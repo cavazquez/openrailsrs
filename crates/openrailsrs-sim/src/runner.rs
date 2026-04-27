@@ -3,8 +3,8 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_scenarios::ScenarioFile;
-use openrailsrs_track::SignalAspect;
+use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef};
+use openrailsrs_track::{SignalAspect, SwitchPosition};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 use serde::Serialize;
 
@@ -111,7 +111,17 @@ pub fn run_scenario_headless_with_driver(
     driver: &mut dyn Driver,
 ) -> Result<SimRunResult, SimError> {
     let route_dir = scenario_dir.join(&scenario.route.path);
-    let graph = load_track_graph_from_route_dir(&route_dir)?;
+    let mut graph = load_track_graph_from_route_dir(&route_dir)?;
+
+    // Apply per-scenario switch overrides (take precedence over track.toml defaults).
+    for sw in &scenario.route.switches {
+        let pos = match sw.position {
+            SwitchPositionDef::Straight => SwitchPosition::Straight,
+            SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+        };
+        graph.set_switch(&sw.node, pos)?;
+    }
+
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let consist = load_consist_with_asset_root(&consist_path, scenario_dir)?;
@@ -522,4 +532,16 @@ pub fn run_from_scenario_file(scenario_path: &Path) -> Result<SimRunResult, SimE
         .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
     let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
     run_scenario_headless(scenario_dir, &scenario)
+}
+
+/// Convenience: like `run_from_scenario_file` but accepts an explicit driver (e.g. `ScriptedDriver`).
+pub fn run_from_scenario_file_with_driver(
+    scenario_path: &Path,
+    driver: &mut dyn Driver,
+) -> Result<SimRunResult, SimError> {
+    let scenario_dir = scenario_path
+        .parent()
+        .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
+    let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
+    run_scenario_headless_with_driver(scenario_dir, &scenario, driver)
 }

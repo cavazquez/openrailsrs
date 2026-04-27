@@ -6,7 +6,7 @@ pub mod model;
 pub use error::ScenarioError;
 pub use model::{
     DavisSection, Difficulty, GameplaySection, ObjectiveKind, OutputSection, RouteSection,
-    ScenarioFile, SimulationSection, StopDef, TrainSection,
+    ScenarioFile, SimulationSection, StopDef, SwitchDef, SwitchPositionDef, TrainSection,
 };
 
 use std::path::Path;

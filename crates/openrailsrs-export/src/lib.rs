@@ -10,4 +10,4 @@ pub use ascii_map::track_graph_to_ascii;
 pub use dot::track_graph_to_dot;
 pub use error::ExportError;
 pub use geojson::track_graph_to_geojson;
-pub use replay::textual_replay_from_csv;
+pub use replay::{animated_replay_from_csv, textual_replay_from_csv};

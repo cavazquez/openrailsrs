@@ -16,4 +16,7 @@ pub enum TrackError {
 
     #[error("signal references unknown edge: {0}")]
     UnknownEdgeForSignal(String),
+
+    #[error("node is not a switch: {0}")]
+    NotASwitch(String),
 }

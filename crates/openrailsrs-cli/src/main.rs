@@ -3,11 +3,12 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use openrailsrs_export::{
-    textual_replay_from_csv, track_graph_to_ascii, track_graph_to_dot, track_graph_to_geojson,
+    animated_replay_from_csv, textual_replay_from_csv, track_graph_to_ascii, track_graph_to_dot,
+    track_graph_to_geojson,
 };
 use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_sim::run_from_scenario_file;
+use openrailsrs_sim::{ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver};
 use openrailsrs_validate::compare_csv_files;
 
 #[derive(Parser)]
@@ -36,7 +37,12 @@ enum Commands {
         out: PathBuf,
     },
     /// Run headless simulation from a scenario TOML.
-    Sim { scenario: PathBuf },
+    Sim {
+        scenario: PathBuf,
+        /// Path to a ScriptedDriver CSV (time_s,throttle,brake). Uses AutoDriver if omitted.
+        #[arg(long)]
+        driver: Option<PathBuf>,
+    },
     /// Run simulation and evaluate game rules (writes outcome.toml).
     PlayHeadless { scenario: PathBuf },
     /// Compare two run CSV files (velocity, position, energy).
@@ -55,11 +61,18 @@ enum Commands {
         #[arg(long, default_value_t = 12)]
         height: usize,
     },
-    /// Print a short textual replay of a run CSV.
+    /// Print a short textual replay of a run CSV (or animate it with --watch).
     Replay {
         csv: PathBuf,
+        /// Max rows printed in static mode (ignored when --watch is active).
         #[arg(long, default_value_t = 25)]
         lines: usize,
+        /// Animate the replay in the terminal, refreshing each row in place.
+        #[arg(long)]
+        watch: bool,
+        /// Time acceleration factor for --watch mode (e.g. 10 = 10× faster than real-time).
+        #[arg(long, default_value_t = 10.0)]
+        speed: f64,
     },
     /// Run several scenarios in parallel (rayon).
     Batch {
@@ -94,9 +107,16 @@ fn main() -> anyhow::Result<()> {
             std::fs::write(&out, dot).with_context(|| format!("write {}", out.display()))?;
             tracing::info!(path = %out.display(), "wrote DOT");
         }
-        Commands::Sim { scenario } => {
-            let r = run_from_scenario_file(&scenario)
-                .map_err(|e| anyhow::anyhow!("sim {}: {e}", scenario.display()))?;
+        Commands::Sim { scenario, driver } => {
+            let r = if let Some(driver_csv) = driver {
+                let mut d = ScriptedDriver::from_csv(&driver_csv)
+                    .map_err(|e| anyhow::anyhow!("load driver {}: {e}", driver_csv.display()))?;
+                run_from_scenario_file_with_driver(&scenario, &mut d)
+                    .map_err(|e| anyhow::anyhow!("sim {}: {e}", scenario.display()))?
+            } else {
+                run_from_scenario_file(&scenario)
+                    .map_err(|e| anyhow::anyhow!("sim {}: {e}", scenario.display()))?
+            };
             println!(
                 "done: reached={} t={:.3}s odometer={:.1}m energy_kwh={:.4}",
                 r.metadata.reached_destination,
@@ -108,10 +128,42 @@ fn main() -> anyhow::Result<()> {
         Commands::PlayHeadless { scenario } => {
             let o = openrailsrs_game::play_headless_from_scenario_file(&scenario)
                 .map_err(|e| anyhow::anyhow!("play {}: {e}", scenario.display()))?;
+            println!("=== PlayHeadless: {} ===", scenario.display());
+            println!("success={} score={:.1}", o.success, o.score);
+            if o.penalties.is_empty() {
+                println!("penalties: none");
+            } else {
+                println!("penalties:");
+                for p in &o.penalties {
+                    println!("  - {p}");
+                }
+            }
+            println!("\n--- timeline ---");
+            for ev in &o.timeline {
+                println!("  [{:>8.1}s] {:16} {}", ev.time_s, ev.kind, ev.detail);
+            }
+            if !o.stops.is_empty() {
+                println!("\n--- stops ---");
+                for s in &o.stops {
+                    let arrive = s
+                        .actual_arrive_s
+                        .map(|t| format!("{t:.0}s"))
+                        .unwrap_or_else(|| "MISSED".into());
+                    let depart = s
+                        .actual_depart_s
+                        .map(|t| format!("{t:.0}s"))
+                        .unwrap_or_else(|| "-".into());
+                    println!(
+                        "  {} arrive={} depart={} on_time={} early_dep={}",
+                        s.node, arrive, depart, s.on_time, s.early_departure
+                    );
+                }
+            }
             println!(
-                "success={} score={:.1} penalties={:?}",
-                o.success, o.score, o.penalties
+                "\nreached={} overspeed_events={} final_time={:.1}s",
+                o.reached_destination, o.overspeed_events, o.final_time_s
             );
+            println!("(outcome.toml written next to scenario)");
         }
         Commands::Compare { run_a, run_b } => {
             let rep =
@@ -134,10 +186,20 @@ fn main() -> anyhow::Result<()> {
                 .map_err(|e| anyhow::anyhow!("load route: {e}"))?;
             print!("{}", track_graph_to_ascii(&g, width, height));
         }
-        Commands::Replay { csv, lines } => {
-            let t =
-                textual_replay_from_csv(&csv, lines).map_err(|e| anyhow::anyhow!("replay: {e}"))?;
-            print!("{t}");
+        Commands::Replay {
+            csv,
+            lines,
+            watch,
+            speed,
+        } => {
+            if watch {
+                animated_replay_from_csv(&csv, speed)
+                    .map_err(|e| anyhow::anyhow!("replay: {e}"))?;
+            } else {
+                let t = textual_replay_from_csv(&csv, lines)
+                    .map_err(|e| anyhow::anyhow!("replay: {e}"))?;
+                print!("{t}");
+            }
         }
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;

@@ -1,9 +1,23 @@
+use std::collections::HashMap;
+
 use indexmap::IndexMap;
 use openrailsrs_core::{EdgeId, NodeId};
 use serde::{Deserialize, Serialize};
 
 use crate::TrackError;
 use crate::signal::TrackSignal;
+
+/// Runtime position of a switch node.
+///
+/// - `Straight` routes the train through the `stem_edge`.
+/// - `Diverging` routes the train through the `diverging_edge`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum SwitchPosition {
+    #[default]
+    Straight,
+    Diverging,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NodeKind {
@@ -49,6 +63,8 @@ pub struct TrackGraph {
     /// edge_id → list of signal ids on that edge (ordered by position_m).
     signals_by_edge: IndexMap<String, Vec<String>>,
     outgoing: IndexMap<String, Vec<String>>,
+    /// Runtime switch positions for `NodeKind::Switch` nodes.
+    switch_positions: HashMap<String, SwitchPosition>,
 }
 
 impl TrackGraph {
@@ -136,5 +152,89 @@ impl TrackGraph {
     /// Look up a signal by id.
     pub fn signal(&self, id: &str) -> Option<&TrackSignal> {
         self.signals.get(id)
+    }
+
+    /// Set the runtime position of a switch node.
+    ///
+    /// Returns `Err(TrackError::NotASwitch)` if the node exists but is not a `NodeKind::Switch`,
+    /// or `Err(TrackError::UnknownNode)` if the node does not exist at all.
+    pub fn set_switch(&mut self, node: &str, pos: SwitchPosition) -> Result<(), TrackError> {
+        match self.nodes.get(node) {
+            None => Err(TrackError::UnknownNode(node.to_string())),
+            Some(n) => match &n.kind {
+                NodeKind::Switch { .. } => {
+                    self.switch_positions.insert(node.to_string(), pos);
+                    Ok(())
+                }
+                _ => Err(TrackError::NotASwitch(node.to_string())),
+            },
+        }
+    }
+
+    /// Current position of a switch node, or `None` if the node is not a switch.
+    pub fn switch_position(&self, node: &str) -> Option<SwitchPosition> {
+        self.switch_positions.get(node).copied()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn two_node_graph() -> TrackGraph {
+        let mut g = TrackGraph::new();
+        g.insert_node(Node {
+            id: NodeId("a".into()),
+            kind: NodeKind::Plain,
+            x_m: 0.0,
+            y_m: 0.0,
+        })
+        .unwrap();
+        g.insert_node(Node {
+            id: NodeId("b".into()),
+            kind: NodeKind::Switch {
+                stem_edge: EdgeId("e1".into()),
+                diverging_edge: EdgeId("e2".into()),
+            },
+            x_m: 100.0,
+            y_m: 0.0,
+        })
+        .unwrap();
+        g
+    }
+
+    #[test]
+    fn set_switch_on_plain_node_returns_not_a_switch() {
+        let mut g = two_node_graph();
+        let err = g.set_switch("a", SwitchPosition::Straight).unwrap_err();
+        assert!(
+            matches!(err, TrackError::NotASwitch(ref id) if id == "a"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn set_switch_on_unknown_node_returns_unknown_node() {
+        let mut g = two_node_graph();
+        let err = g
+            .set_switch("missing", SwitchPosition::Diverging)
+            .unwrap_err();
+        assert!(matches!(err, TrackError::UnknownNode(_)));
+    }
+
+    #[test]
+    fn set_switch_and_read_back() {
+        let mut g = two_node_graph();
+        assert_eq!(g.switch_position("b"), None, "no position set yet");
+        g.set_switch("b", SwitchPosition::Diverging).unwrap();
+        assert_eq!(g.switch_position("b"), Some(SwitchPosition::Diverging));
+        g.set_switch("b", SwitchPosition::Straight).unwrap();
+        assert_eq!(g.switch_position("b"), Some(SwitchPosition::Straight));
+    }
+
+    #[test]
+    fn switch_position_for_plain_node_returns_none() {
+        let g = two_node_graph();
+        assert_eq!(g.switch_position("a"), None);
     }
 }

@@ -30,6 +30,30 @@ pub struct StopDef {
     pub dwell_s: f64,
 }
 
+/// Override the runtime position of a named switch node for this scenario.
+///
+/// ```toml
+/// [[switches]]
+/// node = "junction_a"
+/// position = "diverging"
+/// ```
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SwitchDef {
+    pub node: String,
+    /// `"straight"` (default) or `"diverging"`.
+    #[serde(default)]
+    pub position: SwitchPositionDef,
+}
+
+/// String representation of a switch position used in TOML.
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SwitchPositionDef {
+    #[default]
+    Straight,
+    Diverging,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RouteSection {
     pub path: String,
@@ -37,6 +61,9 @@ pub struct RouteSection {
     pub destination: String,
     #[serde(default)]
     pub stops: Vec<StopDef>,
+    /// Runtime switch overrides; applied after `track.toml` defaults.
+    #[serde(default)]
+    pub switches: Vec<SwitchDef>,
 }
 
 /// Optional Davis resistance override (falls back to consist defaults if absent).

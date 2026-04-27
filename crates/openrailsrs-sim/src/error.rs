@@ -8,6 +8,9 @@ pub enum SimError {
     #[error("route: {0}")]
     Route(#[from] openrailsrs_route::RouteError),
 
+    #[error("track: {0}")]
+    Track(#[from] openrailsrs_track::TrackError),
+
     #[error("train: {0}")]
     Train(#[from] openrailsrs_train::TrainError),
 

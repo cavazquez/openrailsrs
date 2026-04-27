@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use openrailsrs_core::{EdgeId, NodeId};
-use openrailsrs_track::{Edge, Node, NodeKind, SignalAspect, TrackGraph, TrackSignal};
+use openrailsrs_track::{
+    Edge, Node, NodeKind, SignalAspect, SwitchPosition, TrackGraph, TrackSignal,
+};
 use serde::Deserialize;
 
 use crate::RouteError;
@@ -45,7 +47,19 @@ pub enum NodeKindDef {
     Switch {
         diverging_edge: String,
         stem_edge: String,
+        /// Initial runtime position of the switch.  Defaults to `straight` when omitted.
+        #[serde(default)]
+        default_position: SwitchPositionDef,
     },
+}
+
+/// TOML representation of a switch's initial position.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SwitchPositionDef {
+    #[default]
+    Straight,
+    Diverging,
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,23 +114,36 @@ pub fn load_track_graph_from_route_dir(dir: impl AsRef<Path>) -> Result<TrackGra
 fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
     let mut g = TrackGraph::new();
     for n in layout.nodes {
+        let switch_pos: Option<SwitchPosition> = match &n.kind {
+            NodeKindDef::Switch {
+                default_position, ..
+            } => Some(match default_position {
+                SwitchPositionDef::Straight => SwitchPosition::Straight,
+                SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+            }),
+            _ => None,
+        };
         let kind = match n.kind {
             NodeKindDef::Plain => NodeKind::Plain,
             NodeKindDef::Station { name } => NodeKind::Station { name },
             NodeKindDef::Switch {
                 diverging_edge,
                 stem_edge,
+                ..
             } => NodeKind::Switch {
                 diverging_edge: EdgeId(diverging_edge),
                 stem_edge: EdgeId(stem_edge),
             },
         };
         g.insert_node(Node {
-            id: NodeId(n.id),
+            id: NodeId(n.id.clone()),
             kind,
             x_m: n.x_m,
             y_m: n.y_m,
         })?;
+        if let Some(pos) = switch_pos {
+            g.set_switch(&n.id, pos)?;
+        }
     }
     for e in layout.edges {
         let lim_mps = e.speed_limit_kmh / 3.6;
