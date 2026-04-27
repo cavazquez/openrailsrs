@@ -55,6 +55,49 @@ impl TractiveCurve {
     }
 }
 
+/// Steam-traction parameters for a locomotive — fixed, loaded once from the `.eng` file.
+///
+/// These parameters drive the boiler + cylinder model in `openrailsrs-sim::steam`.
+/// When `None` the sim falls back to the electric/diesel P/v model.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SteamParams {
+    /// Number of cylinders (typically 2 for outside-cylinder or 4 for compound).
+    pub cylinder_count: u32,
+    /// Cylinder bore (inner diameter) in metres.
+    pub cylinder_bore_m: f64,
+    /// Piston stroke length in metres.
+    pub piston_stroke_m: f64,
+    /// Driving wheel radius in metres.
+    pub driving_wheel_radius_m: f64,
+    /// Boiler working pressure (bar).  Safety valve opens at ~1.05×.
+    pub working_pressure_bar: f64,
+    /// Steam evaporation rate at full fire (kg/s).
+    pub evaporation_rate_kg_per_s: f64,
+    /// Coal consumption at full fire (kg/s).
+    pub coal_consumption_kg_per_s: f64,
+    /// Initial water in tender/boiler (kg).
+    pub initial_water_kg: f64,
+    /// Initial coal in tender (kg).
+    pub initial_coal_kg: f64,
+}
+
+impl SteamParams {
+    /// Theoretical maximum tractive effort at stall (v = 0) with full boiler pressure.
+    /// Useful to populate `Locomotive::max_tractive_effort_n` when loading from TOML.
+    pub fn max_tractive_effort_n(&self) -> f64 {
+        use std::f64::consts::PI;
+        const MAX_CUTOFF: f64 = 0.75;
+        const ETA_INDICATOR: f64 = 0.85;
+        let p_mep_pa = MAX_CUTOFF * self.working_pressure_bar * 1e5 * ETA_INDICATOR;
+        self.cylinder_count as f64
+            * (PI / 4.0)
+            * self.cylinder_bore_m.powi(2)
+            * self.piston_stroke_m
+            * p_mep_pa
+            / self.driving_wheel_radius_m
+    }
+}
+
 /// Davis rolling-resistance coefficients: F_resist = a + b·v + c·v².
 #[derive(Clone, Debug, PartialEq)]
 pub struct DavisCoefficients {
@@ -87,6 +130,9 @@ pub struct Locomotive {
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
     pub diesel_sfc_g_per_kwh: Option<f64>,
+    /// Steam traction parameters.  When `Some`, the physics engine uses the
+    /// boiler + cylinder model instead of the electric/diesel P/v path.
+    pub steam: Option<SteamParams>,
 }
 
 #[derive(Clone, Debug)]
@@ -177,6 +223,18 @@ impl Consist {
         } else {
             Some(locos_with_sfc.iter().copied().sum::<f64>() / locos_with_sfc.len() as f64)
         }
+    }
+
+    /// Return steam parameters if any locomotive in the consist is steam-powered.
+    ///
+    /// When multiple steam locos are present, the first one's parameters are
+    /// returned (multi-steam-loco consists are uncommon and their aggregate
+    /// behaviour is approximated by scaling `max_tractive_effort_n`).
+    pub fn aggregate_steam_params(&self) -> Option<SteamParams> {
+        self.vehicles.iter().find_map(|v| match v {
+            Vehicle::Loco(l) => l.steam.clone(),
+            _ => None,
+        })
     }
 
     /// Build an aggregate tractive curve for the whole consist.

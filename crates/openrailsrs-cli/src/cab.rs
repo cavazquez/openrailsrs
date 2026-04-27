@@ -81,6 +81,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         tractive,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
+        steam_params: consist.aggregate_steam_params(),
     };
 
     let total_dist_m: f64 = path_edges
@@ -134,6 +135,9 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
 
     // ── State ────────────────────────────────────────────────────────────────
     let mut state = TrainSimState::new(path_edges.clone());
+    state.boiler_state = consist
+        .aggregate_steam_params()
+        .map(|p| openrailsrs_sim::steam::BoilerState::from_params(&p));
     let mut throttle: f64 = 0.0;
     let mut brake: f64 = 0.0;
     let mut emergency = false;

@@ -7,6 +7,10 @@ use crate::error::TrainError;
 use crate::model::{Consist, DavisCoefficients, Locomotive, Vehicle, Wagon};
 
 pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, TrainError> {
+    // Detect TOML-native vs MSTS S-expression format.
+    if crate::steam_loader::is_toml_eng(path.as_ref()).unwrap_or(false) {
+        return crate::steam_loader::load_steam_engine_from_toml(path);
+    }
     let text = std::fs::read_to_string(path.as_ref())?;
     let ast = parse_from_first_paren(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
@@ -88,6 +92,7 @@ impl From<EngineFile> for Locomotive {
             tractive_curve,
             regen_factor: value.regen_factor,
             diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
+            steam: None,
         }
     }
 }

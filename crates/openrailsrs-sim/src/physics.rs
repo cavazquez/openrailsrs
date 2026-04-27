@@ -1,8 +1,9 @@
-use openrailsrs_train::{DavisCoefficients, TractiveCurve};
+use openrailsrs_train::{DavisCoefficients, SteamParams, TractiveCurve};
 
 use crate::coupler::multi_body_step;
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
+use crate::steam::steam_step;
 
 const G: f64 = 9.81;
 const SPEED_EPS_RATIO: f64 = 0.99;
@@ -20,6 +21,8 @@ pub struct TrainPhysics {
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
     pub diesel_sfc_g_per_kwh: Option<f64>,
+    /// Steam traction parameters.  When `Some`, bypasses the P/v electric model.
+    pub steam_params: Option<SteamParams>,
 }
 
 pub struct StepResult {
@@ -44,21 +47,33 @@ pub fn step(
     let v = state.velocity_mps.max(0.0);
     let speed_cap = edge_data.speed_limit_mps;
 
-    let f_motor = if state.throttle > 0.0 {
-        let raw = if let Some(f_curve) = train.tractive.interpolate(v) {
-            f_curve
-        } else {
-            (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n)
-        };
-        raw * state.throttle
-            * (if v >= speed_cap * SPEED_EPS_RATIO {
+    // ── Tractive force ────────────────────────────────────────────────────────
+    // Steam path: boiler + cylinder model (updates boiler state in place).
+    // Electric/diesel path: P/v law or explicit traction curve.
+    let f_motor =
+        if let (Some(params), Some(boiler)) = (&train.steam_params, state.boiler_state.as_mut()) {
+            // Steam: the regulator is capped by the speed limiter.
+            let effective_throttle = if v >= speed_cap * SPEED_EPS_RATIO {
                 0.0
             } else {
-                1.0
-            })
-    } else {
-        0.0
-    };
+                state.throttle
+            };
+            steam_step(boiler, params, effective_throttle, v, dt)
+        } else if state.throttle > 0.0 {
+            let raw = if let Some(f_curve) = train.tractive.interpolate(v) {
+                f_curve
+            } else {
+                (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n)
+            };
+            raw * state.throttle
+                * (if v >= speed_cap * SPEED_EPS_RATIO {
+                    0.0
+                } else {
+                    1.0
+                })
+        } else {
+            0.0
+        };
 
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the

@@ -11,6 +11,7 @@ pub mod physics;
 pub mod runner;
 pub mod scripted_driver;
 pub mod state;
+pub mod steam;
 
 pub use brake::{BrakeCylinder, BrakeState, BrakeSystem};
 pub use coupler::{CouplerState, VehicleState};
@@ -26,3 +27,4 @@ pub use runner::{
 };
 pub use scripted_driver::{Keyframe, ScriptedDriver};
 pub use state::TrainSimState;
+pub use steam::BoilerState;

@@ -1,0 +1,26 @@
+# Locomotora a vapor 2-8-0 "Consolidation" — openrailsrs TOML-native format
+#
+# Parámetros basados en una locomotora tipo Consolidation estándar
+# (Ferrocarril Roca / Buenos Aires & Great Southern Railway, ~1920s-1940s).
+#
+# Fuerza tractiva teórica máxima (fórmula):
+#   F = n × (π/4) × D² × S × (P × 0.75 × 0.85) / r
+#   F = 2 × (π/4) × 0.47² × 0.66 × (16×1e5 × 0.75 × 0.85) / 0.97
+#   F ≈ 155 000 N  (≈ 15 800 kgf)
+
+[engine]
+name = "Vapor 2-8-0 Consolidation"
+mass_kg = 82000
+max_velocity_mps = 27.8   # ~100 km/h
+max_brake_force_n = 120000.0
+
+[steam]
+cylinder_count             = 2
+cylinder_bore_m            = 0.470   # 470 mm
+piston_stroke_m            = 0.660   # 660 mm
+driving_wheel_radius_m     = 0.970   # 970 mm (rueda de 1.94 m de diámetro)
+working_pressure_bar       = 16.0    # 16 bar (232 psi)
+evaporation_rate_kg_per_s  = 10.0    # ~36 t/h de vapor
+coal_consumption_kg_per_s  = 0.70    # ~2.5 t/h de carbón
+initial_water_kg           = 15000.0 # tender: 15 000 L
+initial_coal_kg            = 8000.0  # tender: 8 t

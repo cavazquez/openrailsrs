@@ -202,6 +202,7 @@ pub fn run_scenario_headless_with_driver(
     } else {
         raw_curve
     };
+    let steam_params = consist.aggregate_steam_params();
     let train_physics = TrainPhysics {
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
@@ -211,6 +212,7 @@ pub fn run_scenario_headless_with_driver(
         tractive,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
+        steam_params,
     };
 
     let stop_nodes: HashSet<&str> = scenario
@@ -242,6 +244,9 @@ pub fn run_scenario_headless_with_driver(
     let path_data = PathData::from_path(&path_edges, &graph);
     let mut state = TrainSimState::new(path_edges);
     state.brake_system = build_brake_system(&consist);
+    state.boiler_state = consist
+        .aggregate_steam_params()
+        .map(|p| crate::steam::BoilerState::from_params(&p));
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;
@@ -252,7 +257,8 @@ pub fn run_scenario_headless_with_driver(
         std::fs::create_dir_all(parent)?;
     }
     let csv_file = File::create(&csv_path)?;
-    let mut csv_writer = RunCsvWriter::new(csv_file)?;
+    let has_steam = train_physics.steam_params.is_some();
+    let mut csv_writer = RunCsvWriter::new_with_steam(csv_file, has_steam)?;
     let mut events = Vec::new();
 
     // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.

@@ -2,6 +2,7 @@ use openrailsrs_core::SimTime;
 
 use crate::brake::BrakeSystem;
 use crate::coupler::{CouplerState, VehicleState};
+use crate::steam::BoilerState;
 
 #[derive(Clone, Debug)]
 pub struct TrainSimState {
@@ -32,6 +33,8 @@ pub struct TrainSimState {
     pub couplers: Vec<CouplerState>,
     /// Per-vehicle masses (kg) cached from the consist — parallel to `vehicles`.
     pub vehicle_masses: Vec<f64>,
+    /// Steam boiler mutable state.  `None` for electric/diesel traction.
+    pub boiler_state: Option<BoilerState>,
 }
 
 impl TrainSimState {
@@ -54,6 +57,7 @@ impl TrainSimState {
             vehicles: Vec::new(),
             couplers: Vec::new(),
             vehicle_masses: Vec::new(),
+            boiler_state: None,
         }
     }
 

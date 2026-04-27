@@ -1,46 +1,51 @@
 use std::io::Write;
 
 use csv::Writer;
-use serde::Serialize;
 
 use crate::state::TrainSimState;
 
-#[derive(Serialize)]
-struct SampleRow {
-    pub time_s: f64,
-    pub edge_id: String,
-    pub pos_on_edge_m: f64,
-    pub velocity_mps: f64,
-    pub odometer_m: f64,
-    pub cumulative_energy_kwh: f64,
-    pub regen_energy_kwh: f64,
-    pub fuel_consumption_l: f64,
-    pub passengers: u32,
-    pub throttle: f64,
-    pub brake: f64,
-}
+/// Core columns always present in the output CSV.
+const BASE_HEADERS: &[&str] = &[
+    "time_s",
+    "edge_id",
+    "pos_on_edge_m",
+    "velocity_mps",
+    "odometer_m",
+    "cumulative_energy_kwh",
+    "regen_energy_kwh",
+    "fuel_consumption_l",
+    "passengers",
+    "throttle",
+    "brake",
+];
+
+/// Extra columns appended when a steam boiler state is present.
+const STEAM_HEADERS: &[&str] = &["boiler_pressure_bar", "water_kg", "coal_kg"];
 
 pub struct RunCsvWriter<W: Write> {
     inner: Writer<W>,
+    /// Whether to write the three boiler telemetry columns.
+    has_steam: bool,
 }
 
 impl<W: Write> RunCsvWriter<W> {
+    /// Create a writer without steam columns.
     pub fn new(w: W) -> Result<Self, csv::Error> {
+        Self::new_with_steam(w, false)
+    }
+
+    /// Create a writer; pass `steam = true` to include boiler telemetry columns.
+    pub fn new_with_steam(w: W, steam: bool) -> Result<Self, csv::Error> {
         let mut inner = Writer::from_writer(w);
-        inner.write_record([
-            "time_s",
-            "edge_id",
-            "pos_on_edge_m",
-            "velocity_mps",
-            "odometer_m",
-            "cumulative_energy_kwh",
-            "regen_energy_kwh",
-            "fuel_consumption_l",
-            "passengers",
-            "throttle",
-            "brake",
-        ])?;
-        Ok(Self { inner })
+        let mut headers: Vec<&str> = BASE_HEADERS.to_vec();
+        if steam {
+            headers.extend_from_slice(STEAM_HEADERS);
+        }
+        inner.write_record(&headers)?;
+        Ok(Self {
+            inner,
+            has_steam: steam,
+        })
     }
 
     pub fn write_sample(&mut self, state: &TrainSimState) -> Result<(), csv::Error> {
@@ -48,20 +53,36 @@ impl<W: Write> RunCsvWriter<W> {
             .current_edge()
             .map(|s| s.to_string())
             .unwrap_or_default();
-        let row = SampleRow {
-            time_s: state.time_s(),
-            edge_id: edge,
-            pos_on_edge_m: state.pos_on_edge_m,
-            velocity_mps: state.velocity_mps,
-            odometer_m: state.odometer_m,
-            cumulative_energy_kwh: state.cumulative_energy_j / 3.6e6,
-            regen_energy_kwh: state.regen_energy_j / 3.6e6,
-            fuel_consumption_l: state.fuel_consumption_g / 840.0,
-            passengers: state.passengers,
-            throttle: state.throttle,
-            brake: state.brake,
-        };
-        self.inner.serialize(row)?;
+
+        // Base fields.
+        let mut record = vec![
+            format!("{:.6}", state.time_s()),
+            edge,
+            format!("{:.3}", state.pos_on_edge_m),
+            format!("{:.4}", state.velocity_mps),
+            format!("{:.3}", state.odometer_m),
+            format!("{:.6}", state.cumulative_energy_j / 3.6e6),
+            format!("{:.6}", state.regen_energy_j / 3.6e6),
+            format!("{:.4}", state.fuel_consumption_g / 840.0),
+            state.passengers.to_string(),
+            format!("{:.4}", state.throttle),
+            format!("{:.4}", state.brake),
+        ];
+
+        // Optional steam columns.
+        if self.has_steam {
+            if let Some(b) = &state.boiler_state {
+                record.push(format!("{:.3}", b.pressure_bar));
+                record.push(format!("{:.1}", b.water_kg));
+                record.push(format!("{:.1}", b.coal_kg));
+            } else {
+                record.push(String::new());
+                record.push(String::new());
+                record.push(String::new());
+            }
+        }
+
+        self.inner.write_record(&record)?;
         Ok(())
     }
 

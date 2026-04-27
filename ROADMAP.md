@@ -320,6 +320,15 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - Formato `track.toml` extendido con `[signals.script]` inline; retrocompatible.
 - 4 tests unitarios en `signal_script.rs`.
 
+### Fase 24 — Tracción vapor ✅
+- `SteamParams` en `openrailsrs-train`: cilindros, rueda, presión, evaporación, carbón/agua inicial.
+- `BoilerState` + `steam_step()` en `openrailsrs-sim::steam`: F_te = n×(π/4)×bore²×stroke×P_mep/r; ODE de caldera; inyector automático.
+- `physics.rs`: rama condicional steam (retrocompatible con tracción eléctrica/diesel).
+- CSV extendido con `boiler_pressure_bar`, `water_kg`, `coal_kg` cuando loco es vapor.
+- `steam_loader.rs`: loader TOML nativo `[engine]+[steam]`, detección automática vs MSTS S-expr.
+- Ejemplo `examples/steam/`: 2-8-0 Consolidation 16 bar, 50 km con parada intermedia.
+- 11 tests en `steam_physics.rs`.
+
 ### Fase 25 — Compatibilidad MSTS / Open Rails ✅
 - `openrailsrs-formats`: `EngineFile` con `traction_curve`, `WagonFile` con `length_m`.
 - Nuevos parsers: `TrackDbFile` (`.tdb`), `PathFile` (`.pat`), `ActivityFile` (`.act`).
@@ -327,6 +336,14 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - CLI: subcomando `import-msts <route_dir>` con auto-detección de `.act`.
 - `From<EngineFile> for Locomotive` propaga curva de tracción real desde el `.eng`.
 - 5 tests de integración con fixtures `minimal.tdb/.pat/.act`.
+
+### Fase 25b — Compatibilidad MSTS completa 🔲
+- Encoding UTF-16 / Latin-1 en el lexer.
+- Señales desde `TrItemTable` en `.tdb`.
+- `TrafficService` → `extra_trains` en `scenario.toml`.
+- Eventos de actividad: `ActivityObject`, `FailedSignals`, `RestrictedSpeedZones`.
+- Assets visuales `.s` / `.ace` (requiere Fase 23).
+- World files `.w` (requiere Fase 23).
 
 ---
 

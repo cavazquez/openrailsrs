@@ -1,0 +1,40 @@
+[route]
+id = "pampas"
+name = "Ramal Pampa — tramo de prueba (vapor)"
+
+[[nodes]]
+id = "km0"
+kind = "plain"
+name = "Estación Origen"
+lat = -34.600
+lon = -58.450
+
+[[nodes]]
+id = "km25"
+kind = "plain"
+name = "Estación Media"
+lat = -34.480
+lon = -58.250
+
+[[nodes]]
+id = "km50"
+kind = "plain"
+name = "Estación Destino"
+lat = -34.360
+lon = -58.050
+
+[[edges]]
+id = "e_km0_km25"
+from = "km0"
+to = "km25"
+length_m = 25000.0
+speed_limit_mps = 22.2    # ~80 km/h
+grade_percent = 0.3       # subida leve
+
+[[edges]]
+id = "e_km25_km50"
+from = "km25"
+to = "km50"
+length_m = 25000.0
+speed_limit_mps = 25.0    # ~90 km/h
+grade_percent = -0.2      # bajada leve

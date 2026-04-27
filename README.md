@@ -635,15 +635,21 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
-### Fase 24 — Tracción vapor `🔲`
+### Fase 24 — Tracción vapor `✅`
 
-**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (3-5 meses)
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta
 
-- Modelo termodinámico de caldera: presión, temperatura, consumo de agua y carbón.
-- Distribución de vapor: admisión, expansión, escape; relación con marcha (cutoff) y regulator.
-- Fuerza tractiva function de presión de cilindro, diámetro de rueda, radio de manivela.
-- Sonido sincronizado con los golpes del émbolo (chuff a frecuencia proporcional a v).
-- Necesario para locos históricas argentinas: vapor en General Roca, Viaducto del Malleco, etc.
+**Implementado:**
+
+- **`SteamParams`** en `openrailsrs-train`: cilindros (n, bore, stroke), rueda motriz, presión de caldera, evaporación, consumo de carbón, agua/carbón inicial.
+- **`BoilerState`** en `openrailsrs-sim::steam`: presión, agua y carbón mutables; se inicializa desde `SteamParams` al arrancar la simulación.
+- **`steam_step()`**: fórmula `F_te = n × (π/4) × bore² × stroke × P_mep / r_wheel`; dinámica de caldera (ODE de primer orden: balance supply/demand); consumo de agua y carbón; inyector automático (headless) que repone agua cuando cae al 30 %.
+- **`physics.rs`**: rama condicional — si `train.steam_params.is_some()` usa `steam_step`, si no usa P/v o curva explícita. Retrocompatible: simulaciones existentes no se ven afectadas.
+- **CSV extendido**: columnas `boiler_pressure_bar`, `water_kg`, `coal_kg` se añaden automáticamente cuando la locomotora es vapor.
+- **Loader TOML nativo** (`steam_loader.rs`): formato `[engine] + [steam]` para definir locos vapor sin depender del parser MSTS. Detección automática por primer carácter (`[` = TOML, `(` = MSTS S-expr).
+- **Ejemplo completo**: `examples/steam/` — loco 2-8-0 Consolidation (16 bar, ~155 kN), consist, ruta 50 km con parada intermedia, `scenario.toml`.
+- **11 tests** en `steam_physics.rs`: fuerza en arranque, escala con regulador, dinámica de presión, consumo de agua y carbón, inyector automático, loader TOML.
+- *Pendiente*: sonido sincronizado con golpes de émbolo (Fase 17 ampliada).
 
 ---
 
@@ -664,6 +670,88 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 - **`openrailsrs-train`**: `From<EngineFile> for Locomotive` propaga la curva de tracción real.
 - Tests con fixtures mínimas `minimal.tdb / .pat / .act`; todos los tests del workspace pasan.
 - *Pendiente (iteración futura)*: assets binarios `.s`/`.ace`, parser de terreno `.w`, y rutas reales completas.
+
+---
+
+### Fase 25b — Compatibilidad MSTS completa `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (iteración continua)
+
+Esta fase documenta los **gaps que quedan** para que `openrailsrs import-msts` pueda procesar una ruta MSTS/Open Rails real sin intervención manual.  La Fase 25 implementó la base (topología + actividad del jugador); la 25b cubre todo lo demás.
+
+#### 1. Encoding de archivos
+
+Los archivos MSTS reales usan **BOM UTF-16-LE** (la mayoría de rutas con editor de MSTS) o **Latin-1 / Windows-1252** (rutas antiguas europeas).  El lexer actual (`openrailsrs-formats`) asume UTF-8 puro y fallará o producirá basura con esos encodings.
+
+- Detectar BOM (`FF FE`) y transcodificar a UTF-8 antes de parsear.
+- Fallback a Windows-1252 si no hay BOM y hay bytes > 0x7F.
+- Dependencia sugerida: `encoding_rs` (ya en el árbol vía `symphonia`).
+
+#### 2. Señales desde `TrItemTable`
+
+Las señales en un `.tdb` real no viven como nodos independientes sino en la sección `TrItemTable` (lista de `TrItem` con tipo `Signal`, posición en el track como `(TrItemId, position_m_on_vector)`, estado inicial, y referencia al objeto visual `.s`).
+
+- Parsear `TrItemTable` en `TrackDbFile`.
+- Mapear cada `TrItem` de tipo `Signal` a un `TrackSignal` con `edge_id` + `position_m` calculados desde el vector node al que pertenece.
+- Esto desbloquea señales automáticas en rutas importadas.
+
+#### 3. `TrafficService` en actividades
+
+Las actividades reales incluyen trenes de tráfico AI (`Tr_Activity_Service_Definition`) con horarios propios, tipo de servicio (pasajeros/carga), y paths separados.  Actualmente solo se parsea el tren del jugador (`Player_Train_Init`).
+
+- Parsear `Tr_Activity_Service_Definition` → `Vec<TrafficServiceDef>`.
+- Convertir cada servicio a una entrada `[[extra_trains]]` en el `scenario.toml` generado.
+- Requiere cargar los `.pat` de cada servicio AI.
+
+#### 4. Eventos y restricciones de actividad
+
+Secciones ignoradas que enriquecen la simulación:
+
+| Sección MSTS | Equivalente openrailsrs | Estado |
+|---|---|---|
+| `ActivityObject` (cargas a recoger/dejar) | `StopDef.passengers_on/off` | 🔲 |
+| `FailedSignals` (señales averiadas) | `SignalAspect::Stop` fijo | 🔲 |
+| `RestrictedSpeedZones` | Límite de velocidad por segmento | 🔲 |
+| `SoundRegions` | Zonas de sonido ambiental | 🔲 (Fase 17) |
+| `StartTime` + `Season` | `simulation.seed` + efectos clima | 🔲 |
+
+#### 5. Assets visuales (`.s` / `.ace`)
+
+- **`.s` Shape files**: modelos 3D en S-expression MSTS.  Son texto, parseable con `openrailsrs-formats`, pero su interpretación (geometría, materiales, animaciones) requiere un crate nuevo `openrailsrs-shapes` y el viewer 3D (Fase 23).
+- **`.ace` Textures**: formato propietario de Microsoft.  Necesita un decoder binario (hay implementaciones open-source en C# en Open Rails).
+
+Estos assets son **irrelevantes para la simulación headless** pero necesarios para el viewer 3D.
+
+#### 6. World files (`.w`)
+
+Tiles de terreno binarios + texto.  Cada tile es `~2km × 2km`.  Contienen elevación, vegetación, edificios.  Solo relevantes para Fase 23 (viewer 3D).
+
+#### 7. Paths múltiples en actividades complejas
+
+Algunas actividades referencian varios `.pat` (itinerarios alternativos para AI).  El importer actual carga solo el primero.
+
+- Iterar sobre todos los `TrActivity_PathFile` en el `.act`.
+- Asociar cada path al servicio AI correspondiente.
+
+#### Resumen de compatibilidad actual
+
+```
+openrailsrs import-msts <ruta_msts>
+
+✅ Topología de vía (nodos, aristas, longitudes, velocidades)
+✅ Consist del jugador (.con → .eng + .wag)
+✅ Curvas de tracción de locomotoras
+✅ Path del jugador (.pat → start/destination en scenario.toml)
+✅ Hora de inicio y duración de la actividad
+
+⚠️  Señales (TrItemTable): ignoradas — agregarlas a mano en track.toml
+⚠️  Encoding: falla con archivos UTF-16 o Latin-1
+⚠️  Rutas con cientos de nodos: funciona pero sin validación de integridad
+❌  Tráfico AI (extra_trains): no importado
+❌  Eventos de actividad (cargas, zonas restringidas): no importados
+❌  Assets visuales (.s / .ace): no aplica (headless)
+❌  Terreno (.w): no aplica (headless)
+```
 
 ---
 

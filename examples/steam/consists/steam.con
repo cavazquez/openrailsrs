@@ -1,0 +1,11 @@
+( Train
+    ( TrainCfg "Steam 2-8-0 Consist"
+        ( MaxVelocity 27.8 0 )
+        ( Name "Steam 2-8-0" )
+        ( WagonList
+            ( Engine
+                ( EngineData "steam_2_8_0" "vehicles/steam_2_8_0.eng" )
+            )
+        )
+    )
+)

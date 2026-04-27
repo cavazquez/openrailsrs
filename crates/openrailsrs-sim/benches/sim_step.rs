@@ -49,6 +49,7 @@ fn default_train() -> TrainPhysics {
         tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
+        steam_params: None,
     }
 }
 
