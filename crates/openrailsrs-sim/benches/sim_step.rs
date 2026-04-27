@@ -1,4 +1,6 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 use openrailsrs_core::{EdgeId, NodeId};
 use openrailsrs_sim::{physics::step, state::TrainSimState};
 use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
