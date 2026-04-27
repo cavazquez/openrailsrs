@@ -1,0 +1,35 @@
+[scenario]
+name = "Test diverging run"
+description = "Same origin, diverging switch at junction → siding_c instead of yard_b"
+
+[route]
+path = "routes/test"
+start = "yard_a"
+destination = "siding_c"
+
+# Override the junction switch to take the diverging branch (e4 → siding_c).
+[[route.switches]]
+node = "junction"
+position = "diverging"
+
+[train]
+consist = "consists/freight.con"
+
+[train.davis]
+a_n = 800.0
+b_n_per_mps = 12.0
+c_n_per_mps2 = 0.4
+
+[gameplay]
+objective = "arrive"
+time_limit_seconds = 3600
+difficulty = "normal"
+
+[simulation]
+duration = 900.0
+time_step = 0.1
+seed = 42
+
+[output]
+csv = "run_diverging.csv"
+metadata = "run_diverging.toml"
