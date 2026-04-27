@@ -68,12 +68,12 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 0 — Bootstrap | Base implementada | Workspace Cargo, crates modulares, CI y documentación. |
 | 1 — Parsers MSTS/OpenRails | Profundizado | `openrailsrs-formats`: AST genérico + adaptadores tipados (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades + dispatch por extensión. |
 | 2 — Datos/config juego | Profundizado | `openrailsrs-scenarios`: `scenario.toml` con `[[route.stops]]` (paradas intermedias con `arrive_s`/`depart_s`) y `[train.davis]` (coeficientes Davis sobreescribibles). |
-| 3 — Modelo lógico ferroviario | Profundizado | `openrailsrs-track`: señales ferroviarias (`TrackSignal` con `id`, `aspect`, `clear_after_s`), `insert_signal`, `signals_on_edge`; `track.toml` con sección `[[signals]]`; runner respeta `Stop` (`RunPhase::AwaitingSignal`, auto-despeje por tiempo) y `Caution` (speed limit ×0.5); `SimEvent::SignalStop/SignalClear`. |
+| 3 — Modelo lógico ferroviario | Profundizado | `openrailsrs-track`: señales (`Stop/Caution/Clear`, `clear_after_s`), `insert_signal`, `signals_on_edge`; runner `RunPhase::AwaitingSignal`; **agujas funcionales** (`SwitchPosition::Straight/Diverging`, `set_switch`, `switch_position`, error `NotASwitch`); BFS respeta la posición de cada `NodeKind::Switch`; `default_position` en `track.toml` y `[[switches]]` sobreescribibles por escenario. |
 | 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TractiveCurve` (puntos v→F, interpolación piecewise-linear) en `Locomotive`; `TrainPhysics` agrega la curva o sintetiza una desde P/F_te. |
-| 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling` para frenos de aproximación dinámicos y dwell real en paradas; `ScriptedDriver` permite replay desde CSV (`time_s,throttle,brake`, semántica hold-last). |
-| 6 — Capa de videojuego headless | Profundizado | `evaluate` con multi-parada: penaliza `missed_stop`, `late_stop`, **`early_departure`** (`StationDeparture.time_s < depart_s − GRACE`); `StopResult` incluye `actual_depart_s` y flag `early_departure`. |
+| 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling→AwaitingSignal`; `ScriptedDriver` replay desde CSV; `run_from_scenario_file_with_driver` para driver externo desde CLI. |
+| 6 — Capa de videojuego headless | Profundizado | `evaluate` multi-parada: `missed_stop`, `late_stop`, `early_departure`; `play-headless` imprime timeline completo de eventos y tabla de paradas por stdout; `outcome.toml` con desglose. |
 | 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
-| 8 — Debug sin gráficos | Base implementada | `openrailsrs-export` (DOT/GeoJSON/ASCII/replay). |
+| 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
 | 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
 | 10 — Viewer mínimo | Base implementada | `openrailsrs-viewer` 2D desacoplado del núcleo. |
 
@@ -93,14 +93,14 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 |--------|-----|
 | `openrailsrs-core` | Tipos compartidos (tiempo simulado, IDs). |
 | `openrailsrs-formats` | Tokenizer + AST genérico + adaptadores tipados por extensión (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades MSTS → SI. |
-| `openrailsrs-scenarios` | Carga/validación de `scenario.toml`; soporta paradas intermedias (`[[route.stops]]`) y override de Davis (`[train.davis]`). |
-| `openrailsrs-route` | Carga de layout de vía (`track.toml`) con `grade_percent` por arista y sección `[[signals]]`. |
-| `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad, pendientes y señales (`TrackSignal`: `Stop/Caution/Clear`, `clear_after_s` para auto-despeje). |
-| `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (curva de tracción real, piecewise-linear) configurables. |
-| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics` + `TractiveCurve`); dwell en paradas; señales `Stop/Caution` aplicadas en `RunPhase`; `ScriptedDriver` para replay desde CSV; `SimEvent` con overspeed/estaciones/señales; salida `run.csv` + `run.toml`. |
-| `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop`, `early_departure`), puntuación; `outcome.toml` con desglose por parada (`play-headless`). |
+| `openrailsrs-scenarios` | Carga/validación de `scenario.toml`; paradas intermedias (`[[route.stops]]`), override de Davis y **`[[switches]]`** para sobreescribir posición de agujas por escenario. |
+| `openrailsrs-route` | Carga de `track.toml` con `grade_percent`, `[[signals]]` y `default_position` en nodos Switch. |
+| `openrailsrs-track` | Grafo de vía, nodos, aristas, señales (`Stop/Caution/Clear`) y **agujas** (`SwitchPosition`, `set_switch`, `switch_position`, error `NotASwitch`). |
+| `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (piecewise-linear) configurables. |
+| `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; `SimEvent` overspeed/estaciones/señales; `run.csv` + `run.toml`. |
+| `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop`, `early_departure`); `play-headless` con **timeline completo** por stdout; `outcome.toml`. |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
-| `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual. |
+| `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`** (2D mínimo, opcional). |
 
@@ -125,30 +125,39 @@ Ejemplo de escenario listo: [`examples/smoke/scenario.toml`](examples/smoke/scen
 ## CLI (`openrailsrs`)
 
 ```bash
-# Fase 1 — inspeccionar AST genérico
+# Inspeccionar AST genérico de un archivo MSTS
 cargo run -p openrailsrs-cli --bin openrailsrs -- inspect path/al/archivo.eng
 
-# Fase 3 — exportar grafo DOT
+# Exportar grafo DOT de la ruta
 cargo run -p openrailsrs-cli --bin openrailsrs -- graph examples/smoke/routes/test --out route.dot
 
-# Fase 5 — simulación headless
+# Simulación headless con AutoDriver (por defecto)
 cargo run -p openrailsrs-cli --bin openrailsrs -- sim examples/smoke/scenario.toml
 
-# Fase 6 — partida headless (escribe outcome.toml)
+# Simulación headless con ScriptedDriver (CSV con time_s,throttle,brake)
+cargo run -p openrailsrs-cli --bin openrailsrs -- sim examples/smoke/scenario.toml \
+  --driver examples/smoke/driver_script.csv
+
+# Partida headless: imprime timeline completo + tabla de paradas + escribe outcome.toml
 cargo run -p openrailsrs-cli --bin openrailsrs -- play-headless examples/smoke/scenario.toml
 
-# Fase 7 — comparar dos corridas
+# Comparar dos corridas CSV
 cargo run -p openrailsrs-cli --bin openrailsrs -- compare run1.csv run2.csv
 
-# Fase 8 — GeoJSON, mapa ASCII, replay textual
+# Exportar GeoJSON y mapa ASCII de la ruta
 cargo run -p openrailsrs-cli --bin openrailsrs -- export-geojson examples/smoke/routes/test --out track.geojson
 cargo run -p openrailsrs-cli --bin openrailsrs -- ascii-map examples/smoke/routes/test
+
+# Replay textual (primeras 25 filas del CSV)
 cargo run -p openrailsrs-cli --bin openrailsrs -- replay examples/smoke/run.csv
 
-# Fase 9 — batch con rayon
+# Replay animado: barra de progreso ANSI, 20× más rápido que real-time
+cargo run -p openrailsrs-cli --bin openrailsrs -- replay examples/smoke/run.csv --watch --speed 20
+
+# Batch con rayon (varios escenarios en paralelo)
 cargo run -p openrailsrs-cli --bin openrailsrs -- batch examples/smoke/scenario.toml
 
-# Logs (`tracing`) opcionales
+# Logs tracing opcionales
 cargo run -p openrailsrs-cli --bin openrailsrs -- -v sim examples/smoke/scenario.toml
 ```
 
@@ -216,13 +225,27 @@ El runner aplica las señales automáticamente:
 - `caution` → velocidad efectiva limitada al 50 % del límite nominal de la arista, sin detener el tren.
 - Eventos emitidos: `SimEvent::SignalStop` y `SimEvent::SignalClear`.
 
-Para replay o test de regresión, se puede usar un `ScriptedDriver` cargando un CSV con columnas `time_s,throttle,brake` (el mismo formato que `run.csv`):
+### Agujas en `track.toml` y `scenario.toml`
 
-```bash
-# Simulación headless con conductor scripted
-cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml \
-  --driver examples/smoke/driver_script.csv
+Los nodos de tipo `switch` definen una bifurcación con dos ramas: **stem** (directo) y **diverging** (desviado). La posición activa determina qué arista toma el BFS al calcular el camino.
+
+Definición en `track.toml`:
+
+```toml
+[[nodes]]
+id = "junction"
+kind = { switch = { stem_edge = "e3", diverging_edge = "e4", default_position = "straight" } }
 ```
+
+Override por escenario en `scenario.toml`:
+
+```toml
+[[route.switches]]
+node     = "junction"
+position = "diverging"   # "straight" | "diverging"
+```
+
+Si el escenario no incluye `[[route.switches]]`, se aplica `default_position` del `track.toml` (por defecto `straight`). El BFS solo expande la arista correspondiente a la posición activa, haciendo imposible llegar a un ramal cerrado.
 
 ---
 
