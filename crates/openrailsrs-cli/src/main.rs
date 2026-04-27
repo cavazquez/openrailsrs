@@ -1,3 +1,4 @@
+mod audio;
 mod cab;
 mod dispatch;
 use std::path::PathBuf;
@@ -11,7 +12,7 @@ use openrailsrs_export::{
 use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_sim::{
-    ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
+    LiveMultiSim, ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
     run_multi_train_from_scenario_file,
 };
 use openrailsrs_validate::{ValidationConfig, compare_csv_files_with_config};
@@ -126,6 +127,11 @@ enum Commands {
         #[command(subcommand)]
         cmd: CampaignCmd,
     },
+    /// Run a timetable (multi-train, non-interactive) and print per-train results.
+    Timetable {
+        #[command(subcommand)]
+        cmd: TimetableCmd,
+    },
     /// Import railway topology from an Overpass JSON file and write track.toml.
     ImportOsm {
         /// Path to the Overpass JSON file (see examples/osm/overpass_query.txt).
@@ -142,6 +148,18 @@ enum Commands {
         /// Disable bidirectional edges (by default railway edges are added in both directions).
         #[arg(long)]
         one_way: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum TimetableCmd {
+    /// Run all services in a timetable.toml and print a summary table.
+    Run {
+        /// Path to the timetable.toml file.
+        timetable: PathBuf,
+        /// Simulation speed multiplier (steps per second; higher = faster run).
+        #[arg(long, default_value_t = 100.0)]
+        speed: f64,
     },
 }
 
@@ -517,6 +535,73 @@ fn main() -> anyhow::Result<()> {
                 edges
             );
         }
+        Commands::Timetable { cmd } => match cmd {
+            TimetableCmd::Run { timetable, speed } => {
+                let mut sim = LiveMultiSim::from_timetable(&timetable)
+                    .map_err(|e| anyhow::anyhow!("timetable {}: {e}", timetable.display()))?;
+
+                // Steps per frame sized so we finish without taking forever.
+                let steps_per_frame = (speed as u32).max(1);
+                let mut block_wait_total: u32 = 0;
+
+                loop {
+                    let snapshots = sim.step_frame(steps_per_frame);
+                    // Count block-wait events (status transitions).
+                    for snap in &snapshots {
+                        if matches!(snap.status, openrailsrs_sim::TrainStatus::WaitingBlock) {
+                            block_wait_total += 1;
+                        }
+                    }
+                    if sim.all_arrived() || sim.sim_time() >= sim.duration() {
+                        break;
+                    }
+                }
+
+                let snapshots = sim.step_frame(0); // Final snapshot
+                println!(
+                    "\n  {:<8}  {:<10}  {:<8}  {:<8}  {:<10}  {:<12}  {:<10}",
+                    "ID", "Destino", "Salida", "Llegada", "Distancia", "Energía", "Estado"
+                );
+                println!("  {}", "─".repeat(76));
+                let mut trains_arrived: u32 = 0;
+                let mut total_energy_kwh: f64 = 0.0;
+                for snap in &snapshots {
+                    let state_label = match snap.status {
+                        openrailsrs_sim::TrainStatus::Running => "en marcha",
+                        openrailsrs_sim::TrainStatus::WaitingBlock => "bloqueado",
+                        openrailsrs_sim::TrainStatus::Arrived => {
+                            trains_arrived += 1;
+                            "LLEGÓ ✓"
+                        }
+                        openrailsrs_sim::TrainStatus::WaitingToDepart => "esperando",
+                    };
+                    let energy_kwh = snap.cumulative_energy_j / 3.6e6;
+                    total_energy_kwh += energy_kwh;
+                    println!(
+                        "  {:<8}  {:<10}  {:<8.0}  {:<8.0}  {:<10.1}  {:<12.2}  {:<10}",
+                        snap.id,
+                        snap.id,
+                        0.0_f64, // depart_s not stored in snapshot; use placeholder
+                        snap.time_s,
+                        snap.total_dist_m / 1000.0,
+                        energy_kwh,
+                        state_label,
+                    );
+                }
+                let total = snapshots.len() as u32;
+                let pct = (100 * trains_arrived).checked_div(total).unwrap_or(0);
+                let mean_kwh = total_energy_kwh / total.max(1) as f64;
+                println!();
+                println!(
+                    "  Red: {} trenes | Puntualidad {}% | Bloqueos totales: {} | Tiempo total {:.0} s | Energía media {:.2} kWh",
+                    total,
+                    pct,
+                    block_wait_total,
+                    sim.sim_time(),
+                    mean_kwh,
+                );
+            }
+        },
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;
             let results: Vec<_> = scenarios

@@ -1,5 +1,8 @@
 use openrailsrs_core::SimTime;
 
+use crate::brake::BrakeSystem;
+use crate::coupler::{CouplerState, VehicleState};
+
 #[derive(Clone, Debug)]
 pub struct TrainSimState {
     pub time: SimTime,
@@ -16,6 +19,19 @@ pub struct TrainSimState {
     pub regen_energy_j: f64,
     /// Diesel fuel consumed, in grams (0 for electric traction).
     pub fuel_consumption_g: f64,
+    /// Number of passengers currently on board.
+    pub passengers: u32,
+    /// Extra mass added by passengers (kg), updated at each stop departure.
+    pub extra_mass_kg: f64,
+    /// Air-brake system: per-cylinder state with pipe-propagation delay.
+    pub brake_system: BrakeSystem,
+    /// Per-vehicle kinematic states for multi-body coupler simulation.
+    /// Empty = single-mass mode (backwards-compatible).
+    pub vehicles: Vec<VehicleState>,
+    /// Couplers between adjacent vehicles; length = vehicles.len().saturating_sub(1).
+    pub couplers: Vec<CouplerState>,
+    /// Per-vehicle masses (kg) cached from the consist — parallel to `vehicles`.
+    pub vehicle_masses: Vec<f64>,
 }
 
 impl TrainSimState {
@@ -32,6 +48,12 @@ impl TrainSimState {
             odometer_m: 0.0,
             regen_energy_j: 0.0,
             fuel_consumption_g: 0.0,
+            passengers: 0,
+            extra_mass_kg: 0.0,
+            brake_system: BrakeSystem::default(),
+            vehicles: Vec::new(),
+            couplers: Vec::new(),
+            vehicle_masses: Vec::new(),
         }
     }
 

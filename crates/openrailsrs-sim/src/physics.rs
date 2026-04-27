@@ -1,5 +1,6 @@
 use openrailsrs_train::{DavisCoefficients, TractiveCurve};
 
+use crate::coupler::multi_body_step;
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
 
@@ -59,13 +60,54 @@ pub fn step(
         0.0
     };
 
-    let f_brake = state.brake.clamp(0.0, 1.0) * train.max_brake_n;
+    // Advance the air-brake system and read the total cylinder force.
+    // When no cylinders are registered (default state), fall back to the
+    // instantaneous scalar model so existing single-mass simulations are unchanged.
+    state.brake_system.step(state.brake, dt);
+    let f_brake = if !state.brake_system.cylinders.is_empty() {
+        state.brake_system.total_force_n()
+    } else {
+        state.brake.clamp(0.0, 1.0) * train.max_brake_n
+    };
     let f_resist = train.davis.a_n + train.davis.b_n_per_mps * v + train.davis.c_n_per_mps2 * v * v;
-    let f_grade = train.mass_kg * G * (edge_data.grade_percent / 100.0);
+    // Effective mass includes fixed consist mass plus any passenger load.
+    let effective_mass = train.mass_kg + state.extra_mass_kg;
+    let f_grade = effective_mass * G * (edge_data.grade_percent / 100.0);
 
-    let f_net = f_motor - f_brake - f_resist - f_grade;
-    let accel = f_net / train.mass_kg;
-    let v_new = (v + accel * dt).max(0.0);
+    // ── Multi-body coupler path ───────────────────────────────────────────────
+    // When the state has per-vehicle data (initialised by the runner), delegate
+    // to the spring-damper solver.  The resulting mean velocity is used for
+    // position integration and energy accounting below.
+    let v_new = if !state.vehicles.is_empty() {
+        // Per-vehicle brake and grade+resist forces (split proportionally by mass).
+        let total_mass = effective_mass;
+        let brake_forces: Vec<f64> = state
+            .vehicle_masses
+            .iter()
+            .map(|m| f_brake * m / total_mass)
+            .collect();
+        let grade_resist: Vec<f64> = state
+            .vehicle_masses
+            .iter()
+            .map(|m| (f_resist + f_grade) * m / total_mass)
+            .collect();
+        let masses: Vec<f64> = state.vehicle_masses.clone();
+        multi_body_step(
+            &mut state.vehicles,
+            &mut state.couplers,
+            f_motor,
+            &brake_forces,
+            &grade_resist,
+            &masses,
+            dt,
+        )
+        .max(0.0)
+    } else {
+        // ── Single-mass path (default) ────────────────────────────────────────
+        let f_net = f_motor - f_brake - f_resist - f_grade;
+        let accel = f_net / effective_mass;
+        (v + accel * dt).max(0.0)
+    };
 
     let v_avg = 0.5 * (v + v_new);
     let travel_max = v_avg * dt;

@@ -68,6 +68,7 @@ fn graph_with_stop_signal(clear_after_s: f64) -> TrackGraph {
         position_m: 0.0,
         aspect: SignalAspect::Stop,
         clear_after_s: Some(clear_after_s),
+        script: None,
     })
     .unwrap();
     g
@@ -147,6 +148,7 @@ fn duplicate_signal_id_is_rejected() {
         position_m: 100.0,
         aspect: SignalAspect::Clear,
         clear_after_s: None,
+        script: None,
     })
     .unwrap();
     let result = g.insert_signal(TrackSignal {
@@ -155,6 +157,7 @@ fn duplicate_signal_id_is_rejected() {
         position_m: 0.0,
         aspect: SignalAspect::Stop,
         clear_after_s: None,
+        script: None,
     });
     assert!(result.is_err(), "inserting duplicate signal id should fail");
 }
@@ -170,6 +173,7 @@ fn signal_on_unknown_edge_is_rejected() {
         position_m: 0.0,
         aspect: SignalAspect::Stop,
         clear_after_s: None,
+        script: None,
     });
     assert!(result.is_err());
 }
@@ -189,6 +193,7 @@ fn caution_signal_reduces_speed_on_edge() {
             position_m: 0.0,
             aspect: SignalAspect::Caution,
             clear_after_s: None,
+            script: None,
         })
         .unwrap();
 

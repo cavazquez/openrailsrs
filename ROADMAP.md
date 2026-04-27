@@ -278,6 +278,50 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - Escenario `retiro_victoria_duo.toml`: dos CAF 6000, el segundo sale 3 minutos después.
 - Misión "Servicio duplo" añadida a `mitre_campaign/campaign.toml` (requiere haber completado Retiro→Victoria).
 
+---
+
+## Fases 16, 17 y 18 ✅
+
+### Fase 16 — Carga de pasajeros y masa variable
+- `passengers_on`/`passengers_off` y `max_capacity` en modelo de escenario (`StopDef`, `TrainSection`).
+- `passengers: u32` + `extra_mass_kg: f64` en `TrainSimState`; actualizados al salir de cada parada.
+- `step()` usa `effective_mass = train.mass_kg + state.extra_mass_kg`.
+- HUD de cabina: "Pasajeros N / capacidad (+X kg)" con color según ocupación.
+- Columna `passengers` en CSV; fixture de ejemplo: `scenario_retiro_victoria.toml` con datos de boarding.
+
+### Fase 17 — Audio sintetizado en modo cabina
+- `AudioEngine::try_start()` lanza hilo con `rodio` 0.21 (ondas sinusoidales puras, sin archivos externos).
+- CI-safe: devuelve `None` si no hay dispositivo de audio.
+- Motor: volumen proporcional a velocidad. Freno: sine 800 Hz proporcional a brake. Bocina: sine 440 Hz 500 ms con tecla `H`.
+
+### Fase 18 — Timetable multi-tren desde archivo TOML
+- `TimetableFile` / `TimetableEntry` en `openrailsrs-scenarios` + `load_timetable()`.
+- `LiveMultiSim::from_timetable(path)`: N agentes desde timetable, grafo compartido.
+- `openrailsrs timetable run <timetable.toml>`: tabla de resultados + métricas de red (% llegados, bloqueos, energía media).
+- Ejemplo: `examples/mitre_timetable.toml` (4 servicios Retiro → Victoria).
+- Tests: `timetable_load.rs` (carga modelo) + `timetable_run.rs` (2 trenes llegan).
+
+### Fase 19 — Física de frenos avanzada (freno de aire) ✅
+- `BrakeSystem` + `BrakeCylinder`: tubería Westinghouse a ~200 m/s, retardo real por posición de vehículo.
+- `physics::step()` usa `brake_system.total_force_n()` cuando hay cilindros; fallback escalar si `cylinders.is_empty()`.
+- `runner.rs` y `multi_runner.rs` construyen el sistema desde el consist en carga.
+- Test `brake_propagation.rs`: cilindro trasero (30 m) frena ~0.15 s después del frontal.
+
+### Fase 20 — Dinámica de enganche (coupler forces) ✅
+- `coupler.rs`: `VehicleState`, `CouplerState` (rigidez 2e6 N/m, amortiguación 1e5 N·s/m, holgura 0.05 m), `multi_body_step()`.
+- `TrainSimState` tiene `vehicles`, `couplers`, `vehicle_masses`; vacíos → modo masa puntual (retrocompatible).
+- `physics::step()` delega al solver multi-cuerpo si `state.vehicles` no está vacío.
+- Test `coupler_forces.rs`: locomotora arranca, vagón quieto hasta que se tensa el enganche.
+
+### Fase 22 — Señalización dinámica con scripts TOML ✅
+- `SignalScript` en `TrackSignal`: `on_block_ahead`, `on_second_block_ahead`, `default`.
+- `TrackGraph::evaluate_signals(block_map)`: BFS de 2 pasos, prioridad Stop > Caution > Clear.
+- `runner.rs` y `multi_runner.rs` llaman `evaluate_signals` cada ~1 s de simulación.
+- Formato `track.toml` extendido con `[signals.script]` inline; retrocompatible.
+- 4 tests unitarios en `signal_script.rs`.
+
+---
+
 ## Fase 15 — Editor de rutas 🔲
 
 **Objetivo:** Crear y editar `track.toml` de forma interactiva.

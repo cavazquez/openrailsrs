@@ -8,47 +8,64 @@ start       = "n1618345519"   # Retiro
 destination = "n1427534099"   # Victoria
 
 [[route.stops]]
-node     = "n2151813707"   # Belgrano R
-arrive_s = 480.0           # 8 min desde Retiro
-depart_s = 490.0
+node          = "n2151813707"   # Belgrano R
+arrive_s      = 480.0           # 8 min desde Retiro
+depart_s      = 490.0
+passengers_on  = 80
+passengers_off = 20
 
 [[route.stops]]
-node     = "n290550420"    # Núñez
-arrive_s = 660.0           # 11 min
-depart_s = 670.0
+node          = "n290550420"    # Núñez
+arrive_s      = 660.0           # 11 min
+depart_s      = 670.0
+passengers_on  = 60
+passengers_off = 30
 
 [[route.stops]]
-node     = "n30419070"     # Vicente López
-arrive_s = 900.0           # 15 min
-depart_s = 910.0
+node          = "n30419070"     # Vicente López
+arrive_s      = 900.0           # 15 min
+depart_s      = 910.0
+passengers_on  = 40
+passengers_off = 40
 
 [[route.stops]]
-node     = "n30419065"     # Olivos
-arrive_s = 1020.0          # 17 min
-depart_s = 1030.0
+node          = "n30419065"     # Olivos
+arrive_s      = 1020.0          # 17 min
+depart_s      = 1030.0
+passengers_on  = 30
+passengers_off = 50
 
 [[route.stops]]
-node     = "n30419059"     # La Lucila
-arrive_s = 1140.0          # 19 min
-depart_s = 1150.0
+node          = "n30419059"     # La Lucila
+arrive_s      = 1140.0          # 19 min
+depart_s      = 1150.0
+passengers_on  = 20
+passengers_off = 30
 
 [[route.stops]]
-node     = "n30419055"     # Martínez
-arrive_s = 1320.0          # 22 min
-depart_s = 1330.0
+node          = "n30419055"     # Martínez
+arrive_s      = 1320.0          # 22 min
+depart_s      = 1330.0
+passengers_on  = 15
+passengers_off = 35
 
 [[route.stops]]
-node     = "n1596221135"   # Acassuso
-arrive_s = 1440.0          # 24 min
-depart_s = 1450.0
+node          = "n1596221135"   # Acassuso
+arrive_s      = 1440.0          # 24 min
+depart_s      = 1450.0
+passengers_on  = 10
+passengers_off = 25
 
 [[route.stops]]
-node     = "n30418815"     # San Isidro C
-arrive_s = 1560.0          # 26 min
-depart_s = 1570.0
+node          = "n30418815"     # San Isidro C
+arrive_s      = 1560.0          # 26 min
+depart_s      = 1570.0
+passengers_on  = 5
+passengers_off = 20
 
 [train]
-consist = "consists/caf_6000.con"
+consist      = "consists/caf_6000.con"
+max_capacity = 450
 
 [train.davis]
 # 6 coches CAF 6000 — resist total aprox.

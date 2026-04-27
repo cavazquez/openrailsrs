@@ -5,5 +5,5 @@ time_step_s = 0.1
 final_time_s = 1713.4866055712625
 final_odometer_m = 22930.199999999804
 final_velocity_mps = 0.0
-cumulative_energy_kwh = 50.27466854429634
+cumulative_energy_kwh = 33.687065927741095
 reached_destination = true

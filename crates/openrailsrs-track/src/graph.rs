@@ -175,6 +175,72 @@ impl TrackGraph {
     pub fn switch_position(&self, node: &str) -> Option<SwitchPosition> {
         self.switch_positions.get(node).copied()
     }
+
+    /// Evaluate all scripted signals and update their aspects based on block occupancy.
+    ///
+    /// `block_map` maps edge IDs to the ID of the train currently occupying that edge.
+    /// Only signals that have a [`crate::signal::SignalScript`] are updated; static signals
+    /// are left unchanged.
+    ///
+    /// Algorithm for each scripted signal:
+    /// 1. Find the edge the signal sits on (`signal.edge_id`).
+    /// 2. Identify the *destination* node of that edge → call it `n1`.
+    /// 3. First block ahead = any outgoing edge from `n1`.
+    /// 4. Second block ahead = any outgoing edge from the destination node of each
+    ///    first-block edge.
+    /// 5. Apply the highest-priority rule whose condition is met.
+    pub fn evaluate_signals(&mut self, block_map: &HashMap<String, String>) {
+        use crate::signal::SignalAspect;
+
+        // Collect signal updates separately to avoid borrowing `self` mutably while
+        // iterating over it.
+        let updates: Vec<(String, SignalAspect)> = self
+            .signals
+            .values()
+            .filter_map(|sig| {
+                let script = sig.script.as_ref()?;
+
+                // Destination node of the signal's edge.
+                let edge = self.edges.get(&sig.edge_id)?;
+                let dest_node_str = edge.to.0.clone();
+
+                // First-block edges: outgoing from dest_node.
+                let first_edges = self.outgoing_edges(&dest_node_str).to_vec();
+                let block1_occupied = first_edges.iter().any(|e| block_map.contains_key(e));
+
+                if block1_occupied {
+                    if let Some(aspect) = script.on_block_ahead {
+                        return Some((sig.id.clone(), aspect));
+                    }
+                }
+
+                // Second-block edges: outgoing from each first-edge destination.
+                let block2_occupied = first_edges.iter().any(|e| {
+                    let dest2 = self.edges.get(e).map(|ed| ed.to.0.clone());
+                    dest2.is_some_and(|d| {
+                        self.outgoing_edges(&d)
+                            .iter()
+                            .any(|e2| block_map.contains_key(e2))
+                    })
+                });
+
+                if block2_occupied {
+                    if let Some(aspect) = script.on_second_block_ahead {
+                        return Some((sig.id.clone(), aspect));
+                    }
+                }
+
+                // Default.
+                script.default.map(|aspect| (sig.id.clone(), aspect))
+            })
+            .collect();
+
+        for (id, aspect) in updates {
+            if let Some(sig) = self.signals.get_mut(&id) {
+                sig.aspect = aspect;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

@@ -536,60 +536,63 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
-### Fase 16 — Carga de pasajeros y masa variable `🔲`
+### Fase 16 — Carga de pasajeros y masa variable `✅`
 
 **Dificultad:** ⭐ Fácil (días)
 
-- Campo `passengers: u32` en `TrainSimState`, actualizado en cada parada según `[[route.stops]]`.
-- Masa total del consist aumenta con los pasajeros embarcados (p. ej. 70 kg/pasajero).
-- El `step()` ya usa `mass_kg` dinámicamente; solo hay que actualizarlo entre paradas.
-- Visualizar en el HUD del modo cabina: "Pasajeros: 342 / 450".
+- `passengers_on`/`passengers_off` por parada en `StopDef`; `max_capacity` en `TrainSection`.
+- `passengers: u32` + `extra_mass_kg: f64` en `TrainSimState`; actualizados en cada `StationDeparture`.
+- `step()` usa `effective_mass = train.mass_kg + state.extra_mass_kg` → física variable.
+- HUD de cabina muestra "Pasajeros N / capacidad (+X kg)".
+- Columna `passengers` en CSV de salida.
 
 ---
 
-### Fase 17 — Audio básico `🔲`
+### Fase 17 — Audio básico `✅`
 
 **Dificultad:** ⭐⭐ Fácil-media (semanas)
 
-- Integrar [`rodio`](https://crates.io/crates/rodio) (puro Rust, cross-platform).
-- Sonidos: motor (pitch proporcional a throttle×v), frenos (chirriado al brake > 0.5), bocina (tecla `H`), paso a nivel, anuncio de estación.
-- Archivos `.ogg` / `.wav` en `examples/sounds/`; cargados desde `scenario.toml` via `[audio]`.
-- Sin bloquear el hilo de simulación: rodio corre en su propio thread.
+- [`rodio`](https://crates.io/crates/rodio) 0.21 con ondas sinusoidales generadas en tiempo real (sin archivos externos).
+- `AudioEngine::try_start()` — CI-safe: devuelve `None` si no hay dispositivo de audio.
+- Sonidos: motor (volumen proporcional a velocidad), frenos (volumen al brake), bocina (`H`).
+- Thread dedicado recibe comandos vía `mpsc::channel`.
 
 ---
 
-### Fase 18 — Timetable completo (red multi-tren) `🔲`
+### Fase 18 — Timetable completo (red multi-tren) `✅`
 
 **Dificultad:** ⭐⭐ Fácil-media (semanas)
 
-- Archivo `timetable.csv` con columnas `train_id, start_node, end_node, depart_s`.
-- `openrailsrs timetable run <timetable.csv> <route_dir>` instancia `N` agentes en `LiveMultiSim`.
-- Métricas de red: puntualidad media, trenes bloqueados, tasa de ocupación de bloques.
-- Base para simular la operación real de la Línea Mitre completa (30+ servicios diarios).
+- Archivo `timetable.toml` con `[[trains]]`: `id`, `consist`, `start`, `destination`, `depart_s`.
+- `LiveMultiSim::from_timetable(path)` — carga N agentes desde el timetable sobre el grafo compartido.
+- `openrailsrs timetable run <timetable.toml>` imprime tabla de resultados + métricas de red.
+- Métricas: trenes llegados, bloqueos totales, energía media, tiempo total.
+- Ejemplo: `examples/mitre_timetable.toml` (4 servicios Retiro → Victoria).
 
 ---
 
-### Fase 19 — Física de frenos avanzada (freno de aire) `🔲`
+### Fase 19 — Física de frenos avanzada (freno de aire) `✅`
 
-**Dificultad:** ⭐⭐⭐ Media (1-2 meses)
+**Dificultad:** ⭐⭐⭐ Media
 
-- Modelo de tubería de freno Westinghouse/EP: presión viaja a ~200 m/s, cada vagón tiene un cilindro de freno.
-- `BrakeSystem` con estados: `Charged`, `Applying`, `Applied`, `Releasing`.
-- Retardo de propagación hace que los vagones traseros frenen más tarde → efecto de compresión del tren.
-- Crítico para la seguridad en gradientes largos (ej. sierra).
-- `step()` recibe vector de fuerzas de freno por vagón en lugar de un escalar global.
+- `BrakeSystem` con `BrakeCylinder` por vehículo: presión viaja a ~200 m/s por la tubería.
+- Estados por cilindro: `Charged`, `Applying`, `Applied`, `Releasing` con rampa configurable.
+- Retardo de propagación: vagón trasero (30 m) frena ~0.15 s después del frontal (verificado en test).
+- `physics::step()` usa `brake_system.total_force_n()` cuando hay cilindros; fallback escalar para legado.
+- `runner.rs` y `multi_runner.rs` construyen `BrakeSystem` desde el consist al cargar la simulación.
+- Activado en el ejemplo Mitre y el escenario de prueba smoke.
 
 ---
 
-### Fase 20 — Dinámica de enganche (coupler forces) `🔲`
+### Fase 20 — Dinámica de enganche (coupler forces) `✅`
 
-**Dificultad:** ⭐⭐⭐ Media (1-2 meses)
+**Dificultad:** ⭐⭐⭐ Media
 
-- Simular cada vehículo del consist como partícula independiente conectada por resortes amortiguados.
-- `CouplerState` con `compression_n` / `tension_n`; límite de ruptura configurable.
-- Permite simular el "tirón" al arrancar un tren de carga largo y el choque al frenar.
-- Necesario para material de carga (locomotora + 30 vagones) vs. EMU rígido.
-- `Consist` pasa de ser un agregado escalar a un `Vec<VehicleState>`.
+- `coupler.rs`: `VehicleState` (velocidad/posición individual), `CouplerState` (rigidez, amortiguación, holgura, fuerza de ruptura).
+- `multi_body_step()`: solver de resorte-amortiguador entre vehículos adyacentes; retorna velocidad media ponderada.
+- `TrainSimState` tiene `vehicles`, `couplers` y `vehicle_masses`; vacíos → modo de masa puntual (compatible).
+- `physics::step()` delega al solver multi-cuerpo si `state.vehicles` no está vacío.
+- Test verifica que el vagón arranca después de la locomotora (holgura inicial de 0.05 m).
 
 ---
 
@@ -605,15 +608,17 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
-### Fase 22 — Señalización avanzada (ETCS / scripts) `🔲`
+### Fase 22 — Señalización dinámica con scripts TOML `✅`
 
-**Dificultad:** ⭐⭐⭐⭐ Alta (2-3 meses)
+**Dificultad:** ⭐⭐⭐⭐ Alta
 
-- Motor de scripts para señales: evaluar condiciones arbitrarias (distancia al próximo tren, velocidad, autorización de circulación).
-- Implementar **ETCS nivel 1/2** básico: ATP con curva de frenado supervisada, balises virtuales.
-- Señalización argentina (UEPFP): semáforos de 3 aspectos con bloqueo absoluto y relativo.
-- `SignalScript` en `track.toml` (TOML inline o archivo `.signal.toml` externo).
-- El runner lee el script y actualiza `SignalAspect` en cada tick según el estado de la red.
+- `SignalScript` añadido a `TrackSignal`: reglas `on_block_ahead`, `on_second_block_ahead`, `default`.
+- `TrackGraph::evaluate_signals(block_map)` evalúa todos los scripts y muta los aspectos con prioridad (Stop > Caution > Clear).
+- `runner.rs` llama `evaluate_signals` cada ~1 s real de simulación; sincroniza `signal_runtime`.
+- `multi_runner.rs` evalúa con el `block_map` multi-tren real (todos los edges ocupados).
+- Formato `track.toml` extendido: `[signals.script]` inline, retrocompatible (sin script = señal estática).
+- 4 tests unitarios en `openrailsrs-track/tests/signal_script.rs` cubren todos los casos.
+- Base para ETCS/UEPFP en fases futuras.
 
 ---
 

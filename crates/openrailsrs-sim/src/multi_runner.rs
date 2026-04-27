@@ -11,11 +11,12 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef};
+use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef, load_timetable};
 use openrailsrs_track::{SignalAspect, SwitchPosition};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
 use crate::SimError;
+use crate::brake::BrakeSystem;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
 use crate::path_data::PathData;
@@ -81,6 +82,33 @@ fn auto_decide(vel_mps: f64, speed_limit_mps: f64) -> (f64, f64) {
 
 /// Asset root for resolving .eng/.wag paths inside a consist file.
 /// Paths in the .con reference `consists/foo.eng` which are relative to the route root.
+const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
+
+fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
+    const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
+    let mut pos = 0.0_f64;
+    let pairs: Vec<(f64, f64)> = consist
+        .vehicles
+        .iter()
+        .map(|v| {
+            let cylinder_pos = pos;
+            pos += DEFAULT_VEHICLE_LENGTH_M;
+            let force_n = match v {
+                openrailsrs_train::Vehicle::Loco(l) => l.max_brake_force_n,
+                openrailsrs_train::Vehicle::Wagon(w) => w.max_brake_force_n,
+            };
+            (cylinder_pos, force_n)
+        })
+        .collect();
+    BrakeSystem::from_vehicles(&pairs, BRAKE_PIPE_SPEED_MPS)
+}
+
+fn build_brake_from_path(consist_path: &Path) -> BrakeSystem {
+    load_consist_with_asset_root(consist_path, consist_root(consist_path))
+        .map(|c| build_brake_system(&c))
+        .unwrap_or_default()
+}
+
 fn consist_root(consist_path: &Path) -> &Path {
     consist_path
         .parent()
@@ -157,6 +185,7 @@ pub fn run_scenario_multi_train(
         let physics = build_physics(&consist_path, scenario_dir, scenario.train.davis.as_ref())?;
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
+        state.brake_system = build_brake_from_path(&consist_path);
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
         let csv_path = scenario_dir.join(&scenario.output.csv);
@@ -210,6 +239,7 @@ pub fn run_scenario_multi_train(
         let physics = build_physics(&consist_path, scenario_dir, entry.davis.as_ref())?;
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
+        state.brake_system = build_brake_from_path(&consist_path);
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);
         if let Some(p) = csv_path.parent() {
@@ -451,6 +481,18 @@ pub fn run_scenario_multi_train(
             ));
         }
 
+        // Evaluate scripted signals every ~1 s of simulation time.
+        let eval_period = (1.0 / dt).round() as u64;
+        if global_steps % eval_period.max(1) == 0 {
+            graph.evaluate_signals(&block_map);
+            // Sync each agent's signal_runtime map with the updated aspects.
+            for agent in agents.iter_mut() {
+                for sig in graph.signals() {
+                    agent.signal_runtime.insert(sig.id.clone(), sig.aspect);
+                }
+            }
+        }
+
         // Early exit once all trains have arrived.
         if agents.iter().all(|a| a.arrived) {
             break;
@@ -590,6 +632,7 @@ impl LiveMultiSim {
                 .sum();
             let path_data = PathData::from_path(&path_edges, &graph);
             let mut state = TrainSimState::new(path_edges);
+            state.brake_system = build_brake_from_path(&consist_path);
             state.time = openrailsrs_core::SimTime(0.0);
             agents.push(LiveAgent {
                 id: "primary".to_string(),
@@ -623,6 +666,7 @@ impl LiveMultiSim {
                 .sum();
             let path_data = PathData::from_path(&path_edges, &g2);
             let mut state = TrainSimState::new(path_edges);
+            state.brake_system = build_brake_from_path(&consist_path);
             state.time = openrailsrs_core::SimTime(entry.start_time_s);
             agents.push(LiveAgent {
                 id: entry.id.clone(),
@@ -654,6 +698,68 @@ impl LiveMultiSim {
             t: 0.0,
             duration,
             _scenario_dir: scenario_dir.to_path_buf(),
+        })
+    }
+
+    /// Load and initialise from a timetable file (`timetable.toml`).
+    ///
+    /// All trains share the same route graph; the consist path in each entry is
+    /// resolved relative to the route directory specified in `[timetable].route`.
+    pub fn from_timetable(timetable_path: &Path) -> Result<Self, SimError> {
+        let tt = load_timetable(timetable_path)?;
+        let timetable_dir = timetable_path
+            .parent()
+            .ok_or_else(|| SimError::Msg("timetable path has no parent directory".into()))?;
+
+        let route_dir = timetable_dir.join(&tt.timetable.route);
+        let graph = load_track_graph_from_route_dir(&route_dir)?;
+
+        let dt = tt.timetable.time_step_s;
+        let duration = tt.timetable.duration_s;
+        let mut agents: Vec<LiveAgent> = Vec::new();
+
+        for entry in &tt.trains {
+            let path_edges = crate::path::edge_path(&graph, &entry.start, &entry.destination)?;
+            let consist_path = route_dir.join(&entry.consist);
+            let physics = build_physics(&consist_path, &route_dir, None)?;
+            let total_dist_m: f64 = path_edges
+                .iter()
+                .filter_map(|eid| graph.edge(eid))
+                .map(|e| e.length_m)
+                .sum();
+            let path_data = PathData::from_path(&path_edges, &graph);
+            let mut state = TrainSimState::new(path_edges);
+            state.brake_system = build_brake_from_path(&consist_path);
+            state.time = openrailsrs_core::SimTime(entry.depart_s);
+            agents.push(LiveAgent {
+                id: entry.id.clone(),
+                state,
+                physics,
+                path_data,
+                phase: AgentPhase::Normal,
+                start_time_s: entry.depart_s,
+                arrived: false,
+                total_dist_m,
+            });
+        }
+
+        let mut block_map: HashMap<String, String> = HashMap::new();
+        for agent in &agents {
+            if agent.start_time_s <= 0.0 {
+                if let Some(eid) = agent.state.current_edge() {
+                    block_map.insert(eid.to_string(), agent.id.clone());
+                }
+            }
+        }
+
+        Ok(Self {
+            agents,
+            block_map,
+            graph,
+            dt,
+            t: 0.0,
+            duration,
+            _scenario_dir: timetable_dir.to_path_buf(),
         })
     }
 
@@ -841,5 +947,10 @@ impl LiveMultiSim {
     /// Elapsed simulation time (seconds).
     pub fn sim_time(&self) -> f64 {
         self.t
+    }
+
+    /// Configured total simulation duration (seconds).
+    pub fn duration(&self) -> f64 {
+        self.duration
     }
 }

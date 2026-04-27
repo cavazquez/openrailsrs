@@ -88,6 +88,18 @@ pub struct SignalDef {
     pub aspect: SignalAspectDef,
     #[serde(default)]
     pub clear_after_s: Option<f64>,
+    #[serde(default)]
+    pub script: Option<SignalScriptDef>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct SignalScriptDef {
+    #[serde(default)]
+    pub on_block_ahead: Option<SignalAspectDef>,
+    #[serde(default)]
+    pub on_second_block_ahead: Option<SignalAspectDef>,
+    #[serde(default)]
+    pub default: Option<SignalAspectDef>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -168,6 +180,23 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
             position_m: s.position_m,
             aspect,
             clear_after_s: s.clear_after_s,
+            script: s.script.map(|sc| openrailsrs_track::SignalScript {
+                on_block_ahead: sc.on_block_ahead.map(|a| match a {
+                    SignalAspectDef::Clear => SignalAspect::Clear,
+                    SignalAspectDef::Caution => SignalAspect::Caution,
+                    SignalAspectDef::Stop => SignalAspect::Stop,
+                }),
+                on_second_block_ahead: sc.on_second_block_ahead.map(|a| match a {
+                    SignalAspectDef::Clear => SignalAspect::Clear,
+                    SignalAspectDef::Caution => SignalAspect::Caution,
+                    SignalAspectDef::Stop => SignalAspect::Stop,
+                }),
+                default: sc.default.map(|a| match a {
+                    SignalAspectDef::Clear => SignalAspect::Clear,
+                    SignalAspectDef::Caution => SignalAspect::Caution,
+                    SignalAspectDef::Stop => SignalAspect::Stop,
+                }),
+            }),
         })?;
     }
     Ok(g)

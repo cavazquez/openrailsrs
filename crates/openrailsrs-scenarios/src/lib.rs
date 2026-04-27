@@ -2,6 +2,7 @@
 
 pub mod error;
 pub mod model;
+pub mod timetable;
 
 pub use error::ScenarioError;
 pub use model::{
@@ -9,6 +10,7 @@ pub use model::{
     ScenarioFile, ScenarioMeta, SimulationSection, StopDef, SwitchDef, SwitchPositionDef,
     TrainEntryDef, TrainSection,
 };
+pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 
 use std::path::Path;
 

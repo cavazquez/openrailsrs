@@ -31,6 +31,12 @@ pub struct StopDef {
     /// How long the train must dwell at this stop before departing (seconds, default 0).
     #[serde(default)]
     pub dwell_s: f64,
+    /// Passengers boarding at this stop.
+    #[serde(default)]
+    pub passengers_on: u32,
+    /// Passengers alighting at this stop.
+    #[serde(default)]
+    pub passengers_off: u32,
 }
 
 /// Override the runtime position of a named switch node for this scenario.
@@ -82,6 +88,9 @@ pub struct TrainSection {
     pub consist: String,
     #[serde(default)]
     pub davis: Option<DavisSection>,
+    /// Maximum passenger capacity; `None` = unlimited.
+    #[serde(default)]
+    pub max_capacity: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Default)]

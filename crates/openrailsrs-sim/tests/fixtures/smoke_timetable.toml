@@ -1,0 +1,19 @@
+[timetable]
+name        = "Smoke timetable — 2 freight trains"
+route       = "examples/smoke/routes/test"
+duration_s  = 700.0
+time_step_s = 1.0
+
+[[trains]]
+id          = "F-1"
+consist     = "consists/freight.con"
+start       = "yard_a"
+destination = "yard_b"
+depart_s    = 0.0
+
+[[trains]]
+id          = "F-2"
+consist     = "consists/freight.con"
+start       = "yard_a"
+destination = "yard_b"
+depart_s    = 60.0

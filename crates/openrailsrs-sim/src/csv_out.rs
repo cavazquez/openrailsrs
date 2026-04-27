@@ -15,6 +15,7 @@ struct SampleRow {
     pub cumulative_energy_kwh: f64,
     pub regen_energy_kwh: f64,
     pub fuel_consumption_l: f64,
+    pub passengers: u32,
     pub throttle: f64,
     pub brake: f64,
 }
@@ -35,6 +36,7 @@ impl<W: Write> RunCsvWriter<W> {
             "cumulative_energy_kwh",
             "regen_energy_kwh",
             "fuel_consumption_l",
+            "passengers",
             "throttle",
             "brake",
         ])?;
@@ -55,6 +57,7 @@ impl<W: Write> RunCsvWriter<W> {
             cumulative_energy_kwh: state.cumulative_energy_j / 3.6e6,
             regen_energy_kwh: state.regen_energy_j / 3.6e6,
             fuel_consumption_l: state.fuel_consumption_g / 840.0,
+            passengers: state.passengers,
             throttle: state.throttle,
             brake: state.brake,
         };

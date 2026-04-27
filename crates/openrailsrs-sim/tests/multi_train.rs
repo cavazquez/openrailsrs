@@ -75,6 +75,7 @@ fn make_two_train_scenario(
         train: TrainSection {
             consist: "consists/freight.con".into(),
             davis: Some(heavy_davis()),
+            max_capacity: None,
         },
         gameplay: GameplaySection {
             objective: ObjectiveKind::Arrive,

@@ -5,12 +5,15 @@
 //!   W / Up    → increase throttle (+10 %)
 //!   S / Down  → decrease throttle / apply brake
 //!   Space     → emergency brake (full stop)
+//!   H         → sound horn
 //!   Q / Esc   → quit
 //!
 //! The simulation runs at `speed_mul` × real time so you feel the inertia of a real train.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
+
+use crate::audio::{AudioCmd, AudioEngine};
 
 use crossterm::{
     cursor,
@@ -139,6 +142,9 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     let mut accrued_penalty: f64 = 0.0;
     let mut passed_stops: Vec<(String, f64)> = Vec::new(); // (name, delay_s)
 
+    // ── Audio engine (CI-safe: None when no audio device) ────────────────────
+    let audio = AudioEngine::try_start();
+
     // ── Terminal setup ───────────────────────────────────────────────────────
     terminal::enable_raw_mode().map_err(|e| {
         anyhow::anyhow!(
@@ -179,6 +185,11 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
                             brake = 1.0;
                             emergency = true;
                         }
+                        KeyCode::Char('h') | KeyCode::Char('H') => {
+                            if let Some(ref a) = audio {
+                                a.send(AudioCmd::Horn);
+                            }
+                        }
                         KeyCode::Char('q') | KeyCode::Esc | KeyCode::Char('c')
                             if modifiers.contains(KeyModifiers::CONTROL) =>
                         {
@@ -187,6 +198,12 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
                         _ => {}
                     }
                 }
+            }
+
+            // ── Send audio updates once per frame ────────────────────────────
+            if let Some(ref a) = audio {
+                a.send(AudioCmd::SetVelocity(state.velocity_mps));
+                a.send(AudioCmd::SetBraking(brake));
             }
 
             // ── Advance simulation by one frame worth of sim-time ────────────
@@ -362,6 +379,34 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
                     ResetColor,
                     Print(format!("  ({} paradas pasadas)\n", next_stop_idx)),
                 )?;
+
+                // Passenger count (only if scenario has boarding data)
+                if state.passengers > 0 || state.extra_mass_kg > 0.0 {
+                    let cap_str = scenario
+                        .train
+                        .max_capacity
+                        .map(|c| format!(" / {c}"))
+                        .unwrap_or_default();
+                    let pax_color = scenario
+                        .train
+                        .max_capacity
+                        .map(|c| {
+                            if state.passengers as f64 > c as f64 * 0.9 {
+                                Color::Yellow
+                            } else {
+                                Color::Green
+                            }
+                        })
+                        .unwrap_or(Color::Green);
+                    execute!(
+                        stdout,
+                        Print(" Pasajeros       "),
+                        SetForegroundColor(pax_color),
+                        Print(format!("{}{}", state.passengers, cap_str)),
+                        ResetColor,
+                        Print(format!("  (+{:.0} kg)\n", state.extra_mass_kg)),
+                    )?;
+                }
             }
 
             execute!(

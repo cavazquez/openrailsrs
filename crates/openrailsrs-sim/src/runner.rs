@@ -9,11 +9,42 @@ use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asse
 use serde::Serialize;
 
 use crate::SimError;
+use crate::brake::BrakeSystem;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
 use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, step};
 use crate::state::TrainSimState;
+
+/// Average mass per passenger including luggage (kg).
+const KG_PER_PASSENGER: f64 = 70.0;
+
+/// Pipe propagation speed for the Westinghouse brake system (m/s).
+const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
+
+/// Build a [`BrakeSystem`] from a consist's vehicle list.
+///
+/// Each vehicle gets a cylinder whose position is the cumulative length of
+/// the vehicles ahead of it.  When exact lengths are unavailable a default of
+/// 15 m per vehicle is assumed.
+fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
+    const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
+    let mut pos = 0.0_f64;
+    let pairs: Vec<(f64, f64)> = consist
+        .vehicles
+        .iter()
+        .map(|v| {
+            let cylinder_pos = pos;
+            pos += DEFAULT_VEHICLE_LENGTH_M;
+            let force_n = match v {
+                openrailsrs_train::Vehicle::Loco(l) => l.max_brake_force_n,
+                openrailsrs_train::Vehicle::Wagon(w) => w.max_brake_force_n,
+            };
+            (cylinder_pos, force_n)
+        })
+        .collect();
+    BrakeSystem::from_vehicles(&pairs, BRAKE_PIPE_SPEED_MPS)
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct DriverInput {
@@ -198,8 +229,19 @@ pub fn run_scenario_headless_with_driver(
         .map(|s| (s.node.clone(), s.dwell_s))
         .collect();
 
+    // Map node_id -> (passengers_off, passengers_on) for boarding/alighting.
+    let stop_passengers: HashMap<String, (u32, u32)> = scenario
+        .route
+        .stops
+        .iter()
+        .filter(|s| s.passengers_on > 0 || s.passengers_off > 0)
+        .map(|s| (s.node.clone(), (s.passengers_off, s.passengers_on)))
+        .collect();
+    let max_capacity = scenario.train.max_capacity;
+
     let path_data = PathData::from_path(&path_edges, &graph);
     let mut state = TrainSimState::new(path_edges);
+    state.brake_system = build_brake_system(&consist);
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;
@@ -279,6 +321,7 @@ pub fn run_scenario_headless_with_driver(
                             remaining: dwell_s,
                         };
                     } else {
+                        update_passengers(&mut state, &node_id, &stop_passengers, max_capacity);
                         events.push(SimEvent::StationDeparture {
                             time_s: state.time_s(),
                             node_id,
@@ -309,6 +352,7 @@ pub fn run_scenario_headless_with_driver(
 
                 if *remaining <= 0.0 {
                     let node_id = node.clone();
+                    update_passengers(&mut state, &node_id, &stop_passengers, max_capacity);
                     events.push(SimEvent::StationDeparture {
                         time_s: state.time_s(),
                         node_id,
@@ -518,6 +562,21 @@ pub fn run_scenario_headless_with_driver(
 
                 csv_writer.write_sample(&state)?;
                 steps += 1;
+
+                // Evaluate scripted signals every ~1 s of simulation time.
+                // Build a single-entry block_map for this train's current edge.
+                if steps % ((1.0 / dt).round() as u64).max(1) == 0 {
+                    let mut block_map = HashMap::new();
+                    if let Some(eid) = state.current_edge() {
+                        block_map.insert(eid.to_string(), "player".to_string());
+                    }
+                    graph.evaluate_signals(&block_map);
+                    // Sync runtime map with updated aspects.
+                    for sig in graph.signals() {
+                        signal_runtime.insert(sig.id.clone(), sig.aspect);
+                    }
+                }
+
                 if step_res.arrived {
                     break;
                 }
@@ -551,6 +610,25 @@ pub fn run_scenario_headless_with_driver(
         final_state: state,
         events,
     })
+}
+
+/// Update passenger count and extra_mass_kg on departure from a stop.
+fn update_passengers(
+    state: &mut TrainSimState,
+    node_id: &str,
+    stop_passengers: &HashMap<String, (u32, u32)>,
+    max_capacity: Option<u32>,
+) {
+    if let Some(&(off, on)) = stop_passengers.get(node_id) {
+        let alighted = off.min(state.passengers);
+        let boarded = if let Some(cap) = max_capacity {
+            on.min(cap.saturating_sub(state.passengers - alighted))
+        } else {
+            on
+        };
+        state.passengers = state.passengers - alighted + boarded;
+        state.extra_mass_kg = state.passengers as f64 * KG_PER_PASSENGER;
+    }
 }
 
 /// Convenience: load `scenario.toml` from `scenario_path` (file), resolve sibling directory.

@@ -1,0 +1,36 @@
+# Línea Mitre — servicio matutino
+# Cuatro servicios Retiro → Victoria con salidas escalonadas cada 15 min.
+
+[timetable]
+name       = "Línea Mitre — servicio matutino"
+route      = "examples/routes/mitre"
+duration_s = 7200.0
+time_step_s = 1.0
+
+[[trains]]
+id          = "S-401"
+consist     = "consists/caf_6000.con"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+depart_s    = 0.0
+
+[[trains]]
+id          = "S-402"
+consist     = "consists/caf_6000.con"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+depart_s    = 900.0           # +15 min
+
+[[trains]]
+id          = "S-403"
+consist     = "consists/caf_6000.con"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+depart_s    = 1800.0          # +30 min
+
+[[trains]]
+id          = "S-404"
+consist     = "consists/caf_6000.con"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+depart_s    = 2700.0          # +45 min
