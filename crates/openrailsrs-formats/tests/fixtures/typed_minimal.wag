@@ -1,0 +1,5 @@
+(Wagon
+  (Type "typed_wagon")
+  (Mass 22000)
+  (MaxBrakeForce 90000)
+)

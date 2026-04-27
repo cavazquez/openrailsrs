@@ -16,4 +16,17 @@ pub enum FormatError {
 
     #[error("extra input after complete expression at byte {0}")]
     TrailingInput(usize),
+
+    #[error("missing required field `{key}` in {context}")]
+    MissingField { key: String, context: String },
+
+    #[error("unexpected atom for `{key}` in {context}: {expected}")]
+    UnexpectedAtom {
+        key: String,
+        context: String,
+        expected: String,
+    },
+
+    #[error("unknown unit `{0}`")]
+    UnknownUnit(String),
 }

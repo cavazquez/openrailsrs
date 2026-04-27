@@ -1,0 +1,8 @@
+(Engine
+  (Name "typed_engine")
+  (Mass 81000)
+  (MaxPower 2100000)
+  (MaxVelocity 108)
+  (MaxTractiveEffort 360000)
+  (MaxBrakeForce 220000)
+)

@@ -61,6 +61,24 @@ Simulador ferroviario pensado como **videojuego de simulación**, pero con **nú
 
 Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 
+### Estado de fases (roadmap)
+
+| Fase | Estado actual | Evidencia en el repo |
+|------|---------------|----------------------|
+| 0 — Bootstrap | Base implementada | Workspace Cargo, crates modulares, CI y documentación. |
+| 1 — Parsers MSTS/OpenRails | Base implementada + profundización inicial | `openrailsrs-formats` (AST genérico + adaptadores tipados iniciales). |
+| 2 — Datos/config juego | Base implementada | `openrailsrs-scenarios` con carga/validación de `scenario.toml`. |
+| 3 — Modelo lógico ferroviario | Base implementada | `openrailsrs-track` + `openrailsrs-route` + export DOT. |
+| 4 — Modelo físico del tren | Base implementada | `openrailsrs-train` (locomotoras, vagones, consists). |
+| 5 — Simulación headless | Base implementada | `openrailsrs-sim` + salidas `run.csv`/`run.toml`. |
+| 6 — Capa de videojuego headless | Base implementada | `openrailsrs-game` + `play-headless` + `outcome.toml`. |
+| 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
+| 8 — Debug sin gráficos | Base implementada | `openrailsrs-export` (DOT/GeoJSON/ASCII/replay). |
+| 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
+| 10 — Viewer mínimo | Base implementada | `openrailsrs-viewer` 2D desacoplado del núcleo. |
+
+> Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
+
 ### Principios
 
 - El núcleo corre **sin gráficos**; la simulación no depende de rendering.

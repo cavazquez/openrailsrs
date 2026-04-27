@@ -1,0 +1,7 @@
+(Train
+  (TrainCfg
+    (Name "typed_consist")
+    (Engine "typed_minimal.eng")
+    (Wagon "typed_minimal.wag")
+  )
+)
