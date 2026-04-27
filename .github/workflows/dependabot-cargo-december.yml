@@ -1,0 +1,35 @@
+name: Dependabot Cargo December Check
+
+on:
+  schedule:
+    # Una vez al año: 1 de diciembre a las 03:00 UTC
+    - cron: "0 3 1 12 *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo_toml_healthcheck:
+    name: Cargo.toml and dependency healthcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace-cache
+
+      - name: Validate Cargo manifests
+        run: cargo metadata --format-version 1 --no-deps > /dev/null
+
+      - name: Validate dependency graph compiles
+        run: cargo check --workspace --all-features
+
