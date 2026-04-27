@@ -1,133 +1,223 @@
 # Roadmap openrailsrs
 
-Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona a videojuego de simulación: primero núcleo físico/lógico y herramientas de consola; la visualización queda al final y en crates separados.
+Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona a videojuego de simulación.
 
-**Restricciones transversales:** Rust estable, Linux-first, CSV para series temporales, TOML para escenarios y metadata, sin motor gráfico (Bevy/wgpu) en el stack headless hasta la fase de viewer.
-
----
-
-## Fase 0 — Bootstrap
-
-**Objetivo:** Tener un workspace Cargo reproducible y documentado.
-
-**Entregables:** Workspace `openrailsrs`, crates bajo `crates/`, binario `openrailsrs`, dependencias base (`serde`, `anyhow`, `thiserror`, `clap`, `toml`, `csv`), README.
-
-**Criterio:** `cargo build` en Linux con toolchain estable.
+**Restricciones transversales:** Rust estable, Linux-first, CSV para series temporales, TOML para escenarios y metadata, sin motor gráfico (Bevy/wgpu) en el stack headless.
 
 ---
 
-## Fase 1 — Parsers MSTS / Open Rails (S-exp)
+## Leyenda
 
-**Objetivo:** Tokenizer + parser AST genérico para textos tipo S-expression usados en `.trk`, `.eng`, `.wag`, `.con`.
-
-**Entregables:** Crate `openrailsrs-formats`; CLI `openrailsrs inspect <file>`.
-
-**Criterio:** Fixtures mínimos y tests que parseen sin error.
-
-**Profundidad futura:** Ampliar cobertura de tokens y archivos reales; adaptadores por tipo de archivo encima del AST genérico.
+| Símbolo | Significado |
+|---------|-------------|
+| ✅ | Implementado y con tests |
+| 🔶 | Base funcional, profundizable |
+| 🔲 | Planeado (no iniciado) |
 
 ---
 
-## Fase 2 — Datos y configuración del juego
+## Fase 0 — Bootstrap ✅
 
-**Objetivo:** Esquema TOML para escenarios jugables (`scenario.toml`) con validación explícita.
+**Objetivo:** Workspace Cargo reproducible y documentado.
 
-**Entregables:** Crate `openrailsrs-scenarios`; mensajes de error claros en carga/validación.
-
-**Criterio:** Cargar `scenario.toml` y fallar con errores entendibles ante datos inválidos.
-
----
-
-## Fase 3 — Modelo lógico ferroviario
-
-**Objetivo:** Representar ruta/vía como grafo (nodos, aristas, límites de velocidad; base para agujas, estaciones y señales).
-
-**Entregables:** `openrailsrs-track`, `openrailsrs-route` (p. ej. `track.toml`); export DOT para depuración; CLI `openrailsrs graph <route> --out route.dot`.
-
-**Criterio:** Grafo exportable a DOT válido para Graphviz.
-
-**Profundidad futura:** Tiles MSTS, agujas y señales alineadas con contenido real.
+**Implementado:**
+- Workspace multi-crate bajo `crates/`, binario `openrailsrs-cli`.
+- `rust-toolchain.toml` (stable), `edition = "2024"`, `rust-version = "1.85"`.
+- `check.sh` local + GitHub Actions CI (`cargo fmt`, `clippy -D warnings`, `cargo test`).
+- Cobertura con `cargo-llvm-cov` → Codecov.
+- Dependabot mensual para Cargo.
 
 ---
 
-## Fase 4 — Modelo físico del tren
+## Fase 1 — Parsers MSTS / Open Rails ✅
 
-**Objetivo:** Locomotoras, vagones, consists; masa, potencia, frenado (y más adelante tracción/resistencia/pendiente finos).
+**Objetivo:** Tokenizer + parser para S-expressions de `.trk`, `.eng`, `.wag`, `.con`.
 
-**Entregables:** `openrailsrs-train` leyendo desde AST de `.eng` / `.wag` / `.con`.
-
-**Criterio:** Construir un consist desde fixtures y usarlo en simulación.
-
-**Profundidad futura:** Unidades MSTS reales (lb, kW, etc.) y paridad con Open Rails donde aplique.
+**Implementado:**
+- `openrailsrs-formats`: lexer, AST genérico, adaptadores tipados (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`).
+- Conversiones de unidades MSTS → SI (`lb → kg`, `kW`, `mph → m/s`, `kN → N`).
+- Dispatch por extensión de archivo (`parse_by_extension`).
+- CLI `openrailsrs inspect <file>`.
+- Tests con fixtures `.eng`, `.wag`, `.con`, `.trk`.
 
 ---
 
-## Fase 5 — Simulación headless
+## Fase 2 — Datos y configuración del juego ✅
+
+**Objetivo:** Esquema TOML para escenarios jugables con validación explícita.
+
+**Implementado:**
+- `openrailsrs-scenarios`: `scenario.toml` con `[route]`, `[train]`, `[gameplay]`, `[simulation]`, `[output]`.
+- Paradas intermedias `[[route.stops]]` con `arrive_s`, `depart_s`, `dwell_s`.
+- Override de resistencia Davis `[train.davis]`.
+- Agujas por escenario `[[route.switches]]` (`straight` / `diverging`).
+- Multi-tren `[[extra_trains]]` con id, consist, start_time_s, output_csv.
+- `penalty_per_second_late` en `[gameplay]` para penalizaciones graduales.
+- Validación con mensajes de error explícitos.
+
+---
+
+## Fase 3 — Modelo lógico ferroviario ✅
+
+**Objetivo:** Grafo de vía con nodos, aristas, señales y agujas.
+
+**Implementado:**
+- `openrailsrs-track`: grafo tipado, `NodeKind` (Plain / Switch / Station), `EdgeId`, `NodeId`.
+- Señales (`TrackSignal`): `id`, `edge_id`, `position_m`, `aspect` (Stop/Caution/Clear), `clear_after_s`.
+- Agujas: `SwitchPosition` (Straight/Diverging), `set_switch`, `switch_position`, `NotASwitch`.
+- `openrailsrs-route`: carga de `track.toml` con `grade_percent`, `[[signals]]`, `default_position`.
+- BFS switch-aware en `path.rs`: filtra aristas según posición activa de cada nodo Switch.
+- Export DOT: `openrailsrs graph <route> --out route.dot`.
+
+---
+
+## Fase 4 — Modelo físico del tren ✅
+
+**Objetivo:** Consists realistas con curva de tracción, Davis y pendientes.
+
+**Implementado:**
+- `openrailsrs-train`: `Locomotive`, `Wagon`, `Consist`.
+- `DavisCoefficients` (a_N, b_N·s/m, c_N·s²/m²) configurables por consist o escenario.
+- `TractiveCurve`: puntos (v → F) interpolados en piecewise-linear; fallback a ley P/v.
+- `TrainPhysics`: agrega curvas de tracción e impulso de freno del consist completo.
+- Conversiones de unidades MSTS desde adaptadores tipados.
+
+---
+
+## Fase 5 — Simulación headless ✅
 
 **Objetivo:** Ejecutar el tren sobre el grafo sin gráficos; salidas reproducibles.
 
-**Entregables:** `openrailsrs-sim`; `run.csv` (series) + `run.toml` (metadata); CLI `openrailsrs sim scenario.toml`; semilla documentada en metadata.
-
-**Criterio:** Misma entrada → misma salida (determinismo en el bucle actual); tests de aceleración/frenado.
-
-**Profundidad futura:** RNG solo donde haga falta; orden determinista en toda la simulación.
-
----
-
-## Fase 6 — Capa de videojuego (headless)
-
-**Objetivo:** Reglas jugables sobre la simulación: objetivos, horarios, scoring, penalizaciones, eventos, éxito/fracaso.
-
-**Entregables:** `openrailsrs-game`; CLI `openrailsrs play-headless scenario.toml`; resultado serializado (p. ej. `outcome.toml`).
-
-**Criterio:** Partida resoluble por consola con `success` / `score` / `penalties` / `timeline`.
+**Implementado:**
+- `openrailsrs-sim`: `physics::step` con `TractiveCurve` + Davis + grade.
+- Máquina de estados por tren: `Normal → Approaching → Dwelling → AwaitingSignal`.
+- `AutoDriver` (control automático) y `ScriptedDriver` (replay desde CSV `time_s,throttle,brake`).
+- `run_from_scenario_file`, `run_from_scenario_file_with_driver`.
+- Salida: `run.csv` (series temporales) + `run.toml` (metadata).
+- Tests de integración: physics_headless, run_smoke_example, scripted_driver, signal_enforcement, switch_pathfinding.
+- Benchmark Criterion `sim_step`.
 
 ---
 
-## Fase 7 — Validación y comparación
+## Fase 6 — Capa de videojuego (headless) ✅
 
-**Objetivo:** Cuantificar diferencias entre corridas (propias o frente a exportaciones externas).
+**Objetivo:** Reglas jugables: objetivos, horarios, scoring, penalizaciones, eventos.
 
-**Entregables:** `openrailsrs-validate`; CLI `openrailsrs compare run1.csv run2.csv`.
-
-**Criterio:** Métricas agregadas (p. ej. velocidad, posición/odómetro, energía).
-
-**Profundidad futura:** Comparación sistemática con trazas de Open Rails.
+**Implementado:**
+- `openrailsrs-game`: `evaluate`, `PlayOutcome`, `StopResult`, `TimelineEvent`.
+- Penalizaciones: `missed_stop`, `late_stop` (graduado × `penalty_per_second_late`), `early_departure`, `overspeed`, `late_arrival`.
+- `PlayOutcome.punctuality_pct` y `PlayOutcome.total_delay_s`.
+- `play_headless_from_scenario_file`; CLI `openrailsrs play-headless`.
+- **Multi-tren sincronizado** (`multi_runner.rs`): `BlockMap` (una arista = un bloque), `AgentPhase::WaitingForBlock`, `BlockWait`/`BlockClear` en `SimEvent`.
+- `run_scenario_multi_train`; CLI `openrailsrs sim-multi`.
 
 ---
 
-## Fase 8 — Debug sin gráficos
+## Fase 7 — Validación y comparación 🔶
+
+**Objetivo:** Cuantificar diferencias entre corridas.
+
+**Implementado:**
+- `openrailsrs-validate`: comparación cuantitativa de dos `run.csv`.
+- CLI `openrailsrs compare run1.csv run2.csv`.
+
+**Pendiente:** Comparación sistemática con trazas de Open Rails; umbrales configurables.
+
+---
+
+## Fase 8 — Debug sin gráficos ✅
 
 **Objetivo:** Depurar rutas y partidas sin viewer.
 
-**Entregables:** En `openrailsrs-export` (y CLI): DOT, GeoJSON, mapa ASCII, replay textual; logs detallados vía `tracing` donde corresponda.
-
-**Criterio:** Inspección útil de topología y de series temporales solo con archivos y consola.
-
----
-
-## Fase 9 — Optimización
-
-**Objetivo:** Escenarios largos y lotes de ejecuciones sin cuellos de botella obvios.
-
-**Entregables:** Benchmarks (p. ej. Criterion en `openrailsrs-sim`); `rayon` donde aporte; CLI batch de escenarios.
-
-**Criterio:** Documentar cómo medir y ejecutar batch; mejoras incrementales según perfiles.
+**Implementado:**
+- `openrailsrs-export`: DOT, GeoJSON, mapa ASCII, replay textual, **replay animado** ANSI.
+- `animated_replay_from_csv`: panel multi-línea, barra de progreso, velocidad configurable (`--speed`).
+- CLI: `graph`, `export-geojson`, `ascii-map`, `replay`, `replay --watch`, `batch` (rayon).
 
 ---
 
-## Fase 10 — Viewer mínimo
+## Fase 9 — Optimización 🔶
 
-**Objetivo:** Primera visualización 2D en crate **separado**, sin acoplar `sim` al render.
+**Objetivo:** Escenarios largos y lotes sin cuellos de botella.
 
-**Entregables:** `openrailsrs-viewer` (binario propio); el juego/sim headless sigue siendo la fuente de verdad.
+**Implementado:**
+- Benchmark Criterion `sim_step` en `openrailsrs-sim`.
+- `rayon` en `batch`; `indexmap` para iteración determinista en el grafo.
 
-**Criterio:** Ver topología 2D; 3D y UX rica quedan para iteraciones posteriores.
+**Pendiente:** Profiling real con escenarios grandes; caché de paths ya calculados.
 
 ---
 
-## Leyenda de estado (opcional)
+## Fase 10 — Viewer 2D animado ✅
 
-Las fases 0–10 tienen una **línea base** implementada en el repo (workspace, CLI, sim headless, game headless, validate, export, bench, viewer mínimo). Las sub-bullets “Profundidad futura” marcan trabajo continuo, no un bloque único de “done”.
+**Objetivo:** Primera visualización 2D en crate separado, sin acoplar `sim`.
 
-Para comandos concretos, ver [README.md](README.md).
+**Implementado:**
+- `openrailsrs-viewer`: ventana `minifb` 1024×768.
+- Topología: aristas naranjas gruesas con etiqueta, nodos coloreados por tipo (Plain/Switch/Station).
+- **Señales** renderizadas como diamantes con su aspecto actual (rojo/amarillo/verde), poste y etiqueta.
+- **Trenes animados**: interpolación de posición desde `run.csv` vía `edge_id + pos_on_edge_m`; glow proporcional a velocidad; paleta de 8 colores para multi-tren.
+- **HUD**: nombre, tiempo simulado, barra de progreso, velocidad por tren, controles.
+- Teclado: `Space` pausar · `R` reiniciar · `+`/`-` velocidad · `Esc` salir.
+- Acepta `<route_dir>` (estático) o `<scenario.toml>` (animado).
+
+---
+
+## Fase 11 — Modo cabina jugable 🔲
+
+**Objetivo:** El jugador controla el tren en tiempo real directamente desde el viewer.
+
+**Ideas:**
+- Teclas `↑`/`↓` (throttle), `B`/`N` (freno) en el viewer minifb.
+- Feedback inmediato: límite de velocidad actual, aspecto de señal próxima, penalización acumulada.
+- Tick de simulación sincronizado con el reloj de pared (modo real-time, no replay).
+- Score mostrado en HUD.
+
+---
+
+## Fase 12 — Panel de despacho 🔲
+
+**Objetivo:** Control de tráfico interactivo: cambiar señales y agujas en tiempo real.
+
+**Ideas:**
+- Click (o teclas) sobre señales/nodos en el viewer para cambiar su estado.
+- Log de eventos visible en el HUD.
+- Modo "dispatcher": el jugador gestiona múltiples trenes y evita colisiones.
+- Penalización por bloqueos prolongados y colisiones.
+
+---
+
+## Fase 13 — Importar rutas reales 🔲
+
+**Objetivo:** Convertir datos de OpenStreetMap (GeoJSON railways) a `track.toml`.
+
+**Ideas:**
+- Herramienta `openrailsrs convert-osm <geojson> --out track.toml`.
+- Proyección de coordenadas geográficas (WGS84) a metros locales.
+- Detección automática de bifurcaciones → nodos Switch.
+- Compatibilidad con tags OSM: `railway=rail/station/switch`, `maxspeed`.
+
+---
+
+## Fase 14 — Motor de campaña 🔲
+
+**Objetivo:** Progresión de misiones con estado persistente.
+
+**Ideas:**
+- `campaign.toml`: lista ordenada de escenarios con requisitos de score para desbloquear.
+- `progress.json`: almacena puntuaciones históricas y misiones completadas.
+- CLI `openrailsrs campaign status` / `openrailsrs campaign play <mission_id>`.
+- Dificultad dinámica: el motor ajusta parámetros según nivel.
+
+---
+
+## Fase 15 — Editor de rutas 🔲
+
+**Objetivo:** Crear y editar `track.toml` de forma interactiva.
+
+**Ideas:**
+- Subcomando `openrailsrs edit <route_dir>` que abre el viewer en modo edición.
+- Click para agregar nodos; drag para conectar aristas.
+- Panel de propiedades: editar `length_m`, `speed_limit_kmh`, `grade_percent`.
+- Colocar señales y agujas visualmente.
+- Guardar directamente el `track.toml` resultante.
