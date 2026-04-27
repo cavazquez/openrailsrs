@@ -8,7 +8,6 @@
 //! Math helpers ([`orbit_position`], [`fly_translation_delta`]) are pure
 //! functions and unit-tested without spinning up Bevy.
 
-use bevy::ecs::message::MessageReader;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
@@ -96,7 +95,11 @@ impl Default for FlyState {
 /// pitch lifts the camera over the focus.
 pub fn orbit_position(focus: Vec3, yaw: f32, pitch: f32, distance: f32) -> Vec3 {
     let cp = pitch.cos();
-    let offset = Vec3::new(distance * cp * yaw.sin(), distance * pitch.sin(), distance * cp * yaw.cos());
+    let offset = Vec3::new(
+        distance * cp * yaw.sin(),
+        distance * pitch.sin(),
+        distance * cp * yaw.cos(),
+    );
     focus + offset
 }
 
@@ -164,7 +167,11 @@ pub fn toggle_mode_system(
         return;
     }
 
-    let new_mode = if want_orbit { CameraMode::Orbit } else { CameraMode::Fly };
+    let new_mode = if want_orbit {
+        CameraMode::Orbit
+    } else {
+        CameraMode::Fly
+    };
     if new_mode == *mode {
         return;
     }

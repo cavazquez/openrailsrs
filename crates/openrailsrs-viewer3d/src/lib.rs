@@ -22,7 +22,6 @@
 pub mod camera;
 pub mod scene;
 
-use bevy::ecs::schedule::IntoScheduleConfigs;
 use bevy::prelude::*;
 
 /// Plugin that wires up the camera, scene and update systems for the
@@ -33,7 +32,10 @@ impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::srgb(0.04, 0.07, 0.10)))
             .init_resource::<camera::CameraMode>()
-            .add_systems(Startup, (scene::spawn_ground_and_lights, camera::spawn_camera))
+            .add_systems(
+                Startup,
+                (scene::spawn_ground_and_lights, camera::spawn_camera),
+            )
             .add_systems(
                 Update,
                 (

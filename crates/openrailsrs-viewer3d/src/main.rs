@@ -13,9 +13,7 @@
 //! - `Shift`      — fly: x4 boost. `Ctrl` — x0.25 slow.
 //! - `Esc`        — quit.
 
-use bevy::ecs::message::MessageWriter;
 use bevy::prelude::*;
-use bevy::window::WindowPlugin;
 use openrailsrs_viewer3d::ViewerPlugin;
 
 fn main() {

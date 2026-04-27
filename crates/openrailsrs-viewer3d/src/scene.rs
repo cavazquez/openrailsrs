@@ -29,7 +29,11 @@ pub fn spawn_ground_and_lights(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = meshes.add(Plane3d::default().mesh().size(GROUND_HALF * 2.0, GROUND_HALF * 2.0));
+    let mesh = meshes.add(
+        Plane3d::default()
+            .mesh()
+            .size(GROUND_HALF * 2.0, GROUND_HALF * 2.0),
+    );
     let material = materials.add(StandardMaterial {
         base_color: COLOR_GROUND,
         perceptual_roughness: 0.95,
@@ -63,7 +67,11 @@ pub fn draw_grid_and_axes(mut gizmos: Gizmos) {
 
     for i in -n..=n {
         let v = i as f32 * step;
-        let color = if i.rem_euclid(GRID_MAJOR_EVERY) == 0 { COLOR_GRID_MAJOR } else { COLOR_GRID_MINOR };
+        let color = if i.rem_euclid(GRID_MAJOR_EVERY) == 0 {
+            COLOR_GRID_MAJOR
+        } else {
+            COLOR_GRID_MINOR
+        };
         gizmos.line(Vec3::new(v, 0.0, -half), Vec3::new(v, 0.0, half), color);
         gizmos.line(Vec3::new(-half, 0.0, v), Vec3::new(half, 0.0, v), color);
     }
@@ -80,6 +88,9 @@ mod tests {
     #[test]
     fn grid_steps_evenly_divide_half_extent() {
         let n = GROUND_HALF / GRID_MINOR_STEP;
-        assert!((n - n.round()).abs() < 1e-6, "GROUND_HALF must be a multiple of GRID_MINOR_STEP");
+        assert!(
+            (n - n.round()).abs() < 1e-6,
+            "GROUND_HALF must be a multiple of GRID_MINOR_STEP"
+        );
     }
 }
