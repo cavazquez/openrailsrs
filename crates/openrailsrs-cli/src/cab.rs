@@ -13,7 +13,8 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use crate::audio::{AudioCmd, AudioEngine};
+use openrailsrs_audio::{AudioCmd, AudioEngine};
+use openrailsrs_cli::sound_regions::{RegionTracker, RegionTransition};
 
 use crossterm::{
     cursor,
@@ -148,6 +149,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
 
     // ── Audio engine (CI-safe: None when no audio device) ────────────────────
     let audio = AudioEngine::try_start();
+    let mut region_tracker = RegionTracker::new(scenario.sound_regions.clone());
 
     // ── Terminal setup ───────────────────────────────────────────────────────
     terminal::enable_raw_mode().map_err(|e| {
@@ -230,6 +232,32 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
                             accrued_penalty += delay * penalty_per_late;
                             passed_stops.push((stop_name.clone(), state.time_s() - arrive_s));
                             next_stop_idx += 1;
+                        }
+                    }
+
+                    // Sound region transitions after each physics step (headless-safe:
+                    // tracker always runs; audio commands only if a device exists).
+                    if let Some(edge_id) = state.current_edge() {
+                        let transitions = region_tracker.step(edge_id, state.pos_on_edge_m);
+                        if let Some(ref a) = audio {
+                            for t in transitions {
+                                match t {
+                                    RegionTransition::Enter {
+                                        id,
+                                        kind,
+                                        base_volume,
+                                    } => {
+                                        a.send(AudioCmd::EnterRegion {
+                                            id,
+                                            kind,
+                                            base_volume,
+                                        });
+                                    }
+                                    RegionTransition::Leave { id } => {
+                                        a.send(AudioCmd::LeaveRegion { id });
+                                    }
+                                }
+                            }
                         }
                     }
                 }

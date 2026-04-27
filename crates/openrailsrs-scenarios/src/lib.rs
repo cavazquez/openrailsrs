@@ -7,8 +7,8 @@ pub mod timetable;
 pub use error::ScenarioError;
 pub use model::{
     DavisSection, Difficulty, GameplaySection, ObjectiveKind, OutputSection, RouteSection,
-    ScenarioFile, ScenarioMeta, SimulationSection, StopDef, SwitchDef, SwitchPositionDef,
-    TrainEntryDef, TrainSection,
+    ScenarioFile, ScenarioMeta, SimulationSection, SoundRegionDef, StopDef, SwitchDef,
+    SwitchPositionDef, TrainEntryDef, TrainSection,
 };
 pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 

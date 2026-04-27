@@ -1,0 +1,27 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( Tr_Activity
+    ( Tr_Activity_Header
+        ( Name "Traffic Test" )
+        ( Player_Train_Init
+            ( Player_Train_Init_Cons "CONSISTS\\test.con" )
+        )
+        ( Player_Path "player.pat" )
+        ( StartTime 8 0 0 )
+        ( Duration 1 30 )
+        ( Season Summer )
+    )
+    ( Tr_Activity_File
+        ( Traffic_Definition "Test_Traffic"
+            ( Service_Definition "freight_north"
+                ( UiD 1 )
+                ( "service1.pat" )
+                ( Service_Init_Time 1800 )
+            )
+            ( Service_Definition "express"
+                ( UiD 2 )
+                ( "service2.pat" )
+                ( Service_Init_Time 600 )
+            )
+        )
+    )
+)

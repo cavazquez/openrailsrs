@@ -1,0 +1,31 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( Tr_Activity
+    ( Tr_Activity_Header
+        ( Name "Events Test" )
+        ( Player_Train_Init
+            ( Player_Train_Init_Cons "CONSISTS\\test.con" )
+        )
+        ( Player_Path "player.pat" )
+        ( StartTime 8 0 0 )
+        ( Duration 1 30 )
+    )
+    ( Tr_Activity_File
+        ( FailedSignals 1
+            ( TrItemId 1 )
+        )
+        ( RestrictedSpeedZones 1
+            ( ActivityRestrictedSpeedZone
+                ( ZoneStart 1 )
+                ( ZoneEnd 2 )
+                ( SpeedMpS 10.0 )
+            )
+        )
+        ( ActivityObjects 1
+            ( ActivityObject
+                ( ObjectType "PickupWagon" )
+                ( TrItemId 2 )
+                ( Workers 50 )
+            )
+        )
+    )
+)

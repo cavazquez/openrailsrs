@@ -3,16 +3,25 @@ mod consist;
 mod engine;
 mod path;
 mod route;
+mod shape;
 mod track_db;
 mod wagon;
+mod world;
 
-pub use activity::ActivityFile;
+pub use activity::{
+    ActivityFile, ActivityObjectDef, RestrictedZone, SoundRegionOverride, TrafficServiceDef,
+};
 pub use consist::{ConsistEntry, ConsistFile};
 pub use engine::EngineFile;
 pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
-pub use track_db::{TrackDbFile, TrackDbNode, TrackNodeKind};
+pub use shape::{
+    DistanceLevel, LodControl, Matrix43, NamedMatrix, PrimState, Primitive, ShapeFile, SubObject,
+    Vec2, Vec3,
+};
+pub use track_db::{SignalAspectKind, TrItem, TrItemKind, TrackDbFile, TrackDbNode, TrackNodeKind};
 pub use wagon::WagonFile;
+pub use world::{WorldFile, WorldItem};
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;

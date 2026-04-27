@@ -29,4 +29,7 @@ pub enum FormatError {
 
     #[error("unknown unit `{0}`")]
     UnknownUnit(String),
+
+    #[error("binary tokenized shape file is not supported (only ASCII .s)")]
+    UnsupportedBinaryShape,
 }

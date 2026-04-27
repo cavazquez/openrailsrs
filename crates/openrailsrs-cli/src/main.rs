@@ -1,4 +1,3 @@
-mod audio;
 mod cab;
 mod dispatch;
 use std::path::PathBuf;
@@ -149,6 +148,26 @@ enum Commands {
         /// Disable bidirectional edges (by default railway edges are added in both directions).
         #[arg(long)]
         one_way: bool,
+    },
+    /// Inspect an MSTS ASCII `.s` shape file: prints LOD / mesh / texture stats.
+    ShapeDump {
+        file: PathBuf,
+        /// Emit structured stats as JSON instead of a human-readable summary.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Inspect an MSTS `.w` world tile file: prints item counts per kind.
+    WorldDump {
+        file: PathBuf,
+        /// Optional path to write a CSV with one row per item (kind,uid,file_name,x,y,z).
+        #[arg(long)]
+        csv: Option<PathBuf>,
+    },
+    /// Decode an MSTS `.ace` texture and write its mip 0 as a PNG.
+    AceDecode {
+        file: PathBuf,
+        /// Output PNG file.
+        out: PathBuf,
     },
     /// Import a Microsoft Train Simulator route / activity.
     ImportMsts {
@@ -689,6 +708,15 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        Commands::ShapeDump { file, json } => {
+            run_shape_dump(&file, json)?;
+        }
+        Commands::WorldDump { file, csv } => {
+            run_world_dump(&file, csv.as_deref())?;
+        }
+        Commands::AceDecode { file, out } => {
+            run_ace_decode(&file, &out)?;
+        }
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;
             let results: Vec<_> = scenarios
@@ -710,5 +738,146 @@ fn main() -> anyhow::Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
+    use openrailsrs_formats::ShapeFile;
+
+    let shape = ShapeFile::from_path(file)
+        .map_err(|e| anyhow::anyhow!("parse shape {}: {e}", file.display()))?;
+
+    let lod_count = shape.lod_controls.len();
+    let distance_levels: usize = shape
+        .lod_controls
+        .iter()
+        .map(|c| c.distance_levels.len())
+        .sum();
+    let primitive_count: usize = shape
+        .lod_controls
+        .iter()
+        .flat_map(|c| &c.distance_levels)
+        .flat_map(|dl| &dl.sub_objects)
+        .map(|so| so.primitives.len())
+        .sum();
+    let triangle_count: usize = shape
+        .lod_controls
+        .iter()
+        .flat_map(|c| &c.distance_levels)
+        .flat_map(|dl| &dl.sub_objects)
+        .flat_map(|so| &so.primitives)
+        .map(|p| p.triangle_count())
+        .sum();
+    let texture_count = shape.texture_filenames.len();
+    let prim_state_count = shape.prim_states.len();
+    let matrix_count = shape.matrices.len();
+    let point_count = shape.points.len();
+    let normal_count = shape.normals.len();
+    let uv_count = shape.uvs.len();
+
+    if json {
+        let value = serde_json::json!({
+            "file": file.display().to_string(),
+            "lod_controls": lod_count,
+            "distance_levels": distance_levels,
+            "primitives": primitive_count,
+            "triangles": triangle_count,
+            "points": point_count,
+            "normals": normal_count,
+            "uvs": uv_count,
+            "prim_states": prim_state_count,
+            "textures": texture_count,
+            "texture_filenames": shape.texture_filenames,
+            "matrices": matrix_count,
+        });
+        println!("{}", serde_json::to_string_pretty(&value)?);
+    } else {
+        println!("=== shape-dump: {} ===", file.display());
+        println!("  lod_controls       : {lod_count}");
+        println!("  distance_levels    : {distance_levels}");
+        println!("  primitives         : {primitive_count}");
+        println!("  triangles          : {triangle_count}");
+        println!("  points/normals/uvs : {point_count}/{normal_count}/{uv_count}");
+        println!("  prim_states        : {prim_state_count}");
+        println!("  matrices           : {matrix_count}");
+        println!("  textures           : {texture_count}");
+        for (i, name) in shape.texture_filenames.iter().enumerate() {
+            println!("    [{i}] {name}");
+        }
+    }
+    Ok(())
+}
+
+fn run_world_dump(file: &std::path::Path, csv: Option<&std::path::Path>) -> anyhow::Result<()> {
+    use openrailsrs_formats::WorldFile;
+    use std::collections::BTreeMap;
+
+    let world = WorldFile::from_path(file)
+        .map_err(|e| anyhow::anyhow!("parse world {}: {e}", file.display()))?;
+
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for item in &world.items {
+        *counts.entry(item.kind()).or_insert(0) += 1;
+    }
+
+    println!(
+        "=== world-dump: {} (tile {},{}) ===",
+        file.display(),
+        world.tile_x,
+        world.tile_z
+    );
+    if counts.is_empty() {
+        println!("  (no items)");
+    } else {
+        for (kind, n) in &counts {
+            println!("  {kind:<10} = {n}");
+        }
+    }
+    println!("  total = {}", world.items.len());
+
+    if let Some(csv_path) = csv {
+        if let Some(parent) = csv_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        let mut writer = csv::Writer::from_path(csv_path)
+            .map_err(|e| anyhow::anyhow!("open csv {}: {e}", csv_path.display()))?;
+        writer.write_record(["kind", "uid", "file_name", "x", "y", "z"])?;
+        for item in &world.items {
+            let kind = item.kind();
+            let uid = item.uid().map(|u| u.to_string()).unwrap_or_default();
+            let file_name = item.file_name().unwrap_or("").to_string();
+            let pos = item.position().unwrap_or_default();
+            writer.write_record([
+                kind,
+                &uid,
+                &file_name,
+                &format!("{:.6}", pos.x),
+                &format!("{:.6}", pos.y),
+                &format!("{:.6}", pos.z),
+            ])?;
+        }
+        writer.flush()?;
+        println!("  csv → {}", csv_path.display());
+    }
+    Ok(())
+}
+
+fn run_ace_decode(file: &std::path::Path, out: &std::path::Path) -> anyhow::Result<()> {
+    let ace = openrailsrs_ace::read_ace(file)
+        .map_err(|e| anyhow::anyhow!("decode ace {}: {e}", file.display()))?;
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    openrailsrs_ace::write_png(&ace, out)
+        .map_err(|e| anyhow::anyhow!("write png {}: {e}", out.display()))?;
+    println!(
+        "=== ace-decode: {} ({}x{}, {}, {} mips) → {} ===",
+        file.display(),
+        ace.width,
+        ace.height,
+        ace.format.as_str(),
+        ace.mips_count,
+        out.display()
+    );
     Ok(())
 }

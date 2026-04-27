@@ -12,4 +12,4 @@ pub mod import_route;
 
 pub use error::MstsError;
 pub use import_activity::{import_activity, import_activity_with_summary};
-pub use import_route::{import_route, import_route_with_summary};
+pub use import_route::{import_route, import_route_with_activity, import_route_with_summary};

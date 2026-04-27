@@ -64,6 +64,8 @@ fn make_two_train_scenario(
         scenario: ScenarioMeta {
             name: "multi test".into(),
             description: String::new(),
+            start_time_s: None,
+            season: None,
         },
         route: RouteSection {
             path: "routes/test".into(),
@@ -103,6 +105,7 @@ fn make_two_train_scenario(
             switches: vec![],
             output_csv: "run_express.csv".into(),
         }],
+        sound_regions: vec![],
     };
 
     (scenario, tmp)

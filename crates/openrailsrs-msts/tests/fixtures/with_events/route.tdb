@@ -1,0 +1,35 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( TrackDB
+    ( TrackNodes 3
+        ( TrackNode 1
+            ( TrEndNode )
+        )
+        ( TrackNode 2
+            ( TrVectorNode
+                ( TrVectorSections 1
+                    ( TrVectorSection 0 0 0 0 0.0 0.0 0.0 0.0 1000.0 )
+                )
+                ( SpeedMpS 22.2 )
+                ( TrItemRefs 2
+                    ( TrItemId 1 )
+                    ( TrItemId 2 )
+                )
+                ( TrPins 2 1 3 )
+            )
+        )
+        ( TrackNode 3
+            ( TrEndNode )
+        )
+    )
+    ( TrItemTable 2
+        ( SignalItem
+            ( TrItemId 1 )
+            ( TrItemSData 100.0 0 )
+            ( TrSignalType 0 0 0 "JP_SIGNAL" )
+        )
+        ( SidingItem
+            ( TrItemId 2 )
+            ( TrItemSData 800.0 0 )
+        )
+    )
+)

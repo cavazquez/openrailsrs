@@ -1,0 +1,12 @@
+[package]
+name = "openrailsrs-ace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Decoder for MSTS .ace (Asynchronous Compressed Encoding) textures"
+
+[dependencies]
+thiserror.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+texpresso = "2"

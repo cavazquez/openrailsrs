@@ -669,11 +669,11 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 - **CLI**: `openrailsrs import-msts <route_dir> [--out-dir …] [--activity …]` — auto-detecta `.act`.
 - **`openrailsrs-train`**: `From<EngineFile> for Locomotive` propaga la curva de tracción real.
 - Tests con fixtures mínimas `minimal.tdb / .pat / .act`; todos los tests del workspace pasan.
-- *Pendiente (iteración futura)*: assets binarios `.s`/`.ace`, parser de terreno `.w`, y rutas reales completas.
+- *Pendiente (iteración futura)*: rutas reales completas; binary tokenized `.s` y resolución global de tiles `.w` (Fase 23).
 
 ---
 
-### Fase 25b — Compatibilidad MSTS completa `🔲`
+### Fase 25b — Compatibilidad MSTS completa `✅`
 
 **Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (iteración continua)
 
@@ -690,44 +690,52 @@ Los archivos MSTS reales usan **BOM UTF-16-LE** (la mayoría de rutas con editor
 - Integrado en `dispatch.rs`, `track_db.rs`, `path.rs` y `activity.rs`.
 - 11 tests en `tests/encoding.rs` incluyendo fixtures binarios `.eng` en UTF-16-LE y Windows-1252.
 
-#### 2. Señales desde `TrItemTable`
+#### 2. Señales desde `TrItemTable` `✅`
 
-Las señales en un `.tdb` real no viven como nodos independientes sino en la sección `TrItemTable` (lista de `TrItem` con tipo `Signal`, posición en el track como `(TrItemId, position_m_on_vector)`, estado inicial, y referencia al objeto visual `.s`).
+Las señales en un `.tdb` real no viven como nodos independientes sino en la sección `TrItemTable` (lista de `TrItem` con tipo `Signal`, posición en el track como `(TrItemId, position_m_on_vector)` y estado inicial).
 
-- Parsear `TrItemTable` en `TrackDbFile`.
-- Mapear cada `TrItem` de tipo `Signal` a un `TrackSignal` con `edge_id` + `position_m` calculados desde el vector node al que pertenece.
-- Esto desbloquea señales automáticas en rutas importadas.
+**Implementado en Fase 25b:**
 
-#### 3. `TrafficService` en actividades
+- `TrackDbFile.items: Vec<TrItem>` con variantes `Signal { aspect_initial }` y `Other`.
+- Cada `TrVectorNode` parsea su sección `TrItemRefs` para mapear ítems a edges.
+- `import_route` emite `[[signals]]` con `id="sig{TrItemId}"`, `edge_id="e{vector_node_id}"`, `position_m` desde `TrItemSData` y aspecto inicial (`Stop` por defecto, configurable vía `(InitialAspect …)`).
+- Tests: `parse_tritem_table_extracts_signal`, `import_route_emits_signals_section`, `import_route_without_signals_omits_section`.
 
-Las actividades reales incluyen trenes de tráfico AI (`Tr_Activity_Service_Definition`) con horarios propios, tipo de servicio (pasajeros/carga), y paths separados.  Actualmente solo se parsea el tren del jugador (`Player_Train_Init`).
+#### 3. `TrafficService` y paths múltiples `✅`
 
-- Parsear `Tr_Activity_Service_Definition` → `Vec<TrafficServiceDef>`.
-- Convertir cada servicio a una entrada `[[extra_trains]]` en el `scenario.toml` generado.
-- Requiere cargar los `.pat` de cada servicio AI.
+Las actividades reales incluyen trenes de tráfico AI (`Tr_Activity_Service_Definition` / `Service_Definition`) con horarios propios y paths separados.
 
-#### 4. Eventos y restricciones de actividad
+**Implementado en Fase 25b:**
 
-Secciones ignoradas que enriquecen la simulación:
+- `ActivityFile.services: Vec<TrafficServiceDef>` con `name`, `path_file`, `consist` opcional y `start_time_s` (`Service_Init_Time`).
+- `import_activity` carga el `.pat` de cada servicio y emite una entrada `[[extra_trains]]` con `start`, `destination`, `start_time_s` y `output_csv = "run_{id}.csv"`.
+- Servicios sin `.pat` resoluble se omiten silenciosamente (parser tolerante).
+- Tests: `parse_activity_collects_traffic_services`, `import_activity_emits_extra_trains_from_traffic`.
+
+#### 4. Eventos y restricciones de actividad `✅`
+
+Secciones ahora soportadas por el importer:
 
 | Sección MSTS | Equivalente openrailsrs | Estado |
 |---|---|---|
-| `ActivityObject` (cargas a recoger/dejar) | `StopDef.passengers_on/off` | 🔲 |
-| `FailedSignals` (señales averiadas) | `SignalAspect::Stop` fijo | 🔲 |
-| `RestrictedSpeedZones` | Límite de velocidad por segmento | 🔲 |
-| `SoundRegions` | Zonas de sonido ambiental | 🔲 (Fase 17) |
-| `StartTime` + `Season` | `simulation.seed` + efectos clima | 🔲 |
+| `ActivityObject` (cargas a recoger/dejar) | `[[route.stops]]` con `passengers_on/off` | ✅ |
+| `FailedSignals` (señales averiadas) | `[[signals]] aspect="stop"` forzado | ✅ |
+| `RestrictedSpeedZones` | `speed_limit_mps` mínimo por edge tocado | ✅ |
+| `SoundRegions` | `SoundSourceItem` en TDB + overrides en `.act` → `[[sound_regions]]`; cabina + crate `openrailsrs-audio` | ✅ |
+| `StartTime` + `Season` | `[scenario] start_time_s` + `season` | ✅ |
 
-#### 5. Assets visuales (`.s` / `.ace`)
+`import_route_with_activity(route_dir, act_path)` aplica `FailedSignals` y `RestrictedSpeedZones` al `track.toml` resultante; `import_activity` proyecta cada `ActivityObject` al endpoint más cercano del vector node que contiene su `TrItem`. La metadata `[scenario].start_time_s` y `[scenario].season` se popula automáticamente desde `(StartTime …)` y `(Season …)` cuando están presentes.
 
-- **`.s` Shape files**: modelos 3D en S-expression MSTS.  Son texto, parseable con `openrailsrs-formats`, pero su interpretación (geometría, materiales, animaciones) requiere un crate nuevo `openrailsrs-shapes` y el viewer 3D (Fase 23).
-- **`.ace` Textures**: formato propietario de Microsoft.  Necesita un decoder binario (hay implementaciones open-source en C# en Open Rails).
+#### 5. Assets visuales (`.s` / `.ace`) `✅` (offline)
 
-Estos assets son **irrelevantes para la simulación headless** pero necesarios para el viewer 3D.
+- **`.s` Shape files** ✅: parser ASCII en `openrailsrs-formats` (`ShapeFile`: puntos, normales, UVs, `prim_states`, primitivas, LODs, jerarquía).  La variante "binary tokenized" devuelve `FormatError::UnsupportedBinaryShape` (queda para Fase 23).  CLI: `openrailsrs shape-dump <file.s> [--json]`.
+- **`.ace` Textures** ✅: crate nuevo `openrailsrs-ace` con decoder de mip 0 (RGBA8 + DXT1/3/5 vía `texpresso`) y `write_png`.  CLI: `openrailsrs ace-decode <file.ace> <out.png>`.  Mips superiores, BGRA→RGBA con flag y formatos extra → Fase 23.
 
-#### 6. World files (`.w`)
+Estos parsers son **headless puros**: no requieren Fase 23 y dejan listos los datos para que el viewer 3D los consuma cuando llegue.
 
-Tiles de terreno binarios + texto.  Cada tile es `~2km × 2km`.  Contienen elevación, vegetación, edificios.  Solo relevantes para Fase 23 (viewer 3D).
+#### 6. World files (`.w`) `✅` (offline)
+
+Tiles de terreno (`~2km × 2km`).  Parser ASCII en `openrailsrs-formats` (`WorldFile`: `Static`, `Forest`, `TrackObj`, `Signal`, `Dyntrack`, `Other`) preservando posiciones locales del tile.  CLI: `openrailsrs world-dump <file.w> [--csv <out.csv>]`.  La resolución a coordenadas globales (TileX/TileZ → mundo) queda para Fase 23.
 
 #### 7. Paths múltiples en actividades complejas
 
@@ -747,13 +755,16 @@ openrailsrs import-msts <ruta_msts>
 ✅ Path del jugador (.pat → start/destination en scenario.toml)
 ✅ Hora de inicio y duración de la actividad
 
-✅  Encoding: UTF-16-LE/BE (BOM), Windows-1252 y UTF-8 — automático
-⚠️  Señales (TrItemTable): ignoradas — agregarlas a mano en track.toml
+✅ Encoding: UTF-16-LE/BE (BOM), Windows-1252 y UTF-8 — automático
+✅ Señales (TrItemTable → [[signals]] con edge_id + aspecto inicial)
+✅ Tráfico AI: TrafficService + .pat múltiples → [[extra_trains]]
+✅ Eventos de actividad: FailedSignals, RestrictedSpeedZones, ActivityObject
+✅ Metadata: StartTime → [scenario].start_time_s, Season → [scenario].season
 ⚠️  Rutas con cientos de nodos: funciona pero sin validación de integridad
-❌  Tráfico AI (extra_trains): no importado
-❌  Eventos de actividad (cargas, zonas restringidas): no importados
-❌  Assets visuales (.s / .ace): no aplica (headless)
-❌  Terreno (.w): no aplica (headless)
+✅  Shapes `.s` ASCII: parser (`ShapeFile`) + `openrailsrs shape-dump [--json]` (binary tokenized → error explícito; pendiente Fase 23)
+✅  Texturas `.ace`: decoder mip 0 (RGBA8 + DXT1/3/5) + `openrailsrs ace-decode <in> <out.png>` (mips superiores → Fase 23)
+✅  Tiles `.w` ASCII: parser (`WorldFile`) + `openrailsrs world-dump [--csv]` (Static / Forest / TrackObj / Signal / Dyntrack; coords globales → Fase 23)
+✅  SoundRegions: import MSTS (`import_activity` + TDB) y runtime en modo cabina vía `openrailsrs-audio` (`EnterRegion` / `LeaveRegion`)
 ```
 
 ---

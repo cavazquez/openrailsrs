@@ -1,0 +1,27 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( Tr_Activity
+    ( Tr_Activity_Header
+        ( Name "SoundRegions Test" )
+        ( Player_Train_Init
+            ( Player_Train_Init_Cons "CONSISTS\\test.con" )
+        )
+        ( Player_Path "player.pat" )
+        ( StartTime 8 0 0 )
+        ( Duration 1 30 )
+    )
+    ( Tr_Activity_File
+        ( SoundRegions 2
+            ( SoundRegion
+                ( TrItemId 2 )
+                ( SoundRegionType "tunnel" )
+                ( Volume 0.7 )
+                ( RadiusM 80.0 )
+            )
+            ( SoundRegion
+                ( TrItemId 1 )
+                ( SoundRegionType "depot" )
+                ( Volume 0.5 )
+            )
+        )
+    )
+)

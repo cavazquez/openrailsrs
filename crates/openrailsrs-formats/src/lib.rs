@@ -15,7 +15,10 @@ pub use encoding::{decode_msts_bytes, read_msts_file_to_string};
 pub use error::FormatError;
 pub use parser::{parse, parse_first, parse_from_first_paren};
 pub use typed::{
-    ActivityFile, ConsistEntry, ConsistFile, EngineFile, PathDataPoint, PathFile, RouteFile,
-    TrackDbFile, TrackDbNode, TrackNodeKind, WagonFile,
+    ActivityFile, ActivityObjectDef, ConsistEntry, ConsistFile, DistanceLevel, EngineFile,
+    LodControl, Matrix43, NamedMatrix, PathDataPoint, PathFile, PrimState, Primitive,
+    RestrictedZone, RouteFile, ShapeFile, SignalAspectKind, SoundRegionOverride, SubObject, TrItem,
+    TrItemKind, TrackDbFile, TrackDbNode, TrackNodeKind, TrafficServiceDef, Vec2, Vec3, WagonFile,
+    WorldFile, WorldItem,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

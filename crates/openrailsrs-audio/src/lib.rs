@@ -1,10 +1,13 @@
-/// Synthesized audio engine for cab mode.
-///
-/// Produces three sounds entirely from generated sine waves — no external
-/// audio files required.  The engine runs in a dedicated OS thread and
-/// receives commands via an `mpsc` channel.  If no audio output device is
-/// available (CI, headless servers) `try_start()` returns `None` and the
-/// cab continues silently.
+//! Synthesized audio engine for openrailsrs.
+//!
+//! Produces cab sounds (motor / brake / horn) and ambient sound regions
+//! entirely from generated sine waves — no external audio files required.
+//! The engine runs in a dedicated OS thread and receives commands via an
+//! `mpsc` channel.  If no audio output device is available (CI, headless
+//! servers) [`AudioEngine::try_start`] returns `None` and callers continue
+//! silently.
+
+use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
@@ -19,6 +22,17 @@ pub enum AudioCmd {
     SetBraking(f64),
     /// Play a 500 ms horn one-shot.
     Horn,
+    /// Start playing an ambient loop for a sound region.
+    ///
+    /// `id` uniquely identifies the region (further `EnterRegion` for the same
+    /// id is a no-op until a `LeaveRegion` happens).
+    EnterRegion {
+        id: String,
+        kind: String,
+        base_volume: f32,
+    },
+    /// Stop the ambient loop for a previously entered region.
+    LeaveRegion { id: String },
     /// Shut down the audio thread cleanly.
     Stop,
 }
@@ -54,6 +68,9 @@ impl AudioEngine {
             brake_sink.append(SineWave::new(800.0).amplify(1.0).repeat_infinite());
             brake_sink.play();
 
+            // Active ambient sinks indexed by region id.
+            let mut region_sinks: HashMap<String, Sink> = HashMap::new();
+
             for cmd in rx {
                 match cmd {
                     AudioCmd::SetVelocity(v_mps) => {
@@ -74,6 +91,26 @@ impl AudioEngine {
                         );
                         horn_sink.detach();
                     }
+                    AudioCmd::EnterRegion {
+                        id,
+                        kind,
+                        base_volume,
+                    } => {
+                        if region_sinks.contains_key(&id) {
+                            continue;
+                        }
+                        let sink = Sink::connect_new(_stream.mixer());
+                        let freq = frequency_for_kind(&kind);
+                        sink.append(SineWave::new(freq).amplify(0.3).repeat_infinite());
+                        sink.set_volume(base_volume.clamp(0.0, 1.0));
+                        sink.play();
+                        region_sinks.insert(id, sink);
+                    }
+                    AudioCmd::LeaveRegion { id } => {
+                        if let Some(sink) = region_sinks.remove(&id) {
+                            sink.stop();
+                        }
+                    }
                     AudioCmd::Stop => break,
                 }
             }
@@ -91,5 +128,19 @@ impl AudioEngine {
 impl Drop for AudioEngine {
     fn drop(&mut self) {
         let _ = self.tx.send(AudioCmd::Stop);
+    }
+}
+
+/// Map an ambient region `kind` string to a base sine-wave frequency.
+///
+/// Pure synthesis stand-in for real `.sms` samples — keeps the engine
+/// dependency-free while still differentiating common MSTS region types.
+fn frequency_for_kind(kind: &str) -> f32 {
+    match kind.to_ascii_lowercase().as_str() {
+        "tunnel" => 90.0,
+        "depot" | "yard" => 150.0,
+        "forest" | "rural" => 250.0,
+        "urban" | "city" => 320.0,
+        _ => 200.0,
     }
 }

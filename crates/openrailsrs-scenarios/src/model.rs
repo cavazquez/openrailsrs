@@ -13,6 +13,11 @@ pub struct ScenarioFile {
     /// Additional trains for multi-train simulation (optional).
     #[serde(default)]
     pub extra_trains: Vec<TrainEntryDef>,
+    /// Ambient sound regions activated when the player train enters their
+    /// `position_m ± radius_m` window on `edge_id`. Optional — emitted by the
+    /// MSTS importer when the source `.tdb` declares `SoundSourceItem`s.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sound_regions: Vec<SoundRegionDef>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -20,6 +25,15 @@ pub struct ScenarioMeta {
     pub name: String,
     #[serde(default)]
     pub description: String,
+    /// Optional wall-clock start time (seconds since midnight). Set by MSTS
+    /// imports from `(StartTime h m s)`; ignored by the simulator unless a
+    /// scheduling layer reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_time_s: Option<f64>,
+    /// Optional season string (`"spring"`, `"summer"`, `"autumn"`, `"winter"`).
+    /// Imported from MSTS `(Season ...)`; consumed by visual/weather layers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub season: Option<String>,
 }
 
 /// Intermediate stop along the route with target arrival and departure times.
@@ -155,6 +169,27 @@ pub struct TrainEntryDef {
     pub switches: Vec<SwitchDef>,
     /// Output CSV filename (relative to scenario directory).
     pub output_csv: String,
+}
+
+/// Ambient sound region anchored to a track edge.
+///
+/// The cab runtime treats a region as active when the player train is on
+/// `edge_id` and `(position_m - region.position_m).abs() <= radius_m`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SoundRegionDef {
+    /// Stable identifier (e.g. `"sr12"` derived from the source `TrItemId`).
+    pub id: String,
+    /// Track edge id from `track.toml`.
+    pub edge_id: String,
+    /// Position along the edge in metres.
+    pub position_m: f64,
+    /// Activation radius (metres). Default `50.0` when the importer has no
+    /// override.
+    pub radius_m: f64,
+    /// Region kind (`"ambient"`, `"tunnel"`, `"depot"`, ...).
+    pub kind: String,
+    /// Base playback volume in `[0.0, 1.0]`.
+    pub base_volume: f32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
