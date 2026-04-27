@@ -7,4 +7,4 @@ rust-version.workspace = true
 description = "Synthesized audio engine for openrailsrs (cab sounds + ambient regions)"
 
 [dependencies]
-rodio = "0.21.1"
+rodio = "0.22.2"
