@@ -72,9 +72,9 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TractiveCurve` (puntos v→F, interpolación piecewise-linear) en `Locomotive`; `TrainPhysics` agrega la curva o sintetiza una desde P/F_te. |
 | 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling→AwaitingSignal`; `ScriptedDriver` replay desde CSV; `run_from_scenario_file_with_driver` para driver externo desde CLI. |
 | 6 — Capa de videojuego headless | Profundizado | `evaluate` multi-parada: `missed_stop`, penalización **graduada** (`penalty_per_second_late` pts/s de retraso), `early_departure`; `PlayOutcome` añade `punctuality_pct` y `total_delay_s`; `play-headless` imprime timeline completo + tabla de paradas; `outcome.toml` con desglose. |
-| 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
+| 7 — Validación/comparación | **Profundizado** | `openrailsrs-validate`: `ValidationConfig` con tolerancias por columna (`max_velocity_rms`, `max_position_max`, etc.); `ComparisonReport` con `pass`/`fail` por columna y global; CLI `compare` con 6 flags de umbral y exit code 1 si falla. |
 | 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
-| 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
+| 9 — Optimización | **Profundizado** | `PathData` pre-computa `Vec<PathEdgeData>` antes del bucle → `physics::step` usa indexación directa (sin `HashMap::get` por tick); benchmarks Criterion: micro, escenario completo, multi-tren. |
 | 10 — Viewer 2D animado | **Profundizado** | `openrailsrs-viewer`: topología + señales con aspecto real (rojo/amarillo/verde), **replay multi-tren animado** desde CSV, HUD con t, velocidad por tren, barra de progreso, controles teclado. |
 
 > Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
@@ -97,9 +97,9 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-route` | Carga de `track.toml` con `grade_percent`, `[[signals]]` y `default_position` en nodos Switch. |
 | `openrailsrs-track` | Grafo de vía, nodos, aristas, señales (`Stop/Caution/Clear`) y **agujas** (`SwitchPosition`, `set_switch`, `switch_position`, error `NotASwitch`). |
 | `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (piecewise-linear) configurables. |
-| `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; **`multi_runner`** con `BlockMap` y bucle sincronizado multi-tren; `SimEvent` overspeed/estaciones/señales/`BlockWait`/`BlockClear`; `run.csv` + `run.toml`. |
+| `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; **`multi_runner`** con `BlockMap` y bucle sincronizado multi-tren; `SimEvent` overspeed/estaciones/señales/`BlockWait`/`BlockClear`; **`PathData`** (pre-cómputo de aristas, sin `HashMap` en el hot loop); `run.csv` + `run.toml`. |
 | `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop` graduado, `early_departure`); `PlayOutcome` con `punctuality_pct` / `total_delay_s` / `delay_s` por parada; `play-headless` con **timeline completo** por stdout; `outcome.toml`. |
-| `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
+| `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`: RMSE, max/mean abs por columna; `ValidationConfig` con umbrales por columna; `pass`/`fail` por serie y global. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
@@ -151,8 +151,14 @@ openrailsrs sim examples/smoke/scenario_diverging.toml
 # Partida headless: imprime timeline completo + tabla de paradas + escribe outcome.toml
 openrailsrs play-headless examples/smoke/scenario.toml
 
-# Comparar dos corridas CSV
+# Comparar dos corridas CSV (sin umbrales → siempre pasa)
 openrailsrs compare run1.csv run2.csv
+
+# Comparar con umbrales estrictos → exit code 1 si falla
+openrailsrs compare run1.csv run2.csv \
+  --max-velocity-rms 0.5 \
+  --max-position-max 10.0 \
+  --max-energy-rms 0.01
 
 # Exportar GeoJSON y mapa ASCII de la ruta
 openrailsrs export-geojson examples/smoke/routes/test --out track.geojson
@@ -217,8 +223,16 @@ Controles de teclado: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` doblar
 ## Benchmarks (Fase 9)
 
 ```bash
+# Todos los benchmarks del crate sim
 cargo bench -p openrailsrs-sim --bench sim_step
+
+# Benchmarks disponibles:
+#   physics_step_100        → 100 ticks en hot loop (micro)
+#   full_scenario_smoke     → escenario smoke completo de punta a punta
+#   full_scenario_multi_train → escenario multi-tren con block occupancy
 ```
+
+La optimización clave de Fase 9 es `PathData`: los datos de cada arista del camino se pre-computan en un `Vec` antes del bucle. `physics::step` hace `vec[idx]` en lugar de `HashMap::get(&str)` en cada tick, eliminando hashing por string en el hot loop.
 
 ## Formato de escenario (`scenario.toml`)
 
@@ -349,6 +363,26 @@ penalty_per_second_late = 2.0   # 2 puntos por segundo de retraso
 | `punctuality_pct` | % de paradas alcanzadas a tiempo (0–100) |
 | `total_delay_s` | Suma total de segundos de retraso en todas las paradas |
 | `delay_s` (en cada `StopResult`) | Retraso individual respecto a `arrive_s` |
+
+---
+
+### Validación con umbrales (`compare`)
+
+El comando `compare` muestra estadísticas por columna (RMS, max, media) y permite fijar umbrales de tolerancia con flags opcionales. Si cualquier umbral se supera, el proceso sale con **exit code 1** (útil para CI):
+
+```
+=== Compare: run_ref.csv vs run_new.csv ===
+  velocity  rms=0.123456  max=0.340000  mean=0.089000  n=4859  PASS ✓
+  position  rms=1.234567  max=3.100000  mean=0.890000  n=4859  PASS ✓
+  energy    rms=0.000012  max=0.000034  mean=0.000008  n=4859  PASS ✓
+overall: PASS
+
+--- full report (TOML) ---
+file_a = "run_ref.csv"
+...
+```
+
+Flags disponibles: `--max-velocity-rms`, `--max-velocity-max`, `--max-position-rms`, `--max-position-max`, `--max-energy-rms`, `--max-energy-max`. Cualquier `None` omitido se ignora.
 
 ---
 
