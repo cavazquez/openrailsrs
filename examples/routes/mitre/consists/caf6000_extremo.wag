@@ -1,0 +1,5 @@
+(Wagon
+  (Type "Passenger")
+  (Mass 38000)
+  (MaxBrakeForce 70000)
+)

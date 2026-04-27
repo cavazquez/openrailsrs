@@ -17,6 +17,7 @@ openrailsrs-import = { path = "../openrailsrs-import" }
 openrailsrs-game = { path = "../openrailsrs-game" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-train = { path = "../openrailsrs-train" }
 openrailsrs-sim = { path = "../openrailsrs-sim" }
 openrailsrs-validate = { path = "../openrailsrs-validate" }
 anyhow.workspace = true
@@ -26,3 +27,4 @@ serde_json.workspace = true
 toml.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+crossterm = "0.29.0"

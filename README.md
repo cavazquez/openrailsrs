@@ -76,11 +76,15 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
 | 9 — Optimización | **Profundizado** | `PathData` pre-computa `Vec<PathEdgeData>` antes del bucle → `physics::step` usa indexación directa (sin `HashMap::get` por tick); benchmarks Criterion: micro, escenario completo, multi-tren. |
 | 10 — Viewer 2D animado | **Profundizado** | `openrailsrs-viewer`: topología + señales con aspecto real (rojo/amarillo/verde), **replay multi-tren animado** desde CSV, HUD con t, velocidad por tren, barra de progreso, controles teclado. |
-| 13 — Importar rutas reales | **Implementado** | `openrailsrs-import`: Overpass JSON (OSM) → `track.toml`; junctions automáticos, Haversine, proyección equirectangular, estaciones, speed limit desde tag `maxspeed`. |
+| 13 — Importar rutas reales | **Implementado** | `openrailsrs-import`: Overpass JSON (OSM) → `track.toml`; junctions automáticos, Haversine, proyección equirectangular, estaciones, speed limit desde tag `maxspeed`; aristas bidireccionales por defecto. Línea Mitre (Buenos Aires) en `examples/routes/mitre/`. |
+| 11/14 — Escenario real + Modo cabina | **Implementado** | Escenario Retiro → Victoria (22.9 km, 13 estaciones) sobre el grafo OSM real; consist CAF 6000 EMU 6 coches; `openrailsrs cab` — HUD en pantalla completa, W/↑ acelerar, S/↓ frenar, velocidad configurable. |
 
 > Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
 >
-> **Fase 13** implementada: `openrailsrs import-osm overpass.json --out routes/myroute/track.toml`. Ver [`examples/osm/`](examples/osm/).
+>
+> **Fase 13**: `openrailsrs import-osm overpass.json --out routes/myroute/track.toml`. Ver [`examples/osm/`](examples/osm/).
+>
+> **Modo cabina**: `openrailsrs cab examples/routes/mitre/scenario_retiro_victoria.toml --speed 10`.
 
 ### Principios
 
@@ -410,6 +414,41 @@ El archivo generado es editable: podés ajustar `grade_percent` de cada arista, 
 - `grade_percent` siempre 0.0 (OSM no tiene altimetría confiable por tramo).
 - Switches complejos (>2 ramas) quedan como `Plain`; se editan a mano.
 - Señales OSM (`railway=signal`) tienen cobertura irregular, no se importan.
+
+---
+
+### Modo cabina (`cab`) — Fase 11
+
+Conduce el tren en tiempo real desde la terminal. El simulador corre a velocidad configurable (por defecto 10×) para que el maquinista sienta la inercia real sin esperar 30 minutos.
+
+```bash
+openrailsrs cab examples/routes/mitre/scenario_retiro_victoria.toml --speed 10
+```
+
+**Controles:**
+
+| Tecla | Acción |
+|-------|--------|
+| W / ↑ | Aumentar acelerador (+10%) |
+| S / ↓ | Reducir acelerador / aplicar freno |
+| Espacio | Freno de emergencia (freno al 100%) |
+| Q / Esc | Salir |
+
+**HUD en pantalla completa:**
+
+```
+ openrailsrs — MODO CABINA — Línea Mitre — Retiro → Victoria
+ ─────────────────────────────────────────────
+ Velocidad      78.3 km/h   límite    90 km/h
+ Acelerador  [████████████        ]  60%
+ Freno       [                    ]   0%
+ Recorrido   [▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  8.7 km / 22.9 km  (38.0%)
+ Tiempo sim     312 s       Energía  8.712 kWh
+ ─────────────────────────────────────────────
+ W/↑ acelerar   S/↓ freno   Espacio=freno emergencia   Q=salir
+```
+
+La carpeta `examples/routes/mitre/` incluye la **Línea Mitre real** importada de OpenStreetMap (2133 nodos, 4926 aristas) y el consist **CAF 6000** (EMU eléctrico de 6 coches, 270 t, 900 kW) para el trayecto Retiro → Victoria.
 
 ---
 

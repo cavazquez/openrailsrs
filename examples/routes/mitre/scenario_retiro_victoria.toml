@@ -1,0 +1,72 @@
+[scenario]
+name        = "Línea Mitre — Retiro → Victoria"
+description = "Servicio ferroviario suburbano real de Buenos Aires. 22.9 km, 13 estaciones."
+
+[route]
+path        = "."             # track.toml está en el mismo directorio
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+
+[[route.stops]]
+node     = "n2151813707"   # Belgrano R
+arrive_s = 480.0           # 8 min desde Retiro
+depart_s = 490.0
+
+[[route.stops]]
+node     = "n290550420"    # Núñez
+arrive_s = 660.0           # 11 min
+depart_s = 670.0
+
+[[route.stops]]
+node     = "n30419070"     # Vicente López
+arrive_s = 900.0           # 15 min
+depart_s = 910.0
+
+[[route.stops]]
+node     = "n30419065"     # Olivos
+arrive_s = 1020.0          # 17 min
+depart_s = 1030.0
+
+[[route.stops]]
+node     = "n30419059"     # La Lucila
+arrive_s = 1140.0          # 19 min
+depart_s = 1150.0
+
+[[route.stops]]
+node     = "n30419055"     # Martínez
+arrive_s = 1320.0          # 22 min
+depart_s = 1330.0
+
+[[route.stops]]
+node     = "n1596221135"   # Acassuso
+arrive_s = 1440.0          # 24 min
+depart_s = 1450.0
+
+[[route.stops]]
+node     = "n30418815"     # San Isidro C
+arrive_s = 1560.0          # 26 min
+depart_s = 1570.0
+
+[train]
+consist = "consists/caf_6000.con"
+
+[train.davis]
+# 6 coches CAF 6000 — resist total aprox.
+a_n          = 2120.0    # 6 × 353 N constante
+b_n_per_mps  = 29.0      # término lineal
+c_n_per_mps2 = 1.24      # término cuadrático
+
+[gameplay]
+overspeed_penalty    = 50
+missed_stop_penalty  = 100
+early_departure_penalty = 30
+penalty_per_second_late = 1.5
+
+[simulation]
+duration    = 3600.0   # 1 hora máx
+time_step   = 0.1
+seed        = 42
+
+[output]
+csv      = "run_retiro_victoria.csv"
+metadata = "run_retiro_victoria.toml"

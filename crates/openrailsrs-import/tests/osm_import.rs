@@ -8,6 +8,7 @@ fn default_opts(route_id: &str) -> OsmImportOptions {
     OsmImportOptions {
         route_id: route_id.into(),
         default_speed_kmh: 80.0,
+        bidirectional: false,
     }
 }
 
@@ -67,6 +68,7 @@ fn edge_lengths_are_positive() {
         &Opts {
             route_id: "t".into(),
             default_speed_kmh: 80.0,
+            bidirectional: false,
         },
     )
     .expect("build");
@@ -182,6 +184,7 @@ fn default_speed_used_when_no_maxspeed_tag() {
     let opts = OsmImportOptions {
         route_id: "x".into(),
         default_speed_kmh: 120.0,
+        bidirectional: false,
     };
     let toml = import_osm_str(json, &opts).expect("import");
     assert!(

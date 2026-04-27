@@ -1,0 +1,8 @@
+(Train
+  (Engine "consists/caf6000_motor.eng")
+  (Wagon  "consists/caf6000_inter.wag")
+  (Wagon  "consists/caf6000_inter.wag")
+  (Wagon  "consists/caf6000_inter.wag")
+  (Wagon  "consists/caf6000_inter.wag")
+  (Wagon  "consists/caf6000_extremo.wag")
+)

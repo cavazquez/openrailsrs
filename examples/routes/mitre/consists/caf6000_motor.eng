@@ -1,0 +1,8 @@
+(Engine
+  (WagonShape "caf6000_motor.s")
+  (Mass 44000)
+  (MaxPower 900000)
+  (MaxVelocity 25.1)
+  (MaxForce 110000)
+  (MaxBrakeForce 90000)
+)

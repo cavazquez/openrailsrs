@@ -89,7 +89,7 @@ pub enum NodeKindDef {
     Station { name: String },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EdgeDef {
     pub id: String,
     pub from: String,
@@ -108,6 +108,9 @@ pub struct OsmImportOptions {
     pub route_id: String,
     /// Default speed limit (km/h) when the way has no `maxspeed` tag.
     pub default_speed_kmh: f64,
+    /// Add reverse edges for each segment (railways are normally bidirectional).
+    /// Defaults to `true`.
+    pub bidirectional: bool,
 }
 
 impl Default for OsmImportOptions {
@@ -115,6 +118,7 @@ impl Default for OsmImportOptions {
         Self {
             route_id: "imported".into(),
             default_speed_kmh: 80.0,
+            bidirectional: true,
         }
     }
 }
@@ -318,6 +322,21 @@ pub fn build_layout(json: &str, opts: &OsmImportOptions) -> Result<TrackToml, Im
                 seg_idx += 1;
             }
             let _ = seg_start_idx; // used to track start, suppress warning
+        }
+    }
+
+    // Add reverse edges for bidirectional operation (railways run both ways).
+    if opts.bidirectional {
+        let forward = edge_defs.clone();
+        for e in forward {
+            edge_defs.push(EdgeDef {
+                id: format!("{}_r", e.id),
+                from: e.to.clone(),
+                to: e.from.clone(),
+                length_m: e.length_m,
+                speed_limit_kmh: e.speed_limit_kmh,
+                grade_percent: -e.grade_percent,
+            });
         }
     }
 

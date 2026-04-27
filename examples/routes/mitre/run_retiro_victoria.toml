@@ -1,0 +1,9 @@
+scenario_name = "Línea Mitre — Retiro → Victoria"
+seed = 42
+duration_requested_s = 3600.0
+time_step_s = 0.1
+final_time_s = 1713.4866055712625
+final_odometer_m = 22930.199999999804
+final_velocity_mps = 0.0
+cumulative_energy_kwh = 50.27466854429634
+reached_destination = true

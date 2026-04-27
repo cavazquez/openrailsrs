@@ -203,15 +203,29 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - Nuevo crate `openrailsrs-import`: importa Overpass API JSON → `track.toml`.
 - Algoritmo: indexado de nodos OSM, detección de junctions (nodos compartidos por ≥2 ways), segmentación de ways, proyección equirectangular, distancias Haversine, speed limit desde tag `maxspeed`.
 - Soporta `railway=rail`, `light_rail`, `subway`, `tram`; estaciones (`railway=station`) como `NodeKind::Station`.
+- Aristas **bidireccionales** por defecto (`bidirectional: true`); opción `--one-way` para importación unidireccional.
 - CLI: `openrailsrs import-osm overpass.json --out routes/myroute/track.toml --route-id myroute`.
 - Fixture del Badner Bahn (Viena) en `examples/osm/` + plantilla de query Overpass lista para usar.
 - 11 tests incluyendo round-trip con `openrailsrs-route` (TOML generado → `TrackGraph`).
+- Línea Mitre (Buenos Aires) importada en `examples/routes/mitre/` — 2133 nodos, 4926 aristas, 172 estaciones.
 
 **Pendiente:** Importador simplificado de `.trk` de MSTS (topología sin splines 3D).
 
 ---
 
-## Fase 14 — Motor de campaña 🔲
+## Fase 11/14 — Escenario real + Modo cabina ✅
+
+**Implementado:**
+- Escenario real **Retiro → Victoria** sobre la Línea Mitre importada de OSM: 22.9 km, 13 estaciones, 8 paradas intermedias con horario.
+- Consist CAF 6000 (EMU eléctrico de 6 coches, 270 t, 900 kW) en `examples/routes/mitre/consists/`.
+- Comando `openrailsrs cab <scenario.toml> [--speed N]`: modo cabina interactivo en terminal.
+  - W/↑ acelerador, S/↓ freno, Espacio = freno de emergencia, Q = salir.
+  - HUD en pantalla completa: velocidad actual / límite, barra de acelerador/freno, barra de progreso animada, tiempo y energía acumulada.
+  - Velocidad de simulación configurable (por defecto 10× para sentir la inercia real).
+
+---
+
+## Fase 15 — Motor de campaña 🔲
 
 **Objetivo:** Progresión de misiones con estado persistente.
 

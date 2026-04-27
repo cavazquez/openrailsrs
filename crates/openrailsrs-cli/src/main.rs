@@ -1,3 +1,4 @@
+mod cab;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -105,6 +106,13 @@ enum Commands {
     },
     /// Run multi-train simulation (block-occupancy aware, interleaved clock).
     SimMulti { scenario: PathBuf },
+    /// Interactive cab mode: drive the train in real time with keyboard controls.
+    Cab {
+        scenario: PathBuf,
+        /// Simulation speed multiplier (default 10× = 10 sim-seconds per real second).
+        #[arg(long, default_value_t = 10.0)]
+        speed: f64,
+    },
     /// Import railway topology from an Overpass JSON file and write track.toml.
     ImportOsm {
         /// Path to the Overpass JSON file (see examples/osm/overpass_query.txt).
@@ -118,6 +126,9 @@ enum Commands {
         /// Default speed limit (km/h) for ways without a maxspeed tag.
         #[arg(long, default_value_t = 80.0)]
         default_speed: f64,
+        /// Disable bidirectional edges (by default railway edges are added in both directions).
+        #[arg(long)]
+        one_way: bool,
     },
 }
 
@@ -321,16 +332,21 @@ fn main() -> anyhow::Result<()> {
                 );
             }
         }
+        Commands::Cab { scenario, speed } => {
+            cab::run_cab(&scenario, speed)?;
+        }
         Commands::ImportOsm {
             input,
             out,
             route_id,
             default_speed,
+            one_way,
         } => {
             use openrailsrs_import::{OsmImportOptions, import_osm_file};
             let opts = OsmImportOptions {
                 route_id: route_id.clone(),
                 default_speed_kmh: default_speed,
+                bidirectional: !one_way,
             };
             let toml_str = import_osm_file(&input, &opts)
                 .map_err(|e| anyhow::anyhow!("import-osm {}: {e}", input.display()))?;
