@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::ast::Ast;
+use crate::encoding::read_msts_file_to_string;
 use crate::error::FormatError;
 use crate::parser::parse_from_first_paren;
 use crate::typed::{ConsistFile, EngineFile, RouteFile, WagonFile};
@@ -16,10 +17,7 @@ pub enum MstsFile {
 
 pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> {
     let path = path.as_ref();
-    let source = std::fs::read_to_string(path).map_err(|err| FormatError::UnexpectedToken {
-        offset: 0,
-        message: format!("failed to read {}: {err}", path.display()),
-    })?;
+    let source = read_msts_file_to_string(path)?;
     let ast = parse_from_first_paren(&source)?;
     let ext = path
         .extension()

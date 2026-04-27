@@ -1552,6 +1552,7 @@ dependencies = [
 name = "openrailsrs-formats"
 version = "0.1.0"
 dependencies = [
+ "encoding_rs",
  "openrailsrs-core",
  "pretty_assertions",
  "thiserror 2.0.18",

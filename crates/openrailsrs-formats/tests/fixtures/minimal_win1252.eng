@@ -1,0 +1,6 @@
+(Engine
+  (WagonShape "café.s")
+  (Mass 80000)
+  (MaxPower 2000000)
+  (MaxVelocity 120 )
+)

@@ -56,11 +56,7 @@ impl TrackDbFile {
 
     /// Convenience: read and parse a `.tdb` file from disk.
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
-        let text =
-            std::fs::read_to_string(path.as_ref()).map_err(|e| FormatError::UnexpectedToken {
-                offset: 0,
-                message: format!("failed to read {}: {e}", path.as_ref().display()),
-            })?;
+        let text = crate::encoding::read_msts_file_to_string(path.as_ref())?;
         let ast = parse_from_first_paren(&text)?;
         Self::from_ast(&ast)
     }

@@ -679,13 +679,16 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 Esta fase documenta los **gaps que quedan** para que `openrailsrs import-msts` pueda procesar una ruta MSTS/Open Rails real sin intervención manual.  La Fase 25 implementó la base (topología + actividad del jugador); la 25b cubre todo lo demás.
 
-#### 1. Encoding de archivos
+#### 1. Encoding de archivos `✅`
 
-Los archivos MSTS reales usan **BOM UTF-16-LE** (la mayoría de rutas con editor de MSTS) o **Latin-1 / Windows-1252** (rutas antiguas europeas).  El lexer actual (`openrailsrs-formats`) asume UTF-8 puro y fallará o producirá basura con esos encodings.
+Los archivos MSTS reales usan **BOM UTF-16-LE** (la mayoría de rutas con editor de MSTS) o **Latin-1 / Windows-1252** (rutas antiguas europeas).
 
-- Detectar BOM (`FF FE`) y transcodificar a UTF-8 antes de parsear.
-- Fallback a Windows-1252 si no hay BOM y hay bytes > 0x7F.
-- Dependencia sugerida: `encoding_rs` (ya en el árbol vía `symphonia`).
+**Implementado en Fase 25b:**
+- `openrailsrs-formats/src/encoding.rs` — `read_msts_file_to_string()` y `decode_msts_bytes()`.
+- Detección automática por BOM: `FF FE` → UTF-16-LE, `FE FF` → UTF-16-BE, `EF BB BF` → UTF-8 (strip BOM).
+- Fallback a Windows-1252 si no hay BOM y existen bytes `> 0x7F`.
+- Integrado en `dispatch.rs`, `track_db.rs`, `path.rs` y `activity.rs`.
+- 11 tests en `tests/encoding.rs` incluyendo fixtures binarios `.eng` en UTF-16-LE y Windows-1252.
 
 #### 2. Señales desde `TrItemTable`
 
@@ -744,8 +747,8 @@ openrailsrs import-msts <ruta_msts>
 ✅ Path del jugador (.pat → start/destination en scenario.toml)
 ✅ Hora de inicio y duración de la actividad
 
+✅  Encoding: UTF-16-LE/BE (BOM), Windows-1252 y UTF-8 — automático
 ⚠️  Señales (TrItemTable): ignoradas — agregarlas a mano en track.toml
-⚠️  Encoding: falla con archivos UTF-16 o Latin-1
 ⚠️  Rutas con cientos de nodos: funciona pero sin validación de integridad
 ❌  Tráfico AI (extra_trains): no importado
 ❌  Eventos de actividad (cargas, zonas restringidas): no importados

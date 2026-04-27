@@ -9,6 +9,7 @@ description = "MSTS/Open Rails–style text formats (S-expression AST)"
 [dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
 thiserror.workspace = true
+encoding_rs = "0.8"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
