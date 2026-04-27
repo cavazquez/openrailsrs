@@ -66,12 +66,12 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | Fase | Estado actual | Evidencia en el repo |
 |------|---------------|----------------------|
 | 0 — Bootstrap | Base implementada | Workspace Cargo, crates modulares, CI y documentación. |
-| 1 — Parsers MSTS/OpenRails | Base implementada + profundización inicial | `openrailsrs-formats` (AST genérico + adaptadores tipados iniciales). |
-| 2 — Datos/config juego | Base implementada | `openrailsrs-scenarios` con carga/validación de `scenario.toml`. |
-| 3 — Modelo lógico ferroviario | Base implementada | `openrailsrs-track` + `openrailsrs-route` + export DOT. |
-| 4 — Modelo físico del tren | Base implementada | `openrailsrs-train` (locomotoras, vagones, consists). |
-| 5 — Simulación headless | Base implementada | `openrailsrs-sim` + salidas `run.csv`/`run.toml`. |
-| 6 — Capa de videojuego headless | Base implementada | `openrailsrs-game` + `play-headless` + `outcome.toml`. |
+| 1 — Parsers MSTS/OpenRails | Profundizado | `openrailsrs-formats`: AST genérico + adaptadores tipados (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades + dispatch por extensión. |
+| 2 — Datos/config juego | Profundizado | `openrailsrs-scenarios`: `scenario.toml` con `[[route.stops]]` (paradas intermedias con `arrive_s`/`depart_s`) y `[train.davis]` (coeficientes Davis sobreescribibles). |
+| 3 — Modelo lógico ferroviario | Base implementada | `openrailsrs-track` + `openrailsrs-route` + export DOT; aristas con `grade_percent` configurable. |
+| 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TrainPhysics` desacopla parámetros físicos del consist del bucle de simulación. |
+| 5 — Simulación headless | Profundizado | `physics::step` con Davis y pendiente configurables; `SimEvent::StationArrival/StationDeparture` detectados automáticamente por el runner. |
+| 6 — Capa de videojuego headless | Profundizado | `evaluate` con multi-parada: penaliza `missed_stop`, `late_stop`; `outcome.toml` incluye `stops[]` con resultado por parada y `timeline` extendida. |
 | 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
 | 8 — Debug sin gráficos | Base implementada | `openrailsrs-export` (DOT/GeoJSON/ASCII/replay). |
 | 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
@@ -92,13 +92,13 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | Crate | Rol |
 |--------|-----|
 | `openrailsrs-core` | Tipos compartidos (tiempo simulado, IDs). |
-| `openrailsrs-formats` | Tokenizer + parser AST tipo S-exp (`.trk`, `.eng`, `.wag`, `.con`). |
-| `openrailsrs-scenarios` | Carga y validación de `scenario.toml`. |
-| `openrailsrs-route` | Carga de layout de vía (`track.toml` en carpeta de ruta). |
-| `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad. |
-| `openrailsrs-train` | Locomotoras, vagones, consists (desde AST). |
-| `openrailsrs-sim` | Bucle headless, salida `run.csv` + `run.toml`. |
-| `openrailsrs-game` | Objetivos, penalizaciones, puntuación (`play-headless`). |
+| `openrailsrs-formats` | Tokenizer + AST genérico + adaptadores tipados por extensión (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades MSTS → SI. |
+| `openrailsrs-scenarios` | Carga/validación de `scenario.toml`; soporta paradas intermedias (`[[route.stops]]`) y override de Davis (`[train.davis]`). |
+| `openrailsrs-route` | Carga de layout de vía (`track.toml`) con `grade_percent` por arista. |
+| `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad y pendientes. |
+| `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` configurable. |
+| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics`); `SimEvent` con overspeed y estaciones; salida `run.csv` + `run.toml`. |
+| `openrailsrs-game` | Objetivos, penalizaciones multi-parada, puntuación; `outcome.toml` con desglose por parada (`play-headless`). |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual. |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
@@ -165,6 +165,34 @@ No acopla la simulación al render: solo lee `track.toml` y dibuja la topología
 ```bash
 cargo bench -p openrailsrs-sim --bench sim_step
 ```
+
+## Formato de escenario (`scenario.toml`)
+
+El escenario describe ruta, tren, gameplay y parámetros de simulación. Los campos nuevos más relevantes:
+
+```toml
+[route]
+path    = "routes/test"
+start   = "yard_a"
+destination = "yard_b"
+
+[[route.stops]]        # paradas intermedias (opcional, repetible)
+node     = "mid"
+arrive_s = 400.0       # tiempo objetivo de llegada (s)
+depart_s = 420.0       # tiempo objetivo de salida (s)
+
+[train]
+consist = "consists/freight.con"
+
+[train.davis]          # override de resistencia Davis (opcional)
+a_n          = 800.0   # término constante (N)
+b_n_per_mps  = 12.0    # término lineal (N·s/m)
+c_n_per_mps2 = 0.4     # término cuadrático (N·s²/m²)
+```
+
+El campo `grade_percent` en cada arista de `track.toml` indica la pendiente (positivo = subida, negativo = bajada). El resultado `outcome.toml` incluye `[[stops]]` con `actual_arrive_s`, `on_time` y `missed` por cada parada declarada.
+
+---
 
 ## Consists y rutas de assets
 
