@@ -43,7 +43,10 @@ pub fn animated_replay_from_csv(path: &Path, speed_factor: f64) -> Result<(), Ex
     let headers = rdr.headers()?.clone();
     let idx_time = headers.iter().position(|h| h == "time_s");
     let idx_vel = headers.iter().position(|h| h == "velocity_mps");
-    let idx_pos = headers.iter().position(|h| h == "position_m");
+    // Accept both "odometer_m" (run.csv native) and "position_m" (generic).
+    let idx_pos = headers
+        .iter()
+        .position(|h| h == "odometer_m" || h == "position_m");
 
     // Collect all rows first so we can know the total distance for the progress bar.
     let records: Vec<csv::StringRecord> = rdr.records().collect::<Result<_, _>>()?;
