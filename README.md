@@ -31,6 +31,7 @@
 | 🔄 **rayon** | Batch de escenarios en CLI (paralelismo opcional). |
 | 📝 **TOML / CSV** | Escenarios, metadata y series temporales. |
 | 🖼️ **minifb** | Viewer 2D mínimo (X11 en Linux), sin acoplar al núcleo `sim`. |
+| 🎮 **Bevy** | Viewer 3D experimental (`openrailsrs-viewer3d`): ventana, grilla y cámara orbit/fly; desacoplado del `sim`. |
 
 ---
 
@@ -50,14 +51,14 @@ chmod +x check.sh   # solo la primera vez, si hace falta
 
 En GitHub, el workflow **[`.github/workflows/ci.yml`](.github/workflows/ci.yml)**:
 
-- Job **`check.sh`**: mismo flujo que arriba (con librerías X11 instaladas para compilar `openrailsrs-viewer`).
+- Job **`check.sh`**: mismo flujo que arriba (con librerías X11 + `libxkbcommon-dev` para compilar `openrailsrs-viewer` y `openrailsrs-viewer3d`).
 - Job **cobertura**: `cargo llvm-cov` y subida a Codecov (no falla el CI si Codecov no está configurado todavía).
 
 ---
 
 ## Qué es openrailsrs
 
-Simulador ferroviario pensado como **videojuego de simulación**, pero con **núcleo headless**: la simulación no depende del rendering. **Linux-first**, sin Bevy/wgpu en el stack principal; el viewer vive aparte.
+Simulador ferroviario pensado como **videojuego de simulación**, pero con **núcleo headless**: la simulación no depende del rendering. **Linux-first**; el rendering vive en crates aparte (`openrailsrs-viewer` 2D, `openrailsrs-viewer3d` experimental con Bevy).
 
 Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 
@@ -97,7 +98,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 - El núcleo corre **sin gráficos**; la simulación no depende de rendering.
 - **Linux-first**, Rust estable.
 - Datos de serie temporal en **CSV**; escenarios, configuración y metadata en **TOML**.
-- **Sin** Bevy, wgpu ni motores gráficos en las fases iniciales; el viewer mínimo vive en el crate `openrailsrs-viewer` (Fase 10).
+- El núcleo y la CLI **no** dependen de Bevy/wgpu; el viewer 2D está en `openrailsrs-viewer` (Fase 10) y el viewer 3D experimental en `openrailsrs-viewer3d` (Fase 23 / issue #8).
 - Workspace Cargo modular bajo `crates/`.
 
 ### Crates
@@ -117,6 +118,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
+| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: sandbox Bevy con plano + grilla + cámara orbit (`F1`) / fly (`F2`); sin datos de ruta todavía (ver `docs/OPEN_RAILS_VIEWER_3D.md`). |
 
 Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. ej. `openrailsrs_sim::run_from_scenario_file`).
 
@@ -125,7 +127,7 @@ Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. 
 ## Requisitos
 
 - Rust estable (edition 2024, `rust-version` en workspace).
-- Linux (el viewer usa `minifb` con feature `x11`).
+- Linux (el viewer 2D usa `minifb` con feature `x11`; el viewer 3D usa Bevy/winit y en CI se instala también `libxkbcommon-dev`).
 
 ## Construir y probar
 
@@ -238,6 +240,19 @@ El viewer muestra:
 - **HUD** inferior: nombre del escenario, `t=XXX.Xs`, multiplicador de velocidad, barra de progreso, leyenda de trenes.
 
 Controles de teclado: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` doblar/dividir velocidad de replay · `Esc` salir.
+
+### Viewer 3D experimental (Bevy, Fase 23 / issue #8)
+
+```bash
+cargo run -p openrailsrs-viewer3d
+```
+
+Sandbox: plano gris 200×200 m, grilla cada 10 m (cada 100 m más marcada), ejes RGB en el origen, luz direccional + relleno en cámara.
+
+- `F1` / `F2`: cámara **orbit** (enfocada al origen) / **fly** (WASD en plano horizontal, `Q`/`E` o `Space` arriba/abajo en Y mundial).
+- Orbit: botón derecho rotar, botón del medio pan, rueda zoom.
+- Fly: botón derecho mantenido para mirar (cursor oculto y confinado a la ventana); `Shift` acelera ×4, `Ctrl` ralentiza ×0.25.
+- `Esc`: salir.
 
 ## Benchmarks (Fase 9)
 

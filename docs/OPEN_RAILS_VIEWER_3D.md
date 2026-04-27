@@ -179,7 +179,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 
 | Orden | Tarea | F | V | Por qué va en ese lugar |
 |------:|-------|--:|--:|---------------------------|
-| **1** | App Bevy + ventana + **cámara libre** (orbit / fly) sobre un plano o grilla | 5 | 4 | Infraestructura mínima; valida el crate 3D y el bucle sin depender del sim. |
+| **1** | App Bevy + ventana + **cámara libre** (orbit / fly) sobre un plano o grilla — **✅ hecho** (`openrailsrs-viewer3d`) | 5 | 4 | Infraestructura mínima; valida el crate 3D y el bucle sin depender del sim. |
 | **2** | **Grafo 3D desde `track.toml`**: aristas como tubos o líneas gruesas 3D, nodos como esferas; colorear switches / estaciones | 4 | 5 | Ya tenéis topología 2D→3D (X,Y del grafo, Z=0 o elevación constante); se ve “la ruta” al instante. |
 | **3** | **Marcador del tren** (cubo / flecha) posicionado con el mismo criterio que `openrailsrs-viewer` 2D (`edge_id` + `pos_on_edge_m` desde CSV o snapshot del sim) | 4 | 5 | Prueba end-to-end “sim → posición → mundo 3D” sin parsear `.s`. |
 | **4** | **HUD mínimo** (texto Bevy / egui): tiempo, velocidad, nombre de escenario | 4 | 3 | Poco riesgo; mejora la demo y copia el espíritu del HUD 2D actual. |

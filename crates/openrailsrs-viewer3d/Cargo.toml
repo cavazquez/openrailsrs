@@ -1,0 +1,30 @@
+[package]
+name = "openrailsrs-viewer3d"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Experimental 3D viewer (Bevy) — window + grid + free camera (orbit/fly)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "openrailsrs-viewer3d"
+path = "src/main.rs"
+
+[dependencies]
+bevy = { version = "0.18", default-features = false, features = [
+    "bevy_winit",
+    "x11",
+    "bevy_window",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_asset",
+    "bevy_gizmos",
+    "bevy_log",
+    "default_font",
+    "tonemapping_luts",
+    "zstd_rust",
+] }
