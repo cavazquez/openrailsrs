@@ -1,0 +1,26 @@
+[package]
+name = "openrailsrs-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Headless train simulation over a track graph"
+
+[dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+openrailsrs-train = { path = "../openrailsrs-train" }
+csv.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+pretty_assertions = "1.4"
+
+[[bench]]
+name = "sim_step"
+harness = false

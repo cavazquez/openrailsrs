@@ -1,0 +1,4 @@
+(Wagon
+  (Type "Freight")
+  (Mass 20000)
+)

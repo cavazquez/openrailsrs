@@ -1,0 +1,4 @@
+(Train
+  (Engine "vehicles/minimal.eng")
+  (Wagon "vehicles/minimal.wag")
+)

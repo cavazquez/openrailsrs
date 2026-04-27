@@ -1,0 +1,8 @@
+(Train
+  (TrainCfg
+    (Name "freight_default")
+    (Serial 1)
+    (Engine "minimal.eng")
+    (Wagon "minimal.wag")
+  )
+)

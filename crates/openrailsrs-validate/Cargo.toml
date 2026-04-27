@@ -1,0 +1,15 @@
+[package]
+name = "openrailsrs-validate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Compare simulation outputs and validation helpers"
+
+[dependencies]
+csv.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

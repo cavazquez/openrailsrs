@@ -1,0 +1,33 @@
+[route]
+id = "test"
+
+[[nodes]]
+id = "yard_a"
+x_m = 0.0
+y_m = 0.0
+
+[[nodes]]
+id = "mid"
+x_m = 5000.0
+y_m = 0.0
+
+[[nodes]]
+id = "yard_b"
+x_m = 10000.0
+y_m = 0.0
+
+[[edges]]
+id = "e1"
+from = "yard_a"
+to = "mid"
+length_m = 5000.0
+speed_limit_kmh = 80.0
+grade_percent = 0.0
+
+[[edges]]
+id = "e2"
+from = "mid"
+to = "yard_b"
+length_m = 5000.0
+speed_limit_kmh = 80.0
+grade_percent = 0.0

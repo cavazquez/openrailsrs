@@ -1,0 +1,17 @@
+[package]
+name = "openrailsrs-game"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Playable rules layer (objectives, scoring) on top of simulation"
+
+[dependencies]
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-sim = { path = "../openrailsrs-sim" }
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

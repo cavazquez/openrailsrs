@@ -1,0 +1,27 @@
+[package]
+name = "openrailsrs-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Command-line interface for openrailsrs"
+
+[[bin]]
+name = "openrailsrs"
+path = "src/main.rs"
+
+[dependencies]
+openrailsrs-export = { path = "../openrailsrs-export" }
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-game = { path = "../openrailsrs-game" }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-sim = { path = "../openrailsrs-sim" }
+openrailsrs-validate = { path = "../openrailsrs-validate" }
+anyhow.workspace = true
+clap.workspace = true
+rayon.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

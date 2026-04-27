@@ -1,0 +1,25 @@
+[scenario]
+name = "Test freight run"
+description = "Simple freight scenario for CI/smoke"
+
+[route]
+path = "routes/test"
+start = "yard_a"
+destination = "yard_b"
+
+[train]
+consist = "consists/freight.con"
+
+[gameplay]
+objective = "arrive_on_time"
+time_limit_seconds = 3600
+difficulty = "normal"
+
+[simulation]
+duration = 800.0
+time_step = 0.1
+seed = 42
+
+[output]
+csv = "run.csv"
+metadata = "run.toml"

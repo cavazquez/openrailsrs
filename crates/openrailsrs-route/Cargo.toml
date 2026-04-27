@@ -1,0 +1,17 @@
+[package]
+name = "openrailsrs-route"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Logical route view over track data"
+
+[dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

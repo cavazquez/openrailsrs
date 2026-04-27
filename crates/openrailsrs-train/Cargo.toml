@@ -1,0 +1,15 @@
+[package]
+name = "openrailsrs-train"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Locomotives, wagons, consists, physical parameters"
+
+[dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

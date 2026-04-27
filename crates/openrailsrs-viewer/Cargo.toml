@@ -1,0 +1,16 @@
+[package]
+name = "openrailsrs-viewer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Minimal 2D route viewer (optional; sim stays headless)"
+
+[[bin]]
+name = "openrailsrs-viewer"
+path = "src/main.rs"
+
+[dependencies]
+minifb = { version = "0.27", default-features = false, features = ["x11"] }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-track = { path = "../openrailsrs-track" }

@@ -1,0 +1,18 @@
+[package]
+name = "openrailsrs-export"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Headless exports: DOT, GeoJSON, ASCII maps, textual replay helpers"
+
+[dependencies]
+openrailsrs-track = { path = "../openrailsrs-track" }
+csv.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }
+tempfile = "3"
