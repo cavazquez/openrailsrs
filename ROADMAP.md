@@ -197,15 +197,17 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 ---
 
-## Fase 13 — Importar rutas reales 🔲
+## Fase 13 — Importar rutas reales ✅
 
-**Objetivo:** Convertir datos de OpenStreetMap (GeoJSON railways) a `track.toml`.
+**Implementado:**
+- Nuevo crate `openrailsrs-import`: importa Overpass API JSON → `track.toml`.
+- Algoritmo: indexado de nodos OSM, detección de junctions (nodos compartidos por ≥2 ways), segmentación de ways, proyección equirectangular, distancias Haversine, speed limit desde tag `maxspeed`.
+- Soporta `railway=rail`, `light_rail`, `subway`, `tram`; estaciones (`railway=station`) como `NodeKind::Station`.
+- CLI: `openrailsrs import-osm overpass.json --out routes/myroute/track.toml --route-id myroute`.
+- Fixture del Badner Bahn (Viena) en `examples/osm/` + plantilla de query Overpass lista para usar.
+- 11 tests incluyendo round-trip con `openrailsrs-route` (TOML generado → `TrackGraph`).
 
-**Ideas:**
-- Herramienta `openrailsrs convert-osm <geojson> --out track.toml`.
-- Proyección de coordenadas geográficas (WGS84) a metros locales.
-- Detección automática de bifurcaciones → nodos Switch.
-- Compatibilidad con tags OSM: `railway=rail/station/switch`, `maxspeed`.
+**Pendiente:** Importador simplificado de `.trk` de MSTS (topología sin splines 3D).
 
 ---
 

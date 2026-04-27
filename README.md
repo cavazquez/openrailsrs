@@ -76,8 +76,11 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
 | 9 — Optimización | **Profundizado** | `PathData` pre-computa `Vec<PathEdgeData>` antes del bucle → `physics::step` usa indexación directa (sin `HashMap::get` por tick); benchmarks Criterion: micro, escenario completo, multi-tren. |
 | 10 — Viewer 2D animado | **Profundizado** | `openrailsrs-viewer`: topología + señales con aspecto real (rojo/amarillo/verde), **replay multi-tren animado** desde CSV, HUD con t, velocidad por tren, barra de progreso, controles teclado. |
+| 13 — Importar rutas reales | **Implementado** | `openrailsrs-import`: Overpass JSON (OSM) → `track.toml`; junctions automáticos, Haversine, proyección equirectangular, estaciones, speed limit desde tag `maxspeed`. |
 
 > Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
+>
+> **Fase 13** implementada: `openrailsrs import-osm overpass.json --out routes/myroute/track.toml`. Ver [`examples/osm/`](examples/osm/).
 
 ### Principios
 
@@ -99,6 +102,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (piecewise-linear) configurables. |
 | `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; **`multi_runner`** con `BlockMap` y bucle sincronizado multi-tren; `SimEvent` overspeed/estaciones/señales/`BlockWait`/`BlockClear`; **`PathData`** (pre-cómputo de aristas, sin `HashMap` en el hot loop); `run.csv` + `run.toml`. |
 | `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop` graduado, `early_departure`); `PlayOutcome` con `punctuality_pct` / `total_delay_s` / `delay_s` por parada; `play-headless` con **timeline completo** por stdout; `outcome.toml`. |
+| `openrailsrs-import` | Importa topología ferroviaria real desde Overpass JSON (OpenStreetMap) → `track.toml`; proyección equirectangular, Haversine, estaciones y speed limit. |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`: RMSE, max/mean abs por columna; `ValidationConfig` con umbrales por columna; `pass`/`fail` por serie y global. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
@@ -172,6 +176,11 @@ openrailsrs replay examples/smoke/run.csv --watch --speed 20
 
 # Simulación multi-tren (block occupancy sincronizado)
 openrailsrs sim-multi examples/smoke/scenario_multi.toml
+
+# Importar ruta desde OpenStreetMap (Overpass JSON) → track.toml
+openrailsrs import-osm examples/osm/overpass_sample.json \
+  --out routes/badner_bahn/track.toml \
+  --route-id badner_bahn
 
 # Batch con rayon (varios escenarios en paralelo)
 openrailsrs batch examples/smoke/scenario.toml examples/smoke/scenario_diverging.toml
@@ -363,6 +372,44 @@ penalty_per_second_late = 2.0   # 2 puntos por segundo de retraso
 | `punctuality_pct` | % de paradas alcanzadas a tiempo (0–100) |
 | `total_delay_s` | Suma total de segundos de retraso en todas las paradas |
 | `delay_s` (en cada `StopResult`) | Retraso individual respecto a `arrive_s` |
+
+---
+
+### Importar rutas reales desde OpenStreetMap (`import-osm`)
+
+El comando `import-osm` convierte un JSON de la **Overpass API** en un `track.toml` listo para usar. No hace falta ninguna instalación de Open Rails ni MSTS — basta con datos libres de OpenStreetMap.
+
+**Flujo:**
+
+1. Abrí [overpass-turbo.eu](https://overpass-turbo.eu/) y pegá la query del archivo [`examples/osm/overpass_query.txt`](examples/osm/overpass_query.txt).
+2. Reemplazá `{{bbox}}` por las coordenadas de tu ruta (sur,oeste,norte,este).
+3. Exportá como **raw OSM data (JSON)**.
+4. Importá con:
+
+```bash
+openrailsrs import-osm resultado.json \
+  --out routes/mi_ruta/track.toml \
+  --route-id mi_ruta \
+  --default-speed 120   # km/h cuando no hay tag maxspeed
+```
+
+El archivo generado es editable: podés ajustar `grade_percent` de cada arista, promover nodos Plain a Switch, o agregar señales — todo en TOML legible.
+
+**Qué importa automáticamente:**
+
+| Dato OSM | Resultado en `track.toml` |
+|----------|--------------------------|
+| `railway=rail/light_rail/subway/tram` | Aristas con `length_m` Haversine |
+| `maxspeed=120` | `speed_limit_kmh = 120.0` |
+| `railway=station` + `name=...` | `NodeKind::Station { name }` |
+| Nodo compartido por ≥ 2 ways | Nodo de junction (grafo correcto) |
+| Lat/Lon WGS-84 | Proyección equirectangular → `x_m`, `y_m` |
+
+**Limitaciones conocidas:**
+
+- `grade_percent` siempre 0.0 (OSM no tiene altimetría confiable por tramo).
+- Switches complejos (>2 ramas) quedan como `Plain`; se editan a mano.
+- Señales OSM (`railway=signal`) tienen cobertura irregular, no se importan.
 
 ---
 

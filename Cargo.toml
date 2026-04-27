@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/openrailsrs-core",
     "crates/openrailsrs-formats",
+    "crates/openrailsrs-import",
     "crates/openrailsrs-scenarios",
     "crates/openrailsrs-route",
     "crates/openrailsrs-track",

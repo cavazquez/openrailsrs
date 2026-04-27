@@ -1,0 +1,68 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API — openrailsrs fixture (simplified)",
+  "elements": [
+    {
+      "type": "node",
+      "id": 100001,
+      "lat": 48.0844,
+      "lon": 16.2878,
+      "tags": {
+        "railway": "station",
+        "name": "Mödling"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100002,
+      "lat": 48.0650,
+      "lon": 16.2800
+    },
+    {
+      "type": "node",
+      "id": 100003,
+      "lat": 48.0500,
+      "lon": 16.2700,
+      "tags": {
+        "railway": "station",
+        "name": "Guntramsdorf"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100004,
+      "lat": 48.0350,
+      "lon": 16.2600
+    },
+    {
+      "type": "node",
+      "id": 100005,
+      "lat": 48.0140,
+      "lon": 16.2320,
+      "tags": {
+        "railway": "station",
+        "name": "Baden"
+      }
+    },
+    {
+      "type": "way",
+      "id": 200001,
+      "nodes": [100001, 100002, 100003],
+      "tags": {
+        "railway": "rail",
+        "maxspeed": "80",
+        "name": "Badner Bahn – north segment"
+      }
+    },
+    {
+      "type": "way",
+      "id": 200002,
+      "nodes": [100003, 100004, 100005],
+      "tags": {
+        "railway": "rail",
+        "maxspeed": "80",
+        "name": "Badner Bahn – south segment"
+      }
+    }
+  ]
+}

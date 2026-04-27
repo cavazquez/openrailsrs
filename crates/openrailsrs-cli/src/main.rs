@@ -105,6 +105,20 @@ enum Commands {
     },
     /// Run multi-train simulation (block-occupancy aware, interleaved clock).
     SimMulti { scenario: PathBuf },
+    /// Import railway topology from an Overpass JSON file and write track.toml.
+    ImportOsm {
+        /// Path to the Overpass JSON file (see examples/osm/overpass_query.txt).
+        input: PathBuf,
+        /// Destination track.toml file (parent directory is created if needed).
+        #[arg(long)]
+        out: PathBuf,
+        /// Route id written into [route] id in the output TOML.
+        #[arg(long, default_value = "imported")]
+        route_id: String,
+        /// Default speed limit (km/h) for ways without a maxspeed tag.
+        #[arg(long, default_value_t = 80.0)]
+        default_speed: f64,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -306,6 +320,39 @@ fn main() -> anyhow::Result<()> {
                     block_waits,
                 );
             }
+        }
+        Commands::ImportOsm {
+            input,
+            out,
+            route_id,
+            default_speed,
+        } => {
+            use openrailsrs_import::{OsmImportOptions, import_osm_file};
+            let opts = OsmImportOptions {
+                route_id: route_id.clone(),
+                default_speed_kmh: default_speed,
+            };
+            let toml_str = import_osm_file(&input, &opts)
+                .map_err(|e| anyhow::anyhow!("import-osm {}: {e}", input.display()))?;
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&out, &toml_str)?;
+            // Report summary.
+            let nodes = toml_str
+                .lines()
+                .filter(|l| l.starts_with("[[nodes]]"))
+                .count();
+            let edges = toml_str
+                .lines()
+                .filter(|l| l.starts_with("[[edges]]"))
+                .count();
+            println!(
+                "import-osm: wrote {} ({} nodes, {} edges)",
+                out.display(),
+                nodes,
+                edges
+            );
         }
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;

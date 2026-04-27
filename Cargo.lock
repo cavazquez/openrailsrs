@@ -663,6 +663,7 @@ dependencies = [
  "openrailsrs-export",
  "openrailsrs-formats",
  "openrailsrs-game",
+ "openrailsrs-import",
  "openrailsrs-route",
  "openrailsrs-scenarios",
  "openrailsrs-sim",
@@ -710,6 +711,19 @@ dependencies = [
  "openrailsrs-scenarios",
  "openrailsrs-sim",
  "serde",
+ "tempfile",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
+name = "openrailsrs-import"
+version = "0.1.0"
+dependencies = [
+ "openrailsrs-route",
+ "openrailsrs-track",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "toml",

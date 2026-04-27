@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 openrailsrs-export = { path = "../openrailsrs-export" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-import = { path = "../openrailsrs-import" }
 openrailsrs-game = { path = "../openrailsrs-game" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }

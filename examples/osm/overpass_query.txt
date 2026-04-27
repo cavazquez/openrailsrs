@@ -1,0 +1,33 @@
+/* Overpass API query — download railway topology for a bounding box.
+ *
+ * Usage:
+ *   1. Open https://overpass-turbo.eu/
+ *   2. Replace the bbox below with your area of interest (south,west,north,east).
+ *   3. Click "Run".
+ *   4. Click "Export → Download as raw OSM data (JSON)" → save as overpass_result.json
+ *   5. Run:
+ *        openrailsrs import-osm overpass_result.json \
+ *          --out routes/<route-id>/track.toml \
+ *          --route-id <route-id>
+ *
+ * Tip: Use "Export → Copy" from overpass-turbo.eu and paste the content
+ * directly into a .json file.
+ */
+
+[out:json][timeout:60];
+(
+  /* Main-line, light-rail, subway and tram ways */
+  way[railway~"^(rail|light_rail|subway|tram)$"]({{bbox}});
+  /* All nodes referenced by those ways (includes geometry + stations) */
+  node(w);
+  /* Optionally include named stations/halts even outside the ways */
+  node[railway~"^(station|halt|stop)$"]({{bbox}});
+);
+out body;
+
+/* ── Example bboxes ──────────────────────────────────────────────── */
+/* Semmering (AT):         47.60,15.50,47.70,15.85                   */
+/* Brenner Pass (AT/IT):   46.95,11.40,47.05,11.55                   */
+/* Badner Bahn (AT):       47.95,16.20,48.10,16.35                   */
+/* Caltrain SF–SJ (US):    37.33,-122.02,37.78,-121.90               */
+/* Trans-Siberian (RU):    52.25,103.80,52.35,104.30                  */
