@@ -13,10 +13,12 @@ path = "src/main.rs"
 [dependencies]
 openrailsrs-export = { path = "../openrailsrs-export" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-campaign = { path = "../openrailsrs-campaign" }
 openrailsrs-import = { path = "../openrailsrs-import" }
 openrailsrs-game = { path = "../openrailsrs-game" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-track = { path = "../openrailsrs-track" }
 openrailsrs-train = { path = "../openrailsrs-train" }
 openrailsrs-sim = { path = "../openrailsrs-sim" }
 openrailsrs-validate = { path = "../openrailsrs-validate" }
@@ -28,3 +30,4 @@ toml.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 crossterm = "0.29.0"
+ratatui = "0.29.0"

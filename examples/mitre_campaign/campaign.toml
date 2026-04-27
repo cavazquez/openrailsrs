@@ -1,0 +1,55 @@
+[campaign]
+name        = "Línea Mitre — Operador Ferroviario"
+description = """
+Gestioná los servicios suburbanos eléctricos de la Línea Mitre desde la terminal Retiro.
+Cada misión aumenta la dificultad: más paradas, horarios más ajustados y puntualidad exigida.
+"""
+version = "1.0"
+
+# ── Misión 0: Tutorial ────────────────────────────────────────────────────────
+[[missions]]
+id          = "tutorial"
+name        = "Tutorial — Primer servicio"
+description = "Recorrido corto de prueba para familiarizarse con los controles."
+scenario    = "../../examples/smoke/scenario.toml"
+requires    = []
+min_pass_score  = 0
+bonus_threshold = 80
+sim_speed   = 15.0
+difficulty  = "easy"
+
+# ── Misión 1: Retiro → Olivos (corta, fácil) ─────────────────────────────────
+[[missions]]
+id          = "retiro_olivos"
+name        = "Retiro → Olivos"
+description = "Primer servicio real: 8.5 km por la costanera norte. Tres paradas con horario."
+scenario    = "scenarios/retiro_olivos.toml"
+requires    = ["tutorial"]
+min_pass_score  = 60
+bonus_threshold = 88
+sim_speed   = 10.0
+difficulty  = "easy"
+
+# ── Misión 2: Retiro → San Isidro (media) ────────────────────────────────────
+[[missions]]
+id          = "retiro_san_isidro"
+name        = "Retiro → San Isidro C"
+description = "14 km, seis paradas. El límite de velocidad baja de 90 a 70 km/h en zona urbana."
+scenario    = "scenarios/retiro_san_isidro.toml"
+requires    = ["retiro_olivos"]
+min_pass_score  = 65
+bonus_threshold = 90
+sim_speed   = 10.0
+difficulty  = "medium"
+
+# ── Misión 3: Retiro → Victoria (el trayecto completo) ───────────────────────
+[[missions]]
+id          = "retiro_victoria"
+name        = "Retiro → Victoria (servicio completo)"
+description = "El recorrido eléctrico completo: 22.9 km, 13 estaciones, 8 paradas con horario real. Llegar puntual a cada estación para el score máximo."
+scenario    = "../../examples/routes/mitre/scenario_retiro_victoria.toml"
+requires    = ["retiro_san_isidro"]
+min_pass_score  = 65
+bonus_threshold = 92
+sim_speed   = 10.0
+difficulty  = "hard"

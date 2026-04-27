@@ -1,0 +1,46 @@
+[scenario]
+name        = "Línea Mitre — Retiro → Olivos"
+description = "Primer servicio real: 8.5 km, tres paradas."
+
+[route]
+path        = "../../routes/mitre"
+start       = "n1618345519"   # Retiro
+destination = "n30419065"     # Olivos
+
+[[route.stops]]
+node     = "n2151813707"   # Belgrano R
+arrive_s = 480.0
+depart_s = 490.0
+
+[[route.stops]]
+node     = "n290550420"    # Núñez
+arrive_s = 660.0
+depart_s = 670.0
+
+[[route.stops]]
+node     = "n30419070"     # Vicente López
+arrive_s = 900.0
+depart_s = 910.0
+
+[train]
+consist = "../../routes/mitre/consists/caf_6000.con"
+
+[train.davis]
+a_n          = 2120.0
+b_n_per_mps  = 29.0
+c_n_per_mps2 = 1.24
+
+[gameplay]
+overspeed_penalty        = 50
+missed_stop_penalty      = 100
+early_departure_penalty  = 30
+penalty_per_second_late  = 1.5
+
+[simulation]
+duration  = 1800.0
+time_step = 0.1
+seed      = 1
+
+[output]
+csv      = "run_retiro_olivos.csv"
+metadata = "run_retiro_olivos.toml"

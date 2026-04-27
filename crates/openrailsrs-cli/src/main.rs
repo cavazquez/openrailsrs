@@ -1,4 +1,5 @@
 mod cab;
+mod dispatch;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -113,6 +114,18 @@ enum Commands {
         #[arg(long, default_value_t = 10.0)]
         speed: f64,
     },
+    /// Real-time dispatch panel: monitor simulation with ratatui TUI.
+    Dispatch {
+        scenario: PathBuf,
+        /// Simulation speed multiplier.
+        #[arg(long, default_value_t = 10.0)]
+        speed: f64,
+    },
+    /// Campaign management commands.
+    Campaign {
+        #[command(subcommand)]
+        cmd: CampaignCmd,
+    },
     /// Import railway topology from an Overpass JSON file and write track.toml.
     ImportOsm {
         /// Path to the Overpass JSON file (see examples/osm/overpass_query.txt).
@@ -129,6 +142,34 @@ enum Commands {
         /// Disable bidirectional edges (by default railway edges are added in both directions).
         #[arg(long)]
         one_way: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum CampaignCmd {
+    /// Show mission list and progress for a campaign.
+    Status {
+        /// Path to the campaign.toml file.
+        campaign: PathBuf,
+        /// Path to the progress.json file (created if missing).
+        #[arg(long, default_value = "progress.json")]
+        progress: PathBuf,
+    },
+    /// Run a mission from a campaign (headless simulation).
+    Play {
+        /// Path to the campaign.toml file.
+        campaign: PathBuf,
+        /// Mission id to play.
+        mission: String,
+        /// Path to the progress.json file.
+        #[arg(long, default_value = "progress.json")]
+        progress: PathBuf,
+    },
+    /// Reset all progress for a campaign.
+    Reset {
+        campaign: PathBuf,
+        #[arg(long, default_value = "progress.json")]
+        progress: PathBuf,
     },
 }
 
@@ -334,6 +375,112 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Cab { scenario, speed } => {
             cab::run_cab(&scenario, speed)?;
+        }
+        Commands::Dispatch { scenario, speed } => {
+            dispatch::run_dispatch(&scenario, speed)?;
+        }
+        Commands::Campaign { cmd } => {
+            use openrailsrs_campaign::{
+                MissionState, load_campaign, load_progress, mission_statuses, record_result,
+                save_progress,
+            };
+            use openrailsrs_game::evaluate::play_headless_from_scenario_file;
+            match cmd {
+                CampaignCmd::Status { campaign, progress } => {
+                    let camp = load_campaign(&campaign)?;
+                    let prog = load_progress(&progress)?;
+                    let statuses = mission_statuses(&camp, &prog);
+
+                    println!(
+                        "\n  🚆  {}  —  {}\n",
+                        camp.campaign.name, camp.campaign.description
+                    );
+                    println!(
+                        "  {:<4}  {:<28}  {:<10}  {:<6}  Dificultad",
+                        "ID", "Nombre", "Estado", "Score"
+                    );
+                    println!("  {}", "─".repeat(72));
+                    for ms in &statuses {
+                        let state_label = match ms.state {
+                            MissionState::Locked => "🔒 bloqueada",
+                            MissionState::Available => "▶ disponible",
+                            MissionState::Completed => "✅ completada",
+                        };
+                        let score_str = ms
+                            .best_score
+                            .map(|s| format!("{s:3}/100{}", if ms.bonus { " ⭐" } else { "" }))
+                            .unwrap_or_else(|| "  —".into());
+                        println!(
+                            "  {:<4}  {:<28}  {:<14}  {:<10}  {:?}",
+                            ms.def.id, ms.def.name, state_label, score_str, ms.def.difficulty
+                        );
+                    }
+                    println!();
+                }
+                CampaignCmd::Play {
+                    campaign,
+                    mission,
+                    progress: progress_path,
+                } => {
+                    let camp = load_campaign(&campaign)?;
+                    let mut prog = load_progress(&progress_path)?;
+                    let statuses = mission_statuses(&camp, &prog);
+
+                    let ms = statuses
+                        .iter()
+                        .find(|s| s.def.id == mission)
+                        .ok_or_else(|| anyhow::anyhow!("misión no encontrada: {mission}"))?;
+
+                    if ms.state == MissionState::Locked {
+                        anyhow::bail!(
+                            "misión bloqueada: {} — requiere: {:?}",
+                            mission,
+                            ms.def.requires
+                        );
+                    }
+
+                    let camp_dir = campaign
+                        .parent()
+                        .ok_or_else(|| anyhow::anyhow!("campaign path has no parent"))?;
+                    let scenario_path = camp_dir.join(&ms.def.scenario);
+
+                    println!("▶  {} — {}", ms.def.name, ms.def.description);
+                    let outcome = play_headless_from_scenario_file(&scenario_path)
+                        .map_err(|e| anyhow::anyhow!("sim: {e}"))?;
+                    let pct = (outcome.score.clamp(0.0, 100.0)) as u32;
+
+                    println!(
+                        "   Puntuación: {:.1}/100 → {}%  {} {}",
+                        outcome.score,
+                        pct,
+                        if pct >= ms.def.bonus_threshold {
+                            "⭐ BONUS"
+                        } else {
+                            ""
+                        },
+                        if pct >= ms.def.min_pass_score {
+                            "✅ APROBADA"
+                        } else {
+                            "❌ No aprobada"
+                        },
+                    );
+
+                    record_result(&mut prog, &mission, pct, ms.def.bonus_threshold);
+                    save_progress(&progress_path, &prog)?;
+                    println!("   Progreso guardado en {}", progress_path.display());
+                }
+                CampaignCmd::Reset {
+                    campaign: _,
+                    progress,
+                } => {
+                    if progress.exists() {
+                        std::fs::remove_file(&progress)?;
+                        println!("Progreso eliminado: {}", progress.display());
+                    } else {
+                        println!("No existe archivo de progreso: {}", progress.display());
+                    }
+                }
+            }
         }
         Commands::ImportOsm {
             input,

@@ -78,6 +78,11 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 10 — Viewer 2D animado | **Profundizado** | `openrailsrs-viewer`: topología + señales con aspecto real (rojo/amarillo/verde), **replay multi-tren animado** desde CSV, HUD con t, velocidad por tren, barra de progreso, controles teclado. |
 | 13 — Importar rutas reales | **Implementado** | `openrailsrs-import`: Overpass JSON (OSM) → `track.toml`; junctions automáticos, Haversine, proyección equirectangular, estaciones, speed limit desde tag `maxspeed`; aristas bidireccionales por defecto. Línea Mitre (Buenos Aires) en `examples/routes/mitre/`. |
 | 11/14 — Escenario real + Modo cabina | **Implementado** | Escenario Retiro → Victoria (22.9 km, 13 estaciones) sobre el grafo OSM real; consist CAF 6000 EMU 6 coches; `openrailsrs cab` — HUD en pantalla completa, W/↑ acelerar, S/↓ frenar, velocidad configurable. |
+>
+> **Campaña**: `openrailsrs campaign status examples/mitre_campaign/campaign.toml`
+>
+> **Despacho**: `openrailsrs dispatch examples/routes/mitre/scenario_retiro_victoria.toml --speed 20`
+| 12/15 — Panel de despacho + Campaña | **Implementado** | `openrailsrs-campaign`: misiones, unlock por score, `progress.json`; `campaign status/play/reset`; `openrailsrs dispatch` — TUI ratatui con tabla de trenes, log de eventos, pausa/velocidad. |
 
 > Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
 >
@@ -449,6 +454,57 @@ openrailsrs cab examples/routes/mitre/scenario_retiro_victoria.toml --speed 10
 ```
 
 La carpeta `examples/routes/mitre/` incluye la **Línea Mitre real** importada de OpenStreetMap (2133 nodos, 4926 aristas) y el consist **CAF 6000** (EMU eléctrico de 6 coches, 270 t, 900 kW) para el trayecto Retiro → Victoria.
+
+---
+
+### Panel de despacho (`dispatch`) — Fase 12
+
+Monitor en tiempo real con TUI completa. El tren corre automáticamente (throttle al 100%) mientras la pantalla se actualiza.
+
+```bash
+openrailsrs dispatch examples/routes/mitre/scenario_retiro_victoria.toml --speed 20
+```
+
+```
+ openrailsrs DISPATCH  •  Línea Mitre — Retiro → Victoria  •  t=245s  •  20×
+┌ Trenes en servicio ────────────────────────────────────────────────────────────────┐
+│ Tren         Estado       Velocidad  Límite    Odómetro   Progreso    Energía      │
+│ CAF-6000 #1  EN SERVICIO   84.2 km/h  90 km/h  4 821 m  [▓▓▓▓░░…]   6.14 kWh    │
+└────────────────────────────────────────────────────────────────────────────────────┘
+┌ Log de eventos ────────────────────────────────────────────────────────────────────┐
+│  Arista: e_n1618345519_n…  312m  lím 90km/h → Belgrano C                          │
+│  Arista: e_n6463425690_n…  245m  lím 90km/h → Núñez                               │
+└────────────────────────────────────────────────────────────────────────────────────┘
+  Espacio=pausa/reanudar   +/-=velocidad   Q/Esc=salir
+```
+
+### Motor de campaña (`campaign`) — Fase 15
+
+Sistema progresivo de misiones con persistencia de progreso.
+
+```bash
+# Ver estado de la campaña Mitre
+openrailsrs campaign status examples/mitre_campaign/campaign.toml
+
+# Jugar una misión
+openrailsrs campaign play examples/mitre_campaign/campaign.toml tutorial
+
+# Reiniciar progreso
+openrailsrs campaign reset examples/mitre_campaign/campaign.toml
+```
+
+```
+  🚆  Línea Mitre — Operador Ferroviario
+
+  ID                Nombre                          Estado        Score    Dificultad
+  ────────────────────────────────────────────────────────────────────────
+  tutorial          Tutorial — Primer servicio       ✅ completada  100/100 ⭐  Easy
+  retiro_olivos     Retiro → Olivos                  ▶ disponible   —          Easy
+  retiro_san_isidro Retiro → San Isidro C            🔒 bloqueada   —          Medium
+  retiro_victoria   Retiro → Victoria (completo)     🔒 bloqueada   —          Hard
+```
+
+El archivo `progress.json` persiste el mejor score de cada misión entre sesiones. Una misión se desbloquea cuando se completa la anterior con un score ≥ `min_pass_score` (configurable en `campaign.toml`).
 
 ---
 

@@ -237,6 +237,18 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 ---
 
+---
+
+## Fase 12/15 — Panel de despacho + Motor de campaña ✅
+
+**Implementado:**
+- Nuevo crate `openrailsrs-campaign`: `CampaignFile` + `MissionDef` + `Progress` + `MissionResult`; lógica de unlock basada en `min_pass_score`; persistencia en `progress.json`; `record_result` preserva el mejor score entre reintentos. 8 tests.
+- `examples/mitre_campaign/campaign.toml`: 4 misiones progresivas (Tutorial → Retiro→Olivos → Retiro→San Isidro → Retiro→Victoria); dificultad, `bonus_threshold` y `sim_speed` configurables por misión.
+- CLI `openrailsrs campaign status <campaign.toml>`: tabla con estado 🔒/▶/✅, mejor score y estrella bonus.
+- CLI `openrailsrs campaign play <campaign.toml> <mission_id>`: ejecuta la misión, calcula score desde `PlayOutcome`, guarda progreso y muestra APROBADA/BONUS.
+- CLI `openrailsrs campaign reset <campaign.toml>`: borra `progress.json`.
+- CLI `openrailsrs dispatch <scenario.toml> [--speed N]`: panel de despacho interactivo con `ratatui`; tabla de trenes (velocidad coloreada por límite, odómetro, progreso animado, energía), log de eventos con transiciones de arista y llegadas, pausa/reanudar con Espacio, ajuste de velocidad con +/-.
+
 ## Fase 15 — Editor de rutas 🔲
 
 **Objetivo:** Crear y editar `track.toml` de forma interactiva.
