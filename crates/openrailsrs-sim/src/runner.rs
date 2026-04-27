@@ -110,6 +110,18 @@ pub struct SimRunResult {
 }
 
 /// Run headless simulation from an already-loaded scenario; paths in the scenario are relative to `scenario_dir`.
+/// Determine the asset root for resolving engine/wagon files inside a consist.
+///
+/// The consist file itself lives inside a `consists/` (or similar) directory.  
+/// Paths stored in the `.con` file (e.g. `consists/foo.eng`) are relative to
+/// the *parent* of that directory, not to the `.con` file itself.
+fn consist_root(consist_path: &Path) -> &Path {
+    consist_path
+        .parent() // …/consists
+        .and_then(|p| p.parent()) // parent of consists/ == route root
+        .unwrap_or(consist_path)
+}
+
 pub fn run_scenario_headless(
     scenario_dir: &Path,
     scenario: &ScenarioFile,
@@ -137,7 +149,7 @@ pub fn run_scenario_headless_with_driver(
 
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
-    let consist = load_consist_with_asset_root(&consist_path, scenario_dir)?;
+    let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
     let davis = scenario
         .train
         .davis
@@ -166,6 +178,8 @@ pub fn run_scenario_headless_with_driver(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
+        regen_factor: consist.regen_factor(),
+        diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
     };
 
     let stop_nodes: HashSet<&str> = scenario

@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef};
@@ -79,12 +79,21 @@ fn auto_decide(vel_mps: f64, speed_limit_mps: f64) -> (f64, f64) {
 
 // ── Build physics from a TrainSection-like triple ────────────────────────────
 
+/// Asset root for resolving .eng/.wag paths inside a consist file.
+/// Paths in the .con reference `consists/foo.eng` which are relative to the route root.
+fn consist_root(consist_path: &Path) -> &Path {
+    consist_path
+        .parent()
+        .and_then(|p| p.parent())
+        .unwrap_or(consist_path)
+}
+
 fn build_physics(
     consist_path: &Path,
-    scenario_dir: &Path,
+    _scenario_dir: &Path,
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
 ) -> Result<TrainPhysics, SimError> {
-    let consist = load_consist_with_asset_root(consist_path, scenario_dir)?;
+    let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
     let davis = davis_override
         .map(|d| DavisCoefficients {
             a_n: d.a_n,
@@ -108,6 +117,8 @@ fn build_physics(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
+        regen_factor: consist.regen_factor(),
+        diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
     })
 }
 
@@ -484,4 +495,351 @@ pub fn run_multi_train_from_scenario_file(
         .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
     let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
     run_scenario_multi_train(scenario_dir, &scenario)
+}
+
+// ── LiveMultiSim ─────────────────────────────────────────────────────────────
+//
+// Frame-by-frame multi-train simulation for interactive dispatch panels.
+// Unlike `run_scenario_multi_train`, no CSV files are written; callers receive
+// `LiveTrainSnapshot` structs every call to `step_frame`.
+
+/// Status of an individual train inside `LiveMultiSim`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TrainStatus {
+    /// Waiting for its scheduled departure time.
+    WaitingToDepart,
+    /// Moving normally.
+    Running,
+    /// Stopped because the next block is occupied by another train.
+    WaitingBlock,
+    /// Has reached its destination.
+    Arrived,
+}
+
+/// Lightweight snapshot of a single train's state, returned each frame.
+#[derive(Clone, Debug)]
+pub struct LiveTrainSnapshot {
+    pub id: String,
+    pub velocity_mps: f64,
+    pub odometer_m: f64,
+    pub cumulative_energy_j: f64,
+    pub regen_energy_j: f64,
+    pub fuel_consumption_g: f64,
+    pub time_s: f64,
+    pub status: TrainStatus,
+    pub current_edge_id: Option<String>,
+    pub total_dist_m: f64,
+}
+
+struct LiveAgent {
+    id: String,
+    state: TrainSimState,
+    physics: TrainPhysics,
+    path_data: PathData,
+    phase: AgentPhase,
+    start_time_s: f64,
+    arrived: bool,
+    total_dist_m: f64,
+}
+
+/// Interactive multi-train simulation that advances frame-by-frame.
+pub struct LiveMultiSim {
+    agents: Vec<LiveAgent>,
+    block_map: HashMap<String, String>,
+    graph: openrailsrs_track::TrackGraph,
+    dt: f64,
+    t: f64,
+    duration: f64,
+    _scenario_dir: PathBuf,
+}
+
+impl LiveMultiSim {
+    /// Load and initialise from a scenario file.
+    pub fn new(scenario_path: &Path) -> Result<Self, SimError> {
+        let scenario_dir = scenario_path
+            .parent()
+            .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
+        let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
+
+        let route_dir = scenario_dir.join(&scenario.route.path);
+        let mut graph = load_track_graph_from_route_dir(&route_dir)?;
+
+        for sw in &scenario.route.switches {
+            let pos = match sw.position {
+                SwitchPositionDef::Straight => SwitchPosition::Straight,
+                SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+            };
+            graph.set_switch(&sw.node, pos)?;
+        }
+
+        let dt = scenario.simulation.time_step;
+        let duration = scenario.simulation.duration;
+        let mut agents: Vec<LiveAgent> = Vec::new();
+
+        // Primary train
+        {
+            let path_edges =
+                crate::path::edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
+            let consist_path = scenario_dir.join(&scenario.train.consist);
+            let physics =
+                build_physics(&consist_path, scenario_dir, scenario.train.davis.as_ref())?;
+            let total_dist_m: f64 = path_edges
+                .iter()
+                .filter_map(|eid| graph.edge(eid))
+                .map(|e| e.length_m)
+                .sum();
+            let path_data = PathData::from_path(&path_edges, &graph);
+            let mut state = TrainSimState::new(path_edges);
+            state.time = openrailsrs_core::SimTime(0.0);
+            agents.push(LiveAgent {
+                id: "primary".to_string(),
+                state,
+                physics,
+                path_data,
+                phase: AgentPhase::Normal,
+                start_time_s: 0.0,
+                arrived: false,
+                total_dist_m,
+            });
+        }
+
+        // Extra trains
+        for entry in &scenario.extra_trains {
+            let mut g2 = graph.clone();
+            for sw in &entry.switches {
+                let pos = match sw.position {
+                    SwitchPositionDef::Straight => SwitchPosition::Straight,
+                    SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+                };
+                g2.set_switch(&sw.node, pos)?;
+            }
+            let path_edges = crate::path::edge_path(&g2, &entry.start, &entry.destination)?;
+            let consist_path = scenario_dir.join(&entry.consist);
+            let physics = build_physics(&consist_path, scenario_dir, entry.davis.as_ref())?;
+            let total_dist_m: f64 = path_edges
+                .iter()
+                .filter_map(|eid| g2.edge(eid))
+                .map(|e| e.length_m)
+                .sum();
+            let path_data = PathData::from_path(&path_edges, &g2);
+            let mut state = TrainSimState::new(path_edges);
+            state.time = openrailsrs_core::SimTime(entry.start_time_s);
+            agents.push(LiveAgent {
+                id: entry.id.clone(),
+                state,
+                physics,
+                path_data,
+                phase: AgentPhase::Normal,
+                start_time_s: entry.start_time_s,
+                arrived: false,
+                total_dist_m,
+            });
+        }
+
+        // Initial block map
+        let mut block_map: HashMap<String, String> = HashMap::new();
+        for agent in &agents {
+            if agent.start_time_s <= 0.0 {
+                if let Some(eid) = agent.state.current_edge() {
+                    block_map.insert(eid.to_string(), agent.id.clone());
+                }
+            }
+        }
+
+        Ok(Self {
+            agents,
+            block_map,
+            graph,
+            dt,
+            t: 0.0,
+            duration,
+            _scenario_dir: scenario_dir.to_path_buf(),
+        })
+    }
+
+    /// Advance simulation by `steps` time steps (each step = `dt` seconds from the scenario).
+    /// Returns one `LiveTrainSnapshot` per train.
+    pub fn step_frame(&mut self, steps: u32) -> Vec<LiveTrainSnapshot> {
+        let dt = self.dt;
+        for _ in 0..steps {
+            if self.t >= self.duration {
+                break;
+            }
+            for agent in self.agents.iter_mut() {
+                if agent.arrived {
+                    continue;
+                }
+                if self.t < agent.start_time_s {
+                    continue;
+                }
+
+                // Claim starting edge on first active tick.
+                if (self.t - agent.start_time_s).abs() < dt * 0.5 {
+                    if let Some(eid) = agent.state.current_edge() {
+                        self.block_map
+                            .entry(eid.to_string())
+                            .or_insert_with(|| agent.id.clone());
+                    }
+                }
+
+                match agent.phase {
+                    AgentPhase::WaitingForBlock {
+                        ref edge_id,
+                        ref mut emitted,
+                    } => {
+                        let is_free = self
+                            .block_map
+                            .get(edge_id.as_str())
+                            .map(|id| id == &agent.id)
+                            .unwrap_or(true);
+                        if is_free {
+                            let freed_id = edge_id.clone();
+                            if let Some(old) = agent.state.current_edge() {
+                                self.block_map.remove(old);
+                            }
+                            self.block_map.insert(freed_id, agent.id.clone());
+                            agent.phase = AgentPhase::Normal;
+                            continue;
+                        }
+                        *emitted = true;
+                        agent.state.throttle = 0.0;
+                        agent.state.brake = 1.0;
+                        let res = crate::physics::step(
+                            &mut agent.state,
+                            &agent.path_data,
+                            &agent.physics,
+                            dt,
+                        );
+                        if res.arrived {
+                            agent.arrived = true;
+                            self.block_map.retain(|_, v| *v != agent.id);
+                        }
+                    }
+                    AgentPhase::Normal => {
+                        let edge_id_opt = agent.state.current_edge().map(str::to_string);
+                        let speed_limit = edge_id_opt
+                            .as_deref()
+                            .and_then(|e| self.graph.edge(e))
+                            .map(|e| e.speed_limit_mps)
+                            .unwrap_or(55.0 / 3.6);
+
+                        let next_idx = agent.state.edge_index + 1;
+                        if next_idx < agent.state.path_edges.len() {
+                            let next_eid = agent.state.path_edges[next_idx].clone();
+                            let is_blocked = self
+                                .block_map
+                                .get(&next_eid)
+                                .map(|id| id != &agent.id)
+                                .unwrap_or(false);
+                            const BRAKE_DECEL: f64 = 0.7;
+                            const BRAKE_MARGIN: f64 = 50.0;
+                            let v = agent.state.velocity_mps;
+                            let dist_needed = v * v / (2.0 * BRAKE_DECEL) + BRAKE_MARGIN;
+                            let remaining = edge_id_opt
+                                .as_deref()
+                                .and_then(|e| self.graph.edge(e))
+                                .map(|e| e.length_m - agent.state.pos_on_edge_m)
+                                .unwrap_or(f64::MAX);
+                            if is_blocked && remaining <= dist_needed {
+                                agent.phase = AgentPhase::WaitingForBlock {
+                                    edge_id: next_eid,
+                                    emitted: false,
+                                };
+                                agent.state.throttle = 0.0;
+                                agent.state.brake = 0.9;
+                                let res = crate::physics::step(
+                                    &mut agent.state,
+                                    &agent.path_data,
+                                    &agent.physics,
+                                    dt,
+                                );
+                                if res.arrived {
+                                    agent.arrived = true;
+                                    self.block_map.retain(|_, v| *v != agent.id);
+                                }
+                                continue;
+                            }
+                        }
+
+                        let (throttle, brake) = auto_decide(agent.state.velocity_mps, speed_limit);
+                        agent.state.throttle = throttle;
+                        agent.state.brake = brake;
+                        let prev_idx = agent.state.edge_index;
+                        let res = crate::physics::step(
+                            &mut agent.state,
+                            &agent.path_data,
+                            &agent.physics,
+                            dt,
+                        );
+
+                        if agent.state.edge_index > prev_idx {
+                            for idx in prev_idx..agent.state.edge_index {
+                                if idx < agent.state.path_edges.len() {
+                                    let old_eid = &agent.state.path_edges[idx];
+                                    if self
+                                        .block_map
+                                        .get(old_eid)
+                                        .map(|id| id == &agent.id)
+                                        .unwrap_or(false)
+                                    {
+                                        self.block_map.remove(old_eid);
+                                    }
+                                }
+                            }
+                            if let Some(new_eid) = agent.state.current_edge() {
+                                self.block_map
+                                    .entry(new_eid.to_string())
+                                    .or_insert_with(|| agent.id.clone());
+                            }
+                        }
+
+                        if res.arrived {
+                            agent.arrived = true;
+                            self.block_map.retain(|_, v| *v != agent.id);
+                        }
+                    }
+                }
+            }
+            self.t += dt;
+        }
+
+        // Build snapshots
+        self.agents
+            .iter()
+            .map(|a| {
+                let status = if a.arrived {
+                    TrainStatus::Arrived
+                } else if self.t < a.start_time_s {
+                    TrainStatus::WaitingToDepart
+                } else {
+                    match &a.phase {
+                        AgentPhase::WaitingForBlock { .. } => TrainStatus::WaitingBlock,
+                        AgentPhase::Normal => TrainStatus::Running,
+                    }
+                };
+                LiveTrainSnapshot {
+                    id: a.id.clone(),
+                    velocity_mps: a.state.velocity_mps,
+                    odometer_m: a.state.odometer_m,
+                    cumulative_energy_j: a.state.cumulative_energy_j,
+                    regen_energy_j: a.state.regen_energy_j,
+                    fuel_consumption_g: a.state.fuel_consumption_g,
+                    time_s: a.state.time_s(),
+                    status,
+                    current_edge_id: a.state.current_edge().map(str::to_string),
+                    total_dist_m: a.total_dist_m,
+                }
+            })
+            .collect()
+    }
+
+    /// Returns true if all trains have reached their destination.
+    pub fn all_arrived(&self) -> bool {
+        self.agents.iter().all(|a| a.arrived)
+    }
+
+    /// Elapsed simulation time (seconds).
+    pub fn sim_time(&self) -> f64 {
+        self.t
+    }
 }

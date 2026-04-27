@@ -50691,3 +50691,74 @@ to = "n13759410869"
 length_m = 4.3
 speed_limit_kmh = 90.0
 grade_percent = -0.0
+
+
+# ── Puente sintético Virreyes → Tigre (brecha OSM) ──────────────────────────
+# Añadido manualmente: ~4.1 km con 2 nodos intermedios (Talar y Delta).
+# Coordenadas interpoladas linealmente entre Virreyes (-6169,11190) y Tigre (-9003,14186).
+
+[[nodes]]
+id = "n_talar"
+x_m = -7302.0
+y_m = 12388.0
+
+[nodes.kind.station]
+name = "Talar"
+
+[[nodes]]
+id = "n_delta"
+x_m = -8011.0
+y_m = 13137.0
+
+[nodes.kind.station]
+name = "Delta"
+
+# Forward edges: Virreyes → Talar → Delta → Tigre
+[[edges]]
+id = "e_virreyes_talar"
+from = "n2809270635"
+to = "n_talar"
+length_m = 1649.0
+speed_limit_kmh = 90.0
+grade_percent = 0.0
+
+[[edges]]
+id = "e_talar_delta"
+from = "n_talar"
+to = "n_delta"
+length_m = 1031.0
+speed_limit_kmh = 90.0
+grade_percent = 0.0
+
+[[edges]]
+id = "e_delta_tigre"
+from = "n_delta"
+to = "n31065589"
+length_m = 1443.0
+speed_limit_kmh = 60.0
+grade_percent = 0.0
+
+# Reverse edges: Tigre → Delta → Talar → Virreyes
+[[edges]]
+id = "e_virreyes_talar_r"
+from = "n_talar"
+to = "n2809270635"
+length_m = 1649.0
+speed_limit_kmh = 90.0
+grade_percent = 0.0
+
+[[edges]]
+id = "e_talar_delta_r"
+from = "n_delta"
+to = "n_talar"
+length_m = 1031.0
+speed_limit_kmh = 90.0
+grade_percent = 0.0
+
+[[edges]]
+id = "e_delta_tigre_r"
+from = "n31065589"
+to = "n_delta"
+length_m = 1443.0
+speed_limit_kmh = 60.0
+grade_percent = 0.0

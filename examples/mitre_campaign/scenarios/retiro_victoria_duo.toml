@@ -1,0 +1,79 @@
+[scenario]
+name        = "Línea Mitre — Servicio duplo Retiro → Victoria"
+description = "Dos CAF 6000 en el mismo recorrido. El segundo sale 3 minutos después. El bloque de ocupación evita colisiones."
+
+[route]
+path        = "../../routes/mitre"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+
+[[route.stops]]
+node     = "n2151813707"   # Belgrano R
+arrive_s = 480.0
+depart_s = 490.0
+
+[[route.stops]]
+node     = "n290550420"    # Núñez
+arrive_s = 660.0
+depart_s = 670.0
+
+[[route.stops]]
+node     = "n30419070"     # Vicente López
+arrive_s = 900.0
+depart_s = 910.0
+
+[[route.stops]]
+node     = "n30419065"     # Olivos
+arrive_s = 1020.0
+depart_s = 1030.0
+
+[[route.stops]]
+node     = "n30419059"     # La Lucila
+arrive_s = 1140.0
+depart_s = 1150.0
+
+[[route.stops]]
+node     = "n30419055"     # Martínez
+arrive_s = 1320.0
+depart_s = 1330.0
+
+[[route.stops]]
+node     = "n1596221135"   # Acassuso
+arrive_s = 1440.0
+depart_s = 1450.0
+
+[[route.stops]]
+node     = "n30418815"     # San Isidro C
+arrive_s = 1560.0
+depart_s = 1570.0
+
+[train]
+consist = "../../routes/mitre/consists/caf_6000.con"
+
+[train.davis]
+a_n          = 2120.0
+b_n_per_mps  = 29.0
+c_n_per_mps2 = 1.24
+
+[[extra_trains]]
+id          = "CAF-6000 #2"
+consist     = "../../routes/mitre/consists/caf_6000.con"
+start       = "n1618345519"   # Retiro
+destination = "n1427534099"   # Victoria
+start_time_s = 180.0           # 3 minutos después
+output_csv  = "run_retiro_victoria_2.csv"
+
+[gameplay]
+overspeed_penalty        = 50
+missed_stop_penalty      = 100
+early_departure_penalty  = 30
+penalty_per_second_late  = 1.5
+
+[simulation]
+duration  = 3000.0
+time_step = 0.1
+seed      = 42
+
+[output]
+csv      = "run_retiro_victoria_duo.csv"
+metadata = "run_retiro_victoria_duo.toml"

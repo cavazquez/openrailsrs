@@ -78,6 +78,8 @@ impl From<EngineFile> for Locomotive {
             max_tractive_effort_n: value.max_tractive_effort_n,
             max_brake_force_n: value.max_brake_force_n,
             tractive_curve: None,
+            regen_factor: value.regen_factor,
+            diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
         }
     }
 }

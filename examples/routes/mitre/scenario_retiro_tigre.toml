@@ -1,0 +1,91 @@
+[scenario]
+name        = "Línea Mitre — Retiro → Tigre (recorrido completo)"
+description = "El trayecto eléctrico completo. 28 km, 16 estaciones, incluyendo el tramo Victoria→Talar→Delta→Tigre."
+
+[route]
+path        = "."
+start       = "n1618345519"   # Retiro
+destination = "n31065589"     # Tigre
+
+[[route.stops]]
+node     = "n2151813707"   # Belgrano R
+arrive_s = 480.0
+depart_s = 490.0
+
+[[route.stops]]
+node     = "n290550420"    # Núñez
+arrive_s = 660.0
+depart_s = 670.0
+
+[[route.stops]]
+node     = "n30419070"     # Vicente López
+arrive_s = 900.0
+depart_s = 910.0
+
+[[route.stops]]
+node     = "n30419065"     # Olivos
+arrive_s = 1020.0
+depart_s = 1030.0
+
+[[route.stops]]
+node     = "n30419059"     # La Lucila
+arrive_s = 1140.0
+depart_s = 1150.0
+
+[[route.stops]]
+node     = "n30419055"     # Martínez
+arrive_s = 1320.0
+depart_s = 1330.0
+
+[[route.stops]]
+node     = "n1596221135"   # Acassuso
+arrive_s = 1440.0
+depart_s = 1450.0
+
+[[route.stops]]
+node     = "n30418815"     # San Isidro C
+arrive_s = 1560.0
+depart_s = 1570.0
+
+[[route.stops]]
+node     = "n1427534099"   # Victoria
+arrive_s = 1740.0
+depart_s = 1750.0
+
+[[route.stops]]
+node     = "n2809270635"   # Virreyes
+arrive_s = 1920.0
+depart_s = 1930.0
+
+[[route.stops]]
+node     = "n_talar"       # Talar (sintético)
+arrive_s = 2100.0
+depart_s = 2110.0
+
+[[route.stops]]
+node     = "n_delta"       # Delta (sintético)
+arrive_s = 2220.0
+depart_s = 2230.0
+
+[train]
+consist = "consists/caf_6000.con"
+
+[train.davis]
+a_n          = 2120.0
+b_n_per_mps  = 29.0
+c_n_per_mps2 = 1.24
+
+[gameplay]
+overspeed_penalty        = 50
+missed_stop_penalty      = 100
+early_departure_penalty  = 30
+penalty_per_second_late  = 1.5
+
+[simulation]
+duration  = 3600.0
+time_step = 0.1
+seed      = 42
+
+[output]
+csv      = "run_retiro_tigre.csv"
+metadata = "run_retiro_tigre.toml"

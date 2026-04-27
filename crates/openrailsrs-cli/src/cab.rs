@@ -44,7 +44,11 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     let path_data = PathData::from_path(&path_edges, &graph);
 
     let consist_path = scenario_dir.join(&scenario.train.consist);
-    let consist = load_consist_with_asset_root(&consist_path, scenario_dir)
+    let asset_root = consist_path
+        .parent()
+        .and_then(|p| p.parent())
+        .unwrap_or(scenario_dir);
+    let consist = load_consist_with_asset_root(&consist_path, asset_root)
         .map_err(|e| anyhow::anyhow!("consist: {e}"))?;
     let davis = scenario
         .train
@@ -72,6 +76,8 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
+        regen_factor: consist.regen_factor(),
+        diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
     };
 
     let total_dist_m: f64 = path_edges
@@ -86,6 +92,36 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         .map(|e| e.speed_limit_mps)
         .fold(f64::NAN, f64::max);
 
+    // ── Pre-compute cumulative distance to each stop node ────────────────────
+    let penalty_per_late = scenario.gameplay.penalty_per_second_late;
+    let stops = scenario.route.stops.clone();
+    // Map stop node id → (cumulative_dist_m, arrive_s, depart_s, name)
+    let stop_targets: Vec<(f64, f64, f64, String)> = {
+        let mut cum = 0.0;
+        let mut result = Vec::new();
+        for eid in &path_edges {
+            if let Some(edge) = graph.edge(eid) {
+                cum += edge.length_m;
+                // Check if the destination node is a stop
+                let to_id = &edge.to.0;
+                if let Some(stop) = stops.iter().find(|s| &s.node == to_id) {
+                    let name = graph
+                        .node(to_id)
+                        .and_then(|n| {
+                            if let openrailsrs_track::NodeKind::Station { name } = &n.kind {
+                                Some(name.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or_else(|| to_id.clone());
+                    result.push((cum, stop.arrive_s, stop.depart_s, name));
+                }
+            }
+        }
+        result
+    };
+
     let route_name = scenario.scenario.name.clone();
     let dt = scenario.simulation.time_step;
     let real_frame = Duration::from_millis(50); // 20 FPS
@@ -99,6 +135,9 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     let mut brake: f64 = 0.0;
     let mut emergency = false;
     let mut arrived = false;
+    let mut next_stop_idx: usize = 0;
+    let mut accrued_penalty: f64 = 0.0;
+    let mut passed_stops: Vec<(String, f64)> = Vec::new(); // (name, delay_s)
 
     // ── Terminal setup ───────────────────────────────────────────────────────
     terminal::enable_raw_mode().map_err(|e| {
@@ -160,6 +199,17 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
                     if res.arrived {
                         arrived = true;
                         break;
+                    }
+                    // Check if we passed the next scheduled stop
+                    if next_stop_idx < stop_targets.len() {
+                        let (stop_dist, arrive_s, _depart_s, ref stop_name) =
+                            stop_targets[next_stop_idx];
+                        if state.odometer_m >= stop_dist {
+                            let delay = (state.time_s() - arrive_s).max(0.0);
+                            accrued_penalty += delay * penalty_per_late;
+                            passed_stops.push((stop_name.clone(), state.time_s() - arrive_s));
+                            next_stop_idx += 1;
+                        }
                     }
                 }
             }
@@ -244,14 +294,75 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
             )?;
 
             // Time + energy
-            execute!(
-                stdout,
-                Print(format!(
+            let regen_kwh = state.regen_energy_j / 3_600_000.0;
+            let energy_str = if regen_kwh > 0.01 {
+                format!(
+                    " Tiempo sim  {:6.0} s       Energía {:6.3} kWh  (regen {:5.3} kWh)\n",
+                    state.time_s(),
+                    state.cumulative_energy_j / 3_600_000.0,
+                    regen_kwh,
+                )
+            } else {
+                format!(
                     " Tiempo sim  {:6.0} s       Energía {:6.3} kWh\n",
                     state.time_s(),
-                    state.cumulative_energy_j / 3_600_000.0
-                )),
-            )?;
+                    state.cumulative_energy_j / 3_600_000.0,
+                )
+            };
+            execute!(stdout, Print(energy_str))?;
+
+            // ── Puntuality HUD ───────────────────────────────────────────────
+            if !stop_targets.is_empty() {
+                execute!(
+                    stdout,
+                    Print(" ─────────────────────────────────────────────\n")
+                )?;
+
+                // Next stop info
+                if next_stop_idx < stop_targets.len() {
+                    let (stop_dist, arrive_s, _depart_s, ref stop_name) =
+                        stop_targets[next_stop_idx];
+                    let dist_remaining = (stop_dist - state.odometer_m).max(0.0);
+                    let time_to_sched = arrive_s - state.time_s();
+                    let (label, color) = if time_to_sched >= 0.0 {
+                        (
+                            format!(
+                                "en {:.0}s (faltan {:.0}s horario)",
+                                time_to_sched, time_to_sched
+                            ),
+                            Color::Green,
+                        )
+                    } else {
+                        (format!("{:.0}s DE RETRASO", -time_to_sched), Color::Red)
+                    };
+                    execute!(
+                        stdout,
+                        Print(format!(" Próxima parada  {:<18}", stop_name)),
+                        SetForegroundColor(color),
+                        Print(format!(" {label}  ({:.0}m)\n", dist_remaining)),
+                        ResetColor,
+                    )?;
+                } else {
+                    execute!(stdout, Print(" Próxima parada  —  (recorrido libre)\n"))?;
+                }
+
+                // Penalties
+                let penalty_color = if accrued_penalty > 50.0 {
+                    Color::Red
+                } else if accrued_penalty > 10.0 {
+                    Color::Yellow
+                } else {
+                    Color::Green
+                };
+                execute!(
+                    stdout,
+                    Print(" Penalizaciones  "),
+                    SetForegroundColor(penalty_color),
+                    Print(format!("{:.0} pts", accrued_penalty)),
+                    ResetColor,
+                    Print(format!("  ({} paradas pasadas)\n", next_stop_idx)),
+                )?;
+            }
 
             execute!(
                 stdout,

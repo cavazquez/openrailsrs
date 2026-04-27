@@ -12,7 +12,8 @@ pub mod state;
 
 pub use error::SimError;
 pub use multi_runner::{
-    MultiTrainResult, TrainRunResult, run_multi_train_from_scenario_file, run_scenario_multi_train,
+    LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,
+    run_multi_train_from_scenario_file, run_scenario_multi_train,
 };
 pub use physics::TrainPhysics;
 pub use runner::{

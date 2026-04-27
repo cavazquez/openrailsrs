@@ -53,3 +53,15 @@ min_pass_score  = 65
 bonus_threshold = 92
 sim_speed   = 10.0
 difficulty  = "hard"
+
+# ── Misión 4: Servicio duplo (dos trenes simultáneos) ────────────────────────
+[[missions]]
+id          = "retiro_victoria_duo"
+name        = "Servicio duplo — dos CAF 6000"
+description = "Dos formaciones parten de Retiro con 3 minutos de diferencia. El bloque de ocupación evita colisiones. Ambos trenes deben llegar a Victoria."
+scenario    = "scenarios/retiro_victoria_duo.toml"
+requires    = ["retiro_victoria"]
+min_pass_score  = 60
+bonus_threshold = 88
+sim_speed   = 15.0
+difficulty  = "hard"

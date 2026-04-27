@@ -83,6 +83,10 @@ pub struct Locomotive {
     pub max_brake_force_n: f64,
     /// Optional explicit traction curve; if absent, P/v law is used.
     pub tractive_curve: Option<TractiveCurve>,
+    /// Fraction of braking energy recovered (0.0 = none, 0.7 = modern EMU).
+    pub regen_factor: f64,
+    /// Specific fuel consumption in g/kWh; `None` for electric traction.
+    pub diesel_sfc_g_per_kwh: Option<f64>,
 }
 
 #[derive(Clone, Debug)]
@@ -143,6 +147,34 @@ impl Consist {
                 _ => None,
             })
             .sum()
+    }
+
+    /// Aggregate regen factor: max across all locomotives (0.0 if none have regen).
+    pub fn regen_factor(&self) -> f64 {
+        self.vehicles
+            .iter()
+            .filter_map(|v| match v {
+                Vehicle::Loco(l) => Some(l.regen_factor),
+                _ => None,
+            })
+            .fold(0.0_f64, f64::max)
+    }
+
+    /// Aggregate diesel SFC: `Some` if any locomotive is diesel, `None` if all electric.
+    pub fn diesel_sfc_g_per_kwh(&self) -> Option<f64> {
+        let locos_with_sfc: Vec<f64> = self
+            .vehicles
+            .iter()
+            .filter_map(|v| match v {
+                Vehicle::Loco(l) => l.diesel_sfc_g_per_kwh,
+                _ => None,
+            })
+            .collect();
+        if locos_with_sfc.is_empty() {
+            None
+        } else {
+            Some(locos_with_sfc.iter().copied().sum::<f64>() / locos_with_sfc.len() as f64)
+        }
     }
 
     /// Build an aggregate tractive curve for the whole consist.

@@ -9,8 +9,13 @@ pub struct TrainSimState {
     pub velocity_mps: f64,
     pub throttle: f64,
     pub brake: f64,
+    /// Gross electrical energy drawn (minus regen already subtracted), in joules.
     pub cumulative_energy_j: f64,
     pub odometer_m: f64,
+    /// Energy recovered by regenerative braking, in joules.
+    pub regen_energy_j: f64,
+    /// Diesel fuel consumed, in grams (0 for electric traction).
+    pub fuel_consumption_g: f64,
 }
 
 impl TrainSimState {
@@ -25,6 +30,8 @@ impl TrainSimState {
             brake: 0.0,
             cumulative_energy_j: 0.0,
             odometer_m: 0.0,
+            regen_energy_j: 0.0,
+            fuel_consumption_g: 0.0,
         }
     }
 

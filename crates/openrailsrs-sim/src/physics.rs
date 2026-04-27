@@ -15,6 +15,10 @@ pub struct TrainPhysics {
     pub davis: DavisCoefficients,
     /// Aggregate traction curve.  Empty curve → falls back to P/v law.
     pub tractive: TractiveCurve,
+    /// Fraction of braking energy recovered as electricity (0.0 = none, 0.7 = modern EMU).
+    pub regen_factor: f64,
+    /// Specific fuel consumption in g/kWh; `None` for electric traction.
+    pub diesel_sfc_g_per_kwh: Option<f64>,
 }
 
 pub struct StepResult {
@@ -95,7 +99,17 @@ pub fn step(
     } else {
         dt
     };
+    // Traction energy drawn from supply (gross).
     state.cumulative_energy_j += f_motor.max(0.0) * v_avg * effective_dt;
+    // Regenerative braking: recover fraction of braking work.
+    let regen_j = f_brake * v_avg * train.regen_factor * effective_dt;
+    state.regen_energy_j += regen_j;
+    state.cumulative_energy_j -= regen_j; // net consumed = gross - regen
+    // Diesel fuel: proportional to mechanical energy output.
+    if let Some(sfc) = train.diesel_sfc_g_per_kwh {
+        let kwh = f_motor.max(0.0) * v_avg * effective_dt / 3_600_000.0;
+        state.fuel_consumption_g += kwh * sfc;
+    }
     state.odometer_m += traveled;
     state.time = state.time + effective_dt;
     state.velocity_mps = if arrived { 0.0 } else { v_new };

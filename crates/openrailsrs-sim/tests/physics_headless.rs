@@ -49,6 +49,8 @@ fn default_train_pv() -> TrainPhysics {
         max_brake_n: 400_000.0,
         davis: DavisCoefficients::default(),
         tractive: TractiveCurve::default(),
+        regen_factor: 0.0,
+        diesel_sfc_g_per_kwh: None,
     }
 }
 
@@ -61,6 +63,8 @@ fn default_train_with_curve() -> TrainPhysics {
         max_brake_n: 400_000.0,
         davis: DavisCoefficients::default(),
         tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
+        regen_factor: 0.0,
+        diesel_sfc_g_per_kwh: None,
     }
 }
 

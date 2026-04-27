@@ -243,11 +243,40 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 **Implementado:**
 - Nuevo crate `openrailsrs-campaign`: `CampaignFile` + `MissionDef` + `Progress` + `MissionResult`; lógica de unlock basada en `min_pass_score`; persistencia en `progress.json`; `record_result` preserva el mejor score entre reintentos. 8 tests.
-- `examples/mitre_campaign/campaign.toml`: 4 misiones progresivas (Tutorial → Retiro→Olivos → Retiro→San Isidro → Retiro→Victoria); dificultad, `bonus_threshold` y `sim_speed` configurables por misión.
+- `examples/mitre_campaign/campaign.toml`: 5 misiones progresivas (Tutorial → Retiro→Olivos → Retiro→San Isidro → Retiro→Victoria → Servicio duplo); dificultad, `bonus_threshold` y `sim_speed` configurables por misión.
 - CLI `openrailsrs campaign status <campaign.toml>`: tabla con estado 🔒/▶/✅, mejor score y estrella bonus.
 - CLI `openrailsrs campaign play <campaign.toml> <mission_id>`: ejecuta la misión, calcula score desde `PlayOutcome`, guarda progreso y muestra APROBADA/BONUS.
 - CLI `openrailsrs campaign reset <campaign.toml>`: borra `progress.json`.
-- CLI `openrailsrs dispatch <scenario.toml> [--speed N]`: panel de despacho interactivo con `ratatui`; tabla de trenes (velocidad coloreada por límite, odómetro, progreso animado, energía), log de eventos con transiciones de arista y llegadas, pausa/reanudar con Espacio, ajuste de velocidad con +/-.
+- CLI `openrailsrs dispatch <scenario.toml> [--speed N]`: panel de despacho interactivo multi-tren con `ratatui` + `LiveMultiSim`; tabla por tren (estado, velocidad coloreada, odómetro, progreso animado, energía neta, energía regen), log de eventos con bloqueos y llegadas, pausa/reanudar con Espacio, ajuste de velocidad con +/-.
+
+---
+
+## Cuatro mejoras combinadas (iteración actual) ✅
+
+**Implementado:**
+
+### D — Tracción regenerativa y consumo diésel
+- `TrainPhysics` + `TrainSimState` extendidos con `regen_factor` y `diesel_sfc_g_per_kwh`.
+- `step()` calcula: energía de tracción bruta → resta regen → acumula combustible diésel.
+- CSV enriquecido: columnas `regen_energy_kwh` y `fuel_consumption_l`.
+- `EngineFile` lee `(RegenFactor …)` y `(SpecificFuelConsumption …)` del AST MSTS.
+- CAF 6000 configurado con `RegenFactor 0.70` (EMU moderno, recupera 70 % del freno).
+
+### C — Brecha Victoria → Tigre cerrada
+- 2 nodos sintéticos (`n_talar`, `n_delta`) + 6 aristas (3 forward + 3 reverse) añadidos a `track.toml`.
+- Trayecto Retiro → Tigre: 78 hops, 28.1 km, BFS exitoso.
+- Nuevo escenario `examples/routes/mitre/scenario_retiro_tigre.toml` con 12 paradas.
+
+### B — HUD de puntualidad en modo cabina
+- `cab.rs` pre-calcula la distancia acumulada a cada parada al cargar el escenario.
+- HUD muestra: próxima parada, tiempo restante (o retraso en rojo), penalizaciones acumuladas, paradas pasadas.
+- Línea de energía ampliada con `regen kWh` cuando el tren la tiene disponible.
+
+### A — Dispatch multi-tren + misión duplo
+- `LiveMultiSim` expuesto en `multi_runner.rs`: inicialización desde archivo, `step_frame(steps)` frame-by-frame, `LiveTrainSnapshot` por tren, `all_arrived()`.
+- `dispatch.rs` refactorizado para usar `LiveMultiSim`; tabla dinámica con una fila por tren; detecta y registra bloqueos, liberaciones y llegadas en el log.
+- Escenario `retiro_victoria_duo.toml`: dos CAF 6000, el segundo sale 3 minutos después.
+- Misión "Servicio duplo" añadida a `mitre_campaign/campaign.toml` (requiere haber completado Retiro→Victoria).
 
 ## Fase 15 — Editor de rutas 🔲
 

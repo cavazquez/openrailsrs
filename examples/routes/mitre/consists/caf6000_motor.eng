@@ -5,4 +5,5 @@
   (MaxVelocity 25.1)
   (MaxForce 110000)
   (MaxBrakeForce 90000)
+  (RegenFactor 0.70)
 )
