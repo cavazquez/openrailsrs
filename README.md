@@ -110,7 +110,7 @@ Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. 
 
 ## Requisitos
 
-- Rust estable (edition 2021, `rust-version` en workspace).
+- Rust estable (edition 2024, `rust-version` en workspace).
 - Linux (el viewer usa `minifb` con feature `x11`).
 
 ## Construir y probar
