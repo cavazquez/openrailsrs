@@ -68,7 +68,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 0 — Bootstrap | Base implementada | Workspace Cargo, crates modulares, CI y documentación. |
 | 1 — Parsers MSTS/OpenRails | Profundizado | `openrailsrs-formats`: AST genérico + adaptadores tipados (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades + dispatch por extensión. |
 | 2 — Datos/config juego | Profundizado | `openrailsrs-scenarios`: `scenario.toml` con `[[route.stops]]` (paradas intermedias con `arrive_s`/`depart_s`) y `[train.davis]` (coeficientes Davis sobreescribibles). |
-| 3 — Modelo lógico ferroviario | Base implementada | `openrailsrs-track` + `openrailsrs-route` + export DOT; aristas con `grade_percent` configurable. |
+| 3 — Modelo lógico ferroviario | Profundizado | `openrailsrs-track`: señales ferroviarias (`TrackSignal` con `id`, `aspect`, `clear_after_s`), `insert_signal`, `signals_on_edge`; `track.toml` con sección `[[signals]]`; runner respeta `Stop` (`RunPhase::AwaitingSignal`, auto-despeje por tiempo) y `Caution` (speed limit ×0.5); `SimEvent::SignalStop/SignalClear`. |
 | 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TractiveCurve` (puntos v→F, interpolación piecewise-linear) en `Locomotive`; `TrainPhysics` agrega la curva o sintetiza una desde P/F_te. |
 | 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling` para frenos de aproximación dinámicos y dwell real en paradas; `ScriptedDriver` permite replay desde CSV (`time_s,throttle,brake`, semántica hold-last). |
 | 6 — Capa de videojuego headless | Profundizado | `evaluate` con multi-parada: penaliza `missed_stop`, `late_stop`, **`early_departure`** (`StationDeparture.time_s < depart_s − GRACE`); `StopResult` incluye `actual_depart_s` y flag `early_departure`. |
@@ -94,10 +94,10 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-core` | Tipos compartidos (tiempo simulado, IDs). |
 | `openrailsrs-formats` | Tokenizer + AST genérico + adaptadores tipados por extensión (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades MSTS → SI. |
 | `openrailsrs-scenarios` | Carga/validación de `scenario.toml`; soporta paradas intermedias (`[[route.stops]]`) y override de Davis (`[train.davis]`). |
-| `openrailsrs-route` | Carga de layout de vía (`track.toml`) con `grade_percent` por arista. |
-| `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad y pendientes. |
+| `openrailsrs-route` | Carga de layout de vía (`track.toml`) con `grade_percent` por arista y sección `[[signals]]`. |
+| `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad, pendientes y señales (`TrackSignal`: `Stop/Caution/Clear`, `clear_after_s` para auto-despeje). |
 | `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (curva de tracción real, piecewise-linear) configurables. |
-| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics` + `TractiveCurve`); dwell en paradas con frenado de aproximación dinámico; `ScriptedDriver` para replay desde CSV; `SimEvent` con overspeed/estaciones; salida `run.csv` + `run.toml`. |
+| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics` + `TractiveCurve`); dwell en paradas; señales `Stop/Caution` aplicadas en `RunPhase`; `ScriptedDriver` para replay desde CSV; `SimEvent` con overspeed/estaciones/señales; salida `run.csv` + `run.toml`. |
 | `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop`, `early_departure`), puntuación; `outcome.toml` con desglose por parada (`play-headless`). |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual. |
@@ -192,6 +192,29 @@ c_n_per_mps2 = 0.4     # término cuadrático (N·s²/m²)
 ```
 
 El campo `grade_percent` en cada arista de `track.toml` indica la pendiente (positivo = subida, negativo = bajada). El resultado `outcome.toml` incluye `[[stops]]` con `actual_arrive_s`, `actual_depart_s`, `on_time`, `missed` y `early_departure` por cada parada declarada.
+
+### Señales en `track.toml`
+
+Las señales se definen con `[[signals]]` dentro del archivo de ruta:
+
+```toml
+[[signals]]
+id           = "sig1"          # identificador único
+edge_id      = "e1"            # arista sobre la que actúa
+position_m   = 0.0             # distancia desde el inicio de la arista
+aspect       = "stop"          # "clear" | "caution" | "stop"
+clear_after_s = 120.0          # (opcional) despeje automático a los N segundos
+
+[[signals]]
+id      = "sig2"
+edge_id = "e2"
+aspect  = "caution"            # reduce el speed limit efectivo al 50 %
+```
+
+El runner aplica las señales automáticamente:
+- `stop` → `RunPhase::AwaitingSignal`: frena antes de entrar al bloque y espera hasta que la señal se despeje (por `clear_after_s` o por controlador externo).
+- `caution` → velocidad efectiva limitada al 50 % del límite nominal de la arista, sin detener el tren.
+- Eventos emitidos: `SimEvent::SignalStop` y `SimEvent::SignalClear`.
 
 Para replay o test de regresión, se puede usar un `ScriptedDriver` cargando un CSV con columnas `time_s,throttle,brake` (el mismo formato que `run.csv`):
 
