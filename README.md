@@ -647,15 +647,23 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
-### Fase 25 — Compatibilidad con contenido MSTS / Open Rails `🔲`
+### Fase 25 — Compatibilidad con contenido MSTS / Open Rails `✅`
 
-**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (6+ meses)
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta
 
-- Cargar rutas `.trk` / `.w` completas de MSTS (base ya existe en `openrailsrs-formats`).
-- Parsear modelos 3D `.s` (S-expression shape format) y texturas `.ace`.
-- Cargar actividades `.act` como escenarios.
-- El parser de `openrailsrs-formats` ya tiene el AST genérico; falta el loader de assets binarios.
-- Desbloquea acceso a cientos de rutas y material rodante existentes.
+**Implementado:**
+
+- Nuevo crate `openrailsrs-msts` con importadores de rutas y actividades MSTS.
+- **`openrailsrs-formats`** profundizado:
+  - `EngineFile` ahora parsea `MaxTractiveEffortCurves` → `traction_curve: Vec<(f64, f64)>`.
+  - `WagonFile` parsea `Length` → `length_m: f64` (default 15 m).
+  - Nuevos parsers: `TrackDbFile` (`.tdb`), `PathFile` (`.pat`), `ActivityFile` (`.act`).
+- **`import_route`**: convierte un `.tdb` a `track.toml` (nodos End/Junction/Vector → nodes+edges).
+- **`import_activity`**: convierte `.act` + `.pat` a `scenario.toml` listo para `openrailsrs sim`.
+- **CLI**: `openrailsrs import-msts <route_dir> [--out-dir …] [--activity …]` — auto-detecta `.act`.
+- **`openrailsrs-train`**: `From<EngineFile> for Locomotive` propaga la curva de tracción real.
+- Tests con fixtures mínimas `minimal.tdb / .pat / .act`; todos los tests del workspace pasan.
+- *Pendiente (iteración futura)*: assets binarios `.s`/`.ace`, parser de terreno `.w`, y rutas reales completas.
 
 ---
 

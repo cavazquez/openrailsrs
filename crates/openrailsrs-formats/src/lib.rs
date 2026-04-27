@@ -12,5 +12,8 @@ pub use ast::{Ast, Atom};
 pub use dispatch::{MstsFile, parse_msts_file};
 pub use error::FormatError;
 pub use parser::{parse, parse_first, parse_from_first_paren};
-pub use typed::{ConsistEntry, ConsistFile, EngineFile, RouteFile, WagonFile};
+pub use typed::{
+    ActivityFile, ConsistEntry, ConsistFile, EngineFile, PathDataPoint, PathFile, RouteFile,
+    TrackDbFile, TrackDbNode, TrackNodeKind, WagonFile,
+};
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

@@ -21,6 +21,7 @@ openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-track = { path = "../openrailsrs-track" }
 openrailsrs-train = { path = "../openrailsrs-train" }
 openrailsrs-sim = { path = "../openrailsrs-sim" }
+openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-validate = { path = "../openrailsrs-validate" }
 anyhow.workspace = true
 clap.workspace = true

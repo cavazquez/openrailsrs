@@ -1,0 +1,12 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( Tr_Activity
+    ( Tr_Activity_Header
+        ( Name "Minimal Test Activity" )
+        ( Player_Train_Init
+            ( Player_Train_Init_Cons "CONSISTS\\test.con" )
+        )
+        ( Player_Path "minimal.pat" )
+        ( StartTime 8 0 0 )
+        ( Duration 1 30 )
+    )
+)

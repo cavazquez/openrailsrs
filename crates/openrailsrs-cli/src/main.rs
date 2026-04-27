@@ -10,6 +10,7 @@ use openrailsrs_export::{
     track_graph_to_geojson,
 };
 use openrailsrs_formats::parse_from_first_paren;
+use openrailsrs_msts::{import_activity_with_summary, import_route_with_summary};
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_sim::{
     LiveMultiSim, ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
@@ -148,6 +149,18 @@ enum Commands {
         /// Disable bidirectional edges (by default railway edges are added in both directions).
         #[arg(long)]
         one_way: bool,
+    },
+    /// Import a Microsoft Train Simulator route / activity.
+    ImportMsts {
+        /// Path to the MSTS route directory (must contain a *.tdb file).
+        route_dir: PathBuf,
+        /// Output directory for generated track.toml / scenario.toml files.
+        /// Defaults to the current directory.
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+        /// Path to an MSTS activity file (*.act).  If omitted, only track.toml is generated.
+        #[arg(long)]
+        activity: Option<PathBuf>,
     },
 }
 
@@ -602,6 +615,80 @@ fn main() -> anyhow::Result<()> {
                 );
             }
         },
+        Commands::ImportMsts {
+            route_dir,
+            out_dir,
+            activity,
+        } => {
+            let out = out_dir.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+            std::fs::create_dir_all(&out)
+                .with_context(|| format!("create output dir {}", out.display()))?;
+
+            // 1. Import route: TDB → track.toml
+            let (track_toml, n_nodes, n_edges) = import_route_with_summary(&route_dir)
+                .map_err(|e| anyhow::anyhow!("import route {}: {e}", route_dir.display()))?;
+            let track_out = out.join("track.toml");
+            std::fs::write(&track_out, &track_toml)
+                .with_context(|| format!("write {}", track_out.display()))?;
+            println!(
+                "✓ track.toml  — {} nodos, {} edges → {}",
+                n_nodes,
+                n_edges,
+                track_out.display()
+            );
+
+            // 2. If an activity is given, import it: ACT + PAT → scenario.toml
+            if let Some(act_path) = activity {
+                let (scenario_toml, act_name) = import_activity_with_summary(&route_dir, &act_path)
+                    .map_err(|e| anyhow::anyhow!("import activity {}: {e}", act_path.display()))?;
+                let scenario_out = out.join("scenario.toml");
+                std::fs::write(&scenario_out, &scenario_toml)
+                    .with_context(|| format!("write {}", scenario_out.display()))?;
+                println!(
+                    "✓ scenario.toml  — \"{}\" → {}",
+                    act_name,
+                    scenario_out.display()
+                );
+            } else {
+                // Auto-discover any *.act files in route_dir
+                let acts: Vec<_> = std::fs::read_dir(&route_dir)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.path()
+                            .extension()
+                            .map(|x| x.eq_ignore_ascii_case("act"))
+                            .unwrap_or(false)
+                    })
+                    .collect();
+
+                for (i, act_entry) in acts.iter().enumerate() {
+                    let act_path = act_entry.path();
+                    match import_activity_with_summary(&route_dir, &act_path) {
+                        Ok((scenario_toml, act_name)) => {
+                            let fname = if i == 0 {
+                                "scenario.toml".to_string()
+                            } else {
+                                format!("scenario_{i}.toml")
+                            };
+                            let scenario_out = out.join(&fname);
+                            std::fs::write(&scenario_out, &scenario_toml)
+                                .with_context(|| format!("write {}", scenario_out.display()))?;
+                            println!(
+                                "✓ {}  — \"{}\" → {}",
+                                fname,
+                                act_name,
+                                scenario_out.display()
+                            );
+                        }
+                        Err(e) => {
+                            eprintln!("  warn: skipping {}: {e}", act_path.display());
+                        }
+                    }
+                }
+            }
+        }
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;
             let results: Vec<_> = scenarios

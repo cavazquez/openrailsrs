@@ -1,0 +1,14 @@
+[package]
+name = "openrailsrs-msts"
+description = "MSTS/Open Rails route and activity importer for openrailsrs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+thiserror.workspace = true
+serde.workspace = true
+toml.workspace = true

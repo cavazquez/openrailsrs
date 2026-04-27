@@ -8,6 +8,8 @@ pub struct WagonFile {
     pub name: String,
     pub mass_kg: f64,
     pub max_brake_force_n: f64,
+    /// Physical length of the vehicle (metres), used for brake-pipe positioning.
+    pub length_m: f64,
 }
 
 impl WagonFile {
@@ -19,10 +21,13 @@ impl WagonFile {
         let max_brake_force_n =
             find_optional_numeric_field(ast, &["MaxBrakeForce", "Brake"], context)?
                 .unwrap_or(80_000.0);
+        let length_m =
+            find_optional_numeric_field(ast, &["Length", "WagonLength"], context)?.unwrap_or(15.0);
         Ok(Self {
             name,
             mass_kg,
             max_brake_force_n,
+            length_m,
         })
     }
 }

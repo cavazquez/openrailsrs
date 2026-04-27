@@ -94,6 +94,8 @@ pub struct Wagon {
     pub name: String,
     pub mass_kg: f64,
     pub max_brake_force_n: f64,
+    /// Physical length in metres (used for brake-pipe delay calculations).
+    pub length_m: f64,
 }
 
 #[derive(Clone, Debug)]

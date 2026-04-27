@@ -70,6 +70,14 @@ fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {
 
 impl From<EngineFile> for Locomotive {
     fn from(value: EngineFile) -> Self {
+        use crate::model::TractiveCurve;
+        let tractive_curve = if value.traction_curve.is_empty() {
+            None
+        } else {
+            Some(TractiveCurve {
+                points: value.traction_curve,
+            })
+        };
         Self {
             name: value.name,
             mass_kg: value.mass_kg,
@@ -77,7 +85,7 @@ impl From<EngineFile> for Locomotive {
             max_velocity_mps: value.max_velocity_mps,
             max_tractive_effort_n: value.max_tractive_effort_n,
             max_brake_force_n: value.max_brake_force_n,
-            tractive_curve: None,
+            tractive_curve,
             regen_factor: value.regen_factor,
             diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
         }
@@ -90,6 +98,7 @@ impl From<WagonFile> for Wagon {
             name: value.name,
             mass_kg: value.mass_kg,
             max_brake_force_n: value.max_brake_force_n,
+            length_m: value.length_m,
         }
     }
 }

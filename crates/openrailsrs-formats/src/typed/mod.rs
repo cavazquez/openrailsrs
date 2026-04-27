@@ -1,11 +1,17 @@
+mod activity;
 mod consist;
 mod engine;
+mod path;
 mod route;
+mod track_db;
 mod wagon;
 
+pub use activity::ActivityFile;
 pub use consist::{ConsistEntry, ConsistFile};
 pub use engine::EngineFile;
+pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
+pub use track_db::{TrackDbFile, TrackDbNode, TrackNodeKind};
 pub use wagon::WagonFile;
 
 use crate::ast::{Ast, Atom};

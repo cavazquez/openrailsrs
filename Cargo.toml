@@ -13,6 +13,7 @@ members = [
     "crates/openrailsrs-game",
     "crates/openrailsrs-validate",
     "crates/openrailsrs-export",
+    "crates/openrailsrs-msts",
     "crates/openrailsrs-cli",
     "crates/openrailsrs-viewer",
 ]

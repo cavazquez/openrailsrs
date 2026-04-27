@@ -1,8 +1,11 @@
-use crate::ast::Ast;
+use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::units::kmh_to_mps;
 
-use super::{find_numeric_field, find_optional_numeric_field, find_optional_string_field};
+use super::{
+    atom_to_number, find_numeric_field, find_optional_numeric_field, find_optional_string_field,
+    walk_lists_find,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EngineFile {
@@ -16,6 +19,9 @@ pub struct EngineFile {
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
     pub diesel_sfc_g_per_kwh: Option<f64>,
+    /// Piecewise-linear traction curve as (velocity_mps, force_n) pairs.
+    /// Empty when not present in the file (caller falls back to P/v law).
+    pub traction_curve: Vec<(f64, f64)>,
 }
 
 impl EngineFile {
@@ -41,6 +47,7 @@ impl EngineFile {
                 .clamp(0.0, 1.0);
         let diesel_sfc_g_per_kwh =
             find_optional_numeric_field(ast, &["SpecificFuelConsumption", "DieselSfc"], context)?;
+        let traction_curve = parse_traction_curve(ast);
 
         Ok(Self {
             name,
@@ -51,6 +58,48 @@ impl EngineFile {
             max_brake_force_n,
             regen_factor,
             diesel_sfc_g_per_kwh,
+            traction_curve,
         })
     }
+}
+
+/// Parse `(MaxTractiveEffortCurves (CurveEntry v f) ...)` from any MSTS engine file.
+///
+/// Returns an empty vec if the section is absent (caller uses P/v fallback).
+/// Velocity is assumed to be in km/h and converted to m/s; force in Newtons.
+fn parse_traction_curve(ast: &Ast) -> Vec<(f64, f64)> {
+    let mut points: Vec<(f64, f64)> = Vec::new();
+
+    walk_lists_find::<(), _>(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            // Locate the MaxTractiveEffortCurves container.
+            if head.eq_ignore_ascii_case("MaxTractiveEffortCurves") {
+                for item in items.iter().skip(1) {
+                    if let Ast::List(entry_items) = item {
+                        if let Some(Ast::Atom(Atom::Symbol(tag))) = entry_items.first() {
+                            if tag.eq_ignore_ascii_case("CurveEntry") && entry_items.len() >= 3 {
+                                let v = entry_items.get(1).and_then(|a| match a {
+                                    Ast::Atom(at) => atom_to_number(at),
+                                    _ => None,
+                                });
+                                let f = entry_items.get(2).and_then(|a| match a {
+                                    Ast::Atom(at) => atom_to_number(at),
+                                    _ => None,
+                                });
+                                if let (Some(v_val), Some(f_val)) = (v, f) {
+                                    // Velocity in the curve is km/h; convert to m/s.
+                                    points.push((kmh_to_mps(v_val), f_val));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    });
+
+    // Sort by velocity so the curve is monotonically ordered.
+    points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    points
 }

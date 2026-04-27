@@ -320,6 +320,14 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - Formato `track.toml` extendido con `[signals.script]` inline; retrocompatible.
 - 4 tests unitarios en `signal_script.rs`.
 
+### Fase 25 — Compatibilidad MSTS / Open Rails ✅
+- `openrailsrs-formats`: `EngineFile` con `traction_curve`, `WagonFile` con `length_m`.
+- Nuevos parsers: `TrackDbFile` (`.tdb`), `PathFile` (`.pat`), `ActivityFile` (`.act`).
+- Crate `openrailsrs-msts`: `import_route` (TDB → `track.toml`), `import_activity` (ACT+PAT → `scenario.toml`).
+- CLI: subcomando `import-msts <route_dir>` con auto-detección de `.act`.
+- `From<EngineFile> for Locomotive` propaga curva de tracción real desde el `.eng`.
+- 5 tests de integración con fixtures `minimal.tdb/.pat/.act`.
+
 ---
 
 ## Fase 15 — Editor de rutas 🔲
