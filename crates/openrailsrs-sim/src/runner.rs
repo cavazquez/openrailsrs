@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::ScenarioFile;
+use openrailsrs_track::SignalAspect;
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 use serde::Serialize;
 
@@ -63,6 +64,16 @@ pub enum SimEvent {
     StationDeparture {
         time_s: f64,
         node_id: String,
+    },
+    /// Emitted once when the train stops at a red (Stop) signal.
+    SignalStop {
+        time_s: f64,
+        signal_id: String,
+    },
+    /// Emitted when a Stop signal clears and the train resumes.
+    SignalClear {
+        time_s: f64,
+        signal_id: String,
     },
 }
 
@@ -168,8 +179,15 @@ pub fn run_scenario_headless_with_driver(
     // Calculated dynamically per-step so it adapts to current speed.
     const BRAKE_DECEL_MPS2: f64 = 0.7; // conservative deceleration estimate
     const BRAKE_MARGIN_M: f64 = 50.0; // extra safety margin beyond computed distance
+    /// Caution signals halve the effective speed limit on the signalled edge.
+    const CAUTION_SPEED_FACTOR: f64 = 0.5;
 
-    /// Three-phase run state machine for stop handling.
+    // Mutable signal aspects: start from the static aspects in the graph.
+    // The runner updates aspects when clear_after_s elapses.
+    let mut signal_runtime: HashMap<String, SignalAspect> =
+        graph.signals().map(|s| (s.id.clone(), s.aspect)).collect();
+
+    /// Run state machine: Normal driving, approach/dwell at stops, or awaiting a signal.
     enum RunPhase {
         Normal,
         /// Approaching a stop with dwell; brake until v ≈ 0.
@@ -181,6 +199,10 @@ pub fn run_scenario_headless_with_driver(
         Dwelling {
             node: String,
             remaining: f64,
+        },
+        /// Stopped at a red signal; waiting for it to clear.
+        AwaitingSignal {
+            signal_id: String,
         },
     }
 
@@ -264,14 +286,138 @@ pub fn run_scenario_headless_with_driver(
                 }
             }
 
+            // ── Awaiting signal phase: braked at red; resume when signal clears. ──
+            RunPhase::AwaitingSignal { ref signal_id } => {
+                // Auto-clear logic: if clear_after_s has elapsed, update the runtime aspect.
+                let should_clear = {
+                    let current_asp = signal_runtime
+                        .get(signal_id.as_str())
+                        .copied()
+                        .unwrap_or(SignalAspect::Stop);
+                    if current_asp == SignalAspect::Clear {
+                        true
+                    } else if let Some(sig) = graph.signal(signal_id.as_str()) {
+                        sig.clear_after_s
+                            .map(|t| state.time_s() >= t)
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    }
+                };
+
+                if should_clear {
+                    signal_runtime.insert(signal_id.clone(), SignalAspect::Clear);
+                    let cleared_id = signal_id.clone();
+                    events.push(SimEvent::SignalClear {
+                        time_s: state.time_s(),
+                        signal_id: cleared_id,
+                    });
+                    phase = RunPhase::Normal;
+                    // Don't step this tick; let Normal handle it next iteration.
+                    continue;
+                }
+
+                // Hold brakes while waiting.
+                state.throttle = 0.0;
+                state.brake = 0.9;
+                let step_res = step(&mut state, &graph, &train_physics, dt);
+                csv_writer.write_sample(&state)?;
+                steps += 1;
+
+                if step_res.arrived {
+                    break;
+                }
+                if steps > 10_000_000 {
+                    return Err(SimError::Msg("simulation step limit exceeded".into()));
+                }
+            }
+
             // ── Normal driving phase ──
             RunPhase::Normal => {
                 let edge_id = state.current_edge().map(str::to_string);
-                let speed_limit = edge_id
+                let base_speed_limit = edge_id
                     .as_deref()
                     .and_then(|e| graph.edge(e))
                     .map(|e| e.speed_limit_mps)
                     .unwrap_or(55.0 / 3.6);
+
+                // Apply Caution signals on the current edge: halve effective speed limit.
+                let speed_limit = if let Some(eid) = edge_id.as_deref() {
+                    let has_caution = graph.signals_on_edge(eid).any(|s| {
+                        let asp = signal_runtime.get(&s.id).copied().unwrap_or(s.aspect);
+                        asp == SignalAspect::Caution
+                    });
+                    if has_caution {
+                        base_speed_limit * CAUTION_SPEED_FACTOR
+                    } else {
+                        base_speed_limit
+                    }
+                } else {
+                    base_speed_limit
+                };
+
+                // Check the NEXT path edge for a Stop signal near its entry.
+                // If within dynamic braking distance, enter AwaitingSignal immediately.
+                let upcoming_stop_signal: Option<String> = {
+                    let next_idx = state.edge_index + 1;
+                    if next_idx < state.path_edges.len() {
+                        let next_eid = &state.path_edges[next_idx];
+                        graph
+                            .signals_on_edge(next_eid)
+                            .find(|s| {
+                                let asp = signal_runtime.get(&s.id).copied().unwrap_or(s.aspect);
+                                asp == SignalAspect::Stop
+                            })
+                            .and_then(|s| {
+                                // Only trigger if within braking distance of the current edge end.
+                                edge_id
+                                    .as_deref()
+                                    .and_then(|eid| graph.edge(eid))
+                                    .and_then(|e| {
+                                        let v = state.velocity_mps;
+                                        let dist_needed =
+                                            v * v / (2.0 * BRAKE_DECEL_MPS2) + BRAKE_MARGIN_M;
+                                        let remaining_m = e.length_m - state.pos_on_edge_m;
+                                        if remaining_m <= dist_needed {
+                                            Some(s.id.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                            })
+                    } else {
+                        None
+                    }
+                };
+
+                // Also detect Stop signals on the CURRENT edge that the train hasn't yet passed.
+                let current_stop_signal: Option<String> = edge_id.as_deref().and_then(|eid| {
+                    graph
+                        .signals_on_edge(eid)
+                        .find(|s| {
+                            let asp = signal_runtime.get(&s.id).copied().unwrap_or(s.aspect);
+                            asp == SignalAspect::Stop && s.position_m > state.pos_on_edge_m
+                        })
+                        .and_then(|s| {
+                            let v = state.velocity_mps;
+                            let dist_needed = v * v / (2.0 * BRAKE_DECEL_MPS2) + BRAKE_MARGIN_M;
+                            let dist_to_signal = s.position_m - state.pos_on_edge_m;
+                            if dist_to_signal <= dist_needed {
+                                Some(s.id.clone())
+                            } else {
+                                None
+                            }
+                        })
+                });
+
+                if let Some(sig_id) = upcoming_stop_signal.or(current_stop_signal) {
+                    events.push(SimEvent::SignalStop {
+                        time_s: state.time_s(),
+                        signal_id: sig_id.clone(),
+                    });
+                    phase = RunPhase::AwaitingSignal { signal_id: sig_id };
+                    continue;
+                }
 
                 // Detect whether we should start braking for an upcoming dwell stop.
                 let upcoming_dwell: Option<(String, f64)> = edge_id

@@ -10,4 +10,10 @@ pub enum TrackError {
 
     #[error("duplicate id: {0}")]
     DuplicateId(String),
+
+    #[error("duplicate signal id: {0}")]
+    DuplicateSignalId(String),
+
+    #[error("signal references unknown edge: {0}")]
+    UnknownEdgeForSignal(String),
 }

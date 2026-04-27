@@ -31,3 +31,10 @@ to = "yard_b"
 length_m = 5000.0
 speed_limit_kmh = 80.0
 grade_percent = -1.0
+
+# Caution signal at entry of e1 (km 1.0) — reduces effective speed limit to 40 km/h.
+[[signals]]
+id = "sig_e1_caution"
+edge_id = "e1"
+position_m = 0.0
+aspect = "caution"

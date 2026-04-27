@@ -44,7 +44,10 @@ pub struct Edge {
 pub struct TrackGraph {
     nodes: IndexMap<String, Node>,
     edges: IndexMap<String, Edge>,
-    signals: Vec<TrackSignal>,
+    /// Keyed by signal id for O(1) lookup.
+    signals: IndexMap<String, TrackSignal>,
+    /// edge_id → list of signal ids on that edge (ordered by position_m).
+    signals_by_edge: IndexMap<String, Vec<String>>,
     outgoing: IndexMap<String, Vec<String>>,
 }
 
@@ -100,7 +103,38 @@ impl TrackGraph {
         self.edges.iter().map(|(k, v)| (k.as_str(), v))
     }
 
-    pub fn signals(&self) -> &[TrackSignal] {
-        &self.signals
+    /// Insert a signal into the graph.
+    /// Returns an error if the signal id is duplicate or the edge does not exist.
+    pub fn insert_signal(&mut self, signal: TrackSignal) -> Result<(), TrackError> {
+        if !self.edges.contains_key(&signal.edge_id) {
+            return Err(TrackError::UnknownEdgeForSignal(signal.edge_id.clone()));
+        }
+        if self.signals.contains_key(&signal.id) {
+            return Err(TrackError::DuplicateSignalId(signal.id.clone()));
+        }
+        self.signals_by_edge
+            .entry(signal.edge_id.clone())
+            .or_default()
+            .push(signal.id.clone());
+        self.signals.insert(signal.id.clone(), signal);
+        Ok(())
+    }
+
+    /// All signals on a specific edge, in insertion order.
+    pub fn signals_on_edge(&self, edge_id: &str) -> impl Iterator<Item = &TrackSignal> {
+        self.signals_by_edge
+            .get(edge_id)
+            .into_iter()
+            .flat_map(|ids| ids.iter().filter_map(|id| self.signals.get(id)))
+    }
+
+    /// All signals in the graph.
+    pub fn signals(&self) -> impl Iterator<Item = &TrackSignal> {
+        self.signals.values()
+    }
+
+    /// Look up a signal by id.
+    pub fn signal(&self, id: &str) -> Option<&TrackSignal> {
+        self.signals.get(id)
     }
 }

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use openrailsrs_core::{EdgeId, NodeId};
-use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
+use openrailsrs_track::{Edge, Node, NodeKind, SignalAspect, TrackGraph, TrackSignal};
 use serde::Deserialize;
 
 use crate::RouteError;
@@ -14,6 +14,8 @@ pub struct RouteLayoutFile {
     pub nodes: Vec<NodeDef>,
     #[serde(default)]
     pub edges: Vec<EdgeDef>,
+    #[serde(default)]
+    pub signals: Vec<SignalDef>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +64,27 @@ fn default_speed() -> f64 {
     80.0
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SignalDef {
+    pub id: String,
+    pub edge_id: String,
+    #[serde(default)]
+    pub position_m: f64,
+    #[serde(default)]
+    pub aspect: SignalAspectDef,
+    #[serde(default)]
+    pub clear_after_s: Option<f64>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SignalAspectDef {
+    #[default]
+    Clear,
+    Caution,
+    Stop,
+}
+
 /// Load `track.toml` from a route directory (folder containing `track.toml`).
 pub fn load_track_graph_from_route_dir(dir: impl AsRef<Path>) -> Result<TrackGraph, RouteError> {
     let dir = dir.as_ref();
@@ -104,6 +127,20 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
             length_m: e.length_m,
             speed_limit_mps: lim_mps,
             grade_percent: e.grade_percent,
+        })?;
+    }
+    for s in layout.signals {
+        let aspect = match s.aspect {
+            SignalAspectDef::Clear => SignalAspect::Clear,
+            SignalAspectDef::Caution => SignalAspect::Caution,
+            SignalAspectDef::Stop => SignalAspect::Stop,
+        };
+        g.insert_signal(TrackSignal {
+            id: s.id,
+            edge_id: s.edge_id,
+            position_m: s.position_m,
+            aspect,
+            clear_after_s: s.clear_after_s,
         })?;
     }
     Ok(g)
