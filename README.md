@@ -75,7 +75,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
 | 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
 | 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
-| 10 — Viewer mínimo | Base implementada | `openrailsrs-viewer` 2D desacoplado del núcleo. |
+| 10 — Viewer 2D animado | **Profundizado** | `openrailsrs-viewer`: topología + señales con aspecto real (rojo/amarillo/verde), **replay multi-tren animado** desde CSV, HUD con t, velocidad por tren, barra de progreso, controles teclado. |
 
 > Nota: “Base implementada” significa línea base funcional; la **profundidad futura** de cada fase sigue evolucionando en iteraciones.
 
@@ -102,7 +102,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
-| `openrailsrs-viewer` | Binario **`openrailsrs-viewer`** (2D mínimo, opcional). |
+| `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
 
 Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. ej. `openrailsrs_sim::run_from_scenario_file`).
 
@@ -192,13 +192,27 @@ El flag `--watch` muestra un panel multi-línea que se refresca en vivo:
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Viewer 2D (Fase 10)
+### Viewer 2D animado (Fase 10)
 
 ```bash
-cargo run -p openrailsrs-viewer --bin openrailsrs-viewer -- examples/smoke/routes/test
+# Vista estática de la topología (solo track.toml)
+cargo run -p openrailsrs-viewer -- examples/smoke/routes/test
+
+# Replay animado multi-tren (lee scenario.toml y los CSV generados)
+cargo run -p openrailsrs-viewer -- examples/smoke/scenario_multi.toml
+
+# Escenario individual
+cargo run -p openrailsrs-viewer -- examples/smoke/scenario.toml
 ```
 
-No acopla la simulación al render: solo lee `track.toml` y dibuja la topología.
+El viewer muestra:
+- **Aristas** como líneas naranjas con etiqueta de `edge_id`.
+- **Nodos** como círculos: blanco (Plain), cian (Switch), amarillo (Station).
+- **Señales** como diamantes coloreados: 🔴 rojo (`stop`), 🟡 amarillo (`caution`), 🟢 verde (`clear`), con poste y etiqueta.
+- **Trenes** como círculos animados con glow proporcional a la velocidad, color distinto por tren, velocidad en km/h en el HUD.
+- **HUD** inferior: nombre del escenario, `t=XXX.Xs`, multiplicador de velocidad, barra de progreso, leyenda de trenes.
+
+Controles de teclado: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` doblar/dividir velocidad de replay · `Esc` salir.
 
 ## Benchmarks (Fase 9)
 

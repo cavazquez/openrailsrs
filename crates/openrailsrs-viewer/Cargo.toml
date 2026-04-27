@@ -11,6 +11,9 @@ name = "openrailsrs-viewer"
 path = "src/main.rs"
 
 [dependencies]
-minifb = { version = "0.28", default-features = false, features = ["x11"] }
-openrailsrs-route = { path = "../openrailsrs-route" }
-openrailsrs-track = { path = "../openrailsrs-track" }
+minifb       = { version = "0.28", default-features = false, features = ["x11"] }
+openrailsrs-route     = { path = "../openrailsrs-route" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-track     = { path = "../openrailsrs-track" }
+csv   = "1"
+serde = { version = "1", features = ["derive"] }
