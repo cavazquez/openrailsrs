@@ -30,10 +30,10 @@ jobs:
         with:
           shared-key: workspace-cache
 
-      - name: System libs (X11 para openrailsrs-viewer / minifb)
+      - name: System libs (X11 + ALSA)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev libasound2-dev
 
       - name: Run check.sh
         run: chmod +x check.sh && ./check.sh
@@ -53,10 +53,10 @@ jobs:
           shared-key: workspace-cache
           cache-directories: ~/.cargo/bin
 
-      - name: System libs (X11)
+      - name: System libs (X11 + ALSA)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev libasound2-dev
 
       - uses: taiki-e/install-action@cargo-llvm-cov
 
