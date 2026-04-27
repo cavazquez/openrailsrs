@@ -67,7 +67,7 @@ fn scripted_driver_hold_last_keyframes() {
     use openrailsrs_sim::{Keyframe, ScriptedDriver, TrainSimState};
 
     let check = |mut d: ScriptedDriver, t: f64, expected_throttle: f64| {
-        let mut state = TrainSimState::new(vec!["e1".into()]);
+        let state = TrainSimState::new(vec!["e1".into()]);
         // Simulate advancing time: we set the internal time by advancing the state.
         // TrainSimState::time starts at 0; we advance it via the step mechanism or
         // by directly constructing. For testing, access via time_s() after manipulating.
@@ -75,7 +75,7 @@ fn scripted_driver_hold_last_keyframes() {
         // simulate time by calling step many times, but that requires a graph. Instead,
         // verify sequentially using consecutive calls where time advances via field.
         let _ = t;
-        let input = d.decide(&mut state, 30.0);
+        let input = d.decide(&state, 30.0);
         // At t=0, first keyframe applies.
         assert!(
             (input.throttle - expected_throttle).abs() < 1e-6,
@@ -109,9 +109,9 @@ fn scripted_driver_hold_last_keyframes() {
         throttle: 0.7,
         brake: 0.0,
     }]);
-    let mut state = TrainSimState::new(vec!["e1".into()]);
+    let state = TrainSimState::new(vec!["e1".into()]);
     let mut d2 = d2;
-    let input = d2.decide(&mut state, 30.0);
+    let input = d2.decide(&state, 30.0);
     // t=0 < first keyframe t=5 → hold first (idx 0).
     assert_eq!(input.throttle, 0.7);
     assert_eq!(input.brake, 0.0);
