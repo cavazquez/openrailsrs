@@ -1,5 +1,6 @@
 use openrailsrs_core::{EdgeId, NodeId};
 use openrailsrs_sim::{
+    path_data::PathData,
     physics::{TrainPhysics, step},
     state::TrainSimState,
 };
@@ -34,6 +35,11 @@ fn flat_line_graph() -> TrackGraph {
     g
 }
 
+fn path_data_for(path: &[&str], g: &TrackGraph) -> PathData {
+    let edges: Vec<String> = path.iter().map(|s| s.to_string()).collect();
+    PathData::from_path(&edges, g)
+}
+
 /// Train without an explicit traction curve — uses P/v fallback.
 fn default_train_pv() -> TrainPhysics {
     TrainPhysics {
@@ -66,13 +72,14 @@ fn default_train() -> TrainPhysics {
 #[test]
 fn acceleration_increases_speed_on_flat_track() {
     let g = flat_line_graph();
+    let pd = path_data_for(&["e1"], &g);
     let train = default_train();
     let mut st = TrainSimState::new(vec!["e1".into()]);
     st.throttle = 1.0;
     st.brake = 0.0;
     let v0 = st.velocity_mps;
     for _ in 0..200 {
-        let _ = step(&mut st, &g, &train, 0.1);
+        let _ = step(&mut st, &pd, &train, 0.1);
     }
     assert!(
         st.velocity_mps > v0 + 1.0,
@@ -84,6 +91,7 @@ fn acceleration_increases_speed_on_flat_track() {
 #[test]
 fn braking_reduces_speed() {
     let g = flat_line_graph();
+    let pd = path_data_for(&["e1"], &g);
     let train = default_train();
     let mut st = TrainSimState::new(vec!["e1".into()]);
     st.velocity_mps = 25.0;
@@ -91,7 +99,7 @@ fn braking_reduces_speed() {
     st.brake = 1.0;
     let v0 = st.velocity_mps;
     for _ in 0..500 {
-        let _ = step(&mut st, &g, &train, 0.05);
+        let _ = step(&mut st, &pd, &train, 0.05);
     }
     assert!(
         st.velocity_mps < v0 - 5.0,
@@ -103,12 +111,13 @@ fn braking_reduces_speed() {
 #[test]
 fn tractive_curve_accelerates_from_rest() {
     let g = flat_line_graph();
+    let pd = path_data_for(&["e1"], &g);
     let train = default_train_with_curve();
     let mut st = TrainSimState::new(vec!["e1".into()]);
     st.throttle = 1.0;
     st.brake = 0.0;
     for _ in 0..200 {
-        let _ = step(&mut st, &g, &train, 0.1);
+        let _ = step(&mut st, &pd, &train, 0.1);
     }
     assert!(
         st.velocity_mps > 5.0,
@@ -124,11 +133,12 @@ fn pv_fallback_and_curve_both_accelerate() {
     let train_curve = default_train_with_curve();
 
     let accel_after = |train: TrainPhysics| {
+        let pd = path_data_for(&["e1"], &g);
         let mut st = TrainSimState::new(vec!["e1".into()]);
         st.throttle = 1.0;
         st.brake = 0.0;
         for _ in 0..100 {
-            let _ = step(&mut st, &g, &train, 0.1);
+            let _ = step(&mut st, &pd, &train, 0.1);
         }
         st.velocity_mps
     };

@@ -5,11 +5,17 @@
 use openrailsrs_core::{EdgeId, NodeId};
 use openrailsrs_sim::{
     TrainPhysics,
+    path_data::PathData,
     runner::{AutoDriver, Driver},
     state::TrainSimState,
 };
 use openrailsrs_track::{Edge, Node, NodeKind, SignalAspect, TrackGraph, TrackSignal};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve};
+
+fn path_data_for(path: &[&str], g: &TrackGraph) -> PathData {
+    let edges: Vec<String> = path.iter().map(|s| s.to_string()).collect();
+    PathData::from_path(&edges, g)
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,6 +110,7 @@ fn stop_signal_halts_train_and_resumes_when_cleared() {
     let limit = (80.0_f64 / 3.6) * CAUTION_SPEED_FACTOR; // just to confirm const below
     let _ = limit;
 
+    let pd = path_data_for(&["e1", "e2"], &graph);
     while time_s < 100.0 {
         let speed_lim = graph
             .edge(state.current_edge().unwrap_or("e1"))
@@ -112,7 +119,7 @@ fn stop_signal_halts_train_and_resumes_when_cleared() {
         let d = auto.decide(&state, speed_lim);
         state.throttle = d.throttle;
         state.brake = d.brake;
-        step(&mut state, &graph, &train, dt);
+        step(&mut state, &pd, &train, dt);
         time_s = state.time_s();
         if state.edge_index == 0 {
             steps_on_e1 += 1;
@@ -195,6 +202,7 @@ fn caution_signal_reduces_speed_on_edge() {
     let train = default_physics();
 
     let run_max_v = |g: &TrackGraph| -> f64 {
+        let pd = path_data_for(&["e1"], g);
         let mut st = TrainSimState::new(vec!["e1".to_string()]);
         let mut auto = AutoDriver;
         let mut max_v = 0.0_f64;
@@ -203,7 +211,7 @@ fn caution_signal_reduces_speed_on_edge() {
             let d = auto.decide(&st, limit);
             st.throttle = d.throttle;
             st.brake = d.brake;
-            let r = step(&mut st, g, &train, 0.1);
+            let r = step(&mut st, &pd, &train, 0.1);
             max_v = max_v.max(st.velocity_mps);
             if r.arrived {
                 break;

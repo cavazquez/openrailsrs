@@ -3,5 +3,7 @@
 pub mod compare;
 pub mod error;
 
-pub use compare::{ComparisonReport, compare_csv_files};
+pub use compare::{
+    ComparisonReport, ValidationConfig, compare_csv_files, compare_csv_files_with_config,
+};
 pub use error::ValidateError;

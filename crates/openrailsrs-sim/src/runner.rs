@@ -11,6 +11,7 @@ use serde::Serialize;
 use crate::SimError;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
+use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, step};
 use crate::state::TrainSimState;
 
@@ -183,6 +184,7 @@ pub fn run_scenario_headless_with_driver(
         .map(|s| (s.node.clone(), s.dwell_s))
         .collect();
 
+    let path_data = PathData::from_path(&path_edges, &graph);
     let mut state = TrainSimState::new(path_edges);
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
@@ -237,7 +239,7 @@ pub fn run_scenario_headless_with_driver(
             RunPhase::Approaching { ref node, dwell_s } => {
                 state.throttle = 0.0;
                 state.brake = 0.9;
-                let step_res = step(&mut state, &graph, &train_physics, dt);
+                let step_res = step(&mut state, &path_data, &train_physics, dt);
                 csv_writer.write_sample(&state)?;
                 steps += 1;
 
@@ -286,7 +288,7 @@ pub fn run_scenario_headless_with_driver(
             } => {
                 state.throttle = 0.0;
                 state.brake = 1.0;
-                let step_res = step(&mut state, &graph, &train_physics, dt);
+                let step_res = step(&mut state, &path_data, &train_physics, dt);
                 csv_writer.write_sample(&state)?;
                 steps += 1;
                 *remaining -= dt;
@@ -342,7 +344,7 @@ pub fn run_scenario_headless_with_driver(
                 // Hold brakes while waiting.
                 state.throttle = 0.0;
                 state.brake = 0.9;
-                let step_res = step(&mut state, &graph, &train_physics, dt);
+                let step_res = step(&mut state, &path_data, &train_physics, dt);
                 csv_writer.write_sample(&state)?;
                 steps += 1;
 
@@ -471,7 +473,7 @@ pub fn run_scenario_headless_with_driver(
                 }
 
                 let prev_edge_index = state.edge_index;
-                let step_res = step(&mut state, &graph, &train_physics, dt);
+                let step_res = step(&mut state, &path_data, &train_physics, dt);
 
                 if let Some((dwell_node, dwell_s)) = upcoming_dwell {
                     // Start approach braking on next iteration.

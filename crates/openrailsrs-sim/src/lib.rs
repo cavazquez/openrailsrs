@@ -4,6 +4,7 @@ pub mod csv_out;
 pub mod error;
 pub mod multi_runner;
 pub mod path;
+pub mod path_data;
 pub mod physics;
 pub mod runner;
 pub mod scripted_driver;

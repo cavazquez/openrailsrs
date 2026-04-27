@@ -18,6 +18,7 @@ use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asse
 use crate::SimError;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
+use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, step};
 use crate::runner::{RunMetadata, SimEvent, SimRunResult};
 use crate::state::TrainSimState;
@@ -50,6 +51,7 @@ struct TrainAgent {
     id: String,
     state: TrainSimState,
     physics: TrainPhysics,
+    path_data: PathData,
     phase: AgentPhase,
     events: Vec<SimEvent>,
     csv_writer: RunCsvWriter<File>,
@@ -142,6 +144,7 @@ pub fn run_scenario_multi_train(
         let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
         let physics = build_physics(&consist_path, scenario_dir, scenario.train.davis.as_ref())?;
+        let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
@@ -162,6 +165,7 @@ pub fn run_scenario_multi_train(
             id: "primary".to_string(),
             state,
             physics,
+            path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
             csv_writer: RunCsvWriter::new(csv_file)?,
@@ -193,6 +197,7 @@ pub fn run_scenario_multi_train(
         let path_edges = edge_path(&g2, &entry.start, &entry.destination)?;
         let consist_path = scenario_dir.join(&entry.consist);
         let physics = build_physics(&consist_path, scenario_dir, entry.davis.as_ref())?;
+        let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);
@@ -207,6 +212,7 @@ pub fn run_scenario_multi_train(
             id: entry.id.clone(),
             state,
             physics,
+            path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
             csv_writer: RunCsvWriter::new(csv_file)?,
@@ -293,7 +299,7 @@ pub fn run_scenario_multi_train(
                     }
                     agent.state.throttle = 0.0;
                     agent.state.brake = 1.0;
-                    let step_res = step(&mut agent.state, &graph, &agent.physics, dt);
+                    let step_res = step(&mut agent.state, &agent.path_data, &agent.physics, dt);
                     agent.csv_writer.write_sample(&agent.state)?;
                     global_steps += 1;
                     if step_res.arrived {
@@ -355,7 +361,8 @@ pub fn run_scenario_multi_train(
                             // Apply brakes this tick.
                             agent.state.throttle = 0.0;
                             agent.state.brake = 0.9;
-                            let step_res = step(&mut agent.state, &graph, &agent.physics, dt);
+                            let step_res =
+                                step(&mut agent.state, &agent.path_data, &agent.physics, dt);
                             agent.csv_writer.write_sample(&agent.state)?;
                             global_steps += 1;
                             if step_res.arrived {
@@ -372,7 +379,7 @@ pub fn run_scenario_multi_train(
                     agent.state.brake = brake;
 
                     let prev_edge_index = agent.state.edge_index;
-                    let step_res = step(&mut agent.state, &graph, &agent.physics, dt);
+                    let step_res = step(&mut agent.state, &agent.path_data, &agent.physics, dt);
                     agent.csv_writer.write_sample(&agent.state)?;
                     global_steps += 1;
 

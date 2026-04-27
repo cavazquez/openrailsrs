@@ -113,7 +113,7 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 ---
 
-## Fase 7 — Validación y comparación 🔶
+## Fase 7 — Validación y comparación ✅
 
 **Objetivo:** Cuantificar diferencias entre corridas.
 
@@ -121,7 +121,13 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - `openrailsrs-validate`: comparación cuantitativa de dos `run.csv`.
 - CLI `openrailsrs compare run1.csv run2.csv`.
 
-**Pendiente:** Comparación sistemática con trazas de Open Rails; umbrales configurables.
+**Profundizado:**
+- `ValidationConfig`: tolerancias por columna (`max_velocity_rms`, `max_velocity_max`, `max_position_*`, `max_energy_*`).
+- `ComparisonReport` con `pass`/`fail` por columna y `pass` global.
+- CLI `compare` con flags `--max-velocity-rms`, `--max-position-max`, etc.; sale con exit code 1 si falla.
+- 8 tests: idéntico/perturbado/strict config/smoke self-compare.
+
+**Pendiente:** Comparación sistemática con trazas de Open Rails.
 
 ---
 
@@ -136,7 +142,7 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 ---
 
-## Fase 9 — Optimización 🔶
+## Fase 9 — Optimización ✅
 
 **Objetivo:** Escenarios largos y lotes sin cuellos de botella.
 
@@ -144,7 +150,11 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - Benchmark Criterion `sim_step` en `openrailsrs-sim`.
 - `rayon` en `batch`; `indexmap` para iteración determinista en el grafo.
 
-**Pendiente:** Profiling real con escenarios grandes; caché de paths ya calculados.
+**Profundizado:**
+- `PathData`: pre-computa `Vec<PathEdgeData>` (`length_m`, `speed_limit_mps`, `grade_percent`) antes del bucle; `physics::step` usa indexación directa en lugar de `HashMap::get` en cada tick.
+- Benchmarks Criterion: `physics_step_100` (micro), `full_scenario_smoke` (escenario completo), `full_scenario_multi_train` (multi-tren).
+
+**Pendiente:** Profiling con escenarios más grandes (>50 km); paralelización de escenarios batch.
 
 ---
 

@@ -1,6 +1,6 @@
-use openrailsrs_track::TrackGraph;
 use openrailsrs_train::{DavisCoefficients, TractiveCurve};
 
+use crate::path_data::PathData;
 use crate::state::TrainSimState;
 
 const G: f64 = 9.81;
@@ -22,27 +22,24 @@ pub struct StepResult {
 }
 
 /// Advance state by `dt` seconds using a longitudinal model.
-/// Davis resistance coefficients come from the consist; grade from the current edge.
+///
+/// Uses pre-computed [`PathData`] for direct `Vec` indexing instead of
+/// repeated `HashMap::get` calls — the main hot-loop optimization.
 pub fn step(
     state: &mut TrainSimState,
-    graph: &TrackGraph,
+    path_data: &PathData,
     train: &TrainPhysics,
     dt: f64,
 ) -> StepResult {
-    let edge_id = match state.current_edge() {
-        Some(e) => e,
-        None => return StepResult { arrived: true },
-    };
-    let edge = match graph.edge(edge_id) {
+    let edge_data = match path_data.get(state.edge_index) {
         Some(e) => e,
         None => return StepResult { arrived: true },
     };
 
     let v = state.velocity_mps.max(0.0);
-    let speed_cap = edge.speed_limit_mps;
+    let speed_cap = edge_data.speed_limit_mps;
 
     let f_motor = if state.throttle > 0.0 {
-        // Use the traction curve when available; fall back to P/v law otherwise.
         let raw = if let Some(f_curve) = train.tractive.interpolate(v) {
             f_curve
         } else {
@@ -60,7 +57,7 @@ pub fn step(
 
     let f_brake = state.brake.clamp(0.0, 1.0) * train.max_brake_n;
     let f_resist = train.davis.a_n + train.davis.b_n_per_mps * v + train.davis.c_n_per_mps2 * v * v;
-    let f_grade = train.mass_kg * G * (edge.grade_percent / 100.0);
+    let f_grade = train.mass_kg * G * (edge_data.grade_percent / 100.0);
 
     let f_net = f_motor - f_brake - f_resist - f_grade;
     let accel = f_net / train.mass_kg;
@@ -72,9 +69,9 @@ pub fn step(
     let mut traveled = 0.0;
     let mut arrived = false;
 
-    while travel > 0.0 && state.edge_index < state.path_edges.len() {
-        let eid = state.path_edges[state.edge_index].as_str();
-        let len = graph.edge(eid).map(|e| e.length_m).unwrap_or(0.0);
+    while travel > 0.0 && state.edge_index < path_data.edges.len() {
+        // Direct vec index — no hash lookup.
+        let len = path_data.edges[state.edge_index].length_m;
         let room = len - state.pos_on_edge_m;
         if travel < room {
             state.pos_on_edge_m += travel;
@@ -86,7 +83,7 @@ pub fn step(
             traveled += consumed;
             state.pos_on_edge_m = 0.0;
             state.edge_index += 1;
-            if state.edge_index >= state.path_edges.len() {
+            if state.edge_index >= path_data.edges.len() {
                 arrived = true;
                 break;
             }

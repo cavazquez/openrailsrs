@@ -12,7 +12,7 @@ use openrailsrs_sim::{
     ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
     run_multi_train_from_scenario_file,
 };
-use openrailsrs_validate::compare_csv_files;
+use openrailsrs_validate::{ValidationConfig, compare_csv_files_with_config};
 
 #[derive(Parser)]
 #[command(
@@ -48,8 +48,29 @@ enum Commands {
     },
     /// Run simulation and evaluate game rules (writes outcome.toml).
     PlayHeadless { scenario: PathBuf },
-    /// Compare two run CSV files (velocity, position, energy).
-    Compare { run_a: PathBuf, run_b: PathBuf },
+    /// Compare two run CSV files (velocity, position, energy) with optional tolerances.
+    Compare {
+        run_a: PathBuf,
+        run_b: PathBuf,
+        /// Max RMS tolerance for velocity_mps (m/s). Omit to skip velocity check.
+        #[arg(long)]
+        max_velocity_rms: Option<f64>,
+        /// Max peak absolute tolerance for velocity_mps (m/s).
+        #[arg(long)]
+        max_velocity_max: Option<f64>,
+        /// Max RMS tolerance for odometer_m (m).
+        #[arg(long)]
+        max_position_rms: Option<f64>,
+        /// Max peak absolute tolerance for odometer_m (m).
+        #[arg(long)]
+        max_position_max: Option<f64>,
+        /// Max RMS tolerance for cumulative_energy_kwh (kWh).
+        #[arg(long)]
+        max_energy_rms: Option<f64>,
+        /// Max peak absolute tolerance for cumulative_energy_kwh (kWh).
+        #[arg(long)]
+        max_energy_max: Option<f64>,
+    },
     /// Export GeoJSON for the route graph.
     ExportGeojson {
         route: PathBuf,
@@ -170,10 +191,67 @@ fn main() -> anyhow::Result<()> {
             );
             println!("(outcome.toml written next to scenario)");
         }
-        Commands::Compare { run_a, run_b } => {
-            let rep =
-                compare_csv_files(&run_a, &run_b).map_err(|e| anyhow::anyhow!("compare: {e}"))?;
+        Commands::Compare {
+            run_a,
+            run_b,
+            max_velocity_rms,
+            max_velocity_max,
+            max_position_rms,
+            max_position_max,
+            max_energy_rms,
+            max_energy_max,
+        } => {
+            let config = ValidationConfig {
+                max_velocity_rms,
+                max_velocity_max,
+                max_position_rms,
+                max_position_max,
+                max_energy_rms,
+                max_energy_max,
+            };
+            let rep = compare_csv_files_with_config(&run_a, &run_b, &config)
+                .map_err(|e| anyhow::anyhow!("compare: {e}"))?;
+
+            // Human-readable summary with pass/fail.
+            let status = |p: bool| if p { "PASS ✓" } else { "FAIL ✗" };
+            println!(
+                "=== Compare: {} vs {} ===",
+                run_a.display(),
+                run_b.display()
+            );
+            println!(
+                "  velocity  rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+                rep.velocity.rms_diff,
+                rep.velocity.max_abs_diff,
+                rep.velocity.mean_abs_diff,
+                rep.velocity.samples,
+                status(rep.velocity_pass)
+            );
+            println!(
+                "  position  rms={:.3}  max={:.3}  mean={:.3}  n={}  {}",
+                rep.position.rms_diff,
+                rep.position.max_abs_diff,
+                rep.position.mean_abs_diff,
+                rep.position.samples,
+                status(rep.position_pass)
+            );
+            println!(
+                "  energy    rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+                rep.energy.rms_diff,
+                rep.energy.max_abs_diff,
+                rep.energy.mean_abs_diff,
+                rep.energy.samples,
+                status(rep.energy_pass)
+            );
+            println!("overall: {}", if rep.pass { "PASS" } else { "FAIL" });
+
+            // Also print full TOML report.
+            println!("\n--- full report (TOML) ---");
             println!("{}", toml::to_string_pretty(&rep)?);
+
+            if !rep.pass {
+                std::process::exit(1);
+            }
         }
         Commands::ExportGeojson { route, out } => {
             let g = load_track_graph_from_route_dir(&route)
