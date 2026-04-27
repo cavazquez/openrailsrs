@@ -25,6 +25,9 @@ pub struct StopDef {
     pub node: String,
     pub arrive_s: f64,
     pub depart_s: f64,
+    /// How long the train must dwell at this stop before departing (seconds, default 0).
+    #[serde(default)]
+    pub dwell_s: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

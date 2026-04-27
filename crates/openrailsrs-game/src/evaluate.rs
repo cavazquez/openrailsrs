@@ -22,8 +22,11 @@ pub struct StopResult {
     pub node: String,
     pub scheduled_arrive_s: f64,
     pub actual_arrive_s: Option<f64>,
+    pub actual_depart_s: Option<f64>,
     pub on_time: bool,
     pub missed: bool,
+    /// True when the train departed before `scheduled_depart_s - STOP_GRACE_S`.
+    pub early_departure: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -82,6 +85,13 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
             _ => None,
         });
 
+        let actual_depart = sim.events.iter().find_map(|e| match e {
+            SimEvent::StationDeparture { node_id, time_s } if node_id == &stop_def.node => {
+                Some(*time_s)
+            }
+            _ => None,
+        });
+
         match actual_arrive {
             None => {
                 penalties.push(format!("missed_stop:{}", stop_def.node));
@@ -97,8 +107,10 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
                     node: stop_def.node.clone(),
                     scheduled_arrive_s: stop_def.arrive_s,
                     actual_arrive_s: None,
+                    actual_depart_s: None,
                     on_time: false,
                     missed: true,
+                    early_departure: false,
                 });
             }
             Some(t) => {
@@ -119,12 +131,37 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
                         stop_def.node, stop_def.arrive_s, t
                     ),
                 });
+
+                // Check for early departure.
+                let early_departure = actual_depart
+                    .map(|td| td < stop_def.depart_s - STOP_GRACE_S)
+                    .unwrap_or(false);
+                if early_departure {
+                    let ahead = stop_def.depart_s - actual_depart.unwrap_or(t);
+                    penalties.push(format!(
+                        "early_departure:{}:{:.0}s_early",
+                        stop_def.node, ahead
+                    ));
+                    if let Some(td) = actual_depart {
+                        timeline.push(TimelineEvent {
+                            time_s: td,
+                            kind: "early_departure".into(),
+                            detail: format!(
+                                "node={} scheduled_depart={:.0}s actual_depart={:.0}s",
+                                stop_def.node, stop_def.depart_s, td
+                            ),
+                        });
+                    }
+                }
+
                 stop_results.push(StopResult {
                     node: stop_def.node.clone(),
                     scheduled_arrive_s: stop_def.arrive_s,
                     actual_arrive_s: Some(t),
+                    actual_depart_s: actual_depart,
                     on_time,
                     missed: false,
+                    early_departure,
                 });
             }
         }
@@ -145,7 +182,9 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
         .time_limit_seconds
         .map(|l| sim.metadata.final_time_s <= l as f64)
         .unwrap_or(true);
-    let stops_ok = stop_results.iter().all(|s| s.on_time && !s.missed);
+    let stops_ok = stop_results
+        .iter()
+        .all(|s| s.on_time && !s.missed && !s.early_departure);
 
     let success = match scenario.gameplay.objective {
         ObjectiveKind::ArriveOnTime => reached && on_time && overspeed == 0 && stops_ok,

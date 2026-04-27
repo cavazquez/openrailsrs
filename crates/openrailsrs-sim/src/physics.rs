@@ -1,5 +1,5 @@
 use openrailsrs_track::TrackGraph;
-use openrailsrs_train::DavisCoefficients;
+use openrailsrs_train::{DavisCoefficients, TractiveCurve};
 
 use crate::state::TrainSimState;
 
@@ -13,6 +13,8 @@ pub struct TrainPhysics {
     pub max_tractive_effort_n: f64,
     pub max_brake_n: f64,
     pub davis: DavisCoefficients,
+    /// Aggregate traction curve.  Empty curve → falls back to P/v law.
+    pub tractive: TractiveCurve,
 }
 
 pub struct StepResult {
@@ -40,8 +42,13 @@ pub fn step(
     let speed_cap = edge.speed_limit_mps;
 
     let f_motor = if state.throttle > 0.0 {
-        let raw = train.max_power_w * state.throttle / v.max(0.5);
-        raw.min(train.max_tractive_effort_n)
+        // Use the traction curve when available; fall back to P/v law otherwise.
+        let raw = if let Some(f_curve) = train.tractive.interpolate(v) {
+            f_curve
+        } else {
+            (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n)
+        };
+        raw * state.throttle
             * (if v >= speed_cap * SPEED_EPS_RATIO {
                 0.0
             } else {

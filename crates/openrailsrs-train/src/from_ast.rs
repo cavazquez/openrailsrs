@@ -77,6 +77,7 @@ impl From<EngineFile> for Locomotive {
             max_velocity_mps: value.max_velocity_mps,
             max_tractive_effort_n: value.max_tractive_effort_n,
             max_brake_force_n: value.max_brake_force_n,
+            tractive_curve: None,
         }
     }
 }

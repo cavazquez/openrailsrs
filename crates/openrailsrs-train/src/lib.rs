@@ -9,4 +9,4 @@ pub use from_ast::{
     load_consist_from_path, load_consist_with_asset_root, load_engine_from_path,
     load_wagon_from_path,
 };
-pub use model::{Consist, DavisCoefficients, Locomotive, Vehicle, Wagon};
+pub use model::{Consist, DavisCoefficients, Locomotive, TractiveCurve, Vehicle, Wagon};

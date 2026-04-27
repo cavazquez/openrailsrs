@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::ScenarioFile;
-use openrailsrs_train::{DavisCoefficients, load_consist_with_asset_root};
+use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 use serde::Serialize;
 
 use crate::SimError;
@@ -114,12 +114,24 @@ pub fn run_scenario_headless_with_driver(
             c_n_per_mps2: d.c_n_per_mps2,
         })
         .unwrap_or_else(|| consist.davis.clone());
+    // Build the aggregate traction curve; if the consist has no explicit curves, build a
+    // synthetic one from P and F_te so that `step` always has a non-empty curve.
+    let raw_curve = consist.aggregate_tractive_curve();
+    let tractive = if raw_curve.points.is_empty() {
+        TractiveCurve::from_power_and_effort(
+            consist.total_max_power_w(),
+            consist.total_max_tractive_effort_n(),
+        )
+    } else {
+        raw_curve
+    };
     let train_physics = TrainPhysics {
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
+        tractive,
     };
 
     let stop_nodes: HashSet<&str> = scenario
@@ -127,6 +139,15 @@ pub fn run_scenario_headless_with_driver(
         .stops
         .iter()
         .map(|s| s.node.as_str())
+        .collect();
+
+    // Map node_id -> dwell_s for quick lookup.
+    let stop_dwell: HashMap<String, f64> = scenario
+        .route
+        .stops
+        .iter()
+        .filter(|s| s.dwell_s > 0.0)
+        .map(|s| (s.node.clone(), s.dwell_s))
         .collect();
 
     let mut state = TrainSimState::new(path_edges);
@@ -143,56 +164,183 @@ pub fn run_scenario_headless_with_driver(
     let mut csv_writer = RunCsvWriter::new(csv_file)?;
     let mut events = Vec::new();
 
+    // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.
+    // Calculated dynamically per-step so it adapts to current speed.
+    const BRAKE_DECEL_MPS2: f64 = 0.7; // conservative deceleration estimate
+    const BRAKE_MARGIN_M: f64 = 50.0; // extra safety margin beyond computed distance
+
+    /// Three-phase run state machine for stop handling.
+    enum RunPhase {
+        Normal,
+        /// Approaching a stop with dwell; brake until v ≈ 0.
+        Approaching {
+            node: String,
+            dwell_s: f64,
+        },
+        /// Dwelling at a stop; hold brakes for `remaining` seconds.
+        Dwelling {
+            node: String,
+            remaining: f64,
+        },
+    }
+
+    let mut phase = RunPhase::Normal;
+
     let mut steps = 0_u64;
     while state.time_s() < duration {
-        let edge_id = state.current_edge().map(str::to_string);
-        let speed_limit = edge_id
-            .as_deref()
-            .and_then(|e| graph.edge(e))
-            .map(|e| e.speed_limit_mps)
-            .unwrap_or(55.0 / 3.6);
-        let decision = driver.decide(&state, speed_limit);
-        state.throttle = decision.throttle.clamp(0.0, 1.0);
-        state.brake = decision.brake.clamp(0.0, 1.0);
-        if state.velocity_mps > speed_limit * 1.05 && speed_limit.is_finite() {
-            events.push(SimEvent::OverspeedSample {
-                time_s: state.time_s(),
-                edge_id: edge_id.clone().unwrap_or_default(),
-                speed_mps: state.velocity_mps,
-                limit_mps: speed_limit,
-            });
-        }
+        match phase {
+            // ── Approaching phase: brake hard until v ≈ 0, then snap to node and dwell. ──
+            RunPhase::Approaching { ref node, dwell_s } => {
+                state.throttle = 0.0;
+                state.brake = 0.9;
+                let step_res = step(&mut state, &graph, &train_physics, dt);
+                csv_writer.write_sample(&state)?;
+                steps += 1;
 
-        let prev_edge_index = state.edge_index;
-        let step_res = step(&mut state, &graph, &train_physics, dt);
-
-        // Detect station crossings: for each completed edge boundary this step,
-        // emit arrival + departure events for matching stop nodes.
-        for idx in prev_edge_index..state.edge_index.min(state.path_edges.len()) {
-            let crossed_edge_id = &state.path_edges[idx];
-            if let Some(edge) = graph.edge(crossed_edge_id) {
-                let to_node = edge.to.0.as_str();
-                if stop_nodes.contains(to_node) {
-                    let t = state.time_s();
+                if state.velocity_mps < 0.2 {
+                    // Train has effectively stopped — snap to the next edge boundary
+                    // (simulate rolling exactly to the platform).
+                    let node_id = node.clone();
+                    if let Some(eid) = state.current_edge() {
+                        if let Some(edge) = graph.edge(eid) {
+                            if edge.to.0 == node_id {
+                                state.edge_index += 1;
+                                state.pos_on_edge_m = 0.0;
+                            }
+                        }
+                    }
                     events.push(SimEvent::StationArrival {
-                        time_s: t,
-                        node_id: to_node.to_string(),
+                        time_s: state.time_s(),
+                        node_id: node_id.clone(),
                     });
-                    events.push(SimEvent::StationDeparture {
-                        time_s: t,
-                        node_id: to_node.to_string(),
-                    });
+                    if dwell_s > 0.0 {
+                        phase = RunPhase::Dwelling {
+                            node: node_id,
+                            remaining: dwell_s,
+                        };
+                    } else {
+                        events.push(SimEvent::StationDeparture {
+                            time_s: state.time_s(),
+                            node_id,
+                        });
+                        phase = RunPhase::Normal;
+                    }
+                }
+
+                if step_res.arrived {
+                    break;
+                }
+                if steps > 10_000_000 {
+                    return Err(SimError::Msg("simulation step limit exceeded".into()));
                 }
             }
-        }
 
-        csv_writer.write_sample(&state)?;
-        steps += 1;
-        if step_res.arrived {
-            break;
-        }
-        if steps > 10_000_000 {
-            return Err(SimError::Msg("simulation step limit exceeded".into()));
+            // ── Dwelling phase: hold brakes until dwell expires, then depart. ──
+            RunPhase::Dwelling {
+                ref node,
+                ref mut remaining,
+            } => {
+                state.throttle = 0.0;
+                state.brake = 1.0;
+                let step_res = step(&mut state, &graph, &train_physics, dt);
+                csv_writer.write_sample(&state)?;
+                steps += 1;
+                *remaining -= dt;
+
+                if *remaining <= 0.0 {
+                    let node_id = node.clone();
+                    events.push(SimEvent::StationDeparture {
+                        time_s: state.time_s(),
+                        node_id,
+                    });
+                    phase = RunPhase::Normal;
+                }
+
+                if step_res.arrived {
+                    break;
+                }
+                if steps > 10_000_000 {
+                    return Err(SimError::Msg("simulation step limit exceeded".into()));
+                }
+            }
+
+            // ── Normal driving phase ──
+            RunPhase::Normal => {
+                let edge_id = state.current_edge().map(str::to_string);
+                let speed_limit = edge_id
+                    .as_deref()
+                    .and_then(|e| graph.edge(e))
+                    .map(|e| e.speed_limit_mps)
+                    .unwrap_or(55.0 / 3.6);
+
+                // Detect whether we should start braking for an upcoming dwell stop.
+                let upcoming_dwell: Option<(String, f64)> = edge_id
+                    .as_deref()
+                    .and_then(|eid| graph.edge(eid))
+                    .and_then(|e| {
+                        let to_node = e.to.0.as_str();
+                        stop_dwell.get(to_node).map(|&d| {
+                            // Dynamic braking distance: v²/(2a) + margin.
+                            let v = state.velocity_mps;
+                            let dist_needed = v * v / (2.0 * BRAKE_DECEL_MPS2) + BRAKE_MARGIN_M;
+                            let remaining_m = e.length_m - state.pos_on_edge_m;
+                            (to_node.to_string(), d, remaining_m, dist_needed)
+                        })
+                    })
+                    .and_then(|(n, d, rem, need)| if rem <= need { Some((n, d)) } else { None });
+
+                let decision = driver.decide(&state, speed_limit);
+                state.throttle = decision.throttle.clamp(0.0, 1.0);
+                state.brake = decision.brake.clamp(0.0, 1.0);
+
+                if state.velocity_mps > speed_limit * 1.05 && speed_limit.is_finite() {
+                    events.push(SimEvent::OverspeedSample {
+                        time_s: state.time_s(),
+                        edge_id: edge_id.clone().unwrap_or_default(),
+                        speed_mps: state.velocity_mps,
+                        limit_mps: speed_limit,
+                    });
+                }
+
+                let prev_edge_index = state.edge_index;
+                let step_res = step(&mut state, &graph, &train_physics, dt);
+
+                if let Some((dwell_node, dwell_s)) = upcoming_dwell {
+                    // Start approach braking on next iteration.
+                    phase = RunPhase::Approaching {
+                        node: dwell_node,
+                        dwell_s,
+                    };
+                } else {
+                    // Detect pass-through station crossings (no dwell).
+                    for idx in prev_edge_index..state.edge_index.min(state.path_edges.len()) {
+                        let crossed_edge_id = &state.path_edges[idx];
+                        if let Some(edge) = graph.edge(crossed_edge_id) {
+                            let to_node = edge.to.0.as_str();
+                            if stop_nodes.contains(to_node) {
+                                let t = state.time_s();
+                                events.push(SimEvent::StationArrival {
+                                    time_s: t,
+                                    node_id: to_node.to_string(),
+                                });
+                                events.push(SimEvent::StationDeparture {
+                                    time_s: t,
+                                    node_id: to_node.to_string(),
+                                });
+                            }
+                        }
+                    }
+                }
+
+                csv_writer.write_sample(&state)?;
+                steps += 1;
+                if step_res.arrived {
+                    break;
+                }
+                if steps > 10_000_000 {
+                    return Err(SimError::Msg("simulation step limit exceeded".into()));
+                }
+            }
         }
     }
 

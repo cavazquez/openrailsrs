@@ -7,7 +7,7 @@ use openrailsrs_sim::{
     state::TrainSimState,
 };
 use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
-use openrailsrs_train::DavisCoefficients;
+use openrailsrs_train::{DavisCoefficients, TractiveCurve};
 
 fn build_line_graph() -> TrackGraph {
     let mut g = TrackGraph::new();
@@ -45,6 +45,7 @@ fn bench_physics_step(c: &mut Criterion) {
         max_tractive_effort_n: 350_000.0,
         max_brake_n: 300_000.0,
         davis: DavisCoefficients::default(),
+        tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
     };
     c.bench_function("physics_step", |b| {
         b.iter(|| {

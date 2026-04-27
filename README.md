@@ -69,9 +69,9 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 1 — Parsers MSTS/OpenRails | Profundizado | `openrailsrs-formats`: AST genérico + adaptadores tipados (`EngineFile`, `WagonFile`, `ConsistFile`, `RouteFile`) + conversiones de unidades + dispatch por extensión. |
 | 2 — Datos/config juego | Profundizado | `openrailsrs-scenarios`: `scenario.toml` con `[[route.stops]]` (paradas intermedias con `arrive_s`/`depart_s`) y `[train.davis]` (coeficientes Davis sobreescribibles). |
 | 3 — Modelo lógico ferroviario | Base implementada | `openrailsrs-track` + `openrailsrs-route` + export DOT; aristas con `grade_percent` configurable. |
-| 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TrainPhysics` desacopla parámetros físicos del consist del bucle de simulación. |
-| 5 — Simulación headless | Profundizado | `physics::step` con Davis y pendiente configurables; `SimEvent::StationArrival/StationDeparture` detectados automáticamente por el runner. |
-| 6 — Capa de videojuego headless | Profundizado | `evaluate` con multi-parada: penaliza `missed_stop`, `late_stop`; `outcome.toml` incluye `stops[]` con resultado por parada y `timeline` extendida. |
+| 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TractiveCurve` (puntos v→F, interpolación piecewise-linear) en `Locomotive`; `TrainPhysics` agrega la curva o sintetiza una desde P/F_te. |
+| 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling` para frenos de aproximación dinámicos y dwell real en paradas; `ScriptedDriver` permite replay desde CSV (`time_s,throttle,brake`, semántica hold-last). |
+| 6 — Capa de videojuego headless | Profundizado | `evaluate` con multi-parada: penaliza `missed_stop`, `late_stop`, **`early_departure`** (`StationDeparture.time_s < depart_s − GRACE`); `StopResult` incluye `actual_depart_s` y flag `early_departure`. |
 | 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
 | 8 — Debug sin gráficos | Base implementada | `openrailsrs-export` (DOT/GeoJSON/ASCII/replay). |
 | 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
@@ -96,9 +96,9 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-scenarios` | Carga/validación de `scenario.toml`; soporta paradas intermedias (`[[route.stops]]`) y override de Davis (`[train.davis]`). |
 | `openrailsrs-route` | Carga de layout de vía (`track.toml`) con `grade_percent` por arista. |
 | `openrailsrs-track` | Grafo de vía, nodos, aristas, límites de velocidad y pendientes. |
-| `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` configurable. |
-| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics`); `SimEvent` con overspeed y estaciones; salida `run.csv` + `run.toml`. |
-| `openrailsrs-game` | Objetivos, penalizaciones multi-parada, puntuación; `outcome.toml` con desglose por parada (`play-headless`). |
+| `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (curva de tracción real, piecewise-linear) configurables. |
+| `openrailsrs-sim` | Bucle headless con física configurable (`TrainPhysics` + `TractiveCurve`); dwell en paradas con frenado de aproximación dinámico; `ScriptedDriver` para replay desde CSV; `SimEvent` con overspeed/estaciones; salida `run.csv` + `run.toml`. |
+| `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop`, `early_departure`), puntuación; `outcome.toml` con desglose por parada (`play-headless`). |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual. |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
@@ -180,6 +180,7 @@ destination = "yard_b"
 node     = "mid"
 arrive_s = 400.0       # tiempo objetivo de llegada (s)
 depart_s = 420.0       # tiempo objetivo de salida (s)
+dwell_s  = 60.0        # tiempo de espera en plataforma (s, default 0)
 
 [train]
 consist = "consists/freight.con"
@@ -190,7 +191,15 @@ b_n_per_mps  = 12.0    # término lineal (N·s/m)
 c_n_per_mps2 = 0.4     # término cuadrático (N·s²/m²)
 ```
 
-El campo `grade_percent` en cada arista de `track.toml` indica la pendiente (positivo = subida, negativo = bajada). El resultado `outcome.toml` incluye `[[stops]]` con `actual_arrive_s`, `on_time` y `missed` por cada parada declarada.
+El campo `grade_percent` en cada arista de `track.toml` indica la pendiente (positivo = subida, negativo = bajada). El resultado `outcome.toml` incluye `[[stops]]` con `actual_arrive_s`, `actual_depart_s`, `on_time`, `missed` y `early_departure` por cada parada declarada.
+
+Para replay o test de regresión, se puede usar un `ScriptedDriver` cargando un CSV con columnas `time_s,throttle,brake` (el mismo formato que `run.csv`):
+
+```bash
+# Simulación headless con conductor scripted
+cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml \
+  --driver examples/smoke/driver_script.csv
+```
 
 ---
 
