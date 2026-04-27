@@ -10,6 +10,9 @@ pub struct ScenarioFile {
     pub gameplay: GameplaySection,
     pub simulation: SimulationSection,
     pub output: OutputSection,
+    /// Additional trains for multi-train simulation (optional).
+    #[serde(default)]
+    pub extra_trains: Vec<TrainEntryDef>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -105,6 +108,44 @@ pub struct GameplaySection {
     pub time_limit_seconds: Option<u64>,
     #[serde(default)]
     pub difficulty: Difficulty,
+    /// Points deducted per second of delay beyond `STOP_GRACE_S` at each stop.
+    /// Default 1.0 (linear; set to 0.0 to disable graduated penalties).
+    #[serde(default = "default_penalty_rate")]
+    pub penalty_per_second_late: f64,
+}
+
+fn default_penalty_rate() -> f64 {
+    1.0
+}
+
+/// Definition for an extra train in a multi-train scenario.
+///
+/// The primary train is described by `[train]` + `[route]`; additional trains use
+/// `[[extra_trains]]` with their own route, consist, and departure time.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TrainEntryDef {
+    /// Unique identifier used in `BlockWait`/`BlockClear` events.
+    pub id: String,
+    /// Path to the consist file (relative to scenario directory).
+    pub consist: String,
+    /// Start node id in the route graph.
+    pub start: String,
+    /// Destination node id in the route graph.
+    pub destination: String,
+    /// Simulated time (seconds from t=0) at which this train departs.
+    #[serde(default)]
+    pub start_time_s: f64,
+    /// Intermediate stops for this train.
+    #[serde(default)]
+    pub stops: Vec<StopDef>,
+    /// Optional Davis resistance override.
+    #[serde(default)]
+    pub davis: Option<DavisSection>,
+    /// Switch overrides specific to this train's path.
+    #[serde(default)]
+    pub switches: Vec<SwitchDef>,
+    /// Output CSV filename (relative to scenario directory).
+    pub output_csv: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

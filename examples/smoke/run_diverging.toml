@@ -1,0 +1,9 @@
+scenario_name = "Test diverging run"
+seed = 42
+duration_requested_s = 900.0
+time_step_s = 0.1
+final_time_s = 594.488358972994
+final_odometer_m = 7999.99999999999
+final_velocity_mps = 0.0
+cumulative_energy_kwh = 67.22481050036163
+reached_destination = true

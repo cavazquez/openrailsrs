@@ -8,7 +8,10 @@ use openrailsrs_export::{
 };
 use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_sim::{ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver};
+use openrailsrs_sim::{
+    ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
+    run_multi_train_from_scenario_file,
+};
 use openrailsrs_validate::compare_csv_files;
 
 #[derive(Parser)]
@@ -79,6 +82,8 @@ enum Commands {
         #[arg(required = true)]
         scenarios: Vec<PathBuf>,
     },
+    /// Run multi-train simulation (block-occupancy aware, interleaved clock).
+    SimMulti { scenario: PathBuf },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -199,6 +204,29 @@ fn main() -> anyhow::Result<()> {
                 let t = textual_replay_from_csv(&csv, lines)
                     .map_err(|e| anyhow::anyhow!("replay: {e}"))?;
                 print!("{t}");
+            }
+        }
+        Commands::SimMulti { scenario } => {
+            let result = run_multi_train_from_scenario_file(&scenario)
+                .map_err(|e| anyhow::anyhow!("sim-multi {}: {e}", scenario.display()))?;
+            println!("=== SimMulti: {} ===", scenario.display());
+            for train in &result.results {
+                let m = &train.sim_result.metadata;
+                let block_waits = train
+                    .sim_result
+                    .events
+                    .iter()
+                    .filter(|e| matches!(e, openrailsrs_sim::SimEvent::BlockWait { .. }))
+                    .count();
+                println!(
+                    "  [{}] reached={} t={:.1}s odometer={:.0}m energy={:.3}kwh block_waits={}",
+                    train.id,
+                    m.reached_destination,
+                    m.final_time_s,
+                    m.final_odometer_m,
+                    m.cumulative_energy_kwh,
+                    block_waits,
+                );
             }
         }
         Commands::Batch { scenarios } => {

@@ -1,0 +1,42 @@
+[scenario]
+name = "Multi-train block occupancy demo"
+description = "Two trains share yard_a -> yard_b. Freight departs at t=0 (slow); express departs at t=60 (fast). Express catches the freight and waits for block to clear."
+
+# ── Primary train (freight) ───────────────────────────────────────────────────
+[route]
+path        = "routes/test"
+start       = "yard_a"
+destination = "yard_b"
+
+[train]
+consist = "consists/freight.con"
+
+[train.davis]
+a_n          = 1200.0
+b_n_per_mps  = 18.0
+c_n_per_mps2 = 0.6
+
+[gameplay]
+objective               = "arrive_on_time"
+time_limit_seconds      = 3600
+difficulty              = "normal"
+penalty_per_second_late = 2.0
+
+[simulation]
+duration  = 1200.0
+time_step = 0.1
+seed      = 42
+
+[output]
+csv      = "run_multi_freight.csv"
+metadata = "run_multi_freight.toml"
+
+# ── Extra train (express) — lighter Davis, departs 60 s later ────────────────
+[[extra_trains]]
+id           = "express"
+consist      = "consists/freight.con"
+start        = "yard_a"
+destination  = "yard_b"
+start_time_s = 60.0
+output_csv   = "run_multi_express.csv"
+davis        = { a_n = 500.0, b_n_per_mps = 8.0, c_n_per_mps2 = 0.2 }

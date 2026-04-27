@@ -27,6 +27,8 @@ pub struct StopResult {
     pub missed: bool,
     /// True when the train departed before `scheduled_depart_s - STOP_GRACE_S`.
     pub early_departure: bool,
+    /// Actual delay beyond `scheduled_arrive_s` (0.0 when early or on time).
+    pub delay_s: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -39,6 +41,10 @@ pub struct PlayOutcome {
     pub final_time_s: f64,
     pub overspeed_events: u32,
     pub stops: Vec<StopResult>,
+    /// Percentage of declared stops reached on time (0–100).
+    pub punctuality_pct: f64,
+    /// Sum of delay seconds across all stops (beyond `scheduled_arrive_s`).
+    pub total_delay_s: f64,
 }
 
 /// Run simulation then evaluate rules; writes `outcome.toml` next to scenario.
@@ -62,9 +68,12 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
         .filter(|e| matches!(e, SimEvent::OverspeedSample { .. }))
         .count() as u32;
 
+    let penalty_rate = scenario.gameplay.penalty_per_second_late;
+
     let mut penalties = Vec::new();
     let mut timeline = Vec::new();
     let mut stop_results = Vec::new();
+    let mut graduated_penalty_points = 0.0_f64;
 
     timeline.push(TimelineEvent {
         time_s: 0.0,
@@ -111,24 +120,24 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
                     on_time: false,
                     missed: true,
                     early_departure: false,
+                    delay_s: 0.0,
                 });
             }
             Some(t) => {
-                let delay = t - stop_def.arrive_s;
+                let delay = (t - stop_def.arrive_s).max(0.0);
                 let on_time = delay <= STOP_GRACE_S;
                 if !on_time {
-                    penalties.push(format!(
-                        "late_stop:{}:{:.0}s_over",
-                        stop_def.node,
-                        delay - STOP_GRACE_S
-                    ));
+                    let excess = delay - STOP_GRACE_S;
+                    penalties.push(format!("late_stop:{}:{:.0}s_over", stop_def.node, excess));
+                    // Graduated: deduct points proportional to excess delay.
+                    graduated_penalty_points += excess * penalty_rate;
                 }
                 timeline.push(TimelineEvent {
                     time_s: t,
                     kind: "station_arrival".into(),
                     detail: format!(
-                        "node={} scheduled={:.0}s actual={:.0}s",
-                        stop_def.node, stop_def.arrive_s, t
+                        "node={} scheduled={:.0}s actual={:.0}s delay={:.0}s",
+                        stop_def.node, stop_def.arrive_s, t, delay
                     ),
                 });
 
@@ -162,6 +171,7 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
                     on_time,
                     missed: false,
                     early_departure,
+                    delay_s: delay,
                 });
             }
         }
@@ -191,12 +201,35 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
         ObjectiveKind::Arrive => reached,
     };
 
+    // Score: base 1000 − overspeed flat − graduated late-stop deduction − flat missed/early.
+    let flat_penalties = stop_results
+        .iter()
+        .filter(|s| s.missed || s.early_departure)
+        .count() as f64;
     let mut score = if reached { 1000.0 } else { 0.0 };
     score -= overspeed as f64 * 5.0;
-    score -= penalties.len() as f64 * 50.0;
-    if score < 0.0 {
-        score = 0.0;
-    }
+    score -= graduated_penalty_points;
+    score -= flat_penalties * 50.0;
+    // Keep one flat deduction per non-stop penalty (late_arrival, overspeed summary).
+    let other_penalties = penalties
+        .iter()
+        .filter(|p| p.starts_with("late_arrival") || p.starts_with("overspeed"))
+        .count() as f64;
+    score -= other_penalties * 50.0;
+    score = score.max(0.0);
+
+    // Punctuality metrics.
+    let total_stops = stop_results.len();
+    let on_time_stops = stop_results
+        .iter()
+        .filter(|s| s.on_time && !s.missed)
+        .count();
+    let punctuality_pct = if total_stops == 0 {
+        100.0
+    } else {
+        on_time_stops as f64 / total_stops as f64 * 100.0
+    };
+    let total_delay_s: f64 = stop_results.iter().map(|s| s.delay_s).sum();
 
     timeline.push(TimelineEvent {
         time_s: sim.metadata.final_time_s,
@@ -217,5 +250,7 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
         final_time_s: sim.metadata.final_time_s,
         overspeed_events: overspeed,
         stops: stop_results,
+        punctuality_pct,
+        total_delay_s,
     }
 }

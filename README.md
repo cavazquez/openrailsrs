@@ -71,7 +71,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | 3 — Modelo lógico ferroviario | Profundizado | `openrailsrs-track`: señales (`Stop/Caution/Clear`, `clear_after_s`), `insert_signal`, `signals_on_edge`; runner `RunPhase::AwaitingSignal`; **agujas funcionales** (`SwitchPosition::Straight/Diverging`, `set_switch`, `switch_position`, error `NotASwitch`); BFS respeta la posición de cada `NodeKind::Switch`; `default_position` en `track.toml` y `[[switches]]` sobreescribibles por escenario. |
 | 4 — Modelo físico del tren | Profundizado | `DavisCoefficients` configurable en `Consist`; `TractiveCurve` (puntos v→F, interpolación piecewise-linear) en `Locomotive`; `TrainPhysics` agrega la curva o sintetiza una desde P/F_te. |
 | 5 — Simulación headless | Profundizado | `physics::step` usa `TractiveCurve` si existe, P/v como fallback; máquina de estados `Normal→Approaching→Dwelling→AwaitingSignal`; `ScriptedDriver` replay desde CSV; `run_from_scenario_file_with_driver` para driver externo desde CLI. |
-| 6 — Capa de videojuego headless | Profundizado | `evaluate` multi-parada: `missed_stop`, `late_stop`, `early_departure`; `play-headless` imprime timeline completo de eventos y tabla de paradas por stdout; `outcome.toml` con desglose. |
+| 6 — Capa de videojuego headless | Profundizado | `evaluate` multi-parada: `missed_stop`, penalización **graduada** (`penalty_per_second_late` pts/s de retraso), `early_departure`; `PlayOutcome` añade `punctuality_pct` y `total_delay_s`; `play-headless` imprime timeline completo + tabla de paradas; `outcome.toml` con desglose. |
 | 7 — Validación/comparación | Base implementada | `openrailsrs-validate` + comando `compare`. |
 | 8 — Debug sin gráficos | Profundizado | `openrailsrs-export`: DOT/GeoJSON/ASCII + **replay animado** (`animated_replay_from_csv`: barra de progreso ANSI, refresco in-place, velocidad configurable). |
 | 9 — Optimización | Base implementada | benchmark Criterion + batch con `rayon`. |
@@ -97,8 +97,8 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-route` | Carga de `track.toml` con `grade_percent`, `[[signals]]` y `default_position` en nodos Switch. |
 | `openrailsrs-track` | Grafo de vía, nodos, aristas, señales (`Stop/Caution/Clear`) y **agujas** (`SwitchPosition`, `set_switch`, `switch_position`, error `NotASwitch`). |
 | `openrailsrs-train` | Locomotoras, vagones, consists; `DavisCoefficients` y `TractiveCurve` (piecewise-linear) configurables. |
-| `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; `SimEvent` overspeed/estaciones/señales; `run.csv` + `run.toml`. |
-| `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop`, `early_departure`); `play-headless` con **timeline completo** por stdout; `outcome.toml`. |
+| `openrailsrs-sim` | Bucle headless; `TrainPhysics + TractiveCurve`; máquina `Normal→Approaching→Dwelling→AwaitingSignal`; **BFS switch-aware**; `ScriptedDriver` + `run_from_scenario_file_with_driver`; **`multi_runner`** con `BlockMap` y bucle sincronizado multi-tren; `SimEvent` overspeed/estaciones/señales/`BlockWait`/`BlockClear`; `run.csv` + `run.toml`. |
+| `openrailsrs-game` | Objetivos, penalizaciones multi-parada (`missed_stop`, `late_stop` graduado, `early_departure`); `PlayOutcome` con `punctuality_pct` / `total_delay_s` / `delay_s` por parada; `play-headless` con **timeline completo** por stdout; `outcome.toml`. |
 | `openrailsrs-validate` | Comparación cuantitativa de dos `run.csv`. |
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
@@ -163,6 +163,9 @@ openrailsrs replay examples/smoke/run.csv
 
 # Replay animado: panel multi-línea ANSI, 20× más rápido que real-time
 openrailsrs replay examples/smoke/run.csv --watch --speed 20
+
+# Simulación multi-tren (block occupancy sincronizado)
+openrailsrs sim-multi examples/smoke/scenario_multi.toml
 
 # Batch con rayon (varios escenarios en paralelo)
 openrailsrs batch examples/smoke/scenario.toml examples/smoke/scenario_diverging.toml
@@ -281,6 +284,57 @@ El repositorio incluye dos escenarios de ejemplo para comparar ambas ramas:
 |-----------|--------|---------|---------|
 | [`scenario.toml`](examples/smoke/scenario.toml) | `straight` (default) | `yard_b` | e1 → e2 → e3 |
 | [`scenario_diverging.toml`](examples/smoke/scenario_diverging.toml) | `diverging` | `siding_c` | e1 → e2 → e4 |
+
+---
+
+### Simulación multi-tren (`sim-multi`)
+
+Dos (o más) trenes comparten el mismo grafo de vía con un único reloj de simulación y **block occupancy por arista**: si el tren B intenta entrar a una arista ya ocupada por A, se detiene automáticamente y emite `SimEvent::BlockWait`; cuando A avanza y libera el bloque B recibe `SimEvent::BlockClear` y reanuda la marcha.
+
+```bash
+# Ejecutar escenario multi-tren
+openrailsrs sim-multi examples/smoke/scenario_multi.toml
+```
+
+Salida de ejemplo:
+
+```
+=== SimMulti: examples/smoke/scenario_multi.toml ===
+  [primary] reached=true t=666.2s odometer=10000m energy=67.500kwh block_waits=0
+  [express] reached=true t=793.0s odometer=10000m energy=73.646kwh block_waits=2
+```
+
+Los trenes extra se definen con `[[extra_trains]]` en `scenario.toml`:
+
+```toml
+[[extra_trains]]
+id           = "express"
+consist      = "consists/freight.con"
+start        = "yard_a"
+destination  = "yard_b"
+start_time_s = 60.0          # sale 60 s después del primario
+output_csv   = "run_express.csv"
+davis        = { a_n = 500.0, b_n_per_mps = 8.0, c_n_per_mps2 = 0.2 }
+```
+
+Cada tren escribe su propio CSV con las series temporales de velocidad, posición y energía.
+
+### Penalizaciones graduales de timetable
+
+El campo `penalty_per_second_late` (default `1.0`) en `[gameplay]` controla cuántos puntos se descuentan por cada segundo de retraso respecto al horario declarado (más allá del margen de gracia `STOP_GRACE_S = 30 s`):
+
+```toml
+[gameplay]
+penalty_per_second_late = 2.0   # 2 puntos por segundo de retraso
+```
+
+`PlayOutcome` ahora incluye:
+
+| Campo | Descripción |
+|-------|-------------|
+| `punctuality_pct` | % de paradas alcanzadas a tiempo (0–100) |
+| `total_delay_s` | Suma total de segundos de retraso en todas las paradas |
+| `delay_s` (en cada `StopResult`) | Retraso individual respecto a `arrive_s` |
 
 ---
 

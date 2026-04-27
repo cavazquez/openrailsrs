@@ -75,6 +75,18 @@ pub enum SimEvent {
         time_s: f64,
         signal_id: String,
     },
+    /// Emitted (multi-train only) when a train is blocked waiting for an occupied edge.
+    BlockWait {
+        time_s: f64,
+        train_id: String,
+        edge_id: String,
+    },
+    /// Emitted (multi-train only) when the blocking edge clears and the train resumes.
+    BlockClear {
+        time_s: f64,
+        train_id: String,
+        edge_id: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
