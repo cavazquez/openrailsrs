@@ -124,41 +124,69 @@ Ejemplo de escenario listo: [`examples/smoke/scenario.toml`](examples/smoke/scen
 
 ## CLI (`openrailsrs`)
 
+Instalación del binario (queda disponible como comando global):
+
+```bash
+cargo install --path crates/openrailsrs-cli
+```
+
+O sin instalar, usando `cargo run -p openrailsrs-cli --`:
+
 ```bash
 # Inspeccionar AST genérico de un archivo MSTS
-cargo run -p openrailsrs-cli --bin openrailsrs -- inspect path/al/archivo.eng
+openrailsrs inspect path/al/archivo.eng
 
 # Exportar grafo DOT de la ruta
-cargo run -p openrailsrs-cli --bin openrailsrs -- graph examples/smoke/routes/test --out route.dot
+openrailsrs graph examples/smoke/routes/test --out route.dot
 
 # Simulación headless con AutoDriver (por defecto)
-cargo run -p openrailsrs-cli --bin openrailsrs -- sim examples/smoke/scenario.toml
+openrailsrs sim examples/smoke/scenario.toml
 
 # Simulación headless con ScriptedDriver (CSV con time_s,throttle,brake)
-cargo run -p openrailsrs-cli --bin openrailsrs -- sim examples/smoke/scenario.toml \
-  --driver examples/smoke/driver_script.csv
+openrailsrs sim examples/smoke/scenario.toml --driver examples/smoke/driver_script.csv
+
+# Ruta alternativa: switch en posición divergente → siding_c
+openrailsrs sim examples/smoke/scenario_diverging.toml
 
 # Partida headless: imprime timeline completo + tabla de paradas + escribe outcome.toml
-cargo run -p openrailsrs-cli --bin openrailsrs -- play-headless examples/smoke/scenario.toml
+openrailsrs play-headless examples/smoke/scenario.toml
 
 # Comparar dos corridas CSV
-cargo run -p openrailsrs-cli --bin openrailsrs -- compare run1.csv run2.csv
+openrailsrs compare run1.csv run2.csv
 
 # Exportar GeoJSON y mapa ASCII de la ruta
-cargo run -p openrailsrs-cli --bin openrailsrs -- export-geojson examples/smoke/routes/test --out track.geojson
-cargo run -p openrailsrs-cli --bin openrailsrs -- ascii-map examples/smoke/routes/test
+openrailsrs export-geojson examples/smoke/routes/test --out track.geojson
+openrailsrs ascii-map examples/smoke/routes/test
 
 # Replay textual (primeras 25 filas del CSV)
-cargo run -p openrailsrs-cli --bin openrailsrs -- replay examples/smoke/run.csv
+openrailsrs replay examples/smoke/run.csv
 
-# Replay animado: barra de progreso ANSI, 20× más rápido que real-time
-cargo run -p openrailsrs-cli --bin openrailsrs -- replay examples/smoke/run.csv --watch --speed 20
+# Replay animado: panel multi-línea ANSI, 20× más rápido que real-time
+openrailsrs replay examples/smoke/run.csv --watch --speed 20
 
 # Batch con rayon (varios escenarios en paralelo)
-cargo run -p openrailsrs-cli --bin openrailsrs -- batch examples/smoke/scenario.toml
+openrailsrs batch examples/smoke/scenario.toml examples/smoke/scenario_diverging.toml
 
 # Logs tracing opcionales
-cargo run -p openrailsrs-cli --bin openrailsrs -- -v sim examples/smoke/scenario.toml
+openrailsrs -v sim examples/smoke/scenario.toml
+```
+
+### Panel de replay animado
+
+El flag `--watch` muestra un panel multi-línea que se refresca en vivo:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  openrailsrs  ·  replay  ·  run.csv                          │
+│                                                              │
+│  Recorrido  ████████████████████░░░░░░░░░░░░░░░░   7840m  78%│
+│  Tiempo         485.7 s                                      │
+│  Velocidad   65.4 km/h       ↑ pico  78.2 km/h              │
+│  Tracción    [████████████        ]  60%                     │
+│  Freno       [                    ]   0%                     │
+│  Arista      e3           pos en arista     340 m            │
+│  Energía     22.450 kWh                                      │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Viewer 2D (Fase 10)
@@ -246,6 +274,13 @@ position = "diverging"   # "straight" | "diverging"
 ```
 
 Si el escenario no incluye `[[route.switches]]`, se aplica `default_position` del `track.toml` (por defecto `straight`). El BFS solo expande la arista correspondiente a la posición activa, haciendo imposible llegar a un ramal cerrado.
+
+El repositorio incluye dos escenarios de ejemplo para comparar ambas ramas:
+
+| Escenario | Switch | Destino | Aristas |
+|-----------|--------|---------|---------|
+| [`scenario.toml`](examples/smoke/scenario.toml) | `straight` (default) | `yard_b` | e1 → e2 → e3 |
+| [`scenario_diverging.toml`](examples/smoke/scenario_diverging.toml) | `diverging` | `siding_c` | e1 → e2 → e4 |
 
 ---
 
