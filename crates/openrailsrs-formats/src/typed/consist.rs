@@ -37,11 +37,13 @@ fn collect_entries(ast: &Ast, out: &mut Vec<ConsistEntry>) -> Result<(), FormatE
                     context: head.clone(),
                 })?;
                 let path = match value {
-                    Ast::Atom(atom) => atom_to_string(atom).ok_or_else(|| FormatError::UnexpectedAtom {
-                        key: "path".to_string(),
-                        context: head.clone(),
-                        expected: "string or symbol atom".to_string(),
-                    })?,
+                    Ast::Atom(atom) => {
+                        atom_to_string(atom).ok_or_else(|| FormatError::UnexpectedAtom {
+                            key: "path".to_string(),
+                            context: head.clone(),
+                            expected: "string or symbol atom".to_string(),
+                        })?
+                    }
                     Ast::List(_) => {
                         return Err(FormatError::UnexpectedAtom {
                             key: "path".to_string(),

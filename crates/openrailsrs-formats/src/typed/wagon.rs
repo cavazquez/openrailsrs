@@ -16,8 +16,9 @@ impl WagonFile {
         let mass_kg = find_numeric_field(ast, &["Mass", "MassKG"], context)?;
         let name = find_optional_string_field(ast, &["Type", "Name"], context)?
             .unwrap_or_else(|| "wagon".to_string());
-        let max_brake_force_n = find_optional_numeric_field(ast, &["MaxBrakeForce", "Brake"], context)?
-            .unwrap_or(80_000.0);
+        let max_brake_force_n =
+            find_optional_numeric_field(ast, &["MaxBrakeForce", "Brake"], context)?
+                .unwrap_or(80_000.0);
         Ok(Self {
             name,
             mass_kg,

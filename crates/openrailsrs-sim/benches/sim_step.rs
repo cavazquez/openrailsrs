@@ -2,8 +2,12 @@ use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use openrailsrs_core::{EdgeId, NodeId};
-use openrailsrs_sim::{physics::step, state::TrainSimState};
+use openrailsrs_sim::{
+    physics::{TrainPhysics, step},
+    state::TrainSimState,
+};
 use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
+use openrailsrs_train::DavisCoefficients;
 
 fn build_line_graph() -> TrackGraph {
     let mut g = TrackGraph::new();
@@ -35,6 +39,13 @@ fn build_line_graph() -> TrackGraph {
 
 fn bench_physics_step(c: &mut Criterion) {
     let g = build_line_graph();
+    let train = TrainPhysics {
+        mass_kg: 100_000.0,
+        max_power_w: 2_000_000.0,
+        max_tractive_effort_n: 350_000.0,
+        max_brake_n: 300_000.0,
+        davis: DavisCoefficients::default(),
+    };
     c.bench_function("physics_step", |b| {
         b.iter(|| {
             let mut st = TrainSimState::new(vec!["e1".into()]);
@@ -44,10 +55,7 @@ fn bench_physics_step(c: &mut Criterion) {
                 step(
                     black_box(&mut st),
                     black_box(&g),
-                    black_box(100_000.0),
-                    black_box(2_000_000.0),
-                    black_box(350_000.0),
-                    black_box(300_000.0),
+                    black_box(&train),
                     black_box(0.05),
                 );
             }

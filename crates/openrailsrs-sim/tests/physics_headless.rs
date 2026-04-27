@@ -1,6 +1,10 @@
 use openrailsrs_core::{EdgeId, NodeId};
-use openrailsrs_sim::{physics::step, state::TrainSimState};
+use openrailsrs_sim::{
+    physics::{TrainPhysics, step},
+    state::TrainSimState,
+};
 use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
+use openrailsrs_train::DavisCoefficients;
 
 fn flat_line_graph() -> TrackGraph {
     let mut g = TrackGraph::new();
@@ -30,23 +34,26 @@ fn flat_line_graph() -> TrackGraph {
     g
 }
 
+fn default_train() -> TrainPhysics {
+    TrainPhysics {
+        mass_kg: 100_000.0,
+        max_power_w: 2_000_000.0,
+        max_tractive_effort_n: 350_000.0,
+        max_brake_n: 400_000.0,
+        davis: DavisCoefficients::default(),
+    }
+}
+
 #[test]
 fn acceleration_increases_speed_on_flat_track() {
     let g = flat_line_graph();
+    let train = default_train();
     let mut st = TrainSimState::new(vec!["e1".into()]);
     st.throttle = 1.0;
     st.brake = 0.0;
     let v0 = st.velocity_mps;
     for _ in 0..200 {
-        let _ = step(
-            &mut st,
-            &g,
-            100_000.0,
-            2_000_000.0,
-            350_000.0,
-            400_000.0,
-            0.1,
-        );
+        let _ = step(&mut st, &g, &train, 0.1);
     }
     assert!(
         st.velocity_mps > v0 + 1.0,
@@ -58,21 +65,14 @@ fn acceleration_increases_speed_on_flat_track() {
 #[test]
 fn braking_reduces_speed() {
     let g = flat_line_graph();
+    let train = default_train();
     let mut st = TrainSimState::new(vec!["e1".into()]);
     st.velocity_mps = 25.0;
     st.throttle = 0.0;
     st.brake = 1.0;
     let v0 = st.velocity_mps;
     for _ in 0..500 {
-        let _ = step(
-            &mut st,
-            &g,
-            100_000.0,
-            2_000_000.0,
-            350_000.0,
-            400_000.0,
-            0.05,
-        );
+        let _ = step(&mut st, &g, &train, 0.05);
     }
     assert!(
         st.velocity_mps < v0 - 5.0,

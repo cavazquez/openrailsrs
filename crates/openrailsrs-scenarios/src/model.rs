@@ -19,16 +19,36 @@ pub struct ScenarioMeta {
     pub description: String,
 }
 
+/// Intermediate stop along the route with target arrival and departure times.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StopDef {
+    pub node: String,
+    pub arrive_s: f64,
+    pub depart_s: f64,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RouteSection {
     pub path: String,
     pub start: String,
     pub destination: String,
+    #[serde(default)]
+    pub stops: Vec<StopDef>,
+}
+
+/// Optional Davis resistance override (falls back to consist defaults if absent).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DavisSection {
+    pub a_n: f64,
+    pub b_n_per_mps: f64,
+    pub c_n_per_mps2: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
     pub consist: String,
+    #[serde(default)]
+    pub davis: Option<DavisSection>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Default)]
@@ -99,6 +119,14 @@ impl ScenarioFile {
             return Err(ScenarioError::Validation(
                 "output.csv and output.metadata are required".into(),
             ));
+        }
+        for stop in &self.route.stops {
+            if stop.arrive_s > stop.depart_s {
+                return Err(ScenarioError::Validation(format!(
+                    "stop '{}': arrive_s ({}) must be <= depart_s ({})",
+                    stop.node, stop.arrive_s, stop.depart_s
+                )));
+            }
         }
         Ok(())
     }

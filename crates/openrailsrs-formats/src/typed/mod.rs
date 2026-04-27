@@ -42,11 +42,13 @@ fn find_numeric_field(root: &Ast, keys: &[&str], context: &str) -> Result<f64, F
     for key in keys {
         if let Some(value) = find_list_value(root, key) {
             return match value {
-                Ast::Atom(atom) => atom_to_number(atom).ok_or_else(|| FormatError::UnexpectedAtom {
-                    key: (*key).to_string(),
-                    context: context.to_string(),
-                    expected: "numeric atom".to_string(),
-                }),
+                Ast::Atom(atom) => {
+                    atom_to_number(atom).ok_or_else(|| FormatError::UnexpectedAtom {
+                        key: (*key).to_string(),
+                        context: context.to_string(),
+                        expected: "numeric atom".to_string(),
+                    })
+                }
                 _ => Err(FormatError::UnexpectedAtom {
                     key: (*key).to_string(),
                     context: context.to_string(),
@@ -61,17 +63,23 @@ fn find_numeric_field(root: &Ast, keys: &[&str], context: &str) -> Result<f64, F
     })
 }
 
-fn find_optional_numeric_field(root: &Ast, keys: &[&str], context: &str) -> Result<Option<f64>, FormatError> {
+fn find_optional_numeric_field(
+    root: &Ast,
+    keys: &[&str],
+    context: &str,
+) -> Result<Option<f64>, FormatError> {
     for key in keys {
         if let Some(value) = find_list_value(root, key) {
             return match value {
-                Ast::Atom(atom) => atom_to_number(atom)
-                    .map(Some)
-                    .ok_or_else(|| FormatError::UnexpectedAtom {
-                        key: (*key).to_string(),
-                        context: context.to_string(),
-                        expected: "numeric atom".to_string(),
-                    }),
+                Ast::Atom(atom) => {
+                    atom_to_number(atom)
+                        .map(Some)
+                        .ok_or_else(|| FormatError::UnexpectedAtom {
+                            key: (*key).to_string(),
+                            context: context.to_string(),
+                            expected: "numeric atom".to_string(),
+                        })
+                }
                 _ => Err(FormatError::UnexpectedAtom {
                     key: (*key).to_string(),
                     context: context.to_string(),
@@ -83,17 +91,23 @@ fn find_optional_numeric_field(root: &Ast, keys: &[&str], context: &str) -> Resu
     Ok(None)
 }
 
-fn find_optional_string_field(root: &Ast, keys: &[&str], context: &str) -> Result<Option<String>, FormatError> {
+fn find_optional_string_field(
+    root: &Ast,
+    keys: &[&str],
+    context: &str,
+) -> Result<Option<String>, FormatError> {
     for key in keys {
         if let Some(value) = find_list_value(root, key) {
             return match value {
-                Ast::Atom(atom) => atom_to_string(atom)
-                    .map(Some)
-                    .ok_or_else(|| FormatError::UnexpectedAtom {
-                        key: (*key).to_string(),
-                        context: context.to_string(),
-                        expected: "string or symbol atom".to_string(),
-                    }),
+                Ast::Atom(atom) => {
+                    atom_to_string(atom)
+                        .map(Some)
+                        .ok_or_else(|| FormatError::UnexpectedAtom {
+                            key: (*key).to_string(),
+                            context: context.to_string(),
+                            expected: "string or symbol atom".to_string(),
+                        })
+                }
                 _ => Err(FormatError::UnexpectedAtom {
                     key: (*key).to_string(),
                     context: context.to_string(),

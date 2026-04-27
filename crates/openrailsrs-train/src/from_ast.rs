@@ -4,7 +4,7 @@ use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, WagonFile};
 
 use crate::error::TrainError;
-use crate::model::{Consist, Locomotive, Vehicle, Wagon};
+use crate::model::{Consist, DavisCoefficients, Locomotive, Vehicle, Wagon};
 
 pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, TrainError> {
     let text = std::fs::read_to_string(path.as_ref())?;
@@ -57,7 +57,10 @@ fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
             "consist contains no Engine/Wagon entries".into(),
         ));
     }
-    Ok(Consist { vehicles })
+    Ok(Consist {
+        vehicles,
+        davis: DavisCoefficients::default(),
+    })
 }
 
 fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {

@@ -1,15 +1,16 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::ScenarioFile;
-use openrailsrs_train::load_consist_with_asset_root;
+use openrailsrs_train::{DavisCoefficients, load_consist_with_asset_root};
 use serde::Serialize;
 
 use crate::SimError;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
-use crate::physics::step;
+use crate::physics::{TrainPhysics, step};
 use crate::state::TrainSimState;
 
 #[derive(Debug, Clone, Copy)]
@@ -55,6 +56,14 @@ pub enum SimEvent {
         speed_mps: f64,
         limit_mps: f64,
     },
+    StationArrival {
+        time_s: f64,
+        node_id: String,
+    },
+    StationDeparture {
+        time_s: f64,
+        node_id: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -95,10 +104,30 @@ pub fn run_scenario_headless_with_driver(
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let consist = load_consist_with_asset_root(&consist_path, scenario_dir)?;
-    let mass = consist.total_mass_kg();
-    let power = consist.total_max_power_w();
-    let tractive_effort = consist.total_max_tractive_effort_n();
-    let brake_n = consist.total_max_brake_n();
+    let davis = scenario
+        .train
+        .davis
+        .as_ref()
+        .map(|d| DavisCoefficients {
+            a_n: d.a_n,
+            b_n_per_mps: d.b_n_per_mps,
+            c_n_per_mps2: d.c_n_per_mps2,
+        })
+        .unwrap_or_else(|| consist.davis.clone());
+    let train_physics = TrainPhysics {
+        mass_kg: consist.total_mass_kg(),
+        max_power_w: consist.total_max_power_w(),
+        max_tractive_effort_n: consist.total_max_tractive_effort_n(),
+        max_brake_n: consist.total_max_brake_n(),
+        davis,
+    };
+
+    let stop_nodes: HashSet<&str> = scenario
+        .route
+        .stops
+        .iter()
+        .map(|s| s.node.as_str())
+        .collect();
 
     let mut state = TrainSimState::new(path_edges);
     let dt = scenario.simulation.time_step;
@@ -134,15 +163,29 @@ pub fn run_scenario_headless_with_driver(
             });
         }
 
-        let step_res = step(
-            &mut state,
-            &graph,
-            mass,
-            power,
-            tractive_effort,
-            brake_n,
-            dt,
-        );
+        let prev_edge_index = state.edge_index;
+        let step_res = step(&mut state, &graph, &train_physics, dt);
+
+        // Detect station crossings: for each completed edge boundary this step,
+        // emit arrival + departure events for matching stop nodes.
+        for idx in prev_edge_index..state.edge_index.min(state.path_edges.len()) {
+            let crossed_edge_id = &state.path_edges[idx];
+            if let Some(edge) = graph.edge(crossed_edge_id) {
+                let to_node = edge.to.0.as_str();
+                if stop_nodes.contains(to_node) {
+                    let t = state.time_s();
+                    events.push(SimEvent::StationArrival {
+                        time_s: t,
+                        node_id: to_node.to_string(),
+                    });
+                    events.push(SimEvent::StationDeparture {
+                        time_s: t,
+                        node_id: to_node.to_string(),
+                    });
+                }
+            }
+        }
+
         csv_writer.write_sample(&state)?;
         steps += 1;
         if step_res.arrived {
@@ -164,7 +207,7 @@ pub fn run_scenario_headless_with_driver(
         final_time_s: state.time_s(),
         final_odometer_m: state.odometer_m,
         final_velocity_mps: state.velocity_mps,
-        cumulative_energy_kwh: state.cumulative_energy_j / 3.6e6,
+        cumulative_energy_kwh: state.cumulative_energy_j / 3_600_000.0,
         reached_destination: reached,
     };
 

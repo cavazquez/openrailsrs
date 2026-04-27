@@ -7,8 +7,18 @@ path = "routes/test"
 start = "yard_a"
 destination = "yard_b"
 
+[[route.stops]]
+node = "mid"
+arrive_s = 400.0
+depart_s = 420.0
+
 [train]
 consist = "consists/freight.con"
+
+[train.davis]
+a_n = 800.0
+b_n_per_mps = 12.0
+c_n_per_mps2 = 0.4
 
 [gameplay]
 objective = "arrive_on_time"
@@ -16,7 +26,7 @@ time_limit_seconds = 3600
 difficulty = "normal"
 
 [simulation]
-duration = 800.0
+duration = 900.0
 time_step = 0.1
 seed = 42
 

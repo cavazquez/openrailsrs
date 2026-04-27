@@ -1,3 +1,21 @@
+/// Davis rolling-resistance coefficients: F_resist = a + b·v + c·v².
+#[derive(Clone, Debug, PartialEq)]
+pub struct DavisCoefficients {
+    pub a_n: f64,
+    pub b_n_per_mps: f64,
+    pub c_n_per_mps2: f64,
+}
+
+impl Default for DavisCoefficients {
+    fn default() -> Self {
+        Self {
+            a_n: 800.0,
+            b_n_per_mps: 12.0,
+            c_n_per_mps2: 0.4,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Locomotive {
     pub name: String,
@@ -24,6 +42,7 @@ pub enum Vehicle {
 #[derive(Clone, Debug)]
 pub struct Consist {
     pub vehicles: Vec<Vehicle>,
+    pub davis: DavisCoefficients,
 }
 
 impl Consist {
