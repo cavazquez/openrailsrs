@@ -529,6 +529,143 @@ Flags disponibles: `--max-velocity-rms`, `--max-velocity-max`, `--max-position-r
 
 ---
 
+## Hoja de ruta hacia OpenRails — próximas fases
+
+Las fases siguientes cierran la brecha entre el simulador headless actual y un simulador ferroviario completo comparable a OpenRails.  
+Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
+
+---
+
+### Fase 16 — Carga de pasajeros y masa variable `🔲`
+
+**Dificultad:** ⭐ Fácil (días)
+
+- Campo `passengers: u32` en `TrainSimState`, actualizado en cada parada según `[[route.stops]]`.
+- Masa total del consist aumenta con los pasajeros embarcados (p. ej. 70 kg/pasajero).
+- El `step()` ya usa `mass_kg` dinámicamente; solo hay que actualizarlo entre paradas.
+- Visualizar en el HUD del modo cabina: "Pasajeros: 342 / 450".
+
+---
+
+### Fase 17 — Audio básico `🔲`
+
+**Dificultad:** ⭐⭐ Fácil-media (semanas)
+
+- Integrar [`rodio`](https://crates.io/crates/rodio) (puro Rust, cross-platform).
+- Sonidos: motor (pitch proporcional a throttle×v), frenos (chirriado al brake > 0.5), bocina (tecla `H`), paso a nivel, anuncio de estación.
+- Archivos `.ogg` / `.wav` en `examples/sounds/`; cargados desde `scenario.toml` via `[audio]`.
+- Sin bloquear el hilo de simulación: rodio corre en su propio thread.
+
+---
+
+### Fase 18 — Timetable completo (red multi-tren) `🔲`
+
+**Dificultad:** ⭐⭐ Fácil-media (semanas)
+
+- Archivo `timetable.csv` con columnas `train_id, start_node, end_node, depart_s`.
+- `openrailsrs timetable run <timetable.csv> <route_dir>` instancia `N` agentes en `LiveMultiSim`.
+- Métricas de red: puntualidad media, trenes bloqueados, tasa de ocupación de bloques.
+- Base para simular la operación real de la Línea Mitre completa (30+ servicios diarios).
+
+---
+
+### Fase 19 — Física de frenos avanzada (freno de aire) `🔲`
+
+**Dificultad:** ⭐⭐⭐ Media (1-2 meses)
+
+- Modelo de tubería de freno Westinghouse/EP: presión viaja a ~200 m/s, cada vagón tiene un cilindro de freno.
+- `BrakeSystem` con estados: `Charged`, `Applying`, `Applied`, `Releasing`.
+- Retardo de propagación hace que los vagones traseros frenen más tarde → efecto de compresión del tren.
+- Crítico para la seguridad en gradientes largos (ej. sierra).
+- `step()` recibe vector de fuerzas de freno por vagón en lugar de un escalar global.
+
+---
+
+### Fase 20 — Dinámica de enganche (coupler forces) `🔲`
+
+**Dificultad:** ⭐⭐⭐ Media (1-2 meses)
+
+- Simular cada vehículo del consist como partícula independiente conectada por resortes amortiguados.
+- `CouplerState` con `compression_n` / `tension_n`; límite de ruptura configurable.
+- Permite simular el "tirón" al arrancar un tren de carga largo y el choque al frenar.
+- Necesario para material de carga (locomotora + 30 vagones) vs. EMU rígido.
+- `Consist` pasa de ser un agregado escalar a un `Vec<VehicleState>`.
+
+---
+
+### Fase 21 — Editor de rutas interactivo `🔲`
+
+**Dificultad:** ⭐⭐⭐ Media (1-2 meses)
+
+- `openrailsrs edit <route_dir>` abre el viewer 2D en modo edición (crate `openrailsrs-viewer`).
+- Click izquierdo: agregar nodo; drag entre nodos: agregar arista.
+- Panel de propiedades lateral: editar `length_m`, `speed_limit_kmh`, `grade_percent`, `name`.
+- Colocar señales y agujas visualmente con teclas de acceso rápido.
+- Guardar directamente al `track.toml` existente; soporta deshacer (undo stack).
+
+---
+
+### Fase 22 — Señalización avanzada (ETCS / scripts) `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐ Alta (2-3 meses)
+
+- Motor de scripts para señales: evaluar condiciones arbitrarias (distancia al próximo tren, velocidad, autorización de circulación).
+- Implementar **ETCS nivel 1/2** básico: ATP con curva de frenado supervisada, balises virtuales.
+- Señalización argentina (UEPFP): semáforos de 3 aspectos con bloqueo absoluto y relativo.
+- `SignalScript` en `track.toml` (TOML inline o archivo `.signal.toml` externo).
+- El runner lee el script y actualiza `SignalAspect` en cada tick según el estado de la red.
+
+---
+
+### Fase 23 — Viewer 3D con Bevy `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐ Alta (3-4 meses)
+
+- Integrar [Bevy](https://bevyengine.org/) como renderer desacoplado del sim headless.
+- El sim sigue corriendo en `openrailsrs-sim` (sin cambios); Bevy lo llama como sistema ECS cada frame.
+- Cargar `track.toml` → generar splines 3D de vía con peralte y gradiente.
+- Material rodante 3D desde modelos GLTF/OBJ; cámara libre y seguimiento de tren.
+- HUD Bevy con velocímetro, barra de freno, mapa mini.
+- Primer paso hacia compatibilidad con contenido MSTS (texturas, modelos).
+
+---
+
+### Fase 24 — Tracción vapor `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (3-5 meses)
+
+- Modelo termodinámico de caldera: presión, temperatura, consumo de agua y carbón.
+- Distribución de vapor: admisión, expansión, escape; relación con marcha (cutoff) y regulator.
+- Fuerza tractiva function de presión de cilindro, diámetro de rueda, radio de manivela.
+- Sonido sincronizado con los golpes del émbolo (chuff a frecuencia proporcional a v).
+- Necesario para locos históricas argentinas: vapor en General Roca, Viaducto del Malleco, etc.
+
+---
+
+### Fase 25 — Compatibilidad con contenido MSTS / Open Rails `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (6+ meses)
+
+- Cargar rutas `.trk` / `.w` completas de MSTS (base ya existe en `openrailsrs-formats`).
+- Parsear modelos 3D `.s` (S-expression shape format) y texturas `.ace`.
+- Cargar actividades `.act` como escenarios.
+- El parser de `openrailsrs-formats` ya tiene el AST genérico; falta el loader de assets binarios.
+- Desbloquea acceso a cientos de rutas y material rodante existentes.
+
+---
+
+### Fase 26 — Multijugador `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (6+ meses)
+
+- Arquitectura cliente-servidor: servidor autoritativo corre `LiveMultiSim`, clientes sincronizan estado.
+- Protocolo: WebSocket + mensajes binarios (serde + bincode).
+- Roles: conductor (controla un tren), dispatcher (controla señales/agujas), observador.
+- Tolerancia a desconexiones: el servidor toma el control del tren con `AutoDriver` si el cliente cae.
+- Base en `openrailsrs-sim` ya soporta multi-tren y block occupancy; el networking es la capa nueva.
+
+---
+
 ## Consists y rutas de assets
 
 Las rutas en `(Engine "…")` y `(Wagon "…")` se resuelven respecto al **directorio del escenario** (carpeta que contiene `scenario.toml`), no respecto a la subcarpeta `consists/`, para alinear el layout con un “directorio de instalación” del escenario.
