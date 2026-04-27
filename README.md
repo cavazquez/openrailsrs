@@ -671,6 +671,22 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
+### Fase 27 — IA de despacho `🔲`
+
+**Dificultad:** ⭐⭐⭐⭐⭐ Muy alta (6+ meses)
+
+Scheduler global que coordina todos los trenes en la red con visión completa del estado del grafo.
+
+- **Modelo de conflictos**: representar el grafo de ocupación como un problema de satisfacción de restricciones (CSP); detectar deadlocks antes de que ocurran (p.ej. dos trenes bloqueándose mutuamente en un tramo de vía única).
+- **Algoritmo de scheduling**: variante de *job-shop scheduling* adaptada a grafos ferroviarios; objetivo: minimizar retrasos totales ponderados (prioridad por tipo de servicio — larga distancia > regional > carga).
+- **Resolución de conflictos en tiempo real**: al detectar un conflicto inminente, el dispatcher IA propone una de tres acciones: (1) detener un tren en el próximo desvío libre, (2) invertir el orden de paso, (3) rerouting por vía alternativa.
+- **Integración con el sim**: `DispatcherAI` implementa una interfaz similar a `Driver`; se conecta al `LiveMultiSim` como capa de control por encima de los conductores individuales. El conductor humano puede anular decisiones del AI.
+- **Interfaz de visualización**: panel `ratatui` con tabla de conflictos activos, propuesta de resolución, y tiempo estimado de retraso evitado.
+- **Entrenamiento / calibración**: ejecutar miles de simulaciones headless con el scheduler para ajustar los pesos de prioridad; exportar métricas a CSV para análisis.
+- **Prerequisitos**: Fase 22 (señalización dinámica), Fase 18 (timetable), y un grafo con al menos 2 vías paralelas o lazos de evitación.
+
+---
+
 ## Consists y rutas de assets
 
 Las rutas en `(Engine "…")` y `(Wagon "…")` se resuelven respecto al **directorio del escenario** (carpeta que contiene `scenario.toml`), no respecto a la subcarpeta `consists/`, para alinear el layout con un “directorio de instalación” del escenario.
