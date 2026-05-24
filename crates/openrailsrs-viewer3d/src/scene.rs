@@ -1,13 +1,11 @@
 //! Reference scene: ground plane, world-space grid, RGB axes and lighting.
 //!
-//! The grid is drawn every frame with [`Gizmos`] (no extra mesh asset). The
-//! ground is a single PBR plane spawned once in `spawn_ground_and_lights`.
+//! The grid is drawn every frame with [`Gizmos`]. The ground plane is sized to
+//! fit the loaded [`TrackScene`] bounds when present.
 
 use bevy::prelude::*;
 
-/// Half-extent of the ground plane and the grid (m). The plane is
-/// `2 * GROUND_HALF` wide on each axis and the grid covers the same area.
-const GROUND_HALF: f32 = 100.0;
+use crate::track::TrackScene;
 
 /// Spacing between minor grid lines (m).
 const GRID_MINOR_STEP: f32 = 10.0;
@@ -25,15 +23,15 @@ const AXIS_LENGTH: f32 = 5.0;
 
 /// One-shot startup: spawn the ground plane and the lights.
 pub fn spawn_ground_and_lights(
+    scene: Res<TrackScene>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = meshes.add(
-        Plane3d::default()
-            .mesh()
-            .size(GROUND_HALF * 2.0, GROUND_HALF * 2.0),
-    );
+    let half = scene.bounds.ground_half();
+    let center = scene.bounds.center;
+
+    let mesh = meshes.add(Plane3d::default().mesh().size(half * 2.0, half * 2.0));
     let material = materials.add(StandardMaterial {
         base_color: COLOR_GROUND,
         perceptual_roughness: 0.95,
@@ -44,25 +42,27 @@ pub fn spawn_ground_and_lights(
     commands.spawn((
         Mesh3d(mesh),
         MeshMaterial3d(material),
-        Transform::from_xyz(0.0, -0.001, 0.0),
+        Transform::from_xyz(center.x, -0.001, center.z),
         Name::new("ground"),
     ));
 
+    let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
             shadows_enabled: false,
             ..default()
         },
-        Transform::from_xyz(20.0, 40.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
         Name::new("sun"),
     ));
 }
 
-/// Update-loop gizmos: ground grid + RGB world axes.
-pub fn draw_grid_and_axes(mut gizmos: Gizmos) {
-    let half = GROUND_HALF;
-    let step = GRID_MINOR_STEP;
+/// Update-loop gizmos: ground grid + RGB world axes at the route centre.
+pub fn draw_grid_and_axes(scene: Res<TrackScene>, mut gizmos: Gizmos) {
+    let half = scene.bounds.ground_half();
+    let center = scene.bounds.center;
+    let step = grid_step_for_extent(half);
     let n = (half / step) as i32;
 
     for i in -n..=n {
@@ -72,13 +72,33 @@ pub fn draw_grid_and_axes(mut gizmos: Gizmos) {
         } else {
             COLOR_GRID_MINOR
         };
-        gizmos.line(Vec3::new(v, 0.0, -half), Vec3::new(v, 0.0, half), color);
-        gizmos.line(Vec3::new(-half, 0.0, v), Vec3::new(half, 0.0, v), color);
+        let x = center.x + v;
+        let z = center.z + v;
+        gizmos.line(
+            Vec3::new(x, 0.0, center.z - half),
+            Vec3::new(x, 0.0, center.z + half),
+            color,
+        );
+        gizmos.line(
+            Vec3::new(center.x - half, 0.0, z),
+            Vec3::new(center.x + half, 0.0, z),
+            color,
+        );
     }
 
-    gizmos.line(Vec3::ZERO, Vec3::X * AXIS_LENGTH, COLOR_AXIS_X);
-    gizmos.line(Vec3::ZERO, Vec3::Y * AXIS_LENGTH, COLOR_AXIS_Y);
-    gizmos.line(Vec3::ZERO, Vec3::Z * AXIS_LENGTH, COLOR_AXIS_Z);
+    let axis_len = (half * 0.05).clamp(AXIS_LENGTH, 200.0);
+    gizmos.line(center, center + Vec3::X * axis_len, COLOR_AXIS_X);
+    gizmos.line(center, center + Vec3::Y * axis_len, COLOR_AXIS_Y);
+    gizmos.line(center, center + Vec3::Z * axis_len, COLOR_AXIS_Z);
+}
+
+/// Pick a grid step that keeps line count reasonable on large imported routes.
+fn grid_step_for_extent(half: f32) -> f32 {
+    let mut step = GRID_MINOR_STEP;
+    while half / step > 200.0 {
+        step *= 5.0;
+    }
+    step
 }
 
 #[cfg(test)]
@@ -86,11 +106,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn grid_steps_evenly_divide_half_extent() {
-        let n = GROUND_HALF / GRID_MINOR_STEP;
-        assert!(
-            (n - n.round()).abs() < 1e-6,
-            "GROUND_HALF must be a multiple of GRID_MINOR_STEP"
-        );
+    fn grid_step_scales_up_for_large_routes() {
+        assert!(grid_step_for_extent(100.0) <= GRID_MINOR_STEP);
+        assert!(grid_step_for_extent(50_000.0) > GRID_MINOR_STEP);
     }
 }

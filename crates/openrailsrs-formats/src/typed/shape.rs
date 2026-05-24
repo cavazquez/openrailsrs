@@ -286,28 +286,26 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
     for item in items.iter().skip(1) {
         match item {
             Ast::Atom(Atom::String(s)) if name.is_none() => name = Some(s.clone()),
-            Ast::List(sub) => {
-                if matches_head(sub, "tex_idxs") {
-                    // First numeric atom after the count is the texture index.
-                    if let Some(first) = sub.iter().skip(1).find_map(|a| match a {
-                        Ast::Atom(at) => atom_to_number(at),
-                        _ => None,
-                    }) {
-                        // Skip the count (first numeric) and pick the next one if present.
-                        let nums: Vec<f64> = sub
-                            .iter()
-                            .skip(1)
-                            .filter_map(|a| match a {
-                                Ast::Atom(at) => atom_to_number(at),
-                                _ => None,
-                            })
-                            .collect();
-                        texture_idx = if nums.len() >= 2 {
-                            nums[1] as i32
-                        } else {
-                            first as i32
-                        };
-                    }
+            Ast::List(sub) if matches_head(sub, "tex_idxs") => {
+                // First numeric atom after the count is the texture index.
+                if let Some(first) = sub.iter().skip(1).find_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at),
+                    _ => None,
+                }) {
+                    // Skip the count (first numeric) and pick the next one if present.
+                    let nums: Vec<f64> = sub
+                        .iter()
+                        .skip(1)
+                        .filter_map(|a| match a {
+                            Ast::Atom(at) => atom_to_number(at),
+                            _ => None,
+                        })
+                        .collect();
+                    texture_idx = if nums.len() >= 2 {
+                        nums[1] as i32
+                    } else {
+                        first as i32
+                    };
                 }
             }
             _ => {}

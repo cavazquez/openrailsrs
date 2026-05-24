@@ -31,7 +31,7 @@
 | 🔄 **rayon** | Batch de escenarios en CLI (paralelismo opcional). |
 | 📝 **TOML / CSV** | Escenarios, metadata y series temporales. |
 | 🖼️ **minifb** | Viewer 2D mínimo (X11 en Linux), sin acoplar al núcleo `sim`. |
-| 🎮 **Bevy** | Viewer 3D experimental (`openrailsrs-viewer3d`): ventana, grilla y cámara orbit/fly; desacoplado del `sim`. |
+| 🎮 **Bevy** | Viewer 3D experimental (`openrailsrs-viewer3d`): grafo desde `track.toml`, grilla y cámara orbit/fly; desacoplado del `sim`. |
 
 ---
 
@@ -118,7 +118,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
-| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: sandbox Bevy con plano + grilla + cámara orbit (`F1`) / fly (`F2`); sin datos de ruta todavía (ver `docs/OPEN_RAILS_VIEWER_3D.md`). |
+| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: grafo 3D desde `track.toml` (aristas cilindro naranja, nodos esfera por tipo) + plano/grilla + cámara orbit (`F1`) / fly (`F2`); ver `docs/OPEN_RAILS_VIEWER_3D.md`. |
 
 Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. ej. `openrailsrs_sim::run_from_scenario_file`).
 
@@ -244,15 +244,32 @@ Controles de teclado: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` doblar
 ### Viewer 3D experimental (Bevy, Fase 23 / issue #8)
 
 ```bash
+# Solo topología (grafo estático)
 cargo run -p openrailsrs-viewer3d
+cargo run -p openrailsrs-viewer3d -- examples/smoke/routes/test
+
+# Grafo + tren animado desde CSV de simulación
+cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml   # genera run.csv
+cargo run -p openrailsrs-viewer3d -- examples/smoke/scenario.toml
 ```
 
-Sandbox: plano gris 200×200 m, grilla cada 10 m (cada 100 m más marcada), ejes RGB en el origen, luz direccional + relleno en cámara.
+Muestra el **grafo lógico** de la ruta en 3D:
 
-- `F1` / `F2`: cámara **orbit** (enfocada al origen) / **fly** (WASD en plano horizontal, `Q`/`E` o `Space` arriba/abajo en Y mundial).
+- **Aristas** — cilindros naranjas entre nodos (`x_m` → X, `y_m` → Z; Y es elevación, hoy 0).
+- **Nodos** — esferas: blanco (Plain), cian (Switch), amarillo (Station).
+- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`; HUD en el título de ventana (`t`, km/h, pausa, velocidad).
+- **Plano + grilla** — centrados y escalados al bounding box de la ruta.
+- **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
+
+Controles:
+
+- `F1` / `F2`: cámara **orbit** / **fly** (WASD en plano horizontal, `Q`/`E` arriba/abajo; con replay cargado, `Space` pausa en lugar de subir en fly).
 - Orbit: botón derecho rotar, botón del medio pan, rueda zoom.
 - Fly: botón derecho mantenido para mirar (cursor oculto y confinado a la ventana); `Shift` acelera ×4, `Ctrl` ralentiza ×0.25.
+- Replay: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` velocidad.
 - `Esc`: salir.
+
+Siguiente hito del plan: **HUD en pantalla** (orden 4 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 
 ## Benchmarks (Fase 9)
 

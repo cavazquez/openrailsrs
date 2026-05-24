@@ -3929,6 +3929,12 @@ name = "openrailsrs-viewer3d"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "csv",
+ "openrailsrs-core",
+ "openrailsrs-route",
+ "openrailsrs-scenarios",
+ "openrailsrs-track",
+ "serde",
 ]
 
 [[package]]

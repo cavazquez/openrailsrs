@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Experimental 3D viewer (Bevy) — window + grid + free camera (orbit/fly)"
+description = "Experimental 3D viewer (Bevy) — track graph from track.toml + free camera"
 
 [lib]
 path = "src/lib.rs"
@@ -14,6 +14,11 @@ name = "openrailsrs-viewer3d"
 path = "src/main.rs"
 
 [dependencies]
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+csv = "1.3"
+serde = { workspace = true }
 bevy = { version = "0.18", default-features = false, features = [
     "bevy_winit",
     "x11",
@@ -28,3 +33,6 @@ bevy = { version = "0.18", default-features = false, features = [
     "tonemapping_luts",
     "zstd_rust",
 ] }
+
+[dev-dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }

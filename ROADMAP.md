@@ -350,9 +350,11 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
   - World tiles `.w` ASCII ✅ — parser en `openrailsrs-formats` (`WorldFile`: Static / Forest / TrackObj / Signal / Dyntrack) preservando posiciones locales + subcomando `world-dump [--csv]`. Resolución a coordenadas globales → Fase 23.
   - `SoundRegions` ✅ — `SoundSourceItem` + bloque `SoundRegions` en `.act` → `[[sound_regions]]`; detección en cabina; crate `openrailsrs-audio`.
 
-### Viewer 3D (issue #8 / Fase 23) — prioridad #1 del plan en `docs/OPEN_RAILS_VIEWER_3D.md` ✅
+### Viewer 3D (issue #8 / Fase 23) — prioridad #1 del plan en `docs/OPEN_RAILS_VIEWER_3D.md`
 - Crate **`openrailsrs-viewer3d`**: app Bevy 0.18 (solo X11 en Linux por defecto), ventana 1280×720, plano + grilla + ejes, cámara orbit (`F1`) / fly (`F2`), cursor confinado en fly con botón derecho.
-- `cargo run -p openrailsrs-viewer3d`; el siguiente hito del doc es grafo 3D desde `track.toml`.
+- **Grafo 3D desde `track.toml` ✅** — cilindros naranja (aristas), esferas por tipo de nodo, plano/grilla/cámara encuadrados al bounding box; CLI `openrailsrs-viewer3d [route_dir]`.
+- **Marcador de tren desde CSV ✅** — `openrailsrs-viewer3d scenario.toml` + replay animado; HUD mínimo en título de ventana.
+- Siguiente hito del doc: HUD en pantalla (egui/texto Bevy).
 
 ---
 

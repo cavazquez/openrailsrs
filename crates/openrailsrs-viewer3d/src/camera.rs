@@ -27,9 +27,28 @@ const ORBIT_PAN_SENSITIVITY: f32 = 0.0015;
 /// Per-notch zoom factor for the orbit camera (1 + step). 0.1 = 10 % per tick.
 const ORBIT_ZOOM_STEP: f32 = 0.1;
 
-/// Min / max distance for the orbit camera (m).
+/// Min distance for the orbit camera (m).
 const ORBIT_MIN_DISTANCE: f32 = 1.0;
-const ORBIT_MAX_DISTANCE: f32 = 500.0;
+
+/// Default max distance before a route-specific limit is applied at startup.
+const ORBIT_DEFAULT_MAX_DISTANCE: f32 = 500.0;
+
+/// Upper cap for orbit zoom-out on very large imported routes (m).
+const ORBIT_ABSOLUTE_MAX_DISTANCE: f32 = 500_000.0;
+
+/// Scene-specific orbit distance limit (updated when framing a loaded route).
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct OrbitDistanceLimit {
+    pub max: f32,
+}
+
+impl Default for OrbitDistanceLimit {
+    fn default() -> Self {
+        Self {
+            max: ORBIT_DEFAULT_MAX_DISTANCE,
+        }
+    }
+}
 
 /// Sensitivity (rad per pixel) for fly mouselook.
 const FLY_LOOK_SENSITIVITY: f32 = 0.002;
@@ -109,10 +128,17 @@ pub fn clamp_pitch(pitch: f32) -> f32 {
     pitch.clamp(-MAX_PITCH, MAX_PITCH)
 }
 
-/// Clamp the orbit distance.
+/// Clamp the orbit distance using the default sandbox limit.
 #[inline]
 pub fn clamp_distance(distance: f32) -> f32 {
-    distance.clamp(ORBIT_MIN_DISTANCE, ORBIT_MAX_DISTANCE)
+    clamp_distance_to_limit(distance, ORBIT_DEFAULT_MAX_DISTANCE)
+}
+
+/// Clamp `distance` to `[ORBIT_MIN_DISTANCE, max]`.
+#[inline]
+pub fn clamp_distance_to_limit(distance: f32, max: f32) -> f32 {
+    let max = max.clamp(ORBIT_MIN_DISTANCE, ORBIT_ABSOLUTE_MAX_DISTANCE);
+    distance.clamp(ORBIT_MIN_DISTANCE, max)
 }
 
 /// Direction vector for a camera looking with the given yaw/pitch.
@@ -196,6 +222,7 @@ pub fn toggle_mode_system(
 }
 
 pub fn orbit_camera_system(
+    limit: Res<OrbitDistanceLimit>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
@@ -234,7 +261,8 @@ pub fn orbit_camera_system(
     }
 
     if scroll != 0.0 {
-        orbit.distance = clamp_distance(orbit.distance * (1.0 - scroll * ORBIT_ZOOM_STEP));
+        orbit.distance =
+            clamp_distance_to_limit(orbit.distance * (1.0 - scroll * ORBIT_ZOOM_STEP), limit.max);
         changed = true;
     }
 
@@ -247,6 +275,7 @@ pub fn orbit_camera_system(
 pub fn fly_camera_system(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
+    replay: Option<Res<crate::train::ReplayState>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut query: Query<(&mut Transform, &mut FlyState)>,
@@ -266,7 +295,7 @@ pub fn fly_camera_system(
         fly.pitch = clamp_pitch(fly.pitch - delta.y * FLY_LOOK_SENSITIVITY);
     }
 
-    let axes = read_fly_axes(&keys);
+    let axes = read_fly_axes(&keys, replay.as_deref());
     let mut speed = FLY_BASE_SPEED;
     if keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight) {
         speed *= 4.0;
@@ -282,7 +311,11 @@ pub fn fly_camera_system(
     transform.rotation = Quat::from_euler(EulerRot::YXZ, fly.yaw, fly.pitch, 0.0);
 }
 
-fn read_fly_axes(keys: &ButtonInput<KeyCode>) -> Vec3 {
+fn replay_blocks_space(replay: Option<&crate::train::ReplayState>) -> bool {
+    replay.is_some_and(|r| r.is_active())
+}
+
+fn read_fly_axes(keys: &ButtonInput<KeyCode>, replay: Option<&crate::train::ReplayState>) -> Vec3 {
     let mut axes = Vec3::ZERO;
     if keys.pressed(KeyCode::KeyW) {
         axes.z += 1.0;
@@ -296,7 +329,10 @@ fn read_fly_axes(keys: &ButtonInput<KeyCode>) -> Vec3 {
     if keys.pressed(KeyCode::KeyA) {
         axes.x -= 1.0;
     }
-    if keys.pressed(KeyCode::KeyE) || keys.pressed(KeyCode::Space) {
+    if keys.pressed(KeyCode::KeyE) {
+        axes.y += 1.0;
+    }
+    if keys.pressed(KeyCode::Space) && !replay_blocks_space(replay) {
         axes.y += 1.0;
     }
     if keys.pressed(KeyCode::KeyQ) {
@@ -393,8 +429,14 @@ mod tests {
     #[test]
     fn clamp_distance_clamps_to_bounds() {
         assert!((clamp_distance(0.0) - ORBIT_MIN_DISTANCE).abs() < 1e-6);
-        assert!((clamp_distance(1e9) - ORBIT_MAX_DISTANCE).abs() < 1e-6);
+        assert!((clamp_distance(1e9) - ORBIT_DEFAULT_MAX_DISTANCE).abs() < 1e-6);
         assert!((clamp_distance(50.0) - 50.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn clamp_distance_to_limit_allows_large_routes() {
+        let d = clamp_distance_to_limit(120_000.0, 150_000.0);
+        assert!((d - 120_000.0).abs() < 1e-3);
     }
 
     #[test]
