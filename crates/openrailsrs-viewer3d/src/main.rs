@@ -14,7 +14,7 @@
 //! - `F1` / `F2`   — orbit / fly camera.
 //! - Orbit: right = rotate, middle = pan, wheel = zoom.
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless replay is loaded).
-//! - Replay: `Space` pause, `R` reset, `+`/`-` speed (when CSV loaded).
+//! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
 //! - `Esc`         — quit.
 
 use std::path::{Path, PathBuf};
@@ -22,9 +22,9 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
-use openrailsrs_viewer3d::track::SceneBounds;
+use openrailsrs_viewer3d::ViewerPlugin;
+use openrailsrs_viewer3d::track::TrackScene;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
-use openrailsrs_viewer3d::{TrackScene, ViewerPlugin};
 
 struct LaunchConfig {
     title: String,
@@ -48,12 +48,13 @@ fn main() {
     };
 
     let node_count = config.scene.graph.nodes_iter().count();
-    let edge_count = config.scene.graph.edges_iter().count();
+    let edge_count = config.scene.edge_count;
     eprintln!(
-        "openrailsrs-viewer3d: {} ({} nodes, {} edges{})",
+        "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{})",
         config.title,
         node_count,
         edge_count,
+        config.scene.render_mode.label(),
         if config.replay.is_active() {
             format!(", {} train(s) replay", config.replay.tracks.len())
         } else {
@@ -91,10 +92,9 @@ fn build_launch_config(arg: &Path) -> Result<LaunchConfig, String> {
 
 fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
-    let bounds = SceneBounds::from_graph(&graph);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
-        scene: TrackScene { graph, bounds },
+        scene: TrackScene::from_graph(graph),
         replay: ReplayState::default(),
     })
 }
@@ -106,7 +106,6 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let scenario = load_scenario(path).map_err(|e| e.to_string())?;
     let route_dir = scenario_dir.join(&scenario.route.path);
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
-    let bounds = SceneBounds::from_graph(&graph);
 
     let mut tracks = Vec::new();
     let primary_csv = scenario_dir.join(&scenario.output.csv);
@@ -133,7 +132,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let replay = ReplayState::new(scenario.scenario.name.clone(), tracks);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
-        scene: TrackScene { graph, bounds },
+        scene: TrackScene::from_graph(graph),
         replay,
     })
 }

@@ -193,6 +193,14 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 
 **Regla práctica:** hasta el **orden 5** podés mostrar una demo creíble **sin** parser binario de `.s` ni archivos de terreno MSTS; del **6** en adelante es “contenido MSTS de verdad”.
 
+### Pulido D (post-orden 3, sin reordenar la tabla)
+
+Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
+
+- **Cámara follow (`T`)** — con replay activo: ciclo off → orbit follow (foco en el tren) → chase cam (detrás del tren); solo en modo orbit; pan con botón medio desactiva follow.
+- **Señales 3D** — marcadores coloreados por `SignalAspect` (misma paleta que el viewer 2D), posicionados en arista con `position_m`.
+- **Modo compact** — rutas con más de 800 aristas: aristas como líneas gizmo (no cilindros mesh), nodos Plain omitidos; log `render=compact` al arrancar.
+
 ---
 
 ## 10. Equivalencia sugerida para openrailsrs (issue #8)

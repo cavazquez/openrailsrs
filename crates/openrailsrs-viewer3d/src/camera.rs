@@ -57,7 +57,43 @@ const FLY_LOOK_SENSITIVITY: f32 = 0.002;
 /// Ctrl, so effective range ≈ 2.5 .. 40 m/s.
 const FLY_BASE_SPEED: f32 = 10.0;
 
+/// Orbit focus lerp speed when following the train (1/s).
+const FOLLOW_LERP_SPEED: f32 = 8.0;
+
+/// Fixed pitch (rad) for chase camera behind the train.
+const CHASE_PITCH: f32 = 0.5;
+
+/// Minimum orbit distance while following (avoids clipping into the marker).
+const FOLLOW_MIN_DISTANCE: f32 = 80.0;
+
 // ── Components / resources ────────────────────────────────────────────────
+
+/// Train-tracking camera behaviour (cycle with `T` during replay).
+#[derive(Resource, Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CameraFollowMode {
+    #[default]
+    Off,
+    OrbitFollow,
+    ChaseCam,
+}
+
+impl CameraFollowMode {
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Off => Self::OrbitFollow,
+            Self::OrbitFollow => Self::ChaseCam,
+            Self::ChaseCam => Self::Off,
+        }
+    }
+
+    pub fn hud_label(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::OrbitFollow => "orbit",
+            Self::ChaseCam => "chase",
+        }
+    }
+}
 
 #[derive(Resource, Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CameraMode {
@@ -159,6 +195,88 @@ pub fn fly_translation_delta(yaw: f32, axes: Vec3, speed: f32, dt: f32) -> Vec3 
     (forward_h * axes.z + right_h * axes.x + up * axes.y) * speed * dt
 }
 
+/// Lerp orbit focus toward a target world position (exponential smoothing).
+pub fn lerp_follow_focus(focus: Vec3, target: Vec3, dt: f32) -> Vec3 {
+    let t = (FOLLOW_LERP_SPEED * dt).clamp(0.0, 1.0);
+    focus.lerp(target, t)
+}
+
+/// Shortest-path lerp between two yaw angles (radians).
+pub fn lerp_yaw_toward(current: f32, target: f32, dt: f32) -> f32 {
+    let t = (FOLLOW_LERP_SPEED * dt).clamp(0.0, 1.0);
+    let delta = (target - current).rem_euclid(std::f32::consts::TAU);
+    let delta = if delta > std::f32::consts::PI {
+        delta - std::f32::consts::TAU
+    } else {
+        delta
+    };
+    current + delta * t
+}
+
+/// Yaw for a chase camera sitting behind the train (looks toward +travel).
+#[inline]
+pub fn chase_yaw_from_train(train_yaw: f32) -> f32 {
+    train_yaw + std::f32::consts::PI
+}
+
+/// Extract yaw (rotation around Y) from a train marker transform.
+pub fn yaw_from_transform(transform: &Transform) -> f32 {
+    let fwd = transform.forward();
+    (-fwd.x).atan2(-fwd.z)
+}
+
+/// Train pose inputs for [`apply_orbit_follow`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TrainFollowPose {
+    pub translation: Vec3,
+    pub yaw: f32,
+}
+
+/// Orbit camera state after one follow update (before building the view transform).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OrbitFollowUpdate {
+    pub focus: Vec3,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub distance: f32,
+}
+
+/// Apply orbit/chase follow smoothing for one frame (pure, unit-tested).
+pub fn apply_orbit_follow(
+    orbit: OrbitState,
+    follow: CameraFollowMode,
+    train: TrainFollowPose,
+    dt: f32,
+) -> OrbitFollowUpdate {
+    let target_focus = Vec3::new(train.translation.x, 0.0, train.translation.z);
+    let focus = lerp_follow_focus(orbit.focus, target_focus, dt);
+    let mut yaw = orbit.yaw;
+    let mut pitch = orbit.pitch;
+    let mut distance = orbit.distance;
+
+    if follow == CameraFollowMode::ChaseCam {
+        yaw = lerp_yaw_toward(yaw, chase_yaw_from_train(train.yaw), dt);
+        pitch = lerp_yaw_toward(pitch, CHASE_PITCH, dt);
+    }
+
+    if distance < FOLLOW_MIN_DISTANCE {
+        distance = FOLLOW_MIN_DISTANCE;
+    }
+
+    OrbitFollowUpdate {
+        focus,
+        yaw,
+        pitch,
+        distance,
+    }
+}
+
+/// Build the camera transform from a follow/orbit state snapshot.
+pub fn camera_transform_from_orbit(update: OrbitFollowUpdate) -> Transform {
+    let pos = orbit_position(update.focus, update.yaw, update.pitch, update.distance);
+    Transform::from_translation(pos).looking_at(update.focus, Vec3::Y)
+}
+
 // ── Systems (Bevy) ────────────────────────────────────────────────────────
 
 pub fn spawn_camera(mut commands: Commands) {
@@ -182,10 +300,14 @@ pub fn spawn_camera(mut commands: Commands) {
     ));
 }
 
+#[allow(clippy::type_complexity)]
 pub fn toggle_mode_system(
     keys: Res<ButtonInput<KeyCode>>,
     mut mode: ResMut<CameraMode>,
-    mut query: Query<(&Transform, &mut OrbitState, &mut FlyState)>,
+    mut query: Query<
+        (&Transform, &mut OrbitState, &mut FlyState),
+        (With<Camera3d>, Without<crate::train::TrainMarker>),
+    >,
 ) {
     let want_orbit = keys.just_pressed(KeyCode::F1);
     let want_fly = keys.just_pressed(KeyCode::F2);
@@ -221,13 +343,86 @@ pub fn toggle_mode_system(
     *mode = new_mode;
 }
 
+pub fn cycle_follow_mode(
+    keys: Res<ButtonInput<KeyCode>>,
+    replay: Option<Res<crate::train::ReplayState>>,
+    mut follow: ResMut<CameraFollowMode>,
+) {
+    if !keys.just_pressed(KeyCode::KeyT) {
+        return;
+    }
+    if replay.as_ref().is_some_and(|r| r.is_active()) {
+        *follow = follow.cycle();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn follow_train_camera(
+    time: Res<Time>,
+    mode: Res<CameraMode>,
+    follow: Res<CameraFollowMode>,
+    replay: Option<Res<crate::train::ReplayState>>,
+    train_query: Query<(&Transform, &crate::train::TrainMarker), Without<OrbitState>>,
+    mut orbit_query: Query<
+        (&mut Transform, &mut OrbitState),
+        (With<Camera3d>, Without<crate::train::TrainMarker>),
+    >,
+) {
+    if *mode != CameraMode::Orbit || *follow == CameraFollowMode::Off {
+        return;
+    }
+    if !replay.as_ref().is_some_and(|r| r.is_active()) {
+        return;
+    }
+
+    let Some(train_tf) = train_query
+        .iter()
+        .find(|(_, marker)| marker.track_index == 0)
+        .map(|(tf, _)| tf)
+    else {
+        return;
+    };
+
+    let Ok((mut transform, mut orbit)) = orbit_query.single_mut() else {
+        return;
+    };
+
+    let dt = time.delta_secs();
+    let update = apply_orbit_follow(
+        *orbit,
+        *follow,
+        TrainFollowPose {
+            translation: train_tf.translation,
+            yaw: yaw_from_transform(train_tf),
+        },
+        dt,
+    );
+    orbit.focus = update.focus;
+    orbit.yaw = update.yaw;
+    orbit.pitch = update.pitch;
+    orbit.distance = update.distance;
+    *transform = camera_transform_from_orbit(update);
+}
+
+#[allow(clippy::type_complexity)]
 pub fn orbit_camera_system(
+    mode: Res<CameraMode>,
     limit: Res<OrbitDistanceLimit>,
+    mut follow: ResMut<CameraFollowMode>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
-    mut query: Query<(&mut Transform, &mut OrbitState)>,
+    mut query: Query<
+        (&mut Transform, &mut OrbitState),
+        (With<Camera3d>, Without<crate::train::TrainMarker>),
+    >,
 ) {
+    if *mode != CameraMode::Orbit {
+        motion.clear();
+        wheel.clear();
+        return;
+    }
+
     let Ok((mut transform, mut orbit)) = query.single_mut() else {
         motion.clear();
         wheel.clear();
@@ -253,6 +448,7 @@ pub fn orbit_camera_system(
     }
 
     if mouse_buttons.pressed(MouseButton::Middle) && delta != Vec2::ZERO {
+        *follow = CameraFollowMode::Off;
         let right = transform.right().as_vec3();
         let up = transform.up().as_vec3();
         let scale = orbit.distance * ORBIT_PAN_SENSITIVITY;
@@ -272,13 +468,17 @@ pub fn orbit_camera_system(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn fly_camera_system(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     replay: Option<Res<crate::train::ReplayState>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
-    mut query: Query<(&mut Transform, &mut FlyState)>,
+    mut query: Query<
+        (&mut Transform, &mut FlyState),
+        (With<Camera3d>, Without<crate::train::TrainMarker>),
+    >,
 ) {
     let Ok((mut transform, mut fly)) = query.single_mut() else {
         motion.clear();
@@ -382,6 +582,7 @@ pub fn update_primary_window_cursor(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::train::{CsvRow, ReplayState, TrainTrack};
     use std::f32::consts::FRAC_PI_2;
 
     fn vec3_close(a: Vec3, b: Vec3, eps: f32) -> bool {
@@ -479,5 +680,140 @@ mod tests {
     fn fly_translation_delta_yaw_pi_over_two_forward_moves_minus_x() {
         let d = fly_translation_delta(FRAC_PI_2, Vec3::new(0.0, 0.0, 1.0), 8.0, 1.0);
         assert!(vec3_close(d, Vec3::new(-8.0, 0.0, 0.0), 1e-5));
+    }
+
+    #[test]
+    fn lerp_follow_focus_moves_toward_target() {
+        let focus = Vec3::ZERO;
+        let target = Vec3::new(100.0, 0.0, 0.0);
+        let next = lerp_follow_focus(focus, target, 0.05);
+        assert!(next.x > 0.0 && next.x < 100.0);
+    }
+
+    #[test]
+    fn chase_yaw_from_train_is_opposite_travel() {
+        let yaw = chase_yaw_from_train(0.0);
+        assert!((yaw - std::f32::consts::PI).abs() < 1e-5);
+    }
+
+    #[test]
+    fn camera_follow_mode_cycles() {
+        assert_eq!(CameraFollowMode::Off.cycle(), CameraFollowMode::OrbitFollow);
+        assert_eq!(
+            CameraFollowMode::OrbitFollow.cycle(),
+            CameraFollowMode::ChaseCam
+        );
+        assert_eq!(CameraFollowMode::ChaseCam.cycle(), CameraFollowMode::Off);
+    }
+
+    #[test]
+    fn camera_follow_mode_hud_labels() {
+        assert_eq!(CameraFollowMode::Off.hud_label(), "off");
+        assert_eq!(CameraFollowMode::OrbitFollow.hud_label(), "orbit");
+        assert_eq!(CameraFollowMode::ChaseCam.hud_label(), "chase");
+    }
+
+    #[test]
+    fn lerp_yaw_toward_shortest_path() {
+        let current = 0.1;
+        let target = std::f32::consts::PI - 0.1;
+        let next = lerp_yaw_toward(current, target, 0.05);
+        assert!(next > current);
+        assert!(next <= target);
+    }
+
+    #[test]
+    fn yaw_from_transform_matches_forward() {
+        let tf = Transform::from_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2));
+        let yaw = yaw_from_transform(&tf);
+        assert!((yaw - std::f32::consts::FRAC_PI_2).abs() < 1e-4);
+    }
+
+    #[test]
+    fn apply_orbit_follow_moves_focus_toward_train() {
+        let orbit = OrbitState::default();
+        let train = TrainFollowPose {
+            translation: Vec3::new(200.0, 5.0, 100.0),
+            yaw: 0.0,
+        };
+        let update = apply_orbit_follow(orbit, CameraFollowMode::OrbitFollow, train, 0.05);
+        assert!(update.focus.x > 0.0 && update.focus.x < 200.0);
+        assert_eq!(update.focus.y, 0.0);
+        assert!(update.focus.z > 0.0 && update.focus.z < 100.0);
+    }
+
+    #[test]
+    fn apply_orbit_follow_chase_adjusts_yaw_and_pitch() {
+        let orbit = OrbitState {
+            yaw: 0.0,
+            pitch: 0.0,
+            ..Default::default()
+        };
+        let train = TrainFollowPose {
+            translation: Vec3::new(50.0, 0.0, 0.0),
+            yaw: 0.0,
+        };
+        let update = apply_orbit_follow(orbit, CameraFollowMode::ChaseCam, train, 0.5);
+        assert!(update.yaw > 0.0);
+        assert!(update.pitch > 0.0);
+    }
+
+    #[test]
+    fn apply_orbit_follow_clamps_min_distance() {
+        let orbit = OrbitState {
+            distance: 10.0,
+            ..Default::default()
+        };
+        let train = TrainFollowPose {
+            translation: Vec3::ZERO,
+            yaw: 0.0,
+        };
+        let update = apply_orbit_follow(orbit, CameraFollowMode::OrbitFollow, train, 0.016);
+        assert!((update.distance - FOLLOW_MIN_DISTANCE).abs() < 1e-5);
+    }
+
+    #[test]
+    fn camera_transform_from_orbit_looks_at_focus() {
+        let update = OrbitFollowUpdate {
+            focus: Vec3::new(10.0, 0.0, 10.0),
+            yaw: 0.0,
+            pitch: 0.3,
+            distance: 50.0,
+        };
+        let tf = camera_transform_from_orbit(update);
+        let fwd = tf.forward().as_vec3();
+        let to_focus = (update.focus - tf.translation).normalize();
+        assert!((fwd - to_focus).length() < 0.05);
+    }
+
+    #[test]
+    fn read_fly_axes_wasd_and_qe() {
+        let mut keys = ButtonInput::<KeyCode>::default();
+        keys.press(KeyCode::KeyW);
+        keys.press(KeyCode::KeyD);
+        keys.press(KeyCode::KeyQ);
+        let axes = read_fly_axes(&keys, None);
+        assert_eq!(axes, Vec3::new(1.0, -1.0, 1.0));
+    }
+
+    #[test]
+    fn read_fly_axes_space_blocked_during_replay() {
+        let mut keys = ButtonInput::<KeyCode>::default();
+        keys.press(KeyCode::Space);
+        let replay = ReplayState::new(
+            "x".into(),
+            vec![TrainTrack {
+                label: "t".into(),
+                color: Color::WHITE,
+                rows: vec![CsvRow {
+                    time_s: 0.0,
+                    velocity_mps: 0.0,
+                    edge_id: String::new(),
+                    pos_on_edge_m: 0.0,
+                }],
+            }],
+        );
+        let axes = read_fly_axes(&keys, Some(&replay));
+        assert_eq!(axes.y, 0.0);
     }
 }

@@ -118,7 +118,7 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
-| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: grafo 3D desde `track.toml` (aristas cilindro naranja, nodos esfera por tipo) + plano/grilla + cámara orbit (`F1`) / fly (`F2`); ver `docs/OPEN_RAILS_VIEWER_3D.md`. |
+| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: grafo 3D desde `track.toml` (aristas cilindro o gizmo compact, nodos esfera, señales coloreadas) + plano/grilla + cámara orbit/fly + follow (`T`); ver `docs/OPEN_RAILS_VIEWER_3D.md`. |
 
 Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. ej. `openrailsrs_sim::run_from_scenario_file`).
 
@@ -255,9 +255,10 @@ cargo run -p openrailsrs-viewer3d -- examples/smoke/scenario.toml
 
 Muestra el **grafo lógico** de la ruta en 3D:
 
-- **Aristas** — cilindros naranjas entre nodos (`x_m` → X, `y_m` → Z; Y es elevación, hoy 0).
-- **Nodos** — esferas: blanco (Plain), cian (Switch), amarillo (Station).
-- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`; HUD en el título de ventana (`t`, km/h, pausa, velocidad).
+- **Aristas** — cilindros naranjas entre nodos en rutas pequeñas (≤800 aristas); en rutas grandes (p. ej. Mitre) **modo compact**: líneas naranjas vía gizmos (arranque más rápido).
+- **Nodos** — esferas: blanco (Plain), cian (Switch), amarillo (Station); en modo compact solo Switch/Station.
+- **Señales** — diamantes coloreados como en el viewer 2D: rojo (`stop`), amarillo (`caution`), verde (`clear`), con poste.
+- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`; HUD en el título de ventana (`t`, km/h, pausa, velocidad, follow).
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
@@ -267,7 +268,14 @@ Controles:
 - Orbit: botón derecho rotar, botón del medio pan, rueda zoom.
 - Fly: botón derecho mantenido para mirar (cursor oculto y confinado a la ventana); `Shift` acelera ×4, `Ctrl` ralentiza ×0.25.
 - Replay: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` velocidad.
+- **`T`** (con replay activo): ciclo **follow** off → orbit follow (foco en el tren) → chase cam (detrás del tren); pan con botón medio desactiva follow.
 - `Esc`: salir.
+
+Rutas grandes:
+
+```bash
+cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
+```
 
 Siguiente hito del plan: **HUD en pantalla** (orden 4 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 

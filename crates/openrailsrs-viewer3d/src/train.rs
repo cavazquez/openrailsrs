@@ -243,6 +243,7 @@ pub fn replay_controls(keys: Res<ButtonInput<KeyCode>>, mut replay: ResMut<Repla
 
 pub fn update_window_hud(
     replay: Res<ReplayState>,
+    follow: Res<crate::camera::CameraFollowMode>,
     scene: Res<TrackScene>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
@@ -262,9 +263,14 @@ pub fn update_window_hud(
     }
 
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
+    let follow_label = if replay.is_active() {
+        follow.hud_label()
+    } else {
+        "off"
+    };
     window.title = format!(
-        "openrailsrs-viewer3d — {} | t={:.1}s {:.0} km/h {} {:.0}x",
-        replay.scenario_name, replay.t_sim, vel_kmh, status, replay.speed
+        "openrailsrs-viewer3d — {} | t={:.1}s {:.0} km/h {} {:.0}x follow={}",
+        replay.scenario_name, replay.t_sim, vel_kmh, status, replay.speed, follow_label
     );
 }
 
