@@ -12,7 +12,7 @@ use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
 
-use rodio::{OutputStreamBuilder, Sink, Source, source::SineWave};
+use rodio::{DeviceSinkBuilder, Player, Source, source::SineWave};
 
 /// Commands sent to the audio thread.
 pub enum AudioCmd {
@@ -51,14 +51,14 @@ impl AudioEngine {
 
         // Try opening the default audio device on this thread first;
         // bail without launching the thread if unavailable.
-        let stream_handle = OutputStreamBuilder::open_default_stream().ok()?;
+        let stream_handle = DeviceSinkBuilder::open_default_sink().ok()?;
 
         thread::spawn(move || {
             // Keep the stream alive for the duration of the thread.
             let _stream = stream_handle;
 
-            let engine_sink = Sink::connect_new(_stream.mixer());
-            let brake_sink = Sink::connect_new(_stream.mixer());
+            let engine_sink = Player::connect_new(_stream.mixer());
+            let brake_sink = Player::connect_new(_stream.mixer());
 
             // Seed engine with a quiet idle tone.
             engine_sink.append(SineWave::new(60.0).amplify(0.15).repeat_infinite());
@@ -69,7 +69,7 @@ impl AudioEngine {
             brake_sink.play();
 
             // Active ambient sinks indexed by region id.
-            let mut region_sinks: HashMap<String, Sink> = HashMap::new();
+            let mut region_sinks: HashMap<String, Player> = HashMap::new();
 
             for cmd in rx {
                 match cmd {
@@ -83,7 +83,7 @@ impl AudioEngine {
                         brake_sink.set_volume(vol);
                     }
                     AudioCmd::Horn => {
-                        let horn_sink = Sink::connect_new(_stream.mixer());
+                        let horn_sink = Player::connect_new(_stream.mixer());
                         horn_sink.append(
                             SineWave::new(440.0)
                                 .amplify(0.6)
@@ -99,7 +99,7 @@ impl AudioEngine {
                         if region_sinks.contains_key(&id) {
                             continue;
                         }
-                        let sink = Sink::connect_new(_stream.mixer());
+                        let sink = Player::connect_new(_stream.mixer());
                         let freq = frequency_for_kind(&kind);
                         sink.append(SineWave::new(freq).amplify(0.3).repeat_infinite());
                         sink.set_volume(base_volume.clamp(0.0, 1.0));
