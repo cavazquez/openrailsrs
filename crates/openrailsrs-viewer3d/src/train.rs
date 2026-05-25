@@ -1,7 +1,6 @@
 //! Train replay: position markers from simulation CSV (same fields as viewer 2D).
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use openrailsrs_track::TrackGraph;
 
 use crate::track::{TrackScene, graph_to_world};
@@ -239,39 +238,6 @@ pub fn replay_controls(keys: Res<ButtonInput<KeyCode>>, mut replay: ResMut<Repla
     if keys.just_pressed(KeyCode::Minus) || keys.just_pressed(KeyCode::NumpadSubtract) {
         replay.speed = (replay.speed / 2.0).max(0.125);
     }
-}
-
-pub fn update_window_hud(
-    replay: Res<ReplayState>,
-    follow: Res<crate::camera::CameraFollowMode>,
-    scene: Res<TrackScene>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    if !replay.is_active() {
-        return;
-    }
-    let Ok(mut window) = windows.single_mut() else {
-        return;
-    };
-
-    let y_lift = scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5;
-    let mut vel_kmh = 0.0;
-    if let Some(track) = replay.tracks.first() {
-        if let Some((_, _, v)) = pose_at_time(&scene.graph, &track.rows, replay.t_sim, y_lift) {
-            vel_kmh = v * 3.6;
-        }
-    }
-
-    let status = if replay.paused { "PAUSED" } else { "PLAY" };
-    let follow_label = if replay.is_active() {
-        follow.hud_label()
-    } else {
-        "off"
-    };
-    window.title = format!(
-        "openrailsrs-viewer3d — {} | t={:.1}s {:.0} km/h {} {:.0}x follow={}",
-        replay.scenario_name, replay.t_sim, vel_kmh, status, replay.speed, follow_label
-    );
 }
 
 pub fn replay_is_active(replay: Res<ReplayState>) -> bool {
