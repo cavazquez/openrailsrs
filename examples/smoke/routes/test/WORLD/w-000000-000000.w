@@ -9,7 +9,7 @@ SIMISA@@@@@@@@@@JINX0w0t______
     ( Forest
         ( UiD 2 )
         ( TreeTexture "pine.ace" )
-        ( Position 2500.0 0.0 40.0 )
+        ( Position 180.0 0.0 55.0 )
         ( Population 32 )
         ( Area 100.0 100.0 )
         ( ScaleRange 0.8 1.2 )

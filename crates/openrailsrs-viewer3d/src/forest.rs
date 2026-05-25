@@ -285,5 +285,7 @@ mod tests {
         let patch = forest.forest.as_ref().expect("forest meta");
         assert_eq!(patch.tree_texture.as_deref(), Some("pine.ace"));
         assert_eq!(patch.scale_min, 0.8);
+        assert!((forest.position.x - 180.0).abs() < 0.1);
+        assert!((forest.position.z - 55.0).abs() < 0.1);
     }
 }
