@@ -10,6 +10,8 @@ pub struct WagonFile {
     pub max_brake_force_n: f64,
     /// Physical length of the vehicle (metres), used for brake-pipe positioning.
     pub length_m: f64,
+    /// Visual shape filename (`WagonShape` in MSTS `.wag`).
+    pub wagon_shape: Option<String>,
 }
 
 impl WagonFile {
@@ -23,11 +25,13 @@ impl WagonFile {
                 .unwrap_or(80_000.0);
         let length_m =
             find_optional_numeric_field(ast, &["Length", "WagonLength"], context)?.unwrap_or(15.0);
+        let wagon_shape = find_optional_string_field(ast, &["WagonShape", "Shape"], context)?;
         Ok(Self {
             name,
             mass_kg,
             max_brake_force_n,
             length_m,
+            wagon_shape,
         })
     }
 }

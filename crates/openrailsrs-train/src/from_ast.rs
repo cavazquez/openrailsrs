@@ -72,6 +72,15 @@ fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {
     base.join(trimmed)
 }
 
+/// Directory used to resolve `Engine` / `Wagon` paths in a scenario layout
+/// (`examples/smoke/consists/foo.con` → `examples/smoke/`).
+pub fn consist_asset_root(consist_path: &Path) -> &Path {
+    consist_path
+        .parent()
+        .and_then(|p| p.parent())
+        .unwrap_or_else(|| consist_path.parent().unwrap_or(consist_path))
+}
+
 impl From<EngineFile> for Locomotive {
     fn from(value: EngineFile) -> Self {
         use crate::model::TractiveCurve;
@@ -93,6 +102,8 @@ impl From<EngineFile> for Locomotive {
             regen_factor: value.regen_factor,
             diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
             steam: None,
+            wagon_shape: value.wagon_shape,
+            length_m: value.length_m,
         }
     }
 }
@@ -104,6 +115,7 @@ impl From<WagonFile> for Wagon {
             mass_kg: value.mass_kg,
             max_brake_force_n: value.max_brake_force_n,
             length_m: value.length_m,
+            wagon_shape: value.wagon_shape,
         }
     }
 }

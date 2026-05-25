@@ -19,6 +19,7 @@ openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-track = { path = "../openrailsrs-track" }
+openrailsrs-train = { path = "../openrailsrs-train" }
 csv = "1.3"
 serde = { workspace = true }
 bevy = { version = "0.18", default-features = false, features = [

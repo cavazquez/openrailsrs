@@ -146,6 +146,16 @@ pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> 
     None
 }
 
+/// Search several asset roots (route dir, scenario dir, …) for a shape file.
+pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
+    for dir in dirs {
+        if let Some(path) = resolve_shape_path(dir, file_name) {
+            return Some(path);
+        }
+    }
+    None
+}
+
 /// Resolve `TEXTURES/foo.ace` under the route directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     for subdir in ["TEXTURES", "textures"] {

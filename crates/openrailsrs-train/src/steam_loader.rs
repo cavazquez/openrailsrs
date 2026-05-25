@@ -128,6 +128,8 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam,
+        wagon_shape: None,
+        length_m: 18.0,
     })
 }
 

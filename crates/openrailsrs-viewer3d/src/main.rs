@@ -22,9 +22,11 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
+use openrailsrs_train::{consist_asset_root, load_consist_with_asset_root};
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainScene;
+use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir;
@@ -39,6 +41,7 @@ struct LaunchConfig {
     world: WorldScene,
     terrain: TerrainScene,
     replay: ReplayState,
+    consist: TrainConsistScene,
 }
 
 fn main() {
@@ -103,6 +106,7 @@ fn main() {
         .insert_resource(config.world)
         .insert_resource(config.terrain)
         .insert_resource(config.replay)
+        .insert_resource(config.consist)
         .insert_resource(HudTitle(config.title))
         .add_plugins(ViewerPlugin)
         .add_systems(Update, exit_on_esc)
@@ -128,6 +132,7 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
         world,
         terrain,
         replay: ReplayState::default(),
+        consist: TrainConsistScene::default(),
     })
 }
 
@@ -164,6 +169,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     }
 
     let replay = ReplayState::new(scenario.scenario.name.clone(), tracks);
+    let consist = load_train_consist(scenario_dir, &scenario.train.consist);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
         route_dir,
@@ -171,7 +177,23 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
         world,
         terrain,
         replay,
+        consist,
     })
+}
+
+fn load_train_consist(scenario_dir: &Path, consist_rel: &str) -> TrainConsistScene {
+    let con_path = scenario_dir.join(consist_rel);
+    let asset_root = consist_asset_root(&con_path);
+    match load_consist_with_asset_root(&con_path, asset_root) {
+        Ok(consist) => TrainConsistScene::from_consist(&consist, scenario_dir.to_path_buf()),
+        Err(err) => {
+            eprintln!(
+                "openrailsrs-viewer3d: warning: could not load consist {}: {err}",
+                con_path.display()
+            );
+            TrainConsistScene::default()
+        }
+    }
 }
 
 fn exit_on_esc(keys: Res<ButtonInput<KeyCode>>, mut exit: MessageWriter<AppExit>) {

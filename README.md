@@ -258,7 +258,7 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **Aristas** — cilindros naranjas entre nodos en rutas pequeñas (≤800 aristas); en rutas grandes (p. ej. Mitre) **modo compact**: líneas naranjas vía gizmos (arranque más rápido).
 - **Nodos** — esferas: blanco (Plain), cian (Switch), amarillo (Station); en modo compact solo Switch/Station.
 - **Señales** — diamantes coloreados como en el viewer 2D: rojo (`stop`), amarillo (`caution`), verde (`clear`), con poste.
-- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`.
+- **Tren** (con `scenario.toml`) — consist del escenario: locomotora + vagones encadenados con mesh `.s` (`WagonShape` en `.eng`/`.wag`); fallback cubo magenta si falta shape; recorre la ruta según `run.csv`.
 - **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
 - **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real y textura `.ace` de `TEXTURES/` cuando existe.
 - **Terreno** — carpeta `TERRAIN/` con tile `.y` + `_Y.RAW`: heightfield verde (colina demo en smoke junto al origen); sustituye el plano gris cuando hay tiles.

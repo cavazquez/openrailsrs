@@ -9,6 +9,7 @@
 
 pub mod camera;
 pub mod hud;
+pub mod rolling_stock;
 pub mod scene;
 pub mod shapes;
 pub mod signals;
@@ -23,6 +24,7 @@ mod app_smoke;
 use bevy::prelude::*;
 
 pub use hud::HudTitle;
+pub use rolling_stock::TrainConsistScene;
 pub use shapes::RouteAssets;
 pub use terrain::TerrainScene;
 pub use track::{TrackRenderMode, TrackScene};

@@ -133,6 +133,10 @@ pub struct Locomotive {
     /// Steam traction parameters.  When `Some`, the physics engine uses the
     /// boiler + cylinder model instead of the electric/diesel P/v path.
     pub steam: Option<SteamParams>,
+    /// Visual shape filename from the `.eng` file.
+    pub wagon_shape: Option<String>,
+    /// Body length in metres (for consist spacing in viewers).
+    pub length_m: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -142,6 +146,8 @@ pub struct Wagon {
     pub max_brake_force_n: f64,
     /// Physical length in metres (used for brake-pipe delay calculations).
     pub length_m: f64,
+    /// Visual shape filename from the `.wag` file.
+    pub wagon_shape: Option<String>,
 }
 
 #[derive(Clone, Debug)]

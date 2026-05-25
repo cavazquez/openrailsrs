@@ -12,6 +12,8 @@ mod tests {
         CameraFollowMode, CameraMode, OrbitDistanceLimit, OrbitState, cycle_follow_mode,
         follow_train_camera, spawn_camera,
     };
+    use crate::rolling_stock::TrainConsistScene;
+    use crate::shapes::RouteAssets;
     use crate::signals::spawn_signal_markers;
     use crate::track::{TrackScene, frame_orbit_camera_on_track, spawn_track_meshes};
     use crate::train::{
@@ -83,6 +85,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()));
         app.init_asset::<Mesh>();
+        app.init_asset::<Image>();
         app.init_asset::<StandardMaterial>();
         app.init_resource::<ButtonInput<KeyCode>>();
         app.init_resource::<ButtonInput<MouseButton>>();
@@ -91,6 +94,8 @@ mod tests {
         app.init_resource::<OrbitDistanceLimit>();
         app.insert_resource(scene);
         app.insert_resource(replay);
+        app.insert_resource(TrainConsistScene::default());
+        app.insert_resource(RouteAssets::new("examples/smoke/routes/test"));
         app.update();
 
         f(app.world_mut());

@@ -22,6 +22,10 @@ pub struct EngineFile {
     /// Piecewise-linear traction curve as (velocity_mps, force_n) pairs.
     /// Empty when not present in the file (caller falls back to P/v law).
     pub traction_curve: Vec<(f64, f64)>,
+    /// Visual shape filename (`WagonShape` in MSTS `.eng`).
+    pub wagon_shape: Option<String>,
+    /// Body length in metres (coupling to coupling approximation).
+    pub length_m: f64,
 }
 
 impl EngineFile {
@@ -47,6 +51,9 @@ impl EngineFile {
                 .clamp(0.0, 1.0);
         let diesel_sfc_g_per_kwh =
             find_optional_numeric_field(ast, &["SpecificFuelConsumption", "DieselSfc"], context)?;
+        let wagon_shape = find_optional_string_field(ast, &["WagonShape", "Shape"], context)?;
+        let length_m =
+            find_optional_numeric_field(ast, &["Length", "WagonLength"], context)?.unwrap_or(18.0);
         let traction_curve = parse_traction_curve(ast);
 
         Ok(Self {
@@ -59,6 +66,8 @@ impl EngineFile {
             regen_factor,
             diesel_sfc_g_per_kwh,
             traction_curve,
+            wagon_shape,
+            length_m,
         })
     }
 }

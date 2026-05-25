@@ -188,7 +188,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 | **7** | **Textura `.ace`** en material (mip 0 vía `openrailsrs-ace` → imagen GPU) sobre un cubo o el mesh del paso 6 | 3 | 3 | Cierra el pipeline visual de material; menos espectacular que la geometría pero útil. **✅ hecho** — `prim_state` → `TEXTURES/*.ace`, mip 0 RGBA8 en `StandardMaterial.base_color_texture`; fallback magenta si falta textura. |
 | **8** | **Terreno estilo OR**: parche 16×16 + elevación (necesita **tiles MSTS** + `.y` / RAW / mismas convenciones que `TerrainPrimitive`) | 2 | 5 | Muy visible pero **dificultad y datos** suben mucho (shaders, vecinos, agujeros). **✅ hecho** — `.y` + `_Y.RAW`, parches 17×17 / diagonal alternada, mesh por tile en `TERRAIN/`; sin texturas multi-capa ni agujeros aún. |
 | **9** | **Vía dinámica** (perfiles TSection / mallas como `DynamicTrackPrimitive`) | 2 | 4 | Mucha lógica y datos; mejor cuando el grafo y la cámara ya estén sólidos. |
-| **10** | **Rolling stock completo** (jerarquía, animaciones `PoseableShape`, múltiples LOD, sombras) | 1 | 5 | Es el núcleo de Open Rails en horas-hombre; encaja al final. |
+| **10** | **Rolling stock** — consist del escenario → cadena de meshes `.s` (fallback cubo); sin animaciones/LOD/bogies aún | 2 | 5 | PR1 acotado: reemplaza el cubo magenta del tren primario cuando hay `WagonShape` en `.eng`/`.wag`. |
 | **11** | **Bosque** (población, RNG, colisión con vía) / **agua** / **cielo** / partículas | 2–3 | 3–4 | Bonificación visual; depende menos del sim y más de tuning y assets. |
 
 **Regla práctica:** hasta el **orden 5** podés mostrar una demo creíble **sin** parser binario de `.s` ni archivos de terreno MSTS; del **6** en adelante es “contenido MSTS de verdad”.
@@ -205,6 +205,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Shape `.s` → mesh** — `ShapeFile` ASCII al LOD más cercano; objetos world con `FileName` `.s` resuelven `SHAPES/` y dibujan malla real (fallback a cubo).
 - **Textura `.ace` en material** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; resuelve `TEXTURES/` (o `textures/`); UV con flip V; fallback magenta si falta el `.ace`.
 - **Terreno heightfield** — tile `.y` + `_Y.RAW` en `TERRAIN/`; malla estilo OR (16×16 parches, 17×17 vértices, diagonal alternada); reemplaza el plano gris cuando hay datos.
+- **Rolling stock (PR1)** — consist del `scenario.toml` → locomotora + vagones encadenados con offset longitudinal; mesh `.s` desde `SHAPES/` (fallback cubo coloreado).
 
 ---
 

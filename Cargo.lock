@@ -4066,6 +4066,7 @@ dependencies = [
  "openrailsrs-route",
  "openrailsrs-scenarios",
  "openrailsrs-track",
+ "openrailsrs-train",
  "serde",
 ]
 

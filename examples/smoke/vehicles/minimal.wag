@@ -1,4 +1,6 @@
 (Wagon
   (Type "Freight")
+  (WagonShape "test.s")
+  (Length 14.0)
   (Mass 20000)
 )
