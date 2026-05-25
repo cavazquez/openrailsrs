@@ -184,7 +184,9 @@ pub fn spawn_world_boxes(
     let mut shape_material_cache: std::collections::HashMap<PathBuf, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
-    let shape_material_color = Color::srgb(0.45, 0.72, 0.95);
+    let shape_material_color = Color::srgb(0.35, 0.65, 1.0);
+
+    let mut shape_mesh_count = 0usize;
 
     for obj in &world.items {
         if shape_eligible(obj) {
@@ -226,6 +228,7 @@ pub fn spawn_world_boxes(
                     },
                     Name::new(format!("world:{}:{}", obj.kind, obj.label)),
                 ));
+                shape_mesh_count += 1;
                 continue;
             }
         }
@@ -256,6 +259,10 @@ pub fn spawn_world_boxes(
             },
             Name::new(format!("world:{}:{}", obj.kind, obj.label)),
         ));
+    }
+
+    if shape_mesh_count > 0 {
+        eprintln!("openrailsrs-viewer3d: {shape_mesh_count} world object(s) using .s mesh");
     }
 }
 

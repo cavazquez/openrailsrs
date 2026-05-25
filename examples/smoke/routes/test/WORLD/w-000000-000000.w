@@ -3,7 +3,7 @@ SIMISA@@@@@@@@@@JINX0w0t______
     ( Static
         ( UiD 1 )
         ( FileName "yard_shed.s" )
-        ( Position 500.0 0.0 0.0 )
+        ( Position 5200.0 0.0 55.0 )
         ( QDirection 0.0 0.0 0.0 1.0 )
     )
     ( Forest

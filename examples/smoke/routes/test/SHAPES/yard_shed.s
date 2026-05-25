@@ -5,10 +5,10 @@ SIMISA@@@@@@@@@@JINX0s1t______
     ( shader_names 1 "TexDiff" )
     ( texture_filenames 1 "yard.ace" )
     ( points 4
-        ( point -40.0 0.3 -25.0 )
-        ( point  40.0 0.3 -25.0 )
-        ( point  40.0 0.3  25.0 )
-        ( point -40.0 0.3  25.0 )
+        ( point -40.0 1.0 -25.0 )
+        ( point  40.0 1.0 -25.0 )
+        ( point  40.0 1.0  25.0 )
+        ( point -40.0 1.0  25.0 )
     )
     ( uv_points 4
         ( uv_point 0 0 )
