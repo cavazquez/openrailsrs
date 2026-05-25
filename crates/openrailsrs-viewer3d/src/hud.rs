@@ -10,6 +10,7 @@ use crate::train::{ReplayState, pose_at_time};
 #[derive(Resource, Clone, Default)]
 pub struct HudTitle(pub String);
 
+/// Minimum HUD strip height; panel grows with visible rows (coords, replay, etc.).
 pub const HUD_HEIGHT_PX: f32 = 72.0;
 const FONT_SIZE: f32 = 13.0;
 const FONT_SIZE_HINT: f32 = 11.0;
@@ -161,10 +162,11 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 left: Val::Px(0.0),
                 bottom: Val::Px(0.0),
                 width: Val::Percent(100.0),
-                height: Val::Px(HUD_HEIGHT_PX),
+                height: Val::Auto,
+                min_height: Val::Px(HUD_HEIGHT_PX),
                 flex_direction: FlexDirection::Column,
-                padding: UiRect::new(Val::Px(6.0), Val::Px(8.0), Val::Px(4.0), Val::Px(4.0)),
-                row_gap: Val::Px(2.0),
+                padding: UiRect::new(Val::Px(6.0), Val::Px(8.0), Val::Px(5.0), Val::Px(6.0)),
+                row_gap: Val::Px(3.0),
                 border: UiRect::top(Val::Px(2.0)),
                 ..default()
             },
