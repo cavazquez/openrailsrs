@@ -2,7 +2,8 @@
 
 use bevy::prelude::*;
 
-use crate::camera::{CameraFollowMode, CameraMode};
+use crate::camera::{CameraFollowMode, CameraFollowTarget, CameraMode};
+use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::{ReplayState, pose_at_time};
 
@@ -59,18 +60,42 @@ pub fn camera_mode_label(mode: CameraMode) -> &'static str {
     }
 }
 
+pub fn follow_display_label(
+    follow: CameraFollowMode,
+    target: &CameraFollowTarget,
+    replay: &ReplayState,
+) -> String {
+    if follow == CameraFollowMode::Off {
+        "off".to_string()
+    } else {
+        let name = replay
+            .tracks
+            .get(target.track_index)
+            .map(|t| t.label.as_str())
+            .unwrap_or("?");
+        format!("{}→{}", follow.hud_label(), name)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn build_hud_content(
     title: &str,
     replay: &ReplayState,
     scene: &TrackScene,
     camera_mode: CameraMode,
     follow: CameraFollowMode,
+    follow_target: &CameraFollowTarget,
+    terrain: Option<&TerrainElevation>,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let controls = if replay.is_active() {
-        "Space:pause  R:reset  +/-:spd  T:follow  G:goto  Orbit: drag/WASD pan  F2:fly  Esc:quit"
+        if replay.tracks.len() > 1 {
+            "Space:pause  R:reset  +/-:spd  T:follow  [/]:train  G:goto  F2:fly  Esc:quit"
+        } else {
+            "Space:pause  R:reset  +/-:spd  T:follow  G:goto  Orbit: drag/WASD pan  F2:fly  Esc:quit"
+        }
     } else {
         "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  F2:fly  Esc:quit"
     }
@@ -88,14 +113,21 @@ pub fn build_hud_content(
         };
     }
 
-    let y_lift = scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5;
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
-    let follow_label = follow.hud_label();
+    let follow_label = follow_display_label(follow, follow_target, replay);
     let cam = camera_mode_label(camera_mode);
 
     let mut vel_kmh = 0.0_f64;
-    if let Some(track) = replay.tracks.first() {
-        if let Some((_, _, v)) = pose_at_time(&scene.graph, &track.rows, replay.t_sim, y_lift) {
+    if let Some(track) = replay.tracks.get(follow_target.track_index) {
+        if let Some((_, _, v)) =
+            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
+        {
+            vel_kmh = v * 3.6;
+        }
+    } else if let Some(track) = replay.tracks.first() {
+        if let Some((_, _, v)) =
+            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
+        {
             vel_kmh = v * 3.6;
         }
     }
@@ -115,7 +147,9 @@ pub fn build_hud_content(
 
     let mut train_parts = Vec::new();
     for track in &replay.tracks {
-        if let Some((_, _, vel)) = pose_at_time(&scene.graph, &track.rows, replay.t_sim, y_lift) {
+        if let Some((_, _, vel)) =
+            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
+        {
             train_parts.push(format!("{} {:.0} km/h", track.label, vel * 3.6));
         }
     }
@@ -239,13 +273,15 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
         });
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn update_hud(
     title: Res<HudTitle>,
     replay: Res<ReplayState>,
     scene: Res<TrackScene>,
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
+    follow_target: Res<CameraFollowTarget>,
+    terrain: Option<Res<TerrainElevation>>,
     camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
     mut hud: Query<
         (
@@ -289,6 +325,8 @@ pub(crate) fn update_hud(
         &scene,
         *camera_mode,
         *follow,
+        &follow_target,
+        terrain.as_deref(),
         camera_pos,
         orbit_focus,
     );
@@ -404,6 +442,8 @@ mod tests {
             &scene,
             CameraMode::Orbit,
             CameraFollowMode::Off,
+            &CameraFollowTarget::default(),
+            None,
             Vec3::new(120.0, 35.0, 8.0),
             Some(Vec3::new(5000.0, 0.0, 25.0)),
         );
@@ -433,11 +473,13 @@ mod tests {
             &scene,
             CameraMode::Orbit,
             CameraFollowMode::OrbitFollow,
+            &CameraFollowTarget::default(),
+            None,
             Vec3::ZERO,
             None,
         );
         assert!(content.row1.contains("PLAY"));
-        assert!(content.row1.contains("follow:orbit"));
+        assert!(content.row1.contains("follow:orbit→primary"));
         assert!(content.row2.contains("pos 0,0,0"));
         assert!(content.row2.contains("t=5.0s"));
         assert!(content.row2.contains("spd=2x"));
@@ -456,6 +498,8 @@ mod tests {
             &scene,
             CameraMode::Fly,
             CameraFollowMode::Off,
+            &CameraFollowTarget::default(),
+            None,
             Vec3::ZERO,
             None,
         );

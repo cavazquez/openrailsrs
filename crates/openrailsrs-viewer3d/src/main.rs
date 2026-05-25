@@ -15,6 +15,7 @@
 //! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless replay is loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
+//! - Multi-train replay: `[` / `]` (or Shift+T) cycle which train the follow camera tracks.
 //! - `G`           — teleport dialog (type x,y,z).
 //! - `Esc`         — quit (closes teleport dialog first if open).
 
@@ -26,6 +27,7 @@ use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::RouteAssets;
+use openrailsrs_viewer3d::TerrainElevation;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerPlugin;
@@ -43,6 +45,7 @@ struct LaunchConfig {
     scene: TrackScene,
     world: WorldScene,
     terrain: TerrainScene,
+    elevation: TerrainElevation,
     replay: ReplayState,
     consist: TrainConsistScene,
 }
@@ -108,6 +111,7 @@ fn main() {
         .insert_resource(RouteAssets::new(config.route_dir))
         .insert_resource(config.world)
         .insert_resource(config.terrain)
+        .insert_resource(config.elevation)
         .insert_resource(config.replay)
         .insert_resource(config.consist)
         .insert_resource(HudTitle(config.title))
@@ -128,12 +132,14 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
     let world = load_world_from_route_dir(route_dir);
     let terrain = load_terrain_from_route_dir(route_dir);
+    let elevation = TerrainElevation::load_from_route_dir(route_dir);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
         route_dir: route_dir.to_path_buf(),
         scene: TrackScene::from_graph(graph),
         world,
         terrain,
+        elevation,
         replay: ReplayState::default(),
         consist: TrainConsistScene::default(),
     })
@@ -148,6 +154,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
     let world = load_world_from_route_dir(&route_dir);
     let terrain = load_terrain_from_route_dir(&route_dir);
+    let elevation = TerrainElevation::load_from_route_dir(&route_dir);
 
     let mut tracks = Vec::new();
     let primary_csv = scenario_dir.join(&scenario.output.csv);
@@ -179,6 +186,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
         scene: TrackScene::from_graph(graph),
         world,
         terrain,
+        elevation,
         replay,
         consist,
     })

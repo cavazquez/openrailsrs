@@ -71,6 +71,32 @@ const FOLLOW_MIN_DISTANCE: f32 = 80.0;
 
 // ── Components / resources ────────────────────────────────────────────────
 
+/// Which replay track the follow camera tracks (cycle with `[` / `]` or Shift+T).
+#[derive(Resource, Clone, Copy, Debug, Default)]
+pub struct CameraFollowTarget {
+    pub track_index: usize,
+}
+
+impl CameraFollowTarget {
+    pub fn clamp_to(&mut self, count: usize) {
+        if count == 0 || self.track_index >= count {
+            self.track_index = 0;
+        }
+    }
+
+    pub fn cycle_next(&mut self, count: usize) {
+        if count > 0 {
+            self.track_index = (self.track_index + 1) % count;
+        }
+    }
+
+    pub fn cycle_prev(&mut self, count: usize) {
+        if count > 0 {
+            self.track_index = (self.track_index + count - 1) % count;
+        }
+    }
+}
+
 /// Train-tracking camera behaviour (cycle with `T` during replay).
 #[derive(Resource, Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CameraFollowMode {
@@ -361,11 +387,25 @@ pub fn cycle_follow_mode(
     keys: Res<ButtonInput<KeyCode>>,
     replay: Option<Res<crate::train::ReplayState>>,
     mut follow: ResMut<CameraFollowMode>,
+    mut target: ResMut<CameraFollowTarget>,
 ) {
-    if !keys.just_pressed(KeyCode::KeyT) {
+    let Some(replay) = replay.as_ref().filter(|r| r.is_active()) else {
+        return;
+    };
+    let count = replay.tracks.len();
+    target.clamp_to(count);
+
+    if keys.just_pressed(KeyCode::BracketLeft)
+        || (keys.just_pressed(KeyCode::KeyT) && shift_held(&keys))
+    {
+        target.cycle_next(count);
         return;
     }
-    if replay.as_ref().is_some_and(|r| r.is_active()) {
+    if keys.just_pressed(KeyCode::BracketRight) {
+        target.cycle_prev(count);
+        return;
+    }
+    if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
         *follow = follow.cycle();
     }
 }
@@ -375,6 +415,7 @@ pub fn follow_train_camera(
     time: Res<Time>,
     mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
+    target: Res<CameraFollowTarget>,
     replay: Option<Res<crate::train::ReplayState>>,
     train_query: Query<(&Transform, &crate::train::TrainMarker), Without<OrbitState>>,
     mut orbit_query: Query<
@@ -391,7 +432,7 @@ pub fn follow_train_camera(
 
     let Some(train_tf) = train_query
         .iter()
-        .find(|(_, marker)| marker.track_index == 0)
+        .find(|(_, marker)| marker.track_index == target.track_index)
         .map(|(tf, _)| tf)
     else {
         return;
@@ -863,6 +904,19 @@ mod tests {
         let fwd = tf.forward().as_vec3();
         let to_focus = (update.focus - tf.translation).normalize();
         assert!((fwd - to_focus).length() < 0.05);
+    }
+
+    #[test]
+    fn camera_follow_target_cycles() {
+        let mut target = CameraFollowTarget::default();
+        target.cycle_next(3);
+        assert_eq!(target.track_index, 1);
+        target.cycle_prev(3);
+        assert_eq!(target.track_index, 0);
+        target.clamp_to(1);
+        target.track_index = 5;
+        target.clamp_to(1);
+        assert_eq!(target.track_index, 0);
     }
 
     #[test]

@@ -15,8 +15,8 @@ pub use encoding::{decode_msts_bytes, read_msts_file_to_string};
 pub use error::FormatError;
 pub use parser::{parse, parse_first, parse_from_first_paren};
 pub use typed::{
-    ActivityFile, ActivityObjectDef, ConsistEntry, ConsistFile, DistanceLevel, EngineFile,
-    LodControl, Matrix43, NamedMatrix, PathDataPoint, PathFile, PrimState, Primitive,
+    ActivityFile, ActivityObjectDef, ConsistEntry, ConsistFile, DistanceLevel, ElevationGrid,
+    EngineFile, LodControl, Matrix43, NamedMatrix, PathDataPoint, PathFile, PrimState, Primitive,
     RestrictedZone, RouteFile, ShapeFile, SignalAspectKind, SoundRegionOverride, SubObject,
     TerrainFile, TerrainMeshData, TerrainSamples, TrItem, TrItemKind, TrackDbFile, TrackDbNode,
     TrackNodeKind, TrafficServiceDef, Vec2, Vec3, WagonFile, WorldFile, WorldItem,

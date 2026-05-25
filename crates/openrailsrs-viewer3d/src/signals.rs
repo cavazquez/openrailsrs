@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use openrailsrs_track::{SignalAspect, TrackGraph, TrackSignal};
 
+use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::position_on_graph;
 
@@ -23,9 +24,10 @@ fn aspect_color(aspect: SignalAspect) -> Color {
 pub fn signal_position_on_edge(
     graph: &TrackGraph,
     signal: &TrackSignal,
-    y_lift: f32,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
 ) -> Option<Vec3> {
-    position_on_graph(graph, &signal.edge_id, signal.position_m, y_lift).map(|(p, _)| p)
+    position_on_graph(graph, &signal.edge_id, signal.position_m, terrain, scene).map(|(p, _)| p)
 }
 
 /// Spawn diamond markers and poles for all signals in the graph.
@@ -34,13 +36,14 @@ pub fn spawn_signal_markers(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    terrain: Option<Res<TerrainElevation>>,
 ) {
     let signal_count = scene.graph.signals().count();
     if signal_count == 0 {
         return;
     }
 
-    let y_lift = scene.bounds.node_radius() + scene.bounds.edge_radius() * 2.0;
+    let terrain_ref = terrain.as_deref();
     let diamond_size = scene.bounds.edge_radius().max(1.5) * 1.2;
     let pole_radius = diamond_size * 0.15;
     let pole_height = diamond_size * 2.5;
@@ -49,7 +52,7 @@ pub fn spawn_signal_markers(
     let pole_mesh = meshes.add(Cylinder::new(pole_radius, pole_height));
 
     for signal in scene.graph.signals() {
-        let Some(pos) = signal_position_on_edge(&scene.graph, signal, y_lift) else {
+        let Some(pos) = signal_position_on_edge(&scene.graph, signal, terrain_ref, &scene) else {
             continue;
         };
         let color = aspect_color(signal.aspect);
@@ -67,7 +70,7 @@ pub fn spawn_signal_markers(
             ..default()
         });
 
-        let pole_y = y_lift * 0.5;
+        let pole_y = pos.y + pole_height * 0.5;
         commands.spawn((
             Mesh3d(pole_mesh.clone()),
             MeshMaterial3d(pole_material),
@@ -131,8 +134,9 @@ mod tests {
     #[test]
     fn signal_at_mid_edge() {
         let (g, sig) = line_graph_with_signal();
-        let pos = signal_position_on_edge(&g, &sig, 3.0).unwrap();
+        let scene = TrackScene::from_graph(g.clone());
+        let pos = signal_position_on_edge(&g, &sig, None, &scene).unwrap();
         assert!((pos.x - 50.0).abs() < 1e-3);
-        assert!((pos.y - 3.0).abs() < 1e-3);
+        assert!(pos.y > 0.0);
     }
 }

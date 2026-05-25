@@ -11,6 +11,7 @@ use crate::shapes::{
     RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path_in_dirs,
     vehicle_shape_local_transform,
 };
+use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world};
 
 const COLOR_TRAIN_PRIMARY: Color = Color::srgb(1.0, 0.25, 1.0);
@@ -94,7 +95,8 @@ pub fn position_on_graph(
     graph: &TrackGraph,
     edge_id: &str,
     pos_on_edge_m: f64,
-    y_lift: f32,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
 ) -> Option<(Vec3, f32)> {
     let edge = graph.edge(edge_id.trim())?;
     let from = graph.node(&edge.from.0)?;
@@ -109,7 +111,7 @@ pub fn position_on_graph(
     let x_m = from.x_m + frac * (to.x_m - from.x_m);
     let y_m = from.y_m + frac * (to.y_m - from.y_m);
     let mut world = graph_to_world(x_m, y_m);
-    world.y += y_lift;
+    world.y = ground_y_at(terrain, world.x, world.z, scene);
 
     let dx = (to.x_m - from.x_m) as f32;
     let dz = (to.y_m - from.y_m) as f32;
@@ -127,7 +129,8 @@ pub fn pose_at_time(
     graph: &TrackGraph,
     rows: &[CsvRow],
     t: f64,
-    y_lift: f32,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
 ) -> Option<(Vec3, f32, f64)> {
     if rows.is_empty() {
         return None;
@@ -137,7 +140,7 @@ pub fn pose_at_time(
         .saturating_sub(1)
         .min(rows.len() - 1);
     let row = &rows[idx];
-    let (pos, yaw) = position_on_graph(graph, &row.edge_id, row.pos_on_edge_m, y_lift)?;
+    let (pos, yaw) = position_on_graph(graph, &row.edge_id, row.pos_on_edge_m, terrain, scene)?;
     Some((pos, yaw, row.velocity_mps))
 }
 
@@ -159,12 +162,19 @@ pub fn spawn_train_markers(
     replay: Res<ReplayState>,
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
+    terrain: Option<Res<TerrainElevation>>,
 ) {
     if !replay.is_active() {
         return;
     }
 
-    let y_lift = scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5;
+    let terrain_ref = terrain.as_deref();
+    let fallback_y = ground_y_at(
+        terrain_ref,
+        scene.bounds.center.x,
+        scene.bounds.center.z,
+        &scene,
+    );
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut shape_cache: ShapeCache = HashMap::new();
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
@@ -179,11 +189,8 @@ pub fn spawn_train_markers(
             track.color
         };
 
-        let (pos, yaw, _) = pose_at_time(&scene.graph, &track.rows, 0.0, y_lift).unwrap_or((
-            scene.bounds.center + Vec3::Y * y_lift,
-            0.0,
-            0.0,
-        ));
+        let (pos, yaw, _) = pose_at_time(&scene.graph, &track.rows, 0.0, terrain_ref, &scene)
+            .unwrap_or((scene.bounds.center + Vec3::Y * fallback_y, 0.0, 0.0));
         let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
 
         if !consist.vehicles_for(&track.label).is_empty() {
@@ -373,19 +380,21 @@ pub fn advance_replay_time(time: Res<Time>, mut replay: ResMut<ReplayState>) {
 pub fn update_train_markers(
     scene: Res<TrackScene>,
     replay: Res<ReplayState>,
+    terrain: Option<Res<TerrainElevation>>,
     mut query: Query<(&TrainMarker, &mut Transform), Without<Camera3d>>,
 ) {
     if !replay.is_active() {
         return;
     }
 
-    let y_lift = scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5;
+    let terrain_ref = terrain.as_deref();
 
     for (marker, mut transform) in &mut query {
         let Some(track) = replay.tracks.get(marker.track_index) else {
             continue;
         };
-        let Some((pos, yaw, _)) = pose_at_time(&scene.graph, &track.rows, replay.t_sim, y_lift)
+        let Some((pos, yaw, _)) =
+            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain_ref, &scene)
         else {
             continue;
         };
@@ -454,14 +463,17 @@ mod tests {
     #[test]
     fn position_on_graph_mid_edge() {
         let g = line_graph();
-        let (pos, _yaw) = position_on_graph(&g, "e1", 50.0, 2.0).unwrap();
+        let scene = TrackScene::from_graph(g.clone());
+        let expected_y = ground_y_at(None, 50.0, 0.0, &scene);
+        let (pos, _yaw) = position_on_graph(&g, "e1", 50.0, None, &scene).unwrap();
         assert!((pos.x - 50.0).abs() < 1e-3);
-        assert!((pos.y - 2.0).abs() < 1e-3);
+        assert!((pos.y - expected_y).abs() < 1e-3);
     }
 
     #[test]
     fn pose_at_time_uses_last_row_at_end() {
         let g = line_graph();
+        let scene = TrackScene::from_graph(g.clone());
         let rows = vec![
             CsvRow {
                 time_s: 0.0,
@@ -476,7 +488,7 @@ mod tests {
                 pos_on_edge_m: 100.0,
             },
         ];
-        let (pos, _, vel) = pose_at_time(&g, &rows, 99.0, 0.0).unwrap();
+        let (pos, _, vel) = pose_at_time(&g, &rows, 99.0, None, &scene).unwrap();
         assert!((pos.x - 100.0).abs() < 1e-3);
         assert!((vel - 5.0).abs() < 1e-6);
     }

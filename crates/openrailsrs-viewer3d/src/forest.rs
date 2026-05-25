@@ -1,18 +1,20 @@
-//! MSTS `Forest` patches from `.w` tiles (order 11 / issue #8, PR1).
+//! MSTS `Forest` patches from `.w` tiles (order 11 / issue #8).
 //!
 //! Each forest anchor spawns a population of cross-billboard trees with RNG
-//! seeded from tile + uid. Track/road avoidance and terrain height sampling are
-//! out of scope for this first pass.
+//! seeded from tile + uid. Trees sample terrain height and avoid track centrelines.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
+use openrailsrs_track::TrackGraph;
 
 use crate::shapes::load_ace_image;
-use crate::track::{SceneBounds, TrackScene};
+use crate::terrain::TerrainElevation;
+use crate::track::{SceneBounds, TrackScene, forest_track_clearance_m, min_distance_to_graph_xz};
 use crate::world::WorldScene;
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
+const MAX_SCATTER_ATTEMPTS: u32 = 12;
 
 /// Tree height/width baseline scaled like other world placeholders.
 pub fn forest_tree_size(bounds: &SceneBounds) -> (f32, f32) {
@@ -57,21 +59,36 @@ pub fn scatter_trees_in_patch(
     tile_x: i32,
     tile_z: i32,
     uid: u32,
+    graph: &TrackGraph,
+    terrain: Option<&TerrainElevation>,
+    track_clearance_m: f32,
 ) -> Vec<TreePlacement> {
     let mut trees = Vec::with_capacity(population as usize);
     for i in 0..population {
-        let rx = forest_rng01(tile_x, tile_z, uid, i, 0) * 2.0 - 1.0;
-        let rz = forest_rng01(tile_x, tile_z, uid, i, 1) * 2.0 - 1.0;
-        let t = forest_rng01(tile_x, tile_z, uid, i, 2);
-        let scale = scale_min + (scale_max - scale_min) * t;
-        trees.push(TreePlacement {
-            position: Vec3::new(
-                anchor.x + rx * patch_half_x,
-                anchor.y,
-                anchor.z + rz * patch_half_z,
-            ),
-            scale,
-        });
+        let mut placed = None;
+        for attempt in 0..MAX_SCATTER_ATTEMPTS {
+            let ch = attempt * 4;
+            let rx = forest_rng01(tile_x, tile_z, uid, i, ch) * 2.0 - 1.0;
+            let rz = forest_rng01(tile_x, tile_z, uid, i, ch + 1) * 2.0 - 1.0;
+            let x = anchor.x + rx * patch_half_x;
+            let z = anchor.z + rz * patch_half_z;
+            if min_distance_to_graph_xz(graph, x, z) < track_clearance_m {
+                continue;
+            }
+            let t = forest_rng01(tile_x, tile_z, uid, i, ch + 2);
+            let scale = scale_min + (scale_max - scale_min) * t;
+            let y = terrain
+                .and_then(|elev| elev.sample_world_y(x, z))
+                .unwrap_or(anchor.y);
+            placed = Some(TreePlacement {
+                position: Vec3::new(x, y, z),
+                scale,
+            });
+            break;
+        }
+        if let Some(tree) = placed {
+            trees.push(tree);
+        }
     }
     trees
 }
@@ -144,6 +161,7 @@ pub fn build_forest_patch_mesh(trees: &[TreePlacement], base_width: f32, base_he
 }
 
 /// Spawn cross-billboard tree patches for every `Forest` in the world scene.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_forest_patches(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -151,6 +169,7 @@ pub fn spawn_forest_patches(
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     track: Res<TrackScene>,
+    terrain: Option<Res<TerrainElevation>>,
     assets: Res<crate::shapes::RouteAssets>,
 ) {
     let forests: Vec<_> = world
@@ -164,6 +183,8 @@ pub fn spawn_forest_patches(
 
     let (base_w, base_h) = forest_tree_size(&track.bounds);
     let default_half = default_patch_half(&track.bounds);
+    let track_clearance = forest_track_clearance_m(&track.bounds);
+    let terrain_ref = terrain.as_deref();
     let mut material_cache: std::collections::HashMap<String, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
@@ -202,6 +223,9 @@ pub fn spawn_forest_patches(
             obj.tile_x,
             obj.tile_z,
             patch.uid,
+            &track.graph,
+            terrain_ref,
+            track_clearance,
         );
         tree_count += trees.len();
 
@@ -244,9 +268,40 @@ pub fn spawn_forest_patches(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_core::{EdgeId, NodeId};
+    use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
     use std::path::PathBuf;
 
+    use crate::terrain::TerrainElevation;
     use crate::world::load_world_from_route_dir;
+
+    fn line_graph_through_origin() -> TrackGraph {
+        let mut g = TrackGraph::new();
+        g.insert_node(Node {
+            id: NodeId("a".into()),
+            kind: NodeKind::Plain,
+            x_m: -50.0,
+            y_m: 0.0,
+        })
+        .unwrap();
+        g.insert_node(Node {
+            id: NodeId("b".into()),
+            kind: NodeKind::Plain,
+            x_m: 50.0,
+            y_m: 0.0,
+        })
+        .unwrap();
+        g.insert_edge(Edge {
+            id: EdgeId("e1".into()),
+            from: NodeId("a".into()),
+            to: NodeId("b".into()),
+            length_m: 100.0,
+            speed_limit_mps: 30.0,
+            grade_percent: 0.0,
+        })
+        .unwrap();
+        g
+    }
 
     #[test]
     fn rng_is_deterministic_per_tree() {
@@ -258,15 +313,82 @@ mod tests {
     }
 
     #[test]
-    fn scatter_respects_population() {
-        let trees = scatter_trees_in_patch(Vec3::ZERO, 50.0, 50.0, 12, 0.8, 1.2, 0, 0, 7);
+    fn scatter_respects_population_without_obstacles() {
+        let g = TrackGraph::new();
+        let trees = scatter_trees_in_patch(
+            Vec3::new(5000.0, 0.0, 5000.0),
+            50.0,
+            50.0,
+            12,
+            0.8,
+            1.2,
+            0,
+            0,
+            7,
+            &g,
+            None,
+            5.0,
+        );
         assert_eq!(trees.len(), 12);
         assert!(trees.iter().all(|t| t.scale >= 0.8 && t.scale <= 1.2));
     }
 
     #[test]
+    fn scatter_avoids_track_centreline() {
+        let g = line_graph_through_origin();
+        let clearance = 8.0;
+        let trees = scatter_trees_in_patch(
+            Vec3::ZERO,
+            40.0,
+            40.0,
+            24,
+            1.0,
+            1.0,
+            0,
+            0,
+            1,
+            &g,
+            None,
+            clearance,
+        );
+        assert!(!trees.is_empty());
+        for tree in &trees {
+            assert!(min_distance_to_graph_xz(&g, tree.position.x, tree.position.z) >= clearance);
+        }
+    }
+
+    #[test]
+    fn scatter_uses_terrain_height() {
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let elev = TerrainElevation::load_from_route_dir(&route_dir);
+        let g = TrackGraph::new();
+        let anchor = Vec3::new(180.0, 999.0, 55.0);
+        let trees = scatter_trees_in_patch(
+            anchor,
+            20.0,
+            20.0,
+            4,
+            1.0,
+            1.0,
+            2,
+            0,
+            3,
+            &g,
+            Some(&elev),
+            0.0,
+        );
+        assert!(!trees.is_empty());
+        for tree in &trees {
+            assert!((tree.position.y - 999.0).abs() > 0.1);
+        }
+    }
+
+    #[test]
     fn cross_mesh_has_triangles_per_tree() {
-        let trees = scatter_trees_in_patch(Vec3::ZERO, 10.0, 10.0, 2, 1.0, 1.0, 0, 0, 1);
+        let g = TrackGraph::new();
+        let trees =
+            scatter_trees_in_patch(Vec3::ZERO, 10.0, 10.0, 2, 1.0, 1.0, 0, 0, 1, &g, None, 0.0);
         let mesh = build_forest_patch_mesh(&trees, 4.0, 12.0);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         assert_eq!(positions.len(), 16);

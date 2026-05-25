@@ -29,7 +29,7 @@ use bevy::prelude::*;
 pub use hud::HudTitle;
 pub use rolling_stock::TrainConsistScene;
 pub use shapes::RouteAssets;
-pub use terrain::TerrainScene;
+pub use terrain::{TerrainElevation, TerrainScene};
 pub use track::{TrackRenderMode, TrackScene};
 pub use train::ReplayState;
 pub use world::WorldScene;
@@ -46,6 +46,7 @@ impl Plugin for ViewerPlugin {
         app.insert_resource(ClearColor(Color::srgb(0.04, 0.07, 0.10)))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
+            .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
             .init_resource::<teleport::TeleportDialog>()
             .add_systems(

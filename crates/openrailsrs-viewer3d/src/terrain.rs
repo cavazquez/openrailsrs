@@ -1,13 +1,81 @@
 //! MSTS terrain tiles: heightfield meshes from `.y` + `_Y.RAW` (order 8 / issue #8).
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
-use openrailsrs_formats::{TerrainFile, TerrainMeshData, build_tile_mesh_data, read_y_raw};
+use openrailsrs_formats::{
+    ElevationGrid, TerrainFile, TerrainMeshData, build_tile_mesh_data, read_y_raw,
+};
 
+use crate::track::TrackScene;
 use crate::world::MSTS_TILE_SIZE_M;
+
+#[derive(Clone)]
+struct TileElevation {
+    grid: ElevationGrid,
+    sample_size: f64,
+}
+
+/// Cached elevation grids for runtime height sampling (trains, forests).
+#[derive(Resource, Clone, Default)]
+pub struct TerrainElevation {
+    tiles: HashMap<(i32, i32), TileElevation>,
+}
+
+impl TerrainElevation {
+    /// Load `_Y.RAW` grids for every `.y` tile under the route.
+    pub fn load_from_route_dir(route_dir: &Path) -> Self {
+        let mut tiles = HashMap::new();
+        let mut paths = discover_terrain_files(route_dir);
+        paths.sort();
+        for path in paths {
+            let Ok(tile) = TerrainFile::from_path(&path) else {
+                continue;
+            };
+            let raw_path = tile.y_raw_path(&path);
+            let Ok(grid) = read_y_raw(&raw_path, &tile.samples) else {
+                continue;
+            };
+            tiles.insert(
+                (tile.tile_x, tile.tile_z),
+                TileElevation {
+                    grid,
+                    sample_size: tile.samples.sample_size,
+                },
+            );
+        }
+        Self { tiles }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tiles.is_empty()
+    }
+
+    /// World-space elevation (metres) at `(x, z)`; `None` if no tile covers the point.
+    pub fn sample_world_y(&self, x: f32, z: f32) -> Option<f32> {
+        let tile_x = (x / MSTS_TILE_SIZE_M as f32).floor() as i32;
+        let tile_z = (z / MSTS_TILE_SIZE_M as f32).floor() as i32;
+        let tile = self.tiles.get(&(tile_x, tile_z))?;
+        let lx = x - tile_x as f32 * MSTS_TILE_SIZE_M as f32;
+        let lz = z - tile_z as f32 * MSTS_TILE_SIZE_M as f32;
+        Some(
+            tile.grid
+                .sample_bilinear(lx as f64, lz as f64, tile.sample_size),
+        )
+    }
+}
+
+/// Train / marker height: terrain sample plus a small rail clearance, or graph lift fallback.
+pub fn ground_y_at(terrain: Option<&TerrainElevation>, x: f32, z: f32, scene: &TrackScene) -> f32 {
+    let rail_offset = scene.bounds.edge_radius() * 0.35;
+    terrain
+        .and_then(|t| t.sample_world_y(x, z))
+        .map(|h| h + rail_offset)
+        .unwrap_or(scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5)
+}
 
 /// One loaded terrain tile ready for GPU spawn.
 #[derive(Clone, Debug)]
@@ -189,5 +257,15 @@ mod tests {
             .unwrap_or(0);
         assert!(verts > 0);
         assert!(mesh.indices().is_some());
+    }
+
+    #[test]
+    fn elevation_samples_smoke_tile() {
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let elev = TerrainElevation::load_from_route_dir(&route_dir);
+        assert!(!elev.is_empty());
+        let y = elev.sample_world_y(100.0, 100.0).expect("sample");
+        assert!(y.is_finite());
     }
 }

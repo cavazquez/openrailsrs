@@ -9,12 +9,13 @@ mod tests {
     use openrailsrs_track::{Edge, Node, NodeKind, SignalAspect, TrackGraph, TrackSignal};
 
     use crate::camera::{
-        CameraFollowMode, CameraMode, OrbitDistanceLimit, OrbitState, cycle_follow_mode,
-        follow_train_camera, spawn_camera,
+        CameraFollowMode, CameraFollowTarget, CameraMode, OrbitDistanceLimit, OrbitState,
+        cycle_follow_mode, follow_train_camera, spawn_camera,
     };
     use crate::rolling_stock::TrainConsistScene;
     use crate::shapes::RouteAssets;
     use crate::signals::spawn_signal_markers;
+    use crate::terrain::TerrainElevation;
     use crate::track::{TrackScene, frame_orbit_camera_on_track, spawn_track_meshes};
     use crate::train::{
         CsvRow, ReplayState, TrainMarker, TrainTrack, spawn_train_markers, update_train_markers,
@@ -91,7 +92,9 @@ mod tests {
         app.init_resource::<ButtonInput<MouseButton>>();
         app.init_resource::<CameraMode>();
         app.init_resource::<CameraFollowMode>();
+        app.init_resource::<CameraFollowTarget>();
         app.init_resource::<OrbitDistanceLimit>();
+        app.insert_resource(TerrainElevation::default());
         app.insert_resource(scene);
         app.insert_resource(replay);
         app.insert_resource(TrainConsistScene::default());

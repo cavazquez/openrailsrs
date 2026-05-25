@@ -150,6 +150,53 @@ pub fn graph_to_world(x_m: f64, y_m: f64) -> Vec3 {
     Vec3::new(x_m as f32, 0.0, y_m as f32)
 }
 
+/// Shortest distance in the XZ plane from `(px, pz)` to segment `(x0,z0)–(x1,z1)`.
+pub fn point_segment_distance_xz(px: f32, pz: f32, x0: f32, z0: f32, x1: f32, z1: f32) -> f32 {
+    let dx = x1 - x0;
+    let dz = z1 - z0;
+    let len_sq = dx * dx + dz * dz;
+    if len_sq < 1e-6 {
+        let ex = px - x0;
+        let ez = pz - z0;
+        return (ex * ex + ez * ez).sqrt();
+    }
+    let t = ((px - x0) * dx + (pz - z0) * dz) / len_sq;
+    let t = t.clamp(0.0, 1.0);
+    let cx = x0 + t * dx;
+    let cz = z0 + t * dz;
+    let ex = px - cx;
+    let ez = pz - cz;
+    (ex * ex + ez * ez).sqrt()
+}
+
+/// Minimum distance from a world XZ point to any edge in the track graph.
+pub fn min_distance_to_graph_xz(graph: &TrackGraph, x: f32, z: f32) -> f32 {
+    let mut min = f32::INFINITY;
+    for (_, edge) in graph.edges_iter() {
+        let Some(from) = graph.node(&edge.from.0) else {
+            continue;
+        };
+        let Some(to) = graph.node(&edge.to.0) else {
+            continue;
+        };
+        let d = point_segment_distance_xz(
+            x,
+            z,
+            from.x_m as f32,
+            from.y_m as f32,
+            to.x_m as f32,
+            to.y_m as f32,
+        );
+        min = min.min(d);
+    }
+    min
+}
+
+/// Default clearance when scattering trees away from track centreline.
+pub fn forest_track_clearance_m(bounds: &SceneBounds) -> f32 {
+    bounds.edge_radius().max(2.0) * 2.5
+}
+
 /// Transform for a unit-height cylinder aligned on Y, scaled to span `from` → `to`.
 pub fn cylinder_between(from: Vec3, to: Vec3) -> Transform {
     let delta = to - from;
@@ -461,5 +508,18 @@ mod tests {
         let bounds = SceneBounds::from_graph(&sample_graph());
         assert!(bounds.ground_half() >= bounds.half_extent);
         assert!(bounds.orbit_distance() >= bounds.half_extent * 2.0);
+    }
+
+    #[test]
+    fn point_segment_distance_at_midpoint_is_zero() {
+        let d = point_segment_distance_xz(50.0, 0.0, 0.0, 0.0, 100.0, 0.0);
+        assert!(d.abs() < 1e-5);
+    }
+
+    #[test]
+    fn min_distance_to_graph_on_edge_is_small() {
+        let g = sample_graph();
+        let d = min_distance_to_graph_xz(&g, 50.0, 25.0);
+        assert!(d < 1.0);
     }
 }

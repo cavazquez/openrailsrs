@@ -189,7 +189,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 | **8** | **Terreno estilo OR**: parche 16×16 + elevación (necesita **tiles MSTS** + `.y` / RAW / mismas convenciones que `TerrainPrimitive`) | 2 | 5 | Muy visible pero **dificultad y datos** suben mucho (shaders, vecinos, agujeros). **✅ hecho** — `.y` + `_Y.RAW`, parches 17×17 / diagonal alternada, mesh por tile en `TERRAIN/`; sin texturas multi-capa ni agujeros aún. |
 | **9** | **Vía dinámica** (perfiles TSection / mallas como `DynamicTrackPrimitive`) | 2 | 4 | Mucha lógica y datos; mejor cuando el grafo y la cámara ya estén sólidos. **✅ hecho (PR1)** — segmentos orientados desde `Dyntrack` en `.w` (durmientes + 2 rieles, local +Z); sin perfiles TSection ni enlace `.tdb`. |
 | **10** | **Rolling stock** — consist del escenario → cadena de meshes `.s` (fallback cubo); sin animaciones/LOD/bogies aún | 2 | 5 | PR1 ✅; PR2 (10b/10c) ✅; **PR3 (10d) ✅** — consist por tren desde `scenario.toml` (`[train]` + `[[extra_trains]]`); CSV solo trayectoria. |
-| **11** | **Bosque** (población, RNG, colisión con vía) / **agua** / **cielo** / partículas | 2–3 | 3–4 | Bonificación visual; depende menos del sim y más de tuning y assets. **✅ hecho (PR1 bosque)** — `Forest` en `.w` → cross-billboards con RNG sembrado; sin evitar vías ni samplear terreno aún. |
+| **11** | **Bosque** (población, RNG, colisión con vía) / **agua** / **cielo** / partículas | 2–3 | 3–4 | Bonificación visual; depende menos del sim y más de tuning y assets. **✅ hecho (PR1–PR2)** — `Forest` en `.w` → cross-billboards con RNG, altura desde terreno y evitar vías. |
 
 **Regla práctica:** hasta el **orden 5** podés mostrar una demo creíble **sin** parser binario de `.s` ni archivos de terreno MSTS; del **6** en adelante es “contenido MSTS de verdad”.
 
@@ -197,7 +197,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 
 Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 
-- **Cámara follow (`T`)** — con replay activo: ciclo off → orbit follow (foco en el tren) → chase cam (detrás del tren); solo en modo orbit; pan con botón medio desactiva follow.
+- **Cámara follow (`T`)** — con replay activo: ciclo off → orbit follow (foco en el tren) → chase cam (detrás del tren); solo en modo orbit; pan con botón medio desactiva follow. Multi-tren: `[` / `]` (o Shift+T) elige qué tren seguir; HUD muestra `follow:orbit→nombre`.
 - **Señales 3D** — marcadores coloreados por `SignalAspect` (misma paleta que el viewer 2D), posicionados en arista con `position_m`.
 - **Modo compact** — rutas con más de 800 aristas: aristas como líneas gizmo (no cilindros mesh), nodos Plain omitidos; log `render=compact` al arrancar.
 - **HUD en pantalla** — franja inferior Bevy UI (~60 px): título y modo cámara; con replay: estado PLAY/PAUSED, tiempo, km/h, velocidad, barra de progreso, leyenda por tren y atajos (`Space`, `R`, `+/-`, `T`, `F1/F2`, `Esc`).
@@ -210,7 +210,8 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Rolling stock (PR2)** — rotación MSTS (+Z forward → +X tren) y escala uniforme desde bbox del mesh a `length_m` del vehículo; frente alineado al offset del consist.
 - **Rolling stock (PR3 / 10d)** — cada tren del replay (`primary` + `[[extra_trains]]`) carga su consist desde el TOML; el CSV aporta solo posición/velocidad.
 - **Teletransporte (`G`)** — diálogo x,y,z para saltar la cámara; coords `pos`/`focus` en HUD.
-- **Bosque (PR1)** — objetos `Forest` en `.w` → parches de árboles cross-billboard (`Population`, `Area`, `ScaleRange`); textura `.ace` si existe.
+- **Bosque (PR1–PR2)** — objetos `Forest` en `.w` → parches de árboles cross-billboard (`Population`, `Area`, `ScaleRange`); textura `.ace` si existe; altura sampleada del heightfield; no planta sobre la vía.
+- **Tren sobre terreno (E1)** — posición del replay usa elevación del tile `_Y.RAW` cuando hay terreno cargado (fallback al lift del grafo).
 
 ---
 
