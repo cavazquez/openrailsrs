@@ -270,15 +270,21 @@ pub fn draw_compact_edges(scene: Res<TrackScene>, mut gizmos: Gizmos) {
 pub fn frame_orbit_camera_on_track(
     scene: Res<TrackScene>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
-    mut query: Query<&mut crate::camera::OrbitState>,
+    mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
 ) {
-    let Ok(mut orbit) = query.single_mut() else {
+    let Ok((mut transform, mut orbit)) = query.single_mut() else {
         return;
     };
     let max = scene.bounds.orbit_distance();
     limit.max = max;
     orbit.focus = scene.bounds.center;
     orbit.distance = max;
+    *transform = crate::camera::camera_transform_from_orbit_state(
+        orbit.focus,
+        orbit.yaw,
+        orbit.pitch,
+        orbit.distance,
+    );
 }
 
 #[cfg(test)]

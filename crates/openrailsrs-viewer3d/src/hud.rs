@@ -48,7 +48,12 @@ pub fn build_hud_content(
     camera_mode: CameraMode,
     follow: CameraFollowMode,
 ) -> HudContent {
-    let controls = "Space:pause  R:reset  +/-:spd  T:follow  F1/F2:cam  Esc:quit".to_string();
+    let controls = if replay.is_active() {
+        "Space:pause  R:reset  +/-:spd  T:follow  Orbit: drag/WASD pan  F2:fly  Esc:quit"
+    } else {
+        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  F2:fly  Esc:quit"
+    }
+    .to_string();
 
     if !replay.is_active() {
         return HudContent {
