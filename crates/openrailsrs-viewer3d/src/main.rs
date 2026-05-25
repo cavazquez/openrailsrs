@@ -23,6 +23,7 @@ use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
+use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::track::TrackScene;
@@ -31,6 +32,7 @@ use openrailsrs_viewer3d::world::load_world_from_route_dir;
 
 struct LaunchConfig {
     title: String,
+    route_dir: PathBuf,
     scene: TrackScene,
     world: WorldScene,
     replay: ReplayState,
@@ -89,6 +91,7 @@ fn main() {
             ..default()
         }))
         .insert_resource(config.scene)
+        .insert_resource(RouteAssets::new(config.route_dir))
         .insert_resource(config.world)
         .insert_resource(config.replay)
         .insert_resource(HudTitle(config.title))
@@ -110,6 +113,7 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
     let world = load_world_from_route_dir(route_dir);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
+        route_dir: route_dir.to_path_buf(),
         scene: TrackScene::from_graph(graph),
         world,
         replay: ReplayState::default(),
@@ -150,6 +154,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let replay = ReplayState::new(scenario.scenario.name.clone(), tracks);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
+        route_dir,
         scene: TrackScene::from_graph(graph),
         world,
         replay,
