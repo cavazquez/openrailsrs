@@ -8,6 +8,7 @@
 //! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
 
 pub mod camera;
+pub mod dyntrack;
 pub mod hud;
 pub mod scene;
 pub mod shapes;
@@ -48,6 +49,7 @@ impl Plugin for ViewerPlugin {
                     scene::spawn_ground_and_lights,
                     terrain::spawn_terrain_meshes,
                     track::spawn_track_meshes,
+                    dyntrack::spawn_dyntrack_segments,
                     world::spawn_world_boxes,
                     signals::spawn_signal_markers,
                     camera::spawn_camera,

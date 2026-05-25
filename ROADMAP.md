@@ -359,7 +359,8 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - **Shape `.s` → mesh Bevy ✅** — LOD más cercano desde `ShapeFile`; `Static` con shape en `SHAPES/`.
 - **Textura `.ace` en material ✅** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; `TEXTURES/` en `StandardMaterial`; fallback magenta si falta.
 - **Terreno heightfield ✅** — `.y` + `_Y.RAW` → mesh Bevy por tile; parches OR 17×17; demo smoke con colina junto a `yard_a`.
-- Siguiente hito del doc: vía dinámica (orden 9).
+- **Vía dinámica (básica) ✅** — `Dyntrack` en `.w` → segmento orientado (durmientes + rieles); sin TSection / `.tdb`.
+- Siguiente hito del doc: rolling stock completo (orden 10).
 
 ---
 

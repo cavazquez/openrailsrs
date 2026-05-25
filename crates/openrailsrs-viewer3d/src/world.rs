@@ -194,6 +194,10 @@ pub fn spawn_world_boxes(
     let mut shape_texture_count = 0usize;
 
     for obj in &world.items {
+        if obj.kind == "Dyntrack" {
+            continue;
+        }
+
         if shape_eligible(obj) {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
             if let Some(shape_path) = resolve_shape_path(&assets.route_dir, file_name) {

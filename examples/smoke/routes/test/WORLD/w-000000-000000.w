@@ -26,7 +26,7 @@ SIMISA@@@@@@@@@@JINX0w0t______
     )
     ( Dyntrack
         ( UiD 5 )
-        ( Position 9000.0 0.0 0.0 )
-        ( QDirection 0.0 0.0 0.0 1.0 )
+        ( Position 220.0 0.0 5.0 )
+        ( QDirection 0.0 0.7071 0.0 0.7071 )
     )
 )

@@ -262,6 +262,7 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
 - **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real y textura `.ace` de `TEXTURES/` cuando existe.
 - **Terreno** — carpeta `TERRAIN/` con tile `.y` + `_Y.RAW`: heightfield verde (colina demo en smoke junto al origen); sustituye el plano gris cuando hay tiles.
+- **Vía dinámica** — objetos `Dyntrack` en tiles `.w`: segmento recto con durmientes y dos rieles orientados (local +Z); demo smoke cerca de `yard_a`.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
@@ -280,7 +281,7 @@ Rutas grandes:
 cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
 ```
 
-Siguiente hito del plan: **vía dinámica** (orden 9 en `docs/OPEN_RAILS_VIEWER_3D.md`).
+Siguiente hito del plan: **rolling stock completo** (orden 10 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 
 ## Benchmarks (Fase 9)
 
