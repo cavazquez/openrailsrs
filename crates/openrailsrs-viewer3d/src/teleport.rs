@@ -5,12 +5,56 @@ use bevy::prelude::*;
 use crate::camera::{CameraMode, OrbitState, camera_transform_from_orbit_state};
 
 /// Teleport dialog state (toggle with `G`).
-#[derive(Resource, Default, Clone, Debug)]
+#[derive(Resource, Clone, Debug)]
 pub struct TeleportDialog {
     pub open: bool,
     pub buffer: String,
     pub status: String,
+    backspace_hold_s: f32,
+    backspace_repeat_delay_s: f32,
 }
+
+#[derive(Clone, Copy, Debug, Default)]
+struct BackspaceRepeatState {
+    hold_s: f32,
+    repeat_delay_s: f32,
+}
+
+impl BackspaceRepeatState {
+    fn reset(&mut self) {
+        self.hold_s = 0.0;
+        self.repeat_delay_s = BACKSPACE_INITIAL_DELAY_S;
+    }
+}
+
+impl Default for TeleportDialog {
+    fn default() -> Self {
+        Self {
+            open: false,
+            buffer: String::new(),
+            status: String::new(),
+            backspace_hold_s: 0.0,
+            backspace_repeat_delay_s: BACKSPACE_INITIAL_DELAY_S,
+        }
+    }
+}
+
+impl TeleportDialog {
+    fn backspace_repeat_state(&self) -> BackspaceRepeatState {
+        BackspaceRepeatState {
+            hold_s: self.backspace_hold_s,
+            repeat_delay_s: self.backspace_repeat_delay_s,
+        }
+    }
+
+    fn set_backspace_repeat_state(&mut self, state: BackspaceRepeatState) {
+        self.backspace_hold_s = state.hold_s;
+        self.backspace_repeat_delay_s = state.repeat_delay_s;
+    }
+}
+
+const BACKSPACE_INITIAL_DELAY_S: f32 = 0.35;
+const BACKSPACE_REPEAT_INTERVAL_S: f32 = 0.04;
 
 #[derive(Component)]
 pub(crate) struct TeleportRoot;
@@ -243,6 +287,7 @@ pub(crate) fn toggle_teleport_dialog(
 pub fn close_teleport_dialog(dialog: &mut TeleportDialog) {
     dialog.open = false;
     dialog.status.clear();
+    reset_backspace_repeat(dialog);
 }
 
 fn append_char(buffer: &mut String, ch: char) {
@@ -253,6 +298,37 @@ fn append_char(buffer: &mut String, ch: char) {
 
 fn backspace(buffer: &mut String) {
     buffer.pop();
+}
+
+/// How many backspace deletes to apply this frame while the key is held.
+fn backspace_repeat_count(
+    dt: f32,
+    just_pressed: bool,
+    held: bool,
+    state: &mut BackspaceRepeatState,
+) -> u32 {
+    if just_pressed {
+        state.hold_s = 0.0;
+        state.repeat_delay_s = BACKSPACE_INITIAL_DELAY_S;
+        return 1;
+    }
+    if !held {
+        state.reset();
+        return 0;
+    }
+    state.hold_s += dt;
+    let mut count = 0u32;
+    while state.hold_s >= state.repeat_delay_s {
+        state.hold_s -= state.repeat_delay_s;
+        state.repeat_delay_s = BACKSPACE_REPEAT_INTERVAL_S;
+        count += 1;
+    }
+    count
+}
+
+fn reset_backspace_repeat(dialog: &mut TeleportDialog) {
+    dialog.backspace_hold_s = 0.0;
+    dialog.backspace_repeat_delay_s = BACKSPACE_INITIAL_DELAY_S;
 }
 
 fn key_char(code: KeyCode) -> Option<char> {
@@ -301,6 +377,7 @@ pub fn try_submit_teleport(
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn teleport_input_system(
+    time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     mode: Res<CameraMode>,
     mut dialog: ResMut<TeleportDialog>,
@@ -323,13 +400,25 @@ pub(crate) fn teleport_input_system(
         return;
     }
 
-    if keys.just_pressed(KeyCode::Backspace) {
-        backspace(&mut dialog.buffer);
+    let mut backspace_state = dialog.backspace_repeat_state();
+    let backspace_count = backspace_repeat_count(
+        time.delta_secs(),
+        keys.just_pressed(KeyCode::Backspace),
+        keys.pressed(KeyCode::Backspace),
+        &mut backspace_state,
+    );
+    dialog.set_backspace_repeat_state(backspace_state);
+    if backspace_count > 0 {
+        for _ in 0..backspace_count {
+            backspace(&mut dialog.buffer);
+        }
         dialog.status.clear();
-        return;
     }
 
     for code in keys.get_just_pressed() {
+        if *code == KeyCode::Backspace {
+            continue;
+        }
         if let Some(ch) = key_char(*code) {
             append_char(&mut dialog.buffer, ch);
             dialog.status.clear();
@@ -416,5 +505,21 @@ mod tests {
             Some(Vec3::new(10.0, 0.0, 5.0)),
         );
         assert_eq!(buf, "10,0,5");
+    }
+
+    #[test]
+    fn backspace_repeat_after_hold_delay() {
+        let mut state = BackspaceRepeatState {
+            hold_s: 0.0,
+            repeat_delay_s: BACKSPACE_INITIAL_DELAY_S,
+        };
+        assert_eq!(backspace_repeat_count(0.0, true, true, &mut state), 1);
+
+        assert_eq!(backspace_repeat_count(0.2, false, true, &mut state), 0);
+        let burst = backspace_repeat_count(0.2, false, true, &mut state);
+        assert!(
+            burst >= 1,
+            "expected repeats after initial delay, got {burst}"
+        );
     }
 }
