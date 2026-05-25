@@ -8,7 +8,7 @@
 //! Math helpers ([`orbit_position`], [`fly_translation_delta`]) are pure
 //! functions and unit-tested without spinning up Bevy.
 
-use bevy::input::mouse::{MouseMotion, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
@@ -26,6 +26,9 @@ const ORBIT_PAN_SENSITIVITY: f32 = 0.0015;
 
 /// Per-notch zoom factor for the orbit camera (1 + step). 0.1 = 10 % per tick.
 const ORBIT_ZOOM_STEP: f32 = 0.1;
+
+/// Keyboard pan speed as a fraction of orbit distance per second.
+const ORBIT_KEY_PAN_SPEED: f32 = 0.85;
 
 /// Min distance for the orbit camera (m).
 const ORBIT_MIN_DISTANCE: f32 = 1.0;
@@ -273,16 +276,26 @@ pub fn apply_orbit_follow(
 
 /// Build the camera transform from a follow/orbit state snapshot.
 pub fn camera_transform_from_orbit(update: OrbitFollowUpdate) -> Transform {
-    let pos = orbit_position(update.focus, update.yaw, update.pitch, update.distance);
-    Transform::from_translation(pos).looking_at(update.focus, Vec3::Y)
+    camera_transform_from_orbit_state(update.focus, update.yaw, update.pitch, update.distance)
+}
+
+/// Build the camera transform from raw orbit parameters.
+pub fn camera_transform_from_orbit_state(
+    focus: Vec3,
+    yaw: f32,
+    pitch: f32,
+    distance: f32,
+) -> Transform {
+    let pos = orbit_position(focus, yaw, pitch, distance);
+    Transform::from_translation(pos).looking_at(focus, Vec3::Y)
 }
 
 // ── Systems (Bevy) ────────────────────────────────────────────────────────
 
 pub fn spawn_camera(mut commands: Commands) {
     let orbit = OrbitState::default();
-    let pos = orbit_position(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
-    let transform = Transform::from_translation(pos).looking_at(orbit.focus, Vec3::Y);
+    let transform =
+        camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
 
     commands.spawn((
         Camera3d::default(),
@@ -405,10 +418,63 @@ pub fn follow_train_camera(
     *transform = camera_transform_from_orbit(update);
 }
 
-#[allow(clippy::type_complexity)]
+fn shift_held(keys: &ButtonInput<KeyCode>) -> bool {
+    keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight)
+}
+
+fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>) -> Vec3 {
+    let mut axes = Vec3::ZERO;
+    if keys.pressed(KeyCode::KeyW) {
+        axes.z += 1.0;
+    }
+    if keys.pressed(KeyCode::KeyS) {
+        axes.z -= 1.0;
+    }
+    if keys.pressed(KeyCode::KeyD) {
+        axes.x += 1.0;
+    }
+    if keys.pressed(KeyCode::KeyA) {
+        axes.x -= 1.0;
+    }
+    if keys.pressed(KeyCode::KeyE) {
+        axes.y += 1.0;
+    }
+    if keys.pressed(KeyCode::KeyQ) {
+        axes.y -= 1.0;
+    }
+    axes
+}
+
+fn pan_orbit_focus(orbit: &mut OrbitState, transform: &Transform, delta: Vec2) {
+    let right = transform.right().as_vec3();
+    let up = transform.up().as_vec3();
+    let scale = orbit.distance * ORBIT_PAN_SENSITIVITY;
+    orbit.focus += -right * (delta.x * scale) + up * (delta.y * scale);
+}
+
+fn keyboard_pan_orbit_focus(orbit: &mut OrbitState, axes: Vec3, dt: f32) {
+    let forward_h = Vec3::new(-orbit.yaw.sin(), 0.0, -orbit.yaw.cos());
+    let right_h = Vec3::new(orbit.yaw.cos(), 0.0, -orbit.yaw.sin());
+    let mut speed = orbit.distance * ORBIT_KEY_PAN_SPEED * dt;
+    if axes.length_squared() > 1.0 {
+        speed /= axes.length();
+    }
+    orbit.focus += forward_h * axes.z * speed + right_h * axes.x * speed + Vec3::Y * axes.y * speed;
+}
+
+fn wheel_scroll_lines(ev: &MouseWheel) -> f32 {
+    match ev.unit {
+        MouseScrollUnit::Line => ev.y,
+        MouseScrollUnit::Pixel => ev.y / 100.0,
+    }
+}
+
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn orbit_camera_system(
+    time: Res<Time>,
     mode: Res<CameraMode>,
     limit: Res<OrbitDistanceLimit>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut follow: ResMut<CameraFollowMode>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
@@ -437,23 +503,35 @@ pub fn orbit_camera_system(
 
     let mut scroll = 0.0_f32;
     for ev in wheel.read() {
-        scroll += ev.y;
+        scroll += wheel_scroll_lines(ev);
     }
 
     let mut changed = false;
+    let shift = shift_held(&keys);
+    let drag_rotate = (mouse_buttons.pressed(MouseButton::Left)
+        || mouse_buttons.pressed(MouseButton::Right))
+        && !shift;
+    let drag_pan = mouse_buttons.pressed(MouseButton::Middle)
+        || (shift
+            && (mouse_buttons.pressed(MouseButton::Left)
+                || mouse_buttons.pressed(MouseButton::Right)));
 
-    if mouse_buttons.pressed(MouseButton::Right) && delta != Vec2::ZERO {
+    if drag_rotate && delta != Vec2::ZERO {
         orbit.yaw -= delta.x * ORBIT_ROTATE_SENSITIVITY;
         orbit.pitch = clamp_pitch(orbit.pitch - delta.y * ORBIT_ROTATE_SENSITIVITY);
         changed = true;
     }
 
-    if mouse_buttons.pressed(MouseButton::Middle) && delta != Vec2::ZERO {
+    if drag_pan && delta != Vec2::ZERO {
         *follow = CameraFollowMode::Off;
-        let right = transform.right().as_vec3();
-        let up = transform.up().as_vec3();
-        let scale = orbit.distance * ORBIT_PAN_SENSITIVITY;
-        orbit.focus += -right * (delta.x * scale) + up * (delta.y * scale);
+        pan_orbit_focus(&mut orbit, &transform, delta);
+        changed = true;
+    }
+
+    let pan_axes = read_orbit_pan_axes(&keys);
+    if pan_axes != Vec3::ZERO {
+        *follow = CameraFollowMode::Off;
+        keyboard_pan_orbit_focus(&mut orbit, pan_axes, time.delta_secs());
         changed = true;
     }
 
@@ -464,8 +542,8 @@ pub fn orbit_camera_system(
     }
 
     if changed {
-        let pos = orbit_position(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
-        *transform = Transform::from_translation(pos).looking_at(orbit.focus, Vec3::Y);
+        *transform =
+            camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
     }
 }
 

@@ -4060,6 +4060,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "csv",
+ "openrailsrs-ace",
  "openrailsrs-core",
  "openrailsrs-formats",
  "openrailsrs-route",

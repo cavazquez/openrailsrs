@@ -12,7 +12,7 @@
 //! Controls:
 //!
 //! - `F1` / `F2`   — orbit / fly camera.
-//! - Orbit: right = rotate, middle = pan, wheel = zoom.
+//! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless replay is loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
 //! - `Esc`         — quit.

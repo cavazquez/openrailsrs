@@ -357,7 +357,8 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - **Pulido D ✅** — cámara follow (`T`), señales 3D coloreadas, modo compact automático en rutas >800 aristas (gizmo lines).
 - **Objetos `.w` como cajas ✅** — tiles `WORLD/` → cubos coloreados por tipo en posición global.
 - **Shape `.s` → mesh Bevy ✅** — LOD más cercano desde `ShapeFile`; `Static` con shape en `SHAPES/`.
-- Siguiente hito del doc: textura `.ace` en material (orden 7).
+- **Textura `.ace` en material ✅** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; `TEXTURES/` en `StandardMaterial`; fallback magenta si falta.
+- Siguiente hito del doc: terreno estilo Open Rails (orden 8).
 
 ---
 

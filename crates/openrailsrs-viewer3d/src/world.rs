@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
-use crate::shapes::{RouteAssets, load_shape_mesh, resolve_shape_path};
+use crate::shapes::{RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path};
 use crate::track::TrackScene;
 
 /// MSTS / Open Rails world tile size (metres).
@@ -166,6 +166,7 @@ fn shape_eligible(obj: &WorldObject) -> bool {
 pub fn spawn_world_boxes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
@@ -179,46 +180,88 @@ pub fn spawn_world_boxes(
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut box_material_cache: std::collections::HashMap<&'static str, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
-    let mut shape_mesh_cache: std::collections::HashMap<PathBuf, Handle<Mesh>> =
-        std::collections::HashMap::new();
-    let mut shape_material_cache: std::collections::HashMap<PathBuf, Handle<StandardMaterial>> =
+    let mut shape_cache: std::collections::HashMap<
+        PathBuf,
+        (Handle<Mesh>, Handle<StandardMaterial>, bool),
+    > = std::collections::HashMap::new();
+    let mut texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>> =
         std::collections::HashMap::new();
 
-    // Magenta: distinto del cian de nodos Switch y del verde Forest.
-    let shape_material_color = Color::srgb(0.95, 0.25, 0.85);
+    // Fallback when no `.ace` is available for a shape mesh.
+    let shape_fallback_color = Color::srgb(0.95, 0.25, 0.85);
 
     let mut shape_mesh_count = 0usize;
+    let mut shape_texture_count = 0usize;
 
     for obj in &world.items {
         if shape_eligible(obj) {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
             if let Some(shape_path) = resolve_shape_path(&assets.route_dir, file_name) {
-                let mesh = shape_mesh_cache
+                let (mesh, material, has_texture) = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
-                        if let Some(mesh) = load_shape_mesh(&shape_path) {
-                            meshes.add(mesh)
-                        } else {
-                            eprintln!(
-                                "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
-                                shape_path.display()
-                            );
-                            unit.clone()
+                        match load_shape_from_path(&shape_path) {
+                            Some(loaded) => {
+                                let texture_file = loaded.texture_file.clone();
+                                let mesh = meshes.add(loaded.mesh);
+                                if let Some(tex_name) = texture_file {
+                                    if let Some(tex_path) = crate::shapes::resolve_texture_path(
+                                        &assets.route_dir,
+                                        &tex_name,
+                                    ) {
+                                        if let Some(image) =
+                                            load_ace_image(&assets.route_dir, &tex_name)
+                                        {
+                                            let handle = texture_image_cache
+                                                .entry(tex_path)
+                                                .or_insert_with(|| images.add(image))
+                                                .clone();
+                                            let material = materials.add(StandardMaterial {
+                                                base_color: Color::WHITE,
+                                                base_color_texture: Some(handle),
+                                                perceptual_roughness: 0.85,
+                                                metallic: 0.05,
+                                                double_sided: true,
+                                                ..default()
+                                            });
+                                            return (mesh, material, true);
+                                        }
+                                    }
+                                    eprintln!(
+                                        "openrailsrs-viewer3d: texture {tex_name} missing or failed, using fallback color"
+                                    );
+                                }
+                                let material = materials.add(StandardMaterial {
+                                    base_color: shape_fallback_color,
+                                    emissive: LinearRgba::from(shape_fallback_color) * 0.35,
+                                    perceptual_roughness: 0.75,
+                                    metallic: 0.1,
+                                    double_sided: true,
+                                    ..default()
+                                });
+                                (mesh, material, false)
+                            }
+                            None => {
+                                eprintln!(
+                                    "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
+                                    shape_path.display()
+                                );
+                                let material = materials.add(StandardMaterial {
+                                    base_color: shape_fallback_color,
+                                    emissive: LinearRgba::from(shape_fallback_color) * 0.35,
+                                    perceptual_roughness: 0.75,
+                                    metallic: 0.1,
+                                    double_sided: true,
+                                    ..default()
+                                });
+                                (unit.clone(), material, false)
+                            }
                         }
-                    });
-                let material = shape_material_cache
-                    .entry(shape_path)
-                    .or_insert_with(|| {
-                        materials.add(StandardMaterial {
-                            base_color: shape_material_color,
-                            emissive: LinearRgba::from(shape_material_color) * 0.35,
-                            perceptual_roughness: 0.75,
-                            metallic: 0.1,
-                            double_sided: true,
-                            ..default()
-                        })
                     })
                     .clone();
+                if has_texture {
+                    shape_texture_count += 1;
+                }
 
                 commands.spawn((
                     Mesh3d(mesh.clone()),
@@ -265,6 +308,9 @@ pub fn spawn_world_boxes(
 
     if shape_mesh_count > 0 {
         eprintln!("openrailsrs-viewer3d: {shape_mesh_count} world object(s) using .s mesh");
+    }
+    if shape_texture_count > 0 {
+        eprintln!("openrailsrs-viewer3d: {shape_texture_count} world object(s) with .ace texture");
     }
 }
 

@@ -260,14 +260,14 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **Señales** — diamantes coloreados como en el viewer 2D: rojo (`stop`), amarillo (`caution`), verde (`clear`), con poste.
 - **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`.
 - **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
-- **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real.
+- **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real y textura `.ace` de `TEXTURES/` cuando existe.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
 Controles:
 
 - `F1` / `F2`: cámara **orbit** / **fly** (WASD en plano horizontal, `Q`/`E` arriba/abajo; con replay cargado, `Space` pausa en lugar de subir en fly).
-- Orbit: botón derecho rotar, botón del medio pan, rueda zoom.
+- Orbit: botón izquierdo/derecho rotar, Shift+arrastrar o **WASD** pan, rueda zoom.
 - Fly: botón derecho mantenido para mirar (cursor oculto y confinado a la ventana); `Shift` acelera ×4, `Ctrl` ralentiza ×0.25.
 - Replay: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` velocidad.
 - **`T`** (con replay activo): ciclo **follow** off → orbit follow (foco en el tren) → chase cam (detrás del tren); pan con botón medio desactiva follow.
@@ -279,7 +279,7 @@ Rutas grandes:
 cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
 ```
 
-Siguiente hito del plan: **textura `.ace` en material** (orden 7 en `docs/OPEN_RAILS_VIEWER_3D.md`).
+Siguiente hito del plan: **terreno estilo Open Rails** (orden 8 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 
 ## Benchmarks (Fase 9)
 
