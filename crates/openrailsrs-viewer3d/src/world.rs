@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
 use crate::shapes::{RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path};
+use crate::terrain::{TerrainElevation, scenery_ground_y};
 use crate::track::TrackScene;
 
 /// MSTS / Open Rails world tile size (metres).
@@ -31,6 +32,7 @@ pub struct WaterPatch {
     pub half_x: f32,
     pub half_z: f32,
     pub surface_y: f32,
+    pub texture_file: Option<String>,
 }
 
 /// One scenery object from a loaded `.w` tile, ready for 3D spawn.
@@ -129,6 +131,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
     let water = match item {
         WorldItem::HWater {
             uid,
+            file_name,
             position,
             size,
             ..
@@ -137,6 +140,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
             half_x: (size[0] * 0.5) as f32,
             half_z: (size[1] * 0.5) as f32,
             surface_y: position.y as f32,
+            texture_file: file_name.clone(),
         }),
         _ => None,
     };
@@ -230,6 +234,7 @@ fn shape_eligible(obj: &WorldObject) -> bool {
 }
 
 /// Spawn world objects: real meshes for resolvable `.s` shapes, cuboids otherwise.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_world_boxes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -238,11 +243,13 @@ pub fn spawn_world_boxes(
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
+    terrain: Option<Res<TerrainElevation>>,
 ) {
     if world.is_empty() {
         return;
     }
 
+    let terrain_ref = terrain.as_deref();
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut box_material_cache: std::collections::HashMap<&'static str, Handle<StandardMaterial>> =
@@ -338,7 +345,17 @@ pub fn spawn_world_boxes(
                     Mesh3d(mesh.clone()),
                     MeshMaterial3d(material),
                     Transform {
-                        translation: obj.position,
+                        translation: Vec3::new(
+                            obj.position.x,
+                            scenery_ground_y(
+                                terrain_ref,
+                                obj.position.x,
+                                obj.position.z,
+                                &scene,
+                                obj.position.y,
+                            ),
+                            obj.position.z,
+                        ),
                         rotation: obj.rotation,
                         scale: Vec3::ONE,
                     },
@@ -362,8 +379,14 @@ pub fn spawn_world_boxes(
             })
             .clone();
 
-        let ground_y = obj.position.y + size.y * 0.5;
-        let translation = Vec3::new(obj.position.x, ground_y, obj.position.z);
+        let ground_y = scenery_ground_y(
+            terrain_ref,
+            obj.position.x,
+            obj.position.z,
+            &scene,
+            obj.position.y,
+        );
+        let translation = Vec3::new(obj.position.x, ground_y + size.y * 0.5, obj.position.z);
 
         commands.spawn((
             Mesh3d(unit.clone()),

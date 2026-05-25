@@ -89,6 +89,7 @@ impl Plugin for ViewerPlugin {
                     train::advance_replay_time,
                     train::update_train_markers,
                     precipitation::update_precipitation,
+                    water::update_water_patches,
                     hud::update_hud,
                     (camera::follow_train_camera, camera::orbit_camera_system)
                         .chain()

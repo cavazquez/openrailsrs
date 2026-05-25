@@ -33,6 +33,7 @@ SIMISA@@@@@@@@@@JINX0w0t______
     )
     ( HWater
         ( UiD 6 )
+        ( FileName "yard.ace" )
         ( Position 250.0 3.0 80.0 )
         ( Size 50.0 40.0 )
     )

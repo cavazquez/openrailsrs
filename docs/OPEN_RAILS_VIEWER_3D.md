@@ -212,6 +212,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Teletransporte (`G`)** — diálogo x,y,z para saltar la cámara; coords `pos`/`focus` en HUD.
 - **Bosque (PR1–PR2)** — objetos `Forest` en `.w` → parches de árboles cross-billboard (`Population`, `Area`, `ScaleRange`); textura `.ace` si existe; altura sampleada del heightfield; no planta sobre la vía.
 - **Cielo / agua / lluvia (orden 11 PR3)** — domo celeste + clear colour; parches `HWater` en `.w` → planos translúcidos; precipitación simple (streaks, toggle `P`).
+- **Pulido visual A (orden 11 PR2+)** — lluvia: más gotas, billboards a cámara, mayor contraste; agua: ondas sinusoidales, reflejo fake, textura `.ace` en `FileName`; objetos `.w` y señales apoyados en heightfield (`scenery_ground_y` / `ground_y_at`).
 - **Tren sobre terreno (E1)** — posición del replay usa elevación del tile `_Y.RAW` cuando hay terreno cargado (fallback al lift del grafo).
 
 ---

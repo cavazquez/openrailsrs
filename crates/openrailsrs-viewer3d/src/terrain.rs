@@ -68,6 +68,21 @@ impl TerrainElevation {
     }
 }
 
+/// Scenery anchor height: terrain sample plus a small clearance, else MSTS `Position.y`.
+pub fn scenery_ground_y(
+    terrain: Option<&TerrainElevation>,
+    x: f32,
+    z: f32,
+    scene: &TrackScene,
+    fallback_y: f32,
+) -> f32 {
+    let lift = scene.bounds.edge_radius().max(1.0) * 0.04;
+    terrain
+        .and_then(|t| t.sample_world_y(x, z))
+        .map(|h| h + lift)
+        .unwrap_or(fallback_y)
+}
+
 /// Train / marker height: terrain sample plus a small rail clearance, or graph lift fallback.
 pub fn ground_y_at(terrain: Option<&TerrainElevation>, x: f32, z: f32, scene: &TrackScene) -> f32 {
     let rail_offset = scene.bounds.edge_radius() * 0.35;
@@ -267,5 +282,23 @@ mod tests {
         assert!(!elev.is_empty());
         let y = elev.sample_world_y(100.0, 100.0).expect("sample");
         assert!(y.is_finite());
+    }
+
+    #[test]
+    fn scenery_ground_y_uses_terrain_when_available() {
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let elev = TerrainElevation::load_from_route_dir(&route_dir);
+        let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
+        let y = scenery_ground_y(Some(&elev), 120.0, 15.0, &scene, 0.0);
+        let raw = elev.sample_world_y(120.0, 15.0).unwrap();
+        assert!(y > raw);
+    }
+
+    #[test]
+    fn scenery_ground_y_falls_back_without_terrain() {
+        let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
+        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 4.5);
+        assert!((y - 4.5).abs() < 1e-5);
     }
 }

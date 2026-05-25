@@ -1,12 +1,14 @@
-//! Simple rain streaks around the route centre (order 11 / issue #8).
+//! Simple rain streaks around the camera (order 11 / issue #8, PR2 billboards).
 
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
 use crate::track::TrackScene;
 
-const RAIN_DROP_COUNT: usize = 160;
-const RAIN_STREAK_HEIGHT: f32 = 2.0;
-const RAIN_STREAK_RADIUS: f32 = 0.07;
+const RAIN_DROP_COUNT: usize = 420;
+const RAIN_STREAK_HEIGHT: f32 = 3.4;
+const RAIN_STREAK_WIDTH: f32 = 0.14;
 
 /// Toggle with `P`. Enabled by default for the smoke demo.
 #[derive(Resource, Clone, Debug)]
@@ -26,8 +28,8 @@ impl Default for PrecipitationState {
     fn default() -> Self {
         Self {
             enabled: true,
-            area_half: 220.0,
-            ceiling: 90.0,
+            area_half: 260.0,
+            ceiling: 95.0,
         }
     }
 }
@@ -52,6 +54,38 @@ pub fn rain_offset_xz(center: Vec3, seed: u32, area_half: f32) -> (f32, f32) {
     let rx = rain_rng01(seed, 0) * 2.0 - 1.0;
     let rz = rain_rng01(seed, 1) * 2.0 - 1.0;
     (center.x + rx * area_half, center.z + rz * area_half)
+}
+
+/// Y-axis billboard rotation so a vertical streak quad faces the camera.
+pub fn rain_billboard_yaw(drop_pos: Vec3, camera_pos: Vec3) -> f32 {
+    let dx = camera_pos.x - drop_pos.x;
+    let dz = camera_pos.z - drop_pos.z;
+    if dx * dx + dz * dz < 1e-8 {
+        return 0.0;
+    }
+    dx.atan2(dz)
+}
+
+fn rain_streak_mesh(width: f32, height: f32) -> Mesh {
+    let hw = width * 0.5;
+    let positions = vec![
+        [-hw, 0.0, 0.0],
+        [hw, 0.0, 0.0],
+        [hw, height, 0.0],
+        [-hw, height, 0.0],
+    ];
+    let normals = vec![[0.0, 0.0, 1.0]; 4];
+    let uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    let indices = Indices::U32(vec![0, 1, 2, 0, 2, 3]);
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+    mesh.insert_indices(indices);
+    mesh
 }
 
 pub fn spawn_precipitation(
@@ -84,16 +118,14 @@ fn spawn_rain_entities(
     state: &PrecipitationState,
     visibility: Visibility,
 ) {
-    let streak = meshes.add(Cuboid::new(
-        RAIN_STREAK_RADIUS,
-        RAIN_STREAK_HEIGHT,
-        RAIN_STREAK_RADIUS,
-    ));
+    let streak = meshes.add(rain_streak_mesh(RAIN_STREAK_WIDTH, RAIN_STREAK_HEIGHT));
     let material = materials.add(StandardMaterial {
-        base_color: Color::srgba(0.75, 0.88, 1.0, 0.72),
+        base_color: Color::srgba(0.94, 0.97, 1.0, 0.9),
+        emissive: LinearRgba::from(Color::srgb(0.55, 0.72, 1.0)) * 0.35,
         alpha_mode: AlphaMode::Blend,
         unlit: true,
         double_sided: true,
+        cull_mode: None,
         ..default()
     });
 
@@ -101,7 +133,7 @@ fn spawn_rain_entities(
         let seed = i as u32 + 1;
         let (x, z) = rain_offset_xz(origin, seed, state.area_half);
         let y = origin.y + rain_rng01(seed, 2) * state.ceiling;
-        let speed = 18.0 + rain_rng01(seed, 3) * 14.0;
+        let speed = 20.0 + rain_rng01(seed, 3) * 16.0;
         commands.spawn((
             RainDrop { speed, seed },
             Mesh3d(streak.clone()),
@@ -113,7 +145,7 @@ fn spawn_rain_entities(
     }
 
     eprintln!(
-        "openrailsrs-viewer3d: precipitation {} ({RAIN_DROP_COUNT} streaks, P toggles)",
+        "openrailsrs-viewer3d: precipitation {} ({RAIN_DROP_COUNT} billboards, P toggles)",
         if matches!(visibility, Visibility::Inherited) {
             "on"
         } else {
@@ -173,6 +205,7 @@ pub(crate) fn update_precipitation(
     let origin = cam.translation;
     let floor = origin.y - 30.0;
     let top = origin.y + state.ceiling;
+    let cam_pos = cam.translation;
 
     for (mut transform, drop) in &mut drops {
         let dx = transform.translation.x - origin.x;
@@ -190,6 +223,9 @@ pub(crate) fn update_precipitation(
             transform.translation.z = z;
             transform.translation.y = top;
         }
+
+        let yaw = rain_billboard_yaw(transform.translation, cam_pos);
+        transform.rotation = Quat::from_rotation_y(yaw);
     }
 }
 
@@ -229,5 +265,13 @@ mod tests {
         let (x, z) = rain_offset_xz(center, 12, 80.0);
         assert!((x - center.x).abs() <= 80.0);
         assert!((z - center.z).abs() <= 80.0);
+    }
+
+    #[test]
+    fn billboard_yaw_faces_camera_on_xz() {
+        let drop = Vec3::new(0.0, 10.0, 0.0);
+        let cam = Vec3::new(10.0, 10.0, 0.0);
+        let yaw = rain_billboard_yaw(drop, cam);
+        assert!((yaw - std::f32::consts::FRAC_PI_2).abs() < 0.05);
     }
 }

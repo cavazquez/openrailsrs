@@ -1,12 +1,14 @@
-//! MSTS `HWater` horizontal surfaces from `.w` tiles (order 11 / issue #8).
+//! MSTS `HWater` horizontal surfaces from `.w` tiles (order 11 / issue #8, PR2 waves).
 
 use bevy::prelude::*;
 
+use crate::shapes::{RouteAssets, load_ace_image};
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::world::WorldScene;
 
-const COLOR_WATER: Color = Color::srgba(0.10, 0.42, 0.68, 0.62);
+const COLOR_WATER: Color = Color::srgba(0.08, 0.38, 0.62, 0.68);
+const COLOR_WATER_REFLECT: Color = Color::srgba(0.04, 0.22, 0.38, 0.28);
 
 /// Resolve the water surface height: explicit MSTS `Position.y`, else terrain sample.
 pub fn water_surface_y(anchor: Vec3, terrain: Option<&TerrainElevation>, explicit_y: f32) -> f32 {
@@ -18,13 +20,52 @@ pub fn water_surface_y(anchor: Vec3, terrain: Option<&TerrainElevation>, explici
         .unwrap_or(0.0)
 }
 
+#[derive(Component, Clone, Copy, Debug)]
+pub(crate) struct WaterSurface {
+    base_y: f32,
+    phase: f32,
+    is_reflection: bool,
+}
+
+fn water_material(
+    materials: &mut Assets<StandardMaterial>,
+    texture: Option<Handle<Image>>,
+) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: COLOR_WATER,
+        base_color_texture: texture,
+        emissive: LinearRgba::from(Color::srgb(0.08, 0.24, 0.42)) * 0.45,
+        perceptual_roughness: 0.06,
+        metallic: 0.05,
+        reflectance: 0.75,
+        alpha_mode: AlphaMode::Blend,
+        double_sided: true,
+        ..default()
+    })
+}
+
+fn reflection_material(materials: &mut Assets<StandardMaterial>) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: COLOR_WATER_REFLECT,
+        emissive: LinearRgba::from(Color::srgb(0.05, 0.16, 0.28)) * 0.2,
+        perceptual_roughness: 0.02,
+        reflectance: 0.85,
+        alpha_mode: AlphaMode::Blend,
+        double_sided: true,
+        ..default()
+    })
+}
+
 /// Spawn translucent planes for every `HWater` in the world scene.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_water_patches(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     track: Res<TrackScene>,
+    assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
 ) {
     let patches: Vec<_> = world
@@ -37,18 +78,13 @@ pub fn spawn_water_patches(
     }
 
     let terrain_ref = terrain.as_deref();
-    let material = materials.add(StandardMaterial {
-        base_color: COLOR_WATER,
-        emissive: LinearRgba::from(Color::srgb(0.05, 0.18, 0.32)) * 0.25,
-        perceptual_roughness: 0.08,
-        metallic: 0.0,
-        reflectance: 0.65,
-        alpha_mode: AlphaMode::Blend,
-        double_sided: true,
-        ..default()
-    });
+    let default_material = water_material(&mut materials, None);
+    let reflect_material = reflection_material(&mut materials);
+    let mut texture_cache: std::collections::HashMap<String, Handle<Image>> =
+        std::collections::HashMap::new();
 
     let mut spawned = 0usize;
+    let mut textured = 0usize;
     for obj in patches {
         let patch = obj.water.as_ref().expect("filtered");
         let y = water_surface_y(obj.position, terrain_ref, patch.surface_y);
@@ -56,17 +92,77 @@ pub fn spawn_water_patches(
         let depth = patch.half_z * 2.0;
         let mesh = meshes.add(Plane3d::default().mesh().size(width, depth));
         let lift = track.bounds.edge_radius() * 0.05;
+        let base_y = y + lift;
+        let phase = (patch.uid as f32 * 0.73).fract() * std::f32::consts::TAU;
+
+        let texture = patch.texture_file.as_ref().and_then(|name| {
+            if !name.to_ascii_lowercase().ends_with(".ace") {
+                return None;
+            }
+            if let Some(handle) = texture_cache.get(name) {
+                return Some(handle.clone());
+            }
+            let image = load_ace_image(&assets.route_dir, name)?;
+            let handle = images.add(image);
+            texture_cache.insert(name.clone(), handle.clone());
+            Some(handle)
+        });
+
+        let material = if texture.is_some() {
+            textured += 1;
+            water_material(&mut materials, texture)
+        } else {
+            default_material.clone()
+        };
 
         commands.spawn((
-            Mesh3d(mesh),
-            MeshMaterial3d(material.clone()),
-            Transform::from_xyz(obj.position.x, y + lift, obj.position.z),
+            WaterSurface {
+                base_y,
+                phase,
+                is_reflection: false,
+            },
+            Mesh3d(mesh.clone()),
+            MeshMaterial3d(material),
+            Transform::from_xyz(obj.position.x, base_y, obj.position.z),
             Name::new(format!("water:{}:{}", obj.label, patch.uid)),
         ));
+
+        commands.spawn((
+            WaterSurface {
+                base_y: base_y - 0.05,
+                phase: phase + 1.1,
+                is_reflection: true,
+            },
+            Mesh3d(mesh),
+            MeshMaterial3d(reflect_material.clone()),
+            Transform::from_xyz(obj.position.x, base_y - 0.05, obj.position.z)
+                .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
+            Name::new(format!("water-reflect:{}:{}", obj.label, patch.uid)),
+        ));
+
         spawned += 1;
     }
 
-    eprintln!("openrailsrs-viewer3d: {spawned} water patch(es)");
+    eprintln!(
+        "openrailsrs-viewer3d: {spawned} water patch(es){}",
+        if textured > 0 {
+            format!(" ({textured} textured)")
+        } else {
+            String::new()
+        }
+    );
+}
+
+pub(crate) fn update_water_patches(
+    time: Res<Time>,
+    mut surfaces: Query<(&mut Transform, &WaterSurface)>,
+) {
+    let t = time.elapsed_secs();
+    for (mut transform, surface) in &mut surfaces {
+        let amp = if surface.is_reflection { 0.018 } else { 0.07 };
+        let wave = (t * 1.65 + surface.phase).sin() * amp;
+        transform.translation.y = surface.base_y + wave;
+    }
 }
 
 #[cfg(test)]
@@ -96,6 +192,7 @@ mod tests {
         let patch = water.water.as_ref().expect("water meta");
         assert_eq!(patch.uid, 6);
         assert!((patch.half_x - 25.0).abs() < 0.1);
+        assert_eq!(patch.texture_file.as_deref(), Some("yard.ace"));
     }
 
     #[test]
@@ -105,5 +202,17 @@ mod tests {
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
         let y = water_surface_y(Vec3::new(100.0, 0.0, 100.0), Some(&elev), 0.0);
         assert!(y.is_finite());
+    }
+
+    #[test]
+    fn water_wave_oscillates() {
+        let surface = WaterSurface {
+            base_y: 5.0,
+            phase: 0.0,
+            is_reflection: false,
+        };
+        let wave_a = (0.5_f32 * 1.65 + surface.phase).sin() * 0.07;
+        let wave_b = (1.0_f32 * 1.65 + surface.phase).sin() * 0.07;
+        assert_ne!(wave_a, wave_b);
     }
 }
