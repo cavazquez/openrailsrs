@@ -184,7 +184,7 @@ pub fn spawn_world_boxes(
     let mut shape_material_cache: std::collections::HashMap<PathBuf, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
-    let shape_material_color = Color::srgb(0.72, 0.74, 0.78);
+    let shape_material_color = Color::srgb(0.45, 0.72, 0.95);
 
     for obj in &world.items {
         if shape_eligible(obj) {
