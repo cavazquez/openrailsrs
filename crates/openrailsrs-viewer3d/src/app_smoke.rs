@@ -12,7 +12,11 @@ mod tests {
         CameraFollowMode, CameraFollowTarget, CameraMode, OrbitDistanceLimit, OrbitState,
         cycle_follow_mode, follow_train_camera, spawn_camera,
     };
+    use crate::precipitation::{
+        PrecipitationState, spawn_precipitation, toggle_precipitation, update_precipitation,
+    };
     use crate::rolling_stock::TrainConsistScene;
+    use crate::teleport::TeleportDialog;
     use crate::shapes::RouteAssets;
     use crate::signals::spawn_signal_markers;
     use crate::terrain::TerrainElevation;
@@ -175,6 +179,32 @@ mod tests {
             let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
             assert!(orbit.distance >= 80.0);
             assert_eq!(world.query::<&TrainMarker>().iter(world).count(), 1);
+        });
+    }
+
+    #[test]
+    fn precipitation_toggle_and_update_run_without_query_conflict() {
+        let scene = TrackScene::from_graph(tiny_graph_with_signal());
+        let replay = ReplayState::default();
+
+        with_scene_replay(scene, replay, |world| {
+            world.insert_resource(PrecipitationState::default());
+            world.insert_resource(TeleportDialog::default());
+            world.run_system_once(spawn_camera).unwrap();
+            world.run_system_once(spawn_precipitation).unwrap();
+            world.run_system_once(update_precipitation).unwrap();
+            world.run_system_once(toggle_precipitation).unwrap();
+
+            {
+                let mut keys = world.resource_mut::<ButtonInput<KeyCode>>();
+                keys.press(KeyCode::KeyP);
+            }
+            world.run_system_once(toggle_precipitation).unwrap();
+            assert!(
+                !world.resource::<PrecipitationState>().enabled,
+                "P should turn rain off"
+            );
+            world.run_system_once(update_precipitation).unwrap();
         });
     }
 }

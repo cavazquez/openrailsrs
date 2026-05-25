@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::camera::{CameraFollowMode, CameraFollowTarget, CameraMode};
+use crate::precipitation::PrecipitationState;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::{ReplayState, pose_at_time};
@@ -85,25 +86,36 @@ pub fn build_hud_content(
     camera_mode: CameraMode,
     follow: CameraFollowMode,
     follow_target: &CameraFollowTarget,
+    precipitation: &PrecipitationState,
     terrain: Option<&TerrainElevation>,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
+    let rain_hint = "P:rain";
     let controls = if replay.is_active() {
-        if replay.tracks.len() > 1 {
-            "Space:pause  R:reset  +/-:spd  T:follow  [/]:train  G:goto  F2:fly  Esc:quit"
+        let train_hint = if replay.tracks.len() > 1 {
+            "  [/]:train"
         } else {
-            "Space:pause  R:reset  +/-:spd  T:follow  G:goto  Orbit: drag/WASD pan  F2:fly  Esc:quit"
-        }
+            ""
+        };
+        format!(
+            "Space:pause  R:reset  +/-:spd  T:follow{train_hint}  {rain_hint}  G:goto  F2:fly  Esc:quit"
+        )
     } else {
-        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  P:rain  F2:fly  Esc:quit"
-    }
-    .to_string();
+        format!(
+            "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  {rain_hint}  F2:fly  Esc:quit"
+        )
+    };
+
+    let rain_label = precipitation.hud_label();
 
     if !replay.is_active() {
         return HudContent {
-            row1: format!("{title}    cam:{}", camera_mode_label(camera_mode)),
+            row1: format!(
+                "{title}    cam:{}  rain:{rain_label}",
+                camera_mode_label(camera_mode)
+            ),
             row2: coords,
             progress: 0.0,
             trains: String::new(),
@@ -139,7 +151,8 @@ pub fn build_hud_content(
     };
     let progress_pct = (progress * 100.0).round() as u32;
 
-    let row1 = format!("{title}    {status}    cam:{cam}  follow:{follow_label}");
+    let row1 =
+        format!("{title}    {status}    cam:{cam}  follow:{follow_label}  rain:{rain_label}");
     let row2 = format!(
         "{coords}    t={:.1}s  {:.0} km/h  spd={:.0}x  {progress_pct}%",
         replay.t_sim, vel_kmh, replay.speed
@@ -281,6 +294,7 @@ pub(crate) fn update_hud(
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
     follow_target: Res<CameraFollowTarget>,
+    precipitation: Res<PrecipitationState>,
     terrain: Option<Res<TerrainElevation>>,
     camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
     mut hud: Query<
@@ -326,6 +340,7 @@ pub(crate) fn update_hud(
         *camera_mode,
         *follow,
         &follow_target,
+        &precipitation,
         terrain.as_deref(),
         camera_pos,
         orbit_focus,
@@ -443,12 +458,15 @@ mod tests {
             CameraMode::Orbit,
             CameraFollowMode::Off,
             &CameraFollowTarget::default(),
+            &PrecipitationState::default(),
             None,
             Vec3::new(120.0, 35.0, 8.0),
             Some(Vec3::new(5000.0, 0.0, 25.0)),
         );
         assert!(content.row1.contains("test/route"));
         assert!(content.row1.contains("cam:orbit"));
+        assert!(content.row1.contains("rain:on"));
+        assert!(content.controls.contains("P:rain"));
         assert!(content.row2.contains("pos 120,35,8"));
         assert!(content.row2.contains("focus 5000,0,25"));
         assert!(content.show_row2);
@@ -474,12 +492,15 @@ mod tests {
             CameraMode::Orbit,
             CameraFollowMode::OrbitFollow,
             &CameraFollowTarget::default(),
+            &PrecipitationState::default(),
             None,
             Vec3::ZERO,
             None,
         );
         assert!(content.row1.contains("PLAY"));
         assert!(content.row1.contains("follow:orbit→primary"));
+        assert!(content.row1.contains("rain:on"));
+        assert!(content.controls.contains("P:rain"));
         assert!(content.row2.contains("pos 0,0,0"));
         assert!(content.row2.contains("t=5.0s"));
         assert!(content.row2.contains("spd=2x"));
@@ -499,11 +520,16 @@ mod tests {
             CameraMode::Fly,
             CameraFollowMode::Off,
             &CameraFollowTarget::default(),
+            &PrecipitationState {
+                enabled: false,
+                ..Default::default()
+            },
             None,
             Vec3::ZERO,
             None,
         );
         assert!(content.row1.contains("PAUSED"));
+        assert!(content.row1.contains("rain:off"));
         assert!(content.row1.contains("cam:fly"));
         assert!(content.status_is_paused);
     }

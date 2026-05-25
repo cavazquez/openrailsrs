@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use crate::track::TrackScene;
 
 const RAIN_DROP_COUNT: usize = 160;
-const RAIN_STREAK_HEIGHT: f32 = 1.2;
-const RAIN_STREAK_RADIUS: f32 = 0.04;
+const RAIN_STREAK_HEIGHT: f32 = 2.0;
+const RAIN_STREAK_RADIUS: f32 = 0.07;
 
 /// Toggle with `P`. Enabled by default for the smoke demo.
 #[derive(Resource, Clone, Debug)]
@@ -14,6 +14,12 @@ pub struct PrecipitationState {
     pub enabled: bool,
     pub area_half: f32,
     pub ceiling: f32,
+}
+
+impl PrecipitationState {
+    pub fn hud_label(&self) -> &'static str {
+        if self.enabled { "on" } else { "off" }
+    }
 }
 
 impl Default for PrecipitationState {
@@ -55,78 +61,131 @@ pub fn spawn_precipitation(
     scene: Res<TrackScene>,
     state: Res<PrecipitationState>,
 ) {
-    if !state.enabled {
-        return;
-    }
+    let initial_vis = if state.enabled {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    spawn_rain_entities(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        scene.bounds.center,
+        &state,
+        initial_vis,
+    );
+}
 
+fn spawn_rain_entities(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    origin: Vec3,
+    state: &PrecipitationState,
+    visibility: Visibility,
+) {
     let streak = meshes.add(Cuboid::new(
         RAIN_STREAK_RADIUS,
         RAIN_STREAK_HEIGHT,
         RAIN_STREAK_RADIUS,
     ));
     let material = materials.add(StandardMaterial {
-        base_color: Color::srgba(0.75, 0.88, 1.0, 0.55),
+        base_color: Color::srgba(0.75, 0.88, 1.0, 0.72),
         alpha_mode: AlphaMode::Blend,
         unlit: true,
         double_sided: true,
         ..default()
     });
 
-    let center = scene.bounds.center;
     for i in 0..RAIN_DROP_COUNT {
         let seed = i as u32 + 1;
-        let (x, z) = rain_offset_xz(center, seed, state.area_half);
-        let y = center.y + rain_rng01(seed, 2) * state.ceiling;
+        let (x, z) = rain_offset_xz(origin, seed, state.area_half);
+        let y = origin.y + rain_rng01(seed, 2) * state.ceiling;
         let speed = 18.0 + rain_rng01(seed, 3) * 14.0;
         commands.spawn((
             RainDrop { speed, seed },
             Mesh3d(streak.clone()),
             MeshMaterial3d(material.clone()),
             Transform::from_xyz(x, y, z),
-            Visibility::Inherited,
+            visibility,
             Name::new(format!("rain:{i}")),
         ));
     }
 
-    eprintln!("openrailsrs-viewer3d: precipitation on ({RAIN_DROP_COUNT} streaks, P toggles)");
+    eprintln!(
+        "openrailsrs-viewer3d: precipitation {} ({RAIN_DROP_COUNT} streaks, P toggles)",
+        if matches!(visibility, Visibility::Inherited) {
+            "on"
+        } else {
+            "off"
+        }
+    );
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn toggle_precipitation(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<PrecipitationState>,
     mut drops: Query<&mut Visibility, With<RainDrop>>,
+    mut commands: Commands,
+    scene: Res<TrackScene>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if keys.just_pressed(KeyCode::KeyP) {
-        state.enabled = !state.enabled;
-        let vis = if state.enabled {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
-        for mut visibility in &mut drops {
-            *visibility = vis;
-        }
+    if !keys.just_pressed(KeyCode::KeyP) {
+        return;
+    }
+    state.enabled = !state.enabled;
+    if state.enabled && drops.is_empty() {
+        spawn_rain_entities(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            scene.bounds.center,
+            &state,
+            Visibility::Inherited,
+        );
+        return;
+    }
+    let vis = if state.enabled {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    for mut visibility in &mut drops {
+        *visibility = vis;
     }
 }
 
 pub(crate) fn update_precipitation(
     time: Res<Time>,
-    scene: Res<TrackScene>,
     state: Res<PrecipitationState>,
-    mut drops: Query<(&mut Transform, &RainDrop)>,
+    camera: Query<&Transform, With<Camera3d>>,
+    mut drops: Query<(&mut Transform, &RainDrop), Without<Camera3d>>,
 ) {
     if !state.enabled {
         return;
     }
 
-    let center = scene.bounds.center;
-    let floor = center.y - 2.0;
-    let top = center.y + state.ceiling;
+    let Ok(cam) = camera.single() else {
+        return;
+    };
+    let origin = cam.translation;
+    let floor = origin.y - 30.0;
+    let top = origin.y + state.ceiling;
 
     for (mut transform, drop) in &mut drops {
+        let dx = transform.translation.x - origin.x;
+        let dz = transform.translation.z - origin.z;
+        if dx.abs() > state.area_half || dz.abs() > state.area_half {
+            let (x, z) = rain_offset_xz(origin, drop.seed, state.area_half);
+            transform.translation.x = x;
+            transform.translation.z = z;
+        }
+
         transform.translation.y -= drop.speed * time.delta_secs();
         if transform.translation.y < floor {
-            let (x, z) = rain_offset_xz(center, drop.seed, state.area_half);
+            let (x, z) = rain_offset_xz(origin, drop.seed, state.area_half);
             transform.translation.x = x;
             transform.translation.z = z;
             transform.translation.y = top;
@@ -137,6 +196,26 @@ pub(crate) fn update_precipitation(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hud_label_reflects_enabled_flag() {
+        assert_eq!(
+            PrecipitationState {
+                enabled: true,
+                ..Default::default()
+            }
+            .hud_label(),
+            "on"
+        );
+        assert_eq!(
+            PrecipitationState {
+                enabled: false,
+                ..Default::default()
+            }
+            .hud_label(),
+            "off"
+        );
+    }
 
     #[test]
     fn rain_rng_is_deterministic() {
