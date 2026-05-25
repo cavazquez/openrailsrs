@@ -3963,8 +3963,10 @@ name = "openrailsrs-msts"
 version = "0.1.0"
 dependencies = [
  "openrailsrs-formats",
+ "openrailsrs-route",
  "openrailsrs-scenarios",
  "serde",
+ "tempfile",
  "thiserror 2.0.18",
  "toml",
 ]

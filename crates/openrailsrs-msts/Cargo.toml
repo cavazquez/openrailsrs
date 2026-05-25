@@ -12,3 +12,7 @@ openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 thiserror.workspace = true
 serde.workspace = true
 toml.workspace = true
+
+[dev-dependencies]
+openrailsrs-route = { path = "../openrailsrs-route" }
+tempfile = "3"

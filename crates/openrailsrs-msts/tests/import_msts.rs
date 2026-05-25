@@ -58,10 +58,13 @@ fn parse_minimal_pat() {
 fn import_route_produces_valid_toml() {
     let toml_str = import_route(&fixtures_dir()).expect("import route");
 
-    // The generated TOML must be parseable as a plain TOML document.
     let value: toml::Value = toml::from_str(&toml_str).expect("generated TOML is not valid");
 
-    // Must contain a `nodes` array and an `edges` array.
+    assert!(
+        value.get("route").and_then(|r| r.get("id")).is_some(),
+        "[route].id missing"
+    );
+
     let nodes = value
         .get("nodes")
         .and_then(|v| v.as_array())
@@ -71,11 +74,9 @@ fn import_route_produces_valid_toml() {
         .and_then(|v| v.as_array())
         .expect("edges array missing");
 
-    // From the minimal .tdb: 2 End nodes + 2 anonymous endpoint nodes → ≥2 nodes; 1 edge.
     assert!(!nodes.is_empty(), "nodes array is empty");
     assert_eq!(edges.len(), 1, "expected 1 edge, got {}", edges.len());
 
-    // The edge must have length_m close to 1000.
     let length = edges[0]
         .get("length_m")
         .and_then(|v| v.as_float())
@@ -83,6 +84,28 @@ fn import_route_produces_valid_toml() {
     assert!(
         (length - 1000.0).abs() < 1.0,
         "edge length should be ~1000 m, got {length}"
+    );
+
+    let speed_kmh = edges[0]
+        .get("speed_limit_kmh")
+        .and_then(|v| v.as_float())
+        .expect("edge.speed_limit_kmh missing");
+    assert!(
+        speed_kmh > 0.0,
+        "speed_limit_kmh should be positive, got {speed_kmh}"
+    );
+}
+
+#[test]
+fn import_route_toml_loads_with_route_crate() {
+    let toml_str = import_route(&fixtures_dir()).expect("import route");
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("track.toml"), &toml_str).expect("write track.toml");
+    let graph = openrailsrs_route::load_track_graph_from_route_dir(dir.path())
+        .expect("load imported track.toml");
+    assert!(
+        graph.edges_iter().next().is_some(),
+        "graph should have edges"
     );
 }
 
@@ -314,7 +337,7 @@ fn import_route_with_activity_applies_failed_signals_and_restrictions() {
         "failed signal must be aspect=stop"
     );
 
-    // Restricted zone touches edge e2: speed_limit_mps must equal 10.0.
+    // Restricted zone touches edge e2: speed_limit_kmh must equal 36.0 (10 m/s).
     let edges = value
         .get("edges")
         .and_then(|v| v.as_array())
@@ -323,10 +346,10 @@ fn import_route_with_activity_applies_failed_signals_and_restrictions() {
         .iter()
         .find(|e| e.get("id").and_then(|v| v.as_str()) == Some("e2"))
         .expect("e2 missing");
-    let lim = as_f64(e2.get("speed_limit_mps").expect("speed_limit_mps")).unwrap_or_default();
+    let lim = as_f64(e2.get("speed_limit_kmh").expect("speed_limit_kmh")).unwrap_or_default();
     assert!(
-        (lim - 10.0).abs() < 1e-6,
-        "expected speed_limit_mps=10, got {lim}"
+        (lim - 36.0).abs() < 1e-6,
+        "expected speed_limit_kmh=36, got {lim}"
     );
 }
 

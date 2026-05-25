@@ -214,7 +214,7 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - 11 tests incluyendo round-trip con `openrailsrs-route` (TOML generado → `TrackGraph`).
 - Línea Mitre (Buenos Aires) importada en `examples/routes/mitre/` — 2133 nodos, 4926 aristas, 172 estaciones.
 
-**Pendiente:** Importador simplificado de `.trk` de MSTS (topología sin splines 3D).
+**Pendiente:** Importador simplificado de `.trk` de MSTS (topología sin splines 3D). **Parcial ✅** — `import-msts` emite `track.toml` compatible con `openrailsrs-route` (`[route]`, `speed_limit_kmh`, switches `{ stem_edge, diverging_edge }`, `RouteID` desde `.trk`).
 
 ---
 
