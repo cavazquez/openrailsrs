@@ -186,7 +186,8 @@ pub fn spawn_train_markers(
         ));
         let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
 
-        if i == 0 && !consist.is_empty() {
+        if !consist.vehicles_for(&track.label).is_empty() {
+            let vehicles = consist.vehicles_for(&track.label);
             commands
                 .spawn((
                     TrainMarker { track_index: i },
@@ -195,7 +196,7 @@ pub fn spawn_train_markers(
                     Name::new(format!("train:{}", track.label)),
                 ))
                 .with_children(|train| {
-                    for (vi, vehicle) in consist.vehicles.iter().enumerate() {
+                    for (vi, vehicle) in vehicles.iter().enumerate() {
                         if let Some(shape_name) = vehicle.shape_file.as_deref() {
                             if let Some(shape_path) =
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
@@ -291,8 +292,9 @@ pub fn spawn_train_markers(
 
     if !consist.is_empty() {
         eprintln!(
-            "openrailsrs-viewer3d: consist {} vehicle(s), {shape_mesh_count} shape mesh(es)",
-            consist.vehicles.len()
+            "openrailsrs-viewer3d: {} consist track(s), {} vehicle(s), {shape_mesh_count} shape mesh(es)",
+            consist.track_count(),
+            consist.total_vehicles(),
         );
     }
 }

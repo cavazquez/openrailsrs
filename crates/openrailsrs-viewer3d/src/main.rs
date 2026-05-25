@@ -18,18 +18,19 @@
 //! - `G`           — teleport dialog (type x,y,z).
 //! - `Esc`         — quit (closes teleport dialog first if open).
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
-use openrailsrs_train::{consist_asset_root, load_consist_with_asset_root};
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
+use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::teleport::TeleportDialog;
 use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir;
 use openrailsrs_viewer3d::track::TrackScene;
@@ -171,7 +172,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     }
 
     let replay = ReplayState::new(scenario.scenario.name.clone(), tracks);
-    let consist = load_train_consist(scenario_dir, &scenario.train.consist);
+    let consist = load_train_consists(scenario_dir, &scenario);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
         route_dir,
@@ -183,18 +184,39 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     })
 }
 
-fn load_train_consist(scenario_dir: &Path, consist_rel: &str) -> TrainConsistScene {
-    let con_path = scenario_dir.join(consist_rel);
-    let asset_root = consist_asset_root(&con_path);
-    match load_consist_with_asset_root(&con_path, asset_root) {
-        Ok(consist) => TrainConsistScene::from_consist(&consist, scenario_dir.to_path_buf()),
-        Err(err) => {
-            eprintln!(
-                "openrailsrs-viewer3d: warning: could not load consist {}: {err}",
-                con_path.display()
-            );
-            TrainConsistScene::default()
+fn load_train_consists(
+    scenario_dir: &Path,
+    scenario: &openrailsrs_scenarios::ScenarioFile,
+) -> TrainConsistScene {
+    let mut by_label = HashMap::new();
+    match try_load_consist_vehicles(scenario_dir, &scenario.train.consist) {
+        Some(vehicles) => {
+            by_label.insert("primary".into(), vehicles);
         }
+        None => {
+            eprintln!(
+                "openrailsrs-viewer3d: warning: could not load consist {}",
+                scenario_dir.join(&scenario.train.consist).display()
+            );
+        }
+    }
+    for extra in &scenario.extra_trains {
+        match try_load_consist_vehicles(scenario_dir, &extra.consist) {
+            Some(vehicles) => {
+                by_label.insert(extra.id.clone(), vehicles);
+            }
+            None => {
+                eprintln!(
+                    "openrailsrs-viewer3d: warning: could not load consist for train '{}': {}",
+                    extra.id,
+                    scenario_dir.join(&extra.consist).display()
+                );
+            }
+        }
+    }
+    TrainConsistScene {
+        scenario_dir: Some(scenario_dir.to_path_buf()),
+        by_label,
     }
 }
 
