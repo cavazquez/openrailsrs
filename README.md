@@ -260,7 +260,7 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **Señales** — diamantes coloreados como en el viewer 2D: rojo (`stop`), amarillo (`caution`), verde (`clear`), con poste.
 - **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`.
 - **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
-- **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, `TrackObj`, `Signal`, `Dyntrack`) en posición global (tile × 2048 m + local).
+- **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
@@ -279,7 +279,7 @@ Rutas grandes:
 cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
 ```
 
-Siguiente hito del plan: **shape `.s` ASCII → mesh Bevy** (orden 6 en `docs/OPEN_RAILS_VIEWER_3D.md`).
+Siguiente hito del plan: **textura `.ace` en material** (orden 7 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 
 ## Benchmarks (Fase 9)
 

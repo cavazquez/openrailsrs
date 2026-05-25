@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
+use crate::shapes::{RouteAssets, load_shape_mesh, resolve_shape_path};
 use crate::track::TrackScene;
 
 /// MSTS / Open Rails world tile size (metres).
@@ -15,6 +16,8 @@ pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
 pub struct WorldObject {
     pub kind: &'static str,
     pub label: String,
+    /// Shape filename from the world item (`FileName`), if any.
+    pub shape_file: Option<String>,
     pub position: Vec3,
     pub rotation: Quat,
     pub tile_x: i32,
@@ -75,6 +78,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
     Some(WorldObject {
         kind: item.kind(),
         label: object_label(item),
+        shape_file: item.file_name().map(str::to_string),
         position,
         rotation,
         tile_x,
@@ -152,13 +156,20 @@ fn box_size_for_kind(kind: &str, base: f32) -> Vec3 {
     }
 }
 
-/// Spawn axis-aligned cuboids for every parsed world object.
+fn shape_eligible(obj: &WorldObject) -> bool {
+    obj.shape_file
+        .as_ref()
+        .is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+}
+
+/// Spawn world objects: real meshes for resolvable `.s` shapes, cuboids otherwise.
 pub fn spawn_world_boxes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
+    assets: Res<RouteAssets>,
 ) {
     if world.is_empty() {
         return;
@@ -166,12 +177,64 @@ pub fn spawn_world_boxes(
 
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-    let mut material_cache: std::collections::HashMap<&'static str, Handle<StandardMaterial>> =
+    let mut box_material_cache: std::collections::HashMap<&'static str, Handle<StandardMaterial>> =
+        std::collections::HashMap::new();
+    let mut shape_mesh_cache: std::collections::HashMap<PathBuf, Handle<Mesh>> =
+        std::collections::HashMap::new();
+    let mut shape_material_cache: std::collections::HashMap<PathBuf, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
+    let shape_material_color = Color::srgb(0.35, 0.65, 1.0);
+
+    let mut shape_mesh_count = 0usize;
+
     for obj in &world.items {
+        if shape_eligible(obj) {
+            let file_name = obj.shape_file.as_deref().unwrap_or("");
+            if let Some(shape_path) = resolve_shape_path(&assets.route_dir, file_name) {
+                let mesh = shape_mesh_cache
+                    .entry(shape_path.clone())
+                    .or_insert_with(|| {
+                        if let Some(mesh) = load_shape_mesh(&shape_path) {
+                            meshes.add(mesh)
+                        } else {
+                            eprintln!(
+                                "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
+                                shape_path.display()
+                            );
+                            unit.clone()
+                        }
+                    });
+                let material = shape_material_cache
+                    .entry(shape_path)
+                    .or_insert_with(|| {
+                        materials.add(StandardMaterial {
+                            base_color: shape_material_color,
+                            perceptual_roughness: 0.75,
+                            metallic: 0.1,
+                            double_sided: true,
+                            ..default()
+                        })
+                    })
+                    .clone();
+
+                commands.spawn((
+                    Mesh3d(mesh.clone()),
+                    MeshMaterial3d(material),
+                    Transform {
+                        translation: obj.position,
+                        rotation: obj.rotation,
+                        scale: Vec3::ONE,
+                    },
+                    Name::new(format!("world:{}:{}", obj.kind, obj.label)),
+                ));
+                shape_mesh_count += 1;
+                continue;
+            }
+        }
+
         let size = box_size_for_kind(obj.kind, base);
-        let material = material_cache
+        let material = box_material_cache
             .entry(obj.kind)
             .or_insert_with(|| {
                 materials.add(StandardMaterial {
@@ -196,6 +259,10 @@ pub fn spawn_world_boxes(
             },
             Name::new(format!("world:{}:{}", obj.kind, obj.label)),
         ));
+    }
+
+    if shape_mesh_count > 0 {
+        eprintln!("openrailsrs-viewer3d: {shape_mesh_count} world object(s) using .s mesh");
     }
 }
 

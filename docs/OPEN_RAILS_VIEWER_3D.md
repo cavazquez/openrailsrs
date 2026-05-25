@@ -184,7 +184,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 | **3** | **Marcador del tren** (cubo / flecha) posicionado con el mismo criterio que `openrailsrs-viewer` 2D (`edge_id` + `pos_on_edge_m` desde CSV o snapshot del sim) — **✅ hecho** | 4 | 5 | Prueba end-to-end “sim → posición → mundo 3D” sin parsear `.s`. |
 | **4** | **HUD mínimo** (texto Bevy / egui): tiempo, velocidad, nombre de escenario | 4 | 3 | Poco riesgo; mejora la demo y copia el espíritu del HUD 2D actual. **✅ hecho** — franja Bevy UI inferior (título, replay, barra, leyenda trenes, atajos). |
 | **5** | Objetos **`.w` como cajas** en posición local (`WorldFile` + `WorldItem` → cubo + etiqueta `kind`) sin mesh MSTS | 4 | 4 | Usa el parser ya hecho; el resultado se ve en rutas con tiles world reales. **✅ hecho** — escaneo `WORLD/`/`world/`, coords globales tile×2048, cubos por tipo. |
-| **6** | **Un shape `.s` ASCII** con una sola primitiva LOD → **un `Mesh` Bevy** (vértices/índices desde `ShapeFile`) | 3 | 4 | Hit tangible “MSTS en 3D”; evitad binario tokenized al principio. |
+| **6** | **Un shape `.s` ASCII** con una sola primitiva LOD → **un `Mesh` Bevy** (vértices/índices desde `ShapeFile`) | 3 | 4 | Hit tangible “MSTS en 3D”; evitad binario tokenized al principio. **✅ hecho** — `build_mesh_from_shape`, LOD más cercano, mesh en objetos `Static` con `.s` en `SHAPES/`. |
 | **7** | **Textura `.ace`** en material (mip 0 vía `openrailsrs-ace` → imagen GPU) sobre un cubo o el mesh del paso 6 | 3 | 3 | Cierra el pipeline visual de material; menos espectacular que la geometría pero útil. |
 | **8** | **Terreno estilo OR**: parche 16×16 + elevación (necesita **tiles MSTS** + `.y` / RAW / mismas convenciones que `TerrainPrimitive`) | 2 | 5 | Muy visible pero **dificultad y datos** suben mucho (shaders, vecinos, agujeros). |
 | **9** | **Vía dinámica** (perfiles TSection / mallas como `DynamicTrackPrimitive`) | 2 | 4 | Mucha lógica y datos; mejor cuando el grafo y la cámara ya estén sólidos. |
@@ -202,6 +202,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Modo compact** — rutas con más de 800 aristas: aristas como líneas gizmo (no cilindros mesh), nodos Plain omitidos; log `render=compact` al arrancar.
 - **HUD en pantalla** — franja inferior Bevy UI (~60 px): título y modo cámara; con replay: estado PLAY/PAUSED, tiempo, km/h, velocidad, barra de progreso, leyenda por tren y atajos (`Space`, `R`, `+/-`, `T`, `F1/F2`, `Esc`).
 - **Objetos `.w` como cajas** — tiles en `WORLD/` parseados con `WorldFile`; posición global MSTS → Bevy; cubos coloreados por `Static` / `Forest` / `TrackObj` / `Signal` / `Dyntrack` / `Other`.
+- **Shape `.s` → mesh** — `ShapeFile` ASCII al LOD más cercano; objetos world con `FileName` `.s` resuelven `SHAPES/` y dibujan malla real (fallback a cubo).
 
 ---
 

@@ -356,7 +356,8 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - **Marcador de tren desde CSV ✅** — `openrailsrs-viewer3d scenario.toml` + replay animado; HUD en pantalla (Bevy UI).
 - **Pulido D ✅** — cámara follow (`T`), señales 3D coloreadas, modo compact automático en rutas >800 aristas (gizmo lines).
 - **Objetos `.w` como cajas ✅** — tiles `WORLD/` → cubos coloreados por tipo en posición global.
-- Siguiente hito del doc: shape `.s` ASCII → mesh Bevy (orden 6).
+- **Shape `.s` → mesh Bevy ✅** — LOD más cercano desde `ShapeFile`; `Static` con shape en `SHAPES/`.
+- Siguiente hito del doc: textura `.ace` en material (orden 7).
 
 ---
 
