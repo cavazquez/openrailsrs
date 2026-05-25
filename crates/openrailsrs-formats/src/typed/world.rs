@@ -60,6 +60,14 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
     },
+    /// Horizontal water surface (`HWater` in `.w`).
+    HWater {
+        uid: u32,
+        file_name: Option<String>,
+        position: Vec3,
+        /// Width and depth in metres from `Size`.
+        size: [f64; 2],
+    },
     Other {
         tag: String,
         uid: Option<u32>,
@@ -75,6 +83,7 @@ impl WorldItem {
             WorldItem::Track { .. } => "TrackObj",
             WorldItem::Dyntrack { .. } => "Dyntrack",
             WorldItem::Signal { .. } => "Signal",
+            WorldItem::HWater { .. } => "HWater",
             WorldItem::Other { .. } => "Other",
         }
     }
@@ -85,7 +94,8 @@ impl WorldItem {
             | WorldItem::Forest { uid, .. }
             | WorldItem::Track { uid, .. }
             | WorldItem::Dyntrack { uid, .. }
-            | WorldItem::Signal { uid, .. } => Some(*uid),
+            | WorldItem::Signal { uid, .. }
+            | WorldItem::HWater { uid, .. } => Some(*uid),
             WorldItem::Other { uid, .. } => *uid,
         }
     }
@@ -94,7 +104,8 @@ impl WorldItem {
         match self {
             WorldItem::Static { file_name, .. }
             | WorldItem::Track { file_name, .. }
-            | WorldItem::Signal { file_name, .. } => file_name.as_deref(),
+            | WorldItem::Signal { file_name, .. }
+            | WorldItem::HWater { file_name, .. } => file_name.as_deref(),
             WorldItem::Forest { tree_texture, .. } => tree_texture.as_deref(),
             _ => None,
         }
@@ -106,7 +117,8 @@ impl WorldItem {
             | WorldItem::Forest { position, .. }
             | WorldItem::Track { position, .. }
             | WorldItem::Dyntrack { position, .. }
-            | WorldItem::Signal { position, .. } => Some(*position),
+            | WorldItem::Signal { position, .. }
+            | WorldItem::HWater { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
         }
     }
@@ -215,6 +227,12 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             file_name,
             position: position.unwrap_or_default(),
             qdir,
+        },
+        s if s.eq_ignore_ascii_case("HWater") => WorldItem::HWater {
+            uid: uid.unwrap_or(0),
+            file_name,
+            position: position.unwrap_or_default(),
+            size: find_named_pair(items, "Size").unwrap_or([100.0, 100.0]),
         },
         _ => WorldItem::Other { tag, uid, position },
     })

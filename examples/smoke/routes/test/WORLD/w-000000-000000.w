@@ -31,4 +31,9 @@ SIMISA@@@@@@@@@@JINX0w0t______
         ( Position 80.0 0.0 0.8 )
         ( QDirection 0.0 0.7071 0.0 0.7071 )
     )
+    ( HWater
+        ( UiD 6 )
+        ( Position 250.0 3.0 80.0 )
+        ( Size 50.0 40.0 )
+    )
 )

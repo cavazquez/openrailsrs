@@ -71,6 +71,32 @@ fn binary_shape_returns_unsupported_error() {
 }
 
 #[test]
+fn parse_hwater_from_smoke_fixture() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/smoke/routes/test/WORLD/w-000000-000000.w");
+    let world = WorldFile::from_path(&path).expect("parse smoke world");
+    let item = world
+        .items
+        .iter()
+        .find(|i| i.kind() == "HWater")
+        .expect("hwater");
+    if let WorldItem::HWater {
+        uid,
+        position,
+        size,
+        ..
+    } = item
+    {
+        assert_eq!(*uid, 6);
+        assert!((position.y - 3.0).abs() < 1e-6);
+        assert!((size[0] - 50.0).abs() < 1e-6);
+        assert!((size[1] - 40.0).abs() < 1e-6);
+    } else {
+        panic!("expected HWater");
+    }
+}
+
+#[test]
 fn parse_minimal_world_classifies_items() {
     let world = WorldFile::from_path(fixture("w-001000-001000.w")).expect("parse world");
 

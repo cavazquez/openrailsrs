@@ -24,6 +24,15 @@ pub struct ForestPatch {
     pub patch_half_z: f32,
 }
 
+/// Horizontal water metadata from a `.w` `HWater` item.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WaterPatch {
+    pub uid: u32,
+    pub half_x: f32,
+    pub half_z: f32,
+    pub surface_y: f32,
+}
+
 /// One scenery object from a loaded `.w` tile, ready for 3D spawn.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldObject {
@@ -36,6 +45,7 @@ pub struct WorldObject {
     pub tile_x: i32,
     pub tile_z: i32,
     pub forest: Option<ForestPatch>,
+    pub water: Option<WaterPatch>,
 }
 
 /// All world objects discovered under a route's `WORLD/` (or `world/`) folder.
@@ -116,6 +126,20 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         }
         _ => None,
     };
+    let water = match item {
+        WorldItem::HWater {
+            uid,
+            position,
+            size,
+            ..
+        } => Some(WaterPatch {
+            uid: *uid,
+            half_x: (size[0] * 0.5) as f32,
+            half_z: (size[1] * 0.5) as f32,
+            surface_y: position.y as f32,
+        }),
+        _ => None,
+    };
     Some(WorldObject {
         kind: item.kind(),
         label: object_label(item),
@@ -125,6 +149,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         tile_x,
         tile_z,
         forest,
+        water,
     })
 }
 
@@ -236,7 +261,7 @@ pub fn spawn_world_boxes(
     let mut shape_texture_count = 0usize;
 
     for obj in &world.items {
-        if obj.kind == "Dyntrack" || obj.kind == "Forest" {
+        if obj.kind == "Dyntrack" || obj.kind == "Forest" || obj.kind == "HWater" {
             continue;
         }
 
@@ -399,8 +424,9 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_world_from_route_dir(&route_dir);
         assert_eq!(scene.tiles_loaded, 1);
-        assert_eq!(scene.items.len(), 5);
+        assert_eq!(scene.items.len(), 6);
         assert!(scene.items.iter().any(|o| o.kind == "Static"));
         assert!(scene.items.iter().any(|o| o.kind == "Forest"));
+        assert!(scene.items.iter().any(|o| o.kind == "HWater"));
     }
 }

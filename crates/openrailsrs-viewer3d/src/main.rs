@@ -17,6 +17,7 @@
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
 //! - Multi-train replay: `[` / `]` (or Shift+T) cycle which train the follow camera tracks.
 //! - `G`           — teleport dialog (type x,y,z).
+//! - `P`           — toggle rain streaks.
 //! - `Esc`         — quit (closes teleport dialog first if open).
 
 use std::collections::HashMap;

@@ -97,7 +97,7 @@ pub fn build_hud_content(
             "Space:pause  R:reset  +/-:spd  T:follow  G:goto  Orbit: drag/WASD pan  F2:fly  Esc:quit"
         }
     } else {
-        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  F2:fly  Esc:quit"
+        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  P:rain  F2:fly  Esc:quit"
     }
     .to_string();
 

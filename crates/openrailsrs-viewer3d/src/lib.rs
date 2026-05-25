@@ -11,14 +11,17 @@ pub mod camera;
 pub mod dyntrack;
 pub mod forest;
 pub mod hud;
+pub mod precipitation;
 pub mod rolling_stock;
 pub mod scene;
 pub mod shapes;
 pub mod signals;
+pub mod sky;
 pub mod teleport;
 pub mod terrain;
 pub mod track;
 pub mod train;
+pub mod water;
 pub mod world;
 
 #[cfg(test)]
@@ -43,22 +46,26 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(Color::srgb(0.04, 0.07, 0.10)))
+        app.insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
             .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
+            .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<teleport::TeleportDialog>()
             .add_systems(
                 Startup,
                 (
                     scene::spawn_ground_and_lights,
+                    sky::spawn_sky_dome,
                     terrain::spawn_terrain_meshes,
                     track::spawn_track_meshes,
                     dyntrack::spawn_dyntrack_segments,
                     forest::spawn_forest_patches,
+                    water::spawn_water_patches,
                     world::spawn_world_boxes,
                     signals::spawn_signal_markers,
+                    precipitation::spawn_precipitation,
                     camera::spawn_camera,
                     hud::spawn_hud,
                     teleport::spawn_teleport_ui,
@@ -74,12 +81,14 @@ impl Plugin for ViewerPlugin {
                     teleport::teleport_input_system,
                     teleport::teleport_button_system,
                     teleport::sync_teleport_ui,
+                    precipitation::toggle_precipitation.run_if(teleport::teleport_closed),
                     camera::toggle_mode_system.run_if(teleport::teleport_closed),
                     camera::cycle_follow_mode.run_if(teleport::teleport_closed),
                     camera::update_primary_window_cursor,
                     train::replay_controls.run_if(teleport::teleport_closed),
                     train::advance_replay_time,
                     train::update_train_markers,
+                    precipitation::update_precipitation,
                     hud::update_hud,
                     (camera::follow_train_camera, camera::orbit_camera_system)
                         .chain()
