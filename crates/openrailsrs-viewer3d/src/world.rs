@@ -184,7 +184,8 @@ pub fn spawn_world_boxes(
     let mut shape_material_cache: std::collections::HashMap<PathBuf, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
-    let shape_material_color = Color::srgb(0.35, 0.65, 1.0);
+    // Magenta: distinto del cian de nodos Switch y del verde Forest.
+    let shape_material_color = Color::srgb(0.95, 0.25, 0.85);
 
     let mut shape_mesh_count = 0usize;
 
@@ -210,6 +211,7 @@ pub fn spawn_world_boxes(
                     .or_insert_with(|| {
                         materials.add(StandardMaterial {
                             base_color: shape_material_color,
+                            emissive: LinearRgba::from(shape_material_color) * 0.35,
                             perceptual_roughness: 0.75,
                             metallic: 0.1,
                             double_sided: true,
