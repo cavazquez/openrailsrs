@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
+use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::track::TrackScene;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
@@ -77,6 +78,7 @@ fn main() {
         }))
         .insert_resource(config.scene)
         .insert_resource(config.replay)
+        .insert_resource(HudTitle(config.title))
         .add_plugins(ViewerPlugin)
         .add_systems(Update, exit_on_esc)
         .run();

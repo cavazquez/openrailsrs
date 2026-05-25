@@ -258,7 +258,8 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **Aristas** — cilindros naranjas entre nodos en rutas pequeñas (≤800 aristas); en rutas grandes (p. ej. Mitre) **modo compact**: líneas naranjas vía gizmos (arranque más rápido).
 - **Nodos** — esferas: blanco (Plain), cian (Switch), amarillo (Station); en modo compact solo Switch/Station.
 - **Señales** — diamantes coloreados como en el viewer 2D: rojo (`stop`), amarillo (`caution`), verde (`clear`), con poste.
-- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`; HUD en el título de ventana (`t`, km/h, pausa, velocidad, follow).
+- **Tren** (con `scenario.toml`) — cubo magenta que recorre la ruta según `run.csv`.
+- **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
@@ -277,7 +278,7 @@ Rutas grandes:
 cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
 ```
 
-Siguiente hito del plan: **HUD en pantalla** (orden 4 en `docs/OPEN_RAILS_VIEWER_3D.md`).
+Siguiente hito del plan: **terreno / elevación** (orden 5 en `docs/OPEN_RAILS_VIEWER_3D.md`).
 
 ## Benchmarks (Fase 9)
 
