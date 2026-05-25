@@ -469,7 +469,7 @@ fn wheel_scroll_lines(ev: &MouseWheel) -> f32 {
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn orbit_camera_system(
     time: Res<Time>,
     mode: Res<CameraMode>,
