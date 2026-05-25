@@ -24,3 +24,4 @@ target
 examples/smoke/run.csv
 examples/smoke/run.toml
 examples/smoke/outcome.toml
+examples/smoke/run_multi_*.toml
