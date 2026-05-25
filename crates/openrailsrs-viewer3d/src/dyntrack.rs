@@ -9,20 +9,53 @@ use bevy::prelude::*;
 use crate::track::{SceneBounds, TrackScene};
 use crate::world::WorldScene;
 
-/// Standard gauge (metres).
-pub const STD_GAUGE_M: f32 = 1.435;
-const HALF_GAUGE_M: f32 = STD_GAUGE_M * 0.5;
-const SLEEPER_WIDTH_M: f32 = 2.6;
-const SLEEPER_HEIGHT_M: f32 = 0.22;
-const RAIL_HEAD_H_M: f32 = 0.18;
-const RAIL_HEAD_W_M: f32 = 0.08;
+/// Dark weathered wood — deliberately far from graph orange (`1.0, 0.667, 0.2`).
+const COLOR_SLEEPER: Color = Color::srgb(0.20, 0.14, 0.10);
+/// Cool steel so rails read clearly against edge cylinders and brown sleepers.
+const COLOR_RAIL: Color = Color::srgb(0.78, 0.86, 0.98);
 
-const COLOR_SLEEPER: Color = Color::srgb(0.42, 0.28, 0.18);
-const COLOR_RAIL: Color = Color::srgb(0.55, 0.56, 0.60);
+/// Visual dimensions for a dyntrack segment, scaled like other world placeholders.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DyntrackDimensions {
+    pub length: f32,
+    pub sleeper_width: f32,
+    pub sleeper_height: f32,
+    pub sleeper_spacing: f32,
+    pub sleeper_depth: f32,
+    pub half_gauge: f32,
+    pub rail_width: f32,
+    pub rail_height: f32,
+}
 
-/// Default straight segment length derived from route extent (metres).
-pub fn default_segment_length_m(bounds: &SceneBounds) -> f32 {
-    (bounds.half_extent * 0.02).clamp(12.0, 40.0)
+/// Match the `base` used by [`crate::world::spawn_world_boxes`] so dyntrack is visible
+/// next to scaled graph cylinders and world cuboids.
+pub fn dyntrack_dimensions(bounds: &SceneBounds) -> DyntrackDimensions {
+    let base = bounds.edge_radius().max(2.0) * 1.5;
+    let spacing = (base * 0.16).clamp(3.0, 12.0);
+    DyntrackDimensions {
+        length: base * 2.4,
+        sleeper_width: base * 1.2,
+        sleeper_height: base * 0.12,
+        sleeper_spacing: spacing,
+        sleeper_depth: spacing * 0.55,
+        half_gauge: base * 0.35 * 0.5,
+        rail_width: base * 0.07,
+        rail_height: base * 0.09,
+    }
+}
+
+/// Local +Z positions (metres from segment start) for repeated sleepers.
+pub fn sleeper_local_z_positions(length: f32, spacing: f32) -> Vec<f32> {
+    if spacing <= 0.0 || length <= 0.0 {
+        return Vec::new();
+    }
+    let mut positions = Vec::new();
+    let mut z = spacing * 0.5;
+    while z < length {
+        positions.push(z);
+        z += spacing;
+    }
+    positions
 }
 
 /// World-space end point of a segment anchored at `position` with `rotation`.
@@ -57,44 +90,48 @@ pub fn spawn_dyntrack_segments(
     }
 
     let count = dyntracks.len();
-    let length = default_segment_length_m(&track.bounds);
+    let dims = dyntrack_dimensions(&track.bounds);
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let sleeper_material = materials.add(StandardMaterial {
         base_color: COLOR_SLEEPER,
-        perceptual_roughness: 0.9,
-        metallic: 0.05,
+        perceptual_roughness: 0.92,
+        metallic: 0.02,
         ..default()
     });
     let rail_material = materials.add(StandardMaterial {
         base_color: COLOR_RAIL,
-        perceptual_roughness: 0.45,
-        metallic: 0.65,
+        emissive: LinearRgba::from(COLOR_RAIL) * 0.08,
+        perceptual_roughness: 0.35,
+        metallic: 0.75,
         ..default()
     });
 
-    let rail_y = SLEEPER_HEIGHT_M + RAIL_HEAD_H_M * 0.5;
-    let half_len = length * 0.5;
+    let rail_y = dims.sleeper_height + dims.rail_height * 0.5;
+    let half_len = dims.length * 0.5;
+    let sleeper_positions = sleeper_local_z_positions(dims.length, dims.sleeper_spacing);
 
     for obj in &dyntracks {
-        let sleeper = part_transform(
-            obj.position,
-            obj.rotation,
-            Vec3::new(0.0, SLEEPER_HEIGHT_M * 0.5, half_len),
-            Vec3::new(SLEEPER_WIDTH_M, SLEEPER_HEIGHT_M, length),
-        );
-        commands.spawn((
-            Mesh3d(unit.clone()),
-            MeshMaterial3d(sleeper_material.clone()),
-            sleeper,
-            Name::new(format!("dyntrack:{}:sleepers", obj.label)),
-        ));
+        for (i, local_z) in sleeper_positions.iter().enumerate() {
+            let sleeper = part_transform(
+                obj.position,
+                obj.rotation,
+                Vec3::new(0.0, dims.sleeper_height * 0.5, *local_z),
+                Vec3::new(dims.sleeper_width, dims.sleeper_height, dims.sleeper_depth),
+            );
+            commands.spawn((
+                Mesh3d(unit.clone()),
+                MeshMaterial3d(sleeper_material.clone()),
+                sleeper,
+                Name::new(format!("dyntrack:{}:sleeper:{i}", obj.label)),
+            ));
+        }
 
-        for (side, name) in [(-HALF_GAUGE_M, "left"), (HALF_GAUGE_M, "right")] {
+        for (side, name) in [(-dims.half_gauge, "left"), (dims.half_gauge, "right")] {
             let rail = part_transform(
                 obj.position,
                 obj.rotation,
                 Vec3::new(side, rail_y, half_len),
-                Vec3::new(RAIL_HEAD_W_M, RAIL_HEAD_H_M, length),
+                Vec3::new(dims.rail_width, dims.rail_height, dims.length),
             );
             commands.spawn((
                 Mesh3d(unit.clone()),
@@ -116,15 +153,24 @@ mod tests {
     use crate::world::load_world_from_route_dir;
 
     #[test]
-    fn default_segment_length_clamps() {
-        let small = SceneBounds::default_sandbox();
-        assert_eq!(default_segment_length_m(&small), 12.0);
+    fn dimensions_scale_with_route_bounds() {
+        let small = dyntrack_dimensions(&SceneBounds::default_sandbox());
+        assert!(small.length > 5.0);
 
-        let large = SceneBounds {
-            half_extent: 50_000.0,
+        let large = dyntrack_dimensions(&SceneBounds {
+            half_extent: 5_000.0,
             ..SceneBounds::default_sandbox()
-        };
-        assert_eq!(default_segment_length_m(&large), 40.0);
+        });
+        assert!(large.length > small.length);
+        assert!(large.half_gauge > small.half_gauge);
+    }
+
+    #[test]
+    fn sleepers_repeat_along_segment() {
+        let positions = sleeper_local_z_positions(72.0, 4.8);
+        assert!(positions.len() >= 10);
+        assert!((positions[0] - 2.4).abs() < 1e-4);
+        assert!(*positions.last().unwrap() < 72.0);
     }
 
     #[test]
@@ -142,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn smoke_route_has_dyntrack_near_yard() {
+    fn smoke_route_has_dyntrack_on_e1() {
         let route_dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_world_from_route_dir(&route_dir);
@@ -151,7 +197,7 @@ mod tests {
             .iter()
             .find(|o| o.kind == "Dyntrack")
             .expect("dyntrack");
-        assert!((dyntrack.position.x - 220.0).abs() < 0.1);
-        assert!((dyntrack.position.z - 5.0).abs() < 0.1);
+        assert!((dyntrack.position.x - 80.0).abs() < 0.1);
+        assert!((dyntrack.position.z - 0.8).abs() < 0.1);
     }
 }

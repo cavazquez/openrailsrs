@@ -15,7 +15,8 @@
 //! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless replay is loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
-//! - `Esc`         — quit.
+//! - `G`           — teleport dialog (type x,y,z).
+//! - `Esc`         — quit (closes teleport dialog first if open).
 
 use std::path::{Path, PathBuf};
 
@@ -27,6 +28,7 @@ use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
+use openrailsrs_viewer3d::teleport::TeleportDialog;
 use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir;
 use openrailsrs_viewer3d::track::TrackScene;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
@@ -174,8 +176,17 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     })
 }
 
-fn exit_on_esc(keys: Res<ButtonInput<KeyCode>>, mut exit: MessageWriter<AppExit>) {
-    if keys.just_pressed(KeyCode::Escape) {
-        exit.write(AppExit::Success);
+fn exit_on_esc(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut dialog: ResMut<TeleportDialog>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if !keys.just_pressed(KeyCode::Escape) {
+        return;
     }
+    if dialog.open {
+        openrailsrs_viewer3d::teleport::close_teleport_dialog(&mut dialog);
+        return;
+    }
+    exit.write(AppExit::Success);
 }

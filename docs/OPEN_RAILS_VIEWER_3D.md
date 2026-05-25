@@ -205,7 +205,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Shape `.s` → mesh** — `ShapeFile` ASCII al LOD más cercano; objetos world con `FileName` `.s` resuelven `SHAPES/` y dibujan malla real (fallback a cubo).
 - **Textura `.ace` en material** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; resuelve `TEXTURES/` (o `textures/`); UV con flip V; fallback magenta si falta el `.ace`.
 - **Terreno heightfield** — tile `.y` + `_Y.RAW` en `TERRAIN/`; malla estilo OR (16×16 parches, 17×17 vértices, diagonal alternada); reemplaza el plano gris cuando hay datos.
-- **Vía dinámica (básica)** — objetos `Dyntrack` en `.w` → segmento recto orientado (durmientes + dos rieles a lo largo de local +Z); longitud por defecto según extensión de la ruta; sin perfiles TSection ni `.tdb`.
+- **Vía dinámica (básica)** — objetos `Dyntrack` en `.w` → segmento recto orientado (durmientes repetidos + dos rieles a lo largo de local +Z); longitud por defecto según extensión de la ruta; sin perfiles TSection ni `.tdb`.
 
 ---
 
