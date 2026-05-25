@@ -5,8 +5,7 @@ SIMISA@@@@@@@@@@JINX0y0t______
         ( terrain_sample_floor ( 0.0 ) )
         ( terrain_sample_scale ( 0.25 ) )
         ( terrain_sample_size ( 8 ) )
-        ( terrain_sample_ybuffer ( "+000000+000000_y.raw" ) )
-        ( terrain_sample_fbuffer ( "+000000+000000_f.raw" ) )
+        ( terrain_sample_ybuffer ( "+000001+000000_y.raw" ) )
     )
     ( terrain_shaders
         ( terrain_shader

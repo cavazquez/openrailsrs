@@ -1,22 +1,31 @@
-//! MSTS terrain tiles: heightfield meshes from `.y` + `_Y.RAW` (order 8 / issue #8).
+//! MSTS terrain tiles: heightfield meshes from `.y` + `_Y.RAW` (order 8 / issue #8, PR2 textures).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
+use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_formats::{
-    ElevationGrid, TerrainFile, TerrainMeshData, build_tile_mesh_data, read_y_raw,
+    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, build_patch_mesh_data_ex,
+    build_tile_mesh_data, read_f_raw, read_y_raw,
 };
 
+use crate::shapes::RouteAssets;
+use crate::terrain_assets::terrain_material_textures;
+use crate::terrain_material::TerrainMaterial;
 use crate::track::TrackScene;
 use crate::world::MSTS_TILE_SIZE_M;
+
+const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
 
 #[derive(Clone)]
 struct TileElevation {
     grid: ElevationGrid,
     sample_size: f64,
+    features: Option<FeatureGrid>,
 }
 
 /// Cached elevation grids for runtime height sampling (trains, forests).
@@ -39,11 +48,17 @@ impl TerrainElevation {
             let Ok(grid) = read_y_raw(&raw_path, &tile.samples) else {
                 continue;
             };
+            let features = if tile.samples.f_buffer_file.trim().is_empty() {
+                None
+            } else {
+                read_f_raw(&tile.f_raw_path(&path), &tile.samples).ok()
+            };
             tiles.insert(
                 (tile.tile_x, tile.tile_z),
                 TileElevation {
                     grid,
                     sample_size: tile.samples.sample_size,
+                    features,
                 },
             );
         }
@@ -54,10 +69,27 @@ impl TerrainElevation {
         self.tiles.is_empty()
     }
 
-    /// World-space elevation (metres) at `(x, z)`; `None` if no tile covers the point.
+    fn sample_hidden(&self, tile_x: i32, tile_z: i32, x: f32, z: f32) -> bool {
+        let Some(tile) = self.tiles.get(&(tile_x, tile_z)) else {
+            return false;
+        };
+        let Some(features) = tile.features.as_ref() else {
+            return false;
+        };
+        let lx = x - tile_x as f32 * MSTS_TILE_SIZE_M as f32;
+        let lz = z - tile_z as f32 * MSTS_TILE_SIZE_M as f32;
+        let ux = (lx / tile.sample_size as f32).round() as usize;
+        let uz = (lz / tile.sample_size as f32).round() as usize;
+        features.is_vertex_hidden(ux, uz)
+    }
+
+    /// World-space elevation (metres) at `(x, z)`; `None` if no tile covers the point or vertex is hidden.
     pub fn sample_world_y(&self, x: f32, z: f32) -> Option<f32> {
         let tile_x = (x / MSTS_TILE_SIZE_M as f32).floor() as i32;
         let tile_z = (z / MSTS_TILE_SIZE_M as f32).floor() as i32;
+        if self.sample_hidden(tile_x, tile_z, x, z) {
+            return None;
+        }
         let tile = self.tiles.get(&(tile_x, tile_z))?;
         let lx = x - tile_x as f32 * MSTS_TILE_SIZE_M as f32;
         let lz = z - tile_z as f32 * MSTS_TILE_SIZE_M as f32;
@@ -125,7 +157,7 @@ fn mesh_from_terrain_data(data: &TerrainMeshData) -> Mesh {
     mesh
 }
 
-/// Scan `route_dir/TERRAIN/` (or `terrain/`) for `.y` tiles and parse metadata.
+/// Scan `route_dir/TERRAIN/` and `route_dir/terrain/` for `.y` tiles and parse metadata.
 pub fn load_terrain_from_route_dir(route_dir: &Path) -> TerrainScene {
     let mut paths = discover_terrain_files(route_dir);
     paths.sort();
@@ -179,70 +211,210 @@ fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
     out
 }
 
-fn load_tile_mesh(_route_dir: &Path, tile_path: &Path) -> Option<Mesh> {
-    let tile = TerrainFile::from_path(tile_path).ok()?;
-    let raw_path = tile.y_raw_path(tile_path);
-    if !raw_path.is_file() {
-        eprintln!(
-            "openrailsrs-viewer3d: terrain raw missing {}",
-            raw_path.display()
-        );
-        return None;
-    }
-    let grid = read_y_raw(&raw_path, &tile.samples).ok()?;
-    let data = build_tile_mesh_data(&grid, tile.samples.sample_size);
-    Some(mesh_from_terrain_data(&data))
+fn fallback_terrain_image(images: &mut Assets<Image>) -> Handle<Image> {
+    let mut img = Image::new_fill(
+        Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[70, 107, 56, 255],
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    img.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_v: ImageAddressMode::Repeat,
+        ..default()
+    });
+    images.add(img)
 }
 
-/// Spawn heightfield meshes for all terrain tiles; skips the flat ground plane caller when non-empty.
+#[allow(clippy::too_many_arguments)]
+fn spawn_textured_patches(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<TerrainMaterial>,
+    images: &mut Assets<Image>,
+    route_dir: &Path,
+    tile: &TerrainFile,
+    grid: &ElevationGrid,
+    features: Option<&FeatureGrid>,
+    texture_cache: &mut HashMap<String, Handle<Image>>,
+    fallback_tex: &Handle<Image>,
+) -> (usize, usize) {
+    let patch_set = match tile.primary_patch_set() {
+        Some(set) => set,
+        None => return (0, 0),
+    };
+    let tile_origin = Vec3::new(
+        tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
+        0.0,
+        tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
+    );
+    let mut spawned = 0usize;
+    let mut holed = 0usize;
+
+    for pz in 0..patch_set.npatches {
+        for px in 0..patch_set.npatches {
+            let Some(patch) = patch_set.patch_at(px, pz) else {
+                continue;
+            };
+            if !patch.drawing_enabled() {
+                continue;
+            }
+            let shader = tile
+                .shaders
+                .get(patch.shader_index as usize)
+                .or_else(|| tile.shaders.first());
+            let Some(shader) = shader else {
+                continue;
+            };
+
+            let mesh_data = build_patch_mesh_data_ex(
+                grid,
+                tile.samples.sample_size,
+                px,
+                pz,
+                Some(patch),
+                features,
+                true,
+            );
+            if features.is_some_and(|f| f.patch_has_hidden_vertices(px, pz)) {
+                holed += 1;
+            }
+
+            let (base, overlay, overlay_scale) = terrain_material_textures(
+                route_dir,
+                images,
+                texture_cache,
+                shader,
+                fallback_tex.clone(),
+            );
+            let material = materials.add(TerrainMaterial {
+                overlay_scale,
+                base_texture: base,
+                overlay_texture: overlay,
+            });
+
+            let (cx, cz) = patch.patch_translation();
+            commands.spawn((
+                Mesh3d(meshes.add(mesh_from_terrain_data(&mesh_data))),
+                MeshMaterial3d(material),
+                Transform::from_translation(tile_origin + Vec3::new(cx, 0.0, cz)),
+                Name::new(format!(
+                    "terrain-patch:{}:{}:{}:{}",
+                    tile.tile_x, tile.tile_z, px, pz
+                )),
+            ));
+            spawned += 1;
+        }
+    }
+    (spawned, holed)
+}
+
+fn spawn_legacy_tile(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    tile: &TerrainFile,
+    grid: &ElevationGrid,
+    material: &Handle<StandardMaterial>,
+) {
+    let data = build_tile_mesh_data(grid, tile.samples.sample_size);
+    let translation = Vec3::new(
+        tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
+        0.0,
+        tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
+    );
+    commands.spawn((
+        Mesh3d(meshes.add(mesh_from_terrain_data(&data))),
+        MeshMaterial3d(material.clone()),
+        Transform::from_translation(translation),
+        Name::new(format!("terrain:{}:{}", tile.tile_x, tile.tile_z)),
+    ));
+}
+
+/// Spawn heightfield meshes for all terrain tiles; textured patches when `.y` includes patch sets.
 pub fn spawn_terrain_meshes(
-    route_dir: Res<crate::shapes::RouteAssets>,
+    route_dir: Res<RouteAssets>,
     terrain: Res<TerrainScene>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    mut std_materials: ResMut<Assets<StandardMaterial>>,
+    mut terrain_materials: ResMut<Assets<TerrainMaterial>>,
 ) {
     if terrain.is_empty() {
         return;
     }
 
-    let material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.28, 0.42, 0.22),
+    let fallback_material = std_materials.add(StandardMaterial {
+        base_color: COLOR_TERRAIN_FALLBACK,
         perceptual_roughness: 0.95,
         metallic: 0.0,
         double_sided: false,
         ..default()
     });
+    let fallback_tex = fallback_terrain_image(&mut images);
+    let mut texture_cache: HashMap<String, Handle<Image>> = HashMap::new();
 
     let mut paths = discover_terrain_files(&route_dir.route_dir);
     paths.sort();
 
-    let mut spawned = 0usize;
+    let mut spawned_tiles = 0usize;
+    let mut spawned_patches = 0usize;
+    let mut holed_patches = 0usize;
+
     for path in paths {
-        let Some(mesh) = load_tile_mesh(&route_dir.route_dir, &path) else {
+        let Ok(tile) = TerrainFile::from_path(&path) else {
             continue;
         };
-        let tile = match TerrainFile::from_path(&path) {
-            Ok(t) => t,
-            Err(_) => continue,
+        let Ok(grid) = read_y_raw(&tile.y_raw_path(&path), &tile.samples) else {
+            continue;
         };
-        let translation = Vec3::new(
-            tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
-            0.0,
-            tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
-        );
+        let features = if tile.samples.f_buffer_file.trim().is_empty() {
+            None
+        } else {
+            read_f_raw(&tile.f_raw_path(&path), &tile.samples).ok()
+        };
 
-        commands.spawn((
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(material.clone()),
-            Transform::from_translation(translation),
-            Name::new(format!("terrain:{}:{}", tile.tile_x, tile.tile_z)),
-        ));
-        spawned += 1;
+        if tile.has_textured_patches() {
+            let (patches, holed) = spawn_textured_patches(
+                &mut commands,
+                &mut meshes,
+                &mut terrain_materials,
+                &mut images,
+                &route_dir.route_dir,
+                &tile,
+                &grid,
+                features.as_ref(),
+                &mut texture_cache,
+                &fallback_tex,
+            );
+            if patches > 0 {
+                spawned_patches += patches;
+                holed_patches += holed;
+                spawned_tiles += 1;
+                continue;
+            }
+        }
+
+        spawn_legacy_tile(&mut commands, &mut meshes, &tile, &grid, &fallback_material);
+        spawned_tiles += 1;
     }
 
-    if spawned > 0 {
-        eprintln!("openrailsrs-viewer3d: {spawned} terrain tile(s) with heightfield mesh");
+    if spawned_patches > 0 {
+        eprintln!(
+            "openrailsrs-viewer3d: {spawned_tiles} terrain tile(s), {spawned_patches} textured patch(es){}",
+            if holed_patches > 0 {
+                format!(" ({holed_patches} with holes)")
+            } else {
+                String::new()
+            }
+        );
+    } else if spawned_tiles > 0 {
+        eprintln!("openrailsrs-viewer3d: {spawned_tiles} terrain tile(s) with heightfield mesh");
     }
 }
 
@@ -255,23 +427,17 @@ mod tests {
         let route_dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_terrain_from_route_dir(&route_dir);
-        assert_eq!(scene.tiles_loaded, 1);
-        assert_eq!(scene.tiles[0].tile_x, 0);
-        assert_eq!(scene.tiles[0].tile_z, 0);
+        assert!(scene.tiles_loaded >= 1);
     }
 
     #[test]
-    fn smoke_tile_mesh_has_triangles() {
+    fn smoke_tile_has_textured_patches() {
         let route_dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let path = route_dir.join("TERRAIN/+000000+000000.y");
-        let mesh = load_tile_mesh(&route_dir, &path).expect("mesh");
-        let verts = mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .map(|a| a.len())
-            .unwrap_or(0);
-        assert!(verts > 0);
-        assert!(mesh.indices().is_some());
+        let tile = TerrainFile::from_path(&path).expect("parse");
+        assert!(tile.has_textured_patches());
+        assert_eq!(tile.shaders[0].texslots.len(), 2);
     }
 
     #[test]
@@ -282,6 +448,14 @@ mod tests {
         assert!(!elev.is_empty());
         let y = elev.sample_world_y(100.0, 100.0).expect("sample");
         assert!(y.is_finite());
+    }
+
+    #[test]
+    fn hidden_vertex_returns_none_for_elevation() {
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let elev = TerrainElevation::load_from_route_dir(&route_dir);
+        assert!(elev.sample_world_y(112.0, 112.0).is_none());
     }
 
     #[test]
@@ -300,5 +474,13 @@ mod tests {
         let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
         let y = scenery_ground_y(None, 10.0, 10.0, &scene, 4.5);
         assert!((y - 4.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn neighbor_tile_loads_for_seam_fixture() {
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let scene = load_terrain_from_route_dir(&route_dir);
+        assert!(scene.tiles.iter().any(|t| t.tile_x == 1 && t.tile_z == 0));
     }
 }

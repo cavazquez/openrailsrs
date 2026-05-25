@@ -19,6 +19,8 @@ pub mod signals;
 pub mod sky;
 pub mod teleport;
 pub mod terrain;
+pub mod terrain_assets;
+pub mod terrain_material;
 pub mod track;
 pub mod train;
 pub mod water;
@@ -46,7 +48,8 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(sky::sky_clear_color()))
+        app.add_plugins(MaterialPlugin::<terrain_material::TerrainMaterial>::default())
+            .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
             .init_resource::<camera::CameraFollowTarget>()

@@ -100,14 +100,21 @@ fn main() {
     }
 
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: config.title.clone(),
-                resolution: (1280u32, 720u32).into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: config.title.clone(),
+                        resolution: (1280u32, 720u32).into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .insert_resource(config.scene)
         .insert_resource(RouteAssets::new(config.route_dir))
         .insert_resource(config.world)

@@ -359,9 +359,10 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - **Shape `.s` → mesh Bevy ✅** — LOD más cercano desde `ShapeFile`; `Static` con shape en `SHAPES/`.
 - **Textura `.ace` en material ✅** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; `TEXTURES/` en `StandardMaterial`; fallback magenta si falta.
 - **Terreno heightfield ✅** — `.y` + `_Y.RAW` → mesh Bevy por tile; parches OR 17×17; demo smoke con colina junto a `yard_a`.
+- **Terreno PR2 ✅** — TERRTEX dual-textura, UV afín por parche, `_F.RAW` agujeros, tile vecino smoke.
 - **Vía dinámica (básica) ✅** — `Dyntrack` en `.w` → segmento orientado (durmientes + rieles); teletransporte `G`; coords en HUD.
-- **Rolling stock PR1 ✅** — consist del escenario → cadena de meshes `.s` encadenados.
-- Siguiente hito del doc: rolling stock PR2 u orden 11 (bosque/agua/cielo).
+- **Rolling stock PR1–PR3 ✅** — consist, orientación/escala, multi-tren desde escenario.
+- **Bosque / agua / lluvia / pulido visual ✅** — órdenes 11 completas en viewer3d.
 
 ---
 

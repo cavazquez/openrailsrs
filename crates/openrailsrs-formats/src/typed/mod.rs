@@ -21,8 +21,10 @@ pub use shape::{
     Vec2, Vec3,
 };
 pub use terrain::{
-    ElevationGrid, TerrainFile, TerrainMeshData, TerrainSamples, build_patch_mesh_data,
-    build_tile_mesh_data, parse_tile_xz_from_filename, read_y_raw,
+    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, TerrainPatch, TerrainPatchSet,
+    TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, build_patch_mesh_data,
+    build_patch_mesh_data_ex, build_tile_mesh_data, parse_tile_xz_from_filename, patch_affine_uv,
+    read_f_raw, read_y_raw,
 };
 pub use track_db::{SignalAspectKind, TrItem, TrItemKind, TrackDbFile, TrackDbNode, TrackNodeKind};
 pub use wagon::WagonFile;

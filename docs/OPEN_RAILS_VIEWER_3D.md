@@ -74,6 +74,34 @@ En el constructor de **`TerrainPrimitive`**:
 
 **Resumen:** el terreno es un **heightfield regular** por parche, texturizado por shaders que mezclan capas según datos del tile; los “huecos” son solo **índices omitidos**.
 
+### 3.1 Probar con una ruta MSTS real
+
+Archivos necesarios bajo la carpeta de la ruta:
+
+| Carpeta / archivo | Rol |
+|-------------------|-----|
+| `TERRAIN/+XXXXXX+YYYYYY.y` | Metadata: samples, shaders, patch sets |
+| `TERRAIN/+XXXXXX+YYYYYY_y.raw` | Elevación uint16 (256×256 típico) |
+| `TERRAIN/+XXXXXX+YYYYYY_f.raw` | Opcional: flags por vértice (agujeros si `byte & 0x04`) |
+| `TERRTEX/*.ace` | Texturas de terreno referenciadas en `terrain_texslot` |
+| `TERRTEX/microtex.ace` | Overlay de detalle (fallback OR si falta slot 2) |
+
+Verificación headless:
+
+```bash
+openrailsrs terrain-dump /ruta/TERRAIN/+000000+000000.y --json
+```
+
+Campos útiles en JSON: `shader_count`, `patch_count`, `hidden_vertices`, `textures`.
+
+Viewer:
+
+```bash
+cargo run -p openrailsrs-viewer3d -- /ruta/a/tu/route
+```
+
+Si el `.y` no trae `terrain_patches`, el viewer usa el mesh verde legacy (un draw por tile).
+
 ---
 
 ## 4. Shapes MSTS (`.s`): de archivo a `VertexBuffer`
@@ -186,7 +214,7 @@ Leyenda: **F** = facilidad (5 = muy fácil), **V** = impacto visual inmediato (5
 | **5** | Objetos **`.w` como cajas** en posición local (`WorldFile` + `WorldItem` → cubo + etiqueta `kind`) sin mesh MSTS | 4 | 4 | Usa el parser ya hecho; el resultado se ve en rutas con tiles world reales. **✅ hecho** — escaneo `WORLD/`/`world/`, coords globales tile×2048, cubos por tipo. |
 | **6** | **Un shape `.s` ASCII** con una sola primitiva LOD → **un `Mesh` Bevy** (vértices/índices desde `ShapeFile`) | 3 | 4 | Hit tangible “MSTS en 3D”; evitad binario tokenized al principio. **✅ hecho** — `build_mesh_from_shape`, LOD más cercano, mesh en objetos `Static` con `.s` en `SHAPES/`. |
 | **7** | **Textura `.ace`** en material (mip 0 vía `openrailsrs-ace` → imagen GPU) sobre un cubo o el mesh del paso 6 | 3 | 3 | Cierra el pipeline visual de material; menos espectacular que la geometría pero útil. **✅ hecho** — `prim_state` → `TEXTURES/*.ace`, mip 0 RGBA8 en `StandardMaterial.base_color_texture`; fallback magenta si falta textura. |
-| **8** | **Terreno estilo OR**: parche 16×16 + elevación (necesita **tiles MSTS** + `.y` / RAW / mismas convenciones que `TerrainPrimitive`) | 2 | 5 | Muy visible pero **dificultad y datos** suben mucho (shaders, vecinos, agujeros). **✅ hecho** — `.y` + `_Y.RAW`, parches 17×17 / diagonal alternada, mesh por tile en `TERRAIN/`; sin texturas multi-capa ni agujeros aún. |
+| **8** | **Terreno estilo OR**: parche 16×16 + elevación (necesita **tiles MSTS** + `.y` / RAW / mismas convenciones que `TerrainPrimitive`) | 2 | 5 | **✅ hecho** — `.y` + `_Y.RAW`, parches 17×17 / diagonal alternada; **PR2 ✅** texturas TERRTEX dual (base + microtex), UV afín por parche, `_F.RAW` agujeros, tiles vecinos. |
 | **9** | **Vía dinámica** (perfiles TSection / mallas como `DynamicTrackPrimitive`) | 2 | 4 | Mucha lógica y datos; mejor cuando el grafo y la cámara ya estén sólidos. **✅ hecho (PR1)** — segmentos orientados desde `Dyntrack` en `.w` (durmientes + 2 rieles, local +Z); sin perfiles TSection ni enlace `.tdb`. |
 | **10** | **Rolling stock** — consist del escenario → cadena de meshes `.s` (fallback cubo); sin animaciones/LOD/bogies aún | 2 | 5 | PR1 ✅; PR2 (10b/10c) ✅; **PR3 (10d) ✅** — consist por tren desde `scenario.toml` (`[train]` + `[[extra_trains]]`); CSV solo trayectoria. |
 | **11** | **Bosque** (población, RNG, colisión con vía) / **agua** / **cielo** / partículas | 2–3 | 3–4 | Bonificación visual; depende menos del sim y más de tuning y assets. **✅ hecho** — bosque PR1–PR2; cielo (domo), `HWater`, lluvia (`P`). |
@@ -205,6 +233,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 - **Shape `.s` → mesh** — `ShapeFile` ASCII al LOD más cercano; objetos world con `FileName` `.s` resuelven `SHAPES/` y dibujan malla real (fallback a cubo).
 - **Textura `.ace` en material** — mip 0 vía `openrailsrs-ace` → `Image` Bevy; resuelve `TEXTURES/` (o `textures/`); UV con flip V; fallback magenta si falta el `.ace`.
 - **Terreno heightfield** — tile `.y` + `_Y.RAW` en `TERRAIN/`; malla estilo OR (16×16 parches, 17×17 vértices, diagonal alternada); reemplaza el plano gris cuando hay datos.
+- **Terreno PR2** — `terrain_shaders` / `terrain_patchset_patch` en `.y`; UV afín OR (`U = u·W + v·B + X`); material dual-textura (`grass.ace` + `microtex.ace` en `TERRTEX/`); agujeros vía `_F.RAW` (`byte & 0x04`); un draw por parche; fallback mesh verde si no hay patch metadata.
 - **Vía dinámica (básica)** — objetos `Dyntrack` en `.w` → segmento recto orientado (durmientes repetidos + dos rieles a lo largo de local +Z); longitud por defecto según extensión de la ruta; sin perfiles TSection ni `.tdb`.
 - **Rolling stock (PR1)** — consist del `scenario.toml` → locomotora + vagones encadenados con offset longitudinal; mesh `.s` desde `SHAPES/` (fallback cubo coloreado).
 - **Rolling stock (PR2)** — rotación MSTS (+Z forward → +X tren) y escala uniforme desde bbox del mesh a `length_m` del vehículo; frente alineado al offset del consist.

@@ -893,7 +893,7 @@ fn run_ace_decode(file: &std::path::Path, out: &std::path::Path) -> anyhow::Resu
 }
 
 fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
-    use openrailsrs_formats::{TerrainFile, build_tile_mesh_data, read_y_raw};
+    use openrailsrs_formats::{TerrainFile, build_tile_mesh_data, read_f_raw, read_y_raw};
 
     let tile = TerrainFile::from_path(file)
         .map_err(|e| anyhow::anyhow!("parse terrain {}: {e}", file.display()))?;
@@ -912,6 +912,20 @@ fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
         .copied()
         .fold(f32::NEG_INFINITY, f32::max);
     let mesh = build_tile_mesh_data(&grid, tile.samples.sample_size);
+    let patch_set = tile.primary_patch_set();
+    let patch_count = patch_set.map(|s| s.patches.len()).unwrap_or(0);
+    let f_raw_path = tile.f_raw_path(file);
+    let hidden = if tile.samples.f_buffer_file.trim().is_empty() {
+        None
+    } else {
+        read_f_raw(&f_raw_path, &tile.samples).ok()
+    };
+    let hidden_vertices = hidden.as_ref().map(|f| f.hidden_count()).unwrap_or(0);
+    let textures: Vec<String> = tile
+        .shaders
+        .iter()
+        .flat_map(|s| s.texslots.iter().map(|t| t.filename.clone()))
+        .collect();
 
     if json {
         let payload = serde_json::json!({
@@ -922,10 +936,15 @@ fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             "sample_floor": tile.samples.sample_floor,
             "sample_scale": tile.samples.sample_scale,
             "y_raw": raw_path.display().to_string(),
+            "f_raw": if tile.samples.f_buffer_file.is_empty() { None } else { Some(f_raw_path.display().to_string()) },
             "elevation_min_m": min_h,
             "elevation_max_m": max_h,
             "vertices": mesh.positions.len(),
             "triangles": mesh.indices.len() / 3,
+            "shader_count": tile.shaders.len(),
+            "patch_count": patch_count,
+            "hidden_vertices": hidden_vertices,
+            "textures": textures,
         });
         println!("{}", serde_json::to_string_pretty(&payload)?);
     } else {
@@ -939,12 +958,21 @@ fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             tile.samples.sample_size
         );
         println!("  y_raw      : {}", raw_path.display());
+        if !tile.samples.f_buffer_file.is_empty() {
+            println!("  f_raw      : {}", f_raw_path.display());
+        }
         println!("  elevation  : {min_h:.2} .. {max_h:.2} m");
         println!(
-            "  mesh       : {} vertices, {} triangles",
+            "  mesh       : {} vertices, {} triangles (legacy merged tile)",
             mesh.positions.len(),
             mesh.indices.len() / 3
         );
+        println!("  shaders    : {}", tile.shaders.len());
+        println!("  patches    : {patch_count}");
+        println!("  hidden vtx : {hidden_vertices}");
+        if !textures.is_empty() {
+            println!("  textures   : {}", textures.join(", "));
+        }
     }
     Ok(())
 }
