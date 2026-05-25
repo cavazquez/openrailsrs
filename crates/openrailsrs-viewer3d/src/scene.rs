@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 
+use crate::terrain::TerrainScene;
 use crate::track::TrackScene;
 
 /// Spacing between minor grid lines (m).
@@ -22,8 +23,11 @@ const COLOR_AXIS_Z: Color = Color::srgb(0.25, 0.50, 1.00);
 const AXIS_LENGTH: f32 = 5.0;
 
 /// One-shot startup: spawn the ground plane and the lights.
+///
+/// When [`TerrainScene`] has tiles, the flat placeholder plane is omitted.
 pub fn spawn_ground_and_lights(
     scene: Res<TrackScene>,
+    terrain: Res<TerrainScene>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -31,20 +35,22 @@ pub fn spawn_ground_and_lights(
     let half = scene.bounds.ground_half();
     let center = scene.bounds.center;
 
-    let mesh = meshes.add(Plane3d::default().mesh().size(half * 2.0, half * 2.0));
-    let material = materials.add(StandardMaterial {
-        base_color: COLOR_GROUND,
-        perceptual_roughness: 0.95,
-        metallic: 0.0,
-        ..default()
-    });
+    if terrain.is_empty() {
+        let mesh = meshes.add(Plane3d::default().mesh().size(half * 2.0, half * 2.0));
+        let material = materials.add(StandardMaterial {
+            base_color: COLOR_GROUND,
+            perceptual_roughness: 0.95,
+            metallic: 0.0,
+            ..default()
+        });
 
-    commands.spawn((
-        Mesh3d(mesh),
-        MeshMaterial3d(material),
-        Transform::from_xyz(center.x, -0.001, center.z),
-        Name::new("ground"),
-    ));
+        commands.spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(material),
+            Transform::from_xyz(center.x, -0.001, center.z),
+            Name::new("ground"),
+        ));
+    }
 
     let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((

@@ -106,6 +106,26 @@ fn world_dump_writes_csv() {
 }
 
 #[test]
+fn terrain_dump_runs_on_minimal_fixture() {
+    let out = Command::new(bin())
+        .args([
+            "terrain-dump",
+            formats_fixture("minimal_terrain.y").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run terrain-dump");
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("terrain-dump"));
+    assert!(stdout.contains("256"));
+    assert!(stdout.contains("vertices"));
+}
+
+#[test]
 fn ace_decode_writes_png() {
     let ace_path = std::env::temp_dir().join("openrailsrs_cli_test.ace");
     let png_out = std::env::temp_dir().join("openrailsrs_cli_test.png");

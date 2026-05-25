@@ -4,6 +4,7 @@ mod engine;
 mod path;
 mod route;
 mod shape;
+mod terrain;
 mod track_db;
 mod wagon;
 mod world;
@@ -18,6 +19,10 @@ pub use route::RouteFile;
 pub use shape::{
     DistanceLevel, LodControl, Matrix43, NamedMatrix, PrimState, Primitive, ShapeFile, SubObject,
     Vec2, Vec3,
+};
+pub use terrain::{
+    ElevationGrid, TerrainFile, TerrainMeshData, TerrainSamples, build_patch_mesh_data,
+    build_tile_mesh_data, parse_tile_xz_from_filename, read_y_raw,
 };
 pub use track_db::{SignalAspectKind, TrItem, TrItemKind, TrackDbFile, TrackDbNode, TrackNodeKind};
 pub use wagon::WagonFile;

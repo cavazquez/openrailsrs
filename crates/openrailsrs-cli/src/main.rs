@@ -169,6 +169,13 @@ enum Commands {
         /// Output PNG file.
         out: PathBuf,
     },
+    /// Inspect an MSTS terrain `.y` tile: sample grid stats and optional mesh counts.
+    TerrainDump {
+        file: PathBuf,
+        /// Emit structured stats as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Import a Microsoft Train Simulator route / activity.
     ImportMsts {
         /// Path to the MSTS route directory (must contain a *.tdb file).
@@ -717,6 +724,9 @@ fn main() -> anyhow::Result<()> {
         Commands::AceDecode { file, out } => {
             run_ace_decode(&file, &out)?;
         }
+        Commands::TerrainDump { file, json } => {
+            run_terrain_dump(&file, json)?;
+        }
         Commands::Batch { scenarios } => {
             use rayon::prelude::*;
             let results: Vec<_> = scenarios
@@ -879,5 +889,62 @@ fn run_ace_decode(file: &std::path::Path, out: &std::path::Path) -> anyhow::Resu
         ace.mips_count,
         out.display()
     );
+    Ok(())
+}
+
+fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
+    use openrailsrs_formats::{TerrainFile, build_tile_mesh_data, read_y_raw};
+
+    let tile = TerrainFile::from_path(file)
+        .map_err(|e| anyhow::anyhow!("parse terrain {}: {e}", file.display()))?;
+    let raw_path = tile.y_raw_path(file);
+    let grid = read_y_raw(&raw_path, &tile.samples)
+        .map_err(|e| anyhow::anyhow!("read {}: {e}", raw_path.display()))?;
+
+    let min_h = grid
+        .elevations
+        .iter()
+        .copied()
+        .fold(f32::INFINITY, f32::min);
+    let max_h = grid
+        .elevations
+        .iter()
+        .copied()
+        .fold(f32::NEG_INFINITY, f32::max);
+    let mesh = build_tile_mesh_data(&grid, tile.samples.sample_size);
+
+    if json {
+        let payload = serde_json::json!({
+            "tile_x": tile.tile_x,
+            "tile_z": tile.tile_z,
+            "nsamples": tile.samples.nsamples,
+            "sample_size_m": tile.samples.sample_size,
+            "sample_floor": tile.samples.sample_floor,
+            "sample_scale": tile.samples.sample_scale,
+            "y_raw": raw_path.display().to_string(),
+            "elevation_min_m": min_h,
+            "elevation_max_m": max_h,
+            "vertices": mesh.positions.len(),
+            "triangles": mesh.indices.len() / 3,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+    } else {
+        println!(
+            "=== terrain-dump: {} (tile {},{}; {}×{} samples @ {} m) ===",
+            file.display(),
+            tile.tile_x,
+            tile.tile_z,
+            tile.samples.nsamples,
+            tile.samples.nsamples,
+            tile.samples.sample_size
+        );
+        println!("  y_raw      : {}", raw_path.display());
+        println!("  elevation  : {min_h:.2} .. {max_h:.2} m");
+        println!(
+            "  mesh       : {} vertices, {} triangles",
+            mesh.positions.len(),
+            mesh.indices.len() / 3
+        );
+    }
     Ok(())
 }

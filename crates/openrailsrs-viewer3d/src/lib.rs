@@ -12,6 +12,7 @@ pub mod hud;
 pub mod scene;
 pub mod shapes;
 pub mod signals;
+pub mod terrain;
 pub mod track;
 pub mod train;
 pub mod world;
@@ -23,6 +24,7 @@ use bevy::prelude::*;
 
 pub use hud::HudTitle;
 pub use shapes::RouteAssets;
+pub use terrain::TerrainScene;
 pub use track::{TrackRenderMode, TrackScene};
 pub use train::ReplayState;
 pub use world::WorldScene;
@@ -30,8 +32,8 @@ pub use world::WorldScene;
 /// Plugin that wires up the camera, scene and update systems for the
 /// experimental 3D viewer. Add it on top of [`DefaultPlugins`].
 ///
-/// Requires [`TrackScene`], [`ReplayState`], [`HudTitle`], [`WorldScene`] and
-/// [`RouteAssets`] resources (insert before adding this plugin).
+/// Requires [`TrackScene`], [`ReplayState`], [`HudTitle`], [`WorldScene`],
+/// [`TerrainScene`] and [`RouteAssets`] resources (insert before adding this plugin).
 pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
@@ -44,6 +46,7 @@ impl Plugin for ViewerPlugin {
                 Startup,
                 (
                     scene::spawn_ground_and_lights,
+                    terrain::spawn_terrain_meshes,
                     track::spawn_track_meshes,
                     world::spawn_world_boxes,
                     signals::spawn_signal_markers,
