@@ -24,12 +24,15 @@ use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::ViewerPlugin;
+use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::track::TrackScene;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
+use openrailsrs_viewer3d::world::load_world_from_route_dir;
 
 struct LaunchConfig {
     title: String,
     scene: TrackScene,
+    world: WorldScene,
     replay: ReplayState,
 }
 
@@ -51,11 +54,20 @@ fn main() {
     let node_count = config.scene.graph.nodes_iter().count();
     let edge_count = config.scene.edge_count;
     eprintln!(
-        "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{})",
+        "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{}{})",
         config.title,
         node_count,
         edge_count,
         config.scene.render_mode.label(),
+        if config.world.is_empty() {
+            String::new()
+        } else {
+            format!(
+                ", {} world obj(s) / {} tile(s)",
+                config.world.items.len(),
+                config.world.tiles_loaded
+            )
+        },
         if config.replay.is_active() {
             format!(", {} train(s) replay", config.replay.tracks.len())
         } else {
@@ -77,6 +89,7 @@ fn main() {
             ..default()
         }))
         .insert_resource(config.scene)
+        .insert_resource(config.world)
         .insert_resource(config.replay)
         .insert_resource(HudTitle(config.title))
         .add_plugins(ViewerPlugin)
@@ -94,9 +107,11 @@ fn build_launch_config(arg: &Path) -> Result<LaunchConfig, String> {
 
 fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
+    let world = load_world_from_route_dir(route_dir);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
         scene: TrackScene::from_graph(graph),
+        world,
         replay: ReplayState::default(),
     })
 }
@@ -108,6 +123,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let scenario = load_scenario(path).map_err(|e| e.to_string())?;
     let route_dir = scenario_dir.join(&scenario.route.path);
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
+    let world = load_world_from_route_dir(&route_dir);
 
     let mut tracks = Vec::new();
     let primary_csv = scenario_dir.join(&scenario.output.csv);
@@ -135,6 +151,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
         scene: TrackScene::from_graph(graph),
+        world,
         replay,
     })
 }

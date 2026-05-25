@@ -4061,6 +4061,7 @@ dependencies = [
  "bevy",
  "csv",
  "openrailsrs-core",
+ "openrailsrs-formats",
  "openrailsrs-route",
  "openrailsrs-scenarios",
  "openrailsrs-track",

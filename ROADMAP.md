@@ -353,9 +353,10 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 ### Viewer 3D (issue #8 / Fase 23) — prioridad #1 del plan en `docs/OPEN_RAILS_VIEWER_3D.md`
 - Crate **`openrailsrs-viewer3d`**: app Bevy 0.18 (solo X11 en Linux por defecto), ventana 1280×720, plano + grilla + ejes, cámara orbit (`F1`) / fly (`F2`), cursor confinado en fly con botón derecho.
 - **Grafo 3D desde `track.toml` ✅** — cilindros naranja (aristas), esferas por tipo de nodo, plano/grilla/cámara encuadrados al bounding box; CLI `openrailsrs-viewer3d [route_dir]`.
-- **Marcador de tren desde CSV ✅** — `openrailsrs-viewer3d scenario.toml` + replay animado; HUD mínimo en título de ventana.
+- **Marcador de tren desde CSV ✅** — `openrailsrs-viewer3d scenario.toml` + replay animado; HUD en pantalla (Bevy UI).
 - **Pulido D ✅** — cámara follow (`T`), señales 3D coloreadas, modo compact automático en rutas >800 aristas (gizmo lines).
-- Siguiente hito del doc: HUD en pantalla (egui/texto Bevy).
+- **Objetos `.w` como cajas ✅** — tiles `WORLD/` → cubos coloreados por tipo en posición global.
+- Siguiente hito del doc: shape `.s` ASCII → mesh Bevy (orden 6).
 
 ---
 
