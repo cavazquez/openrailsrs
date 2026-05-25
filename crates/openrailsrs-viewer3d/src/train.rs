@@ -9,6 +9,7 @@ use openrailsrs_track::TrackGraph;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path_in_dirs,
+    vehicle_shape_local_transform,
 };
 use crate::track::{TrackScene, graph_to_world};
 
@@ -195,14 +196,13 @@ pub fn spawn_train_markers(
                 ))
                 .with_children(|train| {
                     for (vi, vehicle) in consist.vehicles.iter().enumerate() {
-                        let local =
-                            vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
                         if let Some(shape_name) = vehicle.shape_file.as_deref() {
                             if let Some(shape_path) =
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
                             {
+                                let shape_path_key = shape_path.clone();
                                 let (mesh, material, _) = shape_cache
-                                    .entry(shape_path.clone())
+                                    .entry(shape_path_key)
                                     .or_insert_with(|| {
                                         load_vehicle_shape_assets(
                                             &shape_path,
@@ -215,6 +215,22 @@ pub fn spawn_train_markers(
                                         )
                                     })
                                     .clone();
+                                let local = meshes
+                                    .get(&mesh)
+                                    .map(|m| {
+                                        vehicle_shape_local_transform(
+                                            m,
+                                            vehicle.offset_m,
+                                            vehicle.length_m,
+                                        )
+                                    })
+                                    .unwrap_or_else(|| {
+                                        vehicle_local_transform(
+                                            &scene,
+                                            vehicle.offset_m,
+                                            vehicle.length_m,
+                                        )
+                                    });
                                 train.spawn((
                                     Mesh3d(mesh),
                                     MeshMaterial3d(material),
@@ -228,6 +244,9 @@ pub fn spawn_train_markers(
                                 continue;
                             }
                         }
+
+                        let local =
+                            vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
 
                         let material = materials.add(StandardMaterial {
                             base_color: color,

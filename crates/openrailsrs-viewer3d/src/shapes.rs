@@ -35,6 +35,78 @@ pub fn shape_point_to_bevy(v: ShapeVec3) -> Vec3 {
     Vec3::new(v.x as f32, v.y as f32, v.z as f32)
 }
 
+/// MSTS shape space: +X lateral, +Y up, +Z forward. Train consist local: +X forward.
+pub fn msts_shape_to_train_rotation() -> Quat {
+    Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+}
+
+/// Axis-aligned bounds of mesh positions (metres, shape local space).
+pub fn mesh_aabb(mesh: &Mesh) -> Option<(Vec3, Vec3)> {
+    let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?;
+    let slice = positions.as_float3()?;
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for pos in slice {
+        let p = Vec3::from(*pos);
+        min = min.min(p);
+        max = max.max(p);
+    }
+    if min.x.is_finite() {
+        Some((min, max))
+    } else {
+        None
+    }
+}
+
+fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
+    [
+        Vec3::new(min.x, min.y, min.z),
+        Vec3::new(max.x, min.y, min.z),
+        Vec3::new(min.x, max.y, min.z),
+        Vec3::new(max.x, max.y, min.z),
+        Vec3::new(min.x, min.y, max.z),
+        Vec3::new(max.x, min.y, max.z),
+        Vec3::new(min.x, max.y, max.z),
+        Vec3::new(max.x, max.y, max.z),
+    ]
+}
+
+/// Uniform scale so the shape's MSTS forward extent (or best fallback) matches `length_m`.
+pub fn vehicle_shape_fit_scale(extent: Vec3, length_m: f32) -> f32 {
+    let target = length_m.max(1.0);
+    let forward = extent.z;
+    if forward >= 0.1 {
+        return target / forward;
+    }
+    // Paper-thin along +Z (profile facing forward): scale from the largest visible axis.
+    let reference = extent.x.max(extent.y).max(0.01);
+    target / reference
+}
+
+/// Local transform for a vehicle `.s` mesh: MSTS→train rotation, bbox scale, front at `offset_m`.
+pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) -> Transform {
+    let rotation = msts_shape_to_train_rotation();
+    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
+    let extent = max - min;
+    let center = (min + max) * 0.5;
+    let scale_factor = vehicle_shape_fit_scale(extent, length_m);
+    let scale = Vec3::splat(scale_factor);
+
+    let front = Vec3::new(center.x, center.y, max.z);
+    let front_local_x = (rotation * (scale * front)).x;
+
+    let min_y = aabb_corners(min, max)
+        .iter()
+        .map(|p| (rotation * (scale * *p)).y)
+        .fold(f32::INFINITY, f32::min);
+
+    Transform {
+        translation: Vec3::new(offset_m - front_local_x, -min_y, 0.0),
+        rotation,
+        scale,
+    }
+}
+
 /// Pick the highest-detail distance level (lowest `dlevel_selection` metres).
 pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
     shape
@@ -242,5 +314,32 @@ mod tests {
         let loaded = load_shape_from_path(&resolve_shape_path(&route, "yard_shed.s").unwrap())
             .expect("shape");
         assert_eq!(loaded.texture_file.as_deref(), Some("yard.ace"));
+    }
+
+    #[test]
+    fn msts_forward_maps_to_train_plus_x() {
+        let forward = msts_shape_to_train_rotation() * Vec3::Z;
+        assert!((forward.x - 1.0).abs() < 1e-4);
+        assert!(forward.z.abs() < 1e-4);
+    }
+
+    #[test]
+    fn vehicle_shape_scales_flat_profile_to_length() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let transform = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
+        assert!((transform.scale.x - 18.0).abs() < 1e-3);
+        let rotated = transform.rotation * Vec3::Z;
+        assert!((rotated.x - 1.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn vehicle_shape_front_stays_at_offset() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let t0 = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
+        let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0);
+        assert!(t0.translation.x.abs() < 1e-3);
+        assert!((t1.translation.x + 18.0).abs() < 1e-3);
     }
 }
