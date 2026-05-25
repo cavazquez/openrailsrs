@@ -9,6 +9,7 @@
 
 pub mod camera;
 pub mod dyntrack;
+pub mod forest;
 pub mod hud;
 pub mod rolling_stock;
 pub mod scene;
@@ -54,6 +55,7 @@ impl Plugin for ViewerPlugin {
                     terrain::spawn_terrain_meshes,
                     track::spawn_track_meshes,
                     dyntrack::spawn_dyntrack_segments,
+                    forest::spawn_forest_patches,
                     world::spawn_world_boxes,
                     signals::spawn_signal_markers,
                     camera::spawn_camera,

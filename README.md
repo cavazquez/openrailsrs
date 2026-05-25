@@ -263,6 +263,7 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real y textura `.ace` de `TEXTURES/` cuando existe.
 - **Terreno** — carpeta `TERRAIN/` con tile `.y` + `_Y.RAW`: heightfield verde (colina demo en smoke junto al origen); sustituye el plano gris cuando hay tiles.
 - **Vía dinámica** — objetos `Dyntrack` en tiles `.w`: durmientes repetidos (madera oscura) y dos rieles acero (gris azulado) orientados sobre el grafo; demo smoke cerca de `yard_a`.
+- **Bosque** — objetos `Forest` en `.w`: árboles cross-billboard con RNG (`Population` / `Area` / `ScaleRange`); fallback verde si falta `TreeTexture`.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 

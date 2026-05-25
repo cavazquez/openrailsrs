@@ -20,6 +20,9 @@ use super::atom_to_number;
 use super::atom_to_string;
 use super::shape::Vec3;
 
+/// Default tree count when a `.w` `Forest` omits `Population`.
+pub const DEFAULT_FOREST_POPULATION: u32 = 48;
+
 /// Kind-aware view of a world item.
 #[derive(Clone, Debug, PartialEq)]
 pub enum WorldItem {
@@ -33,7 +36,12 @@ pub enum WorldItem {
         uid: u32,
         tree_texture: Option<String>,
         position: Vec3,
-        area: Option<[f64; 2]>,
+        /// `(min, max)` random scale factors from `ScaleRange`.
+        scale_range: Option<[f64; 2]>,
+        /// Patch width/depth in metres from `Area` (optional).
+        patch_size: Option<[f64; 2]>,
+        /// Tree count from `Population` (default when absent).
+        population: u32,
     },
     Track {
         uid: u32,
@@ -187,7 +195,9 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             tree_texture: find_named_string(items, "TreeTexture")
                 .or_else(|| find_named_string(items, "FileName")),
             position: position.unwrap_or_default(),
-            area: find_named_pair(items, "ScaleRange").or_else(|| find_named_pair(items, "Area")),
+            scale_range: find_named_pair(items, "ScaleRange"),
+            patch_size: find_named_pair(items, "Area"),
+            population: find_named_u32(items, "Population").unwrap_or(DEFAULT_FOREST_POPULATION),
         },
         s if s.eq_ignore_ascii_case("TrackObj") => WorldItem::Track {
             uid: uid.unwrap_or(0),
@@ -302,6 +312,21 @@ fn find_named_pair(items: &[Ast], key: &str) -> Option<[f64; 2]> {
                     .collect();
                 if nums.len() >= 2 {
                     return Some([nums[0], nums[1]]);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
+    for item in items {
+        if let Ast::List(sub) = item {
+            if matches_head(sub, key) {
+                if let Some(Ast::Atom(at)) = sub.get(1) {
+                    if let Some(n) = atom_to_number(at) {
+                        return Some(n.max(0.0) as u32);
+                    }
                 }
             }
         }

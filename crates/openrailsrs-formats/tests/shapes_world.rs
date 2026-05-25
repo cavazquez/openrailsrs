@@ -117,11 +117,13 @@ fn parse_minimal_world_classifies_items() {
         .find(|i| i.kind() == "Forest")
         .expect("forest");
     if let WorldItem::Forest {
-        tree_texture, area, ..
+        tree_texture,
+        scale_range,
+        ..
     } = forest
     {
         assert_eq!(tree_texture.as_deref(), Some("pine.ace"));
-        assert_eq!(*area, Some([0.8, 1.2]));
+        assert_eq!(*scale_range, Some([0.8, 1.2]));
     } else {
         panic!("expected Forest");
     }

@@ -11,6 +11,19 @@ use crate::track::TrackScene;
 /// MSTS / Open Rails world tile size (metres).
 pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
 
+/// Forest patch metadata from a `.w` `Forest` item.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ForestPatch {
+    pub uid: u32,
+    pub tree_texture: Option<String>,
+    pub scale_min: f32,
+    pub scale_max: f32,
+    pub population: u32,
+    /// Half-width of scatter patch in metres (`Area` / 2, or 0 → viewer default).
+    pub patch_half_x: f32,
+    pub patch_half_z: f32,
+}
+
 /// One scenery object from a loaded `.w` tile, ready for 3D spawn.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldObject {
@@ -22,6 +35,7 @@ pub struct WorldObject {
     pub rotation: Quat,
     pub tile_x: i32,
     pub tile_z: i32,
+    pub forest: Option<ForestPatch>,
 }
 
 /// All world objects discovered under a route's `WORLD/` (or `world/`) folder.
@@ -75,6 +89,33 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         }
         _ => Quat::IDENTITY,
     };
+    let forest = match item {
+        WorldItem::Forest {
+            uid,
+            tree_texture,
+            scale_range,
+            patch_size,
+            population,
+            ..
+        } => {
+            let (scale_min, scale_max) = scale_range
+                .map(|r| (r[0] as f32, r[1] as f32))
+                .unwrap_or((0.8, 1.2));
+            let (patch_half_x, patch_half_z) = patch_size
+                .map(|a| ((a[0] * 0.5) as f32, (a[1] * 0.5) as f32))
+                .unwrap_or((0.0, 0.0));
+            Some(ForestPatch {
+                uid: *uid,
+                tree_texture: tree_texture.clone(),
+                scale_min,
+                scale_max,
+                population: *population,
+                patch_half_x,
+                patch_half_z,
+            })
+        }
+        _ => None,
+    };
     Some(WorldObject {
         kind: item.kind(),
         label: object_label(item),
@@ -83,6 +124,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         rotation,
         tile_x,
         tile_z,
+        forest,
     })
 }
 
@@ -194,7 +236,7 @@ pub fn spawn_world_boxes(
     let mut shape_texture_count = 0usize;
 
     for obj in &world.items {
-        if obj.kind == "Dyntrack" {
+        if obj.kind == "Dyntrack" || obj.kind == "Forest" {
             continue;
         }
 
