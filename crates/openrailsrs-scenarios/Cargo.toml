@@ -8,6 +8,7 @@ description = "Playable scenario definitions (TOML)"
 
 [dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
+openrailsrs-validate = { path = "../openrailsrs-validate" }
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true

@@ -1,0 +1,25 @@
+# Synthetic Open Rails dump.csv for unit tests.
+# Layout mimics a wide data-logger export; column names match OrColumnMap defaults.
+# Speed is in mph (10 mph constant); Distance in meters.
+# Validate against a real dump.csv when Open Rails is available and adjust OrColumnMap.
+Time,Speed,Distance,Gradient,Throttle,TrainBrake,Direction,Memory
+0.0,10,0,0,50,0,F,128
+0.1,10,0.44704,0,50,0,F,128
+0.2,10,0.89408,0,50,0,F,128
+0.3,10,1.34112,0,50,0,F,128
+0.4,10,1.78816,0,50,0,F,128
+0.5,10,2.2352,0,50,0,F,128
+0.6,10,2.68224,0,50,0,F,128
+0.7,10,3.12928,0,50,0,F,128
+0.8,10,3.57632,0,50,0,F,128
+0.9,10,4.02336,0,50,0,F,128
+1.0,10,4.4704,0,50,0,F,128
+1.1,10,4.91744,0,50,0,F,128
+1.2,10,5.36448,0,50,0,F,128
+1.3,10,5.81152,0,50,0,F,128
+1.4,10,6.25856,0,50,0,F,128
+1.5,10,6.7056,0,50,0,F,128
+1.6,10,7.15264,0,50,0,F,128
+1.7,10,7.59968,0,50,0,F,128
+1.8,10,8.04672,0,50,0,F,128
+1.9,10,8.49376,0,50,0,F,128

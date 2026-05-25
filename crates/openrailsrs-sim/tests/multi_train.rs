@@ -106,6 +106,7 @@ fn make_two_train_scenario(
             output_csv: "run_express.csv".into(),
         }],
         sound_regions: vec![],
+        validate: None,
     };
 
     (scenario, tmp)

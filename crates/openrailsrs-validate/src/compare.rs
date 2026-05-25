@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::ValidateError;
+use crate::trace::parse_openrailsrs_run_csv;
 
 // ── Stats per column ──────────────────────────────────────────────────────────
 
@@ -110,29 +110,31 @@ pub fn compare_csv_files_with_config(
     b: &Path,
     config: &ValidationConfig,
 ) -> Result<ComparisonReport, ValidateError> {
-    let rows_a = load_numeric_rows(a)?;
-    let rows_b = load_numeric_rows(b)?;
-    if rows_a.len() != rows_b.len() {
+    let rows_a = parse_openrailsrs_run_csv(a)?;
+    let rows_b = parse_openrailsrs_run_csv(b)?;
+    if rows_a.samples.len() != rows_b.samples.len() {
         return Err(ValidateError::Msg(format!(
             "row count mismatch: {} vs {}",
-            rows_a.len(),
-            rows_b.len()
+            rows_a.samples.len(),
+            rows_b.samples.len()
         )));
     }
     let eps = 1e-4;
     let mut vel = SeriesStats::default();
     let mut pos = SeriesStats::default();
     let mut ene = SeriesStats::default();
-    for (ra, rb) in rows_a.iter().zip(rows_b.iter()) {
-        if (ra.time - rb.time).abs() > eps {
+    for (ra, rb) in rows_a.samples.iter().zip(rows_b.samples.iter()) {
+        if (ra.time_s - rb.time_s).abs() > eps {
             return Err(ValidateError::Msg(format!(
                 "time mismatch at row: {} vs {}",
-                ra.time, rb.time
+                ra.time_s, rb.time_s
             )));
         }
-        accumulate(&mut vel, ra.velocity - rb.velocity);
-        accumulate(&mut pos, ra.odometer - rb.odometer);
-        accumulate(&mut ene, ra.energy - rb.energy);
+        accumulate(&mut vel, ra.velocity_mps - rb.velocity_mps);
+        accumulate(&mut pos, ra.distance_m - rb.distance_m);
+        let ea = ra.energy_kwh.unwrap_or(0.0);
+        let eb = rb.energy_kwh.unwrap_or(0.0);
+        accumulate(&mut ene, ea - eb);
     }
     finalize_stats(&mut vel);
     finalize_stats(&mut pos);
@@ -156,42 +158,74 @@ pub fn compare_csv_files_with_config(
     })
 }
 
-// ── Internal helpers ──────────────────────────────────────────────────────────
+/// Compare two normalized traces after resampling onto a common grid.
+pub fn compare_traces(
+    a: &crate::trace::RunTrace,
+    b: &crate::trace::RunTrace,
+    config: &ValidationConfig,
+    step_s: f64,
+) -> Result<ComparisonReport, ValidateError> {
+    let (ra, rb) = crate::trace::resample_traces(a, b, step_s)?;
+    let mut vel = SeriesStats::default();
+    let mut pos = SeriesStats::default();
+    let mut ene = SeriesStats::default();
 
-struct Row {
-    time: f64,
-    velocity: f64,
-    odometer: f64,
-    energy: f64,
-}
+    let both_have_energy = a.samples.iter().any(|s| s.energy_kwh.is_some())
+        && b.samples.iter().any(|s| s.energy_kwh.is_some());
 
-fn load_numeric_rows(path: &Path) -> Result<Vec<Row>, ValidateError> {
-    let mut rdr = ReaderBuilder::new().has_headers(true).from_path(path)?;
-    let headers = rdr.headers()?.clone();
-    let idx = |name: &str| {
-        headers
-            .iter()
-            .position(|h| h.eq_ignore_ascii_case(name))
-            .ok_or_else(|| ValidateError::Msg(format!("missing column {name}")))
-    };
-    let i_t = idx("time_s")?;
-    let i_v = idx("velocity_mps")?;
-    let i_o = idx("odometer_m")?;
-    let i_e = idx("cumulative_energy_kwh")?;
-    let mut out = Vec::new();
-    for rec in rdr.records() {
-        let rec = rec?;
-        out.push(Row {
-            time: rec.get(i_t).unwrap_or("0").parse().unwrap_or(0.0),
-            velocity: rec.get(i_v).unwrap_or("0").parse().unwrap_or(0.0),
-            odometer: rec.get(i_o).unwrap_or("0").parse().unwrap_or(0.0),
-            energy: rec.get(i_e).unwrap_or("0").parse().unwrap_or(0.0),
-        });
+    for (sa, sb) in ra.iter().zip(rb.iter()) {
+        accumulate(&mut vel, sa.velocity_mps - sb.velocity_mps);
+        accumulate(&mut pos, sa.distance_m - sb.distance_m);
+        if both_have_energy {
+            let ea = sa.energy_kwh.unwrap_or(0.0);
+            let eb = sb.energy_kwh.unwrap_or(0.0);
+            accumulate(&mut ene, ea - eb);
+        }
     }
-    Ok(out)
+    finalize_stats(&mut vel);
+    finalize_stats(&mut pos);
+    if both_have_energy {
+        finalize_stats(&mut ene);
+    }
+
+    let vel_pass = column_passes(&vel, config.max_velocity_rms, config.max_velocity_max);
+    let pos_pass = column_passes(&pos, config.max_position_rms, config.max_position_max);
+    let ene_pass = if both_have_energy {
+        column_passes(&ene, config.max_energy_rms, config.max_energy_max)
+    } else {
+        true
+    };
+
+    Ok(ComparisonReport {
+        file_a: a.source.clone(),
+        file_b: b.source.clone(),
+        time_alignment: format!("resampled_linear_step_{step_s}s"),
+        velocity: vel,
+        position: pos,
+        energy: ene,
+        pass: vel_pass && pos_pass && ene_pass,
+        velocity_pass: vel_pass,
+        position_pass: pos_pass,
+        energy_pass: ene_pass,
+    })
 }
 
-fn accumulate(s: &mut SeriesStats, diff: f64) {
+/// Compare an Open Rails dump against an openrailsrs run CSV.
+pub fn compare_or_dump_with_run(
+    or_dump: &Path,
+    run_csv: &Path,
+    map: &crate::trace::OrColumnMap,
+    config: &ValidationConfig,
+    step_s: f64,
+) -> Result<ComparisonReport, ValidateError> {
+    let or_trace = crate::trace::parse_or_dump_csv(or_dump, map)?;
+    let rs_trace = parse_openrailsrs_run_csv(run_csv)?;
+    compare_traces(&or_trace, &rs_trace, config, step_s)
+}
+
+// ── Shared stats helpers (used by trace comparison) ───────────────────────────
+
+pub(crate) fn accumulate(s: &mut SeriesStats, diff: f64) {
     let ad = diff.abs();
     s.max_abs_diff = s.max_abs_diff.max(ad);
     s.mean_abs_diff += ad;
@@ -199,7 +233,7 @@ fn accumulate(s: &mut SeriesStats, diff: f64) {
     s.samples += 1;
 }
 
-fn finalize_stats(s: &mut SeriesStats) {
+pub(crate) fn finalize_stats(s: &mut SeriesStats) {
     if s.samples == 0 {
         return;
     }
@@ -207,8 +241,7 @@ fn finalize_stats(s: &mut SeriesStats) {
     s.rms_diff = (s.rms_diff / s.samples as f64).sqrt();
 }
 
-/// Check whether a column's stats satisfy the given optional thresholds.
-fn column_passes(s: &SeriesStats, max_rms: Option<f64>, max_abs: Option<f64>) -> bool {
+pub(crate) fn column_passes(s: &SeriesStats, max_rms: Option<f64>, max_abs: Option<f64>) -> bool {
     if let Some(limit) = max_rms {
         if s.rms_diff > limit {
             return false;

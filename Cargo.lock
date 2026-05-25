@@ -3986,6 +3986,7 @@ name = "openrailsrs-scenarios"
 version = "0.1.0"
 dependencies = [
  "openrailsrs-core",
+ "openrailsrs-validate",
  "serde",
  "thiserror 2.0.18",
  "toml",

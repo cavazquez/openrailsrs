@@ -15,7 +15,10 @@ use openrailsrs_sim::{
     LiveMultiSim, ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
     run_multi_train_from_scenario_file,
 };
-use openrailsrs_validate::{ValidationConfig, compare_csv_files_with_config};
+use openrailsrs_validate::{
+    ComparisonReport, OrColumnMap, ValidationConfig, compare_csv_files_with_config,
+    compare_or_dump_with_run,
+};
 
 #[derive(Parser)]
 #[command(
@@ -71,6 +74,31 @@ enum Commands {
         #[arg(long)]
         max_energy_rms: Option<f64>,
         /// Max peak absolute tolerance for cumulative_energy_kwh (kWh).
+        #[arg(long)]
+        max_energy_max: Option<f64>,
+    },
+    /// Compare an Open Rails dump.csv against an openrailsrs run CSV (resampled).
+    CompareOr {
+        /// Open Rails data-logger dump.csv (F12).
+        or_dump: PathBuf,
+        /// openrailsrs run.csv output.
+        run_csv: PathBuf,
+        /// Resampling step in seconds (default 0.1).
+        #[arg(long, default_value_t = 0.1)]
+        step: f64,
+        /// Optional TOML column map for the OR dump (see docs/OR_TRACE_COMPARISON.md).
+        #[arg(long)]
+        map: Option<PathBuf>,
+        #[arg(long)]
+        max_velocity_rms: Option<f64>,
+        #[arg(long)]
+        max_velocity_max: Option<f64>,
+        #[arg(long)]
+        max_position_rms: Option<f64>,
+        #[arg(long)]
+        max_position_max: Option<f64>,
+        #[arg(long)]
+        max_energy_rms: Option<f64>,
         #[arg(long)]
         max_energy_max: Option<f64>,
     },
@@ -334,44 +362,42 @@ fn main() -> anyhow::Result<()> {
             };
             let rep = compare_csv_files_with_config(&run_a, &run_b, &config)
                 .map_err(|e| anyhow::anyhow!("compare: {e}"))?;
-
-            // Human-readable summary with pass/fail.
-            let status = |p: bool| if p { "PASS ✓" } else { "FAIL ✗" };
-            println!(
-                "=== Compare: {} vs {} ===",
-                run_a.display(),
-                run_b.display()
-            );
-            println!(
-                "  velocity  rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
-                rep.velocity.rms_diff,
-                rep.velocity.max_abs_diff,
-                rep.velocity.mean_abs_diff,
-                rep.velocity.samples,
-                status(rep.velocity_pass)
-            );
-            println!(
-                "  position  rms={:.3}  max={:.3}  mean={:.3}  n={}  {}",
-                rep.position.rms_diff,
-                rep.position.max_abs_diff,
-                rep.position.mean_abs_diff,
-                rep.position.samples,
-                status(rep.position_pass)
-            );
-            println!(
-                "  energy    rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
-                rep.energy.rms_diff,
-                rep.energy.max_abs_diff,
-                rep.energy.mean_abs_diff,
-                rep.energy.samples,
-                status(rep.energy_pass)
-            );
-            println!("overall: {}", if rep.pass { "PASS" } else { "FAIL" });
-
-            // Also print full TOML report.
-            println!("\n--- full report (TOML) ---");
-            println!("{}", toml::to_string_pretty(&rep)?);
-
+            print_comparison_report(&rep, "Compare")?;
+            if !rep.pass {
+                std::process::exit(1);
+            }
+        }
+        Commands::CompareOr {
+            or_dump,
+            run_csv,
+            step,
+            map,
+            max_velocity_rms,
+            max_velocity_max,
+            max_position_rms,
+            max_position_max,
+            max_energy_rms,
+            max_energy_max,
+        } => {
+            let column_map = if let Some(path) = map {
+                let text = std::fs::read_to_string(&path)
+                    .with_context(|| format!("read OR column map {}", path.display()))?;
+                toml::from_str(&text)
+                    .with_context(|| format!("parse OR column map {}", path.display()))?
+            } else {
+                OrColumnMap::default()
+            };
+            let config = ValidationConfig {
+                max_velocity_rms,
+                max_velocity_max,
+                max_position_rms,
+                max_position_max,
+                max_energy_rms,
+                max_energy_max,
+            };
+            let rep = compare_or_dump_with_run(&or_dump, &run_csv, &column_map, &config, step)
+                .map_err(|e| anyhow::anyhow!("compare-or: {e}"))?;
+            print_comparison_report(&rep, "Compare OR")?;
             if !rep.pass {
                 std::process::exit(1);
             }
@@ -748,6 +774,42 @@ fn main() -> anyhow::Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+fn print_comparison_report(rep: &ComparisonReport, title: &str) -> anyhow::Result<()> {
+    let status = |p: bool| if p { "PASS ✓" } else { "FAIL ✗" };
+    println!(
+        "=== {title}: {} vs {} ({}) ===",
+        rep.file_a, rep.file_b, rep.time_alignment
+    );
+    println!(
+        "  velocity  rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+        rep.velocity.rms_diff,
+        rep.velocity.max_abs_diff,
+        rep.velocity.mean_abs_diff,
+        rep.velocity.samples,
+        status(rep.velocity_pass)
+    );
+    println!(
+        "  position  rms={:.3}  max={:.3}  mean={:.3}  n={}  {}",
+        rep.position.rms_diff,
+        rep.position.max_abs_diff,
+        rep.position.mean_abs_diff,
+        rep.position.samples,
+        status(rep.position_pass)
+    );
+    println!(
+        "  energy    rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+        rep.energy.rms_diff,
+        rep.energy.max_abs_diff,
+        rep.energy.mean_abs_diff,
+        rep.energy.samples,
+        status(rep.energy_pass)
+    );
+    println!("overall: {}", if rep.pass { "PASS" } else { "FAIL" });
+    println!("\n--- full report (TOML) ---");
+    println!("{}", toml::to_string_pretty(rep)?);
     Ok(())
 }
 

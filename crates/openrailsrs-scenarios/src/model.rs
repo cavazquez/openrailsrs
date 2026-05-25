@@ -18,6 +18,19 @@ pub struct ScenarioFile {
     /// MSTS importer when the source `.tdb` declares `SoundSourceItem`s.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sound_regions: Vec<SoundRegionDef>,
+    /// Optional Open Rails baseline path and comparison tolerances (metadata).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validate: Option<ValidateSection>,
+}
+
+/// Optional validation thresholds and Open Rails baseline reference.
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct ValidateSection {
+    #[serde(flatten)]
+    pub thresholds: openrailsrs_validate::ValidationConfig,
+    /// Path to an Open Rails `dump.csv` baseline (relative to scenario directory).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline_or: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

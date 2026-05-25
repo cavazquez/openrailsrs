@@ -96,6 +96,7 @@ pub fn import_activity_with_summary(
         },
         extra_trains,
         sound_regions,
+        validate: None,
     };
 
     let toml = toml::to_string_pretty(&scenario)?;

@@ -127,7 +127,12 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - CLI `compare` con flags `--max-velocity-rms`, `--max-position-max`, etc.; sale con exit code 1 si falla.
 - 8 tests: idéntico/perturbado/strict config/smoke self-compare.
 
-**Pendiente:** Comparación sistemática con trazas de Open Rails.
+**Comparación Open Rails (Fase 7 ext.):**
+- Parser `dump.csv` OR → traza normalizada; remuestreo lineal; CLI `compare-or`.
+- Fixtures sintéticos en `openrailsrs-validate/tests/fixtures/`; docs en `docs/OR_TRACE_COMPARISON.md`.
+- Sección opcional `[validate]` en `scenario.toml` (umbrales + `baseline_or` metadata).
+
+**Pendiente:** Baseline OR real versionado; comparación topológica; energía vs OR.
 
 ---
 

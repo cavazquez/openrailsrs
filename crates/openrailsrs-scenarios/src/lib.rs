@@ -8,7 +8,7 @@ pub use error::ScenarioError;
 pub use model::{
     DavisSection, Difficulty, GameplaySection, ObjectiveKind, OutputSection, RouteSection,
     ScenarioFile, ScenarioMeta, SimulationSection, SoundRegionDef, StopDef, SwitchDef,
-    SwitchPositionDef, TrainEntryDef, TrainSection,
+    SwitchPositionDef, TrainEntryDef, TrainSection, ValidateSection,
 };
 pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 
