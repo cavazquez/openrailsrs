@@ -262,6 +262,7 @@ Muestra el **grafo lógico** de la ruta en 3D:
 - **HUD** — franja inferior (~60 px): título, estado replay (tiempo, km/h, barra de progreso, leyenda de trenes), modo cámara/follow y atajos.
 - **Objetos `.w`** — si la ruta tiene carpeta `WORLD/` con tiles MSTS, cubos coloreados por tipo (`Static`, `Forest`, …) en posición global (tile × 2048 m + local); `Static` con `.s` en `SHAPES/` usa mesh MSTS real y textura `.ace` de `TEXTURES/` cuando existe.
 - **Terreno** — carpeta `TERRAIN/` con tile `.y` + `_Y.RAW`: heightfield verde (colina demo en smoke junto al origen); sustituye el plano gris cuando hay tiles.
+- **Vía dinámica** — objetos `Dyntrack` en tiles `.w`: durmientes repetidos (madera oscura) y dos rieles acero (gris azulado) orientados sobre el grafo; demo smoke cerca de `yard_a`.
 - **Plano + grilla** — centrados y escalados al bounding box de la ruta.
 - **Cámara orbit** — encuadra la ruta al abrir; zoom máximo adaptado a rutas grandes (p. ej. Mitre OSM).
 
@@ -272,7 +273,8 @@ Controles:
 - Fly: botón derecho mantenido para mirar (cursor oculto y confinado a la ventana); `Shift` acelera ×4, `Ctrl` ralentiza ×0.25.
 - Replay: `Space` pausar/reanudar · `R` reiniciar · `+`/`-` velocidad.
 - **`T`** (con replay activo): ciclo **follow** off → orbit follow (foco en el tren) → chase cam (detrás del tren); pan con botón medio desactiva follow.
-- `Esc`: salir.
+- **`G`**: abrir diálogo **Ir a coordenadas** (escribí `x,y,z`, Enter para teletransporte; Esc cierra).
+- `Esc`: salir (cierra el diálogo de coordenadas si está abierto).
 
 Rutas grandes:
 
@@ -280,7 +282,7 @@ Rutas grandes:
 cargo run -p openrailsrs-viewer3d -- examples/routes/mitre   # modo compact (~5k aristas)
 ```
 
-Siguiente hito del plan: **vía dinámica** (orden 9 en `docs/OPEN_RAILS_VIEWER_3D.md`).
+Siguiente hito del plan: **rolling stock PR2** u **orden 11** (bosque/agua/cielo) en `docs/OPEN_RAILS_VIEWER_3D.md`.
 
 ## Benchmarks (Fase 9)
 

@@ -10,7 +10,8 @@ use crate::train::{ReplayState, pose_at_time};
 #[derive(Resource, Clone, Default)]
 pub struct HudTitle(pub String);
 
-pub const HUD_HEIGHT_PX: f32 = 60.0;
+/// Minimum HUD strip height; panel grows with visible rows (coords, replay, etc.).
+pub const HUD_HEIGHT_PX: f32 = 72.0;
 const FONT_SIZE: f32 = 13.0;
 const FONT_SIZE_HINT: f32 = 11.0;
 
@@ -32,6 +33,23 @@ pub struct HudContent {
     pub trains: String,
     pub controls: String,
     pub status_is_paused: bool,
+    /// Show row2 even without an active replay (camera coordinates).
+    pub show_row2: bool,
+}
+
+pub fn format_world_pos(pos: Vec3) -> String {
+    format!("pos {:.0},{:.0},{:.0}", pos.x, pos.y, pos.z)
+}
+
+pub fn format_coords_line(camera_pos: Vec3, orbit_focus: Option<Vec3>) -> String {
+    let mut line = format_world_pos(camera_pos);
+    if let Some(focus) = orbit_focus {
+        line.push_str(&format!(
+            "    focus {:.0},{:.0},{:.0}",
+            focus.x, focus.y, focus.z
+        ));
+    }
+    line
 }
 
 pub fn camera_mode_label(mode: CameraMode) -> &'static str {
@@ -47,22 +65,26 @@ pub fn build_hud_content(
     scene: &TrackScene,
     camera_mode: CameraMode,
     follow: CameraFollowMode,
+    camera_pos: Vec3,
+    orbit_focus: Option<Vec3>,
 ) -> HudContent {
+    let coords = format_coords_line(camera_pos, orbit_focus);
     let controls = if replay.is_active() {
-        "Space:pause  R:reset  +/-:spd  T:follow  Orbit: drag/WASD pan  F2:fly  Esc:quit"
+        "Space:pause  R:reset  +/-:spd  T:follow  G:goto  Orbit: drag/WASD pan  F2:fly  Esc:quit"
     } else {
-        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  F2:fly  Esc:quit"
+        "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  F2:fly  Esc:quit"
     }
     .to_string();
 
     if !replay.is_active() {
         return HudContent {
             row1: format!("{title}    cam:{}", camera_mode_label(camera_mode)),
-            row2: String::new(),
+            row2: coords,
             progress: 0.0,
             trains: String::new(),
             controls,
             status_is_paused: false,
+            show_row2: true,
         };
     }
 
@@ -87,7 +109,7 @@ pub fn build_hud_content(
 
     let row1 = format!("{title}    {status}    cam:{cam}  follow:{follow_label}");
     let row2 = format!(
-        "t={:.1}s  {:.0} km/h  spd={:.0}x  {progress_pct}%",
+        "{coords}    t={:.1}s  {:.0} km/h  spd={:.0}x  {progress_pct}%",
         replay.t_sim, vel_kmh, replay.speed
     );
 
@@ -106,6 +128,7 @@ pub fn build_hud_content(
         trains,
         controls,
         status_is_paused: replay.paused,
+        show_row2: true,
     }
 }
 
@@ -139,10 +162,11 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 left: Val::Px(0.0),
                 bottom: Val::Px(0.0),
                 width: Val::Percent(100.0),
-                height: Val::Px(HUD_HEIGHT_PX),
+                height: Val::Auto,
+                min_height: Val::Px(HUD_HEIGHT_PX),
                 flex_direction: FlexDirection::Column,
-                padding: UiRect::new(Val::Px(6.0), Val::Px(8.0), Val::Px(4.0), Val::Px(4.0)),
-                row_gap: Val::Px(2.0),
+                padding: UiRect::new(Val::Px(6.0), Val::Px(8.0), Val::Px(5.0), Val::Px(6.0)),
+                row_gap: Val::Px(3.0),
                 border: UiRect::top(Val::Px(2.0)),
                 ..default()
             },
@@ -222,6 +246,7 @@ pub(crate) fn update_hud(
     scene: Res<TrackScene>,
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
+    camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
     mut hud: Query<
         (
             &mut Visibility,
@@ -244,7 +269,29 @@ pub(crate) fn update_hud(
         )>,
     >,
 ) {
-    let content = build_hud_content(&title.0, &replay, &scene, *camera_mode, *follow);
+    let (camera_pos, orbit_focus) = camera
+        .iter()
+        .next()
+        .map(|(transform, orbit)| {
+            let focus = orbit.map(|o| o.focus);
+            (transform.translation, focus)
+        })
+        .unwrap_or((Vec3::ZERO, None));
+    let orbit_focus = if *camera_mode == CameraMode::Orbit {
+        orbit_focus
+    } else {
+        None
+    };
+
+    let content = build_hud_content(
+        &title.0,
+        &replay,
+        &scene,
+        *camera_mode,
+        *follow,
+        camera_pos,
+        orbit_focus,
+    );
     let active = replay.is_active();
 
     for (mut vis, mut text, mut node, row1, row2, bar, trains, controls, fill) in &mut hud {
@@ -256,7 +303,7 @@ pub(crate) fn update_hud(
             if let Some(text) = text.as_mut() {
                 **text = Text::new(content.row2.clone());
             }
-            *vis = if active {
+            *vis = if active || content.show_row2 {
                 Visibility::Inherited
             } else {
                 Visibility::Hidden
@@ -357,11 +404,21 @@ mod tests {
             &scene,
             CameraMode::Orbit,
             CameraFollowMode::Off,
+            Vec3::new(120.0, 35.0, 8.0),
+            Some(Vec3::new(5000.0, 0.0, 25.0)),
         );
         assert!(content.row1.contains("test/route"));
         assert!(content.row1.contains("cam:orbit"));
-        assert!(content.row2.is_empty());
+        assert!(content.row2.contains("pos 120,35,8"));
+        assert!(content.row2.contains("focus 5000,0,25"));
+        assert!(content.show_row2);
         assert!(content.controls.contains("Esc:quit"));
+    }
+
+    #[test]
+    fn format_coords_omits_focus_in_fly_mode() {
+        let line = format_coords_line(Vec3::new(1.0, 2.0, 3.0), None);
+        assert_eq!(line, "pos 1,2,3");
     }
 
     #[test]
@@ -376,9 +433,12 @@ mod tests {
             &scene,
             CameraMode::Orbit,
             CameraFollowMode::OrbitFollow,
+            Vec3::ZERO,
+            None,
         );
         assert!(content.row1.contains("PLAY"));
         assert!(content.row1.contains("follow:orbit"));
+        assert!(content.row2.contains("pos 0,0,0"));
         assert!(content.row2.contains("t=5.0s"));
         assert!(content.row2.contains("spd=2x"));
         assert!(content.trains.contains("primary"));
@@ -396,6 +456,8 @@ mod tests {
             &scene,
             CameraMode::Fly,
             CameraFollowMode::Off,
+            Vec3::ZERO,
+            None,
         );
         assert!(content.row1.contains("PAUSED"));
         assert!(content.row1.contains("cam:fly"));
