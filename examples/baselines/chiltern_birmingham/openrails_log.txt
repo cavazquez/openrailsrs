@@ -1,0 +1,918 @@
+﻿This is a log file for Open Rails. Please include this file in bug reports.
+--------------------------------------------------------------------------------
+Warning: System.Management.ManagementException: Error code: 0x80041002
+   at System.Management.ManagementException.ThrowWithExtendedInfo(ManagementStatus errorCode)
+   at System.Management.PropertyDataCollection.get_Item(String propertyName)
+   at System.Management.ManagementBaseObject.GetPropertyValue(String propertyName)
+   at ORTS.Common.SystemInfo..cctor() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\Orts.Common\SystemInfo.cs:line 59
+   at ORTS.Common.SystemInfo.WriteSystemDetails(TextWriter output)
+   at Orts.Viewer3D.Processes.GameStateRunActivity.InitLogging(UserSettings settings, String[] args, Boolean appendLog) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 836
+   at Orts.Viewer3D.Processes.GameStateRunActivity.<>c__DisplayClass41_0.<Load>b__3() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 207
+   at Orts.Viewer3D.Processes.GameStateRunActivity.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 249
+   at Orts.Viewer3D.Processes.LoaderProcess.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 160
+   at Orts.Viewer3D.Processes.LoaderProcess.DoLoad() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 140
+   at Orts.Viewer3D.Processes.LoaderProcess.LoaderThread() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 111
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.ThreadHelper.ThreadStart()
+
+
+Warning: System.Management.ManagementException: Error code: 0x80041002
+   at System.Management.ManagementException.ThrowWithExtendedInfo(ManagementStatus errorCode)
+   at System.Management.PropertyDataCollection.get_Item(String propertyName)
+   at System.Management.ManagementBaseObject.GetPropertyValue(String propertyName)
+   at ORTS.Common.SystemInfo.<>c.<.cctor>b__2_0(ManagementObject processor) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\Orts.Common\SystemInfo.cs:line 80
+   at System.Linq.Enumerable.WhereSelectEnumerableIterator`2.MoveNext()
+   at System.Collections.Generic.List`1..ctor(IEnumerable`1 collection)
+   at System.Linq.Enumerable.ToList[TSource](IEnumerable`1 source)
+   at ORTS.Common.SystemInfo..cctor() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\Orts.Common\SystemInfo.cs:line 80
+   at ORTS.Common.SystemInfo.WriteSystemDetails(TextWriter output)
+   at Orts.Viewer3D.Processes.GameStateRunActivity.InitLogging(UserSettings settings, String[] args, Boolean appendLog) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 836
+   at Orts.Viewer3D.Processes.GameStateRunActivity.<>c__DisplayClass41_0.<Load>b__3() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 207
+   at Orts.Viewer3D.Processes.GameStateRunActivity.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 249
+   at Orts.Viewer3D.Processes.LoaderProcess.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 160
+   at Orts.Viewer3D.Processes.LoaderProcess.DoLoad() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 140
+   at Orts.Viewer3D.Processes.LoaderProcess.LoaderThread() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 111
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.ThreadHelper.ThreadStart()
+
+
+Date/time   = 25/5/2026 22:50:36 (2026-05-26 01:50:36Z)
+Application = Open Rails 1.6.1 (X64)
+Runtime     = .NET Framework 4.7.3062.0
+System      =   (; ; )
+Memory      = 30.697 MB
+GPU         = NVIDIA GeForce GTX 1060 6GB ((Standard display types); 6.144 MB)
+Direct3D    = 12_1,12_0,11_1,11_0,10_1,10_0,9_3,9_2,9_1
+--------------------------------------------------------------------------------
+Version    = 1.6.1
+Build      = 0.0.9510.40463 (2026-01-14 22:28:46Z)
+Logfile    = C:\users\cristian\Desktop\OpenRailsLog.txt
+Executable = RunActivity.exe
+Argument   = -start
+Argument   = -activity
+Argument   = C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\ACTIVITIES\RS_Let's go to Birmingham.act
+Arguments  = -start -activity "C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\ACTIVITIES\RS_Let's go to Birmingham.act"
+--------------------------------------------------------------------------------
+ActRandomizationLevel          =                0
+ActWeatherRandomizationLevel   =                0
+AdhesionFactor                 =                100
+AdhesionFactorChange           =                10
+AdhesionProportionalToWeather  =                False
+Alerter                        =                False
+AlerterDisableExternal         =                True
+AntiAliasing                   = (user set)     2
+AutoSaveActive                 =                False
+AutoSaveInterval               = (user set)     60
+AuxActionEnabled               =                False
+AvatarURL                      =                http://openrails.org/images/support-logos.jpg
+BrakePipeChargingRate          =                21
+BreakCouplers                  =                False
+CarVibratingLevel              =                0
+ContentInstallPath             = (user set)     C:\users\cristian\Documents\Open Rails\Content
+CorrectQuestionableBrakingParams =                False
+CurveSpeedDependent            =                False
+DataLogger                     = (user set)     True
+DataLoggerSeparator            =                comma
+DataLogMisc                    = (user set)     True
+DataLogPerformance             =                True
+DataLogPhysics                 = (user set)     True
+DataLogSpeedUnits              =                route
+DataLogStart                   =                False
+DataLogStationStops            =                False
+DataLogSteamPerformance        = (user set)     True
+DataLogTrainSpeed              =                False
+DataLogTSContents              =                1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DataLogTSInterval              =                10
+DayAmbientLight                =                20
+DirectXFeatureLevel            =                10_0
+DisableTCSScripts              =                False
+DistantMountains               =                True
+DistantMountainsViewingDistance =                40000
+DoubleWire                     =                False
+DynamicShadows                 =                True
+ElectricHotStart               =                True
+EvaluationFilename             =                OpenRailsEvaluation.txt
+ExternalSoundPassThruPercent   =                50
+FullScreen                     =                True
+GraduatedRelease               =                False
+HotStart                       =                True
+IsModeActivity                 =                True
+Language                       =                
+LastViewNotificationDate       =                
+LegacySuperElevation           = (user set)     False
+Letterbox2DCab                 =                False
+LODBias                        =                0
+LODViewingExtension            =                True
+Logging                        =                True
+LoggingFilename                =                OpenRailsLog.txt
+LoggingPath                    =                C:\users\cristian\Desktop
+Map_allowChangingSignalsCheckbox =                True
+Map_allowJoiningCheckbox       =                True
+Map_allowThrowingSwitchesCheckbox =                True
+Map_drawPathCheckbox           =                True
+Map_mapResolutionUpDown        =                5000
+Map_MapViewer                  =                104, 104, 800, 600
+Map_penaltyCheckbox            =                True
+Map_preferGreenCheckbox        =                True
+Map_rotateThemesButton         =                light
+Map_showActiveTrainsRadio      =                True
+Map_showAllTrainsRadio         =                False
+Map_showPlatformLabelsCheckbox =                False
+Map_showPlatformsCheckbox      =                False
+Map_showSidingLabelsCheckbox   =                False
+Map_showSignalsCheckbox        =                False
+Map_showSignalStateCheckbox    =                False
+Map_showSwitchesCheckbox       =                False
+Map_showTimeCheckbox           =                True
+Map_showTrainLabelsCheckbox    =                False
+Map_showTrainStateCheckbox     =                False
+Map_useAntiAliasingCheckbox    =                False
+Menu_Selection                 = (user set)     C:\users\cristian\Documents\Open Rails\Content\Chiltern, C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern, C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\ACTIVITIES\RS_Let's go to Birmingham.act, , , , , , 
+ModelInstancing                =                True
+Multiplayer                    =                False
+Multiplayer_Host               =                127.0.0.1
+Multiplayer_Port               =                30000
+Multiplayer_UpdateInterval     =                10
+Multiplayer_User               =                cristian
+MultiplayerClient              =                False
+MultiplayerServer              =                False
+NoDieselEngineStart            =                False
+NoForcedRedAtStationStops      =                False
+OpenDoorsInAITrains            =                False
+OSDCarsState                   =                1
+OSDLocationsState              =                7
+PerformanceTuner               =                False
+PerformanceTunerTarget         =                60
+PressureUnit                   =                Automatic
+Profiling                      =                False
+ProfilingFrameCount            =                0
+ProfilingTime                  =                0
+ReplayPauseBeforeEnd           =                True
+ReplayPauseBeforeEndS          =                0
+RetainersOnAllCars             =                False
+ScreenshotPath                 =                C:\users\cristian\Pictures\Open Rails
+ShadowAllShapes                =                False
+ShadowMapBlur                  =                True
+ShadowMapCount                 =                4
+ShadowMapDistance              =                1000
+ShadowMapResolution            =                1024
+ShowAvatar                     =                False
+ShowErrorDialogs               =                True
+SignalLightGlow                =                False
+SimpleControlPhysics           =                False
+SoundDetailLevel               =                5
+SoundVolumePercent             =                100
+SpeedControl                   =                True
+SuperElevationGauge            =                1435
+SuppressConfirmations          =                0
+SuppressShapeWarnings          =                True
+TrackMonitorDisplayMode        =                0
+TTCreateTrainOnPoolUnderflow   =                True
+TTOutputTimetableFullEvaluation =                False
+TTOutputTimetableTrainInfo     =                False
+TTUseRestartDelays             =                True
+TunnelResistanceDependent      =                False
+Units                          =                Automatic
+Use3DCab                       =                True
+UseAdvancedAdhesion            =                True
+UseLargeAddressAware           =                True
+UseLocationPassingPaths        =                False
+UseMSTSEnv                     =                False
+VerboseConfigurationMessages   =                False
+VerticalSync                   =                True
+ViewingDistance                =                2000
+ViewingFOV                     =                45
+WebServerPort                  =                2150
+WindowGlass                    =                False
+WindowPosition_Activity        =                50, 50
+WindowPosition_CarOperations   =                50, 50
+WindowPosition_Compass         =                50, 0
+WindowPosition_ComposeMessage  =                50, 50
+WindowPosition_DriverAid       =                100, 100
+WindowPosition_Help            =                50, 50
+WindowPosition_MultiPlayer     =                50, 50
+WindowPosition_NextStation     =                0, 100
+WindowPosition_Quit            =                50, 50
+WindowPosition_Switch          =                0, 50
+WindowPosition_TrackMonitor    =                100, 0
+WindowPosition_TrainCarOperations =                50, 50
+WindowPosition_TrainCarOperationsViewer =                50, 50
+WindowPosition_TrainDpu        =                50, 50
+WindowPosition_TrainDriving    =                50, 50
+WindowPosition_TrainForces     =                50, 50
+WindowPosition_TrainList       =                100, 0
+WindowPosition_TrainOperations =                50, 50
+WindowSize                     =                1024x768
+WindResistanceDependent        =                False
+Wire                           =                True
+WorldObjectDensity             =                49
+YoungestVersionFailedToRestore =                0.0
+--------------------------------------------------------------------------------
+Mode       = activity
+Route      = Chiltern
+Activity   = RS_Let's go to Birmingham (C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\ACTIVITIES\RS_Let's go to Birmingham.act)
+--------------------------------------------------------------------------------
+Warning: PlatformStartID 11358 is not present in TDB file
+
+Warning: File Default.cs missing from C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\Script
+
+Warning: C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PCFD.wag references non-existent shape C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_BP_PCFC.s
+
+Warning: C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PCFE.wag references non-existent shape C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_BP_PCFD.s
+
+Warning: C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PSG.wag references non-existent shape C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PFC.s
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 159,5 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 159,5 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - $BR_57XX_4683
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed saturated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,31 ft, NumWheels 6, DriveWheelWeight 49,2 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 165,0 cu ft, Evap Area 1.854,1 sq ft, Superheat Area 0,0 sq ft, Max Superheat Temp 0,0 F, Max Boiler Pressure 200,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 27810,81 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 24,0 in, Diameter 17,5 in, Efficiency 1,0, MaxIHP 1.023,5
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 37,1 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 6459,343 lbs/h Max Coal Load 7391,991 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR_57XX_9774
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed saturated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,31 ft, NumWheels 6, DriveWheelWeight 49,2 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 165,0 cu ft, Evap Area 1.854,1 sq ft, Superheat Area 0,0 sq ft, Max Superheat Temp 0,0 F, Max Boiler Pressure 200,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 27810,81 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 24,0 in, Diameter 17,5 in, Efficiency 1,0, MaxIHP 1.023,5
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 37,1 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 6459,343 lbs/h Max Coal Load 7391,991 lbs
+
+Information: ========================================================================================================================================================
+
+Warning: Assumed unknown gear box engine braking type direct_drive in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\RF_Class121_DTS.eng:line 275
+
+Information: Some NumPositions entries refer to non-exisiting frames, trying to renumber in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\CABVIEW\DMUGen1.cvf:line 84
+
+Information: Some NumPositions entries refer to non-exisiting frames, trying to renumber in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\CABVIEW\DMUGen1_rv.cvf:line 84
+
+Warning: Assumed unknown gear box engine braking type direct_drive in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\RF_Class121_DMBS.eng:line 405
+
+Information: Some NumPositions entries refer to non-exisiting frames, trying to renumber in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\CABVIEW\DMUGen1.cvf:line 84
+
+Information: Some NumPositions entries refer to non-exisiting frames, trying to renumber in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\RF_Class121\CABVIEW\DMUGen1_rv.cvf:line 84
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR_57XX_3646
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed saturated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,31 ft, NumWheels 6, DriveWheelWeight 49,2 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 165,0 cu ft, Evap Area 1.854,1 sq ft, Superheat Area 0,0 sq ft, Max Superheat Temp 0,0 F, Max Boiler Pressure 200,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 27810,81 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 24,0 in, Diameter 17,5 in, Efficiency 1,0, MaxIHP 1.023,5
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 37,1 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 6459,343 lbs/h Max Coal Load 7391,991 lbs
+
+Information: ========================================================================================================================================================
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Warning: Ignored missing wagon C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\\.wag in activity definition Loose consist.
+
+Warning: Steam boiler type parameter not formally defined. Superheated locomotive has been assumed.
+
+Warning: Superheat Area not found in ENG file, and has been set to 562,831 Ft^2
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR Class 6100 No 6111
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed superheated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,83 ft, NumWheels 3, DriveWheelWeight 76,8 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 191,0 cu ft, Evap Area 2.251,3 sq ft, Superheat Area 562,8 sq ft, Max Superheat Temp 250,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 33769,86 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,0 in, Efficiency 1,0, MaxIHP 1.943,7
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 45,0 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 7843,392 lbs/h Max Coal Load 7999,99 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR_57XX_3646
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed saturated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,31 ft, NumWheels 6, DriveWheelWeight 49,2 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 165,0 cu ft, Evap Area 1.854,1 sq ft, Superheat Area 0,0 sq ft, Max Superheat Temp 0,0 F, Max Boiler Pressure 200,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 27810,81 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 24,0 in, Diameter 17,5 in, Efficiency 1,0, MaxIHP 1.023,5
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 37,1 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 6459,343 lbs/h Max Coal Load 7391,991 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR Castle 5082 Swordfish
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,35 ft, NumWheels 3, DriveWheelWeight 58,9 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 381,0 cu ft, Evap Area 1.963,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 175,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 14,52 , Max Boiler Output 28502,77 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 4, Stroke 26,0 in, Diameter 16,0 in, Efficiency 1,0, MaxIHP 1.840,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 36,5
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 29,4 sq ft, Limit 178,0 lb/sq ft
+
+Information: Fuel - Calorific 14350 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 13440,02 lbs
+
+Information: ========================================================================================================================================================
+
+Warning: Steam boiler type parameter not formally defined. Superheated locomotive has been assumed.
+
+Warning: Superheat Area not found in ENG file, and has been set to 660,4839 Ft^2
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - FDB_L1_67708
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed superheated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,58 ft, NumWheels 6, DriveWheelWeight 87,6 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 318,3 cu ft, Evap Area 2.641,9 sq ft, Superheat Area 660,5 sq ft, Max Superheat Temp 250,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 39629,03 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 26,0 in, Diameter 20,0 in, Efficiency 1,0, MaxIHP 2.399,7
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 52,8 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 9204,244 lbs/h Max Coal Load 10079,99 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR Castle 5055 Earl of Eldon
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,35 ft, NumWheels 3, DriveWheelWeight 58,9 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 381,0 cu ft, Evap Area 1.963,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 175,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 14,52 , Max Boiler Output 28502,77 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 4, Stroke 26,0 in, Diameter 16,0 in, Efficiency 1,0, MaxIHP 1.840,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 36,5
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 29,4 sq ft, Limit 178,0 lb/sq ft
+
+Information: Fuel - Calorific 14350 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 13440,02 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - FDB_L1_67708
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,58 ft, NumWheels 6, DriveWheelWeight 87,6 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 318,3 cu ft, Evap Area 2.641,9 sq ft, Superheat Area 660,5 sq ft, Max Superheat Temp 250,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 39629,03 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 26,0 in, Diameter 20,0 in, Efficiency 1,0, MaxIHP 2.399,7
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 52,8 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 9204,244 lbs/h Max Coal Load 10079,99 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - FDB_L1_67708
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,58 ft, NumWheels 6, DriveWheelWeight 87,6 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 318,3 cu ft, Evap Area 2.641,9 sq ft, Superheat Area 660,5 sq ft, Max Superheat Temp 250,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 39629,03 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 26,0 in, Diameter 20,0 in, Efficiency 1,0, MaxIHP 2.399,7
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 52,8 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 9204,244 lbs/h Max Coal Load 10079,99 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - BR Castle 5082 Swordfish
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,35 ft, NumWheels 3, DriveWheelWeight 58,9 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 381,0 cu ft, Evap Area 1.963,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 175,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 14,52 , Max Boiler Output 28502,77 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 4, Stroke 26,0 in, Diameter 16,0 in, Efficiency 1,0, MaxIHP 1.840,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 36,5
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 29,4 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14350 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 13440,02 lbs
+
+Information: ========================================================================================================================================================
+
+Warning: Assumed unknown gear box engine braking type direct_drive in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\BRGreenClass117\GreenClass117dmbs.eng:line 170
+
+Warning: Assumed unknown gear box engine braking type direct_drive in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\BRGreenClass117\GreenClass117dms.eng:line 442
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Warning: Cannot find main track for node 6 in path C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\PATHS\RS_NewLineLE57xx.PAT
+
+Warning: Invalid path C:\users\cristian\Documents\Open Rails\Content\Chiltern\ROUTES\Chiltern\PATHS\RS_NewLineLE57xx.PAT for AI train : RS_NewLineLE57xx ; train not started
+
+
+Warning: Cannot parse the constant number 4.1.5 in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\DEE_ BR_9F_92141\DEE_BR_9F_92141.eng:line 156
+
+Information: Some NumPositions entries refer to non-exisiting frames, trying to renumber in C:\users\cristian\Documents\Open Rails\Content\Chiltern\trains\trainset\DEE_ BR_9F_92141\CABVIEW\BR_9f_92150.cvf:line 288
+
+Warning: Steam boiler type parameter not formally defined. Superheated locomotive has been assumed.
+
+Warning: Superheat Area not found in ENG file, and has been set to 816,6666 Ft^2
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - DEE BR 9F 92141
+
+Information: Steam Locomotive Type - Not formally defined (assumed simple) locomotive. + Not formally defined (assumed superheated)
+
+Information: **************** General ****************
+
+Information: WheelRadius 2,50 ft, NumWheels 5, DriveWheelWeight 86,7 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 458,3 cu ft, Evap Area 3.266,7 sq ft, Superheat Area 816,7 sq ft, Max Superheat Temp 250,0 F, Max Boiler Pressure 250,0 psi
+
+Information: Boiler Evap Rate 15 , Max Boiler Output 49000 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 28,0 in, Diameter 20,0 in, Efficiency 1,0, MaxIHP 2.666,3
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 40
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 65,3 sq ft, Limit 138,9 lb/sq ft
+
+Information: Fuel - Calorific 14359,42 btu/lb, Max Firing Rate 30000,27 lbs/h Max Coal Load 15679,98 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Information: ============================================= Steam Locomotive Performance - Locomotive Details =========================================================
+
+Information: Version - 1.6.1
+
+Information: Locomotive Name - Downton Hall
+
+Information: Steam Locomotive Type - Simple locomotive + Superheater
+
+Information: **************** General ****************
+
+Information: WheelRadius 3,00 ft, NumWheels 3, DriveWheelWeight 57,5 t-uk
+
+Information: **************** Boiler ****************
+
+Information: Boiler Volume 331,0 cu ft, Evap Area 1.737,0 sq ft, Superheat Area 295,0 sq ft, Max Superheat Temp 200,0 F, Max Boiler Pressure 225,0 psi
+
+Information: Boiler Evap Rate 13,3 , Max Boiler Output 23102,11 lbs/h
+
+Information: **************** Cylinder ****************
+
+Information: Num 2, Stroke 30,0 in, Diameter 18,5 in, Efficiency 1,0, MaxIHP 1.560,0
+
+Information: Port Opening 0,085, Exhaust Point 0, InitialSuperheatFactor 45
+
+Information: **************** Fire ****************
+
+Information: Grate - Area 27,1 sq ft, Limit 165,1 lb/sq ft
+
+Information: Fuel - Calorific 14330 btu/lb, Max Firing Rate 3000,027 lbs/h Max Coal Load 15680,03 lbs
+
+Information: ========================================================================================================================================================
+
+Information: Train 0 Service PLAYER : cannot find platform 11358
+
+Information: No track profiles found in TrackProfiles folder, using default track profile.
+
+Information: Allocation for 16.125 particles:
+
+      3.096.000 B RAM vertex data
+        387.000 B RAM index data (temporary)
+      3.096.000 B VRAM DynamicVertexBuffer
+        387.000 B VRAM IndexBuffer
+
+Warning: {TileX:-6080 TileZ:14925 X:891.831 Y:35.7818 Z:582.756} car spawner 9448 doesn't have connected road route between {TileX:-6080 TileZ:14925 X:891.7408 Y:35.59822 Z:585.1976} and {TileX:-6080 TileZ:14925 X:915.7682 Y:36.69678 Z:195.0167}
+
+Warning: System.IO.FileLoadException: {TileX:-6080 TileZ:14925 X:888.899 Y:35.9164 Z:580.856} scenery object 9449 failed to load ---> System.IO.InvalidDataException: {TileX:0 TileZ:0 X:0 Y:0 Z:0} could not be found in the track database.
+   at Orts.Simulation.Traveller..ctor(TrackSectionsFile tSectionDat, TrackNode[] trackNodes, Int32 tileX, Int32 tileZ, Single x, Single z) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\Orts.Simulation\Simulation\Traveller.cs:line 200
+   at Orts.Viewer3D.RoadCarSpawner..ctor(Viewer viewer, WorldPosition position, CarSpawnerObj carSpawnerObj) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\RoadCars.cs:line 71
+   at Orts.Viewer3D.WorldFile..ctor(Viewer viewer, Int32 tileX, Int32 tileZ, Boolean visible) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Scenery.cs:line 468
+   at Orts.Viewer3D.SceneryDrawer.LoadWorldFile(Int32 tileX, Int32 tileZ, Boolean visible) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Scenery.cs:line 215
+   at Orts.Viewer3D.SceneryDrawer.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Scenery.cs:line 99
+   at Orts.Viewer3D.World.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\World.cs:line 99
+   at Orts.Viewer3D.Viewer.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Viewer.cs:line 767
+   at Orts.Viewer3D.Viewer.Initialize() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Viewer.cs:line 576
+   at Orts.Viewer3D.Processes.GameStateRunActivity.Start(UserSettings settings, String acttype, String[] args) in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 366
+   at Orts.Viewer3D.Processes.GameStateRunActivity.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\GameStateRunActivity.cs:line 249
+   at Orts.Viewer3D.Processes.LoaderProcess.Load() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 160
+   at Orts.Viewer3D.Processes.LoaderProcess.DoLoad() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 140
+   at Orts.Viewer3D.Processes.LoaderProcess.LoaderThread() in P:\Jenkins\jobs\Open Rails Stable\workspace\Source\RunActivity\Viewer3D\Processes\LoaderProcess.cs:line 111
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.ThreadHelper.ThreadStart()
+
+
+Warning: {TileX:-6080 TileZ:14925 X:916.396 Y:36.6968 Z:195.022} car spawner 9582 doesn't have connected road route between {TileX:-6080 TileZ:14925 X:915.7682 Y:36.69678 Z:195.0167} and {TileX:0 TileZ:0 X:0 Y:0 Z:0}
+
+Information: Skipped unknown shader name Diffuse first seen in shape c:\users\cristian\documents\open rails\content\chiltern\routes\chiltern\shapes\potrolley.s
+
+Information: Skipped unknown lighting model index 0 first seen in shape c:\users\cristian\documents\open rails\content\chiltern\routes\chiltern\shapes\potrolley.s
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\hornlever.ace replaced with default texture
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\headlight.ace replaced with default texture
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\cab.ace replaced with default texture
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\throttle.ace replaced with default texture
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\reverser.ace replaced with default texture
+
+Warning: Missing texture c:\users\cristian\documents\open rails\content\chiltern\trains\trainset\rf_blue_pullman\cabview3d\brakehandle.ace replaced with default texture
+
+Information: Game.ReplaceState(GameStateViewer3D)  GameStateViewer3D
+
+Loader: Time       = 00:00:25.5375791 ms
+Loader: Expected   = 0 bytes
+Loader: Actual     = 0 bytes
+Loader: Difference = 0 bytes (NaN)
+
+
+Save after 144 secs at 10:02:24, EventCategoryLocation = Location ( -6079 14925 -959,82 173,40 10 )
+
+List of commands to replay saved
+
+Information: Game.PopState()  
+

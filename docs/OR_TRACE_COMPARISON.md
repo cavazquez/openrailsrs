@@ -60,6 +60,16 @@ openrailsrs compare-or dump.csv run.csv --map or_column_map.toml
 
 **Nota:** el layout exacto del data logger puede variar según versión de OR. Tras la primera captura real, revisa el header de `dump.csv` y ajusta el mapa.
 
+### Dump de rendimiento (OR 1.6.x, Wine)
+
+Si activas **Performance / Physics / Steam** en el Registrador de datos, OR escribe un CSV distinto (p. ej. `Speed (mph),Time (M),Throttle (%)…`) **sin** columnas `Time`, `Speed`, `Distance` que espera `compare-or` v1.
+
+Baseline real guardado en el repo:
+
+- `examples/baselines/chiltern_birmingham/` — ruta Chiltern, actividad *Let's go to Birmingham*, ~2.5 min sim (10:00–10:02:24).
+
+Para un CSV compatible con `compare-or`, usa la pestaña **Evaluación** y activa solo el registro de **velocidad del tren** (Time, Train Speed, Distance Travelled). En Wine, desactiva el registro de rendimiento: puede abortar con `pdh.dll.PdhFormatFromRawValue`.
+
 ## Escenario TOML — sección `[validate]`
 
 Metadata opcional en `scenario.toml` (no ejecuta la comparación automáticamente):
