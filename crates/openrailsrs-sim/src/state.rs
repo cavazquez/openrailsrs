@@ -35,9 +35,8 @@ pub struct TrainSimState {
     pub vehicle_masses: Vec<f64>,
     /// Steam boiler mutable state.  `None` for electric/diesel traction.
     pub boiler_state: Option<BoilerState>,
-    /// Current diesel engine RPM.  Starts at idle; advances toward throttle target each step.
-    /// Zero when no diesel engine model is active.
-    pub diesel_rpm: f64,
+    /// Current diesel engine RPM per powered locomotive (parallel to `TrainPhysics::diesel_engines`).
+    pub diesel_rpm: Vec<f64>,
 }
 
 impl TrainSimState {
@@ -61,7 +60,7 @@ impl TrainSimState {
             couplers: Vec::new(),
             vehicle_masses: Vec::new(),
             boiler_state: None,
-            diesel_rpm: 0.0,
+            diesel_rpm: Vec::new(),
         }
     }
 

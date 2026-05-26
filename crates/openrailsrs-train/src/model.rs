@@ -127,7 +127,7 @@ pub struct Locomotive {
     /// Optional explicit traction curve; if absent, P/v law is used.
     pub tractive_curve: Option<TractiveCurve>,
     /// ORTS per-notch diesel curves; when set, physics uses notch interpolation.
-    pub diesel_traction: Option<crate::diesel::DieselTractionModel>,
+    pub diesel_traction: Option<Box<crate::diesel::DieselTractionModel>>,
     /// Fraction of braking energy recovered (0.0 = none, 0.7 = modern EMU).
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
@@ -247,10 +247,22 @@ impl Consist {
 
     /// Lead locomotive notch curves (trail DMUs often idle in OR consists).
     pub fn aggregate_diesel_traction(&self) -> Option<crate::diesel::DieselTractionModel> {
-        self.vehicles.iter().find_map(|v| match v {
-            Vehicle::Loco(l) => l.diesel_traction.clone(),
-            _ => None,
-        })
+        self.diesel_traction_models().into_iter().next()
+    }
+
+    /// All diesel traction models in consist order (one per powered locomotive).
+    pub fn diesel_traction_models(&self) -> Vec<crate::diesel::DieselTractionModel> {
+        self.vehicles
+            .iter()
+            .filter_map(|v| match v {
+                Vehicle::Loco(l) => l
+                    .diesel_traction
+                    .as_ref()
+                    .filter(|m| !m.is_empty())
+                    .map(|m| (**m).clone()),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Build an aggregate tractive curve for the whole consist.

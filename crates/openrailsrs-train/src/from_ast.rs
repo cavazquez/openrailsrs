@@ -110,7 +110,14 @@ impl From<EngineFile> for Locomotive {
             })
         };
         let diesel_traction = if value.diesel_notch_curves.is_empty() {
-            None
+            if value.max_power_w > 0.0 && value.max_tractive_effort_n > 0.0 {
+                Some(Box::new(DieselTractionModel::from_power_and_effort(
+                    value.max_power_w,
+                    value.max_tractive_effort_n,
+                )))
+            } else {
+                None
+            }
         } else {
             let mut model = DieselTractionModel::from_notch_curves(value.diesel_notch_curves);
             model.calibrate_effort_scale(value.max_tractive_effort_n);
@@ -142,7 +149,7 @@ impl From<EngineFile> for Locomotive {
                     rpm_time_constant_s: 2.0,
                 }));
             }
-            Some(model)
+            Some(Box::new(model))
         };
         let steam = value.steam.map(msts_steam_to_params);
         Self {

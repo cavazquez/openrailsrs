@@ -45,3 +45,25 @@ fn load_chiltern_pullman_engine_if_present() {
     // been removed.
     assert!(f > 50_000.0, "80% notch stall force too low: {f}");
 }
+
+#[test]
+fn chiltern_pullman_two_engines_aggregate() {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    let con = base.join("consists/birmingham_pullman.con");
+    if !con.exists() {
+        return;
+    }
+    let consist = load_consist_with_asset_root(&con, &base).expect("pullman consist");
+    let models = consist.diesel_traction_models();
+    assert_eq!(
+        models.len(),
+        2,
+        "expected two diesel engines in Blue Pullman consist"
+    );
+    let f_dmbsa = models[0].force_at(0.0, 0.8);
+    let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();
+    assert!(
+        f_combined > f_dmbsa * 1.3,
+        "combined stall should exceed lead engine: {f_combined} vs {f_dmbsa}"
+    );
+}

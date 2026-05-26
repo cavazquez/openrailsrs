@@ -17,8 +17,8 @@ pub struct TrainPhysics {
     pub davis: DavisCoefficients,
     /// Aggregate traction curve. Empty curve → falls back to P/v law.
     pub tractive: TractiveCurve,
-    /// ORTS per-notch diesel model; when set, used instead of `tractive * throttle`.
-    pub diesel_traction: Option<DieselTractionModel>,
+    /// ORTS per-notch diesel models (one per powered locomotive in the consist).
+    pub diesel_engines: Vec<DieselTractionModel>,
     /// Fraction of braking energy recovered as electricity (0.0 = none, 0.7 = modern EMU).
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
@@ -67,16 +67,22 @@ pub fn step(
             } else {
                 1.0
             };
-            let raw = if let Some(diesel) = &train.diesel_traction {
-                // Advance engine RPM toward throttle target (first-order lag).
-                state.diesel_rpm = diesel.advance_rpm(state.diesel_rpm, state.throttle, dt);
-                let mut f = diesel.force_at(v, state.throttle);
-                // Cap by shaft power at current RPM (if engine model present).
-                let engine_pw = diesel.engine_power_w(state.diesel_rpm);
-                if v > 0.5 && engine_pw < f64::MAX {
-                    f = f.min(engine_pw / v);
-                } else if v > 0.5 {
-                    f = f.min(train.max_power_w / v);
+            let raw = if !train.diesel_engines.is_empty() {
+                if state.diesel_rpm.len() != train.diesel_engines.len() {
+                    state.diesel_rpm = train.diesel_engines.iter().map(|e| e.idle_rpm()).collect();
+                }
+                let mut f_total = 0.0;
+                let mut p_total = 0.0;
+                for (i, engine) in train.diesel_engines.iter().enumerate() {
+                    let rpm = state.diesel_rpm[i];
+                    let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
+                    state.diesel_rpm[i] = new_rpm;
+                    f_total += engine.force_at(v, state.throttle);
+                    p_total += engine.effective_power_w(new_rpm, state.throttle);
+                }
+                let mut f = f_total;
+                if v > 0.5 && p_total > 0.0 {
+                    f = f.min(p_total / v);
                 }
                 f
             } else if let Some(f_curve) = train.tractive.interpolate(v) {

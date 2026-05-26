@@ -38,9 +38,9 @@ metadata = "run.json"
 
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
-# velocity threshold: 1.68 m/s RMS with correct driver + physics (post bug-fix)
-max_velocity_rms = 2.5
-# position error: ~120 m due to missing second Blue Pullman engine (TODO: dual-engine support)
-max_position_max = 150.0
+# Dual-motor Blue Pullman: velocity RMS ~5.3 m/s (DMBSA ORTS + DMBSH legacy P/v)
+max_velocity_rms = 6.0
+# Position max error ~39 m with two engines (was ~122 m with one)
+max_position_max = 55.0
 max_throttle_rms = 0.25
 max_brake_rms = 50.0

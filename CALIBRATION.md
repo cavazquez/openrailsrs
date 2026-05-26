@@ -1,6 +1,6 @@
 # Calibración y estado del simulador
 
-Última actualización: 2026-05-26
+Última actualización: 2026-05-26 (multi-motor diesel)
 
 ---
 
@@ -11,11 +11,14 @@
 | Parseo básico `.eng`/`.wag`/`.con` | ✅ | Masa, fuerza, potencia, velocidad, freno |
 | Curvas de tracción `ORTSMaxTractiveForceCurves` | ✅ (bug corregido) | Ver bugs abajo |
 | Modelo diesel (DieselPowerTab + ThrottleRPMTab + RPM lag) | ✅ | `DieselEngineParams` con time constant 2 s |
+| Parseo `ORTSDieselEngines { Diesel { ... } }` | ✅ | Primer bloque Diesel; fallback a campos raíz |
+| Tracción multi-motor (`diesel_engines` + `diesel_rpm[]`) | ✅ | Suma F y P de todos los `Engine` del consist |
+| Modelo legacy P/v (sin ORTSMaxTractiveForceCurves) | ✅ | `DieselTractionModel::from_power_and_effort` |
 | Driver desde CSV de Open Rails (`or-eval-driver`) | ✅ | Activity mode y Explorer mode |
 | Comparación automática (`compare-or`) | ✅ | RMS y max para velocidad, posición, throttle, freno |
 | Ejemplo SCE (Class 47) — velocidad RMS | ✅ 0.35 m/s | Con baseline de 100 s |
-| Ejemplo Chiltern (Blue Pullman) — velocidad RMS | ✅ 1.68 m/s | Con `driver_or.csv` correcto |
-| Ejemplo Chiltern — posición | ⚠️ 122 m error | Falta segundo motor (ver issues) |
+| Ejemplo Chiltern (Blue Pullman) — posición max | ✅ ~39 m | Dual motor + `driver_or.csv` (era ~122 m) |
+| Ejemplo Chiltern — velocidad RMS | ⚠️ ~5.3 m/s | Mejor posición; calibrar Davis / perfiles motor |
 
 ---
 
@@ -56,13 +59,14 @@ Ejemplo concreto (Blue Pullman, notch 100%, stall):
 
 ## Issues conocidos (pendientes)
 
-### Issue 1: Blue Pullman tiene dos motores — solo se usa uno
+### Issue 1: ~~Blue Pullman tiene dos motores — solo se usa uno~~ (resuelto)
 
-El consist `birmingham_pullman.con` tiene **dos** `Engine` entries (DMBSA al frente, DMBSH atrás), cada uno con un motor NBL MAN L12V 18/21S de 1500 hp = 745 513 W. OR usa ambos y obtiene ~1491 kW de potencia total.
+**Fix aplicado:** `Consist::diesel_traction_models()` recolecta un `DieselTractionModel` por cada `Engine` del consist. La física suma fuerzas y potencias (`TrainPhysics::diesel_engines`, `TrainSimState::diesel_rpm: Vec<f64>`).
 
-Nuestro simulador actualmente carga solo el primer motor del consist (DMBSA), dando ~745 kW. Esto causa un error de **~120 m de posición** después de 65 segundos (el tren llega ~113 m cuando OR ya llegó ~230 m).
+- **DMBSA:** curvas ORTS completas (Darwin Smith) + `DieselEngineParams` si hay tablas.
+- **DMBSH:** stub legacy (`MaxPower 1000 kW`, `MaxForce 150.65 kN`) → modelo sintético P/v.
 
-**Fix necesario:** sumar la fuerza tractora de todos los vehículos `Engine` en el consist, o escalar la potencia del primer motor.
+Resultado Chiltern (65 s, `driver_or.csv`): posición max **~39 m** (antes ~122 m), odómetro **~300 m** (antes ~113 m).
 
 ---
 
@@ -74,13 +78,9 @@ Los parámetros Davis en `scenario.tmp.toml` (`a_n`, `b_n_per_mps`, `c_n_per_mps
 
 ---
 
-### Issue 3: `ThrottleRPMTab` en el Blue Pullman aún no se propaga al `DieselEngineParams`
+### Issue 3: ~~`ThrottleRPMTab` en bloque `ORTSDieselEngines`~~ (resuelto)
 
-El `.eng` del Blue Pullman tiene la tabla dentro de un bloque `ORTSDieselEngines { Diesel { ... } }`, que es un formato distinto al `ThrottleRPMTab` a nivel raíz que sí parsea `parse_throttle_rpm_tab`. El SCE Class 47 usa el formato raíz (que sí funciona); el Blue Pullman usa el formato `ORTSDieselEngines`.
-
-**Consecuencia:** el DieselEngineParams del Blue Pullman cae back a `None` → la fuerza no queda limitada por potencia de motor. Aún así la sim resulta razonablemente bien porque las curvas `ORTSMaxTractiveForceCurves` ya capturan el comportamiento correcto (incluyen el derating por potencia implícitamente).
-
-**Fix necesario:** parsear `ORTSDieselEngines { Diesel { DieselPowerTab, ThrottleRPMTab, IdleRPM, MaxRPM } }` y alimentar `DieselEngineParams`.
+Se parsea el primer bloque `Diesel(` dentro de `ORTSDieselEngines` y se usa como fallback cuando los campos raíz están vacíos. El stub DMBSA con tablas a nivel raíz sigue funcionando (SCE, Chiltern).
 
 ---
 

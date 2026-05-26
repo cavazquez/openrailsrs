@@ -47,7 +47,7 @@ fn default_train() -> TrainPhysics {
         max_brake_n: 300_000.0,
         davis: DavisCoefficients::default(),
         tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
-        diesel_traction: None,
+        diesel_engines: Vec::new(),
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,

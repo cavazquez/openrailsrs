@@ -87,6 +87,8 @@ pub struct DieselTractionModel {
     pub effort_scale: f64,
     /// Optional diesel engine thermodynamic model (DieselPowerTab / ThrottleRPMTab).
     pub engine: Option<Box<DieselEngineParams>>,
+    /// Rated max power (W) for legacy P/v models without `DieselEngineParams`.
+    pub max_power_w: Option<f64>,
 }
 
 impl Default for DieselTractionModel {
@@ -95,6 +97,7 @@ impl Default for DieselTractionModel {
             notch_curves: Vec::new(),
             effort_scale: 1.0,
             engine: None,
+            max_power_w: None,
         }
     }
 }
@@ -111,6 +114,18 @@ impl DieselTractionModel {
             notch_curves,
             effort_scale: 1.0,
             engine: None,
+            max_power_w: None,
+        }
+    }
+
+    /// Legacy MSTS diesel: single full-notch curve from max power and tractive effort.
+    pub fn from_power_and_effort(max_power_w: f64, max_tractive_effort_n: f64) -> Self {
+        let curve = TractiveCurve::from_power_and_effort(max_power_w, max_tractive_effort_n);
+        Self {
+            notch_curves: vec![(0.0, TractiveCurve::default()), (1.0, curve)],
+            effort_scale: 1.0,
+            engine: None,
+            max_power_w: Some(max_power_w),
         }
     }
 
@@ -121,12 +136,22 @@ impl DieselTractionModel {
 
     /// Power (W) available from the diesel engine at `current_rpm`.
     ///
-    /// Returns `f64::MAX` when no engine model is configured (uncapped).
+    /// Returns `f64::MAX` when no engine model is configured (uncapped here; use
+    /// [`Self::effective_power_w`] for legacy P/v models).
     pub fn engine_power_w(&self, current_rpm: f64) -> f64 {
         match &self.engine {
             Some(e) => e.power_at_rpm(current_rpm),
             None => f64::MAX,
         }
+    }
+
+    /// Shaft power at `current_rpm` and `throttle`, including legacy P/v fallback.
+    pub fn effective_power_w(&self, current_rpm: f64, throttle: f64) -> f64 {
+        let from_engine = self.engine_power_w(current_rpm);
+        if from_engine < f64::MAX {
+            return from_engine;
+        }
+        self.max_power_w.unwrap_or(0.0) * throttle.clamp(0.0, 1.0)
     }
 
     /// Advance the engine RPM one step; no-op when no engine params.
@@ -210,5 +235,13 @@ mod tests {
         m.calibrate_effort_scale(20_000.0);
         assert!(m.effort_scale < 1.0);
         assert!((m.force_at(0.0, 1.0) - 80_000.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn from_power_and_effort_stall_force() {
+        let m = DieselTractionModel::from_power_and_effort(1_000_000.0, 150_650.0);
+        let stall = m.force_at(0.0, 1.0);
+        assert!((stall - 150_650.0).abs() < 1.0, "stall {stall}");
+        assert_eq!(m.max_power_w, Some(1_000_000.0));
     }
 }

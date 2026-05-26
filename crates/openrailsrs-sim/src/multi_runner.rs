@@ -145,9 +145,9 @@ fn build_physics(
             c_n_per_mps2: d.c_n_per_mps2,
         })
         .unwrap_or_else(|| consist.davis.clone());
-    let diesel_traction = consist.aggregate_diesel_traction();
+    let diesel_engines = consist.diesel_traction_models();
     let raw_curve = consist.aggregate_tractive_curve();
-    let tractive = if diesel_traction.is_some() {
+    let tractive = if !diesel_engines.is_empty() {
         TractiveCurve::default()
     } else if raw_curve.points.is_empty() {
         TractiveCurve::from_power_and_effort(
@@ -164,7 +164,7 @@ fn build_physics(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
-        diesel_traction,
+        diesel_engines,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params: consist.aggregate_steam_params(),
@@ -213,12 +213,11 @@ pub fn run_scenario_multi_train(
             .as_ref()
             .and_then(|c| c.aggregate_steam_params())
             .map(|p| crate::steam::BoilerState::from_params(&p));
-        if let Some(diesel) = loaded_consist
-            .as_ref()
-            .and_then(|c| c.aggregate_diesel_traction())
-            .as_ref()
-        {
-            state.diesel_rpm = diesel.idle_rpm();
+        if let Some(consist) = loaded_consist.as_ref() {
+            let engines = consist.diesel_traction_models();
+            if !engines.is_empty() {
+                state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
+            }
         }
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
@@ -280,12 +279,11 @@ pub fn run_scenario_multi_train(
             .as_ref()
             .and_then(|c| c.aggregate_steam_params())
             .map(|p| crate::steam::BoilerState::from_params(&p));
-        if let Some(diesel) = loaded_consist2
-            .as_ref()
-            .and_then(|c| c.aggregate_diesel_traction())
-            .as_ref()
-        {
-            state.diesel_rpm = diesel.idle_rpm();
+        if let Some(consist) = loaded_consist2.as_ref() {
+            let engines = consist.diesel_traction_models();
+            if !engines.is_empty() {
+                state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
+            }
         }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);

@@ -209,9 +209,9 @@ pub fn run_scenario_headless_with_driver(
         .unwrap_or_else(|| consist.davis.clone());
     // Build the aggregate traction curve; if the consist has no explicit curves, build a
     // synthetic one from P and F_te so that `step` always has a non-empty curve.
-    let diesel_traction = consist.aggregate_diesel_traction();
+    let diesel_engines = consist.diesel_traction_models();
     let raw_curve = consist.aggregate_tractive_curve();
-    let tractive = if diesel_traction.is_some() {
+    let tractive = if !diesel_engines.is_empty() {
         TractiveCurve::default()
     } else if raw_curve.points.is_empty() {
         TractiveCurve::from_power_and_effort(
@@ -229,7 +229,7 @@ pub fn run_scenario_headless_with_driver(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
-        diesel_traction,
+        diesel_engines,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params,
@@ -270,9 +270,13 @@ pub fn run_scenario_headless_with_driver(
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| crate::steam::BoilerState::from_params(&p));
-    // Initialise diesel RPM at engine idle (so spin-up starts from realistic RPM).
-    if let Some(diesel) = consist.aggregate_diesel_traction().as_ref() {
-        state.diesel_rpm = diesel.idle_rpm();
+    // Initialise diesel RPM at each engine's idle speed.
+    if !train_physics.diesel_engines.is_empty() {
+        state.diesel_rpm = train_physics
+            .diesel_engines
+            .iter()
+            .map(|e| e.idle_rpm())
+            .collect();
     }
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
