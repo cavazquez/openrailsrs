@@ -1,0 +1,8 @@
+(Engine
+  (WagonShape "test.s")
+  (Mass 100000)
+  (MaxPower 18000)
+  (MaxTractiveEffort 60000)
+  (MaxBrakeForce 450000)
+  (MaxVelocity 120 )
+)

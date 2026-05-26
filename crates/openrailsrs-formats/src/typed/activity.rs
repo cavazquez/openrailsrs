@@ -191,15 +191,34 @@ impl ActivityFile {
     }
 
     /// Read `Train_Config` from `SERVICES/<service_id>.srv` under `route_dir`.
+    ///
+    /// `PathID` values often carry a `(player)` suffix that is absent from the
+    /// actual `.srv` filename.  Both the full id and the base name (without the
+    /// trailing parenthetical, e.g. `"Foo(player)"` → `"Foo"`) are tried.
     pub fn train_config_from_service(route_dir: &Path, service_id: &str) -> Option<String> {
-        let srv_path = route_dir.join("SERVICES").join(format!("{service_id}.srv"));
-        let text = crate::encoding::read_msts_file_to_string(&srv_path).ok()?;
-        if let Ok(ast) = parse_from_first_paren(&text) {
-            if let Some(name) = find_string_field(&ast, &["Train_Config"]) {
-                return Some(name);
+        let trimmed = service_id
+            .rfind('(')
+            .map(|i| service_id[..i].trim())
+            .unwrap_or(service_id);
+        let candidates: &[&str] = if trimmed != service_id {
+            &[service_id, trimmed]
+        } else {
+            &[service_id]
+        };
+        for &id in candidates {
+            let srv_path = route_dir.join("SERVICES").join(format!("{id}.srv"));
+            if let Ok(text) = crate::encoding::read_msts_file_case_insensitive(&srv_path) {
+                if let Ok(ast) = parse_from_first_paren(&text) {
+                    if let Some(name) = find_string_field(&ast, &["Train_Config"]) {
+                        return Some(name);
+                    }
+                }
+                if let Some(name) = extract_train_config_from_text(&text) {
+                    return Some(name);
+                }
             }
         }
-        extract_train_config_from_text(&text)
+        None
     }
 }
 

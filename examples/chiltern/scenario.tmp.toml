@@ -1,0 +1,48 @@
+extra_trains = []
+
+[scenario]
+name = "RS_Let's go to Birmingham"
+description = "Imported from MSTS activity: Chiltern Paddington → Birmingham (OR eval 61 s)"
+
+[route]
+path = "."
+start = "n3"
+destination = "n10776"
+start_offset_m = 306.0
+stops = []
+
+
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[train.davis]
+a_n = 1200.0
+b_n_per_mps = 18.0
+c_n_per_mps2 = 0.5
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 65.0
+time_step = 1.0
+seed = 42
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
+max_velocity_rms = 0.35
+max_velocity_max = 0.6
+max_position_max = 25.0
+max_throttle_rms = 0.05
+max_throttle_max = 0.10
+
+[[route.switches]]
+node = "n3"
+position = "diverging"

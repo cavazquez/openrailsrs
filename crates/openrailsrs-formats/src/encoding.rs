@@ -42,6 +42,68 @@ pub fn read_msts_file_to_string(path: &Path) -> Result<String, FormatError> {
     Ok(decode_msts_bytes(&bytes))
 }
 
+/// Resolve `path` using a case-insensitive directory scan for each component.
+///
+/// MSTS content was authored on Windows (case-insensitive).  On Linux, file
+/// extensions and folder names often differ in case from the paths stored
+/// inside activity / service files (e.g. `.SRV` vs `.srv`, `.PAT` vs `.pat`).
+/// This function walks every path component and does a case-insensitive
+/// directory listing when the exact name is not found on disk.
+///
+/// Returns the resolved path if every component could be matched, or `None`
+/// if any component does not exist even after the case-insensitive scan.
+pub fn resolve_path_case_insensitive(path: &Path) -> Option<std::path::PathBuf> {
+    use std::path::Component;
+    let mut resolved = std::path::PathBuf::new();
+    for comp in path.components() {
+        match comp {
+            Component::RootDir | Component::Prefix(_) | Component::CurDir => {
+                resolved.push(comp);
+            }
+            Component::ParentDir => {
+                resolved.push("..");
+            }
+            Component::Normal(name) => {
+                let name_str = name.to_string_lossy();
+                let exact = resolved.join(&*name_str);
+                if exact.exists() {
+                    resolved = exact;
+                    continue;
+                }
+                let lower = name_str.to_ascii_lowercase();
+                let found = std::fs::read_dir(&resolved).ok()?.find_map(|e| {
+                    let e = e.ok()?;
+                    if e.file_name().to_string_lossy().to_ascii_lowercase() == lower {
+                        Some(e.path())
+                    } else {
+                        None
+                    }
+                });
+                resolved = found?;
+            }
+        }
+    }
+    Some(resolved)
+}
+
+/// Like [`read_msts_file_to_string`] but retries with a case-insensitive path
+/// scan when the initial read fails.  This is useful for MSTS content where
+/// file extensions or folder names may differ in case from the stored paths.
+pub fn read_msts_file_case_insensitive(path: &Path) -> Result<String, FormatError> {
+    if let Ok(text) = read_msts_file_to_string(path) {
+        return Ok(text);
+    }
+    let resolved =
+        resolve_path_case_insensitive(path).ok_or_else(|| FormatError::UnexpectedToken {
+            offset: 0,
+            message: format!(
+                "failed to read {}: No such file or directory",
+                path.display()
+            ),
+        })?;
+    read_msts_file_to_string(&resolved)
+}
+
 /// Decode a byte slice using MSTS encoding heuristics.
 ///
 /// This function is exposed for testing and for callers that already have the

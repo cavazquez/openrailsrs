@@ -12,7 +12,10 @@ pub mod units;
 
 pub use ast::{Ast, Atom};
 pub use dispatch::{MstsFile, parse_msts_file};
-pub use encoding::{decode_msts_bytes, read_msts_file_to_string};
+pub use encoding::{
+    decode_msts_bytes, read_msts_file_case_insensitive, read_msts_file_to_string,
+    resolve_path_case_insensitive,
+};
 pub use error::FormatError;
 pub use msts_units::{
     parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_pressure_bar,

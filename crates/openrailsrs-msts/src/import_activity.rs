@@ -306,53 +306,7 @@ fn resolve_asset_path(base: &Path, asset: &str) -> std::path::PathBuf {
     if candidate.exists() {
         return candidate;
     }
-    resolve_case_insensitive(&candidate).unwrap_or(candidate)
-}
-
-/// Walk each component of `path` in a case-insensitive manner and return the
-/// first on-disk match, or `None` when no match exists at all.
-fn resolve_case_insensitive(path: &Path) -> Option<std::path::PathBuf> {
-    let mut current = path.ancestors().collect::<Vec<_>>();
-    current.reverse();
-
-    let mut resolved = std::path::PathBuf::new();
-    let components: Vec<_> = path.components().collect();
-
-    for comp in &components {
-        use std::path::Component;
-        match comp {
-            Component::RootDir | Component::Prefix(_) | Component::CurDir => {
-                resolved.push(comp);
-            }
-            Component::ParentDir => {
-                resolved.push("..");
-            }
-            Component::Normal(name) => {
-                let name_str = name.to_string_lossy();
-                // Try exact first (fast path).
-                let exact = resolved.join(&*name_str);
-                if exact.exists() {
-                    resolved = exact;
-                    continue;
-                }
-                // Case-insensitive scan of the parent directory.
-                let lower = name_str.to_ascii_lowercase();
-                let found = std::fs::read_dir(&resolved).ok()?.find_map(|e| {
-                    let e = e.ok()?;
-                    if e.file_name().to_string_lossy().to_ascii_lowercase() == lower {
-                        Some(e.path())
-                    } else {
-                        None
-                    }
-                });
-                match found {
-                    Some(p) => resolved = p,
-                    None => return None,
-                }
-            }
-        }
-    }
-    Some(resolved)
+    openrailsrs_formats::encoding::resolve_path_case_insensitive(&candidate).unwrap_or(candidate)
 }
 
 /// Strip leading path separators and replace backslashes to make the consist

@@ -1,0 +1,7 @@
+(Wagon
+  (Type "Passenger")
+  (WagonShape "test.s")
+  (Length 20.0)
+  (Mass 400000)
+  (MaxBrakeForce 200000)
+)

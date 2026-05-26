@@ -20,10 +20,29 @@ pub struct RouteHints {
 }
 
 /// Read the first `DistanceDownPath` from `SERVICES/<id>.srv`.
+///
+/// `PathID` values often carry a `(player)` suffix absent from the actual
+/// `.srv` filename.  Both the full id and the base name are tried.
 pub fn read_distance_down_path(route_dir: &Path, service_id: &str) -> Option<f64> {
-    let srv_path = route_dir.join("SERVICES").join(format!("{service_id}.srv"));
-    let text = openrailsrs_formats::encoding::read_msts_file_to_string(&srv_path).ok()?;
-    parse_first_distance_down_path(&text)
+    let trimmed = service_id
+        .rfind('(')
+        .map(|i| service_id[..i].trim())
+        .unwrap_or(service_id);
+    let candidates: &[&str] = if trimmed != service_id {
+        &[service_id, trimmed]
+    } else {
+        &[service_id]
+    };
+    for &id in candidates {
+        let srv_path = route_dir.join("SERVICES").join(format!("{id}.srv"));
+        if let Ok(text) = openrailsrs_formats::encoding::read_msts_file_case_insensitive(&srv_path)
+        {
+            if let Some(dist) = parse_first_distance_down_path(&text) {
+                return Some(dist);
+            }
+        }
+    }
+    None
 }
 
 fn parse_first_distance_down_path(text: &str) -> Option<f64> {
