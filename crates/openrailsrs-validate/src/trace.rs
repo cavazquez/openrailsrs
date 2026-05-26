@@ -155,7 +155,7 @@ pub fn parse_openrailsrs_run_csv(path: &Path) -> Result<RunTrace, ValidateError>
     })
 }
 
-/// Parse an Open Rails data-logger `dump.csv`.
+/// Parse an Open Rails data-logger `dump.csv` or evaluation `*Speed.csv`.
 pub fn parse_or_dump_csv(path: &Path, map: &OrColumnMap) -> Result<RunTrace, ValidateError> {
     let text = std::fs::read_to_string(path)?;
     let delimiter = detect_delimiter(&text)?;
@@ -166,6 +166,17 @@ pub fn parse_or_dump_csv(path: &Path, map: &OrColumnMap) -> Result<RunTrace, Val
         .from_reader(body.as_bytes());
 
     let headers = rdr.headers()?.clone();
+    if is_or_evaluation_header(&headers) {
+        let fields = or_eval_fields_from_header(&headers);
+        if fields.is_empty() {
+            return Err(ValidateError::Msg(format!(
+                "unrecognized OR evaluation header in {}",
+                path.display()
+            )));
+        }
+        return parse_or_evaluation_speed_csv(path, map, &fields, &body);
+    }
+
     let col = |name: &str| -> Result<usize, ValidateError> {
         headers
             .iter()
@@ -212,6 +223,281 @@ pub fn parse_or_dump_csv(path: &Path, map: &OrColumnMap) -> Result<RunTrace, Val
         source: path.display().to_string(),
         samples,
     })
+}
+
+/// Column order for OR evaluation `*Speed.csv` (Options → Evaluation → train speed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OrEvalField {
+    Time,
+    TrainSpeed,
+    MaxSpeed,
+    SignalAspect,
+    Elevation,
+    Direction,
+    ControlMode,
+    DistanceTravelled,
+    ThrottlePerc,
+    BrakePressure,
+    DynBrakePerc,
+    GearIndex,
+}
+
+fn is_or_evaluation_header(headers: &csv::StringRecord) -> bool {
+    let mut has_time = false;
+    let mut has_speed = false;
+    for h in headers.iter() {
+        let h = h.trim();
+        if h.eq_ignore_ascii_case("TIME") {
+            has_time = true;
+        }
+        if h.eq_ignore_ascii_case("TRAINSPEED") {
+            has_speed = true;
+        }
+    }
+    has_time && has_speed
+}
+
+fn or_eval_fields_from_header(headers: &csv::StringRecord) -> Vec<OrEvalField> {
+    headers
+        .iter()
+        .filter_map(|h| {
+            let h = h.trim();
+            if h.is_empty() {
+                return None;
+            }
+            Some(match h.to_ascii_uppercase().as_str() {
+                "TIME" => OrEvalField::Time,
+                "TRAINSPEED" => OrEvalField::TrainSpeed,
+                "MAXSPEED" => OrEvalField::MaxSpeed,
+                "SIGNALASPECT" => OrEvalField::SignalAspect,
+                "ELEVATION" => OrEvalField::Elevation,
+                "DIRECTION" => OrEvalField::Direction,
+                "CONTROLMODE" => OrEvalField::ControlMode,
+                "DISTANCETRAVELLED" => OrEvalField::DistanceTravelled,
+                "THROTTLEPERC" => OrEvalField::ThrottlePerc,
+                "BRAKEPRESSURE" => OrEvalField::BrakePressure,
+                "DYNBRAKEPERC" => OrEvalField::DynBrakePerc,
+                "GEARINDEX" => OrEvalField::GearIndex,
+                _ => return None,
+            })
+        })
+        .collect()
+}
+
+fn parse_or_evaluation_speed_csv(
+    path: &Path,
+    map: &OrColumnMap,
+    fields: &[OrEvalField],
+    body: &str,
+) -> Result<RunTrace, ValidateError> {
+    let mut samples = Vec::new();
+    let mut t0: Option<f64> = None;
+    let mut header_seen = false;
+    for line in body.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if !header_seen {
+            header_seen = true;
+            continue;
+        }
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.is_empty() || parts[0].trim().is_empty() {
+            continue;
+        }
+        let row = parse_or_eval_row(fields, &parts, map)?;
+        let Some(abs_t) = row.time_abs_s else {
+            continue;
+        };
+        let base = *t0.get_or_insert(abs_t);
+        samples.push(TraceSample {
+            time_s: abs_t - base,
+            velocity_mps: row.velocity_mps,
+            distance_m: row.distance_m,
+            energy_kwh: None,
+            throttle: row.throttle,
+            brake: row.brake,
+        });
+    }
+    if samples.is_empty() {
+        return Err(ValidateError::Msg(format!(
+            "no numeric rows in OR evaluation speed log {}",
+            path.display()
+        )));
+    }
+    Ok(RunTrace {
+        source: path.display().to_string(),
+        samples,
+    })
+}
+
+struct OrEvalRow {
+    time_abs_s: Option<f64>,
+    velocity_mps: f64,
+    distance_m: f64,
+    throttle: Option<f64>,
+    brake: Option<f64>,
+}
+
+fn parse_or_eval_row(
+    fields: &[OrEvalField],
+    parts: &[&str],
+    map: &OrColumnMap,
+) -> Result<OrEvalRow, ValidateError> {
+    let mut idx = 0;
+    let mut row = OrEvalRow {
+        time_abs_s: None,
+        velocity_mps: 0.0,
+        distance_m: 0.0,
+        throttle: None,
+        brake: None,
+    };
+    for field in fields {
+        if idx >= parts.len() {
+            break;
+        }
+        match field {
+            OrEvalField::Time => {
+                row.time_abs_s = parse_hms_to_seconds(parts[idx]);
+                idx += 1;
+            }
+            OrEvalField::TrainSpeed => {
+                let (raw, consumed) = consume_or_train_speed(parts, idx);
+                row.velocity_mps = map.speed_to_mps(raw);
+                idx += consumed;
+            }
+            OrEvalField::MaxSpeed | OrEvalField::Elevation => {
+                let (_, consumed) = consume_or_formatted_decimal(parts, idx);
+                idx += consumed;
+            }
+            OrEvalField::SignalAspect | OrEvalField::ControlMode | OrEvalField::Direction => {
+                idx += 1;
+            }
+            OrEvalField::DistanceTravelled => {
+                let (raw, consumed) = consume_or_distance(parts, idx);
+                row.distance_m = map.distance_to_m(raw);
+                idx += consumed;
+            }
+            OrEvalField::ThrottlePerc => {
+                row.throttle = Some(parse_or_int_field(parts[idx]) as f64);
+                idx += 1;
+            }
+            OrEvalField::BrakePressure => {
+                row.brake = Some(parse_or_int_field(parts[idx]) as f64);
+                idx += 1;
+            }
+            OrEvalField::DynBrakePerc | OrEvalField::GearIndex => {
+                idx += 1;
+            }
+        }
+    }
+    Ok(row)
+}
+
+/// OR evaluation train speed uses `ToString("0000.0")`; under Wine/comma CSV the field often
+/// appears as two integer tokens (e.g. `0016,4` → 1.64 mph).
+fn consume_or_train_speed(parts: &[&str], idx: usize) -> (f64, usize) {
+    let t1 = parts.get(idx).copied().unwrap_or("").trim();
+    if t1.is_empty() {
+        return (0.0, 1);
+    }
+    if let Some(t2) = parts.get(idx + 1) {
+        let t2 = t2.trim();
+        if is_or_decimal_fragment(t2) {
+            let v = parse_or_int_field(t1) as f64 / 10.0 + parse_or_int_field(t2) as f64 / 100.0;
+            return (v, 2);
+        }
+    }
+    consume_or_formatted_decimal(parts, idx)
+}
+
+/// OR writes `ToString("0000.0")` / `ToString("00.0")`; with comma CSV separator the decimal
+/// comma splits one logical field into two tokens (see `Train.LogTrainSpeed` in Open Rails).
+fn consume_or_formatted_decimal(parts: &[&str], idx: usize) -> (f64, usize) {
+    let t1 = parts.get(idx).copied().unwrap_or("").trim();
+    if t1.is_empty() {
+        return (0.0, 1);
+    }
+    if let Some(v) = parse_f64(Some(t1)) {
+        if t1.contains('.') || t1.contains('e') || t1.contains('E') {
+            return (v, 1);
+        }
+    }
+    if let Some(t2) = parts.get(idx + 1) {
+        let t2 = t2.trim();
+        if is_or_decimal_fragment(t2) {
+            if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
+                if v <= 9999.9 {
+                    return (v, 2);
+                }
+            }
+            let v = parse_or_int_field(t1) as f64 / 10.0 + parse_or_int_field(t2) as f64 / 100.0;
+            return (v, 2);
+        }
+    }
+    (parse_f64(Some(t1)).unwrap_or(0.0), 1)
+}
+
+fn consume_or_distance(parts: &[&str], idx: usize) -> (f64, usize) {
+    let t1 = parts.get(idx).copied().unwrap_or("").trim();
+    if t1.is_empty() {
+        return (0.0, 1);
+    }
+    if let Some(v) = parse_f64(Some(t1)) {
+        if t1.contains('.') || t1.contains('e') || t1.contains('E') {
+            return (v, 1);
+        }
+    }
+    if let Some(t2) = parts.get(idx + 1) {
+        let t2 = t2.trim();
+        if is_or_distance_continuation(t2) {
+            if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
+                return (v, 2);
+            }
+            if t2.contains('E') || t2.contains('e') {
+                if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
+                    return (v, 2);
+                }
+            }
+        }
+    }
+    (parse_f64(Some(t1)).unwrap_or(0.0), 1)
+}
+
+fn is_or_decimal_fragment(s: &str) -> bool {
+    let s = s.trim();
+    !s.is_empty() && s.len() <= 4 && s.chars().all(|c| c.is_ascii_digit())
+}
+
+fn is_or_distance_continuation(s: &str) -> bool {
+    let s = s.trim();
+    if s.is_empty() {
+        return false;
+    }
+    if s.contains('E') || s.contains('e') {
+        return s.chars().all(|c| c.is_ascii_digit() || ".Ee+-".contains(c));
+    }
+    s.chars().all(|c| c.is_ascii_digit())
+}
+
+fn parse_or_int_field(s: &str) -> i64 {
+    let s = s.trim();
+    if s.is_empty() {
+        return 0;
+    }
+    s.parse().unwrap_or(0)
+}
+
+fn parse_hms_to_seconds(hms: &str) -> Option<f64> {
+    let mut it = hms.split(':');
+    let h: f64 = it.next()?.parse().ok()?;
+    let m: f64 = it.next()?.parse().ok()?;
+    let s: f64 = it.next()?.parse().ok()?;
+    if it.next().is_some() {
+        return None;
+    }
+    Some(h * 3600.0 + m * 60.0 + s)
 }
 
 /// Resample two traces onto a common time grid with linear interpolation.
@@ -375,6 +661,50 @@ mod tests {
         assert!((trace.samples[0].velocity_mps - 4.4704).abs() < 0.01);
         assert!((trace.samples[0].distance_m - 0.0).abs() < 0.01);
         assert!((trace.samples[19].distance_m - 8.49376).abs() < 0.01);
+    }
+
+    #[test]
+    fn parse_or_eval_speed_minimal_fixture() {
+        let path = fixtures_dir().join("or_eval_speed_minimal.csv");
+        let trace = parse_or_dump_csv(&path, &OrColumnMap::default()).expect("parse eval speed");
+        assert!(trace.samples.len() >= 10);
+        assert!((trace.samples[0].velocity_mps).abs() < 0.01);
+        assert!((trace.samples[0].distance_m).abs() < 0.01);
+        // 10:00:47 → ~1.64 mph
+        let late = trace
+            .samples
+            .iter()
+            .find(|s| (s.time_s - 47.0).abs() < 0.5)
+            .expect("sample near t=47s");
+        let mph = late.velocity_mps / 0.447_04;
+        assert!((mph - 1.64).abs() < 0.15, "expected ~1.64 mph, got {mph}");
+        assert!(late.distance_m > 50.0);
+        assert!(late.throttle.unwrap_or(0.0) > 50.0);
+        // monotonic distance after movement starts
+        let mut prev = 0.0;
+        for s in &trace.samples {
+            if s.distance_m > 1.0 {
+                assert!(
+                    s.distance_m + 0.01 >= prev,
+                    "distance should be non-decreasing: {} then {}",
+                    prev,
+                    s.distance_m
+                );
+            }
+            prev = s.distance_m;
+        }
+    }
+
+    #[test]
+    fn parse_or_evaluation_header_detection() {
+        let path = fixtures_dir().join("or_eval_speed_minimal.csv");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let body = skip_or_comment_preamble(&text);
+        let mut rdr = ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(body.as_bytes());
+        let headers = rdr.headers().unwrap().clone();
+        assert!(is_or_evaluation_header(&headers));
     }
 
     #[test]

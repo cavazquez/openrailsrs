@@ -70,6 +70,42 @@ Baseline real guardado en el repo:
 
 Para un CSV compatible con `compare-or`, usa la pestaña **Evaluación** y activa solo el registro de **velocidad del tren** (Time, Train Speed, Distance Travelled). En Wine, desactiva el registro de rendimiento: puede abortar con `pdh.dll.PdhFormatFromRawValue`.
 
+### Registro de evaluación `*Speed.csv` (OR 1.6.x)
+
+Con **Evaluación → Train speed logging** activo, OR escribe en `%APPDATA%`:
+
+```text
+Open Rails_<NombreActividad>Speed.csv
+```
+
+Ejemplo (Wine/Linux):
+
+```text
+/home/cristian/wine64-OpenRails/drive_c/users/cristian/AppData/Roaming/Open Rails_RS_Let's go to BirminghamSpeed.csv
+```
+
+Header típico:
+
+```text
+TIME,TRAINSPEED,MAXSPEED,SIGNALASPECT,ELEVATION,DIRECTION,CONTROLMODE,DISTANCETRAVELLED,THROTTLEPERC,...
+```
+
+`compare-or` **detecta automáticamente** este formato (no hace falta `--map`):
+
+- `TIME` en `HH:MM:SS` → segundos relativos al primer sample
+- `TRAINSPEED` en mph (puede partirse en dos columnas si el CSV usa coma como separador decimal)
+- `DISTANCETRAVELLED` en metros (`DistanceTravelledM` en OR)
+- `THROTTLEPERC` / `BRAKEPRESSURE` opcionales
+
+Baseline en el repo: `examples/baselines/chiltern_birmingham/or_evaluation_speed.csv` (~61 s sim, throttle ~80 %).
+
+Config recomendada en OR (Opciones → Registrador de datos / Evaluación):
+
+- `DataLogTrainSpeed = True`
+- `DataLogTSInterval = 1` (1 s)
+- Performance / Physics / Steam = **False**
+- `DataLogStart = True` o pulsar **F12** al iniciar la simulación
+
 ## Escenario TOML — sección `[validate]`
 
 Metadata opcional en `scenario.toml` (no ejecuta la comparación automáticamente):
@@ -101,10 +137,16 @@ Los umbrales siguen el mismo esquema que `openrailsrs compare`. `baseline_or` es
 ## Fixtures de prueba
 
 ```bash
+# Dump estándar sintético (Time/Speed/Distance)
 openrailsrs compare-or \
   crates/openrailsrs-validate/tests/fixtures/or_dump_minimal.csv \
   crates/openrailsrs-validate/tests/fixtures/ors_run_aligned.csv \
   --max-velocity-rms 1e-6 --max-position-max 1e-6
+
+# OR 1.6 evaluación (parseo automático TIME/TRAINSPEED)
+openrailsrs compare-or \
+  crates/openrailsrs-validate/tests/fixtures/or_eval_speed_minimal.csv \
+  examples/smoke/run.csv
 ```
 
 Debe imprimir `overall: PASS`.
