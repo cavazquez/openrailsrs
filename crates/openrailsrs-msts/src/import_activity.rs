@@ -42,7 +42,9 @@ pub fn import_activity_with_summary(
 ) -> Result<(String, String, bool), MstsError> {
     let activity = ActivityFile::from_path(act_path)?;
     let pat_path = resolve_player_pat(route_dir, &activity);
-    let path_file = PathFile::from_path(&pat_path)?;
+    // A missing or unreadable player .pat is non-fatal: we proceed without
+    // PAT-derived placement hints and rely on fallback node names.
+    let path_file_opt = PathFile::from_path(&pat_path).ok();
 
     let service_id = service_id_for_player(&activity);
     let start_offset_m = service_id
@@ -60,12 +62,12 @@ pub fn import_activity_with_summary(
                     hints.start_offset_m,
                 ),
                 Err(_) => {
-                    let (s, d, sw) = fallback_route_nodes(&path_file);
+                    let (s, d, sw) = fallback_route_nodes(path_file_opt.as_ref());
                     (s, d, sw, start_offset_m)
                 }
             }
         } else {
-            let (s, d, sw) = fallback_route_nodes(&path_file);
+            let (s, d, sw) = fallback_route_nodes(path_file_opt.as_ref());
             (s, d, sw, 0.0)
         };
 
@@ -148,13 +150,13 @@ pub fn import_activity_with_summary(
     Ok((toml, activity.name, overlay_applied))
 }
 
-fn fallback_route_nodes(path_file: &PathFile) -> (String, String, Vec<SwitchDef>) {
+fn fallback_route_nodes(path_file: Option<&PathFile>) -> (String, String, Vec<SwitchDef>) {
     let start = path_file
-        .start_node()
+        .and_then(|p| p.start_node())
         .map(|n| format!("n{n}"))
         .unwrap_or_else(|| "start".to_string());
     let destination = path_file
-        .end_node()
+        .and_then(|p| p.end_node())
         .map(|n| format!("n{n}"))
         .unwrap_or_else(|| "end".to_string());
     (start, destination, Vec::new())
@@ -293,9 +295,64 @@ fn train_config_from_service(route_dir: &Path, activity: &ActivityFile) -> Optio
 
 /// Resolve an asset path that may use Windows backslashes and may be relative
 /// to `route_dir`.
+///
+/// On case-sensitive file systems (Linux), MSTS content often uses Windows
+/// casing that does not match the on-disk names (e.g. `.pat` vs `.PAT`).
+/// After building the canonical path, this function falls back to a
+/// case-insensitive directory scan when the exact path does not exist.
 fn resolve_asset_path(base: &Path, asset: &str) -> std::path::PathBuf {
     let normalized = asset.trim().replace('\\', "/");
-    base.join(&normalized)
+    let candidate = base.join(&normalized);
+    if candidate.exists() {
+        return candidate;
+    }
+    resolve_case_insensitive(&candidate).unwrap_or(candidate)
+}
+
+/// Walk each component of `path` in a case-insensitive manner and return the
+/// first on-disk match, or `None` when no match exists at all.
+fn resolve_case_insensitive(path: &Path) -> Option<std::path::PathBuf> {
+    let mut current = path.ancestors().collect::<Vec<_>>();
+    current.reverse();
+
+    let mut resolved = std::path::PathBuf::new();
+    let components: Vec<_> = path.components().collect();
+
+    for comp in &components {
+        use std::path::Component;
+        match comp {
+            Component::RootDir | Component::Prefix(_) | Component::CurDir => {
+                resolved.push(comp);
+            }
+            Component::ParentDir => {
+                resolved.push("..");
+            }
+            Component::Normal(name) => {
+                let name_str = name.to_string_lossy();
+                // Try exact first (fast path).
+                let exact = resolved.join(&*name_str);
+                if exact.exists() {
+                    resolved = exact;
+                    continue;
+                }
+                // Case-insensitive scan of the parent directory.
+                let lower = name_str.to_ascii_lowercase();
+                let found = std::fs::read_dir(&resolved).ok()?.find_map(|e| {
+                    let e = e.ok()?;
+                    if e.file_name().to_string_lossy().to_ascii_lowercase() == lower {
+                        Some(e.path())
+                    } else {
+                        None
+                    }
+                });
+                match found {
+                    Some(p) => resolved = p,
+                    None => return None,
+                }
+            }
+        }
+    }
+    Some(resolved)
 }
 
 /// Strip leading path separators and replace backslashes to make the consist

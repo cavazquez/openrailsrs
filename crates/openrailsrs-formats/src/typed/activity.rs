@@ -272,14 +272,36 @@ fn extract_activity_name_from_text(text: &str) -> Option<String> {
 }
 
 /// Recursively find the first string value of a field with any of the given names.
+///
+/// Handles two MSTS layout conventions:
+///
+/// - **Nested** (standard S-expression): `(Name "value")` — a list whose first element is the key.
+/// - **Flat** (common in MSTS headers): `Name ( "value" )` — the keyword symbol and its value
+///   list appear as *adjacent siblings* inside a parent list, not as a nested `(key value)` pair.
 pub(crate) fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     let Ast::List(items) = ast else { return None };
 
+    // Pattern 1: list starts with the key symbol — nested format `(Name "value")`.
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
         for n in names {
             if head.eq_ignore_ascii_case(n) {
-                if let Some(s) = first_string_in_ast_list(items) {
+                if let Some(s) = string_after_first(items) {
                     return Some(s);
+                }
+            }
+        }
+    }
+
+    // Pattern 2: adjacent flat format — `Symbol(key)` followed by its value sibling.
+    // This covers the common MSTS layout where a keyword is NOT the first element of the
+    // enclosing list (e.g. `RouteID ( SCE ) Name ( "value" )` inside a header list).
+    for i in 0..items.len().saturating_sub(1) {
+        if let Ast::Atom(Atom::Symbol(sym)) = &items[i] {
+            for n in names {
+                if sym.eq_ignore_ascii_case(n) {
+                    if let Some(s) = extract_any_string(&items[i + 1]) {
+                        return Some(s);
+                    }
                 }
             }
         }
@@ -293,22 +315,23 @@ pub(crate) fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     None
 }
 
-fn first_string_in_ast_list(items: &[Ast]) -> Option<String> {
+/// Extract the first string/symbol value after the keyword (items[0]) in a key-value list.
+/// When the value is wrapped in a single-element list `( "string" )`, dig into it.
+fn string_after_first(items: &[Ast]) -> Option<String> {
     for item in items.iter().skip(1) {
-        match item {
-            Ast::Atom(a) => {
-                if let Some(s) = atom_to_string(a) {
-                    return Some(s);
-                }
-            }
-            Ast::List(sub) => {
-                if let Some(s) = first_string_in_ast_list(sub) {
-                    return Some(s);
-                }
-            }
+        if let Some(s) = extract_any_string(item) {
+            return Some(s);
         }
     }
     None
+}
+
+/// Find the first string or symbol atom in any AST node (no skipping).
+fn extract_any_string(ast: &Ast) -> Option<String> {
+    match ast {
+        Ast::Atom(a) => atom_to_string(a),
+        Ast::List(sub) => sub.iter().find_map(extract_any_string),
+    }
 }
 
 /// Parse `(StartTime <h> <m> <s>)` → seconds from midnight.
