@@ -30,7 +30,7 @@ const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
 fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
     const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
     let mut pos = 0.0_f64;
-    let pairs: Vec<(f64, f64)> = consist
+    let pairs: Vec<(f64, f64, bool)> = consist
         .vehicles
         .iter()
         .map(|v| {
@@ -52,11 +52,11 @@ fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
                 }
             };
             pos += length_m;
-            let force_n = match v {
-                openrailsrs_train::Vehicle::Loco(l) => l.max_brake_force_n,
-                openrailsrs_train::Vehicle::Wagon(w) => w.max_brake_force_n,
+            let (force_n, ep) = match v {
+                openrailsrs_train::Vehicle::Loco(l) => (l.max_brake_force_n, true),
+                openrailsrs_train::Vehicle::Wagon(w) => (w.max_brake_force_n, false),
             };
-            (cylinder_pos, force_n)
+            (cylinder_pos, force_n, ep)
         })
         .collect();
     BrakeSystem::from_vehicles(&pairs, BRAKE_PIPE_SPEED_MPS)
@@ -277,6 +277,8 @@ pub fn run_scenario_headless_with_driver(
             .iter()
             .map(|e| e.idle_rpm())
             .collect();
+        state.diesel_run_up = vec![0.0; train_physics.diesel_engines.len()];
+        state.diesel_motor_heat = vec![0.0; train_physics.diesel_engines.len()];
     }
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;

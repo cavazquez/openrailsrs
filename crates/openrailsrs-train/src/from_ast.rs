@@ -4,7 +4,7 @@ use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_formats::read_msts_file_to_string;
 use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, MstsSteamFields, WagonFile};
 
-use crate::diesel::DieselTractionModel;
+use crate::diesel::{DieselTractionModel, OR_DEFAULT_CURTIUS};
 use crate::error::TrainError;
 use crate::model::{Consist, DavisCoefficients, Locomotive, SteamParams, Vehicle, Wagon};
 
@@ -65,10 +65,12 @@ fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
             "consist contains no Engine/Wagon entries".into(),
         ));
     }
-    Ok(Consist {
+    let mut consist = Consist {
         vehicles,
         davis: DavisCoefficients::default(),
-    })
+    };
+    consist.davis = consist.aggregate_davis();
+    Ok(consist)
 }
 
 fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {
@@ -111,16 +113,39 @@ impl From<EngineFile> for Locomotive {
         };
         let diesel_traction = if value.diesel_notch_curves.is_empty() {
             if value.max_power_w > 0.0 && value.max_tractive_effort_n > 0.0 {
-                Some(Box::new(DieselTractionModel::from_power_and_effort(
+                let continuous = if value.max_continuous_force_n > 0.0 {
+                    value.max_continuous_force_n
+                } else {
+                    value.max_tractive_effort_n
+                };
+                let mut model = DieselTractionModel::from_power_and_effort(
                     value.max_power_w,
-                    value.max_tractive_effort_n,
-                )))
+                    continuous,
+                    value.run_up_time_s,
+                );
+                let curtius = if value.curtius_a > 0.0 {
+                    (value.curtius_a, value.curtius_b, value.curtius_c)
+                } else {
+                    OR_DEFAULT_CURTIUS
+                };
+                model.configure_traction_limits(
+                    value.mass_kg,
+                    value.drive_wheel_mass_kg,
+                    curtius,
+                    value.motor_heating_time_s,
+                );
+                Some(Box::new(model))
             } else {
                 None
             }
         } else {
             let mut model = DieselTractionModel::from_notch_curves(value.diesel_notch_curves);
-            model.calibrate_effort_scale(value.max_tractive_effort_n);
+            let scale_force = if value.max_continuous_force_n > 0.0 {
+                value.max_continuous_force_n
+            } else {
+                value.max_tractive_effort_n
+            };
+            model.calibrate_effort_scale(scale_force);
             // Attach engine thermodynamic model if DieselPowerTab / ThrottleRPMTab are present.
             if !value.diesel_power_tab.is_empty() && !value.diesel_throttle_rpm_tab.is_empty() {
                 let idle_rpm = if value.diesel_idle_rpm > 0.0 {
@@ -147,11 +172,31 @@ impl From<EngineFile> for Locomotive {
                     idle_rpm,
                     max_rpm,
                     rpm_time_constant_s: 2.0,
+                    rate_of_change_up_rpm_pss: value.diesel_rate_of_change_up_rpm_pss,
+                    rate_of_change_down_rpm_pss: value.diesel_rate_of_change_down_rpm_pss,
+                    change_up_rpm_ps: value.diesel_change_up_rpm_ps,
+                    change_down_rpm_ps: value.diesel_change_down_rpm_ps,
                 }));
             }
+            let curtius = if value.curtius_a > 0.0 {
+                (value.curtius_a, value.curtius_b, value.curtius_c)
+            } else {
+                OR_DEFAULT_CURTIUS
+            };
+            model.configure_traction_limits(
+                value.mass_kg,
+                value.drive_wheel_mass_kg,
+                curtius,
+                value.motor_heating_time_s,
+            );
             Some(Box::new(model))
         };
         let steam = value.steam.map(msts_steam_to_params);
+        let davis = DavisCoefficients {
+            a_n: value.davis_a_n,
+            b_n_per_mps: value.davis_b_n_per_mps,
+            c_n_per_mps2: value.davis_c_n_per_mps2,
+        };
         Self {
             name: value.name,
             mass_kg: value.mass_kg,
@@ -166,6 +211,7 @@ impl From<EngineFile> for Locomotive {
             steam,
             wagon_shape: value.wagon_shape,
             length_m: value.length_m,
+            davis,
         }
     }
 }
@@ -177,6 +223,11 @@ impl From<WagonFile> for Wagon {
             mass_kg: value.mass_kg,
             max_brake_force_n: value.max_brake_force_n,
             length_m: value.length_m,
+            davis: DavisCoefficients {
+                a_n: value.davis_a_n,
+                b_n_per_mps: value.davis_b_n_per_mps,
+                c_n_per_mps2: value.davis_c_n_per_mps2,
+            },
             wagon_shape: value.wagon_shape,
         }
     }

@@ -443,15 +443,16 @@ fn parse_or_eval_tail(parts: &[&str]) -> Option<OrEvalTail> {
     // or more robustly: anchor-1 is a short 0-padded integer ≤ 100 that would be a
     // reasonable throttle, while anchor-2 is also small (distance decimal).
     //
-    // Simplest reliable heuristic: if any token in the row is exactly "EXPLORER",
-    // the -001 is the brake sentinel itself and throttle is at anchor-1.
+    // Explorer mode can still emit THROTTLEPERC + BRAKEPRESSURE before `-001` (dyn brake).
+    // Only when brake is the sentinel itself (`..., THROTTLE, -001, DYN`) do we use the
+    // short explorer layout.
     let is_explorer = parts
         .iter()
         .any(|p| p.trim().eq_ignore_ascii_case("EXPLORER"));
-    let (throttle, brake, dist_before) = if is_explorer {
-        // Explorer: -001 IS the BrakePressure (= 0), throttle is immediately before it.
-        let throttle = parse_or_int_field(parts[anchor - 1]) as f64 / 100.0;
-        let distance_m = parse_or_eval_distance_before(parts, anchor - 1);
+    let brake_is_sentinel = parts[anchor - 1].trim() == "-001";
+    let (throttle, brake, dist_before) = if is_explorer && brake_is_sentinel && anchor >= 2 {
+        let throttle = parse_or_int_field(parts[anchor - 2]) as f64 / 100.0;
+        let distance_m = parse_or_eval_distance_before(parts, anchor - 2);
         (throttle, 0.0_f64, distance_m)
     } else {
         let throttle = parse_or_int_field(parts[anchor - 2]) as f64 / 100.0;
@@ -497,8 +498,8 @@ fn parse_or_eval_distance_before(parts: &[&str], before_idx: usize) -> Option<f6
     best
 }
 
-/// OR evaluation train speed uses `ToString("0000.0")`; under Wine/comma CSV the field often
-/// appears as two integer tokens (e.g. `0016,4` → 1.64 mph).
+/// OR evaluation train speed uses `ToString("0000.0")`; with comma CSV separator the decimal
+/// point becomes a second token (e.g. `0016,4` → **16.4** mph, not 1.64).
 fn consume_or_train_speed(parts: &[&str], idx: usize) -> (f64, usize) {
     let t1 = parts.get(idx).copied().unwrap_or("").trim();
     if t1.is_empty() {
@@ -507,8 +508,10 @@ fn consume_or_train_speed(parts: &[&str], idx: usize) -> (f64, usize) {
     if let Some(t2) = parts.get(idx + 1) {
         let t2 = t2.trim();
         if is_or_decimal_fragment(t2) {
-            let v = parse_or_int_field(t1) as f64 / 10.0 + parse_or_int_field(t2) as f64 / 100.0;
-            return (v, 2);
+            let whole = parse_or_int_field(t1) as f64;
+            let frac_digits = t2.len() as i32;
+            let frac = parse_or_int_field(t2) as f64 / 10_f64.powi(frac_digits);
+            return (whole + frac, 2);
         }
     }
     consume_or_formatted_decimal(parts, idx)
@@ -850,21 +853,38 @@ fn parse_or_performance_dump_csv(
     })
 }
 
+/// Peak brake value in an OR evaluation trace (pipe pressure, often 0–44 PSI).
+pub fn infer_brake_full_scale(trace: &RunTrace) -> f64 {
+    let max = trace
+        .samples
+        .iter()
+        .filter_map(|s| s.brake)
+        .fold(0.0_f64, f64::max);
+    if max <= 1.0 + 1e-6 { 1.0 } else { max.max(1.0) }
+}
+
+/// Scale OR brake pressure samples to openrailsrs `[0, 1]` for comparison.
+pub fn normalize_trace_brake_to_fraction(trace: &mut RunTrace, full_scale: Option<f64>) {
+    let scale = full_scale.unwrap_or_else(|| infer_brake_full_scale(trace));
+    if scale <= 1.0 + 1e-6 {
+        return;
+    }
+    for sample in &mut trace.samples {
+        if let Some(b) = sample.brake {
+            sample.brake = Some((b / scale).clamp(0.0, 1.0));
+        }
+    }
+}
+
 /// Convert an OR evaluation `*Speed.csv` into a `ScriptedDriver` CSV (`time_s,throttle,brake`).
 pub fn write_or_eval_driver_csv(
     or_eval_path: &Path,
     out_path: &Path,
     brake_full_scale: Option<f64>,
 ) -> Result<usize, ValidateError> {
-    let trace = parse_or_dump_csv(or_eval_path, &OrColumnMap::default())?;
-    let brake_scale = brake_full_scale.unwrap_or_else(|| {
-        trace
-            .samples
-            .iter()
-            .filter_map(|s| s.brake)
-            .fold(0.0_f64, f64::max)
-            .max(1.0)
-    });
+    let mut trace = parse_or_dump_csv(or_eval_path, &OrColumnMap::default())?;
+    let brake_scale = brake_full_scale.unwrap_or_else(|| infer_brake_full_scale(&trace));
+    normalize_trace_brake_to_fraction(&mut trace, Some(brake_scale));
 
     let mut wtr = csv::WriterBuilder::new()
         .has_headers(true)
@@ -950,14 +970,14 @@ mod tests {
         assert!(trace.samples.len() >= 10);
         assert!((trace.samples[0].velocity_mps).abs() < 0.01);
         assert!((trace.samples[0].distance_m).abs() < 0.01);
-        // 10:00:47 → ~1.64 mph
+        // 10:00:47 → 0016,4 = 16.4 mph (comma replaces decimal in OR Speed.csv)
         let late = trace
             .samples
             .iter()
             .find(|s| (s.time_s - 47.0).abs() < 0.5)
             .expect("sample near t=47s");
         let mph = late.velocity_mps / 0.447_04;
-        assert!((mph - 1.64).abs() < 0.15, "expected ~1.64 mph, got {mph}");
+        assert!((mph - 16.4).abs() < 0.5, "expected ~16.4 mph, got {mph}");
         assert!(late.distance_m > 50.0);
         assert!(late.throttle.unwrap_or(0.0) > 0.5);
         // monotonic distance after movement starts
@@ -973,6 +993,13 @@ mod tests {
             }
             prev = s.distance_m;
         }
+    }
+
+    #[test]
+    fn parse_or_train_speed_comma_decimal_is_whole_plus_fraction() {
+        assert!((consume_or_train_speed(&["0016", "4"], 0).0 - 16.4).abs() < 1e-6);
+        assert!((consume_or_train_speed(&["0011", "2"], 0).0 - 11.2).abs() < 1e-6);
+        assert!((consume_or_train_speed(&["0001", "6"], 0).0 - 1.6).abs() < 1e-6);
     }
 
     #[test]

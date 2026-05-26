@@ -131,6 +131,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         steam,
         wagon_shape: None,
         length_m: 18.0,
+        davis: crate::model::DavisCoefficients::default(),
     })
 }
 

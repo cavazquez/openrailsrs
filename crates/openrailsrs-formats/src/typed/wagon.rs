@@ -12,6 +12,9 @@ pub struct WagonFile {
     pub mass_kg: f64,
     pub max_brake_force_n: f64,
     pub length_m: f64,
+    pub davis_a_n: f64,
+    pub davis_b_n_per_mps: f64,
+    pub davis_c_n_per_mps2: f64,
     pub wagon_shape: Option<String>,
 }
 
@@ -34,13 +37,62 @@ impl WagonFile {
         .unwrap_or(80_000.0);
         let length_m = parse_length_from_ast(ast).unwrap_or(15.0);
         let wagon_shape = find_optional_string_field(ast, &["WagonShape", "Shape"], context)?;
+        let (davis_a_n, davis_b_n_per_mps, davis_c_n_per_mps2) = parse_orts_davis(ast);
         Ok(Self {
             name,
             mass_kg,
             max_brake_force_n,
             length_m,
+            davis_a_n,
+            davis_b_n_per_mps,
+            davis_c_n_per_mps2,
             wagon_shape,
         })
+    }
+}
+
+fn parse_orts_davis(ast: &Ast) -> (f64, f64, f64) {
+    let context = "ORTSDavis";
+    (
+        find_optional_scalar_field(ast, &["ORTSDavis_A"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+        find_optional_scalar_field(ast, &["ORTSDavis_B"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+        find_optional_scalar_field(ast, &["ORTSDavis_C"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+    )
+}
+
+fn find_optional_scalar_field(
+    root: &Ast,
+    keys: &[&str],
+    context: &str,
+) -> Result<Option<f64>, FormatError> {
+    for key in keys {
+        if let Some(value) = find_list_value(root, key) {
+            return parse_scalar_ast(value)
+                .map(Some)
+                .ok_or_else(|| FormatError::UnexpectedAtom {
+                    key: (*key).to_string(),
+                    context: context.to_string(),
+                    expected: "numeric scalar".to_string(),
+                });
+        }
+    }
+    Ok(None)
+}
+
+fn parse_scalar_ast(value: &Ast) -> Option<f64> {
+    match value {
+        Ast::Atom(atom) => super::atom_to_number(atom)
+            .or_else(|| atom_to_string(atom).and_then(|s| s.parse::<f64>().ok())),
+        Ast::List(items) => items.iter().find_map(parse_scalar_ast),
     }
 }
 

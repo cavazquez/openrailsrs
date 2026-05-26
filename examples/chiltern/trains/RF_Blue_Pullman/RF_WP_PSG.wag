@@ -3,4 +3,7 @@
   (Mass 50000)
   (MaxBrakeForce 268530)
   (Length 20.726)
+  ( ORTSDavis_A 371 )
+  ( ORTSDavis_B 20.0 )
+  ( ORTSDavis_C 0.86 )
 )

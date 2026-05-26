@@ -1,0 +1,44 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern throttle-50 baseline (30 s)"
+description = "Experimento E — parado, freno 0, throttle 50% constante 30 s (calibración RPM vs F(v))."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 30.0
+time_step = 1.0
+seed = 42
+
+[output]
+csv = "run_throttle50.csv"
+metadata = "run_throttle50.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_throttle50/or_evaluation_speed.csv"
+max_velocity_rms = 3.0
+# Explorer Speed.csv no exporta odómetro fiable (DISTANCE=0); comparar solo velocidad/driver.
+max_throttle_rms = 0.05
+max_brake_rms = 0.05

@@ -38,9 +38,8 @@ metadata = "run.json"
 
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
-# Dual-motor Blue Pullman: velocity RMS ~5.3 m/s (DMBSA ORTS + DMBSH legacy P/v)
-max_velocity_rms = 6.0
-# Position max error ~39 m with two engines (was ~122 m with one)
-max_position_max = 55.0
+# Parser OR Speed.csv corregido (0016,4 = 16.4 mph); DMBSH usa MaxContinuousForce 130 kN
+max_velocity_rms = 0.5
+max_position_max = 45.0
 max_throttle_rms = 0.25
-max_brake_rms = 50.0
+max_brake_rms = 0.25

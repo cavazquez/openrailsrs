@@ -44,6 +44,41 @@ fn load_chiltern_pullman_engine_if_present() {
     // Previously this read > 100 000 due to an erroneous ×4.44 lbf→N conversion that has since
     // been removed.
     assert!(f > 50_000.0, "80% notch stall force too low: {f}");
+    assert!(
+        diesel.engine.is_some(),
+        "DMBSA stub should include DieselPowerTab/ThrottleRPMTab"
+    );
+    assert!(loco.davis.a_n > 400.0, "expected ORTSDavis_A on DMBSA");
+}
+
+#[test]
+fn chiltern_pullman_davis_from_assets() {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    let con = base.join("consists/birmingham_pullman.con");
+    if !con.exists() {
+        return;
+    }
+    let consist = load_consist_with_asset_root(&con, &base).expect("pullman consist");
+    // Lead DMBSA (433) + 6× wagon (371); tail DMBSH has no ORTSDavis in OR source.
+    assert!(
+        consist.davis.a_n > 3400.0 && consist.davis.a_n < 3500.0,
+        "aggregated Davis A: {}",
+        consist.davis.a_n
+    );
+    assert!(consist.davis.b_n_per_mps > 150.0);
+    assert!(consist.davis.c_n_per_mps2 > 9.0);
+}
+
+#[test]
+fn chiltern_dmbsh_legacy_run_up() {
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSH.eng");
+    if !p.exists() {
+        return;
+    }
+    let loco = openrailsrs_train::load_engine_from_path(&p).expect("dmbsh");
+    let diesel = loco.diesel_traction.as_ref().expect("legacy diesel model");
+    assert_eq!(diesel.legacy_run_up_time_s, Some(30.0));
 }
 
 #[test]
@@ -66,4 +101,7 @@ fn chiltern_pullman_two_engines_aggregate() {
         f_combined > f_dmbsa * 1.3,
         "combined stall should exceed lead engine: {f_combined} vs {f_dmbsa}"
     );
+    // DMBSH legacy run-up limits early contribution vs instant full stall.
+    let f_dmbsh = models[1].force_at_scaled(0.0, 0.8, 0.5, 0.0);
+    assert!(f_dmbsh < models[1].force_at(0.0, 0.8) * 0.6);
 }

@@ -31,6 +31,8 @@ pub struct EngineFile {
     pub max_power_w: f64,
     pub max_velocity_mps: f64,
     pub max_tractive_effort_n: f64,
+    /// MSTS `MaxContinuousForce`; legacy diesel P/v uses this when set.
+    pub max_continuous_force_n: f64,
     pub max_brake_force_n: f64,
     pub regen_factor: f64,
     pub diesel_sfc_g_per_kwh: Option<f64>,
@@ -45,6 +47,25 @@ pub struct EngineFile {
     pub diesel_idle_rpm: f64,
     /// Engine max RPM (from `MaxRPM`).
     pub diesel_max_rpm: f64,
+    /// OR rolling resistance (N); summed across consist with B and C.
+    pub davis_a_n: f64,
+    pub davis_b_n_per_mps: f64,
+    pub davis_c_n_per_mps2: f64,
+    /// Legacy MSTS ramp to full tractive effort (seconds).
+    pub run_up_time_s: f64,
+    /// OR `RateOfChangeUpRPMpSS` from first diesel engine block.
+    pub diesel_rate_of_change_up_rpm_pss: f64,
+    pub diesel_rate_of_change_down_rpm_pss: f64,
+    pub diesel_change_up_rpm_ps: f64,
+    pub diesel_change_down_rpm_ps: f64,
+    /// `ORTSDriveWheelWeight` for Curtius-Kniffler adhesion.
+    pub drive_wheel_mass_kg: f64,
+    /// Curtius-Kniffler A/B/C; zero → OR defaults at load time.
+    pub curtius_a: f64,
+    pub curtius_b: f64,
+    pub curtius_c: f64,
+    /// OR `TractiveForceAvgUsageTimeFactor` for motor heating (seconds).
+    pub motor_heating_time_s: f64,
     pub wagon_shape: Option<String>,
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
@@ -78,6 +99,13 @@ impl EngineFile {
             context,
         )?
         .unwrap_or(350_000.0);
+        let max_continuous_force_n = find_optional_quantity_field(
+            ast,
+            QuantityKind::Force,
+            &["MaxContinuousForce", "MaxContinuousTractiveForce"],
+            context,
+        )?
+        .unwrap_or(0.0);
         let max_brake_force_n = find_optional_quantity_field(
             ast,
             QuantityKind::Force,
@@ -117,7 +145,9 @@ impl EngineFile {
             find_optional_scalar_field(ast, &["IdleRPM", "ORTSIdleRPM"], context)?.unwrap_or(0.0);
         let mut diesel_max_rpm =
             find_optional_scalar_field(ast, &["MaxRPM", "ORTSMaxRPM"], context)?.unwrap_or(0.0);
+        let mut diesel_block = None;
         if let Some(block) = parse_ortsdieselengines_diesel(ast) {
+            diesel_block = Some(block.clone());
             if diesel_power_tab.is_empty() {
                 diesel_power_tab = block.power_tab;
             }
@@ -131,6 +161,36 @@ impl EngineFile {
                 diesel_max_rpm = block.max_rpm;
             }
         }
+        let diesel_rate_of_change_up_rpm_pss = diesel_block
+            .as_ref()
+            .map(|b| b.rate_of_change_up_rpm_pss)
+            .unwrap_or(0.0);
+        let diesel_rate_of_change_down_rpm_pss = diesel_block
+            .as_ref()
+            .map(|b| b.rate_of_change_down_rpm_pss)
+            .unwrap_or(0.0);
+        let diesel_change_up_rpm_ps = diesel_block
+            .as_ref()
+            .map(|b| b.change_up_rpm_ps)
+            .unwrap_or(0.0);
+        let diesel_change_down_rpm_ps = diesel_block
+            .as_ref()
+            .map(|b| b.change_down_rpm_ps)
+            .unwrap_or(0.0);
+        let (davis_a_n, davis_b_n_per_mps, davis_c_n_per_mps2) = parse_orts_davis(ast);
+        let run_up_time_s =
+            find_optional_scalar_field(ast, &["RunUpTimeToMaxForce"], context)?.unwrap_or(0.0);
+        let drive_wheel_mass_kg = parse_drive_wheel_mass_kg(ast);
+        let (curtius_a, curtius_b, curtius_c) = parse_curtius_kniffler(ast);
+        let motor_heating_time_s = find_optional_scalar_field(
+            ast,
+            &[
+                "TractiveForceAvgUsageTimeFactor",
+                "ORTSTractiveForceAvgUsageTimeFactor",
+            ],
+            context,
+        )?
+        .unwrap_or(0.0);
 
         Ok(Self {
             name,
@@ -138,6 +198,7 @@ impl EngineFile {
             max_power_w,
             max_velocity_mps,
             max_tractive_effort_n,
+            max_continuous_force_n,
             max_brake_force_n,
             regen_factor,
             diesel_sfc_g_per_kwh,
@@ -147,6 +208,19 @@ impl EngineFile {
             diesel_throttle_rpm_tab,
             diesel_idle_rpm,
             diesel_max_rpm,
+            davis_a_n,
+            davis_b_n_per_mps,
+            davis_c_n_per_mps2,
+            run_up_time_s,
+            diesel_rate_of_change_up_rpm_pss,
+            diesel_rate_of_change_down_rpm_pss,
+            diesel_change_up_rpm_ps,
+            diesel_change_down_rpm_ps,
+            drive_wheel_mass_kg,
+            curtius_a,
+            curtius_b,
+            curtius_c,
+            motor_heating_time_s,
             wagon_shape,
             length_m,
             steam,
@@ -236,7 +310,24 @@ fn parse_mass_ast(value: &Ast) -> Option<f64> {
         Ast::Atom(atom) => {
             atom_to_number(atom).or_else(|| atom_to_string(atom).and_then(|s| parse_mass_kg(&s)))
         }
-        Ast::List(items) => items.first().and_then(parse_mass_ast),
+        Ast::List(items) => {
+            if items.len() >= 2
+                && let (Some(num), Some(unit)) = (
+                    items.first().and_then(|a| match a {
+                        Ast::Atom(atom) => atom_to_number(atom),
+                        _ => None,
+                    }),
+                    items.get(1).and_then(|a| match a {
+                        Ast::Atom(atom) => atom_to_string(atom),
+                        _ => None,
+                    }),
+                )
+                && let Some(kg) = parse_mass_kg(&format!("{num}{unit}"))
+            {
+                return Some(kg);
+            }
+            items.first().and_then(parse_mass_ast)
+        }
     }
 }
 
@@ -381,33 +472,32 @@ fn extract_pair_tab(items: &[Ast]) -> Vec<(f64, f64)> {
     result
 }
 
-/// Fields extracted from the first `Diesel(` block inside `ORTSDieselEngines`.
+/// Fields extracted from `ORTSDieselEngines` (first engine block).
 #[derive(Clone, Debug, Default, PartialEq)]
 struct OrtsDieselEngineBlock {
     power_tab: Vec<(f64, f64)>,
     throttle_rpm_tab: Vec<(f64, f64)>,
     idle_rpm: f64,
     max_rpm: f64,
+    rate_of_change_up_rpm_pss: f64,
+    rate_of_change_down_rpm_pss: f64,
+    change_up_rpm_ps: f64,
+    change_down_rpm_ps: f64,
 }
 
-/// Parse `ORTSDieselEngines ( N Diesel ( ... ) )` — first Diesel block only.
+/// Parse `ORTSDieselEngines` — nested `Diesel ( ... )`, flat `Diesel(` siblings, or
+/// fields directly under `ORTSDieselEngines`.
 fn parse_ortsdieselengines_diesel(ast: &Ast) -> Option<OrtsDieselEngineBlock> {
     walk_lists_find::<OrtsDieselEngineBlock, _>(ast, &mut |items| {
         if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
             if head.eq_ignore_ascii_case("ORTSDieselEngines") {
-                for item in items.iter().skip(1) {
-                    if let Ast::List(diesel_items) = item {
-                        if diesel_items
-                            .first()
-                            .and_then(|a| match a {
-                                Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
-                                _ => None,
-                            })
-                            .is_some_and(|s| s.eq_ignore_ascii_case("Diesel"))
-                        {
-                            return Some(parse_diesel_block_fields(diesel_items));
-                        }
-                    }
+                let block = parse_diesel_block_fields(items);
+                if !block.power_tab.is_empty()
+                    || !block.throttle_rpm_tab.is_empty()
+                    || block.idle_rpm > 0.0
+                    || block.rate_of_change_up_rpm_pss > 0.0
+                {
+                    return Some(block);
                 }
             }
         }
@@ -415,34 +505,18 @@ fn parse_ortsdieselengines_diesel(ast: &Ast) -> Option<OrtsDieselEngineBlock> {
     })
 }
 
-fn parse_diesel_scalar_in_block(diesel_items: &[Ast], key: &str) -> f64 {
-    let mut i = 0;
-    while i < diesel_items.len() {
-        if let Ast::List(items) = &diesel_items[i] {
-            if items
-                .first()
-                .and_then(|a| match a {
-                    Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
-                    _ => None,
-                })
-                .is_some_and(|s| s.eq_ignore_ascii_case(key))
-                && items.len() >= 2
-            {
-                if let Some(v) = parse_scalar_ast(&items[1]) {
-                    return v;
-                }
-            }
+fn parse_diesel_scalar_in_subtree(ast: &Ast, key: &str) -> f64 {
+    let mut value = 0.0_f64;
+    walk_lists_find::<(), _>(ast, &mut |items| {
+        if items.len() >= 2
+            && matches!(&items[0], Ast::Atom(Atom::Symbol(head)) if head.eq_ignore_ascii_case(key))
+            && let Some(v) = parse_scalar_ast(&items[1])
+        {
+            value = value.max(v);
         }
-        if let Ast::Atom(Atom::Symbol(s)) = &diesel_items[i] {
-            if s.eq_ignore_ascii_case(key) {
-                if let Some(v) = diesel_items.get(i + 1).and_then(parse_scalar_ast) {
-                    return v;
-                }
-            }
-        }
-        i += 1;
-    }
-    0.0
+        None
+    });
+    value
 }
 
 fn parse_diesel_block_fields(diesel_items: &[Ast]) -> OrtsDieselEngineBlock {
@@ -450,11 +524,64 @@ fn parse_diesel_block_fields(diesel_items: &[Ast]) -> OrtsDieselEngineBlock {
     OrtsDieselEngineBlock {
         power_tab: parse_rpm_power_tab(&subtree),
         throttle_rpm_tab: parse_throttle_rpm_tab(&subtree),
-        idle_rpm: parse_diesel_scalar_in_block(diesel_items, "IdleRPM")
-            .max(parse_diesel_scalar_in_block(diesel_items, "ORTSIdleRPM")),
-        max_rpm: parse_diesel_scalar_in_block(diesel_items, "MaxRPM")
-            .max(parse_diesel_scalar_in_block(diesel_items, "ORTSMaxRPM")),
+        idle_rpm: parse_diesel_scalar_in_subtree(&subtree, "IdleRPM")
+            .max(parse_diesel_scalar_in_subtree(&subtree, "ORTSIdleRPM")),
+        max_rpm: parse_diesel_scalar_in_subtree(&subtree, "MaxRPM")
+            .max(parse_diesel_scalar_in_subtree(&subtree, "ORTSMaxRPM")),
+        rate_of_change_up_rpm_pss: parse_diesel_scalar_in_subtree(&subtree, "RateOfChangeUpRPMpSS"),
+        rate_of_change_down_rpm_pss: parse_diesel_scalar_in_subtree(
+            &subtree,
+            "RateOfChangeDownRPMpSS",
+        ),
+        change_up_rpm_ps: parse_diesel_scalar_in_subtree(&subtree, "ChangeUpRPMpS"),
+        change_down_rpm_ps: parse_diesel_scalar_in_subtree(&subtree, "ChangeDownRPMpS"),
     }
+}
+
+fn parse_drive_wheel_mass_kg(ast: &Ast) -> f64 {
+    find_list_value(ast, "ORTSDriveWheelWeight")
+        .and_then(parse_mass_ast)
+        .unwrap_or(0.0)
+}
+
+fn parse_curtius_kniffler(ast: &Ast) -> (f64, f64, f64) {
+    walk_lists_find::<(f64, f64, f64), _>(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            if head.eq_ignore_ascii_case("ORTSCurtius_Kniffler") {
+                let coeffs: Vec<f64> = if items.len() >= 4 {
+                    (1..4).filter_map(|i| parse_scalar_ast(&items[i])).collect()
+                } else if let Some(Ast::List(nested)) = items.get(1) {
+                    nested.iter().filter_map(parse_scalar_ast).collect()
+                } else {
+                    Vec::new()
+                };
+                if coeffs.len() >= 3 {
+                    return Some((coeffs[0], coeffs[1], coeffs[2]));
+                }
+            }
+        }
+        None
+    })
+    .unwrap_or((0.0, 0.0, 0.0))
+}
+
+/// OR `ORTSDavis_*` in default SI units (N, N/(m/s), N/(m/s)²).
+fn parse_orts_davis(ast: &Ast) -> (f64, f64, f64) {
+    let context = "ORTSDavis";
+    (
+        find_optional_scalar_field(ast, &["ORTSDavis_A"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+        find_optional_scalar_field(ast, &["ORTSDavis_B"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+        find_optional_scalar_field(ast, &["ORTSDavis_C"], context)
+            .ok()
+            .flatten()
+            .unwrap_or(0.0),
+    )
 }
 
 /// Parse `DieselPowerTab` (RPM → shaft power in Watts).
@@ -809,6 +936,89 @@ mod tests {
         assert!((eng.diesel_power_tab.last().unwrap().1 - 745_513.0).abs() < 1.0);
         assert_eq!(eng.diesel_throttle_rpm_tab.len(), 2);
         assert!((eng.diesel_throttle_rpm_tab[1].0 - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn parse_orts_davis_fields() {
+        let text = r#"
+( Engine
+    ( Mass 68000 )
+    ( ORTSDavis_A ( 433 ) )
+    ( ORTSDavis_B ( 27.2 ) )
+    ( ORTSDavis_C ( 3.50 ) )
+)"#;
+        let ast = parse_from_first_paren(text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert_eq!(eng.davis_a_n, 433.0);
+        assert_eq!(eng.davis_b_n_per_mps, 27.2);
+        assert_eq!(eng.davis_c_n_per_mps2, 3.50);
+    }
+
+    #[test]
+    fn parse_ortsdieselengines_flat_msts() {
+        // MSTS count prefix + fields as siblings (OR content layout).
+        let text = r#"
+( Engine
+    ( Mass 68000 )
+    ( ORTSDieselEngines ( 1
+        ( IdleRPM 650 )
+        ( MaxRPM 1500 )
+        ( ChangeUpRPMpS 50 )
+        ( ChangeDownRPMpS 40 )
+        ( RateOfChangeUpRPMpSS 10 )
+        ( RateOfChangeDownRPMpSS 10 )
+        ( DieselPowerTab (
+            0 0
+            650 22188
+            1500 745513
+        ))
+        ( ThrottleRPMTab (
+            0 650
+            100 1500
+        ))
+    ))
+)"#;
+        let ast = parse_from_first_paren(text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert_eq!(eng.diesel_idle_rpm, 650.0);
+        assert_eq!(eng.diesel_change_up_rpm_ps, 50.0);
+        assert_eq!(eng.diesel_rate_of_change_up_rpm_pss, 10.0);
+        assert!(!eng.diesel_power_tab.is_empty());
+    }
+
+    #[test]
+    fn parse_drive_wheel_and_curtius() {
+        let text = r#"
+( Engine
+    ( Mass 68000 )
+    ( ORTSDriveWheelWeight ( 64t-uk ) )
+    ( ORTSCurtius_Kniffler ( 6.18 44 0.161 0.7 ) )
+)"#;
+        let ast = parse_from_first_paren(text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert!(eng.drive_wheel_mass_kg > 60_000.0);
+        assert_eq!(eng.curtius_a, 6.18);
+        assert_eq!(eng.curtius_b, 44.0);
+        assert_eq!(eng.curtius_c, 0.161);
+    }
+
+    #[test]
+    fn parse_chiltern_dmbsa_stub_diesel_engine_params() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng");
+        if !path.exists() {
+            return;
+        }
+        let text = std::fs::read_to_string(&path).expect("read stub");
+        let ast = parse_from_first_paren(&text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert_eq!(eng.davis_a_n, 433.0);
+        assert!(!eng.diesel_power_tab.is_empty());
+        assert!(!eng.diesel_throttle_rpm_tab.is_empty());
+        assert_eq!(eng.diesel_idle_rpm, 650.0);
+        assert_eq!(eng.diesel_max_rpm, 1500.0);
+        assert_eq!(eng.diesel_change_up_rpm_ps, 50.0);
+        assert!(eng.drive_wheel_mass_kg > 60_000.0);
     }
 
     #[test]

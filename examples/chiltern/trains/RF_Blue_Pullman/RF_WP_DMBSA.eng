@@ -6,6 +6,45 @@
   (MaxVelocity 90.0)
   (MaxBrakeForce 367174)
   (Length 20.879)
+  ( ORTSDavis_A 433 )
+  ( ORTSDavis_B 27.2 )
+  ( ORTSDavis_C 3.50 )
+  ( ORTSDriveWheelWeight ( 64t-uk ) )
+  (ORTSDieselEngines ( 1
+    ( IdleRPM 650 )
+    ( MaxRPM 1500 )
+    ( ChangeUpRPMpS 50 )
+    ( ChangeDownRPMpS 40 )
+    ( RateOfChangeUpRPMpSS 10 )
+    ( RateOfChangeDownRPMpSS 10 )
+    ( DieselPowerTab (
+      0 0
+      650 22188
+      660 58657
+      665 101535
+      670 151004
+      675 238624
+      800 428509
+      900 498359
+      1050 587781
+      1200 658781
+      1350 711359
+      1500 745513
+    ))
+    ( ThrottleRPMTab (
+      0 650
+      10 660
+      20 665
+      30 670
+      40 675
+      50 800
+      60 900
+      70 1050
+      80 1200
+      90 1350
+      100 1500
+    ))
+  ))
   (ORTSMaxTractiveForceCurves (
     0.00 (	
     0.0	        0
@@ -242,5 +281,4 @@
     43.8	11764
      )
     ))
-
 )

@@ -73,6 +73,18 @@ cargo test -p openrailsrs-cli --test chiltern_validate
 
 (Omitido si `examples/chiltern/track.toml` no está presente.)
 
+## Experimento E — throttle 50 % (30 s)
+
+Driver fijo (`driver_throttle50.csv`) para aislar calibración RPM vs curvas F(v):
+
+```bash
+cd examples/chiltern
+openrailsrs sim scenario_throttle50.toml --driver driver_throttle50.csv
+cargo test -p openrailsrs-cli --test chiltern_throttle50
+```
+
+Baseline OR: `examples/baselines/chiltern_throttle50/README.md`.
+
 ## Gaps cerrados vs OR
 
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6).

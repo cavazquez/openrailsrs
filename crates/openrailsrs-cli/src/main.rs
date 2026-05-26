@@ -16,8 +16,8 @@ use openrailsrs_sim::{
     run_multi_train_from_scenario_file,
 };
 use openrailsrs_validate::{
-    ComparisonReport, OrColumnMap, ValidationConfig, compare_csv_files_with_config,
-    compare_or_dump_with_run, write_or_eval_driver_csv,
+    ComparisonReport, OrColumnMap, PhaseReport, ValidationConfig, compare_csv_files_with_config,
+    compare_or_dump_phases, compare_or_dump_with_run, write_or_eval_driver_csv,
 };
 
 #[derive(Parser)]
@@ -124,6 +124,9 @@ enum Commands {
         max_brake_rms: Option<f64>,
         #[arg(long)]
         max_brake_max: Option<f64>,
+        /// Time boundaries (seconds) for phased diagnostic, e.g. `0,20,65` → [0–20), [20–65].
+        #[arg(long, value_delimiter = ',')]
+        phase_bounds: Option<Vec<f64>>,
     },
     /// Convert an OR evaluation *Speed.csv into a ScriptedDriver CSV.
     OrEvalDriver {
@@ -431,6 +434,7 @@ fn main() -> anyhow::Result<()> {
             max_throttle_max,
             max_brake_rms,
             max_brake_max,
+            phase_bounds,
         } => {
             let column_map = if let Some(path) = map {
                 let text = std::fs::read_to_string(&path)
@@ -455,6 +459,11 @@ fn main() -> anyhow::Result<()> {
             let rep = compare_or_dump_with_run(&or_dump, &run_csv, &column_map, &config, step)
                 .map_err(|e| anyhow::anyhow!("compare-or: {e}"))?;
             print_comparison_report(&rep, "Compare OR")?;
+            if let Some(bounds) = phase_bounds {
+                let phases = compare_or_dump_phases(&or_dump, &run_csv, &column_map, &bounds, step)
+                    .map_err(|e| anyhow::anyhow!("compare-or phases: {e}"))?;
+                print_phase_report(&phases)?;
+            }
             if !rep.pass {
                 std::process::exit(1);
             }
@@ -973,6 +982,34 @@ fn print_comparison_report(rep: &ComparisonReport, title: &str) -> anyhow::Resul
     println!("overall: {}", if rep.pass { "PASS" } else { "FAIL" });
     println!("\n--- full report (TOML) ---");
     println!("{}", toml::to_string_pretty(rep)?);
+    Ok(())
+}
+
+fn print_phase_report(phases: &[PhaseReport]) -> anyhow::Result<()> {
+    println!("\n=== Phase diagnostic (OR vs sim) ===");
+    for phase in phases {
+        println!(
+            "  [{}]  velocity rms={:.3} max={:.3}  |  position rms={:.3} max={:.3}  n={}",
+            phase.label,
+            phase.velocity.rms_diff,
+            phase.velocity.max_abs_diff,
+            phase.position.rms_diff,
+            phase.position.max_abs_diff,
+            phase.velocity.samples,
+        );
+        if let Some(th) = &phase.throttle {
+            println!(
+                "           throttle rms={:.4} max={:.4}",
+                th.rms_diff, th.max_abs_diff
+            );
+        }
+        if let Some(br) = &phase.brake {
+            println!(
+                "           brake    rms={:.4} max={:.4}",
+                br.rms_diff, br.max_abs_diff
+            );
+        }
+    }
     Ok(())
 }
 

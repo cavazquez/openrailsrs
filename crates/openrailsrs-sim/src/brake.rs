@@ -31,6 +31,8 @@ pub struct BrakeCylinder {
     pub position_m: f64,
     /// Maximum braking force this cylinder can produce (N).
     pub max_force_n: f64,
+    /// Electro-pneumatic (locomotive): responds instantly to driver command.
+    pub ep_instant: bool,
     /// Current state.
     pub state: BrakeState,
     /// Currently applied force (N).
@@ -43,12 +45,14 @@ pub struct BrakeCylinder {
 
 impl BrakeCylinder {
     /// Create a new charged (released) cylinder.
-    pub fn new(position_m: f64, max_force_n: f64) -> Self {
-        // Ramp from 0 to max in ~0.5 s — realistic for an EMU / loco.
-        let ramp_rate_n_per_s = max_force_n / 0.5;
+    pub fn new(position_m: f64, max_force_n: f64, ep_instant: bool) -> Self {
+        // EP locomotive brakes ramp faster (~0.15 s); train air ~0.5 s.
+        let ramp_time_s = if ep_instant { 0.15 } else { 0.5 };
+        let ramp_rate_n_per_s = max_force_n / ramp_time_s;
         Self {
             position_m,
             max_force_n,
+            ep_instant,
             state: BrakeState::Charged,
             current_force_n: 0.0,
             time_pending_s: 0.0,
@@ -68,11 +72,11 @@ pub struct BrakeSystem {
 }
 
 impl BrakeSystem {
-    /// Build a system from a list of `(position_m, max_force_n)` pairs.
-    pub fn from_vehicles(vehicles: &[(f64, f64)], pipe_speed_mps: f64) -> Self {
+    /// Build a system from `(position_m, max_force_n, ep_instant)` triples.
+    pub fn from_vehicles(vehicles: &[(f64, f64, bool)], pipe_speed_mps: f64) -> Self {
         let cylinders = vehicles
             .iter()
-            .map(|&(pos, force)| BrakeCylinder::new(pos, force))
+            .map(|&(pos, force, ep)| BrakeCylinder::new(pos, force, ep))
             .collect();
         Self {
             cylinders,
@@ -91,9 +95,12 @@ impl BrakeSystem {
         let command_changed = (command - self.prev_command).abs() > 1e-6;
 
         if command_changed {
-            // Recalculate travel times for each cylinder.
             for cyl in &mut self.cylinders {
-                let travel_s = cyl.position_m / self.pipe_speed_mps.max(1.0);
+                let travel_s = if cyl.ep_instant {
+                    0.0
+                } else {
+                    cyl.position_m / self.pipe_speed_mps.max(1.0)
+                };
                 cyl.time_pending_s = travel_s;
                 cyl.state = if applying {
                     BrakeState::Applying

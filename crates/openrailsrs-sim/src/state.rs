@@ -37,6 +37,10 @@ pub struct TrainSimState {
     pub boiler_state: Option<BoilerState>,
     /// Current diesel engine RPM per powered locomotive (parallel to `TrainPhysics::diesel_engines`).
     pub diesel_rpm: Vec<f64>,
+    /// Legacy run-up fraction per diesel engine (`RunUpTimeToMaxForce`).
+    pub diesel_run_up: Vec<f64>,
+    /// Motor heat state per diesel engine for dynamic `PowerReduction`.
+    pub diesel_motor_heat: Vec<f64>,
 }
 
 impl TrainSimState {
@@ -61,6 +65,8 @@ impl TrainSimState {
             vehicle_masses: Vec::new(),
             boiler_state: None,
             diesel_rpm: Vec::new(),
+            diesel_run_up: Vec::new(),
+            diesel_motor_heat: Vec::new(),
         }
     }
 

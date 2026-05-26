@@ -99,6 +99,20 @@ impl ValidationConfig {
 
 // ── Report ────────────────────────────────────────────────────────────────────
 
+/// Per-window statistics for phased OR vs sim diagnostics.
+#[derive(Debug, Serialize)]
+pub struct PhaseReport {
+    pub label: String,
+    pub t_start_s: f64,
+    pub t_end_s: f64,
+    pub velocity: SeriesStats,
+    pub position: SeriesStats,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle: Option<SeriesStats>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brake: Option<SeriesStats>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ComparisonReport {
     pub file_a: String,
@@ -192,6 +206,164 @@ pub fn compare_csv_files_with_config(
     })
 }
 
+struct TraceDiffContext {
+    both_have_energy: bool,
+    both_have_throttle: bool,
+    both_have_brake: bool,
+}
+
+#[derive(Default)]
+struct TraceDiffAccum {
+    velocity: SeriesStats,
+    position: SeriesStats,
+    energy: SeriesStats,
+    throttle: SeriesStats,
+    brake: SeriesStats,
+}
+
+fn trace_diff_context(a: &crate::trace::RunTrace, b: &crate::trace::RunTrace) -> TraceDiffContext {
+    TraceDiffContext {
+        both_have_energy: a.samples.iter().any(|s| s.energy_kwh.is_some())
+            && b.samples.iter().any(|s| s.energy_kwh.is_some()),
+        both_have_throttle: trace_has_throttle(a) && trace_has_throttle(b),
+        both_have_brake: trace_has_brake(a) && trace_has_brake(b),
+    }
+}
+
+fn accumulate_resampled_pair(
+    accum: &mut TraceDiffAccum,
+    ctx: &TraceDiffContext,
+    sa: &crate::trace::TraceSample,
+    sb: &crate::trace::TraceSample,
+) {
+    accumulate(&mut accum.velocity, sa.velocity_mps - sb.velocity_mps);
+    accumulate(&mut accum.position, sa.distance_m - sb.distance_m);
+    if ctx.both_have_energy {
+        let ea = sa.energy_kwh.unwrap_or(0.0);
+        let eb = sb.energy_kwh.unwrap_or(0.0);
+        accumulate(&mut accum.energy, ea - eb);
+    }
+    if ctx.both_have_throttle {
+        let ta = sa.throttle.unwrap_or(0.0);
+        let tb = sb.throttle.unwrap_or(0.0);
+        accumulate(&mut accum.throttle, ta - tb);
+    }
+    if ctx.both_have_brake {
+        let ba = sa.brake.unwrap_or(0.0);
+        let bb = sb.brake.unwrap_or(0.0);
+        accumulate(&mut accum.brake, ba - bb);
+    }
+}
+
+fn finalize_trace_diff(
+    mut accum: TraceDiffAccum,
+    ctx: &TraceDiffContext,
+) -> (
+    SeriesStats,
+    SeriesStats,
+    SeriesStats,
+    Option<SeriesStats>,
+    Option<SeriesStats>,
+) {
+    finalize_stats(&mut accum.velocity);
+    finalize_stats(&mut accum.position);
+    if ctx.both_have_energy {
+        finalize_stats(&mut accum.energy);
+    }
+    let throttle_stats = if ctx.both_have_throttle {
+        finalize_stats(&mut accum.throttle);
+        Some(accum.throttle)
+    } else {
+        None
+    };
+    let brake_stats = if ctx.both_have_brake {
+        finalize_stats(&mut accum.brake);
+        Some(accum.brake)
+    } else {
+        None
+    };
+    (
+        accum.velocity,
+        accum.position,
+        accum.energy,
+        throttle_stats,
+        brake_stats,
+    )
+}
+
+fn sample_in_phase(t: f64, t_start: f64, t_end: f64, last_phase: bool) -> bool {
+    if t < t_start {
+        return false;
+    }
+    if last_phase {
+        t <= t_end + 1e-9
+    } else {
+        t < t_end
+    }
+}
+
+/// Split a resampled OR vs sim comparison into time windows.
+///
+/// `boundaries` must be strictly increasing with at least two values, e.g. `[0.0, 20.0, 65.0]`
+/// yields phases `[0, 20)` and `[20, 65]`.
+pub fn compare_traces_by_phases(
+    a: &crate::trace::RunTrace,
+    b: &crate::trace::RunTrace,
+    boundaries: &[f64],
+    step_s: f64,
+) -> Result<Vec<PhaseReport>, ValidateError> {
+    if boundaries.len() < 2 {
+        return Err(ValidateError::Msg(
+            "phase_bounds needs at least two values (e.g. 0,20,65)".into(),
+        ));
+    }
+    for w in boundaries.windows(2) {
+        if w[1] <= w[0] {
+            return Err(ValidateError::Msg(format!(
+                "phase_bounds must be strictly increasing (got {} then {})",
+                w[0], w[1]
+            )));
+        }
+    }
+
+    let (ra, rb) = crate::trace::resample_traces(a, b, step_s)?;
+    let ctx = trace_diff_context(a, b);
+    let phase_count = boundaries.len() - 1;
+    let mut reports = Vec::with_capacity(phase_count);
+
+    for i in 0..phase_count {
+        let t_start = boundaries[i];
+        let t_end = boundaries[i + 1];
+        let last_phase = i + 1 == phase_count;
+        let mut accum = TraceDiffAccum::default();
+
+        for (sa, sb) in ra.iter().zip(rb.iter()) {
+            if sample_in_phase(sa.time_s, t_start, t_end, last_phase) {
+                accumulate_resampled_pair(&mut accum, &ctx, sa, sb);
+            }
+        }
+
+        if accum.velocity.samples == 0 {
+            return Err(ValidateError::Msg(format!(
+                "phase {t_start}–{t_end} s has no resampled samples (step={step_s})"
+            )));
+        }
+
+        let (velocity, position, _energy, throttle, brake) = finalize_trace_diff(accum, &ctx);
+        reports.push(PhaseReport {
+            label: format!("{t_start:.0}–{t_end:.0} s"),
+            t_start_s: t_start,
+            t_end_s: t_end,
+            velocity,
+            position,
+            throttle,
+            brake,
+        });
+    }
+
+    Ok(reports)
+}
+
 /// Compare two normalized traces after resampling onto a common grid.
 pub fn compare_traces(
     a: &crate::trace::RunTrace,
@@ -200,58 +372,18 @@ pub fn compare_traces(
     step_s: f64,
 ) -> Result<ComparisonReport, ValidateError> {
     let (ra, rb) = crate::trace::resample_traces(a, b, step_s)?;
-    let mut vel = SeriesStats::default();
-    let mut pos = SeriesStats::default();
-    let mut ene = SeriesStats::default();
-
-    let both_have_energy = a.samples.iter().any(|s| s.energy_kwh.is_some())
-        && b.samples.iter().any(|s| s.energy_kwh.is_some());
-    let both_have_throttle = trace_has_throttle(a) && trace_has_throttle(b);
-    let both_have_brake = trace_has_brake(a) && trace_has_brake(b);
-
-    let mut throttle = SeriesStats::default();
-    let mut brake = SeriesStats::default();
+    let ctx = trace_diff_context(a, b);
+    let mut accum = TraceDiffAccum::default();
 
     for (sa, sb) in ra.iter().zip(rb.iter()) {
-        accumulate(&mut vel, sa.velocity_mps - sb.velocity_mps);
-        accumulate(&mut pos, sa.distance_m - sb.distance_m);
-        if both_have_energy {
-            let ea = sa.energy_kwh.unwrap_or(0.0);
-            let eb = sb.energy_kwh.unwrap_or(0.0);
-            accumulate(&mut ene, ea - eb);
-        }
-        if both_have_throttle {
-            let ta = sa.throttle.unwrap_or(0.0);
-            let tb = sb.throttle.unwrap_or(0.0);
-            accumulate(&mut throttle, ta - tb);
-        }
-        if both_have_brake {
-            let ba = sa.brake.unwrap_or(0.0);
-            let bb = sb.brake.unwrap_or(0.0);
-            accumulate(&mut brake, ba - bb);
-        }
+        accumulate_resampled_pair(&mut accum, &ctx, sa, sb);
     }
-    finalize_stats(&mut vel);
-    finalize_stats(&mut pos);
-    if both_have_energy {
-        finalize_stats(&mut ene);
-    }
-    let throttle_stats = if both_have_throttle {
-        finalize_stats(&mut throttle);
-        Some(throttle)
-    } else {
-        None
-    };
-    let brake_stats = if both_have_brake {
-        finalize_stats(&mut brake);
-        Some(brake)
-    } else {
-        None
-    };
+
+    let (vel, pos, ene, throttle_stats, brake_stats) = finalize_trace_diff(accum, &ctx);
 
     let vel_pass = column_passes(&vel, config.max_velocity_rms, config.max_velocity_max);
     let pos_pass = column_passes(&pos, config.max_position_rms, config.max_position_max);
-    let ene_pass = if both_have_energy {
+    let ene_pass = if ctx.both_have_energy {
         column_passes(&ene, config.max_energy_rms, config.max_energy_max)
     } else {
         true
@@ -295,9 +427,24 @@ pub fn compare_or_dump_with_run(
     config: &ValidationConfig,
     step_s: f64,
 ) -> Result<ComparisonReport, ValidateError> {
-    let or_trace = crate::trace::parse_or_dump_csv(or_dump, map)?;
+    let mut or_trace = crate::trace::parse_or_dump_csv(or_dump, map)?;
+    crate::trace::normalize_trace_brake_to_fraction(&mut or_trace, None);
     let rs_trace = parse_openrailsrs_run_csv(run_csv)?;
     compare_traces(&or_trace, &rs_trace, config, step_s)
+}
+
+/// Phased OR vs sim diagnostic on resampled traces.
+pub fn compare_or_dump_phases(
+    or_dump: &Path,
+    run_csv: &Path,
+    map: &crate::trace::OrColumnMap,
+    boundaries: &[f64],
+    step_s: f64,
+) -> Result<Vec<PhaseReport>, ValidateError> {
+    let mut or_trace = crate::trace::parse_or_dump_csv(or_dump, map)?;
+    crate::trace::normalize_trace_brake_to_fraction(&mut or_trace, None);
+    let rs_trace = parse_openrailsrs_run_csv(run_csv)?;
+    compare_traces_by_phases(&or_trace, &rs_trace, boundaries, step_s)
 }
 
 // ── Shared stats helpers (used by trace comparison) ───────────────────────────

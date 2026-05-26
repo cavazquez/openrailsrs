@@ -2,6 +2,9 @@
 
 use crate::model::TractiveCurve;
 
+/// OR default Curtius-Kniffler coefficients (A, B, C) when not specified in `.eng`.
+pub const OR_DEFAULT_CURTIUS: (f64, f64, f64) = (6.18, 44.0, 0.161);
+
 /// Diesel engine thermodynamic parameters (DieselPowerTab + ThrottleRPMTab).
 ///
 /// Models the relationship between throttle position → engine RPM → shaft power,
@@ -16,8 +19,16 @@ pub struct DieselEngineParams {
     pub idle_rpm: f64,
     /// Maximum RPM at full throttle.
     pub max_rpm: f64,
-    /// First-order time constant for RPM response (seconds); default ~2s.
+    /// First-order time constant for RPM response (seconds); fallback when OR params absent.
     pub rpm_time_constant_s: f64,
+    /// OR `RateOfChangeUpRPMpSS` — RPM acceleration (RPM/s² scale factor).
+    pub rate_of_change_up_rpm_pss: f64,
+    /// OR `RateOfChangeDownRPMpSS`.
+    pub rate_of_change_down_rpm_pss: f64,
+    /// OR `ChangeUpRPMpS` — max RPM change per second when increasing.
+    pub change_up_rpm_ps: f64,
+    /// OR `ChangeDownRPMpS`.
+    pub change_down_rpm_ps: f64,
 }
 
 impl DieselEngineParams {
@@ -68,13 +79,51 @@ impl DieselEngineParams {
         0.0
     }
 
-    /// Advance engine RPM toward target with first-order lag (Euler step).
+    /// Advance engine RPM toward target using OR `DieselEngine.cs` dynamics when OR
+    /// rate parameters are present; otherwise first-order exponential lag.
     pub fn advance_rpm(&self, current_rpm: f64, throttle: f64, dt: f64) -> f64 {
         let target = self.target_rpm(throttle);
+        if self.rate_of_change_up_rpm_pss > 0.0 && self.change_up_rpm_ps > 0.0 {
+            return self.advance_rpm_orts(current_rpm, target, throttle, dt);
+        }
         let tau = self.rpm_time_constant_s.max(0.01);
-        // Exponential approach: rpm += (target - rpm) * (1 - exp(-dt/tau))
         let factor = 1.0 - (-dt / tau).exp();
         current_rpm + (target - current_rpm) * factor
+    }
+
+    fn advance_rpm_orts(&self, current_rpm: f64, target: f64, throttle: f64, dt: f64) -> f64 {
+        let delta = target - current_rpm;
+        if delta.abs() < 1e-6 {
+            return current_rpm;
+        }
+        let increasing = delta > 0.0;
+        let acc = if increasing {
+            self.rate_of_change_up_rpm_pss
+        } else {
+            self.rate_of_change_down_rpm_pss
+                .max(self.rate_of_change_up_rpm_pss)
+        };
+        let max_change = if increasing {
+            self.change_up_rpm_ps
+        } else {
+            self.change_down_rpm_ps.max(self.change_up_rpm_ps)
+        };
+        let throttle_acc = if increasing {
+            throttle.clamp(0.01, 1.0)
+        } else {
+            1.0
+        };
+        let mut d_rpm = (2.0 * acc * throttle_acc * delta.abs()).sqrt();
+        d_rpm = d_rpm.clamp(0.01 * max_change, max_change);
+        if !increasing {
+            d_rpm = -d_rpm;
+        }
+        let step = d_rpm * dt;
+        if increasing {
+            (current_rpm + step).min(target)
+        } else {
+            (current_rpm + step).max(target)
+        }
     }
 }
 
@@ -89,6 +138,16 @@ pub struct DieselTractionModel {
     pub engine: Option<Box<DieselEngineParams>>,
     /// Rated max power (W) for legacy P/v models without `DieselEngineParams`.
     pub max_power_w: Option<f64>,
+    /// Legacy MSTS ramp time to full tractive effort (`RunUpTimeToMaxForce`).
+    pub legacy_run_up_time_s: Option<f64>,
+    /// Mass used for Curtius-Kniffler adhesion (drive-wheel weight or loco mass).
+    pub adhesion_mass_kg: f64,
+    /// Curtius-Kniffler A/B/C; adhesion disabled when A <= 0.
+    pub curtius_a: f64,
+    pub curtius_b: f64,
+    pub curtius_c: f64,
+    /// Motor heating time constant for dynamic `PowerReduction` (seconds).
+    pub motor_heating_time_s: f64,
 }
 
 impl Default for DieselTractionModel {
@@ -98,6 +157,12 @@ impl Default for DieselTractionModel {
             effort_scale: 1.0,
             engine: None,
             max_power_w: None,
+            legacy_run_up_time_s: None,
+            adhesion_mass_kg: 0.0,
+            curtius_a: 0.0,
+            curtius_b: 0.0,
+            curtius_c: 0.0,
+            motor_heating_time_s: 120.0,
         }
     }
 }
@@ -115,18 +180,102 @@ impl DieselTractionModel {
             effort_scale: 1.0,
             engine: None,
             max_power_w: None,
+            legacy_run_up_time_s: None,
+            adhesion_mass_kg: 0.0,
+            curtius_a: 0.0,
+            curtius_b: 0.0,
+            curtius_c: 0.0,
+            motor_heating_time_s: 120.0,
         }
     }
 
+    /// Configure adhesion and motor-heating parameters from locomotive `.eng` data.
+    pub fn configure_traction_limits(
+        &mut self,
+        loco_mass_kg: f64,
+        drive_wheel_mass_kg: f64,
+        curtius: (f64, f64, f64),
+        motor_heating_time_s: f64,
+    ) {
+        self.adhesion_mass_kg = if drive_wheel_mass_kg > 0.0 {
+            drive_wheel_mass_kg
+        } else {
+            loco_mass_kg
+        };
+        self.curtius_a = curtius.0;
+        self.curtius_b = curtius.1;
+        self.curtius_c = curtius.2;
+        if motor_heating_time_s > 0.0 {
+            self.motor_heating_time_s = motor_heating_time_s;
+        }
+    }
+
+    /// OR Curtius-Kniffler adhesion limit (N) at speed `v_mps`.
+    pub fn adhesion_limit_n(&self, v_mps: f64) -> f64 {
+        if self.curtius_a <= 0.0 || self.adhesion_mass_kg <= 0.0 {
+            return f64::INFINITY;
+        }
+        let v_kmh = v_mps * 3.6;
+        self.adhesion_mass_kg * 9.81 * (self.curtius_a / (self.curtius_b + v_kmh) + self.curtius_c)
+    }
+
     /// Legacy MSTS diesel: single full-notch curve from max power and tractive effort.
-    pub fn from_power_and_effort(max_power_w: f64, max_tractive_effort_n: f64) -> Self {
+    pub fn from_power_and_effort(
+        max_power_w: f64,
+        max_tractive_effort_n: f64,
+        run_up_time_s: f64,
+    ) -> Self {
         let curve = TractiveCurve::from_power_and_effort(max_power_w, max_tractive_effort_n);
         Self {
             notch_curves: vec![(0.0, TractiveCurve::default()), (1.0, curve)],
             effort_scale: 1.0,
             engine: None,
             max_power_w: Some(max_power_w),
+            legacy_run_up_time_s: if run_up_time_s > 0.0 {
+                Some(run_up_time_s)
+            } else {
+                None
+            },
+            adhesion_mass_kg: 0.0,
+            curtius_a: 0.0,
+            curtius_b: 0.0,
+            curtius_c: 0.0,
+            motor_heating_time_s: 120.0,
         }
+    }
+
+    /// OR dynamic `PowerReduction` fraction from motor heat state `[0, 1]`.
+    pub fn power_reduction_from_heat(heat: f64) -> f64 {
+        heat.clamp(0.0, 0.35)
+    }
+
+    /// Advance motor heat one step; returns updated heat in `[0, 1]`.
+    pub fn advance_motor_heat(
+        &self,
+        heat: f64,
+        v_mps: f64,
+        throttle: f64,
+        run_up_factor: f64,
+        dt: f64,
+    ) -> f64 {
+        let tau = self.motor_heating_time_s.max(1.0);
+        let target = if throttle <= 0.0 {
+            0.0
+        } else {
+            let f_peak = self.uncapped_force_at(v_mps, throttle, run_up_factor);
+            let f_adh = self.adhesion_limit_n(v_mps);
+            let util = if f_adh.is_finite() && f_adh > 0.0 {
+                (f_peak / f_adh).clamp(0.0, 1.0)
+            } else {
+                throttle.clamp(0.0, 1.0)
+            };
+            util * util
+        };
+        (heat + dt / tau * (target - heat)).clamp(0.0, 1.0)
+    }
+
+    pub fn legacy_run_up_time_s(&self) -> Option<f64> {
+        self.legacy_run_up_time_s
     }
 
     /// Idle RPM; returns 0 if no engine params are configured.
@@ -179,7 +328,26 @@ impl DieselTractionModel {
 
     /// Tractive effort (N) at speed `v_mps` with driver throttle in `[0, 1]`.
     pub fn force_at(&self, v_mps: f64, throttle: f64) -> f64 {
-        self.force_at_raw(v_mps, throttle) * self.effort_scale
+        self.force_at_scaled(v_mps, throttle, 1.0, 0.0)
+    }
+
+    /// Like [`Self::force_at`] but scales legacy ramp-in and applies adhesion / heating.
+    pub fn force_at_scaled(
+        &self,
+        v_mps: f64,
+        throttle: f64,
+        run_up_factor: f64,
+        power_reduction: f64,
+    ) -> f64 {
+        let raw =
+            self.force_at_raw(v_mps, throttle) * self.effort_scale * run_up_factor.clamp(0.0, 1.0);
+        let reduced = raw * (1.0 - power_reduction.clamp(0.0, 0.95));
+        reduced.min(self.adhesion_limit_n(v_mps))
+    }
+
+    /// Peak tractive effort at `(v, throttle)` before adhesion / heating caps.
+    pub fn uncapped_force_at(&self, v_mps: f64, throttle: f64, run_up_factor: f64) -> f64 {
+        self.force_at_raw(v_mps, throttle) * self.effort_scale * run_up_factor.clamp(0.0, 1.0)
     }
 
     fn force_at_raw(&self, v_mps: f64, throttle: f64) -> f64 {
@@ -239,9 +407,42 @@ mod tests {
 
     #[test]
     fn from_power_and_effort_stall_force() {
-        let m = DieselTractionModel::from_power_and_effort(1_000_000.0, 150_650.0);
+        let m = DieselTractionModel::from_power_and_effort(1_000_000.0, 150_650.0, 0.0);
         let stall = m.force_at(0.0, 1.0);
         assert!((stall - 150_650.0).abs() < 1.0, "stall {stall}");
         assert_eq!(m.max_power_w, Some(1_000_000.0));
+    }
+
+    #[test]
+    fn or_rpm_sqrt_differs_from_exponential_lag() {
+        let base = DieselEngineParams {
+            power_tab: vec![(650.0, 100_000.0), (1500.0, 500_000.0)],
+            throttle_rpm_tab: vec![(0.0, 650.0), (1.0, 1500.0)],
+            idle_rpm: 650.0,
+            max_rpm: 1500.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 10.0,
+            rate_of_change_down_rpm_pss: 10.0,
+            change_up_rpm_ps: 50.0,
+            change_down_rpm_ps: 40.0,
+        };
+        let lag = DieselEngineParams {
+            rate_of_change_up_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            ..base.clone()
+        };
+        let rpm_or = base.advance_rpm(650.0, 1.0, 1.0);
+        let rpm_lag = lag.advance_rpm(650.0, 1.0, 1.0);
+        assert_ne!(rpm_or, rpm_lag);
+        assert!(rpm_or > 650.0 && rpm_or <= 1500.0);
+    }
+
+    #[test]
+    fn adhesion_caps_stall_force() {
+        let mut m = sample_model();
+        m.configure_traction_limits(68_000.0, 64_000.0, OR_DEFAULT_CURTIUS, 120.0);
+        let stall = m.force_at(0.0, 1.0);
+        let limit = m.adhesion_limit_n(0.0);
+        assert!(stall <= limit + 1.0, "stall {stall} limit {limit}");
     }
 }

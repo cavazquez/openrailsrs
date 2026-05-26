@@ -139,6 +139,8 @@ pub struct Locomotive {
     pub wagon_shape: Option<String>,
     /// Body length in metres (for consist spacing in viewers).
     pub length_m: f64,
+    /// Per-vehicle Davis rolling resistance (summed across the consist).
+    pub davis: DavisCoefficients,
 }
 
 #[derive(Clone, Debug)]
@@ -148,6 +150,8 @@ pub struct Wagon {
     pub max_brake_force_n: f64,
     /// Physical length in metres (used for brake-pipe delay calculations).
     pub length_m: f64,
+    /// Per-vehicle Davis rolling resistance (summed across the consist).
+    pub davis: DavisCoefficients,
     /// Visual shape filename from the `.wag` file.
     pub wagon_shape: Option<String>,
 }
@@ -243,6 +247,22 @@ impl Consist {
             Vehicle::Loco(l) => l.steam.clone(),
             _ => None,
         })
+    }
+
+    pub fn aggregate_davis(&self) -> DavisCoefficients {
+        self.vehicles
+            .iter()
+            .fold(DavisCoefficients::default(), |acc, v| {
+                let d = match v {
+                    Vehicle::Loco(l) => &l.davis,
+                    Vehicle::Wagon(w) => &w.davis,
+                };
+                DavisCoefficients {
+                    a_n: acc.a_n + d.a_n,
+                    b_n_per_mps: acc.b_n_per_mps + d.b_n_per_mps,
+                    c_n_per_mps2: acc.c_n_per_mps2 + d.c_n_per_mps2,
+                }
+            })
     }
 
     /// Lead locomotive notch curves (trail DMUs often idle in OR consists).

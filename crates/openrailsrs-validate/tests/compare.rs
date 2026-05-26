@@ -132,6 +132,48 @@ fn no_thresholds_always_passes() {
 }
 
 #[test]
+fn phase_breakdown_splits_resampled_window() {
+    use openrailsrs_validate::{RunTrace, TraceSample, compare_traces_by_phases};
+
+    let mk = |v: f64, d: f64| TraceSample {
+        time_s: 0.0,
+        velocity_mps: v,
+        distance_m: d,
+        energy_kwh: None,
+        throttle: None,
+        brake: None,
+    };
+
+    let mut a = RunTrace {
+        source: "a".into(),
+        samples: Vec::new(),
+    };
+    let mut b = RunTrace {
+        source: "b".into(),
+        samples: Vec::new(),
+    };
+    for t in 0..=40 {
+        let tf = t as f64;
+        a.samples.push(TraceSample {
+            time_s: tf,
+            ..mk(10.0 + tf, tf * 10.0)
+        });
+        b.samples.push(TraceSample {
+            time_s: tf,
+            ..mk(tf, tf * 9.0)
+        });
+    }
+
+    let phases = compare_traces_by_phases(&a, &b, &[0.0, 20.0, 40.0], 1.0).expect("phases");
+    assert_eq!(phases.len(), 2);
+    assert_eq!(phases[0].label, "0–20 s");
+    assert!(phases[0].velocity.samples > 0);
+    assert!(phases[1].velocity.samples > 0);
+    assert!(phases[0].velocity.rms_diff > 0.0);
+    assert!(phases[1].velocity.rms_diff > 0.0);
+}
+
+#[test]
 fn smoke_self_compare_passes_strict() {
     // Compare the smoke scenario CSV against itself → must be exactly zero.
     let csv = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/run.csv");

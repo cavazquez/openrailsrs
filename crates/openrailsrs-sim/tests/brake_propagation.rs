@@ -13,7 +13,11 @@ use openrailsrs_sim::brake::BrakeSystem;
 #[test]
 fn rear_cylinder_lags_front() {
     // Three vehicles: front at 0 m, middle at 15 m, rear at 30 m.
-    let vehicles: Vec<(f64, f64)> = vec![(0.0, 50_000.0), (15.0, 40_000.0), (30.0, 40_000.0)];
+    let vehicles: Vec<(f64, f64, bool)> = vec![
+        (0.0, 50_000.0, true),
+        (15.0, 40_000.0, false),
+        (30.0, 40_000.0, false),
+    ];
     let mut sys = BrakeSystem::from_vehicles(&vehicles, 200.0);
 
     // Apply full brake.
@@ -51,7 +55,7 @@ fn rear_cylinder_lags_front() {
 
 #[test]
 fn full_release_clears_all_cylinders() {
-    let vehicles: Vec<(f64, f64)> = vec![(0.0, 50_000.0), (30.0, 40_000.0)];
+    let vehicles: Vec<(f64, f64, bool)> = vec![(0.0, 50_000.0, true), (30.0, 40_000.0, false)];
     let mut sys = BrakeSystem::from_vehicles(&vehicles, 200.0);
 
     // Fully apply.
@@ -74,5 +78,26 @@ fn full_release_clears_all_cylinders() {
     assert_eq!(
         sys.cylinders[1].current_force_n, 0.0,
         "rear should be released"
+    );
+}
+
+#[test]
+fn ep_rear_locomotive_applies_without_pipe_delay() {
+    // Rear power car at 140 m would wait ~0.7 s on air-only pipe; EP is instant.
+    let vehicles: Vec<(f64, f64, bool)> = vec![
+        (0.0, 50_000.0, true),
+        (70.0, 40_000.0, false),
+        (140.0, 50_000.0, true),
+    ];
+    let mut sys = BrakeSystem::from_vehicles(&vehicles, 200.0);
+    sys.step(1.0, 0.05);
+    assert!(
+        sys.cylinders[2].current_force_n > 0.0,
+        "rear EP loco should apply within 0.05 s, got {}",
+        sys.cylinders[2].current_force_n
+    );
+    assert_eq!(
+        sys.cylinders[1].current_force_n, 0.0,
+        "middle wagon should still wait for pipe signal"
     );
 }

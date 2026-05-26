@@ -135,7 +135,21 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 - `[validate]` en `scenario.toml` + hook automático en `openrailsrs sim` (`--no-validate` para omitir).
 - Fixtures sintéticos en `openrailsrs-validate/tests/fixtures/`; docs en `docs/OR_TRACE_COMPARISON.md`.
 
-**Pendiente:** Comparación topológica (`edge_id`); energía vs OR; PASS estricto Chiltern (física vapor alineada).
+**Calibración Chiltern (detalle en [`CALIBRATION.md`](CALIBRATION.md#roadmap-de-calibración-chiltern--blue-pullman)):**
+
+T1–T10 ✅ (parser diesel, Davis por vehículo, RPM sqrt, adhesión, frenos EP, Experimento E con baseline OR).
+
+| Prioridad | Pendiente |
+|-----------|-----------|
+| **1** | Cerrar gap de velocidad Birmingham 65 s (fase 40–65 s): RPM, DMBSH, carga motor, Davis fino |
+| **2** | Baselines OR experimentos A, B, D (C si hace falta) |
+| **3** | Calibrar DMBSH vs OR (stub P/v sintético) |
+| **4** | Validar frenos EP vs OR en corrida real |
+| **5** | Umbrales estrictos Chiltern (0.3 m/s / 25 m) en `scenario.toml` |
+| **6** | Pendiente de vía (`grade_m_per_m`) en física |
+| **7** | Señales / límites / driver automático (largo plazo) |
+
+**Otros pendientes Fase 7:** comparación topológica (`edge_id`); energía vs OR.
 
 ---
 

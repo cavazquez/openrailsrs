@@ -47,7 +47,7 @@ fn orts_engine(stall_n: f64) -> DieselTractionModel {
 }
 
 fn legacy_engine(power_w: f64, force_n: f64) -> DieselTractionModel {
-    DieselTractionModel::from_power_and_effort(power_w, force_n)
+    DieselTractionModel::from_power_and_effort(power_w, force_n, 0.0)
 }
 
 #[test]
@@ -115,6 +115,10 @@ fn per_engine_rpm_independent() {
         idle_rpm: 325.0,
         max_rpm: 750.0,
         rpm_time_constant_s: tau,
+        rate_of_change_up_rpm_pss: 0.0,
+        rate_of_change_down_rpm_pss: 0.0,
+        change_up_rpm_ps: 0.0,
+        change_down_rpm_ps: 0.0,
     };
     fast.engine = Some(Box::new(engine_params(0.5)));
     slow.engine = Some(Box::new(engine_params(5.0)));

@@ -196,23 +196,61 @@ Esperar a que el tren alcance velocidad constante y notar:
 
 ---
 
-## Próximos pasos (roadmap)
+## Roadmap de calibración (Chiltern / Blue Pullman)
 
-### Corto plazo (bugs + calibración)
+Última revisión: 2026-05-26.
 
-- [ ] Parsear `ORTSDieselEngines { Diesel { ... } }` para extraer DieselPowerTab/ThrottleRPMTab del Blue Pullman
-- [ ] Soportar múltiples motores en consist (sumar fuerzas de todos los `Engine` entries)
-- [ ] Parsear `ORTSDavis_A/B/C` por vehículo y sumar al Davis del tren
-- [ ] Correr Experimentos A-E para obtener datos de calibración independientes
+### Hecho (T1–T10)
 
-### Mediano plazo (precisión)
+| # | Tarea | Estado |
+|---|--------|--------|
+| T1 | Escala freno OR (0–100) vs sim (0–1) en `compare-or` | ✅ |
+| T2 | Stub DMBSA completo (`ORTSDieselEngines`, tablas OR) | ✅ |
+| T3 | Experimento A (free roll) + ajuste Davis manual | ✅ código |
+| T4 | Parseo `ORTSDavis_A/B/C` por vehículo y suma | ✅ |
+| T5 | Calibración DMBSH legacy vs OR (Exp. B/D) | ✅ código |
+| T6 | RPM sqrt OR (`RateOfChangeUpRPMpSS`, etc.) | ✅ |
+| T7 | Parseo flat `ORTSDieselEngines` + masas `64t-uk` | ✅ |
+| T8 | Adhesión Curtius-Kniffler + calentamiento motor | ✅ |
+| T9 | Frenos EP en locomotoras (sin retardo de tubería) | ✅ código |
+| T10 | Experimento E — throttle 50 % / 30 s + baseline OR | ✅ |
 
-- [ ] Implementar pendiente de vía en la física (`grade_m_per_m` del perfil de elevación)
-- [ ] Calibrar `rpm_time_constant_s` contra el RPM spin-up real de OR (`RateOfChangeUpRPMpSS`)
-- [ ] Verificar el modelo de frenos contra el sistema EP del Blue Pullman (EP brakes, no aire normal)
+### Métricas actuales vs objetivo
 
-### Largo plazo (completitud)
+| Corrida | Métrica | Actual | Objetivo estricto | Estado |
+|---------|---------|--------|-------------------|--------|
+| Birmingham 65 s | posición max | ~19 m | < 55 m | ✅ |
+| Birmingham 65 s | vel RMS global | **~0.42 m/s** | ~0.3 m/s | ✅ (umbral 0.5) |
+| Birmingham 40–65 s | vel RMS | **~0.55 m/s** | bajar | ✅ (umbral 0.5) |
+| Experimento E 30 s | vel RMS | ~2.4 m/s | ≤ 3.0 | ✅ |
 
-- [ ] Parsear señales y velocidades límite del itinerario
-- [ ] Modo de conductor automático que respeta las señales (actualmente usa el driver de OR)
-- [ ] Soporte para vía con pendiente variable a lo largo del recorrido
+### Experimentos OR (baselines)
+
+| Exp | Objetivo | Sim / código | Baseline OR |
+|-----|----------|--------------|-------------|
+| A | Costa libre → Davis | parcial (T3/T4) | ❌ falta capturar |
+| B | Full throttle → F(v) | parcial | ❌ falta capturar |
+| C | Equilibrio 20/40/60/80 % | ❌ | ❌ |
+| D | Un motor vs dos | parcial (T5) | ❌ falta capturar |
+| E | Throttle 50 % / 30 s | ✅ | ✅ |
+
+---
+
+### Pendiente (orden sugerido)
+
+| Prioridad | Qué falta | Notas |
+|-----------|-----------|--------|
+| **1** | Cerrar gap de velocidad en corrida Birmingham (65 s), sobre todo **40–65 s** | ✅ ~0.42 m/s global; stub DMBSA con `ORTSDieselEngines` + Davis; DMBSH `MaxContinuousForce` 130 kN |
+| **2** | Capturar baselines OR de experimentos **A, B, D** (y **C** si hace falta) | Ver procedimientos más abajo (Exp. A–E) |
+| **3** | Calibrar **DMBSH** contra OR | Hoy es modelo P/v sintético (stub legacy) |
+| **4** | Validar **frenos EP** vs OR en corrida real | T9 implementado; falta contraste en Birmingham completo |
+| **5** | **Umbrales estrictos** Chiltern (`0.3 m/s` / `25 m`) en `scenario.toml` | Solo cuando P1–P4 estén cerrados |
+| **6** | **Pendiente de vía** (`grade_m_per_m`) en física | Mediano plazo; `track.toml` ya tiene `grade_percent` |
+| **7** | Señales / límites / driver automático respetando señales | Largo plazo; hoy el driver viene del CSV de OR |
+
+### Mediano / largo plazo (referencia)
+
+- Integrar distancia en trazas OR **Explorer** (integrar `TRAINSPEED` cuando `DISTANCETRAVELLED` = 0).
+- Energía vs OR en `compare-or`.
+- Comparación topológica (`edge_id` además de odómetro).
+- Pendiente variable a lo largo del recorrido (más allá de `grade_percent` por arista).
