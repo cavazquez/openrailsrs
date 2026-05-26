@@ -40,9 +40,6 @@ fn load_chiltern_pullman_engine_if_present() {
         .expect("Pullman stub should include ORTS notch curves");
     assert!(diesel.notch_curves.len() >= 5, "expected multiple notches");
     let f = diesel.force_at(0.0, 0.8);
-    // Blue Pullman 80% notch stall force = 71 711 N (per OR source data, in Newtons already).
-    // Previously this read > 100 000 due to an erroneous ×4.44 lbf→N conversion that has since
-    // been removed.
     assert!(f > 50_000.0, "80% notch stall force too low: {f}");
     assert!(
         diesel.engine.is_some(),

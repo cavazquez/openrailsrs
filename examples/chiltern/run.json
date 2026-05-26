@@ -1,9 +1,9 @@
 scenario_name = "RS_Let's go to Birmingham"
 seed = 42
-duration_requested_s = 65.0
+duration_requested_s = 61.0
 time_step_s = 1.0
-final_time_s = 65.0
-final_odometer_m = 284.0210131054017
-final_velocity_mps = 12.80185616286546
-cumulative_energy_kwh = 10.345575579949614
+final_time_s = 61.0
+final_odometer_m = 232.48435644647455
+final_velocity_mps = 11.28468501880161
+cumulative_energy_kwh = 8.039480392389601
 reached_destination = false

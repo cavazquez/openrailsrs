@@ -77,7 +77,6 @@ pub fn step(
                 state.diesel_motor_heat = vec![0.0; train.diesel_engines.len()];
             }
             let mut f_total = 0.0;
-            let mut p_total = 0.0;
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
                 let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
@@ -100,14 +99,17 @@ pub fn step(
                 let new_heat = engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt);
                 state.diesel_motor_heat[i] = new_heat;
                 let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
-                f_total += engine.force_at_scaled(v, state.throttle, run_factor, power_reduction);
-                p_total += engine.effective_power_w(new_rpm, state.throttle) * run_factor;
+                let mut f_e =
+                    engine.force_at_scaled(v, state.throttle, run_factor, power_reduction);
+                let p_e = engine.effective_power_w(new_rpm, state.throttle)
+                    * run_factor
+                    * (1.0 - power_reduction.clamp(0.0, 0.95));
+                if v > 0.5 && p_e > 0.0 {
+                    f_e = f_e.min(p_e / v);
+                }
+                f_total += f_e;
             }
-            let mut f = f_total;
-            if v > 0.5 && p_total > 0.0 {
-                f = f.min(p_total / v);
-            }
-            f
+            f_total
         } else if let Some(f_curve) = train.tractive.interpolate(v) {
             f_curve * state.throttle
         } else {

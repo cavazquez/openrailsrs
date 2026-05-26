@@ -219,9 +219,9 @@ Esperar a que el tren alcance velocidad constante y notar:
 
 | Corrida | Métrica | Actual | Objetivo estricto | Estado |
 |---------|---------|--------|-------------------|--------|
-| Birmingham 65 s | posición max | ~19 m | < 55 m | ✅ |
-| Birmingham 65 s | vel RMS global | **~0.42 m/s** | ~0.3 m/s | ✅ (umbral 0.5) |
-| Birmingham 40–65 s | vel RMS | **~0.55 m/s** | bajar | ✅ (umbral 0.5) |
+| Birmingham 61 s | posición max | ~16 m | < 55 m | ✅ |
+| Birmingham 61 s | vel RMS global | **~0.36 m/s** | ~0.3 m/s | ✅ (umbral 0.5) |
+| Birmingham 40–61 s | vel RMS | **~0.42 m/s** | bajar | ✅ (umbral 0.5) |
 | Experimento E 30 s | vel RMS | ~2.4 m/s | ≤ 3.0 | ✅ |
 
 ### Experimentos OR (baselines)

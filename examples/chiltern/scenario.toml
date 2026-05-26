@@ -28,7 +28,7 @@ difficulty = "normal"
 penalty_per_second_late = 0.0
 
 [simulation]
-duration = 65.0
+duration = 61.0
 time_step = 1.0
 seed = 42
 
@@ -38,7 +38,7 @@ metadata = "run.json"
 
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
-# Parser OR Speed.csv corregido (0016,4 = 16.4 mph); DMBSH usa MaxContinuousForce 130 kN
+# Parser OR Speed.csv corregido; sim alineada a baseline OR 61 s; cap P/v por locomotora
 max_velocity_rms = 0.5
 max_position_max = 45.0
 max_throttle_rms = 0.25

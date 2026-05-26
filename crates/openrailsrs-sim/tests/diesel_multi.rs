@@ -106,6 +106,43 @@ fn orts_plus_legacy_both_contribute() {
 }
 
 #[test]
+fn per_engine_power_cap_limits_force_at_speed() {
+    let orts = orts_engine(70_000.0);
+    let legacy = legacy_engine(400_000.0, 150_000.0);
+    let f_orts = orts.force_at(20.0, 1.0);
+    let train = TrainPhysics {
+        mass_kg: 250_000.0,
+        max_power_w: 750_000.0,
+        max_tractive_effort_n: 220_000.0,
+        max_brake_n: 200_000.0,
+        davis: DavisCoefficients::default(),
+        tractive: TractiveCurve::default(),
+        diesel_engines: vec![orts, legacy],
+        regen_factor: 0.0,
+        diesel_sfc_g_per_kwh: None,
+        steam_params: None,
+    };
+    let g = flat_graph();
+    let path = PathData::from_path(&["e1".to_string()], &g);
+    let mut state = TrainSimState::new(vec!["e1".into()]);
+    state.throttle = 1.0;
+    state.velocity_mps = 20.0;
+    state.diesel_rpm = vec![750.0, 0.0];
+    state.diesel_run_up = vec![0.0, 1.0];
+    state.diesel_motor_heat = vec![0.0, 0.0];
+    let v_before = state.velocity_mps;
+    step(&mut state, &path, &train, 1.0);
+    // Legacy engine capped at P/v = 400k/20 = 20 kN, not full 150 kN stall.
+    let f_legacy_cap = 400_000.0 / 20.0;
+    let expected_accel = (f_orts + f_legacy_cap) / train.mass_kg;
+    let observed_accel = state.velocity_mps - v_before;
+    assert!(
+        (observed_accel - expected_accel).abs() < 0.05,
+        "expected per-engine P/v cap: accel {observed_accel} vs {expected_accel}"
+    );
+}
+
+#[test]
 fn per_engine_rpm_independent() {
     let mut fast = orts_engine(50_000.0);
     let mut slow = orts_engine(50_000.0);
