@@ -20,6 +20,8 @@ openrailsrs import-msts "$CHILTERN" \
 
 El import escribe `start=n3`, `start_offset_m` (~305.6 m desde PAT+`.srv`), destino lejano y `[[route.switches]]` desde el PAT.
 
+Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`). Edita ese overlay, no `scenario.toml` a mano.
+
 ## Sync consist Pullman
 
 Los `.eng`/`.wag` del repo son **física simplificada** (sin cab/C#) generados desde MSTS:

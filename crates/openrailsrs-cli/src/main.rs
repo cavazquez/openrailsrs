@@ -757,7 +757,7 @@ fn main() -> anyhow::Result<()> {
 
             // 2. If an activity is given, import it: ACT + PAT → scenario.toml
             if let Some(act_path) = activity {
-                let (scenario_toml, act_name) =
+                let (scenario_toml, act_name, overlay_applied) =
                     import_activity_with_summary(&route_dir, &act_path, Some(&out)).map_err(
                         |e| anyhow::anyhow!("import activity {}: {e}", act_path.display()),
                     )?;
@@ -765,9 +765,14 @@ fn main() -> anyhow::Result<()> {
                 std::fs::write(&scenario_out, &scenario_toml)
                     .with_context(|| format!("write {}", scenario_out.display()))?;
                 println!(
-                    "✓ scenario.toml  — \"{}\" → {}",
+                    "✓ scenario.toml  — \"{}\" → {}{}",
                     act_name,
-                    scenario_out.display()
+                    scenario_out.display(),
+                    if overlay_applied {
+                        " (merged scenario.overlay.toml)"
+                    } else {
+                        ""
+                    }
                 );
             } else {
                 // Auto-discover any *.act files in route_dir
@@ -786,7 +791,7 @@ fn main() -> anyhow::Result<()> {
                 for (i, act_entry) in acts.iter().enumerate() {
                     let act_path = act_entry.path();
                     match import_activity_with_summary(&route_dir, &act_path, Some(&out)) {
-                        Ok((scenario_toml, act_name)) => {
+                        Ok((scenario_toml, act_name, overlay_applied)) => {
                             let fname = if i == 0 {
                                 "scenario.toml".to_string()
                             } else {
@@ -796,10 +801,15 @@ fn main() -> anyhow::Result<()> {
                             std::fs::write(&scenario_out, &scenario_toml)
                                 .with_context(|| format!("write {}", scenario_out.display()))?;
                             println!(
-                                "✓ {}  — \"{}\" → {}",
+                                "✓ {}  — \"{}\" → {}{}",
                                 fname,
                                 act_name,
-                                scenario_out.display()
+                                scenario_out.display(),
+                                if overlay_applied {
+                                    " (merged scenario.overlay.toml)"
+                                } else {
+                                    ""
+                                }
                             );
                         }
                         Err(e) => {

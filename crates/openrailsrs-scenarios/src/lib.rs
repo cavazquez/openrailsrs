@@ -2,6 +2,7 @@
 
 pub mod error;
 pub mod model;
+pub mod overlay;
 pub mod timetable;
 
 pub use error::ScenarioError;
@@ -9,6 +10,10 @@ pub use model::{
     DavisSection, Difficulty, GameplaySection, ObjectiveKind, OutputSection, RouteSection,
     ScenarioFile, ScenarioMeta, SimulationSection, SoundRegionDef, StopDef, SwitchDef,
     SwitchPositionDef, TrainEntryDef, TrainSection, ValidateSection,
+};
+pub use overlay::{
+    SCENARIO_OVERLAY_FILENAME, ScenarioOverlay, SimulationOverlay, TrainOverlay,
+    apply_scenario_overlay, apply_scenario_overlay_dir, apply_scenario_overlay_file,
 };
 pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 

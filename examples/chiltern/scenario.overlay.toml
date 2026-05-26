@@ -1,0 +1,15 @@
+# Merged automatically after `import-msts` (route/placement come from the .act).
+# Edit this file instead of hand-fixing scenario.toml after each re-import.
+
+[simulation]
+duration = 65.0
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[validate]
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
+max_velocity_rms = 4.5
+max_position_max = 55.0
+max_throttle_rms = 0.25
+max_brake_rms = 50.0

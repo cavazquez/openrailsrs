@@ -29,16 +29,17 @@ pub fn import_activity_with_track(
     act_path: &Path,
     imported_route_dir: Option<&Path>,
 ) -> Result<String, MstsError> {
-    let (toml, _) = import_activity_with_summary(route_dir, act_path, imported_route_dir)?;
+    let (toml, _, _) = import_activity_with_summary(route_dir, act_path, imported_route_dir)?;
     Ok(toml)
 }
 
-/// Same as `import_activity` but also returns the activity name.
+/// Same as `import_activity` but also returns the activity name and whether
+/// `scenario.overlay.toml` was merged.
 pub fn import_activity_with_summary(
     route_dir: &Path,
     act_path: &Path,
     imported_route_dir: Option<&Path>,
-) -> Result<(String, String), MstsError> {
+) -> Result<(String, String, bool), MstsError> {
     let activity = ActivityFile::from_path(act_path)?;
     let pat_path = resolve_player_pat(route_dir, &activity);
     let path_file = PathFile::from_path(&pat_path)?;
@@ -88,7 +89,7 @@ pub fn import_activity_with_summary(
     let stops = build_stops_from_objects(route_dir, &activity);
     let sound_regions = build_sound_regions(route_dir, &activity);
 
-    let scenario = ScenarioFile {
+    let mut scenario = ScenarioFile {
         scenario: ScenarioMeta {
             name: activity.name.clone(),
             description: format!("Imported from MSTS activity: {}", act_path.display()),
@@ -136,8 +137,15 @@ pub fn import_activity_with_summary(
         validate: None,
     };
 
+    let mut overlay_applied = false;
+    if let Some(track_dir) = imported_route_dir {
+        overlay_applied =
+            openrailsrs_scenarios::apply_scenario_overlay_dir(&mut scenario, track_dir)
+                .map_err(|e| MstsError::Msg(e.to_string()))?;
+    }
+
     let toml = toml::to_string_pretty(&scenario)?;
-    Ok((toml, activity.name))
+    Ok((toml, activity.name, overlay_applied))
 }
 
 fn fallback_route_nodes(path_file: &PathFile) -> (String, String, Vec<SwitchDef>) {

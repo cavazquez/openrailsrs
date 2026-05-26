@@ -614,7 +614,7 @@ fn chiltern_birmingham_import_uses_pat_placement() {
     let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
     let direct = placement_from_imported_route(&out, &pat, offset).expect("direct placement");
     assert_eq!(direct.start, "n3", "direct placement start");
-    let (toml, _) =
+    let (toml, _, overlay_applied) =
         import_activity_with_summary(route_dir, &act, Some(&out)).expect("import activity");
     assert!(
         toml.contains("start = \"n3\""),
@@ -624,4 +624,12 @@ fn chiltern_birmingham_import_uses_pat_placement() {
         direct.start,
         toml.lines().take(20).collect::<Vec<_>>().join("\n")
     );
+    if out.join("scenario.overlay.toml").exists() {
+        assert!(overlay_applied, "expected scenario.overlay.toml merge");
+        assert!(toml.contains("[validate]"), "overlay should add validate");
+        assert!(
+            toml.contains("duration = 65"),
+            "overlay should set duration"
+        );
+    }
 }
