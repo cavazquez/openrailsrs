@@ -1,0 +1,10 @@
+(Train
+  (Engine "trains/RF_Blue_Pullman/RF_WP_DMBSA.eng")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_PSB.wag")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_KFC.wag")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_PCFD.wag")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_PCFE.wag")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_KFF.wag")
+  (Wagon "trains/RF_Blue_Pullman/RF_WP_PSG.wag")
+  (Engine "trains/RF_Blue_Pullman/RF_WP_DMBSH.eng")
+)

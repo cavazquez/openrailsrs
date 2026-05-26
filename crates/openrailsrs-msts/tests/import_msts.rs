@@ -141,6 +141,27 @@ fn import_activity_produces_scenario() {
 // ── Sub-phase A: TrItemTable signals ─────────────────────────────────────────
 
 #[test]
+fn with_events_vector_node_pins_and_refs() {
+    use openrailsrs_formats::TrackNodeKind;
+    let tdb = TrackDbFile::from_path(fixtures_dir().join("with_events/route.tdb"))
+        .expect("parse with_events/route.tdb");
+    let n2 = tdb.nodes.iter().find(|n| n.id == 2).expect("node 2");
+    match &n2.kind {
+        TrackNodeKind::Vector {
+            pins,
+            item_ids,
+            length_m,
+            ..
+        } => {
+            assert_eq!(*pins, (1, 3), "unexpected pins: {pins:?}");
+            assert_eq!(item_ids.as_slice(), &[1, 2]);
+            assert!((*length_m - 1000.0).abs() < 1.0);
+        }
+        other => panic!("expected Vector, got {other:?}"),
+    }
+}
+
+#[test]
 fn parse_tritem_table_extracts_signal() {
     let tdb = TrackDbFile::from_path(fixtures_dir().join("with_signals/route.tdb"))
         .expect("parse with_signals/route.tdb");
@@ -569,5 +590,38 @@ fn engine_traction_curve_parsed() {
     assert!(
         (f0 - 350_000.0).abs() < 1.0,
         "first force should be 350 000 N"
+    );
+}
+
+#[test]
+fn chiltern_birmingham_import_uses_pat_placement() {
+    use openrailsrs_formats::ActivityFile;
+    use openrailsrs_msts::import_activity_with_summary;
+    use openrailsrs_msts::path_placement::{
+        placement_from_imported_route, read_distance_down_path,
+    };
+
+    let route_dir = std::path::Path::new(
+        "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern",
+    );
+    let act = route_dir.join("ACTIVITIES/RS_Let's go to Birmingham.act");
+    let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    if !out.join("track.toml").exists() || !act.exists() {
+        return;
+    }
+    let activity = ActivityFile::from_path(&act).expect("parse act");
+    let pat = route_dir.join("PATHS/RS_Let's go to Birmingham.pat");
+    let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
+    let direct = placement_from_imported_route(&out, &pat, offset).expect("direct placement");
+    assert_eq!(direct.start, "n3", "direct placement start");
+    let (toml, _) =
+        import_activity_with_summary(route_dir, &act, Some(&out)).expect("import activity");
+    assert!(
+        toml.contains("start = \"n3\""),
+        "player_path={} service={:?} offset={offset} direct_start={} scenario:\n{}",
+        activity.player_path,
+        activity.player_service_id,
+        direct.start,
+        toml.lines().take(20).collect::<Vec<_>>().join("\n")
     );
 }

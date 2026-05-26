@@ -24,6 +24,8 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::parser::parse_from_first_paren;
 
+use std::path::Path;
+
 use super::{atom_to_number, atom_to_string};
 
 /// One AI traffic service declared inside `Tr_Activity_Service_Definition` /
@@ -88,6 +90,8 @@ pub struct ActivityFile {
     pub player_consist: String,
     /// Relative path to the player path (`.pat`).
     pub player_path: String,
+    /// Service / path id when the activity uses `PathID` or `Player_Service_Definition`.
+    pub player_service_id: Option<String>,
     /// Start time in seconds from midnight.
     pub start_time_s: f64,
     /// Duration in seconds.
@@ -113,7 +117,27 @@ impl ActivityFile {
         let player_consist = find_string_field(ast, &["Player_Train_Init_Cons"])
             .or_else(|| find_string_field(ast, &["Player_Consist"]))
             .unwrap_or_default();
-        let player_path = find_string_field(ast, &["Player_Path"]).unwrap_or_default();
+        let player_service_id = find_string_field(ast, &["PathID"])
+            .or_else(|| find_header_name(ast))
+            .or_else(|| {
+                find_string_field(ast, &["Player_Service_Definition"])
+                    .filter(|s| valid_service_name(s))
+            })
+            .or_else(|| {
+                if valid_service_name(&name) {
+                    Some(name.clone())
+                } else {
+                    None
+                }
+            });
+        let player_path = find_string_field(ast, &["Player_Path"])
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| {
+                player_service_id
+                    .as_ref()
+                    .map(|id| pat_path_from_service_id(id))
+            })
+            .unwrap_or_default();
         let start_time_s = parse_start_time(ast);
         let duration_s = parse_duration(ast);
         let season = find_string_field(ast, &["Season"]);
@@ -128,6 +152,7 @@ impl ActivityFile {
             name,
             player_consist,
             player_path,
+            player_service_id,
             start_time_s,
             duration_s,
             season,
@@ -143,22 +168,118 @@ impl ActivityFile {
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let text = crate::encoding::read_msts_file_to_string(path.as_ref())?;
         let ast = parse_from_first_paren(&text)?;
-        Self::from_ast(&ast)
+        let mut file = Self::from_ast(&ast)?;
+        if file.name.is_empty() {
+            file.name = extract_activity_name_from_text(&text).unwrap_or_default();
+        }
+        if file.player_service_id.is_none() {
+            file.player_service_id = extract_activity_name_from_text(&text);
+        }
+        if file.player_path.is_empty() {
+            if let Some(id) = file
+                .player_service_id
+                .clone()
+                .or_else(|| Some(file.name.clone()))
+            {
+                if valid_service_name(&id) {
+                    file.player_path = pat_path_from_service_id(&id);
+                    file.player_service_id = Some(id);
+                }
+            }
+        }
+        Ok(file)
+    }
+
+    /// Read `Train_Config` from `SERVICES/<service_id>.srv` under `route_dir`.
+    pub fn train_config_from_service(route_dir: &Path, service_id: &str) -> Option<String> {
+        let srv_path = route_dir.join("SERVICES").join(format!("{service_id}.srv"));
+        let text = crate::encoding::read_msts_file_to_string(&srv_path).ok()?;
+        if let Ok(ast) = parse_from_first_paren(&text) {
+            if let Some(name) = find_string_field(&ast, &["Train_Config"]) {
+                return Some(name);
+            }
+        }
+        extract_train_config_from_text(&text)
     }
 }
 
+/// MSTS activities that use `Player_Service_Definition` / `PathID` instead of `Player_Path`.
+fn pat_path_from_service_id(id: &str) -> String {
+    let id = id.trim();
+    if id.to_ascii_lowercase().ends_with(".pat") {
+        id.replace('\\', "/")
+    } else {
+        format!("PATHS/{id}.pat")
+    }
+}
+
+fn find_header_name(ast: &Ast) -> Option<String> {
+    let Ast::List(items) = ast else {
+        return None;
+    };
+    for item in items {
+        let Ast::List(sub) = item else { continue };
+        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
+            if tag.eq_ignore_ascii_case("Tr_Activity_Header") {
+                return find_string_field(item, &["Name"]);
+            }
+        }
+        if let Some(name) = find_header_name(item) {
+            return Some(name);
+        }
+    }
+    None
+}
+
+fn valid_service_name(s: &str) -> bool {
+    let s = s.trim();
+    !s.is_empty() && !s.contains("Definition") && !s.chars().all(|c| c.is_ascii_digit())
+}
+
+fn extract_train_config_from_text(text: &str) -> Option<String> {
+    for line in text.lines() {
+        let line = line.trim();
+        if !line.contains("Train_Config") {
+            continue;
+        }
+        if let Some(start) = line.find('"') {
+            let rest = &line[start + 1..];
+            if let Some(end) = rest.find('"') {
+                return Some(rest[..end].to_string());
+            }
+        }
+    }
+    None
+}
+
+fn extract_activity_name_from_text(text: &str) -> Option<String> {
+    for line in text.lines() {
+        let line = line.trim();
+        if !line.starts_with("Name") {
+            continue;
+        }
+        if let Some(start) = line.find('"') {
+            let rest = &line[start + 1..];
+            if let Some(end) = rest.find('"') {
+                let name = &rest[..end];
+                if valid_service_name(name) {
+                    return Some(name.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Recursively find the first string value of a field with any of the given names.
-fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
+pub(crate) fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     let Ast::List(items) = ast else { return None };
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
         for n in names {
             if head.eq_ignore_ascii_case(n) {
-                // Return first string/symbol child.
-                if let Some(Ast::Atom(a)) = items.get(1) {
-                    if let Some(s) = atom_to_string(a) {
-                        return Some(s);
-                    }
+                if let Some(s) = first_string_in_ast_list(items) {
+                    return Some(s);
                 }
             }
         }
@@ -167,6 +288,24 @@ fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     for child in items {
         if let Some(v) = find_string_field(child, names) {
             return Some(v);
+        }
+    }
+    None
+}
+
+fn first_string_in_ast_list(items: &[Ast]) -> Option<String> {
+    for item in items.iter().skip(1) {
+        match item {
+            Ast::Atom(a) => {
+                if let Some(s) = atom_to_string(a) {
+                    return Some(s);
+                }
+            }
+            Ast::List(sub) => {
+                if let Some(s) = first_string_in_ast_list(sub) {
+                    return Some(s);
+                }
+            }
         }
     }
     None

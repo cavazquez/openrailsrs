@@ -92,7 +92,23 @@ fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
         .iter()
         .map(|v| {
             let cylinder_pos = pos;
-            pos += DEFAULT_VEHICLE_LENGTH_M;
+            let length_m = match v {
+                openrailsrs_train::Vehicle::Loco(l) => {
+                    if l.length_m > 0.0 {
+                        l.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+                openrailsrs_train::Vehicle::Wagon(w) => {
+                    if w.length_m > 0.0 {
+                        w.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+            };
+            pos += length_m;
             let force_n = match v {
                 openrailsrs_train::Vehicle::Loco(l) => l.max_brake_force_n,
                 openrailsrs_train::Vehicle::Wagon(w) => w.max_brake_force_n,

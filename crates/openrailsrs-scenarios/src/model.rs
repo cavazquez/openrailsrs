@@ -95,6 +95,9 @@ pub struct RouteSection {
     pub path: String,
     pub start: String,
     pub destination: String,
+    /// Distance in metres from `start` along the first edge(s) of the computed path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_offset_m: Option<f64>,
     #[serde(default)]
     pub stops: Vec<StopDef>,
     /// Runtime switch overrides; applied after `track.toml` defaults.

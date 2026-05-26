@@ -9,17 +9,27 @@ use openrailsrs_formats::{
 };
 use openrailsrs_scenarios::model::{
     GameplaySection, ObjectiveKind, OutputSection, RouteSection, ScenarioFile, ScenarioMeta,
-    SimulationSection, SoundRegionDef, StopDef, TrainEntryDef, TrainSection,
+    SimulationSection, SoundRegionDef, StopDef, SwitchDef, TrainEntryDef, TrainSection,
 };
 
 use crate::error::MstsError;
+use crate::path_placement::{placement_from_imported_route, read_distance_down_path};
 
 /// Parse an MSTS `.act` file (and the `.pat` it references) and produce a
 /// `scenario.toml` TOML string compatible with `openrailsrs-scenarios`.
 ///
 /// `route_dir` is used to resolve the `.pat` path found inside the `.act`.
 pub fn import_activity(route_dir: &Path, act_path: &Path) -> Result<String, MstsError> {
-    let (toml, _) = import_activity_with_summary(route_dir, act_path)?;
+    import_activity_with_track(route_dir, act_path, None)
+}
+
+/// Import activity using optional imported `track.toml` directory for route placement.
+pub fn import_activity_with_track(
+    route_dir: &Path,
+    act_path: &Path,
+    imported_route_dir: Option<&Path>,
+) -> Result<String, MstsError> {
+    let (toml, _) = import_activity_with_summary(route_dir, act_path, imported_route_dir)?;
     Ok(toml)
 }
 
@@ -27,23 +37,45 @@ pub fn import_activity(route_dir: &Path, act_path: &Path) -> Result<String, Msts
 pub fn import_activity_with_summary(
     route_dir: &Path,
     act_path: &Path,
+    imported_route_dir: Option<&Path>,
 ) -> Result<(String, String), MstsError> {
     let activity = ActivityFile::from_path(act_path)?;
-    let pat_path = resolve_asset_path(route_dir, &activity.player_path);
+    let pat_path = resolve_player_pat(route_dir, &activity);
     let path_file = PathFile::from_path(&pat_path)?;
 
-    let start_node = path_file
-        .start_node()
-        .map(|n| format!("n{n}"))
-        .unwrap_or_else(|| "start".to_string());
+    let service_id = service_id_for_player(&activity);
+    let start_offset_m = service_id
+        .as_deref()
+        .and_then(|id| read_distance_down_path(route_dir, id))
+        .unwrap_or(0.0);
 
-    let destination_node = path_file
-        .end_node()
-        .map(|n| format!("n{n}"))
-        .unwrap_or_else(|| "end".to_string());
+    let (start_node, destination_node, route_switches, start_offset_m) =
+        if let Some(track_dir) = imported_route_dir {
+            match placement_from_imported_route(track_dir, &pat_path, start_offset_m) {
+                Ok(hints) => (
+                    hints.start,
+                    hints.destination,
+                    hints.switches,
+                    hints.start_offset_m,
+                ),
+                Err(_) => {
+                    let (s, d, sw) = fallback_route_nodes(&path_file);
+                    (s, d, sw, start_offset_m)
+                }
+            }
+        } else {
+            let (s, d, sw) = fallback_route_nodes(&path_file);
+            (s, d, sw, 0.0)
+        };
 
-    // Use the consist path as-is; the user can adjust it after import.
-    let player_consist_str = sanitize_path(&activity.player_consist);
+    let start_offset_m = if imported_route_dir.is_some() {
+        start_offset_m
+    } else {
+        0.0
+    };
+
+    // Use the consist path as-is; fall back to the player service `.srv` Train_Config name.
+    let player_consist_str = resolve_player_consist(route_dir, &activity);
 
     // Duration: use the activity's duration, fallback to 2 hours.
     let duration_s = if activity.duration_s > 0.0 {
@@ -68,11 +100,16 @@ pub fn import_activity_with_summary(
             season: activity.season.as_ref().map(|s| s.to_ascii_lowercase()),
         },
         route: RouteSection {
-            path: "track.toml".to_string(),
+            path: ".".to_string(),
             start: start_node,
             destination: destination_node,
+            start_offset_m: if start_offset_m > 0.0 {
+                Some(start_offset_m)
+            } else {
+                None
+            },
             stops,
-            switches: Vec::new(),
+            switches: route_switches,
         },
         train: TrainSection {
             consist: player_consist_str,
@@ -101,6 +138,18 @@ pub fn import_activity_with_summary(
 
     let toml = toml::to_string_pretty(&scenario)?;
     Ok((toml, activity.name))
+}
+
+fn fallback_route_nodes(path_file: &PathFile) -> (String, String, Vec<SwitchDef>) {
+    let start = path_file
+        .start_node()
+        .map(|n| format!("n{n}"))
+        .unwrap_or_else(|| "start".to_string());
+    let destination = path_file
+        .end_node()
+        .map(|n| format!("n{n}"))
+        .unwrap_or_else(|| "end".to_string());
+    (start, destination, Vec::new())
 }
 
 /// Convert every parseable `Service_Definition` into a `[[extra_trains]]` entry.
@@ -181,6 +230,57 @@ fn sanitize_id(s: &str) -> String {
         })
         .collect();
     mapped.trim_matches('_').to_string()
+}
+
+/// Resolve the player `.pat` from `Player_Path`, `PathID`, or `Player_Service_Definition`.
+fn resolve_player_pat(route_dir: &Path, activity: &ActivityFile) -> std::path::PathBuf {
+    if !activity.player_path.trim().is_empty() {
+        return resolve_asset_path(route_dir, &activity.player_path);
+    }
+    if let Some(id) = service_id_for_player(activity) {
+        return resolve_asset_path(route_dir, &format!("PATHS/{id}.pat"));
+    }
+    route_dir.to_path_buf()
+}
+
+/// Player consist path, or a sanitized `consists/<Train_Config>.con` from the service file.
+fn resolve_player_consist(route_dir: &Path, activity: &ActivityFile) -> String {
+    let direct = sanitize_path(&activity.player_consist);
+    if !direct.is_empty() {
+        return direct;
+    }
+    if let Some(name) = train_config_from_service(route_dir, activity) {
+        return format!("consists/{}.con", sanitize_id(&name));
+    }
+    String::new()
+}
+
+fn service_id_for_player(activity: &ActivityFile) -> Option<String> {
+    if let Some(id) = &activity.player_service_id {
+        if !id.trim().is_empty() {
+            return Some(id.trim().to_string());
+        }
+    }
+    let path = activity.player_path.trim();
+    if path.is_empty() {
+        return None;
+    }
+    let normalized = path.replace('\\', "/");
+    let stem = normalized
+        .strip_prefix("PATHS/")
+        .or_else(|| normalized.strip_prefix("paths/"))
+        .unwrap_or(normalized.as_str());
+    let stem = stem.strip_suffix(".pat").unwrap_or(stem);
+    if stem.is_empty() {
+        None
+    } else {
+        Some(stem.to_string())
+    }
+}
+
+fn train_config_from_service(route_dir: &Path, activity: &ActivityFile) -> Option<String> {
+    let id = service_id_for_player(activity)?;
+    ActivityFile::train_config_from_service(route_dir, &id)
 }
 
 /// Resolve an asset path that may use Windows backslashes and may be relative

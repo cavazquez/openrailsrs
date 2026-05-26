@@ -155,3 +155,33 @@ fn decode_win1252_fixture_contains_accented_char() {
         "decoded text should contain 'é'; got: {s:?}"
     );
 }
+
+#[test]
+fn chiltern_birmingham_act_player_path() {
+    let path = std::path::Path::new(
+        "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act",
+    );
+    if !path.exists() {
+        return;
+    }
+    let act = openrailsrs_formats::ActivityFile::from_path(path).expect("parse act");
+    assert!(
+        act.player_path.contains("Birmingham"),
+        "path={} service={:?}",
+        act.player_path,
+        act.player_service_id
+    );
+}
+
+#[test]
+fn chiltern_birmingham_pat_start_node() {
+    let path = std::path::Path::new(
+        "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/PATHS/RS_Let's go to Birmingham.pat",
+    );
+    if !path.exists() {
+        return;
+    }
+    let pat = openrailsrs_formats::PathFile::from_path(path).expect("parse pat");
+    assert!(pat.pdps.len() > 10);
+    assert!(pat.start_node().is_some());
+}

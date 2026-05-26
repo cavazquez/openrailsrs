@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_core::{EdgeId, NodeId};
@@ -7,6 +8,34 @@ use openrailsrs_track::{
 use serde::Deserialize;
 
 use crate::RouteError;
+
+/// MSTS TDB id → openrailsrs node or edge (vectors become edges).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct MstsAlias {
+    pub tdb_id: u32,
+    pub kind: String,
+    pub id: String,
+    #[serde(default)]
+    pub from: Option<String>,
+    #[serde(default)]
+    pub to: Option<String>,
+}
+
+impl MstsAlias {
+    pub fn is_node(&self) -> bool {
+        self.kind.eq_ignore_ascii_case("node")
+    }
+    pub fn is_edge(&self) -> bool {
+        self.kind.eq_ignore_ascii_case("edge")
+    }
+}
+
+/// Route layout plus optional MSTS alias table from import.
+#[derive(Debug)]
+pub struct LoadedRoute {
+    pub graph: TrackGraph,
+    pub msts_aliases: HashMap<u32, MstsAlias>,
+}
 
 /// Declarative route layout for tests and minimal routes (`track.toml`).
 #[derive(Debug, Deserialize)]
@@ -18,6 +47,8 @@ pub struct RouteLayoutFile {
     pub edges: Vec<EdgeDef>,
     #[serde(default)]
     pub signals: Vec<SignalDef>,
+    #[serde(default)]
+    pub msts_aliases: Vec<MstsAlias>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,6 +144,11 @@ pub enum SignalAspectDef {
 
 /// Load `track.toml` from a route directory (folder containing `track.toml`).
 pub fn load_track_graph_from_route_dir(dir: impl AsRef<Path>) -> Result<TrackGraph, RouteError> {
+    Ok(load_route_from_dir(dir)?.graph)
+}
+
+/// Load graph and MSTS alias table from `track.toml`.
+pub fn load_route_from_dir(dir: impl AsRef<Path>) -> Result<LoadedRoute, RouteError> {
     let dir = dir.as_ref();
     let layout_path: PathBuf = dir.join("track.toml");
     let text = std::fs::read_to_string(&layout_path).map_err(|e| RouteError::Io {
@@ -120,7 +156,16 @@ pub fn load_track_graph_from_route_dir(dir: impl AsRef<Path>) -> Result<TrackGra
         source: e,
     })?;
     let layout: RouteLayoutFile = toml::from_str(&text)?;
-    layout_to_graph(layout)
+    let msts_aliases = layout
+        .msts_aliases
+        .iter()
+        .map(|a| (a.tdb_id, a.clone()))
+        .collect();
+    let graph = layout_to_graph(layout)?;
+    Ok(LoadedRoute {
+        graph,
+        msts_aliases,
+    })
 }
 
 fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {

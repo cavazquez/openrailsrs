@@ -9,6 +9,8 @@ rust-version.workspace = true
 [dependencies]
 openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-track = { path = "../openrailsrs-track" }
 thiserror.workspace = true
 serde.workspace = true
 toml.workspace = true

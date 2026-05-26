@@ -11,5 +11,5 @@ pub use compare::{
 pub use error::ValidateError;
 pub use trace::{
     OrColumnMap, OrDistanceUnit, OrSpeedUnit, RunTrace, TraceSample, parse_openrailsrs_run_csv,
-    parse_or_dump_csv, resample_traces,
+    parse_or_dump_csv, resample_traces, write_or_eval_driver_csv,
 };

@@ -1,0 +1,40 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+TrackDB (
+    TrackNodes ( 4
+        TrackNode ( 1
+            TrEndNode ( 0 )
+            TrPins ( 1 0
+                TrPin ( 2 0 )
+            )
+        )
+        TrackNode ( 2
+            TrVectorNode (
+                TrVectorSections ( 1 38507 385675 -6079 14925 4062 0 1 0 -6079 14925 663.423 37.2162 824.8589 0.005 2.91349 0 38507 38507 )
+                TrItemRefs ( 1
+                    TrItemRef ( 1 )
+                )
+            )
+            TrPins ( 1 1
+                TrPin ( 3 0 )
+                TrPin ( 1 1 )
+            )
+        )
+        TrackNode ( 3
+            TrJunctionNode ( 0 38675 0 )
+            TrPins ( 1 2
+                TrPin ( 4 0 )
+                TrPin ( 2 1 )
+                TrPin ( 999 1 )
+            )
+        )
+        TrackNode ( 4
+            TrEndNode ( 0 )
+        )
+    )
+    TrItemTable ( 1
+        SignalItem (
+            TrItemId ( 1 )
+            TrItemSData ( 100.0 0 )
+        )
+    )
+)

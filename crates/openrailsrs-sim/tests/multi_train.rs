@@ -71,6 +71,7 @@ fn make_two_train_scenario(
             path: "routes/test".into(),
             start: "yard_a".into(),
             destination: "yard_b".into(),
+            start_offset_m: None,
             stops: vec![],
             switches: vec![],
         },

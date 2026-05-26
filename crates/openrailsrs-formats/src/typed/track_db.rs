@@ -25,13 +25,22 @@ pub struct TrackDbNode {
     pub kind: TrackNodeKind,
 }
 
+/// One connection reference on a junction or vector node (`TrPin` in MSTS).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TrPinRef {
+    /// Referenced TDB node id (end, junction, or vector).
+    pub node_id: u32,
+    /// MSTS branch index: 0 = common/stem, 1+ = diverging branches.
+    pub branch_index: u8,
+}
+
 /// Type and payload of a track database node.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrackNodeKind {
     /// Dead-end or route entry/exit point.
     End,
-    /// Switch (points).  `pin1` / `pin2` are the two diverging node IDs.
-    Junction { pin1: u32, pin2: u32 },
+    /// Switch (points).  `pins` lists all `TrPin` entries (common + branches).
+    Junction { pins: Vec<TrPinRef> },
     /// A track section (vector).  `pins` are the two connecting node IDs.
     Vector {
         length_m: f64,
@@ -110,107 +119,361 @@ impl TrackDbFile {
     }
 }
 
-/// Recursively walk the AST looking for `(TrackNode <id> ...)` lists.
+/// Recursively walk the AST looking for track nodes in unified or native MSTS layout.
 fn collect_nodes(ast: &Ast, out: &mut Vec<TrackDbNode>) {
     let Ast::List(items) = ast else { return };
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+        if head.eq_ignore_ascii_case("TrackNodes") {
+            parse_track_nodes_children(track_nodes_body(items), out);
+            return;
+        }
         if head.eq_ignore_ascii_case("TrackNode") && items.len() >= 3 {
             if let Some(id) = parse_u32(&items[1]) {
                 if let Some(kind) = parse_node_kind(&items[2..]) {
                     out.push(TrackDbNode { id, kind });
-                    return; // don't recurse into already-parsed node
+                    return;
                 }
             }
         }
     }
 
-    for child in items {
+    let mut skip_idx: Option<usize> = None;
+    for i in 0..items.len().saturating_sub(1) {
+        if let Ast::Atom(Atom::Symbol(tag)) = &items[i] {
+            if tag.eq_ignore_ascii_case("TrackNodes") {
+                if let Ast::List(body) = &items[i + 1] {
+                    parse_track_nodes_children(body, out);
+                    skip_idx = Some(i + 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    for (idx, child) in items.iter().enumerate() {
+        if skip_idx == Some(idx) {
+            continue;
+        }
         collect_nodes(child, out);
     }
 }
 
-/// Determine the kind of a track node from its inner S-expressions.
-fn parse_node_kind(body: &[Ast]) -> Option<TrackNodeKind> {
-    for item in body {
-        let Ast::List(sub) = item else { continue };
-        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+fn track_nodes_body(items: &[Ast]) -> &[Ast] {
+    if items.len() >= 2 {
+        if let Ast::List(inner) = &items[1] {
+            return inner.as_slice();
+        }
+    }
+    &items[1..]
+}
+
+/// Parse children of `(TrackNodes N ...)`, supporting native editor layout where
+/// `TrackNode` is an atom followed by a sibling list `( <id> ... )`.
+fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
+    let mut i = 0;
+    while i < children.len() {
+        if matches!(
+            children[i],
+            Ast::Atom(Atom::Integer(_)) | Ast::Atom(Atom::Number(_))
+        ) {
+            i += 1;
             continue;
-        };
-
-        if tag.eq_ignore_ascii_case("TrEndNode") {
-            return Some(TrackNodeKind::End);
         }
 
-        if tag.eq_ignore_ascii_case("TrJunctionNode") {
-            let (pin1, pin2) = parse_junction_pins(sub);
-            return Some(TrackNodeKind::Junction { pin1, pin2 });
-        }
-
-        if tag.eq_ignore_ascii_case("TrVectorNode") {
-            let length_m = parse_vector_length(sub);
-            let speed_limit_mps = parse_vector_speed(sub);
-            let (pin1, pin2) = parse_tr_pins(sub);
-            let item_ids = parse_tr_item_refs(sub);
-            return Some(TrackNodeKind::Vector {
-                length_m,
-                speed_limit_mps,
-                pins: (pin1, pin2),
-                item_ids,
-            });
-        }
-    }
-    None
-}
-
-/// Extract `TrPins` from a `TrJunctionNode`; returns `(0, 0)` on failure.
-fn parse_junction_pins(junction: &[Ast]) -> (u32, u32) {
-    parse_tr_pins(junction)
-}
-
-/// Extract `(TrPins <count> <pin1> <pin2>)` from a node body.
-fn parse_tr_pins(body: &[Ast]) -> (u32, u32) {
-    for item in body {
-        let Ast::List(sub) = item else { continue };
-        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("TrPins") && sub.len() >= 4 {
-                let pin1 = parse_u32(&sub[2]).unwrap_or(0);
-                let pin2 = parse_u32(&sub[3]).unwrap_or(0);
-                return (pin1, pin2);
-            }
-        }
-    }
-    (0, 0)
-}
-
-/// Sum the lengths of all `TrVectorSection` entries inside a `TrVectorNode`.
-fn parse_vector_length(vector_node: &[Ast]) -> f64 {
-    let mut total = 0.0_f64;
-    for item in vector_node {
-        let Ast::List(sub) = item else { continue };
-        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("TrVectorSections") {
-                for section in sub.iter().skip(1) {
-                    if let Ast::List(sec_items) = section {
-                        if let Some(Ast::Atom(Atom::Symbol(sec_tag))) = sec_items.first() {
-                            if sec_tag.eq_ignore_ascii_case("TrVectorSection") {
-                                // Layout: (TrVectorSection <shape_idx> <section_idx> <tile_x> <tile_z> <x> <y> <z> <ay> <length> ...)
-                                // Index 8 = length_m (0-based from tag).
-                                if let Some(len) = sec_items.get(9).and_then(|a| match a {
-                                    Ast::Atom(at) => atom_to_number(at),
-                                    _ => None,
-                                }) {
-                                    total += len;
-                                }
-                            }
+        if let Ast::Atom(Atom::Symbol(tag)) = &children[i] {
+            if tag.eq_ignore_ascii_case("TrackNode") {
+                if let Some(Ast::List(body)) = children.get(i + 1) {
+                    if let Some(id) = body.first().and_then(parse_u32) {
+                        if let Some(kind) = parse_node_kind(&body[1..]) {
+                            out.push(TrackDbNode { id, kind });
+                            i += 2;
+                            continue;
                         }
                     }
                 }
             }
         }
+
+        if let Ast::List(sub) = &children[i] {
+            if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
+                if tag.eq_ignore_ascii_case("TrackNode") && sub.len() >= 3 {
+                    if let Some(id) = parse_u32(&sub[1]) {
+                        if let Some(kind) = parse_node_kind(&sub[2..]) {
+                            out.push(TrackDbNode { id, kind });
+                            i += 1;
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        i += 1;
     }
-    // Fallback: if no section data, use a nominal 500 m so the edge is usable.
+}
+
+/// Determine the kind of a track node from its inner S-expressions.
+fn parse_node_kind(body: &[Ast]) -> Option<TrackNodeKind> {
+    let mut i = 0;
+    while i < body.len() {
+        match &body[i] {
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrEndNode") => {
+                return Some(TrackNodeKind::End);
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrJunctionNode") => {
+                let pins = parse_tr_pins(body);
+                return Some(TrackNodeKind::Junction { pins });
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrVectorNode") => {
+                if let Some(Ast::List(vector_sub)) = body.get(i + 1) {
+                    return Some(parse_vector_kind(vector_sub, body));
+                }
+            }
+            Ast::List(sub) => {
+                let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+                    i += 1;
+                    continue;
+                };
+                if tag.eq_ignore_ascii_case("TrEndNode") {
+                    return Some(TrackNodeKind::End);
+                }
+                if tag.eq_ignore_ascii_case("TrJunctionNode") {
+                    let pins = parse_tr_pins(body);
+                    return Some(TrackNodeKind::Junction { pins });
+                }
+                if tag.eq_ignore_ascii_case("TrVectorNode") {
+                    return Some(parse_vector_kind(sub, body));
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+fn parse_vector_kind(vector_sub: &[Ast], node_body: &[Ast]) -> TrackNodeKind {
+    let pin_refs = parse_tr_pins(node_body);
+    let pin_refs = if pin_refs.is_empty() {
+        parse_tr_pins(vector_sub)
+    } else {
+        pin_refs
+    };
+    let pins = vector_pin_pair(&pin_refs);
+    TrackNodeKind::Vector {
+        length_m: parse_vector_length(vector_sub),
+        speed_limit_mps: parse_vector_speed(vector_sub),
+        pins,
+        item_ids: parse_tr_item_refs(vector_sub),
+    }
+}
+
+fn vector_pin_pair(pins: &[TrPinRef]) -> (u32, u32) {
+    if pins.len() >= 2 {
+        (pins[0].node_id, pins[1].node_id)
+    } else if pins.len() == 1 {
+        (pins[0].node_id, 0)
+    } else {
+        (0, 0)
+    }
+}
+
+/// Extract `(TrPins ...)` from a node body; supports flat `(TrPins 2 1 3)` and
+/// native nested `(TrPins 1 1 (TrPin 3 0) (TrPin 1 1))`.
+fn parse_tr_pins(body: &[Ast]) -> Vec<TrPinRef> {
+    for i in 0..body.len() {
+        let pins_slice = match (&body[i], body.get(i + 1)) {
+            (Ast::List(sub), _) if is_tr_pins_list(sub) => sub.as_slice(),
+            (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(sub)))
+                if tag.eq_ignore_ascii_case("TrPins") =>
+            {
+                sub.as_slice()
+            }
+            _ => continue,
+        };
+        let parsed = extract_tr_pin_refs(pins_slice);
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    Vec::new()
+}
+
+fn is_tr_pins_list(sub: &[Ast]) -> bool {
+    sub.first()
+        .and_then(|a| match a {
+            Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+            _ => None,
+        })
+        .is_some_and(|s| s.eq_ignore_ascii_case("TrPins"))
+}
+
+fn extract_tr_pin_refs(pins: &[Ast]) -> Vec<TrPinRef> {
+    let mut out = Vec::new();
+    let mut i = 1;
+    if pins.len() <= 1 {
+        return out;
+    }
+
+    let has_nested_tr_pins = pins[i..].iter().any(is_tr_pin_entry);
+
+    if has_nested_tr_pins {
+        // Native `(TrPins count flags (TrPin ...) ...)` — skip header numerics.
+        let mut header_skipped = 0;
+        while i < pins.len() && header_skipped < 2 {
+            if parse_u32(&pins[i]).is_some() {
+                header_skipped += 1;
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        while i < pins.len() {
+            match (&pins[i], pins.get(i + 1)) {
+                (Ast::List(pin_sub), _) => {
+                    if let Some(Ast::Atom(Atom::Symbol(pin_tag))) = pin_sub.first() {
+                        if pin_tag.eq_ignore_ascii_case("TrPin") {
+                            if let (Some(id), branch) = (
+                                pin_sub.get(1).and_then(parse_u32),
+                                pin_sub.get(2).and_then(parse_u32).unwrap_or(0) as u8,
+                            ) {
+                                out.push(TrPinRef {
+                                    node_id: id,
+                                    branch_index: branch,
+                                });
+                            }
+                            i += 1;
+                            continue;
+                        }
+                    }
+                }
+                (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(args)))
+                    if tag.eq_ignore_ascii_case("TrPin") =>
+                {
+                    if let Some(id) = args.first().and_then(parse_u32) {
+                        let branch = args.get(1).and_then(parse_u32).unwrap_or(0) as u8;
+                        out.push(TrPinRef {
+                            node_id: id,
+                            branch_index: branch,
+                        });
+                    }
+                    i += 2;
+                    continue;
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+    } else {
+        // Flat `(TrPins count node_id ...)` used by unified test fixtures.
+        if parse_u32(&pins[i]).is_some() {
+            i += 1;
+        }
+        while i < pins.len() {
+            if let Some(id) = parse_u32(&pins[i]) {
+                out.push(TrPinRef {
+                    node_id: id,
+                    branch_index: 0,
+                });
+            }
+            i += 1;
+        }
+    }
+    out
+}
+
+fn is_tr_pin_entry(ast: &Ast) -> bool {
+    match ast {
+        Ast::List(sub) => sub
+            .first()
+            .and_then(|a| match a {
+                Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+                _ => None,
+            })
+            .is_some_and(|s| s.eq_ignore_ascii_case("TrPin")),
+        Ast::Atom(Atom::Symbol(s)) => s.eq_ignore_ascii_case("TrPin"),
+        _ => false,
+    }
+}
+
+/// Number of numeric fields per section in native inline `TrVectorSections` blobs.
+const NATIVE_SECTION_FIELDS: usize = 16;
+/// Zero-based index of section length inside each native inline section block.
+const NATIVE_SECTION_LENGTH_IDX: usize = 12;
+
+/// Sum the lengths of all `TrVectorSection` entries inside a `TrVectorNode`.
+fn parse_vector_length(vector_node: &[Ast]) -> f64 {
+    let mut total = 0.0_f64;
+    for sections in vector_sections_lists(vector_node) {
+        for section in sections.iter().skip(1) {
+            if let Ast::List(sec_items) = section {
+                if let Some(Ast::Atom(Atom::Symbol(sec_tag))) = sec_items.first() {
+                    if sec_tag.eq_ignore_ascii_case("TrVectorSection") {
+                        if let Some(len) = sec_items.get(9).and_then(ast_to_f64) {
+                            total += len;
+                        }
+                    }
+                }
+            }
+        }
+
+        if total <= 0.0 {
+            let (count_idx, data_start) = if sections
+                .first()
+                .and_then(|a| match a {
+                    Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+                    _ => None,
+                })
+                .is_some_and(|s| s.eq_ignore_ascii_case("TrVectorSections"))
+            {
+                (1usize, 2usize)
+            } else {
+                (0usize, 1usize)
+            };
+            if let Some(count) = sections.get(count_idx).and_then(parse_u32) {
+                for sec in 0..count as usize {
+                    let base = data_start + sec * NATIVE_SECTION_FIELDS;
+                    if let Some(len) = sections
+                        .get(base + NATIVE_SECTION_LENGTH_IDX)
+                        .and_then(ast_to_f64)
+                    {
+                        total += len;
+                    }
+                }
+            }
+        }
+    }
     if total <= 0.0 { 500.0 } else { total }
+}
+
+fn vector_sections_lists(vector_node: &[Ast]) -> Vec<&[Ast]> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < vector_node.len() {
+        match &vector_node[i] {
+            Ast::List(sub)
+                if sub
+                    .first()
+                    .and_then(|a| match a {
+                        Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .is_some_and(|s| s.eq_ignore_ascii_case("TrVectorSections")) =>
+            {
+                out.push(sub.as_slice());
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrVectorSections") => {
+                if let Some(Ast::List(sub)) = vector_node.get(i + 1) {
+                    out.push(sub.as_slice());
+                    i += 1;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    out
 }
 
 /// Extract speed limit (km/h → m/s) from `(SpeedMpS ...)` or `(MaxVelocity ...)` inside a vector node.
@@ -256,32 +519,90 @@ fn parse_u32(ast: &Ast) -> Option<u32> {
 /// the legacy `(TrItemRef <id>)`; both spellings are accepted.
 fn parse_tr_item_refs(vector_node: &[Ast]) -> Vec<u32> {
     let mut out = Vec::new();
-    for item in vector_node {
-        let Ast::List(sub) = item else { continue };
-        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
-            continue;
-        };
-        if !tag.eq_ignore_ascii_case("TrItemRefs") {
-            continue;
-        }
-        // The first child is the count atom (e.g. `1`); we skip it implicitly
-        // because only `(TrItemId|TrItemRef <n>)` lists yield ids.
-        for ref_item in sub.iter().skip(1) {
-            let Ast::List(ref_sub) = ref_item else {
-                continue;
-            };
-            let Some(Ast::Atom(Atom::Symbol(ref_tag))) = ref_sub.first() else {
-                continue;
-            };
-            if ref_tag.eq_ignore_ascii_case("TrItemId") || ref_tag.eq_ignore_ascii_case("TrItemRef")
+    let mut i = 0;
+    while i < vector_node.len() {
+        let refs_slice = match (&vector_node[i], vector_node.get(i + 1)) {
+            (Ast::List(sub), _) if is_tr_item_refs_list(sub) => {
+                i += 1;
+                sub.as_slice()
+            }
+            (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(sub)))
+                if tag.eq_ignore_ascii_case("TrItemRefs") =>
             {
-                if let Some(id) = ref_sub.get(1).and_then(parse_u32) {
-                    out.push(id);
+                i += 2;
+                sub.as_slice()
+            }
+            _ => {
+                i += 1;
+                continue;
+            }
+        };
+        let mut j = if refs_slice
+            .first()
+            .and_then(|a| match a {
+                Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+                _ => None,
+            })
+            .is_some_and(|s| s.eq_ignore_ascii_case("TrItemRefs"))
+        {
+            1
+        } else {
+            0
+        };
+        if j < refs_slice.len() && parse_u32(&refs_slice[j]).is_some() {
+            j += 1;
+        }
+        while j < refs_slice.len() {
+            if let (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(args))) =
+                (&refs_slice[j], refs_slice.get(j + 1))
+            {
+                if tag.eq_ignore_ascii_case("TrItemRef") || tag.eq_ignore_ascii_case("TrItemId") {
+                    if let Some(id) = args.first().and_then(parse_u32) {
+                        out.push(id);
+                    }
+                    j += 2;
+                    continue;
                 }
             }
+            if let Some(id) = parse_tr_item_ref_entry(&refs_slice[j]) {
+                out.push(id);
+            }
+            j += 1;
         }
     }
     out
+}
+
+fn is_tr_item_refs_list(sub: &[Ast]) -> bool {
+    sub.first()
+        .and_then(|a| match a {
+            Ast::Atom(Atom::Symbol(s)) => Some(s.as_str()),
+            _ => None,
+        })
+        .is_some_and(|s| s.eq_ignore_ascii_case("TrItemRefs"))
+}
+
+fn parse_tr_item_ref_entry(ref_item: &Ast) -> Option<u32> {
+    if let Some(id) = parse_u32(ref_item) {
+        return Some(id);
+    }
+    if let Ast::List(ref_sub) = ref_item {
+        if let Some(Ast::Atom(Atom::Symbol(ref_tag))) = ref_sub.first() {
+            if ref_tag.eq_ignore_ascii_case("TrItemId") || ref_tag.eq_ignore_ascii_case("TrItemRef")
+            {
+                return ref_sub.get(1).and_then(parse_u32);
+            }
+        }
+        return ref_sub.first().and_then(parse_u32);
+    }
+    None
+}
+
+fn ast_to_f64(ast: &Ast) -> Option<f64> {
+    match ast {
+        Ast::Atom(at) => atom_to_number(at),
+        _ => None,
+    }
 }
 
 /// Walk the AST looking for the `TrItemTable` section and collect every entry.
@@ -290,20 +611,69 @@ fn collect_items(ast: &Ast, out: &mut Vec<TrItem>) {
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
         if head.eq_ignore_ascii_case("TrItemTable") {
-            for entry in items.iter().skip(1) {
-                if let Ast::List(_) = entry {
-                    if let Some(item) = parse_tr_item(entry) {
-                        out.push(item);
-                    }
-                }
-            }
+            parse_tr_item_table_entries(&items[1..], out);
             return;
         }
     }
 
-    for child in items {
+    let mut skip_idx: Option<usize> = None;
+    for i in 0..items.len().saturating_sub(1) {
+        if let Ast::Atom(Atom::Symbol(tag)) = &items[i] {
+            if tag.eq_ignore_ascii_case("TrItemTable") {
+                if let Ast::List(body) = &items[i + 1] {
+                    parse_tr_item_table_entries(body, out);
+                    skip_idx = Some(i + 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    for (idx, child) in items.iter().enumerate() {
+        if skip_idx == Some(idx) {
+            continue;
+        }
         collect_items(child, out);
     }
+}
+
+fn parse_tr_item_table_entries(children: &[Ast], out: &mut Vec<TrItem>) {
+    let mut i = 0;
+    while i < children.len() {
+        if matches!(
+            children[i],
+            Ast::Atom(Atom::Integer(_)) | Ast::Atom(Atom::Number(_))
+        ) {
+            i += 1;
+            continue;
+        }
+
+        if let Ast::Atom(Atom::Symbol(tag)) = &children[i] {
+            if is_tr_item_kind_tag(tag) {
+                if let Some(Ast::List(body)) = children.get(i + 1) {
+                    let mut combined = vec![Ast::Atom(Atom::Symbol(tag.clone()))];
+                    combined.extend(body.iter().cloned());
+                    if let Some(item) = parse_tr_item(&Ast::List(combined)) {
+                        out.push(item);
+                    }
+                    i += 2;
+                    continue;
+                }
+            }
+        }
+
+        if let Some(item) = parse_tr_item(&children[i]) {
+            out.push(item);
+            i += 1;
+            continue;
+        }
+
+        i += 1;
+    }
+}
+
+fn is_tr_item_kind_tag(tag: &str) -> bool {
+    tag.ends_with("Item") || tag.eq_ignore_ascii_case("SignalItem")
 }
 
 /// Parse a single `(<KindItem> ...)` list inside `TrItemTable`.
@@ -338,14 +708,26 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
 }
 
 fn find_tr_item_id(item: &[Ast]) -> Option<u32> {
-    for child in item {
-        let Ast::List(sub) = child else { continue };
-        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
-            continue;
-        };
-        if tag.eq_ignore_ascii_case("TrItemId") {
-            return sub.get(1).and_then(parse_u32);
+    let mut i = 0;
+    while i < item.len() {
+        match &item[i] {
+            Ast::List(sub) => {
+                let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+                    i += 1;
+                    continue;
+                };
+                if tag.eq_ignore_ascii_case("TrItemId") {
+                    return sub.get(1).and_then(parse_u32);
+                }
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemId") => {
+                if let Some(Ast::List(sub)) = item.get(i + 1) {
+                    return sub.first().and_then(parse_u32);
+                }
+            }
+            _ => {}
         }
+        i += 1;
     }
     None
 }
@@ -423,4 +805,51 @@ fn parse_signal_aspect(item: &[Ast]) -> SignalAspectKind {
         }
     }
     SignalAspectKind::Stop
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn fixtures_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openrailsrs-msts/tests/fixtures")
+    }
+
+    #[test]
+    fn parse_unified_minimal_tdb() {
+        let tdb = TrackDbFile::from_path(fixtures_dir().join("minimal.tdb")).expect("minimal");
+        assert_eq!(tdb.nodes.len(), 3);
+        assert!(matches!(tdb.nodes[0].kind, TrackNodeKind::End));
+    }
+
+    #[test]
+    fn parse_native_msts_tdb() {
+        let tdb = TrackDbFile::from_path(fixtures_dir().join("native_msts.tdb")).expect("native");
+        assert_eq!(tdb.nodes.len(), 4, "expected 4 track nodes");
+        let vectors: Vec<_> = tdb
+            .nodes
+            .iter()
+            .filter(|n| matches!(n.kind, TrackNodeKind::Vector { .. }))
+            .collect();
+        assert_eq!(vectors.len(), 1);
+        if let TrackNodeKind::Vector { length_m, pins, .. } = &vectors[0].kind {
+            assert!(
+                *length_m > 800.0,
+                "inline section length should be parsed, got {length_m}"
+            );
+            assert_eq!(*pins, (3, 1));
+        }
+        let junction = tdb
+            .nodes
+            .iter()
+            .find(|n| matches!(n.kind, TrackNodeKind::Junction { .. }))
+            .expect("junction");
+        if let TrackNodeKind::Junction { pins } = &junction.kind {
+            assert_eq!(pins.len(), 3);
+            assert_eq!(pins[0].node_id, 4);
+            assert_eq!(pins[0].branch_index, 0);
+        }
+        assert_eq!(tdb.items.len(), 1);
+    }
 }

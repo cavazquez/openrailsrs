@@ -17,7 +17,7 @@ use openrailsrs_sim::{
 };
 use openrailsrs_validate::{
     ComparisonReport, OrColumnMap, ValidationConfig, compare_csv_files_with_config,
-    compare_or_dump_with_run,
+    compare_or_dump_with_run, write_or_eval_driver_csv,
 };
 
 #[derive(Parser)]
@@ -51,6 +51,9 @@ enum Commands {
         /// Path to a ScriptedDriver CSV (time_s,throttle,brake). Uses AutoDriver if omitted.
         #[arg(long)]
         driver: Option<PathBuf>,
+        /// Skip automatic `compare-or` even when `[validate].baseline_or` is set.
+        #[arg(long)]
+        no_validate: bool,
     },
     /// Run simulation and evaluate game rules (writes outcome.toml).
     PlayHeadless { scenario: PathBuf },
@@ -76,6 +79,18 @@ enum Commands {
         /// Max peak absolute tolerance for cumulative_energy_kwh (kWh).
         #[arg(long)]
         max_energy_max: Option<f64>,
+        /// Max RMS tolerance for throttle (0–1).
+        #[arg(long)]
+        max_throttle_rms: Option<f64>,
+        /// Max peak absolute tolerance for throttle (0–1).
+        #[arg(long)]
+        max_throttle_max: Option<f64>,
+        /// Max RMS tolerance for brake (0–1).
+        #[arg(long)]
+        max_brake_rms: Option<f64>,
+        /// Max peak absolute tolerance for brake (0–1).
+        #[arg(long)]
+        max_brake_max: Option<f64>,
     },
     /// Compare an Open Rails dump.csv against an openrailsrs run CSV (resampled).
     CompareOr {
@@ -101,6 +116,25 @@ enum Commands {
         max_energy_rms: Option<f64>,
         #[arg(long)]
         max_energy_max: Option<f64>,
+        #[arg(long)]
+        max_throttle_rms: Option<f64>,
+        #[arg(long)]
+        max_throttle_max: Option<f64>,
+        #[arg(long)]
+        max_brake_rms: Option<f64>,
+        #[arg(long)]
+        max_brake_max: Option<f64>,
+    },
+    /// Convert an OR evaluation *Speed.csv into a ScriptedDriver CSV.
+    OrEvalDriver {
+        /// Open Rails evaluation speed log (`*Speed.csv`).
+        or_eval: PathBuf,
+        /// Output driver CSV (`time_s,throttle,brake`).
+        #[arg(long)]
+        out: PathBuf,
+        /// Full-scale brake pressure for normalizing OR `BRAKEPRESSURE` (default: max in file).
+        #[arg(long)]
+        brake_full_scale: Option<f64>,
     },
     /// Export GeoJSON for the route graph.
     ExportGeojson {
@@ -284,9 +318,13 @@ fn main() -> anyhow::Result<()> {
             std::fs::write(&out, dot).with_context(|| format!("write {}", out.display()))?;
             tracing::info!(path = %out.display(), "wrote DOT");
         }
-        Commands::Sim { scenario, driver } => {
-            let r = if let Some(driver_csv) = driver {
-                let mut d = ScriptedDriver::from_csv(&driver_csv)
+        Commands::Sim {
+            scenario,
+            driver,
+            no_validate,
+        } => {
+            let r = if let Some(driver_csv) = driver.as_ref() {
+                let mut d = ScriptedDriver::from_csv(driver_csv)
                     .map_err(|e| anyhow::anyhow!("load driver {}: {e}", driver_csv.display()))?;
                 run_from_scenario_file_with_driver(&scenario, &mut d)
                     .map_err(|e| anyhow::anyhow!("sim {}: {e}", scenario.display()))?
@@ -301,6 +339,9 @@ fn main() -> anyhow::Result<()> {
                 r.metadata.final_odometer_m,
                 r.metadata.cumulative_energy_kwh
             );
+            if !no_validate {
+                maybe_validate_scenario(&scenario)?;
+            }
         }
         Commands::PlayHeadless { scenario } => {
             let o = openrailsrs_game::play_headless_from_scenario_file(&scenario)
@@ -351,15 +392,23 @@ fn main() -> anyhow::Result<()> {
             max_position_max,
             max_energy_rms,
             max_energy_max,
+            max_throttle_rms,
+            max_throttle_max,
+            max_brake_rms,
+            max_brake_max,
         } => {
-            let config = ValidationConfig {
+            let config = validation_config_from_flags(
                 max_velocity_rms,
                 max_velocity_max,
                 max_position_rms,
                 max_position_max,
                 max_energy_rms,
                 max_energy_max,
-            };
+                max_throttle_rms,
+                max_throttle_max,
+                max_brake_rms,
+                max_brake_max,
+            );
             let rep = compare_csv_files_with_config(&run_a, &run_b, &config)
                 .map_err(|e| anyhow::anyhow!("compare: {e}"))?;
             print_comparison_report(&rep, "Compare")?;
@@ -378,6 +427,10 @@ fn main() -> anyhow::Result<()> {
             max_position_max,
             max_energy_rms,
             max_energy_max,
+            max_throttle_rms,
+            max_throttle_max,
+            max_brake_rms,
+            max_brake_max,
         } => {
             let column_map = if let Some(path) = map {
                 let text = std::fs::read_to_string(&path)
@@ -387,20 +440,33 @@ fn main() -> anyhow::Result<()> {
             } else {
                 OrColumnMap::default()
             };
-            let config = ValidationConfig {
+            let config = validation_config_from_flags(
                 max_velocity_rms,
                 max_velocity_max,
                 max_position_rms,
                 max_position_max,
                 max_energy_rms,
                 max_energy_max,
-            };
+                max_throttle_rms,
+                max_throttle_max,
+                max_brake_rms,
+                max_brake_max,
+            );
             let rep = compare_or_dump_with_run(&or_dump, &run_csv, &column_map, &config, step)
                 .map_err(|e| anyhow::anyhow!("compare-or: {e}"))?;
             print_comparison_report(&rep, "Compare OR")?;
             if !rep.pass {
                 std::process::exit(1);
             }
+        }
+        Commands::OrEvalDriver {
+            or_eval,
+            out,
+            brake_full_scale,
+        } => {
+            let rows = write_or_eval_driver_csv(&or_eval, &out, brake_full_scale)
+                .map_err(|e| anyhow::anyhow!("or-eval-driver: {e}"))?;
+            println!("wrote {} driver keyframes to {}", rows, out.display());
         }
         Commands::ExportGeojson { route, out } => {
             let g = load_track_graph_from_route_dir(&route)
@@ -691,8 +757,10 @@ fn main() -> anyhow::Result<()> {
 
             // 2. If an activity is given, import it: ACT + PAT → scenario.toml
             if let Some(act_path) = activity {
-                let (scenario_toml, act_name) = import_activity_with_summary(&route_dir, &act_path)
-                    .map_err(|e| anyhow::anyhow!("import activity {}: {e}", act_path.display()))?;
+                let (scenario_toml, act_name) =
+                    import_activity_with_summary(&route_dir, &act_path, Some(&out)).map_err(
+                        |e| anyhow::anyhow!("import activity {}: {e}", act_path.display()),
+                    )?;
                 let scenario_out = out.join("scenario.toml");
                 std::fs::write(&scenario_out, &scenario_toml)
                     .with_context(|| format!("write {}", scenario_out.display()))?;
@@ -717,7 +785,7 @@ fn main() -> anyhow::Result<()> {
 
                 for (i, act_entry) in acts.iter().enumerate() {
                     let act_path = act_entry.path();
-                    match import_activity_with_summary(&route_dir, &act_path) {
+                    match import_activity_with_summary(&route_dir, &act_path, Some(&out)) {
                         Ok((scenario_toml, act_name)) => {
                             let fname = if i == 0 {
                                 "scenario.toml".to_string()
@@ -777,6 +845,71 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+fn validation_config_from_flags(
+    max_velocity_rms: Option<f64>,
+    max_velocity_max: Option<f64>,
+    max_position_rms: Option<f64>,
+    max_position_max: Option<f64>,
+    max_energy_rms: Option<f64>,
+    max_energy_max: Option<f64>,
+    max_throttle_rms: Option<f64>,
+    max_throttle_max: Option<f64>,
+    max_brake_rms: Option<f64>,
+    max_brake_max: Option<f64>,
+) -> ValidationConfig {
+    ValidationConfig {
+        max_velocity_rms,
+        max_velocity_max,
+        max_position_rms,
+        max_position_max,
+        max_energy_rms,
+        max_energy_max,
+        max_throttle_rms,
+        max_throttle_max,
+        max_brake_rms,
+        max_brake_max,
+    }
+}
+
+fn maybe_validate_scenario(scenario_path: &std::path::Path) -> anyhow::Result<()> {
+    let scenario_dir = scenario_path
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("scenario path has no parent directory"))?;
+    let scenario = openrailsrs_scenarios::load_scenario(scenario_path)
+        .map_err(|e| anyhow::anyhow!("load scenario for validate: {e}"))?;
+    let Some(validate) = scenario.validate else {
+        return Ok(());
+    };
+    let Some(baseline_rel) = validate.baseline_or else {
+        return Ok(());
+    };
+    let baseline_path = scenario_dir.join(baseline_rel);
+    let run_csv = scenario_dir.join(&scenario.output.csv);
+    if !baseline_path.is_file() {
+        anyhow::bail!("validate baseline not found: {}", baseline_path.display());
+    }
+    if !run_csv.is_file() {
+        anyhow::bail!(
+            "validate run CSV not found: {} (run sim first)",
+            run_csv.display()
+        );
+    }
+    let rep = compare_or_dump_with_run(
+        &baseline_path,
+        &run_csv,
+        &OrColumnMap::default(),
+        &validate.thresholds,
+        0.1,
+    )
+    .map_err(|e| anyhow::anyhow!("validate compare-or: {e}"))?;
+    print_comparison_report(&rep, "Validate")?;
+    if !rep.pass {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
 fn print_comparison_report(rep: &ComparisonReport, title: &str) -> anyhow::Result<()> {
     let status = |p: bool| if p { "PASS ✓" } else { "FAIL ✗" };
     println!(
@@ -807,6 +940,26 @@ fn print_comparison_report(rep: &ComparisonReport, title: &str) -> anyhow::Resul
         rep.energy.samples,
         status(rep.energy_pass)
     );
+    if let Some(th) = &rep.throttle {
+        println!(
+            "  throttle  rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+            th.rms_diff,
+            th.max_abs_diff,
+            th.mean_abs_diff,
+            th.samples,
+            status(rep.throttle_pass.unwrap_or(true))
+        );
+    }
+    if let Some(br) = &rep.brake {
+        println!(
+            "  brake     rms={:.6}  max={:.6}  mean={:.6}  n={}  {}",
+            br.rms_diff,
+            br.max_abs_diff,
+            br.mean_abs_diff,
+            br.samples,
+            status(rep.brake_pass.unwrap_or(true))
+        );
+    }
     println!("overall: {}", if rep.pass { "PASS" } else { "FAIL" });
     println!("\n--- full report (TOML) ---");
     println!("{}", toml::to_string_pretty(rep)?);

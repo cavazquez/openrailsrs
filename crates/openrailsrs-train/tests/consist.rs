@@ -22,3 +22,16 @@ fn load_consist_from_fixture_dir() {
     assert_eq!(c.vehicles.len(), 2);
     assert!(c.total_mass_kg() > 0.0);
 }
+
+#[test]
+fn load_chiltern_pullman_engine_if_present() {
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng");
+    if !p.exists() {
+        return;
+    }
+    let loco = openrailsrs_train::load_engine_from_path(&p).expect("pullman eng");
+    assert!(loco.mass_kg > 60_000.0);
+    // Stub .eng uses sync_chiltern_assets power scale (×0.1 vs OR diesel table).
+    assert!(loco.max_power_w > 50_000.0);
+}

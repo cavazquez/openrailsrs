@@ -39,18 +39,29 @@ Captura manual desde Open Rails 1.6.1 (Wine, Linux) el 2025-05-25.
   `Open Rails_<Actividad>Speed.csv`, p. ej.  
   `/home/cristian/wine64-OpenRails/drive_c/users/cristian/AppData/Roaming/Open Rails_RS_Let's go to BirminghamSpeed.csv`
 - `compare-or` detecta automáticamente el header `TIME,TRAINSPEED,…` de OR 1.6.x (pestaña Evaluación).
-- El dump de rendimiento (`openrails_dump.csv`) requiere parser distinto; no usar con `compare-or` v1.
+- El dump de rendimiento (`openrails_dump.csv`) usa parser posicional (`Speed (mph),Time (M),…`).
 - En Wine, **Registro de datos de rendimiento** puede crashear con `pdh.dll.PdhFormatFromRawValue` (desactivar en Opciones → Registrador de datos).
+
+## Umbrales calibrados (Chiltern eval, loose)
+
+| Métrica | Umbral | Notas |
+|---------|--------|--------|
+| `max_velocity_rms` | 2.0 m/s | Física stub vs vapor OR |
+| `max_position_max` | 150 m | Posición inicial no alineada aún |
+| `max_throttle_rms` | 0.20 | Controles OR vs scripted driver |
+
+Ver `[validate]` en `examples/chiltern/scenario.toml`.
 
 ## Uso
 
 ```bash
-# Inspección rápida (dump rendimiento)
-head -1 examples/baselines/chiltern_birmingham/openrails_dump.csv
-wc -l examples/baselines/chiltern_birmingham/openrails_dump.csv
+cd examples/chiltern
+openrailsrs or-eval-driver ../baselines/chiltern_birmingham/or_evaluation_speed.csv --out driver_or.csv
+openrailsrs sim scenario.toml --driver driver_or.csv
 
-# Comparar evaluación OR vs corrida openrailsrs (ajusta umbrales según escenario alineado)
 openrailsrs compare-or \
-  examples/baselines/chiltern_birmingham/or_evaluation_speed.csv \
-  examples/smoke/run.csv
+  ../baselines/chiltern_birmingham/or_evaluation_speed.csv \
+  run.csv \
+  --max-velocity-rms 50 \
+  --max-position-max 500
 ```

@@ -1,0 +1,9 @@
+(Engine
+  (Name "RF_WP_DMBSH")
+  (Mass 67000)
+  (MaxPower 74551)
+  (MaxForce 150650)
+  (MaxVelocity 90.0)
+  (MaxBrakeForce 70000)
+  (Length 20.602)
+)

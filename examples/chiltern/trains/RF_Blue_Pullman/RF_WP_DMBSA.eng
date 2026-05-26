@@ -1,0 +1,9 @@
+(Engine
+  (Name "RF_WP_DMBSA")
+  (Mass 68000)
+  (MaxPower 74551)
+  (MaxForce 53379)
+  (MaxVelocity 90.0)
+  (MaxBrakeForce 367174)
+  (Length 20.879)
+)

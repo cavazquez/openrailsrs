@@ -176,6 +176,9 @@ pub fn parse_or_dump_csv(path: &Path, map: &OrColumnMap) -> Result<RunTrace, Val
         }
         return parse_or_evaluation_speed_csv(path, map, &fields, &body);
     }
+    if is_or_performance_header(&headers) {
+        return parse_or_performance_dump_csv(path, map, &body);
+    }
 
     let col = |name: &str| -> Result<usize, ValidateError> {
         headers
@@ -345,6 +348,22 @@ fn parse_or_eval_row(
     parts: &[&str],
     map: &OrColumnMap,
 ) -> Result<OrEvalRow, ValidateError> {
+    let mut row = parse_or_eval_row_positional(fields, parts, map)?;
+    if let Some(tail) = parse_or_eval_tail(parts) {
+        row.throttle = Some(tail.throttle);
+        row.brake = Some(tail.brake);
+        if tail.distance_m.is_some() {
+            row.distance_m = tail.distance_m.unwrap_or(row.distance_m);
+        }
+    }
+    Ok(row)
+}
+
+fn parse_or_eval_row_positional(
+    fields: &[OrEvalField],
+    parts: &[&str],
+    map: &OrColumnMap,
+) -> Result<OrEvalRow, ValidateError> {
     let mut idx = 0;
     let mut row = OrEvalRow {
         time_abs_s: None,
@@ -380,7 +399,7 @@ fn parse_or_eval_row(
                 idx += consumed;
             }
             OrEvalField::ThrottlePerc => {
-                row.throttle = Some(parse_or_int_field(parts[idx]) as f64);
+                row.throttle = Some(parse_or_int_field(parts[idx]) as f64 / 100.0);
                 idx += 1;
             }
             OrEvalField::BrakePressure => {
@@ -393,6 +412,61 @@ fn parse_or_eval_row(
         }
     }
     Ok(row)
+}
+
+/// OR evaluation rows often gain extra comma-separated tokens (e.g. `CLEAR_2`, `AUTO_SIGNAL`)
+/// so fixed column indices drift. Throttle, brake, and distance are anchored at the tail:
+/// `..., THROTTLE, BRAKE, -001, GEAR`.
+struct OrEvalTail {
+    distance_m: Option<f64>,
+    throttle: f64,
+    brake: f64,
+}
+
+fn parse_or_eval_tail(parts: &[&str]) -> Option<OrEvalTail> {
+    let anchor = parts.iter().position(|p| p.trim() == "-001")?;
+    if anchor < 2 {
+        return None;
+    }
+    let throttle = parse_or_int_field(parts[anchor - 2]) as f64 / 100.0;
+    let brake = parse_or_int_field(parts[anchor - 1]) as f64;
+    let distance_m = parse_or_eval_distance_before(parts, anchor - 2);
+    Some(OrEvalTail {
+        distance_m,
+        throttle,
+        brake,
+    })
+}
+
+fn parse_or_eval_distance_before(parts: &[&str], before_idx: usize) -> Option<f64> {
+    if before_idx == 0 {
+        return Some(0.0);
+    }
+    // Skip preamble: time + train speed (up to 2 tokens) + max speed (up to 2) + signal + elevation.
+    let mut idx = 1usize;
+    let (_, speed_used) = consume_or_train_speed(parts, idx);
+    idx += speed_used;
+    let (_, max_used) = consume_or_formatted_decimal(parts, idx);
+    idx += max_used;
+    // signal aspect (single token, may contain underscore)
+    if idx < before_idx {
+        idx += 1;
+    }
+    // elevation
+    if idx < before_idx {
+        let (_, elev_used) = consume_or_formatted_decimal(parts, idx);
+        idx += elev_used;
+    }
+    // direction / control mode tokens until the numeric distance cluster right before throttle.
+    let mut best: Option<f64> = None;
+    while idx < before_idx {
+        let (raw, consumed) = consume_or_distance(parts, idx);
+        if idx + consumed <= before_idx {
+            best = Some(raw);
+        }
+        idx += consumed.max(1);
+    }
+    best
 }
 
 /// OR evaluation train speed uses `ToString("0000.0")`; under Wine/comma CSV the field often
@@ -644,12 +718,190 @@ fn opt_lerp(a: Option<f64>, b: Option<f64>, t: f64) -> Option<f64> {
     }
 }
 
+fn is_or_performance_header(headers: &csv::StringRecord) -> bool {
+    headers
+        .get(0)
+        .map(|h| h.trim().eq_ignore_ascii_case("Speed (mph)"))
+        .unwrap_or(false)
+}
+
+struct PerfRow {
+    time_abs_s: f64,
+    velocity_mps: f64,
+    throttle: Option<f64>,
+}
+
+fn parse_perf_row_line(line: &str, map: &OrColumnMap) -> Option<PerfRow> {
+    let parts: Vec<&str> = line.split(',').collect();
+    let mut time_idx = None;
+    let mut speed_mph = None;
+    let mut throttle = None;
+
+    for (i, part) in parts.iter().enumerate() {
+        let p = part.trim();
+        if time_idx.is_none() && parse_hms_to_seconds(p).is_some() {
+            time_idx = Some(i);
+            if let Some(next) = parts.get(i + 1) {
+                let n = next.trim();
+                if let Ok(v) = n.parse::<f64>() {
+                    if (0.0..=100.0).contains(&v) {
+                        throttle = Some(v / 100.0);
+                    }
+                }
+            }
+        }
+        let lower = p.to_ascii_lowercase();
+        if lower.ends_with("mph") {
+            let num: String = lower.chars().take(lower.len().saturating_sub(3)).collect();
+            if let Ok(v) = num.parse::<f64>() {
+                speed_mph = Some(v);
+            }
+        }
+    }
+
+    let idx = time_idx?;
+    let time_abs_s = parse_hms_to_seconds(parts[idx].trim())?;
+    Some(PerfRow {
+        time_abs_s,
+        velocity_mps: map.speed_to_mps(speed_mph.unwrap_or(0.0)),
+        throttle,
+    })
+}
+
+fn parse_or_performance_dump_csv(
+    path: &Path,
+    map: &OrColumnMap,
+    body: &str,
+) -> Result<RunTrace, ValidateError> {
+    let mut samples: Vec<TraceSample> = Vec::new();
+    let mut t0: Option<f64> = None;
+    let mut prev_t = 0.0;
+    let mut distance_m = 0.0;
+    let mut header_seen = false;
+
+    for line in body.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if !header_seen {
+            header_seen = true;
+            continue;
+        }
+        let Some(row) = parse_perf_row_line(line, map) else {
+            continue;
+        };
+        let base = *t0.get_or_insert(row.time_abs_s);
+        let time_s = row.time_abs_s - base;
+        if !samples.is_empty() {
+            let dt = time_s - prev_t;
+            if dt > 0.0 {
+                distance_m += samples.last().unwrap().velocity_mps * dt;
+            }
+        }
+        prev_t = time_s;
+        samples.push(TraceSample {
+            time_s,
+            velocity_mps: row.velocity_mps,
+            distance_m,
+            energy_kwh: None,
+            throttle: row.throttle,
+            brake: None,
+        });
+    }
+
+    if samples.is_empty() {
+        return Err(ValidateError::Msg(format!(
+            "no numeric rows in OR performance dump {}",
+            path.display()
+        )));
+    }
+    Ok(RunTrace {
+        source: path.display().to_string(),
+        samples,
+    })
+}
+
+/// Convert an OR evaluation `*Speed.csv` into a `ScriptedDriver` CSV (`time_s,throttle,brake`).
+pub fn write_or_eval_driver_csv(
+    or_eval_path: &Path,
+    out_path: &Path,
+    brake_full_scale: Option<f64>,
+) -> Result<usize, ValidateError> {
+    let trace = parse_or_dump_csv(or_eval_path, &OrColumnMap::default())?;
+    let brake_scale = brake_full_scale.unwrap_or_else(|| {
+        trace
+            .samples
+            .iter()
+            .filter_map(|s| s.brake)
+            .fold(0.0_f64, f64::max)
+            .max(1.0)
+    });
+
+    let mut wtr = csv::WriterBuilder::new()
+        .has_headers(true)
+        .from_path(out_path)
+        .map_err(|e| ValidateError::Msg(format!("write driver CSV: {e}")))?;
+    wtr.write_record(["time_s", "throttle", "brake"])
+        .map_err(|e| ValidateError::Msg(format!("write driver header: {e}")))?;
+
+    let mut deduped: Vec<&TraceSample> = Vec::new();
+    for s in &trace.samples {
+        if deduped
+            .last()
+            .is_some_and(|p| (p.time_s - s.time_s).abs() < 1e-9)
+        {
+            deduped.pop();
+        }
+        deduped.push(s);
+    }
+    let mut rows = 0usize;
+    for s in deduped {
+        let throttle = s.throttle.unwrap_or(0.0);
+        let brake = (s.brake.unwrap_or(0.0) / brake_scale).clamp(0.0, 1.0);
+        wtr.write_record([
+            format!("{:.3}", s.time_s),
+            format!("{throttle:.4}"),
+            format!("{brake:.4}"),
+        ])
+        .map_err(|e| ValidateError::Msg(format!("write driver row: {e}")))?;
+        rows += 1;
+    }
+    wtr.flush()
+        .map_err(|e| ValidateError::Msg(format!("flush driver CSV: {e}")))?;
+    Ok(rows)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn fixtures_dir() -> std::path::PathBuf {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
+    }
+
+    #[test]
+    fn parse_or_performance_dump_subset_fixture() {
+        let path = fixtures_dir().join("or_perf_subset.csv");
+        let trace = parse_or_dump_csv(&path, &OrColumnMap::default()).expect("parse perf dump");
+        assert!(trace.samples.len() >= 10);
+        assert!(trace.samples[0].time_s.abs() < 0.01);
+        assert!(
+            trace.samples.iter().any(|s| s.throttle.is_some()),
+            "expected throttle column in perf dump"
+        );
+    }
+
+    #[test]
+    fn write_or_eval_driver_csv_fixture() {
+        let eval = fixtures_dir().join("or_eval_speed_minimal.csv");
+        let out = std::env::temp_dir().join("openrailsrs_driver_test.csv");
+        let rows = write_or_eval_driver_csv(&eval, &out, None).expect("write driver");
+        assert!(rows >= 10);
+        let text = std::fs::read_to_string(&out).expect("read driver");
+        assert!(text.contains("time_s,throttle,brake"));
+        assert!(text.contains("0.8000") || text.contains("0.8"));
+        let _ = std::fs::remove_file(out);
     }
 
     #[test]
@@ -679,7 +931,7 @@ mod tests {
         let mph = late.velocity_mps / 0.447_04;
         assert!((mph - 1.64).abs() < 0.15, "expected ~1.64 mph, got {mph}");
         assert!(late.distance_m > 50.0);
-        assert!(late.throttle.unwrap_or(0.0) > 50.0);
+        assert!(late.throttle.unwrap_or(0.0) > 0.5);
         // monotonic distance after movement starts
         let mut prev = 0.0;
         for s in &trace.samples {

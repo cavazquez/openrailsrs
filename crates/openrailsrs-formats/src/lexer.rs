@@ -71,7 +71,15 @@ impl<'a> Lexer<'a> {
                 Ok(Some(Token::RParen))
             }
             Some(b'"') => Ok(Some(self.read_string()?)),
-            Some(b) if b == b'-' || b.is_ascii_digit() => Ok(Some(self.read_number()?)),
+            Some(b'-')
+                if self
+                    .input
+                    .get(self.pos + 1)
+                    .is_some_and(|b| b.is_ascii_digit()) =>
+            {
+                Ok(Some(self.read_number()?))
+            }
+            Some(b) if b.is_ascii_digit() => Ok(Some(self.read_number()?)),
             Some(_) => Ok(Some(self.read_symbol()?)),
         }
     }

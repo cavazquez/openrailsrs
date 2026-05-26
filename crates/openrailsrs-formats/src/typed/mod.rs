@@ -13,7 +13,7 @@ pub use activity::{
     ActivityFile, ActivityObjectDef, RestrictedZone, SoundRegionOverride, TrafficServiceDef,
 };
 pub use consist::{ConsistEntry, ConsistFile};
-pub use engine::EngineFile;
+pub use engine::{EngineFile, MstsSteamFields};
 pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
 pub use shape::{
@@ -26,7 +26,9 @@ pub use terrain::{
     build_patch_mesh_data_ex, build_tile_mesh_data, parse_tile_xz_from_filename, patch_affine_uv,
     read_f_raw, read_y_raw,
 };
-pub use track_db::{SignalAspectKind, TrItem, TrItemKind, TrackDbFile, TrackDbNode, TrackNodeKind};
+pub use track_db::{
+    SignalAspectKind, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind,
+};
 pub use wagon::WagonFile;
 pub use world::{WorldFile, WorldItem};
 
@@ -58,59 +60,6 @@ fn find_list_value<'a>(root: &'a Ast, key: &str) -> Option<&'a Ast> {
         }
         None
     })
-}
-
-fn find_numeric_field(root: &Ast, keys: &[&str], context: &str) -> Result<f64, FormatError> {
-    for key in keys {
-        if let Some(value) = find_list_value(root, key) {
-            return match value {
-                Ast::Atom(atom) => {
-                    atom_to_number(atom).ok_or_else(|| FormatError::UnexpectedAtom {
-                        key: (*key).to_string(),
-                        context: context.to_string(),
-                        expected: "numeric atom".to_string(),
-                    })
-                }
-                _ => Err(FormatError::UnexpectedAtom {
-                    key: (*key).to_string(),
-                    context: context.to_string(),
-                    expected: "numeric atom".to_string(),
-                }),
-            };
-        }
-    }
-    Err(FormatError::MissingField {
-        key: keys.join("|"),
-        context: context.to_string(),
-    })
-}
-
-fn find_optional_numeric_field(
-    root: &Ast,
-    keys: &[&str],
-    context: &str,
-) -> Result<Option<f64>, FormatError> {
-    for key in keys {
-        if let Some(value) = find_list_value(root, key) {
-            return match value {
-                Ast::Atom(atom) => {
-                    atom_to_number(atom)
-                        .map(Some)
-                        .ok_or_else(|| FormatError::UnexpectedAtom {
-                            key: (*key).to_string(),
-                            context: context.to_string(),
-                            expected: "numeric atom".to_string(),
-                        })
-                }
-                _ => Err(FormatError::UnexpectedAtom {
-                    key: (*key).to_string(),
-                    context: context.to_string(),
-                    expected: "numeric atom".to_string(),
-                }),
-            };
-        }
-    }
-    Ok(None)
 }
 
 fn find_optional_string_field(

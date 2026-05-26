@@ -64,9 +64,28 @@ openrailsrs compare-or dump.csv run.csv --map or_column_map.toml
 
 Si activas **Performance / Physics / Steam** en el Registrador de datos, OR escribe un CSV distinto (p. ej. `Speed (mph),Time (M),Throttle (%)…`) **sin** columnas `Time`, `Speed`, `Distance` que espera `compare-or` v1.
 
-Baseline real guardado en el repo:
+## Chiltern Birmingham (eval 61 s)
 
-- `examples/baselines/chiltern_birmingham/` — ruta Chiltern, actividad *Let's go to Birmingham*, ~2.5 min sim (10:00–10:02:24).
+Gaps cerrados en openrailsrs:
+
+| Área | Estado |
+|------|--------|
+| TDB `msts_aliases` + switches salientes | Import emite `[[msts_aliases]]`; PAT resuelve vectores (`tdb_id=2` → `e2`). |
+| Placement PAT | `start=n3`, `start_offset_m≈305.6`, destino y `[[route.switches]]` desde PAT+`.srv`. |
+| Consist | Trainset `RF_Blue_Pullman` (masa/longitud/freno por vehículo); script `scripts/sync_chiltern_assets.sh`. |
+| Física diesel MSTS | Parser con unidades (`68t-uk`, `12000lbf`, `DieselPowerTab`); frenos por `length_m` real. |
+| Vapor MSTS | `MstsSteamFields` en `.eng` → `SteamParams` (Pullman OR es diesel, no activa `steam_step`). |
+| CI | `cargo test -p openrailsrs-cli --test chiltern_validate` (skip si falta `track.toml`). |
+
+Umbrales `[validate]` actuales en `examples/chiltern/scenario.toml` (posición ~9 m máx a t=61; velocidad RMS ~4.3 m/s — pendiente de tablas diesel OR completas / `Default.cs`):
+
+```toml
+max_velocity_rms = 4.5
+max_position_max = 55.0
+```
+
+Objetivo estricto del plan (`0.3` / `25 m`) requiere reproducir curvas `ORTSMaxTractiveForceCurves` + lógica de script del trainset.
+
 
 Para un CSV compatible con `compare-or`, usa la pestaña **Evaluación** y activa solo el registro de **velocidad del tren** (Time, Train Speed, Distance Travelled). En Wine, desactiva el registro de rendimiento: puede abortar con `pdh.dll.PdhFormatFromRawValue`.
 
@@ -99,6 +118,22 @@ TIME,TRAINSPEED,MAXSPEED,SIGNALASPECT,ELEVATION,DIRECTION,CONTROLMODE,DISTANCETR
 
 Baseline en el repo: `examples/baselines/chiltern_birmingham/or_evaluation_speed.csv` (~61 s sim, throttle ~80 %).
 
+### Driver desde evaluación OR
+
+```bash
+openrailsrs or-eval-driver \
+  examples/baselines/chiltern_birmingham/or_evaluation_speed.csv \
+  --out examples/chiltern/driver_or.csv
+
+openrailsrs sim examples/chiltern/scenario.toml --driver examples/chiltern/driver_or.csv
+```
+
+### Dump de rendimiento (`Speed (mph),Time (M),…`)
+
+`compare-or` detecta también el header de rendimiento OR 1.6.x (columnas de ancho variable). Extrae `Time (M)` (`HH:MM:SS`), velocidad (`*mph`) y throttle cuando está presente; la distancia se integra desde velocidad si no hay columna fiable.
+
+Baseline: `examples/baselines/chiltern_birmingham/openrails_dump.csv` (~144 s sim).
+
 Config recomendada en OR (Opciones → Registrador de datos / Evaluación):
 
 - `DataLogTrainSpeed = True`
@@ -108,16 +143,17 @@ Config recomendada en OR (Opciones → Registrador de datos / Evaluación):
 
 ## Escenario TOML — sección `[validate]`
 
-Metadata opcional en `scenario.toml` (no ejecuta la comparación automáticamente):
+Metadata opcional en `scenario.toml`. Si `baseline_or` está definido, `openrailsrs sim` ejecuta `compare-or` al final (salvo `--no-validate`):
 
 ```toml
 [validate]
-max_velocity_rms = 0.5
-max_position_max = 10.0
-baseline_or = "baselines/my_route_dump.csv"
+max_velocity_rms = 2.0
+max_position_max = 150.0
+max_throttle_rms = 0.20
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 ```
 
-Los umbrales siguen el mismo esquema que `openrailsrs compare`. `baseline_or` es una ruta relativa al directorio del escenario, documentada para scripts externos.
+Los umbrales siguen el mismo esquema que `openrailsrs compare` / `compare-or` (`max_throttle_rms`, `max_brake_rms`, …). `baseline_or` es una ruta relativa al directorio del escenario.
 
 ## Qué compara el MVP (v1)
 
@@ -126,6 +162,7 @@ Los umbrales siguen el mismo esquema que `openrailsrs compare`. `baseline_or` es
 | Velocidad | Sí (remuestreada) |
 | Distancia / odómetro | Sí |
 | Energía acumulada | Solo si ambos CSV tienen columna de energía |
+| Throttle / freno | Sí, si ambas trazas tienen columna |
 | Posición topológica (`edge_id`) | No (modelos distintos) |
 
 ## Limitaciones conocidas

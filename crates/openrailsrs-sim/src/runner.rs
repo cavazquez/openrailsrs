@@ -35,7 +35,23 @@ fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
         .iter()
         .map(|v| {
             let cylinder_pos = pos;
-            pos += DEFAULT_VEHICLE_LENGTH_M;
+            let length_m = match v {
+                openrailsrs_train::Vehicle::Loco(l) => {
+                    if l.length_m > 0.0 {
+                        l.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+                openrailsrs_train::Vehicle::Wagon(w) => {
+                    if w.length_m > 0.0 {
+                        w.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+            };
+            pos += length_m;
             let force_n = match v {
                 openrailsrs_train::Vehicle::Loco(l) => l.max_brake_force_n,
                 openrailsrs_train::Vehicle::Wagon(w) => w.max_brake_force_n,
@@ -243,6 +259,9 @@ pub fn run_scenario_headless_with_driver(
 
     let path_data = PathData::from_path(&path_edges, &graph);
     let mut state = TrainSimState::new(path_edges);
+    if let Some(offset) = scenario.route.start_offset_m {
+        apply_start_offset(&mut state, &path_data, offset);
+    }
     state.brake_system = build_brake_system(&consist);
     state.boiler_state = consist
         .aggregate_steam_params()
@@ -656,4 +675,26 @@ pub fn run_from_scenario_file_with_driver(
         .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
     let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
     run_scenario_headless_with_driver(scenario_dir, &scenario, driver)
+}
+
+fn apply_start_offset(state: &mut TrainSimState, path_data: &PathData, offset_m: f64) {
+    let mut remaining = offset_m.max(0.0);
+    state.pos_on_edge_m = 0.0;
+    state.odometer_m = 0.0;
+    state.edge_index = 0;
+    while remaining > 0.0 && state.edge_index < state.path_edges.len() {
+        let Some(edge) = path_data.get(state.edge_index) else {
+            break;
+        };
+        if edge.length_m <= 0.0 {
+            state.edge_index += 1;
+            continue;
+        }
+        if remaining <= edge.length_m {
+            state.pos_on_edge_m = remaining;
+            return;
+        }
+        remaining -= edge.length_m;
+        state.edge_index += 1;
+    }
 }

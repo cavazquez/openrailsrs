@@ -46,6 +46,18 @@ pub struct ValidationConfig {
     /// Maximum allowed peak absolute error for `cumulative_energy_kwh` (kWh).
     #[serde(default)]
     pub max_energy_max: Option<f64>,
+    /// Maximum allowed RMS error for `throttle` (0–1).
+    #[serde(default)]
+    pub max_throttle_rms: Option<f64>,
+    /// Maximum allowed peak absolute error for `throttle` (0–1).
+    #[serde(default)]
+    pub max_throttle_max: Option<f64>,
+    /// Maximum allowed RMS error for `brake` (0–1).
+    #[serde(default)]
+    pub max_brake_rms: Option<f64>,
+    /// Maximum allowed peak absolute error for `brake` (0–1).
+    #[serde(default)]
+    pub max_brake_max: Option<f64>,
 }
 
 impl Default for ValidationConfig {
@@ -58,6 +70,10 @@ impl Default for ValidationConfig {
             max_position_max: None,
             max_energy_rms: None,
             max_energy_max: None,
+            max_throttle_rms: None,
+            max_throttle_max: None,
+            max_brake_rms: None,
+            max_brake_max: None,
         }
     }
 }
@@ -73,6 +89,10 @@ impl ValidationConfig {
             max_position_max: Some(1e-6),
             max_energy_rms: Some(1e-6),
             max_energy_max: Some(1e-6),
+            max_throttle_rms: Some(1e-6),
+            max_throttle_max: Some(1e-6),
+            max_brake_rms: Some(1e-6),
+            max_brake_max: Some(1e-6),
         }
     }
 }
@@ -90,11 +110,21 @@ pub struct ComparisonReport {
     pub position: SeriesStats,
     /// Statistics for `cumulative_energy_kwh`.
     pub energy: SeriesStats,
+    /// Statistics for `throttle` when both traces carry the column.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle: Option<SeriesStats>,
+    /// Statistics for `brake` when both traces carry the column.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brake: Option<SeriesStats>,
     /// `true` when every configured tolerance is satisfied (or no tolerances set).
     pub pass: bool,
     pub velocity_pass: bool,
     pub position_pass: bool,
     pub energy_pass: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle_pass: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brake_pass: Option<bool>,
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -151,10 +181,14 @@ pub fn compare_csv_files_with_config(
         velocity: vel,
         position: pos,
         energy: ene,
+        throttle: None,
+        brake: None,
         pass: vel_pass && pos_pass && ene_pass,
         velocity_pass: vel_pass,
         position_pass: pos_pass,
         energy_pass: ene_pass,
+        throttle_pass: None,
+        brake_pass: None,
     })
 }
 
@@ -172,6 +206,11 @@ pub fn compare_traces(
 
     let both_have_energy = a.samples.iter().any(|s| s.energy_kwh.is_some())
         && b.samples.iter().any(|s| s.energy_kwh.is_some());
+    let both_have_throttle = trace_has_throttle(a) && trace_has_throttle(b);
+    let both_have_brake = trace_has_brake(a) && trace_has_brake(b);
+
+    let mut throttle = SeriesStats::default();
+    let mut brake = SeriesStats::default();
 
     for (sa, sb) in ra.iter().zip(rb.iter()) {
         accumulate(&mut vel, sa.velocity_mps - sb.velocity_mps);
@@ -181,12 +220,34 @@ pub fn compare_traces(
             let eb = sb.energy_kwh.unwrap_or(0.0);
             accumulate(&mut ene, ea - eb);
         }
+        if both_have_throttle {
+            let ta = sa.throttle.unwrap_or(0.0);
+            let tb = sb.throttle.unwrap_or(0.0);
+            accumulate(&mut throttle, ta - tb);
+        }
+        if both_have_brake {
+            let ba = sa.brake.unwrap_or(0.0);
+            let bb = sb.brake.unwrap_or(0.0);
+            accumulate(&mut brake, ba - bb);
+        }
     }
     finalize_stats(&mut vel);
     finalize_stats(&mut pos);
     if both_have_energy {
         finalize_stats(&mut ene);
     }
+    let throttle_stats = if both_have_throttle {
+        finalize_stats(&mut throttle);
+        Some(throttle)
+    } else {
+        None
+    };
+    let brake_stats = if both_have_brake {
+        finalize_stats(&mut brake);
+        Some(brake)
+    } else {
+        None
+    };
 
     let vel_pass = column_passes(&vel, config.max_velocity_rms, config.max_velocity_max);
     let pos_pass = column_passes(&pos, config.max_position_rms, config.max_position_max);
@@ -195,6 +256,18 @@ pub fn compare_traces(
     } else {
         true
     };
+    let throttle_pass = throttle_stats
+        .as_ref()
+        .map(|s| column_passes(s, config.max_throttle_rms, config.max_throttle_max));
+    let brake_pass = brake_stats
+        .as_ref()
+        .map(|s| column_passes(s, config.max_brake_rms, config.max_brake_max));
+
+    let pass = vel_pass
+        && pos_pass
+        && ene_pass
+        && throttle_pass.unwrap_or(true)
+        && brake_pass.unwrap_or(true);
 
     Ok(ComparisonReport {
         file_a: a.source.clone(),
@@ -203,10 +276,14 @@ pub fn compare_traces(
         velocity: vel,
         position: pos,
         energy: ene,
-        pass: vel_pass && pos_pass && ene_pass,
+        throttle: throttle_stats,
+        brake: brake_stats,
+        pass,
         velocity_pass: vel_pass,
         position_pass: pos_pass,
         energy_pass: ene_pass,
+        throttle_pass,
+        brake_pass,
     })
 }
 
@@ -239,6 +316,14 @@ pub(crate) fn finalize_stats(s: &mut SeriesStats) {
     }
     s.mean_abs_diff /= s.samples as f64;
     s.rms_diff = (s.rms_diff / s.samples as f64).sqrt();
+}
+
+fn trace_has_throttle(t: &crate::trace::RunTrace) -> bool {
+    t.samples.iter().any(|s| s.throttle.is_some())
+}
+
+fn trace_has_brake(t: &crate::trace::RunTrace) -> bool {
+    t.samples.iter().any(|s| s.brake.is_some())
 }
 
 pub(crate) fn column_passes(s: &SeriesStats, max_rms: Option<f64>, max_abs: Option<f64>) -> bool {

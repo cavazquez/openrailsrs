@@ -129,10 +129,13 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 **Comparación Open Rails (Fase 7 ext.):**
 - Parser `dump.csv` OR → traza normalizada; remuestreo lineal; CLI `compare-or`.
+- Parser evaluación OR 1.6 `*Speed.csv` y dump rendimiento `Speed (mph),Time (M),…`.
+- CLI `or-eval-driver` (eval → `ScriptedDriver` CSV); métricas throttle/freno en `compare-or`.
+- Escenario Chiltern: `examples/chiltern/` + baseline `examples/baselines/chiltern_birmingham/`.
+- `[validate]` en `scenario.toml` + hook automático en `openrailsrs sim` (`--no-validate` para omitir).
 - Fixtures sintéticos en `openrailsrs-validate/tests/fixtures/`; docs en `docs/OR_TRACE_COMPARISON.md`.
-- Sección opcional `[validate]` en `scenario.toml` (umbrales + `baseline_or` metadata).
 
-**Pendiente:** Baseline OR real versionado; comparación topológica; energía vs OR.
+**Pendiente:** Comparación topológica (`edge_id`); energía vs OR; PASS estricto Chiltern (física vapor alineada).
 
 ---
 

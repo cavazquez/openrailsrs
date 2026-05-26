@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use openrailsrs_formats::{
-    ActivityFile, MstsFile, TrItem, TrItemKind, TrackDbFile, TrackNodeKind, parse_msts_file,
+    ActivityFile, MstsFile, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackNodeKind,
+    parse_msts_file,
 };
 use serde::Serialize;
 
@@ -26,6 +27,19 @@ struct TrackToml {
     edges: Vec<EdgeToml>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     signals: Vec<SignalToml>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    msts_aliases: Vec<MstsAliasToml>,
+}
+
+#[derive(Serialize)]
+struct MstsAliasToml {
+    tdb_id: u32,
+    kind: String,
+    id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    to: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -91,6 +105,7 @@ fn is_zero(v: &f64) -> bool {
 pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
     let tdb = TrackDbFile::from_path(&tdb_path)?;
+    ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
     Ok(toml)
@@ -101,6 +116,7 @@ pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
 pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
     let tdb = TrackDbFile::from_path(&tdb_path)?;
+    ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let activity = ActivityFile::from_path(act_path)?;
     let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity))?;
@@ -111,10 +127,21 @@ pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<S
 pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usize), MstsError> {
     let tdb_path = find_tdb(route_dir)?;
     let tdb = TrackDbFile::from_path(&tdb_path)?;
+    ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let (nodes, edges) = count_nodes_edges(&tdb);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
     Ok((toml, nodes, edges))
+}
+
+fn ensure_non_empty_tdb(tdb: &TrackDbFile, tdb_path: &Path) -> Result<(), MstsError> {
+    if tdb.nodes.is_empty() {
+        return Err(MstsError::msg(format!(
+            "no track nodes parsed from {} (native MSTS editor layout may be unsupported)",
+            tdb_path.display()
+        )));
+    }
+    Ok(())
 }
 
 // ── Internals ─────────────────────────────────────────────────────────────────
@@ -178,7 +205,8 @@ fn convert_tdb_to_toml(
     activity: Option<&ActivityFile>,
 ) -> Result<String, MstsError> {
     let mut node_map: HashMap<u32, String> = HashMap::new();
-    let mut junction_pins: HashMap<u32, (u32, u32)> = HashMap::new();
+    let mut junction_pins: HashMap<u32, Vec<TrPinRef>> = HashMap::new();
+    let mut msts_aliases: Vec<MstsAliasToml> = Vec::new();
     let mut nodes: Vec<NodeToml> = Vec::new();
 
     for n in &tdb.nodes {
@@ -186,6 +214,13 @@ fn convert_tdb_to_toml(
             TrackNodeKind::End => {
                 let id = format!("n{}", n.id);
                 node_map.insert(n.id, id.clone());
+                msts_aliases.push(MstsAliasToml {
+                    tdb_id: n.id,
+                    kind: "node".into(),
+                    id: id.clone(),
+                    from: None,
+                    to: None,
+                });
                 nodes.push(NodeToml {
                     id,
                     kind: None,
@@ -193,10 +228,17 @@ fn convert_tdb_to_toml(
                     y_m: 0.0,
                 });
             }
-            TrackNodeKind::Junction { pin1, pin2 } => {
+            TrackNodeKind::Junction { pins } => {
                 let id = format!("n{}", n.id);
                 node_map.insert(n.id, id.clone());
-                junction_pins.insert(n.id, (*pin1, *pin2));
+                junction_pins.insert(n.id, pins.clone());
+                msts_aliases.push(MstsAliasToml {
+                    tdb_id: n.id,
+                    kind: "node".into(),
+                    id: id.clone(),
+                    from: None,
+                    to: None,
+                });
                 nodes.push(NodeToml {
                     id,
                     kind: None,
@@ -227,17 +269,24 @@ fn convert_tdb_to_toml(
                 item_to_edge.insert(*item_id, edge_id.clone());
             }
             edges.push(EdgeToml {
-                id: edge_id,
-                from: from_id,
-                to: to_id,
+                id: edge_id.clone(),
+                from: from_id.clone(),
+                to: to_id.clone(),
                 length_m: *length_m,
                 speed_limit_kmh: *speed_limit_mps * 3.6,
                 grade_percent: 0.0,
             });
+            msts_aliases.push(MstsAliasToml {
+                tdb_id: n.id,
+                kind: "edge".into(),
+                id: edge_id,
+                from: Some(from_id),
+                to: Some(to_id),
+            });
         }
     }
 
-    configure_switch_nodes(&mut nodes, &edges, &junction_pins);
+    configure_switch_nodes(&mut nodes, &mut edges, &junction_pins, &msts_aliases);
 
     let mut signals = build_signals(&tdb.items, &item_to_edge);
 
@@ -253,6 +302,7 @@ fn convert_tdb_to_toml(
         nodes,
         edges,
         signals,
+        msts_aliases,
     };
     Ok(toml::to_string_pretty(&track)?)
 }
@@ -260,73 +310,116 @@ fn convert_tdb_to_toml(
 /// Attach switch metadata to junction nodes once all edges exist.
 fn configure_switch_nodes(
     nodes: &mut [NodeToml],
-    edges: &[EdgeToml],
-    junction_pins: &HashMap<u32, (u32, u32)>,
+    edges: &mut [EdgeToml],
+    junction_pins: &HashMap<u32, Vec<TrPinRef>>,
+    aliases: &[MstsAliasToml],
 ) {
     for node in nodes.iter_mut() {
         let Some(jid) = node_id_num(&node.id) else {
             continue;
         };
-        let Some((pin1, pin2)) = junction_pins.get(&jid) else {
+        let Some(pins) = junction_pins.get(&jid) else {
             continue;
         };
-
-        let incident: Vec<&EdgeToml> = edges
-            .iter()
-            .filter(|e| e.from == node.id || e.to == node.id)
-            .collect();
-
-        if incident.len() < 2 {
+        if pins.len() < 2 {
             continue;
         }
 
-        let pin1_node = format!("n{pin1}");
-        let pin2_node = format!("n{pin2}");
-
-        let diverging = incident
-            .iter()
-            .find(|e| edge_other_end(e, &node.id) == pin1_node)
-            .or_else(|| {
-                incident
-                    .iter()
-                    .find(|e| edge_other_end(e, &node.id) == pin2_node)
+        let stem_pin = pins.iter().find(|p| p.branch_index == 0);
+        let div_pin = pins.iter().find(|p| p.branch_index == 1).or_else(|| {
+            pins.iter().find(|p| {
+                p.branch_index > 0 && p.node_id != stem_pin.map(|s| s.node_id).unwrap_or(0)
             })
-            .or_else(|| {
-                incident
+        });
+
+        let stem_target = stem_pin.and_then(|p| resolve_pin_endpoint(p.node_id, jid, aliases));
+        let div_target = div_pin.and_then(|p| resolve_pin_endpoint(p.node_id, jid, aliases));
+
+        let stem_id = stem_target
+            .as_ref()
+            .and_then(|t| find_or_orient_edge(edges, &node.id, t, true));
+        let div_id = div_target
+            .as_ref()
+            .and_then(|t| find_or_orient_edge(edges, &node.id, t, false));
+
+        let (stem_id, div_id) = match (stem_id, div_id) {
+            (Some(s), Some(d)) if s != d => (s, d),
+            (Some(s), _) => {
+                let fallback = edges
                     .iter()
-                    .min_by(|a, b| a.length_m.partial_cmp(&b.length_m).unwrap())
-            });
-
-        let Some(diverging) = diverging else {
-            continue;
+                    .find(|e| e.from == node.id && e.id != s)
+                    .map(|e| e.id.clone());
+                (s.clone(), fallback.unwrap_or(s))
+            }
+            _ => continue,
         };
-
-        let stem = incident
-            .iter()
-            .find(|e| e.id != diverging.id)
-            .copied()
-            .unwrap_or(*diverging);
 
         node.kind = Some(SwitchKindTable {
             switch: SwitchEdges {
-                stem_edge: stem.id.clone(),
-                diverging_edge: diverging.id.clone(),
+                stem_edge: stem_id,
+                diverging_edge: div_id,
                 default_position: default_switch_position(),
             },
         });
     }
 }
 
-fn node_id_num(id: &str) -> Option<u32> {
-    id.strip_prefix('n')?.parse().ok()
+fn resolve_pin_endpoint(
+    pin_tdb_id: u32,
+    junction_id: u32,
+    aliases: &[MstsAliasToml],
+) -> Option<String> {
+    let alias = aliases.iter().find(|a| a.tdb_id == pin_tdb_id)?;
+    match alias.kind.as_str() {
+        "node" => Some(alias.id.clone()),
+        "edge" => {
+            let from = alias.from.as_deref()?;
+            let to = alias.to.as_deref()?;
+            let j = format!("n{junction_id}");
+            if from == j {
+                Some(to.to_string())
+            } else if to == j {
+                Some(from.to_string())
+            } else {
+                Some(to.to_string())
+            }
+        }
+        _ => None,
+    }
 }
 
-fn edge_other_end(edge: &EdgeToml, node_id: &str) -> String {
-    if edge.from == node_id {
-        edge.to.clone()
-    } else {
-        edge.from.clone()
+/// Find an edge leaving `node_id` toward `target`, flipping direction if needed.
+fn find_or_orient_edge(
+    edges: &mut [EdgeToml],
+    node_id: &str,
+    target: &str,
+    prefer_stem: bool,
+) -> Option<String> {
+    for edge in edges.iter_mut() {
+        if edge.from == node_id && edge.to == target {
+            return Some(edge.id.clone());
+        }
+        if edge.to == node_id && edge.from == target {
+            std::mem::swap(&mut edge.from, &mut edge.to);
+            return Some(edge.id.clone());
+        }
     }
+    // Fallback: first outgoing edge toward target via BFS neighbor
+    for edge in edges.iter_mut() {
+        if edge.from == node_id {
+            return Some(edge.id.clone());
+        }
+        if edge.to == node_id && prefer_stem {
+            std::mem::swap(&mut edge.from, &mut edge.to);
+            return Some(edge.id.clone());
+        }
+    }
+    let _ = target;
+    None
+}
+
+fn node_id_num(id: &str) -> Option<u32> {
+    id.strip_prefix('n')?.parse().ok()
 }
 
 fn build_signals(items: &[TrItem], item_to_edge: &HashMap<u32, String>) -> Vec<SignalToml> {
@@ -412,8 +505,21 @@ fn resolve_pin(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use openrailsrs_formats::TrackDbFile;
+
     #[test]
     fn mps_to_kmh_conversion() {
         assert!((80.0_f64 * 3.6 - 288.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn native_msts_emits_vector_alias() {
+        let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let tdb = TrackDbFile::from_path(fixtures.join("native_msts.tdb")).expect("tdb");
+        let toml = convert_tdb_to_toml(&tdb, "test", None).expect("toml");
+        assert!(toml.contains("tdb_id = 2"));
+        assert!(toml.contains("kind = \"edge\""));
+        assert!(toml.contains("id = \"e2\""));
     }
 }

@@ -1,24 +1,26 @@
 use std::path::Path;
 
 use openrailsrs_formats::parse_from_first_paren;
-use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, WagonFile};
+use openrailsrs_formats::read_msts_file_to_string;
+use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, MstsSteamFields, WagonFile};
 
 use crate::error::TrainError;
-use crate::model::{Consist, DavisCoefficients, Locomotive, Vehicle, Wagon};
+use crate::model::{Consist, DavisCoefficients, Locomotive, SteamParams, Vehicle, Wagon};
 
 pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, TrainError> {
-    // Detect TOML-native vs MSTS S-expression format.
     if crate::steam_loader::is_toml_eng(path.as_ref()).unwrap_or(false) {
         return crate::steam_loader::load_steam_engine_from_toml(path);
     }
-    let text = std::fs::read_to_string(path.as_ref())?;
+    let text = read_msts_file_to_string(path.as_ref())
+        .map_err(|e| TrainError::Parse(format!("read engine: {e}")))?;
     let ast = parse_from_first_paren(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
     Ok(engine.into())
 }
 
 pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError> {
-    let text = std::fs::read_to_string(path.as_ref())?;
+    let text = read_msts_file_to_string(path.as_ref())
+        .map_err(|e| TrainError::Parse(format!("read wagon: {e}")))?;
     let ast = parse_from_first_paren(&text)?;
     let wagon = WagonFile::from_ast(&ast)?;
     Ok(wagon.into())
@@ -36,7 +38,8 @@ pub fn load_consist_with_asset_root(
     consist: impl AsRef<Path>,
     asset_root: impl AsRef<Path>,
 ) -> Result<Consist, TrainError> {
-    let text = std::fs::read_to_string(consist.as_ref())?;
+    let text = read_msts_file_to_string(consist.as_ref())
+        .map_err(|e| TrainError::Parse(format!("read consist: {e}")))?;
     let ast = parse_from_first_paren(&text)?;
     consist_from_ast(&ast, asset_root.as_ref())
 }
@@ -81,6 +84,20 @@ pub fn consist_asset_root(consist_path: &Path) -> &Path {
         .unwrap_or_else(|| consist_path.parent().unwrap_or(consist_path))
 }
 
+fn msts_steam_to_params(s: MstsSteamFields) -> SteamParams {
+    SteamParams {
+        cylinder_count: s.cylinder_count,
+        cylinder_bore_m: s.cylinder_bore_m,
+        piston_stroke_m: s.piston_stroke_m,
+        driving_wheel_radius_m: s.driving_wheel_radius_m,
+        working_pressure_bar: s.working_pressure_bar,
+        evaporation_rate_kg_per_s: s.evaporation_rate_kg_per_s,
+        coal_consumption_kg_per_s: s.coal_consumption_kg_per_s,
+        initial_water_kg: s.initial_water_kg,
+        initial_coal_kg: s.initial_coal_kg,
+    }
+}
+
 impl From<EngineFile> for Locomotive {
     fn from(value: EngineFile) -> Self {
         use crate::model::TractiveCurve;
@@ -91,6 +108,7 @@ impl From<EngineFile> for Locomotive {
                 points: value.traction_curve,
             })
         };
+        let steam = value.steam.map(msts_steam_to_params);
         Self {
             name: value.name,
             mass_kg: value.mass_kg,
@@ -101,7 +119,7 @@ impl From<EngineFile> for Locomotive {
             tractive_curve,
             regen_factor: value.regen_factor,
             diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
-            steam: None,
+            steam,
             wagon_shape: value.wagon_shape,
             length_m: value.length_m,
         }
