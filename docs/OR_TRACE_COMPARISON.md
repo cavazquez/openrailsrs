@@ -66,6 +66,8 @@ Si activas **Performance / Physics / Steam** en el Registrador de datos, OR escr
 
 ## Chiltern Birmingham (eval 61 s)
 
+Guía completa Wine + OR + sim: [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md).
+
 Gaps cerrados en openrailsrs:
 
 | Área | Estado |
@@ -73,19 +75,30 @@ Gaps cerrados en openrailsrs:
 | TDB `msts_aliases` + switches salientes | Import emite `[[msts_aliases]]`; PAT resuelve vectores (`tdb_id=2` → `e2`). |
 | Placement PAT | `start=n3`, `start_offset_m≈305.6`, destino y `[[route.switches]]` desde PAT+`.srv`. |
 | Consist | Trainset `RF_Blue_Pullman` (masa/longitud/freno por vehículo); script `scripts/sync_chiltern_assets.sh`. |
-| Física diesel MSTS | Parser con unidades (`68t-uk`, `12000lbf`, `DieselPowerTab`); frenos por `length_m` real. |
+| Física diesel MSTS | Parser con unidades; **`ORTSMaxTractiveForceCurves`** por notch → `DieselTractionModel`; interpolación F(v) por throttle; calibración vs `MaxForce` continuo. |
+| Lead loco DMU | Solo la primera locomotora aporta tracción (evita duplicar Pullman 2×). |
 | Vapor MSTS | `MstsSteamFields` en `.eng` → `SteamParams` (Pullman OR es diesel, no activa `steam_step`). |
 | CI | `cargo test -p openrailsrs-cli --test chiltern_validate` (skip si falta `track.toml`). |
 
-Umbrales `[validate]` actuales en `examples/chiltern/scenario.toml` (posición ~9 m máx a t=61; velocidad RMS ~4.3 m/s — pendiente de tablas diesel OR completas / `Default.cs`):
+Umbrales `[validate]` en `examples/chiltern/scenario.overlay.toml` (fusionado tras `import-msts`):
 
 ```toml
 max_velocity_rms = 4.5
 max_position_max = 55.0
+max_throttle_rms = 0.25
+max_brake_rms = 50.0
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 ```
 
-Objetivo estricto del plan (`0.3` / `25 m`) requiere reproducir curvas `ORTSMaxTractiveForceCurves` + lógica de script del trainset.
+Resultados actuales (driver desde eval OR, ~65 s sim):
 
+| Métrica | vs OR | Umbral | Estado |
+|---------|-------|--------|--------|
+| Velocity RMS | ~3.3 m/s | 4.5 | PASS |
+| Position RMS / max | ~13.5 m / ~46 m | 55 m max | PASS |
+| Odómetro @ 65 s | ~200 m (OR eval ~205 m @ 61 s) | — | Δ razonable |
+
+Mejor que el modelo P/v simplificado (~4.4 m/s RMS). Pendiente para objetivo estricto (`0.3` m/s / `25 m`): RPM por notch (`DieselPowerTab` + `ThrottleRPMTab`), scripts cab (`Default.cs`), dinámica de carga motor.
 
 Para un CSV compatible con `compare-or`, usa la pestaña **Evaluación** y activa solo el registro de **velocidad del tren** (Time, Train Speed, Distance Travelled). En Wine, desactiva el registro de rendimiento: puede abortar con `pdh.dll.PdhFormatFromRawValue`.
 

@@ -2,6 +2,8 @@
 
 Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topología real (~28k nodos).
 
+**Guía completa** (Wine, instalación OR, captura baseline, sim): [`docs/CHILTERN_OR_SETUP.md`](../../docs/CHILTERN_OR_SETUP.md).
+
 | Campo | Valor |
 |-------|--------|
 | Ruta MSTS | `~/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern` |
@@ -76,7 +78,7 @@ cargo test -p openrailsrs-cli --test chiltern_validate
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6).
 - Consist: RF_Blue_Pullman multi-vagón, longitudes de freno reales.
 - Parser MSTS: unidades, UTF-16, `EngineData` en `.con`, vapor opcional en `.eng`.
-- Posición a t=61: ~210 m vs OR ~205 m (Δ < 10 m).
+- Posición a t=61: alineada PAT (Δ < umbral 55 m vs baseline eval).
 
 ## Límites conocidos
 

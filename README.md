@@ -138,6 +138,8 @@ cargo test
 
 Ejemplo de escenario listo: [`examples/smoke/scenario.toml`](examples/smoke/scenario.toml).
 
+Validación contra Open Rails (Chiltern): [`docs/CHILTERN_OR_SETUP.md`](docs/CHILTERN_OR_SETUP.md) · comparación de trazas: [`docs/OR_TRACE_COMPARISON.md`](docs/OR_TRACE_COMPARISON.md).
+
 ## CLI (`openrailsrs`)
 
 Instalación del binario (queda disponible como comando global):

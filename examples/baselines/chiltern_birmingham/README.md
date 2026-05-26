@@ -2,6 +2,8 @@
 
 Captura manual desde Open Rails 1.6.1 (Wine, Linux) el 2025-05-25.
 
+Instalación Wine/OR y flujo completo: [`docs/CHILTERN_OR_SETUP.md`](../../docs/CHILTERN_OR_SETUP.md).
+
 | Campo | Valor |
 |-------|--------|
 | Ruta | Chiltern |
@@ -42,15 +44,18 @@ Captura manual desde Open Rails 1.6.1 (Wine, Linux) el 2025-05-25.
 - El dump de rendimiento (`openrails_dump.csv`) usa parser posicional (`Speed (mph),Time (M),…`).
 - En Wine, **Registro de datos de rendimiento** puede crashear con `pdh.dll.PdhFormatFromRawValue` (desactivar en Opciones → Registrador de datos).
 
-## Umbrales calibrados (Chiltern eval, loose)
+## Umbrales calibrados (Chiltern eval)
+
+Definidos en `examples/chiltern/scenario.overlay.toml` (fusionado tras `import-msts`):
 
 | Métrica | Umbral | Notas |
 |---------|--------|--------|
-| `max_velocity_rms` | 2.0 m/s | Física stub vs vapor OR |
-| `max_position_max` | 150 m | Posición inicial no alineada aún |
-| `max_throttle_rms` | 0.20 | Controles OR vs scripted driver |
+| `max_velocity_rms` | 4.5 m/s | Diesel ORTS por notch; RMS actual ~3.3 m/s |
+| `max_position_max` | 55 m | Posición alineada PAT; max actual ~46 m |
+| `max_throttle_rms` | 0.25 | Controles OR vs scripted driver |
+| `max_brake_rms` | 50.0 | Escala freno `--brake-full-scale 27` |
 
-Ver `[validate]` en `examples/chiltern/scenario.toml`.
+Objetivo estricto futuro: 0.3 m/s / 25 m (RPM, scripts cab).
 
 ## Uso
 
