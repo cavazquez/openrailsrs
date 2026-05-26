@@ -8,8 +8,8 @@ Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topol
 |-------|--------|
 | Ruta MSTS | `~/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern` |
 | Actividad | `RS_Let's go to Birmingham` |
-| Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (~61 s eval) |
-| Duración sim | 65 s (ventana evaluación + margen) |
+| Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (~61 s eval; recapturable ≥120 s) |
+| Duración sim | 61 s (alineada al baseline actual; subir tras recaptura OR) |
 
 ## Importar de nuevo
 

@@ -74,6 +74,7 @@ fn make_two_train_scenario(
             start_offset_m: None,
             stops: vec![],
             switches: vec![],
+            assume_signals_clear: false,
         },
         train: TrainSection {
             consist: "consists/freight.con".into(),

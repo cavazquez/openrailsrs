@@ -303,8 +303,14 @@ pub fn run_scenario_headless_with_driver(
 
     // Mutable signal aspects: start from the static aspects in the graph.
     // The runner updates aspects when clear_after_s elapses.
-    let mut signal_runtime: HashMap<String, SignalAspect> =
-        graph.signals().map(|s| (s.id.clone(), s.aspect)).collect();
+    let mut signal_runtime: HashMap<String, SignalAspect> = if scenario.route.assume_signals_clear {
+        graph
+            .signals()
+            .map(|s| (s.id.clone(), SignalAspect::Clear))
+            .collect()
+    } else {
+        graph.signals().map(|s| (s.id.clone(), s.aspect)).collect()
+    };
 
     /// Run state machine: Normal driving, approach/dwell at stops, or awaiting a signal.
     enum RunPhase {
@@ -610,8 +616,12 @@ pub fn run_scenario_headless_with_driver(
                         block_map.insert(eid.to_string(), "player".to_string());
                     }
                     graph.evaluate_signals(&block_map);
-                    // Sync runtime map with updated aspects.
+                    // Sync runtime map with updated aspects (scripted signals only when
+                    // assume_signals_clear — static TDB imports default to Stop).
                     for sig in graph.signals() {
+                        if scenario.route.assume_signals_clear && sig.script.is_none() {
+                            continue;
+                        }
                         signal_runtime.insert(sig.id.clone(), sig.aspect);
                     }
                 }

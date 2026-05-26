@@ -4,6 +4,10 @@
 [simulation]
 duration = 65.0
 
+[route]
+# OR evaluation baseline uses AUTO_SIGNAL with CLEAR aspects; imported TDB defaults to Stop.
+assume_signals_clear = true
+
 [train]
 consist = "consists/birmingham_pullman.con"
 

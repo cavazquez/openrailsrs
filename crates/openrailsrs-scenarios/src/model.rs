@@ -103,6 +103,9 @@ pub struct RouteSection {
     /// Runtime switch overrides; applied after `track.toml` defaults.
     #[serde(default)]
     pub switches: Vec<SwitchDef>,
+    /// When true, all signals start as Clear at t=0 (OR `AUTO_SIGNAL` / evaluation baselines).
+    #[serde(default)]
+    pub assume_signals_clear: bool,
 }
 
 /// Optional Davis resistance override (falls back to consist defaults if absent).

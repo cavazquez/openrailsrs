@@ -22,6 +22,13 @@ pub struct ScenarioOverlay {
     pub gameplay: Option<super::GameplaySection>,
     #[serde(default)]
     pub output: Option<super::OutputSection>,
+    #[serde(default)]
+    pub route: Option<RouteOverlay>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct RouteOverlay {
+    pub assume_signals_clear: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -96,6 +103,11 @@ pub fn apply_scenario_overlay(scenario: &mut ScenarioFile, overlay: &ScenarioOve
     if let Some(output) = &overlay.output {
         scenario.output = output.clone();
     }
+    if let Some(route) = &overlay.route {
+        if let Some(clear) = route.assume_signals_clear {
+            scenario.route.assume_signals_clear = clear;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,6 +133,7 @@ mod tests {
                 start_offset_m: None,
                 stops: vec![],
                 switches: vec![],
+                assume_signals_clear: false,
             },
             train: TrainSection {
                 consist: "from_act.con".into(),

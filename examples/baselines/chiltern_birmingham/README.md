@@ -57,6 +57,23 @@ Definidos en `examples/chiltern/scenario.overlay.toml` (fusionado tras `import-m
 
 Objetivo estricto futuro: 0.3 m/s / 25 m (RPM, scripts cab).
 
+## Capturar baseline más largo
+
+El CSV versionado tiene **~61 s** porque la sesión original se cortó ahí. Para validar más allá de t=61 (p. ej. 120–180 s):
+
+```bash
+# 1. Lanzar OR (actividad AUTO_SIGNAL, Evaluation logging ON)
+./scripts/capture_chiltern_birmingham_or.sh
+
+# 2. Tras cerrar OR, instalar en el repo (mín. 120 s por defecto)
+./scripts/install_chiltern_birmingham_baseline.sh
+
+# Duración mínima distinta (p. ej. 180 s):
+# MIN_DURATION_S=180 ./scripts/install_chiltern_birmingham_baseline.sh
+```
+
+Origen OR: `%APPDATA%/Open Rails_RS_Let's go to BirminghamSpeed.csv`
+
 ## Uso
 
 ```bash
