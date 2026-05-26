@@ -4,6 +4,7 @@ use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_formats::read_msts_file_to_string;
 use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, MstsSteamFields, WagonFile};
 
+use crate::diesel::DieselTractionModel;
 use crate::error::TrainError;
 use crate::model::{Consist, DavisCoefficients, Locomotive, SteamParams, Vehicle, Wagon};
 
@@ -108,6 +109,13 @@ impl From<EngineFile> for Locomotive {
                 points: value.traction_curve,
             })
         };
+        let diesel_traction = if value.diesel_notch_curves.is_empty() {
+            None
+        } else {
+            let mut model = DieselTractionModel::from_notch_curves(value.diesel_notch_curves);
+            model.calibrate_effort_scale(value.max_tractive_effort_n);
+            Some(model)
+        };
         let steam = value.steam.map(msts_steam_to_params);
         Self {
             name: value.name,
@@ -117,6 +125,7 @@ impl From<EngineFile> for Locomotive {
             max_tractive_effort_n: value.max_tractive_effort_n,
             max_brake_force_n: value.max_brake_force_n,
             tractive_curve,
+            diesel_traction,
             regen_factor: value.regen_factor,
             diesel_sfc_g_per_kwh: value.diesel_sfc_g_per_kwh,
             steam,

@@ -34,4 +34,11 @@ fn load_chiltern_pullman_engine_if_present() {
     assert!(loco.mass_kg > 60_000.0);
     // Stub .eng uses sync_chiltern_assets power scale (×0.1 vs OR diesel table).
     assert!(loco.max_power_w > 50_000.0);
+    let diesel = loco
+        .diesel_traction
+        .as_ref()
+        .expect("Pullman stub should include ORTS notch curves");
+    assert!(diesel.notch_curves.len() >= 5, "expected multiple notches");
+    let f = diesel.force_at(0.0, 0.8);
+    assert!(f > 100_000.0, "80% notch stall force too low: {f}");
 }

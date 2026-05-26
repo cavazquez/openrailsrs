@@ -209,8 +209,11 @@ pub fn run_scenario_headless_with_driver(
         .unwrap_or_else(|| consist.davis.clone());
     // Build the aggregate traction curve; if the consist has no explicit curves, build a
     // synthetic one from P and F_te so that `step` always has a non-empty curve.
+    let diesel_traction = consist.aggregate_diesel_traction();
     let raw_curve = consist.aggregate_tractive_curve();
-    let tractive = if raw_curve.points.is_empty() {
+    let tractive = if diesel_traction.is_some() {
+        TractiveCurve::default()
+    } else if raw_curve.points.is_empty() {
         TractiveCurve::from_power_and_effort(
             consist.total_max_power_w(),
             consist.total_max_tractive_effort_n(),
@@ -226,6 +229,7 @@ pub fn run_scenario_headless_with_driver(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
+        diesel_traction,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params,

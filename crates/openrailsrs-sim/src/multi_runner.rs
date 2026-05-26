@@ -145,8 +145,11 @@ fn build_physics(
             c_n_per_mps2: d.c_n_per_mps2,
         })
         .unwrap_or_else(|| consist.davis.clone());
+    let diesel_traction = consist.aggregate_diesel_traction();
     let raw_curve = consist.aggregate_tractive_curve();
-    let tractive = if raw_curve.points.is_empty() {
+    let tractive = if diesel_traction.is_some() {
+        TractiveCurve::default()
+    } else if raw_curve.points.is_empty() {
         TractiveCurve::from_power_and_effort(
             consist.total_max_power_w(),
             consist.total_max_tractive_effort_n(),
@@ -161,6 +164,7 @@ fn build_physics(
         max_brake_n: consist.total_max_brake_n(),
         davis,
         tractive,
+        diesel_traction,
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params: consist.aggregate_steam_params(),

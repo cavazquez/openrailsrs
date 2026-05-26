@@ -1,4 +1,4 @@
-use openrailsrs_train::{DavisCoefficients, SteamParams, TractiveCurve};
+use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, TractiveCurve};
 
 use crate::coupler::multi_body_step;
 use crate::path_data::PathData;
@@ -15,8 +15,10 @@ pub struct TrainPhysics {
     pub max_tractive_effort_n: f64,
     pub max_brake_n: f64,
     pub davis: DavisCoefficients,
-    /// Aggregate traction curve.  Empty curve → falls back to P/v law.
+    /// Aggregate traction curve. Empty curve → falls back to P/v law.
     pub tractive: TractiveCurve,
+    /// ORTS per-notch diesel model; when set, used instead of `tractive * throttle`.
+    pub diesel_traction: Option<DieselTractionModel>,
     /// Fraction of braking energy recovered as electricity (0.0 = none, 0.7 = modern EMU).
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
@@ -60,17 +62,23 @@ pub fn step(
             };
             steam_step(boiler, params, effective_throttle, v, dt)
         } else if state.throttle > 0.0 {
-            let raw = if let Some(f_curve) = train.tractive.interpolate(v) {
-                f_curve
+            let speed_factor = if v >= speed_cap * SPEED_EPS_RATIO {
+                0.0
             } else {
-                (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n)
+                1.0
             };
-            raw * state.throttle
-                * (if v >= speed_cap * SPEED_EPS_RATIO {
-                    0.0
-                } else {
-                    1.0
-                })
+            let raw = if let Some(diesel) = &train.diesel_traction {
+                let mut f = diesel.force_at(v, state.throttle);
+                if v > 0.5 {
+                    f = f.min(train.max_power_w / v);
+                }
+                f
+            } else if let Some(f_curve) = train.tractive.interpolate(v) {
+                f_curve * state.throttle
+            } else {
+                (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n) * state.throttle
+            };
+            raw * speed_factor
         } else {
             0.0
         };

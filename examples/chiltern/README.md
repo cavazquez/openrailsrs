@@ -80,8 +80,9 @@ cargo test -p openrailsrs-cli --test chiltern_validate
 
 ## Límites conocidos
 
-- Pullman en OR es **diesel** (`DieselPowerTab`), no vapor — `steam_step` no aplica.
-- Velocidad RMS ~4 m/s vs OR: falta curva tractiva por notch y scripts (`Default.cs`).
+- Pullman en OR es **diesel** (`DieselPowerTab` + `ORTSMaxTractiveForceCurves` por notch).
+- `sync_chiltern_assets.sh` copia las curvas ORTS al stub `.eng`; la sim interpola F(v) por muesca.
+- Velocidad RMS ~3.3 m/s vs OR (mejor que el modelo P/v simplificado); objetivo estricto 0.3 m/s sigue pendiente (RPM/carga motor, scripts cab).
 - Umbrales estrictos 0.3 / 25 m de velocidad pendientes hasta modelar diesel OR completo.
 
 Baselines: [`../baselines/chiltern_birmingham/`](../baselines/chiltern_birmingham/).

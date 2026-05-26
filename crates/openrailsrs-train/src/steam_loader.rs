@@ -125,6 +125,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         max_tractive_effort_n,
         max_brake_force_n: parsed.engine.max_brake_force_n,
         tractive_curve: None,
+        diesel_traction: None,
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam,

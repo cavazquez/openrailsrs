@@ -35,6 +35,8 @@ pub struct EngineFile {
     pub regen_factor: f64,
     pub diesel_sfc_g_per_kwh: Option<f64>,
     pub traction_curve: Vec<(f64, f64)>,
+    /// ORTS per-notch tractive curves `(throttle, points)`; forces converted to N.
+    pub diesel_notch_curves: Vec<(f64, Vec<(f64, f64)>)>,
     pub wagon_shape: Option<String>,
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
@@ -91,8 +93,14 @@ impl EngineFile {
         let wagon_shape = find_optional_string_field(ast, &["WagonShape", "Shape"], context)?;
         let length_m = parse_length_from_ast(ast).unwrap_or(18.0);
         let mut traction_curve = parse_traction_curve(ast);
+        let diesel_notch_curves = parse_orts_notch_curves(ast);
         if traction_curve.is_empty() {
-            traction_curve = parse_orts_max_tractive_curves(ast);
+            if let Some((_, curve)) = diesel_notch_curves
+                .iter()
+                .max_by(|a, b| a.0.total_cmp(&b.0))
+            {
+                traction_curve = curve.clone();
+            }
         }
         let steam = parse_steam_fields(ast);
 
@@ -106,6 +114,7 @@ impl EngineFile {
             regen_factor,
             diesel_sfc_g_per_kwh,
             traction_curve,
+            diesel_notch_curves,
             wagon_shape,
             length_m,
             steam,
@@ -414,45 +423,94 @@ fn parse_traction_curve(ast: &Ast) -> Vec<(f64, f64)> {
     points
 }
 
-fn parse_orts_max_tractive_curves(ast: &Ast) -> Vec<(f64, f64)> {
-    let mut best_curve: Vec<(f64, f64)> = Vec::new();
-    let mut best_throttle = -1.0_f64;
+fn orts_curve_force_n(value: f64) -> f64 {
+    // MSTS ORTS curves use lbf; unified `CurveEntry` fixtures use Newtons.
+    if value >= 100_000.0 {
+        value
+    } else {
+        value * 4.448_221_615_260_5
+    }
+}
+
+fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
+    let mut curve = Vec::new();
+    let mut i = 0;
+    while i < items.len() {
+        if let Ast::List(pair) = &items[i] {
+            if pair.len() >= 2 {
+                if let (Some(v), Some(f)) = (parse_scalar_ast(&pair[0]), parse_scalar_ast(&pair[1]))
+                {
+                    curve.push((kmh_to_mps(v), orts_curve_force_n(f)));
+                }
+            }
+            i += 1;
+            continue;
+        }
+        if let (Some(v), Some(f)) = (
+            parse_scalar_ast(&items[i]),
+            items.get(i + 1).and_then(parse_scalar_ast),
+        ) {
+            curve.push((kmh_to_mps(v), orts_curve_force_n(f)));
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    curve.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    curve
+}
+
+fn parse_orts_notch_curves(ast: &Ast) -> Vec<(f64, Vec<(f64, f64)>)> {
+    let mut out: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
 
     walk_lists_find::<(), _>(ast, &mut |items| {
         if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
             if head.eq_ignore_ascii_case("ORTSMaxTractiveForceCurves") {
                 let mut i = 1;
-                while i + 1 < items.len() {
-                    let throttle = items.get(i).and_then(parse_scalar_ast).unwrap_or(0.0);
-                    if let Ast::List(curve_items) = &items[i + 1] {
-                        let mut curve = Vec::new();
-                        for row in curve_items.iter().skip(1) {
-                            if let Ast::List(pair) = row {
-                                if pair.len() >= 2 {
-                                    if let (Some(v), Some(f)) =
-                                        (parse_scalar_ast(&pair[0]), parse_scalar_ast(&pair[1]))
-                                    {
-                                        curve.push((kmh_to_mps(v), f));
+                while i < items.len() {
+                    match &items[i] {
+                        Ast::List(group) if group.len() >= 2 => {
+                            let mut j = 0;
+                            while j + 1 < group.len() {
+                                if let Some(throttle) = parse_scalar_ast(&group[j]) {
+                                    let curve = match &group[j + 1] {
+                                        Ast::List(curve_items) => {
+                                            parse_orts_curve_points(curve_items)
+                                        }
+                                        _ => parse_orts_curve_points(&group[j + 1..]),
+                                    };
+                                    if !curve.is_empty() {
+                                        out.push((throttle, curve));
+                                        j += 2;
+                                        continue;
                                     }
                                 }
+                                j += 1;
+                            }
+                            i += 1;
+                        }
+                        throttle_ast => {
+                            if let (Some(throttle), Some(Ast::List(curve_items))) =
+                                (parse_scalar_ast(throttle_ast), items.get(i + 1))
+                            {
+                                let curve = parse_orts_curve_points(curve_items);
+                                if !curve.is_empty() {
+                                    out.push((throttle, curve));
+                                }
+                                i += 2;
+                            } else {
+                                i += 1;
                             }
                         }
-                        if throttle >= best_throttle && !curve.is_empty() {
-                            best_throttle = throttle;
-                            best_curve = curve;
-                        }
-                        i += 2;
-                        continue;
                     }
-                    i += 1;
                 }
             }
         }
         None
     });
 
-    best_curve.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-    best_curve
+    out.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    out
 }
 
 #[cfg(test)]
@@ -479,6 +537,35 @@ mod tests {
         let eng = EngineFile::from_ast(&ast).expect("engine");
         assert!(eng.max_tractive_effort_n > 10_000.0);
         assert!(eng.max_power_w > 0.0);
+    }
+
+    #[test]
+    fn parse_orts_notch_curves_converts_lbf_to_newtons() {
+        let text = r#"
+( Engine
+    ( Mass 68000 )
+    ( MaxForce 12000lbf )
+    ( ORTSMaxTractiveForceCurves (
+        0.10 (
+            0.0 5945
+            10.0 2432
+        )
+        1.00 (
+            0.0 86073
+            20.0 993
+        )
+    ))
+)"#;
+        let ast = parse_from_first_paren(text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert_eq!(eng.diesel_notch_curves.len(), 2);
+        let (_, full) = eng
+            .diesel_notch_curves
+            .iter()
+            .find(|(n, _)| (*n - 1.0).abs() < 1e-6)
+            .expect("full notch");
+        let stall = full.iter().find(|(v, _)| v.abs() < 1e-6).unwrap().1;
+        assert!(stall > 380_000.0, "stall {stall}");
     }
 
     #[test]

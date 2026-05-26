@@ -126,6 +126,8 @@ pub struct Locomotive {
     pub max_brake_force_n: f64,
     /// Optional explicit traction curve; if absent, P/v law is used.
     pub tractive_curve: Option<TractiveCurve>,
+    /// ORTS per-notch diesel curves; when set, physics uses notch interpolation.
+    pub diesel_traction: Option<crate::diesel::DieselTractionModel>,
     /// Fraction of braking energy recovered (0.0 = none, 0.7 = modern EMU).
     pub regen_factor: f64,
     /// Specific fuel consumption in g/kWh; `None` for electric traction.
@@ -239,6 +241,14 @@ impl Consist {
     pub fn aggregate_steam_params(&self) -> Option<SteamParams> {
         self.vehicles.iter().find_map(|v| match v {
             Vehicle::Loco(l) => l.steam.clone(),
+            _ => None,
+        })
+    }
+
+    /// Lead locomotive notch curves (trail DMUs often idle in OR consists).
+    pub fn aggregate_diesel_traction(&self) -> Option<crate::diesel::DieselTractionModel> {
+        self.vehicles.iter().find_map(|v| match v {
+            Vehicle::Loco(l) => l.diesel_traction.clone(),
             _ => None,
         })
     }

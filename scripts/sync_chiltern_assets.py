@@ -93,6 +93,33 @@ def parse_max_velocity_mps(text: str) -> float:
     return float(m.group(1)) / 2.2369362921 if m else 40.0
 
 
+def extract_balanced_parens(text: str, start: int) -> str | None:
+    depth = 0
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
+
+
+def extract_orts_curves(text: str) -> str | None:
+    key = "ORTSMaxTractiveForceCurves"
+    idx = text.find(key)
+    if idx < 0:
+        return None
+    open_idx = text.find("(", idx + len(key))
+    if open_idx < 0:
+        return None
+    inner = extract_balanced_parens(text, open_idx)
+    if not inner:
+        return None
+    return f"  (ORTSMaxTractiveForceCurves {inner})\n"
+
+
 def write_eng(path: Path, name: str, text: str) -> None:
     mass = parse_mass(text)
     length = parse_length(text)
@@ -100,8 +127,9 @@ def write_eng(path: Path, name: str, text: str) -> None:
     brake = parse_force_lbf(
         text, ["ORTSMaxBrakeShoeForce", "MaxBrakeForce"], 70_000.0
     )
-    power = parse_max_power(text) * 0.1  # OR diesel table effective fraction
+    power = parse_max_power(text)
     vmax = parse_max_velocity_mps(text)
+    orts = extract_orts_curves(text) or ""
     body = f'''(Engine
   (Name "{name}")
   (Mass {mass:.0f})
@@ -110,6 +138,7 @@ def write_eng(path: Path, name: str, text: str) -> None:
   (MaxVelocity {vmax * 2.2369362921:.1f})
   (MaxBrakeForce {brake:.0f})
   (Length {length:.3f})
+{orts}
 )
 '''
     path.write_text(body, encoding="utf-8")
