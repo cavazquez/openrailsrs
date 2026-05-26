@@ -9,10 +9,11 @@ SIMISA@@@@@@@@@@JINX0T0t______
                 ( TrVectorSections 1
                     ( TrVectorSection 0 0 0 0 0.0 0.0 0.0 0.0 1000.0 )
                 )
-                ( SpeedMpS 22.2 )
-                ( TrItemRefs 2
+                ( SpeedMpS 25.0 )
+                ( TrItemRefs 3
                     ( TrItemId 1 )
                     ( TrItemId 2 )
+                    ( TrItemId 3 )
                 )
                 ( TrPins 2 1 3 )
             )
@@ -21,7 +22,7 @@ SIMISA@@@@@@@@@@JINX0T0t______
             ( TrEndNode )
         )
     )
-    ( TrItemTable 2
+    ( TrItemTable 3
         ( SignalItem
             ( TrItemId 1 )
             ( TrItemSData 100.0 0 )
@@ -30,6 +31,11 @@ SIMISA@@@@@@@@@@JINX0T0t______
         ( SidingItem
             ( TrItemId 2 )
             ( TrItemSData 800.0 0 )
+        )
+        ( SpeedPostItem
+            ( TrItemId 3 )
+            ( TrItemSData 500.0 0 )
+            ( SpeedpostTrItemData ( 898 50 0.0 ) )
         )
     )
 )

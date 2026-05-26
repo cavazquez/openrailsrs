@@ -8,6 +8,23 @@ duration = 65.0
 # OR evaluation baseline uses AUTO_SIGNAL with CLEAR aspects; imported TDB defaults to Stop.
 assume_signals_clear = true
 
+# OR MAXSPEED drops to ~50 mph beyond ~1490 m (start of e10777 on Birmingham path).
+[[route.edge_speed_limits]]
+edge = "e10777"
+speed_limit_kmh = 80.467
+
+[[route.edge_speed_limits]]
+edge = "e10775"
+speed_limit_kmh = 80.467
+
+[[route.edge_speed_limits]]
+edge = "e10773"
+speed_limit_kmh = 80.467
+
+[[route.edge_speed_limits]]
+edge = "e10771"
+speed_limit_kmh = 80.467
+
 [train]
 consist = "consists/birmingham_pullman.con"
 

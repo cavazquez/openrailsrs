@@ -29,6 +29,8 @@ pub struct ScenarioOverlay {
 #[derive(Debug, Default, Deserialize)]
 pub struct RouteOverlay {
     pub assume_signals_clear: Option<bool>,
+    #[serde(default)]
+    pub edge_speed_limits: Vec<super::EdgeSpeedLimitDef>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -107,6 +109,9 @@ pub fn apply_scenario_overlay(scenario: &mut ScenarioFile, overlay: &ScenarioOve
         if let Some(clear) = route.assume_signals_clear {
             scenario.route.assume_signals_clear = clear;
         }
+        if !route.edge_speed_limits.is_empty() {
+            scenario.route.edge_speed_limits = route.edge_speed_limits.clone();
+        }
     }
 }
 
@@ -134,6 +139,7 @@ mod tests {
                 stops: vec![],
                 switches: vec![],
                 assume_signals_clear: false,
+                edge_speed_limits: vec![],
             },
             train: TrainSection {
                 consist: "from_act.con".into(),

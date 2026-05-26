@@ -235,14 +235,11 @@ def write_eng(path: Path, name: str, text: str) -> None:
     )
     power = parse_max_power(text)
     vmax = parse_max_velocity_mps(text)
-    run_up = parse_run_up(text)
     orts = extract_orts_curves(text) or ""
     diesel = extract_diesel_physics_lines(text)
     davis = extract_davis_lines(text)
     drive_wheel = extract_drive_wheel_line(text)
     extra = ""
-    if run_up > 0.0 and not orts:
-        extra += f"  (RunUpTimeToMaxForce {run_up})\n"
     if continuous > 0.0 and not orts:
         extra += f"  (MaxContinuousForce {continuous:.0f})\n"
     body = f'''(Engine

@@ -16,14 +16,16 @@ Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topol
 
 ```bash
 CHILTERN="/path/to/Chiltern/ROUTES/Chiltern"
-openrailsrs import-msts "$CHILTERN" \
+cargo run -p openrailsrs-cli -- import-msts "$CHILTERN" \
   --out-dir examples/chiltern \
   --activity "$CHILTERN/ACTIVITIES/RS_Let's go to Birmingham.act"
 ```
 
 El import escribe `start=n3`, `start_offset_m` (~305.6 m desde PAT+`.srv`), destino lejano y `[[route.switches]]` desde el PAT.
 
-Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`, señales). Edita ese overlay, no `scenario.toml` a mano.
+**Speed posts:** el import lee `Chiltern.tit` junto al `.tdb` y baja `speed_limit_kmh` en los edges que tienen un `SpeedPostItem` referenciado (~3600 posts en Chiltern). Eso no sustituye el override manual del tramo Birmingham (`e10771`–`e10777` → 50 mph en `scenario.overlay.toml`): OR aplica el post **en sentido de marcha** a lo largo del PAT, mientras nosotros (por ahora) capamos solo el vector que referencia el post. En la práctica el Pullman no supera 50 mph ahí y las métricas casi no cambian.
+
+Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`, señales, `edge_speed_limits`). Edita ese overlay, no `scenario.toml` a mano.
 
 ## Sync consist Pullman
 

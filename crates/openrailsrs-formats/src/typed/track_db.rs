@@ -79,6 +79,8 @@ pub enum TrItemKind {
     /// `SoundSourceItem`: an ambient sound region anchored to a track segment.
     /// `sms_file` holds the referenced `.sms` (or `.wav`) filename when present.
     SoundSource { sms_file: Option<String> },
+    /// `SpeedPostItem`: wayside speed limit (second field of `SpeedpostTrItemData` is mph).
+    SpeedPost { speed_mph: f64 },
     /// Any other `TrItem` kind (siding, platform, level crossing, etc.).
     Other,
 }
@@ -116,6 +118,28 @@ impl TrackDbFile {
         let text = crate::encoding::read_msts_file_to_string(path.as_ref())?;
         let ast = parse_from_first_paren(&text)?;
         Self::from_ast(&ast)
+    }
+
+    /// Merge `SpeedPostItem` entries from a companion `.tit` file (common on real routes).
+    pub fn merge_tit_speed_posts(
+        &mut self,
+        tit_path: impl AsRef<std::path::Path>,
+    ) -> Result<(), FormatError> {
+        let text = crate::encoding::read_msts_file_to_string(tit_path.as_ref())?;
+        let ast = parse_from_first_paren(&text)?;
+        let mut tit_items = Vec::new();
+        if let Ast::List(root) = &ast {
+            // Native `.tit` roots at `( <count> SpeedPostItem ( ... ) ... )` without `TrItemTable`.
+            parse_tr_item_table_entries(root, &mut tit_items);
+        }
+        collect_items(&ast, &mut tit_items);
+        for item in tit_items {
+            if matches!(item.kind, TrItemKind::SpeedPost { .. }) {
+                self.items.retain(|existing| existing.id != item.id);
+                self.items.push(item);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -676,6 +700,76 @@ fn is_tr_item_kind_tag(tag: &str) -> bool {
     tag.ends_with("Item") || tag.eq_ignore_ascii_case("SignalItem")
 }
 
+/// `(SpeedpostTrItemData <display> <limit_mph> <heading>)` — OR uses the second value as mph.
+fn parse_speed_post_limit_mph(item: &[Ast]) -> f64 {
+    let mut i = 0;
+    while i < item.len() {
+        match &item[i] {
+            Ast::List(sub) => {
+                if let Some(mph) = speedpost_mph_from_tagged_list(sub) {
+                    return mph;
+                }
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("SpeedpostTrItemData") => {
+                if let Some(mph) = item.get(i + 1).and_then(speedpost_mph_from_values) {
+                    return mph;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    0.0
+}
+
+fn speedpost_mph_from_tagged_list(sub: &[Ast]) -> Option<f64> {
+    let Ast::Atom(Atom::Symbol(tag)) = sub.first()? else {
+        return None;
+    };
+    if !tag.eq_ignore_ascii_case("SpeedpostTrItemData") {
+        return None;
+    }
+    sub.get(1).and_then(speedpost_mph_from_values).or_else(|| {
+        sub.get(2).and_then(|a| match a {
+            Ast::Atom(at) => atom_to_number(at),
+            _ => None,
+        })
+    })
+}
+
+fn speedpost_mph_from_values(ast: &Ast) -> Option<f64> {
+    if let Ast::List(values) = ast {
+        return values.get(1).and_then(|a| match a {
+            Ast::Atom(at) => atom_to_number(at),
+            _ => None,
+        });
+    }
+    match ast {
+        Ast::Atom(at) => atom_to_number(at),
+        _ => None,
+    }
+}
+
+fn parse_tr_item_scalar(ast: &Ast) -> Option<u32> {
+    if let Some(v) = parse_u32(ast) {
+        return Some(v);
+    }
+    if let Ast::List(inner) = ast {
+        return inner.first().and_then(parse_u32);
+    }
+    None
+}
+
+fn scalar_from_ast(ast: &Ast) -> Option<f64> {
+    match ast {
+        Ast::Atom(at) => atom_to_number(at),
+        Ast::List(inner) => inner.first().and_then(|x| match x {
+            Ast::Atom(at) => atom_to_number(at),
+            _ => None,
+        }),
+    }
+}
+
 /// Parse a single `(<KindItem> ...)` list inside `TrItemTable`.
 fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     let Ast::List(items) = ast else { return None };
@@ -695,6 +789,10 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     {
         TrItemKind::SoundSource {
             sms_file: parse_sound_source_file(items),
+        }
+    } else if tag.eq_ignore_ascii_case("SpeedPostItem") {
+        TrItemKind::SpeedPost {
+            speed_mph: parse_speed_post_limit_mph(items),
         }
     } else {
         TrItemKind::Other
@@ -717,12 +815,12 @@ fn find_tr_item_id(item: &[Ast]) -> Option<u32> {
                     continue;
                 };
                 if tag.eq_ignore_ascii_case("TrItemId") {
-                    return sub.get(1).and_then(parse_u32);
+                    return sub.get(1).and_then(parse_tr_item_scalar);
                 }
             }
             Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemId") => {
-                if let Some(Ast::List(sub)) = item.get(i + 1) {
-                    return sub.first().and_then(parse_u32);
+                if let Some(v) = item.get(i + 1).and_then(parse_tr_item_scalar) {
+                    return Some(v);
                 }
             }
             _ => {}
@@ -734,19 +832,31 @@ fn find_tr_item_id(item: &[Ast]) -> Option<u32> {
 
 /// `(TrItemSData <distance_m> <flags>)` — first numeric child is the distance.
 fn find_tr_item_distance(item: &[Ast]) -> f64 {
-    for child in item {
-        let Ast::List(sub) = child else { continue };
-        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
-            continue;
-        };
-        if tag.eq_ignore_ascii_case("TrItemSData") {
-            if let Some(v) = sub.get(1).and_then(|a| match a {
-                Ast::Atom(at) => atom_to_number(at),
-                _ => None,
-            }) {
-                return v;
+    let mut i = 0;
+    while i < item.len() {
+        match &item[i] {
+            Ast::List(sub) => {
+                let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+                    i += 1;
+                    continue;
+                };
+                if tag.eq_ignore_ascii_case("TrItemSData") {
+                    if let Some(v) = sub.get(1).and_then(|a| match a {
+                        Ast::Atom(at) => atom_to_number(at),
+                        _ => None,
+                    }) {
+                        return v;
+                    }
+                }
             }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemSData") => {
+                if let Some(v) = item.get(i + 1).and_then(scalar_from_ast) {
+                    return v;
+                }
+            }
+            _ => {}
         }
+        i += 1;
     }
     0.0
 }
@@ -851,5 +961,47 @@ mod tests {
             assert_eq!(pins[0].branch_index, 0);
         }
         assert_eq!(tdb.items.len(), 1);
+    }
+
+    #[test]
+    fn parse_speed_post_item_from_route_tdb() {
+        let tdb =
+            TrackDbFile::from_path(fixtures_dir().join("with_events/route.tdb")).expect("events");
+        let post = tdb
+            .items
+            .iter()
+            .find(|i| i.id == 3)
+            .expect("speed post item 3");
+        assert!(
+            matches!(post.kind, TrItemKind::SpeedPost { speed_mph } if (speed_mph - 50.0).abs() < 1e-6)
+        );
+        let vector = tdb.nodes.iter().find(|n| n.id == 2).expect("vector node 2");
+        if let TrackNodeKind::Vector { item_ids, .. } = &vector.kind {
+            assert!(item_ids.contains(&3));
+        } else {
+            panic!("node 2 not vector");
+        }
+    }
+
+    #[test]
+    fn parse_native_tit_style_speed_post() {
+        use crate::parser::parse_from_first_paren;
+        let src = r#"( 1
+  SpeedPostItem
+  (
+    TrItemId ( 2706 )
+    TrItemSData ( 6.229199 0 )
+    SpeedpostTrItemData ( 898 50 0.9293867 )
+  )
+)"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let mut tdb = TrackDbFile::default();
+        if let Ast::List(root) = &ast {
+            parse_tr_item_table_entries(root, &mut tdb.items);
+        }
+        let post = tdb.items.iter().find(|i| i.id == 2706).expect("2706");
+        assert!(
+            matches!(post.kind, TrItemKind::SpeedPost { speed_mph } if (speed_mph - 50.0).abs() < 1e-6)
+        );
     }
 }

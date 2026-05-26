@@ -51,6 +51,10 @@ pub struct RestrictedZone {
     pub item_id_end: u32,
     /// Maximum speed in metres per second to apply over the zone.
     pub max_speed_mps: f64,
+    /// MSTS world tile position `(tileX, height, tileZ, pos)` when declared via `StartPosition`.
+    pub position_start: Option<[f64; 4]>,
+    /// MSTS world tile position for `EndPosition`.
+    pub position_end: Option<[f64; 4]>,
 }
 
 /// One activity-level override for a `TrItemTable` `SoundSourceItem`.
@@ -564,6 +568,8 @@ fn walk_restricted_zones(ast: &Ast, out: &mut Vec<RestrictedZone>) {
 fn parse_restricted_zone(items: &[Ast]) -> Option<RestrictedZone> {
     let mut ids = Vec::with_capacity(2);
     let mut speed: Option<f64> = None;
+    let mut position_start: Option<[f64; 4]> = None;
+    let mut position_end: Option<[f64; 4]> = None;
 
     for child in items.iter().skip(1) {
         let Ast::List(sub) = child else { continue };
@@ -581,25 +587,66 @@ fn parse_restricted_zone(items: &[Ast]) -> Option<RestrictedZone> {
                     }
                 }
             }
+            "startposition" => {
+                position_start = parse_position_tuple(sub);
+            }
+            "endposition" => {
+                position_end = parse_position_tuple(sub);
+            }
             "speedmps" | "maxspeedmps" | "maxspeed" => {
                 if let Some(Ast::Atom(at)) = sub.get(1) {
                     speed = atom_to_number(at);
+                }
+            }
+            "speedmph" => {
+                if let Some(Ast::Atom(at)) = sub.get(1) {
+                    speed = atom_to_number(at).map(|mph| mph * 0.44704);
                 }
             }
             _ => {}
         }
     }
 
-    if ids.is_empty() || speed.is_none() {
+    let has_tr_items = !ids.is_empty();
+    let has_positions = position_start.is_some() && position_end.is_some();
+    if !has_tr_items && !has_positions {
         return None;
     }
-    let item_id_start = ids[0];
-    let item_id_end = *ids.get(1).unwrap_or(&item_id_start);
+    let item_id_start = ids.first().copied().unwrap_or(0);
+    let item_id_end = ids.get(1).copied().unwrap_or(item_id_start);
     Some(RestrictedZone {
         item_id_start,
         item_id_end,
         max_speed_mps: speed.unwrap_or(0.0),
+        position_start,
+        position_end,
     })
+}
+
+fn parse_position_tuple(sub: &[Ast]) -> Option<[f64; 4]> {
+    let coords = sub.get(1)?;
+    let nums: Vec<f64> = match coords {
+        Ast::List(inner) => inner
+            .iter()
+            .filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at),
+                _ => None,
+            })
+            .collect(),
+        Ast::Atom(at) => {
+            let mut out = vec![atom_to_number(at)?];
+            out.extend(sub.iter().skip(2).filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at),
+                _ => None,
+            }));
+            out
+        }
+    };
+    if nums.len() >= 4 {
+        Some([nums[0], nums[1], nums[2], nums[3]])
+    } else {
+        None
+    }
 }
 
 /// Walk the AST collecting every `ActivityObject` block.

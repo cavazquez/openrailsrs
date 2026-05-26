@@ -107,6 +107,14 @@ impl TrackGraph {
         self.edges.get(id)
     }
 
+    /// Lower the speed limit on an edge (km/h). No-op if the edge is unknown.
+    pub fn cap_edge_speed_limit_kmh(&mut self, id: &str, speed_limit_kmh: f64) {
+        if let Some(edge) = self.edges.get_mut(id) {
+            let cap_mps = speed_limit_kmh / 3.6;
+            edge.speed_limit_mps = edge.speed_limit_mps.min(cap_mps);
+        }
+    }
+
     pub fn node(&self, id: &str) -> Option<&Node> {
         self.nodes.get(id)
     }

@@ -67,7 +67,7 @@ fn chiltern_pullman_davis_from_assets() {
 }
 
 #[test]
-fn chiltern_dmbsh_legacy_run_up() {
+fn chiltern_dmbsh_legacy_diesel() {
     let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSH.eng");
     if !p.exists() {
@@ -75,7 +75,15 @@ fn chiltern_dmbsh_legacy_run_up() {
     }
     let loco = openrailsrs_train::load_engine_from_path(&p).expect("dmbsh");
     let diesel = loco.diesel_traction.as_ref().expect("legacy diesel model");
-    assert_eq!(diesel.legacy_run_up_time_s, Some(30.0));
+    assert!(
+        diesel.engine.is_none(),
+        "DMBSH OR source has legacy P/v only (no ORTS tables)"
+    );
+    assert_eq!(
+        diesel.legacy_run_up_time_s,
+        Some(30.0),
+        "OR/MSTS RunUpTimeToMaxForce on trail motor"
+    );
 }
 
 #[test]

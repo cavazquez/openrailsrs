@@ -112,6 +112,16 @@ pub struct RouteSection {
     /// When true, all signals start as Clear at t=0 (OR `AUTO_SIGNAL` / evaluation baselines).
     #[serde(default)]
     pub assume_signals_clear: bool,
+    /// Per-edge speed cap overrides (km/h); applied after `track.toml` defaults.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edge_speed_limits: Vec<EdgeSpeedLimitDef>,
+}
+
+/// Override `speed_limit_kmh` on one track edge for this scenario.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EdgeSpeedLimitDef {
+    pub edge: String,
+    pub speed_limit_kmh: f64,
 }
 
 /// Optional Davis resistance override (falls back to consist defaults if absent).

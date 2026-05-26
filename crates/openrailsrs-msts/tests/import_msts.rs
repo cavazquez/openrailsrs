@@ -154,7 +154,7 @@ fn with_events_vector_node_pins_and_refs() {
             ..
         } => {
             assert_eq!(*pins, (1, 3), "unexpected pins: {pins:?}");
-            assert_eq!(item_ids.as_slice(), &[1, 2]);
+            assert_eq!(item_ids.as_slice(), &[1, 2, 3]);
             assert!((*length_m - 1000.0).abs() < 1.0);
         }
         other => panic!("expected Vector, got {other:?}"),
@@ -337,6 +337,17 @@ fn parse_activity_collects_events_and_restrictions() {
 }
 
 #[test]
+fn parse_activity_collects_position_restricted_zones() {
+    let act = ActivityFile::from_path(fixtures_dir().join("with_events/position_restricted.act"))
+        .expect("parse position zone activity");
+    assert_eq!(act.restricted_zones.len(), 1);
+    let z = &act.restricted_zones[0];
+    assert_eq!(z.item_id_start, 0);
+    assert_eq!(z.position_start, Some([-6100.0, 14934.0, -761.0, -908.0]));
+    assert_eq!(z.position_end, Some([-6100.0, 14934.0, -798.0, -856.0]));
+}
+
+#[test]
 fn import_route_with_activity_applies_failed_signals_and_restrictions() {
     let dir = fixtures_dir().join("with_events");
     let act_path = dir.join("events.act");
@@ -371,6 +382,26 @@ fn import_route_with_activity_applies_failed_signals_and_restrictions() {
     assert!(
         (lim - 36.0).abs() < 1e-6,
         "expected speed_limit_kmh=36, got {lim}"
+    );
+}
+
+#[test]
+fn import_route_applies_speed_post_limits() {
+    let dir = fixtures_dir().join("with_events");
+    let toml_str = import_route(&dir).expect("import route");
+    let value: toml::Value = toml::from_str(&toml_str).expect("valid TOML");
+    let edges = value
+        .get("edges")
+        .and_then(|v| v.as_array())
+        .expect("edges missing");
+    let e2 = edges
+        .iter()
+        .find(|e| e.get("id").and_then(|v| v.as_str()) == Some("e2"))
+        .expect("e2 missing");
+    let lim = as_f64(e2.get("speed_limit_kmh").expect("speed_limit_kmh")).unwrap_or_default();
+    assert!(
+        (lim - 50.0 * 1.609_344).abs() < 1e-3,
+        "expected 50 mph speed post cap, got {lim}"
     );
 }
 

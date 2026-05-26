@@ -104,7 +104,7 @@ fn is_zero(v: &f64) -> bool {
 /// `track.toml` TOML string.
 pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = TrackDbFile::from_path(&tdb_path)?;
+    let tdb = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
@@ -115,7 +115,7 @@ pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
 /// and restricted speed zones) to the generated `track.toml`.
 pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = TrackDbFile::from_path(&tdb_path)?;
+    let tdb = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let activity = ActivityFile::from_path(act_path)?;
@@ -126,12 +126,21 @@ pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<S
 /// Same as `import_route` but also returns a count summary `(nodes, edges)`.
 pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usize), MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = TrackDbFile::from_path(&tdb_path)?;
+    let tdb = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let (nodes, edges) = count_nodes_edges(&tdb);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
     Ok((toml, nodes, edges))
+}
+
+fn load_tdb(_route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError> {
+    let mut tdb = TrackDbFile::from_path(tdb_path)?;
+    let tit_path = tdb_path.with_extension("tit");
+    if tit_path.exists() {
+        let _ = tdb.merge_tit_speed_posts(&tit_path);
+    }
+    Ok(tdb)
 }
 
 fn ensure_non_empty_tdb(tdb: &TrackDbFile, tdb_path: &Path) -> Result<(), MstsError> {
@@ -292,7 +301,10 @@ fn convert_tdb_to_toml(
 
     if let Some(act) = activity {
         apply_failed_signals(&mut signals, &act.failed_signals);
+        apply_speed_posts(&mut edges, &tdb.items, &item_to_edge);
         apply_restricted_zones(&mut edges, &act.restricted_zones, &item_to_edge);
+    } else {
+        apply_speed_posts(&mut edges, &tdb.items, &item_to_edge);
     }
 
     let track = TrackToml {
@@ -458,6 +470,30 @@ fn apply_failed_signals(signals: &mut [SignalToml], failed_ids: &[u32]) {
     }
 }
 
+fn apply_speed_posts(
+    edges: &mut [EdgeToml],
+    items: &[TrItem],
+    item_to_edge: &HashMap<u32, String>,
+) {
+    for item in items {
+        let TrItemKind::SpeedPost { speed_mph } = item.kind else {
+            continue;
+        };
+        if speed_mph <= 0.0 {
+            continue;
+        }
+        let Some(edge_id) = item_to_edge.get(&item.id) else {
+            continue;
+        };
+        let cap_kmh = speed_mph * 1.609_344;
+        for edge in edges.iter_mut() {
+            if &edge.id == edge_id {
+                edge.speed_limit_kmh = edge.speed_limit_kmh.min(cap_kmh);
+            }
+        }
+    }
+}
+
 fn apply_restricted_zones(
     edges: &mut [EdgeToml],
     zones: &[openrailsrs_formats::RestrictedZone],
@@ -467,9 +503,15 @@ fn apply_restricted_zones(
         return;
     }
     for zone in zones {
+        if zone.max_speed_mps <= 0.0 {
+            continue;
+        }
+        let cap_kmh = zone.max_speed_mps * 3.6;
+        if zone.item_id_start == 0 && zone.item_id_end == 0 {
+            continue;
+        }
         let start_edge = item_to_edge.get(&zone.item_id_start);
         let end_edge = item_to_edge.get(&zone.item_id_end);
-        let cap_kmh = zone.max_speed_mps * 3.6;
         for edge in edges.iter_mut() {
             let touches = match (start_edge, end_edge) {
                 (Some(s), _) if *s == edge.id => true,

@@ -194,6 +194,10 @@ pub fn run_scenario_headless_with_driver(
         graph.set_switch(&sw.node, pos)?;
     }
 
+    for cap in &scenario.route.edge_speed_limits {
+        graph.cap_edge_speed_limit_kmh(&cap.edge, cap.speed_limit_kmh);
+    }
+
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;

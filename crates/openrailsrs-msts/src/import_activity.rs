@@ -114,6 +114,7 @@ pub fn import_activity_with_summary(
             stops,
             switches: route_switches,
             assume_signals_clear: false,
+            edge_speed_limits: vec![],
         },
         train: TrainSection {
             consist: player_consist_str,

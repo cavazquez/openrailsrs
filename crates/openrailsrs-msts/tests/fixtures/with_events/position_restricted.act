@@ -1,0 +1,18 @@
+SIMISA@@@@@@@@@@JINX0T0t______
+( Tr_Activity
+    ( Tr_Activity_Header
+        ( Name "Position zone test" )
+        ( Player_Train_Init
+            ( Player_Train_Init_Cons "CONSISTS\\test.con" )
+        )
+        ( Player_Path "player.pat" )
+    )
+    ( Tr_Activity_File
+        ( RestrictedSpeedZones 1
+            ( ActivityRestrictedSpeedZone
+                ( StartPosition ( -6100 14934 -761 -908 ) )
+                ( EndPosition ( -6100 14934 -798 -856 ) )
+            )
+        )
+    )
+)
