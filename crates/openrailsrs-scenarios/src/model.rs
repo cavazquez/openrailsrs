@@ -31,6 +31,12 @@ pub struct ValidateSection {
     /// Path to an Open Rails `dump.csv` baseline (relative to scenario directory).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub baseline_or: Option<String>,
+    /// Optional phase boundaries for `compare-or` diagnostics (e.g. `[0.0, 61.0, 136.0]`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase_bounds: Option<Vec<f64>>,
+    /// Optional velocity RMS limit for phase checks (defaults to `max_velocity_rms`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase_max_velocity_rms: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

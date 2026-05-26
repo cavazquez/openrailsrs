@@ -1,12 +1,16 @@
-//! Debug Chiltern path — run with: cargo test -p openrailsrs-sim chiltern_path_debug -- --nocapture
+//! Chiltern route path sanity (skipped when `examples/chiltern/track.toml` is absent).
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_sim::path::edge_path;
 use openrailsrs_track::SwitchPosition;
 
+/// Minimum edges on n3 → n10770 with Birmingham Pullman switch overrides.
+const MIN_PATH_EDGES: usize = 6;
+
 #[test]
-fn chiltern_path_debug() {
-    let route_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+fn chiltern_path_reaches_beyond_local_switch_back() {
+    let route_dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
     if !route_dir.join("track.toml").exists() {
         return;
     }
@@ -14,17 +18,17 @@ fn chiltern_path_debug() {
     g.set_switch("n10770", SwitchPosition::Diverging).unwrap();
     g.set_switch("n10780", SwitchPosition::Straight).unwrap();
     let path = edge_path(&g, "n3", "n10770").expect("path");
-    eprintln!("path len={}", path.len());
-    let mut cum = 0.0;
-    for (i, e) in path.iter().enumerate() {
-        let edge = g.edge(e).unwrap();
-        cum += edge.length_m;
-        eprintln!(
-            "{i:3} {e} {} -> {} len={:.1} cum={:.1}",
-            edge.from.0, edge.to.0, edge.length_m, cum
-        );
-        for s in g.signals_on_edge(e) {
-            eprintln!("      sig {} pos={:.1} asp={:?}", s.id, s.position_m, s.aspect);
-        }
-    }
+    assert!(
+        path.len() >= MIN_PATH_EDGES,
+        "expected at least {MIN_PATH_EDGES} edges on Birmingham path, got {}: {path:?}",
+        path.len()
+    );
+    assert!(
+        path.contains(&"e10783".to_string()),
+        "path must start via Paddington edge e10783"
+    );
+    assert!(
+        path.contains(&"e10771".to_string()),
+        "path must reach destination approach e10771, got: {path:?}"
+    );
 }

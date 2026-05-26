@@ -8,8 +8,9 @@ Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topol
 |-------|--------|
 | Ruta MSTS | `~/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern` |
 | Actividad | `RS_Let's go to Birmingham` |
-| Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (~61 s eval; recapturable ≥120 s) |
-| Duración sim | 61 s (alineada al baseline actual; subir tras recaptura OR) |
+| Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (**136 s** sim, 10:00→10:02:16) |
+| Duración sim | 136 s |
+| Señales | `assume_signals_clear = true` (OR `AUTO_SIGNAL` / aspectos CLEAR en eval) |
 
 ## Importar de nuevo
 
@@ -22,7 +23,7 @@ openrailsrs import-msts "$CHILTERN" \
 
 El import escribe `start=n3`, `start_offset_m` (~305.6 m desde PAT+`.srv`), destino lejano y `[[route.switches]]` desde el PAT.
 
-Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`). Edita ese overlay, no `scenario.toml` a mano.
+Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`, señales). Edita ese overlay, no `scenario.toml` a mano.
 
 ## Sync consist Pullman
 
@@ -34,7 +35,10 @@ Los `.eng`/`.wag` del repo son **física simplificada** (sin cab/C#) generados d
 
 Fuente: `Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/`.
 
-## Flujo compare-or (evaluación 61 s)
+- **DMBSA:** curvas ORTS + `DieselPowerTab` / `ThrottleRPMTab` + Davis.
+- **DMBSH:** diesel legacy OR (`MaxPower`/`MaxForce` kN, `RunUpTimeToMaxForce` 30 s) — el `.eng` OR no incluye tablas ORTS.
+
+## Flujo compare-or (evaluación 136 s)
 
 Usa el binario **del repo** (`cargo install --path crates/openrailsrs-cli` desde la raíz, o `cargo run -p openrailsrs-cli -- …`).
 
@@ -63,15 +67,51 @@ openrailsrs sim examples/chiltern/scenario.toml \
   --driver examples/chiltern/driver_or.csv
 ```
 
-La sim valida automáticamente contra `[validate]` si el baseline existe (`overall: PASS` con umbrales documentados).
+La sim valida automáticamente contra `[validate]` si el baseline existe (`overall: PASS`).
+
+### Diagnóstico por fases
+
+```bash
+openrailsrs compare-or \
+  examples/baselines/chiltern_birmingham/or_evaluation_speed.csv \
+  examples/chiltern/run.csv \
+  --phase-bounds 0,30,61,136 \
+  --max-velocity-rms 0.5 --max-position-max 45
+```
+
+Métricas típicas (post `assume_signals_clear`):
+
+| Fase | Vel RMS | Pos max |
+|------|---------|---------|
+| 0–30 s | ~0.2 m/s | ~15 m |
+| 30–61 s | ~0.4 m/s | ~22 m |
+| 61–136 s | ~0.5 m/s | ~23 m |
+
+## Capturar baseline OR más largo
+
+```bash
+./scripts/capture_chiltern_birmingham_or.sh
+./scripts/install_chiltern_birmingham_baseline.sh
+# MIN_DURATION_S=180 ./scripts/install_chiltern_birmingham_baseline.sh
+```
 
 ## CI
 
 ```bash
 cargo test -p openrailsrs-cli --test chiltern_validate
+cargo test -p openrailsrs-sim chiltern_path_reaches
 ```
 
+`chiltern_validate` comprueba el reporte global **y** cada ventana en `phase_bounds` (`0, 61, 136` s por defecto). Para arranque fino: `--phase-bounds 0,30,61,136` (0–30 s suele ser ~0.63 m/s RMS).
+
 (Omitido si `examples/chiltern/track.toml` no está presente.)
+
+## Dump de rendimiento OR (`openrails_dump.csv`)
+
+Para fuerzas/adhesión internas (no compatible con `compare-or` v1 sin mapa de columnas):
+
+- Archivo: `examples/baselines/chiltern_birmingham/openrails_dump.csv` (~9961 filas).
+- Uso: calibración manual de motor/resistencia; ver [`docs/OR_TRACE_COMPARISON.md`](../../docs/OR_TRACE_COMPARISON.md).
 
 ## Experimento E — throttle 50 % (30 s)
 
@@ -87,16 +127,15 @@ Baseline OR: `examples/baselines/chiltern_throttle50/README.md`.
 
 ## Gaps cerrados vs OR
 
-- Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6).
-- Consist: RF_Blue_Pullman multi-vagón, longitudes de freno reales.
-- Parser MSTS: unidades, UTF-16, `EngineData` en `.con`, vapor opcional en `.eng`.
-- Posición a t=61: alineada PAT (Δ < umbral 55 m vs baseline eval).
+- Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6); path ≥ 6 edges hasta destino.
+- Consist: RF_Blue_Pullman multi-vagón, Davis sumado por vehículo, dual motor (ORTS + legacy).
+- Señales eval: `assume_signals_clear` alinea AUTO_SIGNAL con baseline OR.
+- Posición/velocidad 0–136 s: RMS ~0.5 m/s, Δpos ~23 m.
 
 ## Límites conocidos
 
-- Pullman en OR es **diesel** (`DieselPowerTab` + `ORTSMaxTractiveForceCurves` por notch).
-- `sync_chiltern_assets.sh` copia las curvas ORTS al stub `.eng`; la sim interpola F(v) por muesca.
-- Velocidad RMS ~3.3 m/s vs OR (mejor que el modelo P/v simplificado); objetivo estricto 0.3 m/s sigue pendiente (RPM/carga motor, scripts cab).
-- Umbrales estrictos 0.3 / 25 m de velocidad pendientes hasta modelar diesel OR completo.
+- Objetivo estricto **0.3 m/s / 25 m** aún pendiente (RPM fino, DMBSH legacy, límites TDB 80 km/h vs OR `MAXSPEED` 90→50 mph).
+- `RestrictedSpeedZones` de la actividad no se aplican al `track.toml` importado.
+- Import TDB: aspecto inicial de señales = `Stop` salvo `FailedSignals`; usar overlay o re-import mejorado.
 
 Baselines: [`../baselines/chiltern_birmingham/`](../baselines/chiltern_birmingham/).

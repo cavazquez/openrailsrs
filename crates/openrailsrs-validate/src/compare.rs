@@ -473,6 +473,27 @@ fn trace_has_brake(t: &crate::trace::RunTrace) -> bool {
     t.samples.iter().any(|s| s.brake.is_some())
 }
 
+pub fn phase_report_passes(phase: &PhaseReport, config: &ValidationConfig) -> bool {
+    column_passes(
+        &phase.velocity,
+        config.max_velocity_rms,
+        config.max_velocity_max,
+    ) && column_passes(
+        &phase.position,
+        config.max_position_rms,
+        config.max_position_max,
+    ) && phase
+        .throttle
+        .as_ref()
+        .map(|s| column_passes(s, config.max_throttle_rms, config.max_throttle_max))
+        .unwrap_or(true)
+        && phase
+            .brake
+            .as_ref()
+            .map(|s| column_passes(s, config.max_brake_rms, config.max_brake_max))
+            .unwrap_or(true)
+}
+
 pub(crate) fn column_passes(s: &SeriesStats, max_rms: Option<f64>, max_abs: Option<f64>) -> bool {
     if let Some(limit) = max_rms {
         if s.rms_diff > limit {

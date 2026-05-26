@@ -1,6 +1,6 @@
 # Calibración y estado del simulador
 
-Última actualización: 2026-05-26 (multi-motor diesel)
+Última actualización: 2026-05-26 (baseline Chiltern 136 s, AUTO_SIGNAL)
 
 ---
 
@@ -13,12 +13,13 @@
 | Modelo diesel (DieselPowerTab + ThrottleRPMTab + RPM lag) | ✅ | `DieselEngineParams` con time constant 2 s |
 | Parseo `ORTSDieselEngines { Diesel { ... } }` | ✅ | Primer bloque Diesel; fallback a campos raíz |
 | Tracción multi-motor (`diesel_engines` + `diesel_rpm[]`) | ✅ | Suma F y P de todos los `Engine` del consist |
-| Modelo legacy P/v (sin ORTSMaxTractiveForceCurves) | ✅ | `DieselTractionModel::from_power_and_effort` |
+| Modelo legacy P/v (sin ORTSMaxTractiveForceCurves) | ✅ | `DieselTractionModel::from_power_and_effort` + `RunUpTimeToMaxForce` |
+| Davis por vehículo (`ORTSDavis_A/B/C` sumados) | ✅ | `Consist::aggregate_davis()` al cargar `.con` |
 | Driver desde CSV de Open Rails (`or-eval-driver`) | ✅ | Activity mode y Explorer mode |
-| Comparación automática (`compare-or`) | ✅ | RMS y max para velocidad, posición, throttle, freno |
+| Comparación automática (`compare-or`) | ✅ | RMS y max; fases vía `phase_bounds` en `[validate]` |
 | Ejemplo SCE (Class 47) — velocidad RMS | ✅ 0.35 m/s | Con baseline de 100 s |
-| Ejemplo Chiltern (Blue Pullman) — posición max | ✅ ~39 m | Dual motor + `driver_or.csv` (era ~122 m) |
-| Ejemplo Chiltern — velocidad RMS | ⚠️ ~5.3 m/s | Mejor posición; calibrar Davis / perfiles motor |
+| Ejemplo Chiltern (Blue Pullman) — 136 s OR | ✅ ~0.50 m/s RMS | `assume_signals_clear` + baseline largo |
+| Ejemplo Chiltern — posición max | ✅ ~23 m | 0–136 s vs OR eval AUTO_SIGNAL |
 
 ---
 
@@ -70,11 +71,11 @@ Resultado Chiltern (65 s, `driver_or.csv`): posición max **~39 m** (antes ~122 
 
 ---
 
-### Issue 2: Davis resistance calibrada a mano, sin validación rigurosa
+### Issue 2: ~~Davis resistance calibrada a mano~~ (resuelto en assets)
 
-Los parámetros Davis en `scenario.tmp.toml` (`a_n`, `b_n_per_mps`, `c_n_per_mps2`) fueron estimados, no derivados de los datos reales del vehículo. Los archivos `.eng` y `.wag` de OR tienen `ORTSDavis_A`, `ORTSDavis_B`, `ORTSDavis_C` **por vagón**, que OR suma. Nuestro sim usa un Davis único para todo el tren.
+`ORTSDavis_A/B/C` se parsean por `.eng`/`.wag` y se suman en `Consist::aggregate_davis()` (~3455 N en A para Birmingham Pullman: DMBSA + 6 vagones). El override manual en `scenario.tmp.toml` ya no se usa en el escenario principal.
 
-**Fix necesario:** parsear `ORTSDavis_A/B/C` de cada vehículo en el consist y sumar la resistencia total.
+**Pendiente opcional:** DMBSH (cola) no trae `ORTSDavis_*` en el content OR — usa solo masa + modelo legacy P/v.
 
 ---
 

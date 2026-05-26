@@ -17,3 +17,5 @@ max_velocity_rms = 4.5
 max_position_max = 55.0
 max_throttle_rms = 0.25
 max_brake_rms = 50.0
+phase_bounds = [0.0, 61.0, 136.0]
+phase_max_velocity_rms = 0.55

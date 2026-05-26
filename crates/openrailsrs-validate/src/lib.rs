@@ -7,7 +7,7 @@ pub mod trace;
 pub use compare::{
     ComparisonReport, PhaseReport, ValidationConfig, compare_csv_files,
     compare_csv_files_with_config, compare_or_dump_phases, compare_or_dump_with_run,
-    compare_traces, compare_traces_by_phases,
+    compare_traces, compare_traces_by_phases, phase_report_passes,
 };
 pub use error::ValidateError;
 pub use trace::{
