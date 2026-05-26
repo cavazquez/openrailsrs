@@ -1,0 +1,6 @@
+(Wagon
+  (Name "MT_DB_MK2_BSO_SC9411")
+  (Mass 33000)
+  (Length 20.340)
+  (MaxBrakeForce 100000)
+)

@@ -1,0 +1,6 @@
+(Wagon
+  (Name "MT_DB_MK2_TSO_SC5134")
+  (Mass 34000)
+  (Length 20.340)
+  (MaxBrakeForce 100000)
+)

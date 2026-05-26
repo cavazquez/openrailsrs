@@ -1,0 +1,30 @@
+extra_trains = []
+
+[scenario]
+name = "0930 Edinburgh-Glasgow Queen Street"
+description = "SCE Demo Model 1 — Class 47 push-pull with 6 Mk2 coaches"
+start_time_s = 34200.0
+
+[route]
+path = "."
+start = "n474"
+destination = "n1"
+start_offset_m = 0.0
+stops = []
+
+[train]
+consist = "consists/mt_mt_class_47___6_mk2_pp.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 7200.0
+time_step = 1.0
+seed = 42
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

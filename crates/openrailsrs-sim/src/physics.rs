@@ -68,8 +68,14 @@ pub fn step(
                 1.0
             };
             let raw = if let Some(diesel) = &train.diesel_traction {
+                // Advance engine RPM toward throttle target (first-order lag).
+                state.diesel_rpm = diesel.advance_rpm(state.diesel_rpm, state.throttle, dt);
                 let mut f = diesel.force_at(v, state.throttle);
-                if v > 0.5 {
+                // Cap by shaft power at current RPM (if engine model present).
+                let engine_pw = diesel.engine_power_w(state.diesel_rpm);
+                if v > 0.5 && engine_pw < f64::MAX {
+                    f = f.min(engine_pw / v);
+                } else if v > 0.5 {
                     f = f.min(train.max_power_w / v);
                 }
                 f

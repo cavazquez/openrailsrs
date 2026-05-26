@@ -1,0 +1,23 @@
+# Merged automatically after `import-msts` (route/placement come from the .act).
+# Edit this file instead of hand-fixing scenario.toml after each re-import.
+
+[scenario]
+start_time_s = 34200.0
+
+[route]
+start = "n474"
+destination = "n1"
+start_offset_m = 0.0
+
+[simulation]
+duration = 310.0
+
+[train]
+consist = "consists/mt_mt_class_47___6_mk2_pp.con"
+
+[validate]
+baseline_or = "../baselines/sce_glasgow/or_evaluation_speed.csv"
+max_velocity_rms = 5.0
+max_position_max = 100.0
+max_throttle_rms = 0.30
+max_brake_rms = 50.0

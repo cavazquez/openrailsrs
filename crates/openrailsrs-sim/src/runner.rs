@@ -270,6 +270,10 @@ pub fn run_scenario_headless_with_driver(
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| crate::steam::BoilerState::from_params(&p));
+    // Initialise diesel RPM at engine idle (so spin-up starts from realistic RPM).
+    if let Some(diesel) = consist.aggregate_diesel_traction().as_ref() {
+        state.diesel_rpm = diesel.idle_rpm();
+    }
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;

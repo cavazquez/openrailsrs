@@ -8,7 +8,7 @@ use crate::typed::{ConsistFile, EngineFile, RouteFile, WagonFile};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MstsFile {
-    Engine(EngineFile),
+    Engine(Box<EngineFile>),
     Wagon(WagonFile),
     Consist(ConsistFile),
     Route(RouteFile),
@@ -25,7 +25,7 @@ pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> 
         .map(str::to_ascii_lowercase);
 
     match ext.as_deref() {
-        Some("eng") => Ok(MstsFile::Engine(EngineFile::from_ast(&ast)?)),
+        Some("eng") => Ok(MstsFile::Engine(Box::new(EngineFile::from_ast(&ast)?))),
         Some("wag") => Ok(MstsFile::Wagon(WagonFile::from_ast(&ast)?)),
         Some("con") => Ok(MstsFile::Consist(ConsistFile::from_ast(&ast)?)),
         Some("trk") => Ok(MstsFile::Route(RouteFile::from_ast(&ast)?)),

@@ -114,6 +114,34 @@ impl From<EngineFile> for Locomotive {
         } else {
             let mut model = DieselTractionModel::from_notch_curves(value.diesel_notch_curves);
             model.calibrate_effort_scale(value.max_tractive_effort_n);
+            // Attach engine thermodynamic model if DieselPowerTab / ThrottleRPMTab are present.
+            if !value.diesel_power_tab.is_empty() && !value.diesel_throttle_rpm_tab.is_empty() {
+                let idle_rpm = if value.diesel_idle_rpm > 0.0 {
+                    value.diesel_idle_rpm
+                } else {
+                    value
+                        .diesel_throttle_rpm_tab
+                        .first()
+                        .map(|(_, r)| *r)
+                        .unwrap_or(325.0)
+                };
+                let max_rpm = if value.diesel_max_rpm > 0.0 {
+                    value.diesel_max_rpm
+                } else {
+                    value
+                        .diesel_throttle_rpm_tab
+                        .last()
+                        .map(|(_, r)| *r)
+                        .unwrap_or(750.0)
+                };
+                model.engine = Some(Box::new(crate::diesel::DieselEngineParams {
+                    power_tab: value.diesel_power_tab,
+                    throttle_rpm_tab: value.diesel_throttle_rpm_tab,
+                    idle_rpm,
+                    max_rpm,
+                    rpm_time_constant_s: 2.0,
+                }));
+            }
             Some(model)
         };
         let steam = value.steam.map(msts_steam_to_params);

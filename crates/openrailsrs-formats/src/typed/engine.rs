@@ -37,6 +37,14 @@ pub struct EngineFile {
     pub traction_curve: Vec<(f64, f64)>,
     /// ORTS per-notch tractive curves `(throttle, points)`; forces converted to N.
     pub diesel_notch_curves: Vec<(f64, Vec<(f64, f64)>)>,
+    /// `DieselPowerTab`: (RPM, Watts) pairs — engine shaft power vs RPM.
+    pub diesel_power_tab: Vec<(f64, f64)>,
+    /// `ThrottleRPMTab`: (throttle 0-1, target RPM) pairs.
+    pub diesel_throttle_rpm_tab: Vec<(f64, f64)>,
+    /// Engine idle RPM (from `IdleRPM`).
+    pub diesel_idle_rpm: f64,
+    /// Engine max RPM (from `MaxRPM`).
+    pub diesel_max_rpm: f64,
     pub wagon_shape: Option<String>,
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
@@ -103,6 +111,12 @@ impl EngineFile {
             }
         }
         let steam = parse_steam_fields(ast);
+        let diesel_power_tab = parse_rpm_power_tab(ast);
+        let diesel_throttle_rpm_tab = parse_throttle_rpm_tab(ast);
+        let diesel_idle_rpm =
+            find_optional_scalar_field(ast, &["IdleRPM", "ORTSIdleRPM"], context)?.unwrap_or(0.0);
+        let diesel_max_rpm =
+            find_optional_scalar_field(ast, &["MaxRPM", "ORTSMaxRPM"], context)?.unwrap_or(0.0);
 
         Ok(Self {
             name,
@@ -115,6 +129,10 @@ impl EngineFile {
             diesel_sfc_g_per_kwh,
             traction_curve,
             diesel_notch_curves,
+            diesel_power_tab,
+            diesel_throttle_rpm_tab,
+            diesel_idle_rpm,
+            diesel_max_rpm,
             wagon_shape,
             length_m,
             steam,
@@ -286,6 +304,97 @@ fn parse_length_from_ast(ast: &Ast) -> Option<f64> {
     found
 }
 
+/// Extract flat numeric pairs from the children of a named list.
+///
+/// Handles three formats that appear in MSTS/OR files:
+/// 1. Flat-sibling: `(Name a b c d …)` → pairs from direct Atom children.
+/// 2. Nested-row: `(Name (a b) (c d) …)` → one pair per inner list.
+/// 3. Single-wrapper: `(Name (a b c d …))` → all flat atoms from the single
+///    inner list (produced by stub files that wrap values in an extra paren).
+fn extract_pair_tab(items: &[Ast]) -> Vec<(f64, f64)> {
+    let mut result = Vec::new();
+    let mut flat = Vec::new();
+
+    // Collect children after the head token.
+    let children: Vec<&Ast> = items.iter().skip(1).collect();
+
+    // If there is exactly ONE child and it is a list of pure atoms (no symbol
+    // head), treat it as the single-wrapper format: unwrap and use its atoms.
+    let effective: Vec<&Ast> = if children.len() == 1 {
+        if let Ast::List(inner) = children[0] {
+            let all_atoms = inner
+                .iter()
+                .all(|n| matches!(n, Ast::Atom(Atom::Number(_) | Atom::Integer(_))));
+            if all_atoms {
+                inner.iter().collect()
+            } else {
+                children
+            }
+        } else {
+            children
+        }
+    } else {
+        children
+    };
+
+    for item in &effective {
+        match item {
+            Ast::List(row) if row.len() >= 2 => {
+                // Nested-row: `(a b)` or `(a b extra…)` — take first pair only.
+                let a = row.first().and_then(parse_scalar_ast);
+                let b = row.get(1).and_then(parse_scalar_ast);
+                if let (Some(a), Some(b)) = (a, b) {
+                    result.push((a, b));
+                }
+            }
+            Ast::Atom(atom) => {
+                if let Some(v) = quantity_from_atom(atom)
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .or_else(|| atom_to_number(atom))
+                {
+                    flat.push(v);
+                }
+            }
+            _ => {}
+        }
+    }
+    for chunk in flat.chunks(2) {
+        if chunk.len() == 2 {
+            result.push((chunk[0], chunk[1]));
+        }
+    }
+    result
+}
+
+/// Parse `DieselPowerTab` (RPM → shaft power in Watts).
+fn parse_rpm_power_tab(ast: &Ast) -> Vec<(f64, f64)> {
+    let mut found = Vec::new();
+    walk_lists_find::<(), _>(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            if head.eq_ignore_ascii_case("DieselPowerTab") {
+                found = extract_pair_tab(items);
+            }
+        }
+        None
+    });
+    found
+}
+
+/// Parse `ThrottleRPMTab` (throttle % → target RPM); converts % to 0-1.
+fn parse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
+    let mut found = Vec::new();
+    walk_lists_find::<(), _>(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            if head.eq_ignore_ascii_case("ThrottleRPMTab") {
+                let raw = extract_pair_tab(items);
+                found = raw.into_iter().map(|(t, r)| (t / 100.0, r)).collect();
+            }
+        }
+        None
+    });
+    found
+}
+
 fn parse_diesel_power_tab_max(ast: &Ast) -> Option<f64> {
     let mut best = 0.0_f64;
     walk_lists_find::<(), _>(ast, &mut |items| {
@@ -423,15 +532,18 @@ fn parse_traction_curve(ast: &Ast) -> Vec<(f64, f64)> {
     points
 }
 
+/// `ORTSMaxTractiveForceCurves` values have no unit suffix in MSTS/OR files,
+/// which means OR's STFReader treats them as Newtons (the SI default for Force).
+/// No conversion is needed; return the value unchanged.
 fn orts_curve_force_n(value: f64) -> f64 {
-    // MSTS ORTS curves use lbf; unified `CurveEntry` fixtures use Newtons.
-    if value >= 100_000.0 {
-        value
-    } else {
-        value * 4.448_221_615_260_5
-    }
+    value
 }
 
+/// Parse (speed_mps, force_n) pairs from a notch sub-list.
+///
+/// Speed values in `ORTSMaxTractiveForceCurves` are in m/s (OR's default for
+/// Speed when no unit suffix is present).  Force values are in N (OR's default
+/// for Force).  No unit conversion is applied here.
 fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
     let mut curve = Vec::new();
     let mut i = 0;
@@ -440,7 +552,7 @@ fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
             if pair.len() >= 2 {
                 if let (Some(v), Some(f)) = (parse_scalar_ast(&pair[0]), parse_scalar_ast(&pair[1]))
                 {
-                    curve.push((kmh_to_mps(v), orts_curve_force_n(f)));
+                    curve.push((v, orts_curve_force_n(f)));
                 }
             }
             i += 1;
@@ -450,7 +562,7 @@ fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
             parse_scalar_ast(&items[i]),
             items.get(i + 1).and_then(parse_scalar_ast),
         ) {
-            curve.push((kmh_to_mps(v), orts_curve_force_n(f)));
+            curve.push((v, orts_curve_force_n(f)));
             i += 2;
         } else {
             i += 1;
@@ -540,7 +652,10 @@ mod tests {
     }
 
     #[test]
-    fn parse_orts_notch_curves_converts_lbf_to_newtons() {
+    fn parse_orts_notch_curves_reads_n_values_directly() {
+        // OR's STFReader treats bare numbers in ORTSMaxTractiveForceCurves as
+        // Newtons (default SI unit for Force) and m/s (default for Speed).
+        // Speeds like 10.0 and 20.0 are m/s; forces like 86073 are N.
         let text = r#"
 ( Engine
     ( Mass 68000 )
@@ -564,8 +679,15 @@ mod tests {
             .iter()
             .find(|(n, _)| (*n - 1.0).abs() < 1e-6)
             .expect("full notch");
+        // Stall force at v=0: 86073 N (already Newtons, no conversion).
         let stall = full.iter().find(|(v, _)| v.abs() < 1e-6).unwrap().1;
-        assert!(stall > 380_000.0, "stall {stall}");
+        assert!(
+            (stall - 86073.0).abs() < 1.0,
+            "expected 86073 N, got {stall}"
+        );
+        // Speed axis: 20.0 stored as 20.0 m/s (no km/h→m/s conversion).
+        let high_speed_entry = full.iter().find(|(v, _)| (v - 20.0).abs() < 0.1).unwrap();
+        assert!((high_speed_entry.0 - 20.0).abs() < 0.1, "speed axis is m/s");
     }
 
     #[test]

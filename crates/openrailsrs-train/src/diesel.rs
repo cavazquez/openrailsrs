@@ -2,6 +2,82 @@
 
 use crate::model::TractiveCurve;
 
+/// Diesel engine thermodynamic parameters (DieselPowerTab + ThrottleRPMTab).
+///
+/// Models the relationship between throttle position → engine RPM → shaft power,
+/// with a first-order lag on RPM response (engine inertia / governor dynamics).
+#[derive(Clone, Debug, PartialEq)]
+pub struct DieselEngineParams {
+    /// `DieselPowerTab`: sorted `(RPM, shaft_power_W)` pairs.
+    pub power_tab: Vec<(f64, f64)>,
+    /// `ThrottleRPMTab`: sorted `(throttle 0-1, target_RPM)` pairs.
+    pub throttle_rpm_tab: Vec<(f64, f64)>,
+    /// Idle RPM (engine at rest with throttle=0).
+    pub idle_rpm: f64,
+    /// Maximum RPM at full throttle.
+    pub max_rpm: f64,
+    /// First-order time constant for RPM response (seconds); default ~2s.
+    pub rpm_time_constant_s: f64,
+}
+
+impl DieselEngineParams {
+    /// Target RPM for a given throttle position (0-1).
+    pub fn target_rpm(&self, throttle: f64) -> f64 {
+        if self.throttle_rpm_tab.is_empty() {
+            return self.idle_rpm + throttle * (self.max_rpm - self.idle_rpm);
+        }
+        let t = throttle.clamp(0.0, 1.0);
+        let tab = &self.throttle_rpm_tab;
+        if t <= tab.first().map(|(x, _)| *x).unwrap_or(0.0) {
+            return tab.first().map(|(_, r)| *r).unwrap_or(self.idle_rpm);
+        }
+        if t >= tab.last().map(|(x, _)| *x).unwrap_or(1.0) {
+            return tab.last().map(|(_, r)| *r).unwrap_or(self.max_rpm);
+        }
+        for i in 1..tab.len() {
+            let (t0, r0) = tab[i - 1];
+            let (t1, r1) = tab[i];
+            if t <= t1 {
+                let alpha = (t - t0) / (t1 - t0);
+                return r0 + alpha * (r1 - r0);
+            }
+        }
+        self.max_rpm
+    }
+
+    /// Shaft power (W) at a given RPM, interpolated from `DieselPowerTab`.
+    pub fn power_at_rpm(&self, rpm: f64) -> f64 {
+        if self.power_tab.is_empty() {
+            return 0.0;
+        }
+        let tab = &self.power_tab;
+        if rpm <= tab.first().map(|(r, _)| *r).unwrap_or(0.0) {
+            return tab.first().map(|(_, p)| *p).unwrap_or(0.0);
+        }
+        if rpm >= tab.last().map(|(r, _)| *r).unwrap_or(f64::MAX) {
+            return tab.last().map(|(_, p)| *p).unwrap_or(0.0);
+        }
+        for i in 1..tab.len() {
+            let (r0, p0) = tab[i - 1];
+            let (r1, p1) = tab[i];
+            if rpm <= r1 {
+                let alpha = (rpm - r0) / (r1 - r0);
+                return p0 + alpha * (p1 - p0);
+            }
+        }
+        0.0
+    }
+
+    /// Advance engine RPM toward target with first-order lag (Euler step).
+    pub fn advance_rpm(&self, current_rpm: f64, throttle: f64, dt: f64) -> f64 {
+        let target = self.target_rpm(throttle);
+        let tau = self.rpm_time_constant_s.max(0.01);
+        // Exponential approach: rpm += (target - rpm) * (1 - exp(-dt/tau))
+        let factor = 1.0 - (-dt / tau).exp();
+        current_rpm + (target - current_rpm) * factor
+    }
+}
+
 /// ORTS `MaxTractiveForceCurves` / `ORTSMaxTractiveForceCurves` by throttle notch.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DieselTractionModel {
@@ -9,6 +85,8 @@ pub struct DieselTractionModel {
     pub notch_curves: Vec<(f64, TractiveCurve)>,
     /// Scales curve forces (peak ORTS stall vs continuous `MaxForce`).
     pub effort_scale: f64,
+    /// Optional diesel engine thermodynamic model (DieselPowerTab / ThrottleRPMTab).
+    pub engine: Option<Box<DieselEngineParams>>,
 }
 
 impl Default for DieselTractionModel {
@@ -16,6 +94,7 @@ impl Default for DieselTractionModel {
         Self {
             notch_curves: Vec::new(),
             effort_scale: 1.0,
+            engine: None,
         }
     }
 }
@@ -31,6 +110,30 @@ impl DieselTractionModel {
         Self {
             notch_curves,
             effort_scale: 1.0,
+            engine: None,
+        }
+    }
+
+    /// Idle RPM; returns 0 if no engine params are configured.
+    pub fn idle_rpm(&self) -> f64 {
+        self.engine.as_deref().map(|e| e.idle_rpm).unwrap_or(0.0)
+    }
+
+    /// Power (W) available from the diesel engine at `current_rpm`.
+    ///
+    /// Returns `f64::MAX` when no engine model is configured (uncapped).
+    pub fn engine_power_w(&self, current_rpm: f64) -> f64 {
+        match &self.engine {
+            Some(e) => e.power_at_rpm(current_rpm),
+            None => f64::MAX,
+        }
+    }
+
+    /// Advance the engine RPM one step; no-op when no engine params.
+    pub fn advance_rpm(&self, current_rpm: f64, throttle: f64, dt: f64) -> f64 {
+        match &self.engine {
+            Some(e) => e.advance_rpm(current_rpm, throttle, dt),
+            None => current_rpm,
         }
     }
 

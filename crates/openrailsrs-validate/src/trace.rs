@@ -428,11 +428,39 @@ fn parse_or_eval_tail(parts: &[&str]) -> Option<OrEvalTail> {
     if anchor < 2 {
         return None;
     }
-    let throttle = parse_or_int_field(parts[anchor - 2]) as f64 / 100.0;
-    let brake = parse_or_int_field(parts[anchor - 1]) as f64;
-    let distance_m = parse_or_eval_distance_before(parts, anchor - 2);
+    // OR uses `-001` in two different positions depending on context:
+    //
+    // Activity / AUTO_SIGNAL mode:
+    //   ..., DISTANCETRAVELLED (single large token), THROTTLEPERC, BRAKEPRESSURE, -001 (DYNBRAKE), ...
+    //   anchor-2 = THROTTLEPERC, anchor-1 = BRAKEPRESSURE (positive PSI).
+    //
+    // Explorer mode (no service brake applied):
+    //   ..., DIST_INT, DIST_DEC, THROTTLEPERC, -001 (BRAKEPRESSURE = sentinel), DYNBRAKE, ...
+    //   anchor-1 = THROTTLEPERC, anchor itself is the brake sentinel (0 PSI).
+    //
+    // We detect the explorer layout by checking whether anchor-1 looks like a valid
+    // brake-cylinder pressure (>= 0 PSI integer) *and* there is an "EXPLORER" token,
+    // or more robustly: anchor-1 is a short 0-padded integer ≤ 100 that would be a
+    // reasonable throttle, while anchor-2 is also small (distance decimal).
+    //
+    // Simplest reliable heuristic: if any token in the row is exactly "EXPLORER",
+    // the -001 is the brake sentinel itself and throttle is at anchor-1.
+    let is_explorer = parts
+        .iter()
+        .any(|p| p.trim().eq_ignore_ascii_case("EXPLORER"));
+    let (throttle, brake, dist_before) = if is_explorer {
+        // Explorer: -001 IS the BrakePressure (= 0), throttle is immediately before it.
+        let throttle = parse_or_int_field(parts[anchor - 1]) as f64 / 100.0;
+        let distance_m = parse_or_eval_distance_before(parts, anchor - 1);
+        (throttle, 0.0_f64, distance_m)
+    } else {
+        let throttle = parse_or_int_field(parts[anchor - 2]) as f64 / 100.0;
+        let brake = parse_or_int_field(parts[anchor - 1]) as f64;
+        let distance_m = parse_or_eval_distance_before(parts, anchor - 2);
+        (throttle, brake, distance_m)
+    };
     Some(OrEvalTail {
-        distance_m,
+        distance_m: dist_before,
         throttle,
         brake,
     })

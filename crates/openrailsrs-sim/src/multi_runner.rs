@@ -207,11 +207,19 @@ pub fn run_scenario_multi_train(
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
         state.brake_system = build_brake_from_path(&consist_path);
-        state.boiler_state =
-            load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
-                .ok()
-                .and_then(|c| c.aggregate_steam_params())
-                .map(|p| crate::steam::BoilerState::from_params(&p));
+        let loaded_consist =
+            load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
+        state.boiler_state = loaded_consist
+            .as_ref()
+            .and_then(|c| c.aggregate_steam_params())
+            .map(|p| crate::steam::BoilerState::from_params(&p));
+        if let Some(diesel) = loaded_consist
+            .as_ref()
+            .and_then(|c| c.aggregate_diesel_traction())
+            .as_ref()
+        {
+            state.diesel_rpm = diesel.idle_rpm();
+        }
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
         let csv_path = scenario_dir.join(&scenario.output.csv);
@@ -266,11 +274,19 @@ pub fn run_scenario_multi_train(
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
         state.brake_system = build_brake_from_path(&consist_path);
-        state.boiler_state =
-            load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
-                .ok()
-                .and_then(|c| c.aggregate_steam_params())
-                .map(|p| crate::steam::BoilerState::from_params(&p));
+        let loaded_consist2 =
+            load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
+        state.boiler_state = loaded_consist2
+            .as_ref()
+            .and_then(|c| c.aggregate_steam_params())
+            .map(|p| crate::steam::BoilerState::from_params(&p));
+        if let Some(diesel) = loaded_consist2
+            .as_ref()
+            .and_then(|c| c.aggregate_diesel_traction())
+            .as_ref()
+        {
+            state.diesel_rpm = diesel.idle_rpm();
+        }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);
         if let Some(p) = csv_path.parent() {
