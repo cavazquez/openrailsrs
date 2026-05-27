@@ -2,7 +2,7 @@ use openrailsrs_core::SimTime;
 use openrailsrs_train::{Consist, Vehicle};
 
 use crate::brake::BrakeSystem;
-use crate::coupler::{CouplerState, VehicleState};
+use crate::coupler::{CouplerKind, CouplerState, VehicleState};
 use crate::steam::BoilerState;
 
 #[derive(Clone, Debug)]
@@ -77,10 +77,15 @@ impl TrainSimState {
         }
     }
 
-    /// Initialise per-vehicle kinematics and freight couplers for OR-P4 multi-body mode.
+    /// Initialise per-vehicle kinematics and couplers for OR-P4 multi-body mode.
     ///
     /// When `enabled` is false or the consist has no vehicles, clears multi-body state.
-    pub fn init_multi_body_if_enabled(&mut self, consist: &Consist, enabled: bool) {
+    pub fn init_multi_body_if_enabled(
+        &mut self,
+        consist: &Consist,
+        enabled: bool,
+        coupler_kind: CouplerKind,
+    ) {
         if !enabled {
             self.vehicles.clear();
             self.couplers.clear();
@@ -104,8 +109,9 @@ impl TrainSimState {
                 position_m: 0.0,
             })
             .collect();
+        let coupler = CouplerState::from_kind(coupler_kind);
         self.couplers = (0..self.vehicles.len().saturating_sub(1))
-            .map(|_| CouplerState::freight())
+            .map(|_| coupler.clone())
             .collect();
     }
 

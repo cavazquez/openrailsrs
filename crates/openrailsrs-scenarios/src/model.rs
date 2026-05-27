@@ -257,6 +257,13 @@ pub struct SimulationSection {
     /// Per-vehicle coupler dynamics (OR-P4). Default off until validated on long runs.
     #[serde(default)]
     pub multi_body: bool,
+    /// Coupler preset when `multi_body = true`: `freight` (default) or `passenger`.
+    #[serde(default)]
+    pub coupler_kind: String,
+    /// Below this speed (m/s), with throttle off, multi-body uses scalar Davis+brake
+    /// decay (matches OR coast after service brake). Omit to keep full coupler dynamics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multi_body_scalar_coast_below_v_mps: Option<f64>,
 }
 
 fn default_train_air_full_release_s() -> f64 {

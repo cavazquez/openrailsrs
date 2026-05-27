@@ -17,7 +17,7 @@ pub use brake::{
     BrakeCylinder, BrakeState, BrakeSystem, BrakeVehicleSpec, OR_DEFAULT_BRAKE_ADHESION_MU,
     vehicle_specs_from_consist,
 };
-pub use coupler::{CouplerState, VehicleState};
+pub use coupler::{CouplerKind, CouplerState, VehicleState};
 pub use error::SimError;
 pub use multi_runner::{
     LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,

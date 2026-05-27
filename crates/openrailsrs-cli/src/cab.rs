@@ -94,6 +94,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         brake_mapping: scenario.brake_mapping(),
         legacy_power_cap: scenario.simulation.legacy_power_cap,
         brake_skid_limit: scenario.simulation.brake_skid_limit,
+        multi_body_scalar_coast_below_v_mps: scenario.simulation.multi_body_scalar_coast_below_v_mps,
     };
 
     let total_dist_m: f64 = path_edges

@@ -10,6 +10,7 @@ use serde::Serialize;
 
 use crate::SimError;
 use crate::brake::BrakeSystem;
+use crate::coupler::CouplerKind;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
 use crate::path_data::PathData;
@@ -237,6 +238,7 @@ pub fn run_scenario_headless_with_driver(
         brake_mapping: scenario.brake_mapping(),
         legacy_power_cap: scenario.simulation.legacy_power_cap,
         brake_skid_limit: scenario.simulation.brake_skid_limit,
+        multi_body_scalar_coast_below_v_mps: scenario.simulation.multi_body_scalar_coast_below_v_mps,
     };
 
     let stop_nodes: HashSet<&str> = scenario
@@ -299,7 +301,11 @@ pub fn run_scenario_headless_with_driver(
         state.diesel_traction_force_n = vec![0.0; train_physics.diesel_engines.len()];
         state.diesel_average_force_n = vec![0.0; train_physics.diesel_engines.len()];
     }
-    state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
+    state.init_multi_body_if_enabled(
+        &consist,
+        scenario.simulation.multi_body,
+        CouplerKind::parse(&scenario.simulation.coupler_kind),
+    );
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;

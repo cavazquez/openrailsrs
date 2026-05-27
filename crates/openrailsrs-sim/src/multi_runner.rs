@@ -16,6 +16,7 @@ use openrailsrs_track::{SignalAspect, SwitchPosition};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
 use crate::SimError;
+use crate::coupler::CouplerKind;
 use crate::brake::BrakeSystem;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
@@ -145,6 +146,7 @@ fn build_physics(
         brake_mapping,
         legacy_power_cap,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     })
 }
 
@@ -204,7 +206,11 @@ pub fn run_scenario_multi_train(
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
             }
-            state.init_multi_body_if_enabled(consist, scenario.simulation.multi_body);
+            state.init_multi_body_if_enabled(
+                consist,
+                scenario.simulation.multi_body,
+                CouplerKind::parse(&scenario.simulation.coupler_kind),
+            );
         }
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
@@ -282,7 +288,11 @@ pub fn run_scenario_multi_train(
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
             }
-            state.init_multi_body_if_enabled(consist, scenario.simulation.multi_body);
+            state.init_multi_body_if_enabled(
+                consist,
+                scenario.simulation.multi_body,
+                CouplerKind::parse(&scenario.simulation.coupler_kind),
+            );
         }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);
@@ -691,7 +701,11 @@ impl LiveMultiSim {
             if let Ok(consist) =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
             {
-                state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
+                state.init_multi_body_if_enabled(
+                    &consist,
+                    scenario.simulation.multi_body,
+                    CouplerKind::parse(&scenario.simulation.coupler_kind),
+                );
             }
             state.time = openrailsrs_core::SimTime(0.0);
             agents.push(LiveAgent {
@@ -740,7 +754,11 @@ impl LiveMultiSim {
             if let Ok(consist) =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
             {
-                state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
+                state.init_multi_body_if_enabled(
+                    &consist,
+                    scenario.simulation.multi_body,
+                    CouplerKind::parse(&scenario.simulation.coupler_kind),
+                );
             }
             state.time = openrailsrs_core::SimTime(entry.start_time_s);
             agents.push(LiveAgent {

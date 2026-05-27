@@ -68,6 +68,7 @@ fn two_identical_engines_double_stall_force() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -103,6 +104,7 @@ fn orts_plus_legacy_both_contribute() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -133,6 +135,7 @@ fn per_engine_power_cap_limits_force_at_speed() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -190,6 +193,7 @@ fn per_engine_rpm_independent() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);

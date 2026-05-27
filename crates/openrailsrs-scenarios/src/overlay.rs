@@ -218,6 +218,8 @@ mod tests {
                 brake_shoe_speed_factor: false,
                 brake_skid_limit: false,
                 multi_body: false,
+                coupler_kind: String::new(),
+                multi_body_scalar_coast_below_v_mps: None,
             },
             output: OutputSection {
                 csv: "run.csv".into(),

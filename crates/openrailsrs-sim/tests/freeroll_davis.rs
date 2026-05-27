@@ -35,6 +35,7 @@ fn chiltern_pullman_freeroll_deceleration() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
 
     let path_data = PathData {

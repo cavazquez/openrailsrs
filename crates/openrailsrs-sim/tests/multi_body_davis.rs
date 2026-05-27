@@ -88,11 +88,12 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
 
     let path = flat_path();
     let mut state = TrainSimState::new(vec!["e1".into()]);
-    state.init_multi_body_if_enabled(&consist, true);
+    state.init_multi_body_if_enabled(&consist, true, openrailsrs_sim::CouplerKind::Freight);
     state.vehicles[0].velocity_mps = 10.0;
     state.vehicles[1].velocity_mps = 10.0;
     state.velocity_mps = 10.0;

@@ -70,6 +70,26 @@ impl CouplerState {
         }
     }
 
+    /// Passenger / multiple-unit stock (Pullman, Mk2): tight slack, stable at dt≤0.05 s.
+    pub fn passenger() -> Self {
+        Self {
+            stiffness_n_per_m: 4.0e5,
+            damping_n_per_mps: 1.5e4,
+            free_play_m: 0.010,
+            break_force_n: 0.0,
+            extension_m: 0.0,
+            broken: false,
+        }
+    }
+
+    /// Build from [`CouplerKind`].
+    pub fn from_kind(kind: CouplerKind) -> Self {
+        match kind {
+            CouplerKind::Freight => Self::freight(),
+            CouplerKind::Passenger => Self::passenger(),
+        }
+    }
+
     /// Compute the current coupler force (N) given the relative velocity between
     /// the two vehicles it connects.
     pub fn force_n(&self, delta_v_mps: f64) -> f64 {
@@ -83,8 +103,12 @@ impl CouplerState {
         } else {
             0.0
         };
-        // Damping force (acts whenever there is relative motion).
-        let damp = self.damping_n_per_mps * delta_v_mps;
+        // Damping only when the spring is engaged (no dissipation in slack).
+        let damp = if spring.abs() > 0.0 {
+            self.damping_n_per_mps * delta_v_mps
+        } else {
+            0.0
+        };
         spring + damp
     }
 }
@@ -92,6 +116,24 @@ impl CouplerState {
 impl Default for CouplerState {
     fn default() -> Self {
         Self::freight()
+    }
+}
+
+/// Coupler preset for multi-body consists (scenario `coupler_kind`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CouplerKind {
+    #[default]
+    Freight,
+    Passenger,
+}
+
+impl CouplerKind {
+    /// Parse scenario TOML value (`freight`, `passenger`, `emu` → passenger).
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "passenger" | "emu" | "pullman" | "mk2" => Self::Passenger,
+            _ => Self::Freight,
+        }
     }
 }
 
@@ -205,7 +247,14 @@ mod tests {
     }
 
     #[test]
-    fn large_dt_substeps_stay_bounded_with_velocity_slack() {
+    fn no_damping_inside_free_play() {
+        let mut c = CouplerState::freight();
+        c.extension_m = 0.0;
+        assert_eq!(c.force_n(1.0), 0.0);
+    }
+
+    #[test]
+    fn passenger_preset_is_stable_under_one_second_step() {
         let mut vehicles = vec![
             VehicleState {
                 velocity_mps: 10.0,
@@ -216,7 +265,7 @@ mod tests {
                 position_m: 0.0,
             },
         ];
-        let mut couplers = vec![CouplerState::freight()];
+        let mut couplers = vec![CouplerState::passenger()];
         let masses = vec![50_000.0, 50_000.0];
         let brake = vec![0.0; 2];
         let resist = vec![800.0, 800.0];

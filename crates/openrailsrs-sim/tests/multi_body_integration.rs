@@ -51,11 +51,12 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
 
     let path_data = flat_path();
     let mut state = TrainSimState::new(vec!["e1".into()]);
-    state.init_multi_body_if_enabled(&consist, true);
+    state.init_multi_body_if_enabled(&consist, true, openrailsrs_sim::CouplerKind::Freight);
     assert_eq!(state.vehicles.len(), consist.vehicles.len());
     assert_eq!(state.couplers.len(), consist.vehicles.len() - 1);
 
@@ -107,11 +108,12 @@ fn multi_body_dt_one_second_remains_stable_over_ten_steps() {
         brake_mapping: Default::default(),
         legacy_power_cap: true,
         brake_skid_limit: false,
+        multi_body_scalar_coast_below_v_mps: None,
     };
 
     let path_data = flat_path();
     let mut state = TrainSimState::new(vec!["e1".into()]);
-    state.init_multi_body_if_enabled(&consist, true);
+    state.init_multi_body_if_enabled(&consist, true, openrailsrs_sim::CouplerKind::Freight);
     state.throttle = 1.0;
 
     for _ in 0..10 {
@@ -138,7 +140,7 @@ fn init_multi_body_disabled_leaves_single_mass_path() {
         None => return,
     };
     let mut state = TrainSimState::new(vec!["e1".into()]);
-    state.init_multi_body_if_enabled(&consist, false);
+    state.init_multi_body_if_enabled(&consist, false, openrailsrs_sim::CouplerKind::Freight);
     assert!(state.vehicles.is_empty());
     assert!(state.couplers.is_empty());
 }

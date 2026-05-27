@@ -33,6 +33,7 @@ duration = 180.0
 time_step = 1.0
 seed = 42
 multi_body = true
+multi_body_scalar_coast_below_v_mps = 12.0
 legacy_power_cap = false
 train_air_lap_hold = true
 train_air_full_release_s = 15.0
