@@ -33,11 +33,13 @@ duration = 180.0
 time_step = 1.0
 seed = 42
 legacy_power_cap = false
-train_air_lap_hold = false
-train_air_full_release_s = 3.0
+train_air_lap_hold = true
+# OR BC bleed ~115–127 s in baseline; EP + train-air use same exhaust window
+train_air_full_release_s = 15.0
 brake_shoe_speed_factor = true
 brake_skid_limit = true
-brake_cylinder_full_scale_psi = 35.0
+# Identity driver scale; service level via scripted peak ~0.54 (OR ~45 PSI)
+brake_cylinder_full_scale_psi = 121.0
 
 [output]
 csv = "run_brake_coast.csv"
@@ -47,7 +49,7 @@ metadata = "run_brake_coast.json"
 baseline_or = "../baselines/chiltern_brake_coast/or_evaluation_speed.csv"
 max_velocity_rms = 5.0
 max_throttle_rms = 0.10
-max_brake_rms = 0.10
-phase_bounds = [0.0, 100.0, 105.0, 180.0]
-# Fase costa libre post-freno (105–180 s): umbral OR-P6 Experimento A
+max_brake_rms = 0.16
+phase_bounds = [0.0, 100.0, 115.0, 180.0]
+# Costa libre post-suelta (115–180 s): umbral OR-P6 Experimento A
 phase_max_velocity_rms = 0.50

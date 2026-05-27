@@ -319,9 +319,13 @@ impl BrakeSystem {
             let eff = cyl.effective_command(command, self.train_air_lap_hold);
             let target = eff * cyl.max_force_n;
 
-            // Ramp toward target; exhausting a cylinder is slower than applying.
+            // Release: EP + latched train-air bleed at `train_air_full_release_s` when lap-hold is on
+            // (OR pipe exhaust / BC bleed); otherwise use per-cylinder default release ramp.
             let delta = if cyl.current_force_n > target {
-                let rate = if command <= 0.0 && was_latched && self.train_air_lap_hold {
+                let rate = if command <= 0.0
+                    && self.train_air_lap_hold
+                    && (cyl.ep_instant || was_latched)
+                {
                     cyl.max_force_n / self.train_air_full_release_s
                 } else {
                     cyl.release_ramp_rate_n_per_s
