@@ -154,7 +154,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [x] Experimento B (aceleración 100 % throttle): baseline OR + `chiltern_fullthrottle` (vel RMS 0–30 s ~0.40 m/s vs OR; umbral fase ≤2.0)
+- [x] Experimento B (aceleración 100 % throttle): baseline OR + `chiltern_fullthrottle` (vel RMS 0–30 s ~0.40–0.70 m/s vs OR; umbral fase ≤2.0). Gap principal: DMBSH legacy `RunUpTimeToMaxForce` 30 s sin RPM; ver `chiltern_fullthrottle_audit`.
 - [x] No overshoot de velocidad >2 m/s vs OR en arranque Chiltern (`chiltern_startup_overshoot`)
 
 **Estimación:** 3–4 días.
