@@ -118,6 +118,49 @@ impl Default for DavisCoefficients {
     }
 }
 
+impl DavisCoefficients {
+    /// Rolling resistance at speed `v_mps`: a + b·v + c·v².
+    pub fn resistance_n(&self, v_mps: f64) -> f64 {
+        let v = v_mps.max(0.0);
+        self.a_n + self.b_n_per_mps * v + self.c_n_per_mps2 * v * v
+    }
+
+    /// Sum of per-component values (used when aggregating vehicle coefficients).
+    pub fn sum(&self, other: &Self) -> Self {
+        Self {
+            a_n: self.a_n + other.a_n,
+            b_n_per_mps: self.b_n_per_mps + other.b_n_per_mps,
+            c_n_per_mps2: self.c_n_per_mps2 + other.c_n_per_mps2,
+        }
+    }
+}
+
+fn scale_davis_per_vehicle(
+    base: &[DavisCoefficients],
+    aggregate: &DavisCoefficients,
+    target: &DavisCoefficients,
+) -> Vec<DavisCoefficients> {
+    let n = base.len().max(1) as f64;
+    let scale = |sum: f64, tgt: f64| -> f64 {
+        if sum.abs() > 1e-9 {
+            tgt / sum
+        } else {
+            tgt / n
+        }
+    };
+    let sa = scale(aggregate.a_n, target.a_n);
+    let sb = scale(aggregate.b_n_per_mps, target.b_n_per_mps);
+    let sc = scale(aggregate.c_n_per_mps2, target.c_n_per_mps2);
+    base
+        .iter()
+        .map(|d| DavisCoefficients {
+            a_n: d.a_n * sa,
+            b_n_per_mps: d.b_n_per_mps * sb,
+            c_n_per_mps2: d.c_n_per_mps2 * sc,
+        })
+        .collect()
+}
+
 #[derive(Clone, Debug)]
 pub struct Locomotive {
     pub name: String,
@@ -269,17 +312,35 @@ impl Consist {
                     Vehicle::Loco(l) => &l.davis,
                     Vehicle::Wagon(w) => &w.davis,
                 };
-                DavisCoefficients {
-                    a_n: acc.a_n + d.a_n,
-                    b_n_per_mps: acc.b_n_per_mps + d.b_n_per_mps,
-                    c_n_per_mps2: acc.c_n_per_mps2 + d.c_n_per_mps2,
-                }
+                acc.sum(d)
             },
         );
         if is_unspecified_davis(&total) {
             DavisCoefficients::default()
         } else {
             total
+        }
+    }
+
+    /// Per-vehicle Davis coefficients in consist order.
+    ///
+    /// When `scenario_override` is set, each vehicle is scaled so the sum matches
+    /// the override at any speed (same relative split as parsed assets).
+    pub fn per_vehicle_davis(
+        &self,
+        scenario_override: Option<&DavisCoefficients>,
+    ) -> Vec<DavisCoefficients> {
+        let base: Vec<DavisCoefficients> = self
+            .vehicles
+            .iter()
+            .map(|v| match v {
+                Vehicle::Loco(l) => l.davis.clone(),
+                Vehicle::Wagon(w) => w.davis.clone(),
+            })
+            .collect();
+        match scenario_override {
+            Some(target) => scale_davis_per_vehicle(&base, &self.aggregate_davis(), target),
+            None => base,
         }
     }
 

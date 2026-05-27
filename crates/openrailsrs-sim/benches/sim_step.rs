@@ -46,6 +46,7 @@ fn default_train() -> TrainPhysics {
         max_tractive_effort_n: 350_000.0,
         max_brake_n: 300_000.0,
         davis: DavisCoefficients::default(),
+        vehicle_davis: Vec::new(),
         tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
         diesel_engines: Vec::new(),
         regen_factor: 0.0,

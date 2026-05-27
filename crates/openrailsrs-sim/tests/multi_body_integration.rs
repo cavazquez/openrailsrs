@@ -42,6 +42,7 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis: consist.davis.clone(),
+        vehicle_davis: consist.per_vehicle_davis(None),
         tractive: TractiveCurve::default(),
         diesel_engines: consist.diesel_traction_models(),
         regen_factor: 0.0,

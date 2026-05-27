@@ -35,6 +35,8 @@ pub struct TrainPhysics {
     pub max_tractive_effort_n: f64,
     pub max_brake_n: f64,
     pub davis: DavisCoefficients,
+    /// Per-vehicle Davis coefficients (consist order); used in multi-body mode.
+    pub vehicle_davis: Vec<DavisCoefficients>,
     /// Aggregate traction curve. Empty curve → falls back to P/v law.
     pub tractive: TractiveCurve,
     /// ORTS per-notch diesel models (one per powered locomotive in the consist).
@@ -205,8 +207,9 @@ pub fn step(
             raw
         }
     };
-    let f_resist = train.davis.a_n + train.davis.b_n_per_mps * v + train.davis.c_n_per_mps2 * v * v;
-    let f_grade = effective_mass * G * (edge_data.grade_percent / 100.0);
+    let f_resist = train.davis.resistance_n(v);
+    let grade_fraction = edge_data.grade_percent / 100.0;
+    let f_grade = effective_mass * G * grade_fraction;
 
     // ── Multi-body coupler path ───────────────────────────────────────────────
     // When the state has per-vehicle data (initialised by the runner), delegate
@@ -224,11 +227,23 @@ pub fn step(
                 .map(|m| f_brake * m / total_mass)
                 .collect()
         };
-        let grade_resist: Vec<f64> = state
-            .vehicle_masses
-            .iter()
-            .map(|m| (f_resist + f_grade) * m / total_mass)
-            .collect();
+        let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
+            state
+                .vehicles
+                .iter()
+                .zip(train.vehicle_davis.iter())
+                .zip(state.vehicle_masses.iter())
+                .map(|((veh, davis), mass)| {
+                    davis.resistance_n(veh.velocity_mps) + mass * G * grade_fraction
+                })
+                .collect()
+        } else {
+            state
+                .vehicle_masses
+                .iter()
+                .map(|m| (f_resist + f_grade) * m / total_mass)
+                .collect()
+        };
         let masses: Vec<f64> = state.vehicle_masses.clone();
         multi_body_step(
             &mut state.vehicles,

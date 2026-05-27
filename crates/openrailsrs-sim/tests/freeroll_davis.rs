@@ -26,6 +26,7 @@ fn chiltern_pullman_freeroll_deceleration() {
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
+        vehicle_davis: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: consist.diesel_traction_models(),
         regen_factor: 0.0,

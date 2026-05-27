@@ -109,13 +109,15 @@ fn build_physics(
     legacy_power_cap: bool,
 ) -> Result<TrainPhysics, SimError> {
     let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
+    let davis_override = davis_override.map(|d| DavisCoefficients {
+        a_n: d.a_n,
+        b_n_per_mps: d.b_n_per_mps,
+        c_n_per_mps2: d.c_n_per_mps2,
+    });
     let davis = davis_override
-        .map(|d| DavisCoefficients {
-            a_n: d.a_n,
-            b_n_per_mps: d.b_n_per_mps,
-            c_n_per_mps2: d.c_n_per_mps2,
-        })
+        .clone()
         .unwrap_or_else(|| consist.davis.clone());
+    let vehicle_davis = consist.per_vehicle_davis(davis_override.as_ref());
     let diesel_engines = consist.diesel_traction_models();
     let raw_curve = consist.aggregate_tractive_curve();
     let tractive = if !diesel_engines.is_empty() {
@@ -134,6 +136,7 @@ fn build_physics(
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
+        vehicle_davis,
         tractive,
         diesel_engines,
         regen_factor: consist.regen_factor(),

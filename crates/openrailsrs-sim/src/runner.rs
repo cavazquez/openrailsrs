@@ -194,7 +194,7 @@ pub fn run_scenario_headless_with_driver(
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
-    let davis = scenario
+    let davis_override = scenario
         .train
         .davis
         .as_ref()
@@ -202,8 +202,11 @@ pub fn run_scenario_headless_with_driver(
             a_n: d.a_n,
             b_n_per_mps: d.b_n_per_mps,
             c_n_per_mps2: d.c_n_per_mps2,
-        })
+        });
+    let davis = davis_override
+        .clone()
         .unwrap_or_else(|| consist.davis.clone());
+    let vehicle_davis = consist.per_vehicle_davis(davis_override.as_ref());
     // Build the aggregate traction curve; if the consist has no explicit curves, build a
     // synthetic one from P and F_te so that `step` always has a non-empty curve.
     let diesel_engines = consist.diesel_traction_models();
@@ -225,6 +228,7 @@ pub fn run_scenario_headless_with_driver(
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
+        vehicle_davis,
         tractive,
         diesel_engines,
         regen_factor: consist.regen_factor(),

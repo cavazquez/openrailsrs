@@ -179,7 +179,7 @@ flowchart LR
 |------|-------|---------|
 | 1 | `openrailsrs-sim/runner.rs`, `multi_runner.rs` | Inicializar `vehicles`, `couplers`, `vehicle_masses` desde `Consist` (longitudes, masas, offsets) |
 | 2 | `openrailsrs-train` | Exponer `Consist::vehicle_layout() -> Vec<VehicleLayout>` (posición, masa, length_m) |
-| 3 | `physics.rs` | Aplicar tracción solo a vehículo 0; resistencia Davis **por vehículo** (prep. OR-P5) |
+| 3 | `physics.rs` | Aplicar tracción solo a vehículo 0; resistencia Davis **por vehículo** (prep. OR-P5) | ✅ |
 | 4 | `[simulation] multi_body = true` en escenario (default false hasta validado) | ✅ flag + init en runner |
 
 **Criterios de aceptación:**
@@ -202,13 +202,13 @@ flowchart LR
 
 | Paso | Trabajo |
 |------|---------|
-| 1 | `TrainPhysics`: `Vec<DavisCoefficients>` paralelo a vehículos |
-| 2 | En multi-cuerpo: `f_resist_i` por vehículo; en masa puntual: suma (comportamiento actual) |
+| 1 | `TrainPhysics`: `Vec<DavisCoefficients>` paralelo a vehículos | ✅ `vehicle_davis` + `Consist::per_vehicle_davis` |
+| 2 | En multi-cuerpo: `f_resist_i` por vehículo; en masa puntual: suma (comportamiento actual) | ✅ |
 | 3 | Opcional fase 1: resistencia en curva `(mass × μ × (gauge + wheelbase)) / (2 × radius)` desde `PathData.curve_radius_m` |
 
 **Criterios de aceptación:**
 
-- [ ] Suma de resistencias por vehículo = resistencia agregada actual ±1 % en Chiltern/SCE
+- [x] Suma de resistencias por vehículo = resistencia agregada actual ±1 % en Chiltern/SCE (`multi_body_davis`)
 - [ ] Con curva en track: deceleración en curva medible vs OR (Experimento free-roll en curva)
 
 **Estimación:** 2–3 días (+2 días si incluye curva).
