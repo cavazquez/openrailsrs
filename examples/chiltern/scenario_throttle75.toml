@@ -1,0 +1,46 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern throttle-75 baseline (60 s)"
+description = "Experimento C — parado, freno 0, throttle 75% constante 60 s (equilibrio F(v) vs resistencia, OR-P1)."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 60.0
+time_step = 1.0
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_throttle75.csv"
+metadata = "run_throttle75.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_throttle75/or_evaluation_speed.csv"
+max_velocity_rms = 3.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05
+phase_bounds = [0.0, 20.0, 60.0]
+phase_max_velocity_rms = 0.50

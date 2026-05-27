@@ -127,6 +127,18 @@ cargo test -p openrailsrs-cli --test chiltern_throttle50
 
 Baseline OR: `examples/baselines/chiltern_throttle50/README.md`.
 
+## Experimento C — throttle 75 % (60 s)
+
+Crucero a notch fijo para calibrar equilibrio F(v) vs resistencia (OR-P1):
+
+```bash
+cd examples/chiltern
+openrailsrs sim scenario_throttle75.toml --driver driver_throttle75.csv
+cargo test -p openrailsrs-cli --test chiltern_throttle75
+```
+
+Baseline OR: `examples/baselines/chiltern_throttle75/README.md` (captura con `./scripts/capture_chiltern_throttle75_or.sh`).
+
 ## Gaps cerrados vs OR
 
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6); path ≥ 6 edges hasta destino.
