@@ -432,7 +432,7 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 |----|-----------|---------|-----------------|----------------------------|-----------|
 | — | Chiltern eval 136 s | Pullman ×8 | Masa puntual | **Sí** — en curso (`scenario_multi_body.toml`) | Alta |
 | A (freno+costa) | Pullman ×8 | Masa puntual | **Sí** — `scenario_brake_coast_multi_body.toml` (~0.16 m/s costa) | Alta ✅ |
-| B | Aceleración 100 % | Pullman ×8 | Masa puntual | **Sí** — arranque en oleadas / holgura | Media |
+| B | Aceleración 100 % | Pullman ×8 | Masa puntual | **Sí** — `scenario_throttle100_multi_body.toml` (~0.47 m/s arranque) | Media ✅ |
 | C | Crucero 75 % notch | Pullman ×8 | Masa puntual | Opcional — régimen casi uniforme | Baja |
 | E | Throttle 50 % (30 s) | Pullman ×8 | Masa puntual | Opcional — mismo motivo | Baja |
 | — | SCE eval 100 s | 47 + MK2 ×6 | Masa puntual | **Sí** — tras estabilizar acopladores Chiltern | Media |

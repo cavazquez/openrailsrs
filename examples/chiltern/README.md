@@ -161,6 +161,19 @@ cargo test -p openrailsrs-cli --test chiltern_throttle50
 
 Baseline OR: `examples/baselines/chiltern_throttle50/README.md`.
 
+## Experimento B — throttle 100 % (120 s)
+
+```bash
+cd examples/chiltern
+openrailsrs sim scenario_throttle100.toml --driver driver_throttle100.csv
+cargo test -p openrailsrs-cli --test chiltern_fullthrottle
+
+openrailsrs sim scenario_throttle100_multi_body.toml --driver driver_throttle100.csv
+cargo test -p openrailsrs-cli --test chiltern_fullthrottle_multi_body
+```
+
+Baseline OR: `examples/baselines/chiltern_fullthrottle/README.md`. Arranque 0–30 s: masa puntual y multi-cuerpo ~**0.47** m/s RMS vs OR.
+
 ## Experimento C — throttle 75 % (60 s)
 
 Crucero a notch fijo para calibrar equilibrio F(v) vs resistencia (OR-P1):

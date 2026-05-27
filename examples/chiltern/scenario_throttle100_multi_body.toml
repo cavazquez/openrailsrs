@@ -1,0 +1,47 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern full-throttle (multi-body, 120 s)"
+description = "Experimento B con multi_body — arranque en oleadas / holgura acopladores."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 120.0
+time_step = 1.0
+seed = 42
+multi_body = true
+legacy_power_cap = false
+
+[output]
+csv = "run_throttle100_multi_body.csv"
+metadata = "run_throttle100_multi_body.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_fullthrottle/or_evaluation_speed.csv"
+max_velocity_rms = 5.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05
+phase_bounds = [0.0, 30.0, 120.0]
+phase_max_velocity_rms = 2.0
