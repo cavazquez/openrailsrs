@@ -185,7 +185,9 @@ flowchart LR
 **Criterios de aceptación:**
 
 - [x] Test integración: tren 2 coches — retraso de aceleración del vagón vs loco visible vía `physics::step()` (`multi_body_integration`)
-- [ ] Chiltern 136 s con multi_body: RMS ≤ 0.40 m/s (transitorios distintos, umbral relajado inicial)
+- [x] Chiltern 136 s con multi_body + `time_step = 0.05`: RMS velocidad vs OR ~**0.52 m/s** (arranque 0–30 s ~0.26); test `chiltern_multi_body` (umbral 0.55)
+- [ ] Chiltern multi_body con `time_step = 1.0` estable (sub-pasos acoplador o integrador implícito)
+- [ ] Chiltern 136 s multi_body: RMS ≤ 0.40 m/s vs OR
 - [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire
 
 **Estimación:** 4–5 días.

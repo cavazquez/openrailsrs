@@ -1,0 +1,44 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern Birmingham (single-mass, dt=0.05)"
+description = "Misma corrida que scenario.toml con paso fino para comparar con multi_body."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+assume_signals_clear = true
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 136.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+brake_cylinder_full_scale_psi = 35.0
+
+[output]
+csv = "run_single_dt005.csv"
+metadata = "run_single_dt005.json"

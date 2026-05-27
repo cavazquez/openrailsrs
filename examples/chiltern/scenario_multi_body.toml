@@ -1,0 +1,53 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern Birmingham (multi-body)"
+description = "136 s OR driver; multi_body = true para validar acopladores + Davis por vehículo."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+assume_signals_clear = true
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 136.0
+# Acopladores (Euler explícito): dt=1 s diverge; usar ≤0.05 s en multi-cuerpo.
+time_step = 0.05
+seed = 42
+multi_body = true
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+brake_cylinder_full_scale_psi = 35.0
+
+[output]
+csv = "run_multi_body.csv"
+metadata = "run_multi_body.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
+max_velocity_rms = 0.40
+max_position_max = 45.0
+phase_bounds = [0.0, 30.0, 61.0, 136.0]
+phase_max_velocity_rms = 0.55
