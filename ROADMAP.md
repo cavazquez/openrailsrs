@@ -139,15 +139,19 @@ Orden de trabajo para un **simulador ferroviario headless-first** que evoluciona
 
 T1–T10 ✅ (parser diesel, Davis por vehículo, RPM sqrt, adhesión, frenos EP, Experimento E con baseline OR).
 
-| Prioridad | Pendiente |
-|-----------|-----------|
-| **1** | Cerrar gap de velocidad Birmingham 65 s (fase 40–65 s): RPM, DMBSH, carga motor, Davis fino |
-| **2** | Baselines OR experimentos A, B, D (C si hace falta) |
-| **3** | Calibrar DMBSH vs OR (stub P/v sintético) |
-| **4** | Validar frenos EP vs OR en corrida real |
-| **5** | Umbrales estrictos Chiltern (0.3 m/s / 25 m) en `scenario.toml` |
+Chiltern 136 s ~0.28 m/s RMS ✅ · SCE 100 s ✅ (crucero alineado tras fix P/v).
+
+**Roadmap de paridad física con Open Rails:** [`docs/OR_PARITY_ROADMAP.md`](docs/OR_PARITY_ROADMAP.md) — fases OR-P1 … OR-P15 (diesel, Davis CN, multi-cuerpo, frenos MSTS, señales, gearbox, etc.).
+
+| Prioridad | Pendiente (→ ver OR_PARITY_ROADMAP) |
+|-----------|-------------------------------------|
+| **1** | OR-P1 throttle aparente + cap P/v OR; OR-P13 DMBSH |
+| **2** | OR-P2 auto-friction CN; experimentos A, B, D |
+| **3** | OR-P4 multi-cuerpo en runner; OR-P6 frenos MSTS |
+| **4** | OR-P7 señales Activity sin `assume_signals_clear` |
+| **5** | OR-P15 umbrales estrictos sin overrides de escenario |
 | **6** | Pendiente de vía (`grade_m_per_m`) en física |
-| **7** | Señales / límites / driver automático (largo plazo) |
+| **7** | OR-P9+ gearbox / vapor / freno dinámico (contenido específico) |
 
 **Otros pendientes Fase 7:** comparación topológica (`edge_id`); energía vs OR.
 

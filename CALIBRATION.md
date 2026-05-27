@@ -2,6 +2,8 @@
 
 Última actualización: 2026-05-26 (baseline Chiltern 136 s, AUTO_SIGNAL)
 
+**Roadmap de paridad con Open Rails:** [`docs/OR_PARITY_ROADMAP.md`](docs/OR_PARITY_ROADMAP.md)
+
 ---
 
 ## Resumen de avances
