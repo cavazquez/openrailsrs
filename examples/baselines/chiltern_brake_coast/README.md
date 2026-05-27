@@ -61,6 +61,21 @@ openrailsrs compare-or ../baselines/chiltern_brake_coast/or_evaluation_speed.csv
 cargo test -p openrailsrs-cli --test chiltern_brake_coast
 ```
 
+### Multi-cuerpo (`multi_body = true`)
+
+Misma ventana y driver; compara propagación de freno/costa por vehículo vs OR multi-cuerpo nativo:
+
+```bash
+openrailsrs sim scenario_brake_coast_multi_body.toml --driver driver_brake_coast.csv
+cargo test -p openrailsrs-cli --test chiltern_brake_coast_multi_body
+```
+
+| Fase | Masa puntual vs OR | Multi-cuerpo vs OR |
+|------|-------------------|-------------------|
+| 115–180 s (costa) | ~0.07 m/s RMS | ~0.16 m/s RMS |
+
+Ambos pasan umbral OR-P6 (≤0.50 m/s); multi-cuerpo empeora la costa por holgura/acopladores — objetivo futuro ≤0.10 m/s.
+
 Sin baseline OR versionado, el test `validate_against_or_baseline` se omite.
 
 ## Qué mirar

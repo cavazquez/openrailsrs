@@ -208,6 +208,7 @@ flowchart LR
 - [x] Chiltern 136 s con multi_body + `time_step = 0.05`: RMS velocidad vs OR ~**0.52 m/s** (arranque 0–30 s ~0.26); test `chiltern_multi_body` (umbral 0.55)
 - [x] Chiltern 136 s multi_body: RMS ≤ 0.40 m/s vs OR (~0.39 con sub-pasos, `time_step = 1.0`)
 - [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire
+- [x] Experimento A costa multi-cuerpo: 115–180 s ~0.16 m/s RMS vs OR (`chiltern_brake_coast_multi_body`; masa puntual ~0.07)
 
 **Estimación:** 4–5 días.
 
@@ -430,7 +431,7 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 | ID | Propósito | Consist | Sim openrailsrs | ¿Revisar con `multi_body`? | Prioridad |
 |----|-----------|---------|-----------------|----------------------------|-----------|
 | — | Chiltern eval 136 s | Pullman ×8 | Masa puntual | **Sí** — en curso (`scenario_multi_body.toml`) | Alta |
-| A | Frenada + costa (OR-P6) | Pullman ×8 | Masa puntual | **Sí** — propagación freno cabeza/cola | Alta |
+| A (freno+costa) | Pullman ×8 | Masa puntual | **Sí** — `scenario_brake_coast_multi_body.toml` (~0.16 m/s costa) | Alta ✅ |
 | B | Aceleración 100 % | Pullman ×8 | Masa puntual | **Sí** — arranque en oleadas / holgura | Media |
 | C | Crucero 75 % notch | Pullman ×8 | Masa puntual | Opcional — régimen casi uniforme | Baja |
 | E | Throttle 50 % (30 s) | Pullman ×8 | Masa puntual | Opcional — mismo motivo | Baja |

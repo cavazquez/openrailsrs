@@ -1,0 +1,53 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern brake-coast (multi-body, 180 s)"
+description = "Experimento A con multi_body — propagación freno/costa por vehículo."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+assume_signals_clear = true
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 180.0
+time_step = 1.0
+seed = 42
+multi_body = true
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 15.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+brake_cylinder_full_scale_psi = 121.0
+
+[output]
+csv = "run_brake_coast_multi_body.csv"
+metadata = "run_brake_coast_multi_body.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_brake_coast/or_evaluation_speed.csv"
+max_velocity_rms = 5.0
+max_throttle_rms = 0.10
+max_brake_rms = 0.16
+phase_bounds = [0.0, 100.0, 115.0, 180.0]
+phase_max_velocity_rms = 0.50

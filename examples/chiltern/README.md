@@ -133,6 +133,22 @@ Para fuerzas/adhesión internas (no compatible con `compare-or` v1 sin mapa de c
 - Archivo: `examples/baselines/chiltern_birmingham/openrails_dump.csv` (~9961 filas).
 - Uso: calibración manual de motor/resistencia; ver [`docs/OR_TRACE_COMPARISON.md`](../../docs/OR_TRACE_COMPARISON.md).
 
+## Experimento A — freno + costa (180 s)
+
+Frenada fuerte y costa libre (OR-P6). Baseline: `examples/baselines/chiltern_brake_coast/README.md`.
+
+```bash
+cd examples/chiltern
+openrailsrs sim scenario_brake_coast.toml --driver driver_brake_coast.csv
+cargo test -p openrailsrs-cli --test chiltern_brake_coast
+
+# Multi-cuerpo:
+openrailsrs sim scenario_brake_coast_multi_body.toml --driver driver_brake_coast.csv
+cargo test -p openrailsrs-cli --test chiltern_brake_coast_multi_body
+```
+
+Costa 115–180 s vs OR: masa puntual ~**0.07** m/s RMS; multi-cuerpo ~**0.16** m/s RMS (umbral 0.50).
+
 ## Experimento E — throttle 50 % (30 s)
 
 Driver fijo (`driver_throttle50.csv`) para aislar calibración RPM vs curvas F(v):
