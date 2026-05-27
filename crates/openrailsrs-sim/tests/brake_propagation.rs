@@ -67,8 +67,8 @@ fn full_release_clears_all_cylinders() {
         "rear should be applied after 1 s"
     );
 
-    // Fully release.
-    for _ in 0..100 {
+    // Fully release (EP ~2.5 s, wagons ~8 s).
+    for _ in 0..900 {
         sys.step(0.0, 0.01);
     }
     assert_eq!(

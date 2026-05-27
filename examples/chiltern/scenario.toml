@@ -40,9 +40,9 @@ metadata = "run.json"
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 # Baseline OR ~136 s sim (10:00→10:02:16); cap P/v por locomotora
-max_velocity_rms = 0.5
+max_velocity_rms = 0.30
 max_position_max = 45.0
 max_throttle_rms = 0.25
 max_brake_rms = 0.25
-phase_bounds = [0.0, 61.0, 136.0]
-phase_max_velocity_rms = 0.55
+phase_bounds = [0.0, 30.0, 61.0, 136.0]
+phase_max_velocity_rms = 0.35

@@ -159,3 +159,63 @@ fn pv_fallback_and_curve_both_accelerate() {
         "curve-based should accelerate, got {v_curve}"
     );
 }
+
+#[test]
+fn speed_limit_allows_modest_overspeed_before_cutoff() {
+    let mut g = TrackGraph::new();
+    g.insert_node(Node {
+        id: NodeId("a".into()),
+        kind: NodeKind::Plain,
+        x_m: 0.0,
+        y_m: 0.0,
+    })
+    .unwrap();
+    g.insert_node(Node {
+        id: NodeId("b".into()),
+        kind: NodeKind::Plain,
+        x_m: 1.0,
+        y_m: 0.0,
+    })
+    .unwrap();
+    let limit_mps = 50.0_f64 / 0.44704; // ~50 mph in m/s
+    g.insert_edge(Edge {
+        id: EdgeId("e1".into()),
+        from: NodeId("a".into()),
+        to: NodeId("b".into()),
+        length_m: 100_000.0,
+        speed_limit_mps: limit_mps,
+        grade_percent: 0.0,
+    })
+    .unwrap();
+
+    let train = TrainPhysics {
+        mass_kg: 50_000.0,
+        max_power_w: 5_000_000.0,
+        max_tractive_effort_n: 500_000.0,
+        max_brake_n: 400_000.0,
+        davis: DavisCoefficients::default(),
+        tractive: TractiveCurve::from_power_and_effort(5_000_000.0, 500_000.0),
+        diesel_engines: Vec::new(),
+        regen_factor: 0.0,
+        diesel_sfc_g_per_kwh: None,
+        steam_params: None,
+    };
+    let pd = path_data_for(&["e1"], &g);
+    let mut st = TrainSimState::new(vec!["e1".into()]);
+    st.throttle = 1.0;
+    for _ in 0..800 {
+        let _ = step(&mut st, &pd, &train, 0.1);
+    }
+    assert!(
+        st.velocity_mps > limit_mps * 1.01,
+        "should exceed nominal limit slightly, v={} limit={}",
+        st.velocity_mps,
+        limit_mps
+    );
+    assert!(
+        st.velocity_mps < limit_mps * 1.06,
+        "should stay below overspeed cutoff, v={} limit={}",
+        st.velocity_mps,
+        limit_mps
+    );
+}

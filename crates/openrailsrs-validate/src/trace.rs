@@ -876,6 +876,11 @@ pub fn normalize_trace_brake_to_fraction(trace: &mut RunTrace, full_scale: Optio
     }
 }
 
+/// Open Rails logs brake pipe/cylinder pressure in PSI. A single activity often never
+/// reaches full service pressure, so inferring scale from the trace peak under-estimates
+/// the `[0, 1]` driver command. OR/MSTS typically treat ~121 PSI as the display ceiling.
+pub const OR_DEFAULT_BRAKE_FULL_SCALE_PSI: f64 = 121.0;
+
 /// Convert an OR evaluation `*Speed.csv` into a `ScriptedDriver` CSV (`time_s,throttle,brake`).
 pub fn write_or_eval_driver_csv(
     or_eval_path: &Path,
@@ -883,7 +888,7 @@ pub fn write_or_eval_driver_csv(
     brake_full_scale: Option<f64>,
 ) -> Result<usize, ValidateError> {
     let mut trace = parse_or_dump_csv(or_eval_path, &OrColumnMap::default())?;
-    let brake_scale = brake_full_scale.unwrap_or_else(|| infer_brake_full_scale(&trace));
+    let brake_scale = brake_full_scale.unwrap_or(OR_DEFAULT_BRAKE_FULL_SCALE_PSI);
     normalize_trace_brake_to_fraction(&mut trace, Some(brake_scale));
 
     let mut wtr = csv::WriterBuilder::new()
@@ -906,7 +911,7 @@ pub fn write_or_eval_driver_csv(
     let mut rows = 0usize;
     for s in deduped {
         let throttle = s.throttle.unwrap_or(0.0);
-        let brake = (s.brake.unwrap_or(0.0) / brake_scale).clamp(0.0, 1.0);
+        let brake = s.brake.unwrap_or(0.0).clamp(0.0, 1.0);
         wtr.write_record([
             format!("{:.3}", s.time_s),
             format!("{throttle:.4}"),
@@ -944,11 +949,16 @@ mod tests {
     fn write_or_eval_driver_csv_fixture() {
         let eval = fixtures_dir().join("or_eval_speed_minimal.csv");
         let out = std::env::temp_dir().join("openrailsrs_driver_test.csv");
-        let rows = write_or_eval_driver_csv(&eval, &out, None).expect("write driver");
+        let rows = write_or_eval_driver_csv(&eval, &out, Some(45.0)).expect("write driver");
         assert!(rows >= 10);
         let text = std::fs::read_to_string(&out).expect("read driver");
         assert!(text.contains("time_s,throttle,brake"));
         assert!(text.contains("0.8000") || text.contains("0.8"));
+        // 45 PSI with peak 45 PSI in the fixture → full service brake ≈ 1.0, not PSI/scale².
+        assert!(
+            text.contains("1.0000") || text.contains(",1.000,"),
+            "expected full brake fraction in driver CSV, got:\n{text}"
+        );
         let _ = std::fs::remove_file(out);
     }
 

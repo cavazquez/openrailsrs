@@ -39,16 +39,18 @@ pub struct BrakeCylinder {
     pub current_force_n: f64,
     /// Seconds of pipe-signal travel still to cover before this cylinder reacts.
     time_pending_s: f64,
-    /// Apply/release ramp rate (N/s).
-    ramp_rate_n_per_s: f64,
+    /// Apply/release ramp rate (N/s) when increasing cylinder force.
+    apply_ramp_rate_n_per_s: f64,
+    /// Slower ramp when exhausting the cylinder (OR pipe recharge is gradual).
+    release_ramp_rate_n_per_s: f64,
 }
 
 impl BrakeCylinder {
     /// Create a new charged (released) cylinder.
     pub fn new(position_m: f64, max_force_n: f64, ep_instant: bool) -> Self {
-        // EP locomotive brakes ramp faster (~0.15 s); train air ~0.5 s.
-        let ramp_time_s = if ep_instant { 0.15 } else { 0.5 };
-        let ramp_rate_n_per_s = max_force_n / ramp_time_s;
+        // EP locomotive brakes ramp faster (~0.15 s apply); train air ~0.5 s apply.
+        // Release is much slower — OR holds partial brake for several seconds.
+        let (apply_time_s, release_time_s) = if ep_instant { (0.15, 2.5) } else { (0.5, 8.0) };
         Self {
             position_m,
             max_force_n,
@@ -56,7 +58,8 @@ impl BrakeCylinder {
             state: BrakeState::Charged,
             current_force_n: 0.0,
             time_pending_s: 0.0,
-            ramp_rate_n_per_s,
+            apply_ramp_rate_n_per_s: max_force_n / apply_time_s,
+            release_ramp_rate_n_per_s: max_force_n / release_time_s,
         }
     }
 }
@@ -127,8 +130,12 @@ impl BrakeSystem {
                 0.0
             };
 
-            // Ramp toward target.
-            let delta = cyl.ramp_rate_n_per_s * dt;
+            // Ramp toward target; exhausting a cylinder is slower than applying.
+            let delta = if cyl.current_force_n > target {
+                cyl.release_ramp_rate_n_per_s * dt
+            } else {
+                cyl.apply_ramp_rate_n_per_s * dt
+            };
             if cyl.current_force_n < target {
                 cyl.current_force_n = (cyl.current_force_n + delta).min(target);
                 cyl.state = if cyl.current_force_n >= target {

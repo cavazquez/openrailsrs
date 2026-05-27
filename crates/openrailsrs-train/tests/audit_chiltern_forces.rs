@@ -33,9 +33,28 @@ fn audit_chiltern_forces_at_cruise() {
             pwr / 10.863
         );
     }
-    for v in [9.0, 10.0, 10.863, 11.0, 12.0, 12.8, 13.0] {
+    for v in [
+        9.0, 10.0, 10.863, 11.0, 12.0, 12.8, 13.0, 15.0, 18.0, 20.0, 22.0, 23.0,
+    ] {
         let fr = f_res(v);
-        let ft: f64 = models.iter().map(|m| m.force_at(v, throttle)).sum();
-        eprintln!("v={v:.1} F_trac={ft:.0} F_res={fr:.0} delta={:.0}", ft - fr);
+        let mut f_trac = 0.0;
+        for (i, m) in models.iter().enumerate() {
+            let rpm = if i == 0 { 1200.0 } else { 0.0 };
+            let run_factor = 1.0;
+            let mut f = m.force_at_scaled(v, throttle, run_factor, 0.0);
+            let p = m.effective_power_w(rpm, throttle) * run_factor;
+            if v > 0.5 && p > 0.0 && m.engine.is_some() {
+                f = f.min(p / v);
+            }
+            eprintln!(
+                "  eng[{i}] v={v:.1} F={f:.0} P/v={:.0}",
+                if v > 0.5 { p / v } else { 0.0 }
+            );
+            f_trac += f;
+        }
+        eprintln!(
+            "v={v:.1} F_trac={f_trac:.0} F_res={fr:.0} delta={:.0}",
+            f_trac - fr
+        );
     }
 }

@@ -14,6 +14,7 @@ pub use model::{
 pub use overlay::{
     SCENARIO_OVERLAY_FILENAME, ScenarioOverlay, SimulationOverlay, TrainOverlay,
     apply_scenario_overlay, apply_scenario_overlay_dir, apply_scenario_overlay_file,
+    apply_scenario_runtime_overlay, apply_scenario_runtime_overlay_dir,
 };
 pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 

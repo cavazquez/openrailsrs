@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef};
+use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef, apply_scenario_runtime_overlay_dir};
 use openrailsrs_track::{SignalAspect, SwitchPosition};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 use serde::Serialize;
@@ -686,11 +686,8 @@ fn update_passengers(
 
 /// Convenience: load `scenario.toml` from `scenario_path` (file), resolve sibling directory.
 pub fn run_from_scenario_file(scenario_path: &Path) -> Result<SimRunResult, SimError> {
-    let scenario_dir = scenario_path
-        .parent()
-        .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
-    let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
-    run_scenario_headless(scenario_dir, &scenario)
+    let mut driver = AutoDriver;
+    run_from_scenario_file_with_driver(scenario_path, &mut driver)
 }
 
 /// Convenience: like `run_from_scenario_file` but accepts an explicit driver (e.g. `ScriptedDriver`).
@@ -701,7 +698,10 @@ pub fn run_from_scenario_file_with_driver(
     let scenario_dir = scenario_path
         .parent()
         .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
-    let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
+    let mut scenario = openrailsrs_scenarios::load_scenario(scenario_path)
+        .map_err(|e| SimError::Msg(format!("load scenario: {e}")))?;
+    apply_scenario_runtime_overlay_dir(&mut scenario, scenario_dir)
+        .map_err(|e| SimError::Msg(format!("scenario overlay: {e}")))?;
     run_scenario_headless_with_driver(scenario_dir, &scenario, driver)
 }
 
