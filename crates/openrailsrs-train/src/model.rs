@@ -1,3 +1,5 @@
+use crate::davis_est::is_unspecified_davis;
+
 /// Tractive-effort curve: ordered list of (velocity_mps, force_n) breakpoints.
 /// Interpolation is piecewise-linear inside the range; outside the range the nearest
 /// endpoint value is returned (clamped, never extrapolated).
@@ -250,9 +252,13 @@ impl Consist {
     }
 
     pub fn aggregate_davis(&self) -> DavisCoefficients {
-        self.vehicles
-            .iter()
-            .fold(DavisCoefficients::default(), |acc, v| {
+        let total = self.vehicles.iter().fold(
+            DavisCoefficients {
+                a_n: 0.0,
+                b_n_per_mps: 0.0,
+                c_n_per_mps2: 0.0,
+            },
+            |acc, v| {
                 let d = match v {
                     Vehicle::Loco(l) => &l.davis,
                     Vehicle::Wagon(w) => &w.davis,
@@ -262,7 +268,13 @@ impl Consist {
                     b_n_per_mps: acc.b_n_per_mps + d.b_n_per_mps,
                     c_n_per_mps2: acc.c_n_per_mps2 + d.c_n_per_mps2,
                 }
-            })
+            },
+        );
+        if is_unspecified_davis(&total) {
+            DavisCoefficients::default()
+        } else {
+            total
+        }
     }
 
     /// Lead locomotive notch curves (trail DMUs often idle in OR consists).

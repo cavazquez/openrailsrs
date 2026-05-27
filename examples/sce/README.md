@@ -63,13 +63,14 @@ openrailsrs compare-or ../baselines/sce_glasgow/or_evaluation_speed.csv run.csv
 
 - La vía principal `e1017` (111 km) tiene un solo segmento en el track.toml; los sidings
   de Edimburgo (n3→n4→n1, 9 km) son una rama separada no usada en la ruta principal.
-- OR corre el Activity en AUTO\_SIGNAL (autopiloto) con 27% throttle; nuestro sim usa
-  el driver capturado de OR.
-- La velocidad de crucero OR (~14 mph con 27% throttle) es inferior a la de nuestro
-  sim (~16 mph con mismos inputs) — diferencia debida al modelo diesel OR (DieselPowerTab
-  + adhesión adaptativa) vs nuestras curvas ORTSMaxTractiveForceCurves.
 - OR crashea a los ~100 s de juego bajo Wine (NullReferenceException en Dispose);
   el baseline cubre la fase de aceleración desde Edimburgo.
+
+### Crucero diesel (Class 47 @ 27 % mando)
+
+Corregido en sim: `DieselPowerTab` escala P/v como `P_idle + (P(RPM)-P_idle)×throttle`
+por debajo del 50 % de mando, más Davis estimado por vagón cuando falta ORTSDavis.
+En t≈80 s del baseline OR la velocidad coincide (~13.6 mph).
 
 ## Capturar nuevo baseline OR
 

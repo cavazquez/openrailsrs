@@ -111,7 +111,8 @@ impl From<EngineFile> for Locomotive {
                 points: value.traction_curve,
             })
         };
-        let diesel_traction = if value.diesel_notch_curves.is_empty() {
+        let legacy_diesel = value.diesel_notch_curves.is_empty();
+        let diesel_traction = if legacy_diesel {
             if value.max_power_w > 0.0 && value.max_tractive_effort_n > 0.0 {
                 let continuous = if value.max_continuous_force_n > 0.0 {
                     value.max_continuous_force_n
@@ -192,10 +193,15 @@ impl From<EngineFile> for Locomotive {
             Some(Box::new(model))
         };
         let steam = value.steam.map(msts_steam_to_params);
-        let davis = DavisCoefficients {
+        let parsed_davis = DavisCoefficients {
             a_n: value.davis_a_n,
             b_n_per_mps: value.davis_b_n_per_mps,
             c_n_per_mps2: value.davis_c_n_per_mps2,
+        };
+        let davis = if legacy_diesel {
+            parsed_davis
+        } else {
+            crate::davis_est::resolve_davis_coefficients(parsed_davis, value.mass_kg, true)
         };
         Self {
             name: value.name,
@@ -223,11 +229,15 @@ impl From<WagonFile> for Wagon {
             mass_kg: value.mass_kg,
             max_brake_force_n: value.max_brake_force_n,
             length_m: value.length_m,
-            davis: DavisCoefficients {
-                a_n: value.davis_a_n,
-                b_n_per_mps: value.davis_b_n_per_mps,
-                c_n_per_mps2: value.davis_c_n_per_mps2,
-            },
+            davis: crate::davis_est::resolve_davis_coefficients(
+                DavisCoefficients {
+                    a_n: value.davis_a_n,
+                    b_n_per_mps: value.davis_b_n_per_mps,
+                    c_n_per_mps2: value.davis_c_n_per_mps2,
+                },
+                value.mass_kg,
+                false,
+            ),
             wagon_shape: value.wagon_shape,
         }
     }

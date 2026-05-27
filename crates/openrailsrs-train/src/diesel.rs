@@ -295,12 +295,22 @@ impl DieselTractionModel {
     }
 
     /// Shaft power at `current_rpm` and `throttle`, including legacy P/v fallback.
+    ///
+    /// With a [`DieselEngineParams`] model, OR scales shaft power between idle and
+    /// `DieselPowerTab(RPM)` at partial throttle; near notch power the tab maximum applies.
     pub fn effective_power_w(&self, current_rpm: f64, throttle: f64) -> f64 {
-        let from_engine = self.engine_power_w(current_rpm);
-        if from_engine < f64::MAX {
-            return from_engine;
+        let t = throttle.clamp(0.0, 1.0);
+        match &self.engine {
+            Some(e) => {
+                let at_rpm = e.power_at_rpm(current_rpm);
+                if t >= 0.5 {
+                    return at_rpm;
+                }
+                let at_idle = e.power_at_rpm(e.idle_rpm);
+                at_idle + (at_rpm - at_idle).max(0.0) * t
+            }
+            None => self.max_power_w.unwrap_or(0.0) * t,
         }
-        self.max_power_w.unwrap_or(0.0) * throttle.clamp(0.0, 1.0)
     }
 
     /// Advance the engine RPM one step; no-op when no engine params.
@@ -403,6 +413,29 @@ mod tests {
         m.calibrate_effort_scale(20_000.0);
         assert!(m.effort_scale < 1.0);
         assert!((m.force_at(0.0, 1.0) - 80_000.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn effective_power_scales_with_throttle_when_engine_present() {
+        let engine = DieselEngineParams {
+            power_tab: vec![(325.0, 100_000.0), (1500.0, 500_000.0)],
+            throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 1500.0)],
+            idle_rpm: 325.0,
+            max_rpm: 1500.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 0.0,
+            rate_of_change_down_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            change_down_rpm_ps: 0.0,
+        };
+        let mut m = sample_model();
+        m.engine = Some(Box::new(engine));
+        let idle = m.effective_power_w(1500.0, 0.0);
+        let full = m.effective_power_w(1500.0, 1.0);
+        let partial = m.effective_power_w(1500.0, 0.27);
+        assert!((idle - 100_000.0).abs() < 1.0);
+        assert!((full - 500_000.0).abs() < 1.0);
+        assert!(partial > idle && partial < full, "partial={partial}");
     }
 
     #[test]

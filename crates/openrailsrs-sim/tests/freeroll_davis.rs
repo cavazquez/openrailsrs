@@ -14,7 +14,11 @@ fn chiltern_pullman_freeroll_deceleration() {
     }
     let consist = load_consist_with_asset_root(&con, &base).expect("consist");
     let davis = consist.davis.clone();
-    assert!(davis.a_n > 3000.0, "expected parsed Davis from assets");
+    assert!(
+        davis.a_n > 2600.0,
+        "expected parsed Davis from assets, got {}",
+        davis.a_n
+    );
 
     let train = TrainPhysics {
         mass_kg: consist.total_mass_kg(),

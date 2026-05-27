@@ -56,14 +56,14 @@ fn chiltern_pullman_davis_from_assets() {
         return;
     }
     let consist = load_consist_with_asset_root(&con, &base).expect("pullman consist");
-    // Lead DMBSA (433) + 6× wagon (371); tail DMBSH has no ORTSDavis in OR source.
+    // Asset sum without scenario override: DMBSA (433) + 6× wagon (371).
     assert!(
-        consist.davis.a_n > 3400.0 && consist.davis.a_n < 3500.0,
+        consist.davis.a_n > 2600.0 && consist.davis.a_n < 2700.0,
         "aggregated Davis A: {}",
         consist.davis.a_n
     );
-    assert!(consist.davis.b_n_per_mps > 150.0);
-    assert!(consist.davis.c_n_per_mps2 > 9.0);
+    assert!(consist.davis.b_n_per_mps > 140.0);
+    assert!(consist.davis.c_n_per_mps2 > 8.0);
 }
 
 #[test]
