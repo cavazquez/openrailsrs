@@ -143,6 +143,9 @@ pub struct Locomotive {
     pub length_m: f64,
     /// Per-vehicle Davis rolling resistance (summed across the consist).
     pub davis: DavisCoefficients,
+    /// OR brake shoe type / optional user μ(v) curve.
+    pub brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType,
+    pub brake_shoe_friction: Option<openrailsrs_formats::BrakeShoeFrictionCurve>,
 }
 
 #[derive(Clone, Debug)]
@@ -156,6 +159,9 @@ pub struct Wagon {
     pub davis: DavisCoefficients,
     /// Visual shape filename from the `.wag` file.
     pub wagon_shape: Option<String>,
+    /// OR brake shoe type / optional user μ(v) curve.
+    pub brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType,
+    pub brake_shoe_friction: Option<openrailsrs_formats::BrakeShoeFrictionCurve>,
 }
 
 #[derive(Clone, Debug)]

@@ -6,6 +6,7 @@ use crate::msts_units::{
 };
 use crate::units::kmh_to_mps;
 
+use super::brake_shoe::{BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe};
 use super::friction::parse_orts_friction_fields;
 use super::{
     OrtsFrictionFields, atom_to_number, atom_to_string, find_list_value,
@@ -93,6 +94,8 @@ pub struct EngineFile {
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
     pub friction: OrtsFrictionFields,
+    pub brake_shoe_type: OrtsBrakeShoeType,
+    pub brake_shoe_friction: Option<BrakeShoeFrictionCurve>,
 }
 
 impl EngineFile {
@@ -304,6 +307,7 @@ impl EngineFile {
         .unwrap_or(0.0);
         let diesel_reverse_throttle_rpm_tab = parse_reverse_throttle_rpm_tab(ast);
         let friction = parse_orts_friction_fields(ast, true, &name);
+        let (brake_shoe_type, brake_shoe_friction) = parse_orts_brake_shoe(ast);
 
         Ok(Self {
             name,
@@ -350,6 +354,8 @@ impl EngineFile {
             length_m,
             steam,
             friction,
+            brake_shoe_type,
+            brake_shoe_friction,
         })
     }
 }

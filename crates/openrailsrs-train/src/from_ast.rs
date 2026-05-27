@@ -289,6 +289,8 @@ impl From<EngineFile> for Locomotive {
             wagon_shape: value.wagon_shape,
             length_m: value.length_m,
             davis,
+            brake_shoe_type: value.brake_shoe_type,
+            brake_shoe_friction: value.brake_shoe_friction,
         }
     }
 }
@@ -311,6 +313,8 @@ impl From<WagonFile> for Wagon {
                 &value.friction,
             ),
             wagon_shape: value.wagon_shape,
+            brake_shoe_type: value.brake_shoe_type,
+            brake_shoe_friction: value.brake_shoe_friction,
         }
     }
 }

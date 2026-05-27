@@ -1,4 +1,5 @@
 mod activity;
+mod brake_shoe;
 mod consist;
 mod engine;
 mod friction;
@@ -12,6 +13,9 @@ mod world;
 
 pub use activity::{
     ActivityFile, ActivityObjectDef, RestrictedZone, SoundRegionOverride, TrafficServiceDef,
+};
+pub use brake_shoe::{
+    BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe, resolve_brake_shoe_curve,
 };
 pub use consist::{ConsistEntry, ConsistFile};
 pub use engine::{EngineFile, MstsSteamFields};

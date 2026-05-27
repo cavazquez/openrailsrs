@@ -248,6 +248,9 @@ pub struct SimulationSection {
     /// Train-air dump time (s) after driver full release when lap-hold is enabled.
     #[serde(default = "default_train_air_full_release_s")]
     pub train_air_full_release_s: f64,
+    /// Scale wheel-rim brake force by μ(v)/μ(0) from OR shoe curves (OR-P6b).
+    #[serde(default)]
+    pub brake_shoe_speed_factor: bool,
 }
 
 fn default_train_air_full_release_s() -> f64 {

@@ -11,6 +11,9 @@
 //! For a single-vehicle consist (locomotive only), the propagation delay is
 //! zero and the behaviour is identical to the previous instantaneous model.
 
+use openrailsrs_formats::{BrakeShoeFrictionCurve, resolve_brake_shoe_curve};
+use openrailsrs_train::{Consist, Vehicle};
+
 /// State of one brake cylinder.
 #[derive(Clone, Debug, PartialEq)]
 pub enum BrakeState {
@@ -45,11 +48,86 @@ pub struct BrakeCylinder {
     release_ramp_rate_n_per_s: f64,
     /// Train-air latch: lap release does not reduce wagon cylinder command until driver hits 0.
     latched_command: f64,
+    /// μ(v)/μ(0) curve for OR-P6b (identity = constant force vs speed).
+    shoe_friction: BrakeShoeFrictionCurve,
+}
+
+/// Per-vehicle brake cylinder specification for [`BrakeSystem`].
+#[derive(Clone, Debug)]
+pub struct BrakeVehicleSpec {
+    pub position_m: f64,
+    pub max_force_n: f64,
+    pub ep_instant: bool,
+    pub shoe_friction: BrakeShoeFrictionCurve,
+}
+
+const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
+
+/// Build per-vehicle brake specs from a loaded consist.
+pub fn vehicle_specs_from_consist(
+    consist: &Consist,
+    shoe_speed_factor: bool,
+) -> Vec<BrakeVehicleSpec> {
+    let mut pos = 0.0_f64;
+    consist
+        .vehicles
+        .iter()
+        .map(|v| {
+            let cylinder_pos = pos;
+            let length_m = match v {
+                Vehicle::Loco(l) => {
+                    if l.length_m > 0.0 {
+                        l.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+                Vehicle::Wagon(w) => {
+                    if w.length_m > 0.0 {
+                        w.length_m
+                    } else {
+                        DEFAULT_VEHICLE_LENGTH_M
+                    }
+                }
+            };
+            pos += length_m;
+            let (force_n, ep, shoe_type, user_curve) = match v {
+                Vehicle::Loco(l) => (
+                    l.max_brake_force_n,
+                    true,
+                    &l.brake_shoe_type,
+                    &l.brake_shoe_friction,
+                ),
+                Vehicle::Wagon(w) => (
+                    w.max_brake_force_n,
+                    false,
+                    &w.brake_shoe_type,
+                    &w.brake_shoe_friction,
+                ),
+            };
+            let shoe_friction = if shoe_speed_factor {
+                resolve_brake_shoe_curve(shoe_type, user_curve)
+            } else {
+                BrakeShoeFrictionCurve::identity()
+            };
+            BrakeVehicleSpec {
+                position_m: cylinder_pos,
+                max_force_n: force_n,
+                ep_instant: ep,
+                shoe_friction,
+            }
+        })
+        .collect()
 }
 
 impl BrakeCylinder {
     /// Create a new charged (released) cylinder.
-    pub fn new(position_m: f64, max_force_n: f64, ep_instant: bool) -> Self {
+    pub fn new(
+        position_m: f64,
+        max_force_n: f64,
+        ep_instant: bool,
+        shoe_friction: openrailsrs_formats::BrakeShoeFrictionCurve,
+    ) -> Self {
         // Release: EP ~2.5 s; wagons ~8 s (OR pipe recharge). Fast bleed on full release when lap-hold enabled.
         let (apply_time_s, release_time_s) = if ep_instant { (0.15, 2.5) } else { (0.5, 8.0) };
         Self {
@@ -62,7 +140,13 @@ impl BrakeCylinder {
             apply_ramp_rate_n_per_s: max_force_n / apply_time_s,
             release_ramp_rate_n_per_s: max_force_n / release_time_s,
             latched_command: 0.0,
+            shoe_friction,
         }
+    }
+
+    /// Wheel-rim braking force after shoe μ(v) scaling.
+    pub fn effective_force_n(&self, speed_mps: f64) -> f64 {
+        self.current_force_n * self.shoe_friction.speed_factor(speed_mps)
     }
 
     /// Driver command this cylinder responds to (EP follows handle; train air holds during lap release).
@@ -103,6 +187,33 @@ impl BrakeSystem {
     }
 
     /// Build a system with optional train-air lap-release hold (see `train_air_lap_hold`).
+    pub fn from_vehicle_specs(
+        vehicles: &[BrakeVehicleSpec],
+        pipe_speed_mps: f64,
+        train_air_lap_hold: bool,
+        train_air_full_release_s: f64,
+    ) -> Self {
+        let cylinders = vehicles
+            .iter()
+            .map(|v| {
+                BrakeCylinder::new(
+                    v.position_m,
+                    v.max_force_n,
+                    v.ep_instant,
+                    v.shoe_friction.clone(),
+                )
+            })
+            .collect();
+        Self {
+            cylinders,
+            pipe_speed_mps,
+            prev_command: 0.0,
+            train_air_lap_hold,
+            train_air_full_release_s: train_air_full_release_s.max(0.5),
+        }
+    }
+
+    /// Backward-compatible builder (identity μ(v) curve).
     pub fn from_vehicles_with_options(
         vehicles: &[(f64, f64, bool)],
         pipe_speed_mps: f64,
@@ -118,17 +229,21 @@ impl BrakeSystem {
         train_air_lap_hold: bool,
         train_air_full_release_s: f64,
     ) -> Self {
-        let cylinders = vehicles
+        let specs: Vec<BrakeVehicleSpec> = vehicles
             .iter()
-            .map(|&(pos, force, ep)| BrakeCylinder::new(pos, force, ep))
+            .map(|&(pos, force, ep)| BrakeVehicleSpec {
+                position_m: pos,
+                max_force_n: force,
+                ep_instant: ep,
+                shoe_friction: BrakeShoeFrictionCurve::identity(),
+            })
             .collect();
-        Self {
-            cylinders,
+        Self::from_vehicle_specs(
+            &specs,
             pipe_speed_mps,
-            prev_command: 0.0,
             train_air_lap_hold,
-            train_air_full_release_s: train_air_full_release_s.max(0.5),
-        }
+            train_air_full_release_s,
+        )
     }
 
     /// Advance the brake system by `dt` seconds given driver `command` in [0, 1].
@@ -200,9 +315,20 @@ impl BrakeSystem {
         }
     }
 
-    /// Sum of all cylinder forces at the current instant (N).
-    pub fn total_force_n(&self) -> f64 {
-        self.cylinders.iter().map(|c| c.current_force_n).sum()
+    /// Sum of all cylinder forces at the current instant (N), scaled by μ(v).
+    pub fn total_force_n(&self, speed_mps: f64) -> f64 {
+        self.cylinders
+            .iter()
+            .map(|c| c.effective_force_n(speed_mps))
+            .sum()
+    }
+
+    /// Per-cylinder wheel-rim force (N) after shoe μ(v) scaling.
+    pub fn cylinder_forces_n(&self, speed_mps: f64) -> Vec<f64> {
+        self.cylinders
+            .iter()
+            .map(|c| c.effective_force_n(speed_mps))
+            .collect()
     }
 
     /// Maximum total force when fully applied (N).

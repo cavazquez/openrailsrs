@@ -31,40 +31,11 @@ fn build_brake_system(
     consist: &openrailsrs_train::Consist,
     train_air_lap_hold: bool,
     train_air_full_release_s: f64,
+    brake_shoe_speed_factor: bool,
 ) -> BrakeSystem {
-    const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
-    let mut pos = 0.0_f64;
-    let pairs: Vec<(f64, f64, bool)> = consist
-        .vehicles
-        .iter()
-        .map(|v| {
-            let cylinder_pos = pos;
-            let length_m = match v {
-                openrailsrs_train::Vehicle::Loco(l) => {
-                    if l.length_m > 0.0 {
-                        l.length_m
-                    } else {
-                        DEFAULT_VEHICLE_LENGTH_M
-                    }
-                }
-                openrailsrs_train::Vehicle::Wagon(w) => {
-                    if w.length_m > 0.0 {
-                        w.length_m
-                    } else {
-                        DEFAULT_VEHICLE_LENGTH_M
-                    }
-                }
-            };
-            pos += length_m;
-            let (force_n, ep) = match v {
-                openrailsrs_train::Vehicle::Loco(l) => (l.max_brake_force_n, true),
-                openrailsrs_train::Vehicle::Wagon(w) => (w.max_brake_force_n, false),
-            };
-            (cylinder_pos, force_n, ep)
-        })
-        .collect();
-    BrakeSystem::from_vehicles_with_release(
-        &pairs,
+    let specs = crate::brake::vehicle_specs_from_consist(consist, brake_shoe_speed_factor);
+    BrakeSystem::from_vehicle_specs(
+        &specs,
         BRAKE_PIPE_SPEED_MPS,
         train_air_lap_hold,
         train_air_full_release_s,
@@ -293,6 +264,7 @@ pub fn run_scenario_headless_with_driver(
         &consist,
         scenario.simulation.train_air_lap_hold,
         scenario.simulation.train_air_full_release_s,
+        scenario.simulation.brake_shoe_speed_factor,
     );
     let init = driver.initial_inputs();
     let brake_frac = train_physics

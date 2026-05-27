@@ -85,38 +85,8 @@ fn auto_decide(vel_mps: f64, speed_limit_mps: f64) -> (f64, f64) {
 const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
 
 fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
-    const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
-    let mut pos = 0.0_f64;
-    let pairs: Vec<(f64, f64, bool)> = consist
-        .vehicles
-        .iter()
-        .map(|v| {
-            let cylinder_pos = pos;
-            let length_m = match v {
-                openrailsrs_train::Vehicle::Loco(l) => {
-                    if l.length_m > 0.0 {
-                        l.length_m
-                    } else {
-                        DEFAULT_VEHICLE_LENGTH_M
-                    }
-                }
-                openrailsrs_train::Vehicle::Wagon(w) => {
-                    if w.length_m > 0.0 {
-                        w.length_m
-                    } else {
-                        DEFAULT_VEHICLE_LENGTH_M
-                    }
-                }
-            };
-            pos += length_m;
-            let (force_n, ep) = match v {
-                openrailsrs_train::Vehicle::Loco(l) => (l.max_brake_force_n, true),
-                openrailsrs_train::Vehicle::Wagon(w) => (w.max_brake_force_n, false),
-            };
-            (cylinder_pos, force_n, ep)
-        })
-        .collect();
-    BrakeSystem::from_vehicles(&pairs, BRAKE_PIPE_SPEED_MPS)
+    let specs = crate::brake::vehicle_specs_from_consist(consist, false);
+    BrakeSystem::from_vehicle_specs(&specs, BRAKE_PIPE_SPEED_MPS, false, 3.0)
 }
 
 fn build_brake_from_path(consist_path: &Path) -> BrakeSystem {

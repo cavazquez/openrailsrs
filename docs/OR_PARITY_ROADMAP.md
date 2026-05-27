@@ -223,14 +223,14 @@ flowchart LR
 **Gap actual:**
 
 - OR: `MSTSBrakeSystem`, tipos de zapata (Karwatzki), blending DB/fricción, skid, `BrakeShoeCoefficientFriction` vs velocidad.
-- Nosotros: cilindros con rampa fija + `BrakeCommandMapping` (121 PSI → cilindro).
+- Nosotros: cilindros con rampa fija + `BrakeCommandMapping` (121 PSI → cilindro); μ(v) opcional vía `brake_shoe_speed_factor` (P6b).
 
 **Implementación (incremental):**
 
 | Sub-fase | Alcance |
 |----------|---------|
 | P6a | Presión de cilindro como estado (0–max PSI), no fuerza directa; mapeo driver → reducción tubo |
-| P6b | Coeficiente de zapata vs velocidad (curvas Karwatzki para Cast Iron / HFC / Disc) |
+| P6b | ✅ Coeficiente de zapata vs velocidad (`ORTSBrakeShoeType` / `ORTSBrakeShoeFriction`, μ(v)/μ(0) en cilindros) |
 | P6c | Skid limit: `min(force, mass × g × skid_friction)` |
 | P6d | Blending con freno dinámico (requiere OR-P10) |
 
@@ -239,6 +239,7 @@ flowchart LR
 - [ ] Experimento A (costa libre tras frenada fuerte): perfil v(t) post-suelta freno dentro de 0.5 m/s RMS vs OR
 - [ ] Chiltern fase 0–40 s (frenos al inicio): mejora posición max sin empeorar velocidad global
 - [x] OR-P6a parcial: precarga cilindros + lap hold train-air + `train_air_full_release_s` (Chiltern global ~0.39 m/s; 0–30 s ~0.54; 40–65 s ~0.33)
+- [x] OR-P6b: parseo shoe type/curva + `F_efectiva(v) = F_cilindro × μ(v)/μ(0)`; flag `brake_shoe_speed_factor` en Chiltern (sin regresión en umbrales actuales)
 
 **Estimación:** P6a–c: 1–2 semanas.
 

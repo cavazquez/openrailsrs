@@ -192,7 +192,7 @@ pub fn step(
         .command_to_cylinder_fraction(state.brake);
     state.brake_system.step(brake_frac, dt);
     let f_brake = if !state.brake_system.cylinders.is_empty() {
-        state.brake_system.total_force_n()
+        state.brake_system.total_force_n(v)
     } else {
         brake_frac * train.max_brake_n
     };
@@ -208,11 +208,15 @@ pub fn step(
     let v_new = if !state.vehicles.is_empty() {
         // Per-vehicle brake and grade+resist forces (split proportionally by mass).
         let total_mass = effective_mass;
-        let brake_forces: Vec<f64> = state
-            .vehicle_masses
-            .iter()
-            .map(|m| f_brake * m / total_mass)
-            .collect();
+        let brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
+            state.brake_system.cylinder_forces_n(v)
+        } else {
+            state
+                .vehicle_masses
+                .iter()
+                .map(|m| f_brake * m / total_mass)
+                .collect()
+        };
         let grade_resist: Vec<f64> = state
             .vehicle_masses
             .iter()

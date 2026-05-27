@@ -2,6 +2,7 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::msts_units::{parse_force_n, parse_length_m, parse_mass_kg};
 
+use super::brake_shoe::{BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe};
 use super::friction::parse_orts_friction_fields;
 use super::{
     OrtsFrictionFields, atom_to_number, atom_to_string, find_list_value,
@@ -18,6 +19,8 @@ pub struct WagonFile {
     pub davis_c_n_per_mps2: f64,
     pub wagon_shape: Option<String>,
     pub friction: OrtsFrictionFields,
+    pub brake_shoe_type: OrtsBrakeShoeType,
+    pub brake_shoe_friction: Option<BrakeShoeFrictionCurve>,
 }
 
 impl WagonFile {
@@ -41,6 +44,7 @@ impl WagonFile {
         let wagon_shape = find_optional_string_field(ast, &["WagonShape", "Shape"], context)?;
         let (davis_a_n, davis_b_n_per_mps, davis_c_n_per_mps2) = parse_orts_davis(ast);
         let friction = parse_orts_friction_fields(ast, false, &name);
+        let (brake_shoe_type, brake_shoe_friction) = parse_orts_brake_shoe(ast);
         Ok(Self {
             name,
             mass_kg,
@@ -51,6 +55,8 @@ impl WagonFile {
             davis_c_n_per_mps2,
             wagon_shape,
             friction,
+            brake_shoe_type,
+            brake_shoe_friction,
         })
     }
 }

@@ -136,6 +136,7 @@ pub fn import_activity_with_summary(
             legacy_power_cap: true,
             train_air_lap_hold: false,
             train_air_full_release_s: 3.0,
+            brake_shoe_speed_factor: false,
         },
         output: OutputSection {
             csv: "run.csv".to_string(),

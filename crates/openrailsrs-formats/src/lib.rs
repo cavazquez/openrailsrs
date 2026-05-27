@@ -23,14 +23,15 @@ pub use msts_units::{
 };
 pub use parser::{parse, parse_first, parse_from_first_paren};
 pub use typed::{
-    ActivityFile, ActivityObjectDef, ConsistEntry, ConsistFile, DistanceLevel, ElevationGrid,
-    EngineFile, FeatureGrid, LodControl, Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType,
-    OrtsFrictionFields, OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive,
-    RestrictedZone, RouteFile, ShapeFile, SignalAspectKind, SoundRegionOverride, SubObject,
-    TerrainFile, TerrainMeshData, TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader,
-    TerrainTexSlot, TerrainUvCalc, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackDbNode,
-    TrackNodeKind, TrafficServiceDef, Vec2, Vec3, WagonFile, WorldFile, WorldItem,
-    build_patch_mesh_data, build_patch_mesh_data_ex, build_tile_mesh_data,
-    parse_orts_friction_fields, patch_affine_uv, read_f_raw, read_y_raw,
+    ActivityFile, ActivityObjectDef, BrakeShoeFrictionCurve, ConsistEntry, ConsistFile,
+    DistanceLevel, ElevationGrid, EngineFile, FeatureGrid, LodControl, Matrix43, MstsSteamFields,
+    NamedMatrix, OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType,
+    PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile, ShapeFile,
+    SignalAspectKind, SoundRegionOverride, SubObject, TerrainFile, TerrainMeshData, TerrainPatch,
+    TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
+    TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind, TrafficServiceDef, Vec2, Vec3,
+    WagonFile, WorldFile, WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex,
+    build_tile_mesh_data, parse_orts_brake_shoe, parse_orts_friction_fields, patch_affine_uv,
+    read_f_raw, read_y_raw, resolve_brake_shoe_curve,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};
