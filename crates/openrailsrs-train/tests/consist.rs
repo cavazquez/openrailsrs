@@ -56,9 +56,9 @@ fn chiltern_pullman_davis_from_assets() {
         return;
     }
     let consist = load_consist_with_asset_root(&con, &base).expect("pullman consist");
-    // Asset sum without scenario override: DMBSA (433) + 6× wagon (371).
+    // DMBSA (433 explicit) + 6× wagon (371 explicit) + DMBSH auto-friction (~556 A).
     assert!(
-        consist.davis.a_n > 2600.0 && consist.davis.a_n < 2700.0,
+        consist.davis.a_n > 3100.0 && consist.davis.a_n < 3350.0,
         "aggregated Davis A: {}",
         consist.davis.a_n
     );

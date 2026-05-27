@@ -1,5 +1,6 @@
 //! Train/consist model built from MSTS-style `.eng`, `.wag`, `.con` AST.
 
+pub mod auto_friction;
 pub mod davis_est;
 pub mod diesel;
 pub mod error;

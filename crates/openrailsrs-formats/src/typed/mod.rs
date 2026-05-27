@@ -1,6 +1,7 @@
 mod activity;
 mod consist;
 mod engine;
+mod friction;
 mod path;
 mod route;
 mod shape;
@@ -14,6 +15,9 @@ pub use activity::{
 };
 pub use consist::{ConsistEntry, ConsistFile};
 pub use engine::{EngineFile, MstsSteamFields};
+pub use friction::{
+    OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
+};
 pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
 pub use shape::{

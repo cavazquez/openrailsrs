@@ -6,8 +6,10 @@ use crate::msts_units::{
 };
 use crate::units::kmh_to_mps;
 
+use super::friction::parse_orts_friction_fields;
 use super::{
-    atom_to_number, atom_to_string, find_list_value, find_optional_string_field, walk_lists_find,
+    OrtsFrictionFields, atom_to_number, atom_to_string, find_list_value,
+    find_optional_string_field, walk_lists_find,
 };
 
 /// Optional MSTS steam parameters parsed from `.eng` (mapped to `SteamParams` in train crate).
@@ -69,6 +71,7 @@ pub struct EngineFile {
     pub wagon_shape: Option<String>,
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
+    pub friction: OrtsFrictionFields,
 }
 
 impl EngineFile {
@@ -192,6 +195,8 @@ impl EngineFile {
         )?
         .unwrap_or(0.0);
 
+        let friction = parse_orts_friction_fields(ast, true, &name);
+
         Ok(Self {
             name,
             mass_kg,
@@ -224,6 +229,7 @@ impl EngineFile {
             wagon_shape,
             length_m,
             steam,
+            friction,
         })
     }
 }

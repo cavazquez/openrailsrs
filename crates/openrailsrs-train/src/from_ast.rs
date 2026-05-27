@@ -198,11 +198,12 @@ impl From<EngineFile> for Locomotive {
             b_n_per_mps: value.davis_b_n_per_mps,
             c_n_per_mps2: value.davis_c_n_per_mps2,
         };
-        let davis = if legacy_diesel {
-            parsed_davis
-        } else {
-            crate::davis_est::resolve_davis_coefficients(parsed_davis, value.mass_kg, true)
-        };
+        let davis = crate::davis_est::resolve_davis_coefficients(
+            parsed_davis,
+            value.mass_kg,
+            true,
+            &value.friction,
+        );
         Self {
             name: value.name,
             mass_kg: value.mass_kg,
@@ -237,6 +238,7 @@ impl From<WagonFile> for Wagon {
                 },
                 value.mass_kg,
                 false,
+                &value.friction,
             ),
             wagon_shape: value.wagon_shape,
         }
