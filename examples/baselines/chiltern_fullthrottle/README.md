@@ -2,7 +2,12 @@
 
 Experimento **B** de calibración: aceleración a pleno throttle desde parado en vía plana (Blue Pullman, **8 vehículos** en OR).
 
-> Baseline OR = multi-cuerpo; sim openrailsrs default = masa puntual. Revisión con `multi_body` recomendada (arranque / holgura). Ver [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
+> Baseline OR = multi-cuerpo; sim openrailsrs default = masa puntual. Revisión con `multi_body` **hecha** — arranque ~0.47 m/s RMS (≈ masa puntual). Ver [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
+
+```bash
+openrailsrs sim scenario_throttle100_multi_body.toml --driver driver_throttle100.csv
+cargo test -p openrailsrs-cli --test chiltern_fullthrottle_multi_body
+```
 
 ## Captura en Open Rails (Wine)
 
