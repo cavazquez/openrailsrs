@@ -1,9 +1,9 @@
 scenario_name = "0930 Edinburgh-Glasgow Queen Street"
 seed = 42
-duration_requested_s = 7200.0
+duration_requested_s = 100.0
 time_step_s = 1.0
-final_time_s = 7200.0
-final_odometer_m = 60758.36305359809
-final_velocity_mps = 8.972286360311196
-cumulative_energy_kwh = 19.32615874944255
+final_time_s = 100.0
+final_odometer_m = 227.99535715250266
+final_velocity_mps = 0.0
+cumulative_energy_kwh = 2.463801321946248
 reached_destination = false

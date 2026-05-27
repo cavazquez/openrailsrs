@@ -45,7 +45,7 @@ Los stubs de física en `trains/` se generaron desde los archivos MSTS originale
 cd examples/sce
 
 openrailsrs or-eval-driver ../baselines/sce_glasgow/or_evaluation_speed.csv \
-  --out driver_or.csv
+  --out driver_or.csv --scenario scenario.toml
 
 openrailsrs sim scenario.toml --driver driver_or.csv
 openrailsrs compare-or ../baselines/sce_glasgow/or_evaluation_speed.csv run.csv
