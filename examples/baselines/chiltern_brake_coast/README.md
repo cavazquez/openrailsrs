@@ -91,3 +91,5 @@ Sin baseline OR versionado, el test `validate_against_or_baseline` se omite.
 | Sim frena más que OR en 100–105 s | μ(v), skid, escala PSI cilindro |
 | Sim más lenta en costa 105–180 s | Davis, resistencia rodadura, bleed aire |
 | Sim más rápida en costa | Freno residual, μ(v) bajo |
+
+`run.csv` incluye **`brake_f_head_n`** y **`brake_f_tail_n`** (fuerza efectiva cilindro 0 y último vehículo) cuando el consist tiene cilindros registrados — útil para validar propagación sin captura OR adicional.

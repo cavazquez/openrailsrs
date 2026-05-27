@@ -213,6 +213,8 @@ pub fn run_scenario_multi_train(
             std::fs::create_dir_all(p)?;
         }
         let csv_file = File::create(&csv_path)?;
+        let brake_telemetry = !state.brake_system.cylinders.is_empty();
+        let has_steam = physics.steam_params.is_some();
         let stop_nodes: HashSet<String> = scenario
             .route
             .stops
@@ -228,7 +230,7 @@ pub fn run_scenario_multi_train(
             path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
-            csv_writer: RunCsvWriter::new(csv_file)?,
+            csv_writer: RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?,
             stop_nodes,
             signal_runtime,
             start_time_s: 0.0,
@@ -288,6 +290,8 @@ pub fn run_scenario_multi_train(
             std::fs::create_dir_all(p)?;
         }
         let csv_file = File::create(&csv_path)?;
+        let brake_telemetry = !state.brake_system.cylinders.is_empty();
+        let has_steam = physics.steam_params.is_some();
         let stop_nodes: HashSet<String> = entry.stops.iter().map(|s| s.node.clone()).collect();
         let signal_runtime: HashMap<String, SignalAspect> =
             graph.signals().map(|s| (s.id.clone(), s.aspect)).collect();
@@ -298,7 +302,7 @@ pub fn run_scenario_multi_train(
             path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
-            csv_writer: RunCsvWriter::new(csv_file)?,
+            csv_writer: RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?,
             stop_nodes,
             signal_runtime,
             start_time_s: entry.start_time_s,

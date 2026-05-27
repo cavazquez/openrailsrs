@@ -207,7 +207,7 @@ flowchart LR
 - [x] Test integración: tren 2 coches — retraso de aceleración del vagón vs loco visible vía `physics::step()` (`multi_body_integration`)
 - [x] Chiltern 136 s con multi_body + `time_step = 0.05`: RMS velocidad vs OR ~**0.52 m/s** (arranque 0–30 s ~0.26); test `chiltern_multi_body` (umbral 0.55)
 - [x] Chiltern 136 s multi_body: RMS ≤ 0.40 m/s vs OR (~0.39 con sub-pasos, `time_step = 1.0`)
-- [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire
+- [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire — **`brake_f_head_n` / `brake_f_tail_n` en `run.csv`** (sin baseline OR por cilindro aún)
 - [x] Experimento A costa multi-cuerpo: 115–180 s ~0.16 m/s RMS vs OR (`chiltern_brake_coast_multi_body`; masa puntual ~0.07)
 
 **Estimación:** 4–5 días.

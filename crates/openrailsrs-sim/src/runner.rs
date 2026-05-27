@@ -311,7 +311,9 @@ pub fn run_scenario_headless_with_driver(
     }
     let csv_file = File::create(&csv_path)?;
     let has_steam = train_physics.steam_params.is_some();
-    let mut csv_writer = RunCsvWriter::new_with_steam(csv_file, has_steam)?;
+    let brake_telemetry = !state.brake_system.cylinders.is_empty();
+    let mut csv_writer =
+        RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?;
     let mut events = Vec::new();
 
     // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.
