@@ -23,12 +23,6 @@ position = "straight"
 [train]
 consist = "consists/birmingham_pullman.con"
 
-[train.davis]
-# Effective resistance calibrated vs OR (legacy aggregate included default seed).
-a_n = 3088.0
-b_n_per_mps = 159.0
-c_n_per_mps2 = 9.1
-
 [gameplay]
 objective = "arrive"
 difficulty = "normal"

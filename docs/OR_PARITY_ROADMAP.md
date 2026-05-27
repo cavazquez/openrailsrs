@@ -124,7 +124,7 @@ flowchart LR
 
 - [ ] Vagón SCE MK2: A/B/C dentro de ±5 % vs OR `-verboseconfig`
 - [ ] SCE 100 s sigue pasando sin `[train.davis]` en escenario
-- [ ] Chiltern puede quitar override manual cuando Pullman + 6 coaches coincidan con OR
+- [x] Chiltern puede quitar override manual cuando Pullman + 6 coaches coincidan con OR (`chiltern_validate` sin `[train.davis]`)
 
 **Referencias OR:** PR [#1207 auto_friction](https://github.com/openrails/openrails/commit/d01848a), manual Physics § Davis.
 
