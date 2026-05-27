@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="openrailsrs — simulador ferroviario headless-first en Rust. Física, escenarios TOML, validación contra Open Rails y viewers 2D/3D.">
+  <title>openrailsrs — Simulador ferroviario en Rust</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="#">open<span>rails</span>rs</a>
+      <nav class="nav" aria-label="Principal">
+        <a href="#principios">Principios</a>
+        <a href="#caracteristicas">Características</a>
+        <a href="#crates">Crates</a>
+        <a href="#cli">CLI</a>
+        <a href="#ejemplos">Ejemplos</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <header class="hero">
+      <div class="hero-badges">
+        <span class="badge badge-rust">Rust stable</span>
+        <span class="badge">Linux-first</span>
+        <span class="badge">Headless-first</span>
+        <span class="badge">GPL-3.0</span>
+      </div>
+      <h1>Simulador ferroviario headless-first</h1>
+      <p class="lead">
+        <strong>openrailsrs</strong> es un simulador ferroviario pensado como videojuego de simulación,
+        con núcleo de física y lógica que corre sin gráficos. Escenarios en TOML, series temporales en CSV,
+        compatibilidad con contenido MSTS/Open Rails y validación cuantitativa contra Open Rails.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/cavazquez/openrailsrs">Ver en GitHub</a>
+        <a class="btn btn-secondary" href="#caracteristicas">Explorar características</a>
+      </div>
+    </header>
+
+    <section id="principios">
+      <h2>Principios de diseño</h2>
+      <p class="section-desc">
+        El proyecto prioriza reproducibilidad, tests y desacoplamiento: la simulación no depende del rendering.
+      </p>
+      <div class="principles">
+        <div class="principle">
+          <strong>Headless-first</strong>
+          <p>El motor físico y la CLI funcionan sin ventana ni GPU. Los viewers son crates aparte.</p>
+        </div>
+        <div class="principle">
+          <strong>Datos explícitos</strong>
+          <p>TOML para escenarios y rutas; CSV para trazas de simulación; salidas comparables en CI.</p>
+        </div>
+        <div class="principle">
+          <strong>Workspace modular</strong>
+          <p>Decenas de crates pequeños: parseo, grafo, tren, sim, juego, validación, viewers.</p>
+        </div>
+        <div class="principle">
+          <strong>Calibración OR</strong>
+          <p>Baselines de Open Rails (Chiltern, SCE) con <code>compare-or</code> y tests de regresión.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="caracteristicas">
+      <h2>Características del proyecto</h2>
+      <p class="section-desc">
+        Cada bloque resume una capacidad implementada o en curso. El estado refleja el repo a mayo 2026.
+      </p>
+
+      <div class="feature-grid">
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-formats</div>
+          <h3>Parseo MSTS / Open Rails <span class="status status-done">Hecho</span></h3>
+          <p>Lexer y AST para archivos S-expression de rutas y material rodante.</p>
+          <ul>
+            <li><code>.eng</code>, <code>.wag</code>, <code>.con</code>, <code>.trk</code></li>
+            <li>Encoding UTF-16, Latin-1 y UTF-8 automático</li>
+            <li>Curvas ORTS, Davis, diesel tabs, vapor MSTS</li>
+            <li>Shapes <code>.s</code>, texturas <code>.ace</code>, tiles <code>.w</code>, terreno <code>.y</code></li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-msts</div>
+          <h3>Importador MSTS <span class="status status-done">Hecho</span></h3>
+          <p>Convierte rutas y actividades reales a TOML jugable.</p>
+          <ul>
+            <li><code>import-msts</code>: <code>.tdb</code> → <code>track.toml</code></li>
+            <li>Actividad <code>.act</code> + path <code>.pat</code> → <code>scenario.toml</code></li>
+            <li>Señales desde TrItemTable, tráfico AI, zonas de velocidad</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-scenarios · route · track</div>
+          <h3>Rutas y escenarios <span class="status status-done">Hecho</span></h3>
+          <p>Grafo ferroviario tipado con señales, agujas y horarios.</p>
+          <ul>
+            <li><code>scenario.toml</code>: tren, paradas, gameplay, validación</li>
+            <li><code>track.toml</code>: nodos, aristas, pendiente, señales con scripts</li>
+            <li>BFS con agujas; overlays por escenario</li>
+            <li>Multi-tren con <code>[[extra_trains]]</code> y timetable</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-train</div>
+          <h3>Modelo del tren <span class="status status-partial">Profundizado</span></h3>
+          <p>Consists con física longitudinal realista.</p>
+          <ul>
+            <li>Resistencia Davis por vehículo (suma al consist)</li>
+            <li>Curvas <code>ORTSMaxTractiveForceCurves</code> por notch</li>
+            <li>Diesel: RPM, DieselPowerTab, adhesión Curtius-Kniffler</li>
+            <li>Vapor simplificado; regen y consumo diésel en EMU</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-sim</div>
+          <h3>Simulación headless <span class="status status-done">Hecho</span></h3>
+          <p>Bucle principal sin gráficos, reproducible y testeable.</p>
+          <ul>
+            <li>Integración longitudinal: tracción, Davis, pendiente, freno</li>
+            <li>AutoDriver y ScriptedDriver (CSV throttle/brake)</li>
+            <li>Estados: Normal, parada, dwell, señal en rojo</li>
+            <li>Multi-tren sincronizado con ocupación de bloques</li>
+            <li>Freno de aire Westinghouse; acopladores multi-cuerpo (opt-in)</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-game · campaign</div>
+          <h3>Capa de juego <span class="status status-done">Hecho</span></h3>
+          <p>Reglas, puntuación y progresión de misiones.</p>
+          <ul>
+            <li>Penalizaciones: retraso, parada omitida, overspeed</li>
+            <li><code>play-headless</code> y <code>outcome.toml</code></li>
+            <li>Campaña Mitre con unlock por score</li>
+            <li>Pasajeros y masa variable por parada</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-validate</div>
+          <h3>Validación y Open Rails <span class="status status-done">Hecho</span></h3>
+          <p>Comparación cuantitativa entre corridas y contra OR.</p>
+          <ul>
+            <li><code>compare</code> con umbrales RMS/max por columna</li>
+            <li><code>compare-or</code> vs baselines OR (<code>*Speed.csv</code>)</li>
+            <li><code>or-eval-driver</code>: traza OR → driver CSV</li>
+            <li>Hook automático en <code>sim</code> vía <code>[validate]</code></li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-import</div>
+          <h3>Rutas reales (OSM) <span class="status status-done">Hecho</span></h3>
+          <p>Topología desde OpenStreetMap sin MSTS.</p>
+          <ul>
+            <li>Overpass JSON → <code>track.toml</code></li>
+            <li>Línea Mitre (Buenos Aires): 22–28 km de escenarios</li>
+            <li>Estaciones, límites de velocidad, junctions automáticos</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-cli</div>
+          <h3>Herramientas de línea de comandos <span class="status status-done">Hecho</span></h3>
+          <p>Binario único <code>openrailsrs</code> para simular, comparar e inspeccionar.</p>
+          <ul>
+            <li><code>sim</code>, <code>sim-multi</code>, <code>cab</code>, <code>dispatch</code></li>
+            <li><code>inspect</code>, <code>graph</code>, <code>batch</code>, <code>timetable run</code></li>
+            <li>Assets: <code>shape-dump</code>, <code>ace-decode</code>, <code>world-dump</code></li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-export</div>
+          <h3>Debug sin gráficos <span class="status status-done">Hecho</span></h3>
+          <p>Visualizar rutas y replays en terminal.</p>
+          <ul>
+            <li>Export DOT, GeoJSON, mapa ASCII</li>
+            <li>Replay animado ANSI con barra de progreso</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-viewer</div>
+          <h3>Viewer 2D <span class="status status-done">Hecho</span></h3>
+          <p>Ventana minifb con topología y replay multi-tren.</p>
+          <ul>
+            <li>Señales coloreadas por aspecto</li>
+            <li>Animación desde CSV; controles de pausa y velocidad</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-viewer3d</div>
+          <h3>Viewer 3D (Bevy) <span class="status status-partial">Experimental</span></h3>
+          <p>Visualización 3D desacoplada del simulador.</p>
+          <ul>
+            <li>Grafo, señales, rolling stock con shapes MSTS</li>
+            <li>Terreno, bosque, vía dinámica, texturas ACE</li>
+            <li>Cámara orbit/fly/follow; replay desde escenario</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-audio</div>
+          <h3>Audio <span class="status status-done">Hecho</span></h3>
+          <p>Sonido sintetizado en cabina y regiones MSTS.</p>
+          <ul>
+            <li>Motor, freno y bocina (rodio, sin assets externos)</li>
+            <li>SoundRegions importadas desde actividad MSTS</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">Paridad Open Rails</div>
+          <h3>Calibración OR <span class="status status-partial">En curso</span></h3>
+          <p>Alineación física con el simulador de referencia.</p>
+          <ul>
+            <li>Chiltern Blue Pullman: ~0.28 m/s RMS @ 136 s</li>
+            <li>SCE Class 47: crucero y validación 100 s</li>
+            <li>Roadmap OR-P1…P15 documentado</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">Futuro</div>
+          <h3>Planeado <span class="status status-planned">Roadmap</span></h3>
+          <p>Capacidades identificadas en el análisis de paridad.</p>
+          <ul>
+            <li>Throttle aparente diesel, auto-friction CN completa</li>
+            <li>Multi-cuerpo activo en runner; frenos MSTS completos</li>
+            <li>Gearbox mecánico, freno dinámico, multijugador</li>
+            <li>Editor de rutas interactivo</li>
+          </ul>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="crates">
+      <h2>Arquitectura — crates</h2>
+      <p class="section-desc">Workspace Cargo modular bajo <code>crates/</code>.</p>
+      <div class="table-wrap">
+        <table class="crates-table">
+          <thead>
+            <tr>
+              <th>Crate</th>
+              <th>Responsabilidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>openrailsrs-core</td><td>Tipos compartidos (tiempo simulado, IDs)</td></tr>
+            <tr><td>openrailsrs-formats</td><td>Parseo MSTS/OR, shapes, terreno, encoding</td></tr>
+            <tr><td>openrailsrs-scenarios</td><td>Carga y validación de <code>scenario.toml</code></td></tr>
+            <tr><td>openrailsrs-route</td><td>Carga de <code>track.toml</code></td></tr>
+            <tr><td>openrailsrs-track</td><td>Grafo, señales, agujas, scripts de aspecto</td></tr>
+            <tr><td>openrailsrs-train</td><td>Locomotoras, vagones, consists, Davis, diesel</td></tr>
+            <tr><td>openrailsrs-sim</td><td>Física, runner, multi-runner, freno, acopladores</td></tr>
+            <tr><td>openrailsrs-game</td><td>Scoring, timetable, evaluación de partida</td></tr>
+            <tr><td>openrailsrs-validate</td><td>Comparación CSV y trazas Open Rails</td></tr>
+            <tr><td>openrailsrs-msts</td><td>Importación de rutas y actividades MSTS</td></tr>
+            <tr><td>openrailsrs-import</td><td>Import OSM → track.toml</td></tr>
+            <tr><td>openrailsrs-export</td><td>DOT, GeoJSON, replay textual/animado</td></tr>
+            <tr><td>openrailsrs-campaign</td><td>Misiones progresivas y progreso JSON</td></tr>
+            <tr><td>openrailsrs-audio</td><td>Audio sintetizado y regiones de sonido</td></tr>
+            <tr><td>openrailsrs-ace</td><td>Decoder de texturas MSTS ACE → PNG</td></tr>
+            <tr><td>openrailsrs-cli</td><td>Binario <code>openrailsrs</code></td></tr>
+            <tr><td>openrailsrs-viewer</td><td>Viewer 2D (minifb)</td></tr>
+            <tr><td>openrailsrs-viewer3d</td><td>Viewer 3D (Bevy)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="cli">
+      <h2>CLI — comandos esenciales</h2>
+      <p class="section-desc">Instalación: <code>cargo install --path crates/openrailsrs-cli</code></p>
+      <pre class="cli-block"><span class="comment"># Simulación headless</span>
+<span class="cmd">openrailsrs sim</span> examples/smoke/scenario.toml
+<span class="cmd">openrailsrs sim</span> examples/chiltern/scenario.toml --driver examples/chiltern/driver_or.csv
+
+<span class="comment"># Validación contra Open Rails</span>
+<span class="cmd">openrailsrs compare-or</span> examples/baselines/chiltern_birmingham/or_speed.csv run.csv
+<span class="cmd">openrailsrs or-eval-driver</span> baseline.csv --out driver_or.csv --scenario scenario.toml
+
+<span class="comment"># Modo juego y multi-tren</span>
+<span class="cmd">openrailsrs play-headless</span> examples/smoke/scenario.toml
+<span class="cmd">openrailsrs sim-multi</span> examples/smoke/scenario_multi.toml
+<span class="cmd">openrailsrs cab</span> examples/routes/mitre/scenario_retiro_victoria.toml --speed 10
+<span class="cmd">openrailsrs dispatch</span> examples/routes/mitre/scenario_retiro_victoria.toml
+
+<span class="comment"># Importación</span>
+<span class="cmd">openrailsrs import-msts</span> /ruta/msts --activity mi_actividad.act
+<span class="cmd">openrailsrs import-osm</span> overpass.json --out routes/mi_ruta/track.toml
+
+<span class="comment"># Calidad</span>
+<span class="cmd">./check.sh</span>   <span class="comment"># fmt + clippy + tests</span></pre>
+    </section>
+
+    <section id="ejemplos">
+      <h2>Escenarios de ejemplo</h2>
+      <p class="section-desc">Carpetas listas para simular y validar.</p>
+      <div class="examples-list">
+        <div class="example-item">
+          <strong>Smoke</strong>
+          <span>Pruebas rápidas, multi-tren, agujas</span>
+          <span class="example-path">examples/smoke/</span>
+        </div>
+        <div class="example-item">
+          <strong>Chiltern Birmingham</strong>
+          <span>Blue Pullman vs baseline Open Rails (136 s)</span>
+          <span class="example-path">examples/chiltern/</span>
+        </div>
+        <div class="example-item">
+          <strong>SCE Glasgow</strong>
+          <span>Class 47 + MK2, validación 100 s</span>
+          <span class="example-path">examples/sce/</span>
+        </div>
+        <div class="example-item">
+          <strong>Línea Mitre</strong>
+          <span>Retiro → Victoria / Tigre, campaña, cabina</span>
+          <span class="example-path">examples/routes/mitre/</span>
+        </div>
+        <div class="example-item">
+          <strong>Vapor</strong>
+          <span>Locomotora 2-8-0 Consolidation</span>
+          <span class="example-path">examples/steam/</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2>Documentación y roadmap</h2>
+      <p class="section-desc">
+        El desarrollo está organizado en fases numeradas. La paridad física con Open Rails tiene su propio plan.
+      </p>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3><a href="../ROADMAP.md">ROADMAP.md</a></h3>
+          <p>Fases 0–25 del simulador: parsers, sim, juego, viewers, MSTS, campaña.</p>
+        </article>
+        <article class="feature-card">
+          <h3><a href="../docs/OR_PARITY_ROADMAP.md">OR_PARITY_ROADMAP.md</a></h3>
+          <p>Plan OR-P1…P15: diesel, Davis CN, multi-cuerpo, frenos, señales, gearbox.</p>
+        </article>
+        <article class="feature-card">
+          <h3><a href="../CALIBRATION.md">CALIBRATION.md</a></h3>
+          <p>Estado de calibración Chiltern/SCE, bugs corregidos y experimentos OR.</p>
+        </article>
+        <article class="feature-card">
+          <h3><a href="../README.md">README.md</a></h3>
+          <p>Guía completa: instalación, formatos TOML, viewers, CI.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>openrailsrs</strong> — simulador ferroviario headless-first en Rust</p>
+    <p>Licencia <a href="https://www.gnu.org/licenses/gpl-3.0">GPL-3.0</a> ·
+       <a href="https://github.com/cavazquez/openrailsrs">GitHub</a></p>
+  </footer>
+</body>
+</html>
