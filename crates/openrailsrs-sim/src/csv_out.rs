@@ -22,8 +22,12 @@ const BASE_HEADERS: &[&str] = &[
 /// Extra columns appended when a steam boiler state is present.
 const STEAM_HEADERS: &[&str] = &["boiler_pressure_bar", "water_kg", "coal_kg"];
 
-/// Per-vehicle brake telemetry (head = vehicle 0, tail = last cylinder).
-const BRAKE_CYLINDER_HEADERS: &[&str] = &["brake_f_head_n", "brake_f_tail_n"];
+/// Per-vehicle brake telemetry (head, first train-air wagon, tail).
+const BRAKE_CYLINDER_HEADERS: &[&str] = &[
+    "brake_f_head_n",
+    "brake_f_train_air_n",
+    "brake_f_tail_n",
+];
 
 pub struct RunCsvWriter<W: Write> {
     inner: Writer<W>,
@@ -97,12 +101,20 @@ impl<W: Write> RunCsvWriter<W> {
         }
 
         if self.brake_cylinder_telemetry {
-            let forces = state
-                .brake_system
-                .cylinder_forces_n(state.velocity_mps.max(0.0));
+            let speed = state.velocity_mps.max(0.0);
+            let forces = state.brake_system.cylinder_forces_n(speed);
             let head = forces.first().copied().unwrap_or(0.0);
             let tail = forces.last().copied().unwrap_or(0.0);
+            let train_air = state
+                .brake_system
+                .cylinders
+                .iter()
+                .zip(forces.iter())
+                .find(|(cyl, _)| !cyl.ep_instant)
+                .map(|(_, f)| *f)
+                .unwrap_or(0.0);
             record.push(format!("{:.1}", head));
+            record.push(format!("{:.1}", train_air));
             record.push(format!("{:.1}", tail));
         }
 
@@ -142,8 +154,16 @@ mod tests {
                 position_m: 20.0,
                 max_force_n: 80_000.0,
                 ep_instant: false,
-                shoe_friction: shoe,
+                shoe_friction: shoe.clone(),
                 mass_kg: 40_000.0,
+                skid_adhesion_mu: 0.0,
+            },
+            BrakeVehicleSpec {
+                position_m: 40.0,
+                max_force_n: 100_000.0,
+                ep_instant: true,
+                shoe_friction: shoe,
+                mass_kg: 50_000.0,
                 skid_adhesion_mu: 0.0,
             },
         ];
@@ -162,9 +182,12 @@ mod tests {
         let lines: Vec<&str> = text.lines().collect();
         assert_eq!(lines.len(), 2);
         let fields: Vec<&str> = lines[1].split(',').collect();
-        let head: f64 = fields[fields.len() - 2].parse().unwrap();
+        let head: f64 = fields[fields.len() - 3].parse().unwrap();
+        let train_air: f64 = fields[fields.len() - 2].parse().unwrap();
         let tail: f64 = fields[fields.len() - 1].parse().unwrap();
         assert!(head > 90_000.0);
-        assert!(tail < head, "head EP should lead train-air tail at t=0");
+        assert!(train_air > 70_000.0);
+        assert!(tail > 90_000.0);
+        assert!(head > train_air + 5_000.0);
     }
 }

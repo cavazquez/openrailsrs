@@ -92,4 +92,14 @@ Sin baseline OR versionado, el test `validate_against_or_baseline` se omite.
 | Sim más lenta en costa 105–180 s | Davis, resistencia rodadura, bleed aire |
 | Sim más rápida en costa | Freno residual, μ(v) bajo |
 
-`run.csv` incluye **`brake_f_head_n`** y **`brake_f_tail_n`** (fuerza efectiva cilindro 0 y último vehículo) cuando el consist tiene cilindros registrados — útil para validar propagación sin captura OR adicional.
+`run.csv` incluye **`brake_f_head_n`**, **`brake_f_train_air_n`** (primer vagón train-air) y **`brake_f_tail_n`** cuando hay cilindros registrados.
+
+Análisis A1 (propagación cabeza → vagón sin EP):
+
+```bash
+openrailsrs sim scenario_brake_coast.toml --driver driver_brake_coast.csv
+python3 ../../scripts/analyze_brake_propagation.py run_brake_coast.csv
+cargo test -p openrailsrs-cli --test chiltern_brake_coast chiltern_brake_coast_a1_script_passes
+```
+
+En Pullman ambos motores (DMBSA/DMBSH) son **EP**; el retardo de tubo se ve en **`brake_f_train_air_n`**, no head vs tail.

@@ -133,7 +133,7 @@ fn chiltern_brake_coast_validate_against_or_baseline() {
 }
 
 #[test]
-fn chiltern_brake_coast_csv_logs_head_ahead_of_tail_during_apply() {
+fn chiltern_brake_coast_train_air_lags_head_during_apply() {
     let chiltern = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
     if !chiltern.join("track.toml").exists() {
         return;
@@ -150,34 +150,56 @@ fn chiltern_brake_coast_csv_logs_head_ahead_of_tail_during_apply() {
         .from_path(&run_csv)
         .expect("run csv");
     let headers = rdr.headers().expect("headers").clone();
-    let i_t = headers
-        .iter()
-        .position(|h| h == "time_s")
-        .expect("time_s");
+    let i_t = headers.iter().position(|h| h == "time_s").expect("time_s");
     let i_head = headers
         .iter()
         .position(|h| h == "brake_f_head_n")
         .expect("brake_f_head_n");
-    let i_tail = headers
+    let i_air = headers
         .iter()
-        .position(|h| h == "brake_f_tail_n")
-        .expect("brake_f_tail_n");
+        .position(|h| h == "brake_f_train_air_n")
+        .expect("brake_f_train_air_n");
 
-    let mut saw_head_leading = false;
+    let mut max_gap = 0.0_f64;
     for rec in rdr.records().flatten() {
         let t: f64 = rec.get(i_t).and_then(|s| s.parse().ok()).unwrap_or(0.0);
-        if !(100.0..=108.0).contains(&t) {
+        if !(100.0..=115.0).contains(&t) {
             continue;
         }
         let head: f64 = rec.get(i_head).and_then(|s| s.parse().ok()).unwrap_or(0.0);
-        let tail: f64 = rec.get(i_tail).and_then(|s| s.parse().ok()).unwrap_or(0.0);
-        if head > 5_000.0 && head > tail + 1_000.0 {
-            saw_head_leading = true;
-            break;
-        }
+        let air: f64 = rec.get(i_air).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        max_gap = max_gap.max(head - air);
     }
     assert!(
-        saw_head_leading,
-        "expected brake_f_head_n to lead brake_f_tail_n during 100–108 s apply window"
+        max_gap >= 10_000.0,
+        "head EP should lead first train-air wagon during apply, max gap {max_gap:.0} N"
+    );
+}
+
+#[test]
+fn chiltern_brake_coast_a1_script_passes() {
+    let chiltern = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    if !chiltern.join("track.toml").exists() {
+        return;
+    }
+    let run_csv = chiltern.join("run_brake_coast.csv");
+    if !run_csv.exists() {
+        let scenario_path = chiltern.join("scenario_brake_coast.toml");
+        let driver_path = chiltern.join("driver_brake_coast.csv");
+        let mut driver = ScriptedDriver::from_csv(&driver_path).expect("load driver");
+        run_from_scenario_file_with_driver(&scenario_path, &mut driver).expect("sim");
+    }
+
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/analyze_brake_propagation.py");
+    let output = std::process::Command::new("python3")
+        .arg(&script)
+        .arg(&run_csv)
+        .output()
+        .expect("run analyze_brake_propagation.py");
+    assert!(
+        output.status.success(),
+        "A1 script failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
 }
