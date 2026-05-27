@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use openrailsrs_train::load_consist_with_asset_root;
+use openrailsrs_train::{DieselTractionModel, load_consist_with_asset_root, load_engine_from_path};
 
 #[test]
 fn load_consist_from_fixture_dir() {
@@ -67,7 +67,7 @@ fn chiltern_pullman_davis_from_assets() {
 }
 
 #[test]
-fn chiltern_dmbsh_legacy_diesel() {
+fn chiltern_dmbsh_legacy_diesel_standalone() {
     let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSH.eng");
     if !p.exists() {
@@ -77,13 +77,40 @@ fn chiltern_dmbsh_legacy_diesel() {
     let diesel = loco.diesel_traction.as_ref().expect("legacy diesel model");
     assert!(
         diesel.engine.is_none(),
-        "DMBSH OR source has legacy P/v only (no ORTS tables)"
+        "standalone DMBSH .eng has legacy P/v only (no ORTS tables)"
     );
     assert_eq!(
         diesel.legacy_run_up_time_s,
         Some(30.0),
         "OR/MSTS RunUpTimeToMaxForce on trail motor"
     );
+}
+
+#[test]
+fn chiltern_dmbsh_orts_scaled_from_lead() {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    let lead_path = base.join("trains/RF_Blue_Pullman/RF_WP_DMBSA.eng");
+    let trail_path = base.join("trains/RF_Blue_Pullman/RF_WP_DMBSH.eng");
+    if !lead_path.exists() || !trail_path.exists() {
+        return;
+    }
+    let lead_loco = load_engine_from_path(&lead_path).expect("dmbSA");
+    let trail_loco = load_engine_from_path(&trail_path).expect("dmbSH");
+    let lead = lead_loco.diesel_traction.as_ref().expect("lead diesel");
+    let trail_legacy = trail_loco.diesel_traction.as_ref().expect("trail legacy");
+    let scaled = DieselTractionModel::from_lead_orts_scaled(
+        lead,
+        trail_loco.max_power_w,
+        trail_loco.max_tractive_effort_n,
+        trail_legacy.max_continuous_force_n,
+        trail_legacy.legacy_run_up_time_s,
+    )
+    .expect("scale trail from lead ORTS");
+    assert!(scaled.engine.is_some());
+    assert_eq!(scaled.legacy_run_up_time_s, Some(30.0));
+    assert!((scaled.max_rail_output_power_w - 1_000_000.0).abs() < 1.0);
+    assert!(scaled.effort_scale > 0.0 && scaled.effort_scale <= 1.0);
+    assert!((scaled.max_continuous_force_n - 130_000.0).abs() < 1.0);
 }
 
 #[test]
@@ -100,18 +127,21 @@ fn chiltern_pullman_two_engines_aggregate() {
         2,
         "expected two diesel engines in Blue Pullman consist"
     );
+    // Consist load keeps DMBSH on legacy P/v; ORTS scaling is opt-in via from_lead_orts_scaled.
+    let models = consist.diesel_traction_models();
+    assert_eq!(models.len(), 2);
+    assert!(
+        models[1].engine.is_none(),
+        "trail stays legacy unless explicitly upgraded"
+    );
     let f_dmbsa = models[0].force_at(0.0, 0.8);
     let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();
     assert!(
         f_combined > f_dmbsa * 1.3,
         "combined stall should exceed lead engine: {f_combined} vs {f_dmbsa}"
     );
-    // DMBSH legacy run-up limits early contribution vs instant full stall.
-    let rpm_dmbsh = models[1]
-        .engine
-        .as_ref()
-        .map(|e| e.target_rpm(0.8))
-        .unwrap_or(0.0);
-    let f_dmbsh = models[1].force_at_scaled(0.0, 0.8, rpm_dmbsh, 0.5, 0.0, true);
-    assert!(f_dmbsh < models[1].force_at(0.0, 0.8) * 0.6);
+    // DMBSH legacy P/v at full run-up (physics applies the 30 s ramp separately).
+    let f_dmbsh = models[1].force_at(0.0, 0.8);
+    assert!(f_dmbsh > 100_000.0);
+    assert!(f_combined > f_dmbsa * 1.1);
 }

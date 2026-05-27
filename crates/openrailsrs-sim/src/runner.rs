@@ -285,6 +285,8 @@ pub fn run_scenario_headless_with_driver(
             .collect();
         state.diesel_run_up = vec![0.0; train_physics.diesel_engines.len()];
         state.diesel_motor_heat = vec![0.0; train_physics.diesel_engines.len()];
+        state.diesel_traction_force_n = vec![0.0; train_physics.diesel_engines.len()];
+        state.diesel_average_force_n = vec![0.0; train_physics.diesel_engines.len()];
     }
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;

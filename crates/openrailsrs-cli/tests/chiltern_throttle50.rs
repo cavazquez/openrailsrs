@@ -17,16 +17,8 @@ fn chiltern_throttle50_sanity() {
     let scenario_path = chiltern.join("scenario_throttle50.toml");
     let driver_path = chiltern.join("driver_throttle50.csv");
     let mut driver = ScriptedDriver::from_csv(&driver_path).expect("load driver");
-    run_from_scenario_file_with_driver(&scenario_path, &mut driver).expect("sim");
-
-    let run_csv = chiltern.join("run_throttle50.csv");
-    let text = std::fs::read_to_string(&run_csv).expect("read run csv");
-    let last_v: f64 = text
-        .lines()
-        .last()
-        .and_then(|l| l.split(',').nth(3))
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.0);
+    let result = run_from_scenario_file_with_driver(&scenario_path, &mut driver).expect("sim");
+    let last_v = result.final_state.velocity_mps;
     assert!(
         last_v > 3.0 && last_v < 15.0,
         "expected sensible speed at 30 s with 50% throttle, got {last_v} m/s"

@@ -4,7 +4,7 @@ use openrailsrs_formats::parse_from_first_paren;
 use openrailsrs_formats::read_msts_file_to_string;
 use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, MstsSteamFields, WagonFile};
 
-use crate::diesel::{DieselTractionModel, OR_DEFAULT_CURTIUS};
+use crate::diesel::{DieselTractionModel, OR_DEFAULT_CURTIUS, TractionDynamicsParams};
 use crate::error::TrainError;
 use crate::model::{Consist, DavisCoefficients, Locomotive, SteamParams, Vehicle, Wagon};
 
@@ -104,6 +104,17 @@ fn msts_steam_to_params(s: MstsSteamFields) -> SteamParams {
 impl From<EngineFile> for Locomotive {
     fn from(value: EngineFile) -> Self {
         use crate::model::TractiveCurve;
+        let traction_dynamics = TractionDynamicsParams {
+            max_force_n: value.max_tractive_effort_n,
+            max_continuous_force_n: value.max_continuous_force_n,
+            force_ramp_up_nps: value.traction_force_ramp_up_nps,
+            force_ramp_down_nps: value.traction_force_ramp_down_nps,
+            force_ramp_down_to_zero_nps: value.traction_force_ramp_down_to_zero_nps,
+            power_ramp_up_wps: value.traction_power_ramp_up_wps,
+            power_ramp_down_wps: value.traction_power_ramp_down_wps,
+            power_ramp_down_to_zero_wps: value.traction_power_ramp_down_to_zero_wps,
+            continuous_force_time_factor_s: value.continuous_force_time_factor_s,
+        };
         let tractive_curve = if value.traction_curve.is_empty() {
             None
         } else {
@@ -135,6 +146,7 @@ impl From<EngineFile> for Locomotive {
                     curtius,
                     value.motor_heating_time_s,
                 );
+                model.configure_traction_dynamics(traction_dynamics);
                 Some(Box::new(model))
             } else {
                 None
@@ -192,6 +204,7 @@ impl From<EngineFile> for Locomotive {
             };
             model.unloading_speed_mps = value.unloading_speed_mps;
             model.tractive_force_power_limited = value.tractive_force_power_limited;
+            model.max_continuous_force_n = scale_force;
             let curtius = if value.curtius_a > 0.0 {
                 (value.curtius_a, value.curtius_b, value.curtius_c)
             } else {
@@ -203,6 +216,7 @@ impl From<EngineFile> for Locomotive {
                 curtius,
                 value.motor_heating_time_s,
             );
+            model.configure_traction_dynamics(traction_dynamics);
             Some(Box::new(model))
         };
         let steam = value.steam.map(msts_steam_to_params);

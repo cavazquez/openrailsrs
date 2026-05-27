@@ -76,51 +76,67 @@ pub fn step(
     // ── Tractive force ────────────────────────────────────────────────────────
     // Steam path: boiler + cylinder model (updates boiler state in place).
     // Electric/diesel path: P/v law or explicit traction curve.
-    let f_motor =
-        if let (Some(params), Some(boiler)) = (&train.steam_params, state.boiler_state.as_mut()) {
-            // Steam: the regulator is capped by the speed limiter.
-            let effective_throttle = state.throttle * speed_limit_traction_factor(v, speed_cap);
-            steam_step(boiler, params, effective_throttle, v, dt)
-        } else if state.throttle > 0.0 {
-            let speed_factor = speed_limit_traction_factor(v, speed_cap);
-            let raw = if !train.diesel_engines.is_empty() {
-                if state.diesel_rpm.len() != train.diesel_engines.len() {
-                    state.diesel_rpm = train.diesel_engines.iter().map(|e| e.idle_rpm()).collect();
-                    state.diesel_run_up = vec![0.0; train.diesel_engines.len()];
-                    state.diesel_motor_heat = vec![0.0; train.diesel_engines.len()];
-                } else if state.diesel_motor_heat.len() != train.diesel_engines.len() {
-                    state.diesel_motor_heat = vec![0.0; train.diesel_engines.len()];
+    let f_motor = if let (Some(params), Some(boiler)) =
+        (&train.steam_params, state.boiler_state.as_mut())
+    {
+        // Steam: the regulator is capped by the speed limiter.
+        let effective_throttle = state.throttle * speed_limit_traction_factor(v, speed_cap);
+        steam_step(boiler, params, effective_throttle, v, dt)
+    } else if state.throttle > 0.0 {
+        let speed_factor = speed_limit_traction_factor(v, speed_cap);
+        let raw = if !train.diesel_engines.is_empty() {
+            let n = train.diesel_engines.len();
+            if state.diesel_rpm.len() != n {
+                state.diesel_rpm = train.diesel_engines.iter().map(|e| e.idle_rpm()).collect();
+                state.diesel_run_up = vec![0.0; n];
+                state.diesel_motor_heat = vec![0.0; n];
+                state.diesel_traction_force_n = vec![0.0; n];
+                state.diesel_average_force_n = vec![0.0; n];
+            } else {
+                if state.diesel_motor_heat.len() != n {
+                    state.diesel_motor_heat = vec![0.0; n];
                 }
-                let mut f_total = 0.0;
-                for (i, engine) in train.diesel_engines.iter().enumerate() {
-                    let rpm = state.diesel_rpm[i];
-                    let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
-                    state.diesel_rpm[i] = new_rpm;
-                    let mut run_up = state.diesel_run_up.get(i).copied().unwrap_or(0.0);
-                    if let Some(tau) = engine.legacy_run_up_time_s() {
-                        if state.throttle > 0.0 {
-                            run_up = (run_up + dt / tau).min(1.0);
-                        } else {
-                            run_up = 0.0;
-                        }
-                        state.diesel_run_up[i] = run_up;
+                if state.diesel_traction_force_n.len() != n {
+                    state.diesel_traction_force_n = vec![0.0; n];
+                }
+                if state.diesel_average_force_n.len() != n {
+                    state.diesel_average_force_n = vec![0.0; n];
+                }
+            }
+            let prev_v = v;
+            let mut f_total = 0.0;
+            for (i, engine) in train.diesel_engines.iter().enumerate() {
+                let rpm = state.diesel_rpm[i];
+                let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
+                state.diesel_rpm[i] = new_rpm;
+                let mut run_up = state.diesel_run_up.get(i).copied().unwrap_or(0.0);
+                if let Some(tau) = engine.legacy_run_up_time_s() {
+                    if state.throttle > 0.0 {
+                        run_up = (run_up + dt / tau).min(1.0);
+                    } else {
+                        run_up = 0.0;
                     }
-                    let run_factor = if engine.legacy_run_up_time_s().is_some() {
-                        run_up
-                    } else {
-                        1.0
-                    };
-                    let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
-                    // ORTS motor heating only applies to engines with a thermodynamic model.
-                    let new_heat = if engine.engine.is_some() && engine.motor_heating_time_s > 0.0 {
-                        engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt)
-                    } else {
-                        0.0
-                    };
-                    state.diesel_motor_heat[i] = new_heat;
-                    let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
-                    let legacy = train.legacy_power_cap;
-                    let mut f_e = engine.force_at_scaled(
+                    state.diesel_run_up[i] = run_up;
+                }
+                let run_factor = if engine.legacy_run_up_time_s().is_some() {
+                    run_up
+                } else {
+                    1.0
+                };
+                let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
+                let new_heat = if engine.engine.is_some() && engine.motor_heating_time_s > 0.0 {
+                    engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt)
+                } else {
+                    0.0
+                };
+                state.diesel_motor_heat[i] = new_heat;
+                let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
+                let legacy = train.legacy_power_cap;
+
+                let mut force_n = if state.throttle <= 0.0 {
+                    0.0
+                } else {
+                    let target = engine.target_traction_force_n(
                         v,
                         state.throttle,
                         new_rpm,
@@ -128,24 +144,38 @@ pub fn step(
                         power_reduction,
                         legacy,
                     );
-                    let p_e = engine.traction_power_cap_w(new_rpm, state.throttle, v, legacy)
-                        * run_factor
-                        * (1.0 - power_reduction.clamp(0.0, 0.95));
-                    if v > 0.5 && p_e > 0.0 {
-                        f_e = f_e.min(p_e / v);
-                    }
-                    f_total += f_e;
-                }
-                f_total
-            } else if let Some(f_curve) = train.tractive.interpolate(v) {
-                f_curve * state.throttle
-            } else {
-                (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n) * state.throttle
-            };
-            raw * speed_factor
+                    let max_force_limit = if target.is_finite() {
+                        target
+                    } else {
+                        f64::INFINITY
+                    };
+                    let current = state.diesel_traction_force_n.get(i).copied().unwrap_or(0.0);
+                    engine.update_force_with_ramp(current, dt, target, max_force_limit, v, prev_v)
+                };
+
+                force_n = engine.apply_continuous_force_limit(
+                    force_n,
+                    state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
+                    power_reduction,
+                );
+                state.diesel_traction_force_n[i] = force_n;
+                state.diesel_average_force_n[i] = engine.advance_average_force(
+                    state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
+                    force_n,
+                    dt,
+                );
+                f_total += force_n;
+            }
+            f_total
+        } else if let Some(f_curve) = train.tractive.interpolate(v) {
+            f_curve * state.throttle
         } else {
-            0.0
+            (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n) * state.throttle
         };
+        raw * speed_factor
+    } else {
+        0.0
+    };
 
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the

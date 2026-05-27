@@ -78,6 +78,17 @@ pub struct EngineFile {
     pub curtius_c: f64,
     /// OR `TractiveForceAvgUsageTimeFactor` for motor heating (seconds).
     pub motor_heating_time_s: f64,
+    /// OR `ORTSTractiveForceRampUpRate` (N/s).
+    pub traction_force_ramp_up_nps: f64,
+    pub traction_force_ramp_down_nps: f64,
+    /// Negative in OR means “use ramp down”; stored as-is, resolved at load time.
+    pub traction_force_ramp_down_to_zero_nps: f64,
+    /// OR `ORTSTractivePowerRampUpRate` (W/s).
+    pub traction_power_ramp_up_wps: f64,
+    pub traction_power_ramp_down_wps: f64,
+    pub traction_power_ramp_down_to_zero_wps: f64,
+    /// OR `ORTSContinuousForceTimeFactor` (seconds); 0 → OR default 1800 when continuous limit active.
+    pub continuous_force_time_factor_s: f64,
     pub wagon_shape: Option<String>,
     pub length_m: f64,
     pub steam: Option<MstsSteamFields>,
@@ -204,6 +215,60 @@ impl EngineFile {
             context,
         )?
         .unwrap_or(0.0);
+        let traction_force_ramp_up_nps = parse_force_rate_field(
+            ast,
+            &[
+                "ORTSTractiveForceRampUpRate",
+                "TractiveForceRampUpRate",
+                "TractionForceRampUpNpS",
+            ],
+        );
+        let traction_force_ramp_down_nps = parse_force_rate_field(
+            ast,
+            &[
+                "ORTSTractiveForceRampDownRate",
+                "TractiveForceRampDownRate",
+                "TractionForceRampDownNpS",
+            ],
+        );
+        let traction_force_ramp_down_to_zero_nps = parse_force_rate_field(
+            ast,
+            &[
+                "ORTSTractiveForceRampDownToZeroRate",
+                "TractiveForceRampDownToZeroRate",
+                "TractionForceRampDownToZeroNpS",
+            ],
+        );
+        let traction_power_ramp_up_wps = parse_power_rate_field(
+            ast,
+            &[
+                "ORTSTractivePowerRampUpRate",
+                "TractivePowerRampUpRate",
+                "TractionPowerRampUpWpS",
+            ],
+        );
+        let traction_power_ramp_down_wps = parse_power_rate_field(
+            ast,
+            &[
+                "ORTSTractivePowerRampDownRate",
+                "TractivePowerRampDownRate",
+                "TractionPowerRampDownWpS",
+            ],
+        );
+        let traction_power_ramp_down_to_zero_wps = parse_power_rate_field(
+            ast,
+            &[
+                "ORTSTractivePowerRampDownToZeroRate",
+                "TractivePowerRampDownToZeroRate",
+                "TractionPowerRampDownToZeroWpS",
+            ],
+        );
+        let continuous_force_time_factor_s = find_optional_scalar_field(
+            ast,
+            &["ORTSContinuousForceTimeFactor", "ContinuousForceTimeFactor"],
+            context,
+        )?
+        .unwrap_or(0.0);
 
         let max_rail_output_power_w = find_optional_quantity_field(
             ast,
@@ -274,6 +339,13 @@ impl EngineFile {
             curtius_b,
             curtius_c,
             motor_heating_time_s,
+            traction_force_ramp_up_nps,
+            traction_force_ramp_down_nps,
+            traction_force_ramp_down_to_zero_nps,
+            traction_power_ramp_up_wps,
+            traction_power_ramp_down_wps,
+            traction_power_ramp_down_to_zero_wps,
+            continuous_force_time_factor_s,
             wagon_shape,
             length_m,
             steam,
@@ -620,6 +692,32 @@ fn parse_curtius_kniffler(ast: &Ast) -> (f64, f64, f64) {
 }
 
 /// OR `ORTSDavis_*` in default SI units (N, N/(m/s), N/(m/s)²).
+/// Parse force rate fields (N/s); accepts plain numbers or `kN/s`-style quantities.
+fn parse_force_rate_field(ast: &Ast, keys: &[&str]) -> f64 {
+    for key in keys {
+        if let Some(v) = find_list_value(ast, key).and_then(parse_scalar_ast) {
+            return v;
+        }
+        if let Some(v) = find_list_value(ast, key).and_then(parse_force_ast) {
+            return v;
+        }
+    }
+    0.0
+}
+
+/// Parse power rate fields (W/s).
+fn parse_power_rate_field(ast: &Ast, keys: &[&str]) -> f64 {
+    for key in keys {
+        if let Some(v) = find_list_value(ast, key).and_then(parse_scalar_ast) {
+            return v;
+        }
+        if let Some(v) = find_list_value(ast, key).and_then(parse_power_ast) {
+            return v;
+        }
+    }
+    0.0
+}
+
 fn parse_orts_davis(ast: &Ast) -> (f64, f64, f64) {
     let context = "ORTSDavis";
     (

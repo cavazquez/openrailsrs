@@ -7,6 +7,7 @@ Plan de implementación para cerrar las diferencias entre **openrailsrs** y el s
 | Escenario | Duración | RMS velocidad | Notas |
 |-----------|----------|---------------|-------|
 | Chiltern Birmingham | 136 s | ~0.28 m/s | `assume_signals_clear`, Davis explícito en escenario |
+| Chiltern full-throttle (Exp B) | 120 s | ~0.45 m/s global; ~0.40 m/s (0–30 s) | baseline `chiltern_fullthrottle`, OR-P3 rampas |
 | SCE Glasgow | 100 s | ≤1.0 m/s (umbral) | Crucero ~14 mph @ 27 % throttle alineado |
 
 Este documento **no reemplaza** [`ROADMAP.md`](../ROADMAP.md) ni [`CALIBRATION.md`](../CALIBRATION.md); los complementa con trabajo específico de paridad física.
@@ -153,8 +154,8 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [ ] Experimento B (aceleración 100 % throttle): curva v(t) más cercana a OR en primeros 30 s
-- [ ] No overshoot de velocidad >2 m/s vs OR en arranque Chiltern
+- [x] Experimento B (aceleración 100 % throttle): baseline OR + `chiltern_fullthrottle` (vel RMS 0–30 s ~0.40 m/s vs OR; umbral fase ≤2.0)
+- [x] No overshoot de velocidad >2 m/s vs OR en arranque Chiltern (`chiltern_startup_overshoot`)
 
 **Estimación:** 3–4 días.
 
@@ -357,7 +358,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [ ] Chiltern fase 40–65 s: RMS ≤ 0.35 m/s (gap histórico prioridad 1 en ROADMAP)
+- [x] Chiltern fase 40–65 s: RMS ≤ 0.35 m/s (legacy P/v DMBSH + OR-P1/P2; herencia ORTS escala overshoot)
 
 **Estimación:** 2–4 días (depende de content).
 
@@ -401,7 +402,7 @@ Cada fase OR-P* debe incluir:
 | ID | Propósito | Fase que lo consume |
 |----|-----------|---------------------|
 | A | Costa libre (Davis) | OR-P2, OR-P5 |
-| B | Aceleración 100 % | OR-P1, OR-P3 |
+| B | Aceleración 100 % | OR-P1, OR-P3 ✅ |
 | C | Crucero por notch | OR-P1 ✅ parcial |
 | D | Segundo motor | OR-P13 |
 | E | Frenada EP | OR-P6 |

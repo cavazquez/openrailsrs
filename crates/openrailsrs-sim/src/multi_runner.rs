@@ -227,6 +227,8 @@ pub fn run_scenario_multi_train(
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
                 state.diesel_run_up = vec![0.0; engines.len()];
                 state.diesel_motor_heat = vec![0.0; engines.len()];
+                state.diesel_traction_force_n = vec![0.0; engines.len()];
+                state.diesel_average_force_n = vec![0.0; engines.len()];
             }
         }
         // Primary train starts at t=0; shift its internal clock to 0.
@@ -300,6 +302,8 @@ pub fn run_scenario_multi_train(
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
                 state.diesel_run_up = vec![0.0; engines.len()];
                 state.diesel_motor_heat = vec![0.0; engines.len()];
+                state.diesel_traction_force_n = vec![0.0; engines.len()];
+                state.diesel_average_force_n = vec![0.0; engines.len()];
             }
         }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);

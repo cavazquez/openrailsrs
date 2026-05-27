@@ -41,6 +41,10 @@ pub struct TrainSimState {
     pub diesel_run_up: Vec<f64>,
     /// Motor heat state per diesel engine for dynamic `PowerReduction`.
     pub diesel_motor_heat: Vec<f64>,
+    /// Ramped tractive force per diesel engine (OR `TractionForceN`).
+    pub diesel_traction_force_n: Vec<f64>,
+    /// Moving-average tractive load per diesel engine (OR `AverageForceN`).
+    pub diesel_average_force_n: Vec<f64>,
 }
 
 impl TrainSimState {
@@ -67,6 +71,8 @@ impl TrainSimState {
             diesel_rpm: Vec::new(),
             diesel_run_up: Vec::new(),
             diesel_motor_heat: Vec::new(),
+            diesel_traction_force_n: Vec::new(),
+            diesel_average_force_n: Vec::new(),
         }
     }
 

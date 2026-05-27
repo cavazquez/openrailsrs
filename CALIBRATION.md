@@ -126,9 +126,23 @@ Con `F = m × a`, si el tren pesa ~440 t y decelera 0.01 m/s², la resistencia t
 
 **Procedimiento:**
 1. Partir desde parado en vía plana.
-2. Aplicar throttle al **100%** (notch 10).
+2. Aplicar throttle al **100%** (notch 8 / HUD ~100).
 3. Grabar con `*Speed.csv` durante 120 segundos.
-4. Copiar el CSV a `examples/baselines/chiltern_fullthrottle/`.
+4. Instalar baseline:
+
+```bash
+./scripts/capture_chiltern_fullthrottle_or.sh
+# … en cabina OR: freno suelto, D hasta 100 %, 120 s simulados …
+./scripts/install_chiltern_fullthrottle_baseline.sh
+```
+
+Destino versionado: `examples/baselines/chiltern_fullthrottle/or_evaluation_speed.csv`
+
+Validación openrailsrs:
+
+```bash
+cargo test -p openrailsrs-cli --test chiltern_fullthrottle
+```
 
 **Qué medir:** curva de aceleración v(t). Con F_motor(v) conocida y Davis calibrado, comparar `dv/dt × m_total` con `F_motor(v) - F_davis(v)`.
 
@@ -232,7 +246,7 @@ Esperar a que el tren alcance velocidad constante y notar:
 | Exp | Objetivo | Sim / código | Baseline OR |
 |-----|----------|--------------|-------------|
 | A | Costa libre → Davis | parcial (T3/T4) | ❌ falta capturar |
-| B | Full throttle → F(v) | parcial | ❌ falta capturar |
+| B | Full throttle → F(v) | `scenario_throttle100.toml` + test | ❌ capturar con scripts |
 | C | Equilibrio 20/40/60/80 % | ❌ | ❌ |
 | D | Un motor vs dos | parcial (T5) | ❌ falta capturar |
 | E | Throttle 50 % / 30 s | ✅ | ✅ |

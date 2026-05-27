@@ -177,6 +177,20 @@ impl DieselEngineParams {
     }
 }
 
+/// OR traction ramp and continuous-force parameters from `.eng`.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TractionDynamicsParams {
+    pub max_force_n: f64,
+    pub max_continuous_force_n: f64,
+    pub force_ramp_up_nps: f64,
+    pub force_ramp_down_nps: f64,
+    pub force_ramp_down_to_zero_nps: f64,
+    pub power_ramp_up_wps: f64,
+    pub power_ramp_down_wps: f64,
+    pub power_ramp_down_to_zero_wps: f64,
+    pub continuous_force_time_factor_s: f64,
+}
+
 /// ORTS `MaxTractiveForceCurves` / `ORTSMaxTractiveForceCurves` by throttle notch.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DieselTractionModel {
@@ -204,6 +218,20 @@ pub struct DieselTractionModel {
     pub unloading_speed_mps: f64,
     /// When true, skip apparent-throttle limiting on F(v) curves.
     pub tractive_force_power_limited: bool,
+    /// MSTS `MaxContinuousForce` used for effort-scale calibration (N).
+    pub max_continuous_force_n: f64,
+    /// MSTS `MaxForce` peak rating for continuous-force derating (N).
+    pub max_force_n: f64,
+    /// OR `TractionForceRampUpNpS` (N/s); 0 = instant.
+    pub traction_force_ramp_up_nps: f64,
+    pub traction_force_ramp_down_nps: f64,
+    /// Negative means “use ramp down” (OR default when unset).
+    pub traction_force_ramp_down_to_zero_nps: f64,
+    pub traction_power_ramp_up_wps: f64,
+    pub traction_power_ramp_down_wps: f64,
+    pub traction_power_ramp_down_to_zero_wps: f64,
+    /// OR `ContinuousForceTimeFactor` (s); 0 = disabled.
+    pub continuous_force_time_factor_s: f64,
 }
 
 impl Default for DieselTractionModel {
@@ -222,6 +250,15 @@ impl Default for DieselTractionModel {
             max_rail_output_power_w: 0.0,
             unloading_speed_mps: 0.0,
             tractive_force_power_limited: false,
+            max_continuous_force_n: 0.0,
+            max_force_n: 0.0,
+            traction_force_ramp_up_nps: 0.0,
+            traction_force_ramp_down_nps: 0.0,
+            traction_force_ramp_down_to_zero_nps: -1.0,
+            traction_power_ramp_up_wps: 0.0,
+            traction_power_ramp_down_wps: 0.0,
+            traction_power_ramp_down_to_zero_wps: -1.0,
+            continuous_force_time_factor_s: 0.0,
         }
     }
 }
@@ -248,7 +285,99 @@ impl DieselTractionModel {
             max_rail_output_power_w: 0.0,
             unloading_speed_mps: 0.0,
             tractive_force_power_limited: false,
+            max_continuous_force_n: 0.0,
+            max_force_n: 0.0,
+            traction_force_ramp_up_nps: 0.0,
+            traction_force_ramp_down_nps: 0.0,
+            traction_force_ramp_down_to_zero_nps: -1.0,
+            traction_power_ramp_up_wps: 0.0,
+            traction_power_ramp_down_wps: 0.0,
+            traction_power_ramp_down_to_zero_wps: -1.0,
+            continuous_force_time_factor_s: 0.0,
         }
+    }
+
+    /// OR-P13: clone lead ORTS diesel for a trail motor with scaled power/continuous ratings.
+    ///
+    /// Used when the trail `.eng` only has legacy MSTS fields (`RunUpTimeToMaxForce`, P/v)
+    /// but the consist lead locomotive has full `ORTSMaxTractiveForceCurves`.
+    pub fn from_lead_orts_scaled(
+        lead: &Self,
+        max_power_w: f64,
+        max_tractive_effort_n: f64,
+        max_continuous_force_n: f64,
+        run_up_time_s: Option<f64>,
+    ) -> Option<Self> {
+        let lead_engine = lead.engine.as_deref()?;
+        if lead.notch_curves.is_empty() || max_power_w <= 0.0 {
+            return None;
+        }
+        let lead_rail_w = if lead.max_rail_output_power_w > 0.0 {
+            lead.max_rail_output_power_w
+        } else {
+            lead.max_power_w.unwrap_or(max_power_w)
+        };
+        let power_scale = max_power_w / lead_rail_w;
+        let mut engine = lead_engine.clone();
+        engine.power_tab = engine
+            .power_tab
+            .iter()
+            .map(|(rpm, p)| (*rpm, p * power_scale))
+            .collect();
+
+        let continuous = if max_continuous_force_n > 0.0 {
+            max_continuous_force_n
+        } else {
+            lead.max_continuous_force_n
+        };
+
+        let mut model = Self {
+            notch_curves: lead.notch_curves.clone(),
+            effort_scale: 1.0,
+            engine: Some(Box::new(engine)),
+            max_power_w: Some(max_power_w),
+            legacy_run_up_time_s: run_up_time_s,
+            adhesion_mass_kg: lead.adhesion_mass_kg,
+            curtius_a: lead.curtius_a,
+            curtius_b: lead.curtius_b,
+            curtius_c: lead.curtius_c,
+            motor_heating_time_s: lead.motor_heating_time_s,
+            max_rail_output_power_w: max_power_w,
+            unloading_speed_mps: lead.unloading_speed_mps,
+            tractive_force_power_limited: lead.tractive_force_power_limited,
+            max_continuous_force_n: continuous,
+            max_force_n: if max_tractive_effort_n > 0.0 {
+                max_tractive_effort_n
+            } else {
+                lead.max_force_n
+            },
+            traction_force_ramp_up_nps: lead.traction_force_ramp_up_nps,
+            traction_force_ramp_down_nps: lead.traction_force_ramp_down_nps,
+            traction_force_ramp_down_to_zero_nps: lead.traction_force_ramp_down_to_zero_nps,
+            traction_power_ramp_up_wps: lead.traction_power_ramp_up_wps,
+            traction_power_ramp_down_wps: lead.traction_power_ramp_down_wps,
+            traction_power_ramp_down_to_zero_wps: lead.traction_power_ramp_down_to_zero_wps,
+            continuous_force_time_factor_s: if continuous > 0.0 && max_tractive_effort_n > 0.0 {
+                if lead.continuous_force_time_factor_s > 0.0 {
+                    lead.continuous_force_time_factor_s
+                } else {
+                    1800.0
+                }
+            } else {
+                0.0
+            },
+        };
+        // Legacy trail `.eng` only exposes MSTS MaxForce; stall effort must match that,
+        // not the lead ORTS 4× continuous calibration.
+        if max_tractive_effort_n > 0.0 {
+            let stall = model.force_at_raw(0.0, 1.0);
+            if stall > 0.0 {
+                model.effort_scale = (max_tractive_effort_n / stall).clamp(0.05, 1.0);
+            }
+        } else if continuous > 0.0 {
+            model.calibrate_effort_scale(continuous);
+        }
+        Some(model)
     }
 
     /// Effective throttle for F(v) curves: `min(driver, apparent)` unless power-limited.
@@ -336,6 +465,170 @@ impl DieselTractionModel {
         }
     }
 
+    /// Wire OR traction ramp and continuous-force parameters from a parsed `.eng`.
+    pub fn configure_traction_dynamics(&mut self, params: TractionDynamicsParams) {
+        if params.max_force_n > 0.0 {
+            self.max_force_n = params.max_force_n;
+        }
+        if params.max_continuous_force_n > 0.0 {
+            self.max_continuous_force_n = params.max_continuous_force_n;
+        }
+        self.traction_force_ramp_up_nps = params.force_ramp_up_nps;
+        self.traction_force_ramp_down_nps = params.force_ramp_down_nps;
+        self.traction_force_ramp_down_to_zero_nps = if params.force_ramp_down_to_zero_nps != 0.0 {
+            params.force_ramp_down_to_zero_nps
+        } else {
+            -1.0
+        };
+        self.traction_power_ramp_up_wps = params.power_ramp_up_wps;
+        self.traction_power_ramp_down_wps = params.power_ramp_down_wps;
+        self.traction_power_ramp_down_to_zero_wps = if params.power_ramp_down_to_zero_wps != 0.0 {
+            params.power_ramp_down_to_zero_wps
+        } else {
+            -1.0
+        };
+        if self.max_force_n > 0.0 && self.max_continuous_force_n > 0.0 {
+            self.continuous_force_time_factor_s = if params.continuous_force_time_factor_s > 0.0 {
+                params.continuous_force_time_factor_s
+            } else {
+                1800.0
+            };
+        }
+    }
+
+    fn effective_ramp_down_to_zero_nps(&self) -> f64 {
+        if self.traction_force_ramp_down_to_zero_nps >= 0.0 {
+            self.traction_force_ramp_down_to_zero_nps
+        } else {
+            self.traction_force_ramp_down_nps
+        }
+    }
+
+    fn effective_power_ramp_down_to_zero_wps(&self) -> f64 {
+        if self.traction_power_ramp_down_to_zero_wps >= 0.0 {
+            self.traction_power_ramp_down_to_zero_wps
+        } else {
+            self.traction_power_ramp_down_wps
+        }
+    }
+
+    /// Instantaneous tractive demand before OR ramp / continuous limiting.
+    pub fn target_traction_force_n(
+        &self,
+        v_mps: f64,
+        driver_throttle: f64,
+        rpm: f64,
+        run_up_factor: f64,
+        power_reduction: f64,
+        legacy_power_cap: bool,
+    ) -> f64 {
+        let mut f_e = self.force_at_scaled(
+            v_mps,
+            driver_throttle,
+            rpm,
+            run_up_factor,
+            power_reduction,
+            legacy_power_cap,
+        );
+        let p_e = self.traction_power_cap_w(rpm, driver_throttle, v_mps, legacy_power_cap)
+            * run_up_factor
+            * (1.0 - power_reduction.clamp(0.0, 0.95));
+        if v_mps > 0.5 && p_e > 0.0 {
+            f_e = f_e.min(p_e / v_mps);
+        }
+        f_e
+    }
+
+    /// OR `MSTSLocomotive.UpdateForceWithRamp` — smooth force transitions (N/s and W/s).
+    pub fn update_force_with_ramp(
+        &self,
+        mut force_n: f64,
+        dt: f64,
+        mut target_force_n: f64,
+        max_force_n: f64,
+        v_mps: f64,
+        prev_v_mps: f64,
+    ) -> f64 {
+        if max_force_n.is_finite() {
+            target_force_n = target_force_n.min(max_force_n);
+            force_n = force_n.min(max_force_n);
+        }
+        let to_zero = target_force_n == 0.0;
+        if v_mps > 0.0 {
+            let power_w = force_n * prev_v_mps.max(0.0);
+            let mut target_power_w = target_force_n * v_mps;
+            if target_power_w > power_w && self.traction_power_ramp_up_wps > 0.0 {
+                let max_change_w = self.traction_power_ramp_up_wps * dt;
+                if power_w + max_change_w < target_power_w {
+                    target_power_w = power_w + max_change_w;
+                    target_force_n = target_force_n.min(target_power_w / v_mps);
+                }
+            }
+            let ramp_down_wps = if to_zero {
+                self.effective_power_ramp_down_to_zero_wps()
+            } else {
+                self.traction_power_ramp_down_wps
+            };
+            if target_power_w < power_w && ramp_down_wps > 0.0 {
+                let max_change_w = ramp_down_wps * dt;
+                if power_w - max_change_w > target_power_w {
+                    target_power_w = power_w - max_change_w;
+                    target_force_n = target_force_n.max(target_power_w / v_mps).min(force_n);
+                }
+            }
+        }
+        if target_force_n > force_n {
+            if self.traction_force_ramp_up_nps > 0.0 {
+                force_n = (force_n + self.traction_force_ramp_up_nps * dt).min(target_force_n);
+            } else {
+                force_n = target_force_n;
+            }
+        } else if target_force_n < force_n {
+            let ramp_down_nps = if to_zero {
+                self.effective_ramp_down_to_zero_nps()
+            } else {
+                self.traction_force_ramp_down_nps
+            };
+            if ramp_down_nps > 0.0 {
+                force_n = (force_n - ramp_down_nps * dt).max(target_force_n);
+            } else {
+                force_n = target_force_n;
+            }
+        }
+        force_n
+    }
+
+    /// OR continuous tractive-force derating from moving-average motor load.
+    pub fn apply_continuous_force_limit(
+        &self,
+        force_n: f64,
+        average_force_n: f64,
+        power_reduction: f64,
+    ) -> f64 {
+        let max_force = self.max_force_n;
+        let max_continuous = self.max_continuous_force_n;
+        if max_force <= 0.0 || max_continuous <= 0.0 || power_reduction >= 1.0 {
+            return force_n;
+        }
+        let coef = (max_force - max_continuous) / (max_force * max_continuous);
+        force_n * (1.0 - coef * average_force_n * (1.0 - power_reduction))
+    }
+
+    /// OR `AverageForceN` low-pass filter (`ContinuousForceTimeFactor`).
+    pub fn advance_average_force(
+        &self,
+        average_force_n: f64,
+        traction_force_n: f64,
+        dt: f64,
+    ) -> f64 {
+        let tau = self.continuous_force_time_factor_s;
+        if tau <= 0.0 || self.max_force_n <= 0.0 || self.max_continuous_force_n <= 0.0 {
+            return average_force_n;
+        }
+        let w = ((tau - dt) / tau).clamp(0.0, 1.0);
+        w * average_force_n + (1.0 - w) * traction_force_n
+    }
+
     /// OR Curtius-Kniffler adhesion limit (N) at speed `v_mps`.
     pub fn adhesion_limit_n(&self, v_mps: f64) -> f64 {
         if self.curtius_a <= 0.0 || self.adhesion_mass_kg <= 0.0 {
@@ -370,8 +663,19 @@ impl DieselTractionModel {
             max_rail_output_power_w: max_power_w,
             unloading_speed_mps: 0.0,
             tractive_force_power_limited: false,
+            max_continuous_force_n: max_tractive_effort_n,
+            max_force_n: max_tractive_effort_n,
+            traction_force_ramp_up_nps: 0.0,
+            traction_force_ramp_down_nps: 0.0,
+            traction_force_ramp_down_to_zero_nps: -1.0,
+            traction_power_ramp_up_wps: 0.0,
+            traction_power_ramp_down_wps: 0.0,
+            traction_power_ramp_down_to_zero_wps: -1.0,
+            continuous_force_time_factor_s: 0.0,
         }
     }
+
+    /// OR dynamic `PowerReduction` fraction from motor heat state `[0, 1]`.
     pub fn power_reduction_from_heat(heat: f64) -> f64 {
         heat.clamp(0.0, 0.35)
     }
@@ -605,6 +909,68 @@ mod tests {
         assert!((idle - 100_000.0).abs() < 1.0);
         assert!((full - 500_000.0).abs() < 1.0);
         assert!(partial > idle && partial < full, "partial={partial}");
+    }
+
+    #[test]
+    fn update_force_with_ramp_limits_rise_rate() {
+        let mut m = sample_model();
+        m.traction_force_ramp_up_nps = 10_000.0;
+        let f0 = m.update_force_with_ramp(0.0, 1.0, 50_000.0, f64::INFINITY, 0.0, 0.0);
+        assert!((f0 - 10_000.0).abs() < 1.0, "f0={f0}");
+        let f1 = m.update_force_with_ramp(f0, 1.0, 50_000.0, f64::INFINITY, 0.0, 0.0);
+        assert!((f1 - 20_000.0).abs() < 1.0, "f1={f1}");
+    }
+
+    #[test]
+    fn continuous_force_limit_derates_at_high_average() {
+        let mut m = sample_model();
+        m.max_force_n = 100_000.0;
+        m.max_continuous_force_n = 50_000.0;
+        m.continuous_force_time_factor_s = 1800.0;
+        let limited = m.apply_continuous_force_limit(100_000.0, 50_000.0, 0.0);
+        assert!((limited - 50_000.0).abs() < 1.0, "limited={limited}");
+    }
+
+    #[test]
+    fn advance_average_force_low_pass() {
+        let mut m = sample_model();
+        m.max_force_n = 100_000.0;
+        m.max_continuous_force_n = 50_000.0;
+        m.continuous_force_time_factor_s = 100.0;
+        let avg = m.advance_average_force(0.0, 100_000.0, 10.0);
+        assert!(avg > 0.0 && avg < 100_000.0, "avg={avg}");
+    }
+
+    #[test]
+    fn from_lead_orts_scaled_calibrates_stall_to_max_force() {
+        let mut lead = DieselTractionModel::from_notch_curves(vec![
+            (0.0, vec![(0.0, 0.0), (30.0, 0.0)]),
+            (1.0, vec![(0.0, 200_000.0), (30.0, 80_000.0)]),
+        ]);
+        lead.max_rail_output_power_w = 745_513.0;
+        lead.engine = Some(Box::new(DieselEngineParams {
+            power_tab: vec![(325.0, 100_000.0), (750.0, 745_513.0)],
+            throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 750.0)],
+            idle_rpm: 325.0,
+            max_rpm: 750.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 0.0,
+            rate_of_change_down_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            change_down_rpm_ps: 0.0,
+            reverse_throttle_rpm_tab: Vec::new(),
+        }));
+        let scaled = DieselTractionModel::from_lead_orts_scaled(
+            &lead,
+            1_000_000.0,
+            150_650.0,
+            130_000.0,
+            Some(30.0),
+        )
+        .expect("scaled");
+        let stall = scaled.force_at_raw(0.0, 1.0) * scaled.effort_scale;
+        assert!((stall - 150_650.0).abs() < 1.0, "stall {stall}");
+        assert_eq!(scaled.legacy_run_up_time_s, Some(30.0));
     }
 
     #[test]
