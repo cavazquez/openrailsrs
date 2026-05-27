@@ -104,4 +104,8 @@ fn chiltern_fullthrottle_audit_0_30s() {
 
     let rms = (sq_err / n as f64).sqrt();
     eprintln!("velocity RMS (5 s samples): {rms:.3} m/s");
+    assert!(
+        rms <= 0.50,
+        "Exp B 0–30 s velocity RMS {rms:.3} m/s exceeds 0.50 m/s OR parity target"
+    );
 }

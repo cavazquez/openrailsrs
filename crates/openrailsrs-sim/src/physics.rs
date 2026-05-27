@@ -110,19 +110,26 @@ pub fn step(
                 let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
                 state.diesel_rpm[i] = new_rpm;
                 let mut run_up = state.diesel_run_up.get(i).copied().unwrap_or(0.0);
-                let use_msts_run_up = engine.legacy_run_up_time_s().is_some()
+                let has_msts_run_up = engine.legacy_run_up_time_s().is_some()
                     && (train.legacy_power_cap || engine.engine.is_some());
-                if use_msts_run_up {
+                if has_msts_run_up {
                     if let Some(tau) = engine.legacy_run_up_time_s() {
-                        if state.throttle > 0.0 {
-                            run_up = (run_up + dt / tau).min(1.0);
-                        } else {
+                        if state.throttle <= 0.0 {
                             run_up = 0.0;
+                        } else if state.throttle >= 1.0 {
+                            run_up = 1.0;
+                        } else {
+                            run_up = (run_up + dt / tau).min(1.0);
                         }
                         state.diesel_run_up[i] = run_up;
                     }
                 }
-                let run_factor = if use_msts_run_up { run_up } else { 1.0 };
+                // OR diesel ignores RunUpTimeToMaxForce at full notch; partial throttle keeps ramp.
+                let run_factor = if has_msts_run_up && state.throttle < 1.0 {
+                    run_up
+                } else {
+                    1.0
+                };
                 let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
                 let new_heat = if engine.engine.is_some() && engine.motor_heating_time_s > 0.0 {
                     engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt)

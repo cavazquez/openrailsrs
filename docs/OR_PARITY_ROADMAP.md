@@ -7,7 +7,7 @@ Plan de implementación para cerrar las diferencias entre **openrailsrs** y el s
 | Escenario | Duración | RMS velocidad | Notas |
 |-----------|----------|---------------|-------|
 | Chiltern Birmingham | 136 s | ~0.28 m/s | `assume_signals_clear`, Davis explícito en escenario |
-| Chiltern full-throttle (Exp B) | 120 s | ~0.51 m/s (0–30 s) | OR-P13 trail ORTS + `chiltern_fullthrottle` |
+| Chiltern full-throttle (Exp B) | 120 s | ~0.47 m/s (0–30 s) | OR-P13 + run-up solo <100% notch |
 | SCE Glasgow | 100 s | ≤1.0 m/s (umbral) | Crucero ~14 mph @ 27 % throttle alineado |
 
 Este documento **no reemplaza** [`ROADMAP.md`](../ROADMAP.md) ni [`CALIBRATION.md`](../CALIBRATION.md); los complementa con trabajo específico de paridad física.
@@ -154,7 +154,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [x] Experimento B (aceleración 100 % throttle): baseline OR + `chiltern_fullthrottle` (vel RMS 0–30 s ~0.51 m/s vs OR; umbral fase ≤2.0). OR-P13: DMBSH hereda ORTS del DMBSA con `effort_scale` hasta 4× y run-up 15 s.
+- [x] Experimento B (aceleración 100 % throttle): baseline OR + `chiltern_fullthrottle` (vel RMS 0–30 s ~0.47 m/s vs OR; audit ≤0.5). OR-P13 + run-up MSTS solo bajo notch completo.
 - [x] No overshoot de velocidad >2 m/s vs OR en arranque Chiltern (`chiltern_startup_overshoot`)
 
 **Estimación:** 3–4 días.
@@ -359,7 +359,7 @@ flowchart LR
 **Criterios de aceptación:**
 
 - [x] Chiltern fase 40–65 s: RMS ≤ 0.35 m/s (ORTS trail heredado del DMBSA + run-up 15 s)
-- [x] Experimento B 0–30 s: ~0.51 m/s RMS (antes ~0.98; umbral fase 2.0)
+- [x] Experimento B 0–30 s: ~0.47 m/s RMS (audit ≤0.5; antes ~0.98)
 
 **Estimación:** 2–4 días (depende de content).
 
