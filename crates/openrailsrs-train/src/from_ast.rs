@@ -69,8 +69,51 @@ fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
         vehicles,
         davis: DavisCoefficients::default(),
     };
+    upgrade_trail_diesel_from_lead_orts(&mut consist);
     consist.davis = consist.aggregate_davis();
     Ok(consist)
+}
+
+/// OR-P13: trail locos with legacy MSTS diesel inherit scaled ORTS curves from the lead.
+fn upgrade_trail_diesel_from_lead_orts(consist: &mut Consist) {
+    let lead = consist.vehicles.iter().find_map(|v| match v {
+        Vehicle::Loco(l) => l.diesel_traction.as_ref().and_then(|m| {
+            if m.engine.is_some() && !m.is_empty() {
+                Some((**m).clone())
+            } else {
+                None
+            }
+        }),
+        _ => None,
+    });
+    let Some(lead) = lead else {
+        return;
+    };
+
+    for v in &mut consist.vehicles {
+        let Vehicle::Loco(l) = v else { continue };
+        let Some(trail) = l.diesel_traction.as_mut() else {
+            continue;
+        };
+        if trail.engine.is_some() {
+            continue;
+        }
+        let continuous = if trail.max_continuous_force_n > 0.0 {
+            trail.max_continuous_force_n
+        } else {
+            l.max_tractive_effort_n
+        };
+        let run_up = trail.legacy_run_up_time_s.map(|tau| (tau * 0.5).max(10.0));
+        if let Some(upgraded) = DieselTractionModel::from_lead_orts_scaled(
+            &lead,
+            l.max_power_w,
+            l.max_tractive_effort_n,
+            continuous,
+            run_up,
+        ) {
+            **trail = upgraded;
+        }
+    }
 }
 
 fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {

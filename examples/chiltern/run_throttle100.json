@@ -1,9 +1,9 @@
 scenario_name = "Chiltern full-throttle baseline (120 s)"
 seed = 42
-duration_requested_s = 120.0
+duration_requested_s = 30.0
 time_step_s = 1.0
-final_time_s = 120.0
-final_odometer_m = 1720.2268924908053
-final_velocity_mps = 23.059934576880323
-cumulative_energy_kwh = 36.617572900469085
+final_time_s = 30.0
+final_odometer_m = 111.6877482710398
+final_velocity_mps = 8.415384858950997
+cumulative_energy_kwh = 4.4157170437366196
 reached_destination = false

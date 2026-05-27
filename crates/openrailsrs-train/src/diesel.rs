@@ -372,7 +372,7 @@ impl DieselTractionModel {
         if max_tractive_effort_n > 0.0 {
             let stall = model.force_at_raw(0.0, 1.0);
             if stall > 0.0 {
-                model.effort_scale = (max_tractive_effort_n / stall).clamp(0.05, 1.0);
+                model.effort_scale = (max_tractive_effort_n / stall).clamp(0.05, 4.0);
             }
         } else if continuous > 0.0 {
             model.calibrate_effort_scale(continuous);

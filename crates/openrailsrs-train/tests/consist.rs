@@ -109,7 +109,7 @@ fn chiltern_dmbsh_orts_scaled_from_lead() {
     assert!(scaled.engine.is_some());
     assert_eq!(scaled.legacy_run_up_time_s, Some(30.0));
     assert!((scaled.max_rail_output_power_w - 1_000_000.0).abs() < 1.0);
-    assert!(scaled.effort_scale > 0.0 && scaled.effort_scale <= 1.0);
+    assert!(scaled.effort_scale > 1.0 && scaled.effort_scale <= 4.0);
     assert!((scaled.max_continuous_force_n - 130_000.0).abs() < 1.0);
 }
 
@@ -127,12 +127,12 @@ fn chiltern_pullman_two_engines_aggregate() {
         2,
         "expected two diesel engines in Blue Pullman consist"
     );
-    // Consist load keeps DMBSH on legacy P/v; ORTS scaling is opt-in via from_lead_orts_scaled.
+    // Consist load upgrades legacy trail diesel (DMBSH) from lead ORTS curves (OR-P13).
     let models = consist.diesel_traction_models();
     assert_eq!(models.len(), 2);
     assert!(
-        models[1].engine.is_none(),
-        "trail stays legacy unless explicitly upgraded"
+        models[1].engine.is_some(),
+        "trail DMBSH should inherit scaled ORTS from DMBSA lead"
     );
     let f_dmbsa = models[0].force_at(0.0, 0.8);
     let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();
@@ -140,8 +140,7 @@ fn chiltern_pullman_two_engines_aggregate() {
         f_combined > f_dmbsa * 1.3,
         "combined stall should exceed lead engine: {f_combined} vs {f_dmbsa}"
     );
-    // DMBSH legacy P/v at full run-up (physics applies the 30 s ramp separately).
-    let f_dmbsh = models[1].force_at(0.0, 0.8);
-    assert!(f_dmbsh > 100_000.0);
+    let f_dmbsh = models[1].force_at(0.0, 1.0);
+    assert!(f_dmbsh > 140_000.0, "scaled DMBSH stall: {f_dmbsh}");
     assert!(f_combined > f_dmbsa * 1.1);
 }

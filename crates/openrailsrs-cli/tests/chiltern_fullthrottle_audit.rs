@@ -80,8 +80,12 @@ fn chiltern_fullthrottle_audit_0_30s() {
         for (i, m) in models.iter().enumerate().take(2) {
             let rpm = state.diesel_rpm.get(i).copied().unwrap_or(0.0);
             let run_up = state.diesel_run_up.get(i).copied().unwrap_or(1.0);
-            let run_factor = if m.legacy_run_up_time_s().is_some() {
-                run_up
+            let run_factor = if legacy {
+                if m.legacy_run_up_time_s().is_some() {
+                    run_up
+                } else {
+                    1.0
+                }
             } else {
                 1.0
             };
