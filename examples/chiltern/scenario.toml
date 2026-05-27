@@ -34,6 +34,7 @@ time_step = 1.0
 seed = 42
 legacy_power_cap = false
 train_air_lap_hold = true
+train_air_full_release_s = 3.0
 # OR driver CSV uses PSI/121; Westinghouse cylinder force calibrated at 35 PSI (Chiltern).
 brake_cylinder_full_scale_psi = 35.0
 
@@ -44,7 +45,7 @@ metadata = "run.json"
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 # Baseline OR ~136 s sim (10:00→10:02:16); cap P/v por locomotora
-max_velocity_rms = 0.41
+max_velocity_rms = 0.40
 max_position_max = 45.0
 max_throttle_rms = 0.25
 max_brake_rms = 0.25

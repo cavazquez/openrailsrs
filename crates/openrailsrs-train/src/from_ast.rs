@@ -103,7 +103,7 @@ fn upgrade_trail_diesel_from_lead_orts(consist: &mut Consist) {
         } else {
             l.max_tractive_effort_n
         };
-        let run_up = trail.legacy_run_up_time_s.map(|tau| (tau * 0.5).max(10.0));
+        let run_up = trail.legacy_run_up_time_s.map(|tau| (tau * 0.44).max(8.5));
         if let Some(upgraded) = DieselTractionModel::from_lead_orts_scaled(
             &lead,
             l.max_power_w,

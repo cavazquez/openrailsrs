@@ -245,6 +245,13 @@ pub struct SimulationSection {
     /// Hold train-air cylinders during driver lap release (Chiltern activity brake bleed).
     #[serde(default)]
     pub train_air_lap_hold: bool,
+    /// Train-air dump time (s) after driver full release when lap-hold is enabled.
+    #[serde(default = "default_train_air_full_release_s")]
+    pub train_air_full_release_s: f64,
+}
+
+fn default_train_air_full_release_s() -> f64 {
+    3.0
 }
 
 fn default_legacy_power_cap() -> bool {

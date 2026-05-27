@@ -92,6 +92,8 @@ pub struct BrakeSystem {
     prev_command: f64,
     /// Hold wagon cylinders at peak application during lap release (Chiltern activity start).
     train_air_lap_hold: bool,
+    /// Seconds to dump train-air after driver full release when lap-hold is enabled.
+    train_air_full_release_s: f64,
 }
 
 impl BrakeSystem {
@@ -106,6 +108,16 @@ impl BrakeSystem {
         pipe_speed_mps: f64,
         train_air_lap_hold: bool,
     ) -> Self {
+        Self::from_vehicles_with_release(vehicles, pipe_speed_mps, train_air_lap_hold, 3.0)
+    }
+
+    /// Build with lap-hold and full-release bleed duration (s).
+    pub fn from_vehicles_with_release(
+        vehicles: &[(f64, f64, bool)],
+        pipe_speed_mps: f64,
+        train_air_lap_hold: bool,
+        train_air_full_release_s: f64,
+    ) -> Self {
         let cylinders = vehicles
             .iter()
             .map(|&(pos, force, ep)| BrakeCylinder::new(pos, force, ep))
@@ -115,6 +127,7 @@ impl BrakeSystem {
             pipe_speed_mps,
             prev_command: 0.0,
             train_air_lap_hold,
+            train_air_full_release_s: train_air_full_release_s.max(0.5),
         }
     }
 
@@ -161,8 +174,7 @@ impl BrakeSystem {
             // Ramp toward target; exhausting a cylinder is slower than applying.
             let delta = if cyl.current_force_n > target {
                 let rate = if command <= 0.0 && was_latched && self.train_air_lap_hold {
-                    // Activity brake bleed after lap release (Chiltern ~3 s train-air dump).
-                    cyl.max_force_n / 3.0
+                    cyl.max_force_n / self.train_air_full_release_s
                 } else {
                     cyl.release_ramp_rate_n_per_s
                 };
@@ -230,6 +242,7 @@ impl Default for BrakeSystem {
             pipe_speed_mps: 200.0,
             prev_command: 0.0,
             train_air_lap_hold: false,
+            train_air_full_release_s: 3.0,
         }
     }
 }

@@ -30,6 +30,7 @@ const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
 fn build_brake_system(
     consist: &openrailsrs_train::Consist,
     train_air_lap_hold: bool,
+    train_air_full_release_s: f64,
 ) -> BrakeSystem {
     const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
     let mut pos = 0.0_f64;
@@ -62,7 +63,12 @@ fn build_brake_system(
             (cylinder_pos, force_n, ep)
         })
         .collect();
-    BrakeSystem::from_vehicles_with_options(&pairs, BRAKE_PIPE_SPEED_MPS, train_air_lap_hold)
+    BrakeSystem::from_vehicles_with_release(
+        &pairs,
+        BRAKE_PIPE_SPEED_MPS,
+        train_air_lap_hold,
+        train_air_full_release_s,
+    )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -283,7 +289,11 @@ pub fn run_scenario_headless_with_driver(
     if let Some(offset) = scenario.route.start_offset_m {
         apply_start_offset(&mut state, &path_data, offset);
     }
-    state.brake_system = build_brake_system(&consist, scenario.simulation.train_air_lap_hold);
+    state.brake_system = build_brake_system(
+        &consist,
+        scenario.simulation.train_air_lap_hold,
+        scenario.simulation.train_air_full_release_s,
+    );
     let init = driver.initial_inputs();
     let brake_frac = train_physics
         .brake_mapping

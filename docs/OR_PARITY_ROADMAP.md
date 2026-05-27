@@ -238,7 +238,7 @@ flowchart LR
 
 - [ ] Experimento A (costa libre tras frenada fuerte): perfil v(t) post-suelta freno dentro de 0.5 m/s RMS vs OR
 - [ ] Chiltern fase 0–40 s (frenos al inicio): mejora posición max sin empeorar velocidad global
-- [x] OR-P6a parcial: precarga cilindros al freno inicial del driver + retención train-air en lap release (Chiltern 0–30 s ~0.43 m/s RMS vs ~0.54)
+- [x] OR-P6a parcial: precarga cilindros + lap hold train-air + `train_air_full_release_s` (Chiltern global ~0.39 m/s; 0–30 s ~0.54; 40–65 s ~0.33)
 
 **Estimación:** P6a–c: 1–2 semanas.
 
@@ -359,7 +359,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [x] Chiltern fase 40–65 s: RMS ≤ 0.35 m/s (ORTS trail heredado del DMBSA + run-up 15 s)
+- [x] Chiltern fase 40–65 s: RMS ≤ 0.35 m/s (trail ORTS + run-up ~13 s + OR-P6a freno arrancada)
 - [x] Experimento B 0–30 s: ~0.47 m/s RMS (audit ≤0.5; antes ~0.98)
 
 **Estimación:** 2–4 días (depende de content).

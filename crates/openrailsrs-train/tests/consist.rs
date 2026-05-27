@@ -134,6 +134,10 @@ fn chiltern_pullman_two_engines_aggregate() {
         models[1].engine.is_some(),
         "trail DMBSH should inherit scaled ORTS from DMBSA lead"
     );
+    assert!(
+        (models[1].legacy_run_up_time_s.unwrap() - 13.2).abs() < 0.2,
+        "trail run-up scaled from MSTS 30 s"
+    );
     let f_dmbsa = models[0].force_at(0.0, 0.8);
     let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();
     assert!(

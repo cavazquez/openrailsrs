@@ -135,6 +135,7 @@ pub fn import_activity_with_summary(
             brake_cylinder_full_scale_psi: None,
             legacy_power_cap: true,
             train_air_lap_hold: false,
+            train_air_full_release_s: 3.0,
         },
         output: OutputSection {
             csv: "run.csv".to_string(),
