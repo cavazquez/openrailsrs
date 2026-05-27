@@ -4006,6 +4006,7 @@ dependencies = [
  "openrailsrs-scenarios",
  "openrailsrs-track",
  "openrailsrs-train",
+ "openrailsrs-validate",
  "pretty_assertions",
  "serde",
  "tempfile",

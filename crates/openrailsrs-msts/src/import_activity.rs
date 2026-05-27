@@ -131,6 +131,8 @@ pub fn import_activity_with_summary(
             duration: duration_s,
             time_step: 1.0,
             seed: 42,
+            driver_brake_full_scale_psi: None,
+            brake_cylinder_full_scale_psi: None,
         },
         output: OutputSection {
             csv: "run.csv".to_string(),

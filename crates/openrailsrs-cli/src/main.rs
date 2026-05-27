@@ -17,7 +17,7 @@ use openrailsrs_sim::{
 };
 use openrailsrs_validate::{
     ComparisonReport, OrColumnMap, PhaseReport, ValidationConfig, compare_csv_files_with_config,
-    compare_or_dump_phases, compare_or_dump_with_run, write_or_eval_driver_csv,
+    compare_or_dump_phases, compare_or_dump_with_run,
 };
 
 #[derive(Parser)]
@@ -135,9 +135,12 @@ enum Commands {
         /// Output driver CSV (`time_s,throttle,brake`).
         #[arg(long)]
         out: PathBuf,
-        /// Full-scale brake pressure for normalizing OR `BRAKEPRESSURE` (default: max in file).
+        /// Full-scale brake pressure for normalizing OR `BRAKEPRESSURE` (overrides scenario).
         #[arg(long)]
         brake_full_scale: Option<f64>,
+        /// Load brake mapping defaults from `scenario.toml` (and runtime overlay).
+        #[arg(long)]
+        scenario: Option<PathBuf>,
     },
     /// Export GeoJSON for the route graph.
     ExportGeojson {
@@ -472,9 +475,31 @@ fn main() -> anyhow::Result<()> {
             or_eval,
             out,
             brake_full_scale,
+            scenario,
         } => {
-            let rows = write_or_eval_driver_csv(&or_eval, &out, brake_full_scale)
-                .map_err(|e| anyhow::anyhow!("or-eval-driver: {e}"))?;
+            let mapping = if let Some(scenario_path) = scenario {
+                let scenario_dir = scenario_path
+                    .parent()
+                    .ok_or_else(|| anyhow::anyhow!("scenario has no parent directory"))?;
+                let mut sc = openrailsrs_scenarios::load_scenario(&scenario_path)
+                    .map_err(|e| anyhow::anyhow!("load scenario: {e}"))?;
+                openrailsrs_scenarios::apply_scenario_runtime_overlay_dir(&mut sc, scenario_dir)
+                    .map_err(|e| anyhow::anyhow!("scenario overlay: {e}"))?;
+                let mut mapping = sc.brake_mapping();
+                if let Some(scale) = brake_full_scale {
+                    mapping.driver_full_scale_psi = scale;
+                }
+                mapping
+            } else {
+                openrailsrs_validate::BrakeCommandMapping::from_scenario_fields(
+                    brake_full_scale,
+                    None,
+                )
+            };
+            let rows = openrailsrs_validate::write_or_eval_driver_csv_with_mapping(
+                &or_eval, &out, &mapping,
+            )
+            .map_err(|e| anyhow::anyhow!("or-eval-driver: {e}"))?;
             println!("wrote {} driver keyframes to {}", rows, out.display());
         }
         Commands::ExportGeojson { route, out } => {

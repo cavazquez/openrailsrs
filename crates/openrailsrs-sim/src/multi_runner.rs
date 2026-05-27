@@ -134,8 +134,8 @@ fn consist_root(consist_path: &Path) -> &Path {
 
 fn build_physics(
     consist_path: &Path,
-    _scenario_dir: &Path,
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
+    brake_mapping: openrailsrs_validate::BrakeCommandMapping,
 ) -> Result<TrainPhysics, SimError> {
     let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
     let davis = davis_override
@@ -168,6 +168,7 @@ fn build_physics(
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params: consist.aggregate_steam_params(),
+        brake_mapping,
     })
 }
 
@@ -203,7 +204,11 @@ pub fn run_scenario_multi_train(
     {
         let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
-        let physics = build_physics(&consist_path, scenario_dir, scenario.train.davis.as_ref())?;
+        let physics = build_physics(
+            &consist_path,
+            scenario.train.davis.as_ref(),
+            scenario.brake_mapping(),
+        )?;
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
         state.brake_system = build_brake_from_path(&consist_path);
@@ -271,7 +276,11 @@ pub fn run_scenario_multi_train(
         }
         let path_edges = edge_path(&g2, &entry.start, &entry.destination)?;
         let consist_path = scenario_dir.join(&entry.consist);
-        let physics = build_physics(&consist_path, scenario_dir, entry.davis.as_ref())?;
+        let physics = build_physics(
+            &consist_path,
+            entry.davis.as_ref(),
+            scenario.brake_mapping(),
+        )?;
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
         state.brake_system = build_brake_from_path(&consist_path);
@@ -672,8 +681,11 @@ impl LiveMultiSim {
             let path_edges =
                 crate::path::edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
             let consist_path = scenario_dir.join(&scenario.train.consist);
-            let physics =
-                build_physics(&consist_path, scenario_dir, scenario.train.davis.as_ref())?;
+            let physics = build_physics(
+                &consist_path,
+                scenario.train.davis.as_ref(),
+                scenario.brake_mapping(),
+            )?;
             let total_dist_m: f64 = path_edges
                 .iter()
                 .filter_map(|eid| graph.edge(eid))
@@ -712,7 +724,11 @@ impl LiveMultiSim {
             }
             let path_edges = crate::path::edge_path(&g2, &entry.start, &entry.destination)?;
             let consist_path = scenario_dir.join(&entry.consist);
-            let physics = build_physics(&consist_path, scenario_dir, entry.davis.as_ref())?;
+            let physics = build_physics(
+                &consist_path,
+                entry.davis.as_ref(),
+                scenario.brake_mapping(),
+            )?;
             let total_dist_m: f64 = path_edges
                 .iter()
                 .filter_map(|eid| g2.edge(eid))
@@ -780,7 +796,11 @@ impl LiveMultiSim {
         for entry in &tt.trains {
             let path_edges = crate::path::edge_path(&graph, &entry.start, &entry.destination)?;
             let consist_path = route_dir.join(&entry.consist);
-            let physics = build_physics(&consist_path, &route_dir, None)?;
+            let physics = build_physics(
+                &consist_path,
+                None,
+                openrailsrs_validate::BrakeCommandMapping::default(),
+            )?;
             let total_dist_m: f64 = path_edges
                 .iter()
                 .filter_map(|eid| graph.edge(eid))

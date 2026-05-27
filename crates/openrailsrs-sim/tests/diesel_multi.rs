@@ -64,6 +64,7 @@ fn two_identical_engines_double_stall_force() {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -95,6 +96,7 @@ fn orts_plus_legacy_both_contribute() {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -121,6 +123,7 @@ fn per_engine_power_cap_limits_force_at_speed() {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -170,6 +173,7 @@ fn per_engine_rpm_independent() {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);

@@ -27,6 +27,7 @@ fn chiltern_pullman_freeroll_deceleration() {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     };
 
     let path_data = PathData {

@@ -51,6 +51,7 @@ fn default_train() -> TrainPhysics {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
+        brake_mapping: Default::default(),
     }
 }
 

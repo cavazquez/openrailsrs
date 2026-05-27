@@ -1,21 +1,13 @@
 use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, TractiveCurve};
 
+use openrailsrs_validate::BrakeCommandMapping;
+
 use crate::coupler::multi_body_step;
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
 use crate::steam::steam_step;
 
 const G: f64 = 9.81;
-/// Driver CSV stores OR brake pipe pressure / 121 PSI (see `openrailsrs_validate`).
-const OR_DRIVER_BRAKE_FULL_PSI: f64 = 121.0;
-/// Peak service pressure in OR evaluation logs (Chiltern AUTO_SIGNAL ~11 PSI). Driver
-/// commands are stored as `PSI/121`; cylinder force uses `PSI/this` (calibrated ~35 PSI).
-const OR_EVAL_BRAKE_PIPE_MAX_PSI: f64 = 35.0;
-
-/// Convert scripted-driver brake command to cylinder force fraction for the Westinghouse model.
-fn brake_command_fraction(command: f64) -> f64 {
-    (command.clamp(0.0, 1.0) * OR_DRIVER_BRAKE_FULL_PSI / OR_EVAL_BRAKE_PIPE_MAX_PSI).min(1.0)
-}
 /// Full tractive effort below this fraction of the edge speed limit.
 const SPEED_EPS_RATIO: f64 = 0.99;
 /// Open Rails allows modest overspeed before the limiter fully cuts power (see `runner` overspeed at 1.05×).
@@ -53,6 +45,8 @@ pub struct TrainPhysics {
     pub diesel_sfc_g_per_kwh: Option<f64>,
     /// Steam traction parameters.  When `Some`, bypasses the P/v electric model.
     pub steam_params: Option<SteamParams>,
+    /// OR driver brake command → cylinder force mapping (from scenario `[simulation]`).
+    pub brake_mapping: BrakeCommandMapping,
 }
 
 pub struct StepResult {
@@ -147,13 +141,14 @@ pub fn step(
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
-    state
-        .brake_system
-        .step(brake_command_fraction(state.brake), dt);
+    let brake_frac = train
+        .brake_mapping
+        .command_to_cylinder_fraction(state.brake);
+    state.brake_system.step(brake_frac, dt);
     let f_brake = if !state.brake_system.cylinders.is_empty() {
         state.brake_system.total_force_n()
     } else {
-        brake_command_fraction(state.brake) * train.max_brake_n
+        brake_frac * train.max_brake_n
     };
     let f_resist = train.davis.a_n + train.davis.b_n_per_mps * v + train.davis.c_n_per_mps2 * v * v;
     // Effective mass includes fixed consist mass plus any passenger load.
@@ -247,13 +242,13 @@ pub fn step(
 
 #[cfg(test)]
 mod tests {
-    use super::brake_command_fraction;
+    use openrailsrs_validate::BrakeCommandMapping;
 
     #[test]
     fn brake_command_maps_driver_psi_to_cylinder_fraction() {
-        // 9 PSI service brake: driver stores 9/121, physics uses ~9/35 at Chiltern calibration.
-        let cmd = 9.0 / 121.0;
-        let frac = brake_command_fraction(cmd);
+        let mapping = BrakeCommandMapping::from_scenario_fields(None, Some(35.0));
+        let cmd = 9.0 / openrailsrs_validate::OR_DEFAULT_BRAKE_FULL_SCALE_PSI;
+        let frac = mapping.command_to_cylinder_fraction(cmd);
         assert!((frac - 9.0 / 35.0).abs() < 1e-6, "frac={frac}");
         assert!(
             frac > cmd,

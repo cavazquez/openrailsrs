@@ -1,9 +1,11 @@
 //! Quantitative comparison of `run.csv` series.
 
+pub mod brake;
 pub mod compare;
 pub mod error;
 pub mod trace;
 
+pub use brake::{BrakeCommandMapping, OR_DEFAULT_BRAKE_FULL_SCALE_PSI};
 pub use compare::{
     ComparisonReport, PhaseReport, ValidationConfig, compare_csv_files,
     compare_csv_files_with_config, compare_or_dump_phases, compare_or_dump_with_run,
@@ -11,7 +13,7 @@ pub use compare::{
 };
 pub use error::ValidateError;
 pub use trace::{
-    OR_DEFAULT_BRAKE_FULL_SCALE_PSI, OrColumnMap, OrDistanceUnit, OrSpeedUnit, RunTrace,
-    TraceSample, infer_brake_full_scale, normalize_trace_brake_to_fraction,
-    parse_openrailsrs_run_csv, parse_or_dump_csv, resample_traces, write_or_eval_driver_csv,
+    OrColumnMap, OrDistanceUnit, OrSpeedUnit, RunTrace, TraceSample, infer_brake_full_scale,
+    normalize_trace_brake_to_fraction, parse_openrailsrs_run_csv, parse_or_dump_csv,
+    resample_traces, write_or_eval_driver_csv, write_or_eval_driver_csv_with_mapping,
 };

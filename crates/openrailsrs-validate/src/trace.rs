@@ -879,7 +879,7 @@ pub fn normalize_trace_brake_to_fraction(trace: &mut RunTrace, full_scale: Optio
 /// Open Rails logs brake pipe/cylinder pressure in PSI. A single activity often never
 /// reaches full service pressure, so inferring scale from the trace peak under-estimates
 /// the `[0, 1]` driver command. OR/MSTS typically treat ~121 PSI as the display ceiling.
-pub const OR_DEFAULT_BRAKE_FULL_SCALE_PSI: f64 = 121.0;
+pub use crate::brake::OR_DEFAULT_BRAKE_FULL_SCALE_PSI;
 
 /// Convert an OR evaluation `*Speed.csv` into a `ScriptedDriver` CSV (`time_s,throttle,brake`).
 pub fn write_or_eval_driver_csv(
@@ -887,9 +887,22 @@ pub fn write_or_eval_driver_csv(
     out_path: &Path,
     brake_full_scale: Option<f64>,
 ) -> Result<usize, ValidateError> {
+    write_or_eval_driver_csv_with_mapping(
+        or_eval_path,
+        out_path,
+        &crate::brake::BrakeCommandMapping::from_scenario_fields(brake_full_scale, None),
+    )
+}
+
+/// Like [`write_or_eval_driver_csv`] but uses an explicit driver/cylinder mapping
+/// (only the driver scale affects the exported CSV).
+pub fn write_or_eval_driver_csv_with_mapping(
+    or_eval_path: &Path,
+    out_path: &Path,
+    mapping: &crate::brake::BrakeCommandMapping,
+) -> Result<usize, ValidateError> {
     let mut trace = parse_or_dump_csv(or_eval_path, &OrColumnMap::default())?;
-    let brake_scale = brake_full_scale.unwrap_or(OR_DEFAULT_BRAKE_FULL_SCALE_PSI);
-    normalize_trace_brake_to_fraction(&mut trace, Some(brake_scale));
+    normalize_trace_brake_to_fraction(&mut trace, Some(mapping.driver_full_scale_psi));
 
     let mut wtr = csv::WriterBuilder::new()
         .has_headers(true)

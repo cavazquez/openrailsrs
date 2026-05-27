@@ -12,6 +12,7 @@ openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-track = { path = "../openrailsrs-track" }
 openrailsrs-train = { path = "../openrailsrs-train" }
+openrailsrs-validate = { path = "../openrailsrs-validate" }
 csv.workspace = true
 serde.workspace = true
 thiserror.workspace = true

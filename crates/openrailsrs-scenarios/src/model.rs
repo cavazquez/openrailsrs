@@ -233,6 +233,12 @@ pub struct SimulationSection {
     pub time_step: f64,
     #[serde(default = "default_seed")]
     pub seed: u64,
+    /// PSI divisor for OR `BRAKEPRESSURE` when building `driver_or.csv` (default 121).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_brake_full_scale_psi: Option<f64>,
+    /// PSI reference for full cylinder force; defaults to `driver_brake_full_scale_psi`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brake_cylinder_full_scale_psi: Option<f64>,
 }
 
 fn default_seed() -> u64 {
@@ -279,5 +285,13 @@ impl ScenarioFile {
             }
         }
         Ok(())
+    }
+
+    /// Brake pressure mapping for OR driver export and physics cylinder force.
+    pub fn brake_mapping(&self) -> openrailsrs_validate::BrakeCommandMapping {
+        openrailsrs_validate::BrakeCommandMapping::from_scenario_fields(
+            self.simulation.driver_brake_full_scale_psi,
+            self.simulation.brake_cylinder_full_scale_psi,
+        )
     }
 }

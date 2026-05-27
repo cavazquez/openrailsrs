@@ -92,6 +92,8 @@ fn make_two_train_scenario(
             duration,
             time_step: 0.5,
             seed: 1,
+            driver_brake_full_scale_psi: None,
+            brake_cylinder_full_scale_psi: None,
         },
         output: OutputSection {
             csv: "run_primary.csv".into(),

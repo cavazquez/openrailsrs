@@ -237,6 +237,7 @@ pub fn run_scenario_headless_with_driver(
         regen_factor: consist.regen_factor(),
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params,
+        brake_mapping: scenario.brake_mapping(),
     };
 
     let stop_nodes: HashSet<&str> = scenario

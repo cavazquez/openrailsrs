@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use openrailsrs_scenarios::load_scenario;
+use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
 use openrailsrs_sim::{ScriptedDriver, run_scenario_headless_with_driver};
 use openrailsrs_train::load_consist_with_asset_root;
 use openrailsrs_validate::{OrColumnMap, parse_or_dump_csv};
@@ -25,6 +25,7 @@ fn or_velocity_at(or_samples: &[openrailsrs_validate::TraceSample], t: f64) -> O
 
 fn sim_state_at(chiltern: &Path, t: f64) -> openrailsrs_sim::TrainSimState {
     let mut scenario = load_scenario(chiltern.join("scenario.toml")).expect("scenario");
+    apply_scenario_runtime_overlay_dir(&mut scenario, chiltern).expect("overlay");
     scenario.simulation.duration = t;
     let mut driver = ScriptedDriver::from_csv(chiltern.join("driver_or.csv")).expect("driver");
     run_scenario_headless_with_driver(chiltern, &scenario, &mut driver)

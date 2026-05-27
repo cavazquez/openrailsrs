@@ -38,6 +38,8 @@ pub struct SimulationOverlay {
     pub duration: Option<f64>,
     pub time_step: Option<f64>,
     pub seed: Option<u64>,
+    pub driver_brake_full_scale_psi: Option<f64>,
+    pub brake_cylinder_full_scale_psi: Option<f64>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -97,6 +99,14 @@ pub fn apply_scenario_runtime_overlay(scenario: &mut ScenarioFile, overlay: &Sce
             scenario.train.max_capacity = Some(max_capacity);
         }
     }
+    if let Some(sim) = &overlay.simulation {
+        if let Some(v) = sim.driver_brake_full_scale_psi {
+            scenario.simulation.driver_brake_full_scale_psi = Some(v);
+        }
+        if let Some(v) = sim.brake_cylinder_full_scale_psi {
+            scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
+        }
+    }
 }
 
 /// Load and merge `scenario.overlay.toml` for simulation (route/train only).
@@ -128,6 +138,12 @@ pub fn apply_scenario_overlay(scenario: &mut ScenarioFile, overlay: &ScenarioOve
         }
         if let Some(seed) = sim.seed {
             scenario.simulation.seed = seed;
+        }
+        if let Some(v) = sim.driver_brake_full_scale_psi {
+            scenario.simulation.driver_brake_full_scale_psi = Some(v);
+        }
+        if let Some(v) = sim.brake_cylinder_full_scale_psi {
+            scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
         }
     }
     if let Some(train) = &overlay.train {
@@ -194,6 +210,8 @@ mod tests {
                 duration: 3600.0,
                 time_step: 1.0,
                 seed: 42,
+                driver_brake_full_scale_psi: None,
+                brake_cylinder_full_scale_psi: None,
             },
             output: OutputSection {
                 csv: "run.csv".into(),
@@ -249,6 +267,25 @@ max_velocity_rms = 4.5
         );
         assert!(scenario.route.assume_signals_clear);
         assert_eq!(scenario.route.edge_speed_limits.len(), 1);
+    }
+
+    #[test]
+    fn runtime_overlay_merges_brake_mapping() {
+        let overlay: ScenarioOverlay = toml::from_str(
+            r#"
+[simulation]
+brake_cylinder_full_scale_psi = 35.0
+"#,
+        )
+        .expect("parse overlay");
+
+        let mut scenario = minimal_scenario();
+        apply_scenario_runtime_overlay(&mut scenario, &overlay);
+        assert_eq!(
+            scenario.simulation.brake_cylinder_full_scale_psi,
+            Some(35.0)
+        );
+        assert!((scenario.brake_mapping().cylinder_full_scale_psi - 35.0).abs() < 1e-9);
     }
 
     #[test]
