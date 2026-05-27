@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Referencia de física del simulador openrailsrs: tracción, Davis, frenos, diesel, validación.">
+  <title>Física — openrailsrs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="index.html">open<span>rails</span>rs</a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html">Inicio</a>
+        <a href="fisica.html" class="active">Física</a>
+        <a href="paridad-or.html">Paridad OR</a>
+        <a href="https://github.com/cavazquez/openrailsrs">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <header class="page-hero">
+      <h1>Referencia de física</h1>
+      <p class="lead">
+        Cada bloque describe un subsistema del motor de simulación: ecuaciones, archivos MSTS/OR que alimentan el modelo,
+        flags de escenario y enlace a la fase de paridad con Open Rails cuando aplica.
+      </p>
+      <p class="section-desc">
+        Código principal en <code>openrailsrs-sim</code> y <code>openrailsrs-train</code>.
+        Validación cuantitativa en <a href="paridad-or.html">Paridad OR</a>.
+      </p>
+    </header>
+
+    <div class="doc-layout">
+      <aside class="doc-toc" aria-label="Contenido">
+        <strong>Conceptos</strong>
+        <ul>
+          <li><a href="#longitudinal">Dinámica longitudinal</a></li>
+          <li><a href="#davis">Resistencia Davis</a></li>
+          <li><a href="#auto-friction">Auto-friction OR</a></li>
+          <li><a href="#diesel">Tracción diesel</a></li>
+          <li><a href="#throttle-pv">Throttle aparente y P/v</a></li>
+          <li><a href="#ramps">Rampas y fuerza continua</a></li>
+          <li><a href="#adhesion">Adhesión</a></li>
+          <li><a href="#dmbsh">DMBSH trail</a></li>
+          <li><a href="#air-brake">Freno de aire</a></li>
+          <li><a href="#shoe-friction">Zapata μ(v)</a></li>
+          <li><a href="#multi-body">Multi-cuerpo</a></li>
+          <li><a href="#steam">Vapor</a></li>
+          <li><a href="#validation">Validación</a></li>
+        </ul>
+      </aside>
+
+      <div class="doc-content">
+
+        <section id="longitudinal">
+          <h2>Dinámica longitudinal</h2>
+          <p class="section-desc">Integración escalar (masa puntual) o multi-cuerpo con acopladores.</p>
+          <div class="concept-block">
+            <p>En cada paso de tiempo <code>dt</code>, la velocidad del tren evoluciona por balance de fuerzas longitudinales:</p>
+            <span class="formula">F_net = F_tracción − F_freno − F_Davis − F_pendiente<br>
+a = F_net / m_efectiva &nbsp;&nbsp;→&nbsp;&nbsp; v += a · dt</span>
+            <p><code>m_efectiva</code> incluye masa del consist más pasajeros embarcados en paradas. La posición avanza con la velocidad media del paso sobre el grafo de vía (<code>PathData</code>: pendiente, límite de velocidad).</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-sim/physics.rs</span>
+              <span class="meta-tag">openrailsrs-sim/state.rs</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="davis">
+          <h2>Resistencia Davis</h2>
+          <p class="section-desc">Rodadura + arrastre aerodinámico; sumada por vehículo al cargar el consist.</p>
+          <div class="concept-block">
+            <span class="formula">F_resist(v) = A + B·v + C·v²</span>
+            <p>Los coeficientes <code>A</code>, <code>B</code>, <code>C</code> se leen de <code>ORTSDavis_A/B/C</code> en cada <code>.eng</code> / <code>.wag</code> y se agregan en <code>Consist::aggregate_davis()</code>. Un override manual <code>[train.davis]</code> en el escenario sigue siendo posible.</p>
+            <p>Unidades: <code>A</code> en N, <code>B</code> en N·s/m, <code>C</code> en N·s²/m²; velocidad <code>v</code> en m/s.</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-train/model.rs</span>
+              <span class="meta-tag">ORTSDavis_*</span>
+              <span class="meta-tag">OR-P5</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="auto-friction">
+          <h2>Auto-friction OR <span class="status status-partial">Parcial</span></h2>
+          <p class="section-desc">Estimación Davis cuando el content no trae ORTSDavis explícito.</p>
+          <div class="concept-block">
+            <p>Open Rails calcula A/B desde tipo de rodamiento (<code>ORTSBearingType</code>), masa y ejes; C desde área frontal y <code>ORTSDavisDragConstant</code> (fórmulas Davis 1926 / CN 1992).</p>
+            <p>openrailsrs usa hoy <code>davis_est.rs</code>: escala heurística respecto a un coach de referencia (~34 t). Chiltern Pullman ya tiene Davis explícito en assets; SCE MK2 depende más de la estimación.</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-train/davis_est.rs</span>
+              <span class="meta-tag">OR-P2</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="diesel">
+          <h2>Tracción diesel</h2>
+          <p class="section-desc">Curvas por notch, motor(es) múltiples y modelo legacy P/v.</p>
+          <div class="concept-block">
+            <h4>Curvas ORTS (preferido)</h4>
+            <p><code>ORTSMaxTractiveForceCurves</code> define fuerza vs velocidad por posición de throttle. El eje X está en <strong>m/s</strong> (default OR). Cada motor del consist (<code>Engine ( … )</code> en el <code>.con</code>) puede tener su propio modelo.</p>
+            <h4>Modelo legacy</h4>
+            <p>Sin curvas ORTS: <code>F = min(P_max/v, F_max)</code> con rampa <code>RunUpTimeToMaxForce</code>.</p>
+            <h4>Multi-motor</h4>
+            <p><code>diesel_engines[]</code> y <code>diesel_rpm[]</code> en estado de simulación; fuerzas y potencias se suman.</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-train/diesel.rs</span>
+              <span class="meta-tag">DieselPowerTab</span>
+              <span class="meta-tag">ThrottleRPMTab</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="throttle-pv">
+          <h2>Throttle aparente y tope P/v <span class="status status-partial">En curso</span></h2>
+          <p class="section-desc">Cadena diesel-eléctrica de Open Rails (OR-P1).</p>
+          <div class="concept-block">
+            <p>En OR, antes de consultar curvas:</p>
+            <ul>
+              <li><code>ReverseThrottleRPMTab[RPM]</code> → throttle aparente máximo</li>
+              <li>Tope de fuerza: <code>LocomotiveMaxRailOutputPowerW × throttle × run_fraction</code></li>
+            </ul>
+            <p>openrailsrs limita potencia con <code>effective_power_w()</code> (escalado idle→tab). Flag <code>legacy_power_cap = false</code> en Chiltern desactiva el cap P/v antiguo por locomotora.</p>
+            <div class="meta-row">
+              <span class="meta-tag">OR-P1</span>
+              <span class="meta-tag">legacy_power_cap</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="ramps">
+          <h2>Rampas y fuerza continua <span class="status status-done">Hecho</span></h2>
+          <p class="section-desc">Transitorios de tracción y límite térmico continuo (OR-P3).</p>
+          <div class="concept-block">
+            <p>Parseo de <code>ORTSTractiveForceRampUpRate</code>, rampas de potencia y <code>ORTSContinuousForceTimeFactor</code>. Estado por motor: <code>diesel_traction_force_n</code>, <code>diesel_average_force_n</code>.</p>
+            <p>La fuerza aplicada sigue rampas antes del paso de velocidad; el límite continuo reduce esfuerzo cuando la media móvil supera <code>MaxContinuousForce</code>.</p>
+            <div class="meta-row">
+              <span class="meta-tag">OR-P3</span>
+              <span class="meta-tag">physics.rs</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="adhesion">
+          <h2>Adhesión Curtius-Kniffler</h2>
+          <p class="section-desc">Tope de tracción por adherencia rueda-rail.</p>
+          <div class="concept-block">
+            <span class="formula">μ_adh(v) = A + B / (v + C)</span>
+            <p>Coeficientes desde <code>ORTSCurtiusKniffler</code> o defaults OR. <code>ORTSDriveWheelWeight</code> define masa sobre ejes motrices. La tracción solicitada se recorta a <code>μ · m_drive · g</code>.</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-train/diesel.rs</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="dmbsh">
+          <h2>DMBSH trail <span class="status status-done">Hecho</span></h2>
+          <p class="section-desc">Locomotora cola Blue Pullman sin curvas ORTS propias (OR-P13).</p>
+          <div class="concept-block">
+            <p>Al cargar el consist, el DMBSH (trail) <strong>hereda</strong> las curvas ORTS y parámetros diesel del DMBSA lead si su <code>.eng</code> es stub MSTS.</p>
+            <p>Run-up MSTS (<code>RunUpTimeToMaxForce</code>) solo aplica bajo notch completo; en notches parciales la respuesta es inmediata como en OR.</p>
+            <div class="meta-row">
+              <span class="meta-tag">OR-P13</span>
+              <span class="meta-tag">from_ast.rs</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="air-brake">
+          <h2>Freno de aire Westinghouse <span class="status status-partial">Parcial</span></h2>
+          <p class="section-desc">Propagación por tubo y cilindros por vehículo (OR-P6a).</p>
+          <div class="concept-block">
+            <p>Cada vehículo tiene un cilindro en posición acumulada a lo largo del tren. La señal de freno viaja a ~200 m/s desde la cabeza; locomotoras EP responden al instante, vagones train-air con retardo.</p>
+            <h4>Arrancada Chiltern</h4>
+            <ul>
+              <li><code>precharge()</code> — cilindros al freno inicial del driver</li>
+              <li><code>train_air_lap_hold</code> — lap no libera vagones hasta notch 0</li>
+              <li><code>train_air_full_release_s</code> — tiempo de vaciado tras soltar freno</li>
+            </ul>
+            <p>Driver OR: <code>BRAKEPRESSURE / 121</code> → comando; fuerza máxima calibrada con <code>brake_cylinder_full_scale_psi = 35</code>.</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-sim/brake.rs</span>
+              <span class="meta-tag">OR-P6a</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="shoe-friction">
+          <h2>Coeficiente de zapata μ(v) <span class="status status-done">Hecho</span></h2>
+          <p class="section-desc">Curvas Karwatzki 1D (OR-P6b).</p>
+          <div class="concept-block">
+            <span class="formula">F_rueda(v) = F_cilindro × μ(v) / μ(0)</span>
+            <p>Parseo de <code>ORTSBrakeShoeType</code> y <code>ORTSBrakeShoeFriction</code>. Tipos built-in: cast iron, HFC, disc. <code>MaxBrakeForce</code> ya incluye μ a velocidad 0.</p>
+            <p>Activar con <code>brake_shoe_speed_factor = true</code> en <code>[simulation]</code> (Chiltern).</p>
+            <div class="meta-row">
+              <span class="meta-tag">brake_shoe.rs</span>
+              <span class="meta-tag">OR-P6b</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="multi-body">
+          <h2>Multi-cuerpo y acopladores <span class="status status-partial">Opt-in</span></h2>
+          <p class="section-desc">Resorte-amortiguador entre vehículos (OR-P4).</p>
+          <div class="concept-block">
+            <p><code>multi_body_step()</code> resuelve velocidades por vehículo con acopladores tipo muelle. Tracción en el primer vehículo; freno repartido por cilindro cuando hay <code>BrakeSystem</code> registrado.</p>
+            <p>En el runner estándar la simulación usa masa agregada salvo que se inicialice <code>state.vehicles</code> (tests / futuro flag <code>multi_body</code>).</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-sim/coupler.rs</span>
+              <span class="meta-tag">OR-P4</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="steam">
+          <h2>Vapor</h2>
+          <p class="section-desc">Modelo simplificado de caldera y cilindros.</p>
+          <div class="concept-block">
+            <p>Parámetros MSTS: bore, carrera, ruedas motrices, presión de trabajo, evaporación. Fuerza desde presión efectiva en cilindros; consumo de agua y carbón. Menor paridad OR que el diesel (OR-P11 a largo plazo).</p>
+            <div class="meta-row">
+              <span class="meta-tag">openrailsrs-sim/steam.rs</span>
+              <span class="meta-tag">examples/steam/</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="validation">
+          <h2>Validación cuantitativa</h2>
+          <p class="section-desc">Comparar CSV de simulación contra trazas Open Rails.</p>
+          <div class="concept-block">
+            <p>Tras <code>openrailsrs sim</code>, la sección <code>[validate]</code> del escenario puede invocar <code>compare-or</code> con umbrales RMS/max por columna y fases temporales (<code>phase_bounds</code>).</p>
+            <pre class="cli-block"><span class="cmd">openrailsrs compare-or</span> baseline_or.csv run.csv --phase-bounds 0,30,40,65
+<span class="cmd">openrailsrs or-eval-driver</span> or_trace.csv --out driver_or.csv --scenario scenario.toml</pre>
+            <p>Ver métricas actuales y gaps en <a href="paridad-or.html">Paridad OR</a>.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>openrailsrs</strong> — referencia de física</p>
+    <p><a href="index.html">Inicio</a> · <a href="paridad-or.html">Paridad OR</a> ·
+       <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/OR_PARITY_ROADMAP.md">Roadmap OR (GitHub)</a></p>
+  </footer>
+</body>
+</html>
