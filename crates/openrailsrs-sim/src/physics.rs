@@ -47,6 +47,8 @@ pub struct TrainPhysics {
     pub steam_params: Option<SteamParams>,
     /// OR driver brake command → cylinder force mapping (from scenario `[simulation]`).
     pub brake_mapping: BrakeCommandMapping,
+    /// When true, use pre-OR-P1 `DieselPowerTab` P/v cap and skip apparent throttle.
+    pub legacy_power_cap: bool,
 }
 
 pub struct StepResult {
@@ -117,9 +119,16 @@ pub fn step(
                     };
                     state.diesel_motor_heat[i] = new_heat;
                     let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
-                    let mut f_e =
-                        engine.force_at_scaled(v, state.throttle, run_factor, power_reduction);
-                    let p_e = engine.effective_power_w(new_rpm, state.throttle)
+                    let legacy = train.legacy_power_cap;
+                    let mut f_e = engine.force_at_scaled(
+                        v,
+                        state.throttle,
+                        new_rpm,
+                        run_factor,
+                        power_reduction,
+                        legacy,
+                    );
+                    let p_e = engine.traction_power_cap_w(new_rpm, state.throttle, v, legacy)
                         * run_factor
                         * (1.0 - power_reduction.clamp(0.0, 0.95));
                     if v > 0.5 && p_e > 0.0 {

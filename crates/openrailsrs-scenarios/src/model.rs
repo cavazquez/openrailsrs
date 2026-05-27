@@ -239,6 +239,13 @@ pub struct SimulationSection {
     /// PSI reference for full cylinder force; defaults to `driver_brake_full_scale_psi`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brake_cylinder_full_scale_psi: Option<f64>,
+    /// Use pre-OR-P1 diesel P/v cap (default true for baseline compatibility).
+    #[serde(default = "default_legacy_power_cap")]
+    pub legacy_power_cap: bool,
+}
+
+fn default_legacy_power_cap() -> bool {
+    true
 }
 
 fn default_seed() -> u64 {

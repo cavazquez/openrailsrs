@@ -36,8 +36,8 @@ fn sce_class47_cruise_force_balance() {
 
     for v_mph in [12.0, 13.0, 14.0, 15.0, 16.0] {
         let v = v_mph / 2.237;
-        let f_curve = m.force_at_scaled(v, throttle, 1.0, 0.0);
-        let p = m.effective_power_w(target_rpm, throttle);
+        let f_curve = m.force_at_scaled(v, throttle, target_rpm, 1.0, 0.0, true);
+        let p = m.traction_power_cap_w(target_rpm, throttle, v, true);
         let f_pv = if v > 0.5 { p / v } else { 0.0 };
         let f_trac = f_curve.min(f_pv).min(m.adhesion_limit_n(v));
         let f_res = davis.a_n + davis.b_n_per_mps * v + davis.c_n_per_mps2 * v * v;
@@ -51,8 +51,8 @@ fn sce_class47_cruise_force_balance() {
     let v_or = 14.0 / 2.237;
     let f_res_or = davis.a_n + davis.b_n_per_mps * v_or + davis.c_n_per_mps2 * v_or * v_or;
     let f_sim = m
-        .force_at_scaled(v_or, throttle, 1.0, 0.0)
-        .min(m.effective_power_w(target_rpm, throttle) / v_or);
+        .force_at_scaled(v_or, throttle, target_rpm, 1.0, 0.0, true)
+        .min(m.traction_power_cap_w(target_rpm, throttle, v_or, true) / v_or);
 
     eprintln!(
         "OR equilibrium hint: need F≈{f_res_or:.0}N at 14 mph; sim delivers {f_sim:.0}N (+{:.0}N)",

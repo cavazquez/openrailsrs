@@ -136,6 +136,7 @@ fn build_physics(
     consist_path: &Path,
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
     brake_mapping: openrailsrs_validate::BrakeCommandMapping,
+    legacy_power_cap: bool,
 ) -> Result<TrainPhysics, SimError> {
     let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
     let davis = davis_override
@@ -169,6 +170,7 @@ fn build_physics(
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params: consist.aggregate_steam_params(),
         brake_mapping,
+        legacy_power_cap,
     })
 }
 
@@ -208,6 +210,7 @@ pub fn run_scenario_multi_train(
             &consist_path,
             scenario.train.davis.as_ref(),
             scenario.brake_mapping(),
+            scenario.simulation.legacy_power_cap,
         )?;
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
@@ -280,6 +283,7 @@ pub fn run_scenario_multi_train(
             &consist_path,
             entry.davis.as_ref(),
             scenario.brake_mapping(),
+            scenario.simulation.legacy_power_cap,
         )?;
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
@@ -685,6 +689,7 @@ impl LiveMultiSim {
                 &consist_path,
                 scenario.train.davis.as_ref(),
                 scenario.brake_mapping(),
+                scenario.simulation.legacy_power_cap,
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()
@@ -728,6 +733,7 @@ impl LiveMultiSim {
                 &consist_path,
                 entry.davis.as_ref(),
                 scenario.brake_mapping(),
+                scenario.simulation.legacy_power_cap,
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()
@@ -800,6 +806,7 @@ impl LiveMultiSim {
                 &consist_path,
                 None,
                 openrailsrs_validate::BrakeCommandMapping::default(),
+                true,
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()

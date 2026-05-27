@@ -212,6 +212,7 @@ mod tests {
                 seed: 42,
                 driver_brake_full_scale_psi: None,
                 brake_cylinder_full_scale_psi: None,
+                legacy_power_cap: true,
             },
             output: OutputSection {
                 csv: "run.csv".into(),

@@ -54,6 +54,7 @@ fn default_train_pv() -> TrainPhysics {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     }
 }
 
@@ -71,6 +72,7 @@ fn default_train_with_curve() -> TrainPhysics {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     }
 }
 
@@ -202,6 +204,7 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
     let pd = path_data_for(&["e1"], &g);
     let mut st = TrainSimState::new(vec!["e1".into()]);

@@ -29,6 +29,48 @@ pub struct DieselEngineParams {
     pub change_up_rpm_ps: f64,
     /// OR `ChangeDownRPMpS`.
     pub change_down_rpm_ps: f64,
+    /// RPM → throttle 0–1 (`ReverseThrottleRPMTab`, built from `ThrottleRPMTab` when absent).
+    pub reverse_throttle_rpm_tab: Vec<(f64, f64)>,
+}
+
+/// Build OR `ReverseThrottleRPMTab` from `ThrottleRPMTab`.
+pub fn build_reverse_throttle_rpm_tab(throttle_rpm_tab: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    if throttle_rpm_tab.is_empty() {
+        return Vec::new();
+    }
+    let mut pairs: Vec<(f64, f64)> = throttle_rpm_tab.iter().map(|(t, r)| (*r, *t)).collect();
+    pairs.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if pairs.first().map(|(r, _)| *r > 0.0).unwrap_or(true) {
+        if let Some((_, idle_rpm)) = throttle_rpm_tab.first() {
+            pairs.insert(0, (*idle_rpm, 0.0));
+        }
+    }
+    pairs
+}
+
+fn interp_sorted_tab(tab: &[(f64, f64)], x: f64) -> f64 {
+    if tab.is_empty() {
+        return 0.0;
+    }
+    if x <= tab[0].0 {
+        return tab[0].1;
+    }
+    if x >= tab.last().map(|(k, _)| *k).unwrap_or(f64::MAX) {
+        return tab.last().map(|(_, v)| *v).unwrap_or(0.0);
+    }
+    for i in 1..tab.len() {
+        let (x0, y0) = tab[i - 1];
+        let (x1, y1) = tab[i];
+        if x <= x1 {
+            let span = x1 - x0;
+            if span.abs() < 1e-9 {
+                return y1;
+            }
+            let alpha = (x - x0) / span;
+            return y0 + alpha * (y1 - y0);
+        }
+    }
+    tab.last().map(|(_, v)| *v).unwrap_or(0.0)
 }
 
 impl DieselEngineParams {
@@ -54,6 +96,14 @@ impl DieselEngineParams {
             }
         }
         self.max_rpm
+    }
+
+    /// OR `ApparentThrottleSetting / 100` from `ReverseThrottleRPMTab[RealRPM]`.
+    pub fn apparent_throttle_fraction(&self, rpm: f64) -> f64 {
+        if self.reverse_throttle_rpm_tab.is_empty() {
+            return 1.0;
+        }
+        interp_sorted_tab(&self.reverse_throttle_rpm_tab, rpm).clamp(0.0, 1.0)
     }
 
     /// Shaft power (W) at a given RPM, interpolated from `DieselPowerTab`.
@@ -148,6 +198,12 @@ pub struct DieselTractionModel {
     pub curtius_c: f64,
     /// Motor heating time constant for dynamic `PowerReduction` (seconds).
     pub motor_heating_time_s: f64,
+    /// OR `LocomotiveMaxRailOutputPowerW` (W); falls back to legacy `max_power_w`.
+    pub max_rail_output_power_w: f64,
+    /// OR `ORTSUnloadingSpeed` (m/s); 0 = disabled.
+    pub unloading_speed_mps: f64,
+    /// When true, skip apparent-throttle limiting on F(v) curves.
+    pub tractive_force_power_limited: bool,
 }
 
 impl Default for DieselTractionModel {
@@ -163,6 +219,9 @@ impl Default for DieselTractionModel {
             curtius_b: 0.0,
             curtius_c: 0.0,
             motor_heating_time_s: 120.0,
+            max_rail_output_power_w: 0.0,
+            unloading_speed_mps: 0.0,
+            tractive_force_power_limited: false,
         }
     }
 }
@@ -186,10 +245,77 @@ impl DieselTractionModel {
             curtius_b: 0.0,
             curtius_c: 0.0,
             motor_heating_time_s: 120.0,
+            max_rail_output_power_w: 0.0,
+            unloading_speed_mps: 0.0,
+            tractive_force_power_limited: false,
         }
     }
 
-    /// Configure adhesion and motor-heating parameters from locomotive `.eng` data.
+    /// Effective throttle for F(v) curves: `min(driver, apparent)` unless power-limited.
+    pub fn effective_traction_throttle(&self, driver_throttle: f64, rpm: f64) -> f64 {
+        let driver = driver_throttle.clamp(0.0, 1.0);
+        if self.tractive_force_power_limited {
+            return driver;
+        }
+        let apparent = self
+            .engine
+            .as_deref()
+            .map(|e| e.apparent_throttle_fraction(rpm))
+            .unwrap_or(1.0);
+        driver.min(apparent)
+    }
+
+    /// OR rail P/v cap (W): `LocomotiveMaxRailOutputPowerW × t`, with optional unload decay.
+    pub fn rail_power_cap_w(&self, effective_throttle: f64, v_mps: f64) -> f64 {
+        let t = effective_throttle.clamp(0.0, 1.0);
+        let base_w = if self.max_rail_output_power_w > 0.0 {
+            self.max_rail_output_power_w
+        } else {
+            self.max_power_w.unwrap_or(0.0)
+        };
+        if base_w <= 0.0 || t <= 0.0 {
+            return 0.0;
+        }
+        let mut power_w = base_w * t;
+        let unload = self.unloading_speed_mps;
+        if unload > 0.0 && v_mps > unload {
+            let decay = 1.0 - (1.0 / unload) * (v_mps - unload);
+            power_w *= decay.clamp(0.0, 1.0);
+        }
+        power_w
+    }
+
+    /// Legacy P/v cap from `DieselPowerTab` (SCE calibration hack).
+    pub fn legacy_effective_power_w(&self, current_rpm: f64, throttle: f64) -> f64 {
+        let t = throttle.clamp(0.0, 1.0);
+        match &self.engine {
+            Some(e) => {
+                let at_rpm = e.power_at_rpm(current_rpm);
+                if t >= 0.5 {
+                    return at_rpm;
+                }
+                let at_idle = e.power_at_rpm(e.idle_rpm);
+                at_idle + (at_rpm - at_idle).max(0.0) * t
+            }
+            None => self.max_power_w.unwrap_or(0.0) * t,
+        }
+    }
+
+    /// P/v cap power (W) for traction limiting.
+    pub fn traction_power_cap_w(
+        &self,
+        current_rpm: f64,
+        driver_throttle: f64,
+        v_mps: f64,
+        legacy_power_cap: bool,
+    ) -> f64 {
+        if legacy_power_cap {
+            return self.legacy_effective_power_w(current_rpm, driver_throttle);
+        }
+        let t_eff = self.effective_traction_throttle(driver_throttle, current_rpm);
+        self.rail_power_cap_w(t_eff, v_mps)
+    }
+
     pub fn configure_traction_limits(
         &mut self,
         loco_mass_kg: f64,
@@ -241,10 +367,11 @@ impl DieselTractionModel {
             curtius_b: 0.0,
             curtius_c: 0.0,
             motor_heating_time_s: 120.0,
+            max_rail_output_power_w: max_power_w,
+            unloading_speed_mps: 0.0,
+            tractive_force_power_limited: false,
         }
     }
-
-    /// OR dynamic `PowerReduction` fraction from motor heat state `[0, 1]`.
     pub fn power_reduction_from_heat(heat: f64) -> f64 {
         heat.clamp(0.0, 0.35)
     }
@@ -294,23 +421,9 @@ impl DieselTractionModel {
         }
     }
 
-    /// Shaft power at `current_rpm` and `throttle`, including legacy P/v fallback.
-    ///
-    /// With a [`DieselEngineParams`] model, OR scales shaft power between idle and
-    /// `DieselPowerTab(RPM)` at partial throttle; near notch power the tab maximum applies.
+    /// Shaft power at `current_rpm` and `throttle` — delegates to legacy P/v cap.
     pub fn effective_power_w(&self, current_rpm: f64, throttle: f64) -> f64 {
-        let t = throttle.clamp(0.0, 1.0);
-        match &self.engine {
-            Some(e) => {
-                let at_rpm = e.power_at_rpm(current_rpm);
-                if t >= 0.5 {
-                    return at_rpm;
-                }
-                let at_idle = e.power_at_rpm(e.idle_rpm);
-                at_idle + (at_rpm - at_idle).max(0.0) * t
-            }
-            None => self.max_power_w.unwrap_or(0.0) * t,
-        }
+        self.legacy_effective_power_w(current_rpm, throttle)
     }
 
     /// Advance the engine RPM one step; no-op when no engine params.
@@ -338,26 +451,46 @@ impl DieselTractionModel {
 
     /// Tractive effort (N) at speed `v_mps` with driver throttle in `[0, 1]`.
     pub fn force_at(&self, v_mps: f64, throttle: f64) -> f64 {
-        self.force_at_scaled(v_mps, throttle, 1.0, 0.0)
+        let rpm = self
+            .engine
+            .as_deref()
+            .map(|e| e.target_rpm(throttle))
+            .unwrap_or(0.0);
+        self.force_at_scaled(v_mps, throttle, rpm, 1.0, 0.0, true)
     }
 
     /// Like [`Self::force_at`] but scales legacy ramp-in and applies adhesion / heating.
     pub fn force_at_scaled(
         &self,
         v_mps: f64,
-        throttle: f64,
+        driver_throttle: f64,
+        rpm: f64,
         run_up_factor: f64,
         power_reduction: f64,
+        legacy_power_cap: bool,
     ) -> f64 {
-        let raw =
-            self.force_at_raw(v_mps, throttle) * self.effort_scale * run_up_factor.clamp(0.0, 1.0);
+        let curve_throttle = if legacy_power_cap {
+            driver_throttle.clamp(0.0, 1.0)
+        } else {
+            self.effective_traction_throttle(driver_throttle, rpm)
+        };
+        let raw = self.force_at_raw(v_mps, curve_throttle)
+            * self.effort_scale
+            * run_up_factor.clamp(0.0, 1.0);
         let reduced = raw * (1.0 - power_reduction.clamp(0.0, 0.95));
         reduced.min(self.adhesion_limit_n(v_mps))
     }
 
     /// Peak tractive effort at `(v, throttle)` before adhesion / heating caps.
     pub fn uncapped_force_at(&self, v_mps: f64, throttle: f64, run_up_factor: f64) -> f64 {
-        self.force_at_raw(v_mps, throttle) * self.effort_scale * run_up_factor.clamp(0.0, 1.0)
+        let rpm = self
+            .engine
+            .as_deref()
+            .map(|e| e.target_rpm(throttle))
+            .unwrap_or(0.0);
+        self.force_at_raw(v_mps, self.effective_traction_throttle(throttle, rpm))
+            * self.effort_scale
+            * run_up_factor.clamp(0.0, 1.0)
     }
 
     fn force_at_raw(&self, v_mps: f64, throttle: f64) -> f64 {
@@ -416,6 +549,41 @@ mod tests {
     }
 
     #[test]
+    fn apparent_throttle_limits_force_at_low_rpm() {
+        let throttle_rpm = vec![(0.0, 325.0), (1.0, 750.0)];
+        let engine = DieselEngineParams {
+            power_tab: vec![(325.0, 100_000.0), (750.0, 1_000_000.0)],
+            throttle_rpm_tab: throttle_rpm.clone(),
+            idle_rpm: 325.0,
+            max_rpm: 750.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 0.0,
+            rate_of_change_down_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            change_down_rpm_ps: 0.0,
+            reverse_throttle_rpm_tab: build_reverse_throttle_rpm_tab(&throttle_rpm),
+        };
+        let mut m = sample_model();
+        m.engine = Some(Box::new(engine));
+        m.max_rail_output_power_w = 1_000_000.0;
+        let apparent = m.engine.as_ref().unwrap().apparent_throttle_fraction(400.0);
+        assert!(apparent < 0.5, "apparent={apparent}");
+        let f_legacy = m.force_at_scaled(0.0, 1.0, 400.0, 1.0, 0.0, true);
+        let f_or = m.force_at_scaled(0.0, 1.0, 400.0, 1.0, 0.0, false);
+        assert!(f_or < f_legacy, "legacy={f_legacy} or={f_or}");
+    }
+
+    #[test]
+    fn rail_power_cap_scales_with_effective_throttle() {
+        let mut m = sample_model();
+        m.max_rail_output_power_w = 2_000_000.0;
+        let p_full = m.rail_power_cap_w(1.0, 10.0);
+        let p_partial = m.rail_power_cap_w(0.27, 10.0);
+        assert!((p_full - 2_000_000.0).abs() < 1.0);
+        assert!((p_partial - 540_000.0).abs() < 1_000.0);
+    }
+
+    #[test]
     fn effective_power_scales_with_throttle_when_engine_present() {
         let engine = DieselEngineParams {
             power_tab: vec![(325.0, 100_000.0), (1500.0, 500_000.0)],
@@ -427,6 +595,7 @@ mod tests {
             rate_of_change_down_rpm_pss: 0.0,
             change_up_rpm_ps: 0.0,
             change_down_rpm_ps: 0.0,
+            reverse_throttle_rpm_tab: Vec::new(),
         };
         let mut m = sample_model();
         m.engine = Some(Box::new(engine));
@@ -458,6 +627,10 @@ mod tests {
             rate_of_change_down_rpm_pss: 10.0,
             change_up_rpm_ps: 50.0,
             change_down_rpm_ps: 40.0,
+            reverse_throttle_rpm_tab: build_reverse_throttle_rpm_tab(&[
+                (0.0, 650.0),
+                (1.0, 1500.0),
+            ]),
         };
         let lag = DieselEngineParams {
             rate_of_change_up_rpm_pss: 0.0,

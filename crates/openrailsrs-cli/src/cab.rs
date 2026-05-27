@@ -88,6 +88,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         diesel_sfc_g_per_kwh: consist.diesel_sfc_g_per_kwh(),
         steam_params: consist.aggregate_steam_params(),
         brake_mapping: scenario.brake_mapping(),
+        legacy_power_cap: scenario.simulation.legacy_power_cap,
     };
 
     let total_dist_m: f64 = path_edges

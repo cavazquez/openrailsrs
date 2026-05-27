@@ -65,6 +65,7 @@ fn two_identical_engines_double_stall_force() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -97,6 +98,7 @@ fn orts_plus_legacy_both_contribute() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -124,6 +126,7 @@ fn per_engine_power_cap_limits_force_at_speed() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -159,6 +162,10 @@ fn per_engine_rpm_independent() {
         rate_of_change_down_rpm_pss: 0.0,
         change_up_rpm_ps: 0.0,
         change_down_rpm_ps: 0.0,
+        reverse_throttle_rpm_tab: openrailsrs_train::build_reverse_throttle_rpm_tab(&[
+            (0.0, 325.0),
+            (1.0, 750.0),
+        ]),
     };
     fast.engine = Some(Box::new(engine_params(0.5)));
     slow.engine = Some(Box::new(engine_params(5.0)));
@@ -174,6 +181,7 @@ fn per_engine_rpm_independent() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);

@@ -132,8 +132,10 @@ fn chiltern_cruise_phase_audit_61_136s() {
             };
             let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
             let pr = openrailsrs_train::DieselTractionModel::power_reduction_from_heat(heat);
-            let mut f = m.force_at_scaled(v_sim, throttle, run_factor, pr);
-            let p = m.effective_power_w(rpm, throttle) * run_factor * (1.0 - pr.clamp(0.0, 0.95));
+            let mut f = m.force_at_scaled(v_sim, throttle, rpm, run_factor, pr, true);
+            let p = m.traction_power_cap_w(rpm, throttle, v_sim, true)
+                * run_factor
+                * (1.0 - pr.clamp(0.0, 0.95));
             if v_sim > 0.5 && p > 0.0 && m.engine.is_some() {
                 f = f.min(p / v_sim);
             }

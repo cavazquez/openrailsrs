@@ -44,8 +44,8 @@ fn chiltern_cruise_state_at_61s() {
             1.0
         };
         let pr = openrailsrs_train::DieselTractionModel::power_reduction_from_heat(heat);
-        let mut f = m.force_at_scaled(v, t, run_factor, pr);
-        let p = m.effective_power_w(rpm, t) * run_factor * (1.0 - pr.clamp(0.0, 0.95));
+        let mut f = m.force_at_scaled(v, t, rpm, run_factor, pr, true);
+        let p = m.traction_power_cap_w(rpm, t, v, true) * run_factor * (1.0 - pr.clamp(0.0, 0.95));
         if v > 0.5 && p > 0.0 {
             f = f.min(p / v);
         }

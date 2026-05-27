@@ -38,6 +38,7 @@ penalty_per_second_late = 0.0
 duration = 136.0
 time_step = 1.0
 seed = 42
+legacy_power_cap = false
 # OR driver CSV uses PSI/121; Westinghouse cylinder force calibrated at 35 PSI (Chiltern).
 brake_cylinder_full_scale_psi = 35.0
 

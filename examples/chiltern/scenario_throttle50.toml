@@ -31,6 +31,7 @@ penalty_per_second_late = 0.0
 duration = 30.0
 time_step = 1.0
 seed = 42
+legacy_power_cap = false
 
 [output]
 csv = "run_throttle50.csv"

@@ -32,6 +32,7 @@ fn chiltern_pullman_freeroll_deceleration() {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     };
 
     let path_data = PathData {

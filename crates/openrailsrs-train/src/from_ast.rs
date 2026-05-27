@@ -167,6 +167,11 @@ impl From<EngineFile> for Locomotive {
                         .map(|(_, r)| *r)
                         .unwrap_or(750.0)
                 };
+                let reverse_tab = if !value.diesel_reverse_throttle_rpm_tab.is_empty() {
+                    value.diesel_reverse_throttle_rpm_tab.clone()
+                } else {
+                    crate::diesel::build_reverse_throttle_rpm_tab(&value.diesel_throttle_rpm_tab)
+                };
                 model.engine = Some(Box::new(crate::diesel::DieselEngineParams {
                     power_tab: value.diesel_power_tab,
                     throttle_rpm_tab: value.diesel_throttle_rpm_tab,
@@ -177,8 +182,16 @@ impl From<EngineFile> for Locomotive {
                     rate_of_change_down_rpm_pss: value.diesel_rate_of_change_down_rpm_pss,
                     change_up_rpm_ps: value.diesel_change_up_rpm_ps,
                     change_down_rpm_ps: value.diesel_change_down_rpm_ps,
+                    reverse_throttle_rpm_tab: reverse_tab,
                 }));
             }
+            model.max_rail_output_power_w = if value.max_rail_output_power_w > 0.0 {
+                value.max_rail_output_power_w
+            } else {
+                value.max_power_w
+            };
+            model.unloading_speed_mps = value.unloading_speed_mps;
+            model.tractive_force_power_limited = value.tractive_force_power_limited;
             let curtius = if value.curtius_a > 0.0 {
                 (value.curtius_a, value.curtius_b, value.curtius_c)
             } else {

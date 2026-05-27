@@ -52,6 +52,7 @@ fn default_train() -> TrainPhysics {
         diesel_sfc_g_per_kwh: None,
         steam_params: None,
         brake_mapping: Default::default(),
+        legacy_power_cap: true,
     }
 }
 

@@ -60,6 +60,16 @@ pub struct EngineFile {
     pub diesel_rate_of_change_down_rpm_pss: f64,
     pub diesel_change_up_rpm_ps: f64,
     pub diesel_change_down_rpm_ps: f64,
+    /// `LocomotiveMaxRailOutputPowerW` / ORTS equivalent (W); 0 → derive from `MaxPower`.
+    pub max_rail_output_power_w: f64,
+    /// `ORTSUnloadingSpeed` — generator unload speed (m/s); 0 = disabled.
+    pub unloading_speed_mps: f64,
+    /// When true, OR skips apparent-throttle curve limiting.
+    pub tractive_force_power_limited: bool,
+    /// `SpeedOfMaxContinuousForce` for default rail-power derivation (m/s).
+    pub speed_of_max_continuous_force_mps: f64,
+    /// Optional explicit `ReverseThrottleRPMTab` (RPM → throttle 0–1).
+    pub diesel_reverse_throttle_rpm_tab: Vec<(f64, f64)>,
     /// `ORTSDriveWheelWeight` for Curtius-Kniffler adhesion.
     pub drive_wheel_mass_kg: f64,
     /// Curtius-Kniffler A/B/C; zero → OR defaults at load time.
@@ -195,6 +205,39 @@ impl EngineFile {
         )?
         .unwrap_or(0.0);
 
+        let max_rail_output_power_w = find_optional_quantity_field(
+            ast,
+            QuantityKind::Power,
+            &[
+                "LocomotiveMaxRailOutputPowerW",
+                "ORTSMaxRailOutputPowerW",
+                "MaxRailOutputPowerW",
+            ],
+            context,
+        )?
+        .unwrap_or(0.0);
+        let unloading_speed_mps = find_optional_quantity_field(
+            ast,
+            QuantityKind::Velocity,
+            &["ORTSUnloadingSpeed", "UnloadingSpeedMpS", "UnloadingSpeed"],
+            context,
+        )?
+        .unwrap_or(0.0);
+        let tractive_force_power_limited = parse_orts_bool_field(
+            ast,
+            &[
+                "ORTSTractiveForceIsPowerLimited",
+                "TractiveForceIsPowerLimited",
+            ],
+        );
+        let speed_of_max_continuous_force_mps = find_optional_quantity_field(
+            ast,
+            QuantityKind::Velocity,
+            &["SpeedOfMaxContinuousForce", "ORTSSpeedOfMaxContinuousForce"],
+            context,
+        )?
+        .unwrap_or(0.0);
+        let diesel_reverse_throttle_rpm_tab = parse_reverse_throttle_rpm_tab(ast);
         let friction = parse_orts_friction_fields(ast, true, &name);
 
         Ok(Self {
@@ -221,6 +264,11 @@ impl EngineFile {
             diesel_rate_of_change_down_rpm_pss,
             diesel_change_up_rpm_ps,
             diesel_change_down_rpm_ps,
+            max_rail_output_power_w,
+            unloading_speed_mps,
+            tractive_force_power_limited,
+            speed_of_max_continuous_force_mps,
+            diesel_reverse_throttle_rpm_tab,
             drive_wheel_mass_kg,
             curtius_a,
             curtius_b,
@@ -597,6 +645,30 @@ fn parse_rpm_power_tab(ast: &Ast) -> Vec<(f64, f64)> {
         if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
             if head.eq_ignore_ascii_case("DieselPowerTab") {
                 found = extract_pair_tab(items);
+            }
+        }
+        None
+    });
+    found
+}
+
+fn parse_orts_bool_field(ast: &Ast, keys: &[&str]) -> bool {
+    for key in keys {
+        if let Some(v) = find_list_value(ast, key).and_then(parse_scalar_ast) {
+            return v != 0.0;
+        }
+    }
+    false
+}
+
+/// Parse `ReverseThrottleRPMTab` (RPM → throttle %); converts % to 0–1.
+fn parse_reverse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
+    let mut found = Vec::new();
+    walk_lists_find::<(), _>(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            if head.eq_ignore_ascii_case("ReverseThrottleRPMTab") {
+                let raw = extract_pair_tab(items);
+                found = raw.into_iter().map(|(r, t)| (r, t / 100.0)).collect();
             }
         }
         None

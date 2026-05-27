@@ -107,6 +107,11 @@ fn chiltern_pullman_two_engines_aggregate() {
         "combined stall should exceed lead engine: {f_combined} vs {f_dmbsa}"
     );
     // DMBSH legacy run-up limits early contribution vs instant full stall.
-    let f_dmbsh = models[1].force_at_scaled(0.0, 0.8, 0.5, 0.0);
+    let rpm_dmbsh = models[1]
+        .engine
+        .as_ref()
+        .map(|e| e.target_rpm(0.8))
+        .unwrap_or(0.0);
+    let f_dmbsh = models[1].force_at_scaled(0.0, 0.8, rpm_dmbsh, 0.5, 0.0, true);
     assert!(f_dmbsh < models[1].force_at(0.0, 0.8) * 0.6);
 }

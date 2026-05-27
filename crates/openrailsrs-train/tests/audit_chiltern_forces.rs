@@ -41,8 +41,8 @@ fn audit_chiltern_forces_at_cruise() {
         for (i, m) in models.iter().enumerate() {
             let rpm = if i == 0 { 1200.0 } else { 0.0 };
             let run_factor = 1.0;
-            let mut f = m.force_at_scaled(v, throttle, run_factor, 0.0);
-            let p = m.effective_power_w(rpm, throttle) * run_factor;
+            let mut f = m.force_at_scaled(v, throttle, rpm, run_factor, 0.0, true);
+            let p = m.traction_power_cap_w(rpm, throttle, v, true) * run_factor;
             if v > 0.5 && p > 0.0 && m.engine.is_some() {
                 f = f.min(p / v);
             }
