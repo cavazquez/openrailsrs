@@ -2,6 +2,8 @@
 
 Experimento **E** de calibración: aislar dinámica de motor (RPM) y curvas F(v) sin ambigüedad del driver.
 
+> OR: consist Pullman multi-cuerpo; openrailsrs default: masa puntual. Revisión con `multi_body` **opcional** (crucero/notch fijo). [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md)
+
 ## Captura en Open Rails (Wine)
 
 ### ⚠️ No uses `RunActivity.exe -help`

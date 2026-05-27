@@ -11,8 +11,26 @@ Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topol
 | Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (**136 s** sim, 10:00→10:02:16) |
 | Duración sim | 136 s |
 | Señales | `assume_signals_clear = true` (OR `AUTO_SIGNAL` / aspectos CLEAR en eval) |
+| Física sim (default) | **Masa puntual** — ver [Modelo físico vs OR](../../docs/OR_PARITY_ROADMAP.md#modelo-físico-or-vs-openrailsrs-importante-para-baselines) |
+| Consist | DMBSA + 6 Pullman + DMBSH (**8 vehículos**; no es un solo loco) |
 
-## Importar de nuevo
+## Modelo físico vs baseline OR
+
+Open Rails simula los **8 coches acoplados** (multi-cuerpo nativo). Por defecto openrailsrs usa **masa puntual** (`multi_body = false`): una velocidad, Davis sumado, mismos cilindros de freno por vehículo pero sin holgura ni oleadas de arranque.
+
+Los RMS de `compare-or` (p. ej. ~0.39 m/s en 136 s) comparan por tanto **masa puntual vs OR multi-cuerpo**. En crucero suele encajar; en arranque/frenada la diferencia de modelo puede compensarse con otros ajustes.
+
+Para acercarse a OR:
+
+```bash
+# Requiere time_step ≤ 0.05 (dt=1 s diverge en acopladores)
+openrailsrs sim scenario_multi_body.toml --driver driver_or.csv
+cargo test -p openrailsrs-cli --test chiltern_multi_body
+```
+
+Detalle y plan de revisión de experimentos: [`docs/OR_PARITY_ROADMAP.md`](../../docs/OR_PARITY_ROADMAP.md).
+
+---
 
 ```bash
 CHILTERN="/path/to/Chiltern/ROUTES/Chiltern"
@@ -144,10 +162,11 @@ Baseline OR: `examples/baselines/chiltern_throttle75/README.md` (captura con `./
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6); path ≥ 6 edges hasta destino.
 - Consist: RF_Blue_Pullman multi-vagón, Davis sumado por vehículo, dual motor (ORTS + legacy).
 - Señales eval: `assume_signals_clear` alinea AUTO_SIGNAL con baseline OR.
-- Posición/velocidad 0–136 s: RMS ~0.5 m/s, Δpos ~23 m.
+- Posición/velocidad 0–136 s (masa puntual): RMS ~0.39 m/s, Δpos ~23 m.
 
 ## Límites conocidos
 
+- Comparación **masa puntual vs OR multi-cuerpo** — ver sección arriba; Exp A/B pendientes de re-validar con `multi_body`.
 - Objetivo estricto **0.3 m/s / 25 m** aún pendiente (RPM fino, DMBSH legacy, límites TDB 80 km/h vs OR `MAXSPEED` 90→50 mph).
 - `RestrictedSpeedZones` de la actividad no se aplican al `track.toml` importado.
 - Import TDB: aspecto inicial de señales = `Stop` salvo `FailedSignals`; usar overlay o re-import mejorado.

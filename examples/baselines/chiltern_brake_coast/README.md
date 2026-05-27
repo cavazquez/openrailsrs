@@ -2,6 +2,8 @@
 
 Experimento **A** (OR-P6): aceleración a pleno throttle, **frenada fuerte breve** (5 s), soltar freno y **costa libre** — validar μ(v), skid limit y bleed del aire vs Open Rails.
 
+> **Modelo:** OR simula 8 coches acoplados; openrailsrs (default) usa masa puntual. Tras OR-P4 conviene re-ejecutar este experimento con `multi_body = true` (prioridad alta — propagación de freno). Ver [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
+
 > Distinto del “Experimento A” de `CALIBRATION.md` (coast-down sin frenos para calibrar Davis). Este es el criterio del roadmap OR-P6.
 
 ## Perfil del driver (`driver_brake_coast.csv`)

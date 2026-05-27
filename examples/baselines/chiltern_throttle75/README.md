@@ -2,6 +2,8 @@
 
 Experimento **C** de calibración (OR-P1): equilibrio entre tracción y resistencia a notch fijo, complemento del Experimento E (50 %).
 
+> OR: multi-cuerpo; openrailsrs default: masa puntual. Revisión con `multi_body` **opcional** (prioridad baja en régimen estable). [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md)
+
 ## Captura en Open Rails (Wine)
 
 Ver [`../../chiltern/README.md`](../../chiltern/README.md) y el script:

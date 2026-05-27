@@ -10,6 +10,7 @@ Instalación Wine/OR y flujo completo: [`docs/CHILTERN_OR_SETUP.md`](../../docs/
 | Actividad | `RS_Let's go to Birmingham` |
 | Consist | Birmingham Pullman |
 | Inicio | Paddington Pfm 6 → Beyond Banbury |
+| Física OR | **Multi-cuerpo** — 8 vehículos (DMBSA + 6 coaches + DMBSH) |
 | Sim time (evaluación) | 10:00:00 → 10:01:01 (~61 s sim, sesión 23:14) |
 | Sim time (rendimiento) | 10:00:00 → 10:02:24 (~144 s sim, sesión ~22:53) |
 | Throttle peak | ~80 %, ~2.4 mph (evaluación) |
@@ -35,6 +36,7 @@ Instalación Wine/OR y flujo completo: [`docs/CHILTERN_OR_SETUP.md`](../../docs/
 
 ## Notas
 
+- Baseline capturado con el **consist Pullman completo** en OR (simulación multi-cuerpo por vehículo). openrailsrs en modo default compara con **masa puntual** — ver [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
 - Open Rails escribe en el Escritorio de Wine:  
   `/home/cristian/wine64-OpenRails/drive_c/users/cristian/Desktop/`
 - El registro de **evaluación** (velocidad del tren) va a `%APPDATA%` con nombre  

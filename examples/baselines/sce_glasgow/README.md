@@ -3,6 +3,8 @@
 Actividad: **MT_MT_0930 Edinburgh-Glasgow Queen Street** (Demo Model 1)
 OR versión: 1.6.1, Wine, Linux
 
+Consist OR: **Class 47 + 6 MK2** (simulación multi-cuerpo). openrailsrs default: masa puntual — [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
+
 ## Archivos
 
 | Archivo | Descripción |

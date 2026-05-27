@@ -6,11 +6,31 @@ Plan de implementación para cerrar las diferencias entre **openrailsrs** y el s
 
 | Escenario | Duración | RMS velocidad | Notas |
 |-----------|----------|---------------|-------|
-| Chiltern Birmingham | 136 s | ~0.28 m/s | `assume_signals_clear`, Davis explícito en escenario |
-| Chiltern full-throttle (Exp B) | 120 s | ~0.47 m/s (0–30 s) | OR-P13 + run-up solo <100% notch |
-| SCE Glasgow | 100 s | ≤1.0 m/s (umbral) | Crucero ~14 mph @ 27 % throttle alineado |
+| Chiltern Birmingham | 136 s | ~0.39 m/s | Masa puntual vs OR multi-cuerpo; `assume_signals_clear` |
+| Chiltern multi_body | 136 s | ~0.52 m/s | `multi_body` + `time_step = 0.05`; test `chiltern_multi_body` |
+| Chiltern full-throttle (Exp B) | 120 s | ~0.47 m/s (0–30 s) | Masa puntual; OR-P13 + run-up |
+| SCE Glasgow | 100 s | ≤1.0 m/s (umbral) | Masa puntual; crucero 27 % throttle |
 
 Este documento **no reemplaza** [`ROADMAP.md`](../ROADMAP.md) ni [`CALIBRATION.md`](../CALIBRATION.md); los complementa con trabajo específico de paridad física.
+
+---
+
+## Modelo físico: OR vs openrailsrs (importante para baselines)
+
+Los CSV en `examples/baselines/` se capturan en **Open Rails**, que siempre simula el **consist completo** como coches acoplados (`TrainCar` + acopladores + frenos por vehículo).
+
+En **openrailsrs**, hasta activar `[simulation] multi_body = true`, la dinámica longitudinal usa **masa puntual**: una sola velocidad, Davis agregado, tracción sumada — aunque el `.con` tenga 8 coches. Los cilindros de freno sí pueden ser por vehículo (`BrakeSystem`), pero el tren no “se estira” ni transmite esfuerzo por holgura.
+
+| | Open Rails | openrailsrs (default) | openrailsrs (`multi_body = true`) |
+|---|------------|----------------------|-----------------------------------|
+| Consist Chiltern | DMBSA + 6 Pullman + DMBSH (**8**) | Mismo `.con`, **1 velocidad** | 8 masas + acopladores |
+| Consist SCE | Class 47 + 6 MK2 (**7**) | Mismo `.con`, **1 velocidad** | 7 masas + acopladores |
+| Davis | Por `TrainCar` | Suma en `train.davis` | Por vehículo (`vehicle_davis`) |
+| Baselines OR | Multi-cuerpo nativo | Comparación **mixta** ⚠️ | Más comparable con OR |
+
+**Implicación:** los RMS publicados (Chiltern ~0.39 m/s, costa ~0.07 m/s, etc.) calibran **masa puntual vs OR multi-cuerpo**. En crucero la diferencia suele ser pequeña; en **arranque, frenada fuerte y propagación de aire** puede ocultar error físico compensado por otros ajustes.
+
+**Estado multi-cuerpo (2026-05):** cableado + Davis por vehículo; Chiltern con `time_step = 0.05` → RMS ~0.52 m/s vs OR; `time_step = 1.0` diverge (sub-pasos acoplador pendientes). Escenario: `examples/chiltern/scenario_multi_body.toml`.
 
 ---
 
@@ -406,13 +426,27 @@ Cada fase OR-P* debe incluir:
 
 ### Experimentos OR (desde CALIBRATION.md)
 
-| ID | Propósito | Fase que lo consume |
-|----|-----------|---------------------|
-| A | Costa libre (Davis) | OR-P2, OR-P5 |
-| B | Aceleración 100 % | OR-P1, OR-P3 ✅ |
-| C | Crucero por notch | OR-P1 ✅ parcial (E 50 % ✅; C 75 % infra + baseline OR pendiente) |
-| D | Segundo motor | OR-P13 |
-| E | Frenada EP | OR-P6 |
+Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo. Las corridas openrailsrs en la columna “Sim actual” usan **masa puntual** salvo que se indique `multi_body`.
+
+| ID | Propósito | Consist | Sim openrailsrs | ¿Revisar con `multi_body`? | Prioridad |
+|----|-----------|---------|-----------------|----------------------------|-----------|
+| — | Chiltern eval 136 s | Pullman ×8 | Masa puntual | **Sí** — en curso (`scenario_multi_body.toml`) | Alta |
+| A | Frenada + costa (OR-P6) | Pullman ×8 | Masa puntual | **Sí** — propagación freno cabeza/cola | Alta |
+| B | Aceleración 100 % | Pullman ×8 | Masa puntual | **Sí** — arranque en oleadas / holgura | Media |
+| C | Crucero 75 % notch | Pullman ×8 | Masa puntual | Opcional — régimen casi uniforme | Baja |
+| E | Throttle 50 % (30 s) | Pullman ×8 | Masa puntual | Opcional — mismo motivo | Baja |
+| — | SCE eval 100 s | 47 + MK2 ×6 | Masa puntual | **Sí** — tras estabilizar acopladores Chiltern | Media |
+| CALIBRATION A | Coast-down Davis puro | — | — | No aplica (sin baseline OR multi vs single) | — |
+
+**Criterio de revisión:** no invalidar baselines OR (siguen siendo verdad OR). Re-ejecutar openrailsrs con `multi_body = true` + `time_step ≤ 0.05`, comparar RMS y decidir si el umbral del test sube temporalmente o si se afina acoplador antes. **No hace falta recapturar Wine** salvo que cambiemos el driver o la ventana temporal.
+
+| ID | Fase que consume |
+|----|------------------|
+| A (freno+costa) | OR-P2, OR-P5, OR-P6 |
+| B | OR-P1, OR-P3 ✅ |
+| C | OR-P1 ✅ parcial (E 50 % ✅; C 75 % infra + baseline OR pendiente) |
+| D | OR-P13 |
+| E (50 %) | OR-P1 / diesel notch |
 
 ---
 
@@ -457,6 +491,7 @@ Cada fase OR-P* debe incluir:
 | Riesgo | Mitigación |
 |--------|------------|
 | Regresión Chiltern al quitar hacks | Feature flag + baseline congelado; OR-P15 solo al final |
+| Baselines OR vs sim masa puntual | Documentado arriba; revisar Exp A/B y Chiltern con `multi_body` tras sub-pasos acoplador |
 | Content MSTS inconsistente (DMBSH) | Documentar desviaciones; tests por escenario, no global |
 | Complejidad frenos MSTS | Entrega incremental P6a→d; mantener proxy como fallback |
 | Gearbox mecánico amplio | Fase separada; no bloquea diesel-eléctrico |
@@ -466,6 +501,8 @@ Cada fase OR-P* debe incluir:
 
 ## Próximo paso recomendado
 
-**Empezar por OR-P1** (throttle aparente + cap P/v OR) en paralelo con **OR-P2** (auto-friction), porque desbloquean OR-P13 y permiten retirar los dos atajos de calibración más frágiles (`effective_power_w` heurístico y `[train.davis]` en Chiltern).
+1. **OR-P4:** sub-pasos en acopladores → `time_step = 1.0` estable en Chiltern multi-cuerpo.
+2. **Revisión experimentos (tabla arriba):** Exp **A** (freno+costa) y **B** (100 %) con `multi_body`; mantener tests masa puntual hasta que multi pase umbrales.
+3. **OR-P1 cierre:** auditorías SCE/Chiltern sin overrides de potencia (en paralelo, no bloqueado por multi).
 
 Cuando una fase esté en progreso, actualizar el estado en este archivo y enlazar el PR en la tabla de la fase correspondiente.

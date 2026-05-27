@@ -11,6 +11,9 @@ Escenario importado desde la actividad MSTS **0930 Edinburgh-Glasgow Queen Stree
 | Distancia OR | ~111 km (Edinburgh Waverley → Glasgow Q.S.) |
 | Baseline OR | `../baselines/sce_glasgow/or_evaluation_speed.csv` (~100 s eval) |
 | Duración sim | 100 s (ventana evaluación) |
+| Física sim (default) | **Masa puntual** (Class 47 + 6 MK2 en `.con`; OR usa multi-cuerpo) |
+
+Ver [`docs/OR_PARITY_ROADMAP.md`](../../docs/OR_PARITY_ROADMAP.md#modelo-físico-or-vs-openrailsrs-importante-para-baselines).
 
 ## Importar de nuevo
 

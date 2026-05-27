@@ -19,8 +19,10 @@
 | Davis por vehículo (`ORTSDavis_A/B/C` sumados) | ✅ | `Consist::aggregate_davis()` al cargar `.con` |
 | Driver desde CSV de Open Rails (`or-eval-driver`) | ✅ | Activity mode y Explorer mode |
 | Comparación automática (`compare-or`) | ✅ | RMS y max; fases vía `phase_bounds` en `[validate]` |
-| Ejemplo SCE (Class 47) — velocidad RMS | ✅ 0.35 m/s | Con baseline de 100 s |
-| Ejemplo Chiltern (Blue Pullman) — 136 s OR | ✅ ~0.50 m/s RMS | `assume_signals_clear` + baseline largo |
+| Modelo longitudinal default | 🔶 Masa puntual | Baselines OR = multi-cuerpo; ver [`docs/OR_PARITY_ROADMAP.md`](docs/OR_PARITY_ROADMAP.md) |
+| Multi-cuerpo opt-in (`multi_body`) | 🔶 | Chiltern ~0.52 m/s RMS con `time_step=0.05`; sub-pasos acoplador pendientes |
+| Ejemplo SCE (Class 47) — velocidad RMS | ✅ 0.35 m/s | Con baseline de 100 s (masa puntual) |
+| Ejemplo Chiltern (Blue Pullman) — 136 s OR | ✅ ~0.39 m/s RMS | Masa puntual vs OR multi-cuerpo; `assume_signals_clear` |
 | Ejemplo Chiltern — posición max | ✅ ~23 m | 0–136 s vs OR eval AUTO_SIGNAL |
 
 ---

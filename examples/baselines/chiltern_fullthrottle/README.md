@@ -1,6 +1,8 @@
 # Baseline Chiltern — throttle 100 % (120 s)
 
-Experimento **B** de calibración: aceleración a pleno throttle desde parado en vía plana (Blue Pullman).
+Experimento **B** de calibración: aceleración a pleno throttle desde parado en vía plana (Blue Pullman, **8 vehículos** en OR).
+
+> Baseline OR = multi-cuerpo; sim openrailsrs default = masa puntual. Revisión con `multi_body` recomendada (arranque / holgura). Ver [`docs/OR_PARITY_ROADMAP.md`](../../../docs/OR_PARITY_ROADMAP.md).
 
 ## Captura en Open Rails (Wine)
 
