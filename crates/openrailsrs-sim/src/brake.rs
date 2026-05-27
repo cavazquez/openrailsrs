@@ -43,13 +43,14 @@ pub struct BrakeCylinder {
     apply_ramp_rate_n_per_s: f64,
     /// Slower ramp when exhausting the cylinder (OR pipe recharge is gradual).
     release_ramp_rate_n_per_s: f64,
+    /// Train-air latch: lap release does not reduce wagon cylinder command until driver hits 0.
+    latched_command: f64,
 }
 
 impl BrakeCylinder {
     /// Create a new charged (released) cylinder.
     pub fn new(position_m: f64, max_force_n: f64, ep_instant: bool) -> Self {
-        // EP locomotive brakes ramp faster (~0.15 s apply); train air ~0.5 s apply.
-        // Release is much slower — OR holds partial brake for several seconds.
+        // Release: EP ~2.5 s; wagons ~8 s (OR pipe recharge). Fast bleed on full release when lap-hold enabled.
         let (apply_time_s, release_time_s) = if ep_instant { (0.15, 2.5) } else { (0.5, 8.0) };
         Self {
             position_m,
@@ -60,7 +61,24 @@ impl BrakeCylinder {
             time_pending_s: 0.0,
             apply_ramp_rate_n_per_s: max_force_n / apply_time_s,
             release_ramp_rate_n_per_s: max_force_n / release_time_s,
+            latched_command: 0.0,
         }
+    }
+
+    /// Driver command this cylinder responds to (EP follows handle; train air holds during lap release).
+    fn effective_command(&mut self, command: f64, lap_hold: bool) -> f64 {
+        if self.ep_instant || !lap_hold {
+            return command;
+        }
+        // Train air: ignore lap release until driver reaches full release (command = 0).
+        if command <= 0.0 {
+            self.latched_command = 0.0;
+            return 0.0;
+        }
+        if command > self.latched_command {
+            self.latched_command = command;
+        }
+        self.latched_command
     }
 }
 
@@ -72,11 +90,22 @@ pub struct BrakeSystem {
     pub pipe_speed_mps: f64,
     /// Magnitude of the previous command (0.0 = released).
     prev_command: f64,
+    /// Hold wagon cylinders at peak application during lap release (Chiltern activity start).
+    train_air_lap_hold: bool,
 }
 
 impl BrakeSystem {
     /// Build a system from `(position_m, max_force_n, ep_instant)` triples.
     pub fn from_vehicles(vehicles: &[(f64, f64, bool)], pipe_speed_mps: f64) -> Self {
+        Self::from_vehicles_with_options(vehicles, pipe_speed_mps, false)
+    }
+
+    /// Build a system with optional train-air lap-release hold (see `train_air_lap_hold`).
+    pub fn from_vehicles_with_options(
+        vehicles: &[(f64, f64, bool)],
+        pipe_speed_mps: f64,
+        train_air_lap_hold: bool,
+    ) -> Self {
         let cylinders = vehicles
             .iter()
             .map(|&(pos, force, ep)| BrakeCylinder::new(pos, force, ep))
@@ -85,13 +114,14 @@ impl BrakeSystem {
             cylinders,
             pipe_speed_mps,
             prev_command: 0.0,
+            train_air_lap_hold,
         }
     }
 
     /// Advance the brake system by `dt` seconds given driver `command` in [0, 1].
     ///
     /// - `command == 0.0` → release.
-    /// - `command > 0.0`  → apply at `command * max_force_n`.
+    /// - `command > 0.0`  → apply at `command * max_force_n` (EP) or latched train-air level (wagons).
     pub fn step(&mut self, command: f64, dt: f64) {
         let command = command.clamp(0.0, 1.0);
         let applying = command > 0.0;
@@ -124,15 +154,19 @@ impl BrakeSystem {
                 }
             }
 
-            let target = if applying {
-                command * cyl.max_force_n
-            } else {
-                0.0
-            };
+            let was_latched = !cyl.ep_instant && cyl.latched_command > 0.0;
+            let eff = cyl.effective_command(command, self.train_air_lap_hold);
+            let target = eff * cyl.max_force_n;
 
             // Ramp toward target; exhausting a cylinder is slower than applying.
             let delta = if cyl.current_force_n > target {
-                cyl.release_ramp_rate_n_per_s * dt
+                let rate = if command <= 0.0 && was_latched && self.train_air_lap_hold {
+                    // Activity brake bleed after lap release (Chiltern ~3 s train-air dump).
+                    cyl.max_force_n / 3.0
+                } else {
+                    cyl.release_ramp_rate_n_per_s
+                };
+                rate * dt
             } else {
                 cyl.apply_ramp_rate_n_per_s * dt
             };
@@ -163,6 +197,27 @@ impl BrakeSystem {
     pub fn max_total_force_n(&self) -> f64 {
         self.cylinders.iter().map(|c| c.max_force_n).sum()
     }
+
+    /// Set cylinders to steady state for `command` (activity start with brakes already set).
+    pub fn precharge(&mut self, command: f64) {
+        let command = command.clamp(0.0, 1.0);
+        for cyl in &mut self.cylinders {
+            cyl.latched_command = if cyl.ep_instant || !self.train_air_lap_hold {
+                0.0
+            } else {
+                command
+            };
+            cyl.current_force_n =
+                cyl.effective_command(command, self.train_air_lap_hold) * cyl.max_force_n;
+            cyl.time_pending_s = 0.0;
+            cyl.state = if command > 0.0 {
+                BrakeState::Applied
+            } else {
+                BrakeState::Charged
+            };
+        }
+        self.prev_command = command;
+    }
 }
 
 impl Default for BrakeSystem {
@@ -174,6 +229,7 @@ impl Default for BrakeSystem {
             cylinders: Vec::new(),
             pipe_speed_mps: 200.0,
             prev_command: 0.0,
+            train_air_lap_hold: false,
         }
     }
 }

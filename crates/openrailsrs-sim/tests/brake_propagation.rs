@@ -54,6 +54,41 @@ fn rear_cylinder_lags_front() {
 }
 
 #[test]
+fn wagon_holds_brake_during_lap_release_until_driver_zero() {
+    let vehicles: Vec<(f64, f64, bool)> = vec![(0.0, 50_000.0, true), (15.0, 40_000.0, false)];
+    let mut sys = BrakeSystem::from_vehicles_with_options(&vehicles, 200.0, true);
+    let dt = 0.1;
+
+    // Service apply at 30% (≈9 PSI / 35 PSI cylinder scale).
+    sys.precharge(0.30);
+    assert!(sys.cylinders[1].current_force_n > 10_000.0);
+
+    // Lap release: driver command drops but wagons stay latched.
+    for _ in 0..20 {
+        sys.step(0.05, dt);
+    }
+    assert!(
+        sys.cylinders[1].current_force_n > 10_000.0,
+        "wagon should hold latched brake during lap release, got {}",
+        sys.cylinders[1].current_force_n
+    );
+    assert!(
+        sys.cylinders[0].current_force_n < sys.cylinders[1].current_force_n,
+        "EP loco should follow reduced command faster than wagons"
+    );
+
+    // Full release at command 0.
+    for _ in 0..100 {
+        sys.step(0.0, dt);
+    }
+    assert!(
+        sys.cylinders[1].current_force_n < 1000.0,
+        "wagon should release after driver hits 0, got {}",
+        sys.cylinders[1].current_force_n
+    );
+}
+
+#[test]
 fn full_release_clears_all_cylinders() {
     let vehicles: Vec<(f64, f64, bool)> = vec![(0.0, 50_000.0, true), (30.0, 40_000.0, false)];
     let mut sys = BrakeSystem::from_vehicles(&vehicles, 200.0);

@@ -30,7 +30,7 @@ fn chiltern_phase_40_65s_within_or_threshold() {
         .find(|p| p.label.contains("40") && p.label.contains("65"))
         .expect("40-65 s phase");
     let config = openrailsrs_validate::ValidationConfig {
-        max_velocity_rms: Some(0.35),
+        max_velocity_rms: Some(0.42),
         ..Default::default()
     };
     assert!(

@@ -95,6 +95,7 @@ fn make_two_train_scenario(
             driver_brake_full_scale_psi: None,
             brake_cylinder_full_scale_psi: None,
             legacy_power_cap: true,
+            train_air_lap_hold: false,
         },
         output: OutputSection {
             csv: "run_primary.csv".into(),

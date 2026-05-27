@@ -94,6 +94,14 @@ impl ScriptedDriver {
 }
 
 impl Driver for ScriptedDriver {
+    fn initial_inputs(&self) -> DriverInput {
+        let kf = self.keyframes.first().expect("keyframes non-empty");
+        DriverInput {
+            throttle: kf.throttle.clamp(0.0, 1.0),
+            brake: kf.brake.clamp(0.0, 1.0),
+        }
+    }
+
     fn decide(&mut self, state: &TrainSimState, _speed_limit_mps: f64) -> DriverInput {
         let t = state.time_s();
 

@@ -242,6 +242,9 @@ pub struct SimulationSection {
     /// Use pre-OR-P1 diesel P/v cap (default true for baseline compatibility).
     #[serde(default = "default_legacy_power_cap")]
     pub legacy_power_cap: bool,
+    /// Hold train-air cylinders during driver lap release (Chiltern activity brake bleed).
+    #[serde(default)]
+    pub train_air_lap_hold: bool,
 }
 
 fn default_legacy_power_cap() -> bool {

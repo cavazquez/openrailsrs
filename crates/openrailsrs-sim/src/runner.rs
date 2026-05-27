@@ -27,7 +27,10 @@ const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
 /// Each vehicle gets a cylinder whose position is the cumulative length of
 /// the vehicles ahead of it.  When exact lengths are unavailable a default of
 /// 15 m per vehicle is assumed.
-fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
+fn build_brake_system(
+    consist: &openrailsrs_train::Consist,
+    train_air_lap_hold: bool,
+) -> BrakeSystem {
     const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
     let mut pos = 0.0_f64;
     let pairs: Vec<(f64, f64, bool)> = consist
@@ -59,7 +62,7 @@ fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
             (cylinder_pos, force_n, ep)
         })
         .collect();
-    BrakeSystem::from_vehicles(&pairs, BRAKE_PIPE_SPEED_MPS)
+    BrakeSystem::from_vehicles_with_options(&pairs, BRAKE_PIPE_SPEED_MPS, train_air_lap_hold)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -70,6 +73,14 @@ pub struct DriverInput {
 
 pub trait Driver {
     fn decide(&mut self, state: &TrainSimState, speed_limit_mps: f64) -> DriverInput;
+
+    /// Inputs at simulation start (t = 0); used to precharge the air-brake system.
+    fn initial_inputs(&self) -> DriverInput {
+        DriverInput {
+            throttle: 0.0,
+            brake: 0.0,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -272,7 +283,14 @@ pub fn run_scenario_headless_with_driver(
     if let Some(offset) = scenario.route.start_offset_m {
         apply_start_offset(&mut state, &path_data, offset);
     }
-    state.brake_system = build_brake_system(&consist);
+    state.brake_system = build_brake_system(&consist, scenario.simulation.train_air_lap_hold);
+    let init = driver.initial_inputs();
+    let brake_frac = train_physics
+        .brake_mapping
+        .command_to_cylinder_fraction(init.brake);
+    state.brake_system.precharge(brake_frac);
+    state.throttle = init.throttle.clamp(0.0, 1.0);
+    state.brake = init.brake.clamp(0.0, 1.0);
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| crate::steam::BoilerState::from_params(&p));
