@@ -295,6 +295,7 @@ pub fn run_scenario_headless_with_driver(
         state.diesel_traction_force_n = vec![0.0; train_physics.diesel_engines.len()];
         state.diesel_average_force_n = vec![0.0; train_physics.diesel_engines.len()];
     }
+    state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;

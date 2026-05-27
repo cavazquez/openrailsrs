@@ -254,6 +254,9 @@ pub struct SimulationSection {
     /// Cap per-vehicle brake at mass × g × μ_adhesion (OR-P6c).
     #[serde(default)]
     pub brake_skid_limit: bool,
+    /// Per-vehicle coupler dynamics (OR-P4). Default off until validated on long runs.
+    #[serde(default)]
+    pub multi_body: bool,
 }
 
 fn default_train_air_full_release_s() -> f64 {

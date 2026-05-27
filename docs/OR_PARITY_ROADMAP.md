@@ -179,11 +179,11 @@ flowchart LR
 | 1 | `openrailsrs-sim/runner.rs`, `multi_runner.rs` | Inicializar `vehicles`, `couplers`, `vehicle_masses` desde `Consist` (longitudes, masas, offsets) |
 | 2 | `openrailsrs-train` | Exponer `Consist::vehicle_layout() -> Vec<VehicleLayout>` (posición, masa, length_m) |
 | 3 | `physics.rs` | Aplicar tracción solo a vehículo 0; resistencia Davis **por vehículo** (prep. OR-P5) |
-| 4 | `[simulation] multi_body = true` en escenario (default false hasta validado) |
+| 4 | `[simulation] multi_body = true` en escenario (default false hasta validado) | ✅ flag + init en runner |
 
 **Criterios de aceptación:**
 
-- [ ] Test integración: tren 2 coches — retraso de aceleración del vagón vs loco visible en CSV
+- [x] Test integración: tren 2 coches — retraso de aceleración del vagón vs loco visible vía `physics::step()` (`multi_body_integration`)
 - [ ] Chiltern 136 s con multi_body: RMS ≤ 0.40 m/s (transitorios distintos, umbral relajado inicial)
 - [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire
 

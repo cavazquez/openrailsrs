@@ -1,4 +1,5 @@
 use openrailsrs_core::SimTime;
+use openrailsrs_train::{Consist, Vehicle};
 
 use crate::brake::BrakeSystem;
 use crate::coupler::{CouplerState, VehicleState};
@@ -74,6 +75,38 @@ impl TrainSimState {
             diesel_traction_force_n: Vec::new(),
             diesel_average_force_n: Vec::new(),
         }
+    }
+
+    /// Initialise per-vehicle kinematics and freight couplers for OR-P4 multi-body mode.
+    ///
+    /// When `enabled` is false or the consist has no vehicles, clears multi-body state.
+    pub fn init_multi_body_if_enabled(&mut self, consist: &Consist, enabled: bool) {
+        if !enabled {
+            self.vehicles.clear();
+            self.couplers.clear();
+            self.vehicle_masses.clear();
+            return;
+        }
+        self.vehicle_masses = consist
+            .vehicles
+            .iter()
+            .map(|v| match v {
+                Vehicle::Loco(l) => l.mass_kg,
+                Vehicle::Wagon(w) => w.mass_kg,
+            })
+            .collect();
+        let v0 = self.velocity_mps;
+        self.vehicles = self
+            .vehicle_masses
+            .iter()
+            .map(|_| VehicleState {
+                velocity_mps: v0,
+                position_m: 0.0,
+            })
+            .collect();
+        self.couplers = (0..self.vehicles.len().saturating_sub(1))
+            .map(|_| CouplerState::freight())
+            .collect();
     }
 
     pub fn current_edge(&self) -> Option<&str> {

@@ -201,6 +201,7 @@ pub fn run_scenario_multi_train(
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
             }
+            state.init_multi_body_if_enabled(consist, scenario.simulation.multi_body);
         }
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
@@ -276,6 +277,7 @@ pub fn run_scenario_multi_train(
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
             }
+            state.init_multi_body_if_enabled(consist, scenario.simulation.multi_body);
         }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);
@@ -679,6 +681,11 @@ impl LiveMultiSim {
                     .ok()
                     .and_then(|c| c.aggregate_steam_params())
                     .map(|p| crate::steam::BoilerState::from_params(&p));
+            if let Ok(consist) =
+                load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
+            {
+                state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
+            }
             state.time = openrailsrs_core::SimTime(0.0);
             agents.push(LiveAgent {
                 id: "primary".to_string(),
@@ -723,6 +730,11 @@ impl LiveMultiSim {
                     .ok()
                     .and_then(|c| c.aggregate_steam_params())
                     .map(|p| crate::steam::BoilerState::from_params(&p));
+            if let Ok(consist) =
+                load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
+            {
+                state.init_multi_body_if_enabled(&consist, scenario.simulation.multi_body);
+            }
             state.time = openrailsrs_core::SimTime(entry.start_time_s);
             agents.push(LiveAgent {
                 id: entry.id.clone(),
