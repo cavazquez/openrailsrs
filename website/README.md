@@ -1,6 +1,6 @@
 # Sitio web de openrailsrs
 
-Página estática en esta carpeta. Se publica con **GitHub Actions** (no desde `/docs`).
+**Fuente de verdad:** esta carpeta (`website/`). Los HTML se publican en GitHub Pages vía `docs/` (sync automático).
 
 URL: **https://cavazquez.github.io/openrailsrs/**
 
@@ -13,25 +13,31 @@ URL: **https://cavazquez.github.io/openrailsrs/**
 | `paridad-or.html` | Comparación Open Rails vs openrailsrs, métricas, roadmap OR-P |
 | `css/style.css` | Estilos compartidos (tema oscuro, tablas, layout docs) |
 
-## Publicación (GitHub Pages)
+## Editar y publicar
 
-1. En el repo: **Settings → Pages → Build and deployment**
-2. **Source:** `GitHub Actions`
-3. Cada push a `main` que toque `website/` dispara [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
+1. Modificá archivos en `website/`.
+2. Sincronizá a `docs/` (GitHub Pages legacy lee `/docs` en `main`):
 
-Deploy manual: **Actions → Deploy website → Run workflow**
+```bash
+./scripts/sync_website_to_docs.sh
+git add website/ docs/
+git commit -m "..."
+git push
+```
+
+3. El workflow [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) también corre `sync_website_to_docs.sh` antes del deploy por Actions.
+
+**Settings → Pages:** conviene **Build and deployment → Source: GitHub Actions**. Si sigue en *Deploy from branch → /docs*, igual funciona mientras `docs/` tenga los HTML sincronizados.
 
 ## Ver localmente
 
 ```bash
 python3 -m http.server 8080 --directory website
-# http://localhost:8080
 # http://localhost:8080/fisica.html
-# http://localhost:8080/paridad-or.html
 ```
 
 ## Mantenimiento
 
 - Actualizar métricas en `paridad-or.html` cuando cambien umbrales Chiltern/SCE en CI.
 - Añadir secciones en `fisica.html` al implementar nuevas fases OR-P (p. ej. OR-P6c skid).
-- La documentación canónica sigue en el repo: `docs/OR_PARITY_ROADMAP.md`, `CALIBRATION.md`.
+- Documentación canónica en el repo: `docs/OR_PARITY_ROADMAP.md`, `CALIBRATION.md`.

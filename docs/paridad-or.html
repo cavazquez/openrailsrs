@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Comparación entre Open Rails y openrailsrs: paridad física, métricas Chiltern/SCE y roadmap OR-P.">
+  <title>Paridad Open Rails — openrailsrs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="index.html">open<span>rails</span>rs</a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html">Inicio</a>
+        <a href="fisica.html">Física</a>
+        <a href="paridad-or.html" class="active">Paridad OR</a>
+        <a href="https://github.com/cavazquez/openrailsrs">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <header class="page-hero">
+      <h1>Paridad con Open Rails</h1>
+      <p class="lead">
+        openrailsrs no reimplementa OR entero: persigue <strong>paridad física medible</strong> en escenarios de referencia
+        (Chiltern Blue Pullman, SCE Class 47) usando las mismas entradas de driver y baselines OR en CSV.
+      </p>
+    </header>
+
+    <div class="doc-layout">
+      <aside class="doc-toc" aria-label="Contenido">
+        <strong>Secciones</strong>
+        <ul>
+          <li><a href="#metricas">Métricas actuales</a></li>
+          <li><a href="#workflow">Flujo de validación</a></li>
+          <li><a href="#comparacion">Comparación por subsistema</a></li>
+          <li><a href="#fases">Roadmap OR-P</a></li>
+          <li><a href="#atalhos">Atajos y diferencias</a></li>
+          <li><a href="#docs">Documentación repo</a></li>
+        </ul>
+      </aside>
+
+      <div class="doc-content">
+
+        <section id="metricas">
+          <h2>Métricas de calibración</h2>
+          <p class="section-desc">Mayo 2026 — tests CI con <code>compare-or</code> y umbrales en <code>scenario.toml</code>.</p>
+          <div class="metric-grid">
+            <div class="metric-card">
+              <div class="value">~0.39 m/s</div>
+              <div class="label">Chiltern 136 s — RMS velocidad global</div>
+            </div>
+            <div class="metric-card">
+              <div class="value">~0.54 m/s</div>
+              <div class="label">Chiltern 0–30 s (arrancada + freno)</div>
+            </div>
+            <div class="metric-card">
+              <div class="value">~0.33 m/s</div>
+              <div class="label">Chiltern 40–65 s (trail DMBSH)</div>
+            </div>
+            <div class="metric-card">
+              <div class="value">≤1.0 m/s</div>
+              <div class="label">SCE Glasgow 100 s (umbral CI)</div>
+            </div>
+            <div class="metric-card">
+              <div class="value">~0.47 m/s</div>
+              <div class="label">Chiltern Exp B full-throttle 0–30 s</div>
+            </div>
+          </div>
+          <p class="section-desc">
+            Posición max Chiltern ~22 m vs OR en ventana 136 s. Señales: <code>assume_signals_clear = true</code> (paridad Explorer, no Activity completa).
+          </p>
+        </section>
+
+        <section id="workflow">
+          <h2>Flujo de validación</h2>
+          <div class="concept-block">
+            <ol>
+              <li>Exportar o usar baseline OR (<code>*Speed.csv</code>, modo evaluación).</li>
+              <li><code>or-eval-driver</code> → <code>driver_or.csv</code> (throttle/brake alineados a PSI OR).</li>
+              <li><code>sim scenario.toml --driver driver_or.csv</code> → <code>run.csv</code>.</li>
+              <li><code>compare-or</code> o hook <code>[validate]</code> con RMS, max y fases.</li>
+            </ol>
+            <pre class="cli-block"><span class="comment"># Chiltern — ejemplo completo</span>
+<span class="cmd">openrailsrs sim</span> examples/chiltern/scenario.toml --driver examples/chiltern/driver_or.csv
+<span class="cmd">openrailsrs compare-or</span> examples/baselines/chiltern_birmingham/or_evaluation_speed.csv examples/chiltern/run.csv</pre>
+          </div>
+        </section>
+
+        <section id="comparacion">
+          <h2>Comparación por subsistema</h2>
+          <p class="section-desc">Qué hace Open Rails vs qué hace openrailsrs hoy.</p>
+          <div class="table-wrap">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Subsistema</th>
+                  <th>Open Rails</th>
+                  <th>openrailsrs</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Curvas tracción diesel</td>
+                  <td><code>ORTSMaxTractiveForceCurves</code>, eje v en m/s</td>
+                  <td>Parseo + interpolación por notch; multi-motor</td>
+                  <td><span class="status status-done">OK</span></td>
+                </tr>
+                <tr>
+                  <td>Throttle aparente + P/v rail</td>
+                  <td><code>ReverseThrottleRPMTab</code>, <code>LocomotiveMaxRailOutputPowerW</code></td>
+                  <td>Cap heurístico <code>effective_power_w</code>; <code>legacy_power_cap</code></td>
+                  <td><span class="status status-partial">Gap</span></td>
+                </tr>
+                <tr>
+                  <td>Rampas / fuerza continua</td>
+                  <td>Ramp up/down N/s, W/s, <code>ContinuousForceTimeFactor</code></td>
+                  <td>OR-P3 implementado; run-up MSTS solo notch 100%</td>
+                  <td><span class="status status-done">OK</span></td>
+                </tr>
+                <tr>
+                  <td>DMBSH trail</td>
+                  <td>Herencia de parámetros lead en consist multi-unit</td>
+                  <td>Herencia ORTS + run-up acortado (~13 s)</td>
+                  <td><span class="status status-done">OK</span></td>
+                </tr>
+                <tr>
+                  <td>Resistencia Davis</td>
+                  <td>Por <code>TrainCar</code>; auto-friction CN/Davis 1926</td>
+                  <td>Suma <code>ORTSDavis_*</code>; estimación simplificada si faltan</td>
+                  <td><span class="status status-partial">Parcial</span></td>
+                </tr>
+                <tr>
+                  <td>Resistencia en curva</td>
+                  <td>μ, gauge, wheelbase, radio</td>
+                  <td>No modelado</td>
+                  <td><span class="status status-gap">Pendiente</span></td>
+                </tr>
+                <tr>
+                  <td>Freno MSTS</td>
+                  <td><code>MSTSBrakeSystem</code>, presión tubo/cilindro, tipos</td>
+                  <td>Cilindros + propagación 200 m/s; EP vs train-air</td>
+                  <td><span class="status status-partial">Parcial</span></td>
+                </tr>
+                <tr>
+                  <td>Lap hold / bleed arrancada</td>
+                  <td>Comportamiento train-air en activity brake</td>
+                  <td><code>train_air_lap_hold</code>, <code>train_air_full_release_s</code></td>
+                  <td><span class="status status-done">OK</span></td>
+                </tr>
+                <tr>
+                  <td>μ zapata vs velocidad</td>
+                  <td>Karwatzki 1D, <code>ORTSBrakeShoeFriction</code></td>
+                  <td><code>brake_shoe_speed_factor</code>, curvas cast/HFC/disc</td>
+                  <td><span class="status status-done">OK</span></td>
+                </tr>
+                <tr>
+                  <td>Skid limit</td>
+                  <td><code>min(F, m·g·μ_skid)</code></td>
+                  <td>No implementado</td>
+                  <td><span class="status status-gap">OR-P6c</span></td>
+                </tr>
+                <tr>
+                  <td>Freno dinámico</td>
+                  <td>Blending DB + fricción</td>
+                  <td>No implementado</td>
+                  <td><span class="status status-gap">OR-P10</span></td>
+                </tr>
+                <tr>
+                  <td>Multi-cuerpo</td>
+                  <td>Acopladores, longitud real, slack</td>
+                  <td><code>coupler.rs</code>; runner usa masa puntual por defecto</td>
+                  <td><span class="status status-partial">Parcial</span></td>
+                </tr>
+                <tr>
+                  <td>Señales / driver</td>
+                  <td>Activity obedece aspectos; AI traffic</td>
+                  <td>Replay CSV; Chiltern <code>assume_signals_clear</code></td>
+                  <td><span class="status status-gap">OR-P7</span></td>
+                </tr>
+                <tr>
+                  <td>Gearbox mecánico</td>
+                  <td>Cambios, embrague, RPM motor</td>
+                  <td>No implementado</td>
+                  <td><span class="status status-gap">OR-P9</span></td>
+                </tr>
+                <tr>
+                  <td>Rendering / mundo 3D</td>
+                  <td>Motor completo OR</td>
+                  <td>Headless + viewers 2D/3D opcionales</td>
+                  <td><span class="status status-done">Distinto objetivo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="fases">
+          <h2>Roadmap OR-P (resumen)</h2>
+          <p class="section-desc">Plan detallado en el repositorio. Leyenda: ✅ hecho · 🔶 parcial · 🔲 pendiente.</p>
+          <div class="table-wrap">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Fase</th>
+                  <th>Tema</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>OR-P1</td><td>Throttle aparente + tope P/v diesel</td><td>🔲</td></tr>
+                <tr><td>OR-P2</td><td>Auto-friction OR (Davis CN / bearing type)</td><td>🔶</td></tr>
+                <tr><td>OR-P3</td><td>Rampas tracción + fuerza continua</td><td>✅</td></tr>
+                <tr><td>OR-P4</td><td>Multi-cuerpo en runner</td><td>🔶</td></tr>
+                <tr><td>OR-P5</td><td>Resistencia por vehículo en paso físico</td><td>🔶</td></tr>
+                <tr><td>OR-P6a</td><td>Freno aire: precarga, lap hold, bleed</td><td>✅</td></tr>
+                <tr><td>OR-P6b</td><td>Coeficiente zapata μ(v)</td><td>✅</td></tr>
+                <tr><td>OR-P6c</td><td>Skid limit</td><td>🔲</td></tr>
+                <tr><td>OR-P7</td><td>Señales + driver sin atajos</td><td>🔲</td></tr>
+                <tr><td>OR-P8</td><td>Resistencia ambiental (curva, túnel, viento)</td><td>🔲</td></tr>
+                <tr><td>OR-P9–P11</td><td>Gearbox, freno dinámico, vapor avanzado</td><td>🔲</td></tr>
+                <tr><td>OR-P13</td><td>DMBSH trail + run-up notch</td><td>✅</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="atalhos">
+          <h2>Atajos conscientes</h2>
+          <div class="concept-block">
+            <ul>
+              <li><strong>Headless-first:</strong> sin bucle de juego OR; simulación CSV + validación numérica.</li>
+              <li><strong>Chiltern:</strong> señales asumidas verdes; baseline Explorer/eval, no Activity con AI.</li>
+              <li><strong>Masa puntual:</strong> por defecto un solo grado de libertad longitudinal (multi-cuerpo en código, no en producción).</li>
+              <li><strong>Freno:</strong> proxy de rampa en cilindros, no modelo completo de presiones MSTSBrakeSystem.</li>
+              <li><strong>Flags de escenario:</strong> activan comportamientos OR recientes sin romper escenarios legacy (<code>legacy_power_cap</code>, <code>brake_shoe_speed_factor</code>, etc.).</li>
+            </ul>
+            <p>Cada atajo está documentado en <code>docs/OR_PARITY_ROADMAP.md</code> con criterio de aceptación para retirarlo.</p>
+          </div>
+        </section>
+
+        <section id="docs">
+          <h2>Documentación en el repo</h2>
+          <div class="hub-grid">
+            <a class="hub-card" href="https://github.com/cavazquez/openrailsrs/blob/main/docs/OR_PARITY_ROADMAP.md">
+              <h3>OR_PARITY_ROADMAP.md</h3>
+              <p>Plan OR-P1…P15, criterios, referencias a código fuente OR.</p>
+            </a>
+            <a class="hub-card" href="https://github.com/cavazquez/openrailsrs/blob/main/CALIBRATION.md">
+              <h3>CALIBRATION.md</h3>
+              <p>Bugs corregidos, experimentos, estado Chiltern/SCE.</p>
+            </a>
+            <a class="hub-card" href="fisica.html">
+              <h3>Referencia de física</h3>
+              <p>Ecuaciones y flags por concepto (esta web).</p>
+            </a>
+            <a class="hub-card" href="https://open-rails.readthedocs.io/en/latest/physics.html">
+              <h3>Manual OR — Physics</h3>
+              <p>Documentación oficial de referencia.</p>
+            </a>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>openrailsrs</strong> — paridad con Open Rails</p>
+    <p><a href="index.html">Inicio</a> · <a href="fisica.html">Física</a> ·
+       <a href="https://github.com/cavazquez/openrailsrs">GitHub</a></p>
+  </footer>
+</body>
+</html>

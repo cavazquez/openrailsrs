@@ -8,6 +8,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/backup_or_speed_csv.sh
+source "$SCRIPT_DIR/lib/backup_or_speed_csv.sh"
+
 WINEPREFIX="${WINEPREFIX:-$HOME/wine64-OpenRails}"
 export WINEPREFIX WINEARCH="${WINEARCH:-win64}"
 export PATH="/usr/lib/x86_64-linux-gnu/wine:${PATH:-}"
@@ -52,12 +56,10 @@ echo "  3. Throttle ~80 % (D hasta THROTTLEPERC ~080 en el HUD)"
 echo "  4. Dejá correr ≥ ${TARGET_S} s (ideal 120–180 s) sin salir de OR"
 echo "  5. Alt+F4 para cerrar OR (el CSV se escribe al salir)"
 echo ""
-if [[ -f "$SRC_CSV" ]]; then
-  echo "Aviso: ya existe $SRC_CSV"
-  echo "  Renombralo antes de capturar para no mezclar sesiones:"
-  echo "  mv \"$SRC_CSV\" \"${SRC_CSV}.bak.\$(date +%Y%m%d%H%M%S)\""
-  echo ""
-fi
+ROAM="$WINEPREFIX/drive_c/users/cristian/AppData/Roaming"
+echo "=== Respaldo automático de capturas OR previas ==="
+backup_or_speed_csv "$ROAM" "Open Rails_RS_Let*Speed*.csv"
+echo ""
 echo "Después instalá en el repo:"
 echo "  ./scripts/install_chiltern_birmingham_baseline.sh"
 echo ""

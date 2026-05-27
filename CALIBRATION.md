@@ -118,6 +118,24 @@ Para tener datos de calibración independientes con los que verificar los modelo
 **Qué medir:** `a = F_resist / m_total` en la zona donde la deceleración es constante.
 Con `F = m × a`, si el tren pesa ~440 t y decelera 0.01 m/s², la resistencia total es 4400 N.
 
+> **Nota:** En el roadmap OR-P6, “Experimento A” también designa **frenada fuerte + costa libre** (validar μ(v) y bleed del freno). Ese perfil está en `examples/chiltern/scenario_brake_coast.toml` y `examples/baselines/chiltern_brake_coast/` — distinto del free-roll Davis de arriba.
+
+---
+
+### Experimento A (OR-P6): Frenada + costa libre — validar frenos
+
+**Objetivo:** comparar decaimiento post-freno vs OR (P6b μ(v), P6c skid, bleed cilindro).
+
+**Driver:** 100 s throttle 100 % → 5 s freno pleno → 75 s costa libre (`driver_brake_coast.csv`).
+
+```bash
+./scripts/capture_chiltern_brake_coast_or.sh
+./scripts/install_chiltern_brake_coast_baseline.sh
+cargo test -p openrailsrs-cli --test chiltern_brake_coast
+```
+
+Criterio: fase **105–180 s**, velocidad RMS ≤ **0.5 m/s** vs OR.
+
 ---
 
 ### Experimento B: Aceleración a pleno throttle — verificar curvas de tracción

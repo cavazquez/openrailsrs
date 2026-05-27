@@ -1,0 +1,9 @@
+scenario_name = "Chiltern brake-coast baseline (180 s)"
+seed = 42
+duration_requested_s = 180.0
+time_step_s = 1.0
+final_time_s = 180.0
+final_odometer_m = 2158.1366794182304
+final_velocity_mps = 9.783024234904222
+cumulative_energy_kwh = 32.07952719194532
+reached_destination = false

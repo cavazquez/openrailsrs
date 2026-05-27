@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="openrailsrs — simulador ferroviario headless-first en Rust. Física, escenarios TOML, validación contra Open Rails y viewers 2D/3D.">
+  <title>openrailsrs — Simulador ferroviario en Rust</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="index.html">open<span>rails</span>rs</a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html" class="active">Inicio</a>
+        <a href="fisica.html">Física</a>
+        <a href="paridad-or.html">Paridad OR</a>
+        <a href="#crates">Crates</a>
+        <a href="#cli">CLI</a>
+        <a href="https://github.com/cavazquez/openrailsrs">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <header class="hero">
+      <div class="hero-badges">
+        <span class="badge badge-rust">Rust stable</span>
+        <span class="badge">Linux-first</span>
+        <span class="badge">Headless-first</span>
+        <span class="badge">GPL-3.0</span>
+      </div>
+      <h1>Simulador ferroviario headless-first</h1>
+      <p class="lead">
+        <strong>openrailsrs</strong> es un simulador ferroviario pensado como videojuego de simulación,
+        con núcleo de física que corre sin gráficos. Escenarios en TOML, trazas en CSV,
+        compatibilidad MSTS/Open Rails y validación cuantitativa contra Open Rails.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/cavazquez/openrailsrs">Ver en GitHub</a>
+        <a class="btn btn-secondary" href="fisica.html">Referencia de física</a>
+        <a class="btn btn-secondary" href="paridad-or.html">Comparar con OR</a>
+      </div>
+    </header>
+
+    <section id="documentacion">
+      <h2>Documentación</h2>
+      <p class="section-desc">
+        La landing resume el proyecto; la física y la paridad OR tienen páginas propias con índice navegable.
+      </p>
+      <div class="hub-grid">
+        <a class="hub-card" href="fisica.html">
+          <h3>Referencia de física</h3>
+          <p>Dinámica longitudinal, Davis, diesel, frenos Westinghouse, μ(v), multi-cuerpo, flags de escenario y crates implicados.</p>
+          <span class="hub-meta">13 conceptos · enlaces ancla</span>
+        </a>
+        <a class="hub-card" href="paridad-or.html">
+          <h3>Paridad Open Rails</h3>
+          <p>Tabla OR vs openrailsrs por subsistema, métricas Chiltern/SCE, roadmap OR-P y flujo compare-or.</p>
+          <span class="hub-meta">Actualizado mayo 2026</span>
+        </a>
+        <a class="hub-card" href="https://github.com/cavazquez/openrailsrs/blob/main/README.md">
+          <h3>README del repo</h3>
+          <p>Instalación, formatos TOML, viewers, CI y guía de contribución.</p>
+          <span class="hub-meta">GitHub</span>
+        </a>
+      </div>
+    </section>
+
+    <section id="principios">
+      <h2>Principios de diseño</h2>
+      <div class="principles">
+        <div class="principle">
+          <strong>Headless-first</strong>
+          <p>El motor físico y la CLI funcionan sin ventana ni GPU. Los viewers son crates aparte.</p>
+        </div>
+        <div class="principle">
+          <strong>Datos explícitos</strong>
+          <p>TOML para escenarios; CSV para trazas; salidas comparables en CI.</p>
+        </div>
+        <div class="principle">
+          <strong>Workspace modular</strong>
+          <p>Crates pequeños: parseo, grafo, tren, sim, juego, validación, viewers.</p>
+        </div>
+        <div class="principle">
+          <strong>Calibración OR</strong>
+          <p>Baselines Open Rails con <code>compare-or</code> y tests de regresión por fase temporal.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="caracteristicas">
+      <h2>Características</h2>
+      <p class="section-desc">
+        Resumen por área. Detalle físico en <a href="fisica.html">Física</a>; gaps vs OR en <a href="paridad-or.html">Paridad OR</a>.
+      </p>
+
+      <div class="feature-grid">
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-formats · msts</div>
+          <h3>Contenido MSTS/OR <span class="status status-done">Hecho</span></h3>
+          <p>Parseo e importación de rutas y actividades reales.</p>
+          <ul>
+            <li><code>.eng</code>, <code>.wag</code>, <code>.con</code>, <code>.trk</code>, <code>.act</code></li>
+            <li>Curvas ORTS, Davis, diesel tabs, shapes y terreno</li>
+            <li><code>import-msts</code> → <code>scenario.toml</code></li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-sim · train</div>
+          <h3>Física y tren <span class="status status-partial">Profundizado</span></h3>
+          <p>Longitudinal, diesel multi-motor, freno de aire, acopladores.</p>
+          <ul>
+            <li><a href="fisica.html#diesel">Tracción diesel ORTS</a> + legacy P/v</li>
+            <li><a href="fisica.html#air-brake">Freno Westinghouse</a> + μ(v)</li>
+            <li>Davis agregado; multi-cuerpo en código</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-validate</div>
+          <h3>Validación OR <span class="status status-done">Hecho</span></h3>
+          <p>Comparación cuantitativa reproducible.</p>
+          <ul>
+            <li><code>compare-or</code> RMS/max + fases</li>
+            <li><code>or-eval-driver</code> desde traza OR</li>
+            <li>Chiltern ~0.39 m/s RMS @ 136 s</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">openrailsrs-game · cli</div>
+          <h3>Juego y CLI <span class="status status-done">Hecho</span></h3>
+          <p>Simular, jugar headless, cabina y dispatch.</p>
+          <ul>
+            <li><code>sim</code>, <code>play-headless</code>, <code>cab</code></li>
+            <li>Campaña Mitre, multi-tren, scoring</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">viewers · audio · import</div>
+          <h3>Visualización e import OSM <span class="status status-partial">Mixto</span></h3>
+          <p>2D minifb, 3D Bevy experimental, línea Mitre desde OSM.</p>
+          <ul>
+            <li>Replay CSV; shapes MSTS en 3D</li>
+            <li>Audio sintetizado + SoundRegions</li>
+          </ul>
+        </article>
+
+        <article class="feature-card">
+          <div class="crate">Paridad OR</div>
+          <h3>Roadmap físico <span class="status status-partial">En curso</span></h3>
+          <p>Olas OR-P1…P15 hacia paridad medible.</p>
+          <ul>
+            <li>✅ P3 rampas, P6a/b frenos, P13 DMBSH</li>
+            <li>🔲 P1 throttle aparente, P7 señales, P6c skid</li>
+            <li><a href="paridad-or.html">Ver comparación completa</a></li>
+          </ul>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="crates">
+      <h2>Arquitectura — crates</h2>
+      <div class="table-wrap">
+        <table class="crates-table">
+          <thead>
+            <tr><th>Crate</th><th>Responsabilidad</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>openrailsrs-formats</td><td>Parseo MSTS/OR, shapes, terreno</td></tr>
+            <tr><td>openrailsrs-train</td><td>Consists, Davis, diesel, vapor</td></tr>
+            <tr><td>openrailsrs-sim</td><td>Física, runner, freno, acopladores</td></tr>
+            <tr><td>openrailsrs-scenarios</td><td><code>scenario.toml</code>, flags simulación</td></tr>
+            <tr><td>openrailsrs-validate</td><td><code>compare-or</code>, trazas OR</td></tr>
+            <tr><td>openrailsrs-cli</td><td>Binario <code>openrailsrs</code></td></tr>
+            <tr><td>openrailsrs-viewer / viewer3d</td><td>Visualización 2D y 3D</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="cli">
+      <h2>CLI — comandos esenciales</h2>
+      <pre class="cli-block"><span class="comment"># Simulación + validación OR</span>
+<span class="cmd">openrailsrs sim</span> examples/chiltern/scenario.toml --driver examples/chiltern/driver_or.csv
+<span class="cmd">openrailsrs compare-or</span> examples/baselines/chiltern_birmingham/or_evaluation_speed.csv run.csv
+
+<span class="comment"># Calidad</span>
+<span class="cmd">./check.sh</span></pre>
+    </section>
+
+    <section id="ejemplos">
+      <h2>Escenarios de ejemplo</h2>
+      <div class="examples-list">
+        <div class="example-item">
+          <strong>Chiltern Birmingham</strong>
+          <span>Blue Pullman vs baseline OR (136 s)</span>
+          <span class="example-path">examples/chiltern/</span>
+        </div>
+        <div class="example-item">
+          <strong>SCE Glasgow</strong>
+          <span>Class 47 + MK2, 100 s</span>
+          <span class="example-path">examples/sce/</span>
+        </div>
+        <div class="example-item">
+          <strong>Línea Mitre</strong>
+          <span>Retiro → Victoria / Tigre, campaña</span>
+          <span class="example-path">examples/routes/mitre/</span>
+        </div>
+        <div class="example-item">
+          <strong>Smoke</strong>
+          <span>Pruebas rápidas y multi-tren</span>
+          <span class="example-path">examples/smoke/</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>openrailsrs</strong> — simulador ferroviario headless-first en Rust</p>
+    <p>
+      <a href="fisica.html">Física</a> ·
+      <a href="paridad-or.html">Paridad OR</a> ·
+      <a href="https://www.gnu.org/licenses/gpl-3.0">GPL-3.0</a> ·
+      <a href="https://github.com/cavazquez/openrailsrs">GitHub</a>
+    </p>
+  </footer>
+</body>
+</html>

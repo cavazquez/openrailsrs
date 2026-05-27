@@ -236,7 +236,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [ ] Experimento A (costa libre tras frenada fuerte): perfil v(t) post-suelta freno dentro de 0.5 m/s RMS vs OR
+- [ ] Experimento A (costa libre tras frenada fuerte): perfil v(t) post-suelta freno dentro de 0.5 m/s RMS vs OR — infra `scenario_brake_coast.toml` + `chiltern_brake_coast` (baseline OR pendiente)
 - [ ] Chiltern fase 0–40 s (frenos al inicio): mejora posición max sin empeorar velocidad global
 - [x] OR-P6a parcial: precarga cilindros + lap hold train-air + `train_air_full_release_s` (Chiltern global ~0.39 m/s; 0–30 s ~0.54; 40–65 s ~0.33)
 - [x] OR-P6b: parseo shoe type/curva + `F_efectiva(v) = F_cilindro × μ(v)/μ(0)`; flag `brake_shoe_speed_factor` en Chiltern (sin regresión en umbrales actuales)

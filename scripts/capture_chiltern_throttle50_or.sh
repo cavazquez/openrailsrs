@@ -8,6 +8,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/backup_or_speed_csv.sh
+source "$SCRIPT_DIR/lib/backup_or_speed_csv.sh"
+
 WINEPREFIX="${WINEPREFIX:-$HOME/wine64-OpenRails}"
 export WINEPREFIX WINEARCH="${WINEARCH:-win64}"
 export PATH="/usr/lib/x86_64-linux-gnu/wine:${PATH:-}"
@@ -44,13 +48,10 @@ echo "     (Pullman 8 notches → suele ser notch 4; NO te quedes en ~012)"
 echo "  5. Despausa y dejá correr 30 s de tiempo simulado"
 echo "  6. Salí de OR (Alt+F4)"
 echo ""
-SRC_CSV="$WINEPREFIX/drive_c/users/cristian/AppData/Roaming/Open Rails_explorerSpeed.csv"
-if [[ -f "$SRC_CSV" ]]; then
-  echo "Aviso: ya existe $SRC_CSV"
-  echo "  Si es una captura vieja, renombrala antes de correr OR:"
-  echo "  mv \"$SRC_CSV\" \"${SRC_CSV}.bak.$(date +%Y%m%d%H%M%S)\""
-  echo ""
-fi
+ROAM="$WINEPREFIX/drive_c/users/cristian/AppData/Roaming"
+echo "=== Respaldo automático de capturas OR previas ==="
+backup_or_speed_csv "$ROAM" "Open Rails_explorerSpeed*.csv"
+echo ""
 echo "Luego instalá el baseline:"
 echo "  ./scripts/install_chiltern_throttle50_baseline.sh"
 echo ""

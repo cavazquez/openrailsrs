@@ -1,0 +1,53 @@
+extra_trains = []
+
+[scenario]
+name = "Chiltern brake-coast baseline (180 s)"
+description = "Experimento A — acelerar, frenada fuerte, soltar freno y costa libre (validación P6 / μ(v))."
+
+[route]
+path = "."
+start = "n3"
+destination = "n10770"
+start_offset_m = 305.576
+assume_signals_clear = true
+stops = []
+
+[[route.switches]]
+node = "n10770"
+position = "diverging"
+
+[[route.switches]]
+node = "n10780"
+position = "straight"
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 180.0
+time_step = 1.0
+seed = 42
+legacy_power_cap = false
+train_air_lap_hold = false
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+brake_cylinder_full_scale_psi = 35.0
+
+[output]
+csv = "run_brake_coast.csv"
+metadata = "run_brake_coast.json"
+
+[validate]
+baseline_or = "../baselines/chiltern_brake_coast/or_evaluation_speed.csv"
+max_velocity_rms = 5.0
+max_throttle_rms = 0.10
+max_brake_rms = 0.10
+phase_bounds = [0.0, 100.0, 105.0, 180.0]
+# Fase costa libre post-freno (105–180 s): umbral OR-P6 Experimento A
+phase_max_velocity_rms = 0.50
