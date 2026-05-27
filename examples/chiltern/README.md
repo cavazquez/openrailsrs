@@ -23,7 +23,7 @@ Los RMS de `compare-or` (p. ej. ~0.39 m/s en 136 s) comparan por tanto **masa pu
 Para acercarse a OR:
 
 ```bash
-# Requiere time_step ≤ 0.05 (dt=1 s diverge en acopladores)
+# multi_body = true; time_step = 1.0 (sub-pasos acoplador ≤0.05 s internos)
 openrailsrs sim scenario_multi_body.toml --driver driver_or.csv
 cargo test -p openrailsrs-cli --test chiltern_multi_body
 ```

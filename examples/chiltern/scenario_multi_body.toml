@@ -30,8 +30,8 @@ penalty_per_second_late = 0.0
 
 [simulation]
 duration = 136.0
-# Acopladores (Euler explícito): dt=1 s diverge; usar ≤0.05 s en multi-cuerpo.
-time_step = 0.05
+# Sub-pasos internos en acopladores (≤0.05 s) permiten dt=1 s estable.
+time_step = 1.0
 seed = 42
 multi_body = true
 legacy_power_cap = false

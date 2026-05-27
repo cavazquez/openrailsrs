@@ -95,6 +95,28 @@ impl Default for CouplerState {
     }
 }
 
+/// Maximum explicit-Euler sub-step for stiff coupler springs (s).
+pub const MULTI_BODY_MAX_SUBSTEP_S: f64 = 0.05;
+
+/// Sub-step count so each integration step is at most [`MULTI_BODY_MAX_SUBSTEP_S`].
+pub fn multi_body_substep_count(dt: f64) -> usize {
+    if dt <= 0.0 {
+        return 1;
+    }
+    ((dt / MULTI_BODY_MAX_SUBSTEP_S).ceil() as usize).max(1)
+}
+
+/// Mass-weighted mean of per-vehicle speeds (m/s).
+pub fn mass_weighted_mean_velocity(vehicles: &[VehicleState], masses: &[f64]) -> f64 {
+    let total_mass: f64 = masses.iter().sum::<f64>().max(1.0);
+    masses
+        .iter()
+        .zip(vehicles.iter())
+        .map(|(m, v)| m * v.velocity_mps)
+        .sum::<f64>()
+        / total_mass
+}
+
 /// Advance all vehicles by `dt` seconds.
 ///
 /// - `vehicles` — mutable per-vehicle states (index 0 = locomotive / front).
@@ -167,11 +189,59 @@ pub fn multi_body_step(
     }
 
     // Mass-weighted mean velocity.
-    let total_mass: f64 = masses.iter().sum::<f64>().max(1.0);
-    masses
-        .iter()
-        .zip(vehicles.iter())
-        .map(|(m, v)| m * v.velocity_mps)
-        .sum::<f64>()
-        / total_mass
+    mass_weighted_mean_velocity(vehicles, masses)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn substep_count_scales_with_dt() {
+        assert_eq!(multi_body_substep_count(0.01), 1);
+        assert_eq!(multi_body_substep_count(0.05), 1);
+        assert_eq!(multi_body_substep_count(0.051), 2);
+        assert_eq!(multi_body_substep_count(1.0), 20);
+    }
+
+    #[test]
+    fn large_dt_substeps_stay_bounded_with_velocity_slack() {
+        let mut vehicles = vec![
+            VehicleState {
+                velocity_mps: 10.0,
+                position_m: 0.0,
+            },
+            VehicleState {
+                velocity_mps: 0.0,
+                position_m: 0.0,
+            },
+        ];
+        let mut couplers = vec![CouplerState::freight()];
+        let masses = vec![50_000.0, 50_000.0];
+        let brake = vec![0.0; 2];
+        let resist = vec![800.0, 800.0];
+        let n = multi_body_substep_count(1.0);
+        let sub_dt = 1.0 / n as f64;
+        for _ in 0..n {
+            multi_body_step(
+                &mut vehicles,
+                &mut couplers,
+                0.0,
+                &brake,
+                &resist,
+                &masses,
+                sub_dt,
+            );
+        }
+        assert!(
+            vehicles[0].velocity_mps.is_finite() && vehicles[0].velocity_mps < 15.0,
+            "front v={}",
+            vehicles[0].velocity_mps
+        );
+        assert!(
+            vehicles[1].velocity_mps.is_finite() && vehicles[1].velocity_mps < 15.0,
+            "rear v={}",
+            vehicles[1].velocity_mps
+        );
+    }
 }

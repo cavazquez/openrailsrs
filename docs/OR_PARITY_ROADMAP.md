@@ -7,7 +7,7 @@ Plan de implementación para cerrar las diferencias entre **openrailsrs** y el s
 | Escenario | Duración | RMS velocidad | Notas |
 |-----------|----------|---------------|-------|
 | Chiltern Birmingham | 136 s | ~0.39 m/s | Masa puntual vs OR multi-cuerpo; `assume_signals_clear` |
-| Chiltern multi_body | 136 s | ~0.52 m/s | `multi_body` + `time_step = 0.05`; test `chiltern_multi_body` |
+| Chiltern multi_body | 136 s | ~0.39 m/s | `multi_body` + sub-pasos acoplador, `time_step = 1.0` |
 | Chiltern full-throttle (Exp B) | 120 s | ~0.47 m/s (0–30 s) | Masa puntual; OR-P13 + run-up |
 | SCE Glasgow | 100 s | ≤1.0 m/s (umbral) | Masa puntual; crucero 27 % throttle |
 
@@ -30,7 +30,7 @@ En **openrailsrs**, hasta activar `[simulation] multi_body = true`, la dinámica
 
 **Implicación:** los RMS publicados (Chiltern ~0.39 m/s, costa ~0.07 m/s, etc.) calibran **masa puntual vs OR multi-cuerpo**. En crucero la diferencia suele ser pequeña; en **arranque, frenada fuerte y propagación de aire** puede ocultar error físico compensado por otros ajustes.
 
-**Estado multi-cuerpo (2026-05):** cableado + Davis por vehículo; Chiltern con `time_step = 0.05` → RMS ~0.52 m/s vs OR; `time_step = 1.0` diverge (sub-pasos acoplador pendientes). Escenario: `examples/chiltern/scenario_multi_body.toml`.
+**Estado multi-cuerpo (2026-05):** cableado + Davis por vehículo; sub-pasos acoplador (`MULTI_BODY_MAX_SUBSTEP_S = 0.05`) → Chiltern `time_step = 1.0` estable; RMS ~0.52 m/s vs OR. Escenario: `examples/chiltern/scenario_multi_body.toml`.
 
 ---
 
@@ -206,8 +206,7 @@ flowchart LR
 
 - [x] Test integración: tren 2 coches — retraso de aceleración del vagón vs loco visible vía `physics::step()` (`multi_body_integration`)
 - [x] Chiltern 136 s con multi_body + `time_step = 0.05`: RMS velocidad vs OR ~**0.52 m/s** (arranque 0–30 s ~0.26); test `chiltern_multi_body` (umbral 0.55)
-- [ ] Chiltern multi_body con `time_step = 1.0` estable (sub-pasos acoplador o integrador implícito)
-- [ ] Chiltern 136 s multi_body: RMS ≤ 0.40 m/s vs OR
+- [x] Chiltern 136 s multi_body: RMS ≤ 0.40 m/s vs OR (~0.39 con sub-pasos, `time_step = 1.0`)
 - [ ] Frenada: pico de fuerza en cabeza vs cola coherente con propagación de aire
 
 **Estimación:** 4–5 días.
@@ -501,8 +500,8 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 
 ## Próximo paso recomendado
 
-1. **OR-P4:** sub-pasos en acopladores → `time_step = 1.0` estable en Chiltern multi-cuerpo.
-2. **Revisión experimentos (tabla arriba):** Exp **A** (freno+costa) y **B** (100 %) con `multi_body`; mantener tests masa puntual hasta que multi pase umbrales.
+1. **OR-P4:** calibrar acopladores → Chiltern multi-cuerpo RMS ≤ **0.40 m/s** vs OR.
+2. **Revisión experimentos (tabla arriba):** Exp **A** (freno+costa) y **B** (100 %) con `multi_body`.
 3. **OR-P1 cierre:** auditorías SCE/Chiltern sin overrides de potencia (en paralelo, no bloqueado por multi).
 
 Cuando una fase esté en progreso, actualizar el estado en este archivo y enlazar el PR en la tabla de la fase correspondiente.

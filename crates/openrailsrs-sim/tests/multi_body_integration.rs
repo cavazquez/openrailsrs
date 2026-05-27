@@ -86,6 +86,52 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
 }
 
 #[test]
+fn multi_body_dt_one_second_remains_stable_over_ten_steps() {
+    let (consist, _) = match smoke_freight_consist() {
+        Some(x) => x,
+        None => return,
+    };
+
+    let train = TrainPhysics {
+        mass_kg: consist.total_mass_kg(),
+        max_power_w: consist.total_max_power_w(),
+        max_tractive_effort_n: consist.total_max_tractive_effort_n(),
+        max_brake_n: consist.total_max_brake_n(),
+        davis: consist.davis.clone(),
+        vehicle_davis: consist.per_vehicle_davis(None),
+        tractive: TractiveCurve::default(),
+        diesel_engines: consist.diesel_traction_models(),
+        regen_factor: 0.0,
+        diesel_sfc_g_per_kwh: None,
+        steam_params: None,
+        brake_mapping: Default::default(),
+        legacy_power_cap: true,
+        brake_skid_limit: false,
+    };
+
+    let path_data = flat_path();
+    let mut state = TrainSimState::new(vec!["e1".into()]);
+    state.init_multi_body_if_enabled(&consist, true);
+    state.throttle = 1.0;
+
+    for _ in 0..10 {
+        step(&mut state, &path_data, &train, 1.0);
+        assert!(
+            state.velocity_mps.is_finite() && state.velocity_mps < 80.0,
+            "mean velocity diverged: {}",
+            state.velocity_mps
+        );
+        for (i, veh) in state.vehicles.iter().enumerate() {
+            assert!(
+                veh.velocity_mps.is_finite() && veh.velocity_mps < 80.0,
+                "vehicle {i} diverged: {}",
+                veh.velocity_mps
+            );
+        }
+    }
+}
+
+#[test]
 fn init_multi_body_disabled_leaves_single_mass_path() {
     let (consist, _) = match smoke_freight_consist() {
         Some(x) => x,

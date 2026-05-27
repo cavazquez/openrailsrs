@@ -2,7 +2,7 @@ use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, Tra
 
 use openrailsrs_validate::BrakeCommandMapping;
 
-use crate::coupler::multi_body_step;
+use crate::coupler::{mass_weighted_mean_velocity, multi_body_step, multi_body_substep_count};
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
 use crate::steam::steam_step;
@@ -216,45 +216,52 @@ pub fn step(
     // to the spring-damper solver.  The resulting mean velocity is used for
     // position integration and energy accounting below.
     let v_new = if !state.vehicles.is_empty() {
-        // Per-vehicle brake and grade+resist forces (split proportionally by mass).
         let total_mass = effective_mass;
-        let brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
-            state.brake_system.cylinder_forces_n(v)
-        } else {
-            state
-                .vehicle_masses
-                .iter()
-                .map(|m| f_brake * m / total_mass)
-                .collect()
-        };
-        let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
-            state
-                .vehicles
-                .iter()
-                .zip(train.vehicle_davis.iter())
-                .zip(state.vehicle_masses.iter())
-                .map(|((veh, davis), mass)| {
-                    davis.resistance_n(veh.velocity_mps) + mass * G * grade_fraction
-                })
-                .collect()
-        } else {
-            state
-                .vehicle_masses
-                .iter()
-                .map(|m| (f_resist + f_grade) * m / total_mass)
-                .collect()
-        };
-        let masses: Vec<f64> = state.vehicle_masses.clone();
-        multi_body_step(
-            &mut state.vehicles,
-            &mut state.couplers,
-            f_motor,
-            &brake_forces,
-            &grade_resist,
-            &masses,
-            dt,
-        )
-        .max(0.0)
+        let n_sub = multi_body_substep_count(dt);
+        let sub_dt = dt / n_sub as f64;
+        let masses = state.vehicle_masses.clone();
+        let mut mean_v = v;
+        for _ in 0..n_sub {
+            let coupling_v =
+                mass_weighted_mean_velocity(&state.vehicles, &masses).max(0.0);
+            let brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
+                state.brake_system.cylinder_forces_n(coupling_v)
+            } else {
+                state
+                    .vehicle_masses
+                    .iter()
+                    .map(|m| f_brake * m / total_mass)
+                    .collect()
+            };
+            let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
+                state
+                    .vehicles
+                    .iter()
+                    .zip(train.vehicle_davis.iter())
+                    .zip(state.vehicle_masses.iter())
+                    .map(|((veh, davis), mass)| {
+                        davis.resistance_n(veh.velocity_mps) + mass * G * grade_fraction
+                    })
+                    .collect()
+            } else {
+                state
+                    .vehicle_masses
+                    .iter()
+                    .map(|m| (f_resist + f_grade) * m / total_mass)
+                    .collect()
+            };
+            mean_v = multi_body_step(
+                &mut state.vehicles,
+                &mut state.couplers,
+                f_motor,
+                &brake_forces,
+                &grade_resist,
+                &masses,
+                sub_dt,
+            )
+            .max(0.0);
+        }
+        mean_v
     } else {
         // ── Single-mass path (default) ────────────────────────────────────────
         let f_net = f_motor - f_brake - f_resist - f_grade;
