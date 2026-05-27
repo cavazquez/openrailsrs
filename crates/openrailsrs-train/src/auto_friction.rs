@@ -180,4 +180,12 @@ mod tests {
         let c = calc_davis_c_n_per_mps2(10.0, 0.00034);
         assert!(c > 0.0);
     }
+
+    #[test]
+    fn grease_heavy_uses_linear_tons_branch() {
+        let light = calc_davis_a_n(OrtsBearingType::Grease, 8_000.0, 2);
+        let heavy = calc_davis_a_n(OrtsBearingType::Grease, 100_000.0, 8);
+        assert!(heavy > light * 1.2);
+        assert!((heavy - 1669.4).abs() < 5.0);
+    }
 }

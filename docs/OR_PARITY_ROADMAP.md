@@ -91,7 +91,7 @@ flowchart LR
 
 **Criterios de aceptación:**
 
-- [ ] Test unitario: RPM bajo → fuerza limitada aunque throttle driver = 1.0
+- [x] Test unitario: RPM bajo → fuerza limitada aunque throttle driver = 1.0 (`or_p1_diesel_eng`, Class 47 / DMBSA `.eng`)
 - [ ] `audit_sce_cruise` y `audit_chiltern_forces` pasan sin overrides de potencia
 - [ ] SCE 100 s: RMS ≤ 1.0 m/s; crucero 27 % dentro de ±0.5 mph vs OR
 - [ ] Chiltern 136 s: RMS ≤ 0.35 m/s (no empeorar >10 % vs baseline actual)
@@ -122,8 +122,9 @@ flowchart LR
 
 **Criterios de aceptación:**
 
+- [x] Test unitario: valores golden auto-friction (bearing, masa/ejes, C por área) — `auto_friction_golden`
 - [ ] Vagón SCE MK2: A/B/C dentro de ±5 % vs OR `-verboseconfig`
-- [ ] SCE 100 s sigue pasando sin `[train.davis]` en escenario
+- [x] SCE 100 s sigue pasando sin `[train.davis]` en escenario
 - [x] Chiltern puede quitar override manual cuando Pullman + 6 coaches coincidan con OR (`chiltern_validate` sin `[train.davis]`)
 
 **Referencias OR:** PR [#1207 auto_friction](https://github.com/openrails/openrails/commit/d01848a), manual Physics § Davis.

@@ -1017,4 +1017,45 @@ mod tests {
         let limit = m.adhesion_limit_n(0.0);
         assert!(stall <= limit + 1.0, "stall {stall} limit {limit}");
     }
+
+    #[test]
+    fn build_reverse_throttle_tab_endpoints() {
+        let tab = vec![(0.0, 325.0), (0.4, 450.0), (1.0, 750.0)];
+        let rev = build_reverse_throttle_rpm_tab(&tab);
+        assert!((rev.first().unwrap().0 - 325.0).abs() < 1e-6);
+        let engine = DieselEngineParams {
+            power_tab: vec![],
+            throttle_rpm_tab: tab,
+            idle_rpm: 325.0,
+            max_rpm: 750.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 0.0,
+            rate_of_change_down_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            change_down_rpm_ps: 0.0,
+            reverse_throttle_rpm_tab: rev,
+        };
+        assert!((engine.apparent_throttle_fraction(750.0) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn target_traction_force_limited_by_rail_power_at_speed() {
+        let mut m = sample_model();
+        m.max_rail_output_power_w = 800_000.0;
+        m.engine = Some(Box::new(DieselEngineParams {
+            power_tab: vec![(325.0, 100_000.0), (750.0, 800_000.0)],
+            throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 750.0)],
+            idle_rpm: 325.0,
+            max_rpm: 750.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 0.0,
+            rate_of_change_down_rpm_pss: 0.0,
+            change_up_rpm_ps: 0.0,
+            change_down_rpm_ps: 0.0,
+            reverse_throttle_rpm_tab: build_reverse_throttle_rpm_tab(&[(0.0, 325.0), (1.0, 750.0)]),
+        }));
+        let v = 20.0;
+        let target = m.target_traction_force_n(v, 1.0, 750.0, 1.0, 0.0, false);
+        assert!(target <= 800_000.0 / v + 1.0, "target={target}");
+    }
 }
