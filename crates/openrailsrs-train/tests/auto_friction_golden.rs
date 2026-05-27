@@ -30,6 +30,40 @@ fn roller_bearing_lower_a_than_friction_same_mass() {
 }
 
 #[test]
+fn golden_bearing_type_a_reference_table() {
+    // Documented OR formula outputs at 34 t, 4 axles (MK2-class).
+    struct Row {
+        bearing: OrtsBearingType,
+        expected_a: f64,
+    }
+    for row in [
+        Row {
+            bearing: OrtsBearingType::Friction,
+            expected_a: 732.7,
+        },
+        Row {
+            bearing: OrtsBearingType::Roller,
+            expected_a: 570.3,
+        },
+        Row {
+            bearing: OrtsBearingType::Low,
+            expected_a: 445.8,
+        },
+        Row {
+            bearing: OrtsBearingType::Grease,
+            expected_a: 732.7,
+        },
+    ] {
+        let a = calc_davis_a_n(row.bearing, 34_000.0, 4);
+        assert!(
+            (a - row.expected_a).abs() < 5.0,
+            "{:?} a={a}",
+            row.bearing
+        );
+    }
+}
+
+#[test]
 fn low_bearing_freight_b_between_roller_and_default() {
     let mass = 50_000.0;
     let axles = 4;
