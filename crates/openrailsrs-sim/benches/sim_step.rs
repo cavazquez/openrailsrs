@@ -53,6 +53,7 @@ fn default_train() -> TrainPhysics {
         steam_params: None,
         brake_mapping: Default::default(),
         legacy_power_cap: true,
+        brake_skid_limit: false,
     }
 }
 

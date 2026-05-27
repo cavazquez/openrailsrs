@@ -49,6 +49,8 @@ pub struct TrainPhysics {
     pub brake_mapping: BrakeCommandMapping,
     /// When true, use pre-OR-P1 `DieselPowerTab` P/v cap and skip apparent throttle.
     pub legacy_power_cap: bool,
+    /// When true, per-cylinder brake force is capped at mass × g × μ_adhesion (OR-P6c).
+    pub brake_skid_limit: bool,
 }
 
 pub struct StepResult {
@@ -191,14 +193,19 @@ pub fn step(
         .brake_mapping
         .command_to_cylinder_fraction(state.brake);
     state.brake_system.step(brake_frac, dt);
+    let effective_mass = train.mass_kg + state.extra_mass_kg;
     let f_brake = if !state.brake_system.cylinders.is_empty() {
         state.brake_system.total_force_n(v)
     } else {
-        brake_frac * train.max_brake_n
+        let raw = brake_frac * train.max_brake_n;
+        if train.brake_skid_limit {
+            use crate::brake::OR_DEFAULT_BRAKE_ADHESION_MU;
+            raw.min(effective_mass * G * OR_DEFAULT_BRAKE_ADHESION_MU)
+        } else {
+            raw
+        }
     };
     let f_resist = train.davis.a_n + train.davis.b_n_per_mps * v + train.davis.c_n_per_mps2 * v * v;
-    // Effective mass includes fixed consist mass plus any passenger load.
-    let effective_mass = train.mass_kg + state.extra_mass_kg;
     let f_grade = effective_mass * G * (edge_data.grade_percent / 100.0);
 
     // ── Multi-body coupler path ───────────────────────────────────────────────

@@ -216,6 +216,7 @@ mod tests {
                 train_air_lap_hold: false,
                 train_air_full_release_s: 3.0,
                 brake_shoe_speed_factor: false,
+                brake_skid_limit: false,
             },
             output: OutputSection {
                 csv: "run.csv".into(),

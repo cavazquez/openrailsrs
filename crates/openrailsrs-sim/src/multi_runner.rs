@@ -85,7 +85,7 @@ fn auto_decide(vel_mps: f64, speed_limit_mps: f64) -> (f64, f64) {
 const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
 
 fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
-    let specs = crate::brake::vehicle_specs_from_consist(consist, false);
+    let specs = crate::brake::vehicle_specs_from_consist(consist, false, false);
     BrakeSystem::from_vehicle_specs(&specs, BRAKE_PIPE_SPEED_MPS, false, 3.0)
 }
 
@@ -141,6 +141,7 @@ fn build_physics(
         steam_params: consist.aggregate_steam_params(),
         brake_mapping,
         legacy_power_cap,
+        brake_skid_limit: false,
     })
 }
 

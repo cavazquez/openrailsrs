@@ -50,6 +50,10 @@ pub struct BrakeCylinder {
     latched_command: f64,
     /// μ(v)/μ(0) curve for OR-P6b (identity = constant force vs speed).
     shoe_friction: BrakeShoeFrictionCurve,
+    /// Vehicle mass for OR-P6c skid cap (kg).
+    mass_kg: f64,
+    /// Wheel-rail adhesion μ; 0 disables skid limit on this cylinder.
+    skid_adhesion_mu: f64,
 }
 
 /// Per-vehicle brake cylinder specification for [`BrakeSystem`].
@@ -59,7 +63,13 @@ pub struct BrakeVehicleSpec {
     pub max_force_n: f64,
     pub ep_instant: bool,
     pub shoe_friction: BrakeShoeFrictionCurve,
+    pub mass_kg: f64,
+    /// Wheel-rail μ cap when skid limit enabled; 0 = no cap (OR-P6c off).
+    pub skid_adhesion_mu: f64,
 }
+
+/// OR `Train.WagonCoefficientFriction` dry default for brake adhesion cap.
+pub const OR_DEFAULT_BRAKE_ADHESION_MU: f64 = 0.25;
 
 const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
 
@@ -67,6 +77,7 @@ const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
 pub fn vehicle_specs_from_consist(
     consist: &Consist,
     shoe_speed_factor: bool,
+    skid_limit: bool,
 ) -> Vec<BrakeVehicleSpec> {
     let mut pos = 0.0_f64;
     consist
@@ -91,18 +102,20 @@ pub fn vehicle_specs_from_consist(
                 }
             };
             pos += length_m;
-            let (force_n, ep, shoe_type, user_curve) = match v {
+            let (force_n, ep, shoe_type, user_curve, mass_kg) = match v {
                 Vehicle::Loco(l) => (
                     l.max_brake_force_n,
                     true,
                     &l.brake_shoe_type,
                     &l.brake_shoe_friction,
+                    l.mass_kg,
                 ),
                 Vehicle::Wagon(w) => (
                     w.max_brake_force_n,
                     false,
                     &w.brake_shoe_type,
                     &w.brake_shoe_friction,
+                    w.mass_kg,
                 ),
             };
             let shoe_friction = if shoe_speed_factor {
@@ -110,11 +123,18 @@ pub fn vehicle_specs_from_consist(
             } else {
                 BrakeShoeFrictionCurve::identity()
             };
+            let skid_adhesion_mu = if skid_limit {
+                OR_DEFAULT_BRAKE_ADHESION_MU
+            } else {
+                0.0
+            };
             BrakeVehicleSpec {
                 position_m: cylinder_pos,
                 max_force_n: force_n,
                 ep_instant: ep,
                 shoe_friction,
+                mass_kg,
+                skid_adhesion_mu,
             }
         })
         .collect()
@@ -127,6 +147,8 @@ impl BrakeCylinder {
         max_force_n: f64,
         ep_instant: bool,
         shoe_friction: openrailsrs_formats::BrakeShoeFrictionCurve,
+        mass_kg: f64,
+        skid_adhesion_mu: f64,
     ) -> Self {
         // Release: EP ~2.5 s; wagons ~8 s (OR pipe recharge). Fast bleed on full release when lap-hold enabled.
         let (apply_time_s, release_time_s) = if ep_instant { (0.15, 2.5) } else { (0.5, 8.0) };
@@ -141,12 +163,19 @@ impl BrakeCylinder {
             release_ramp_rate_n_per_s: max_force_n / release_time_s,
             latched_command: 0.0,
             shoe_friction,
+            mass_kg,
+            skid_adhesion_mu,
         }
     }
 
-    /// Wheel-rim braking force after shoe μ(v) scaling.
+    /// Wheel-rim braking force after shoe μ(v) and optional skid adhesion cap.
     pub fn effective_force_n(&self, speed_mps: f64) -> f64 {
-        self.current_force_n * self.shoe_friction.speed_factor(speed_mps)
+        let shoe = self.current_force_n * self.shoe_friction.speed_factor(speed_mps);
+        if self.skid_adhesion_mu > 0.0 && self.mass_kg > 0.0 {
+            shoe.min(self.mass_kg * 9.81 * self.skid_adhesion_mu)
+        } else {
+            shoe
+        }
     }
 
     /// Driver command this cylinder responds to (EP follows handle; train air holds during lap release).
@@ -201,6 +230,8 @@ impl BrakeSystem {
                     v.max_force_n,
                     v.ep_instant,
                     v.shoe_friction.clone(),
+                    v.mass_kg,
+                    v.skid_adhesion_mu,
                 )
             })
             .collect();
@@ -236,6 +267,8 @@ impl BrakeSystem {
                 max_force_n: force,
                 ep_instant: ep,
                 shoe_friction: BrakeShoeFrictionCurve::identity(),
+                mass_kg: 0.0,
+                skid_adhesion_mu: 0.0,
             })
             .collect();
         Self::from_vehicle_specs(
@@ -370,5 +403,36 @@ impl Default for BrakeSystem {
             train_air_lap_hold: false,
             train_air_full_release_s: 3.0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_formats::BrakeShoeFrictionCurve;
+
+    #[test]
+    fn skid_limit_caps_brake_at_mass_times_adhesion() {
+        let mass_kg = 30_000.0;
+        let max_force = 500_000.0;
+        let mu = OR_DEFAULT_BRAKE_ADHESION_MU;
+        let cap = mass_kg * 9.81 * mu;
+
+        let mut cyl = BrakeCylinder::new(
+            0.0,
+            max_force,
+            true,
+            BrakeShoeFrictionCurve::identity(),
+            mass_kg,
+            mu,
+        );
+        cyl.current_force_n = max_force;
+
+        let effective = cyl.effective_force_n(0.0);
+        assert!(
+            (effective - cap).abs() < 1.0,
+            "expected cap {cap}, got {effective}"
+        );
+        assert!(effective < max_force * 0.5);
     }
 }

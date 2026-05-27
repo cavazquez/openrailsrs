@@ -231,7 +231,7 @@ flowchart LR
 |----------|---------|
 | P6a | Presión de cilindro como estado (0–max PSI), no fuerza directa; mapeo driver → reducción tubo |
 | P6b | ✅ Coeficiente de zapata vs velocidad (`ORTSBrakeShoeType` / `ORTSBrakeShoeFriction`, μ(v)/μ(0) en cilindros) |
-| P6c | Skid limit: `min(force, mass × g × skid_friction)` |
+| P6c | ✅ Skid limit: `min(F, m·g·μ_adhesion)` por vehículo (`brake_skid_limit`) |
 | P6d | Blending con freno dinámico (requiere OR-P10) |
 
 **Criterios de aceptación:**
@@ -240,6 +240,7 @@ flowchart LR
 - [ ] Chiltern fase 0–40 s (frenos al inicio): mejora posición max sin empeorar velocidad global
 - [x] OR-P6a parcial: precarga cilindros + lap hold train-air + `train_air_full_release_s` (Chiltern global ~0.39 m/s; 0–30 s ~0.54; 40–65 s ~0.33)
 - [x] OR-P6b: parseo shoe type/curva + `F_efectiva(v) = F_cilindro × μ(v)/μ(0)`; flag `brake_shoe_speed_factor` en Chiltern (sin regresión en umbrales actuales)
+- [x] OR-P6c: cap por adherencia rueda-carril (`brake_skid_limit`, μ=0.25 default OR) por cilindro
 
 **Estimación:** P6a–c: 1–2 semanas.
 

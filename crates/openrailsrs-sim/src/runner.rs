@@ -32,8 +32,13 @@ fn build_brake_system(
     train_air_lap_hold: bool,
     train_air_full_release_s: f64,
     brake_shoe_speed_factor: bool,
+    brake_skid_limit: bool,
 ) -> BrakeSystem {
-    let specs = crate::brake::vehicle_specs_from_consist(consist, brake_shoe_speed_factor);
+    let specs = crate::brake::vehicle_specs_from_consist(
+        consist,
+        brake_shoe_speed_factor,
+        brake_skid_limit,
+    );
     BrakeSystem::from_vehicle_specs(
         &specs,
         BRAKE_PIPE_SPEED_MPS,
@@ -227,6 +232,7 @@ pub fn run_scenario_headless_with_driver(
         steam_params,
         brake_mapping: scenario.brake_mapping(),
         legacy_power_cap: scenario.simulation.legacy_power_cap,
+        brake_skid_limit: scenario.simulation.brake_skid_limit,
     };
 
     let stop_nodes: HashSet<&str> = scenario
@@ -265,6 +271,7 @@ pub fn run_scenario_headless_with_driver(
         scenario.simulation.train_air_lap_hold,
         scenario.simulation.train_air_full_release_s,
         scenario.simulation.brake_shoe_speed_factor,
+        scenario.simulation.brake_skid_limit,
     );
     let init = driver.initial_inputs();
     let brake_frac = train_physics

@@ -55,6 +55,7 @@ fn default_train_pv() -> TrainPhysics {
         steam_params: None,
         brake_mapping: Default::default(),
         legacy_power_cap: true,
+        brake_skid_limit: false,
     }
 }
 
@@ -73,6 +74,7 @@ fn default_train_with_curve() -> TrainPhysics {
         steam_params: None,
         brake_mapping: Default::default(),
         legacy_power_cap: true,
+        brake_skid_limit: false,
     }
 }
 
@@ -205,6 +207,7 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
         steam_params: None,
         brake_mapping: Default::default(),
         legacy_power_cap: true,
+        brake_skid_limit: false,
     };
     let pd = path_data_for(&["e1"], &g);
     let mut st = TrainSimState::new(vec!["e1".into()]);

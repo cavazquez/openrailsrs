@@ -251,6 +251,9 @@ pub struct SimulationSection {
     /// Scale wheel-rim brake force by μ(v)/μ(0) from OR shoe curves (OR-P6b).
     #[serde(default)]
     pub brake_shoe_speed_factor: bool,
+    /// Cap per-vehicle brake at mass × g × μ_adhesion (OR-P6c).
+    #[serde(default)]
+    pub brake_skid_limit: bool,
 }
 
 fn default_train_air_full_release_s() -> f64 {

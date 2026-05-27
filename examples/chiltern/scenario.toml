@@ -36,6 +36,7 @@ legacy_power_cap = false
 train_air_lap_hold = true
 train_air_full_release_s = 3.0
 brake_shoe_speed_factor = true
+brake_skid_limit = true
 # OR driver CSV uses PSI/121; Westinghouse cylinder force calibrated at 35 PSI (Chiltern).
 brake_cylinder_full_scale_psi = 35.0
 
