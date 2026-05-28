@@ -11,6 +11,8 @@ use crate::state::TrainSimState;
 use crate::steam::steam_step;
 
 const G: f64 = 9.81;
+/// OR holds speed with brakes set while diesel RPM can still rise; no tractive demand.
+const BRAKE_TRACTION_CUTOFF: f64 = 0.001;
 /// Full tractive effort below this fraction of the edge speed limit.
 const SPEED_EPS_RATIO: f64 = 0.99;
 /// Open Rails allows modest overspeed before the limiter fully cuts power (see `runner` overspeed at 1.05×).
@@ -85,10 +87,6 @@ fn advance_diesel_run_up(
     _dt: f64,
     run_up: &mut f64,
 ) -> f64 {
-    if throttle >= 1.0 {
-        *run_up = 1.0;
-        return 1.0;
-    }
     if throttle <= 0.0 {
         *run_up = 0.0;
         return 0.0;
@@ -155,11 +153,19 @@ pub fn step(
             }
             let prev_v = v;
             let mut f_total = 0.0;
+            let traction_throttle = if brake_frac > BRAKE_TRACTION_CUTOFF {
+                0.0
+            } else {
+                state.throttle
+            };
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
                 let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
                 state.diesel_rpm[i] = new_rpm;
-                state.diesel_apparent_throttle[i] = if state.throttle > 0.0 {
+                let curve_throttle = traction_throttle;
+                state.diesel_apparent_throttle[i] = if curve_throttle > 0.0 {
+                    engine.effective_traction_throttle(curve_throttle, new_rpm)
+                } else if state.throttle > 0.0 && brake_frac > BRAKE_TRACTION_CUTOFF {
                     engine.effective_traction_throttle(state.throttle, new_rpm)
                 } else {
                     0.0
@@ -178,12 +184,12 @@ pub fn step(
                 let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
                 let legacy = train.legacy_power_cap;
 
-                let mut force_n = if state.throttle <= 0.0 {
+                let mut force_n = if curve_throttle <= 0.0 {
                     0.0
                 } else {
                     let target = engine.target_traction_force_n(
                         v,
-                        state.throttle,
+                        curve_throttle,
                         new_rpm,
                         run_factor,
                         power_reduction,

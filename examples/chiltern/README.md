@@ -207,7 +207,19 @@ cargo test -p openrailsrs-cli --test chiltern_startup_diesel_audit -- --nocaptur
 # Escribe examples/chiltern/run_startup_diesel_audit.csv (gitignored)
 ```
 
-Hallazgos (nominal 50/10): RPM y apparent coherentes con OR (p. ej. t=7 → rpm≈1000, app≈0.67); overspeed 0–40 s (~0.77 m/s RMS) apunta a **fuerza/resistencia/freno**, no a integración RPM (test unitario `advance_rpm_orts_matches_diesel_engine_cs_dmb_sa` en `openrailsrs-train`).
+Hallazgos (nominal 50/10): RPM y apparent coherentes con OR (p. ej. t=7 → rpm≈1000, app≈0.67); overspeed 0–40 s apunta a **fuerza/resistencia/freno**, no a integración RPM (test `advance_rpm_orts_matches_diesel_engine_cs_dmb_sa`).
+
+**Investigación F₀+F₁ / creep / trail (post-audit):**
+
+| t (s) | v\_or | v\_sim | F₀ (N) | F₁ (N) | F\_sum | Pcap₀/v (N) |
+|------:|------:|-------:|-------:|-------:|-------:|--------------:|
+| 5 | 0 | 0 | 0 | 0 | 0 | — (freno residual, RPM sube) |
+| 7 | 0.27 | 0.40 | ~64k | ~111k | ~175k | ≫ F (cap no limita) |
+| 13 | ~1.2 | ~1.6 | ~60k | ~105k | ~165k | idem |
+
+- **`LocomotiveMaxRailOutputPowerW`:** DMBSA parsea **745 513 W** (`MaxPower` en `.eng`); a baja v el cap rail×apparent no acota (columna audit `Pcap0` ≫ F₀).
+- **Creep con freno:** OR revoluciona con freno sin tracción; sim cortaba tracción solo con `throttle=0`. Fix: `BRAKE_TRACTION_CUTOFF` — RPM/apparent siguen con notch del driver, **F=0** si `brake>0` (v=0 en t=5).
+- **Trail DMBSH:** el `.eng` es stub MSTS P/v, pero la evaluación OR encaja con **OR-P13** (heredar ORTS del lead), no con P/v legacy a notch completo (doble ~170 kN → overspeed; solo lead → ~5 m/s de déficit a t=40). Sin tocar `ChangeUpRPMpS` (50/10 del content).
 
 **Barrido local** de `ChangeUpRPMpS` × `RateOfChangeUpRPMpSS` (solo diagnóstico; no commitear resultados):
 

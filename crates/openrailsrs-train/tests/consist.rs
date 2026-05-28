@@ -126,17 +126,11 @@ fn chiltern_pullman_two_engines_aggregate() {
         2,
         "expected two diesel engines in Blue Pullman consist"
     );
-    // Consist load upgrades legacy trail diesel (DMBSH) from lead ORTS curves (OR-P13).
-    let models = consist.diesel_traction_models();
-    assert_eq!(models.len(), 2);
     assert!(
         models[1].engine.is_some(),
-        "trail DMBSH should inherit scaled ORTS from DMBSA lead"
+        "trail DMBSH inherits scaled ORTS from lead (OR-P13)"
     );
-    assert!(
-        models[1].legacy_run_up_time_s.is_none(),
-        "trail ORTS upgrade ignores MSTS RunUpTimeToMaxForce"
-    );
+    assert_eq!(models[1].legacy_run_up_time_s, None);
     let f_dmbsa = models[0].force_at(0.0, 0.8);
     let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();
     assert!(

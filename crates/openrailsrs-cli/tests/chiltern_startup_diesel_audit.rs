@@ -25,6 +25,7 @@ struct DieselSample {
     rpm: Vec<f64>,
     apparent: Vec<f64>,
     f_n: Vec<f64>,
+    #[allow(dead_code)]
     run_up: Vec<f64>,
 }
 
@@ -172,8 +173,20 @@ fn chiltern_startup_diesel_audit_0_40s() {
     eprintln!("\n=== Chiltern startup diesel audit (0–40 s) ===");
     eprintln!("DMBSA target RPM @ 80% notch: {target_rpm:.0} (idle {idle_rpm:.0})");
     eprintln!(
-        "{:>4} {:>7} {:>7} {:>7} {:>6} {:>6} {:>7} {:>7} {:>7} {:>7} {:>7} {:>7}",
-        "t", "v_or", "v_sim", "dv", "brake", "rpm0", "app0", "F0", "rpm1", "app1", "run1", "F1"
+        "{:>4} {:>7} {:>7} {:>7} {:>6} {:>6} {:>7} {:>7} {:>7} {:>7} {:>7} {:>7} {:>7}",
+        "t",
+        "v_or",
+        "v_sim",
+        "dv",
+        "brake",
+        "rpm0",
+        "app0",
+        "F0",
+        "Pcap0",
+        "Fsum",
+        "rpm1",
+        "app1",
+        "F1"
     );
 
     let mut sq_err = 0.0;
@@ -188,17 +201,33 @@ fn chiltern_startup_diesel_audit_0_40s() {
         let dv = s.velocity_mps - v_or;
         sq_err += dv * dv;
         n += 1;
+        let v = s.velocity_mps.max(0.5);
+        let f0 = s.f_n.first().copied().unwrap_or(0.0);
+        let f1 = s.f_n.get(1).copied().unwrap_or(0.0);
+        let f_sum = f0 + f1;
+        let app0 = s.apparent.first().copied().unwrap_or(0.0);
+        let p_cap0 = models[0].traction_power_cap_w(
+            s.rpm.first().copied().unwrap_or(650.0),
+            s.throttle,
+            v,
+            false,
+        );
+        let f_cap0 = if v > 0.5 { p_cap0 / v } else { f64::INFINITY };
         eprintln!(
-            "{t:4.0} {v_or:7.3} {v:7.3} {dv:+7.3} {br:6.3} {rpm0:7.0} {app0:7.3} {f0:7.0} {rpm1:7.0} {app1:7.3} {run1:7.3} {f1:7.0}",
-            v = s.velocity_mps,
+            "{t:4.0} {v_or:7.3} {v_sim:7.3} {dv:+7.3} {br:6.3} {rpm0:7.0} {app0:7.3} {f0:7.0} {pcap:7.0} {fsum:7.0} {rpm1:7.0} {app1:7.3} {f1:7.0}",
+            t = t,
+            v_or = v_or,
+            v_sim = s.velocity_mps,
+            dv = dv,
             br = s.brake,
             rpm0 = s.rpm.first().copied().unwrap_or(0.0),
-            app0 = s.apparent.first().copied().unwrap_or(0.0),
-            f0 = s.f_n.first().copied().unwrap_or(0.0),
+            app0 = app0,
+            f0 = f0,
+            pcap = f_cap0,
+            fsum = f_sum,
             rpm1 = s.rpm.get(1).copied().unwrap_or(0.0),
             app1 = s.apparent.get(1).copied().unwrap_or(0.0),
-            run1 = s.run_up.get(1).copied().unwrap_or(0.0),
-            f1 = s.f_n.get(1).copied().unwrap_or(0.0),
+            f1 = f1,
         );
     }
 
@@ -223,6 +252,16 @@ fn chiltern_startup_diesel_audit_0_40s() {
         "t=5 lead RPM should rise above idle while brakes on, got {:.0}",
         s5.rpm[0]
     );
+    assert!(
+        s5.f_n.iter().sum::<f64>() < 1000.0,
+        "t=5 no traction while brake held (OR revs only), F_sum={:.0}",
+        s5.f_n.iter().sum::<f64>()
+    );
+    assert!(
+        s5.velocity_mps < 0.05,
+        "t=5 creep with residual brake: v={:.3}",
+        s5.velocity_mps
+    );
 
     let s7 = checks.get(&7).expect("t=7");
     assert!(
@@ -243,13 +282,14 @@ fn chiltern_startup_diesel_audit_0_40s() {
         s40.rpm[0]
     );
 
-    eprintln!(
-        "t=7 trail run_up={:.3} (OR ignores RunUpTimeToMaxForce; sim reports 1.0)",
-        s7.run_up[1]
-    );
     assert!(
-        (s7.run_up[1] - 1.0).abs() < 0.01,
-        "t=7 trail run_up {:.3} should be 1.0 (no MSTS τ)",
-        s7.run_up[1]
+        models[1].engine.is_some(),
+        "trail DMBSH inherits ORTS from lead (OR-P13); OR evaluation still differs on legacy stub path"
+    );
+    let s13 = checks.get(&13).expect("t=13");
+    assert!(
+        s13.f_n[0] > 40_000.0,
+        "t=13 lead should carry traction alone, F0={:.0}",
+        s13.f_n[0]
     );
 }
