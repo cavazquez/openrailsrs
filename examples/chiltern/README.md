@@ -50,10 +50,23 @@ Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist P
 Los `.eng`/`.wag` del repo son **física simplificada** (sin cab/C#) generados desde MSTS:
 
 ```bash
+# Solo física (eng/wag simplificados, sin meshes)
 ./scripts/sync_chiltern_assets.sh
+
+# Física + WagonShape + SHAPES/TEXTURES para viewer3d --live
+./scripts/sync_chiltern_assets.sh --with-shapes
 ```
 
-Fuente: `Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/`.
+Fuente: `Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/`. En muchas instalaciones MSTS los `.s` y `.ace` están en la **raíz del trainset** (no en subcarpetas); el script los copia a `trains/RF_Blue_Pullman/SHAPES` y `TEXTURES`.
+
+Rutas distintas (sustituir por tus paths reales; no uses `...` como placeholder):
+
+```bash
+python3 scripts/sync_chiltern_assets.py \
+  "$HOME/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman" \
+  --with-shapes \
+  --route-content "$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+```
 
 - **DMBSA:** curvas ORTS + `DieselPowerTab` / `ThrottleRPMTab` + Davis (`ChangeUpRPMpS` 50, `RateOfChangeUpRPMpSS` 10).
 - **DMBSH:** stub MSTS sin tablas ORTS; al cargar el consist hereda curvas/RPM del DMBSA lead (OR-P13). OR 1.6.x **no** aplica `RunUpTimeToMaxForce` en motores ORTS.

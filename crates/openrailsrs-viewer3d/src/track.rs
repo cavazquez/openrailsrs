@@ -3,6 +3,8 @@
 //! Planar graph coordinates (`x_m`, `y_m`) map to Bevy world space with Y up:
 //! `X = x_m`, `Z = y_m` (same convention as the 2D viewer's horizontal axes).
 
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use openrailsrs_track::{NodeKind, TrackGraph};
 
@@ -228,6 +230,30 @@ fn should_spawn_node(kind: &NodeKind, mode: TrackRenderMode) -> bool {
     }
 }
 
+/// Line-list mesh for compact routes (drawn once; avoids per-frame gizmo cost).
+pub fn build_compact_track_line_mesh(graph: &TrackGraph) -> Mesh {
+    let edge_count = graph.edges_iter().count();
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edge_count * 2);
+    for (_, edge) in graph.edges_iter() {
+        let Some(from) = graph.node(&edge.from.0) else {
+            continue;
+        };
+        let Some(to) = graph.node(&edge.to.0) else {
+            continue;
+        };
+        let p0 = graph_to_world(from.x_m, from.y_m);
+        let p1 = graph_to_world(to.x_m, to.y_m);
+        positions.push(p0.to_array());
+        positions.push(p1.to_array());
+    }
+    let mut mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default());
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh
+}
+
+#[derive(Component)]
+pub(crate) struct CompactTrackLines;
+
 /// One-shot: spawn edge cylinders and node spheres for the loaded graph.
 pub fn spawn_track_meshes(
     mut commands: Commands,
@@ -260,7 +286,22 @@ pub fn spawn_track_meshes(
         node_materials[node_material_index(kind)].clone()
     };
 
-    if scene.render_mode == TrackRenderMode::Full {
+    if scene.render_mode == TrackRenderMode::Compact {
+        let line_mesh = meshes.add(build_compact_track_line_mesh(&scene.graph));
+        let line_material = materials.add(StandardMaterial {
+            base_color: COLOR_EDGE,
+            emissive: LinearRgba::from(COLOR_EDGE) * 0.35,
+            unlit: true,
+            ..default()
+        });
+        commands.spawn((
+            CompactTrackLines,
+            Mesh3d(line_mesh),
+            MeshMaterial3d(line_material),
+            Transform::IDENTITY,
+            Name::new("track:compact-lines"),
+        ));
+    } else {
         let edge_mesh = meshes.add(Cylinder::new(edge_radius, 1.0));
         for (_, edge) in scene.graph.edges_iter() {
             let Some(from) = scene.graph.node(&edge.from.0) else {
@@ -292,24 +333,6 @@ pub fn spawn_track_meshes(
             Transform::from_translation(pos),
             Name::new(format!("node:{}", node.id.0)),
         ));
-    }
-}
-
-/// Draw edge segments as gizmo lines in compact render mode.
-pub fn draw_compact_edges(scene: Res<TrackScene>, mut gizmos: Gizmos) {
-    if scene.render_mode != TrackRenderMode::Compact {
-        return;
-    }
-    for (_, edge) in scene.graph.edges_iter() {
-        let Some(from) = scene.graph.node(&edge.from.0) else {
-            continue;
-        };
-        let Some(to) = scene.graph.node(&edge.to.0) else {
-            continue;
-        };
-        let p0 = graph_to_world(from.x_m, from.y_m);
-        let p1 = graph_to_world(to.x_m, to.y_m);
-        gizmos.line(p0, p1, COLOR_EDGE);
     }
 }
 
@@ -482,6 +505,13 @@ mod tests {
     fn render_mode_labels() {
         assert_eq!(TrackRenderMode::Full.label(), "full");
         assert_eq!(TrackRenderMode::Compact.label(), "compact");
+    }
+
+    #[test]
+    fn compact_line_mesh_has_two_vertices_per_edge() {
+        let mesh = build_compact_track_line_mesh(&sample_graph());
+        let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
+        assert_eq!(positions.len(), 2);
     }
 
     #[test]

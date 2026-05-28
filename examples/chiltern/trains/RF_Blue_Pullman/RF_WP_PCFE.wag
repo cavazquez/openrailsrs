@@ -1,5 +1,6 @@
 (Wagon
   (Type "RF_WP_PCFE")
+  (WagonShape "RF_BP_PCFrear.s")
   (Mass 50000)
   (MaxBrakeForce 268530)
   (Length 20.726)

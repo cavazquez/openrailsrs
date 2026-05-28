@@ -72,7 +72,7 @@ cargo run -p openrailsrs-viewer3d -- examples/smoke/routes/test
 cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
 cargo run -p openrailsrs-viewer3d -- examples/smoke/scenario.toml
 
-# Sim en tiempo real (Fase A ✅)
+# Sim en tiempo real (Fase A+B ✅): W/S, H bocina, HUD paradas/penalización
 cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
 ```
 
@@ -87,7 +87,7 @@ cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
 ### 2.3 Cabina hoy (`openrailsrs cab`)
 
 - **Solo terminal** (`crates/openrailsrs-cli/src/cab.rs`): ratatui, W/S/Space, física idéntica a `sim`.
-- **Audio** vía `openrailsrs-audio` + `RegionTracker` (`sound_regions.rs`).
+- **Audio** vía `openrailsrs-audio` + `RegionTracker` (`openrailsrs-scenarios/src/sound_regions.rs`; también en `--live`).
 - **Sin ventana 3D** ni cabview MSTS.
 
 ### 2.4 Parsers de assets (headless)
@@ -208,7 +208,7 @@ TRAINS/TRAINSET/RF_Blue_Pullman/*.wav
 | Import regiones | TDB `SoundSourceItem` + overrides `.act` | `import_activity.rs` → `build_sound_regions` |
 | Playback `.sms`/`.wav` | **No** | Parseado en TDB; nombre `.sms` no se usa al reproducir |
 
-**Integración actual:** solo `openrailsrs cab` (TTY). **`--live` en viewer3d no reproduce audio** (Fase B).
+**Integración actual:** `openrailsrs cab` (TTY) y **`openrailsrs-viewer3d --live`** (motor/freno/bocina/regiones).
 
 ### 4.3 De dónde sacar sonido “real” en el futuro
 
@@ -231,9 +231,9 @@ Leyenda: ✅ hecho · 🔶 parcial · 🔲 planificado
 |------|--------|--------|-------------------|
 | **0** | Viewer mundo + replay | ✅ | Mundo MSTS + tren desde CSV |
 | **A** | Live link sim ↔ Bevy | ✅ | `--live`, conducir en 3D |
-| **B** | Conducción pulida + audio + juego | 🔲 | Sonido, señales, paradas en HUD |
-| **C** | Cabina (interior / panel) | 🔲 | Gauges o cabview MSTS |
-| **D** | Assets MSTS hardening | 🔲 | `.s` binario, LOD, sync shapes |
+| **B** | Conducción pulida + audio + juego | ✅ | Sonido, señales, paradas en HUD |
+| **C** | Cabina (interior / panel) | 🔶 | Panel CAB en `--live` (C3); cabview MSTS pendiente |
+| **D** | Assets MSTS hardening | 🔶 | `.s` binario (básico), LOD, sync `--with-shapes` |
 | **E** | Vía visual avanzada | 🔲 | Peralte, TSection, splines |
 | **F** | Modo juego completo | 🔲 | Campaña, scoring visual, multi-tren live |
 | **G** | Editor de ruta 3D | 🔲 | ROADMAP Fase 15 |
@@ -273,44 +273,56 @@ Leyenda: ✅ hecho · 🔶 parcial · 🔲 planificado
 **Limitaciones conocidas:**
 
 - Controles de driver solo en cámara **orbit** (en fly, WASD mueven la cámara).
-- Sin señales runtime, sin `openrailsrs-game`, sin audio.
+- Sin parada automática en plataforma (dwell); el jugador frena manualmente.
+- Scoring simplificado en HUD (no `openrailsrs-game` post-hoc completo).
 - Un tren (`[train]` del escenario).
 - Chiltern con stubs del repo → cubos; smoke o Content OR → meshes.
 
 ---
 
-### Fase B — Conducción pulida, audio y reglas de juego 🔲
+### Fase B — Conducción pulida, audio y reglas de juego ✅
 
 **Objetivo:** Experiencia “actividad jugable” en exterior 3D, no solo sandbox físico.
 
-| Entrega | Descripción | Código previsto |
-|---------|-------------|-----------------|
-| **B1 Audio en viewer** | Conectar `AudioEngine` al loop `--live` (velocidad, freno, bocina H) | `live.rs` + `openrailsrs-audio` |
-| **B2 Regiones de sonido** | `[[sound_regions]]` en escenarios importados; `RegionTracker` en Bevy | Reutilizar `sound_regions.rs` |
-| **B3 Señales en runtime** | Aspectos desde sim (o grafo + `clear_after_s`) reflejados en marcadores 3D | `runner.rs` hooks → resource Bevy |
-| **B4 HUD de juego** | Paradas, retraso, objetivo; integrar `openrailsrs-game` | `game` crate + `hud.rs` |
-| **B5 Input** | Mantener W/S en orbit; opcional: gamepad / sensibilidad | `live.rs` |
-| **B6 Calibración** | Validar en `examples/smoke` y documentar Chiltern con ruta OR externa | tests + README |
+| Entrega | Descripción | Estado |
+|---------|-------------|--------|
+| **B1 Audio en viewer** | `AudioEngine` en `--live` (velocidad, freno, bocina `H`) | ✅ `live.rs` |
+| **B2 Regiones de sonido** | `[[sound_regions]]` + `RegionTracker` compartido | ✅ `openrailsrs-scenarios/src/sound_regions.rs` |
+| **B3 Señales en runtime** | `signal_runtime` + `evaluate_signals` / `clear_after_s` → marcadores 3D | ✅ `live_drive.rs`, `signals.rs` |
+| **B4 HUD de juego** | Próxima parada, penalización, overspeed, destino | ✅ `hud.rs` + `LiveGameplay` (sin depender de `openrailsrs-game`) |
+| **B5 Input** | W/S/Space en orbit; `H` bocina | ✅ |
+| **B6 Calibración** | Tests smoke (`live_*`, `sound_regions`); ejemplo `[[sound_regions]]` en smoke | ✅ |
 
-**Assets de sonido (fase B):** por defecto **sintético** (sin archivos). Opcional: documentar carpeta `SOUND/` de la ruta si en el futuro se cargan WAV.
+**Código:** `live_drive.rs` (`LiveGameplay`, señales), `live.rs` (audio), `signals::update_live_signal_markers`, `hud::build_hud_content_live`.
+
+**Uso:**
+
+```bash
+cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
+# Orbit: W/S throttle/freno, Space emergencia, H bocina, +/- velocidad sim
+```
+
+**Assets de sonido:** sintético (`openrailsrs-audio`); sin WAV de ruta.
+
+**Limitaciones:** sin enforcement de parada en rojo (solo aspectos visibles + límite caution); sin gamepad; Chiltern externo sigue siendo cubos sin content OR.
 
 **Depende de:** Fase A ✅.
 
-**Estimación:** 2–4 semanas (1 dev).
-
 ---
 
-### Fase C — Cabina 🔲
+### Fase C — Cabina 🔶
 
 **Objetivo:** Vista de conductor (inmersión), no solo cámara exterior.
 
 Open Rails usa `cabview3d/` (meshes + texturas `.ace`) y a veces `cabview` 2D. **openrailsrs no parsea ni renderiza cabview.**
 
-| Enfoque | Descripción | Esfuerzo | Recomendación |
-|---------|-------------|----------|----------------|
-| **C1 Cabview MSTS** | Parser CVF + sprites/meshes cabina | Muy alto | Largo plazo; seguir OR `cabview3d` |
-| **C2 Cabina genérica** | Cab 3D procedural o mesh único reutilizable | Medio | Solo si no hay content |
-| **C3 Híbrido (preferido primero)** | Vista 3D exterior + **panel egui/Bevy UI** con palancas, velocímetro, manómetros fed por `LiveDriveSession` | Medio-bajo | **Primera entrega C** |
+| Enfoque | Descripción | Estado |
+|---------|-------------|--------|
+| **C1 Cabview MSTS** | Parser CVF + sprites/meshes cabina | 🔲 |
+| **C2 Cabina genérica** | Cab 3D procedural o mesh único reutilizable | 🔲 |
+| **C3 Panel híbrido** | Panel Bevy UI: velocidad, límite, THR/BRK, kN freno, RPM diesel, P boiler; tecla **C** | ✅ `cab_panel.rs`, `CabTelemetry` |
+
+**C3 hecho:** panel inferior derecho en `--live`; follow **chase** al arrancar; cubos del tren más visibles.
 
 **Datos ya disponibles en sim para el panel (C3):**
 
@@ -328,24 +340,31 @@ Open Rails usa `cabview3d/` (meshes + texturas `.ace`) y a veces `cabview` 2D. *
 
 ---
 
-### Fase D — Assets MSTS (geometría y sync) 🔲
+### Fase D — Assets MSTS (geometría y sync) 🔶
 
 **Objetivo:** Que rutas y trenes reales se vean bien sin cubos fallback.
 
-| Entrega | Descripción |
-|---------|-------------|
-| **D1 Shapes binarios** | Parser `.s` tokenized (`UnsupportedBinaryShape` hoy) |
-| **D2 LOD / distancia** | Cambio de LOD por distancia; unload tiles lejanos (`AssetServer`) |
-| **D3 Animación shape** | Jerarquía animada en `.s` (puertas, bogies) — como OR `SharedShape` |
-| **D4 Sync ampliado** | `sync_chiltern_assets.py`: opción `--with-shapes` copiar `WagonShape` + SHAPES/TEXTURES |
-| **D5 ACE completo** | Mips, BGRA flag MSTS, menos fallbacks magenta |
-| **D6 GLTF pipeline** (opcional) | Export/import para content propio sin MSTS |
+| Entrega | Descripción | Estado |
+|---------|-------------|--------|
+| **D1 Shapes binarios** | SIMISA zlib + volcado binario→ASCII (`shape_binary.rs`) | 🔶 básico |
+| **D2 LOD / distancia** | `lod_level_for_distance` + `load_shape_from_path(..., Some(d))` | ✅ API |
+| **D3 Animación shape** | Jerarquía animada en `.s` (puertas, bogies) | 🔲 |
+| **D4 Sync ampliado** | `sync_chiltern_assets.py --with-shapes` + `WagonShape` en eng/wag | ✅ |
+| **D5 ACE completo** | Mips, BGRA flag MSTS, menos fallbacks magenta | 🔲 |
+| **D6 GLTF pipeline** (opcional) | Export/import para content propio sin MSTS | 🔲 |
 
-**De dónde salen las imágenes:** instalación MSTS/OR del usuario; el repo solo documenta paths y parsers.
+**D4 uso (Chiltern con content OR):**
+
+```bash
+./scripts/sync_chiltern_assets.sh --with-shapes \
+  "$HOME/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman"
+```
+
+Copia meshes a `examples/chiltern/trains/RF_Blue_Pullman/SHAPES/`; el viewer busca ahí vía `TrainConsistScene::shape_search_dirs`.
+
+**De dónde salen las imágenes:** instalación MSTS/OR del usuario; el repo documenta paths y parsers.
 
 **Depende de:** Fase 0 ✅; mejora independiente de B/C.
-
-**Estimación:** continuo; D1+D4 ~1–2 meses.
 
 ---
 
@@ -431,7 +450,7 @@ cargo run -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
 # bajo examples/chiltern/ — ver README chiltern (próxima mejora: --route-root).
 ```
 
-**Sonido:** `openrailsrs cab examples/chiltern/scenario.toml` (sintético). Viewer `--live`: sin audio hasta Fase B.
+**Sonido:** `openrailsrs cab` o viewer `--live` (sintético; requiere dispositivo de audio).
 
 ### SCE / otras rutas importadas
 

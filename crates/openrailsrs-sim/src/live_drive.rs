@@ -1,12 +1,14 @@
 //! Real-time single-train session for interactive viewers (`openrailsrs-viewer3d --live`).
 
+use std::collections::HashMap;
 use std::path::Path;
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef};
-use openrailsrs_track::SwitchPosition;
+use openrailsrs_scenarios::{RegionTracker, RegionTransition, ScenarioFile, SwitchPositionDef};
+use openrailsrs_track::{NodeKind, SignalAspect, SwitchPosition, TrackGraph};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
+use crate::SimError;
 use crate::brake::BrakeSystem;
 use crate::coupler::CouplerKind;
 use crate::path::edge_path;
@@ -14,9 +16,10 @@ use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::runner::consist_root;
 use crate::state::TrainSimState;
-use crate::SimError;
 
 const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
+/// Caution signals halve the effective speed limit on the signalled edge (same as headless runner).
+const CAUTION_SPEED_FACTOR: f64 = 0.5;
 
 fn build_brake_system(
     consist: &openrailsrs_train::Consist,
@@ -60,18 +63,102 @@ fn apply_start_offset(state: &mut TrainSimState, path_data: &PathData, offset_m:
     }
 }
 
+fn init_signal_runtime(
+    graph: &TrackGraph,
+    assume_signals_clear: bool,
+) -> HashMap<String, SignalAspect> {
+    if assume_signals_clear {
+        graph
+            .signals()
+            .map(|s| (s.id.clone(), SignalAspect::Clear))
+            .collect()
+    } else {
+        graph.signals().map(|s| (s.id.clone(), s.aspect)).collect()
+    }
+}
+
+/// Scheduled stop along the route (cumulative distance from start).
+#[derive(Debug, Clone)]
+pub struct LiveStopTarget {
+    pub cum_dist_m: f64,
+    pub arrive_s: f64,
+    pub name: String,
+}
+
+/// Lightweight gameplay state for live HUD (stops, penalties, overspeed).
+#[derive(Debug, Clone)]
+pub struct LiveGameplay {
+    pub destination: String,
+    pub penalty_per_second_late: f64,
+    pub stop_targets: Vec<LiveStopTarget>,
+    pub next_stop_idx: usize,
+    pub accrued_penalty: f64,
+    /// `(stop name, delay_s)` for stops already passed.
+    pub passed_stops: Vec<(String, f64)>,
+    pub overspeed_active: bool,
+}
+
+fn build_live_gameplay(
+    scenario: &ScenarioFile,
+    graph: &TrackGraph,
+    path_edges: &[String],
+) -> LiveGameplay {
+    let stops = &scenario.route.stops;
+    let mut stop_targets = Vec::new();
+    let mut cum = 0.0;
+    for eid in path_edges {
+        if let Some(edge) = graph.edge(eid) {
+            cum += edge.length_m;
+            let to_id = &edge.to.0;
+            if let Some(stop) = stops.iter().find(|s| &s.node == to_id) {
+                let name = graph
+                    .node(to_id)
+                    .and_then(|n| {
+                        if let NodeKind::Station { name } = &n.kind {
+                            Some(name.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| to_id.clone());
+                stop_targets.push(LiveStopTarget {
+                    cum_dist_m: cum,
+                    arrive_s: stop.arrive_s,
+                    name,
+                });
+            }
+        }
+    }
+    LiveGameplay {
+        destination: scenario.route.destination.clone(),
+        penalty_per_second_late: scenario.gameplay.penalty_per_second_late,
+        stop_targets,
+        next_stop_idx: 0,
+        accrued_penalty: 0.0,
+        passed_stops: Vec::new(),
+        overspeed_active: false,
+    }
+}
+
 /// Interactive session: same physics as headless `sim` / `cab`, stepped from a real-time loop.
 pub struct LiveDriveSession {
     pub scenario_name: String,
     pub state: TrainSimState,
     pub physics: TrainPhysics,
     pub path_data: PathData,
+    pub graph: TrackGraph,
     pub dt: f64,
+    pub assume_signals_clear: bool,
+    /// Runtime signal aspects (updated each step; used by 3D markers).
+    pub signal_runtime: HashMap<String, SignalAspect>,
+    pub gameplay: LiveGameplay,
+    pub region_tracker: RegionTracker,
     /// Driver notch [0, 1] (not yet written to `state` until step).
     pub driver_throttle: f64,
     pub driver_brake: f64,
     pub speed_mul: f64,
     sim_time_remainder: f64,
+    signal_steps: u64,
     pub arrived: bool,
 }
 
@@ -139,7 +226,7 @@ impl LiveDriveSession {
         };
 
         let path_data = PathData::from_path(&path_edges, &graph);
-        let mut state = TrainSimState::new(path_edges);
+        let mut state = TrainSimState::new(path_edges.clone());
         if let Some(offset) = scenario.route.start_offset_m {
             apply_start_offset(&mut state, &path_data, offset);
         }
@@ -172,16 +259,27 @@ impl LiveDriveSession {
             CouplerKind::parse(&scenario.simulation.coupler_kind),
         );
 
+        let assume_signals_clear = scenario.route.assume_signals_clear;
+        let signal_runtime = init_signal_runtime(&graph, assume_signals_clear);
+        let gameplay = build_live_gameplay(scenario, &graph, &path_edges);
+        let region_tracker = RegionTracker::new(scenario.sound_regions.clone());
+
         Ok(Self {
             scenario_name: scenario.scenario.name.clone(),
             state,
             physics,
             path_data,
+            graph,
             dt: scenario.simulation.time_step,
+            assume_signals_clear,
+            signal_runtime,
+            gameplay,
+            region_tracker,
             driver_throttle: 0.0,
             driver_brake: 0.0,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
+            signal_steps: 0,
             arrived: false,
         })
     }
@@ -209,8 +307,88 @@ impl LiveDriveSession {
             .unwrap_or(f64::INFINITY)
     }
 
+    /// Effective limit including caution signals on the current edge.
+    pub fn effective_speed_limit_mps(&self) -> f64 {
+        let base = self.speed_limit_mps();
+        let Some(edge) = self.current_edge_id() else {
+            return base;
+        };
+        let has_caution = self.graph.signals_on_edge(edge).any(|s| {
+            self.signal_runtime.get(&s.id).copied().unwrap_or(s.aspect) == SignalAspect::Caution
+        });
+        if has_caution {
+            base * CAUTION_SPEED_FACTOR
+        } else {
+            base
+        }
+    }
+
+    pub fn signal_aspect(&self, signal_id: &str) -> Option<SignalAspect> {
+        self.signal_runtime.get(signal_id).copied()
+    }
+
+    pub fn next_stop_label(&self) -> Option<&str> {
+        self.gameplay
+            .stop_targets
+            .get(self.gameplay.next_stop_idx)
+            .map(|s| s.name.as_str())
+    }
+
+    /// Snapshot for the live cab panel (Fase C3).
+    pub fn cab_telemetry(&self) -> CabTelemetry {
+        let speed_kmh = self.state.velocity_mps * 3.6;
+        let limit_kmh = self.effective_speed_limit_mps() * 3.6;
+        let brake_force_kn = self
+            .state
+            .brake_system
+            .total_force_n(self.state.velocity_mps)
+            / 1000.0;
+        let diesel_rpm = if self
+            .physics
+            .diesel_engines
+            .iter()
+            .any(|e| e.engine.is_some())
+            && !self.state.diesel_rpm.is_empty()
+        {
+            Some(self.state.diesel_rpm.iter().sum::<f64>() / self.state.diesel_rpm.len() as f64)
+        } else {
+            None
+        };
+        let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
+        CabTelemetry {
+            speed_kmh,
+            limit_kmh,
+            throttle_pct: self.driver_throttle * 100.0,
+            brake_pct: self.driver_brake * 100.0,
+            brake_force_kn,
+            diesel_rpm,
+            boiler_bar,
+            overspeed: self.gameplay.overspeed_active,
+        }
+    }
+}
+
+/// Driver-facing gauges for the 3D cab panel.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabTelemetry {
+    pub speed_kmh: f64,
+    pub limit_kmh: f64,
+    pub throttle_pct: f64,
+    pub brake_pct: f64,
+    pub brake_force_kn: f64,
+    pub diesel_rpm: Option<f64>,
+    pub boiler_bar: Option<f64>,
+    pub overspeed: bool,
+}
+
+impl LiveDriveSession {
     /// Advance simulation by `real_dt` seconds of wall-clock time (scaled by `speed_mul`).
-    pub fn step_realtime(&mut self, real_dt: f64) {
+    ///
+    /// `on_region_transition` is invoked for each sound-region enter/leave (e.g. audio engine).
+    pub fn step_realtime<F>(&mut self, real_dt: f64, mut on_region_transition: F)
+    where
+        F: FnMut(&RegionTransition),
+    {
         if self.arrived || real_dt <= 0.0 {
             return;
         }
@@ -220,6 +398,7 @@ impl LiveDriveSession {
             self.state.throttle = self.driver_throttle;
             self.state.brake = self.driver_brake;
             let res = step(&mut self.state, &self.path_data, &self.physics, dt);
+            self.tick_after_physics_step(&mut on_region_transition);
             if res.arrived {
                 self.arrived = true;
                 break;
@@ -227,6 +406,66 @@ impl LiveDriveSession {
             budget -= dt;
         }
         self.sim_time_remainder = budget;
+    }
+
+    fn tick_after_physics_step<F>(&mut self, on_region_transition: &mut F)
+    where
+        F: FnMut(&RegionTransition),
+    {
+        self.tick_signals();
+        self.tick_gameplay();
+
+        if let Some(edge_id) = self.state.current_edge() {
+            let transitions = self.region_tracker.step(edge_id, self.state.pos_on_edge_m);
+            for t in &transitions {
+                on_region_transition(t);
+            }
+        }
+    }
+
+    fn tick_signals(&mut self) {
+        let t = self.state.time_s();
+        for sig in self.graph.signals() {
+            let id = sig.id.clone();
+            let asp = self.signal_runtime.get(&id).copied().unwrap_or(sig.aspect);
+            if asp != SignalAspect::Clear && sig.clear_after_s.is_some_and(|clear_t| t >= clear_t) {
+                self.signal_runtime.insert(id, SignalAspect::Clear);
+            }
+        }
+
+        self.signal_steps += 1;
+        let every = (1.0 / self.dt).round() as u64;
+        if every > 0 && self.signal_steps % every == 0 {
+            let mut block_map = HashMap::new();
+            if let Some(eid) = self.state.current_edge() {
+                block_map.insert(eid.to_string(), "player".to_string());
+            }
+            self.graph.evaluate_signals(&block_map);
+            for sig in self.graph.signals() {
+                if self.assume_signals_clear && sig.script.is_none() {
+                    continue;
+                }
+                self.signal_runtime.insert(sig.id.clone(), sig.aspect);
+            }
+        }
+    }
+
+    fn tick_gameplay(&mut self) {
+        let limit = self.effective_speed_limit_mps();
+        self.gameplay.overspeed_active =
+            limit.is_finite() && self.state.velocity_mps > limit * 1.05;
+
+        if self.gameplay.next_stop_idx < self.gameplay.stop_targets.len() {
+            let target = &self.gameplay.stop_targets[self.gameplay.next_stop_idx];
+            if self.state.odometer_m >= target.cum_dist_m {
+                let delay = (self.state.time_s() - target.arrive_s).max(0.0);
+                self.gameplay.accrued_penalty += delay * self.gameplay.penalty_per_second_late;
+                self.gameplay
+                    .passed_stops
+                    .push((target.name.clone(), delay));
+                self.gameplay.next_stop_idx += 1;
+            }
+        }
     }
 }
 
@@ -249,7 +488,48 @@ mod tests {
             LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
         session.driver_throttle = 1.0;
         assert_eq!(session.time_s(), 0.0);
-        session.step_realtime(5.0);
+        session.step_realtime(5.0, |_| {});
         assert!(session.time_s() > 0.0);
+    }
+
+    #[test]
+    fn live_session_has_stop_target_for_smoke_mid() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        if !scenario_path.exists() {
+            return;
+        }
+        let scenario_dir = scenario_path.parent().unwrap();
+        let scenario = load_scenario(&scenario_path).expect("scenario");
+        let session =
+            LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
+        assert!(
+            session
+                .gameplay
+                .stop_targets
+                .iter()
+                .any(|s| s.name == "mid"),
+            "smoke scenario should schedule stop at node mid"
+        );
+    }
+
+    #[test]
+    fn live_caution_signal_halves_effective_limit_on_e1() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        if !scenario_path.exists() {
+            return;
+        }
+        let scenario_dir = scenario_path.parent().unwrap();
+        let scenario = load_scenario(&scenario_path).expect("scenario");
+        let session =
+            LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
+        assert_eq!(session.current_edge_id(), Some("e1"));
+        let base = session.speed_limit_mps();
+        let effective = session.effective_speed_limit_mps();
+        assert!(
+            (effective - base * CAUTION_SPEED_FACTOR).abs() < 1e-6,
+            "caution on e1 should halve limit: base={base} effective={effective}"
+        );
     }
 }

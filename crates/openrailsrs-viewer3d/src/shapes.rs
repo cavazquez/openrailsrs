@@ -121,6 +121,26 @@ pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
         })
 }
 
+/// LOD level for a camera distance (m): finest level whose `dlevel_selection` ≤ `distance_m`.
+pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
+    let control = shape.lod_controls.first()?;
+    let levels = &control.distance_levels;
+    if levels.is_empty() {
+        return None;
+    }
+    let mut best = levels.iter().min_by(|a, b| {
+        a.selection_m
+            .partial_cmp(&b.selection_m)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })?;
+    for lvl in levels {
+        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= best.selection_m {
+            best = lvl;
+        }
+    }
+    Some(best)
+}
+
 /// Resolve the first texture referenced by the closest LOD (prim_state → `texture_filenames`).
 pub fn primary_texture_filename(shape: &ShapeFile) -> Option<String> {
     let level = closest_lod_level(shape)?;
@@ -143,9 +163,8 @@ pub fn primary_texture_filename(shape: &ShapeFile) -> Option<String> {
     shape.texture_filenames.first().cloned()
 }
 
-/// Build a Bevy mesh from the closest LOD of a parsed ASCII shape.
-pub fn build_mesh_from_shape(shape: &ShapeFile) -> Option<Mesh> {
-    let level = closest_lod_level(shape)?;
+/// Build a Bevy mesh from a specific distance level.
+pub fn build_mesh_from_shape_lod(shape: &ShapeFile, level: &DistanceLevel) -> Option<Mesh> {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     let mut uvs = Vec::new();
@@ -190,6 +209,18 @@ pub fn build_mesh_from_shape(shape: &ShapeFile) -> Option<Mesh> {
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     Some(mesh)
+}
+
+/// Build a Bevy mesh from the closest LOD of a parsed shape.
+pub fn build_mesh_from_shape(shape: &ShapeFile) -> Option<Mesh> {
+    let level = closest_lod_level(shape)?;
+    build_mesh_from_shape_lod(shape, level)
+}
+
+/// Build mesh choosing LOD from camera distance (m) to the shape origin.
+pub fn build_mesh_from_shape_at_distance(shape: &ShapeFile, distance_m: f32) -> Option<Mesh> {
+    let level = lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))?;
+    build_mesh_from_shape_lod(shape, level)
 }
 
 /// Convert decoded ACE mip 0 (RGBA8) into a Bevy GPU image.
@@ -247,16 +278,21 @@ pub fn load_ace_image(route_dir: &Path, file_name: &str) -> Option<Image> {
 }
 
 /// Load shape mesh and discover its primary texture filename, if any.
-pub fn load_shape_from_path(path: &Path) -> Option<LoadedShape> {
+///
+/// When `camera_distance_m` is set, picks a coarser LOD farther from the camera.
+pub fn load_shape_from_path(path: &Path, camera_distance_m: Option<f32>) -> Option<LoadedShape> {
     let shape = ShapeFile::from_path(path).ok()?;
-    let mesh = build_mesh_from_shape(&shape)?;
+    let mesh = match camera_distance_m {
+        Some(d) => build_mesh_from_shape_at_distance(&shape, d)?,
+        None => build_mesh_from_shape(&shape)?,
+    };
     let texture_file = primary_texture_filename(&shape);
     Some(LoadedShape { mesh, texture_file })
 }
 
 /// Load and convert a shape file from disk (mesh only).
 pub fn load_shape_mesh(path: &Path) -> Option<Mesh> {
-    load_shape_from_path(path).map(|loaded| loaded.mesh)
+    load_shape_from_path(path, None).map(|loaded| loaded.mesh)
 }
 
 #[cfg(test)]
@@ -311,8 +347,9 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         assert!(resolve_shape_path(&route, "yard_shed.s").is_some());
         assert!(resolve_texture_path(&route, "yard.ace").is_some());
-        let loaded = load_shape_from_path(&resolve_shape_path(&route, "yard_shed.s").unwrap())
-            .expect("shape");
+        let loaded =
+            load_shape_from_path(&resolve_shape_path(&route, "yard_shed.s").unwrap(), None)
+                .expect("shape");
         assert_eq!(loaded.texture_file.as_deref(), Some("yard.ace"));
     }
 

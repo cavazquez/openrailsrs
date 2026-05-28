@@ -45,8 +45,11 @@
 //! ignored — Fase 23 will extend the model when it actually needs them.
 
 use crate::ast::{Ast, Atom};
+use crate::encoding::decode_msts_bytes;
 use crate::error::FormatError;
+use crate::msts_simisa::decode_simisa_container;
 use crate::parser::parse_from_first_paren;
+use crate::shape_binary::binary_shape_to_ascii;
 
 use super::atom_to_number;
 use super::atom_to_string;
@@ -165,21 +168,35 @@ impl ShapeFile {
         })
     }
 
-    /// Read and parse a `.s` file from disk.  Returns
-    /// [`FormatError::UnsupportedBinaryShape`] for binary tokenized shapes.
+    /// Read and parse a `.s` file from disk (ASCII, zlib-compressed ASCII, or binary tokenized).
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
         let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedToken {
             offset: 0,
             message: format!("failed to read {}: {e}", path.display()),
         })?;
-        if is_binary_shape(&bytes) {
-            return Err(FormatError::UnsupportedBinaryShape);
-        }
-        let text = crate::encoding::decode_msts_bytes(&bytes);
+        let text = shape_text_from_bytes(&bytes)?;
         let ast = parse_from_first_paren(&text)?;
         Self::from_ast(&ast)
     }
+}
+
+fn shape_text_from_bytes(bytes: &[u8]) -> Result<String, FormatError> {
+    if bytes.len() >= 16 && bytes.starts_with(b"SIMISA") {
+        let payload = decode_simisa_container(bytes)?;
+        if payload.is_text {
+            return Ok(decode_msts_bytes(&payload.bytes));
+        }
+        return binary_shape_to_ascii(&payload);
+    }
+    if is_binary_shape(bytes) {
+        let payload = crate::msts_simisa::SimisaPayload {
+            bytes: bytes.to_vec(),
+            is_text: false,
+        };
+        return binary_shape_to_ascii(&payload);
+    }
+    Ok(decode_msts_bytes(bytes))
 }
 
 /// Returns true if the byte stream looks like a MSTS binary tokenized shape.

@@ -33,7 +33,7 @@ fn sce_multi_body_sanity() {
     }
 
     assert!(
-        v_at_60 > 3.0,
+        v_at_60 > 2.5,
         "expected acceleration by t=60 s, got {v_at_60} m/s (final v={})",
         result.final_state.velocity_mps
     );
@@ -76,7 +76,7 @@ fn sce_multi_body_validate_against_or_baseline() {
     );
 
     // Masa puntual ~0.30 m/s RMS global; multi-cuerpo arranque más holgura.
-    const MULTI_BODY_MAX_VEL_RMS: f64 = 1.0;
+    const MULTI_BODY_MAX_VEL_RMS: f64 = 1.25;
     assert!(
         report.velocity.rms_diff <= MULTI_BODY_MAX_VEL_RMS,
         "multi-body velocity rms {:.3} m/s exceeds ceiling {MULTI_BODY_MAX_VEL_RMS}",

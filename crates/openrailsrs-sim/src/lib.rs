@@ -20,7 +20,7 @@ pub use brake::{
 };
 pub use coupler::{CouplerKind, CouplerState, VehicleState};
 pub use error::SimError;
-pub use live_drive::LiveDriveSession;
+pub use live_drive::{CabTelemetry, LiveDriveSession, LiveGameplay, LiveStopTarget};
 pub use multi_runner::{
     LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,
     run_multi_train_from_scenario_file, run_scenario_multi_train,

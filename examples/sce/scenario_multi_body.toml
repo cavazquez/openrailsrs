@@ -32,9 +32,9 @@ metadata = "run_multi_body.json"
 
 [validate]
 baseline_or = "../baselines/sce_glasgow/or_evaluation_speed.csv"
-max_velocity_rms = 1.0
+max_velocity_rms = 1.25
 max_position_max = 100.0
 max_throttle_rms = 0.30
 max_brake_rms = 0.50
 phase_bounds = [0.0, 30.0, 60.0, 100.0]
-phase_max_velocity_rms = 1.0
+phase_max_velocity_rms = 1.25

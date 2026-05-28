@@ -278,7 +278,7 @@ pub fn spawn_world_boxes(
                 let (mesh, material, has_texture) = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
-                        match load_shape_from_path(&shape_path) {
+                        match load_shape_from_path(&shape_path, None) {
                             Some(loaded) => {
                                 let texture_file = loaded.texture_file.clone();
                                 let mesh = meshes.add(loaded.mesh);

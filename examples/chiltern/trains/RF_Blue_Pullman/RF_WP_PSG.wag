@@ -1,5 +1,6 @@
 (Wagon
   (Type "RF_WP_PSG")
+  (WagonShape "RF_WP_PSG.s")
   (Mass 50000)
   (MaxBrakeForce 268530)
   (Length 20.726)

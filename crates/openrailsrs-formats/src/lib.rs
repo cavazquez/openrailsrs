@@ -5,8 +5,10 @@ pub mod dispatch;
 pub mod encoding;
 pub mod error;
 pub mod lexer;
+pub mod msts_simisa;
 pub mod msts_units;
 pub mod parser;
+pub mod shape_binary;
 pub mod typed;
 pub mod units;
 

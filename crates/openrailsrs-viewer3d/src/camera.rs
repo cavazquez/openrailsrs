@@ -64,10 +64,13 @@ const FLY_BASE_SPEED: f32 = 10.0;
 const FOLLOW_LERP_SPEED: f32 = 8.0;
 
 /// Fixed pitch (rad) for chase camera behind the train.
-const CHASE_PITCH: f32 = 0.5;
+pub(crate) const CHASE_PITCH: f32 = 0.5;
 
 /// Minimum orbit distance while following (avoids clipping into the marker).
 const FOLLOW_MIN_DISTANCE: f32 = 80.0;
+
+/// Target orbit distance for chase follow in live mode (m).
+pub const LIVE_CHASE_DISTANCE: f32 = 120.0;
 
 // ── Components / resources ────────────────────────────────────────────────
 
@@ -286,6 +289,7 @@ pub fn apply_orbit_follow(
     if follow == CameraFollowMode::ChaseCam {
         yaw = lerp_yaw_toward(yaw, chase_yaw_from_train(train.yaw), dt);
         pitch = lerp_yaw_toward(pitch, CHASE_PITCH, dt);
+        distance = lerp_yaw_toward(distance, LIVE_CHASE_DISTANCE, dt);
     }
 
     if distance < FOLLOW_MIN_DISTANCE {

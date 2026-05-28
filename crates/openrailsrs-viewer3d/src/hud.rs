@@ -3,15 +3,46 @@
 use bevy::prelude::*;
 
 use crate::camera::{CameraFollowMode, CameraFollowTarget, CameraMode};
+use crate::live::LiveDrive;
 use crate::precipitation::PrecipitationState;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
-use crate::live::LiveDrive;
 use crate::train::{ReplayState, pose_at_time};
 
 /// Window / route title shown in the HUD (set from `main` at launch).
 #[derive(Resource, Clone, Default)]
 pub struct HudTitle(pub String);
+
+/// Smoothed render FPS (exponential moving average).
+#[derive(Resource, Clone, Copy, Default)]
+pub struct HudFps {
+    pub smoothed: f32,
+    pub frame_ms: f32,
+}
+
+impl HudFps {
+    pub fn tick(&mut self, delta_secs: f32) {
+        if delta_secs <= 0.0 {
+            return;
+        }
+        let instant_fps = 1.0 / delta_secs;
+        self.frame_ms = delta_secs * 1000.0;
+        self.smoothed = if self.smoothed < 1.0 {
+            instant_fps
+        } else {
+            self.smoothed * 0.92 + instant_fps * 0.08
+        };
+    }
+}
+
+/// Suffix for HUD row1, e.g. `  fps:58 (17.2ms)`.
+pub fn format_fps_suffix(fps: &HudFps) -> String {
+    if fps.smoothed < 1.0 {
+        return String::new();
+    }
+    let warn = if fps.smoothed < 30.0 { " !" } else { "" };
+    format!("  fps:{:.0} ({:.1}ms){warn}", fps.smoothed, fps.frame_ms)
+}
 
 /// Minimum HUD strip height; panel grows with visible rows (coords, replay, etc.).
 pub const HUD_HEIGHT_PX: f32 = 72.0;
@@ -153,7 +184,6 @@ fn build_hud_replay(
     controls: String,
     terrain: Option<&TerrainElevation>,
 ) -> HudContent {
-
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
     let follow_label = follow_display_label(follow, follow_target, replay);
     let cam = camera_mode_label(camera_mode);
@@ -338,13 +368,34 @@ pub fn build_hud_content_live(
         format!("{}→live", follow.hud_label())
     };
     let vel_kmh = live.session.velocity_mps() * 3.6;
-    let limit_kmh = live.session.speed_limit_mps() * 3.6;
+    let limit_kmh = live.session.effective_speed_limit_mps() * 3.6;
+    let gp = &live.session.gameplay;
+    let game_line = if live.session.arrived {
+        format!("dest:{}  penalty:{:.0}", gp.destination, gp.accrued_penalty)
+    } else if let Some(next) = live.session.next_stop_label() {
+        let overspeed = if gp.overspeed_active {
+            " OVERSPEED"
+        } else {
+            ""
+        };
+        format!("next:{next}  penalty:{:.0}{overspeed}", gp.accrued_penalty)
+    } else {
+        let overspeed = if gp.overspeed_active {
+            " OVERSPEED"
+        } else {
+            ""
+        };
+        format!(
+            "dest:{}  penalty:{:.0}{overspeed}",
+            gp.destination, gp.accrued_penalty
+        )
+    };
     let controls =
-        "W/S:throttle/brake  Space:emergency  +/-:sim spd  T:follow  P:rain  G:goto  F2:fly  Esc:quit"
+        "W/S:thr/brk  Space:emerg  H:horn  C:cab  +/-:sim  T:follow  P:rain  G:goto  F2:fly  Esc:quit"
             .to_string();
     HudContent {
         row1: format!(
-            "{title}    {status}    cam:{}  follow:{follow_label}  rain:{rain_label}",
+            "{title}    {status}    cam:{}  follow:{follow_label}  rain:{rain_label}  {game_line}",
             camera_mode_label(camera_mode)
         ),
         row2: format!(
@@ -364,9 +415,14 @@ pub fn build_hud_content_live(
     }
 }
 
+pub(crate) fn tick_hud_fps(time: Res<Time>, mut fps: ResMut<HudFps>) {
+    fps.tick(time.delta_secs());
+}
+
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn update_hud(
     title: Res<HudTitle>,
+    fps: Res<HudFps>,
     replay: Res<ReplayState>,
     live: Option<Res<LiveDrive>>,
     scene: Res<TrackScene>,
@@ -436,12 +492,15 @@ pub(crate) fn update_hud(
             orbit_focus,
         )
     };
+    let fps_suffix = format_fps_suffix(fps.as_ref());
     let active = replay.is_active() || live.is_some();
 
     for (mut vis, mut text, mut node, row1, row2, bar, trains, controls, fill) in &mut hud {
         if row1.is_some() {
             if let Some(text) = text.as_mut() {
-                **text = Text::new(content.row1.clone());
+                let mut row1_text = content.row1.clone();
+                row1_text.push_str(&fps_suffix);
+                **text = Text::new(row1_text);
             }
         } else if row2.is_some() {
             if let Some(text) = text.as_mut() {
@@ -597,6 +656,18 @@ mod tests {
         assert!(content.row2.contains("spd=2x"));
         assert!(content.trains.contains("primary"));
         assert!(content.progress > 0.4 && content.progress < 0.6);
+    }
+
+    #[test]
+    fn fps_suffix_shows_smoothed_rate_and_warns_below_30() {
+        let mut fps = HudFps {
+            smoothed: 58.0,
+            frame_ms: 17.2,
+        };
+        assert!(format_fps_suffix(&fps).contains("fps:58"));
+        assert!(format_fps_suffix(&fps).contains("17.2ms"));
+        fps.smoothed = 22.0;
+        assert!(format_fps_suffix(&fps).ends_with('!'));
     }
 
     #[test]

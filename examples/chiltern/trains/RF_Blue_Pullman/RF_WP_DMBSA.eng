@@ -1,5 +1,6 @@
 (Engine
   (Name "RF_WP_DMBSA")
+  (WagonShape "RF_WP_DMBSA.s")
   (Mass 68000)
   (MaxPower 745513)
   (MaxForce 53379)

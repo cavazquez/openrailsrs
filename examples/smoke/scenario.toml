@@ -30,6 +30,14 @@ duration = 900.0
 time_step = 0.1
 seed = 42
 
+[[sound_regions]]
+id = "yard_ambient"
+edge_id = "e1"
+position_m = 50.0
+radius_m = 80.0
+kind = "urban"
+base_volume = 0.25
+
 [output]
 csv = "run.csv"
 metadata = "run.toml"

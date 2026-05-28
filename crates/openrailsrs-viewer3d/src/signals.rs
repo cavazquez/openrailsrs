@@ -12,7 +12,7 @@ const COLOR_SIG_CAUTION: Color = Color::srgb(1.0, 0.8, 0.0);
 const COLOR_SIG_CLEAR: Color = Color::srgb(0.133, 1.0, 0.333);
 const COLOR_SIG_POLE: Color = Color::srgb(0.533, 0.533, 0.533);
 
-fn aspect_color(aspect: SignalAspect) -> Color {
+pub fn aspect_color(aspect: SignalAspect) -> Color {
     match aspect {
         SignalAspect::Stop => COLOR_SIG_STOP,
         SignalAspect::Caution => COLOR_SIG_CAUTION,
@@ -79,12 +79,45 @@ pub fn spawn_signal_markers(
         ));
 
         commands.spawn((
+            SignalMarker {
+                id: signal.id.clone(),
+            },
             Mesh3d(diamond_mesh.clone()),
             MeshMaterial3d(material),
             Transform::from_translation(pos)
                 .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_4)),
             Name::new(format!("signal:{}", signal.id)),
         ));
+    }
+}
+
+/// Diamond mesh for a track signal; aspect is updated in live mode from [`LiveDriveSession`].
+#[derive(Component)]
+pub struct SignalMarker {
+    pub id: String,
+}
+
+/// Refresh signal colours from the live sim's `signal_runtime` map.
+pub fn update_live_signal_markers(
+    live: Option<Res<crate::live::LiveDrive>>,
+    scene: Res<TrackScene>,
+    query: Query<(&SignalMarker, &MeshMaterial3d<StandardMaterial>)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Some(live) = live else {
+        return;
+    };
+    for (marker, mat_handle) in &query {
+        let aspect = live
+            .session
+            .signal_aspect(&marker.id)
+            .or_else(|| scene.graph.signal(&marker.id).map(|s| s.aspect))
+            .unwrap_or(SignalAspect::Stop);
+        let color = aspect_color(aspect);
+        if let Some(mat) = materials.get_mut(mat_handle) {
+            mat.base_color = color;
+            mat.emissive = LinearRgba::from(color) * 0.4;
+        }
     }
 }
 

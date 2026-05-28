@@ -3,6 +3,7 @@
 pub mod error;
 pub mod model;
 pub mod overlay;
+pub mod sound_regions;
 pub mod timetable;
 
 pub use error::ScenarioError;
@@ -16,6 +17,7 @@ pub use overlay::{
     apply_scenario_overlay, apply_scenario_overlay_dir, apply_scenario_overlay_file,
     apply_scenario_runtime_overlay, apply_scenario_runtime_overlay_dir,
 };
+pub use sound_regions::{RegionTracker, RegionTransition};
 pub use timetable::{TimetableEntry, TimetableFile, TimetableMeta, load_timetable};
 
 use std::path::Path;

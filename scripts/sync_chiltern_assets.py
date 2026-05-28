@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Extract physics-only rolling stock for examples/chiltern (no cab/C# scripts)."""
+"""Extract physics-only rolling stock for examples/chiltern (no cab/C# scripts).
+
+With ``--with-shapes``, also copies ``WagonShape`` meshes and textures into
+``examples/chiltern/trains/<trainset>/SHAPES`` and ``TEXTURES`` for the 3D viewer.
+"""
 from __future__ import annotations
 
+import argparse
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -19,6 +25,12 @@ def read_msts(path: Path) -> str:
 def first_quantity(pattern: str, text: str) -> str | None:
     m = re.search(pattern, text, re.I)
     return m.group(1).strip() if m else None
+
+
+def parse_wagon_shape(text: str) -> str | None:
+    return first_quantity(r'WagonShape\s*\(\s*"([^"]+)"\s*\)', text) or first_quantity(
+        r'WagonShape\s*\(\s*([^\s)]+)\s*\)', text
+    )
 
 
 def parse_mass(text: str) -> float:
@@ -131,14 +143,6 @@ def extract_orts_curves(text: str) -> str | None:
     return f"  (ORTSMaxTractiveForceCurves {inner})\n"
 
 
-def parse_run_up(text: str) -> float:
-    s = first_quantity(r"RunUpTimeToMaxForce\s*\(\s*([^)]+)\)", text)
-    if not s:
-        return 0.0
-    m = re.search(r"([\d.]+)", s)
-    return float(m.group(1)) if m else 0.0
-
-
 def parse_continuous_force(text: str) -> float:
     return parse_force_lbf(text, ["MaxContinuousForce", "MaxContinuousTractiveForce"], 0.0)
 
@@ -225,7 +229,7 @@ def extract_drive_wheel_line(text: str) -> str:
     return f"  ( ORTSDriveWheelWeight ( {m.group(1).strip()} ) )\n"
 
 
-def write_eng(path: Path, name: str, text: str) -> None:
+def write_eng(path: Path, name: str, text: str, shape_line: str) -> None:
     mass = parse_mass(text)
     length = parse_length(text)
     force = parse_force_lbf(text, ["MaxForce", "MaxTractiveEffort"], 12000 * LBF)
@@ -244,7 +248,7 @@ def write_eng(path: Path, name: str, text: str) -> None:
         extra += f"  (MaxContinuousForce {continuous:.0f})\n"
     body = f'''(Engine
   (Name "{name}")
-  (Mass {mass:.0f})
+{shape_line}  (Mass {mass:.0f})
   (MaxPower {power:.0f})
   (MaxForce {force:.0f})
   (MaxVelocity {vmax * 2.2369362921:.1f})
@@ -256,7 +260,7 @@ def write_eng(path: Path, name: str, text: str) -> None:
     print(f"  eng {path.name}: {mass/1000:.0f}t, {power/1000:.0f}kW, {length:.1f}m")
 
 
-def write_wag(path: Path, name: str, text: str) -> None:
+def write_wag(path: Path, name: str, text: str, shape_line: str) -> None:
     mass = parse_mass(text)
     length = parse_length(text, 20.71)
     brake = parse_force_lbf(
@@ -265,7 +269,7 @@ def write_wag(path: Path, name: str, text: str) -> None:
     davis = extract_davis_lines(text)
     body = f'''(Wagon
   (Type "{name}")
-  (Mass {mass:.0f})
+{shape_line}  (Mass {mass:.0f})
   (MaxBrakeForce {brake:.0f})
   (Length {length:.3f})
 {davis})
@@ -274,15 +278,157 @@ def write_wag(path: Path, name: str, text: str) -> None:
     print(f"  wag {path.name}: {mass/1000:.0f}t, {length:.1f}m")
 
 
+def find_shape_file(src_roots: list[Path], shape_name: str) -> Path | None:
+    """Resolve shape path (MSTS often stores .s in trainset root, not SHAPES/)."""
+    want = shape_name.lower()
+
+    def match_in_dir(directory: Path) -> Path | None:
+        if not directory.is_dir():
+            return None
+        exact = directory / shape_name
+        if exact.is_file():
+            return exact
+        for entry in directory.iterdir():
+            if entry.is_file() and entry.name.lower() == want:
+                return entry
+        return None
+
+    for root in src_roots:
+        for sub in (root / "SHAPES", root / "shapes", root):
+            found = match_in_dir(sub)
+            if found is not None:
+                return found
+    return None
+
+
+def find_texture_file(src_roots: list[Path], tex_name: str) -> Path | None:
+    want = tex_name.lower()
+    for root in src_roots:
+        for sub in (root / "TEXTURES", root / "textures", root):
+            if not sub.is_dir():
+                continue
+            exact = sub / tex_name
+            if exact.is_file():
+                return exact
+            for entry in sub.iterdir():
+                if entry.is_file() and entry.name.lower() == want:
+                    return entry
+    return None
+
+
+def copy_texture_file(
+    tex: Path,
+    dest_textures: Path,
+    copied_textures: set[str],
+) -> None:
+    dest_textures.mkdir(parents=True, exist_ok=True)
+    out = dest_textures / tex.name
+    if tex.name not in copied_textures or not out.exists():
+        shutil.copy2(tex, out)
+        copied_textures.add(tex.name)
+
+
+def textures_referenced_in_shape(shape_path: Path) -> set[str]:
+    """Best-effort: scan shape bytes for ``*.ace`` / ``*.dds`` names."""
+    try:
+        raw = shape_path.read_bytes()
+    except OSError:
+        return set()
+    text = raw.decode("latin-1", errors="ignore")
+    found: set[str] = set()
+    for m in re.finditer(r"([\w.-]+\.(?:ace|dds))\b", text, re.I):
+        found.add(m.group(1))
+    return found
+
+
+def copy_shape_assets(
+    shape_name: str,
+    src_roots: list[Path],
+    dest_shapes: Path,
+    dest_textures: Path,
+    copied_shapes: set[str],
+    copied_textures: set[str],
+) -> str | None:
+    """Copy shape (+ .sd) and referenced textures. Returns canonical filename."""
+    src = find_shape_file(src_roots, shape_name)
+    if src is None:
+        print(f"  shape missing: {shape_name}", file=sys.stderr)
+        return None
+    canonical = src.name
+    dest_shapes.mkdir(parents=True, exist_ok=True)
+    dest = dest_shapes / canonical
+    if canonical not in copied_shapes or not dest.exists():
+        shutil.copy2(src, dest)
+        copied_shapes.add(canonical)
+    sd = src.with_suffix(".sd")
+    if sd.is_file():
+        shutil.copy2(sd, dest_shapes / sd.name)
+    stem = canonical.rsplit(".", 1)[0]
+    for ext in (".ace", ".ACE", ".dds", ".DDS"):
+        tex = find_texture_file(src_roots, f"{stem}{ext}")
+        if tex is not None:
+            copy_texture_file(tex, dest_textures, copied_textures)
+    for ref in textures_referenced_in_shape(src):
+        tex = find_texture_file(src_roots, ref)
+        if tex is not None:
+            copy_texture_file(tex, dest_textures, copied_textures)
+    return canonical
+
+
+def copy_trainset_textures(
+    src_roots: list[Path],
+    dest_textures: Path,
+    copied_textures: set[str],
+) -> int:
+    """Copy all ACE/DDS from trainset root and TEXTURES/ (MSTS often uses root)."""
+    n = 0
+    for root in src_roots:
+        for sub in (root / "TEXTURES", root / "textures", root):
+            if not sub.is_dir():
+                continue
+            for pattern in ("*.ace", "*.ACE", "*.dds", "*.DDS"):
+                for tex in sub.glob(pattern):
+                    if not tex.is_file():
+                        continue
+                    copy_texture_file(tex, dest_textures, copied_textures)
+                    n += 1
+    return n
+
+
 def main() -> int:
-    src = Path(
-        sys.argv[1]
-        if len(sys.argv) > 1
-        else Path.home()
-        / "Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "trainset",
+        nargs="?",
+        type=Path,
+        default=Path.home()
+        / "Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman",
     )
-    dest = Path(__file__).resolve().parents[1] / "examples/chiltern/trains/RF_Blue_Pullman"
+    parser.add_argument(
+        "--route-content",
+        type=Path,
+        default=None,
+        help="Optional MSTS route dir (ROUTES/Chiltern) for route SHAPES/",
+    )
+    parser.add_argument(
+        "--with-shapes",
+        action="store_true",
+        help="Copy WagonShape .s/.sd and textures into examples/chiltern/trains/RF_Blue_Pullman/",
+    )
+    args = parser.parse_args()
+    src: Path = args.trainset
+    repo = Path(__file__).resolve().parents[1]
+    dest = repo / "examples/chiltern/trains/RF_Blue_Pullman"
     dest.mkdir(parents=True, exist_ok=True)
+
+    src_roots = [src]
+    if args.route_content:
+        src_roots.append(args.route_content)
+
+    dest_shapes = dest / "SHAPES"
+    dest_textures = dest / "TEXTURES"
+    copied_shapes: set[str] = set()
+    copied_textures: set[str] = set()
 
     mapping = {
         "RF_WP_DMBSA.eng": write_eng,
@@ -295,6 +441,10 @@ def main() -> int:
         "RF_WP_PSG.wag": write_wag,
     }
     print(f"Sync physics assets {src} -> {dest}")
+    if args.with_shapes:
+        print(f"  shapes -> {dest_shapes}")
+        print(f"  textures -> {dest_textures}")
+
     for fname, writer in mapping.items():
         src_path = src / fname
         if not src_path.exists():
@@ -302,7 +452,34 @@ def main() -> int:
             continue
         text = read_msts(src_path)
         name = fname.rsplit(".", 1)[0]
-        writer(dest / fname, name, text)
+        shape_name = parse_wagon_shape(text)
+        shape_line = ""
+        if shape_name:
+            canonical = shape_name
+            resolved_path = find_shape_file(src_roots, shape_name)
+            if resolved_path is not None:
+                canonical = resolved_path.name
+            if args.with_shapes:
+                copied = copy_shape_assets(
+                    shape_name,
+                    src_roots,
+                    dest_shapes,
+                    dest_textures,
+                    copied_shapes,
+                    copied_textures,
+                )
+                if copied is not None:
+                    canonical = copied
+            shape_line = f'  (WagonShape "{canonical}")\n'
+        writer(dest / fname, name, text, shape_line)
+
+    if args.with_shapes:
+        # Only bulk-copy ACE/DDS from the trainset dir — not route_content (huge).
+        copy_trainset_textures([src], dest_textures, copied_textures)
+        if copied_shapes or copied_textures:
+            print(
+                f"  copied {len(copied_shapes)} shape(s), {len(copied_textures)} texture(s)"
+            )
     return 0
 
 

@@ -21,6 +21,8 @@ pub struct ConsistVehicleVisual {
 pub struct TrainConsistScene {
     pub scenario_dir: Option<PathBuf>,
     pub by_label: HashMap<String, Vec<ConsistVehicleVisual>>,
+    /// `examples/.../trains/*/SHAPES` (synced trainset meshes).
+    trainset_shape_dirs: Vec<PathBuf>,
 }
 
 impl TrainConsistScene {
@@ -43,15 +45,35 @@ impl TrainConsistScene {
         self.by_label.values().map(|v| v.len()).sum()
     }
 
-    pub fn shape_search_dirs<'a>(&'a self, route_dir: &'a Path) -> Vec<&'a Path> {
-        let mut dirs = vec![route_dir];
+    pub fn shape_search_dirs(&self, route_dir: &Path) -> Vec<PathBuf> {
+        let mut dirs = vec![route_dir.to_path_buf()];
         if let Some(scenario_dir) = self.scenario_dir.as_deref() {
             if scenario_dir != route_dir {
-                dirs.push(scenario_dir);
+                dirs.push(scenario_dir.to_path_buf());
             }
+            dirs.extend(self.trainset_shape_dirs.iter().cloned());
         }
         dirs
     }
+
+    pub fn set_scenario_dir(&mut self, scenario_dir: PathBuf) {
+        self.trainset_shape_dirs = collect_trainset_shape_dirs(&scenario_dir);
+        self.scenario_dir = Some(scenario_dir);
+    }
+}
+
+fn collect_trainset_shape_dirs(scenario_dir: &Path) -> Vec<PathBuf> {
+    let trains = scenario_dir.join("trains");
+    let Ok(entries) = std::fs::read_dir(trains) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let shapes = entry.path().join("SHAPES");
+            shapes.is_dir().then_some(shapes)
+        })
+        .collect()
 }
 
 /// Build vehicle visuals from a parsed consist.
@@ -142,10 +164,8 @@ mod tests {
     #[test]
     fn multi_train_labels_use_toml_consist_paths() {
         let scenario_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke");
-        let mut scene = TrainConsistScene {
-            scenario_dir: Some(scenario_dir.clone()),
-            by_label: HashMap::new(),
-        };
+        let mut scene = TrainConsistScene::default();
+        scene.set_scenario_dir(scenario_dir.clone());
         if let Some(v) = try_load_consist_vehicles(&scenario_dir, "consists/freight.con") {
             scene.by_label.insert("primary".into(), v);
         }

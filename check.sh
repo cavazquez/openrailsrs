@@ -12,6 +12,6 @@ echo "==> clippy (-D warnings)"
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 echo "==> tests"
-cargo test --workspace --all-features
+cargo test --workspace --all-features -- --test-threads=1
 
 echo "OK: check.sh completó sin errores."

@@ -3928,6 +3928,7 @@ name = "openrailsrs-formats"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
+ "flate2",
  "openrailsrs-core",
  "pretty_assertions",
  "thiserror 2.0.18",
@@ -4067,6 +4068,7 @@ dependencies = [
  "bevy",
  "csv",
  "openrailsrs-ace",
+ "openrailsrs-audio",
  "openrailsrs-core",
  "openrailsrs-formats",
  "openrailsrs-route",

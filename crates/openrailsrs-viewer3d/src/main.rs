@@ -17,7 +17,7 @@
 //! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless live/replay loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
-//! - Live: `W`/`S` throttle/brake (orbit cam), `Space` emergency, `+`/`-` sim speed, `T` follow.
+//! - Live: `W`/`S` throttle/brake (orbit cam), `Space` emergency, `H` horn, `C` cab panel, `+`/`-` sim speed, `T` follow (chase on start).
 //! - Multi-train replay: `[` / `]` (or Shift+T) cycle which train the follow camera tracks.
 //! - `G`           — teleport dialog (type x,y,z).
 //! - `P`           — toggle rain streaks.
@@ -208,8 +208,7 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
         let drive = LiveDrive::from_scenario_path(path)?;
         eprintln!(
             "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, W/S throttle/brake in orbit cam)",
-            drive.session.scenario_name,
-            drive.session.dt,
+            drive.session.scenario_name, drive.session.dt,
         );
         (ReplayState::default(), Some(drive))
     } else {
@@ -242,10 +241,7 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
 
     Ok(LaunchConfig {
         title: if live {
-            format!(
-                "openrailsrs-viewer3d LIVE — {}",
-                scenario.scenario.name
-            )
+            format!("openrailsrs-viewer3d LIVE — {}", scenario.scenario.name)
         } else {
             format!("openrailsrs-viewer3d — {}", scenario.scenario.name)
         },
@@ -290,10 +286,10 @@ fn load_train_consists(
             }
         }
     }
-    TrainConsistScene {
-        scenario_dir: Some(scenario_dir.to_path_buf()),
-        by_label,
-    }
+    let mut scene = TrainConsistScene::default();
+    scene.set_scenario_dir(scenario_dir.to_path_buf());
+    scene.by_label = by_label;
+    scene
 }
 
 fn exit_on_esc(

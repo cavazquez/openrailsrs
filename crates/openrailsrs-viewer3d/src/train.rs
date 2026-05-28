@@ -178,7 +178,8 @@ pub fn spawn_train_markers(
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut shape_cache: ShapeCache = HashMap::new();
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
-    let shape_dirs: Vec<&std::path::Path> = consist.shape_search_dirs(&assets.route_dir);
+    let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
+    let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
 
     let mut shape_mesh_count = 0usize;
 
@@ -306,7 +307,11 @@ pub fn spawn_train_markers(
     }
 }
 
-pub(crate) fn vehicle_local_transform(scene: &TrackScene, offset_m: f32, length_m: f32) -> Transform {
+pub(crate) fn vehicle_local_transform(
+    scene: &TrackScene,
+    offset_m: f32,
+    length_m: f32,
+) -> Transform {
     let edge = scene.bounds.edge_radius().max(2.0);
     Transform {
         translation: Vec3::new(offset_m, 0.0, 0.0),
@@ -324,7 +329,7 @@ fn load_vehicle_shape_assets(
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
 ) -> (Handle<Mesh>, Handle<StandardMaterial>, bool) {
-    match load_shape_from_path(shape_path) {
+    match load_shape_from_path(shape_path, None) {
         Some(loaded) => {
             let mesh = meshes.add(loaded.mesh);
             if let Some(tex_name) = loaded.texture_file {
