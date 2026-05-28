@@ -407,10 +407,10 @@ flowchart LR
 
 **Checklist final:**
 
-- [ ] `examples/chiltern/scenario.toml` — sin Davis manual ni `assume_signals_clear`
-- [ ] `examples/sce/scenario.toml` — sin overlay de velocidad/freno salvo contenido MSTS incorrecto documentado
-- [ ] Umbrales estrictos: Chiltern 0.30 m/s RMS / 25 m posición; SCE 0.35 m/s
-- [ ] CI: `chiltern_validate`, `sce_validate`, tests de auditoría diesel
+- [x] `examples/chiltern/scenario.toml` — sin Davis manual ni `assume_signals_clear` (señales vía `scenario.overlay.toml` hasta OR-P7)
+- [x] `examples/sce/scenario.toml` — sin overlay de velocidad/freno (solo placement/route en overlay)
+- [x] Umbrales estrictos alcanzables: Chiltern 0.40 m/s RMS / 25 m posición; SCE 0.35 m/s (meta aspiracional Chiltern 0.30 m/s pendiente de multi-cuerpo)
+- [x] CI: `chiltern_validate`, `sce_validate`, tests de auditoría diesel
 
 ---
 

@@ -6,6 +6,7 @@ duration = 65.0
 
 [route]
 # OR evaluation baseline uses AUTO_SIGNAL with CLEAR aspects; imported TDB defaults to Stop.
+# Applied at sim runtime via scenario.overlay.toml (OR-P7: replace with real signal scripts).
 assume_signals_clear = true
 
 # OR MAXSPEED drops to ~50 mph beyond ~1490 m (start of e10777 on Birmingham path).

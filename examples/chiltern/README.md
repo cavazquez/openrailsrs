@@ -10,7 +10,7 @@ Escenario importado desde la ruta MSTS **Chiltern** (Open Rails 1.6.1) con topol
 | Actividad | `RS_Let's go to Birmingham` |
 | Baseline OR | `../baselines/chiltern_birmingham/or_evaluation_speed.csv` (**136 s** sim, 10:00→10:02:16) |
 | Duración sim | 136 s |
-| Señales | `assume_signals_clear = true` (OR `AUTO_SIGNAL` / aspectos CLEAR en eval) |
+| Señales | `scenario.overlay.toml` → `assume_signals_clear` (OR `AUTO_SIGNAL` / aspectos CLEAR en eval; OR-P7) |
 | Física sim (default) | **Masa puntual** — ver [Modelo físico vs OR](../../docs/OR_PARITY_ROADMAP.md#modelo-físico-or-vs-openrailsrs-importante-para-baselines) |
 | Consist | DMBSA + 6 Pullman + DMBSH (**8 vehículos**; no es un solo loco) |
 

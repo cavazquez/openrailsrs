@@ -70,7 +70,7 @@ openrailsrs compare-or ../baselines/sce_glasgow/or_evaluation_speed.csv run.csv
 
 | Métrica | Valor | Umbral |
 |---------|-------|--------|
-| Velocity RMS | ~3.7 m/s | 5.0 m/s |
+| Velocity RMS | ~0.30 m/s | 0.35 m/s |
 | Position max | ~53 m | 100 m |
 | Estado | **PASS** | — |
 

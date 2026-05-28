@@ -9,7 +9,6 @@ path = "."
 start = "n3"
 destination = "n10770"
 start_offset_m = 305.576
-assume_signals_clear = true
 stops = []
 
 [[route.switches]]
@@ -48,7 +47,7 @@ metadata = "run.json"
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 # Baseline OR ~136 s sim (10:00→10:02:16); cap P/v por locomotora
 max_velocity_rms = 0.40
-max_position_max = 45.0
+max_position_max = 25.0
 max_throttle_rms = 0.25
 max_brake_rms = 0.25
 phase_bounds = [0.0, 30.0, 61.0, 136.0]

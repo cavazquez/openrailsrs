@@ -9,7 +9,6 @@ path = "."
 start = "n3"
 destination = "n10770"
 start_offset_m = 305.576
-assume_signals_clear = true
 stops = []
 
 [[route.switches]]
