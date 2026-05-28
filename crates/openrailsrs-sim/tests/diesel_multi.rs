@@ -69,6 +69,8 @@ fn two_identical_engines_double_stall_force() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -105,6 +107,8 @@ fn orts_plus_legacy_both_contribute() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -136,6 +140,8 @@ fn per_engine_power_cap_limits_force_at_speed() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);
@@ -194,6 +200,8 @@ fn per_engine_rpm_independent() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
     let g = flat_graph();
     let path = PathData::from_path(&["e1".to_string()], &g);

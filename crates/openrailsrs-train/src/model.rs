@@ -141,18 +141,11 @@ fn scale_davis_per_vehicle(
     target: &DavisCoefficients,
 ) -> Vec<DavisCoefficients> {
     let n = base.len().max(1) as f64;
-    let scale = |sum: f64, tgt: f64| -> f64 {
-        if sum.abs() > 1e-9 {
-            tgt / sum
-        } else {
-            tgt / n
-        }
-    };
+    let scale = |sum: f64, tgt: f64| -> f64 { if sum.abs() > 1e-9 { tgt / sum } else { tgt / n } };
     let sa = scale(aggregate.a_n, target.a_n);
     let sb = scale(aggregate.b_n_per_mps, target.b_n_per_mps);
     let sc = scale(aggregate.c_n_per_mps2, target.c_n_per_mps2);
-    base
-        .iter()
+    base.iter()
         .map(|d| DavisCoefficients {
             a_n: d.a_n * sa,
             b_n_per_mps: d.b_n_per_mps * sb,

@@ -58,6 +58,8 @@ fn default_train_pv() -> TrainPhysics {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     }
 }
 
@@ -79,6 +81,8 @@ fn default_train_with_curve() -> TrainPhysics {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     }
 }
 
@@ -214,6 +218,8 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
     let pd = path_data_for(&["e1"], &g);
     let mut st = TrainSimState::new(vec!["e1".into()]);

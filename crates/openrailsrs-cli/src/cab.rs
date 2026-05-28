@@ -28,7 +28,7 @@ use openrailsrs_scenarios::load_scenario;
 use openrailsrs_sim::{
     path::edge_path,
     path_data::PathData,
-    physics::{TrainPhysics, step},
+    physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step},
     state::TrainSimState,
 };
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
@@ -54,15 +54,11 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         .unwrap_or(scenario_dir);
     let consist = load_consist_with_asset_root(&consist_path, asset_root)
         .map_err(|e| anyhow::anyhow!("consist: {e}"))?;
-    let davis_override = scenario
-        .train
-        .davis
-        .as_ref()
-        .map(|d| DavisCoefficients {
-            a_n: d.a_n,
-            b_n_per_mps: d.b_n_per_mps,
-            c_n_per_mps2: d.c_n_per_mps2,
-        });
+    let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
+        a_n: d.a_n,
+        b_n_per_mps: d.b_n_per_mps,
+        c_n_per_mps2: d.c_n_per_mps2,
+    });
     let davis = davis_override
         .clone()
         .unwrap_or_else(|| consist.davis.clone());
@@ -79,6 +75,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     } else {
         raw_curve
     };
+    let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
@@ -94,7 +91,11 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         brake_mapping: scenario.brake_mapping(),
         legacy_power_cap: scenario.simulation.legacy_power_cap,
         brake_skid_limit: scenario.simulation.brake_skid_limit,
-        multi_body_scalar_coast_below_v_mps: scenario.simulation.multi_body_scalar_coast_below_v_mps,
+        multi_body_scalar_coast_below_v_mps: scenario
+            .simulation
+            .multi_body_scalar_coast_below_v_mps,
+        partial_throttle_run_up_time_s,
+        orts_inherit_partial_run_up: scenario.simulation.orts_inherit_partial_run_up,
     };
 
     let total_dist_m: f64 = path_edges

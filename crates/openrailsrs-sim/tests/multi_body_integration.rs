@@ -52,6 +52,8 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
 
     let path_data = flat_path();
@@ -109,6 +111,8 @@ fn multi_body_dt_one_second_remains_stable_over_ten_steps() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
 
     let path_data = flat_path();

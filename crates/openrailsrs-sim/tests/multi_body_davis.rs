@@ -89,6 +89,8 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     };
 
     let path = flat_path();
@@ -106,8 +108,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
 
     let dv_front = state.vehicles[0].velocity_mps - v0_front;
     let dv_rear = state.vehicles[1].velocity_mps - v0_rear;
-    let expected_front =
-        -train.vehicle_davis[0].resistance_n(10.0) / 50_000.0 * 0.1;
+    let expected_front = -train.vehicle_davis[0].resistance_n(10.0) / 50_000.0 * 0.1;
     let expected_rear = -train.vehicle_davis[1].resistance_n(10.0) / 30_000.0 * 0.1;
     assert!(
         (dv_front - expected_front).abs() < 0.0005,

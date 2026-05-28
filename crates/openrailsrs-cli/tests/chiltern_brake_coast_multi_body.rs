@@ -82,8 +82,7 @@ fn chiltern_brake_coast_multi_body_validate_against_or_baseline() {
     assert!(
         report.pass,
         "multi-body brake-coast OR validation failed: vel_rms={:.3} max={:.3}",
-        report.velocity.rms_diff,
-        report.velocity.max_abs_diff
+        report.velocity.rms_diff, report.velocity.max_abs_diff
     );
 
     let bounds = validate

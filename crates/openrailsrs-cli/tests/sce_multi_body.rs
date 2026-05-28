@@ -72,8 +72,7 @@ fn sce_multi_body_validate_against_or_baseline() {
     assert!(
         report.pass,
         "SCE multi-body OR validation failed: vel_rms={:.3} max={:.3}",
-        report.velocity.rms_diff,
-        report.velocity.max_abs_diff
+        report.velocity.rms_diff, report.velocity.max_abs_diff
     );
 
     // Masa puntual ~0.30 m/s RMS global; multi-cuerpo arranque más holgura.

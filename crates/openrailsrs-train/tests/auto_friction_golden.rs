@@ -26,7 +26,10 @@ fn roller_bearing_lower_a_than_friction_same_mass() {
     let friction = calc_davis_a_n(OrtsBearingType::Friction, 34_000.0, 4);
     let roller = calc_davis_a_n(OrtsBearingType::Roller, 34_000.0, 4);
     assert!((roller - 570.3).abs() < 5.0, "roller a={roller}");
-    assert!(roller < friction, "roller {roller} should beat friction {friction}");
+    assert!(
+        roller < friction,
+        "roller {roller} should beat friction {friction}"
+    );
 }
 
 #[test]
@@ -55,11 +58,7 @@ fn golden_bearing_type_a_reference_table() {
         },
     ] {
         let a = calc_davis_a_n(row.bearing, 34_000.0, 4);
-        assert!(
-            (a - row.expected_a).abs() < 5.0,
-            "{:?} a={a}",
-            row.bearing
-        );
+        assert!((a - row.expected_a).abs() < 5.0, "{:?} a={a}", row.bearing);
     }
 }
 
@@ -67,12 +66,8 @@ fn golden_bearing_type_a_reference_table() {
 fn low_bearing_freight_b_between_roller_and_default() {
     let mass = 50_000.0;
     let axles = 4;
-    let roller = calc_davis_b_n_per_mps(
-        OrtsBearingType::Roller,
-        mass,
-        axles,
-        OrtsWagonType::Freight,
-    );
+    let roller =
+        calc_davis_b_n_per_mps(OrtsBearingType::Roller, mass, axles, OrtsWagonType::Freight);
     let low = calc_davis_b_n_per_mps(OrtsBearingType::Low, mass, axles, OrtsWagonType::Freight);
     let default = calc_davis_b_n_per_mps(
         OrtsBearingType::Default,

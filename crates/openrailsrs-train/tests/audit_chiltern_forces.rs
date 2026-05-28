@@ -20,9 +20,8 @@ fn audit_chiltern_forces_at_cruise_or_p1() {
 
     let throttle = 0.8;
     let v = 10.863_f64;
-    let f_res = consist.davis.a_n
-        + consist.davis.b_n_per_mps * v
-        + consist.davis.c_n_per_mps2 * v * v;
+    let f_res =
+        consist.davis.a_n + consist.davis.b_n_per_mps * v + consist.davis.c_n_per_mps2 * v * v;
 
     let mut f_trac = 0.0;
     for (i, m) in models.iter().enumerate() {

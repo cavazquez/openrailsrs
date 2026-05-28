@@ -16,12 +16,12 @@ use openrailsrs_track::{SignalAspect, SwitchPosition};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
 use crate::SimError;
-use crate::coupler::CouplerKind;
 use crate::brake::BrakeSystem;
+use crate::coupler::CouplerKind;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
 use crate::path_data::PathData;
-use crate::physics::{TrainPhysics, step};
+use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::runner::{RunMetadata, SimEvent, SimRunResult};
 use crate::state::TrainSimState;
 
@@ -131,6 +131,7 @@ fn build_physics(
     } else {
         raw_curve
     };
+    let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     Ok(TrainPhysics {
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
@@ -147,6 +148,8 @@ fn build_physics(
         legacy_power_cap,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s,
+        orts_inherit_partial_run_up: false,
     })
 }
 

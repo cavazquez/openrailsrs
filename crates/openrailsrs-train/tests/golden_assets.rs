@@ -3,9 +3,13 @@
 use std::path::{Path, PathBuf};
 
 use openrailsrs_formats::{OrtsBearingType, OrtsFrictionFields, OrtsWagonType};
-use openrailsrs_train::auto_friction::{auto_davis_coefficients, calc_davis_a_n, calc_davis_b_n_per_mps};
+use openrailsrs_train::auto_friction::{
+    auto_davis_coefficients, calc_davis_a_n, calc_davis_b_n_per_mps,
+};
 use openrailsrs_train::model::DavisCoefficients;
-use openrailsrs_train::{load_consist_with_asset_root, load_engine_from_path, load_wagon_from_path};
+use openrailsrs_train::{
+    load_consist_with_asset_root, load_engine_from_path, load_wagon_from_path,
+};
 
 fn repo_examples(sub: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -76,12 +80,7 @@ fn golden_sce_mk2_auto_friction_formula() {
     assert_near("MK2 A", w.davis.a_n, expected_a, 5.0);
     assert_near("MK2 B", w.davis.b_n_per_mps, expected_b, 1.0);
     assert_eq!(w.davis.c_n_per_mps2, 0.0, "no frontal area in minimal .wag");
-    let _ = auto_davis_coefficients(
-        DavisCoefficients::default(),
-        34_000.0,
-        false,
-        &meta,
-    );
+    let _ = auto_davis_coefficients(DavisCoefficients::default(), 34_000.0, false, &meta);
 }
 
 #[test]
@@ -190,9 +189,24 @@ fn golden_class47_reverse_throttle_rpm_golden_points() {
     }
     let m = load_diesel_model(&eng);
     let e = m.engine.as_ref().expect("engine");
-    assert_near("apparent@325", e.apparent_throttle_fraction(325.0), 0.0, 0.02);
-    assert_near("apparent@450", e.apparent_throttle_fraction(450.0), 0.40, 0.02);
-    assert_near("apparent@750", e.apparent_throttle_fraction(750.0), 1.0, 0.02);
+    assert_near(
+        "apparent@325",
+        e.apparent_throttle_fraction(325.0),
+        0.0,
+        0.02,
+    );
+    assert_near(
+        "apparent@450",
+        e.apparent_throttle_fraction(450.0),
+        0.40,
+        0.02,
+    );
+    assert_near(
+        "apparent@750",
+        e.apparent_throttle_fraction(750.0),
+        1.0,
+        0.02,
+    );
 }
 
 #[test]

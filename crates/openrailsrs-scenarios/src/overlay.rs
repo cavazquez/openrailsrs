@@ -220,6 +220,7 @@ mod tests {
                 multi_body: false,
                 coupler_kind: String::new(),
                 multi_body_scalar_coast_below_v_mps: None,
+                orts_inherit_partial_run_up: false,
             },
             output: OutputSection {
                 csv: "run.csv".into(),

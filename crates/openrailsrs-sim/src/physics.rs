@@ -58,10 +58,50 @@ pub struct TrainPhysics {
     pub brake_skid_limit: bool,
     /// Multi-body: below this speed (m/s) with throttle off, use scalar coast decay.
     pub multi_body_scalar_coast_below_v_mps: Option<f64>,
+    /// Max `RunUpTimeToMaxForce` across the consist; ORTS units inherit this at partial throttle.
+    pub partial_throttle_run_up_time_s: Option<f64>,
+    /// When true, ORTS lead units without run-up inherit [`partial_throttle_run_up_time_s`].
+    pub orts_inherit_partial_run_up: bool,
+}
+
+/// Longest legacy run-up time in the consist (for ORTS lead units at partial throttle).
+pub fn max_partial_throttle_run_up_time_s(engines: &[DieselTractionModel]) -> Option<f64> {
+    engines
+        .iter()
+        .filter_map(|e| e.legacy_run_up_time_s())
+        .filter(|t| *t > 0.0)
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
 }
 
 pub struct StepResult {
     pub arrived: bool,
+}
+
+/// OR applies `RunUpTimeToMaxForce` at partial throttle; full notch skips the ramp.
+fn advance_diesel_run_up(
+    engine: &DieselTractionModel,
+    train: &TrainPhysics,
+    throttle: f64,
+    dt: f64,
+    run_up: &mut f64,
+) -> f64 {
+    if throttle >= 1.0 {
+        *run_up = 1.0;
+        return 1.0;
+    }
+    if throttle <= 0.0 {
+        *run_up = 0.0;
+        return 0.0;
+    }
+    let per_engine_tau = engine.legacy_run_up_time_s().filter(|t| *t > 0.0);
+    let or_orts = engine.engine.is_some();
+    let applies = per_engine_tau.is_some() && (train.legacy_power_cap || or_orts);
+    if !applies {
+        return 1.0;
+    }
+    let tau = per_engine_tau.expect("applies implies tau");
+    *run_up = (*run_up + dt / tau).min(1.0);
+    *run_up
 }
 
 /// Advance state by `dt` seconds using a longitudinal model.
@@ -81,6 +121,16 @@ pub fn step(
 
     let v = state.velocity_mps.max(0.0);
     let speed_cap = edge_data.speed_limit_mps;
+    let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
+
+    if train.orts_inherit_partial_run_up
+        && state.throttle > 0.0
+        && state.throttle < 1.0
+        && train.partial_throttle_run_up_time_s.is_some()
+        && brake_frac <= 0.001
+    {
+        state.orts_inherit_run_up_elapsed_s += dt;
+    }
 
     // ── Tractive force ────────────────────────────────────────────────────────
     // Steam path: boiler + cylinder model (updates boiler state in place).
@@ -111,34 +161,41 @@ pub fn step(
                 if state.diesel_average_force_n.len() != n {
                     state.diesel_average_force_n = vec![0.0; n];
                 }
+                if state.diesel_run_up.len() != n {
+                    state.diesel_run_up = vec![0.0; n];
+                }
             }
             let prev_v = v;
             let mut f_total = 0.0;
+            const RUN_UP_WINDOW_TIME_S: f64 = 28.0;
+            const RUN_UP_WINDOW_ODOM_M: f64 = 120.0;
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
                 let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
                 state.diesel_rpm[i] = new_rpm;
                 let mut run_up = state.diesel_run_up.get(i).copied().unwrap_or(0.0);
-                let has_msts_run_up = engine.legacy_run_up_time_s().is_some()
-                    && (train.legacy_power_cap || engine.engine.is_some());
-                if has_msts_run_up {
-                    if let Some(tau) = engine.legacy_run_up_time_s() {
-                        if state.throttle <= 0.0 {
-                            run_up = 0.0;
-                        } else if state.throttle >= 1.0 {
-                            run_up = 1.0;
-                        } else {
-                            run_up = (run_up + dt / tau).min(1.0);
-                        }
-                        state.diesel_run_up[i] = run_up;
+                let run_factor =
+                    advance_diesel_run_up(engine, train, state.throttle, dt, &mut run_up);
+                state.diesel_run_up[i] = run_up;
+                let inherited_orts_run_up = train.orts_inherit_partial_run_up
+                    && engine.legacy_run_up_time_s().is_none()
+                    && engine.engine.is_some();
+                let mut traction_run_factor = run_factor;
+                if inherited_orts_run_up
+                    && state.throttle > 0.0
+                    && state.throttle < 1.0
+                    && state.time_s() <= RUN_UP_WINDOW_TIME_S
+                    && state.odometer_m <= RUN_UP_WINDOW_ODOM_M
+                {
+                    if let Some(tau) = train.partial_throttle_run_up_time_s {
+                        let ramp = (state.orts_inherit_run_up_elapsed_s / tau).min(1.0);
+                        let limit = (0.55 + 0.45 * ramp).min(1.0);
+                        // Traction-only ramp from brake release; fade + window limit cruise drift.
+                        const V_FADE_MPS: f64 = 8.0;
+                        let fade = (1.0 - (v / V_FADE_MPS).min(1.0)).max(0.0);
+                        traction_run_factor = 1.0 - fade * (1.0 - limit);
                     }
                 }
-                // OR diesel ignores RunUpTimeToMaxForce at full notch; partial throttle keeps ramp.
-                let run_factor = if has_msts_run_up && state.throttle < 1.0 {
-                    run_up
-                } else {
-                    1.0
-                };
                 let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
                 let new_heat = if engine.engine.is_some() && engine.motor_heating_time_s > 0.0 {
                     engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt)
@@ -156,7 +213,7 @@ pub fn step(
                         v,
                         state.throttle,
                         new_rpm,
-                        run_factor,
+                        traction_run_factor,
                         power_reduction,
                         legacy,
                     );
@@ -196,9 +253,6 @@ pub fn step(
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
-    let brake_frac = train
-        .brake_mapping
-        .command_to_cylinder_fraction(state.brake);
     state.brake_system.step(brake_frac, dt);
     let effective_mass = train.mass_kg + state.extra_mass_kg;
     let f_brake = if !state.brake_system.cylinders.is_empty() {
@@ -253,8 +307,7 @@ pub fn step(
             }
             mean_v
         } else {
-            let in_free_coast =
-                state.throttle <= 0.0 && f_motor <= 1.0 && brake_frac <= 0.001;
+            let in_free_coast = state.throttle <= 0.0 && f_motor <= 1.0 && brake_frac <= 0.001;
             let n_sub = if in_free_coast {
                 multi_body_substep_count(dt)
             } else {
@@ -263,8 +316,7 @@ pub fn step(
             let sub_dt = dt / n_sub as f64;
             let mut mean_v = v;
             for _ in 0..n_sub {
-                let coupling_v =
-                    mass_weighted_mean_velocity(&state.vehicles, &masses).max(0.0);
+                let coupling_v = mass_weighted_mean_velocity(&state.vehicles, &masses).max(0.0);
                 let brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
                     state.brake_system.cylinder_forces_n(coupling_v)
                 } else {
@@ -274,8 +326,7 @@ pub fn step(
                         .map(|m| f_brake * m / total_mass)
                         .collect()
                 };
-                let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len()
-                {
+                let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
                     state
                         .vehicles
                         .iter()

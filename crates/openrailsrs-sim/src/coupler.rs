@@ -225,6 +225,7 @@ pub fn mass_weighted_mean_velocity(vehicles: &[VehicleState], masses: &[f64]) ->
 /// - `masses` — mass of each vehicle (kg).
 ///
 /// Returns the **mass-weighted mean velocity** (m/s) for `state.velocity_mps`.
+#[allow(clippy::too_many_arguments)]
 pub fn multi_body_step(
     vehicles: &mut [VehicleState],
     couplers: &mut [CouplerState],
@@ -374,7 +375,9 @@ mod tests {
             );
         }
         assert!(
-            vehicles.iter().all(|v| v.velocity_mps.is_finite() && v.velocity_mps < 35.0),
+            vehicles
+                .iter()
+                .all(|v| v.velocity_mps.is_finite() && v.velocity_mps < 35.0),
             "front={} rear={}",
             vehicles[0].velocity_mps,
             vehicles[1].velocity_mps

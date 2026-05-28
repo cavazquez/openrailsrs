@@ -190,7 +190,8 @@ fn chiltern_brake_coast_a1_script_passes() {
         run_from_scenario_file_with_driver(&scenario_path, &mut driver).expect("sim");
     }
 
-    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/analyze_brake_propagation.py");
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/analyze_brake_propagation.py");
     let output = std::process::Command::new("python3")
         .arg(&script)
         .arg(&run_csv)

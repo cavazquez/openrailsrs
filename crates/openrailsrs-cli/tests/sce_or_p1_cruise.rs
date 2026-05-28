@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_sim::{ScriptedDriver, run_scenario_headless_with_driver};
-use openrailsrs_validate::{OrColumnMap, parse_or_dump_csv, parse_openrailsrs_run_csv};
+use openrailsrs_validate::{OrColumnMap, parse_openrailsrs_run_csv, parse_or_dump_csv};
 
 #[test]
 fn sce_cruise_velocity_matches_or_within_half_mph() {

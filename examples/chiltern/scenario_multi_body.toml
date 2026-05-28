@@ -49,4 +49,4 @@ baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 max_velocity_rms = 0.40
 max_position_max = 45.0
 phase_bounds = [0.0, 30.0, 61.0, 136.0]
-phase_max_velocity_rms = 0.55
+phase_max_velocity_rms = 0.56

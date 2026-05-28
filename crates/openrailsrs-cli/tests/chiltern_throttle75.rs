@@ -61,8 +61,7 @@ fn chiltern_throttle75_validate_against_or_baseline() {
     assert!(
         report.pass,
         "Chiltern throttle-75 OR validation failed: vel_rms={:.3} max={:.3}",
-        report.velocity.rms_diff,
-        report.velocity.max_abs_diff
+        report.velocity.rms_diff, report.velocity.max_abs_diff
     );
 
     let bounds = validate

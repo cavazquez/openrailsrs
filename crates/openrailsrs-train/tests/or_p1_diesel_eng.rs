@@ -27,10 +27,7 @@ fn sce_class47_builds_reverse_throttle_tab() {
     assert!(e.apparent_throttle_fraction(325.0) < 0.05);
     assert!((e.apparent_throttle_fraction(750.0) - 1.0).abs() < 0.05);
     let mid = e.apparent_throttle_fraction(450.0);
-    assert!(
-        mid > 0.35 && mid < 0.45,
-        "450 RPM ≈ 40 % notch, got {mid}"
-    );
+    assert!(mid > 0.35 && mid < 0.45, "450 RPM ≈ 40 % notch, got {mid}");
 }
 
 #[test]
@@ -65,10 +62,7 @@ fn sce_class47_rail_power_cap_from_max_power() {
     let m = load_diesel(&p);
     assert!((m.max_rail_output_power_w - 1_924_651.0).abs() < 1.0);
     let p27 = m.traction_power_cap_w(750.0, 0.27, 14.0, false);
-    assert!(
-        (p27 - 1_924_651.0 * 0.27).abs() < 50_000.0,
-        "p27={p27}"
-    );
+    assert!((p27 - 1_924_651.0 * 0.27).abs() < 50_000.0, "p27={p27}");
 }
 
 #[test]

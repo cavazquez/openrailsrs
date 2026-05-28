@@ -14,7 +14,7 @@ use crate::coupler::CouplerKind;
 use crate::csv_out::RunCsvWriter;
 use crate::path::edge_path;
 use crate::path_data::PathData;
-use crate::physics::{TrainPhysics, step};
+use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::state::TrainSimState;
 
 /// Average mass per passenger including luggage (kg).
@@ -195,15 +195,11 @@ pub fn run_scenario_headless_with_driver(
     let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
-    let davis_override = scenario
-        .train
-        .davis
-        .as_ref()
-        .map(|d| DavisCoefficients {
-            a_n: d.a_n,
-            b_n_per_mps: d.b_n_per_mps,
-            c_n_per_mps2: d.c_n_per_mps2,
-        });
+    let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
+        a_n: d.a_n,
+        b_n_per_mps: d.b_n_per_mps,
+        c_n_per_mps2: d.c_n_per_mps2,
+    });
     let davis = davis_override
         .clone()
         .unwrap_or_else(|| consist.davis.clone());
@@ -223,6 +219,7 @@ pub fn run_scenario_headless_with_driver(
         raw_curve
     };
     let steam_params = consist.aggregate_steam_params();
+    let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
@@ -238,7 +235,11 @@ pub fn run_scenario_headless_with_driver(
         brake_mapping: scenario.brake_mapping(),
         legacy_power_cap: scenario.simulation.legacy_power_cap,
         brake_skid_limit: scenario.simulation.brake_skid_limit,
-        multi_body_scalar_coast_below_v_mps: scenario.simulation.multi_body_scalar_coast_below_v_mps,
+        multi_body_scalar_coast_below_v_mps: scenario
+            .simulation
+            .multi_body_scalar_coast_below_v_mps,
+        partial_throttle_run_up_time_s,
+        orts_inherit_partial_run_up: scenario.simulation.orts_inherit_partial_run_up,
     };
 
     let stop_nodes: HashSet<&str> = scenario
@@ -282,7 +283,7 @@ pub fn run_scenario_headless_with_driver(
     let init = driver.initial_inputs();
     let brake_frac = train_physics
         .brake_mapping
-        .command_to_cylinder_fraction(init.brake);
+        .command_to_sim_fraction(init.brake);
     state.brake_system.precharge(brake_frac);
     state.throttle = init.throttle.clamp(0.0, 1.0);
     state.brake = init.brake.clamp(0.0, 1.0);
@@ -318,8 +319,7 @@ pub fn run_scenario_headless_with_driver(
     let csv_file = File::create(&csv_path)?;
     let has_steam = train_physics.steam_params.is_some();
     let brake_telemetry = !state.brake_system.cylinders.is_empty();
-    let mut csv_writer =
-        RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?;
+    let mut csv_writer = RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?;
     let mut events = Vec::new();
 
     // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.

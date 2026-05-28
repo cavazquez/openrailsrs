@@ -54,6 +54,21 @@ impl BrakeCommandMapping {
         }
         (cmd * self.driver_full_scale_psi / self.cylinder_full_scale_psi).min(1.0)
     }
+
+    /// Like [`command_to_cylinder_fraction`] but caps light residual commands (OR-P6).
+    ///
+    /// Chiltern maps 9 PSI service to 35 PSI cylinders; at activity start OR only bleeds
+    /// ~9 PSI pipe pressure and wagon BC stay near driver fraction, not the boosted ratio.
+    pub fn command_to_sim_fraction(&self, command: f64) -> f64 {
+        let cmd = command.clamp(0.0, 1.0);
+        let scaled = self.command_to_cylinder_fraction(cmd);
+        const LIGHT_RESIDUAL_MAX: f64 = 15.0 / OR_DEFAULT_BRAKE_FULL_SCALE_PSI;
+        if cmd <= LIGHT_RESIDUAL_MAX {
+            scaled.min(cmd)
+        } else {
+            scaled
+        }
+    }
 }
 
 #[cfg(test)]
@@ -64,6 +79,15 @@ mod tests {
     fn identity_mapping_is_one_to_one() {
         let m = BrakeCommandMapping::identity();
         assert!((m.command_to_cylinder_fraction(0.5) - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn chiltern_nine_psi_residual_not_cylinder_boosted() {
+        let m = BrakeCommandMapping::from_scenario_fields(None, Some(35.0));
+        let cmd = 9.0 / OR_DEFAULT_BRAKE_FULL_SCALE_PSI;
+        let frac = m.command_to_sim_fraction(cmd);
+        assert!((frac - cmd).abs() < 1e-6);
+        assert!(frac < m.command_to_cylinder_fraction(cmd));
     }
 
     #[test]

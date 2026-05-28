@@ -23,11 +23,8 @@ const BASE_HEADERS: &[&str] = &[
 const STEAM_HEADERS: &[&str] = &["boiler_pressure_bar", "water_kg", "coal_kg"];
 
 /// Per-vehicle brake telemetry (head, first train-air wagon, tail).
-const BRAKE_CYLINDER_HEADERS: &[&str] = &[
-    "brake_f_head_n",
-    "brake_f_train_air_n",
-    "brake_f_tail_n",
-];
+const BRAKE_CYLINDER_HEADERS: &[&str] =
+    &["brake_f_head_n", "brake_f_train_air_n", "brake_f_tail_n"];
 
 pub struct RunCsvWriter<W: Write> {
     inner: Writer<W>,

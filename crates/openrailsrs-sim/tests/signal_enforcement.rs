@@ -61,6 +61,8 @@ fn default_physics() -> TrainPhysics {
         legacy_power_cap: true,
         brake_skid_limit: false,
         multi_body_scalar_coast_below_v_mps: None,
+        partial_throttle_run_up_time_s: None,
+        orts_inherit_partial_run_up: false,
     }
 }
 

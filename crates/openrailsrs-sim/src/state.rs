@@ -46,6 +46,8 @@ pub struct TrainSimState {
     pub diesel_traction_force_n: Vec<f64>,
     /// Moving-average tractive load per diesel engine (OR `AverageForceN`).
     pub diesel_average_force_n: Vec<f64>,
+    /// Elapsed time (s) for ORTS lead partial-throttle run-up after brakes release (OR-P6).
+    pub orts_inherit_run_up_elapsed_s: f64,
 }
 
 impl TrainSimState {
@@ -74,6 +76,7 @@ impl TrainSimState {
             diesel_motor_heat: Vec::new(),
             diesel_traction_force_n: Vec::new(),
             diesel_average_force_n: Vec::new(),
+            orts_inherit_run_up_elapsed_s: 0.0,
         }
     }
 
