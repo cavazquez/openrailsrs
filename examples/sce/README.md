@@ -13,6 +13,18 @@ Escenario importado desde la actividad MSTS **0930 Edinburgh-Glasgow Queen Stree
 | Duración sim | 100 s (ventana evaluación) |
 | Física sim (default) | **Masa puntual** (Class 47 + 6 MK2 en `.con`; OR usa multi-cuerpo) |
 
+Multi-cuerpo (`multi_body = true`, sub-pasos acoplador ≤0.05 s):
+
+```bash
+openrailsrs sim scenario_multi_body.toml --driver driver_or.csv
+cargo test -p openrailsrs-cli --test sce_multi_body
+```
+
+| Modo | RMS velocidad 100 s vs OR |
+|------|---------------------------|
+| Masa puntual | ~0.30 m/s |
+| Multi-cuerpo | ~**0.29** m/s (arranque 30–60 s ~0.44 m/s) |
+
 Ver [`docs/OR_PARITY_ROADMAP.md`](../../docs/OR_PARITY_ROADMAP.md#modelo-físico-or-vs-openrailsrs-importante-para-baselines).
 
 ## Importar de nuevo

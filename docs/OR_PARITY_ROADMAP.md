@@ -431,11 +431,11 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 | ID | Propósito | Consist | Sim openrailsrs | ¿Revisar con `multi_body`? | Prioridad |
 |----|-----------|---------|-----------------|----------------------------|-----------|
 | — | Chiltern eval 136 s | Pullman ×8 | Masa puntual | **Sí** — en curso (`scenario_multi_body.toml`) | Alta |
-| A (freno+costa) | Pullman ×8 | Masa puntual | **Sí** — `scenario_brake_coast_multi_body.toml` (~0.16 m/s costa) | Alta ✅ |
+| A (freno+costa) | Pullman ×8 | Masa puntual | **Sí** — `scenario_brake_coast_multi_body.toml` (~0.13 m/s costa) | Alta ✅ |
 | B | Aceleración 100 % | Pullman ×8 | Masa puntual | **Sí** — `scenario_throttle100_multi_body.toml` (~0.47 m/s arranque) | Media ✅ |
 | C | Crucero 75 % notch | Pullman ×8 | Masa puntual | Opcional — régimen casi uniforme | Baja |
 | E | Throttle 50 % (30 s) | Pullman ×8 | Masa puntual | Opcional — mismo motivo | Baja |
-| — | SCE eval 100 s | 47 + MK2 ×6 | Masa puntual | **Sí** — tras estabilizar acopladores Chiltern | Media |
+| — | SCE eval 100 s | 47 + MK2 ×6 | Masa puntual | **Sí** — `scenario_multi_body.toml` (~0.29 m/s global) | Media ✅ |
 | CALIBRATION A | Coast-down Davis puro | — | — | No aplica (sin baseline OR multi vs single) | — |
 
 **Criterio de revisión:** no invalidar baselines OR (siguen siendo verdad OR). Re-ejecutar openrailsrs con `multi_body = true` + `time_step ≤ 0.05`, comparar RMS y decidir si el umbral del test sube temporalmente o si se afina acoplador antes. **No hace falta recapturar Wine** salvo que cambiemos el driver o la ventana temporal.
@@ -501,8 +501,8 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 
 ## Próximo paso recomendado
 
-1. **OR-P4:** calibrar acopladores → Chiltern multi-cuerpo RMS ≤ **0.40 m/s** vs OR.
-2. **Revisión experimentos (tabla arriba):** Exp **A** (freno+costa) y **B** (100 %) con `multi_body`.
-3. **OR-P1 cierre:** auditorías SCE/Chiltern sin overrides de potencia (en paralelo, no bloqueado por multi).
+1. **OR-P4:** Chiltern multi-cuerpo RMS ~**0.39 m/s** ✅; SCE multi ~**0.29 m/s** ✅.
+2. **OR-P1 cierre:** auditorías SCE/Chiltern sin overrides de potencia (en paralelo).
+3. **A2+ opcional:** costa Chiltern multi ≤0.10 m/s sin depender solo del modo escalar.
 
 Cuando una fase esté en progreso, actualizar el estado en este archivo y enlazar el PR en la tabla de la fase correspondiente.

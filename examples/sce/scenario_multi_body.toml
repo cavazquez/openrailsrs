@@ -1,0 +1,40 @@
+extra_trains = []
+
+[scenario]
+name = "SCE Edinburgh-Glasgow (multi-body, 100 s)"
+description = "100 s OR driver; multi_body = true — Class 47 + 6 Mk2 acoplados."
+
+[route]
+path = "."
+start = "n474"
+destination = "n1"
+start_offset_m = 0.0
+stops = []
+
+[train]
+consist = "consists/mt_mt_class_47___6_mk2_pp.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 100.0
+time_step = 1.0
+seed = 42
+multi_body = true
+legacy_power_cap = false
+
+[output]
+csv = "run_multi_body.csv"
+metadata = "run_multi_body.json"
+
+[validate]
+baseline_or = "../baselines/sce_glasgow/or_evaluation_speed.csv"
+max_velocity_rms = 1.0
+max_position_max = 100.0
+max_throttle_rms = 0.30
+max_brake_rms = 0.50
+phase_bounds = [0.0, 30.0, 60.0, 100.0]
+phase_max_velocity_rms = 1.0
