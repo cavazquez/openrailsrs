@@ -11,6 +11,7 @@ pub mod camera;
 pub mod dyntrack;
 pub mod forest;
 pub mod hud;
+pub mod live;
 pub mod precipitation;
 pub mod rolling_stock;
 pub mod scene;
@@ -36,6 +37,7 @@ pub use rolling_stock::TrainConsistScene;
 pub use shapes::RouteAssets;
 pub use terrain::{TerrainElevation, TerrainScene};
 pub use track::{TrackRenderMode, TrackScene};
+pub use live::LiveDrive;
 pub use train::ReplayState;
 pub use world::WorldScene;
 
@@ -73,7 +75,8 @@ impl Plugin for ViewerPlugin {
                     hud::spawn_hud,
                     teleport::spawn_teleport_ui,
                     track::frame_orbit_camera_on_track,
-                    train::spawn_train_markers,
+                    train::spawn_train_markers.run_if(live::live_mode_inactive),
+                    live::spawn_live_train.run_if(live::live_mode_active),
                 )
                     .chain(),
             )
@@ -88,17 +91,30 @@ impl Plugin for ViewerPlugin {
                     camera::toggle_mode_system.run_if(teleport::teleport_closed),
                     camera::cycle_follow_mode.run_if(teleport::teleport_closed),
                     camera::update_primary_window_cursor,
-                    train::replay_controls.run_if(teleport::teleport_closed),
-                    train::advance_replay_time,
-                    train::update_train_markers,
+                    train::replay_controls
+                        .run_if(teleport::teleport_closed)
+                        .run_if(live::live_mode_inactive),
+                    live::live_driver_input
+                        .run_if(teleport::teleport_closed)
+                        .run_if(live::live_mode_active),
+                    train::advance_replay_time.run_if(live::live_mode_inactive),
+                    live::advance_live_sim.run_if(live::live_mode_active),
+                    train::update_train_markers.run_if(live::live_mode_inactive),
+                    live::update_live_train_marker.run_if(live::live_mode_active),
                     precipitation::update_precipitation,
                     water::update_water_patches,
                     hud::update_hud,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
                     (camera::follow_train_camera, camera::orbit_camera_system)
                         .chain()
                         .run_if(camera::in_orbit_mode)
                         .run_if(teleport::teleport_closed)
-                        .after(train::update_train_markers),
+                        .after(train::update_train_markers)
+                        .after(live::update_live_train_marker),
                     camera::fly_camera_system
                         .run_if(camera::in_fly_mode)
                         .run_if(teleport::teleport_closed),

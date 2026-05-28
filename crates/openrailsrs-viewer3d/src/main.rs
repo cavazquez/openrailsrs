@@ -2,19 +2,22 @@
 //!
 //! Usage:
 //!   openrailsrs-viewer3d [route_dir | scenario.toml]
+//!   openrailsrs-viewer3d --live scenario.toml
 //!
 //! - `route_dir` — static graph only (default: `examples/smoke/routes/test`).
 //! - `scenario.toml` — graph + animated train marker(s) from simulation CSV.
+//! - `--live scenario.toml` — run physics in real time (no CSV); drive with W/S in orbit mode.
 //!
-//! Generate CSV first, e.g.:
+//! Generate CSV for replay mode, e.g.:
 //!   cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
 //!
 //! Controls:
 //!
 //! - `F1` / `F2`   — orbit / fly camera.
 //! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
-//! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless replay is loaded).
+//! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless live/replay loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
+//! - Live: `W`/`S` throttle/brake (orbit cam), `Space` emergency, `+`/`-` sim speed, `T` follow.
 //! - Multi-train replay: `[` / `]` (or Shift+T) cycle which train the follow camera tracks.
 //! - `G`           — teleport dialog (type x,y,z).
 //! - `P`           — toggle rain streaks.
@@ -27,6 +30,7 @@ use bevy::prelude::*;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
+use openrailsrs_viewer3d::LiveDrive;
 use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainElevation;
 use openrailsrs_viewer3d::TerrainScene;
@@ -49,19 +53,38 @@ struct LaunchConfig {
     elevation: TerrainElevation,
     replay: ReplayState,
     consist: TrainConsistScene,
+    live: Option<LiveDrive>,
+}
+
+struct CliArgs {
+    live: bool,
+    path: PathBuf,
+}
+
+fn parse_cli() -> CliArgs {
+    let mut live = false;
+    let mut path = None;
+    for arg in std::env::args().skip(1) {
+        if arg == "--live" {
+            live = true;
+        } else if !arg.starts_with('-') {
+            path = Some(PathBuf::from(arg));
+        }
+    }
+    CliArgs {
+        live,
+        path: path.unwrap_or_else(|| PathBuf::from("examples/smoke/routes/test")),
+    }
 }
 
 fn main() {
-    let arg = std::env::args()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("examples/smoke/routes/test"));
+    let cli = parse_cli();
 
-    let config = match build_launch_config(&arg) {
+    let config = match build_launch_config(&cli.path, cli.live) {
         Ok(c) => c,
         Err(err) => {
             eprintln!("error: {err}");
-            eprintln!("usage: openrailsrs-viewer3d [route_dir | scenario.toml]");
+            eprintln!("usage: openrailsrs-viewer3d [--live] [route_dir | scenario.toml]");
             std::process::exit(1);
         }
     };
@@ -69,7 +92,7 @@ fn main() {
     let node_count = config.scene.graph.nodes_iter().count();
     let edge_count = config.scene.edge_count;
     eprintln!(
-        "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{}{}{})",
+        "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{}{}{}{})",
         config.title,
         node_count,
         edge_count,
@@ -88,49 +111,63 @@ fn main() {
         } else {
             format!(", {} terrain tile(s)", config.terrain.tiles_loaded)
         },
-        if config.replay.is_active() {
+        if config.live.is_some() {
+            ", live sim".to_string()
+        } else if config.replay.is_active() {
             format!(", {} train(s) replay", config.replay.tracks.len())
         } else {
             String::new()
-        }
+        },
+        if config.live.is_none()
+            && !config.replay.is_active()
+            && cli.path.extension().and_then(|e| e.to_str()) == Some("toml")
+        {
+            "\n  hint: add --live or run: cargo run -p openrailsrs-cli -- sim <scenario.toml>"
+                .to_string()
+        } else {
+            String::new()
+        },
     );
-    if !config.replay.is_active() && arg.extension().and_then(|e| e.to_str()) == Some("toml") {
-        eprintln!("hint: run simulation first to create the CSV, e.g.:");
-        eprintln!("  cargo run -p openrailsrs-cli -- sim {}", arg.display());
-    }
 
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(AssetPlugin {
-                    file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
-                    ..default()
-                })
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: config.title.clone(),
-                        resolution: (1280u32, 720u32).into(),
-                        ..default()
-                    }),
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(AssetPlugin {
+                file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
+                ..default()
+            })
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: config.title.clone(),
+                    resolution: (1280u32, 720u32).into(),
                     ..default()
                 }),
-        )
-        .insert_resource(config.scene)
-        .insert_resource(RouteAssets::new(config.route_dir))
-        .insert_resource(config.world)
-        .insert_resource(config.terrain)
-        .insert_resource(config.elevation)
-        .insert_resource(config.replay)
-        .insert_resource(config.consist)
-        .insert_resource(HudTitle(config.title))
-        .add_plugins(ViewerPlugin)
-        .add_systems(Update, exit_on_esc)
-        .run();
+                ..default()
+            }),
+    )
+    .insert_resource(config.scene)
+    .insert_resource(RouteAssets::new(config.route_dir))
+    .insert_resource(config.world)
+    .insert_resource(config.terrain)
+    .insert_resource(config.elevation)
+    .insert_resource(config.replay)
+    .insert_resource(config.consist)
+    .insert_resource(HudTitle(config.title))
+    .add_plugins(ViewerPlugin)
+    .add_systems(Update, exit_on_esc);
+
+    if let Some(live) = config.live {
+        app.insert_resource(live);
+    }
+
+    app.run();
 }
 
-fn build_launch_config(arg: &Path) -> Result<LaunchConfig, String> {
+fn build_launch_config(arg: &Path, live: bool) -> Result<LaunchConfig, String> {
     if arg.extension().and_then(|e| e.to_str()) == Some("toml") {
-        load_from_scenario(arg)
+        load_from_scenario(arg, live)
+    } else if live {
+        Err("--live requires a scenario.toml path".into())
     } else {
         load_from_route_dir(arg)
     }
@@ -150,10 +187,11 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
         elevation,
         replay: ReplayState::default(),
         consist: TrainConsistScene::default(),
+        live: None,
     })
 }
 
-fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
+fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
     let scenario_dir = path
         .parent()
         .ok_or("scenario path has no parent directory")?;
@@ -164,32 +202,53 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
     let terrain = load_terrain_from_route_dir(&route_dir);
     let elevation = TerrainElevation::load_from_route_dir(&route_dir);
 
-    let mut tracks = Vec::new();
-    let primary_csv = scenario_dir.join(&scenario.output.csv);
-    let rows = load_csv(&primary_csv);
-    if !rows.is_empty() {
-        tracks.push(TrainTrack {
-            label: "primary".into(),
-            color: TRAIN_COLORS[0],
-            rows,
-        });
-    }
-    for (i, extra) in scenario.extra_trains.iter().enumerate() {
-        let csv_path = scenario_dir.join(&extra.output_csv);
-        let rows = load_csv(&csv_path);
+    let consist = load_train_consists(scenario_dir, &scenario);
+
+    let (replay, live_drive) = if live {
+        let drive = LiveDrive::from_scenario_path(path)?;
+        eprintln!(
+            "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, W/S throttle/brake in orbit cam)",
+            drive.session.scenario_name,
+            drive.session.dt,
+        );
+        (ReplayState::default(), Some(drive))
+    } else {
+        let mut tracks = Vec::new();
+        let primary_csv = scenario_dir.join(&scenario.output.csv);
+        let rows = load_csv(&primary_csv);
         if !rows.is_empty() {
             tracks.push(TrainTrack {
-                label: extra.id.clone(),
-                color: TRAIN_COLORS[(i + 1) % TRAIN_COLORS.len()],
+                label: "primary".into(),
+                color: TRAIN_COLORS[0],
                 rows,
             });
         }
-    }
+        for (i, extra) in scenario.extra_trains.iter().enumerate() {
+            let csv_path = scenario_dir.join(&extra.output_csv);
+            let rows = load_csv(&csv_path);
+            if !rows.is_empty() {
+                tracks.push(TrainTrack {
+                    label: extra.id.clone(),
+                    color: TRAIN_COLORS[(i + 1) % TRAIN_COLORS.len()],
+                    rows,
+                });
+            }
+        }
+        (
+            ReplayState::new(scenario.scenario.name.clone(), tracks),
+            None,
+        )
+    };
 
-    let replay = ReplayState::new(scenario.scenario.name.clone(), tracks);
-    let consist = load_train_consists(scenario_dir, &scenario);
     Ok(LaunchConfig {
-        title: format!("openrailsrs-viewer3d — {}", scenario.scenario.name),
+        title: if live {
+            format!(
+                "openrailsrs-viewer3d LIVE — {}",
+                scenario.scenario.name
+            )
+        } else {
+            format!("openrailsrs-viewer3d — {}", scenario.scenario.name)
+        },
         route_dir,
         scene: TrackScene::from_graph(graph),
         world,
@@ -197,6 +256,7 @@ fn load_from_scenario(path: &Path) -> Result<LaunchConfig, String> {
         elevation,
         replay,
         consist,
+        live: live_drive,
     })
 }
 

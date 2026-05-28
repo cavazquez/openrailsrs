@@ -386,14 +386,28 @@ pub fn toggle_mode_system(
 pub fn cycle_follow_mode(
     keys: Res<ButtonInput<KeyCode>>,
     replay: Option<Res<crate::train::ReplayState>>,
+    live: Option<Res<crate::live::LiveDrive>>,
     mut follow: ResMut<CameraFollowMode>,
     mut target: ResMut<CameraFollowTarget>,
 ) {
-    let Some(replay) = replay.as_ref().filter(|r| r.is_active()) else {
+    let replay_active = replay.as_ref().is_some_and(|r| r.is_active());
+    let live_active = live.is_some();
+    if !replay_active && !live_active {
         return;
+    }
+    let count = if live_active {
+        1
+    } else {
+        replay.as_ref().map(|r| r.tracks.len()).unwrap_or(0)
     };
-    let count = replay.tracks.len();
     target.clamp_to(count);
+
+    if live_active {
+        if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
+            *follow = follow.cycle();
+        }
+        return;
+    }
 
     if keys.just_pressed(KeyCode::BracketLeft)
         || (keys.just_pressed(KeyCode::KeyT) && shift_held(&keys))
@@ -410,14 +424,19 @@ pub fn cycle_follow_mode(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn follow_train_camera(
     time: Res<Time>,
     mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
     target: Res<CameraFollowTarget>,
     replay: Option<Res<crate::train::ReplayState>>,
-    train_query: Query<(&Transform, &crate::train::TrainMarker), Without<OrbitState>>,
+    live: Option<Res<crate::live::LiveDrive>>,
+    train_query: Query<
+        (&Transform, Option<&crate::train::TrainMarker>),
+        (Without<OrbitState>, Without<crate::live::LiveTrainMarker>),
+    >,
+    live_train: Query<&Transform, (With<crate::live::LiveTrainMarker>, Without<OrbitState>)>,
     mut orbit_query: Query<
         (&mut Transform, &mut OrbitState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
@@ -426,15 +445,21 @@ pub fn follow_train_camera(
     if *mode != CameraMode::Orbit || *follow == CameraFollowMode::Off {
         return;
     }
-    if !replay.as_ref().is_some_and(|r| r.is_active()) {
+    let replay_active = replay.as_ref().is_some_and(|r| r.is_active());
+    let live_active = live.is_some();
+    if !replay_active && !live_active {
         return;
     }
 
-    let Some(train_tf) = train_query
-        .iter()
-        .find(|(_, marker)| marker.track_index == target.track_index)
-        .map(|(tf, _)| tf)
-    else {
+    let train_tf = if live_active {
+        live_train.iter().next()
+    } else {
+        train_query
+            .iter()
+            .find(|(_, marker)| marker.is_some_and(|m| m.track_index == target.track_index))
+            .map(|(tf, _)| tf)
+    };
+    let Some(train_tf) = train_tf else {
         return;
     };
 

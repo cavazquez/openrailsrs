@@ -253,6 +253,8 @@ cargo run -p openrailsrs-viewer3d -- examples/smoke/routes/test
 # Grafo + tren animado desde CSV de simulación
 cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml   # genera run.csv
 cargo run -p openrailsrs-viewer3d -- examples/smoke/scenario.toml
+# Sim en vivo (sin CSV): misma física que `openrailsrs cab`
+cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
 ```
 
 Muestra el **grafo lógico** de la ruta en 3D:

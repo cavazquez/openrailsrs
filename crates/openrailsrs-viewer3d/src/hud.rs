@@ -6,6 +6,7 @@ use crate::camera::{CameraFollowMode, CameraFollowTarget, CameraMode};
 use crate::precipitation::PrecipitationState;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
+use crate::live::LiveDrive;
 use crate::train::{ReplayState, pose_at_time};
 
 /// Window / route title shown in the HUD (set from `main` at launch).
@@ -124,6 +125,34 @@ pub fn build_hud_content(
             show_row2: true,
         };
     }
+
+    build_hud_replay(
+        title,
+        replay,
+        scene,
+        camera_mode,
+        follow,
+        follow_target,
+        rain_label,
+        coords,
+        controls,
+        terrain,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_hud_replay(
+    title: &str,
+    replay: &ReplayState,
+    scene: &TrackScene,
+    camera_mode: CameraMode,
+    follow: CameraFollowMode,
+    follow_target: &CameraFollowTarget,
+    rain_label: &str,
+    coords: String,
+    controls: String,
+    terrain: Option<&TerrainElevation>,
+) -> HudContent {
 
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
     let follow_label = follow_display_label(follow, follow_target, replay);
@@ -287,9 +316,59 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
 }
 
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
+pub fn build_hud_content_live(
+    title: &str,
+    live: &LiveDrive,
+    camera_mode: CameraMode,
+    follow: CameraFollowMode,
+    precipitation: &PrecipitationState,
+    camera_pos: Vec3,
+    orbit_focus: Option<Vec3>,
+) -> HudContent {
+    let coords = format_coords_line(camera_pos, orbit_focus);
+    let rain_label = precipitation.hud_label();
+    let status = if live.session.arrived {
+        "ARRIVED"
+    } else {
+        "LIVE"
+    };
+    let follow_label = if follow == CameraFollowMode::Off {
+        "off".to_string()
+    } else {
+        format!("{}→live", follow.hud_label())
+    };
+    let vel_kmh = live.session.velocity_mps() * 3.6;
+    let limit_kmh = live.session.speed_limit_mps() * 3.6;
+    let controls =
+        "W/S:throttle/brake  Space:emergency  +/-:sim spd  T:follow  P:rain  G:goto  F2:fly  Esc:quit"
+            .to_string();
+    HudContent {
+        row1: format!(
+            "{title}    {status}    cam:{}  follow:{follow_label}  rain:{rain_label}",
+            camera_mode_label(camera_mode)
+        ),
+        row2: format!(
+            "{coords}    t={:.1}s  {:.0} km/h  lim {:.0} km/h  thr={:.0}%  br={:.0}%  sim={:.1}x",
+            live.session.time_s(),
+            vel_kmh,
+            limit_kmh,
+            live.session.driver_throttle * 100.0,
+            live.session.driver_brake * 100.0,
+            live.session.speed_mul,
+        ),
+        progress: 0.0,
+        trains: format!("live {:.0} km/h", vel_kmh),
+        controls,
+        status_is_paused: live.session.arrived,
+        show_row2: true,
+    }
+}
+
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn update_hud(
     title: Res<HudTitle>,
     replay: Res<ReplayState>,
+    live: Option<Res<LiveDrive>>,
     scene: Res<TrackScene>,
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
@@ -333,19 +412,31 @@ pub(crate) fn update_hud(
         None
     };
 
-    let content = build_hud_content(
-        &title.0,
-        &replay,
-        &scene,
-        *camera_mode,
-        *follow,
-        &follow_target,
-        &precipitation,
-        terrain.as_deref(),
-        camera_pos,
-        orbit_focus,
-    );
-    let active = replay.is_active();
+    let content = if let Some(live) = live.as_deref() {
+        build_hud_content_live(
+            &title.0,
+            live,
+            *camera_mode,
+            *follow,
+            &precipitation,
+            camera_pos,
+            orbit_focus,
+        )
+    } else {
+        build_hud_content(
+            &title.0,
+            &replay,
+            &scene,
+            *camera_mode,
+            *follow,
+            &follow_target,
+            &precipitation,
+            terrain.as_deref(),
+            camera_pos,
+            orbit_focus,
+        )
+    };
+    let active = replay.is_active() || live.is_some();
 
     for (mut vis, mut text, mut node, row1, row2, bar, trains, controls, fill) in &mut hud {
         if row1.is_some() {

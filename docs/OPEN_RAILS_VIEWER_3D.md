@@ -251,7 +251,7 @@ Mejoras acotadas ya implementadas en `openrailsrs-viewer3d`:
 | Open Rails | openrailsrs (dirección) |
 |------------|-------------------------|
 | `Orts.Simulation` | `openrailsrs-sim` (autoritativo) |
-| `PrepareFrame` + snapshot | canal / component Bevy que recibe **estado mínimo** (trenes, tiempo) |
+| `PrepareFrame` + snapshot | canal / component Bevy que recibe **estado mínimo** (trenes, tiempo) — **✅ Fase A** (`--live`, `LiveDriveSession` + `LiveTrainMarker`) |
 | `SharedShape` + VB | **Asset pipeline**: mesh Bevy desde `ShapeFile` / glTF intermedio |
 | `TerrainPrimitive` | mesh de terreno desde elevación + mismo layout 17×17 / índices |
 | `RenderFrame` ordenado | `Transparent3d` / `Opaque3d` + materiales Bevy |

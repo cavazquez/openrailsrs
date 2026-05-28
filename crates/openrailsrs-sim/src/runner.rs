@@ -156,7 +156,7 @@ pub struct SimRunResult {
 /// The consist file itself lives inside a `consists/` (or similar) directory.  
 /// Paths stored in the `.con` file (e.g. `consists/foo.eng`) are relative to
 /// the *parent* of that directory, not to the `.con` file itself.
-fn consist_root(consist_path: &Path) -> &Path {
+pub(crate) fn consist_root(consist_path: &Path) -> &Path {
     consist_path
         .parent() // …/consists
         .and_then(|p| p.parent()) // parent of consists/ == route root

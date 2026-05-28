@@ -221,6 +221,13 @@ Hallazgos (nominal 50/10): RPM y apparent coherentes con OR (p. ej. t=7 → rpm�
 - **Creep con freno:** OR revoluciona con freno sin tracción; sim cortaba tracción solo con `throttle=0`. Fix: `BRAKE_TRACTION_CUTOFF` — RPM/apparent siguen con notch del driver, **F=0** si `brake>0` (v=0 en t=5).
 - **Trail DMBSH:** el `.eng` es stub MSTS P/v, pero la evaluación OR encaja con **OR-P13** (heredar ORTS del lead), no con P/v legacy a notch completo (doble ~170 kN → overspeed; solo lead → ~5 m/s de déficit a t=40). Sin tocar `ChangeUpRPMpS` (50/10 del content).
 
+**Modo live 3D** (Fase A — sim en ventana, sin CSV):
+
+```bash
+cargo run -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+# Orbit (F1): W/S throttle/freno, Space emergencia, T follow, +/- velocidad sim
+```
+
 **Barrido local** de `ChangeUpRPMpS` × `RateOfChangeUpRPMpSS` (solo diagnóstico; no commitear resultados):
 
 ```bash

@@ -306,7 +306,7 @@ pub fn spawn_train_markers(
     }
 }
 
-fn vehicle_local_transform(scene: &TrackScene, offset_m: f32, length_m: f32) -> Transform {
+pub(crate) fn vehicle_local_transform(scene: &TrackScene, offset_m: f32, length_m: f32) -> Transform {
     let edge = scene.bounds.edge_radius().max(2.0);
     Transform {
         translation: Vec3::new(offset_m, 0.0, 0.0),
