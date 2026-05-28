@@ -672,16 +672,15 @@ Ordenadas de **menor a mayor dificultad** para facilitar la priorización.
 
 ---
 
-### Fase 23 — Viewer 3D con Bevy `🔲`
+### Fase 23 — Viewer 3D con Bevy `🔶`
 
 **Dificultad:** ⭐⭐⭐⭐ Alta (3-4 meses)
 
-- Integrar [Bevy](https://bevyengine.org/) como renderer desacoplado del sim headless.
-- El sim sigue corriendo en `openrailsrs-sim` (sin cambios); Bevy lo llama como sistema ECS cada frame.
-- Cargar `track.toml` → generar splines 3D de vía con peralte y gradiente.
-- Material rodante 3D desde modelos GLTF/OBJ; cámara libre y seguimiento de tren.
-- HUD Bevy con velocímetro, barra de freno, mapa mini.
-- Primer paso hacia compatibilidad con contenido MSTS (texturas, modelos).
+**Hecho (viewer + mundo MSTS):** crate `openrailsrs-viewer3d` — terreno, `.w`, shapes `.s`, `.ace`, rolling stock, replay CSV, cámara follow. Ver [`docs/OPEN_RAILS_VIEWER_3D.md`](docs/OPEN_RAILS_VIEWER_3D.md).
+
+**Hecho (jugable Fase A):** `--live scenario.toml` — sim en tiempo real en la ventana 3D (`LiveDriveSession`).
+
+**Pendiente (roadmap jugable):** audio en viewer, cabina, shapes binarios, vía con peralte, modo juego completo. **Documento maestro:** [`docs/SIMULACION_3D_ROADMAP.md`](docs/SIMULACION_3D_ROADMAP.md) (fases A–G, fuentes de imágenes y sonidos).
 
 ---
 

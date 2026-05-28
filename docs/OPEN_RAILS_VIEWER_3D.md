@@ -2,6 +2,8 @@
 
 Este documento resume el **flujo real del código** del simulador [Open Rails](https://github.com/openrails/openrails), analizado a partir de un clon shallow en `/tmp/openrails` (rama `master` al momento del estudio). Sirve de referencia para [issue #8](https://github.com/cavazquez/openrailsrs/issues/8) (viewer 3D con Bevy en openrailsrs): **no hay que portar MonoGame**, pero sí entender **qué datos produce cada subsistema** y **cómo llegan a la GPU**.
 
+**Roadmap jugable (fases A–G, imágenes, sonidos, cabina):** [`SIMULACION_3D_ROADMAP.md`](SIMULACION_3D_ROADMAP.md).
+
 ---
 
 ## 1. Arquitectura general (dónde vive el “3D”)
