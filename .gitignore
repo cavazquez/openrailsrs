@@ -56,6 +56,9 @@ examples/chiltern/run_multi_body.*
 examples/chiltern/run_single_dt005.*
 examples/chiltern/run_throttle100_multi_body.*
 examples/chiltern/run_startup_diesel_audit.*
+examples/chiltern/run_head.csv
+examples/chiltern/run_wip.csv
+examples/chiltern/rpm_sweep_results.csv
 examples/chiltern/driver_brake_coast_or_aligned.csv
 
 # Debug / temp

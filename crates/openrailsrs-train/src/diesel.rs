@@ -973,6 +973,103 @@ mod tests {
     }
 
     #[test]
+    fn advance_rpm_orts_matches_diesel_engine_cs_dmb_sa() {
+        fn or_reference_advance_rpm(
+            rpm: f64,
+            target: f64,
+            dt: f64,
+            acc_up: f64,
+            acc_down: f64,
+            change_up: f64,
+            change_down: f64,
+        ) -> f64 {
+            let delta = target - rpm;
+            if delta.abs() < 1e-6 {
+                return rpm;
+            }
+            let throttle_acc = 1.0;
+            if delta > 0.0 {
+                let mut d = (2.0 * acc_up * throttle_acc * delta).sqrt();
+                d = d.clamp(0.01 * change_up, change_up);
+                let next = rpm + d * dt;
+                if next > target { target } else { next }
+            } else {
+                let mut d = (2.0 * acc_down * throttle_acc * (-delta)).sqrt();
+                d = d.clamp(0.01 * change_down, change_down);
+                let next = rpm - d * dt;
+                if next < target { target } else { next }
+            }
+        }
+
+        let throttle_rpm_tab: Vec<(f64, f64)> = [
+            (0.0, 650.0),
+            (0.1, 660.0),
+            (0.2, 665.0),
+            (0.3, 670.0),
+            (0.4, 675.0),
+            (0.5, 800.0),
+            (0.6, 900.0),
+            (0.7, 1050.0),
+            (0.8, 1200.0),
+            (0.9, 1350.0),
+            (1.0, 1500.0),
+        ]
+        .to_vec();
+        let eng = DieselEngineParams {
+            power_tab: vec![],
+            throttle_rpm_tab: throttle_rpm_tab.clone(),
+            idle_rpm: 650.0,
+            max_rpm: 1500.0,
+            rpm_time_constant_s: 2.0,
+            rate_of_change_up_rpm_pss: 10.0,
+            rate_of_change_down_rpm_pss: 10.0,
+            change_up_rpm_ps: 50.0,
+            change_down_rpm_ps: 40.0,
+            reverse_throttle_rpm_tab: build_reverse_throttle_rpm_tab(&throttle_rpm_tab),
+        };
+        let driver = 0.8;
+        let target = eng.target_rpm(driver);
+        assert!((target - 1200.0).abs() < 1.0, "target {target}");
+
+        let mut rpm = 650.0;
+        for _ in 0..20 {
+            let next_sim = eng.advance_rpm(rpm, driver, 1.0);
+            let next_ref = or_reference_advance_rpm(
+                rpm,
+                target,
+                1.0,
+                eng.rate_of_change_up_rpm_pss,
+                eng.rate_of_change_down_rpm_pss,
+                eng.change_up_rpm_ps,
+                eng.change_down_rpm_ps,
+            );
+            assert!(
+                (next_sim - next_ref).abs() < 1e-6,
+                "rpm {rpm} sim={next_sim} ref={next_ref}"
+            );
+            rpm = next_sim;
+        }
+
+        let mut rpm = 650.0;
+        let checkpoints: &[(usize, f64, f64)] =
+            &[(5, 900.0, 0.60), (7, 1000.0, 0.67), (13, 1200.0, 0.80)];
+        for t in 1..=13 {
+            rpm = eng.advance_rpm(rpm, driver, 1.0);
+            let app = eng.apparent_throttle_fraction(rpm);
+            if let Some((_, exp_rpm, exp_app)) = checkpoints.iter().find(|(s, _, _)| *s == t) {
+                assert!(
+                    (rpm - exp_rpm).abs() < 25.0,
+                    "t={t} rpm {rpm} expected ~{exp_rpm}"
+                );
+                assert!(
+                    (app - exp_app).abs() < 0.03,
+                    "t={t} apparent {app:.3} expected ~{exp_app}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn or_rpm_sqrt_differs_from_exponential_lag() {
         let base = DieselEngineParams {
             power_tab: vec![(650.0, 100_000.0), (1500.0, 500_000.0)],

@@ -55,8 +55,8 @@ Los `.eng`/`.wag` del repo son **física simplificada** (sin cab/C#) generados d
 
 Fuente: `Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/`.
 
-- **DMBSA:** curvas ORTS + `DieselPowerTab` / `ThrottleRPMTab` + Davis.
-- **DMBSH:** diesel legacy OR (`MaxPower`/`MaxForce` kN, `RunUpTimeToMaxForce` 30 s) — el `.eng` OR no incluye tablas ORTS.
+- **DMBSA:** curvas ORTS + `DieselPowerTab` / `ThrottleRPMTab` + Davis (`ChangeUpRPMpS` 50, `RateOfChangeUpRPMpSS` 10).
+- **DMBSH:** stub MSTS sin tablas ORTS; al cargar el consist hereda curvas/RPM del DMBSA lead (OR-P13). OR 1.6.x **no** aplica `RunUpTimeToMaxForce` en motores ORTS.
 
 ## Flujo compare-or (evaluación 136 s)
 
@@ -99,13 +99,14 @@ openrailsrs compare-or \
   --max-velocity-rms 0.5 --max-position-max 45
 ```
 
-Métricas típicas (post `assume_signals_clear`):
+Métricas típicas (post `assume_signals_clear`, línea base OR-correct diesel OR-P6):
 
 | Fase | Vel RMS | Pos max |
 |------|---------|---------|
-| 0–30 s | ~0.2 m/s | ~15 m |
-| 30–61 s | ~0.4 m/s | ~22 m |
-| 61–136 s | ~0.5 m/s | ~23 m |
+| 0–30 s | ~0.9 m/s | ~23 m |
+| 30–61 s | ~0.2 m/s | ~19 m |
+| 61–136 s | ~0.35 m/s | ~23 m |
+| **Global 136 s** | **~0.48 m/s** | **~24 m** |
 
 ## Capturar baseline OR más largo
 
@@ -119,10 +120,12 @@ Métricas típicas (post `assume_signals_clear`):
 
 ```bash
 cargo test -p openrailsrs-cli --test chiltern_validate
+cargo test -p openrailsrs-cli --test chiltern_startup_brake_phase
+cargo test -p openrailsrs-cli --test chiltern_startup_diesel_audit -- --nocapture
 cargo test -p openrailsrs-sim chiltern_path_reaches
 ```
 
-`chiltern_validate` comprueba el reporte global **y** cada ventana en `phase_bounds` (`0, 61, 136` s por defecto). Para arranque fino: `--phase-bounds 0,30,61,136` (0–30 s suele ser ~0.63 m/s RMS).
+`chiltern_validate` comprueba el reporte global **y** cada ventana en `phase_bounds` (`0, 30, 61, 136` s). Umbrales en `scenario.toml`: global vel RMS ≤ 0.48 m/s; fase arranque ≤ 0.95 m/s.
 
 (Omitido si `examples/chiltern/track.toml` no está presente.)
 
@@ -186,17 +189,50 @@ cargo test -p openrailsrs-cli --test chiltern_throttle75
 
 Baseline OR: `examples/baselines/chiltern_throttle75/README.md` (captura con `./scripts/capture_chiltern_throttle75_or.sh`).
 
+## Arranque diesel (OR-P6)
+
+Open Rails 1.6.x limita la tracción diesel-eléctrica con **RPM → `ReverseThrottleRPMTab` → apparent throttle → curvas**, no con `RunUpTimeToMaxForce` (parámetro MSTS ignorado en ORTS).
+
+| Componente | Comportamiento en sim |
+|------------|------------------------|
+| `advance_rpm_orts` | Igual que `DieselEngine.Update` (sqrt + clamp 1–100 % de `ChangeUpRPMpS`, snap a `DemandedRPM`) |
+| `throttleAcclerationFactor` | 1.0 (diesel-eléctrico sin caja; DMBSA) |
+| Trail DMBSH | Hereda tablas del lead; sin τ MSTS |
+| CSV extra | `diesel_rpm_{i}`, `diesel_apparent_{i}`, `diesel_f_n_{i}`, `diesel_run_up_{i}` (siempre 1.0 en ORTS) |
+
+**Audit 0–40 s** (`driver_or.csv`, 80 % notch):
+
+```bash
+cargo test -p openrailsrs-cli --test chiltern_startup_diesel_audit -- --nocapture
+# Escribe examples/chiltern/run_startup_diesel_audit.csv (gitignored)
+```
+
+Hallazgos (nominal 50/10): RPM y apparent coherentes con OR (p. ej. t=7 → rpm≈1000, app≈0.67); overspeed 0–40 s (~0.77 m/s RMS) apunta a **fuerza/resistencia/freno**, no a integración RPM (test unitario `advance_rpm_orts_matches_diesel_engine_cs_dmb_sa` en `openrailsrs-train`).
+
+**Barrido local** de `ChangeUpRPMpS` × `RateOfChangeUpRPMpSS` (solo diagnóstico; no commitear resultados):
+
+```bash
+./examples/chiltern/rpm_sweep.sh
+# → rpm_sweep_results.csv (gitignored); nominal OR 50/10 es el correcto en .eng
+```
+
+Flag `orts_inherit_partial_run_up` en `[simulation]`: **deprecado**, sin efecto (experimento MSTS retirado).
+
+Detalle: [`docs/OR_PARITY_ROADMAP.md`](../../docs/OR_PARITY_ROADMAP.md) · [`docs/fisica.html`](../../docs/fisica.html).
+
 ## Gaps cerrados vs OR
 
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6); path ≥ 6 edges hasta destino.
-- Consist: RF_Blue_Pullman multi-vagón, Davis sumado por vehículo, dual motor (ORTS + legacy).
+- Consist: RF_Blue_Pullman multi-vagón, Davis sumado por vehículo, dual motor (ORTS lead + trail heredado).
 - Señales eval: `assume_signals_clear` alinea AUTO_SIGNAL con baseline OR.
-- Posición/velocidad 0–136 s (masa puntual): RMS ~0.39 m/s, Δpos ~23 m.
+- Diesel OR-P6: RPM/apparent alineados con `DieselEngine.cs`; freno residual ≤15 PSI sin boost cilindro 9/35.
+- Posición/velocidad 136 s (masa puntual, OR-correct): RMS ~0.48 m/s, Δpos ~24 m.
 
 ## Límites conocidos
 
-- Comparación **masa puntual vs OR multi-cuerpo** — ver sección arriba; Exp A/B pendientes de re-validar con `multi_body`.
-- Objetivo estricto **0.3 m/s / 25 m** aún pendiente (RPM fino, DMBSH legacy, límites TDB 80 km/h vs OR `MAXSPEED` 90→50 mph).
+- Comparación **masa puntual vs OR multi-cuerpo** — ver sección arriba.
+- Arranque 0–40 s: sim adelanta a OR (~0.77 m/s RMS) con parámetros RPM nominales; siguiente palanca: tracción dual-motor / cap P/v / creep con freno residual (no bajar `ChangeUpRPMpS` sin empeorar 40–65 s).
+- Objetivo estricto **0.3 m/s / 25 m** aún pendiente (límites TDB 80 km/h vs OR `MAXSPEED` 90→50 mph).
 - `RestrictedSpeedZones` de la actividad no se aplican al `track.toml` importado.
 - Import TDB: aspecto inicial de señales = `Stop` salvo `FailedSignals`; usar overlay o re-import mejorado.
 

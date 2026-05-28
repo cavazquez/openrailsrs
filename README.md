@@ -138,7 +138,7 @@ cargo test
 
 Ejemplo de escenario listo: [`examples/smoke/scenario.toml`](examples/smoke/scenario.toml).
 
-Validación contra Open Rails (Chiltern): [`docs/CHILTERN_OR_SETUP.md`](docs/CHILTERN_OR_SETUP.md) · comparación de trazas: [`docs/OR_TRACE_COMPARISON.md`](docs/OR_TRACE_COMPARISON.md).
+Validación contra Open Rails (Chiltern): [`docs/CHILTERN_OR_SETUP.md`](docs/CHILTERN_OR_SETUP.md) · comparación de trazas: [`docs/OR_TRACE_COMPARISON.md`](docs/OR_TRACE_COMPARISON.md) · paridad diesel OR-P6 (RPM → apparent throttle, sin `RunUpTimeToMaxForce` en ORTS): [`examples/chiltern/README.md`](examples/chiltern/README.md#arranque-diesel-or-p6).
 
 ## CLI (`openrailsrs`)
 
