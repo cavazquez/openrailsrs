@@ -47,6 +47,7 @@ fn wagon_starts_later_than_locomotive() {
         &grade_resist,
         &masses,
         dt,
+        1.0,
     );
     let loco_v_initial = vehicles[0].velocity_mps;
     let wagon_v_initial = vehicles[1].velocity_mps;
@@ -72,6 +73,7 @@ fn wagon_starts_later_than_locomotive() {
             &grade_resist,
             &masses,
             dt,
+            1.0,
         );
     }
 
@@ -111,6 +113,7 @@ fn single_vehicle_no_couplers() {
         &grade_resist,
         &masses,
         dt,
+        1.0,
     );
 
     assert!(

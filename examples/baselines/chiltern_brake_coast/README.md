@@ -72,7 +72,7 @@ cargo test -p openrailsrs-cli --test chiltern_brake_coast_multi_body
 
 | Fase | Masa puntual vs OR | Multi-cuerpo vs OR |
 |------|-------------------|-------------------|
-| 115–180 s (costa) | ~0.07 m/s RMS | ~**0.13** m/s RMS (`multi_body_scalar_coast_below_v_mps = 12`) |
+| 115–180 s (costa) | ~0.07 m/s RMS | ~**0.10** m/s RMS (`coupler_kind = "pullman"`, `multi_body_scalar_coast_below_v_mps = 16`) |
 
 Ambos pasan umbral OR-P6 (≤0.50 m/s); multi-cuerpo costa mejorada vs ~0.16 m/s con acopladores puros (A2).
 
@@ -104,4 +104,4 @@ cargo test -p openrailsrs-cli --test chiltern_brake_coast chiltern_brake_coast_a
 
 En Pullman ambos motores (DMBSA/DMBSH) son **EP**; el retardo de tubo se ve en **`brake_f_train_air_n`**, no head vs tail.
 
-En `scenario_brake_coast_multi_body.toml` activar `multi_body_scalar_coast_below_v_mps = 12.0` para la costa (115–180 s ~**0.13** m/s RMS vs OR; antes ~0.16 con acopladores solos). Opcional: `coupler_kind = "passenger"` (más holgura; freight sigue siendo el default estable).
+En `scenario_brake_coast_multi_body.toml`: `coupler_kind = "pullman"` (acoplador estable con tope de fuerza y sub-pasos adaptativos en tracción/freno) y `multi_body_scalar_coast_below_v_mps = 16.0` para la costa (115–180 s ~**0.10** m/s RMS vs OR; antes ~0.13 con freight + v<12).

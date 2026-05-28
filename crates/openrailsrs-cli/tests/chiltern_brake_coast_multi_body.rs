@@ -108,8 +108,8 @@ fn chiltern_brake_coast_multi_body_validate_against_or_baseline() {
         coast.velocity.max_abs_diff,
     );
 
-    // Masa puntual ~0.07 m/s RMS en 115–180 s; multi con costa escalar ~0.13 m/s.
-    const COAST_RMS_CEILING: f64 = 0.15;
+    // Masa puntual ~0.07 m/s RMS en 115–180 s; multi pullman + costa escalar v<16 m/s ~0.10 m/s.
+    const COAST_RMS_CEILING: f64 = 0.10;
     assert!(
         coast.velocity.rms_diff <= COAST_RMS_CEILING,
         "coast RMS {:.3} m/s exceeds interim ceiling {COAST_RMS_CEILING}",

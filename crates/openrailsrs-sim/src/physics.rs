@@ -2,7 +2,10 @@ use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, Tra
 
 use openrailsrs_validate::BrakeCommandMapping;
 
-use crate::coupler::{mass_weighted_mean_velocity, multi_body_step, multi_body_substep_count};
+use crate::coupler::{
+    mass_weighted_mean_velocity, multi_body_step, multi_body_substep_count,
+    multi_body_substep_count_for_vehicles,
+};
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
 use crate::steam::steam_step;
@@ -229,7 +232,16 @@ pub fn step(
             } else {
                 f_brake
             };
-            let f_resist_coast = train.davis.resistance_n(v);
+            let f_resist_coast = if train.vehicle_davis.len() == state.vehicles.len() {
+                state
+                    .vehicles
+                    .iter()
+                    .zip(train.vehicle_davis.iter())
+                    .map(|(veh, davis)| davis.resistance_n(veh.velocity_mps))
+                    .sum::<f64>()
+            } else {
+                train.davis.resistance_n(v)
+            };
             let f_grade_coast = effective_mass * G * grade_fraction;
             let accel = (-f_brake_coast - f_resist_coast - f_grade_coast) / effective_mass.max(1.0);
             let mean_v = (v + accel * dt).max(0.0);
@@ -241,7 +253,13 @@ pub fn step(
             }
             mean_v
         } else {
-            let n_sub = multi_body_substep_count(dt);
+            let in_free_coast =
+                state.throttle <= 0.0 && f_motor <= 1.0 && brake_frac <= 0.001;
+            let n_sub = if in_free_coast {
+                multi_body_substep_count(dt)
+            } else {
+                multi_body_substep_count_for_vehicles(dt, &state.vehicles)
+            };
             let sub_dt = dt / n_sub as f64;
             let mut mean_v = v;
             for _ in 0..n_sub {
@@ -282,6 +300,7 @@ pub fn step(
                     &grade_resist,
                     &masses,
                     sub_dt,
+                    1.0,
                 )
                 .max(0.0);
             }

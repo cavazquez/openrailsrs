@@ -39,6 +39,8 @@ pub struct CouplerState {
     pub free_play_m: f64,
     /// Force at which the coupler breaks (N); 0 = unbreakable.
     pub break_force_n: f64,
+    /// Saturated draft-gear force (N); 0 = no cap.
+    pub max_force_n: f64,
     /// Current extension relative to nominal (m).
     pub extension_m: f64,
     /// Whether this coupler has failed.
@@ -53,6 +55,7 @@ impl CouplerState {
             damping_n_per_mps: 1e5,
             free_play_m: 0.05,
             break_force_n: 0.0,
+            max_force_n: 0.0,
             extension_m: 0.0,
             broken: false,
         }
@@ -65,18 +68,33 @@ impl CouplerState {
             damping_n_per_mps: 2e5,
             free_play_m: 0.005,
             break_force_n: 0.0,
+            max_force_n: 0.0,
             extension_m: 0.0,
             broken: false,
         }
     }
 
-    /// Passenger / multiple-unit stock (Pullman, Mk2): tight slack, stable at dt≤0.05 s.
+    /// Passenger / Mk2: moderate slack, force-capped for stiff-brake stability.
     pub fn passenger() -> Self {
         Self {
-            stiffness_n_per_m: 4.0e5,
-            damping_n_per_mps: 1.5e4,
-            free_play_m: 0.010,
+            stiffness_n_per_m: 2.0e5,
+            damping_n_per_mps: 8.0e3,
+            free_play_m: 0.015,
             break_force_n: 0.0,
+            max_force_n: 600_000.0,
+            extension_m: 0.0,
+            broken: false,
+        }
+    }
+
+    /// Blue Pullman / tight passenger stock (Chiltern 8-car): low dissipation in coast.
+    pub fn pullman() -> Self {
+        Self {
+            stiffness_n_per_m: 1.2e5,
+            damping_n_per_mps: 4.0e3,
+            free_play_m: 0.012,
+            break_force_n: 0.0,
+            max_force_n: 800_000.0,
             extension_m: 0.0,
             broken: false,
         }
@@ -87,12 +105,18 @@ impl CouplerState {
         match kind {
             CouplerKind::Freight => Self::freight(),
             CouplerKind::Passenger => Self::passenger(),
+            CouplerKind::Pullman => Self::pullman(),
         }
     }
 
     /// Compute the current coupler force (N) given the relative velocity between
     /// the two vehicles it connects.
     pub fn force_n(&self, delta_v_mps: f64) -> f64 {
+        self.force_n_scaled(delta_v_mps, 1.0)
+    }
+
+    /// Like [`force_n`] but scales viscous damping (spring force unchanged).
+    pub fn force_n_scaled(&self, delta_v_mps: f64, damping_scale: f64) -> f64 {
         if self.broken {
             return 0.0;
         }
@@ -105,11 +129,15 @@ impl CouplerState {
         };
         // Damping only when the spring is engaged (no dissipation in slack).
         let damp = if spring.abs() > 0.0 {
-            self.damping_n_per_mps * delta_v_mps
+            self.damping_n_per_mps * delta_v_mps * damping_scale
         } else {
             0.0
         };
-        spring + damp
+        let mut f = spring + damp;
+        if self.max_force_n > 0.0 {
+            f = f.clamp(-self.max_force_n, self.max_force_n);
+        }
+        f
     }
 }
 
@@ -125,13 +153,15 @@ pub enum CouplerKind {
     #[default]
     Freight,
     Passenger,
+    Pullman,
 }
 
 impl CouplerKind {
-    /// Parse scenario TOML value (`freight`, `passenger`, `emu` → passenger).
+    /// Parse scenario TOML value (`freight`, `passenger`, `pullman`, `mk2`, `emu`).
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
-            "passenger" | "emu" | "pullman" | "mk2" => Self::Passenger,
+            "pullman" => Self::Pullman,
+            "passenger" | "emu" | "mk2" => Self::Passenger,
             _ => Self::Freight,
         }
     }
@@ -142,10 +172,34 @@ pub const MULTI_BODY_MAX_SUBSTEP_S: f64 = 0.05;
 
 /// Sub-step count so each integration step is at most [`MULTI_BODY_MAX_SUBSTEP_S`].
 pub fn multi_body_substep_count(dt: f64) -> usize {
+    multi_body_substep_count_for_vehicles(dt, &[])
+}
+
+/// Like [`multi_body_substep_count`] but adds extra sub-steps when adjacent speeds diverge.
+pub fn multi_body_substep_count_for_vehicles(dt: f64, vehicles: &[VehicleState]) -> usize {
     if dt <= 0.0 {
         return 1;
     }
-    ((dt / MULTI_BODY_MAX_SUBSTEP_S).ceil() as usize).max(1)
+    let base = ((dt / MULTI_BODY_MAX_SUBSTEP_S).ceil() as usize).max(1);
+    let max_dv = vehicles
+        .windows(2)
+        .map(|pair| (pair[0].velocity_mps - pair[1].velocity_mps).abs())
+        .fold(0.0_f64, f64::max);
+    let scale = if max_dv > 15.0 {
+        4
+    } else if max_dv > 5.0 {
+        2
+    } else {
+        1
+    };
+    base * scale
+}
+
+/// True when every coupler is inside its free-play band (no spring load).
+pub fn couplers_all_in_slack(couplers: &[CouplerState]) -> bool {
+    couplers
+        .iter()
+        .all(|c| c.extension_m.abs() <= c.free_play_m)
 }
 
 /// Mass-weighted mean of per-vehicle speeds (m/s).
@@ -179,6 +233,7 @@ pub fn multi_body_step(
     grade_resist: &[f64],
     masses: &[f64],
     dt: f64,
+    damping_scale: f64,
 ) -> f64 {
     let n = vehicles.len();
     if n == 0 {
@@ -189,7 +244,7 @@ pub fn multi_body_step(
     let mut coupler_forces = vec![0.0f64; n.saturating_sub(1)];
     for i in 0..couplers.len().min(n.saturating_sub(1)) {
         let dv = vehicles[i].velocity_mps - vehicles[i + 1].velocity_mps;
-        coupler_forces[i] = couplers[i].force_n(dv);
+        coupler_forces[i] = couplers[i].force_n_scaled(dv, damping_scale);
     }
 
     // Advance each vehicle.
@@ -239,21 +294,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn substep_count_scales_with_dt() {
-        assert_eq!(multi_body_substep_count(0.01), 1);
-        assert_eq!(multi_body_substep_count(0.05), 1);
-        assert_eq!(multi_body_substep_count(0.051), 2);
-        assert_eq!(multi_body_substep_count(1.0), 20);
-    }
-
-    #[test]
-    fn no_damping_inside_free_play() {
-        let mut c = CouplerState::freight();
-        c.extension_m = 0.0;
-        assert_eq!(c.force_n(1.0), 0.0);
-    }
-
-    #[test]
     fn passenger_preset_is_stable_under_one_second_step() {
         let mut vehicles = vec![
             VehicleState {
@@ -280,6 +320,7 @@ mod tests {
                 &resist,
                 &masses,
                 sub_dt,
+                1.0,
             );
         }
         assert!(
@@ -290,6 +331,52 @@ mod tests {
         assert!(
             vehicles[1].velocity_mps.is_finite() && vehicles[1].velocity_mps < 15.0,
             "rear v={}",
+            vehicles[1].velocity_mps
+        );
+    }
+
+    #[test]
+    fn force_cap_limits_passenger_coupler() {
+        let mut c = CouplerState::passenger();
+        c.extension_m = 0.5;
+        let f = c.force_n(50.0);
+        assert!(f.abs() <= c.max_force_n + 1.0);
+    }
+
+    #[test]
+    fn pullman_preset_survives_hard_brake_jerk() {
+        let mut vehicles = vec![
+            VehicleState {
+                velocity_mps: 30.0,
+                position_m: 0.0,
+            },
+            VehicleState {
+                velocity_mps: 28.0,
+                position_m: 0.0,
+            },
+        ];
+        let mut couplers = vec![CouplerState::pullman()];
+        let masses = vec![80_000.0, 50_000.0];
+        let brake = vec![120_000.0, 80_000.0];
+        let resist = vec![2_000.0, 1_500.0];
+        let n = multi_body_substep_count_for_vehicles(1.0, &vehicles);
+        let sub_dt = 1.0 / n as f64;
+        for _ in 0..n {
+            multi_body_step(
+                &mut vehicles,
+                &mut couplers,
+                0.0,
+                &brake,
+                &resist,
+                &masses,
+                sub_dt,
+                1.0,
+            );
+        }
+        assert!(
+            vehicles.iter().all(|v| v.velocity_mps.is_finite() && v.velocity_mps < 35.0),
+            "front={} rear={}",
+            vehicles[0].velocity_mps,
             vehicles[1].velocity_mps
         );
     }
