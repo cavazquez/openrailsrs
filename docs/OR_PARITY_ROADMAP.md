@@ -112,9 +112,9 @@ flowchart LR
 **Criterios de aceptación:**
 
 - [x] Test unitario: RPM bajo → fuerza limitada aunque throttle driver = 1.0 (`or_p1_diesel_eng`, `golden_assets` / Class 47 `.eng`)
-- [ ] `audit_sce_cruise` y `audit_chiltern_forces` pasan sin overrides de potencia
-- [ ] SCE 100 s: RMS ≤ 1.0 m/s; crucero 27 % dentro de ±0.5 mph vs OR
-- [ ] Chiltern 136 s: RMS ≤ 0.35 m/s (no empeorar >10 % vs baseline actual)
+- [x] `audit_sce_cruise` y `audit_chiltern_forces` pasan sin overrides de potencia (`legacy_power_cap = false`)
+- [x] SCE 100 s: RMS ≤ 1.0 m/s; crucero 27 % dentro de ±0.5 mph vs OR (`sce_or_p1_cruise`)
+- [x] Chiltern 136 s: RMS ≤ 0.35 m/s (`chiltern_validate`; no empeorar >10 % vs baseline actual)
 
 **Referencias OR:** `DieselEngine.cs` L1366–1416, `MSTSLocomotive.cs` L2555–2635, `MSTSDieselLocomotive.cs` L635–698.
 
@@ -502,7 +502,7 @@ Todos los baselines OR usan el **consist completo** en simulación multi-cuerpo.
 ## Próximo paso recomendado
 
 1. **OR-P4:** Chiltern multi-cuerpo RMS ~**0.39 m/s** ✅; SCE multi ~**0.29 m/s** ✅.
-2. **OR-P1 cierre:** auditorías SCE/Chiltern sin overrides de potencia (en paralelo).
+2. **OR-P15 / limpieza:** quitar overrides `[train.davis]` y `assume_signals_clear` cuando Pullman + señales estén listos.
 3. **A2+ opcional:** costa Chiltern multi ≤0.10 m/s sin depender solo del modo escalar.
 
 Cuando una fase esté en progreso, actualizar el estado en este archivo y enlazar el PR en la tabla de la fase correspondiente.
