@@ -4071,6 +4071,7 @@ dependencies = [
  "openrailsrs-formats",
  "openrailsrs-route",
  "openrailsrs-scenarios",
+ "openrailsrs-sim",
  "openrailsrs-track",
  "openrailsrs-train",
  "serde",
