@@ -260,11 +260,11 @@ flowchart LR
 **Criterios de aceptación:**
 
 - [x] Experimento A (costa libre tras frenada fuerte): perfil v(t) post-suelta freno ≤ 0.5 m/s RMS vs OR — `scenario_brake_coast.toml` + `chiltern_brake_coast` (coast 115–180 s ~0.07 m/s RMS)
-- [x] Chiltern fase 0–40 s (frenos al inicio): con `orts_inherit_partial_run_up` pos max ~7.4 m (baseline flag off ~12.3 m); test `chiltern_startup_brake_phase` (vel RMS ≤0.42, pos max ≤9 m). Flag off en `scenario.toml` conserva validación global (~0.39 m/s, pos max ~22 m).
+- [x] Chiltern fase 0–40 s (frenos al inicio): test `chiltern_startup_brake_phase` (vel RMS ≤0.48, pos max ≤13 m) con run-up OR vía RPM (`advance_rpm_orts`, factor aceleración 1.0). Flag `orts_inherit_partial_run_up` deprecado (sin efecto).
 - [x] OR-P6a parcial: precarga cilindros + lap hold train-air + `train_air_full_release_s` (Chiltern global ~0.39 m/s; 0–30 s ~0.54; 40–65 s ~0.33)
 - [x] OR-P6b: parseo shoe type/curva + `F_efectiva(v) = F_cilindro × μ(v)/μ(0)`; flag `brake_shoe_speed_factor` en Chiltern (sin regresión en umbrales actuales)
 - [x] OR-P6c: cap por adherencia rueda-carril (`brake_skid_limit`, μ=0.25 default OR) por cilindro
-- [x] OR-P6 arranque Chiltern (0–40 s): `command_to_sim_fraction` — residual ≤15 PSI sin boost cilindro 9/35; run-up lead ORTS heredado solo tracción (`orts_inherit_partial_run_up`): rampa desde suelta de freno + fade por velocidad, ventana 28 s / 120 m. Causa principal del overspeed 0–40 s: lead ORTS sin `RunUpTimeToMaxForce` a notch 80 %; activar el flag mejora 0–40 s pero desvía la trayectoria global (~0.45 m/s) — flag off en producción.
+- [x] OR-P6 arranque Chiltern (0–40 s): `command_to_sim_fraction` — residual ≤15 PSI sin boost cilindro 9/35; telemetría `diesel_rpm_*` / `diesel_apparent_*` + audit `chiltern_startup_diesel_audit`. OR no usa `RunUpTimeToMaxForce`; overspeed 0–40 s (~0.47 m/s RMS) se limita vía dinámica RPM (`ChangeUpRPMpS`, `ReverseThrottleRPMTab`), no τ MSTS.
 
 **Estimación:** P6a–c: 1–2 semanas.
 

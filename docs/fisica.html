@@ -166,7 +166,7 @@ a = F_net / m_efectiva &nbsp;&nbsp;→&nbsp;&nbsp; v += a · dt</span>
           <p class="section-desc">Locomotora cola Blue Pullman sin curvas ORTS propias (OR-P13).</p>
           <div class="concept-block">
             <p>Al cargar el consist, el DMBSH (trail) <strong>hereda</strong> las curvas ORTS y parámetros diesel del DMBSA lead si su <code>.eng</code> es stub MSTS.</p>
-            <p>Run-up MSTS (<code>RunUpTimeToMaxForce</code>) solo aplica bajo notch completo; en notches parciales la respuesta es inmediata como en OR.</p>
+            <p>Open Rails 1.6.x ignora <code>RunUpTimeToMaxForce</code> en motores ORTS: la tracción efectiva sigue <code>RPM → ReverseThrottleRPMTab → curvas</code>. El trail DMBSH hereda curvas del lead; el campo MSTS del stub no activa run-up en sim.</p>
             <div class="meta-row">
               <span class="meta-tag">OR-P13</span>
               <span class="meta-tag">from_ast.rs</span>

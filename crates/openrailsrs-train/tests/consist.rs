@@ -103,11 +103,10 @@ fn chiltern_dmbsh_orts_scaled_from_lead() {
         trail_loco.max_power_w,
         trail_loco.max_tractive_effort_n,
         trail_legacy.max_continuous_force_n,
-        trail_legacy.legacy_run_up_time_s,
     )
     .expect("scale trail from lead ORTS");
     assert!(scaled.engine.is_some());
-    assert_eq!(scaled.legacy_run_up_time_s, Some(30.0));
+    assert_eq!(scaled.legacy_run_up_time_s, None);
     assert!((scaled.max_rail_output_power_w - 1_000_000.0).abs() < 1.0);
     assert!(scaled.effort_scale > 1.0 && scaled.effort_scale <= 4.0);
     assert!((scaled.max_continuous_force_n - 130_000.0).abs() < 1.0);
@@ -135,8 +134,8 @@ fn chiltern_pullman_two_engines_aggregate() {
         "trail DMBSH should inherit scaled ORTS from DMBSA lead"
     );
     assert!(
-        (models[1].legacy_run_up_time_s.unwrap() - 13.2).abs() < 0.2,
-        "trail run-up scaled from MSTS 30 s"
+        models[1].legacy_run_up_time_s.is_none(),
+        "trail ORTS upgrade ignores MSTS RunUpTimeToMaxForce"
     );
     let f_dmbsa = models[0].force_at(0.0, 0.8);
     let f_combined: f64 = models.iter().map(|m| m.force_at(0.0, 0.8)).sum();

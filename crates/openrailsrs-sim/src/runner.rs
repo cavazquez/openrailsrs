@@ -301,6 +301,7 @@ pub fn run_scenario_headless_with_driver(
         state.diesel_motor_heat = vec![0.0; train_physics.diesel_engines.len()];
         state.diesel_traction_force_n = vec![0.0; train_physics.diesel_engines.len()];
         state.diesel_average_force_n = vec![0.0; train_physics.diesel_engines.len()];
+        state.diesel_apparent_throttle = vec![0.0; train_physics.diesel_engines.len()];
     }
     state.init_multi_body_if_enabled(
         &consist,
@@ -319,7 +320,9 @@ pub fn run_scenario_headless_with_driver(
     let csv_file = File::create(&csv_path)?;
     let has_steam = train_physics.steam_params.is_some();
     let brake_telemetry = !state.brake_system.cylinders.is_empty();
-    let mut csv_writer = RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?;
+    let diesel_count = train_physics.diesel_engines.len();
+    let mut csv_writer =
+        RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry, diesel_count)?;
     let mut events = Vec::new();
 
     // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.

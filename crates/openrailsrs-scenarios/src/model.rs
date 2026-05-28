@@ -264,7 +264,7 @@ pub struct SimulationSection {
     /// decay (matches OR coast after service brake). Omit to keep full coupler dynamics.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multi_body_scalar_coast_below_v_mps: Option<f64>,
-    /// ORTS lead locos without `RunUpTimeToMaxForce` inherit consist run-up at partial throttle (OR-P6).
+    /// Deprecated experiment (OR-P6): partial MSTS run-up on ORTS lead. OR uses RPM dynamics.
     #[serde(default)]
     pub orts_inherit_partial_run_up: bool,
 }

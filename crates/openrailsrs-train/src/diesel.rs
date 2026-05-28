@@ -141,7 +141,7 @@ impl DieselEngineParams {
         current_rpm + (target - current_rpm) * factor
     }
 
-    fn advance_rpm_orts(&self, current_rpm: f64, target: f64, throttle: f64, dt: f64) -> f64 {
+    fn advance_rpm_orts(&self, current_rpm: f64, target: f64, _throttle: f64, dt: f64) -> f64 {
         let delta = target - current_rpm;
         if delta.abs() < 1e-6 {
             return current_rpm;
@@ -158,11 +158,8 @@ impl DieselEngineParams {
         } else {
             self.change_down_rpm_ps.max(self.change_up_rpm_ps)
         };
-        let throttle_acc = if increasing {
-            throttle.clamp(0.01, 1.0)
-        } else {
-            1.0
-        };
+        // Diesel-electric (no gearbox): OR uses throttleAcclerationFactor = 1.0.
+        let throttle_acc = 1.0;
         let mut d_rpm = (2.0 * acc * throttle_acc * delta.abs()).sqrt();
         d_rpm = d_rpm.clamp(0.01 * max_change, max_change);
         if !increasing {
@@ -306,7 +303,6 @@ impl DieselTractionModel {
         max_power_w: f64,
         max_tractive_effort_n: f64,
         max_continuous_force_n: f64,
-        run_up_time_s: Option<f64>,
     ) -> Option<Self> {
         let lead_engine = lead.engine.as_deref()?;
         if lead.notch_curves.is_empty() || max_power_w <= 0.0 {
@@ -336,7 +332,7 @@ impl DieselTractionModel {
             effort_scale: 1.0,
             engine: Some(Box::new(engine)),
             max_power_w: Some(max_power_w),
-            legacy_run_up_time_s: run_up_time_s,
+            legacy_run_up_time_s: None,
             adhesion_mass_kg: lead.adhesion_mass_kg,
             curtius_a: lead.curtius_a,
             curtius_b: lead.curtius_b,
@@ -960,17 +956,12 @@ mod tests {
             change_down_rpm_ps: 0.0,
             reverse_throttle_rpm_tab: Vec::new(),
         }));
-        let scaled = DieselTractionModel::from_lead_orts_scaled(
-            &lead,
-            1_000_000.0,
-            150_650.0,
-            130_000.0,
-            Some(30.0),
-        )
-        .expect("scaled");
+        let scaled =
+            DieselTractionModel::from_lead_orts_scaled(&lead, 1_000_000.0, 150_650.0, 130_000.0)
+                .expect("scaled");
         let stall = scaled.force_at_raw(0.0, 1.0) * scaled.effort_scale;
         assert!((stall - 150_650.0).abs() < 1.0, "stall {stall}");
-        assert_eq!(scaled.legacy_run_up_time_s, Some(30.0));
+        assert_eq!(scaled.legacy_run_up_time_s, None);
     }
 
     #[test]

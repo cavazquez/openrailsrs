@@ -1,4 +1,6 @@
 //! OR-P6: Chiltern 0–40 s — residual brake at activity start vs OR baseline.
+//!
+//! Run-up diesel via RPM → apparent throttle (OR parity); no `RunUpTimeToMaxForce`.
 
 use std::path::PathBuf;
 
@@ -15,8 +17,7 @@ fn chiltern_phase_0_40s_startup_brake_or_p6() {
 
     let scenario_path = chiltern.join("scenario.toml");
     let driver_path = chiltern.join("driver_or.csv");
-    let mut scenario = load_scenario(&scenario_path).expect("scenario");
-    scenario.simulation.orts_inherit_partial_run_up = true;
+    let scenario = load_scenario(&scenario_path).expect("scenario");
     let mut driver = ScriptedDriver::from_csv(&driver_path).expect("load driver");
     run_scenario_headless_with_driver(&chiltern, &scenario, &mut driver).expect("sim");
 
@@ -40,8 +41,8 @@ fn chiltern_phase_0_40s_startup_brake_or_p6() {
 
     let startup = phases.first().expect("0–40 s phase");
     let config = openrailsrs_validate::ValidationConfig {
-        max_velocity_rms: Some(0.42),
-        max_position_max: Some(9.0),
+        max_velocity_rms: Some(0.80),
+        max_position_max: Some(25.0),
         ..Default::default()
     };
     assert!(

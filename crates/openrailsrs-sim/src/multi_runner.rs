@@ -208,6 +208,7 @@ pub fn run_scenario_multi_train(
                 state.diesel_motor_heat = vec![0.0; engines.len()];
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
+                state.diesel_apparent_throttle = vec![0.0; engines.len()];
             }
             state.init_multi_body_if_enabled(
                 consist,
@@ -224,6 +225,7 @@ pub fn run_scenario_multi_train(
         let csv_file = File::create(&csv_path)?;
         let brake_telemetry = !state.brake_system.cylinders.is_empty();
         let has_steam = physics.steam_params.is_some();
+        let diesel_count = physics.diesel_engines.len();
         let stop_nodes: HashSet<String> = scenario
             .route
             .stops
@@ -239,7 +241,12 @@ pub fn run_scenario_multi_train(
             path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
-            csv_writer: RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?,
+            csv_writer: RunCsvWriter::new_with_options(
+                csv_file,
+                has_steam,
+                brake_telemetry,
+                diesel_count,
+            )?,
             stop_nodes,
             signal_runtime,
             start_time_s: 0.0,
@@ -290,6 +297,7 @@ pub fn run_scenario_multi_train(
                 state.diesel_motor_heat = vec![0.0; engines.len()];
                 state.diesel_traction_force_n = vec![0.0; engines.len()];
                 state.diesel_average_force_n = vec![0.0; engines.len()];
+                state.diesel_apparent_throttle = vec![0.0; engines.len()];
             }
             state.init_multi_body_if_enabled(
                 consist,
@@ -305,6 +313,7 @@ pub fn run_scenario_multi_train(
         let csv_file = File::create(&csv_path)?;
         let brake_telemetry = !state.brake_system.cylinders.is_empty();
         let has_steam = physics.steam_params.is_some();
+        let diesel_count = physics.diesel_engines.len();
         let stop_nodes: HashSet<String> = entry.stops.iter().map(|s| s.node.clone()).collect();
         let signal_runtime: HashMap<String, SignalAspect> =
             graph.signals().map(|s| (s.id.clone(), s.aspect)).collect();
@@ -315,7 +324,12 @@ pub fn run_scenario_multi_train(
             path_data,
             phase: AgentPhase::Normal,
             events: Vec::new(),
-            csv_writer: RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry)?,
+            csv_writer: RunCsvWriter::new_with_options(
+                csv_file,
+                has_steam,
+                brake_telemetry,
+                diesel_count,
+            )?,
             stop_nodes,
             signal_runtime,
             start_time_s: entry.start_time_s,

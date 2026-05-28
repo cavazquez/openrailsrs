@@ -30,24 +30,26 @@ pub struct RunCsvWriter<W: Write> {
     inner: Writer<W>,
     has_steam: bool,
     brake_cylinder_telemetry: bool,
+    diesel_engine_count: usize,
 }
 
 impl<W: Write> RunCsvWriter<W> {
     /// Create a writer without optional telemetry columns.
     pub fn new(w: W) -> Result<Self, csv::Error> {
-        Self::new_with_options(w, false, false)
+        Self::new_with_options(w, false, false, 0)
     }
 
     /// Create a writer; pass `steam = true` to include boiler telemetry columns.
     pub fn new_with_steam(w: W, steam: bool) -> Result<Self, csv::Error> {
-        Self::new_with_options(w, steam, false)
+        Self::new_with_options(w, steam, false, 0)
     }
 
-    /// Create a writer with optional steam and per-cylinder brake force columns.
+    /// Create a writer with optional steam, brake-cylinder, and per-engine diesel columns.
     pub fn new_with_options(
         w: W,
         steam: bool,
         brake_cylinder_telemetry: bool,
+        diesel_engine_count: usize,
     ) -> Result<Self, csv::Error> {
         let mut inner = Writer::from_writer(w);
         let mut headers: Vec<&str> = BASE_HEADERS.to_vec();
@@ -57,11 +59,16 @@ impl<W: Write> RunCsvWriter<W> {
         if brake_cylinder_telemetry {
             headers.extend_from_slice(BRAKE_CYLINDER_HEADERS);
         }
+        let diesel_header_names = diesel_telemetry_header_names(diesel_engine_count);
+        for name in &diesel_header_names {
+            headers.push(name.as_str());
+        }
         inner.write_record(&headers)?;
         Ok(Self {
             inner,
             has_steam: steam,
             brake_cylinder_telemetry,
+            diesel_engine_count,
         })
     }
 
@@ -115,6 +122,23 @@ impl<W: Write> RunCsvWriter<W> {
             record.push(format!("{:.1}", tail));
         }
 
+        if self.diesel_engine_count > 0 {
+            for i in 0..self.diesel_engine_count {
+                let rpm = state.diesel_rpm.get(i).copied().unwrap_or(0.0);
+                let apparent = state
+                    .diesel_apparent_throttle
+                    .get(i)
+                    .copied()
+                    .unwrap_or(0.0);
+                let f_n = state.diesel_traction_force_n.get(i).copied().unwrap_or(0.0);
+                let run_up = state.diesel_run_up.get(i).copied().unwrap_or(0.0);
+                record.push(format!("{:.1}", rpm));
+                record.push(format!("{:.4}", apparent));
+                record.push(format!("{:.1}", f_n));
+                record.push(format!("{:.4}", run_up));
+            }
+        }
+
         self.inner.write_record(&record)?;
         Ok(())
     }
@@ -122,6 +146,17 @@ impl<W: Write> RunCsvWriter<W> {
     pub fn flush(&mut self) -> Result<(), csv::Error> {
         self.inner.flush().map_err(csv::Error::from)
     }
+}
+
+fn diesel_telemetry_header_names(count: usize) -> Vec<String> {
+    let mut names = Vec::with_capacity(count * 4);
+    for i in 0..count {
+        names.push(format!("diesel_rpm_{i}"));
+        names.push(format!("diesel_apparent_{i}"));
+        names.push(format!("diesel_f_n_{i}"));
+        names.push(format!("diesel_run_up_{i}"));
+    }
+    names
 }
 
 #[cfg(test)]
@@ -169,7 +204,7 @@ mod tests {
         state.brake_system.precharge(1.0);
 
         let buf = Cursor::new(Vec::new());
-        let mut w = RunCsvWriter::new_with_options(buf, false, true).unwrap();
+        let mut w = RunCsvWriter::new_with_options(buf, false, true, 0).unwrap();
         w.write_sample(&state).unwrap();
         w.flush().unwrap();
         let data = w.inner.into_inner().unwrap().into_inner();
@@ -186,5 +221,29 @@ mod tests {
         assert!(train_air > 70_000.0);
         assert!(tail > 90_000.0);
         assert!(head > train_air + 5_000.0);
+    }
+
+    #[test]
+    fn writes_diesel_telemetry_columns() {
+        let mut state = TrainSimState::new(vec!["e1".into()]);
+        state.throttle = 0.8;
+        state.diesel_rpm = vec![950.0, 800.0];
+        state.diesel_apparent_throttle = vec![0.55, 0.50];
+        state.diesel_traction_force_n = vec![120_000.0, 95_000.0];
+        state.diesel_run_up = vec![1.0, 0.25];
+
+        let buf = Cursor::new(Vec::new());
+        let mut w = RunCsvWriter::new_with_options(buf, false, false, 2).unwrap();
+        w.write_sample(&state).unwrap();
+        w.flush().unwrap();
+        let text = String::from_utf8(w.inner.into_inner().unwrap().into_inner()).expect("utf8");
+        assert!(text.contains("diesel_rpm_0"));
+        assert!(text.contains("diesel_apparent_1"));
+        assert!(text.contains("diesel_f_n_0"));
+        assert!(text.contains("diesel_run_up_1"));
+        assert!(text.contains("950.0"));
+        assert!(text.contains("0.5500"));
+        assert!(text.contains("120000.0"));
+        assert!(text.contains("0.2500"));
     }
 }
