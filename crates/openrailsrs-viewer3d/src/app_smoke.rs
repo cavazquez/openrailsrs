@@ -188,7 +188,10 @@ mod tests {
         let replay = ReplayState::default();
 
         with_scene_replay(scene, replay, |world| {
-            world.insert_resource(PrecipitationState::default());
+            world.insert_resource(PrecipitationState {
+                enabled: true,
+                ..Default::default()
+            });
             world.insert_resource(TeleportDialog::default());
             world.run_system_once(spawn_camera).unwrap();
             world.run_system_once(spawn_precipitation).unwrap();

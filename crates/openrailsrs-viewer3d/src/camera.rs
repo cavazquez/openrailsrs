@@ -333,11 +333,10 @@ pub fn spawn_camera(mut commands: Commands) {
         transform,
         orbit,
         FlyState::default(),
-        // In Bevy 0.18 `AmbientLight` is a per-camera component; attaching
-        // it here makes the scene legible without an extra fill light.
+        Msaa::Off,
         AmbientLight {
             color: Color::srgb(1.0, 1.0, 1.0),
-            brightness: 200.0,
+            brightness: 0.15,
             ..default()
         },
         Name::new("viewer-camera"),

@@ -1,9 +1,10 @@
 //! MSTS dynamic track segments from `.w` `Dyntrack` items (order 9 / issue #8).
 //!
-//! Each world `Dyntrack` anchor spawns a short oriented rail segment (sleepers +
-//! two rail heads) along local +Z. Profile XML, `.tdb` linkage and curved sections
-//! are out of scope for this first pass.
+//! All sleeper and rail geometry for a route is merged into two consolidated
+//! meshes (one for sleepers, one for rails) to minimise draw calls.
 
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
 use crate::track::{SceneBounds, TrackScene};
@@ -72,7 +73,7 @@ pub fn part_transform(anchor: Vec3, rotation: Quat, local_center: Vec3, scale: V
     }
 }
 
-/// One-shot: spawn oriented rail segments for every `Dyntrack` in the world scene.
+/// Spawn all dyntrack geometry as two merged meshes (sleepers + rails).
 pub fn spawn_dyntrack_segments(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -91,7 +92,6 @@ pub fn spawn_dyntrack_segments(
 
     let count = dyntracks.len();
     let dims = dyntrack_dimensions(&track.bounds);
-    let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let sleeper_material = materials.add(StandardMaterial {
         base_color: COLOR_SLEEPER,
         perceptual_roughness: 0.92,
@@ -110,39 +110,140 @@ pub fn spawn_dyntrack_segments(
     let half_len = dims.length * 0.5;
     let sleeper_positions = sleeper_local_z_positions(dims.length, dims.sleeper_spacing);
 
+    let mut sleeper_pos: Vec<[f32; 3]> = Vec::new();
+    let mut sleeper_nrm: Vec<[f32; 3]> = Vec::new();
+    let mut sleeper_uv: Vec<[f32; 2]> = Vec::new();
+    let mut sleeper_idx: Vec<u32> = Vec::new();
+
+    let mut rail_pos: Vec<[f32; 3]> = Vec::new();
+    let mut rail_nrm: Vec<[f32; 3]> = Vec::new();
+    let mut rail_uv: Vec<[f32; 2]> = Vec::new();
+    let mut rail_idx: Vec<u32> = Vec::new();
+
     for obj in &dyntracks {
-        for (i, local_z) in sleeper_positions.iter().enumerate() {
-            let sleeper = part_transform(
+        for local_z in &sleeper_positions {
+            let tf = part_transform(
                 obj.position,
                 obj.rotation,
                 Vec3::new(0.0, dims.sleeper_height * 0.5, *local_z),
                 Vec3::new(dims.sleeper_width, dims.sleeper_height, dims.sleeper_depth),
             );
-            commands.spawn((
-                Mesh3d(unit.clone()),
-                MeshMaterial3d(sleeper_material.clone()),
-                sleeper,
-                Name::new(format!("dyntrack:{}:sleeper:{i}", obj.label)),
-            ));
+            push_cuboid(
+                &mut sleeper_pos,
+                &mut sleeper_nrm,
+                &mut sleeper_uv,
+                &mut sleeper_idx,
+                &tf,
+                Vec3::splat(1.0),
+            );
         }
 
-        for (side, name) in [(-dims.half_gauge, "left"), (dims.half_gauge, "right")] {
-            let rail = part_transform(
+        for side in [-dims.half_gauge, dims.half_gauge] {
+            let tf = part_transform(
                 obj.position,
                 obj.rotation,
                 Vec3::new(side, rail_y, half_len),
                 Vec3::new(dims.rail_width, dims.rail_height, dims.length),
             );
-            commands.spawn((
-                Mesh3d(unit.clone()),
-                MeshMaterial3d(rail_material.clone()),
-                rail,
-                Name::new(format!("dyntrack:{}:rail:{name}", obj.label)),
-            ));
+            push_cuboid(
+                &mut rail_pos,
+                &mut rail_nrm,
+                &mut rail_uv,
+                &mut rail_idx,
+                &tf,
+                Vec3::splat(1.0),
+            );
         }
     }
 
+    if !sleeper_pos.is_empty() {
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, sleeper_pos);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, sleeper_nrm);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, sleeper_uv);
+        mesh.insert_indices(Indices::U32(sleeper_idx));
+        commands.spawn((
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(sleeper_material),
+            Transform::IDENTITY,
+            Name::new("dyntrack:sleepers"),
+        ));
+    }
+
+    if !rail_pos.is_empty() {
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, rail_pos);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, rail_nrm);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, rail_uv);
+        mesh.insert_indices(Indices::U32(rail_idx));
+        commands.spawn((
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(rail_material),
+            Transform::IDENTITY,
+            Name::new("dyntrack:rails"),
+        ));
+    }
+
     eprintln!("openrailsrs-viewer3d: {count} dyntrack segment(s)");
+}
+
+/// Bake a unit cuboid (optionally scaled by `size`) transformed by `tf` into aggregate buffers.
+fn push_cuboid(
+    positions: &mut Vec<[f32; 3]>,
+    normals: &mut Vec<[f32; 3]>,
+    uvs: &mut Vec<[f32; 2]>,
+    indices: &mut Vec<u32>,
+    tf: &Transform,
+    size: Vec3,
+) {
+    let hx = size.x * 0.5;
+    let hy = size.y * 0.5;
+    let hz = size.z * 0.5;
+
+    let local = [
+        Vec3::new(-hx, -hy, -hz),
+        Vec3::new(hx, -hy, -hz),
+        Vec3::new(hx, hy, -hz),
+        Vec3::new(-hx, hy, -hz),
+        Vec3::new(-hx, -hy, hz),
+        Vec3::new(hx, -hy, hz),
+        Vec3::new(hx, hy, hz),
+        Vec3::new(-hx, hy, hz),
+    ];
+    let world: [Vec3; 8] = local.map(|c| tf.transform_point(c));
+
+    let face_defs: [(usize, usize, usize, usize, Vec3); 6] = [
+        (4, 5, 6, 7, Vec3::new(0.0, 0.0, 1.0)),
+        (1, 0, 3, 2, Vec3::new(0.0, 0.0, -1.0)),
+        (3, 7, 6, 2, Vec3::new(0.0, 1.0, 0.0)),
+        (0, 1, 5, 4, Vec3::new(0.0, -1.0, 0.0)),
+        (1, 2, 6, 5, Vec3::new(1.0, 0.0, 0.0)),
+        (0, 4, 7, 3, Vec3::new(-1.0, 0.0, 0.0)),
+    ];
+
+    let base = positions.len() as u32;
+    for (v0, v1, v2, v3, normal) in &face_defs {
+        let wn = tf.rotation * *normal;
+        let wn_arr = [wn.x, wn.y, wn.z];
+        positions.push(world[*v0].to_array());
+        positions.push(world[*v1].to_array());
+        positions.push(world[*v2].to_array());
+        positions.push(world[*v3].to_array());
+        for _ in 0..4 {
+            normals.push(wn_arr);
+        }
+        uvs.push([0.0, 0.0]);
+        uvs.push([1.0, 0.0]);
+        uvs.push([1.0, 1.0]);
+        uvs.push([0.0, 1.0]);
+        indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+    }
 }
 
 #[cfg(test)]

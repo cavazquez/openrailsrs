@@ -51,29 +51,52 @@ pub fn spawn_signal_markers(
     let diamond_mesh = meshes.add(Cuboid::new(diamond_size, diamond_size, diamond_size));
     let pole_mesh = meshes.add(Cylinder::new(pole_radius, pole_height));
 
+    let stop_mat = materials.add(StandardMaterial {
+        base_color: COLOR_SIG_STOP,
+        perceptual_roughness: 0.5,
+        metallic: 0.2,
+        emissive: LinearRgba::from(COLOR_SIG_STOP) * 0.4,
+        ..default()
+    });
+    let caution_mat = materials.add(StandardMaterial {
+        base_color: COLOR_SIG_CAUTION,
+        perceptual_roughness: 0.5,
+        metallic: 0.2,
+        emissive: LinearRgba::from(COLOR_SIG_CAUTION) * 0.4,
+        ..default()
+    });
+    let clear_mat = materials.add(StandardMaterial {
+        base_color: COLOR_SIG_CLEAR,
+        perceptual_roughness: 0.5,
+        metallic: 0.2,
+        emissive: LinearRgba::from(COLOR_SIG_CLEAR) * 0.4,
+        ..default()
+    });
+    let pole_material = materials.add(StandardMaterial {
+        base_color: COLOR_SIG_POLE,
+        perceptual_roughness: 0.9,
+        metallic: 0.05,
+        ..default()
+    });
+
+    let aspect_mat = |aspect: &SignalAspect| -> Handle<StandardMaterial> {
+        match aspect {
+            SignalAspect::Stop => stop_mat.clone(),
+            SignalAspect::Caution => caution_mat.clone(),
+            SignalAspect::Clear => clear_mat.clone(),
+        }
+    };
+
     for signal in scene.graph.signals() {
         let Some(pos) = signal_position_on_edge(&scene.graph, signal, terrain_ref, &scene) else {
             continue;
         };
-        let color = aspect_color(signal.aspect);
-        let material = materials.add(StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.5,
-            metallic: 0.2,
-            emissive: LinearRgba::from(color) * 0.4,
-            ..default()
-        });
-        let pole_material = materials.add(StandardMaterial {
-            base_color: COLOR_SIG_POLE,
-            perceptual_roughness: 0.9,
-            metallic: 0.05,
-            ..default()
-        });
+        let material = aspect_mat(&signal.aspect);
 
         let pole_y = pos.y + pole_height * 0.5;
         commands.spawn((
             Mesh3d(pole_mesh.clone()),
-            MeshMaterial3d(pole_material),
+            MeshMaterial3d(pole_material.clone()),
             Transform::from_translation(Vec3::new(pos.x, pole_y, pos.z)),
             Name::new(format!("signal-pole:{}", signal.id)),
         ));

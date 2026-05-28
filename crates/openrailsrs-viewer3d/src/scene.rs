@@ -1,8 +1,11 @@
 //! Reference scene: ground plane, world-space grid, RGB axes and lighting.
 //!
-//! The grid is drawn every frame with [`Gizmos`]. The ground plane is sized to
-//! fit the loaded [`TrackScene`] bounds when present.
+//! The grid is spawned as a static line-list mesh at startup (no per-frame
+//! Gizmo cost). The ground plane is sized to fit the loaded [`TrackScene`]
+//! bounds when present.
 
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 
 use crate::terrain::TerrainScene;
@@ -15,14 +18,12 @@ const GRID_MINOR_STEP: f32 = 10.0;
 const GRID_MAJOR_EVERY: i32 = 10;
 
 const COLOR_GROUND: Color = Color::srgb(0.18, 0.20, 0.22);
-const COLOR_GRID_MINOR: Color = Color::srgb(0.30, 0.33, 0.36);
-const COLOR_GRID_MAJOR: Color = Color::srgb(0.55, 0.58, 0.62);
 const COLOR_AXIS_X: Color = Color::srgb(0.95, 0.20, 0.20);
 const COLOR_AXIS_Y: Color = Color::srgb(0.20, 0.95, 0.30);
 const COLOR_AXIS_Z: Color = Color::srgb(0.25, 0.50, 1.00);
 const AXIS_LENGTH: f32 = 5.0;
 
-/// One-shot startup: spawn the ground plane and the lights.
+/// One-shot startup: spawn the ground plane, grid mesh, axes and the lights.
 ///
 /// When [`TerrainScene`] has tiles, the flat placeholder plane is omitted.
 pub fn spawn_ground_and_lights(
@@ -52,6 +53,8 @@ pub fn spawn_ground_and_lights(
         ));
     }
 
+    spawn_grid_mesh(&mut commands, &mut meshes, &mut materials, &scene);
+
     let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((
         DirectionalLight {
@@ -64,38 +67,77 @@ pub fn spawn_ground_and_lights(
     ));
 }
 
-/// Update-loop gizmos: ground grid + RGB world axes at the route centre.
-pub fn draw_grid_and_axes(scene: Res<TrackScene>, mut gizmos: Gizmos) {
+fn spawn_grid_mesh(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    scene: &TrackScene,
+) {
     let half = scene.bounds.ground_half();
     let center = scene.bounds.center;
     let step = grid_step_for_extent(half);
     let n = (half / step) as i32;
 
+    let mut positions: Vec<[f32; 3]> = Vec::new();
+    let mut colors: Vec<[f32; 4]> = Vec::new();
+
+    let minor: [f32; 4] = Color::srgb(0.30, 0.33, 0.36).to_srgba().to_f32_array();
+    let major: [f32; 4] = Color::srgb(0.55, 0.58, 0.62).to_srgba().to_f32_array();
+
     for i in -n..=n {
         let v = i as f32 * step;
-        let color = if i.rem_euclid(GRID_MAJOR_EVERY) == 0 {
-            COLOR_GRID_MAJOR
+        let c = if i.rem_euclid(GRID_MAJOR_EVERY) == 0 {
+            major
         } else {
-            COLOR_GRID_MINOR
+            minor
         };
         let x = center.x + v;
         let z = center.z + v;
-        gizmos.line(
-            Vec3::new(x, 0.0, center.z - half),
-            Vec3::new(x, 0.0, center.z + half),
-            color,
-        );
-        gizmos.line(
-            Vec3::new(center.x - half, 0.0, z),
-            Vec3::new(center.x + half, 0.0, z),
-            color,
-        );
+        // Vertical line (along Z)
+        positions.push([x, 0.0, center.z - half]);
+        positions.push([x, 0.0, center.z + half]);
+        colors.push(c);
+        colors.push(c);
+        // Horizontal line (along X)
+        positions.push([center.x - half, 0.0, z]);
+        positions.push([center.x + half, 0.0, z]);
+        colors.push(c);
+        colors.push(c);
     }
 
     let axis_len = (half * 0.05).clamp(AXIS_LENGTH, 200.0);
-    gizmos.line(center, center + Vec3::X * axis_len, COLOR_AXIS_X);
-    gizmos.line(center, center + Vec3::Y * axis_len, COLOR_AXIS_Y);
-    gizmos.line(center, center + Vec3::Z * axis_len, COLOR_AXIS_Z);
+    let ax: [f32; 4] = COLOR_AXIS_X.to_srgba().to_f32_array();
+    let ay: [f32; 4] = COLOR_AXIS_Y.to_srgba().to_f32_array();
+    let az: [f32; 4] = COLOR_AXIS_Z.to_srgba().to_f32_array();
+    positions.push([center.x, center.y, center.z]);
+    positions.push([center.x + axis_len, center.y, center.z]);
+    colors.push(ax);
+    colors.push(ax);
+    positions.push([center.x, center.y, center.z]);
+    positions.push([center.x, center.y + axis_len, center.z]);
+    colors.push(ay);
+    colors.push(ay);
+    positions.push([center.x, center.y, center.z]);
+    positions.push([center.x, center.y, center.z + axis_len]);
+    colors.push(az);
+    colors.push(az);
+
+    let mut mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default());
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+
+    let material = materials.add(StandardMaterial {
+        base_color: Color::WHITE,
+        unlit: true,
+        ..default()
+    });
+
+    commands.spawn((
+        Mesh3d(meshes.add(mesh)),
+        MeshMaterial3d(material),
+        Transform::from_xyz(0.0, 0.05, 0.0),
+        Name::new("grid"),
+    ));
 }
 
 /// Pick a grid step that keeps line count reasonable on large imported routes.

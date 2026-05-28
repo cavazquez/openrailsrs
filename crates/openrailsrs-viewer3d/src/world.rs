@@ -2,6 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
@@ -11,6 +13,14 @@ use crate::track::TrackScene;
 
 /// MSTS / Open Rails world tile size (metres).
 pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
+
+/// Maximum distance (m) from the route centre at which world objects are spawned.
+/// Objects beyond this radius are skipped to keep draw call count manageable on
+/// large imported routes.
+pub const VISIBLE_RADIUS_M: f32 = 8000.0;
+
+/// Shapes closer than this use the highest LOD; farther shapes use coarser LOD.
+pub const SHAPE_LOD_DISTANCE_M: f32 = 2000.0;
 
 /// Forest patch metadata from a `.w` `Forest` item.
 #[derive(Clone, Debug, PartialEq)]
@@ -233,6 +243,63 @@ fn shape_eligible(obj: &WorldObject) -> bool {
         .is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
 }
 
+struct MergedBoxGroup {
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    uvs: Vec<[f32; 2]>,
+    indices: Vec<u32>,
+    color: Color,
+}
+
+fn push_cuboid(
+    positions: &mut Vec<[f32; 3]>,
+    normals: &mut Vec<[f32; 3]>,
+    uvs: &mut Vec<[f32; 2]>,
+    indices: &mut Vec<u32>,
+    tf: &Transform,
+    size: Vec3,
+) {
+    let hx = size.x * 0.5;
+    let hy = size.y * 0.5;
+    let hz = size.z * 0.5;
+    let local = [
+        Vec3::new(-hx, -hy, -hz),
+        Vec3::new(hx, -hy, -hz),
+        Vec3::new(hx, hy, -hz),
+        Vec3::new(-hx, hy, -hz),
+        Vec3::new(-hx, -hy, hz),
+        Vec3::new(hx, -hy, hz),
+        Vec3::new(hx, hy, hz),
+        Vec3::new(-hx, hy, hz),
+    ];
+    let world: [Vec3; 8] = local.map(|c| tf.transform_point(c));
+    let faces: [(usize, usize, usize, usize, Vec3); 6] = [
+        (4, 5, 6, 7, Vec3::new(0.0, 0.0, 1.0)),
+        (1, 0, 3, 2, Vec3::new(0.0, 0.0, -1.0)),
+        (3, 7, 6, 2, Vec3::new(0.0, 1.0, 0.0)),
+        (0, 1, 5, 4, Vec3::new(0.0, -1.0, 0.0)),
+        (1, 2, 6, 5, Vec3::new(1.0, 0.0, 0.0)),
+        (0, 4, 7, 3, Vec3::new(-1.0, 0.0, 0.0)),
+    ];
+    let base = positions.len() as u32;
+    for (v0, v1, v2, v3, normal) in &faces {
+        let wn = tf.rotation * *normal;
+        let wn_arr = [wn.x, wn.y, wn.z];
+        positions.push(world[*v0].to_array());
+        positions.push(world[*v1].to_array());
+        positions.push(world[*v2].to_array());
+        positions.push(world[*v3].to_array());
+        for _ in 0..4 {
+            normals.push(wn_arr);
+        }
+        uvs.push([0.0, 0.0]);
+        uvs.push([1.0, 0.0]);
+        uvs.push([1.0, 1.0]);
+        uvs.push([0.0, 1.0]);
+        indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+    }
+}
+
 /// Spawn world objects: real meshes for resolvable `.s` shapes, cuboids otherwise.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_world_boxes(
@@ -251,9 +318,6 @@ pub fn spawn_world_boxes(
 
     let terrain_ref = terrain.as_deref();
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
-    let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-    let mut box_material_cache: std::collections::HashMap<&'static str, Handle<StandardMaterial>> =
-        std::collections::HashMap::new();
     let mut shape_cache: std::collections::HashMap<
         PathBuf,
         (Handle<Mesh>, Handle<StandardMaterial>, bool),
@@ -261,16 +325,39 @@ pub fn spawn_world_boxes(
     let mut texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>> =
         std::collections::HashMap::new();
 
-    // Fallback when no `.ace` is available for a shape mesh.
+    let mut merged_boxes: std::collections::HashMap<&str, MergedBoxGroup> =
+        std::collections::HashMap::new();
+
     let shape_fallback_color = Color::srgb(0.95, 0.25, 0.85);
+    let shape_fallback_material = materials.add(StandardMaterial {
+        base_color: shape_fallback_color,
+        emissive: LinearRgba::from(shape_fallback_color) * 0.35,
+        perceptual_roughness: 0.75,
+        metallic: 0.1,
+        double_sided: true,
+        ..default()
+    });
 
     let mut shape_mesh_count = 0usize;
     let mut shape_texture_count = 0usize;
+    let mut culled_count = 0usize;
 
     for obj in &world.items {
         if obj.kind == "Dyntrack" || obj.kind == "Forest" || obj.kind == "HWater" {
             continue;
         }
+
+        let dist = (obj.position - scene.bounds.center).length();
+        if dist > VISIBLE_RADIUS_M {
+            culled_count += 1;
+            continue;
+        }
+
+        let lod_distance = if dist > SHAPE_LOD_DISTANCE_M {
+            Some(dist)
+        } else {
+            None
+        };
 
         if shape_eligible(obj) {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
@@ -278,7 +365,7 @@ pub fn spawn_world_boxes(
                 let (mesh, material, has_texture) = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
-                        match load_shape_from_path(&shape_path, None) {
+                        match load_shape_from_path(&shape_path, lod_distance) {
                             Some(loaded) => {
                                 let texture_file = loaded.texture_file.clone();
                                 let mesh = meshes.add(loaded.mesh);
@@ -309,30 +396,15 @@ pub fn spawn_world_boxes(
                                         "openrailsrs-viewer3d: texture {tex_name} missing or failed, using fallback color"
                                     );
                                 }
-                                let material = materials.add(StandardMaterial {
-                                    base_color: shape_fallback_color,
-                                    emissive: LinearRgba::from(shape_fallback_color) * 0.35,
-                                    perceptual_roughness: 0.75,
-                                    metallic: 0.1,
-                                    double_sided: true,
-                                    ..default()
-                                });
-                                (mesh, material, false)
+                                (mesh, shape_fallback_material.clone(), false)
                             }
                             None => {
                                 eprintln!(
                                     "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
                                     shape_path.display()
                                 );
-                                let material = materials.add(StandardMaterial {
-                                    base_color: shape_fallback_color,
-                                    emissive: LinearRgba::from(shape_fallback_color) * 0.35,
-                                    perceptual_roughness: 0.75,
-                                    metallic: 0.1,
-                                    double_sided: true,
-                                    ..default()
-                                });
-                                (unit.clone(), material, false)
+                                let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+                                (unit, shape_fallback_material.clone(), false)
                             }
                         }
                     })
@@ -367,18 +439,6 @@ pub fn spawn_world_boxes(
         }
 
         let size = box_size_for_kind(obj.kind, base);
-        let material = box_material_cache
-            .entry(obj.kind)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: kind_color(obj.kind),
-                    perceptual_roughness: 0.85,
-                    metallic: 0.05,
-                    ..default()
-                })
-            })
-            .clone();
-
         let ground_y = scenery_ground_y(
             terrain_ref,
             obj.position.x,
@@ -387,19 +447,64 @@ pub fn spawn_world_boxes(
             obj.position.y,
         );
         let translation = Vec3::new(obj.position.x, ground_y + size.y * 0.5, obj.position.z);
-
-        commands.spawn((
-            Mesh3d(unit.clone()),
-            MeshMaterial3d(material),
-            Transform {
-                translation,
-                rotation: obj.rotation,
-                scale: size,
-            },
-            Name::new(format!("world:{}:{}", obj.kind, obj.label)),
-        ));
+        let tf = Transform {
+            translation,
+            rotation: obj.rotation,
+            scale: size,
+        };
+        let kind_entry = merged_boxes.entry(obj.kind).or_insert_with(|| {
+            let color = kind_color(obj.kind);
+            MergedBoxGroup {
+                positions: Vec::new(),
+                normals: Vec::new(),
+                uvs: Vec::new(),
+                indices: Vec::new(),
+                color,
+            }
+        });
+        push_cuboid(
+            &mut kind_entry.positions,
+            &mut kind_entry.normals,
+            &mut kind_entry.uvs,
+            &mut kind_entry.indices,
+            &tf,
+            size,
+        );
     }
 
+    for (kind, group) in &merged_boxes {
+        let material = materials.add(StandardMaterial {
+            base_color: group.color,
+            perceptual_roughness: 0.85,
+            metallic: 0.05,
+            ..default()
+        });
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, group.positions.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, group.normals.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, group.uvs.clone());
+        mesh.insert_indices(Indices::U32(group.indices.clone()));
+        let count = group.indices.len() / 6;
+        commands.spawn((
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(material),
+            Transform::IDENTITY,
+            Name::new(format!("world-boxes:{}", kind)),
+        ));
+        eprintln!(
+            "openrailsrs-viewer3d: merged {count} {} placeholder(s)",
+            kind
+        );
+    }
+
+    if culled_count > 0 {
+        eprintln!(
+            "openrailsrs-viewer3d: {culled_count} world object(s) culled (>{VISIBLE_RADIUS_M:.0}m from centre)"
+        );
+    }
     if shape_mesh_count > 0 {
         eprintln!("openrailsrs-viewer3d: {shape_mesh_count} world object(s) using .s mesh");
     }

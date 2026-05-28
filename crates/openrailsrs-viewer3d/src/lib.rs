@@ -61,6 +61,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<hud::HudFps>()
+            .init_resource::<hud::ProfileLog>()
             .add_systems(
                 Startup,
                 (
@@ -114,6 +115,7 @@ impl Plugin for ViewerPlugin {
                     hud::update_hud.after(hud::tick_hud_fps),
                 ),
             )
+            .add_systems(Update, hud::log_profile)
             .add_systems(
                 Update,
                 (
@@ -130,7 +132,6 @@ impl Plugin for ViewerPlugin {
                     camera::fly_camera_system
                         .run_if(camera::in_fly_mode)
                         .run_if(teleport::teleport_closed),
-                    scene::draw_grid_and_axes,
                 ),
             );
     }

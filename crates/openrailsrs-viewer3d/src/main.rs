@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
+use bevy::window::PresentMode;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
@@ -140,6 +141,7 @@ fn main() {
                 primary_window: Some(Window {
                     title: config.title.clone(),
                     resolution: (1280u32, 720u32).into(),
+                    present_mode: PresentMode::AutoNoVsync,
                     ..default()
                 }),
                 ..default()

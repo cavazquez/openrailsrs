@@ -35,13 +35,27 @@ impl HudFps {
     }
 }
 
-/// Suffix for HUD row1, e.g. `  fps:58 (17.2ms)`.
-pub fn format_fps_suffix(fps: &HudFps) -> String {
+/// Cached HUD strings to avoid per-frame allocations.
+#[derive(Resource, Default)]
+pub struct HudCache {
+    pub row1: String,
+    pub row2: String,
+    pub fps_suffix: String,
+}
+
+/// Write the FPS suffix into `buf`, returning a reference to the written content.
+pub fn write_fps_suffix(buf: &mut String, fps: &HudFps) {
+    buf.clear();
     if fps.smoothed < 1.0 {
-        return String::new();
+        return;
     }
     let warn = if fps.smoothed < 30.0 { " !" } else { "" };
-    format!("  fps:{:.0} ({:.1}ms){warn}", fps.smoothed, fps.frame_ms)
+    use std::fmt::Write;
+    let _ = write!(
+        buf,
+        "  fps:{:.0} ({:.1}ms){warn}",
+        fps.smoothed, fps.frame_ms
+    );
 }
 
 /// Minimum HUD strip height; panel grows with visible rows (coords, replay, etc.).
@@ -432,6 +446,7 @@ pub(crate) fn update_hud(
     precipitation: Res<PrecipitationState>,
     terrain: Option<Res<TerrainElevation>>,
     camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
+    mut cache: Local<HudCache>,
     mut hud: Query<
         (
             &mut Visibility,
@@ -492,19 +507,20 @@ pub(crate) fn update_hud(
             orbit_focus,
         )
     };
-    let fps_suffix = format_fps_suffix(fps.as_ref());
+    write_fps_suffix(&mut cache.row1, &fps);
     let active = replay.is_active() || live.is_some();
 
     for (mut vis, mut text, mut node, row1, row2, bar, trains, controls, fill) in &mut hud {
         if row1.is_some() {
             if let Some(text) = text.as_mut() {
-                let mut row1_text = content.row1.clone();
-                row1_text.push_str(&fps_suffix);
-                **text = Text::new(row1_text);
+                text.0.clear();
+                text.0.push_str(&content.row1);
+                text.0.push_str(&cache.fps_suffix);
             }
         } else if row2.is_some() {
             if let Some(text) = text.as_mut() {
-                **text = Text::new(content.row2.clone());
+                text.0.clear();
+                text.0.push_str(&content.row2);
             }
             *vis = if active || content.show_row2 {
                 Visibility::Inherited
@@ -519,7 +535,8 @@ pub(crate) fn update_hud(
             };
         } else if trains.is_some() {
             if let Some(text) = text.as_mut() {
-                **text = Text::new(content.trains.clone());
+                text.0.clear();
+                text.0.push_str(&content.trains);
             }
             *vis = if active && !content.trains.is_empty() {
                 Visibility::Inherited
@@ -528,7 +545,8 @@ pub(crate) fn update_hud(
             };
         } else if controls.is_some() {
             if let Some(text) = text.as_mut() {
-                **text = Text::new(content.controls.clone());
+                text.0.clear();
+                text.0.push_str(&content.controls);
             }
         } else if fill.is_some() {
             if let Some(node) = node.as_mut() {
@@ -608,7 +626,10 @@ mod tests {
             CameraMode::Orbit,
             CameraFollowMode::Off,
             &CameraFollowTarget::default(),
-            &PrecipitationState::default(),
+            &PrecipitationState {
+                enabled: true,
+                ..Default::default()
+            },
             None,
             Vec3::new(120.0, 35.0, 8.0),
             Some(Vec3::new(5000.0, 0.0, 25.0)),
@@ -642,7 +663,10 @@ mod tests {
             CameraMode::Orbit,
             CameraFollowMode::OrbitFollow,
             &CameraFollowTarget::default(),
-            &PrecipitationState::default(),
+            &PrecipitationState {
+                enabled: true,
+                ..Default::default()
+            },
             None,
             Vec3::ZERO,
             None,
@@ -664,10 +688,13 @@ mod tests {
             smoothed: 58.0,
             frame_ms: 17.2,
         };
-        assert!(format_fps_suffix(&fps).contains("fps:58"));
-        assert!(format_fps_suffix(&fps).contains("17.2ms"));
+        let mut buf = String::new();
+        write_fps_suffix(&mut buf, &fps);
+        assert!(buf.contains("fps:58"));
+        assert!(buf.contains("17.2ms"));
         fps.smoothed = 22.0;
-        assert!(format_fps_suffix(&fps).ends_with('!'));
+        write_fps_suffix(&mut buf, &fps);
+        assert!(buf.ends_with('!'));
     }
 
     #[test]
@@ -694,5 +721,30 @@ mod tests {
         assert!(content.row1.contains("rain:off"));
         assert!(content.row1.contains("cam:fly"));
         assert!(content.status_is_paused);
+    }
+}
+
+use std::time::Instant;
+
+#[derive(Resource, Default)]
+pub struct ProfileLog {
+    last: Option<Instant>,
+    frames: u32,
+}
+
+pub(crate) fn log_profile(fps: Res<HudFps>, mut state: ResMut<ProfileLog>) {
+    state.frames += 1;
+    let now = Instant::now();
+    if let Some(last) = state.last {
+        if now.duration_since(last).as_secs() >= 3 {
+            eprintln!(
+                "[profile] fps={:.1} frame={:.1}ms over {} frames",
+                fps.smoothed, fps.frame_ms, state.frames,
+            );
+            state.frames = 0;
+            state.last = Some(now);
+        }
+    } else {
+        state.last = Some(now);
     }
 }

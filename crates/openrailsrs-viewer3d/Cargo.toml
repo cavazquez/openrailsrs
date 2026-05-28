@@ -13,6 +13,10 @@ path = "src/lib.rs"
 name = "openrailsrs-viewer3d"
 path = "src/main.rs"
 
+[features]
+default = []
+trace = ["bevy/trace"]
+
 [dependencies]
 openrailsrs-ace = { path = "../openrailsrs-ace" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
