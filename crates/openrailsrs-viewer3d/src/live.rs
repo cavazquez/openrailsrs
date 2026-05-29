@@ -314,10 +314,10 @@ pub fn spawn_live_train(
     let color = TRAIN_COLORS[0];
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
 
-    let locator = meshes.add(Sphere::new(6.0));
+    let locator = meshes.add(Sphere::new(1.2));
     let locator_mat = materials.add(StandardMaterial {
-        base_color: TRAIN_COLORS[0],
-        emissive: LinearRgba::from(TRAIN_COLORS[0]) * 2.0,
+        base_color: Color::srgb(0.2, 0.9, 0.3),
+        emissive: LinearRgba::new(0.2, 1.8, 0.3, 1.0),
         ..default()
     });
 

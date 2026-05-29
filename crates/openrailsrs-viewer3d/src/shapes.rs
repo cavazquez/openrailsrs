@@ -532,30 +532,39 @@ fn material_for_shape_texture(
     fallback_color: Color,
 ) -> (Handle<StandardMaterial>, bool, bool) {
     if let Some(tex_name) = texture_file {
-        if let Some(tex_path) = resolve_texture_path_in_dirs(texture_dirs, tex_name) {
-            if let Ok(ace) = read_ace(&tex_path) {
-                let is_transparent =
-                    ace_has_alpha(&ace) || texture_name_suggests_transparency(tex_name);
-                let image = ace_to_image(&ace);
-                let handle = texture_cache
-                    .entry(tex_path)
-                    .or_insert_with(|| images.add(image))
-                    .clone();
-                let material = materials.add(StandardMaterial {
-                    base_color: Color::WHITE,
-                    base_color_texture: Some(handle),
-                    perceptual_roughness: 0.85,
-                    metallic: 0.05,
-                    double_sided: true,
-                    alpha_mode: if is_transparent {
-                        AlphaMode::Blend
-                    } else {
-                        AlphaMode::Opaque
-                    },
-                    ..default()
-                });
-                return (material, true, is_transparent);
-            }
+        match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
+            None => {}
+            Some(tex_path) => match read_ace(&tex_path) {
+                Err(e) => {
+                    eprintln!(
+                        "openrailsrs-viewer3d: ACE decode error for {}: {e}",
+                        tex_path.display()
+                    );
+                }
+                Ok(ace) => {
+                    let is_transparent =
+                        ace_has_alpha(&ace) || texture_name_suggests_transparency(tex_name);
+                    let image = ace_to_image(&ace);
+                    let handle = texture_cache
+                        .entry(tex_path)
+                        .or_insert_with(|| images.add(image))
+                        .clone();
+                    let material = materials.add(StandardMaterial {
+                        base_color: Color::WHITE,
+                        base_color_texture: Some(handle),
+                        perceptual_roughness: 0.85,
+                        metallic: 0.05,
+                        double_sided: true,
+                        alpha_mode: if is_transparent {
+                            AlphaMode::Blend
+                        } else {
+                            AlphaMode::Opaque
+                        },
+                        ..default()
+                    });
+                    return (material, true, is_transparent);
+                }
+            },
         }
     }
 
