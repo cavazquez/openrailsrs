@@ -39,6 +39,10 @@ pub struct ForestPatch {
     /// Half-width of scatter patch in metres (`Area` / 2, or 0 → viewer default).
     pub patch_half_x: f32,
     pub patch_half_z: f32,
+    /// Base billboard width in metres from `TreeSize`.
+    pub tree_width: f32,
+    /// Base billboard height in metres from `TreeSize`.
+    pub tree_height: f32,
 }
 
 /// Horizontal water metadata from a `.w` `HWater` item.
@@ -226,6 +230,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
             tree_texture,
             scale_range,
             patch_size,
+            tree_size,
             population,
             ..
         } => {
@@ -235,6 +240,9 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
             let (patch_half_x, patch_half_z) = patch_size
                 .map(|a| ((a[0] * 0.5) as f32, (a[1] * 0.5) as f32))
                 .unwrap_or((0.0, 0.0));
+            let (tree_width, tree_height) = tree_size
+                .map(|s| (s[0] as f32, s[1] as f32))
+                .unwrap_or((0.0, 0.0));
             Some(ForestPatch {
                 uid: *uid,
                 tree_texture: tree_texture.clone(),
@@ -243,6 +251,8 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
                 population: *population,
                 patch_half_x,
                 patch_half_z,
+                tree_width,
+                tree_height,
             })
         }
         _ => None,

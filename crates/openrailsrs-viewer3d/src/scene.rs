@@ -26,9 +26,9 @@ const COLOR_AXIS_Y: Color = Color::srgb(0.20, 0.95, 0.30);
 const COLOR_AXIS_Z: Color = Color::srgb(0.25, 0.50, 1.00);
 const AXIS_LENGTH: f32 = 5.0;
 
-/// One-shot startup: spawn the ground plane, grid mesh, axes and the lights.
+/// One-shot startup: spawn the reference ground/grid and the lights.
 ///
-/// When [`TerrainScene`] has tiles, the flat placeholder plane is omitted.
+/// When [`TerrainScene`] has tiles, the flat placeholder plane and grid are omitted.
 pub fn spawn_ground_and_lights(
     scene: Res<TrackScene>,
     _focus: Res<crate::world::RouteFocus>,
@@ -65,14 +65,16 @@ pub fn spawn_ground_and_lights(
         }
     }
 
-    spawn_grid_mesh(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &scene,
-        center,
-        opts.live,
-    );
+    if terrain.is_empty() {
+        spawn_grid_mesh(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &scene,
+            center,
+            opts.live,
+        );
+    }
 
     let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((

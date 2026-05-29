@@ -63,10 +63,10 @@ pub fn terrain_material_textures(
         .map(|s| s.filename.as_str())
         .unwrap_or(DEFAULT_MICROTEX);
 
-    let base =
-        texture_handle(route_dir, images, cache, base_name).unwrap_or_else(|| fallback.clone());
-    let overlay = texture_handle(route_dir, images, cache, overlay_name)
-        .or_else(|| texture_handle(route_dir, images, cache, DEFAULT_MICROTEX))
+    let base = texture_handle(route_dir, images, cache, base_name, true)
+        .unwrap_or_else(|| fallback.clone());
+    let overlay = texture_handle(route_dir, images, cache, overlay_name, false)
+        .or_else(|| texture_handle(route_dir, images, cache, DEFAULT_MICROTEX, false))
         .unwrap_or_else(|| base.clone());
 
     (base, overlay, overlay_scale_from_shader(shader))
@@ -77,15 +77,67 @@ fn texture_handle(
     images: &mut Assets<Image>,
     cache: &mut HashMap<String, Handle<Image>>,
     file_name: &str,
+    sanitize_base_alpha: bool,
 ) -> Option<Handle<Image>> {
-    if let Some(handle) = cache.get(file_name) {
+    let key = format!(
+        "{file_name}:{}",
+        if sanitize_base_alpha { "base" } else { "raw" }
+    );
+    if let Some(handle) = cache.get(&key) {
         return Some(handle.clone());
     }
     resolve_terrtex_path(route_dir, file_name)?;
-    let image = load_terrtex_image(route_dir, file_name)?;
+    let mut image = load_terrtex_image(route_dir, file_name)?;
+    if sanitize_base_alpha {
+        sanitize_terrain_base_rgba(image.data.as_mut());
+    }
     let handle = images.add(image);
-    cache.insert(file_name.to_string(), handle.clone());
+    cache.insert(key, handle.clone());
     Some(handle)
+}
+
+fn sanitize_terrain_base_rgba(data: Option<&mut Vec<u8>>) {
+    let Some(data) = data else {
+        return;
+    };
+    if data.chunks_exact(4).all(|rgba| rgba[3] >= 250) {
+        return;
+    }
+
+    let mut sum = [0u64; 3];
+    let mut count = 0u64;
+    for rgba in data.chunks_exact(4) {
+        if rgba[3] >= 250 && !looks_like_terrain_chroma_key(rgba) {
+            sum[0] += rgba[0] as u64;
+            sum[1] += rgba[1] as u64;
+            sum[2] += rgba[2] as u64;
+            count += 1;
+        }
+    }
+    let fill = count
+        .checked_sub(1)
+        .map(|_| {
+            [
+                (sum[0] / count) as u8,
+                (sum[1] / count) as u8,
+                (sum[2] / count) as u8,
+            ]
+        })
+        .unwrap_or([72, 107, 56]);
+
+    for rgba in data.chunks_exact_mut(4) {
+        if rgba[3] < 16 || looks_like_terrain_chroma_key(rgba) {
+            rgba[0] = fill[0];
+            rgba[1] = fill[1];
+            rgba[2] = fill[2];
+        }
+        rgba[3] = 255;
+    }
+}
+
+fn looks_like_terrain_chroma_key(rgba: &[u8]) -> bool {
+    let [r, g, b, _] = [rgba[0], rgba[1], rgba[2], rgba[3]];
+    b > 135 && g > 115 && r < 170 && b.saturating_sub(r) > 25 && b >= g
 }
 
 #[cfg(test)]
@@ -113,5 +165,16 @@ mod tests {
         let route =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         assert!(resolve_terrtex_path(&route, "grass.ace").is_some());
+    }
+
+    #[test]
+    fn terrain_base_sanitizer_fills_transparent_pixels() {
+        let mut rgba = vec![
+            10, 20, 30, 255, //
+            200, 210, 220, 0,
+        ];
+        sanitize_terrain_base_rgba(Some(&mut rgba));
+        assert_eq!(&rgba[0..4], &[10, 20, 30, 255]);
+        assert_eq!(&rgba[4..8], &[10, 20, 30, 255]);
     }
 }

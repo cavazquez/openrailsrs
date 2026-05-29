@@ -60,6 +60,9 @@ const FLY_LOOK_SENSITIVITY: f32 = 0.002;
 /// Ctrl, so effective range ≈ 2.5 .. 40 m/s.
 const FLY_BASE_SPEED: f32 = 10.0;
 
+/// Distance moved along the current view direction per mouse-wheel line in fly mode.
+const FLY_WHEEL_DOLLY_STEP_M: f32 = 8.0;
+
 /// Orbit focus lerp speed when following the train (1/s).
 const FOLLOW_LERP_SPEED: f32 = 8.0;
 
@@ -261,6 +264,10 @@ pub fn fly_translation_delta(yaw: f32, axes: Vec3, speed: f32, dt: f32) -> Vec3 
     let right_h = Vec3::new(yaw.cos(), 0.0, -yaw.sin());
     let up = Vec3::Y;
     (forward_h * axes.z + right_h * axes.x + up * axes.y) * speed * dt
+}
+
+pub fn fly_wheel_dolly_delta(yaw: f32, pitch: f32, scroll_lines: f32) -> Vec3 {
+    fly_forward(yaw, pitch) * scroll_lines * FLY_WHEEL_DOLLY_STEP_M
 }
 
 /// Lerp orbit focus toward a target world position (exponential smoothing).
@@ -708,6 +715,7 @@ pub fn fly_camera_system(
     replay: Option<Res<crate::train::ReplayState>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
+    mut wheel: MessageReader<MouseWheel>,
     mut query: Query<
         (&mut Transform, &mut FlyState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
@@ -715,12 +723,17 @@ pub fn fly_camera_system(
 ) {
     let Ok((mut transform, mut fly)) = query.single_mut() else {
         motion.clear();
+        wheel.clear();
         return;
     };
 
     let mut delta = Vec2::ZERO;
     for ev in motion.read() {
         delta += ev.delta;
+    }
+    let mut scroll = 0.0_f32;
+    for ev in wheel.read() {
+        scroll += wheel_scroll_lines(ev);
     }
 
     if mouse_buttons.pressed(MouseButton::Right) && delta != Vec2::ZERO {
@@ -739,6 +752,9 @@ pub fn fly_camera_system(
 
     if axes != Vec3::ZERO {
         transform.translation += fly_translation_delta(fly.yaw, axes, speed, time.delta_secs());
+    }
+    if scroll != 0.0 {
+        transform.translation += fly_wheel_dolly_delta(fly.yaw, fly.pitch, scroll);
     }
 
     transform.rotation = Quat::from_euler(EulerRot::YXZ, fly.yaw, fly.pitch, 0.0);
@@ -933,6 +949,23 @@ mod tests {
     fn fly_translation_delta_yaw_pi_over_two_forward_moves_minus_x() {
         let d = fly_translation_delta(FRAC_PI_2, Vec3::new(0.0, 0.0, 1.0), 8.0, 1.0);
         assert!(vec3_close(d, Vec3::new(-8.0, 0.0, 0.0), 1e-5));
+    }
+
+    #[test]
+    fn fly_wheel_dolly_moves_along_view_direction() {
+        let d = fly_wheel_dolly_delta(0.0, 0.0, 2.0);
+        assert!(vec3_close(d, Vec3::new(0.0, 0.0, -16.0), 1e-5));
+    }
+
+    #[test]
+    fn pixel_wheel_scroll_is_normalized_to_lines() {
+        let ev = MouseWheel {
+            unit: MouseScrollUnit::Pixel,
+            x: 0.0,
+            y: 250.0,
+            window: Entity::PLACEHOLDER,
+        };
+        assert!((wheel_scroll_lines(&ev) - 2.5).abs() < 1e-6);
     }
 
     #[test]

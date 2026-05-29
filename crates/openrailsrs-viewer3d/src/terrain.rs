@@ -23,17 +23,10 @@ use crate::world::MSTS_TILE_SIZE_M;
 
 const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
 
-/// MSTS terrain patch size (metres); must match [`openrailsrs_formats::typed::terrain`].
-pub(crate) const TERRAIN_PATCH_SIZE_M: f32 = 128.0;
-
-/// World-space offset for a textured patch inside a tile (viewer spawn; not OR `patch_translation`).
+/// World-space offset for a textured patch inside a tile.
 #[inline]
 pub(crate) fn terrain_patch_offset_in_tile(px: u32, pz: u32) -> Vec3 {
-    Vec3::new(
-        px as f32 * TERRAIN_PATCH_SIZE_M,
-        0.0,
-        pz as f32 * TERRAIN_PATCH_SIZE_M,
-    )
+    Vec3::new(px as f32 * 128.0, 0.0, pz as f32 * 128.0)
 }
 
 #[derive(Clone)]
@@ -815,38 +808,6 @@ mod tests {
         assert_eq!(
             terrain_patch_offset_in_tile(0, 1),
             Vec3::new(0.0, 0.0, 128.0)
-        );
-    }
-
-    #[test]
-    fn patch_translation_must_not_be_added_on_top_of_mesh_offset() {
-        use openrailsrs_formats::TerrainPatch;
-
-        let tile_origin = Vec3::new(-400.0, 0.0, -200.0);
-        let correct = tile_origin + terrain_patch_offset_in_tile(0, 1);
-        let patch = TerrainPatch {
-            flags: 0,
-            center_x: 1024.0,
-            average_y: 0.0,
-            center_z: 1024.0,
-            factor_y: 0.0,
-            range_y: 0.0,
-            radius_m: 64.0,
-            shader_index: 0,
-            x: 0.0,
-            y: 0.0,
-            w: 0.0,
-            h: 0.0,
-            b: 0.0,
-            c: 0.0,
-            error_bias: 0.0,
-        };
-        let (cx, cz) = patch.patch_translation();
-        let wrong = tile_origin + Vec3::new(cx, 0.0, cz);
-        assert!(
-            (correct - wrong).length() > 1000.0,
-            "OR patch_translation duplicates mesh layout (Δ={:?})",
-            correct - wrong
         );
     }
 

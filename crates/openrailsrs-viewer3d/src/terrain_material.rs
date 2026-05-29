@@ -1,7 +1,10 @@
 //! Dual-texture terrain material (OR-style base + microtex overlay).
 
+use bevy::mesh::MeshVertexBufferLayoutRef;
+use bevy::pbr::{MaterialPipeline, MaterialPipelineKey};
 use bevy::prelude::*;
 use bevy::render::render_resource::AsBindGroup;
+use bevy::render::render_resource::{RenderPipelineDescriptor, SpecializedMeshPipelineError};
 use bevy::shader::ShaderRef;
 
 pub const TERRAIN_SHADER_PATH: &str = "shaders/terrain.wgsl";
@@ -22,5 +25,15 @@ pub struct TerrainMaterial {
 impl Material for TerrainMaterial {
     fn fragment_shader() -> ShaderRef {
         TERRAIN_SHADER_PATH.into()
+    }
+
+    fn specialize(
+        _pipeline: &MaterialPipeline,
+        descriptor: &mut RenderPipelineDescriptor,
+        _layout: &MeshVertexBufferLayoutRef,
+        _key: MaterialPipelineKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        descriptor.primitive.cull_mode = None;
+        Ok(())
     }
 }

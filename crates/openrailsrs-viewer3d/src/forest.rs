@@ -15,16 +15,28 @@ use crate::world::{RouteFocus, WorldScene};
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
 const MAX_SCATTER_ATTEMPTS: u32 = 12;
+const DEFAULT_TREE_WIDTH_M: f32 = 5.0;
+const DEFAULT_TREE_HEIGHT_M: f32 = 12.0;
+const DEFAULT_PATCH_HALF_M: f32 = 128.0;
 
-/// Tree height/width baseline scaled like other world placeholders.
-pub fn forest_tree_size(bounds: &SceneBounds) -> (f32, f32) {
-    let base = bounds.edge_radius().max(2.0) * 1.5;
-    (base * 0.55, base * 2.2)
+/// Tree height/width baseline in metres.
+pub fn forest_tree_size(width: f32, height: f32) -> (f32, f32) {
+    let w = if width > 0.0 {
+        width.clamp(0.5, 50.0)
+    } else {
+        DEFAULT_TREE_WIDTH_M
+    };
+    let h = if height > 0.0 {
+        height.clamp(1.0, 80.0)
+    } else {
+        DEFAULT_TREE_HEIGHT_M
+    };
+    (w, h)
 }
 
 /// Default half-extent of a forest patch when `.w` has no `Area`.
 pub fn default_patch_half(bounds: &SceneBounds) -> f32 {
-    bounds.edge_radius().max(2.0) * 12.0
+    DEFAULT_PATCH_HALF_M.min(bounds.ground_half().max(DEFAULT_PATCH_HALF_M))
 }
 
 /// Deterministic [0, 1) sample for tree placement (Open Rails-style seeded RNG).
@@ -183,7 +195,6 @@ pub fn spawn_forest_patches(
         return;
     }
 
-    let (base_w, base_h) = forest_tree_size(&track.bounds);
     let default_half = default_patch_half(&track.bounds);
     let track_clearance = forest_track_clearance_m(&track.bounds);
     let terrain_ref = terrain.as_deref();
@@ -215,6 +226,7 @@ pub fn spawn_forest_patches(
         } else {
             default_half
         };
+        let (base_w, base_h) = forest_tree_size(patch.tree_width, patch.tree_height);
         if focus.horizontal_distance(obj.position) > crate::world::VISIBLE_RADIUS_M {
             continue;
         }
@@ -330,6 +342,17 @@ mod tests {
         let c = forest_rng01(0, 0, 5, 3, 0);
         assert_eq!(a, b);
         assert_ne!(a, c);
+    }
+
+    #[test]
+    fn tree_size_does_not_scale_with_route_extent() {
+        let small = forest_tree_size(0.0, 0.0);
+        let explicit = forest_tree_size(4.0, 9.0);
+        let clamped = forest_tree_size(400.0, 900.0);
+
+        assert_eq!(small, (DEFAULT_TREE_WIDTH_M, DEFAULT_TREE_HEIGHT_M));
+        assert_eq!(explicit, (4.0, 9.0));
+        assert_eq!(clamped, (50.0, 80.0));
     }
 
     #[test]

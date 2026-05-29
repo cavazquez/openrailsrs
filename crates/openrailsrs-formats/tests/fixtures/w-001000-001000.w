@@ -11,6 +11,7 @@ SIMISA@@@@@@@@@@JINX0w0t______
         ( TreeTexture "pine.ace" )
         ( Position 200.0 0.0 -75.0 )
         ( ScaleRange 0.8 1.2 )
+        ( TreeSize 4.0 9.0 )
     )
     ( TrackObj
         ( UiD 3 )

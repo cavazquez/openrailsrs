@@ -41,6 +41,8 @@ pub enum WorldItem {
         scale_range: Option<[f64; 2]>,
         /// Patch width/depth in metres from `Area` (optional).
         patch_size: Option<[f64; 2]>,
+        /// Billboard width/height in metres from `TreeSize` (optional).
+        tree_size: Option<[f64; 2]>,
         /// Tree count from `Population` (default when absent).
         population: u32,
     },
@@ -217,6 +219,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position: position.unwrap_or_default(),
             scale_range: find_named_pair(items, "ScaleRange"),
             patch_size: find_named_pair(items, "Area"),
+            tree_size: find_named_pair(items, "TreeSize"),
             population: find_named_u32(items, "Population").unwrap_or(DEFAULT_FOREST_POPULATION),
         },
         s if s.eq_ignore_ascii_case("TrackObj") => WorldItem::Track {

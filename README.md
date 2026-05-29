@@ -41,18 +41,42 @@ El script **[`check.sh`](check.sh)** concentra lo que debe pasar antes de pushea
 
 1. `cargo fmt --all -- --check`  
 2. `cargo clippy --workspace --all-targets --all-features -- -D warnings`  
-3. `cargo test --workspace --all-features`  
-4. `cargo build --workspace --all-features`  
+3. Regresiones enfocadas del viewer/import MSTS:
+   - `cargo test -p openrailsrs-formats terrain`
+   - `cargo test -p openrailsrs-formats parse_compressed_binary_shape_from_open_rails_content`
+   - `cargo test -p openrailsrs-viewer3d shapes`
+   - `cargo test -p openrailsrs-viewer3d camera`
+4. `cargo test --workspace --all-features -- --test-threads=1`  
+5. `cargo build --workspace --all-features`  
 
 ```bash
 chmod +x check.sh   # solo la primera vez, si hace falta
 ./check.sh
 ```
 
+`check.sh` exporta `OPENRAILSRS_DISABLE_AUDIO=1` para que los tests sean deterministas en CI/headless aunque ALSA/PulseAudio estén presentes pero no puedan reproducir audio.
+
 En GitHub, el workflow **[`.github/workflows/ci.yml`](.github/workflows/ci.yml)**:
 
 - Job **`check.sh`**: mismo flujo que arriba (con librerías X11 + `libxkbcommon-dev` para compilar `openrailsrs-viewer` y `openrailsrs-viewer3d`).
 - Job **cobertura**: `cargo llvm-cov` y subida a Codecov (no falla el CI si Codecov no está configurado todavía).
+
+---
+
+## Notas de paridad Open Rails / MSTS
+
+Estas notas resumen bugs reales encontrados al comparar `openrailsrs-viewer3d` con el código fuente de Open Rails. La intención es evitar volver a “arreglar” estos casos por intuición:
+
+- Terreno MSTS: los patches son 16x16 celdas con 17x17 vértices. Open Rails alterna la diagonal por paridad `(x & 1) == (z & 1)`; cuando hay `_F.RAW`, evalúa los dos triángulos de cada celda de forma independiente. Un `else if` en los triángulos con vértices ocultos abre agujeros falsos.
+- Terreno MSTS: `terrain_patchset_patch` usa UV affine con la fórmula de OR `U = u*W + v*B + X`, `V = u*C + v*H + Y`. El orden textual/binario de `W/B/C/H` importa.
+- Terreno MSTS: `CenterX/CenterZ` de un patch son el ancla que OR usa para render camera-relative. En nuestro viewer, los vértices son patch-local y la entidad se coloca con `patch_index * 128m`; no hay que sumar el corrimiento OR encima o el terreno se desplaza.
+- Shapes MSTS: dentro de `primitives`, `prim_state_idx` e `indexed_trilist` vienen intercalados. El parser debe recorrerlos en orden; si primero junta todos los `prim_state_idx` y después todos los triángulos, muchas partes terminan con material/textura equivocada.
+- Shapes MSTS: la transparencia se decide como OR: `ShaderName` (`BlendATex*`/`AddATex*`), `AlphaTestMode` y alpha real del ACE. No alcanza con que el nombre de textura sea `glass`/`window`, y usar `Blend` de más hace que el tren se vea transparente.
+- Tren live: no cargar el consist con LOD lejano cuando la cámara está pegada. Un LOD demasiado alto puede exponer geometría simplificada/interior y esconder el exterior.
+- Forests MSTS: `TreeSize` en los world files gobierna ancho/alto de árboles. Escalarlo por tamaño de ruta produce bosques gigantes.
+- Cámara viewer3d: el scroll en `cam:orbit` cambia distancia; en `cam:fly` debe hacer dolly sobre la dirección de vista para que la rueda siga acercando/alejando.
+
+Los tests de regresión en `check.sh` cubren explícitamente estos puntos críticos donde ya hubo fallos visuales.
 
 ---
 

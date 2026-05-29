@@ -441,31 +441,32 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
     });
     for_each_tagged(items, "primitives", |sub| {
         let mut current_state_idx: i32 = -1;
-        for_each_tagged(sub, "prim_state_idx", |prim| {
-            if let Some(n) = first_number_after_head(prim) {
-                current_state_idx = n as i32;
-            }
-        });
-        for_each_tagged(sub, "indexed_trilist", |prim| {
-            let mut p = Primitive {
-                prim_state_idx: current_state_idx,
-                vertex_indices: Vec::new(),
-            };
-            for_each_tagged(prim, "vertex_idxs", |idx| {
-                for v in shape_section_body(idx) {
-                    if let Ast::Atom(at) = v {
-                        if let Some(n) = shape_atom_to_i32(at) {
-                            if n >= 0 {
-                                p.vertex_indices.push(n as u32);
+        for_each_tagged_ordered(sub, &["prim_state_idx", "indexed_trilist"], |prim| {
+            if matches_head(prim, "prim_state_idx") {
+                if let Some(n) = first_number_after_head(prim) {
+                    current_state_idx = n as i32;
+                }
+            } else if matches_head(prim, "indexed_trilist") {
+                let mut p = Primitive {
+                    prim_state_idx: current_state_idx,
+                    vertex_indices: Vec::new(),
+                };
+                for_each_tagged(prim, "vertex_idxs", |idx| {
+                    for v in shape_section_body(idx) {
+                        if let Ast::Atom(at) = v {
+                            if let Some(n) = shape_atom_to_i32(at) {
+                                if n >= 0 {
+                                    p.vertex_indices.push(n as u32);
+                                }
                             }
                         }
                     }
+                });
+                if !p.vertex_indices.is_empty() {
+                    p.vertex_indices.remove(0);
                 }
-            });
-            if !p.vertex_indices.is_empty() {
-                p.vertex_indices.remove(0);
+                primitives.push(p);
             }
-            primitives.push(p);
         });
     });
 
@@ -568,15 +569,27 @@ fn shape_section_body(items: &[Ast]) -> &[Ast] {
 
 /// Visit `( tag ... )` lists and JINX `tag ( ... )` symbol+list pairs.
 fn for_each_tagged(items: &[Ast], tag: &str, mut f: impl FnMut(&[Ast])) {
+    for_each_tagged_ordered(items, &[tag], |sub| f(sub));
+}
+
+/// Visit several tagged sections in source order, including JINX `tag ( ... )` pairs.
+fn for_each_tagged_ordered(items: &[Ast], tags: &[&str], mut f: impl FnMut(&[Ast])) {
     let body = shape_section_body(items);
     let mut i = 0usize;
     while i < body.len() {
         match body.get(i) {
-            Some(Ast::List(sub)) if matches_head(sub, tag) => {
+            Some(Ast::List(sub)) if tags.iter().any(|tag| matches_head(sub, tag)) => {
                 f(sub);
                 i += 1;
             }
-            Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case(tag) => {
+            Some(Ast::Atom(Atom::Symbol(s)))
+                if tags.iter().any(|tag| s.eq_ignore_ascii_case(tag)) =>
+            {
+                let tag = tags
+                    .iter()
+                    .find(|tag| s.eq_ignore_ascii_case(tag))
+                    .copied()
+                    .unwrap_or(tags[0]);
                 i += 1;
                 let mut synthetic = vec![Ast::Atom(Atom::Symbol(tag.to_string()))];
                 if let Some(Ast::Atom(Atom::Symbol(name))) = body.get(i) {

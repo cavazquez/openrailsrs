@@ -38,6 +38,7 @@ pub struct LoadedShapePart {
     pub prim_state_idx: i32,
     pub mesh: Mesh,
     pub texture_file: Option<String>,
+    pub shader_name: Option<String>,
 }
 
 /// Bevy asset handles for one renderable shape part.
@@ -228,6 +229,7 @@ pub fn build_mesh_parts_from_shape_lod(
                 prim_state_idx,
                 mesh,
                 texture_file: texture_filename_for_prim_state(shape, prim_state_idx),
+                shader_name: shader_name_for_prim_state(shape, prim_state_idx),
             })
         })
         .collect()
@@ -301,6 +303,17 @@ fn texture_filename_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Op
         return None;
     }
     shape.texture_filenames.get(texture_idx as usize).cloned()
+}
+
+fn shader_name_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
+    if prim_state_idx < 0 {
+        return None;
+    }
+    let ps = shape.prim_states.get(prim_state_idx as usize)?;
+    if ps.shader_idx < 0 {
+        return None;
+    }
+    shape.shader_names.get(ps.shader_idx as usize).cloned()
 }
 
 fn resolve_shape_vertex_indices(
@@ -483,6 +496,7 @@ pub fn load_shape_render_asset_from_path(
         let (material, has_texture, is_transparent) = material_for_shape_texture(
             texture_dirs,
             loaded.texture_file.as_deref(),
+            None,
             images,
             materials,
             texture_cache,
@@ -501,6 +515,7 @@ pub fn load_shape_render_asset_from_path(
         let (material, has_texture, is_transparent) = material_for_shape_texture(
             texture_dirs,
             part.texture_file.as_deref(),
+            part.shader_name.as_deref(),
             images,
             materials,
             texture_cache,
@@ -526,6 +541,7 @@ pub fn load_shape_render_asset_from_path(
 fn material_for_shape_texture(
     texture_dirs: &[&Path],
     texture_file: Option<&str>,
+    shader_name: Option<&str>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
@@ -542,24 +558,7 @@ fn material_for_shape_texture(
                     );
                 }
                 Ok(ace) => {
-                    // Determine the correct alpha mode:
-                    //   • Opaque  – no alpha channel at all
-                    //   • Mask    – 1-bit ACE mask channel (binary: 0 or 0xFF).
-                    //               AlphaMode::Blend would cause depth-sort artefacts
-                    //               making the surface look see-through.
-                    //   • Blend   – genuine 8-bit alpha (gradients, real semi-transparency)
-                    //               or texture names that imply transparency (glass, window…).
-                    let has_any_alpha =
-                        ace_has_alpha(&ace) || texture_name_suggests_transparency(tex_name);
-                    let alpha_mode = if !has_any_alpha {
-                        AlphaMode::Opaque
-                    } else if ace.has_mask_channel && !texture_name_suggests_transparency(tex_name)
-                    {
-                        // Binary cutout — no depth sorting needed.
-                        AlphaMode::Mask(0.5)
-                    } else {
-                        AlphaMode::Blend
-                    };
+                    let alpha_mode = shape_alpha_mode(&ace, tex_name, shader_name);
                     let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
                     let image = ace_to_image(&ace);
                     let handle = texture_cache
@@ -592,8 +591,44 @@ fn material_for_shape_texture(
     (material, false, false)
 }
 
-fn ace_has_alpha(ace: &AceFile) -> bool {
-    ace.mip0.chunks_exact(4).any(|rgba| rgba[3] < 250)
+fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
+    let alpha = shape_alpha_stats(ace);
+    if !alpha.has_any {
+        return AlphaMode::Opaque;
+    }
+
+    if alpha.has_semitransparent
+        && shader_name
+            .map(shape_shader_requests_blending)
+            .unwrap_or_else(|| texture_name_suggests_transparency(texture_file))
+    {
+        AlphaMode::Blend
+    } else {
+        AlphaMode::Mask(0.5)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ShapeAlphaStats {
+    has_any: bool,
+    has_semitransparent: bool,
+}
+
+fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
+    let mut stats = ShapeAlphaStats {
+        has_any: ace.has_mask_channel,
+        has_semitransparent: false,
+    };
+    for rgba in ace.mip0.chunks_exact(4) {
+        let a = rgba[3];
+        if a < 250 {
+            stats.has_any = true;
+        }
+        if (9..248).contains(&a) {
+            stats.has_semitransparent = true;
+        }
+    }
+    stats
 }
 
 fn texture_name_suggests_transparency(file_name: &str) -> bool {
@@ -601,6 +636,13 @@ fn texture_name_suggests_transparency(file_name: &str) -> bool {
     ["glass", "window", "alpha", "trans", "transp"]
         .iter()
         .any(|needle| lower.contains(needle))
+}
+
+fn shape_shader_requests_blending(shader_name: &str) -> bool {
+    matches!(
+        shader_name,
+        "BlendATex" | "BlendATexDiff" | "AddATex" | "AddATexDiff"
+    )
 }
 
 /// Load shape mesh and discover its primary texture filename, if any.
@@ -829,6 +871,7 @@ mod tests {
         let (handle, has_texture, is_transparent) = material_for_shape_texture(
             &[route.as_path()],
             Some("alpha_test.ace"),
+            Some("BlendATexDiff"),
             &mut images,
             &mut materials,
             &mut texture_cache,
@@ -839,6 +882,54 @@ mod tests {
         assert!(has_texture);
         assert!(is_transparent);
         assert!(matches!(material.alpha_mode, AlphaMode::Blend));
+
+        let _ = std::fs::remove_file(texture);
+        let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
+    fn material_for_shape_texture_uses_alpha_mask_for_binary_cutout() {
+        let route = std::env::temp_dir().join("openrailsrs_mask_shape_material");
+        let textures = route.join("TEXTURES");
+        std::fs::create_dir_all(&textures).unwrap();
+        let texture = textures.join("body.ace");
+        write_synthetic_ace(&texture, &[0xFF, 0xFF, 0xFF, 0x00]);
+
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+
+        let (handle, has_texture, is_transparent) = material_for_shape_texture(
+            &[route.as_path()],
+            Some("body.ace"),
+            Some("TexDiff"),
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            Color::srgb(0.95, 0.25, 0.85),
+        );
+
+        let material = materials.get(&handle).expect("material");
+        assert!(has_texture);
+        assert!(is_transparent);
+        assert!(matches!(material.alpha_mode, AlphaMode::Mask(_)));
+
+        let _ = std::fs::remove_file(texture);
+        let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
+    fn shape_alpha_mode_does_not_blend_opaque_window_named_texture() {
+        let route = std::env::temp_dir().join("openrailsrs_opaque_window_shape_material");
+        std::fs::create_dir_all(&route).unwrap();
+        let texture = route.join("window_body.ace");
+        write_synthetic_ace(&texture, &[0xFF, 0xFF, 0xFF, 0xFF]);
+        let ace = read_ace(&texture).expect("ace");
+
+        assert!(matches!(
+            shape_alpha_mode(&ace, "window_body.ace", Some("TexDiff")),
+            AlphaMode::Opaque
+        ));
 
         let _ = std::fs::remove_file(texture);
         let _ = std::fs::remove_dir_all(route);

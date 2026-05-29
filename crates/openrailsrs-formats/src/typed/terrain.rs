@@ -996,15 +996,18 @@ fn append_patch_indices(
                     if !(h00 || h10 || h11) {
                         indices.extend([i00, i10, i11]);
                     }
-                } else if !(h00 || h10 || h01) {
-                    indices.extend([i00, i10, i01]);
-                } else if !(h01 || h10 || h11) {
-                    indices.extend([i01, i10, i11]);
+                } else {
+                    if !(h10 || h11 || h01) {
+                        indices.extend([i10, i11, i01]);
+                    }
+                    if !(h00 || h10 || h01) {
+                        indices.extend([i00, i10, i01]);
+                    }
                 }
             } else if (x & 1) == (z & 1) {
                 indices.extend([i00, i11, i01, i00, i10, i11]);
             } else {
-                indices.extend([i00, i10, i01, i01, i10, i11]);
+                indices.extend([i10, i11, i01, i00, i10, i01]);
             }
         }
     }
@@ -1367,9 +1370,9 @@ fn parse_terrain_patch(ast: &Ast) -> Option<TerrainPatch> {
         x: nums[8] as f32,
         y: nums[9] as f32,
         w: nums[10] as f32,
-        h: nums[11] as f32,
-        b: nums[12] as f32,
-        c: nums[13] as f32,
+        b: nums[11] as f32,
+        c: nums[12] as f32,
+        h: nums[13] as f32,
         error_bias: nums[14] as f32,
     })
 }
@@ -1600,6 +1603,10 @@ mod tests {
         let set = tf.primary_patch_set().expect("patch set");
         assert_eq!(set.npatches, 2);
         assert_eq!(set.patches.len(), 4);
+        assert!((set.patches[0].w - 0.06225586).abs() < 1e-6);
+        assert!((set.patches[0].b - 0.06225586).abs() < 1e-6);
+        assert!((set.patches[0].c - 0.0).abs() < 1e-6);
+        assert!((set.patches[0].h - 0.0).abs() < 1e-6);
     }
 
     #[test]
@@ -1683,6 +1690,29 @@ mod tests {
         assert!(holed.indices.len() < full.indices.len());
     }
 
+    #[test]
+    fn patch_indices_match_openrails_alternating_winding() {
+        let mut indices = Vec::new();
+        append_patch_indices(&mut indices, None, 0, 0, false);
+        assert_eq!(&indices[0..6], &[0, 18, 17, 0, 1, 18]);
+        assert_eq!(&indices[6..12], &[2, 19, 18, 1, 2, 18]);
+    }
+
+    #[test]
+    fn hidden_odd_cell_keeps_visible_triangle_like_openrails() {
+        let mut flags = vec![0u8; 17 * 17];
+        flags[1] = VERTEX_HIDDEN_FLAG; // h00 for cell x=1,z=0
+        let hidden = FeatureGrid {
+            nsamples: 17,
+            flags,
+        };
+
+        let mut indices = Vec::new();
+        append_patch_indices(&mut indices, Some(&hidden), 0, 0, true);
+        assert!(indices.windows(3).any(|tri| tri == [2, 19, 18]));
+        assert!(!indices.windows(3).any(|tri| tri == [1, 2, 18]));
+    }
+
     /// Verify that the binary terrain parser extracts shader and texture slot data
     /// from a real Chiltern `JINX0t6b` tile (enables textured terrain patches).
     #[test]
@@ -1750,6 +1780,10 @@ mod tests {
         let ps = tf.primary_patch_set().unwrap();
         assert_eq!(ps.npatches, 16, "Chiltern tile should have 16x16 patches");
         assert_eq!(ps.patches.len(), 256, "should have 256 patch descriptors");
+        assert!(
+            ps.patches.iter().any(|p| p.center_z < 0.0),
+            "MSTS patch CenterZ is stored north-to-south and should include negative values"
+        );
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use openrailsrs_formats::{
@@ -177,6 +178,18 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
     assert_eq!(primitive_count, 30);
     assert_eq!(triangle_count, 4869);
     assert_eq!(vertex_count, 14232);
+
+    let primitive_states: BTreeSet<i32> = shape.lod_controls[0].distance_levels[0]
+        .sub_objects
+        .iter()
+        .flat_map(|sub_object| &sub_object.primitives)
+        .map(|primitive| primitive.prim_state_idx)
+        .collect();
+    assert!(
+        primitive_states.len() >= 20,
+        "primitive parser must preserve interleaved prim_state_idx entries, got {primitive_states:?}"
+    );
+
     assert!(
         shape
             .prim_states
@@ -542,11 +555,13 @@ fn parse_minimal_world_classifies_items() {
     if let WorldItem::Forest {
         tree_texture,
         scale_range,
+        tree_size,
         ..
     } = forest
     {
         assert_eq!(tree_texture.as_deref(), Some("pine.ace"));
         assert_eq!(*scale_range, Some([0.8, 1.2]));
+        assert_eq!(*tree_size, Some([4.0, 9.0]));
     } else {
         panic!("expected Forest");
     }

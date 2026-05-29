@@ -47,6 +47,10 @@ impl AudioEngine {
     ///
     /// Returns `None` when no audio device is available (CI-safe).
     pub fn try_start() -> Option<Self> {
+        if std::env::var_os("OPENRAILSRS_DISABLE_AUDIO").is_some() {
+            return None;
+        }
+
         let (tx, rx) = mpsc::channel::<AudioCmd>();
 
         // Try opening the default audio device on this thread first;
