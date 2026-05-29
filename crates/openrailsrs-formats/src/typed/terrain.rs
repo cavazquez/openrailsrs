@@ -1032,7 +1032,10 @@ pub fn build_patch_mesh_data_ex(
             let lx = origin_x + vx as f64 * cell;
             let lz = origin_z + vz as f64 * cell;
             let y = grid.sample_bilinear(lx, lz, sample_size);
-            positions.push([lx as f32, y, lz as f32]);
+            // Patch-local coordinates: subtract patch origin so vertices start at (0,0).
+            // Callers that need tile-local coordinates (build_tile_mesh_data) must add
+            // the patch offset (px * PATCH_SIZE_M, pz * PATCH_SIZE_M) back themselves.
+            positions.push([(lx - origin_x) as f32, y, (lz - origin_z) as f32]);
             uvs.push(if let Some(p) = patch {
                 patch_affine_uv(p, vx as f32, vz as f32)
             } else {
@@ -1082,7 +1085,16 @@ pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMe
         for px in 0..PATCHES_PER_SIDE {
             let patch = build_patch_mesh_data(grid, sample_size, px, pz, PATCH_SIZE_M);
             let base = out.positions.len() as u32;
-            out.positions.extend(patch.positions);
+            // build_patch_mesh_data_ex returns patch-local positions (0..PATCH_SIZE_M).
+            // Restore tile-local positions by adding the patch's tile offset.
+            let ox = px as f32 * PATCH_SIZE_M as f32;
+            let oz = pz as f32 * PATCH_SIZE_M as f32;
+            out.positions.extend(
+                patch
+                    .positions
+                    .into_iter()
+                    .map(|[x, y, z]| [x + ox, y, z + oz]),
+            );
             out.normals.extend(patch.normals);
             out.uvs.extend(patch.uvs);
             out.indices
@@ -1490,6 +1502,68 @@ mod tests {
         assert_eq!(mesh.positions.len(), 17 * 17);
         assert_eq!(mesh.indices.len(), 16 * 16 * 6);
         assert_eq!(mesh.indices[0..6], [0, 18, 17, 0, 1, 18]);
+    }
+
+    #[test]
+    fn patch_mesh_positions_are_patch_local() {
+        // build_patch_mesh_data_ex must return patch-local positions (0..PATCH_SIZE_M).
+        // This matters for spawn_textured_patches, which places the entity Transform at
+        // tile_origin + patch_offset; if positions were tile-local the offset would double.
+        let tf = TerrainFile::from_path(fixture("minimal_terrain.y")).unwrap();
+        let grid = read_y_raw(&fixture("minimal_terrain_y.raw"), &tf.samples).unwrap();
+        // Patch (2, 3) should have x in [0..128] and z in [0..128], not [256..384]/[384..512].
+        let mesh = build_patch_mesh_data(&grid, tf.samples.sample_size, 2, 3, 128.0);
+        let max_x = mesh
+            .positions
+            .iter()
+            .map(|p| p[0])
+            .fold(f32::NEG_INFINITY, f32::max);
+        let max_z = mesh
+            .positions
+            .iter()
+            .map(|p| p[2])
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!(
+            max_x <= PATCH_SIZE_M as f32 + 1.0,
+            "patch x should be patch-local (≤128m), got max_x={max_x}"
+        );
+        assert!(
+            max_z <= PATCH_SIZE_M as f32 + 1.0,
+            "patch z should be patch-local (≤128m), got max_z={max_z}"
+        );
+    }
+
+    #[test]
+    fn tile_mesh_positions_are_tile_local() {
+        // build_tile_mesh_data must return tile-local positions (0..2048m for a 16-patch side).
+        // It should restore patch offsets even though build_patch_mesh_data_ex is patch-local.
+        let tf = TerrainFile::from_path(fixture("minimal_terrain.y")).unwrap();
+        let grid = read_y_raw(&fixture("minimal_terrain_y.raw"), &tf.samples).unwrap();
+        let mesh = build_tile_mesh_data(&grid, tf.samples.sample_size);
+        let max_x = mesh
+            .positions
+            .iter()
+            .map(|p| p[0])
+            .fold(f32::NEG_INFINITY, f32::max);
+        let max_z = mesh
+            .positions
+            .iter()
+            .map(|p| p[2])
+            .fold(f32::NEG_INFINITY, f32::max);
+        let tile_size = 16.0 * PATCH_SIZE_M as f32;
+        assert!(
+            max_x > PATCH_SIZE_M as f32,
+            "tile mesh x should span multiple patches (>{} m), got max_x={max_x}",
+            PATCH_SIZE_M
+        );
+        assert!(
+            max_x <= tile_size + 1.0,
+            "tile mesh x should not exceed tile size ({tile_size}m), got max_x={max_x}"
+        );
+        assert!(
+            max_z > PATCH_SIZE_M as f32,
+            "tile mesh z should span multiple patches, got max_z={max_z}"
+        );
     }
 
     #[test]
