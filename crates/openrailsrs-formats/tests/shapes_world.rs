@@ -149,6 +149,179 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
 }
 
 #[test]
+fn parse_current_chiltern_binary_shape_fixtures() {
+    struct Expected {
+        file_name: &'static str,
+        points: usize,
+        normals: usize,
+        uvs: usize,
+        textures: usize,
+        prim_states: usize,
+        matrices: usize,
+        primitives: usize,
+        triangles: usize,
+    }
+
+    let cases = [
+        Expected {
+            file_name: "RF_BP_PCFfwd.s",
+            points: 2955,
+            normals: 1895,
+            uvs: 737,
+            textures: 7,
+            prim_states: 29,
+            matrices: 10,
+            primitives: 29,
+            triangles: 3636,
+        },
+        Expected {
+            file_name: "RF_BP_PCFrear.s",
+            points: 2955,
+            normals: 2550,
+            uvs: 737,
+            textures: 7,
+            prim_states: 29,
+            matrices: 10,
+            primitives: 29,
+            triangles: 3636,
+        },
+        Expected {
+            file_name: "RF_WP_DMBSA.s",
+            points: 3755,
+            normals: 4636,
+            uvs: 2214,
+            textures: 8,
+            prim_states: 30,
+            matrices: 12,
+            primitives: 30,
+            triangles: 4869,
+        },
+        Expected {
+            file_name: "RF_WP_DMBSH.s",
+            points: 3555,
+            normals: 4091,
+            uvs: 1879,
+            textures: 7,
+            prim_states: 29,
+            matrices: 12,
+            primitives: 29,
+            triangles: 4588,
+        },
+        Expected {
+            file_name: "RF_WP_KFC.s",
+            points: 1979,
+            normals: 1957,
+            uvs: 752,
+            textures: 7,
+            prim_states: 27,
+            matrices: 10,
+            primitives: 27,
+            triangles: 2832,
+        },
+        Expected {
+            file_name: "RF_WP_KFF.s",
+            points: 1979,
+            normals: 1491,
+            uvs: 752,
+            textures: 7,
+            prim_states: 27,
+            matrices: 10,
+            primitives: 27,
+            triangles: 2836,
+        },
+        Expected {
+            file_name: "RF_WP_PSB.s",
+            points: 3787,
+            normals: 3128,
+            uvs: 1157,
+            textures: 7,
+            prim_states: 27,
+            matrices: 10,
+            primitives: 27,
+            triangles: 4355,
+        },
+        Expected {
+            file_name: "RF_WP_PSG.s",
+            points: 3787,
+            normals: 3024,
+            uvs: 1157,
+            textures: 7,
+            prim_states: 27,
+            matrices: 10,
+            primitives: 27,
+            triangles: 4392,
+        },
+    ];
+
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES");
+    for expected in cases {
+        let shape = ShapeFile::from_path(base.join(expected.file_name))
+            .expect("parse binary shape fixture");
+        assert_eq!(
+            shape.points.len(),
+            expected.points,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(
+            shape.normals.len(),
+            expected.normals,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(shape.uvs.len(), expected.uvs, "{}", expected.file_name);
+        assert_eq!(
+            shape.texture_filenames.len(),
+            expected.textures,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(
+            shape.prim_states.len(),
+            expected.prim_states,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(
+            shape.matrices.len(),
+            expected.matrices,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(shape.lod_controls.len(), 1, "{}", expected.file_name);
+        assert_eq!(
+            shape.lod_controls[0].distance_levels.len(),
+            1,
+            "{}",
+            expected.file_name
+        );
+
+        let primitive_count: usize = shape
+            .lod_controls
+            .iter()
+            .flat_map(|lod| &lod.distance_levels)
+            .flat_map(|level| &level.sub_objects)
+            .map(|sub_object| sub_object.primitives.len())
+            .sum();
+        let triangle_count: usize = shape
+            .lod_controls
+            .iter()
+            .flat_map(|lod| &lod.distance_levels)
+            .flat_map(|level| &level.sub_objects)
+            .flat_map(|sub_object| &sub_object.primitives)
+            .map(|primitive| primitive.triangle_count())
+            .sum();
+        assert_eq!(
+            primitive_count, expected.primitives,
+            "{}",
+            expected.file_name
+        );
+        assert_eq!(triangle_count, expected.triangles, "{}", expected.file_name);
+    }
+}
+
+#[test]
 fn parse_hwater_from_smoke_fixture() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/smoke/routes/test/WORLD/w-000000-000000.w");

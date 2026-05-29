@@ -509,19 +509,13 @@ Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente
 
 #### Shapes binarios (prioridad #2, esfuerzo medio)
 
-**Problema:** la mayoría de rutas OR/MSTS usan shapes `.s` en formato binario tokenizado (`JINX0s1b`). El parser actual (`binary_shape_to_ascii`) usa heurísticas frágiles que fallan en shapes reales → silenciosamente cae a cubo coloreado.
+**Estado:** el parser ya lee shapes `.s` binarios comprimidos (`SIMISA@F` + `JINX0s1b`) con la tabla de tokens alineada a Open Rails y fixtures reales Chiltern. Extrae buffers, texturas, matrices, `prim_states`, LODs, primitivas y triángulos.
 
-**Plan por pasos:**
+**Brecha restante:** el camino interno todavía convierte binario a S-expression sintética antes del parser tipado. Para paridad más fuerte con Open Rails conviene reemplazarlo por un `BinaryBlockReader` estructural y modelar `Vertex` completo; hoy `vertex_idxs` se conserva, pero el viewer todavía debe resolverlo contra `vertices` antes de indexar `points`/`normals`/`uvs`.
 
-1. **Completar tabla `token_name()`** — cruzar con `Orts.Formats.Msts/ShapeFile.cs` para obtener ~20-30 tokens faltantes.
-2. **Crear fixture `.s` binario sintético** — comprimir un shape ASCII conocido con SIMISA (`SIMISA@F`) para test automatizado.
-3. **Reemplazar heurísticas por parsing estructural** — en vez de `try_read_string_in_block` / `peek_subblock_header`, usar conocimiento del tipo de bloque padre (ej: dentro de `vertices` sabemos que hay floats, no strings).
-4. **Test manual con Content OR** — apuntar viewer a ruta Chiltern real y verificar que shapes binarios renderizan sin cubo magenta.
-5. **Logging mejorado** — log de warn cuando un shape binario falla, indicando qué token/bloque causó el error.
+**Plan detallado:** ver `docs/MSTS_SHAPE_BINARY_PARSER.md`.
 
-**Dependencia:** se necesita al menos 1-2 archivos `.s` binarios de MSTS/OR como fixtures. Posibles fuentes: Content OR (Chiltern), herramientas comunitarias MSTS, o generar uno sintético vía compresor SIMISA.
-
-**Archivos:** `crates/openrailsrs-formats/src/shape_binary.rs`, `crates/openrailsrs-formats/src/typed/shape.rs`
+**Archivos:** `crates/openrailsrs-formats/src/shape_binary.rs`, `crates/openrailsrs-formats/src/typed/shape.rs`, `crates/openrailsrs-viewer3d/src/shapes.rs`
 
 ---
 
