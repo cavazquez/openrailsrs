@@ -1,9 +1,9 @@
 //! Parser for MSTS Shape (`.s`) ASCII files.
 //!
 //! MSTS shapes come in two flavours: an S-expression ASCII form and a
-//! "binary tokenized" form sharing the same tag schema.  This module only
-//! supports the ASCII variant; binary shapes return
-//! [`FormatError::UnsupportedBinaryShape`].
+//! "binary tokenized" form sharing the same tag schema.  This module parses
+//! ASCII directly and converts the binary token stream into equivalent
+//! S-expression text first.
 //!
 //! The grammar fragments we care about (lenient — unknown sub-fields are
 //! ignored):
@@ -185,7 +185,7 @@ fn shape_text_from_bytes(bytes: &[u8]) -> Result<String, FormatError> {
     if bytes.len() >= 16 && bytes.starts_with(b"SIMISA") {
         let payload = decode_simisa_container(bytes)?;
         if payload.is_text {
-            return Ok(decode_msts_bytes(&payload.bytes));
+            return Ok(decode_msts_bytes(&payload.bytes[payload.data_offset..]));
         }
         return binary_shape_to_ascii(&payload);
     }
@@ -193,6 +193,8 @@ fn shape_text_from_bytes(bytes: &[u8]) -> Result<String, FormatError> {
         let payload = crate::msts_simisa::SimisaPayload {
             bytes: bytes.to_vec(),
             is_text: false,
+            data_offset: 0,
+            token_offset: 0,
         };
         return binary_shape_to_ascii(&payload);
     }
@@ -224,12 +226,26 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     let mut out = Vec::new();
     walk_named_list(ast, "texture_filenames", &mut |items| {
         for item in items.iter().skip(1) {
-            // Skip leading numeric count atom; collect every following string atom.
             if let Ast::Atom(Atom::String(s)) = item {
                 out.push(s.clone());
             }
         }
     });
+    if out.is_empty() {
+        walk_named_list(ast, "images", &mut |items| {
+            for item in items.iter().skip(1) {
+                if let Ast::List(sub) = item {
+                    if matches_head(sub, "image") {
+                        for inner in sub.iter().skip(1) {
+                            if let Ast::Atom(Atom::String(s)) = inner {
+                                out.push(s.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
     out
 }
 

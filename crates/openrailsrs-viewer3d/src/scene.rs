@@ -5,6 +5,7 @@
 //! bounds when present.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 
@@ -59,12 +60,21 @@ pub fn spawn_ground_and_lights(
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
-            shadows_enabled: false,
+            shadows_enabled: true,
             ..default()
         },
+        CascadeShadowConfigBuilder {
+            num_cascades: 4,
+            minimum_distance: 0.1,
+            maximum_distance: 200.0,
+            first_cascade_far_bound: 10.0,
+            overlap_proportion: 0.2,
+        }
+        .build(),
         Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
         Name::new("sun"),
     ));
+    commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
 }
 
 fn spawn_grid_mesh(

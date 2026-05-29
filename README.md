@@ -777,7 +777,7 @@ Secciones ahora soportadas por el importer:
 
 #### 5. Assets visuales (`.s` / `.ace`) `✅` (offline)
 
-- **`.s` Shape files** ✅: parser ASCII en `openrailsrs-formats` (`ShapeFile`: puntos, normales, UVs, `prim_states`, primitivas, LODs, jerarquía).  La variante "binary tokenized" devuelve `FormatError::UnsupportedBinaryShape` (queda para Fase 23).  CLI: `openrailsrs shape-dump <file.s> [--json]`.
+- **`.s` Shape files** ✅: parser ASCII en `openrailsrs-formats` (`ShapeFile`: puntos, normales, UVs, `prim_states`, primitivas, LODs, jerarquía). La variante "binary tokenized" se descomprime si viene en `SIMISA@F` y se convierte a S-expression antes de alimentar el mismo parser tipado. CLI: `openrailsrs shape-dump <file.s> [--json]`.
 - **`.ace` Textures** ✅: crate nuevo `openrailsrs-ace` con decoder de mip 0 (RGBA8 + DXT1/3/5 vía `texpresso`) y `write_png`.  CLI: `openrailsrs ace-decode <file.ace> <out.png>`.  Mips superiores, BGRA→RGBA con flag y formatos extra → Fase 23.
 
 Estos parsers son **headless puros**: no requieren Fase 23 y dejan listos los datos para que el viewer 3D los consuma cuando llegue.

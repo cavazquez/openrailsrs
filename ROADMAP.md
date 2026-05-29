@@ -371,7 +371,7 @@ Chiltern 136 s ~0.28 m/s RMS ✅ · SCE 100 s ✅ (crucero alineado tras fix P/v
 - Metadata `StartTime` y `Season` → `[scenario].start_time_s` y `[scenario].season` (campos opcionales, retrocompatibles).
 - API pública nueva: `import_route_with_activity(route_dir, act_path)` aplica overrides de actividad sobre el track.
 - Fuera de alcance headless (planificados):
-  - Shapes `.s` ASCII ✅ — parser en `openrailsrs-formats` (`ShapeFile`: puntos, normales, UVs, prim_states, LODs, jerarquía) + subcomando `shape-dump [--json]`. Binary tokenized devuelve `FormatError::UnsupportedBinaryShape` (queda para Fase 23).
+  - Shapes `.s` ASCII/binario ✅ — parser en `openrailsrs-formats` (`ShapeFile`: puntos, normales, UVs, prim_states, LODs, jerarquía) + subcomando `shape-dump [--json]`. `SIMISA@F` se descomprime con zlib y el binario tokenizado se convierte a S-expression antes del parser tipado.
   - Texturas `.ace` ✅ — crate `openrailsrs-ace` con decoder mip 0 (RGBA8 + DXT1/3/5 vía `texpresso`) + subcomando `ace-decode` que escribe PNG. Mips adicionales → Fase 23.
   - World tiles `.w` ASCII ✅ — parser en `openrailsrs-formats` (`WorldFile`: Static / Forest / TrackObj / Signal / Dyntrack) preservando posiciones locales + subcomando `world-dump [--csv]`. Resolución a coordenadas globales → Fase 23.
   - `SoundRegions` ✅ — `SoundSourceItem` + bloque `SoundRegions` en `.act` → `[[sound_regions]]`; detección en cabina; crate `openrailsrs-audio`.

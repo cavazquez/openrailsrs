@@ -78,6 +78,77 @@ fn binary_shape_fixture_may_parse_or_fail_gracefully() {
 }
 
 #[test]
+fn compressed_simisa_shape_decompresses_before_parse() {
+    use std::io::Write;
+
+    let body = b"JINX0s1t______\n( shape ( texture_filenames 1 \"wagon.ace\" ) )";
+    let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    encoder.write_all(body).unwrap();
+    let compressed = encoder.finish().unwrap();
+
+    let mut bytes = b"SIMISA@F@@@@@@@@".to_vec();
+    bytes.extend_from_slice(&compressed);
+
+    let tmp = std::env::temp_dir().join("openrailsrs_compressed_shape_fixture.s");
+    std::fs::write(&tmp, &bytes).unwrap();
+    let shape = ShapeFile::from_path(&tmp).expect("parse compressed SIMISA shape");
+    assert_eq!(shape.texture_filenames, vec!["wagon.ace"]);
+    let _ = std::fs::remove_file(&tmp);
+}
+
+#[test]
+fn binary_shape_starts_after_jinx_padding() {
+    let mut bytes = b"SIMISA@@@@@@@@@@JINX0s1b______".to_vec();
+    bytes.extend_from_slice(&71u16.to_le_bytes());
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    bytes.extend_from_slice(&1u32.to_le_bytes());
+    bytes.push(0);
+
+    let tmp = std::env::temp_dir().join("openrailsrs_minimal_binary_shape_fixture.s");
+    std::fs::write(&tmp, &bytes).unwrap();
+    let shape = ShapeFile::from_path(&tmp).expect("parse minimal binary SIMISA shape");
+    assert!(shape.points.is_empty());
+    assert!(shape.texture_filenames.is_empty());
+    let _ = std::fs::remove_file(&tmp);
+}
+
+#[test]
+fn parse_compressed_binary_shape_from_open_rails_content() {
+    let shape = ShapeFile::from_path(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s"),
+    )
+    .expect("parse compressed binary Open Rails shape");
+
+    assert_eq!(shape.points.len(), 3755);
+    assert_eq!(shape.normals.len(), 4636);
+    assert_eq!(shape.uvs.len(), 2214);
+    assert_eq!(shape.texture_filenames.len(), 8);
+    assert_eq!(shape.prim_states.len(), 30);
+    assert_eq!(shape.matrices.len(), 12);
+    assert_eq!(shape.lod_controls.len(), 1);
+    assert_eq!(shape.lod_controls[0].distance_levels.len(), 1);
+
+    let primitive_count: usize = shape
+        .lod_controls
+        .iter()
+        .flat_map(|lod| &lod.distance_levels)
+        .flat_map(|level| &level.sub_objects)
+        .map(|sub_object| sub_object.primitives.len())
+        .sum();
+    let triangle_count: usize = shape
+        .lod_controls
+        .iter()
+        .flat_map(|lod| &lod.distance_levels)
+        .flat_map(|level| &level.sub_objects)
+        .flat_map(|sub_object| &sub_object.primitives)
+        .map(|primitive| primitive.triangle_count())
+        .sum();
+    assert_eq!(primitive_count, 30);
+    assert_eq!(triangle_count, 4869);
+}
+
+#[test]
 fn parse_hwater_from_smoke_fixture() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/smoke/routes/test/WORLD/w-000000-000000.w");

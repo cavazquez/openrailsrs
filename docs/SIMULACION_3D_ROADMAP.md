@@ -471,6 +471,60 @@ Mismo patrón: `import-msts` → `track.toml` en `examples/sce/`; assets 3D desd
 
 ---
 
+## 8.1 Brechas de fidelidad visual (priorizadas)
+
+Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente realista.
+
+| # | Brecha | Impacto visual | Esfuerzo | Estado | Archivo clave |
+|---|--------|---------------|----------|--------|-------|---------------|
+| 1 | **Sombras deshabilitadas** | Alto | Bajo | `shadows_enabled: false` | `scene.rs:62` |
+| 2 | **Shapes `.s` binarios** → fallback cubo magenta | Alto | Medio | Parser básico (`shape_binary.rs`), heurísticas frágiles | `shape_binary.rs`, `shapes.rs` |
+| 3 | **Cabina 3D interior** | Alto | Alto | Solo panel UI plano (C3) | `cab_panel.rs` |
+| 4 | **Animación de shapes** (puertas, bogies, pantógrafos) | Medio | Alto | Todo estático | `shapes.rs` |
+| 5 | **ACE mipmaps + alpha** (solo mip 0, BGRA parcial) | Medio | Bajo | Shimmer a distancia, alpha recortado | `shapes.rs:ace_to_image`, `openrailsrs-ace` |
+| 6 | **Audio real** (.wav/.sms) | Medio | Medio | Tonos sintéticos | `openrailsrs-audio` |
+| 7 | **Vía visual avanzada** (TSection, splines, peralte) | Medio | Alto | Durmientes procedurales sin perfil | `dyntrack.rs` |
+| 8 | **Posición multi-body** por vehículo | Bajo | Medio | Offset estático desde cabeza | `live.rs`, `train.rs` |
+| 9 | **Efectos atmosféricos** (niebla, día/noche, humo/vapor) | Medio | Medio | Solo cielo dome + lluvia toggle | `sky.rs`, `precipitation.rs` |
+| 10 | **Pipeline de contenido** (GLTF/OBJ import) | Bajo | Bajo | Copia manual de assets OR | scripts/ |
+
+### Plan de implementación: sombras + shapes binarios
+
+#### Sombras (prioridad #1, esfuerzo bajo)
+
+**Objetivo:** habilitar `DirectionalLight` shadows en `scene.rs` para objetos con `StandardMaterial`.
+
+**Cambios:**
+1. `scene.rs`: `shadows_enabled: true` + `CascadeShadowConfigBuilder` (3 cascadas: 10, 50, 200 m).
+2. Ajustar `illuminance` si las sombras quedan demasiado duras.
+
+**Fuera de alcance (por ahora):**
+- `TerrainMaterial` (shader WGSL custom) no recibe sombras — requiere integrar shadow sampling en `terrain.wgsl`.
+- Objetos con `StandardMaterial` (edificios, trenes, árboles, señales) sí proyectan y reciben sombras automáticamente.
+- Ground plane (fallback sin terreno) recibe sombras automáticamente.
+
+**Archivos:** `crates/openrailsrs-viewer3d/src/scene.rs`
+
+**Verificación:** abrir `examples/smoke` con terreno; objetos proyectan sombra visible sobre el plano y terreno.
+
+#### Shapes binarios (prioridad #2, esfuerzo medio)
+
+**Problema:** la mayoría de rutas OR/MSTS usan shapes `.s` en formato binario tokenizado (`JINX0s1b`). El parser actual (`binary_shape_to_ascii`) usa heurísticas frágiles que fallan en shapes reales → silenciosamente cae a cubo coloreado.
+
+**Plan por pasos:**
+
+1. **Completar tabla `token_name()`** — cruzar con `Orts.Formats.Msts/ShapeFile.cs` para obtener ~20-30 tokens faltantes.
+2. **Crear fixture `.s` binario sintético** — comprimir un shape ASCII conocido con SIMISA (`SIMISA@F`) para test automatizado.
+3. **Reemplazar heurísticas por parsing estructural** — en vez de `try_read_string_in_block` / `peek_subblock_header`, usar conocimiento del tipo de bloque padre (ej: dentro de `vertices` sabemos que hay floats, no strings).
+4. **Test manual con Content OR** — apuntar viewer a ruta Chiltern real y verificar que shapes binarios renderizan sin cubo magenta.
+5. **Logging mejorado** — log de warn cuando un shape binario falla, indicando qué token/bloque causó el error.
+
+**Dependencia:** se necesita al menos 1-2 archivos `.s` binarios de MSTS/OR como fixtures. Posibles fuentes: Content OR (Chiltern), herramientas comunitarias MSTS, o generar uno sintético vía compresor SIMISA.
+
+**Archivos:** `crates/openrailsrs-formats/src/shape_binary.rs`, `crates/openrailsrs-formats/src/typed/shape.rs`
+
+---
+
 ## 9. Referencias de código Open Rails (lectura)
 
 Clon shallow de OR (`RunActivity/Viewer3D/`):
