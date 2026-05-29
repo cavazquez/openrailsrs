@@ -12,6 +12,26 @@ fn fixture(name: &str) -> PathBuf {
 }
 
 #[test]
+fn parse_chiltern_jinx_text_shape_has_geometry() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/SHAPES/Doc_CalvertStn.s");
+    if !path.is_file() {
+        return;
+    }
+    let shape = ShapeFile::from_path(&path).expect("parse Doc_CalvertStn.s");
+    assert!(shape.points.len() > 100, "expected route shape points");
+    assert!(!shape.lod_controls.is_empty());
+    let tris: usize = shape.lod_controls[0]
+        .distance_levels
+        .iter()
+        .flat_map(|dl| &dl.sub_objects)
+        .flat_map(|so| &so.primitives)
+        .map(|p| p.triangle_count())
+        .sum();
+    assert!(tris > 100, "expected triangles, got {tris}");
+}
+
+#[test]
 fn parse_minimal_shape_collects_lods_and_prims() {
     let shape = ShapeFile::from_path(fixture("minimal.s")).expect("parse minimal.s");
 
@@ -449,6 +469,28 @@ fn parse_hwater_from_smoke_fixture() {
     } else {
         panic!("expected HWater");
     }
+}
+
+#[test]
+fn parse_chiltern_compressed_binary_world_tile() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/WORLD/w-006084+014923.w");
+    if !path.is_file() {
+        eprintln!("skip: Chiltern WORLD not present");
+        return;
+    }
+    let world = WorldFile::from_path(&path).expect("parse compressed UTF-16 binary .w");
+    assert!(
+        !world.items.is_empty(),
+        "expected scenery items in populated tile"
+    );
+    assert!(
+        world
+            .items
+            .iter()
+            .any(|i| matches!(i, WorldItem::Static { .. })),
+        "expected at least one Static"
+    );
 }
 
 #[test]

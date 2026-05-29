@@ -8,7 +8,8 @@ use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path,
+    RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
+    shape_search_dirs,
 };
 use crate::terrain::{TerrainElevation, scenery_ground_y};
 use crate::track::TrackScene;
@@ -23,6 +24,9 @@ pub const VISIBLE_RADIUS_M: f32 = 8000.0;
 
 /// Shapes closer than this use the highest LOD; farther shapes use coarser LOD.
 pub const SHAPE_LOD_DISTANCE_M: f32 = 2000.0;
+
+/// Within this radius, spawn real `.s` meshes when the file resolves; beyond it, placeholders only.
+pub const SHAPE_MESH_RADIUS_M: f32 = SHAPE_LOD_DISTANCE_M;
 
 /// Forest patch metadata from a `.w` `Forest` item.
 #[derive(Clone, Debug, PartialEq)]
@@ -73,6 +77,108 @@ impl WorldScene {
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
+
+    /// World-space centre of loaded scenery (for culling / terrain when the track graph has no `x_m`/`y_m`).
+    pub fn position_center(&self) -> Option<Vec3> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let mut min = Vec3::splat(f32::MAX);
+        let mut max = Vec3::splat(f32::MIN);
+        for obj in &self.items {
+            min = min.min(obj.position);
+            max = max.max(obj.position);
+        }
+        Some((min + max) * 0.5)
+    }
+}
+
+/// View/cull centre: MSTS world bbox when present, else track graph centre.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct RouteFocus {
+    pub center: Vec3,
+    /// Terrain MSL (metres) at route centre; use with [`Self::to_render_surface`] only.
+    pub height_origin: f32,
+}
+
+impl RouteFocus {
+    pub fn from_scene_and_world(scene: &TrackScene, world: &WorldScene) -> Self {
+        Self::from_scene_world_and_elevation(scene, world, None)
+    }
+
+    pub fn from_scene_world_and_elevation(
+        scene: &TrackScene,
+        world: &WorldScene,
+        elevation: Option<&TerrainElevation>,
+    ) -> Self {
+        let center = world.position_center().unwrap_or(scene.bounds.center);
+        let height_origin = elevation
+            .and_then(|t| t.sample_world_y(center.x, center.z))
+            .unwrap_or(center.y);
+        Self {
+            center,
+            height_origin,
+        }
+    }
+
+    /// Scenery / `.w` world positions (`Position.y` is tile-local, not terrain MSL).
+    pub fn to_render(&self, world: Vec3) -> Vec3 {
+        Vec3::new(
+            world.x - self.center.x,
+            world.y - self.center.y,
+            world.z - self.center.z,
+        )
+    }
+
+    /// World points on the terrain surface (MSL from `_Y.RAW` / [`crate::terrain::ground_y_at`]).
+    pub fn to_render_surface(&self, world: Vec3) -> Vec3 {
+        Vec3::new(
+            world.x - self.center.x,
+            world.y - self.height_origin,
+            world.z - self.center.z,
+        )
+    }
+
+    /// Convert `.w` tile-local Y to terrain MSL for [`Self::to_render_surface`].
+    pub fn scenery_y_to_msl(&self, scenery_y: f32) -> f32 {
+        self.height_origin + (scenery_y - self.center.y)
+    }
+
+    /// Horizontal distance from route centre in render space (for culling).
+    pub fn horizontal_distance(&self, world: Vec3) -> f32 {
+        let local = self.to_render(world);
+        Vec2::new(local.x, local.z).length()
+    }
+}
+
+/// Whether a world object should be culled for being outside [`VISIBLE_RADIUS_M`].
+#[inline]
+pub fn should_cull_world_object(focus: &RouteFocus, world: Vec3) -> bool {
+    focus.horizontal_distance(world) > VISIBLE_RADIUS_M
+}
+
+/// Translates abstract graph coordinates into MSTS world space when the two diverge.
+#[derive(Resource, Clone, Copy, Debug, Default)]
+pub struct RouteWorldOffset {
+    pub delta: Vec3,
+}
+
+impl RouteWorldOffset {
+    pub fn from_scene_and_world(scene: &TrackScene, world: &WorldScene) -> Self {
+        let graph_center = scene.bounds.center;
+        let Some(world_center) = world.position_center() else {
+            return Self::default();
+        };
+        if (world_center - graph_center).length() <= 2_000.0 {
+            return Self::default();
+        }
+        let delta = world_center - graph_center;
+        eprintln!(
+            "openrailsrs-viewer3d: aligning track/train to MSTS scenery (offset {:.0}, {:.0}, {:.0} m)",
+            delta.x, delta.y, delta.z
+        );
+        Self { delta }
+    }
 }
 
 /// Convert MSTS tile-local coordinates to Bevy world space (Y up).
@@ -108,9 +214,8 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         WorldItem::Static { qdir, .. }
         | WorldItem::Track { qdir, .. }
         | WorldItem::Dyntrack { qdir, .. }
-        | WorldItem::Signal { qdir, .. } => {
-            qdir.map(|q| qdir_to_quat(&q)).unwrap_or(Quat::IDENTITY)
-        }
+        | WorldItem::Signal { qdir, .. }
+        | WorldItem::Other { qdir, .. } => qdir.map(|q| qdir_to_quat(&q)).unwrap_or(Quat::IDENTITY),
         _ => Quat::IDENTITY,
     };
     let forest = match item {
@@ -175,6 +280,8 @@ pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
     paths.sort();
 
     let mut scene = WorldScene::default();
+    let mut skip_count = 0usize;
+    let mut skip_sample: Option<String> = None;
     for path in paths {
         match WorldFile::from_path(&path) {
             Ok(world) => {
@@ -186,12 +293,21 @@ pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
                 }
             }
             Err(err) => {
-                eprintln!(
-                    "openrailsrs-viewer3d: skip world {} ({err})",
-                    path.display()
-                );
+                skip_count += 1;
+                if skip_sample.is_none() {
+                    skip_sample = Some(format!("{} ({err})", path.display()));
+                }
             }
         }
+    }
+    if skip_count > 0 {
+        eprintln!(
+            "openrailsrs-viewer3d: skipped {skip_count} world tile(s){}",
+            skip_sample
+                .as_ref()
+                .map(|s| format!(" (e.g. {s})"))
+                .unwrap_or_default()
+        );
     }
     scene
 }
@@ -310,6 +426,7 @@ pub fn spawn_world_boxes(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
+    focus: Res<RouteFocus>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
@@ -319,6 +436,8 @@ pub fn spawn_world_boxes(
     }
 
     let terrain_ref = terrain.as_deref();
+    let shape_dirs: Vec<PathBuf> = shape_search_dirs(&assets.route_dir);
+    let shape_dir_refs: Vec<&Path> = shape_dirs.iter().map(|p| p.as_path()).collect();
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
     let mut shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset> =
         std::collections::HashMap::new();
@@ -347,27 +466,27 @@ pub fn spawn_world_boxes(
             continue;
         }
 
-        let dist = (obj.position - scene.bounds.center).length();
-        if dist > VISIBLE_RADIUS_M {
+        if should_cull_world_object(&focus, obj.position) {
             culled_count += 1;
             continue;
         }
 
+        let dist = focus.horizontal_distance(obj.position);
         let lod_distance = if dist > SHAPE_LOD_DISTANCE_M {
             Some(dist)
         } else {
             None
         };
 
-        if shape_eligible(obj) {
+        if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
-            if let Some(shape_path) = resolve_shape_path(&assets.route_dir, file_name) {
+            if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dir_refs, file_name) {
                 let asset = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
                         load_shape_render_asset_from_path(
                             &shape_path,
-                            &assets.route_dir,
+                            &[assets.route_dir.as_path()],
                             lod_distance,
                             &mut meshes,
                             &mut images,
@@ -399,20 +518,22 @@ pub fn spawn_world_boxes(
                     shape_texture_count += 1;
                 }
 
+                let render_pos = focus.to_render_surface(Vec3::new(
+                    obj.position.x,
+                    scenery_ground_y(
+                        terrain_ref,
+                        obj.position.x,
+                        obj.position.z,
+                        &scene,
+                        obj.position.y,
+                        &focus,
+                    ),
+                    obj.position.z,
+                ));
                 commands
                     .spawn((
                         Transform {
-                            translation: Vec3::new(
-                                obj.position.x,
-                                scenery_ground_y(
-                                    terrain_ref,
-                                    obj.position.x,
-                                    obj.position.z,
-                                    &scene,
-                                    obj.position.y,
-                                ),
-                                obj.position.z,
-                            ),
+                            translation: render_pos,
                             rotation: obj.rotation,
                             scale: Vec3::ONE,
                         },
@@ -444,8 +565,13 @@ pub fn spawn_world_boxes(
             obj.position.z,
             &scene,
             obj.position.y,
+            &focus,
         );
-        let translation = Vec3::new(obj.position.x, ground_y + size.y * 0.5, obj.position.z);
+        let translation = focus.to_render_surface(Vec3::new(
+            obj.position.x,
+            ground_y + size.y * 0.5,
+            obj.position.z,
+        ));
         let tf = Transform {
             translation,
             rotation: obj.rotation,
@@ -555,5 +681,105 @@ mod tests {
         assert!(scene.items.iter().any(|o| o.kind == "Static"));
         assert!(scene.items.iter().any(|o| o.kind == "Forest"));
         assert!(scene.items.iter().any(|o| o.kind == "HWater"));
+    }
+
+    /// Chiltern-like focus: MSTS bbox `y` is tile-local (~80 m) but terrain MSL is ~13 km.
+    fn chiltern_like_focus() -> RouteFocus {
+        RouteFocus {
+            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
+            height_origin: 13_184.0,
+        }
+    }
+
+    #[test]
+    fn route_focus_scenery_uses_bbox_y_not_msl() {
+        let focus = chiltern_like_focus();
+        let obj = Vec3::new(12_494_900.0, 55.0, 30_600_300.0);
+        let local = focus.to_render(obj);
+        assert!(
+            local.y.abs() < 200.0,
+            "scenery local y should be O(100 m), got {}",
+            local.y
+        );
+        assert!((local.y - (55.0 - 82.0)).abs() < 1.0);
+        assert!(
+            local.x.abs() < 500.0 && local.z.abs() < 500.0,
+            "horizontal rebasing failed: {:?}",
+            local
+        );
+    }
+
+    #[test]
+    fn scenery_y_to_msl_maps_tile_local_to_height_origin() {
+        let focus = chiltern_like_focus();
+        assert!((focus.scenery_y_to_msl(55.0) - 13_157.0).abs() < 1.0);
+        assert!((focus.to_render_surface(Vec3::new(0.0, 13_157.0, 0.0)).y - (-27.0)).abs() < 1.0);
+    }
+
+    #[test]
+    fn route_focus_surface_uses_height_origin() {
+        let focus = chiltern_like_focus();
+        let rail = Vec3::new(focus.center.x, 13_190.0, focus.center.z);
+        let local = focus.to_render_surface(rail);
+        assert!(
+            (local.y - 6.0).abs() < 1.0,
+            "MSL rail height should be ~0 local, got {}",
+            local.y
+        );
+    }
+
+    #[test]
+    fn culling_uses_horizontal_distance_not_msl_y() {
+        let focus = chiltern_like_focus();
+        let obj = Vec3::new(focus.center.x + 100.0, 55.0, focus.center.z + 80.0);
+        assert!(
+            !should_cull_world_object(&focus, obj),
+            "object 130 m away horizontally must not be culled"
+        );
+        let wrongly_vertical = Vec3::new(focus.center.x, 13_190.0, focus.center.z);
+        assert!(
+            !should_cull_world_object(&focus, wrongly_vertical),
+            "same xz as centre must not be culled despite MSL y"
+        );
+    }
+
+    #[test]
+    fn using_height_origin_for_scenery_y_would_cull_everything() {
+        let focus = chiltern_like_focus();
+        let obj = Vec3::new(focus.center.x + 50.0, 55.0, focus.center.z);
+        let buggy_y = obj.y - focus.height_origin;
+        assert!(
+            buggy_y.abs() > 10_000.0,
+            "sanity: old bug shifted scenery y by ~-13 km"
+        );
+        assert!(!should_cull_world_object(&focus, obj));
+    }
+
+    #[test]
+    fn from_scene_world_and_elevation_prefers_terrain_msl() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("TILES").is_dir() {
+            return;
+        }
+        let world = load_world_from_route_dir(&route_dir);
+        let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
+        let elev = TerrainElevation::load_from_route_dir_near(&route_dir, None, f32::MAX);
+        let focus_no_elev = RouteFocus::from_scene_world_and_elevation(&scene, &world, None);
+        let focus = RouteFocus::from_scene_world_and_elevation(&scene, &world, Some(&elev));
+
+        // With terrain, height_origin should be a terrain sample — a realistic MSL elevation
+        // for Chiltern (~50-250 m). Without terrain it falls back to centre.y.
+        assert!(
+            focus.height_origin > 10.0 && focus.height_origin < 500.0,
+            "height_origin should be a realistic Chiltern MSL elevation, got {}",
+            focus.height_origin
+        );
+        // The terrain sample should differ from the bare scenery bbox fallback.
+        assert!(
+            (focus.height_origin - focus_no_elev.height_origin).abs() > 0.1,
+            "with elevation, height_origin ({}) should differ from fallback ({})",
+            focus.height_origin,
+            focus_no_elev.height_origin
+        );
     }
 }

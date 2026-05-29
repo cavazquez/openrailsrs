@@ -14,6 +14,7 @@ use std::path::Path;
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
+use crate::msts_file_text::read_msts_file_decoded;
 use crate::parser::parse_from_first_paren;
 
 use super::atom_to_number;
@@ -72,6 +73,8 @@ pub enum WorldItem {
         tag: String,
         uid: Option<u32>,
         position: Option<Vec3>,
+        file_name: Option<String>,
+        qdir: Option<[f64; 4]>,
     },
 }
 
@@ -107,6 +110,7 @@ impl WorldItem {
             | WorldItem::Signal { file_name, .. }
             | WorldItem::HWater { file_name, .. } => file_name.as_deref(),
             WorldItem::Forest { tree_texture, .. } => tree_texture.as_deref(),
+            WorldItem::Other { file_name, .. } => file_name.as_deref(),
             _ => None,
         }
     }
@@ -144,7 +148,7 @@ impl WorldFile {
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
-        let text = crate::encoding::read_msts_file_to_string(path)?;
+        let text = read_msts_file_decoded(path)?;
         let ast = parse_from_first_paren(&text)?;
         let (tile_x, tile_z) = parse_tile_xz_from_filename(path).unwrap_or((0, 0));
         Ok(Self::from_ast(&ast, tile_x, tile_z))
@@ -152,9 +156,13 @@ impl WorldFile {
 }
 
 fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
-    // Filenames look like `w-001000-001000.w` or `w+000123-000456.w`.
+    // `w-006074+014924.w` (Chiltern) or `w-001000-001000.w`.
     let stem = path.file_stem()?.to_string_lossy();
-    let rest = stem.strip_prefix("w-").or_else(|| stem.strip_prefix('w'))?;
+    let rest = stem.strip_prefix('w')?;
+    let coords = rest.trim_start_matches('-');
+    if let Some((x, z)) = coords.split_once('+') {
+        return Some((x.parse().ok()?, z.parse().ok()?));
+    }
     let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
     let x = parts.next()?.parse::<i32>().ok()?;
     let z = parts.next()?.parse::<i32>().ok()?;
@@ -234,7 +242,13 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position: position.unwrap_or_default(),
             size: find_named_pair(items, "Size").unwrap_or([100.0, 100.0]),
         },
-        _ => WorldItem::Other { tag, uid, position },
+        _ => WorldItem::Other {
+            tag,
+            uid,
+            position,
+            file_name,
+            qdir,
+        },
     })
 }
 

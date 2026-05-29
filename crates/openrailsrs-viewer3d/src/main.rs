@@ -6,7 +6,7 @@
 //!
 //! - `route_dir` — static graph only (default: `examples/smoke/routes/test`).
 //! - `scenario.toml` — graph + animated train marker(s) from simulation CSV.
-//! - `--live scenario.toml` — run physics in real time (no CSV); drive with W/S in orbit mode.
+//! - `--live scenario.toml` — run physics in real time (no CSV); drive with arrow keys.
 //!
 //! Generate CSV for replay mode, e.g.:
 //!   cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
@@ -15,9 +15,10 @@
 //!
 //! - `F1` / `F2`   — orbit / fly camera.
 //! - Orbit: drag (LMB/RMB) = rotate, Shift+drag or WASD = pan, wheel = zoom.
+//! - Live orbit pan: `I`/`K` forward/back (W/S stay free); `F2` = fly camera (WASD roam).
 //! - Fly: WASD move, `Q`/`E` up/down (`Space` = up unless live/replay loaded).
 //! - Replay: `Space` pause, `R` reset, `+`/`-` speed, `T` cycle camera follow (when CSV loaded).
-//! - Live: `W`/`S` throttle/brake (orbit cam), `Space` emergency, `H` horn, `C` cab panel, `+`/`-` sim speed, `T` follow (chase on start).
+//! - Live: `↑`/`↓` throttle/brake, `Space` emergency, `H` horn, `C` cab panel, `+`/`-` sim speed, `T` camera, `G` teleport.
 //! - Multi-train replay: `[` / `]` (or Shift+T) cycle which train the follow camera tracks.
 //! - `G`           — teleport dialog (type x,y,z).
 //! - `P`           — toggle rain streaks.
@@ -36,13 +37,17 @@ use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainElevation;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
+use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::teleport::TeleportDialog;
-use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir;
+use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir_near;
 use openrailsrs_viewer3d::track::TrackScene;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
+use openrailsrs_viewer3d::world::RouteFocus;
+use openrailsrs_viewer3d::world::RouteWorldOffset;
+use openrailsrs_viewer3d::world::VISIBLE_RADIUS_M;
 use openrailsrs_viewer3d::world::load_world_from_route_dir;
 
 struct LaunchConfig {
@@ -129,6 +134,32 @@ fn main() {
             String::new()
         },
     );
+    if config.live.is_some()
+        && config.scene.render_mode == openrailsrs_viewer3d::track::TrackRenderMode::Compact
+        && cfg!(debug_assertions)
+    {
+        eprintln!(
+            "openrailsrs-viewer3d: tip — large route in debug is very slow; use \
+             `cargo run --release -p openrailsrs-viewer3d -- --live …` for playable FPS"
+        );
+    }
+
+    let route_focus = RouteFocus::from_scene_world_and_elevation(
+        &config.scene,
+        &config.world,
+        if config.elevation.is_empty() {
+            None
+        } else {
+            Some(&config.elevation)
+        },
+    );
+    if route_focus.height_origin != route_focus.center.y {
+        eprintln!(
+            "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0})",
+            route_focus.height_origin, route_focus.center.y
+        );
+    }
+    let route_offset = RouteWorldOffset::from_scene_and_world(&config.scene, &config.world);
 
     let mut app = App::new();
     app.add_plugins(
@@ -147,8 +178,13 @@ fn main() {
                 ..default()
             }),
     )
+    .insert_resource(ViewerLaunchOpts {
+        live: config.live.is_some(),
+    })
     .insert_resource(config.scene)
     .insert_resource(RouteAssets::new(config.route_dir))
+    .insert_resource(route_focus)
+    .insert_resource(route_offset)
     .insert_resource(config.world)
     .insert_resource(config.terrain)
     .insert_resource(config.elevation)
@@ -177,13 +213,16 @@ fn build_launch_config(arg: &Path, live: bool) -> Result<LaunchConfig, String> {
 
 fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
+    let scene = TrackScene::from_graph(graph);
     let world = load_world_from_route_dir(route_dir);
-    let terrain = load_terrain_from_route_dir(route_dir);
-    let elevation = TerrainElevation::load_from_route_dir(route_dir);
+    let focus = RouteFocus::from_scene_and_world(&scene, &world);
+    let terrain = load_terrain_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    let elevation =
+        TerrainElevation::load_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
         route_dir: route_dir.to_path_buf(),
-        scene: TrackScene::from_graph(graph),
+        scene,
         world,
         terrain,
         elevation,
@@ -200,16 +239,23 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
     let scenario = load_scenario(path).map_err(|e| e.to_string())?;
     let route_dir = scenario_dir.join(&scenario.route.path);
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
+    let scene = TrackScene::from_graph(graph);
     let world = load_world_from_route_dir(&route_dir);
-    let terrain = load_terrain_from_route_dir(&route_dir);
-    let elevation = TerrainElevation::load_from_route_dir(&route_dir);
+    let focus = RouteFocus::from_scene_and_world(&scene, &world);
+    let terrain =
+        load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    let elevation = TerrainElevation::load_from_route_dir_near(
+        &route_dir,
+        Some(focus.center),
+        VISIBLE_RADIUS_M,
+    );
 
     let consist = load_train_consists(scenario_dir, &scenario);
 
     let (replay, live_drive) = if live {
         let drive = LiveDrive::from_scenario_path(path)?;
         eprintln!(
-            "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, W/S throttle/brake in orbit cam)",
+            "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, ↑/↓ throttle/brake, F2 fly, G teleport)",
             drive.session.scenario_name, drive.session.dt,
         );
         (ReplayState::default(), Some(drive))
@@ -248,7 +294,7 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
             format!("openrailsrs-viewer3d — {}", scenario.scenario.name)
         },
         route_dir,
-        scene: TrackScene::from_graph(graph),
+        scene,
         world,
         terrain,
         elevation,

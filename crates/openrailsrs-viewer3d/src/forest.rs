@@ -11,7 +11,7 @@ use openrailsrs_track::TrackGraph;
 use crate::shapes::load_ace_image;
 use crate::terrain::TerrainElevation;
 use crate::track::{SceneBounds, TrackScene, forest_track_clearance_m, min_distance_to_graph_xz};
-use crate::world::WorldScene;
+use crate::world::{RouteFocus, WorldScene};
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
 const MAX_SCATTER_ATTEMPTS: u32 = 12;
@@ -62,6 +62,7 @@ pub fn scatter_trees_in_patch(
     graph: &TrackGraph,
     terrain: Option<&TerrainElevation>,
     track_clearance_m: f32,
+    focus: &RouteFocus,
 ) -> Vec<TreePlacement> {
     let mut trees = Vec::with_capacity(population as usize);
     for i in 0..population {
@@ -79,7 +80,7 @@ pub fn scatter_trees_in_patch(
             let scale = scale_min + (scale_max - scale_min) * t;
             let y = terrain
                 .and_then(|elev| elev.sample_world_y(x, z))
-                .unwrap_or(anchor.y);
+                .unwrap_or_else(|| focus.scenery_y_to_msl(anchor.y));
             placed = Some(TreePlacement {
                 position: Vec3::new(x, y, z),
                 scale,
@@ -171,6 +172,7 @@ pub fn spawn_forest_patches(
     track: Res<TrackScene>,
     terrain: Option<Res<TerrainElevation>>,
     assets: Res<crate::shapes::RouteAssets>,
+    focus: Res<crate::world::RouteFocus>,
 ) {
     let forests: Vec<_> = world
         .items
@@ -213,7 +215,10 @@ pub fn spawn_forest_patches(
         } else {
             default_half
         };
-        let trees = scatter_trees_in_patch(
+        if focus.horizontal_distance(obj.position) > crate::world::VISIBLE_RADIUS_M {
+            continue;
+        }
+        let trees_world = scatter_trees_in_patch(
             obj.position,
             patch_half_x,
             patch_half_z,
@@ -226,7 +231,15 @@ pub fn spawn_forest_patches(
             &track.graph,
             terrain_ref,
             track_clearance,
+            &focus,
         );
+        let trees: Vec<TreePlacement> = trees_world
+            .iter()
+            .map(|t| TreePlacement {
+                position: focus.to_render_surface(t.position),
+                scale: t.scale,
+            })
+            .collect();
         tree_count += trees.len();
 
         let mesh = meshes.add(build_forest_patch_mesh(&trees, base_w, base_h));
@@ -275,6 +288,13 @@ mod tests {
     use crate::terrain::TerrainElevation;
     use crate::world::load_world_from_route_dir;
 
+    fn zero_focus() -> RouteFocus {
+        RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        }
+    }
+
     fn line_graph_through_origin() -> TrackGraph {
         let mut g = TrackGraph::new();
         g.insert_node(Node {
@@ -315,6 +335,7 @@ mod tests {
     #[test]
     fn scatter_respects_population_without_obstacles() {
         let g = TrackGraph::new();
+        let focus = zero_focus();
         let trees = scatter_trees_in_patch(
             Vec3::new(5000.0, 0.0, 5000.0),
             50.0,
@@ -328,6 +349,7 @@ mod tests {
             &g,
             None,
             5.0,
+            &focus,
         );
         assert_eq!(trees.len(), 12);
         assert!(trees.iter().all(|t| t.scale >= 0.8 && t.scale <= 1.2));
@@ -336,6 +358,7 @@ mod tests {
     #[test]
     fn scatter_avoids_track_centreline() {
         let g = line_graph_through_origin();
+        let focus = zero_focus();
         let clearance = 8.0;
         let trees = scatter_trees_in_patch(
             Vec3::ZERO,
@@ -350,6 +373,7 @@ mod tests {
             &g,
             None,
             clearance,
+            &focus,
         );
         assert!(!trees.is_empty());
         for tree in &trees {
@@ -363,6 +387,7 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
         let g = TrackGraph::new();
+        let focus = zero_focus();
         let anchor = Vec3::new(180.0, 999.0, 55.0);
         let trees = scatter_trees_in_patch(
             anchor,
@@ -377,6 +402,7 @@ mod tests {
             &g,
             Some(&elev),
             0.0,
+            &focus,
         );
         assert!(!trees.is_empty());
         for tree in &trees {
@@ -385,10 +411,51 @@ mod tests {
     }
 
     #[test]
+    fn scatter_fallback_y_is_msl_not_scenery_local() {
+        let focus = RouteFocus {
+            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
+            height_origin: 13_184.0,
+        };
+        let g = TrackGraph::new();
+        let anchor = Vec3::new(focus.center.x, 55.0, focus.center.z);
+        let trees = scatter_trees_in_patch(
+            anchor, 40.0, 40.0, 8, 1.0, 1.0, 0, 0, 1, &g, None, 0.0, &focus,
+        );
+        assert!(!trees.is_empty());
+        let expected_msl = focus.scenery_y_to_msl(55.0);
+        for tree in &trees {
+            assert!(
+                (tree.position.y - expected_msl).abs() < 1.0,
+                "fallback tree y must be MSL (~{expected_msl}), got {}",
+                tree.position.y
+            );
+            let render_y = focus.to_render_surface(tree.position).y;
+            assert!(
+                render_y.abs() < 50.0,
+                "render y must stay near ground, got {render_y}"
+            );
+        }
+    }
+
+    #[test]
     fn cross_mesh_has_triangles_per_tree() {
         let g = TrackGraph::new();
-        let trees =
-            scatter_trees_in_patch(Vec3::ZERO, 10.0, 10.0, 2, 1.0, 1.0, 0, 0, 1, &g, None, 0.0);
+        let focus = zero_focus();
+        let trees = scatter_trees_in_patch(
+            Vec3::ZERO,
+            10.0,
+            10.0,
+            2,
+            1.0,
+            1.0,
+            0,
+            0,
+            1,
+            &g,
+            None,
+            0.0,
+            &focus,
+        );
         let mesh = build_forest_patch_mesh(&trees, 4.0, 12.0);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         assert_eq!(positions.len(), 16);

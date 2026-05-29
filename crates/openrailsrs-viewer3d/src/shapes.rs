@@ -380,12 +380,35 @@ pub fn ace_to_image(ace: &AceFile) -> Image {
     )
 }
 
-/// Resolve `SHAPES/foo.s` under the route directory.
+/// Optional MSTS install root (`Content/`) for `GLOBAL/SHAPES` lookup.
+pub fn msts_content_root() -> Option<PathBuf> {
+    std::env::var("OPENRAILSRS_MSTS_CONTENT")
+        .ok()
+        .map(PathBuf::from)
+        .filter(|p| p.is_dir())
+}
+
+/// Route directory plus optional `GLOBAL` from [`msts_content_root`].
+pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = vec![route_dir.to_path_buf()];
+    if let Some(root) = msts_content_root() {
+        let global = root.join("GLOBAL");
+        if global.is_dir() {
+            dirs.push(global);
+        }
+    }
+    dirs
+}
+
+/// Resolve `SHAPES/foo.s` under the route directory (case-insensitive on Linux).
 pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     for subdir in ["SHAPES", "shapes"] {
         let path = route_dir.join(subdir).join(file_name);
         if path.is_file() {
             return Some(path);
+        }
+        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+            return Some(resolved);
         }
     }
     None
@@ -401,12 +424,28 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
     None
 }
 
-/// Resolve `TEXTURES/foo.ace` under the route directory.
+/// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     for subdir in ["TEXTURES", "textures"] {
         let path = route_dir.join(subdir).join(file_name);
         if path.is_file() {
             return Some(path);
+        }
+        if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+            return Some(p);
+        }
+    }
+    None
+}
+
+/// Search several asset roots for `TEXTURES/foo.ace`, returning the first match.
+///
+/// Use this instead of `resolve_texture_path` when a shape may live in a
+/// directory other than the route root (e.g. a trainset folder).
+pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
+    for dir in dirs {
+        if let Some(p) = resolve_texture_path(dir, file_name) {
+            return Some(p);
         }
     }
     None
@@ -420,10 +459,14 @@ pub fn load_ace_image(route_dir: &Path, file_name: &str) -> Option<Image> {
 }
 
 /// Load a shape and prepare Bevy mesh/material handles for each `prim_state` part.
+///
+/// `texture_dirs` is searched in order for `TEXTURES/<name>.ace`.  Pass at
+/// least `&[route_dir]`; for trainset shapes also include the trainset root so
+/// that textures stored alongside the rolling stock are found.
 #[allow(clippy::too_many_arguments)]
 pub fn load_shape_render_asset_from_path(
     shape_path: &Path,
-    route_dir: &Path,
+    texture_dirs: &[&Path],
     camera_distance_m: Option<f32>,
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
@@ -438,7 +481,7 @@ pub fn load_shape_render_asset_from_path(
     let mut parts = Vec::with_capacity(loaded.parts.len().max(1));
     if loaded.parts.is_empty() {
         let (material, has_texture, is_transparent) = material_for_shape_texture(
-            route_dir,
+            texture_dirs,
             loaded.texture_file.as_deref(),
             images,
             materials,
@@ -456,7 +499,7 @@ pub fn load_shape_render_asset_from_path(
     }
     for part in loaded.parts {
         let (material, has_texture, is_transparent) = material_for_shape_texture(
-            route_dir,
+            texture_dirs,
             part.texture_file.as_deref(),
             images,
             materials,
@@ -481,7 +524,7 @@ pub fn load_shape_render_asset_from_path(
 }
 
 fn material_for_shape_texture(
-    route_dir: &Path,
+    texture_dirs: &[&Path],
     texture_file: Option<&str>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
@@ -489,7 +532,7 @@ fn material_for_shape_texture(
     fallback_color: Color,
 ) -> (Handle<StandardMaterial>, bool, bool) {
     if let Some(tex_name) = texture_file {
-        if let Some(tex_path) = resolve_texture_path(route_dir, tex_name) {
+        if let Some(tex_path) = resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             if let Ok(ace) = read_ace(&tex_path) {
                 let is_transparent =
                     ace_has_alpha(&ace) || texture_name_suggests_transparency(tex_name);
@@ -665,10 +708,11 @@ mod tests {
         let mut images = Assets::<Image>::default();
         let mut materials = Assets::<StandardMaterial>::default();
         let mut texture_cache = HashMap::new();
+        let trainset_dir = chiltern_route_dir();
 
         let asset = load_shape_render_asset_from_path(
             &chiltern_shape_fixture("RF_WP_DMBSA.s"),
-            &chiltern_route_dir(),
+            &[trainset_dir.as_path()],
             None,
             &mut meshes,
             &mut images,
@@ -685,6 +729,42 @@ mod tests {
                 .parts
                 .iter()
                 .all(|part| meshes.get(&part.mesh).is_some())
+        );
+    }
+
+    /// Verify that `resolve_texture_path_in_dirs` finds a texture in the
+    /// trainset directory even when it is absent from the route dir.
+    ///
+    /// This mirrors the real Chiltern layout where
+    /// `examples/chiltern/TEXTURES/` and `trains/RF_Blue_Pullman/TEXTURES/`
+    /// are distinct directories.
+    #[test]
+    fn resolve_texture_path_in_dirs_finds_trainset_texture() {
+        let fake_route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")); // no TEXTURES here
+        let trainset_dir = chiltern_route_dir(); // .../RF_Blue_Pullman – has TEXTURES/
+
+        if !trainset_dir.join("TEXTURES/bp01.ace").exists() {
+            return; // Skip when Chiltern data is absent (CI)
+        }
+
+        // Route-only search should NOT find trainset textures.
+        assert!(
+            resolve_texture_path(&fake_route_dir, "bp01.ace").is_none(),
+            "fake route_dir should have no TEXTURES/bp01.ace"
+        );
+
+        // Multi-dir search that includes trainset_dir SHOULD find it.
+        let found = resolve_texture_path_in_dirs(
+            &[fake_route_dir.as_path(), trainset_dir.as_path()],
+            "bp01.ace",
+        );
+        assert!(
+            found.is_some(),
+            "resolve_texture_path_in_dirs should find bp01.ace in trainset TEXTURES/"
+        );
+        assert!(
+            found.unwrap().ends_with("TEXTURES/bp01.ace"),
+            "resolved path should end with TEXTURES/bp01.ace"
         );
     }
 
@@ -725,7 +805,7 @@ mod tests {
         let mut texture_cache = HashMap::new();
 
         let (handle, has_texture, is_transparent) = material_for_shape_texture(
-            &route,
+            &[route.as_path()],
             Some("alpha_test.ace"),
             &mut images,
             &mut materials,

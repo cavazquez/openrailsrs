@@ -12,7 +12,8 @@ use crate::shapes::{
     vehicle_shape_local_transform,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
-use crate::track::{TrackScene, graph_to_world};
+use crate::track::{TrackScene, graph_to_world_with_offset};
+use crate::world::{RouteFocus, RouteWorldOffset};
 
 const COLOR_TRAIN_PRIMARY: Color = Color::srgb(1.0, 0.25, 1.0);
 const COLOR_TRAIN_FALLBACK: Color = Color::srgb(0.95, 0.25, 0.85);
@@ -97,6 +98,8 @@ pub fn position_on_graph(
     pos_on_edge_m: f64,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
+    world_offset: Vec3,
+    focus: &RouteFocus,
 ) -> Option<(Vec3, f32)> {
     let edge = graph.edge(edge_id.trim())?;
     let from = graph.node(&edge.from.0)?;
@@ -110,8 +113,9 @@ pub fn position_on_graph(
 
     let x_m = from.x_m + frac * (to.x_m - from.x_m);
     let y_m = from.y_m + frac * (to.y_m - from.y_m);
-    let mut world = graph_to_world(x_m, y_m);
+    let mut world = graph_to_world_with_offset(world_offset, x_m, y_m);
     world.y = ground_y_at(terrain, world.x, world.z, scene);
+    world = focus.to_render_surface(world);
 
     let dx = (to.x_m - from.x_m) as f32;
     let dz = (to.y_m - from.y_m) as f32;
@@ -131,6 +135,8 @@ pub fn pose_at_time(
     t: f64,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
+    world_offset: Vec3,
+    focus: &RouteFocus,
 ) -> Option<(Vec3, f32, f64)> {
     if rows.is_empty() {
         return None;
@@ -140,7 +146,15 @@ pub fn pose_at_time(
         .saturating_sub(1)
         .min(rows.len() - 1);
     let row = &rows[idx];
-    let (pos, yaw) = position_on_graph(graph, &row.edge_id, row.pos_on_edge_m, terrain, scene)?;
+    let (pos, yaw) = position_on_graph(
+        graph,
+        &row.edge_id,
+        row.pos_on_edge_m,
+        terrain,
+        scene,
+        world_offset,
+        focus,
+    )?;
     Some((pos, yaw, row.velocity_mps))
 }
 
@@ -159,6 +173,8 @@ pub fn spawn_train_markers(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    offset: Res<RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
     replay: Res<ReplayState>,
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
@@ -169,12 +185,8 @@ pub fn spawn_train_markers(
     }
 
     let terrain_ref = terrain.as_deref();
-    let fallback_y = ground_y_at(
-        terrain_ref,
-        scene.bounds.center.x,
-        scene.bounds.center.z,
-        &scene,
-    );
+    let graph_world = scene.bounds.center + offset.delta;
+    let fallback_y = ground_y_at(terrain_ref, graph_world.x, graph_world.z, &scene);
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut shape_cache: ShapeCache = HashMap::new();
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
@@ -190,8 +202,20 @@ pub fn spawn_train_markers(
             track.color
         };
 
-        let (pos, yaw, _) = pose_at_time(&scene.graph, &track.rows, 0.0, terrain_ref, &scene)
-            .unwrap_or((scene.bounds.center + Vec3::Y * fallback_y, 0.0, 0.0));
+        let (pos, yaw, _) = pose_at_time(
+            &scene.graph,
+            &track.rows,
+            0.0,
+            terrain_ref,
+            &scene,
+            offset.delta,
+            &focus,
+        )
+        .unwrap_or((
+            focus.to_render_surface(scene.bounds.center + offset.delta + Vec3::Y * fallback_y),
+            0.0,
+            0.0,
+        ));
         let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
 
         if !consist.vehicles_for(&track.label).is_empty() {
@@ -342,9 +366,18 @@ fn load_vehicle_shape_assets(
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
 ) -> ShapeRenderAsset {
+    // Derive the trainset root from the shape path so that textures stored in
+    // <trainset>/TEXTURES/ are found even when they are outside route_dir.
+    let trainset_root = shape_path
+        .parent() // …/SHAPES
+        .and_then(|p| p.parent()); // …/<trainset name>
+    let tex_dirs: Vec<&std::path::Path> = std::iter::once(route_dir)
+        .chain(trainset_root.filter(|t| *t != route_dir))
+        .collect();
+
     load_shape_render_asset_from_path(
         shape_path,
-        route_dir,
+        &tex_dirs,
         None,
         meshes,
         images,
@@ -387,6 +420,8 @@ pub fn advance_replay_time(time: Res<Time>, mut replay: ResMut<ReplayState>) {
 
 pub fn update_train_markers(
     scene: Res<TrackScene>,
+    offset: Res<RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
     replay: Res<ReplayState>,
     terrain: Option<Res<TerrainElevation>>,
     mut query: Query<(&TrainMarker, &mut Transform), Without<Camera3d>>,
@@ -401,9 +436,15 @@ pub fn update_train_markers(
         let Some(track) = replay.tracks.get(marker.track_index) else {
             continue;
         };
-        let Some((pos, yaw, _)) =
-            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain_ref, &scene)
-        else {
+        let Some((pos, yaw, _)) = pose_at_time(
+            &scene.graph,
+            &track.rows,
+            replay.t_sim,
+            terrain_ref,
+            &scene,
+            offset.delta,
+            &focus,
+        ) else {
             continue;
         };
         transform.translation = pos;
@@ -468,14 +509,47 @@ mod tests {
         g
     }
 
+    fn test_focus() -> RouteFocus {
+        RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        }
+    }
+
     #[test]
     fn position_on_graph_mid_edge() {
         let g = line_graph();
         let scene = TrackScene::from_graph(g.clone());
+        let focus = test_focus();
         let expected_y = ground_y_at(None, 50.0, 0.0, &scene);
-        let (pos, _yaw) = position_on_graph(&g, "e1", 50.0, None, &scene).unwrap();
+        let (pos, _yaw) =
+            position_on_graph(&g, "e1", 50.0, None, &scene, Vec3::ZERO, &focus).unwrap();
         assert!((pos.x - 50.0).abs() < 1e-3);
         assert!((pos.y - expected_y).abs() < 1e-3);
+    }
+
+    #[test]
+    fn position_on_graph_uses_to_render_surface_not_scenery_y() {
+        let focus = RouteFocus {
+            center: Vec3::new(1_000_000.0, 80.0, 2_000_000.0),
+            height_origin: 1_050.0,
+        };
+        let g = line_graph();
+        let scene = TrackScene::from_graph(g.clone());
+        let offset = Vec3::new(1_000_000.0, 80.0, 2_000_000.0);
+        let (pos, _) = position_on_graph(&g, "e1", 0.0, None, &scene, offset, &focus).unwrap();
+        let msl_y = ground_y_at(None, 1_000_000.0, 2_000_000.0, &scene);
+        assert!(
+            (pos.y - (msl_y - focus.height_origin)).abs() < 1e-3,
+            "expected MSL rebase, got {}",
+            pos.y
+        );
+        let wrong_scenery_y = msl_y - focus.center.y;
+        assert!(
+            (pos.y - wrong_scenery_y).abs() > 500.0,
+            "must not subtract bbox center.y ({}) for rail height",
+            focus.center.y
+        );
     }
 
     #[test]
@@ -496,7 +570,9 @@ mod tests {
                 pos_on_edge_m: 100.0,
             },
         ];
-        let (pos, _, vel) = pose_at_time(&g, &rows, 99.0, None, &scene).unwrap();
+        let focus = test_focus();
+        let (pos, _, vel) =
+            pose_at_time(&g, &rows, 99.0, None, &scene, Vec3::ZERO, &focus).unwrap();
         assert!((pos.x - 100.0).abs() < 1e-3);
         assert!((vel - 5.0).abs() < 1e-6);
     }

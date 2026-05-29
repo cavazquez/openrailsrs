@@ -6,6 +6,7 @@ use openrailsrs_track::{SignalAspect, TrackGraph, TrackSignal};
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::position_on_graph;
+use crate::world::{RouteFocus, RouteWorldOffset};
 
 const COLOR_SIG_STOP: Color = Color::srgb(1.0, 0.133, 0.133);
 const COLOR_SIG_CAUTION: Color = Color::srgb(1.0, 0.8, 0.0);
@@ -26,8 +27,19 @@ pub fn signal_position_on_edge(
     signal: &TrackSignal,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
+    world_offset: Vec3,
+    focus: &RouteFocus,
 ) -> Option<Vec3> {
-    position_on_graph(graph, &signal.edge_id, signal.position_m, terrain, scene).map(|(p, _)| p)
+    position_on_graph(
+        graph,
+        &signal.edge_id,
+        signal.position_m,
+        terrain,
+        scene,
+        world_offset,
+        focus,
+    )
+    .map(|(p, _)| p)
 }
 
 /// Spawn diamond markers and poles for all signals in the graph.
@@ -36,6 +48,8 @@ pub fn spawn_signal_markers(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    offset: Res<RouteWorldOffset>,
+    focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
 ) {
     let signal_count = scene.graph.signals().count();
@@ -88,7 +102,14 @@ pub fn spawn_signal_markers(
     };
 
     for signal in scene.graph.signals() {
-        let Some(pos) = signal_position_on_edge(&scene.graph, signal, terrain_ref, &scene) else {
+        let Some(pos) = signal_position_on_edge(
+            &scene.graph,
+            signal,
+            terrain_ref,
+            &scene,
+            offset.delta,
+            &focus,
+        ) else {
             continue;
         };
         let material = aspect_mat(&signal.aspect);
@@ -130,6 +151,9 @@ pub fn update_live_signal_markers(
     let Some(live) = live else {
         return;
     };
+    if live.session.assume_signals_clear {
+        return;
+    }
     for (marker, mat_handle) in &query {
         let aspect = live
             .session
@@ -191,7 +215,11 @@ mod tests {
     fn signal_at_mid_edge() {
         let (g, sig) = line_graph_with_signal();
         let scene = TrackScene::from_graph(g.clone());
-        let pos = signal_position_on_edge(&g, &sig, None, &scene).unwrap();
+        let focus = RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let pos = signal_position_on_edge(&g, &sig, None, &scene, Vec3::ZERO, &focus).unwrap();
         assert!((pos.x - 50.0).abs() < 1e-3);
         assert!(pos.y > 0.0);
     }

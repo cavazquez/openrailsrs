@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::track::TrackScene;
+use crate::world::RouteFocus;
 
 const SKY_COLOR_ZENITH: Color = Color::srgb(0.38, 0.62, 0.92);
 const SKY_COLOR_HORIZON: Color = Color::srgb(0.72, 0.84, 0.96);
@@ -13,6 +14,7 @@ pub fn spawn_sky_dome(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    _focus: Res<RouteFocus>,
 ) {
     let radius = (scene.bounds.orbit_distance() * 3.0).clamp(500.0, 150_000.0);
     let mesh = meshes.add(Sphere::new(radius));
@@ -30,7 +32,7 @@ pub fn spawn_sky_dome(
     commands.spawn((
         Mesh3d(mesh),
         MeshMaterial3d(material),
-        Transform::from_translation(scene.bounds.center).with_scale(Vec3::splat(-1.0)),
+        Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(-1.0)),
         Name::new("sky-dome"),
     ));
 }

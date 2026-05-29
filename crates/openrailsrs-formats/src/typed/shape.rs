@@ -45,11 +45,8 @@
 //! ignored — Fase 23 will extend the model when it actually needs them.
 
 use crate::ast::{Ast, Atom};
-use crate::encoding::decode_msts_bytes;
 use crate::error::FormatError;
-use crate::msts_simisa::decode_simisa_container;
 use crate::parser::parse_from_first_paren;
-use crate::shape_binary::binary_shape_to_ascii;
 
 use super::atom_to_number;
 use super::atom_to_string;
@@ -212,50 +209,13 @@ impl ShapeFile {
 }
 
 fn shape_text_from_bytes(bytes: &[u8]) -> Result<String, FormatError> {
-    if bytes.len() >= 16 && bytes.starts_with(b"SIMISA") {
-        let payload = decode_simisa_container(bytes)?;
-        if payload.is_text {
-            return Ok(decode_msts_bytes(&payload.bytes[payload.data_offset..]));
-        }
-        return binary_shape_to_ascii(&payload);
-    }
-    if is_binary_shape(bytes) {
-        let payload = crate::msts_simisa::SimisaPayload {
-            bytes: bytes.to_vec(),
-            is_text: false,
-            data_offset: 0,
-            token_offset: 0,
-        };
-        return binary_shape_to_ascii(&payload);
-    }
-    Ok(decode_msts_bytes(bytes))
-}
-
-/// Returns true if the byte stream looks like a MSTS binary tokenized shape.
-///
-/// MSTS shapes always start with a SIMISA-style 32-byte header.  In ASCII
-/// form, the bytes after the header are printable S-expression characters.
-/// Binary shapes contain raw token bytes (often `0x00`–`0x1F` outside of
-/// whitespace) almost immediately.  We sample a window after the header and
-/// declare it binary if more than ~10% of those bytes are non-printable.
-fn is_binary_shape(bytes: &[u8]) -> bool {
-    let scan_start = 32.min(bytes.len());
-    let scan_end = (scan_start + 256).min(bytes.len());
-    let window = &bytes[scan_start..scan_end];
-    if window.is_empty() {
-        return false;
-    }
-    let suspicious = window
-        .iter()
-        .filter(|&&b| b != b'\n' && b != b'\r' && b != b'\t' && (b < 0x20 || b == 0x7F))
-        .count();
-    suspicious * 10 > window.len()
+    crate::msts_file_text::decode_msts_file_bytes(bytes)
 }
 
 fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     let mut out = Vec::new();
     walk_named_list(ast, "texture_filenames", &mut |items| {
-        for item in items.iter().skip(1) {
+        for item in shape_section_body(items) {
             if let Ast::Atom(Atom::String(s)) = item {
                 out.push(s.clone());
             }
@@ -263,17 +223,13 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     });
     if out.is_empty() {
         walk_named_list(ast, "images", &mut |items| {
-            for item in items.iter().skip(1) {
-                if let Ast::List(sub) = item {
-                    if matches_head(sub, "image") {
-                        for inner in sub.iter().skip(1) {
-                            if let Ast::Atom(Atom::String(s)) = inner {
-                                out.push(s.clone());
-                            }
-                        }
+            for_each_tagged(items, "image", |sub| {
+                for item in shape_section_body(sub) {
+                    if let Ast::Atom(Atom::String(s)) = item {
+                        out.push(s.clone());
                     }
                 }
-            }
+            });
         });
     }
     out
@@ -303,15 +259,11 @@ fn collect_shader_names(ast: &Ast) -> Vec<String> {
 fn collect_points(ast: &Ast) -> Vec<Vec3> {
     let mut out = Vec::new();
     walk_named_list(ast, "points", &mut |items| {
-        for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "point") {
-                    if let Some(v) = parse_vec3(sub) {
-                        out.push(v);
-                    }
-                }
+        for_each_tagged(items, "point", |sub| {
+            if let Some(v) = parse_vec3(sub) {
+                out.push(v);
             }
-        }
+        });
     });
     out
 }
@@ -319,15 +271,11 @@ fn collect_points(ast: &Ast) -> Vec<Vec3> {
 fn collect_uv_points(ast: &Ast) -> Vec<Vec2> {
     let mut out = Vec::new();
     walk_named_list(ast, "uv_points", &mut |items| {
-        for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "uv_point") {
-                    if let Some(v) = parse_vec2(sub) {
-                        out.push(v);
-                    }
-                }
+        for_each_tagged(items, "uv_point", |sub| {
+            if let Some(v) = parse_vec2(sub) {
+                out.push(v);
             }
-        }
+        });
     });
     out
 }
@@ -335,14 +283,12 @@ fn collect_uv_points(ast: &Ast) -> Vec<Vec2> {
 fn collect_normals(ast: &Ast) -> Vec<Vec3> {
     let mut out = Vec::new();
     walk_named_list(ast, "normals", &mut |items| {
-        for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "vector") || matches_head(sub, "normal") {
-                    if let Some(v) = parse_vec3(sub) {
-                        out.push(v);
-                    }
+        for tag in ["vector", "normal"] {
+            for_each_tagged(items, tag, |sub| {
+                if let Some(v) = parse_vec3(sub) {
+                    out.push(v);
                 }
-            }
+            });
         }
     });
     out
@@ -351,13 +297,9 @@ fn collect_normals(ast: &Ast) -> Vec<Vec3> {
 fn collect_prim_states(ast: &Ast) -> Vec<PrimState> {
     let mut out = Vec::new();
     walk_named_list(ast, "prim_states", &mut |items| {
-        for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "prim_state") {
-                    out.push(parse_prim_state(sub));
-                }
-            }
-        }
+        for_each_tagged(items, "prim_state", |sub| {
+            out.push(parse_prim_state(sub));
+        });
     });
     out
 }
@@ -379,10 +321,12 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
             Ast::Atom(at) => {
                 if let Some(n) = atom_to_number(at) {
                     top_level_nums.push(n);
+                } else if let Some(h) = shape_atom_to_i32(at) {
+                    top_level_nums.push(f64::from(h));
                 }
             }
             Ast::List(sub) if matches_head(sub, "tex_idxs") => {
-                tex_indices = parse_counted_i32_list(sub);
+                tex_indices = parse_tex_idxs_list(sub);
                 texture_idx = tex_indices.first().copied().unwrap_or(-1);
             }
             Ast::List(sub) if matches_head(sub, "flags") => {
@@ -421,6 +365,12 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
     if z_bias.is_none() {
         z_bias = top_level_nums.get(3).copied();
     }
+    if tex_indices.is_empty() {
+        for_each_tagged(items, "tex_idxs", |sub| {
+            tex_indices = parse_tex_idxs_list(sub);
+            texture_idx = tex_indices.first().copied().unwrap_or(-1);
+        });
+    }
 
     PrimState {
         name,
@@ -436,32 +386,20 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
 fn collect_lod_controls(ast: &Ast) -> Vec<LodControl> {
     let mut out = Vec::new();
     walk_named_list(ast, "lod_controls", &mut |items| {
-        for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "lod_control") {
-                    out.push(parse_lod_control(sub));
-                }
-            }
-        }
+        for_each_tagged(items, "lod_control", |sub| {
+            out.push(parse_lod_control(sub));
+        });
     });
     out
 }
 
 fn parse_lod_control(items: &[Ast]) -> LodControl {
     let mut distance_levels = Vec::new();
-    for item in items.iter().skip(1) {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, "distance_levels") {
-                for child in sub.iter().skip(1) {
-                    if let Ast::List(dl) = child {
-                        if matches_head(dl, "distance_level") {
-                            distance_levels.push(parse_distance_level(dl));
-                        }
-                    }
-                }
-            }
-        }
-    }
+    for_each_tagged(items, "distance_levels", |sub| {
+        for_each_tagged(sub, "distance_level", |dl| {
+            distance_levels.push(parse_distance_level(dl));
+        });
+    });
     LodControl { distance_levels }
 }
 
@@ -469,22 +407,16 @@ fn parse_distance_level(items: &[Ast]) -> DistanceLevel {
     let mut selection_m = 0.0;
     let mut sub_objects = Vec::new();
 
-    for item in items.iter().skip(1) {
-        let Ast::List(sub) = item else { continue };
-        if matches_head(sub, "distance_level_header") {
-            if let Some(s) = find_first_named_number(sub, "dlevel_selection") {
-                selection_m = s;
-            }
-        } else if matches_head(sub, "sub_objects") {
-            for child in sub.iter().skip(1) {
-                if let Ast::List(so) = child {
-                    if matches_head(so, "sub_object") {
-                        sub_objects.push(parse_sub_object(so));
-                    }
-                }
-            }
+    for_each_tagged(items, "distance_level_header", |sub| {
+        if let Some(s) = find_tagged_number(sub, "dlevel_selection") {
+            selection_m = s;
         }
-    }
+    });
+    for_each_tagged(items, "sub_objects", |sub| {
+        for_each_tagged(sub, "sub_object", |so| {
+            sub_objects.push(parse_sub_object(so));
+        });
+    });
 
     DistanceLevel {
         selection_m,
@@ -497,63 +429,45 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
     let mut vertices = Vec::new();
     let mut primitives = Vec::new();
 
-    for item in items.iter().skip(1) {
-        let Ast::List(sub) = item else { continue };
-        if matches_head(sub, "vertices") {
-            if let Some(Ast::Atom(at)) = sub.get(1) {
-                if let Some(n) = atom_to_number(at) {
-                    vertex_count = n as usize;
-                }
+    for_each_tagged(items, "vertices", |sub| {
+        if let Some(n) = first_number_in_section(sub) {
+            vertex_count = n as usize;
+        }
+        for_each_tagged(sub, "vertex", |vertex| {
+            if let Some(parsed) = parse_vertex(vertex) {
+                vertices.push(parsed);
             }
-            for child in sub.iter().skip(2) {
-                let Ast::List(vertex) = child else { continue };
-                if matches_head(vertex, "vertex") {
-                    if let Some(parsed) = parse_vertex(vertex) {
-                        vertices.push(parsed);
-                    }
-                }
+        });
+    });
+    for_each_tagged(items, "primitives", |sub| {
+        let mut current_state_idx: i32 = -1;
+        for_each_tagged(sub, "prim_state_idx", |prim| {
+            if let Some(n) = first_number_after_head(prim) {
+                current_state_idx = n as i32;
             }
-        } else if matches_head(sub, "primitives") {
-            // ( primitives <count> ( prim_state_idx ... ) ( indexed_trilist ... ) ... )
-            let mut current_state_idx: i32 = -1;
-            for child in sub.iter().skip(1) {
-                let Ast::List(prim) = child else { continue };
-                if matches_head(prim, "prim_state_idx") {
-                    if let Some(Ast::Atom(at)) = prim.get(1) {
-                        if let Some(n) = atom_to_number(at) {
-                            current_state_idx = n as i32;
-                        }
-                    }
-                } else if matches_head(prim, "indexed_trilist") {
-                    let mut p = Primitive {
-                        prim_state_idx: current_state_idx,
-                        vertex_indices: Vec::new(),
-                    };
-                    for inner in prim.iter().skip(1) {
-                        if let Ast::List(idx) = inner {
-                            if matches_head(idx, "vertex_idxs") {
-                                for v in idx.iter().skip(1) {
-                                    if let Ast::Atom(at) = v {
-                                        if let Some(n) = atom_to_number(at) {
-                                            if n >= 0.0 {
-                                                p.vertex_indices.push(n as u32);
-                                            }
-                                        }
-                                    }
-                                }
+        });
+        for_each_tagged(sub, "indexed_trilist", |prim| {
+            let mut p = Primitive {
+                prim_state_idx: current_state_idx,
+                vertex_indices: Vec::new(),
+            };
+            for_each_tagged(prim, "vertex_idxs", |idx| {
+                for v in shape_section_body(idx) {
+                    if let Ast::Atom(at) = v {
+                        if let Some(n) = shape_atom_to_i32(at) {
+                            if n >= 0 {
+                                p.vertex_indices.push(n as u32);
                             }
                         }
                     }
-                    // The first numeric in `vertex_idxs` is the index count (we collected it as
-                    // an index too — drop it to keep the list as raw indices).
-                    if !p.vertex_indices.is_empty() {
-                        p.vertex_indices.remove(0);
-                    }
-                    primitives.push(p);
                 }
+            });
+            if !p.vertex_indices.is_empty() {
+                p.vertex_indices.remove(0);
             }
-        }
-    }
+            primitives.push(p);
+        });
+    });
 
     SubObject {
         vertex_count,
@@ -563,11 +477,10 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
 }
 
 fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
-    let nums: Vec<i32> = items
+    let nums: Vec<i32> = shape_section_body(items)
         .iter()
-        .skip(1)
         .filter_map(|a| match a {
-            Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
+            Ast::Atom(at) => shape_atom_to_i32(at),
             _ => None,
         })
         .collect();
@@ -576,16 +489,12 @@ fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
     }
 
     let mut uv_indices = Vec::new();
-    for item in items.iter().skip(1) {
-        let Ast::List(sub) = item else { continue };
-        if matches_head(sub, "vertex_uvs") {
-            uv_indices.extend(sub.iter().skip(2).filter_map(|a| match a {
-                Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
-                _ => None,
-            }));
-            break;
-        }
-    }
+    for_each_tagged(items, "vertex_uvs", |sub| {
+        uv_indices.extend(shape_section_body(sub).iter().filter_map(|a| match a {
+            Ast::Atom(at) => shape_atom_to_i32(at),
+            _ => None,
+        }));
+    });
 
     Some(Vertex {
         // Layout: flags, point index, normal index, color1, color2, vertex_uvs.
@@ -641,12 +550,95 @@ fn parse_named_matrix(items: &[Ast]) -> Option<NamedMatrix> {
 
 // ── small helpers ────────────────────────────────────────────────────────────
 
+/// Body of a MSTS section: either direct children or `( tag ( count ... ))` (JINX0s1t).
+fn shape_section_body(items: &[Ast]) -> &[Ast] {
+    if let Some(Ast::List(inner)) = items.get(1) {
+        // JINX wraps payload in `( tag ( count child ... ))`; classic uses `( tag count ( child ... ))`.
+        if inner.len() > 1
+            && matches!(
+                inner.first(),
+                Some(Ast::Atom(Atom::Integer(_) | Atom::Number(_)))
+            )
+        {
+            return &inner[1..];
+        }
+    }
+    &items[1..]
+}
+
+/// Visit `( tag ... )` lists and JINX `tag ( ... )` symbol+list pairs.
+fn for_each_tagged(items: &[Ast], tag: &str, mut f: impl FnMut(&[Ast])) {
+    let body = shape_section_body(items);
+    let mut i = 0usize;
+    while i < body.len() {
+        match body.get(i) {
+            Some(Ast::List(sub)) if matches_head(sub, tag) => {
+                f(sub);
+                i += 1;
+            }
+            Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case(tag) => {
+                i += 1;
+                let mut synthetic = vec![Ast::Atom(Atom::Symbol(tag.to_string()))];
+                if let Some(Ast::Atom(Atom::Symbol(name))) = body.get(i) {
+                    if !name.eq_ignore_ascii_case(tag) {
+                        synthetic.push(Ast::Atom(Atom::Symbol(name.clone())));
+                        i += 1;
+                    }
+                }
+                if let Some(Ast::List(coords)) = body.get(i) {
+                    synthetic.extend(coords.iter().cloned());
+                    i += 1;
+                }
+                if synthetic.len() > 1 {
+                    f(&synthetic);
+                }
+            }
+            _ => {
+                i += 1;
+            }
+        }
+    }
+}
+
+fn find_tagged_number(container: &[Ast], tag: &str) -> Option<f64> {
+    let mut out = None;
+    for_each_tagged(container, tag, |sub| {
+        if out.is_none() {
+            out = first_number_after_head(sub).or_else(|| first_number_in_section(sub));
+        }
+    });
+    out
+}
+
+fn first_number_in_section(items: &[Ast]) -> Option<f64> {
+    shape_section_body(items).iter().find_map(|a| match a {
+        Ast::Atom(at) => atom_to_number(at),
+        _ => None,
+    })
+}
+
+fn shape_atom_to_i32(atom: &Atom) -> Option<i32> {
+    match atom {
+        Atom::Integer(v) => Some(*v as i32),
+        Atom::Number(v) => Some(*v as i32),
+        Atom::Symbol(s) => {
+            let hex = s.strip_prefix("0x").unwrap_or(s);
+            if !hex.is_empty() && hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+                u32::from_str_radix(hex, 16).ok().map(|v| v as i32)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 fn matches_head(items: &[Ast], expected: &str) -> bool {
     matches!(items.first(), Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case(expected))
 }
 
 fn parse_vec3(items: &[Ast]) -> Option<Vec3> {
-    let nums: Vec<f64> = items
+    let mut nums: Vec<f64> = items
         .iter()
         .skip(1)
         .filter_map(|a| match a {
@@ -654,6 +646,22 @@ fn parse_vec3(items: &[Ast]) -> Option<Vec3> {
             _ => None,
         })
         .collect();
+    if nums.len() < 3 {
+        for item in items.iter().skip(1) {
+            if let Ast::List(sub) = item {
+                nums = sub
+                    .iter()
+                    .filter_map(|a| match a {
+                        Ast::Atom(at) => atom_to_number(at),
+                        _ => None,
+                    })
+                    .collect();
+                if nums.len() >= 3 {
+                    break;
+                }
+            }
+        }
+    }
     if nums.len() < 3 {
         return None;
     }
@@ -665,7 +673,7 @@ fn parse_vec3(items: &[Ast]) -> Option<Vec3> {
 }
 
 fn parse_vec2(items: &[Ast]) -> Option<Vec2> {
-    let nums: Vec<f64> = items
+    let mut nums: Vec<f64> = items
         .iter()
         .skip(1)
         .filter_map(|a| match a {
@@ -673,6 +681,22 @@ fn parse_vec2(items: &[Ast]) -> Option<Vec2> {
             _ => None,
         })
         .collect();
+    if nums.len() < 2 {
+        for item in items.iter().skip(1) {
+            if let Ast::List(sub) = item {
+                nums = sub
+                    .iter()
+                    .filter_map(|a| match a {
+                        Ast::Atom(at) => atom_to_number(at),
+                        _ => None,
+                    })
+                    .collect();
+                if nums.len() >= 2 {
+                    break;
+                }
+            }
+        }
+    }
     if nums.len() < 2 {
         return None;
     }
@@ -689,39 +713,55 @@ fn first_number_after_head(items: &[Ast]) -> Option<f64> {
     })
 }
 
-fn parse_counted_i32_list(items: &[Ast]) -> Vec<i32> {
-    items
+fn parse_tex_idxs_list(items: &[Ast]) -> Vec<i32> {
+    let nums: Vec<i32> = shape_section_body(items)
         .iter()
-        .skip(2)
         .filter_map(|a| match a {
-            Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
+            Ast::Atom(at) => shape_atom_to_i32(at),
             _ => None,
         })
-        .collect()
-}
-
-fn find_first_named_number(items: &[Ast], name: &str) -> Option<f64> {
-    for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, name) {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        return Some(n);
-                    }
-                }
-            }
-        }
+        .collect();
+    if nums.len() > 1 {
+        nums[1..].to_vec()
+    } else {
+        nums
     }
-    None
 }
 
-/// Walk every list node and run `f` on lists whose head symbol equals `name`.
+/// Walk the tree and run `f` on each `name` section.
+///
+/// MSTS uses `( points 4 ( point ... ) )` and JINX0s1t uses `points ( 1085 point ( ... ) )`
+/// (tag symbol followed by a payload list).
 fn walk_named_list<F: FnMut(&[Ast])>(ast: &Ast, name: &str, f: &mut F) {
     let Ast::List(items) = ast else { return };
-    if matches_head(items, name) {
-        f(items);
-    }
-    for child in items {
-        walk_named_list(child, name, f);
+    let mut i = 0usize;
+    while i < items.len() {
+        match &items[i] {
+            child @ Ast::List(sub) if matches_head(sub, name) => {
+                f(sub);
+                walk_named_list(child, name, f);
+                i += 1;
+            }
+            Ast::Atom(Atom::Symbol(s)) if s.eq_ignore_ascii_case(name) => {
+                i += 1;
+                if let Some(body @ Ast::List(_)) = items.get(i) {
+                    let Ast::List(body_items) = body else {
+                        unreachable!()
+                    };
+                    let mut synthetic = vec![Ast::Atom(Atom::Symbol(name.to_string()))];
+                    synthetic.extend(body_items.iter().cloned());
+                    f(&synthetic);
+                    walk_named_list(body, name, f);
+                    i += 1;
+                }
+            }
+            child @ Ast::List(_) => {
+                walk_named_list(child, name, f);
+                i += 1;
+            }
+            _ => {
+                i += 1;
+            }
+        }
     }
 }

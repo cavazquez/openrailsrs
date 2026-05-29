@@ -4,9 +4,12 @@
 //! `X = x_m`, `Z = y_m` (same convention as the 2D viewer's horizontal axes).
 
 use bevy::asset::RenderAssetUsages;
+use bevy::light::NotShadowCaster;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use openrailsrs_track::{NodeKind, TrackGraph};
+
+use crate::launch::ViewerLaunchOpts;
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
 
@@ -152,6 +155,11 @@ pub fn graph_to_world(x_m: f64, y_m: f64) -> Vec3 {
     Vec3::new(x_m as f32, 0.0, y_m as f32)
 }
 
+/// Graph node position plus optional MSTS world alignment offset.
+pub fn graph_to_world_with_offset(offset: Vec3, x_m: f64, y_m: f64) -> Vec3 {
+    graph_to_world(x_m, y_m) + offset
+}
+
 /// Shortest distance in the XZ plane from `(px, pz)` to segment `(x0,z0)–(x1,z1)`.
 pub fn point_segment_distance_xz(px: f32, pz: f32, x0: f32, z0: f32, x1: f32, z1: f32) -> f32 {
     let dx = x1 - x0;
@@ -231,7 +239,11 @@ fn should_spawn_node(kind: &NodeKind, mode: TrackRenderMode) -> bool {
 }
 
 /// Line-list mesh for compact routes (drawn once; avoids per-frame gizmo cost).
-pub fn build_compact_track_line_mesh(graph: &TrackGraph) -> Mesh {
+pub fn build_compact_track_line_mesh(
+    graph: &TrackGraph,
+    offset: Vec3,
+    focus: &crate::world::RouteFocus,
+) -> Mesh {
     let edge_count = graph.edges_iter().count();
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edge_count * 2);
     for (_, edge) in graph.edges_iter() {
@@ -241,8 +253,8 @@ pub fn build_compact_track_line_mesh(graph: &TrackGraph) -> Mesh {
         let Some(to) = graph.node(&edge.to.0) else {
             continue;
         };
-        let p0 = graph_to_world(from.x_m, from.y_m);
-        let p1 = graph_to_world(to.x_m, to.y_m);
+        let p0 = focus.to_render(graph_to_world_with_offset(offset, from.x_m, from.y_m));
+        let p1 = focus.to_render(graph_to_world_with_offset(offset, to.x_m, to.y_m));
         positions.push(p0.to_array());
         positions.push(p1.to_array());
     }
@@ -260,7 +272,11 @@ pub fn spawn_track_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    offset: Res<crate::world::RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
+    opts: Res<ViewerLaunchOpts>,
 ) {
+    let offset = offset.delta;
     let bounds = scene.bounds;
     let edge_radius = bounds.edge_radius();
     let node_radius = bounds.node_radius();
@@ -287,20 +303,23 @@ pub fn spawn_track_meshes(
     };
 
     if scene.render_mode == TrackRenderMode::Compact {
-        let line_mesh = meshes.add(build_compact_track_line_mesh(&scene.graph));
+        let line_mesh = meshes.add(build_compact_track_line_mesh(&scene.graph, offset, &focus));
         let line_material = materials.add(StandardMaterial {
             base_color: COLOR_EDGE,
             emissive: LinearRgba::from(COLOR_EDGE) * 0.35,
             unlit: true,
             ..default()
         });
-        commands.spawn((
+        let mut track = commands.spawn((
             CompactTrackLines,
             Mesh3d(line_mesh),
             MeshMaterial3d(line_material),
             Transform::IDENTITY,
             Name::new("track:compact-lines"),
         ));
+        if opts.live {
+            track.insert(NotShadowCaster);
+        }
     } else {
         let edge_mesh = meshes.add(Cylinder::new(edge_radius, 1.0));
         for (_, edge) in scene.graph.edges_iter() {
@@ -310,8 +329,8 @@ pub fn spawn_track_meshes(
             let Some(to) = scene.graph.node(&edge.to.0) else {
                 continue;
             };
-            let p0 = graph_to_world(from.x_m, from.y_m);
-            let p1 = graph_to_world(to.x_m, to.y_m);
+            let p0 = focus.to_render(graph_to_world_with_offset(offset, from.x_m, from.y_m));
+            let p1 = focus.to_render(graph_to_world_with_offset(offset, to.x_m, to.y_m));
             commands.spawn((
                 Mesh3d(edge_mesh.clone()),
                 MeshMaterial3d(edge_material.clone()),
@@ -321,24 +340,27 @@ pub fn spawn_track_meshes(
         }
     }
 
-    let node_mesh = meshes.add(Sphere::new(node_radius));
-    for (_, node) in scene.graph.nodes_iter() {
-        if !should_spawn_node(&node.kind, scene.render_mode) {
-            continue;
+    if !opts.live {
+        let node_mesh = meshes.add(Sphere::new(node_radius));
+        for (_, node) in scene.graph.nodes_iter() {
+            if !should_spawn_node(&node.kind, scene.render_mode) {
+                continue;
+            }
+            let pos = focus.to_render(graph_to_world_with_offset(offset, node.x_m, node.y_m));
+            commands.spawn((
+                Mesh3d(node_mesh.clone()),
+                MeshMaterial3d(node_material_for(&node.kind)),
+                Transform::from_translation(pos),
+                Name::new(format!("node:{}", node.id.0)),
+            ));
         }
-        let pos = graph_to_world(node.x_m, node.y_m);
-        commands.spawn((
-            Mesh3d(node_mesh.clone()),
-            MeshMaterial3d(node_material_for(&node.kind)),
-            Transform::from_translation(pos),
-            Name::new(format!("node:{}", node.id.0)),
-        ));
     }
 }
 
 /// Point the orbit camera at the route centre with a distance that frames it.
 pub fn frame_orbit_camera_on_track(
     scene: Res<TrackScene>,
+    _focus: Res<crate::world::RouteFocus>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
     mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
 ) {
@@ -347,7 +369,7 @@ pub fn frame_orbit_camera_on_track(
     };
     let max = scene.bounds.orbit_distance();
     limit.max = max;
-    orbit.focus = scene.bounds.center;
+    orbit.focus = Vec3::ZERO;
     orbit.distance = max;
     *transform = crate::camera::camera_transform_from_orbit_state(
         orbit.focus,
@@ -509,7 +531,11 @@ mod tests {
 
     #[test]
     fn compact_line_mesh_has_two_vertices_per_edge() {
-        let mesh = build_compact_track_line_mesh(&sample_graph());
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let mesh = build_compact_track_line_mesh(&sample_graph(), Vec3::ZERO, &focus);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         assert_eq!(positions.len(), 2);
     }

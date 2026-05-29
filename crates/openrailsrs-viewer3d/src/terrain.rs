@@ -10,7 +10,9 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_formats::{
     ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, build_patch_mesh_data_ex,
-    build_tile_mesh_data, read_f_raw, read_y_raw,
+    build_tile_mesh_data, msts_display_tile_x_from_internal,
+    msts_internal_tile_x_from_world_display, msts_tile_name_from_xz, msts_tile_world_origin,
+    parse_tile_xz_from_filename, read_f_raw, read_y_raw,
 };
 
 use crate::shapes::RouteAssets;
@@ -20,6 +22,19 @@ use crate::track::TrackScene;
 use crate::world::MSTS_TILE_SIZE_M;
 
 const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
+
+/// MSTS terrain patch size (metres); must match [`openrailsrs_formats::typed::terrain`].
+pub(crate) const TERRAIN_PATCH_SIZE_M: f32 = 128.0;
+
+/// World-space offset for a textured patch inside a tile (viewer spawn; not OR `patch_translation`).
+#[inline]
+pub(crate) fn terrain_patch_offset_in_tile(px: u32, pz: u32) -> Vec3 {
+    Vec3::new(
+        px as f32 * TERRAIN_PATCH_SIZE_M,
+        0.0,
+        pz as f32 * TERRAIN_PATCH_SIZE_M,
+    )
+}
 
 #[derive(Clone)]
 struct TileElevation {
@@ -35,13 +50,17 @@ pub struct TerrainElevation {
 }
 
 impl TerrainElevation {
-    /// Load `_Y.RAW` grids for every `.y` tile under the route.
+    /// Load `_Y.RAW` grids for terrain tiles under the route (optionally within `radius_m` of `center`).
     pub fn load_from_route_dir(route_dir: &Path) -> Self {
+        Self::load_from_route_dir_near(route_dir, None, f32::MAX)
+    }
+
+    pub fn load_from_route_dir_near(route_dir: &Path, center: Option<Vec3>, radius_m: f32) -> Self {
         let mut tiles = HashMap::new();
-        let mut paths = discover_terrain_files(route_dir);
-        paths.sort();
-        for path in paths {
-            let Ok(tile) = TerrainFile::from_path(&path) else {
+        let mut entries = discover_terrain_tile_entries(route_dir, center, radius_m);
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+        for (display_x, display_z, path) in entries {
+            let Ok(tile) = TerrainFile::from_path_with_coords(&path, display_x, display_z) else {
                 continue;
             };
             let raw_path = tile.y_raw_path(&path);
@@ -69,15 +88,17 @@ impl TerrainElevation {
         self.tiles.is_empty()
     }
 
-    fn sample_hidden(&self, tile_x: i32, tile_z: i32, x: f32, z: f32) -> bool {
-        let Some(tile) = self.tiles.get(&(tile_x, tile_z)) else {
+    fn sample_hidden(&self, display_x: i32, display_z: i32, x: f32, z: f32) -> bool {
+        let internal_x = msts_internal_tile_x_from_world_display(display_x);
+        let Some(tile) = self.tiles.get(&(internal_x, display_z)) else {
             return false;
         };
         let Some(features) = tile.features.as_ref() else {
             return false;
         };
-        let lx = x - tile_x as f32 * MSTS_TILE_SIZE_M as f32;
-        let lz = z - tile_z as f32 * MSTS_TILE_SIZE_M as f32;
+        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let lx = x - ox;
+        let lz = z - oz;
         let ux = (lx / tile.sample_size as f32).round() as usize;
         let uz = (lz / tile.sample_size as f32).round() as usize;
         features.is_vertex_hidden(ux, uz)
@@ -85,14 +106,17 @@ impl TerrainElevation {
 
     /// World-space elevation (metres) at `(x, z)`; `None` if no tile covers the point or vertex is hidden.
     pub fn sample_world_y(&self, x: f32, z: f32) -> Option<f32> {
-        let tile_x = (x / MSTS_TILE_SIZE_M as f32).floor() as i32;
-        let tile_z = (z / MSTS_TILE_SIZE_M as f32).floor() as i32;
-        if self.sample_hidden(tile_x, tile_z, x, z) {
+        let tile = MSTS_TILE_SIZE_M as f32;
+        let display_x = (x / tile).floor() as i32;
+        let display_z = (z / tile).floor() as i32;
+        if self.sample_hidden(display_x, display_z, x, z) {
             return None;
         }
-        let tile = self.tiles.get(&(tile_x, tile_z))?;
-        let lx = x - tile_x as f32 * MSTS_TILE_SIZE_M as f32;
-        let lz = z - tile_z as f32 * MSTS_TILE_SIZE_M as f32;
+        let internal_x = msts_internal_tile_x_from_world_display(display_x);
+        let tile = self.tiles.get(&(internal_x, display_z))?;
+        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let lx = x - ox;
+        let lz = z - oz;
         Some(
             tile.grid
                 .sample_bilinear(lx as f64, lz as f64, tile.sample_size),
@@ -100,19 +124,20 @@ impl TerrainElevation {
     }
 }
 
-/// Scenery anchor height: terrain sample plus a small clearance, else MSTS `Position.y`.
+/// Scenery anchor height: terrain sample plus a small clearance, else tile-local Y → MSL.
 pub fn scenery_ground_y(
     terrain: Option<&TerrainElevation>,
     x: f32,
     z: f32,
     scene: &TrackScene,
-    fallback_y: f32,
+    fallback_scene_y: f32,
+    focus: &crate::world::RouteFocus,
 ) -> f32 {
     let lift = scene.bounds.edge_radius().max(1.0) * 0.04;
     terrain
         .and_then(|t| t.sample_world_y(x, z))
         .map(|h| h + lift)
-        .unwrap_or(fallback_y)
+        .unwrap_or_else(|| focus.scenery_y_to_msl(fallback_scene_y))
 }
 
 /// Train / marker height: terrain sample plus a small rail clearance, or graph lift fallback.
@@ -130,6 +155,7 @@ pub struct TerrainTile {
     pub tile_x: i32,
     pub tile_z: i32,
     pub translation: Vec3,
+    pub path: PathBuf,
 }
 
 /// Terrain tiles discovered under a route's `TERRAIN/` folder.
@@ -145,52 +171,227 @@ impl TerrainScene {
     }
 }
 
-fn mesh_from_terrain_data(data: &TerrainMeshData) -> Mesh {
+fn mesh_from_terrain_data(data: &TerrainMeshData, height_origin: f32) -> Mesh {
+    let positions: Vec<[f32; 3]> = data
+        .positions
+        .iter()
+        .map(|p| [p[0], p[1] - height_origin, p[2]])
+        .collect();
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(),
     );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data.positions.clone());
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals.clone());
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs.clone());
     mesh.insert_indices(Indices::U32(data.indices.clone()));
     mesh
 }
 
-/// Scan `route_dir/TERRAIN/` and `route_dir/terrain/` for `.y` tiles and parse metadata.
+/// Scan terrain folders and parse tile metadata (see [`discover_terrain_files`]).
 pub fn load_terrain_from_route_dir(route_dir: &Path) -> TerrainScene {
-    let mut paths = discover_terrain_files(route_dir);
-    paths.sort();
+    load_terrain_from_route_dir_near(route_dir, None, f32::MAX)
+}
+
+pub fn load_terrain_from_route_dir_near(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+) -> TerrainScene {
+    let mut entries = discover_terrain_tile_entries(route_dir, center, radius_m);
+    entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
     let mut scene = TerrainScene::default();
-    for path in paths {
-        match TerrainFile::from_path(&path) {
+    let mut skip_count = 0usize;
+    for (tile_x, tile_z, path) in entries {
+        match TerrainFile::from_path_with_coords(&path, tile_x, tile_z) {
             Ok(tile) => {
                 scene.tiles_loaded += 1;
+                let display_x = msts_display_tile_x_from_internal(tile.tile_x);
+                let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
                 scene.tiles.push(TerrainTile {
                     tile_x: tile.tile_x,
                     tile_z: tile.tile_z,
-                    translation: Vec3::new(
-                        tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
-                        0.0,
-                        tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
-                    ),
+                    translation: Vec3::new(wx, 0.0, wz),
+                    path,
                 });
             }
             Err(err) => {
-                eprintln!(
-                    "openrailsrs-viewer3d: skip terrain {} ({err})",
-                    path.display()
-                );
+                skip_count += 1;
+                if skip_count == 1 {
+                    eprintln!(
+                        "openrailsrs-viewer3d: skip terrain {} ({err})",
+                        path.display()
+                    );
+                }
             }
+        }
+    }
+    if skip_count > 1 {
+        eprintln!("openrailsrs-viewer3d: skipped {skip_count} terrain tile(s)");
+    }
+    if scene.tiles.is_empty() {
+        let tiles_dir = route_dir.join("TILES");
+        if tiles_dir.is_dir()
+            && std::fs::read_dir(&tiles_dir)
+                .ok()
+                .is_some_and(|rd| rd.flatten().any(|e| e.path().extension().is_some()))
+        {
+            eprintln!(
+                "openrailsrs-viewer3d: no terrain tiles near route focus (check TILES/ + *_y.raw)"
+            );
         }
     }
     scene
 }
 
-fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
+fn tile_center_distance_m(display_x: i32, display_z: i32, center: Vec3) -> f32 {
+    let tile = MSTS_TILE_SIZE_M as f32;
+    let half = tile * 0.5;
+    let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+    let tcx = ox + half;
+    let tcz = oz + half;
+    Vec2::new(tcx - center.x, tcz - center.z).length()
+}
+
+/// `(display_tile_x, display_tile_z, path)` for each terrain tile to load.
+pub fn discover_terrain_tile_entries(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+) -> Vec<(i32, i32, PathBuf)> {
+    if uses_hash_tile_names(route_dir) {
+        return discover_hash_terrain_tiles(route_dir, center, radius_m);
+    }
+    discover_terrain_files(route_dir)
+        .into_iter()
+        .map(|path| {
+            let (x, z) = parse_tile_xz_from_filename(&path).unwrap_or((0, 0));
+            (x, z, path)
+        })
+        .collect()
+}
+
+fn uses_hash_tile_names(route_dir: &Path) -> bool {
+    let dir = route_dir.join("TILES");
+    if !dir.is_dir() {
+        return false;
+    }
+    std::fs::read_dir(&dir).ok().is_some_and(|rd| {
+        rd.flatten().any(|e| {
+            e.path()
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .is_some_and(|stem| stem.starts_with('-') && stem.len() >= 9)
+        })
+    })
+}
+
+fn discover_hash_terrain_tiles(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+) -> Vec<(i32, i32, PathBuf)> {
+    let tiles_dir = route_dir.join("TILES");
+    let world_dir = route_dir.join("WORLD");
     let mut out = Vec::new();
-    for subdir in ["TERRAIN", "terrain"] {
+
+    if let Some(c) = center {
+        let tile = MSTS_TILE_SIZE_M as f32;
+        let center_dx = (c.x / tile).floor() as i32;
+        let center_dz = (c.z / tile).floor() as i32;
+        let radius_tiles = (radius_m / tile).ceil() as i32 + 1;
+        for dtx in -radius_tiles..=radius_tiles {
+            for dtz in -radius_tiles..=radius_tiles {
+                let display_x = center_dx + dtx;
+                let display_z = center_dz + dtz;
+                if tile_center_distance_m(display_x, display_z, c) > radius_m + tile {
+                    continue;
+                }
+                push_hash_tile(&mut out, &tiles_dir, display_x, display_z);
+            }
+        }
+        if out.is_empty() {
+            push_hash_tiles_from_world_near(&mut out, &world_dir, &tiles_dir, c, radius_m);
+        }
+        return out;
+    }
+
+    if world_dir.is_dir() {
+        for entry in std::fs::read_dir(&world_dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("w") {
+                continue;
+            }
+            let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+                continue;
+            };
+            push_hash_tile(&mut out, &tiles_dir, display_x, display_z);
+        }
+    }
+    out
+}
+
+/// Display tile coords from `WORLD/w-006074+014924.w` (also accepts `w-001000-001000`).
+fn parse_world_w_tile_display_xz(path: &Path) -> Option<(i32, i32)> {
+    let stem = path.file_stem()?.to_str()?;
+    let rest = stem.strip_prefix('w')?;
+    let coords = rest.trim_start_matches('-');
+    if let Some((x, z)) = coords.split_once('+') {
+        return Some((x.parse().ok()?, z.parse().ok()?));
+    }
+    let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
+    Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
+}
+
+fn push_hash_tile(
+    out: &mut Vec<(i32, i32, PathBuf)>,
+    tiles_dir: &Path,
+    display_x: i32,
+    display_z: i32,
+) {
+    let internal_x = msts_internal_tile_x_from_world_display(display_x);
+    let hash = msts_tile_name_from_xz(internal_x, display_z).to_ascii_lowercase();
+    let path = tiles_dir.join(format!("{hash}.t"));
+    if path.is_file() {
+        out.push((internal_x, display_z, path));
+    }
+}
+
+fn push_hash_tiles_from_world_near(
+    out: &mut Vec<(i32, i32, PathBuf)>,
+    world_dir: &Path,
+    tiles_dir: &Path,
+    center: Vec3,
+    radius_m: f32,
+) {
+    if !world_dir.is_dir() {
+        return;
+    }
+    let tile = MSTS_TILE_SIZE_M as f32;
+    for entry in std::fs::read_dir(world_dir).into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("w") {
+            continue;
+        }
+        let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+            continue;
+        };
+        if tile_center_distance_m(display_x, display_z, center) > radius_m + tile {
+            continue;
+        }
+        push_hash_tile(out, tiles_dir, display_x, display_z);
+    }
+}
+
+/// Scan `TERRAIN/` (`.y`) and `TILES/` (`.t`) under the route (legacy `+000000+000000` names).
+pub fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for subdir in ["TERRAIN", "terrain", "TILES", "tiles"] {
         let dir = route_dir.join(subdir);
         if !dir.is_dir() {
             continue;
@@ -202,7 +403,7 @@ fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
             let path = entry.path();
             if path
                 .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("y"))
+                .is_some_and(|e| e.eq_ignore_ascii_case("y") || e.eq_ignore_ascii_case("t"))
             {
                 out.push(path);
             }
@@ -243,16 +444,16 @@ fn spawn_textured_patches(
     features: Option<&FeatureGrid>,
     texture_cache: &mut HashMap<String, Handle<Image>>,
     fallback_tex: &Handle<Image>,
+    render_origin: Vec3,
+    height_origin: f32,
 ) -> (usize, usize) {
     let patch_set = match tile.primary_patch_set() {
         Some(set) => set,
         None => return (0, 0),
     };
-    let tile_origin = Vec3::new(
-        tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
-        0.0,
-        tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
-    );
+    let display_x = msts_display_tile_x_from_internal(tile.tile_x);
+    let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
+    let tile_origin = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
     let mut spawned = 0usize;
     let mut holed = 0usize;
 
@@ -298,11 +499,11 @@ fn spawn_textured_patches(
                 overlay_texture: overlay,
             });
 
-            let (cx, cz) = patch.patch_translation();
+            let patch_offset = terrain_patch_offset_in_tile(px, pz);
             commands.spawn((
-                Mesh3d(meshes.add(mesh_from_terrain_data(&mesh_data))),
+                Mesh3d(meshes.add(mesh_from_terrain_data(&mesh_data, height_origin))),
                 MeshMaterial3d(material),
-                Transform::from_translation(tile_origin + Vec3::new(cx, 0.0, cz)),
+                Transform::from_translation(tile_origin + patch_offset),
                 Name::new(format!(
                     "terrain-patch:{}:{}:{}:{}",
                     tile.tile_x, tile.tile_z, px, pz
@@ -320,15 +521,15 @@ fn spawn_legacy_tile(
     tile: &TerrainFile,
     grid: &ElevationGrid,
     material: &Handle<StandardMaterial>,
+    render_origin: Vec3,
+    height_origin: f32,
 ) {
     let data = build_tile_mesh_data(grid, tile.samples.sample_size);
-    let translation = Vec3::new(
-        tile.tile_x as f32 * MSTS_TILE_SIZE_M as f32,
-        0.0,
-        tile.tile_z as f32 * MSTS_TILE_SIZE_M as f32,
-    );
+    let display_x = msts_display_tile_x_from_internal(tile.tile_x);
+    let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
+    let translation = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
     commands.spawn((
-        Mesh3d(meshes.add(mesh_from_terrain_data(&data))),
+        Mesh3d(meshes.add(mesh_from_terrain_data(&data, height_origin))),
         MeshMaterial3d(material.clone()),
         Transform::from_translation(translation),
         Name::new(format!("terrain:{}:{}", tile.tile_x, tile.tile_z)),
@@ -336,9 +537,11 @@ fn spawn_legacy_tile(
 }
 
 /// Spawn heightfield meshes for all terrain tiles; textured patches when `.y` includes patch sets.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_terrain_meshes(
     route_dir: Res<RouteAssets>,
     terrain: Res<TerrainScene>,
+    focus: Res<crate::world::RouteFocus>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
@@ -359,25 +562,43 @@ pub fn spawn_terrain_meshes(
     let fallback_tex = fallback_terrain_image(&mut images);
     let mut texture_cache: HashMap<String, Handle<Image>> = HashMap::new();
 
-    let mut paths = discover_terrain_files(&route_dir.route_dir);
-    paths.sort();
-
+    let render_origin = focus.center;
+    let height_origin = focus.height_origin;
     let mut spawned_tiles = 0usize;
     let mut spawned_patches = 0usize;
     let mut holed_patches = 0usize;
 
-    for path in paths {
-        let Ok(tile) = TerrainFile::from_path(&path) else {
+    for terrain_tile in &terrain.tiles {
+        let path = &terrain_tile.path;
+        let Ok(tile) =
+            TerrainFile::from_path_with_coords(path, terrain_tile.tile_x, terrain_tile.tile_z)
+        else {
             continue;
         };
-        let Ok(grid) = read_y_raw(&tile.y_raw_path(&path), &tile.samples) else {
+        let Ok(grid) = read_y_raw(&tile.y_raw_path(path), &tile.samples) else {
             continue;
         };
         let features = if tile.samples.f_buffer_file.trim().is_empty() {
             None
         } else {
-            read_f_raw(&tile.f_raw_path(&path), &tile.samples).ok()
+            read_f_raw(&tile.f_raw_path(path), &tile.samples).ok()
         };
+
+        if std::env::var("OPENRAILSRS_TERRAIN_DEBUG").is_ok() {
+            let min_h = grid.elevations.iter().cloned().fold(f32::MAX, f32::min);
+            let max_h = grid.elevations.iter().cloned().fold(f32::MIN, f32::max);
+            eprintln!(
+                "openrailsrs-viewer3d: terrain-debug tile {}:{} floor={:.2} scale={:.6} size={:.1} elev=[{:.1}..{:.1}] range={:.1}m",
+                terrain_tile.tile_x,
+                terrain_tile.tile_z,
+                tile.samples.sample_floor,
+                tile.samples.sample_scale,
+                tile.samples.sample_size,
+                min_h,
+                max_h,
+                max_h - min_h,
+            );
+        }
 
         if tile.has_textured_patches() {
             let (patches, holed) = spawn_textured_patches(
@@ -391,6 +612,8 @@ pub fn spawn_terrain_meshes(
                 features.as_ref(),
                 &mut texture_cache,
                 &fallback_tex,
+                render_origin,
+                height_origin,
             );
             if patches > 0 {
                 spawned_patches += patches;
@@ -400,7 +623,15 @@ pub fn spawn_terrain_meshes(
             }
         }
 
-        spawn_legacy_tile(&mut commands, &mut meshes, &tile, &grid, &fallback_material);
+        spawn_legacy_tile(
+            &mut commands,
+            &mut meshes,
+            &tile,
+            &grid,
+            &fallback_material,
+            render_origin,
+            height_origin,
+        );
         spawned_tiles += 1;
     }
 
@@ -421,6 +652,7 @@ pub fn spawn_terrain_meshes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::mesh::VertexAttributeValues;
 
     #[test]
     fn load_smoke_route_terrain_tile() {
@@ -428,6 +660,73 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_terrain_from_route_dir(&route_dir);
         assert!(scene.tiles_loaded >= 1);
+    }
+
+    #[test]
+    fn parse_world_w_tile_display_xz_chiltern_name() {
+        let path = PathBuf::from("w-006074+014924.w");
+        assert_eq!(parse_world_w_tile_display_xz(&path), Some((6074, 14924)));
+    }
+
+    #[test]
+    fn chiltern_hash_tiles_discovered_from_world_and_center_grid() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("TILES").is_dir() || !route_dir.join("WORLD").is_dir() {
+            return;
+        }
+        let from_world = discover_terrain_tile_entries(&route_dir, None, f32::MAX);
+        assert!(
+            from_world.len() >= 50,
+            "expected TILES from WORLD/*.w names, got {}",
+            from_world.len()
+        );
+        // RouteFocus-style centre (positive display/world coords from `.w` bbox).
+        let center = Vec3::new(
+            6100.0 * MSTS_TILE_SIZE_M as f32 + 1024.0,
+            0.0,
+            14941.0 * MSTS_TILE_SIZE_M as f32 + 1024.0,
+        );
+        let near = discover_terrain_tile_entries(&route_dir, Some(center), 8_000.0);
+        assert!(
+            !near.is_empty(),
+            "expected hash TILES near display tile (6100,14941), got {}",
+            near.len()
+        );
+        let has_6100 = near
+            .iter()
+            .any(|(ix, iz, _)| msts_display_tile_x_from_internal(*ix) == 6100 && *iz == 14941);
+        assert!(has_6100, "expected tile hash for display (6100,14941)");
+    }
+
+    #[test]
+    fn chiltern_terrain_loads_near_route_focus() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("TILES").is_dir() {
+            return;
+        }
+        let world = crate::world::load_world_from_route_dir(&route_dir);
+        let graph = openrailsrs_track::TrackGraph::new();
+        let scene = TrackScene::from_graph(graph);
+        let elevation = TerrainElevation::load_from_route_dir_near(&route_dir, None, f32::MAX);
+        let focus = crate::world::RouteFocus::from_scene_world_and_elevation(
+            &scene,
+            &world,
+            Some(&elevation),
+        );
+        let terrain = load_terrain_from_route_dir_near(&route_dir, Some(focus.center), 8_000.0);
+        assert!(
+            terrain.tiles_loaded >= 10,
+            "expected terrain near focus {:?}, got {}",
+            focus.center,
+            terrain.tiles_loaded
+        );
+        // height_origin should be a realistic MSL elevation from the terrain sample,
+        // not the scenery bbox Y. For Chiltern this is ~50-250 m.
+        assert!(
+            focus.height_origin > 10.0 && focus.height_origin < 500.0,
+            "Chiltern height_origin should be a realistic terrain MSL value, got {}",
+            focus.height_origin
+        );
     }
 
     #[test]
@@ -464,7 +763,11 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
         let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
-        let y = scenery_ground_y(Some(&elev), 120.0, 15.0, &scene, 0.0);
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let y = scenery_ground_y(Some(&elev), 120.0, 15.0, &scene, 0.0, &focus);
         let raw = elev.sample_world_y(120.0, 15.0).unwrap();
         assert!(y > raw);
     }
@@ -472,8 +775,26 @@ mod tests {
     #[test]
     fn scenery_ground_y_falls_back_without_terrain() {
         let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
-        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 4.5);
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 4.5, &focus);
         assert!((y - 4.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scenery_ground_y_fallback_converts_scenery_y_to_msl() {
+        let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
+        let focus = crate::world::RouteFocus {
+            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
+            height_origin: 13_184.0,
+        };
+        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 55.0, &focus);
+        assert!(
+            (y - 13_157.0).abs() < 1.0,
+            "tile-local scenery y must map to MSL, got {y}"
+        );
     }
 
     #[test]
@@ -482,5 +803,76 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_terrain_from_route_dir(&route_dir);
         assert!(scene.tiles.iter().any(|t| t.tile_x == 1 && t.tile_z == 0));
+    }
+
+    #[test]
+    fn terrain_patch_offset_is_index_times_128m() {
+        assert_eq!(terrain_patch_offset_in_tile(0, 0), Vec3::new(0.0, 0.0, 0.0));
+        assert_eq!(
+            terrain_patch_offset_in_tile(1, 0),
+            Vec3::new(128.0, 0.0, 0.0)
+        );
+        assert_eq!(
+            terrain_patch_offset_in_tile(0, 1),
+            Vec3::new(0.0, 0.0, 128.0)
+        );
+    }
+
+    #[test]
+    fn patch_translation_must_not_be_added_on_top_of_mesh_offset() {
+        use openrailsrs_formats::TerrainPatch;
+
+        let tile_origin = Vec3::new(-400.0, 0.0, -200.0);
+        let correct = tile_origin + terrain_patch_offset_in_tile(0, 1);
+        let patch = TerrainPatch {
+            flags: 0,
+            center_x: 1024.0,
+            average_y: 0.0,
+            center_z: 1024.0,
+            factor_y: 0.0,
+            range_y: 0.0,
+            radius_m: 64.0,
+            shader_index: 0,
+            x: 0.0,
+            y: 0.0,
+            w: 0.0,
+            h: 0.0,
+            b: 0.0,
+            c: 0.0,
+            error_bias: 0.0,
+        };
+        let (cx, cz) = patch.patch_translation();
+        let wrong = tile_origin + Vec3::new(cx, 0.0, cz);
+        assert!(
+            (correct - wrong).length() > 1000.0,
+            "OR patch_translation duplicates mesh layout (Δ={:?})",
+            correct - wrong
+        );
+    }
+
+    #[test]
+    fn mesh_from_terrain_data_rebases_msl_y() {
+        let data = TerrainMeshData {
+            positions: vec![[10.0, 13_200.0, 20.0]],
+            normals: vec![[0.0, 1.0, 0.0]],
+            uvs: vec![[0.0, 0.0]],
+            indices: vec![0, 0, 0],
+        };
+        let mesh = mesh_from_terrain_data(&data, 13_184.0);
+        let pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
+        let VertexAttributeValues::Float32x3(vals) = pos else {
+            panic!("expected positions");
+        };
+        assert!((vals[0][1] - 16.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn tile_translation_only_rebases_xz() {
+        let render_origin = Vec3::new(12_494_846.0, 82.0, 30_600_240.0);
+        let wx = 12_494_000.0;
+        let wz = 30_599_000.0;
+        let t = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
+        assert!(t.x.abs() < 2000.0 && t.z.abs() < 2000.0);
+        assert_eq!(t.y, 0.0);
     }
 }

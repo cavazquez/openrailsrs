@@ -1,15 +1,19 @@
 //! Live simulation bridge: `openrailsrs-sim` stepped each frame, train pose in 3D.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use openrailsrs_audio::{AudioCmd, AudioEngine};
 use openrailsrs_scenarios::sound_regions::RegionTransition;
 use openrailsrs_scenarios::{ScenarioFile, apply_scenario_runtime_overlay_dir};
 use openrailsrs_sim::LiveDriveSession;
 
-use crate::camera::{CHASE_PITCH, CameraFollowMode, CameraMode, LIVE_CHASE_DISTANCE, OrbitState};
+use crate::camera::{
+    CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitState,
+};
+use crate::launch::LIVE_TRAIN_LOD_DISTANCE_M;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
@@ -24,6 +28,9 @@ use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
 pub struct LiveDrive {
     pub session: LiveDriveSession,
     pub audio: Option<AudioEngine>,
+    pub paused: bool,
+    scenario_dir: PathBuf,
+    scenario_path: PathBuf,
 }
 
 impl LiveDrive {
@@ -34,11 +41,20 @@ impl LiveDrive {
         let mut scenario = openrailsrs_scenarios::load_scenario(path).map_err(|e| e.to_string())?;
         apply_scenario_runtime_overlay_dir(&mut scenario, scenario_dir)
             .map_err(|e| e.to_string())?;
-        Self::from_scenario(scenario_dir, &scenario)
+        Self::from_scenario_with_paths(scenario_dir, path, &scenario)
     }
 
     pub fn from_scenario(
         scenario_dir: &std::path::Path,
+        scenario: &ScenarioFile,
+    ) -> Result<Self, String> {
+        let scenario_path = scenario_dir.join("scenario.toml");
+        Self::from_scenario_with_paths(scenario_dir, &scenario_path, scenario)
+    }
+
+    fn from_scenario_with_paths(
+        scenario_dir: &std::path::Path,
+        scenario_path: &std::path::Path,
         scenario: &ScenarioFile,
     ) -> Result<Self, String> {
         let session =
@@ -47,7 +63,25 @@ impl LiveDrive {
         if audio.is_none() {
             eprintln!("openrailsrs-viewer3d: no audio device — live drive is silent");
         }
-        Ok(Self { session, audio })
+        Ok(Self {
+            session,
+            audio,
+            paused: false,
+            scenario_dir: scenario_dir.to_path_buf(),
+            scenario_path: scenario_path.to_path_buf(),
+        })
+    }
+
+    /// Reset physics, gameplay and driver inputs to scenario start.
+    pub fn reset(&mut self) -> Result<(), String> {
+        let mut scenario =
+            openrailsrs_scenarios::load_scenario(&self.scenario_path).map_err(|e| e.to_string())?;
+        apply_scenario_runtime_overlay_dir(&mut scenario, &self.scenario_dir)
+            .map_err(|e| e.to_string())?;
+        self.session = LiveDriveSession::from_scenario(&self.scenario_dir, &scenario)
+            .map_err(|e| e.to_string())?;
+        self.paused = false;
+        Ok(())
     }
 }
 
@@ -76,12 +110,12 @@ pub fn live_mode_inactive(live: Option<Res<LiveDrive>>) -> bool {
     live.is_none()
 }
 
-/// Chase camera and sensible zoom when entering live mode (overrides route-wide orbit framing).
+/// Orbit framing for live mode: free pan/rotate (T cycles chase / driver later).
 pub fn enable_live_defaults(
     mut follow: ResMut<CameraFollowMode>,
     mut orbit: Query<&mut OrbitState, With<Camera3d>>,
 ) {
-    *follow = CameraFollowMode::ChaseCam;
+    *follow = CameraFollowMode::Off;
     if let Ok(mut orbit) = orbit.single_mut() {
         orbit.distance = LIVE_CHASE_DISTANCE;
         orbit.pitch = CHASE_PITCH;
@@ -89,6 +123,9 @@ pub fn enable_live_defaults(
 }
 
 pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
+    if live.paused {
+        return;
+    }
     let audio = live.audio.take();
     live.session.step_realtime(time.delta_secs() as f64, |t| {
         if let Some(ref a) = audio {
@@ -107,20 +144,24 @@ pub fn live_audio_frame(live: Res<LiveDrive>) {
     audio.send(AudioCmd::SetBraking(live.session.driver_brake));
 }
 
-/// Driver controls (same as `openrailsrs cab`); only in orbit mode so W/S do not pan the camera.
-pub fn live_driver_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    mode: Res<CameraMode>,
-    mut live: ResMut<LiveDrive>,
-) {
-    if *mode != CameraMode::Orbit {
-        return;
+/// Driver controls (same as `openrailsrs cab`). Throttle/brake use arrow keys so W/S stay free for camera pan.
+pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveDrive>) {
+    if keys.just_pressed(KeyCode::KeyP) {
+        live.paused = !live.paused;
     }
-    if keys.just_pressed(KeyCode::KeyW) || keys.just_pressed(KeyCode::ArrowUp) {
+    if keys.just_pressed(KeyCode::KeyR) {
+        if let Err(err) = live.reset() {
+            eprintln!("openrailsrs-viewer3d: live reset failed: {err}");
+        }
+    }
+    let throttle_up = keys.just_pressed(KeyCode::ArrowUp) || keys.just_pressed(KeyCode::PageUp);
+    let throttle_down =
+        keys.just_pressed(KeyCode::ArrowDown) || keys.just_pressed(KeyCode::PageDown);
+    if throttle_up {
         live.session.driver_brake = 0.0;
         live.session.driver_throttle = (live.session.driver_throttle + 0.1).min(1.0);
     }
-    if keys.just_pressed(KeyCode::KeyS) || keys.just_pressed(KeyCode::ArrowDown) {
+    if throttle_down {
         if live.session.driver_throttle > 0.0 {
             live.session.driver_throttle = (live.session.driver_throttle - 0.1).max(0.0);
         } else {
@@ -146,6 +187,8 @@ pub fn live_driver_input(
 
 pub fn update_live_train_marker(
     scene: Res<TrackScene>,
+    offset: Res<crate::world::RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
     live: Res<LiveDrive>,
     terrain: Option<Res<TerrainElevation>>,
     mut query: Query<&mut Transform, With<LiveTrainMarker>>,
@@ -159,6 +202,8 @@ pub fn update_live_train_marker(
         live.session.pos_on_edge_m(),
         terrain.as_deref(),
         &scene,
+        offset.delta,
+        &focus,
     ) else {
         return;
     };
@@ -171,6 +216,36 @@ pub fn update_live_train_marker(
 #[derive(Component)]
 pub struct LiveTrainMarker;
 
+/// Visual mesh under the live train (hidden in driver view).
+#[derive(Component)]
+pub struct LiveTrainBody;
+
+/// Hide the consist mesh in first-person driver view (avoids clipping through the cab).
+pub fn update_driver_train_visibility(
+    follow: Res<CameraFollowMode>,
+    mut bodies: Query<&mut Visibility, With<LiveTrainBody>>,
+) {
+    let hide = *follow == CameraFollowMode::DriverCam;
+    for mut vis in &mut bodies {
+        *vis = if hide {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        };
+    }
+}
+
+fn live_driver_cab_from_vehicles(
+    vehicles: &[crate::rolling_stock::ConsistVehicleVisual],
+) -> LiveDriverCab {
+    let head_len = vehicles.first().map(|v| v.length_m).unwrap_or(20.0);
+    // Lead cab: eye a short way behind the nose (DMU/loco front is at train head).
+    LiveDriverCab {
+        back_m: (head_len * 0.15).clamp(1.8, 4.5),
+        height_m: (head_len * 0.14).clamp(2.4, 3.2),
+    }
+}
+
 /// Spawn the player consist (reuses rolling-stock mesh path from `spawn_train_markers`).
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_live_train(
@@ -179,6 +254,8 @@ pub fn spawn_live_train(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    offset: Res<crate::world::RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
@@ -199,13 +276,18 @@ pub fn spawn_live_train(
         live.session.pos_on_edge_m(),
         terrain_ref,
         &scene,
+        offset.delta,
+        &focus,
     )
-    .unwrap_or((
-        scene.bounds.center + Vec3::Y * ground_y_at(terrain_ref, 0.0, 0.0, &scene),
-        0.0,
-    ));
+    .unwrap_or({
+        let w = scene.bounds.center + offset.delta;
+        let y = ground_y_at(terrain_ref, w.x, w.z, &scene);
+        (focus.to_render_surface(w + Vec3::Y * y), 0.0)
+    });
 
     let vehicles = consist.vehicles_for("primary");
+    let driver_cab = live_driver_cab_from_vehicles(vehicles);
+    commands.insert_resource(driver_cab);
     if vehicles.is_empty() {
         let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
         let material = materials.add(StandardMaterial {
@@ -215,6 +297,7 @@ pub fn spawn_live_train(
         });
         commands.spawn((
             LiveTrainMarker,
+            LiveTrainBody,
             Mesh3d(unit),
             MeshMaterial3d(material),
             Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
@@ -247,6 +330,8 @@ pub fn spawn_live_train(
         ))
         .with_children(|train| {
             train.spawn((
+                LiveTrainBody,
+                NotShadowCaster,
                 Mesh3d(locator.clone()),
                 MeshMaterial3d(locator_mat),
                 Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
@@ -255,10 +340,17 @@ pub fn spawn_live_train(
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle.shape_file.as_deref() {
                     if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dirs, shape_name) {
+                        let trainset_root = shape_path
+                            .parent()
+                            .and_then(|p| p.parent())
+                            .filter(|p| *p != assets.route_dir.as_path());
+                        let tex_dirs: Vec<&Path> = std::iter::once(assets.route_dir.as_path())
+                            .chain(trainset_root)
+                            .collect();
                         if let Some(asset) = load_shape_render_asset_from_path(
                             &shape_path,
-                            &assets.route_dir,
-                            None,
+                            &tex_dirs,
+                            Some(LIVE_TRAIN_LOD_DISTANCE_M),
                             &mut meshes,
                             &mut images,
                             &mut materials,
@@ -283,6 +375,7 @@ pub fn spawn_live_train(
                                 });
                             train
                                 .spawn((
+                                    LiveTrainBody,
                                     local,
                                     Visibility::default(),
                                     Name::new(format!("train:live:car:{vi}")),
@@ -290,6 +383,8 @@ pub fn spawn_live_train(
                                 .with_children(|car| {
                                     for (pi, part) in asset.parts.iter().enumerate() {
                                         car.spawn((
+                                            LiveTrainBody,
+                                            NotShadowCaster,
                                             Mesh3d(part.mesh.clone()),
                                             MeshMaterial3d(part.material.clone()),
                                             Transform::default(),
@@ -312,6 +407,8 @@ pub fn spawn_live_train(
                 let mut local = vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
                 local.scale *= 1.15;
                 train.spawn((
+                    LiveTrainBody,
+                    NotShadowCaster,
                     Mesh3d(unit.clone()),
                     MeshMaterial3d(material),
                     local,
@@ -321,9 +418,38 @@ pub fn spawn_live_train(
         });
 
     eprintln!(
-        "openrailsrs-viewer3d: live drive — {} vehicle(s), dt={:.2}s, audio={}",
+        "openrailsrs-viewer3d: live drive — {} vehicle(s), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
         vehicles.len(),
         live.session.dt,
-        live.audio.is_some()
+        live.audio.is_some(),
+        driver_cab.back_m,
+        driver_cab.height_m,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rolling_stock::ConsistVehicleVisual;
+
+    #[test]
+    fn pullman_dmbsa_driver_cab_near_front() {
+        let cab = live_driver_cab_from_vehicles(&[ConsistVehicleVisual {
+            name: "DMBSA".into(),
+            shape_file: Some("RF_WP_DMBSA.s".into()),
+            length_m: 20.879,
+            offset_m: 0.0,
+        }]);
+        assert!(
+            cab.back_m >= 1.8 && cab.back_m <= 4.5,
+            "back={}",
+            cab.back_m
+        );
+        assert!(
+            cab.height_m >= 2.4 && cab.height_m <= 3.2,
+            "height={}",
+            cab.height_m
+        );
+        assert!((cab.back_m - 3.13).abs() < 0.2);
+    }
 }

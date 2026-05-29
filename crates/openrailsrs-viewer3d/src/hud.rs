@@ -136,6 +136,8 @@ pub fn build_hud_content(
     terrain: Option<&TerrainElevation>,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
+    world_offset: Vec3,
+    focus: &crate::world::RouteFocus,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let rain_hint = "P:rain";
@@ -182,6 +184,8 @@ pub fn build_hud_content(
         coords,
         controls,
         terrain,
+        world_offset,
+        focus,
     )
 }
 
@@ -197,6 +201,8 @@ fn build_hud_replay(
     coords: String,
     controls: String,
     terrain: Option<&TerrainElevation>,
+    world_offset: Vec3,
+    focus: &crate::world::RouteFocus,
 ) -> HudContent {
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
     let follow_label = follow_display_label(follow, follow_target, replay);
@@ -204,15 +210,27 @@ fn build_hud_replay(
 
     let mut vel_kmh = 0.0_f64;
     if let Some(track) = replay.tracks.get(follow_target.track_index) {
-        if let Some((_, _, v)) =
-            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
-        {
+        if let Some((_, _, v)) = pose_at_time(
+            &scene.graph,
+            &track.rows,
+            replay.t_sim,
+            terrain,
+            scene,
+            world_offset,
+            focus,
+        ) {
             vel_kmh = v * 3.6;
         }
     } else if let Some(track) = replay.tracks.first() {
-        if let Some((_, _, v)) =
-            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
-        {
+        if let Some((_, _, v)) = pose_at_time(
+            &scene.graph,
+            &track.rows,
+            replay.t_sim,
+            terrain,
+            scene,
+            world_offset,
+            focus,
+        ) {
             vel_kmh = v * 3.6;
         }
     }
@@ -233,9 +251,15 @@ fn build_hud_replay(
 
     let mut train_parts = Vec::new();
     for track in &replay.tracks {
-        if let Some((_, _, vel)) =
-            pose_at_time(&scene.graph, &track.rows, replay.t_sim, terrain, scene)
-        {
+        if let Some((_, _, vel)) = pose_at_time(
+            &scene.graph,
+            &track.rows,
+            replay.t_sim,
+            terrain,
+            scene,
+            world_offset,
+            focus,
+        ) {
             train_parts.push(format!("{} {:.0} km/h", track.label, vel * 3.6));
         }
     }
@@ -373,6 +397,8 @@ pub fn build_hud_content_live(
     let rain_label = precipitation.hud_label();
     let status = if live.session.arrived {
         "ARRIVED"
+    } else if live.paused {
+        "PAUSED"
     } else {
         "LIVE"
     };
@@ -384,6 +410,11 @@ pub fn build_hud_content_live(
     let vel_kmh = live.session.velocity_mps() * 3.6;
     let limit_kmh = live.session.effective_speed_limit_mps() * 3.6;
     let gp = &live.session.gameplay;
+    let dist_line = live
+        .session
+        .distance_to_next_stop_m()
+        .map(|d| format!("  dist:{d:.0}m"))
+        .unwrap_or_default();
     let game_line = if live.session.arrived {
         format!("dest:{}  penalty:{:.0}", gp.destination, gp.accrued_penalty)
     } else if let Some(next) = live.session.next_stop_label() {
@@ -392,7 +423,10 @@ pub fn build_hud_content_live(
         } else {
             ""
         };
-        format!("next:{next}  penalty:{:.0}{overspeed}", gp.accrued_penalty)
+        format!(
+            "next:{next}{dist_line}  penalty:{:.0}{overspeed}",
+            gp.accrued_penalty
+        )
     } else {
         let overspeed = if gp.overspeed_active {
             " OVERSPEED"
@@ -405,7 +439,7 @@ pub fn build_hud_content_live(
         )
     };
     let controls =
-        "W/S:thr/brk  Space:emerg  H:horn  C:cab  +/-:sim  T:follow  P:rain  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  I/K:pan  WASD:pan  Space:emerg  H:horn  C:cab  T:cam  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
             .to_string();
     HudContent {
         row1: format!(
@@ -421,10 +455,10 @@ pub fn build_hud_content_live(
             live.session.driver_brake * 100.0,
             live.session.speed_mul,
         ),
-        progress: 0.0,
+        progress: live.session.route_progress() as f32,
         trains: format!("live {:.0} km/h", vel_kmh),
         controls,
-        status_is_paused: live.session.arrived,
+        status_is_paused: live.session.arrived || live.paused,
         show_row2: true,
     }
 }
@@ -440,6 +474,8 @@ pub(crate) fn update_hud(
     replay: Res<ReplayState>,
     live: Option<Res<LiveDrive>>,
     scene: Res<TrackScene>,
+    offset: Res<crate::world::RouteWorldOffset>,
+    focus: Res<crate::world::RouteFocus>,
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
     follow_target: Res<CameraFollowTarget>,
@@ -505,6 +541,8 @@ pub(crate) fn update_hud(
             terrain.as_deref(),
             camera_pos,
             orbit_focus,
+            offset.delta,
+            &focus,
         )
     };
     write_fps_suffix(&mut cache.row1, &fps);
@@ -528,7 +566,7 @@ pub(crate) fn update_hud(
                 Visibility::Hidden
             };
         } else if bar.is_some() {
-            *vis = if active {
+            *vis = if active || live.is_some() {
                 Visibility::Inherited
             } else {
                 Visibility::Hidden
@@ -633,6 +671,11 @@ mod tests {
             None,
             Vec3::new(120.0, 35.0, 8.0),
             Some(Vec3::new(5000.0, 0.0, 25.0)),
+            Vec3::ZERO,
+            &crate::world::RouteFocus {
+                center: Vec3::ZERO,
+                height_origin: 0.0,
+            },
         );
         assert!(content.row1.contains("test/route"));
         assert!(content.row1.contains("cam:orbit"));
@@ -670,6 +713,11 @@ mod tests {
             None,
             Vec3::ZERO,
             None,
+            Vec3::ZERO,
+            &crate::world::RouteFocus {
+                center: Vec3::ZERO,
+                height_origin: 0.0,
+            },
         );
         assert!(content.row1.contains("PLAY"));
         assert!(content.row1.contains("follow:orbit→primary"));
@@ -716,6 +764,11 @@ mod tests {
             None,
             Vec3::ZERO,
             None,
+            Vec3::ZERO,
+            &crate::world::RouteFocus {
+                center: Vec3::ZERO,
+                height_origin: 0.0,
+            },
         );
         assert!(content.row1.contains("PAUSED"));
         assert!(content.row1.contains("rain:off"));

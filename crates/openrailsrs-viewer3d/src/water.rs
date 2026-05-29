@@ -22,7 +22,8 @@ pub fn water_surface_y(anchor: Vec3, terrain: Option<&TerrainElevation>, explici
 
 #[derive(Component, Clone, Copy, Debug)]
 pub(crate) struct WaterSurface {
-    base_y: f32,
+    /// Surface height in render space (after [`crate::world::RouteFocus::to_render_surface`]).
+    render_base_y: f32,
     phase: f32,
     is_reflection: bool,
 }
@@ -67,6 +68,7 @@ pub fn spawn_water_patches(
     track: Res<TrackScene>,
     assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
+    focus: Res<crate::world::RouteFocus>,
 ) {
     let patches: Vec<_> = world
         .items
@@ -115,27 +117,30 @@ pub fn spawn_water_patches(
             default_material.clone()
         };
 
+        let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z));
         commands.spawn((
             WaterSurface {
-                base_y,
+                render_base_y: render.y,
                 phase,
                 is_reflection: false,
             },
             Mesh3d(mesh.clone()),
             MeshMaterial3d(material),
-            Transform::from_xyz(obj.position.x, base_y, obj.position.z),
+            Transform::from_translation(render),
             Name::new(format!("water:{}:{}", obj.label, patch.uid)),
         ));
 
+        let reflect_render =
+            focus.to_render_surface(Vec3::new(obj.position.x, base_y - 0.05, obj.position.z));
         commands.spawn((
             WaterSurface {
-                base_y: base_y - 0.05,
+                render_base_y: reflect_render.y,
                 phase: phase + 1.1,
                 is_reflection: true,
             },
             Mesh3d(mesh),
             MeshMaterial3d(reflect_material.clone()),
-            Transform::from_xyz(obj.position.x, base_y - 0.05, obj.position.z)
+            Transform::from_translation(reflect_render)
                 .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
             Name::new(format!("water-reflect:{}:{}", obj.label, patch.uid)),
         ));
@@ -161,7 +166,7 @@ pub(crate) fn update_water_patches(
     for (mut transform, surface) in &mut surfaces {
         let amp = if surface.is_reflection { 0.018 } else { 0.07 };
         let wave = (t * 1.65 + surface.phase).sin() * amp;
-        transform.translation.y = surface.base_y + wave;
+        transform.translation.y = surface.render_base_y + wave;
     }
 }
 
@@ -205,9 +210,39 @@ mod tests {
     }
 
     #[test]
+    fn update_water_uses_render_local_y_not_msl() {
+        use crate::world::RouteFocus;
+
+        let focus = RouteFocus {
+            center: Vec3::new(1_000_000.0, 80.0, 2_000_000.0),
+            height_origin: 1_050.0,
+        };
+        let msl_y = 1_060.0;
+        let render_y = focus
+            .to_render_surface(Vec3::new(1_000_000.0, msl_y, 2_000_000.0))
+            .y;
+        assert!((render_y - 10.0).abs() < 1e-3);
+
+        let surface = WaterSurface {
+            render_base_y: render_y,
+            phase: 0.0,
+            is_reflection: false,
+        };
+        let mut tf = Transform::from_translation(Vec3::new(0.0, render_y, 0.0));
+        let wave = 0.05_f32;
+        tf.translation.y = surface.render_base_y + wave;
+        assert!(
+            tf.translation.y.abs() < 100.0,
+            "wave update must stay in render space, got {}",
+            tf.translation.y
+        );
+        assert!((tf.translation.y - (render_y + wave)).abs() < 1e-5);
+    }
+
+    #[test]
     fn water_wave_oscillates() {
         let surface = WaterSurface {
-            base_y: 5.0,
+            render_base_y: 5.0,
             phase: 0.0,
             is_reflection: false,
         };

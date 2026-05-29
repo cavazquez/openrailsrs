@@ -31,6 +31,9 @@ pub struct RouteOverlay {
     pub assume_signals_clear: Option<bool>,
     #[serde(default)]
     pub edge_speed_limits: Vec<super::EdgeSpeedLimitDef>,
+    /// Intermediate stops merged into the scenario for live drive / timetable scoring.
+    #[serde(default)]
+    pub stops: Vec<super::StopDef>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -87,6 +90,12 @@ pub fn apply_scenario_runtime_overlay(scenario: &mut ScenarioFile, overlay: &Sce
         if !route.edge_speed_limits.is_empty() {
             scenario.route.edge_speed_limits = route.edge_speed_limits.clone();
         }
+        if !route.stops.is_empty() {
+            scenario.route.stops = route.stops.clone();
+        }
+    }
+    if let Some(gameplay) = &overlay.gameplay {
+        scenario.gameplay = gameplay.clone();
     }
     if let Some(train) = &overlay.train {
         if let Some(consist) = &train.consist {
@@ -323,5 +332,27 @@ max_velocity_rms = 4.5
         let validate = scenario.validate.expect("validate");
         assert_eq!(validate.baseline_or.as_deref(), Some("../baselines/or.csv"));
         assert_eq!(validate.thresholds.max_velocity_rms, Some(4.5));
+    }
+
+    #[test]
+    fn runtime_overlay_merges_stops_and_gameplay() {
+        let overlay: ScenarioOverlay = toml::from_str(
+            r#"
+[[route.stops]]
+node = "n10770"
+arrive_s = 136.0
+depart_s = 136.0
+
+[gameplay]
+penalty_per_second_late = 8.0
+"#,
+        )
+        .expect("parse overlay");
+
+        let mut scenario = minimal_scenario();
+        apply_scenario_runtime_overlay(&mut scenario, &overlay);
+        assert_eq!(scenario.route.stops.len(), 1);
+        assert_eq!(scenario.route.stops[0].node, "n10770");
+        assert!((scenario.gameplay.penalty_per_second_late - 8.0).abs() < 1e-9);
     }
 }

@@ -26,6 +26,21 @@ speed_limit_kmh = 80.467
 edge = "e10771"
 speed_limit_kmh = 80.467
 
+# Live-drive timetable (Birmingham Pullman shuttle, ~136 s OR eval window).
+[[route.stops]]
+node = "n10778"
+arrive_s = 95.0
+depart_s = 100.0
+
+[[route.stops]]
+node = "n10770"
+arrive_s = 136.0
+depart_s = 136.0
+
+[gameplay]
+objective = "arrive_on_time"
+penalty_per_second_late = 8.0
+
 [train]
 consist = "consists/birmingham_pullman.con"
 

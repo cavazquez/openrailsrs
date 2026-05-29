@@ -334,6 +334,24 @@ impl LiveDriveSession {
             .map(|s| s.name.as_str())
     }
 
+    /// Remaining distance to the next scheduled stop (m), if any remain.
+    pub fn distance_to_next_stop_m(&self) -> Option<f64> {
+        self.gameplay
+            .stop_targets
+            .get(self.gameplay.next_stop_idx)
+            .map(|t| (t.cum_dist_m - self.state.odometer_m).max(0.0))
+    }
+
+    /// Fraction of route distance travelled [0, 1].
+    pub fn route_progress(&self) -> f64 {
+        let total = self.path_data.total_length_m();
+        if total > 0.0 {
+            (self.state.odometer_m / total).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    }
+
     /// Snapshot for the live cab panel (Fase C3).
     pub fn cab_telemetry(&self) -> CabTelemetry {
         let speed_kmh = self.state.velocity_mps * 3.6;

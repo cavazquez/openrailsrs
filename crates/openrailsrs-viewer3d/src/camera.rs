@@ -72,6 +72,38 @@ const FOLLOW_MIN_DISTANCE: f32 = 80.0;
 /// Target orbit distance for chase follow in live mode (m).
 pub const LIVE_CHASE_DISTANCE: f32 = 120.0;
 
+/// Driver eye height above track (m); overridden per consist when spawned.
+pub const DRIVER_EYE_HEIGHT_M: f32 = 2.4;
+
+/// Metres behind the train head (into the cab) for the eye position.
+pub const DRIVER_CAB_BACK_M: f32 = 2.8;
+
+/// Slight downward pitch for driver view (rad).
+pub const DRIVER_LOOK_PITCH: f32 = -0.04;
+
+/// FOV in driver view (degrees).
+pub const DRIVER_FOV_DEG: f32 = 72.0;
+
+/// Near clip in driver view (m) — closer than orbit to reduce cab clipping.
+pub const DRIVER_NEAR_CLIP_M: f32 = 0.08;
+
+/// Per-consist cab eye placement (set when the live train spawns).
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct LiveDriverCab {
+    /// Metres behind the train head along the consist axis.
+    pub back_m: f32,
+    pub height_m: f32,
+}
+
+impl Default for LiveDriverCab {
+    fn default() -> Self {
+        Self {
+            back_m: DRIVER_CAB_BACK_M,
+            height_m: DRIVER_EYE_HEIGHT_M,
+        }
+    }
+}
+
 // ── Components / resources ────────────────────────────────────────────────
 
 /// Which replay track the follow camera tracks (cycle with `[` / `]` or Shift+T).
@@ -107,6 +139,8 @@ pub enum CameraFollowMode {
     Off,
     OrbitFollow,
     ChaseCam,
+    /// First-person view from the locomotive cab (live mode).
+    DriverCam,
 }
 
 impl CameraFollowMode {
@@ -114,7 +148,8 @@ impl CameraFollowMode {
         match self {
             Self::Off => Self::OrbitFollow,
             Self::OrbitFollow => Self::ChaseCam,
-            Self::ChaseCam => Self::Off,
+            Self::ChaseCam => Self::DriverCam,
+            Self::DriverCam => Self::Off,
         }
     }
 
@@ -123,6 +158,7 @@ impl CameraFollowMode {
             Self::Off => "off",
             Self::OrbitFollow => "orbit",
             Self::ChaseCam => "chase",
+            Self::DriverCam => "driver",
         }
     }
 }
@@ -280,7 +316,11 @@ pub fn apply_orbit_follow(
     train: TrainFollowPose,
     dt: f32,
 ) -> OrbitFollowUpdate {
-    let target_focus = Vec3::new(train.translation.x, 0.0, train.translation.z);
+    let target_focus = Vec3::new(
+        train.translation.x,
+        train.translation.y,
+        train.translation.z,
+    );
     let focus = lerp_follow_focus(orbit.focus, target_focus, dt);
     let mut yaw = orbit.yaw;
     let mut pitch = orbit.pitch;
@@ -318,6 +358,19 @@ pub fn camera_transform_from_orbit_state(
 ) -> Transform {
     let pos = orbit_position(focus, yaw, pitch, distance);
     Transform::from_translation(pos).looking_at(focus, Vec3::Y)
+}
+
+/// First-person driver view locked to the train head pose.
+pub fn driver_camera_transform(train: TrainFollowPose, cab: LiveDriverCab) -> Transform {
+    let rot = Quat::from_rotation_y(train.yaw);
+    let forward = rot * Vec3::X;
+    let eye = train.translation - forward * cab.back_m + Vec3::Y * cab.height_m;
+    Transform::from_translation(eye).with_rotation(Quat::from_euler(
+        EulerRot::YXZ,
+        train.yaw,
+        DRIVER_LOOK_PITCH,
+        0.0,
+    ))
 }
 
 // ── Systems (Bevy) ────────────────────────────────────────────────────────
@@ -406,6 +459,14 @@ pub fn cycle_follow_mode(
     target.clamp_to(count);
 
     if live_active {
+        if keys.just_pressed(KeyCode::KeyV) && !shift_held(&keys) {
+            *follow = if *follow == CameraFollowMode::DriverCam {
+                CameraFollowMode::ChaseCam
+            } else {
+                CameraFollowMode::DriverCam
+            };
+            return;
+        }
         if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
             *follow = follow.cycle();
         }
@@ -435,6 +496,7 @@ pub fn follow_train_camera(
     target: Res<CameraFollowTarget>,
     replay: Option<Res<crate::train::ReplayState>>,
     live: Option<Res<crate::live::LiveDrive>>,
+    cab: Option<Res<LiveDriverCab>>,
     train_query: Query<
         (&Transform, Option<&crate::train::TrainMarker>),
         (Without<OrbitState>, Without<crate::live::LiveTrainMarker>),
@@ -471,15 +533,20 @@ pub fn follow_train_camera(
     };
 
     let dt = time.delta_secs();
-    let update = apply_orbit_follow(
-        *orbit,
-        *follow,
-        TrainFollowPose {
-            translation: train_tf.translation,
-            yaw: yaw_from_transform(train_tf),
-        },
-        dt,
-    );
+    let train_pose = TrainFollowPose {
+        translation: train_tf.translation,
+        yaw: yaw_from_transform(train_tf),
+    };
+
+    if *follow == CameraFollowMode::DriverCam {
+        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
+        orbit.yaw = train_pose.yaw;
+        let cab = cab.as_deref().copied().unwrap_or_default();
+        *transform = driver_camera_transform(train_pose, cab);
+        return;
+    }
+
+    let update = apply_orbit_follow(*orbit, *follow, train_pose, dt);
     orbit.focus = update.focus;
     orbit.yaw = update.yaw;
     orbit.pitch = update.pitch;
@@ -491,13 +558,23 @@ fn shift_held(keys: &ButtonInput<KeyCode>) -> bool {
     keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight)
 }
 
-fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>) -> Vec3 {
+fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>, live_mode: bool) -> Vec3 {
     let mut axes = Vec3::ZERO;
-    if keys.pressed(KeyCode::KeyW) {
-        axes.z += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        axes.z -= 1.0;
+    if live_mode {
+        // In live mode W/S are not used for throttle; I/K pan forward/back instead.
+        if keys.pressed(KeyCode::KeyI) {
+            axes.z += 1.0;
+        }
+        if keys.pressed(KeyCode::KeyK) {
+            axes.z -= 1.0;
+        }
+    } else {
+        if keys.pressed(KeyCode::KeyW) {
+            axes.z += 1.0;
+        }
+        if keys.pressed(KeyCode::KeyS) {
+            axes.z -= 1.0;
+        }
     }
     if keys.pressed(KeyCode::KeyD) {
         axes.x += 1.0;
@@ -542,6 +619,7 @@ fn wheel_scroll_lines(ev: &MouseWheel) -> f32 {
 pub fn orbit_camera_system(
     time: Res<Time>,
     mode: Res<CameraMode>,
+    opts: Res<crate::launch::ViewerLaunchOpts>,
     limit: Res<OrbitDistanceLimit>,
     keys: Res<ButtonInput<KeyCode>>,
     mut follow: ResMut<CameraFollowMode>,
@@ -597,7 +675,7 @@ pub fn orbit_camera_system(
         changed = true;
     }
 
-    let pan_axes = read_orbit_pan_axes(&keys);
+    let pan_axes = read_orbit_pan_axes(&keys, opts.live);
     if pan_axes != Vec3::ZERO {
         *follow = CameraFollowMode::Off;
         keyboard_pan_orbit_focus(&mut orbit, pan_axes, time.delta_secs());
@@ -697,6 +775,26 @@ pub fn in_orbit_mode(mode: Res<CameraMode>) -> bool {
 
 pub fn in_fly_mode(mode: Res<CameraMode>) -> bool {
     *mode == CameraMode::Fly
+}
+
+/// Widen FOV and tighten near clip in driver view.
+pub fn update_driver_camera_fov(
+    follow: Res<CameraFollowMode>,
+    mut query: Query<&mut Projection, With<Camera3d>>,
+) {
+    let Ok(mut projection) = query.single_mut() else {
+        return;
+    };
+    let Projection::Perspective(persp) = &mut *projection else {
+        return;
+    };
+    if *follow == CameraFollowMode::DriverCam {
+        persp.fov = DRIVER_FOV_DEG.to_radians();
+        persp.near = DRIVER_NEAR_CLIP_M;
+    } else {
+        persp.fov = std::f32::consts::FRAC_PI_4;
+        persp.near = 0.1;
+    }
 }
 
 /// While in fly mode, hide the cursor and confine it to the window during
@@ -851,7 +949,11 @@ mod tests {
             CameraFollowMode::OrbitFollow.cycle(),
             CameraFollowMode::ChaseCam
         );
-        assert_eq!(CameraFollowMode::ChaseCam.cycle(), CameraFollowMode::Off);
+        assert_eq!(
+            CameraFollowMode::ChaseCam.cycle(),
+            CameraFollowMode::DriverCam
+        );
+        assert_eq!(CameraFollowMode::DriverCam.cycle(), CameraFollowMode::Off);
     }
 
     #[test]
@@ -859,6 +961,24 @@ mod tests {
         assert_eq!(CameraFollowMode::Off.hud_label(), "off");
         assert_eq!(CameraFollowMode::OrbitFollow.hud_label(), "orbit");
         assert_eq!(CameraFollowMode::ChaseCam.hud_label(), "chase");
+        assert_eq!(CameraFollowMode::DriverCam.hud_label(), "driver");
+    }
+
+    #[test]
+    fn driver_camera_transform_places_eye_in_cab() {
+        let tf = driver_camera_transform(
+            TrainFollowPose {
+                translation: Vec3::new(10.0, 0.0, 20.0),
+                yaw: 0.0,
+            },
+            LiveDriverCab {
+                back_m: 3.0,
+                height_m: 2.5,
+            },
+        );
+        assert!((tf.translation.x - 7.0).abs() < 1e-5);
+        assert!((tf.translation.y - 2.5).abs() < 1e-5);
+        assert!((tf.translation.z - 20.0).abs() < 1e-5);
     }
 
     #[test]
@@ -886,7 +1006,7 @@ mod tests {
         };
         let update = apply_orbit_follow(orbit, CameraFollowMode::OrbitFollow, train, 0.05);
         assert!(update.focus.x > 0.0 && update.focus.x < 200.0);
-        assert_eq!(update.focus.y, 0.0);
+        assert!(update.focus.y > 0.0 && update.focus.y < 5.0);
         assert!(update.focus.z > 0.0 && update.focus.z < 100.0);
     }
 

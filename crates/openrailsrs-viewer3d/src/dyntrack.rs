@@ -80,6 +80,7 @@ pub fn spawn_dyntrack_segments(
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     track: Res<TrackScene>,
+    focus: Res<crate::world::RouteFocus>,
 ) {
     let dyntracks: Vec<_> = world
         .items
@@ -121,9 +122,10 @@ pub fn spawn_dyntrack_segments(
     let mut rail_idx: Vec<u32> = Vec::new();
 
     for obj in &dyntracks {
+        let pos = focus.to_render(obj.position);
         for local_z in &sleeper_positions {
             let tf = part_transform(
-                obj.position,
+                pos,
                 obj.rotation,
                 Vec3::new(0.0, dims.sleeper_height * 0.5, *local_z),
                 Vec3::new(dims.sleeper_width, dims.sleeper_height, dims.sleeper_depth),
@@ -140,7 +142,7 @@ pub fn spawn_dyntrack_segments(
 
         for side in [-dims.half_gauge, dims.half_gauge] {
             let tf = part_transform(
-                obj.position,
+                pos,
                 obj.rotation,
                 Vec3::new(side, rail_y, half_len),
                 Vec3::new(dims.rail_width, dims.rail_height, dims.length),

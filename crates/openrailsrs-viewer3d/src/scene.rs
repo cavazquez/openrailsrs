@@ -6,9 +6,11 @@
 
 use bevy::asset::RenderAssetUsages;
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
+use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 
+use crate::launch::{LIVE_GROUND_HALF_MAX_M, ViewerLaunchOpts};
 use crate::terrain::TerrainScene;
 use crate::track::TrackScene;
 
@@ -29,13 +31,18 @@ const AXIS_LENGTH: f32 = 5.0;
 /// When [`TerrainScene`] has tiles, the flat placeholder plane is omitted.
 pub fn spawn_ground_and_lights(
     scene: Res<TrackScene>,
+    _focus: Res<crate::world::RouteFocus>,
     terrain: Res<TerrainScene>,
+    opts: Res<ViewerLaunchOpts>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let half = scene.bounds.ground_half();
-    let center = scene.bounds.center;
+    let mut half = scene.bounds.ground_half();
+    if opts.live {
+        half = half.min(LIVE_GROUND_HALF_MAX_M);
+    }
+    let center = Vec3::ZERO;
 
     if terrain.is_empty() {
         let mesh = meshes.add(Plane3d::default().mesh().size(half * 2.0, half * 2.0));
@@ -46,27 +53,38 @@ pub fn spawn_ground_and_lights(
             ..default()
         });
 
-        commands.spawn((
+        let mut ground = commands.spawn((
             Mesh3d(mesh),
             MeshMaterial3d(material),
             Transform::from_xyz(center.x, -0.001, center.z),
             Name::new("ground"),
         ));
+        if opts.live {
+            ground.insert(NotShadowCaster);
+            ground.insert(NotShadowReceiver);
+        }
     }
 
-    spawn_grid_mesh(&mut commands, &mut meshes, &mut materials, &scene);
+    spawn_grid_mesh(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &scene,
+        center,
+        opts.live,
+    );
 
     let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
-            shadows_enabled: true,
+            shadows_enabled: !opts.live,
             ..default()
         },
         CascadeShadowConfigBuilder {
-            num_cascades: 4,
+            num_cascades: if opts.live { 2 } else { 4 },
             minimum_distance: 0.1,
-            maximum_distance: 200.0,
+            maximum_distance: if opts.live { 120.0 } else { 200.0 },
             first_cascade_far_bound: 10.0,
             overlap_proportion: 0.2,
         }
@@ -74,7 +92,9 @@ pub fn spawn_ground_and_lights(
         Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
         Name::new("sun"),
     ));
-    commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
+    commands.insert_resource(DirectionalLightShadowMap {
+        size: if opts.live { 1024 } else { 2048 },
+    });
 }
 
 fn spawn_grid_mesh(
@@ -82,9 +102,13 @@ fn spawn_grid_mesh(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     scene: &TrackScene,
+    center: Vec3,
+    live: bool,
 ) {
-    let half = scene.bounds.ground_half();
-    let center = scene.bounds.center;
+    let mut half = scene.bounds.ground_half();
+    if live {
+        half = half.min(LIVE_GROUND_HALF_MAX_M);
+    }
     let step = grid_step_for_extent(half);
     let n = (half / step) as i32;
 
@@ -142,12 +166,15 @@ fn spawn_grid_mesh(
         ..default()
     });
 
-    commands.spawn((
+    let mut grid = commands.spawn((
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(material),
         Transform::from_xyz(0.0, 0.05, 0.0),
         Name::new("grid"),
     ));
+    if live {
+        grid.insert(NotShadowCaster);
+    }
 }
 
 /// Pick a grid step that keeps line count reasonable on large imported routes.

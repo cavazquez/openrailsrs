@@ -10,3 +10,4 @@ description = "Decoder for MSTS .ace (Asynchronous Compressed Encoding) textures
 thiserror.workspace = true
 image = { version = "0.25", default-features = false, features = ["png"] }
 texpresso = "2"
+flate2 = "1.1"

@@ -71,6 +71,63 @@ python3 scripts/sync_chiltern_assets.py \
 - **DMBSA:** curvas ORTS + `DieselPowerTab` / `ThrottleRPMTab` + Davis (`ChangeUpRPMpS` 50, `RateOfChangeUpRPMpSS` 10).
 - **DMBSH:** stub MSTS sin tablas ORTS; al cargar el consist hereda curvas/RPM del DMBSA lead (OR-P13). OR 1.6.x **no** aplica `RunUpTimeToMaxForce` en motores ORTS.
 
+## Live 3D (viewer)
+
+Conductor en primera persona, paradas y penalización vía `scenario.overlay.toml`:
+
+```bash
+cargo run --release -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+```
+
+Controles: **W/S** acelerar/frenar, **V** driver/chase, **P** pausa, **R** reinicio, **C** panel CAB, **Shift+P** lluvia.
+
+Paradas Birmingham (overlay): `n10778` (~95 s), destino `n10770` (136 s). Penalización: 8 pts/s tarde.
+
+En rutas grandes usa **`--release`** (debug ≈ 4 FPS; release ≈ 60+ FPS).
+
+## Escenario MSTS (WORLD / terreno, opcional)
+
+Chiltern **no tiene** carpeta `TERRAIN/` como el demo `smoke`. En MSTS el relieve está en **`TILES/`** (`.t` + `_y.raw`, ~1600 tiles). El viewer carga **`TILES/*.t`** y **`TERRAIN/*.y`** en un radio de ~8 km desde el centro de la vía.
+
+Los directorios `WORLD/`, `TILES/`, `TERRTEX/`, `TEXTURES/`, `SHAPES/` (ruta) y `TERRAIN/` están en `.gitignore` (~5 GB con rsync). No los subas al repo; cópialos en local con los comandos de abajo.
+
+### WORLD (objetos `.w`) — recomendado
+
+```bash
+ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+DEST=examples/chiltern
+mkdir -p "$DEST/WORLD"
+rsync -a --info=progress2 "$ROUTE/WORLD/" "$DEST/WORLD/"
+```
+
+Tras tu `rsync`, deberías tener ~900 archivos `.w` en `examples/chiltern/WORLD/` (~60 MB). El viewer los dibuja en un radio de ~8 km; los **meshes `.s` reales** solo dentro de **~2 km** si el shape existe en disco.
+
+### SHAPES de ruta + GLOBAL (meshes reales)
+
+Los `.w` referencian shapes en la carpeta de la ruta y en `GLOBAL/SHAPES` del MSTS:
+
+```bash
+rsync -a "$ROUTE/SHAPES/" "$DEST/SHAPES/"
+rsync -a "$ROUTE/TEXTURES/" "$DEST/TEXTURES/"   # si faltan .ace junto a shapes de ruta
+```
+
+Indica la raíz de contenido MSTS (carpeta `Content/`) para resolver `GLOBAL/SHAPES`:
+
+```bash
+export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
+```
+
+### TILES + TERRTEX (terreno)
+
+```bash
+rsync -a "$ROUTE/TILES/" "$DEST/TILES/"      # ~1675 tiles, varios GB
+rsync -a "$ROUTE/TERRTEX/" "$DEST/TERRTEX/"  # texturas de suelo (parches texturizados)
+```
+
+**No copies `TERRAIN/`** — esa carpeta no existe en esta ruta.
+
+Sin `TILES/` el viewer usa **suelo plano** + vía compacta; con **TILES** ganas heightfield (y texturas si hay `TERRTEX/`).
+
 ## Flujo compare-or (evaluación 136 s)
 
 Usa el binario **del repo** (`cargo install --path crates/openrailsrs-cli` desde la raíz, o `cargo run -p openrailsrs-cli -- …`).

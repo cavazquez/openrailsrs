@@ -1,127 +1,30 @@
-//! Lightweight Bevy world smoke tests (`run_system_once`, no window/render loop).
+//! Replay-mode smoke tests (track, train, camera, precipitation).
 
 #[cfg(test)]
 mod tests {
-    use bevy::asset::AssetPlugin;
     use bevy::ecs::system::RunSystemOnce;
     use bevy::prelude::*;
-    use openrailsrs_core::{EdgeId, NodeId};
-    use openrailsrs_track::{Edge, Node, NodeKind, SignalAspect, TrackGraph, TrackSignal};
 
     use crate::camera::{
-        CameraFollowMode, CameraFollowTarget, CameraMode, OrbitDistanceLimit, OrbitState,
-        cycle_follow_mode, follow_train_camera, spawn_camera,
+        CameraFollowMode, OrbitState, cycle_follow_mode, follow_train_camera, spawn_camera,
     };
     use crate::precipitation::{
         PrecipitationState, spawn_precipitation, toggle_precipitation, update_precipitation,
     };
-    use crate::rolling_stock::TrainConsistScene;
-    use crate::shapes::RouteAssets;
     use crate::signals::spawn_signal_markers;
     use crate::teleport::TeleportDialog;
-    use crate::terrain::TerrainElevation;
-    use crate::track::{TrackScene, frame_orbit_camera_on_track, spawn_track_meshes};
-    use crate::train::{
-        CsvRow, ReplayState, TrainMarker, TrainTrack, spawn_train_markers, update_train_markers,
+    use crate::test_harness::{
+        count_named, sample_replay_track, tiny_graph_with_signal, with_replay_world,
     };
-
-    fn tiny_graph_with_signal() -> TrackGraph {
-        let mut g = TrackGraph::new();
-        g.insert_node(Node {
-            id: NodeId("a".into()),
-            kind: NodeKind::Plain,
-            x_m: 0.0,
-            y_m: 0.0,
-        })
-        .unwrap();
-        g.insert_node(Node {
-            id: NodeId("b".into()),
-            kind: NodeKind::Switch {
-                stem_edge: EdgeId("e1".into()),
-                diverging_edge: EdgeId("e2".into()),
-            },
-            x_m: 100.0,
-            y_m: 0.0,
-        })
-        .unwrap();
-        g.insert_edge(Edge {
-            id: EdgeId("e1".into()),
-            from: NodeId("a".into()),
-            to: NodeId("b".into()),
-            length_m: 100.0,
-            speed_limit_mps: 20.0,
-            grade_percent: 0.0,
-        })
-        .unwrap();
-        g.insert_signal(TrackSignal {
-            id: "sig1".into(),
-            edge_id: "e1".into(),
-            position_m: 50.0,
-            aspect: SignalAspect::Caution,
-            clear_after_s: None,
-            script: None,
-        })
-        .unwrap();
-        g
-    }
-
-    fn sample_replay_track() -> TrainTrack {
-        TrainTrack {
-            label: "primary".into(),
-            color: Color::srgb(1.0, 0.25, 1.0),
-            rows: vec![
-                CsvRow {
-                    time_s: 0.0,
-                    velocity_mps: 10.0,
-                    edge_id: "e1".into(),
-                    pos_on_edge_m: 0.0,
-                },
-                CsvRow {
-                    time_s: 10.0,
-                    velocity_mps: 10.0,
-                    edge_id: "e1".into(),
-                    pos_on_edge_m: 100.0,
-                },
-            ],
-        }
-    }
-
-    fn with_scene_replay(scene: TrackScene, replay: ReplayState, f: impl FnOnce(&mut World)) {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<Mesh>();
-        app.init_asset::<Image>();
-        app.init_asset::<StandardMaterial>();
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.init_resource::<ButtonInput<MouseButton>>();
-        app.init_resource::<CameraMode>();
-        app.init_resource::<CameraFollowMode>();
-        app.init_resource::<CameraFollowTarget>();
-        app.init_resource::<OrbitDistanceLimit>();
-        app.insert_resource(TerrainElevation::default());
-        app.insert_resource(scene);
-        app.insert_resource(replay);
-        app.insert_resource(TrainConsistScene::default());
-        app.insert_resource(RouteAssets::new("examples/smoke/routes/test"));
-        app.update();
-
-        f(app.world_mut());
-    }
-
-    fn count_named(world: &mut World, prefix: &str) -> usize {
-        world
-            .query::<&Name>()
-            .iter(world)
-            .filter(|name| name.as_str().starts_with(prefix))
-            .count()
-    }
+    use crate::track::{TrackScene, frame_orbit_camera_on_track, spawn_track_meshes};
+    use crate::train::{ReplayState, TrainMarker, spawn_train_markers, update_train_markers};
 
     #[test]
     fn spawn_systems_create_track_signal_and_train() {
         let scene = TrackScene::from_graph(tiny_graph_with_signal());
         let replay = ReplayState::new("test".into(), vec![sample_replay_track()]);
 
-        with_scene_replay(scene, replay, |world| {
+        with_replay_world(scene, replay, |world| {
             world.run_system_once(spawn_track_meshes).unwrap();
             world.run_system_once(spawn_signal_markers).unwrap();
             world.run_system_once(spawn_camera).unwrap();
@@ -142,7 +45,7 @@ mod tests {
         let scene = TrackScene::from_graph(tiny_graph_with_signal());
         let replay = ReplayState::new("test".into(), vec![sample_replay_track()]);
 
-        with_scene_replay(scene, replay, |world| {
+        with_replay_world(scene, replay, |world| {
             world.run_system_once(spawn_track_meshes).unwrap();
             world.run_system_once(spawn_camera).unwrap();
             world.run_system_once(frame_orbit_camera_on_track).unwrap();
@@ -187,7 +90,7 @@ mod tests {
         let scene = TrackScene::from_graph(tiny_graph_with_signal());
         let replay = ReplayState::default();
 
-        with_scene_replay(scene, replay, |world| {
+        with_replay_world(scene, replay, |world| {
             world.insert_resource(PrecipitationState {
                 enabled: true,
                 ..Default::default()
@@ -205,7 +108,7 @@ mod tests {
             world.run_system_once(toggle_precipitation).unwrap();
             assert!(
                 !world.resource::<PrecipitationState>().enabled,
-                "P should turn rain off"
+                "P should turn rain off in replay (precipitation toggle)"
             );
             world.run_system_once(update_precipitation).unwrap();
         });

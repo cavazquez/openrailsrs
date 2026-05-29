@@ -10,9 +10,13 @@
 pub mod cab_panel;
 pub mod camera;
 pub mod dyntrack;
+pub mod floating_origin;
 pub mod forest;
+pub mod gameplay;
 pub mod hud;
+pub mod launch;
 pub mod live;
+pub mod overspeed_flash;
 pub mod precipitation;
 pub mod rolling_stock;
 pub mod scene;
@@ -29,11 +33,22 @@ pub mod water;
 pub mod world;
 
 #[cfg(test)]
+mod app_floating;
+#[cfg(test)]
+mod app_gameplay;
+#[cfg(test)]
+mod app_live;
+#[cfg(test)]
 mod app_smoke;
+#[cfg(test)]
+mod app_spawn;
+#[cfg(test)]
+mod test_harness;
 
 use bevy::prelude::*;
 
 pub use hud::HudTitle;
+pub use launch::ViewerLaunchOpts;
 pub use live::LiveDrive;
 pub use rolling_stock::TrainConsistScene;
 pub use shapes::RouteAssets;
@@ -57,11 +72,15 @@ impl Plugin for ViewerPlugin {
             .init_resource::<camera::CameraFollowMode>()
             .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
+            .init_resource::<camera::LiveDriverCab>()
             .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<hud::HudFps>()
             .init_resource::<hud::ProfileLog>()
+            .init_resource::<gameplay::GameplayToast>()
+            .init_resource::<overspeed_flash::OverspeedFlash>()
+            .init_resource::<floating_origin::FloatingOrigin>()
             .add_systems(
                 Startup,
                 (
@@ -73,7 +92,13 @@ impl Plugin for ViewerPlugin {
                     forest::spawn_forest_patches,
                     water::spawn_water_patches,
                     world::spawn_world_boxes,
-                    signals::spawn_signal_markers,
+                )
+                    .chain(),
+            )
+            .add_systems(
+                Startup,
+                (
+                    signals::spawn_signal_markers.run_if(live::live_mode_inactive),
                     precipitation::spawn_precipitation,
                     camera::spawn_camera,
                     hud::spawn_hud,
@@ -83,8 +108,11 @@ impl Plugin for ViewerPlugin {
                     train::spawn_train_markers.run_if(live::live_mode_inactive),
                     live::spawn_live_train.run_if(live::live_mode_active),
                     live::enable_live_defaults.run_if(live::live_mode_active),
+                    gameplay::spawn_gameplay_ui,
+                    gameplay::spawn_gameplay_markers.run_if(live::live_mode_active),
                 )
-                    .chain(),
+                    .chain()
+                    .after(world::spawn_world_boxes),
             )
             .add_systems(
                 Update,
@@ -113,6 +141,20 @@ impl Plugin for ViewerPlugin {
                     water::update_water_patches,
                     hud::tick_hud_fps,
                     hud::update_hud.after(hud::tick_hud_fps),
+                ),
+            )
+            .add_systems(
+                Update,
+                (
+                    gameplay::update_gameplay_markers.run_if(live::live_mode_active),
+                    gameplay::update_gameplay_toast.run_if(live::live_mode_active),
+                    gameplay::update_arrival_overlay.run_if(live::live_mode_active),
+                    gameplay::update_driver_vignette.run_if(live::live_mode_active),
+                    live::update_driver_train_visibility.run_if(live::live_mode_active),
+                    camera::update_driver_camera_fov.run_if(live::live_mode_active),
+                    overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
+                    overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
+                    gameplay::update_stop_billboards.run_if(live::live_mode_active),
                 ),
             )
             .add_systems(Update, hud::log_profile)

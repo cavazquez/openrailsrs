@@ -134,6 +134,22 @@ pub fn decode_msts_bytes(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+/// If `bytes` is UTF-16-LE with BOM, collapse each code unit to its low byte.
+///
+/// MSTS stores SIMISA containers as UTF-16 where every ASCII character is
+/// followed by a zero byte.  Decoding as UTF-16 produces a `String` that breaks
+/// zlib/binary payloads; collapsing recovers the original byte stream.
+pub fn utf16le_msts_to_latin_bytes(bytes: &[u8]) -> Option<Vec<u8>> {
+    if !bytes.starts_with(&BOM_UTF16_LE) {
+        return None;
+    }
+    let payload = &bytes[2..];
+    if payload.len() % 2 != 0 {
+        return None;
+    }
+    Some(payload.chunks_exact(2).map(|pair| pair[0]).collect())
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 fn decode_utf16_le(bytes: &[u8]) -> String {

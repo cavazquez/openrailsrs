@@ -20,6 +20,20 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# MSTS bulk assets under examples (rsync from Content/; multi-GB — never commit)
+# Trainset SHAPES under examples/*/trains/** remain allowed.
+examples/*/WORLD/
+examples/*/world/
+examples/*/TILES/
+examples/*/tiles/
+examples/*/TERRTEX/
+examples/*/terrtex/
+examples/*/TEXTURES/
+examples/*/textures/
+examples/*/TERRAIN/
+examples/*/terrain/
+examples/*/SHAPES/
+
 # Generated smoke outputs
 examples/smoke/run.csv
 examples/smoke/run.toml

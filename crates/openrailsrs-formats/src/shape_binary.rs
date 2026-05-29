@@ -157,7 +157,7 @@ impl<'a> BinaryReader<'a> {
         let Ok(token_id) = self.map_token_id(token) else {
             return false;
         };
-        if !is_known_shape_token(token_id) || remaining == 0 {
+        if !is_known_binary_token(token_id, self.token_offset) || remaining == 0 {
             return false;
         }
         remaining + 8 <= block_end.saturating_sub(pos)
@@ -455,11 +455,30 @@ fn token_name(id: i32) -> &'static str {
         81 => "uv_ops",
         125 => "named_filter_mode",
         129 => "named_shader",
+        303 => "Static",
+        305 => "TrackObj",
+        308 => "Forest",
+        311 => "CollideObject",
+        317 => "Signal",
+        360 => "Platform",
+        362 => "LevelCr",
+        364 => "Speedpost",
+        365 => "Hazard",
+        375 => "Tr_Worldfile",
+        395 => "FileName",
+        396 => "FileNames",
+        397 => "Position",
+        398 => "Direction",
+        408 => "UiD",
+        _ if (300..=430).contains(&id) => "_world",
         _ => "_unknown",
     }
 }
 
-fn is_known_shape_token(id: i32) -> bool {
+fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
+    if token_offset >= 300 {
+        return matches!(id, 300..=430);
+    }
     matches!(
         id,
         1..=18

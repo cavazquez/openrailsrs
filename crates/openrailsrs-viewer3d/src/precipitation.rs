@@ -192,6 +192,7 @@ fn build_rain_mesh(drops: &[RainDropState], origin: Vec3, area_half: f32, ceilin
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn toggle_precipitation(
     keys: Res<ButtonInput<KeyCode>>,
+    live: Option<Res<crate::live::LiveDrive>>,
     mut state: ResMut<PrecipitationState>,
     existing: Query<Entity, With<RainMeshMarker>>,
     mut commands: Commands,
@@ -199,6 +200,10 @@ pub(crate) fn toggle_precipitation(
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
 ) {
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    if live.is_some() && !shift {
+        return;
+    }
     if !keys.just_pressed(KeyCode::KeyP) {
         return;
     }
