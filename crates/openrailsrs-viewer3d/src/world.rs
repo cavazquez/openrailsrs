@@ -7,7 +7,9 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_formats::{WorldFile, WorldItem};
 
-use crate::shapes::{RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path};
+use crate::shapes::{
+    RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path,
+};
 use crate::terrain::{TerrainElevation, scenery_ground_y};
 use crate::track::TrackScene;
 
@@ -318,10 +320,8 @@ pub fn spawn_world_boxes(
 
     let terrain_ref = terrain.as_deref();
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
-    let mut shape_cache: std::collections::HashMap<
-        PathBuf,
-        (Handle<Mesh>, Handle<StandardMaterial>, bool),
-    > = std::collections::HashMap::new();
+    let mut shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset> =
+        std::collections::HashMap::new();
     let mut texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>> =
         std::collections::HashMap::new();
 
@@ -362,78 +362,77 @@ pub fn spawn_world_boxes(
         if shape_eligible(obj) {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
             if let Some(shape_path) = resolve_shape_path(&assets.route_dir, file_name) {
-                let (mesh, material, has_texture) = shape_cache
+                let asset = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
-                        match load_shape_from_path(&shape_path, lod_distance) {
-                            Some(loaded) => {
-                                let texture_file = loaded.texture_file.clone();
-                                let mesh = meshes.add(loaded.mesh);
-                                if let Some(tex_name) = texture_file {
-                                    if let Some(tex_path) = crate::shapes::resolve_texture_path(
-                                        &assets.route_dir,
-                                        &tex_name,
-                                    ) {
-                                        if let Some(image) =
-                                            load_ace_image(&assets.route_dir, &tex_name)
-                                        {
-                                            let handle = texture_image_cache
-                                                .entry(tex_path)
-                                                .or_insert_with(|| images.add(image))
-                                                .clone();
-                                            let material = materials.add(StandardMaterial {
-                                                base_color: Color::WHITE,
-                                                base_color_texture: Some(handle),
-                                                perceptual_roughness: 0.85,
-                                                metallic: 0.05,
-                                                double_sided: true,
-                                                ..default()
-                                            });
-                                            return (mesh, material, true);
-                                        }
-                                    }
-                                    eprintln!(
-                                        "openrailsrs-viewer3d: texture {tex_name} missing or failed, using fallback color"
-                                    );
-                                }
-                                (mesh, shape_fallback_material.clone(), false)
+                        load_shape_render_asset_from_path(
+                            &shape_path,
+                            &assets.route_dir,
+                            lod_distance,
+                            &mut meshes,
+                            &mut images,
+                            &mut materials,
+                            &mut texture_image_cache,
+                            shape_fallback_color,
+                        )
+                        .unwrap_or_else(|| {
+                            eprintln!(
+                                "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
+                                shape_path.display()
+                            );
+                            let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+                            ShapeRenderAsset {
+                                combined_mesh: unit.clone(),
+                                parts: vec![crate::shapes::ShapePartAsset {
+                                    prim_state_idx: -1,
+                                    mesh: unit,
+                                    material: shape_fallback_material.clone(),
+                                    has_texture: false,
+                                    is_transparent: false,
+                                }],
+                                has_texture: false,
                             }
-                            None => {
-                                eprintln!(
-                                    "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
-                                    shape_path.display()
-                                );
-                                let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-                                (unit, shape_fallback_material.clone(), false)
-                            }
-                        }
+                        })
                     })
                     .clone();
-                if has_texture {
+                if asset.has_texture {
                     shape_texture_count += 1;
                 }
 
-                commands.spawn((
-                    Mesh3d(mesh.clone()),
-                    MeshMaterial3d(material),
-                    Transform {
-                        translation: Vec3::new(
-                            obj.position.x,
-                            scenery_ground_y(
-                                terrain_ref,
+                commands
+                    .spawn((
+                        Transform {
+                            translation: Vec3::new(
                                 obj.position.x,
+                                scenery_ground_y(
+                                    terrain_ref,
+                                    obj.position.x,
+                                    obj.position.z,
+                                    &scene,
+                                    obj.position.y,
+                                ),
                                 obj.position.z,
-                                &scene,
-                                obj.position.y,
                             ),
-                            obj.position.z,
-                        ),
-                        rotation: obj.rotation,
-                        scale: Vec3::ONE,
-                    },
-                    Name::new(format!("world:{}:{}", obj.kind, obj.label)),
-                ));
-                shape_mesh_count += 1;
+                            rotation: obj.rotation,
+                            scale: Vec3::ONE,
+                        },
+                        Visibility::default(),
+                        Name::new(format!("world:{}:{}", obj.kind, obj.label)),
+                    ))
+                    .with_children(|parent| {
+                        for (pi, part) in asset.parts.iter().enumerate() {
+                            parent.spawn((
+                                Mesh3d(part.mesh.clone()),
+                                MeshMaterial3d(part.material.clone()),
+                                Transform::default(),
+                                Name::new(format!(
+                                    "world:{}:{}:part:{pi}:{}",
+                                    obj.kind, obj.label, part.prim_state_idx
+                                )),
+                            ));
+                        }
+                    });
+                shape_mesh_count += asset.parts.len();
                 continue;
             }
         }

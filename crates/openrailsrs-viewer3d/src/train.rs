@@ -8,7 +8,7 @@ use openrailsrs_track::TrackGraph;
 
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path_in_dirs,
+    RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
     vehicle_shape_local_transform,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
@@ -149,7 +149,7 @@ pub struct TrainMarker {
     pub track_index: usize,
 }
 
-type ShapeCache = HashMap<PathBuf, (Handle<Mesh>, Handle<StandardMaterial>, bool)>;
+type ShapeCache = HashMap<PathBuf, ShapeRenderAsset>;
 
 /// Spawn train visuals: consist meshes for the primary track when available, else cubes.
 #[allow(clippy::too_many_arguments)]
@@ -210,7 +210,7 @@ pub fn spawn_train_markers(
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
                             {
                                 let shape_path_key = shape_path.clone();
-                                let (mesh, material, _) = shape_cache
+                                let asset = shape_cache
                                     .entry(shape_path_key)
                                     .or_insert_with(|| {
                                         load_vehicle_shape_assets(
@@ -225,7 +225,7 @@ pub fn spawn_train_markers(
                                     })
                                     .clone();
                                 let local = meshes
-                                    .get(&mesh)
+                                    .get(&asset.combined_mesh)
                                     .map(|m| {
                                         vehicle_shape_local_transform(
                                             m,
@@ -240,16 +240,29 @@ pub fn spawn_train_markers(
                                             vehicle.length_m,
                                         )
                                     });
-                                train.spawn((
-                                    Mesh3d(mesh),
-                                    MeshMaterial3d(material),
-                                    local,
-                                    Name::new(format!(
-                                        "train:{}:car:{vi}:{}",
-                                        track.label, vehicle.name
-                                    )),
-                                ));
-                                shape_mesh_count += 1;
+                                train
+                                    .spawn((
+                                        local,
+                                        Visibility::default(),
+                                        Name::new(format!(
+                                            "train:{}:car:{vi}:{}",
+                                            track.label, vehicle.name
+                                        )),
+                                    ))
+                                    .with_children(|car| {
+                                        for (pi, part) in asset.parts.iter().enumerate() {
+                                            car.spawn((
+                                                Mesh3d(part.mesh.clone()),
+                                                MeshMaterial3d(part.material.clone()),
+                                                Transform::default(),
+                                                Name::new(format!(
+                                                    "train:{}:car:{vi}:{}:part:{pi}:{}",
+                                                    track.label, vehicle.name, part.prim_state_idx
+                                                )),
+                                            ));
+                                        }
+                                    });
+                                shape_mesh_count += asset.parts.len();
                                 continue;
                             }
                         }
@@ -300,7 +313,7 @@ pub fn spawn_train_markers(
 
     if !consist.is_empty() {
         eprintln!(
-            "openrailsrs-viewer3d: {} consist track(s), {} vehicle(s), {shape_mesh_count} shape mesh(es)",
+            "openrailsrs-viewer3d: {} consist track(s), {} vehicle(s), {shape_mesh_count} shape mesh part(s)",
             consist.track_count(),
             consist.total_vehicles(),
         );
@@ -328,47 +341,37 @@ fn load_vehicle_shape_assets(
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
-) -> (Handle<Mesh>, Handle<StandardMaterial>, bool) {
-    match load_shape_from_path(shape_path, None) {
-        Some(loaded) => {
-            let mesh = meshes.add(loaded.mesh);
-            if let Some(tex_name) = loaded.texture_file {
-                if let Some(image) = load_ace_image(route_dir, &tex_name) {
-                    let handle = texture_cache
-                        .entry(route_dir.join("TEXTURES").join(&tex_name))
-                        .or_insert_with(|| images.add(image))
-                        .clone();
-                    let material = materials.add(StandardMaterial {
-                        base_color: Color::WHITE,
-                        base_color_texture: Some(handle),
-                        perceptual_roughness: 0.85,
-                        metallic: 0.05,
-                        double_sided: true,
-                        ..default()
-                    });
-                    return (mesh, material, true);
-                }
-            }
-            let material = materials.add(StandardMaterial {
-                base_color: fallback_color,
-                emissive: LinearRgba::from(fallback_color) * 0.35,
-                perceptual_roughness: 0.75,
-                metallic: 0.1,
-                double_sided: true,
-                ..default()
-            });
-            (mesh, material, false)
+) -> ShapeRenderAsset {
+    load_shape_render_asset_from_path(
+        shape_path,
+        route_dir,
+        None,
+        meshes,
+        images,
+        materials,
+        texture_cache,
+        fallback_color,
+    )
+    .unwrap_or_else(|| {
+        let mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+        let material = materials.add(StandardMaterial {
+            base_color: COLOR_TRAIN_FALLBACK,
+            perceptual_roughness: 0.75,
+            metallic: 0.1,
+            ..default()
+        });
+        ShapeRenderAsset {
+            combined_mesh: mesh.clone(),
+            parts: vec![crate::shapes::ShapePartAsset {
+                prim_state_idx: -1,
+                mesh,
+                material,
+                has_texture: false,
+                is_transparent: false,
+            }],
+            has_texture: false,
         }
-        None => {
-            let material = materials.add(StandardMaterial {
-                base_color: COLOR_TRAIN_FALLBACK,
-                perceptual_roughness: 0.75,
-                metallic: 0.1,
-                ..default()
-            });
-            (meshes.add(Cuboid::new(1.0, 1.0, 1.0)), material, false)
-        }
-    }
+    })
 }
 
 pub fn advance_replay_time(time: Res<Time>, mut replay: ResMut<ReplayState>) {

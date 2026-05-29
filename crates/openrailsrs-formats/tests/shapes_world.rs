@@ -20,8 +20,12 @@ fn parse_minimal_shape_collects_lods_and_prims() {
     assert_eq!(shape.normals.len(), 1, "expected 1 normal");
     assert_eq!(shape.prim_states.len(), 1);
     assert_eq!(shape.prim_states[0].name.as_deref(), Some("wagon_body"));
+    assert_eq!(shape.prim_states[0].flags, 0);
+    assert_eq!(shape.prim_states[0].shader_idx, -1);
     assert_eq!(shape.prim_states[0].texture_idx, 0);
+    assert_eq!(shape.prim_states[0].tex_indices, vec![0]);
     assert_eq!(shape.texture_filenames, vec!["wagon.ace", "trim.ace"]);
+    assert_eq!(shape.shader_names, vec!["TexDiff"]);
     assert_eq!(shape.matrices.len(), 1);
     assert_eq!(shape.matrices[0].name, "MAIN");
 
@@ -125,6 +129,7 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
     assert_eq!(shape.uvs.len(), 2214);
     assert_eq!(shape.texture_filenames.len(), 8);
     assert_eq!(shape.prim_states.len(), 30);
+    assert!(!shape.shader_names.is_empty());
     assert_eq!(shape.matrices.len(), 12);
     assert_eq!(shape.lod_controls.len(), 1);
     assert_eq!(shape.lod_controls[0].distance_levels.len(), 1);
@@ -144,8 +149,46 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
         .flat_map(|sub_object| &sub_object.primitives)
         .map(|primitive| primitive.triangle_count())
         .sum();
+    let vertex_count: usize = shape.lod_controls[0].distance_levels[0]
+        .sub_objects
+        .iter()
+        .map(|sub_object| sub_object.vertices.len())
+        .sum();
     assert_eq!(primitive_count, 30);
     assert_eq!(triangle_count, 4869);
+    assert_eq!(vertex_count, 14232);
+    assert!(
+        shape
+            .prim_states
+            .iter()
+            .any(|ps| !ps.tex_indices.is_empty())
+    );
+    for prim_state in &shape.prim_states {
+        if prim_state.texture_idx >= 0 {
+            assert!(
+                (prim_state.texture_idx as usize) < shape.texture_filenames.len(),
+                "prim_state texture index must point into texture_filenames"
+            );
+        }
+        for texture_idx in &prim_state.tex_indices {
+            assert!(
+                *texture_idx >= 0 && (*texture_idx as usize) < shape.texture_filenames.len(),
+                "tex_idxs entries must point into texture_filenames"
+            );
+        }
+    }
+
+    for sub_object in &shape.lod_controls[0].distance_levels[0].sub_objects {
+        assert_eq!(sub_object.vertices.len(), sub_object.vertex_count);
+        assert!(
+            sub_object
+                .primitives
+                .iter()
+                .flat_map(|primitive| &primitive.vertex_indices)
+                .any(|vertex_idx| (*vertex_idx as usize) < sub_object.vertices.len()),
+            "sub_object should contain renderable vertex indices"
+        );
+    }
 }
 
 #[test]
@@ -283,6 +326,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             "{}",
             expected.file_name
         );
+        assert!(!shape.shader_names.is_empty(), "{}", expected.file_name);
         assert_eq!(
             shape.matrices.len(),
             expected.matrices,
@@ -312,12 +356,72 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             .flat_map(|sub_object| &sub_object.primitives)
             .map(|primitive| primitive.triangle_count())
             .sum();
+        let vertex_count: usize = shape
+            .lod_controls
+            .iter()
+            .flat_map(|lod| &lod.distance_levels)
+            .flat_map(|level| &level.sub_objects)
+            .map(|sub_object| sub_object.vertices.len())
+            .sum();
         assert_eq!(
             primitive_count, expected.primitives,
             "{}",
             expected.file_name
         );
         assert_eq!(triangle_count, expected.triangles, "{}", expected.file_name);
+        assert!(
+            vertex_count > 0,
+            "expected parsed vertex table for {}",
+            expected.file_name
+        );
+        assert!(
+            shape
+                .prim_states
+                .iter()
+                .any(|ps| !ps.tex_indices.is_empty()),
+            "expected texture indices for {}",
+            expected.file_name
+        );
+
+        for prim_state in &shape.prim_states {
+            if prim_state.texture_idx >= 0 {
+                assert!(
+                    (prim_state.texture_idx as usize) < shape.texture_filenames.len(),
+                    "{}",
+                    expected.file_name
+                );
+            }
+            for texture_idx in &prim_state.tex_indices {
+                assert!(
+                    *texture_idx >= 0 && (*texture_idx as usize) < shape.texture_filenames.len(),
+                    "{}",
+                    expected.file_name
+                );
+            }
+        }
+
+        for sub_object in shape
+            .lod_controls
+            .iter()
+            .flat_map(|lod| &lod.distance_levels)
+            .flat_map(|level| &level.sub_objects)
+        {
+            assert_eq!(
+                sub_object.vertices.len(),
+                sub_object.vertex_count,
+                "{}",
+                expected.file_name
+            );
+            assert!(
+                sub_object
+                    .primitives
+                    .iter()
+                    .flat_map(|primitive| &primitive.vertex_indices)
+                    .any(|vertex_idx| (*vertex_idx as usize) < sub_object.vertices.len()),
+                "{}",
+                expected.file_name
+            );
+        }
     }
 }
 

@@ -26,7 +26,7 @@ pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
 pub use shape::{
     DistanceLevel, LodControl, Matrix43, NamedMatrix, PrimState, Primitive, ShapeFile, SubObject,
-    Vec2, Vec3,
+    Vec2, Vec3, Vertex,
 };
 pub use terrain::{
     ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, TerrainPatch, TerrainPatchSet,

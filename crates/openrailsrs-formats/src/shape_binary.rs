@@ -287,13 +287,13 @@ impl<'a> BinaryReader<'a> {
                     }
                     Err(_) => {
                         self.pos = saved;
-                        self.append_scalar(block_end, &mut out)?;
+                        self.append_scalar(token_id, block_end, &mut out)?;
                     }
                 }
             } else if self.try_read_string_in_block(block_end, &mut out)? {
                 // string appended
             } else if self.pos + 4 <= block_end {
-                self.append_scalar(block_end, &mut out)?;
+                self.append_scalar(token_id, block_end, &mut out)?;
             } else {
                 break;
             }
@@ -304,14 +304,24 @@ impl<'a> BinaryReader<'a> {
         Ok(out)
     }
 
-    fn append_scalar(&mut self, block_end: usize, out: &mut String) -> Result<(), FormatError> {
+    fn append_scalar(
+        &mut self,
+        token_id: i32,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
         if self.pos + 4 > block_end {
             self.pos = block_end;
             return Ok(());
         }
-        let f = self.read_f32()?;
         out.push(' ');
-        out.push_str(&format_float(f as f64));
+        if token_scalars_are_i32(token_id) {
+            let n = self.read_u32()? as i32;
+            out.push_str(&n.to_string());
+        } else {
+            let f = self.read_f32()?;
+            out.push_str(&format_float(f as f64));
+        }
         Ok(())
     }
 
@@ -361,6 +371,20 @@ fn format_float(v: f64) -> String {
     } else {
         format!("{v:.6}")
     }
+}
+
+fn token_scalars_are_i32(id: i32) -> bool {
+    matches!(
+        id,
+        48  // vertex: flags, point index, normal index, colors
+            | 49 // vertex_uvs
+            | 54 // prim_state: flags, shader index, vertex state, etc.
+            | 56 // prim_state_idx
+            | 61 // tex_idxs
+            | 63 // vertex_idxs
+            | 64 // flags
+            | 70 // shape_header
+    )
 }
 
 fn token_name(id: i32) -> &'static str {

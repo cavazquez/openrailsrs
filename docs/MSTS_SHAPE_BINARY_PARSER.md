@@ -56,17 +56,26 @@ Fuentes candidatas:
 El estado actual parsea binarios reales comprimidos hasta obtener buffers, texturas, matrices, LODs, primitivas y triangulos. Aun asi, el camino interno sigue siendo `binario -> S-expression sintetica -> ShapeFile`, con heuristicas. Faltantes principales:
 
 1. Reemplazar el dumper generico por un lector estructural estilo `SBR`.
-2. Modelar `Vertex` completo: `ipoint`, `inormal`, `Color1`, `Color2`, `vertex_uvs`.
-3. Corregir el armado de malla: `vertex_idxs` indexa la tabla de `vertices` del `sub_object`, no directamente `shape.points`.
-4. Exponer `vertex_sets` y `geometry_info`, aunque sea de forma minima, para material/LOD/rendering correcto.
-5. Completar `prim_state`: flags, shader index, `tex_idxs`, `ZBias`, `ivtx_state`, alpha test, light config, z-buffer mode.
-6. Parsear `vtx_states`, `textures`, `texture_filter_names`, `shader_names` y `light_model_cfgs`.
-7. Parsear `uv_ops` o degradarlos de forma explicita cuando no afecten el primer UV set.
-8. Parsear animaciones: `animations`, `animation`, `anim_nodes`, `controllers`, `linear_pos`, `linear_key`, `tcb_rot`, `tcb_key`, `slerp_rot`.
-9. Completar la tabla `TokenID` para todos los tokens de shape usados por Open Rails, no solo los actuales.
-10. Mejorar errores: incluir token, offset absoluto, parent block y bytes restantes.
-11. Agregar soporte de fixtures binarios por bloque para tests chicos y deterministas.
-12. Evaluar si conviene mantener la conversion a AST para compatibilidad o migrar `ShapeFile::from_path` a un parser binario tipado directo.
+2. Completar `Vertex` con `Color1`, `Color2` y flags. Ya se modelan `ipoint`, `inormal` y `vertex_uvs`.
+3. Exponer `vertex_sets` y `geometry_info`, aunque sea de forma minima, para material/LOD/rendering correcto.
+4. Completar `prim_state`: alpha test, light config, z-buffer mode y validacion fuerte de campos binarios tipados. Ya se modelan `flags`, `shader_idx`, `tex_idxs`, `ZBias` e `ivtx_state` cuando aparecen en la forma parseada.
+5. Parsear `vtx_states`, `textures`, `texture_filter_names` y `light_model_cfgs`. Ya se exponen `shader_names`.
+6. Parsear `uv_ops` o degradarlos de forma explicita cuando no afecten el primer UV set.
+7. Parsear animaciones: `animations`, `animation`, `anim_nodes`, `controllers`, `linear_pos`, `linear_key`, `tcb_rot`, `tcb_key`, `slerp_rot`.
+8. Completar la tabla `TokenID` para todos los tokens de shape usados por Open Rails, no solo los actuales.
+9. Mejorar errores: incluir token, offset absoluto, parent block y bytes restantes.
+10. Agregar soporte de fixtures binarios por bloque para tests chicos y deterministas.
+11. Evaluar si conviene mantener la conversion a AST para compatibilidad o migrar `ShapeFile::from_path` a un parser binario tipado directo.
+
+Ya resuelto:
+
+- `vertex_idxs` ahora se interpreta como indice a la tabla `vertices` del `sub_object`.
+- El viewer resuelve cada vertex a `point`, `normal` y primer UV antes de construir el mesh Bevy.
+- Hay tests sobre fixtures binarios reales para validar tablas de vertices y conteo final de triangulos renderizables.
+- `PrimState` conserva `tex_idxs`, `shader_idx`, `flags`, `ivtx_state` y `ZBias`; `ShapeFile` expone `shader_names`.
+- El viewer puede construir partes de mesh agrupadas por `prim_state_idx`, con textura resuelta por parte.
+- `train.rs`, `live.rs` y `world.rs` instancian esas partes como children con su material/textura propia.
+- Los materiales usan `AlphaMode::Blend` cuando el `.ace` tiene alpha real o el nombre de textura sugiere vidrio/transparencia.
 
 ## Plan De Implementacion
 
@@ -83,13 +92,18 @@ El estado actual parsea binarios reales comprimidos hasta obtener buffers, textu
    - Mantener fallback textual para ASCII.
 
 4. **Completar geometria real**
-   - Agregar `Vertex` a `ShapeFile` o a `SubObject`.
-   - Cambiar `Primitive.vertex_indices` para representar indices de vertices, y resolverlos a punto/normal/UV en el viewer.
-   - Agregar tests de malla sobre un fixture binario real: vertices Bevy > 0, UVs validos, textura primaria esperada.
+   - Hecho: `SubObject` conserva `vertices` con `point_idx`, `normal_idx` y `uv_indices`.
+   - Hecho: `Primitive.vertex_indices` representa indices de vertices y el viewer los resuelve a punto/normal/UV.
+   - Hecho: tests de malla sobre fixture binario real con conteo de vertices Bevy.
+   - Pendiente: guardar flags/colores del vertex cuando el renderer los necesite.
 
 5. **Materiales y transparencia**
-   - Mapear `prim_state.texture_idx` desde `tex_idxs[0]`.
-   - Guardar flags de alpha/z-buffer para que el viewer pueda crear materiales transparentes cuando corresponda.
+   - Hecho: mapear `prim_state.texture_idx` desde `tex_idxs[0]`.
+   - Hecho: exponer `shader_names` y conservar los `tex_idxs` completos por `PrimState`.
+   - Hecho: agregar API de viewer para `LoadedShapePart` / mesh por `prim_state_idx`.
+   - Hecho: conectar los spawners de escena para instanciar cada parte con su material.
+   - Hecho: detectar alpha en `ACE.mip0` y aplicar `AlphaMode::Blend` de forma conservadora.
+   - Pendiente: mapear flags reales de alpha/z-buffer desde `prim_state` / `vtx_state` / `light_model_cfgs`.
 
 6. **Animaciones**
    - Primero parsearlas y conservarlas sin render.

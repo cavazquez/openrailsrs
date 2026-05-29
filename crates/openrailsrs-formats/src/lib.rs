@@ -32,7 +32,7 @@ pub use typed::{
     SignalAspectKind, SoundRegionOverride, SubObject, TerrainFile, TerrainMeshData, TerrainPatch,
     TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
     TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind, TrafficServiceDef, Vec2, Vec3,
-    WagonFile, WorldFile, WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex,
+    Vertex, WagonFile, WorldFile, WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex,
     build_tile_mesh_data, parse_orts_brake_shoe, parse_orts_friction_fields, patch_affine_uv,
     read_f_raw, read_y_raw, resolve_brake_shoe_curve,
 };

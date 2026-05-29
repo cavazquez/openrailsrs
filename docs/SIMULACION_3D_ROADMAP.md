@@ -509,9 +509,9 @@ Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente
 
 #### Shapes binarios (prioridad #2, esfuerzo medio)
 
-**Estado:** el parser ya lee shapes `.s` binarios comprimidos (`SIMISA@F` + `JINX0s1b`) con la tabla de tokens alineada a Open Rails y fixtures reales Chiltern. Extrae buffers, texturas, matrices, `prim_states`, LODs, primitivas y triángulos.
+**Estado:** el parser ya lee shapes `.s` binarios comprimidos (`SIMISA@F` + `JINX0s1b`) con la tabla de tokens alineada a Open Rails y fixtures reales Chiltern. Extrae buffers, texturas, shaders, matrices, `prim_states`, vertices reales, LODs, primitivas y triángulos.
 
-**Brecha restante:** el camino interno todavía convierte binario a S-expression sintética antes del parser tipado. Para paridad más fuerte con Open Rails conviene reemplazarlo por un `BinaryBlockReader` estructural y modelar `Vertex` completo; hoy `vertex_idxs` se conserva, pero el viewer todavía debe resolverlo contra `vertices` antes de indexar `points`/`normals`/`uvs`.
+**Brecha restante:** el camino interno todavía convierte binario a S-expression sintética antes del parser tipado. Para paridad más fuerte con Open Rails conviene reemplazarlo por un `BinaryBlockReader` estructural, completar flags/colores de `Vertex` y mapear flags reales de material para alpha/z-buffer.
 
 **Plan detallado:** ver `docs/MSTS_SHAPE_BINARY_PARSER.md`.
 

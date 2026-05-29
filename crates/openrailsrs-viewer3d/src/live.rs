@@ -1,5 +1,8 @@
 //! Live simulation bridge: `openrailsrs-sim` stepped each frame, train pose in 3D.
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 use openrailsrs_audio::{AudioCmd, AudioEngine};
 use openrailsrs_scenarios::sound_regions::RegionTransition;
@@ -9,7 +12,7 @@ use openrailsrs_sim::LiveDriveSession;
 use crate::camera::{CHASE_PITCH, CameraFollowMode, CameraMode, LIVE_CHASE_DISTANCE, OrbitState};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, load_ace_image, load_shape_from_path, resolve_shape_path_in_dirs,
+    RouteAssets, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
     vehicle_shape_local_transform,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
@@ -226,6 +229,7 @@ pub fn spawn_live_train(
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let color = TRAIN_COLORS[0];
+    let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
 
     let locator = meshes.add(Sphere::new(6.0));
     let locator_mat = materials.add(StandardMaterial {
@@ -251,31 +255,18 @@ pub fn spawn_live_train(
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle.shape_file.as_deref() {
                     if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dirs, shape_name) {
-                        if let Some(loaded) = load_shape_from_path(&shape_path, None) {
-                            let mesh = meshes.add(loaded.mesh);
-                            let material = if let Some(tex_name) = loaded.texture_file {
-                                if let Some(image) = load_ace_image(&assets.route_dir, &tex_name) {
-                                    let handle = images.add(image);
-                                    materials.add(StandardMaterial {
-                                        base_color: Color::WHITE,
-                                        base_color_texture: Some(handle),
-                                        double_sided: true,
-                                        ..default()
-                                    })
-                                } else {
-                                    materials.add(StandardMaterial {
-                                        base_color: color,
-                                        ..default()
-                                    })
-                                }
-                            } else {
-                                materials.add(StandardMaterial {
-                                    base_color: color,
-                                    ..default()
-                                })
-                            };
+                        if let Some(asset) = load_shape_render_asset_from_path(
+                            &shape_path,
+                            &assets.route_dir,
+                            None,
+                            &mut meshes,
+                            &mut images,
+                            &mut materials,
+                            &mut texture_cache,
+                            color,
+                        ) {
                             let local = meshes
-                                .get(&mesh)
+                                .get(&asset.combined_mesh)
                                 .map(|m| {
                                     vehicle_shape_local_transform(
                                         m,
@@ -290,12 +281,25 @@ pub fn spawn_live_train(
                                         vehicle.length_m,
                                     )
                                 });
-                            train.spawn((
-                                Mesh3d(mesh),
-                                MeshMaterial3d(material),
-                                local,
-                                Name::new(format!("train:live:car:{vi}")),
-                            ));
+                            train
+                                .spawn((
+                                    local,
+                                    Visibility::default(),
+                                    Name::new(format!("train:live:car:{vi}")),
+                                ))
+                                .with_children(|car| {
+                                    for (pi, part) in asset.parts.iter().enumerate() {
+                                        car.spawn((
+                                            Mesh3d(part.mesh.clone()),
+                                            MeshMaterial3d(part.material.clone()),
+                                            Transform::default(),
+                                            Name::new(format!(
+                                                "train:live:car:{vi}:part:{pi}:{}",
+                                                part.prim_state_idx
+                                            )),
+                                        ));
+                                    }
+                                });
                             continue;
                         }
                     }

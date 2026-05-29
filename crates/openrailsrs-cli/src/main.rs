@@ -1085,6 +1085,7 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             "prim_states": prim_state_count,
             "textures": texture_count,
             "texture_filenames": shape.texture_filenames,
+            "shader_names": shape.shader_names,
             "matrices": matrix_count,
         });
         println!("{}", serde_json::to_string_pretty(&value)?);
@@ -1098,6 +1099,12 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
         println!("  prim_states        : {prim_state_count}");
         println!("  matrices           : {matrix_count}");
         println!("  textures           : {texture_count}");
+        if !shape.shader_names.is_empty() {
+            println!("  shaders            : {}", shape.shader_names.len());
+            for (i, name) in shape.shader_names.iter().enumerate() {
+                println!("    shader[{i}] {name}");
+            }
+        }
         for (i, name) in shape.texture_filenames.iter().enumerate() {
             println!("    [{i}] {name}");
         }

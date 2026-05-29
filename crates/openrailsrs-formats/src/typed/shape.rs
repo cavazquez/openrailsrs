@@ -76,8 +76,18 @@ pub struct Vec2 {
 pub struct PrimState {
     /// Optional human-readable name (`prim_state "name" ...`).
     pub name: Option<String>,
+    /// Raw `prim_state` flags when present.
+    pub flags: i32,
+    /// Index into [`ShapeFile::shader_names`] (-1 = unknown).
+    pub shader_idx: i32,
     /// Index into the `texture_filenames` list (-1 = none).
     pub texture_idx: i32,
+    /// All texture indices declared by `tex_idxs`, excluding the leading count.
+    pub tex_indices: Vec<i32>,
+    /// Index into `vtx_states` when present (-1 = unknown).
+    pub vertex_state_idx: i32,
+    /// Optional z-bias value carried by later MSTS/Open Rails prim_state layouts.
+    pub z_bias: Option<f64>,
 }
 
 /// A single triangle list block (`indexed_trilist`).
@@ -98,11 +108,27 @@ impl Primitive {
     }
 }
 
+/// A MSTS `vertex` entry.
+///
+/// Primitive `vertex_idxs` refer to this table first; each vertex then points
+/// into the global point, normal and UV arrays.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Vertex {
+    /// Index into [`ShapeFile::points`].
+    pub point_idx: i32,
+    /// Index into [`ShapeFile::normals`].
+    pub normal_idx: i32,
+    /// Indices into [`ShapeFile::uvs`]. MSTS may carry more than one UV set.
+    pub uv_indices: Vec<i32>,
+}
+
 /// A `sub_object` inside a `distance_level`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SubObject {
     /// Vertex count declared by `vertices <count>`.
     pub vertex_count: usize,
+    /// Vertex table addressed by [`Primitive::vertex_indices`].
+    pub vertices: Vec<Vertex>,
     pub primitives: Vec<Primitive>,
 }
 
@@ -138,6 +164,8 @@ pub struct NamedMatrix {
 pub struct ShapeFile {
     /// Texture filenames declared via `texture_filenames`.
     pub texture_filenames: Vec<String>,
+    /// Shader names declared via `shader_names`.
+    pub shader_names: Vec<String>,
     pub points: Vec<Vec3>,
     pub uvs: Vec<Vec2>,
     pub normals: Vec<Vec3>,
@@ -150,6 +178,7 @@ impl ShapeFile {
     /// Parse from a pre-built AST.
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let texture_filenames = collect_texture_filenames(ast);
+        let shader_names = collect_shader_names(ast);
         let points = collect_points(ast);
         let uvs = collect_uv_points(ast);
         let normals = collect_normals(ast);
@@ -159,6 +188,7 @@ impl ShapeFile {
 
         Ok(Self {
             texture_filenames,
+            shader_names,
             points,
             uvs,
             normals,
@@ -249,6 +279,27 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     out
 }
 
+fn collect_shader_names(ast: &Ast) -> Vec<String> {
+    let mut out = Vec::new();
+    walk_named_list(ast, "shader_names", &mut |items| {
+        for item in items.iter().skip(1) {
+            match item {
+                Ast::Atom(Atom::String(s)) => out.push(s.clone()),
+                Ast::List(sub) if matches_head(sub, "named_shader") => {
+                    if let Some(name) = sub.iter().skip(1).find_map(|a| match a {
+                        Ast::Atom(at) => atom_to_string(at),
+                        _ => None,
+                    }) {
+                        out.push(name);
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
+    out
+}
+
 fn collect_points(ast: &Ast) -> Vec<Vec3> {
     let mut out = Vec::new();
     walk_named_list(ast, "points", &mut |items| {
@@ -314,38 +365,72 @@ fn collect_prim_states(ast: &Ast) -> Vec<PrimState> {
 fn parse_prim_state(items: &[Ast]) -> PrimState {
     // Layout (lenient): ( prim_state ["name"] <flags> <shader_idx> ( tex_idxs <count> <i> ... ) ... )
     let mut name: Option<String> = None;
+    let mut flags: i32 = 0;
+    let mut shader_idx: i32 = -1;
     let mut texture_idx: i32 = -1;
+    let mut tex_indices = Vec::new();
+    let mut vertex_state_idx: i32 = -1;
+    let mut z_bias: Option<f64> = None;
+    let mut top_level_nums = Vec::new();
 
     for item in items.iter().skip(1) {
         match item {
             Ast::Atom(Atom::String(s)) if name.is_none() => name = Some(s.clone()),
-            Ast::List(sub) if matches_head(sub, "tex_idxs") => {
-                // First numeric atom after the count is the texture index.
-                if let Some(first) = sub.iter().skip(1).find_map(|a| match a {
-                    Ast::Atom(at) => atom_to_number(at),
-                    _ => None,
-                }) {
-                    // Skip the count (first numeric) and pick the next one if present.
-                    let nums: Vec<f64> = sub
-                        .iter()
-                        .skip(1)
-                        .filter_map(|a| match a {
-                            Ast::Atom(at) => atom_to_number(at),
-                            _ => None,
-                        })
-                        .collect();
-                    texture_idx = if nums.len() >= 2 {
-                        nums[1] as i32
-                    } else {
-                        first as i32
-                    };
+            Ast::Atom(at) => {
+                if let Some(n) = atom_to_number(at) {
+                    top_level_nums.push(n);
                 }
+            }
+            Ast::List(sub) if matches_head(sub, "tex_idxs") => {
+                tex_indices = parse_counted_i32_list(sub);
+                texture_idx = tex_indices.first().copied().unwrap_or(-1);
+            }
+            Ast::List(sub) if matches_head(sub, "flags") => {
+                if let Some(n) = first_number_after_head(sub) {
+                    flags = n as i32;
+                }
+            }
+            Ast::List(sub) if matches_head(sub, "shader_idx") => {
+                if let Some(n) = first_number_after_head(sub) {
+                    shader_idx = n as i32;
+                }
+            }
+            Ast::List(sub)
+                if matches_head(sub, "ivtx_state") || matches_head(sub, "vtx_state_idx") =>
+            {
+                if let Some(n) = first_number_after_head(sub) {
+                    vertex_state_idx = n as i32;
+                }
+            }
+            Ast::List(sub) if matches_head(sub, "zbias") || matches_head(sub, "z_bias") => {
+                z_bias = first_number_after_head(sub);
             }
             _ => {}
         }
     }
 
-    PrimState { name, texture_idx }
+    if let Some(n) = top_level_nums.first() {
+        flags = *n as i32;
+    }
+    if let Some(n) = top_level_nums.get(1) {
+        shader_idx = *n as i32;
+    }
+    if let Some(n) = top_level_nums.get(2) {
+        vertex_state_idx = *n as i32;
+    }
+    if z_bias.is_none() {
+        z_bias = top_level_nums.get(3).copied();
+    }
+
+    PrimState {
+        name,
+        flags,
+        shader_idx,
+        texture_idx,
+        tex_indices,
+        vertex_state_idx,
+        z_bias,
+    }
 }
 
 fn collect_lod_controls(ast: &Ast) -> Vec<LodControl> {
@@ -409,6 +494,7 @@ fn parse_distance_level(items: &[Ast]) -> DistanceLevel {
 
 fn parse_sub_object(items: &[Ast]) -> SubObject {
     let mut vertex_count: usize = 0;
+    let mut vertices = Vec::new();
     let mut primitives = Vec::new();
 
     for item in items.iter().skip(1) {
@@ -417,6 +503,14 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
             if let Some(Ast::Atom(at)) = sub.get(1) {
                 if let Some(n) = atom_to_number(at) {
                     vertex_count = n as usize;
+                }
+            }
+            for child in sub.iter().skip(2) {
+                let Ast::List(vertex) = child else { continue };
+                if matches_head(vertex, "vertex") {
+                    if let Some(parsed) = parse_vertex(vertex) {
+                        vertices.push(parsed);
+                    }
                 }
             }
         } else if matches_head(sub, "primitives") {
@@ -463,8 +557,42 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
 
     SubObject {
         vertex_count,
+        vertices,
         primitives,
     }
+}
+
+fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
+    let nums: Vec<i32> = items
+        .iter()
+        .skip(1)
+        .filter_map(|a| match a {
+            Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
+            _ => None,
+        })
+        .collect();
+    if nums.len() < 3 {
+        return None;
+    }
+
+    let mut uv_indices = Vec::new();
+    for item in items.iter().skip(1) {
+        let Ast::List(sub) = item else { continue };
+        if matches_head(sub, "vertex_uvs") {
+            uv_indices.extend(sub.iter().skip(2).filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
+                _ => None,
+            }));
+            break;
+        }
+    }
+
+    Some(Vertex {
+        // Layout: flags, point index, normal index, color1, color2, vertex_uvs.
+        point_idx: nums[1],
+        normal_idx: nums[2],
+        uv_indices,
+    })
 }
 
 fn collect_matrices(ast: &Ast) -> Vec<NamedMatrix> {
@@ -552,6 +680,24 @@ fn parse_vec2(items: &[Ast]) -> Option<Vec2> {
         u: nums[0],
         v: nums[1],
     })
+}
+
+fn first_number_after_head(items: &[Ast]) -> Option<f64> {
+    items.iter().skip(1).find_map(|a| match a {
+        Ast::Atom(at) => atom_to_number(at),
+        _ => None,
+    })
+}
+
+fn parse_counted_i32_list(items: &[Ast]) -> Vec<i32> {
+    items
+        .iter()
+        .skip(2)
+        .filter_map(|a| match a {
+            Ast::Atom(at) => atom_to_number(at).map(|n| n as i32),
+            _ => None,
+        })
+        .collect()
 }
 
 fn find_first_named_number(items: &[Ast], name: &str) -> Option<f64> {
