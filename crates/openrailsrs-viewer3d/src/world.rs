@@ -11,7 +11,7 @@ use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
     shape_search_dirs,
 };
-use crate::terrain::{TerrainElevation, scenery_ground_y};
+use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 
 /// MSTS / Open Rails world tile size (metres).
@@ -121,7 +121,9 @@ impl RouteFocus {
         }
     }
 
-    /// Scenery / `.w` world positions (`Position.y` is tile-local, not terrain MSL).
+    /// General world-space position to Bevy render space using the scenery bbox centre.
+    /// For Y this subtracts `center.y`; prefer [`Self::to_render_surface`] (uses
+    /// `height_origin`) for consistent height with terrain tiles.
     pub fn to_render(&self, world: Vec3) -> Vec3 {
         Vec3::new(
             world.x - self.center.x,
@@ -429,13 +431,11 @@ pub fn spawn_world_boxes(
     focus: Res<RouteFocus>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
-    terrain: Option<Res<TerrainElevation>>,
 ) {
     if world.is_empty() {
         return;
     }
 
-    let terrain_ref = terrain.as_deref();
     let shape_dirs: Vec<PathBuf> = shape_search_dirs(&assets.route_dir);
     let shape_dir_refs: Vec<&Path> = shape_dirs.iter().map(|p| p.as_path()).collect();
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
@@ -518,16 +518,14 @@ pub fn spawn_world_boxes(
                     shape_texture_count += 1;
                 }
 
+                // Use the .w file Y directly — it is already the object's world-space
+                // height (≈ MSL). Open Rails does the same: it uses Location.Location.Y
+                // straight from the .w file without any terrain lookup. Sampling terrain
+                // and ignoring Position.Y caused objects to appear at the wrong elevation
+                // (floating or sunken) whenever the terrain height differed from the .w Y.
                 let render_pos = focus.to_render_surface(Vec3::new(
                     obj.position.x,
-                    scenery_ground_y(
-                        terrain_ref,
-                        obj.position.x,
-                        obj.position.z,
-                        &scene,
-                        obj.position.y,
-                        &focus,
-                    ),
+                    obj.position.y,
                     obj.position.z,
                 ));
                 commands
@@ -559,17 +557,11 @@ pub fn spawn_world_boxes(
         }
 
         let size = box_size_for_kind(obj.kind, base);
-        let ground_y = scenery_ground_y(
-            terrain_ref,
-            obj.position.x,
-            obj.position.z,
-            &scene,
-            obj.position.y,
-            &focus,
-        );
+        // Position.Y from the .w file is the object's base height in world space (≈ MSL).
+        // Add half the placeholder-box height to get its visual centre.
         let translation = focus.to_render_surface(Vec3::new(
             obj.position.x,
-            ground_y + size.y * 0.5,
+            obj.position.y + size.y * 0.5,
             obj.position.z,
         ));
         let tf = Transform {
