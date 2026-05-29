@@ -84,6 +84,12 @@ pub struct AceFile {
     pub mips_count: u8,
     /// Decoded mip 0, RGBA8 byte order, length = `width * height * 4`.
     pub mip0: Vec<u8>,
+    /// True if the alpha channel originated from a 1-bit MASK channel (kind=2),
+    /// meaning pixels are binary (0 or 255 only). Use `AlphaMode::Mask` not
+    /// `AlphaMode::Blend` for correct cutout rendering without depth-sort artefacts.
+    /// False when alpha comes from a full 8-bit ALPHA channel (kind=6) or when
+    /// there is no alpha at all.
+    pub has_mask_channel: bool,
 }
 
 #[derive(Debug, Error)]
@@ -252,6 +258,8 @@ fn parse_or_raw_data(
         format,
         mips_count: image_count as u8,
         mip0,
+        // DXT raw-data path has no explicit alpha/mask channels.
+        has_mask_channel: false,
     })
 }
 
@@ -354,12 +362,16 @@ fn parse_or_structured(
         }
     }
 
+    let has_mask_channel = channels.iter().any(|(_, k)| *k == CH_MASK)
+        && !channels.iter().any(|(_, k)| *k == CH_ALPHA);
+
     Ok(AceFile {
         width,
         height,
         format: AceFormat::Rgba8,
         mips_count: image_count as u8,
         mip0,
+        has_mask_channel,
     })
 }
 
@@ -399,6 +411,8 @@ fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
         format,
         mips_count: mip_count.max(1),
         mip0,
+        // Synthetic test format has no mask channel metadata.
+        has_mask_channel: false,
     })
 }
 

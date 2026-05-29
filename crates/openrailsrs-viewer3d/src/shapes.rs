@@ -542,8 +542,25 @@ fn material_for_shape_texture(
                     );
                 }
                 Ok(ace) => {
-                    let is_transparent =
+                    // Determine the correct alpha mode:
+                    //   • Opaque  – no alpha channel at all
+                    //   • Mask    – 1-bit ACE mask channel (binary: 0 or 0xFF).
+                    //               AlphaMode::Blend would cause depth-sort artefacts
+                    //               making the surface look see-through.
+                    //   • Blend   – genuine 8-bit alpha (gradients, real semi-transparency)
+                    //               or texture names that imply transparency (glass, window…).
+                    let has_any_alpha =
                         ace_has_alpha(&ace) || texture_name_suggests_transparency(tex_name);
+                    let alpha_mode = if !has_any_alpha {
+                        AlphaMode::Opaque
+                    } else if ace.has_mask_channel && !texture_name_suggests_transparency(tex_name)
+                    {
+                        // Binary cutout — no depth sorting needed.
+                        AlphaMode::Mask(0.5)
+                    } else {
+                        AlphaMode::Blend
+                    };
+                    let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
                     let image = ace_to_image(&ace);
                     let handle = texture_cache
                         .entry(tex_path)
@@ -555,11 +572,7 @@ fn material_for_shape_texture(
                         perceptual_roughness: 0.85,
                         metallic: 0.05,
                         double_sided: true,
-                        alpha_mode: if is_transparent {
-                            AlphaMode::Blend
-                        } else {
-                            AlphaMode::Opaque
-                        },
+                        alpha_mode,
                         ..default()
                     });
                     return (material, true, is_transparent);
