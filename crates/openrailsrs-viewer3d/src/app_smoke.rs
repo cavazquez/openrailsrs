@@ -80,7 +80,7 @@ mod tests {
             }
 
             let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
-            assert!(orbit.distance >= 80.0);
+            assert!(orbit.distance >= crate::camera::FOLLOW_MIN_DISTANCE);
             assert_eq!(world.query::<&TrainMarker>().iter(world).count(), 1);
         });
     }

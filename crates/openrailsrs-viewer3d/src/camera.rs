@@ -34,7 +34,7 @@ const ORBIT_KEY_PAN_SPEED: f32 = 0.85;
 const ORBIT_MIN_DISTANCE: f32 = 1.0;
 
 /// Default max distance before a route-specific limit is applied at startup.
-const ORBIT_DEFAULT_MAX_DISTANCE: f32 = 500.0;
+const ORBIT_DEFAULT_MAX_DISTANCE: f32 = 8_000.0;
 
 /// Upper cap for orbit zoom-out on very large imported routes (m).
 const ORBIT_ABSOLUTE_MAX_DISTANCE: f32 = 500_000.0;
@@ -67,7 +67,7 @@ const FOLLOW_LERP_SPEED: f32 = 8.0;
 pub(crate) const CHASE_PITCH: f32 = 0.5;
 
 /// Minimum orbit distance while following (avoids clipping into the marker).
-const FOLLOW_MIN_DISTANCE: f32 = 80.0;
+pub(crate) const FOLLOW_MIN_DISTANCE: f32 = 5.0;
 
 /// Target orbit distance for chase follow in live mode (m).
 pub const LIVE_CHASE_DISTANCE: f32 = 120.0;
@@ -620,7 +620,6 @@ pub fn orbit_camera_system(
     time: Res<Time>,
     mode: Res<CameraMode>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
-    limit: Res<OrbitDistanceLimit>,
     keys: Res<ButtonInput<KeyCode>>,
     mut follow: ResMut<CameraFollowMode>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
@@ -683,8 +682,16 @@ pub fn orbit_camera_system(
     }
 
     if scroll != 0.0 {
-        orbit.distance =
-            clamp_distance_to_limit(orbit.distance * (1.0 - scroll * ORBIT_ZOOM_STEP), limit.max);
+        // Scroll zoom uses the absolute cap so the user can always zoom further out.
+        // When actively following in ChaseCam the lerp would override the distance every
+        // frame, so switch to OrbitFollow (focus still tracks the train, distance is free).
+        if *follow == CameraFollowMode::ChaseCam {
+            *follow = CameraFollowMode::OrbitFollow;
+        }
+        orbit.distance = clamp_distance_to_limit(
+            orbit.distance * (1.0 - scroll * ORBIT_ZOOM_STEP),
+            ORBIT_ABSOLUTE_MAX_DISTANCE,
+        );
         changed = true;
     }
 
@@ -1029,7 +1036,7 @@ mod tests {
     #[test]
     fn apply_orbit_follow_clamps_min_distance() {
         let orbit = OrbitState {
-            distance: 10.0,
+            distance: 0.5, // well below FOLLOW_MIN_DISTANCE
             ..Default::default()
         };
         let train = TrainFollowPose {
