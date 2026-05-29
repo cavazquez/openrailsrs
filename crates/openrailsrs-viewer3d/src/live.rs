@@ -340,9 +340,11 @@ pub fn spawn_live_train(
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle.shape_file.as_deref() {
                     if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dirs, shape_name) {
+                        // Shape path is vehicle_root/SHAPES/file.s; textures are in
+                        // vehicle_root/TEXTURES/, so go two levels up: SHAPES/ → vehicle root.
                         let trainset_root = shape_path
-                            .parent()
-                            .and_then(|p| p.parent())
+                            .parent() // …/SHAPES/
+                            .and_then(|p| p.parent()) // …/<vehicle_root>/
                             .filter(|p| *p != assets.route_dir.as_path());
                         let tex_dirs: Vec<&Path> = std::iter::once(assets.route_dir.as_path())
                             .chain(trainset_root)

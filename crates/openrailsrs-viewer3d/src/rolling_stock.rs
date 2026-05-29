@@ -70,8 +70,12 @@ fn collect_trainset_shape_dirs(scenario_dir: &Path) -> Vec<PathBuf> {
     entries
         .flatten()
         .filter_map(|entry| {
-            let shapes = entry.path().join("SHAPES");
-            shapes.is_dir().then_some(shapes)
+            // Return the vehicle ROOT directory (not the SHAPES subdir) so that
+            // resolve_shape_path can correctly append "SHAPES/" to build the shape
+            // path, and the texture root (vehicle_root/TEXTURES/) is also correct.
+            let path = entry.path();
+            let shapes = path.join("SHAPES");
+            shapes.is_dir().then_some(path)
         })
         .collect()
 }
@@ -143,6 +147,33 @@ pub fn longitudinal_offsets_m(lengths: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trainset_shape_dirs_return_vehicle_roots_not_shapes_subdir() {
+        // collect_trainset_shape_dirs must return the vehicle ROOT directory (e.g.
+        // trains/RF_Blue_Pullman/) so that resolve_shape_path can correctly append
+        // "SHAPES/" to build the full path.  If it returned the SHAPES/ subdir,
+        // resolve_shape_path would produce "SHAPES/SHAPES/file.s" and find nothing.
+        let scenario_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let dirs = collect_trainset_shape_dirs(&scenario_dir);
+        // At least one dir should be found for the Blue Pullman.
+        assert!(!dirs.is_empty(), "expected at least one trainset dir");
+        for dir in &dirs {
+            // Each returned dir must NOT end in "SHAPES" — it must be a vehicle root.
+            let last = dir.file_name().unwrap_or_default().to_string_lossy();
+            assert_ne!(
+                last.to_uppercase(),
+                "SHAPES",
+                "returned SHAPES subdir instead of vehicle root: {dir:?}"
+            );
+            // The SHAPES subdir must exist under the returned vehicle root.
+            assert!(
+                dir.join("SHAPES").is_dir(),
+                "vehicle root has no SHAPES/ subdir: {dir:?}"
+            );
+        }
+    }
 
     #[test]
     fn offsets_chain_vehicles_nose_to_tail() {
