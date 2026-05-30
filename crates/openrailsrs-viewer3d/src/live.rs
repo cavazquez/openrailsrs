@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
@@ -22,6 +23,7 @@ use crate::shapes::{
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
 use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
+use crate::{log_step, viewer_log};
 
 /// When present, the viewer runs the physics sim in real time instead of CSV replay.
 #[derive(Resource)]
@@ -61,7 +63,7 @@ impl LiveDrive {
             LiveDriveSession::from_scenario(scenario_dir, scenario).map_err(|e| e.to_string())?;
         let audio = AudioEngine::try_start();
         if audio.is_none() {
-            eprintln!("openrailsrs-viewer3d: no audio device — live drive is silent");
+            viewer_log!("openrailsrs-viewer3d: no audio device — live drive is silent");
         }
         Ok(Self {
             session,
@@ -151,7 +153,7 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
     }
     if keys.just_pressed(KeyCode::KeyR) {
         if let Err(err) = live.reset() {
-            eprintln!("openrailsrs-viewer3d: live reset failed: {err}");
+            viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
         }
     }
     let throttle_up = keys.just_pressed(KeyCode::ArrowUp) || keys.just_pressed(KeyCode::PageUp);
@@ -261,6 +263,9 @@ pub fn spawn_live_train(
     terrain: Option<Res<TerrainElevation>>,
     live: Res<LiveDrive>,
 ) {
+    viewer_log!("openrailsrs-viewer3d: spawning live train");
+    let spawn_start = Instant::now();
+
     let terrain_ref = terrain.as_deref();
     let edge = live.session.current_edge_id().unwrap_or(
         scene
@@ -303,7 +308,8 @@ pub fn spawn_live_train(
             Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
             Name::new("train:live:fallback"),
         ));
-        eprintln!("openrailsrs-viewer3d: live mode — consist mesh missing, using cube");
+        viewer_log!("openrailsrs-viewer3d: live mode — consist mesh missing, using cube");
+        log_step("spawned live train (fallback cube)", spawn_start);
         return;
     }
 
@@ -419,7 +425,7 @@ pub fn spawn_live_train(
             }
         });
 
-    eprintln!(
+    viewer_log!(
         "openrailsrs-viewer3d: live drive — {} vehicle(s), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
         vehicles.len(),
         live.session.dt,
@@ -427,6 +433,7 @@ pub fn spawn_live_train(
         driver_cab.back_m,
         driver_cab.height_m,
     );
+    log_step("spawned live train", spawn_start);
 }
 
 #[cfg(test)]

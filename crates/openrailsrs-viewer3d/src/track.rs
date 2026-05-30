@@ -185,25 +185,102 @@ pub fn point_segment_distance_xz(px: f32, pz: f32, x0: f32, z0: f32, x1: f32, z1
 
 /// Minimum distance from a world XZ point to any edge in the track graph.
 pub fn min_distance_to_graph_xz(graph: &TrackGraph, x: f32, z: f32) -> f32 {
-    let mut min = f32::INFINITY;
-    for (_, edge) in graph.edges_iter() {
-        let Some(from) = graph.node(&edge.from.0) else {
-            continue;
-        };
-        let Some(to) = graph.node(&edge.to.0) else {
-            continue;
-        };
-        let d = point_segment_distance_xz(
-            x,
-            z,
-            from.x_m as f32,
-            from.y_m as f32,
-            to.x_m as f32,
-            to.y_m as f32,
-        );
-        min = min.min(d);
+    TrackSegmentIndex::from_graph(graph, Vec3::ZERO).min_distance_xz(x, z, f32::INFINITY)
+}
+
+const TRACK_SEGMENT_CELL_M: f32 = 256.0;
+
+#[derive(Clone, Copy, Debug)]
+struct TrackSegment {
+    x0: f32,
+    z0: f32,
+    x1: f32,
+    z1: f32,
+}
+
+/// Spatial index for track edges in world XZ (for forest clearance checks).
+#[derive(Clone)]
+pub struct TrackSegmentIndex {
+    cell_size: f32,
+    segments: Vec<TrackSegment>,
+    grid: std::collections::HashMap<(i32, i32), Vec<usize>>,
+}
+
+impl TrackSegmentIndex {
+    pub fn from_graph(graph: &TrackGraph, world_offset: Vec3) -> Self {
+        let mut segments = Vec::new();
+        for (_, edge) in graph.edges_iter() {
+            let Some(from) = graph.node(&edge.from.0) else {
+                continue;
+            };
+            let Some(to) = graph.node(&edge.to.0) else {
+                continue;
+            };
+            let w0 = graph_to_world_with_offset(world_offset, from.x_m, from.y_m);
+            let w1 = graph_to_world_with_offset(world_offset, to.x_m, to.y_m);
+            segments.push(TrackSegment {
+                x0: w0.x,
+                z0: w0.z,
+                x1: w1.x,
+                z1: w1.z,
+            });
+        }
+
+        let cell_size = TRACK_SEGMENT_CELL_M;
+        let mut grid: std::collections::HashMap<(i32, i32), Vec<usize>> =
+            std::collections::HashMap::new();
+        for (idx, seg) in segments.iter().enumerate() {
+            let min_x = seg.x0.min(seg.x1);
+            let max_x = seg.x0.max(seg.x1);
+            let min_z = seg.z0.min(seg.z1);
+            let max_z = seg.z0.max(seg.z1);
+            let ci_min = (min_x / cell_size).floor() as i32;
+            let ci_max = (max_x / cell_size).floor() as i32;
+            let cz_min = (min_z / cell_size).floor() as i32;
+            let cz_max = (max_z / cell_size).floor() as i32;
+            for cx in ci_min..=ci_max {
+                for cz in cz_min..=cz_max {
+                    grid.entry((cx, cz)).or_default().push(idx);
+                }
+            }
+        }
+
+        Self {
+            cell_size,
+            segments,
+            grid,
+        }
     }
-    min
+
+    /// Minimum XZ distance to the nearest indexed segment within `search_radius_m`.
+    pub fn min_distance_xz(&self, x: f32, z: f32, search_radius_m: f32) -> f32 {
+        if !search_radius_m.is_finite() {
+            return self.segments.iter().fold(f32::INFINITY, |min, seg| {
+                min.min(point_segment_distance_xz(
+                    x, z, seg.x0, seg.z0, seg.x1, seg.z1,
+                ))
+            });
+        }
+
+        let search_cells = (search_radius_m / self.cell_size).ceil() as i32 + 1;
+        let cx = (x / self.cell_size).floor() as i32;
+        let cz = (z / self.cell_size).floor() as i32;
+
+        let mut min = f32::INFINITY;
+        for dx in -search_cells..=search_cells {
+            for dz in -search_cells..=search_cells {
+                let Some(indices) = self.grid.get(&(cx + dx, cz + dz)) else {
+                    continue;
+                };
+                for &idx in indices {
+                    let seg = &self.segments[idx];
+                    let d = point_segment_distance_xz(x, z, seg.x0, seg.z0, seg.x1, seg.z1);
+                    min = min.min(d);
+                }
+            }
+        }
+        min
+    }
 }
 
 /// Default clearance when scattering trees away from track centreline.

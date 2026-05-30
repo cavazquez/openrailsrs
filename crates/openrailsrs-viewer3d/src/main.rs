@@ -26,6 +26,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use bevy::prelude::*;
 use bevy::window::PresentMode;
@@ -43,6 +44,7 @@ use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
+use openrailsrs_viewer3d::init_viewer_log;
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::shapes::{resolve_shape_path_in_dirs, shape_search_dirs};
 use openrailsrs_viewer3d::teleport::TeleportDialog;
@@ -53,6 +55,7 @@ use openrailsrs_viewer3d::world::RouteFocus;
 use openrailsrs_viewer3d::world::RouteWorldOffset;
 use openrailsrs_viewer3d::world::VISIBLE_RADIUS_M;
 use openrailsrs_viewer3d::world::{load_world_from_route_dir, msts_to_bevy};
+use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
 
 struct LaunchConfig {
@@ -113,6 +116,7 @@ fn parse_cli() -> CliArgs {
 }
 
 fn main() {
+    init_viewer_log();
     let cli = parse_cli();
 
     let config = match build_launch_config(&cli.path, cli.live) {
@@ -126,7 +130,7 @@ fn main() {
 
     let node_count = config.scene.graph.nodes_iter().count();
     let edge_count = config.scene.edge_count;
-    eprintln!(
+    viewer_log!(
         "openrailsrs-viewer3d: {} ({} nodes, {} edges, render={}{}{}{}{})",
         config.title,
         node_count,
@@ -167,7 +171,7 @@ fn main() {
         && config.scene.render_mode == openrailsrs_viewer3d::track::TrackRenderMode::Compact
         && cfg!(debug_assertions)
     {
-        eprintln!(
+        viewer_log!(
             "openrailsrs-viewer3d: tip — large route in debug is very slow; use \
              `cargo run --release -p openrailsrs-viewer3d -- --live …` for playable FPS"
         );
@@ -175,9 +179,10 @@ fn main() {
 
     let route_focus = route_focus_for_config(&config);
     if route_focus.height_origin != route_focus.center.y {
-        eprintln!(
+        viewer_log!(
             "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0})",
-            route_focus.height_origin, route_focus.center.y
+            route_focus.height_origin,
+            route_focus.center.y
         );
     }
     let route_offset = config
@@ -185,6 +190,7 @@ fn main() {
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
+    viewer_log!("openrailsrs-viewer3d: starting Bevy app");
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
@@ -236,13 +242,35 @@ fn build_launch_config(arg: &Path, live: bool) -> Result<LaunchConfig, String> {
 }
 
 fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
+    let t = Instant::now();
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
+    log_step(
+        &format!("loaded track graph ({} nodes)", graph.nodes_iter().count()),
+        t,
+    );
     let scene = TrackScene::from_graph(graph);
-    let world = load_world_from_route_dir(route_dir);
+    let t = Instant::now();
+    let mut world = load_world_from_route_dir(route_dir);
+    log_step(
+        &format!(
+            "loaded world ({} obj(s) / {} tile(s))",
+            world.items.len(),
+            world.tiles_loaded
+        ),
+        t,
+    );
     let focus = RouteFocus::from_scene_and_world(&scene, &world);
+    world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    let t = Instant::now();
     let terrain = load_terrain_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    log_step(
+        &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
+        t,
+    );
+    let t = Instant::now();
     let elevation =
         TerrainElevation::load_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    log_step("loaded terrain elevation", t);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
         route_dir: route_dir.to_path_buf(),
@@ -262,18 +290,37 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
     let scenario_dir = path
         .parent()
         .ok_or("scenario path has no parent directory")?;
+    let t = Instant::now();
     let scenario = load_scenario(path).map_err(|e| e.to_string())?;
+    log_step(
+        &format!("loaded scenario \"{}\"", scenario.scenario.name),
+        t,
+    );
     let route_dir = scenario_dir.join(&scenario.route.path);
+    let t = Instant::now();
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
+    log_step(
+        &format!("loaded track graph ({} nodes)", graph.nodes_iter().count()),
+        t,
+    );
     let scene = TrackScene::from_graph(graph);
-    let world = load_world_from_route_dir(&route_dir);
+    let t = Instant::now();
+    let mut world = load_world_from_route_dir(&route_dir);
+    log_step(
+        &format!(
+            "loaded world ({} obj(s) / {} tile(s))",
+            world.items.len(),
+            world.tiles_loaded
+        ),
+        t,
+    );
     let viewer3d = load_viewer3d_config(path, scenario_dir)?;
     let anchor_world = viewer3d.world_anchor.map(world_anchor_position);
     let route_offset_override = match (viewer3d.world_anchor, anchor_world) {
         (Some(anchor), Some(world_pos)) => {
             let graph_pos = graph_start_position(&scene, &scenario)?;
             let delta = Vec3::new(world_pos.x - graph_pos.x, 0.0, world_pos.z - graph_pos.z);
-            eprintln!(
+            viewer_log!(
                 "openrailsrs-viewer3d: viewer3d world anchor tile {},{} local {:.1},{:.1},{:.1} -> offset {:.0},{:.0},{:.0} m",
                 anchor.tile_x,
                 anchor.tile_z,
@@ -294,21 +341,40 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
             height_origin: center.y,
         })
         .unwrap_or_else(|| RouteFocus::from_scene_and_world(&scene, &world));
+    world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    let t = Instant::now();
     let terrain =
         load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    log_step(
+        &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
+        t,
+    );
+    let t = Instant::now();
     let elevation = TerrainElevation::load_from_route_dir_near(
         &route_dir,
         Some(focus.center),
         VISIBLE_RADIUS_M,
     );
+    log_step("loaded terrain elevation", t);
 
+    let t = Instant::now();
     let consist = load_train_consists(scenario_dir, &scenario);
+    log_step(
+        &format!(
+            "loaded train consist(s) ({} vehicle(s))",
+            consist.total_vehicles()
+        ),
+        t,
+    );
 
     let (replay, live_drive) = if live {
+        let t = Instant::now();
         let drive = LiveDrive::from_scenario_path(path)?;
-        eprintln!(
+        log_step("initialized live drive session", t);
+        viewer_log!(
             "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, ↑/↓ throttle/brake, F2 fly, G teleport)",
-            drive.session.scenario_name, drive.session.dt,
+            drive.session.scenario_name,
+            drive.session.dt,
         );
         (ReplayState::default(), Some(drive))
     } else {
@@ -508,17 +574,23 @@ fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Ve
     }
 
     nearest.sort_by(|a, b| a.2.total_cmp(&b.2));
-    eprintln!(
+    viewer_log!(
         "openrailsrs-viewer3d: scenery-debug center {:.1},{:.1},{:.1}: {} obj(s) <=250m, {} <=1000m, {} <=2000m, {} missing .s <=2000m",
-        center.x, center.y, center.z, within_250, within_1000, within_2000, missing_shapes
+        center.x,
+        center.y,
+        center.z,
+        within_250,
+        within_1000,
+        within_2000,
+        missing_shapes
     );
     let mut kinds: Vec<_> = by_kind.into_iter().collect();
     kinds.sort_by_key(|(kind, _)| *kind);
     for (kind, count) in kinds {
-        eprintln!("openrailsrs-viewer3d: scenery-debug kind {kind}: {count}");
+        viewer_log!("openrailsrs-viewer3d: scenery-debug kind {kind}: {count}");
     }
     for (kind, label, dist, shape, missing) in nearest.into_iter().take(12) {
-        eprintln!(
+        viewer_log!(
             "openrailsrs-viewer3d: scenery-debug near {:>7.1}m {:<8} {}{}{}",
             dist,
             kind,
@@ -539,7 +611,7 @@ fn load_train_consists(
             by_label.insert("primary".into(), vehicles);
         }
         None => {
-            eprintln!(
+            viewer_log!(
                 "openrailsrs-viewer3d: warning: could not load consist {}",
                 scenario_dir.join(&scenario.train.consist).display()
             );
@@ -551,7 +623,7 @@ fn load_train_consists(
                 by_label.insert(extra.id.clone(), vehicles);
             }
             None => {
-                eprintln!(
+                viewer_log!(
                     "openrailsrs-viewer3d: warning: could not load consist for train '{}': {}",
                     extra.id,
                     scenario_dir.join(&extra.consist).display()

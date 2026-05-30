@@ -46,7 +46,7 @@
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
-use crate::parser::parse_from_first_paren;
+use crate::parser::parse_first_from_first_paren;
 
 use super::atom_to_number;
 use super::atom_to_string;
@@ -203,7 +203,7 @@ impl ShapeFile {
             message: format!("failed to read {}: {e}", path.display()),
         })?;
         let text = shape_text_from_bytes(&bytes)?;
-        let ast = parse_from_first_paren(&text)?;
+        let ast = parse_first_from_first_paren(&text)?;
         Self::from_ast(&ast)
     }
 }

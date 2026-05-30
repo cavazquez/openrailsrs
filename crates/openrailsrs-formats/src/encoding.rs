@@ -134,20 +134,64 @@ pub fn decode_msts_bytes(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+/// Collapse UTF-16-LE code units (low byte only) until a non-ASCII pair or raw tail.
+fn collapse_utf16le_pairs(payload: &[u8]) -> Vec<u8> {
+    let mut latin = Vec::with_capacity(payload.len());
+    let mut i = 0;
+    while i + 1 < payload.len() {
+        let lo = payload[i];
+        let hi = payload[i + 1];
+        if hi != 0 {
+            latin.extend_from_slice(&payload[i..]);
+            return latin;
+        }
+        latin.push(lo);
+        i += 2;
+    }
+    if i < payload.len() {
+        latin.push(payload[i]);
+    }
+    latin
+}
+
+/// True when `bytes` looks like UTF-16-LE ASCII without a BOM (`J\0I\0N\0X`, etc.).
+fn is_utf16le_interleaved_ascii(bytes: &[u8]) -> bool {
+    bytes.len() >= 4
+        && bytes.len() % 2 == 0
+        && bytes[1] == 0
+        && bytes[3] == 0
+        && bytes.chunks_exact(2).take(8).all(|pair| pair[1] == 0)
+}
+
+/// Normalize MSTS on-disk bytes to a single-byte SIMISA / text stream.
+pub fn msts_latin_bytes(bytes: &[u8]) -> Vec<u8> {
+    if let Some(v) = utf16le_msts_to_latin_bytes(bytes) {
+        return v;
+    }
+    if is_utf16le_interleaved_ascii(bytes) {
+        return collapse_utf16le_pairs(bytes);
+    }
+    bytes.to_vec()
+}
+
 /// If `bytes` is UTF-16-LE with BOM, collapse each code unit to its low byte.
 ///
 /// MSTS stores SIMISA containers as UTF-16 where every ASCII character is
 /// followed by a zero byte.  Decoding as UTF-16 produces a `String` that breaks
 /// zlib/binary payloads; collapsing recovers the original byte stream.
+///
+/// Some route shapes switch to raw binary (zlib) mid-file after the `@@@@`
+/// padding — once a UTF-16 code unit has a non-zero high byte, the remainder
+/// is appended verbatim.
 pub fn utf16le_msts_to_latin_bytes(bytes: &[u8]) -> Option<Vec<u8>> {
     if !bytes.starts_with(&BOM_UTF16_LE) {
         return None;
     }
     let payload = &bytes[2..];
-    if payload.len() % 2 != 0 {
-        return None;
+    if payload.is_empty() {
+        return Some(Vec::new());
     }
-    Some(payload.chunks_exact(2).map(|pair| pair[0]).collect())
+    Some(collapse_utf16le_pairs(payload))
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -205,5 +249,24 @@ mod tests {
         // 0xE9 = 'é' in Windows-1252
         let bytes = b"caf\xe9";
         assert_eq!(decode_msts_bytes(bytes), "café");
+    }
+
+    #[test]
+    fn utf16le_msts_hybrid_header_then_raw_zlib() {
+        let mut bytes: Vec<u8> = BOM_UTF16_LE.to_vec();
+        for ch in "SIMISA@F".encode_utf16() {
+            bytes.extend_from_slice(&ch.to_le_bytes());
+        }
+        bytes.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // compressed size placeholder
+        for ch in "@@@@".encode_utf16() {
+            bytes.extend_from_slice(&ch.to_le_bytes());
+        }
+        // Raw zlib payload (not UTF-16) follows — typical MSTS hybrid shape file.
+        bytes.extend_from_slice(&[
+            0x78, 0x9c, 0x01, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01,
+        ]);
+        let latin = utf16le_msts_to_latin_bytes(&bytes).expect("hybrid");
+        assert!(latin.starts_with(b"SIMISA@F"));
+        assert!(latin.windows(2).any(|w| w == [0x78, 0x9c]));
     }
 }

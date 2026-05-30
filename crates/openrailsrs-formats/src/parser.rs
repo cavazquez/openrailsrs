@@ -8,6 +8,16 @@ pub fn parse_first(source: &str) -> Result<Ast, FormatError> {
     parse_expr(&mut lexer)
 }
 
+/// Skip preamble, find the first `(`, then parse one expression (ignore trailing bytes).
+pub fn parse_first_from_first_paren(source: &str) -> Result<Ast, FormatError> {
+    let trimmed = source.trim_start();
+    let from_paren = trimmed
+        .find('(')
+        .map(|i| &trimmed[i..])
+        .ok_or(FormatError::UnexpectedEof)?;
+    parse_first(from_paren)
+}
+
 /// Skip preamble, find the first `(`, then parse one expression until balanced closing.
 pub fn parse_from_first_paren(source: &str) -> Result<Ast, FormatError> {
     let trimmed = source.trim_start();
@@ -57,5 +67,18 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
         Some(Token::String(s)) => Ok(Ast::Atom(Atom::String(s))),
         Some(Token::Number(n)) => Ok(Ast::Atom(Atom::Number(n))),
         Some(Token::Integer(i)) => Ok(Ast::Atom(Atom::Integer(i))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_first_from_first_paren_ignores_trailing_bytes() {
+        let src = r#"(Shape (a 1) (b 2)) trailing junk"#;
+        let ast = parse_first_from_first_paren(src).expect("parse");
+        assert!(matches!(ast, Ast::List(_)));
+        assert!(parse_from_first_paren(src).is_err());
     }
 }

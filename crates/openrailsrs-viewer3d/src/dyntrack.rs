@@ -8,6 +8,7 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
 use crate::track::{SceneBounds, TrackScene};
+use crate::viewer_log;
 use crate::world::WorldScene;
 
 /// Dark weathered wood — deliberately far from graph orange (`1.0, 0.667, 0.2`).
@@ -192,7 +193,7 @@ pub fn spawn_dyntrack_segments(
         ));
     }
 
-    eprintln!("openrailsrs-viewer3d: {count} dyntrack segment(s)");
+    viewer_log!("openrailsrs-viewer3d: {count} dyntrack segment(s)");
 }
 
 /// Bake a unit cuboid (optionally scaled by `size`) transformed by `tf` into aggregate buffers.
@@ -229,8 +230,8 @@ fn push_cuboid(
         (0, 4, 7, 3, Vec3::new(-1.0, 0.0, 0.0)),
     ];
 
-    let base = positions.len() as u32;
     for (v0, v1, v2, v3, normal) in &face_defs {
+        let face_base = positions.len() as u32;
         let wn = tf.rotation * *normal;
         let wn_arr = [wn.x, wn.y, wn.z];
         positions.push(world[*v0].to_array());
@@ -244,7 +245,14 @@ fn push_cuboid(
         uvs.push([1.0, 0.0]);
         uvs.push([1.0, 1.0]);
         uvs.push([0.0, 1.0]);
-        indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+        indices.extend([
+            face_base,
+            face_base + 1,
+            face_base + 2,
+            face_base,
+            face_base + 2,
+            face_base + 3,
+        ]);
     }
 }
 

@@ -8,6 +8,7 @@ use crate::precipitation::PrecipitationState;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::{ReplayState, pose_at_time};
+use crate::viewer_log;
 
 /// Window / route title shown in the HUD (set from `main` at launch).
 #[derive(Resource, Clone, Default)]
@@ -790,9 +791,11 @@ pub(crate) fn log_profile(fps: Res<HudFps>, mut state: ResMut<ProfileLog>) {
     let now = Instant::now();
     if let Some(last) = state.last {
         if now.duration_since(last).as_secs() >= 3 {
-            eprintln!(
+            viewer_log!(
                 "[profile] fps={:.1} frame={:.1}ms over {} frames",
-                fps.smoothed, fps.frame_ms, state.frames,
+                fps.smoothed,
+                fps.frame_ms,
+                state.frames,
             );
             state.frames = 0;
             state.last = Some(now);

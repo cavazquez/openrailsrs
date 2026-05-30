@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
@@ -20,6 +21,7 @@ use crate::terrain_assets::terrain_material_textures;
 use crate::terrain_material::TerrainMaterial;
 use crate::track::TrackScene;
 use crate::world::MSTS_TILE_SIZE_M;
+use crate::{log_step, viewer_log};
 
 const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
 
@@ -212,7 +214,7 @@ pub fn load_terrain_from_route_dir_near(
             Err(err) => {
                 skip_count += 1;
                 if skip_count == 1 {
-                    eprintln!(
+                    viewer_log!(
                         "openrailsrs-viewer3d: skip terrain {} ({err})",
                         path.display()
                     );
@@ -221,7 +223,7 @@ pub fn load_terrain_from_route_dir_near(
         }
     }
     if skip_count > 1 {
-        eprintln!("openrailsrs-viewer3d: skipped {skip_count} terrain tile(s)");
+        viewer_log!("openrailsrs-viewer3d: skipped {skip_count} terrain tile(s)");
     }
     if scene.tiles.is_empty() {
         let tiles_dir = route_dir.join("TILES");
@@ -230,7 +232,7 @@ pub fn load_terrain_from_route_dir_near(
                 .ok()
                 .is_some_and(|rd| rd.flatten().any(|e| e.path().extension().is_some()))
         {
-            eprintln!(
+            viewer_log!(
                 "openrailsrs-viewer3d: no terrain tiles near route focus (check TILES/ + *_y.raw)"
             );
         }
@@ -545,6 +547,12 @@ pub fn spawn_terrain_meshes(
         return;
     }
 
+    viewer_log!(
+        "openrailsrs-viewer3d: spawning terrain meshes ({} tile(s))",
+        terrain.tiles.len()
+    );
+    let spawn_start = Instant::now();
+
     let fallback_material = std_materials.add(StandardMaterial {
         base_color: COLOR_TERRAIN_FALLBACK,
         perceptual_roughness: 0.95,
@@ -580,7 +588,7 @@ pub fn spawn_terrain_meshes(
         if std::env::var("OPENRAILSRS_TERRAIN_DEBUG").is_ok() {
             let min_h = grid.elevations.iter().cloned().fold(f32::MAX, f32::min);
             let max_h = grid.elevations.iter().cloned().fold(f32::MIN, f32::max);
-            eprintln!(
+            viewer_log!(
                 "openrailsrs-viewer3d: terrain-debug tile {}:{} floor={:.2} scale={:.6} size={:.1} elev=[{:.1}..{:.1}] range={:.1}m",
                 terrain_tile.tile_x,
                 terrain_tile.tile_z,
@@ -629,7 +637,7 @@ pub fn spawn_terrain_meshes(
     }
 
     if spawned_patches > 0 {
-        eprintln!(
+        viewer_log!(
             "openrailsrs-viewer3d: {spawned_tiles} terrain tile(s), {spawned_patches} textured patch(es){}",
             if holed_patches > 0 {
                 format!(" ({holed_patches} with holes)")
@@ -638,8 +646,9 @@ pub fn spawn_terrain_meshes(
             }
         );
     } else if spawned_tiles > 0 {
-        eprintln!("openrailsrs-viewer3d: {spawned_tiles} terrain tile(s) with heightfield mesh");
+        viewer_log!("openrailsrs-viewer3d: {spawned_tiles} terrain tile(s) with heightfield mesh");
     }
+    log_step("spawned terrain meshes", spawn_start);
 }
 
 #[cfg(test)]

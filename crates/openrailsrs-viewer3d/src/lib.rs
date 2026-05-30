@@ -16,6 +16,7 @@ pub mod gameplay;
 pub mod hud;
 pub mod launch;
 pub mod live;
+pub mod log;
 pub mod overspeed_flash;
 pub mod precipitation;
 pub mod rolling_stock;
@@ -50,6 +51,8 @@ use bevy::prelude::*;
 pub use hud::HudTitle;
 pub use launch::ViewerLaunchOpts;
 pub use live::LiveDrive;
+pub use log::init as init_viewer_log;
+pub use log::log_step;
 pub use rolling_stock::TrainConsistScene;
 pub use shapes::RouteAssets;
 pub use terrain::{TerrainElevation, TerrainScene};
@@ -91,10 +94,11 @@ impl Plugin for ViewerPlugin {
                     dyntrack::spawn_dyntrack_segments,
                     forest::spawn_forest_patches,
                     water::spawn_water_patches,
-                    world::spawn_world_boxes,
+                    world::init_world_spawn_progress,
                 )
                     .chain(),
             )
+            .add_systems(Update, world::progressive_world_spawn_system)
             .add_systems(
                 Startup,
                 (
@@ -111,8 +115,7 @@ impl Plugin for ViewerPlugin {
                     gameplay::spawn_gameplay_ui,
                     gameplay::spawn_gameplay_markers.run_if(live::live_mode_active),
                 )
-                    .chain()
-                    .after(world::spawn_world_boxes),
+                    .chain(),
             )
             .add_systems(
                 Update,

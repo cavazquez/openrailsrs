@@ -13,6 +13,7 @@ use crate::shapes::{
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
+use crate::viewer_log;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
 const COLOR_TRAIN_PRIMARY: Color = Color::srgb(1.0, 0.25, 1.0);
@@ -336,7 +337,7 @@ pub fn spawn_train_markers(
     }
 
     if !consist.is_empty() {
-        eprintln!(
+        viewer_log!(
             "openrailsrs-viewer3d: {} consist track(s), {} vehicle(s), {shape_mesh_count} shape mesh part(s)",
             consist.track_count(),
             consist.total_vehicles(),

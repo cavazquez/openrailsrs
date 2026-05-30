@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::shapes::{RouteAssets, load_ace_image};
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
+use crate::viewer_log;
 use crate::world::WorldScene;
 
 const COLOR_WATER: Color = Color::srgba(0.08, 0.38, 0.62, 0.68);
@@ -148,7 +149,7 @@ pub fn spawn_water_patches(
         spawned += 1;
     }
 
-    eprintln!(
+    viewer_log!(
         "openrailsrs-viewer3d: {spawned} water patch(es){}",
         if textured > 0 {
             format!(" ({textured} textured)")

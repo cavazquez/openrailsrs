@@ -55,7 +55,9 @@ mod tests {
         with_route_dir_world(&route_dir, |world| {
             world.run_system_once(spawn_world_boxes).unwrap();
             world.flush();
-            let named = count_named(world, "world:");
+            let named = count_named(world, "world:")
+                + count_named(world, "world:mesh")
+                + count_named(world, "world:merged");
             let merged = count_named(world, "world-boxes:");
             assert!(named + merged >= 1, "expected world placeholders or meshes");
         });

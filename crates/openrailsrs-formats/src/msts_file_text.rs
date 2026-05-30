@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::encoding::{decode_msts_bytes, utf16le_msts_to_latin_bytes};
+use crate::encoding::{decode_msts_bytes, msts_latin_bytes};
 use crate::error::FormatError;
 use crate::msts_simisa::decode_simisa_container;
 use crate::shape_binary::binary_shape_to_ascii;
@@ -12,7 +12,7 @@ use crate::shape_binary::binary_shape_to_ascii;
 /// Handles UTF-16-LE wrappers, uncompressed SIMISA text, zlib-compressed SIMISA,
 /// and binary JINX token streams (shapes and world tiles).
 pub fn decode_msts_file_bytes(bytes: &[u8]) -> Result<String, FormatError> {
-    let raw = utf16le_msts_to_latin_bytes(bytes).unwrap_or_else(|| bytes.to_vec());
+    let raw = msts_latin_bytes(bytes);
     if raw.len() >= 6 && raw.starts_with(b"SIMISA") {
         let payload = decode_simisa_container(&raw)?;
         if payload.is_text {

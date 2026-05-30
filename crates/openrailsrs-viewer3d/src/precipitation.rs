@@ -8,6 +8,7 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
 use crate::track::TrackScene;
+use crate::viewer_log;
 
 const RAIN_DROP_COUNT: usize = 200;
 const RAIN_STREAK_HEIGHT: f32 = 3.4;
@@ -138,7 +139,7 @@ pub fn spawn_precipitation(
         Name::new("rain"),
     ));
     commands.insert_resource(RainState { drops });
-    eprintln!(
+    viewer_log!(
         "openrailsrs-viewer3d: precipitation on ({RAIN_DROP_COUNT} billboards merged, P toggles)"
     );
 }

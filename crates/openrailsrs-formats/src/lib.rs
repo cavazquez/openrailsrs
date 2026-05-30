@@ -17,7 +17,7 @@ pub mod units;
 pub use ast::{Ast, Atom};
 pub use dispatch::{MstsFile, parse_msts_file};
 pub use encoding::{
-    decode_msts_bytes, read_msts_file_case_insensitive, read_msts_file_to_string,
+    decode_msts_bytes, msts_latin_bytes, read_msts_file_case_insensitive, read_msts_file_to_string,
     resolve_path_case_insensitive, utf16le_msts_to_latin_bytes,
 };
 pub use error::FormatError;
@@ -29,7 +29,7 @@ pub use msts_units::{
     parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_pressure_bar,
     parse_velocity_mps,
 };
-pub use parser::{parse, parse_first, parse_from_first_paren};
+pub use parser::{parse, parse_first, parse_first_from_first_paren, parse_from_first_paren};
 pub use typed::{
     ActivityFile, ActivityObjectDef, BrakeShoeFrictionCurve, ConsistEntry, ConsistFile,
     DistanceLevel, ElevationGrid, EngineFile, FeatureGrid, LodControl, Matrix43, MstsSteamFields,

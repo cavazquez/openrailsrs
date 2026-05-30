@@ -42,7 +42,8 @@ pub fn decode_simisa_container(bytes: &[u8]) -> Result<SimisaPayload, FormatErro
                 message: "truncated compressed SIMISA header".into(),
             });
         }
-        inflate_simisa_body(bytes)?
+        let inflated = inflate_simisa_body(bytes)?;
+        crate::encoding::msts_latin_bytes(&inflated)
     } else if header_prefix.starts_with("SIMISA@@") || header_prefix.starts_with("SIMISA") {
         bytes[HEADER_LEN..].to_vec()
     } else {
@@ -102,16 +103,36 @@ pub fn decode_simisa_container(bytes: &[u8]) -> Result<SimisaPayload, FormatErro
     })
 }
 
+fn is_zlib_header(cmf: u8, flg: u8) -> bool {
+    cmf == 0x78 && ((u16::from(cmf) << 8) | u16::from(flg)) % 31 == 0
+}
+
 fn inflate_simisa_body(bytes: &[u8]) -> Result<Vec<u8>, FormatError> {
-    let mut last_error = None;
-    for start in [HEADER_LEN, HEADER_LEN + 2] {
-        if start >= bytes.len() {
-            continue;
+    let mut starts = Vec::new();
+    for fixed in [HEADER_LEN, HEADER_LEN + 2] {
+        if fixed < bytes.len() {
+            starts.push(fixed);
         }
+    }
+    let scan_end = bytes.len().min(128).saturating_sub(1);
+    for i in 8..scan_end {
+        if is_zlib_header(bytes[i], bytes[i + 1]) && !starts.contains(&i) {
+            starts.push(i);
+        }
+    }
+
+    let mut last_error = None;
+    for start in starts {
         let mut decoder = flate2::read::ZlibDecoder::new(&bytes[start..]);
         let mut out = Vec::new();
         match decoder.read_to_end(&mut out) {
-            Ok(_) => return Ok(out),
+            Ok(_) if !out.is_empty() => return Ok(out),
+            Ok(_) => {
+                last_error = Some(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "empty zlib payload",
+                ))
+            }
             Err(e) => last_error = Some(e),
         }
     }

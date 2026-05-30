@@ -10,17 +10,33 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 
+use crate::viewer_log;
+
 /// Route directory for resolving `SHAPES/` and `TEXTURES/` assets.
 #[derive(Resource, Clone)]
 pub struct RouteAssets {
     pub route_dir: PathBuf,
+    shape_path_index: HashMap<String, PathBuf>,
 }
 
 impl RouteAssets {
     pub fn new(route_dir: impl Into<PathBuf>) -> Self {
+        let route_dir = route_dir.into();
+        let shape_path_index = build_shape_path_index(&shape_search_dirs(&route_dir));
         Self {
-            route_dir: route_dir.into(),
+            route_dir,
+            shape_path_index,
         }
+    }
+
+    /// Resolve a shape filename using a pre-built index (case-insensitive).
+    pub fn resolve_shape(&self, file_name: &str) -> Option<PathBuf> {
+        if file_name.is_empty() {
+            return None;
+        }
+        self.shape_path_index
+            .get(&file_name.to_ascii_lowercase())
+            .cloned()
     }
 }
 
@@ -462,6 +478,40 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
     None
 }
 
+/// Scan `SHAPES/` under each asset root once and map lowercase filename → path.
+pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
+    let mut index = HashMap::new();
+    for dir in dirs {
+        for subdir in ["SHAPES", "shapes"] {
+            let shapes_dir = dir.join(subdir);
+            if !shapes_dir.is_dir() {
+                continue;
+            }
+            let Ok(read_dir) = std::fs::read_dir(&shapes_dir) else {
+                continue;
+            };
+            for entry in read_dir.flatten() {
+                let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
+                if !path
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("s"))
+                {
+                    continue;
+                }
+                if let Some(name) = path.file_name() {
+                    index
+                        .entry(name.to_string_lossy().to_ascii_lowercase())
+                        .or_insert(path);
+                }
+            }
+        }
+    }
+    index
+}
+
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     for subdir in ["TEXTURES", "textures"] {
@@ -529,6 +579,52 @@ pub fn load_shape_render_asset_from_path(
     fallback_color: Color,
 ) -> Option<ShapeRenderAsset> {
     let loaded = load_shape_from_path(shape_path, camera_distance_m)?;
+    Some(shape_render_asset_from_loaded(
+        loaded,
+        texture_dirs,
+        meshes,
+        images,
+        materials,
+        texture_cache,
+        fallback_color,
+    ))
+}
+
+/// Turn parsed shape geometry into Bevy asset handles (main thread — touches `Assets`).
+#[allow(clippy::too_many_arguments)]
+pub fn shape_render_asset_from_loaded(
+    loaded: LoadedShape,
+    texture_dirs: &[&Path],
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    fallback_color: Color,
+) -> ShapeRenderAsset {
+    shape_render_asset_from_loaded_with_ace_cache(
+        loaded,
+        texture_dirs,
+        meshes,
+        images,
+        materials,
+        texture_cache,
+        &HashMap::new(),
+        fallback_color,
+    )
+}
+
+/// Like [`shape_render_asset_from_loaded`] but uses a pre-decoded ACE cache (from parallel prefetch).
+#[allow(clippy::too_many_arguments)]
+pub fn shape_render_asset_from_loaded_with_ace_cache(
+    loaded: LoadedShape,
+    texture_dirs: &[&Path],
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    ace_cache: &HashMap<PathBuf, AceFile>,
+    fallback_color: Color,
+) -> ShapeRenderAsset {
     let combined_mesh = meshes.add(loaded.mesh);
 
     let mut has_any_texture = false;
@@ -541,6 +637,7 @@ pub fn load_shape_render_asset_from_path(
             images,
             materials,
             texture_cache,
+            ace_cache,
             fallback_color,
         );
         has_any_texture |= has_texture;
@@ -560,6 +657,7 @@ pub fn load_shape_render_asset_from_path(
             images,
             materials,
             texture_cache,
+            ace_cache,
             fallback_color,
         );
         has_any_texture |= has_texture;
@@ -572,13 +670,46 @@ pub fn load_shape_render_asset_from_path(
         });
     }
 
-    Some(ShapeRenderAsset {
+    ShapeRenderAsset {
         combined_mesh,
         parts,
         has_texture: has_any_texture,
-    })
+    }
 }
 
+/// Resolve on-disk paths for every ACE referenced by a parsed shape.
+pub fn collect_loaded_shape_texture_paths(
+    loaded: &LoadedShape,
+    texture_dirs: &[&Path],
+) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    let mut names = Vec::new();
+    if let Some(name) = loaded.texture_file.as_deref() {
+        names.push(name);
+    }
+    for part in &loaded.parts {
+        if let Some(name) = part.texture_file.as_deref() {
+            names.push(name);
+        }
+    }
+    for name in names {
+        if let Some(path) = resolve_texture_path_in_dirs(texture_dirs, name) {
+            paths.push(path);
+        }
+    }
+    paths
+}
+
+/// Decode `.ace` files in parallel (safe before inserting into Bevy `Assets`).
+pub fn prefetch_ace_textures(paths: &[PathBuf]) -> HashMap<PathBuf, AceFile> {
+    use rayon::prelude::*;
+    paths
+        .par_iter()
+        .filter_map(|path| read_ace(path).ok().map(|ace| (path.clone(), ace)))
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
 fn material_for_shape_texture(
     texture_dirs: &[&Path],
     texture_file: Option<&str>,
@@ -586,19 +717,28 @@ fn material_for_shape_texture(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    ace_cache: &HashMap<PathBuf, AceFile>,
     fallback_color: Color,
 ) -> (Handle<StandardMaterial>, bool, bool) {
     if let Some(tex_name) = texture_file {
         match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             None => {}
-            Some(tex_path) => match read_ace(&tex_path) {
-                Err(e) => {
-                    eprintln!(
-                        "openrailsrs-viewer3d: ACE decode error for {}: {e}",
-                        tex_path.display()
-                    );
-                }
-                Ok(ace) => {
+            Some(tex_path) => {
+                let ace = if let Some(ace) = ace_cache.get(&tex_path) {
+                    Some(ace.clone())
+                } else {
+                    match read_ace(&tex_path) {
+                        Ok(ace) => Some(ace),
+                        Err(e) => {
+                            viewer_log!(
+                                "openrailsrs-viewer3d: ACE decode error for {}: {e}",
+                                tex_path.display()
+                            );
+                            None
+                        }
+                    }
+                };
+                if let Some(ace) = ace {
                     let alpha_mode = shape_alpha_mode(&ace, tex_name, shader_name);
                     let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
                     let image = ace_to_image(&ace);
@@ -617,7 +757,7 @@ fn material_for_shape_texture(
                     });
                     return (material, true, is_transparent);
                 }
-            },
+            }
         }
     }
 
@@ -916,6 +1056,7 @@ mod tests {
             &mut images,
             &mut materials,
             &mut texture_cache,
+            &HashMap::new(),
             Color::srgb(0.95, 0.25, 0.85),
         );
 
@@ -947,6 +1088,7 @@ mod tests {
             &mut images,
             &mut materials,
             &mut texture_cache,
+            &HashMap::new(),
             Color::srgb(0.95, 0.25, 0.85),
         );
 
