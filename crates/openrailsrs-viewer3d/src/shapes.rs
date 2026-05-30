@@ -404,12 +404,37 @@ pub fn msts_content_root() -> Option<PathBuf> {
 /// Route directory plus optional `GLOBAL` from [`msts_content_root`].
 pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(root) = msts_content_root() {
-        let global = root.join("GLOBAL");
-        if global.is_dir() {
-            dirs.push(global);
+    if let Some(global) = global_assets_dir() {
+        dirs.push(global);
+    }
+    dirs
+}
+
+/// `GLOBAL/` under [`msts_content_root`], when configured.
+pub fn global_assets_dir() -> Option<PathBuf> {
+    msts_content_root()
+        .map(|root| root.join("GLOBAL"))
+        .filter(|p| p.is_dir())
+}
+
+/// Directories to search for `.ace` textures given a resolved shape path.
+pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = vec![route_dir.to_path_buf()];
+    if let Some(shapes_dir) = shape_path.parent().filter(|p| {
+        p.file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("shapes"))
+    }) {
+        if let Some(asset_root) = shapes_dir.parent() {
+            if asset_root != route_dir {
+                dirs.push(asset_root.to_path_buf());
+            }
         }
     }
+    if let Some(global) = global_assets_dir() {
+        dirs.push(global);
+    }
+    dirs.sort();
+    dirs.dedup();
     dirs
 }
 
@@ -440,12 +465,28 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     for subdir in ["TEXTURES", "textures"] {
-        let path = route_dir.join(subdir).join(file_name);
-        if path.is_file() {
-            return Some(path);
+        let textures_root = route_dir.join(subdir);
+        let direct = textures_root.join(file_name);
+        if direct.is_file() {
+            return Some(direct);
         }
-        if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+        if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&direct) {
             return Some(p);
+        }
+        // MSTS routes often store seasonal variants in TEXTURES/SPRING/, etc.
+        if let Ok(entries) = std::fs::read_dir(&textures_root) {
+            for entry in entries.flatten() {
+                if !entry.file_type().is_ok_and(|t| t.is_dir()) {
+                    continue;
+                }
+                let candidate = entry.path().join(file_name);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+                if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
+                    return Some(p);
+                }
+            }
         }
     }
     None
@@ -736,7 +777,7 @@ mod tests {
         let shape = ShapeFile::from_path(chiltern_shape_fixture("RF_WP_DMBSA.s"))
             .expect("parse binary shape");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        assert_eq!(mesh.count_vertices(), 11211);
+        assert_eq!(mesh.count_vertices(), 14610);
     }
 
     #[test]
@@ -747,7 +788,7 @@ mod tests {
         assert!(parts.len() > 1);
 
         let total_vertices: usize = parts.iter().map(|part| part.mesh.count_vertices()).sum();
-        assert_eq!(total_vertices, 11211);
+        assert_eq!(total_vertices, 14610);
 
         for part in &parts {
             assert!(part.mesh.count_vertices() > 0);
@@ -936,6 +977,16 @@ mod tests {
     }
 
     #[test]
+    fn resolve_texture_path_finds_seasonal_subdir_on_chiltern() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route.join("TEXTURES/SPRING").is_dir() {
+            return;
+        }
+        // poplar15_1.ace exists under TEXTURES/ and TEXTURES/SPRING/
+        assert!(resolve_texture_path(&route, "poplar15_1.ace").is_some());
+    }
+
+    #[test]
     fn resolve_smoke_route_assets() {
         let route =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
@@ -972,5 +1023,46 @@ mod tests {
         let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0);
         assert!(t0.translation.x.abs() < 1e-3);
         assert!((t1.translation.x + 18.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn chiltern_tree_shapes_build_meshes() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route.join("SHAPES/POPLAR15.S").is_file() {
+            return;
+        }
+        for name in [
+            "SHAPES/POPLAR15.S",
+            "SHAPES/ASH12.S",
+            "SHAPES/by_poplar2_treeline.s",
+        ] {
+            let path = route.join(name);
+            let shape = ShapeFile::from_path(&path).expect("parse tree shape");
+            let mesh = build_mesh_from_shape(&shape).expect("mesh");
+            let parts = build_mesh_parts_from_shape(&shape);
+            assert!(mesh.count_vertices() > 0, "{name}: empty combined mesh");
+            assert!(
+                parts.iter().all(|p| p.mesh.count_vertices() > 0),
+                "{name}: empty part"
+            );
+            assert!(
+                load_shape_from_path(&path, None).is_some(),
+                "{name}: load failed"
+            );
+        }
+    }
+
+    #[test]
+    fn texture_search_dirs_include_route_root() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let shape = route.join("SHAPES/POPLAR15.S");
+        if !shape.is_file() {
+            return;
+        }
+        let dirs = texture_search_dirs_for_shape(&shape, &route);
+        assert!(
+            dirs.iter().any(|d| d.ends_with("chiltern")),
+            "expected route root in texture dirs: {dirs:?}"
+        );
     }
 }

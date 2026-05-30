@@ -10,13 +10,17 @@ use bevy::prelude::*;
 use openrailsrs_track::{NodeKind, TrackGraph};
 
 use crate::launch::ViewerLaunchOpts;
+use crate::terrain::{TerrainElevation, ground_y_at};
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
 
 pub(crate) const COLOR_EDGE: Color = Color::srgb(1.0, 0.667, 0.2);
+const COLOR_TRACK_RAIL: Color = Color::srgb(0.78, 0.86, 0.98);
 const COLOR_NODE_PLAIN: Color = Color::srgb(1.0, 1.0, 1.0);
 const COLOR_NODE_SWITCH: Color = Color::srgb(0.0, 1.0, 1.0);
 const COLOR_NODE_STATION: Color = Color::srgb(1.0, 1.0, 0.0);
+const TRACK_HALF_GAUGE_M: f32 = 0.7175;
+const TRACK_RENDER_LIFT_M: f32 = 0.14;
 
 /// Edge count above which the viewer switches to gizmo lines (no per-edge meshes).
 pub const COMPACT_EDGE_THRESHOLD: usize = 800;
@@ -243,9 +247,11 @@ pub fn build_compact_track_line_mesh(
     graph: &TrackGraph,
     offset: Vec3,
     focus: &crate::world::RouteFocus,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
 ) -> Mesh {
     let edge_count = graph.edges_iter().count();
-    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edge_count * 2);
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edge_count * 4);
     for (_, edge) in graph.edges_iter() {
         let Some(from) = graph.node(&edge.from.0) else {
             continue;
@@ -253,20 +259,44 @@ pub fn build_compact_track_line_mesh(
         let Some(to) = graph.node(&edge.to.0) else {
             continue;
         };
-        let p0 = focus.to_render(graph_to_world_with_offset(offset, from.x_m, from.y_m));
-        let p1 = focus.to_render(graph_to_world_with_offset(offset, to.x_m, to.y_m));
-        positions.push(p0.to_array());
-        positions.push(p1.to_array());
+        let w0 = graph_to_world_with_offset(offset, from.x_m, from.y_m);
+        let w1 = graph_to_world_with_offset(offset, to.x_m, to.y_m);
+        let p0 = track_surface_render_pos(w0, terrain, scene, focus);
+        let p1 = track_surface_render_pos(w1, terrain, scene, focus);
+        let dir = Vec2::new(p1.x - p0.x, p1.z - p0.z);
+        let side = if dir.length_squared() > 1e-6 {
+            let n = dir.normalize();
+            Vec3::new(-n.y, 0.0, n.x)
+        } else {
+            Vec3::X
+        };
+        let lift = Vec3::Y * TRACK_RENDER_LIFT_M;
+        for lateral in [-TRACK_HALF_GAUGE_M, TRACK_HALF_GAUGE_M] {
+            let rail_offset = side * lateral + lift;
+            positions.push((p0 + rail_offset).to_array());
+            positions.push((p1 + rail_offset).to_array());
+        }
     }
     let mut mesh = Mesh::new(PrimitiveTopology::LineList, RenderAssetUsages::default());
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh
 }
 
+fn track_surface_render_pos(
+    world: Vec3,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
+    focus: &crate::world::RouteFocus,
+) -> Vec3 {
+    let y = ground_y_at(terrain, world.x, world.z, scene);
+    focus.to_render_surface(Vec3::new(world.x, y, world.z))
+}
+
 #[derive(Component)]
 pub(crate) struct CompactTrackLines;
 
 /// One-shot: spawn edge cylinders and node spheres for the loaded graph.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_track_meshes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -275,8 +305,10 @@ pub fn spawn_track_meshes(
     offset: Res<crate::world::RouteWorldOffset>,
     focus: Res<crate::world::RouteFocus>,
     opts: Res<ViewerLaunchOpts>,
+    terrain: Option<Res<TerrainElevation>>,
 ) {
     let offset = offset.delta;
+    let terrain_ref = terrain.as_deref();
     let bounds = scene.bounds;
     let edge_radius = bounds.edge_radius();
     let node_radius = bounds.node_radius();
@@ -303,10 +335,16 @@ pub fn spawn_track_meshes(
     };
 
     if scene.render_mode == TrackRenderMode::Compact {
-        let line_mesh = meshes.add(build_compact_track_line_mesh(&scene.graph, offset, &focus));
+        let line_mesh = meshes.add(build_compact_track_line_mesh(
+            &scene.graph,
+            offset,
+            &focus,
+            terrain_ref,
+            &scene,
+        ));
         let line_material = materials.add(StandardMaterial {
-            base_color: COLOR_EDGE,
-            emissive: LinearRgba::from(COLOR_EDGE) * 0.35,
+            base_color: COLOR_TRACK_RAIL,
+            emissive: LinearRgba::from(COLOR_TRACK_RAIL) * 0.2,
             unlit: true,
             ..default()
         });
@@ -329,8 +367,18 @@ pub fn spawn_track_meshes(
             let Some(to) = scene.graph.node(&edge.to.0) else {
                 continue;
             };
-            let p0 = focus.to_render(graph_to_world_with_offset(offset, from.x_m, from.y_m));
-            let p1 = focus.to_render(graph_to_world_with_offset(offset, to.x_m, to.y_m));
+            let p0 = track_surface_render_pos(
+                graph_to_world_with_offset(offset, from.x_m, from.y_m),
+                terrain_ref,
+                &scene,
+                &focus,
+            );
+            let p1 = track_surface_render_pos(
+                graph_to_world_with_offset(offset, to.x_m, to.y_m),
+                terrain_ref,
+                &scene,
+                &focus,
+            );
             commands.spawn((
                 Mesh3d(edge_mesh.clone()),
                 MeshMaterial3d(edge_material.clone()),
@@ -346,7 +394,12 @@ pub fn spawn_track_meshes(
             if !should_spawn_node(&node.kind, scene.render_mode) {
                 continue;
             }
-            let pos = focus.to_render(graph_to_world_with_offset(offset, node.x_m, node.y_m));
+            let pos = track_surface_render_pos(
+                graph_to_world_with_offset(offset, node.x_m, node.y_m),
+                terrain_ref,
+                &scene,
+                &focus,
+            );
             commands.spawn((
                 Mesh3d(node_mesh.clone()),
                 MeshMaterial3d(node_material_for(&node.kind)),
@@ -530,14 +583,15 @@ mod tests {
     }
 
     #[test]
-    fn compact_line_mesh_has_two_vertices_per_edge() {
+    fn compact_line_mesh_has_two_rail_segments_per_edge() {
         let focus = crate::world::RouteFocus {
             center: Vec3::ZERO,
             height_origin: 0.0,
         };
-        let mesh = build_compact_track_line_mesh(&sample_graph(), Vec3::ZERO, &focus);
+        let scene = TrackScene::from_graph(sample_graph());
+        let mesh = build_compact_track_line_mesh(&scene.graph, Vec3::ZERO, &focus, None, &scene);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
-        assert_eq!(positions.len(), 2);
+        assert_eq!(positions.len(), 4);
     }
 
     #[test]

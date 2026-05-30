@@ -44,6 +44,16 @@ penalty_per_second_late = 8.0
 [train]
 consist = "consists/birmingham_pullman.con"
 
+[viewer3d.world_anchor]
+# Visual-only anchor from Open Rails log near the Birmingham activity start area:
+# {TileX:-6080 TileZ:14925 X:891.831 Y:35.7818 Z:582.756}
+# The viewer accepts the negative OR/internal tile X and maps it to `.w` display X.
+tile_x = -6080
+tile_z = 14925
+local_x_m = 891.831
+local_y_m = 35.7818
+local_z_m = 582.756
+
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 max_velocity_rms = 4.5

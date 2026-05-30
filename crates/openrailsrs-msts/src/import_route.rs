@@ -12,7 +12,7 @@ use std::path::Path;
 
 use openrailsrs_formats::{
     ActivityFile, MstsFile, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackNodeKind,
-    parse_msts_file,
+    TrackVectorPoint, parse_msts_file,
 };
 use serde::Serialize;
 
@@ -233,8 +233,8 @@ fn convert_tdb_to_toml(
                 nodes.push(NodeToml {
                     id,
                     kind: None,
-                    x_m: 0.0,
-                    y_m: 0.0,
+                    x_m: n.position.map(point_graph_x).unwrap_or(0.0),
+                    y_m: n.position.map(point_graph_z).unwrap_or(0.0),
                 });
             }
             TrackNodeKind::Junction { pins } => {
@@ -251,8 +251,8 @@ fn convert_tdb_to_toml(
                 nodes.push(NodeToml {
                     id,
                     kind: None,
-                    x_m: 0.0,
-                    y_m: 0.0,
+                    x_m: n.position.map(point_graph_x).unwrap_or(0.0),
+                    y_m: n.position.map(point_graph_z).unwrap_or(0.0),
                 });
             }
             TrackNodeKind::Vector { .. } => {}
@@ -269,10 +269,15 @@ fn convert_tdb_to_toml(
             speed_limit_mps,
             pins,
             item_ids,
+            geometry,
         } = &n.kind
         {
             let from_id = resolve_pin(pins.0, &node_map, &mut vec_counter, &mut nodes);
             let to_id = resolve_pin(pins.1, &node_map, &mut vec_counter, &mut nodes);
+            if let Some(geometry) = geometry {
+                set_node_position(&mut nodes, &from_id, geometry.start);
+                set_node_position(&mut nodes, &to_id, geometry.end);
+            }
             let edge_id = format!("e{}", n.id);
             for item_id in item_ids {
                 item_to_edge.insert(*item_id, edge_id.clone());
@@ -543,6 +548,31 @@ fn resolve_pin(
         y_m: 0.0,
     });
     id
+}
+
+fn set_node_position(nodes: &mut [NodeToml], id: &str, point: TrackVectorPoint) {
+    let x_m = point_graph_x(point);
+    let y_m = point_graph_z(point);
+    let Some(node) = nodes.iter_mut().find(|n| n.id == id) else {
+        return;
+    };
+    if is_zero(&node.x_m) && is_zero(&node.y_m) {
+        node.x_m = x_m;
+        node.y_m = y_m;
+    }
+}
+
+fn point_graph_x(point: TrackVectorPoint) -> f64 {
+    let display_tile_x = if point.tile_x < 0 {
+        -point.tile_x
+    } else {
+        point.tile_x
+    };
+    display_tile_x as f64 * 2048.0 + point.x
+}
+
+fn point_graph_z(point: TrackVectorPoint) -> f64 {
+    point.tile_z as f64 * 2048.0 + point.z
 }
 
 #[cfg(test)]

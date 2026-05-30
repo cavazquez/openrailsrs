@@ -176,7 +176,7 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
         .map(|sub_object| sub_object.vertices.len())
         .sum();
     assert_eq!(primitive_count, 30);
-    assert_eq!(triangle_count, 4869);
+    assert_eq!(triangle_count, 4870);
     assert_eq!(vertex_count, 14232);
 
     let primitive_states: BTreeSet<i32> = shape.lod_controls[0].distance_levels[0]
@@ -248,7 +248,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 29,
             matrices: 10,
             primitives: 29,
-            triangles: 3636,
+            triangles: 3672,
         },
         Expected {
             file_name: "RF_BP_PCFrear.s",
@@ -259,7 +259,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 29,
             matrices: 10,
             primitives: 29,
-            triangles: 3636,
+            triangles: 3672,
         },
         Expected {
             file_name: "RF_WP_DMBSA.s",
@@ -270,7 +270,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 30,
             matrices: 12,
             primitives: 30,
-            triangles: 4869,
+            triangles: 4870,
         },
         Expected {
             file_name: "RF_WP_DMBSH.s",
@@ -281,7 +281,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 29,
             matrices: 12,
             primitives: 29,
-            triangles: 4588,
+            triangles: 4589,
         },
         Expected {
             file_name: "RF_WP_KFC.s",
@@ -292,7 +292,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 27,
             matrices: 10,
             primitives: 27,
-            triangles: 2832,
+            triangles: 2836,
         },
         Expected {
             file_name: "RF_WP_KFF.s",
@@ -314,7 +314,7 @@ fn parse_current_chiltern_binary_shape_fixtures() {
             prim_states: 27,
             matrices: 10,
             primitives: 27,
-            triangles: 4355,
+            triangles: 4392,
         },
         Expected {
             file_name: "RF_WP_PSG.s",
@@ -503,6 +503,34 @@ fn parse_chiltern_compressed_binary_world_tile() {
             .iter()
             .any(|i| matches!(i, WorldItem::Static { .. })),
         "expected at least one Static"
+    );
+}
+
+#[test]
+fn parse_chiltern_prefixed_text_world_tile() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/WORLD/w-006084+014927.w");
+    if !path.is_file() {
+        eprintln!("skip: Chiltern WORLD not present");
+        return;
+    }
+    let world = WorldFile::from_path(&path).expect("parse prefixed UTF-16 .w");
+    assert!(
+        world
+            .items
+            .iter()
+            .any(|i| matches!(i, WorldItem::Forest { .. })),
+        "expected prefixed Forest blocks to classify correctly"
+    );
+    let static_item = world
+        .items
+        .iter()
+        .find(|i| matches!(i, WorldItem::Static { .. }))
+        .expect("expected at least one Static");
+    let pos = static_item.position().expect("static position");
+    assert!(
+        pos.x != 0.0 || pos.y != 0.0 || pos.z != 0.0,
+        "prefixed Position blocks should not collapse to origin"
     );
 }
 

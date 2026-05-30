@@ -4106,6 +4106,7 @@ dependencies = [
  "openrailsrs-track",
  "openrailsrs-train",
  "serde",
+ "toml",
 ]
 
 [[package]]

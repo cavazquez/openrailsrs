@@ -22,6 +22,8 @@ use super::atom_to_number;
 pub struct TrackDbNode {
     /// 1-based sequential ID as stored in the `.tdb` file.
     pub id: u32,
+    /// World-space node location from native `UiD (...)`, when present.
+    pub position: Option<TrackVectorPoint>,
     pub kind: TrackNodeKind,
 }
 
@@ -32,6 +34,26 @@ pub struct TrPinRef {
     pub node_id: u32,
     /// MSTS branch index: 0 = common/stem, 1+ = diverging branches.
     pub branch_index: u8,
+}
+
+/// One world-space point from a `TrVectorSection`.
+///
+/// `tile_x` keeps the MSTS/Open Rails internal sign convention from `.tdb`
+/// files (UK routes are commonly negative on X).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TrackVectorPoint {
+    pub tile_x: i32,
+    pub tile_z: i32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+/// Minimal geometry recovered from a vector node.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TrackVectorGeometry {
+    pub start: TrackVectorPoint,
+    pub end: TrackVectorPoint,
 }
 
 /// Type and payload of a track database node.
@@ -48,6 +70,8 @@ pub enum TrackNodeKind {
         pins: (u32, u32),
         /// `TrItemId`s referenced by this vector node via `TrItemRefs`.
         item_ids: Vec<u32>,
+        /// Best-effort section geometry for placing imported nodes in MSTS world space.
+        geometry: Option<TrackVectorGeometry>,
     },
 }
 
@@ -155,7 +179,11 @@ fn collect_nodes(ast: &Ast, out: &mut Vec<TrackDbNode>) {
         if head.eq_ignore_ascii_case("TrackNode") && items.len() >= 3 {
             if let Some(id) = parse_u32(&items[1]) {
                 if let Some(kind) = parse_node_kind(&items[2..]) {
-                    out.push(TrackDbNode { id, kind });
+                    out.push(TrackDbNode {
+                        id,
+                        position: parse_node_position(&items[2..]),
+                        kind,
+                    });
                     return;
                 }
             }
@@ -210,7 +238,11 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
                 if let Some(Ast::List(body)) = children.get(i + 1) {
                     if let Some(id) = body.first().and_then(parse_u32) {
                         if let Some(kind) = parse_node_kind(&body[1..]) {
-                            out.push(TrackDbNode { id, kind });
+                            out.push(TrackDbNode {
+                                id,
+                                position: parse_node_position(&body[1..]),
+                                kind,
+                            });
                             i += 2;
                             continue;
                         }
@@ -224,7 +256,11 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
                 if tag.eq_ignore_ascii_case("TrackNode") && sub.len() >= 3 {
                     if let Some(id) = parse_u32(&sub[1]) {
                         if let Some(kind) = parse_node_kind(&sub[2..]) {
-                            out.push(TrackDbNode { id, kind });
+                            out.push(TrackDbNode {
+                                id,
+                                position: parse_node_position(&sub[2..]),
+                                kind,
+                            });
                             i += 1;
                             continue;
                         }
@@ -290,7 +326,47 @@ fn parse_vector_kind(vector_sub: &[Ast], node_body: &[Ast]) -> TrackNodeKind {
         speed_limit_mps: parse_vector_speed(vector_sub),
         pins,
         item_ids: parse_tr_item_refs(vector_sub),
+        geometry: parse_vector_geometry(vector_sub),
     }
+}
+
+fn parse_node_position(body: &[Ast]) -> Option<TrackVectorPoint> {
+    let mut i = 0;
+    while i < body.len() {
+        match &body[i] {
+            Ast::List(sub)
+                if sub
+                    .first()
+                    .and_then(symbol_name)
+                    .is_some_and(|s| s.eq_ignore_ascii_case("UiD")) =>
+            {
+                return parse_uid_point(sub);
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("UiD") => {
+                if let Some(Ast::List(sub)) = body.get(i + 1) {
+                    return parse_uid_point(sub);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+fn parse_uid_point(items: &[Ast]) -> Option<TrackVectorPoint> {
+    let data_start = if items.first().and_then(symbol_name).is_some() {
+        1
+    } else {
+        0
+    };
+    Some(TrackVectorPoint {
+        tile_x: items.get(data_start + 4).and_then(parse_i32)?,
+        tile_z: items.get(data_start + 5).and_then(parse_i32)?,
+        x: items.get(data_start + 6).and_then(ast_to_f64)?,
+        y: items.get(data_start + 7).and_then(ast_to_f64)?,
+        z: items.get(data_start + 8).and_then(ast_to_f64)?,
+    })
 }
 
 fn vector_pin_pair(pins: &[TrPinRef]) -> (u32, u32) {
@@ -421,28 +497,65 @@ fn is_tr_pin_entry(ast: &Ast) -> bool {
     }
 }
 
-/// Number of numeric fields per section in native inline `TrVectorSections` blobs.
-const NATIVE_SECTION_FIELDS: usize = 16;
-/// Zero-based index of section length inside each native inline section block.
-const NATIVE_SECTION_LENGTH_IDX: usize = 12;
-
-/// Sum the lengths of all `TrVectorSection` entries inside a `TrVectorNode`.
+/// Estimate vector length from consecutive `TrVectorSection` world positions.
+///
+/// Open Rails reads the final three native section fields as `AX`, `AY`, `AZ`,
+/// not as length data, so exact per-section lengths require looking up
+/// `tsection.dat`.  This parser keeps a local geometric estimate instead.
 fn parse_vector_length(vector_node: &[Ast]) -> f64 {
-    let mut total = 0.0_f64;
+    let tagged_total = parse_tagged_vector_lengths(vector_node);
+    if tagged_total > 0.0 {
+        return tagged_total;
+    }
+    let Some(points) = parse_vector_points(vector_node) else {
+        return 25.0;
+    };
+    let total = polyline_length(&points);
+    if total <= 0.0 { 25.0 } else { total }
+}
+
+fn parse_tagged_vector_lengths(vector_node: &[Ast]) -> f64 {
+    let mut total = 0.0;
+    for sections in vector_sections_lists(vector_node) {
+        for section in sections.iter().skip(1) {
+            let Ast::List(sec_items) = section else {
+                continue;
+            };
+            if sec_items
+                .first()
+                .and_then(symbol_name)
+                .is_some_and(|s| s.eq_ignore_ascii_case("TrVectorSection"))
+            {
+                total += sec_items.get(9).and_then(ast_to_f64).unwrap_or(0.0);
+            }
+        }
+    }
+    total
+}
+
+fn parse_vector_geometry(vector_node: &[Ast]) -> Option<TrackVectorGeometry> {
+    let points = parse_vector_points(vector_node)?;
+    let start = *points.first()?;
+    let end = *points.last()?;
+    Some(TrackVectorGeometry { start, end })
+}
+
+fn parse_vector_points(vector_node: &[Ast]) -> Option<Vec<TrackVectorPoint>> {
+    let mut starts = Vec::new();
     for sections in vector_sections_lists(vector_node) {
         for section in sections.iter().skip(1) {
             if let Ast::List(sec_items) = section {
                 if let Some(Ast::Atom(Atom::Symbol(sec_tag))) = sec_items.first() {
                     if sec_tag.eq_ignore_ascii_case("TrVectorSection") {
-                        if let Some(len) = sec_items.get(9).and_then(ast_to_f64) {
-                            total += len;
+                        if let Some(point) = parse_tagged_vector_section_point(sec_items) {
+                            starts.push(point);
                         }
                     }
                 }
             }
         }
 
-        if total <= 0.0 {
+        if starts.is_empty() {
             let (count_idx, data_start) = if sections
                 .first()
                 .and_then(|a| match a {
@@ -456,19 +569,105 @@ fn parse_vector_length(vector_node: &[Ast]) -> f64 {
                 (0usize, 1usize)
             };
             if let Some(count) = sections.get(count_idx).and_then(parse_u32) {
-                for sec in 0..count as usize {
-                    let base = data_start + sec * NATIVE_SECTION_FIELDS;
-                    if let Some(len) = sections
-                        .get(base + NATIVE_SECTION_LENGTH_IDX)
-                        .and_then(ast_to_f64)
-                    {
-                        total += len;
-                    }
-                }
+                starts.extend(parse_native_vector_section_points(
+                    sections,
+                    data_start,
+                    count as usize,
+                ));
             }
         }
     }
-    if total <= 0.0 { 500.0 } else { total }
+    if starts.is_empty() {
+        None
+    } else {
+        Some(starts)
+    }
+}
+
+fn polyline_length(points: &[TrackVectorPoint]) -> f64 {
+    points
+        .windows(2)
+        .map(|pair| {
+            let (a, b) = (pair[0], pair[1]);
+            let ax = point_graph_x(a);
+            let bx = point_graph_x(b);
+            let az = point_graph_z(a);
+            let bz = point_graph_z(b);
+            ((bx - ax).powi(2) + (bz - az).powi(2)).sqrt()
+        })
+        .sum()
+}
+
+fn parse_tagged_vector_section_point(sec_items: &[Ast]) -> Option<TrackVectorPoint> {
+    Some(TrackVectorPoint {
+        tile_x: sec_items.get(3).and_then(parse_i32)?,
+        tile_z: sec_items.get(4).and_then(parse_i32)?,
+        x: sec_items.get(5).and_then(ast_to_f64)?,
+        y: sec_items.get(6).and_then(ast_to_f64)?,
+        z: sec_items.get(7).and_then(ast_to_f64)?,
+    })
+}
+
+fn parse_native_vector_section_points(
+    items: &[Ast],
+    data_start: usize,
+    count: usize,
+) -> Vec<TrackVectorPoint> {
+    let mut out = Vec::new();
+    let mut i = data_start;
+    while i + 15 < items.len() && out.len() < count {
+        if let Some(point) = parse_native_section_record(items, i) {
+            out.push(point);
+            i += 16;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+fn parse_native_section_record(items: &[Ast], base: usize) -> Option<TrackVectorPoint> {
+    let shape_a = items.get(base).and_then(parse_i32)?;
+    let shape_b = items.get(base + 1).and_then(parse_i32)?;
+    let world_tile_x = items.get(base + 2).and_then(parse_i32)?;
+    let world_tile_z = items.get(base + 3).and_then(parse_i32)?;
+    if !is_plausible_shape_id(shape_a)
+        || !is_plausible_shape_id(shape_b)
+        || !is_plausible_tile_pair(world_tile_x, world_tile_z)
+    {
+        return None;
+    }
+
+    let point = TrackVectorPoint {
+        tile_x: items.get(base + 8).and_then(parse_i32)?,
+        tile_z: items.get(base + 9).and_then(parse_i32)?,
+        x: items.get(base + 10).and_then(ast_to_f64)?,
+        y: items.get(base + 11).and_then(ast_to_f64)?,
+        z: items.get(base + 12).and_then(ast_to_f64)?,
+    };
+    if is_plausible_world_point(point) {
+        Some(point)
+    } else {
+        None
+    }
+}
+
+fn is_plausible_shape_id(id: i32) -> bool {
+    (20_000..=500_000).contains(&id)
+}
+
+fn is_plausible_tile_pair(tile_x: i32, tile_z: i32) -> bool {
+    (1000..=20_000).contains(&tile_x.abs()) && (10_000..=20_000).contains(&tile_z.abs())
+}
+
+fn is_plausible_world_point(point: TrackVectorPoint) -> bool {
+    is_plausible_tile_pair(point.tile_x, point.tile_z)
+        && point.x.is_finite()
+        && point.y.is_finite()
+        && point.z.is_finite()
+        && point.x.abs() <= 2048.0
+        && point.y.abs() <= 5000.0
+        && point.z.abs() <= 2048.0
 }
 
 fn vector_sections_lists(vector_node: &[Ast]) -> Vec<&[Ast]> {
@@ -498,6 +697,26 @@ fn vector_sections_lists(vector_node: &[Ast]) -> Vec<&[Ast]> {
         i += 1;
     }
     out
+}
+
+fn symbol_name(ast: &Ast) -> Option<&str> {
+    match ast {
+        Ast::Atom(Atom::Symbol(s)) => Some(s),
+        _ => None,
+    }
+}
+
+fn point_graph_x(point: TrackVectorPoint) -> f64 {
+    let display_tile_x = if point.tile_x < 0 {
+        -point.tile_x
+    } else {
+        point.tile_x
+    };
+    display_tile_x as f64 * 2048.0 + point.x
+}
+
+fn point_graph_z(point: TrackVectorPoint) -> f64 {
+    point.tile_z as f64 * 2048.0 + point.z
 }
 
 /// Extract speed limit (km/h → m/s) from `(SpeedMpS ...)` or `(MaxVelocity ...)` inside a vector node.
@@ -533,6 +752,14 @@ fn parse_u32(ast: &Ast) -> Option<u32> {
     match ast {
         Ast::Atom(Atom::Integer(i)) if *i >= 0 => Some(*i as u32),
         Ast::Atom(Atom::Number(n)) if *n >= 0.0 => Some(*n as u32),
+        _ => None,
+    }
+}
+
+fn parse_i32(ast: &Ast) -> Option<i32> {
+    match ast {
+        Ast::Atom(Atom::Integer(i)) => Some(*i as i32),
+        Ast::Atom(Atom::Number(n)) => Some(*n as i32),
         _ => None,
     }
 }
@@ -943,12 +1170,19 @@ mod tests {
             .filter(|n| matches!(n.kind, TrackNodeKind::Vector { .. }))
             .collect();
         assert_eq!(vectors.len(), 1);
-        if let TrackNodeKind::Vector { length_m, pins, .. } = &vectors[0].kind {
+        if let TrackNodeKind::Vector {
+            length_m,
+            pins,
+            geometry,
+            ..
+        } = &vectors[0].kind
+        {
             assert!(
-                *length_m > 800.0,
-                "inline section length should be parsed, got {length_m}"
+                (*length_m - 25.0).abs() < 1e-6,
+                "single-section fallback length should be used until tsection.dat is consulted, got {length_m}"
             );
             assert_eq!(*pins, (3, 1));
+            assert!(geometry.is_some(), "native section geometry should parse");
         }
         let junction = tdb
             .nodes

@@ -43,6 +43,31 @@ fn parse_minimal_tdb() {
 }
 
 #[test]
+fn parse_native_tdb_vector_geometry() {
+    let tdb = TrackDbFile::from_path(fixtures_dir().join("native_msts.tdb"))
+        .expect("parse native_msts.tdb");
+    let n2 = tdb.nodes.iter().find(|n| n.id == 2).expect("node 2");
+    match &n2.kind {
+        openrailsrs_formats::TrackNodeKind::Vector {
+            length_m, geometry, ..
+        } => {
+            assert!(
+                (*length_m - 25.0).abs() < 1e-6,
+                "single-section native vector should use fallback length until tsection.dat is consulted, got {length_m}"
+            );
+            let geometry = geometry.expect("native vector geometry");
+            assert_eq!(geometry.start.tile_x, -6079);
+            assert_eq!(geometry.start.tile_z, 14925);
+            assert!((geometry.start.x - 663.423).abs() < 1e-3);
+            assert!((geometry.start.y - 37.2162).abs() < 1e-4);
+            assert!((geometry.start.z - 824.8589).abs() < 1e-4);
+            assert_eq!(geometry.end, geometry.start);
+        }
+        other => panic!("node 2 should be Vector, got {other:?}"),
+    }
+}
+
+#[test]
 fn parse_minimal_pat() {
     let pat = PathFile::from_path(fixtures_dir().join("minimal.pat")).expect("parse minimal.pat");
 
@@ -107,6 +132,31 @@ fn import_route_toml_loads_with_route_crate() {
         graph.edges_iter().next().is_some(),
         "graph should have edges"
     );
+}
+
+#[test]
+fn import_native_route_emits_world_coordinates() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::copy(
+        fixtures_dir().join("native_msts.tdb"),
+        dir.path().join("native_msts.tdb"),
+    )
+    .expect("copy native tdb");
+
+    let toml_str = import_route(dir.path()).expect("import native route");
+    let value: toml::Value = toml::from_str(&toml_str).expect("valid TOML");
+    let nodes = value
+        .get("nodes")
+        .and_then(|v| v.as_array())
+        .expect("nodes array");
+    let n3 = nodes
+        .iter()
+        .find(|n| n.get("id").and_then(|v| v.as_str()) == Some("n3"))
+        .expect("n3");
+    let x_m = n3.get("x_m").and_then(as_f64).expect("n3.x_m");
+    let y_m = n3.get("y_m").and_then(as_f64).expect("n3.y_m");
+    assert!((x_m - (6079.0 * 2048.0 + 663.423)).abs() < 1e-3);
+    assert!((y_m - (14925.0 * 2048.0 + 824.8589)).abs() < 1e-3);
 }
 
 #[test]

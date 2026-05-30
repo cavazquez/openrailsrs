@@ -139,8 +139,33 @@ impl<'a> BinaryReader<'a> {
         })
     }
 
-    fn peek_subblock_header(&self, block_end: usize) -> bool {
-        self.peek_subblock_header_at(self.pos, block_end)
+    fn peek_subblock_header(&self, parent_token_id: i32, block_end: usize) -> bool {
+        self.peek_subblock_header_for_parent(parent_token_id, self.pos, block_end)
+    }
+
+    fn peek_subblock_header_for_parent(
+        &self,
+        parent_token_id: i32,
+        pos: usize,
+        block_end: usize,
+    ) -> bool {
+        if is_scalar_only_leaf_block(parent_token_id) {
+            return false;
+        }
+        if !self.peek_subblock_header_at(pos, block_end) {
+            return false;
+        }
+        let Some(child) = self.peek_token_id_at(pos) else {
+            return false;
+        };
+        if parent_token_id == 60 {
+            // indexed_trilist → vertex_idxs | normal_idxs | flags
+            return matches!(child, 63 | 6 | 64);
+        }
+        if is_schema_collection_parent(parent_token_id) {
+            return is_expected_collection_child(parent_token_id, child);
+        }
+        true
     }
 
     fn peek_subblock_header_at(&self, pos: usize, block_end: usize) -> bool {
@@ -203,23 +228,94 @@ impl<'a> BinaryReader<'a> {
         let count_child = self.peek_token_id_at(self.pos + 4);
         if count_child.is_some_and(|child| is_expected_collection_child(parent_token_id, child))
             && count <= 100_000
-            && self.peek_subblock_header_at(self.pos + 4, block_end)
+            && self.peek_subblock_header_for_parent(parent_token_id, self.pos + 4, block_end)
         {
             self.pos += 4;
             out.push(' ');
             out.push_str(&count.to_string());
             return Ok(true);
         }
-        if self.peek_subblock_header(block_end) {
+        if self.peek_subblock_header(parent_token_id, block_end) {
             return Ok(false);
         }
-        if count <= 100_000 && self.peek_subblock_header_at(self.pos + 4, block_end) {
+        if count_child.is_some_and(|child| is_expected_collection_child(parent_token_id, child))
+            && count <= 100_000
+            && self.peek_subblock_header_for_parent(parent_token_id, self.pos + 4, block_end)
+        {
             self.pos += 4;
             out.push(' ');
             out.push_str(&count.to_string());
             return Ok(true);
         }
         Ok(false)
+    }
+
+    /// Blocks whose body is only numeric scalars (Open Rails never nests sub-blocks here).
+    fn dump_vertex_idxs_content(
+        &mut self,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        let total = self.read_u32()? as i32;
+        out.push(' ');
+        out.push_str(&total.to_string());
+        for _ in 0..total.max(0) {
+            if self.pos + 4 > block_end {
+                break;
+            }
+            out.push(' ');
+            out.push_str(&(self.read_u32()? as i32).to_string());
+        }
+        Ok(())
+    }
+
+    fn dump_normal_idxs_content(
+        &mut self,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        let count = self.read_u32()? as i32;
+        out.push(' ');
+        out.push_str(&count.to_string());
+        for _ in 0..count.max(0) {
+            if self.pos + 4 > block_end {
+                break;
+            }
+            out.push(' ');
+            out.push_str(&(self.read_u32()? as i32).to_string());
+            // Open Rails skips the constant `3` after each normal index.
+            if self.pos + 4 <= block_end {
+                self.read_u32()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn dump_flags_content(
+        &mut self,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        let count = self.read_u32()? as i32;
+        out.push(' ');
+        out.push_str(&count.to_string());
+        for _ in 0..count.max(0) {
+            if self.pos + 4 > block_end {
+                break;
+            }
+            out.push(' ');
+            out.push_str(&self.read_u32()?.to_string());
+        }
+        Ok(())
     }
 
     fn dump_block(&mut self) -> Result<String, FormatError> {
@@ -275,10 +371,44 @@ impl<'a> BinaryReader<'a> {
             out.push('"');
         }
 
+        // OR reads these blocks as flat scalar runs, never nested sub-blocks.
+        match token_id {
+            63 => {
+                self.dump_vertex_idxs_content(block_end, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            6 => {
+                self.dump_normal_idxs_content(block_end, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            64 => {
+                self.dump_flags_content(block_end, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            60 => {
+                while self.pos < block_end
+                    && self.peek_subblock_header_for_parent(token_id, self.pos, block_end)
+                {
+                    out.push(' ');
+                    out.push_str(&self.dump_block()?);
+                }
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            _ => {}
+        }
+
         while self.pos < block_end {
             if self.try_read_count_before_subblocks(token_id, block_end, &mut out)? {
                 // count appended
-            } else if self.peek_subblock_header(block_end) {
+            } else if self.peek_subblock_header(token_id, block_end) {
                 let saved = self.pos;
                 match self.dump_block() {
                     Ok(block) => {
@@ -492,6 +622,39 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
     )
 }
 
+fn is_scalar_only_leaf_block(token_id: i32) -> bool {
+    matches!(
+        token_id,
+        2 | 3 | 6 | 8 | 56 | 63 | 64 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags
+    )
+}
+
+fn is_schema_collection_parent(parent: i32) -> bool {
+    matches!(
+        parent,
+        5 | 7
+            | 9
+            | 11
+            | 14
+            | 16
+            | 18
+            | 31
+            | 36
+            | 38
+            | 42
+            | 47
+            | 50
+            | 52
+            | 53
+            | 55
+            | 60
+            | 66
+            | 68
+            | 72
+            | 74
+    )
+}
+
 fn is_expected_collection_child(parent: i32, child: i32) -> bool {
     matches!(
         (parent, child),
@@ -512,6 +675,9 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (53, 56) // primitives -> prim_state_idx
             | (53, 60) // primitives -> indexed_trilist
             | (55, 54) // prim_states -> prim_state
+            | (60, 63) // indexed_trilist -> vertex_idxs
+            | (60, 6) // indexed_trilist -> normal_idxs
+            | (60, 64) // indexed_trilist -> flags
             | (66, 65) // matrices -> matrix
             | (68, 69) // volumes -> vol_sphere
             | (72, 129) // shader_names -> named_shader
@@ -521,6 +687,7 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::ShapeFile;
     use crate::msts_simisa::decode_simisa_container;
 
     #[test]
@@ -531,5 +698,21 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn chiltern_tree_shape_vertex_indices_are_sane() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/SHAPES/POPLAR15.S");
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse POPLAR15");
+        let prim = &shape.lod_controls[0].distance_levels[0].sub_objects[0].primitives[0];
+        assert!(
+            prim.vertex_indices.iter().all(|&idx| idx < 16),
+            "tree shape vertex indices must be small table indices, got {:?}",
+            prim.vertex_indices
+        );
     }
 }

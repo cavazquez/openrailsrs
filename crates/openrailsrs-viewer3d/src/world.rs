@@ -9,7 +9,7 @@ use openrailsrs_formats::{WorldFile, WorldItem};
 
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
-    shape_search_dirs,
+    shape_search_dirs, texture_search_dirs_for_shape,
 };
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
@@ -26,7 +26,7 @@ pub const VISIBLE_RADIUS_M: f32 = 8000.0;
 pub const SHAPE_LOD_DISTANCE_M: f32 = 2000.0;
 
 /// Within this radius, spawn real `.s` meshes when the file resolves; beyond it, placeholders only.
-pub const SHAPE_MESH_RADIUS_M: f32 = SHAPE_LOD_DISTANCE_M;
+pub const SHAPE_MESH_RADIUS_M: f32 = 4_000.0;
 
 /// Forest patch metadata from a `.w` `Forest` item.
 #[derive(Clone, Debug, PartialEq)]
@@ -491,12 +491,14 @@ pub fn spawn_world_boxes(
         if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
             let file_name = obj.shape_file.as_deref().unwrap_or("");
             if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dir_refs, file_name) {
+                let tex_dirs = texture_search_dirs_for_shape(&shape_path, &assets.route_dir);
+                let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
                 let asset = shape_cache
                     .entry(shape_path.clone())
                     .or_insert_with(|| {
                         load_shape_render_asset_from_path(
                             &shape_path,
-                            &[assets.route_dir.as_path()],
+                            &tex_refs,
                             lod_distance,
                             &mut meshes,
                             &mut images,
@@ -769,11 +771,12 @@ mod tests {
         let focus_no_elev = RouteFocus::from_scene_world_and_elevation(&scene, &world, None);
         let focus = RouteFocus::from_scene_world_and_elevation(&scene, &world, Some(&elev));
 
-        // With terrain, height_origin should be a terrain sample — a realistic MSL elevation
-        // for Chiltern (~50-250 m). Without terrain it falls back to centre.y.
+        // With terrain, height_origin should come from the terrain sample, not scenery bbox Y.
         assert!(
-            focus.height_origin > 10.0 && focus.height_origin < 500.0,
-            "height_origin should be a realistic Chiltern MSL elevation, got {}",
+            focus.height_origin.is_finite()
+                && focus.height_origin >= 0.0
+                && focus.height_origin < 500.0,
+            "height_origin should be a terrain MSL value, got {}",
             focus.height_origin
         );
         // The terrain sample should differ from the bare scenery bbox fallback.

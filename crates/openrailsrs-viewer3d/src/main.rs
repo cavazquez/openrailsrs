@@ -29,7 +29,10 @@ use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
 use bevy::window::PresentMode;
+use openrailsrs_formats::Vec3 as MstsVec3;
+use openrailsrs_route::edge_path;
 use openrailsrs_route::load_track_graph_from_route_dir;
+use openrailsrs_scenarios::SCENARIO_OVERLAY_FILENAME;
 use openrailsrs_scenarios::load_scenario;
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::LiveDrive;
@@ -41,14 +44,16 @@ use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
+use openrailsrs_viewer3d::shapes::{resolve_shape_path_in_dirs, shape_search_dirs};
 use openrailsrs_viewer3d::teleport::TeleportDialog;
 use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir_near;
-use openrailsrs_viewer3d::track::TrackScene;
+use openrailsrs_viewer3d::track::{TrackScene, graph_to_world};
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
 use openrailsrs_viewer3d::world::RouteFocus;
 use openrailsrs_viewer3d::world::RouteWorldOffset;
 use openrailsrs_viewer3d::world::VISIBLE_RADIUS_M;
-use openrailsrs_viewer3d::world::load_world_from_route_dir;
+use openrailsrs_viewer3d::world::{load_world_from_route_dir, msts_to_bevy};
+use serde::Deserialize;
 
 struct LaunchConfig {
     title: String,
@@ -60,11 +65,35 @@ struct LaunchConfig {
     replay: ReplayState,
     consist: TrainConsistScene,
     live: Option<LiveDrive>,
+    focus_center_override: Option<Vec3>,
+    route_offset_override: Option<RouteWorldOffset>,
 }
 
 struct CliArgs {
     live: bool,
     path: PathBuf,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+struct Viewer3dToml {
+    #[serde(default)]
+    viewer3d: Viewer3dConfig,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+struct Viewer3dConfig {
+    #[serde(default)]
+    world_anchor: Option<WorldAnchorToml>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+struct WorldAnchorToml {
+    tile_x: i32,
+    tile_z: i32,
+    local_x_m: f64,
+    #[serde(default)]
+    local_y_m: f64,
+    local_z_m: f64,
 }
 
 fn parse_cli() -> CliArgs {
@@ -144,22 +173,17 @@ fn main() {
         );
     }
 
-    let route_focus = RouteFocus::from_scene_world_and_elevation(
-        &config.scene,
-        &config.world,
-        if config.elevation.is_empty() {
-            None
-        } else {
-            Some(&config.elevation)
-        },
-    );
+    let route_focus = route_focus_for_config(&config);
     if route_focus.height_origin != route_focus.center.y {
         eprintln!(
             "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0})",
             route_focus.height_origin, route_focus.center.y
         );
     }
-    let route_offset = RouteWorldOffset::from_scene_and_world(&config.scene, &config.world);
+    let route_offset = config
+        .route_offset_override
+        .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
+    log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
     let mut app = App::new();
     app.add_plugins(
@@ -229,6 +253,8 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
         replay: ReplayState::default(),
         consist: TrainConsistScene::default(),
         live: None,
+        focus_center_override: None,
+        route_offset_override: None,
     })
 }
 
@@ -241,7 +267,33 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
     let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
     let scene = TrackScene::from_graph(graph);
     let world = load_world_from_route_dir(&route_dir);
-    let focus = RouteFocus::from_scene_and_world(&scene, &world);
+    let viewer3d = load_viewer3d_config(path, scenario_dir)?;
+    let anchor_world = viewer3d.world_anchor.map(world_anchor_position);
+    let route_offset_override = match (viewer3d.world_anchor, anchor_world) {
+        (Some(anchor), Some(world_pos)) => {
+            let graph_pos = graph_start_position(&scene, &scenario)?;
+            let delta = Vec3::new(world_pos.x - graph_pos.x, 0.0, world_pos.z - graph_pos.z);
+            eprintln!(
+                "openrailsrs-viewer3d: viewer3d world anchor tile {},{} local {:.1},{:.1},{:.1} -> offset {:.0},{:.0},{:.0} m",
+                anchor.tile_x,
+                anchor.tile_z,
+                anchor.local_x_m,
+                anchor.local_y_m,
+                anchor.local_z_m,
+                delta.x,
+                delta.y,
+                delta.z
+            );
+            Some(RouteWorldOffset { delta })
+        }
+        _ => None,
+    };
+    let focus = anchor_world
+        .map(|center| RouteFocus {
+            center,
+            height_origin: center.y,
+        })
+        .unwrap_or_else(|| RouteFocus::from_scene_and_world(&scene, &world));
     let terrain =
         load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M);
     let elevation = TerrainElevation::load_from_route_dir_near(
@@ -301,7 +353,180 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
         replay,
         consist,
         live: live_drive,
+        focus_center_override: anchor_world,
+        route_offset_override,
     })
+}
+
+fn route_focus_for_config(config: &LaunchConfig) -> RouteFocus {
+    if let Some(center) = config.focus_center_override {
+        let height_origin = if config.elevation.is_empty() {
+            center.y
+        } else {
+            config
+                .elevation
+                .sample_world_y(center.x, center.z)
+                .unwrap_or(center.y)
+        };
+        RouteFocus {
+            center,
+            height_origin,
+        }
+    } else {
+        RouteFocus::from_scene_world_and_elevation(
+            &config.scene,
+            &config.world,
+            if config.elevation.is_empty() {
+                None
+            } else {
+                Some(&config.elevation)
+            },
+        )
+    }
+}
+
+fn load_viewer3d_config(path: &Path, scenario_dir: &Path) -> Result<Viewer3dConfig, String> {
+    let mut out = Viewer3dConfig::default();
+    for file in [
+        path.to_path_buf(),
+        scenario_dir.join(SCENARIO_OVERLAY_FILENAME),
+    ] {
+        if !file.is_file() {
+            continue;
+        }
+        let text = std::fs::read_to_string(&file)
+            .map_err(|e| format!("failed to read {}: {e}", file.display()))?;
+        let parsed: Viewer3dToml = toml::from_str(&text)
+            .map_err(|e| format!("failed to parse viewer3d config in {}: {e}", file.display()))?;
+        if parsed.viewer3d.world_anchor.is_some() {
+            out.world_anchor = parsed.viewer3d.world_anchor;
+        }
+    }
+    Ok(out)
+}
+
+fn world_anchor_position(anchor: WorldAnchorToml) -> Vec3 {
+    let display_tile_x = if anchor.tile_x < 0 {
+        -anchor.tile_x
+    } else {
+        anchor.tile_x
+    };
+    msts_to_bevy(
+        display_tile_x,
+        anchor.tile_z,
+        MstsVec3 {
+            x: anchor.local_x_m,
+            y: anchor.local_y_m,
+            z: anchor.local_z_m,
+        },
+    )
+}
+
+fn graph_start_position(
+    scene: &TrackScene,
+    scenario: &openrailsrs_scenarios::ScenarioFile,
+) -> Result<Vec3, String> {
+    let path_edges = edge_path(
+        &scene.graph,
+        &scenario.route.start,
+        &scenario.route.destination,
+    )
+    .map_err(|e| e.to_string())?;
+    let mut remaining = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
+    for edge_id in path_edges {
+        let edge = scene
+            .graph
+            .edge(&edge_id)
+            .ok_or_else(|| format!("missing edge {edge_id}"))?;
+        let from = scene
+            .graph
+            .node(&edge.from.0)
+            .ok_or_else(|| format!("missing node {}", edge.from.0))?;
+        let to = scene
+            .graph
+            .node(&edge.to.0)
+            .ok_or_else(|| format!("missing node {}", edge.to.0))?;
+        if remaining <= edge.length_m || edge.length_m <= 0.0 {
+            let frac = if edge.length_m > 0.0 {
+                (remaining / edge.length_m).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let x_m = from.x_m + frac * (to.x_m - from.x_m);
+            let y_m = from.y_m + frac * (to.y_m - from.y_m);
+            return Ok(graph_to_world(x_m, y_m));
+        }
+        remaining -= edge.length_m;
+    }
+    let node = scene
+        .graph
+        .node(&scenario.route.start)
+        .ok_or_else(|| format!("missing start node {}", scenario.route.start))?;
+    Ok(graph_to_world(node.x_m, node.y_m))
+}
+
+fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Vec3) {
+    if std::env::var_os("OPENRAILSRS_SCENERY_DEBUG").is_none() {
+        return;
+    }
+    let mut within_250 = 0usize;
+    let mut within_1000 = 0usize;
+    let mut within_2000 = 0usize;
+    let mut by_kind: HashMap<&'static str, usize> = HashMap::new();
+    let mut nearest: Vec<(&str, &str, f32, Option<&str>, bool)> = Vec::new();
+    let shape_dir_bufs = shape_search_dirs(route_dir);
+    let shape_dirs: Vec<&Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
+    let mut missing_shapes = 0usize;
+
+    for obj in &world.items {
+        let dist = Vec2::new(obj.position.x - center.x, obj.position.z - center.z).length();
+        if dist <= 250.0 {
+            within_250 += 1;
+        }
+        if dist <= 1000.0 {
+            within_1000 += 1;
+        }
+        if dist <= 2000.0 {
+            within_2000 += 1;
+            *by_kind.entry(obj.kind).or_default() += 1;
+            let shape_name = obj.shape_file.as_deref();
+            let shape_missing = shape_name.is_some_and(|name| {
+                name.to_ascii_lowercase().ends_with(".s")
+                    && resolve_shape_path_in_dirs(&shape_dirs, name).is_none()
+            });
+            if shape_missing {
+                missing_shapes += 1;
+            }
+            nearest.push((
+                obj.kind,
+                obj.label.as_str(),
+                dist,
+                shape_name,
+                shape_missing,
+            ));
+        }
+    }
+
+    nearest.sort_by(|a, b| a.2.total_cmp(&b.2));
+    eprintln!(
+        "openrailsrs-viewer3d: scenery-debug center {:.1},{:.1},{:.1}: {} obj(s) <=250m, {} <=1000m, {} <=2000m, {} missing .s <=2000m",
+        center.x, center.y, center.z, within_250, within_1000, within_2000, missing_shapes
+    );
+    let mut kinds: Vec<_> = by_kind.into_iter().collect();
+    kinds.sort_by_key(|(kind, _)| *kind);
+    for (kind, count) in kinds {
+        eprintln!("openrailsrs-viewer3d: scenery-debug kind {kind}: {count}");
+    }
+    for (kind, label, dist, shape, missing) in nearest.into_iter().take(12) {
+        eprintln!(
+            "openrailsrs-viewer3d: scenery-debug near {:>7.1}m {:<8} {}{}{}",
+            dist,
+            kind,
+            label,
+            shape.map(|s| format!(" shape={s}")).unwrap_or_default(),
+            if missing { " MISSING" } else { "" }
+        );
+    }
 }
 
 fn load_train_consists(

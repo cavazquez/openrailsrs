@@ -151,10 +151,76 @@ impl WorldFile {
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
         let text = read_msts_file_decoded(path)?;
-        let ast = parse_from_first_paren(&text)?;
+        let normalized = normalize_world_text(&text);
+        let ast = parse_from_first_paren(&normalized)?;
         let (tile_x, tile_z) = parse_tile_xz_from_filename(path).unwrap_or((0, 0));
         Ok(Self::from_ast(&ast, tile_x, tile_z))
     }
+}
+
+/// MSTS world text often uses `Name ( ... )` blocks instead of canonical
+/// S-expressions `( Name ... )`.  The generic parser expects the latter, so
+/// convert only symbol-prefix block openers while leaving existing canonical
+/// blocks, strings and scalar values untouched.
+fn normalize_world_text(source: &str) -> String {
+    let mut out = String::with_capacity(source.len() + source.len() / 8);
+    let bytes = source.as_bytes();
+    let mut i = 0usize;
+    let mut in_string = false;
+    let mut prev_non_ws: Option<u8> = None;
+
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == b'"' {
+            in_string = !in_string;
+            out.push(b as char);
+            prev_non_ws = Some(b);
+            i += 1;
+            continue;
+        }
+
+        if !in_string && is_symbol_start(b) {
+            let start = i;
+            i += 1;
+            while i < bytes.len() && is_symbol_continue(bytes[i]) {
+                i += 1;
+            }
+            let end = i;
+            let mut j = i;
+            while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                j += 1;
+            }
+
+            if j < bytes.len() && bytes[j] == b'(' && prev_non_ws != Some(b'(') {
+                out.push_str("( ");
+                out.push_str(&source[start..end]);
+                out.push(' ');
+                prev_non_ws = Some(b'(');
+                i = j + 1;
+                continue;
+            }
+
+            out.push_str(&source[start..end]);
+            prev_non_ws = Some(bytes[end - 1]);
+            continue;
+        }
+
+        out.push(b as char);
+        if !b.is_ascii_whitespace() {
+            prev_non_ws = Some(b);
+        }
+        i += 1;
+    }
+
+    out
+}
+
+fn is_symbol_start(b: u8) -> bool {
+    b.is_ascii_alphabetic() || b == b'_'
+}
+
+fn is_symbol_continue(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.')
 }
 
 fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {

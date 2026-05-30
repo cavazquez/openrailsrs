@@ -37,9 +37,10 @@ pub use typed::{
     PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile, ShapeFile,
     SignalAspectKind, SoundRegionOverride, SubObject, TerrainFile, TerrainMeshData, TerrainPatch,
     TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
-    TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind, TrafficServiceDef, Vec2, Vec3,
-    Vertex, WagonFile, WorldFile, WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex,
-    build_tile_mesh_data, parse_orts_brake_shoe, parse_orts_friction_fields,
-    parse_tile_xz_from_filename, patch_affine_uv, read_f_raw, read_y_raw, resolve_brake_shoe_curve,
+    TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
+    TrackVectorPoint, TrafficServiceDef, Vec2, Vec3, Vertex, WagonFile, WorldFile, WorldItem,
+    build_patch_mesh_data, build_patch_mesh_data_ex, build_tile_mesh_data, parse_orts_brake_shoe,
+    parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
+    read_y_raw, resolve_brake_shoe_curve,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

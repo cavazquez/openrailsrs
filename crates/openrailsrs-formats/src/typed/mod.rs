@@ -36,6 +36,7 @@ pub use terrain::{
 };
 pub use track_db::{
     SignalAspectKind, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind,
+    TrackVectorGeometry, TrackVectorPoint,
 };
 pub use wagon::WagonFile;
 pub use world::{WorldFile, WorldItem};
