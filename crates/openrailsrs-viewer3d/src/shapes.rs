@@ -152,6 +152,27 @@ pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) 
     }
 }
 
+/// Lead-vehicle placement for 3D cab (same origin/rotation as exterior `.s`, unit scale).
+pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32) -> Transform {
+    let rotation = msts_shape_to_train_rotation();
+    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
+    let center = (min + max) * 0.5;
+
+    let front = Vec3::new(center.x, center.y, max.z);
+    let front_local_x = (rotation * front).x;
+
+    let min_y = aabb_corners(min, max)
+        .iter()
+        .map(|p| (rotation * *p).y)
+        .fold(f32::INFINITY, f32::min);
+
+    Transform {
+        translation: Vec3::new(offset_m - front_local_x, -min_y, 0.0),
+        rotation,
+        scale: Vec3::ONE,
+    }
+}
+
 /// Pick the highest-detail distance level (lowest `dlevel_selection` metres).
 pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
     shape
@@ -411,10 +432,23 @@ pub fn ace_to_image(ace: &AceFile) -> Image {
 
 /// Optional MSTS install root (`Content/`) for `GLOBAL/SHAPES` lookup.
 pub fn msts_content_root() -> Option<PathBuf> {
-    std::env::var("OPENRAILSRS_MSTS_CONTENT")
-        .ok()
-        .map(PathBuf::from)
-        .filter(|p| p.is_dir())
+    if let Ok(env) = std::env::var("OPENRAILSRS_MSTS_CONTENT") {
+        let path = PathBuf::from(env);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    let home = std::env::var_os("HOME")?;
+    for rel in [
+        "Documentos/Open Rails/Content",
+        "Documents/Open Rails/Content",
+    ] {
+        let path = PathBuf::from(&home).join(rel);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 /// Route directory plus optional `GLOBAL` from [`msts_content_root`].
@@ -436,13 +470,18 @@ pub fn global_assets_dir() -> Option<PathBuf> {
 /// Directories to search for `.ace` textures given a resolved shape path.
 pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(shapes_dir) = shape_path.parent().filter(|p| {
-        p.file_name()
-            .is_some_and(|n| n.eq_ignore_ascii_case("shapes"))
-    }) {
-        if let Some(asset_root) = shapes_dir.parent() {
-            if asset_root != route_dir {
-                dirs.push(asset_root.to_path_buf());
+    if let Some(parent) = shape_path.parent() {
+        let in_asset_subdir = parent.file_name().is_some_and(|n| {
+            n.eq_ignore_ascii_case("shapes")
+                || n.eq_ignore_ascii_case("cabview3d")
+                || n.eq_ignore_ascii_case("cabview")
+        });
+        if in_asset_subdir {
+            dirs.push(parent.to_path_buf());
+            if let Some(asset_root) = parent.parent() {
+                if asset_root != route_dir {
+                    dirs.push(asset_root.to_path_buf());
+                }
             }
         }
     }
@@ -514,6 +553,13 @@ pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
+    let direct = route_dir.join(file_name);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&direct) {
+        return Some(p);
+    }
     for subdir in ["TEXTURES", "textures"] {
         let textures_root = route_dir.join(subdir);
         let direct = textures_root.join(file_name);
@@ -1116,6 +1162,21 @@ mod tests {
 
         let _ = std::fs::remove_file(texture);
         let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
+    fn resolve_texture_path_finds_ace_in_cabview3d_folder() {
+        let cab_dir = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d",
+        );
+        if !cab_dir.is_dir() {
+            return;
+        }
+        let found = resolve_texture_path(&cab_dir, "Cab1.ace");
+        assert!(
+            found.is_some(),
+            "CABVIEW3D stores .ace next to .s, not only in TEXTURES/"
+        );
     }
 
     #[test]

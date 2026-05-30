@@ -1,21 +1,29 @@
-//! Driver cab panel (Fase C3): Bevy UI gauges fed by [`LiveDriveSession`].
+//! Driver cab instrumentation (Open Rails cabview analogue).
+//!
+//! Open Rails renders MSTS `CABVIEW3D` meshes plus `.cvf` control sprites. Until CVF
+//! animation is ported, this module draws a HUD instrument board and loads the 3D cab
+//! shell via [`crate::cab_view`] when `CABVIEW3D/*.s` exists on disk.
 
 use bevy::prelude::*;
 use openrailsrs_sim::CabTelemetry;
 
+use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
 
-const PANEL_WIDTH_PX: f32 = 260.0;
-const PANEL_HEIGHT_PX: f32 = 168.0;
-const FONT_SPEED: f32 = 28.0;
-const FONT_LABEL: f32 = 12.0;
+const PANEL_WIDTH_PX: f32 = 520.0;
+const PANEL_HEIGHT_PX: f32 = 210.0;
+const FONT_SPEED: f32 = 42.0;
+const FONT_LABEL: f32 = 13.0;
+const FONT_BADGE: f32 = 15.0;
 
-const COL_PANEL_BG: Color = Color::srgba(0.04, 0.05, 0.08, 0.92);
+const COL_PANEL_BG: Color = Color::srgba(0.04, 0.05, 0.08, 0.94);
 const COL_PANEL_BORDER: Color = Color::srgb(0.35, 0.45, 0.55);
 const COL_TEXT: Color = Color::srgb(0.85, 0.88, 0.92);
 const COL_MUTED: Color = Color::srgb(0.45, 0.52, 0.58);
 const COL_SPEED: Color = Color::srgb(1.0, 0.82, 0.35);
 const COL_WARN: Color = Color::srgb(1.0, 0.35, 0.35);
+const COL_BADGE: Color = Color::srgb(0.55, 0.95, 0.65);
+const COL_BADGE_BG: Color = Color::srgba(0.02, 0.12, 0.06, 0.88);
 const COL_THROTTLE: Color = Color::srgb(0.25, 0.85, 0.45);
 const COL_BRAKE: Color = Color::srgb(0.95, 0.3, 0.3);
 const COL_BAR_TRACK: Color = Color::srgb(0.12, 0.16, 0.22);
@@ -73,6 +81,9 @@ pub fn build_cab_panel_content(tel: &CabTelemetry) -> CabPanelContent {
 pub(crate) struct CabPanelRoot;
 
 #[derive(Component)]
+pub(crate) struct CabModeBadge;
+
+#[derive(Component)]
 pub(crate) struct CabSpeedText;
 
 #[derive(Component)]
@@ -93,143 +104,206 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
             CabPanelRoot,
             Node {
                 position_type: PositionType::Absolute,
-                right: Val::Px(12.0),
-                bottom: Val::Px(88.0),
-                width: Val::Px(PANEL_WIDTH_PX),
-                height: Val::Px(PANEL_HEIGHT_PX),
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(10.0)),
-                row_gap: Val::Px(6.0),
-                border: UiRect::all(Val::Px(1.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
-            BackgroundColor(COL_PANEL_BG),
-            BorderColor::all(COL_PANEL_BORDER),
-            ZIndex(110),
+            ZIndex(95),
         ))
-        .with_children(|panel| {
-            panel.spawn((
-                Text::new("CAB"),
-                TextFont {
-                    font_size: FONT_LABEL,
-                    ..default()
-                },
-                TextColor(COL_MUTED),
-            ));
-            panel.spawn((
-                CabSpeedText,
-                Text::new("0 km/h"),
-                TextFont {
-                    font_size: FONT_SPEED,
-                    ..default()
-                },
-                TextColor(COL_SPEED),
-            ));
-            panel.spawn((
-                CabLimitText,
-                Text::new("LIM —"),
-                TextFont {
-                    font_size: FONT_LABEL,
-                    ..default()
-                },
-                TextColor(COL_MUTED),
-            ));
-            panel
-                .spawn(Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(14.0),
-                    column_gap: Val::Px(8.0),
-                    flex_direction: FlexDirection::Row,
-                    ..default()
-                })
-                .with_children(|bars| {
-                    bars.spawn(Node {
-                        flex_grow: 1.0,
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(2.0),
+        .with_children(|overlay| {
+            overlay
+                .spawn((
+                    CabModeBadge,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(8.0),
+                        left: Val::Percent(50.0),
+                        margin: UiRect::left(Val::Px(-110.0)),
+                        padding: UiRect::axes(Val::Px(14.0), Val::Px(5.0)),
+                        border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    })
-                    .with_children(|col| {
-                        col.spawn((
-                            Text::new("THR"),
-                            TextFont {
-                                font_size: 10.0,
-                                ..default()
-                            },
-                            TextColor(COL_MUTED),
-                        ));
-                        col.spawn((
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Px(8.0),
-                                ..default()
-                            },
-                            BackgroundColor(COL_BAR_TRACK),
-                        ))
-                        .with_children(|track| {
-                            track.spawn((
-                                CabThrottleFill,
-                                Node {
-                                    width: Val::Percent(0.0),
-                                    height: Val::Percent(100.0),
-                                    ..default()
-                                },
-                                BackgroundColor(COL_THROTTLE),
-                            ));
-                        });
-                    });
-                    bars.spawn(Node {
-                        flex_grow: 1.0,
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(2.0),
-                        ..default()
-                    })
-                    .with_children(|col| {
-                        col.spawn((
-                            Text::new("BRK"),
-                            TextFont {
-                                font_size: 10.0,
-                                ..default()
-                            },
-                            TextColor(COL_MUTED),
-                        ));
-                        col.spawn((
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Px(8.0),
-                                ..default()
-                            },
-                            BackgroundColor(COL_BAR_TRACK),
-                        ))
-                        .with_children(|track| {
-                            track.spawn((
-                                CabBrakeFill,
-                                Node {
-                                    width: Val::Percent(0.0),
-                                    height: Val::Percent(100.0),
-                                    ..default()
-                                },
-                                BackgroundColor(COL_BRAKE),
-                            ));
-                        });
-                    });
+                    },
+                    BackgroundColor(COL_BADGE_BG),
+                    BorderColor::all(COL_BADGE),
+                ))
+                .with_children(|badge| {
+                    badge.spawn((
+                        Text::new("MODO CABINA"),
+                        TextFont {
+                            font_size: FONT_BADGE,
+                            ..default()
+                        },
+                        TextColor(COL_BADGE),
+                    ));
                 });
-            panel.spawn((
-                CabDetailText,
-                Text::new(""),
-                TextFont {
-                    font_size: FONT_LABEL,
-                    ..default()
-                },
-                TextColor(COL_TEXT),
-            ));
+
+            overlay
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        bottom: Val::Px(92.0),
+                        left: Val::Percent(50.0),
+                        margin: UiRect::left(Val::Px(-PANEL_WIDTH_PX * 0.5)),
+                        width: Val::Px(PANEL_WIDTH_PX),
+                        height: Val::Px(PANEL_HEIGHT_PX),
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(12.0)),
+                        row_gap: Val::Px(8.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        ..default()
+                    },
+                    BackgroundColor(COL_PANEL_BG),
+                    BorderColor::all(COL_PANEL_BORDER),
+                ))
+                .with_children(|panel| {
+                    panel.spawn((
+                        Text::new("INSTRUMENTAL"),
+                        TextFont {
+                            font_size: FONT_LABEL,
+                            ..default()
+                        },
+                        TextColor(COL_MUTED),
+                    ));
+                    panel
+                        .spawn((Node {
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(16.0),
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },))
+                        .with_children(|row| {
+                            row.spawn((Node {
+                                flex_grow: 1.0,
+                                flex_direction: FlexDirection::Column,
+                                row_gap: Val::Px(4.0),
+                                ..default()
+                            },))
+                                .with_children(|col| {
+                                    col.spawn((
+                                        Text::new("MARCHA"),
+                                        TextFont {
+                                            font_size: 10.0,
+                                            ..default()
+                                        },
+                                        TextColor(COL_MUTED),
+                                    ));
+                                    col.spawn((
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            height: Val::Px(72.0),
+                                            justify_content: JustifyContent::FlexEnd,
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        BackgroundColor(COL_BAR_TRACK),
+                                    ))
+                                    .with_children(|track| {
+                                        track.spawn((
+                                            CabThrottleFill,
+                                            Node {
+                                                width: Val::Percent(55.0),
+                                                height: Val::Percent(0.0),
+                                                ..default()
+                                            },
+                                            BackgroundColor(COL_THROTTLE),
+                                        ));
+                                    });
+                                });
+                            row.spawn((Node {
+                                flex_grow: 1.2,
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::Center,
+                                row_gap: Val::Px(2.0),
+                                ..default()
+                            },))
+                                .with_children(|col| {
+                                    col.spawn((
+                                        CabSpeedText,
+                                        Text::new("0"),
+                                        TextFont {
+                                            font_size: FONT_SPEED,
+                                            ..default()
+                                        },
+                                        TextColor(COL_SPEED),
+                                    ));
+                                    col.spawn((
+                                        Text::new("km/h"),
+                                        TextFont {
+                                            font_size: FONT_LABEL,
+                                            ..default()
+                                        },
+                                        TextColor(COL_MUTED),
+                                    ));
+                                    col.spawn((
+                                        CabLimitText,
+                                        Text::new("LIM —"),
+                                        TextFont {
+                                            font_size: FONT_LABEL,
+                                            ..default()
+                                        },
+                                        TextColor(COL_MUTED),
+                                    ));
+                                });
+                            row.spawn((Node {
+                                flex_grow: 1.0,
+                                flex_direction: FlexDirection::Column,
+                                row_gap: Val::Px(4.0),
+                                ..default()
+                            },))
+                                .with_children(|col| {
+                                    col.spawn((
+                                        Text::new("FRENO"),
+                                        TextFont {
+                                            font_size: 10.0,
+                                            ..default()
+                                        },
+                                        TextColor(COL_MUTED),
+                                    ));
+                                    col.spawn((
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            height: Val::Px(72.0),
+                                            justify_content: JustifyContent::FlexEnd,
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        },
+                                        BackgroundColor(COL_BAR_TRACK),
+                                    ))
+                                    .with_children(|track| {
+                                        track.spawn((
+                                            CabBrakeFill,
+                                            Node {
+                                                width: Val::Percent(55.0),
+                                                height: Val::Percent(0.0),
+                                                ..default()
+                                            },
+                                            BackgroundColor(COL_BRAKE),
+                                        ));
+                                    });
+                                });
+                        });
+                    panel.spawn((
+                        CabDetailText,
+                        Text::new(""),
+                        TextFont {
+                            font_size: FONT_LABEL,
+                            ..default()
+                        },
+                        TextColor(COL_TEXT),
+                    ));
+                });
         });
 }
 
 pub(crate) fn toggle_cab_panel(
     keys: Res<ButtonInput<KeyCode>>,
+    follow: Res<CameraFollowMode>,
     mut visible: ResMut<CabPanelVisible>,
 ) {
+    if *follow != CameraFollowMode::DriverCam {
+        return;
+    }
     if keys.just_pressed(KeyCode::KeyC) {
         visible.open = !visible.open;
     }
@@ -237,6 +311,7 @@ pub(crate) fn toggle_cab_panel(
 
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn update_cab_panel(
+    follow: Res<CameraFollowMode>,
     visible: Res<CabPanelVisible>,
     live: Option<Res<LiveDrive>>,
     mut root: Query<&mut Visibility, With<CabPanelRoot>>,
@@ -250,17 +325,32 @@ pub(crate) fn update_cab_panel(
             Without<CabLimitText>,
         ),
     >,
-    mut throttle: Query<&mut Node, (With<CabThrottleFill>, Without<CabBrakeFill>)>,
-    mut brake: Query<&mut Node, (With<CabBrakeFill>, Without<CabThrottleFill>)>,
+    mut throttle: Query<
+        &mut Node,
+        (
+            With<CabThrottleFill>,
+            Without<CabBrakeFill>,
+            Without<CabSpeedText>,
+        ),
+    >,
+    mut brake: Query<
+        &mut Node,
+        (
+            With<CabBrakeFill>,
+            Without<CabThrottleFill>,
+            Without<CabSpeedText>,
+        ),
+    >,
 ) {
     let Ok(mut vis) = root.single_mut() else {
         return;
     };
+    let in_cab = *follow == CameraFollowMode::DriverCam;
     let Some(live) = live else {
         *vis = Visibility::Hidden;
         return;
     };
-    if !visible.open {
+    if !in_cab || !visible.open {
         *vis = Visibility::Hidden;
         return;
     }
@@ -268,7 +358,7 @@ pub(crate) fn update_cab_panel(
 
     let content = build_cab_panel_content(&live.session.cab_telemetry());
     if let Ok((mut text, mut color)) = speed.single_mut() {
-        **text = format!("{} km/h", content.speed_line);
+        **text = content.speed_line.clone();
         *color = if content.overspeed {
             TextColor(COL_WARN)
         } else {
@@ -282,10 +372,10 @@ pub(crate) fn update_cab_panel(
         **text = content.detail_line.clone();
     }
     if let Ok(mut node) = throttle.single_mut() {
-        node.width = Val::Percent(content.throttle_frac * 100.0);
+        node.height = Val::Percent(content.throttle_frac * 100.0);
     }
     if let Ok(mut node) = brake.single_mut() {
-        node.width = Val::Percent(content.brake_frac * 100.0);
+        node.height = Val::Percent(content.brake_frac * 100.0);
     }
 }
 

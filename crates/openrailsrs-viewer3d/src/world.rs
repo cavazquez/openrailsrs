@@ -242,13 +242,50 @@ pub fn msts_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_formats::Vec3) 
     )
 }
 
-pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
+/// Open Rails XNA quaternion from a `.w` `QDirection` (`Scenery.cs`).
+fn qdir_to_xna_quat(qdir: &[f64; 4]) -> Quat {
     Quat::from_xyzw(
         qdir[0] as f32,
         qdir[1] as f32,
-        qdir[2] as f32,
+        -(qdir[2] as f32),
         qdir[3] as f32,
     )
+}
+
+/// Open Rails XNA 3×3 rotation from a `.w` `Matrix3x3`.
+fn matrix3x3_to_xna_mat3(m: &[f64; 9]) -> Mat3 {
+    Mat3::from_cols(
+        Vec3::new(m[0] as f32, m[3] as f32, -m[6] as f32),
+        Vec3::new(m[1] as f32, m[4] as f32, -m[7] as f32),
+        Vec3::new(-m[2] as f32, -m[5] as f32, m[8] as f32),
+    )
+}
+
+const MSTS_Z_REFLECT: Mat3 = Mat3::from_diagonal(Vec3::new(1.0, 1.0, -1.0));
+
+/// MSTS `QDirection` → Bevy rotation (terrain uses native +Z, not XNA −Z).
+pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
+    xna_rotation_to_bevy(qdir_to_xna_quat(qdir))
+}
+
+/// MSTS `Matrix3x3` → Bevy rotation.
+pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
+    xna_rotation_to_bevy(Quat::from_mat3(&matrix3x3_to_xna_mat3(m)))
+}
+
+/// Map an Open Rails / XNA rotation into Bevy's native MSTS +Z world axes.
+fn xna_rotation_to_bevy(rot_xna: Quat) -> Quat {
+    let r = Mat3::from_quat(rot_xna);
+    Quat::from_mat3(&(MSTS_Z_REFLECT * r * MSTS_Z_REFLECT))
+}
+
+fn world_item_rotation(item: &WorldItem) -> Quat {
+    if let Some(m) = item.matrix3x3() {
+        return matrix3x3_to_quat(&m);
+    }
+    item.qdirection()
+        .map(|q| qdir_to_quat(&q))
+        .unwrap_or(Quat::IDENTITY)
 }
 
 fn object_label(item: &WorldItem) -> String {
@@ -259,14 +296,7 @@ fn object_label(item: &WorldItem) -> String {
 
 fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldObject> {
     let position = msts_to_bevy(tile_x, tile_z, item.position()?);
-    let rotation = match item {
-        WorldItem::Static { qdir, .. }
-        | WorldItem::Track { qdir, .. }
-        | WorldItem::Dyntrack { qdir, .. }
-        | WorldItem::Signal { qdir, .. }
-        | WorldItem::Other { qdir, .. } => qdir.map(|q| qdir_to_quat(&q)).unwrap_or(Quat::IDENTITY),
-        _ => Quat::IDENTITY,
-    };
+    let rotation = world_item_rotation(item);
     let forest = match item {
         WorldItem::Forest {
             uid,
@@ -1322,6 +1352,36 @@ pub fn spawn_world_boxes(
 mod tests {
     use super::*;
     use openrailsrs_formats::Vec3 as FVec3;
+
+    #[test]
+    fn qdir_identity_is_identity() {
+        let q = qdir_to_quat(&[0.0, 0.0, 0.0, 1.0]);
+        assert!((q.length() - 1.0).abs() < 1e-4);
+        assert!((q.w.abs() - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn qdir_y_90_matches_bevy_native_y_rotation() {
+        // File stores (0, sin45, 0, cos45) — same numeric values OR uses in XNA.
+        let q = qdir_to_quat(&[
+            0.0,
+            std::f64::consts::FRAC_1_SQRT_2,
+            0.0,
+            std::f64::consts::FRAC_1_SQRT_2,
+        ]);
+        let expected = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
+        assert!((q.dot(expected).abs() - 1.0) < 1e-3 || (q.dot(-expected).abs() - 1.0) < 1e-3);
+    }
+
+    #[test]
+    fn matrix3x3_identity_is_identity_quat() {
+        let m = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+        let q = matrix3x3_to_quat(&m);
+        assert!((q.x - 0.0).abs() < 1e-4);
+        assert!((q.y - 0.0).abs() < 1e-4);
+        assert!((q.z - 0.0).abs() < 1e-4);
+        assert!((q.w - 1.0).abs() < 1e-4 || (q.w + 1.0).abs() < 1e-4);
+    }
 
     #[test]
     fn msts_tile_zero_uses_local_coords() {

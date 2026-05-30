@@ -80,13 +80,14 @@ pub fn spawn_ground_and_lights(
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
-            shadows_enabled: !opts.live,
+            // Player consist and camera-adjacent meshes must not darken the route.
+            shadows_enabled: false,
             ..default()
         },
         CascadeShadowConfigBuilder {
-            num_cascades: if opts.live { 2 } else { 4 },
+            num_cascades: 2,
             minimum_distance: 0.1,
-            maximum_distance: if opts.live { 120.0 } else { 200.0 },
+            maximum_distance: 120.0,
             first_cascade_far_bound: 10.0,
             overlap_proportion: 0.2,
         }
@@ -94,9 +95,7 @@ pub fn spawn_ground_and_lights(
         Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
         Name::new("sun"),
     ));
-    commands.insert_resource(DirectionalLightShadowMap {
-        size: if opts.live { 1024 } else { 2048 },
-    });
+    commands.insert_resource(DirectionalLightShadowMap { size: 1024 });
 }
 
 fn spawn_grid_mesh(
@@ -174,9 +173,7 @@ fn spawn_grid_mesh(
         Transform::from_xyz(0.0, 0.05, 0.0),
         Name::new("grid"),
     ));
-    if live {
-        grid.insert(NotShadowCaster);
-    }
+    grid.insert(NotShadowCaster);
 }
 
 /// Pick a grid step that keeps line count reasonable on large imported routes.

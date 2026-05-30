@@ -143,18 +143,10 @@ mod tests {
     }
 
     #[test]
-    fn update_driver_vignette_follows_driver_cam() {
+    fn update_driver_vignette_stays_hidden() {
         with_live_world(|world| {
             world.run_system_once(spawn_gameplay_ui).unwrap();
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
-            world.run_system_once(update_driver_vignette).unwrap();
-            let vis = world
-                .query_filtered::<&Visibility, With<DriverVignetteRoot>>()
-                .single(world)
-                .expect("vignette");
-            assert_ne!(*vis, Visibility::Hidden);
-
-            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::Off;
             world.run_system_once(update_driver_vignette).unwrap();
             let vis = world
                 .query_filtered::<&Visibility, With<DriverVignetteRoot>>()

@@ -98,7 +98,7 @@ cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
 | `.ace` textura | `openrailsrs-ace` | ✅ mip 0 | Sin mips altos; BGRA MSTS parcial |
 | `.w` world | `openrailsrs-formats` | ✅ cubos/meshes | |
 | `.y` + RAW terreno | `openrailsrs-formats` | ✅ heightfield + TERRTEX | |
-| `cabview` / `cabview3d` | — | ❌ | No hay parser ni render |
+| `cabview` / `cabview3d` | — | 🔶 | Carga mesh + 37/39 `.ace`; ver [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) |
 | `.sms` / `.wav` (TDB) | parseo en `track_db.rs` | ❌ playback | Solo metadata → `[[sound_regions]]` |
 
 ### 2.5 Qué está en git vs qué debe instalar el usuario
@@ -232,7 +232,7 @@ Leyenda: ✅ hecho · 🔶 parcial · 🔲 planificado
 | **0** | Viewer mundo + replay | ✅ | Mundo MSTS + tren desde CSV |
 | **A** | Live link sim ↔ Bevy | ✅ | `--live`, conducir en 3D |
 | **B** | Conducción pulida + audio + juego | ✅ | Sonido, señales, paradas en HUD |
-| **C** | Cabina (interior / panel) | 🔶 | Panel CAB en `--live` (C3); cabview MSTS pendiente |
+| **C** | Cabina (interior / panel) | 🔶 | Panel CAB (C3); cabina 3D parcial — [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) |
 | **D** | Assets MSTS hardening | 🔶 | `.s` binario (básico), LOD, sync `--with-shapes` |
 | **E** | Vía visual avanzada | 🔲 | Peralte, TSection, splines |
 | **F** | Modo juego completo | 🔲 | Campaña, scoring visual, multi-tren live |
@@ -314,11 +314,11 @@ cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
 
 **Objetivo:** Vista de conductor (inmersión), no solo cámara exterior.
 
-Open Rails usa `cabview3d/` (meshes + texturas `.ace`) y a veces `cabview` 2D. **openrailsrs no parsea ni renderiza cabview.**
+Open Rails usa `cabview3d/` (meshes + texturas `.ace`) y a veces `cabview` 2D. **Estado detallado y próximos pasos:** [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md).
 
 | Enfoque | Descripción | Estado |
 |---------|-------------|--------|
-| **C1 Cabview MSTS** | Parser CVF + sprites/meshes cabina | 🔲 |
+| **C1 Cabview MSTS** | Parser CVF + meshes/texturas cabina 3D | 🔶 ver [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) |
 | **C2 Cabina genérica** | Cab 3D procedural o mesh único reutilizable | 🔲 |
 | **C3 Panel híbrido** | Panel Bevy UI: velocidad, límite, THR/BRK, kN freno, RPM diesel, P boiler; tecla **C** | ✅ `cab_panel.rs`, `CabTelemetry` |
 
@@ -479,7 +479,7 @@ Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente
 |---|--------|---------------|----------|--------|-------|---------------|
 | 1 | **Sombras deshabilitadas** | Alto | Bajo | `shadows_enabled: false` | `scene.rs:62` |
 | 2 | **Shapes `.s` binarios** → fallback cubo magenta | Alto | Medio | Parser básico (`shape_binary.rs`), heurísticas frágiles | `shape_binary.rs`, `shapes.rs` |
-| 3 | **Cabina 3D interior** | Alto | Alto | Solo panel UI plano (C3) | `cab_panel.rs` |
+| 3 | **Cabina 3D interior** | Alto | Alto | 🔶 Parcial (`cab_view.rs`); ver [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) | `cab_view.rs` |
 | 4 | **Animación de shapes** (puertas, bogies, pantógrafos) | Medio | Alto | Todo estático | `shapes.rs` |
 | 5 | **ACE mipmaps + alpha** (solo mip 0, BGRA parcial) | Medio | Bajo | Shimmer a distancia, alpha recortado | `shapes.rs:ace_to_image`, `openrailsrs-ace` |
 | 6 | **Audio real** (.wav/.sms) | Medio | Medio | Tonos sintéticos | `openrailsrs-audio` |

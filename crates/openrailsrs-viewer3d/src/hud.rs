@@ -108,6 +108,14 @@ pub fn camera_mode_label(mode: CameraMode) -> &'static str {
     }
 }
 
+pub fn camera_status_label(mode: CameraMode, follow: CameraFollowMode) -> String {
+    if follow == CameraFollowMode::DriverCam {
+        "CABINA".into()
+    } else {
+        format!("cam:{}", camera_mode_label(mode))
+    }
+}
+
 pub fn follow_display_label(
     follow: CameraFollowMode,
     target: &CameraFollowTarget,
@@ -149,7 +157,7 @@ pub fn build_hud_content(
             ""
         };
         format!(
-            "Space:pause  R:reset  +/-:spd  T:follow{train_hint}  {rain_hint}  G:goto  F2:fly  Esc:quit"
+            "Space:pause  R:reset  +/-:spd  T:cam  V:driver{train_hint}  {rain_hint}  G:goto  F2:fly  Esc:quit"
         )
     } else {
         format!(
@@ -206,8 +214,12 @@ fn build_hud_replay(
     focus: &crate::world::RouteFocus,
 ) -> HudContent {
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
-    let follow_label = follow_display_label(follow, follow_target, replay);
-    let cam = camera_mode_label(camera_mode);
+    let follow_label = if follow == CameraFollowMode::DriverCam {
+        "CABINA".to_string()
+    } else {
+        follow_display_label(follow, follow_target, replay)
+    };
+    let cam = camera_status_label(camera_mode, follow);
 
     let mut vel_kmh = 0.0_f64;
     if let Some(track) = replay.tracks.get(follow_target.track_index) {
@@ -403,11 +415,14 @@ pub fn build_hud_content_live(
     } else {
         "LIVE"
     };
-    let follow_label = if follow == CameraFollowMode::Off {
+    let follow_label = if follow == CameraFollowMode::DriverCam {
+        "CABINA".to_string()
+    } else if follow == CameraFollowMode::Off {
         "off".to_string()
     } else {
         format!("{}→live", follow.hud_label())
     };
+    let cam_label = camera_status_label(camera_mode, follow);
     let vel_kmh = live.session.velocity_mps() * 3.6;
     let limit_kmh = live.session.effective_speed_limit_mps() * 3.6;
     let gp = &live.session.gameplay;
@@ -440,12 +455,11 @@ pub fn build_hud_content_live(
         )
     };
     let controls =
-        "↑/↓:thr/brk  I/K:pan  WASD:pan  Space:emerg  H:horn  C:cab  T:cam  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  I/K:pan  WASD:pan  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
             .to_string();
     HudContent {
         row1: format!(
-            "{title}    {status}    cam:{}  follow:{follow_label}  rain:{rain_label}  {game_line}",
-            camera_mode_label(camera_mode)
+            "{title}    {status}    {cam_label}  follow:{follow_label}  rain:{rain_label}  {game_line}",
         ),
         row2: format!(
             "{coords}    t={:.1}s  {:.0} km/h  lim {:.0} km/h  thr={:.0}%  br={:.0}%  sim={:.1}x",

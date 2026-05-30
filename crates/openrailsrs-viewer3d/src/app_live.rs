@@ -93,6 +93,7 @@ mod tests {
     fn update_driver_train_visibility_hides_in_driver_cam() {
         with_live_world(|world| {
             world.run_system_once(spawn_live_train).unwrap();
+            world.flush();
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
             world
                 .run_system_once(update_driver_train_visibility)
@@ -100,11 +101,17 @@ mod tests {
             for vis in world.query::<&Visibility>().iter(world) {
                 let _ = vis;
             }
-            let hidden = world
+            let marker_visible = world
+                .query_filtered::<&Visibility, With<LiveTrainMarker>>()
+                .iter(world)
+                .any(|v| *v != Visibility::Hidden);
+            assert!(marker_visible, "train root stays visible in driver view");
+
+            let bodies_hidden = world
                 .query_filtered::<&Visibility, With<LiveTrainBody>>()
                 .iter(world)
                 .all(|v| *v == Visibility::Hidden);
-            assert!(hidden, "body hidden in driver view");
+            assert!(bodies_hidden, "train body hidden in driver view");
 
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
             world
@@ -114,7 +121,7 @@ mod tests {
                 .query_filtered::<&Visibility, With<LiveTrainBody>>()
                 .iter(world)
                 .any(|v| *v != Visibility::Hidden);
-            assert!(visible, "body visible in chase view");
+            assert!(visible, "train body visible in chase view");
         });
     }
 

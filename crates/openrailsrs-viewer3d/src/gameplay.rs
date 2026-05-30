@@ -536,12 +536,9 @@ pub(crate) fn update_driver_vignette(
     follow: Res<CameraFollowMode>,
     mut root: Query<&mut Visibility, With<DriverVignetteRoot>>,
 ) {
-    let show = *follow == CameraFollowMode::DriverCam;
+    // Cab panel provides its own HUD; edge vignettes blocked too much of the windscreen.
+    let _ = follow;
     for mut vis in &mut root {
-        *vis = if show {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+        *vis = Visibility::Hidden;
     }
 }

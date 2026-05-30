@@ -93,9 +93,17 @@ pub const DRIVER_NEAR_CLIP_M: f32 = 0.08;
 /// Per-consist cab eye placement (set when the live train spawns).
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct LiveDriverCab {
-    /// Metres behind the train head along the consist axis.
+    /// Metres behind the train head along the consist axis (fallback when no ORTS head pos).
     pub back_m: f32,
     pub height_m: f32,
+    /// Eyepoint in train-local metres from `ORTS3DCabHeadPos` (Open Rails 3D cab).
+    pub head_pos_train: Option<Vec3>,
+    /// Look pitch (rad) from `StartDirection` or default.
+    pub look_pitch: f32,
+    /// Cab `.s` placement on the train root (lead vehicle origin, unit scale).
+    pub interior_placement: Transform,
+    /// Raw `ORTS3DCabHeadPos` in MSTS shape metres (for camera-attached cab).
+    pub head_msts: Option<Vec3>,
 }
 
 impl Default for LiveDriverCab {
@@ -103,6 +111,13 @@ impl Default for LiveDriverCab {
         Self {
             back_m: DRIVER_CAB_BACK_M,
             height_m: DRIVER_EYE_HEIGHT_M,
+            head_pos_train: None,
+            look_pitch: DRIVER_LOOK_PITCH,
+            interior_placement: Transform {
+                rotation: crate::shapes::msts_shape_to_train_rotation(),
+                ..default()
+            },
+            head_msts: None,
         }
     }
 }
@@ -370,12 +385,16 @@ pub fn camera_transform_from_orbit_state(
 /// First-person driver view locked to the train head pose.
 pub fn driver_camera_transform(train: TrainFollowPose, cab: LiveDriverCab) -> Transform {
     let rot = Quat::from_rotation_y(train.yaw);
-    let forward = rot * Vec3::X;
-    let eye = train.translation - forward * cab.back_m + Vec3::Y * cab.height_m;
+    let eye = if let Some(head) = cab.head_pos_train {
+        train.translation + rot * head
+    } else {
+        let forward = rot * Vec3::X;
+        train.translation - forward * cab.back_m + Vec3::Y * cab.height_m
+    };
     Transform::from_translation(eye).with_rotation(Quat::from_euler(
         EulerRot::YXZ,
         train.yaw,
-        DRIVER_LOOK_PITCH,
+        cab.look_pitch,
         0.0,
     ))
 }
@@ -446,10 +465,16 @@ pub fn toggle_mode_system(
     *mode = new_mode;
 }
 
+fn enter_driver_cam(follow: &mut CameraFollowMode, mode: &mut CameraMode) {
+    *follow = CameraFollowMode::DriverCam;
+    *mode = CameraMode::Orbit;
+}
+
 pub fn cycle_follow_mode(
     keys: Res<ButtonInput<KeyCode>>,
     replay: Option<Res<crate::train::ReplayState>>,
     live: Option<Res<crate::live::LiveDrive>>,
+    mut mode: ResMut<CameraMode>,
     mut follow: ResMut<CameraFollowMode>,
     mut target: ResMut<CameraFollowTarget>,
 ) {
@@ -465,17 +490,22 @@ pub fn cycle_follow_mode(
     };
     target.clamp_to(count);
 
-    if live_active {
-        if keys.just_pressed(KeyCode::KeyV) && !shift_held(&keys) {
-            *follow = if *follow == CameraFollowMode::DriverCam {
-                CameraFollowMode::ChaseCam
-            } else {
-                CameraFollowMode::DriverCam
-            };
-            return;
+    if keys.just_pressed(KeyCode::KeyV) && !shift_held(&keys) {
+        if *follow == CameraFollowMode::DriverCam {
+            *follow = CameraFollowMode::ChaseCam;
+        } else {
+            enter_driver_cam(&mut follow, &mut mode);
         }
+        return;
+    }
+
+    if live_active {
         if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
-            *follow = follow.cycle();
+            let next = follow.cycle();
+            *follow = next;
+            if next == CameraFollowMode::DriverCam {
+                *mode = CameraMode::Orbit;
+            }
         }
         return;
     }
@@ -491,7 +521,11 @@ pub fn cycle_follow_mode(
         return;
     }
     if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
-        *follow = follow.cycle();
+        let next = follow.cycle();
+        *follow = next;
+        if next == CameraFollowMode::DriverCam {
+            *mode = CameraMode::Orbit;
+        }
     }
 }
 
@@ -638,6 +672,12 @@ pub fn orbit_camera_system(
     >,
 ) {
     if *mode != CameraMode::Orbit {
+        motion.clear();
+        wheel.clear();
+        return;
+    }
+
+    if *follow == CameraFollowMode::DriverCam {
         motion.clear();
         wheel.clear();
         return;
@@ -800,12 +840,12 @@ pub fn in_fly_mode(mode: Res<CameraMode>) -> bool {
     *mode == CameraMode::Fly
 }
 
-/// Widen FOV and tighten near clip in driver view.
+/// Widen FOV, tighten near clip, and brighten ambient in driver view.
 pub fn update_driver_camera_fov(
     follow: Res<CameraFollowMode>,
-    mut query: Query<&mut Projection, With<Camera3d>>,
+    mut query: Query<(&mut Projection, &mut AmbientLight), With<Camera3d>>,
 ) {
-    let Ok(mut projection) = query.single_mut() else {
+    let Ok((mut projection, mut ambient)) = query.single_mut() else {
         return;
     };
     let Projection::Perspective(persp) = &mut *projection else {
@@ -813,10 +853,12 @@ pub fn update_driver_camera_fov(
     };
     if *follow == CameraFollowMode::DriverCam {
         persp.fov = DRIVER_FOV_DEG.to_radians();
-        persp.near = DRIVER_NEAR_CLIP_M;
+        persp.near = 0.05;
+        ambient.brightness = 800.0;
     } else {
         persp.fov = std::f32::consts::FRAC_PI_4;
         persp.near = 0.1;
+        ambient.brightness = 0.15;
     }
 }
 
@@ -1014,11 +1056,35 @@ mod tests {
             LiveDriverCab {
                 back_m: 3.0,
                 height_m: 2.5,
+                head_pos_train: None,
+                look_pitch: DRIVER_LOOK_PITCH,
+                ..Default::default()
             },
         );
         assert!((tf.translation.x - 7.0).abs() < 1e-5);
         assert!((tf.translation.y - 2.5).abs() < 1e-5);
         assert!((tf.translation.z - 20.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn driver_camera_uses_orts_head_pos_when_set() {
+        let head = crate::shapes::msts_shape_to_train_rotation() * Vec3::new(-0.8, 2.875, 8.60);
+        let tf = driver_camera_transform(
+            TrainFollowPose {
+                translation: Vec3::ZERO,
+                yaw: 0.0,
+            },
+            LiveDriverCab {
+                back_m: 3.0,
+                height_m: 2.5,
+                head_pos_train: Some(head),
+                look_pitch: -15.0_f32.to_radians(),
+                ..Default::default()
+            },
+        );
+        assert!((tf.translation.x - head.x).abs() < 1e-4);
+        assert!((tf.translation.y - head.y).abs() < 1e-4);
+        assert!((tf.translation.z - head.z).abs() < 1e-4);
     }
 
     #[test]

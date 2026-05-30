@@ -11,14 +11,15 @@ use openrailsrs_scenarios::sound_regions::RegionTransition;
 use openrailsrs_scenarios::{ScenarioFile, apply_scenario_runtime_overlay_dir};
 use openrailsrs_sim::LiveDriveSession;
 
+use crate::cab_view::{CabLeadVehicle, CabTrainParent, orts_3d_cab_for_vehicle};
 use crate::camera::{
     CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitState,
 };
 use crate::launch::LIVE_TRAIN_LOD_DISTANCE_M;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
-    vehicle_shape_local_transform,
+    RouteAssets, load_shape_from_path, load_shape_render_asset_from_path,
+    resolve_shape_path_in_dirs, vehicle_shape_local_transform,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
@@ -222,30 +223,81 @@ pub struct LiveTrainMarker;
 #[derive(Component)]
 pub struct LiveTrainBody;
 
-/// Hide the consist mesh in first-person driver view (avoids clipping through the cab).
+/// Hide the consist mesh in first-person driver view (cab interior stays visible).
 pub fn update_driver_train_visibility(
     follow: Res<CameraFollowMode>,
-    mut bodies: Query<&mut Visibility, With<LiveTrainBody>>,
+    mut bodies: Query<
+        &mut Visibility,
+        (
+            With<LiveTrainBody>,
+            Without<crate::cab_view::CabInteriorMarker>,
+        ),
+    >,
+    mut cab_parts: Query<&mut Visibility, With<crate::cab_view::CabInteriorMarker>>,
 ) {
     let hide = *follow == CameraFollowMode::DriverCam;
     for mut vis in &mut bodies {
         *vis = if hide {
             Visibility::Hidden
         } else {
-            Visibility::Inherited
+            Visibility::Visible
         };
+    }
+    if hide {
+        for mut vis in &mut cab_parts {
+            *vis = Visibility::Visible;
+        }
     }
 }
 
-fn live_driver_cab_from_vehicles(
-    vehicles: &[crate::rolling_stock::ConsistVehicleVisual],
+pub(crate) fn driver_cab_from_lead_vehicle(
+    vehicle: &crate::rolling_stock::ConsistVehicleVisual,
+    shape_dirs: &[&std::path::Path],
+    lead_mesh: &bevy::mesh::Mesh,
 ) -> LiveDriverCab {
-    let head_len = vehicles.first().map(|v| v.length_m).unwrap_or(20.0);
-    // Lead cab: eye a short way behind the nose (DMU/loco front is at train head).
-    LiveDriverCab {
+    let head_len = vehicle.length_m;
+    let vehicle_t = vehicle_shape_local_transform(lead_mesh, vehicle.offset_m, vehicle.length_m);
+    let mut cab = LiveDriverCab {
         back_m: (head_len * 0.15).clamp(1.8, 4.5),
         height_m: (head_len * 0.14).clamp(2.4, 3.2),
+        interior_placement: vehicle_t,
+        ..Default::default()
+    };
+    if let Some(shape_name) = vehicle.shape_file.as_deref() {
+        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name) {
+            cab.head_msts = Some(orts.head_pos_msts);
+            cab.head_pos_train = Some(vehicle_t.transform_point(orts.head_pos_msts));
+            cab.look_pitch = orts.look_pitch;
+        }
     }
+    cab
+}
+
+pub(crate) fn live_driver_cab_from_vehicles(
+    vehicles: &[crate::rolling_stock::ConsistVehicleVisual],
+    shape_dirs: &[&std::path::Path],
+) -> LiveDriverCab {
+    let head_len = vehicles.first().map(|v| v.length_m).unwrap_or(20.0);
+    let mut cab = LiveDriverCab {
+        back_m: (head_len * 0.15).clamp(1.8, 4.5),
+        height_m: (head_len * 0.14).clamp(2.4, 3.2),
+        ..Default::default()
+    };
+    if let Some(vehicle) = vehicles.first() {
+        if let Some(shape_name) = vehicle.shape_file.as_deref() {
+            if let Some(shape_path) = resolve_shape_path_in_dirs(shape_dirs, shape_name) {
+                if let Some(loaded) =
+                    load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
+                {
+                    return driver_cab_from_lead_vehicle(vehicle, shape_dirs, &loaded.mesh);
+                }
+            }
+            if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name) {
+                cab.look_pitch = orts.look_pitch;
+            }
+        }
+    }
+    cab
 }
 
 /// Spawn the player consist (reuses rolling-stock mesh path from `spawn_train_markers`).
@@ -291,7 +343,9 @@ pub fn spawn_live_train(
     });
 
     let vehicles = consist.vehicles_for("primary");
-    let driver_cab = live_driver_cab_from_vehicles(vehicles);
+    let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
+    let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
+    let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs);
     commands.insert_resource(driver_cab);
     if vehicles.is_empty() {
         let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
@@ -303,6 +357,7 @@ pub fn spawn_live_train(
         commands.spawn((
             LiveTrainMarker,
             LiveTrainBody,
+            NotShadowCaster,
             Mesh3d(unit),
             MeshMaterial3d(material),
             Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
@@ -314,8 +369,6 @@ pub fn spawn_live_train(
     }
 
     let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
-    let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
-    let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let color = TRAIN_COLORS[0];
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
@@ -330,6 +383,7 @@ pub fn spawn_live_train(
     commands
         .spawn((
             LiveTrainMarker,
+            CabTrainParent,
             head,
             Visibility::default(),
             Name::new("train:live"),
@@ -341,6 +395,7 @@ pub fn spawn_live_train(
                 Mesh3d(locator.clone()),
                 MeshMaterial3d(locator_mat),
                 Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
+                Visibility::default(),
                 Name::new("train:live:locator"),
             ));
             for (vi, vehicle) in vehicles.iter().enumerate() {
@@ -381,28 +436,31 @@ pub fn spawn_live_train(
                                         vehicle.length_m,
                                     )
                                 });
-                            train
-                                .spawn((
-                                    LiveTrainBody,
-                                    local,
-                                    Visibility::default(),
-                                    Name::new(format!("train:live:car:{vi}")),
-                                ))
-                                .with_children(|car| {
-                                    for (pi, part) in asset.parts.iter().enumerate() {
-                                        car.spawn((
-                                            LiveTrainBody,
-                                            NotShadowCaster,
-                                            Mesh3d(part.mesh.clone()),
-                                            MeshMaterial3d(part.material.clone()),
-                                            Transform::default(),
-                                            Name::new(format!(
-                                                "train:live:car:{vi}:part:{pi}:{}",
-                                                part.prim_state_idx
-                                            )),
-                                        ));
-                                    }
-                                });
+                            let is_lead = vi == 0;
+                            let mut car = train.spawn((
+                                local,
+                                Visibility::default(),
+                                Name::new(format!("train:live:car:{vi}")),
+                            ));
+                            if is_lead {
+                                car.insert(CabLeadVehicle);
+                            }
+                            car.with_children(|car| {
+                                for (pi, part) in asset.parts.iter().enumerate() {
+                                    car.spawn((
+                                        LiveTrainBody,
+                                        NotShadowCaster,
+                                        Mesh3d(part.mesh.clone()),
+                                        MeshMaterial3d(part.material.clone()),
+                                        Transform::default(),
+                                        Visibility::default(),
+                                        Name::new(format!(
+                                            "train:live:car:{vi}:part:{pi}:{}",
+                                            part.prim_state_idx
+                                        )),
+                                    ));
+                                }
+                            });
                             continue;
                         }
                     }
@@ -414,14 +472,19 @@ pub fn spawn_live_train(
                 });
                 let mut local = vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
                 local.scale *= 1.15;
-                train.spawn((
+                let is_lead = vi == 0;
+                let mut fallback = train.spawn((
                     LiveTrainBody,
                     NotShadowCaster,
                     Mesh3d(unit.clone()),
                     MeshMaterial3d(material),
                     local,
+                    Visibility::default(),
                     Name::new(format!("train:live:car:{vi}:fallback")),
                 ));
+                if is_lead {
+                    fallback.insert(CabLeadVehicle);
+                }
             }
         });
 
@@ -440,15 +503,28 @@ pub fn spawn_live_train(
 mod tests {
     use super::*;
     use crate::rolling_stock::ConsistVehicleVisual;
+    use crate::rolling_stock::TrainConsistScene;
 
     #[test]
     fn pullman_dmbsa_driver_cab_near_front() {
-        let cab = live_driver_cab_from_vehicles(&[ConsistVehicleVisual {
-            name: "DMBSA".into(),
-            shape_file: Some("RF_WP_DMBSA.s".into()),
-            length_m: 20.879,
-            offset_m: 0.0,
-        }]);
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let mut consist = TrainConsistScene::default();
+        consist.set_scenario_dir(route.clone());
+        let mut shape_dirs_bufs = consist.shape_search_dirs(&route);
+        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
+        if content.is_dir() {
+            shape_dirs_bufs.push(content.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman"));
+        }
+        let shape_dirs: Vec<&Path> = shape_dirs_bufs.iter().map(|p| p.as_path()).collect();
+        let cab = live_driver_cab_from_vehicles(
+            &[ConsistVehicleVisual {
+                name: "DMBSA".into(),
+                shape_file: Some("RF_WP_DMBSA.s".into()),
+                length_m: 20.879,
+                offset_m: 0.0,
+            }],
+            &shape_dirs,
+        );
         assert!(
             cab.back_m >= 1.8 && cab.back_m <= 4.5,
             "back={}",
@@ -460,5 +536,10 @@ mod tests {
             cab.height_m
         );
         assert!((cab.back_m - 3.13).abs() < 0.2);
+        if content.is_dir() {
+            let head = cab.head_pos_train.expect("ORTS3DCabHeadPos");
+            assert!((head.x + 1.701).abs() < 0.15, "head={head:?}");
+            assert!((head.y - 3.627).abs() < 0.15, "head={head:?}");
+        }
     }
 }

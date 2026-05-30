@@ -4,6 +4,7 @@
 //! a [`RainState`] resource. This avoids hundreds of individual draw calls.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::light::NotShadowCaster;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 
@@ -133,6 +134,7 @@ pub fn spawn_precipitation(
     let handle = meshes.add(mesh);
     commands.spawn((
         RainMeshMarker,
+        NotShadowCaster,
         Mesh3d(handle),
         MeshMaterial3d(material),
         Transform::IDENTITY,
@@ -231,6 +233,7 @@ pub(crate) fn toggle_precipitation(
             let handle = meshes.add(mesh);
             commands.spawn((
                 RainMeshMarker,
+                NotShadowCaster,
                 Mesh3d(handle),
                 MeshMaterial3d(material),
                 Transform::IDENTITY,

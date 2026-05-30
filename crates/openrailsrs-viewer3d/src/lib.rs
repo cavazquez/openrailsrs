@@ -8,6 +8,7 @@
 //! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
 
 pub mod cab_panel;
+pub mod cab_view;
 pub mod camera;
 pub mod dyntrack;
 pub mod floating_origin;
@@ -79,6 +80,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
+            .init_resource::<cab_view::CabInteriorState>()
             .init_resource::<hud::HudFps>()
             .init_resource::<hud::ProfileLog>()
             .init_resource::<gameplay::GameplayToast>()
@@ -152,9 +154,11 @@ impl Plugin for ViewerPlugin {
                     gameplay::update_gameplay_markers.run_if(live::live_mode_active),
                     gameplay::update_gameplay_toast.run_if(live::live_mode_active),
                     gameplay::update_arrival_overlay.run_if(live::live_mode_active),
-                    gameplay::update_driver_vignette.run_if(live::live_mode_active),
+                    gameplay::update_driver_vignette,
                     live::update_driver_train_visibility.run_if(live::live_mode_active),
-                    camera::update_driver_camera_fov.run_if(live::live_mode_active),
+                    train::update_replay_train_visibility.run_if(live::live_mode_inactive),
+                    cab_view::sync_cab_interior,
+                    camera::update_driver_camera_fov,
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
                     gameplay::update_stop_billboards.run_if(live::live_mode_active),

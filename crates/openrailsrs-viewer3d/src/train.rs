@@ -3,9 +3,11 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use openrailsrs_track::TrackGraph;
 
+use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
@@ -194,6 +196,19 @@ pub fn spawn_train_markers(
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
 
+    let driver_label = replay
+        .tracks
+        .first()
+        .map(|t| t.label.as_str())
+        .unwrap_or("primary");
+    let driver_vehicles = consist.vehicles_for(driver_label);
+    if !driver_vehicles.is_empty() {
+        commands.insert_resource(crate::live::live_driver_cab_from_vehicles(
+            driver_vehicles,
+            &shape_dirs,
+        ));
+    }
+
     let mut shape_mesh_count = 0usize;
 
     for (i, track) in replay.tracks.iter().enumerate() {
@@ -277,6 +292,7 @@ pub fn spawn_train_markers(
                                     .with_children(|car| {
                                         for (pi, part) in asset.parts.iter().enumerate() {
                                             car.spawn((
+                                                NotShadowCaster,
                                                 Mesh3d(part.mesh.clone()),
                                                 MeshMaterial3d(part.material.clone()),
                                                 Transform::default(),
@@ -303,6 +319,7 @@ pub fn spawn_train_markers(
                             ..default()
                         });
                         train.spawn((
+                            NotShadowCaster,
                             Mesh3d(unit.clone()),
                             MeshMaterial3d(material),
                             local,
@@ -328,6 +345,7 @@ pub fn spawn_train_markers(
         });
 
         commands.spawn((
+            NotShadowCaster,
             Mesh3d(unit.clone()),
             MeshMaterial3d(material),
             head.with_scale(Vec3::new(body_len, body_h, body_w)),
@@ -450,6 +468,21 @@ pub fn update_train_markers(
         };
         transform.translation = pos;
         transform.rotation = Quat::from_rotation_y(yaw);
+    }
+}
+
+/// Hide the replay consist mesh in first-person driver view.
+pub fn update_replay_train_visibility(
+    follow: Res<crate::camera::CameraFollowMode>,
+    mut markers: Query<&mut Visibility, With<TrainMarker>>,
+) {
+    let hide = *follow == CameraFollowMode::DriverCam;
+    for mut vis in &mut markers {
+        *vis = if hide {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        };
     }
 }
 

@@ -32,6 +32,7 @@ pub enum WorldItem {
         file_name: Option<String>,
         position: Vec3,
         qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
     },
     Forest {
         uid: u32,
@@ -51,17 +52,20 @@ pub enum WorldItem {
         file_name: Option<String>,
         position: Vec3,
         qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
     },
     Dyntrack {
         uid: u32,
         position: Vec3,
         qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
     },
     Signal {
         uid: u32,
         file_name: Option<String>,
         position: Vec3,
         qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
     },
     /// Horizontal water surface (`HWater` in `.w`).
     HWater {
@@ -77,6 +81,7 @@ pub enum WorldItem {
         position: Option<Vec3>,
         file_name: Option<String>,
         qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
     },
 }
 
@@ -126,6 +131,28 @@ impl WorldItem {
             | WorldItem::Signal { position, .. }
             | WorldItem::HWater { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
+        }
+    }
+
+    pub fn qdirection(&self) -> Option<[f64; 4]> {
+        match self {
+            WorldItem::Static { qdir, .. }
+            | WorldItem::Track { qdir, .. }
+            | WorldItem::Dyntrack { qdir, .. }
+            | WorldItem::Signal { qdir, .. }
+            | WorldItem::Other { qdir, .. } => *qdir,
+            _ => None,
+        }
+    }
+
+    pub fn matrix3x3(&self) -> Option<[f64; 9]> {
+        match self {
+            WorldItem::Static { matrix3x3, .. }
+            | WorldItem::Track { matrix3x3, .. }
+            | WorldItem::Dyntrack { matrix3x3, .. }
+            | WorldItem::Signal { matrix3x3, .. }
+            | WorldItem::Other { matrix3x3, .. } => *matrix3x3,
+            _ => None,
         }
     }
 }
@@ -269,7 +296,8 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
     let uid = find_uid(items);
     let position = find_position(items);
     let file_name = find_named_string(items, "FileName");
-    let qdir = find_quaternion(items);
+    let qdir = find_qdirection(items);
+    let matrix3x3 = find_matrix3x3(items);
 
     Some(match tag.as_str() {
         s if s.eq_ignore_ascii_case("Static") => WorldItem::Static {
@@ -277,6 +305,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             file_name,
             position: position.unwrap_or_default(),
             qdir,
+            matrix3x3,
         },
         s if s.eq_ignore_ascii_case("Forest") => WorldItem::Forest {
             uid: uid.unwrap_or(0),
@@ -293,17 +322,20 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             file_name,
             position: position.unwrap_or_default(),
             qdir,
+            matrix3x3,
         },
         s if s.eq_ignore_ascii_case("Dyntrack") => WorldItem::Dyntrack {
             uid: uid.unwrap_or(0),
             position: position.unwrap_or_default(),
             qdir,
+            matrix3x3,
         },
         s if s.eq_ignore_ascii_case("Signal") => WorldItem::Signal {
             uid: uid.unwrap_or(0),
             file_name,
             position: position.unwrap_or_default(),
             qdir,
+            matrix3x3,
         },
         s if s.eq_ignore_ascii_case("HWater") => WorldItem::HWater {
             uid: uid.unwrap_or(0),
@@ -317,6 +349,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position,
             file_name,
             qdir,
+            matrix3x3,
         },
     })
 }
@@ -361,10 +394,10 @@ fn find_position(items: &[Ast]) -> Option<Vec3> {
     None
 }
 
-fn find_quaternion(items: &[Ast]) -> Option<[f64; 4]> {
+fn find_qdirection(items: &[Ast]) -> Option<[f64; 4]> {
     for item in items {
         if let Ast::List(sub) = item {
-            if matches_head(sub, "QDirection") || matches_head(sub, "Matrix3x3") {
+            if matches_head(sub, "QDirection") {
                 let nums: Vec<f64> = sub
                     .iter()
                     .skip(1)
@@ -375,6 +408,30 @@ fn find_quaternion(items: &[Ast]) -> Option<[f64; 4]> {
                     .collect();
                 if nums.len() >= 4 {
                     return Some([nums[0], nums[1], nums[2], nums[3]]);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_matrix3x3(items: &[Ast]) -> Option<[f64; 9]> {
+    for item in items {
+        if let Ast::List(sub) = item {
+            if matches_head(sub, "Matrix3x3") {
+                let nums: Vec<f64> = sub
+                    .iter()
+                    .skip(1)
+                    .filter_map(|a| match a {
+                        Ast::Atom(at) => atom_to_number(at),
+                        _ => None,
+                    })
+                    .collect();
+                if nums.len() >= 9 {
+                    return Some([
+                        nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], nums[6], nums[7],
+                        nums[8],
+                    ]);
                 }
             }
         }

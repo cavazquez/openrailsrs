@@ -81,6 +81,8 @@ cargo run --release -p openrailsrs-viewer3d -- --live examples/chiltern/scenario
 
 Controles: **W/S** acelerar/frenar, **V** driver/chase, **P** pausa, **R** reinicio, **C** panel CAB, **Shift+P** lluvia.
 
+Cabina 3D MSTS (`CABVIEW3D`): estado y roadmap en [`docs/CABVIEW3D_ROADMAP.md`](../../docs/CABVIEW3D_ROADMAP.md).
+
 Paradas Birmingham (overlay): `n10778` (~95 s), destino `n10770` (136 s). Penalización: 8 pts/s tarde.
 
 En rutas grandes usa **`--release`** (debug ≈ 4 FPS; release ≈ 60+ FPS).

@@ -558,6 +558,7 @@ fn parse_minimal_world_classifies_items() {
         uid,
         file_name,
         position,
+        qdir,
         ..
     } = static_item
     {
@@ -571,9 +572,21 @@ fn parse_minimal_world_classifies_items() {
                 z: 50.0
             }
         );
+        assert_eq!(*qdir, Some([0.0, 0.0, 0.0, 1.0]));
     } else {
         panic!("expected Static");
     }
+
+    let signal = world
+        .items
+        .iter()
+        .find(|i| i.kind() == "Signal")
+        .expect("signal");
+    let qdir = signal.qdirection().expect("signal qdirection");
+    assert_eq!(qdir[0], 0.0);
+    assert_eq!(qdir[2], 0.0);
+    assert!((qdir[1] - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-3);
+    assert!((qdir[3] - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-3);
 
     let forest = world
         .items
