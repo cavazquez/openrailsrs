@@ -10,7 +10,9 @@ use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 
-use crate::launch::{LIVE_GROUND_HALF_MAX_M, ViewerLaunchOpts};
+use crate::launch::{
+    LIVE_GROUND_HALF_MAX_M, TRACK_DEV_GROUND_HALF_M, ViewerLaunchOpts, ViewerSceneryMode,
+};
 use crate::terrain::TerrainScene;
 use crate::track::TrackScene;
 
@@ -29,17 +31,21 @@ const AXIS_LENGTH: f32 = 5.0;
 /// One-shot startup: spawn the reference ground/grid and the lights.
 ///
 /// When [`TerrainScene`] has tiles, the flat placeholder plane and grid are omitted.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_ground_and_lights(
     scene: Res<TrackScene>,
     _focus: Res<crate::world::RouteFocus>,
     terrain: Res<TerrainScene>,
     opts: Res<ViewerLaunchOpts>,
+    mode: Res<ViewerSceneryMode>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mut half = scene.bounds.ground_half();
-    if opts.live {
+    if mode.is_track_dev() {
+        half = half.min(TRACK_DEV_GROUND_HALF_M);
+    } else if opts.live {
         half = half.min(LIVE_GROUND_HALF_MAX_M);
     }
     let center = Vec3::ZERO;
@@ -73,13 +79,16 @@ pub fn spawn_ground_and_lights(
             &scene,
             center,
             opts.live,
+            *mode,
         );
     }
 
+    let outdoor = opts.live || !terrain.is_empty();
+    let illuminance = if outdoor { 75_000.0 } else { 10_000.0 };
     let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
     commands.spawn((
         DirectionalLight {
-            illuminance: 10_000.0,
+            illuminance,
             // Player consist and camera-adjacent meshes must not darken the route.
             shadows_enabled: false,
             ..default()
@@ -105,9 +114,12 @@ fn spawn_grid_mesh(
     scene: &TrackScene,
     center: Vec3,
     live: bool,
+    mode: ViewerSceneryMode,
 ) {
     let mut half = scene.bounds.ground_half();
-    if live {
+    if mode.is_track_dev() {
+        half = half.min(TRACK_DEV_GROUND_HALF_M);
+    } else if live {
         half = half.min(LIVE_GROUND_HALF_MAX_M);
     }
     let step = grid_step_for_extent(half);

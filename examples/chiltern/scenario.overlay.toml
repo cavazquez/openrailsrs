@@ -54,6 +54,10 @@ local_x_m = 891.831
 local_y_m = 35.7818
 local_z_m = 582.756
 
+# Uncomment to hide terrain/shapes and draw continuous track from .tdb (not TrackObj):
+# [viewer3d]
+# scenery_mode = "track_dev"
+
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 max_velocity_rms = 4.5

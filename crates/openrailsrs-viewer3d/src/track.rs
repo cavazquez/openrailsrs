@@ -9,8 +9,9 @@ use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use openrailsrs_track::{NodeKind, TrackGraph};
 
-use crate::launch::ViewerLaunchOpts;
+use crate::launch::{ViewerLaunchOpts, ViewerSceneryMode};
 use crate::terrain::{TerrainElevation, ground_y_at};
+use crate::world::WorldScene;
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
 
@@ -285,7 +286,8 @@ impl TrackSegmentIndex {
 
 /// Default clearance when scattering trees away from track centreline.
 pub fn forest_track_clearance_m(bounds: &SceneBounds) -> f32 {
-    bounds.edge_radius().max(2.0) * 2.5
+    // Cap clearance: route `edge_radius` can be km-scale and would reject every tree.
+    (bounds.edge_radius().max(2.0) * 0.12).clamp(2.5, 6.0)
 }
 
 /// Transform for a unit-height cylinder aligned on Y, scaled to span `from` → `to`.
@@ -372,6 +374,14 @@ fn track_surface_render_pos(
 #[derive(Component)]
 pub(crate) struct CompactTrackLines;
 
+fn should_hide_compact_track_lines(
+    opts: ViewerLaunchOpts,
+    render_mode: TrackRenderMode,
+    has_world_scenery: bool,
+) -> bool {
+    opts.live && render_mode == TrackRenderMode::Compact && has_world_scenery
+}
+
 /// One-shot: spawn edge cylinders and node spheres for the loaded graph.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_track_meshes(
@@ -382,8 +392,20 @@ pub fn spawn_track_meshes(
     offset: Res<crate::world::RouteWorldOffset>,
     focus: Res<crate::world::RouteFocus>,
     opts: Res<ViewerLaunchOpts>,
+    mode: Res<ViewerSceneryMode>,
     terrain: Option<Res<TerrainElevation>>,
+    world: Option<Res<WorldScene>>,
 ) {
+    if mode.is_track_dev() {
+        return;
+    }
+    let has_world_scenery = world.as_deref().is_some_and(|w| !w.is_empty());
+    if should_hide_compact_track_lines(*opts, scene.render_mode, has_world_scenery) {
+        crate::viewer_log!(
+            "openrailsrs-viewer3d: hiding compact logical track graph in live MSTS scenery; TrackObj/TDB geometry provides visual rails"
+        );
+        return;
+    }
     let offset = offset.delta;
     let terrain_ref = terrain.as_deref();
     let bounds = scene.bounds;
@@ -669,6 +691,31 @@ mod tests {
         let mesh = build_compact_track_line_mesh(&scene.graph, Vec3::ZERO, &focus, None, &scene);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         assert_eq!(positions.len(), 4);
+    }
+
+    #[test]
+    fn live_msts_scenery_hides_compact_graph_overlay() {
+        let opts = ViewerLaunchOpts { live: true };
+        assert!(should_hide_compact_track_lines(
+            opts,
+            TrackRenderMode::Compact,
+            true
+        ));
+        assert!(!should_hide_compact_track_lines(
+            opts,
+            TrackRenderMode::Compact,
+            false
+        ));
+        assert!(!should_hide_compact_track_lines(
+            ViewerLaunchOpts { live: false },
+            TrackRenderMode::Compact,
+            true
+        ));
+        assert!(!should_hide_compact_track_lines(
+            opts,
+            TrackRenderMode::Full,
+            true
+        ));
     }
 
     #[test]

@@ -66,6 +66,18 @@ pub fn msts_tile_world_origin(display_x: i32, display_z: i32) -> (f32, f32) {
     (display_x as f32 * tile, display_z as f32 * tile)
 }
 
+/// Display tile coords from `WORLD/w-006074+014924.w` (also accepts `w-001000-001000`).
+pub fn parse_world_w_tile_display_xz(path: &std::path::Path) -> Option<(i32, i32)> {
+    let stem = path.file_stem()?.to_str()?;
+    let rest = stem.strip_prefix('w')?;
+    let coords = rest.trim_start_matches('-');
+    if let Some((x, z)) = coords.split_once('+') {
+        return Some((x.parse().ok()?, z.parse().ok()?));
+    }
+    let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
+    Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,6 +111,19 @@ mod tests {
         assert!(
             tiles.join(format!("{name}.t")).is_file(),
             "expected {name}.t under Chiltern TILES"
+        );
+    }
+
+    #[test]
+    fn parse_world_w_filename() {
+        use std::path::Path;
+        assert_eq!(
+            parse_world_w_tile_display_xz(Path::new("w-006084+014923.w")),
+            Some((6084, 14923))
+        );
+        assert_eq!(
+            parse_world_w_tile_display_xz(Path::new("w-001000-001000.w")),
+            Some((1000, 1000))
         );
     }
 }

@@ -8,6 +8,13 @@
 //! Math helpers ([`orbit_position`], [`fly_translation_delta`]) are pure
 //! functions and unit-tested without spinning up Bevy.
 
+use bevy::camera::Exposure;
+use bevy::core_pipeline::tonemapping::Tonemapping;
+
+use crate::launch::ViewerLaunchOpts;
+
+/// Ambient fill for live drive / terrain routes (MSTS `.ace` albedos are often very dark).
+pub const LIVE_OUTDOOR_AMBIENT: f32 = 500.0;
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
@@ -18,8 +25,11 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 /// avoid gimbal flip when looking straight up/down.
 pub const MAX_PITCH: f32 = 1.5;
 
-/// Sensitivity (rad per pixel) for orbit rotate (right mouse drag).
+/// Sensitivity (rad per pixel) for orbit rotate (left mouse drag).
 const ORBIT_ROTATE_SENSITIVITY: f32 = 0.005;
+
+/// Fraction of orbit distance per pixel when right-dragging vertically (dolly zoom).
+const ORBIT_RMB_DOLLY_SENSITIVITY: f32 = 0.004;
 
 /// Sensitivity (world units per pixel × distance) for orbit pan (middle drag).
 const ORBIT_PAN_SENSITIVITY: f32 = 0.0015;
@@ -31,7 +41,7 @@ const ORBIT_ZOOM_STEP: f32 = 0.1;
 const ORBIT_KEY_PAN_SPEED: f32 = 0.85;
 
 /// Min distance for the orbit camera (m).
-const ORBIT_MIN_DISTANCE: f32 = 1.0;
+const ORBIT_MIN_DISTANCE: f32 = 8.0;
 
 /// Default max distance before a route-specific limit is applied at startup.
 const ORBIT_DEFAULT_MAX_DISTANCE: f32 = 8_000.0;
@@ -89,6 +99,10 @@ pub const DRIVER_FOV_DEG: f32 = 72.0;
 
 /// Near clip in driver view (m) — closer than orbit to reduce cab clipping.
 pub const DRIVER_NEAR_CLIP_M: f32 = 0.08;
+
+/// Yaw offset so the camera −Z axis aligns with MSTS shape +Z (train-local +X after
+/// [`crate::shapes::msts_shape_to_train_rotation`]).
+pub const DRIVER_CAB_FORWARD_YAW_OFFSET: f32 = -std::f32::consts::FRAC_PI_2;
 
 /// Per-consist cab eye placement (set when the live train spawns).
 #[derive(Resource, Clone, Copy, Debug)]
@@ -250,7 +264,25 @@ pub fn clamp_pitch(pitch: f32) -> f32 {
     pitch.clamp(-MAX_PITCH, MAX_PITCH)
 }
 
-/// Clamp the orbit distance using the default sandbox limit.
+/// Upper distance for user-driven orbit zoom (scroll / RMB dolly), independent of route framing.
+#[inline]
+pub fn orbit_user_zoom_max() -> f32 {
+    ORBIT_ABSOLUTE_MAX_DISTANCE
+}
+/// Apply a vertical mouse delta as an orbit dolly factor (`>1` zoom out, `<1` zoom in).
+pub fn orbit_rmb_dolly_factor(delta_y: f32) -> f32 {
+    (1.0 + delta_y * ORBIT_RMB_DOLLY_SENSITIVITY).clamp(0.05, 20.0)
+}
+
+/// Scale orbit distance from mouse-wheel lines (`scroll` > 0 = zoom in).
+pub fn orbit_wheel_zoom_factor(scroll_lines: f32) -> f32 {
+    if std::env::var_os("OPENRAILSRS_INVERT_SCROLL_ZOOM").is_some() {
+        1.0 + scroll_lines * ORBIT_ZOOM_STEP
+    } else {
+        1.0 - scroll_lines * ORBIT_ZOOM_STEP
+    }
+}
+
 #[inline]
 pub fn clamp_distance(distance: f32) -> f32 {
     clamp_distance_to_limit(distance, ORBIT_DEFAULT_MAX_DISTANCE)
@@ -393,7 +425,7 @@ pub fn driver_camera_transform(train: TrainFollowPose, cab: LiveDriverCab) -> Tr
     };
     Transform::from_translation(eye).with_rotation(Quat::from_euler(
         EulerRot::YXZ,
-        train.yaw,
+        train.yaw + DRIVER_CAB_FORWARD_YAW_OFFSET,
         cab.look_pitch,
         0.0,
     ))
@@ -401,10 +433,16 @@ pub fn driver_camera_transform(train: TrainFollowPose, cab: LiveDriverCab) -> Tr
 
 // ── Systems (Bevy) ────────────────────────────────────────────────────────
 
-pub fn spawn_camera(mut commands: Commands) {
+pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
     let orbit = OrbitState::default();
     let transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
+
+    let (ambient_brightness, exposure) = if opts.live {
+        (LIVE_OUTDOOR_AMBIENT, Exposure::SUNLIGHT)
+    } else {
+        (0.15, Exposure::BLENDER)
+    };
 
     commands.spawn((
         Camera3d::default(),
@@ -414,10 +452,12 @@ pub fn spawn_camera(mut commands: Commands) {
         FlyState::default(),
         Msaa::Off,
         AmbientLight {
-            color: Color::srgb(1.0, 1.0, 1.0),
-            brightness: 0.15,
+            color: Color::srgb(0.85, 0.9, 1.0),
+            brightness: ambient_brightness,
             ..default()
         },
+        exposure,
+        Tonemapping::None,
         Name::new("viewer-camera"),
     ));
 }
@@ -701,17 +741,33 @@ pub fn orbit_camera_system(
 
     let mut changed = false;
     let shift = shift_held(&keys);
-    let drag_rotate = (mouse_buttons.pressed(MouseButton::Left)
-        || mouse_buttons.pressed(MouseButton::Right))
-        && !shift;
+    let mouse_dragging = mouse_buttons.pressed(MouseButton::Left)
+        || mouse_buttons.pressed(MouseButton::Right)
+        || mouse_buttons.pressed(MouseButton::Middle);
+    let drag_rotate_lmb = mouse_buttons.pressed(MouseButton::Left) && !shift;
+    let drag_rmb = mouse_buttons.pressed(MouseButton::Right) && !shift;
     let drag_pan = mouse_buttons.pressed(MouseButton::Middle)
         || (shift
             && (mouse_buttons.pressed(MouseButton::Left)
                 || mouse_buttons.pressed(MouseButton::Right)));
 
-    if drag_rotate && delta != Vec2::ZERO {
+    if drag_rotate_lmb && delta != Vec2::ZERO {
+        *follow = CameraFollowMode::Off;
         orbit.yaw -= delta.x * ORBIT_ROTATE_SENSITIVITY;
         orbit.pitch = clamp_pitch(orbit.pitch - delta.y * ORBIT_ROTATE_SENSITIVITY);
+        changed = true;
+    }
+
+    if drag_rmb && delta != Vec2::ZERO {
+        *follow = CameraFollowMode::Off;
+        if delta.x.abs() >= delta.y.abs() {
+            orbit.yaw -= delta.x * ORBIT_ROTATE_SENSITIVITY;
+        } else {
+            orbit.distance = clamp_distance_to_limit(
+                orbit.distance * orbit_rmb_dolly_factor(delta.y),
+                orbit_user_zoom_max(),
+            );
+        }
         changed = true;
     }
 
@@ -728,7 +784,34 @@ pub fn orbit_camera_system(
         changed = true;
     }
 
-    if scroll != 0.0 {
+    let zoom_keys = if opts.live {
+        keys.pressed(KeyCode::BracketLeft) || keys.pressed(KeyCode::Comma)
+    } else {
+        keys.pressed(KeyCode::BracketLeft)
+    };
+    let zoom_out_keys = if opts.live {
+        keys.pressed(KeyCode::BracketRight) || keys.pressed(KeyCode::Period)
+    } else {
+        keys.pressed(KeyCode::BracketRight)
+    };
+    if zoom_out_keys {
+        *follow = CameraFollowMode::Off;
+        orbit.distance = clamp_distance_to_limit(
+            orbit.distance * 1.08_f32.powf(time.delta_secs() * 10.0),
+            orbit_user_zoom_max(),
+        );
+        changed = true;
+    }
+    if zoom_keys {
+        *follow = CameraFollowMode::Off;
+        orbit.distance = clamp_distance_to_limit(
+            orbit.distance / 1.08_f32.powf(time.delta_secs() * 10.0),
+            orbit_user_zoom_max(),
+        );
+        changed = true;
+    }
+
+    if scroll != 0.0 && !mouse_dragging {
         // Scroll zoom uses the absolute cap so the user can always zoom further out.
         // When actively following in ChaseCam the lerp would override the distance every
         // frame, so switch to OrbitFollow (focus still tracks the train, distance is free).
@@ -736,8 +819,8 @@ pub fn orbit_camera_system(
             *follow = CameraFollowMode::OrbitFollow;
         }
         orbit.distance = clamp_distance_to_limit(
-            orbit.distance * (1.0 - scroll * ORBIT_ZOOM_STEP),
-            ORBIT_ABSOLUTE_MAX_DISTANCE,
+            orbit.distance * orbit_wheel_zoom_factor(scroll),
+            orbit_user_zoom_max(),
         );
         changed = true;
     }
@@ -840,12 +923,22 @@ pub fn in_fly_mode(mode: Res<CameraMode>) -> bool {
     *mode == CameraMode::Fly
 }
 
-/// Widen FOV, tighten near clip, and brighten ambient in driver view.
+/// Widen FOV, tighten near clip, and tune exposure/ambient per camera mode.
 pub fn update_driver_camera_fov(
+    opts: Res<ViewerLaunchOpts>,
     follow: Res<CameraFollowMode>,
-    mut query: Query<(&mut Projection, &mut AmbientLight), With<Camera3d>>,
+    mut query: Query<
+        (
+            &mut Projection,
+            &mut AmbientLight,
+            &mut Tonemapping,
+            &mut Exposure,
+        ),
+        With<Camera3d>,
+    >,
 ) {
-    let Ok((mut projection, mut ambient)) = query.single_mut() else {
+    let Ok((mut projection, mut ambient, mut tonemapping, mut exposure)) = query.single_mut()
+    else {
         return;
     };
     let Projection::Perspective(persp) = &mut *projection else {
@@ -854,11 +947,24 @@ pub fn update_driver_camera_fov(
     if *follow == CameraFollowMode::DriverCam {
         persp.fov = DRIVER_FOV_DEG.to_radians();
         persp.near = 0.05;
-        ambient.brightness = 800.0;
+        ambient.brightness = 650.0;
+        ambient.color = Color::srgb(1.0, 0.97, 0.92);
+        *tonemapping = Tonemapping::None;
+        *exposure = Exposure::BLENDER;
+    } else if opts.live {
+        persp.fov = std::f32::consts::FRAC_PI_4;
+        persp.near = 0.1;
+        ambient.brightness = LIVE_OUTDOOR_AMBIENT;
+        ambient.color = Color::srgb(0.85, 0.9, 1.0);
+        *tonemapping = Tonemapping::None;
+        *exposure = Exposure::SUNLIGHT;
     } else {
         persp.fov = std::f32::consts::FRAC_PI_4;
         persp.near = 0.1;
         ambient.brightness = 0.15;
+        ambient.color = Color::srgb(1.0, 1.0, 1.0);
+        *tonemapping = Tonemapping::default();
+        *exposure = Exposure::BLENDER;
     }
 }
 
@@ -936,6 +1042,18 @@ mod tests {
     fn clamp_pitch_clamps_to_max_pitch() {
         assert!((clamp_pitch(10.0) - MAX_PITCH).abs() < 1e-6);
         assert!((clamp_pitch(-10.0) + MAX_PITCH).abs() < 1e-6);
+    }
+
+    #[test]
+    fn orbit_wheel_zoom_factor_scroll_up_zooms_in() {
+        assert!(orbit_wheel_zoom_factor(1.0) < 1.0);
+        assert!(orbit_wheel_zoom_factor(-1.0) > 1.0);
+    }
+
+    #[test]
+    fn orbit_rmb_dolly_factor_zooms_in_on_drag_up() {
+        assert!(orbit_rmb_dolly_factor(-100.0) < 1.0);
+        assert!(orbit_rmb_dolly_factor(100.0) > 1.0);
     }
 
     #[test]
@@ -1085,6 +1203,29 @@ mod tests {
         assert!((tf.translation.x - head.x).abs() < 1e-4);
         assert!((tf.translation.y - head.y).abs() < 1e-4);
         assert!((tf.translation.z - head.z).abs() < 1e-4);
+    }
+
+    #[test]
+    fn driver_camera_looks_along_cab_forward() {
+        let train_yaw = 0.35;
+        let tf = driver_camera_transform(
+            TrainFollowPose {
+                translation: Vec3::ZERO,
+                yaw: train_yaw,
+            },
+            LiveDriverCab {
+                head_pos_train: Some(Vec3::ZERO),
+                look_pitch: 0.0,
+                ..Default::default()
+            },
+        );
+        let cam_fwd = tf.forward().as_vec3();
+        let cab_fwd = Quat::from_rotation_y(train_yaw)
+            * crate::shapes::msts_shape_to_train_rotation()
+            * Vec3::Z;
+        let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
+        let cab_h = Vec3::new(cab_fwd.x, 0.0, cab_fwd.z).normalize();
+        assert!(cam_h.dot(cab_h) > 0.99, "cam={cam_h:?} cab={cab_h:?}");
     }
 
     #[test]

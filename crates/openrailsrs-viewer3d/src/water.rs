@@ -11,14 +11,19 @@ use crate::world::WorldScene;
 const COLOR_WATER: Color = Color::srgba(0.08, 0.38, 0.62, 0.68);
 const COLOR_WATER_REFLECT: Color = Color::srgba(0.04, 0.22, 0.38, 0.28);
 
-/// Resolve the water surface height: explicit MSTS `Position.y`, else terrain sample.
-pub fn water_surface_y(anchor: Vec3, terrain: Option<&TerrainElevation>, explicit_y: f32) -> f32 {
+/// Resolve the water surface height in terrain MSL: explicit `.w` Y (via [`crate::world::RouteFocus::scenery_y_to_msl`]), else terrain sample.
+pub fn water_surface_y(
+    anchor: Vec3,
+    terrain: Option<&TerrainElevation>,
+    explicit_y: f32,
+    focus: &crate::world::RouteFocus,
+) -> f32 {
     if explicit_y.abs() > 1e-4 {
-        return explicit_y;
+        return focus.scenery_y_to_msl(explicit_y);
     }
     terrain
         .and_then(|t| t.sample_world_y(anchor.x, anchor.z))
-        .unwrap_or(0.0)
+        .unwrap_or(focus.height_origin)
 }
 
 #[derive(Component, Clone, Copy, Debug)]
@@ -71,8 +76,33 @@ pub fn spawn_water_patches(
     terrain: Option<Res<TerrainElevation>>,
     focus: Res<crate::world::RouteFocus>,
 ) {
-    let patches: Vec<_> = world
-        .items
+    spawn_water_objects(
+        &mut commands,
+        &mut meshes,
+        &mut images,
+        &mut materials,
+        &world.items,
+        &track,
+        terrain.as_deref(),
+        &assets,
+        &focus,
+    );
+}
+
+/// Spawn water for a slice of world objects (tile streaming).
+#[allow(clippy::too_many_arguments)]
+pub fn spawn_water_objects(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[crate::world::WorldObject],
+    track: &TrackScene,
+    terrain: Option<&TerrainElevation>,
+    assets: &RouteAssets,
+    focus: &crate::world::RouteFocus,
+) {
+    let patches: Vec<_> = items
         .iter()
         .filter(|obj| obj.kind == "HWater" && obj.water.is_some())
         .collect();
@@ -80,9 +110,8 @@ pub fn spawn_water_patches(
         return;
     }
 
-    let terrain_ref = terrain.as_deref();
-    let default_material = water_material(&mut materials, None);
-    let reflect_material = reflection_material(&mut materials);
+    let default_material = water_material(materials, None);
+    let reflect_material = reflection_material(materials);
     let mut texture_cache: std::collections::HashMap<String, Handle<Image>> =
         std::collections::HashMap::new();
 
@@ -90,7 +119,7 @@ pub fn spawn_water_patches(
     let mut textured = 0usize;
     for obj in patches {
         let patch = obj.water.as_ref().expect("filtered");
-        let y = water_surface_y(obj.position, terrain_ref, patch.surface_y);
+        let y = water_surface_y(obj.position, terrain, patch.surface_y, focus);
         let width = patch.half_x * 2.0;
         let depth = patch.half_z * 2.0;
         let mesh = meshes.add(Plane3d::default().mesh().size(width, depth));
@@ -113,7 +142,7 @@ pub fn spawn_water_patches(
 
         let material = if texture.is_some() {
             textured += 1;
-            water_material(&mut materials, texture)
+            water_material(materials, texture)
         } else {
             default_material.clone()
         };
@@ -181,8 +210,12 @@ mod tests {
 
     #[test]
     fn explicit_y_overrides_terrain() {
-        let y = water_surface_y(Vec3::new(10.0, 0.0, 10.0), None, 12.5);
-        assert!((y - 12.5).abs() < 1e-5);
+        let focus = crate::world::RouteFocus {
+            center: Vec3::new(0.0, 10.0, 0.0),
+            height_origin: 5.0,
+        };
+        let y = water_surface_y(Vec3::new(10.0, 0.0, 10.0), None, 12.5, &focus);
+        assert!((y - 7.5).abs() < 1e-5);
     }
 
     #[test]
@@ -206,7 +239,11 @@ mod tests {
         let route_dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
-        let y = water_surface_y(Vec3::new(100.0, 0.0, 100.0), Some(&elev), 0.0);
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let y = water_surface_y(Vec3::new(100.0, 0.0, 100.0), Some(&elev), 0.0, &focus);
         assert!(y.is_finite());
     }
 

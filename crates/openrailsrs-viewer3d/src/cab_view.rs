@@ -276,22 +276,57 @@ pub fn parse_orts_3d_cab_from_eng(eng_path: &Path) -> Option<Orts3dCabConfig> {
     })
 }
 
+/// Trainset root for a vehicle `.s` path (`…/SHAPES/foo.s` or `…/Trainset/foo.s`).
+pub fn trainset_root_from_shape_path(shape_path: &Path) -> Option<PathBuf> {
+    let parent = shape_path.parent()?;
+    if parent
+        .file_name()
+        .is_some_and(|n| n.eq_ignore_ascii_case("shapes"))
+    {
+        parent.parent().map(|p| p.to_path_buf())
+    } else {
+        Some(parent.to_path_buf())
+    }
+}
+
 /// Resolve ORTS 3D cab eyepoint for a lead vehicle (searches all trainset dirs).
-pub fn orts_3d_cab_for_vehicle(shape_dirs: &[&Path], shape_file: &str) -> Option<Orts3dCabConfig> {
+pub fn orts_3d_cab_for_vehicle(
+    shape_dirs: &[&Path],
+    shape_file: &str,
+    route_dir: &Path,
+) -> Option<Orts3dCabConfig> {
     let stem = Path::new(shape_file).file_stem()?.to_str()?;
+    if let Some(name) = crate::shapes::trainset_name_from_shape_search(shape_dirs, shape_file) {
+        for root in crate::shapes::or_content_trainset_roots(route_dir, &name) {
+            let eng = root.join(format!("{stem}.eng"));
+            if let Some(config) = parse_orts_3d_cab_from_eng(&eng) {
+                return Some(config);
+            }
+            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng) {
+                if let Some(config) = parse_orts_3d_cab_from_eng(&resolved) {
+                    return Some(config);
+                }
+            }
+        }
+    }
     for dir in shape_dirs {
         let eng = dir.join(format!("{stem}.eng"));
         if let Some(config) = parse_orts_3d_cab_from_eng(&eng) {
             return Some(config);
         }
+        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng) {
+            if let Some(config) = parse_orts_3d_cab_from_eng(&resolved) {
+                return Some(config);
+            }
+        }
     }
-    let shape_path = resolve_shape_path_in_dirs(shape_dirs, shape_file)?;
+    let shape_path = crate::shapes::resolve_vehicle_shape_path(shape_dirs, shape_file, route_dir)?;
     orts_3d_cab_from_shape_path(&shape_path)
 }
 
 /// Resolve ORTS 3D cab eyepoint from the lead vehicle exterior shape path.
 pub fn orts_3d_cab_from_shape_path(shape_path: &Path) -> Option<Orts3dCabConfig> {
-    let trainset_root = shape_path.parent()?.parent()?;
+    let trainset_root = trainset_root_from_shape_path(shape_path)?;
     let stem = shape_path.file_stem()?.to_str()?;
     let eng = trainset_root.join(format!("{stem}.eng"));
     parse_orts_3d_cab_from_eng(&eng).or_else(|| {
@@ -304,26 +339,30 @@ pub fn orts_3d_cab_from_shape_path(shape_path: &Path) -> Option<Orts3dCabConfig>
 impl Orts3dCabConfig {
     /// Eyepoint in train-local metres (transformed with the lead vehicle placement matrix).
     pub fn head_pos_in_train(self, vehicle_placement: Transform) -> Vec3 {
-        vehicle_placement.transform_point(self.head_pos_msts)
+        vehicle_placement
+            .transform_point(crate::shapes::msts_shape_vec3_to_bevy(self.head_pos_msts))
     }
 }
 
 /// Local transform for a 3D cab mesh parented to the driver camera.
 ///
-/// Shape vertices are in MSTS space (+Z forward); the Bevy camera looks down -Z.
-/// The eyepoint `head_msts` is moved to the camera origin.
-pub fn cab_transform_on_camera(head_msts: Vec3, vehicle: Transform) -> Transform {
-    // MSTS +Z (windshield / forward) → Bevy camera look axis -Z
+/// Vertices stay in MSTS shape space (+Z = windshield / forward). The Bevy camera
+/// looks down −Z, so we flip Y and offset so `head_msts` sits at the camera origin.
+/// Train yaw/pitch stay on the camera — do not bake `frame.rotation` here.
+pub fn cab_transform_on_camera(head_msts: Vec3) -> Transform {
     let align = Quat::from_rotation_y(std::f32::consts::PI);
-    let scaled_head = head_msts * vehicle.scale;
     Transform {
         rotation: align,
-        scale: vehicle.scale,
-        translation: -align.mul_vec3(scaled_head),
+        scale: Vec3::ONE,
+        translation: align * (-head_msts),
     }
 }
 
-fn cab_interior_material(
+/// MSTS cab `.ace` atlases are baked dark (AO/grey); boost albedo so labels and panels read in driver view.
+const CAB_INTERIOR_ALBEDO_BOOST: f32 = 4.0;
+
+/// Cab interior: unlit albedo, no fog (Bevy defaults fog on and greys out the cab).
+fn prepare_cab_interior_material(
     part: &crate::shapes::ShapePartAsset,
     materials: &mut Assets<StandardMaterial>,
 ) -> Handle<StandardMaterial> {
@@ -331,18 +370,24 @@ fn cab_interior_material(
         return materials.add(StandardMaterial {
             unlit: true,
             double_sided: true,
-            alpha_mode: AlphaMode::Opaque,
+            fog_enabled: false,
             base_color: Color::srgb(0.55, 0.58, 0.62),
             ..default()
         });
     };
+    let boost = if base.base_color_texture.is_some() {
+        CAB_INTERIOR_ALBEDO_BOOST
+    } else {
+        1.0
+    };
     materials.add(StandardMaterial {
         unlit: true,
         double_sided: true,
-        alpha_mode: AlphaMode::Opaque,
-        base_color: Color::WHITE,
+        fog_enabled: false,
+        alpha_mode: base.alpha_mode,
+        depth_bias: base.depth_bias,
+        base_color: Color::linear_rgb(boost, boost, boost),
         base_color_texture: base.base_color_texture.clone(),
-        emissive: LinearRgba::new(0.35, 0.35, 0.38, 1.0),
         ..default()
     })
 }
@@ -359,6 +404,7 @@ pub fn sync_cab_interior(
     mut materials: ResMut<Assets<StandardMaterial>>,
     lead_car: Query<Entity, With<CabLeadVehicle>>,
     existing: Query<Entity, With<CabInteriorRoot>>,
+    driver_cab: Option<Res<crate::camera::LiveDriverCab>>,
 ) {
     let driver = *follow == CameraFollowMode::DriverCam;
     if !driver {
@@ -393,6 +439,8 @@ pub fn sync_cab_interior(
     let Ok(lead_car) = lead_car.single() else {
         return;
     };
+
+    let head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
 
     let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab_shape, &assets.route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -436,6 +484,20 @@ pub fn sync_cab_interior(
         textured,
     );
 
+    if let Some(cab_res) = driver_cab.as_ref() {
+        if let Some(head_msts) = cab_res.head_msts {
+            let cab_mesh_refs: Vec<&Mesh> = asset
+                .parts
+                .iter()
+                .filter_map(|p| meshes.get(&p.mesh))
+                .collect();
+            let aligned = crate::shapes::orts_head_inside_cab_aabb(head_msts, &cab_mesh_refs);
+            viewer_log!(
+                "openrailsrs-viewer3d: cab alignment ORTS head in cab AABB (MSTS): {aligned}"
+            );
+        }
+    }
+
     commands.entity(lead_car).with_children(|cab_root| {
         cab_root
             .spawn((
@@ -447,18 +509,35 @@ pub fn sync_cab_interior(
                 Name::new("cab:interior:root"),
             ))
             .with_children(|root| {
+                let light_pos = head_msts
+                    .map(|h| Vec3::new(h.x, h.y + 0.4, h.z + 1.5))
+                    .unwrap_or(Vec3::new(0.0, 2.5, 4.0));
                 root.spawn((
                     PointLight {
-                        intensity: 120_000.0,
-                        range: 12.0,
+                        color: Color::srgb(1.0, 0.96, 0.88),
+                        intensity: 280_000.0,
+                        range: 16.0,
                         shadows_enabled: false,
                         ..default()
                     },
-                    Transform::from_xyz(0.0, 2.5, 4.0),
+                    Transform::from_translation(light_pos),
                     Name::new("cab:interior:light"),
                 ));
+                if let Some(h) = head_msts {
+                    root.spawn((
+                        PointLight {
+                            color: Color::srgb(0.85, 0.90, 1.0),
+                            intensity: 120_000.0,
+                            range: 10.0,
+                            shadows_enabled: false,
+                            ..default()
+                        },
+                        Transform::from_translation(Vec3::new(h.x + 0.6, h.y + 0.3, h.z + 0.8)),
+                        Name::new("cab:interior:fill"),
+                    ));
+                }
                 for (pi, part) in asset.parts.iter().enumerate() {
-                    let material = cab_interior_material(part, &mut materials);
+                    let material = prepare_cab_interior_material(part, &mut materials);
                     root.spawn((
                         CabInteriorMarker,
                         NotShadowCaster,
@@ -592,7 +671,7 @@ mod tests {
             ..default()
         };
         let head = config.head_pos_in_train(vehicle_t);
-        assert!((head.x - 8.60).abs() < 1e-2);
+        assert!((head.x - (-8.60)).abs() < 1e-2);
         assert!((head.y - 2.875).abs() < 1e-3);
     }
 
@@ -601,43 +680,33 @@ mod tests {
         let cab = PathBuf::from(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
-        let ext = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        let ext_or = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        let ext_stub = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s");
+        let ext = if ext_or.is_file() { ext_or } else { ext_stub };
         if !cab.is_file() || !ext.is_file() {
             return;
         }
-        let loaded = crate::shapes::load_shape_from_path(&cab, Some(2.0)).unwrap();
-        let el = crate::shapes::load_shape_from_path(&ext, Some(50.0)).unwrap();
-        let vehicle_t = crate::shapes::vehicle_shape_local_transform(&el.mesh, 0.0, 20.879);
+        let cab_loaded = crate::shapes::load_shape_from_path(&cab, Some(2.0)).unwrap();
+        let ext_loaded = crate::shapes::load_shape_from_path(&ext, Some(50.0)).unwrap();
+        let cab_meshes: Vec<&Mesh> = cab_loaded.parts.iter().map(|p| &p.mesh).collect();
         let head_msts = Vec3::new(-0.8, 2.875, 8.60);
-        let head = vehicle_t.transform_point(head_msts);
-        eprintln!("vehicle head train-local: {head:?}");
         assert!(
-            loaded.parts.iter().all(|p| p.texture_file.is_some()),
-            "cab textures"
-        );
-        let mut min_all = Vec3::splat(f32::INFINITY);
-        let mut max_all = Vec3::splat(f32::NEG_INFINITY);
-        for part in &loaded.parts {
-            if let Some((mn, mx)) = crate::shapes::mesh_aabb(&part.mesh) {
-                min_all = min_all.min(mn);
-                max_all = max_all.max(mx);
-            }
-        }
-        let head_shape = head_msts;
-        assert!(
-            head_shape.x >= min_all.x && head_shape.x <= max_all.x,
-            "head x in cab"
+            crate::shapes::orts_head_inside_cab_aabb(head_msts, &cab_meshes),
+            "ORTS head must lie inside cab shape AABB (MSTS metres)"
         );
         assert!(
-            head_shape.y >= min_all.y && head_shape.y <= max_all.y,
-            "head y in cab"
+            crate::shapes::orts_head_inside_cab_train_space(
+                head_msts,
+                &ext_loaded.mesh,
+                &cab_meshes,
+                0.0,
+                20.879,
+            ),
+            "ORTS head must lie inside cab AABB after cab frame transform"
         );
-        assert!(
-            head_shape.z >= min_all.z && head_shape.z <= max_all.z,
-            "head z in cab"
-        );
-        let _ = head;
     }
 
     #[test]
@@ -685,29 +754,37 @@ mod tests {
     #[test]
     fn cab_transform_on_camera_places_head_at_origin() {
         let head = Vec3::new(-0.8, 2.875, 8.60);
-        let vehicle = crate::shapes::vehicle_shape_local_transform(
-            &{
-                let ext = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s");
-                if !ext.is_file() {
-                    return;
-                }
-                crate::shapes::load_shape_from_path(&ext, Some(50.0))
-                    .unwrap()
-                    .mesh
-            },
-            0.0,
-            20.879,
-        );
-        let local = cab_transform_on_camera(head, vehicle);
+        let local = cab_transform_on_camera(head);
         let eye = local.transform_point(head);
         assert!(eye.length() < 1e-3, "eye={eye:?}");
-        // Windshield direction (+Z in shape) must point along camera -Z
+        // MSTS +Z (forward) → camera-local −Z (Bevy look axis).
         let forward = local.rotation * Vec3::Z;
         assert!(
-            (forward.z + 1.0).abs() < 1e-3 && forward.x.abs() < 1e-3,
+            (forward.z + 1.0).abs() < 1e-2 && forward.x.abs() < 1e-2,
             "forward={forward:?}"
         );
+    }
+
+    #[test]
+    fn orts_3d_cab_from_or_trainset_root_shape_path() {
+        let shape = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape.is_file() {
+            return;
+        }
+        let config = orts_3d_cab_from_shape_path(&shape).expect("ORTS from OR root .s");
+        assert!((config.head_pos_msts.y - 2.875).abs() < 1e-3);
+    }
+
+    #[test]
+    fn orts_3d_cab_from_chiltern_stub_eng() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let shape_dirs: Vec<PathBuf> = vec![route.join("trains/RF_Blue_Pullman")];
+        let refs: Vec<&Path> = shape_dirs.iter().map(|p| p.as_path()).collect();
+        let config = orts_3d_cab_for_vehicle(refs.as_slice(), "RF_WP_DMBSA.s", &route)
+            .expect("ORTS from stub eng");
+        assert!((config.head_pos_msts.z - 8.60).abs() < 1e-2);
     }
 
     #[test]

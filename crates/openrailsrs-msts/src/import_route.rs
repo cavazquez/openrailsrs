@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use openrailsrs_formats::{
-    ActivityFile, MstsFile, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackNodeKind,
-    TrackVectorPoint, parse_msts_file,
+    ActivityFile, MstsFile, TrItem, TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile,
+    TrackNodeKind, TrackVectorGeometry, TrackVectorPoint, parse_msts_file,
 };
 use serde::Serialize;
 
@@ -132,6 +132,66 @@ pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usi
     let (nodes, edges) = count_nodes_edges(&tdb);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
     Ok((toml, nodes, edges))
+}
+
+/// Update `x_m`/`y_m` on an existing `track.toml` from the route `.tdb` without replacing edges.
+///
+/// Node ids must match a fresh import (same `n*` / `anon*` names). Returns the number of nodes
+/// that received non-zero coordinates.
+pub fn patch_track_coordinates(route_dir: &Path, track_path: &Path) -> Result<usize, MstsError> {
+    let tdb_path = find_tdb(route_dir)?;
+    let tdb = load_tdb(route_dir, &tdb_path)?;
+    ensure_non_empty_tdb(&tdb, &tdb_path)?;
+    let route_id = find_route_id(route_dir, &tdb_path);
+    let fresh = convert_tdb_to_toml(&tdb, &route_id, None)?;
+    let fresh_val: toml::Value = toml::from_str(&fresh)?;
+    let existing_text = std::fs::read_to_string(track_path)?;
+    let mut existing: toml::Value = toml::from_str(&existing_text)?;
+
+    let fresh_coords = node_coordinates_from_toml(&fresh_val);
+    let Some(nodes) = existing.get_mut("nodes").and_then(|v| v.as_array_mut()) else {
+        return Err(MstsError::msg(format!(
+            "no [[nodes]] in {}",
+            track_path.display()
+        )));
+    };
+
+    let mut patched = 0usize;
+    for node in nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let Some((x_m, y_m)) = fresh_coords.get(id) else {
+            continue;
+        };
+        if let Some(table) = node.as_table_mut() {
+            table.insert("x_m".into(), toml::Value::Float(*x_m));
+            table.insert("y_m".into(), toml::Value::Float(*y_m));
+            patched += 1;
+        }
+    }
+
+    std::fs::write(track_path, toml::to_string_pretty(&existing)?)?;
+    Ok(patched)
+}
+
+fn node_coordinates_from_toml(value: &toml::Value) -> HashMap<String, (f64, f64)> {
+    let mut out = HashMap::new();
+    let Some(nodes) = value.get("nodes").and_then(|v| v.as_array()) else {
+        return out;
+    };
+    for node in nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let x_m = node.get("x_m").and_then(|v| v.as_float()).unwrap_or(0.0);
+        let y_m = node.get("y_m").and_then(|v| v.as_float()).unwrap_or(0.0);
+        if x_m == 0.0 && y_m == 0.0 {
+            continue;
+        }
+        out.insert(id.to_string(), (x_m, y_m));
+    }
+    out
 }
 
 fn load_tdb(_route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError> {
@@ -270,13 +330,18 @@ fn convert_tdb_to_toml(
             pins,
             item_ids,
             geometry,
+            sections,
+            ..
         } = &n.kind
         {
             let from_id = resolve_pin(pins.0, &node_map, &mut vec_counter, &mut nodes);
             let to_id = resolve_pin(pins.1, &node_map, &mut vec_counter, &mut nodes);
-            if let Some(geometry) = geometry {
-                set_node_position(&mut nodes, &from_id, geometry.start);
-                set_node_position(&mut nodes, &to_id, geometry.end);
+            let (start_pt, end_pt) = vector_endpoint_positions(sections, *geometry, *length_m);
+            if let Some(start) = start_pt {
+                set_node_position(&mut nodes, &from_id, start);
+            }
+            if let Some(end) = end_pt {
+                set_node_position(&mut nodes, &to_id, end);
             }
             let edge_id = format!("e{}", n.id);
             for item_id in item_ids {
@@ -301,6 +366,7 @@ fn convert_tdb_to_toml(
     }
 
     configure_switch_nodes(&mut nodes, &mut edges, &junction_pins, &msts_aliases);
+    apply_tdb_world_positions(tdb, &node_map, &mut nodes);
 
     let mut signals = build_signals(&tdb.items, &item_to_edge);
 
@@ -562,6 +628,128 @@ fn set_node_position(nodes: &mut [NodeToml], id: &str, point: TrackVectorPoint) 
     }
 }
 
+/// World anchors at the two pin ends of a vector node (from `TrVectorSection` chain).
+fn vector_endpoint_positions(
+    sections: &[TrVectorSectionRecord],
+    geometry: Option<TrackVectorGeometry>,
+    length_m: f64,
+) -> (Option<TrackVectorPoint>, Option<TrackVectorPoint>) {
+    let filtered: Vec<_> = sections
+        .iter()
+        .copied()
+        .filter(|s| s.shape_idx != 0)
+        .collect();
+    if !filtered.is_empty() {
+        let start = Some(filtered[0].start);
+        let end = if filtered.len() > 1 {
+            Some(filtered[filtered.len() - 1].start)
+        } else {
+            single_section_terminal(filtered[0], geometry, length_m)
+        };
+        return (start, end.or(start));
+    }
+    geometry
+        .map(|g| (Some(g.start), Some(g.end)))
+        .unwrap_or((None, None))
+}
+
+fn single_section_terminal(
+    section: TrVectorSectionRecord,
+    geometry: Option<TrackVectorGeometry>,
+    length_m: f64,
+) -> Option<TrackVectorPoint> {
+    if let Some(g) = geometry {
+        let distinct = (g.end.x - g.start.x).abs() > 1e-3
+            || (g.end.z - g.start.z).abs() > 1e-3
+            || g.end.tile_x != g.start.tile_x
+            || g.end.tile_z != g.start.tile_z;
+        if distinct {
+            return Some(g.end);
+        }
+    }
+    let _ = (section, length_m);
+    None
+}
+
+/// Fill junction/end nodes that lack `UiD` by propagating along `TrPins`.
+fn apply_tdb_world_positions(
+    tdb: &TrackDbFile,
+    node_map: &HashMap<u32, String>,
+    nodes: &mut [NodeToml],
+) {
+    let mut positions: HashMap<u32, TrackVectorPoint> = HashMap::new();
+    for n in &tdb.nodes {
+        if let Some(p) = n.position {
+            positions.insert(n.id, p);
+        }
+    }
+    for n in &tdb.nodes {
+        let TrackNodeKind::Vector {
+            pins,
+            sections,
+            geometry,
+            length_m,
+            ..
+        } = &n.kind
+        else {
+            continue;
+        };
+        let (start, end) = vector_endpoint_positions(sections, *geometry, *length_m);
+        if let Some(s) = start {
+            positions.entry(pins.0).or_insert(s);
+        }
+        if let Some(e) = end {
+            positions.entry(pins.1).or_insert(e);
+        }
+    }
+    loop {
+        let mut changed = false;
+        for n in &tdb.nodes {
+            if positions.contains_key(&n.id) {
+                continue;
+            }
+            let mut refs = Vec::new();
+            for other in &tdb.nodes {
+                if other.id == n.id {
+                    continue;
+                }
+                let Some(p) = positions.get(&other.id) else {
+                    continue;
+                };
+                let connects = other.pin_refs.iter().any(|pin| pin.node_id == n.id)
+                    || n.pin_refs.iter().any(|pin| pin.node_id == other.id);
+                if connects {
+                    refs.push(*p);
+                }
+            }
+            if refs.is_empty() {
+                continue;
+            }
+            positions.insert(n.id, average_points(&refs));
+            changed = true;
+        }
+        if !changed {
+            break;
+        }
+    }
+    for (tdb_id, node_id) in node_map {
+        if let Some(p) = positions.get(tdb_id) {
+            set_node_position(nodes, node_id, *p);
+        }
+    }
+}
+
+fn average_points(points: &[TrackVectorPoint]) -> TrackVectorPoint {
+    let n = points.len() as f64;
+    TrackVectorPoint {
+        tile_x: points[0].tile_x,
+        tile_z: points[0].tile_z,
+        x: points.iter().map(|p| p.x).sum::<f64>() / n,
+        y: points.iter().map(|p| p.y).sum::<f64>() / n,
+        z: points.iter().map(|p| p.z).sum::<f64>() / n,
+    }
+}
+
 fn point_graph_x(point: TrackVectorPoint) -> f64 {
     let display_tile_x = if point.tile_x < 0 {
         -point.tile_x
@@ -572,7 +760,7 @@ fn point_graph_x(point: TrackVectorPoint) -> f64 {
 }
 
 fn point_graph_z(point: TrackVectorPoint) -> f64 {
-    point.tile_z as f64 * 2048.0 + point.z
+    point.tile_z as f64 * 2048.0 - point.z
 }
 
 #[cfg(test)]
@@ -593,5 +781,22 @@ mod tests {
         assert!(toml.contains("tdb_id = 2"));
         assert!(toml.contains("kind = \"edge\""));
         assert!(toml.contains("id = \"e2\""));
+    }
+
+    #[test]
+    fn native_msts_propagates_end_node_position() {
+        let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let tdb = TrackDbFile::from_path(fixtures.join("native_msts.tdb")).expect("tdb");
+        let toml = convert_tdb_to_toml(&tdb, "test", None).expect("toml");
+        let value: toml::Value = toml::from_str(&toml).expect("valid toml");
+        let nodes = value["nodes"].as_array().expect("nodes");
+        let n4 = nodes
+            .iter()
+            .find(|n| n.get("id").and_then(|v| v.as_str()) == Some("n4"))
+            .expect("n4");
+        assert!(
+            n4.get("x_m").and_then(|v| v.as_float()).is_some(),
+            "n4 should receive propagated coordinates via junction pins"
+        );
     }
 }

@@ -161,7 +161,7 @@ pub fn build_hud_content(
         )
     } else {
         format!(
-            "Orbit: drag=rotate  Shift+drag/WASD=pan  wheel=zoom  G:goto  {rain_hint}  F2:fly  Esc:quit"
+            "Orbit: LMB=rotate  RMB↑↓=zoom  RMB←→=spin  Shift+drag/WASD=pan  wheel=zoom  G:goto  {rain_hint}  F2:fly  Esc:quit"
         )
     };
 
@@ -455,7 +455,7 @@ pub fn build_hud_content_live(
         )
     };
     let controls =
-        "↑/↓:thr/brk  I/K:pan  WASD:pan  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  ,/.:zoom  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
             .to_string();
     HudContent {
         row1: format!(

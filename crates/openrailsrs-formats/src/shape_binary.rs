@@ -513,6 +513,7 @@ fn token_scalars_are_i32(id: i32) -> bool {
             | 61 // tex_idxs
             | 63 // vertex_idxs
             | 64 // flags
+            | 67 // hierarchy
             | 70 // shape_header
     )
 }
@@ -640,7 +641,7 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
 fn is_scalar_only_leaf_block(token_id: i32) -> bool {
     matches!(
         token_id,
-        2 | 3 | 6 | 8 | 56 | 63 | 64 | 99 | 101 | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, anim_keys
+        2 | 3 | 6 | 8 | 56 | 63 | 64 | 67 | 99 | 101 | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, hierarchy, anim_keys
     )
 }
 

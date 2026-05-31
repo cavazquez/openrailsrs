@@ -143,6 +143,12 @@ pub struct SubObject {
 pub struct DistanceLevel {
     /// Selection distance in metres (`dlevel_selection`).
     pub selection_m: f64,
+    /// Matrix parent chain from `distance_level_header/hierarchy`.
+    ///
+    /// Each entry is the parent matrix index for the matrix at the same index,
+    /// or `-1` for a root.  Shape primitives choose their starting matrix via
+    /// `prim_state -> vtx_state -> matrix_idx`.
+    pub hierarchy: Vec<i32>,
     pub sub_objects: Vec<SubObject>,
 }
 
@@ -491,12 +497,16 @@ fn parse_lod_control(items: &[Ast]) -> LodControl {
 
 fn parse_distance_level(items: &[Ast]) -> DistanceLevel {
     let mut selection_m = 0.0;
+    let mut hierarchy = Vec::new();
     let mut sub_objects = Vec::new();
 
     for_each_tagged(items, "distance_level_header", |sub| {
         if let Some(s) = find_tagged_number(sub, "dlevel_selection") {
             selection_m = s;
         }
+        for_each_tagged(sub, "hierarchy", |h| {
+            hierarchy = parse_counted_i32_list(h);
+        });
     });
     for_each_tagged(items, "sub_objects", |sub| {
         for_each_tagged(sub, "sub_object", |so| {
@@ -506,6 +516,7 @@ fn parse_distance_level(items: &[Ast]) -> DistanceLevel {
 
     DistanceLevel {
         selection_m,
+        hierarchy,
         sub_objects,
     }
 }
@@ -865,6 +876,21 @@ fn parse_tex_idxs_list(items: &[Ast]) -> Vec<i32> {
         })
         .collect();
     if nums.len() > 1 {
+        nums[1..].to_vec()
+    } else {
+        nums
+    }
+}
+
+fn parse_counted_i32_list(items: &[Ast]) -> Vec<i32> {
+    let nums: Vec<i32> = shape_section_body(items)
+        .iter()
+        .filter_map(|a| match a {
+            Ast::Atom(at) => shape_atom_to_i32(at),
+            _ => None,
+        })
+        .collect();
+    if nums.len() > 1 && nums[0].max(0) as usize == nums.len() - 1 {
         nums[1..].to_vec()
     } else {
         nums

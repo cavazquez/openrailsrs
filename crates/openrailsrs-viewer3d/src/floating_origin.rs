@@ -4,6 +4,8 @@
 
 use bevy::prelude::*;
 
+use crate::camera::OrbitState;
+
 /// Cumulative shift applied when floating origin is active.
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct FloatingOrigin {
@@ -14,17 +16,14 @@ pub struct FloatingOrigin {
 pub const FLOATING_ORIGIN_THRESHOLD_M: f32 = 256.0;
 
 /// Move the camera and non-UI scene transforms toward the origin for f32 stability.
-#[allow(dead_code, clippy::type_complexity)]
+#[allow(clippy::type_complexity)]
 pub(crate) fn apply_floating_origin(
     mut origin: ResMut<FloatingOrigin>,
-    mut transforms: ParamSet<(
-        Query<&mut Transform, With<Camera3d>>,
-        Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
-    )>,
+    mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+    mut transforms: Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
-    let mut cameras = transforms.p0();
-    let Ok(mut cam) = cameras.single_mut() else {
+    let Ok((mut cam, mut orbit)) = cameras.single_mut() else {
         return;
     };
     if cam.translation.length() < FLOATING_ORIGIN_THRESHOLD_M {
@@ -33,7 +32,8 @@ pub(crate) fn apply_floating_origin(
     let delta = cam.translation;
     origin.shift += delta;
     cam.translation -= delta;
-    for mut tf in transforms.p1().iter_mut() {
+    orbit.focus -= delta;
+    for mut tf in transforms.iter_mut() {
         tf.translation -= delta;
     }
     for mut billboard in &mut billboards {

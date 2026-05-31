@@ -6,8 +6,11 @@ use std::time::Instant;
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
-use openrailsrs_formats::{WorldFile, WorldItem};
+use openrailsrs_formats::{
+    WorldFile, WorldItem, msts_tile_world_origin, parse_world_w_tile_display_xz,
+};
 
+use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_from_path,
     prefetch_ace_textures, shape_render_asset_from_loaded_with_ace_cache,
@@ -43,6 +46,8 @@ const SHAPE_INSTANCE_MERGE_MIN: usize = 12;
 
 /// Set to `false` to skip TrackObj placeholder cuboids (tiny rail clutter, very numerous).
 const SPAWN_TRACKOBJ_PLACEHOLDERS: bool = false;
+/// Procedural sleepers/rails for TrackObj without a resolvable `.s` mesh (Open Rails TSection fallback).
+const SPAWN_TRACKOBJ_PROCEDURAL: bool = true;
 
 /// World items classified per frame during progressive spawn.
 const CLASSIFY_ITEMS_PER_FRAME: usize = 12_000;
@@ -90,8 +95,12 @@ pub struct WorldObject {
     pub label: String,
     /// Shape filename from the world item (`FileName`), if any.
     pub shape_file: Option<String>,
+    /// `TrackObj` → `TrackShape` index in `tsection.dat`.
+    pub section_idx: Option<u32>,
     pub position: Vec3,
     pub rotation: Quat,
+    /// Non-uniform scale from `.w` `Matrix3x3` when present.
+    pub scale: Vec3,
     pub tile_x: i32,
     pub tile_z: i32,
     pub forest: Option<ForestPatch>,
@@ -191,6 +200,26 @@ impl RouteFocus {
         self.height_origin + (scenery_y - self.center.y)
     }
 
+    /// MSTS world position from a `.w` item (scenery-local Y) → Bevy render space.
+    pub fn scenery_to_render(&self, scenery_world: Vec3) -> Vec3 {
+        self.to_render_surface(Vec3::new(
+            scenery_world.x,
+            self.scenery_y_to_msl(scenery_world.y),
+            scenery_world.z,
+        ))
+    }
+
+    /// Build focus at an explicit MSTS world centre, sampling terrain MSL when available.
+    pub fn at_world_center(center: Vec3, elevation: Option<&TerrainElevation>) -> Self {
+        let height_origin = elevation
+            .and_then(|t| t.sample_world_y(center.x, center.z))
+            .unwrap_or(center.y);
+        Self {
+            center,
+            height_origin,
+        }
+    }
+
     /// Horizontal distance from route centre in render space (for culling).
     pub fn horizontal_distance(&self, world: Vec3) -> f32 {
         let local = self.to_render(world);
@@ -211,15 +240,22 @@ pub struct RouteWorldOffset {
 }
 
 impl RouteWorldOffset {
+    /// Minimum horizontal (XZ) separation before applying a graph→scenery shift.
+    const ALIGN_THRESHOLD_XZ_M: f32 = 500.0;
+
     pub fn from_scene_and_world(scene: &TrackScene, world: &WorldScene) -> Self {
         let graph_center = scene.bounds.center;
         let Some(world_center) = world.position_center() else {
             return Self::default();
         };
-        if (world_center - graph_center).length() <= 2_000.0 {
+        let delta_xz = Vec2::new(
+            world_center.x - graph_center.x,
+            world_center.z - graph_center.z,
+        );
+        if delta_xz.length() <= Self::ALIGN_THRESHOLD_XZ_M {
             return Self::default();
         }
-        let delta = world_center - graph_center;
+        let delta = Vec3::new(delta_xz.x, 0.0, delta_xz.y);
         viewer_log!(
             "openrailsrs-viewer3d: aligning track/train to MSTS scenery (offset {:.0}, {:.0}, {:.0} m)",
             delta.x,
@@ -233,12 +269,13 @@ impl RouteWorldOffset {
 /// Convert MSTS tile-local coordinates to Bevy world space (Y up).
 ///
 /// Global X/Z follow the usual MSTS rule: `tile * 2048 + local`.
+/// Local Z is negated like Open Rails `WorldPositionFromMSTSLocation` (`Scenery.cs`).
 /// MSTS `y` maps to Bevy `Y` (height).
 pub fn msts_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_formats::Vec3) -> Vec3 {
     Vec3::new(
         (tile_x as f64 * MSTS_TILE_SIZE_M + local.x) as f32,
         local.y as f32,
-        (tile_z as f64 * MSTS_TILE_SIZE_M + local.z) as f32,
+        (tile_z as f64 * MSTS_TILE_SIZE_M - local.z) as f32,
     )
 }
 
@@ -255,37 +292,44 @@ fn qdir_to_xna_quat(qdir: &[f64; 4]) -> Quat {
 /// Open Rails XNA 3×3 rotation from a `.w` `Matrix3x3`.
 fn matrix3x3_to_xna_mat3(m: &[f64; 9]) -> Mat3 {
     Mat3::from_cols(
-        Vec3::new(m[0] as f32, m[3] as f32, -m[6] as f32),
-        Vec3::new(m[1] as f32, m[4] as f32, -m[7] as f32),
-        Vec3::new(-m[2] as f32, -m[5] as f32, m[8] as f32),
+        Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32)),
+        Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32)),
+        Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32),
     )
 }
 
-const MSTS_Z_REFLECT: Mat3 = Mat3::from_diagonal(Vec3::new(1.0, 1.0, -1.0));
-
-/// MSTS `QDirection` → Bevy rotation (terrain uses native +Z, not XNA −Z).
+/// MSTS `QDirection` → Bevy rotation in the same XNA-style Z-flipped world space
+/// used by terrain, world objects and `msts_to_bevy`.
 pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
-    xna_rotation_to_bevy(qdir_to_xna_quat(qdir))
+    qdir_to_xna_quat(qdir)
 }
 
 /// MSTS `Matrix3x3` → Bevy rotation.
 pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
-    xna_rotation_to_bevy(Quat::from_mat3(&matrix3x3_to_xna_mat3(m)))
+    matrix3x3_to_rotation_scale(m).0
 }
 
-/// Map an Open Rails / XNA rotation into Bevy's native MSTS +Z world axes.
-fn xna_rotation_to_bevy(rot_xna: Quat) -> Quat {
-    let r = Mat3::from_quat(rot_xna);
-    Quat::from_mat3(&(MSTS_Z_REFLECT * r * MSTS_Z_REFLECT))
+/// Rotation and non-uniform scale from MSTS `Matrix3x3` (Open Rails `WorldMatrix`).
+pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
+    let raw = matrix3x3_to_xna_mat3(m);
+    let sx = raw.x_axis.length().max(1e-6);
+    let sy = raw.y_axis.length().max(1e-6);
+    let sz = raw.z_axis.length().max(1e-6);
+    let scale = Vec3::new(sx, sy, sz);
+    let normalized = Mat3::from_cols(raw.x_axis / sx, raw.y_axis / sy, raw.z_axis / sz);
+    let rot = Quat::from_mat3(&normalized);
+    (rot, scale)
 }
 
-fn world_item_rotation(item: &WorldItem) -> Quat {
+fn world_item_transform(item: &WorldItem) -> (Quat, Vec3) {
     if let Some(m) = item.matrix3x3() {
-        return matrix3x3_to_quat(&m);
+        return matrix3x3_to_rotation_scale(&m);
     }
-    item.qdirection()
+    let rot = item
+        .qdirection()
         .map(|q| qdir_to_quat(&q))
-        .unwrap_or(Quat::IDENTITY)
+        .unwrap_or(Quat::IDENTITY);
+    (rot, Vec3::ONE)
 }
 
 fn object_label(item: &WorldItem) -> String {
@@ -296,7 +340,7 @@ fn object_label(item: &WorldItem) -> String {
 
 fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldObject> {
     let position = msts_to_bevy(tile_x, tile_z, item.position()?);
-    let rotation = world_item_rotation(item);
+    let (rotation, scale) = world_item_transform(item);
     let forest = match item {
         WorldItem::Forest {
             uid,
@@ -350,8 +394,10 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         kind: item.kind(),
         label: object_label(item),
         shape_file: item.file_name().map(str::to_string),
+        section_idx: item.section_idx(),
         position,
         rotation,
+        scale,
         tile_x,
         tile_z,
         forest,
@@ -361,29 +407,134 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
 
 /// Scan `route_dir/WORLD` and `route_dir/world` for `.w` files and parse them.
 pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
-    let mut paths = discover_world_files(route_dir);
-    paths.sort();
+    load_world_from_route_dir_near(route_dir, None, f32::MAX)
+}
+
+fn tile_center_distance_m(display_x: i32, display_z: i32, center: Vec3) -> f32 {
+    let tile = MSTS_TILE_SIZE_M as f32;
+    let half = tile * 0.5;
+    let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+    let tcx = ox + half;
+    let tcz = oz + half;
+    Vec2::new(tcx - center.x, tcz - center.z).length()
+}
+
+/// `(display_tile_x, display_tile_z, path)` for each `.w` tile within `radius_m` of `center`.
+pub fn discover_world_tile_entries(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+) -> Vec<(i32, i32, PathBuf)> {
+    let tile = MSTS_TILE_SIZE_M as f32;
+    let extra = tile;
+    if let Some(c) = center {
+        let center_dx = (c.x / tile).floor() as i32;
+        let center_dz = (c.z / tile).floor() as i32;
+        let radius_tiles = (radius_m / tile).ceil() as i32 + 1;
+        let mut out = Vec::new();
+        for dtx in -radius_tiles..=radius_tiles {
+            for dtz in -radius_tiles..=radius_tiles {
+                let display_x = center_dx + dtx;
+                let display_z = center_dz + dtz;
+                if tile_center_distance_m(display_x, display_z, c) > radius_m + extra {
+                    continue;
+                }
+                if let Some(path) = world_tile_path_for_coords(route_dir, display_x, display_z) {
+                    out.push((display_x, display_z, path));
+                }
+            }
+        }
+        if !out.is_empty() {
+            return out;
+        }
+    }
+    discover_world_files(route_dir)
+        .into_iter()
+        .filter_map(|path| {
+            let (display_x, display_z) = parse_world_w_tile_display_xz(&path)?;
+            if let Some(c) = center {
+                if tile_center_distance_m(display_x, display_z, c) > radius_m + extra {
+                    return None;
+                }
+            }
+            Some((display_x, display_z, path))
+        })
+        .collect()
+}
+
+fn world_tile_path_for_coords(route_dir: &Path, display_x: i32, display_z: i32) -> Option<PathBuf> {
+    let abs_x = display_x.unsigned_abs();
+    let abs_z = display_z.unsigned_abs();
+    let names = [
+        format!("w-{abs_x:06}+{abs_z:06}.w"),
+        format!("w-{abs_x:06}-{abs_z:06}.w"),
+        format!("w-{display_x}+{display_z}.w"),
+        format!("w-{display_x}-{display_z}.w"),
+    ];
+    for subdir in ["WORLD", "world"] {
+        let dir = route_dir.join(subdir);
+        for name in &names {
+            let path = dir.join(name);
+            if path.is_file() {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
+/// MSTS world XZ centre from `.w` filenames (no parse) — used before the route anchor is known.
+pub fn world_tile_center_hint(route_dir: &Path) -> Option<Vec3> {
+    let paths = discover_world_files(route_dir);
+    let mut count = 0usize;
+    let mut sum_x = 0.0f64;
+    let mut sum_z = 0.0f64;
+    let half = MSTS_TILE_SIZE_M * 0.5;
+    for path in paths {
+        let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+            continue;
+        };
+        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        sum_x += f64::from(ox) + half;
+        sum_z += f64::from(oz) + half;
+        count += 1;
+    }
+    if count == 0 {
+        return None;
+    }
+    let n = count as f64;
+    Some(Vec3::new((sum_x / n) as f32, 0.0, (sum_z / n) as f32))
+}
+
+/// Parse only `.w` tiles within `radius_m` of `center` (Open Rails tile streaming at load).
+pub fn load_world_from_route_dir_near(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+) -> WorldScene {
+    let mut entries = discover_world_tile_entries(route_dir, center, radius_m);
+    entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
 
     let mut scene = WorldScene::default();
     let mut skip_count = 0usize;
     let mut skip_sample: Option<String> = None;
-    for path in paths {
-        match WorldFile::from_path(&path) {
-            Ok(world) => {
-                scene.tiles_loaded += 1;
-                for item in &world.items {
-                    if let Some(obj) = object_from_item(world.tile_x, world.tile_z, item) {
-                        scene.items.push(obj);
-                    }
-                }
-            }
-            Err(err) => {
-                skip_count += 1;
-                if skip_sample.is_none() {
-                    skip_sample = Some(format!("{} ({err})", path.display()));
-                }
+    for (_display_x, _display_z, path) in entries {
+        if append_world_tile_file(&mut scene, &path).is_err() {
+            skip_count += 1;
+            if skip_sample.is_none() {
+                skip_sample = Some(path.display().to_string());
             }
         }
+    }
+    if let Some(c) = center.filter(|_| radius_m.is_finite() && radius_m < f32::MAX / 2.0) {
+        viewer_log!(
+            "openrailsrs-viewer3d: loaded {} world tile(s) ({} item(s)) within {:.0}m of ({:.0},{:.0})",
+            scene.tiles_loaded,
+            scene.items.len(),
+            radius_m,
+            c.x,
+            c.z
+        );
     }
     if skip_count > 0 {
         viewer_log!(
@@ -395,6 +546,17 @@ pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
         );
     }
     scene
+}
+
+fn append_world_tile_file(scene: &mut WorldScene, path: &Path) -> Result<(), String> {
+    let world = WorldFile::from_path(path).map_err(|e| e.to_string())?;
+    scene.tiles_loaded += 1;
+    for item in &world.items {
+        if let Some(obj) = object_from_item(world.tile_x, world.tile_z, item) {
+            scene.items.push(obj);
+        }
+    }
+    Ok(())
 }
 
 fn discover_world_files(route_dir: &Path) -> Vec<PathBuf> {
@@ -441,9 +603,83 @@ fn box_size_for_kind(kind: &str, base: f32) -> Vec3 {
 }
 
 fn shape_eligible(obj: &WorldObject) -> bool {
-    obj.shape_file
-        .as_ref()
-        .is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+    trackobj_effective_shape_file(obj).is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+}
+
+fn trackobj_effective_shape_file(obj: &WorldObject) -> Option<String> {
+    obj.shape_file.as_ref().filter(|f| !f.is_empty()).cloned()
+}
+
+fn trackobj_procedural_links(
+    assets: &RouteAssets,
+    shape_idx: u32,
+    mode: ViewerSceneryMode,
+) -> Vec<openrailsrs_formats::TrackProceduralLink> {
+    let catalog = assets.tsection();
+    if mode.is_track_dev() {
+        if catalog
+            .shapes
+            .get(&shape_idx)
+            .is_some_and(|s| s.main_route.is_some())
+        {
+            return catalog.procedural_links_all_paths(shape_idx);
+        }
+        return catalog.procedural_links_primary_path(shape_idx);
+    }
+    catalog.procedural_links(shape_idx)
+}
+
+fn trackobj_procedural_segments(
+    obj: &WorldObject,
+    render_pos: Vec3,
+    assets: &RouteAssets,
+    mode: ViewerSceneryMode,
+) -> Vec<crate::dyntrack::ProceduralTrackSegment> {
+    let rotation = assets.refine_trackobj_rotation(obj.section_idx, obj.position, obj.rotation);
+    let Some(shape_idx) = obj.section_idx else {
+        if mode.is_track_dev() {
+            return Vec::new();
+        }
+        return vec![crate::dyntrack::ProceduralTrackSegment {
+            position: render_pos,
+            rotation,
+            length_m: Some(crate::dyntrack::MSTS_DEFAULT_SECTION_LENGTH_M),
+            half_gauge_m: Some(crate::dyntrack::MSTS_STANDARD_HALF_GAUGE_M),
+            curve_radius_m: None,
+            curve_angle_deg: None,
+        }];
+    };
+    let links = trackobj_procedural_links(assets, shape_idx, mode);
+    if links.is_empty() {
+        return Vec::new();
+    }
+    links
+        .into_iter()
+        .map(|link| {
+            let offset = Vec3::new(
+                link.shape_local_offset[0] as f32,
+                link.shape_local_offset[1] as f32,
+                link.shape_local_offset[2] as f32,
+            );
+            let link_rot = Quat::from_rotation_y(link.shape_local_yaw_deg.to_radians() as f32);
+            crate::dyntrack::ProceduralTrackSegment {
+                position: render_pos + rotation * offset,
+                rotation: rotation * link_rot,
+                length_m: Some(link.dims.length_m as f32),
+                half_gauge_m: Some(link.dims.half_gauge_m as f32),
+                curve_radius_m: link.dims.curve_radius_m.map(|v| v as f32),
+                curve_angle_deg: link.dims.curve_angle_deg.map(|v| v as f32),
+            }
+        })
+        .collect()
+}
+
+fn resolve_object_shape_path(obj: &WorldObject, assets: &RouteAssets) -> Option<PathBuf> {
+    if obj.kind == "TrackObj" {
+        return assets.resolve_trackobj_shape(obj.shape_file.as_deref(), obj.section_idx);
+    }
+    let file_name = trackobj_effective_shape_file(obj).or(obj.shape_file.clone())?;
+    assets.resolve_world_shape(obj.kind, &file_name)
 }
 
 struct MergedBoxGroup {
@@ -602,9 +838,15 @@ pub struct WorldSpawnProgress {
     item_index: usize,
     shape_path_cache: std::collections::HashMap<String, Option<PathBuf>>,
     shape_instances: std::collections::HashMap<PathBuf, Vec<Transform>>,
+    shape_instance_min_dist: std::collections::HashMap<PathBuf, f32>,
     merged_boxes: std::collections::HashMap<String, MergedBoxGroup>,
     culled_count: usize,
     skipped_trackobj_placeholders: usize,
+    trackobj_seen: usize,
+    trackobj_mesh_queued: usize,
+    trackobj_no_filename: usize,
+    trackobj_unresolved: usize,
+    trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment>,
     placeholder_base: f32,
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
@@ -622,6 +864,7 @@ pub struct WorldSpawnProgress {
     merged_shape_groups: usize,
     loading_shapes_started: Option<Instant>,
     build_queue_started: Option<Instant>,
+    scenery_audit: Option<crate::scenery_audit::ShapeAuditSummary>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -635,17 +878,27 @@ enum WorldSpawnPhase {
 
 impl WorldSpawnProgress {
     fn new(placeholder_base: f32) -> Self {
+        Self::new_from_item_index(placeholder_base, 0)
+    }
+
+    fn new_from_item_index(placeholder_base: f32, item_index: usize) -> Self {
         Self {
             phase: WorldSpawnPhase::Classifying,
             started: Instant::now(),
-            item_index: 0,
+            item_index,
             shape_path_cache: std::collections::HashMap::new(),
             shape_instances: std::collections::HashMap::new(),
+            shape_instance_min_dist: std::collections::HashMap::new(),
             merged_boxes: std::collections::HashMap::new(),
             culled_count: 0,
             skipped_trackobj_placeholders: 0,
+            trackobj_seen: 0,
+            trackobj_mesh_queued: 0,
+            trackobj_no_filename: 0,
+            trackobj_unresolved: 0,
+            trackobj_procedural: Vec::new(),
             placeholder_base,
-            shape_fallback_color: Color::srgb(0.95, 0.25, 0.85),
+            shape_fallback_color: Color::srgb(0.72, 0.55, 0.42),
             shape_fallback_material: None,
             parsed_shapes: Vec::new(),
             ace_cache: std::collections::HashMap::new(),
@@ -661,6 +914,7 @@ impl WorldSpawnProgress {
             merged_shape_groups: 0,
             loading_shapes_started: None,
             build_queue_started: None,
+            scenery_audit: None,
         }
     }
 }
@@ -674,9 +928,10 @@ pub fn world_spawn_complete(progress: Option<Res<WorldSpawnProgress>>) -> bool {
 pub fn init_world_spawn_progress(
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
+    mode: Res<ViewerSceneryMode>,
     mut commands: Commands,
 ) {
-    if world.is_empty() {
+    if world.is_empty() || mode.is_track_dev() {
         return;
     }
     viewer_log!(
@@ -691,6 +946,7 @@ fn classify_one_object(
     obj: &WorldObject,
     focus: &RouteFocus,
     assets: &RouteAssets,
+    mode: ViewerSceneryMode,
     progress: &mut WorldSpawnProgress,
 ) {
     if obj.kind == "Dyntrack" || obj.kind == "Forest" || obj.kind == "HWater" {
@@ -703,31 +959,66 @@ fn classify_one_object(
 
     let dist = focus.horizontal_distance(obj.position);
 
+    if mode.is_track_dev() {
+        return;
+    }
+
+    if obj.kind == "TrackObj" && dist <= SHAPE_MESH_RADIUS_M {
+        progress.trackobj_seen += 1;
+    }
+
     if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
-        let file_name = obj.shape_file.as_deref().unwrap_or("");
+        let cache_key = obj
+            .shape_file
+            .clone()
+            .or_else(|| {
+                obj.section_idx
+                    .and_then(|idx| assets.tsection().shape_file_name(idx).map(str::to_string))
+            })
+            .unwrap_or_default();
         let shape_path = progress
             .shape_path_cache
-            .entry(file_name.to_string())
-            .or_insert_with(|| assets.resolve_shape(file_name))
+            .entry(cache_key)
+            .or_insert_with(|| resolve_object_shape_path(obj, assets))
             .clone();
         if let Some(shape_path) = shape_path {
-            let render_pos =
-                focus.to_render_surface(Vec3::new(obj.position.x, obj.position.y, obj.position.z));
+            if obj.kind == "TrackObj" {
+                progress.trackobj_mesh_queued += 1;
+            }
+            let render_pos = focus.scenery_to_render(obj.position);
+            let tf = Transform {
+                translation: render_pos,
+                rotation: obj.rotation,
+                scale: obj.scale,
+            };
             progress
                 .shape_instances
-                .entry(shape_path)
+                .entry(shape_path.clone())
                 .or_default()
-                .push(Transform {
-                    translation: render_pos,
-                    rotation: obj.rotation,
-                    scale: Vec3::ONE,
-                });
+                .push(tf);
+            progress
+                .shape_instance_min_dist
+                .entry(shape_path)
+                .and_modify(|d| *d = d.min(dist))
+                .or_insert(dist);
             return;
         }
+        if obj.kind == "TrackObj" {
+            progress.trackobj_unresolved += 1;
+        }
+    } else if obj.kind == "TrackObj" && dist <= SHAPE_MESH_RADIUS_M {
+        progress.trackobj_no_filename += 1;
     }
 
     if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-        progress.skipped_trackobj_placeholders += 1;
+        if SPAWN_TRACKOBJ_PROCEDURAL && dist <= SHAPE_MESH_RADIUS_M {
+            let render_pos = focus.scenery_to_render(obj.position);
+            progress
+                .trackobj_procedural
+                .extend(trackobj_procedural_segments(obj, render_pos, assets, mode));
+        } else {
+            progress.skipped_trackobj_placeholders += 1;
+        }
         return;
     }
     if dist > SHAPE_MESH_RADIUS_M {
@@ -735,7 +1026,7 @@ fn classify_one_object(
     }
 
     let size = box_size_for_kind(obj.kind, progress.placeholder_base);
-    let translation = focus.to_render_surface(Vec3::new(
+    let translation = focus.scenery_to_render(Vec3::new(
         obj.position.x,
         obj.position.y + size.y * 0.5,
         obj.position.z,
@@ -824,6 +1115,27 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
     }
     if progress.skipped_trackobj_placeholders > 0 {
         viewer_log!(
+            "openrailsrs-viewer3d: TrackObj sin mesh visible: {} omitido(s) (sin placeholder)",
+            progress.skipped_trackobj_placeholders
+        );
+    }
+    if progress.trackobj_seen > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
+            SHAPE_MESH_RADIUS_M as u32,
+            progress.trackobj_mesh_queued,
+            progress.trackobj_no_filename,
+            progress.trackobj_unresolved
+        );
+    }
+    if !progress.trackobj_procedural.is_empty() {
+        viewer_log!(
+            "openrailsrs-viewer3d: {} TrackObj procedural segment(s) (tsection/tdb)",
+            progress.trackobj_procedural.len()
+        );
+    }
+    if progress.skipped_trackobj_placeholders > 0 && progress.trackobj_seen == 0 {
+        viewer_log!(
             "openrailsrs-viewer3d: skipped {} TrackObj placeholder(s) (no .s mesh)",
             progress.skipped_trackobj_placeholders
         );
@@ -846,7 +1158,223 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
             progress.shape_texture_count
         );
     }
+    if let Some(audit) = &progress.scenery_audit {
+        audit.log_report("unique shapes at spawn");
+    }
     log_step("spawned world objects (progressive)", progress.started);
+}
+
+/// Index of every `.w` tile on disk; loads additional tiles as the camera moves (OR `SceneryDrawer`).
+#[derive(Resource)]
+pub struct WorldTileStream {
+    catalog: std::collections::HashMap<(i32, i32), PathBuf>,
+    loaded: std::collections::HashSet<(i32, i32)>,
+    route_dir: PathBuf,
+    radius_m: f32,
+    last_camera_tile: Option<(i32, i32)>,
+}
+
+impl WorldTileStream {
+    pub fn new(route_dir: &Path, world: &WorldScene, radius_m: f32) -> Self {
+        let catalog = discover_world_files(route_dir)
+            .into_iter()
+            .filter_map(|path| parse_world_w_tile_display_xz(&path).map(|xz| (xz, path)))
+            .collect();
+        let mut loaded = std::collections::HashSet::new();
+        for obj in &world.items {
+            loaded.insert((obj.tile_x, obj.tile_z));
+        }
+        Self {
+            catalog,
+            loaded,
+            route_dir: route_dir.to_path_buf(),
+            radius_m,
+            last_camera_tile: None,
+        }
+    }
+}
+
+fn camera_msts_xz(
+    focus: &RouteFocus,
+    cam: &Transform,
+    origin: &crate::floating_origin::FloatingOrigin,
+) -> Vec2 {
+    Vec2::new(
+        cam.translation.x + focus.center.x + origin.shift.x,
+        cam.translation.z + focus.center.z + origin.shift.z,
+    )
+}
+
+/// Tracks how many world items already have forest / water / dyntrack GPU spawns.
+#[derive(Resource, Default)]
+pub struct WorldSceneryStreamState {
+    pub processed_items: usize,
+}
+
+/// After startup (or tile stream), spawn forest / water / dyntrack for newly loaded items.
+pub fn init_scenery_stream_state(
+    world: Res<WorldScene>,
+    mut state: ResMut<WorldSceneryStreamState>,
+) {
+    state.processed_items = world.items.len();
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn world_stream_scenery_system(
+    world: Res<WorldScene>,
+    mut state: ResMut<WorldSceneryStreamState>,
+    progress: Option<Res<WorldSpawnProgress>>,
+    mode: Res<ViewerSceneryMode>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    track: Res<TrackScene>,
+    terrain: Option<Res<TerrainElevation>>,
+    assets: Res<RouteAssets>,
+    focus: Res<RouteFocus>,
+    offset: Res<RouteWorldOffset>,
+) {
+    if progress.is_some() {
+        return;
+    }
+    if world.items.len() <= state.processed_items {
+        return;
+    }
+    let new_items = &world.items[state.processed_items..];
+    let forests = if mode.is_track_dev() {
+        0
+    } else {
+        new_items
+            .iter()
+            .filter(|obj| obj.kind == "Forest" && obj.forest.is_some())
+            .count()
+    };
+    let waters = if mode.is_track_dev() {
+        0
+    } else {
+        new_items
+            .iter()
+            .filter(|obj| obj.kind == "HWater" && obj.water.is_some())
+            .count()
+    };
+    let dyntracks = new_items
+        .iter()
+        .filter(|obj| obj.kind == "Dyntrack")
+        .count();
+    if forests > 0 {
+        crate::forest::spawn_forest_objects(
+            &mut commands,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            new_items,
+            &track,
+            terrain.as_deref(),
+            &assets,
+            &focus,
+            &offset,
+        );
+    }
+    if waters > 0 {
+        crate::water::spawn_water_objects(
+            &mut commands,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            new_items,
+            &track,
+            terrain.as_deref(),
+            &assets,
+            &focus,
+        );
+    }
+    if dyntracks > 0 {
+        crate::dyntrack::spawn_dyntrack_objects(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            new_items,
+            &track,
+            &focus,
+        );
+    }
+    if forests + waters + dyntracks > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: streamed scenery — {forests} forest, {waters} water, {dyntracks} dyntrack"
+        );
+    }
+    state.processed_items = world.items.len();
+}
+
+/// Load `.w` tiles around the camera once initial spawn has finished.
+#[allow(clippy::too_many_arguments)]
+pub fn world_tile_stream_system(
+    mut world: ResMut<WorldScene>,
+    mut stream: ResMut<WorldTileStream>,
+    focus: Res<RouteFocus>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    scene: Res<TrackScene>,
+    camera: Query<&Transform, With<Camera3d>>,
+    progress: Option<Res<WorldSpawnProgress>>,
+    mut commands: Commands,
+) {
+    if progress.is_some() {
+        return;
+    }
+    let Ok(cam) = camera.single() else {
+        return;
+    };
+    let msts_xz = camera_msts_xz(&focus, cam, &origin);
+    let tile = MSTS_TILE_SIZE_M as f32;
+    let cam_tile_x = (msts_xz.x / tile).floor() as i32;
+    let cam_tile_z = (msts_xz.y / tile).floor() as i32;
+    if stream.last_camera_tile == Some((cam_tile_x, cam_tile_z)) {
+        return;
+    }
+    stream.last_camera_tile = Some((cam_tile_x, cam_tile_z));
+
+    let radius_tiles = (stream.radius_m / tile).ceil() as i32 + 1;
+    let center = Vec3::new(msts_xz.x, focus.center.y, msts_xz.y);
+    let item_base = world.items.len();
+    let mut tiles_loaded = 0usize;
+
+    for dtx in -radius_tiles..=radius_tiles {
+        for dtz in -radius_tiles..=radius_tiles {
+            let display_x = cam_tile_x + dtx;
+            let display_z = cam_tile_z + dtz;
+            if tile_center_distance_m(display_x, display_z, center) > stream.radius_m + tile {
+                continue;
+            }
+            let key = (display_x, display_z);
+            if stream.loaded.contains(&key) {
+                continue;
+            }
+            let Some(path) =
+                stream.catalog.get(&key).cloned().or_else(|| {
+                    world_tile_path_for_coords(&stream.route_dir, display_x, display_z)
+                })
+            else {
+                continue;
+            };
+            if append_world_tile_file(&mut world, &path).is_ok() {
+                stream.loaded.insert(key);
+                tiles_loaded += 1;
+            }
+        }
+    }
+
+    let new_items = world.items.len().saturating_sub(item_base);
+    if tiles_loaded > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) near tile ({cam_tile_x},{cam_tile_z})"
+        );
+        let placeholder_base = scene.bounds.edge_radius().max(2.0) * 1.5;
+        commands.insert_resource(WorldSpawnProgress::new_from_item_index(
+            placeholder_base,
+            item_base,
+        ));
+    }
 }
 
 /// Continue progressive world spawn across frames so the window stays responsive.
@@ -857,8 +1385,10 @@ pub fn progressive_world_spawn_system(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
+    scene: Res<TrackScene>,
     focus: Res<RouteFocus>,
     assets: Res<RouteAssets>,
+    mode: Res<ViewerSceneryMode>,
     progress: Option<ResMut<WorldSpawnProgress>>,
 ) {
     let Some(mut progress) = progress else {
@@ -869,7 +1399,7 @@ pub fn progressive_world_spawn_system(
         WorldSpawnPhase::Classifying => {
             let end = (progress.item_index + CLASSIFY_ITEMS_PER_FRAME).min(world.items.len());
             for obj in &world.items[progress.item_index..end] {
-                classify_one_object(obj, &focus, &assets, &mut progress);
+                classify_one_object(obj, &focus, &assets, *mode, &mut progress);
             }
             progress.item_index = end;
             if progress.item_index >= world.items.len() {
@@ -877,7 +1407,20 @@ pub fn progressive_world_spawn_system(
                     "openrailsrs-viewer3d: classified {} visible world item(s)",
                     world.items.len().saturating_sub(progress.culled_count)
                 );
-                progress.phase = WorldSpawnPhase::LoadingShapes;
+                if progress.trackobj_seen > 0 {
+                    viewer_log!(
+                        "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
+                        SHAPE_MESH_RADIUS_M as u32,
+                        progress.trackobj_mesh_queued,
+                        progress.trackobj_no_filename,
+                        progress.trackobj_unresolved
+                    );
+                }
+                progress.phase = if progress.shape_instances.is_empty() {
+                    WorldSpawnPhase::SpawningPlaceholders
+                } else {
+                    WorldSpawnPhase::LoadingShapes
+                };
                 progress.loading_shapes_started = Some(Instant::now());
             }
         }
@@ -887,7 +1430,10 @@ pub fn progressive_world_spawn_system(
                     progress.shape_instances.keys().cloned().collect();
                 progress.parsed_shapes = unique_shape_paths
                     .par_iter()
-                    .map(|path| (path.clone(), load_shape_from_path(path, None)))
+                    .map(|path| {
+                        let lod_dist = progress.shape_instance_min_dist.get(path).copied();
+                        (path.clone(), load_shape_from_path(path, lod_dist))
+                    })
                     .collect();
                 let mut texture_paths = Vec::new();
                 for (shape_path, loaded) in &progress.parsed_shapes {
@@ -916,6 +1462,13 @@ pub fn progressive_world_spawn_system(
                     progress.parsed_shapes.len(),
                     progress.ace_cache.len()
                 );
+                if progress.scenery_audit.is_none() && crate::scenery_audit::scenery_audit_enabled()
+                {
+                    progress.scenery_audit = Some(crate::scenery_audit::audit_parsed_shapes(
+                        &progress.parsed_shapes,
+                        &assets.route_dir,
+                    ));
+                }
             }
 
             let fallback_material = progress.shape_fallback_material.clone().unwrap();
@@ -1041,6 +1594,18 @@ pub fn progressive_world_spawn_system(
                 ));
                 viewer_log!("openrailsrs-viewer3d: merged {cuboid_count} {kind} placeholder(s)");
             }
+            if !progress.trackobj_procedural.is_empty() {
+                let segments = std::mem::take(&mut progress.trackobj_procedural);
+                crate::dyntrack::spawn_procedural_track_batch(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &segments,
+                    &scene.bounds,
+                    "trackobj",
+                    crate::dyntrack::ProceduralTrackStyle::Full,
+                );
+            }
             log_world_spawn_summary(&progress);
             commands.remove_resource::<WorldSpawnProgress>();
         }
@@ -1058,6 +1623,7 @@ pub fn spawn_world_boxes(
     focus: Res<RouteFocus>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
+    mode: Res<ViewerSceneryMode>,
 ) {
     if world.is_empty() {
         return;
@@ -1072,17 +1638,16 @@ pub fn spawn_world_boxes(
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
     let mut shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset> =
         std::collections::HashMap::new();
-    let mut shape_path_cache: std::collections::HashMap<String, Option<PathBuf>> =
-        std::collections::HashMap::new();
     let mut texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>> =
         std::collections::HashMap::new();
     let mut shape_instances: std::collections::HashMap<PathBuf, Vec<Transform>> =
         std::collections::HashMap::new();
+    let mut trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment> = Vec::new();
 
     let mut merged_boxes: std::collections::HashMap<&str, MergedBoxGroup> =
         std::collections::HashMap::new();
 
-    let shape_fallback_color = Color::srgb(0.95, 0.25, 0.85);
+    let shape_fallback_color = Color::srgb(0.72, 0.55, 0.42);
     let shape_fallback_material = materials.add(StandardMaterial {
         base_color: shape_fallback_color,
         emissive: LinearRgba::from(shape_fallback_color) * 0.35,
@@ -1111,32 +1676,37 @@ pub fn spawn_world_boxes(
 
         let dist = focus.horizontal_distance(obj.position);
 
+        if mode.is_track_dev() {
+            continue;
+        }
+
         if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
-            let file_name = obj.shape_file.as_deref().unwrap_or("");
-            let shape_path = shape_path_cache
-                .entry(file_name.to_string())
-                .or_insert_with(|| assets.resolve_shape(file_name))
-                .clone();
+            let shape_path = resolve_object_shape_path(obj, &assets);
             if let Some(shape_path) = shape_path {
-                let render_pos = focus.to_render_surface(Vec3::new(
-                    obj.position.x,
-                    obj.position.y,
-                    obj.position.z,
-                ));
+                let render_pos = focus.scenery_to_render(obj.position);
                 shape_instances
                     .entry(shape_path)
                     .or_default()
                     .push(Transform {
                         translation: render_pos,
                         rotation: obj.rotation,
-                        scale: Vec3::ONE,
+                        scale: obj.scale,
                     });
                 continue;
             }
         }
 
         if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-            skipped_trackobj_placeholders += 1;
+            if SPAWN_TRACKOBJ_PROCEDURAL && dist <= SHAPE_MESH_RADIUS_M {
+                trackobj_procedural.extend(trackobj_procedural_segments(
+                    obj,
+                    focus.scenery_to_render(obj.position),
+                    &assets,
+                    *mode,
+                ));
+            } else {
+                skipped_trackobj_placeholders += 1;
+            }
             continue;
         }
 
@@ -1146,7 +1716,7 @@ pub fn spawn_world_boxes(
         }
 
         let size = box_size_for_kind(obj.kind, base);
-        let translation = focus.to_render_surface(Vec3::new(
+        let translation = focus.scenery_to_render(Vec3::new(
             obj.position.x,
             obj.position.y + size.y * 0.5,
             obj.position.z,
@@ -1324,6 +1894,18 @@ pub fn spawn_world_boxes(
         );
     }
 
+    if !trackobj_procedural.is_empty() {
+        crate::dyntrack::spawn_procedural_track_batch(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &trackobj_procedural,
+            &scene.bounds,
+            "trackobj",
+            crate::dyntrack::ProceduralTrackStyle::Full,
+        );
+    }
+
     if culled_count > 0 {
         viewer_log!(
             "openrailsrs-viewer3d: {culled_count} world object(s) culled (>{VISIBLE_RADIUS_M:.0}m from centre)"
@@ -1361,7 +1943,7 @@ mod tests {
     }
 
     #[test]
-    fn qdir_y_90_matches_bevy_native_y_rotation() {
+    fn qdir_y_90_matches_openrails_xna_rotation() {
         // File stores (0, sin45, 0, cos45) — same numeric values OR uses in XNA.
         let q = qdir_to_quat(&[
             0.0,
@@ -1369,8 +1951,26 @@ mod tests {
             0.0,
             std::f64::consts::FRAC_1_SQRT_2,
         ]);
-        let expected = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
+        let expected = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
         assert!((q.dot(expected).abs() - 1.0) < 1e-3 || (q.dot(-expected).abs() - 1.0) < 1e-3);
+    }
+
+    #[test]
+    fn matrix3x3_extracts_non_uniform_scale() {
+        let m = [2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0];
+        let (_, scale) = matrix3x3_to_rotation_scale(&m);
+        assert!((scale.x - 2.0).abs() < 1e-3);
+        assert!((scale.y - 1.0).abs() < 1e-3);
+        assert!((scale.z - 3.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn matrix3x3_rows_match_openrails_xna_layout() {
+        let m = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let raw = matrix3x3_to_xna_mat3(&m);
+        assert_eq!(raw.x_axis, Vec3::new(1.0, 2.0, -3.0));
+        assert_eq!(raw.y_axis, Vec3::new(4.0, 5.0, -6.0));
+        assert_eq!(raw.z_axis, Vec3::new(-7.0, -8.0, 9.0));
     }
 
     #[test]
@@ -1394,7 +1994,7 @@ mod tests {
                 z: -3.0,
             },
         );
-        assert_eq!(p, Vec3::new(100.0, 5.0, -3.0));
+        assert_eq!(p, Vec3::new(100.0, 5.0, 3.0));
     }
 
     #[test]
@@ -1408,7 +2008,7 @@ mod tests {
                 z: 20.0,
             },
         );
-        assert_eq!(p, Vec3::new(4106.0, 0.0, 2068.0));
+        assert_eq!(p, Vec3::new(4106.0, 0.0, 2028.0));
     }
 
     #[test]
@@ -1484,6 +2084,18 @@ mod tests {
     }
 
     #[test]
+    fn scenery_at_bbox_center_renders_on_terrain_plane() {
+        let focus = chiltern_like_focus();
+        let obj = Vec3::new(focus.center.x, focus.center.y, focus.center.z);
+        let render = focus.scenery_to_render(obj);
+        assert!(
+            render.y.abs() < 1.0,
+            "object at bbox centre Y should sit on render Y≈0, got {}",
+            render.y
+        );
+    }
+
+    #[test]
     fn using_height_origin_for_scenery_y_would_cull_everything() {
         let focus = chiltern_like_focus();
         let obj = Vec3::new(focus.center.x + 50.0, 55.0, focus.center.z);
@@ -1504,23 +2116,56 @@ mod tests {
         let world = load_world_from_route_dir(&route_dir);
         let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
         let elev = TerrainElevation::load_from_route_dir_near(&route_dir, None, f32::MAX);
-        let focus_no_elev = RouteFocus::from_scene_world_and_elevation(&scene, &world, None);
         let focus = RouteFocus::from_scene_world_and_elevation(&scene, &world, Some(&elev));
 
-        // With terrain, height_origin should come from the terrain sample, not scenery bbox Y.
+        // With elevation loaded, height_origin must be a finite terrain MSL sample.
+        assert!(focus.height_origin.is_finite() && focus.height_origin >= 0.0);
+        assert!(!elev.is_empty(), "expected Chiltern elevation tiles");
+    }
+
+    #[test]
+    fn chiltern_world_loads_near_focus_not_all_tiles() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("WORLD").is_dir() {
+            return;
+        }
+        let all = load_world_from_route_dir(&route_dir);
+        let center = world_tile_center_hint(&route_dir).expect("tile hint");
+        let near = load_world_from_route_dir_near(&route_dir, Some(center), VISIBLE_RADIUS_M);
         assert!(
-            focus.height_origin.is_finite()
-                && focus.height_origin >= 0.0
-                && focus.height_origin < 500.0,
-            "height_origin should be a terrain MSL value, got {}",
-            focus.height_origin
+            near.tiles_loaded < all.tiles_loaded,
+            "near load should parse fewer tiles than full route ({} vs {})",
+            near.tiles_loaded,
+            all.tiles_loaded
         );
-        // The terrain sample should differ from the bare scenery bbox fallback.
         assert!(
-            (focus.height_origin - focus_no_elev.height_origin).abs() > 0.1,
-            "with elevation, height_origin ({}) should differ from fallback ({})",
-            focus.height_origin,
-            focus_no_elev.height_origin
+            near.tiles_loaded >= 10,
+            "expected at least 10 tiles near centre, got {}",
+            near.tiles_loaded
+        );
+        assert!(!near.items.is_empty(), "expected scenery items near centre");
+    }
+
+    #[test]
+    fn discover_world_tile_entries_matches_chiltern_anchor() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("WORLD").is_dir() {
+            return;
+        }
+        let anchor = Vec3::new(
+            6080.0 * MSTS_TILE_SIZE_M as f32 + 891.8,
+            35.8,
+            14925.0 * MSTS_TILE_SIZE_M as f32 + 582.8,
+        );
+        let entries = discover_world_tile_entries(&route_dir, Some(anchor), VISIBLE_RADIUS_M);
+        assert!(
+            entries.len() >= 10 && entries.len() <= 120,
+            "expected ~25–56 tiles at 8 km, got {}",
+            entries.len()
+        );
+        assert!(
+            entries.iter().any(|(x, z, _)| *x == 6084 && *z == 14923),
+            "expected tile w-006084+014923 near Birmingham anchor"
         );
     }
 }

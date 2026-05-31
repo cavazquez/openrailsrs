@@ -44,11 +44,21 @@ mod tests {
     #[test]
     fn enable_live_defaults_leaves_orbit_unfollowed() {
         with_live_world(|world| {
+            world.run_system_once(spawn_track_meshes).unwrap();
             world.run_system_once(spawn_camera).unwrap();
+            world.run_system_once(spawn_live_train).unwrap();
             world.run_system_once(enable_live_defaults).unwrap();
             assert_eq!(*world.resource::<CameraFollowMode>(), CameraFollowMode::Off);
             let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
             assert!((orbit.distance - LIVE_CHASE_DISTANCE).abs() < 1e-3);
+            let cam = world
+                .query_filtered::<&Transform, With<Camera3d>>()
+                .single(world)
+                .expect("camera");
+            assert!(
+                cam.translation.length() > 20.0,
+                "camera should start behind the train"
+            );
         });
     }
 

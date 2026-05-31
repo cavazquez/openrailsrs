@@ -1,0 +1,10 @@
+TrackSection ( 9101
+ SectionSize ( 1.435 10.000 )
+)
+TrackShape ( 9101
+ FileName ( test_multipath.s )
+ NumPaths ( 2 )
+ MainRoute ( 0 )
+ SectionIdx ( 1 -1.435 0 0 0 9101 )
+ SectionIdx ( 1 1.435 0 0 0 9101 )
+)

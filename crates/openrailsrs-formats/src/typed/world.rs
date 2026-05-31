@@ -49,6 +49,7 @@ pub enum WorldItem {
     },
     Track {
         uid: u32,
+        section_idx: Option<u32>,
         file_name: Option<String>,
         position: Vec3,
         qdir: Option<[f64; 4]>,
@@ -152,6 +153,14 @@ impl WorldItem {
             | WorldItem::Dyntrack { matrix3x3, .. }
             | WorldItem::Signal { matrix3x3, .. }
             | WorldItem::Other { matrix3x3, .. } => *matrix3x3,
+            _ => None,
+        }
+    }
+
+    /// `TrackObj` → `TrackShape` index in `tsection.dat`.
+    pub fn section_idx(&self) -> Option<u32> {
+        match self {
+            WorldItem::Track { section_idx, .. } => *section_idx,
             _ => None,
         }
     }
@@ -319,6 +328,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         },
         s if s.eq_ignore_ascii_case("TrackObj") => WorldItem::Track {
             uid: uid.unwrap_or(0),
+            section_idx: find_named_u32(items, "SectionIdx"),
             file_name,
             position: position.unwrap_or_default(),
             qdir,

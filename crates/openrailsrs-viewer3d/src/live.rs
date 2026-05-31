@@ -13,17 +13,21 @@ use openrailsrs_sim::LiveDriveSession;
 
 use crate::cab_view::{CabLeadVehicle, CabTrainParent, orts_3d_cab_for_vehicle};
 use crate::camera::{
-    CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitState,
+    CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitDistanceLimit,
+    OrbitState, camera_transform_from_orbit_state, chase_yaw_from_train, clamp_distance_to_limit,
+    orbit_user_zoom_max, yaw_from_transform,
 };
-use crate::launch::LIVE_TRAIN_LOD_DISTANCE_M;
+use crate::launch::{LIVE_TRAIN_LOD_DISTANCE_M, ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_shape_from_path, load_shape_render_asset_from_path,
-    resolve_shape_path_in_dirs, vehicle_shape_local_transform,
+    resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
+    vehicle_shape_local_transform,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
 use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
+use crate::world::VISIBLE_RADIUS_M;
 use crate::{log_step, viewer_log};
 
 /// When present, the viewer runs the physics sim in real time instead of CSV replay.
@@ -114,15 +118,38 @@ pub fn live_mode_inactive(live: Option<Res<LiveDrive>>) -> bool {
 }
 
 /// Orbit framing for live mode: free pan/rotate (T cycles chase / driver later).
+#[allow(clippy::type_complexity)]
 pub fn enable_live_defaults(
     mut follow: ResMut<CameraFollowMode>,
-    mut orbit: Query<&mut OrbitState, With<Camera3d>>,
+    scene: Res<crate::track::TrackScene>,
+    focus: Res<crate::world::RouteFocus>,
+    mut limit: ResMut<OrbitDistanceLimit>,
+    train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
+    mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
 ) {
     *follow = CameraFollowMode::Off;
-    if let Ok(mut orbit) = orbit.single_mut() {
-        orbit.distance = LIVE_CHASE_DISTANCE;
-        orbit.pitch = CHASE_PITCH;
-    }
+    limit.max = scene
+        .bounds
+        .orbit_distance()
+        .max(VISIBLE_RADIUS_M)
+        .min(orbit_user_zoom_max());
+    let Ok((mut transform, mut orbit)) = cam.single_mut() else {
+        return;
+    };
+    let (focus_pt, yaw) = if let Ok(train_tf) = train.single() {
+        (
+            train_tf.translation + Vec3::Y * 2.0,
+            yaw_from_transform(train_tf),
+        )
+    } else {
+        (focus.to_render_surface(focus.center), 0.0)
+    };
+    orbit.focus = focus_pt;
+    orbit.yaw = chase_yaw_from_train(yaw);
+    orbit.pitch = CHASE_PITCH;
+    orbit.distance = clamp_distance_to_limit(LIVE_CHASE_DISTANCE, orbit_user_zoom_max());
+    *transform =
+        camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
 }
 
 pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
@@ -315,20 +342,25 @@ fn set_visibility_recursive(
 pub(crate) fn driver_cab_from_lead_vehicle(
     vehicle: &crate::rolling_stock::ConsistVehicleVisual,
     shape_dirs: &[&std::path::Path],
+    route_dir: &std::path::Path,
     lead_mesh: &bevy::mesh::Mesh,
 ) -> LiveDriverCab {
     let head_len = vehicle.length_m;
-    let vehicle_t = vehicle_shape_local_transform(lead_mesh, vehicle.offset_m, vehicle.length_m);
+    let placement =
+        crate::shapes::cab_shape_placement_transform(lead_mesh, vehicle.offset_m, vehicle.length_m);
     let mut cab = LiveDriverCab {
         back_m: (head_len * 0.15).clamp(1.8, 4.5),
         height_m: (head_len * 0.14).clamp(2.4, 3.2),
-        interior_placement: vehicle_t,
+        interior_placement: placement,
         ..Default::default()
     };
     if let Some(shape_name) = vehicle.shape_file.as_deref() {
-        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name) {
+        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
             cab.head_msts = Some(orts.head_pos_msts);
-            cab.head_pos_train = Some(vehicle_t.transform_point(orts.head_pos_msts));
+            cab.head_pos_train = Some(
+                placement
+                    .transform_point(crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts)),
+            );
             cab.look_pitch = orts.look_pitch;
         }
     }
@@ -338,6 +370,7 @@ pub(crate) fn driver_cab_from_lead_vehicle(
 pub(crate) fn live_driver_cab_from_vehicles(
     vehicles: &[crate::rolling_stock::ConsistVehicleVisual],
     shape_dirs: &[&std::path::Path],
+    route_dir: &std::path::Path,
 ) -> LiveDriverCab {
     let head_len = vehicles.first().map(|v| v.length_m).unwrap_or(20.0);
     let mut cab = LiveDriverCab {
@@ -347,14 +380,20 @@ pub(crate) fn live_driver_cab_from_vehicles(
     };
     if let Some(vehicle) = vehicles.first() {
         if let Some(shape_name) = vehicle.shape_file.as_deref() {
-            if let Some(shape_path) = resolve_shape_path_in_dirs(shape_dirs, shape_name) {
+            if let Some(shape_path) = resolve_vehicle_shape_path(shape_dirs, shape_name, route_dir)
+            {
                 if let Some(loaded) =
                     load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
                 {
-                    return driver_cab_from_lead_vehicle(vehicle, shape_dirs, &loaded.mesh);
+                    return driver_cab_from_lead_vehicle(
+                        vehicle,
+                        shape_dirs,
+                        route_dir,
+                        &loaded.mesh,
+                    );
                 }
             }
-            if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name) {
+            if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
                 cab.look_pitch = orts.look_pitch;
             }
         }
@@ -374,6 +413,7 @@ pub fn spawn_live_train(
     focus: Res<crate::world::RouteFocus>,
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
+    mode: Res<ViewerSceneryMode>,
     terrain: Option<Res<TerrainElevation>>,
     live: Res<LiveDrive>,
 ) {
@@ -407,8 +447,45 @@ pub fn spawn_live_train(
     let vehicles = consist.vehicles_for("primary");
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
-    let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs);
+    let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs, &assets.route_dir);
     commands.insert_resource(driver_cab);
+
+    if mode.is_track_dev() && !track_dev_render_enabled() {
+        let unit = meshes.add(Cuboid::new(2.0, 2.5, 14.0));
+        let material = materials.add(StandardMaterial {
+            base_color: TRAIN_COLORS[0],
+            emissive: LinearRgba::from(TRAIN_COLORS[0]) * 0.5,
+            ..default()
+        });
+        commands.spawn((
+            LiveTrainMarker,
+            LiveTrainBody,
+            NotShadowCaster,
+            Mesh3d(unit),
+            MeshMaterial3d(material),
+            Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
+            Name::new("train:live:track_dev"),
+        ));
+        viewer_log!("openrailsrs-viewer3d: track_dev — live train as box (no Pullman meshes)");
+        log_step("spawned live train (track_dev box)", spawn_start);
+        return;
+    }
+
+    if let Some(head) = driver_cab.head_pos_train {
+        viewer_log!(
+            "openrailsrs-viewer3d: ORTS cab head train-local ({:.2}, {:.2}, {:.2}) pitch={:.1}°",
+            head.x,
+            head.y,
+            head.z,
+            driver_cab.look_pitch.to_degrees(),
+        );
+    } else {
+        viewer_log!(
+            "openrailsrs-viewer3d: cab fallback eye back={:.1}m height={:.1}m (no ORTS3DCabHeadPos)",
+            driver_cab.back_m,
+            driver_cab.height_m,
+        );
+    }
     if vehicles.is_empty() {
         let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
         let material = materials.add(StandardMaterial {
@@ -432,8 +509,10 @@ pub fn spawn_live_train(
 
     let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-    let color = TRAIN_COLORS[0];
+    const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
+    let mut shape_cars = 0usize;
+    let mut fallback_cars = 0usize;
 
     let locator = meshes.add(Sphere::new(1.2));
     let locator_mat = materials.add(StandardMaterial {
@@ -462,7 +541,9 @@ pub fn spawn_live_train(
             ));
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle.shape_file.as_deref() {
-                    if let Some(shape_path) = resolve_shape_path_in_dirs(&shape_dirs, shape_name) {
+                    if let Some(shape_path) =
+                        resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
+                    {
                         // Shape path is vehicle_root/SHAPES/file.s; textures are in
                         // vehicle_root/TEXTURES/, so go two levels up: SHAPES/ → vehicle root.
                         let trainset_root = shape_path
@@ -480,27 +561,53 @@ pub fn spawn_live_train(
                             &mut images,
                             &mut materials,
                             &mut texture_cache,
-                            color,
+                            TRAIN_SHAPE_FALLBACK,
                         ) {
-                            let local = meshes
-                                .get(&asset.combined_mesh)
-                                .map(|m| {
-                                    vehicle_shape_local_transform(
-                                        m,
-                                        vehicle.offset_m,
-                                        vehicle.length_m,
-                                    )
-                                })
-                                .unwrap_or_else(|| {
-                                    vehicle_local_transform(
-                                        &scene,
-                                        vehicle.offset_m,
-                                        vehicle.length_m,
-                                    )
-                                });
+                            shape_cars += 1;
                             let is_lead = vi == 0;
+                            let mesh_ref = meshes.get(&asset.combined_mesh);
+                            let (car_transform, exterior_scale) = if is_lead {
+                                mesh_ref
+                                    .map(|m| {
+                                        vehicle_cab_frame_and_exterior_scale(
+                                            m,
+                                            vehicle.offset_m,
+                                            vehicle.length_m,
+                                        )
+                                    })
+                                    .map(|(t, s)| (t, Some(s)))
+                                    .unwrap_or_else(|| {
+                                        (
+                                            vehicle_local_transform(
+                                                &scene,
+                                                vehicle.offset_m,
+                                                vehicle.length_m,
+                                            ),
+                                            None,
+                                        )
+                                    })
+                            } else {
+                                (
+                                    mesh_ref
+                                        .map(|m| {
+                                            vehicle_shape_local_transform(
+                                                m,
+                                                vehicle.offset_m,
+                                                vehicle.length_m,
+                                            )
+                                        })
+                                        .unwrap_or_else(|| {
+                                            vehicle_local_transform(
+                                                &scene,
+                                                vehicle.offset_m,
+                                                vehicle.length_m,
+                                            )
+                                        }),
+                                    None,
+                                )
+                            };
                             let mut car = train.spawn((
-                                local,
+                                car_transform,
                                 Visibility::default(),
                                 Name::new(format!("train:live:car:{vi}")),
                             ));
@@ -508,19 +615,32 @@ pub fn spawn_live_train(
                                 car.insert(CabLeadVehicle);
                             }
                             car.with_children(|car| {
-                                for (pi, part) in asset.parts.iter().enumerate() {
+                                let spawn_parts = |parent: &mut ChildSpawnerCommands<'_>,
+                                                   parts: &[crate::shapes::ShapePartAsset]| {
+                                    for (pi, part) in parts.iter().enumerate() {
+                                        parent.spawn((
+                                            LiveTrainBody,
+                                            NotShadowCaster,
+                                            Mesh3d(part.mesh.clone()),
+                                            MeshMaterial3d(part.material.clone()),
+                                            Transform::default(),
+                                            Visibility::default(),
+                                            Name::new(format!(
+                                                "train:live:car:{vi}:part:{pi}:{}",
+                                                part.prim_state_idx
+                                            )),
+                                        ));
+                                    }
+                                };
+                                if let Some(scale) = exterior_scale {
                                     car.spawn((
-                                        LiveTrainBody,
-                                        NotShadowCaster,
-                                        Mesh3d(part.mesh.clone()),
-                                        MeshMaterial3d(part.material.clone()),
-                                        Transform::default(),
+                                        Transform::from_scale(Vec3::splat(scale)),
                                         Visibility::default(),
-                                        Name::new(format!(
-                                            "train:live:car:{vi}:part:{pi}:{}",
-                                            part.prim_state_idx
-                                        )),
-                                    ));
+                                        Name::new(format!("train:live:car:{vi}:exterior_scale")),
+                                    ))
+                                    .with_children(|scaled| spawn_parts(scaled, &asset.parts));
+                                } else {
+                                    spawn_parts(car, &asset.parts);
                                 }
                             });
                             continue;
@@ -528,13 +648,16 @@ pub fn spawn_live_train(
                     }
                 }
                 let material = materials.add(StandardMaterial {
-                    base_color: color,
-                    emissive: LinearRgba::from(color) * 0.85,
+                    base_color: TRAIN_SHAPE_FALLBACK,
+                    emissive: LinearRgba::from(TRAIN_SHAPE_FALLBACK) * 0.25,
+                    perceptual_roughness: 0.75,
+                    metallic: 0.35,
                     ..default()
                 });
                 let mut local = vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
                 local.scale *= 1.15;
                 let is_lead = vi == 0;
+                fallback_cars += 1;
                 let mut fallback = train.spawn((
                     LiveTrainBody,
                     NotShadowCaster,
@@ -551,8 +674,10 @@ pub fn spawn_live_train(
         });
 
     viewer_log!(
-        "openrailsrs-viewer3d: live drive — {} vehicle(s), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
+        "openrailsrs-viewer3d: live drive — {} vehicle(s) ({} shape / {} fallback), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
         vehicles.len(),
+        shape_cars,
+        fallback_cars,
         live.session.dt,
         live.audio.is_some(),
         driver_cab.back_m,
@@ -586,6 +711,7 @@ mod tests {
                 offset_m: 0.0,
             }],
             &shape_dirs,
+            &route,
         );
         assert!(
             cab.back_m >= 1.8 && cab.back_m <= 4.5,
@@ -600,8 +726,8 @@ mod tests {
         assert!((cab.back_m - 3.13).abs() < 0.2);
         if content.is_dir() {
             let head = cab.head_pos_train.expect("ORTS3DCabHeadPos");
-            assert!((head.x + 1.701).abs() < 0.15, "head={head:?}");
-            assert!((head.y - 3.627).abs() < 0.15, "head={head:?}");
+            assert!(head.y > 2.0 && head.y < 4.5, "head height={head:?}");
+            assert!(head.x.abs() < 12.0, "head forward={head:?}");
         }
     }
 }

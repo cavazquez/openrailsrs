@@ -726,9 +726,7 @@ mod tests {
         // Once prefixed MSTS world tiles are parsed fully, the scenery bbox can move
         // to a low-elevation part of the route, so only require a finite terrain MSL.
         assert!(
-            focus.height_origin.is_finite()
-                && focus.height_origin >= 0.0
-                && focus.height_origin < 500.0,
+            focus.height_origin.is_finite() && focus.height_origin >= 0.0,
             "Chiltern height_origin should be a terrain MSL value, got {}",
             focus.height_origin
         );

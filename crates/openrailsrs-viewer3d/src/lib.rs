@@ -22,14 +22,17 @@ pub mod overspeed_flash;
 pub mod precipitation;
 pub mod rolling_stock;
 pub mod scene;
+pub mod scenery_audit;
 pub mod shapes;
 pub mod signals;
 pub mod sky;
+pub mod tdb_track;
 pub mod teleport;
 pub mod terrain;
 pub mod terrain_assets;
 pub mod terrain_material;
 pub mod track;
+pub mod track_audit;
 pub mod train;
 pub mod water;
 pub mod world;
@@ -50,7 +53,7 @@ mod test_harness;
 use bevy::prelude::*;
 
 pub use hud::HudTitle;
-pub use launch::ViewerLaunchOpts;
+pub use launch::{ViewerLaunchOpts, ViewerSceneryMode};
 pub use live::LiveDrive;
 pub use log::init as init_viewer_log;
 pub use log::log_step;
@@ -87,31 +90,40 @@ impl Plugin for ViewerPlugin {
             .init_resource::<gameplay::GameplayToast>()
             .init_resource::<overspeed_flash::OverspeedFlash>()
             .init_resource::<floating_origin::FloatingOrigin>()
+            .init_resource::<world::WorldSceneryStreamState>()
+            .init_resource::<launch::ViewerSceneryMode>()
             .add_systems(
                 Startup,
                 (
                     scene::spawn_ground_and_lights,
-                    sky::spawn_sky_dome,
-                    terrain::spawn_terrain_meshes,
+                    sky::spawn_sky_dome.run_if(launch::full_scenery_active),
+                    terrain::spawn_terrain_meshes.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
-                    dyntrack::spawn_dyntrack_segments,
-                    forest::spawn_forest_patches,
-                    water::spawn_water_patches,
+                    tdb_track::spawn_tdb_graph_track,
+                    dyntrack::spawn_dyntrack_segments.run_if(launch::full_scenery_active),
+                    forest::spawn_forest_patches.run_if(launch::full_scenery_active),
+                    water::spawn_water_patches.run_if(launch::full_scenery_active),
                     world::init_world_spawn_progress,
+                    world::init_scenery_stream_state,
                 )
                     .chain(),
             )
             .add_systems(Update, world::progressive_world_spawn_system)
+            .add_systems(Update, world::world_tile_stream_system)
+            .add_systems(
+                Update,
+                world::world_stream_scenery_system.after(world::world_tile_stream_system),
+            )
             .add_systems(
                 Startup,
                 (
                     signals::spawn_signal_markers.run_if(live::live_mode_inactive),
-                    precipitation::spawn_precipitation,
+                    precipitation::spawn_precipitation.run_if(launch::full_scenery_active),
                     camera::spawn_camera,
                     hud::spawn_hud,
                     cab_panel::spawn_cab_panel,
                     teleport::spawn_teleport_ui,
-                    track::frame_orbit_camera_on_track,
+                    track::frame_orbit_camera_on_track.run_if(live::live_mode_inactive),
                     train::spawn_train_markers.run_if(live::live_mode_inactive),
                     live::spawn_live_train.run_if(live::live_mode_active),
                     live::enable_live_defaults.run_if(live::live_mode_active),
@@ -179,6 +191,7 @@ impl Plugin for ViewerPlugin {
                         .run_if(teleport::teleport_closed)
                         .after(train::update_train_markers)
                         .after(live::update_live_train_marker),
+                    floating_origin::apply_floating_origin.after(camera::orbit_camera_system),
                     camera::fly_camera_system
                         .run_if(camera::in_fly_mode)
                         .run_if(teleport::teleport_closed),

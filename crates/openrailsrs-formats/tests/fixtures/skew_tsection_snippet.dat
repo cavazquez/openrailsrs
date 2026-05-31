@@ -1,0 +1,12 @@
+TrackSection ( 9301
+ SectionSize ( 1.435 0 )
+ SectionSkew ( -0.55 )
+)
+TrackSection ( 9302
+ SectionSize ( 1.435 10.000 )
+)
+TrackShape ( 9301
+ FileName ( test_skew_chain.s )
+ NumPaths ( 1 )
+ SectionIdx ( 2 0 0 0 0 9301 9302 )
+)

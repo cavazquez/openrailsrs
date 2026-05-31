@@ -25,24 +25,30 @@ pub use error::FormatError;
 pub use msts_tile_name::{
     MSTS_TILE_ZOOM_SMALL, msts_display_tile_x_from_internal,
     msts_internal_tile_x_from_world_display, msts_tile_name_from_xz, msts_tile_world_origin,
+    parse_world_w_tile_display_xz,
 };
 pub use msts_units::{
     parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_pressure_bar,
     parse_velocity_mps,
 };
-pub use parser::{parse, parse_first, parse_first_from_first_paren, parse_from_first_paren};
+pub use parser::{
+    parse, parse_all_top_level, parse_all_top_level_lenient, parse_first,
+    parse_first_from_first_paren, parse_from_first_paren,
+};
 pub use shape_binary_reader::{BinaryBlockReader, apply_token_offset};
 pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
-    ConsistEntry, ConsistFile, DistanceLevel, ElevationGrid, EngineFile, FeatureGrid, LodControl,
-    Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields,
-    OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile,
-    ShapeFile, SignalAspectKind, SoundRegionOverride, SubObject, TerrainFile, TerrainMeshData,
-    TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc,
-    TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
-    TrackVectorPoint, TrafficServiceDef, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile,
-    WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex, build_tile_mesh_data,
-    parse_orts_brake_shoe, parse_orts_friction_fields, parse_tile_xz_from_filename,
-    patch_affine_uv, read_f_raw, read_y_raw, resolve_brake_shoe_curve,
+    ConsistEntry, ConsistFile, DistanceLevel, ElevationGrid, EngineFile, FeatureGrid,
+    IndexedTrVectorSection, LodControl, Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType,
+    OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, PathDataPoint, PathFile, PrimState,
+    Primitive, RestrictedZone, RouteFile, SKEW_AS_CURVE_RADIUS_M, ShapeFile, SignalAspectKind,
+    SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData, TerrainPatch,
+    TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
+    TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
+    TrackProceduralDims, TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint,
+    TrafficServiceDef, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile, WorldItem,
+    build_patch_mesh_data, build_patch_mesh_data_ex, build_tile_mesh_data, parse_orts_brake_shoe,
+    parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
+    read_y_raw, resolve_brake_shoe_curve,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

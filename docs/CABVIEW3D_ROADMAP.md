@@ -37,7 +37,7 @@ Referencia OR: `ThreeDimentionCabViewer`, `ThreeDimCabCamera`, grupo `RenderPrim
 | Texturas `.ace` | 🔶 37/39 | Log: `37 textured, lead-car attached` |
 | Posición cámara ORTS | ✅ | `ORTS3DCabHeadPos` + `StartDirection` en `RF_WP_DMBSA.eng` |
 | Ocultar exterior (LiveTrainBody) | 🔶 | `live.rs` — `update_driver_train_visibility` |
-| Cabina hija del vagón líder | ✅ | `CabLeadVehicle` + `CabInteriorRoot` |
+| Cabina hija del vagón líder | ✅ | `CabLeadVehicle` + marco unit-scale + `exterior_scale` hijo |
 | Materiales interior unlit | ✅ | `cab_interior_material()` en `cab_view.rs` |
 | Tests | ✅ | Resolución paths, ORTS head pos, carga Pullman, ≥30 texturas |
 
@@ -133,20 +133,20 @@ Exterior del tren (stub en repo):
 
 ---
 
-### P4 — Alineación cámara ↔ cabina ↔ exterior (esfuerzo medio)
+### P4 — Alineación cámara ↔ cabina ↔ exterior (esfuerzo medio) ✅ (2026-05)
 
 **Problema:** `ORTS3DCabHeadPos` está en espacio del `.eng` del exterior; la cabina es otro `.s` (`PULLMAN_GR.s`). Deben compartir el mismo origen MSTS al colgar del vagón líder.
 
-**Acciones:**
+**Implementado:**
 
-1. Validar que stub `RF_WP_DMBSA.s` (repo) y cab OR comparten origen (comparar AABB / offset)
-2. Preferir shape exterior desde OR Content cuando exista, no solo stub Chiltern
-3. Documentar offset si el modelador desalineó cabina y exterior
-4. Test geométrico: punto ORTS dentro del AABB de la cabina tras `vehicle_shape_local_transform`
+1. Vagón líder: marco cabina sin escala (`cab_shape_placement_transform`) + hijo `exterior_scale` con length-fit
+2. `ORTS3DCabHeadPos` transformado sin escalar (metros MSTS del `.eng`)
+3. `resolve_vehicle_shape_path` prefiere shape exterior de OR Content sobre stub Chiltern
+4. Tests `orts_head_inside_cab_aabb` / `orts_head_inside_cab_train_space`; log de alineación al cargar cabina
 
 **Criterio de hecho:** cámara dentro del volumen cabina; techo/parabrisas a distancias coherentes (~0.5–1.5 m).
 
-**Archivos:** `live.rs` (`driver_cab_from_lead_vehicle`), `shapes.rs`, `cab_view.rs`.
+**Archivos:** `live.rs`, `shapes.rs`, `cab_view.rs`.
 
 ---
 
@@ -245,6 +245,7 @@ flowchart LR
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-05 | P4: marco cabina unit-scale, OR content shapes, tests alineación ORTS/cab AABB |
 | 2026-05 | Documento inicial: estado Pullman Chiltern, 37/39 texturas, pasos P1–P6 |
 
 Actualizar este archivo al cerrar cada paso (marcar ✅ en §3 y ajustar §2).

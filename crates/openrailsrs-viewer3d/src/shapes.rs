@@ -8,25 +8,386 @@ use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
-use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
+use openrailsrs_formats::{DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
 use crate::viewer_log;
+
+/// HDR multiplier on textured scenery whose `.ace` mip0 is already reasonably bright.
+pub const SCENERY_TEXTURE_ALBEDO_BOOST: f32 = 4.0;
+
+/// Mean sRGB luma below this → MSTS atlas looks black even with unlit + albedo boost.
+pub const DARK_TEXTURE_LUMA_THRESHOLD: f32 = 32.0;
+
+/// Target mean luma after normalizing dark MSTS `.ace` mip0 (Open Rails draws these unlit).
+const SCENERY_TEXTURE_TARGET_LUMA: f32 = 112.0;
+
+/// Max per-pixel scale when lifting near-black atlases (signals, tunnels, night textures).
+const SCENERY_TEXTURE_MAX_PIXEL_SCALE: f32 = 128.0;
+
+/// Small extra tint after pixel normalization (avoid double-boost with [`SCENERY_TEXTURE_ALBEDO_BOOST`]).
+const SCENERY_TEXTURE_POST_BRIGHTEN_TINT: f32 = 1.25;
+
+fn scenery_texture_tint() -> Color {
+    let b = SCENERY_TEXTURE_ALBEDO_BOOST;
+    Color::linear_rgb(b, b, b)
+}
+
+fn scenery_texture_tint_scaled(multiplier: f32) -> Color {
+    Color::linear_rgb(multiplier, multiplier, multiplier)
+}
+
+/// Mean sRGB luma of opaque pixels in decoded ACE mip0 (0–255).
+pub fn ace_mean_luma(rgba: &[u8]) -> f32 {
+    if rgba.len() < 4 {
+        return 0.0;
+    }
+    let mut sum = 0.0f64;
+    let mut n = 0usize;
+    for px in rgba.chunks_exact(4) {
+        if px[3] < 8 {
+            continue;
+        }
+        sum += 0.299 * f64::from(px[0]) + 0.587 * f64::from(px[1]) + 0.114 * f64::from(px[2]);
+        n += 1;
+    }
+    if n == 0 { 0.0 } else { (sum / n as f64) as f32 }
+}
+
+fn scale_ace_channel(v: u8, scale: f32) -> u8 {
+    (f32::from(v) * scale).min(255.0).round() as u8
+}
+
+/// Lift dark MSTS atlases toward [`SCENERY_TEXTURE_TARGET_LUMA`]. Returns `(rgba, was_brightened)`.
+pub fn brighten_dark_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
+    let mean = ace_mean_luma(rgba);
+    if mean >= DARK_TEXTURE_LUMA_THRESHOLD {
+        return (rgba.to_vec(), false);
+    }
+    let scale = (SCENERY_TEXTURE_TARGET_LUMA / mean.max(1.0)).min(SCENERY_TEXTURE_MAX_PIXEL_SCALE);
+    let mut out = rgba.to_vec();
+    for px in out.chunks_exact_mut(4) {
+        if px[3] < 8 {
+            continue;
+        }
+        px[0] = scale_ace_channel(px[0], scale);
+        px[1] = scale_ace_channel(px[1], scale);
+        px[2] = scale_ace_channel(px[2], scale);
+    }
+    (out, true)
+}
+
+/// Material tint for a scenery texture (full boost, or modest tint after pixel normalization).
+pub fn scenery_material_tint_for_ace(pixel_brightened: bool) -> Color {
+    if pixel_brightened {
+        scenery_texture_tint_scaled(SCENERY_TEXTURE_POST_BRIGHTEN_TINT)
+    } else {
+        scenery_texture_tint()
+    }
+}
+
+/// Emissive lift for atlases that stay near-black after pixel normalization (MSTS night/signal tex).
+const SCENERY_DARK_EMISSIVE: LinearRgba = LinearRgba::new(0.4, 0.4, 0.45, 1.0);
+
+fn scenery_needs_emissive_texture(rgba: &[u8]) -> bool {
+    ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD
+}
+
+fn scenery_shape_material_with_texture(
+    tint: Color,
+    handle: Handle<Image>,
+    rgba_for_luma: &[u8],
+    alpha_mode: AlphaMode,
+    z_bias: f32,
+) -> StandardMaterial {
+    let mut mat = StandardMaterial {
+        base_color: tint,
+        base_color_texture: Some(handle.clone()),
+        perceptual_roughness: 0.85,
+        metallic: 0.05,
+        double_sided: true,
+        alpha_mode,
+        depth_bias: z_bias,
+        ..default()
+    };
+    if scenery_needs_emissive_texture(rgba_for_luma) {
+        mat.emissive = SCENERY_DARK_EMISSIVE;
+        mat.emissive_texture = Some(handle);
+    }
+    scenery_shape_material(mat)
+}
+
+/// MSTS `.ace` albedo is authored for fixed-function / unlit-style drawing; Bevy PBR + fog
+/// crushes it to black silhouettes (same issue as cab interior — see `cab_view.rs`).
+fn scenery_shape_material(base: StandardMaterial) -> StandardMaterial {
+    StandardMaterial {
+        unlit: true,
+        fog_enabled: false,
+        ..base
+    }
+}
+
+/// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
+pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
+    let stem = route_dir.file_name()?.to_str()?;
+    let content = msts_content_root()?;
+    let mut candidates = vec![
+        content.join(stem).join("ROUTES").join(stem),
+        content.join("ROUTES").join(stem),
+    ];
+    if let Ok(entries) = std::fs::read_dir(&content) {
+        for entry in entries.flatten() {
+            if !entry.file_type().is_ok_and(|t| t.is_dir()) {
+                continue;
+            }
+            if entry
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(stem)
+            {
+                let pack = entry.path();
+                candidates.push(pack.join("ROUTES").join(stem));
+                if let Ok(route_entries) = std::fs::read_dir(pack.join("ROUTES")) {
+                    for route in route_entries.flatten() {
+                        if route
+                            .file_name()
+                            .to_string_lossy()
+                            .eq_ignore_ascii_case(stem)
+                        {
+                            candidates.push(route.path());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for candidate in candidates {
+        if !candidate.is_dir() {
+            continue;
+        }
+        let has_tsection = [
+            "OpenRails/tsection.dat",
+            "openrails/tsection.dat",
+            "tsection.dat",
+        ]
+        .iter()
+        .any(|rel| candidate.join(rel).is_file());
+        if has_tsection || candidate.join("WORLD").is_dir() || candidate.join("world").is_dir() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn load_tsection_catalog(route_dir: &Path) -> openrailsrs_formats::TSectionCatalog {
+    if let Ok(catalog) = openrailsrs_formats::TSectionCatalog::load_for_route(route_dir) {
+        if !catalog.shapes.is_empty() {
+            return catalog;
+        }
+    }
+    if let Some(msts_route) = resolve_msts_route_dir(route_dir) {
+        if let Ok(catalog) = openrailsrs_formats::TSectionCatalog::load_for_route(&msts_route) {
+            if !catalog.shapes.is_empty() {
+                return catalog;
+            }
+        }
+    }
+    openrailsrs_formats::TSectionCatalog::default()
+}
+
+fn track_db_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = vec![route_dir.to_path_buf()];
+    if let Some(msts_route) = resolve_msts_route_dir(route_dir) {
+        if msts_route != route_dir {
+            dirs.push(msts_route);
+        }
+    }
+    dirs
+}
+
+fn load_track_db(route_dir: &Path) -> Option<openrailsrs_formats::TrackDbFile> {
+    for dir in track_db_search_dirs(route_dir) {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("tdb"))
+            {
+                continue;
+            }
+            if let Ok(mut tdb) = openrailsrs_formats::TrackDbFile::from_path(&path) {
+                let tit = path.with_extension("tit");
+                if tit.is_file() {
+                    let _ = tdb.merge_tit_speed_posts(&tit);
+                }
+                return Some(tdb);
+            }
+        }
+    }
+    None
+}
+
+#[derive(Clone, Copy, Debug)]
+struct TdbSectionAnchor {
+    bevy_x: f32,
+    bevy_z: f32,
+    heading_deg: f64,
+}
+
+fn heading_from_vector_geometry(geometry: openrailsrs_formats::TrackVectorGeometry) -> Option<f64> {
+    let (x0, _, z0) = geometry.start.bevy_position();
+    let (x1, _, z1) = geometry.end.bevy_position();
+    let dx = x1 - x0;
+    let dz = z1 - z0;
+    if dx * dx + dz * dz < 0.01 {
+        return None;
+    }
+    Some((dx as f64).atan2(dz as f64).to_degrees())
+}
+
+fn build_tdb_section_index(
+    tdb: &openrailsrs_formats::TrackDbFile,
+) -> HashMap<u32, Vec<TdbSectionAnchor>> {
+    let mut geometry_by_node: HashMap<u32, openrailsrs_formats::TrackVectorGeometry> =
+        HashMap::new();
+    for node in &tdb.nodes {
+        if let openrailsrs_formats::TrackNodeKind::Vector {
+            geometry: Some(geom),
+            ..
+        } = &node.kind
+        {
+            geometry_by_node.insert(node.id, *geom);
+        }
+    }
+
+    let mut out: HashMap<u32, Vec<TdbSectionAnchor>> = HashMap::new();
+    for (shape_idx, entries) in tdb.index_vector_sections_by_shape() {
+        let mut anchors = Vec::new();
+        for entry in entries {
+            let heading = entry.record.heading_deg().or_else(|| {
+                geometry_by_node
+                    .get(&entry.node_id)
+                    .copied()
+                    .and_then(heading_from_vector_geometry)
+            });
+            let Some(heading_deg) = heading else {
+                continue;
+            };
+            let (bevy_x, _, bevy_z) = entry.record.start.bevy_position();
+            anchors.push(TdbSectionAnchor {
+                bevy_x,
+                bevy_z,
+                heading_deg,
+            });
+        }
+        if !anchors.is_empty() {
+            out.insert(shape_idx, anchors);
+        }
+    }
+    out
+}
 
 /// Route directory for resolving `SHAPES/` and `TEXTURES/` assets.
 #[derive(Resource, Clone)]
 pub struct RouteAssets {
     pub route_dir: PathBuf,
     shape_path_index: HashMap<String, PathBuf>,
+    tsection: openrailsrs_formats::TSectionCatalog,
+    track_db: Option<openrailsrs_formats::TrackDbFile>,
+    tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
 }
 
 impl RouteAssets {
     pub fn new(route_dir: impl Into<PathBuf>) -> Self {
         let route_dir = route_dir.into();
         let shape_path_index = build_shape_path_index(&shape_search_dirs(&route_dir));
+        let tsection = load_tsection_catalog(&route_dir);
+        if !tsection.shapes.is_empty() {
+            let junction_clearance = tsection
+                .shapes
+                .iter()
+                .filter(|(id, shape)| {
+                    shape.is_junction() && tsection.clearance_dist_m(**id).is_some()
+                })
+                .count();
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: tsection — {} shape(s), {} section(s), {} junction(s) with ClearanceDist",
+                tsection.shapes.len(),
+                tsection.sections.len(),
+                junction_clearance
+            );
+        }
+        let (track_db, tdb_sections_by_shape) = load_track_db(&route_dir)
+            .map(|tdb| {
+                let indexed_shapes = tdb.index_vector_sections_by_shape().len();
+                let junctions = tdb.junction_nodes().count();
+                let anchors = build_tdb_section_index(&tdb);
+                let anchor_count: usize = anchors.values().map(|v| v.len()).sum();
+                crate::viewer_log!(
+                    "openrailsrs-viewer3d: tdb — {} node(s), {} junction(s), {} vector section(s) with heading ({indexed_shapes} shape(s))",
+                    tdb.nodes.len(),
+                    junctions,
+                    anchor_count,
+                );
+                (Some(tdb), anchors)
+            })
+            .unwrap_or((None, HashMap::new()));
         Self {
             route_dir,
             shape_path_index,
+            tsection,
+            track_db,
+            tdb_sections_by_shape,
         }
+    }
+
+    pub fn track_db(&self) -> Option<&openrailsrs_formats::TrackDbFile> {
+        self.track_db.as_ref()
+    }
+
+    pub fn tsection(&self) -> &openrailsrs_formats::TSectionCatalog {
+        &self.tsection
+    }
+
+    /// Refine TrackObj yaw from `.tdb` `TrVectorSection` when a nearby anchor matches `SectionIdx`.
+    pub fn refine_trackobj_rotation(
+        &self,
+        section_idx: Option<u32>,
+        position: Vec3,
+        rotation: Quat,
+    ) -> Quat {
+        let Some(shape_idx) = section_idx else {
+            return rotation;
+        };
+        let Some(entries) = self.tdb_sections_by_shape.get(&shape_idx) else {
+            return rotation;
+        };
+        const MAX_DIST_M: f32 = 25.0;
+        let max_dist_sq = MAX_DIST_M * MAX_DIST_M;
+        let mut best: Option<(f32, f64)> = None;
+        for entry in entries {
+            let dx = entry.bevy_x - position.x;
+            let dz = entry.bevy_z - position.z;
+            let dist_sq = dx * dx + dz * dz;
+            if dist_sq <= max_dist_sq
+                && best
+                    .map(|(best_dist, _)| dist_sq < best_dist)
+                    .unwrap_or(true)
+            {
+                best = Some((dist_sq, entry.heading_deg));
+            }
+        }
+        let Some((_, heading_deg)) = best else {
+            return rotation;
+        };
+        let (yaw, pitch, roll) = rotation.to_euler(EulerRot::YXZ);
+        let tdb_yaw = heading_deg.to_radians() as f32;
+        if (yaw - tdb_yaw).abs() < 0.01 {
+            return rotation;
+        }
+        Quat::from_euler(EulerRot::YXZ, tdb_yaw, pitch, roll)
     }
 
     /// Resolve a shape filename using a pre-built index (case-insensitive).
@@ -34,9 +395,41 @@ impl RouteAssets {
         if file_name.is_empty() {
             return None;
         }
+        let base = shape_file_basename(file_name);
         self.shape_path_index
-            .get(&file_name.to_ascii_lowercase())
+            .get(&base.to_ascii_lowercase())
             .cloned()
+    }
+
+    /// Resolve scenery shapes; `TrackObj` prefers route-pack `GLOBAL/SHAPES/` (Open Rails layout).
+    pub fn resolve_world_shape(&self, kind: &str, file_name: &str) -> Option<PathBuf> {
+        if file_name.is_empty() {
+            return None;
+        }
+        let base = shape_file_basename(file_name);
+        if kind == "TrackObj" {
+            for global in global_assets_dirs(&self.route_dir) {
+                if let Some(path) = resolve_shape_path(&global, base) {
+                    return Some(path);
+                }
+            }
+        }
+        self.resolve_shape(base)
+    }
+
+    /// Resolve `TrackObj` mesh path using `.w` `FileName` and/or `SectionIdx` → `tsection.dat`.
+    pub fn resolve_trackobj_shape(
+        &self,
+        file_name: Option<&str>,
+        section_idx: Option<u32>,
+    ) -> Option<PathBuf> {
+        let name = file_name
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .or_else(|| {
+                section_idx.and_then(|idx| self.tsection.shape_file_name(idx).map(str::to_string))
+            })?;
+        self.resolve_world_shape("TrackObj", &name)
     }
 }
 
@@ -80,8 +473,10 @@ pub struct ShapeRenderAsset {
 }
 
 /// Map a shape point from MSTS local space to Bevy (Y up).
+///
+/// Open Rails negates Z in `XNAVertexPositionNormalTextureFromMSTS` (`Shapes.cs`).
 pub fn shape_point_to_bevy(v: ShapeVec3) -> Vec3 {
-    Vec3::new(v.x as f32, v.y as f32, v.z as f32)
+    Vec3::new(v.x as f32, v.y as f32, -(v.z as f32))
 }
 
 /// MSTS shape space: +X lateral, +Y up, +Z forward. Train consist local: +X forward.
@@ -141,7 +536,7 @@ pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) 
     let scale_factor = vehicle_shape_fit_scale(extent, length_m);
     let scale = Vec3::splat(scale_factor);
 
-    let front = Vec3::new(center.x, center.y, max.z);
+    let front = Vec3::new(center.x, center.y, min.z);
     let front_local_x = (rotation * (scale * front)).x;
 
     let min_y = aabb_corners(min, max)
@@ -157,12 +552,15 @@ pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) 
 }
 
 /// Lead-vehicle placement for 3D cab (same origin/rotation as exterior `.s`, unit scale).
+///
+/// Open Rails keeps `ORTS3DCabHeadPos` and `CABVIEW3D` meshes in unscaled MSTS shape
+/// metres; only the exterior body is length-fitted via a child scale node.
 pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32) -> Transform {
     let rotation = msts_shape_to_train_rotation();
     let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
     let center = (min + max) * 0.5;
 
-    let front = Vec3::new(center.x, center.y, max.z);
+    let front = Vec3::new(center.x, center.y, min.z);
     let front_local_x = (rotation * front).x;
 
     let min_y = aabb_corners(min, max)
@@ -175,6 +573,152 @@ pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32)
         rotation,
         scale: Vec3::ONE,
     }
+}
+
+/// Cab frame (unit MSTS scale) plus uniform length-fit scale for the exterior mesh child.
+pub fn vehicle_cab_frame_and_exterior_scale(
+    mesh: &Mesh,
+    offset_m: f32,
+    length_m: f32,
+) -> (Transform, f32) {
+    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
+    let scale = vehicle_shape_fit_scale(max - min, length_m);
+    (
+        cab_shape_placement_transform(mesh, offset_m, length_m),
+        scale,
+    )
+}
+
+/// Union AABB of several meshes in their local space.
+pub fn union_meshes_aabb(meshes: &[&Mesh]) -> Option<(Vec3, Vec3)> {
+    let mut min_all = Vec3::splat(f32::INFINITY);
+    let mut max_all = Vec3::splat(f32::NEG_INFINITY);
+    let mut any = false;
+    for mesh in meshes {
+        let Some((mn, mx)) = mesh_aabb(mesh) else {
+            continue;
+        };
+        min_all = min_all.min(mn);
+        max_all = max_all.max(mx);
+        any = true;
+    }
+    any.then_some((min_all, max_all))
+}
+
+/// True when `point` lies inside an axis-aligned box (inclusive).
+pub fn point_in_aabb(point: Vec3, min: Vec3, max: Vec3) -> bool {
+    point.x >= min.x
+        && point.x <= max.x
+        && point.y >= min.y
+        && point.y <= max.y
+        && point.z >= min.z
+        && point.z <= max.z
+}
+
+/// MSTS shape-file coordinates (`.s` points, `.eng` ORTS3DCabHeadPos) → Bevy mesh space.
+pub fn msts_shape_vec3_to_bevy(v: Vec3) -> Vec3 {
+    shape_point_to_bevy(ShapeVec3 {
+        x: v.x as f64,
+        y: v.y as f64,
+        z: v.z as f64,
+    })
+}
+
+/// `ORTS3DCabHeadPos` inside the cab shape AABB (MSTS shape metres, unit scale).
+pub fn orts_head_inside_cab_aabb(head_msts: Vec3, cab_meshes: &[&Mesh]) -> bool {
+    let Some((min, max)) = union_meshes_aabb(cab_meshes) else {
+        return false;
+    };
+    point_in_aabb(msts_shape_vec3_to_bevy(head_msts), min, max)
+}
+
+/// Same check after applying the lead-vehicle cab frame (train-local metres).
+pub fn orts_head_inside_cab_train_space(
+    head_msts: Vec3,
+    exterior_mesh: &Mesh,
+    cab_meshes: &[&Mesh],
+    offset_m: f32,
+    length_m: f32,
+) -> bool {
+    let frame = cab_shape_placement_transform(exterior_mesh, offset_m, length_m);
+    let head_shape = msts_shape_vec3_to_bevy(head_msts);
+    let head_train = frame.transform_point(head_shape);
+    let Some((min, max)) = union_meshes_aabb(cab_meshes) else {
+        return false;
+    };
+    let mut mn = Vec3::splat(f32::INFINITY);
+    let mut mx = Vec3::splat(f32::NEG_INFINITY);
+    for corner in aabb_corners(min, max) {
+        let p = frame.transform_point(corner);
+        mn = mn.min(p);
+        mx = mx.max(p);
+    }
+    point_in_aabb(head_train, mn, mx)
+}
+
+fn push_unique_path(candidates: &mut Vec<PathBuf>, path: PathBuf) {
+    if path.is_dir() && !candidates.iter().any(|p| p == &path) {
+        candidates.push(path);
+    }
+}
+
+/// Open Rails `Content/` trainset folders for a vehicle (e.g. `RF_Blue_Pullman`).
+pub fn or_content_trainset_roots(route_dir: &Path, trainset_name: &str) -> Vec<PathBuf> {
+    let Some(content) = msts_content_root() else {
+        return Vec::new();
+    };
+    let mut roots = Vec::new();
+    let route_names = route_dir
+        .file_name()
+        .into_iter()
+        .map(|n| n.to_string_lossy().into_owned())
+        .chain([String::from("Chiltern")]);
+    for route_name in route_names {
+        for trains_sub in [
+            "TRAINS/TRAINSET",
+            "trains/trainset",
+            "trains/TRAINSET",
+            "Trains/Trainset",
+        ] {
+            push_unique_path(
+                &mut roots,
+                content
+                    .join(&route_name)
+                    .join(trains_sub)
+                    .join(trainset_name),
+            );
+        }
+    }
+    for trains_sub in ["TRAINS/TRAINSET", "trains/trainset", "trains/TRAINSET"] {
+        push_unique_path(&mut roots, content.join(trains_sub).join(trainset_name));
+    }
+    roots
+}
+
+/// Trainset folder name (`RF_Blue_Pullman`) from the first shape search hit.
+pub fn trainset_name_from_shape_search(shape_dirs: &[&Path], shape_file: &str) -> Option<String> {
+    for dir in shape_dirs {
+        if resolve_shape_path(dir, shape_file).is_some() {
+            return dir.file_name().map(|n| n.to_string_lossy().into_owned());
+        }
+    }
+    None
+}
+
+/// Resolve a vehicle `.s`, preferring Open Rails Content over scenario stubs.
+pub fn resolve_vehicle_shape_path(
+    shape_dirs: &[&Path],
+    shape_file: &str,
+    route_dir: &Path,
+) -> Option<PathBuf> {
+    if let Some(name) = trainset_name_from_shape_search(shape_dirs, shape_file) {
+        for root in or_content_trainset_roots(route_dir, &name) {
+            if let Some(path) = resolve_shape_path(&root, shape_file) {
+                return Some(path);
+            }
+        }
+    }
+    resolve_shape_path_in_dirs(shape_dirs, shape_file)
 }
 
 /// Pick the highest-detail distance level (lowest `dlevel_selection` metres).
@@ -236,7 +780,7 @@ pub fn build_mesh_from_shape_lod(shape: &ShapeFile, level: &DistanceLevel) -> Op
 
     for sub in &level.sub_objects {
         for prim in &sub.primitives {
-            append_primitive_mesh_buffers(shape, sub, prim, default_normal, &mut buffers);
+            append_primitive_mesh_buffers(shape, level, sub, prim, default_normal, &mut buffers);
         }
     }
 
@@ -258,7 +802,7 @@ pub fn build_mesh_parts_from_shape_lod(
     for sub in &level.sub_objects {
         for prim in &sub.primitives {
             let buffers = parts.entry(prim.prim_state_idx).or_default();
-            append_primitive_mesh_buffers(shape, sub, prim, default_normal, buffers);
+            append_primitive_mesh_buffers(shape, level, sub, prim, default_normal, buffers);
         }
     }
 
@@ -316,11 +860,13 @@ impl MeshBuffers {
 
 fn append_primitive_mesh_buffers(
     shape: &ShapeFile,
+    level: &DistanceLevel,
     sub: &openrailsrs_formats::SubObject,
     prim: &openrailsrs_formats::Primitive,
     default_normal: ShapeVec3,
     buffers: &mut MeshBuffers,
 ) {
+    let matrix_chain = primitive_matrix_chain(shape, level, prim.prim_state_idx);
     for tri in prim.vertex_indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -334,11 +880,17 @@ fn append_primitive_mesh_buffers(
             let Some(point) = shape.points.get(point_idx) else {
                 continue;
             };
-            buffers.positions.push(shape_point_to_bevy(*point));
+            buffers.positions.push(transform_shape_point(
+                shape_point_to_bevy(*point),
+                &matrix_chain,
+            ));
             let normal = normal_idx
                 .and_then(|idx| shape.normals.get(idx).copied())
                 .unwrap_or(default_normal);
-            buffers.normals.push(shape_point_to_bevy(normal));
+            buffers.normals.push(transform_shape_normal(
+                shape_point_to_bevy(normal),
+                &matrix_chain,
+            ));
             let uv = uv_idx
                 .and_then(|idx| shape.uvs.get(idx).copied())
                 .unwrap_or_default();
@@ -346,6 +898,81 @@ fn append_primitive_mesh_buffers(
             buffers.uvs.push(Vec2::new(uv.u as f32, 1.0 - uv.v as f32));
         }
     }
+}
+
+#[derive(Clone, Copy)]
+struct ShapeMatrixRef<'a> {
+    matrix: &'a Matrix43,
+    zero_translation: bool,
+}
+
+fn primitive_matrix_chain<'a>(
+    shape: &'a ShapeFile,
+    level: &DistanceLevel,
+    prim_state_idx: i32,
+) -> Vec<ShapeMatrixRef<'a>> {
+    let Some(prim_state) = shape.prim_states.get(prim_state_idx.max(0) as usize) else {
+        return Vec::new();
+    };
+    let Some(vtx_state) = shape
+        .vtx_states
+        .get(prim_state.vertex_state_idx.max(0) as usize)
+    else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut matrix_idx = vtx_state.matrix_idx;
+    let mut guard = 0usize;
+    while matrix_idx >= 0 && guard < shape.matrices.len() {
+        let idx = matrix_idx as usize;
+        let Some(matrix) = shape.matrices.get(idx) else {
+            break;
+        };
+        out.push(ShapeMatrixRef {
+            matrix: &matrix.matrix,
+            zero_translation: idx == 0 && level.hierarchy.first().copied() == Some(-1),
+        });
+        matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
+        guard += 1;
+    }
+    out
+}
+
+fn matrix43_transform_point_xna(m: &Matrix43, p: Vec3, zero_translation: bool) -> Vec3 {
+    let r = &m.rows;
+    let d = if zero_translation {
+        [0.0, 0.0, 0.0]
+    } else {
+        r[3]
+    };
+    Vec3::new(
+        p.x * r[0][0] as f32 + p.y * r[1][0] as f32 - p.z * r[2][0] as f32 + d[0] as f32,
+        p.x * r[0][1] as f32 + p.y * r[1][1] as f32 - p.z * r[2][1] as f32 + d[1] as f32,
+        -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32 - d[2] as f32,
+    )
+}
+
+fn matrix43_transform_vector_xna(m: &Matrix43, p: Vec3) -> Vec3 {
+    let r = &m.rows;
+    Vec3::new(
+        p.x * r[0][0] as f32 + p.y * r[1][0] as f32 - p.z * r[2][0] as f32,
+        p.x * r[0][1] as f32 + p.y * r[1][1] as f32 - p.z * r[2][1] as f32,
+        -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32,
+    )
+}
+
+fn transform_shape_point(mut point: Vec3, matrices: &[ShapeMatrixRef<'_>]) -> Vec3 {
+    for matrix in matrices {
+        point = matrix43_transform_point_xna(matrix.matrix, point, matrix.zero_translation);
+    }
+    point
+}
+
+fn transform_shape_normal(mut normal: Vec3, matrices: &[ShapeMatrixRef<'_>]) -> Vec3 {
+    for matrix in matrices {
+        normal = matrix43_transform_vector_xna(matrix.matrix, normal);
+    }
+    normal.try_normalize().unwrap_or(Vec3::Y)
 }
 
 fn texture_filename_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
@@ -433,16 +1060,26 @@ pub fn build_mesh_parts_from_shape_at_distance(
     build_mesh_parts_from_shape_lod(shape, level)
 }
 
-/// Convert decoded ACE mip 0 (RGBA8) into a Bevy GPU image.
+/// Convert decoded ACE mip 0 (RGBA8) into a Bevy GPU image (raw mip0, no brightening).
 pub fn ace_to_image(ace: &AceFile) -> Image {
+    ace_rgba_to_image(ace.width, ace.height, &ace.mip0)
+}
+
+/// ACE → GPU image with dark-atlas normalization for world / train scenery.
+pub fn ace_to_scenery_image(ace: &AceFile) -> (Image, bool) {
+    let (rgba, brightened) = brighten_dark_ace_rgba(&ace.mip0);
+    (ace_rgba_to_image(ace.width, ace.height, &rgba), brightened)
+}
+
+fn ace_rgba_to_image(width: u32, height: u32, rgba: &[u8]) -> Image {
     Image::new(
         Extent3d {
-            width: ace.width,
-            height: ace.height,
+            width,
+            height,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        ace.mip0.clone(),
+        rgba.to_vec(),
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     )
@@ -483,16 +1120,60 @@ pub fn msts_content_root() -> Option<PathBuf> {
     None
 }
 
-/// Route directory plus optional `GLOBAL` from [`msts_content_root`].
+/// All `GLOBAL/` asset roots under MSTS Content (OR uses per-route-pack trees like `Chiltern/GLOBAL/`).
+pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
+    let Some(content) = msts_content_root() else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut push = |p: PathBuf| {
+        let has_shapes = p.join("SHAPES").is_dir() || p.join("shapes").is_dir();
+        if has_shapes && !out.iter().any(|existing| existing == &p) {
+            out.push(p);
+        }
+    };
+    push(content.join("GLOBAL"));
+    let Some(stem) = route_dir.file_name().and_then(|s| s.to_str()) else {
+        return out;
+    };
+    push(content.join(stem).join("GLOBAL"));
+    if let Ok(entries) = std::fs::read_dir(&content) {
+        for entry in entries.flatten() {
+            if !entry.file_type().is_ok_and(|t| t.is_dir()) {
+                continue;
+            }
+            if entry
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(stem)
+            {
+                push(entry.path().join("GLOBAL"));
+            }
+        }
+    }
+    out
+}
+
+/// Route directory plus route-pack and root `GLOBAL` trees from [`msts_content_root`].
 pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(global) = global_assets_dir() {
+    if let Some(content) = msts_content_root() {
+        if let Some(stem) = route_dir.file_name() {
+            let pack = content.join(stem);
+            if pack.is_dir() {
+                dirs.push(pack);
+            }
+        }
+    }
+    for global in global_assets_dirs(route_dir) {
         dirs.push(global);
     }
+    dirs.sort();
+    dirs.dedup();
     dirs
 }
 
-/// `GLOBAL/` under [`msts_content_root`], when configured.
+/// First `GLOBAL/` root, if any (legacy helper).
 pub fn global_assets_dir() -> Option<PathBuf> {
     msts_content_root()
         .map(|root| root.join("GLOBAL"))
@@ -517,7 +1198,7 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
             }
         }
     }
-    if let Some(global) = global_assets_dir() {
+    for global in global_assets_dirs(route_dir) {
         dirs.push(global);
     }
     dirs.sort();
@@ -525,10 +1206,20 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
     dirs
 }
 
+/// Basename of a `.w` `FileName` (strips `SHAPES\\foo.s` / `foo.s`).
+pub fn shape_file_basename(file_name: &str) -> &str {
+    file_name
+        .rsplit(['\\', '/'])
+        .next()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(file_name)
+}
+
 /// Resolve `SHAPES/foo.s` under the route directory (case-insensitive on Linux).
 pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
+    let base = shape_file_basename(file_name);
     for subdir in ["SHAPES", "shapes"] {
-        let path = route_dir.join(subdir).join(file_name);
+        let path = route_dir.join(subdir).join(base);
         if path.is_file() {
             return Some(path);
         }
@@ -536,7 +1227,12 @@ pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> 
             return Some(resolved);
         }
     }
-    None
+    // Open Rails / MSTS trainsets sometimes store `.s` in the trainset root.
+    let direct = route_dir.join(base);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    openrailsrs_formats::resolve_path_case_insensitive(&direct)
 }
 
 /// Search several asset roots (route dir, scenario dir, …) for a shape file.
@@ -585,10 +1281,16 @@ pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    if let Some(p) = resolve_texture_path_exact(route_dir, file_name) {
+    let base = shape_file_basename(file_name);
+    if let Some(p) = resolve_texture_path_exact(route_dir, base) {
         return Some(p);
     }
-    let path_obj = Path::new(file_name);
+    if !base.eq_ignore_ascii_case(file_name)
+        && let Some(p) = resolve_texture_path_exact(route_dir, file_name)
+    {
+        return Some(p);
+    }
+    let path_obj = Path::new(base);
     if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
     {
         let dds_name = path_obj
@@ -655,7 +1357,7 @@ pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<P
 pub fn load_ace_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     let path = resolve_texture_path(route_dir, file_name)?;
     let ace = read_ace(&path).ok()?;
-    Some(ace_to_image(&ace))
+    Some(ace_to_scenery_image(&ace).0)
 }
 
 /// Load a shape and prepare Bevy mesh/material handles for each `prim_state` part.
@@ -835,16 +1537,13 @@ fn material_for_shape_texture(
                                 .entry(tex_path.clone())
                                 .or_insert_with(|| images.add(image))
                                 .clone();
-                            let material = materials.add(StandardMaterial {
-                                base_color: Color::WHITE,
-                                base_color_texture: Some(handle),
-                                perceptual_roughness: 0.85,
-                                metallic: 0.05,
-                                double_sided: true,
-                                alpha_mode: AlphaMode::Blend,
-                                depth_bias: z_bias.unwrap_or(0.0),
-                                ..default()
-                            });
+                            let material = materials.add(scenery_shape_material_with_texture(
+                                scenery_texture_tint(),
+                                handle,
+                                &[],
+                                AlphaMode::Blend,
+                                z_bias.unwrap_or(0.0),
+                            ));
                             return (material, true, true);
                         }
                     }
@@ -868,28 +1567,27 @@ fn material_for_shape_texture(
                     let alpha_mode =
                         alpha_mode_from_prim_state(&ace, tex_name, shader_name, alpha_test_mode);
                     let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
-                    let image = ace_to_image(&ace);
+                    let (rgba, pixel_brightened) = brighten_dark_ace_rgba(&ace.mip0);
+                    let tint = scenery_material_tint_for_ace(pixel_brightened);
+                    let image = ace_rgba_to_image(ace.width, ace.height, &rgba);
                     let handle = texture_cache
                         .entry(tex_path)
                         .or_insert_with(|| images.add(image))
                         .clone();
-                    let material = materials.add(StandardMaterial {
-                        base_color: Color::WHITE,
-                        base_color_texture: Some(handle),
-                        perceptual_roughness: 0.85,
-                        metallic: 0.05,
-                        double_sided: true,
+                    let material = materials.add(scenery_shape_material_with_texture(
+                        tint,
+                        handle,
+                        &rgba,
                         alpha_mode,
-                        depth_bias: z_bias.unwrap_or(0.0),
-                        ..default()
-                    });
+                        z_bias.unwrap_or(0.0),
+                    ));
                     return (material, true, is_transparent);
                 }
             }
         }
     }
 
-    let material = materials.add(StandardMaterial {
+    let material = materials.add(scenery_shape_material(StandardMaterial {
         base_color: fallback_color,
         emissive: LinearRgba::from(fallback_color) * 0.35,
         perceptual_roughness: 0.75,
@@ -897,7 +1595,7 @@ fn material_for_shape_texture(
         double_sided: true,
         depth_bias: z_bias.unwrap_or(0.0),
         ..default()
-    });
+    }));
     (material, false, false)
 }
 
@@ -1065,6 +1763,71 @@ mod tests {
     }
 
     #[test]
+    fn shape_hierarchy_matrix_translates_primitive_vertices_like_openrails() {
+        let ascii = r#"
+        ( shape
+            ( shader_names 1 "TexDiff" )
+            ( points 3
+                ( point 0 0 0 )
+                ( point 1 0 0 )
+                ( point 0 1 0 )
+            )
+            ( normals 1 ( vector 0 1 0 ) )
+            ( prim_states 1
+                ( prim_state "body" 0 0 ( tex_idxs 0 ) 0 0 0 0 )
+            )
+            ( vtx_states 1
+                ( vtx_state 0 1 0 )
+            )
+            ( lod_controls 1
+                ( lod_control
+                    ( distance_levels_header )
+                    ( distance_levels 1
+                        ( distance_level
+                            ( distance_level_header
+                                ( dlevel_selection 100 )
+                                ( hierarchy 2 -1 0 )
+                            )
+                            ( sub_objects 1
+                                ( sub_object
+                                    ( vertices 3 )
+                                    ( primitives 1
+                                        ( prim_state_idx 0 )
+                                        ( indexed_trilist
+                                            ( vertex_idxs 3 0 1 2 )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+            ( matrices 2
+                ( matrix "ROOT"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 0 0
+                )
+                ( matrix "CHILD"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    10 0 0
+                )
+            )
+        )
+        "#;
+        let ast = openrailsrs_formats::parse_first_from_first_paren(ascii).expect("parse AST");
+        let shape = ShapeFile::from_ast(&ast).expect("shape");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let (min, max) = mesh_aabb(&mesh).expect("AABB");
+        assert!((min.x - 10.0).abs() < 1e-4, "min={min:?} max={max:?}");
+        assert!((max.x - 11.0).abs() < 1e-4, "min={min:?} max={max:?}");
+    }
+
+    #[test]
     fn build_mesh_from_binary_shape_resolves_vertex_table() {
         let shape = ShapeFile::from_path(chiltern_shape_fixture("RF_WP_DMBSA.s"))
             .expect("parse binary shape");
@@ -1190,6 +1953,26 @@ mod tests {
     }
 
     #[test]
+    fn brighten_dark_ace_rgba_lifts_near_black_atlas() {
+        let rgba = vec![1u8, 2, 1, 255, 3, 1, 2, 255];
+        let (out, brightened) = brighten_dark_ace_rgba(&rgba);
+        assert!(brightened);
+        let mean = ace_mean_luma(&out);
+        assert!(
+            mean >= SCENERY_TEXTURE_TARGET_LUMA * 0.85,
+            "expected ~{SCENERY_TEXTURE_TARGET_LUMA}, got {mean}"
+        );
+    }
+
+    #[test]
+    fn brighten_dark_ace_rgba_leaves_bright_atlas_unchanged() {
+        let rgba = vec![200u8, 180, 160, 255, 190, 170, 150, 255];
+        let (out, brightened) = brighten_dark_ace_rgba(&rgba);
+        assert!(!brightened);
+        assert_eq!(out, rgba);
+    }
+
+    #[test]
     fn material_for_shape_texture_uses_alpha_blend() {
         let route = std::env::temp_dir().join("openrailsrs_alpha_shape_material");
         let textures = route.join("TEXTURES");
@@ -1275,6 +2058,21 @@ mod tests {
     }
 
     #[test]
+    fn resolve_texture_path_strips_msts_path_prefix() {
+        let route = std::env::temp_dir().join("openrailsrs_tex_basename");
+        let textures = route.join("TEXTURES");
+        std::fs::create_dir_all(&textures).unwrap();
+        let ace_file = textures.join("ballast.ace");
+        std::fs::write(&ace_file, b"ACE").unwrap();
+
+        let found = resolve_texture_path(&route, r"TEXTURES\ballast.ace");
+        assert_eq!(found.as_ref(), Some(&ace_file));
+
+        let _ = std::fs::remove_file(ace_file);
+        let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
     fn resolve_texture_path_dds_fallback() {
         let route = std::env::temp_dir().join("openrailsrs_dds_fallback");
         let textures = route.join("TEXTURES");
@@ -1354,6 +2152,21 @@ mod tests {
     }
 
     #[test]
+    fn chiltern_pullman_shape_bounds_are_vehicle_sized() {
+        let path = chiltern_shape_fixture("RF_WP_DMBSA.s");
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(path).expect("parse Pullman shape");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let (min, max) = mesh_aabb(&mesh).expect("mesh AABB");
+        let extent = max - min;
+        assert!(extent.x < 5.0, "width extent too large: {extent:?}");
+        assert!(extent.y < 6.0, "height extent too large: {extent:?}");
+        assert!(extent.z < 30.0, "length extent too large: {extent:?}");
+    }
+
+    #[test]
     fn chiltern_tree_shapes_build_meshes() {
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         if !route.join("SHAPES/POPLAR15.S").is_file() {
@@ -1381,16 +2194,81 @@ mod tests {
     }
 
     #[test]
-    fn texture_search_dirs_include_route_root() {
-        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
-        let shape = route.join("SHAPES/POPLAR15.S");
-        if !shape.is_file() {
+    fn vehicle_cab_frame_keeps_unit_scale_on_lead_car() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let (frame, fit_scale) = vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0);
+        assert!((frame.scale.x - 1.0).abs() < 1e-4);
+        assert!((fit_scale - 18.0).abs() < 1e-3);
+        let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
+        assert!((full.scale.x - fit_scale).abs() < 1e-3);
+    }
+
+    #[test]
+    fn shape_file_basename_strips_path() {
+        assert_eq!(
+            super::shape_file_basename(r"SHAPES\ukfs_s_1x10m.s"),
+            "ukfs_s_1x10m.s"
+        );
+        assert_eq!(super::shape_file_basename("yard_shed.s"), "yard_shed.s");
+    }
+
+    #[test]
+    fn resolve_chiltern_pack_global_trackobj() {
+        let content = PathBuf::from(env!("HOME")).join("Documentos/Open Rails/Content");
+        if !content
+            .join("Chiltern/GLOBAL/SHAPES/ukfs_s_1x10m.s")
+            .is_file()
+        {
             return;
         }
-        let dirs = texture_search_dirs_for_shape(&shape, &route);
+        unsafe {
+            std::env::set_var("OPENRAILSRS_MSTS_CONTENT", &content);
+        }
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let globals = global_assets_dirs(&route);
         assert!(
-            dirs.iter().any(|d| d.ends_with("chiltern")),
-            "expected route root in texture dirs: {dirs:?}"
+            globals.iter().any(|p| p.ends_with("Chiltern/GLOBAL")),
+            "expected Chiltern/GLOBAL in {:?}",
+            globals
+        );
+        let assets = RouteAssets::new(&route);
+        assert!(
+            assets
+                .resolve_world_shape("TrackObj", "ukfs_s_1x10m.s")
+                .is_some(),
+            "ukfs TrackObj should resolve from route-pack GLOBAL"
+        );
+        assert_eq!(
+            assets.tsection().shape_file_name(38508),
+            Some("ukfs_s_1x25m.s"),
+            "tsection catalog should load from MSTS ROUTES/Chiltern"
+        );
+    }
+
+    #[test]
+    fn resolve_vehicle_shape_prefers_or_content_when_present() {
+        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
+        if !content.is_dir() {
+            return;
+        }
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let stub = route.join("trains/RF_Blue_Pullman");
+        let shape_dirs: Vec<&Path> = vec![stub.as_path()];
+        let path = resolve_vehicle_shape_path(shape_dirs.as_slice(), "RF_WP_DMBSA.s", &route)
+            .expect("shape");
+        assert!(
+            path.starts_with(&content),
+            "expected OR content shape, got {}",
+            path.display()
+        );
+        let shape = ShapeFile::from_path(&path).expect("parse OR content Pullman shape");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let (min, max) = mesh_aabb(&mesh).expect("mesh AABB");
+        let extent = max - min;
+        assert!(
+            extent.x < 5.0 && extent.y < 6.0 && extent.z < 30.0,
+            "OR content shape extent too large: {extent:?}"
         );
     }
 }

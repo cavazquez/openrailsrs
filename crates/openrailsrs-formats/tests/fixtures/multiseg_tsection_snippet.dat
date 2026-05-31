@@ -1,0 +1,12 @@
+TrackSection ( 9201
+ SectionSize ( 1.435 10.000 )
+)
+TrackSection ( 9202
+ SectionSize ( 1.435 0 )
+ SectionCurve ( 500.0 5 )
+)
+TrackShape ( 9201
+ FileName ( test_multiseg.s )
+ NumPaths ( 1 )
+ SectionIdx ( 2 0 0 0 0 9201 9202 )
+)

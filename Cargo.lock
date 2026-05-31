@@ -4131,6 +4131,7 @@ dependencies = [
  "openrailsrs-train",
  "rayon",
  "serde",
+ "serde_json",
  "toml",
 ]
 

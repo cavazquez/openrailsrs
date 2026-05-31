@@ -11,7 +11,7 @@ use std::time::Instant;
 use crate::shapes::load_ace_image;
 use crate::terrain::TerrainElevation;
 use crate::track::{SceneBounds, TrackScene, TrackSegmentIndex, forest_track_clearance_m};
-use crate::world::{RouteFocus, RouteWorldOffset, WorldScene};
+use crate::world::{RouteFocus, RouteWorldOffset, WorldObject, WorldScene};
 use crate::{log_step, viewer_log};
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
@@ -86,7 +86,12 @@ pub fn scatter_trees_in_patch(
             let rz = forest_rng01(tile_x, tile_z, uid, i, ch + 1) * 2.0 - 1.0;
             let x = anchor.x + rx * patch_half_x;
             let z = anchor.z + rz * patch_half_z;
-            if track_index.min_distance_xz(x, z, track_clearance_m) < track_clearance_m {
+            let clearance = if attempt + 1 == MAX_SCATTER_ATTEMPTS {
+                0.0
+            } else {
+                track_clearance_m
+            };
+            if clearance > 0.0 && track_index.min_distance_xz(x, z, clearance) < clearance {
                 continue;
             }
             let t = forest_rng01(tile_x, tile_z, uid, i, ch + 2);
@@ -188,8 +193,44 @@ pub fn spawn_forest_patches(
     focus: Res<crate::world::RouteFocus>,
     offset: Res<RouteWorldOffset>,
 ) {
-    let forests: Vec<_> = world
-        .items
+    viewer_log!(
+        "openrailsrs-viewer3d: spawning forest patches ({} anchor(s))",
+        world
+            .items
+            .iter()
+            .filter(|obj| obj.kind == "Forest" && obj.forest.is_some())
+            .count()
+    );
+    spawn_forest_objects(
+        &mut commands,
+        &mut meshes,
+        &mut images,
+        &mut materials,
+        &world.items,
+        &track,
+        terrain.as_deref(),
+        &assets,
+        &focus,
+        &offset,
+    );
+}
+
+/// Spawn forest patches for a slice of world objects (tile streaming).
+#[allow(clippy::too_many_arguments)]
+pub fn spawn_forest_objects(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[WorldObject],
+    track: &TrackScene,
+    terrain: Option<&TerrainElevation>,
+    assets: &crate::shapes::RouteAssets,
+    focus: &RouteFocus,
+    offset: &RouteWorldOffset,
+) {
+    let spawn_start = Instant::now();
+    let forests: Vec<_> = items
         .iter()
         .filter(|obj| obj.kind == "Forest" && obj.forest.is_some())
         .collect();
@@ -197,16 +238,9 @@ pub fn spawn_forest_patches(
         return;
     }
 
-    viewer_log!(
-        "openrailsrs-viewer3d: spawning forest patches ({} anchor(s))",
-        forests.len()
-    );
-    let spawn_start = Instant::now();
-
     let default_half = default_patch_half(&track.bounds);
     let track_clearance = forest_track_clearance_m(&track.bounds);
     let track_index = TrackSegmentIndex::from_graph(&track.graph, offset.delta);
-    let terrain_ref = terrain.as_deref();
     let mut material_cache: std::collections::HashMap<String, Handle<StandardMaterial>> =
         std::collections::HashMap::new();
 
@@ -250,9 +284,9 @@ pub fn spawn_forest_patches(
             obj.tile_z,
             patch.uid,
             &track_index,
-            terrain_ref,
+            terrain,
             track_clearance,
-            &focus,
+            focus,
         );
         let trees: Vec<TreePlacement> = trees_world
             .iter()
@@ -390,6 +424,29 @@ mod tests {
     }
 
     #[test]
+    fn scatter_places_trees_when_track_fills_patch() {
+        let g = line_graph_through_origin();
+        let idx = TrackSegmentIndex::from_graph(&g, Vec3::ZERO);
+        let focus = zero_focus();
+        let trees = scatter_trees_in_patch(
+            Vec3::ZERO,
+            20.0,
+            20.0,
+            8,
+            1.0,
+            1.0,
+            0,
+            0,
+            3,
+            &idx,
+            None,
+            50.0,
+            &focus,
+        );
+        assert_eq!(trees.len(), 8);
+    }
+
+    #[test]
     fn scatter_avoids_track_centreline() {
         let g = line_graph_through_origin();
         let idx = TrackSegmentIndex::from_graph(&g, Vec3::ZERO);
@@ -513,6 +570,6 @@ mod tests {
         assert_eq!(patch.tree_texture.as_deref(), Some("pine.ace"));
         assert_eq!(patch.scale_min, 0.8);
         assert!((forest.position.x - 180.0).abs() < 0.1);
-        assert!((forest.position.z - 55.0).abs() < 0.1);
+        assert!((forest.position.z - (-55.0)).abs() < 0.1);
     }
 }

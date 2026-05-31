@@ -121,6 +121,7 @@ pub fn minimal_app() -> App {
     app.init_resource::<LiveDriverCab>();
     app.init_resource::<crate::live::DriverCamState>();
     app.insert_resource(ViewerLaunchOpts::default());
+    app.insert_resource(crate::launch::ViewerSceneryMode::default());
     app.insert_resource(TerrainElevation::default());
     app.insert_resource(HudTitle("test".into()));
     app

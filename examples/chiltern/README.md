@@ -41,6 +41,29 @@ cargo run -p openrailsrs-cli -- import-msts "$CHILTERN" \
 
 El import escribe `start=n3`, `start_offset_m` (~305.6 m desde PAT+`.srv`), destino lejano y `[[route.switches]]` desde el PAT.
 
+### Coordenadas de nodo (`x_m` / `y_m`) sin tocar la topología
+
+El `track.toml` del repo trae la topología y los experimentos de sim (`chiltern_brake_coast`, compare-or, etc.). Un **re-import completo** regenera nodos/aristas y puede romper esos tests.
+
+Para añadir o refrescar **posiciones MSTS** en los nodos existentes (desde `TrVectorSection` + propagación por `TrPins`):
+
+```bash
+CHILTERN="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cargo run -p openrailsrs-cli -- import-msts "$CHILTERN" \
+  --out-dir examples/chiltern \
+  --patch-coords
+```
+
+Escribe `x_m`/`y_m` en nodos cuyo `id` coincide con un import fresco (`n*`, `anon*`). No modifica `scenario.toml` ni las aristas.
+
+Comprobar que hay coords:
+
+```bash
+rg -c 'x_m' examples/chiltern/track.toml   # esperado: miles (p. ej. ~8370)
+```
+
+Usa **re-import completo** solo si quieres regenerar todo el grafo desde cero (y revisar tests/overlay después).
+
 **Speed posts:** el import lee `Chiltern.tit` junto al `.tdb` y baja `speed_limit_kmh` en los edges que tienen un `SpeedPostItem` referenciado (~3600 posts en Chiltern). Eso no sustituye el override manual del tramo Birmingham (`e10771`–`e10777` → 50 mph en `scenario.overlay.toml`): OR aplica el post **en sentido de marcha** a lo largo del PAT, mientras nosotros (por ahora) capamos solo el vector que referencia el post. En la práctica el Pullman no supera 50 mph ahí y las métricas casi no cambian.
 
 Tras el import se fusiona **`scenario.overlay.toml`** (duración eval, consist Pullman, `[validate]`, señales, `edge_speed_limits`). Edita ese overlay, no `scenario.toml` a mano.
@@ -86,6 +109,30 @@ Cabina 3D MSTS (`CABVIEW3D`): estado y roadmap en [`docs/CABVIEW3D_ROADMAP.md`](
 Paradas Birmingham (overlay): `n10778` (~95 s), destino `n10770` (136 s). Penalización: 8 pts/s tarde.
 
 En rutas grandes usa **`--release`** (debug ≈ 4 FPS; release ≈ 60+ FPS).
+
+### Modo `--track-dev` (vía `.tdb` procedural)
+
+Laboratorio para validar el encadenado TDB (TrPins + secciones) sin terreno ni escenario. Requiere el `.tdb` live vía `OPENRAILSRS_MSTS_CONTENT`:
+
+```bash
+export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
+export OPENRAILSRS_TRACK_AUDIT=1   # métricas en consola (graph match, inter-node gap)
+
+cargo run --release -p openrailsrs-viewer3d -- \
+  --track-dev --live examples/chiltern/scenario.toml
+```
+
+En `--track-dev` **no se cargan** tiles `.w` (evita ~40k objetos y OOM). Radio de vía `.tdb` por defecto **1500 m** alrededor del tren; override: `OPENRAILSRS_TRACK_DEV_RADIUS_M=800`.
+
+Por defecto solo corre el **audit** (sin mallas de riel ni meshes Pullman). Para dibujar rieles y consist completo:
+
+```bash
+export OPENRAILSRS_TRACK_DEV_RENDER=1
+```
+
+El audit también corre **antes de abrir Bevy** (verás `track-audit` en consola aunque la ventana falle por RAM).
+
+Con `track.toml` parcheado (`--patch-coords`), el audit puede comparar acordes `.tdb` con el grafo importado (`graph match %`, no `n/a`). JSON opcional: `OPENRAILSRS_TRACK_AUDIT=/tmp/track-audit.json`.
 
 ## Escenario MSTS (WORLD / terreno, opcional)
 
@@ -316,6 +363,7 @@ Detalle: [`docs/OR_PARITY_ROADMAP.md`](../../docs/OR_PARITY_ROADMAP.md) · [`doc
 ## Gaps cerrados vs OR
 
 - Topología: alias TDB, switches salientes, placement PAT (Paddington Pfm 6); path ≥ 6 edges hasta destino.
+- Coordenadas: `import-msts --patch-coords` → `x_m`/`y_m` en nodos para audit 3D y alineación grafo↔`.tdb`.
 - Consist: RF_Blue_Pullman multi-vagón, Davis sumado por vehículo, dual motor (ORTS lead + trail heredado).
 - Señales eval: `assume_signals_clear` alinea AUTO_SIGNAL con baseline OR.
 - Diesel OR-P6: RPM/apparent alineados con `DieselEngine.cs`; freno residual ≤15 PSI sin boost cilindro 9/35.

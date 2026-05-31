@@ -156,7 +156,7 @@ fn import_native_route_emits_world_coordinates() {
     let x_m = n3.get("x_m").and_then(as_f64).expect("n3.x_m");
     let y_m = n3.get("y_m").and_then(as_f64).expect("n3.y_m");
     assert!((x_m - (6079.0 * 2048.0 + 663.423)).abs() < 1e-3);
-    assert!((y_m - (14925.0 * 2048.0 + 824.8589)).abs() < 1e-3);
+    assert!((y_m - (14925.0 * 2048.0 - 824.8589)).abs() < 1e-3);
 }
 
 #[test]

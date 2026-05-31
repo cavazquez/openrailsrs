@@ -16,6 +16,11 @@ const COLOR_SLEEPER: Color = Color::srgb(0.20, 0.14, 0.10);
 /// Cool steel so rails read clearly against edge cylinders and brown sleepers.
 const COLOR_RAIL: Color = Color::srgb(0.78, 0.86, 0.98);
 
+/// Standard UIC gauge half-width (1.435 m track).
+pub const MSTS_STANDARD_HALF_GAUGE_M: f32 = 0.7175;
+/// Default MSTS section length when `tsection.dat` has no entry.
+pub const MSTS_DEFAULT_SECTION_LENGTH_M: f32 = 25.0;
+
 /// Visual dimensions for a dyntrack segment, scaled like other world placeholders.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DyntrackDimensions {
@@ -46,6 +51,29 @@ pub fn dyntrack_dimensions(bounds: &SceneBounds) -> DyntrackDimensions {
     }
 }
 
+/// Realistic sleeper/rail cross-section from track gauge (independent of route bbox).
+pub fn msts_track_visual_dims(half_gauge_m: f32, length_m: f32) -> DyntrackDimensions {
+    let half_gauge = half_gauge_m.max(0.35);
+    let gauge = half_gauge * 2.0;
+    DyntrackDimensions {
+        length: length_m.max(0.5),
+        sleeper_width: gauge * 2.2,
+        sleeper_height: 0.14,
+        sleeper_spacing: 0.55,
+        sleeper_depth: 0.26,
+        half_gauge,
+        rail_width: 0.072,
+        rail_height: 0.16,
+    }
+}
+
+pub fn procedural_segment_visual_dims(segment: ProceduralTrackSegment) -> DyntrackDimensions {
+    msts_track_visual_dims(
+        segment.half_gauge_m.unwrap_or(MSTS_STANDARD_HALF_GAUGE_M),
+        segment.length_m.unwrap_or(MSTS_DEFAULT_SECTION_LENGTH_M),
+    )
+}
+
 /// Local +Z positions (metres from segment start) for repeated sleepers.
 pub fn sleeper_local_z_positions(length: f32, spacing: f32) -> Vec<f32> {
     if spacing <= 0.0 || length <= 0.0 {
@@ -61,7 +89,19 @@ pub fn sleeper_local_z_positions(length: f32, spacing: f32) -> Vec<f32> {
 }
 
 /// World-space end point of a segment anchored at `position` with `rotation`.
-pub fn segment_end_world(position: Vec3, rotation: Quat, length_m: f32) -> Vec3 {
+pub fn segment_end_world(
+    position: Vec3,
+    rotation: Quat,
+    length_m: f32,
+    curve_radius_m: Option<f32>,
+    curve_angle_deg: Option<f32>,
+) -> Vec3 {
+    if let (Some(r), Some(a)) = (curve_radius_m, curve_angle_deg) {
+        if r.abs() > 1e-6 && a.abs() > 1e-6 {
+            let (local, _) = arc_local_frame(r, a, 1.0);
+            return position + rotation * local;
+        }
+    }
     position + rotation * Vec3::new(0.0, 0.0, length_m)
 }
 
@@ -83,34 +123,264 @@ pub fn spawn_dyntrack_segments(
     track: Res<TrackScene>,
     focus: Res<crate::world::RouteFocus>,
 ) {
-    let dyntracks: Vec<_> = world
-        .items
-        .iter()
-        .filter(|obj| obj.kind == "Dyntrack")
-        .collect();
-    if dyntracks.is_empty() {
+    spawn_dyntrack_objects(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &world.items,
+        &track,
+        &focus,
+    );
+}
+
+/// One oriented track segment for merged procedural geometry (dyntrack / TrackObj fallback).
+#[derive(Clone, Copy, Debug)]
+pub struct ProceduralTrackSegment {
+    pub position: Vec3,
+    pub rotation: Quat,
+    /// When set, overrides default dyntrack segment length from route bounds.
+    pub length_m: Option<f32>,
+    /// When set, overrides default half-gauge from route bounds.
+    pub half_gauge_m: Option<f32>,
+    /// MSTS `SectionCurve` radius (metres); paired with [`Self::curve_angle_deg`].
+    pub curve_radius_m: Option<f32>,
+    /// MSTS `SectionCurve` angle (degrees, signed left/right).
+    pub curve_angle_deg: Option<f32>,
+}
+
+/// How procedural track meshes are drawn.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum ProceduralTrackStyle {
+    #[default]
+    Full,
+    /// Two rails per segment, no sleepers (clearer for `.tdb` debug).
+    RailsOnly,
+}
+
+impl ProceduralTrackSegment {
+    pub fn is_curved(&self) -> bool {
+        matches!(
+            (self.curve_radius_m, self.curve_angle_deg),
+            (Some(r), Some(a)) if r.abs() > 1e-6 && a.abs() > 1e-6
+        )
+    }
+}
+
+/// Local position + tangent rotation along an MSTS circular arc (start at origin, tangent +Z).
+pub fn arc_local_frame(radius_m: f32, total_angle_deg: f32, fraction: f32) -> (Vec3, Quat) {
+    let theta_rad = total_angle_deg.to_radians();
+    let r = radius_m.abs();
+    let sign = if total_angle_deg >= 0.0 { 1.0 } else { -1.0 };
+    let center = Vec3::new(sign * r, 0.0, 0.0);
+    let phi = theta_rad * fraction.clamp(0.0, 1.0);
+    let from_center = Vec3::new(-sign * r, 0.0, 0.0);
+    let rotated = Quat::from_rotation_y(-phi) * from_center;
+    let pos = center + rotated;
+    (pos, Quat::from_rotation_y(-phi))
+}
+
+/// Distances along a centreline for repeated sleepers (straight or curved).
+pub fn sleeper_path_distances(path_length: f32, spacing: f32) -> Vec<f32> {
+    sleeper_local_z_positions(path_length, spacing)
+}
+
+/// Append sleepers + rails for one segment into aggregate mesh buffers.
+#[allow(clippy::too_many_arguments)]
+pub fn append_procedural_track_segment(
+    sleeper_pos: &mut Vec<[f32; 3]>,
+    sleeper_nrm: &mut Vec<[f32; 3]>,
+    sleeper_uv: &mut Vec<[f32; 2]>,
+    sleeper_idx: &mut Vec<u32>,
+    rail_pos: &mut Vec<[f32; 3]>,
+    rail_nrm: &mut Vec<[f32; 3]>,
+    rail_uv: &mut Vec<[f32; 2]>,
+    rail_idx: &mut Vec<u32>,
+    segment: ProceduralTrackSegment,
+    dims: DyntrackDimensions,
+    style: ProceduralTrackStyle,
+) {
+    let length = segment.length_m.unwrap_or(dims.length);
+    let half_gauge = segment.half_gauge_m.unwrap_or(dims.half_gauge);
+    let mut seg_dims = dims;
+    seg_dims.length = length;
+    seg_dims.half_gauge = half_gauge;
+    let rail_y = seg_dims.sleeper_height + seg_dims.rail_height * 0.5;
+    let draw_sleepers = style == ProceduralTrackStyle::Full;
+
+    if segment.is_curved() {
+        let radius = segment.curve_radius_m.unwrap();
+        let angle = segment.curve_angle_deg.unwrap();
+        append_curved_procedural_segment(
+            sleeper_pos,
+            sleeper_nrm,
+            sleeper_uv,
+            sleeper_idx,
+            rail_pos,
+            rail_nrm,
+            rail_uv,
+            rail_idx,
+            segment,
+            &seg_dims,
+            radius,
+            angle,
+            length,
+            half_gauge,
+            rail_y,
+            draw_sleepers,
+        );
         return;
     }
 
-    let count = dyntracks.len();
-    let dims = dyntrack_dimensions(&track.bounds);
+    let half_len = seg_dims.length * 0.5;
+
+    if draw_sleepers {
+        let sleeper_positions = sleeper_path_distances(seg_dims.length, seg_dims.sleeper_spacing);
+        for local_z in &sleeper_positions {
+            let tf = part_transform(
+                segment.position,
+                segment.rotation,
+                Vec3::new(0.0, seg_dims.sleeper_height * 0.5, *local_z),
+                Vec3::new(
+                    seg_dims.sleeper_width,
+                    seg_dims.sleeper_height,
+                    seg_dims.sleeper_depth,
+                ),
+            );
+            push_cuboid(
+                sleeper_pos,
+                sleeper_nrm,
+                sleeper_uv,
+                sleeper_idx,
+                &tf,
+                Vec3::splat(1.0),
+            );
+        }
+    }
+
+    if style == ProceduralTrackStyle::RailsOnly {
+        for side in [-half_gauge, half_gauge] {
+            let tf = part_transform(
+                segment.position,
+                segment.rotation,
+                Vec3::new(side, rail_y, half_len),
+                Vec3::new(seg_dims.rail_width, seg_dims.rail_height, seg_dims.length),
+            );
+            push_cuboid(rail_pos, rail_nrm, rail_uv, rail_idx, &tf, Vec3::splat(1.0));
+        }
+        return;
+    }
+
+    for side in [-half_gauge, half_gauge] {
+        let tf = part_transform(
+            segment.position,
+            segment.rotation,
+            Vec3::new(side, rail_y, half_len),
+            Vec3::new(seg_dims.rail_width, seg_dims.rail_height, seg_dims.length),
+        );
+        push_cuboid(rail_pos, rail_nrm, rail_uv, rail_idx, &tf, Vec3::splat(1.0));
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_curved_procedural_segment(
+    sleeper_pos: &mut Vec<[f32; 3]>,
+    sleeper_nrm: &mut Vec<[f32; 3]>,
+    sleeper_uv: &mut Vec<[f32; 2]>,
+    sleeper_idx: &mut Vec<u32>,
+    rail_pos: &mut Vec<[f32; 3]>,
+    rail_nrm: &mut Vec<[f32; 3]>,
+    rail_uv: &mut Vec<[f32; 2]>,
+    rail_idx: &mut Vec<u32>,
+    segment: ProceduralTrackSegment,
+    seg_dims: &DyntrackDimensions,
+    radius_m: f32,
+    angle_deg: f32,
+    arc_length: f32,
+    half_gauge: f32,
+    rail_y: f32,
+    draw_sleepers: bool,
+) {
+    if draw_sleepers {
+        let sleeper_distances = sleeper_path_distances(arc_length, seg_dims.sleeper_spacing);
+        for distance in sleeper_distances {
+            let fraction = distance / arc_length;
+            let (local_pos, local_rot) = arc_local_frame(radius_m, angle_deg, fraction);
+            let tf = part_transform(
+                segment.position,
+                segment.rotation * local_rot,
+                local_pos + Vec3::new(0.0, seg_dims.sleeper_height * 0.5, 0.0),
+                Vec3::new(
+                    seg_dims.sleeper_width,
+                    seg_dims.sleeper_height,
+                    seg_dims.sleeper_depth,
+                ),
+            );
+            push_cuboid(
+                sleeper_pos,
+                sleeper_nrm,
+                sleeper_uv,
+                sleeper_idx,
+                &tf,
+                Vec3::splat(1.0),
+            );
+        }
+    }
+
+    let rail_pieces = ((arc_length / 2.0).ceil() as usize).clamp(1, 256);
+    let piece_len = arc_length / rail_pieces as f32;
+    for piece in 0..rail_pieces {
+        let f_mid = (piece as f32 + 0.5) / rail_pieces as f32;
+        let (local_pos, local_rot) = arc_local_frame(radius_m, angle_deg, f_mid);
+        for side in [-half_gauge, half_gauge] {
+            let tf = part_transform(
+                segment.position,
+                segment.rotation * local_rot,
+                local_pos + local_rot * Vec3::new(side, rail_y, 0.0),
+                Vec3::new(seg_dims.rail_width, seg_dims.rail_height, piece_len),
+            );
+            push_cuboid(rail_pos, rail_nrm, rail_uv, rail_idx, &tf, Vec3::splat(1.0));
+        }
+    }
+}
+
+/// Spawn merged sleepers + rails for arbitrary oriented segments.
+pub fn spawn_procedural_track_batch(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    segments: &[ProceduralTrackSegment],
+    _bounds: &SceneBounds,
+    label: &str,
+    style: ProceduralTrackStyle,
+) {
+    if segments.is_empty() {
+        return;
+    }
+
+    let count = segments.len();
     let sleeper_material = materials.add(StandardMaterial {
         base_color: COLOR_SLEEPER,
         perceptual_roughness: 0.92,
         metallic: 0.02,
         ..default()
     });
-    let rail_material = materials.add(StandardMaterial {
-        base_color: COLOR_RAIL,
-        emissive: LinearRgba::from(COLOR_RAIL) * 0.08,
-        perceptual_roughness: 0.35,
-        metallic: 0.75,
-        ..default()
+    let rail_material = materials.add(if style == ProceduralTrackStyle::RailsOnly {
+        StandardMaterial {
+            base_color: Color::srgb(0.35, 0.38, 0.42),
+            emissive: LinearRgba::new(0.15, 0.16, 0.18, 1.0),
+            perceptual_roughness: 0.35,
+            metallic: 0.75,
+            ..default()
+        }
+    } else {
+        StandardMaterial {
+            base_color: COLOR_RAIL,
+            emissive: LinearRgba::from(COLOR_RAIL) * 0.08,
+            perceptual_roughness: 0.35,
+            metallic: 0.75,
+            ..default()
+        }
     });
-
-    let rail_y = dims.sleeper_height + dims.rail_height * 0.5;
-    let half_len = dims.length * 0.5;
-    let sleeper_positions = sleeper_local_z_positions(dims.length, dims.sleeper_spacing);
 
     let mut sleeper_pos: Vec<[f32; 3]> = Vec::new();
     let mut sleeper_nrm: Vec<[f32; 3]> = Vec::new();
@@ -122,44 +392,28 @@ pub fn spawn_dyntrack_segments(
     let mut rail_uv: Vec<[f32; 2]> = Vec::new();
     let mut rail_idx: Vec<u32> = Vec::new();
 
-    for obj in &dyntracks {
-        let pos = focus.to_render(obj.position);
-        for local_z in &sleeper_positions {
-            let tf = part_transform(
-                pos,
-                obj.rotation,
-                Vec3::new(0.0, dims.sleeper_height * 0.5, *local_z),
-                Vec3::new(dims.sleeper_width, dims.sleeper_height, dims.sleeper_depth),
-            );
-            push_cuboid(
-                &mut sleeper_pos,
-                &mut sleeper_nrm,
-                &mut sleeper_uv,
-                &mut sleeper_idx,
-                &tf,
-                Vec3::splat(1.0),
-            );
+    for segment in segments {
+        let mut seg_dims = procedural_segment_visual_dims(*segment);
+        if style == ProceduralTrackStyle::RailsOnly {
+            seg_dims.rail_width *= 3.0;
+            seg_dims.rail_height *= 2.5;
         }
-
-        for side in [-dims.half_gauge, dims.half_gauge] {
-            let tf = part_transform(
-                pos,
-                obj.rotation,
-                Vec3::new(side, rail_y, half_len),
-                Vec3::new(dims.rail_width, dims.rail_height, dims.length),
-            );
-            push_cuboid(
-                &mut rail_pos,
-                &mut rail_nrm,
-                &mut rail_uv,
-                &mut rail_idx,
-                &tf,
-                Vec3::splat(1.0),
-            );
-        }
+        append_procedural_track_segment(
+            &mut sleeper_pos,
+            &mut sleeper_nrm,
+            &mut sleeper_uv,
+            &mut sleeper_idx,
+            &mut rail_pos,
+            &mut rail_nrm,
+            &mut rail_uv,
+            &mut rail_idx,
+            *segment,
+            seg_dims,
+            style,
+        );
     }
 
-    if !sleeper_pos.is_empty() {
+    if style == ProceduralTrackStyle::Full && !sleeper_pos.is_empty() {
         let mut mesh = Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
@@ -172,7 +426,7 @@ pub fn spawn_dyntrack_segments(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(sleeper_material),
             Transform::IDENTITY,
-            Name::new("dyntrack:sleepers"),
+            Name::new(format!("{label}:sleepers:{count}")),
         ));
     }
 
@@ -189,11 +443,43 @@ pub fn spawn_dyntrack_segments(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(rail_material),
             Transform::IDENTITY,
-            Name::new("dyntrack:rails"),
+            Name::new(format!("{label}:rails:{count}")),
         ));
     }
 
-    viewer_log!("openrailsrs-viewer3d: {count} dyntrack segment(s)");
+    viewer_log!("openrailsrs-viewer3d: {count} {label} segment(s)");
+}
+
+/// Spawn dyntrack for a slice of world objects (tile streaming).
+pub fn spawn_dyntrack_objects(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[crate::world::WorldObject],
+    track: &TrackScene,
+    focus: &crate::world::RouteFocus,
+) {
+    let segments: Vec<ProceduralTrackSegment> = items
+        .iter()
+        .filter(|obj| obj.kind == "Dyntrack")
+        .map(|obj| ProceduralTrackSegment {
+            position: focus.scenery_to_render(obj.position),
+            rotation: obj.rotation,
+            length_m: None,
+            half_gauge_m: None,
+            curve_radius_m: None,
+            curve_angle_deg: None,
+        })
+        .collect();
+    spawn_procedural_track_batch(
+        commands,
+        meshes,
+        materials,
+        &segments,
+        &track.bounds,
+        "dyntrack",
+        ProceduralTrackStyle::Full,
+    );
 }
 
 /// Bake a unit cuboid (optionally scaled by `size`) transformed by `tf` into aggregate buffers.
@@ -264,6 +550,18 @@ mod tests {
     use crate::world::load_world_from_route_dir;
 
     #[test]
+    fn msts_visual_dims_match_gauge_not_route_bbox() {
+        let dims = msts_track_visual_dims(0.7175, 25.0);
+        assert!((dims.half_gauge - 0.7175).abs() < 1e-3);
+        assert!((dims.length - 25.0).abs() < 1e-3);
+        assert!(
+            dims.sleeper_width < 3.5,
+            "sleepers should be ~3m not route-scaled"
+        );
+        assert!(dims.sleeper_width > dims.half_gauge * 2.0);
+    }
+
+    #[test]
     fn dimensions_scale_with_route_bounds() {
         let small = dyntrack_dimensions(&SceneBounds::default_sandbox());
         assert!(small.length > 5.0);
@@ -278,7 +576,7 @@ mod tests {
 
     #[test]
     fn sleepers_repeat_along_segment() {
-        let positions = sleeper_local_z_positions(72.0, 4.8);
+        let positions = sleeper_path_distances(72.0, 4.8);
         assert!(positions.len() >= 10);
         assert!((positions[0] - 2.4).abs() < 1e-4);
         assert!(*positions.last().unwrap() < 72.0);
@@ -286,16 +584,38 @@ mod tests {
 
     #[test]
     fn segment_extends_along_local_z() {
-        let end = segment_end_world(Vec3::new(10.0, 0.0, 5.0), Quat::IDENTITY, 20.0);
+        let end = segment_end_world(Vec3::new(10.0, 0.0, 5.0), Quat::IDENTITY, 20.0, None, None);
         assert_eq!(end, Vec3::new(10.0, 0.0, 25.0));
     }
 
     #[test]
     fn segment_respects_yaw_rotation() {
         let yaw = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
-        let end = segment_end_world(Vec3::ZERO, yaw, 10.0);
+        let end = segment_end_world(Vec3::ZERO, yaw, 10.0, None, None);
         assert!((end.x - 10.0).abs() < 1e-4);
         assert!(end.z.abs() < 1e-4);
+    }
+
+    #[test]
+    fn arc_end_distance_matches_msts_formula() {
+        let radius = 500.0_f32;
+        let angle = -5.0_f32;
+        let (end, _) = arc_local_frame(radius, angle, 1.0);
+        let expected = radius * angle.abs().to_radians();
+        assert!(
+            (end.length() - expected).abs() < 0.05,
+            "got {}",
+            end.length()
+        );
+    }
+
+    #[test]
+    fn arc_start_is_origin_facing_plus_z() {
+        let (pos, rot) = arc_local_frame(500.0, -5.0, 0.0);
+        assert!(pos.length() < 1e-4);
+        let tangent = rot * Vec3::Z;
+        assert!((tangent.z - 1.0).abs() < 1e-4);
+        assert!(tangent.x.abs() < 1e-4);
     }
 
     #[test]
@@ -309,6 +629,6 @@ mod tests {
             .find(|o| o.kind == "Dyntrack")
             .expect("dyntrack");
         assert!((dyntrack.position.x - 80.0).abs() < 0.1);
-        assert!((dyntrack.position.z - 0.8).abs() < 0.1);
+        assert!((dyntrack.position.z - (-0.8)).abs() < 0.1);
     }
 }

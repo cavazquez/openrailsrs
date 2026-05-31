@@ -1,0 +1,8 @@
+TrackSection ( 38508
+ SectionSize ( 1.435 25.000 )
+)
+TrackShape ( 38508
+ FileName ( ukfs_s_1x25m.s )
+ NumPaths ( 1 )
+ SectionIdx ( 1 0 0 0 0 38508 )
+)

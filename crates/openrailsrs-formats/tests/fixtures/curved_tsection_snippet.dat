@@ -1,0 +1,9 @@
+TrackSection ( 5005
+ SectionSize ( 1.435 0 )
+ SectionCurve ( 500.0 -5 )
+)
+TrackShape ( 5020
+ FileName ( A1t500r5d.s )
+ NumPaths ( 1 )
+ SectionIdx ( 1 0 0 0 0 5005 )
+)

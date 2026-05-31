@@ -255,6 +255,9 @@ enum Commands {
         /// Path to an MSTS activity file (*.act).  If omitted, only track.toml is generated.
         #[arg(long)]
         activity: Option<PathBuf>,
+        /// Only patch `x_m`/`y_m` on an existing `track.toml` (preserves edges/topology).
+        #[arg(long)]
+        patch_coords: bool,
     },
 }
 
@@ -771,10 +774,24 @@ fn main() -> anyhow::Result<()> {
             route_dir,
             out_dir,
             activity,
+            patch_coords,
         } => {
             let out = out_dir.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
             std::fs::create_dir_all(&out)
                 .with_context(|| format!("create output dir {}", out.display()))?;
+
+            if patch_coords {
+                let track_out = out.join("track.toml");
+                let patched = openrailsrs_msts::patch_track_coordinates(&route_dir, &track_out)
+                    .map_err(|e| {
+                        anyhow::anyhow!("patch coordinates {}: {e}", route_dir.display())
+                    })?;
+                println!(
+                    "✓ track.toml  — patched {patched} node coordinate(s) → {}",
+                    track_out.display()
+                );
+                return Ok(());
+            }
 
             // 1. Import route: TDB → track.toml
             let (track_toml, n_nodes, n_edges) = import_route_with_summary(&route_dir)

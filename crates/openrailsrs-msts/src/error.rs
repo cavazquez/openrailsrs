@@ -10,6 +10,9 @@ pub enum MstsError {
     #[error("TOML serialization error: {0}")]
     Toml(#[from] toml::ser::Error),
 
+    #[error("TOML parse error: {0}")]
+    TomlDe(#[from] toml::de::Error),
+
     #[error("{0}")]
     Msg(String),
 }

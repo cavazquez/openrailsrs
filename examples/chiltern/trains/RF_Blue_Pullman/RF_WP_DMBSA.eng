@@ -282,4 +282,9 @@
     43.8	11764
      )
     ))
+  (ORTS3DCab
+    (ORTS3DCabFile ( PULLMAN_GR.s ))
+    (ORTS3DCabHeadPos ( -0.8 2.875 8.60 ))
+    (StartDirection ( 15 0 0 ))
+  )
 )

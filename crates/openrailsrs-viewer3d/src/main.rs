@@ -3,9 +3,11 @@
 //! Usage:
 //!   openrailsrs-viewer3d [route_dir | scenario.toml]
 //!   openrailsrs-viewer3d --live scenario.toml
+//!   openrailsrs-viewer3d --track-dev [--live] scenario.toml
 //!
 //! - `route_dir` — static graph only (default: `examples/smoke/routes/test`).
 //! - `scenario.toml` — graph + animated train marker(s) from simulation CSV.
+//! - `--track-dev` — grafo `.tdb` + vía procedural continua; sin terreno/shapes/`TrackObj`.
 //! - `--live scenario.toml` — run physics in real time (no CSV); drive with arrow keys.
 //!
 //! Generate CSV for replay mode, e.g.:
@@ -43,20 +45,26 @@ use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
+use openrailsrs_viewer3d::ViewerSceneryMode;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::init_viewer_log;
+use openrailsrs_viewer3d::launch::{track_dev_render_enabled, track_dev_tdb_radius_m};
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
-use openrailsrs_viewer3d::shapes::{resolve_shape_path_in_dirs, shape_search_dirs};
+use openrailsrs_viewer3d::shapes::global_assets_dirs;
+use openrailsrs_viewer3d::tdb_track::collect_tdb_chords;
 use openrailsrs_viewer3d::teleport::TeleportDialog;
 use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir_near;
 use openrailsrs_viewer3d::track::{TrackScene, graph_to_world};
+use openrailsrs_viewer3d::track_audit::run_track_dev_audit;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
-use openrailsrs_viewer3d::world::RouteFocus;
-use openrailsrs_viewer3d::world::RouteWorldOffset;
-use openrailsrs_viewer3d::world::VISIBLE_RADIUS_M;
-use openrailsrs_viewer3d::world::{load_world_from_route_dir, msts_to_bevy};
+use openrailsrs_viewer3d::world::{
+    RouteFocus, RouteWorldOffset, VISIBLE_RADIUS_M, WorldTileStream,
+    load_world_from_route_dir_near, msts_to_bevy, world_tile_center_hint,
+};
 use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
+
+const WORLD_ANCHOR_COORD_SPACE_THRESHOLD_M: f32 = 100_000.0;
 
 struct LaunchConfig {
     title: String,
@@ -68,13 +76,32 @@ struct LaunchConfig {
     replay: ReplayState,
     consist: TrainConsistScene,
     live: Option<LiveDrive>,
+    scenery_mode: ViewerSceneryMode,
     focus_center_override: Option<Vec3>,
     route_offset_override: Option<RouteWorldOffset>,
 }
 
 struct CliArgs {
     live: bool,
+    track_dev: bool,
     path: PathBuf,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SceneryModeToml {
+    #[default]
+    Full,
+    TrackDev,
+}
+
+impl From<SceneryModeToml> for ViewerSceneryMode {
+    fn from(value: SceneryModeToml) -> Self {
+        match value {
+            SceneryModeToml::Full => Self::Full,
+            SceneryModeToml::TrackDev => Self::TrackDev,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -87,6 +114,8 @@ struct Viewer3dToml {
 struct Viewer3dConfig {
     #[serde(default)]
     world_anchor: Option<WorldAnchorToml>,
+    #[serde(default)]
+    scenery_mode: SceneryModeToml,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
@@ -101,16 +130,20 @@ struct WorldAnchorToml {
 
 fn parse_cli() -> CliArgs {
     let mut live = false;
+    let mut track_dev = false;
     let mut path = None;
     for arg in std::env::args().skip(1) {
         if arg == "--live" {
             live = true;
+        } else if arg == "--track-dev" {
+            track_dev = true;
         } else if !arg.starts_with('-') {
             path = Some(PathBuf::from(arg));
         }
     }
     CliArgs {
         live,
+        track_dev,
         path: path.unwrap_or_else(|| PathBuf::from("examples/smoke/routes/test")),
     }
 }
@@ -119,14 +152,22 @@ fn main() {
     init_viewer_log();
     let cli = parse_cli();
 
-    let config = match build_launch_config(&cli.path, cli.live) {
+    let config = match build_launch_config(&cli.path, cli.live, cli.track_dev) {
         Ok(c) => c,
         Err(err) => {
             eprintln!("error: {err}");
-            eprintln!("usage: openrailsrs-viewer3d [--live] [route_dir | scenario.toml]");
+            eprintln!(
+                "usage: openrailsrs-viewer3d [--live] [--track-dev] [route_dir | scenario.toml]"
+            );
             std::process::exit(1);
         }
     };
+
+    if config.scenery_mode.is_track_dev() {
+        viewer_log!(
+            "openrailsrs-viewer3d: scenery_mode=track_dev — vía procedural desde .tdb; sin terreno/shapes/TrackObj"
+        );
+    }
 
     let node_count = config.scene.graph.nodes_iter().count();
     let edge_count = config.scene.edge_count;
@@ -178,9 +219,15 @@ fn main() {
     }
 
     let route_focus = route_focus_for_config(&config);
-    if route_focus.height_origin != route_focus.center.y {
+    if config.elevation.is_empty() {
         viewer_log!(
-            "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0})",
+            "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0}, no terrain RAW)",
+            route_focus.height_origin,
+            route_focus.center.y
+        );
+    } else if (route_focus.height_origin - route_focus.center.y).abs() > 0.5 {
+        viewer_log!(
+            "openrailsrs-viewer3d: render height origin {:.0} m terrain MSL (scenery bbox y {:.0})",
             route_focus.height_origin,
             route_focus.center.y
         );
@@ -189,6 +236,31 @@ fn main() {
         .route_offset_override
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
+
+    let assets = RouteAssets::new(&config.route_dir);
+    if config.scenery_mode.is_track_dev() {
+        if let Some(tdb) = assets.track_db() {
+            let radius_m = track_dev_tdb_radius_m();
+            viewer_log!(
+                "openrailsrs-viewer3d: track_dev — pre-audit {:.0}m radius (before Bevy)…",
+                radius_m
+            );
+            let chords = collect_tdb_chords(tdb, &route_focus, radius_m);
+            run_track_dev_audit(
+                tdb,
+                &config.scene,
+                &route_focus,
+                route_offset,
+                radius_m,
+                &chords,
+            );
+            if !track_dev_render_enabled() {
+                viewer_log!(
+                    "openrailsrs-viewer3d: track_dev — audit complete; OPENRAILSRS_TRACK_DEV_RENDER=1 to draw rails in window"
+                );
+            }
+        }
+    }
 
     viewer_log!("openrailsrs-viewer3d: starting Bevy app");
     let mut app = App::new();
@@ -211,8 +283,14 @@ fn main() {
     .insert_resource(ViewerLaunchOpts {
         live: config.live.is_some(),
     })
+    .insert_resource(config.scenery_mode)
     .insert_resource(config.scene)
-    .insert_resource(RouteAssets::new(config.route_dir))
+    .insert_resource(WorldTileStream::new(
+        &config.route_dir,
+        &config.world,
+        VISIBLE_RADIUS_M,
+    ))
+    .insert_resource(assets)
     .insert_resource(route_focus)
     .insert_resource(route_offset)
     .insert_resource(config.world)
@@ -231,17 +309,29 @@ fn main() {
     app.run();
 }
 
-fn build_launch_config(arg: &Path, live: bool) -> Result<LaunchConfig, String> {
+fn build_launch_config(
+    arg: &Path,
+    live: bool,
+    track_dev_cli: bool,
+) -> Result<LaunchConfig, String> {
     if arg.extension().and_then(|e| e.to_str()) == Some("toml") {
-        load_from_scenario(arg, live)
+        load_from_scenario(arg, live, track_dev_cli)
     } else if live {
         Err("--live requires a scenario.toml path".into())
     } else {
-        load_from_route_dir(arg)
+        load_from_route_dir(arg, track_dev_cli)
     }
 }
 
-fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
+fn resolve_scenery_mode(track_dev_cli: bool, from_toml: SceneryModeToml) -> ViewerSceneryMode {
+    if track_dev_cli {
+        ViewerSceneryMode::TrackDev
+    } else {
+        from_toml.into()
+    }
+}
+
+fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchConfig, String> {
     let t = Instant::now();
     let graph = load_track_graph_from_route_dir(route_dir).map_err(|e| e.to_string())?;
     log_step(
@@ -249,27 +339,45 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
         t,
     );
     let scene = TrackScene::from_graph(graph);
+    let track_dev = track_dev_cli;
     let t = Instant::now();
-    let mut world = load_world_from_route_dir(route_dir);
-    log_step(
-        &format!(
-            "loaded world ({} obj(s) / {} tile(s))",
-            world.items.len(),
-            world.tiles_loaded
-        ),
-        t,
-    );
+    let mut world = if track_dev {
+        viewer_log!("openrailsrs-viewer3d: track_dev — skipping .w world load");
+        WorldScene::default()
+    } else {
+        let world_hint = world_tile_center_hint(route_dir).unwrap_or(scene.bounds.center);
+        load_world_from_route_dir_near(route_dir, Some(world_hint), VISIBLE_RADIUS_M)
+    };
+    if !track_dev {
+        log_step(
+            &format!(
+                "loaded world ({} obj(s) / {} tile(s))",
+                world.items.len(),
+                world.tiles_loaded
+            ),
+            t,
+        );
+    }
     let focus = RouteFocus::from_scene_and_world(&scene, &world);
-    world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    if !track_dev {
+        world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    }
     let t = Instant::now();
-    let terrain = load_terrain_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    let terrain = if track_dev {
+        TerrainScene::default()
+    } else {
+        load_terrain_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+    };
     log_step(
         &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
         t,
     );
     let t = Instant::now();
-    let elevation =
-        TerrainElevation::load_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    let elevation = if track_dev {
+        TerrainElevation::default()
+    } else {
+        TerrainElevation::load_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+    };
     log_step("loaded terrain elevation", t);
     Ok(LaunchConfig {
         title: format!("openrailsrs-viewer3d — {}", route_dir.display()),
@@ -281,12 +389,17 @@ fn load_from_route_dir(route_dir: &Path) -> Result<LaunchConfig, String> {
         replay: ReplayState::default(),
         consist: TrainConsistScene::default(),
         live: None,
+        scenery_mode: resolve_scenery_mode(track_dev_cli, SceneryModeToml::Full),
         focus_center_override: None,
         route_offset_override: None,
     })
 }
 
-fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
+fn load_from_scenario(
+    path: &Path,
+    live: bool,
+    track_dev_cli: bool,
+) -> Result<LaunchConfig, String> {
     let scenario_dir = path
         .parent()
         .ok_or("scenario path has no parent directory")?;
@@ -304,34 +417,60 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
         t,
     );
     let scene = TrackScene::from_graph(graph);
-    let t = Instant::now();
-    let mut world = load_world_from_route_dir(&route_dir);
-    log_step(
-        &format!(
-            "loaded world ({} obj(s) / {} tile(s))",
-            world.items.len(),
-            world.tiles_loaded
-        ),
-        t,
-    );
     let viewer3d = load_viewer3d_config(path, scenario_dir)?;
+    let scenery_mode = resolve_scenery_mode(track_dev_cli, viewer3d.scenery_mode);
     let anchor_world = viewer3d.world_anchor.map(world_anchor_position);
+    let t = Instant::now();
+    let mut world = if scenery_mode.is_track_dev() {
+        viewer_log!("openrailsrs-viewer3d: track_dev — skipping .w world load");
+        WorldScene::default()
+    } else {
+        let world_hint = anchor_world
+            .or_else(|| world_tile_center_hint(&route_dir))
+            .unwrap_or(scene.bounds.center);
+        load_world_from_route_dir_near(&route_dir, Some(world_hint), VISIBLE_RADIUS_M)
+    };
+    if !scenery_mode.is_track_dev() {
+        log_step(
+            &format!(
+                "loaded world ({} obj(s) / {} tile(s))",
+                world.items.len(),
+                world.tiles_loaded
+            ),
+            t,
+        );
+    }
     let route_offset_override = match (viewer3d.world_anchor, anchor_world) {
         (Some(anchor), Some(world_pos)) => {
             let graph_pos = graph_start_position(&scene, &scenario)?;
             let delta = Vec3::new(world_pos.x - graph_pos.x, 0.0, world_pos.z - graph_pos.z);
-            viewer_log!(
-                "openrailsrs-viewer3d: viewer3d world anchor tile {},{} local {:.1},{:.1},{:.1} -> offset {:.0},{:.0},{:.0} m",
-                anchor.tile_x,
-                anchor.tile_z,
-                anchor.local_x_m,
-                anchor.local_y_m,
-                anchor.local_z_m,
-                delta.x,
-                delta.y,
-                delta.z
-            );
-            Some(RouteWorldOffset { delta })
+            if Vec2::new(delta.x, delta.z).length() <= WORLD_ANCHOR_COORD_SPACE_THRESHOLD_M {
+                viewer_log!(
+                    "openrailsrs-viewer3d: viewer3d world anchor tile {},{} local {:.1},{:.1},{:.1} -> focus only (graph already in MSTS world; anchor delta {:.0},{:.0},{:.0} m)",
+                    anchor.tile_x,
+                    anchor.tile_z,
+                    anchor.local_x_m,
+                    anchor.local_y_m,
+                    anchor.local_z_m,
+                    delta.x,
+                    delta.y,
+                    delta.z
+                );
+                Some(RouteWorldOffset::default())
+            } else {
+                viewer_log!(
+                    "openrailsrs-viewer3d: viewer3d world anchor tile {},{} local {:.1},{:.1},{:.1} -> offset {:.0},{:.0},{:.0} m",
+                    anchor.tile_x,
+                    anchor.tile_z,
+                    anchor.local_x_m,
+                    anchor.local_y_m,
+                    anchor.local_z_m,
+                    delta.x,
+                    delta.y,
+                    delta.z
+                );
+                Some(RouteWorldOffset { delta })
+            }
         }
         _ => None,
     };
@@ -341,20 +480,25 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
             height_origin: center.y,
         })
         .unwrap_or_else(|| RouteFocus::from_scene_and_world(&scene, &world));
-    world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    if !scenery_mode.is_track_dev() {
+        world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+    }
     let t = Instant::now();
-    let terrain =
-        load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M);
+    let terrain = if scenery_mode.is_track_dev() {
+        TerrainScene::default()
+    } else {
+        load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+    };
     log_step(
         &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
         t,
     );
     let t = Instant::now();
-    let elevation = TerrainElevation::load_from_route_dir_near(
-        &route_dir,
-        Some(focus.center),
-        VISIBLE_RADIUS_M,
-    );
+    let elevation = if scenery_mode.is_track_dev() {
+        TerrainElevation::default()
+    } else {
+        TerrainElevation::load_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+    };
     log_step("loaded terrain elevation", t);
 
     let t = Instant::now();
@@ -419,6 +563,7 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
         replay,
         consist,
         live: live_drive,
+        scenery_mode,
         focus_center_override: anchor_world,
         route_offset_override,
     })
@@ -426,18 +571,7 @@ fn load_from_scenario(path: &Path, live: bool) -> Result<LaunchConfig, String> {
 
 fn route_focus_for_config(config: &LaunchConfig) -> RouteFocus {
     if let Some(center) = config.focus_center_override {
-        let height_origin = if config.elevation.is_empty() {
-            center.y
-        } else {
-            config
-                .elevation
-                .sample_world_y(center.x, center.z)
-                .unwrap_or(center.y)
-        };
-        RouteFocus {
-            center,
-            height_origin,
-        }
+        RouteFocus::at_world_center(center, Some(&config.elevation).filter(|e| !e.is_empty()))
     } else {
         RouteFocus::from_scene_world_and_elevation(
             &config.scene,
@@ -467,6 +601,7 @@ fn load_viewer3d_config(path: &Path, scenario_dir: &Path) -> Result<Viewer3dConf
         if parsed.viewer3d.world_anchor.is_some() {
             out.world_anchor = parsed.viewer3d.world_anchor;
         }
+        out.scenery_mode = parsed.viewer3d.scenery_mode;
     }
     Ok(out)
 }
@@ -540,8 +675,19 @@ fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Ve
     let mut within_2000 = 0usize;
     let mut by_kind: HashMap<&'static str, usize> = HashMap::new();
     let mut nearest: Vec<(&str, &str, f32, Option<&str>, bool)> = Vec::new();
-    let shape_dir_bufs = shape_search_dirs(route_dir);
-    let shape_dirs: Vec<&Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
+    let assets = RouteAssets::new(route_dir);
+    let globals: Vec<_> = global_assets_dirs(route_dir)
+        .iter()
+        .map(|p| p.display().to_string())
+        .collect();
+    viewer_log!(
+        "openrailsrs-viewer3d: scenery-debug GLOBAL roots: {}",
+        if globals.is_empty() {
+            "(none — set OPENRAILSRS_MSTS_CONTENT)".into()
+        } else {
+            globals.join(", ")
+        }
+    );
     let mut missing_shapes = 0usize;
 
     for obj in &world.items {
@@ -558,7 +704,7 @@ fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Ve
             let shape_name = obj.shape_file.as_deref();
             let shape_missing = shape_name.is_some_and(|name| {
                 name.to_ascii_lowercase().ends_with(".s")
-                    && resolve_shape_path_in_dirs(&shape_dirs, name).is_none()
+                    && assets.resolve_world_shape(obj.kind, name).is_none()
             });
             if shape_missing {
                 missing_shapes += 1;
@@ -599,6 +745,15 @@ fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Ve
             if missing { " MISSING" } else { "" }
         );
     }
+
+    let focus = openrailsrs_viewer3d::world::RouteFocus {
+        center,
+        height_origin: center.y,
+    };
+    let audit = openrailsrs_viewer3d::scenery_audit::audit_world_shapes_near(
+        world, &focus, &assets, 2000.0, 24,
+    );
+    audit.log_report("near focus pre-spawn");
 }
 
 fn load_train_consists(

@@ -1,0 +1,13 @@
+( TrackSections 101
+  ( TrackSection 100
+    ( SectionSize 1.435 25.000 )
+  )
+)
+
+( TrackShapes 101
+  ( TrackShape 100
+    ( FileName test_straight.s )
+    ( NumPaths 1 )
+    ( SectionIdx 1 0 0 0 0 100 )
+  )
+)

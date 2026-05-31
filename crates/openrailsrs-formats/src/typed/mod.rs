@@ -8,6 +8,7 @@ mod route;
 mod shape;
 mod terrain;
 mod track_db;
+mod tsection;
 mod wagon;
 mod world;
 
@@ -35,8 +36,12 @@ pub use terrain::{
     read_f_raw, read_y_raw,
 };
 pub use track_db::{
-    SignalAspectKind, TrItem, TrItemKind, TrPinRef, TrackDbFile, TrackDbNode, TrackNodeKind,
-    TrackVectorGeometry, TrackVectorPoint,
+    IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemKind, TrPinRef, TrVectorSectionRecord,
+    TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry, TrackVectorPoint,
+};
+pub use tsection::{
+    SKEW_AS_CURVE_RADIUS_M, TSectionCatalog, TrackProceduralDims, TrackProceduralLink,
+    TrackSectionDef, TrackShapeDef, TrackShapePath,
 };
 pub use wagon::WagonFile;
 pub use world::{WorldFile, WorldItem};

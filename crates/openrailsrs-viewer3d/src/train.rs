@@ -206,6 +206,7 @@ pub fn spawn_train_markers(
         commands.insert_resource(crate::live::live_driver_cab_from_vehicles(
             driver_vehicles,
             &shape_dirs,
+            &assets.route_dir,
         ));
     }
 

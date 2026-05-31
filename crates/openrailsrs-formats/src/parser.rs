@@ -28,6 +28,60 @@ pub fn parse_from_first_paren(source: &str) -> Result<Ast, FormatError> {
     parse(from_paren)
 }
 
+/// Parse every top-level S-expression in `source` (MSTS `tsection.dat`, route overlays, etc.).
+pub fn parse_all_top_level(source: &str) -> Result<Vec<Ast>, FormatError> {
+    let mut out = Vec::new();
+    let mut rest = source;
+    loop {
+        rest = rest.trim_start();
+        if rest.is_empty() {
+            break;
+        }
+        let Some(start) = rest.find('(') else {
+            break;
+        };
+        let from_paren = &rest[start..];
+        let mut lexer = Lexer::new(from_paren);
+        let ast = parse_expr(&mut lexer)?;
+        let consumed = lexer.position();
+        out.push(ast);
+        rest = &from_paren[consumed..];
+    }
+    Ok(out)
+}
+
+/// Like [`parse_all_top_level`], but skips malformed blocks instead of failing.
+pub fn parse_all_top_level_lenient(source: &str) -> Vec<Ast> {
+    match parse_all_top_level(source) {
+        Ok(blocks) if !blocks.is_empty() => return blocks,
+        Ok(_) | Err(_) => {}
+    }
+    let mut out = Vec::new();
+    let mut rest = source;
+    loop {
+        rest = rest.trim_start();
+        if rest.is_empty() {
+            break;
+        }
+        let Some(start) = rest.find('(') else {
+            break;
+        };
+        let from_paren = &rest[start..];
+        let mut lexer = Lexer::new(from_paren);
+        match parse_expr(&mut lexer) {
+            Ok(ast) => {
+                let consumed = lexer.position().max(1);
+                out.push(ast);
+                rest = &from_paren[consumed..];
+            }
+            Err(_) => {
+                rest = &from_paren[1..];
+            }
+        }
+    }
+    out
+}
+
 /// Parse a single top-level S-expression; the entire `source` must be one expression (after trim).
 pub fn parse(source: &str) -> Result<Ast, FormatError> {
     let mut lexer = Lexer::new(source);
@@ -73,6 +127,13 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_all_top_level_reads_multiple_blocks() {
+        let src = "(A 1) junk (B 2) (C 3)";
+        let asts = parse_all_top_level(src).expect("parse");
+        assert_eq!(asts.len(), 3);
+    }
 
     #[test]
     fn parse_first_from_first_paren_ignores_trailing_bytes() {
