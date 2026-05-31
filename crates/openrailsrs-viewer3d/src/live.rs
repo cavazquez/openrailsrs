@@ -27,7 +27,7 @@ use crate::shapes::{
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
 use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
-use crate::world::VISIBLE_RADIUS_M;
+use crate::world::visible_radius_m;
 use crate::{log_step, viewer_log};
 
 /// When present, the viewer runs the physics sim in real time instead of CSV replay.
@@ -131,7 +131,7 @@ pub fn enable_live_defaults(
     limit.max = scene
         .bounds
         .orbit_distance()
-        .max(VISIBLE_RADIUS_M)
+        .max(visible_radius_m())
         .min(orbit_user_zoom_max());
     let Ok((mut transform, mut orbit)) = cam.single_mut() else {
         return;

@@ -58,8 +58,8 @@ use openrailsrs_viewer3d::track::{TrackScene, graph_to_world};
 use openrailsrs_viewer3d::track_audit::run_track_dev_audit;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
 use openrailsrs_viewer3d::world::{
-    RouteFocus, RouteWorldOffset, VISIBLE_RADIUS_M, WorldTileStream,
-    load_world_from_route_dir_near, msts_to_bevy, world_tile_center_hint,
+    RouteFocus, RouteWorldOffset, WorldTileStream, load_world_from_route_dir_near, msts_to_bevy,
+    visible_radius_m, world_tile_center_hint,
 };
 use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
@@ -288,7 +288,7 @@ fn main() {
     .insert_resource(WorldTileStream::new(
         &config.route_dir,
         &config.world,
-        VISIBLE_RADIUS_M,
+        visible_radius_m(),
     ))
     .insert_resource(assets)
     .insert_resource(route_focus)
@@ -346,7 +346,7 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
         WorldScene::default()
     } else {
         let world_hint = world_tile_center_hint(route_dir).unwrap_or(scene.bounds.center);
-        load_world_from_route_dir_near(route_dir, Some(world_hint), VISIBLE_RADIUS_M)
+        load_world_from_route_dir_near(route_dir, Some(world_hint), visible_radius_m())
     };
     if !track_dev {
         log_step(
@@ -360,13 +360,13 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
     }
     let focus = RouteFocus::from_scene_and_world(&scene, &world);
     if !track_dev {
-        world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+        world.retain_within_visible_radius(&focus, visible_radius_m());
     }
     let t = Instant::now();
     let terrain = if track_dev {
         TerrainScene::default()
     } else {
-        load_terrain_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+        load_terrain_from_route_dir_near(route_dir, Some(focus.center), visible_radius_m())
     };
     log_step(
         &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
@@ -376,7 +376,7 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
     let elevation = if track_dev {
         TerrainElevation::default()
     } else {
-        TerrainElevation::load_from_route_dir_near(route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+        TerrainElevation::from_terrain_scene(&terrain)
     };
     log_step("loaded terrain elevation", t);
     Ok(LaunchConfig {
@@ -428,7 +428,7 @@ fn load_from_scenario(
         let world_hint = anchor_world
             .or_else(|| world_tile_center_hint(&route_dir))
             .unwrap_or(scene.bounds.center);
-        load_world_from_route_dir_near(&route_dir, Some(world_hint), VISIBLE_RADIUS_M)
+        load_world_from_route_dir_near(&route_dir, Some(world_hint), visible_radius_m())
     };
     if !scenery_mode.is_track_dev() {
         log_step(
@@ -481,13 +481,13 @@ fn load_from_scenario(
         })
         .unwrap_or_else(|| RouteFocus::from_scene_and_world(&scene, &world));
     if !scenery_mode.is_track_dev() {
-        world.retain_within_visible_radius(&focus, VISIBLE_RADIUS_M);
+        world.retain_within_visible_radius(&focus, visible_radius_m());
     }
     let t = Instant::now();
     let terrain = if scenery_mode.is_track_dev() {
         TerrainScene::default()
     } else {
-        load_terrain_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+        load_terrain_from_route_dir_near(&route_dir, Some(focus.center), visible_radius_m())
     };
     log_step(
         &format!("loaded terrain index ({} tile(s))", terrain.tiles_loaded),
@@ -497,7 +497,7 @@ fn load_from_scenario(
     let elevation = if scenery_mode.is_track_dev() {
         TerrainElevation::default()
     } else {
-        TerrainElevation::load_from_route_dir_near(&route_dir, Some(focus.center), VISIBLE_RADIUS_M)
+        TerrainElevation::from_terrain_scene(&terrain)
     };
     log_step("loaded terrain elevation", t);
 

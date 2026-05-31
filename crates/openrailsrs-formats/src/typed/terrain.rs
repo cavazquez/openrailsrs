@@ -846,6 +846,44 @@ impl ElevationGrid {
         self.elevations[j * self.nsamples + i]
     }
 
+    pub fn elevation_at_clamped(&self, i: isize, j: isize) -> f32 {
+        let max = self.nsamples.saturating_sub(1) as isize;
+        let x = i.clamp(0, max) as usize;
+        let z = j.clamp(0, max) as usize;
+        self.elevation_at(x, z)
+    }
+
+    /// Continuous height sample matching OR's `TileManager.GetElevation` triangle split.
+    ///
+    /// MSTS terrain cells alternate diagonals. A plain bilinear sample smooths across the
+    /// wrong virtual surface, which makes trains/scenery float or sink between vertices.
+    pub fn sample_or_triangle(&self, x: f64, z: f64, sample_size: f64) -> f32 {
+        let max = (self.nsamples - 1) as f64;
+        let u = (x / sample_size).clamp(0.0, max);
+        let v = (z / sample_size).clamp(0.0, max);
+        let ux = u.floor() as isize;
+        let uz = v.floor() as isize;
+        let fu = (u - ux as f64) as f32;
+        let fv = (v - uz as f64) as f32;
+
+        let nw = self.elevation_at_clamped(ux, uz);
+        let ne = self.elevation_at_clamped(ux + 1, uz);
+        let sw = self.elevation_at_clamped(ux, uz + 1);
+        let se = self.elevation_at_clamped(ux + 1, uz + 1);
+
+        if (ux & 1) == (uz & 1) {
+            if fu > fv {
+                return nw + (ne - nw) * fu + (se - ne) * fv;
+            }
+            return nw + (se - sw) * fu + (sw - nw) * fv;
+        }
+
+        if fu + fv < 1.0 {
+            return nw + (ne - nw) * fu + (sw - nw) * fv;
+        }
+        se + (sw - se) * (1.0 - fu) + (ne - se) * (1.0 - fv)
+    }
+
     /// Bilinear sample at tile-local `(x, z)` metres (clamped to the grid).
     pub fn sample_bilinear(&self, x: f64, z: f64, sample_size: f64) -> f32 {
         let max = (self.nsamples - 1) as f64;
@@ -867,6 +905,10 @@ impl ElevationGrid {
         let h1 = h01 * (1.0 - fu) + h11 * fu;
         h0 * (1.0 - fv) + h1 * fv
     }
+}
+
+pub fn terrain_patches_per_side(nsamples: usize) -> u32 {
+    ((nsamples as u32) / PATCH_CELLS).max(1)
 }
 
 /// Decode a MSTS `_Y.RAW` height buffer using tile sample parameters.
@@ -955,6 +997,7 @@ pub fn patch_affine_uv(patch: &TerrainPatch, u: f32, v: f32) -> [f32; 2] {
     ]
 }
 
+#[cfg(test)]
 fn sample_hidden(
     hidden: Option<&FeatureGrid>,
     patch_x: u32,
@@ -969,6 +1012,55 @@ fn sample_hidden(
     })
 }
 
+fn append_patch_indices_sampled(
+    indices: &mut Vec<u32>,
+    mut hidden_at: impl FnMut(i32, i32) -> bool,
+    patch_x: u32,
+    patch_z: u32,
+    skip_hidden: bool,
+) {
+    let base_x = patch_x * PATCH_CELLS;
+    let base_z = patch_z * PATCH_CELLS;
+    for z in 0..PATCH_CELLS {
+        for x in 0..PATCH_CELLS {
+            let i00 = z * PATCH_VERTS + x;
+            let i10 = i00 + 1;
+            let i01 = i00 + PATCH_VERTS;
+            let i11 = i01 + 1;
+
+            let ux = base_x + x;
+            let uz = base_z + z;
+            let h00 = hidden_at(ux as i32, uz as i32);
+            let h10 = hidden_at((ux + 1) as i32, uz as i32);
+            let h01 = hidden_at(ux as i32, (uz + 1) as i32);
+            let h11 = hidden_at((ux + 1) as i32, (uz + 1) as i32);
+
+            if skip_hidden {
+                if (x & 1) == (z & 1) {
+                    if !(h00 || h11 || h01) {
+                        indices.extend([i00, i11, i01]);
+                    }
+                    if !(h00 || h10 || h11) {
+                        indices.extend([i00, i10, i11]);
+                    }
+                } else {
+                    if !(h10 || h11 || h01) {
+                        indices.extend([i10, i11, i01]);
+                    }
+                    if !(h00 || h10 || h01) {
+                        indices.extend([i00, i10, i01]);
+                    }
+                }
+            } else if (x & 1) == (z & 1) {
+                indices.extend([i00, i11, i01, i00, i10, i11]);
+            } else {
+                indices.extend([i10, i11, i01, i00, i10, i01]);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 fn append_patch_indices(
     indices: &mut Vec<u32>,
     hidden: Option<&FeatureGrid>,
@@ -1013,32 +1105,32 @@ fn append_patch_indices(
     }
 }
 
-/// Build one OR-style terrain patch with optional affine UVs and hidden triangles.
-pub fn build_patch_mesh_data_ex(
-    grid: &ElevationGrid,
+/// Build one OR-style terrain patch using caller-provided tile-sample lookup.
+///
+/// `elevation_at` and `hidden_at` receive absolute sample coordinates inside the tile
+/// (`patch_x * 16 + vx`, `patch_z * 16 + vz`). Callers can wrap those coordinates to
+/// adjacent tiles to match Open Rails at patch/tile borders.
+pub fn build_patch_mesh_data_sampled(
     sample_size: f64,
     patch_x: u32,
     patch_z: u32,
     patch: Option<&TerrainPatch>,
-    hidden: Option<&FeatureGrid>,
     skip_hidden_tris: bool,
+    mut elevation_at: impl FnMut(i32, i32) -> f32,
+    hidden_at: impl FnMut(i32, i32) -> bool,
 ) -> TerrainMeshData {
     let cell = sample_size;
-    let origin_x = patch_x as f64 * PATCH_SIZE_M;
-    let origin_z = patch_z as f64 * PATCH_SIZE_M;
-
     let mut positions = Vec::with_capacity((PATCH_VERTS * PATCH_VERTS) as usize);
     let mut uvs = Vec::with_capacity((PATCH_VERTS * PATCH_VERTS) as usize);
+    let base_x = patch_x * PATCH_CELLS;
+    let base_z = patch_z * PATCH_CELLS;
 
     for vz in 0..PATCH_VERTS {
         for vx in 0..PATCH_VERTS {
-            let lx = origin_x + vx as f64 * cell;
-            let lz = origin_z + vz as f64 * cell;
-            let y = grid.sample_bilinear(lx, lz, sample_size);
-            // Patch-local coordinates: subtract patch origin so vertices start at (0,0).
-            // Callers that need tile-local coordinates (build_tile_mesh_data) must add
-            // the patch offset (px * PATCH_SIZE_M, pz * PATCH_SIZE_M) back themselves.
-            positions.push([(lx - origin_x) as f32, y, (lz - origin_z) as f32]);
+            let ux = base_x + vx;
+            let uz = base_z + vz;
+            let y = elevation_at(ux as i32, uz as i32);
+            positions.push([vx as f32 * cell as f32, y, vz as f32 * cell as f32]);
             uvs.push(if let Some(p) = patch {
                 patch_affine_uv(p, vx as f32, vz as f32)
             } else {
@@ -1050,9 +1142,9 @@ pub fn build_patch_mesh_data_ex(
         }
     }
 
-    let normals = compute_vertex_normals(&positions, PATCH_VERTS as usize, PATCH_VERTS as usize);
     let mut indices = Vec::with_capacity((PATCH_CELLS * PATCH_CELLS * 6) as usize);
-    append_patch_indices(&mut indices, hidden, patch_x, patch_z, skip_hidden_tris);
+    append_patch_indices_sampled(&mut indices, hidden_at, patch_x, patch_z, skip_hidden_tris);
+    let normals = compute_indexed_vertex_normals(&positions, &indices);
 
     TerrainMeshData {
         positions,
@@ -1060,6 +1152,27 @@ pub fn build_patch_mesh_data_ex(
         uvs,
         indices,
     }
+}
+
+/// Build one OR-style terrain patch with optional affine UVs and hidden triangles.
+pub fn build_patch_mesh_data_ex(
+    grid: &ElevationGrid,
+    sample_size: f64,
+    patch_x: u32,
+    patch_z: u32,
+    patch: Option<&TerrainPatch>,
+    hidden: Option<&FeatureGrid>,
+    skip_hidden_tris: bool,
+) -> TerrainMeshData {
+    build_patch_mesh_data_sampled(
+        sample_size,
+        patch_x,
+        patch_z,
+        patch,
+        skip_hidden_tris,
+        |ux, uz| grid.elevation_at_clamped(ux as isize, uz as isize),
+        |ux, uz| hidden.is_some_and(|grid| grid.is_vertex_hidden(ux as usize, uz as usize)),
+    )
 }
 
 /// Build one OR-style terrain patch: 17×17 vertices, 16×16 cells, alternating diagonals.
@@ -1075,8 +1188,12 @@ pub fn build_patch_mesh_data(
 }
 
 /// Merge all patches of a tile into one mesh (legacy fallback without patch metadata).
-pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMeshData {
-    const PATCHES_PER_SIDE: u32 = 16;
+pub fn build_tile_mesh_data_sampled(
+    sample_size: f64,
+    patches_per_side: u32,
+    mut elevation_at: impl FnMut(i32, i32) -> f32,
+    mut hidden_at: impl FnMut(i32, i32) -> bool,
+) -> TerrainMeshData {
     let mut out = TerrainMeshData {
         positions: Vec::new(),
         normals: Vec::new(),
@@ -1084,11 +1201,19 @@ pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMe
         indices: Vec::new(),
     };
 
-    for pz in 0..PATCHES_PER_SIDE {
-        for px in 0..PATCHES_PER_SIDE {
-            let patch = build_patch_mesh_data(grid, sample_size, px, pz, PATCH_SIZE_M);
+    for pz in 0..patches_per_side {
+        for px in 0..patches_per_side {
+            let patch = build_patch_mesh_data_sampled(
+                sample_size,
+                px,
+                pz,
+                None,
+                false,
+                &mut elevation_at,
+                &mut hidden_at,
+            );
             let base = out.positions.len() as u32;
-            // build_patch_mesh_data_ex returns patch-local positions (0..PATCH_SIZE_M).
+            // build_patch_mesh_data_sampled returns patch-local positions (0..PATCH_SIZE_M).
             // Restore tile-local positions by adding the patch's tile offset.
             let ox = px as f32 * PATCH_SIZE_M as f32;
             let oz = pz as f32 * PATCH_SIZE_M as f32;
@@ -1107,23 +1232,40 @@ pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMe
     out
 }
 
-fn compute_vertex_normals(positions: &[[f32; 3]], width: usize, height: usize) -> Vec<[f32; 3]> {
-    let mut normals = vec![[0.0f32; 3]; width * height];
-    let idx = |x: usize, z: usize| z * width + x;
+/// Merge all patches of a tile into one mesh (legacy fallback without patch metadata).
+pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMeshData {
+    build_tile_mesh_data_sampled(
+        sample_size,
+        terrain_patches_per_side(grid.nsamples),
+        |ux, uz| grid.elevation_at_clamped(ux as isize, uz as isize),
+        |_ux, _uz| false,
+    )
+}
 
-    for z in 0..height.saturating_sub(1) {
-        for x in 0..width.saturating_sub(1) {
-            let p00 = positions[idx(x, z)];
-            let p10 = positions[idx(x + 1, z)];
-            let p01 = positions[idx(x, z + 1)];
-            let e1 = [p10[0] - p00[0], p10[1] - p00[1], p10[2] - p00[2]];
-            let e2 = [p01[0] - p00[0], p01[1] - p00[1], p01[2] - p00[2]];
-            let n = cross(e1, e2);
-            for &i in &[idx(x, z), idx(x + 1, z), idx(x, z + 1)] {
-                normals[i][0] += n[0];
-                normals[i][1] += n[1];
-                normals[i][2] += n[2];
-            }
+fn compute_indexed_vertex_normals(positions: &[[f32; 3]], indices: &[u32]) -> Vec<[f32; 3]> {
+    let mut normals = vec![[0.0f32; 3]; positions.len()];
+
+    for tri in indices.chunks_exact(3) {
+        let i0 = tri[0] as usize;
+        let i1 = tri[1] as usize;
+        let i2 = tri[2] as usize;
+        let Some((&p0, &p1, &p2)) = positions
+            .get(i0)
+            .zip(positions.get(i1))
+            .zip(positions.get(i2))
+            .map(|((p0, p1), p2)| (p0, p1, p2))
+        else {
+            continue;
+        };
+        let e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+        let e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+        // The MSTS/OR index winding is mirrored by our Bevy-space Z convention; flip the
+        // face normal here so flat terrain lights from above.
+        let n = cross(e2, e1);
+        for &i in &[i0, i1, i2] {
+            normals[i][0] += n[0];
+            normals[i][1] += n[1];
+            normals[i][2] += n[2];
         }
     }
 
@@ -1508,6 +1650,21 @@ mod tests {
     }
 
     #[test]
+    fn patch_normals_point_up_for_flat_terrain() {
+        let grid = ElevationGrid {
+            nsamples: 256,
+            elevations: vec![10.0; 256 * 256],
+        };
+        let mesh = build_patch_mesh_data(&grid, 8.0, 0, 0, 128.0);
+        for n in mesh.normals {
+            assert!(
+                n[1] > 0.99,
+                "flat terrain normal should point up, got {n:?}"
+            );
+        }
+    }
+
+    #[test]
     fn patch_mesh_positions_are_patch_local() {
         // build_patch_mesh_data_ex must return patch-local positions (0..PATCH_SIZE_M).
         // This matters for spawn_textured_patches, which places the entity Transform at
@@ -1534,6 +1691,24 @@ mod tests {
             max_z <= PATCH_SIZE_M as f32 + 1.0,
             "patch z should be patch-local (≤128m), got max_z={max_z}"
         );
+    }
+
+    #[test]
+    fn sampled_patch_can_supply_neighbor_edge_heights() {
+        let mesh = build_patch_mesh_data_sampled(
+            8.0,
+            15,
+            0,
+            None,
+            false,
+            |ux, _uz| {
+                if ux == 256 { 42.0 } else { 1.0 }
+            },
+            |_ux, _uz| false,
+        );
+        let east_edge = 16usize;
+        assert_eq!(mesh.positions[east_edge][1], 42.0);
+        assert_eq!(mesh.positions[0][1], 1.0);
     }
 
     #[test]
@@ -1579,6 +1754,38 @@ mod tests {
     }
 
     #[test]
+    fn sampled_tile_can_supply_neighbor_edge_heights() {
+        let mesh = build_tile_mesh_data_sampled(
+            8.0,
+            16,
+            |ux, _uz| {
+                if ux == 256 { 42.0 } else { 1.0 }
+            },
+            |_ux, _uz| false,
+        );
+        assert!(
+            mesh.positions
+                .iter()
+                .any(|p| (p[0] - 2048.0).abs() < 1e-4 && (p[1] - 42.0).abs() < 1e-4),
+            "legacy tile mesh should include sampled east-neighbor edge heights"
+        );
+    }
+
+    #[test]
+    fn tile_mesh_patch_count_scales_with_sample_grid() {
+        assert_eq!(terrain_patches_per_side(256), 16);
+        assert_eq!(terrain_patches_per_side(512), 32);
+
+        let mesh = build_tile_mesh_data_sampled(8.0, 32, |_ux, _uz| 1.0, |_ux, _uz| false);
+        assert_eq!(mesh.positions.len(), 17 * 17 * 32 * 32);
+        assert_eq!(mesh.indices.len(), 16 * 16 * 6 * 32 * 32);
+        assert!(
+            mesh.positions.iter().any(|p| (p[0] - 4096.0).abs() < 1e-4),
+            "2x2 legacy tile should span 4096m"
+        );
+    }
+
+    #[test]
     fn parse_smoke_terrain_y_buffer_name() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/smoke/routes/test/TERRAIN/+000000+000000.y");
@@ -1593,6 +1800,19 @@ mod tests {
             elevations: vec![0.0, 10.0, 20.0, 1.0, 11.0, 21.0, 2.0, 12.0, 22.0],
         };
         assert!((grid.sample_bilinear(8.0, 0.0, 8.0) - 10.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn or_triangle_sample_follows_alternating_diagonal() {
+        let grid = ElevationGrid {
+            nsamples: 2,
+            elevations: vec![0.0, 10.0, 20.0, 100.0],
+        };
+        // Cell (0,0) is split NW-SE. This point is on the NE triangle in OR.
+        let or_h = grid.sample_or_triangle(6.0, 2.0, 8.0);
+        let bilinear = grid.sample_bilinear(6.0, 2.0, 8.0);
+        assert!((or_h - 30.0).abs() < 1e-4, "got {or_h}");
+        assert!((bilinear - 25.625).abs() < 1e-4, "got {bilinear}");
     }
 
     #[test]

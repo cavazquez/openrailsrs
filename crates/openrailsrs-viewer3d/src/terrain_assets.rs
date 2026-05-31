@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use openrailsrs_formats::TerrainShader;
 
@@ -36,12 +37,16 @@ pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf
 pub fn load_terrtex_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     if let Some(path) = resolve_terrtex_path(route_dir, file_name) {
         let ace = read_ace(&path).ok()?;
-        return Some(ace_to_image(&ace));
+        let mut image = ace_to_image(&ace);
+        set_terrain_sampler_wrap(&mut image);
+        return Some(image);
     }
     if !file_name.eq_ignore_ascii_case(DEFAULT_MICROTEX) {
         return load_terrtex_image(route_dir, DEFAULT_MICROTEX);
     }
-    load_ace_image(route_dir, file_name)
+    let mut image = load_ace_image(route_dir, file_name)?;
+    set_terrain_sampler_wrap(&mut image);
+    Some(image)
 }
 
 /// Load/cache base + overlay handles for one terrain shader.
@@ -94,6 +99,14 @@ fn texture_handle(
     let handle = images.add(image);
     cache.insert(key, handle.clone());
     Some(handle)
+}
+
+fn set_terrain_sampler_wrap(image: &mut Image) {
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_v: ImageAddressMode::Repeat,
+        ..default()
+    });
 }
 
 fn sanitize_terrain_base_rgba(data: Option<&mut Vec<u8>>) {
@@ -176,5 +189,16 @@ mod tests {
         sanitize_terrain_base_rgba(Some(&mut rgba));
         assert_eq!(&rgba[0..4], &[10, 20, 30, 255]);
         assert_eq!(&rgba[4..8], &[10, 20, 30, 255]);
+    }
+
+    #[test]
+    fn terrain_textures_use_repeat_sampler_like_open_rails() {
+        let mut image = Image::default();
+        set_terrain_sampler_wrap(&mut image);
+        let ImageSampler::Descriptor(desc) = image.sampler else {
+            panic!("expected explicit sampler");
+        };
+        assert_eq!(desc.address_mode_u, ImageAddressMode::Repeat);
+        assert_eq!(desc.address_mode_v, ImageAddressMode::Repeat);
     }
 }

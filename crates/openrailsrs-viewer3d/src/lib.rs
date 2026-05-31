@@ -30,7 +30,10 @@ pub mod tdb_track;
 pub mod teleport;
 pub mod terrain;
 pub mod terrain_assets;
+pub(crate) mod terrain_io;
 pub mod terrain_material;
+pub(crate) mod terrain_sampler;
+pub(crate) mod terrain_spawn;
 pub mod track;
 pub mod track_audit;
 pub mod train;
@@ -97,7 +100,7 @@ impl Plugin for ViewerPlugin {
                 (
                     scene::spawn_ground_and_lights,
                     sky::spawn_sky_dome.run_if(launch::full_scenery_active),
-                    terrain::spawn_terrain_meshes.run_if(launch::full_scenery_active),
+                    terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
                     tdb_track::spawn_tdb_graph_track,
                     dyntrack::spawn_dyntrack_segments.run_if(launch::full_scenery_active),
@@ -107,6 +110,10 @@ impl Plugin for ViewerPlugin {
                     world::init_scenery_stream_state,
                 )
                     .chain(),
+            )
+            .add_systems(
+                Update,
+                terrain::progressive_terrain_spawn_system.run_if(launch::full_scenery_active),
             )
             .add_systems(Update, world::progressive_world_spawn_system)
             .add_systems(Update, world::world_tile_stream_system)

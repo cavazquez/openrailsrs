@@ -270,7 +270,7 @@ pub fn spawn_forest_objects(
             default_half
         };
         let (base_w, base_h) = forest_tree_size(patch.tree_width, patch.tree_height);
-        if focus.horizontal_distance(obj.position) > crate::world::VISIBLE_RADIUS_M {
+        if focus.horizontal_distance(obj.position) > crate::world::visible_radius_m() {
             continue;
         }
         let trees_world = scatter_trees_in_patch(

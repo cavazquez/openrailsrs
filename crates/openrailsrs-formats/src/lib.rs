@@ -47,8 +47,9 @@ pub use typed::{
     TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
     TrackProceduralDims, TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint,
     TrafficServiceDef, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile, WorldItem,
-    build_patch_mesh_data, build_patch_mesh_data_ex, build_tile_mesh_data, parse_orts_brake_shoe,
+    build_patch_mesh_data, build_patch_mesh_data_ex, build_patch_mesh_data_sampled,
+    build_tile_mesh_data, build_tile_mesh_data_sampled, parse_orts_brake_shoe,
     parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
-    read_y_raw, resolve_brake_shoe_curve,
+    read_y_raw, resolve_brake_shoe_curve, terrain_patches_per_side,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

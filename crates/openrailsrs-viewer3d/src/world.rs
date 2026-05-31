@@ -29,6 +29,16 @@ pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
 /// large imported routes.
 pub const VISIBLE_RADIUS_M: f32 = 8000.0;
 
+/// Visible scenery/terrain radius. Override with `OPENRAILSRS_VISIBLE_RADIUS_M`
+/// for faster startup on large routes.
+pub fn visible_radius_m() -> f32 {
+    std::env::var("OPENRAILSRS_VISIBLE_RADIUS_M")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|r| *r >= 512.0 && *r <= 64_000.0)
+        .unwrap_or(VISIBLE_RADIUS_M)
+}
+
 /// Shapes closer than this use the highest LOD; farther shapes use coarser LOD.
 pub const SHAPE_LOD_DISTANCE_M: f32 = 2000.0;
 
@@ -51,6 +61,12 @@ const SPAWN_TRACKOBJ_PROCEDURAL: bool = true;
 
 /// World items classified per frame during progressive spawn.
 const CLASSIFY_ITEMS_PER_FRAME: usize = 12_000;
+
+/// Unique `.s` files parsed per frame during progressive scenery spawn.
+const SHAPE_PARSE_PER_FRAME: usize = 16;
+
+/// ACE texture files decoded per frame after shape parse.
+const ACE_TEXTURES_PER_FRAME: usize = 32;
 
 /// Shape assets converted to Bevy handles per frame.
 const SHAPE_ASSETS_PER_FRAME: usize = 64;
@@ -230,7 +246,7 @@ impl RouteFocus {
 /// Whether a world object should be culled for being outside [`VISIBLE_RADIUS_M`].
 #[inline]
 pub fn should_cull_world_object(focus: &RouteFocus, world: Vec3) -> bool {
-    focus.horizontal_distance(world) > VISIBLE_RADIUS_M
+    focus.horizontal_distance(world) > visible_radius_m()
 }
 
 /// Translates abstract graph coordinates into MSTS world space when the two diverge.
@@ -851,6 +867,10 @@ pub struct WorldSpawnProgress {
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
     parsed_shapes: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)>,
+    shape_load_paths: Vec<PathBuf>,
+    shape_parse_index: usize,
+    texture_paths: Vec<PathBuf>,
+    texture_prefetch_index: usize,
     ace_cache: std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
     texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>>,
@@ -901,6 +921,10 @@ impl WorldSpawnProgress {
             shape_fallback_color: Color::srgb(0.72, 0.55, 0.42),
             shape_fallback_material: None,
             parsed_shapes: Vec::new(),
+            shape_load_paths: Vec::new(),
+            shape_parse_index: 0,
+            texture_paths: Vec::new(),
+            texture_prefetch_index: 0,
             ace_cache: std::collections::HashMap::new(),
             shape_cache: std::collections::HashMap::new(),
             texture_image_cache: std::collections::HashMap::new(),
@@ -1056,17 +1080,17 @@ fn classify_one_object(
     );
 }
 
-fn append_shape_spawn_entries(
-    progress: &mut WorldSpawnProgress,
-    shape_path: &Path,
+fn append_shape_spawn_entries_for_transforms(
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
+    transforms: &[Transform],
+    spawn_queue: &mut Vec<ShapeSpawnBundle>,
+    shape_mesh_count: &mut usize,
+    shape_texture_count: &mut usize,
+    merged_shape_groups: &mut usize,
 ) {
-    let Some(transforms) = progress.shape_instances.get(shape_path) else {
-        return;
-    };
     if asset.has_texture {
-        progress.shape_texture_count += transforms.len();
+        *shape_texture_count += transforms.len();
     }
     let mergeable = ENABLE_SHAPE_INSTANCE_MERGE
         && transforms.len() >= SHAPE_INSTANCE_MERGE_MIN
@@ -1079,11 +1103,11 @@ fn append_shape_spawn_entries(
         });
 
     if mergeable {
-        progress.merged_shape_groups += 1;
-        progress.shape_mesh_count += asset.parts.len();
+        *merged_shape_groups += 1;
+        *shape_mesh_count += asset.parts.len();
         for part in &asset.parts {
             if let Some(merged) = build_merged_instance_mesh(meshes, &part.mesh, transforms) {
-                progress.spawn_queue.push((
+                spawn_queue.push((
                     Transform::IDENTITY,
                     Mesh3d(meshes.add(merged)),
                     MeshMaterial3d(part.material.clone()),
@@ -1092,10 +1116,10 @@ fn append_shape_spawn_entries(
             }
         }
     } else {
-        progress.shape_mesh_count += asset.parts.len() * transforms.len();
+        *shape_mesh_count += asset.parts.len() * transforms.len();
         for tf in transforms {
             for part in &asset.parts {
-                progress.spawn_queue.push((
+                spawn_queue.push((
                     *tf,
                     Mesh3d(part.mesh.clone()),
                     MeshMaterial3d(part.material.clone()),
@@ -1106,10 +1130,174 @@ fn append_shape_spawn_entries(
     }
 }
 
+fn append_shape_spawn_entries(
+    progress: &mut WorldSpawnProgress,
+    shape_path: &Path,
+    asset: &ShapeRenderAsset,
+    meshes: &mut Assets<Mesh>,
+) {
+    let Some(transforms) = progress.shape_instances.get(shape_path).cloned() else {
+        return;
+    };
+    append_shape_spawn_entries_for_transforms(
+        asset,
+        meshes,
+        &transforms,
+        &mut progress.spawn_queue,
+        &mut progress.shape_mesh_count,
+        &mut progress.shape_texture_count,
+        &mut progress.merged_shape_groups,
+    );
+}
+
+fn add_shape_fallback_material(
+    materials: &mut Assets<StandardMaterial>,
+    color: Color,
+) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: color,
+        emissive: LinearRgba::from(color) * 0.35,
+        perceptual_roughness: 0.75,
+        metallic: 0.1,
+        double_sided: true,
+        ..default()
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_world_shape_asset(
+    shape_path: PathBuf,
+    loaded: Option<crate::shapes::LoadedShape>,
+    route_dir: &Path,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    texture_image_cache: &mut std::collections::HashMap<PathBuf, Handle<Image>>,
+    ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
+    fallback_color: Color,
+    fallback_material: &Handle<StandardMaterial>,
+) -> (PathBuf, ShapeRenderAsset) {
+    let tex_dirs = texture_search_dirs_for_shape(&shape_path, route_dir);
+    let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+    let asset = match loaded {
+        Some(loaded) => shape_render_asset_from_loaded_with_ace_cache(
+            loaded,
+            &tex_refs,
+            meshes,
+            images,
+            materials,
+            texture_image_cache,
+            ace_cache,
+            fallback_color,
+        ),
+        None => {
+            viewer_log!(
+                "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
+                shape_path.display()
+            );
+            let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+            ShapeRenderAsset {
+                combined_mesh: unit.clone(),
+                parts: vec![crate::shapes::ShapePartAsset {
+                    prim_state_idx: -1,
+                    mesh: unit,
+                    material: fallback_material.clone(),
+                    has_texture: false,
+                    is_transparent: false,
+                }],
+                has_texture: false,
+            }
+        }
+    };
+    (shape_path, asset)
+}
+
+fn prepare_shape_load_paths(progress: &mut WorldSpawnProgress) {
+    if !progress.shape_load_paths.is_empty() {
+        return;
+    }
+    progress.shape_load_paths = progress.shape_instances.keys().cloned().collect();
+    progress.shape_load_paths.sort_unstable();
+    progress.shape_load_paths.dedup();
+    progress
+        .parsed_shapes
+        .reserve(progress.shape_load_paths.len());
+}
+
+fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -> bool {
+    if progress.shape_parse_index >= progress.shape_load_paths.len() {
+        return false;
+    }
+    let end =
+        (progress.shape_parse_index + SHAPE_PARSE_PER_FRAME).min(progress.shape_load_paths.len());
+    let batch: Vec<PathBuf> = progress.shape_load_paths[progress.shape_parse_index..end].to_vec();
+    let parsed: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> = batch
+        .par_iter()
+        .map(|path| {
+            let lod_dist = progress.shape_instance_min_dist.get(path).copied();
+            (path.clone(), load_shape_from_path(path, lod_dist))
+        })
+        .collect();
+    for (shape_path, loaded) in &parsed {
+        if let Some(loaded) = loaded {
+            let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
+            let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+            progress
+                .texture_paths
+                .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+        }
+    }
+    progress.parsed_shapes.extend(parsed);
+    progress.shape_parse_index = end;
+    if progress.shape_parse_index >= progress.shape_load_paths.len() {
+        progress.texture_paths.sort_unstable();
+        progress.texture_paths.dedup();
+        false
+    } else {
+        true
+    }
+}
+
+fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool {
+    if progress.texture_prefetch_index >= progress.texture_paths.len() {
+        return false;
+    }
+    let end = (progress.texture_prefetch_index + ACE_TEXTURES_PER_FRAME)
+        .min(progress.texture_paths.len());
+    let batch: Vec<PathBuf> = progress.texture_paths[progress.texture_prefetch_index..end].to_vec();
+    progress.ace_cache.extend(prefetch_ace_textures(&batch));
+    progress.texture_prefetch_index = end;
+    progress.texture_prefetch_index < progress.texture_paths.len()
+}
+
+fn finish_shape_loading(
+    progress: &mut WorldSpawnProgress,
+    route_dir: &Path,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    if progress.shape_fallback_material.is_some() {
+        return;
+    }
+    let color = progress.shape_fallback_color;
+    progress.shape_fallback_material = Some(add_shape_fallback_material(materials, color));
+    viewer_log!(
+        "openrailsrs-viewer3d: parsed {} shape(s), prefetched {} texture(s)",
+        progress.parsed_shapes.len(),
+        progress.ace_cache.len()
+    );
+    if progress.scenery_audit.is_none() && crate::scenery_audit::scenery_audit_enabled() {
+        progress.scenery_audit = Some(crate::scenery_audit::audit_parsed_shapes(
+            &progress.parsed_shapes,
+            route_dir,
+        ));
+    }
+}
+
 fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
     if progress.culled_count > 0 {
+        let radius_m = visible_radius_m();
         viewer_log!(
-            "openrailsrs-viewer3d: {culled} world object(s) culled (>{VISIBLE_RADIUS_M:.0}m from centre)",
+            "openrailsrs-viewer3d: {culled} world object(s) culled (>{radius_m:.0}m from centre)",
             culled = progress.culled_count
         );
     }
@@ -1425,53 +1613,18 @@ pub fn progressive_world_spawn_system(
             }
         }
         WorldSpawnPhase::LoadingShapes => {
-            if progress.parsed_shapes.is_empty() {
-                let unique_shape_paths: Vec<PathBuf> =
-                    progress.shape_instances.keys().cloned().collect();
-                progress.parsed_shapes = unique_shape_paths
-                    .par_iter()
-                    .map(|path| {
-                        let lod_dist = progress.shape_instance_min_dist.get(path).copied();
-                        (path.clone(), load_shape_from_path(path, lod_dist))
-                    })
-                    .collect();
-                let mut texture_paths = Vec::new();
-                for (shape_path, loaded) in &progress.parsed_shapes {
-                    if let Some(loaded) = loaded {
-                        let tex_dirs = texture_search_dirs_for_shape(shape_path, &assets.route_dir);
-                        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-                        texture_paths.extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
-                    }
-                }
-                texture_paths.sort_unstable();
-                texture_paths.dedup();
-                progress.ace_cache = prefetch_ace_textures(&texture_paths);
-                if progress.shape_fallback_material.is_none() {
-                    let color = progress.shape_fallback_color;
-                    progress.shape_fallback_material = Some(materials.add(StandardMaterial {
-                        base_color: color,
-                        emissive: LinearRgba::from(color) * 0.35,
-                        perceptual_roughness: 0.75,
-                        metallic: 0.1,
-                        double_sided: true,
-                        ..default()
-                    }));
-                }
-                viewer_log!(
-                    "openrailsrs-viewer3d: parsed {} shape(s), prefetched {} texture(s)",
-                    progress.parsed_shapes.len(),
-                    progress.ace_cache.len()
-                );
-                if progress.scenery_audit.is_none() && crate::scenery_audit::scenery_audit_enabled()
-                {
-                    progress.scenery_audit = Some(crate::scenery_audit::audit_parsed_shapes(
-                        &progress.parsed_shapes,
-                        &assets.route_dir,
-                    ));
-                }
+            prepare_shape_load_paths(&mut progress);
+            if parse_next_shape_batch(&mut progress, &assets.route_dir) {
+                return;
             }
+            if prefetch_next_shape_texture_batch(&mut progress) {
+                return;
+            }
+            finish_shape_loading(&mut progress, &assets.route_dir, &mut materials);
 
-            let fallback_material = progress.shape_fallback_material.clone().unwrap();
+            let Some(fallback_material) = progress.shape_fallback_material.clone() else {
+                return;
+            };
             let fallback_color = progress.shape_fallback_color;
             let ace_cache = progress.ace_cache.clone();
             let end = (progress.asset_build_index + SHAPE_ASSETS_PER_FRAME)
@@ -1479,38 +1632,18 @@ pub fn progressive_world_spawn_system(
             let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> =
                 progress.parsed_shapes[progress.asset_build_index..end].to_vec();
             for (shape_path, loaded) in batch {
-                let tex_dirs = texture_search_dirs_for_shape(&shape_path, &assets.route_dir);
-                let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-                let asset = match loaded {
-                    Some(loaded) => shape_render_asset_from_loaded_with_ace_cache(
-                        loaded,
-                        &tex_refs,
-                        &mut meshes,
-                        &mut images,
-                        &mut materials,
-                        &mut progress.texture_image_cache,
-                        &ace_cache,
-                        fallback_color,
-                    ),
-                    None => {
-                        viewer_log!(
-                            "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
-                            shape_path.display()
-                        );
-                        let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-                        ShapeRenderAsset {
-                            combined_mesh: unit.clone(),
-                            parts: vec![crate::shapes::ShapePartAsset {
-                                prim_state_idx: -1,
-                                mesh: unit,
-                                material: fallback_material.clone(),
-                                has_texture: false,
-                                is_transparent: false,
-                            }],
-                            has_texture: false,
-                        }
-                    }
-                };
+                let (shape_path, asset) = build_world_shape_asset(
+                    shape_path,
+                    loaded,
+                    &assets.route_dir,
+                    &mut meshes,
+                    &mut images,
+                    &mut materials,
+                    &mut progress.texture_image_cache,
+                    &ace_cache,
+                    fallback_color,
+                    &fallback_material,
+                );
                 progress.shape_cache.insert(shape_path, asset);
             }
             progress.asset_build_index = end;
@@ -1648,14 +1781,7 @@ pub fn spawn_world_boxes(
         std::collections::HashMap::new();
 
     let shape_fallback_color = Color::srgb(0.72, 0.55, 0.42);
-    let shape_fallback_material = materials.add(StandardMaterial {
-        base_color: shape_fallback_color,
-        emissive: LinearRgba::from(shape_fallback_color) * 0.35,
-        perceptual_roughness: 0.75,
-        metallic: 0.1,
-        double_sided: true,
-        ..default()
-    });
+    let shape_fallback_material = add_shape_fallback_material(&mut materials, shape_fallback_color);
 
     let mut shape_mesh_count = 0usize;
     let mut shape_texture_count = 0usize;
@@ -1781,38 +1907,18 @@ pub fn spawn_world_boxes(
 
     let asset_start = Instant::now();
     for (shape_path, loaded) in parsed_shapes {
-        let tex_dirs = texture_search_dirs_for_shape(&shape_path, &assets.route_dir);
-        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-        let asset = match loaded {
-            Some(loaded) => shape_render_asset_from_loaded_with_ace_cache(
-                loaded,
-                &tex_refs,
-                &mut meshes,
-                &mut images,
-                &mut materials,
-                &mut texture_image_cache,
-                &ace_cache,
-                shape_fallback_color,
-            ),
-            None => {
-                viewer_log!(
-                    "openrailsrs-viewer3d: shape {} failed, using placeholder cube",
-                    shape_path.display()
-                );
-                let unit: Handle<Mesh> = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-                ShapeRenderAsset {
-                    combined_mesh: unit.clone(),
-                    parts: vec![crate::shapes::ShapePartAsset {
-                        prim_state_idx: -1,
-                        mesh: unit,
-                        material: shape_fallback_material.clone(),
-                        has_texture: false,
-                        is_transparent: false,
-                    }],
-                    has_texture: false,
-                }
-            }
-        };
+        let (shape_path, asset) = build_world_shape_asset(
+            shape_path,
+            loaded,
+            &assets.route_dir,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_image_cache,
+            &ace_cache,
+            shape_fallback_color,
+            &shape_fallback_material,
+        );
         shape_cache.insert(shape_path, asset);
     }
     log_step("built world shape Bevy assets", asset_start);
@@ -1821,45 +1927,15 @@ pub fn spawn_world_boxes(
         let Some(asset) = shape_cache.get(&shape_path) else {
             continue;
         };
-        if asset.has_texture {
-            shape_texture_count += transforms.len();
-        }
-        let mergeable = ENABLE_SHAPE_INSTANCE_MERGE
-            && transforms.len() >= SHAPE_INSTANCE_MERGE_MIN
-            && asset.parts.iter().all(|part| {
-                !part.is_transparent
-                    && meshes
-                        .get(&part.mesh)
-                        .map(|mesh| mesh.count_vertices() <= SHAPE_INSTANCE_MERGE_MAX_VERTS)
-                        .unwrap_or(false)
-            });
-
-        if mergeable {
-            merged_shape_groups += 1;
-            shape_mesh_count += asset.parts.len();
-            for part in &asset.parts {
-                if let Some(merged) = build_merged_instance_mesh(&meshes, &part.mesh, &transforms) {
-                    shape_spawn_batches.push((
-                        Transform::IDENTITY,
-                        Mesh3d(meshes.add(merged)),
-                        MeshMaterial3d(part.material.clone()),
-                        Name::new("world:merged"),
-                    ));
-                }
-            }
-        } else {
-            shape_mesh_count += asset.parts.len() * transforms.len();
-            for tf in transforms {
-                for part in &asset.parts {
-                    shape_spawn_batches.push((
-                        tf,
-                        Mesh3d(part.mesh.clone()),
-                        MeshMaterial3d(part.material.clone()),
-                        Name::new("world:mesh"),
-                    ));
-                }
-            }
-        }
+        append_shape_spawn_entries_for_transforms(
+            asset,
+            &mut meshes,
+            &transforms,
+            &mut shape_spawn_batches,
+            &mut shape_mesh_count,
+            &mut shape_texture_count,
+            &mut merged_shape_groups,
+        );
     }
 
     if !shape_spawn_batches.is_empty() {
@@ -1907,8 +1983,9 @@ pub fn spawn_world_boxes(
     }
 
     if culled_count > 0 {
+        let radius_m = visible_radius_m();
         viewer_log!(
-            "openrailsrs-viewer3d: {culled_count} world object(s) culled (>{VISIBLE_RADIUS_M:.0}m from centre)"
+            "openrailsrs-viewer3d: {culled_count} world object(s) culled (>{radius_m:.0}m from centre)"
         );
     }
     if skipped_trackobj_placeholders > 0 {
