@@ -223,29 +223,91 @@ pub struct LiveTrainMarker;
 #[derive(Component)]
 pub struct LiveTrainBody;
 
+/// Tracks the last driver-cam state to emit the diagnostic log only once per transition.
+#[derive(Resource, Default)]
+pub struct DriverCamState {
+    /// `true` when driver view was active on the previous frame.
+    pub was_driver: bool,
+}
+
 /// Hide the consist mesh in first-person driver view (cab interior stays visible).
+///
+/// CAB-P2: traverses the **full** `LiveTrainBody` hierarchy (including children
+/// of children) so that any mesh entity under the consist root is hidden.  Only
+/// entities carrying [`CabInteriorMarker`] remain visible in driver view.
+///
+/// Emits a single diagnostic log line each time the view mode changes.
 pub fn update_driver_train_visibility(
     follow: Res<CameraFollowMode>,
-    mut bodies: Query<
-        &mut Visibility,
+    mut cam_state: ResMut<DriverCamState>,
+    bodies: Query<
+        Entity,
         (
             With<LiveTrainBody>,
             Without<crate::cab_view::CabInteriorMarker>,
         ),
     >,
+    children_query: Query<&Children>,
+    mut visibility_query: Query<&mut Visibility, Without<crate::cab_view::CabInteriorMarker>>,
     mut cab_parts: Query<&mut Visibility, With<crate::cab_view::CabInteriorMarker>>,
 ) {
     let hide = *follow == CameraFollowMode::DriverCam;
-    for mut vis in &mut bodies {
-        *vis = if hide {
-            Visibility::Hidden
-        } else {
-            Visibility::Visible
-        };
+    let mode_changed = hide != cam_state.was_driver;
+    cam_state.was_driver = hide;
+
+    let visibility = if hide {
+        Visibility::Hidden
+    } else {
+        Visibility::Visible
+    };
+
+    let mut exterior_count = 0usize;
+    for entity in &bodies {
+        set_visibility_recursive(
+            entity,
+            visibility,
+            &children_query,
+            &mut visibility_query,
+            &mut exterior_count,
+        );
     }
+
+    let mut cab_count = 0usize;
     if hide {
         for mut vis in &mut cab_parts {
             *vis = Visibility::Visible;
+            cab_count += 1;
+        }
+    }
+
+    if mode_changed {
+        if hide {
+            viewer_log!(
+                "openrailsrs-viewer3d: driver view → {exterior_count} exterior hidden, \
+                 {cab_count} cab parts visible"
+            );
+        } else {
+            viewer_log!("openrailsrs-viewer3d: chase view → {exterior_count} exterior visible");
+        }
+    }
+}
+
+fn set_visibility_recursive(
+    entity: Entity,
+    visibility: Visibility,
+    children_query: &Query<&Children>,
+    visibility_query: &mut Query<&mut Visibility, Without<crate::cab_view::CabInteriorMarker>>,
+    count: &mut usize,
+) {
+    if let Ok(mut vis) = visibility_query.get_mut(entity) {
+        if *vis != visibility {
+            *vis = visibility;
+        }
+        *count += 1;
+    }
+    if let Ok(children) = children_query.get(entity) {
+        for &child in children {
+            set_visibility_recursive(child, visibility, children_query, visibility_query, count);
         }
     }
 }

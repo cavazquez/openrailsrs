@@ -85,6 +85,11 @@ pub struct PrimState {
     pub vertex_state_idx: i32,
     /// Optional z-bias value carried by later MSTS/Open Rails prim_state layouts.
     pub z_bias: Option<f64>,
+    /// Alpha test mode from `prim_state` flags (0 = opaque, 1 = alpha test, 2 = alpha blend).
+    /// -1 means not explicitly set (infer from shader name / texture alpha).
+    pub alpha_test_mode: i32,
+    /// Z-buffer mode (0 = read+write, 1 = read-only, 2 = write-only, -1 = unknown).
+    pub z_buf_mode: i32,
 }
 
 /// A single triangle list block (`indexed_trilist`).
@@ -117,6 +122,10 @@ pub struct Vertex {
     pub normal_idx: i32,
     /// Indices into [`ShapeFile::uvs`]. MSTS may carry more than one UV set.
     pub uv_indices: Vec<i32>,
+    /// `Color1` RGBA packed as `[r, g, b, a]` (0–255), if present in the binary stream.
+    pub color1: Option<[u8; 4]>,
+    /// `Color2` RGBA packed as `[r, g, b, a]` (0–255), if present in the binary stream.
+    pub color2: Option<[u8; 4]>,
 }
 
 /// A `sub_object` inside a `distance_level`.
@@ -156,6 +165,46 @@ pub struct NamedMatrix {
     pub matrix: Matrix43,
 }
 
+/// A `vtx_state` entry: links a vertex state index to a matrix and lighting model.
+///
+/// MSTS layout (lenient): `( vtx_state flags matrix_idx lighting_model ... )`
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct VtxState {
+    /// Raw flags word.
+    pub flags: i32,
+    /// Index into [`ShapeFile::matrices`] (-1 = identity / world space).
+    pub matrix_idx: i32,
+    /// Lighting model index (0 = lit, 1 = unlit, …).
+    pub lighting_model: i32,
+}
+
+/// Animation key types supported by MSTS shapes.
+#[derive(Clone, Debug, PartialEq)]
+pub enum AnimController {
+    /// Linear position interpolation: `(time_s, [x, y, z])`.
+    LinearPos { keys: Vec<(f32, [f32; 3])> },
+    /// TCB rotation: `(time_s, [qx, qy, qz, qw], tension, continuity, bias)`.
+    TcbRot { keys: Vec<(f32, [f32; 4])> },
+    /// SLERP rotation: `(time_s, [qx, qy, qz, qw])`.
+    SlerpRot { keys: Vec<(f32, [f32; 4])> },
+}
+
+/// One animated node in a shape animation.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AnimNode {
+    /// Node name (matches a matrix name in [`ShapeFile::matrices`]).
+    pub name: String,
+    pub controllers: Vec<AnimController>,
+}
+
+/// A named animation block (`animation` inside `animations`).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Animation {
+    /// Total frame count declared in the animation header.
+    pub frame_count: u32,
+    pub nodes: Vec<AnimNode>,
+}
+
 /// Parsed `.s` ASCII file.
 #[derive(Clone, Debug, Default)]
 pub struct ShapeFile {
@@ -169,6 +218,10 @@ pub struct ShapeFile {
     pub prim_states: Vec<PrimState>,
     pub lod_controls: Vec<LodControl>,
     pub matrices: Vec<NamedMatrix>,
+    /// Vertex states from `vtx_states` (empty if the shape has none).
+    pub vtx_states: Vec<VtxState>,
+    /// Animations from `animations` (empty for static shapes).
+    pub animations: Vec<Animation>,
 }
 
 impl ShapeFile {
@@ -182,6 +235,7 @@ impl ShapeFile {
         let prim_states = collect_prim_states(ast);
         let lod_controls = collect_lod_controls(ast);
         let matrices = collect_matrices(ast);
+        let vtx_states = collect_vtx_states(ast);
 
         Ok(Self {
             texture_filenames,
@@ -192,6 +246,8 @@ impl ShapeFile {
             prim_states,
             lod_controls,
             matrices,
+            vtx_states,
+            animations: collect_animations(ast),
         })
     }
 
@@ -313,6 +369,8 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
     let mut tex_indices = Vec::new();
     let mut vertex_state_idx: i32 = -1;
     let mut z_bias: Option<f64> = None;
+    let mut alpha_test_mode: i32 = -1;
+    let mut z_buf_mode: i32 = -1;
     let mut top_level_nums = Vec::new();
 
     for item in items.iter().skip(1) {
@@ -349,6 +407,22 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
             Ast::List(sub) if matches_head(sub, "zbias") || matches_head(sub, "z_bias") => {
                 z_bias = first_number_after_head(sub);
             }
+            Ast::List(sub)
+                if matches_head(sub, "alpha_test_mode") || matches_head(sub, "alphatest_mode") =>
+            {
+                if let Some(n) = first_number_after_head(sub) {
+                    alpha_test_mode = n as i32;
+                }
+            }
+            Ast::List(sub)
+                if matches_head(sub, "z_buf_mode")
+                    || matches_head(sub, "zbuf_mode")
+                    || matches_head(sub, "zBufferMode") =>
+            {
+                if let Some(n) = first_number_after_head(sub) {
+                    z_buf_mode = n as i32;
+                }
+            }
             _ => {}
         }
     }
@@ -372,6 +446,16 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
         });
     }
 
+    // Derive alpha_test_mode from `flags` bits when not explicitly present.
+    // MSTS bit 0x40 = AlphaBlend, bit 0x80 = AlphaTest (heuristic from OR source).
+    if alpha_test_mode < 0 && flags != 0 {
+        if flags & 0x0040 != 0 {
+            alpha_test_mode = 2; // blend
+        } else if flags & 0x0080 != 0 {
+            alpha_test_mode = 1; // test
+        }
+    }
+
     PrimState {
         name,
         flags,
@@ -380,6 +464,8 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
         tex_indices,
         vertex_state_idx,
         z_bias,
+        alpha_test_mode,
+        z_buf_mode,
     }
 }
 
@@ -497,12 +583,30 @@ fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
         }));
     });
 
+    // ASCII layout: flags(0), point_idx(1), normal_idx(2), [color1_rgba(3), color2_rgba(4), ...]
+    // Color values are packed as hex (e.g. 0xFFFFFFFF) or decimals.
+    let color1 = nums.get(3).copied().map(u32_to_rgba_bytes);
+    let color2 = nums.get(4).copied().map(u32_to_rgba_bytes);
+
     Some(Vertex {
         // Layout: flags, point index, normal index, color1, color2, vertex_uvs.
         point_idx: nums[1],
         normal_idx: nums[2],
         uv_indices,
+        color1,
+        color2,
     })
+}
+
+/// Pack an MSTS ARGB color dword (`0xAARRGGBB`) into `[r, g, b, a]`.
+#[inline]
+fn u32_to_rgba_bytes(v: i32) -> [u8; 4] {
+    let u = v as u32;
+    let b = (u & 0xFF) as u8;
+    let g = ((u >> 8) & 0xFF) as u8;
+    let r = ((u >> 16) & 0xFF) as u8;
+    let a = ((u >> 24) & 0xFF) as u8;
+    [r, g, b, a]
 }
 
 fn collect_matrices(ast: &Ast) -> Vec<NamedMatrix> {
@@ -547,6 +651,32 @@ fn parse_named_matrix(items: &[Ast]) -> Option<NamedMatrix> {
         name,
         matrix: Matrix43 { rows },
     })
+}
+
+fn collect_vtx_states(ast: &Ast) -> Vec<VtxState> {
+    let mut out = Vec::new();
+    walk_named_list(ast, "vtx_states", &mut |items| {
+        for_each_tagged(items, "vtx_state", |sub| {
+            out.push(parse_vtx_state(sub));
+        });
+    });
+    out
+}
+
+fn parse_vtx_state(items: &[Ast]) -> VtxState {
+    // Layout (lenient): ( vtx_state flags matrix_idx lighting_model ... )
+    let nums: Vec<i32> = shape_section_body(items)
+        .iter()
+        .filter_map(|a| match a {
+            Ast::Atom(at) => shape_atom_to_i32(at),
+            _ => None,
+        })
+        .collect();
+    VtxState {
+        flags: nums.first().copied().unwrap_or(0),
+        matrix_idx: nums.get(1).copied().unwrap_or(-1),
+        lighting_model: nums.get(2).copied().unwrap_or(0),
+    }
 }
 
 // ── small helpers ────────────────────────────────────────────────────────────
@@ -776,5 +906,138 @@ fn walk_named_list<F: FnMut(&[Ast])>(ast: &Ast, name: &str, f: &mut F) {
                 i += 1;
             }
         }
+    }
+}
+
+fn collect_animations(ast: &Ast) -> Vec<Animation> {
+    let mut out = Vec::new();
+    walk_named_list(ast, "animations", &mut |items| {
+        for_each_tagged(items, "animation", |sub| {
+            if let Some(anim) = parse_animation(sub) {
+                out.push(anim);
+            }
+        });
+    });
+    out
+}
+
+fn parse_animation(items: &[Ast]) -> Option<Animation> {
+    let mut frame_count = 0u32;
+    let mut nodes = Vec::new();
+
+    let mut nums = Vec::new();
+    for item in items.iter().skip(1) {
+        match item {
+            Ast::Atom(at) => {
+                if let Some(n) = atom_to_number(at) {
+                    nums.push(n as u32);
+                } else if let Some(h) = shape_atom_to_i32(at) {
+                    nums.push(h as u32);
+                }
+            }
+            Ast::List(sub) if matches_head(sub, "anim_nodes") => {
+                for_each_tagged(sub, "anim_node", |node_sub| {
+                    if let Some(node) = parse_anim_node(node_sub) {
+                        nodes.push(node);
+                    }
+                });
+            }
+            _ => {}
+        }
+    }
+    if let Some(&fc) = nums.first() {
+        frame_count = fc;
+    }
+    Some(Animation { frame_count, nodes })
+}
+
+fn parse_anim_node(items: &[Ast]) -> Option<AnimNode> {
+    let mut name = String::new();
+    let mut controllers = Vec::new();
+
+    for item in items.iter().skip(1) {
+        match item {
+            Ast::Atom(Atom::String(s)) if name.is_empty() => name = s.clone(),
+            Ast::Atom(Atom::Symbol(s)) if name.is_empty() => name = s.clone(),
+            Ast::List(sub) if matches_head(sub, "controllers") => {
+                for controller_item in sub.iter().skip(1) {
+                    if let Ast::List(controller_sub) = controller_item {
+                        if let Some(c) = parse_controller(controller_sub) {
+                            controllers.push(c);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    if name.is_empty() {
+        return None;
+    }
+    Some(AnimNode { name, controllers })
+}
+
+fn parse_controller(items: &[Ast]) -> Option<AnimController> {
+    if items.is_empty() {
+        return None;
+    }
+    let head = match &items[0] {
+        Ast::Atom(Atom::Symbol(s)) => s.to_ascii_lowercase(),
+        _ => return None,
+    };
+
+    match head.as_str() {
+        "linear_pos" => {
+            let mut keys = Vec::new();
+            for_each_tagged(items, "linear_key", |sub| {
+                let mut nums = Vec::new();
+                for at in sub.iter().skip(1) {
+                    if let Ast::Atom(atom) = at {
+                        if let Some(n) = atom_to_number(atom) {
+                            nums.push(n as f32);
+                        }
+                    }
+                }
+                if nums.len() >= 4 {
+                    keys.push((nums[0], [nums[1], nums[2], nums[3]]));
+                }
+            });
+            Some(AnimController::LinearPos { keys })
+        }
+        "tcb_rot" => {
+            let mut keys = Vec::new();
+            for_each_tagged(items, "tcb_key", |sub| {
+                let mut nums = Vec::new();
+                for at in sub.iter().skip(1) {
+                    if let Ast::Atom(atom) = at {
+                        if let Some(n) = atom_to_number(atom) {
+                            nums.push(n as f32);
+                        }
+                    }
+                }
+                if nums.len() >= 5 {
+                    keys.push((nums[0], [nums[1], nums[2], nums[3], nums[4]]));
+                }
+            });
+            Some(AnimController::TcbRot { keys })
+        }
+        "slerp_rot" => {
+            let mut keys = Vec::new();
+            for_each_tagged(items, "slerp_key", |sub| {
+                let mut nums = Vec::new();
+                for at in sub.iter().skip(1) {
+                    if let Ast::Atom(atom) = at {
+                        if let Some(n) = atom_to_number(atom) {
+                            nums.push(n as f32);
+                        }
+                    }
+                }
+                if nums.len() >= 5 {
+                    keys.push((nums[0], [nums[1], nums[2], nums[3], nums[4]]));
+                }
+            });
+            Some(AnimController::SlerpRot { keys })
+        }
+        _ => None,
     }
 }

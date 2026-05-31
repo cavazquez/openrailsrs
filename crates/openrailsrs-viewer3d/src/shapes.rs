@@ -55,6 +55,10 @@ pub struct LoadedShapePart {
     pub mesh: Mesh,
     pub texture_file: Option<String>,
     pub shader_name: Option<String>,
+    /// From `prim_state.alpha_test_mode`: -1 = unknown, 0 = opaque, 1 = test, 2 = blend.
+    pub alpha_test_mode: i32,
+    pub z_bias: Option<f32>,
+    pub z_buf_mode: i32,
 }
 
 /// Bevy asset handles for one renderable shape part.
@@ -262,11 +266,25 @@ pub fn build_mesh_parts_from_shape_lod(
         .into_iter()
         .filter_map(|(prim_state_idx, buffers)| {
             let mesh = buffers.into_mesh()?;
+            let (alpha_test_mode, z_bias, z_buf_mode) = shape
+                .prim_states
+                .get(prim_state_idx.max(0) as usize)
+                .map(|ps| {
+                    (
+                        ps.alpha_test_mode,
+                        ps.z_bias.map(|z| z as f32),
+                        ps.z_buf_mode,
+                    )
+                })
+                .unwrap_or((-1, None, -1));
             Some(LoadedShapePart {
                 prim_state_idx,
                 mesh,
                 texture_file: texture_filename_for_prim_state(shape, prim_state_idx),
                 shader_name: shader_name_for_prim_state(shape, prim_state_idx),
+                alpha_test_mode,
+                z_bias,
+                z_buf_mode,
             })
         })
         .collect()
@@ -430,6 +448,20 @@ pub fn ace_to_image(ace: &AceFile) -> Image {
     )
 }
 
+/// Decode a DDS file from raw bytes into a Bevy GPU image.
+pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
+    use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
+    Image::from_buffer(
+        bytes,
+        ImageType::Extension("dds"),
+        CompressedImageFormats::all(),
+        false,
+        ImageSampler::Default,
+        RenderAssetUsages::default(),
+    )
+    .map_err(|e| e.to_string())
+}
+
 /// Optional MSTS install root (`Content/`) for `GLOBAL/SHAPES` lookup.
 pub fn msts_content_root() -> Option<PathBuf> {
     if let Ok(env) = std::env::var("OPENRAILSRS_MSTS_CONTENT") {
@@ -553,6 +585,24 @@ pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
+    if let Some(p) = resolve_texture_path_exact(route_dir, file_name) {
+        return Some(p);
+    }
+    let path_obj = Path::new(file_name);
+    if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
+    {
+        let dds_name = path_obj
+            .with_extension("dds")
+            .to_string_lossy()
+            .into_owned();
+        if let Some(p) = resolve_texture_path_exact(route_dir, &dds_name) {
+            return Some(p);
+        }
+    }
+    None
+}
+
+fn resolve_texture_path_exact(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     let direct = route_dir.join(file_name);
     if direct.is_file() {
         return Some(direct);
@@ -680,6 +730,8 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             texture_dirs,
             loaded.texture_file.as_deref(),
             None,
+            -1, // no prim_state for combined fallback
+            None,
             images,
             materials,
             texture_cache,
@@ -700,6 +752,8 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             texture_dirs,
             part.texture_file.as_deref(),
             part.shader_name.as_deref(),
+            part.alpha_test_mode,
+            part.z_bias,
             images,
             materials,
             texture_cache,
@@ -760,6 +814,8 @@ fn material_for_shape_texture(
     texture_dirs: &[&Path],
     texture_file: Option<&str>,
     shader_name: Option<&str>,
+    alpha_test_mode: i32,
+    z_bias: Option<f32>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
@@ -770,6 +826,30 @@ fn material_for_shape_texture(
         match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             None => {}
             Some(tex_path) => {
+                let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
+                    == Some(std::ffi::OsString::from("dds"));
+                if is_dds {
+                    if let Ok(bytes) = std::fs::read(&tex_path) {
+                        if let Ok(image) = decode_dds_to_image(&bytes) {
+                            let handle = texture_cache
+                                .entry(tex_path.clone())
+                                .or_insert_with(|| images.add(image))
+                                .clone();
+                            let material = materials.add(StandardMaterial {
+                                base_color: Color::WHITE,
+                                base_color_texture: Some(handle),
+                                perceptual_roughness: 0.85,
+                                metallic: 0.05,
+                                double_sided: true,
+                                alpha_mode: AlphaMode::Blend,
+                                depth_bias: z_bias.unwrap_or(0.0),
+                                ..default()
+                            });
+                            return (material, true, true);
+                        }
+                    }
+                }
+
                 let ace = if let Some(ace) = ace_cache.get(&tex_path) {
                     Some(ace.clone())
                 } else {
@@ -785,7 +865,8 @@ fn material_for_shape_texture(
                     }
                 };
                 if let Some(ace) = ace {
-                    let alpha_mode = shape_alpha_mode(&ace, tex_name, shader_name);
+                    let alpha_mode =
+                        alpha_mode_from_prim_state(&ace, tex_name, shader_name, alpha_test_mode);
                     let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
                     let image = ace_to_image(&ace);
                     let handle = texture_cache
@@ -799,6 +880,7 @@ fn material_for_shape_texture(
                         metallic: 0.05,
                         double_sided: true,
                         alpha_mode,
+                        depth_bias: z_bias.unwrap_or(0.0),
                         ..default()
                     });
                     return (material, true, is_transparent);
@@ -813,9 +895,33 @@ fn material_for_shape_texture(
         perceptual_roughness: 0.75,
         metallic: 0.1,
         double_sided: true,
+        depth_bias: z_bias.unwrap_or(0.0),
         ..default()
     });
     (material, false, false)
+}
+
+/// Determine the Bevy [`AlphaMode`] for a texture+shader combination.
+///
+/// Priority order:
+/// 1. `prim_state.alpha_test_mode` when explicitly set (0 = opaque, 1 = test, 2 = blend).
+/// 2. Texture pixel analysis (semi-transparent pixels → blend, alpha-only → mask).
+/// 3. Shader name / texture name heuristics.
+pub fn alpha_mode_from_prim_state(
+    ace: &AceFile,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> AlphaMode {
+    // Honour the explicit prim_state flag first.
+    match alpha_test_mode {
+        0 => return AlphaMode::Opaque,
+        1 => return AlphaMode::Mask(0.5),
+        2 => return AlphaMode::Blend,
+        _ => {}
+    }
+    // Fall back to the per-texture heuristic.
+    shape_alpha_mode(ace, texture_file, shader_name)
 }
 
 fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
@@ -1099,6 +1205,8 @@ mod tests {
             &[route.as_path()],
             Some("alpha_test.ace"),
             Some("BlendATexDiff"),
+            -1, // no explicit alpha_test_mode → heuristic path
+            None,
             &mut images,
             &mut materials,
             &mut texture_cache,
@@ -1131,6 +1239,8 @@ mod tests {
             &[route.as_path()],
             Some("body.ace"),
             Some("TexDiff"),
+            -1, // no explicit alpha_test_mode → heuristic path
+            None,
             &mut images,
             &mut materials,
             &mut texture_cache,
@@ -1161,6 +1271,21 @@ mod tests {
         ));
 
         let _ = std::fs::remove_file(texture);
+        let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
+    fn resolve_texture_path_dds_fallback() {
+        let route = std::env::temp_dir().join("openrailsrs_dds_fallback");
+        let textures = route.join("TEXTURES");
+        std::fs::create_dir_all(&textures).unwrap();
+        let dds_file = textures.join("glass.dds");
+        std::fs::write(&dds_file, b"DDS_RAW_BYTES").unwrap();
+
+        let found = resolve_texture_path(&route, "glass.ace");
+        assert_eq!(found, Some(dds_file));
+
+        let _ = std::fs::remove_file(textures.join("glass.dds"));
         let _ = std::fs::remove_dir_all(route);
     }
 

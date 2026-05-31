@@ -81,6 +81,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<cab_view::CabInteriorState>()
+            .init_resource::<live::DriverCamState>()
             .init_resource::<hud::HudFps>()
             .init_resource::<hud::ProfileLog>()
             .init_resource::<gameplay::GameplayToast>()

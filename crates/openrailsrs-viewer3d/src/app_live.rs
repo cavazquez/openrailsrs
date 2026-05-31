@@ -93,6 +93,7 @@ mod tests {
     fn update_driver_train_visibility_hides_in_driver_cam() {
         with_live_world(|world| {
             world.run_system_once(spawn_live_train).unwrap();
+            world.spawn((crate::cab_view::CabInteriorMarker, Visibility::Hidden));
             world.flush();
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
             world
@@ -112,6 +113,15 @@ mod tests {
                 .iter(world)
                 .all(|v| *v == Visibility::Hidden);
             assert!(bodies_hidden, "train body hidden in driver view");
+
+            let cab_part_visible = world
+                .query_filtered::<&Visibility, With<crate::cab_view::CabInteriorMarker>>()
+                .iter(world)
+                .all(|v| *v == Visibility::Visible);
+            assert!(
+                cab_part_visible,
+                "cab parts carrying CabInteriorMarker stay visible"
+            );
 
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
             world

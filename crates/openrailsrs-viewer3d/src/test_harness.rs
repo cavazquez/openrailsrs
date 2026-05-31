@@ -119,6 +119,7 @@ pub fn minimal_app() -> App {
     app.init_resource::<crate::floating_origin::FloatingOrigin>();
     app.init_resource::<crate::gameplay::GameplayToast>();
     app.init_resource::<LiveDriverCab>();
+    app.init_resource::<crate::live::DriverCamState>();
     app.insert_resource(ViewerLaunchOpts::default());
     app.insert_resource(TerrainElevation::default());
     app.insert_resource(HudTitle("test".into()));

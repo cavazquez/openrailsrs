@@ -583,6 +583,17 @@ fn token_name(id: i32) -> &'static str {
         79 => "light_model_cfgs",
         80 => "light_model_cfg",
         81 => "uv_ops",
+        90 => "animations",
+        91 => "animation",
+        92 => "anim_nodes",
+        93 => "anim_node",
+        94 => "controllers",
+        95 => "tcb_rot",
+        96 => "linear_pos",
+        97 => "slerp_rot",
+        99 => "tcb_key",
+        101 => "linear_key",
+        103 => "slerp_key",
         125 => "named_filter_mode",
         129 => "named_shader",
         303 => "Static",
@@ -617,6 +628,10 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
             | 61
             | 63..=76
             | 79..=81
+            | 90..=97
+            | 99
+            | 101
+            | 103
             | 125
             | 129
     )
@@ -625,7 +640,7 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
 fn is_scalar_only_leaf_block(token_id: i32) -> bool {
     matches!(
         token_id,
-        2 | 3 | 6 | 8 | 56 | 63 | 64 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags
+        2 | 3 | 6 | 8 | 56 | 63 | 64 | 99 | 101 | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, anim_keys
     )
 }
 
@@ -652,6 +667,12 @@ fn is_schema_collection_parent(parent: i32) -> bool {
             | 68
             | 72
             | 74
+            | 90 // animations
+            | 92 // anim_nodes
+            | 94 // controllers
+            | 95 // tcb_rot
+            | 96 // linear_pos
+            | 97 // slerp_rot
     )
 }
 
@@ -682,6 +703,14 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (68, 69) // volumes -> vol_sphere
             | (72, 129) // shader_names -> named_shader
             | (74, 125) // texture_filter_names -> named_filter_mode
+            | (90, 91) // animations -> animation
+            | (92, 93) // anim_nodes -> anim_node
+            | (94, 95) // controllers -> tcb_rot
+            | (94, 96) // controllers -> linear_pos
+            | (94, 97) // controllers -> slerp_rot
+            | (95, 99) // tcb_rot -> tcb_key
+            | (96, 101) // linear_pos -> linear_key
+            | (97, 103) // slerp_rot -> slerp_key
     )
 }
 
@@ -714,5 +743,46 @@ mod tests {
             "tree shape vertex indices must be small table indices, got {:?}",
             prim.vertex_indices
         );
+    }
+
+    #[test]
+    fn parse_shape_with_animations() {
+        let ascii = r#"
+        SIMISA@@@@@@@@@@JINX0s1t______
+
+        ( shape
+            ( animations 1
+                ( animation 30 30
+                    ( anim_nodes 1
+                        ( anim_node "BOGIE1"
+                            ( controllers 1
+                                ( linear_pos 2
+                                    ( linear_key 0.0 1.0 2.0 3.0 )
+                                    ( linear_key 1.0 4.0 5.0 6.0 )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        "#;
+        let ast = crate::parser::parse_first_from_first_paren(ascii).expect("parse AST");
+        let shape = ShapeFile::from_ast(&ast).expect("parse ShapeFile");
+        assert_eq!(shape.animations.len(), 1);
+        let anim = &shape.animations[0];
+        assert_eq!(anim.frame_count, 30);
+        assert_eq!(anim.nodes.len(), 1);
+        let node = &anim.nodes[0];
+        assert_eq!(node.name, "BOGIE1");
+        assert_eq!(node.controllers.len(), 1);
+        match &node.controllers[0] {
+            crate::AnimController::LinearPos { keys } => {
+                assert_eq!(keys.len(), 2);
+                assert_eq!(keys[0], (0.0, [1.0, 2.0, 3.0]));
+                assert_eq!(keys[1], (1.0, [4.0, 5.0, 6.0]));
+            }
+            _ => panic!("Expected LinearPos controller"),
+        }
     }
 }
