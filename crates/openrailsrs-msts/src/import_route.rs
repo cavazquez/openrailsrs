@@ -216,20 +216,19 @@ fn ensure_non_empty_tdb(tdb: &TrackDbFile, tdb_path: &Path) -> Result<(), MstsEr
 // ── Internals ─────────────────────────────────────────────────────────────────
 
 fn find_tdb(dir: &Path) -> Result<std::path::PathBuf, MstsError> {
-    for entry in std::fs::read_dir(dir)? {
-        let e = entry?;
-        let p = e.path();
-        if p.extension()
-            .map(|x| x.eq_ignore_ascii_case("tdb"))
-            .unwrap_or(false)
-        {
-            return Ok(p);
-        }
-    }
-    Err(MstsError::msg(format!(
-        "no *.tdb file found in {}",
-        dir.display()
-    )))
+    let mut tdbs: Vec<_> = std::fs::read_dir(dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension()
+                .map(|x| x.eq_ignore_ascii_case("tdb"))
+                .unwrap_or(false)
+        })
+        .collect();
+    tdbs.sort();
+    tdbs.into_iter()
+        .next()
+        .ok_or_else(|| MstsError::msg(format!("no *.tdb file found in {}", dir.display())))
 }
 
 fn find_route_id(route_dir: &Path, tdb_path: &Path) -> String {
