@@ -238,10 +238,11 @@ pub fn spawn_train_markers(
         let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
 
         if mode.is_track_dev() && !track_dev_render_enabled() {
-            let unit = meshes.add(Cuboid::new(2.0, 2.5, 14.0));
+            let unit = meshes.add(Cuboid::new(3.0, 3.5, 16.0));
             let material = materials.add(StandardMaterial {
                 base_color: color,
-                emissive: LinearRgba::from(color) * 0.5,
+                emissive: LinearRgba::from(color) * 2.0,
+                unlit: true,
                 ..default()
             });
             commands.spawn((
