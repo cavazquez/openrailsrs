@@ -1,5 +1,6 @@
 //! Recentre the scene around the camera when far from the origin (Open Rails `PrepareFrame` style).
 
+use bevy::ecs::system::ParamSet;
 use bevy::prelude::*;
 
 use crate::camera::{OrbitState, camera_transform_from_orbit_state};
@@ -28,25 +29,28 @@ pub(crate) fn track_dev_recenter_at_subject(
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     mut origin: ResMut<FloatingOrigin>,
-    mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
-    mut transforms: Query<
-        &mut Transform,
-        (
-            Without<Camera3d>,
-            Without<Window>,
-            Without<Node>,
-            Without<TrainMarker>,
-            Without<LiveTrainMarker>,
-        ),
-    >,
-    mut train_tf: Query<&mut Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
+    mut queries: ParamSet<(
+        Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+        Query<&mut Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
+        Query<
+            &mut Transform,
+            (
+                Without<Camera3d>,
+                Without<Window>,
+                Without<Node>,
+                Without<TrainMarker>,
+                Without<LiveTrainMarker>,
+            ),
+        >,
+    )>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
     if !mode.is_track_dev() {
         return;
     }
 
-    let subject = train_tf
+    let subject = queries
+        .p1()
         .iter()
         .next()
         .map(|t| t.translation)
@@ -73,22 +77,24 @@ pub(crate) fn track_dev_recenter_at_subject(
     }
 
     origin.shift += delta;
-    for mut tf in &mut train_tf {
+    for mut tf in queries.p1().iter_mut() {
         tf.translation -= delta;
     }
-    for mut tf in &mut transforms {
+    for mut tf in queries.p2().iter_mut() {
         tf.translation -= delta;
-    }
-    for mut billboard in &mut billboards {
-        billboard.world -= delta;
     }
 
-    let Ok((mut cam, mut orbit)) = cameras.single_mut() else {
+    let mut camera_q = queries.p0();
+    let Ok((mut cam, mut orbit)) = camera_q.single_mut() else {
         return;
     };
     cam.translation -= delta;
     orbit.focus -= delta;
     *cam = camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
+
+    for mut billboard in &mut billboards {
+        billboard.world -= delta;
+    }
 
     viewer_log!(
         "openrailsrs-viewer3d: track_dev — recentered scene at subject ({:.0}, {:.0}, {:.0})",
