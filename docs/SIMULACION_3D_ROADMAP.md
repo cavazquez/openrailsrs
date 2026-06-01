@@ -442,12 +442,12 @@ Meshes: `examples/smoke/routes/test/SHAPES/test.s`.
 # Sim / validación
 cargo run -p openrailsrs-cli -- sim examples/chiltern/scenario.toml
 
-# 3D con mundo real: apuntar al directorio de RUTA MSTS/OR
+# 3D con mundo real: usar assets desde el directorio de RUTA MSTS/OR
 CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
-cargo run -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
-# Nota: hoy el viewer carga route.path relativo al escenario (./ = examples/chiltern).
-# Para WORLD/SHAPES de la ruta real hace falta symlink o copiar TERRAIN/WORLD/SHAPES
-# bajo examples/chiltern/ — ver README chiltern (próxima mejora: --route-root).
+cargo run -p openrailsrs-viewer3d -- --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+# El grafo/física sale de examples/chiltern; tren y vía .tdb salen de --route-root.
+# No carga WORLD/terreno/grilla/objetos estáticos.
+# Ajustes opcionales: OPENRAILSRS_RUN_CORRIDOR_WIDTH_M=240 y OPENRAILSRS_RUN_CORRIDOR_RADIUS_M=3000.
 ```
 
 **Sonido:** `openrailsrs cab` o viewer `--live` (sintético; requiere dispositivo de audio).
@@ -462,7 +462,7 @@ Mismo patrón: `import-msts` → `track.toml` en `examples/sce/`; assets 3D desd
 
 | Tema | Estado | Fase |
 |------|--------|------|
-| `--route-root` para mezclar `scenario.toml` del repo + `WORLD/` de OR externo | 🔲 | B o D |
+| `--route-root` para mezclar `scenario.toml` del repo + `WORLD/` de OR externo | ✅ | B/D |
 | README Fase 23 marcada 🔲 pero órdenes 1–11 ✅ | Doc | Actualizar `README.md` |
 | Señales enforced en `LiveDriveSession` | 🔲 | B |
 | Freno residual Chiltern al arrancar en live | 🔲 | Afinar init como `ScriptedDriver` |

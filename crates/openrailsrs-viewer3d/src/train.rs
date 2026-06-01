@@ -13,7 +13,7 @@ use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
-    vehicle_shape_local_transform,
+    vehicle_shape_local_transform, vehicle_texture_root_for_shape_path,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
@@ -408,11 +408,9 @@ fn load_vehicle_shape_assets(
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
 ) -> ShapeRenderAsset {
-    // Derive the trainset root from the shape path so that textures stored in
-    // <trainset>/TEXTURES/ are found even when they are outside route_dir.
-    let trainset_root = shape_path
-        .parent() // …/SHAPES
-        .and_then(|p| p.parent()); // …/<trainset name>
+    // Derive the trainset root from the shape path so textures are found even
+    // when they are outside route_dir and the trainset uses flat `.s` layout.
+    let trainset_root = vehicle_texture_root_for_shape_path(shape_path);
     let tex_dirs: Vec<&std::path::Path> = std::iter::once(route_dir)
         .chain(trainset_root.filter(|t| *t != route_dir))
         .collect();

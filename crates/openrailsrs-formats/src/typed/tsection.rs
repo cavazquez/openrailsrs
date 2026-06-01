@@ -58,6 +58,8 @@ pub struct TrackShapeDef {
     pub main_route: Option<u32>,
     /// Occupancy clearance in metres for diverging routes (`ClearanceDist` in junction shapes).
     pub clearance_dist_m: Option<f64>,
+    /// MSTS marks road pieces inside `TrackShape` with `RoadShape ( )`.
+    pub road_shape: bool,
     pub paths: Vec<TrackShapePath>,
 }
 
@@ -153,6 +155,10 @@ impl TSectionCatalog {
 
     pub fn is_junction_shape(&self, shape_idx: u32) -> bool {
         self.shapes.get(&shape_idx).is_some_and(|s| s.is_junction())
+    }
+
+    pub fn is_road_shape(&self, shape_idx: u32) -> bool {
+        self.shapes.get(&shape_idx).is_some_and(|s| s.road_shape)
     }
 
     /// Length + half-gauge for procedural track from the shape's primary path (first section).
@@ -392,6 +398,7 @@ fn merge_track_shapes(existing: &mut TrackShapeDef, incoming: &TrackShapeDef) {
         if existing.clearance_dist_m.is_none() {
             existing.clearance_dist_m = incoming.clearance_dist_m;
         }
+        existing.road_shape |= incoming.road_shape;
     }
 }
 
@@ -607,6 +614,7 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
     let mut file_name = String::new();
     let mut main_route = None;
     let mut clearance_dist_m = None;
+    let mut road_shape = false;
     let mut paths = Vec::new();
     let mut i = body_start;
     while i < items.len() {
@@ -626,6 +634,9 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
             }
             Ast::List(sub) if matches_head(sub, "ClearanceDist") => {
                 clearance_dist_m = sub.get(1).and_then(ast_to_f64);
+            }
+            Ast::List(sub) if matches_head(sub, "RoadShape") => {
+                road_shape = true;
             }
             Ast::List(sub) if matches_head(sub, "SectionIdx") => {
                 if let Some(path) = parse_section_idx(sub) {
@@ -659,6 +670,9 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
                     other => ast_to_f64(other),
                 });
             }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("RoadShape") => {
+                road_shape = true;
+            }
             Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("SectionIdx") => {
                 i += 1;
                 if let Some(Ast::List(sub)) = items.get(i) {
@@ -685,6 +699,7 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
             file_name,
             main_route,
             clearance_dist_m,
+            road_shape,
             paths,
         },
     ))
@@ -949,6 +964,7 @@ TrackShape ( 42
  FileName ( turnout.s )
  MainRoute ( 1 )
  ClearanceDist ( 12.5 )
+ RoadShape ( )
  SectionIdx ( 1 0 0 0 0 1 )
 )
 "#;
@@ -956,6 +972,8 @@ TrackShape ( 42
         scan_tsection_entries(nested, &mut catalog);
         let shape = catalog.shapes.get(&42).expect("nested");
         assert_eq!(shape.clearance_dist_m, Some(12.5));
+        assert!(shape.road_shape);
+        assert!(catalog.is_road_shape(42));
         assert!(catalog.is_junction_shape(42));
 
         let flat = r#"

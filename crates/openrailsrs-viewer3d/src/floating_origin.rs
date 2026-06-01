@@ -40,7 +40,7 @@ pub(crate) fn track_dev_recenter_at_subject(
         Query<&mut Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
     )>,
 ) {
-    if !mode.is_track_dev() {
+    if !mode.is_track_focused() {
         return;
     }
 
@@ -86,7 +86,7 @@ pub(crate) fn track_dev_recenter_at_subject(
     *cam = camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
 
     viewer_log!(
-        "openrailsrs-viewer3d: track_dev — recentered scene at subject ({:.0}, {:.0}, {:.0})",
+        "openrailsrs-viewer3d: track-focused — recentered scene at subject ({:.0}, {:.0}, {:.0})",
         delta.x,
         delta.y,
         delta.z
@@ -102,7 +102,7 @@ pub(crate) fn apply_floating_origin(
     mut transforms: Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         return;
     }
     let Ok((mut cam, mut orbit)) = cameras.single_mut() else {

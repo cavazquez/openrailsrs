@@ -1353,6 +1353,24 @@ pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<P
     None
 }
 
+/// Root folder for a vehicle shape's textures.
+///
+/// MSTS/Open Rails trainsets appear in both layouts:
+/// - `<trainset>/SHAPES/car.s` with textures in `<trainset>/TEXTURES/`
+/// - `<trainset>/car.s` with textures directly in `<trainset>/`
+pub fn vehicle_texture_root_for_shape_path(shape_path: &Path) -> Option<&Path> {
+    let parent = shape_path.parent()?;
+    if parent
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("SHAPES"))
+    {
+        parent.parent()
+    } else {
+        Some(parent)
+    }
+}
+
 /// Load and decode an `.ace` file into a Bevy image (mip 0 only).
 pub fn load_ace_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     let path = resolve_texture_path(route_dir, file_name)?;
@@ -2269,6 +2287,50 @@ mod tests {
         assert!(
             extent.x < 5.0 && extent.y < 6.0 && extent.z < 30.0,
             "OR content shape extent too large: {extent:?}"
+        );
+        let texture_root =
+            vehicle_texture_root_for_shape_path(&path).expect("vehicle texture root");
+        assert!(
+            resolve_texture_path(texture_root, "bp01.ace").is_some(),
+            "flat OR trainset texture should resolve from {}",
+            texture_root.display()
+        );
+
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &path,
+            &[route.as_path(), texture_root],
+            Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            Color::srgb(0.55, 0.58, 0.62),
+        )
+        .expect("render OR content Pullman shape");
+        let textured_parts = asset.parts.iter().filter(|part| part.has_texture).count();
+        assert!(
+            textured_parts > 20,
+            "expected most OR content Pullman parts to resolve textures, got {textured_parts}/{}",
+            asset.parts.len()
+        );
+    }
+
+    #[test]
+    fn vehicle_texture_root_supports_shapes_subdir_and_flat_trainset() {
+        let shapes_layout = Path::new("/tmp/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s");
+        assert_eq!(
+            vehicle_texture_root_for_shape_path(shapes_layout),
+            Some(Path::new("/tmp/RF_Blue_Pullman"))
+        );
+
+        let flat_layout = Path::new("/tmp/RF_Blue_Pullman/RF_WP_DMBSA.s");
+        assert_eq!(
+            vehicle_texture_root_for_shape_path(flat_layout),
+            Some(Path::new("/tmp/RF_Blue_Pullman"))
         );
     }
 }

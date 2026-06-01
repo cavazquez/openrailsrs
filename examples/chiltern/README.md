@@ -99,8 +99,12 @@ python3 scripts/sync_chiltern_assets.py \
 Conductor en primera persona, paradas y penalización vía `scenario.overlay.toml`:
 
 ```bash
-cargo run --release -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cargo run --release -p openrailsrs-viewer3d -- \
+  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
+
+`--run-corridor` carga solo el escenario, el tren y vía procedural desde `.tdb` alrededor del recorrido. No carga `WORLD/`, terreno, grilla ni objetos estáticos. Si hace falta afinar, `OPENRAILSRS_RUN_CORRIDOR_WIDTH_M=240` controla el ancho visible y `OPENRAILSRS_RUN_CORRIDOR_RADIUS_M=3000` el radio de búsqueda `.tdb`.
 
 Controles: **W/S** acelerar/frenar, **V** driver/chase, **P** pausa, **R** reinicio, **C** panel CAB, **Shift+P** lluvia.
 
@@ -117,9 +121,10 @@ Laboratorio para validar el encadenado TDB (TrPins + secciones) sin terreno ni e
 ```bash
 export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
 export OPENRAILSRS_TRACK_AUDIT=1   # métricas en consola (graph match, inter-node gap)
+CHILTERN_ROUTE="$OPENRAILSRS_MSTS_CONTENT/Chiltern/ROUTES/Chiltern"
 
 cargo run --release -p openrailsrs-viewer3d -- \
-  --track-dev --live examples/chiltern/scenario.toml
+  --track-dev --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
 En `--track-dev` **no se cargan** tiles `.w`, señales del grafo ni meshes Pullman (evita ~40k objetos y OOM). Radio de vía `.tdb` por defecto **1500 m** alrededor del tren; override: `OPENRAILSRS_TRACK_DEV_RADIUS_M=800`.
@@ -154,7 +159,7 @@ Preferí **`--live`** en track-dev (tren caja, menos RAM). El replay sin `OPENRA
 
 Chiltern **no tiene** carpeta `TERRAIN/` como el demo `smoke`. En MSTS el relieve está en **`TILES/`** (`.t` + `_y.raw`, ~1600 tiles). El viewer carga **`TILES/*.t`** y **`TERRAIN/*.y`** en un radio de ~8 km desde el centro de la vía.
 
-Los directorios `WORLD/`, `TILES/`, `TERRTEX/`, `TEXTURES/`, `SHAPES/` (ruta) y `TERRAIN/` están en `.gitignore` (~5 GB con rsync). No los subas al repo; cópialos en local con los comandos de abajo.
+Los directorios `WORLD/`, `TILES/`, `TERRTEX/`, `TEXTURES/`, `SHAPES/` (ruta) y `TERRAIN/` están en `.gitignore` (~5 GB con rsync). No los subas al repo. Para usarlos sin copiarlos, preferí `--route-root "$CHILTERN_ROUTE"`; los comandos de abajo siguen sirviendo si querés una copia local.
 
 ### WORLD (objetos `.w`) — recomendado
 
@@ -361,7 +366,8 @@ Roadmap completo 3D (fases, assets MSTS, sonidos): [`docs/SIMULACION_3D_ROADMAP.
 **Modo live 3D** (Fase A — sim en ventana, sin CSV):
 
 ```bash
-cargo run -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+cargo run -p openrailsrs-viewer3d -- \
+  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 # Orbit (F1): W/S throttle/freno, Space emergencia, T follow, +/- velocidad sim
 ```
 

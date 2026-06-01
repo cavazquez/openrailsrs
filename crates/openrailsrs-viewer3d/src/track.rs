@@ -399,7 +399,7 @@ pub fn spawn_track_meshes(
     terrain: Option<Res<TerrainElevation>>,
     world: Option<Res<WorldScene>>,
 ) {
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         return;
     }
     let has_world_scenery = world.as_deref().is_some_and(|w| !w.is_empty());
@@ -525,7 +525,7 @@ pub fn frame_orbit_camera_on_track(
     let Ok((mut transform, mut orbit)) = query.single_mut() else {
         return;
     };
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         limit.max = TRACK_DEV_ORBIT_MAX_M;
         orbit.focus = replay
             .tracks

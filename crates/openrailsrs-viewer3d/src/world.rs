@@ -634,7 +634,7 @@ fn trackobj_procedural_links(
     mode: ViewerSceneryMode,
 ) -> Vec<openrailsrs_formats::TrackProceduralLink> {
     let catalog = assets.tsection();
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         if catalog
             .shapes
             .get(&shape_idx)
@@ -655,7 +655,7 @@ fn trackobj_procedural_segments(
 ) -> Vec<crate::dyntrack::ProceduralTrackSegment> {
     let rotation = assets.refine_trackobj_rotation(obj.section_idx, obj.position, obj.rotation);
     let Some(shape_idx) = obj.section_idx else {
-        if mode.is_track_dev() {
+        if mode.is_track_focused() {
             return Vec::new();
         }
         return vec![crate::dyntrack::ProceduralTrackSegment {
@@ -957,7 +957,7 @@ pub fn init_world_spawn_progress(
     mode: Res<ViewerSceneryMode>,
     mut commands: Commands,
 ) {
-    if world.is_empty() || mode.is_track_dev() {
+    if world.is_empty() || mode.is_track_focused() {
         return;
     }
     viewer_log!(
@@ -985,7 +985,7 @@ fn classify_one_object(
 
     let dist = focus.horizontal_distance(obj.position);
 
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         return;
     }
 
@@ -1432,7 +1432,7 @@ pub fn world_stream_scenery_system(
         return;
     }
     let new_items = &world.items[state.processed_items..];
-    let forests = if mode.is_track_dev() {
+    let forests = if mode.is_track_focused() {
         0
     } else {
         new_items
@@ -1440,7 +1440,7 @@ pub fn world_stream_scenery_system(
             .filter(|obj| obj.kind == "Forest" && obj.forest.is_some())
             .count()
     };
-    let waters = if mode.is_track_dev() {
+    let waters = if mode.is_track_focused() {
         0
     } else {
         new_items
@@ -1510,7 +1510,7 @@ pub fn world_tile_stream_system(
     mode: Res<crate::launch::ViewerSceneryMode>,
     mut commands: Commands,
 ) {
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         return;
     }
     if progress.is_some() {
@@ -1808,7 +1808,7 @@ pub fn spawn_world_boxes(
 
         let dist = focus.horizontal_distance(obj.position);
 
-        if mode.is_track_dev() {
+        if mode.is_track_focused() {
             continue;
         }
 

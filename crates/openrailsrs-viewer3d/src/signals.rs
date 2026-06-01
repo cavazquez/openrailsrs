@@ -55,7 +55,7 @@ pub fn spawn_signal_markers(
     terrain: Option<Res<TerrainElevation>>,
     mode: Res<ViewerSceneryMode>,
 ) {
-    if mode.is_track_dev() {
+    if mode.is_track_focused() {
         return;
     }
     let signal_count = scene.graph.signals().count();

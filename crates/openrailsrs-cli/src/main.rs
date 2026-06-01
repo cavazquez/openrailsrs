@@ -1122,6 +1122,25 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
     let uv_count = shape.uvs.len();
 
     if json {
+        let prim_states: Vec<_> = shape
+            .prim_states
+            .iter()
+            .enumerate()
+            .map(|(i, ps)| {
+                serde_json::json!({
+                    "index": i,
+                    "name": ps.name,
+                    "flags": ps.flags,
+                    "shader_idx": ps.shader_idx,
+                    "texture_idx": ps.texture_idx,
+                    "tex_indices": ps.tex_indices,
+                    "vertex_state_idx": ps.vertex_state_idx,
+                    "z_bias": ps.z_bias,
+                    "alpha_test_mode": ps.alpha_test_mode,
+                    "z_buf_mode": ps.z_buf_mode,
+                })
+            })
+            .collect();
         let value = serde_json::json!({
             "file": file.display().to_string(),
             "lod_controls": lod_count,
@@ -1135,6 +1154,7 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             "textures": texture_count,
             "texture_filenames": shape.texture_filenames,
             "shader_names": shape.shader_names,
+            "prim_state_details": prim_states,
             "matrices": matrix_count,
         });
         println!("{}", serde_json::to_string_pretty(&value)?);

@@ -56,7 +56,7 @@ mod test_harness;
 use bevy::prelude::*;
 
 pub use hud::HudTitle;
-pub use launch::{ViewerLaunchOpts, ViewerSceneryMode};
+pub use launch::{RunCorridorPath, ViewerLaunchOpts, ViewerSceneryMode};
 pub use live::LiveDrive;
 pub use log::init as init_viewer_log;
 pub use log::log_step;
@@ -95,6 +95,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<floating_origin::FloatingOrigin>()
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<launch::ViewerSceneryMode>()
+            .init_resource::<launch::RunCorridorPath>()
             .add_systems(
                 Startup,
                 (

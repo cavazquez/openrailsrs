@@ -16,8 +16,8 @@ use crate::dyntrack::{
     ProceduralTrackStyle, spawn_procedural_track_batch,
 };
 use crate::launch::{
-    TRACK_DEV_BRANCH_WALK_MAX_NODES, TRACK_DEV_MAX_BRANCHES, TRACK_DEV_MAX_SEGMENTS,
-    ViewerSceneryMode, track_dev_render_enabled, track_dev_tdb_radius_m,
+    RunCorridorPath, TRACK_DEV_BRANCH_WALK_MAX_NODES, TRACK_DEV_MAX_BRANCHES,
+    TRACK_DEV_MAX_SEGMENTS, ViewerSceneryMode, tdb_radius_for_mode, track_dev_render_enabled,
 };
 use crate::shapes::RouteAssets;
 use crate::track::TrackScene;
@@ -878,27 +878,40 @@ pub fn spawn_tdb_graph_track(
     offset: Res<RouteWorldOffset>,
     scene: Res<TrackScene>,
     mode: Res<ViewerSceneryMode>,
+    corridor: Res<RunCorridorPath>,
 ) {
-    if !mode.is_track_dev() {
+    if !mode.draws_tdb_track() {
         return;
     }
-    if !track_dev_render_enabled() {
+    if mode.is_track_dev() && !track_dev_render_enabled() {
         return;
     }
     let Some(tdb) = assets.track_db() else {
         viewer_log!("openrailsrs-viewer3d: tdb-graph — no .tdb loaded");
         return;
     };
-    let radius_m = track_dev_tdb_radius_m();
+    let radius_m = tdb_radius_for_mode(*mode);
     viewer_log!(
-        "openrailsrs-viewer3d: tdb-graph — collecting chords within {:.0}m…",
-        radius_m
+        "openrailsrs-viewer3d: tdb-graph — collecting chords within {:.0}m ({:?})…",
+        radius_m,
+        *mode
     );
-    let chords = collect_tdb_chords(tdb, &focus, radius_m, Some(assets.tsection()));
+    let mut chords = collect_tdb_chords(tdb, &focus, radius_m, Some(assets.tsection()));
+    if mode.is_run_corridor() && corridor.active() {
+        let before = chords.len();
+        chords.retain(|chord| corridor.contains_segment(chord.start_world, chord.end_world));
+        viewer_log!(
+            "openrailsrs-viewer3d: run_corridor — corridor filter {} → {} chord(s), width {:.0}m",
+            before,
+            chords.len(),
+            corridor.half_width_m * 2.0
+        );
+    }
     viewer_log!(
         "openrailsrs-viewer3d: tdb-graph — {} chord(s), running audit…",
         chords.len()
     );
+    let audit_route_dir = mode.is_track_dev().then_some(assets.route_dir.as_path());
     run_track_dev_audit(
         tdb,
         &scene,
@@ -906,10 +919,12 @@ pub fn spawn_tdb_graph_track(
         *offset,
         radius_m,
         &chords,
-        Some(assets.route_dir.as_path()),
+        audit_route_dir,
     );
-    let mut segments =
-        tdb_procedural_segments_near(tdb, assets.tsection(), &scene, &focus, radius_m);
+    let mut segments: Vec<_> = chords
+        .into_iter()
+        .filter_map(|chord| chord_to_segment(chord, assets.tsection(), &scene, &focus))
+        .collect();
     if segments.is_empty() {
         viewer_log!(
             "openrailsrs-viewer3d: tdb-graph — no vector sections within {:.0}m",

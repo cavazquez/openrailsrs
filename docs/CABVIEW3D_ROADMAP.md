@@ -68,7 +68,9 @@ El visor solo decodifica **`.ace`** (`openrailsrs-ace`). Esas piezas usan materi
 export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
 
 # Arranque típico
-cargo run --release -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cargo run --release -p openrailsrs-viewer3d -- \
+  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
 Cabina resuelta desde:
@@ -174,7 +176,9 @@ Si la cabina 3D sigue problemática, OR también soporta `CabView/` 2D (sprites 
 
 ```bash
 # Build release (Chiltern grande necesita release)
-cargo run --release -p openrailsrs-viewer3d -- --live examples/chiltern/scenario.toml
+CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cargo run --release -p openrailsrs-viewer3d -- \
+  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 
 # Teclas
 # V  — alternar chase / cabina / off

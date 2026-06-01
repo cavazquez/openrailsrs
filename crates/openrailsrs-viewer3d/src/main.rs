@@ -1,12 +1,16 @@
 //! Binary entry point for the experimental 3D viewer.
 //!
 //! Usage:
-//!   openrailsrs-viewer3d [route_dir | scenario.toml]
-//!   openrailsrs-viewer3d --live scenario.toml
-//!   openrailsrs-viewer3d --track-dev [--live] scenario.toml
+//!   openrailsrs-viewer3d [--route-root ROUTE_DIR] [route_dir | scenario.toml]
+//!   openrailsrs-viewer3d --live [--route-root ROUTE_DIR] scenario.toml
+//!   openrailsrs-viewer3d --track-dev [--live] [--route-root ROUTE_DIR] scenario.toml
+//!   openrailsrs-viewer3d --run-corridor --live --route-root ROUTE_DIR scenario.toml
 //!
 //! - `route_dir` — static graph only (default: `examples/smoke/routes/test`).
 //! - `scenario.toml` — graph + animated train marker(s) from simulation CSV.
+//! - `--route-root` — load MSTS/OR scenery assets from an external route dir while keeping
+//!   the scenario/track graph from `scenario.toml`.
+//! - `--run-corridor` — minimal train + `.tdb` procedural track view; no world/terrain scenery.
 //! - `--track-dev` — grafo `.tdb` + vía procedural continua; sin terreno/shapes/`TrackObj`.
 //! - `--live scenario.toml` — run physics in real time (no CSV); drive with arrow keys.
 //!
@@ -48,7 +52,9 @@ use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::ViewerSceneryMode;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::init_viewer_log;
-use openrailsrs_viewer3d::launch::{track_dev_render_enabled, track_dev_tdb_radius_m};
+use openrailsrs_viewer3d::launch::{
+    RunCorridorPath, run_corridor_half_width_m, tdb_radius_for_mode, track_dev_render_enabled,
+};
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::shapes::global_assets_dirs;
 use openrailsrs_viewer3d::tdb_track::collect_tdb_chords;
@@ -77,6 +83,7 @@ struct LaunchConfig {
     consist: TrainConsistScene,
     live: Option<LiveDrive>,
     scenery_mode: ViewerSceneryMode,
+    run_corridor_path: RunCorridorPath,
     focus_center_override: Option<Vec3>,
     route_offset_override: Option<RouteWorldOffset>,
 }
@@ -84,7 +91,9 @@ struct LaunchConfig {
 struct CliArgs {
     live: bool,
     track_dev: bool,
+    run_corridor: bool,
     path: PathBuf,
+    route_root: Option<PathBuf>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -93,6 +102,7 @@ enum SceneryModeToml {
     #[default]
     Full,
     TrackDev,
+    RunCorridor,
 }
 
 impl From<SceneryModeToml> for ViewerSceneryMode {
@@ -100,6 +110,7 @@ impl From<SceneryModeToml> for ViewerSceneryMode {
         match value {
             SceneryModeToml::Full => Self::Full,
             SceneryModeToml::TrackDev => Self::TrackDev,
+            SceneryModeToml::RunCorridor => Self::RunCorridor,
         }
     }
 }
@@ -129,14 +140,27 @@ struct WorldAnchorToml {
 }
 
 fn parse_cli() -> CliArgs {
+    parse_cli_from(std::env::args().skip(1))
+}
+
+fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
     let mut live = false;
     let mut track_dev = false;
+    let mut run_corridor = false;
+    let mut route_root = None;
     let mut path = None;
-    for arg in std::env::args().skip(1) {
+    let mut args = args.into_iter().peekable();
+    while let Some(arg) = args.next() {
         if arg == "--live" {
             live = true;
         } else if arg == "--track-dev" {
             track_dev = true;
+        } else if arg == "--run-corridor" {
+            run_corridor = true;
+        } else if arg == "--route-root" {
+            route_root = args.next().map(PathBuf::from);
+        } else if let Some(value) = arg.strip_prefix("--route-root=") {
+            route_root = Some(PathBuf::from(value));
         } else if !arg.starts_with('-') {
             path = Some(PathBuf::from(arg));
         }
@@ -144,7 +168,9 @@ fn parse_cli() -> CliArgs {
     CliArgs {
         live,
         track_dev,
+        run_corridor,
         path: path.unwrap_or_else(|| PathBuf::from("examples/smoke/routes/test")),
+        route_root,
     }
 }
 
@@ -152,12 +178,18 @@ fn main() {
     init_viewer_log();
     let cli = parse_cli();
 
-    let config = match build_launch_config(&cli.path, cli.live, cli.track_dev) {
+    let config = match build_launch_config(
+        &cli.path,
+        cli.live,
+        cli.track_dev,
+        cli.run_corridor,
+        cli.route_root.as_deref(),
+    ) {
         Ok(c) => c,
         Err(err) => {
             eprintln!("error: {err}");
             eprintln!(
-                "usage: openrailsrs-viewer3d [--live] [--track-dev] [route_dir | scenario.toml]"
+                "usage: openrailsrs-viewer3d [--live] [--track-dev|--run-corridor] [--route-root ROUTE_DIR] [route_dir | scenario.toml]"
             );
             std::process::exit(1);
         }
@@ -166,6 +198,10 @@ fn main() {
     if config.scenery_mode.is_track_dev() {
         viewer_log!(
             "openrailsrs-viewer3d: scenery_mode=track_dev — vía procedural desde .tdb; sin terreno/shapes/TrackObj"
+        );
+    } else if config.scenery_mode.is_run_corridor() {
+        viewer_log!(
+            "openrailsrs-viewer3d: scenery_mode=run_corridor — tren + vía .tdb; sin WORLD/terreno/objetos"
         );
     }
 
@@ -238,14 +274,38 @@ fn main() {
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
     let assets = RouteAssets::new(&config.route_dir);
-    if config.scenery_mode.is_track_dev() {
+    if config.scenery_mode.draws_tdb_track() {
         if let Some(tdb) = assets.track_db() {
-            let radius_m = track_dev_tdb_radius_m();
+            let radius_m = tdb_radius_for_mode(config.scenery_mode);
             viewer_log!(
-                "openrailsrs-viewer3d: track_dev — pre-audit {:.0}m radius (before Bevy)…",
+                "openrailsrs-viewer3d: {} — pre-audit {:.0}m radius (before Bevy)…",
+                if config.scenery_mode.is_run_corridor() {
+                    "run_corridor"
+                } else {
+                    "track_dev"
+                },
                 radius_m
             );
-            let chords = collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
+            let mut chords =
+                collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
+            if config.scenery_mode.is_run_corridor() && config.run_corridor_path.active() {
+                let before = chords.len();
+                chords.retain(|chord| {
+                    config
+                        .run_corridor_path
+                        .contains_segment(chord.start_world, chord.end_world)
+                });
+                viewer_log!(
+                    "openrailsrs-viewer3d: run_corridor — corridor filter {} → {} chord(s), width {:.0}m",
+                    before,
+                    chords.len(),
+                    config.run_corridor_path.half_width_m * 2.0
+                );
+            }
+            let audit_route_dir = config
+                .scenery_mode
+                .is_track_dev()
+                .then_some(config.route_dir.as_path());
             run_track_dev_audit(
                 tdb,
                 &config.scene,
@@ -253,9 +313,9 @@ fn main() {
                 route_offset,
                 radius_m,
                 &chords,
-                Some(config.route_dir.as_path()),
+                audit_route_dir,
             );
-            if !track_dev_render_enabled() {
+            if config.scenery_mode.is_track_dev() && !track_dev_render_enabled() {
                 viewer_log!(
                     "openrailsrs-viewer3d: track_dev — audit complete; OPENRAILSRS_TRACK_DEV_RENDER=1 to draw rails in window"
                 );
@@ -285,6 +345,7 @@ fn main() {
         live: config.live.is_some(),
     })
     .insert_resource(config.scenery_mode)
+    .insert_resource(config.run_corridor_path)
     .insert_resource(config.scene)
     .insert_resource(WorldTileStream::new(
         &config.route_dir,
@@ -314,19 +375,31 @@ fn build_launch_config(
     arg: &Path,
     live: bool,
     track_dev_cli: bool,
+    run_corridor_cli: bool,
+    route_root: Option<&Path>,
 ) -> Result<LaunchConfig, String> {
     if arg.extension().and_then(|e| e.to_str()) == Some("toml") {
-        load_from_scenario(arg, live, track_dev_cli)
+        load_from_scenario(arg, live, track_dev_cli, run_corridor_cli, route_root)
     } else if live {
         Err("--live requires a scenario.toml path".into())
+    } else if run_corridor_cli {
+        Err("--run-corridor requires a scenario.toml path".into())
+    } else if route_root.is_some() {
+        Err("--route-root is only valid with a scenario.toml path".into())
     } else {
         load_from_route_dir(arg, track_dev_cli)
     }
 }
 
-fn resolve_scenery_mode(track_dev_cli: bool, from_toml: SceneryModeToml) -> ViewerSceneryMode {
+fn resolve_scenery_mode(
+    track_dev_cli: bool,
+    run_corridor_cli: bool,
+    from_toml: SceneryModeToml,
+) -> ViewerSceneryMode {
     if track_dev_cli {
         ViewerSceneryMode::TrackDev
+    } else if run_corridor_cli {
+        ViewerSceneryMode::RunCorridor
     } else {
         from_toml.into()
     }
@@ -390,7 +463,8 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
         replay: ReplayState::default(),
         consist: TrainConsistScene::default(),
         live: None,
-        scenery_mode: resolve_scenery_mode(track_dev_cli, SceneryModeToml::Full),
+        scenery_mode: resolve_scenery_mode(track_dev_cli, false, SceneryModeToml::Full),
+        run_corridor_path: RunCorridorPath::default(),
         focus_center_override: None,
         route_offset_override: None,
     })
@@ -400,6 +474,8 @@ fn load_from_scenario(
     path: &Path,
     live: bool,
     track_dev_cli: bool,
+    run_corridor_cli: bool,
+    route_root: Option<&Path>,
 ) -> Result<LaunchConfig, String> {
     let scenario_dir = path
         .parent()
@@ -410,20 +486,30 @@ fn load_from_scenario(
         &format!("loaded scenario \"{}\"", scenario.scenario.name),
         t,
     );
-    let route_dir = scenario_dir.join(&scenario.route.path);
+    let graph_route_dir = scenario_dir.join(&scenario.route.path);
+    let route_dir = route_root
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| graph_route_dir.clone());
+    if route_root.is_some() {
+        viewer_log!(
+            "openrailsrs-viewer3d: using external route root {} (graph from {})",
+            route_dir.display(),
+            graph_route_dir.display()
+        );
+    }
     let t = Instant::now();
-    let graph = load_track_graph_from_route_dir(&route_dir).map_err(|e| e.to_string())?;
+    let graph = load_track_graph_from_route_dir(&graph_route_dir).map_err(|e| e.to_string())?;
     log_step(
         &format!("loaded track graph ({} nodes)", graph.nodes_iter().count()),
         t,
     );
     let scene = TrackScene::from_graph(graph);
     let viewer3d = load_viewer3d_config(path, scenario_dir)?;
-    let scenery_mode = resolve_scenery_mode(track_dev_cli, viewer3d.scenery_mode);
+    let scenery_mode = resolve_scenery_mode(track_dev_cli, run_corridor_cli, viewer3d.scenery_mode);
     let anchor_world = viewer3d.world_anchor.map(world_anchor_position);
     let t = Instant::now();
-    let mut world = if scenery_mode.is_track_dev() {
-        viewer_log!("openrailsrs-viewer3d: track_dev — skipping .w world load");
+    let mut world = if scenery_mode.is_track_focused() {
+        viewer_log!("openrailsrs-viewer3d: track-focused — skipping .w world load");
         WorldScene::default()
     } else {
         let world_hint = anchor_world
@@ -431,7 +517,7 @@ fn load_from_scenario(
             .unwrap_or(scene.bounds.center);
         load_world_from_route_dir_near(&route_dir, Some(world_hint), visible_radius_m())
     };
-    if !scenery_mode.is_track_dev() {
+    if !scenery_mode.is_track_focused() {
         log_step(
             &format!(
                 "loaded world ({} obj(s) / {} tile(s))",
@@ -475,17 +561,26 @@ fn load_from_scenario(
         }
         _ => None,
     };
+    let run_corridor_path = if scenery_mode.is_run_corridor() {
+        build_run_corridor_path(
+            &scene,
+            &scenario,
+            route_offset_override.unwrap_or_default().delta,
+        )?
+    } else {
+        RunCorridorPath::default()
+    };
     let focus = anchor_world
         .map(|center| RouteFocus {
             center,
             height_origin: center.y,
         })
         .unwrap_or_else(|| RouteFocus::from_scene_and_world(&scene, &world));
-    if !scenery_mode.is_track_dev() {
+    if !scenery_mode.is_track_focused() {
         world.retain_within_visible_radius(&focus, visible_radius_m());
     }
     let t = Instant::now();
-    let terrain = if scenery_mode.is_track_dev() {
+    let terrain = if scenery_mode.is_track_focused() {
         TerrainScene::default()
     } else {
         load_terrain_from_route_dir_near(&route_dir, Some(focus.center), visible_radius_m())
@@ -495,7 +590,7 @@ fn load_from_scenario(
         t,
     );
     let t = Instant::now();
-    let elevation = if scenery_mode.is_track_dev() {
+    let elevation = if scenery_mode.is_track_focused() {
         TerrainElevation::default()
     } else {
         TerrainElevation::from_terrain_scene(&terrain)
@@ -565,6 +660,7 @@ fn load_from_scenario(
         consist,
         live: live_drive,
         scenery_mode,
+        run_corridor_path,
         focus_center_override: anchor_world,
         route_offset_override,
     })
@@ -665,6 +761,59 @@ fn graph_start_position(
         .node(&scenario.route.start)
         .ok_or_else(|| format!("missing start node {}", scenario.route.start))?;
     Ok(graph_to_world(node.x_m, node.y_m))
+}
+
+fn build_run_corridor_path(
+    scene: &TrackScene,
+    scenario: &openrailsrs_scenarios::ScenarioFile,
+    route_delta: Vec3,
+) -> Result<RunCorridorPath, String> {
+    let path_edges = edge_path(
+        &scene.graph,
+        &scenario.route.start,
+        &scenario.route.destination,
+    )
+    .map_err(|e| e.to_string())?;
+    let mut points = Vec::new();
+    for edge_id in path_edges {
+        let edge = scene
+            .graph
+            .edge(&edge_id)
+            .ok_or_else(|| format!("missing edge {edge_id}"))?;
+        let from = scene
+            .graph
+            .node(&edge.from.0)
+            .ok_or_else(|| format!("missing node {}", edge.from.0))?;
+        let to = scene
+            .graph
+            .node(&edge.to.0)
+            .ok_or_else(|| format!("missing node {}", edge.to.0))?;
+        let mut a = graph_to_world(from.x_m, from.y_m) + route_delta;
+        let mut b = graph_to_world(to.x_m, to.y_m) + route_delta;
+        if let Some(last) = points.last() {
+            let last: Vec3 = *last;
+            if last.distance_squared(b) < last.distance_squared(a) {
+                std::mem::swap(&mut a, &mut b);
+            }
+        }
+        if points
+            .last()
+            .is_none_or(|last: &Vec3| last.distance_squared(a) > 1.0)
+        {
+            points.push(a);
+        }
+        points.push(b);
+    }
+    let path = RunCorridorPath {
+        points_world: points,
+        half_width_m: run_corridor_half_width_m(),
+    };
+    viewer_log!(
+        "openrailsrs-viewer3d: run_corridor — scenario path {} point(s), width {:.0}m",
+        path.points_world.len(),
+        path.half_width_m * 2.0
+    );
+    Ok(path)
 }
 
 fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Vec3) {
@@ -806,4 +955,56 @@ fn exit_on_esc(
         return;
     }
     exit.write(AppExit::Success);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(items: &[&str]) -> CliArgs {
+        parse_cli_from(items.iter().map(|s| s.to_string()))
+    }
+
+    #[test]
+    fn parse_cli_accepts_route_root_before_scenario() {
+        let cli = args(&[
+            "--live",
+            "--route-root",
+            "/routes/Chiltern",
+            "examples/chiltern/scenario.toml",
+        ]);
+
+        assert!(cli.live);
+        assert!(!cli.track_dev);
+        assert!(!cli.run_corridor);
+        assert_eq!(cli.route_root, Some(PathBuf::from("/routes/Chiltern")));
+        assert_eq!(cli.path, PathBuf::from("examples/chiltern/scenario.toml"));
+    }
+
+    #[test]
+    fn parse_cli_accepts_route_root_equals_form() {
+        let cli = args(&[
+            "--track-dev",
+            "--route-root=/routes/Chiltern",
+            "examples/chiltern/scenario.toml",
+        ]);
+
+        assert!(cli.track_dev);
+        assert_eq!(cli.route_root, Some(PathBuf::from("/routes/Chiltern")));
+    }
+
+    #[test]
+    fn parse_cli_accepts_run_corridor() {
+        let cli = args(&[
+            "--run-corridor",
+            "--live",
+            "--route-root=/routes/Chiltern",
+            "examples/chiltern/scenario.toml",
+        ]);
+
+        assert!(cli.live);
+        assert!(cli.run_corridor);
+        assert!(!cli.track_dev);
+        assert_eq!(cli.route_root, Some(PathBuf::from("/routes/Chiltern")));
+    }
 }

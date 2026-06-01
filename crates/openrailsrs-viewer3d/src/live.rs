@@ -23,7 +23,7 @@ use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_shape_from_path, load_shape_render_asset_from_path,
     resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
-    vehicle_shape_local_transform,
+    vehicle_shape_local_transform, vehicle_texture_root_for_shape_path,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
@@ -124,11 +124,16 @@ pub fn enable_live_defaults(
     mut follow: ResMut<CameraFollowMode>,
     scene: Res<crate::track::TrackScene>,
     focus: Res<crate::world::RouteFocus>,
+    mode: Res<ViewerSceneryMode>,
     mut limit: ResMut<OrbitDistanceLimit>,
     train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
     mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
 ) {
-    *follow = CameraFollowMode::Off;
+    *follow = if mode.is_run_corridor() {
+        CameraFollowMode::ChaseCam
+    } else {
+        CameraFollowMode::Off
+    };
     limit.max = scene
         .bounds
         .orbit_distance()
@@ -147,10 +152,28 @@ pub fn enable_live_defaults(
     };
     orbit.focus = focus_pt;
     orbit.yaw = chase_yaw_from_train(yaw);
-    orbit.pitch = CHASE_PITCH;
-    orbit.distance = clamp_distance_to_limit(LIVE_CHASE_DISTANCE, orbit_user_zoom_max());
+    orbit.pitch = if mode.is_run_corridor() {
+        0.12
+    } else {
+        CHASE_PITCH
+    };
+    orbit.distance = clamp_distance_to_limit(
+        if mode.is_run_corridor() {
+            32.0
+        } else {
+            LIVE_CHASE_DISTANCE
+        },
+        orbit_user_zoom_max(),
+    );
     *transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
+    if mode.is_run_corridor() {
+        viewer_log!(
+            "openrailsrs-viewer3d: run_corridor — camera chase init dist={:.0}m pitch={:.0}°",
+            orbit.distance,
+            orbit.pitch.to_degrees()
+        );
+    }
 }
 
 pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
@@ -516,6 +539,8 @@ pub fn spawn_live_train(
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
     let mut shape_cars = 0usize;
     let mut fallback_cars = 0usize;
+    let mut shape_parts = 0usize;
+    let mut textured_parts = 0usize;
 
     let locator = meshes.add(Sphere::new(1.2));
     let locator_mat = materials.add(StandardMaterial {
@@ -533,25 +558,23 @@ pub fn spawn_live_train(
             Name::new("train:live"),
         ))
         .with_children(|train| {
-            train.spawn((
-                LiveTrainBody,
-                NotShadowCaster,
-                Mesh3d(locator.clone()),
-                MeshMaterial3d(locator_mat),
-                Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
-                Visibility::default(),
-                Name::new("train:live:locator"),
-            ));
+            if !mode.is_run_corridor() {
+                train.spawn((
+                    LiveTrainBody,
+                    NotShadowCaster,
+                    Mesh3d(locator.clone()),
+                    MeshMaterial3d(locator_mat),
+                    Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
+                    Visibility::default(),
+                    Name::new("train:live:locator"),
+                ));
+            }
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle.shape_file.as_deref() {
                     if let Some(shape_path) =
                         resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
                     {
-                        // Shape path is vehicle_root/SHAPES/file.s; textures are in
-                        // vehicle_root/TEXTURES/, so go two levels up: SHAPES/ → vehicle root.
-                        let trainset_root = shape_path
-                            .parent() // …/SHAPES/
-                            .and_then(|p| p.parent()) // …/<vehicle_root>/
+                        let trainset_root = vehicle_texture_root_for_shape_path(&shape_path)
                             .filter(|p| *p != assets.route_dir.as_path());
                         let tex_dirs: Vec<&Path> = std::iter::once(assets.route_dir.as_path())
                             .chain(trainset_root)
@@ -567,6 +590,9 @@ pub fn spawn_live_train(
                             TRAIN_SHAPE_FALLBACK,
                         ) {
                             shape_cars += 1;
+                            shape_parts += asset.parts.len();
+                            textured_parts +=
+                                asset.parts.iter().filter(|part| part.has_texture).count();
                             let is_lead = vi == 0;
                             let mesh_ref = meshes.get(&asset.combined_mesh);
                             let (car_transform, exterior_scale) = if is_lead {
@@ -677,10 +703,12 @@ pub fn spawn_live_train(
         });
 
     viewer_log!(
-        "openrailsrs-viewer3d: live drive — {} vehicle(s) ({} shape / {} fallback), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
+        "openrailsrs-viewer3d: live drive — {} vehicle(s) ({} shape / {} fallback, {} textured part(s) / {}), dt={:.2}s, audio={}, cab back={:.1}m height={:.1}m",
         vehicles.len(),
         shape_cars,
         fallback_cars,
+        textured_parts,
+        shape_parts,
         live.session.dt,
         live.audio.is_some(),
         driver_cab.back_m,

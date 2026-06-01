@@ -6,6 +6,7 @@ mod tests {
     use bevy::prelude::*;
 
     use crate::camera::{CameraFollowMode, LIVE_CHASE_DISTANCE, OrbitState, spawn_camera};
+    use crate::launch::ViewerSceneryMode;
     use crate::live::{
         LiveTrainBody, LiveTrainMarker, advance_live_sim, enable_live_defaults, live_driver_input,
         spawn_live_train, update_driver_train_visibility, update_live_train_marker,
@@ -59,6 +60,23 @@ mod tests {
                 cam.translation.length() > 20.0,
                 "camera should start behind the train"
             );
+        });
+    }
+
+    #[test]
+    fn run_corridor_live_defaults_start_in_chase() {
+        with_live_world(|world| {
+            world.insert_resource(ViewerSceneryMode::RunCorridor);
+            world.run_system_once(spawn_track_meshes).unwrap();
+            world.run_system_once(spawn_camera).unwrap();
+            world.run_system_once(spawn_live_train).unwrap();
+            world.run_system_once(enable_live_defaults).unwrap();
+            assert_eq!(
+                *world.resource::<CameraFollowMode>(),
+                CameraFollowMode::ChaseCam
+            );
+            let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
+            assert!(orbit.distance < LIVE_CHASE_DISTANCE);
         });
     }
 

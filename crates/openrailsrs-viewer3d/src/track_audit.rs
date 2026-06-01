@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 use openrailsrs_formats::msts_internal_tile_x_from_world_display;
-use openrailsrs_formats::{TrackDbFile, TrackNodeKind};
+use openrailsrs_formats::{TSectionCatalog, TrackDbFile, TrackNodeKind};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
@@ -407,10 +407,14 @@ fn static_trackobj_to_chord_summary(
         return Some((None, None, None, Vec::new()));
     }
     let shape_index = tdb.index_vector_sections_by_shape();
+    let tsection = load_tsection_for_trackobj_audit(route_dir);
     let world =
         crate::world::load_world_from_route_dir_near(route_dir, Some(focus.center), radius_m);
     let mut samples = Vec::new();
     for obj in world.items.iter().filter(|o| o.kind == "TrackObj") {
+        if is_road_trackobj_for_audit(obj, tsection.as_ref()) {
+            continue;
+        }
         if focus.horizontal_distance(obj.position) > radius_m {
             continue;
         }
@@ -456,6 +460,45 @@ fn static_trackobj_to_chord_summary(
         Some(count),
         worst_static_trackobj_outliers(&samples),
     ))
+}
+
+fn load_tsection_for_trackobj_audit(route_dir: &std::path::Path) -> Option<TSectionCatalog> {
+    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir) {
+        if !catalog.shapes.is_empty() {
+            return Some(catalog);
+        }
+    }
+    let msts_route = crate::shapes::resolve_msts_route_dir(route_dir)?;
+    TSectionCatalog::load_for_route(&msts_route)
+        .ok()
+        .filter(|catalog| !catalog.shapes.is_empty())
+}
+
+fn is_road_trackobj_for_audit(
+    obj: &crate::world::WorldObject,
+    tsection: Option<&TSectionCatalog>,
+) -> bool {
+    if obj
+        .section_idx
+        .is_some_and(|idx| tsection.is_some_and(|cat| cat.is_road_shape(idx)))
+    {
+        return true;
+    }
+    obj.shape_file
+        .as_deref()
+        .is_some_and(is_road_shape_file_name)
+}
+
+fn is_road_shape_file_name(name: &str) -> bool {
+    let lower = name
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(name)
+        .to_ascii_lowercase();
+    lower.starts_with("hwy")
+        || lower.starts_with("road")
+        || lower.starts_with("rd")
+        || lower.contains("road")
 }
 
 fn worst_static_trackobj_outliers(samples: &[StaticTrackObjSample]) -> Vec<StaticTrackObjOutlier> {
@@ -1208,6 +1251,14 @@ mod tests {
         let (dist, vector) = select_spatial_match_with_shape_tie_break(candidates);
         assert_eq!(vector, Some(100));
         assert!((dist.unwrap() - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn road_shape_file_names_are_excluded_from_trackobj_audit() {
+        assert!(is_road_shape_file_name("hwy2l2wnaStrt5mp.s"));
+        assert!(is_road_shape_file_name("GLOBAL/SHAPES/RoadBridge.s"));
+        assert!(!is_road_shape_file_name("A1t500r5d.s"));
+        assert!(!is_road_shape_file_name("UKFS_R_1x200m.s"));
     }
 
     #[test]
