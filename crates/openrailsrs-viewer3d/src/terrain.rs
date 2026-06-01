@@ -129,12 +129,12 @@ pub fn scenery_ground_y(
 }
 
 /// Train / marker height: terrain sample plus a small rail clearance, or graph lift fallback.
-pub fn ground_y_at(terrain: Option<&TerrainElevation>, x: f32, z: f32, scene: &TrackScene) -> f32 {
-    let rail_offset = scene.bounds.edge_radius() * 0.35;
+pub fn ground_y_at(terrain: Option<&TerrainElevation>, x: f32, z: f32, _scene: &TrackScene) -> f32 {
+    let rail_offset = 0.30; // Real physical top of rail height!
     terrain
         .and_then(|t| t.sample_world_y(x, z))
         .map(|h| h + rail_offset)
-        .unwrap_or(scene.bounds.node_radius() + scene.bounds.edge_radius() * 1.5)
+        .unwrap_or(rail_offset)
 }
 
 /// One loaded terrain tile ready for GPU spawn.

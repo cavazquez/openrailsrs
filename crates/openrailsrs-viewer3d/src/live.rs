@@ -67,9 +67,11 @@ impl LiveDrive {
     ) -> Result<Self, String> {
         let session =
             LiveDriveSession::from_scenario(scenario_dir, scenario).map_err(|e| e.to_string())?;
-        let audio = AudioEngine::try_start();
+        let audio = None; // AudioEngine::try_start(); // Desactivado por pedido del usuario para evitar ruido
         if audio.is_none() {
-            viewer_log!("openrailsrs-viewer3d: no audio device — live drive is silent");
+            viewer_log!(
+                "openrailsrs-viewer3d: no audio device or audio disabled — live drive is silent"
+            );
         }
         Ok(Self {
             session,
@@ -534,7 +536,6 @@ pub fn spawn_live_train(
     }
 
     let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
-    let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
     let mut shape_cars = 0usize;
@@ -570,7 +571,11 @@ pub fn spawn_live_train(
                 ));
             }
             for (vi, vehicle) in vehicles.iter().enumerate() {
-                if let Some(shape_name) = vehicle.shape_file.as_deref() {
+                if let Some(shape_name) = vehicle
+                    .shape_file
+                    .as_deref()
+                    .filter(|s| !s.eq_ignore_ascii_case("test.s"))
+                {
                     if let Some(shape_path) =
                         resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
                     {
@@ -649,7 +654,6 @@ pub fn spawn_live_train(
                                     for (pi, part) in parts.iter().enumerate() {
                                         parent.spawn((
                                             LiveTrainBody,
-                                            NotShadowCaster,
                                             Mesh3d(part.mesh.clone()),
                                             MeshMaterial3d(part.material.clone()),
                                             Transform::default(),
@@ -676,22 +680,84 @@ pub fn spawn_live_train(
                         }
                     }
                 }
-                let material = materials.add(StandardMaterial {
-                    base_color: TRAIN_SHAPE_FALLBACK,
-                    emissive: LinearRgba::from(TRAIN_SHAPE_FALLBACK) * 0.25,
-                    perceptual_roughness: 0.75,
-                    metallic: 0.35,
+                let is_lead = vi == 0;
+                let is_last = vi == vehicles.len() - 1;
+                let body_color = if is_lead {
+                    Color::srgb(0.55, 0.08, 0.12) // Crimson Red / Burgundy
+                } else if vi % 2 == 1 {
+                    Color::srgb(0.12, 0.28, 0.18) // Dark Forest Green
+                } else {
+                    Color::srgb(0.10, 0.22, 0.38) // Midnight Blue
+                };
+
+                let body_material = materials.add(StandardMaterial {
+                    base_color: body_color,
+                    perceptual_roughness: 0.45,
+                    metallic: 0.3,
                     ..default()
                 });
-                let mut local = vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m);
-                local.scale *= 1.15;
-                let is_lead = vi == 0;
+
+                let roof_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.15, 0.16, 0.17),
+                    perceptual_roughness: 0.6,
+                    metallic: 0.5,
+                    ..default()
+                });
+
+                let glass_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.02, 0.05, 0.1),
+                    perceptual_roughness: 0.1,
+                    metallic: 0.9,
+                    ..default()
+                });
+
+                let metal_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.12, 0.12, 0.13),
+                    perceptual_roughness: 0.8,
+                    metallic: 0.2,
+                    ..default()
+                });
+
+                let wheel_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.65, 0.66, 0.68),
+                    perceptual_roughness: 0.2,
+                    metallic: 0.9,
+                    ..default()
+                });
+
+                let headlight_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(1.0, 1.0, 0.85),
+                    emissive: LinearRgba::new(3.0, 3.0, 1.5, 1.0),
+                    perceptual_roughness: 0.1,
+                    ..default()
+                });
+
+                let taillight_material = materials.add(StandardMaterial {
+                    base_color: Color::srgb(1.0, 0.15, 0.15),
+                    emissive: LinearRgba::new(3.0, 0.3, 0.3, 1.0),
+                    perceptual_roughness: 0.1,
+                    ..default()
+                });
+
+                let main_mesh = meshes.add(Cuboid::new(1.0, 0.8, 0.95));
+                let roof_mesh = meshes.add(Cuboid::new(1.0, 0.15, 0.95));
+                let window_mesh = meshes.add(Cuboid::new(0.06, 0.22, 1.01));
+                let bogey_mesh = meshes.add(Cuboid::new(0.2, 0.08, 0.8));
+                let wheel_mesh = meshes.add(Sphere::new(0.08));
+                let light_mesh = meshes.add(Sphere::new(0.035));
+                let windshield_mesh = meshes.add(Cuboid::new(0.12, 0.28, 0.96));
+
+                let real_width = 3.0_f32;
+                let real_height = 3.6_f32;
+                let real_length = vehicle.length_m.max(4.0);
+                let local = Transform {
+                    translation: Vec3::new(vehicle.offset_m, real_height * 0.5, 0.0),
+                    scale: Vec3::new(real_length, real_height, real_width),
+                    ..default()
+                };
                 fallback_cars += 1;
+
                 let mut fallback = train.spawn((
-                    LiveTrainBody,
-                    NotShadowCaster,
-                    Mesh3d(unit.clone()),
-                    MeshMaterial3d(material),
                     local,
                     Visibility::default(),
                     Name::new(format!("train:live:car:{vi}:fallback")),
@@ -699,6 +765,128 @@ pub fn spawn_live_train(
                 if is_lead {
                     fallback.insert(CabLeadVehicle);
                 }
+
+                fallback.with_children(|parent| {
+                    // 1. Main body
+                    parent.spawn((
+                        LiveTrainBody,
+                        Mesh3d(main_mesh.clone()),
+                        MeshMaterial3d(body_material.clone()),
+                        Transform::from_xyz(0.0, -0.05, 0.0),
+                        Visibility::default(),
+                        Name::new("body"),
+                    ));
+
+                    // 2. Roof
+                    parent.spawn((
+                        LiveTrainBody,
+                        Mesh3d(roof_mesh.clone()),
+                        MeshMaterial3d(roof_material.clone()),
+                        Transform::from_xyz(0.0, 0.425, 0.0),
+                        Visibility::default(),
+                        Name::new("roof"),
+                    ));
+
+                    // 3. Side Windows
+                    for &x_pos in &[-0.32_f32, -0.16_f32, 0.0_f32, 0.16_f32, 0.32_f32] {
+                        if is_lead && x_pos > 0.25 {
+                            continue; // Leave room for cab
+                        }
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(window_mesh.clone()),
+                            MeshMaterial3d(glass_material.clone()),
+                            Transform::from_xyz(x_pos, 0.1, 0.0),
+                            Visibility::default(),
+                            Name::new("window"),
+                        ));
+                    }
+
+                    // 4. Bogeys & Wheels
+                    for &bogey_x in &[-0.3_f32, 0.3_f32] {
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(bogey_mesh.clone()),
+                            MeshMaterial3d(metal_material.clone()),
+                            Transform::from_xyz(bogey_x, -0.4, 0.0),
+                            Visibility::default(),
+                            Name::new("bogey"),
+                        ));
+
+                        // 4 wheels per bogey aligned on 1.435m track gauge (Z = ±0.239 inside 3.0m wide car)
+                        for &wheel_z in &[-0.239_f32, 0.239_f32] {
+                            for &wheel_offset_x in &[-0.06_f32, 0.06_f32] {
+                                parent.spawn((
+                                    LiveTrainBody,
+                                    Mesh3d(wheel_mesh.clone()),
+                                    MeshMaterial3d(wheel_material.clone()),
+                                    Transform::from_xyz(bogey_x + wheel_offset_x, -0.5, wheel_z),
+                                    Visibility::default(),
+                                    Name::new("wheel"),
+                                ));
+                            }
+                        }
+                    }
+
+                    // 5. Locomotive features (lead)
+                    if is_lead {
+                        // Windshield
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(windshield_mesh.clone()),
+                            MeshMaterial3d(glass_material.clone()),
+                            Transform::from_xyz(0.42, 0.2, 0.0),
+                            Visibility::default(),
+                            Name::new("windshield"),
+                        ));
+
+                        // Glowing Headlights
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(light_mesh.clone()),
+                            MeshMaterial3d(headlight_material.clone()),
+                            Transform::from_xyz(0.505, -0.1, -0.28),
+                            Visibility::default(),
+                            Name::new("headlight_l"),
+                        ));
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(light_mesh.clone()),
+                            MeshMaterial3d(headlight_material.clone()),
+                            Transform::from_xyz(0.505, -0.1, 0.28),
+                            Visibility::default(),
+                            Name::new("headlight_r"),
+                        ));
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(light_mesh.clone()),
+                            MeshMaterial3d(headlight_material.clone()),
+                            Transform::from_xyz(0.505, 0.3, 0.0),
+                            Visibility::default(),
+                            Name::new("headlight_top"),
+                        ));
+                    }
+
+                    // 6. Taillights (last car)
+                    if is_last {
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(light_mesh.clone()),
+                            MeshMaterial3d(taillight_material.clone()),
+                            Transform::from_xyz(-0.505, 0.0, -0.28),
+                            Visibility::default(),
+                            Name::new("taillight_l"),
+                        ));
+                        parent.spawn((
+                            LiveTrainBody,
+                            Mesh3d(light_mesh.clone()),
+                            MeshMaterial3d(taillight_material.clone()),
+                            Transform::from_xyz(-0.505, 0.0, 0.28),
+                            Visibility::default(),
+                            Name::new("taillight_r"),
+                        ));
+                    }
+                });
             }
         });
 

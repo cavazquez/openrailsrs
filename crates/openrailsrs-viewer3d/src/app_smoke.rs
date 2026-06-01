@@ -32,7 +32,7 @@ mod tests {
             world.run_system_once(spawn_train_markers).unwrap();
             world.flush();
 
-            assert_eq!(count_named(world, "edge:"), 1);
+            assert_eq!(count_named(world, "logical-track:rails:"), 1);
             assert_eq!(count_named(world, "node:"), 2);
             assert_eq!(count_named(world, "signal:"), 1);
             assert_eq!(count_named(world, "train:"), 1);

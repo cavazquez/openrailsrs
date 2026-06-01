@@ -177,6 +177,11 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
 fn main() {
     init_viewer_log();
     let cli = parse_cli();
+    let assets = RouteAssets::new(
+        cli.route_root
+            .as_deref()
+            .unwrap_or(cli.path.parent().unwrap_or(&cli.path)),
+    );
 
     let config = match build_launch_config(
         &cli.path,
@@ -200,9 +205,15 @@ fn main() {
             "openrailsrs-viewer3d: scenery_mode=track_dev — vía procedural desde .tdb; sin terreno/shapes/TrackObj"
         );
     } else if config.scenery_mode.is_run_corridor() {
-        viewer_log!(
-            "openrailsrs-viewer3d: scenery_mode=run_corridor — tren + vía .tdb; sin WORLD/terreno/objetos"
-        );
+        if assets.track_db().is_some() {
+            viewer_log!(
+                "openrailsrs-viewer3d: scenery_mode=run_corridor — tren + vía .tdb; sin WORLD/terreno/objetos"
+            );
+        } else {
+            viewer_log!(
+                "openrailsrs-viewer3d: scenery_mode=run_corridor — tren + vía lógica (grafo track.toml); sin WORLD/terreno/objetos"
+            );
+        }
     }
 
     let node_count = config.scene.graph.nodes_iter().count();
@@ -273,7 +284,6 @@ fn main() {
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
-    let assets = RouteAssets::new(&config.route_dir);
     if config.scenery_mode.draws_tdb_track() {
         if let Some(tdb) = assets.track_db() {
             let radius_m = tdb_radius_for_mode(config.scenery_mode);

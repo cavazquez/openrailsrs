@@ -125,7 +125,7 @@ pub fn position_on_graph(
     let dx = (to.x_m - from.x_m) as f32;
     let dz = (to.y_m - from.y_m) as f32;
     let yaw = if dx * dx + dz * dz > 1e-6 {
-        dz.atan2(dx)
+        -dz.atan2(dx)
     } else {
         0.0
     };
@@ -268,7 +268,11 @@ pub fn spawn_train_markers(
                 ))
                 .with_children(|train| {
                     for (vi, vehicle) in vehicles.iter().enumerate() {
-                        if let Some(shape_name) = vehicle.shape_file.as_deref() {
+                        if let Some(shape_name) = vehicle
+                            .shape_file
+                            .as_deref()
+                            .filter(|s| !s.eq_ignore_ascii_case("test.s"))
+                        {
                             if let Some(shape_path) =
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
                             {

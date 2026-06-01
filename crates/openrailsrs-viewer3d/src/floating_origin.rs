@@ -37,8 +37,10 @@ pub(crate) fn track_dev_recenter_at_subject(
     mut origin: ResMut<FloatingOrigin>,
     mut queries: ParamSet<(
         Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
-        Query<&mut Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
+        Query<&Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
+        Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
     )>,
+    mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
     if !mode.is_track_focused() {
         return;
@@ -72,8 +74,8 @@ pub(crate) fn track_dev_recenter_at_subject(
     }
 
     origin.shift += delta;
-    // Grid/ground stay at the origin; only the train (and camera) move onto them.
-    for mut tf in queries.p1().iter_mut() {
+    // Shift all other transforms by -delta to keep track, scenery and consists aligned
+    for mut tf in queries.p2().iter_mut() {
         tf.translation -= delta;
     }
 
@@ -84,6 +86,10 @@ pub(crate) fn track_dev_recenter_at_subject(
     cam.translation -= delta;
     orbit.focus -= delta;
     *cam = camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
+
+    for mut billboard in &mut billboards {
+        billboard.world -= delta;
+    }
 
     viewer_log!(
         "openrailsrs-viewer3d: track-focused — recentered scene at subject ({:.0}, {:.0}, {:.0})",

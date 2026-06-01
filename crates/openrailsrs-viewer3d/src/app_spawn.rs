@@ -24,7 +24,7 @@ mod tests {
         with_route_dir_world(&route_dir, |world| {
             world.run_system_once(spawn_track_meshes).unwrap();
             world.flush();
-            assert!(count_named(world, "edge:") >= 1);
+            assert!(count_named(world, "logical-track:") >= 1);
             assert!(count_named(world, "node:") >= 2);
         });
     }
@@ -122,7 +122,7 @@ mod tests {
             world.run_system_once(spawn_water_patches).unwrap();
             world.run_system_once(spawn_world_boxes).unwrap();
             world.flush();
-            assert!(count_named(world, "edge:") >= 1);
+            assert!(count_named(world, "logical-track:") >= 1);
         });
     }
 

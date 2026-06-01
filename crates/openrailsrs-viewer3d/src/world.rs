@@ -258,7 +258,7 @@ pub struct RouteWorldOffset {
 
 impl RouteWorldOffset {
     /// Minimum horizontal (XZ) separation before applying a graph→scenery shift.
-    const ALIGN_THRESHOLD_XZ_M: f32 = 500.0;
+    const ALIGN_THRESHOLD_XZ_M: f32 = 10000.0;
 
     pub fn from_scene_and_world(scene: &TrackScene, world: &WorldScene) -> Self {
         let graph_center = scene.bounds.center;

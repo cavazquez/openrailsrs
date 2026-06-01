@@ -5,8 +5,8 @@
 //! bounds when present.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::light::NotShadowCaster;
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
-use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 
@@ -67,11 +67,11 @@ pub fn spawn_ground_and_lights(
         ));
         if opts.live {
             ground.insert(NotShadowCaster);
-            ground.insert(NotShadowReceiver);
+            // Allow shadow receiving on the grid/ground plane for high-end aesthetics
         }
     }
 
-    if terrain.is_empty() && !mode.is_run_corridor() {
+    if terrain.is_empty() {
         spawn_grid_mesh(
             &mut commands,
             &mut meshes,
@@ -89,14 +89,13 @@ pub fn spawn_ground_and_lights(
     commands.spawn((
         DirectionalLight {
             illuminance,
-            // Player consist and camera-adjacent meshes must not darken the route.
-            shadows_enabled: false,
+            shadows_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {
-            num_cascades: 2,
+            num_cascades: 3,
             minimum_distance: 0.1,
-            maximum_distance: 120.0,
+            maximum_distance: 200.0,
             first_cascade_far_bound: 10.0,
             overlap_proportion: 0.2,
         }
@@ -104,7 +103,7 @@ pub fn spawn_ground_and_lights(
         Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
         Name::new("sun"),
     ));
-    commands.insert_resource(DirectionalLightShadowMap { size: 1024 });
+    commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
 }
 
 fn spawn_grid_mesh(

@@ -12,13 +12,14 @@ use openrailsrs_track::{NodeKind, TrackGraph};
 use crate::launch::{
     TRACK_DEV_ORBIT_DISTANCE_M, TRACK_DEV_ORBIT_MAX_M, ViewerLaunchOpts, ViewerSceneryMode,
 };
+use crate::shapes::RouteAssets;
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::train::{ReplayState, pose_at_time};
 use crate::world::WorldScene;
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
 
-pub(crate) const COLOR_EDGE: Color = Color::srgb(1.0, 0.667, 0.2);
+// const COLOR_EDGE: Color = Color::srgb(1.0, 0.667, 0.2);
 const COLOR_TRACK_RAIL: Color = Color::srgb(0.78, 0.86, 0.98);
 const COLOR_NODE_PLAIN: Color = Color::srgb(1.0, 1.0, 1.0);
 const COLOR_NODE_SWITCH: Color = Color::srgb(0.0, 1.0, 1.0);
@@ -398,8 +399,9 @@ pub fn spawn_track_meshes(
     mode: Res<ViewerSceneryMode>,
     terrain: Option<Res<TerrainElevation>>,
     world: Option<Res<WorldScene>>,
+    assets: Res<RouteAssets>,
 ) {
-    if mode.is_track_focused() {
+    if mode.is_track_focused() && assets.track_db().is_some() {
         return;
     }
     let has_world_scenery = world.as_deref().is_some_and(|w| !w.is_empty());
@@ -412,15 +414,7 @@ pub fn spawn_track_meshes(
     let offset = offset.delta;
     let terrain_ref = terrain.as_deref();
     let bounds = scene.bounds;
-    let edge_radius = bounds.edge_radius();
     let node_radius = bounds.node_radius();
-
-    let edge_material = materials.add(StandardMaterial {
-        base_color: COLOR_EDGE,
-        perceptual_roughness: 0.85,
-        metallic: 0.05,
-        ..default()
-    });
 
     let mut node_materials: Vec<Handle<StandardMaterial>> = Vec::new();
     for color in [COLOR_NODE_PLAIN, COLOR_NODE_SWITCH, COLOR_NODE_STATION] {
@@ -461,7 +455,7 @@ pub fn spawn_track_meshes(
             track.insert(NotShadowCaster);
         }
     } else {
-        let edge_mesh = meshes.add(Cylinder::new(edge_radius, 1.0));
+        let mut segments = Vec::new();
         for (_, edge) in scene.graph.edges_iter() {
             let Some(from) = scene.graph.node(&edge.from.0) else {
                 continue;
@@ -481,13 +475,29 @@ pub fn spawn_track_meshes(
                 &scene,
                 &focus,
             );
-            commands.spawn((
-                Mesh3d(edge_mesh.clone()),
-                MeshMaterial3d(edge_material.clone()),
-                cylinder_between(p0, p1),
-                Name::new(format!("edge:{}", edge.id.0)),
-            ));
+            let delta = p1 - p0;
+            let length = delta.length();
+            if length > 1e-4 {
+                let rotation = Quat::from_rotation_arc(Vec3::Z, delta.normalize());
+                segments.push(crate::dyntrack::ProceduralTrackSegment {
+                    position: p0,
+                    rotation,
+                    length_m: Some(length),
+                    half_gauge_m: Some(crate::dyntrack::MSTS_STANDARD_HALF_GAUGE_M),
+                    curve_radius_m: None,
+                    curve_angle_deg: None,
+                });
+            }
         }
+        crate::dyntrack::spawn_procedural_track_batch(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &segments,
+            &scene.bounds,
+            "logical-track",
+            crate::dyntrack::ProceduralTrackStyle::Full,
+        );
     }
 
     if !opts.live {

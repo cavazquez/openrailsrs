@@ -426,6 +426,7 @@ pub fn spawn_procedural_track_batch(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(sleeper_material),
             Transform::IDENTITY,
+            Visibility::default(),
             Name::new(format!("{label}:sleepers:{count}")),
         ));
     }
@@ -443,6 +444,7 @@ pub fn spawn_procedural_track_batch(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(rail_material),
             Transform::IDENTITY,
+            Visibility::default(),
             Name::new(format!("{label}:rails:{count}")),
         ));
     }

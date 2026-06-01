@@ -14,7 +14,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use crate::launch::ViewerLaunchOpts;
 
 /// Ambient fill for live drive / terrain routes (MSTS `.ace` albedos are often very dark).
-pub const LIVE_OUTDOOR_AMBIENT: f32 = 500.0;
+pub const LIVE_OUTDOOR_AMBIENT: f32 = 15000.0;
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
