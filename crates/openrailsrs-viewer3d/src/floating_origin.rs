@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::camera::{OrbitState, camera_transform_from_orbit_state};
 use crate::launch::ViewerSceneryMode;
-use crate::live::{LiveDrive, LiveTrainMarker};
+use crate::live::LiveTrainMarker;
 use crate::track::TrackScene;
 use crate::train::{ReplayState, TrainMarker, pose_at_time};
 use crate::viewer_log;
@@ -27,9 +27,6 @@ pub(crate) fn track_dev_recenter_at_subject(
     scene: Res<TrackScene>,
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
-    _live: Option<Res<LiveDrive>>,
-    train: Query<&Transform, With<TrainMarker>>,
-    live_train: Query<&Transform, With<LiveTrainMarker>>,
     mut origin: ResMut<FloatingOrigin>,
     mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
     mut transforms: Query<
@@ -49,11 +46,10 @@ pub(crate) fn track_dev_recenter_at_subject(
         return;
     }
 
-    let subject = live_train
+    let subject = train_tf
         .iter()
         .next()
         .map(|t| t.translation)
-        .or_else(|| train.iter().next().map(|t| t.translation))
         .or_else(|| {
             replay.tracks.first().and_then(|track| {
                 pose_at_time(
