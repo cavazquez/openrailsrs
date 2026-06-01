@@ -9,8 +9,11 @@ use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
 use openrailsrs_track::{NodeKind, TrackGraph};
 
-use crate::launch::{ViewerLaunchOpts, ViewerSceneryMode};
+use crate::launch::{
+    TRACK_DEV_ORBIT_DISTANCE_M, TRACK_DEV_ORBIT_MAX_M, ViewerLaunchOpts, ViewerSceneryMode,
+};
 use crate::terrain::{TerrainElevation, ground_y_at};
+use crate::train::{ReplayState, pose_at_time};
 use crate::world::WorldScene;
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
@@ -512,17 +515,41 @@ pub fn spawn_track_meshes(
 /// Point the orbit camera at the route centre with a distance that frames it.
 pub fn frame_orbit_camera_on_track(
     scene: Res<TrackScene>,
-    _focus: Res<crate::world::RouteFocus>,
+    focus: Res<crate::world::RouteFocus>,
+    mode: Res<ViewerSceneryMode>,
+    replay: Res<ReplayState>,
+    offset: Res<crate::world::RouteWorldOffset>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
     mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
 ) {
     let Ok((mut transform, mut orbit)) = query.single_mut() else {
         return;
     };
-    let max = scene.bounds.orbit_distance();
-    limit.max = max;
-    orbit.focus = Vec3::ZERO;
-    orbit.distance = max;
+    if mode.is_track_dev() {
+        limit.max = TRACK_DEV_ORBIT_MAX_M;
+        orbit.focus = replay
+            .tracks
+            .first()
+            .and_then(|track| {
+                pose_at_time(
+                    &scene.graph,
+                    &track.rows,
+                    0.0,
+                    None,
+                    &scene,
+                    offset.delta,
+                    &focus,
+                )
+                .map(|(pos, _, _)| pos)
+            })
+            .unwrap_or_else(|| focus.to_render_surface(scene.bounds.center));
+        orbit.distance = TRACK_DEV_ORBIT_DISTANCE_M;
+    } else {
+        let max = scene.bounds.orbit_distance();
+        limit.max = max;
+        orbit.focus = Vec3::ZERO;
+        orbit.distance = max;
+    }
     *transform = crate::camera::camera_transform_from_orbit_state(
         orbit.focus,
         orbit.yaw,

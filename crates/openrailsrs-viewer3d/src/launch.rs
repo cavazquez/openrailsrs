@@ -53,6 +53,12 @@ pub fn track_dev_tdb_radius_m() -> f32 {
         .unwrap_or(TRACK_DEV_TDB_RADIUS_M)
 }
 
+/// Initial orbit distance in `--track-dev` (metres); avoids framing the whole route bbox.
+pub const TRACK_DEV_ORBIT_DISTANCE_M: f32 = 100.0;
+
+/// Max orbit zoom in `--track-dev` (full-route bbox can reach 500 km otherwise).
+pub const TRACK_DEV_ORBIT_MAX_M: f32 = 2_000.0;
+
 /// When false (default), `--track-dev` runs audit only — no rail meshes (saves RAM).
 pub fn track_dev_render_enabled() -> bool {
     std::env::var_os("OPENRAILSRS_TRACK_DEV_RENDER").is_some_and(|v| {

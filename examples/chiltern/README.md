@@ -148,7 +148,7 @@ Sin `x_m`/`y_m` en nodos (solo TDB): Good exige intra-node p95 ≤ 1 m, mean ≤
 
 **Referencia Chiltern** (1500 m, coords parcheadas, mayo 2026): graph match **98%**, endpoint snap **81%**, mid→chord p95 **10 m**, intra-node **0 m**, inter-node mean **9.3 m** / p95 **33 m** → **Good**. El inter-node gap no entra en el veredicto cuando hay coords; es la métrica a mejorar en TrPins (objetivo práctico: p95 &lt; 15 m).
 
-Preferí **`--live`** en track-dev (tren caja, menos RAM). El replay sin `OPENRAILSRS_TRACK_DEV_RENDER=1` también usa caja; no se streamean tiles `.w` en track-dev.
+Preferí **`--live`** en track-dev (tren caja, menos RAM). El replay sin `OPENRAILSRS_TRACK_DEV_RENDER=1` también usa caja; no se streamean tiles `.w` ni señales. La cámara arranca a ~100 m del tren (no encuadra los 500 km del bbox Chiltern). **`T`** sigue al tren en replay.
 
 ## Escenario MSTS (WORLD / terreno, opcional)
 
