@@ -1505,8 +1505,12 @@ pub fn world_tile_stream_system(
     scene: Res<TrackScene>,
     camera: Query<&Transform, With<Camera3d>>,
     progress: Option<Res<WorldSpawnProgress>>,
+    mode: Res<crate::launch::ViewerSceneryMode>,
     mut commands: Commands,
 ) {
+    if mode.is_track_dev() {
+        return;
+    }
     if progress.is_some() {
         return;
     }

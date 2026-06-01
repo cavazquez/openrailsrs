@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use openrailsrs_track::TrackGraph;
 
 use crate::camera::CameraFollowMode;
+use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
@@ -182,6 +183,7 @@ pub fn spawn_train_markers(
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
+    mode: Res<ViewerSceneryMode>,
 ) {
     if !replay.is_active() {
         return;
@@ -234,6 +236,24 @@ pub fn spawn_train_markers(
             0.0,
         ));
         let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
+
+        if mode.is_track_dev() && !track_dev_render_enabled() {
+            let unit = meshes.add(Cuboid::new(2.0, 2.5, 14.0));
+            let material = materials.add(StandardMaterial {
+                base_color: color,
+                emissive: LinearRgba::from(color) * 0.5,
+                ..default()
+            });
+            commands.spawn((
+                NotShadowCaster,
+                Mesh3d(unit),
+                MeshMaterial3d(material),
+                head,
+                TrainMarker { track_index: i },
+                Name::new(format!("train:{}:track_dev", track.label)),
+            ));
+            continue;
+        }
 
         if !consist.vehicles_for(&track.label).is_empty() {
             let vehicles = consist.vehicles_for(&track.label);

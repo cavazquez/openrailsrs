@@ -134,6 +134,22 @@ El audit también corre **antes de abrir Bevy** (verás `track-audit` en consola
 
 Con `track.toml` parcheado (`--patch-coords`), el audit puede comparar acordes `.tdb` con el grafo importado (`graph match %`, no `n/a`). JSON opcional: `OPENRAILSRS_TRACK_AUDIT=/tmp/track-audit.json`.
 
+#### Umbrales del audit (`verdict`)
+
+Lógica en `track_audit.rs` → `classify_verdict`. Con coords en el grafo (Chiltern parcheado):
+
+| Veredicto | Condiciones |
+|-----------|-------------|
+| **Good** | graph match ≥ 70%, endpoint snap ≥ 80%, mid→chord p95 ≤ 25 m, intra-node chain gap p95 ≤ 1 m |
+| **Partial** | graph match ≥ 35%, endpoint snap ≥ 50% |
+| **Poor** | por debajo de Partial |
+
+Sin `x_m`/`y_m` en nodos (solo TDB): Good exige intra-node p95 ≤ 1 m, mean ≤ 2 m e inter-node p95 ≤ 5 m.
+
+**Referencia Chiltern** (1500 m, coords parcheadas, mayo 2026): graph match **98%**, endpoint snap **81%**, mid→chord p95 **10 m**, intra-node **0 m**, inter-node mean **9.3 m** / p95 **33 m** → **Good**. El inter-node gap no entra en el veredicto cuando hay coords; es la métrica a mejorar en TrPins (objetivo práctico: p95 &lt; 15 m).
+
+Preferí **`--live`** en track-dev (tren caja, menos RAM). El replay sin `OPENRAILSRS_TRACK_DEV_RENDER=1` también usa caja; no se streamean tiles `.w` en track-dev.
+
 ## Escenario MSTS (WORLD / terreno, opcional)
 
 Chiltern **no tiene** carpeta `TERRAIN/` como el demo `smoke`. En MSTS el relieve está en **`TILES/`** (`.t` + `_y.raw`, ~1600 tiles). El viewer carga **`TILES/*.t`** y **`TERRAIN/*.y`** en un radio de ~8 km desde el centro de la vía.
