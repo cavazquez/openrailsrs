@@ -122,7 +122,7 @@ cargo run --release -p openrailsrs-viewer3d -- \
   --track-dev --live examples/chiltern/scenario.toml
 ```
 
-En `--track-dev` **no se cargan** tiles `.w` (evita ~40k objetos y OOM). Radio de vía `.tdb` por defecto **1500 m** alrededor del tren; override: `OPENRAILSRS_TRACK_DEV_RADIUS_M=800`.
+En `--track-dev` **no se cargan** tiles `.w`, señales del grafo ni meshes Pullman (evita ~40k objetos y OOM). Radio de vía `.tdb` por defecto **1500 m** alrededor del tren; override: `OPENRAILSRS_TRACK_DEV_RADIUS_M=800`.
 
 Por defecto solo corre el **audit** (sin mallas de riel ni meshes Pullman). Para dibujar rieles y consist completo:
 

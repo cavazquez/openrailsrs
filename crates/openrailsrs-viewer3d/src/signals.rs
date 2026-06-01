@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use openrailsrs_track::{SignalAspect, TrackGraph, TrackSignal};
 
+use crate::launch::ViewerSceneryMode;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::position_on_graph;
@@ -51,7 +52,11 @@ pub fn spawn_signal_markers(
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
+    mode: Res<ViewerSceneryMode>,
 ) {
+    if mode.is_track_dev() {
+        return;
+    }
     let signal_count = scene.graph.signals().count();
     if signal_count == 0 {
         return;
