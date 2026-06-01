@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use openrailsrs_track::TrackGraph;
 
 use crate::camera::CameraFollowMode;
+use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
@@ -465,6 +466,7 @@ pub fn update_train_markers(
     focus: Res<crate::world::RouteFocus>,
     replay: Res<ReplayState>,
     terrain: Option<Res<TerrainElevation>>,
+    origin: Res<FloatingOrigin>,
     mut query: Query<(&TrainMarker, &mut Transform), Without<Camera3d>>,
 ) {
     if !replay.is_active() {
@@ -488,7 +490,7 @@ pub fn update_train_markers(
         ) else {
             continue;
         };
-        transform.translation = pos;
+        transform.translation = view_position(pos, &origin);
         transform.rotation = Quat::from_rotation_y(yaw);
     }
 }

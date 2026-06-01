@@ -17,6 +17,12 @@ pub struct FloatingOrigin {
     pub shift: Vec3,
 }
 
+/// Map a render-space pose from `pose_at_time` / `position_on_graph` into view space.
+#[inline]
+pub fn view_position(render: Vec3, origin: &FloatingOrigin) -> Vec3 {
+    render - origin.shift
+}
+
 /// Recentre when the camera drifts farther than this from the origin (metres).
 pub const FLOATING_ORIGIN_THRESHOLD_M: f32 = 256.0;
 
@@ -124,5 +130,14 @@ mod tests {
     #[test]
     fn threshold_is_sub_kilometre() {
         assert_eq!(FLOATING_ORIGIN_THRESHOLD_M, 256.0);
+    }
+
+    #[test]
+    fn view_position_subtracts_shift() {
+        let origin = FloatingOrigin {
+            shift: Vec3::new(100.0, 0.0, -50.0),
+        };
+        let render = Vec3::new(110.0, 5.0, -40.0);
+        assert_eq!(view_position(render, &origin), Vec3::new(10.0, 5.0, 10.0));
     }
 }

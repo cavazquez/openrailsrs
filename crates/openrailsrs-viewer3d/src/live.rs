@@ -17,6 +17,7 @@ use crate::camera::{
     OrbitState, camera_transform_from_orbit_state, chase_yaw_from_train, clamp_distance_to_limit,
     orbit_user_zoom_max, yaw_from_transform,
 };
+use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{LIVE_TRAIN_LOD_DISTANCE_M, ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
@@ -221,6 +222,7 @@ pub fn update_live_train_marker(
     focus: Res<crate::world::RouteFocus>,
     live: Res<LiveDrive>,
     terrain: Option<Res<TerrainElevation>>,
+    origin: Res<FloatingOrigin>,
     mut query: Query<&mut Transform, With<LiveTrainMarker>>,
 ) {
     let Some(edge) = live.session.current_edge_id() else {
@@ -237,6 +239,7 @@ pub fn update_live_train_marker(
     ) else {
         return;
     };
+    let pos = view_position(pos, &origin);
     for mut transform in &mut query {
         transform.translation = pos;
         transform.rotation = Quat::from_rotation_y(yaw);
