@@ -108,6 +108,7 @@ pub struct WaterPatch {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldObject {
     pub kind: &'static str,
+    pub uid: Option<u32>,
     pub label: String,
     /// Shape filename from the world item (`FileName`), if any.
     pub shape_file: Option<String>,
@@ -408,6 +409,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
     };
     Some(WorldObject {
         kind: item.kind(),
+        uid: item.uid(),
         label: object_label(item),
         shape_file: item.file_name().map(str::to_string),
         section_idx: item.section_idx(),

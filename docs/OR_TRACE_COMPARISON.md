@@ -28,6 +28,11 @@ openrailsrs sim examples/smoke/scenario.toml
 openrailsrs compare-or /path/to/dump.csv examples/smoke/run.csv \
   --max-velocity-rms 1.0 \
   --max-position-max 50.0
+
+# 4. (Opcional) comparar checkpoints concretos de tiempo
+openrailsrs compare-or /path/to/dump.csv examples/smoke/run.csv \
+  --checkpoints 10,30,60 \
+  --phase-bounds 0,20,65
 ```
 
 Para rutas MSTS reales, importar primero con `openrailsrs import-msts <route_dir>` y alinear consist/física lo más posible antes de comparar.
@@ -140,6 +145,23 @@ openrailsrs or-eval-driver \
 
 openrailsrs sim examples/chiltern/scenario.toml --driver examples/chiltern/driver_or.csv
 ```
+
+### Checkpoints concretos (OR vs sim)
+
+`compare-or` soporta puntos temporales explícitos para inspección puntual:
+
+```bash
+openrailsrs compare-or \
+  examples/baselines/chiltern_birmingham/or_evaluation_speed.csv \
+  examples/chiltern/run.csv \
+  --checkpoints 10,30,60
+```
+
+Salida (además del resumen global):
+
+- `t=...` instante del checkpoint (s)
+- `vel OR / sim` y `Δv` (m/s)
+- `dist OR / sim` y `Δx` (m)
 
 ### Dump de rendimiento (`Speed (mph),Time (M),…`)
 

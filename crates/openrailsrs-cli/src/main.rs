@@ -16,8 +16,9 @@ use openrailsrs_sim::{
     run_multi_train_from_scenario_file,
 };
 use openrailsrs_validate::{
-    ComparisonReport, OrColumnMap, PhaseReport, ValidationConfig, compare_csv_files_with_config,
-    compare_or_dump_phases, compare_or_dump_with_run,
+    CheckpointDiff, ComparisonReport, OrColumnMap, PhaseReport, ValidationConfig,
+    compare_csv_files_with_config, compare_or_dump_checkpoints, compare_or_dump_phases,
+    compare_or_dump_with_run,
 };
 
 #[derive(Parser)]
@@ -127,6 +128,9 @@ enum Commands {
         /// Time boundaries (seconds) for phased diagnostic, e.g. `0,20,65` → [0–20), [20–65].
         #[arg(long, value_delimiter = ',')]
         phase_bounds: Option<Vec<f64>>,
+        /// Explicit checkpoint times (seconds) for pointwise OR vs sim deltas.
+        #[arg(long, value_delimiter = ',')]
+        checkpoints: Option<Vec<f64>>,
     },
     /// Convert an OR evaluation *Speed.csv into a ScriptedDriver CSV.
     OrEvalDriver {
@@ -441,6 +445,7 @@ fn main() -> anyhow::Result<()> {
             max_brake_rms,
             max_brake_max,
             phase_bounds,
+            checkpoints,
         } => {
             let column_map = if let Some(path) = map {
                 let text = std::fs::read_to_string(&path)
@@ -469,6 +474,12 @@ fn main() -> anyhow::Result<()> {
                 let phases = compare_or_dump_phases(&or_dump, &run_csv, &column_map, &bounds, step)
                     .map_err(|e| anyhow::anyhow!("compare-or phases: {e}"))?;
                 print_phase_report(&phases)?;
+            }
+            if let Some(times) = checkpoints {
+                let points =
+                    compare_or_dump_checkpoints(&or_dump, &run_csv, &column_map, &times, step)
+                        .map_err(|e| anyhow::anyhow!("compare-or checkpoints: {e}"))?;
+                print_checkpoint_report(&points)?;
             }
             if !rep.pass {
                 std::process::exit(1);
@@ -1051,6 +1062,27 @@ fn print_phase_report(phases: &[PhaseReport]) -> anyhow::Result<()> {
                 br.rms_diff, br.max_abs_diff
             );
         }
+    }
+    Ok(())
+}
+
+fn print_checkpoint_report(points: &[CheckpointDiff]) -> anyhow::Result<()> {
+    if points.is_empty() {
+        println!("\n=== Checkpoints (OR vs sim) ===\n  (sin checkpoints)");
+        return Ok(());
+    }
+    println!("\n=== Checkpoints (OR vs sim) ===");
+    for p in points {
+        println!(
+            "  t={:>7.2}s | vel OR={:>7.3} sim={:>7.3} | Δv={:>6.3} m/s | dist OR={:>8.3} sim={:>8.3} | Δx={:>6.3} m",
+            p.time_s,
+            p.or_velocity_mps,
+            p.sim_velocity_mps,
+            p.velocity_abs_diff,
+            p.or_distance_m,
+            p.sim_distance_m,
+            p.position_abs_diff,
+        );
     }
     Ok(())
 }

@@ -1,6 +1,9 @@
 use std::io::Write;
 
-use openrailsrs_validate::{ValidationConfig, compare_csv_files, compare_csv_files_with_config};
+use openrailsrs_validate::{
+    ValidationConfig, compare_csv_files, compare_csv_files_with_config,
+    compare_traces_at_checkpoints,
+};
 
 const HEADER: &str =
     "time_s,edge_id,pos_on_edge_m,velocity_mps,odometer_m,cumulative_energy_kwh,throttle,brake\n";
@@ -171,6 +174,60 @@ fn phase_breakdown_splits_resampled_window() {
     assert!(phases[1].velocity.samples > 0);
     assert!(phases[0].velocity.rms_diff > 0.0);
     assert!(phases[1].velocity.rms_diff > 0.0);
+}
+
+#[test]
+fn checkpoints_report_pointwise_diffs() {
+    use openrailsrs_validate::{RunTrace, TraceSample};
+
+    let a = RunTrace {
+        source: "or".into(),
+        samples: vec![
+            TraceSample {
+                time_s: 0.0,
+                velocity_mps: 0.0,
+                distance_m: 0.0,
+                energy_kwh: None,
+                throttle: Some(0.2),
+                brake: Some(0.0),
+            },
+            TraceSample {
+                time_s: 10.0,
+                velocity_mps: 10.0,
+                distance_m: 50.0,
+                energy_kwh: None,
+                throttle: Some(0.6),
+                brake: Some(0.0),
+            },
+        ],
+    };
+    let b = RunTrace {
+        source: "sim".into(),
+        samples: vec![
+            TraceSample {
+                time_s: 0.0,
+                velocity_mps: 0.0,
+                distance_m: 0.0,
+                energy_kwh: None,
+                throttle: Some(0.1),
+                brake: Some(0.0),
+            },
+            TraceSample {
+                time_s: 10.0,
+                velocity_mps: 12.0,
+                distance_m: 55.0,
+                energy_kwh: None,
+                throttle: Some(0.5),
+                brake: Some(0.0),
+            },
+        ],
+    };
+    let points = compare_traces_at_checkpoints(&a, &b, &[5.0, 10.0], 1.0).expect("checkpoints");
+    assert_eq!(points.len(), 2);
+    assert!((points[0].velocity_abs_diff - 1.0).abs() < 1e-9);
+    assert!((points[0].position_abs_diff - 2.5).abs() < 1e-9);
+    assert!((points[1].velocity_abs_diff - 2.0).abs() < 1e-9);
+    assert!((points[1].position_abs_diff - 5.0).abs() < 1e-9);
 }
 
 #[test]

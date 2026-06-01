@@ -67,7 +67,7 @@ pub fn track_dev_render_enabled() -> bool {
     })
 }
 
-/// Large `.tdb` files skip global TrPins branch walks (OOM on routes like Chiltern).
+/// Full TrPins branch walk only on small `.tdb` files (large routes OOM if walked globally).
 pub const TRACK_DEV_BRANCH_WALK_MAX_NODES: usize = 800;
 
 /// Shape LOD distance for the player consist in live drive.

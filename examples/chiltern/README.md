@@ -132,7 +132,7 @@ export OPENRAILSRS_TRACK_DEV_RENDER=1
 
 El audit también corre **antes de abrir Bevy** (verás `track-audit` en consola aunque la ventana falle por RAM).
 
-Con `track.toml` parcheado (`--patch-coords`), el audit puede comparar acordes `.tdb` con el grafo importado (`graph match %`, no `n/a`). JSON opcional: `OPENRAILSRS_TRACK_AUDIT=/tmp/track-audit.json`.
+Con `track.toml` parcheado (`--patch-coords`), el audit puede comparar acordes `.tdb` con el grafo importado (`graph match %`, no `n/a`). JSON opcional: `OPENRAILSRS_TRACK_AUDIT=/tmp/track-audit.json` (incluye `worst_inter_node_gaps`: hasta 10 pares V↔V con gap ≥ 5 m). Detalle en consola con `OPENRAILSRS_TRACK_AUDIT=1`.
 
 #### Umbrales del audit (`verdict`)
 
@@ -146,7 +146,7 @@ Lógica en `track_audit.rs` → `classify_verdict`. Con coords en el grafo (Chil
 
 Sin `x_m`/`y_m` en nodos (solo TDB): Good exige intra-node p95 ≤ 1 m, mean ≤ 2 m e inter-node p95 ≤ 5 m.
 
-**Referencia Chiltern** (1500 m, coords parcheadas, mayo 2026): graph match **98%**, endpoint snap **81%**, mid→chord p95 **10 m**, intra-node **0 m**, inter-node mean **9.3 m** / p95 **33 m** → **Good**. El inter-node gap no entra en el veredicto cuando hay coords; es la métrica a mejorar en TrPins (objetivo práctico: p95 &lt; 15 m).
+**Referencia Chiltern** (1500 m, coords parcheadas, mayo 2026): graph match **98%**, endpoint snap **~80%**, mid→chord p95 **~8 m**, intra-node **0 m**, inter-node mean **~0.6 m** / p95 **0 m** (puentes TrPin local; rutas &gt;800 nodos TDB no hacen branch walk global). Outliers (p. ej. max **343 m**) aparecen en `worst_inter_node_gaps` del JSON.
 
 Preferí **`--live`** en track-dev (tren caja, menos RAM). El replay sin `OPENRAILSRS_TRACK_DEV_RENDER=1` también usa caja; no se streamean tiles `.w` ni señales. La cámara arranca a ~100 m del tren (no encuadra los 500 km del bbox Chiltern). **`T`** sigue al tren en replay.
 

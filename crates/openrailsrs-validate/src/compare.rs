@@ -141,6 +141,30 @@ pub struct ComparisonReport {
     pub brake_pass: Option<bool>,
 }
 
+/// Difference snapshot at one explicit checkpoint time.
+#[derive(Debug, Clone, Serialize)]
+pub struct CheckpointDiff {
+    pub time_s: f64,
+    pub or_velocity_mps: f64,
+    pub sim_velocity_mps: f64,
+    pub velocity_abs_diff: f64,
+    pub or_distance_m: f64,
+    pub sim_distance_m: f64,
+    pub position_abs_diff: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub or_throttle: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sim_throttle: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub throttle_abs_diff: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub or_brake: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sim_brake: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brake_abs_diff: Option<f64>,
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Compare two run CSVs using default (permissive) tolerances — always passes.
@@ -445,6 +469,136 @@ pub fn compare_or_dump_phases(
     crate::trace::normalize_trace_brake_to_fraction(&mut or_trace, None);
     let rs_trace = parse_openrailsrs_run_csv(run_csv)?;
     compare_traces_by_phases(&or_trace, &rs_trace, boundaries, step_s)
+}
+
+/// Compare OR vs sim at explicit checkpoint times (seconds).
+pub fn compare_or_dump_checkpoints(
+    or_dump: &Path,
+    run_csv: &Path,
+    map: &crate::trace::OrColumnMap,
+    checkpoints_s: &[f64],
+    step_s: f64,
+) -> Result<Vec<CheckpointDiff>, ValidateError> {
+    let mut or_trace = crate::trace::parse_or_dump_csv(or_dump, map)?;
+    crate::trace::normalize_trace_brake_to_fraction(&mut or_trace, None);
+    let rs_trace = parse_openrailsrs_run_csv(run_csv)?;
+    compare_traces_at_checkpoints(&or_trace, &rs_trace, checkpoints_s, step_s)
+}
+
+/// Compare two traces at explicit checkpoint times (seconds).
+pub fn compare_traces_at_checkpoints(
+    a: &crate::trace::RunTrace,
+    b: &crate::trace::RunTrace,
+    checkpoints_s: &[f64],
+    step_s: f64,
+) -> Result<Vec<CheckpointDiff>, ValidateError> {
+    if checkpoints_s.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut checkpoints = checkpoints_s.to_vec();
+    checkpoints.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+    for w in checkpoints.windows(2) {
+        if w[1] <= w[0] {
+            return Err(ValidateError::Msg(
+                "checkpoints must be strictly increasing".into(),
+            ));
+        }
+    }
+
+    let (ra, rb) = crate::trace::resample_traces(a, b, step_s)?;
+    let t_min = ra.first().map(|s| s.time_s).unwrap_or(0.0);
+    let t_max = ra.last().map(|s| s.time_s).unwrap_or(0.0);
+    let mut out = Vec::with_capacity(checkpoints.len());
+    for &t in &checkpoints {
+        if t < t_min || t > t_max {
+            return Err(ValidateError::Msg(format!(
+                "checkpoint {t:.3}s out of range [{t_min:.3}, {t_max:.3}]"
+            )));
+        }
+        let Some(sa) = sample_at_time(&ra, t) else {
+            return Err(ValidateError::Msg(format!(
+                "cannot sample OR trace at checkpoint {t:.3}s"
+            )));
+        };
+        let Some(sb) = sample_at_time(&rb, t) else {
+            return Err(ValidateError::Msg(format!(
+                "cannot sample sim trace at checkpoint {t:.3}s"
+            )));
+        };
+        let throttle_abs_diff = match (sa.throttle, sb.throttle) {
+            (Some(x), Some(y)) => Some((x - y).abs()),
+            _ => None,
+        };
+        let brake_abs_diff = match (sa.brake, sb.brake) {
+            (Some(x), Some(y)) => Some((x - y).abs()),
+            _ => None,
+        };
+        out.push(CheckpointDiff {
+            time_s: t,
+            or_velocity_mps: sa.velocity_mps,
+            sim_velocity_mps: sb.velocity_mps,
+            velocity_abs_diff: (sa.velocity_mps - sb.velocity_mps).abs(),
+            or_distance_m: sa.distance_m,
+            sim_distance_m: sb.distance_m,
+            position_abs_diff: (sa.distance_m - sb.distance_m).abs(),
+            or_throttle: sa.throttle,
+            sim_throttle: sb.throttle,
+            throttle_abs_diff,
+            or_brake: sa.brake,
+            sim_brake: sb.brake,
+            brake_abs_diff,
+        });
+    }
+    Ok(out)
+}
+
+fn sample_at_time(
+    samples: &[crate::trace::TraceSample],
+    t: f64,
+) -> Option<crate::trace::TraceSample> {
+    if samples.is_empty() {
+        return None;
+    }
+    if t <= samples[0].time_s {
+        return Some(samples[0].clone());
+    }
+    if t >= samples[samples.len() - 1].time_s {
+        return Some(samples[samples.len() - 1].clone());
+    }
+    let idx = samples.binary_search_by(|s| {
+        s.time_s
+            .partial_cmp(&t)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    match idx {
+        Ok(i) => Some(samples[i].clone()),
+        Err(i) if i > 0 && i < samples.len() => {
+            let a = &samples[i - 1];
+            let b = &samples[i];
+            let dt = (b.time_s - a.time_s).max(1e-9);
+            let f = ((t - a.time_s) / dt).clamp(0.0, 1.0);
+            Some(crate::trace::TraceSample {
+                time_s: t,
+                velocity_mps: lerp(a.velocity_mps, b.velocity_mps, f),
+                distance_m: lerp(a.distance_m, b.distance_m, f),
+                energy_kwh: lerp_opt(a.energy_kwh, b.energy_kwh, f),
+                throttle: lerp_opt(a.throttle, b.throttle, f),
+                brake: lerp_opt(a.brake, b.brake, f),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn lerp(a: f64, b: f64, f: f64) -> f64 {
+    a + f * (b - a)
+}
+
+fn lerp_opt(a: Option<f64>, b: Option<f64>, f: f64) -> Option<f64> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(lerp(x, y, f)),
+        _ => None,
+    }
 }
 
 // ── Shared stats helpers (used by trace comparison) ───────────────────────────

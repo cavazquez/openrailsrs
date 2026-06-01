@@ -66,6 +66,9 @@ pub struct TrVectorSectionRecord {
     pub shape_idx: u32,
     /// Secondary native shape/section field when present.
     pub aux_shape_idx: u32,
+    /// Native `TrVectorSection` header tile (fields +2/+3); anchor `start` may use an adjacent tile.
+    pub header_tile_x: i32,
+    pub header_tile_z: i32,
     pub start: TrackVectorPoint,
     /// Native section orientation fields (`AX`, `AY`, `AZ` in Open Rails).
     pub ax: f64,
@@ -86,6 +89,93 @@ impl TrVectorSectionRecord {
         } else {
             None
         }
+    }
+
+    /// Bevy world positions for this section anchor, including tile-boundary variants.
+    pub fn bevy_position_candidates(
+        &self,
+        ref_tile: Option<TrackVectorPoint>,
+    ) -> Vec<(f32, f32, f32)> {
+        let mut points = vec![self.start];
+        push_point_tile_variants(
+            &mut points,
+            self.start,
+            self.header_tile_x,
+            self.header_tile_z,
+        );
+        if let Some(r) = ref_tile {
+            if r.tile_x != self.start.tile_x || r.tile_z != self.start.tile_z {
+                push_point_tile_variants(&mut points, self.start, r.tile_x, r.tile_z);
+            }
+        }
+        let mut out = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for p in points {
+            let bevy = p.bevy_position();
+            let key = (
+                (bevy.0 * 4.0).round() as i32,
+                (bevy.1 * 4.0).round() as i32,
+                (bevy.2 * 4.0).round() as i32,
+            );
+            if seen.insert(key) {
+                out.push(bevy);
+            }
+        }
+        out
+    }
+
+    /// Closest Bevy anchor to a reference world XZ, preferring tile-boundary variants near `ref_tile`.
+    pub fn bevy_position_nearest_to(
+        &self,
+        ref_x: f32,
+        ref_z: f32,
+        ref_tile: Option<(i32, i32)>,
+    ) -> (f32, f32, f32) {
+        let ref_point = ref_tile.map(|(tile_x, tile_z)| TrackVectorPoint {
+            tile_x,
+            tile_z,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        let mut best = self.start.bevy_position();
+        let mut best_dist = f32::INFINITY;
+        for cand in self.bevy_position_candidates(ref_point) {
+            let dx = ref_x - cand.0;
+            let dz = ref_z - cand.2;
+            let dist = dx * dx + dz * dz;
+            if dist < best_dist {
+                best_dist = dist;
+                best = cand;
+            }
+        }
+        best
+    }
+}
+
+/// MSTS often stores the same junction anchor on an adjacent tile with flipped local X or Z.
+fn push_point_tile_variants(
+    out: &mut Vec<TrackVectorPoint>,
+    base: TrackVectorPoint,
+    tile_x: i32,
+    tile_z: i32,
+) {
+    if tile_x == base.tile_x && tile_z == base.tile_z {
+        return;
+    }
+    for (x, z) in [
+        (base.x, base.z),
+        (base.x, -base.z),
+        (-base.x, base.z),
+        (-base.x, -base.z),
+    ] {
+        out.push(TrackVectorPoint {
+            tile_x,
+            tile_z,
+            x,
+            y: base.y,
+            z,
+        });
     }
 }
 
@@ -189,6 +279,45 @@ impl TrackVectorPoint {
             self.y as f32,
             (self.tile_z as f64 * TILE - self.z) as f32,
         )
+    }
+
+    /// Closest Bevy position among tile-boundary variants near `ref_tile` / `header_tile`.
+    pub fn bevy_position_nearest_to(
+        self,
+        ref_x: f32,
+        ref_z: f32,
+        ref_tile: Option<(i32, i32)>,
+        header_tile: Option<(i32, i32)>,
+    ) -> (f32, f32, f32) {
+        let mut points = vec![self];
+        if let Some((tile_x, tile_z)) = header_tile {
+            push_point_tile_variants(&mut points, self, tile_x, tile_z);
+        }
+        if let Some((tile_x, tile_z)) = ref_tile {
+            push_point_tile_variants(&mut points, self, tile_x, tile_z);
+        }
+        let mut best = self.bevy_position();
+        let mut best_dist = f32::INFINITY;
+        let mut seen = std::collections::HashSet::new();
+        for p in points {
+            let bevy = p.bevy_position();
+            let key = (
+                (bevy.0 * 4.0).round() as i32,
+                (bevy.1 * 4.0).round() as i32,
+                (bevy.2 * 4.0).round() as i32,
+            );
+            if !seen.insert(key) {
+                continue;
+            }
+            let dx = ref_x - bevy.0;
+            let dz = ref_z - bevy.2;
+            let dist = dx * dx + dz * dz;
+            if dist < best_dist {
+                best_dist = dist;
+                best = bevy;
+            }
+        }
+        best
     }
 }
 
@@ -674,6 +803,8 @@ fn parse_vector_section_records(vector_node: &[Ast]) -> Vec<TrVectorSectionRecor
                         list_records.push(TrVectorSectionRecord {
                             shape_idx: sec_items.get(1).and_then(parse_u32).unwrap_or(0),
                             aux_shape_idx: sec_items.get(2).and_then(parse_u32).unwrap_or(0),
+                            header_tile_x: point.tile_x,
+                            header_tile_z: point.tile_z,
                             start: point,
                             ax: sec_items.get(10).and_then(ast_to_f64).unwrap_or(0.0),
                             ay: sec_items.get(11).and_then(ast_to_f64).unwrap_or(0.0),
@@ -787,6 +918,8 @@ fn parse_native_section_record(items: &[Ast], base: usize) -> Option<TrVectorSec
     Some(TrVectorSectionRecord {
         shape_idx: shape_a as u32,
         aux_shape_idx: shape_b as u32,
+        header_tile_x: world_tile_x,
+        header_tile_z: world_tile_z,
         start: point,
         ax: items.get(base + 13).and_then(ast_to_f64).unwrap_or(0.0),
         ay: items.get(base + 14).and_then(ast_to_f64).unwrap_or(0.0),
@@ -1300,6 +1433,89 @@ mod tests {
         let tdb = TrackDbFile::from_path(fixtures_dir().join("minimal.tdb")).expect("minimal");
         assert_eq!(tdb.nodes.len(), 3);
         assert!(matches!(tdb.nodes[0].kind, TrackNodeKind::End));
+    }
+
+    #[test]
+    fn bevy_position_candidates_rebase_tile_z_boundary() {
+        let junction = TrackVectorPoint {
+            tile_x: -6081,
+            tile_z: 14926,
+            x: 18.488,
+            y: 28.5577,
+            z: -1016.008,
+        };
+        let section = TrVectorSectionRecord {
+            shape_idx: 38700,
+            aux_shape_idx: 38669,
+            header_tile_x: -6081,
+            header_tile_z: 14926,
+            start: TrackVectorPoint {
+                tile_x: -6081,
+                tile_z: 14925,
+                x: 6.833565,
+                y: 28.5577,
+                z: 1018.938,
+            },
+            ax: 0.0,
+            ay: 0.7287974,
+            az: 0.0,
+        };
+        let candidates = section.bevy_position_candidates(Some(junction));
+        let (jx, jy, jz) = junction.bevy_position();
+        let j = (jx, jy, jz);
+        let best = candidates
+            .iter()
+            .map(|(x, _y, z)| {
+                let dx = x - j.0;
+                let dz = z - j.2;
+                (dx * dx + dz * dz).sqrt()
+            })
+            .fold(f32::INFINITY, f32::min);
+        assert!(
+            best < 15.0,
+            "tile-z boundary rebase should land near junction UiD, best={best}m"
+        );
+    }
+
+    #[test]
+    fn bevy_position_candidates_rebase_tile_x_boundary() {
+        let junction = TrackVectorPoint {
+            tile_x: -6079,
+            tile_z: 14925,
+            x: -1018.98,
+            y: 28.5577,
+            z: 273.3258,
+        };
+        let section = TrVectorSectionRecord {
+            shape_idx: 38701,
+            aux_shape_idx: 38668,
+            header_tile_x: -6079,
+            header_tile_z: 14925,
+            start: TrackVectorPoint {
+                tile_x: -6080,
+                tile_z: 14925,
+                x: 1018.18,
+                y: 28.5577,
+                z: 287.168,
+            },
+            ax: 0.0,
+            ay: 2.409297,
+            az: 0.0,
+        };
+        let candidates = section.bevy_position_candidates(Some(junction));
+        let (jx, _jy, jz) = junction.bevy_position();
+        let best = candidates
+            .iter()
+            .map(|(x, _y, z)| {
+                let dx = x - jx;
+                let dz = z - jz;
+                (dx * dx + dz * dz).sqrt()
+            })
+            .fold(f32::INFINITY, f32::min);
+        assert!(
+            best < 20.0,
+            "tile-x boundary rebase should land near junction UiD, best={best}m"
+        );
     }
 
     #[test]

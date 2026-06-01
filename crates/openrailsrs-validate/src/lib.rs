@@ -7,9 +7,10 @@ pub mod trace;
 
 pub use brake::{BrakeCommandMapping, OR_DEFAULT_BRAKE_FULL_SCALE_PSI};
 pub use compare::{
-    ComparisonReport, PhaseReport, ValidationConfig, compare_csv_files,
-    compare_csv_files_with_config, compare_or_dump_phases, compare_or_dump_with_run,
-    compare_traces, compare_traces_by_phases, phase_report_passes,
+    CheckpointDiff, ComparisonReport, PhaseReport, ValidationConfig, compare_csv_files,
+    compare_csv_files_with_config, compare_or_dump_checkpoints, compare_or_dump_phases,
+    compare_or_dump_with_run, compare_traces, compare_traces_at_checkpoints,
+    compare_traces_by_phases, phase_report_passes,
 };
 pub use error::ValidateError;
 pub use trace::{

@@ -245,7 +245,7 @@ fn main() {
                 "openrailsrs-viewer3d: track_dev — pre-audit {:.0}m radius (before Bevy)…",
                 radius_m
             );
-            let chords = collect_tdb_chords(tdb, &route_focus, radius_m);
+            let chords = collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
             run_track_dev_audit(
                 tdb,
                 &config.scene,
@@ -253,6 +253,7 @@ fn main() {
                 route_offset,
                 radius_m,
                 &chords,
+                Some(config.route_dir.as_path()),
             );
             if !track_dev_render_enabled() {
                 viewer_log!(
