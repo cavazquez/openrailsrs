@@ -44,6 +44,7 @@ pub fn signal_position_on_edge(
 }
 
 /// Spawn diamond markers and poles for all signals in the graph.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_signal_markers(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,

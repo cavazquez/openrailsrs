@@ -133,6 +133,7 @@ impl Plugin for ViewerPlugin {
                     track::frame_orbit_camera_on_track.run_if(live::live_mode_inactive),
                     train::spawn_train_markers.run_if(live::live_mode_inactive),
                     live::spawn_live_train.run_if(live::live_mode_active),
+                    floating_origin::track_dev_recenter_at_subject.run_if(launch::track_dev_active),
                     live::enable_live_defaults.run_if(live::live_mode_active),
                     gameplay::spawn_gameplay_ui,
                     gameplay::spawn_gameplay_markers.run_if(live::live_mode_active),
