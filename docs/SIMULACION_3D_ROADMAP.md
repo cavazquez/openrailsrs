@@ -477,7 +477,8 @@ Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente
 
 | # | Brecha | Impacto visual | Esfuerzo | Estado | Archivo clave |
 |---|--------|---------------|----------|--------|-------|---------------|
-| 1 | **Sombras deshabilitadas** | Alto | Bajo | `shadows_enabled: false` | `scene.rs:62` |
+| 0 | **Escenario `unlit`** (no recibe sol ni sombras; brillo a base de hacks) | Alto | Medio | ✅ Camino lit estilo OR **por defecto** (opt-out: `OPENRAILSRS_UNLIT_SCENERY=1`) | `shapes.rs:or_lighting_enabled` |
+| 1 | **Sombras** | Alto | Bajo | ✅ `shadows_enabled: true` + 3 cascadas | `scene.rs` |
 | 2 | **Shapes `.s` binarios** → fallback cubo magenta | Alto | Medio | Parser básico (`shape_binary.rs`), heurísticas frágiles | `shape_binary.rs`, `shapes.rs` |
 | 3 | **Cabina 3D interior** | Alto | Alto | 🔶 Parcial (`cab_view.rs`); ver [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) | `cab_view.rs` |
 | 4 | **Animación de shapes** (puertas, bogies, pantógrafos) | Medio | Alto | Todo estático | `shapes.rs` |
@@ -487,6 +488,41 @@ Evaluación del viewer 3D actual respecto a un simulador ferroviario visualmente
 | 8 | **Posición multi-body** por vehículo | Bajo | Medio | Offset estático desde cabeza | `live.rs`, `train.rs` |
 | 9 | **Efectos atmosféricos** (niebla, día/noche, humo/vapor) | Medio | Medio | Solo cielo dome + lluvia toggle | `sky.rs`, `precipitation.rs` |
 | 10 | **Pipeline de contenido** (GLTF/OBJ import) | Bajo | Bajo | Copia manual de assets OR | scripts/ |
+
+### Por qué todavía no se ve como Open Rails (análisis 2026-06)
+
+El motivo principal **no** es geométrico (la vía/escenario están bien posicionados) sino el
+**modelo de iluminación**. El viewer arrastra una pila de compensaciones contradictorias:
+
+1. La cámara usa **sol físico brillante** (`DirectionalLight` 75 000 lux) + **exposición oscura**
+   (`Exposure::SUNLIGHT`) + **`Tonemapping::None`** (sin curva fílmica que reencuadre el HDR).
+2. Pero **todo el escenario se dibuja `unlit`** (`scenery_shape_material` forzaba `unlit: true`),
+   así que ignora el sol por completo → superficies **planas, sin volumen y sin recibir sombras**.
+3. Para que el `unlit` no quede negro se recupera brillo "a mano":
+   `brighten_dark_ace_rgba`, boost de albedo ×4 (`SCENERY_TEXTURE_ALBEDO_BOOST`) y `emissive`.
+
+OR, en cambio, **ilumina el mundo** (sol + ambiente) con su `SceneryShader` y tone-mapea. Por eso
+sus edificios/trenes tienen sombreado por orientación al sol y sombras proyectadas, y los nuestros
+no, aunque las texturas sean las mismas.
+
+**Arreglo (ahora el camino por defecto):** el render *lit* estilo OR es el predeterminado:
+
+- Materiales de escenario `unlit: false` → el sol los sombrea y **reciben sombras** (brecha #1 ya
+  proyecta; ahora también se reciben sobre objetos, no solo el suelo).
+- Albedo **neutral** (sin boost ×4 ni `brighten_dark_ace`): la luz aporta el brillo, no un hack.
+- Sin `emissive` de relleno (evita que texturas noche/señal se autoiluminen bajo luz real).
+- Consistente con la cámara física (`Exposure::SUNLIGHT` + sol 75 klux + relleno ambiente 15 klux).
+
+```bash
+# Por defecto (lit, estilo OR):
+cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
+# Volver al render fijo (legacy unlit), p. ej. para comparar:
+OPENRAILSRS_UNLIT_SCENERY=1 cargo run -p openrailsrs-viewer3d -- --live examples/smoke/scenario.toml
+```
+
+Pendiente (mejoras incrementales, requieren validación visual): afinar exposición/tonemap
+(p. ej. `Tonemapping::TonyMcMapface`) y propagar el camino lit al material rodante
+(`rolling_stock.rs`) y al terreno (`terrain.wgsl`, shader propio que aún no recibe sombras).
 
 ### Plan de implementación: sombras + shapes binarios
 

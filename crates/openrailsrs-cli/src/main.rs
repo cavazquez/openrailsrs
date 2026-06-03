@@ -1177,6 +1177,63 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
         for (i, name) in shape.texture_filenames.iter().enumerate() {
             println!("    [{i}] {name}");
         }
+        if !shape.points.is_empty() {
+            let mut min = [f64::INFINITY; 3];
+            let mut max = [f64::NEG_INFINITY; 3];
+            for p in &shape.points {
+                for (i, v) in [p.x, p.y, p.z].into_iter().enumerate() {
+                    min[i] = min[i].min(v);
+                    max[i] = max[i].max(v);
+                }
+            }
+            println!(
+                "  raw points AABB    : x[{:.2},{:.2}] y[{:.2},{:.2}] z[{:.2},{:.2}]  ext=({:.2},{:.2},{:.2})",
+                min[0],
+                max[0],
+                min[1],
+                max[1],
+                min[2],
+                max[2],
+                max[0] - min[0],
+                max[1] - min[1],
+                max[2] - min[2],
+            );
+        }
+        for (li, control) in shape.lod_controls.iter().enumerate() {
+            for (di, level) in control.distance_levels.iter().enumerate() {
+                let mut min = [f64::INFINITY; 3];
+                let mut max = [f64::NEG_INFINITY; 3];
+                let mut refs = 0usize;
+                for so in &level.sub_objects {
+                    for prim in &so.primitives {
+                        for &vi in &prim.vertex_indices {
+                            let Some(vtx) = so.vertices.get(vi as usize) else {
+                                continue;
+                            };
+                            let Some(p) = shape.points.get(vtx.point_idx as usize) else {
+                                continue;
+                            };
+                            refs += 1;
+                            for (i, v) in [p.x, p.y, p.z].into_iter().enumerate() {
+                                min[i] = min[i].min(v);
+                                max[i] = max[i].max(v);
+                            }
+                        }
+                    }
+                }
+                if refs > 0 {
+                    println!(
+                        "  LOD[{li}.{di}] sel={:.0}m drawn-AABB z[{:.2},{:.2}] ext=({:.2},{:.2},{:.2})",
+                        level.selection_m,
+                        min[2],
+                        max[2],
+                        max[0] - min[0],
+                        max[1] - min[1],
+                        max[2] - min[2],
+                    );
+                }
+            }
+        }
     }
     Ok(())
 }

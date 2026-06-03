@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
@@ -27,9 +28,65 @@ const SCENERY_TEXTURE_MAX_PIXEL_SCALE: f32 = 128.0;
 /// Small extra tint after pixel normalization (avoid double-boost with [`SCENERY_TEXTURE_ALBEDO_BOOST`]).
 const SCENERY_TEXTURE_POST_BRIGHTEN_TINT: f32 = 1.25;
 
+/// Open Rails lights its world with a sun + ambient and tone-maps it; MSTS `.ace`
+/// albedos look right under that model. This OR-style lit path (sun shading + shadow
+/// receive, neutral albedo) is the **default** and matches the camera's physical
+/// `Exposure::SUNLIGHT` + 75 klux sun + ambient fill.
+///
+/// The legacy fixed-function path draws scenery `unlit` and claws brightness back with
+/// [`SCENERY_TEXTURE_ALBEDO_BOOST`] and [`brighten_dark_ace_rgba`]; it is internally
+/// inconsistent with that exposure, so surfaces stay flat and never receive shadows.
+/// Opt back into it with `OPENRAILSRS_UNLIT_SCENERY=1` (or `OPENRAILSRS_OR_LIGHTING=0`).
+pub fn or_lighting_enabled() -> bool {
+    static FLAG: OnceLock<bool> = OnceLock::new();
+    *FLAG.get_or_init(|| {
+        resolve_or_lighting(
+            std::env::var("OPENRAILSRS_UNLIT_SCENERY").ok().as_deref(),
+            std::env::var("OPENRAILSRS_OR_LIGHTING").ok().as_deref(),
+        )
+    })
+}
+
+/// Pure resolver for the lighting mode (unit-tested without global env state).
+///
+/// Lit (OR-style) is the default. `OPENRAILSRS_UNLIT_SCENERY` (truthy) forces the
+/// legacy unlit path; otherwise `OPENRAILSRS_OR_LIGHTING` may explicitly disable it
+/// with `"0"`/empty.
+fn resolve_or_lighting(unlit_opt_out: Option<&str>, or_flag: Option<&str>) -> bool {
+    let truthy = |v: &str| !v.is_empty() && v != "0";
+    if unlit_opt_out.is_some_and(truthy) {
+        return false;
+    }
+    match or_flag {
+        Some(v) => truthy(v),
+        None => true,
+    }
+}
+
 fn scenery_texture_tint() -> Color {
     let b = SCENERY_TEXTURE_ALBEDO_BOOST;
     Color::linear_rgb(b, b, b)
+}
+
+/// Albedo tint for a scenery texture, honouring the OR-style lit path.
+///
+/// In the lit path the sun/ambient provide brightness, so the fixed-function
+/// `×SCENERY_TEXTURE_ALBEDO_BOOST` tint must collapse to white to avoid a washed-out look.
+fn scenery_albedo_tint(pixel_brightened: bool, lit: bool) -> Color {
+    if lit {
+        Color::WHITE
+    } else {
+        scenery_material_tint_for_ace(pixel_brightened)
+    }
+}
+
+/// Base (untextured / DDS) tint, honouring the OR-style lit path.
+fn scenery_base_tint(lit: bool) -> Color {
+    if lit {
+        Color::WHITE
+    } else {
+        scenery_texture_tint()
+    }
 }
 
 fn scenery_texture_tint_scaled(multiplier: f32) -> Color {
@@ -99,6 +156,7 @@ fn scenery_shape_material_with_texture(
     alpha_mode: AlphaMode,
     z_bias: f32,
 ) -> StandardMaterial {
+    let lit = or_lighting_enabled();
     let mut mat = StandardMaterial {
         base_color: tint,
         base_color_texture: Some(handle.clone()),
@@ -109,21 +167,35 @@ fn scenery_shape_material_with_texture(
         depth_bias: z_bias,
         ..default()
     };
-    if scenery_needs_emissive_texture(rgba_for_luma) {
+    // The dark-atlas emissive lift only compensates for the unlit path; under real
+    // lighting it would make night/signal textures self-glow, so skip it when lit.
+    if !lit && scenery_needs_emissive_texture(rgba_for_luma) {
         mat.emissive = SCENERY_DARK_EMISSIVE;
         mat.emissive_texture = Some(handle);
     }
     scenery_shape_material(mat)
 }
 
-/// MSTS `.ace` albedo is authored for fixed-function / unlit-style drawing; Bevy PBR + fog
-/// crushes it to black silhouettes (same issue as cab interior — see `cab_view.rs`).
+/// Finalise a scenery material for the active lighting path.
+///
+/// - OR-style ([`or_lighting_enabled`], the default): keep the material lit so the directional
+///   sun shades it and it receives shadows, matching Open Rails' `SceneryShader`.
+/// - Legacy (unlit, opt-in via `OPENRAILSRS_UNLIT_SCENERY=1`): MSTS `.ace` albedo is authored for
+///   fixed-function drawing; drawn `unlit` with a brightness boost, never receiving shadows.
 fn scenery_shape_material(base: StandardMaterial) -> StandardMaterial {
-    StandardMaterial {
-        unlit: true,
-        fog_enabled: false,
-        ..base
+    finalize_scenery_material(base, or_lighting_enabled())
+}
+
+/// Pure lighting-mode finaliser (unit-tested without env state).
+fn finalize_scenery_material(mut base: StandardMaterial, lit: bool) -> StandardMaterial {
+    if lit {
+        base.unlit = false;
+        base.fog_enabled = true;
+    } else {
+        base.unlit = true;
+        base.fog_enabled = false;
     }
+    base
 }
 
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
@@ -1556,7 +1628,7 @@ fn material_for_shape_texture(
                                 .or_insert_with(|| images.add(image))
                                 .clone();
                             let material = materials.add(scenery_shape_material_with_texture(
-                                scenery_texture_tint(),
+                                scenery_base_tint(or_lighting_enabled()),
                                 handle,
                                 &[],
                                 AlphaMode::Blend,
@@ -1585,8 +1657,15 @@ fn material_for_shape_texture(
                     let alpha_mode =
                         alpha_mode_from_prim_state(&ace, tex_name, shader_name, alpha_test_mode);
                     let is_transparent = !matches!(alpha_mode, AlphaMode::Opaque);
+                    let lit = or_lighting_enabled();
+                    // MSTS `.ace` atlases are authored dark for fixed-function drawing; as a raw
+                    // PBR albedo they render as black silhouettes under the sun. Normalizing the
+                    // near-black ones to a plausible reflectance fixes that in BOTH paths. The lit
+                    // path then relies on the sun/ambient (white tint, no emissive) rather than the
+                    // unlit ×boost to set final brightness — see `scenery_albedo_tint` /
+                    // `scenery_shape_material_with_texture`.
                     let (rgba, pixel_brightened) = brighten_dark_ace_rgba(&ace.mip0);
-                    let tint = scenery_material_tint_for_ace(pixel_brightened);
+                    let tint = scenery_albedo_tint(pixel_brightened, lit);
                     let image = ace_rgba_to_image(ace.width, ace.height, &rgba);
                     let handle = texture_cache
                         .entry(tex_path)
@@ -1605,9 +1684,15 @@ fn material_for_shape_texture(
         }
     }
 
+    // Untextured fallback: the emissive lift fakes brightness for the unlit path only.
+    let fallback_emissive = if or_lighting_enabled() {
+        LinearRgba::BLACK
+    } else {
+        LinearRgba::from(fallback_color) * 0.35
+    };
     let material = materials.add(scenery_shape_material(StandardMaterial {
         base_color: fallback_color,
-        emissive: LinearRgba::from(fallback_color) * 0.35,
+        emissive: fallback_emissive,
         perceptual_roughness: 0.75,
         metallic: 0.1,
         double_sided: true,
@@ -2220,6 +2305,64 @@ mod tests {
         assert!((fit_scale - 18.0).abs() < 1e-3);
         let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
         assert!((full.scale.x - fit_scale).abs() < 1e-3);
+    }
+
+    #[test]
+    fn or_lighting_defaults_to_lit() {
+        assert!(resolve_or_lighting(None, None), "lit is the default");
+        assert!(!resolve_or_lighting(Some("1"), Some("0")));
+    }
+
+    #[test]
+    fn or_lighting_unlit_opt_out_wins() {
+        assert!(!resolve_or_lighting(Some("1"), Some("1")));
+        assert!(!resolve_or_lighting(Some("true"), None));
+        assert!(resolve_or_lighting(Some("0"), None), "0 is not opt-out");
+    }
+
+    #[test]
+    fn or_lighting_explicit_disable() {
+        assert!(!resolve_or_lighting(None, Some("0")));
+        assert!(!resolve_or_lighting(None, Some("")));
+        assert!(resolve_or_lighting(None, Some("1")));
+    }
+
+    #[test]
+    fn finalize_scenery_material_unlit_path_disables_lighting() {
+        let mat = finalize_scenery_material(StandardMaterial::default(), false);
+        assert!(
+            mat.unlit,
+            "legacy opt-out path must stay unlit (fixed-function look)"
+        );
+        assert!(!mat.fog_enabled);
+    }
+
+    #[test]
+    fn finalize_scenery_material_lit_path_enables_lighting() {
+        let mat = finalize_scenery_material(StandardMaterial::default(), true);
+        assert!(
+            !mat.unlit,
+            "OR-style path must be lit to receive sun + shadows"
+        );
+        assert!(mat.fog_enabled);
+    }
+
+    #[test]
+    fn scenery_albedo_tint_neutralizes_boost_when_lit() {
+        // Unlit: keep the ×boost / post-brighten tint to claw brightness back.
+        let unlit_tint = scenery_albedo_tint(false, false).to_linear();
+        assert!(unlit_tint.red > 1.0, "unlit tint should boost albedo");
+        // Lit: lighting provides brightness, so the tint collapses to white.
+        let lit_tint = scenery_albedo_tint(false, true).to_linear();
+        assert!((lit_tint.red - 1.0).abs() < 1e-4);
+        assert!((lit_tint.green - 1.0).abs() < 1e-4);
+        assert!((lit_tint.blue - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn scenery_base_tint_neutralizes_boost_when_lit() {
+        assert!(scenery_base_tint(false).to_linear().red > 1.0);
+        assert!((scenery_base_tint(true).to_linear().red - 1.0).abs() < 1e-4);
     }
 
     #[test]

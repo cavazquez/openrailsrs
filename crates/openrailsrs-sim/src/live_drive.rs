@@ -532,6 +532,43 @@ mod tests {
     }
 
     #[test]
+    fn live_session_reaches_chiltern_destination_with_throttle() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern/scenario.toml");
+        if !scenario_path.exists() {
+            return;
+        }
+        let scenario_dir = scenario_path.parent().unwrap();
+        let Ok(scenario) = load_scenario(&scenario_path) else {
+            return;
+        };
+        let Ok(mut session) = LiveDriveSession::from_scenario(scenario_dir, &scenario) else {
+            return;
+        };
+        let start_odo = session.state.odometer_m;
+        // Chiltern n3 → n10770 is a ~29 km mainline run; at ~80 km/h that needs ~21 min
+        // of sim time. Step generously and assert the train both progresses and arrives.
+        for _ in 0..1800 {
+            session.driver_throttle = 1.0;
+            session.driver_brake = 0.0;
+            session.step_realtime(1.0, |_| {});
+            if session.arrived {
+                break;
+            }
+        }
+        assert!(
+            session.arrived,
+            "train should reach destination n10770 under full throttle (odo={:.0}m of {:.0}m)",
+            session.state.odometer_m,
+            session.path_data.total_length_m(),
+        );
+        assert!(
+            session.state.odometer_m > start_odo,
+            "odometer should advance toward the station"
+        );
+    }
+
+    #[test]
     fn live_caution_signal_halves_effective_limit_on_e1() {
         let scenario_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");

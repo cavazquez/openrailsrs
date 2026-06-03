@@ -10,6 +10,7 @@
 pub mod cab_panel;
 pub mod cab_view;
 pub mod camera;
+pub mod capture;
 pub mod dyntrack;
 pub mod floating_origin;
 pub mod forest;
@@ -185,6 +186,15 @@ impl Plugin for ViewerPlugin {
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
                     gameplay::update_stop_billboards.run_if(live::live_mode_active),
                 ),
+            )
+            .add_systems(Startup, capture::init_capture)
+            .add_systems(Update, capture::capture_system)
+            .add_systems(
+                Update,
+                live::live_autodrive
+                    .run_if(live::live_mode_active)
+                    .run_if(live::autodrive_enabled)
+                    .before(live::advance_live_sim),
             )
             .add_systems(Update, hud::log_profile)
             .add_systems(

@@ -65,8 +65,19 @@ impl LiveDrive {
         scenario_path: &std::path::Path,
         scenario: &ScenarioFile,
     ) -> Result<Self, String> {
-        let session =
+        let mut session =
             LiveDriveSession::from_scenario(scenario_dir, scenario).map_err(|e| e.to_string())?;
+        // Optional time-compression for demos / headless capture (e.g. the ~29 km Chiltern run).
+        if let Some(mul) = std::env::var("OPENRAILSRS_SPEED_MUL")
+            .ok()
+            .and_then(|v| v.trim().parse::<f64>().ok())
+            .filter(|m| *m >= 0.1 && *m <= 64.0)
+        {
+            session.speed_mul = mul;
+            viewer_log!(
+                "openrailsrs-viewer3d: live sim speed_mul = {mul:.1}x (OPENRAILSRS_SPEED_MUL)"
+            );
+        }
         let audio = None; // AudioEngine::try_start(); // Desactivado por pedido del usuario para evitar ruido
         if audio.is_none() {
             viewer_log!(
@@ -136,6 +147,16 @@ pub fn enable_live_defaults(
     } else {
         CameraFollowMode::Off
     };
+    // Optional override for demos / capture: keep the camera locked to the train.
+    if let Ok(mode) = std::env::var("OPENRAILSRS_FOLLOW") {
+        match mode.trim().to_ascii_lowercase().as_str() {
+            "chase" => *follow = CameraFollowMode::ChaseCam,
+            "driver" | "cab" => *follow = CameraFollowMode::DriverCam,
+            "orbit" | "orbitfollow" => *follow = CameraFollowMode::OrbitFollow,
+            "off" => *follow = CameraFollowMode::Off,
+            _ => {}
+        }
+    }
     limit.max = scene
         .bounds
         .orbit_distance()
@@ -167,6 +188,7 @@ pub fn enable_live_defaults(
         },
         orbit_user_zoom_max(),
     );
+    *orbit = crate::camera::orbit_state_with_env_overrides(*orbit);
     *transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
     if mode.is_run_corridor() {
@@ -182,6 +204,7 @@ pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
     if live.paused {
         return;
     }
+    let was_arrived = live.session.arrived;
     let audio = live.audio.take();
     live.session.step_realtime(time.delta_secs() as f64, |t| {
         if let Some(ref a) = audio {
@@ -189,6 +212,50 @@ pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
         }
     });
     live.audio = audio;
+    if live.session.arrived && !was_arrived {
+        viewer_log!(
+            "openrailsrs-viewer3d: train ARRIVED at destination \"{}\" — t={:.0}s, {:.0}m travelled",
+            live.session.gameplay.destination,
+            live.session.time_s(),
+            live.session.state.odometer_m,
+        );
+    }
+}
+
+/// Autopilot for demos / headless capture: drives toward the destination holding a
+/// target notch, easing off near the speed limit. Opt in with `OPENRAILSRS_AUTODRIVE`
+/// (truthy, or a `0..1` notch). Lets the train reach the next station hands-free.
+pub fn autodrive_enabled() -> bool {
+    std::env::var_os("OPENRAILSRS_AUTODRIVE").is_some_and(|v| !v.is_empty() && v != "0")
+}
+
+fn autodrive_notch() -> f64 {
+    std::env::var("OPENRAILSRS_AUTODRIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<f64>().ok())
+        .filter(|v| *v > 0.0 && *v <= 1.0)
+        .unwrap_or(1.0)
+}
+
+pub fn live_autodrive(mut live: ResMut<LiveDrive>) {
+    if live.paused || live.session.arrived {
+        return;
+    }
+    let target = autodrive_notch();
+    let v = live.session.velocity_mps();
+    let limit = live.session.effective_speed_limit_mps();
+    let cap = if limit.is_finite() {
+        limit * 0.95
+    } else {
+        f64::INFINITY
+    };
+    if v < cap {
+        live.session.driver_brake = 0.0;
+        live.session.driver_throttle = target;
+    } else {
+        live.session.driver_throttle = 0.0;
+        live.session.driver_brake = 0.2;
+    }
 }
 
 /// Engine / brake loops once per frame (independent of physics sub-steps).

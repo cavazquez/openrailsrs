@@ -15,6 +15,39 @@ use crate::launch::ViewerLaunchOpts;
 
 /// Ambient fill for live drive / terrain routes (MSTS `.ace` albedos are often very dark).
 pub const LIVE_OUTDOOR_AMBIENT: f32 = 15000.0;
+
+/// Effective ambient fill (lux), overridable via `OPENRAILSRS_AMBIENT` for A/B tuning.
+/// Open Rails lights its world fairly flat; a higher sky fill keeps sun-shadowed
+/// faces from crushing to black under the physical sun.
+pub fn live_outdoor_ambient() -> f32 {
+    std::env::var("OPENRAILSRS_AMBIENT")
+        .ok()
+        .and_then(|v| v.trim().parse::<f32>().ok())
+        .filter(|v| *v >= 0.0)
+        .unwrap_or(LIVE_OUTDOOR_AMBIENT)
+}
+
+/// Tonemapper for the live outdoor world. Open Rails tone-maps its HDR sun-lit scene;
+/// `Tonemapping::None` clips highlights and crushes shadows. A neutral filmic curve
+/// (TonyMcMapface) reframes the HDR for a more OR-like look. Override at runtime with
+/// `OPENRAILSRS_TONEMAP=none|tony|agx|aces|reinhard|blender` to A/B compare.
+pub fn live_tonemapping() -> Tonemapping {
+    parse_tonemapping(std::env::var("OPENRAILSRS_TONEMAP").ok().as_deref())
+}
+
+/// Pure parser for [`live_tonemapping`] (unit-tested without env state).
+fn parse_tonemapping(value: Option<&str>) -> Tonemapping {
+    match value.map(|v| v.trim().to_ascii_lowercase()).as_deref() {
+        Some("none") => Tonemapping::None,
+        Some("agx") => Tonemapping::AgX,
+        Some("aces" | "aces_fitted") => Tonemapping::AcesFitted,
+        Some("reinhard") => Tonemapping::ReinhardLuminance,
+        Some("blender" | "filmic" | "blender_filmic") => Tonemapping::BlenderFilmic,
+        Some("boring" | "somewhat_boring") => Tonemapping::SomewhatBoringDisplayTransform,
+        // Default (unset, empty, or "tony"/"tonymcmapface"): neutral filmic LUT.
+        _ => Tonemapping::TonyMcMapface,
+    }
+}
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
@@ -433,15 +466,39 @@ pub fn driver_camera_transform(train: TrainFollowPose, cab: LiveDriverCab) -> Tr
 
 // ── Systems (Bevy) ────────────────────────────────────────────────────────
 
+/// Optional debug/capture override of the initial orbit (yaw/pitch/distance, radians/m)
+/// via `OPENRAILSRS_CAM_YAW` / `_PITCH` / `_DIST`. No effect when unset.
+pub fn orbit_state_with_env_overrides(mut orbit: OrbitState) -> OrbitState {
+    let env_f32 = |key: &str| {
+        std::env::var(key)
+            .ok()
+            .and_then(|v| v.trim().parse::<f32>().ok())
+    };
+    if let Some(yaw) = env_f32("OPENRAILSRS_CAM_YAW") {
+        orbit.yaw = yaw;
+    }
+    if let Some(pitch) = env_f32("OPENRAILSRS_CAM_PITCH") {
+        orbit.pitch = clamp_pitch(pitch);
+    }
+    if let Some(dist) = env_f32("OPENRAILSRS_CAM_DIST") {
+        orbit.distance = clamp_distance(dist);
+    }
+    orbit
+}
+
 pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
-    let orbit = OrbitState::default();
+    let orbit = orbit_state_with_env_overrides(OrbitState::default());
     let transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
 
-    let (ambient_brightness, exposure) = if opts.live {
-        (LIVE_OUTDOOR_AMBIENT, Exposure::SUNLIGHT)
+    let (ambient_brightness, exposure, tonemapping) = if opts.live {
+        (
+            live_outdoor_ambient(),
+            Exposure::SUNLIGHT,
+            live_tonemapping(),
+        )
     } else {
-        (0.15, Exposure::BLENDER)
+        (0.15, Exposure::BLENDER, Tonemapping::None)
     };
 
     commands.spawn((
@@ -457,7 +514,7 @@ pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
             ..default()
         },
         exposure,
-        Tonemapping::None,
+        tonemapping,
         Name::new("viewer-camera"),
     ));
 }
@@ -954,9 +1011,9 @@ pub fn update_driver_camera_fov(
     } else if opts.live {
         persp.fov = std::f32::consts::FRAC_PI_4;
         persp.near = 0.1;
-        ambient.brightness = LIVE_OUTDOOR_AMBIENT;
+        ambient.brightness = live_outdoor_ambient();
         ambient.color = Color::srgb(0.85, 0.9, 1.0);
-        *tonemapping = Tonemapping::None;
+        *tonemapping = live_tonemapping();
         *exposure = Exposure::SUNLIGHT;
     } else {
         persp.fov = std::f32::consts::FRAC_PI_4;
@@ -1004,6 +1061,28 @@ mod tests {
 
     fn vec3_close(a: Vec3, b: Vec3, eps: f32) -> bool {
         (a - b).length() < eps
+    }
+
+    #[test]
+    fn parse_tonemapping_defaults_to_tony() {
+        assert_eq!(parse_tonemapping(None), Tonemapping::TonyMcMapface);
+        assert_eq!(parse_tonemapping(Some("")), Tonemapping::TonyMcMapface);
+        assert_eq!(parse_tonemapping(Some("tony")), Tonemapping::TonyMcMapface);
+    }
+
+    #[test]
+    fn parse_tonemapping_recognizes_named_curves() {
+        assert_eq!(parse_tonemapping(Some("none")), Tonemapping::None);
+        assert_eq!(parse_tonemapping(Some("AgX")), Tonemapping::AgX);
+        assert_eq!(parse_tonemapping(Some(" aces ")), Tonemapping::AcesFitted);
+        assert_eq!(
+            parse_tonemapping(Some("reinhard")),
+            Tonemapping::ReinhardLuminance
+        );
+        assert_eq!(
+            parse_tonemapping(Some("blender")),
+            Tonemapping::BlenderFilmic
+        );
     }
 
     #[test]

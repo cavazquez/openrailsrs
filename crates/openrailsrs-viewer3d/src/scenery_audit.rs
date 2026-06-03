@@ -377,6 +377,162 @@ pub fn audit_world_shapes_near(
     summary
 }
 
+/// Largest near `.s` shapes by mesh AABB extent (diagnoses oversized geometry).
+///
+/// Resolves + parses unique shapes within `radius_m` of `focus` and logs the
+/// `max_report` with the biggest local-space extent (metres). MSTS shapes are
+/// authored 1:1 in metres, so anything spanning hundreds of metres is suspect.
+pub fn log_oversized_shapes_near(
+    world: &WorldScene,
+    focus: &RouteFocus,
+    assets: &RouteAssets,
+    radius_m: f32,
+    max_shapes: usize,
+    max_report: usize,
+) {
+    use crate::shapes::mesh_aabb;
+
+    let mut objects: Vec<_> = world
+        .items
+        .iter()
+        .filter(|obj| {
+            focus.horizontal_distance(obj.position) <= radius_m
+                && (obj
+                    .shape_file
+                    .as_ref()
+                    .is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+                    || (obj.kind == "TrackObj" && obj.section_idx.is_some()))
+        })
+        .collect();
+    objects.sort_by(|a, b| {
+        focus
+            .horizontal_distance(a.position)
+            .total_cmp(&focus.horizontal_distance(b.position))
+    });
+
+    let mut seen = std::collections::HashSet::new();
+    let mut sized: Vec<(String, &'static str, f32, Vec3)> = Vec::new();
+    for obj in objects {
+        if seen.len() >= max_shapes {
+            break;
+        }
+        let resolve_path = if obj.kind == "TrackObj" {
+            assets.resolve_trackobj_shape(obj.shape_file.as_deref(), obj.section_idx)
+        } else {
+            obj.shape_file
+                .as_deref()
+                .and_then(|f| assets.resolve_world_shape(obj.kind, f))
+        };
+        let Some(path) = resolve_path else {
+            continue;
+        };
+        if !seen.insert(path.clone()) {
+            continue;
+        }
+        let Some(loaded) = load_shape_from_path(&path, None) else {
+            continue;
+        };
+        let Some((min, max)) = mesh_aabb(&loaded.mesh) else {
+            continue;
+        };
+        let extent = max - min;
+        let span = extent.x.max(extent.y).max(extent.z);
+        let name = path
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        sized.push((name, obj.kind, span, extent));
+    }
+
+    sized.sort_by(|a, b| b.2.total_cmp(&a.2));
+    viewer_log!(
+        "openrailsrs-viewer3d: scenery-size — {} unique shape(s) sampled <= {:.0}m; largest by AABB span:",
+        sized.len(),
+        radius_m
+    );
+    for (name, kind, span, extent) in sized.into_iter().take(max_report) {
+        viewer_log!(
+            "openrailsrs-viewer3d: scenery-size   {:<8} {:<28} span={:.1}m  ext=({:.1},{:.1},{:.1})",
+            kind,
+            name,
+            span,
+            extent.x,
+            extent.y,
+            extent.z
+        );
+    }
+}
+
+/// Per-shape lighting diagnostic for the nearest objects (normals + texture luma).
+///
+/// Black silhouettes under the lit path come from either degenerate/flipped normals
+/// (no diffuse term) or near-black `.ace` albedo. This logs both for every near shape
+/// so we can tell which one is to blame. Gated by `OPENRAILSRS_SCENERY_DEBUG=1`.
+pub fn log_lighting_diag_near(
+    world: &WorldScene,
+    focus: &RouteFocus,
+    assets: &RouteAssets,
+    radius_m: f32,
+    max_shapes: usize,
+) {
+    let mut objects: Vec<_> = world
+        .items
+        .iter()
+        .filter(|obj| {
+            focus.horizontal_distance(obj.position) <= radius_m
+                && obj
+                    .shape_file
+                    .as_ref()
+                    .is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+                && obj.kind != "TrackObj"
+        })
+        .collect();
+    objects.sort_by(|a, b| {
+        focus
+            .horizontal_distance(a.position)
+            .total_cmp(&focus.horizontal_distance(b.position))
+    });
+
+    viewer_log!(
+        "openrailsrs-viewer3d: scenery-light — nearest non-track shapes (normals + albedo luma):"
+    );
+    let mut seen = std::collections::HashSet::new();
+    for obj in objects {
+        if seen.len() >= max_shapes {
+            break;
+        }
+        let Some(file) = obj.shape_file.as_deref() else {
+            continue;
+        };
+        let Some(path) = assets.resolve_world_shape(obj.kind, file) else {
+            continue;
+        };
+        if !seen.insert(path.clone()) {
+            continue;
+        }
+        let sample = audit_shape_path(&path, &assets.route_dir);
+        let luma = sample
+            .textures
+            .iter()
+            .filter_map(|t| t.mean_luma)
+            .reduce(f32::min);
+        let name = path
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        viewer_log!(
+            "openrailsrs-viewer3d: scenery-light   {:<7} {:<28} has_normals={} zero_normals={:.0}% has_uvs={} luma_min={}",
+            obj.kind,
+            name,
+            sample.mesh.has_normals,
+            sample.mesh.zero_normal_fraction * 100.0,
+            sample.mesh.has_uvs,
+            luma.map(|l| format!("{l:.0}"))
+                .unwrap_or_else(|| "n/a".into()),
+        );
+    }
+}
+
 /// Audit parsed shapes from progressive spawn (unique paths only).
 pub fn audit_parsed_shapes(
     parsed: &[(PathBuf, Option<crate::shapes::LoadedShape>)],

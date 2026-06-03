@@ -914,6 +914,10 @@ fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Ve
         world, &focus, &assets, 2000.0, 24,
     );
     audit.log_report("near focus pre-spawn");
+    openrailsrs_viewer3d::scenery_audit::log_oversized_shapes_near(
+        world, &focus, &assets, 500.0, 400, 20,
+    );
+    openrailsrs_viewer3d::scenery_audit::log_lighting_diag_near(world, &focus, &assets, 300.0, 24);
 }
 
 fn load_train_consists(
