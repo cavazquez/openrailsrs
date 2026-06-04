@@ -282,6 +282,7 @@ fn main() {
     let route_offset = config
         .route_offset_override
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
+    log_coord_debug_if_enabled(&config.scene, &config.world, route_offset);
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
     if config.scenery_mode.draws_tdb_track() {
@@ -824,6 +825,59 @@ fn build_run_corridor_path(
         path.half_width_m * 2.0
     );
     Ok(path)
+}
+
+/// Emite un diagnóstico de coordenadas cuando `OPENRAILSRS_COORD_DEBUG=1`.
+///
+/// Para cada tile con objetos `.w` muestra la posición del primer objeto en Bevy world space
+/// y la compara con el centro de bounds del grafo de vías (después de aplicar el offset).
+/// Si la diferencia supera 50 m hay un desalineamiento potencial que necesita investigación.
+fn log_coord_debug_if_enabled(
+    scene: &TrackScene,
+    world: &WorldScene,
+    route_offset: RouteWorldOffset,
+) {
+    if std::env::var_os("OPENRAILSRS_COORD_DEBUG").is_none() {
+        return;
+    }
+    let graph_center = scene.bounds.center + route_offset.delta;
+    viewer_log!(
+        "openrailsrs-viewer3d: [coord-debug] graph center (Bevy world): ({:.1}, {:.1}, {:.1})  offset=({:.1},{:.1},{:.1})",
+        graph_center.x,
+        graph_center.y,
+        graph_center.z,
+        route_offset.delta.x,
+        route_offset.delta.y,
+        route_offset.delta.z,
+    );
+
+    // Muestra los primeros 5 objetos de mundo con su posición en Bevy world space.
+    for obj in world.items.iter().take(5) {
+        let tile_label = format!("({},{})", obj.tile_x, obj.tile_z);
+        let bx = obj.position.x as f64;
+        let bz = obj.position.z as f64;
+        let world_x = (obj.tile_x as f64 * 2048.0 + bx) as f32;
+        let world_z = (obj.tile_z as f64 * 2048.0 - bz) as f32;
+        let dx = world_x - graph_center.x;
+        let dz = world_z - graph_center.z;
+        let dist = (dx * dx + dz * dz).sqrt();
+        viewer_log!(
+            "openrailsrs-viewer3d: [coord-debug] obj {:?} tile={} local=({:.1},{:.1}) → bevy=({:.1},{:.1}) dist_to_graph={:.0}m",
+            obj.kind,
+            tile_label,
+            bx as f32, // local MSTS x (shown for reference)
+            bz as f32, // local MSTS z (shown for reference)
+            world_x,
+            world_z,
+            dist,
+        );
+        if dist > 50_000.0 {
+            viewer_log!(
+                "openrailsrs-viewer3d: [coord-debug] ⚠ LARGE OFFSET {:.0}m — posible error en conversión de tile X (display vs internal)",
+                dist
+            );
+        }
+    }
 }
 
 fn log_scenery_debug_if_enabled(route_dir: &Path, world: &WorldScene, center: Vec3) {

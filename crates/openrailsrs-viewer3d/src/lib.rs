@@ -11,6 +11,7 @@ pub mod cab_panel;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
+pub mod coordinates;
 pub mod dyntrack;
 pub mod floating_origin;
 pub mod forest;

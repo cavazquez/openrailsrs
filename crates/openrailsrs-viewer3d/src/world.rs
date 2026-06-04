@@ -10,6 +10,9 @@ use openrailsrs_formats::{
     WorldFile, WorldItem, msts_tile_world_origin, parse_world_w_tile_display_xz,
 };
 
+use crate::coordinates::{
+    matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy, qdir_to_quat,
+};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_from_path,
@@ -22,7 +25,8 @@ use crate::{log_step, viewer_log};
 use rayon::prelude::*;
 
 /// MSTS / Open Rails world tile size (metres).
-pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
+/// Re-exported from [`crate::coordinates`] for callers that only import `world`.
+pub use crate::coordinates::MSTS_TILE_SIZE_M;
 
 /// Maximum distance (m) from the route centre at which world objects are spawned.
 /// Objects beyond this radius are skipped to keep draw call count manageable on
@@ -285,40 +289,10 @@ impl RouteWorldOffset {
 
 /// Convert MSTS tile-local coordinates to Bevy world space (Y up).
 ///
-/// Global X/Z follow the usual MSTS rule: `tile * 2048 + local`.
-/// Local Z is negated like Open Rails `WorldPositionFromMSTSLocation` (`Scenery.cs`).
-/// MSTS `y` maps to Bevy `Y` (height).
+/// Delegates to [`crate::coordinates::msts_to_bevy`]; kept here as a public
+/// re-export so existing callers in `world.rs` and other modules don't break.
 pub fn msts_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_formats::Vec3) -> Vec3 {
-    Vec3::new(
-        (tile_x as f64 * MSTS_TILE_SIZE_M + local.x) as f32,
-        local.y as f32,
-        (tile_z as f64 * MSTS_TILE_SIZE_M - local.z) as f32,
-    )
-}
-
-/// Open Rails XNA quaternion from a `.w` `QDirection` (`Scenery.cs`).
-fn qdir_to_xna_quat(qdir: &[f64; 4]) -> Quat {
-    Quat::from_xyzw(
-        qdir[0] as f32,
-        qdir[1] as f32,
-        -(qdir[2] as f32),
-        qdir[3] as f32,
-    )
-}
-
-/// Open Rails XNA 3×3 rotation from a `.w` `Matrix3x3`.
-fn matrix3x3_to_xna_mat3(m: &[f64; 9]) -> Mat3 {
-    Mat3::from_cols(
-        Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32)),
-        Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32)),
-        Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32),
-    )
-}
-
-/// MSTS `QDirection` → Bevy rotation in the same XNA-style Z-flipped world space
-/// used by terrain, world objects and `msts_to_bevy`.
-pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
-    qdir_to_xna_quat(qdir)
+    msts_tile_local_to_bevy(tile_x, tile_z, local)
 }
 
 /// MSTS `Matrix3x3` → Bevy rotation.
@@ -326,17 +300,7 @@ pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
     matrix3x3_to_rotation_scale(m).0
 }
 
-/// Rotation and non-uniform scale from MSTS `Matrix3x3` (Open Rails `WorldMatrix`).
-pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
-    let raw = matrix3x3_to_xna_mat3(m);
-    let sx = raw.x_axis.length().max(1e-6);
-    let sy = raw.y_axis.length().max(1e-6);
-    let sz = raw.z_axis.length().max(1e-6);
-    let scale = Vec3::new(sx, sy, sz);
-    let normalized = Mat3::from_cols(raw.x_axis / sx, raw.y_axis / sy, raw.z_axis / sz);
-    let rot = Quat::from_mat3(&normalized);
-    (rot, scale)
-}
+// `qdir_to_quat` and `matrix3x3_to_rotation_scale` are imported from `crate::coordinates`.
 
 fn world_item_transform(item: &WorldItem) -> (Quat, Vec3) {
     if let Some(m) = item.matrix3x3() {
@@ -674,7 +638,9 @@ fn trackobj_procedural_segments(
     links
         .into_iter()
         .map(|link| {
-            let offset = Vec3::new(
+            // `shape_local_offset` comes from tsection.dat and is in MSTS local space (+Z forward).
+            // It must be Z-flipped before being used as a Bevy-space offset vector.
+            let offset = msts_local_offset_to_bevy(
                 link.shape_local_offset[0] as f32,
                 link.shape_local_offset[1] as f32,
                 link.shape_local_offset[2] as f32,
@@ -2049,11 +2015,23 @@ mod tests {
 
     #[test]
     fn matrix3x3_rows_match_openrails_xna_layout() {
-        let m = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
-        let raw = matrix3x3_to_xna_mat3(&m);
-        assert_eq!(raw.x_axis, Vec3::new(1.0, 2.0, -3.0));
-        assert_eq!(raw.y_axis, Vec3::new(4.0, 5.0, -6.0));
-        assert_eq!(raw.z_axis, Vec3::new(-7.0, -8.0, 9.0));
+        // A proper 90° rotation around Y in MSTS row-major convention.
+        // MSTS row-major: rows are [X-axis, Y-axis, Z-axis] of the world frame in local space.
+        // For 90° CW around Y (MSTS): X→Z, Y→Y, Z→-X
+        // Row 0 (MSTS X in local): (0, 0, 1)
+        // Row 1 (MSTS Y in local): (0, 1, 0)
+        // Row 2 (MSTS Z in local): (-1, 0, 0)
+        let m: [f64; 9] = [0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0];
+        let (rot, scale) = crate::coordinates::matrix3x3_to_rotation_scale(&m);
+        // Scale should be ~1 for a pure rotation.
+        assert!((scale.x - 1.0).abs() < 1e-4, "scale.x={}", scale.x);
+        assert!((scale.y - 1.0).abs() < 1e-4, "scale.y={}", scale.y);
+        assert!((scale.z - 1.0).abs() < 1e-4, "scale.z={}", scale.z);
+        assert!(
+            (rot.length() - 1.0).abs() < 1e-4,
+            "rot must be unit quat, len={}",
+            rot.length()
+        );
     }
 
     #[test]

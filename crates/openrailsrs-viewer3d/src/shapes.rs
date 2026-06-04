@@ -11,6 +11,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
 use openrailsrs_formats::{DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
+use crate::coordinates::{matrix43_transform_point_xna, matrix43_transform_vector_xna};
 use crate::viewer_log;
 
 /// HDR multiplier on textured scenery whose `.ace` mip0 is already reasonably bright.
@@ -546,10 +547,9 @@ pub struct ShapeRenderAsset {
 
 /// Map a shape point from MSTS local space to Bevy (Y up).
 ///
-/// Open Rails negates Z in `XNAVertexPositionNormalTextureFromMSTS` (`Shapes.cs`).
-pub fn shape_point_to_bevy(v: ShapeVec3) -> Vec3 {
-    Vec3::new(v.x as f32, v.y as f32, -(v.z as f32))
-}
+/// Delegates to [`crate::coordinates::shape_point_to_bevy`]; kept as a public
+/// re-export so existing callers in this module and elsewhere don't break.
+pub use crate::coordinates::shape_point_to_bevy;
 
 /// MSTS shape space: +X lateral, +Y up, +Z forward. Train consist local: +X forward.
 pub fn msts_shape_to_train_rotation() -> Quat {
@@ -688,13 +688,8 @@ pub fn point_in_aabb(point: Vec3, min: Vec3, max: Vec3) -> bool {
 }
 
 /// MSTS shape-file coordinates (`.s` points, `.eng` ORTS3DCabHeadPos) → Bevy mesh space.
-pub fn msts_shape_vec3_to_bevy(v: Vec3) -> Vec3 {
-    shape_point_to_bevy(ShapeVec3 {
-        x: v.x as f64,
-        y: v.y as f64,
-        z: v.z as f64,
-    })
-}
+/// Delegates to [`crate::coordinates::msts_shape_vec3_to_bevy`].
+pub use crate::coordinates::msts_shape_vec3_to_bevy;
 
 /// `ORTS3DCabHeadPos` inside the cab shape AABB (MSTS shape metres, unit scale).
 pub fn orts_head_inside_cab_aabb(head_msts: Vec3, cab_meshes: &[&Mesh]) -> bool {
@@ -1010,28 +1005,8 @@ fn primitive_matrix_chain<'a>(
     out
 }
 
-fn matrix43_transform_point_xna(m: &Matrix43, p: Vec3, zero_translation: bool) -> Vec3 {
-    let r = &m.rows;
-    let d = if zero_translation {
-        [0.0, 0.0, 0.0]
-    } else {
-        r[3]
-    };
-    Vec3::new(
-        p.x * r[0][0] as f32 + p.y * r[1][0] as f32 - p.z * r[2][0] as f32 + d[0] as f32,
-        p.x * r[0][1] as f32 + p.y * r[1][1] as f32 - p.z * r[2][1] as f32 + d[1] as f32,
-        -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32 - d[2] as f32,
-    )
-}
-
-fn matrix43_transform_vector_xna(m: &Matrix43, p: Vec3) -> Vec3 {
-    let r = &m.rows;
-    Vec3::new(
-        p.x * r[0][0] as f32 + p.y * r[1][0] as f32 - p.z * r[2][0] as f32,
-        p.x * r[0][1] as f32 + p.y * r[1][1] as f32 - p.z * r[2][1] as f32,
-        -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32,
-    )
-}
+// matrix43_transform_point_xna and matrix43_transform_vector_xna are imported from
+// crate::coordinates at the top of this file.
 
 fn transform_shape_point(mut point: Vec3, matrices: &[ShapeMatrixRef<'_>]) -> Vec3 {
     for matrix in matrices {

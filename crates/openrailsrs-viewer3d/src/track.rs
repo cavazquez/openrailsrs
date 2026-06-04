@@ -159,10 +159,8 @@ impl SceneBounds {
 }
 
 /// Map track graph coordinates to Bevy world space (Y up, route on the XZ plane).
-#[inline]
-pub fn graph_to_world(x_m: f64, y_m: f64) -> Vec3 {
-    Vec3::new(x_m as f32, 0.0, y_m as f32)
-}
+/// Delegates to [`crate::coordinates::graph_to_world`].
+pub use crate::coordinates::graph_to_world;
 
 /// Graph node position plus optional MSTS world alignment offset.
 pub fn graph_to_world_with_offset(offset: Vec3, x_m: f64, y_m: f64) -> Vec3 {
