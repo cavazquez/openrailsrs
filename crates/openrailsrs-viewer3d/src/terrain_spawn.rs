@@ -9,8 +9,8 @@ use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_formats::{
-    build_patch_mesh_data_sampled, build_tile_mesh_data_sampled, msts_display_tile_x_from_internal,
-    msts_tile_world_origin, terrain_patches_per_side,
+    build_patch_mesh_data_sampled, build_tile_mesh_data_sampled, msts_tile_world_origin,
+    terrain_patches_per_side,
 };
 
 use crate::shapes::RouteAssets;
@@ -64,8 +64,7 @@ fn spawn_textured_patches(
         Some(set) => set,
         None => return (0, 0),
     };
-    let display_x = msts_display_tile_x_from_internal(tile.tile_x);
-    let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
+    let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
     let tile_origin = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
     let mut spawned = 0usize;
     let mut holed = 0usize;
@@ -148,8 +147,7 @@ fn spawn_legacy_tile(
         |ux, uz| tile_cache.sample_elevation(current, ux, uz),
         |ux, uz| tile_cache.sample_hidden(current, ux, uz),
     );
-    let display_x = msts_display_tile_x_from_internal(tile.tile_x);
-    let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
+    let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
     let translation = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
     commands.spawn((
         Mesh3d(meshes.add(mesh_from_terrain_data(&data, height_origin))),
@@ -299,7 +297,6 @@ impl TerrainSpawnProgress {
         images: &mut Assets<Image>,
         terrain_materials: &mut Assets<TerrainMaterial>,
     ) {
-        let display_x = msts_display_tile_x_from_internal(terrain_tile.tile_x);
         let TerrainSpawnProgress {
             tile_cache,
             texture_cache,
@@ -313,7 +310,7 @@ impl TerrainSpawnProgress {
             ..
         } = self;
         let Some(loaded) = tile_cache
-            .get_display(display_x, terrain_tile.tile_z)
+            .get_display(terrain_tile.tile_x, terrain_tile.tile_z)
             .cloned()
         else {
             return;

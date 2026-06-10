@@ -4,12 +4,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, TerrainFile, msts_display_tile_x_from_internal,
-    msts_tile_world_origin,
+    ElevationGrid, FeatureGrid, TerrainFile, msts_tile_world_origin, msts_tile_x_index_for_coord,
+    msts_tile_z_index_for_coord,
 };
 
 use crate::terrain::TerrainTile;
-use crate::world::MSTS_TILE_SIZE_M;
 
 #[derive(Clone)]
 pub(crate) struct LoadedTerrainTile {
@@ -55,24 +54,24 @@ impl TerrainTileCache {
         }
     }
 
-    pub(crate) fn get_display(&self, display_x: i32, display_z: i32) -> Option<&LoadedTerrainTile> {
-        self.tiles.get(&(display_x, display_z))
+    pub(crate) fn get_display(&self, tile_x: i32, tile_z: i32) -> Option<&LoadedTerrainTile> {
+        self.tiles.get(&(tile_x, tile_z))
     }
 
     pub(crate) fn display_key(tile: &TerrainFile) -> (i32, i32) {
-        (msts_display_tile_x_from_internal(tile.tile_x), tile.tile_z)
+        (tile.tile_x, tile.tile_z)
     }
 
     pub(crate) fn tile_key_for_sample(tile: &TerrainFile, ux: i32, uz: i32) -> (i32, i32) {
-        let (display_x, display_z) = Self::display_key(tile);
-        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let (ox, oz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
         let sample_size = tile.samples.sample_size as f32;
-        let wx = ox + ux as f32 * sample_size;
-        let wz = oz + uz as f32 * sample_size;
-        let tile_size = MSTS_TILE_SIZE_M as f32;
+        // Sample at the cell centre so edge rows/columns resolve to the correct
+        // neighbour regardless of which side owns the exact boundary coordinate.
+        let wx = ox + (ux as f32 + 0.5) * sample_size;
+        let wz = oz + (uz as f32 + 0.5) * sample_size;
         (
-            (wx / tile_size).floor() as i32,
-            (wz / tile_size).floor() as i32,
+            msts_tile_x_index_for_coord(wx),
+            msts_tile_z_index_for_coord(wz),
         )
     }
 
@@ -82,10 +81,8 @@ impl TerrainTileCache {
         ux: i32,
         uz: i32,
     ) -> (isize, isize) {
-        let (current_display_x, current_display_z) = Self::display_key(current);
-        let (target_display_x, target_display_z) = Self::display_key(target);
-        let (current_ox, current_oz) = msts_tile_world_origin(current_display_x, current_display_z);
-        let (target_ox, target_oz) = msts_tile_world_origin(target_display_x, target_display_z);
+        let (current_ox, current_oz) = msts_tile_world_origin(current.tile_x, current.tile_z);
+        let (target_ox, target_oz) = msts_tile_world_origin(target.tile_x, target.tile_z);
         let current_sample_size = current.samples.sample_size as f32;
         let target_sample_size = target.samples.sample_size as f32;
         let wx = current_ox + ux as f32 * current_sample_size;
@@ -187,7 +184,7 @@ mod tests {
     #[test]
     fn mesh_vertex_sampling_wraps_east_edge_to_loaded_neighbor() {
         let current = test_loaded_tile(0, 0, 1.0);
-        let east = test_loaded_tile(-1, 0, 42.0);
+        let east = test_loaded_tile(1, 0, 42.0);
         let cache = TerrainTileCache::from_loaded_tiles_for_test(vec![current, east]);
         let current = cache.get_display(0, 0).unwrap();
         assert_eq!(cache.sample_elevation(current, 255, 0), 1.0);
@@ -199,26 +196,28 @@ mod tests {
         let current = test_loaded_tile(0, 0, 1.0);
         let north = test_loaded_tile(0, 1, 77.0);
         let south = test_loaded_tile(0, -1, 13.0);
+        // Row uz=0 is the MSTS north edge; uz=256 reaches the south neighbour
+        // (tile_z - 1) and uz=-1 reaches the north neighbour (tile_z + 1).
         assert_eq!(
             TerrainTileCache::tile_key_for_sample(&current.tile, 0, 256),
-            (0, 1)
+            (0, -1)
         );
         assert_eq!(
             TerrainTileCache::tile_key_for_sample(&current.tile, 0, -1),
-            (0, -1)
+            (0, 1)
         );
 
         let cache = TerrainTileCache::from_loaded_tiles_for_test(vec![current, north, south]);
         let current = cache.get_display(0, 0).unwrap();
-        assert_eq!(cache.sample_elevation(current, 0, 256), 77.0);
-        assert_eq!(cache.sample_elevation(current, 0, -1), 13.0);
+        assert_eq!(cache.sample_elevation(current, 0, 256), 13.0);
+        assert_eq!(cache.sample_elevation(current, 0, -1), 77.0);
     }
 
     #[test]
     fn large_physical_tile_samples_inside_its_own_grid_before_neighbor_lookup() {
         let mut current = test_loaded_tile_with_nsamples(0, 0, 512, 1.0);
         Arc::make_mut(&mut current.grid).elevations[256] = 99.0;
-        let east = test_loaded_tile(-1, 0, 42.0);
+        let east = test_loaded_tile(1, 0, 42.0);
 
         let cache = TerrainTileCache::from_loaded_tiles_for_test(vec![current, east]);
         let current = cache.get_display(0, 0).unwrap();
@@ -233,7 +232,7 @@ mod tests {
     #[test]
     fn hidden_flags_wrap_to_loaded_neighbor_edges() {
         let current = test_loaded_tile(0, 0, 1.0);
-        let mut east = test_loaded_tile(-1, 0, 1.0);
+        let mut east = test_loaded_tile(1, 0, 1.0);
         east.features = Some(Arc::new(test_feature_grid(&[(0, 0)])));
 
         let cache = TerrainTileCache::from_loaded_tiles_for_test(vec![current, east]);
@@ -246,7 +245,7 @@ mod tests {
     #[test]
     fn neighbor_hidden_edge_removes_border_triangles() {
         let current = test_loaded_tile(0, 0, 1.0);
-        let mut east = test_loaded_tile(-1, 0, 1.0);
+        let mut east = test_loaded_tile(1, 0, 1.0);
         east.features = Some(Arc::new(test_feature_grid(&[(0, 0), (0, 1)])));
 
         let cache = TerrainTileCache::from_loaded_tiles_for_test(vec![current, east]);

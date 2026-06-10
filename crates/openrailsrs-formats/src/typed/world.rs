@@ -260,17 +260,8 @@ fn is_symbol_continue(b: u8) -> bool {
 }
 
 fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
-    // `w-006074+014924.w` (Chiltern) or `w-001000-001000.w`.
-    let stem = path.file_stem()?.to_string_lossy();
-    let rest = stem.strip_prefix('w')?;
-    let coords = rest.trim_start_matches('-');
-    if let Some((x, z)) = coords.split_once('+') {
-        return Some((x.parse().ok()?, z.parse().ok()?));
-    }
-    let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
-    let x = parts.next()?.parse::<i32>().ok()?;
-    let z = parts.next()?.parse::<i32>().ok()?;
-    Some((x, z))
+    // Signed, exactly as Open Rails: `w-006074+014924.w` → (-6074, 14924).
+    crate::msts_tile_name::parse_world_w_tile_xz(path)
 }
 
 fn collect_items(ast: &Ast) -> Vec<WorldItem> {

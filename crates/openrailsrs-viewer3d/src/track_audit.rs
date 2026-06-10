@@ -4,7 +4,6 @@
 //! Write JSON report: `OPENRAILSRS_TRACK_AUDIT=/tmp/track-audit.json`
 
 use bevy::prelude::*;
-use openrailsrs_formats::msts_internal_tile_x_from_world_display;
 use openrailsrs_formats::{TSectionCatalog, TrackDbFile, TrackNodeKind};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -536,11 +535,9 @@ fn worst_static_trackobj_outliers(samples: &[StaticTrackObjSample]) -> Vec<Stati
     sorted
 }
 
-fn tdb_ref_tile_from_world(display_tile_x: i32, display_tile_z: i32) -> (i32, i32) {
-    (
-        msts_internal_tile_x_from_world_display(display_tile_x),
-        display_tile_z,
-    )
+fn tdb_ref_tile_from_world(tile_x: i32, tile_z: i32) -> (i32, i32) {
+    // `.w` tile coords are parsed signed now, same convention as `.tdb`.
+    (tile_x, tile_z)
 }
 
 fn matching_shape_distance_and_vector(

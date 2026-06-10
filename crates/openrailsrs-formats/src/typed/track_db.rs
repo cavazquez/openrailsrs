@@ -16,8 +16,6 @@ use crate::parser::parse_from_first_paren;
 use crate::units::kmh_to_mps;
 
 use super::atom_to_number;
-use crate::msts_tile_name::msts_display_tile_x_from_internal;
-
 /// One node in the MSTS Track Database.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrackDbNode {
@@ -260,7 +258,7 @@ pub struct TrackDbFile {
 }
 
 impl TrackVectorPoint {
-    /// Graph X in metres (display tile convention, matches route import).
+    /// Graph X in metres (signed internal tile convention, matches route import).
     pub fn graph_x_m(self) -> f64 {
         point_graph_x(self)
     }
@@ -270,14 +268,13 @@ impl TrackVectorPoint {
         point_graph_z(self)
     }
 
-    /// Bevy world position (`msts_to_bevy` / `.w` display tile convention).
+    /// Bevy world position (`msts_to_bevy`, signed internal tile convention).
     pub fn bevy_position(self) -> (f32, f32, f32) {
         const TILE: f64 = 2048.0;
-        let display_x = msts_display_tile_x_from_internal(self.tile_x);
         (
-            (display_x as f64 * TILE + self.x) as f32,
+            (self.tile_x as f64 * TILE + self.x) as f32,
             self.y as f32,
-            (self.tile_z as f64 * TILE - self.z) as f32,
+            (-(self.tile_z as f64 * TILE + self.z)) as f32,
         )
     }
 
@@ -982,16 +979,16 @@ fn symbol_name(ast: &Ast) -> Option<&str> {
 }
 
 fn point_graph_x(point: TrackVectorPoint) -> f64 {
-    let display_tile_x = if point.tile_x < 0 {
-        -point.tile_x
-    } else {
-        point.tile_x
-    };
-    display_tile_x as f64 * 2048.0 + point.x
+    // Signed internal tile X (Open Rails convention). Using the positive
+    // "display" value here would mirror the tile grid east-west and break
+    // continuity across tile borders.
+    point.tile_x as f64 * 2048.0 + point.x
 }
 
 fn point_graph_z(point: TrackVectorPoint) -> f64 {
-    point.tile_z as f64 * 2048.0 - point.z
+    // Whole-world Z negation (Open Rails XNA convention); negating only the
+    // local part would mirror the tile grid north-south.
+    -(point.tile_z as f64 * 2048.0 + point.z)
 }
 
 /// Extract speed limit (km/h → m/s) from `(SpeedMpS ...)` or `(MaxVelocity ...)` inside a vector node.

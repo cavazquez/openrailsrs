@@ -30,6 +30,9 @@ const TRACK_RENDER_LIFT_M: f32 = 0.14;
 /// Edge count above which the viewer switches to gizmo lines (no per-edge meshes).
 pub const COMPACT_EDGE_THRESHOLD: usize = 800;
 
+/// Initial orbit distance when a replay/scenario provides a train start position.
+pub const REPLAY_START_ORBIT_DISTANCE_M: f32 = 400.0;
+
 /// How track geometry is drawn (auto-selected from edge count at load time).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrackRenderMode {
@@ -520,6 +523,38 @@ pub fn spawn_track_meshes(
     }
 }
 
+/// `--tile-lab`: encuadre robusto en Update (la cámara puede no existir aún en
+/// Startup según el orden de sistemas); corre una sola vez.
+pub fn tile_lab_frame_camera_once(
+    mode: Res<ViewerSceneryMode>,
+    mut done: Local<bool>,
+    mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
+    mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
+) {
+    if *done || !mode.is_tile_lab() {
+        return;
+    }
+    let Ok((mut transform, mut orbit)) = query.single_mut() else {
+        return;
+    };
+    limit.max = crate::launch::TILE_LAB_ORBIT_MAX_M;
+    orbit.focus = Vec3::ZERO;
+    orbit.pitch = 0.9;
+    orbit.distance = std::env::var("OPENRAILSRS_TILE_LAB_DIST_M")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|d| *d >= 50.0 && *d <= crate::launch::TILE_LAB_ORBIT_MAX_M)
+        .unwrap_or(crate::launch::TILE_LAB_ORBIT_DISTANCE_M);
+    *orbit = crate::camera::orbit_state_with_env_overrides(*orbit);
+    *transform = crate::camera::camera_transform_from_orbit_state(
+        orbit.focus,
+        orbit.yaw,
+        orbit.pitch,
+        orbit.distance,
+    );
+    *done = true;
+}
+
 /// Point the orbit camera at the route centre with a distance that frames it.
 pub fn frame_orbit_camera_on_track(
     scene: Res<TrackScene>,
@@ -527,12 +562,32 @@ pub fn frame_orbit_camera_on_track(
     mode: Res<ViewerSceneryMode>,
     replay: Res<ReplayState>,
     offset: Res<crate::world::RouteWorldOffset>,
+    terrain: Option<Res<TerrainElevation>>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
     mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
 ) {
     let Ok((mut transform, mut orbit)) = query.single_mut() else {
         return;
     };
+    if mode.is_tile_lab() {
+        // The focus centre is the tile centre, i.e. render-space origin: park the
+        // camera above it looking down so the whole 2048 m tile is framed.
+        limit.max = crate::launch::TILE_LAB_ORBIT_MAX_M;
+        orbit.focus = Vec3::ZERO;
+        orbit.pitch = 0.9;
+        orbit.distance = std::env::var("OPENRAILSRS_TILE_LAB_DIST_M")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .filter(|d| *d >= 50.0 && *d <= crate::launch::TILE_LAB_ORBIT_MAX_M)
+            .unwrap_or(crate::launch::TILE_LAB_ORBIT_DISTANCE_M);
+        *transform = crate::camera::camera_transform_from_orbit_state(
+            orbit.focus,
+            orbit.yaw,
+            orbit.pitch,
+            orbit.distance,
+        );
+        return;
+    }
     if mode.is_track_focused() {
         limit.max = TRACK_DEV_ORBIT_MAX_M;
         orbit.focus = replay
@@ -555,8 +610,31 @@ pub fn frame_orbit_camera_on_track(
     } else {
         let max = scene.bounds.orbit_distance();
         limit.max = max;
-        orbit.focus = Vec3::ZERO;
-        orbit.distance = max;
+        // Start at the player's position (first replay row) instead of framing the
+        // whole route bbox: on big MSTS routes the bbox distance puts the camera
+        // outside the sky sphere and far from the 8 km scenery radius.
+        let start_pose = replay.tracks.first().and_then(|track| {
+            pose_at_time(
+                &scene.graph,
+                &track.rows,
+                0.0,
+                terrain.as_deref(),
+                &scene,
+                offset.delta,
+                &focus,
+            )
+            .map(|(pos, _, _)| pos)
+        });
+        match start_pose {
+            Some(pos) => {
+                orbit.focus = pos;
+                orbit.distance = REPLAY_START_ORBIT_DISTANCE_M.min(max);
+            }
+            None => {
+                orbit.focus = Vec3::ZERO;
+                orbit.distance = max;
+            }
+        }
     }
     *transform = crate::camera::camera_transform_from_orbit_state(
         orbit.focus,

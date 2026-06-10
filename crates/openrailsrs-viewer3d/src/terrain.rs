@@ -8,9 +8,9 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, msts_display_tile_x_from_internal,
-    msts_internal_tile_x_from_world_display, msts_tile_name_from_xz, msts_tile_world_origin,
-    parse_tile_xz_from_filename,
+    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, msts_tile_name_from_xz,
+    msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
+    parse_tile_xz_from_filename, parse_world_w_tile_xz,
 };
 
 use crate::terrain_io::{TerrainTileData, load_tile_data};
@@ -76,15 +76,14 @@ impl TerrainElevation {
         self.tiles.is_empty()
     }
 
-    fn sample_hidden(&self, display_x: i32, display_z: i32, x: f32, z: f32) -> bool {
-        let internal_x = msts_internal_tile_x_from_world_display(display_x);
-        let Some(tile) = self.tiles.get(&(internal_x, display_z)) else {
+    fn sample_hidden(&self, tile_x: i32, tile_z: i32, x: f32, z: f32) -> bool {
+        let Some(tile) = self.tiles.get(&(tile_x, tile_z)) else {
             return false;
         };
         let Some(features) = tile.features.as_ref() else {
             return false;
         };
-        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
         let lx = x - ox;
         let lz = z - oz;
         let ux = (lx / tile.sample_size as f32).round() as usize;
@@ -94,15 +93,13 @@ impl TerrainElevation {
 
     /// World-space elevation (metres) at `(x, z)`; `None` if no tile covers the point or vertex is hidden.
     pub fn sample_world_y(&self, x: f32, z: f32) -> Option<f32> {
-        let tile = MSTS_TILE_SIZE_M as f32;
-        let display_x = (x / tile).floor() as i32;
-        let display_z = (z / tile).floor() as i32;
-        if self.sample_hidden(display_x, display_z, x, z) {
+        let tile_x = msts_tile_x_index_for_coord(x);
+        let tile_z = msts_tile_z_index_for_coord(z);
+        if self.sample_hidden(tile_x, tile_z, x, z) {
             return None;
         }
-        let internal_x = msts_internal_tile_x_from_world_display(display_x);
-        let tile = self.tiles.get(&(internal_x, display_z))?;
-        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let tile = self.tiles.get(&(tile_x, tile_z))?;
+        let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
         let lx = x - ox;
         let lz = z - oz;
         Some(
@@ -198,8 +195,7 @@ pub fn load_terrain_from_route_dir_near(
             Ok(tile) => {
                 let data = load_tile_data(&tile, &path).map(Arc::new);
                 scene.tiles_loaded += 1;
-                let display_x = msts_display_tile_x_from_internal(tile.tile_x);
-                let (wx, wz) = msts_tile_world_origin(display_x, tile.tile_z);
+                let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
                 scene.tiles.push(TerrainTile {
                     tile_x: tile.tile_x,
                     tile_z: tile.tile_z,
@@ -238,10 +234,10 @@ pub fn load_terrain_from_route_dir_near(
     scene
 }
 
-fn tile_center_distance_m(display_x: i32, display_z: i32, center: Vec3) -> f32 {
+fn tile_center_distance_m(tile_x: i32, tile_z: i32, center: Vec3) -> f32 {
     let tile = MSTS_TILE_SIZE_M as f32;
     let half = tile * 0.5;
-    let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+    let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
     let tcx = ox + half;
     let tcz = oz + half;
     Vec2::new(tcx - center.x, tcz - center.z).length()
@@ -291,17 +287,17 @@ fn discover_hash_terrain_tiles(
 
     if let Some(c) = center {
         let tile = MSTS_TILE_SIZE_M as f32;
-        let center_dx = (c.x / tile).floor() as i32;
-        let center_dz = (c.z / tile).floor() as i32;
+        let center_tx = msts_tile_x_index_for_coord(c.x);
+        let center_tz = msts_tile_z_index_for_coord(c.z);
         let radius_tiles = (radius_m / tile).ceil() as i32 + 1;
         for dtx in -radius_tiles..=radius_tiles {
             for dtz in -radius_tiles..=radius_tiles {
-                let display_x = center_dx + dtx;
-                let display_z = center_dz + dtz;
-                if tile_center_distance_m(display_x, display_z, c) > radius_m + tile {
+                let tile_x = center_tx + dtx;
+                let tile_z = center_tz + dtz;
+                if tile_center_distance_m(tile_x, tile_z, c) > radius_m + tile {
                     continue;
                 }
-                push_hash_tile(&mut out, &tiles_dir, display_x, display_z);
+                push_hash_tile(&mut out, &tiles_dir, tile_x, tile_z);
             }
         }
         if out.is_empty() {
@@ -320,38 +316,20 @@ fn discover_hash_terrain_tiles(
             if path.extension().and_then(|e| e.to_str()) != Some("w") {
                 continue;
             }
-            let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+            let Some((tile_x, tile_z)) = parse_world_w_tile_xz(&path) else {
                 continue;
             };
-            push_hash_tile(&mut out, &tiles_dir, display_x, display_z);
+            push_hash_tile(&mut out, &tiles_dir, tile_x, tile_z);
         }
     }
     out
 }
 
-/// Display tile coords from `WORLD/w-006074+014924.w` (also accepts `w-001000-001000`).
-fn parse_world_w_tile_display_xz(path: &Path) -> Option<(i32, i32)> {
-    let stem = path.file_stem()?.to_str()?;
-    let rest = stem.strip_prefix('w')?;
-    let coords = rest.trim_start_matches('-');
-    if let Some((x, z)) = coords.split_once('+') {
-        return Some((x.parse().ok()?, z.parse().ok()?));
-    }
-    let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
-    Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
-}
-
-fn push_hash_tile(
-    out: &mut Vec<(i32, i32, PathBuf)>,
-    tiles_dir: &Path,
-    display_x: i32,
-    display_z: i32,
-) {
-    let internal_x = msts_internal_tile_x_from_world_display(display_x);
-    let hash = msts_tile_name_from_xz(internal_x, display_z).to_ascii_lowercase();
+fn push_hash_tile(out: &mut Vec<(i32, i32, PathBuf)>, tiles_dir: &Path, tile_x: i32, tile_z: i32) {
+    let hash = msts_tile_name_from_xz(tile_x, tile_z).to_ascii_lowercase();
     let path = tiles_dir.join(format!("{hash}.t"));
     if path.is_file() {
-        out.push((internal_x, display_z, path));
+        out.push((tile_x, tile_z, path));
     }
 }
 
@@ -371,13 +349,13 @@ fn push_hash_tiles_from_world_near(
         if path.extension().and_then(|e| e.to_str()) != Some("w") {
             continue;
         }
-        let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+        let Some((tile_x, tile_z)) = parse_world_w_tile_xz(&path) else {
             continue;
         };
-        if tile_center_distance_m(display_x, display_z, center) > radius_m + tile {
+        if tile_center_distance_m(tile_x, tile_z, center) > radius_m + tile {
             continue;
         }
-        push_hash_tile(out, tiles_dir, display_x, display_z);
+        push_hash_tile(out, tiles_dir, tile_x, tile_z);
     }
 }
 
@@ -419,9 +397,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_world_w_tile_display_xz_chiltern_name() {
+    fn parse_world_w_tile_xz_chiltern_name_is_signed() {
         let path = PathBuf::from("w-006074+014924.w");
-        assert_eq!(parse_world_w_tile_display_xz(&path), Some((6074, 14924)));
+        assert_eq!(parse_world_w_tile_xz(&path), Some((-6074, 14924)));
     }
 
     #[test]
@@ -436,22 +414,20 @@ mod tests {
             "expected TILES from WORLD/*.w names, got {}",
             from_world.len()
         );
-        // RouteFocus-style centre (positive display/world coords from `.w` bbox).
+        // RouteFocus-style centre (render space: signed tile X, negated MSTS Z).
         let center = Vec3::new(
-            6100.0 * MSTS_TILE_SIZE_M as f32 + 1024.0,
+            -6100.0 * MSTS_TILE_SIZE_M as f32,
             0.0,
-            14941.0 * MSTS_TILE_SIZE_M as f32 + 1024.0,
+            -14941.0 * MSTS_TILE_SIZE_M as f32,
         );
         let near = discover_terrain_tile_entries(&route_dir, Some(center), 8_000.0);
         assert!(
             !near.is_empty(),
-            "expected hash TILES near display tile (6100,14941), got {}",
+            "expected hash TILES near tile (-6100,14941), got {}",
             near.len()
         );
-        let has_6100 = near
-            .iter()
-            .any(|(ix, iz, _)| msts_display_tile_x_from_internal(*ix) == 6100 && *iz == 14941);
-        assert!(has_6100, "expected tile hash for display (6100,14941)");
+        let has_6100 = near.iter().any(|(ix, iz, _)| *ix == -6100 && *iz == 14941);
+        assert!(has_6100, "expected tile hash for (-6100,14941)");
     }
 
     #[test]
@@ -507,6 +483,16 @@ mod tests {
     }
 
     #[test]
+    fn elevation_tile_zero_covers_negative_half() {
+        // Tile (0,0) spans ±1024 m around the origin in render space.
+        let route_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let elev = TerrainElevation::load_from_route_dir(&route_dir);
+        assert!(elev.sample_world_y(-1000.0, -1000.0).is_some());
+        assert!(elev.sample_world_y(1000.0, 1000.0).is_some());
+    }
+
+    #[test]
     fn runtime_elevation_uses_or_triangle_sampling() {
         let mut elev = TerrainElevation::default();
         elev.tiles.insert(
@@ -521,7 +507,8 @@ mod tests {
                 features: None,
             },
         );
-        let y = elev.sample_world_y(6.0, 2.0).expect("sample");
+        // Tile (0,0) min corner is at (-1024, -1024); sample 6 m / 2 m inside it.
+        let y = elev.sample_world_y(-1024.0 + 6.0, -1024.0 + 2.0).expect("sample");
         assert!((y - 30.0).abs() < 1e-4, "got {y}");
     }
 
@@ -530,7 +517,8 @@ mod tests {
         let route_dir =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
-        assert!(elev.sample_world_y(112.0, 112.0).is_none());
+        // Hidden vertex at grid sample (14, 14): world = tile min corner + 14 * 8 m.
+        assert!(elev.sample_world_y(-1024.0 + 112.0, -1024.0 + 112.0).is_none());
     }
 
     #[test]

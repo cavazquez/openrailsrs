@@ -108,7 +108,10 @@ pub(crate) fn apply_floating_origin(
     mut transforms: Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
-    if mode.is_track_focused() {
+    // Tile-lab: todo el contenido vive a ±2 km del origen (centro del tile) y la
+    // cámara orbita a ~2.6 km fija; el rebase rompería los spawns progresivos
+    // (terreno/objetos) que no compensan `origin.shift`.
+    if mode.is_track_focused() || mode.is_tile_lab() {
         return;
     }
     let Ok((mut cam, mut orbit)) = cameras.single_mut() else {

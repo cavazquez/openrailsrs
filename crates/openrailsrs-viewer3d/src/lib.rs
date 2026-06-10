@@ -118,6 +118,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 terrain::progressive_terrain_spawn_system.run_if(launch::full_scenery_active),
             )
+            .add_systems(Update, track::tile_lab_frame_camera_once)
             .add_systems(Update, world::progressive_world_spawn_system)
             .add_systems(Update, world::world_tile_stream_system)
             .add_systems(

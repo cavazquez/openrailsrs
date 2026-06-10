@@ -50,32 +50,61 @@ pub fn msts_tile_name_from_xz_zoom(tile_x: i32, tile_z: i32, zoom: u32) -> Strin
     name
 }
 
-/// Display coords from a `.w` filename (`w-006084+014924`) → internal coords for `TILES/`.
-pub fn msts_internal_tile_x_from_world_display(display_x: i32) -> i32 {
-    -display_x
-}
-
-/// Internal `TILES/` X index → display/world tile X (inverse of [`msts_internal_tile_x_from_world_display`]).
-pub fn msts_display_tile_x_from_internal(internal_x: i32) -> i32 {
-    -internal_x
-}
-
-/// World-space metres of the south-west corner of a display tile (`.w` / `msts_to_bevy` convention).
-pub fn msts_tile_world_origin(display_x: i32, display_z: i32) -> (f32, f32) {
+/// Render-space metres of the minimum corner of a tile (Bevy/XNA axes).
+///
+/// `tile_x` / `tile_z` use MSTS internal (signed) coordinates.  Following Open
+/// Rails, render space is `x = msts_x`, `z = -msts_z` (whole-world Z negation),
+/// and a tile is centred on `tile * 2048` in MSTS space spanning ±1024 m:
+/// - render X span: `[tile_x*2048 - 1024, tile_x*2048 + 1024)`
+/// - render Z span: `[-tile_z*2048 - 1024, -tile_z*2048 + 1024)`
+pub fn msts_tile_world_origin(tile_x: i32, tile_z: i32) -> (f32, f32) {
     let tile = 2048.0_f32;
-    (display_x as f32 * tile, display_z as f32 * tile)
+    let half = 1024.0_f32;
+    (
+        tile_x as f32 * tile - half,
+        -(tile_z as f32) * tile - half,
+    )
 }
 
-/// Display tile coords from `WORLD/w-006074+014924.w` (also accepts `w-001000-001000`).
-pub fn parse_world_w_tile_display_xz(path: &std::path::Path) -> Option<(i32, i32)> {
+/// Internal (signed) tile X index containing render-space X coordinate (metres).
+pub fn msts_tile_x_index_for_coord(x: f32) -> i32 {
+    ((x + 1024.0) / 2048.0).floor() as i32
+}
+
+/// Internal (signed) tile Z index containing render-space Z coordinate (metres).
+/// Render Z is the negated MSTS world Z, so the index search is mirrored.
+pub fn msts_tile_z_index_for_coord(z: f32) -> i32 {
+    ((-z + 1024.0) / 2048.0).floor() as i32
+}
+
+/// Signed tile coords from `WORLD/w-006074+014924.w` filenames.
+///
+/// Matches Open Rails `WorldFile`: the sign characters are part of the value
+/// (`w-006084+014923.w` → `(-6084, 14923)`).
+pub fn parse_world_w_tile_xz(path: &std::path::Path) -> Option<(i32, i32)> {
     let stem = path.file_stem()?.to_str()?;
-    let rest = stem.strip_prefix('w')?;
-    let coords = rest.trim_start_matches('-');
-    if let Some((x, z)) = coords.split_once('+') {
-        return Some((x.parse().ok()?, z.parse().ok()?));
+    let rest = stem.strip_prefix(['w', 'W'])?;
+    if rest.len() < 14 {
+        return None;
     }
-    let mut parts = rest.split(['-', '_']).filter(|p| !p.is_empty());
-    Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
+    let (x_part, z_part) = rest.split_at(7);
+    let parse = |s: &str| -> Option<i32> {
+        let (sign, digits) = s.split_at(1);
+        let v: i32 = digits.parse().ok()?;
+        match sign {
+            "-" => Some(-v),
+            "+" | "_" => Some(v),
+            _ => None,
+        }
+    };
+    Some((parse(x_part)?, parse(&z_part[..7])?))
+}
+
+/// `.w` filename (`w-006084+014923.w`) from signed tile coords (Open Rails
+/// `WorldFileNameFromTileCoordinates`).
+pub fn world_w_filename_from_tile_xz(tile_x: i32, tile_z: i32) -> String {
+    let fmt = |v: i32| format!("{}{:06}", if v < 0 { '-' } else { '+' }, v.abs());
+    format!("w{}{}.w", fmt(tile_x), fmt(tile_z))
 }
 
 #[cfg(test)]
@@ -84,9 +113,35 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn display_internal_x_roundtrip() {
-        assert_eq!(msts_display_tile_x_from_internal(-6084), 6084);
-        assert_eq!(msts_internal_tile_x_from_world_display(6084), -6084);
+    fn tile_origin_is_centre_minus_half() {
+        let (ox, oz) = msts_tile_world_origin(-6084, 14923);
+        assert_eq!(ox, -6084.0 * 2048.0 - 1024.0);
+        assert_eq!(oz, -14923.0 * 2048.0 - 1024.0);
+    }
+
+    #[test]
+    fn tile_index_rounds_to_nearest_centre() {
+        assert_eq!(msts_tile_x_index_for_coord(0.0), 0);
+        assert_eq!(msts_tile_x_index_for_coord(1023.9), 0);
+        assert_eq!(msts_tile_x_index_for_coord(1024.1), 1);
+        assert_eq!(msts_tile_x_index_for_coord(-1023.9), 0);
+        assert_eq!(msts_tile_x_index_for_coord(-1024.1), -1);
+        // Render Z is negated MSTS Z: tile 1 is centred on render z = -2048.
+        assert_eq!(msts_tile_z_index_for_coord(-2048.0), 1);
+        assert_eq!(msts_tile_z_index_for_coord(2048.0), -1);
+        assert_eq!(msts_tile_z_index_for_coord(0.0), 0);
+    }
+
+    #[test]
+    fn tile_origin_and_index_roundtrip() {
+        for (tx, tz) in [(-6084, 14923), (0, 0), (7, -3)] {
+            let (ox, oz) = msts_tile_world_origin(tx, tz);
+            // Interior points map back to the same tile (offsets > f32 ulp at ~30 Mm).
+            assert_eq!(msts_tile_x_index_for_coord(ox + 8.0), tx);
+            assert_eq!(msts_tile_x_index_for_coord(ox + 2040.0), tx);
+            assert_eq!(msts_tile_z_index_for_coord(oz + 8.0), tz);
+            assert_eq!(msts_tile_z_index_for_coord(oz + 2040.0), tz);
+        }
     }
 
     #[test]
@@ -115,15 +170,30 @@ mod tests {
     }
 
     #[test]
-    fn parse_world_w_filename() {
+    fn parse_world_w_filename_is_signed() {
         use std::path::Path;
         assert_eq!(
-            parse_world_w_tile_display_xz(Path::new("w-006084+014923.w")),
-            Some((6084, 14923))
+            parse_world_w_tile_xz(Path::new("w-006084+014923.w")),
+            Some((-6084, 14923))
         );
         assert_eq!(
-            parse_world_w_tile_display_xz(Path::new("w-001000-001000.w")),
+            parse_world_w_tile_xz(Path::new("w-001000-001000.w")),
+            Some((-1000, -1000))
+        );
+        assert_eq!(
+            parse_world_w_tile_xz(Path::new("w+001000+001000.w")),
             Some((1000, 1000))
+        );
+    }
+
+    #[test]
+    fn world_filename_roundtrip() {
+        use std::path::Path;
+        let name = world_w_filename_from_tile_xz(-6084, 14923);
+        assert_eq!(name, "w-006084+014923.w");
+        assert_eq!(
+            parse_world_w_tile_xz(Path::new(&name)),
+            Some((-6084, 14923))
         );
     }
 }

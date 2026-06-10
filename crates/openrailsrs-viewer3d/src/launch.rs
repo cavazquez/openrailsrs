@@ -11,6 +11,10 @@ pub enum ViewerSceneryMode {
     TrackDev,
     /// Minimal playable view: train + `.tdb` procedural route corridor, no scenery/world tiles.
     RunCorridor,
+    /// Laboratorio de validación: UN solo tile (el del anchor) con capas opt-in
+    /// (`OPENRAILSRS_TILE_LAB_LAYERS`), cámara fija sobre el centro del tile y
+    /// sin streaming. Para validar un elemento a la vez contra Open Rails.
+    TileLab,
 }
 
 impl ViewerSceneryMode {
@@ -22,6 +26,10 @@ impl ViewerSceneryMode {
         matches!(self, Self::RunCorridor)
     }
 
+    pub fn is_tile_lab(self) -> bool {
+        matches!(self, Self::TileLab)
+    }
+
     pub fn is_track_focused(self) -> bool {
         matches!(self, Self::TrackDev | Self::RunCorridor)
     }
@@ -30,6 +38,91 @@ impl ViewerSceneryMode {
         matches!(self, Self::TrackDev | Self::RunCorridor)
     }
 }
+
+/// Capas habilitadas en `--tile-lab` (todas opt-in salvo terreno).
+#[derive(Clone, Copy, Debug)]
+pub struct TileLabLayers {
+    pub terrain: bool,
+    pub track: bool,
+    pub world: bool,
+    pub train: bool,
+}
+
+impl Default for TileLabLayers {
+    fn default() -> Self {
+        Self {
+            terrain: true,
+            track: false,
+            world: false,
+            train: false,
+        }
+    }
+}
+
+impl TileLabLayers {
+    pub fn label(&self) -> String {
+        let mut on = Vec::new();
+        if self.terrain {
+            on.push("terrain");
+        }
+        if self.track {
+            on.push("track");
+        }
+        if self.world {
+            on.push("world");
+        }
+        if self.train {
+            on.push("train");
+        }
+        if on.is_empty() {
+            "(ninguna)".to_string()
+        } else {
+            on.join(",")
+        }
+    }
+}
+
+/// Parse `OPENRAILSRS_TILE_LAB_LAYERS` (lista separada por comas de
+/// `terrain,track,world,train`; `all` habilita todo). Default: solo `terrain`.
+pub fn tile_lab_layers() -> TileLabLayers {
+    let Ok(raw) = std::env::var("OPENRAILSRS_TILE_LAB_LAYERS") else {
+        return TileLabLayers::default();
+    };
+    let mut layers = TileLabLayers {
+        terrain: false,
+        track: false,
+        world: false,
+        train: false,
+    };
+    for token in raw.split(',').map(|t| t.trim().to_ascii_lowercase()) {
+        match token.as_str() {
+            "terrain" => layers.terrain = true,
+            "track" => layers.track = true,
+            "world" => layers.world = true,
+            "train" => layers.train = true,
+            "all" => {
+                layers = TileLabLayers {
+                    terrain: true,
+                    track: true,
+                    world: true,
+                    train: true,
+                }
+            }
+            "" => {}
+            other => {
+                crate::viewer_log!(
+                    "openrailsrs-viewer3d: tile-lab — capa desconocida \"{other}\" (válidas: terrain,track,world,train,all)"
+                );
+            }
+        }
+    }
+    layers
+}
+
+/// Distancia orbital inicial en `--tile-lab` (encuadra el tile de 2048 m).
+pub const TILE_LAB_ORBIT_DISTANCE_M: f32 = 2_600.0;
+/// Zoom máximo en `--tile-lab`.
+pub const TILE_LAB_ORBIT_MAX_M: f32 = 8_000.0;
 
 pub fn full_scenery_active(mode: Res<ViewerSceneryMode>) -> bool {
     !mode.is_track_focused()

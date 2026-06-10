@@ -750,16 +750,14 @@ fn average_points(points: &[TrackVectorPoint]) -> TrackVectorPoint {
 }
 
 fn point_graph_x(point: TrackVectorPoint) -> f64 {
-    let display_tile_x = if point.tile_x < 0 {
-        -point.tile_x
-    } else {
-        point.tile_x
-    };
-    display_tile_x as f64 * 2048.0 + point.x
+    // Signed internal tile X (Open Rails convention); a positive "display"
+    // value would mirror the tile grid east-west.
+    point.tile_x as f64 * 2048.0 + point.x
 }
 
 fn point_graph_z(point: TrackVectorPoint) -> f64 {
-    point.tile_z as f64 * 2048.0 - point.z
+    // Whole-world Z negation (Open Rails XNA convention).
+    -(point.tile_z as f64 * 2048.0 + point.z)
 }
 
 #[cfg(test)]

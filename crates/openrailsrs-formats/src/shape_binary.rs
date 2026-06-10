@@ -515,6 +515,16 @@ fn token_scalars_are_i32(id: i32) -> bool {
             | 64 // flags
             | 67 // hierarchy
             | 70 // shape_header
+            // World tokens whose payload is u32 (not f32):
+            | 401 // StaticDetailLevel
+            | 404 // StaticFlags
+            | 405 // CollideFlags
+            | 408 // UiD
+            | 419 // SectionIdx
+            | 500 // Population
+            | 583 // VDbId
+            | 584 // VDbIdCount
+            | 922 // TrItemId
     )
 }
 
@@ -597,6 +607,7 @@ fn token_name(id: i32) -> &'static str {
         103 => "slerp_key",
         125 => "named_filter_mode",
         129 => "named_shader",
+        // World tokens: raw binary value + 300, matching Open Rails `TokenID.cs`.
         303 => "Static",
         305 => "TrackObj",
         308 => "Forest",
@@ -607,11 +618,64 @@ fn token_name(id: i32) -> &'static str {
         364 => "Speedpost",
         365 => "Hazard",
         375 => "Tr_Worldfile",
+        376 => "Tr_Watermark",
         395 => "FileName",
         396 => "FileNames",
         397 => "Position",
         398 => "Direction",
+        399 => "MaxVisDistance",
+        400 => "Quality",
+        401 => "StaticDetailLevel",
+        404 => "StaticFlags",
+        405 => "CollideFlags",
         408 => "UiD",
+        409 => "TrackSections",
+        410 => "TrackSection",
+        419 => "SectionIdx",
+        420 => "SectionCurve",
+        424 => "JNodePosn",
+        458 => "SignalSubObj",
+        486 => "SignalUnits",
+        487 => "SignalUnit",
+        493 => "Elevation",
+        500 => "Population",
+        501 => "Area",
+        503 => "ScaleRange",
+        579 => "ViewDbSphere",
+        580 => "Radius",
+        583 => "VDbId",
+        584 => "VDbIdCount",
+        598 => "Matrix3x3",
+        922 => "TrItemId",
+        945 => "QDirection",
+        1107 => "PlatformData",
+        1111 => "SpeedRange",
+        1112 => "PickupType",
+        1113 => "PickupAnimData",
+        1114 => "PickupCapacity",
+        1116 => "CarFrequency",
+        1117 => "CarAvSpeed",
+        1120 => "SidingData",
+        1122 => "LevelCrParameters",
+        1123 => "LevelCrData",
+        1124 => "LevelCrTiming",
+        1131 => "Speed_Sign_Shape",
+        1134 => "Speed_Digit_Tex",
+        1139 => "Speed_Text_Size",
+        1152 => "Width",
+        1153 => "Height",
+        1154 => "TreeTexture",
+        1155 => "TreeSize",
+        1531 => "CrashProbability",
+        1540 => "CarSpawner",
+        1541 => "Siding",
+        1542 => "Dyntrack",
+        1543 => "Transfer",
+        1544 => "Gantry",
+        1545 => "Pickup",
+        1561 => "Length",
+        1562 => "Flipped",
+        1563 => "Ruler",
         _ if (300..=430).contains(&id) => "_world",
         _ => "_unknown",
     }
@@ -619,7 +683,37 @@ fn token_name(id: i32) -> &'static str {
 
 fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
     if token_offset >= 300 {
-        return matches!(id, 300..=430);
+        // World tokens above 430 (orientation, forest, signal, dyntrack, …)
+        // per Open Rails `TokenID.cs`; without them `QDirection`/`Matrix3x3`
+        // blocks in binary `.w` tiles are dropped and objects lose rotation.
+        return matches!(
+            id,
+            300..=430
+                | 458
+                | 486
+                | 487
+                | 493
+                | 500
+                | 501
+                | 503
+                | 579
+                | 580
+                | 583
+                | 584
+                | 598
+                | 922
+                | 945
+                | 1107
+                | 1111..=1117
+                | 1120..=1124
+                | 1131
+                | 1134
+                | 1139
+                | 1152..=1155
+                | 1531
+                | 1540..=1545
+                | 1561..=1563
+        );
     }
     matches!(
         id,

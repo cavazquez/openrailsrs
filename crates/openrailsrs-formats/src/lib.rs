@@ -23,9 +23,9 @@ pub use encoding::{
 };
 pub use error::FormatError;
 pub use msts_tile_name::{
-    MSTS_TILE_ZOOM_SMALL, msts_display_tile_x_from_internal,
-    msts_internal_tile_x_from_world_display, msts_tile_name_from_xz, msts_tile_world_origin,
-    parse_world_w_tile_display_xz,
+    MSTS_TILE_ZOOM_SMALL, msts_tile_name_from_xz, msts_tile_world_origin,
+    msts_tile_x_index_for_coord, msts_tile_z_index_for_coord, parse_world_w_tile_xz,
+    world_w_filename_from_tile_xz,
 };
 pub use msts_units::{
     parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_pressure_bar,

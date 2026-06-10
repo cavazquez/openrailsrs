@@ -14,9 +14,13 @@ pub fn spawn_sky_dome(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    mode: Res<crate::launch::ViewerSceneryMode>,
     _focus: Res<RouteFocus>,
 ) {
-    let radius = (scene.bounds.orbit_distance() * 3.0).clamp(500.0, 150_000.0);
+    // Tile-lab puede tener grafo vacío (bbox 0 → radio mínimo 500 m), pero la
+    // cámara orbita a ~2.6 km: el domo debe envolverla siempre.
+    let min_radius = if mode.is_tile_lab() { 20_000.0 } else { 500.0 };
+    let radius = (scene.bounds.orbit_distance() * 3.0).clamp(min_radius, 150_000.0);
     let mesh = meshes.add(Sphere::new(radius));
     let material = materials.add(StandardMaterial {
         base_color: SKY_COLOR_HORIZON,

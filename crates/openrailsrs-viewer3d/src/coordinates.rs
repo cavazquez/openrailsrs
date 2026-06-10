@@ -8,9 +8,10 @@
 //! - **Z** = away from the viewer in MSTS camera convention (positive south in some places,
 //!   but tile-local Z uses "screen-forward" conventions per Microsoft XNA)
 //!
-//! **Tile layout**: the world is divided into tiles of 2048 m × 2048 m.  Tile numbers are stored
-//! as "internal" values in `.tdb` (negative X for UK: e.g. tile_x = -6084) and as "display"
-//! values in `.w` filenames (positive X for UK: e.g. `w-006084+014923.w`).
+//! **Tile layout**: the world is divided into tiles of 2048 m × 2048 m.  Tile numbers are
+//! signed ("internal") values, negative X for UK routes (e.g. tile_x = -6084).  The signs are
+//! written into `.w` filenames too (`w-006084+014923.w` → tile (-6084, 14923), exactly as
+//! Open Rails parses them in `WorldFile.cs`).
 //!
 //! Tile-local positions are centred: (0, 0) = tile centre, range roughly ±1024 m in X and Z.
 //!
@@ -20,16 +21,17 @@
 //!
 //! ## MSTS → Bevy world-space conversion
 //!
-//! Follows Open Rails `WorldPositionFromMSTSLocation` in `Scenery.cs` and
-//! `XNAVertexPositionNormalTextureFromMSTS` in `Shapes.cs`:
+//! Follows Open Rails XNA convention (`Scenery.cs` / `Shapes.cs`): the **whole-world** MSTS Z
+//! is negated:
 //!
 //! ```text
-//! bevy_x = tile_x_display * 2048 + local_x
+//! bevy_x = tile_x * 2048 + local_x            (signed internal tile X)
 //! bevy_y = local_y                            (Y up, unchanged)
-//! bevy_z = tile_z * 2048 - local_z            (Z flipped, same as XNA / Open Rails)
+//! bevy_z = -(tile_z * 2048 + local_z)         (whole-world Z negation, same as XNA)
 //! ```
 //!
-//! This negation of local Z is the **only** axis change; X and Y are identity.
+//! Negating only the local part (or using positive "display" tile numbers) would mirror the
+//! tile grid and break continuity at every tile border.
 //!
 //! ## Shape-local coordinates
 //!
@@ -56,14 +58,14 @@ pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /// A position in the MSTS world reference frame:
-/// tile numbers (display convention, positive for UK east) plus tile-local offset.
+/// signed internal tile numbers plus tile-local offset.
 ///
 /// Created from `.w` world-file items, `.tdb` track nodes, or tsection anchors.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MstsWorldPosition {
-    /// East tile index (display convention: positive east).
+    /// East tile index (signed internal convention: negative for UK routes).
     pub tile_x: i32,
-    /// South tile index (same sign convention in both `.w` and `.tdb`).
+    /// North tile index (signed internal convention).
     pub tile_z: i32,
     /// East offset from tile centre (metres).
     pub x: f64,
@@ -92,21 +94,21 @@ impl BevyWorldPosition {
 
 /// Convert an MSTS tile-local position to Bevy absolute world space.
 ///
-/// Tile X must use the **display** convention (positive east, as in `.w` filenames).
-/// Tile Z uses the same sign in both `.w` and `.tdb` conventions.
+/// Tile X / Z must use the **signed internal** convention (negative X for UK routes,
+/// exactly as parsed from `.w` filenames and `.tdb` nodes).
 ///
-/// Matches Open Rails `WorldPositionFromMSTSLocation` (`Scenery.cs`):
+/// Matches the Open Rails XNA convention (whole-world Z negation):
 /// ```text
 /// bevy_x = tile_x * 2048 + x
 /// bevy_y = y
-/// bevy_z = tile_z * 2048 - z   ← Z flip
+/// bevy_z = -(tile_z * 2048 + z)   ← whole-world Z flip
 /// ```
 #[inline]
 pub fn msts_to_bevy(pos: MstsWorldPosition) -> BevyWorldPosition {
     BevyWorldPosition(Vec3::new(
         (pos.tile_x as f64 * MSTS_TILE_SIZE_M + pos.x) as f32,
         pos.y as f32,
-        (pos.tile_z as f64 * MSTS_TILE_SIZE_M - pos.z) as f32,
+        (-(pos.tile_z as f64 * MSTS_TILE_SIZE_M + pos.z)) as f32,
     ))
 }
 
@@ -124,18 +126,6 @@ pub fn msts_tile_local_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_form
     .as_vec3()
 }
 
-/// Convert an MSTS display tile X (positive east) to the internal sign convention
-/// used in `.tdb` files (negative X for UK routes: internal = -display).
-#[inline]
-pub fn display_tile_x_to_internal(display: i32) -> i32 {
-    -display
-}
-
-/// Convert an MSTS `.tdb` internal tile X to the display convention.
-#[inline]
-pub fn internal_tile_x_to_display(internal: i32) -> i32 {
-    if internal < 0 { -internal } else { internal }
-}
 
 // ── Shape-local coordinates ───────────────────────────────────────────────────
 
@@ -307,7 +297,7 @@ mod tests {
             y: 5.0,
             z: -3.0,
         });
-        // Z flip: bevy_z = 0*2048 - (-3) = 3
+        // Z flip: bevy_z = -(0*2048 + (-3)) = 3
         assert_eq!(p.as_vec3(), Vec3::new(100.0, 5.0, 3.0));
     }
 
@@ -320,8 +310,44 @@ mod tests {
             y: 0.0,
             z: 20.0,
         });
-        // x = 2*2048+10 = 4106; z = 1*2048-20 = 2028
-        assert_eq!(p.as_vec3(), Vec3::new(4106.0, 0.0, 2028.0));
+        // x = 2*2048+10 = 4106; z = -(1*2048+20) = -2068
+        assert_eq!(p.as_vec3(), Vec3::new(4106.0, 0.0, -2068.0));
+    }
+
+    #[test]
+    fn msts_to_bevy_is_continuous_across_tile_borders() {
+        // East edge of tile (-6084, 0) == west edge of tile (-6083, 0).
+        let a = msts_to_bevy(MstsWorldPosition {
+            tile_x: -6084,
+            tile_z: 0,
+            x: 1024.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        let b = msts_to_bevy(MstsWorldPosition {
+            tile_x: -6083,
+            tile_z: 0,
+            x: -1024.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        assert!((a.as_vec3() - b.as_vec3()).length() < 1e-3);
+        // North edge of tile (0, 14923) == south edge of tile (0, 14924).
+        let c = msts_to_bevy(MstsWorldPosition {
+            tile_x: 0,
+            tile_z: 14923,
+            x: 0.0,
+            y: 0.0,
+            z: 1024.0,
+        });
+        let d = msts_to_bevy(MstsWorldPosition {
+            tile_x: 0,
+            tile_z: 14924,
+            x: 0.0,
+            y: 0.0,
+            z: -1024.0,
+        });
+        assert!((c.as_vec3() - d.as_vec3()).length() < 1e-3);
     }
 
     #[test]
@@ -338,7 +364,7 @@ mod tests {
 
     #[test]
     fn msts_to_bevy_positive_local_z_gives_negative_bevy_z_relative_to_tile_origin() {
-        // MSTS local z=+100 (away in MSTS conv) → Bevy z = 0*2048 - 100 = -100
+        // MSTS local z=+100 (north) → Bevy z = -(0*2048 + 100) = -100
         let p = msts_to_bevy(MstsWorldPosition {
             tile_x: 0,
             tile_z: 0,
@@ -366,22 +392,6 @@ mod tests {
         .as_vec3();
         let via_fn = msts_tile_local_to_bevy(2, 1, local);
         assert_eq!(via_struct, via_fn);
-    }
-
-    // ── display / internal tile ───────────────────────────────────────────────
-
-    #[test]
-    fn display_internal_tile_x_round_trip() {
-        let display = 6084_i32;
-        let internal = display_tile_x_to_internal(display);
-        assert_eq!(internal, -6084);
-        assert_eq!(internal_tile_x_to_display(internal), display);
-    }
-
-    #[test]
-    fn internal_tile_x_to_display_handles_already_positive() {
-        // Some routes have positive internal tile X; display should be same value.
-        assert_eq!(internal_tile_x_to_display(100), 100);
     }
 
     // ── shape_point_to_bevy ───────────────────────────────────────────────────

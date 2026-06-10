@@ -7,7 +7,8 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_formats::{
-    WorldFile, WorldItem, msts_tile_world_origin, parse_world_w_tile_display_xz,
+    WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
+    msts_tile_z_index_for_coord, parse_world_w_tile_xz, world_w_filename_from_tile_xz,
 };
 
 use crate::coordinates::{
@@ -392,10 +393,10 @@ pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
     load_world_from_route_dir_near(route_dir, None, f32::MAX)
 }
 
-fn tile_center_distance_m(display_x: i32, display_z: i32, center: Vec3) -> f32 {
+fn tile_center_distance_m(tile_x: i32, tile_z: i32, center: Vec3) -> f32 {
     let tile = MSTS_TILE_SIZE_M as f32;
     let half = tile * 0.5;
-    let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+    let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
     let tcx = ox + half;
     let tcz = oz + half;
     Vec2::new(tcx - center.x, tcz - center.z).length()
@@ -410,19 +411,19 @@ pub fn discover_world_tile_entries(
     let tile = MSTS_TILE_SIZE_M as f32;
     let extra = tile;
     if let Some(c) = center {
-        let center_dx = (c.x / tile).floor() as i32;
-        let center_dz = (c.z / tile).floor() as i32;
+        let center_tx = msts_tile_x_index_for_coord(c.x);
+        let center_tz = msts_tile_z_index_for_coord(c.z);
         let radius_tiles = (radius_m / tile).ceil() as i32 + 1;
         let mut out = Vec::new();
         for dtx in -radius_tiles..=radius_tiles {
             for dtz in -radius_tiles..=radius_tiles {
-                let display_x = center_dx + dtx;
-                let display_z = center_dz + dtz;
-                if tile_center_distance_m(display_x, display_z, c) > radius_m + extra {
+                let tile_x = center_tx + dtx;
+                let tile_z = center_tz + dtz;
+                if tile_center_distance_m(tile_x, tile_z, c) > radius_m + extra {
                     continue;
                 }
-                if let Some(path) = world_tile_path_for_coords(route_dir, display_x, display_z) {
-                    out.push((display_x, display_z, path));
+                if let Some(path) = world_tile_path_for_coords(route_dir, tile_x, tile_z) {
+                    out.push((tile_x, tile_z, path));
                 }
             }
         }
@@ -433,33 +434,23 @@ pub fn discover_world_tile_entries(
     discover_world_files(route_dir)
         .into_iter()
         .filter_map(|path| {
-            let (display_x, display_z) = parse_world_w_tile_display_xz(&path)?;
+            let (tile_x, tile_z) = parse_world_w_tile_xz(&path)?;
             if let Some(c) = center {
-                if tile_center_distance_m(display_x, display_z, c) > radius_m + extra {
+                if tile_center_distance_m(tile_x, tile_z, c) > radius_m + extra {
                     return None;
                 }
             }
-            Some((display_x, display_z, path))
+            Some((tile_x, tile_z, path))
         })
         .collect()
 }
 
-fn world_tile_path_for_coords(route_dir: &Path, display_x: i32, display_z: i32) -> Option<PathBuf> {
-    let abs_x = display_x.unsigned_abs();
-    let abs_z = display_z.unsigned_abs();
-    let names = [
-        format!("w-{abs_x:06}+{abs_z:06}.w"),
-        format!("w-{abs_x:06}-{abs_z:06}.w"),
-        format!("w-{display_x}+{display_z}.w"),
-        format!("w-{display_x}-{display_z}.w"),
-    ];
+fn world_tile_path_for_coords(route_dir: &Path, tile_x: i32, tile_z: i32) -> Option<PathBuf> {
+    let name = world_w_filename_from_tile_xz(tile_x, tile_z);
     for subdir in ["WORLD", "world"] {
-        let dir = route_dir.join(subdir);
-        for name in &names {
-            let path = dir.join(name);
-            if path.is_file() {
-                return Some(path);
-            }
+        let path = route_dir.join(subdir).join(&name);
+        if path.is_file() {
+            return Some(path);
         }
     }
     None
@@ -473,10 +464,10 @@ pub fn world_tile_center_hint(route_dir: &Path) -> Option<Vec3> {
     let mut sum_z = 0.0f64;
     let half = MSTS_TILE_SIZE_M * 0.5;
     for path in paths {
-        let Some((display_x, display_z)) = parse_world_w_tile_display_xz(&path) else {
+        let Some((tile_x, tile_z)) = parse_world_w_tile_xz(&path) else {
             continue;
         };
-        let (ox, oz) = msts_tile_world_origin(display_x, display_z);
+        let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
         sum_x += f64::from(ox) + half;
         sum_z += f64::from(oz) + half;
         count += 1;
@@ -1321,7 +1312,7 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
 }
 
 /// Index of every `.w` tile on disk; loads additional tiles as the camera moves (OR `SceneryDrawer`).
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct WorldTileStream {
     catalog: std::collections::HashMap<(i32, i32), PathBuf>,
     loaded: std::collections::HashSet<(i32, i32)>,
@@ -1334,7 +1325,7 @@ impl WorldTileStream {
     pub fn new(route_dir: &Path, world: &WorldScene, radius_m: f32) -> Self {
         let catalog = discover_world_files(route_dir)
             .into_iter()
-            .filter_map(|path| parse_world_w_tile_display_xz(&path).map(|xz| (xz, path)))
+            .filter_map(|path| parse_world_w_tile_xz(&path).map(|xz| (xz, path)))
             .collect();
         let mut loaded = std::collections::HashSet::new();
         for obj in &world.items {
@@ -1476,7 +1467,8 @@ pub fn world_tile_stream_system(
     mode: Res<crate::launch::ViewerSceneryMode>,
     mut commands: Commands,
 ) {
-    if mode.is_track_focused() {
+    // Tile-lab keeps exactly the tiles loaded at startup: no streaming.
+    if mode.is_track_focused() || mode.is_tile_lab() {
         return;
     }
     if progress.is_some() {
@@ -1487,8 +1479,8 @@ pub fn world_tile_stream_system(
     };
     let msts_xz = camera_msts_xz(&focus, cam, &origin);
     let tile = MSTS_TILE_SIZE_M as f32;
-    let cam_tile_x = (msts_xz.x / tile).floor() as i32;
-    let cam_tile_z = (msts_xz.y / tile).floor() as i32;
+    let cam_tile_x = msts_tile_x_index_for_coord(msts_xz.x);
+    let cam_tile_z = msts_tile_z_index_for_coord(msts_xz.y);
     if stream.last_camera_tile == Some((cam_tile_x, cam_tile_z)) {
         return;
     }
@@ -1501,19 +1493,20 @@ pub fn world_tile_stream_system(
 
     for dtx in -radius_tiles..=radius_tiles {
         for dtz in -radius_tiles..=radius_tiles {
-            let display_x = cam_tile_x + dtx;
-            let display_z = cam_tile_z + dtz;
-            if tile_center_distance_m(display_x, display_z, center) > stream.radius_m + tile {
+            let tile_x = cam_tile_x + dtx;
+            let tile_z = cam_tile_z + dtz;
+            if tile_center_distance_m(tile_x, tile_z, center) > stream.radius_m + tile {
                 continue;
             }
-            let key = (display_x, display_z);
+            let key = (tile_x, tile_z);
             if stream.loaded.contains(&key) {
                 continue;
             }
-            let Some(path) =
-                stream.catalog.get(&key).cloned().or_else(|| {
-                    world_tile_path_for_coords(&stream.route_dir, display_x, display_z)
-                })
+            let Some(path) = stream
+                .catalog
+                .get(&key)
+                .cloned()
+                .or_else(|| world_tile_path_for_coords(&stream.route_dir, tile_x, tile_z))
             else {
                 continue;
             };
@@ -2069,7 +2062,8 @@ mod tests {
                 z: 20.0,
             },
         );
-        assert_eq!(p, Vec3::new(4106.0, 0.0, 2028.0));
+        // z = -(1*2048 + 20) = -2068 (whole-world Z negation).
+        assert_eq!(p, Vec3::new(4106.0, 0.0, -2068.0));
     }
 
     #[test]
@@ -2213,10 +2207,11 @@ mod tests {
         if !route_dir.join("WORLD").is_dir() {
             return;
         }
+        // Render-space anchor: signed tile X, whole-world Z negation.
         let anchor = Vec3::new(
-            6080.0 * MSTS_TILE_SIZE_M as f32 + 891.8,
+            -6080.0 * MSTS_TILE_SIZE_M as f32 + 891.8,
             35.8,
-            14925.0 * MSTS_TILE_SIZE_M as f32 + 582.8,
+            -(14925.0 * MSTS_TILE_SIZE_M as f32 + 582.8),
         );
         let entries = discover_world_tile_entries(&route_dir, Some(anchor), VISIBLE_RADIUS_M);
         assert!(
@@ -2224,9 +2219,15 @@ mod tests {
             "expected ~25–56 tiles at 8 km, got {}",
             entries.len()
         );
+        // The anchor sits in tile (-6080, 14925); its own tile and an adjacent
+        // one must always be discovered within the visible radius.
         assert!(
-            entries.iter().any(|(x, z, _)| *x == 6084 && *z == 14923),
-            "expected tile w-006084+014923 near Birmingham anchor"
+            entries.iter().any(|(x, z, _)| *x == -6080 && *z == 14925),
+            "expected tile w-006080+014925 (anchor tile) in discovered entries"
+        );
+        assert!(
+            entries.iter().any(|(x, z, _)| *x == -6081 && *z == 14925),
+            "expected west neighbour tile w-006081+014925 in discovered entries"
         );
     }
 }

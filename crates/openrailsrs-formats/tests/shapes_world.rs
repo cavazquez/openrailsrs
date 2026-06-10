@@ -538,8 +538,9 @@ fn parse_chiltern_prefixed_text_world_tile() {
 fn parse_minimal_world_classifies_items() {
     let world = WorldFile::from_path(fixture("w-001000-001000.w")).expect("parse world");
 
-    assert_eq!(world.tile_x, 1000);
-    assert_eq!(world.tile_z, 1000);
+    // Signed parse (Open Rails convention): both coords are negative in this name.
+    assert_eq!(world.tile_x, -1000);
+    assert_eq!(world.tile_z, -1000);
     assert_eq!(world.items.len(), 5);
 
     let kinds: Vec<&str> = world.items.iter().map(|i| i.kind()).collect();
