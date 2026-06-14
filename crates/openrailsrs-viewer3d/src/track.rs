@@ -556,6 +556,7 @@ pub fn tile_lab_frame_camera_once(
 }
 
 /// Point the orbit camera at the route centre with a distance that frames it.
+#[allow(clippy::too_many_arguments)]
 pub fn frame_orbit_camera_on_track(
     scene: Res<TrackScene>,
     focus: Res<crate::world::RouteFocus>,

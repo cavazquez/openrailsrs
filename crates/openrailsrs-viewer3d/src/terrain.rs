@@ -508,7 +508,9 @@ mod tests {
             },
         );
         // Tile (0,0) min corner is at (-1024, -1024); sample 6 m / 2 m inside it.
-        let y = elev.sample_world_y(-1024.0 + 6.0, -1024.0 + 2.0).expect("sample");
+        let y = elev
+            .sample_world_y(-1024.0 + 6.0, -1024.0 + 2.0)
+            .expect("sample");
         assert!((y - 30.0).abs() < 1e-4, "got {y}");
     }
 
@@ -518,7 +520,10 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let elev = TerrainElevation::load_from_route_dir(&route_dir);
         // Hidden vertex at grid sample (14, 14): world = tile min corner + 14 * 8 m.
-        assert!(elev.sample_world_y(-1024.0 + 112.0, -1024.0 + 112.0).is_none());
+        assert!(
+            elev.sample_world_y(-1024.0 + 112.0, -1024.0 + 112.0)
+                .is_none()
+        );
     }
 
     #[test]

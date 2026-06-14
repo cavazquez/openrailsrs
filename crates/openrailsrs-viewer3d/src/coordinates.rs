@@ -126,7 +126,6 @@ pub fn msts_tile_local_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_form
     .as_vec3()
 }
 
-
 // ── Shape-local coordinates ───────────────────────────────────────────────────
 
 /// Convert an MSTS shape-local point (`.s` vertex) to Bevy mesh space.

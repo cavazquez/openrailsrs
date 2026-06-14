@@ -37,6 +37,9 @@ use std::time::Instant;
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use openrailsrs_formats::Vec3 as MstsVec3;
+use openrailsrs_formats::{
+    msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
+};
 use openrailsrs_route::edge_path;
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::SCENARIO_OVERLAY_FILENAME;
@@ -64,9 +67,6 @@ use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir_near;
 use openrailsrs_viewer3d::track::{TrackScene, graph_to_world};
 use openrailsrs_viewer3d::track_audit::run_track_dev_audit;
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
-use openrailsrs_formats::{
-    msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
-};
 use openrailsrs_viewer3d::world::{
     MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, WorldTileStream,
     load_world_from_route_dir_near, msts_to_bevy, visible_radius_m, world_tile_center_hint,
@@ -750,7 +750,8 @@ fn load_tile_lab(
     let terrain = if layers.terrain {
         let t = Instant::now();
         let mut ts = load_terrain_from_route_dir_near(route_dir, Some(tile_center), 1.0);
-        ts.tiles.retain(|t| t.tile_x == tile_x && t.tile_z == tile_z);
+        ts.tiles
+            .retain(|t| t.tile_x == tile_x && t.tile_z == tile_z);
         ts.tiles_loaded = ts.tiles.len();
         log_step(
             &format!("tile-lab: loaded terrain ({} tile(s))", ts.tiles.len()),

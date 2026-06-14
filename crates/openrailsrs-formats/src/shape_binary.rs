@@ -402,6 +402,26 @@ impl<'a> BinaryReader<'a> {
                 out.push_str(" )");
                 return Ok(out);
             }
+            // Open Rails reads `shape` children in fixed order; `animations` is optional last.
+            71 => {
+                for _ in 0..17 {
+                    if self.pos >= block_end || !self.peek_subblock_header_at(self.pos, block_end) {
+                        break;
+                    }
+                    out.push(' ');
+                    out.push_str(&self.dump_block()?);
+                }
+                if self.pos < block_end
+                    && self.peek_subblock_header_at(self.pos, block_end)
+                    && self.peek_token_id_at(self.pos) == Some(90)
+                {
+                    out.push(' ');
+                    out.push_str(&self.dump_block()?);
+                }
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
             _ => {}
         }
 
@@ -879,5 +899,58 @@ mod tests {
             }
             _ => panic!("Expected LinearPos controller"),
         }
+    }
+
+    #[test]
+    fn chiltern_water_column_has_animations_if_present() {
+        let path = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/SHAPES/RF_GW_WaterColumn.s",
+        );
+        if !path.is_file() {
+            eprintln!("skip: RF_GW_WaterColumn.s no disponible");
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse water column");
+        eprintln!(
+            "water column: matrices={} animations={}",
+            shape.matrices.len(),
+            shape.animations.len()
+        );
+    }
+
+    #[test]
+    fn chiltern_water_column_shape_child_tokens() {
+        let path = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/SHAPES/RF_GW_WaterColumn.s",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let bytes = std::fs::read(&path).unwrap();
+        let payload = crate::msts_simisa::decode_simisa_container(&bytes).unwrap();
+        let data = &payload.bytes[payload.data_offset..];
+        // root shape block header
+        if data.len() < 8 {
+            return;
+        }
+        let root_tok = u16::from_le_bytes([data[0], data[1]]) as i32 + payload.token_offset;
+        let root_rem = u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize;
+        eprintln!("root token={root_tok} rem={root_rem}");
+        let mut pos = 8 + 1 + (data[8] as usize) * 2; // skip label
+        let block_end = 8 + root_rem;
+        let mut children = Vec::new();
+        while pos + 8 <= block_end && pos + 8 <= data.len() {
+            let tok = u16::from_le_bytes([data[pos], data[pos + 1]]) as i32 + payload.token_offset;
+            let rem =
+                u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                    as usize;
+            if rem == 0 || rem > block_end.saturating_sub(pos) {
+                break;
+            }
+            children.push(tok);
+            let label_len = data.get(pos + 8).copied().unwrap_or(0) as usize;
+            pos += 8 + 1 + label_len * 2 + rem;
+        }
+        eprintln!("shape children: {children:?}");
     }
 }

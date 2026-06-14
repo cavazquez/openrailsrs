@@ -19,6 +19,7 @@ members = [
     "crates/openrailsrs-cli",
     "crates/openrailsrs-viewer",
     "crates/openrailsrs-viewer3d",
+    "crates/openrailsrs-render3d",
 ]
 
 [workspace.package]

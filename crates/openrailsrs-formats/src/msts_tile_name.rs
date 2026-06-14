@@ -60,10 +60,7 @@ pub fn msts_tile_name_from_xz_zoom(tile_x: i32, tile_z: i32, zoom: u32) -> Strin
 pub fn msts_tile_world_origin(tile_x: i32, tile_z: i32) -> (f32, f32) {
     let tile = 2048.0_f32;
     let half = 1024.0_f32;
-    (
-        tile_x as f32 * tile - half,
-        -(tile_z as f32) * tile - half,
-    )
+    (tile_x as f32 * tile - half, -(tile_z as f32) * tile - half)
 }
 
 /// Internal (signed) tile X index containing render-space X coordinate (metres).
