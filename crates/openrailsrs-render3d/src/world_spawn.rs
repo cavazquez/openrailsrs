@@ -128,7 +128,7 @@ fn index_tree(
 
 /// Texturas MSTS/OR: albedo oscuro pensado para fixed-function + unlit.
 const MSTS_ALBEDO_BOOST: f32 = 4.0;
-const DARK_TEXTURE_LUMA: f32 = 32.0;
+const DARK_TEXTURE_LUMA: f32 = 60.0;
 const TARGET_TEXTURE_LUMA: f32 = 112.0;
 
 struct PreparedAce {
@@ -262,6 +262,8 @@ pub struct TextureLoadStats {
     /// Primeras entradas para el log (shape, textura).
     pub unresolved_samples: Vec<(String, String)>,
     pub decode_failed_samples: Vec<(String, String)>,
+    /// Texturas con luminosidad baja o alpha no-opaco (diagnóstico de manchas negras).
+    pub dark_or_blend_samples: Vec<(String, String, f32, String)>,
 }
 
 impl TextureLoadStats {
@@ -303,6 +305,23 @@ impl TextureLoadStats {
         self.resolved += 1;
     }
 
+    pub fn record_material_diagnostic(
+        &mut self,
+        shape_file: &str,
+        texture: &str,
+        luma: f32,
+        alpha_mode_str: &str,
+    ) {
+        if self.dark_or_blend_samples.len() < Self::MAX_SAMPLES * 2 {
+            self.dark_or_blend_samples.push((
+                shape_file.to_string(),
+                texture.to_string(),
+                luma,
+                alpha_mode_str.to_string(),
+            ));
+        }
+    }
+
     pub fn report(&self) {
         let total = self.resolved + self.unresolved + self.decode_failed;
         if total == 0 && self.no_texture_part == 0 {
@@ -326,10 +345,23 @@ impl TextureLoadStats {
                 );
             }
         }
-        if self.unresolved == 0 && self.decode_failed == 0 && texture_debug_enabled() {
+        if !self.dark_or_blend_samples.is_empty() {
             println!(
-                "texturas: todas las referencias resolvieron (las manchas negras serían otro causa: alpha, material, etc.)"
+                "  diagnóstico manchas negras: {} texturas con luma < 60 ó alpha no-opaco:",
+                self.dark_or_blend_samples.len()
             );
+            for (shape, tex, luma, mode) in &self.dark_or_blend_samples {
+                let luma_str = if *luma >= 0.0 {
+                    format!("{luma:.0}")
+                } else {
+                    "n/a".to_string()
+                };
+                println!("    · {shape} → {tex}  luma={luma_str}  alpha={mode}");
+            }
+        }
+        if self.unresolved == 0 && self.decode_failed == 0 && self.dark_or_blend_samples.is_empty()
+        {
+            println!("texturas: todas ok, sin candidatos a manchas negras");
         }
     }
 }
@@ -510,6 +542,7 @@ fn build_shape(
                     file,
                     name,
                     p.alpha_test_mode,
+                    p.shader_name.as_deref(),
                     &path,
                     route,
                     tex_mat_cache,
@@ -538,6 +571,7 @@ fn texture_material(
     shape_file: &str,
     name: &str,
     alpha_test_mode: i32,
+    shader_name: Option<&str>,
     shape_path: &Path,
     route_dir: &Path,
     tex_mat_cache: &mut HashMap<String, Handle<StandardMaterial>>,
@@ -558,7 +592,7 @@ fn texture_material(
         .and_then(|e| e.to_str())
         .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
 
-    let alpha_mode = if is_dds {
+    let mut alpha_mode = if is_dds {
         alpha_mode_from_name(name, alpha_test_mode)
     } else {
         let Some(ace) = load_ace_file(&tex_path) else {
@@ -567,6 +601,16 @@ fn texture_material(
         };
         alpha_mode_from_ace(&ace, name, alpha_test_mode)
     };
+
+    if let Some(shader) = shader_name {
+        if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
+            alpha_mode = AlphaMode::Add;
+        } else if shader.eq_ignore_ascii_case("BlendATex")
+            || shader.eq_ignore_ascii_case("BlendATexDiff")
+        {
+            alpha_mode = AlphaMode::Blend;
+        }
+    }
 
     tex_mat_cache
         .entry(format!("{}:{alpha_mode:?}", tex_path.display()))
@@ -577,12 +621,26 @@ fn texture_material(
                     return untextured.clone();
                 };
                 tex_stats.record_resolved();
+                let final_alpha =
+                    if alpha_mode == AlphaMode::Add || texture_name_suggests_additive(name) {
+                        AlphaMode::Add
+                    } else {
+                        alpha_mode
+                    };
+                if !matches!(final_alpha, AlphaMode::Opaque) {
+                    tex_stats.record_material_diagnostic(
+                        shape_file,
+                        name,
+                        -1.0,
+                        &format!("{final_alpha:?} (DDS)"),
+                    );
+                }
                 let tex = images.add(image);
                 msts_unlit_material(
                     materials,
                     tex,
                     Color::linear_rgb(MSTS_ALBEDO_BOOST, MSTS_ALBEDO_BOOST, MSTS_ALBEDO_BOOST),
-                    alpha_mode,
+                    final_alpha,
                     0.85,
                 )
             } else {
@@ -594,9 +652,25 @@ fn texture_material(
                     }
                 };
                 tex_stats.record_resolved();
+                let raw_luma = ace_mean_luma(&ace.mip0);
+                let final_alpha = if alpha_mode == AlphaMode::Add
+                    || (raw_luma < 30.0 && texture_name_suggests_additive(name))
+                {
+                    AlphaMode::Add
+                } else {
+                    alpha_mode
+                };
+                if raw_luma < 60.0 || !matches!(final_alpha, AlphaMode::Opaque) {
+                    tex_stats.record_material_diagnostic(
+                        shape_file,
+                        name,
+                        raw_luma,
+                        &format!("{final_alpha:?}"),
+                    );
+                }
                 let prep = prepared_ace(&ace);
                 let tex = images.add(prep.image);
-                msts_unlit_material(materials, tex, prep.tint, alpha_mode, 0.85)
+                msts_unlit_material(materials, tex, prep.tint, final_alpha, 0.85)
             }
         })
         .clone()
@@ -651,6 +725,24 @@ fn texture_name_suggests_blend(texture_name: &str) -> bool {
     [
         "glass", "window", "alpha", "trans", "transp", "steam", "smoke", "exhaust", "fume",
         "cloud", "mist", "vapor", "vapour",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
+}
+
+fn texture_name_suggests_additive(texture_name: &str) -> bool {
+    let lower = texture_name.to_ascii_lowercase();
+    if lower.contains("post")
+        || lower.contains("lad")
+        || lower.contains("gantry")
+        || lower.contains("bracket")
+        || lower.contains("pole")
+        || lower.contains("frame")
+    {
+        return false;
+    }
+    [
+        "led", "light", "glow", "dolly", "corona", "lamp", "lantern", "cls", "sig", "feather",
     ]
     .iter()
     .any(|needle| lower.contains(needle))

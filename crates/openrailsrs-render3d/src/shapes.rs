@@ -27,6 +27,8 @@ pub struct ShapePart {
     pub texture: Option<String>,
     /// Modo alpha MSTS (`prim_state.alpha_test_mode`); -1 = derivado de flags.
     pub alpha_test_mode: i32,
+    /// Nombre del shader MSTS de este prim_state (ej. "AddATex", "BlendATex", "TexDiff").
+    pub shader_name: Option<String>,
 }
 
 /// Carga un `.s` y construye sus partes de malla (LOD de mayor detalle).
@@ -127,6 +129,11 @@ pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
                 .get(prim_state_idx.max(0) as usize)
                 .map(|ps| ps.alpha_test_mode)
                 .unwrap_or(-1),
+            shader_name: shape
+                .prim_states
+                .get(prim_state_idx.max(0) as usize)
+                .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
+                .cloned(),
         })
         .collect()
 }
