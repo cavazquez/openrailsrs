@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 openrailsrs-formats = { path = "../openrailsrs-formats" }
-openrailsrs-ace = { path = "../openrailsrs-ace" }
+openrailsrs-ace = { version = "0.1.0", path = "../openrailsrs-ace" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-track = { path = "../openrailsrs-track" }
 anyhow.workspace = true
@@ -28,9 +28,11 @@ bevy = { version = "0.18", default-features = false, features = [
     "bevy_log",
     "bevy_ui",
     "bevy_text",
+    "dds",
     "default_font",
     "bevy_state",
     "tonemapping_luts",
     "multi_threaded",
     "zstd_rust",
 ] }
+image = "0.25"

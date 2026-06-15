@@ -5,7 +5,7 @@
 //! una contra Open Rails antes de seguir. El viewer3d viejo queda como referencia.
 //!
 //! Uso:
-//!   cargo run -p openrailsrs-render3d -- [--route DIR] [--tile-x N --tile-z N]
+//!   cargo run -p openrailsrs-render3d -- [--route DIR] [--tile-x N --tile-z N] [--radius R]
 //!
 //! Controles:
 //!   W/A/S/D  mover    Q/E  bajar/subir    Shift  más rápido
@@ -36,36 +36,50 @@ use terrain::TileGeometry;
 
 #[derive(Parser, Debug)]
 #[command(
-    about = "Render 3D mínimo: un tile de terreno (desde cero)",
+    about = "Render 3D mínimo: tiles de terreno (desde cero)",
     allow_negative_numbers = true
 )]
 struct Cli {
     /// Carpeta de la ruta (con TILES/ y WORLD/).
     #[arg(long, default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/chiltern"))]
     route: PathBuf,
-    /// Tile X (interno, con signo). Si se omite, se elige el centroide de WORLD/.
+    /// Raíz de la instalación de MSTS/Open Rails (con GLOBAL/). Si se omite, se deduce subiendo dos niveles.
+    #[arg(long)]
+    msts_root: Option<PathBuf>,
+    /// Tile X central (interno, con signo). Si se omite, se elige el centroide de WORLD/.
     #[arg(long)]
     tile_x: Option<i32>,
-    /// Tile Z (interno, con signo).
+    /// Tile Z central (interno, con signo).
     #[arg(long)]
     tile_z: Option<i32>,
+    /// Radio del grid de tiles a cargar. 0=solo el tile central (1×1),
+    /// 1=3×3=9 tiles, 2=5×5=25 tiles, etc.
+    #[arg(long, default_value_t = 1)]
+    radius: u32,
 }
 
-/// El tile cargado, insertado como recurso para spawnearlo en Startup.
-#[derive(Resource)]
-pub struct TileToRender(pub TileGeometry);
+/// Información de un tile (geometría + offset en el espacio world).
+pub struct TileEntry {
+    pub geometry: TileGeometry,
+    /// Desplazamiento del origen del tile en el espacio world (metros).
+    pub world_offset: Vec3,
+    /// Vía del tile.
+    pub track: track::TrackRibbon,
+    /// Marcadores de objetos del tile.
+    pub objects: Vec<objects::ObjectMarker>,
+}
 
-/// La vía del tile, en coords locales, para spawnear en Startup.
+/// Lista de tiles a renderizar.
 #[derive(Resource)]
-pub struct TrackToRender(pub track::TrackRibbon);
+pub struct TilesToRender(pub Vec<TileEntry>);
 
-/// Marcadores de objetos del `.w`, para spawnear en Startup.
-#[derive(Resource)]
-pub struct ObjectsToRender(pub Vec<objects::ObjectMarker>);
-
-/// Carpeta de la ruta (para resolver texturas TERRTEX).
+/// Carpeta de la ruta (para resolver texturas TERRTEX y SHAPES locales).
 #[derive(Resource)]
 pub struct RouteDir(pub PathBuf);
+
+/// Carpeta base de MSTS/OR (para resolver GLOBAL/SHAPES y GLOBAL/TEXTURES).
+#[derive(Resource)]
+pub struct MstsRootDir(pub PathBuf);
 
 /// Velocidad base de la cámara (m/s).
 #[derive(Resource)]
@@ -73,14 +87,28 @@ struct FlySpeed(f32);
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let tile = match (cli.tile_x, cli.tile_z) {
+
+    // Deducir msts_root si no se especificó.
+    let msts_root = cli.msts_root.unwrap_or_else(|| {
+        let route_canonical =
+            std::fs::canonicalize(&cli.route).unwrap_or_else(|_| cli.route.clone());
+        if let Some(parent) = route_canonical.parent() {
+            if let Some(grandparent) = parent.parent() {
+                return grandparent.to_path_buf();
+            }
+        }
+        PathBuf::from(".")
+    });
+
+    let center_tile = match (cli.tile_x, cli.tile_z) {
         (Some(x), Some(z)) => Some((x, z)),
         (None, None) => None,
         _ => anyhow::bail!("pasá --tile-x y --tile-z juntos, o ninguno"),
     };
     let graph = track::load_graph(&cli.route);
 
-    let (tx, tz) = if let Some(t) = tile {
+    // Elegir el tile central.
+    let (cx, cz) = if let Some(t) = center_tile {
         t
     } else if let Some(t) = objects::busiest_world_tile(&cli.route) {
         t
@@ -90,50 +118,97 @@ fn main() -> anyhow::Result<()> {
         terrain::resolve_tile(&cli.route, None)?
     };
 
-    let loaded = terrain::load_tile_geometry(&cli.route, tx, tz)?;
-    let track_ribbon = graph
-        .as_ref()
-        .map(|g| track::build_track_ribbon(g, tx, tz, &loaded.height))
-        .unwrap_or_default();
-    let object_markers = objects::load_objects(&cli.route, tx, tz, loaded.height.base_y());
+    // Construir la lista de tiles (grid de radio R, el central primero).
+    let r = cli.radius as i32;
+    let mut tile_coords: Vec<(i32, i32)> = Vec::new();
+    tile_coords.push((cx, cz)); // central siempre primero
+    for dz in -r..=r {
+        for dx in -r..=r {
+            if dx == 0 && dz == 0 {
+                continue; // ya está
+            }
+            tile_coords.push((cx + dx, cz + dz));
+        }
+    }
 
-    let textured = loaded
-        .patches
-        .iter()
-        .filter(|p| p.texture.is_some())
-        .count();
+    // Cargar cada tile (los que existan).
+    let tile_size_m = 2048.0_f32; // lado de un tile MSTS
+    let mut entries: Vec<TileEntry> = Vec::new();
+    let mut skipped = 0usize;
+
+    for &(tx, tz) in &tile_coords {
+        let world_offset = Vec3::new(
+            (tx - cx) as f32 * tile_size_m,
+            0.0,
+            (tz - cz) as f32 * tile_size_m,
+        );
+        match terrain::load_tile_geometry(&cli.route, tx, tz) {
+            Ok(geom) => {
+                let base_y = geom.height.base_y();
+                let ribbon = graph
+                    .as_ref()
+                    .map(|g| track::build_track_ribbon(g, tx, tz, &geom.height))
+                    .unwrap_or_default();
+                let objs = objects::load_objects(&cli.route, tx, tz, base_y);
+                entries.push(TileEntry {
+                    geometry: geom,
+                    world_offset,
+                    track: ribbon,
+                    objects: objs,
+                });
+            }
+            Err(_) => {
+                skipped += 1;
+            }
+        }
+    }
+
+    if entries.is_empty() {
+        anyhow::bail!("no se pudo cargar ningún tile en el radio={r} alrededor de ({cx}, {cz})");
+    }
+
+    // Estadísticas de la escena.
+    let total_patches: usize = entries.iter().map(|e| e.geometry.patches.len()).sum();
+    let total_segments: usize = entries.iter().map(|e| e.track.segment_count()).sum();
+    let total_objects: usize = entries.iter().map(|e| e.objects.len()).sum();
     println!(
-        "render3d: tile ({}, {}) — {} patches ({} con textura), {} segmentos de vía, {} objetos, lado {:.0} m, altura {:.1}..{:.1} m MSL",
-        loaded.tile_x,
-        loaded.tile_z,
-        loaded.patches.len(),
-        textured,
-        track_ribbon.segment_count(),
-        object_markers.len(),
-        loaded.side_m,
-        loaded.min_y,
-        loaded.max_y,
+        "render3d: {} tiles cargados ({} sin .t ignorados), {} patches, {} segmentos de vía, {} objetos",
+        entries.len(),
+        skipped,
+        total_patches,
+        total_segments,
+        total_objects,
     );
     println!(
         "controles: WASD mover · Q/E bajar/subir · Shift rápido · click derecho + mouse mirar · Esc salir"
     );
 
+    // Ventana centrada en el tile principal.
+    let central_geom = &entries[0].geometry;
+    let side = central_geom.side_m;
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: format!("openrailsrs-render3d — tile ({tx}, {tz})"),
+                title: format!(
+                    "openrailsrs-render3d — tile ({cx}, {cz}) r={r} [{} tiles]",
+                    entries.len()
+                ),
                 ..default()
             }),
             ..default()
         }))
         .init_state::<AppState>()
-        .insert_resource(ClearColor(Color::srgb(0.53, 0.70, 0.92)))
+        .insert_resource(ClearColor(Color::srgb(0.53, 0.81, 0.92))) // Sky blue
         .insert_resource(FlySpeed(120.0))
         .insert_resource(RouteDir(cli.route.clone()))
-        .insert_resource(TileToRender(loaded))
-        .insert_resource(TrackToRender(track_ribbon))
-        .insert_resource(ObjectsToRender(object_markers))
-        .add_systems(Startup, (setup_loading_screen, begin_load_stage).chain())
+        .insert_resource(MstsRootDir(msts_root))
+        .insert_resource(TilesToRender(entries))
+        .insert_resource(SceneExtent { side_m: side })
+        .add_systems(
+            Startup,
+            (setup_loading_screen, begin_load_stage, spawn_sun).chain(),
+        )
         .add_systems(
             Update,
             (
@@ -146,6 +221,34 @@ fn main() -> anyhow::Result<()> {
         .run();
 
     Ok(())
+}
+
+/// Lado del tile central en metros — para posicionar la cámara inicial.
+#[derive(Resource)]
+pub struct SceneExtent {
+    pub side_m: f32,
+}
+
+fn spawn_sun(mut commands: Commands) {
+    commands.spawn((
+        DirectionalLight {
+            color: Color::srgb(1.0, 0.98, 0.9),
+            illuminance: 10000.0, // Lux
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::YXZ,
+            std::f32::consts::PI / 4.0,  // Yaw
+            -std::f32::consts::PI / 4.0, // Pitch (downwards)
+            0.0,
+        )),
+    ));
+    commands.spawn(AmbientLight {
+        color: Color::srgb(0.6, 0.7, 0.9),
+        brightness: 200.0,
+        affects_lightmapped_meshes: false,
+    });
 }
 
 /// Cámara fly: WASD/QE para moverse, click derecho + mouse para mirar.

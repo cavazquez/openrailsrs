@@ -12,8 +12,8 @@ use crate::objects::ObjectMarker;
 use crate::shapes;
 use crate::terrain::{PatchGeometry, TileGeometry};
 use crate::textures::{
-    load_ace_file, load_texture_image, msts_content_root, resolve_shape_path_in_dirs,
-    resolve_texture_path_in_dirs, shape_search_dirs, texture_search_dirs_for_shape,
+    load_ace_file, load_texture_image, resolve_shape_path_in_dirs, resolve_texture_path_in_dirs,
+    shape_search_dirs, texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
 
@@ -32,10 +32,22 @@ pub struct AssetIndex {
 }
 
 impl AssetIndex {
-    pub fn build(route_dir: &Path) -> Self {
+    pub fn build(route_dir: &Path, msts_root: &Path) -> Self {
         let mut shapes = HashMap::new();
         let mut textures = HashMap::new();
 
+        // 1. Indexar GLOBAL primero para que la ruta pueda sobrescribir con SHAPES/TEXTURES locales
+        let global = msts_root.join("GLOBAL");
+        for sub in ["SHAPES", "shapes"] {
+            index_dir(&mut shapes, &global.join(sub));
+        }
+        let global_tex = global.join("TEXTURES");
+        index_dir(&mut textures, &global_tex);
+        for season in ["SPRING", "AUTUMN", "WINTER", "SNOW", "SUMMER"] {
+            index_dir(&mut textures, &global_tex.join(season));
+        }
+
+        // 2. Indexar la ruta
         for sub in ["SHAPES", "shapes"] {
             index_dir(&mut shapes, &route_dir.join(sub));
         }
@@ -43,10 +55,6 @@ impl AssetIndex {
         index_dir(&mut textures, &tex);
         for season in ["SPRING", "AUTUMN", "WINTER", "SNOW", "SUMMER"] {
             index_dir(&mut textures, &tex.join(season));
-        }
-
-        if let Some(root) = msts_content_root() {
-            index_tree(&mut shapes, &mut textures, &root, 6);
         }
 
         Self { shapes, textures }
@@ -65,11 +73,16 @@ impl AssetIndex {
     }
 }
 
-fn resolve_shape_file(index: &AssetIndex, route: &Path, file: &str) -> Option<PathBuf> {
+fn resolve_shape_file(
+    index: &AssetIndex,
+    route: &Path,
+    msts_root: &Path,
+    file: &str,
+) -> Option<PathBuf> {
     if let Some(path) = index.shape(file) {
         return Some(path.clone());
     }
-    let dirs = shape_search_dirs(route);
+    let dirs = shape_search_dirs(route, msts_root);
     let refs: Vec<&Path> = dirs.iter().map(|p| p.as_path()).collect();
     resolve_shape_path_in_dirs(&refs, file)
 }
@@ -96,38 +109,8 @@ fn index_dir(map: &mut HashMap<String, PathBuf>, dir: &Path) {
     }
 }
 
-fn index_tree(
-    shapes: &mut HashMap<String, PathBuf>,
-    textures: &mut HashMap<String, PathBuf>,
-    dir: &Path,
-    depth: usize,
-) {
-    if depth == 0 {
-        return;
-    }
-    let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in rd.flatten() {
-        let Ok(ft) = entry.file_type() else {
-            continue;
-        };
-        let path = entry.path();
-        if ft.is_dir() {
-            index_tree(shapes, textures, &path, depth - 1);
-        } else if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-            let lower = name.to_ascii_lowercase();
-            if lower.ends_with(".s") {
-                shapes.entry(lower).or_insert(path);
-            } else if lower.ends_with(".ace") || lower.ends_with(".dds") {
-                textures.entry(lower).or_insert(path);
-            }
-        }
-    }
-}
-
 /// Texturas MSTS/OR: albedo oscuro pensado para fixed-function + unlit.
-const MSTS_ALBEDO_BOOST: f32 = 4.0;
+const MSTS_ALBEDO_BOOST: f32 = 1.0;
 const DARK_TEXTURE_LUMA: f32 = 60.0;
 const TARGET_TEXTURE_LUMA: f32 = 112.0;
 
@@ -188,7 +171,7 @@ fn prepared_ace(ace: &AceFile) -> PreparedAce {
     }
 }
 
-fn msts_unlit_material(
+fn msts_material(
     materials: &mut Assets<StandardMaterial>,
     texture: Handle<Image>,
     tint: Color,
@@ -202,7 +185,7 @@ fn msts_unlit_material(
         alpha_mode,
         double_sided: true,
         cull_mode: None,
-        unlit: true,
+        unlit: false,
         ..default()
     })
 }
@@ -221,7 +204,7 @@ impl TerrainSpawnCtx {
             perceptual_roughness: 0.95,
             double_sided: true,
             cull_mode: None,
-            unlit: true,
+            unlit: false,
             ..default()
         });
         Self {
@@ -240,13 +223,39 @@ impl TerrainSpawnCtx {
         self.mat_cache
             .entry(name.to_string())
             .or_insert_with(|| {
-                load_terrtex_ace(route, name)
-                    .map(|ace| {
-                        let prep = prepared_ace(&ace);
-                        let tex = images.add(prep.image);
-                        msts_unlit_material(materials, tex, prep.tint, AlphaMode::Opaque, 0.95)
-                    })
-                    .unwrap_or_else(|| self.fallback.clone())
+                let Some(tex_path) = crate::terrain::resolve_terrtex_path(route, name) else {
+                    return self.fallback.clone();
+                };
+                let is_dds = tex_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
+                if is_dds {
+                    if let Some(image) = load_texture_image(&tex_path) {
+                        let tex = images.add(image);
+                        msts_material(
+                            materials,
+                            tex,
+                            Color::linear_rgb(
+                                MSTS_ALBEDO_BOOST,
+                                MSTS_ALBEDO_BOOST,
+                                MSTS_ALBEDO_BOOST,
+                            ),
+                            AlphaMode::Opaque,
+                            0.95,
+                        )
+                    } else {
+                        self.fallback.clone()
+                    }
+                } else {
+                    load_terrtex_ace(route, name)
+                        .map(|ace| {
+                            let prep = prepared_ace(&ace);
+                            let tex = images.add(prep.image);
+                            msts_material(materials, tex, prep.tint, AlphaMode::Opaque, 0.95)
+                        })
+                        .unwrap_or_else(|| self.fallback.clone())
+                }
             })
             .clone()
     }
@@ -385,7 +394,7 @@ impl ObjectSpawnCtx {
             perceptual_roughness: 0.85,
             double_sided: true,
             cull_mode: None,
-            unlit: true,
+            unlit: false,
             ..default()
         });
         Self {
@@ -407,6 +416,7 @@ pub fn spawn_terrain_patches(
     tile: &TileGeometry,
     from: usize,
     to: usize,
+    tile_offset: Vec3,
 ) {
     for (i, patch) in tile
         .patches
@@ -423,7 +433,7 @@ pub fn spawn_terrain_patches(
         commands.spawn((
             Mesh3d(mesh_handle),
             MeshMaterial3d(material),
-            Transform::from_translation(Vec3::from_array(patch.offset)),
+            Transform::from_translation(Vec3::from_array(patch.offset) + tile_offset),
             Name::new(format!("terrain_patch_{i}")),
         ));
     }
@@ -434,6 +444,7 @@ pub fn spawn_track(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     ribbon: &TrackRibbon,
+    tile_offset: Vec3,
 ) {
     if ribbon.positions.is_empty() {
         return;
@@ -449,7 +460,7 @@ pub fn spawn_track(
     commands.spawn((
         Mesh3d(meshes.add(track_ribbon_mesh(ribbon))),
         MeshMaterial3d(track_mat),
-        Transform::default(),
+        Transform::from_translation(tile_offset),
         Name::new("track"),
     ));
 }
@@ -462,9 +473,11 @@ pub fn spawn_objects_batch(
     images: &mut Assets<Image>,
     index: &AssetIndex,
     ctx: &mut ObjectSpawnCtx,
-    route: &Path,
+    route_dir: &Path,
+    msts_root: &Path,
     batch: &[ObjectMarker],
     tex_stats: &mut TextureLoadStats,
+    tile_offset: Vec3,
 ) {
     for obj in batch {
         let Some(file) = obj.file_name.as_deref() else {
@@ -473,7 +486,8 @@ pub fn spawn_objects_batch(
         let Some(parts) = build_shape(
             file,
             index,
-            route,
+            route_dir,
+            msts_root,
             meshes,
             materials,
             images,
@@ -488,7 +502,7 @@ pub fn spawn_objects_batch(
             continue;
         }
         let transform = Transform {
-            translation: obj.position,
+            translation: obj.position + tile_offset,
             rotation: obj.rotation,
             scale: obj.scale,
         };
@@ -519,7 +533,8 @@ pub fn spawn_world_lights(commands: &mut Commands) {
 fn build_shape(
     file: &str,
     index: &AssetIndex,
-    route: &Path,
+    route_dir: &Path,
+    msts_root: &Path,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
@@ -531,7 +546,7 @@ fn build_shape(
     if let Some(cached) = shape_cache.get(file) {
         return Some(cached.clone());
     }
-    let path = resolve_shape_file(index, route, file)?;
+    let path = resolve_shape_file(index, route_dir, msts_root, file)?;
     let parts = shapes::load_shape_parts(&path)?;
     let handles: Vec<PartHandles> = parts
         .into_iter()
@@ -544,7 +559,8 @@ fn build_shape(
                     p.alpha_test_mode,
                     p.shader_name.as_deref(),
                     &path,
-                    route,
+                    route_dir,
+                    msts_root,
                     tex_mat_cache,
                     materials,
                     images,
@@ -574,13 +590,14 @@ fn texture_material(
     shader_name: Option<&str>,
     shape_path: &Path,
     route_dir: &Path,
+    msts_root: &Path,
     tex_mat_cache: &mut HashMap<String, Handle<StandardMaterial>>,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     untextured: &Handle<StandardMaterial>,
     tex_stats: &mut TextureLoadStats,
 ) -> Handle<StandardMaterial> {
-    let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
+    let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir, msts_root);
     let dir_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let Some(tex_path) = resolve_texture_path_in_dirs(&dir_refs, name) else {
         tex_stats.record_unresolved(shape_file, name, shape_path);
@@ -592,25 +609,45 @@ fn texture_material(
         .and_then(|e| e.to_str())
         .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
 
-    let mut alpha_mode = if is_dds {
-        alpha_mode_from_name(name, alpha_test_mode)
+    let alpha_mode = if is_dds {
+        use crate::textures::{DdsAlpha, dds_alpha_type};
+        let dds_alpha = dds_alpha_type(&tex_path).unwrap_or(DdsAlpha::Full);
+        let has_alpha = matches!(dds_alpha, DdsAlpha::Full);
+        let has_semitransparent = has_alpha;
+
+        alpha_mode_from_shader(
+            shader_name,
+            name,
+            alpha_test_mode,
+            has_semitransparent,
+            has_alpha,
+        )
     } else {
         let Some(ace) = load_ace_file(&tex_path) else {
             tex_stats.record_decode_failed(shape_file, name, &tex_path);
             return untextured.clone();
         };
-        alpha_mode_from_ace(&ace, name, alpha_test_mode)
-    };
 
-    if let Some(shader) = shader_name {
-        if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
-            alpha_mode = AlphaMode::Add;
-        } else if shader.eq_ignore_ascii_case("BlendATex")
-            || shader.eq_ignore_ascii_case("BlendATexDiff")
-        {
-            alpha_mode = AlphaMode::Blend;
+        let mut has_alpha = ace.has_mask_channel;
+        let mut has_semitransparent = false;
+        for rgba in ace.mip0.chunks_exact(4) {
+            let alpha = rgba[3];
+            if alpha < 250 {
+                has_alpha = true;
+            }
+            if (9..248).contains(&alpha) {
+                has_semitransparent = true;
+            }
         }
-    }
+
+        alpha_mode_from_shader(
+            shader_name,
+            name,
+            alpha_test_mode,
+            has_semitransparent,
+            has_alpha,
+        )
+    };
 
     tex_mat_cache
         .entry(format!("{}:{alpha_mode:?}", tex_path.display()))
@@ -636,7 +673,7 @@ fn texture_material(
                     );
                 }
                 let tex = images.add(image);
-                msts_unlit_material(
+                msts_material(
                     materials,
                     tex,
                     Color::linear_rgb(MSTS_ALBEDO_BOOST, MSTS_ALBEDO_BOOST, MSTS_ALBEDO_BOOST),
@@ -670,53 +707,58 @@ fn texture_material(
                 }
                 let prep = prepared_ace(&ace);
                 let tex = images.add(prep.image);
-                msts_unlit_material(materials, tex, prep.tint, final_alpha, 0.85)
+                msts_material(materials, tex, prep.tint, final_alpha, 0.85)
             }
         })
         .clone()
 }
 
-fn alpha_mode_from_name(texture_name: &str, alpha_test_mode: i32) -> AlphaMode {
-    match alpha_test_mode {
-        0 => AlphaMode::Opaque,
-        1 => AlphaMode::Mask(0.5),
-        2 => AlphaMode::Blend,
-        _ => {
-            if texture_name_suggests_blend(texture_name) {
-                AlphaMode::Blend
-            } else {
-                AlphaMode::Opaque
-            }
-        }
-    }
-}
+fn alpha_mode_from_shader(
+    shader_name: Option<&str>,
+    texture_name: &str,
+    alpha_test_mode: i32,
+    has_semitransparent: bool,
+    has_alpha: bool,
+) -> AlphaMode {
+    let alpha_test_requested = alpha_test_mode == 1;
 
-fn alpha_mode_from_ace(ace: &AceFile, texture_name: &str, alpha_test_mode: i32) -> AlphaMode {
-    match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
-        2 => return AlphaMode::Blend,
-        _ => {}
+    let Some(shader) = shader_name else {
+        // Fallback if no shader specified
+        if alpha_test_requested || (alpha_test_mode == -1 && has_alpha) {
+            return AlphaMode::Mask(0.5);
+        } else {
+            return AlphaMode::Opaque;
+        }
+    };
+
+    if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
+        return AlphaMode::Add;
     }
 
-    let mut has_alpha = ace.has_mask_channel;
-    let mut has_semitransparent = false;
-    for rgba in ace.mip0.chunks_exact(4) {
-        let alpha = rgba[3];
-        if alpha < 250 {
-            has_alpha = true;
-        }
-        if (9..248).contains(&alpha) {
-            has_semitransparent = true;
-        }
-    }
+    let alpha_blend_requested =
+        shader.eq_ignore_ascii_case("BlendATex") || shader.eq_ignore_ascii_case("BlendATexDiff");
+
+    // Lógica inteligente (diferente de OR pero mejor para Bevy):
+    // 1. Si no hay pixeles transparentes (<250), es Opaque.
+    // 2. Si es blend-shader y hay píxeles semi-transparentes Y su nombre sugiere blend, es Blend.
+    // 3. De lo contrario, usamos Mask(0.5) o Opaque dependiendo de los flags.
 
     if !has_alpha {
         AlphaMode::Opaque
-    } else if has_semitransparent && texture_name_suggests_blend(texture_name) {
-        AlphaMode::Blend
+    } else if alpha_blend_requested {
+        if has_semitransparent && texture_name_suggests_blend(texture_name) {
+            AlphaMode::Blend
+        } else {
+            // Solo tiene máscara binaria, o es un objeto que debe usar Z-sorting (árboles, vías)
+            AlphaMode::Mask(0.5)
+        }
     } else {
-        AlphaMode::Mask(0.5)
+        // Shader no es de blend (TexDiff).
+        if alpha_test_requested {
+            AlphaMode::Mask(0.5)
+        } else {
+            AlphaMode::Opaque
+        }
     }
 }
 
@@ -724,7 +766,8 @@ fn texture_name_suggests_blend(texture_name: &str) -> bool {
     let lower = texture_name.to_ascii_lowercase();
     [
         "glass", "window", "alpha", "trans", "transp", "steam", "smoke", "exhaust", "fume",
-        "cloud", "mist", "vapor", "vapour",
+        "cloud", "mist", "vapor", "vapour", "blank", "black", "shadow", "cloud", "mist", "vapor",
+        "vapour", "blank", "black", "shadow",
     ]
     .iter()
     .any(|needle| lower.contains(needle))
@@ -794,35 +837,18 @@ fn ace_to_image(ace: &AceFile) -> Image {
 mod tests {
     use super::*;
 
-    fn ace_with_alpha(alphas: &[u8], has_mask_channel: bool) -> AceFile {
-        let mut mip0 = Vec::with_capacity(alphas.len() * 4);
-        for alpha in alphas {
-            mip0.extend_from_slice(&[255, 255, 255, *alpha]);
-        }
-        AceFile {
-            width: alphas.len() as u32,
-            height: 1,
-            format: openrailsrs_ace::AceFormat::Rgba8,
-            mips_count: 1,
-            mip0,
-            has_mask_channel,
-        }
-    }
-
     #[test]
     fn inferred_shape_alpha_uses_ace_cutout_when_prim_state_unspecified() {
-        let ace = ace_with_alpha(&[0, 255], true);
         assert!(matches!(
-            alpha_mode_from_ace(&ace, "tree.ace", -1),
+            alpha_mode_from_shader(None, "tree.ace", -1, false, true),
             AlphaMode::Mask(_)
         ));
     }
 
     #[test]
     fn explicit_opaque_prim_state_wins_over_texture_alpha() {
-        let ace = ace_with_alpha(&[0, 128, 255], false);
         assert!(matches!(
-            alpha_mode_from_ace(&ace, "glass.ace", 0),
+            alpha_mode_from_shader(None, "glass.ace", 0, true, true),
             AlphaMode::Opaque
         ));
     }
@@ -836,6 +862,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![8, 8, 8, 255],
             has_mask_channel: false,
+            alpha_bits: 8,
         };
         let (out, brightened) = brighten_dark_ace_rgba(&ace.mip0);
         assert!(brightened);
@@ -856,6 +883,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![180, 180, 180, 255],
             has_mask_channel: false,
+            alpha_bits: 8,
         };
         let prep = prepared_ace(&ace);
         assert_eq!(prep.tint, msts_albedo_tint(false));

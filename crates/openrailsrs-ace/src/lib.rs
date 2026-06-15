@@ -90,6 +90,8 @@ pub struct AceFile {
     /// False when alpha comes from a full 8-bit ALPHA channel (kind=6) or when
     /// there is no alpha at all.
     pub has_mask_channel: bool,
+    /// Number of alpha bits (0, 1 for Mask, 8 for Alpha) as defined in Open Rails.
+    pub alpha_bits: u8,
 }
 
 #[derive(Debug, Error)]
@@ -213,6 +215,7 @@ fn parse_or_body(body: &[u8]) -> Result<AceFile, AceError> {
             height,
             surface_format,
             image_count,
+            &channels,
         )
     } else {
         parse_or_structured(body, data_offset, width, height, &channels, image_count)
@@ -227,6 +230,7 @@ fn parse_or_raw_data(
     height: u32,
     surface_format: u32,
     image_count: usize,
+    channels: &[(u8, u64)],
 ) -> Result<AceFile, AceError> {
     let format = match surface_format {
         0x12 => AceFormat::Dxt1,
@@ -252,6 +256,14 @@ fn parse_or_raw_data(
         vec![0xFFu8; width as usize * height as usize * 4]
     };
 
+    let alpha_bits = if channels.iter().any(|(_, k)| *k == CH_ALPHA) {
+        8
+    } else if channels.iter().any(|(_, k)| *k == CH_MASK) {
+        1
+    } else {
+        0
+    };
+
     Ok(AceFile {
         width,
         height,
@@ -260,6 +272,7 @@ fn parse_or_raw_data(
         mip0,
         // DXT raw-data path has no explicit alpha/mask channels.
         has_mask_channel: false,
+        alpha_bits,
     })
 }
 
@@ -365,6 +378,14 @@ fn parse_or_structured(
     let has_mask_channel = channels.iter().any(|(_, k)| *k == CH_MASK)
         && !channels.iter().any(|(_, k)| *k == CH_ALPHA);
 
+    let alpha_bits = if channels.iter().any(|(_, k)| *k == CH_ALPHA) {
+        8
+    } else if channels.iter().any(|(_, k)| *k == CH_MASK) {
+        1
+    } else {
+        0
+    };
+
     Ok(AceFile {
         width,
         height,
@@ -372,6 +393,7 @@ fn parse_or_structured(
         mips_count: image_count as u8,
         mip0,
         has_mask_channel,
+        alpha_bits,
     })
 }
 
@@ -413,6 +435,7 @@ fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
         mip0,
         // Synthetic test format has no mask channel metadata.
         has_mask_channel: false,
+        alpha_bits: 0,
     })
 }
 

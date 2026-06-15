@@ -18,32 +18,8 @@ pub fn texture_file_basename(file_name: &str) -> &str {
         .unwrap_or(file_name)
 }
 
-/// Raíz de contenido MSTS/OR (`OPENRAILSRS_MSTS_CONTENT` o rutas típicas).
-pub fn msts_content_root() -> Option<PathBuf> {
-    if let Ok(env) = std::env::var("OPENRAILSRS_MSTS_CONTENT") {
-        let path = PathBuf::from(env);
-        if path.is_dir() {
-            return Some(path);
-        }
-    }
-    let home = std::env::var_os("HOME")?;
-    for rel in [
-        "Documentos/Open Rails/Content",
-        "Documents/Open Rails/Content",
-    ] {
-        let path = PathBuf::from(&home).join(rel);
-        if path.is_dir() {
-            return Some(path);
-        }
-    }
-    None
-}
-
 /// Árboles `GLOBAL/` bajo el content pack de la ruta.
-pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
-    let Some(content) = msts_content_root() else {
-        return Vec::new();
-    };
+pub fn global_assets_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut push = |p: PathBuf| {
         let has_shapes = p.join("SHAPES").is_dir() || p.join("shapes").is_dir();
@@ -51,12 +27,12 @@ pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
             out.push(p);
         }
     };
-    push(content.join("GLOBAL"));
+    push(msts_root.join("GLOBAL"));
     let Some(stem) = route_dir.file_name().and_then(|s| s.to_str()) else {
         return out;
     };
-    push(content.join(stem).join("GLOBAL"));
-    if let Ok(entries) = std::fs::read_dir(&content) {
+    push(msts_root.join(stem).join("GLOBAL"));
+    if let Ok(entries) = std::fs::read_dir(msts_root) {
         for entry in entries.flatten() {
             if !entry.file_type().is_ok_and(|t| t.is_dir()) {
                 continue;
@@ -74,7 +50,11 @@ pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
 }
 
 /// Directorios donde buscar texturas dado el path del `.s` resuelto.
-pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
+pub fn texture_search_dirs_for_shape(
+    shape_path: &Path,
+    route_dir: &Path,
+    msts_root: &Path,
+) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
     if let Some(parent) = shape_path.parent() {
         let in_asset_subdir = parent.file_name().is_some_and(|n| {
@@ -91,7 +71,7 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
             }
         }
     }
-    for global in global_assets_dirs(route_dir) {
+    for global in global_assets_dirs(route_dir, msts_root) {
         dirs.push(global);
     }
     dirs.sort();
@@ -100,17 +80,15 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
 }
 
 /// Directorios para resolver shapes (ruta + pack MSTS + GLOBAL).
-pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
+pub fn shape_search_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(content) = msts_content_root() {
-        if let Some(stem) = route_dir.file_name() {
-            let pack = content.join(stem);
-            if pack.is_dir() {
-                dirs.push(pack);
-            }
+    if let Some(stem) = route_dir.file_name() {
+        let pack = msts_root.join(stem);
+        if pack.is_dir() {
+            dirs.push(pack);
         }
     }
-    for global in global_assets_dirs(route_dir) {
+    for global in global_assets_dirs(route_dir, msts_root) {
         dirs.push(global);
     }
     dirs.sort();
@@ -220,7 +198,7 @@ pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<P
 }
 
 pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
-    Image::from_buffer(
+    let mut image = Image::from_buffer(
         bytes,
         ImageType::Extension("dds"),
         CompressedImageFormats::all(),
@@ -228,9 +206,18 @@ pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
         ImageSampler::Default,
         RenderAssetUsages::default(),
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+
+    image.sampler = bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
+        address_mode_u: bevy::image::ImageAddressMode::Repeat,
+        address_mode_v: bevy::image::ImageAddressMode::Repeat,
+        ..Default::default()
+    });
+
+    Ok(image)
 }
 
+/// Decodifica `.ace` o `.dds` a `Image` Bevy (descomprimido para poder leer sus píxeles).
 /// Decodifica `.ace` o `.dds` a `Image` Bevy.
 pub fn load_texture_image(path: &Path) -> Option<Image> {
     let ext = path.extension()?.to_str()?.to_ascii_lowercase();
@@ -240,6 +227,39 @@ pub fn load_texture_image(path: &Path) -> Option<Image> {
     }
     let ace = read_ace(path).ok()?;
     Some(ace_to_image(&ace))
+}
+
+pub enum DdsAlpha {
+    NoneOr1Bit,
+    Full,
+}
+
+pub fn dds_alpha_type(path: &Path) -> Option<DdsAlpha> {
+    use std::fs::File;
+    use std::io::Read;
+    let mut f = File::open(path).ok()?;
+    let mut header = [0u8; 128];
+    f.read_exact(&mut header).ok()?;
+
+    if &header[0..4] != b"DDS " {
+        return None;
+    }
+
+    let pf_flags = u32::from_le_bytes(header[76..80].try_into().unwrap());
+    if (pf_flags & 0x4) != 0 {
+        let fourcc = &header[84..88];
+        match fourcc {
+            b"DXT1" => Some(DdsAlpha::NoneOr1Bit),
+            b"DXT3" | b"DXT5" => Some(DdsAlpha::Full),
+            _ => Some(DdsAlpha::Full),
+        }
+    } else {
+        if (pf_flags & 0x1) != 0 {
+            Some(DdsAlpha::Full)
+        } else {
+            Some(DdsAlpha::NoneOr1Bit)
+        }
+    }
 }
 
 pub fn load_ace_file(path: &Path) -> Option<AceFile> {

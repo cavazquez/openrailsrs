@@ -472,7 +472,7 @@ mod tests {
         let loaded = load_tile_geometry(&dir, tx, tz).expect("tile");
         let base = loaded.height.base_y();
         let markers = load_objects(&dir, tx, tz, base);
-        let shape_dirs = shape_search_dirs(&dir);
+        let shape_dirs = shape_search_dirs(&dir, &dir);
 
         let mut seen = HashSet::new();
         let mut total = ShapeTextureAudit::default();

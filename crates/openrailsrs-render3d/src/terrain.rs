@@ -36,6 +36,7 @@ pub struct PatchGeometry {
 /// Muestreador de altura del tile, en el mismo espacio local centrado que la
 /// malla (X/Z en ±lado/2, Y re-basado a 0). Lo usa la capa de vía para apoyar
 /// los raíles sobre el terreno.
+#[derive(Clone)]
 pub struct TileHeight {
     grid: ElevationGrid,
     sample_size: f64,
@@ -59,6 +60,7 @@ impl TileHeight {
 }
 
 /// Un tile de terreno texturizado, listo para renderizar (capa 2).
+#[derive(Clone)]
 pub struct TileGeometry {
     pub tile_x: i32,
     pub tile_z: i32,
@@ -108,9 +110,12 @@ fn tile_dot_t_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> PathBuf {
     route_dir.join("TILES").join(format!("{hash}.t"))
 }
 
-/// Ruta de un `.ace` dentro de `TERRTEX/` (case-insensitive), si existe.
+/// Ruta de un `.ace` o `.dds` dentro de `TERRTEX/` (case-insensitive), si existe.
+/// Primero intenta el nombre exacto, luego el equivalente `.dds` si el original
+/// era `.ace` y no se encontró.
 pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     let base = Path::new(file_name).file_name()?.to_str()?;
+    // 1. Intentar el nombre exacto (.ace u otro)
     for subdir in ["TERRTEX", "terrtex"] {
         let path = route_dir.join(subdir).join(base);
         if path.is_file() {
@@ -118,6 +123,24 @@ pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf
         }
         if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
             return Some(resolved);
+        }
+    }
+    // 2. Fallback: si el nombre termina en .ace, intentar con .dds
+    let path_obj = Path::new(base);
+    if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
+    {
+        let dds_name = path_obj
+            .with_extension("dds")
+            .to_string_lossy()
+            .into_owned();
+        for subdir in ["TERRTEX", "terrtex"] {
+            let path = route_dir.join(subdir).join(&dds_name);
+            if path.is_file() {
+                return Some(path);
+            }
+            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+                return Some(resolved);
+            }
         }
     }
     None
