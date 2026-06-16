@@ -10,6 +10,7 @@
 //! coordinate resolution is not done here — that requires the world tile
 //! origin and is left for Fase 23.
 
+use std::borrow::Cow;
 use std::path::Path;
 
 use crate::ast::{Ast, Atom};
@@ -76,6 +77,16 @@ pub enum WorldItem {
         /// Width and depth in metres from `Size`.
         size: [f64; 2],
     },
+    /// Textured ground decal (`Transfer` in `.w`).
+    Transfer {
+        uid: u32,
+        file_name: Option<String>,
+        position: Vec3,
+        width: f64,
+        height: f64,
+        qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
+    },
     Other {
         tag: String,
         uid: Option<u32>,
@@ -95,6 +106,7 @@ impl WorldItem {
             WorldItem::Dyntrack { .. } => "Dyntrack",
             WorldItem::Signal { .. } => "Signal",
             WorldItem::HWater { .. } => "HWater",
+            WorldItem::Transfer { .. } => "Transfer",
             WorldItem::Other { .. } => "Other",
         }
     }
@@ -106,7 +118,8 @@ impl WorldItem {
             | WorldItem::Track { uid, .. }
             | WorldItem::Dyntrack { uid, .. }
             | WorldItem::Signal { uid, .. }
-            | WorldItem::HWater { uid, .. } => Some(*uid),
+            | WorldItem::HWater { uid, .. }
+            | WorldItem::Transfer { uid, .. } => Some(*uid),
             WorldItem::Other { uid, .. } => *uid,
         }
     }
@@ -116,7 +129,8 @@ impl WorldItem {
             WorldItem::Static { file_name, .. }
             | WorldItem::Track { file_name, .. }
             | WorldItem::Signal { file_name, .. }
-            | WorldItem::HWater { file_name, .. } => file_name.as_deref(),
+            | WorldItem::HWater { file_name, .. }
+            | WorldItem::Transfer { file_name, .. } => file_name.as_deref(),
             WorldItem::Forest { tree_texture, .. } => tree_texture.as_deref(),
             WorldItem::Other { file_name, .. } => file_name.as_deref(),
             _ => None,
@@ -130,7 +144,8 @@ impl WorldItem {
             | WorldItem::Track { position, .. }
             | WorldItem::Dyntrack { position, .. }
             | WorldItem::Signal { position, .. }
-            | WorldItem::HWater { position, .. } => Some(*position),
+            | WorldItem::HWater { position, .. }
+            | WorldItem::Transfer { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
         }
     }
@@ -187,10 +202,34 @@ impl WorldFile {
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
         let text = read_msts_file_decoded(path)?;
-        let normalized = normalize_world_text(&text);
-        let ast = parse_from_first_paren(&normalized)?;
+        let ast = load_world_ast(&text)?;
         let (tile_x, tile_z) = parse_tile_xz_from_filename(path).unwrap_or((0, 0));
         Ok(Self::from_ast(&ast, tile_x, tile_z))
+    }
+}
+
+/// JINX-decompiled `.w` tiles parse correctly from raw text; classic routes that
+/// use `Name ( … )` blocks need [`normalize_world_text`]. Prefer whichever yields
+/// more scenery entries when both parse.
+fn load_world_ast(text: &str) -> Result<Ast, FormatError> {
+    let raw = parse_from_first_paren(text).ok();
+    let normalized = normalize_world_text(text);
+    let norm = parse_from_first_paren(&normalized).ok();
+    match (raw, norm) {
+        (Some(a), Some(b)) => Ok(select_better_world_ast(&a, &b)),
+        (Some(a), None) => Ok(a),
+        (None, Some(b)) => Ok(b),
+        (None, None) => parse_from_first_paren(text),
+    }
+}
+
+fn select_better_world_ast(a: &Ast, b: &Ast) -> Ast {
+    let count_a = collect_items(a).len();
+    let count_b = collect_items(b).len();
+    if count_a >= count_b {
+        a.clone()
+    } else {
+        b.clone()
     }
 }
 
@@ -265,26 +304,122 @@ fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
 }
 
 fn collect_items(ast: &Ast) -> Vec<WorldItem> {
-    let mut out = Vec::new();
     let Ast::List(root) = ast else {
-        return out;
+        return Vec::new();
     };
-    // The top-level `Tr_Worldfile` block contains the entries; some routes nest
-    // the items directly at the root.
-    let entries = if matches_head(root, "Tr_Worldfile") {
-        &root[1..]
-    } else {
-        &root[..]
-    };
+    flatten_world_entries(root)
+        .into_iter()
+        .filter_map(|items| parse_world_item(&items))
+        .collect()
+}
 
-    for entry in entries {
-        if let Ast::List(items) = entry {
-            if let Some(item) = parse_world_item(items) {
-                out.push(item);
-            }
-        }
+/// JINX-decompiled `.w` tiles often wrap every object in one `Transfer` block and
+/// flatten each entry to `( UiD ( n ) Width ( w ) … )` instead of typed wrappers.
+fn flatten_world_entries(root: &[Ast]) -> Vec<Vec<Ast>> {
+    if root.len() <= 1 {
+        return Vec::new();
     }
-    out
+    if matches_head(root, "Tr_Worldfile") {
+        return root[1..]
+            .iter()
+            .flat_map(|entry| match entry {
+                Ast::List(inner) => flatten_world_entries(inner),
+                _ => Vec::new(),
+            })
+            .collect();
+    }
+    if matches_head(root, "Transfer") {
+        return root[1..]
+            .iter()
+            .filter_map(|entry| match entry {
+                Ast::List(items) if matches_head(items, "UiD") => Some(items.clone()),
+                _ => None,
+            })
+            .collect();
+    }
+    if is_object_entry(root) {
+        return vec![root.to_vec()];
+    }
+    root[1..]
+        .iter()
+        .filter_map(|entry| match entry {
+            Ast::List(items) if is_object_entry(items) => Some(items.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn is_object_entry(items: &[Ast]) -> bool {
+    matches!(
+        items.first(),
+        Some(Ast::Atom(Atom::Symbol(head)))
+            if matches!(
+                head.as_str(),
+                "Static" | "TrackObj" | "Forest" | "Transfer" | "Dyntrack" | "Signal" | "HWater"
+                    | "UiD"
+            )
+    )
+}
+
+/// JINX flat `( UiD ( 75 ) Width ( 30 ) … )` → nested `( UiD ( 75 ) ) ( Width ( 30 ) ) …`.
+fn normalize_jinx_flat_fields(items: &[Ast]) -> Cow<'_, [Ast]> {
+    if !is_jinx_flat_alternating(items) {
+        return Cow::Borrowed(items);
+    }
+    let mut out = Vec::with_capacity(items.len() / 2);
+    let mut i = 0usize;
+    while i + 1 < items.len() {
+        let (Ast::Atom(Atom::Symbol(key)), Ast::List(val)) = (&items[i], &items[i + 1]) else {
+            break;
+        };
+        let mut sub = vec![Ast::Atom(Atom::Symbol(key.clone()))];
+        if val.len() == 1 {
+            sub.push(val[0].clone());
+        } else {
+            sub.extend(val.iter().cloned());
+        }
+        out.push(Ast::List(sub));
+        i += 2;
+    }
+    if out.is_empty() {
+        Cow::Borrowed(items)
+    } else {
+        Cow::Owned(out)
+    }
+}
+
+fn is_jinx_flat_alternating(items: &[Ast]) -> bool {
+    if items.len() < 4 {
+        return false;
+    }
+    if !matches!(items.first(), Some(Ast::Atom(Atom::Symbol(_)))) {
+        return false;
+    }
+    if !matches!(items.get(1), Some(Ast::List(_))) {
+        return false;
+    }
+    matches!(items.get(2), Some(Ast::Atom(Atom::Symbol(_))))
+}
+
+fn infer_object_tag(fields: &[Ast]) -> Option<String> {
+    if find_named_f64(fields, "Width").is_some() && find_named_f64(fields, "Height").is_some() {
+        return Some("Transfer".into());
+    }
+    if find_named_u32(fields, "SectionIdx").is_some() {
+        return Some("TrackObj".into());
+    }
+    if find_named_u32(fields, "Population").is_some()
+        || find_named_string(fields, "TreeTexture").is_some()
+    {
+        return Some("Forest".into());
+    }
+    if find_named_pair(fields, "Size").is_some() {
+        return Some("HWater".into());
+    }
+    if find_named_string(fields, "FileName").is_some() {
+        return Some("Static".into());
+    }
+    None
 }
 
 fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
@@ -293,13 +428,22 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         _ => return None,
     };
 
-    let uid = find_uid(items);
-    let position = find_position(items);
-    let file_name = find_named_string(items, "FileName");
-    let qdir = find_qdirection(items);
-    let matrix3x3 = find_matrix3x3(items);
+    let normalized = normalize_jinx_flat_fields(items);
+    let fields = normalized.as_ref();
 
-    Some(match tag.as_str() {
+    let effective_tag = if tag.eq_ignore_ascii_case("UiD") {
+        infer_object_tag(fields)?
+    } else {
+        tag
+    };
+
+    let uid = find_uid(fields);
+    let position = find_position(fields);
+    let file_name = find_named_string(fields, "FileName");
+    let qdir = find_qdirection(fields);
+    let matrix3x3 = find_matrix3x3(fields);
+
+    Some(match effective_tag.as_str() {
         s if s.eq_ignore_ascii_case("Static") => WorldItem::Static {
             uid: uid.unwrap_or(0),
             file_name,
@@ -309,17 +453,17 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         },
         s if s.eq_ignore_ascii_case("Forest") => WorldItem::Forest {
             uid: uid.unwrap_or(0),
-            tree_texture: find_named_string(items, "TreeTexture")
-                .or_else(|| find_named_string(items, "FileName")),
+            tree_texture: find_named_string(fields, "TreeTexture")
+                .or_else(|| find_named_string(fields, "FileName")),
             position: position.unwrap_or_default(),
-            scale_range: find_named_pair(items, "ScaleRange"),
-            patch_size: find_named_pair(items, "Area"),
-            tree_size: find_named_pair(items, "TreeSize"),
-            population: find_named_u32(items, "Population").unwrap_or(DEFAULT_FOREST_POPULATION),
+            scale_range: find_named_pair(fields, "ScaleRange"),
+            patch_size: find_named_pair(fields, "Area"),
+            tree_size: find_named_pair(fields, "TreeSize"),
+            population: find_named_u32(fields, "Population").unwrap_or(DEFAULT_FOREST_POPULATION),
         },
         s if s.eq_ignore_ascii_case("TrackObj") => WorldItem::Track {
             uid: uid.unwrap_or(0),
-            section_idx: find_named_u32(items, "SectionIdx"),
+            section_idx: find_named_u32(fields, "SectionIdx"),
             file_name,
             position: position.unwrap_or_default(),
             qdir,
@@ -342,10 +486,19 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             uid: uid.unwrap_or(0),
             file_name,
             position: position.unwrap_or_default(),
-            size: find_named_pair(items, "Size").unwrap_or([100.0, 100.0]),
+            size: find_named_pair(fields, "Size").unwrap_or([100.0, 100.0]),
+        },
+        s if s.eq_ignore_ascii_case("Transfer") => WorldItem::Transfer {
+            uid: uid.unwrap_or(0),
+            file_name,
+            position: position.unwrap_or_default(),
+            width: find_named_f64(fields, "Width").unwrap_or(10.0),
+            height: find_named_f64(fields, "Height").unwrap_or(10.0),
+            qdir,
+            matrix3x3,
         },
         _ => WorldItem::Other {
-            tag,
+            tag: effective_tag,
             uid,
             position,
             file_name,
@@ -478,6 +631,21 @@ fn find_named_pair(items: &[Ast], key: &str) -> Option<[f64; 2]> {
     None
 }
 
+fn find_named_f64(items: &[Ast], key: &str) -> Option<f64> {
+    for item in items {
+        if let Ast::List(sub) = item {
+            if matches_head(sub, key) {
+                if let Some(Ast::Atom(at)) = sub.get(1) {
+                    if let Some(n) = atom_to_number(at) {
+                        return Some(n);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
     for item in items {
         if let Ast::List(sub) = item {
@@ -495,4 +663,56 @@ fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
 
 fn matches_head(items: &[Ast], expected: &str) -> bool {
     matches!(items.first(), Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case(expected))
+}
+
+#[cfg(test)]
+mod watersnake_jinx_tests {
+    use super::*;
+    use crate::ast::Ast;
+    use crate::msts_file_text::read_msts_file_decoded;
+    use crate::parser::parse_from_first_paren;
+    use std::path::PathBuf;
+
+    #[test]
+    fn watersnake_jinx_transfer_and_uid_parsing() {
+        let path = PathBuf::from(std::env::var("HOME").unwrap_or_default())
+            .join("routes/NewForestRouteV3/Routes/Watersnake/world/w-006144+014900.w");
+        if !path.is_file() {
+            return;
+        }
+        let text = read_msts_file_decoded(&path).expect("decode");
+        let ast = parse_from_first_paren(&text).expect("parse");
+        let Ast::List(root) = &ast else {
+            return;
+        };
+        let entries = flatten_world_entries(root);
+        eprintln!("flattened {} entries", entries.len());
+        for (i, items) in entries.iter().enumerate().take(6) {
+            let fields = normalize_jinx_flat_fields(items);
+            let uid = find_uid(fields.as_ref());
+            eprintln!(
+                "{i}: infer={:?} uid={uid:?} w={:?} h={:?} file={:?}",
+                infer_object_tag(fields.as_ref()),
+                find_named_f64(fields.as_ref(), "Width"),
+                find_named_f64(fields.as_ref(), "Height"),
+                find_named_string(fields.as_ref(), "FileName"),
+            );
+        }
+        let world = WorldFile::from_path(&path).expect("world");
+        let transfers: Vec<_> = world
+            .items
+            .iter()
+            .filter(|i| i.kind() == "Transfer")
+            .collect();
+        assert_eq!(
+            transfers.len(),
+            3,
+            "expected 3 transfers in tunnel tile, got {}",
+            transfers.len()
+        );
+        assert!(
+            transfers.iter().any(|t| t.uid() == Some(75)),
+            "missing transfer uid 75"
+        );
+    }
 }

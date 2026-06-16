@@ -4330,12 +4330,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
+ "bytemuck",
  "clap",
  "image",
  "openrailsrs-ace",
  "openrailsrs-formats",
  "openrailsrs-route",
  "openrailsrs-track",
+ "openrailsrs-train",
 ]
 
 [[package]]

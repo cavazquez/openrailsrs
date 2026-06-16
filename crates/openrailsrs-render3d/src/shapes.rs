@@ -20,6 +20,8 @@ use crate::coords::{
 /// Una parte de malla de un shape (todos los triángulos que comparten textura).
 #[derive(Clone, Debug)]
 pub struct ShapePart {
+    /// Índice del sub-objeto MSTS dentro del LOD (0 = principal).
+    pub sub_object_idx: u32,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
@@ -29,12 +31,34 @@ pub struct ShapePart {
     pub alpha_test_mode: i32,
     /// Nombre del shader MSTS de este prim_state (ej. "AddATex", "BlendATex", "TexDiff").
     pub shader_name: Option<String>,
+    /// Color por vértice (RGBA lineal) cuando el shape no tiene textura.
+    pub colors: Option<Vec<[f32; 4]>>,
+    /// Color uniforme si todos los vértices comparten el mismo tono.
+    pub solid_color: Option<[f32; 3]>,
+}
+
+/// Bucket de LOD para la clave de caché de mallas (evita recomputar por metro).
+pub fn lod_cache_key(distance_m: f32) -> u32 {
+    if distance_m <= 200.0 {
+        0
+    } else if distance_m <= 800.0 {
+        1
+    } else {
+        2
+    }
+}
+
+/// Carga un `.s` con el LOD apropiado para la distancia a cámara (metros).
+pub fn load_shape_parts_at_distance(path: &Path, distance_m: f32) -> Option<Vec<ShapePart>> {
+    let shape = ShapeFile::from_path(path).ok()?;
+    let level = lod_level_for_distance(&shape, distance_m).or_else(|| closest_lod(&shape))?;
+    Some(build_parts_for_level(&shape, level))
 }
 
 /// Carga un `.s` y construye sus partes de malla (LOD de mayor detalle).
+#[allow(dead_code)]
 pub fn load_shape_parts(path: &Path) -> Option<Vec<ShapePart>> {
-    let shape = ShapeFile::from_path(path).ok()?;
-    Some(build_parts(&shape))
+    load_shape_parts_at_distance(path, 0.0)
 }
 
 #[cfg(test)]
@@ -64,18 +88,44 @@ fn closest_lod(shape: &ShapeFile) -> Option<&DistanceLevel> {
         })
 }
 
+/// LOD para una distancia de cámara: el nivel más fino cuyo `selection_m` ≤ `distance_m`.
+pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
+    let control = shape.lod_controls.first()?;
+    let levels = &control.distance_levels;
+    if levels.is_empty() {
+        return None;
+    }
+    let mut best = levels.iter().min_by(|a, b| {
+        a.selection_m
+            .partial_cmp(&b.selection_m)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })?;
+    for lvl in levels {
+        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= best.selection_m {
+            best = lvl;
+        }
+    }
+    Some(best)
+}
+
 #[derive(Default)]
 struct PartBuffers {
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
+    colors: Vec<[f32; 4]>,
 }
 
 /// Construye una parte de malla por `prim_state` del LOD de mayor detalle.
+#[allow(dead_code)]
 pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
     let Some(level) = closest_lod(shape) else {
         return Vec::new();
     };
+    build_parts_for_level(shape, level)
+}
+
+fn build_parts_for_level(shape: &ShapeFile, level: &DistanceLevel) -> Vec<ShapePart> {
     let pose = animation_pose_matrices(shape, 0.0);
     let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
         x: 0.0,
@@ -83,17 +133,19 @@ pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
         z: 0.0,
     });
 
-    let mut by_state: BTreeMap<i32, PartBuffers> = BTreeMap::new();
-    for sub in &level.sub_objects {
+    let mut by_state: BTreeMap<(u32, i32), PartBuffers> = BTreeMap::new();
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in &sub.primitives {
             let chain = matrix_chain(shape, level, prim.prim_state_idx, &pose);
-            let buf = by_state.entry(prim.prim_state_idx).or_default();
+            let buf = by_state
+                .entry((sub_idx as u32, prim.prim_state_idx))
+                .or_default();
             for tri in prim.vertex_indices.chunks(3) {
                 if tri.len() < 3 {
                     continue;
                 }
                 for &vidx in tri {
-                    let Some((pi, ni, ui)) = resolve_vertex(shape, sub, vidx) else {
+                    let Some((pi, ni, ui, vertex_color)) = resolve_vertex(shape, sub, vidx) else {
                         continue;
                     };
                     let Some(point) = shape.points.get(pi) else {
@@ -111,6 +163,7 @@ pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
                     buf.positions.push(pos.to_array());
                     buf.normals.push(nrm.to_array());
                     buf.uvs.push([uv.u as f32, 1.0 - uv.v as f32]);
+                    buf.colors.push(vertex_color);
                 }
             }
         }
@@ -119,23 +172,38 @@ pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
     by_state
         .into_iter()
         .filter(|(_, b)| !b.positions.is_empty())
-        .map(|(prim_state_idx, b)| ShapePart {
-            positions: b.positions,
-            normals: b.normals,
-            uvs: b.uvs,
-            texture: texture_for_prim_state(shape, prim_state_idx),
-            alpha_test_mode: shape
-                .prim_states
-                .get(prim_state_idx.max(0) as usize)
-                .map(|ps| ps.alpha_test_mode)
-                .unwrap_or(-1),
-            shader_name: shape
-                .prim_states
-                .get(prim_state_idx.max(0) as usize)
-                .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
-                .cloned(),
+        .map(|((sub_object_idx, prim_state_idx), b)| {
+            let (colors, solid_color) = part_vertex_colors(&b.colors);
+            ShapePart {
+                sub_object_idx,
+                positions: b.positions,
+                normals: b.normals,
+                uvs: b.uvs,
+                texture: texture_for_prim_state(shape, prim_state_idx),
+                alpha_test_mode: shape
+                    .prim_states
+                    .get(prim_state_idx.max(0) as usize)
+                    .map(|ps| ps.alpha_test_mode)
+                    .unwrap_or(-1),
+                shader_name: shape
+                    .prim_states
+                    .get(prim_state_idx.max(0) as usize)
+                    .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
+                    .cloned(),
+                colors,
+                solid_color,
+            }
         })
         .collect()
+}
+
+/// Sub-objeto nocturno (índice 1) oculto de día cuando el `.sd` declara `ESD_SubObj`.
+pub fn part_visible(
+    descriptor: &crate::shape_descriptor::ShapeDescriptor,
+    part: &ShapePart,
+    env: &crate::textures::TextureEnvironment,
+) -> bool {
+    !(descriptor.has_night_subobj && part.sub_object_idx == 1 && env.is_day())
 }
 
 /// Matrices de pose del shape en un fotograma de animación (Open Rails `AnimateMatrix`).
@@ -314,23 +382,57 @@ fn transform_normal(mut n: Vec3, chain: &[MatrixRef]) -> Vec3 {
     n.try_normalize().unwrap_or(Vec3::Y)
 }
 
+#[allow(clippy::type_complexity)]
 fn resolve_vertex(
     shape: &ShapeFile,
     sub: &openrailsrs_formats::SubObject,
     vertex_idx: u32,
-) -> Option<(usize, Option<usize>, Option<usize>)> {
+) -> Option<(usize, Option<usize>, Option<usize>, [f32; 4])> {
     if let Some(v) = sub.vertices.get(vertex_idx as usize) {
         return Some((
             idx_to_usize(v.point_idx)?,
             idx_to_usize(v.normal_idx),
-            v.uv_indices.first().and_then(|i| idx_to_usize(*i)),
+            v.uv_indices.first().copied().and_then(idx_to_usize),
+            v.color1.map(rgba_u8_to_f32).unwrap_or([1.0, 1.0, 1.0, 1.0]),
         ));
     }
     let idx = vertex_idx as usize;
     if idx < shape.points.len() {
-        return Some((idx, Some(idx), Some(idx)));
+        return Some((idx, Some(idx), Some(idx), [1.0, 1.0, 1.0, 1.0]));
     }
     None
+}
+
+fn rgba_u8_to_f32([r, g, b, a]: [u8; 4]) -> [f32; 4] {
+    [
+        r as f32 / 255.0,
+        g as f32 / 255.0,
+        b as f32 / 255.0,
+        a as f32 / 255.0,
+    ]
+}
+
+fn part_vertex_colors(colors: &[[f32; 4]]) -> (Option<Vec<[f32; 4]>>, Option<[f32; 3]>) {
+    if colors.is_empty() || !colors.iter().any(color_is_meaningful) {
+        return (None, None);
+    }
+    let first = colors[0];
+    let uniform = colors.iter().all(|c| colors_close(c, &first));
+    if uniform {
+        return (None, Some([first[0], first[1], first[2]]));
+    }
+    (Some(colors.to_vec()), None)
+}
+
+fn color_is_meaningful(c: &[f32; 4]) -> bool {
+    (c[0] - 1.0).abs() > 0.02 || (c[1] - 1.0).abs() > 0.02 || (c[2] - 1.0).abs() > 0.02
+}
+
+fn colors_close(a: &[f32; 4], b: &[f32; 4]) -> bool {
+    (a[0] - b[0]).abs() < 0.02
+        && (a[1] - b[1]).abs() < 0.02
+        && (a[2] - b[2]).abs() < 0.02
+        && (a[3] - b[3]).abs() < 0.05
 }
 
 fn idx_to_usize(idx: i32) -> Option<usize> {
@@ -338,15 +440,54 @@ fn idx_to_usize(idx: i32) -> Option<usize> {
 }
 
 fn texture_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    if prim_state_idx < 0 {
+    shape
+        .texture_for_prim_state_idx(prim_state_idx)
+        .or_else(|| fallback_shape_texture(shape, prim_state_idx))
+}
+
+/// Heurísticas cuando el `prim_state` no declara `tex_idxs` (paridad OR + extensiones).
+fn fallback_shape_texture(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
+    if shape.texture_filenames.is_empty() {
         return None;
     }
-    let ps = shape.prim_states.get(prim_state_idx as usize)?;
-    let texture_idx = ps.tex_indices.first().copied().unwrap_or(ps.texture_idx);
-    if texture_idx < 0 {
-        return None;
+    if shape.texture_filenames.len() == 1 {
+        return shape.texture_filenames.first().cloned();
     }
-    shape.texture_filenames.get(texture_idx as usize).cloned()
+    for (i, other) in shape.prim_states.iter().enumerate() {
+        if i as i32 == prim_state_idx {
+            continue;
+        }
+        let tex_slot = other
+            .tex_indices
+            .first()
+            .copied()
+            .unwrap_or(other.texture_idx);
+        if let Some(name) = shape.resolve_texture_for_tex_slot(tex_slot) {
+            return Some(name);
+        }
+    }
+    let ps = shape.prim_states.get(prim_state_idx.max(0) as usize);
+    if ps.is_some_and(|ps| shader_requests_texture(shape, ps)) {
+        return shape
+            .primary_texture_filename()
+            .or_else(|| shape.texture_filenames.first().cloned());
+    }
+    None
+}
+
+fn shader_requests_texture(shape: &ShapeFile, ps: &openrailsrs_formats::PrimState) -> bool {
+    shape
+        .shader_names
+        .get(ps.shader_idx.max(0) as usize)
+        .is_some_and(|name| {
+            let n = name.to_ascii_lowercase();
+            // Open Rails SceneryShader names that expect a texture stage.
+            matches!(
+                n.as_str(),
+                "tex" | "texdiff" | "blendatex" | "blendatexdiff" | "addatex" | "addatexdiff"
+            ) || n.contains("tex")
+                || n.contains("blend")
+        })
 }
 
 #[cfg(test)]
@@ -399,6 +540,15 @@ mod tests {
             chiltern_dir().join("SHAPES/RF_GW_WaterColumn.s"),
         ];
         candidates.into_iter().find(|p| p.is_file())
+    }
+
+    #[test]
+    fn lod_cache_key_buckets_distance() {
+        assert_eq!(lod_cache_key(50.0), 0);
+        assert_eq!(lod_cache_key(200.0), 0);
+        assert_eq!(lod_cache_key(201.0), 1);
+        assert_eq!(lod_cache_key(800.0), 1);
+        assert_eq!(lod_cache_key(801.0), 2);
     }
 
     #[test]
@@ -463,7 +613,7 @@ mod tests {
 
     #[test]
     fn chiltern_untextured_parts_audit() {
-        use crate::objects::{load_objects, wants_shape_mesh};
+        use crate::objects::{load_objects, object_wants_shape_mesh};
         use crate::terrain::load_tile_geometry;
         use crate::textures::{resolve_shape_path_in_dirs, shape_search_dirs};
 
@@ -478,10 +628,7 @@ mod tests {
         let mut total = ShapeTextureAudit::default();
         let mut top_shapes: HashMap<String, u32> = HashMap::new();
 
-        for m in markers
-            .iter()
-            .filter(|m| wants_shape_mesh(m.kind, m.file_name.as_deref()))
-        {
+        for m in markers.iter().filter(|m| object_wants_shape_mesh(m)) {
             let Some(file) = &m.file_name else { continue };
             let key = file.to_ascii_lowercase();
             if !seen.insert(key.clone()) {
@@ -522,6 +669,204 @@ mod tests {
         eprintln!("  top sin textura:");
         for (name, n) in ranked.iter().take(12) {
             eprintln!("    {n:4}  {name}");
+        }
+    }
+
+    #[test]
+    fn ukfs_curve_module_bounds_are_short_not_km() {
+        let path = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("routes/NewForestRouteV3/GLOBAL/SHAPES/ukfs_c_1x1200m_5d.s"))
+            .filter(|p| p.is_file());
+        let Some(path) = path else {
+            eprintln!("skip: ukfs_c_1x1200m_5d.s no disponible");
+            return;
+        };
+        let parts = load_shape_parts(&path).expect("ukfs curve");
+        let (min, max) = shape_local_bounds(&parts).expect("bounds");
+        eprintln!("ukfs_c_1x1200m_5d bounds min={min:?} max={max:?}");
+        let extent = max - min;
+        let longest = extent.x.max(extent.y).max(extent.z);
+        assert!(
+            longest < 200.0,
+            "módulo UKFS debería ser un tramo corto, no km (longest={longest:.1}m)"
+        );
+    }
+
+    #[test]
+    fn ukfs_track_shape_extends_along_z_near_ground() {
+        let path = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("routes/NewForestRouteV3/GLOBAL/SHAPES/ukfs_s_1x25m.s"))
+            .filter(|p| p.is_file());
+        let Some(path) = path else {
+            eprintln!("skip: ukfs_s_1x25m.s no disponible");
+            return;
+        };
+        let parts = load_shape_parts(&path).expect("ukfs shape");
+        let (min, max) = shape_local_bounds(&parts).expect("bounds");
+        eprintln!("ukfs_s_1x25m bounds min={min:?} max={max:?}");
+        assert!(
+            min.y.abs() < 1.5,
+            "base del tramo UKFS cerca de Y=0 (min_y={})",
+            min.y
+        );
+        let extent_x = max.x - min.x;
+        let extent_y = max.y - min.y;
+        let extent_z = max.z - min.z;
+        let longest = extent_x.max(extent_y).max(extent_z);
+        assert!(
+            longest > 10.0 && longest < 35.0,
+            "tramo ~25 m en algún eje (extents x={extent_x:.1} y={extent_y:.1} z={extent_z:.1})"
+        );
+        assert!(
+            extent_y < longest * 0.5,
+            "eje principal no debería ser vertical (y={extent_y:.1})"
+        );
+    }
+
+    fn new_forest_route() -> PathBuf {
+        std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("routes/NewForestRouteV3/Routes/Watersnake"))
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn new_forest_untextured_parts_audit() {
+        use crate::objects::{load_objects, object_wants_shape_mesh};
+        use crate::terrain::load_tile_geometry;
+        use crate::textures::{resolve_shape_path_in_dirs, shape_search_dirs};
+
+        let dir = new_forest_route();
+        if !dir.is_dir() {
+            return;
+        }
+        let msts = dir.ancestors().nth(2).unwrap_or(&dir);
+        let (tx, tz) = (-6096, 14916);
+        let loaded = match load_tile_geometry(&dir, tx, tz) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("NF audit skip: {e}");
+                return;
+            }
+        };
+        let base = loaded.height.base_y();
+        let markers = load_objects(&dir, tx, tz, base);
+        let shape_dirs = shape_search_dirs(&dir, msts);
+
+        let mut seen = HashSet::new();
+        let mut total = ShapeTextureAudit::default();
+        let mut top_shapes: HashMap<String, u32> = HashMap::new();
+
+        for m in markers.iter().filter(|m| object_wants_shape_mesh(m)) {
+            let Some(file) = &m.file_name else { continue };
+            let key = file.to_ascii_lowercase();
+            if !seen.insert(key.clone()) {
+                continue;
+            }
+            let refs: Vec<&Path> = shape_dirs.iter().map(|p| p.as_path()).collect();
+            let Some(path) = resolve_shape_path_in_dirs(&refs, file) else {
+                continue;
+            };
+            let Ok(shape) = ShapeFile::from_path(&path) else {
+                continue;
+            };
+            let audit = audit_shape_textures(&shape);
+            total.total_parts += audit.total_parts;
+            total.textured_parts += audit.textured_parts;
+            total.untextured_parts += audit.untextured_parts;
+            total.untextured_with_shape_textures += audit.untextured_with_shape_textures;
+            total.untextured_no_shape_textures += audit.untextured_no_shape_textures;
+            if audit.untextured_parts > 0 {
+                *top_shapes.entry(key).or_default() += audit.untextured_parts;
+            }
+        }
+
+        let mut ranked: Vec<_> = top_shapes.into_iter().collect();
+        ranked.sort_by_key(|b| std::cmp::Reverse(b.1));
+        eprintln!("NF audit tile ({tx},{tz}) shapes únicos={}", seen.len());
+        eprintln!("  total_parts={}", total.total_parts);
+        eprintln!("  textured={}", total.textured_parts);
+        eprintln!("  untextured={}", total.untextured_parts);
+        eprintln!(
+            "    con texturas en el shape pero prim_state sin tex_idxs={}",
+            total.untextured_with_shape_textures
+        );
+        eprintln!(
+            "    shape sin texture_filenames={}",
+            total.untextured_no_shape_textures
+        );
+        eprintln!("  top sin textura:");
+        for (name, n) in ranked.iter().take(12) {
+            eprintln!("    {n:4}  {name}");
+        }
+    }
+
+    #[test]
+    fn chalk_cliff80m_world_bounds_vs_terrain() {
+        use crate::objects::load_objects;
+        use crate::terrain::load_tile_geometry;
+        use bevy::math::Vec3;
+
+        let dir = new_forest_route();
+        if !dir.is_dir() {
+            return;
+        }
+        let path = dir.join("SHAPES/ChalkCliff80m.s");
+        if !path.is_file() {
+            return;
+        }
+        let parts = load_shape_parts(&path).expect("parts");
+        let (tx, tz) = (-6144, 14900);
+        let tile = load_tile_geometry(&dir, tx, tz).expect("tile");
+        let base = tile.height.base_y();
+        let objs = load_objects(&dir, tx, tz, base);
+        for obj in objs
+            .iter()
+            .filter(|o| o.file_name.as_deref() == Some("ChalkCliff80m.s"))
+        {
+            let mut min_wy = f32::INFINITY;
+            let mut max_wy = f32::NEG_INFINITY;
+            for part in &parts {
+                for p in &part.positions {
+                    let local = Vec3::from_array(*p);
+                    let rotated = obj.rotation * (local * obj.scale);
+                    min_wy = min_wy.min(rotated.y);
+                    max_wy = max_wy.max(rotated.y);
+                }
+            }
+            let foot_y = obj.position.y + min_wy;
+            let top_y = obj.position.y + max_wy;
+            let terrain = tile.height.local_y(obj.position.x, obj.position.z);
+            assert!(
+                terrain >= foot_y - 0.5 && terrain <= top_y + 0.5,
+                "terrain {terrain:.1} should fall within cliff mesh Y [{foot_y:.1}, {top_y:.1}] at ({:.1},{:.1})",
+                obj.position.x,
+                obj.position.z,
+            );
+        }
+    }
+
+    #[test]
+    fn new_forest_jinx_tunnel_and_chalk_parts_use_distinct_textures() {
+        let dir = new_forest_route();
+        if !dir.is_dir() {
+            return;
+        }
+        for file in ["IJ_tunnel_1bore.s", "ChalkCliff80m.s"] {
+            let path = dir.join("SHAPES").join(file);
+            if !path.is_file() {
+                continue;
+            }
+            let shape = ShapeFile::from_path(&path).expect(file);
+            let parts = build_parts(&shape);
+            let textures: HashSet<_> = parts.iter().filter_map(|p| p.texture.as_ref()).collect();
+            assert_eq!(
+                textures.len(),
+                2,
+                "{file} expected two distinct part textures, got {textures:?}"
+            );
         }
     }
 }

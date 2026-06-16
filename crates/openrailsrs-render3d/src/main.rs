@@ -5,33 +5,72 @@
 //! una contra Open Rails antes de seguir. El viewer3d viejo queda como referencia.
 //!
 //! Uso:
-//!   cargo run -p openrailsrs-render3d -- [--route DIR] [--tile-x N --tile-z N] [--radius R]
+//!   cargo run -p openrailsrs-render3d -- [--route DIR] [--activity ACT.act] [--tile-x N --tile-z N] [--radius R]
+//!
+//! Rutas OR recomendadas (scripts): ver `docs/RENDER3D_ROUTES.md` y `./scripts/run_render3d_*.sh`.
 //!
 //! Controles:
 //!   W/A/S/D  mover    Q/E  bajar/subir    Shift  más rápido
-//!   Botón derecho + mover el mouse  mirar    Rueda  no usada
-//!   Esc  salir
+//!   Botón derecho + mover el mouse  mirar    F3 HUD    F4-F8 VSM    F9 preset debug    Esc  salir
 
+mod activity;
+mod consist;
 mod coords;
+mod debug_hud;
+mod dyntrack;
+mod lighting;
 mod loading;
 mod objects;
+mod or_cascade;
+mod or_scenery_material;
+mod or_shader;
+mod or_terrain_material;
+mod or_vsm;
+mod or_vsm_debug;
+mod or_vsm_moments;
+mod or_vsm_render;
+mod player_spawn;
+mod scenery;
+mod shape_descriptor;
 mod shapes;
+mod sky;
+mod stream;
+mod tdb_track;
 mod terrain;
 mod textures;
 mod track;
+mod transfer;
 mod world_spawn;
 
 use std::path::PathBuf;
 
+use bevy::asset::AssetPlugin;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::state::condition::in_state;
 use bevy::window::PrimaryWindow;
 use clap::Parser;
+use or_scenery_material::OrSceneryMaterial;
+use or_terrain_material::OrTerrainMaterial;
+use or_vsm_debug::OrVsmDebugPlugin;
+use or_vsm_moments::OrVsmPlugin;
+use or_vsm_render::OrVsmRenderPlugin;
 
-use loading::{
-    AppState, begin_load_stage, progressive_world_load, setup_loading_screen, update_loading_ui,
+use consist::{StaticConsistPlan, load_consist_at_path, resolve_player_consist_path};
+use debug_hud::{
+    DebugHudEnabled, FlySpeed, SceneDebugContext, toggle_debug_hud, update_debug_hud,
+    update_window_title,
 };
+use loading::{
+    AppState, begin_load_stage, finish_world_load, progressive_world_load, setup_loading_screen,
+    update_loading_ui,
+};
+use player_spawn::{
+    PlayerStartPoseResource, default_track_camera_pose, default_trackobj_camera_pose,
+    resolve_pat_start_pose, resolve_player_start_pose,
+};
+use stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
 use terrain::TileGeometry;
 
 #[derive(Parser, Debug)]
@@ -53,12 +92,40 @@ struct Cli {
     #[arg(long)]
     tile_z: Option<i32>,
     /// Radio del grid de tiles a cargar. 0=solo el tile central (1×1),
-    /// 1=3×3=9 tiles, 2=5×5=25 tiles, etc.
-    #[arg(long, default_value_t = 1)]
+    /// 1=3×3=9 tiles, 2=5×5=25 tiles, etc. Todo el grid se spawnea al arrancar.
+    #[arg(long, default_value_t = 2)]
     radius: u32,
+    /// Actividad MSTS (`.act`): estación y hora de inicio para texturas/sol.
+    #[arg(long)]
+    activity: Option<PathBuf>,
+    /// Path del jugador (`.pat`) sin `.act` — rutas OR-only como New Forest.
+    #[arg(long)]
+    player_path: Option<PathBuf>,
+    /// Metros desde el inicio del `.pat` (con `--player-path`).
+    #[arg(long, default_value_t = 0.0)]
+    path_offset_m: f64,
+    /// Override de estación (`Spring`, `Summer`, `Autumn`, `Winter`).
+    #[arg(long)]
+    season: Option<String>,
+    /// Override de clima: `clear` o `snow`.
+    #[arg(long)]
+    weather: Option<String>,
+    /// Forzar modo noche (texturas Night/ + sub-objetos nocturnos).
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    night: bool,
+    /// Forzar modo día (ignora hora nocturna del `.act`).
+    #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "night")]
+    day: bool,
+    /// Ocultar HUD de depuración (posición, tile, FPS).
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    no_hud: bool,
+    /// Consist del jugador (`.con`); si se omite y hay `--activity`, se usa el del `.act`.
+    #[arg(long)]
+    consist: Option<PathBuf>,
 }
 
 /// Información de un tile (geometría + offset en el espacio world).
+#[derive(Clone)]
 pub struct TileEntry {
     pub geometry: TileGeometry,
     /// Desplazamiento del origen del tile en el espacio world (metros).
@@ -81,9 +148,12 @@ pub struct RouteDir(pub PathBuf);
 #[derive(Resource)]
 pub struct MstsRootDir(pub PathBuf);
 
-/// Velocidad base de la cámara (m/s).
-#[derive(Resource)]
-struct FlySpeed(f32);
+/// Grafo `.tdb` + radio de recolección de acordes (vía UKFS procedural).
+#[derive(Resource, Clone)]
+pub struct TdbTrackResource {
+    pub ctx: tdb_track::TdbContext,
+    pub grid_radius: u32,
+}
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -118,6 +188,44 @@ fn main() -> anyhow::Result<()> {
         terrain::resolve_tile(&cli.route, None)?
     };
 
+    let activity_session = cli
+        .activity
+        .as_ref()
+        .and_then(|p| activity::load_activity_session(&cli.route, p));
+    if cli.activity.is_some() && activity_session.is_none() {
+        anyhow::bail!(
+            "no se pudo cargar --activity {:?} bajo {}",
+            cli.activity,
+            cli.route.display()
+        );
+    }
+    let night_override = if cli.night {
+        Some(true)
+    } else if cli.day {
+        Some(false)
+    } else {
+        None
+    };
+    let texture_env = activity::build_texture_environment(
+        activity_session.as_ref(),
+        cli.season.as_deref(),
+        cli.weather.as_deref(),
+        night_override,
+    );
+
+    let tdb_ctx = track::load_tdb_context(&cli.route);
+    if let Some(ctx) = &tdb_ctx {
+        println!(
+            "render3d: .tdb — {} nodos, {} secciones, {} formas tsection",
+            ctx.track_db.nodes.len(),
+            ctx.tsection.sections.len(),
+            ctx.tsection.shapes.len()
+        );
+    }
+    let tdb_chords = tdb_ctx
+        .as_ref()
+        .map(|ctx| track::collect_tdb_chords(ctx, cx, cz, cli.radius));
+
     // Construir la lista de tiles (grid de radio R, el central primero).
     let r = cli.radius as i32;
     let mut tile_coords: Vec<(i32, i32)> = Vec::new();
@@ -140,15 +248,18 @@ fn main() -> anyhow::Result<()> {
         let world_offset = Vec3::new(
             (tx - cx) as f32 * tile_size_m,
             0.0,
-            (tz - cz) as f32 * tile_size_m,
+            (cz - tz) as f32 * tile_size_m,
         );
         match terrain::load_tile_geometry(&cli.route, tx, tz) {
             Ok(geom) => {
                 let base_y = geom.height.base_y();
-                let ribbon = graph
-                    .as_ref()
-                    .map(|g| track::build_track_ribbon(g, tx, tz, &geom.height))
-                    .unwrap_or_default();
+                let ribbon = if tdb_chords.is_some() {
+                    track::TrackRibbon::default()
+                } else if let Some(g) = graph.as_ref() {
+                    track::build_track_ribbon(g, tx, tz, &geom.height)
+                } else {
+                    track::TrackRibbon::default()
+                };
                 let objs = objects::load_objects(&cli.route, tx, tz, base_y);
                 entries.push(TileEntry {
                     geometry: geom,
@@ -160,6 +271,21 @@ fn main() -> anyhow::Result<()> {
             Err(_) => {
                 skipped += 1;
             }
+        }
+    }
+
+    if let Some(chords) = &tdb_chords {
+        let height_rows: Vec<_> = entries
+            .iter()
+            .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height))
+            .collect();
+        let height_index = tdb_track::TileHeightIndex::new(&height_rows, (cx, cz));
+        let scene_ribbon = track::build_tdb_track_ribbon(chords, cx, cz, &height_index, cli.radius);
+        if let Some(entry) = entries
+            .iter_mut()
+            .find(|e| e.geometry.tile_x == cx && e.geometry.tile_z == cz)
+        {
+            entry.track = scene_ribbon;
         }
     }
 
@@ -182,43 +308,212 @@ fn main() -> anyhow::Result<()> {
     println!(
         "controles: WASD mover · Q/E bajar/subir · Shift rápido · click derecho + mouse mirar · Esc salir"
     );
+    println!(
+        "vía: OPENRAILSRS_TDB_UKFS=procedural fuerza rieles 3D (dyntrack); al cargar verás resumen vía:"
+    );
+    if let Some(act) = &activity_session {
+        let (h, m, s) = act.start_time_hms();
+        println!(
+            "actividad: \"{}\" — inicio {:02}:{:02}:{:02}, estación={}",
+            act.name,
+            h,
+            m,
+            s,
+            act.season.label()
+        );
+    }
+    println!(
+        "texturas: estación={} clima={} noche={}",
+        texture_env.season.label(),
+        if texture_env.snow_weather {
+            "snow"
+        } else {
+            "clear"
+        },
+        texture_env.night
+    );
+
+    // Posición inicial de cámara: `.act` → `.pat` directo → vía del tile central.
+    let full_catalog = TileCatalog {
+        entries: entries.clone(),
+    };
+    let stream_config = TileStreamConfig::new((cx, cz), cli.radius);
+    let initial_entries = catalog_entries_for_initial_load(&full_catalog, &stream_config);
+    let n_initial = initial_entries.len();
+    if stream_config.streaming_enabled() {
+        println!(
+            "streaming: radio {} — carga inicial {n_initial}/{} tiles (resto bajo demanda)",
+            stream_config.stream_radius,
+            full_catalog.entries.len()
+        );
+    } else if stream_config.stream_radius > 0 {
+        println!(
+            "tiles: radio {} — {} tiles en escena",
+            stream_config.stream_radius, n_initial
+        );
+    }
+    let tiles_res = TilesToRender(initial_entries);
+    let tdb = tdb_ctx.as_ref().map(|c| &c.track_db);
+    let from_ribbon = default_track_camera_pose(&tiles_res);
+    let from_scenery = default_trackobj_camera_pose(&tiles_res);
+    let player_start = activity_session
+        .as_ref()
+        .and_then(|session| {
+            resolve_player_start_pose(
+                &cli.route,
+                &session.path,
+                graph.as_ref(),
+                tdb,
+                (cx, cz),
+                &tiles_res,
+            )
+        })
+        .or_else(|| {
+            cli.player_path.as_ref().and_then(|pat| {
+                resolve_pat_start_pose(
+                    &cli.route,
+                    pat,
+                    cli.path_offset_m.max(0.0),
+                    graph.as_ref(),
+                    tdb,
+                    (cx, cz),
+                    &tiles_res,
+                )
+            })
+        })
+        .or(from_ribbon)
+        .or(from_scenery);
+    if let Some(pose) = &player_start {
+        let src = if activity_session.is_some() {
+            "jugador (.act)"
+        } else if cli.player_path.is_some() {
+            "jugador (.pat)"
+        } else if Some(*pose) == from_ribbon {
+            "vía (tile central)"
+        } else {
+            "escenario (TrackObj/túnel)"
+        };
+        println!(
+            "cámara [{src}]: ({:.0}, {:.1}, {:.0}) yaw {:.0}°",
+            pose.position.x,
+            pose.position.y,
+            pose.position.z,
+            pose.yaw_rad.to_degrees()
+        );
+    } else {
+        println!("cámara [overview]: vista cenital del tile (sin .act/.pat/vía ribbon)");
+    }
+
+    let activity_consist = activity_session.as_ref().and_then(|s| {
+        if s.player_consist.is_empty() {
+            None
+        } else {
+            Some(s.player_consist.as_str())
+        }
+    });
+    let consist_plan =
+        resolve_player_consist_path(&cli.route, cli.consist.as_deref(), activity_consist).and_then(
+            |path| {
+                load_consist_at_path(&path).map(|vehicles| {
+                    println!(
+                        "consist: {} vehículo(s) desde {}",
+                        vehicles.len(),
+                        path.display()
+                    );
+                    StaticConsistPlan { vehicles }
+                })
+            },
+        );
 
     // Ventana centrada en el tile principal.
-    let central_geom = &entries[0].geometry;
-    let side = central_geom.side_m;
+    let side = tiles_res
+        .0
+        .first()
+        .map(|e| e.geometry.side_m)
+        .unwrap_or(2048.0);
+    let n_tiles = tiles_res.0.len();
+    let _catalog_count = full_catalog.entries.len();
+    let object_count: usize = tiles_res.0.iter().map(|e| e.objects.len()).sum();
 
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: format!(
-                    "openrailsrs-render3d — tile ({cx}, {cz}) r={r} [{} tiles]",
-                    entries.len()
-                ),
+    let mut app = App::new();
+    let night_mode = texture_env.night;
+    app.add_plugins(
+        DefaultPlugins
+            .set(AssetPlugin {
+                file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
+                ..default()
+            })
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: format!(
+                        "openrailsrs-render3d — tile ({cx}, {cz}) r={r} [{n_tiles} tiles]",
+                    ),
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .init_state::<AppState>()
-        .insert_resource(ClearColor(Color::srgb(0.53, 0.81, 0.92))) // Sky blue
-        .insert_resource(FlySpeed(120.0))
-        .insert_resource(RouteDir(cli.route.clone()))
-        .insert_resource(MstsRootDir(msts_root))
-        .insert_resource(TilesToRender(entries))
-        .insert_resource(SceneExtent { side_m: side })
-        .add_systems(
-            Startup,
-            (setup_loading_screen, begin_load_stage, spawn_sun).chain(),
+    )
+    .add_plugins(bevy::pbr::MaterialPlugin::<OrSceneryMaterial>::default())
+    .add_plugins(bevy::pbr::MaterialPlugin::<OrTerrainMaterial>::default())
+    .add_plugins(OrVsmPlugin)
+    .add_plugins(OrVsmRenderPlugin)
+    .add_plugins(OrVsmDebugPlugin)
+    .add_plugins(FrameTimeDiagnosticsPlugin::default())
+    .init_state::<AppState>()
+    .insert_resource(ClearColor(sky::sky_clear_color(night_mode)))
+    .insert_resource(FlySpeed(120.0))
+    .insert_resource(SceneDebugContext {
+        center_tile: (cx, cz),
+        radius: r as u32,
+        tile_count: n_tiles,
+        object_count,
+    })
+    .insert_resource(DebugHudEnabled(!cli.no_hud))
+    .insert_resource(RouteDir(cli.route.clone()))
+    .insert_resource(MstsRootDir(msts_root))
+    .insert_resource(texture_env)
+    .insert_resource(full_catalog)
+    .insert_resource(stream_config)
+    .insert_resource(tiles_res)
+    .insert_resource(SceneExtent { side_m: side })
+    .insert_resource(PlayerStartPoseResource(player_start));
+    if let Some(session) = activity_session {
+        app.insert_resource(session);
+    }
+    if let Some(plan) = consist_plan {
+        app.insert_resource(plan);
+    }
+    if let Some(ctx) = tdb_ctx {
+        app.insert_resource(TdbTrackResource {
+            ctx,
+            grid_radius: r as u32,
+        });
+    }
+    app.add_systems(
+        Startup,
+        (
+            setup_loading_screen,
+            begin_load_stage,
+            lighting::spawn_scene_sun,
         )
-        .add_systems(
-            Update,
-            (
-                update_loading_ui.run_if(in_state(AppState::Loading)),
-                progressive_world_load.run_if(in_state(AppState::Loading)),
-                fly_camera.run_if(in_state(AppState::Playing)),
-                quit_on_esc,
-            ),
-        )
-        .run();
+            .chain(),
+    )
+    .add_systems(
+        Update,
+        (
+            update_loading_ui.run_if(in_state(AppState::Loading)),
+            progressive_world_load.run_if(in_state(AppState::Loading)),
+            finish_world_load.run_if(in_state(AppState::Loading)),
+            fly_camera.run_if(in_state(AppState::Playing)),
+            update_debug_hud.run_if(in_state(AppState::Playing)),
+            update_window_title.run_if(in_state(AppState::Playing)),
+            toggle_debug_hud.run_if(in_state(AppState::Playing)),
+            scenery::update_water_surfaces.run_if(in_state(AppState::Playing)),
+            stream::tile_stream_system.run_if(in_state(AppState::Playing)),
+            quit_on_esc,
+        ),
+    )
+    .run();
 
     Ok(())
 }
@@ -227,28 +522,6 @@ fn main() -> anyhow::Result<()> {
 #[derive(Resource)]
 pub struct SceneExtent {
     pub side_m: f32,
-}
-
-fn spawn_sun(mut commands: Commands) {
-    commands.spawn((
-        DirectionalLight {
-            color: Color::srgb(1.0, 0.98, 0.9),
-            illuminance: 10000.0, // Lux
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(
-            EulerRot::YXZ,
-            std::f32::consts::PI / 4.0,  // Yaw
-            -std::f32::consts::PI / 4.0, // Pitch (downwards)
-            0.0,
-        )),
-    ));
-    commands.spawn(AmbientLight {
-        color: Color::srgb(0.6, 0.7, 0.9),
-        brightness: 200.0,
-        affects_lightmapped_meshes: false,
-    });
 }
 
 /// Cámara fly: WASD/QE para moverse, click derecho + mouse para mirar.

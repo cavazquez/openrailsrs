@@ -318,6 +318,34 @@ impl<'a> BinaryReader<'a> {
         Ok(())
     }
 
+    /// Open Rails `texture`: `:uint,ImageIdx :uint,FilterMode :float,MipMapLODBias [:dword,BorderColor]`.
+    fn dump_texture_content(
+        &mut self,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&(self.read_u32()? as i32).to_string());
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&(self.read_u32()? as i32).to_string());
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&format_float(self.read_f32()? as f64));
+        if self.pos + 4 <= block_end {
+            out.push(' ');
+            out.push_str(&self.read_u32()?.to_string());
+        }
+        Ok(())
+    }
+
     fn dump_block(&mut self) -> Result<String, FormatError> {
         let token_id = self.read_token_id()?;
         let _flags = self.read_u16()?;
@@ -387,6 +415,12 @@ impl<'a> BinaryReader<'a> {
             }
             64 => {
                 self.dump_flags_content(block_end, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            15 => {
+                self.dump_texture_content(block_end, &mut out)?;
                 self.pos = block_end;
                 out.push_str(" )");
                 return Ok(out);

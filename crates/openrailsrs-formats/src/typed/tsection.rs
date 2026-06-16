@@ -134,13 +134,17 @@ pub struct TSectionCatalog {
 }
 
 impl TSectionCatalog {
-    /// Load route overlay (`OpenRails/tsection.dat` or route root) with `include` recursion.
+    /// Load global `tsection.dat` plus route overlay (`OpenRails/tsection.dat` or route root).
+    ///
+    /// Route-only overlays (e.g. New Forest `tsection.dat` with custom `TrackSection`s but
+    /// no `TrackShape`s) must still inherit shapes from `GLOBAL/tsection.dat`.
     pub fn load_for_route(route_dir: &Path) -> Result<Self, FormatError> {
         let mut catalog = Self::default();
+        if let Some(global) = discover_global_tsection(route_dir) {
+            Self::merge_file(&global, &mut catalog)?;
+        }
         if let Some(path) = discover_route_tsection(route_dir) {
             Self::merge_file(&path, &mut catalog)?;
-        } else if let Some(global) = discover_global_tsection(route_dir) {
-            Self::merge_file(&global, &mut catalog)?;
         }
         Ok(catalog)
     }
@@ -1129,6 +1133,31 @@ TrackShape ( 1
             "route load: {} sections, {} shapes",
             catalog.sections.len(),
             catalog.shapes.len()
+        );
+    }
+
+    #[test]
+    fn new_forest_route_tsection_merges_global_shapes() {
+        let route = std::env::var_os("NEW_FOREST_V3_ROUTE")
+            .map(PathBuf::from)
+            .or_else(|| {
+                let home = std::env::var_os("HOME")?;
+                let p = PathBuf::from(home).join("routes/NewForestRouteV3/Routes/Watersnake");
+                p.join("tsection.dat").is_file().then_some(p)
+            });
+        let Some(route) = route else {
+            return;
+        };
+        let catalog = TSectionCatalog::load_for_route(&route).expect("load");
+        assert!(
+            catalog.shapes.len() > 1000,
+            "esperaba formas GLOBAL + overlay NF, tuvo {}",
+            catalog.shapes.len()
+        );
+        assert!(
+            catalog.sections.len() > 100,
+            "esperaba secciones GLOBAL, tuvo {}",
+            catalog.sections.len()
         );
     }
 }

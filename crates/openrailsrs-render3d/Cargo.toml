@@ -15,6 +15,7 @@ openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-ace = { version = "0.1.0", path = "../openrailsrs-ace" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-track = { path = "../openrailsrs-track" }
+openrailsrs-train = { path = "../openrailsrs-train" }
 anyhow.workspace = true
 clap = { workspace = true }
 bevy = { version = "0.18", default-features = false, features = [
@@ -36,3 +37,4 @@ bevy = { version = "0.18", default-features = false, features = [
     "zstd_rust",
 ] }
 image = "0.25"
+bytemuck = { version = "1", features = ["derive"] }

@@ -12,8 +12,8 @@ use bevy::prelude::*;
 use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, load_shape_render_asset_from_path, msts_content_root,
-    msts_shape_to_train_rotation, resolve_shape_path_in_dirs, texture_search_dirs_for_shape,
+    RouteAssets, load_shape_render_asset_from_path, msts_shape_to_train_rotation,
+    resolve_shape_path_in_dirs, texture_search_dirs_for_shape,
 };
 use crate::viewer_log;
 
@@ -142,15 +142,26 @@ pub fn resolve_cab_shape_path(trainset_root: &Path) -> Option<PathBuf> {
 
 /// Trainset root for the lead vehicle of the primary consist.
 pub fn lead_trainset_root(consist: &TrainConsistScene, route_dir: &Path) -> Option<PathBuf> {
-    let shape_dir_bufs = consist.shape_search_dirs(route_dir);
+    let mut shape_dir_bufs = consist.shape_search_dirs(route_dir);
+    for dir in crate::shapes::shape_search_dirs(route_dir) {
+        if !shape_dir_bufs.iter().any(|d| d == &dir) {
+            shape_dir_bufs.push(dir);
+        }
+    }
     let shape_dirs: Vec<&Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let vehicles = consist.vehicles_for("primary");
     let shape_name = vehicles.first()?.shape_file.as_deref()?;
     let shape_path = resolve_shape_path_in_dirs(&shape_dirs, shape_name)?;
-    shape_path
+    let trainset = if shape_path
         .parent()
-        .and_then(|p| p.parent())
-        .map(|p| p.to_path_buf())
+        .and_then(|p| p.file_name())
+        .is_some_and(|n| n.eq_ignore_ascii_case("shapes"))
+    {
+        shape_path.parent()?.parent()?
+    } else {
+        shape_path.parent()?
+    };
+    Some(trainset.to_path_buf())
 }
 
 fn trainset_folder_name(trainset_root: &Path) -> Option<String> {
@@ -171,27 +182,29 @@ pub fn cab_trainset_candidates(consist: &TrainConsistScene, route_dir: &Path) ->
     if let Some(root) = lead_trainset_root(consist, route_dir) {
         let name = trainset_folder_name(&root);
         push_unique_root(&mut candidates, root.clone());
-        if let (Some(content), Some(name)) = (msts_content_root(), name.as_deref()) {
-            for route_name in route_dir
-                .file_name()
-                .into_iter()
-                .map(|n| n.to_string_lossy().into_owned())
-                .chain(["Chiltern".into()])
-            {
-                for trains_sub in [
-                    "trains/trainset",
-                    "TRAINS/TRAINSET",
-                    "trains/TRAINSET",
-                    "Trains/Trainset",
-                ] {
-                    push_unique_root(
-                        &mut candidates,
-                        content.join(&route_name).join(trains_sub).join(name),
-                    );
+        if let Some(name) = name.as_deref() {
+            for content in crate::shapes::msts_content_roots() {
+                for route_name in route_dir
+                    .file_name()
+                    .into_iter()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .chain(["Chiltern".into()])
+                {
+                    for trains_sub in [
+                        "trains/trainset",
+                        "TRAINS/TRAINSET",
+                        "trains/TRAINSET",
+                        "Trains/Trainset",
+                    ] {
+                        push_unique_root(
+                            &mut candidates,
+                            content.join(&route_name).join(trains_sub).join(name),
+                        );
+                    }
                 }
-            }
-            for trains_sub in ["trains/trainset", "TRAINS/TRAINSET", "trains/TRAINSET"] {
-                push_unique_root(&mut candidates, content.join(trains_sub).join(name));
+                for trains_sub in ["trains/trainset", "TRAINS/TRAINSET", "trains/TRAINSET"] {
+                    push_unique_root(&mut candidates, content.join(trains_sub).join(name));
+                }
             }
         }
     }

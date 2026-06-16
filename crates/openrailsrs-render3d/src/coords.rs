@@ -38,3 +38,9 @@ pub fn matrix43_transform_vector_xna(m: &Matrix43, p: Vec3) -> Vec3 {
         -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32,
     )
 }
+
+/// Offset local MSTS (+Z adelante) → vector Bevy (Z negada).
+#[inline]
+pub fn msts_local_offset_to_bevy(x: f32, y: f32, z: f32) -> Vec3 {
+    Vec3::new(x, y, -z)
+}

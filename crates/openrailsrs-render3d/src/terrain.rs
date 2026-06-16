@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use openrailsrs_formats::{
-    ElevationGrid, TerrainFile, build_patch_mesh_data_sampled, msts_tile_name_from_xz,
-    parse_world_w_tile_xz, read_y_raw, terrain_patches_per_side,
+    ElevationGrid, TerrainFile, TerrainShader, build_patch_mesh_data_sampled,
+    msts_tile_name_from_xz, parse_world_w_tile_xz, read_y_raw, terrain_patches_per_side,
 };
 
 /// Lado de un patch MSTS en metros (16 celdas × 8 m). Constante de Open Rails.
@@ -31,6 +31,10 @@ pub struct PatchGeometry {
     pub offset: [f32; 3],
     /// Nombre del archivo de textura base (`TERRTEX/*.ace`), si el patch tiene shader.
     pub texture: Option<String>,
+    /// Textura de detalle (segundo texslot o `microtex.ace`).
+    pub overlay_texture: Option<String>,
+    /// Escala UV del overlay (`terrain_uvcalcs[1].d`, default 32).
+    pub overlay_scale: f32,
 }
 
 /// Muestreador de altura del tile, en el mismo espacio local centrado que la
@@ -71,6 +75,28 @@ pub struct TileGeometry {
     pub height: TileHeight,
 }
 
+/// Carpeta `TILES/` de la ruta (New Forest usa `Tiles/`, etc.).
+fn tiles_dir(route_dir: &Path) -> PathBuf {
+    for name in ["TILES", "Tiles", "tiles"] {
+        let path = route_dir.join(name);
+        if path.is_dir() {
+            return path;
+        }
+    }
+    route_dir.join("TILES")
+}
+
+/// Carpeta `WORLD/` de la ruta, si existe.
+fn world_dir(route_dir: &Path) -> Option<PathBuf> {
+    for name in ["WORLD", "world"] {
+        let path = route_dir.join(name);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    None
+}
+
 /// Resuelve qué tile cargar: el indicado por el usuario, o el centroide de los
 /// tiles que aparecen en `WORLD/*.w` (zona poblada de la ruta).
 pub fn resolve_tile(route_dir: &Path, tile: Option<(i32, i32)>) -> Result<(i32, i32)> {
@@ -81,9 +107,9 @@ pub fn resolve_tile(route_dir: &Path, tile: Option<(i32, i32)>) -> Result<(i32, 
         .context("no pude elegir un tile por defecto (¿hay WORLD/*.w en la ruta?)")
 }
 
-/// Centroide (redondeado) de los tiles presentes en `WORLD/*.w`.
+/// Centroide (redondeado) de los tiles presentes en `WORLD/*.w` o `world/*.w`.
 fn centroid_world_tile(route_dir: &Path) -> Option<(i32, i32)> {
-    let world = route_dir.join("WORLD");
+    let world = world_dir(route_dir)?;
     let mut sum_x = 0i64;
     let mut sum_z = 0i64;
     let mut n = 0i64;
@@ -104,10 +130,10 @@ fn centroid_world_tile(route_dir: &Path) -> Option<(i32, i32)> {
     Some(((sum_x / n) as i32, (sum_z / n) as i32))
 }
 
-/// Ruta del `.t` (hash MSTS) para un tile dentro de `TILES/`.
+/// Ruta del `.t` (hash MSTS) para un tile dentro de `TILES/` / `Tiles/`.
 fn tile_dot_t_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> PathBuf {
     let hash = msts_tile_name_from_xz(tile_x, tile_z).to_ascii_lowercase();
-    route_dir.join("TILES").join(format!("{hash}.t"))
+    tiles_dir(route_dir).join(format!("{hash}.t"))
 }
 
 /// Ruta de un `.ace` o `.dds` dentro de `TERRTEX/` (case-insensitive), si existe.
@@ -179,15 +205,20 @@ pub fn load_tile_geometry(route_dir: &Path, tile_x: i32, tile_z: i32) -> Result<
             if patch.is_some_and(|p| !p.drawing_enabled()) {
                 continue;
             }
-            let texture = patch
+            let shader = patch
                 .and_then(|p| {
                     tile.shaders
                         .get(p.shader_index as usize)
                         .or_else(|| tile.shaders.first())
                 })
-                .or_else(|| tile.shaders.first())
+                .or_else(|| tile.shaders.first());
+            let texture = shader
                 .and_then(|sh| sh.texslots.first())
                 .map(|ts| ts.filename.clone());
+            let overlay_texture = shader
+                .and_then(|sh| sh.texslots.get(1).map(|ts| ts.filename.clone()))
+                .or_else(|| Some("microtex.ace".to_string()));
+            let overlay_scale = shader.map(shader_overlay_scale).unwrap_or(32.0);
 
             let md = build_patch_mesh_data_sampled(
                 sample_size,
@@ -215,6 +246,8 @@ pub fn load_tile_geometry(route_dir: &Path, tile_x: i32, tile_z: i32) -> Result<
                     pz as f32 * PATCH_SIZE_M - half,
                 ],
                 texture,
+                overlay_texture,
+                overlay_scale,
             });
         }
     }
@@ -241,6 +274,16 @@ fn elevation_range(grid: &ElevationGrid) -> (f32, f32) {
         .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), &h| {
             (lo.min(h), hi.max(h))
         })
+}
+
+/// Escala UV del overlay desde `terrain_uvcalcs[1].d` (paridad OR TerrainMaterial).
+pub fn shader_overlay_scale(shader: &TerrainShader) -> f32 {
+    shader
+        .uvcalcs
+        .get(1)
+        .map(|c| c.d)
+        .map(crate::or_terrain_material::overlay_scale_from_uvcalc)
+        .unwrap_or(32.0)
 }
 
 #[cfg(test)]
@@ -297,6 +340,12 @@ mod tests {
             resolve_terrtex_path(&dir, textured).is_some(),
             "no encontré la textura {textured} en TERRTEX/"
         );
+        let with_overlay = tile
+            .patches
+            .iter()
+            .find(|p| p.overlay_texture.is_some())
+            .expect("overlay en patches");
+        assert_eq!(with_overlay.overlay_scale, 32.0);
     }
 
     #[test]
@@ -309,5 +358,39 @@ mod tests {
         // Chiltern está alrededor de (-6080, 14930).
         assert!((-6200..=-5900).contains(&tx), "tile_x raro: {tx}");
         assert!((14700..=15100).contains(&tz), "tile_z raro: {tz}");
+    }
+
+    #[test]
+    fn scene_tile_z_offset_matches_render_space() {
+        use openrailsrs_formats::msts_tile_world_origin;
+
+        let (cx, cz) = (-6144, 14900);
+        let tile_size = 2048.0_f32;
+        for (tz, label) in [(14899, "north"), (14901, "south")] {
+            let (_, oz) = msts_tile_world_origin(cx, tz);
+            let (_, oz_center) = msts_tile_world_origin(cx, cz);
+            let render_delta = oz - oz_center;
+            let scene_offset_z = (cz - tz) as f32 * tile_size;
+            assert!(
+                (render_delta - scene_offset_z).abs() < 0.01,
+                "{label}: render Δz={render_delta} scene_offset={scene_offset_z}"
+            );
+        }
+    }
+
+    #[test]
+    fn new_forest_tiles_subdir_loads_geometry() {
+        let dir = std::env::var_os("NEW_FOREST_V3_ROUTE")
+            .map(PathBuf::from)
+            .or_else(|| {
+                let home = std::env::var_os("HOME")?;
+                let p = PathBuf::from(home).join("routes/NewForestRouteV3/Routes/Watersnake");
+                p.join("Tiles").is_dir().then_some(p)
+            });
+        let Some(dir) = dir else {
+            return;
+        };
+        // Tile del `.w` más grande en `world/` (busiest_world_tile).
+        load_tile_geometry(&dir, -6131, 14898).expect("tile con .t en Tiles/");
     }
 }

@@ -1,0 +1,426 @@
+//! Streaming de tiles alrededor de la camara + marcador `TileContent`.
+
+use std::collections::HashSet;
+
+use bevy::prelude::*;
+
+use crate::objects::ObjectMarker;
+use crate::or_scenery_material::OrSceneryMaterial;
+use crate::or_terrain_material::OrTerrainMaterial;
+use crate::world_spawn::{
+    AssetIndex, ObjectSpawnCtx, TerrainSpawnCtx, TextureLoadStats, spawn_objects_batch,
+    spawn_terrain_patches, spawn_tile_track,
+};
+use crate::{MstsRootDir, RouteDir, TileEntry};
+
+pub const TILE_SIZE_M: f32 = 2048.0;
+
+/// Tile y su contenido 3D spawneado (para despawn).
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TileContent {
+    pub tile_x: i32,
+    pub tile_z: i32,
+}
+
+#[derive(Resource, Clone)]
+pub struct TileStreamConfig {
+    pub center_tile: (i32, i32),
+    /// Radio maximo alrededor de la camara (tiles Chebyshev), desde `--radius`.
+    pub stream_radius: u32,
+    /// Tiles cargados al arrancar (igual que `stream_radius`: todo el grid visible).
+    pub initial_radius: u32,
+}
+
+impl TileStreamConfig {
+    pub fn new(center: (i32, i32), stream_radius: u32) -> Self {
+        let initial_radius = stream_radius;
+        Self {
+            center_tile: center,
+            stream_radius,
+            initial_radius,
+        }
+    }
+
+    pub fn streaming_enabled(&self) -> bool {
+        self.stream_radius > self.initial_radius
+    }
+
+    pub fn tile_in_stream_radius(&self, cam_tile: (i32, i32), tile: (i32, i32)) -> bool {
+        let dx = (tile.0 - cam_tile.0).unsigned_abs();
+        let dz = (tile.1 - cam_tile.1).unsigned_abs();
+        dx.max(dz) <= self.stream_radius
+    }
+
+    pub fn tile_in_initial_radius(&self, tile: (i32, i32)) -> bool {
+        let dx = (tile.0 - self.center_tile.0).unsigned_abs();
+        let dz = (tile.1 - self.center_tile.1).unsigned_abs();
+        dx.max(dz) <= self.initial_radius
+    }
+}
+
+#[derive(Resource, Clone)]
+pub struct TileCatalog {
+    pub entries: Vec<TileEntry>,
+}
+
+#[derive(Resource, Clone)]
+pub struct StreamWorldAssets {
+    pub index: AssetIndex,
+    pub terrain_ctx: TerrainSpawnCtx,
+    pub obj_ctx: ObjectSpawnCtx,
+    pub materials_lit: bool,
+}
+
+#[derive(Resource, Default)]
+pub struct TileStreamState {
+    pub loaded: HashSet<(i32, i32)>,
+    pub last_camera_tile: Option<(i32, i32)>,
+}
+
+#[derive(Resource, Clone)]
+pub struct SavedTerrainCtx(pub TerrainSpawnCtx);
+
+/// Filtra entradas al radio inicial de carga (evita bloquear en grids grandes).
+pub fn catalog_entries_for_initial_load(
+    catalog: &TileCatalog,
+    config: &TileStreamConfig,
+) -> Vec<TileEntry> {
+    catalog
+        .entries
+        .iter()
+        .filter(|e| config.tile_in_initial_radius((e.geometry.tile_x, e.geometry.tile_z)))
+        .cloned()
+        .collect()
+}
+
+pub fn initial_loaded_tiles(
+    config: &TileStreamConfig,
+    entries: &[(i32, i32)],
+) -> HashSet<(i32, i32)> {
+    entries
+        .iter()
+        .filter(|(x, z)| config.tile_in_initial_radius((*x, *z)))
+        .copied()
+        .collect()
+}
+
+pub fn camera_tile(config: &TileStreamConfig, cam: &Transform) -> (i32, i32) {
+    let dx = (cam.translation.x / TILE_SIZE_M).round() as i32;
+    let dz = (cam.translation.z / TILE_SIZE_M).round() as i32;
+    // Scene Z crece hacia el norte (render Z = -msts Z); tile_z decrece hacia el norte.
+    (config.center_tile.0 + dx, config.center_tile.1 - dz)
+}
+
+fn find_catalog_entry(catalog: &TileCatalog, tile_x: i32, tile_z: i32) -> Option<&TileEntry> {
+    catalog
+        .entries
+        .iter()
+        .find(|e| e.geometry.tile_x == tile_x && e.geometry.tile_z == tile_z)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn spawn_tile_entry(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    or_materials: &mut Assets<OrSceneryMaterial>,
+    or_terrain_materials: &mut Assets<OrTerrainMaterial>,
+    images: &mut Assets<Image>,
+    assets: &mut StreamWorldAssets,
+    route: &RouteDir,
+    msts_root: &MstsRootDir,
+    entry: &TileEntry,
+    texture_env: &crate::textures::TextureEnvironment,
+    viewer_pos: Vec3,
+    tdb_track: Option<&crate::TdbTrackResource>,
+    stream_config: &TileStreamConfig,
+    catalog: &TileCatalog,
+) {
+    let tile_x = entry.geometry.tile_x;
+    let tile_z = entry.geometry.tile_z;
+    let offset = entry.world_offset;
+    let mut tex_stats = TextureLoadStats::default();
+
+    spawn_terrain_patches(
+        commands,
+        meshes,
+        &mut assets.terrain_ctx,
+        or_terrain_materials,
+        images,
+        &route.0,
+        &entry.geometry,
+        0,
+        entry.geometry.patches.len(),
+        offset,
+        tile_x,
+        tile_z,
+    );
+
+    if !crate::objects::tile_suppresses_tdb_ribbon(&entry.objects) {
+        let center = stream_config.center_tile;
+        let shaped = tdb_track
+            .map(|tdb| {
+                crate::tdb_track::collect_tdb_shaped_chords(
+                    &tdb.ctx,
+                    center.0,
+                    center.1,
+                    tdb.grid_radius,
+                )
+            })
+            .unwrap_or_default();
+        let height_buf: Vec<_> = catalog
+            .entries
+            .iter()
+            .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height))
+            .collect();
+        let height_index = crate::tdb_track::TileHeightIndex::new(&height_buf, center);
+        spawn_tile_track(
+            commands,
+            meshes,
+            materials,
+            or_materials,
+            images,
+            Some(&assets.index),
+            Some(&mut assets.obj_ctx),
+            &route.0,
+            &msts_root.0,
+            tdb_track.map(|r| &r.ctx),
+            &shaped,
+            &entry.track,
+            &entry.objects,
+            center,
+            &height_index,
+            offset,
+            assets.materials_lit,
+            tile_x,
+            tile_z,
+            &mut tex_stats,
+            texture_env,
+            viewer_pos,
+            None,
+        );
+    }
+
+    let filtered: Vec<ObjectMarker> = entry
+        .objects
+        .iter()
+        .filter(|o| crate::objects::object_wants_shape_mesh(o))
+        .cloned()
+        .collect();
+    if !filtered.is_empty() {
+        spawn_objects_batch(
+            commands,
+            meshes,
+            materials,
+            or_materials,
+            images,
+            &assets.index,
+            &mut assets.obj_ctx,
+            &route.0,
+            &msts_root.0,
+            &filtered,
+            &mut tex_stats,
+            offset,
+            texture_env,
+            viewer_pos,
+            tile_x,
+            tile_z,
+            assets.materials_lit,
+            None,
+            tdb_track.map(|t| &t.ctx),
+        );
+    }
+
+    let trackobj = crate::world_spawn::spawn_trackobj_procedural_for_objects(
+        commands,
+        meshes,
+        materials,
+        &entry.objects,
+        offset,
+        &assets.index.tsection,
+        tdb_track.map(|t| &t.ctx),
+        &assets.index,
+        &route.0,
+        &msts_root.0,
+        assets.materials_lit,
+        tile_x,
+        tile_z,
+        None,
+    );
+    let _ = trackobj;
+
+    let (forests, waters) = crate::scenery::spawn_tile_scenery(
+        commands,
+        meshes,
+        materials,
+        images,
+        &assets.index,
+        &mut assets.obj_ctx,
+        &route.0,
+        &msts_root.0,
+        &entry.objects,
+        &entry.geometry.height,
+        tile_x,
+        tile_z,
+        offset,
+        &mut tex_stats,
+        texture_env,
+        assets.materials_lit,
+    );
+    let _ = (forests, waters);
+
+    let dyntrack = crate::dyntrack::spawn_tile_dyntrack(
+        commands,
+        meshes,
+        materials,
+        &entry.objects,
+        offset,
+        assets.materials_lit,
+        tile_x,
+        tile_z,
+    );
+    let _ = dyntrack;
+
+    let transfers = crate::transfer::spawn_tile_transfers(
+        commands,
+        meshes,
+        materials,
+        images,
+        &assets.index,
+        &route.0,
+        &msts_root.0,
+        &entry.objects,
+        &entry.geometry.height,
+        tile_x,
+        tile_z,
+        offset,
+        &mut tex_stats,
+        texture_env,
+        assets.materials_lit,
+    );
+    let _ = transfers;
+}
+
+pub fn despawn_tile(
+    commands: &mut Commands,
+    tile_x: i32,
+    tile_z: i32,
+    query: &Query<(Entity, &TileContent)>,
+) {
+    for (entity, content) in query.iter() {
+        if content.tile_x == tile_x && content.tile_z == tile_z {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn tile_stream_system(
+    mut commands: Commands,
+    config: Res<TileStreamConfig>,
+    catalog: Res<TileCatalog>,
+    assets: Option<ResMut<StreamWorldAssets>>,
+    state: Option<ResMut<TileStreamState>>,
+    route: Res<RouteDir>,
+    msts_root: Res<MstsRootDir>,
+    texture_env: Res<crate::textures::TextureEnvironment>,
+    tdb_track: Option<Res<crate::TdbTrackResource>>,
+    camera: Query<&Transform, With<Camera3d>>,
+    tile_entities: Query<(Entity, &TileContent)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut or_materials: ResMut<Assets<OrSceneryMaterial>>,
+    mut or_terrain_materials: ResMut<Assets<OrTerrainMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    if !config.streaming_enabled() {
+        return;
+    }
+    let Some(mut assets) = assets else {
+        return;
+    };
+    let Some(mut state) = state else {
+        return;
+    };
+    let Ok(cam_tf) = camera.single() else {
+        return;
+    };
+    let cam_tile = camera_tile(&config, cam_tf);
+    if state.last_camera_tile == Some(cam_tile) {
+        return;
+    }
+    state.last_camera_tile = Some(cam_tile);
+
+    let mut wanted = HashSet::new();
+    for entry in &catalog.entries {
+        let key = (entry.geometry.tile_x, entry.geometry.tile_z);
+        if config.tile_in_stream_radius(cam_tile, key) {
+            wanted.insert(key);
+        }
+    }
+
+    for key in state.loaded.iter().copied().collect::<Vec<_>>() {
+        if !wanted.contains(&key) {
+            despawn_tile(&mut commands, key.0, key.1, &tile_entities);
+            state.loaded.remove(&key);
+        }
+    }
+
+    // Varios tiles por frame: el catálogo ya está en memoria; solo falta spawn 3D.
+    const TILES_PER_FRAME: usize = 4;
+    let mut spawned = 0usize;
+    for key in wanted.iter().copied() {
+        if state.loaded.contains(&key) {
+            continue;
+        }
+        let Some(entry) = find_catalog_entry(&catalog, key.0, key.1).cloned() else {
+            continue;
+        };
+        spawn_tile_entry(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &mut or_materials,
+            &mut or_terrain_materials,
+            &mut images,
+            &mut assets,
+            &route,
+            &msts_root,
+            &entry,
+            &texture_env,
+            cam_tf.translation,
+            tdb_track.as_deref(),
+            &config,
+            &catalog,
+        );
+        state.loaded.insert(key);
+        spawned += 1;
+        if spawned >= TILES_PER_FRAME {
+            break;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initial_radius_matches_stream_radius() {
+        let cfg = TileStreamConfig::new((0, 0), 2);
+        assert_eq!(cfg.initial_radius, 2);
+        assert!(!cfg.streaming_enabled());
+    }
+
+    #[test]
+    fn camera_tile_follows_world_offset() {
+        let cfg = TileStreamConfig::new((10, 20), 1);
+        let tf = Transform::from_xyz(2048.0, 0.0, 0.0);
+        assert_eq!(camera_tile(&cfg, &tf), (11, 20));
+        // Scene +Z = norte → tile_z decrece.
+        let north = Transform::from_xyz(0.0, 0.0, 2048.0);
+        assert_eq!(camera_tile(&cfg, &north), (10, 19));
+        let south = Transform::from_xyz(0.0, 0.0, -2048.0);
+        assert_eq!(camera_tile(&cfg, &south), (10, 21));
+    }
+}

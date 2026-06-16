@@ -4,14 +4,26 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use bevy::ecs::query::Without;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task, futures::check_ready};
 
+use crate::consist::{StaticConsistPlan, spawn_static_consist};
+use crate::debug_hud::{FlyCamera, spawn_debug_hud, spawn_ui_overlay_camera};
 use crate::objects::ObjectMarker;
+use crate::or_cascade::{or_limits_from_view_distance, or_max_shadow_view_distance};
+use crate::or_scenery_material::OrSceneryMaterial;
+use crate::or_terrain_material::OrTerrainMaterial;
+use crate::or_vsm_render::OrMomentAtlasImage;
+use crate::player_spawn::{PlayerStartPose, PlayerStartPoseResource};
+use crate::stream::{
+    SavedTerrainCtx, StreamWorldAssets, TileCatalog, TileStreamConfig, TileStreamState,
+    initial_loaded_tiles,
+};
 use crate::terrain::TileGeometry;
 use crate::world_spawn::{
-    AssetIndex, ObjectSpawnCtx, TerrainSpawnCtx, TextureLoadStats, spawn_objects_batch,
-    spawn_terrain_patches, spawn_track, spawn_world_lights,
+    AssetIndex, ObjectSpawnCtx, TerrainSpawnCtx, TextureLoadStats, TrackSpawnStats,
+    spawn_objects_batch, spawn_terrain_patches, spawn_tile_track,
 };
 
 /// Fases de la app: carga → juego.
@@ -105,6 +117,7 @@ pub enum LoadStage {
     /// Cinta de vía (todos los tiles).
     Track {
         index: AssetIndex,
+        obj_ctx: ObjectSpawnCtx,
         slots: Vec<TileSlot>,
         tile_i: usize,
     },
@@ -119,7 +132,12 @@ pub enum LoadStage {
         /// Objetos filtrables del tile actual.
         filtered: Vec<ObjectMarker>,
     },
-    Done,
+    /// Carga terminada; `finish_world_load` activa streaming y pasa a `Playing`.
+    Finished {
+        index: AssetIndex,
+        obj_ctx: ObjectSpawnCtx,
+        initial_tile_coords: Vec<(i32, i32)>,
+    },
 }
 
 const TERRAIN_PATCHES_PER_FRAME: usize = 32;
@@ -153,11 +171,30 @@ pub struct LoadPerfState {
     pub terrain_batches: u32,
     /// Batches de objetos procesados.
     pub object_batches: u32,
+    /// Lado del tile central (m) para la cámara inicial.
+    pub scene_side_m: f32,
+    /// Posición inicial del jugador (cámara cabina).
+    pub player_start: Option<PlayerStartPose>,
+    /// HUD de depuración visible al entrar en juego.
+    pub hud_enabled: bool,
+    /// Materiales PBR iluminados (día); unlit con emissive en noche.
+    pub materials_lit: bool,
+    /// Tiles cargados (para radio del domo de cielo).
+    pub tile_count: usize,
+    /// Posición de la cámara al cargar (LOD de shapes).
+    pub viewer_pos: Vec3,
 }
 
 impl LoadPerfState {
-    fn new() -> Self {
+    fn new(
+        scene_side_m: f32,
+        player_start: Option<PlayerStartPose>,
+        hud_enabled: bool,
+        materials_lit: bool,
+        tile_count: usize,
+    ) -> Self {
         let now = Instant::now();
+        let viewer_pos = player_start.map(|p| p.position).unwrap_or(Vec3::ZERO);
         Self {
             total_start: now,
             phase_start: now,
@@ -167,6 +204,12 @@ impl LoadPerfState {
             secs_objects: 0.0,
             terrain_batches: 0,
             object_batches: 0,
+            scene_side_m,
+            player_start,
+            hud_enabled,
+            materials_lit,
+            tile_count,
+            viewer_pos,
         }
     }
 
@@ -309,7 +352,6 @@ pub fn setup_loading_screen(mut commands: Commands) {
 
     commands.spawn((
         Camera2d,
-        bevy::render::camera::CameraRenderGraph::new(bevy::core_pipeline::core_2d::graph::Core2d),
         Camera {
             clear_color: ClearColorConfig::Custom(Color::srgb(0.08, 0.10, 0.14)),
             ..default()
@@ -325,13 +367,18 @@ pub fn setup_loading_screen(mut commands: Commands) {
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn begin_load_stage(
     mut commands: Commands,
     tiles_res: Res<crate::TilesToRender>,
     route: Res<crate::RouteDir>,
     msts_root: Res<crate::MstsRootDir>,
+    extent: Res<crate::SceneExtent>,
+    player_start: Res<PlayerStartPoseResource>,
     mut progress: ResMut<LoadProgress>,
     mut log: ResMut<LoadLog>,
+    hud_enabled: Res<crate::debug_hud::DebugHudEnabled>,
+    texture_env: Res<crate::textures::TextureEnvironment>,
 ) {
     let n = tiles_res.0.len();
     progress.set(format!("Indexando shapes y texturas… ({n} tiles)"), 0.02);
@@ -349,7 +396,14 @@ pub fn begin_load_stage(
     }
 
     commands.insert_resource(TextureLoadStats::default());
-    commands.insert_resource(LoadPerfState::new());
+    commands.insert_resource(TrackSpawnStats::default());
+    commands.insert_resource(LoadPerfState::new(
+        extent.side_m,
+        player_start.0,
+        hud_enabled.0,
+        !texture_env.night,
+        n,
+    ));
     let route_dir = route.0.clone();
     let msts_dir = msts_root.0.clone();
     let task =
@@ -390,25 +444,35 @@ pub fn update_loading_ui(
 
 // ─── Máquina de estados de carga ─────────────────────────────────────────────
 
+#[derive(SystemParam)]
+pub struct LoadRenderAssets<'w> {
+    pub meshes: ResMut<'w, Assets<Mesh>>,
+    pub materials: ResMut<'w, Assets<StandardMaterial>>,
+    pub or_materials: ResMut<'w, Assets<OrSceneryMaterial>>,
+    pub or_terrain_materials: ResMut<'w, Assets<OrTerrainMaterial>>,
+    pub images: ResMut<'w, Assets<Image>>,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn progressive_world_load(
     mut commands: Commands,
     mut stage: ResMut<LoadStage>,
     mut progress: ResMut<LoadProgress>,
     mut log: ResMut<LoadLog>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    mut load_assets: LoadRenderAssets,
     route: Res<crate::RouteDir>,
     msts_root: Res<crate::MstsRootDir>,
     screen: Res<LoadingScreen>,
-    loading_cams: Query<Entity, With<Camera2d>>,
     mut tex_stats: ResMut<TextureLoadStats>,
-    mut next_state: ResMut<NextState<AppState>>,
-    extent: Res<crate::SceneExtent>,
+    mut track_stats: ResMut<TrackSpawnStats>,
+    texture_env: Res<crate::textures::TextureEnvironment>,
     mut texts: Query<&mut Text>,
     mut perf: ResMut<LoadPerfState>,
+    moment_atlas: Res<OrMomentAtlasImage>,
+    tdb_track: Option<Res<crate::TdbTrackResource>>,
+    stream_config: Res<crate::stream::TileStreamConfig>,
 ) {
+    let materials_lit = perf.materials_lit;
     'progress: loop {
         match &mut *stage {
             // ── 1. Indexado (hilo async) ──────────────────────────────────
@@ -436,7 +500,12 @@ pub fn progressive_world_load(
                     ));
                     update_tile_counter(&screen, &mut texts, 0, n);
                     progress.set("Preparando terreno…", 0.05);
-                    let ctx = TerrainSpawnCtx::new(&mut materials);
+                    let ctx = TerrainSpawnCtx::new(
+                        &mut load_assets.or_terrain_materials,
+                        &mut load_assets.images,
+                        materials_lit,
+                        texture_env.night,
+                    );
                     let slots = std::mem::take(slots);
                     *stage = LoadStage::Terrain {
                         index,
@@ -479,8 +548,20 @@ pub fn progressive_world_load(
                         );
                     }
                     let slots = std::mem::take(slots);
+                    commands.insert_resource(SavedTerrainCtx(ctx.clone()));
+                    let moment_atlas = moment_atlas.0.clone();
+                    let side = perf.scene_side_m.max(256.0);
+                    let shadow_map_limits =
+                        or_limits_from_view_distance(or_max_shadow_view_distance(side));
+                    let obj_ctx = ObjectSpawnCtx::new(
+                        &mut load_assets.materials,
+                        materials_lit,
+                        moment_atlas,
+                        shadow_map_limits,
+                    );
                     *stage = LoadStage::Track {
                         index: index.clone(),
+                        obj_ctx,
                         slots,
                         tile_i: 0,
                     };
@@ -496,15 +577,17 @@ pub fn progressive_world_load(
                 let batch_t = Instant::now();
                 spawn_terrain_patches(
                     &mut commands,
-                    &mut meshes,
+                    &mut load_assets.meshes,
                     ctx,
-                    &mut materials,
-                    &mut images,
+                    &mut load_assets.or_terrain_materials,
+                    &mut load_assets.images,
                     &route.0,
                     &slot.geometry,
                     start,
                     end,
                     slot.world_offset,
+                    slot.geometry.tile_x,
+                    slot.geometry.tile_z,
                 );
                 let batch_ms = batch_t.elapsed().as_secs_f64() * 1000.0;
                 perf.terrain_batches += 1;
@@ -562,6 +645,7 @@ pub fn progressive_world_load(
             // ── 3. Vía (un tile por frame) ───────────────────────────────
             LoadStage::Track {
                 index,
+                obj_ctx,
                 slots,
                 tile_i,
             } => {
@@ -575,11 +659,10 @@ pub fn progressive_world_load(
                     }
                     // Preparar Objects.
                     let slots = std::mem::take(slots);
-                    let obj_ctx = ObjectSpawnCtx::new(&mut materials);
                     let filtered = build_filtered_objects(&slots, 0);
                     *stage = LoadStage::Objects {
                         index: index.clone(),
-                        obj_ctx,
+                        obj_ctx: obj_ctx.clone(),
                         slots,
                         tile_i: 0,
                         obj_i: 0,
@@ -591,33 +674,93 @@ pub fn progressive_world_load(
 
                 let slot = &slots[*tile_i];
                 let segs = slot.track.segment_count();
+                let track_objs = crate::objects::count_track_objects(&slot.objects);
+                let center = stream_config.center_tile;
+                let shaped = tdb_track
+                    .as_ref()
+                    .map(|tdb| {
+                        crate::tdb_track::collect_tdb_shaped_chords(
+                            &tdb.ctx,
+                            center.0,
+                            center.1,
+                            tdb.grid_radius,
+                        )
+                    })
+                    .unwrap_or_default();
+                let height_buf: Vec<_> = slots
+                    .iter()
+                    .map(|s| (s.geometry.tile_x, s.geometry.tile_z, &s.geometry.height))
+                    .collect();
+                let height_index = crate::tdb_track::TileHeightIndex::new(&height_buf, center);
                 let batch_t = Instant::now();
-                spawn_track(
-                    &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    &slot.track,
-                    slot.world_offset,
-                );
-                let batch_ms = batch_t.elapsed().as_secs_f64() * 1000.0;
-                if perf_debug() {
-                    eprintln!(
-                        "[PERF] track      T[{}/{}] {segs} segs  {batch_ms:.2}ms",
+                let suppressed = crate::objects::tile_suppresses_tdb_ribbon(&slot.objects);
+                let bypass = suppressed && crate::world_spawn::tdb_procedural_forced();
+                if suppressed && !bypass {
+                    if perf_debug() {
+                        eprintln!(
+                            "[PERF] track      T[{}/{}] omitida ({track_objs} TrackObj UKFS)",
+                            *tile_i + 1,
+                            n_tiles
+                        );
+                    }
+                    log.push(format!(
+                        "→ Vía T[{}/{}]: omitida ({track_objs} TrackObj UKFS)",
                         *tile_i + 1,
                         n_tiles
-                    );
-                } else if batch_ms > SLOW_BATCH_MS {
-                    eprintln!(
-                        "[PERF] SLOW track T[{}/{}] {segs} segs: {batch_ms:.1}ms",
+                    ));
+                } else if bypass {
+                    log.push(format!(
+                        "→ Vía T[{}/{}]: TrackObj presente, .tdb procedural forzado",
                         *tile_i + 1,
                         n_tiles
-                    );
+                    ));
                 }
-                log.push(format!(
-                    "→ Vía T[{}/{}]: {segs} segmentos",
-                    *tile_i + 1,
-                    n_tiles
-                ));
+                spawn_tile_track(
+                    &mut commands,
+                    &mut load_assets.meshes,
+                    &mut load_assets.materials,
+                    &mut load_assets.or_materials,
+                    &mut load_assets.images,
+                    Some(index),
+                    Some(obj_ctx),
+                    &route.0,
+                    &msts_root.0,
+                    tdb_track.as_deref().map(|r| &r.ctx),
+                    &shaped,
+                    &slot.track,
+                    &slot.objects,
+                    center,
+                    &height_index,
+                    slot.world_offset,
+                    materials_lit,
+                    slot.geometry.tile_x,
+                    slot.geometry.tile_z,
+                    &mut tex_stats,
+                    &texture_env,
+                    perf.viewer_pos,
+                    Some(track_stats.as_mut()),
+                );
+                if !suppressed || bypass {
+                    let batch_ms = batch_t.elapsed().as_secs_f64() * 1000.0;
+                    if perf_debug() {
+                        eprintln!(
+                            "[PERF] track      T[{}/{}] {segs} segs  {batch_ms:.2}ms",
+                            *tile_i + 1,
+                            n_tiles
+                        );
+                    } else if batch_ms > SLOW_BATCH_MS {
+                        eprintln!(
+                            "[PERF] SLOW track T[{}/{}] {segs} segs: {batch_ms:.1}ms",
+                            *tile_i + 1,
+                            n_tiles
+                        );
+                    }
+                    log.push(format!(
+                        "→ Vía T[{}/{}]: {segs} segmentos",
+                        *tile_i + 1,
+                        n_tiles
+                    ));
+                }
                 *tile_i += 1;
                 progress.set(
                     format!("Vía… (tile {}/{n_tiles})", *tile_i),
@@ -641,14 +784,40 @@ pub fn progressive_world_load(
                     .map(|s| count_filtered_objects(&s.objects))
                     .sum();
 
-                // Fin de tile actual.
+                // Fin de tile actual (shapes completos → bosque/agua del tile).
                 if *obj_i >= filtered.len() {
+                    let finished = *tile_i;
+                    spawn_scenery_for_slot(
+                        &mut commands,
+                        &mut load_assets.meshes,
+                        &mut load_assets.materials,
+                        &mut load_assets.images,
+                        index,
+                        obj_ctx,
+                        &route.0,
+                        &msts_root.0,
+                        &slots[finished],
+                        &mut tex_stats,
+                        &texture_env,
+                        &mut log,
+                        materials_lit,
+                        Some(track_stats.as_mut()),
+                        tdb_track.as_deref().map(|r| &r.ctx),
+                    );
                     *tile_i += 1;
                     *obj_i = 0;
                     if *tile_i >= n_tiles {
                         progress.set("Finalizando…", 0.98);
                         log.push("→ Luces y cámara");
-                        *stage = LoadStage::Done;
+                        let initial_tile_coords = slots
+                            .iter()
+                            .map(|s| (s.geometry.tile_x, s.geometry.tile_z))
+                            .collect();
+                        *stage = LoadStage::Finished {
+                            index: index.clone(),
+                            obj_ctx: obj_ctx.clone(),
+                            initial_tile_coords,
+                        };
                         continue 'progress;
                     }
                     *filtered = build_filtered_objects(slots, *tile_i);
@@ -661,13 +830,38 @@ pub fn progressive_world_load(
                 }
 
                 if filtered.is_empty() {
-                    // Tile sin objetos → avanzar.
+                    // Tile sin shapes → igual puede tener bosque/agua.
+                    spawn_scenery_for_slot(
+                        &mut commands,
+                        &mut load_assets.meshes,
+                        &mut load_assets.materials,
+                        &mut load_assets.images,
+                        index,
+                        obj_ctx,
+                        &route.0,
+                        &msts_root.0,
+                        &slots[*tile_i],
+                        &mut tex_stats,
+                        &texture_env,
+                        &mut log,
+                        materials_lit,
+                        Some(track_stats.as_mut()),
+                        tdb_track.as_deref().map(|r| &r.ctx),
+                    );
                     *tile_i += 1;
                     *obj_i = 0;
                     if *tile_i >= n_tiles {
                         progress.set("Finalizando…", 0.98);
                         log.push("→ Luces y cámara");
-                        *stage = LoadStage::Done;
+                        let initial_tile_coords = slots
+                            .iter()
+                            .map(|s| (s.geometry.tile_x, s.geometry.tile_z))
+                            .collect();
+                        *stage = LoadStage::Finished {
+                            index: index.clone(),
+                            obj_ctx: obj_ctx.clone(),
+                            initial_tile_coords,
+                        };
                         continue 'progress;
                     }
                     *filtered = build_filtered_objects(slots, *tile_i);
@@ -682,9 +876,10 @@ pub fn progressive_world_load(
                 let batch_t = Instant::now();
                 spawn_objects_batch(
                     &mut commands,
-                    &mut meshes,
-                    &mut materials,
-                    &mut images,
+                    &mut load_assets.meshes,
+                    &mut load_assets.materials,
+                    &mut load_assets.or_materials,
+                    &mut load_assets.images,
                     index,
                     obj_ctx,
                     &route.0,
@@ -692,6 +887,13 @@ pub fn progressive_world_load(
                     batch,
                     &mut tex_stats,
                     tile_offset,
+                    &texture_env,
+                    perf.viewer_pos,
+                    slots[*tile_i].geometry.tile_x,
+                    slots[*tile_i].geometry.tile_z,
+                    materials_lit,
+                    Some(track_stats.as_mut()),
+                    tdb_track.as_deref().map(|r| &r.ctx),
                 );
                 let batch_ms = batch_t.elapsed().as_secs_f64() * 1000.0;
                 perf.object_batches += 1;
@@ -744,22 +946,117 @@ pub fn progressive_world_load(
             }
 
             // ── 5. Done ──────────────────────────────────────────────────
-            LoadStage::Done => {
+            LoadStage::Finished { .. } => {
                 let elapsed_objects = perf.elapsed_phase();
                 perf.secs_objects = elapsed_objects;
-                finish_loading(
-                    &mut commands,
-                    &screen,
-                    &loading_cams,
-                    &mut next_state,
-                    &tex_stats,
-                    extent.side_m,
-                    &perf,
-                );
-                return;
+                break 'progress;
             }
         }
     }
+}
+
+/// Tras `LoadStage::Finished`: activa streaming y pasa a `Playing`.
+#[derive(SystemParam)]
+pub(crate) struct WorldLoadFinish<'w> {
+    stream_config: Res<'w, TileStreamConfig>,
+    catalog: Res<'w, TileCatalog>,
+    terrain_saved: Option<Res<'w, SavedTerrainCtx>>,
+    consist_plan: Option<Res<'w, StaticConsistPlan>>,
+    player_start: Res<'w, PlayerStartPoseResource>,
+    route: Res<'w, crate::RouteDir>,
+    msts_root: Res<'w, crate::MstsRootDir>,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn finish_world_load(
+    mut commands: Commands,
+    stage: Res<LoadStage>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut or_materials: ResMut<Assets<OrSceneryMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    screen: Res<LoadingScreen>,
+    loading_cams: Query<Entity, With<Camera2d>>,
+    perf: Res<LoadPerfState>,
+    finish: WorldLoadFinish,
+    texture_env: Res<crate::textures::TextureEnvironment>,
+    mut tex_stats: ResMut<TextureLoadStats>,
+    track_stats: Res<TrackSpawnStats>,
+) {
+    let WorldLoadFinish {
+        stream_config,
+        catalog,
+        terrain_saved,
+        consist_plan,
+        player_start,
+        route,
+        msts_root,
+    } = finish;
+    let LoadStage::Finished {
+        index,
+        obj_ctx,
+        initial_tile_coords,
+    } = stage.as_ref()
+    else {
+        return;
+    };
+
+    if let Some(terrain) = terrain_saved.as_ref() {
+        let mut obj_ctx = obj_ctx.clone();
+
+        if let (Some(plan), Some(pose)) = (consist_plan.as_ref(), player_start.0) {
+            spawn_static_consist(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                &mut or_materials,
+                &mut images,
+                index,
+                &mut obj_ctx,
+                &route.0,
+                &msts_root.0,
+                plan,
+                pose,
+                &texture_env,
+                &mut tex_stats,
+            );
+        }
+
+        commands.insert_resource(StreamWorldAssets {
+            index: index.clone(),
+            terrain_ctx: terrain.0.clone(),
+            obj_ctx,
+            materials_lit: perf.materials_lit,
+        });
+        if stream_config.streaming_enabled() {
+            commands.insert_resource(TileStreamState {
+                loaded: initial_loaded_tiles(&stream_config, initial_tile_coords),
+                last_camera_tile: Some(stream_config.center_tile),
+            });
+            info!(
+                "streaming activo: {} tiles iniciales, {} en catálogo",
+                initial_tile_coords.len(),
+                catalog.entries.len()
+            );
+        }
+        commands.remove_resource::<SavedTerrainCtx>();
+    } else if stream_config.streaming_enabled() {
+        warn!("streaming: SavedTerrainCtx ausente — tiles extra no se cargarán");
+    }
+    finish_loading(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &screen,
+        &loading_cams,
+        &mut next_state,
+        &tex_stats,
+        &track_stats,
+        perf.scene_side_m,
+        &perf,
+        !texture_env.night,
+    );
 }
 
 /// Fracción de progreso al inicio de la fase de vía (después del terreno).
@@ -793,29 +1090,119 @@ fn build_filtered_objects(slots: &[TileSlot], tile_i: usize) -> Vec<ObjectMarker
     slots[tile_i]
         .objects
         .iter()
-        .filter(|o| crate::objects::wants_shape_mesh(o.kind, o.file_name.as_deref()))
+        .filter(|o| crate::objects::object_wants_shape_mesh(o))
         .cloned()
         .collect()
 }
 
 fn count_filtered_objects(objs: &[ObjectMarker]) -> usize {
     objs.iter()
-        .filter(|o| crate::objects::wants_shape_mesh(o.kind, o.file_name.as_deref()))
+        .filter(|o| crate::objects::object_wants_shape_mesh(o))
         .count()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_scenery_for_slot(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    index: &AssetIndex,
+    obj_ctx: &mut ObjectSpawnCtx,
+    route_dir: &std::path::Path,
+    msts_root: &std::path::Path,
+    slot: &TileSlot,
+    tex_stats: &mut TextureLoadStats,
+    texture_env: &crate::textures::TextureEnvironment,
+    log: &mut LoadLog,
+    materials_lit: bool,
+    track_stats: Option<&mut TrackSpawnStats>,
+    tdb: Option<&crate::tdb_track::TdbContext>,
+) {
+    let trackobj = crate::world_spawn::spawn_trackobj_procedural_for_objects(
+        commands,
+        meshes,
+        materials,
+        &slot.objects,
+        slot.world_offset,
+        &index.tsection,
+        tdb,
+        index,
+        route_dir,
+        msts_root,
+        materials_lit,
+        slot.geometry.tile_x,
+        slot.geometry.tile_z,
+        track_stats,
+    );
+    let (forests, waters) = crate::scenery::spawn_tile_scenery(
+        commands,
+        meshes,
+        materials,
+        images,
+        index,
+        obj_ctx,
+        route_dir,
+        msts_root,
+        &slot.objects,
+        &slot.geometry.height,
+        slot.geometry.tile_x,
+        slot.geometry.tile_z,
+        slot.world_offset,
+        tex_stats,
+        texture_env,
+        materials_lit,
+    );
+    let dyntrack = crate::dyntrack::spawn_tile_dyntrack(
+        commands,
+        meshes,
+        materials,
+        &slot.objects,
+        slot.world_offset,
+        materials_lit,
+        slot.geometry.tile_x,
+        slot.geometry.tile_z,
+    );
+    let transfers = crate::transfer::spawn_tile_transfers(
+        commands,
+        meshes,
+        materials,
+        images,
+        index,
+        route_dir,
+        msts_root,
+        &slot.objects,
+        &slot.geometry.height,
+        slot.geometry.tile_x,
+        slot.geometry.tile_z,
+        slot.world_offset,
+        tex_stats,
+        texture_env,
+        materials_lit,
+    );
+    if forests > 0 || waters > 0 || dyntrack > 0 || transfers > 0 || trackobj > 0 {
+        log.push(format!(
+            "→ Escena: {forests} bosque(s), {waters} agua, {dyntrack} dyntrack, {transfers} transfer, {trackobj} TrackObj proc."
+        ));
+    }
 }
 
 // ─── Finalización ────────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn finish_loading(
     commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
     screen: &LoadingScreen,
     loading_cams: &Query<Entity, With<Camera2d>>,
     next_state: &mut NextState<AppState>,
     tex_stats: &TextureLoadStats,
+    track_stats: &TrackSpawnStats,
     side_m: f32,
     perf: &LoadPerfState,
+    night: bool,
 ) {
-    // Resumen de performance.
     let total = perf.elapsed_total();
     let misc = total - perf.secs_indexing - perf.secs_terrain - perf.secs_track - perf.secs_objects;
     eprintln!("[PERF] ══ Carga completa ══  total {total:.3}s");
@@ -849,8 +1236,20 @@ fn finish_loading(
         );
     }
     tex_stats.report();
-    spawn_world_lights(commands);
-    spawn_play_camera(commands, side_m);
+    track_stats.report();
+    let extent = crate::SceneExtent { side_m };
+    crate::sky::spawn_scene_sky(commands, meshes, materials, &extent, perf.tile_count, night);
+    commands.insert_resource(ClearColor(crate::sky::sky_clear_color(night)));
+    spawn_play_camera(
+        commands,
+        side_m,
+        perf.player_start,
+        &extent,
+        perf.tile_count,
+        night,
+    );
+    spawn_ui_overlay_camera(commands);
+    spawn_debug_hud(commands, perf.hud_enabled);
     commands.entity(screen.root).despawn();
     for e in loading_cams {
         commands.entity(e).despawn();
@@ -860,26 +1259,44 @@ fn finish_loading(
     commands.remove_resource::<LoadLog>();
     commands.remove_resource::<LoadProgress>();
     commands.remove_resource::<TextureLoadStats>();
+    commands.remove_resource::<TrackSpawnStats>();
     next_state.set(AppState::Playing);
     info!("carga completa — escena 3D lista");
 }
 
-fn spawn_play_camera(commands: &mut Commands, side_m: f32) {
+fn spawn_play_camera(
+    commands: &mut Commands,
+    side_m: f32,
+    start: Option<PlayerStartPose>,
+    extent: &crate::SceneExtent,
+    tile_count: usize,
+    night: bool,
+) {
     let side = side_m.max(256.0);
+    let far = side * 16.0;
+    let fog = crate::sky::scene_distance_fog(extent, tile_count, night);
+
+    if let Some(pose) = start {
+        // Mirada ligeramente hacia abajo (cabina sobre el raíl).
+        let rotation = Quat::from_euler(EulerRot::YXZ, pose.yaw_rad, -0.07, 0.0);
+        commands.spawn((
+            Camera3d::default(),
+            FlyCamera,
+            Projection::Perspective(PerspectiveProjection { far, ..default() }),
+            Transform::from_translation(pose.position).with_rotation(rotation),
+            fog,
+            Name::new("fly_camera"),
+        ));
+        return;
+    }
+
     let eye = Vec3::new(0.0, side * 0.45, side * 0.75);
     commands.spawn((
         Camera3d::default(),
-        bevy::render::camera::CameraRenderGraph::new(bevy::core_pipeline::core_3d::graph::Core3d),
-        Projection::Perspective(PerspectiveProjection {
-            far: side * 16.0, // ver más lejos cuando hay muchos tiles
-            ..default()
-        }),
+        FlyCamera,
+        Projection::Perspective(PerspectiveProjection { far, ..default() }),
         Transform::from_translation(eye).looking_at(Vec3::ZERO, Vec3::Y),
-        AmbientLight {
-            color: Color::srgb(0.85, 0.90, 1.0),
-            brightness: 350.0,
-            ..default()
-        },
+        fog,
         Name::new("fly_camera"),
     ));
 }

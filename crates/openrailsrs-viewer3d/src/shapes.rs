@@ -1167,6 +1167,28 @@ pub fn msts_content_root() -> Option<PathBuf> {
     None
 }
 
+/// All candidate MSTS/OR `Content/` roots (`OPENRAILSRS_MSTS_CONTENT` first, then default installs).
+pub fn msts_content_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    let mut push = |path: PathBuf| {
+        if path.is_dir() && !roots.iter().any(|r| r == &path) {
+            roots.push(path);
+        }
+    };
+    if let Ok(env) = std::env::var("OPENRAILSRS_MSTS_CONTENT") {
+        push(PathBuf::from(env));
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        for rel in [
+            "Documentos/Open Rails/Content",
+            "Documents/Open Rails/Content",
+        ] {
+            push(PathBuf::from(&home).join(rel));
+        }
+    }
+    roots
+}
+
 /// All `GLOBAL/` asset roots under MSTS Content (OR uses per-route-pack trees like `Chiltern/GLOBAL/`).
 pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let Some(content) = msts_content_root() else {
@@ -1205,10 +1227,22 @@ pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
 pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
     if let Some(content) = msts_content_root() {
-        if let Some(stem) = route_dir.file_name() {
+        if let Some(stem) = route_dir.file_name().and_then(|s| s.to_str()) {
             let pack = content.join(stem);
             if pack.is_dir() {
                 dirs.push(pack);
+            } else if let Ok(rd) = std::fs::read_dir(&content) {
+                for entry in rd.flatten() {
+                    let path = entry.path();
+                    if path.is_dir()
+                        && path
+                            .file_name()
+                            .is_some_and(|n| n.eq_ignore_ascii_case(stem))
+                    {
+                        dirs.push(path);
+                        break;
+                    }
+                }
             }
         }
     }

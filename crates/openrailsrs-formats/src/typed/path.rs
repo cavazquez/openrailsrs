@@ -23,6 +23,7 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::parser::parse_from_first_paren;
 
+use super::track_db::TrackVectorPoint;
 use super::{atom_to_number, atom_to_string};
 
 /// One point along the path.
@@ -32,6 +33,8 @@ pub struct PathDataPoint {
     pub node_id: u32,
     /// Junction direction:  0 = straight / main, 1 = diverging, -1 = reverse.
     pub junction_flag: i32,
+    /// World position from native `TrackPDP` lines, when present.
+    pub world: Option<TrackVectorPoint>,
 }
 
 /// Parsed representation of a `.pat` file.
@@ -118,7 +121,8 @@ fn collect_pdps(ast: &Ast, out: &mut Vec<PathDataPoint>) {
         }
         // TrackPDP tileX tileZ x y z node_id junction_flag  (native MSTS editor format)
         if head.eq_ignore_ascii_case("TrackPDP") && items.len() >= 8 {
-            if let Some(pdp) = pdp_from_node_and_flag(items.get(6), items.get(7)) {
+            if let Some(mut pdp) = pdp_from_node_and_flag(items.get(6), items.get(7)) {
+                pdp.world = track_pdp_world_from_ast(items);
                 out.push(pdp);
             }
             return;
@@ -142,6 +146,29 @@ fn pdp_from_node_and_flag(node: Option<&Ast>, flag: Option<&Ast>) -> Option<Path
     Some(PathDataPoint {
         node_id,
         junction_flag,
+        world: None,
+    })
+}
+
+fn track_pdp_world_from_ast(items: &[Ast]) -> Option<TrackVectorPoint> {
+    let nums: Vec<f64> = items
+        .iter()
+        .skip(1)
+        .take(6)
+        .filter_map(|a| match a {
+            Ast::Atom(at) => atom_to_number(at),
+            _ => None,
+        })
+        .collect();
+    if nums.len() < 6 {
+        return None;
+    }
+    Some(TrackVectorPoint {
+        tile_x: nums[0] as i32,
+        tile_z: nums[1] as i32,
+        x: nums[2],
+        y: nums[3],
+        z: nums[4],
     })
 }
 
@@ -168,9 +195,21 @@ fn extract_track_pdps_from_text(text: &str) -> Vec<PathDataPoint> {
         if nums.len() >= 2 {
             let node_id = nums[nums.len() - 2] as u32;
             let junction_flag = nums[nums.len() - 1] as i32;
+            let world = if nums.len() >= 7 {
+                Some(TrackVectorPoint {
+                    tile_x: nums[0] as i32,
+                    tile_z: nums[1] as i32,
+                    x: nums[2],
+                    y: nums[3],
+                    z: nums[4],
+                })
+            } else {
+                None
+            };
             out.push(PathDataPoint {
                 node_id,
                 junction_flag,
+                world,
             });
         }
     }
@@ -197,6 +236,9 @@ mod tests {
         assert_eq!(path.pdps.len(), 2);
         assert_eq!(path.pdps[0].node_id, 42);
         assert_eq!(path.pdps[0].junction_flag, 0);
+        let w = path.pdps[0].world.expect("world");
+        assert_eq!(w.tile_x, -6079);
+        assert!((w.x + 961.337).abs() < 0.01);
         assert_eq!(path.pdps[1].node_id, 99);
         assert_eq!(path.pdps[1].junction_flag, 1);
         assert_eq!(path.start_node(), Some(42));

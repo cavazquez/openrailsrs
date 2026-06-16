@@ -27,7 +27,7 @@ pub use path::{PathDataPoint, PathFile};
 pub use route::RouteFile;
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LodControl, Matrix43, NamedMatrix,
-    PrimState, Primitive, ShapeFile, SubObject, Vec2, Vec3, Vertex, VtxState,
+    PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject, Vec2, Vec3, Vertex, VtxState,
 };
 pub use terrain::{
     ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, TerrainPatch, TerrainPatchSet,

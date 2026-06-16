@@ -1,5 +1,6 @@
 //! Resolución de texturas MSTS/Open Rails (paridad con `openrailsrs-viewer3d`).
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
@@ -8,6 +9,120 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
 use openrailsrs_formats::resolve_path_case_insensitive;
+
+/// Estación activa (paridad Open Rails `SeasonType`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Season {
+    Spring,
+    #[default]
+    Summer,
+    Autumn,
+    Winter,
+}
+
+impl Season {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Spring => "spring",
+            Self::Summer => "summer",
+            Self::Autumn => "autumn",
+            Self::Winter => "winter",
+        }
+    }
+
+    pub fn parse(s: &str) -> Self {
+        match s.to_ascii_lowercase().as_str() {
+            "spring" => Self::Spring,
+            "autumn" | "fall" => Self::Autumn,
+            "winter" => Self::Winter,
+            _ => Self::Summer,
+        }
+    }
+}
+
+/// Bitfield `ESD_Alternative_Texture` / `Helpers.TextureFlags` (Open Rails).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TextureFlags(u32);
+
+impl TextureFlags {
+    pub const NONE: u32 = 0;
+    pub const SNOW: u32 = 0x1;
+    pub const SNOW_TRACK: u32 = 0x2;
+    pub const SPRING: u32 = 0x4;
+    pub const AUTUMN: u32 = 0x8;
+    pub const WINTER: u32 = 0x10;
+    pub const SPRING_SNOW: u32 = 0x20;
+    pub const AUTUMN_SNOW: u32 = 0x40;
+    pub const WINTER_SNOW: u32 = 0x80;
+    pub const NIGHT: u32 = 0x100;
+
+    /// Flags que Open Rails usa para bosques (`GetForestTextureFile`).
+    pub const FOREST: u32 = Self::SPRING
+        | Self::AUTUMN
+        | Self::WINTER
+        | Self::SPRING_SNOW
+        | Self::AUTUMN_SNOW
+        | Self::WINTER_SNOW;
+
+    pub const fn from_raw(bits: u32) -> Self {
+        Self(bits)
+    }
+
+    pub const fn bits(self) -> u32 {
+        self.0
+    }
+
+    pub const fn contains(self, flag: u32) -> bool {
+        (self.0 & flag) != 0
+    }
+
+    pub const fn intersects(self, mask: u32) -> bool {
+        (self.0 & mask) != 0
+    }
+}
+
+/// Entorno de resolución de texturas (estación, clima, día/noche).
+#[derive(Clone, Copy, Debug, Resource, PartialEq, Eq)]
+pub struct TextureEnvironment {
+    pub season: Season,
+    pub snow_weather: bool,
+    pub night: bool,
+}
+
+impl TextureEnvironment {
+    #[allow(dead_code)]
+    pub fn from_cli(season: &str, weather: &str, night: bool) -> Self {
+        Self {
+            season: Season::parse(season),
+            snow_weather: weather.eq_ignore_ascii_case("snow"),
+            night,
+        }
+    }
+
+    /// Paridad OR `Helpers.IsSnow`.
+    pub fn is_snow(self) -> bool {
+        matches!(self.season, Season::Winter)
+            || (!matches!(self.season, Season::Summer) && self.snow_weather)
+    }
+
+    pub fn is_day(self) -> bool {
+        !self.night
+    }
+
+    pub fn cache_key(self) -> u32 {
+        (self.season as u32) | (u32::from(self.snow_weather) << 4) | (u32::from(self.night) << 5)
+    }
+}
+
+/// Flags de textura para un shape concreto (`.sd` + heurísticas de ruta).
+pub fn shape_texture_flags(shape_path: &Path, alternative_texture: u32) -> TextureFlags {
+    let mut flags = TextureFlags::from_raw(alternative_texture);
+    let path = shape_path.to_string_lossy().to_ascii_lowercase();
+    if path.contains("/global/") || path.contains("\\global\\") {
+        flags = TextureFlags::from_raw(flags.bits() | TextureFlags::SNOW_TRACK);
+    }
+    flags
+}
 
 /// Basename de un path MSTS (`TEXTURES\foo.ace` → `foo.ace`).
 pub fn texture_file_basename(file_name: &str) -> &str {
@@ -74,9 +189,252 @@ pub fn texture_search_dirs_for_shape(
     for global in global_assets_dirs(route_dir, msts_root) {
         dirs.push(global);
     }
+    if let Some(trainset_root) = vehicle_texture_root_for_shape_path(shape_path) {
+        if !dirs.iter().any(|d| d.as_path() == trainset_root) {
+            dirs.push(trainset_root.to_path_buf());
+        }
+    }
     dirs.sort();
     dirs.dedup();
     dirs
+}
+
+/// Raíz del vehículo/trainset dado el path del `.s` resuelto.
+pub fn vehicle_texture_root_for_shape_path(shape_path: &Path) -> Option<&Path> {
+    let parent = shape_path.parent()?;
+    if parent
+        .file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("SHAPES") || n.eq_ignore_ascii_case("shapes"))
+    {
+        parent.parent()
+    } else {
+        Some(parent)
+    }
+}
+
+/// Indexa recursivamente `TEXTURES/` (estaciones, estaciones, subcarpetas).
+pub fn index_textures_tree(map: &mut HashMap<String, PathBuf>, root: &Path) {
+    for sub in ["TEXTURES", "textures"] {
+        index_textures_dir(map, &root.join(sub));
+    }
+    index_textures_dir(map, root);
+}
+
+fn index_textures_dir(map: &mut HashMap<String, PathBuf>, dir: &Path) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in rd.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                if ext.eq_ignore_ascii_case("ace") || ext.eq_ignore_ascii_case("dds") {
+                    map.entry(name.to_ascii_lowercase()).or_insert(path);
+                }
+            }
+            continue;
+        }
+        if entry.file_type().is_ok_and(|t| t.is_dir()) {
+            index_textures_dir(map, &path);
+        }
+    }
+}
+
+pub fn index_trainset_textures(map: &mut HashMap<String, PathBuf>, msts_root: &Path) {
+    for trains_sub in [
+        "TRAINS/TRAINSET",
+        "trains/trainset",
+        "trains/TRAINSET",
+        "TRAINSET",
+        "trainset",
+    ] {
+        let trainsets = msts_root.join(trains_sub);
+        let Ok(rd) = std::fs::read_dir(&trainsets) else {
+            continue;
+        };
+        for entry in rd.flatten() {
+            if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                index_textures_tree(map, &entry.path());
+            }
+        }
+    }
+}
+
+pub fn resolve_texture_with_index(
+    index: &HashMap<String, PathBuf>,
+    dirs: &[&Path],
+    file_name: &str,
+    env: &TextureEnvironment,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
+    for candidate in texture_name_candidates(file_name) {
+        for dir in dirs {
+            for path in texture_path_candidates(dir, &candidate, env, flags) {
+                if path.is_file() {
+                    return Some(path);
+                }
+                if let Some(resolved) = resolve_path_case_insensitive(&path) {
+                    return Some(resolved);
+                }
+            }
+        }
+        let base = texture_file_basename(&candidate);
+        let key = Path::new(base)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())?;
+        if let Some(path) = index.get(&key) {
+            // El índice es plano; preferir candidatos estacionales explícitos arriba.
+            if seasonal_subdir(flags, env).is_none() && !env.night {
+                return Some(path.clone());
+            }
+        }
+    }
+    None
+}
+
+/// Subcarpeta estacional bajo `TEXTURES/` según flags y entorno (OR `GetTextureFile`).
+pub fn seasonal_subdir(flags: TextureFlags, env: &TextureEnvironment) -> Option<&'static str> {
+    if flags.intersects(TextureFlags::SNOW | TextureFlags::SNOW_TRACK) && env.is_snow() {
+        return Some("Snow");
+    }
+    if env.snow_weather {
+        match env.season {
+            Season::Spring if flags.contains(TextureFlags::SPRING_SNOW) => {
+                return Some("SpringSnow");
+            }
+            Season::Autumn if flags.contains(TextureFlags::AUTUMN_SNOW) => {
+                return Some("AutumnSnow");
+            }
+            Season::Winter if flags.contains(TextureFlags::WINTER_SNOW) => {
+                return Some("WinterSnow");
+            }
+            _ => {}
+        }
+    } else {
+        match env.season {
+            Season::Spring if flags.contains(TextureFlags::SPRING) => return Some("Spring"),
+            Season::Autumn if flags.contains(TextureFlags::AUTUMN) => return Some("Autumn"),
+            Season::Winter if flags.contains(TextureFlags::WINTER) => return Some("Winter"),
+            _ => {}
+        }
+    }
+    None
+}
+
+fn texture_roots(asset_root: &Path) -> [PathBuf; 2] {
+    [asset_root.join("TEXTURES"), asset_root.join("textures")]
+}
+
+fn push_file_variant(out: &mut Vec<PathBuf>, dir: &Path, file_name: &str) {
+    out.push(dir.join(file_name));
+    let path_obj = Path::new(file_name);
+    if path_obj
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("ace"))
+    {
+        let dds = path_obj.with_extension("dds");
+        out.push(dir.join(dds));
+    }
+}
+
+/// Candidatos ordenados para una textura bajo una raíz de assets.
+pub fn texture_path_candidates(
+    asset_root: &Path,
+    file_name: &str,
+    env: &TextureEnvironment,
+    flags: TextureFlags,
+) -> Vec<PathBuf> {
+    let base = texture_file_basename(file_name);
+    let mut out = Vec::new();
+
+    if env.night && flags.contains(TextureFlags::NIGHT) {
+        for root in texture_roots(asset_root) {
+            out.extend(night_texture_candidates(&root, base));
+        }
+    }
+
+    if let Some(season) = seasonal_subdir(flags, env) {
+        for root in texture_roots(asset_root) {
+            push_file_variant(&mut out, &root.join(season), base);
+        }
+    }
+
+    for root in texture_roots(asset_root) {
+        push_file_variant(&mut out, &root, base);
+    }
+    push_file_variant(&mut out, asset_root, base);
+
+    // Sin flags estacionales: aceptar cualquier subcarpeta (rutas legacy).
+    if flags.bits() == TextureFlags::NONE {
+        for root in texture_roots(asset_root) {
+            if let Ok(rd) = std::fs::read_dir(&root) {
+                for entry in rd.flatten() {
+                    if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                        push_file_variant(&mut out, &entry.path(), base);
+                    }
+                }
+            }
+        }
+    }
+
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Paridad OR `GetNightTextureFile`.
+fn night_texture_candidates(textures_root: &Path, file_name: &str) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let local_night = textures_root.join("Night");
+    let parent_night = textures_root
+        .parent()
+        .map(|p| p.join("Night"))
+        .unwrap_or_else(|| textures_root.join("Night"));
+
+    for night_dir in [local_night, parent_night] {
+        push_file_variant(&mut out, &night_dir, file_name);
+    }
+    out
+}
+
+/// Variantes de nombre para texturas MSTS mal referenciadas o con prefijos de pack distintos.
+fn texture_name_candidates(file_name: &str) -> Vec<String> {
+    let base = texture_file_basename(file_name);
+    let mut out = vec![base.to_string(), file_name.to_string()];
+    let stem = Path::new(base)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(base);
+    let ext = Path::new(base)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("ace");
+    let push = |out: &mut Vec<String>, name: String| {
+        if !out
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(&name))
+        {
+            out.push(name);
+        }
+    };
+    for prefix in ["MAS_", "SR_", "BR_", "UK_", "US_"] {
+        if let Some(rest) = stem.strip_prefix(prefix) {
+            push(&mut out, format!("{rest}.{ext}"));
+            for alt in ["MAS", "SR", "BR", "UK", "US"] {
+                push(&mut out, format!("{alt}_{rest}.{ext}"));
+            }
+        }
+    }
+    if stem.contains('_') {
+        if let Some((_p, rest)) = stem.split_once('_') {
+            push(&mut out, format!("{rest}.{ext}"));
+        }
+    }
+    out
 }
 
 /// Directorios para resolver shapes (ruta + pack MSTS + GLOBAL).
@@ -104,12 +462,27 @@ pub fn shape_file_basename(file_name: &str) -> &str {
 pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     let base = shape_file_basename(file_name);
     for subdir in ["SHAPES", "shapes"] {
-        let path = route_dir.join(subdir).join(base);
+        let shapes_root = route_dir.join(subdir);
+        let path = shapes_root.join(base);
         if path.is_file() {
             return Some(path);
         }
         if let Some(resolved) = resolve_path_case_insensitive(&path) {
             return Some(resolved);
+        }
+        if let Ok(entries) = std::fs::read_dir(&shapes_root) {
+            for entry in entries.flatten() {
+                if !entry.file_type().is_ok_and(|t| t.is_dir()) {
+                    continue;
+                }
+                let nested = entry.path().join(base);
+                if nested.is_file() {
+                    return Some(nested);
+                }
+                if let Some(resolved) = resolve_path_case_insensitive(&nested) {
+                    return Some(resolved);
+                }
+            }
         }
     }
     let direct = route_dir.join(base);
@@ -128,73 +501,52 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
     None
 }
 
-/// Resuelve `TEXTURES/foo.ace` bajo una raíz (incluye subcarpetas estacionales y `.dds`).
-pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let base = texture_file_basename(file_name);
-    if let Some(p) = resolve_texture_path_exact(route_dir, base) {
-        return Some(p);
-    }
-    if !base.eq_ignore_ascii_case(file_name)
-        && let Some(p) = resolve_texture_path_exact(route_dir, file_name)
-    {
-        return Some(p);
-    }
-    let path_obj = Path::new(base);
-    if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
-    {
-        let dds_name = path_obj
-            .with_extension("dds")
-            .to_string_lossy()
-            .into_owned();
-        if let Some(p) = resolve_texture_path_exact(route_dir, &dds_name) {
-            return Some(p);
+/// Resuelve `TEXTURES/foo.ace` bajo una raíz (variantes estacionales / nocturnas).
+pub fn resolve_texture_path(
+    route_dir: &Path,
+    file_name: &str,
+    env: &TextureEnvironment,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
+    for path in texture_path_candidates(route_dir, file_name, env, flags) {
+        if path.is_file() {
+            return Some(path);
+        }
+        if let Some(resolved) = resolve_path_case_insensitive(&path) {
+            return Some(resolved);
         }
     }
     None
 }
 
-fn resolve_texture_path_exact(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let direct = route_dir.join(file_name);
-    if direct.is_file() {
-        return Some(direct);
-    }
-    if let Some(p) = resolve_path_case_insensitive(&direct) {
-        return Some(p);
-    }
-    for subdir in ["TEXTURES", "textures"] {
-        let textures_root = route_dir.join(subdir);
-        let direct = textures_root.join(file_name);
-        if direct.is_file() {
-            return Some(direct);
-        }
-        if let Some(p) = resolve_path_case_insensitive(&direct) {
-            return Some(p);
-        }
-        if let Ok(entries) = std::fs::read_dir(&textures_root) {
-            for entry in entries.flatten() {
-                if !entry.file_type().is_ok_and(|t| t.is_dir()) {
-                    continue;
-                }
-                let candidate = entry.path().join(file_name);
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
-                if let Some(p) = resolve_path_case_insensitive(&candidate) {
-                    return Some(p);
-                }
-            }
-        }
-    }
-    None
-}
-
-pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
+#[allow(dead_code)]
+pub fn resolve_texture_path_in_dirs(
+    dirs: &[&Path],
+    file_name: &str,
+    env: &TextureEnvironment,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
     for dir in dirs {
-        if let Some(p) = resolve_texture_path(dir, file_name) {
+        if let Some(p) = resolve_texture_path(dir, file_name, env, flags) {
             return Some(p);
         }
     }
     None
+}
+
+#[allow(dead_code)]
+fn resolve_texture_path_legacy(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
+    let env = TextureEnvironment {
+        season: Season::Summer,
+        snow_weather: false,
+        night: false,
+    };
+    resolve_texture_path(
+        route_dir,
+        file_name,
+        &env,
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
 }
 
 pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
@@ -294,13 +646,29 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern")
     }
 
+    fn summer_env() -> TextureEnvironment {
+        TextureEnvironment {
+            season: Season::Summer,
+            snow_weather: false,
+            night: false,
+        }
+    }
+
+    fn default_flags() -> TextureFlags {
+        TextureFlags::from_raw(TextureFlags::NONE)
+    }
+
     #[test]
     fn resolve_texture_strips_msts_prefix() {
         let route = chiltern_route();
         if !route.is_dir() {
             return;
         }
-        assert!(resolve_texture_path(&route, r"TEXTURES\poplar15_1.ace").is_some());
+        let env = summer_env();
+        assert!(
+            resolve_texture_path(&route, r"TEXTURES\poplar15_1.ace", &env, default_flags())
+                .is_some()
+        );
     }
 
     #[test]
@@ -309,7 +677,82 @@ mod tests {
         if !route.is_dir() {
             return;
         }
-        assert!(resolve_texture_path(&route, "poplar15_1.ace").is_some());
+        let env = summer_env();
+        assert!(resolve_texture_path(&route, "poplar15_1.ace", &env, default_flags()).is_some());
+    }
+
+    #[test]
+    fn new_forest_spring_subdir_when_flagged() {
+        let route = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("routes/NewForestRouteV3/Routes/Watersnake"));
+        let Some(route) = route else { return };
+        if !route.is_dir() {
+            return;
+        }
+        let spring_env = TextureEnvironment {
+            season: Season::Spring,
+            snow_weather: false,
+            night: false,
+        };
+        let flags = TextureFlags::from_raw(TextureFlags::SPRING);
+        let spring_dir = route.join("TEXTURES/SPRING");
+        let textures_root = route.join("TEXTURES");
+        if !spring_dir.is_dir() {
+            return;
+        }
+        let sample = std::fs::read_dir(&spring_dir).ok().and_then(|rd| {
+            rd.filter_map(|e| e.ok())
+                .filter(|e| e.path().is_file())
+                .find(|e| {
+                    let name = e.file_name();
+                    !textures_root.join(&name).is_file()
+                })
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+        });
+        let Some(name) = sample else {
+            return;
+        };
+        let resolved = resolve_texture_path(&route, &name, &spring_env, flags);
+        assert!(
+            resolved
+                .as_ref()
+                .is_some_and(|p| { p.to_string_lossy().to_ascii_lowercase().contains("spring") }),
+            "expected SPRING variant for {name}, got {resolved:?}"
+        );
+    }
+
+    #[test]
+    fn new_forest_night_subdir_when_flagged() {
+        let route = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("routes/NewForestRouteV3/Routes/Watersnake"));
+        let Some(route) = route else { return };
+        if !route.is_dir() {
+            return;
+        }
+        let night_dir = route.join("TEXTURES/NIGHT");
+        if !night_dir.is_dir() {
+            return;
+        }
+        let sample = std::fs::read_dir(&night_dir)
+            .ok()
+            .and_then(|mut rd| rd.find_map(|e| e.ok()))
+            .map(|e| e.file_name().to_string_lossy().into_owned());
+        let Some(name) = sample else { return };
+        let night_env = TextureEnvironment {
+            season: Season::Summer,
+            snow_weather: false,
+            night: true,
+        };
+        let flags = TextureFlags::from_raw(TextureFlags::NIGHT);
+        let resolved = resolve_texture_path(&route, &name, &night_env, flags);
+        assert!(
+            resolved
+                .as_ref()
+                .is_some_and(|p| { p.to_string_lossy().to_ascii_lowercase().contains("night") }),
+            "expected NIGHT variant for {name}, got {resolved:?}"
+        );
     }
 
     #[test]

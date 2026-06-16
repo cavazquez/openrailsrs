@@ -211,11 +211,20 @@ pub struct Animation {
     pub nodes: Vec<AnimNode>,
 }
 
+/// Slot in the shape `textures` table (maps to `images` via `image_idx`).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ShapeTextureSlot {
+    /// Index into [`ShapeFile::texture_filenames`] / `images`.
+    pub image_idx: i32,
+}
+
 /// Parsed `.s` ASCII file.
 #[derive(Clone, Debug, Default)]
 pub struct ShapeFile {
-    /// Texture filenames declared via `texture_filenames`.
+    /// Texture filenames declared via `texture_filenames` or `images`.
     pub texture_filenames: Vec<String>,
+    /// MSTS `textures` table (`tex_idxs` indexes here, not `texture_filenames` directly).
+    pub texture_slots: Vec<ShapeTextureSlot>,
     /// Shader names declared via `shader_names`.
     pub shader_names: Vec<String>,
     pub points: Vec<Vec3>,
@@ -234,6 +243,7 @@ impl ShapeFile {
     /// Parse from a pre-built AST.
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let texture_filenames = collect_texture_filenames(ast);
+        let texture_slots = collect_texture_slots(ast);
         let shader_names = collect_shader_names(ast);
         let points = collect_points(ast);
         let uvs = collect_uv_points(ast);
@@ -245,6 +255,7 @@ impl ShapeFile {
 
         Ok(Self {
             texture_filenames,
+            texture_slots,
             shader_names,
             points,
             uvs,
@@ -268,6 +279,53 @@ impl ShapeFile {
         let ast = parse_first_from_first_paren(&text)?;
         Self::from_ast(&ast)
     }
+
+    /// Resolve a texture filename from a `tex_idxs` / `textures` slot (Open Rails parity).
+    pub fn resolve_texture_for_tex_slot(&self, tex_slot_idx: i32) -> Option<String> {
+        if tex_slot_idx < 0 {
+            return None;
+        }
+        let image_idx = if !self.texture_slots.is_empty() {
+            self.texture_slots.get(tex_slot_idx as usize)?.image_idx
+        } else {
+            tex_slot_idx
+        };
+        self.texture_filenames
+            .get(image_idx.max(0) as usize)
+            .cloned()
+    }
+
+    /// Texture for a `prim_state` index, following OR: `tex_idxs[0]` → `textures[]` → `images[]`.
+    pub fn texture_for_prim_state_idx(&self, prim_state_idx: i32) -> Option<String> {
+        if prim_state_idx < 0 {
+            return self.primary_texture_filename();
+        }
+        let ps = self.prim_states.get(prim_state_idx as usize)?;
+        let tex_slot = ps.tex_indices.first().copied().unwrap_or(ps.texture_idx);
+        self.resolve_texture_for_tex_slot(tex_slot)
+    }
+
+    /// First resolvable texture in the closest LOD (viewer3d / OR helper).
+    pub fn primary_texture_filename(&self) -> Option<String> {
+        let level = self
+            .lod_controls
+            .first()?
+            .distance_levels
+            .iter()
+            .min_by(|a, b| {
+                a.selection_m
+                    .partial_cmp(&b.selection_m)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })?;
+        for sub in &level.sub_objects {
+            for prim in &sub.primitives {
+                if let Some(name) = self.texture_for_prim_state_idx(prim.prim_state_idx) {
+                    return Some(name);
+                }
+            }
+        }
+        self.texture_filenames.first().cloned()
+    }
 }
 
 fn shape_text_from_bytes(bytes: &[u8]) -> Result<String, FormatError> {
@@ -278,8 +336,10 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     let mut out = Vec::new();
     walk_named_list(ast, "texture_filenames", &mut |items| {
         for item in shape_section_body(items) {
-            if let Ast::Atom(Atom::String(s)) = item {
-                out.push(s.clone());
+            if let Ast::Atom(at) = item {
+                if let Some(s) = atom_to_string(at) {
+                    out.push(s);
+                }
             }
         }
     });
@@ -287,13 +347,36 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
         walk_named_list(ast, "images", &mut |items| {
             for_each_tagged(items, "image", |sub| {
                 for item in shape_section_body(sub) {
-                    if let Ast::Atom(Atom::String(s)) = item {
-                        out.push(s.clone());
+                    if let Ast::Atom(at) = item {
+                        if let Some(s) = atom_to_string(at) {
+                            out.push(s);
+                        }
                     }
                 }
             });
         });
     }
+    out
+}
+
+fn collect_texture_slots(ast: &Ast) -> Vec<ShapeTextureSlot> {
+    let mut out = Vec::new();
+    walk_named_list(ast, "textures", &mut |items| {
+        for_each_tagged(items, "texture", |sub| {
+            let image_idx = first_number_after_head(sub)
+                .map(|n| n as i32)
+                .or_else(|| {
+                    shape_section_body(sub).iter().find_map(|a| match a {
+                        Ast::Atom(at) => shape_atom_to_i32(at),
+                        _ => None,
+                    })
+                })
+                .unwrap_or(-1);
+            if image_idx >= 0 {
+                out.push(ShapeTextureSlot { image_idx });
+            }
+        });
+    });
     out
 }
 
