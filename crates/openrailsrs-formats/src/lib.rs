@@ -1,6 +1,7 @@
 //! Tokenizer and generic S-expression AST for MSTS-style files.
 
 pub mod ast;
+pub mod cab_link;
 pub mod dispatch;
 pub mod encoding;
 pub mod error;
@@ -14,8 +15,14 @@ pub mod shape_binary;
 pub mod shape_binary_reader;
 pub mod typed;
 pub mod units;
+pub mod vehicle_audit;
+pub mod vehicle_field_catalog;
 
 pub use ast::{Ast, Atom};
+pub use cab_link::{
+    ResolvedCabAssets, find_cabview_dir, pick_cab_shape_in_dir, resolve_cab_assets,
+    resolve_cab_assets_scan,
+};
 pub use dispatch::{MstsFile, parse_msts_file};
 pub use encoding::{
     decode_msts_bytes, msts_latin_bytes, read_msts_file_case_insensitive, read_msts_file_to_string,
@@ -38,10 +45,11 @@ pub use parser::{
 pub use shape_binary_reader::{BinaryBlockReader, apply_token_offset};
 pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
-    ConsistEntry, ConsistFile, DistanceLevel, ElevationGrid, EngineFile, FeatureGrid,
-    IndexedTrVectorSection, LodControl, Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType,
-    OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, PathDataPoint, PathFile, PrimState,
-    Primitive, RestrictedZone, RouteFile, SKEW_AS_CURVE_RADIUS_M, ShapeFile, SignalAspectKind,
+    CabControl, CabView, CabViewFile, ConsistEntry, ConsistFile, ControlState, ControlType,
+    DistanceLevel, ElevationGrid, EngineCabView, EngineFile, FeatureGrid, IndexedTrVectorSection,
+    LodControl, Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType,
+    OrtsFrictionFields, OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive,
+    RestrictedZone, RouteFile, SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, SignalAspectKind,
     SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData, TerrainPatch,
     TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
     TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
@@ -53,3 +61,10 @@ pub use typed::{
     read_y_raw, resolve_brake_shoe_curve, terrain_patches_per_side,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};
+pub use vehicle_audit::{
+    FieldAuditEntry, VehicleAuditReport, audit_vehicle_file, collect_msts_list_head_symbols,
+};
+pub use vehicle_field_catalog::{
+    ParserSupport, VEHICLE_FIELD_CATALOG, VehicleFieldSpec, VehicleKind, catalog_for_kind,
+    lookup_field,
+};

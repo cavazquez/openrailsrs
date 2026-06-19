@@ -405,6 +405,7 @@ pub fn build_hud_content_live(
     precipitation: &PrecipitationState,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
+    cab_render_diag: Option<&str>,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let rain_label = precipitation.hud_label();
@@ -454,22 +455,33 @@ pub fn build_hud_content_live(
             gp.destination, gp.accrued_penalty
         )
     };
-    let controls =
+    let controls = if follow == CameraFollowMode::DriverCam {
+        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  C:cab  T:cam  V:chase  Space:emerg  G:goto  F2:fly  Esc:quit"
+            .to_string()
+    } else {
         "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  ,/.:zoom  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
-            .to_string();
+            .to_string()
+    };
+    let mut row2 = format!(
+        "{coords}    t={:.1}s  {:.0} km/h  lim {:.0} km/h  thr={:.0}%  br={:.0}%  sim={:.1}x",
+        live.session.time_s(),
+        vel_kmh,
+        limit_kmh,
+        live.session.driver_throttle * 100.0,
+        live.session.driver_brake * 100.0,
+        live.session.speed_mul,
+    );
+    if follow == CameraFollowMode::DriverCam {
+        if let Some(diag) = cab_render_diag {
+            row2.push_str("  |  ");
+            row2.push_str(diag);
+        }
+    }
     HudContent {
         row1: format!(
             "{title}    {status}    {cam_label}  follow:{follow_label}  rain:{rain_label}  {game_line}",
         ),
-        row2: format!(
-            "{coords}    t={:.1}s  {:.0} km/h  lim {:.0} km/h  thr={:.0}%  br={:.0}%  sim={:.1}x",
-            live.session.time_s(),
-            vel_kmh,
-            limit_kmh,
-            live.session.driver_throttle * 100.0,
-            live.session.driver_brake * 100.0,
-            live.session.speed_mul,
-        ),
+        row2,
         progress: live.session.route_progress() as f32,
         trains: format!("live {:.0} km/h", vel_kmh),
         controls,
@@ -495,6 +507,7 @@ pub(crate) fn update_hud(
     follow: Res<CameraFollowMode>,
     follow_target: Res<CameraFollowTarget>,
     precipitation: Res<PrecipitationState>,
+    cab_diag: Option<Res<crate::cab_render::CabRenderDiagnostic>>,
     terrain: Option<Res<TerrainElevation>>,
     camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
     mut cache: Local<HudCache>,
@@ -543,6 +556,7 @@ pub(crate) fn update_hud(
             &precipitation,
             camera_pos,
             orbit_focus,
+            cab_diag.as_ref().and_then(|d| d.hud_line.as_deref()),
         )
     } else {
         build_hud_content(

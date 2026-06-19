@@ -1,6 +1,7 @@
 mod activity;
 mod brake_shoe;
 mod consist;
+mod cvf;
 mod engine;
 mod friction;
 mod path;
@@ -19,7 +20,8 @@ pub use brake_shoe::{
     BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe, resolve_brake_shoe_curve,
 };
 pub use consist::{ConsistEntry, ConsistFile};
-pub use engine::{EngineFile, MstsSteamFields};
+pub use cvf::{CabControl, CabView, CabViewFile, ControlState, ControlType, ScreenRect};
+pub use engine::{EngineCabView, EngineFile, MstsSteamFields};
 pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };

@@ -443,6 +443,7 @@ fn load_vehicle_shape_assets(
                 prim_state_idx: -1,
                 mesh,
                 material,
+                or_cab_material: None,
                 has_texture: false,
                 is_transparent: false,
             }],

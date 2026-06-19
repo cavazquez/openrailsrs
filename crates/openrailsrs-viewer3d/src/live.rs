@@ -452,10 +452,9 @@ pub(crate) fn driver_cab_from_lead_vehicle(
     if let Some(shape_name) = vehicle.shape_file.as_deref() {
         if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
             cab.head_msts = Some(orts.head_pos_msts);
-            cab.head_pos_train = Some(
-                placement
-                    .transform_point(crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts)),
-            );
+            let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts);
+            cab.head_lead_local = Some(head_bevy);
+            cab.head_pos_train = Some(placement.transform_point(head_bevy));
             cab.look_pitch = orts.look_pitch;
         }
     }

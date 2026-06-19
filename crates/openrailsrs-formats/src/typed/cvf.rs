@@ -1,0 +1,1041 @@
+//! Typed adapter for MSTS cab view files (`.cvf`).
+//!
+//! Reference: OpenBVE `Train.MsTs/Panel/CvfParser.cs`, Open Rails `CabViewFile.cs`.
+
+use crate::ast::{Ast, Atom};
+use crate::error::FormatError;
+
+use super::{atom_to_number, atom_to_string, walk_lists_find};
+
+/// Parsed MSTS cab view definition (`Tr_CabViewFile`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabViewFile {
+    pub cab_view_type: Option<u32>,
+    pub views: Vec<CabView>,
+    pub controls: Vec<CabControl>,
+}
+
+/// A 2D cab panel view (texture + head position).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabView {
+    pub texture_ace: String,
+    pub window: ScreenRect,
+    pub position_m: [f64; 3],
+    pub direction_deg: [f64; 3],
+}
+
+/// Screen rectangle in cab panel pixels (x, y, width, height).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScreenRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// Simulation variable driving a cab control (from `Type (...)` tokens).
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ControlType {
+    Throttle,
+    TrainBrake,
+    Ammeter,
+    ThrottleDisplay,
+    DirectionDisplay,
+    DynamicBrakeDisplay,
+    Speedometer,
+    MainRes,
+    BrakePipe,
+    BrakeCyl,
+    EqRes,
+    LoadMeter,
+    PenaltyApp,
+    Generic(String),
+}
+
+impl ControlType {
+    pub fn from_type_tokens(tokens: &[String]) -> Self {
+        let joined = tokens
+            .iter()
+            .map(|t| t.to_ascii_uppercase())
+            .collect::<Vec<_>>()
+            .join(" ");
+        match joined.as_str() {
+            "THROTTLE LEVER" | "THROTTLE" => return Self::Throttle,
+            "TRAIN BRAKE LEVER" | "TRAIN BRAKE" => return Self::TrainBrake,
+            "AMMETER" | "AMMETER ABS" => return Self::Ammeter,
+            _ => {}
+        }
+        for token in tokens {
+            match token.to_ascii_uppercase().as_str() {
+                "THROTTLE" => return Self::Throttle,
+                "TRAIN_BRAKE" | "TRAIN BRAKE" => return Self::TrainBrake,
+                "THROTTLE_DISPLAY" => return Self::ThrottleDisplay,
+                "DIRECTION_DISPLAY" => return Self::DirectionDisplay,
+                "DYNAMIC_BRAKE_DISPLAY" => return Self::DynamicBrakeDisplay,
+                "SPEEDOMETER" => return Self::Speedometer,
+                "MAIN_RES" => return Self::MainRes,
+                "BRAKE_PIPE" => return Self::BrakePipe,
+                "BRAKE_CYL" => return Self::BrakeCyl,
+                "EQ_RES" => return Self::EqRes,
+                "LOAD_METER" => return Self::LoadMeter,
+                "PENALTY_APP" => return Self::PenaltyApp,
+                _ => {}
+            }
+        }
+        Self::Generic(tokens.first().cloned().unwrap_or_default())
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Throttle => "THROTTLE",
+            Self::TrainBrake => "TRAIN_BRAKE",
+            Self::Ammeter => "AMMETER",
+            Self::ThrottleDisplay => "THROTTLE_DISPLAY",
+            Self::DirectionDisplay => "DIRECTION_DISPLAY",
+            Self::DynamicBrakeDisplay => "DYNAMIC_BRAKE_DISPLAY",
+            Self::Speedometer => "SPEEDOMETER",
+            Self::MainRes => "MAIN_RES",
+            Self::BrakePipe => "BRAKE_PIPE",
+            Self::BrakeCyl => "BRAKE_CYL",
+            Self::EqRes => "EQ_RES",
+            Self::LoadMeter => "LOAD_METER",
+            Self::PenaltyApp => "PENALTY_APP",
+            Self::Generic(s) => s.as_str(),
+        }
+    }
+}
+
+/// One discrete state for multi-state displays.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ControlState {
+    pub style: u32,
+    pub switch_val: f64,
+}
+
+/// Cab control element (display, dial, digital readout, …).
+#[derive(Clone, Debug, PartialEq)]
+pub enum CabControl {
+    MultiStateDisplay {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+        states: Vec<ControlState>,
+    },
+    Dial {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+    },
+    Digital {
+        control_type: ControlType,
+        position: ScreenRect,
+        units: Option<String>,
+    },
+    TwoStateDisplay {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+    },
+    TriStateDisplay {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+    },
+    /// Continuous lever (3D cab): throttle, train brake, …
+    Lever {
+        control_type: ControlType,
+        position: Option<ScreenRect>,
+        graphic: String,
+    },
+    Unknown {
+        kind: String,
+    },
+}
+
+impl CabViewFile {
+    pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
+        if let Some(root) = find_cabview_root(ast) {
+            return parse_cabview_block(root);
+        }
+        if looks_like_cabview_content(ast) {
+            return parse_cabview_block(ast);
+        }
+        Err(FormatError::MissingField {
+            key: "Tr_CabViewFile".to_string(),
+            context: "cvf".to_string(),
+        })
+    }
+
+    /// Collect distinct control type names (for inspect / debugging).
+    pub fn control_type_names(&self) -> Vec<&str> {
+        let mut names: Vec<&str> = self
+            .controls
+            .iter()
+            .filter_map(|c| control_type(c).map(ControlType::as_str))
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        names
+    }
+}
+
+fn control_type(control: &CabControl) -> Option<&ControlType> {
+    match control {
+        CabControl::MultiStateDisplay { control_type, .. }
+        | CabControl::Dial { control_type, .. }
+        | CabControl::Digital { control_type, .. }
+        | CabControl::TwoStateDisplay { control_type, .. }
+        | CabControl::TriStateDisplay { control_type, .. } => Some(control_type),
+        CabControl::Lever { control_type, .. } => Some(control_type),
+        CabControl::Unknown { .. } => None,
+    }
+}
+
+fn find_cabview_root(ast: &Ast) -> Option<&Ast> {
+    if is_cabview_block(ast) {
+        return Some(ast);
+    }
+    if let Ast::List(items) = ast {
+        for item in items {
+            if let Some(found) = find_cabview_root(item) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+fn looks_like_cabview_content(ast: &Ast) -> bool {
+    walk_lists_find(ast, &mut |items| {
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
+            match head.to_ascii_uppercase().as_str() {
+                "CABVIEWTYPE" | "CABVIEWCONTROLS" | "CABVIEWFILE" => return Some(()),
+                _ => {}
+            }
+        }
+        None
+    })
+    .is_some()
+}
+
+fn cabview_block_start_index(items: &[Ast]) -> usize {
+    if items.first().is_some_and(|item| {
+        matches!(item, Ast::Atom(Atom::Symbol(head)) if head.eq_ignore_ascii_case("Tr_CabViewFile"))
+    }) {
+        1
+    } else {
+        0
+    }
+}
+
+fn is_cabview_block(ast: &Ast) -> bool {
+    matches!(
+        ast,
+        Ast::List(items)
+            if items.first().is_some_and(|item| {
+                matches!(item, Ast::Atom(Atom::Symbol(head)) if head.eq_ignore_ascii_case("Tr_CabViewFile"))
+            })
+    )
+}
+
+fn parse_cabview_block(ast: &Ast) -> Result<CabViewFile, FormatError> {
+    let Ast::List(items) = ast else {
+        return Err(FormatError::UnexpectedAtom {
+            key: "Tr_CabViewFile".to_string(),
+            context: "cvf".to_string(),
+            expected: "list".to_string(),
+        });
+    };
+
+    let mut cab_view_type = None;
+    let mut views = Vec::new();
+    let mut controls = Vec::new();
+
+    let mut pending_texture: Option<String> = None;
+    let mut pending_window = ScreenRect {
+        x: 0.0,
+        y: 0.0,
+        width: 0.0,
+        height: 0.0,
+    };
+    let mut pending_position = [0.0; 3];
+    let mut pending_direction = [0.0; 3];
+    let mut has_position = false;
+    let mut has_direction = false;
+
+    let start = cabview_block_start_index(items);
+    let mut i = start;
+    while i < items.len() {
+        match &items[i] {
+            Ast::List(entry) => {
+                if let Some(Ast::Atom(Atom::Symbol(key))) = entry.first() {
+                    apply_cabview_field(
+                        key,
+                        Some(entry.as_slice()),
+                        None,
+                        &mut cab_view_type,
+                        &mut views,
+                        &mut controls,
+                        &mut pending_texture,
+                        &mut pending_window,
+                        &mut pending_position,
+                        &mut pending_direction,
+                        &mut has_position,
+                        &mut has_direction,
+                    )?;
+                }
+                i += 1;
+            }
+            Ast::Atom(Atom::Symbol(key)) => {
+                i += 1;
+                let value = items.get(i);
+                apply_cabview_field(
+                    key,
+                    None,
+                    value,
+                    &mut cab_view_type,
+                    &mut views,
+                    &mut controls,
+                    &mut pending_texture,
+                    &mut pending_window,
+                    &mut pending_position,
+                    &mut pending_direction,
+                    &mut has_position,
+                    &mut has_direction,
+                )?;
+                if value.is_some() {
+                    i += 1;
+                }
+            }
+            _ => i += 1,
+        }
+    }
+
+    flush_pending_view(
+        &mut views,
+        &mut pending_texture,
+        &pending_window,
+        pending_position,
+        pending_direction,
+        has_position,
+        has_direction,
+    );
+
+    Ok(CabViewFile {
+        cab_view_type,
+        views,
+        controls,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_cabview_field(
+    key: &str,
+    entry: Option<&[Ast]>,
+    flat_value: Option<&Ast>,
+    cab_view_type: &mut Option<u32>,
+    views: &mut Vec<CabView>,
+    controls: &mut Vec<CabControl>,
+    pending_texture: &mut Option<String>,
+    pending_window: &mut ScreenRect,
+    pending_position: &mut [f64; 3],
+    pending_direction: &mut [f64; 3],
+    has_position: &mut bool,
+    has_direction: &mut bool,
+) -> Result<(), FormatError> {
+    match key.to_ascii_uppercase().as_str() {
+        "CABVIEWTYPE" => {
+            *cab_view_type = Some(parse_u32_value(entry, flat_value)?);
+        }
+        "CABVIEWFILE" => {
+            flush_pending_view(
+                views,
+                pending_texture,
+                pending_window,
+                *pending_position,
+                *pending_direction,
+                *has_position,
+                *has_direction,
+            );
+            *pending_texture = Some(parse_string_value(entry, flat_value)?);
+            *has_position = false;
+            *has_direction = false;
+        }
+        "CABVIEWWINDOW" => {
+            *pending_window = parse_screen_rect_value(entry, flat_value)?;
+        }
+        "POSITION" => {
+            *pending_position = parse_vec3_value(entry, flat_value)?;
+            *has_position = true;
+        }
+        "DIRECTION" => {
+            *pending_direction = parse_vec3_value(entry, flat_value)?;
+            *has_direction = true;
+        }
+        "CABVIEWCONTROLS" => {
+            flush_pending_view(
+                views,
+                pending_texture,
+                pending_window,
+                *pending_position,
+                *pending_direction,
+                *has_position,
+                *has_direction,
+            );
+            if let Some(entry) = entry {
+                parse_controls(entry, controls)?;
+            } else if let Some(Ast::List(vals)) = flat_value {
+                parse_controls_flat(vals, controls)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn parse_controls_flat(items: &[Ast], out: &mut Vec<CabControl>) -> Result<(), FormatError> {
+    let mut i = items
+        .first()
+        .filter(|a| matches!(a, Ast::Atom(Atom::Number(_) | Atom::Integer(_))))
+        .map(|_| 1)
+        .unwrap_or(0);
+    while i < items.len() {
+        match &items[i] {
+            Ast::List(entry) => {
+                if let Some(control) = parse_control_entry(entry)? {
+                    out.push(control);
+                }
+                i += 1;
+            }
+            Ast::Atom(Atom::Symbol(kind)) => {
+                i += 1;
+                let Some(Ast::List(values)) = items.get(i) else {
+                    continue;
+                };
+                let mut entry = vec![Ast::Atom(Atom::Symbol(kind.clone()))];
+                entry.extend(values.clone());
+                if let Some(control) = parse_control_entry(&entry)? {
+                    out.push(control);
+                }
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+    Ok(())
+}
+
+fn parse_control_entry(entry: &[Ast]) -> Result<Option<CabControl>, FormatError> {
+    let Some(Ast::Atom(Atom::Symbol(kind))) = entry.first() else {
+        return Ok(None);
+    };
+    Ok(Some(match kind.to_ascii_uppercase().as_str() {
+        "MULTISTATEDISPLAY" => parse_multi_state(entry)?,
+        "DIAL" => parse_dial(entry)?,
+        "DIGITAL" => parse_digital(entry)?,
+        "TWOSTATEDISPLAY" | "TWOSTATE" => parse_two_state(entry)?,
+        "TRISTATEDISPLAY" | "TRISTATE" => parse_tri_state(entry)?,
+        "LEVER" => parse_lever(entry)?,
+        other => CabControl::Unknown {
+            kind: other.to_string(),
+        },
+    }))
+}
+
+fn parse_u32_value(entry: Option<&[Ast]>, flat_value: Option<&Ast>) -> Result<u32, FormatError> {
+    if let Some(entry) = entry {
+        return parse_u32_field(entry, "CabViewType")?.ok_or_else(|| FormatError::MissingField {
+            key: "CabViewType".to_string(),
+            context: "cvf".to_string(),
+        });
+    }
+    parse_u32_from_ast(flat_value.ok_or_else(|| FormatError::MissingField {
+        key: "CabViewType".to_string(),
+        context: "cvf".to_string(),
+    })?)
+}
+
+fn parse_u32_from_ast(value: &Ast) -> Result<u32, FormatError> {
+    match value {
+        Ast::Atom(atom) => {
+            atom_to_number(atom)
+                .map(|v| v as u32)
+                .ok_or_else(|| FormatError::UnexpectedAtom {
+                    key: "CabViewType".to_string(),
+                    context: "cvf".to_string(),
+                    expected: "number".to_string(),
+                })
+        }
+        Ast::List(items) => {
+            if items.len() == 1 {
+                if let Ast::Atom(atom) = &items[0] {
+                    if let Some(v) = atom_to_number(atom) {
+                        return Ok(v as u32);
+                    }
+                }
+            }
+            parse_coordinate_numbers(items)?
+                .first()
+                .copied()
+                .map(|v| v as u32)
+                .ok_or_else(|| FormatError::MissingField {
+                    key: "CabViewType".to_string(),
+                    context: "cvf".to_string(),
+                })
+        }
+    }
+}
+
+fn parse_string_value(
+    entry: Option<&[Ast]>,
+    flat_value: Option<&Ast>,
+) -> Result<String, FormatError> {
+    if let Some(entry) = entry {
+        return parse_string_field(entry, "CabViewFile")?.ok_or_else(|| {
+            FormatError::MissingField {
+                key: "CabViewFile".to_string(),
+                context: "cvf".to_string(),
+            }
+        });
+    }
+    match flat_value {
+        Some(Ast::Atom(atom)) => atom_to_string(atom).ok_or_else(|| FormatError::UnexpectedAtom {
+            key: "CabViewFile".to_string(),
+            context: "cvf".to_string(),
+            expected: "string".to_string(),
+        }),
+        Some(Ast::List(items)) => {
+            if let Some(Ast::Atom(atom)) = items.first() {
+                atom_to_string(atom).ok_or_else(|| FormatError::UnexpectedAtom {
+                    key: "CabViewFile".to_string(),
+                    context: "cvf".to_string(),
+                    expected: "string".to_string(),
+                })
+            } else {
+                Err(FormatError::MissingField {
+                    key: "CabViewFile".to_string(),
+                    context: "cvf".to_string(),
+                })
+            }
+        }
+        None => Err(FormatError::MissingField {
+            key: "CabViewFile".to_string(),
+            context: "cvf".to_string(),
+        }),
+    }
+}
+
+fn parse_screen_rect_value(
+    entry: Option<&[Ast]>,
+    flat_value: Option<&Ast>,
+) -> Result<ScreenRect, FormatError> {
+    if let Some(entry) = entry {
+        return parse_screen_rect(entry, "CabViewWindow");
+    }
+    match flat_value {
+        Some(Ast::List(items)) => parse_screen_rect(items, "CabViewWindow"),
+        Some(value) => {
+            let fake = Ast::List(vec![
+                Ast::Atom(Atom::Symbol("CabViewWindow".into())),
+                value.clone(),
+            ]);
+            if let Ast::List(items) = fake {
+                parse_screen_rect(&items, "CabViewWindow")
+            } else {
+                unreachable!()
+            }
+        }
+        None => Err(FormatError::MissingField {
+            key: "CabViewWindow".to_string(),
+            context: "cvf".to_string(),
+        }),
+    }
+}
+
+fn parse_vec3_value(
+    entry: Option<&[Ast]>,
+    flat_value: Option<&Ast>,
+) -> Result<[f64; 3], FormatError> {
+    if let Some(entry) = entry {
+        return parse_vec3(entry, "Position");
+    }
+    match flat_value {
+        Some(Ast::List(items)) => parse_vec3(items, "Position"),
+        Some(value) => {
+            let fake = Ast::List(vec![
+                Ast::Atom(Atom::Symbol("Position".into())),
+                value.clone(),
+            ]);
+            if let Ast::List(items) = fake {
+                parse_vec3(&items, "Position")
+            } else {
+                unreachable!()
+            }
+        }
+        None => Err(FormatError::MissingField {
+            key: "Position".to_string(),
+            context: "cvf".to_string(),
+        }),
+    }
+}
+
+fn flush_pending_view(
+    views: &mut Vec<CabView>,
+    pending_texture: &mut Option<String>,
+    window: &ScreenRect,
+    position_m: [f64; 3],
+    direction_deg: [f64; 3],
+    has_position: bool,
+    has_direction: bool,
+) {
+    if let Some(texture_ace) = pending_texture.take() {
+        if has_position || has_direction || !texture_ace.is_empty() {
+            views.push(CabView {
+                texture_ace,
+                window: window.clone(),
+                position_m,
+                direction_deg,
+            });
+        }
+    }
+}
+
+fn parse_controls(items: &[Ast], out: &mut Vec<CabControl>) -> Result<(), FormatError> {
+    for item in items.iter().skip(1) {
+        let Ast::List(entry) = item else {
+            continue;
+        };
+        if let Some(control) = parse_control_entry(entry)? {
+            out.push(control);
+        }
+    }
+    Ok(())
+}
+
+fn parse_multi_state(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "MultiStateDisplay")?;
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    let states = parse_states(items)?;
+    Ok(CabControl::MultiStateDisplay {
+        control_type,
+        position,
+        graphic,
+        states,
+    })
+}
+
+fn parse_dial(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "Dial")?;
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::Dial {
+        control_type,
+        position,
+        graphic,
+    })
+}
+
+fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "Digital")?;
+    let units = find_string_in_list(items, "Units");
+    Ok(CabControl::Digital {
+        control_type,
+        position,
+        units,
+    })
+}
+
+fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "TwoStateDisplay")?;
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::TwoStateDisplay {
+        control_type,
+        position,
+        graphic,
+    })
+}
+
+fn parse_tri_state(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "TriStateDisplay").ok();
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::TriStateDisplay {
+        control_type,
+        position: position.unwrap_or(ScreenRect {
+            x: 0.0,
+            y: 0.0,
+            width: 0.0,
+            height: 0.0,
+        }),
+        graphic,
+    })
+}
+
+fn parse_lever(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "Lever").ok();
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::Lever {
+        control_type,
+        position,
+        graphic,
+    })
+}
+
+fn parse_control_type(items: &[Ast]) -> Result<ControlType, FormatError> {
+    let tokens = find_type_tokens(items)?;
+    Ok(ControlType::from_type_tokens(&tokens))
+}
+
+fn find_type_tokens(items: &[Ast]) -> Result<Vec<String>, FormatError> {
+    if let Some(tokens) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() >= 2 {
+            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
+                if head.eq_ignore_ascii_case("Type") {
+                    return Some(collect_type_token_strings(&list[1..]));
+                }
+            }
+        }
+        None
+    }) {
+        return Ok(tokens);
+    }
+
+    for (i, item) in items.iter().enumerate() {
+        if let Ast::Atom(Atom::Symbol(head)) = item {
+            if head.eq_ignore_ascii_case("Type") {
+                if let Some(next) = items.get(i + 1) {
+                    return Ok(match next {
+                        Ast::List(sub) => collect_type_token_strings(sub),
+                        Ast::Atom(atom) => atom_to_string(atom).into_iter().collect(),
+                    });
+                }
+            }
+        }
+    }
+
+    Err(FormatError::MissingField {
+        key: "Type".to_string(),
+        context: "CabControl".to_string(),
+    })
+}
+
+fn collect_type_token_strings(items: &[Ast]) -> Vec<String> {
+    let mut tokens = Vec::new();
+    for item in items {
+        match item {
+            Ast::Atom(atom) => {
+                if let Some(s) = atom_to_string(atom) {
+                    tokens.push(s);
+                }
+            }
+            Ast::List(sub) => tokens.extend(collect_type_token_strings(sub)),
+        }
+    }
+    tokens
+}
+
+fn find_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
+    if let Some(rect) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() >= 2 {
+            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
+                if head.eq_ignore_ascii_case("Position") {
+                    return parse_screen_rect(list, "Position").ok();
+                }
+            }
+        }
+        None
+    }) {
+        return Ok(rect);
+    }
+
+    for (i, item) in items.iter().enumerate() {
+        if let Ast::Atom(Atom::Symbol(head)) = item {
+            if head.eq_ignore_ascii_case("Position") {
+                if let Some(next) = items.get(i + 1) {
+                    return parse_screen_rect_value(None, Some(next));
+                }
+            }
+        }
+    }
+
+    Err(FormatError::MissingField {
+        key: "Position".to_string(),
+        context: context.to_string(),
+    })
+}
+
+fn parse_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
+    let nums = parse_coordinate_numbers(items)?;
+    if nums.len() >= 4 {
+        return Ok(ScreenRect {
+            x: nums[0],
+            y: nums[1],
+            width: nums[2],
+            height: nums[3],
+        });
+    }
+    Err(FormatError::UnexpectedAtom {
+        key: context.to_string(),
+        context: "cvf".to_string(),
+        expected: "four numbers (x y width height)".to_string(),
+    })
+}
+
+fn parse_vec3(items: &[Ast], context: &str) -> Result<[f64; 3], FormatError> {
+    let nums = parse_coordinate_numbers(items)?;
+    if nums.len() >= 3 {
+        return Ok([nums[0], nums[1], nums[2]]);
+    }
+    Err(FormatError::UnexpectedAtom {
+        key: context.to_string(),
+        context: "cvf".to_string(),
+        expected: "three numbers".to_string(),
+    })
+}
+
+/// MSTS cab files use flat `(Key n n n)`, nested `(Key (n n n))`, or value-only `(n n n)`.
+fn parse_coordinate_numbers(items: &[Ast]) -> Result<Vec<f64>, FormatError> {
+    if items
+        .first()
+        .is_some_and(|a| matches!(a, Ast::Atom(Atom::Number(_) | Atom::Integer(_))))
+    {
+        let nums: Vec<f64> = items
+            .iter()
+            .filter_map(|a| match a {
+                Ast::Atom(atom) => atom_to_number(atom),
+                _ => None,
+            })
+            .collect();
+        if !nums.is_empty() {
+            return Ok(nums);
+        }
+    }
+    if items.len() >= 2 {
+        if let Ast::List(coords) = &items[1] {
+            let nums: Vec<f64> = coords
+                .iter()
+                .filter_map(|a| match a {
+                    Ast::Atom(atom) => atom_to_number(atom),
+                    _ => None,
+                })
+                .collect();
+            if !nums.is_empty() {
+                return Ok(nums);
+            }
+        } else {
+            let nums: Vec<f64> = items[1..]
+                .iter()
+                .filter_map(|a| match a {
+                    Ast::Atom(atom) => atom_to_number(atom),
+                    _ => None,
+                })
+                .collect();
+            if !nums.is_empty() {
+                return Ok(nums);
+            }
+        }
+    }
+    Ok(collect_numbers(items))
+}
+
+fn parse_states(items: &[Ast]) -> Result<Vec<ControlState>, FormatError> {
+    let mut states = Vec::new();
+    collect_states(&Ast::List(items.to_vec()), &mut states);
+    Ok(states)
+}
+
+fn collect_states(ast: &Ast, out: &mut Vec<ControlState>) {
+    if let Ast::List(list) = ast {
+        if list.len() >= 2 {
+            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
+                if head.eq_ignore_ascii_case("State") {
+                    if let Ok(state) = parse_state(list) {
+                        out.push(state);
+                    }
+                }
+            }
+        }
+        for item in list {
+            collect_states(item, out);
+        }
+    }
+}
+
+fn parse_state(items: &[Ast]) -> Result<ControlState, FormatError> {
+    let mut style = 0u32;
+    let mut switch_val = 0.0;
+    for item in items.iter().skip(1) {
+        let Ast::List(entry) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(key))) = entry.first() else {
+            continue;
+        };
+        match key.to_ascii_uppercase().as_str() {
+            "STYLE" => {
+                if let Ok(nums) = parse_coordinate_numbers(entry) {
+                    if let Some(v) = nums.first() {
+                        style = *v as u32;
+                    }
+                }
+            }
+            "SWITCHVAL" => {
+                if let Ok(nums) = parse_coordinate_numbers(entry) {
+                    if let Some(v) = nums.first() {
+                        switch_val = *v;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(ControlState { style, switch_val })
+}
+
+fn parse_u32_field(items: &[Ast], context: &str) -> Result<Option<u32>, FormatError> {
+    parse_coordinate_numbers(items)?
+        .first()
+        .map(|v| *v as u32)
+        .map(Some)
+        .ok_or_else(|| FormatError::MissingField {
+            key: context.to_string(),
+            context: "cvf".to_string(),
+        })
+}
+
+fn parse_string_field(items: &[Ast], context: &str) -> Result<Option<String>, FormatError> {
+    if items.len() >= 2 {
+        if let Ast::Atom(atom) = &items[1] {
+            return atom_to_string(atom)
+                .map(Some)
+                .ok_or_else(|| FormatError::UnexpectedAtom {
+                    key: context.to_string(),
+                    context: "cvf".to_string(),
+                    expected: "string".to_string(),
+                });
+        }
+    }
+    Ok(None)
+}
+
+fn find_string_in_list(items: &[Ast], key: &str) -> Option<String> {
+    if let Some(value) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() >= 2 {
+            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
+                if head.eq_ignore_ascii_case(key) {
+                    if let Ast::Atom(atom) = &list[1] {
+                        return atom_to_string(atom);
+                    }
+                }
+            }
+        }
+        None
+    }) {
+        return Some(value);
+    }
+
+    for (i, item) in items.iter().enumerate() {
+        if let Ast::Atom(Atom::Symbol(head)) = item {
+            if head.eq_ignore_ascii_case(key) {
+                if let Some(Ast::Atom(atom)) = items.get(i + 1) {
+                    return atom_to_string(atom);
+                }
+                if let Some(Ast::List(sub)) = items.get(i + 1) {
+                    if let Some(Ast::Atom(atom)) = sub.first() {
+                        return atom_to_string(atom);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn collect_numbers(items: &[Ast]) -> Vec<f64> {
+    let mut nums = Vec::new();
+    for item in items.iter().skip(1) {
+        match item {
+            Ast::Atom(atom) => {
+                if let Some(n) = atom_to_number(atom) {
+                    nums.push(n);
+                }
+            }
+            Ast::List(sub) => {
+                nums.extend(collect_numbers(sub));
+            }
+        }
+    }
+    nums
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::parse_from_first_paren;
+
+    #[test]
+    fn control_type_from_tokens() {
+        assert_eq!(
+            ControlType::from_type_tokens(&[
+                "DIRECTION_DISPLAY".into(),
+                "MULTI_STATE_DISPLAY".into()
+            ]),
+            ControlType::DirectionDisplay
+        );
+        assert_eq!(
+            ControlType::from_type_tokens(&["CUSTOM_GAUGE".into()]),
+            ControlType::Generic("CUSTOM_GAUGE".into())
+        );
+    }
+
+    #[test]
+    fn parse_minimal_fixture_shape() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 800 600))
+  (Position (1.0 2.0 3.0))
+  (Direction (0 0 0))
+  (CabViewControls
+    (MultiStateDisplay
+      (Type (DIRECTION_DISPLAY MULTI_STATE_DISPLAY))
+      (Position (10 20 18 11))
+      (Graphic "reverser.ace")
+      (States (3 3 1
+        (State (Style (0)) (SwitchVal (-1)))
+        (State (Style (0)) (SwitchVal (0)))
+        (State (Style (0)) (SwitchVal (1)))
+      ))
+    )
+    (MultiStateDisplay
+      (Type (THROTTLE_DISPLAY MULTI_STATE_DISPLAY))
+      (Position (10 40 18 11))
+      (Graphic "throttle.ace")
+      (States (2 2 1
+        (State (Style (0)) (SwitchVal (0)))
+        (State (Style (0)) (SwitchVal (1)))
+      ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        assert_eq!(cvf.cab_view_type, Some(2));
+        assert_eq!(cvf.views.len(), 1);
+        assert_eq!(cvf.views[0].texture_ace, "panel.ace");
+        assert_eq!(cvf.controls.len(), 2);
+        match &cvf.controls[0] {
+            CabControl::MultiStateDisplay { states, .. } => {
+                assert_eq!(states.len(), 3);
+                assert!((states[2].switch_val - 1.0).abs() < 1e-9);
+            }
+            other => panic!("expected MultiStateDisplay, got {other:?}"),
+        }
+    }
+}

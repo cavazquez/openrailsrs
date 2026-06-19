@@ -53,6 +53,8 @@ En **openrailsrs**, hasta activar `[simulation] multi_body = true`, la dinámica
 - `Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs`
 - [Manual OR — Physics](https://open-rails.readthedocs.io/en/latest/physics.html)
 
+**Referencia complementaria (no sustituye OR):** OpenBVE [`VehicleParser.cs`](../../OpenBVE/source/Plugins/Train.MsTs/Train/VehicleParser.cs) — checklist de campos ENG/WAG; auditoría automatizada: [`PARSER_CROSS_VALIDATION.md`](PARSER_CROSS_VALIDATION.md) (`openrailsrs audit-vehicle`).
+
 ---
 
 ## Visión general

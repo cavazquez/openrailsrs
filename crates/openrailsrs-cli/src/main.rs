@@ -8,7 +8,10 @@ use openrailsrs_export::{
     animated_replay_from_csv, textual_replay_from_csv, track_graph_to_ascii, track_graph_to_dot,
     track_graph_to_geojson,
 };
-use openrailsrs_formats::parse_from_first_paren;
+use openrailsrs_formats::{
+    CabControl, MstsFile, audit_vehicle_file, parse_from_first_paren, parse_msts_file,
+    resolve_cab_assets,
+};
 use openrailsrs_msts::{import_activity_with_summary, import_route_with_summary};
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_sim::{
@@ -40,6 +43,13 @@ struct Cli {
 enum Commands {
     /// Parse an MSTS-style file and print the generic AST.
     Inspect { file: PathBuf },
+    /// Audit `.eng`/`.wag` field coverage: openrailsrs vs OpenBVE catalog.
+    AuditVehicle {
+        file: PathBuf,
+        /// Emit JSON instead of human-readable text.
+        #[arg(long)]
+        json: bool,
+    },
     /// Export the route track graph as Graphviz DOT.
     Graph {
         route: PathBuf,
@@ -317,12 +327,79 @@ fn main() -> anyhow::Result<()> {
     }
 
     match cli.command {
+        Commands::AuditVehicle { file, json } => {
+            let report = audit_vehicle_file(&file)
+                .map_err(|e| anyhow::anyhow!("audit {}: {e}", file.display()))?;
+            if json {
+                let payload = serde_json::json!({
+                    "path": report.path,
+                    "vehicle_kind": format!("{:?}", report.vehicle_kind),
+                    "typed_parse_ok": report.typed_parse_ok,
+                    "typed_parse_error": report.typed_parse_error,
+                    "symbols_in_file": report.symbols_in_file,
+                    "known_fields": report.known_fields.iter().map(|e| serde_json::json!({
+                        "token": e.token,
+                        "category": e.category,
+                        "openrailsrs": format!("{:?}", e.openrailsrs),
+                        "openbve": format!("{:?}", e.openbve),
+                        "notes": e.notes,
+                    })).collect::<Vec<_>>(),
+                    "unknown_symbols": report.unknown_symbols,
+                    "gaps_openbve_parsed_we_dont": report.gaps_openbve_parsed_we_dont,
+                    "orrs_only_in_file": report.orrs_only_in_file,
+                    "openrailsrs_catalog_parsed_ratio": report.openrailsrs_catalog_parsed_ratio,
+                    "openbve_catalog_parsed_ratio": report.openbve_catalog_parsed_ratio,
+                });
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+            } else {
+                print!("{}", report.format_text());
+            }
+        }
         Commands::Inspect { file } => {
-            let text = std::fs::read_to_string(&file)
-                .with_context(|| format!("read {}", file.display()))?;
-            let ast = parse_from_first_paren(&text)
-                .map_err(|e| anyhow::anyhow!("parse {}: {e}", file.display()))?;
-            println!("{ast}");
+            if let Ok(parsed) = parse_msts_file(&file) {
+                match parsed {
+                    MstsFile::Engine(eng) => {
+                        println!("EngineFile: {}", file.display());
+                        println!("  name: {}", eng.name);
+                        println!("  mass_kg: {:.0}", eng.mass_kg);
+                        if let Some(shape) = eng.wagon_shape.as_deref() {
+                            println!("  wagon_shape: {shape}");
+                        }
+                        print_engine_cab_summary(&file, &eng.cab);
+                    }
+                    MstsFile::CabView(cvf) => {
+                        println!("CabViewFile: {}", file.display());
+                        println!("  cab_view_type: {:?}", cvf.cab_view_type);
+                        println!("  views: {}", cvf.views.len());
+                        for (i, view) in cvf.views.iter().enumerate() {
+                            println!(
+                                "    [{i}] {} @ ({:.2}, {:.2}, {:.2})",
+                                view.texture_ace,
+                                view.position_m[0],
+                                view.position_m[1],
+                                view.position_m[2],
+                            );
+                        }
+                        println!("  controls: {}", cvf.controls.len());
+                        for (i, control) in cvf.controls.iter().enumerate() {
+                            print_cab_control_summary(i, control);
+                        }
+                        let types = cvf.control_type_names();
+                        if !types.is_empty() {
+                            println!("  control_types: {}", types.join(", "));
+                        }
+                    }
+                    other => {
+                        println!("{other:#?}");
+                    }
+                }
+            } else {
+                let text = std::fs::read_to_string(&file)
+                    .with_context(|| format!("read {}", file.display()))?;
+                let ast = parse_from_first_paren(&text)
+                    .map_err(|e| anyhow::anyhow!("parse {}: {e}", file.display()))?;
+                println!("{ast}");
+            }
         }
         Commands::Graph { route, out } => {
             let g = load_track_graph_from_route_dir(&route)
@@ -1395,4 +1472,114 @@ fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+fn print_engine_cab_summary(eng_path: &std::path::Path, cab: &openrailsrs_formats::EngineCabView) {
+    if cab.cab_view_file.is_none()
+        && cab.orts_3d_cab_shape.is_none()
+        && cab.orts_3d_cab_head_pos_m.is_none()
+    {
+        println!("  cab: (none)");
+        return;
+    }
+    println!("  cab:");
+    if let Some(ref path) = cab.cab_view_file {
+        println!("    CabView: {path}");
+    }
+    if let Some(ref shape) = cab.orts_3d_cab_shape {
+        println!("    ORTS3DCabFile: {shape}");
+    }
+    if let Some(head) = cab.orts_3d_cab_head_pos_m {
+        println!(
+            "    ORTS3DCabHeadPos: ({:.3}, {:.3}, {:.3})",
+            head[0], head[1], head[2]
+        );
+    }
+    if let Some(dir) = cab.start_direction_deg {
+        println!(
+            "    StartDirection: ({:.1}, {:.1}, {:.1}) deg",
+            dir[0], dir[1], dir[2]
+        );
+    }
+    if let Some(trainset_root) = eng_path.parent() {
+        if let Some(assets) = resolve_cab_assets(trainset_root, cab) {
+            println!("    resolved shape: {}", assets.shape_path.display());
+            println!("    resolved cvf:   {}", assets.cvf_path.display());
+        }
+    }
+}
+
+fn print_cab_control_summary(index: usize, control: &CabControl) {
+    match control {
+        CabControl::MultiStateDisplay {
+            control_type,
+            graphic,
+            states,
+            position,
+        } => println!(
+            "    [{index}] MultiStateDisplay {} graphic={graphic} states={} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            states.len(),
+            position.x,
+            position.y,
+        ),
+        CabControl::Dial {
+            control_type,
+            graphic,
+            position,
+        } => println!(
+            "    [{index}] Dial {} graphic={graphic} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            position.x,
+            position.y,
+        ),
+        CabControl::Digital {
+            control_type,
+            units,
+            position,
+        } => println!(
+            "    [{index}] Digital {} units={} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            units.as_deref().unwrap_or("-"),
+            position.x,
+            position.y,
+        ),
+        CabControl::TwoStateDisplay {
+            control_type,
+            graphic,
+            position,
+        } => println!(
+            "    [{index}] TwoStateDisplay {} graphic={graphic} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            position.x,
+            position.y,
+        ),
+        CabControl::TriStateDisplay {
+            control_type,
+            graphic,
+            position,
+        } => println!(
+            "    [{index}] TriStateDisplay {} graphic={graphic} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            position.x,
+            position.y,
+        ),
+        CabControl::Lever {
+            control_type,
+            graphic,
+            position,
+        } => {
+            let pos = position
+                .as_ref()
+                .map(|p| format!("({:.0},{:.0})", p.x, p.y))
+                .unwrap_or_else(|| "(3D)".into());
+            println!(
+                "    [{index}] Lever {} graphic={graphic} @ {pos}",
+                control_type.as_str(),
+            );
+        }
+        CabControl::Unknown { kind } => {
+            println!("    [{index}] Unknown ({kind})");
+        }
+    }
 }

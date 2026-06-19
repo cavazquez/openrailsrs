@@ -1,0 +1,28 @@
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 800 600))
+  (Position (1.0 2.0 3.0))
+  (Direction (0 0 0))
+  (CabViewControls
+    (MultiStateDisplay
+      (Type (DIRECTION_DISPLAY MULTI_STATE_DISPLAY))
+      (Position (10 20 18 11))
+      (Graphic "reverser.ace")
+      (States (3 3 1
+        (State (Style (0)) (SwitchVal (-1)))
+        (State (Style (0)) (SwitchVal (0)))
+        (State (Style (0)) (SwitchVal (1)))
+      ))
+    )
+    (MultiStateDisplay
+      (Type (THROTTLE_DISPLAY MULTI_STATE_DISPLAY))
+      (Position (10 40 18 11))
+      (Graphic "throttle.ace")
+      (States (2 2 1
+        (State (Style (0)) (SwitchVal (0)))
+        (State (Style (0)) (SwitchVal (1)))
+      ))
+    )
+  )
+)

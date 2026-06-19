@@ -216,7 +216,7 @@ TRAINS/TRAINSET/RF_Blue_Pullman/*.wav
 |--------|---------------|-------|
 | Seguir con sintético mejorado | B (rápido) | Pitch/RPM, ruido banda, sin licencias |
 | WAV del trainset MSTS | C+/D | Resolver paths desde `.eng`; `rodio`/`kira` decode |
-| `.sms` de MSTS | D+ | Formato propietario; estudiar OR `SoundManagement.cs` o convertir con herramientas comunitarias |
+| `.sms` de MSTS | D+ | OR `SoundManagement.cs`; alternativa OpenBVE [`SmsParser.cs`](../../OpenBVE/source/Plugins/Train.MsTs/Sound/SmsParser.cs) — ver [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) |
 | Pack libre (CC0) | Opcional | Bocina/motor genéricos si no hay Content |
 
 ---

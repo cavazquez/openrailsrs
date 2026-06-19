@@ -162,7 +162,7 @@ cargo test
 
 Ejemplo de escenario listo: [`examples/smoke/scenario.toml`](examples/smoke/scenario.toml).
 
-Validación contra Open Rails (Chiltern): [`docs/CHILTERN_OR_SETUP.md`](docs/CHILTERN_OR_SETUP.md) · comparación de trazas: [`docs/OR_TRACE_COMPARISON.md`](docs/OR_TRACE_COMPARISON.md) · paridad diesel OR-P6 (RPM → apparent throttle, sin `RunUpTimeToMaxForce` en ORTS): [`examples/chiltern/README.md`](examples/chiltern/README.md#arranque-diesel-or-p6).
+Validación contra Open Rails (Chiltern): [`docs/CHILTERN_OR_SETUP.md`](docs/CHILTERN_OR_SETUP.md) · comparación de trazas: [`docs/OR_TRACE_COMPARISON.md`](docs/OR_TRACE_COMPARISON.md) · referencia OpenBVE: [`docs/OPENBVE_REFERENCE.md`](docs/OPENBVE_REFERENCE.md) · auditoría parsers ENG/WAG: [`docs/PARSER_CROSS_VALIDATION.md`](docs/PARSER_CROSS_VALIDATION.md) · paridad diesel OR-P6: [`examples/chiltern/README.md`](examples/chiltern/README.md#arranque-diesel-or-p6).
 
 ## CLI (`openrailsrs`)
 
@@ -177,6 +177,9 @@ O sin instalar, usando `cargo run -p openrailsrs-cli --`:
 ```bash
 # Inspeccionar AST genérico de un archivo MSTS
 openrailsrs inspect path/al/archivo.eng
+
+# Auditar cobertura ENG/WAG (openrailsrs vs catálogo OpenBVE)
+openrailsrs audit-vehicle examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng
 
 # Exportar grafo DOT de la ruta
 openrailsrs graph examples/smoke/routes/test --out route.dot

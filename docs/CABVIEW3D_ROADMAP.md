@@ -118,20 +118,22 @@ Exterior del tren (stub en repo):
 
 ---
 
-### P3 — Parser `.cvf` y matrices de sub-objetos (esfuerzo alto, paridad OR)
+### P3 — Parser `.cvf` y matrices de sub-objetos (esfuerzo alto, paridad OR) 🔶 piloto
 
 **Problema:** Open Rails aplica animaciones y matrices de `PULLMAN_GR.cvf` y jerarquía del `.s` (`MatrixVisible`, sub-objetos). Nosotros spawnamos cada `prim_state` en identidad local sin animación.
 
-**Acciones:**
+**Piloto ✅ (2026-06):** parser tipado mínimo en `openrailsrs-formats/src/typed/cvf.rs` — `CabViewFile`, `CabControl`, `ControlType`; dispatch `.cvf`; `openrailsrs inspect archivo.cvf`. Referencias: OpenBVE [`CvfParser.cs`](../../OpenBVE/source/Plugins/Train.MsTs/Panel/CvfParser.cs) + [`PanelSubject.cs`](../../OpenBVE/source/Plugins/Train.MsTs/Panel/Enums/PanelSubject.cs); OR [`CabViewFile.cs`](../../openrails/Source/Orts.Formats.Msts/CabViewFile.cs). Ver [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) §7.
 
-1. Parser mínimo de `.cvf` (posiciones de mandos, estados TwoState/TriState/Dial)
+**Acciones pendientes:**
+
+1. ~~Parser mínimo de `.cvf`~~ ✅
 2. Aplicar matrices nombradas del `.s` (`ShapeFile::matrices`) al spawn/update de partes cabina
-3. Sincronizar mandos con telemetría live (`throttle`, `brake`, `velocity`, señales)
+3. Sincronizar mandos con telemetría live (`throttle`, `brake`, `velocity`, señales) — ✅ `cab_cvf.rs` (levers + multi-state; Pullman probado)
 4. Referencia OR: `ThreeDimentionCabViewer`, `MatrixVisibleTargetNode`
 
-**Criterio de hecho:** palancas/agujas visibles; al menos un mando responde al throttle en live.
+**Criterio de hecho (fase completa):** palancas/agujas visibles; al menos un mando responde al throttle en live.
 
-**Archivos nuevos sugeridos:** `cab_cvf.rs` o módulo en `openrailsrs-formats`.
+**Archivos:** `openrailsrs-formats/src/typed/cvf.rs` (piloto); próximo: `openrailsrs-viewer3d/src/cab_cvf.rs`.
 
 ---
 

@@ -10,6 +10,10 @@ El comportamiento base se toma del codigo fuente oficial de Open Rails:
 - `Source/Orts.Parsers.Msts/TokenID.cs`: tabla oficial de tokens core MSTS; shape usa offset `0`, world usa offset `300`.
 - `Source/Orts.Formats.Msts/ShapeFile.cs`: estructura esperada de `shape`, colecciones con `count`, `prim_states`, `lod_controls`, `sub_objects`, `vertices`, `vertex_sets`, `primitives` y `indexed_trilist`.
 
+## Referencias secundarias
+
+- OpenBVE [`Object.Msts/ShapeParser.cs`](../../OpenBVE/source/Plugins/Object.Msts/ShapeParser.cs): edge cases de shapes Kuju (secundario frente a OR). Ver [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md).
+
 ## Fixtures Binarios
 
 Regla para agregar fixtures al repo:

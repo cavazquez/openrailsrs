@@ -5,6 +5,12 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce;
     use bevy::prelude::*;
 
+    use crate::cab_render::{
+        camera_layers_driver, camera_layers_outdoor, sync_camera_render_layers,
+        tag_train_exterior_render_layers,
+    };
+    use bevy::camera::visibility::RenderLayers;
+
     use crate::camera::{CameraFollowMode, LIVE_CHASE_DISTANCE, OrbitState, spawn_camera};
     use crate::launch::ViewerSceneryMode;
     use crate::live::{
@@ -222,5 +228,39 @@ mod tests {
                 .time_s()
                 > t0
         );
+    }
+
+    #[test]
+    fn sync_camera_render_layers_excludes_exterior_in_driver_cam() {
+        with_live_world(|world| {
+            world.run_system_once(spawn_camera).unwrap();
+            world.run_system_once(spawn_live_train).unwrap();
+            world
+                .run_system_once(tag_train_exterior_render_layers)
+                .unwrap();
+            world.flush();
+
+            let exterior = camera_layers_outdoor();
+            let driver = camera_layers_driver();
+            let train_layer = RenderLayers::layer(1);
+            assert!(exterior.intersects(&train_layer));
+            assert!(!driver.intersects(&train_layer));
+
+            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
+            world.run_system_once(sync_camera_render_layers).unwrap();
+            let cam_layers = world
+                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .single(world)
+                .expect("camera layers");
+            assert_eq!(*cam_layers, driver);
+
+            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
+            world.run_system_once(sync_camera_render_layers).unwrap();
+            let cam_layers = world
+                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .single(world)
+                .expect("camera layers chase");
+            assert_eq!(*cam_layers, exterior);
+        });
     }
 }

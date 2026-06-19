@@ -3,8 +3,9 @@ use std::path::Path;
 use crate::ast::Ast;
 use crate::encoding::read_msts_file_to_string;
 use crate::error::FormatError;
+use crate::msts_file_text::read_msts_file_decoded;
 use crate::parser::parse_from_first_paren;
-use crate::typed::{ConsistFile, EngineFile, RouteFile, WagonFile};
+use crate::typed::{CabViewFile, ConsistFile, EngineFile, RouteFile, WagonFile};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MstsFile {
@@ -12,23 +13,30 @@ pub enum MstsFile {
     Wagon(WagonFile),
     Consist(ConsistFile),
     Route(RouteFile),
+    CabView(CabViewFile),
     Unknown(Ast),
 }
 
 pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> {
     let path = path.as_ref();
-    let source = read_msts_file_to_string(path)?;
-    let ast = parse_from_first_paren(&source)?;
     let ext = path
         .extension()
         .and_then(|value| value.to_str())
         .map(str::to_ascii_lowercase);
+
+    let source = if ext.as_deref() == Some("cvf") {
+        read_msts_file_decoded(path)?
+    } else {
+        read_msts_file_to_string(path)?
+    };
+    let ast = parse_from_first_paren(&source)?;
 
     match ext.as_deref() {
         Some("eng") => Ok(MstsFile::Engine(Box::new(EngineFile::from_ast(&ast)?))),
         Some("wag") => Ok(MstsFile::Wagon(WagonFile::from_ast(&ast)?)),
         Some("con") => Ok(MstsFile::Consist(ConsistFile::from_ast(&ast)?)),
         Some("trk") => Ok(MstsFile::Route(RouteFile::from_ast(&ast)?)),
+        Some("cvf") => Ok(MstsFile::CabView(CabViewFile::from_ast(&ast)?)),
         _ => Ok(MstsFile::Unknown(ast)),
     }
 }

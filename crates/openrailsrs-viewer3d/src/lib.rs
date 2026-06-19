@@ -7,7 +7,9 @@
 //!
 //! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
 
+pub mod cab_cvf;
 pub mod cab_panel;
+pub mod cab_render;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
@@ -20,6 +22,8 @@ pub mod hud;
 pub mod launch;
 pub mod live;
 pub mod log;
+pub mod or_cab_material;
+pub mod or_shader;
 pub mod overspeed_flash;
 pub mod precipitation;
 pub mod rolling_stock;
@@ -79,16 +83,21 @@ pub struct ViewerPlugin;
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<terrain_material::TerrainMaterial>::default())
+            .add_plugins(MaterialPlugin::<or_cab_material::OrCabMaterial>::default())
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
             .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
             .init_resource::<camera::LiveDriverCab>()
+            .init_resource::<camera::DriverLookOffset>()
             .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<cab_view::CabInteriorState>()
+            .init_resource::<cab_cvf::CabCvfState>()
+            .init_resource::<cab_render::CabRenderDiagnostic>()
+            .init_resource::<cab_render::CabRenderDiagLatch>()
             .init_resource::<live::DriverCamState>()
             .init_resource::<hud::HudFps>()
             .init_resource::<hud::ProfileLog>()
@@ -182,7 +191,15 @@ impl Plugin for ViewerPlugin {
                     gameplay::update_driver_vignette,
                     live::update_driver_train_visibility.run_if(live::live_mode_active),
                     train::update_replay_train_visibility.run_if(live::live_mode_inactive),
+                    cab_render::tag_train_exterior_render_layers.run_if(live::live_mode_active),
+                    cab_render::sync_camera_render_layers,
                     cab_view::sync_cab_interior,
+                    cab_render::tag_cab_interior_render_layers.after(cab_view::sync_cab_interior),
+                    cab_cvf::update_cab_cvf_controls.after(cab_view::sync_cab_interior),
+                    cab_render::update_cab_render_diagnostic
+                        .after(cab_render::tag_cab_interior_render_layers)
+                        .after(camera::follow_train_camera)
+                        .run_if(live::live_mode_active),
                     camera::update_driver_camera_fov,
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
@@ -206,7 +223,7 @@ impl Plugin for ViewerPlugin {
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
                     cab_panel::update_cab_panel,
-                    (camera::follow_train_camera, camera::orbit_camera_system)
+                    (camera::orbit_camera_system, camera::follow_train_camera)
                         .chain()
                         .run_if(camera::in_orbit_mode)
                         .run_if(teleport::teleport_closed)

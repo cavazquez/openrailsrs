@@ -13,6 +13,19 @@ use super::{
     find_optional_string_field, walk_lists_find,
 };
 
+/// Cab view references from an MSTS `.eng` (`CabView`, `ORTS3DCab`, …).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EngineCabView {
+    /// MSTS 2D cab panel reference (`CabView "foo.cvf"`).
+    pub cab_view_file: Option<String>,
+    /// OR 3D cab shape from `ORTS3DCabFile` (e.g. `PULLMAN_GR.s`).
+    pub orts_3d_cab_shape: Option<String>,
+    /// Eyepoint in MSTS shape metres (`ORTS3DCabHeadPos`).
+    pub orts_3d_cab_head_pos_m: Option<[f64; 3]>,
+    /// MSTS `StartDirection` (degrees); X = pitch (positive = look down).
+    pub start_direction_deg: Option<[f64; 3]>,
+}
+
 /// Optional MSTS steam parameters parsed from `.eng` (mapped to `SteamParams` in train crate).
 #[derive(Clone, Debug, PartialEq)]
 pub struct MstsSteamFields {
@@ -96,6 +109,7 @@ pub struct EngineFile {
     pub friction: OrtsFrictionFields,
     pub brake_shoe_type: OrtsBrakeShoeType,
     pub brake_shoe_friction: Option<BrakeShoeFrictionCurve>,
+    pub cab: EngineCabView,
 }
 
 impl EngineFile {
@@ -308,6 +322,7 @@ impl EngineFile {
         let diesel_reverse_throttle_rpm_tab = parse_reverse_throttle_rpm_tab(ast);
         let friction = parse_orts_friction_fields(ast, true, &name);
         let (brake_shoe_type, brake_shoe_friction) = parse_orts_brake_shoe(ast);
+        let cab = parse_engine_cab_view(ast);
 
         Ok(Self {
             name,
@@ -356,8 +371,115 @@ impl EngineFile {
             friction,
             brake_shoe_type,
             brake_shoe_friction,
+            cab,
         })
     }
+}
+
+fn parse_engine_cab_view(ast: &Ast) -> EngineCabView {
+    let mut cab = EngineCabView::default();
+    if let Ok(Some(path)) = find_optional_string_field(ast, &["CabView"], "cab") {
+        cab.cab_view_file = Some(normalize_cab_asset_name(&path));
+    }
+    let _ = walk_lists_find(ast, &mut |items| {
+        if !matches!(
+            items.first(),
+            Some(Ast::Atom(Atom::Symbol(head))) if head.eq_ignore_ascii_case("ORTS3DCab")
+        ) {
+            return None;
+        }
+        for item in items.iter().skip(1) {
+            apply_cab_subfield(item, &mut cab);
+        }
+        Some(())
+    });
+    if cab.orts_3d_cab_shape.is_none() {
+        if let Some(shape) = parse_cab_shape_ref(ast, "ORTS3DCabFile") {
+            cab.orts_3d_cab_shape = Some(shape);
+        }
+    }
+    if cab.orts_3d_cab_head_pos_m.is_none() {
+        cab.orts_3d_cab_head_pos_m = parse_f64_triplet_field(ast, "ORTS3DCabHeadPos");
+    }
+    if cab.start_direction_deg.is_none() {
+        cab.start_direction_deg = parse_f64_triplet_field(ast, "StartDirection");
+    }
+    cab
+}
+
+fn apply_cab_subfield(item: &Ast, cab: &mut EngineCabView) {
+    let Ast::List(pair) = item else {
+        return;
+    };
+    let Some(Ast::Atom(Atom::Symbol(key))) = pair.first() else {
+        return;
+    };
+    match key.to_ascii_lowercase().as_str() {
+        "orts3dcabfile" if pair.len() >= 2 => {
+            if let Some(shape) = string_from_ast_value(&pair[1]) {
+                cab.orts_3d_cab_shape = Some(normalize_cab_asset_name(&shape));
+            }
+        }
+        "orts3dcabheadpos" if pair.len() >= 2 => {
+            cab.orts_3d_cab_head_pos_m = f64_triplet_from_ast(&pair[1]);
+        }
+        "startdirection" if pair.len() >= 2 => {
+            cab.start_direction_deg = f64_triplet_from_ast(&pair[1]);
+        }
+        _ => {}
+    }
+}
+
+fn parse_cab_shape_ref(ast: &Ast, key: &str) -> Option<String> {
+    find_list_value(ast, key).and_then(string_from_ast_value)
+}
+
+fn parse_f64_triplet_field(ast: &Ast, key: &str) -> Option<[f64; 3]> {
+    find_list_value(ast, key).and_then(f64_triplet_from_ast)
+}
+
+fn string_from_ast_value(ast: &Ast) -> Option<String> {
+    match ast {
+        Ast::Atom(atom) => atom_to_string(atom),
+        Ast::List(items) => items.iter().find_map(|item| {
+            if let Ast::Atom(atom) = item {
+                atom_to_string(atom)
+            } else {
+                None
+            }
+        }),
+    }
+}
+
+fn f64_triplet_from_ast(ast: &Ast) -> Option<[f64; 3]> {
+    let values: Vec<f64> = match ast {
+        Ast::List(items) => items
+            .iter()
+            .filter_map(|item| {
+                if let Ast::Atom(atom) = item {
+                    atom_to_number(atom)
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        Ast::Atom(atom) => {
+            let n = atom_to_number(atom)?;
+            return Some([n, 0.0, 0.0]);
+        }
+    };
+    if values.len() >= 3 {
+        Some([values[0], values[1], values[2]])
+    } else {
+        None
+    }
+}
+
+fn normalize_cab_asset_name(raw: &str) -> String {
+    raw.trim()
+        .trim_matches(|c| c == '(' || c == ')')
+        .trim()
+        .to_string()
 }
 
 #[derive(Clone, Copy)]
@@ -1201,6 +1323,9 @@ mod tests {
         assert_eq!(eng.diesel_max_rpm, 1500.0);
         assert_eq!(eng.diesel_change_up_rpm_ps, 50.0);
         assert!(eng.drive_wheel_mass_kg > 60_000.0);
+        assert_eq!(eng.cab.orts_3d_cab_shape.as_deref(), Some("PULLMAN_GR.s"));
+        assert_eq!(eng.cab.orts_3d_cab_head_pos_m, Some([-0.8, 2.875, 8.60]));
+        assert_eq!(eng.cab.start_direction_deg, Some([15.0, 0.0, 0.0]));
     }
 
     #[test]

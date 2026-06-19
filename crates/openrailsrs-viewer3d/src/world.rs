@@ -1145,9 +1145,12 @@ fn build_world_shape_asset(
             meshes,
             images,
             materials,
+            None,
             texture_image_cache,
             ace_cache,
             fallback_color,
+            None,
+            false,
         ),
         None => {
             viewer_log!(
@@ -1161,6 +1164,7 @@ fn build_world_shape_asset(
                     prim_state_idx: -1,
                     mesh: unit,
                     material: fallback_material.clone(),
+                    or_cab_material: None,
                     has_texture: false,
                     is_transparent: false,
                 }],
