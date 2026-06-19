@@ -2,7 +2,7 @@
 
 Documento de trabajo para la depuración de **CABVIEW3D** en `openrailsrs-viewer3d` con Chiltern live (`RF_Blue_Pullman`, `PULLMAN_GR.s` + `.cvf`).
 
-Relacionado: [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) · Open Rails `ThreeDimentionCabViewer` (`MSTSLocomotiveViewer.cs`).
+Relacionado: [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md) · [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) · Open Rails `ThreeDimentionCabViewer` (`MSTSLocomotiveViewer.cs`).
 
 ---
 
@@ -10,7 +10,7 @@ Relacionado: [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [`OPENBVE_REFEREN
 
 Conseguir que al subir el acelerador (**↑** / `thr`) en vista cabina (**C**) gire la **rueda del regulador** en el pupitre, no que se desplace geometría vertical u objetos flotando lejos del tablero.
 
-Comando habitual:
+Comando habitual (corredor mínimo — depurar cabina/CVF):
 
 ```fish
 set -gx CHILTERN_ROUTE "$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
@@ -18,6 +18,8 @@ cd ~/repos/propios/ProyectoOpenRails/openrailsrs
 cargo run --release -p openrailsrs-viewer3d -- \
   --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
+
+Modo **Full** (terreno + WORLD): mismo comando **sin** `--run-corridor` — ver [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md).
 
 Teclas: **C** cabina · **↑/↓** throttle/freno · `OPENRAILSRS_CAB_DEBUG=albedo` para texturas planas.
 
@@ -134,6 +136,20 @@ Nuestro **fallback de rotación** es necesario porque el content no trae keyfram
 
 ---
 
+## Modo Full (sin `--run-corridor`) — misma sesión, tarde
+
+Documentación completa: [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md).
+
+Resumen de tres bugs de coordenadas corregidos:
+
+1. **Spawn progresivo vs `origin.shift`** — WORLD/terreno en render space; tren en view space → pantalla azul / coords astronómicas.
+2. **Rebase en jerarquía del tren** — `apply_floating_origin` movía hijos del consist → `GlobalTransform` del lead corrupto; cámara a (0,0,0) con cabina a ~1,7 km.
+3. **Shift en Y** — `origin.shift.y ≈ 9 m` enterraba el tren ~9 m bajo el terreno; ventanas azules con pupitre OK.
+
+Tras los fixes: cabina Pullman visible (69 partes), `eye` y `pos` coherentes, log `floating origin — XZ shift (1821, -230) m` sin Y.
+
+---
+
 ## Archivos tocados (2026-06-19)
 
 | Área | Archivos |
@@ -142,10 +158,11 @@ Nuestro **fallback de rotación** es necesario porque el content no trae keyfram
 | Mesh / binding | `crates/openrailsrs-viewer3d/src/shapes.rs` |
 | Spawn cab | `crates/openrailsrs-viewer3d/src/cab_view.rs` |
 | Transforms | `crates/openrailsrs-viewer3d/src/coordinates.rs` |
-| Diagnóstico | `crates/openrailsrs-viewer3d/src/cab_diag.rs` |
+| Diagnóstico | `crates/openrailsrs-viewer3d/src/cab_diag.rs`, `cab_render.rs` |
+| Floating origin / Full | `floating_origin.rs`, `world.rs`, `terrain_spawn.rs`, `lib.rs`, `camera.rs` |
 | Shader / material | `or_cab.wgsl`, `or_cab_material.rs`, `or_shader.rs` |
 | Formats | `shape_binary.rs`, `typed/shape.rs` |
-| Docs | `docs/CABVIEW3D_ROADMAP.md`, este archivo |
+| Docs | `docs/CABVIEW3D_ROADMAP.md`, `docs/FULL_SCENERY_LIVE_CHILTERN.md`, este archivo |
 | CI local | `check.sh` |
 
 ---
@@ -154,6 +171,7 @@ Nuestro **fallback de rotación** es necesario porque el content no trae keyfram
 
 ```bash
 ./check.sh
+cargo test -p openrailsrs-viewer3d floating_origin
 # Tests opcionales con Content OR instalado:
 cargo test -p openrailsrs-viewer3d pullman_cvf_lever_binding_diagnostics -- --nocapture
 ```

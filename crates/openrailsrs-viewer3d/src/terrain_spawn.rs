@@ -58,6 +58,7 @@ fn spawn_textured_patches(
     fallback_tex: &Handle<Image>,
     render_origin: Vec3,
     height_origin: f32,
+    origin_shift: Vec3,
 ) -> (usize, usize) {
     let tile = &current.tile;
     let patch_set = match tile.primary_patch_set() {
@@ -65,7 +66,11 @@ fn spawn_textured_patches(
         None => return (0, 0),
     };
     let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
-    let tile_origin = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
+    let tile_origin = Vec3::new(
+        wx - render_origin.x - origin_shift.x,
+        0.0,
+        wz - render_origin.z - origin_shift.z,
+    );
     let mut spawned = 0usize;
     let mut holed = 0usize;
 
@@ -131,6 +136,7 @@ fn spawn_textured_patches(
     (spawned, holed)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_legacy_tile(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -139,6 +145,7 @@ fn spawn_legacy_tile(
     material: &Handle<StandardMaterial>,
     render_origin: Vec3,
     height_origin: f32,
+    origin_shift: Vec3,
 ) {
     let tile = &current.tile;
     let data = build_tile_mesh_data_sampled(
@@ -148,7 +155,11 @@ fn spawn_legacy_tile(
         |ux, uz| tile_cache.sample_hidden(current, ux, uz),
     );
     let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
-    let translation = Vec3::new(wx - render_origin.x, 0.0, wz - render_origin.z);
+    let translation = Vec3::new(
+        wx - render_origin.x - origin_shift.x,
+        0.0,
+        wz - render_origin.z - origin_shift.z,
+    );
     commands.spawn((
         Mesh3d(meshes.add(mesh_from_terrain_data(&data, height_origin))),
         MeshMaterial3d(material.clone()),
@@ -171,6 +182,7 @@ fn spawn_loaded_terrain_tile(
     fallback_material: &Handle<StandardMaterial>,
     render_origin: Vec3,
     height_origin: f32,
+    origin_shift: Vec3,
 ) -> (bool, usize, usize) {
     let tile = &current.tile;
     let grid = &current.grid;
@@ -204,6 +216,7 @@ fn spawn_loaded_terrain_tile(
             fallback_tex,
             render_origin,
             height_origin,
+            origin_shift,
         );
         if patches > 0 {
             return (true, patches, holed);
@@ -218,6 +231,7 @@ fn spawn_loaded_terrain_tile(
         fallback_material,
         render_origin,
         height_origin,
+        origin_shift,
     );
     (true, 0, 0)
 }
@@ -292,6 +306,7 @@ impl TerrainSpawnProgress {
         &mut self,
         terrain_tile: &TerrainTile,
         route_dir: &Path,
+        origin_shift: Vec3,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         images: &mut Assets<Image>,
@@ -330,6 +345,7 @@ impl TerrainSpawnProgress {
             &fallback_material,
             *render_origin,
             *height_origin,
+            origin_shift,
         );
         if spawned {
             *spawned_tiles += 1;
@@ -364,6 +380,7 @@ pub fn init_terrain_spawn_progress(
 pub fn progressive_terrain_spawn_system(
     route_dir: Res<RouteAssets>,
     terrain: Res<TerrainScene>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
     progress: Option<ResMut<TerrainSpawnProgress>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -373,12 +390,14 @@ pub fn progressive_terrain_spawn_system(
     let Some(mut progress) = progress else {
         return;
     };
+    let origin_shift = crate::floating_origin::horizontal_shift(origin.shift);
     let start = progress.tile_index;
     let end = (start + TERRAIN_TILES_PER_FRAME).min(terrain.tiles.len());
     for terrain_tile in &terrain.tiles[start..end] {
         progress.spawn_scene_tile(
             terrain_tile,
             &route_dir.route_dir,
+            origin_shift,
             &mut commands,
             &mut meshes,
             &mut images,
@@ -398,6 +417,7 @@ pub fn spawn_terrain_meshes(
     route_dir: Res<RouteAssets>,
     terrain: Res<TerrainScene>,
     focus: Res<crate::world::RouteFocus>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
@@ -417,6 +437,7 @@ pub fn spawn_terrain_meshes(
         progress.spawn_scene_tile(
             terrain_tile,
             &route_dir.route_dir,
+            crate::floating_origin::horizontal_shift(origin.shift),
             &mut commands,
             &mut meshes,
             &mut images,

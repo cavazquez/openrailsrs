@@ -54,6 +54,7 @@ pub struct CabRenderDiagnostic {
 #[derive(Resource, Default, Debug)]
 pub struct CabRenderDiagLatch {
     pub was_driver: bool,
+    pub last_eye: Option<Vec3>,
 }
 
 /// Tag new train exterior meshes (live consist bodies).
@@ -124,13 +125,9 @@ pub fn update_cab_render_diagnostic(
         return;
     }
 
-    if state.was_driver {
-        return;
-    }
     if cab_parts.is_empty() {
         return;
     }
-    state.was_driver = true;
 
     let Ok((cam_global, projection)) = camera_q.single() else {
         return;
@@ -141,6 +138,13 @@ pub fn update_cab_render_diagnostic(
         .next()
         .and_then(|lead| cab_res.and_then(|cab| driver_eye_from_lead(lead, cab)))
         .unwrap_or_else(|| cam_global.translation());
+
+    if !state.was_driver {
+        state.was_driver = true;
+    } else if state.last_eye.is_some_and(|last| last.distance(eye) < 0.05) {
+        return;
+    }
+    state.last_eye = Some(eye);
 
     let mesh_local_aabb = cab_interior_mesh_local_aabb(&cab_parts, &meshes);
     let head_inside_local = cab_res

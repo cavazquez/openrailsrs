@@ -22,6 +22,7 @@ cargo test -p openrailsrs-viewer3d camera
 cargo test -p openrailsrs-viewer3d cab_cvf
 cargo test -p openrailsrs-viewer3d pullman
 cargo test -p openrailsrs-viewer3d cab_view
+cargo test -p openrailsrs-viewer3d floating_origin
 
 echo "==> tests"
 cargo test --workspace --all-features -- --test-threads=1

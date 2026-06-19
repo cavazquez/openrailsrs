@@ -14,6 +14,7 @@ use openrailsrs_formats::{
 use crate::coordinates::{
     matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy, qdir_to_quat,
 };
+use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_from_path,
@@ -1039,6 +1040,7 @@ fn classify_one_object(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_shape_spawn_entries_for_transforms(
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
@@ -1047,6 +1049,7 @@ fn append_shape_spawn_entries_for_transforms(
     shape_mesh_count: &mut usize,
     shape_texture_count: &mut usize,
     merged_shape_groups: &mut usize,
+    origin: &FloatingOrigin,
 ) {
     if asset.has_texture {
         *shape_texture_count += transforms.len();
@@ -1064,8 +1067,12 @@ fn append_shape_spawn_entries_for_transforms(
     if mergeable {
         *merged_shape_groups += 1;
         *shape_mesh_count += asset.parts.len();
+        let view_transforms: Vec<Transform> = transforms
+            .iter()
+            .map(|tf| view_transform(*tf, origin))
+            .collect();
         for part in &asset.parts {
-            if let Some(merged) = build_merged_instance_mesh(meshes, &part.mesh, transforms) {
+            if let Some(merged) = build_merged_instance_mesh(meshes, &part.mesh, &view_transforms) {
                 spawn_queue.push((
                     Transform::IDENTITY,
                     Mesh3d(meshes.add(merged)),
@@ -1077,9 +1084,10 @@ fn append_shape_spawn_entries_for_transforms(
     } else {
         *shape_mesh_count += asset.parts.len() * transforms.len();
         for tf in transforms {
+            let tf = view_transform(*tf, origin);
             for part in &asset.parts {
                 spawn_queue.push((
-                    *tf,
+                    tf,
                     Mesh3d(part.mesh.clone()),
                     MeshMaterial3d(part.material.clone()),
                     Name::new("world:mesh"),
@@ -1094,6 +1102,7 @@ fn append_shape_spawn_entries(
     shape_path: &Path,
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
+    origin: &FloatingOrigin,
 ) {
     let Some(transforms) = progress.shape_instances.get(shape_path).cloned() else {
         return;
@@ -1106,6 +1115,7 @@ fn append_shape_spawn_entries(
         &mut progress.shape_mesh_count,
         &mut progress.shape_texture_count,
         &mut progress.merged_shape_groups,
+        origin,
     );
 }
 
@@ -1550,6 +1560,7 @@ pub fn progressive_world_spawn_system(
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
     focus: Res<RouteFocus>,
+    origin: Res<FloatingOrigin>,
     assets: Res<RouteAssets>,
     mode: Res<ViewerSceneryMode>,
     progress: Option<ResMut<WorldSpawnProgress>>,
@@ -1641,7 +1652,13 @@ pub fn progressive_world_spawn_system(
                 let Some(asset) = progress.shape_cache.get(&shape_path).cloned() else {
                     continue;
                 };
-                append_shape_spawn_entries(&mut progress, &shape_path, &asset, &mut meshes);
+                append_shape_spawn_entries(
+                    &mut progress,
+                    &shape_path,
+                    &asset,
+                    &mut meshes,
+                    &origin,
+                );
             }
             progress.build_queue_index = end;
             if progress.build_queue_index >= progress.instance_paths.len() {
@@ -1697,13 +1714,21 @@ pub fn progressive_world_spawn_system(
                 commands.spawn((
                     Mesh3d(meshes.add(mesh)),
                     MeshMaterial3d(material),
-                    Transform::IDENTITY,
+                    Transform::from_translation(-crate::floating_origin::horizontal_shift(
+                        origin.shift,
+                    )),
                     Name::new(format!("world-boxes:{kind}")),
                 ));
                 viewer_log!("openrailsrs-viewer3d: merged {cuboid_count} {kind} placeholder(s)");
             }
             if !progress.trackobj_procedural.is_empty() {
-                let segments = std::mem::take(&mut progress.trackobj_procedural);
+                let segments = std::mem::take(&mut progress.trackobj_procedural)
+                    .into_iter()
+                    .map(|mut seg| {
+                        seg.position = view_translation(seg.position, &origin);
+                        seg
+                    })
+                    .collect::<Vec<_>>();
                 crate::dyntrack::spawn_procedural_track_batch(
                     &mut commands,
                     &mut meshes,
@@ -1729,6 +1754,7 @@ pub fn spawn_world_boxes(
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
     focus: Res<RouteFocus>,
+    origin: Res<FloatingOrigin>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
     mode: Res<ViewerSceneryMode>,
@@ -1910,6 +1936,7 @@ pub fn spawn_world_boxes(
             &mut shape_mesh_count,
             &mut shape_texture_count,
             &mut merged_shape_groups,
+            &origin,
         );
     }
 
@@ -1936,7 +1963,7 @@ pub fn spawn_world_boxes(
         commands.spawn((
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(material),
-            Transform::IDENTITY,
+            Transform::from_translation(-crate::floating_origin::horizontal_shift(origin.shift)),
             Name::new(format!("world-boxes:{}", kind)),
         ));
         viewer_log!(
@@ -1946,11 +1973,19 @@ pub fn spawn_world_boxes(
     }
 
     if !trackobj_procedural.is_empty() {
+        let shifted: Vec<_> = trackobj_procedural
+            .iter()
+            .map(|seg| {
+                let mut s = *seg;
+                s.position = view_translation(s.position, &origin);
+                s
+            })
+            .collect();
         crate::dyntrack::spawn_procedural_track_batch(
             &mut commands,
             &mut meshes,
             &mut materials,
-            &trackobj_procedural,
+            &shifted,
             &scene.bounds,
             "trackobj",
             crate::dyntrack::ProceduralTrackStyle::Full,

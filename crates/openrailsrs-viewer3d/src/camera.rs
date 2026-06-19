@@ -752,12 +752,15 @@ pub fn follow_train_camera(
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
-    if *mode != CameraMode::Orbit || *follow == CameraFollowMode::Off {
+    if *follow == CameraFollowMode::Off {
         return;
     }
     let replay_active = replay.as_ref().is_some_and(|r| r.is_active());
     let live_active = live.is_some();
     if !replay_active && !live_active {
+        return;
+    }
+    if *mode != CameraMode::Orbit && *follow != CameraFollowMode::DriverCam {
         return;
     }
 
@@ -1012,10 +1015,11 @@ pub fn orbit_camera_system(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn fly_camera_system(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
+    follow: Res<CameraFollowMode>,
     replay: Option<Res<crate::train::ReplayState>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
@@ -1025,6 +1029,11 @@ pub fn fly_camera_system(
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
+    if *follow == CameraFollowMode::DriverCam {
+        motion.clear();
+        wheel.clear();
+        return;
+    }
     let Ok((mut transform, mut fly)) = query.single_mut() else {
         motion.clear();
         wheel.clear();
@@ -1102,6 +1111,26 @@ pub fn in_orbit_mode(mode: Res<CameraMode>) -> bool {
 
 pub fn in_fly_mode(mode: Res<CameraMode>) -> bool {
     *mode == CameraMode::Fly
+}
+
+pub fn follow_train_camera_active(
+    mode: Res<CameraMode>,
+    follow: Res<CameraFollowMode>,
+    replay: Option<Res<crate::train::ReplayState>>,
+    live: Option<Res<crate::live::LiveDrive>>,
+) -> bool {
+    if *follow == CameraFollowMode::Off {
+        return false;
+    }
+    let sim_active = live.is_some() || replay.as_ref().is_some_and(|r| r.is_active());
+    if !sim_active {
+        return false;
+    }
+    *follow == CameraFollowMode::DriverCam || *mode == CameraMode::Orbit
+}
+
+pub fn fly_camera_allowed(follow: Res<CameraFollowMode>) -> bool {
+    *follow != CameraFollowMode::DriverCam
 }
 
 /// Widen FOV, tighten near clip, and tune exposure/ambient per camera mode.

@@ -1,26 +1,48 @@
 //! Recentre the scene around the camera when far from the origin (Open Rails `PrepareFrame` style).
 
+use bevy::ecs::hierarchy::ChildOf;
 use bevy::ecs::system::ParamSet;
 use bevy::prelude::*;
 
-use crate::camera::{OrbitState, camera_transform_from_orbit_state};
+use crate::cab_view::{CabInteriorMarker, CabInteriorRoot};
+use crate::camera::{CameraFollowMode, OrbitState, camera_transform_from_orbit_state};
 use crate::launch::ViewerSceneryMode;
-use crate::live::LiveTrainMarker;
+use crate::live::{LiveTrainBody, LiveTrainMarker};
 use crate::track::TrackScene;
 use crate::train::{ReplayState, TrainMarker, pose_at_time};
 use crate::viewer_log;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
-/// Cumulative shift applied when floating origin is active.
+/// Cumulative horizontal shift (XZ only) for floating-origin rebasing.
+/// Y stays in [`RouteFocus::height_origin`] / terrain MSL space.
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct FloatingOrigin {
     pub shift: Vec3,
 }
 
+#[inline]
+pub fn horizontal_shift(v: Vec3) -> Vec3 {
+    Vec3::new(v.x, 0.0, v.z)
+}
+
 /// Map a render-space pose from `pose_at_time` / `position_on_graph` into view space.
 #[inline]
 pub fn view_position(render: Vec3, origin: &FloatingOrigin) -> Vec3 {
-    render - origin.shift
+    let h = horizontal_shift(origin.shift);
+    Vec3::new(render.x - h.x, render.y, render.z - h.z)
+}
+
+/// Same as [`view_position`] for static scenery spawned from `RouteFocus::scenery_to_render`.
+#[inline]
+pub fn view_translation(render: Vec3, origin: &FloatingOrigin) -> Vec3 {
+    view_position(render, origin)
+}
+
+/// Apply floating-origin view shift to a focus-relative spawn transform.
+#[inline]
+pub fn view_transform(mut tf: Transform, origin: &FloatingOrigin) -> Transform {
+    tf.translation = view_translation(tf.translation, origin);
+    tf
 }
 
 /// Recentre when the camera drifts farther than this from the origin (metres).
@@ -38,7 +60,17 @@ pub(crate) fn track_dev_recenter_at_subject(
     mut queries: ParamSet<(
         Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
         Query<&Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
-        Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
+        Query<
+            &mut Transform,
+            (
+                Without<Camera3d>,
+                Without<Window>,
+                Without<Node>,
+                Without<ChildOf>,
+                Without<LiveTrainMarker>,
+                Without<TrainMarker>,
+            ),
+        >,
     )>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
@@ -74,7 +106,6 @@ pub(crate) fn track_dev_recenter_at_subject(
     }
 
     origin.shift += delta;
-    // Shift all other transforms by -delta to keep track, scenery and consists aligned
     for mut tf in queries.p2().iter_mut() {
         tf.translation -= delta;
     }
@@ -99,37 +130,85 @@ pub(crate) fn track_dev_recenter_at_subject(
     );
 }
 
-/// Move the camera and non-UI scene transforms toward the origin for f32 stability.
+/// Move root-level scenery toward the origin for f32 stability.
+///
+/// Train hierarchies are excluded: [`live::update_live_train_marker`] / replay markers
+/// already use [`view_position`], and shifting child transforms would corrupt locals.
 #[allow(clippy::type_complexity)]
 pub(crate) fn apply_floating_origin(
     mode: Res<ViewerSceneryMode>,
+    follow: Res<CameraFollowMode>,
     mut origin: ResMut<FloatingOrigin>,
-    mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
-    mut transforms: Query<&mut Transform, (Without<Camera3d>, Without<Window>, Without<Node>)>,
+    mut queries: ParamSet<(
+        Query<&Transform, Or<(With<LiveTrainMarker>, With<TrainMarker>)>>,
+        Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+        Query<
+            &mut Transform,
+            (
+                Without<Camera3d>,
+                Without<Window>,
+                Without<Node>,
+                Without<ChildOf>,
+                Without<LiveTrainMarker>,
+                Without<TrainMarker>,
+                Without<LiveTrainBody>,
+                Without<CabInteriorMarker>,
+                Without<CabInteriorRoot>,
+            ),
+        >,
+    )>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
-    // Tile-lab: todo el contenido vive a ±2 km del origen (centro del tile) y la
-    // cámara orbita a ~2.6 km fija; el rebase rompería los spawns progresivos
-    // (terreno/objetos) que no compensan `origin.shift`.
     if mode.is_track_focused() || mode.is_tile_lab() {
         return;
     }
-    let Ok((mut cam, mut orbit)) = cameras.single_mut() else {
-        return;
+
+    let subject = queries.p0().iter().next().map(|t| t.translation);
+
+    let reference = {
+        let camera_q = queries.p1();
+        let Ok((cam, _)) = camera_q.single() else {
+            return;
+        };
+        horizontal_shift(subject.unwrap_or(cam.translation))
     };
-    if cam.translation.length() < FLOATING_ORIGIN_THRESHOLD_M {
+
+    if reference.length() < FLOATING_ORIGIN_THRESHOLD_M {
         return;
     }
-    let delta = cam.translation;
+
+    let delta = reference;
     origin.shift += delta;
-    cam.translation -= delta;
-    orbit.focus -= delta;
-    for mut tf in transforms.iter_mut() {
-        tf.translation -= delta;
+    let driver_cam = *follow == CameraFollowMode::DriverCam;
+
+    for mut tf in queries.p2().iter_mut() {
+        tf.translation.x -= delta.x;
+        tf.translation.z -= delta.z;
     }
     for mut billboard in &mut billboards {
-        billboard.world -= delta;
+        billboard.world.x -= delta.x;
+        billboard.world.z -= delta.z;
     }
+
+    // Driver view: camera is set every frame from the lead vehicle; do not zero it here.
+    if !driver_cam {
+        let mut camera_q = queries.p1();
+        let Ok((mut cam, mut orbit)) = camera_q.single_mut() else {
+            return;
+        };
+        cam.translation.x -= delta.x;
+        cam.translation.z -= delta.z;
+        orbit.focus.x -= delta.x;
+        orbit.focus.z -= delta.z;
+    }
+
+    viewer_log!(
+        "openrailsrs-viewer3d: floating origin — XZ shift ({:.0}, {:.0}) m (total {:.0}, {:.0})",
+        delta.x,
+        delta.z,
+        origin.shift.x,
+        origin.shift.z,
+    );
 }
 
 #[cfg(test)]
@@ -148,5 +227,14 @@ mod tests {
         };
         let render = Vec3::new(110.0, 5.0, -40.0);
         assert_eq!(view_position(render, &origin), Vec3::new(10.0, 5.0, 10.0));
+    }
+
+    #[test]
+    fn view_position_preserves_render_y() {
+        let origin = FloatingOrigin {
+            shift: Vec3::new(100.0, 9.0, -50.0),
+        };
+        let render = Vec3::new(110.0, 0.3, -40.0);
+        assert_eq!(view_position(render, &origin).y, 0.3);
     }
 }

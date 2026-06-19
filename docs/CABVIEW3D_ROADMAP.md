@@ -42,6 +42,8 @@ Referencia OR: `ThreeDimentionCabViewer`, `ThreeDimCabCamera`, grupo `RenderPrim
 | Cielo en ventanas (`--run-corridor`) | ✅ | `sky.rs` + domo en `RunCorridor` |
 | Diagnóstico cab | ✅ | `cab_diag.rs` — `OPENRAILSRS_CAB_DEBUG=uv\|albedo\|vcolor` |
 | Tests Pullman | ✅ | UV, ventanas DDS, CVF matrices, ≥39 texturas |
+| Modo Full (terreno + WORLD, sin `--run-corridor`) | 🔶 | [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md) — cabina + tren alineados tras fix floating origin XZ (2026-06-19); ventanas/paisaje dependen de spawn ~30 s |
+| Floating origin view space | ✅ | `floating_origin.rs` — shift solo XZ; spawn WORLD/terreno con `view_transform`; jerarquía tren excluida del rebase |
 
 ### 2.2 Variables de entorno (cabina)
 
@@ -55,12 +57,16 @@ Referencia OR: `ThreeDimentionCabViewer`, `ThreeDimCabCamera`, grupo `RenderPrim
 
 ### 2.3 Arranque (bash / fish)
 
+**Corredor mínimo** (depurar cabina/CVF):
+
 ```fish
 set -gx CHILTERN_ROUTE "$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
 cd ~/repos/propios/ProyectoOpenRails/openrailsrs
 cargo run --release -p openrailsrs-viewer3d -- \
     --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
+
+**Modo Full** (terreno + WORLD): mismo comando **sin** `--run-corridor` — ver [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md).
 
 Teclas en cabina: **C** cabina/chase · **↑/↓** throttle/freno · **H** bocina · **Home** centrar vista.
 
@@ -80,6 +86,7 @@ Assets:
 ### 2.4 Pendiente / bug abierto (2026-06-19)
 
 - **Animación regulador (THROTTLE M8):** geometría sigue desplazándose muy alto al subir `thr`; rebase bone-local aplicado pero no resuelve del todo — ver [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md) § estado al cierre.
+- **Modo Full — ventanas azules / paisaje:** layer 0 puede estar vacío hasta terminar spawn WORLD; 345 `.s` TrackObj sin resolver en log.
 - Freno (`Brake_wheel`): malla a ~1.3 m del pivote CVF — sin enlace hasta localizar hueso/malla correctos.
 - Asiento con tinte cálido del ACE (`seat.ace` rgb≈25,18,13) — ajuste artístico opcional
 - Modo noche `CABVIEW3D/NIGHT/` + `.SD`

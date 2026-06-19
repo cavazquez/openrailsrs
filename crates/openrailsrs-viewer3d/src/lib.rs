@@ -156,6 +156,12 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
+                floating_origin::apply_floating_origin
+                    .before(live::update_live_train_marker)
+                    .before(train::update_train_markers),
+            )
+            .add_systems(
+                Update,
                 (
                     teleport::toggle_teleport_dialog,
                     teleport::teleport_input_system,
@@ -224,15 +230,17 @@ impl Plugin for ViewerPlugin {
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
                     cab_panel::update_cab_panel,
-                    (camera::orbit_camera_system, camera::follow_train_camera)
-                        .chain()
+                    (camera::orbit_camera_system)
                         .run_if(camera::in_orbit_mode)
+                        .run_if(teleport::teleport_closed),
+                    camera::follow_train_camera
+                        .run_if(camera::follow_train_camera_active)
                         .run_if(teleport::teleport_closed)
                         .after(train::update_train_markers)
                         .after(live::update_live_train_marker),
-                    floating_origin::apply_floating_origin.after(camera::orbit_camera_system),
                     camera::fly_camera_system
                         .run_if(camera::in_fly_mode)
+                        .run_if(camera::fly_camera_allowed)
                         .run_if(teleport::teleport_closed),
                 ),
             );
