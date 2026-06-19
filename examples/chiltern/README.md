@@ -106,9 +106,20 @@ cargo run --release -p openrailsrs-viewer3d -- \
 
 `--run-corridor` carga solo el escenario, el tren y vía procedural desde `.tdb` alrededor del recorrido. No carga `WORLD/`, terreno, grilla ni objetos estáticos. Si hace falta afinar, `OPENRAILSRS_RUN_CORRIDOR_WIDTH_M=240` controla el ancho visible y `OPENRAILSRS_RUN_CORRIDOR_RADIUS_M=3000` el radio de búsqueda `.tdb`.
 
-Controles: **W/S** acelerar/frenar, **V** driver/chase, **P** pausa, **R** reinicio, **C** panel CAB, **Shift+P** lluvia.
+Controles: **↑/↓** throttle/freno (cabina), **C** cabina/chase, **V** cámara, **P** pausa, **R** reinicio, **H** bocina, **Shift+P** lluvia.
 
-Cabina 3D MSTS (`CABVIEW3D`): estado y roadmap en [`docs/CABVIEW3D_ROADMAP.md`](../../docs/CABVIEW3D_ROADMAP.md).
+Cabina 3D MSTS (`CABVIEW3D`): [`docs/CABVIEW3D_ROADMAP.md`](../../docs/CABVIEW3D_ROADMAP.md) · sesión CVF 2026-06-19: [`docs/CABVIEW3D_SESSION_2026-06-19.md`](../../docs/CABVIEW3D_SESSION_2026-06-19.md). Defaults: iluminación plana (como albedo), 39 texturas, CVF levers con ↑/↓ (regulador aún en depuración).
+
+**fish** (equivalente):
+
+```fish
+set -gx CHILTERN_ROUTE "$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cd ~/repos/propios/ProyectoOpenRails/openrailsrs
+cargo run --release -p openrailsrs-viewer3d -- \
+    --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+```
+
+Debug cabina: `env OPENRAILSRS_CAB_DEBUG=albedo cargo run --release …` (comparar con producción).
 
 Paradas Birmingham (overlay): `n10778` (~95 s), destino `n10770` (136 s). Penalización: 8 pts/s tarde.
 

@@ -13,9 +13,9 @@ use openrailsrs_formats::{
 };
 use openrailsrs_sim::CabTelemetry;
 
-use crate::cab_view::CabInteriorMarker;
-use crate::cab_view::CabInteriorRoot;
+use crate::cab_view::{CabInteriorMarker, CabInteriorRoot};
 use crate::camera::CameraFollowMode;
+use crate::coordinates::{hierarchy_chain_transform, static_hierarchy_chain_transform};
 use crate::live::LiveDrive;
 use crate::viewer_log;
 
@@ -60,7 +60,7 @@ pub struct CabCvfPart {
 pub fn build_cab_cvf_runtime(cvf: CabViewFile, shape: ShapeFile) -> CabCvfRuntime {
     let mut matrix_drivers = HashMap::new();
     for (idx, matrix) in shape.matrices.iter().enumerate() {
-        if let Some(driver) = matrix_driver_from_name(&matrix.name, &shape) {
+        if let Some(driver) = matrix_driver_from_name(&matrix.name, &shape, idx) {
             matrix_drivers.insert(idx, driver);
         }
     }
@@ -72,7 +72,11 @@ pub fn build_cab_cvf_runtime(cvf: CabViewFile, shape: ShapeFile) -> CabCvfRuntim
     }
 }
 
-fn matrix_driver_from_name(name: &str, shape: &ShapeFile) -> Option<MatrixDriver> {
+fn matrix_driver_from_name(
+    name: &str,
+    shape: &ShapeFile,
+    matrix_idx: usize,
+) -> Option<MatrixDriver> {
     let head = name.split('-').next()?.trim();
     let parts: Vec<&str> = head.split(':').collect();
     if parts.len() < 2 {
@@ -87,9 +91,13 @@ fn matrix_driver_from_name(name: &str, shape: &ShapeFile) -> Option<MatrixDriver
     let state_index = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);
 
     let anim_node = shape.animations.first().and_then(|anim| {
-        anim.nodes
-            .iter()
-            .position(|n| n.name.eq_ignore_ascii_case(name))
+        if matrix_idx < anim.nodes.len() && !anim.nodes[matrix_idx].controllers.is_empty() {
+            Some(matrix_idx)
+        } else {
+            anim.nodes
+                .iter()
+                .position(|n| n.name.eq_ignore_ascii_case(name))
+        }
     });
 
     if control_is_lever(&control) {
@@ -364,19 +372,9 @@ fn set_matrix_rotation(m: &mut Matrix43, q: Quat) {
     ];
 }
 
-fn matrix43_to_transform(m: &Matrix43) -> Transform {
-    let r = &m.rows;
-    let basis = Mat3::from_cols(
-        Vec3::new(r[0][0] as f32, r[0][1] as f32, -r[0][2] as f32),
-        Vec3::new(r[1][0] as f32, r[1][1] as f32, -r[1][2] as f32),
-        Vec3::new(-r[2][0] as f32, -r[2][1] as f32, r[2][2] as f32),
-    );
-    let translation = Vec3::new(r[3][0] as f32, r[3][1] as f32, -r[3][2] as f32);
-    Transform {
-        translation,
-        rotation: Quat::from_mat3(&basis),
-        scale: Vec3::ONE,
-    }
+/// Static bone transform for cab lever spawn (before CVF animation).
+pub fn static_matrix_transform(shape: &ShapeFile, matrix_idx: usize) -> Transform {
+    static_hierarchy_chain_transform(shape, matrix_idx)
 }
 
 fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -> f32 {
@@ -402,13 +400,37 @@ fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -
     (value as f32 * max_frame).clamp(0.0, max_frame)
 }
 
-fn fallback_lever_rotation(control: &ControlType, value: f64) -> Quat {
+fn fallback_lever_rotation(
+    _shape: &ShapeFile,
+    _matrix_idx: usize,
+    control: &ControlType,
+    value: f64,
+) -> Quat {
     let angle = match control {
-        ControlType::Throttle => -0.55 + value * 0.55,
-        ControlType::TrainBrake => -0.45 + value * 0.45,
-        _ => value * 0.35 - 0.175,
+        ControlType::Throttle => -0.75 + value * 0.75,
+        ControlType::TrainBrake => -1.25 + value * 1.25,
+        _ => value * 0.5 - 0.25,
     };
-    Quat::from_rotation_x(angle as f32)
+    // MSTS cab wheels / regulator: spin around local Y (vertical axis through pivot).
+    let local_axis = match control {
+        ControlType::Throttle | ControlType::TrainBrake => Vec3::Y,
+        _ => Vec3::X,
+    };
+    Quat::from_axis_angle(local_axis, angle as f32)
+}
+
+fn lever_pose_from_fallback(
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    control: &ControlType,
+    value: f64,
+) -> Transform {
+    let static_t = static_hierarchy_chain_transform(shape, matrix_idx);
+    Transform {
+        translation: static_t.translation,
+        rotation: static_t.rotation * fallback_lever_rotation(shape, matrix_idx, control, value),
+        scale: Vec3::ONE,
+    }
 }
 
 /// Apply CVF / matrix animation from live telemetry.
@@ -450,12 +472,20 @@ pub fn update_cab_cvf_controls(
                 .and_modify(|current| *current += (target_key - *current) * smooth)
                 .or_insert(target_key);
             let pose_mats = animation_pose_matrices(&runtime.shape, *key);
-            if let Some(mat) = pose_mats.get(*matrix_idx) {
-                lever_poses.insert(*matrix_idx, matrix43_to_transform(mat));
+            let has_anim = runtime.shape.animations.first().is_some_and(|anim| {
+                anim_node
+                    .and_then(|i| anim.nodes.get(i))
+                    .is_some_and(|n| !n.controllers.is_empty())
+            });
+            if has_anim {
+                lever_poses.insert(
+                    *matrix_idx,
+                    hierarchy_chain_transform(&runtime.shape, *matrix_idx, &pose_mats),
+                );
             } else {
                 lever_poses.insert(
                     *matrix_idx,
-                    Transform::from_rotation(fallback_lever_rotation(control, value)),
+                    lever_pose_from_fallback(&runtime.shape, *matrix_idx, control, value),
                 );
             }
         }
@@ -472,7 +502,8 @@ pub fn update_cab_cvf_controls(
                     *transform = *pose;
                 } else {
                     let value = control_value(control, &tel);
-                    transform.rotation = fallback_lever_rotation(control, value);
+                    *transform =
+                        lever_pose_from_fallback(&runtime.shape, part.matrix_idx, control, value);
                 }
             }
             MatrixDriver::MultiState {
@@ -532,6 +563,7 @@ fn types_match(a: &ControlType, b: &ControlType) -> bool {
 mod tests {
     use super::*;
     use openrailsrs_formats::ControlState;
+    use std::collections::HashSet;
 
     #[test]
     fn control_value_maps_throttle_and_brake() {
@@ -552,7 +584,7 @@ mod tests {
     #[test]
     fn matrix_driver_parses_or_throttle_name() {
         let shape = ShapeFile::default();
-        let driver = matrix_driver_from_name("THROTTLE:0:0", &shape).expect("driver");
+        let driver = matrix_driver_from_name("THROTTLE:0:0", &shape, 8).expect("driver");
         assert!(matches!(
             driver,
             MatrixDriver::Lever {
@@ -623,5 +655,153 @@ mod tests {
             .filter(|d| matches!(d, MatrixDriver::Lever { .. }))
             .count();
         assert!(levers >= 1, "expected at least one lever matrix");
+    }
+
+    #[test]
+    fn pullman_cvf_lever_binding_diagnostics() {
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let cvf_path = shape_path.with_extension("cvf");
+        let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
+            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
+            other => panic!("expected CabView, got {other:?}"),
+        };
+        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
+        eprintln!("=== Pullman CVF levers ===");
+        for (idx, driver) in &runtime.matrix_drivers {
+            eprintln!("matrix {idx}: {driver:?}");
+            if let MatrixDriver::Lever { anim_node, .. } = driver {
+                eprintln!("  anim_node={anim_node:?}");
+            }
+        }
+        eprintln!("vtx_states count={}", shape.vtx_states.len());
+        for (i, v) in shape.vtx_states.iter().enumerate() {
+            eprintln!("  vtx_state {i}: matrix_idx={}", v.matrix_idx);
+        }
+        for (pi, ps) in shape.prim_states.iter().enumerate() {
+            let m = shape
+                .vtx_states
+                .get(ps.vertex_state_idx.max(0) as usize)
+                .map(|v| v.matrix_idx)
+                .unwrap_or(-1);
+            eprintln!(
+                "prim_state {pi} vtx_state {} matrix_idx={m}",
+                ps.vertex_state_idx
+            );
+        }
+        eprintln!("=== matrix names ===");
+        for (i, m) in shape.matrices.iter().enumerate() {
+            eprintln!("  {i}: {}", m.name);
+        }
+        for (pi, ps) in shape.prim_states.iter().enumerate() {
+            let Some(vtx) = shape.vtx_states.get(ps.vertex_state_idx.max(0) as usize) else {
+                continue;
+            };
+            let name = shape
+                .matrices
+                .get(vtx.matrix_idx.max(0) as usize)
+                .map(|m| m.name.as_str())
+                .unwrap_or("?");
+            eprintln!("prim {pi:2} matrix {} ({name})", vtx.matrix_idx);
+        }
+        eprintln!("=== prim → matrix (lever matrices only) ===");
+        let lever_idxs: std::collections::HashSet<usize> = runtime
+            .matrix_drivers
+            .iter()
+            .filter_map(|(i, d)| matches!(d, MatrixDriver::Lever { .. }).then_some(*i))
+            .collect();
+        for (pi, ps) in shape.prim_states.iter().enumerate() {
+            let Some(vtx) = shape.vtx_states.get(ps.vertex_state_idx.max(0) as usize) else {
+                continue;
+            };
+            if vtx.matrix_idx >= 0 && lever_idxs.contains(&(vtx.matrix_idx as usize)) {
+                let name = shape
+                    .matrices
+                    .get(vtx.matrix_idx as usize)
+                    .map(|m| m.name.as_str())
+                    .unwrap_or("?");
+                eprintln!("prim {pi} matrix {} ({name})", vtx.matrix_idx);
+            }
+        }
+        if let Some(anim) = shape.animations.first() {
+            eprintln!(
+                "anim frame_count={} nodes={}",
+                anim.frame_count,
+                anim.nodes.len()
+            );
+        }
+        if let Some(level) = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+        {
+            let levers: HashSet<usize> = runtime
+                .matrix_drivers
+                .iter()
+                .filter_map(|(i, d)| matches!(d, MatrixDriver::Lever { .. }).then_some(*i))
+                .collect();
+            for (mi, m) in shape.matrices.iter().enumerate() {
+                if levers.contains(&mi) {
+                    let r = &m.matrix.rows[3];
+                    let row0 = &m.matrix.rows[0];
+                    eprintln!(
+                        "matrix {mi} {} pivot=({:.3},{:.3},{:.3}) ax0=({:.2},{:.2},{:.2})",
+                        m.name, r[0], r[1], r[2], row0[0], row0[1], row0[2]
+                    );
+                }
+            }
+            eprintln!("=== cab_matrix_for_prim bindings (levers) ===");
+            let parts = crate::shapes::build_mesh_parts_from_shape_lod_cab(
+                &shape,
+                level,
+                &runtime.matrix_drivers.keys().copied().collect(),
+                &levers,
+            );
+            for part in &parts {
+                if let Some(m) = part.cab_matrix_idx {
+                    if levers.contains(&m) {
+                        let tex = part.texture_file.as_deref().unwrap_or("?");
+                        let (c, h) = (
+                            part.bounds_center.unwrap_or(Vec3::ZERO),
+                            part.bounds_half_extent.unwrap_or(Vec3::ZERO),
+                        );
+                        let pivot =
+                            crate::shapes::matrix_pivot_bevy(&shape, m).unwrap_or(Vec3::ZERO);
+                        eprintln!(
+                            "sub {} prim {} -> matrix {m} ({}) tex={tex} center=({:.3},{:.3},{:.3}) r={:.3} dist={:.3}",
+                            part.sub_object_idx,
+                            part.prim_state_idx,
+                            shape.matrices[m].name,
+                            c.x,
+                            c.y,
+                            c.z,
+                            h.max_element(),
+                            c.distance(pivot),
+                        );
+                    }
+                }
+            }
+            eprintln!("hierarchy: {:?}", level.hierarchy);
+            for (si, sub) in level.sub_objects.iter().enumerate() {
+                eprintln!(
+                    "sub_object {si}: verts={} prims={}",
+                    sub.vertices.len(),
+                    sub.primitives.len()
+                );
+                for prim in &sub.primitives {
+                    let ps = shape
+                        .prim_states
+                        .get(prim.prim_state_idx.max(0) as usize)
+                        .map(|p| p.vertex_state_idx)
+                        .unwrap_or(-1);
+                    eprintln!("  prim_state {} vtx_state_idx={ps}", prim.prim_state_idx);
+                }
+            }
+        }
     }
 }

@@ -1162,11 +1162,17 @@ fn build_world_shape_asset(
                 combined_mesh: unit.clone(),
                 parts: vec![crate::shapes::ShapePartAsset {
                     prim_state_idx: -1,
+                    sub_object_idx: u32::MAX,
+                    cab_matrix_idx: None,
                     mesh: unit,
                     material: fallback_material.clone(),
                     or_cab_material: None,
                     has_texture: false,
                     is_transparent: false,
+                    texture_name: None,
+                    shader_name: None,
+                    light_mat_idx: None,
+                    solid_color: None,
                 }],
                 has_texture: false,
             }

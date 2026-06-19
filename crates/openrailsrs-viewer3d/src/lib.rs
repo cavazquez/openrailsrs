@@ -8,6 +8,7 @@
 //! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
 
 pub mod cab_cvf;
+pub mod cab_diag;
 pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_view;
@@ -111,7 +112,7 @@ impl Plugin for ViewerPlugin {
                 Startup,
                 (
                     scene::spawn_ground_and_lights,
-                    sky::spawn_sky_dome.run_if(launch::full_scenery_active),
+                    sky::spawn_sky_dome.run_if(launch::sky_dome_active),
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
                     tdb_track::spawn_tdb_graph_track,

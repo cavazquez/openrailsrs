@@ -83,7 +83,9 @@ pub fn resolve_or_material_kind(
     // OR `ShaderNames` table — `Tex` / additive / blend-atlas use FullBright stage.
     let from_shader = match shader_name.map(|s| s.to_ascii_lowercase()).as_deref() {
         Some("tex") => OrShaderKind::FullBright,
-        Some("blendatex") | Some("addatex") => OrShaderKind::FullBright,
+        Some(s) if s.starts_with("blendatex") || s.starts_with("addatex") => {
+            OrShaderKind::FullBright
+        }
         _ => classify_or_shader(shader_name),
     };
 
@@ -138,6 +140,14 @@ mod tests {
         assert_eq!(classify_or_shader(Some("TexDiff")), OrShaderKind::TexDiff);
         assert_eq!(
             classify_or_shader(Some("FullBright")),
+            OrShaderKind::FullBright
+        );
+    }
+
+    #[test]
+    fn blendatexdiff_resolves_fullbright_for_cab() {
+        assert_eq!(
+            resolve_or_material_kind(Some("BlendATexDiff"), None),
             OrShaderKind::FullBright
         );
     }

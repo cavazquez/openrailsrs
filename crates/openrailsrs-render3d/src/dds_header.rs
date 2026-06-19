@@ -17,7 +17,7 @@ pub fn dds_alpha_type(path: &std::path::Path) -> Option<DdsAlpha> {
     
     // Check if dwFlags in dwPixelFormat includes DDPF_FOURCC (0x4)
     // dwPixelFormat starts at offset 76.
-    let pf_flags = u32::from_le_bytes(header[76..80].try_into().unwrap());
+    let pf_flags = u32::from_le_bytes(header[80..84].try_into().unwrap());
     if (pf_flags & 0x4) != 0 {
         let fourcc = &header[84..88];
         match fourcc {

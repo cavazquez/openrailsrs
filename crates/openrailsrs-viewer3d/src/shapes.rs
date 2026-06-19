@@ -1,17 +1,21 @@
 //! MSTS ASCII `.s` shapes → Bevy meshes (order 6) + `.ace` textures (order 7).
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
+use bevy::mesh::VertexAttributeValues;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
 use openrailsrs_formats::{DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
-use crate::coordinates::{matrix43_transform_point_xna, matrix43_transform_vector_xna};
+use crate::coordinates::{
+    matrix43_transform_point_xna, matrix43_transform_vector_xna, rebase_points_to_bone_local,
+    rebase_vectors_to_bone_local, static_hierarchy_chain_transform,
+};
 use crate::viewer_log;
 
 /// HDR multiplier on textured scenery whose `.ace` mip0 is already reasonably bright.
@@ -150,26 +154,6 @@ fn scenery_needs_emissive_texture(rgba: &[u8]) -> bool {
     ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD
 }
 
-fn scenery_shape_material_with_texture(
-    tint: Color,
-    handle: Handle<Image>,
-    rgba_for_luma: &[u8],
-    alpha_mode: AlphaMode,
-    z_bias: f32,
-) -> StandardMaterial {
-    cab_or_scenery_material_with_texture(
-        tint,
-        handle,
-        rgba_for_luma,
-        alpha_mode,
-        z_bias,
-        or_lighting_enabled(),
-        None,
-        None,
-        false,
-    )
-}
-
 #[allow(clippy::too_many_arguments)]
 fn cab_or_scenery_material_with_texture(
     tint: Color,
@@ -201,8 +185,9 @@ fn cab_or_scenery_material_with_texture(
         fog_enabled: false,
         ..default()
     };
-    if cab_interior {
+    if cab_interior && matches!(alpha_mode, AlphaMode::Opaque) {
         // OR HalfBright-style ambient fill (no emissive_texture — PBR uses base_color_texture).
+        // Skip on blend/mask glass — emissive washes out transparent cab windows (.dds).
         mat.emissive = LinearRgba::new(0.22, 0.23, 0.25, 1.0);
     } else if !material_lit && scenery_needs_emissive_texture(rgba_for_luma) {
         mat.emissive = SCENERY_DARK_EMISSIVE;
@@ -212,7 +197,7 @@ fn cab_or_scenery_material_with_texture(
 }
 
 /// OR `TexDiff` / `Tex`: vertex colour × texture albedo.
-fn shader_uses_vertex_color_multiply(shader_name: Option<&str>) -> bool {
+pub fn shader_uses_vertex_color_multiply(shader_name: Option<&str>) -> bool {
     shader_name.is_some_and(|s| {
         let n = s.to_ascii_lowercase();
         n.contains("diff") || n == "tex"
@@ -234,11 +219,21 @@ fn apply_msts_vertex_tint(
     Color::linear_rgba(c.red * rgb[0], c.green * rgb[1], c.blue * rgb[2], c.alpha)
 }
 
-/// Target mean luma for cab `.ace` (slightly higher than scenery — interior detail).
+/// Target mean luma when [`cab_ace_brighten_enabled`] lifts dark cab atlases.
 const CAB_TEXTURE_TARGET_LUMA: f32 = 140.0;
 
-/// Lift dark MSTS cab atlases (same as [`brighten_dark_ace_rgba`] but cab target luma).
+/// Lift dark MSTS cab atlases — opt-in via `OPENRAILSRS_CAB_BRIGHTEN=1` (default off).
+pub fn cab_ace_brighten_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAB_BRIGHTEN").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
 fn brighten_cab_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
+    if !cab_ace_brighten_enabled() {
+        return (rgba.to_vec(), false);
+    }
     let mean = ace_mean_luma(rgba);
     if mean >= DARK_TEXTURE_LUMA_THRESHOLD {
         return (rgba.to_vec(), false);
@@ -256,18 +251,18 @@ fn brighten_cab_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
     (out, true)
 }
 
-/// Cab / interior albedo boost (`OPENRAILSRS_CAB_ALBEDO`, default 2).
-fn cab_interior_albedo_boost() -> f32 {
+/// Cab / interior albedo multiplier (`OPENRAILSRS_CAB_ALBEDO`, default 1 — raw `.ace`).
+pub fn cab_interior_albedo_boost() -> f32 {
     std::env::var("OPENRAILSRS_CAB_ALBEDO")
         .ok()
         .and_then(|v| v.trim().parse::<f32>().ok())
-        .unwrap_or(2.0)
+        .unwrap_or(1.0)
         .clamp(1.0, 6.0)
 }
 
 fn cab_albedo_tint(pixel_brightened: bool) -> Color {
     let boost = cab_interior_albedo_boost();
-    if pixel_brightened {
+    if pixel_brightened && cab_ace_brighten_enabled() {
         Color::linear_rgb(boost * 0.65, boost * 0.65, boost * 0.65)
     } else {
         Color::linear_rgb(boost, boost, boost)
@@ -610,6 +605,10 @@ pub struct LoadedShape {
 #[derive(Clone, Debug)]
 pub struct LoadedShapePart {
     pub prim_state_idx: i32,
+    /// Source `sub_object` index (cab CVF binding); `u32::MAX` when merged across sub-objects.
+    pub sub_object_idx: u32,
+    /// Animated MSTS matrix for cab levers (`sub_object_idx == matrix_idx` convention).
+    pub cab_matrix_idx: Option<usize>,
     pub mesh: Mesh,
     pub texture_file: Option<String>,
     pub shader_name: Option<String>,
@@ -621,18 +620,29 @@ pub struct LoadedShapePart {
     pub z_buf_mode: i32,
     /// OR `vtx_state` light material index (`12 + idx` → HalfBright / FullBright).
     pub light_mat_idx: Option<i32>,
+    /// Baked mesh AABB (cab CVF proximity filter).
+    pub bounds_center: Option<Vec3>,
+    pub bounds_half_extent: Option<Vec3>,
 }
 
 /// Bevy asset handles for one renderable shape part.
 #[derive(Clone, Debug)]
 pub struct ShapePartAsset {
     pub prim_state_idx: i32,
+    pub sub_object_idx: u32,
+    pub cab_matrix_idx: Option<usize>,
     pub mesh: Handle<Mesh>,
     pub material: Handle<StandardMaterial>,
     /// Open Rails cab shader (`or_cab.wgsl`); preferred in cab spawn when set.
     pub or_cab_material: Option<Handle<crate::or_cab_material::OrCabMaterial>>,
     pub has_texture: bool,
     pub is_transparent: bool,
+    /// Diagnostic metadata (cab / shape load).
+    pub texture_name: Option<String>,
+    pub shader_name: Option<String>,
+    pub light_mat_idx: Option<i32>,
+    /// MSTS uniform vertex tint when all verts share one colour (TexDiff).
+    pub solid_color: Option<[f32; 3]>,
 }
 
 /// Bevy asset handles for a shape, including a combined mesh for fitting/bounds.
@@ -669,6 +679,101 @@ pub fn mesh_aabb(mesh: &Mesh) -> Option<(Vec3, Vec3)> {
         Some((min, max))
     } else {
         None
+    }
+}
+
+/// UV bounds for a mesh (`ATTRIBUTE_UV_0`).
+pub fn mesh_uv_aabb(mesh: &Mesh) -> Option<(Vec2, Vec2)> {
+    let uvs = mesh.attribute(Mesh::ATTRIBUTE_UV_0)?;
+    let slice = match uvs {
+        VertexAttributeValues::Float32x2(uvs) => uvs.as_slice(),
+        _ => return None,
+    };
+    let mut min = Vec2::splat(f32::INFINITY);
+    let mut max = Vec2::splat(f32::NEG_INFINITY);
+    for uv in slice {
+        let p = Vec2::from(*uv);
+        min = min.min(p);
+        max = max.max(p);
+    }
+    if min.x.is_finite() {
+        Some((min, max))
+    } else {
+        None
+    }
+}
+
+pub fn mesh_has_uvs(mesh: &Mesh) -> bool {
+    mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_some()
+}
+
+/// True when all UVs collapse to a tiny range (typical broken / missing UV symptom).
+pub fn mesh_uv_degenerate(min: Vec2, max: Vec2) -> bool {
+    (max - min).length() < 1e-4
+}
+
+/// Per-vertex or uniform colour stats for cab diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MeshVertexColorMode {
+    #[default]
+    None,
+    Uniform,
+    Varying,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MeshVertexColorStats {
+    pub mode: MeshVertexColorMode,
+    pub min: Vec3,
+    pub max: Vec3,
+    pub count: usize,
+}
+
+impl Default for MeshVertexColorStats {
+    fn default() -> Self {
+        Self {
+            mode: MeshVertexColorMode::None,
+            min: Vec3::ZERO,
+            max: Vec3::ZERO,
+            count: 0,
+        }
+    }
+}
+
+pub fn mesh_vertex_color_stats(mesh: &Mesh) -> MeshVertexColorStats {
+    let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) else {
+        return MeshVertexColorStats::default();
+    };
+    let slice = match colors {
+        VertexAttributeValues::Float32x4(colors) => colors.as_slice(),
+        _ => return MeshVertexColorStats::default(),
+    };
+    if slice.is_empty() {
+        return MeshVertexColorStats::default();
+    }
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for c in slice {
+        let p = Vec3::new(c[0], c[1], c[2]);
+        min = min.min(p);
+        max = max.max(p);
+    }
+    let first = Vec3::new(slice[0][0], slice[0][1], slice[0][2]);
+    let uniform = slice.iter().all(|c| {
+        colors_close(
+            &[c[0], c[1], c[2], c[3]],
+            &[first.x, first.y, first.z, slice[0][3]],
+        )
+    });
+    MeshVertexColorStats {
+        mode: if uniform {
+            MeshVertexColorMode::Uniform
+        } else {
+            MeshVertexColorMode::Varying
+        },
+        min,
+        max,
+        count: slice.len(),
     }
 }
 
@@ -945,7 +1050,16 @@ pub fn build_mesh_from_shape_lod(shape: &ShapeFile, level: &DistanceLevel) -> Op
 
     for sub in &level.sub_objects {
         for prim in &sub.primitives {
-            append_primitive_mesh_buffers(shape, level, sub, prim, default_normal, &mut buffers);
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
         }
     }
 
@@ -967,7 +1081,16 @@ pub fn build_mesh_parts_from_shape_lod(
     for sub in &level.sub_objects {
         for prim in &sub.primitives {
             let buffers = parts.entry(prim.prim_state_idx).or_default();
-            append_primitive_mesh_buffers(shape, level, sub, prim, default_normal, buffers);
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                buffers,
+                None,
+                false,
+            );
         }
     }
 
@@ -988,6 +1111,8 @@ pub fn build_mesh_parts_from_shape_lod(
                 .unwrap_or((-1, None, -1));
             Some(LoadedShapePart {
                 prim_state_idx,
+                sub_object_idx: u32::MAX,
+                cab_matrix_idx: None,
                 mesh,
                 texture_file: texture_for_prim_state(shape, prim_state_idx),
                 shader_name: shader_name_for_prim_state(shape, prim_state_idx),
@@ -996,9 +1121,290 @@ pub fn build_mesh_parts_from_shape_lod(
                 z_bias,
                 z_buf_mode,
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
+                bounds_center: None,
+                bounds_half_extent: None,
             })
         })
         .collect()
+}
+
+/// Cab interior: one part per (`sub_object`, `prim_state`); animated matrix bones omit leaf from bake.
+pub fn build_mesh_parts_from_shape_lod_cab(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    cab_driver_matrices: &HashSet<usize>,
+    omit_leaf_matrices: &HashSet<usize>,
+) -> Vec<LoadedShapePart> {
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let exclusive_throttle =
+        pick_exclusive_controller_base_throttle(shape, level, omit_leaf_matrices);
+    let mut parts = Vec::new();
+
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (bounds_center, bounds_half_extent) = mesh_buffers_bounds(&buffers);
+            let cab_matrix_idx = cab_matrix_for_prim(
+                shape,
+                sub_idx,
+                sub,
+                prim.prim_state_idx,
+                prim_ord,
+                cab_driver_matrices,
+                omit_leaf_matrices,
+                bounds_center,
+                bounds_half_extent,
+                &exclusive_throttle,
+            );
+            let chain_start = cab_matrix_idx.map(|i| i as i32);
+            let rebase_bone = cab_matrix_idx.is_some_and(|idx| omit_leaf_matrices.contains(&idx));
+
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                chain_start,
+                false,
+            );
+            if let Some(matrix_idx) = cab_matrix_idx.filter(|_| rebase_bone) {
+                let bone = static_hierarchy_chain_transform(shape, matrix_idx);
+                rebase_points_to_bone_local(&mut buffers.positions, bone);
+                rebase_vectors_to_bone_local(&mut buffers.normals, bone);
+            }
+            let (mesh, solid_color) = match buffers.into_mesh_with_color() {
+                Some(v) => v,
+                None => continue,
+            };
+            let prim_state_idx = prim.prim_state_idx;
+            let (alpha_test_mode, z_bias, z_buf_mode) = shape
+                .prim_states
+                .get(prim_state_idx.max(0) as usize)
+                .map(|ps| {
+                    (
+                        ps.alpha_test_mode,
+                        ps.z_bias.map(|z| z as f32),
+                        ps.z_buf_mode,
+                    )
+                })
+                .unwrap_or((-1, None, -1));
+            parts.push(LoadedShapePart {
+                prim_state_idx,
+                sub_object_idx: sub_idx as u32,
+                cab_matrix_idx,
+                mesh,
+                texture_file: texture_for_prim_state(shape, prim_state_idx),
+                shader_name: shader_name_for_prim_state(shape, prim_state_idx),
+                solid_color,
+                alpha_test_mode,
+                z_bias,
+                z_buf_mode,
+                light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
+                bounds_center: Some(bounds_center),
+                bounds_half_extent: Some(bounds_half_extent),
+            });
+        }
+    }
+
+    parts
+}
+
+/// CVF matrix for one cab primitive (texture + dedicated sub_object heuristics).
+#[allow(clippy::too_many_arguments)]
+pub fn cab_matrix_for_prim(
+    shape: &ShapeFile,
+    sub_idx: usize,
+    sub: &openrailsrs_formats::SubObject,
+    prim_state_idx: i32,
+    prim_ord: usize,
+    driver_matrices: &HashSet<usize>,
+    lever_matrices: &HashSet<usize>,
+    bounds_center: Vec3,
+    bounds_half_extent: Vec3,
+    exclusive_throttle: &HashSet<(usize, usize)>,
+) -> Option<usize> {
+    let tex = texture_for_prim_state(shape, prim_state_idx)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    // Brake wheel mesh only — must sit near TRAIN_BRAKE matrix pivot.
+    if tex.contains("brake_wheel") {
+        return lever_matrices
+            .iter()
+            .copied()
+            .filter(|&idx| idx == 9 || idx == 10)
+            .filter(|&idx| {
+                cab_part_near_matrix(shape, idx, bounds_center, bounds_half_extent, 0.35, 0.02)
+            })
+            .min_by(|&a, &b| {
+                let da = bounds_center.distance(matrix_pivot_bevy(shape, a).unwrap_or(Vec3::ZERO));
+                let db = bounds_center.distance(matrix_pivot_bevy(shape, b).unwrap_or(Vec3::ZERO));
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            });
+    }
+
+    // Controller_base — only the largest regulator wheel near THROTTLE pivot.
+    if tex.contains("controller_base") {
+        if sub_idx == 4 && lever_matrices.contains(&4) {
+            return cab_part_near_matrix(shape, 4, bounds_center, bounds_half_extent, 0.35, 0.015)
+                .then_some(4);
+        }
+        if lever_matrices.contains(&8) && exclusive_throttle.contains(&(sub_idx, prim_ord)) {
+            return Some(8);
+        }
+        return None;
+    }
+
+    // Dedicated 1-prim sub_object *i* → matrix *i* (small bone meshes only).
+    const DEDICATED_MAX_VERTS: usize = 500;
+    if sub.vertices.len() <= DEDICATED_MAX_VERTS
+        && sub.primitives.len() == 1
+        && sub_idx < shape.matrices.len()
+        && lever_matrices.contains(&sub_idx)
+    {
+        // Pullman sub8 Controls.ace is a vertical plate, not the regulator wheel.
+        if sub_idx == 8 && tex.contains("controls") {
+            return None;
+        }
+        return Some(sub_idx);
+    }
+
+    // Multi-state gauge needles etc. (visibility, not rotation).
+    if sub.vertices.len() <= DEDICATED_MAX_VERTS
+        && sub.primitives.len() == 1
+        && sub_idx < shape.matrices.len()
+        && driver_matrices.contains(&sub_idx)
+        && !lever_matrices.contains(&sub_idx)
+    {
+        return Some(sub_idx);
+    }
+
+    None
+}
+
+fn cab_part_near_matrix(
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    center: Vec3,
+    half_extent: Vec3,
+    max_dist: f32,
+    min_radius: f32,
+) -> bool {
+    let Some(pivot) = matrix_pivot_bevy(shape, matrix_idx) else {
+        return false;
+    };
+    let radius = half_extent.max_element();
+    if radius < min_radius {
+        return false;
+    }
+    center.distance(pivot) <= max_dist
+}
+
+/// Pick the single `Controller_base` primitive nearest the throttle pivot with the largest extent.
+fn pick_exclusive_controller_base_throttle(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    lever_matrices: &HashSet<usize>,
+) -> HashSet<(usize, usize)> {
+    if !lever_matrices.contains(&8) {
+        return HashSet::new();
+    }
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let mut best: Option<(usize, usize, f32)> = None;
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !tex.contains("controller_base") {
+                continue;
+            }
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (center, half) = mesh_buffers_bounds(&buffers);
+            if !cab_part_near_matrix(shape, 8, center, half, 0.35, 0.02) {
+                continue;
+            }
+            let radius = half.max_element();
+            if best.as_ref().is_none_or(|(_, _, r)| radius > *r) {
+                best = Some((sub_idx, prim_ord, radius));
+            }
+        }
+    }
+    best.map(|(s, p, _)| HashSet::from([(s, p)]))
+        .unwrap_or_default()
+}
+
+pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {
+    shape.matrices.get(matrix_idx).map(|m| {
+        let r = &m.matrix.rows[3];
+        crate::coordinates::shape_point_to_bevy(openrailsrs_formats::Vec3 {
+            x: r[0],
+            y: r[1],
+            z: r[2],
+        })
+    })
+}
+
+fn mesh_buffers_bounds(buffers: &MeshBuffers) -> (Vec3, Vec3) {
+    if buffers.positions.is_empty() {
+        return (Vec3::ZERO, Vec3::ZERO);
+    }
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for p in &buffers.positions {
+        min = min.min(*p);
+        max = max.max(*p);
+    }
+    ((min + max) * 0.5, (max - min) * 0.5)
+}
+
+/// Legacy helper — prefer [`cab_matrix_for_prim`].
+pub fn cab_matrix_for_sub_object(
+    shape: &ShapeFile,
+    sub_idx: usize,
+    sub: &openrailsrs_formats::SubObject,
+    animated_matrices: &HashSet<usize>,
+) -> Option<usize> {
+    let _ = shape;
+    if sub.vertices.len() > 500 || sub.primitives.len() != 1 {
+        return None;
+    }
+    if sub_idx < 18 && animated_matrices.contains(&sub_idx) {
+        Some(sub_idx)
+    } else {
+        None
+    }
 }
 
 #[derive(Default)]
@@ -1034,6 +1440,7 @@ impl MeshBuffers {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_primitive_mesh_buffers(
     shape: &ShapeFile,
     level: &DistanceLevel,
@@ -1041,8 +1448,18 @@ fn append_primitive_mesh_buffers(
     prim: &openrailsrs_formats::Primitive,
     default_normal: ShapeVec3,
     buffers: &mut MeshBuffers,
+    chain_start: Option<i32>,
+    omit_leaf_matrix: bool,
 ) {
-    let matrix_chain = primitive_matrix_chain(shape, level, prim.prim_state_idx);
+    let start = chain_start.unwrap_or_else(|| {
+        shape
+            .prim_states
+            .get(prim.prim_state_idx.max(0) as usize)
+            .and_then(|ps| shape.vtx_states.get(ps.vertex_state_idx.max(0) as usize))
+            .map(|vs| vs.matrix_idx)
+            .unwrap_or(0)
+    });
+    let matrix_chain = primitive_matrix_chain_bake(shape, level, start, omit_leaf_matrix);
     for tri in prim.vertex_indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -1083,22 +1500,14 @@ struct ShapeMatrixRef<'a> {
     zero_translation: bool,
 }
 
-fn primitive_matrix_chain<'a>(
+fn primitive_matrix_chain_bake<'a>(
     shape: &'a ShapeFile,
     level: &DistanceLevel,
-    prim_state_idx: i32,
+    chain_start: i32,
+    omit_leaf_matrix: bool,
 ) -> Vec<ShapeMatrixRef<'a>> {
-    let Some(prim_state) = shape.prim_states.get(prim_state_idx.max(0) as usize) else {
-        return Vec::new();
-    };
-    let Some(vtx_state) = shape
-        .vtx_states
-        .get(prim_state.vertex_state_idx.max(0) as usize)
-    else {
-        return Vec::new();
-    };
     let mut out = Vec::new();
-    let mut matrix_idx = vtx_state.matrix_idx;
+    let mut matrix_idx = chain_start;
     let mut guard = 0usize;
     while matrix_idx >= 0 && guard < shape.matrices.len() {
         let idx = matrix_idx as usize;
@@ -1111,6 +1520,9 @@ fn primitive_matrix_chain<'a>(
         });
         matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
         guard += 1;
+    }
+    if omit_leaf_matrix && !out.is_empty() {
+        out.remove(0);
     }
     out
 }
@@ -1328,7 +1740,39 @@ fn ace_rgba_to_image(width: u32, height: u32, rgba: &[u8]) -> Image {
     )
 }
 
-/// Decode a DDS file from raw bytes into a Bevy GPU image.
+/// DDS header alpha class (DXT1 vs DXT3/DXT5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DdsAlpha {
+    NoneOr1Bit,
+    Full,
+}
+
+/// Read DDS pixel-format flags to guess alpha support (paridad `openrailsrs-render3d`).
+pub fn dds_alpha_type(path: &Path) -> Option<DdsAlpha> {
+    use std::fs::File;
+    use std::io::Read;
+    let mut f = File::open(path).ok()?;
+    let mut header = [0u8; 128];
+    f.read_exact(&mut header).ok()?;
+    if &header[0..4] != b"DDS " {
+        return None;
+    }
+    let pf_flags = u32::from_le_bytes(header[80..84].try_into().ok()?);
+    if (pf_flags & 0x4) != 0 {
+        let fourcc = &header[84..88];
+        match fourcc {
+            b"DXT1" => Some(DdsAlpha::NoneOr1Bit),
+            b"DXT3" | b"DXT5" => Some(DdsAlpha::Full),
+            _ => Some(DdsAlpha::Full),
+        }
+    } else if (pf_flags & 0x1) != 0 {
+        Some(DdsAlpha::Full)
+    } else {
+        Some(DdsAlpha::NoneOr1Bit)
+    }
+}
+
+/// Decode a DDS file from raw bytes into a Bevy GPU image (keeps block compression).
 pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
     use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
     Image::from_buffer(
@@ -1340,6 +1784,25 @@ pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
         RenderAssetUsages::default(),
     )
     .map_err(|e| e.to_string())
+}
+
+/// Decode DDS mip0 to uncompressed RGBA8 (reliable alpha blend in custom shaders).
+pub fn decode_dds_to_rgba_image(bytes: &[u8]) -> Result<Image, String> {
+    use image::ImageFormat;
+    let dyn_img =
+        image::load_from_memory_with_format(bytes, ImageFormat::Dds).map_err(|e| e.to_string())?;
+    let rgba = dyn_img.to_rgba8();
+    Ok(Image::new(
+        Extent3d {
+            width: rgba.width(),
+            height: rgba.height(),
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        rgba.into_raw(),
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    ))
 }
 
 /// Optional MSTS install root (`Content/`) for `GLOBAL/SHAPES` lookup.
@@ -1698,8 +2161,15 @@ pub fn load_cab_interior_render_asset_from_path(
     or_materials: &mut Assets<crate::or_cab_material::OrCabMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
+    animated_leaf_matrices: &HashSet<usize>,
+    omit_leaf_matrices: &HashSet<usize>,
 ) -> Option<ShapeRenderAsset> {
-    let loaded = load_shape_from_path(shape_path, camera_distance_m)?;
+    let loaded = load_cab_shape_from_path(
+        shape_path,
+        camera_distance_m,
+        animated_leaf_matrices,
+        omit_leaf_matrices,
+    )?;
     Some(shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
@@ -1783,11 +2253,17 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
             prim_state_idx: -1,
+            sub_object_idx: u32::MAX,
+            cab_matrix_idx: None,
             mesh: combined_mesh.clone(),
             material,
             or_cab_material,
             has_texture,
             is_transparent,
+            texture_name: loaded.texture_file.clone(),
+            shader_name: None,
+            light_mat_idx: None,
+            solid_color: None,
         });
     }
     for part in loaded.parts {
@@ -1811,11 +2287,17 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
             prim_state_idx: part.prim_state_idx,
+            sub_object_idx: part.sub_object_idx,
+            cab_matrix_idx: part.cab_matrix_idx,
             mesh: meshes.add(part.mesh),
             material,
             or_cab_material,
             has_texture,
             is_transparent,
+            texture_name: part.texture_file.clone(),
+            shader_name: part.shader_name.clone(),
+            light_mat_idx: part.light_mat_idx,
+            solid_color: part.solid_color,
         });
     }
 
@@ -1847,6 +2329,92 @@ pub fn collect_loaded_shape_texture_paths(
         }
     }
     paths
+}
+
+#[allow(clippy::too_many_arguments)]
+fn finish_shape_textured_part(
+    handle: Handle<Image>,
+    rgba_for_luma: &[u8],
+    tint: Color,
+    alpha_mode: AlphaMode,
+    is_transparent: bool,
+    z_bias: f32,
+    lit: bool,
+    shader_name: Option<&str>,
+    solid_color: Option<[f32; 3]>,
+    cab_interior: bool,
+    or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
+    materials: &mut Assets<StandardMaterial>,
+    light_mat_idx: Option<i32>,
+) -> (
+    Handle<StandardMaterial>,
+    Option<Handle<crate::or_cab_material::OrCabMaterial>>,
+    bool,
+    bool,
+) {
+    let use_or_cab =
+        cab_interior && crate::or_cab_material::or_cab_shaders_enabled() && or_materials.is_some();
+    if use_or_cab {
+        let or_materials = or_materials.expect("checked is_some");
+        let or_mat = crate::or_cab_material::create_or_cab_material(
+            or_materials,
+            handle.clone(),
+            tint,
+            alpha_mode,
+            shader_name,
+            light_mat_idx,
+        );
+        let placeholder = materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            unlit: true,
+            double_sided: true,
+            cull_mode: None,
+            alpha_mode,
+            depth_bias: z_bias,
+            fog_enabled: false,
+            ..default()
+        });
+        return (placeholder, Some(or_mat), true, is_transparent);
+    }
+    let material = materials.add(cab_or_scenery_material_with_texture(
+        tint,
+        handle,
+        rgba_for_luma,
+        alpha_mode,
+        z_bias,
+        lit,
+        shader_name,
+        solid_color,
+        cab_interior,
+    ));
+    (material, None, true, is_transparent)
+}
+
+fn scenery_dds_alpha_mode(
+    dds_path: &Path,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> AlphaMode {
+    match alpha_test_mode {
+        0 => return AlphaMode::Opaque,
+        1 => return AlphaMode::Mask(0.5),
+        2 => return AlphaMode::Blend,
+        _ => {}
+    }
+    let has_alpha = matches!(dds_alpha_type(dds_path), Some(DdsAlpha::Full) | None);
+    if !has_alpha {
+        return AlphaMode::Opaque;
+    }
+    if shader_name
+        .map(shape_shader_requests_blending)
+        .unwrap_or(false)
+        && texture_name_suggests_transparency(texture_file)
+    {
+        AlphaMode::Blend
+    } else {
+        AlphaMode::Mask(0.5)
+    }
 }
 
 /// Decode `.ace` files in parallel (safe before inserting into Bevy `Assets`).
@@ -1890,19 +2458,54 @@ fn material_for_shape_texture(
                     == Some(std::ffi::OsString::from("dds"));
                 if is_dds {
                     if let Ok(bytes) = std::fs::read(&tex_path) {
-                        if let Ok(image) = decode_dds_to_image(&bytes) {
+                        let alpha_mode = if cab_interior {
+                            cab_dds_alpha_mode(&tex_path, tex_name, shader_name, alpha_test_mode)
+                        } else {
+                            scenery_dds_alpha_mode(
+                                &tex_path,
+                                tex_name,
+                                shader_name,
+                                alpha_test_mode,
+                            )
+                        };
+                        let use_rgba =
+                            cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
+                        let image = if use_rgba {
+                            decode_dds_to_rgba_image(&bytes)
+                        } else {
+                            decode_dds_to_image(&bytes)
+                        };
+                        if let Ok(image) = image {
                             let handle = texture_cache
                                 .entry(tex_path.clone())
                                 .or_insert_with(|| images.add(image))
                                 .clone();
-                            let material = materials.add(scenery_shape_material_with_texture(
-                                scenery_base_tint(lit),
+                            let is_transparent =
+                                !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                            let tint = apply_msts_vertex_tint(
+                                if cab_interior {
+                                    Color::WHITE
+                                } else {
+                                    scenery_base_tint(lit)
+                                },
+                                solid_color,
+                                shader_name,
+                            );
+                            return finish_shape_textured_part(
                                 handle,
                                 &[],
-                                AlphaMode::Blend,
+                                tint,
+                                alpha_mode,
+                                is_transparent,
                                 z_bias.unwrap_or(0.0),
-                            ));
-                            return (material, None, true, true);
+                                lit,
+                                shader_name,
+                                solid_color,
+                                cab_interior,
+                                or_materials,
+                                materials,
+                                light_mat_idx,
+                            );
                         }
                     }
                 }
@@ -1948,43 +2551,21 @@ fn material_for_shape_texture(
                         .entry(tex_path)
                         .or_insert_with(|| images.add(image))
                         .clone();
-                    let use_or_cab = cab_interior
-                        && crate::or_cab_material::or_cab_shaders_enabled()
-                        && or_materials.is_some();
-                    if use_or_cab {
-                        let or_materials = or_materials.expect("checked is_some");
-                        let or_mat = crate::or_cab_material::create_or_cab_material(
-                            or_materials,
-                            handle.clone(),
-                            tint,
-                            alpha_mode,
-                            shader_name,
-                            light_mat_idx,
-                        );
-                        let placeholder = materials.add(StandardMaterial {
-                            base_color: Color::WHITE,
-                            unlit: true,
-                            double_sided: true,
-                            cull_mode: None,
-                            alpha_mode,
-                            depth_bias: z_bias.unwrap_or(0.0),
-                            fog_enabled: false,
-                            ..default()
-                        });
-                        return (placeholder, Some(or_mat), true, is_transparent);
-                    }
-                    let material = materials.add(cab_or_scenery_material_with_texture(
-                        tint,
+                    return finish_shape_textured_part(
                         handle,
                         &rgba,
+                        tint,
                         alpha_mode,
+                        is_transparent,
                         z_bias.unwrap_or(0.0),
                         lit,
                         shader_name,
                         solid_color,
                         cab_interior,
-                    ));
-                    return (material, None, true, is_transparent);
+                        or_materials,
+                        materials,
+                        light_mat_idx,
+                    );
                 }
             }
         }
@@ -2021,14 +2602,44 @@ fn cab_shape_alpha_mode(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
+    cab_shape_alpha_mode_with_stats(
+        shape_alpha_stats(ace),
+        texture_file,
+        shader_name,
+        alpha_test_mode,
+    )
+}
+
+fn cab_dds_alpha_mode(
+    dds_path: &Path,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> AlphaMode {
+    let has_alpha = matches!(dds_alpha_type(dds_path), Some(DdsAlpha::Full) | None);
+    cab_shape_alpha_mode_with_stats(
+        ShapeAlphaStats {
+            has_any: has_alpha,
+            has_semitransparent: has_alpha,
+        },
+        texture_file,
+        shader_name,
+        alpha_test_mode,
+    )
+}
+
+fn cab_shape_alpha_mode_with_stats(
+    alpha: ShapeAlphaStats,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> AlphaMode {
     match alpha_test_mode {
         0 => return AlphaMode::Opaque,
         1 => return AlphaMode::Mask(0.5),
         2 => return AlphaMode::Blend,
         _ => {}
     }
-
-    let alpha = shape_alpha_stats(ace);
 
     if let Some(shader) = shader_name {
         if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
@@ -2057,7 +2668,18 @@ fn cab_shape_alpha_mode(
         }
     }
 
-    shape_alpha_mode(ace, texture_file, shader_name)
+    if !alpha.has_any {
+        return AlphaMode::Opaque;
+    }
+    if alpha.has_semitransparent
+        && shader_name
+            .map(shape_shader_requests_blending)
+            .unwrap_or_else(|| texture_name_suggests_transparency(texture_file))
+    {
+        AlphaMode::Blend
+    } else {
+        AlphaMode::Mask(0.5)
+    }
 }
 
 /// Determine the Bevy [`AlphaMode`] for a texture+shader combination.
@@ -2135,6 +2757,29 @@ fn shape_shader_requests_blending(shader_name: &str) -> bool {
         shader_name,
         "BlendATex" | "BlendATexDiff" | "AddATex" | "AddATexDiff"
     )
+}
+
+/// Load cab interior shape; lever matrix indices omit leaf bone from vertex bake (CVF anim).
+pub fn load_cab_shape_from_path(
+    path: &Path,
+    camera_distance_m: Option<f32>,
+    cab_driver_matrices: &HashSet<usize>,
+    omit_leaf_matrices: &HashSet<usize>,
+) -> Option<LoadedShape> {
+    let shape = ShapeFile::from_path(path).ok()?;
+    let level = match camera_distance_m {
+        Some(d) => lod_level_for_distance(&shape, d).or_else(|| closest_lod_level(&shape))?,
+        None => closest_lod_level(&shape)?,
+    };
+    let parts =
+        build_mesh_parts_from_shape_lod_cab(&shape, level, cab_driver_matrices, omit_leaf_matrices);
+    let mesh = build_mesh_from_shape_lod(&shape, level)?;
+    let texture_file = primary_texture_filename(&shape);
+    Some(LoadedShape {
+        mesh,
+        texture_file,
+        parts,
+    })
 }
 
 /// Load shape mesh and discover its primary texture filename, if any.
@@ -2321,6 +2966,31 @@ mod tests {
             .expect("parts");
         assert!(parts.len() > 1);
         assert!(parts.iter().any(|part| part.texture_file.is_some()));
+    }
+
+    #[test]
+    fn pullman_cab_mesh_uvs_are_not_degenerate() {
+        let cab = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !cab.is_file() {
+            return;
+        }
+        let loaded = load_shape_from_path(&cab, Some(2.0)).expect("cab shape");
+        let mut degenerate = 0usize;
+        for part in &loaded.parts {
+            if let Some((mn, mx)) = mesh_uv_aabb(&part.mesh) {
+                if mesh_uv_degenerate(mn, mx) {
+                    degenerate += 1;
+                }
+            }
+        }
+        assert_eq!(
+            degenerate,
+            0,
+            "cab parts should have varying UVs, {degenerate}/{} degenerate",
+            loaded.parts.len()
+        );
     }
 
     #[test]
@@ -2639,6 +3309,126 @@ mod tests {
 
         let _ = std::fs::remove_file(textures.join("glass.dds"));
         let _ = std::fs::remove_dir_all(route);
+    }
+
+    #[test]
+    fn window_dds_decodes_with_semitransparent_alpha() {
+        let path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/Window_front.dds",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let bytes = std::fs::read(&path).expect("read dds");
+        let img = decode_dds_to_rgba_image(&bytes).expect("decode rgba");
+        assert_eq!(img.texture_descriptor.size.width, 1024);
+        let data = img.data.as_ref().expect("pixel data");
+        let semi = data
+            .chunks_exact(4)
+            .filter(|px| (9..250).contains(&px[3]))
+            .count();
+        assert!(
+            semi > 100_000,
+            "window glass should be mostly semi-transparent, got {semi} px"
+        );
+    }
+
+    #[test]
+    fn cab_dds_window_textures_use_blend_alpha() {
+        let dds = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/Window_front.dds",
+        );
+        if !dds.is_file() {
+            return;
+        }
+        assert_eq!(
+            cab_dds_alpha_mode(&dds, "Window_front.ace", Some("BlendATexDiff"), -1),
+            AlphaMode::Blend
+        );
+    }
+
+    #[test]
+    fn resolve_texture_path_dds_fallback_in_cabview3d() {
+        let cab_dir = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d",
+        );
+        if !cab_dir.is_dir() {
+            return;
+        }
+        for ace_name in ["Window_front.ace", "Window_front4.ace"] {
+            let found = resolve_texture_path(&cab_dir, ace_name);
+            assert!(
+                found.is_some(),
+                "{ace_name} should resolve to .dds in Cabview3d"
+            );
+            assert!(
+                found
+                    .as_ref()
+                    .and_then(|p| p.extension())
+                    .is_some_and(|e| e.eq_ignore_ascii_case("dds")),
+                "expected .dds fallback for {ace_name}, got {:?}",
+                found
+            );
+        }
+    }
+
+    #[test]
+    fn pullman_cab_window_parts_use_or_shader_on_dds() {
+        let cab = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !cab.is_file() {
+            return;
+        }
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab, &route);
+        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut or_materials = Assets::<crate::or_cab_material::OrCabMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let asset = load_cab_interior_render_asset_from_path(
+            &cab,
+            &tex_refs,
+            Some(2.0),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut or_materials,
+            &mut texture_cache,
+            Color::srgb(0.35, 0.38, 0.42),
+            &HashSet::new(),
+            &HashSet::new(),
+        )
+        .expect("cab asset");
+        let windows: Vec<_> = asset
+            .parts
+            .iter()
+            .filter(|p| {
+                p.texture_name
+                    .as_deref()
+                    .is_some_and(|t| t.to_ascii_lowercase().contains("window"))
+            })
+            .collect();
+        assert!(
+            windows.len() >= 2,
+            "expected at least two window parts, got {}",
+            windows.len()
+        );
+        for part in windows {
+            assert!(
+                part.or_cab_material.is_some(),
+                "window part prim={} should use OrCabMaterial",
+                part.prim_state_idx
+            );
+            assert!(
+                part.is_transparent,
+                "window prim={} should be blend-transparent",
+                part.prim_state_idx,
+            );
+            assert!(part.has_texture);
+        }
     }
 
     #[test]

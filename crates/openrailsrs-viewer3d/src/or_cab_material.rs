@@ -7,11 +7,29 @@ use bevy::render::render_resource::SpecializedMeshPipelineError;
 use bevy::render::render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderType};
 use bevy::shader::{ShaderDefVal, ShaderRef};
 
+use crate::cab_diag::cab_debug_view;
 use crate::or_shader::{OrShaderKind, or_shader_kind_gpu_id};
 
 pub const OR_CAB_SHADER_PATH: &str = "shaders/or_cab.wgsl";
 
 const OR_FLAG_LIT: f32 = 1.0;
+const OR_FLAG_BLEND: f32 = 2.0;
+
+/// Outdoor directional sun on cab TexDiff (`OPENRAILSRS_CAB_SUN=1`). Default off — flat interior.
+pub fn cab_interior_sun_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAB_SUN").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
+fn cab_min_brightness_default() -> f32 {
+    if cab_interior_sun_enabled() {
+        0.72
+    } else {
+        0.0
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, ShaderType)]
 pub struct OrCabGpuParams {
@@ -52,8 +70,8 @@ pub fn build_or_cab_params(kind: OrShaderKind, reference_alpha: f32) -> OrCabGpu
     let cab_min = std::env::var("OPENRAILSRS_CAB_MIN_BRIGHT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(0.72_f32)
-        .clamp(0.35, 1.0);
+        .unwrap_or_else(cab_min_brightness_default)
+        .clamp(0.0, 1.0);
 
     OrCabGpuParams {
         tint_r: 1.0,
@@ -66,7 +84,11 @@ pub fn build_or_cab_params(kind: OrShaderKind, reference_alpha: f32) -> OrCabGpu
         half_shadow_brightness: 0.75,
         shader_kind: or_shader_kind_gpu_id(kind),
         cab_min_brightness: cab_min,
-        flags: OR_FLAG_LIT,
+        flags: if cab_interior_sun_enabled() {
+            OR_FLAG_LIT
+        } else {
+            0.0
+        },
     }
 }
 
@@ -103,6 +125,11 @@ impl Material for OrCabMaterial {
                     .push(ShaderDefVal::from("VERTEX_COLORS"));
             }
         }
+        if let Some(def) = cab_debug_view().shader_def() {
+            if let Some(fragment) = descriptor.fragment.as_mut() {
+                fragment.shader_defs.push(ShaderDefVal::from(def));
+            }
+        }
         Ok(())
     }
 }
@@ -119,6 +146,12 @@ pub fn create_or_cab_material(
     let reference_alpha = reference_alpha_from_mode(alpha_mode);
     let mut params = build_or_cab_params(kind, reference_alpha);
     params.shader_kind = crate::or_shader::or_cab_shader_kind_gpu_id(kind);
+    if matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add) {
+        params.flags = OR_FLAG_BLEND;
+        params.reference_alpha = 0.0;
+    } else if !cab_interior_sun_enabled() {
+        params.flags = 0.0;
+    }
     let linear = tint.to_linear();
     params.tint_r = linear.red;
     params.tint_g = linear.green;
@@ -143,10 +176,27 @@ mod tests {
     }
 
     #[test]
-    fn cab_shader_default_on() {
+    fn cab_interior_flat_by_default() {
         unsafe {
-            std::env::remove_var("OPENRAILSRS_OR_CAB_SHADER");
+            std::env::remove_var("OPENRAILSRS_CAB_SUN");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
-        assert!(or_cab_shaders_enabled());
+        let p = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(p.flags, 0.0);
+        assert_eq!(p.cab_min_brightness, 0.0);
+    }
+
+    #[test]
+    fn cab_sun_opt_in() {
+        unsafe {
+            std::env::set_var("OPENRAILSRS_CAB_SUN", "1");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
+        }
+        let p = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(p.flags, OR_FLAG_LIT);
+        assert!((p.cab_min_brightness - 0.72).abs() < 1e-3);
+        unsafe {
+            std::env::remove_var("OPENRAILSRS_CAB_SUN");
+        }
     }
 }

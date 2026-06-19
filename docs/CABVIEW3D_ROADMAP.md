@@ -5,6 +5,7 @@ Documento de referencia para la vista de conductor en **`openrailsrs-viewer3d --
 Relacionado:
 
 - Roadmap general jugable: [`SIMULACION_3D_ROADMAP.md`](SIMULACION_3D_ROADMAP.md) (Fase C)
+- **Sesión depuración CVF 2026-06-19:** [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md)
 - Arquitectura viewer / OR: [`OPEN_RAILS_VIEWER_3D.md`](OPEN_RAILS_VIEWER_3D.md)
 - Setup Chiltern + Content OR: [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md), [`examples/chiltern/README.md`](../examples/chiltern/README.md)
 
@@ -24,80 +25,83 @@ Referencia OR: `ThreeDimentionCabViewer`, `ThreeDimCabCamera`, grupo `RenderPrim
 
 ---
 
-## 2. Estado actual (2026-05)
+## 2. Estado actual (2026-06)
 
 ### 2.1 Qué funciona
 
 | Componente | Estado | Código / notas |
 |------------|--------|----------------|
-| Modo conductor (**V**) | ✅ | `camera.rs` — `CameraFollowMode::DriverCam` |
-| Panel instrumental (**C**) | ✅ | `cab_panel.rs` — THR/BRK, RPM, límite, badge «MODO CABINA» |
-| Resolución cab `.s` | ✅ | `cab_view.rs` — `CABVIEW3D/`, prioriza par `.cvf` → `PULLMAN_GR.s` |
-| Carga mesh cabina | ✅ | 39 `prim_state` desde OR Content |
-| Texturas `.ace` | 🔶 37/39 | Log: `37 textured, lead-car attached` |
-| Posición cámara ORTS | ✅ | `ORTS3DCabHeadPos` + `StartDirection` en `RF_WP_DMBSA.eng` |
-| Ocultar exterior (LiveTrainBody) | 🔶 | `live.rs` — `update_driver_train_visibility` |
-| Cabina hija del vagón líder | ✅ | `CabLeadVehicle` + marco unit-scale + `exterior_scale` hijo |
-| Materiales interior unlit | ✅ | `cab_interior_material()` en `cab_view.rs` |
-| Tests | ✅ | Resolución paths, ORTS head pos, carga Pullman, ≥30 texturas |
+| Modo conductor (**C** / **V**) | ✅ | `camera.rs` — `DriverCam`; **C** alterna cabina/chase en `--run-corridor` |
+| Panel instrumental | ✅ | `cab_panel.rs` — THR/BRK, RPM, límite |
+| Resolución cab `.s` + `.cvf` | ✅ | `cab_view.rs` → `PULLMAN_GR.s` + `PULLMAN_GR.cvf` |
+| Texturas 39/39 | ✅ | `.ace` + fallback `.dds` (cristales prim 11/12) |
+| Shader OR cabina (`or_cab.wgsl`) | ✅ | TexDiff plano (sin sol exterior por defecto) |
+| Iluminación interior | ✅ | `OPENRAILSRS_CAB_SUN=0` (default), albedo 1.0, sin brighten |
+| CVF palancas (throttle/freno) | 🔶 parcial | `cab_cvf.rs` — ↑/↓ live; **bug abierto**: pieza animada flota lejos del pupitre (ver sesión 2026-06-19) |
+| RenderLayers L0+L2 | ✅ | `cab_render.rs` — mundo + cabina; exterior en L1 oculto |
+| Cielo en ventanas (`--run-corridor`) | ✅ | `sky.rs` + domo en `RunCorridor` |
+| Diagnóstico cab | ✅ | `cab_diag.rs` — `OPENRAILSRS_CAB_DEBUG=uv\|albedo\|vcolor` |
+| Tests Pullman | ✅ | UV, ventanas DDS, CVF matrices, ≥39 texturas |
 
-### 2.2 Síntoma visual pendiente
+### 2.2 Variables de entorno (cabina)
 
-En Chiltern `--live` con **V** (modo cabina), la captura típica muestra:
+| Variable | Default | Efecto |
+|----------|---------|--------|
+| `OPENRAILSRS_CAB_ALBEDO` | `1.0` | Multiplicador tint OR (1 = ACE crudo) |
+| `OPENRAILSRS_CAB_BRIGHTEN` | off | `1` = levantar `.ace` oscuros (legacy) |
+| `OPENRAILSRS_CAB_SUN` | off | `1` = sol direccional + sombras en TexDiff |
+| `OPENRAILSRS_CAB_MIN_BRIGHT` | `0` (sin sol) | Piso de brillo shader (0.72 si `CAB_SUN=1`) |
+| `OPENRAILSRS_CAB_DEBUG` | off | `albedo`, `uv`, `vcolor` |
 
-- **Arco negro** ocupando la mitad superior del viewport
-- **Mundo visible** en la parte inferior (terreno, vía, edificios)
-- **Sin interior texturizado** reconocible (mandos, techo, ventana)
-- Fila de **formas cilíndricas/grises** en el horizonte (posible bogies/vagones del consist u objetos de vía)
+### 2.3 Arranque (bash / fish)
 
-El log confirma que la cabina **sí se carga**; el fallo es de **presentación** (alineación, ocultación del exterior y/o materiales), no de ausencia del asset.
-
-### 2.3 Texturas que faltan (2/39)
-
-| `prim_state` | Textura pedida por el `.s` | En Content del usuario |
-|--------------|---------------------------|-------------------------|
-| 11 | `Window_front4.ace` | Solo `Window_front4.dds` |
-| 12 | `Window_front.ace` | Solo `Window_front.dds` (+ `.pdn`) |
-
-El visor solo decodifica **`.ace`** (`openrailsrs-ace`). Esas piezas usan material gris de respaldo; **no explican** un arco negro uniforme (serían gris claro).
-
-### 2.4 Variables de entorno y paths
-
-```bash
-# Content MSTS/OR (cabina 3D real)
-export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
-
-# Arranque típico
-CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+```fish
+set -gx CHILTERN_ROUTE "$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
+cd ~/repos/propios/ProyectoOpenRails/openrailsrs
 cargo run --release -p openrailsrs-viewer3d -- \
-  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+    --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
-Cabina resuelta desde:
+Teclas en cabina: **C** cabina/chase · **↑/↓** throttle/freno · **H** bocina · **Home** centrar vista.
 
-`Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s`
+Log esperado al entrar en cabina:
 
-Exterior del tren (stub en repo):
+```
+cab diag — env albedo=1.00 brighten=false sun=false …
+cab interior from …/PULLMAN_GR.s (39 part(s), 39 textured, 39 OR shader …)
+cab CVF … — N matrix bindings (M levers)
+```
 
-`examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s`
+Assets:
+
+- Cabina: `Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s`
+- Exterior stub repo: `examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s`
+
+### 2.4 Pendiente / bug abierto (2026-06-19)
+
+- **Animación regulador (THROTTLE M8):** geometría sigue desplazándose muy alto al subir `thr`; rebase bone-local aplicado pero no resuelve del todo — ver [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md) § estado al cierre.
+- Freno (`Brake_wheel`): malla a ~1.3 m del pivote CVF — sin enlace hasta localizar hueso/malla correctos.
+- Asiento con tinte cálido del ACE (`seat.ace` rgb≈25,18,13) — ajuste artístico opcional
+- Modo noche `CABVIEW3D/NIGHT/` + `.SD`
+- Instrumentos multi-state (aguja velocímetro desde telemetría fina)
 
 ---
 
 ## 3. Próximos pasos posibles (priorizados)
 
-### P1 — Texturas `.dds` para cristales (esfuerzo bajo–medio)
+### P1 — Texturas `.dds` para cristales ✅ (2026-06)
+
+Implementado: fallback `.dds`, decode DXT3→RGBA para blend, `BlendATexDiff` → FullBright en OR shader. Log: `39 textured`.
+
+---
+
+### P1 (legacy notes)
+
+<details>
+<summary>Detalle original P1</summary>
 
 **Problema:** `Window_front.ace` / `Window_front4.ace` no existen; el trainset trae `.dds`.
-
-**Acciones:**
-
-1. En `shapes.rs` → `resolve_texture_path`: si no hay `.ace`, probar mismo stem con `.dds`
-2. Decodificar DDS a `bevy::prelude::Image` (p. ej. crate `image` con feature `dds`, o conversión offline)
-3. Test: `Window_front.dds` resuelve y `has_texture == true` para prim 11/12
-
-**Criterio de hecho:** log `39 textured`; parabrisas con transparencia aproximada (alpha blend o mask).
-
-**Alternativa rápida:** convertir una vez con herramientas OR/MSTS a `.ace` y copiarlas a `Cabview3d/`.
+</details>
 
 ---
 
@@ -128,7 +132,7 @@ Exterior del tren (stub en repo):
 
 1. ~~Parser mínimo de `.cvf`~~ ✅
 2. Aplicar matrices nombradas del `.s` (`ShapeFile::matrices`) al spawn/update de partes cabina
-3. Sincronizar mandos con telemetría live (`throttle`, `brake`, `velocity`, señales) — ✅ `cab_cvf.rs` (levers + multi-state; Pullman probado)
+3. Sincronizar mandos con telemetría live — ✅ `cab_cvf.rs` (levers + multi-state; bake sin hoja en matrices animadas)
 4. Referencia OR: `ThreeDimentionCabViewer`, `MatrixVisibleTargetNode`
 
 **Criterio de hecho (fase completa):** palancas/agujas visibles; al menos un mando responde al throttle en live.
@@ -158,8 +162,8 @@ Exterior del tren (stub en repo):
 
 | Mejora | Descripción |
 |--------|-------------|
-| **Iluminación interior** | Luz puntual + ambiente en driver view (parcialmente hecho: `AmbientLight` 800 en cabina) |
-| **Alpha / shaders MSTS** | Respetar `shader_names` y alpha test de `prim_state` (cristales, recortes) |
+| **Iluminación interior** | ✅ Plano OR sin sol (`CAB_SUN=0`); ver §2.2 |
+| **Alpha / shaders MSTS** | ✅ OR cab shader + ventanas `.dds` blend |
 | **Modo noche** | `CABVIEW3D/NIGHT/` + `PULLMAN_GR.SD` (`ESD_Alternative_Texture`) |
 | **Near clip** | Ajustar `DRIVER_NEAR_CLIP_M` para evitar clipping del tablero |
 | **Render order** | Cabina después del mundo exterior (grupo `Interior` como OR) |

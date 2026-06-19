@@ -867,6 +867,7 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
 mod tests {
     use crate::ShapeFile;
     use crate::msts_simisa::decode_simisa_container;
+    use crate::shape_binary::binary_shape_to_ascii;
 
     #[test]
     fn minimal_ascii_shape_still_parses_via_container() {
@@ -876,6 +877,67 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn dmb_sa_exterior_vertex_uv_indices_diversity() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s");
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse");
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let mut uv_idx_set = std::collections::HashSet::new();
+        for sub in &level.sub_objects {
+            for v in &sub.vertices {
+                if let Some(&ui) = v.uv_indices.first() {
+                    if ui >= 0 {
+                        uv_idx_set.insert(ui);
+                    }
+                }
+            }
+        }
+        assert!(
+            uv_idx_set.len() > 100,
+            "exterior shape should have many UV indices, got {}",
+            uv_idx_set.len()
+        );
+    }
+
+    #[test]
+    fn pullman_cab_vertex_uv_indices_are_populated() {
+        let path = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse cab");
+        let level = shape.lod_controls[0]
+            .distance_levels
+            .iter()
+            .min_by(|a, b| {
+                a.selection_m
+                    .partial_cmp(&b.selection_m)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .expect("lod");
+        let mut uv_idx_set = std::collections::HashSet::new();
+        for sub in &level.sub_objects {
+            for v in &sub.vertices {
+                if let Some(&ui) = v.uv_indices.first() {
+                    if ui >= 0 {
+                        uv_idx_set.insert(ui);
+                    }
+                }
+            }
+        }
+        assert!(
+            uv_idx_set.len() > 1000,
+            "cab shape should have many distinct UV indices, got {}",
+            uv_idx_set.len()
+        );
     }
 
     #[test]
@@ -932,6 +994,83 @@ mod tests {
                 assert_eq!(keys[1], (1.0, [4.0, 5.0, 6.0]));
             }
             _ => panic!("Expected LinearPos controller"),
+        }
+    }
+
+    #[test]
+    fn pullman_cab_geometry_and_anim_diagnostics() {
+        let path = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse cab");
+        eprintln!(
+            "Pullman: matrices={} animations={} anim_nodes={}",
+            shape.matrices.len(),
+            shape.animations.len(),
+            shape.animations.first().map(|a| a.nodes.len()).unwrap_or(0)
+        );
+        if let Some(anim) = shape.animations.first() {
+            for (i, node) in anim.nodes.iter().enumerate() {
+                if !node.controllers.is_empty() {
+                    eprintln!(
+                        "  anim_node {i} {} ctrl={}",
+                        node.name,
+                        node.controllers.len()
+                    );
+                }
+            }
+        }
+        let payload = crate::msts_simisa::decode_simisa_container(&std::fs::read(&path).unwrap())
+            .expect("decode");
+        let ascii = binary_shape_to_ascii(&payload).expect("ascii");
+        eprintln!(
+            "ascii has geometry_node_map={}",
+            ascii.contains("geometry_node_map")
+        );
+        eprintln!("ascii has animations={}", ascii.contains("animations"));
+        // Dump geometry_node_map per sub_object from raw ASCII.
+        for (sub_idx, chunk) in ascii.split("( sub_object").skip(1).enumerate() {
+            if let Some(map_start) = chunk.find("( geometry_node_map") {
+                let rest = &chunk[map_start..];
+                if let Some(end) = rest.find(')') {
+                    let inner = &rest["( geometry_node_map".len()..end];
+                    let nums: Vec<i32> = inner
+                        .split_whitespace()
+                        .filter_map(|s| s.parse().ok())
+                        .collect();
+                    if nums.len() > 1 {
+                        let count = nums[0] as usize;
+                        let values = &nums[1..];
+                        let active: Vec<(usize, i32)> = values
+                            .iter()
+                            .take(count)
+                            .enumerate()
+                            .filter(|(_, v)| **v >= 0)
+                            .map(|(i, &v)| (i, v))
+                            .collect();
+                        if !active.is_empty() {
+                            eprintln!("sub_object {sub_idx} geometry_node_map active: {active:?}");
+                        }
+                    }
+                }
+            }
+        }
+        for (n, _chunk) in ascii.match_indices("geometry_node_map") {
+            let snippet = &ascii[n..n + 80.min(ascii.len() - n)];
+            eprintln!("gnm@{n}: {snippet}");
+            if n > 50000 {
+                break;
+            }
+        }
+        if let Some(level) = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+        {
+            eprintln!("hierarchy: {:?}", level.hierarchy);
         }
     }
 

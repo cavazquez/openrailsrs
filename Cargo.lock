@@ -4434,6 +4434,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "csv",
+ "image",
  "openrailsrs-ace",
  "openrailsrs-audio",
  "openrailsrs-core",

@@ -671,10 +671,14 @@ fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
 
     let mut uv_indices = Vec::new();
     for_each_tagged(items, "vertex_uvs", |sub| {
-        uv_indices.extend(shape_section_body(sub).iter().filter_map(|a| match a {
-            Ast::Atom(at) => shape_atom_to_i32(at),
-            _ => None,
-        }));
+        let raw: Vec<i32> = shape_section_body(sub)
+            .iter()
+            .filter_map(|a| match a {
+                Ast::Atom(at) => shape_atom_to_i32(at),
+                _ => None,
+            })
+            .collect();
+        uv_indices.extend(parse_vertex_uv_indices(&raw));
     });
 
     // ASCII layout: flags(0), point_idx(1), normal_idx(2), [color1_rgba(3), color2_rgba(4), ...]
@@ -690,6 +694,19 @@ fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
         color1,
         color2,
     })
+}
+
+/// MSTS `vertex_uvs`: leading count (`numSrcUVIdxs`) then indices into [`ShapeFile::uvs`].
+fn parse_vertex_uv_indices(raw: &[i32]) -> Vec<i32> {
+    if raw.is_empty() {
+        return Vec::new();
+    }
+    let count = raw[0].max(0) as usize;
+    if count > 0 && raw.len() > count {
+        return raw[1..1 + count].to_vec();
+    }
+    // Legacy ASCII without an explicit count prefix.
+    raw.to_vec()
 }
 
 /// Pack an MSTS ARGB color dword (`0xAARRGGBB`) into `[r, g, b, a]`.
@@ -1148,5 +1165,17 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             Some(AnimController::SlerpRot { keys })
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_vertex_uv_indices;
+
+    #[test]
+    fn parse_vertex_uv_indices_strips_msts_count_prefix() {
+        assert_eq!(parse_vertex_uv_indices(&[1, 42]), vec![42]);
+        assert_eq!(parse_vertex_uv_indices(&[3, 10, 11, 12]), vec![10, 11, 12]);
+        assert_eq!(parse_vertex_uv_indices(&[5]), vec![5]);
     }
 }

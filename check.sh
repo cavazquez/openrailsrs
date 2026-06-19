@@ -16,8 +16,12 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 echo "==> focused MSTS/Open Rails regressions"
 cargo test -p openrailsrs-formats terrain
 cargo test -p openrailsrs-formats parse_compressed_binary_shape_from_open_rails_content
+cargo test -p openrailsrs-formats cvf
 cargo test -p openrailsrs-viewer3d shapes
 cargo test -p openrailsrs-viewer3d camera
+cargo test -p openrailsrs-viewer3d cab_cvf
+cargo test -p openrailsrs-viewer3d pullman
+cargo test -p openrailsrs-viewer3d cab_view
 
 echo "==> tests"
 cargo test --workspace --all-features -- --test-threads=1

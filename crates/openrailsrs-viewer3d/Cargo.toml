@@ -48,6 +48,7 @@ bevy = { version = "0.18", default-features = false, features = [
     "zstd_rust",
     "dds",
 ] }
+image = { version = "0.25", default-features = false, features = ["dds"] }
 
 [dev-dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }

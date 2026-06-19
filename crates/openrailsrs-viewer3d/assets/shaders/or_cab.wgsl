@@ -43,6 +43,26 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     color *= in.color;
 #endif
 
+#ifdef OR_CAB_DEBUG_UV
+    return vec4(fract(in.uv), 0.0, 1.0);
+#endif
+
+#ifdef OR_CAB_DEBUG_VCOLOR
+    return vec4(in.color.rgb, 1.0);
+#endif
+
+#ifdef OR_CAB_DEBUG_ALBEDO
+    if (color.a < params.reference_alpha) {
+        discard;
+    }
+    return vec4(color.rgb, color.a);
+#endif
+
+    // Blend / Add cab glass: output texture alpha as-is (no cutout discard).
+    if (params.flags >= 2.0) {
+        return vec4(color.rgb, color.a);
+    }
+
     if (color.a < params.reference_alpha) {
         discard;
     }

@@ -128,6 +128,14 @@ pub fn full_scenery_active(mode: Res<ViewerSceneryMode>) -> bool {
     !mode.is_track_focused()
 }
 
+/// Sky dome for full routes and run_corridor (driver cab windows need a backdrop).
+pub fn sky_dome_active(mode: Res<ViewerSceneryMode>) -> bool {
+    matches!(
+        *mode,
+        ViewerSceneryMode::Full | ViewerSceneryMode::RunCorridor
+    )
+}
+
 pub fn track_dev_active(mode: Res<ViewerSceneryMode>) -> bool {
     mode.is_track_focused()
 }

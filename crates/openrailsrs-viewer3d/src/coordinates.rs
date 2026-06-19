@@ -50,7 +50,8 @@
 //! `Matrix3×3` uses the same XNA convention; see [`matrix3x3_to_rotation_scale`].
 
 use bevy::math::{Mat3, Quat, Vec3};
-use openrailsrs_formats::{Matrix43, Vec3 as ShapeVec3};
+use bevy::prelude::Transform;
+use openrailsrs_formats::{Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
 /// MSTS tile size (metres), equal in X and Z.
 pub const MSTS_TILE_SIZE_M: f64 = 2048.0;
@@ -237,6 +238,76 @@ pub fn matrix43_transform_vector_xna(m: &Matrix43, p: Vec3) -> Vec3 {
         p.x * r[0][1] as f32 + p.y * r[1][1] as f32 - p.z * r[2][1] as f32,
         -p.x * r[0][2] as f32 - p.y * r[1][2] as f32 + p.z * r[2][2] as f32,
     )
+}
+
+/// MSTS `Matrix43` → Bevy `Transform` (Open Rails XNA column basis + Z flip).
+pub fn matrix43_to_transform(m: &Matrix43) -> Transform {
+    let r = &m.rows;
+    let basis = Mat3::from_cols(
+        Vec3::new(r[0][0] as f32, r[0][1] as f32, -r[0][2] as f32),
+        Vec3::new(r[1][0] as f32, r[1][1] as f32, -r[1][2] as f32),
+        Vec3::new(-r[2][0] as f32, -r[2][1] as f32, r[2][2] as f32),
+    );
+    let translation = Vec3::new(r[3][0] as f32, r[3][1] as f32, -r[3][2] as f32);
+    Transform {
+        translation,
+        rotation: Quat::from_mat3(&basis),
+        scale: Vec3::ONE,
+    }
+}
+
+/// Walk shape hierarchy from `leaf` to root, multiplying pose matrices (OR `PrepareFrame` order).
+pub fn hierarchy_chain_transform(
+    shape: &ShapeFile,
+    leaf: usize,
+    pose_mats: &[Matrix43],
+) -> Transform {
+    let level = shape
+        .lod_controls
+        .first()
+        .and_then(|lc| lc.distance_levels.first());
+    let Some(level) = level else {
+        return pose_mats
+            .get(leaf)
+            .map(matrix43_to_transform)
+            .unwrap_or(Transform::IDENTITY);
+    };
+    let mut hi = leaf as i32;
+    let mut chain = Vec::new();
+    let mut guard = 0usize;
+    while hi >= 0 && guard < shape.matrices.len() {
+        let idx = hi as usize;
+        if let Some(m) = pose_mats.get(idx) {
+            chain.push(matrix43_to_transform(m));
+        }
+        hi = level.hierarchy.get(idx).copied().unwrap_or(-1);
+        guard += 1;
+    }
+    chain
+        .into_iter()
+        .reduce(|acc, t| acc * t)
+        .unwrap_or(Transform::IDENTITY)
+}
+
+/// Static rest pose for a cab bone (shape file matrices, no animation).
+pub fn static_hierarchy_chain_transform(shape: &ShapeFile, leaf: usize) -> Transform {
+    let mats: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
+    hierarchy_chain_transform(shape, leaf, &mats)
+}
+
+/// Re-express baked cab vertices in bone-local space so entity `Transform` can carry the pose.
+pub fn rebase_points_to_bone_local(points: &mut [Vec3], bone_world: Transform) {
+    let inv = bone_world.rotation.inverse();
+    for p in points {
+        *p = inv * (*p - bone_world.translation);
+    }
+}
+
+pub fn rebase_vectors_to_bone_local(vectors: &mut [Vec3], bone_world: Transform) {
+    let inv = bone_world.rotation.inverse();
+    for v in vectors {
+        *v = (inv * *v).try_normalize().unwrap_or(Vec3::Y);
+    }
 }
 
 // ── Track / graph coordinates ─────────────────────────────────────────────────

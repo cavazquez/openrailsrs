@@ -4,12 +4,14 @@
 //! lead vehicle; the driver camera uses `ORTS3DCabHeadPos` from the `.eng`.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 
-use crate::cab_cvf::{self, CabCvfPart, matrix_idx_for_prim_state};
+use crate::cab_cvf::{self, CabCvfPart, MatrixDriver, static_matrix_transform};
+use crate::cab_diag;
 use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
@@ -351,17 +353,8 @@ pub fn cab_transform_on_camera(head_msts: Vec3) -> Transform {
     }
 }
 
-/// MSTS cab `.ace` atlases are baked dark (AO/grey); mild boost keeps detail without blow-out.
-const CAB_INTERIOR_ALBEDO_DEFAULT: f32 = 2.0;
-
-/// Albedo multiplier for cab `.ace` textures (`OPENRAILSRS_CAB_ALBEDO`, default 2).
-pub fn cab_interior_albedo_boost() -> f32 {
-    std::env::var("OPENRAILSRS_CAB_ALBEDO")
-        .ok()
-        .and_then(|v| v.trim().parse::<f32>().ok())
-        .unwrap_or(CAB_INTERIOR_ALBEDO_DEFAULT)
-        .clamp(1.0, 6.0)
-}
+/// Re-export for cab tuning docs / tests.
+pub use crate::shapes::cab_interior_albedo_boost;
 
 #[allow(clippy::too_many_arguments)]
 pub fn sync_cab_interior(
@@ -431,6 +424,24 @@ pub fn sync_cab_interior(
     let head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
     let cab_shape_file = ShapeFile::from_path(&cab_shape).ok();
 
+    let lever_matrices: HashSet<usize> = cvf_state
+        .runtime
+        .as_ref()
+        .map(|rt| {
+            rt.matrix_drivers
+                .iter()
+                .filter_map(|(idx, driver)| {
+                    matches!(driver, MatrixDriver::Lever { .. }).then_some(*idx)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let driver_matrices: HashSet<usize> = cvf_state
+        .runtime
+        .as_ref()
+        .map(|rt| rt.matrix_drivers.keys().copied().collect())
+        .unwrap_or_default();
+
     let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab_shape, &assets.route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let mut texture_cache = HashMap::new();
@@ -444,6 +455,8 @@ pub fn sync_cab_interior(
         &mut or_materials,
         &mut texture_cache,
         Color::srgb(0.35, 0.38, 0.42),
+        &driver_matrices,
+        &lever_matrices,
     ) else {
         if state.lookup != CabInteriorLookup::LoadFailed {
             state.lookup = CabInteriorLookup::LoadFailed;
@@ -475,17 +488,14 @@ pub fn sync_cab_interior(
             shader_kinds
         );
     }
-    for (pi, part) in asset.parts.iter().enumerate() {
-        if part.has_texture {
-            continue;
-        }
-        let extent = crate::shapes::mesh_aabb(meshes.get(&part.mesh).expect("cab part mesh"))
-            .map(|(mn, mx)| mx - mn);
-        viewer_log!(
-            "openrailsrs-viewer3d: cab part {pi} prim={} no texture (ext={extent:?})",
-            part.prim_state_idx,
-        );
-    }
+    cab_diag::log_cab_interior_part_diagnostics(
+        &cab_shape,
+        &tex_dirs,
+        &asset,
+        &meshes,
+        &materials,
+        &or_materials,
+    );
     viewer_log!(
         "openrailsrs-viewer3d: cab interior from {} ({} part(s), {} textured, {} OR shader, lead-attached)",
         cab_shape.display(),
@@ -555,15 +565,31 @@ pub fn sync_cab_interior(
                     ));
                 }
                 for (pi, part) in asset.parts.iter().enumerate() {
-                    let matrix_idx = cab_shape_file
-                        .as_ref()
-                        .and_then(|shape| matrix_idx_for_prim_state(shape, part.prim_state_idx));
+                    let matrix_idx = part.cab_matrix_idx.or_else(|| {
+                        cab_shape_file.as_ref().and_then(|shape| {
+                            crate::cab_cvf::matrix_idx_for_prim_state(shape, part.prim_state_idx)
+                                .filter(|idx| {
+                                    cvf_state
+                                        .runtime
+                                        .as_ref()
+                                        .is_some_and(|rt| rt.matrix_drivers.contains_key(idx))
+                                })
+                        })
+                    });
+                    let lever_transform = matrix_idx.and_then(|idx| {
+                        cvf_state.runtime.as_ref().and_then(|rt| {
+                            rt.matrix_drivers
+                                .get(&idx)
+                                .filter(|d| matches!(d, MatrixDriver::Lever { .. }))
+                                .map(|_| static_matrix_transform(&rt.shape, idx))
+                        })
+                    });
                     let mut entity = root.spawn((
                         CabInteriorMarker,
                         NotShadowCaster,
                         NotShadowReceiver,
                         Mesh3d(part.mesh.clone()),
-                        Transform::default(),
+                        lever_transform.unwrap_or(Transform::default()),
                         Visibility::Visible,
                         Name::new(format!("cab:interior:part:{pi}")),
                     ));
@@ -573,7 +599,13 @@ pub fn sync_cab_interior(
                         entity.insert(MeshMaterial3d(part.material.clone()));
                     }
                     if let Some(matrix_idx) = matrix_idx {
-                        entity.insert(CabCvfPart { matrix_idx });
+                        if cvf_state
+                            .runtime
+                            .as_ref()
+                            .is_some_and(|rt| rt.matrix_drivers.contains_key(&matrix_idx))
+                        {
+                            entity.insert(CabCvfPart { matrix_idx });
+                        }
                     }
                 }
             });
@@ -764,6 +796,8 @@ mod tests {
             &mut or_materials,
             &mut texture_cache,
             bevy::prelude::Color::srgb(0.35, 0.38, 0.42),
+            &HashSet::new(),
+            &HashSet::new(),
         )
         .expect("cab render asset");
         let textured = asset.parts.iter().filter(|p| p.has_texture).count();
@@ -819,7 +853,10 @@ mod tests {
 
     #[test]
     fn cab_interior_albedo_boost_default() {
-        assert!((cab_interior_albedo_boost() - 2.0).abs() < 1e-3);
+        unsafe {
+            std::env::remove_var("OPENRAILSRS_CAB_ALBEDO");
+        }
+        assert!((cab_interior_albedo_boost() - 1.0).abs() < 1e-3);
     }
 
     #[test]
