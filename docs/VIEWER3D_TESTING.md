@@ -80,3 +80,34 @@ Regresiones y diagnóstico de carrocería + texto **PULLMAN** (alpha, winding, c
 
 - Threshold 256 m (`floating_origin.rs` unit).
 - System tests: camera + scene shift together, `FloatingOrigin.shift` accumulation, noop below threshold, double recentre, no B0001 with `follow_train_camera`.
+
+## Track Viewer study / `--track-dev` audit
+
+Estudio comparativo OR Track Viewer vs parsers y vía procedural openrailsrs:
+
+- Doc: [`TRACKVIEWER_STUDY.md`](TRACKVIEWER_STUDY.md)
+- Fixtures JSON: [`docs/fixtures/smoke-track-audit-good.json`](fixtures/smoke-track-audit-good.json), [`docs/fixtures/chiltern-track-audit.json`](fixtures/chiltern-track-audit.json)
+- Tests: `track_audit::tests` (`aligned_synthetic_route_scores_good`, `write_smoke_track_audit_fixture`, `export_chiltern_msts_track_audit` ignored)
+- Regenerar Chiltern (requiere MSTS):
+
+```bash
+export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
+OPENRAILSRS_TRACK_AUDIT="$PWD/docs/fixtures/chiltern-track-audit.json" \
+  cargo test -p openrailsrs-viewer3d --lib export_chiltern_msts_track_audit -- --ignored --nocapture
+```
+
+Modo dev interactivo: `OPENRAILSRS_TRACK_DEV_RENDER=1` + `--track-dev --route-root …` (ver estudio §8).
+
+## Track Viewer study — Parte 2 (pat / items / outliers)
+
+Profundización: TrItem, paths `.pat`, casos outlier Chiltern.
+
+- Doc: [`TRACKVIEWER_STUDY_PART2.md`](TRACKVIEWER_STUDY_PART2.md)
+- Tests headless (requieren MSTS Chiltern + `examples/chiltern/track.toml`):
+
+```bash
+cargo test -p openrailsrs-msts document_birmingham_pat_for_study -- --ignored --nocapture
+cargo test -p openrailsrs-viewer3d document_chiltern_outlier_nodes -- --ignored --nocapture
+```
+
+- TrackObj outlier (C2): `cargo run -p openrailsrs-cli -- world-dump "$CHILTERN/WORLD/w-006079+014925.w" --csv /tmp/w6079.csv`

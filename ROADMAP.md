@@ -401,6 +401,8 @@ Roadmap **simulación 3D jugable** (fases A–G, fuentes imagen/sonido, cabina):
 
 **Objetivo:** Crear y editar `track.toml` de forma interactiva.
 
+**Prerequisito:** entender geometría MSTS real vs grafo importado — [`docs/TRACKVIEWER_STUDY.md`](docs/TRACKVIEWER_STUDY.md) (estudio Track Viewer / `.tdb`).
+
 **Ideas:**
 - Subcomando `openrailsrs edit <route_dir>` que abre el viewer en modo edición.
 - Click para agregar nodos; drag para conectar aristas.

@@ -1349,7 +1349,7 @@ mod tests {
         let graph = load_track_graph_from_route_dir(route_dir).expect("track.toml");
         let scene = TrackScene::from_graph(graph);
         let anchor = crate::world::msts_to_bevy(
-            6080,
+            -6080,
             14925,
             openrailsrs_formats::Vec3 {
                 x: 891.831,
@@ -1414,5 +1414,255 @@ mod tests {
         });
         report.log_detail();
         assert!(report.tdb_chords > 1000, "chords near Birmingham anchor");
+    }
+
+    /// Refresh [`docs/fixtures/chiltern-track-audit.json`] with MSTS route on disk:
+    ///
+    /// ```bash
+    /// export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
+    /// OPENRAILSRS_TRACK_AUDIT="$PWD/docs/fixtures/chiltern-track-audit.json" \
+    ///   cargo test -p openrailsrs-viewer3d --lib export_chiltern_msts_track_audit -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs MSTS Chiltern content"]
+    fn export_chiltern_msts_track_audit() {
+        use openrailsrs_route::load_track_graph_from_route_dir;
+
+        let Some(msts) = std::env::var_os("OPENRAILSRS_MSTS_CONTENT") else {
+            eprintln!("skip: set OPENRAILSRS_MSTS_CONTENT");
+            return;
+        };
+        let msts_route = PathBuf::from(msts).join("Chiltern/ROUTES/Chiltern");
+        if !msts_route.join("Chiltern.tdb").exists() {
+            let alt = msts_route.join("Route.tdb");
+            assert!(
+                alt.exists(),
+                "Chiltern .tdb not found under {}",
+                msts_route.display()
+            );
+        }
+        let chiltern_graph =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let scenario_path = chiltern_graph.join("scenario.toml");
+        let graph = load_track_graph_from_route_dir(&chiltern_graph).expect("track.toml");
+        let scene = TrackScene::from_graph(graph);
+        let anchor = crate::world::msts_to_bevy(
+            -6080,
+            14925,
+            openrailsrs_formats::Vec3 {
+                x: 891.831,
+                y: 35.7818,
+                z: 582.756,
+            },
+        );
+        let focus = RouteFocus {
+            center: anchor,
+            height_origin: anchor.y,
+        };
+        let assets = crate::shapes::RouteAssets::new(&msts_route);
+        let tdb = assets.track_db().expect("Chiltern .tdb from MSTS");
+        let tsection = assets.tsection();
+        let radius = crate::launch::TRACK_DEV_TDB_RADIUS_M;
+        let chords = collect_tdb_chords(tdb, &focus, radius, Some(tsection));
+        let report = audit_track_dev(TrackDevAuditInput {
+            tdb,
+            scene: &scene,
+            focus: &focus,
+            offset: RouteWorldOffset::default(),
+            radius_m: radius,
+            chords: &chords,
+            route_dir: Some(&msts_route),
+        });
+        report.log_detail();
+        report.write_json_if_requested();
+        assert!(
+            report.tdb_chords > 100,
+            "expected chords near Birmingham with MSTS .tdb"
+        );
+        let _ = scenario_path;
+    }
+
+    /// Refresh [`docs/fixtures/smoke-track-audit-good.json`]:
+    ///
+    /// ```bash
+    /// OPENRAILSRS_TRACK_AUDIT="$PWD/docs/fixtures/smoke-track-audit-good.json" \
+    ///   cargo test -p openrailsrs-viewer3d --lib write_smoke_track_audit_fixture -- --nocapture
+    /// ```
+    #[test]
+    fn write_smoke_track_audit_fixture() {
+        let s0 = section_at(0.0, 0.0);
+        let s1 = section_at(100.0, 0.0);
+        let tdb = TrackDbFile {
+            nodes: vec![TrackDbNode {
+                id: 2,
+                position: None,
+                pin_refs: Vec::new(),
+                kind: TrackNodeKind::Vector {
+                    length_m: 100.0,
+                    speed_limit_mps: 0.0,
+                    pins: (1, 3),
+                    item_ids: Vec::new(),
+                    sections: vec![s0, s1],
+                    geometry: Some(TrackVectorGeometry {
+                        start: s0.start,
+                        end: s1.start,
+                    }),
+                },
+            }],
+            items: Vec::new(),
+        };
+        let mut graph = TrackGraph::new();
+        graph
+            .insert_node(Node {
+                id: NodeId("n1".into()),
+                kind: NodeKind::Plain,
+                x_m: 0.0,
+                y_m: 0.0,
+            })
+            .unwrap();
+        graph
+            .insert_node(Node {
+                id: NodeId("n2".into()),
+                kind: NodeKind::Plain,
+                x_m: 100.0,
+                y_m: 0.0,
+            })
+            .unwrap();
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e1".into()),
+                from: NodeId("n1".into()),
+                to: NodeId("n2".into()),
+                length_m: 100.0,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let scene = TrackScene::from_graph(graph);
+        let focus = RouteFocus {
+            center: Vec3::new(50.0, 0.0, 0.0),
+            height_origin: 0.0,
+        };
+        let chords = collect_tdb_chords(&tdb, &focus, 500.0, None);
+        let report = audit_track_dev(TrackDevAuditInput {
+            tdb: &tdb,
+            scene: &scene,
+            focus: &focus,
+            offset: RouteWorldOffset::default(),
+            radius_m: 500.0,
+            chords: &chords,
+            route_dir: None,
+        });
+        report.write_json_if_requested();
+        assert_eq!(report.verdict, TrackDevVerdict::Good);
+    }
+
+    /// Headless dump for [`docs/TRACKVIEWER_STUDY_PART2.md`]: outlier TDB nodes near Birmingham.
+    ///
+    /// ```bash
+    /// cargo test -p openrailsrs-viewer3d --lib document_chiltern_outlier_nodes -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs MSTS Chiltern content"]
+    fn document_chiltern_outlier_nodes() {
+        use openrailsrs_formats::{TrackDbFile, TrackNodeKind};
+
+        let msts_route = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern",
+        );
+        if !msts_route.join("Chiltern.tdb").exists() {
+            eprintln!("skip: Chiltern.tdb missing");
+            return;
+        }
+        let tdb = TrackDbFile::from_path(msts_route.join("Chiltern.tdb")).expect("parse tdb");
+
+        fn dump_node(tdb: &TrackDbFile, id: u32) {
+            let Some(node) = tdb.node_by_id(id) else {
+                eprintln!("node {id}: not found");
+                return;
+            };
+            eprintln!("node {id}: pins={:?}", node.pin_refs);
+            match &node.kind {
+                TrackNodeKind::Vector {
+                    length_m,
+                    sections,
+                    pins,
+                    ..
+                } => {
+                    eprintln!(
+                        "  Vector length_m={length_m:.1} sections={} pins=({},{})",
+                        sections.len(),
+                        pins.0,
+                        pins.1
+                    );
+                    if let (Some(first), Some(last)) = (sections.first(), sections.last()) {
+                        eprintln!(
+                            "  first sec shape_idx={} ay={:.3}",
+                            first.shape_idx, first.ay
+                        );
+                        eprintln!("  last sec shape_idx={} ay={:.3}", last.shape_idx, last.ay);
+                    }
+                }
+                TrackNodeKind::Junction { pins, .. } => {
+                    eprintln!("  Junction pins={pins:?}");
+                }
+                other => eprintln!("  {other:?}"),
+            }
+        }
+
+        eprintln!("=== C1 inter-node gap vectors ===");
+        for id in [16897_u32, 17283, 17790] {
+            dump_node(&tdb, id);
+        }
+
+        eprintln!("=== C2 TrackObj vector (uid 9266) ===");
+        dump_node(&tdb, 17312);
+
+        eprintln!("=== C3 max intra-node chain gap ===");
+        let chiltern_graph =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let graph = openrailsrs_route::load_track_graph_from_route_dir(&chiltern_graph)
+            .expect("track.toml");
+        let _scene = TrackScene::from_graph(graph);
+        let anchor = crate::world::msts_to_bevy(
+            -6080,
+            14925,
+            openrailsrs_formats::Vec3 {
+                x: 891.831,
+                y: 35.7818,
+                z: 582.756,
+            },
+        );
+        let focus = RouteFocus {
+            center: anchor,
+            height_origin: anchor.y,
+        };
+        let assets = crate::shapes::RouteAssets::new(&msts_route);
+        let tsection = assets.tsection();
+        let chords = collect_tdb_chords(&tdb, &focus, 1500.0, Some(tsection));
+        let mut worst: Option<(u32, u32, f32)> = None;
+        let mut by_node: HashMap<u32, Vec<&TdbChord>> = HashMap::new();
+        for chord in &chords {
+            if chord.section_index == crate::tdb_track::TDB_JUNCTION_BRIDGE_SECTION {
+                continue;
+            }
+            by_node.entry(chord.node_id).or_default().push(chord);
+        }
+        for (node_id, mut node_chords) in by_node {
+            if node_chords.len() < 2 {
+                continue;
+            }
+            node_chords.sort_by_key(|c| c.section_index);
+            for pair in node_chords.windows(2) {
+                let gap = distance_xz(pair[0].end_world, pair[1].start_world);
+                if worst.as_ref().is_none_or(|(_, _, g)| gap > *g) {
+                    worst = Some((node_id, pair[1].section_index as u32, gap));
+                }
+            }
+        }
+        if let Some((node_id, sec_idx, gap)) = worst {
+            eprintln!("worst intra gap: node={node_id} after sec_idx={sec_idx} gap={gap:.2} m");
+            dump_node(&tdb, node_id);
+        }
     }
 }

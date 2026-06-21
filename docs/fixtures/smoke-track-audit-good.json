@@ -1,0 +1,34 @@
+{
+  "radius_m": 500.0,
+  "vector_nodes_in_radius": 1,
+  "tdb_chords": 1,
+  "graph_nodes": 2,
+  "graph_edges": 1,
+  "graph_positions_available": true,
+  "graph_edge_match_pct": 100.0,
+  "chord_endpoint_snap_pct": 100.0,
+  "graph_midpoint_to_chord_m": {
+    "count": 1,
+    "mean_m": 0.0,
+    "p50_m": 0.0,
+    "p95_m": 0.0,
+    "max_m": 0.0
+  },
+  "intra_node_chain_gap_m": {
+    "count": 0,
+    "mean_m": 0.0,
+    "p50_m": 0.0,
+    "p95_m": 0.0,
+    "max_m": 0.0
+  },
+  "inter_node_chain_gap_m": {
+    "count": 0,
+    "mean_m": 0.0,
+    "p50_m": 0.0,
+    "p95_m": 0.0,
+    "max_m": 0.0
+  },
+  "worst_inter_node_gaps": [],
+  "worst_static_trackobj": [],
+  "verdict": "good"
+}

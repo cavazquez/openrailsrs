@@ -1,0 +1,316 @@
+{
+  "radius_m": 1500.0,
+  "vector_nodes_in_radius": 679,
+  "tdb_chords": 4117,
+  "graph_nodes": 557,
+  "graph_edges": 689,
+  "graph_positions_available": true,
+  "graph_edge_match_pct": 97.96806966618288,
+  "chord_endpoint_snap_pct": 89.02798232695139,
+  "graph_midpoint_to_chord_m": {
+    "count": 689,
+    "mean_m": 2.2452699082683236,
+    "p50_m": 0.0,
+    "p95_m": 6.0,
+    "max_m": 92.00543212890625
+  },
+  "intra_node_chain_gap_m": {
+    "count": 2728,
+    "mean_m": 0.042606300622487,
+    "p50_m": 0.0,
+    "p95_m": 0.0,
+    "max_m": 72.71863555908203
+  },
+  "inter_node_chain_gap_m": {
+    "count": 1150,
+    "mean_m": 0.5541307532269022,
+    "p50_m": 0.0,
+    "p95_m": 1.0,
+    "max_m": 34.828147888183594
+  },
+  "static_trackobj_to_chord_m": {
+    "count": 2421,
+    "mean_m": 1.4507205022459728,
+    "p50_m": 0.0,
+    "p95_m": 1.0,
+    "max_m": 128.0
+  },
+  "static_trackobj_to_matching_chord_m": {
+    "count": 2421,
+    "mean_m": 1.4807920522898597,
+    "p50_m": 0.0,
+    "p95_m": 2.2360680103302,
+    "max_m": 128.0
+  },
+  "static_trackobj_count": 2421,
+  "worst_inter_node_gaps": [
+    {
+      "vector_a": 16897,
+      "vector_b": 17790,
+      "via_junction": 17283,
+      "gap_m": 34.828147888183594,
+      "junction_face_gap_m": 34.828147888183594
+    },
+    {
+      "vector_a": 16701,
+      "vector_b": 16976,
+      "via_junction": 16978,
+      "gap_m": 33.52610778808594,
+      "junction_face_gap_m": 33.52610778808594
+    },
+    {
+      "vector_a": 17301,
+      "vector_b": 17423,
+      "via_junction": 17382,
+      "gap_m": 30.528675079345703,
+      "junction_face_gap_m": 30.528675079345703
+    },
+    {
+      "vector_a": 17394,
+      "vector_b": 17412,
+      "via_junction": 17418,
+      "gap_m": 30.528675079345703,
+      "junction_face_gap_m": 30.528675079345703
+    },
+    {
+      "vector_a": 16997,
+      "vector_b": 17025,
+      "via_junction": 17023,
+      "gap_m": 26.925823211669922,
+      "junction_face_gap_m": 26.925823211669922
+    },
+    {
+      "vector_a": 16954,
+      "vector_b": 17007,
+      "via_junction": 17019,
+      "gap_m": 25.612497329711914,
+      "junction_face_gap_m": 25.612497329711914
+    },
+    {
+      "vector_a": 17300,
+      "vector_b": 17360,
+      "via_junction": 17378,
+      "gap_m": 25.0,
+      "junction_face_gap_m": 25.0
+    },
+    {
+      "vector_a": 17200,
+      "vector_b": 17215,
+      "via_junction": 17202,
+      "gap_m": 24.83948516845703,
+      "junction_face_gap_m": 24.83948516845703
+    },
+    {
+      "vector_a": 16870,
+      "vector_b": 16910,
+      "via_junction": 16872,
+      "gap_m": 24.083189010620117,
+      "junction_face_gap_m": 29.120439529418945
+    },
+    {
+      "vector_a": 16870,
+      "vector_b": 16913,
+      "via_junction": 16872,
+      "gap_m": 24.083189010620117,
+      "junction_face_gap_m": 28.160255432128906
+    }
+  ],
+  "worst_static_trackobj": [
+    {
+      "uid": 9266,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450797.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 128.0,
+      "dist_matching_m": 128.0,
+      "vector_id": 17312,
+      "dist_m": 128.0
+    },
+    {
+      "uid": 9226,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450795.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 125.06398010253906,
+      "dist_matching_m": 125.06398010253906,
+      "vector_id": 17312,
+      "dist_m": 125.06398010253906
+    },
+    {
+      "uid": 9265,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450792.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 123.0,
+      "dist_matching_m": 123.0,
+      "vector_id": 17312,
+      "dist_m": 123.0
+    },
+    {
+      "uid": 9225,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450793.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 122.0,
+      "dist_matching_m": 122.0,
+      "vector_id": 17300,
+      "dist_m": 122.0
+    },
+    {
+      "uid": 9228,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450790.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 120.066650390625,
+      "dist_matching_m": 120.066650390625,
+      "vector_id": 17312,
+      "dist_m": 120.066650390625
+    },
+    {
+      "uid": 9227,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450788.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 117.0,
+      "dist_matching_m": 117.0,
+      "vector_id": 17300,
+      "dist_m": 117.0
+    },
+    {
+      "uid": 9261,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450780.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 111.0,
+      "dist_matching_m": 111.0,
+      "vector_id": 17312,
+      "dist_m": 111.0
+    },
+    {
+      "uid": 9230,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450779.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 109.01834869384766,
+      "dist_matching_m": 109.01834869384766,
+      "vector_id": 17312,
+      "dist_m": 109.01834869384766
+    },
+    {
+      "uid": 9229,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450777.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 106.0,
+      "dist_matching_m": 106.0,
+      "vector_id": 17300,
+      "dist_m": 106.0
+    },
+    {
+      "uid": 9263,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450775.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 106.0,
+      "dist_matching_m": 106.0,
+      "vector_id": 17312,
+      "dist_m": 106.0
+    },
+    {
+      "uid": 9232,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450773.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 103.01941680908203,
+      "dist_matching_m": 103.01941680908203,
+      "vector_id": 17312,
+      "dist_m": 103.01941680908203
+    },
+    {
+      "uid": 8977,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450771.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16620,
+      "dist_any_m": 100.0,
+      "dist_matching_m": 100.0,
+      "vector_id": 17300,
+      "dist_m": 100.0
+    },
+    {
+      "uid": 9231,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450771.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 100.0,
+      "dist_matching_m": 100.0,
+      "vector_id": 17300,
+      "dist_m": 100.0
+    },
+    {
+      "uid": 9260,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450764.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 95.0,
+      "dist_matching_m": 95.0,
+      "vector_id": 17312,
+      "dist_m": 95.0
+    },
+    {
+      "uid": 9234,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450762.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 92.02173614501953,
+      "dist_matching_m": 92.02173614501953,
+      "vector_id": 17312,
+      "dist_m": 92.02173614501953
+    }
+  ],
+  "verdict": "good"
+}

@@ -5,6 +5,7 @@ Documento de referencia para pasar de **viewer 3D + replay CSV** a un **simulado
 Relacionado:
 
 - Arquitectura OR vs Bevy: [`OPEN_RAILS_VIEWER_3D.md`](OPEN_RAILS_VIEWER_3D.md)
+- Vía MSTS / Track Viewer vs `--track-dev`: [`TRACKVIEWER_STUDY.md`](TRACKVIEWER_STUDY.md)
 - Instalación contenido MSTS/OR: [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md)
 - Issue GitHub: [#8](https://github.com/cavazquez/openrailsrs/issues/8)
 - Fase 23 en [`ROADMAP.md`](../ROADMAP.md) (lista histórica; este doc es la fuente de verdad para fases **jugables**)
@@ -380,6 +381,8 @@ Copia meshes a `examples/chiltern/trains/RF_Blue_Pullman/SHAPES/`; el viewer bus
 | **E4 Acoplamiento sim–visual** | Multi-body: posición por vehículo en 3D (no solo cabeza del tren) |
 
 **Datos:** `track.toml` (en repo); TDB completo vía `import-msts` (parcial hoy).
+
+**Prerequisito de diseño:** [`TRACKVIEWER_STUDY.md`](TRACKVIEWER_STUDY.md) — geometría OR (`FindLocationInSection`, arcos) vs `TdbChord` actual.
 
 **Depende de:** D (opcional); A para validar velocidad en pendiente.
 

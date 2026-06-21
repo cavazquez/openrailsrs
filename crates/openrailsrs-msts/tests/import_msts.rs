@@ -715,3 +715,58 @@ fn chiltern_birmingham_import_uses_pat_placement() {
         );
     }
 }
+
+/// Headless dump for [`docs/TRACKVIEWER_STUDY_PART2.md`]: Birmingham `.pat` PDPs vs placement.
+///
+/// ```bash
+/// cargo test -p openrailsrs-msts document_birmingham_pat_for_study -- --ignored --nocapture
+/// ```
+#[test]
+#[ignore = "needs MSTS Chiltern + examples/chiltern/track.toml"]
+fn document_birmingham_pat_for_study() {
+    use openrailsrs_msts::path_placement::{
+        placement_from_imported_route, read_distance_down_path,
+    };
+
+    let route_dir = std::path::Path::new(
+        "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern",
+    );
+    let graph_dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    let pat = route_dir.join("PATHS/RS_Let's go to Birmingham.pat");
+    if !pat.exists() || !graph_dir.join("track.toml").exists() {
+        eprintln!("skip: Chiltern MSTS or examples/chiltern missing");
+        return;
+    }
+
+    let path_file = PathFile::from_path(&pat).expect("parse Birmingham.pat");
+    eprintln!("pat name: {}", path_file.name);
+    eprintln!("pdps: {}", path_file.pdps.len());
+    eprintln!("first 10 PDPs (tdb_id, junction_flag):");
+    for (i, p) in path_file.pdps.iter().take(10).enumerate() {
+        eprintln!("  [{i}] {} {}", p.node_id, p.junction_flag);
+    }
+    eprintln!("last 5 PDPs:");
+    for (i, p) in path_file
+        .pdps
+        .iter()
+        .enumerate()
+        .skip(path_file.pdps.len().saturating_sub(5))
+    {
+        eprintln!("  [{i}] {} {}", p.node_id, p.junction_flag);
+    }
+
+    let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
+    eprintln!("DistanceDownPath (srv): {offset:.3} m");
+    let hints = placement_from_imported_route(&graph_dir, &pat, offset).expect("placement");
+    eprintln!(
+        "placement: start={} dest={} offset={:.3} switches={}",
+        hints.start,
+        hints.destination,
+        hints.start_offset_m,
+        hints.switches.len()
+    );
+    for sw in &hints.switches {
+        eprintln!("  switch {} -> {:?}", sw.node, sw.position);
+    }
+}
