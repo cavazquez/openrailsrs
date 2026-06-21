@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 
-use crate::cab_cvf::{self, CabCvfPart, MatrixDriver, static_matrix_transform};
+use crate::cab_cvf::{self, CabCvfPart, static_lever_transform};
 use crate::cab_diag;
 use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
@@ -427,19 +427,7 @@ pub fn sync_cab_interior(
     let lever_matrices: HashSet<usize> = cvf_state
         .runtime
         .as_ref()
-        .map(|rt| {
-            rt.matrix_drivers
-                .iter()
-                .filter_map(|(idx, driver)| {
-                    matches!(driver, MatrixDriver::Lever { .. }).then_some(*idx)
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    let driver_matrices: HashSet<usize> = cvf_state
-        .runtime
-        .as_ref()
-        .map(|rt| rt.matrix_drivers.keys().copied().collect())
+        .map(cab_cvf::cab_lever_matrix_indices)
         .unwrap_or_default();
 
     let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab_shape, &assets.route_dir);
@@ -455,7 +443,6 @@ pub fn sync_cab_interior(
         &mut or_materials,
         &mut texture_cache,
         Color::srgb(0.35, 0.38, 0.42),
-        &driver_matrices,
         &lever_matrices,
     ) else {
         if state.lookup != CabInteriorLookup::LoadFailed {
@@ -544,7 +531,7 @@ pub fn sync_cab_interior(
                         color: Color::srgb(1.0, 0.96, 0.88),
                         intensity: 180_000.0,
                         range: 18.0,
-                        shadows_enabled: false,
+                        shadow_maps_enabled: false,
                         ..default()
                     },
                     Transform::from_translation(light_pos),
@@ -557,7 +544,7 @@ pub fn sync_cab_interior(
                             color: Color::srgb(0.85, 0.90, 1.0),
                             intensity: 120_000.0,
                             range: 12.0,
-                            shadows_enabled: false,
+                            shadow_maps_enabled: false,
                             ..default()
                         },
                         Transform::from_translation(p + Vec3::new(0.6, 0.3, -0.8)),
@@ -576,12 +563,16 @@ pub fn sync_cab_interior(
                                 })
                         })
                     });
-                    let lever_transform = matrix_idx.and_then(|idx| {
+                    let pivot_at_mesh = if part.lever_pivot_at_mesh_center {
+                        part.bounds_center
+                    } else {
+                        None
+                    };
+                    let initial_transform = matrix_idx.and_then(|idx| {
                         cvf_state.runtime.as_ref().and_then(|rt| {
                             rt.matrix_drivers
                                 .get(&idx)
-                                .filter(|d| matches!(d, MatrixDriver::Lever { .. }))
-                                .map(|_| static_matrix_transform(&rt.shape, idx))
+                                .map(|_| static_lever_transform(&rt.shape, idx, pivot_at_mesh))
                         })
                     });
                     let mut entity = root.spawn((
@@ -589,7 +580,7 @@ pub fn sync_cab_interior(
                         NotShadowCaster,
                         NotShadowReceiver,
                         Mesh3d(part.mesh.clone()),
-                        lever_transform.unwrap_or(Transform::default()),
+                        initial_transform.unwrap_or(Transform::default()),
                         Visibility::Visible,
                         Name::new(format!("cab:interior:part:{pi}")),
                     ));
@@ -604,7 +595,11 @@ pub fn sync_cab_interior(
                             .as_ref()
                             .is_some_and(|rt| rt.matrix_drivers.contains_key(&matrix_idx))
                         {
-                            entity.insert(CabCvfPart { matrix_idx });
+                            entity.insert(CabCvfPart {
+                                matrix_idx,
+                                pivot_at_mesh,
+                                local_spin_axis: part.lever_local_axis,
+                            });
                         }
                     }
                 }
@@ -796,7 +791,6 @@ mod tests {
             &mut or_materials,
             &mut texture_cache,
             bevy::prelude::Color::srgb(0.35, 0.38, 0.42),
-            &HashSet::new(),
             &HashSet::new(),
         )
         .expect("cab render asset");

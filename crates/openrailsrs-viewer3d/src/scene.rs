@@ -89,7 +89,7 @@ pub fn spawn_ground_and_lights(
     commands.spawn((
         DirectionalLight {
             illuminance,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {

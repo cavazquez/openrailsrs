@@ -224,7 +224,7 @@ pub fn update_water_surfaces(
         let Some(handle) = &surface.flow_material else {
             continue;
         };
-        let Some(mat) = materials.get_mut(handle) else {
+        let Some(mut mat) = materials.get_mut(handle) else {
             continue;
         };
         mat.uv_transform = water_uv_transform(t, surface.phase);

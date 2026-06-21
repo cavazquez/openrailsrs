@@ -7,71 +7,29 @@
 //! Uso:
 //!   cargo run -p openrailsrs-render3d -- [--route DIR] [--activity ACT.act] [--tile-x N --tile-z N] [--radius R]
 //!
-//! Rutas OR recomendadas (scripts): ver `docs/RENDER3D_ROUTES.md` y `./scripts/run_render3d_*.sh`.
+//! Rutas OR recomendadas (scripts): ver [`docs/RENDER3D.md`](../../docs/RENDER3D.md) y `./scripts/run_render3d_*.sh`.
 //!
 //! Controles:
 //!   W/A/S/D  mover    Q/E  bajar/subir    Shift  más rápido
 //!   Botón derecho + mover el mouse  mirar    F3 HUD    F4-F8 VSM    F9 preset debug    Esc  salir
 
-mod activity;
-mod consist;
-mod coords;
-mod debug_hud;
-mod dyntrack;
-mod lighting;
-mod loading;
-mod objects;
-mod or_cascade;
-mod or_scenery_material;
-mod or_shader;
-mod or_terrain_material;
-mod or_vsm;
-mod or_vsm_debug;
-mod or_vsm_moments;
-mod or_vsm_render;
-mod player_spawn;
-mod scenery;
-mod shape_descriptor;
-mod shapes;
-mod sky;
-mod stream;
-mod tdb_track;
-mod terrain;
-mod textures;
-mod track;
-mod transfer;
-mod world_spawn;
+//! CLI entry for `openrailsrs-render3d`. Core logic in [`openrailsrs_render3d`].
 
 use std::path::PathBuf;
 
-use bevy::asset::AssetPlugin;
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::state::condition::in_state;
-use bevy::window::PrimaryWindow;
 use clap::Parser;
-use or_scenery_material::OrSceneryMaterial;
-use or_terrain_material::OrTerrainMaterial;
-use or_vsm_debug::OrVsmDebugPlugin;
-use or_vsm_moments::OrVsmPlugin;
-use or_vsm_render::OrVsmRenderPlugin;
 
-use consist::{StaticConsistPlan, load_consist_at_path, resolve_player_consist_path};
-use debug_hud::{
-    DebugHudEnabled, FlySpeed, SceneDebugContext, toggle_debug_hud, update_debug_hud,
-    update_window_title,
+use openrailsrs_render3d::{
+    DebugHudEnabled, FlySpeed, MstsRootDir, PlayerStartPoseResource, Render3dPlugin, RouteDir,
+    SceneDebugContext, SceneExtent, StaticConsistPlan, TdbTrackResource, TileCatalog, TileEntry,
+    TileStreamConfig, TilesToRender, activity, catalog_entries_for_initial_load,
+    default_track_camera_pose, default_trackobj_camera_pose, fly_camera, load_consist_at_path,
+    objects, quit_on_esc, resolve_pat_start_pose, resolve_player_consist_path,
+    resolve_player_start_pose, scenery, sky, stream, tdb_track, terrain, toggle_debug_hud, track,
+    update_debug_hud, update_window_title,
 };
-use loading::{
-    AppState, begin_load_stage, finish_world_load, progressive_world_load, setup_loading_screen,
-    update_loading_ui,
-};
-use player_spawn::{
-    PlayerStartPoseResource, default_track_camera_pose, default_trackobj_camera_pose,
-    resolve_pat_start_pose, resolve_player_start_pose,
-};
-use stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
-use terrain::TileGeometry;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -122,37 +80,6 @@ struct Cli {
     /// Consist del jugador (`.con`); si se omite y hay `--activity`, se usa el del `.act`.
     #[arg(long)]
     consist: Option<PathBuf>,
-}
-
-/// Información de un tile (geometría + offset en el espacio world).
-#[derive(Clone)]
-pub struct TileEntry {
-    pub geometry: TileGeometry,
-    /// Desplazamiento del origen del tile en el espacio world (metros).
-    pub world_offset: Vec3,
-    /// Vía del tile.
-    pub track: track::TrackRibbon,
-    /// Marcadores de objetos del tile.
-    pub objects: Vec<objects::ObjectMarker>,
-}
-
-/// Lista de tiles a renderizar.
-#[derive(Resource)]
-pub struct TilesToRender(pub Vec<TileEntry>);
-
-/// Carpeta de la ruta (para resolver texturas TERRTEX y SHAPES locales).
-#[derive(Resource)]
-pub struct RouteDir(pub PathBuf);
-
-/// Carpeta base de MSTS/OR (para resolver GLOBAL/SHAPES y GLOBAL/TEXTURES).
-#[derive(Resource)]
-pub struct MstsRootDir(pub PathBuf);
-
-/// Grafo `.tdb` + radio de recolección de acordes (vía UKFS procedural).
-#[derive(Resource, Clone)]
-pub struct TdbTrackResource {
-    pub ctx: tdb_track::TdbContext,
-    pub grid_radius: u32,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -439,10 +366,7 @@ fn main() -> anyhow::Result<()> {
     let night_mode = texture_env.night;
     app.add_plugins(
         DefaultPlugins
-            .set(AssetPlugin {
-                file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
-                ..default()
-            })
+            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: format!(
@@ -453,13 +377,7 @@ fn main() -> anyhow::Result<()> {
                 ..default()
             }),
     )
-    .add_plugins(bevy::pbr::MaterialPlugin::<OrSceneryMaterial>::default())
-    .add_plugins(bevy::pbr::MaterialPlugin::<OrTerrainMaterial>::default())
-    .add_plugins(OrVsmPlugin)
-    .add_plugins(OrVsmRenderPlugin)
-    .add_plugins(OrVsmDebugPlugin)
-    .add_plugins(FrameTimeDiagnosticsPlugin::default())
-    .init_state::<AppState>()
+    .add_plugins(Render3dPlugin)
     .insert_resource(ClearColor(sky::sky_clear_color(night_mode)))
     .insert_resource(FlySpeed(120.0))
     .insert_resource(SceneDebugContext {
@@ -490,106 +408,19 @@ fn main() -> anyhow::Result<()> {
         });
     }
     app.add_systems(
-        Startup,
-        (
-            setup_loading_screen,
-            begin_load_stage,
-            lighting::spawn_scene_sun,
-        )
-            .chain(),
-    )
-    .add_systems(
         Update,
         (
-            update_loading_ui.run_if(in_state(AppState::Loading)),
-            progressive_world_load.run_if(in_state(AppState::Loading)),
-            finish_world_load.run_if(in_state(AppState::Loading)),
-            fly_camera.run_if(in_state(AppState::Playing)),
-            update_debug_hud.run_if(in_state(AppState::Playing)),
-            update_window_title.run_if(in_state(AppState::Playing)),
-            toggle_debug_hud.run_if(in_state(AppState::Playing)),
-            scenery::update_water_surfaces.run_if(in_state(AppState::Playing)),
-            stream::tile_stream_system.run_if(in_state(AppState::Playing)),
+            fly_camera.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            update_debug_hud.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            update_window_title.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            toggle_debug_hud.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            scenery::update_water_surfaces
+                .run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            stream::tile_stream_system.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
             quit_on_esc,
         ),
     )
     .run();
 
     Ok(())
-}
-
-/// Lado del tile central en metros — para posicionar la cámara inicial.
-#[derive(Resource)]
-pub struct SceneExtent {
-    pub side_m: f32,
-}
-
-/// Cámara fly: WASD/QE para moverse, click derecho + mouse para mirar.
-fn fly_camera(
-    time: Res<Time>,
-    keys: Res<ButtonInput<KeyCode>>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    mut motion: MessageReader<MouseMotion>,
-    speed: Res<FlySpeed>,
-    mut cam: Query<&mut Transform, With<Camera3d>>,
-) {
-    let Ok(mut tf) = cam.single_mut() else {
-        return;
-    };
-
-    if buttons.pressed(MouseButton::Right) {
-        let mut delta = Vec2::ZERO;
-        for ev in motion.read() {
-            delta += ev.delta;
-        }
-        if delta != Vec2::ZERO {
-            let sens = 0.003;
-            let (mut yaw, mut pitch, _) = tf.rotation.to_euler(EulerRot::YXZ);
-            yaw -= delta.x * sens;
-            pitch = (pitch - delta.y * sens).clamp(-1.54, 1.54);
-            tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-        }
-    } else {
-        motion.clear();
-    }
-
-    let mut dir = Vec3::ZERO;
-    let fwd = *tf.forward();
-    let right = *tf.right();
-    if keys.pressed(KeyCode::KeyW) {
-        dir += fwd;
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        dir -= fwd;
-    }
-    if keys.pressed(KeyCode::KeyD) {
-        dir += right;
-    }
-    if keys.pressed(KeyCode::KeyA) {
-        dir -= right;
-    }
-    if keys.pressed(KeyCode::KeyE) {
-        dir += Vec3::Y;
-    }
-    if keys.pressed(KeyCode::KeyQ) {
-        dir -= Vec3::Y;
-    }
-    if dir != Vec3::ZERO {
-        let boost = if keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight) {
-            4.0
-        } else {
-            1.0
-        };
-        tf.translation += dir.normalize() * speed.0 * boost * time.delta_secs();
-    }
-}
-
-fn quit_on_esc(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut exit: MessageWriter<AppExit>,
-    _windows: Query<&Window, With<PrimaryWindow>>,
-) {
-    if keys.just_pressed(KeyCode::Escape) {
-        exit.write(AppExit::Success);
-    }
 }

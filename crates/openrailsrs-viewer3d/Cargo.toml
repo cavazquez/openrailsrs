@@ -18,6 +18,8 @@ default = []
 trace = ["bevy/trace"]
 
 [dependencies]
+openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
+openrailsrs-or-shader = { path = "../openrailsrs-or-shader" }
 openrailsrs-ace = { path = "../openrailsrs-ace" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-route = { path = "../openrailsrs-route" }
@@ -31,24 +33,8 @@ rayon.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }
-bevy = { version = "0.18", default-features = false, features = [
-    "bevy_winit",
-    "x11",
-    "bevy_window",
-    "bevy_render",
-    "bevy_core_pipeline",
-    "bevy_pbr",
-    "bevy_asset",
-    "bevy_gizmos",
-    "bevy_ui",
-    "bevy_ui_render",
-    "bevy_log",
-    "default_font",
-    "tonemapping_luts",
-    "zstd_rust",
-    "dds",
-] }
-image = { version = "0.25", default-features = false, features = ["dds"] }
+bevy = { workspace = true, features = ["bevy_gizmos", "bevy_ui_render"] }
+image.workspace = true
 
 [dev-dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }

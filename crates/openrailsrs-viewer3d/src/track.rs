@@ -495,7 +495,6 @@ pub fn spawn_track_meshes(
             &mut meshes,
             &mut materials,
             &segments,
-            &scene.bounds,
             "logical-track",
             crate::dyntrack::ProceduralTrackStyle::Full,
         );

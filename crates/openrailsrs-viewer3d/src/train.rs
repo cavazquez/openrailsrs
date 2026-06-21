@@ -452,6 +452,9 @@ fn load_vehicle_shape_assets(
                 shader_name: None,
                 light_mat_idx: None,
                 solid_color: None,
+                lever_pivot_at_mesh_center: false,
+                lever_local_axis: None,
+                bounds_center: None,
             }],
             has_texture: false,
         }

@@ -10,7 +10,6 @@ use openrailsrs_ace::AceFile;
 use openrailsrs_formats::TSectionCatalog;
 
 use crate::objects::{ObjectKind, ObjectMarker};
-use crate::or_shader::{apply_albedo_scale, resolve_or_material_pbr};
 use crate::shape_descriptor::ShapeDescriptor;
 use crate::shapes;
 use crate::stream::TileContent;
@@ -22,6 +21,7 @@ use crate::textures::{
     texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
+use openrailsrs_or_shader::standard_pbr::{apply_albedo_scale, resolve_or_material_pbr};
 
 use crate::or_scenery_material::{
     OrSceneryMaterial, create_or_scenery_material, or_scenery_shaders_enabled,
@@ -41,7 +41,7 @@ pub(crate) enum SceneMaterialHandle {
 
 /// Handles de una parte de shape ya en GPU.
 #[derive(Clone)]
-pub(crate) struct PartHandles {
+pub struct PartHandles {
     mesh: Handle<Mesh>,
     material: SceneMaterialHandle,
 }
@@ -2465,6 +2465,7 @@ mod tests {
             format: openrailsrs_ace::AceFormat::Rgba8,
             mips_count: 1,
             mip0: vec![8, 8, 8, 255],
+            mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         };
@@ -2486,6 +2487,7 @@ mod tests {
             format: openrailsrs_ace::AceFormat::Rgba8,
             mips_count: 1,
             mip0: vec![180, 180, 180, 255],
+            mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         };

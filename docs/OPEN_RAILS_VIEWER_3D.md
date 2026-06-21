@@ -277,6 +277,20 @@ Rutas bajo `/tmp/openrails/Source/`:
 
 ---
 
+## 13. Capa Bevy en openrailsrs
+
+Implementación Rust (no port de MonoGame): ver [`BEVY_ARCHITECTURE.md`](BEVY_ARCHITECTURE.md).
+
+| Crate | Rol |
+|-------|-----|
+| `openrailsrs-or-shader` | Shaders MSTS + coordenadas |
+| `openrailsrs-bevy-scenery` | Materiales OR, spawn, VSM |
+| `openrailsrs-viewer3d` | App jugable (`--live`, cabina) |
+
+Bevy **0.19** — [`BEVY_MIGRATION_0_19.md`](BEVY_MIGRATION_0_19.md).
+
+---
+
 ## 12. Nota legal
 
 Open Rails es **GPL v3**. Este documento es **análisis arquitectónico**; cualquier reutilización de código fuente de Open Rails en otro proyecto debe respetar la licencia y la atribución correspondientes.

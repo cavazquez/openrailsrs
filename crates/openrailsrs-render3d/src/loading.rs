@@ -90,7 +90,7 @@ pub struct LoadingScreen {
 // ─── Etapas de carga ─────────────────────────────────────────────────────────
 
 /// Un slot de tile pendiente de procesar: datos ya en memoria.
-pub(crate) struct TileSlot {
+pub struct TileSlot {
     geometry: crate::terrain::TileGeometry,
     world_offset: Vec3,
     track: crate::track::TrackRibbon,
@@ -262,7 +262,7 @@ pub fn setup_loading_screen(mut commands: Commands) {
         .spawn((
             Text::new("openrailsrs-render3d"),
             TextFont {
-                font_size: 28.0,
+                font_size: FontSize::Px(28.0),
                 ..default()
             },
             TextColor(Color::srgb(0.92, 0.94, 0.98)),
@@ -273,7 +273,7 @@ pub fn setup_loading_screen(mut commands: Commands) {
         .spawn((
             Text::new(""),
             TextFont {
-                font_size: 14.0,
+                font_size: FontSize::Px(14.0),
                 ..default()
             },
             TextColor(Color::srgb(0.55, 0.65, 0.85)),
@@ -284,7 +284,7 @@ pub fn setup_loading_screen(mut commands: Commands) {
         .spawn((
             Text::new("Cargando…"),
             TextFont {
-                font_size: 17.0,
+                font_size: FontSize::Px(17.0),
                 ..default()
             },
             TextColor(Color::srgb(0.75, 0.80, 0.88)),
@@ -337,7 +337,7 @@ pub fn setup_loading_screen(mut commands: Commands) {
         .spawn((
             Text::new(""),
             TextFont {
-                font_size: 12.0,
+                font_size: FontSize::Px(12.0),
                 ..default()
             },
             TextColor(Color::srgb(0.55, 0.65, 0.72)),
@@ -957,7 +957,7 @@ pub fn progressive_world_load(
 
 /// Tras `LoadStage::Finished`: activa streaming y pasa a `Playing`.
 #[derive(SystemParam)]
-pub(crate) struct WorldLoadFinish<'w> {
+pub struct WorldLoadFinish<'w> {
     stream_config: Res<'w, TileStreamConfig>,
     catalog: Res<'w, TileCatalog>,
     terrain_saved: Option<Res<'w, SavedTerrainCtx>>,

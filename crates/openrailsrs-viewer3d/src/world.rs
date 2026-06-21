@@ -1,13 +1,18 @@
 //! MSTS world tiles (`.w`) as coloured placeholder boxes (order 5 / issue #8).
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::shapes::{
+    build_mesh_from_shape_lod, build_mesh_parts_from_shape_lod, lod_level_index_for_distance,
+    primary_texture_filename,
+};
 use openrailsrs_formats::{
-    WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
+    ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
     msts_tile_z_index_for_coord, parse_world_w_tile_xz, world_w_filename_from_tile_xz,
 };
 
@@ -21,6 +26,23 @@ use crate::shapes::{
     prefetch_ace_textures, shape_render_asset_from_loaded_with_ace_cache,
     texture_search_dirs_for_shape,
 };
+
+/// Tracks which LOD level a spawned world shape part is using (runtime swap).
+#[derive(Component, Clone, Debug)]
+pub struct WorldSceneryLod {
+    pub enabled: bool,
+    pub shape_path: PathBuf,
+    pub prim_state_idx: i32,
+    pub part_index: usize,
+    pub lod_idx: usize,
+}
+
+/// Cached parsed shapes + pre-built assets per LOD level for runtime swaps.
+#[derive(Resource, Default)]
+pub struct WorldShapeLodCache {
+    pub shapes: HashMap<PathBuf, ShapeFile>,
+    pub assets_by_lod: HashMap<PathBuf, Vec<ShapeRenderAsset>>,
+}
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::{log_step, viewer_log};
@@ -805,7 +827,13 @@ fn build_merged_instance_mesh(
     Some(mesh)
 }
 
-type ShapeSpawnBundle = (Transform, Mesh3d, MeshMaterial3d<StandardMaterial>, Name);
+type ShapeSpawnBundle = (
+    Transform,
+    Mesh3d,
+    MeshMaterial3d<StandardMaterial>,
+    Name,
+    WorldSceneryLod,
+);
 
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
@@ -833,6 +861,8 @@ pub struct WorldSpawnProgress {
     texture_prefetch_index: usize,
     ace_cache: std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
+    parsed_shape_files: std::collections::HashMap<PathBuf, ShapeFile>,
+    shape_lod_assets: std::collections::HashMap<PathBuf, Vec<ShapeRenderAsset>>,
     texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>>,
     asset_build_index: usize,
     instance_paths: Vec<PathBuf>,
@@ -887,6 +917,8 @@ impl WorldSpawnProgress {
             texture_prefetch_index: 0,
             ace_cache: std::collections::HashMap::new(),
             shape_cache: std::collections::HashMap::new(),
+            parsed_shape_files: std::collections::HashMap::new(),
+            shape_lod_assets: std::collections::HashMap::new(),
             texture_image_cache: std::collections::HashMap::new(),
             asset_build_index: 0,
             instance_paths: Vec::new(),
@@ -989,6 +1021,21 @@ fn classify_one_object(
         }
         if obj.kind == "TrackObj" {
             progress.trackobj_unresolved += 1;
+            if progress.trackobj_unresolved <= 8 {
+                let name = obj
+                    .shape_file
+                    .as_deref()
+                    .filter(|s| !s.is_empty())
+                    .or_else(|| {
+                        obj.section_idx
+                            .and_then(|idx| assets.tsection().shape_file_name(idx))
+                    })
+                    .unwrap_or("<sin nombre>");
+                viewer_log!(
+                    "openrailsrs-viewer3d: TrackObj sin .s resuelto: {name} (section={:?})",
+                    obj.section_idx
+                );
+            }
         }
     } else if obj.kind == "TrackObj" && dist <= SHAPE_MESH_RADIUS_M {
         progress.trackobj_no_filename += 1;
@@ -1042,10 +1089,12 @@ fn classify_one_object(
 
 #[allow(clippy::too_many_arguments)]
 fn append_shape_spawn_entries_for_transforms(
+    shape_path: &Path,
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
     transforms: &[Transform],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
+    initial_lod_idx: usize,
     shape_mesh_count: &mut usize,
     shape_texture_count: &mut usize,
     merged_shape_groups: &mut usize,
@@ -1078,6 +1127,13 @@ fn append_shape_spawn_entries_for_transforms(
                     Mesh3d(meshes.add(merged)),
                     MeshMaterial3d(part.material.clone()),
                     Name::new("world:merged"),
+                    WorldSceneryLod {
+                        enabled: false,
+                        shape_path: PathBuf::new(),
+                        prim_state_idx: -1,
+                        part_index: 0,
+                        lod_idx: 0,
+                    },
                 ));
             }
         }
@@ -1085,12 +1141,19 @@ fn append_shape_spawn_entries_for_transforms(
         *shape_mesh_count += asset.parts.len() * transforms.len();
         for tf in transforms {
             let tf = view_transform(*tf, origin);
-            for part in &asset.parts {
+            for (part_index, part) in asset.parts.iter().enumerate() {
                 spawn_queue.push((
                     tf,
                     Mesh3d(part.mesh.clone()),
                     MeshMaterial3d(part.material.clone()),
                     Name::new("world:mesh"),
+                    WorldSceneryLod {
+                        enabled: true,
+                        shape_path: shape_path.to_path_buf(),
+                        prim_state_idx: part.prim_state_idx,
+                        part_index,
+                        lod_idx: initial_lod_idx,
+                    },
                 ));
             }
         }
@@ -1107,11 +1170,24 @@ fn append_shape_spawn_entries(
     let Some(transforms) = progress.shape_instances.get(shape_path).cloned() else {
         return;
     };
+    let initial_lod_idx = progress
+        .parsed_shape_files
+        .get(shape_path)
+        .and_then(|shape| {
+            progress
+                .shape_instance_min_dist
+                .get(shape_path)
+                .copied()
+                .map(|d| lod_level_index_for_distance(shape, d))
+        })
+        .unwrap_or(0);
     append_shape_spawn_entries_for_transforms(
+        shape_path,
         asset,
         meshes,
         &transforms,
         &mut progress.spawn_queue,
+        initial_lod_idx,
         &mut progress.shape_mesh_count,
         &mut progress.shape_texture_count,
         &mut progress.merged_shape_groups,
@@ -1183,12 +1259,64 @@ fn build_world_shape_asset(
                     shader_name: None,
                     light_mat_idx: None,
                     solid_color: None,
+                    lever_pivot_at_mesh_center: false,
+                    lever_local_axis: None,
+                    bounds_center: None,
                 }],
                 has_texture: false,
             }
         }
     };
     (shape_path, asset)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_shape_lod_assets(
+    shape_path: &Path,
+    shape: &ShapeFile,
+    route_dir: &Path,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    texture_image_cache: &mut std::collections::HashMap<PathBuf, Handle<Image>>,
+    ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
+    fallback_color: Color,
+    _fallback_material: &Handle<StandardMaterial>,
+) -> Vec<ShapeRenderAsset> {
+    let Some(control) = shape.lod_controls.first() else {
+        return Vec::new();
+    };
+    if control.distance_levels.len() <= 1 {
+        return Vec::new();
+    }
+    let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
+    let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+    control
+        .distance_levels
+        .iter()
+        .filter_map(|level| {
+            let mesh = build_mesh_from_shape_lod(shape, level)?;
+            let parts = build_mesh_parts_from_shape_lod(shape, level);
+            let loaded = openrailsrs_bevy_scenery::shapes::LoadedShape {
+                mesh,
+                texture_file: primary_texture_filename(shape),
+                parts,
+            };
+            Some(shape_render_asset_from_loaded_with_ace_cache(
+                loaded,
+                &tex_refs,
+                meshes,
+                images,
+                materials,
+                None,
+                texture_image_cache,
+                ace_cache,
+                fallback_color,
+                None,
+                false,
+            ))
+        })
+        .collect()
 }
 
 fn prepare_shape_load_paths(progress: &mut WorldSpawnProgress) {
@@ -1217,6 +1345,11 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
             (path.clone(), load_shape_from_path(path, lod_dist))
         })
         .collect();
+    for path in &batch {
+        if let Ok(shape) = ShapeFile::from_path(path) {
+            progress.parsed_shape_files.insert(path.clone(), shape);
+        }
+    }
     for (shape_path, loaded) in &parsed {
         if let Some(loaded) = loaded {
             let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
@@ -1558,7 +1691,7 @@ pub fn progressive_world_spawn_system(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
-    scene: Res<TrackScene>,
+    _scene: Res<TrackScene>,
     focus: Res<RouteFocus>,
     origin: Res<FloatingOrigin>,
     assets: Res<RouteAssets>,
@@ -1630,6 +1763,25 @@ pub fn progressive_world_spawn_system(
                     fallback_color,
                     &fallback_material,
                 );
+                if let Some(shape) = progress.parsed_shape_files.get(&shape_path).cloned() {
+                    let lod_assets = build_shape_lod_assets(
+                        &shape_path,
+                        &shape,
+                        &assets.route_dir,
+                        &mut meshes,
+                        &mut images,
+                        &mut materials,
+                        &mut progress.texture_image_cache,
+                        &ace_cache,
+                        fallback_color,
+                        &fallback_material,
+                    );
+                    if !lod_assets.is_empty() {
+                        progress
+                            .shape_lod_assets
+                            .insert(shape_path.clone(), lod_assets);
+                    }
+                }
                 progress.shape_cache.insert(shape_path, asset);
             }
             progress.asset_build_index = end;
@@ -1734,14 +1886,66 @@ pub fn progressive_world_spawn_system(
                     &mut meshes,
                     &mut materials,
                     &segments,
-                    &scene.bounds,
                     "trackobj",
                     crate::dyntrack::ProceduralTrackStyle::Full,
                 );
             }
             log_world_spawn_summary(&progress);
+            commands.insert_resource(WorldShapeLodCache {
+                shapes: std::mem::take(&mut progress.parsed_shape_files),
+                assets_by_lod: std::mem::take(&mut progress.shape_lod_assets),
+            });
             commands.remove_resource::<WorldSpawnProgress>();
         }
+    }
+}
+
+/// Swap world shape meshes when the camera crosses MSTS `dlevel_selection` thresholds.
+pub fn update_world_scenery_lod(
+    cache: Option<Res<WorldShapeLodCache>>,
+    camera: Query<&GlobalTransform, With<Camera3d>>,
+    focus: Option<Res<RouteFocus>>,
+    mut parts: Query<(&GlobalTransform, &mut WorldSceneryLod, &mut Mesh3d)>,
+) {
+    let Some(cache) = cache else {
+        return;
+    };
+    let Ok(cam_gt) = camera.single() else {
+        return;
+    };
+    let cam_pos = cam_gt.translation();
+    let focus_pos = focus
+        .as_ref()
+        .map(|f| f.scenery_to_render(f.center))
+        .unwrap_or(Vec3::ZERO);
+    let cam_dist = cam_pos.distance(focus_pos);
+
+    for (gt, mut lod, mut mesh3d) in &mut parts {
+        if !lod.enabled {
+            continue;
+        }
+        let Some(shape) = cache.shapes.get(&lod.shape_path) else {
+            continue;
+        };
+        let Some(lod_assets) = cache.assets_by_lod.get(&lod.shape_path) else {
+            continue;
+        };
+        if lod_assets.is_empty() {
+            continue;
+        }
+        let instance_dist = cam_dist + gt.translation().distance(focus_pos);
+        let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
+        if new_lod == lod.lod_idx {
+            continue;
+        }
+        let Some(asset) = lod_assets.get(new_lod) else {
+            continue;
+        };
+        let Some(part) = asset.parts.get(lod.part_index) else {
+            continue;
+        };
+        mesh3d.0 = part.mesh.clone();
+        lod.lod_idx = new_lod;
     }
 }
 
@@ -1929,10 +2133,12 @@ pub fn spawn_world_boxes(
             continue;
         };
         append_shape_spawn_entries_for_transforms(
+            &shape_path,
             asset,
             &mut meshes,
             &transforms,
             &mut shape_spawn_batches,
+            0,
             &mut shape_mesh_count,
             &mut shape_texture_count,
             &mut merged_shape_groups,
@@ -1986,7 +2192,6 @@ pub fn spawn_world_boxes(
             &mut meshes,
             &mut materials,
             &shifted,
-            &scene.bounds,
             "trackobj",
             crate::dyntrack::ProceduralTrackStyle::Full,
         );

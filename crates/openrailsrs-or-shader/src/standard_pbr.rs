@@ -1,26 +1,11 @@
-//! Shaders MSTS / Open Rails -> parametros PBR aproximados (Bevy StandardMaterial).
+//! Shaders MSTS / Open Rails → parámetros PBR aproximados (Bevy StandardMaterial legacy).
 //!
-//! OR usa HLSL en `SceneryShader.fx` (HalfBright con sombra minima ~75%, Specular*, TexDiff...).
-//! Bevy no tiene esos shaders; aproximamos con metallic/roughness/reflectance y un fill ambiente.
+//! Usado durante la transición antes de `OrSceneryMaterial` unificado. OR usa HLSL en
+//! `SceneryShader.fx`; Bevy aproxima con metallic/roughness/reflectance.
 
 use bevy::prelude::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OrShaderKind {
-    Unknown,
-    Tex,
-    TexDiff,
-    HalfBright,
-    FullBright,
-    Bright,
-    Dark,
-    DarkShade,
-    Specular25,
-    Specular750,
-    Specular,
-    AddATex,
-    BlendATex,
-}
+use crate::shader::{OrShaderKind, classify_or_shader};
 
 #[derive(Debug, Clone, Copy)]
 pub struct OrShaderPbr {
@@ -47,50 +32,6 @@ impl OrShaderPbr {
     }
 }
 
-pub fn classify_or_shader(shader_name: Option<&str>) -> OrShaderKind {
-    let Some(shader) = shader_name else {
-        return OrShaderKind::Unknown;
-    };
-    let n = shader.to_ascii_lowercase();
-    if n.contains("halfbright") {
-        return OrShaderKind::HalfBright;
-    }
-    if n.contains("fullbright") {
-        return OrShaderKind::FullBright;
-    }
-    if n == "bright" || (n.ends_with("bright") && !n.contains("half")) {
-        return OrShaderKind::Bright;
-    }
-    if n.contains("darkshade") {
-        return OrShaderKind::DarkShade;
-    }
-    if n.contains("dark") {
-        return OrShaderKind::Dark;
-    }
-    if n.contains("specular750") || n.contains("specular_750") {
-        return OrShaderKind::Specular750;
-    }
-    if n.contains("specular25") || n.contains("specular_25") {
-        return OrShaderKind::Specular25;
-    }
-    if n.contains("specular") {
-        return OrShaderKind::Specular;
-    }
-    if n.contains("addatex") {
-        return OrShaderKind::AddATex;
-    }
-    if n.contains("blendatex") {
-        return OrShaderKind::BlendATex;
-    }
-    if n.contains("texdiff") || n == "texdiff" {
-        return OrShaderKind::TexDiff;
-    }
-    if n == "tex" {
-        return OrShaderKind::Tex;
-    }
-    OrShaderKind::Unknown
-}
-
 fn texture_name_suggests_rail(texture_name: &str) -> bool {
     let lower = texture_name.to_ascii_lowercase();
     lower.contains("rail")
@@ -103,7 +44,7 @@ fn texture_name_suggests_sleeper(texture_name: &str) -> bool {
     lower.contains("tie") || lower.contains("sleeper") || lower.contains("ukfs_t")
 }
 
-/// PBR + flags segun shader OR y nombre de textura (rieles UKFS, etc.).
+/// PBR + flags según shader OR y nombre de textura (rieles UKFS, etc.).
 pub fn resolve_or_material_pbr(
     texture_name: &str,
     shader_name: Option<&str>,
@@ -119,7 +60,6 @@ pub fn resolve_or_material_pbr(
 
     hints.force_unlit = false;
 
-    // Rieles / metal UKFS (prioridad sobre shader generico).
     if texture_name_suggests_rail(texture_name) {
         hints.metallic = 0.82;
         hints.roughness = match kind {
@@ -143,7 +83,6 @@ pub fn resolve_or_material_pbr(
             hints.roughness = 0.68;
             hints.reflectance = 0.62;
             hints.albedo_scale = 1.03;
-            // Sombra no baja del ~75% (OR PSHalfBright).
             hints.ambient_fill = LinearRgba::new(0.11, 0.12, 0.14, 1.0);
         }
         OrShaderKind::FullBright | OrShaderKind::Bright => {
@@ -199,19 +138,6 @@ pub fn apply_albedo_scale(tint: Color, scale: f32) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn classifies_halfbright_and_specular() {
-        assert_eq!(
-            classify_or_shader(Some("HalfBright")),
-            OrShaderKind::HalfBright
-        );
-        assert_eq!(
-            classify_or_shader(Some("Specular25")),
-            OrShaderKind::Specular25
-        );
-        assert_eq!(classify_or_shader(Some("TexDiff")), OrShaderKind::TexDiff);
-    }
 
     #[test]
     fn halfbright_adds_ambient_fill_when_lit() {

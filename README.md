@@ -31,7 +31,7 @@
 | 🔄 **rayon** | Batch de escenarios en CLI (paralelismo opcional). |
 | 📝 **TOML / CSV** | Escenarios, metadata y series temporales. |
 | 🖼️ **minifb** | Viewer 2D mínimo (X11 en Linux), sin acoplar al núcleo `sim`. |
-| 🎮 **Bevy** | Viewer 3D experimental (`openrailsrs-viewer3d`): grafo desde `track.toml`, grilla y cámara orbit/fly; desacoplado del `sim`. |
+| 🎮 **Bevy 0.19** | Capa 3D: [`openrailsrs-bevy-scenery`](crates/openrailsrs-bevy-scenery/) (materiales OR + VSM) · [`openrailsrs-viewer3d`](crates/openrailsrs-viewer3d/) (jugable) · [`openrailsrs-render3d`](crates/openrailsrs-render3d/) (validación OR). Ver [`docs/BEVY_ARCHITECTURE.md`](docs/BEVY_ARCHITECTURE.md). |
 
 ---
 
@@ -142,7 +142,10 @@ Las fases de producto (0–10) están en **[ROADMAP.md](ROADMAP.md)**.
 | `openrailsrs-export` | DOT, GeoJSON, mapa ASCII, replay textual y **replay animado** (ANSI, barra de progreso, velocidad configurable). |
 | `openrailsrs-cli` | Binario **`openrailsrs`**. |
 | `openrailsrs-viewer` | Binario **`openrailsrs-viewer`**: topología de vía, señales coloreadas por aspecto, **replay multi-tren animado** desde CSV, HUD con tiempo y velocidad, controles teclado. Lee `scenario.toml` o `route_dir` directamente. |
-| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: grafo 3D desde `track.toml` (aristas cilindro o gizmo compact, nodos esfera, señales coloreadas) + plano/grilla + cámara orbit/fly + follow (`T`); ver `docs/OPEN_RAILS_VIEWER_3D.md`. |
+| `openrailsrs-or-shader` | Clasificación shaders MSTS + coordenadas (sin render). |
+| `openrailsrs-bevy-scenery` | Materiales OR WGSL, spawn compartido, VSM — ver [`docs/BEVY_ARCHITECTURE.md`](docs/BEVY_ARCHITECTURE.md). |
+| `openrailsrs-viewer3d` | Binario **`openrailsrs-viewer3d`**: simulación jugable, cabina, `--live`; ver [`docs/OPEN_RAILS_VIEWER_3D.md`](docs/OPEN_RAILS_VIEWER_3D.md). |
+| `openrailsrs-render3d` | Validación visual OR por tiles — ver [`docs/RENDER3D.md`](docs/RENDER3D.md). |
 
 Los módulos públicos en Rust siguen el patrón `openrailsrs_<crate>::…` (p. ej. `openrailsrs_sim::run_from_scenario_file`).
 

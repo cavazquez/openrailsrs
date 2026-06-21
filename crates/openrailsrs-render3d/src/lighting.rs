@@ -36,7 +36,7 @@ pub fn spawn_scene_sun(
             DirectionalLight {
                 color: sun_color,
                 illuminance,
-                shadows_enabled: false,
+                shadow_maps_enabled: false,
                 ..default()
             },
             Transform::from_rotation(rotation),
@@ -48,7 +48,7 @@ pub fn spawn_scene_sun(
             DirectionalLight {
                 color: sun_color,
                 illuminance: illuminance.max(25_000.0),
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 ..default()
             },
             cascade,

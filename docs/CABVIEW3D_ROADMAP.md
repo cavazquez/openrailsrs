@@ -6,6 +6,7 @@ Relacionado:
 
 - Roadmap general jugable: [`SIMULACION_3D_ROADMAP.md`](SIMULACION_3D_ROADMAP.md) (Fase C)
 - **Sesión depuración CVF 2026-06-19:** [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md)
+- **Qué son M0, M4, M8, M9, M10 (matrices cabina):** [`CABVIEW3D_MATRICES.md`](CABVIEW3D_MATRICES.md)
 - Arquitectura viewer / OR: [`OPEN_RAILS_VIEWER_3D.md`](OPEN_RAILS_VIEWER_3D.md)
 - Setup Chiltern + Content OR: [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md), [`examples/chiltern/README.md`](../examples/chiltern/README.md)
 
@@ -37,7 +38,7 @@ Referencia OR: `ThreeDimentionCabViewer`, `ThreeDimCabCamera`, grupo `RenderPrim
 | Texturas 39/39 | ✅ | `.ace` + fallback `.dds` (cristales prim 11/12) |
 | Shader OR cabina (`or_cab.wgsl`) | ✅ | TexDiff plano (sin sol exterior por defecto) |
 | Iluminación interior | ✅ | `OPENRAILSRS_CAB_SUN=0` (default), albedo 1.0, sin brighten |
-| CVF palancas (throttle/freno) | 🔶 parcial | `cab_cvf.rs` — ↑/↓ live; **bug abierto**: pieza animada flota lejos del pupitre (ver sesión 2026-06-19) |
+| CVF palancas (throttle/freno/inversor) | 🔶 parcial | `cab_cvf.rs` — ↑/↓ throttle/freno, `[`/`]`/`\\` inversor; M8/M9/M10/M4 documentados en [`CABVIEW3D_MATRICES.md`](CABVIEW3D_MATRICES.md) |
 | RenderLayers L0+L2 | ✅ | `cab_render.rs` — mundo + cabina; exterior en L1 oculto |
 | Cielo en ventanas (`--run-corridor`) | ✅ | `sky.rs` + domo en `RunCorridor` |
 | Diagnóstico cab | ✅ | `cab_diag.rs` — `OPENRAILSRS_CAB_DEBUG=uv\|albedo\|vcolor` |
@@ -85,9 +86,10 @@ Assets:
 
 ### 2.4 Pendiente / bug abierto (2026-06-19)
 
-- **Animación regulador (THROTTLE M8):** geometría sigue desplazándose muy alto al subir `thr`; rebase bone-local aplicado pero no resuelve del todo — ver [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md) § estado al cierre.
+- **Afinado ángulos/ejes** vs capturas Open Rails (regulador 0–10, arco freno 2D vs spin rueda 3D).
 - **Modo Full — ventanas azules / paisaje:** layer 0 puede estar vacío hasta terminar spawn WORLD; 345 `.s` TrackObj sin resolver en log.
-- Freno (`Brake_wheel`): malla a ~1.3 m del pivote CVF — sin enlace hasta localizar hueso/malla correctos.
+- **Inversor en física:** `driver_direction` anima cabina; aún no cambia sentido del tren en sim.
+- Historial matrices M8/M9/M10 y problemas de enlace: [`CABVIEW3D_MATRICES.md`](CABVIEW3D_MATRICES.md).
 - Asiento con tinte cálido del ACE (`seat.ace` rgb≈25,18,13) — ajuste artístico opcional
 - Modo noche `CABVIEW3D/NIGHT/` + `.SD`
 - Instrumentos multi-state (aguja velocímetro desde telemetría fina)

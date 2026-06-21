@@ -17,9 +17,12 @@ echo "==> focused MSTS/Open Rails regressions"
 cargo test -p openrailsrs-formats terrain
 cargo test -p openrailsrs-formats parse_compressed_binary_shape_from_open_rails_content
 cargo test -p openrailsrs-formats cvf
+cargo test -p openrailsrs-or-shader
+cargo test -p openrailsrs-bevy-scenery
 cargo test -p openrailsrs-viewer3d shapes
 cargo test -p openrailsrs-viewer3d camera
 cargo test -p openrailsrs-viewer3d cab_cvf
+cargo test -p openrailsrs-viewer3d cab_cvf_overlay
 cargo test -p openrailsrs-viewer3d pullman
 cargo test -p openrailsrs-viewer3d cab_view
 cargo test -p openrailsrs-viewer3d floating_origin

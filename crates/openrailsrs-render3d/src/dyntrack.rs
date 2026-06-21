@@ -7,9 +7,9 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_formats::TSectionCatalog;
 
-use crate::coords::msts_local_offset_to_bevy;
 use crate::objects::{ObjectKind, ObjectMarker};
 use crate::stream::TileContent;
+use openrailsrs_or_shader::coordinates::msts_local_offset_to_bevy;
 
 const COLOR_SLEEPER: Color = Color::srgb(0.20, 0.14, 0.10);
 const COLOR_RAIL: Color = Color::srgb(0.78, 0.86, 0.98);

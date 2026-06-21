@@ -381,7 +381,8 @@ Chiltern 136 s ~0.28 m/s RMS ✅ · SCE 100 s ✅ (crucero alineado tras fix P/v
 Roadmap **simulación 3D jugable** (fases A–G, fuentes imagen/sonido, cabina): [`docs/SIMULACION_3D_ROADMAP.md`](docs/SIMULACION_3D_ROADMAP.md). Fase A (`--live`) ✅.
 
 ### Viewer 3D — detalle técnico OR (issue #8)
-- Crate **`openrailsrs-viewer3d`**: app Bevy 0.18 (solo X11 en Linux por defecto), ventana 1280×720, plano + grilla + ejes, cámara orbit (`F1`) / fly (`F2`), cursor confinado en fly con botón derecho.
+- Crate **`openrailsrs-viewer3d`**: app Bevy **0.19** (solo X11 en Linux por defecto), ventana 1280×720, plano + grilla + ejes, cámara orbit (`F1`) / fly (`F2`), cursor confinado en fly con botón derecho.
+- Crates compartidos **`openrailsrs-bevy-scenery`** + **`openrailsrs-or-shader`** — migración documentada en [`docs/BEVY_MIGRATION_0_19.md`](docs/BEVY_MIGRATION_0_19.md).
 - **Grafo 3D desde `track.toml` ✅** — cilindros naranja (aristas), esferas por tipo de nodo, plano/grilla/cámara encuadrados al bounding box; CLI `openrailsrs-viewer3d [route_dir]`.
 - **Marcador de tren desde CSV ✅** — `openrailsrs-viewer3d scenario.toml` + replay animado; HUD en pantalla (Bevy UI).
 - **Pulido D ✅** — cámara follow (`T`), señales 3D coloreadas, modo compact automático en rutas >800 aristas (gizmo lines).

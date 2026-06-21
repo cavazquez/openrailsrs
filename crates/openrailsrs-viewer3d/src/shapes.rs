@@ -1,290 +1,37 @@
 //! MSTS ASCII `.s` shapes → Bevy meshes (order 6) + `.ace` textures (order 7).
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
 
+use crate::coordinates::{
+    matrix43_to_transform, rebase_points_to_bone_local, rebase_vectors_to_bone_local,
+};
+use crate::viewer_log;
 use bevy::asset::RenderAssetUsages;
-use bevy::mesh::PrimitiveTopology;
-use bevy::mesh::VertexAttributeValues;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
-use openrailsrs_formats::{DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
-
-use crate::coordinates::{
-    matrix43_transform_point_xna, matrix43_transform_vector_xna, rebase_points_to_bone_local,
-    rebase_vectors_to_bone_local, static_hierarchy_chain_transform,
+pub use openrailsrs_bevy_scenery::shapes::mesh::{
+    MeshBuffers, ShapeMatrixRef, append_primitive_mesh_buffers, mesh_buffers_bounds,
 };
-use crate::viewer_log;
-
-/// HDR multiplier on textured scenery whose `.ace` mip0 is already reasonably bright.
-pub const SCENERY_TEXTURE_ALBEDO_BOOST: f32 = 4.0;
-
-/// Mean sRGB luma below this → MSTS atlas looks black even with unlit + albedo boost.
-pub const DARK_TEXTURE_LUMA_THRESHOLD: f32 = 32.0;
-
-/// Target mean luma after normalizing dark MSTS `.ace` mip0 (Open Rails draws these unlit).
-const SCENERY_TEXTURE_TARGET_LUMA: f32 = 112.0;
-
-/// Max per-pixel scale when lifting near-black atlases (signals, tunnels, night textures).
-const SCENERY_TEXTURE_MAX_PIXEL_SCALE: f32 = 128.0;
-
-/// Small extra tint after pixel normalization (avoid double-boost with [`SCENERY_TEXTURE_ALBEDO_BOOST`]).
-const SCENERY_TEXTURE_POST_BRIGHTEN_TINT: f32 = 1.25;
-
-/// Open Rails lights its world with a sun + ambient and tone-maps it; MSTS `.ace`
-/// albedos look right under that model. This OR-style lit path (sun shading + shadow
-/// receive, neutral albedo) is the **default** and matches the camera's physical
-/// `Exposure::SUNLIGHT` + 75 klux sun + ambient fill.
-///
-/// The legacy fixed-function path draws scenery `unlit` and claws brightness back with
-/// [`SCENERY_TEXTURE_ALBEDO_BOOST`] and [`brighten_dark_ace_rgba`]; it is internally
-/// inconsistent with that exposure, so surfaces stay flat and never receive shadows.
-/// Opt back into it with `OPENRAILSRS_UNLIT_SCENERY=1` (or `OPENRAILSRS_OR_LIGHTING=0`).
-pub fn or_lighting_enabled() -> bool {
-    static FLAG: OnceLock<bool> = OnceLock::new();
-    *FLAG.get_or_init(|| {
-        resolve_or_lighting(
-            std::env::var("OPENRAILSRS_UNLIT_SCENERY").ok().as_deref(),
-            std::env::var("OPENRAILSRS_OR_LIGHTING").ok().as_deref(),
-        )
-    })
-}
-
-/// Pure resolver for the lighting mode (unit-tested without global env state).
-///
-/// Lit (OR-style) is the default. `OPENRAILSRS_UNLIT_SCENERY` (truthy) forces the
-/// legacy unlit path; otherwise `OPENRAILSRS_OR_LIGHTING` may explicitly disable it
-/// with `"0"`/empty.
-fn resolve_or_lighting(unlit_opt_out: Option<&str>, or_flag: Option<&str>) -> bool {
-    let truthy = |v: &str| !v.is_empty() && v != "0";
-    if unlit_opt_out.is_some_and(truthy) {
-        return false;
-    }
-    match or_flag {
-        Some(v) => truthy(v),
-        None => true,
-    }
-}
-
-fn scenery_texture_tint() -> Color {
-    let b = SCENERY_TEXTURE_ALBEDO_BOOST;
-    Color::linear_rgb(b, b, b)
-}
-
-/// Albedo tint for a scenery texture, honouring the OR-style lit path.
-///
-/// In the lit path the sun/ambient provide brightness, so the fixed-function
-/// `×SCENERY_TEXTURE_ALBEDO_BOOST` tint must collapse to white to avoid a washed-out look.
-fn scenery_albedo_tint(pixel_brightened: bool, lit: bool) -> Color {
-    if lit {
-        Color::WHITE
-    } else {
-        scenery_material_tint_for_ace(pixel_brightened)
-    }
-}
-
-/// Base (untextured / DDS) tint, honouring the OR-style lit path.
-fn scenery_base_tint(lit: bool) -> Color {
-    if lit {
-        Color::WHITE
-    } else {
-        scenery_texture_tint()
-    }
-}
-
-fn scenery_texture_tint_scaled(multiplier: f32) -> Color {
-    Color::linear_rgb(multiplier, multiplier, multiplier)
-}
-
-/// Mean sRGB luma of opaque pixels in decoded ACE mip0 (0–255).
-pub fn ace_mean_luma(rgba: &[u8]) -> f32 {
-    if rgba.len() < 4 {
-        return 0.0;
-    }
-    let mut sum = 0.0f64;
-    let mut n = 0usize;
-    for px in rgba.chunks_exact(4) {
-        if px[3] < 8 {
-            continue;
-        }
-        sum += 0.299 * f64::from(px[0]) + 0.587 * f64::from(px[1]) + 0.114 * f64::from(px[2]);
-        n += 1;
-    }
-    if n == 0 { 0.0 } else { (sum / n as f64) as f32 }
-}
-
-fn scale_ace_channel(v: u8, scale: f32) -> u8 {
-    (f32::from(v) * scale).min(255.0).round() as u8
-}
-
-/// Lift dark MSTS atlases toward [`SCENERY_TEXTURE_TARGET_LUMA`]. Returns `(rgba, was_brightened)`.
-pub fn brighten_dark_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
-    let mean = ace_mean_luma(rgba);
-    if mean >= DARK_TEXTURE_LUMA_THRESHOLD {
-        return (rgba.to_vec(), false);
-    }
-    let scale = (SCENERY_TEXTURE_TARGET_LUMA / mean.max(1.0)).min(SCENERY_TEXTURE_MAX_PIXEL_SCALE);
-    let mut out = rgba.to_vec();
-    for px in out.chunks_exact_mut(4) {
-        if px[3] < 8 {
-            continue;
-        }
-        px[0] = scale_ace_channel(px[0], scale);
-        px[1] = scale_ace_channel(px[1], scale);
-        px[2] = scale_ace_channel(px[2], scale);
-    }
-    (out, true)
-}
-
-/// Material tint for a scenery texture (full boost, or modest tint after pixel normalization).
-pub fn scenery_material_tint_for_ace(pixel_brightened: bool) -> Color {
-    if pixel_brightened {
-        scenery_texture_tint_scaled(SCENERY_TEXTURE_POST_BRIGHTEN_TINT)
-    } else {
-        scenery_texture_tint()
-    }
-}
-
-/// Emissive lift for atlases that stay near-black after pixel normalization (MSTS night/signal tex).
-const SCENERY_DARK_EMISSIVE: LinearRgba = LinearRgba::new(0.4, 0.4, 0.45, 1.0);
-
-fn scenery_needs_emissive_texture(rgba: &[u8]) -> bool {
-    ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD
-}
-
-#[allow(clippy::too_many_arguments)]
-fn cab_or_scenery_material_with_texture(
-    tint: Color,
-    handle: Handle<Image>,
-    rgba_for_luma: &[u8],
-    alpha_mode: AlphaMode,
-    z_bias: f32,
-    lit: bool,
-    shader_name: Option<&str>,
-    solid_color: Option<[f32; 3]>,
-    cab_interior: bool,
-) -> StandardMaterial {
-    let tint = apply_msts_vertex_tint(tint, solid_color, shader_name);
-    let material_lit = if cab_interior {
-        // Bevy 0.18 forward: `unlit` skips PBR lighting; cab needs lit + point lights.
-        true
-    } else {
-        lit
-    };
-    let mut mat = StandardMaterial {
-        base_color: if cab_interior { Color::WHITE } else { tint },
-        base_color_texture: Some(handle),
-        perceptual_roughness: if cab_interior { 0.92 } else { 0.85 },
-        metallic: if cab_interior { 0.0 } else { 0.05 },
-        double_sided: true,
-        cull_mode: None,
-        alpha_mode,
-        depth_bias: z_bias,
-        fog_enabled: false,
-        ..default()
-    };
-    if cab_interior && matches!(alpha_mode, AlphaMode::Opaque) {
-        // OR HalfBright-style ambient fill (no emissive_texture — PBR uses base_color_texture).
-        // Skip on blend/mask glass — emissive washes out transparent cab windows (.dds).
-        mat.emissive = LinearRgba::new(0.22, 0.23, 0.25, 1.0);
-    } else if !material_lit && scenery_needs_emissive_texture(rgba_for_luma) {
-        mat.emissive = SCENERY_DARK_EMISSIVE;
-        mat.emissive_texture = mat.base_color_texture.clone();
-    }
-    finalize_scenery_material(mat, material_lit)
-}
-
-/// OR `TexDiff` / `Tex`: vertex colour × texture albedo.
-pub fn shader_uses_vertex_color_multiply(shader_name: Option<&str>) -> bool {
-    shader_name.is_some_and(|s| {
-        let n = s.to_ascii_lowercase();
-        n.contains("diff") || n == "tex"
-    })
-}
-
-fn apply_msts_vertex_tint(
-    tint: Color,
-    solid_color: Option<[f32; 3]>,
-    shader_name: Option<&str>,
-) -> Color {
-    let Some(rgb) = solid_color else {
-        return tint;
-    };
-    if !shader_uses_vertex_color_multiply(shader_name) {
-        return tint;
-    }
-    let c = tint.to_linear();
-    Color::linear_rgba(c.red * rgb[0], c.green * rgb[1], c.blue * rgb[2], c.alpha)
-}
-
-/// Target mean luma when [`cab_ace_brighten_enabled`] lifts dark cab atlases.
-const CAB_TEXTURE_TARGET_LUMA: f32 = 140.0;
-
-/// Lift dark MSTS cab atlases — opt-in via `OPENRAILSRS_CAB_BRIGHTEN=1` (default off).
-pub fn cab_ace_brighten_enabled() -> bool {
-    matches!(
-        std::env::var("OPENRAILSRS_CAB_BRIGHTEN").ok().as_deref(),
-        Some("1") | Some("true") | Some("on")
-    )
-}
-
-fn brighten_cab_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
-    if !cab_ace_brighten_enabled() {
-        return (rgba.to_vec(), false);
-    }
-    let mean = ace_mean_luma(rgba);
-    if mean >= DARK_TEXTURE_LUMA_THRESHOLD {
-        return (rgba.to_vec(), false);
-    }
-    let scale = (CAB_TEXTURE_TARGET_LUMA / mean.max(1.0)).min(SCENERY_TEXTURE_MAX_PIXEL_SCALE);
-    let mut out = rgba.to_vec();
-    for px in out.chunks_exact_mut(4) {
-        if px[3] < 8 {
-            continue;
-        }
-        px[0] = scale_ace_channel(px[0], scale);
-        px[1] = scale_ace_channel(px[1], scale);
-        px[2] = scale_ace_channel(px[2], scale);
-    }
-    (out, true)
-}
-
-/// Cab / interior albedo multiplier (`OPENRAILSRS_CAB_ALBEDO`, default 1 — raw `.ace`).
-pub fn cab_interior_albedo_boost() -> f32 {
-    std::env::var("OPENRAILSRS_CAB_ALBEDO")
-        .ok()
-        .and_then(|v| v.trim().parse::<f32>().ok())
-        .unwrap_or(1.0)
-        .clamp(1.0, 6.0)
-}
-
-fn cab_albedo_tint(pixel_brightened: bool) -> Color {
-    let boost = cab_interior_albedo_boost();
-    if pixel_brightened && cab_ace_brighten_enabled() {
-        Color::linear_rgb(boost * 0.65, boost * 0.65, boost * 0.65)
-    } else {
-        Color::linear_rgb(boost, boost, boost)
-    }
-}
-
-/// Finalise a scenery material for the active lighting path.
-///
-/// - OR-style ([`or_lighting_enabled`], the default): keep the material lit so the directional
-///   sun shades it and it receives shadows, matching Open Rails' `SceneryShader`.
-/// - Legacy (unlit, opt-in via `OPENRAILSRS_UNLIT_SCENERY=1`): MSTS `.ace` albedo is authored for
-///   fixed-function drawing; drawn `unlit` with a brightness boost, never receiving shadows.
-fn finalize_scenery_material(mut base: StandardMaterial, lit: bool) -> StandardMaterial {
-    if lit {
-        base.unlit = false;
-        base.fog_enabled = true;
-    } else {
-        base.unlit = true;
-        base.fog_enabled = false;
-    }
-    base
-}
+pub use openrailsrs_bevy_scenery::shapes::{
+    DARK_TEXTURE_LUMA_THRESHOLD, LoadedShape, LoadedShapePart, MeshVertexColorMode,
+    MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST, SCENERY_TEXTURE_TARGET_LUMA, ace_mean_luma,
+    alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_z_buf_mode, brighten_cab_ace_rgba,
+    brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
+    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
+    build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
+    cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
+    cab_or_scenery_material_with_texture, closest_lod_level, finalize_scenery_material,
+    legacy_standard_scenery_enabled, light_mat_idx_for_prim_state, lod_level_for_distance,
+    mesh_aabb, mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
+    msts_shape_to_train_rotation, or_lighting_enabled, primary_texture_filename,
+    resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
+    scenery_materials_lit, scenery_uses_or_wgsl_shaders, shader_name_for_prim_state,
+    shader_uses_vertex_color_multiply, shape_alpha_mode, shape_point_to_bevy,
+    shape_shader_requests_blending, texture_for_prim_state, texture_name_suggests_transparency,
+};
+use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
 pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
@@ -593,38 +340,6 @@ impl RouteAssets {
     }
 }
 
-/// Parsed shape geometry plus optional primary texture filename from the shape.
-#[derive(Clone, Debug)]
-pub struct LoadedShape {
-    pub mesh: Mesh,
-    pub texture_file: Option<String>,
-    pub parts: Vec<LoadedShapePart>,
-}
-
-/// One mesh/material slice of a shape, grouped by `prim_state_idx`.
-#[derive(Clone, Debug)]
-pub struct LoadedShapePart {
-    pub prim_state_idx: i32,
-    /// Source `sub_object` index (cab CVF binding); `u32::MAX` when merged across sub-objects.
-    pub sub_object_idx: u32,
-    /// Animated MSTS matrix for cab levers (`sub_object_idx == matrix_idx` convention).
-    pub cab_matrix_idx: Option<usize>,
-    pub mesh: Mesh,
-    pub texture_file: Option<String>,
-    pub shader_name: Option<String>,
-    /// Uniform vertex colour for TexDiff/Tex (MSTS colour × texture).
-    pub solid_color: Option<[f32; 3]>,
-    /// From `prim_state.alpha_test_mode`: -1 = unknown, 0 = opaque, 1 = test, 2 = blend.
-    pub alpha_test_mode: i32,
-    pub z_bias: Option<f32>,
-    pub z_buf_mode: i32,
-    /// OR `vtx_state` light material index (`12 + idx` → HalfBright / FullBright).
-    pub light_mat_idx: Option<i32>,
-    /// Baked mesh AABB (cab CVF proximity filter).
-    pub bounds_center: Option<Vec3>,
-    pub bounds_half_extent: Option<Vec3>,
-}
-
 /// Bevy asset handles for one renderable shape part.
 #[derive(Clone, Debug)]
 pub struct ShapePartAsset {
@@ -643,6 +358,9 @@ pub struct ShapePartAsset {
     pub light_mat_idx: Option<i32>,
     /// MSTS uniform vertex tint when all verts share one colour (TexDiff).
     pub solid_color: Option<[f32; 3]>,
+    pub lever_pivot_at_mesh_center: bool,
+    pub lever_local_axis: Option<Vec3>,
+    pub bounds_center: Option<Vec3>,
 }
 
 /// Bevy asset handles for a shape, including a combined mesh for fitting/bounds.
@@ -651,130 +369,6 @@ pub struct ShapeRenderAsset {
     pub combined_mesh: Handle<Mesh>,
     pub parts: Vec<ShapePartAsset>,
     pub has_texture: bool,
-}
-
-/// Map a shape point from MSTS local space to Bevy (Y up).
-///
-/// Delegates to [`crate::coordinates::shape_point_to_bevy`]; kept as a public
-/// re-export so existing callers in this module and elsewhere don't break.
-pub use crate::coordinates::shape_point_to_bevy;
-
-/// MSTS shape space: +X lateral, +Y up, +Z forward. Train consist local: +X forward.
-pub fn msts_shape_to_train_rotation() -> Quat {
-    Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
-}
-
-/// Axis-aligned bounds of mesh positions (metres, shape local space).
-pub fn mesh_aabb(mesh: &Mesh) -> Option<(Vec3, Vec3)> {
-    let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?;
-    let slice = positions.as_float3()?;
-    let mut min = Vec3::splat(f32::INFINITY);
-    let mut max = Vec3::splat(f32::NEG_INFINITY);
-    for pos in slice {
-        let p = Vec3::from(*pos);
-        min = min.min(p);
-        max = max.max(p);
-    }
-    if min.x.is_finite() {
-        Some((min, max))
-    } else {
-        None
-    }
-}
-
-/// UV bounds for a mesh (`ATTRIBUTE_UV_0`).
-pub fn mesh_uv_aabb(mesh: &Mesh) -> Option<(Vec2, Vec2)> {
-    let uvs = mesh.attribute(Mesh::ATTRIBUTE_UV_0)?;
-    let slice = match uvs {
-        VertexAttributeValues::Float32x2(uvs) => uvs.as_slice(),
-        _ => return None,
-    };
-    let mut min = Vec2::splat(f32::INFINITY);
-    let mut max = Vec2::splat(f32::NEG_INFINITY);
-    for uv in slice {
-        let p = Vec2::from(*uv);
-        min = min.min(p);
-        max = max.max(p);
-    }
-    if min.x.is_finite() {
-        Some((min, max))
-    } else {
-        None
-    }
-}
-
-pub fn mesh_has_uvs(mesh: &Mesh) -> bool {
-    mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_some()
-}
-
-/// True when all UVs collapse to a tiny range (typical broken / missing UV symptom).
-pub fn mesh_uv_degenerate(min: Vec2, max: Vec2) -> bool {
-    (max - min).length() < 1e-4
-}
-
-/// Per-vertex or uniform colour stats for cab diagnostics.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum MeshVertexColorMode {
-    #[default]
-    None,
-    Uniform,
-    Varying,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct MeshVertexColorStats {
-    pub mode: MeshVertexColorMode,
-    pub min: Vec3,
-    pub max: Vec3,
-    pub count: usize,
-}
-
-impl Default for MeshVertexColorStats {
-    fn default() -> Self {
-        Self {
-            mode: MeshVertexColorMode::None,
-            min: Vec3::ZERO,
-            max: Vec3::ZERO,
-            count: 0,
-        }
-    }
-}
-
-pub fn mesh_vertex_color_stats(mesh: &Mesh) -> MeshVertexColorStats {
-    let Some(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR) else {
-        return MeshVertexColorStats::default();
-    };
-    let slice = match colors {
-        VertexAttributeValues::Float32x4(colors) => colors.as_slice(),
-        _ => return MeshVertexColorStats::default(),
-    };
-    if slice.is_empty() {
-        return MeshVertexColorStats::default();
-    }
-    let mut min = Vec3::splat(f32::INFINITY);
-    let mut max = Vec3::splat(f32::NEG_INFINITY);
-    for c in slice {
-        let p = Vec3::new(c[0], c[1], c[2]);
-        min = min.min(p);
-        max = max.max(p);
-    }
-    let first = Vec3::new(slice[0][0], slice[0][1], slice[0][2]);
-    let uniform = slice.iter().all(|c| {
-        colors_close(
-            &[c[0], c[1], c[2], c[3]],
-            &[first.x, first.y, first.z, slice[0][3]],
-        )
-    });
-    MeshVertexColorStats {
-        mode: if uniform {
-            MeshVertexColorMode::Uniform
-        } else {
-            MeshVertexColorMode::Varying
-        },
-        min,
-        max,
-        count: slice.len(),
-    }
 }
 
 fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
@@ -991,157 +585,30 @@ pub fn resolve_vehicle_shape_path(
     resolve_shape_path_in_dirs(shape_dirs, shape_file)
 }
 
-/// Pick the highest-detail distance level (lowest `dlevel_selection` metres).
-pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
-    shape
-        .lod_controls
-        .first()?
-        .distance_levels
-        .iter()
-        .min_by(|a, b| {
-            a.selection_m
-                .partial_cmp(&b.selection_m)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-}
-
-/// LOD level for a camera distance (m): finest level whose `dlevel_selection` ≤ `distance_m`.
-pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
-    let control = shape.lod_controls.first()?;
-    let levels = &control.distance_levels;
-    if levels.is_empty() {
-        return None;
-    }
-    let mut best = levels.iter().min_by(|a, b| {
-        a.selection_m
-            .partial_cmp(&b.selection_m)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    })?;
-    for lvl in levels {
-        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= best.selection_m {
-            best = lvl;
-        }
-    }
-    Some(best)
-}
-
-/// Resolve the first texture referenced by the closest LOD (prim_state → `texture_filenames`).
-pub fn primary_texture_filename(shape: &ShapeFile) -> Option<String> {
-    let level = closest_lod_level(shape)?;
-    for sub in &level.sub_objects {
-        for prim in &sub.primitives {
-            if let Some(texture) = texture_for_prim_state(shape, prim.prim_state_idx) {
-                return Some(texture);
-            }
-        }
-    }
-    shape.texture_filenames.first().cloned()
-}
-
-/// Build a Bevy mesh from a specific distance level.
-pub fn build_mesh_from_shape_lod(shape: &ShapeFile, level: &DistanceLevel) -> Option<Mesh> {
-    let mut buffers = MeshBuffers::default();
-
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-
-    for sub in &level.sub_objects {
-        for prim in &sub.primitives {
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-        }
-    }
-
-    buffers.into_mesh()
-}
-
-/// Build one Bevy mesh per `prim_state_idx` for a specific distance level.
-pub fn build_mesh_parts_from_shape_lod(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-) -> Vec<LoadedShapePart> {
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut parts: BTreeMap<i32, MeshBuffers> = BTreeMap::new();
-
-    for sub in &level.sub_objects {
-        for prim in &sub.primitives {
-            let buffers = parts.entry(prim.prim_state_idx).or_default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                buffers,
-                None,
-                false,
-            );
-        }
-    }
-
-    parts
-        .into_iter()
-        .filter_map(|(prim_state_idx, buffers)| {
-            let (mesh, solid_color) = buffers.into_mesh_with_color()?;
-            let (alpha_test_mode, z_bias, z_buf_mode) = shape
-                .prim_states
-                .get(prim_state_idx.max(0) as usize)
-                .map(|ps| {
-                    (
-                        ps.alpha_test_mode,
-                        ps.z_bias.map(|z| z as f32),
-                        ps.z_buf_mode,
-                    )
-                })
-                .unwrap_or((-1, None, -1));
-            Some(LoadedShapePart {
-                prim_state_idx,
-                sub_object_idx: u32::MAX,
-                cab_matrix_idx: None,
-                mesh,
-                texture_file: texture_for_prim_state(shape, prim_state_idx),
-                shader_name: shader_name_for_prim_state(shape, prim_state_idx),
-                solid_color,
-                alpha_test_mode,
-                z_bias,
-                z_buf_mode,
-                light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
-                bounds_center: None,
-                bounds_half_extent: None,
-            })
-        })
-        .collect()
-}
-
-/// Cab interior: one part per (`sub_object`, `prim_state`); animated matrix bones omit leaf from bake.
+/// Cab interior: one part per (`sub_object`, `prim_state`); lever matrix bones omit leaf from bake.
 pub fn build_mesh_parts_from_shape_lod_cab(
     shape: &ShapeFile,
     level: &DistanceLevel,
-    cab_driver_matrices: &HashSet<usize>,
-    omit_leaf_matrices: &HashSet<usize>,
+    lever_matrices: &HashSet<usize>,
 ) -> Vec<LoadedShapePart> {
     let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
         x: 0.0,
         y: 1.0,
         z: 0.0,
     });
-    let exclusive_throttle =
-        pick_exclusive_controller_base_throttle(shape, level, omit_leaf_matrices);
+    let exclusive_throttle = pick_exclusive_controller_base_throttle(shape, level, lever_matrices);
+    let exclusive_brake_wheel = pick_exclusive_brake_wheel(shape, level, lever_matrices);
+    let exclusive_brake_lever_m9 =
+        pick_exclusive_controls_lever(shape, level, lever_matrices, 9, 0.15);
+    let exclusive_brake_lever_m10 = pick_exclusive_controls_lever_excluding(
+        shape,
+        level,
+        lever_matrices,
+        10,
+        0.15,
+        &exclusive_brake_lever_m9,
+    );
+    let exclusive_direction = pick_exclusive_direction_lever(shape, level, lever_matrices);
     let mut parts = Vec::new();
 
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
@@ -1164,14 +631,35 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 sub,
                 prim.prim_state_idx,
                 prim_ord,
-                cab_driver_matrices,
-                omit_leaf_matrices,
+                lever_matrices,
                 bounds_center,
                 bounds_half_extent,
                 &exclusive_throttle,
+                &exclusive_brake_wheel,
+                &exclusive_brake_lever_m9,
+                &exclusive_brake_lever_m10,
+                &exclusive_direction,
             );
-            let chain_start = cab_matrix_idx.map(|i| i as i32);
-            let rebase_bone = cab_matrix_idx.is_some_and(|idx| omit_leaf_matrices.contains(&idx));
+            let matrix_needs_rebase =
+                cab_matrix_idx.is_some_and(|idx| lever_matrices.contains(&idx));
+            let lever_pivot_at_mesh_center = cab_matrix_idx.is_some_and(|_| {
+                matrix_needs_rebase
+                    && texture_for_prim_state(shape, prim.prim_state_idx)
+                        .is_some_and(|t| t.to_ascii_lowercase().contains("brake_wheel"))
+            });
+            let lever_local_axis = cab_lever_local_axis(shape, prim.prim_state_idx, cab_matrix_idx);
+            let lever_bone = cab_matrix_idx.and_then(|idx| {
+                if !matrix_needs_rebase {
+                    return None;
+                }
+                shape.matrices.get(idx).map(|m| {
+                    let mut bone = matrix43_to_transform(&m.matrix);
+                    if lever_pivot_at_mesh_center {
+                        bone.translation = bounds_center;
+                    }
+                    bone
+                })
+            });
 
             let mut buffers = MeshBuffers::default();
             append_primitive_mesh_buffers(
@@ -1181,13 +669,12 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 prim,
                 default_normal,
                 &mut buffers,
-                chain_start,
+                None,
                 false,
             );
-            if let Some(matrix_idx) = cab_matrix_idx.filter(|_| rebase_bone) {
-                let bone = static_hierarchy_chain_transform(shape, matrix_idx);
-                rebase_points_to_bone_local(&mut buffers.positions, bone);
-                rebase_vectors_to_bone_local(&mut buffers.normals, bone);
+            if let Some(bone) = lever_bone.as_ref() {
+                rebase_points_to_bone_local(&mut buffers.positions, *bone);
+                rebase_vectors_to_bone_local(&mut buffers.normals, *bone);
             }
             let (mesh, solid_color) = match buffers.into_mesh_with_color() {
                 Some(v) => v,
@@ -1219,6 +706,8 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
                 bounds_center: Some(bounds_center),
                 bounds_half_extent: Some(bounds_half_extent),
+                lever_pivot_at_mesh_center,
+                lever_local_axis,
             });
         }
     }
@@ -1227,6 +716,9 @@ pub fn build_mesh_parts_from_shape_lod_cab(
 }
 
 /// CVF matrix for one cab primitive (texture + dedicated sub_object heuristics).
+///
+/// Only **lever** bones (M4/M8/M9/M10 on Pullman) are bound to 3D meshes. Gauges,
+/// horn and wipers are drawn by the CVF 2D overlay ([`crate::cab_cvf_overlay`]).
 #[allow(clippy::too_many_arguments)]
 pub fn cab_matrix_for_prim(
     shape: &ShapeFile,
@@ -1234,38 +726,49 @@ pub fn cab_matrix_for_prim(
     sub: &openrailsrs_formats::SubObject,
     prim_state_idx: i32,
     prim_ord: usize,
-    driver_matrices: &HashSet<usize>,
     lever_matrices: &HashSet<usize>,
-    bounds_center: Vec3,
-    bounds_half_extent: Vec3,
+    _bounds_center: Vec3,
+    _bounds_half_extent: Vec3,
     exclusive_throttle: &HashSet<(usize, usize)>,
+    exclusive_brake_wheel: &HashSet<(usize, usize)>,
+    exclusive_brake_lever_m9: &HashSet<(usize, usize)>,
+    exclusive_brake_lever_m10: &HashSet<(usize, usize)>,
+    exclusive_direction: &HashSet<(usize, usize)>,
 ) -> Option<usize> {
     let tex = texture_for_prim_state(shape, prim_state_idx)
         .unwrap_or_default()
         .to_ascii_lowercase();
 
-    // Brake wheel mesh only — must sit near TRAIN_BRAKE matrix pivot.
+    // 3D brake handwheel on the right — same TRAIN_BRAKE value, pivot at mesh center.
     if tex.contains("brake_wheel") {
-        return lever_matrices
-            .iter()
-            .copied()
-            .filter(|&idx| idx == 9 || idx == 10)
-            .filter(|&idx| {
-                cab_part_near_matrix(shape, idx, bounds_center, bounds_half_extent, 0.35, 0.02)
-            })
-            .min_by(|&a, &b| {
-                let da = bounds_center.distance(matrix_pivot_bevy(shape, a).unwrap_or(Vec3::ZERO));
-                let db = bounds_center.distance(matrix_pivot_bevy(shape, b).unwrap_or(Vec3::ZERO));
-                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-            });
+        if exclusive_brake_wheel.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&9) {
+            return Some(9);
+        }
+        return None;
+    }
+
+    // Left train-brake lever plate (CVF `BrakeHandle` analogue).
+    if tex.contains("controls.ace") && !tex.contains("controls2") {
+        if exclusive_brake_lever_m9.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&9) {
+            return Some(9);
+        }
+        if exclusive_brake_lever_m10.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&10)
+        {
+            return Some(10);
+        }
+        return None;
+    }
+
+    // Reverser / direction lever (vertical switch panel near DIRECTION pivot).
+    if tex.contains("switch panel") {
+        if exclusive_direction.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&4) {
+            return Some(4);
+        }
+        return None;
     }
 
     // Controller_base — only the largest regulator wheel near THROTTLE pivot.
     if tex.contains("controller_base") {
-        if sub_idx == 4 && lever_matrices.contains(&4) {
-            return cab_part_near_matrix(shape, 4, bounds_center, bounds_half_extent, 0.35, 0.015)
-                .then_some(4);
-        }
         if lever_matrices.contains(&8) && exclusive_throttle.contains(&(sub_idx, prim_ord)) {
             return Some(8);
         }
@@ -1279,23 +782,35 @@ pub fn cab_matrix_for_prim(
         && sub_idx < shape.matrices.len()
         && lever_matrices.contains(&sub_idx)
     {
-        // Pullman sub8 Controls.ace is a vertical plate, not the regulator wheel.
         if sub_idx == 8 && tex.contains("controls") {
             return None;
         }
         return Some(sub_idx);
     }
 
-    // Multi-state gauge needles etc. (visibility, not rotation).
-    if sub.vertices.len() <= DEDICATED_MAX_VERTS
-        && sub.primitives.len() == 1
-        && sub_idx < shape.matrices.len()
-        && driver_matrices.contains(&sub_idx)
-        && !lever_matrices.contains(&sub_idx)
-    {
-        return Some(sub_idx);
-    }
+    None
+}
 
+fn cab_lever_local_axis(
+    shape: &ShapeFile,
+    prim_state_idx: i32,
+    cab_matrix_idx: Option<usize>,
+) -> Option<Vec3> {
+    let tex = texture_for_prim_state(shape, prim_state_idx)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if tex.contains("brake_wheel") {
+        return Some(Vec3::Y);
+    }
+    if tex.contains("switch panel") {
+        return Some(Vec3::X);
+    }
+    if tex.contains("controls.ace") && !tex.contains("controls2") {
+        return Some(Vec3::X);
+    }
+    if cab_matrix_idx == Some(8) {
+        return Some(Vec3::Y);
+    }
     None
 }
 
@@ -1365,354 +880,215 @@ fn pick_exclusive_controller_base_throttle(
         .unwrap_or_default()
 }
 
+/// Pick the largest `Brake_wheel` mesh (3D handwheel on the right).
+fn pick_exclusive_brake_wheel(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    lever_matrices: &HashSet<usize>,
+) -> HashSet<(usize, usize)> {
+    if !lever_matrices.contains(&9) {
+        return HashSet::new();
+    }
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let mut best: Option<(usize, usize, f32)> = None;
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !tex.contains("brake_wheel") {
+                continue;
+            }
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (_, half) = mesh_buffers_bounds(&buffers);
+            let radius = half.max_element();
+            if radius < 0.05 {
+                continue;
+            }
+            if best.as_ref().is_none_or(|(_, _, r)| radius > *r) {
+                best = Some((sub_idx, prim_ord, radius));
+            }
+        }
+    }
+    best.map(|(s, p, _)| HashSet::from([(s, p)]))
+        .unwrap_or_default()
+}
+
+/// Pick the single `Controls.ace` lever plate nearest a TRAIN_BRAKE matrix pivot.
+fn pick_exclusive_controls_lever(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    lever_matrices: &HashSet<usize>,
+    matrix_idx: usize,
+    max_dist: f32,
+) -> HashSet<(usize, usize)> {
+    if !lever_matrices.contains(&matrix_idx) {
+        return HashSet::new();
+    }
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let mut best: Option<(usize, usize, f32)> = None;
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !tex.contains("controls.ace") || tex.contains("controls2") {
+                continue;
+            }
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (center, half) = mesh_buffers_bounds(&buffers);
+            if !cab_part_near_matrix(shape, matrix_idx, center, half, max_dist, 0.04) {
+                continue;
+            }
+            let dist = center.distance(matrix_pivot_bevy(shape, matrix_idx).unwrap_or(Vec3::ZERO));
+            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
+                best = Some((sub_idx, prim_ord, dist));
+            }
+        }
+    }
+    best.map(|(s, p, _)| HashSet::from([(s, p)]))
+        .unwrap_or_default()
+}
+
+/// Like [`pick_exclusive_controls_lever`] but skips prims already claimed by another matrix.
+fn pick_exclusive_controls_lever_excluding(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    lever_matrices: &HashSet<usize>,
+    matrix_idx: usize,
+    max_dist: f32,
+    exclude: &HashSet<(usize, usize)>,
+) -> HashSet<(usize, usize)> {
+    if !lever_matrices.contains(&matrix_idx) {
+        return HashSet::new();
+    }
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let mut best: Option<(usize, usize, f32)> = None;
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            if exclude.contains(&(sub_idx, prim_ord)) {
+                continue;
+            }
+            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !tex.contains("controls.ace") || tex.contains("controls2") {
+                continue;
+            }
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (center, half) = mesh_buffers_bounds(&buffers);
+            if !cab_part_near_matrix(shape, matrix_idx, center, half, max_dist, 0.04) {
+                continue;
+            }
+            let dist = center.distance(matrix_pivot_bevy(shape, matrix_idx).unwrap_or(Vec3::ZERO));
+            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
+                best = Some((sub_idx, prim_ord, dist));
+            }
+        }
+    }
+    best.map(|(s, p, _)| HashSet::from([(s, p)]))
+        .unwrap_or_default()
+}
+
+/// Pick the switch-panel mesh nearest the DIRECTION matrix pivot (reverser lever).
+fn pick_exclusive_direction_lever(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    lever_matrices: &HashSet<usize>,
+) -> HashSet<(usize, usize)> {
+    if !lever_matrices.contains(&4) {
+        return HashSet::new();
+    }
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    let mut best: Option<(usize, usize, f32)> = None;
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !tex.contains("switch panel") {
+                continue;
+            }
+            let mut buffers = MeshBuffers::default();
+            append_primitive_mesh_buffers(
+                shape,
+                level,
+                sub,
+                prim,
+                default_normal,
+                &mut buffers,
+                None,
+                false,
+            );
+            let (center, half) = mesh_buffers_bounds(&buffers);
+            if !cab_part_near_matrix(shape, 4, center, half, 0.45, 0.05) {
+                continue;
+            }
+            let dist = center.distance(matrix_pivot_bevy(shape, 4).unwrap_or(Vec3::ZERO));
+            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
+                best = Some((sub_idx, prim_ord, dist));
+            }
+        }
+    }
+    best.map(|(s, p, _)| HashSet::from([(s, p)]))
+        .unwrap_or_default()
+}
+
 pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {
     shape.matrices.get(matrix_idx).map(|m| {
         let r = &m.matrix.rows[3];
-        crate::coordinates::shape_point_to_bevy(openrailsrs_formats::Vec3 {
+        openrailsrs_bevy_scenery::shapes::shape_point_to_bevy(openrailsrs_formats::Vec3 {
             x: r[0],
             y: r[1],
             z: r[2],
         })
     })
-}
-
-fn mesh_buffers_bounds(buffers: &MeshBuffers) -> (Vec3, Vec3) {
-    if buffers.positions.is_empty() {
-        return (Vec3::ZERO, Vec3::ZERO);
-    }
-    let mut min = Vec3::splat(f32::INFINITY);
-    let mut max = Vec3::splat(f32::NEG_INFINITY);
-    for p in &buffers.positions {
-        min = min.min(*p);
-        max = max.max(*p);
-    }
-    ((min + max) * 0.5, (max - min) * 0.5)
-}
-
-/// Legacy helper — prefer [`cab_matrix_for_prim`].
-pub fn cab_matrix_for_sub_object(
-    shape: &ShapeFile,
-    sub_idx: usize,
-    sub: &openrailsrs_formats::SubObject,
-    animated_matrices: &HashSet<usize>,
-) -> Option<usize> {
-    let _ = shape;
-    if sub.vertices.len() > 500 || sub.primitives.len() != 1 {
-        return None;
-    }
-    if sub_idx < 18 && animated_matrices.contains(&sub_idx) {
-        Some(sub_idx)
-    } else {
-        None
-    }
-}
-
-#[derive(Default)]
-struct MeshBuffers {
-    positions: Vec<Vec3>,
-    normals: Vec<Vec3>,
-    uvs: Vec<Vec2>,
-    colors: Vec<[f32; 4]>,
-}
-
-impl MeshBuffers {
-    fn into_mesh(self) -> Option<Mesh> {
-        self.into_mesh_with_color().map(|(m, _)| m)
-    }
-
-    fn into_mesh_with_color(self) -> Option<(Mesh, Option<[f32; 3]>)> {
-        if self.positions.is_empty() {
-            return None;
-        }
-
-        let (vertex_colors, solid_color) = part_vertex_colors(&self.colors);
-        let mut mesh = Mesh::new(
-            PrimitiveTopology::TriangleList,
-            RenderAssetUsages::default(),
-        );
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
-        if let Some(colors) = vertex_colors {
-            mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-        }
-        Some((mesh, solid_color))
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn append_primitive_mesh_buffers(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    sub: &openrailsrs_formats::SubObject,
-    prim: &openrailsrs_formats::Primitive,
-    default_normal: ShapeVec3,
-    buffers: &mut MeshBuffers,
-    chain_start: Option<i32>,
-    omit_leaf_matrix: bool,
-) {
-    let start = chain_start.unwrap_or_else(|| {
-        shape
-            .prim_states
-            .get(prim.prim_state_idx.max(0) as usize)
-            .and_then(|ps| shape.vtx_states.get(ps.vertex_state_idx.max(0) as usize))
-            .map(|vs| vs.matrix_idx)
-            .unwrap_or(0)
-    });
-    let matrix_chain = primitive_matrix_chain_bake(shape, level, start, omit_leaf_matrix);
-    for tri in prim.vertex_indices.chunks(3) {
-        if tri.len() < 3 {
-            continue;
-        }
-        for &vertex_idx in tri {
-            let Some((point_idx, normal_idx, uv_idx, vertex_color)) =
-                resolve_shape_vertex(shape, sub, vertex_idx)
-            else {
-                continue;
-            };
-            let Some(point) = shape.points.get(point_idx) else {
-                continue;
-            };
-            buffers.positions.push(transform_shape_point(
-                shape_point_to_bevy(*point),
-                &matrix_chain,
-            ));
-            let normal = normal_idx
-                .and_then(|idx| shape.normals.get(idx).copied())
-                .unwrap_or(default_normal);
-            buffers.normals.push(transform_shape_normal(
-                shape_point_to_bevy(normal),
-                &matrix_chain,
-            ));
-            let uv = uv_idx
-                .and_then(|idx| shape.uvs.get(idx).copied())
-                .unwrap_or_default();
-            // MSTS UV origin differs from Bevy; flip V for textured quads.
-            buffers.uvs.push(Vec2::new(uv.u as f32, 1.0 - uv.v as f32));
-            buffers.colors.push(vertex_color);
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-struct ShapeMatrixRef<'a> {
-    matrix: &'a Matrix43,
-    zero_translation: bool,
-}
-
-fn primitive_matrix_chain_bake<'a>(
-    shape: &'a ShapeFile,
-    level: &DistanceLevel,
-    chain_start: i32,
-    omit_leaf_matrix: bool,
-) -> Vec<ShapeMatrixRef<'a>> {
-    let mut out = Vec::new();
-    let mut matrix_idx = chain_start;
-    let mut guard = 0usize;
-    while matrix_idx >= 0 && guard < shape.matrices.len() {
-        let idx = matrix_idx as usize;
-        let Some(matrix) = shape.matrices.get(idx) else {
-            break;
-        };
-        out.push(ShapeMatrixRef {
-            matrix: &matrix.matrix,
-            zero_translation: idx == 0 && level.hierarchy.first().copied() == Some(-1),
-        });
-        matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
-        guard += 1;
-    }
-    if omit_leaf_matrix && !out.is_empty() {
-        out.remove(0);
-    }
-    out
-}
-
-// matrix43_transform_point_xna and matrix43_transform_vector_xna are imported from
-// crate::coordinates at the top of this file.
-
-fn transform_shape_point(mut point: Vec3, matrices: &[ShapeMatrixRef<'_>]) -> Vec3 {
-    for matrix in matrices {
-        point = matrix43_transform_point_xna(matrix.matrix, point, matrix.zero_translation);
-    }
-    point
-}
-
-fn transform_shape_normal(mut normal: Vec3, matrices: &[ShapeMatrixRef<'_>]) -> Vec3 {
-    for matrix in matrices {
-        normal = matrix43_transform_vector_xna(matrix.matrix, normal);
-    }
-    normal.try_normalize().unwrap_or(Vec3::Y)
-}
-
-fn texture_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    shape
-        .texture_for_prim_state_idx(prim_state_idx)
-        .or_else(|| fallback_shape_texture(shape, prim_state_idx))
-}
-
-/// Heurísticas cuando el `prim_state` no declara `tex_idxs` (paridad OR + render3d).
-fn fallback_shape_texture(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    if shape.texture_filenames.is_empty() {
-        return None;
-    }
-    if shape.texture_filenames.len() == 1 {
-        return shape.texture_filenames.first().cloned();
-    }
-    for (i, other) in shape.prim_states.iter().enumerate() {
-        if i as i32 == prim_state_idx {
-            continue;
-        }
-        let tex_slot = other
-            .tex_indices
-            .first()
-            .copied()
-            .unwrap_or(other.texture_idx);
-        if let Some(name) = shape.resolve_texture_for_tex_slot(tex_slot) {
-            return Some(name);
-        }
-    }
-    let ps = shape.prim_states.get(prim_state_idx.max(0) as usize);
-    if ps.is_some_and(|ps| shader_requests_texture(shape, ps)) {
-        return shape
-            .primary_texture_filename()
-            .or_else(|| shape.texture_filenames.first().cloned());
-    }
-    None
-}
-
-fn shader_requests_texture(shape: &ShapeFile, ps: &openrailsrs_formats::PrimState) -> bool {
-    shape
-        .shader_names
-        .get(ps.shader_idx.max(0) as usize)
-        .is_some_and(|name| {
-            let n = name.to_ascii_lowercase();
-            matches!(
-                n.as_str(),
-                "tex" | "texdiff" | "blendatex" | "blendatexdiff" | "addatex" | "addatexdiff"
-            ) || n.contains("tex")
-                || n.contains("blend")
-        })
-}
-
-fn light_mat_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<i32> {
-    let ps = shape.prim_states.get(prim_state_idx.max(0) as usize)?;
-    if ps.vertex_state_idx < 0 {
-        return None;
-    }
-    shape
-        .vtx_states
-        .get(ps.vertex_state_idx as usize)
-        .map(|vs| vs.lighting_model)
-}
-
-fn shader_name_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    if prim_state_idx < 0 {
-        return None;
-    }
-    let ps = shape.prim_states.get(prim_state_idx as usize)?;
-    if ps.shader_idx < 0 {
-        return None;
-    }
-    shape.shader_names.get(ps.shader_idx as usize).cloned()
-}
-
-#[allow(clippy::type_complexity)]
-fn resolve_shape_vertex(
-    shape: &ShapeFile,
-    sub: &openrailsrs_formats::SubObject,
-    vertex_idx: u32,
-) -> Option<(usize, Option<usize>, Option<usize>, [f32; 4])> {
-    if let Some(vertex) = sub.vertices.get(vertex_idx as usize) {
-        return Some((
-            index_to_usize(vertex.point_idx)?,
-            index_to_usize(vertex.normal_idx),
-            vertex
-                .uv_indices
-                .first()
-                .and_then(|idx| index_to_usize(*idx)),
-            vertex
-                .color1
-                .map(rgba_u8_to_f32)
-                .unwrap_or([1.0, 1.0, 1.0, 1.0]),
-        ));
-    }
-
-    // Older ASCII fixtures can use `vertex_idxs` directly against points.
-    let idx = vertex_idx as usize;
-    if idx < shape.points.len() {
-        return Some((idx, Some(idx), Some(idx), [1.0, 1.0, 1.0, 1.0]));
-    }
-
-    None
-}
-
-fn rgba_u8_to_f32([r, g, b, a]: [u8; 4]) -> [f32; 4] {
-    [
-        r as f32 / 255.0,
-        g as f32 / 255.0,
-        b as f32 / 255.0,
-        a as f32 / 255.0,
-    ]
-}
-
-fn part_vertex_colors(colors: &[[f32; 4]]) -> (Option<Vec<[f32; 4]>>, Option<[f32; 3]>) {
-    if colors.is_empty() || !colors.iter().any(color_is_meaningful) {
-        return (None, None);
-    }
-    let first = colors[0];
-    let uniform = colors.iter().all(|c| colors_close(c, &first));
-    if uniform {
-        return (None, Some([first[0], first[1], first[2]]));
-    }
-    (Some(colors.to_vec()), None)
-}
-
-fn color_is_meaningful(c: &[f32; 4]) -> bool {
-    (c[0] - 1.0).abs() > 0.02 || (c[1] - 1.0).abs() > 0.02 || (c[2] - 1.0).abs() > 0.02
-}
-
-fn colors_close(a: &[f32; 4], b: &[f32; 4]) -> bool {
-    (a[0] - b[0]).abs() < 0.02
-        && (a[1] - b[1]).abs() < 0.02
-        && (a[2] - b[2]).abs() < 0.02
-        && (a[3] - b[3]).abs() < 0.05
-}
-
-fn index_to_usize(idx: i32) -> Option<usize> {
-    (idx >= 0).then_some(idx as usize)
-}
-
-/// Build a Bevy mesh from the closest LOD of a parsed shape.
-pub fn build_mesh_from_shape(shape: &ShapeFile) -> Option<Mesh> {
-    let level = closest_lod_level(shape)?;
-    build_mesh_from_shape_lod(shape, level)
-}
-
-/// Build one Bevy mesh per `prim_state_idx` from the closest LOD.
-pub fn build_mesh_parts_from_shape(shape: &ShapeFile) -> Vec<LoadedShapePart> {
-    let Some(level) = closest_lod_level(shape) else {
-        return Vec::new();
-    };
-    build_mesh_parts_from_shape_lod(shape, level)
-}
-
-/// Build mesh choosing LOD from camera distance (m) to the shape origin.
-pub fn build_mesh_from_shape_at_distance(shape: &ShapeFile, distance_m: f32) -> Option<Mesh> {
-    let level = lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))?;
-    build_mesh_from_shape_lod(shape, level)
-}
-
-/// Build mesh parts choosing LOD from camera distance (m) to the shape origin.
-pub fn build_mesh_parts_from_shape_at_distance(
-    shape: &ShapeFile,
-    distance_m: f32,
-) -> Vec<LoadedShapePart> {
-    let Some(level) =
-        lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))
-    else {
-        return Vec::new();
-    };
-    build_mesh_parts_from_shape_lod(shape, level)
 }
 
 /// Convert decoded ACE mip 0 (RGBA8) into a Bevy GPU image (raw mip0, no brightening).
@@ -1986,37 +1362,59 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
 }
 
 /// Scan `SHAPES/` under each asset root once and map lowercase filename → path.
+///
+/// Recurses into nested subfolders (common in GLOBAL packs) and indexes every `.s` file.
 pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
     let mut index = HashMap::new();
     for dir in dirs {
         for subdir in ["SHAPES", "shapes"] {
-            let shapes_dir = dir.join(subdir);
-            if !shapes_dir.is_dir() {
-                continue;
-            }
-            let Ok(read_dir) = std::fs::read_dir(&shapes_dir) else {
-                continue;
-            };
-            for entry in read_dir.flatten() {
-                let path = entry.path();
-                if !path.is_file() {
-                    continue;
-                }
-                if !path
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("s"))
-                {
-                    continue;
-                }
-                if let Some(name) = path.file_name() {
-                    index
-                        .entry(name.to_string_lossy().to_ascii_lowercase())
-                        .or_insert(path);
-                }
-            }
+            index_shapes_tree(&mut index, &dir.join(subdir));
         }
+        index_shapes_tree(&mut index, dir);
     }
     index
+}
+
+fn index_shapes_tree(index: &mut HashMap<String, PathBuf>, root: &Path) {
+    if !root.is_dir() {
+        return;
+    }
+    let Ok(read_dir) = std::fs::read_dir(root) else {
+        return;
+    };
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            index_shapes_tree(index, &path);
+            continue;
+        }
+        if !path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("s"))
+        {
+            continue;
+        }
+        if let Some(name) = path.file_name() {
+            index
+                .entry(name.to_string_lossy().to_ascii_lowercase())
+                .or_insert(path);
+        }
+    }
+}
+
+/// Resolve using the pre-built index first, then fall back to per-directory search.
+pub fn resolve_shape_path_with_index(
+    index: &HashMap<String, PathBuf>,
+    dirs: &[&Path],
+    file_name: &str,
+) -> Option<PathBuf> {
+    let base = shape_file_basename(file_name);
+    if let Some(path) = index.get(&base.to_ascii_lowercase()) {
+        if path.is_file() {
+            return Some(path.clone());
+        }
+    }
+    resolve_shape_path_in_dirs(dirs, file_name)
 }
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
@@ -2161,15 +1559,9 @@ pub fn load_cab_interior_render_asset_from_path(
     or_materials: &mut Assets<crate::or_cab_material::OrCabMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
-    animated_leaf_matrices: &HashSet<usize>,
-    omit_leaf_matrices: &HashSet<usize>,
+    lever_matrices: &HashSet<usize>,
 ) -> Option<ShapeRenderAsset> {
-    let loaded = load_cab_shape_from_path(
-        shape_path,
-        camera_distance_m,
-        animated_leaf_matrices,
-        omit_leaf_matrices,
-    )?;
+    let loaded = load_cab_shape_from_path(shape_path, camera_distance_m, lever_matrices)?;
     Some(shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
@@ -2239,6 +1631,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             None,
             -1, // no prim_state for combined fallback
             None,
+            -1,
             images,
             materials,
             or_materials.as_deref_mut(),
@@ -2264,6 +1657,9 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             shader_name: None,
             light_mat_idx: None,
             solid_color: None,
+            lever_pivot_at_mesh_center: false,
+            lever_local_axis: None,
+            bounds_center: None,
         });
     }
     for part in loaded.parts {
@@ -2273,6 +1669,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             part.shader_name.as_deref(),
             part.alpha_test_mode,
             part.z_bias,
+            part.z_buf_mode,
             images,
             materials,
             or_materials.as_deref_mut(),
@@ -2298,6 +1695,9 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             shader_name: part.shader_name.clone(),
             light_mat_idx: part.light_mat_idx,
             solid_color: part.solid_color,
+            lever_pivot_at_mesh_center: part.lever_pivot_at_mesh_center,
+            lever_local_axis: part.lever_local_axis,
+            bounds_center: part.bounds_center,
         });
     }
 
@@ -2339,6 +1739,7 @@ fn finish_shape_textured_part(
     alpha_mode: AlphaMode,
     is_transparent: bool,
     z_bias: f32,
+    z_buf_mode: i32,
     lit: bool,
     shader_name: Option<&str>,
     solid_color: Option<[f32; 3]>,
@@ -2364,7 +1765,7 @@ fn finish_shape_textured_part(
             shader_name,
             light_mat_idx,
         );
-        let placeholder = materials.add(StandardMaterial {
+        let mut placeholder = StandardMaterial {
             base_color: Color::WHITE,
             unlit: true,
             double_sided: true,
@@ -2373,10 +1774,12 @@ fn finish_shape_textured_part(
             depth_bias: z_bias,
             fog_enabled: false,
             ..default()
-        });
+        };
+        apply_z_buf_mode(&mut placeholder, z_buf_mode);
+        let placeholder = materials.add(placeholder);
         return (placeholder, Some(or_mat), true, is_transparent);
     }
-    let material = materials.add(cab_or_scenery_material_with_texture(
+    let mut mat = cab_or_scenery_material_with_texture(
         tint,
         handle,
         rgba_for_luma,
@@ -2386,7 +1789,9 @@ fn finish_shape_textured_part(
         shader_name,
         solid_color,
         cab_interior,
-    ));
+    );
+    apply_z_buf_mode(&mut mat, z_buf_mode);
+    let material = materials.add(mat);
     (material, None, true, is_transparent)
 }
 
@@ -2433,6 +1838,7 @@ fn material_for_shape_texture(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
     z_bias: Option<f32>,
+    z_buf_mode: i32,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
@@ -2449,7 +1855,7 @@ fn material_for_shape_texture(
     bool,
     bool,
 ) {
-    let lit = lit_override.unwrap_or_else(or_lighting_enabled);
+    let lit = lit_override.unwrap_or_else(scenery_materials_lit);
     if let Some(tex_name) = texture_file {
         match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             None => {}
@@ -2498,6 +1904,7 @@ fn material_for_shape_texture(
                                 alpha_mode,
                                 is_transparent,
                                 z_bias.unwrap_or(0.0),
+                                z_buf_mode,
                                 lit,
                                 shader_name,
                                 solid_color,
@@ -2558,6 +1965,7 @@ fn material_for_shape_texture(
                         alpha_mode,
                         is_transparent,
                         z_bias.unwrap_or(0.0),
+                        z_buf_mode,
                         lit,
                         shader_name,
                         solid_color,
@@ -2577,18 +1985,17 @@ fn material_for_shape_texture(
     } else {
         LinearRgba::from(fallback_color) * 0.35
     };
-    let material = materials.add(finalize_scenery_material(
-        StandardMaterial {
-            base_color: fallback_color,
-            emissive: fallback_emissive,
-            perceptual_roughness: 0.75,
-            metallic: 0.1,
-            double_sided: true,
-            depth_bias: z_bias.unwrap_or(0.0),
-            ..default()
-        },
-        lit,
-    ));
+    let mut fallback_mat = StandardMaterial {
+        base_color: fallback_color,
+        emissive: fallback_emissive,
+        perceptual_roughness: 0.75,
+        metallic: 0.1,
+        double_sided: true,
+        depth_bias: z_bias.unwrap_or(0.0),
+        ..default()
+    };
+    apply_z_buf_mode(&mut fallback_mat, z_buf_mode);
+    let material = materials.add(finalize_scenery_material(fallback_mat, lit));
     (material, None, false, false)
 }
 
@@ -2682,46 +2089,6 @@ fn cab_shape_alpha_mode_with_stats(
     }
 }
 
-/// Determine the Bevy [`AlphaMode`] for a texture+shader combination.
-///
-/// Priority order:
-/// 1. `prim_state.alpha_test_mode` when explicitly set (0 = opaque, 1 = test, 2 = blend).
-/// 2. Texture pixel analysis (semi-transparent pixels → blend, alpha-only → mask).
-/// 3. Shader name / texture name heuristics.
-pub fn alpha_mode_from_prim_state(
-    ace: &AceFile,
-    texture_file: &str,
-    shader_name: Option<&str>,
-    alpha_test_mode: i32,
-) -> AlphaMode {
-    // Honour the explicit prim_state flag first.
-    match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
-        2 => return AlphaMode::Blend,
-        _ => {}
-    }
-    // Fall back to the per-texture heuristic.
-    shape_alpha_mode(ace, texture_file, shader_name)
-}
-
-fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
-    let alpha = shape_alpha_stats(ace);
-    if !alpha.has_any {
-        return AlphaMode::Opaque;
-    }
-
-    if alpha.has_semitransparent
-        && shader_name
-            .map(shape_shader_requests_blending)
-            .unwrap_or_else(|| texture_name_suggests_transparency(texture_file))
-    {
-        AlphaMode::Blend
-    } else {
-        AlphaMode::Mask(0.5)
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ShapeAlphaStats {
     has_any: bool,
@@ -2745,34 +2112,18 @@ fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
     stats
 }
 
-fn texture_name_suggests_transparency(file_name: &str) -> bool {
-    let lower = file_name.to_ascii_lowercase();
-    ["glass", "window", "alpha", "trans", "transp"]
-        .iter()
-        .any(|needle| lower.contains(needle))
-}
-
-fn shape_shader_requests_blending(shader_name: &str) -> bool {
-    matches!(
-        shader_name,
-        "BlendATex" | "BlendATexDiff" | "AddATex" | "AddATexDiff"
-    )
-}
-
 /// Load cab interior shape; lever matrix indices omit leaf bone from vertex bake (CVF anim).
 pub fn load_cab_shape_from_path(
     path: &Path,
     camera_distance_m: Option<f32>,
-    cab_driver_matrices: &HashSet<usize>,
-    omit_leaf_matrices: &HashSet<usize>,
+    lever_matrices: &HashSet<usize>,
 ) -> Option<LoadedShape> {
     let shape = ShapeFile::from_path(path).ok()?;
     let level = match camera_distance_m {
         Some(d) => lod_level_for_distance(&shape, d).or_else(|| closest_lod_level(&shape))?,
         None => closest_lod_level(&shape)?,
     };
-    let parts =
-        build_mesh_parts_from_shape_lod_cab(&shape, level, cab_driver_matrices, omit_leaf_matrices);
+    let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, lever_matrices);
     let mesh = build_mesh_from_shape_lod(&shape, level)?;
     let texture_file = primary_texture_filename(&shape);
     Some(LoadedShape {
@@ -3154,6 +2505,7 @@ mod tests {
                 Some("BlendATexDiff"),
                 -1, // no explicit alpha_test_mode → heuristic path
                 None,
+                -1,
                 &mut images,
                 &mut materials,
                 None,
@@ -3241,6 +2593,7 @@ mod tests {
                 Some("TexDiff"),
                 -1, // no explicit alpha_test_mode → heuristic path
                 None,
+                -1,
                 &mut images,
                 &mut materials,
                 None,
@@ -3398,7 +2751,6 @@ mod tests {
             &mut or_materials,
             &mut texture_cache,
             Color::srgb(0.35, 0.38, 0.42),
-            &HashSet::new(),
             &HashSet::new(),
         )
         .expect("cab asset");

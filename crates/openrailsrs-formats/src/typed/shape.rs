@@ -46,7 +46,6 @@
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
-use crate::parser::parse_first_from_first_paren;
 
 use super::atom_to_number;
 use super::atom_to_string;
@@ -275,9 +274,34 @@ impl ShapeFile {
             offset: 0,
             message: format!("failed to read {}: {e}", path.display()),
         })?;
-        let text = shape_text_from_bytes(&bytes)?;
-        let ast = parse_first_from_first_paren(&text)?;
+        Self::from_bytes(&bytes)
+    }
+
+    /// Parse shape bytes (SIMISA text/binary or raw ASCII).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, FormatError> {
+        let raw = crate::encoding::msts_latin_bytes(bytes);
+        if raw.len() >= 6 && raw.starts_with(b"SIMISA") {
+            let payload = crate::msts_simisa::decode_simisa_container(&raw)?;
+            if crate::shape_binary_direct::is_binary_shape_payload(&payload) {
+                return crate::shape_binary_direct::shape_from_binary_payload(&payload);
+            }
+            if payload.is_text {
+                let text =
+                    crate::encoding::decode_msts_bytes(&payload.bytes[payload.data_offset..]);
+                let ast = crate::parser::parse_first_from_first_paren(&text)?;
+                return Self::from_ast(&ast);
+            }
+        }
+        let text = shape_text_from_bytes(bytes)?;
+        let ast = crate::parser::parse_first_from_first_paren(&text)?;
         Self::from_ast(&ast)
+    }
+
+    /// Parse a decoded SIMISA binary shape payload (direct [`BinaryBlockReader`] path).
+    pub fn from_binary_payload(
+        payload: &crate::msts_simisa::SimisaPayload,
+    ) -> Result<Self, FormatError> {
+        crate::shape_binary_direct::shape_from_binary_payload(payload)
     }
 
     /// Resolve a texture filename from a `tex_idxs` / `textures` slot (Open Rails parity).
@@ -542,6 +566,18 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
             alpha_test_mode = 2; // blend
         } else if flags & 0x0080 != 0 {
             alpha_test_mode = 1; // test
+        }
+    }
+
+    // Derive z_buf_mode from flags when not explicitly present (OR PrimStateDetailFlags).
+    // Bit 0x0100 = disable depth write; bit 0x0200 = disable depth test.
+    if z_buf_mode < 0 && flags != 0 {
+        if flags & 0x0200 != 0 {
+            z_buf_mode = 2; // no depth test (write-only / always on top)
+        } else if flags & 0x0100 != 0 {
+            z_buf_mode = 1; // depth read, no write (typical alpha surfaces)
+        } else {
+            z_buf_mode = 0;
         }
     }
 

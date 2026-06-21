@@ -12,6 +12,7 @@ pub mod msts_tile_name;
 pub mod msts_units;
 pub mod parser;
 pub mod shape_binary;
+pub mod shape_binary_direct;
 pub mod shape_binary_reader;
 pub mod typed;
 pub mod units;
@@ -41,6 +42,9 @@ pub use msts_units::{
 pub use parser::{
     parse, parse_all_top_level, parse_all_top_level_lenient, parse_first,
     parse_first_from_first_paren, parse_from_first_paren,
+};
+pub use shape_binary_direct::{
+    binary_shape_to_ast, is_binary_shape_payload, shape_from_binary_payload,
 };
 pub use shape_binary_reader::{BinaryBlockReader, apply_token_offset};
 pub use typed::{

@@ -1,0 +1,28 @@
+[package]
+name = "openrailsrs-bevy-scenery"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Shared Bevy OR scenery: materials, spawn, VSM (see docs/BEVY_ARCHITECTURE.md)"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["cab", "vsm"]
+cab = []
+vsm = []
+
+[dependencies]
+openrailsrs-ace = { path = "../openrailsrs-ace" }
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-or-shader = { path = "../openrailsrs-or-shader" }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+bevy = { workspace = true }
+bytemuck.workspace = true
+image.workspace = true
+
+[dev-dependencies]
+openrailsrs-core = { path = "../openrailsrs-core" }

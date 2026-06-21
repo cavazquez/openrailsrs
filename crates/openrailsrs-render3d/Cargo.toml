@@ -6,11 +6,16 @@ license.workspace = true
 rust-version.workspace = true
 description = "Render 3D nuevo desde cero (Bevy) — una capa a la vez, validado contra Open Rails. Empieza por el terreno."
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "openrailsrs-render3d"
 path = "src/main.rs"
 
 [dependencies]
+openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
+openrailsrs-or-shader = { path = "../openrailsrs-or-shader" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-ace = { version = "0.1.0", path = "../openrailsrs-ace" }
 openrailsrs-route = { path = "../openrailsrs-route" }
@@ -18,23 +23,6 @@ openrailsrs-track = { path = "../openrailsrs-track" }
 openrailsrs-train = { path = "../openrailsrs-train" }
 anyhow.workspace = true
 clap = { workspace = true }
-bevy = { version = "0.18", default-features = false, features = [
-    "bevy_winit",
-    "x11",
-    "bevy_window",
-    "bevy_render",
-    "bevy_core_pipeline",
-    "bevy_pbr",
-    "bevy_asset",
-    "bevy_log",
-    "bevy_ui",
-    "bevy_text",
-    "dds",
-    "default_font",
-    "bevy_state",
-    "tonemapping_luts",
-    "multi_threaded",
-    "zstd_rust",
-] }
-image = "0.25"
-bytemuck = { version = "1", features = ["derive"] }
+bevy = { workspace = true, features = ["bevy_text", "bevy_state", "multi_threaded"] }
+image.workspace = true
+bytemuck.workspace = true

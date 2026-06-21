@@ -161,7 +161,7 @@ pub(crate) fn spawn_teleport_ui(mut commands: Commands) {
                     panel.spawn((
                         Text::new("Ir a coordenadas"),
                         TextFont {
-                            font_size: 16.0,
+                            font_size: FontSize::Px(16.0),
                             ..default()
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.9)),
@@ -169,7 +169,7 @@ pub(crate) fn spawn_teleport_ui(mut commands: Commands) {
                     panel.spawn((
                         Text::new("Formato: x,y,z  —  orbit mueve el foco, fly mueve la cámara"),
                         TextFont {
-                            font_size: 11.0,
+                            font_size: FontSize::Px(11.0),
                             ..default()
                         },
                         TextColor(Color::srgb(0.55, 0.62, 0.7)),
@@ -177,7 +177,7 @@ pub(crate) fn spawn_teleport_ui(mut commands: Commands) {
                     panel.spawn((
                         Text::new("demo dyntrack: 80,0,1"),
                         TextFont {
-                            font_size: 11.0,
+                            font_size: FontSize::Px(11.0),
                             ..default()
                         },
                         TextColor(Color::srgb(0.45, 0.55, 0.65)),
@@ -198,7 +198,7 @@ pub(crate) fn spawn_teleport_ui(mut commands: Commands) {
                                 TeleportBufferText,
                                 Text::new(""),
                                 TextFont {
-                                    font_size: 15.0,
+                                    font_size: FontSize::Px(15.0),
                                     ..default()
                                 },
                                 TextColor(Color::srgb(0.85, 0.92, 1.0)),
@@ -208,7 +208,7 @@ pub(crate) fn spawn_teleport_ui(mut commands: Commands) {
                         TeleportStatusText,
                         Text::new(""),
                         TextFont {
-                            font_size: 11.0,
+                            font_size: FontSize::Px(11.0),
                             ..default()
                         },
                         TextColor(Color::srgb(1.0, 0.45, 0.45)),
@@ -254,7 +254,7 @@ fn spawn_dialog_button(
             btn.spawn((
                 Text::new(label),
                 TextFont {
-                    font_size: 13.0,
+                    font_size: FontSize::Px(13.0),
                     ..default()
                 },
                 TextColor(Color::srgb(0.92, 0.92, 0.92)),

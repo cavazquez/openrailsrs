@@ -85,7 +85,7 @@ pub fn spawn_debug_hud(commands: &mut Commands, enabled: bool) {
         vis,
         Text::new("openrailsrs-render3d\nHUD cargando…"),
         TextFont {
-            font_size: 15.0,
+            font_size: FontSize::Px(15.0),
             ..default()
         },
         TextColor(Color::srgb(0.92, 0.96, 1.0)),

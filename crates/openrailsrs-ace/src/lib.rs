@@ -75,6 +75,14 @@ impl AceFormat {
     }
 }
 
+/// One decoded mip level (RGBA8).
+#[derive(Clone, Debug)]
+pub struct AceMipLevel {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+}
+
 /// In-memory ACE file with mip 0 decoded to RGBA8.
 #[derive(Clone, Debug)]
 pub struct AceFile {
@@ -84,6 +92,8 @@ pub struct AceFile {
     pub mips_count: u8,
     /// Decoded mip 0, RGBA8 byte order, length = `width * height * 4`.
     pub mip0: Vec<u8>,
+    /// Full mip chain (level 0 = full size). Empty when only mip0 was decoded.
+    pub mips: Vec<AceMipLevel>,
     /// True if the alpha channel originated from a 1-bit MASK channel (kind=2),
     /// meaning pixels are binary (0 or 255 only). Use `AlphaMode::Mask` not
     /// `AlphaMode::Blend` for correct cutout rendering without depth-sort artefacts.
@@ -269,7 +279,12 @@ fn parse_or_raw_data(
         height,
         format,
         mips_count: image_count as u8,
-        mip0,
+        mip0: mip0.clone(),
+        mips: vec![AceMipLevel {
+            width,
+            height,
+            rgba: mip0,
+        }],
         // DXT raw-data path has no explicit alpha/mask channels.
         has_mask_channel: false,
         alpha_bits,
@@ -304,7 +319,8 @@ fn parse_or_structured(
         pos += 4 * mip_h;
     }
 
-    // Read ALL mip levels (as OR does), but only assemble mip 0 into the output.
+    // Read ALL mip levels (as OR does), assemble each into RGBA8.
+    let mut mips: Vec<AceMipLevel> = Vec::with_capacity(image_count);
     let mut mip0 = vec![0u8; w * h * 4];
 
     for img_idx in 0..image_count {
@@ -319,6 +335,8 @@ fn parse_or_structured(
                 ch_buf[k] = vec![0xFFu8; mip_w];
             }
         }
+
+        let mut mip_rgba = vec![0u8; mip_w * mip_h * 4];
 
         for y in 0..mip_h {
             for &(size, kind) in channels {
@@ -355,24 +373,31 @@ fn parse_or_structured(
                 }
             }
 
-            // Assemble pixels only for mip 0
-            if img_idx == 0 {
-                let has_alpha = channels.iter().any(|(_, k)| *k == CH_ALPHA);
-                let has_mask = channels.iter().any(|(_, k)| *k == CH_MASK);
-                for (x, base) in (0..w).map(|x| (x, (y * w + x) * 4)).collect::<Vec<_>>() {
-                    mip0[base] = ch_buf[CH_RED as usize][x];
-                    mip0[base + 1] = ch_buf[CH_GREEN as usize][x];
-                    mip0[base + 2] = ch_buf[CH_BLUE as usize][x];
-                    mip0[base + 3] = if has_alpha {
-                        ch_buf[CH_ALPHA as usize][x]
-                    } else if has_mask {
-                        ch_buf[CH_MASK as usize][x]
-                    } else {
-                        0xFF
-                    };
-                }
+            let has_alpha = channels.iter().any(|(_, k)| *k == CH_ALPHA);
+            let has_mask = channels.iter().any(|(_, k)| *k == CH_MASK);
+            for (x, &red) in ch_buf[CH_RED as usize].iter().enumerate().take(mip_w) {
+                let base = (y * mip_w + x) * 4;
+                mip_rgba[base] = red;
+                mip_rgba[base + 1] = ch_buf[CH_GREEN as usize][x];
+                mip_rgba[base + 2] = ch_buf[CH_BLUE as usize][x];
+                mip_rgba[base + 3] = if has_alpha {
+                    ch_buf[CH_ALPHA as usize][x]
+                } else if has_mask {
+                    ch_buf[CH_MASK as usize][x]
+                } else {
+                    0xFF
+                };
             }
         }
+
+        if img_idx == 0 {
+            mip0.clone_from(&mip_rgba);
+        }
+        mips.push(AceMipLevel {
+            width: mip_w as u32,
+            height: mip_h as u32,
+            rgba: mip_rgba,
+        });
     }
 
     let has_mask_channel = channels.iter().any(|(_, k)| *k == CH_MASK)
@@ -392,6 +417,7 @@ fn parse_or_structured(
         format: AceFormat::Rgba8,
         mips_count: image_count as u8,
         mip0,
+        mips,
         has_mask_channel,
         alpha_bits,
     })
@@ -432,7 +458,12 @@ fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
         height,
         format,
         mips_count: mip_count.max(1),
-        mip0,
+        mip0: mip0.clone(),
+        mips: vec![AceMipLevel {
+            width,
+            height,
+            rgba: mip0,
+        }],
         // Synthetic test format has no mask channel metadata.
         has_mask_channel: false,
         alpha_bits: 0,

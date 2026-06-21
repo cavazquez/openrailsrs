@@ -352,10 +352,7 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
-            .set(AssetPlugin {
-                file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
-                ..default()
-            })
+            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: config.title.clone(),

@@ -167,7 +167,7 @@ pub fn update_live_signal_markers(
             .or_else(|| scene.graph.signal(&marker.id).map(|s| s.aspect))
             .unwrap_or(SignalAspect::Stop);
         let color = aspect_color(aspect);
-        if let Some(mat) = materials.get_mut(mat_handle) {
+        if let Some(mut mat) = materials.get_mut(mat_handle) {
             mat.base_color = color;
             mat.emissive = LinearRgba::from(color) * 0.4;
         }

@@ -17,6 +17,7 @@ Full workspace (CI):
 | Module | Role |
 |--------|------|
 | [`test_harness.rs`](../crates/openrailsrs-viewer3d/src/test_harness.rs) | Shared `minimal_app()`, smoke fixtures, `with_replay_world` / `with_live_world` |
+| [`openrailsrs-bevy-scenery`](../crates/openrailsrs-bevy-scenery/src/test_harness.rs) | `minimal_scenery_app()` — materiales OR sin ventana |
 | [`app_smoke.rs`](../crates/openrailsrs-viewer3d/src/app_smoke.rs) | Replay: track, train, camera, precipitation |
 | [`app_floating.rs`](../crates/openrailsrs-viewer3d/src/app_floating.rs) | Floating origin multi-frame + B0001 schedule |
 | [`app_live.rs`](../crates/openrailsrs-viewer3d/src/app_live.rs) | Live drive spawn/update/input |

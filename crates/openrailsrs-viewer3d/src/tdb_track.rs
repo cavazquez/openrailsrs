@@ -7,14 +7,17 @@
 use bevy::prelude::*;
 use openrailsrs_formats::{
     TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
-    TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint,
+    TrackVectorGeometry, TrackVectorPoint,
 };
 use std::collections::{HashMap, HashSet};
 
-use crate::dyntrack::{
-    MSTS_DEFAULT_SECTION_LENGTH_M, MSTS_STANDARD_HALF_GAUGE_M, ProceduralTrackSegment,
-    ProceduralTrackStyle, spawn_procedural_track_batch,
+use crate::dyntrack::{ProceduralTrackStyle, spawn_procedural_track_batch};
+use openrailsrs_bevy_scenery::spawn::dyntrack::ProceduralTrackSegment;
+use openrailsrs_bevy_scenery::spawn::tdb_track::{
+    chord_heading_and_length, end_from_heading, point_world_vec3, section_shape_length_m,
+    section_world_vec3, straight_segment_from_tsection_link,
 };
+
 use crate::launch::{
     RunCorridorPath, TRACK_DEV_BRANCH_WALK_MAX_NODES, TRACK_DEV_MAX_BRANCHES,
     TRACK_DEV_MAX_SEGMENTS, ViewerSceneryMode, tdb_radius_for_mode, track_dev_render_enabled,
@@ -24,17 +27,7 @@ use crate::track::TrackScene;
 use crate::track_audit::run_track_dev_audit;
 use crate::viewer_log;
 use crate::world::{RouteFocus, RouteWorldOffset};
-
-/// Sentinel `section_index` for junction bridge chords (excluded from intra-node gap stats).
-pub const TDB_JUNCTION_BRIDGE_SECTION: usize = usize::MAX;
-#[derive(Clone, Copy, Debug)]
-pub struct TdbChord {
-    pub node_id: u32,
-    pub section_index: usize,
-    pub shape_idx: u32,
-    pub start_world: Vec3,
-    pub end_world: Vec3,
-}
+pub use openrailsrs_bevy_scenery::spawn::tdb_track::{TDB_JUNCTION_BRIDGE_SECTION, TdbChord};
 
 #[derive(Clone, Copy, Debug)]
 struct BranchVectorStep {
@@ -372,29 +365,7 @@ fn single_section_end_world(
     Some(end_from_heading(start, h, len))
 }
 
-fn section_shape_length_m(
-    tsection: Option<&TSectionCatalog>,
-    shape_idx: u32,
-    node_length_m: f64,
-    section_count: usize,
-) -> f32 {
-    if let Some(cat) = tsection {
-        if let Some(dims) = cat.procedural_dims(shape_idx) {
-            if dims.length_m > 0.5 {
-                return dims.length_m as f32;
-            }
-        }
-    }
-    if section_count <= 1 {
-        return single_section_length(node_length_m, shape_idx);
-    }
-    if node_length_m > 0.5 {
-        return (node_length_m / section_count as f64) as f32;
-    }
-    MSTS_DEFAULT_SECTION_LENGTH_M
-}
-
-/// Per-vector chord collection (fallback when branch walk yields nothing).
+/// Spawn merged procedural track along the `.tdb` vector graph (`--track-dev`).
 fn collect_tdb_chords_per_vector(
     tdb: &TrackDbFile,
     focus: &RouteFocus,
@@ -802,71 +773,6 @@ fn chord_to_segment(
     ))
 }
 
-fn end_from_heading(start: Vec3, heading_deg: f64, length_m: f32) -> Vec3 {
-    let yaw = heading_deg.to_radians() as f32;
-    start + Vec3::new(yaw.sin() * length_m, 0.0, yaw.cos() * length_m)
-}
-
-fn single_section_length(node_length_m: f64, _shape_idx: u32) -> f32 {
-    if node_length_m > 0.5 {
-        return node_length_m as f32;
-    }
-    MSTS_DEFAULT_SECTION_LENGTH_M
-}
-
-fn straight_segment_from_tsection_link(
-    position: Vec3,
-    rotation: Quat,
-    length_m: f32,
-    link: Option<&TrackProceduralLink>,
-) -> ProceduralTrackSegment {
-    let half_gauge = link
-        .map(|l| l.dims.half_gauge_m as f32)
-        .or(Some(MSTS_STANDARD_HALF_GAUGE_M));
-
-    ProceduralTrackSegment {
-        position,
-        rotation,
-        length_m: Some(length_m),
-        half_gauge_m: half_gauge,
-        curve_radius_m: None,
-        curve_angle_deg: None,
-    }
-}
-
-fn section_world_vec3(section: TrVectorSectionRecord, near_hint: Option<Vec3>) -> Vec3 {
-    let (dx, _, dz) = section.start.bevy_position();
-    let (near_x, near_z) = near_hint.map(|h| (h.x, h.z)).unwrap_or((dx, dz));
-    let (x, y, z) = section.bevy_position_nearest_to(
-        near_x,
-        near_z,
-        Some((section.header_tile_x, section.header_tile_z)),
-    );
-    Vec3::new(x, y, z)
-}
-
-fn point_world_vec3(
-    point: TrackVectorPoint,
-    header_tile: (i32, i32),
-    near_hint: Option<Vec3>,
-) -> Vec3 {
-    let (dx, _, dz) = point.bevy_position();
-    let (near_x, near_z) = near_hint.map(|h| (h.x, h.z)).unwrap_or((dx, dz));
-    let (x, y, z) =
-        point.bevy_position_nearest_to(near_x, near_z, Some(header_tile), Some(header_tile));
-    Vec3::new(x, y, z)
-}
-
-fn chord_heading_and_length(from: Vec3, to: Vec3) -> Option<(f64, f32)> {
-    let dx = to.x - from.x;
-    let dz = to.z - from.z;
-    let len = (dx * dx + dz * dz).sqrt();
-    if len < 0.5 {
-        return None;
-    }
-    Some((f64::from(dx).atan2(f64::from(dz)).to_degrees(), len))
-}
-
 /// Spawn merged procedural track along the `.tdb` vector graph (`--track-dev`).
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_tdb_graph_track(
@@ -949,7 +855,6 @@ pub fn spawn_tdb_graph_track(
         &mut meshes,
         &mut materials,
         &segments,
-        &scene.bounds,
         "tdb-graph",
         ProceduralTrackStyle::RailsOnly,
     );

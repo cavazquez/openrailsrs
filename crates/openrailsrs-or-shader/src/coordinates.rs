@@ -256,11 +256,115 @@ pub fn matrix43_to_transform(m: &Matrix43) -> Transform {
     }
 }
 
+/// True when LOD0 hierarchy marks matrix 0 as root (`hierarchy[0] == -1`).
+///
+/// Cab mesh bake uses `zero_translation` on that root so rebased lever poses must match.
+fn shape_zero_root_translation(shape: &ShapeFile) -> bool {
+    shape
+        .lod_controls
+        .first()
+        .and_then(|lc| lc.distance_levels.first())
+        .is_some_and(|level| level.hierarchy.first().copied() == Some(-1))
+}
+
+fn matrix43_to_transform_cab(m: &Matrix43, zero_translation: bool) -> Transform {
+    if !zero_translation {
+        return matrix43_to_transform(m);
+    }
+    let mut copy = *m;
+    copy.rows[3] = [0.0, 0.0, 0.0];
+    matrix43_to_transform(&copy)
+}
+
+/// Matrix chain from `leaf` to root — same walk order as shape mesh bake.
+fn cab_matrix_chain<'a>(
+    shape: &'a ShapeFile,
+    leaf: i32,
+    pose_mats: &'a [Matrix43],
+    zero_root_translation: bool,
+) -> Vec<(&'a Matrix43, bool)> {
+    let Some(level) = shape
+        .lod_controls
+        .first()
+        .and_then(|lc| lc.distance_levels.first())
+    else {
+        return pose_mats
+            .get(leaf as usize)
+            .map(|m| (m, false))
+            .into_iter()
+            .collect();
+    };
+    let mut out = Vec::new();
+    let mut matrix_idx = leaf;
+    let mut guard = 0usize;
+    while matrix_idx >= 0 && guard < shape.matrices.len() {
+        let idx = matrix_idx as usize;
+        if let Some(m) = pose_mats.get(idx) {
+            out.push((m, zero_root_translation && idx == 0));
+        }
+        matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
+        guard += 1;
+    }
+    out
+}
+
+fn transform_point_xna_chain(mut point: Vec3, chain: &[(&Matrix43, bool)]) -> Vec3 {
+    for (matrix, zero_translation) in chain {
+        point = matrix43_transform_point_xna(matrix, point, *zero_translation);
+    }
+    point
+}
+
+/// Build a Bevy transform that matches [`transform_shape_point`] / cab mesh bake.
+fn transform_from_xna_matrix_chain(chain: &[(&Matrix43, bool)]) -> Transform {
+    if chain.is_empty() {
+        return Transform::IDENTITY;
+    }
+    let origin = transform_point_xna_chain(Vec3::ZERO, chain);
+    let x = transform_point_xna_chain(Vec3::X, chain) - origin;
+    let y = transform_point_xna_chain(Vec3::Y, chain) - origin;
+    let z = transform_point_xna_chain(Vec3::Z, chain) - origin;
+    let basis = Mat3::from_cols(
+        x.try_normalize().unwrap_or(Vec3::X),
+        y.try_normalize().unwrap_or(Vec3::Y),
+        z.try_normalize().unwrap_or(Vec3::Z),
+    );
+    Transform {
+        translation: origin,
+        rotation: Quat::from_mat3(&basis),
+        scale: Vec3::ONE,
+    }
+}
+
 /// Walk shape hierarchy from `leaf` to root, multiplying pose matrices (OR `PrepareFrame` order).
 pub fn hierarchy_chain_transform(
     shape: &ShapeFile,
     leaf: usize,
     pose_mats: &[Matrix43],
+) -> Transform {
+    hierarchy_chain_transform_inner(shape, leaf, pose_mats, false)
+}
+
+/// Cab lever pose: same chain order and XNA math as cab mesh bake.
+pub fn hierarchy_chain_transform_cab(
+    shape: &ShapeFile,
+    leaf: usize,
+    pose_mats: &[Matrix43],
+) -> Transform {
+    let chain = cab_matrix_chain(
+        shape,
+        leaf as i32,
+        pose_mats,
+        shape_zero_root_translation(shape),
+    );
+    transform_from_xna_matrix_chain(&chain)
+}
+
+fn hierarchy_chain_transform_inner(
+    shape: &ShapeFile,
+    leaf: usize,
+    pose_mats: &[Matrix43],
+    zero_root_translation: bool,
 ) -> Transform {
     let level = shape
         .lod_controls
@@ -269,7 +373,7 @@ pub fn hierarchy_chain_transform(
     let Some(level) = level else {
         return pose_mats
             .get(leaf)
-            .map(matrix43_to_transform)
+            .map(|m| matrix43_to_transform_cab(m, false))
             .unwrap_or(Transform::IDENTITY);
     };
     let mut hi = leaf as i32;
@@ -278,14 +382,15 @@ pub fn hierarchy_chain_transform(
     while hi >= 0 && guard < shape.matrices.len() {
         let idx = hi as usize;
         if let Some(m) = pose_mats.get(idx) {
-            chain.push(matrix43_to_transform(m));
+            let zero_trans = zero_root_translation && idx == 0;
+            chain.push(matrix43_to_transform_cab(m, zero_trans));
         }
         hi = level.hierarchy.get(idx).copied().unwrap_or(-1);
         guard += 1;
     }
     chain
         .into_iter()
-        .reduce(|acc, t| acc * t)
+        .reduce(|acc, t| t * acc)
         .unwrap_or(Transform::IDENTITY)
 }
 
@@ -293,6 +398,12 @@ pub fn hierarchy_chain_transform(
 pub fn static_hierarchy_chain_transform(shape: &ShapeFile, leaf: usize) -> Transform {
     let mats: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
     hierarchy_chain_transform(shape, leaf, &mats)
+}
+
+/// Static cab bone pose aligned with cab mesh bake (`zero_translation` on matrix 0).
+pub fn static_hierarchy_chain_transform_cab(shape: &ShapeFile, leaf: usize) -> Transform {
+    let mats: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
+    hierarchy_chain_transform_cab(shape, leaf, &mats)
 }
 
 /// Re-express baked cab vertices in bone-local space so entity `Transform` can carry the pose.

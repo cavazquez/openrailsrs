@@ -104,7 +104,7 @@ pub(crate) fn spawn_gameplay_ui(mut commands: Commands) {
                 GameplayToastText,
                 Text::new(""),
                 TextFont {
-                    font_size: 16.0,
+                    font_size: FontSize::Px(16.0),
                     ..default()
                 },
                 TextColor(COL_TOAST_TEXT),
@@ -144,7 +144,7 @@ pub(crate) fn spawn_gameplay_ui(mut commands: Commands) {
                     panel.spawn((
                         Text::new("DESTINO ALCANZADO"),
                         TextFont {
-                            font_size: 22.0,
+                            font_size: FontSize::Px(22.0),
                             ..default()
                         },
                         TextColor(COL_ARRIVAL_ACCENT),
@@ -153,7 +153,7 @@ pub(crate) fn spawn_gameplay_ui(mut commands: Commands) {
                         ArrivalOverlayBody,
                         Text::new(""),
                         TextFont {
-                            font_size: 14.0,
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
                         TextColor(Color::srgb(0.85, 0.88, 0.92)),
@@ -332,7 +332,7 @@ pub(crate) fn spawn_gameplay_markers(
                     StopBillboardText,
                     Text::new(stop.name.clone()),
                     TextFont {
-                        font_size: 13.0,
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
                     TextColor(COL_STOP_NEXT),

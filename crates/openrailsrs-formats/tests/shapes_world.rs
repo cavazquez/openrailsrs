@@ -459,6 +459,59 @@ fn parse_current_chiltern_binary_shape_fixtures() {
 }
 
 #[test]
+fn binary_shape_direct_payload_matches_from_path_chiltern_fixtures() {
+    use openrailsrs_formats::{
+        encoding::msts_latin_bytes, is_binary_shape_payload, msts_simisa::decode_simisa_container,
+        shape_from_binary_payload,
+    };
+
+    let cases = [
+        "RF_WP_DMBSA.s",
+        "RF_WP_DMBSB.s",
+        "RF_WP_DMBSC.s",
+        "RF_WP_MS1.s",
+        "RF_WP_MS2.s",
+        "RF_WP_MS3.s",
+        "RF_WP_PSB.s",
+        "RF_WP_PSG.s",
+    ];
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES");
+    for file_name in cases {
+        let path = base.join(file_name);
+        if !path.is_file() {
+            continue;
+        }
+        let bytes = std::fs::read(&path).expect("read shape");
+        let from_path = ShapeFile::from_path(&path).expect("from_path");
+        let raw = msts_latin_bytes(&bytes);
+        let payload = decode_simisa_container(&raw).expect("simisa");
+        assert!(is_binary_shape_payload(&payload), "{file_name}");
+        let direct = shape_from_binary_payload(&payload).expect("direct binary");
+        assert_eq!(
+            from_path.points.len(),
+            direct.points.len(),
+            "{file_name} points"
+        );
+        assert_eq!(
+            from_path.lod_controls.len(),
+            direct.lod_controls.len(),
+            "{file_name} lod_controls"
+        );
+        assert_eq!(
+            from_path.prim_states.len(),
+            direct.prim_states.len(),
+            "{file_name} prim_states"
+        );
+        assert_eq!(
+            from_path.animations.len(),
+            direct.animations.len(),
+            "{file_name} animations"
+        );
+    }
+}
+
+#[test]
 fn parse_hwater_from_smoke_fixture() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/smoke/routes/test/WORLD/w-000000-000000.w");

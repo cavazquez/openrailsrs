@@ -10,7 +10,7 @@ use crate::or_cascade::{
 };
 use crate::or_scenery_material::OrSceneryMaterial;
 use crate::or_vsm::OrVsmMode;
-use crate::or_vsm_debug::OrVsmDebugSettings;
+use openrailsrs_bevy_scenery::vsm::OrVsmDebugSettings;
 
 /// Límites de distancia de cascada OR (`ShadowMapLimit` en SM3).
 #[derive(Resource, Clone, Debug)]

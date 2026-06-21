@@ -336,7 +336,7 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 HudRow1,
                 Text::new(""),
                 TextFont {
-                    font_size: FONT_SIZE,
+                    font_size: FontSize::Px(FONT_SIZE),
                     ..default()
                 },
                 TextColor(COL_HUD_TEXT),
@@ -346,7 +346,7 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 Visibility::Hidden,
                 Text::new(""),
                 TextFont {
-                    font_size: FONT_SIZE,
+                    font_size: FontSize::Px(FONT_SIZE),
                     ..default()
                 },
                 TextColor(COL_HUD_TIME),
@@ -379,7 +379,7 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 Visibility::Hidden,
                 Text::new(""),
                 TextFont {
-                    font_size: FONT_SIZE,
+                    font_size: FontSize::Px(FONT_SIZE),
                     ..default()
                 },
                 TextColor(COL_HUD_SPD),
@@ -388,7 +388,7 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                 HudControls,
                 Text::new(""),
                 TextFont {
-                    font_size: FONT_SIZE_HINT,
+                    font_size: FontSize::Px(FONT_SIZE_HINT),
                     ..default()
                 },
                 TextColor(COL_HUD_MUTED),

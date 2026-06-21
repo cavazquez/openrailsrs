@@ -3,19 +3,22 @@
 //! Maps shape matrix names (`THROTTLE:0:0`, `TRAIN_BRAKE:0:0`, …) to parsed `.cvf`
 //! controls and applies live telemetry in driver view.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::shapes::{
+    animation_pose_matrices, lever_entity_transform_at_mesh_center, lever_entity_transform_rebased,
+};
 use openrailsrs_formats::{
-    AnimController, CabControl, CabViewFile, ControlType, Matrix43, ResolvedCabAssets, ShapeFile,
-    parse_msts_file, resolve_cab_assets,
+    CabControl, CabViewFile, ControlType, ResolvedCabAssets, ShapeFile, parse_msts_file,
+    resolve_cab_assets,
 };
 use openrailsrs_sim::CabTelemetry;
 
 use crate::cab_view::{CabInteriorMarker, CabInteriorRoot};
 use crate::camera::CameraFollowMode;
-use crate::coordinates::{hierarchy_chain_transform, static_hierarchy_chain_transform};
+use crate::coordinates::matrix43_to_transform;
 use crate::live::LiveDrive;
 use crate::viewer_log;
 
@@ -54,6 +57,10 @@ pub enum MatrixDriver {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct CabCvfPart {
     pub matrix_idx: usize,
+    /// Fixed cab-local pivot (3D handwheel far from CVF matrix).
+    pub pivot_at_mesh: Option<Vec3>,
+    /// Local rotation axis override for fallback animation.
+    pub local_spin_axis: Option<Vec3>,
 }
 
 /// Build matrix → control bindings from MSTS/OR matrix names.
@@ -123,6 +130,8 @@ fn control_type_from_matrix_prefix(prefix: &str) -> Option<ControlType> {
         "BRAKE CYL" => ControlType::BrakeCyl,
         "BRAKE PIPE" => ControlType::BrakePipe,
         "AMMETER" => ControlType::Ammeter,
+        "HORN" => ControlType::Generic("HORN".into()),
+        "WIPERS" | "EXTERNALWIPERS" | "EXTERNAL WIPERS" => ControlType::Generic("WIPERS".into()),
         other => ControlType::Generic(other.to_string()),
     })
 }
@@ -137,21 +146,40 @@ fn control_is_lever(control: &ControlType) -> bool {
     )
 }
 
+/// Matrices whose bound meshes are rebaked to bone-local space (3D levers only).
+pub fn cab_rebase_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
+    runtime
+        .matrix_drivers
+        .iter()
+        .filter_map(|(idx, driver)| matches!(driver, MatrixDriver::Lever { .. }).then_some(*idx))
+        .collect()
+}
+
+/// Matrix indices with dedicated 3D lever meshes (Pullman: M4, M8, M9, M10).
+pub fn cab_lever_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
+    cab_rebase_matrix_indices(runtime)
+}
 /// Normalized 0–1 value for a cab control from live telemetry.
 pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
     match control {
         ControlType::Throttle | ControlType::ThrottleDisplay => tel.throttle_pct / 100.0,
         ControlType::TrainBrake => tel.brake_pct / 100.0,
         ControlType::DynamicBrakeDisplay => tel.brake_pct / 100.0,
-        ControlType::DirectionDisplay => 0.5,
+        ControlType::DirectionDisplay => tel.direction,
         ControlType::Speedometer => {
             let scale = tel.limit_kmh.max(40.0);
             (tel.speed_kmh / scale).clamp(0.0, 1.0)
         }
-        ControlType::MainRes => 0.8,
+        ControlType::MainRes => (tel.main_res_bar / 10.0).clamp(0.0, 1.0),
         ControlType::BrakeCyl | ControlType::BrakePipe => {
-            (tel.brake_force_kn / 200.0).clamp(0.0, 1.0)
+            let bar = match control {
+                ControlType::BrakeCyl => tel.brake_cyl_bar,
+                _ => tel.brake_pipe_bar,
+            };
+            (bar / 5.0).clamp(0.0, 1.0)
         }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") && tel.horn_active => 1.0,
+        ControlType::Generic(name) if name.contains("WIPER") && tel.speed_kmh > 5.0 => 1.0,
         ControlType::Ammeter => tel
             .diesel_rpm
             .map(|r| (r / 1500.0).clamp(0.0, 1.0))
@@ -248,133 +276,26 @@ pub fn matrix_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Opti
     }
 }
 
-fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
-    let mut pose: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
-    let Some(anim) = shape.animations.first() else {
-        return pose;
-    };
-    for (i, node) in anim.nodes.iter().enumerate() {
-        if node.controllers.is_empty() || i >= pose.len() {
-            continue;
-        }
-        pose[i] = animate_matrix(pose[i], &node.controllers, key);
-    }
-    pose
-}
-
-fn animate_matrix(base: Matrix43, controllers: &[AnimController], key: f32) -> Matrix43 {
-    let mut m = base;
-    for controller in controllers {
-        m = apply_controller(m, controller, key);
-    }
-    m
-}
-
-fn apply_controller(mut m: Matrix43, controller: &AnimController, key: f32) -> Matrix43 {
-    match controller {
-        AnimController::LinearPos { keys } => {
-            let Some((frame1, p1, frame2, p2)) = bracket_keys(keys, key) else {
-                return m;
-            };
-            let t = if (frame2 - frame1).abs() > 1e-6 {
-                ((key - frame1) / (frame2 - frame1)).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let pos = lerp3(p1, p2, t);
-            m.rows[3] = [pos[0] as f64, pos[1] as f64, pos[2] as f64];
-            m
-        }
-        AnimController::SlerpRot { keys } | AnimController::TcbRot { keys } => {
-            let Some((frame1, q1, frame2, q2)) = bracket_quat_keys(keys, key) else {
-                return m;
-            };
-            let t = if (frame2 - frame1).abs() > 1e-6 {
-                ((key - frame1) / (frame2 - frame1)).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let q = Quat::from_xyzw(q1[0], q1[1], -q1[2], q1[3])
-                .slerp(Quat::from_xyzw(q2[0], q2[1], -q2[2], q2[3]), t);
-            set_matrix_rotation(&mut m, q);
-            m
-        }
-    }
-}
-
-fn bracket_keys(keys: &[(f32, [f32; 3])], key: f32) -> Option<(f32, [f32; 3], f32, [f32; 3])> {
-    if keys.is_empty() {
-        return None;
-    }
-    let mut index = 0usize;
-    for (i, (frame, _)) in keys.iter().enumerate() {
-        if *frame <= key {
-            index = i;
-        } else {
-            break;
-        }
-    }
-    let (frame1, p1) = keys[index];
-    let (frame2, p2) = keys.get(index + 1).copied().unwrap_or(keys[index]);
-    Some((frame1, p1, frame2, p2))
-}
-
-fn bracket_quat_keys(keys: &[(f32, [f32; 4])], key: f32) -> Option<(f32, [f32; 4], f32, [f32; 4])> {
-    if keys.is_empty() {
-        return None;
-    }
-    let mut index = 0usize;
-    for (i, (frame, _)) in keys.iter().enumerate() {
-        if *frame <= key {
-            index = i;
-        } else {
-            break;
-        }
-    }
-    let (frame1, q1) = keys[index];
-    let (frame2, q2) = keys.get(index + 1).copied().unwrap_or(keys[index]);
-    Some((frame1, q1, frame2, q2))
-}
-
-fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [
-        a[0] + (b[0] - a[0]) * t,
-        a[1] + (b[1] - a[1]) * t,
-        a[2] + (b[2] - a[2]) * t,
-    ]
-}
-
-fn set_matrix_rotation(m: &mut Matrix43, q: Quat) {
-    let (x, y, z, w) = q.into();
-    let xx = x * x;
-    let yy = y * y;
-    let zz = z * z;
-    let xy = x * y;
-    let xz = x * z;
-    let yz = y * z;
-    let wx = w * x;
-    let wy = w * y;
-    let wz = w * z;
-    m.rows[0] = [
-        (1.0 - 2.0 * (yy + zz)) as f64,
-        (2.0 * (xy + wz)) as f64,
-        (2.0 * (xz - wy)) as f64,
-    ];
-    m.rows[1] = [
-        (2.0 * (xy - wz)) as f64,
-        (1.0 - 2.0 * (xx + zz)) as f64,
-        (2.0 * (yz + wx)) as f64,
-    ];
-    m.rows[2] = [
-        (2.0 * (xz + wy)) as f64,
-        (2.0 * (yz - wx)) as f64,
-        (1.0 - 2.0 * (xx + yy)) as f64,
-    ];
-}
-
-/// Static bone transform for cab lever spawn (before CVF animation).
+/// Static bone transform for cab lever spawn (M0-baked mesh, pivot at matrix translation).
 pub fn static_matrix_transform(shape: &ShapeFile, matrix_idx: usize) -> Transform {
-    static_hierarchy_chain_transform(shape, matrix_idx)
+    shape
+        .matrices
+        .get(matrix_idx)
+        .map(|m| matrix43_to_transform(&m.matrix))
+        .unwrap_or(Transform::IDENTITY)
+}
+
+/// Spawn transform for a rebased cab lever (optional mesh-center pivot).
+pub fn static_lever_transform(
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    pivot_at_mesh: Option<Vec3>,
+) -> Transform {
+    let mut t = static_matrix_transform(shape, matrix_idx);
+    if let Some(center) = pivot_at_mesh {
+        t.translation = center;
+    }
+    t
 }
 
 fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -> f32 {
@@ -391,10 +312,9 @@ fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -
         .controllers
         .iter()
         .filter_map(|c| match c {
-            AnimController::LinearPos { keys } => keys.last().map(|k| k.0),
-            AnimController::SlerpRot { keys } | AnimController::TcbRot { keys } => {
-                keys.last().map(|k| k.0)
-            }
+            openrailsrs_formats::AnimController::LinearPos { keys } => keys.last().map(|k| k.0),
+            openrailsrs_formats::AnimController::SlerpRot { keys }
+            | openrailsrs_formats::AnimController::TcbRot { keys } => keys.last().map(|k| k.0),
         })
         .fold(1.0f32, f32::max);
     (value as f32 * max_frame).clamp(0.0, max_frame)
@@ -405,17 +325,19 @@ fn fallback_lever_rotation(
     _matrix_idx: usize,
     control: &ControlType,
     value: f64,
+    local_axis: Option<Vec3>,
 ) -> Quat {
     let angle = match control {
         ControlType::Throttle => -0.75 + value * 0.75,
         ControlType::TrainBrake => -1.25 + value * 1.25,
+        ControlType::DirectionDisplay => -0.35 + value * 0.70,
         _ => value * 0.5 - 0.25,
     };
-    // MSTS cab wheels / regulator: spin around local Y (vertical axis through pivot).
-    let local_axis = match control {
+    let local_axis = local_axis.unwrap_or(match control {
         ControlType::Throttle | ControlType::TrainBrake => Vec3::Y,
+        ControlType::DirectionDisplay => Vec3::X,
         _ => Vec3::X,
-    };
+    });
     Quat::from_axis_angle(local_axis, angle as f32)
 }
 
@@ -424,11 +346,17 @@ fn lever_pose_from_fallback(
     matrix_idx: usize,
     control: &ControlType,
     value: f64,
+    pivot_at_mesh: Option<Vec3>,
+    local_axis: Option<Vec3>,
 ) -> Transform {
-    let static_t = static_hierarchy_chain_transform(shape, matrix_idx);
+    let Some(rest) = shape.matrices.get(matrix_idx) else {
+        return Transform::IDENTITY;
+    };
+    let bone = matrix43_to_transform(&rest.matrix);
     Transform {
-        translation: static_t.translation,
-        rotation: static_t.rotation * fallback_lever_rotation(shape, matrix_idx, control, value),
+        translation: pivot_at_mesh.unwrap_or(bone.translation),
+        rotation: bone.rotation
+            * fallback_lever_rotation(shape, matrix_idx, control, value, local_axis),
         scale: Vec3::ONE,
     }
 }
@@ -460,71 +388,57 @@ pub fn update_cab_cvf_controls(
 
     let tel = live.session.cab_telemetry();
     let smooth = 1.0 - (-12.0_f32 * time.delta_secs()).exp();
-    let mut lever_poses: HashMap<usize, Transform> = HashMap::new();
-
-    for (matrix_idx, driver) in &runtime.matrix_drivers {
-        if let MatrixDriver::Lever { control, anim_node } = driver {
-            let value = control_value(control, &tel);
-            let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
-            let key = cvf_state
-                .lever_keys
-                .entry(*matrix_idx)
-                .and_modify(|current| *current += (target_key - *current) * smooth)
-                .or_insert(target_key);
-            let pose_mats = animation_pose_matrices(&runtime.shape, *key);
-            let has_anim = runtime.shape.animations.first().is_some_and(|anim| {
-                anim_node
-                    .and_then(|i| anim.nodes.get(i))
-                    .is_some_and(|n| !n.controllers.is_empty())
-            });
-            if has_anim {
-                lever_poses.insert(
-                    *matrix_idx,
-                    hierarchy_chain_transform(&runtime.shape, *matrix_idx, &pose_mats),
-                );
-            } else {
-                lever_poses.insert(
-                    *matrix_idx,
-                    lever_pose_from_fallback(&runtime.shape, *matrix_idx, control, value),
-                );
-            }
-        }
-    }
 
     for (part, mut transform, mut visibility) in &mut parts {
         let Some(driver) = runtime.matrix_drivers.get(&part.matrix_idx) else {
             continue;
         };
         match driver {
-            MatrixDriver::Lever { control, .. } => {
+            MatrixDriver::Lever { control, anim_node } => {
                 *visibility = Visibility::Visible;
-                if let Some(pose) = lever_poses.get(&part.matrix_idx) {
-                    *transform = *pose;
-                } else {
-                    let value = control_value(control, &tel);
-                    *transform =
-                        lever_pose_from_fallback(&runtime.shape, part.matrix_idx, control, value);
-                }
-            }
-            MatrixDriver::MultiState {
-                control,
-                state_index,
-                sub_part,
-            } => {
                 let value = control_value(control, &tel);
-                let active = pick_multi_state_index(&runtime.cvf, control, value);
-                let show = active == *state_index as usize && *sub_part == 0;
-                *visibility = if show {
-                    Visibility::Visible
+                let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
+                let key = cvf_state
+                    .lever_keys
+                    .entry(part.matrix_idx)
+                    .and_modify(|current| *current += (target_key - *current) * smooth)
+                    .or_insert(target_key);
+                let pose_mats = animation_pose_matrices(&runtime.shape, *key);
+                let has_anim = runtime.shape.animations.first().is_some_and(|anim| {
+                    anim_node
+                        .and_then(|i| anim.nodes.get(i))
+                        .is_some_and(|n| !n.controllers.is_empty())
+                });
+                *transform = if has_anim {
+                    if let Some(center) = part.pivot_at_mesh {
+                        lever_entity_transform_at_mesh_center(
+                            &runtime.shape,
+                            part.matrix_idx,
+                            center,
+                            &pose_mats,
+                        )
+                    } else {
+                        lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
+                    }
                 } else {
-                    Visibility::Hidden
+                    lever_pose_from_fallback(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        control,
+                        value,
+                        part.pivot_at_mesh,
+                        part.local_spin_axis,
+                    )
                 };
+            }
+            MatrixDriver::MultiState { .. } => {
+                // Gauges, horn and wipers: CVF 2D overlay (`cab_cvf_overlay`), not 3D mesh.
             }
         }
     }
 }
 
-fn pick_multi_state_index(cvf: &CabViewFile, control: &ControlType, value: f64) -> usize {
+pub fn pick_multi_state_index(cvf: &CabViewFile, control: &ControlType, value: f64) -> usize {
     for cab_control in &cvf.controls {
         let (ctrl_type, states) = match cab_control {
             CabControl::MultiStateDisplay {
@@ -554,7 +468,7 @@ fn pick_multi_state_index(cvf: &CabViewFile, control: &ControlType, value: f64) 
     ((value * 8.0).round() as usize).min(7)
 }
 
-fn types_match(a: &ControlType, b: &ControlType) -> bool {
+pub fn types_match(a: &ControlType, b: &ControlType) -> bool {
     std::mem::discriminant(a) == std::mem::discriminant(b)
         || a.as_str().eq_ignore_ascii_case(b.as_str())
 }
@@ -572,6 +486,11 @@ mod tests {
             limit_kmh: 80.0,
             throttle_pct: 75.0,
             brake_pct: 25.0,
+            direction: 0.5,
+            horn_active: false,
+            main_res_bar: 8.0,
+            brake_pipe_bar: 4.0,
+            brake_cyl_bar: 1.0,
             brake_force_kn: 80.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
@@ -579,6 +498,7 @@ mod tests {
         };
         assert!((control_value(&ControlType::Throttle, &tel) - 0.75).abs() < 1e-6);
         assert!((control_value(&ControlType::TrainBrake, &tel) - 0.25).abs() < 1e-6);
+        assert!((control_value(&ControlType::DirectionDisplay, &tel) - 0.5).abs() < 1e-6);
     }
 
     #[test]
@@ -756,12 +676,7 @@ mod tests {
                 }
             }
             eprintln!("=== cab_matrix_for_prim bindings (levers) ===");
-            let parts = crate::shapes::build_mesh_parts_from_shape_lod_cab(
-                &shape,
-                level,
-                &runtime.matrix_drivers.keys().copied().collect(),
-                &levers,
-            );
+            let parts = crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &levers);
             for part in &parts {
                 if let Some(m) = part.cab_matrix_idx {
                     if levers.contains(&m) {
@@ -803,5 +718,260 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Rebaked cab lever mesh + cab hierarchy must agree at rest; throttle rotation stays on pivot.
+    #[test]
+    fn pullman_throttle_rebased_rest_pose_matches_bake() {
+        use openrailsrs_bevy_scenery::shapes::{
+            MeshBuffers, append_primitive_mesh_buffers, mesh_buffers_bounds,
+        };
+        use openrailsrs_formats::{SubObject, Vec3 as ShapeVec3};
+
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let cvf_path = shape_path.with_extension("cvf");
+        let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
+            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
+            other => panic!("expected CabView, got {other:?}"),
+        };
+        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
+        let lever_matrices = cab_lever_matrix_indices(&runtime);
+        let level = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+            .expect("lod0");
+        let parts =
+            crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
+        let throttle = parts
+            .iter()
+            .find(|p| p.cab_matrix_idx == Some(8))
+            .expect("Controller_base throttle part");
+
+        // Reference: world-space bake with THROTTLE matrix chain (same as runtime mesh).
+        let sub: &SubObject = &level.sub_objects[throttle.sub_object_idx as usize];
+        let prim = sub
+            .primitives
+            .iter()
+            .find(|p| p.prim_state_idx == throttle.prim_state_idx)
+            .expect("prim for throttle part");
+        let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        });
+        let mut world_buffers = MeshBuffers::default();
+        append_primitive_mesh_buffers(
+            &shape,
+            level,
+            sub,
+            prim,
+            default_normal,
+            &mut world_buffers,
+            None,
+            false,
+        );
+        let (baked_center, _) = mesh_buffers_bounds(&world_buffers);
+
+        let positions = match throttle.mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+            Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) => pos,
+            _ => panic!("positions"),
+        };
+        let local_center: Vec3 = positions.iter().map(|p| Vec3::from_array(*p)).sum::<Vec3>()
+            / positions.len().max(1) as f32;
+
+        let rest = lever_pose_from_fallback(&shape, 8, &ControlType::Throttle, 0.0, None, None);
+        let full = lever_pose_from_fallback(&shape, 8, &ControlType::Throttle, 1.0, None, None);
+        let world_at_rest = rest.transform_point(local_center);
+        let pivot_at_rest = rest.transform_point(Vec3::ZERO);
+        let pivot_at_full = full.transform_point(Vec3::ZERO);
+
+        assert!(
+            (world_at_rest - baked_center).length() < 0.20,
+            "rest pose mismatch: rebased={world_at_rest} baked={baked_center}"
+        );
+        assert!(
+            (rest.translation - full.translation).length() < 1e-4,
+            "lever translation must not drift with throttle"
+        );
+        assert!(
+            (pivot_at_rest - pivot_at_full).length() < 1e-4,
+            "pivot must stay fixed when throttle changes"
+        );
+    }
+
+    /// Scan cab LOD0 primitives near lever matrix pivots (content diagnostic).
+    #[test]
+    fn pullman_scan_lever_mesh_candidates() {
+        use openrailsrs_bevy_scenery::shapes::{
+            MeshBuffers, append_primitive_mesh_buffers, mesh_buffers_bounds, texture_for_prim_state,
+        };
+        use openrailsrs_formats::Vec3 as ShapeVec3;
+
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let level = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+            .expect("lod0");
+        let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        });
+        for matrix_idx in [4usize, 8, 9, 10] {
+            let pivot = crate::shapes::matrix_pivot_bevy(&shape, matrix_idx).unwrap();
+            eprintln!(
+                "=== near matrix {matrix_idx} ({}) ===",
+                shape.matrices[matrix_idx].name
+            );
+            for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+                for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+                    let mut buffers = MeshBuffers::default();
+                    append_primitive_mesh_buffers(
+                        &shape,
+                        level,
+                        sub,
+                        prim,
+                        default_normal,
+                        &mut buffers,
+                        None,
+                        false,
+                    );
+                    let (center, half) = mesh_buffers_bounds(&buffers);
+                    let r = half.max_element();
+                    if r < 0.03 {
+                        continue;
+                    }
+                    let dist = center.distance(pivot);
+                    if dist > 1.5 {
+                        continue;
+                    }
+                    let tex =
+                        texture_for_prim_state(&shape, prim.prim_state_idx).unwrap_or_default();
+                    eprintln!(
+                        "  sub {sub_idx} prim {prim_ord} ps={} tex={tex} r={r:.3} dist={dist:.3} center=({:.3},{:.3},{:.3})",
+                        prim.prim_state_idx, center.x, center.y, center.z,
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pullman_cab_lever_bindings_when_content_present() {
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let cvf_path = shape_path.with_extension("cvf");
+        let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
+            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
+            other => panic!("expected CabView, got {other:?}"),
+        };
+        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
+        let lever_matrices = cab_lever_matrix_indices(&runtime);
+        let level = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+            .expect("lod0");
+        let parts =
+            crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
+        assert!(
+            parts.iter().any(|p| {
+                p.cab_matrix_idx == Some(8)
+                    && p.texture_file
+                        .as_deref()
+                        .is_some_and(|t| t.to_ascii_lowercase().contains("controller_base"))
+            }),
+            "throttle wheel bound to M8"
+        );
+        assert!(
+            parts.iter().any(|p| {
+                p.cab_matrix_idx == Some(4)
+                    && p.texture_file
+                        .as_deref()
+                        .is_some_and(|t| t.to_ascii_lowercase().contains("switch panel"))
+            }),
+            "direction reverser bound to M4"
+        );
+        assert!(
+            parts.iter().any(|p| {
+                p.cab_matrix_idx == Some(9)
+                    && p.texture_file
+                        .as_deref()
+                        .is_some_and(|t| t.to_ascii_lowercase().contains("controls.ace"))
+            }),
+            "train brake lever bound to M9"
+        );
+        let brake_wheel = parts
+            .iter()
+            .find(|p| {
+                p.cab_matrix_idx == Some(9)
+                    && p.texture_file
+                        .as_deref()
+                        .is_some_and(|t| t.to_ascii_lowercase().contains("brake_wheel"))
+            })
+            .expect("3D brake wheel bound to M9");
+        assert!(
+            brake_wheel.lever_pivot_at_mesh_center,
+            "brake wheel pivots at mesh center"
+        );
+    }
+
+    #[test]
+    fn pullman_only_lever_matrices_bound_to_3d_when_content_present() {
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let cvf_path = shape_path.with_extension("cvf");
+        let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
+            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
+            other => panic!("expected CabView, got {other:?}"),
+        };
+        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
+        let lever_matrices = cab_lever_matrix_indices(&runtime);
+        let level = shape
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+            .expect("lod0");
+        let parts =
+            crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
+        let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
+        for idx in &lever_matrices {
+            assert!(
+                bound.contains(idx),
+                "lever matrix {idx} should have a 3D mesh binding"
+            );
+        }
+        assert!(
+            !bound.contains(&1) && !bound.contains(&6),
+            "gauge matrices M1/M6 must not be forced to 3D meshes (CVF 2D overlay)"
+        );
+        assert!(
+            !runtime.cvf.controls.is_empty(),
+            "Pullman CVF should drive gauges via 2D overlay"
+        );
     }
 }

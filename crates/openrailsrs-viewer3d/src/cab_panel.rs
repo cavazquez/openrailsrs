@@ -61,6 +61,14 @@ pub fn build_cab_panel_content(tel: &CabTelemetry) -> CabPanelContent {
         "THR {:.0}%   BRK {:.0}%   {:.0} kN",
         tel.throttle_pct, tel.brake_pct, tel.brake_force_kn
     );
+    let dir_label = if tel.direction <= 0.25 {
+        "REV"
+    } else if tel.direction >= 0.75 {
+        "FWD"
+    } else {
+        "NEU"
+    };
+    detail.push_str(&format!("   INV {dir_label}"));
     if let Some(rpm) = tel.diesel_rpm {
         detail.push_str(&format!("   RPM {:.0}", rpm));
     }
@@ -130,7 +138,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                     badge.spawn((
                         Text::new("MODO CABINA"),
                         TextFont {
-                            font_size: FONT_BADGE,
+                            font_size: FontSize::Px(FONT_BADGE),
                             ..default()
                         },
                         TextColor(COL_BADGE),
@@ -159,7 +167,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                     panel.spawn((
                         Text::new("INSTRUMENTAL"),
                         TextFont {
-                            font_size: FONT_LABEL,
+                            font_size: FontSize::Px(FONT_LABEL),
                             ..default()
                         },
                         TextColor(COL_MUTED),
@@ -183,7 +191,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                     col.spawn((
                                         Text::new("MARCHA"),
                                         TextFont {
-                                            font_size: 10.0,
+                                            font_size: FontSize::Px(10.0),
                                             ..default()
                                         },
                                         TextColor(COL_MUTED),
@@ -222,7 +230,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                         CabSpeedText,
                                         Text::new("0"),
                                         TextFont {
-                                            font_size: FONT_SPEED,
+                                            font_size: FontSize::Px(FONT_SPEED),
                                             ..default()
                                         },
                                         TextColor(COL_SPEED),
@@ -230,7 +238,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                     col.spawn((
                                         Text::new("km/h"),
                                         TextFont {
-                                            font_size: FONT_LABEL,
+                                            font_size: FontSize::Px(FONT_LABEL),
                                             ..default()
                                         },
                                         TextColor(COL_MUTED),
@@ -239,7 +247,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                         CabLimitText,
                                         Text::new("LIM —"),
                                         TextFont {
-                                            font_size: FONT_LABEL,
+                                            font_size: FontSize::Px(FONT_LABEL),
                                             ..default()
                                         },
                                         TextColor(COL_MUTED),
@@ -255,7 +263,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                     col.spawn((
                                         Text::new("FRENO"),
                                         TextFont {
-                                            font_size: 10.0,
+                                            font_size: FontSize::Px(10.0),
                                             ..default()
                                         },
                                         TextColor(COL_MUTED),
@@ -287,7 +295,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                         CabDetailText,
                         Text::new(""),
                         TextFont {
-                            font_size: FONT_LABEL,
+                            font_size: FontSize::Px(FONT_LABEL),
                             ..default()
                         },
                         TextColor(COL_TEXT),
@@ -390,6 +398,11 @@ mod tests {
             limit_kmh: 80.0,
             throttle_pct: 50.0,
             brake_pct: 25.0,
+            direction: 1.0,
+            horn_active: false,
+            main_res_bar: 8.0,
+            brake_pipe_bar: 4.5,
+            brake_cyl_bar: 1.5,
             brake_force_kn: 120.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
@@ -398,6 +411,7 @@ mod tests {
         let c = build_cab_panel_content(&tel);
         assert_eq!(c.speed_line, "72");
         assert!(c.detail_line.contains("RPM 900"));
+        assert!(c.detail_line.contains("INV FWD"));
         assert!((c.throttle_frac - 0.5).abs() < 1e-6);
         assert!((c.brake_frac - 0.25).abs() < 1e-6);
     }
@@ -409,6 +423,11 @@ mod tests {
             limit_kmh: 40.0,
             throttle_pct: 0.0,
             brake_pct: 0.0,
+            direction: 0.5,
+            horn_active: false,
+            main_res_bar: 12.0,
+            brake_pipe_bar: 5.0,
+            brake_cyl_bar: 0.0,
             brake_force_kn: 0.0,
             diesel_rpm: None,
             boiler_bar: Some(12.0),

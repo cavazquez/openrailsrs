@@ -156,6 +156,10 @@ pub struct LiveDriveSession {
     /// Driver notch [0, 1] (not yet written to `state` until step).
     pub driver_throttle: f64,
     pub driver_brake: f64,
+    /// Reverser: 0 = REV, 0.5 = neutral, 1 = FWD (cab CVF / HUD).
+    pub driver_direction: f64,
+    /// Sim time until which horn button appears pressed (cab M5).
+    horn_pressed_until_s: f64,
     pub speed_mul: f64,
     sim_time_remainder: f64,
     signal_steps: u64,
@@ -277,11 +281,17 @@ impl LiveDriveSession {
             region_tracker,
             driver_throttle: 0.0,
             driver_brake: 0.0,
+            driver_direction: 0.5,
+            horn_pressed_until_s: 0.0,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
             signal_steps: 0,
             arrived: false,
         })
+    }
+
+    pub fn trigger_horn(&mut self, hold_s: f64) {
+        self.horn_pressed_until_s = self.time_s() + hold_s.max(0.05);
     }
 
     pub fn time_s(&self) -> f64 {
@@ -373,11 +383,19 @@ impl LiveDriveSession {
             None
         };
         let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
+        let main_res_bar = boiler_bar.unwrap_or(8.0 - self.driver_brake * 2.0);
+        let brake_pipe_bar = (5.0 - self.driver_brake * 3.5).max(0.0);
+        let brake_cyl_bar = (self.driver_brake * 4.5).min(5.0);
         CabTelemetry {
             speed_kmh,
             limit_kmh,
             throttle_pct: self.driver_throttle * 100.0,
             brake_pct: self.driver_brake * 100.0,
+            direction: self.driver_direction.clamp(0.0, 1.0),
+            horn_active: self.time_s() < self.horn_pressed_until_s,
+            main_res_bar,
+            brake_pipe_bar,
+            brake_cyl_bar,
             brake_force_kn,
             diesel_rpm,
             boiler_bar,
@@ -393,6 +411,12 @@ pub struct CabTelemetry {
     pub limit_kmh: f64,
     pub throttle_pct: f64,
     pub brake_pct: f64,
+    /// Reverser position 0–1 (0 = REV, 0.5 = neutral, 1 = FWD).
+    pub direction: f64,
+    pub horn_active: bool,
+    pub main_res_bar: f64,
+    pub brake_pipe_bar: f64,
+    pub brake_cyl_bar: f64,
     pub brake_force_kn: f64,
     pub diesel_rpm: Option<f64>,
     pub boiler_bar: Option<f64>,

@@ -274,7 +274,7 @@ pub(crate) fn update_precipitation(
     let _dt = time.delta_secs();
 
     let mesh = build_rain_mesh(&rain.drops, origin, state.area_half, state.ceiling);
-    if let Some(existing) = mesh_assets.get_mut(&mesh_handle.0) {
+    if let Some(mut existing) = mesh_assets.get_mut(&mesh_handle.0) {
         *existing = mesh;
     }
 }

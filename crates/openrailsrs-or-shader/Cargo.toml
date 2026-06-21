@@ -1,0 +1,12 @@
+[package]
+name = "openrailsrs-or-shader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "MSTS/Open Rails shader classification and MSTS→Bevy coordinates (no render plugins)"
+
+[dependencies]
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+# Math types only (Vec3, Transform) — no render stack.
+bevy = { workspace = true, default-features = false, features = ["bevy_log", "bevy_color"] }

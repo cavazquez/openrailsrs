@@ -1210,6 +1210,7 @@ pub fn update_primary_window_cursor(
 mod tests {
     use super::*;
     use crate::train::{CsvRow, ReplayState, TrainTrack};
+    use bevy::input::touch::TouchPhase;
     use std::f32::consts::FRAC_PI_2;
 
     fn vec3_close(a: Vec3, b: Vec3, eps: f32) -> bool {
@@ -1356,6 +1357,7 @@ mod tests {
             x: 0.0,
             y: 250.0,
             window: Entity::PLACEHOLDER,
+            phase: TouchPhase::Moved,
         };
         assert!((wheel_scroll_lines(&ev) - 2.5).abs() < 1e-6);
     }

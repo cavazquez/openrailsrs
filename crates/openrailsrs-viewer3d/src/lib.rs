@@ -8,13 +8,14 @@
 //! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
 
 pub mod cab_cvf;
+pub mod cab_cvf_overlay;
 pub mod cab_diag;
 pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
-pub mod coordinates;
+pub use openrailsrs_or_shader::coordinates;
 pub mod dyntrack;
 pub mod floating_origin;
 pub mod forest;
@@ -24,7 +25,9 @@ pub mod launch;
 pub mod live;
 pub mod log;
 pub mod or_cab_material;
-pub mod or_shader;
+pub mod or_shader {
+    pub use openrailsrs_or_shader::*;
+}
 pub mod overspeed_flash;
 pub mod precipitation;
 pub mod rolling_stock;
@@ -83,8 +86,7 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<terrain_material::TerrainMaterial>::default())
-            .add_plugins(MaterialPlugin::<or_cab_material::OrCabMaterial>::default())
+        app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
@@ -97,6 +99,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<cab_view::CabInteriorState>()
             .init_resource::<cab_cvf::CabCvfState>()
+            .init_resource::<cab_cvf_overlay::CabCvfOverlayState>()
             .init_resource::<cab_render::CabRenderDiagnostic>()
             .init_resource::<cab_render::CabRenderDiagLatch>()
             .init_resource::<live::DriverCamState>()
@@ -129,7 +132,15 @@ impl Plugin for ViewerPlugin {
                 terrain::progressive_terrain_spawn_system.run_if(launch::full_scenery_active),
             )
             .add_systems(Update, track::tile_lab_frame_camera_once)
+            .add_systems(
+                Update,
+                openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
+            )
             .add_systems(Update, world::progressive_world_spawn_system)
+            .add_systems(
+                Update,
+                world::update_world_scenery_lod.after(world::progressive_world_spawn_system),
+            )
             .add_systems(Update, world::world_tile_stream_system)
             .add_systems(
                 Update,
@@ -201,8 +212,11 @@ impl Plugin for ViewerPlugin {
                     cab_render::tag_train_exterior_render_layers.run_if(live::live_mode_active),
                     cab_render::sync_camera_render_layers,
                     cab_view::sync_cab_interior,
+                    cab_cvf_overlay::sync_cab_cvf_overlay.after(cab_view::sync_cab_interior),
                     cab_render::tag_cab_interior_render_layers.after(cab_view::sync_cab_interior),
                     cab_cvf::update_cab_cvf_controls.after(cab_view::sync_cab_interior),
+                    cab_cvf_overlay::update_cab_cvf_overlay
+                        .after(cab_cvf_overlay::sync_cab_cvf_overlay),
                     cab_render::update_cab_render_diagnostic
                         .after(cab_render::tag_cab_interior_render_layers)
                         .after(camera::follow_train_camera)

@@ -295,7 +295,18 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
         live.session.driver_throttle = 0.0;
         live.session.driver_brake = 1.0;
     }
+    // Reverser (cab CVF): [ = REV, ] = FWD, \ = neutral (Open Rails style 3-position).
+    if keys.just_pressed(KeyCode::BracketLeft) {
+        live.session.driver_direction = 0.0;
+    }
+    if keys.just_pressed(KeyCode::BracketRight) {
+        live.session.driver_direction = 1.0;
+    }
+    if keys.just_pressed(KeyCode::Backslash) {
+        live.session.driver_direction = 0.5;
+    }
     if keys.just_pressed(KeyCode::KeyH) {
+        live.session.trigger_horn(0.35);
         if let Some(ref audio) = live.audio {
             audio.send(AudioCmd::Horn);
         }

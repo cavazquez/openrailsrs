@@ -1,56 +1,17 @@
 //! Depuracion VSM/sombras OR: toggle de modo, tint de cascadas, preview del atlas.
 
 use bevy::prelude::*;
-use bevy::render::extract_resource::ExtractResource;
 use bevy::ui::widget::ImageNode;
+use openrailsrs_bevy_scenery::materials::OrSceneryMaterial;
+use openrailsrs_bevy_scenery::vsm::{
+    OR_VSM_ATLAS_LAYERS, OrMomentPreviewImage, OrVsmMode, OrVsmRenderSettings,
+};
 
 use crate::debug_hud::{DebugHudEnabled, DebugHudRoot, SceneDebugContext, scene_to_msts};
 use crate::loading::AppState;
-use crate::or_scenery_material::OrSceneryMaterial;
-use crate::or_vsm::OrVsmMode;
 use crate::or_vsm_moments::{OrMomentMaps, OrVsmCascadeLimits};
-use crate::or_vsm_render::{OrMomentPreviewImage, OrVsmRenderSettings};
 
-pub const OR_DEBUG_CASCADE_TINT: f32 = 1.0;
-pub const OR_VSM_ATLAS_LAYERS: u32 = 4;
-
-/// Estado de depuracion VSM (runtime; F4/F5/F6/F7/F8).
-#[derive(Resource, Clone, Debug, ExtractResource)]
-pub struct OrVsmDebugSettings {
-    pub mode: OrVsmMode,
-    pub cascade_tint: bool,
-    pub atlas_preview: bool,
-    pub atlas_layer: u32,
-}
-
-impl Default for OrVsmDebugSettings {
-    fn default() -> Self {
-        Self {
-            mode: OrVsmMode::from_env(),
-            cascade_tint: false,
-            atlas_preview: false,
-            atlas_layer: 0,
-        }
-    }
-}
-
-impl OrVsmDebugSettings {
-    /// Preset F9: exact + tint cascada + atlas capa 0.
-    pub fn apply_debug_preset(&mut self) {
-        self.mode = OrVsmMode::Exact;
-        self.cascade_tint = true;
-        self.atlas_preview = true;
-        self.atlas_layer = 0;
-    }
-
-    pub fn debug_flags(&self) -> f32 {
-        if self.cascade_tint {
-            OR_DEBUG_CASCADE_TINT
-        } else {
-            0.0
-        }
-    }
-}
+pub use openrailsrs_bevy_scenery::vsm::OrVsmDebugSettings;
 
 #[derive(Component)]
 pub struct OrVsmPreviewPanel;
@@ -244,6 +205,7 @@ pub fn vsm_debug_hud_lines(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_bevy_scenery::vsm::OR_DEBUG_CASCADE_TINT;
 
     #[test]
     fn debug_preset_sets_exact_and_overlays() {

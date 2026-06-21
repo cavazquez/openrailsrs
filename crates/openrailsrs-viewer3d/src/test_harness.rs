@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use bevy::asset::AssetPlugin;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::OrSceneryPlugins;
 use openrailsrs_core::{EdgeId, NodeId};
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::load_scenario;
@@ -101,11 +102,7 @@ pub fn sample_replay_track() -> TrainTrack {
 /// `MinimalPlugins` + assets used by spawn systems.
 pub fn minimal_app() -> App {
     let mut app = App::new();
-    app.add_plugins((
-        MinimalPlugins,
-        AssetPlugin::default(),
-        MaterialPlugin::<TerrainMaterial>::default(),
-    ));
+    app.add_plugins((MinimalPlugins, AssetPlugin::default(), OrSceneryPlugins));
     app.init_asset::<Mesh>();
     app.init_asset::<Image>();
     app.init_asset::<StandardMaterial>();

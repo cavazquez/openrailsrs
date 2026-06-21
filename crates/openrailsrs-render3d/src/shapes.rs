@@ -13,7 +13,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
-use crate::coords::{
+use openrailsrs_or_shader::coordinates::{
     matrix43_transform_point_xna, matrix43_transform_vector_xna, shape_point_to_bevy,
 };
 

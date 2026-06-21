@@ -18,6 +18,8 @@ members = [
     "crates/openrailsrs-ace",
     "crates/openrailsrs-cli",
     "crates/openrailsrs-viewer",
+    "crates/openrailsrs-or-shader",
+    "crates/openrailsrs-bevy-scenery",
     "crates/openrailsrs-viewer3d",
     "crates/openrailsrs-render3d",
 ]
@@ -40,3 +42,21 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rayon = "1.10"
 indexmap = "2.7"
+# Bevy pin — see docs/BEVY_MIGRATION_0_19.md.
+bevy = { version = "0.19", default-features = false, features = [
+    "bevy_winit",
+    "x11",
+    "bevy_window",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_asset",
+    "bevy_log",
+    "bevy_ui",
+    "default_font",
+    "tonemapping_luts",
+    "zstd_rust",
+    "dds",
+] }
+bytemuck = { version = "1", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["dds"] }
