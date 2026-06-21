@@ -109,6 +109,10 @@ pub struct RouteSection {
     /// Runtime switch overrides; applied after `track.toml` defaults.
     #[serde(default)]
     pub switches: Vec<SwitchDef>,
+    /// Ordered graph node ids from the player `.pat` (import-msts). When present
+    /// (≥2 entries), the sim follows this route instead of BFS start→destination.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waypoints: Vec<String>,
     /// When true, all signals start as Clear at t=0 (OR `AUTO_SIGNAL` / evaluation baselines).
     #[serde(default)]
     pub assume_signals_clear: bool,

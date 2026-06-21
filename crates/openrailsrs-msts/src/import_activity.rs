@@ -7,13 +7,16 @@ use openrailsrs_formats::{
     ActivityFile, ActivityObjectDef, PathFile, SoundRegionOverride, TrItemKind, TrackDbFile,
     TrackNodeKind, TrafficServiceDef,
 };
+use openrailsrs_route::load_route_from_dir;
 use openrailsrs_scenarios::model::{
     GameplaySection, ObjectiveKind, OutputSection, RouteSection, ScenarioFile, ScenarioMeta,
     SimulationSection, SoundRegionDef, StopDef, SwitchDef, TrainEntryDef, TrainSection,
 };
 
 use crate::error::MstsError;
-use crate::path_placement::{placement_from_imported_route, read_distance_down_path};
+use crate::path_placement::{
+    pat_waypoints_with_offset, placement_from_imported_route, read_distance_down_path,
+};
 
 /// Parse an MSTS `.act` file (and the `.pat` it references) and produce a
 /// `scenario.toml` TOML string compatible with `openrailsrs-scenarios`.
@@ -71,6 +74,38 @@ pub fn import_activity_with_summary(
             (s, d, sw, 0.0)
         };
 
+    let route_waypoints =
+        if let (Some(track_dir), Some(path_file)) = (imported_route_dir, path_file_opt.as_ref()) {
+            load_route_from_dir(track_dir)
+                .ok()
+                .and_then(|loaded| {
+                    let mut graph = loaded.graph.clone();
+                    for sw in &route_switches {
+                        let pos = match sw.position {
+                            openrailsrs_scenarios::model::SwitchPositionDef::Straight => {
+                                openrailsrs_track::SwitchPosition::Straight
+                            }
+                            openrailsrs_scenarios::model::SwitchPositionDef::Diverging => {
+                                openrailsrs_track::SwitchPosition::Diverging
+                            }
+                        };
+                        let _ = graph.set_switch(&sw.node, pos);
+                    }
+                    pat_waypoints_with_offset(
+                        &graph,
+                        &loaded.msts_aliases,
+                        path_file,
+                        &start_node,
+                        &destination_node,
+                        start_offset_m,
+                    )
+                    .ok()
+                })
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
     let start_offset_m = if imported_route_dir.is_some() {
         start_offset_m
     } else {
@@ -113,6 +148,7 @@ pub fn import_activity_with_summary(
             },
             stops,
             switches: route_switches,
+            waypoints: route_waypoints,
             assume_signals_clear: false,
             edge_speed_limits: vec![],
         },

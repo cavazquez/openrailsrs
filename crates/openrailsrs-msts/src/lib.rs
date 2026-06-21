@@ -18,3 +18,8 @@ pub use import_activity::{
 pub use import_route::{
     import_route, import_route_with_activity, import_route_with_summary, patch_track_coordinates,
 };
+pub use path_placement::{
+    pat_edge_path, pat_edge_path_with_offset, pat_outbound_waypoints, pat_waypoints,
+    pat_waypoints_from_world, pat_waypoints_with_offset, placement_for_pat,
+    placement_from_imported_route, read_distance_down_path,
+};

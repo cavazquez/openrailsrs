@@ -4333,6 +4333,7 @@ dependencies = [
  "csv",
  "openrailsrs-core",
  "openrailsrs-formats",
+ "openrailsrs-msts",
  "openrailsrs-route",
  "openrailsrs-scenarios",
  "openrailsrs-track",

@@ -307,6 +307,16 @@ OPENRAILSRS_TRACK_AUDIT="$PWD/docs/fixtures/chiltern-track-audit.json" \
 
 **Nota:** no se añadió subcomando `pat-dump`; los tests `document_*` cubren el volcado de PDPs.
 
+### Sim PAT-aware (2026-06)
+
+La sim usa `route.waypoints` (import-msts desde `.pat`) vía `resolve_route_edges` en `openrailsrs-sim`:
+
+- `TrPathPDP` (`minimal.pat`): waypoints por ids TDB resueltos (`n1` → `n3`).
+- `TrackPDP` nativo (Birmingham): snap mundo → nodos con cadena conectada BFS + offset de plataforma.
+- Tests: `openrailsrs-sim/tests/pat_route_edges.rs`, `path_placement::chiltern_birmingham_pat_edge_path`.
+
+Para Birmingham con switches actuales, el path PAT coincide con BFS; la infraestructura fija el recorrido explícitamente cuando import re-emite `waypoints`.
+
 ---
 
 ## 7. Referencias cruzadas

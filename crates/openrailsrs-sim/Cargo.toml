@@ -21,6 +21,7 @@ toml.workspace = true
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-train = { path = "../openrailsrs-train" }
 pretty_assertions = "1.4"
 tempfile = "3.27.0"

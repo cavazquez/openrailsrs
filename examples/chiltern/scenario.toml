@@ -9,6 +9,7 @@ path = "."
 start = "n3"
 destination = "n10770"
 start_offset_m = 305.576
+waypoints = ["n3", "n10770"]
 stops = []
 
 [[route.switches]]

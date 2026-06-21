@@ -4,7 +4,10 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 
 use openrailsrs_formats::PathFile;
-use openrailsrs_route::{MstsAlias, load_route_from_dir, path::edge_path};
+use openrailsrs_route::{
+    MstsAlias, load_route_from_dir,
+    path::{edge_path, edge_path_via_waypoints},
+};
 use openrailsrs_scenarios::model::{SwitchDef, SwitchPositionDef};
 use openrailsrs_track::TrackGraph;
 
@@ -106,6 +109,224 @@ pub fn placement_from_imported_route(
         pat_path,
         start_offset_m,
     )
+}
+
+/// Compress consecutive duplicate graph node ids from a resolved PAT sequence.
+pub fn compress_pat_waypoints(nodes: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for node in nodes {
+        if out.last().map(String::as_str) != Some(node.as_str()) {
+            out.push(node.clone());
+        }
+    }
+    out
+}
+
+/// Graph node ids along the player `.pat` from `start` to `destination` (outbound leg).
+///
+/// Native MSTS `TrackPDP` lines carry world coordinates; when present, waypoints are
+/// derived by snapping each PDP to the nearest graph node. Otherwise falls back to
+/// resolved TDB node ids (see [`TrPathPDP`] / `minimal.pat`).
+pub fn pat_waypoints(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+    start: &str,
+    destination: &str,
+) -> Result<Vec<String>, MstsError> {
+    pat_waypoints_with_offset(graph, aliases, path_file, start, destination, 0.0)
+}
+
+/// Like [`pat_waypoints`] but skips the first `start_offset_m` metres along the PAT
+/// world polyline before building the connected node chain.
+pub fn pat_waypoints_with_offset(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+    start: &str,
+    destination: &str,
+    start_offset_m: f64,
+) -> Result<Vec<String>, MstsError> {
+    if path_file.pdps.iter().any(|p| p.world.is_some()) {
+        return pat_waypoints_from_world(graph, path_file, start, destination, start_offset_m);
+    }
+    let compressed = compressed_pat_nodes(graph, aliases, path_file)?;
+    let start_idx = compressed
+        .iter()
+        .position(|n| n == start)
+        .ok_or_else(|| MstsError::Msg(format!("PAT does not visit start node {start}")))?;
+    if let Some(dest_offset) = compressed[start_idx..]
+        .iter()
+        .position(|n| n == destination)
+    {
+        let dest_idx = start_idx + dest_offset;
+        return Ok(compressed[start_idx..=dest_idx].to_vec());
+    }
+    pat_outbound_waypoints_from_compressed(&compressed, start_idx)
+}
+
+/// Snap native `TrackPDP` world positions to graph nodes and extract the outbound leg.
+///
+/// Only appends a snapped node when it is reachable from the previous waypoint
+/// (switch-aware BFS), so noisy nearest-node snaps off the route are skipped.
+pub fn pat_waypoints_from_world(
+    graph: &TrackGraph,
+    path_file: &PathFile,
+    start: &str,
+    destination: &str,
+    start_offset_m: f64,
+) -> Result<Vec<String>, MstsError> {
+    let mut waypoints = vec![start.to_string()];
+    let mut past_offset = start_offset_m <= 0.0;
+    let mut walked = 0.0f64;
+    let world_pdps: Vec<_> = path_file.pdps.iter().filter_map(|p| p.world).collect();
+    for (i, w) in world_pdps.iter().enumerate() {
+        if i > 0 {
+            let (ax, _, az) = world_pdps[i - 1].bevy_position();
+            let (bx, _, bz) = w.bevy_position();
+            let dx = (bx - ax) as f64;
+            let dz = (bz - az) as f64;
+            walked += (dx * dx + dz * dz).sqrt();
+        }
+        if !past_offset {
+            if walked >= start_offset_m {
+                past_offset = true;
+            } else {
+                continue;
+            }
+        }
+        let Some(nid) = nearest_node_id(graph, w) else {
+            continue;
+        };
+        if waypoints.last().map(String::as_str) == Some(nid.as_str()) {
+            continue;
+        }
+        let tail = waypoints.last().expect("non-empty");
+        if edge_path(graph, tail, &nid).is_ok() {
+            waypoints.push(nid);
+        }
+    }
+    if !waypoints.iter().any(|n| n == destination) {
+        if let Some(tail) = waypoints.last() {
+            if edge_path(graph, tail, destination).is_ok() && tail != destination {
+                waypoints.push(destination.to_string());
+            }
+        }
+    }
+    let start_idx = waypoints.iter().position(|n| n == start).unwrap_or(0);
+    if let Some(dest_offset) = waypoints[start_idx..].iter().position(|n| n == destination) {
+        let dest_idx = start_idx + dest_offset;
+        return Ok(waypoints[start_idx..=dest_idx].to_vec());
+    }
+    pat_outbound_waypoints_from_compressed(&waypoints, start_idx)
+}
+
+fn nearest_node_id(
+    graph: &TrackGraph,
+    world: &openrailsrs_formats::TrackVectorPoint,
+) -> Option<String> {
+    let (px, _, pz) = world.bevy_position();
+    graph
+        .nodes_iter()
+        .min_by(|(_, a), (_, b)| {
+            let da = sq_dist_node(px, pz, a);
+            let db = sq_dist_node(px, pz, b);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(id, _)| id.to_string())
+}
+
+fn sq_dist_node(px: f32, pz: f32, node: &openrailsrs_track::Node) -> f32 {
+    let dx = node.x_m as f32 - px;
+    let dz = node.y_m as f32 - pz;
+    dx * dx + dz * dz
+}
+
+/// Outbound PAT leg: from `start_idx` until the first return to `n1` (exclusive).
+pub fn pat_outbound_waypoints_from_compressed(
+    compressed: &[String],
+    start_idx: usize,
+) -> Result<Vec<String>, MstsError> {
+    if start_idx >= compressed.len() {
+        return Err(MstsError::Msg("start_idx past end of PAT".into()));
+    }
+    let mut end_idx = compressed.len();
+    for (i, node) in compressed.iter().enumerate().skip(start_idx + 1) {
+        if node == "n1" {
+            end_idx = i;
+            break;
+        }
+    }
+    Ok(compressed[start_idx..end_idx].to_vec())
+}
+
+/// Outbound PAT graph nodes from `start` (see [`pat_outbound_waypoints_from_compressed`]).
+pub fn pat_outbound_waypoints(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+    start: &str,
+) -> Result<Vec<String>, MstsError> {
+    let compressed = compressed_pat_nodes(graph, aliases, path_file)?;
+    let start_idx = compressed
+        .iter()
+        .position(|n| n == start)
+        .ok_or_else(|| MstsError::Msg(format!("PAT does not visit start node {start}")))?;
+    pat_outbound_waypoints_from_compressed(&compressed, start_idx)
+}
+
+fn compressed_pat_nodes(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+) -> Result<Vec<String>, MstsError> {
+    let resolved = resolve_pat_sequence(graph, aliases, path_file)?;
+    Ok(compress_pat_waypoints(
+        &resolved
+            .iter()
+            .map(|r| r.graph_node.clone())
+            .collect::<Vec<_>>(),
+    ))
+}
+
+/// Edge ids following the player `.pat` between `start` and `destination`.
+pub fn pat_edge_path(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+    start: &str,
+    destination: &str,
+) -> Result<Vec<String>, MstsError> {
+    pat_edge_path_with_offset(graph, aliases, path_file, start, destination, 0.0)
+}
+
+pub fn pat_edge_path_with_offset(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    path_file: &PathFile,
+    start: &str,
+    destination: &str,
+    start_offset_m: f64,
+) -> Result<Vec<String>, MstsError> {
+    let waypoints = pat_waypoints_with_offset(
+        graph,
+        aliases,
+        path_file,
+        start,
+        destination,
+        start_offset_m,
+    )?;
+    let mut edges =
+        edge_path_via_waypoints(graph, &waypoints).map_err(|e| MstsError::Msg(e.to_string()))?;
+    if waypoints.last().map(String::as_str) != Some(destination) {
+        let tail_from = waypoints
+            .last()
+            .ok_or_else(|| MstsError::Msg("empty PAT".into()))?;
+        let tail =
+            edge_path(graph, tail_from, destination).map_err(|e| MstsError::Msg(e.to_string()))?;
+        edges.extend(tail);
+    }
+    Ok(edges)
 }
 
 #[derive(Debug, Clone)]
@@ -391,5 +612,74 @@ mod tests {
         assert_ne!(hints.start, hints.destination);
         assert_eq!(hints.start, "n3", "Paddington platform start on main line");
         assert!(hints.start_offset_m > 250.0 && hints.start_offset_m < 350.0);
+    }
+
+    #[test]
+    fn chiltern_birmingham_pat_edge_path() {
+        use openrailsrs_track::SwitchPosition;
+
+        let route_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("track.toml").exists() {
+            return;
+        }
+        let pat = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/PATHS/RS_Let's go to Birmingham.pat",
+        );
+        if !pat.exists() {
+            return;
+        }
+        let path_file = PathFile::from_path(pat).expect("parse pat");
+        let loaded = load_route_from_dir(&route_dir).expect("load chiltern");
+        let mut graph = loaded.graph.clone();
+        graph
+            .set_switch("n10770", SwitchPosition::Diverging)
+            .expect("sw");
+        graph
+            .set_switch("n10780", SwitchPosition::Straight)
+            .expect("sw");
+
+        let pat_path = pat_edge_path_with_offset(
+            &graph,
+            &loaded.msts_aliases,
+            &path_file,
+            "n3",
+            "n10770",
+            305.576,
+        )
+        .expect("pat edges");
+        let wps = pat_waypoints_with_offset(
+            &graph,
+            &loaded.msts_aliases,
+            &path_file,
+            "n3",
+            "n10770",
+            305.576,
+        )
+        .expect("waypoints");
+        eprintln!("PAT waypoints (offset 305m): {} nodes", wps.len());
+        if wps.len() <= 8 {
+            eprintln!("  {wps:?}");
+        }
+
+        assert!(
+            pat_path.len() >= 6,
+            "expected long Birmingham PAT path, got {} edges",
+            pat_path.len()
+        );
+        assert!(
+            pat_path.contains(&"e10783".to_string()),
+            "PAT path must use Paddington departure e10783"
+        );
+        assert!(
+            pat_path.contains(&"e10771".to_string()),
+            "PAT path must reach destination approach e10771"
+        );
+
+        let bfs = edge_path(&graph, "n3", "n10770").expect("bfs");
+        assert_eq!(
+            pat_path, bfs,
+            "with Birmingham switches, PAT waypoints should match BFS"
+        );
     }
 }

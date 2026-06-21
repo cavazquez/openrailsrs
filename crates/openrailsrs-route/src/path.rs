@@ -74,3 +74,106 @@ pub fn edge_path(
         "no path from {start} to {destination}"
     )))
 }
+
+/// Direct outgoing edge from `from` to `to`, if any.
+pub fn direct_edge(graph: &TrackGraph, from: &str, to: &str) -> Option<String> {
+    graph
+        .outgoing_edges(from)
+        .iter()
+        .find(|eid| graph.edge(eid).is_some_and(|edge| edge.to.0.as_str() == to))
+        .cloned()
+}
+
+/// Chain edges through an ordered list of graph node ids (PAT waypoints).
+///
+/// Uses a direct edge when `waypoints[i]` → `waypoints[i+1]` exists; otherwise
+/// switch-aware BFS for that hop only.
+pub fn edge_path_via_waypoints(
+    graph: &TrackGraph,
+    waypoints: &[String],
+) -> Result<Vec<String>, RouteError> {
+    if waypoints.len() < 2 {
+        return Err(RouteError::Msg(
+            "need at least 2 waypoints for PAT path".into(),
+        ));
+    }
+    let mut out = Vec::new();
+    for pair in waypoints.windows(2) {
+        let a = pair[0].as_str();
+        let b = pair[1].as_str();
+        if a == b {
+            continue;
+        }
+        if let Some(eid) = direct_edge(graph, a, b) {
+            out.push(eid);
+        } else {
+            let hop = edge_path(graph, a, b)?;
+            out.extend(hop);
+        }
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_core::{EdgeId, NodeId};
+    use openrailsrs_track::{Edge, Node, NodeKind, SwitchPosition, TrackGraph};
+
+    fn fork_graph(switch_pos: SwitchPosition) -> TrackGraph {
+        let mut g = TrackGraph::new();
+        for (id, x) in [
+            ("start", 0.0),
+            ("junction", 1000.0),
+            ("dest_a", 2000.0),
+            ("dest_b", 2000.0),
+        ] {
+            let kind = if id == "junction" {
+                NodeKind::Switch {
+                    stem_edge: EdgeId("e2".into()),
+                    diverging_edge: EdgeId("e3".into()),
+                }
+            } else {
+                NodeKind::Plain
+            };
+            g.insert_node(Node {
+                id: NodeId(id.into()),
+                kind,
+                x_m: x,
+                y_m: 0.0,
+            })
+            .unwrap();
+        }
+        for (id, from, to) in [
+            ("e1", "start", "junction"),
+            ("e2", "junction", "dest_a"),
+            ("e3", "junction", "dest_b"),
+        ] {
+            g.insert_edge(Edge {
+                id: EdgeId(id.into()),
+                from: NodeId(from.into()),
+                to: NodeId(to.into()),
+                length_m: 1000.0,
+                speed_limit_mps: 20.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        }
+        g.set_switch("junction", switch_pos).unwrap();
+        g
+    }
+
+    #[test]
+    fn via_waypoints_matches_bfs_on_fork() {
+        let g = fork_graph(SwitchPosition::Diverging);
+        let wps = [
+            "start".to_string(),
+            "junction".to_string(),
+            "dest_b".to_string(),
+        ];
+        let via = edge_path_via_waypoints(&g, &wps).expect("via waypoints");
+        let bfs = edge_path(&g, "start", "dest_b").expect("bfs");
+        assert_eq!(via, bfs);
+        assert_eq!(via, vec!["e1", "e3"]);
+    }
+}

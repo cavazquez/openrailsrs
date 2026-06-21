@@ -183,7 +183,7 @@ pub fn run_scenario_multi_train(
 
     // Primary train (id = scenario name or "primary").
     {
-        let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
+        let path_edges = crate::path::resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
         let physics = build_physics(
             &consist_path,
@@ -693,8 +693,7 @@ impl LiveMultiSim {
 
         // Primary train
         {
-            let path_edges =
-                crate::path::edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
+            let path_edges = crate::path::resolve_route_edges(&graph, &scenario.route)?;
             let consist_path = scenario_dir.join(&scenario.train.consist);
             let physics = build_physics(
                 &consist_path,

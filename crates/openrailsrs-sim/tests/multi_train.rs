@@ -74,6 +74,7 @@ fn make_two_train_scenario(
             start_offset_m: None,
             stops: vec![],
             switches: vec![],
+            waypoints: vec![],
             assume_signals_clear: false,
             edge_speed_limits: vec![],
         },

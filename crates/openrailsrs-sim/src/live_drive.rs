@@ -11,7 +11,7 @@ use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asse
 use crate::SimError;
 use crate::brake::BrakeSystem;
 use crate::coupler::CouplerKind;
-use crate::path::edge_path;
+use crate::path::resolve_route_edges;
 use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::runner::consist_root;
@@ -182,7 +182,7 @@ impl LiveDriveSession {
             graph.cap_edge_speed_limit_kmh(&cap.edge, cap.speed_limit_kmh);
         }
 
-        let path_edges = edge_path(&graph, &scenario.route.start, &scenario.route.destination)?;
+        let path_edges = resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
         let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
         let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
