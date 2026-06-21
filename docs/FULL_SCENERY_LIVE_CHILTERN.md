@@ -2,7 +2,7 @@
 
 Documento del proceso de depuración para cargar **terreno + WORLD + cabina + tren** en `openrailsrs-viewer3d --live` con la ruta Chiltern externa.
 
-Relacionado: [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md) · [`CABVIEW3D_MATRICES.md`](CABVIEW3D_MATRICES.md) · [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md)
+Relacionado: [`CABVIEW3D_SESSION_2026-06-19.md`](CABVIEW3D_SESSION_2026-06-19.md) · [`PULLMAN_EXTERIOR_SESSION_2026-06-21.md`](PULLMAN_EXTERIOR_SESSION_2026-06-21.md) · [`CABVIEW3D_MATRICES.md`](CABVIEW3D_MATRICES.md) · [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [`CHILTERN_OR_SETUP.md`](CHILTERN_OR_SETUP.md)
 
 ---
 

@@ -23,11 +23,12 @@ use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_shape_from_path, load_shape_render_asset_from_path,
     resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
-    vehicle_shape_local_transform, vehicle_texture_root_for_shape_path,
+    vehicle_shape_local_transform, vehicle_texture_search_dirs,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
 use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
+use crate::train_diagnostics::{log_consist_diagnostic, log_vehicle_transform_if_enabled};
 use crate::world::visible_radius_m;
 use crate::{log_step, viewer_log};
 
@@ -363,6 +364,24 @@ pub struct DriverCamState {
     pub was_driver: bool,
 }
 
+/// Force cab interior meshes visible when the driver camera is active (after late spawn).
+pub fn ensure_cab_parts_visible_in_driver_view(
+    follow: &CameraFollowMode,
+    cab_parts: &mut Query<&mut Visibility, With<crate::cab_view::CabInteriorMarker>>,
+) -> usize {
+    if *follow != CameraFollowMode::DriverCam {
+        return 0;
+    }
+    let mut count = 0usize;
+    for mut vis in cab_parts.iter_mut() {
+        if *vis != Visibility::Visible {
+            *vis = Visibility::Visible;
+        }
+        count += 1;
+    }
+    count
+}
+
 /// Hide the consist mesh in first-person driver view (cab interior stays visible).
 ///
 /// CAB-P2: traverses the **full** `LiveTrainBody` hierarchy (including children
@@ -613,19 +632,18 @@ pub fn spawn_live_train(
     }
 
     let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
+    if let (Some(scenario_dir), Some(consist_rel)) = (
+        consist.scenario_dir.as_deref(),
+        consist.primary_consist_rel.as_deref(),
+    ) {
+        log_consist_diagnostic(scenario_dir, consist_rel, vehicles, pos, yaw.to_degrees());
+    }
     const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
     let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
     let mut shape_cars = 0usize;
     let mut fallback_cars = 0usize;
     let mut shape_parts = 0usize;
     let mut textured_parts = 0usize;
-
-    let locator = meshes.add(Sphere::new(1.2));
-    let locator_mat = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.2, 0.9, 0.3),
-        emissive: LinearRgba::new(0.2, 1.8, 0.3, 1.0),
-        ..default()
-    });
 
     commands
         .spawn((
@@ -636,17 +654,6 @@ pub fn spawn_live_train(
             Name::new("train:live"),
         ))
         .with_children(|train| {
-            if !mode.is_run_corridor() {
-                train.spawn((
-                    LiveTrainBody,
-                    NotShadowCaster,
-                    Mesh3d(locator.clone()),
-                    MeshMaterial3d(locator_mat),
-                    Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
-                    Visibility::default(),
-                    Name::new("train:live:locator"),
-                ));
-            }
             for (vi, vehicle) in vehicles.iter().enumerate() {
                 if let Some(shape_name) = vehicle
                     .shape_file
@@ -656,11 +663,10 @@ pub fn spawn_live_train(
                     if let Some(shape_path) =
                         resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
                     {
-                        let trainset_root = vehicle_texture_root_for_shape_path(&shape_path)
-                            .filter(|p| *p != assets.route_dir.as_path());
-                        let tex_dirs: Vec<&Path> = std::iter::once(assets.route_dir.as_path())
-                            .chain(trainset_root)
-                            .collect();
+                        let tex_dirs_owned =
+                            vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
+                        let tex_dirs: Vec<&Path> =
+                            tex_dirs_owned.iter().map(|p| p.as_path()).collect();
                         if let Some(asset) = load_shape_render_asset_from_path(
                             &shape_path,
                             &tex_dirs,
@@ -670,6 +676,7 @@ pub fn spawn_live_train(
                             &mut materials,
                             &mut texture_cache,
                             TRAIN_SHAPE_FALLBACK,
+                            true,
                         ) {
                             shape_cars += 1;
                             shape_parts += asset.parts.len();
@@ -722,6 +729,7 @@ pub fn spawn_live_train(
                                 Visibility::default(),
                                 Name::new(format!("train:live:car:{vi}")),
                             ));
+                            log_vehicle_transform_if_enabled(vi, vehicle, &car_transform, &head);
                             if is_lead {
                                 car.insert(CabLeadVehicle);
                             }

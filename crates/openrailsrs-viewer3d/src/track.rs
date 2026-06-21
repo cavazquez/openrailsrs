@@ -808,7 +808,10 @@ mod tests {
 
     #[test]
     fn live_msts_scenery_hides_compact_graph_overlay() {
-        let opts = ViewerLaunchOpts { live: true };
+        let opts = ViewerLaunchOpts {
+            live: true,
+            ..Default::default()
+        };
         assert!(should_hide_compact_track_lines(
             opts,
             TrackRenderMode::Compact,
@@ -820,7 +823,10 @@ mod tests {
             false
         ));
         assert!(!should_hide_compact_track_lines(
-            ViewerLaunchOpts { live: false },
+            ViewerLaunchOpts {
+                live: false,
+                ..Default::default()
+            },
             TrackRenderMode::Compact,
             true
         ));

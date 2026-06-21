@@ -13,7 +13,7 @@ use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
-    vehicle_shape_local_transform, vehicle_texture_root_for_shape_path,
+    vehicle_shape_local_transform, vehicle_texture_search_dirs,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
@@ -412,12 +412,10 @@ fn load_vehicle_shape_assets(
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
 ) -> ShapeRenderAsset {
-    // Derive the trainset root from the shape path so textures are found even
-    // when they are outside route_dir and the trainset uses flat `.s` layout.
-    let trainset_root = vehicle_texture_root_for_shape_path(shape_path);
-    let tex_dirs: Vec<&std::path::Path> = std::iter::once(route_dir)
-        .chain(trainset_root.filter(|t| *t != route_dir))
-        .collect();
+    // Open Rails resolves rolling-stock textures from ReferencePath (trainset root),
+    // not route TEXTURES/ — see `vehicle_texture_search_dirs`.
+    let tex_dirs_owned = vehicle_texture_search_dirs(shape_path, route_dir);
+    let tex_dirs: Vec<&std::path::Path> = tex_dirs_owned.iter().map(|p| p.as_path()).collect();
 
     load_shape_render_asset_from_path(
         shape_path,
@@ -428,6 +426,7 @@ fn load_vehicle_shape_assets(
         materials,
         texture_cache,
         fallback_color,
+        true,
     )
     .unwrap_or_else(|| {
         let mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));

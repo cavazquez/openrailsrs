@@ -47,6 +47,7 @@ pub(crate) mod terrain_spawn;
 pub mod track;
 pub mod track_audit;
 pub mod train;
+pub mod train_diagnostics;
 pub mod water;
 pub mod world;
 

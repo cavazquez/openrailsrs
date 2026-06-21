@@ -67,6 +67,15 @@ cargo test -p openrailsrs-viewer3d chiltern_live_startup_no_panic -- --ignored
 
 Requires `examples/chiltern/scenario.toml` and MSTS content on disk.
 
+## Pullman exterior (Chiltern / DMBSA)
+
+Regresiones y diagnóstico de carrocería + texto **PULLMAN** (alpha, winding, cull):
+
+- Doc: [`PULLMAN_EXTERIOR_SESSION_2026-06-21.md`](PULLMAN_EXTERIOR_SESSION_2026-06-21.md)
+- Tests: `pullman_exterior_alpha_modes_audit`, `pullman_train_exterior_single_sided_back_cull`, `pullman_prim_state_z_bias_sane`
+- Matriz visual: `./scripts/pullman_visual_matrix.sh` → `tmp/pullman_matrix/`
+- CLI OBJ: `cargo run -p openrailsrs-cli -- shape-obj-dump …/RF_WP_DMBSA.s -o /tmp/DMBSA.obj`
+
 ## Floating origin
 
 - Threshold 256 m (`floating_origin.rs` unit).

@@ -540,17 +540,31 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
         }
     }
 
+    // Flat atoms after optional name: flags, shader_idx, then (post tex_idxs in binary shapes)
+    // ZBias, ivtx_state, alphatestmode, LightCfgIdx, ZBufMode — see OR `prim_state` reader.
     if let Some(n) = top_level_nums.first() {
         flags = *n as i32;
     }
     if let Some(n) = top_level_nums.get(1) {
         shader_idx = *n as i32;
     }
-    if let Some(n) = top_level_nums.get(2) {
-        vertex_state_idx = *n as i32;
-    }
     if z_bias.is_none() {
-        z_bias = top_level_nums.get(3).copied();
+        z_bias = top_level_nums.get(2).copied();
+    }
+    if vertex_state_idx < 0 {
+        if let Some(n) = top_level_nums.get(3) {
+            vertex_state_idx = *n as i32;
+        }
+    }
+    if alpha_test_mode < 0 {
+        if let Some(n) = top_level_nums.get(4) {
+            alpha_test_mode = *n as i32;
+        }
+    }
+    if z_buf_mode < 0 {
+        if let Some(n) = top_level_nums.get(6) {
+            z_buf_mode = *n as i32;
+        }
     }
     if tex_indices.is_empty() {
         for_each_tagged(items, "tex_idxs", |sub| {

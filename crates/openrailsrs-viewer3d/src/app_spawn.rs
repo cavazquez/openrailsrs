@@ -11,8 +11,10 @@ mod tests {
     use crate::sky::spawn_sky_dome;
     use crate::terrain::spawn_terrain_meshes;
     use crate::test_harness::{count_named, smoke_route_dir, with_route_dir_world};
+    use crate::track::TrackScene;
     use crate::track::spawn_track_meshes;
     use crate::water::spawn_water_patches;
+    use crate::world::RouteFocus;
     use crate::world::spawn_world_boxes;
 
     #[test]
@@ -53,6 +55,16 @@ mod tests {
             return;
         }
         with_route_dir_world(&route_dir, |world| {
+            // Smoke `.w` mixes yard-local Static (120 m) with far TrackObj/Signal (5–7 km).
+            // Default focus uses the world bbox centre and culls the yard fixture.
+            let yard_static = world
+                .resource::<crate::world::WorldScene>()
+                .items
+                .iter()
+                .find(|o| o.kind == "Static")
+                .map(|o| o.position)
+                .unwrap_or_else(|| world.resource::<TrackScene>().bounds.center);
+            world.insert_resource(RouteFocus::at_world_center(yard_static, None));
             world.run_system_once(spawn_world_boxes).unwrap();
             world.flush();
             let named = count_named(world, "world:")

@@ -3,7 +3,9 @@
 use std::sync::OnceLock;
 
 use bevy::prelude::*;
+use bevy::render::render_resource::Face;
 use openrailsrs_ace::AceFile;
+use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
 
 pub use crate::materials::or_scenery_shaders_enabled;
 
@@ -37,7 +39,9 @@ pub fn legacy_standard_scenery_enabled() -> bool {
 
 /// Effective lit path for scenery: OR-style sun shading unless legacy/unlit opt-outs apply.
 pub fn scenery_materials_lit() -> bool {
-    or_lighting_enabled() && !legacy_standard_scenery_enabled()
+    or_lighting_enabled()
+        && !legacy_standard_scenery_enabled()
+        && !crate::shapes::debug::debug_force_unlit()
 }
 
 /// Whether to use `OrSceneryMaterial` WGSL for world shapes.
@@ -211,6 +215,39 @@ pub fn cab_or_scenery_material_with_texture(
     finalize_scenery_material(mat, material_lit)
 }
 
+/// Rolling-stock exterior: Open Rails `CullCounterClockwise` (back-face cull, CCW front).
+pub fn apply_train_exterior_culling(mat: &mut StandardMaterial) {
+    mat.double_sided = false;
+    mat.cull_mode = Some(Face::Back);
+}
+
+/// Textured exterior body for live/replay train `.s` meshes (single-sided + back cull).
+#[allow(clippy::too_many_arguments)]
+pub fn train_exterior_material_with_texture(
+    tint: Color,
+    handle: Handle<Image>,
+    rgba_for_luma: &[u8],
+    alpha_mode: AlphaMode,
+    z_bias: f32,
+    lit: bool,
+    shader_name: Option<&str>,
+    solid_color: Option<[f32; 3]>,
+) -> StandardMaterial {
+    let mut mat = cab_or_scenery_material_with_texture(
+        tint,
+        handle,
+        rgba_for_luma,
+        alpha_mode,
+        z_bias,
+        lit,
+        shader_name,
+        solid_color,
+        false,
+    );
+    apply_train_exterior_culling(&mut mat);
+    mat
+}
+
 /// OR `TexDiff` / `Tex`: vertex colour × texture albedo.
 pub fn shader_uses_vertex_color_multiply(shader_name: Option<&str>) -> bool {
     shader_name.is_some_and(|s| {
@@ -325,10 +362,15 @@ pub fn alpha_mode_from_prim_state(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
-    // Honour the explicit prim_state flag first.
+    let blend_shader = shader_name
+        .map(shape_shader_requests_blending)
+        .unwrap_or(false);
+
+    // Honour explicit prim_state flags, except alpha-test on blend-capable shaders:
+    // OR still runs BlendATexDiff via dual-pass blend (ReferenceAlpha 250/10), not cutout.
     match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
+        0 if !blend_shader => return AlphaMode::Opaque,
+        1 if !blend_shader => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
         2 => return AlphaMode::Blend,
         _ => {}
     }
@@ -337,19 +379,25 @@ pub fn alpha_mode_from_prim_state(
 }
 
 pub fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
+    let blend_shader = shader_name
+        .map(shape_shader_requests_blending)
+        .unwrap_or(false);
+
+    // Open Rails: Tex/TexDiff only alpha-test when `prim_state` requests it (see Shapes.cs).
+    if !blend_shader {
+        return AlphaMode::Opaque;
+    }
+
     let alpha = shape_alpha_stats(ace);
     if !alpha.has_any {
         return AlphaMode::Opaque;
     }
 
-    if alpha.has_semitransparent
-        && shader_name
-            .map(shape_shader_requests_blending)
-            .unwrap_or_else(|| texture_name_suggests_transparency(texture_file))
-    {
+    if alpha.has_semitransparent || texture_name_suggests_transparency(texture_file) {
         AlphaMode::Blend
     } else {
-        AlphaMode::Mask(0.5)
+        // BlendATex on solid panels (bp01, wheels): OR draws them opaque unless alpha-tested.
+        AlphaMode::Opaque
     }
 }
 

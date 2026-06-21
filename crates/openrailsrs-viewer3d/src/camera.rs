@@ -128,11 +128,26 @@ pub const DRIVER_CAB_BACK_M: f32 = 2.8;
 /// Slight downward pitch for driver view (rad).
 pub const DRIVER_LOOK_PITCH: f32 = -0.04;
 
-/// FOV in driver view (degrees).
-pub const DRIVER_FOV_DEG: f32 = 72.0;
+/// FOV in driver view (degrees) — Open Rails default `ViewingFOV` is often ~60.
+pub const DRIVER_FOV_DEG_DEFAULT: f32 = 60.0;
 
-/// Near clip in driver view (m) — closer than orbit to reduce cab clipping.
-pub const DRIVER_NEAR_CLIP_M: f32 = 0.08;
+/// Resolve driver cab FOV: CLI `--cab-fov`, then `OPENRAILSRS_CAB_FOV`, else [`DRIVER_FOV_DEG_DEFAULT`].
+pub fn driver_cab_fov_deg(opts: &ViewerLaunchOpts) -> f32 {
+    opts.cab_fov_deg
+        .or_else(|| {
+            std::env::var("OPENRAILSRS_CAB_FOV")
+                .ok()
+                .and_then(|v| v.parse().ok())
+        })
+        .filter(|f| *f >= 40.0 && *f <= 90.0)
+        .unwrap_or(DRIVER_FOV_DEG_DEFAULT)
+}
+
+/// FOV in driver view (degrees).
+pub const DRIVER_FOV_DEG: f32 = DRIVER_FOV_DEG_DEFAULT;
+
+/// Near clip in driver view (m) — Open Rails `InsideThreeDimCamera.NearPlane` = 0.1.
+pub const DRIVER_NEAR_CLIP_M: f32 = 0.1;
 
 /// Mouse-look sensitivity in cab (rad / pixel).
 pub const DRIVER_LOOK_SENSITIVITY: f32 = 0.004;
@@ -1155,8 +1170,8 @@ pub fn update_driver_camera_fov(
         return;
     };
     if *follow == CameraFollowMode::DriverCam {
-        persp.fov = DRIVER_FOV_DEG.to_radians();
-        persp.near = 0.05;
+        persp.fov = driver_cab_fov_deg(&opts).to_radians();
+        persp.near = DRIVER_NEAR_CLIP_M;
         ambient.brightness = 350.0;
         ambient.color = Color::srgb(0.95, 0.94, 0.92);
         *tonemapping = Tonemapping::None;

@@ -4185,6 +4185,7 @@ dependencies = [
  "csv",
  "openrailsrs-ace",
  "openrailsrs-audio",
+ "openrailsrs-bevy-scenery",
  "openrailsrs-campaign",
  "openrailsrs-export",
  "openrailsrs-formats",

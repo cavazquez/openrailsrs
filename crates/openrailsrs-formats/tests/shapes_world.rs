@@ -211,6 +211,16 @@ fn parse_compressed_binary_shape_from_open_rails_content() {
         }
     }
 
+    for (i, prim_state) in shape.prim_states.iter().enumerate() {
+        if let Some(z) = prim_state.z_bias {
+            assert!(
+                z.is_finite() && z.abs() < 100.0,
+                "prim_state {i} {:?} z_bias={z} out of sane range",
+                prim_state.name
+            );
+        }
+    }
+
     for sub_object in &shape.lod_controls[0].distance_levels[0].sub_objects {
         assert_eq!(sub_object.vertices.len(), sub_object.vertex_count);
         assert!(

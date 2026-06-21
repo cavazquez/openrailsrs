@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 export OPENRAILSRS_DISABLE_AUDIO=1
+unset OPENRAILSRS_FOLLOW OPENRAILSRS_CAM_YAW OPENRAILSRS_CAM_PITCH OPENRAILSRS_CAM_DIST
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check

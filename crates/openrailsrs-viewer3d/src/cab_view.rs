@@ -421,7 +421,7 @@ pub fn sync_cab_interior(
         }
     }
 
-    let head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
+    let _head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
     let cab_shape_file = ShapeFile::from_path(&cab_shape).ok();
 
     let lever_matrices: HashSet<usize> = cvf_state
@@ -520,37 +520,7 @@ pub fn sync_cab_interior(
                 Name::new("cab:interior:root"),
             ))
             .with_children(|root| {
-                let light_pos = head_msts
-                    .map(|h| {
-                        let p = crate::shapes::msts_shape_vec3_to_bevy(h);
-                        p + Vec3::new(0.0, 0.4, -1.5)
-                    })
-                    .unwrap_or(Vec3::new(0.0, 2.5, -4.0));
-                root.spawn((
-                    PointLight {
-                        color: Color::srgb(1.0, 0.96, 0.88),
-                        intensity: 180_000.0,
-                        range: 18.0,
-                        shadow_maps_enabled: false,
-                        ..default()
-                    },
-                    Transform::from_translation(light_pos),
-                    Name::new("cab:interior:light"),
-                ));
-                if let Some(h) = head_msts {
-                    let p = crate::shapes::msts_shape_vec3_to_bevy(h);
-                    root.spawn((
-                        PointLight {
-                            color: Color::srgb(0.85, 0.90, 1.0),
-                            intensity: 120_000.0,
-                            range: 12.0,
-                            shadow_maps_enabled: false,
-                            ..default()
-                        },
-                        Transform::from_translation(p + Vec3::new(0.6, 0.3, -0.8)),
-                        Name::new("cab:interior:fill"),
-                    ));
-                }
+                // Open Rails cab 3D uses SceneryShader (ambient/sun), not Bevy point lights.
                 for (pi, part) in asset.parts.iter().enumerate() {
                     let matrix_idx = part.cab_matrix_idx.or_else(|| {
                         cab_shape_file.as_ref().and_then(|shape| {
@@ -605,6 +575,13 @@ pub fn sync_cab_interior(
                 }
             });
     });
+
+    if *follow == CameraFollowMode::DriverCam {
+        viewer_log!(
+            "openrailsrs-viewer3d: cab interior ready — {} part(s) in driver view",
+            asset.parts.len()
+        );
+    }
 }
 
 #[cfg(test)]

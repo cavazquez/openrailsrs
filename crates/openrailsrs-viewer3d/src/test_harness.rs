@@ -100,7 +100,18 @@ pub fn sample_replay_track() -> TrainTrack {
 }
 
 /// `MinimalPlugins` + assets used by spawn systems.
+pub fn clear_viewer_env_overrides() {
+    // Shell/CI may export demo overrides; tests expect deterministic defaults.
+    unsafe {
+        std::env::remove_var("OPENRAILSRS_FOLLOW");
+        std::env::remove_var("OPENRAILSRS_CAM_YAW");
+        std::env::remove_var("OPENRAILSRS_CAM_PITCH");
+        std::env::remove_var("OPENRAILSRS_CAM_DIST");
+    }
+}
+
 pub fn minimal_app() -> App {
+    clear_viewer_env_overrides();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), OrSceneryPlugins));
     app.init_asset::<Mesh>();

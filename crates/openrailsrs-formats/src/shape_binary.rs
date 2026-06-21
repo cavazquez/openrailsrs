@@ -319,6 +319,41 @@ impl<'a> BinaryReader<'a> {
     }
 
     /// Open Rails `texture`: `:uint,ImageIdx :uint,FilterMode :float,MipMapLODBias [:dword,BorderColor]`.
+    /// MSTS/Open Rails `prim_state` payload (flat scalars + one `tex_idxs` sub-block).
+    fn dump_prim_state_content(
+        &mut self,
+        block_end: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&(self.read_u32()? as i32).to_string());
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&(self.read_u32()? as i32).to_string());
+        if self.peek_subblock_header(54, block_end) {
+            out.push(' ');
+            out.push_str(&self.dump_block()?);
+        }
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&format_float(self.read_f32()? as f64));
+        for _ in 0..4 {
+            if self.pos + 4 > block_end {
+                break;
+            }
+            out.push(' ');
+            out.push_str(&(self.read_u32()? as i32).to_string());
+        }
+        Ok(())
+    }
+
     fn dump_texture_content(
         &mut self,
         block_end: usize,
@@ -421,6 +456,14 @@ impl<'a> BinaryReader<'a> {
             }
             15 => {
                 self.dump_texture_content(block_end, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            // Open Rails `prim_state`: flags, shader, tex_idxs, **ZBias float**, ivtx, alphatest, LightCfgIdx, ZBufMode
+            // (`ShapeFile.cs` prim_state constructor).
+            54 => {
+                self.dump_prim_state_content(block_end, &mut out)?;
                 self.pos = block_end;
                 out.push_str(" )");
                 return Ok(out);
@@ -562,7 +605,7 @@ fn token_scalars_are_i32(id: i32) -> bool {
         id,
         48  // vertex: flags, point index, normal index, colors
             | 49 // vertex_uvs
-            | 54 // prim_state: flags, shader index, vertex state, etc.
+            // 54 prim_state: handled by dump_prim_state_content (mixed i32 + float ZBias)
             | 56 // prim_state_idx
             | 61 // tex_idxs
             | 63 // vertex_idxs

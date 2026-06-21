@@ -16,6 +16,7 @@ use openrailsrs_formats::{
     msts_tile_z_index_for_coord, parse_world_w_tile_xz, world_w_filename_from_tile_xz,
 };
 
+use crate::camera::CameraFollowMode;
 use crate::coordinates::{
     matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy, qdir_to_quat,
 };
@@ -52,26 +53,24 @@ use rayon::prelude::*;
 /// Re-exported from [`crate::coordinates`] for callers that only import `world`.
 pub use crate::coordinates::MSTS_TILE_SIZE_M;
 
-/// Maximum distance (m) from the route centre at which world objects are spawned.
-/// Objects beyond this radius are skipped to keep draw call count manageable on
-/// large imported routes.
-pub const VISIBLE_RADIUS_M: f32 = 8000.0;
+/// Maximum distance (m) from the route focus at which world/terrain tiles load and
+/// scenery spawns. Kept small (400 m) so live mode loads only what the camera can see.
+pub const VISIBLE_RADIUS_M: f32 = 400.0;
 
 /// Visible scenery/terrain radius. Override with `OPENRAILSRS_VISIBLE_RADIUS_M`
-/// for faster startup on large routes.
+/// (100–16000 m) for wider views on fast GPUs.
 pub fn visible_radius_m() -> f32 {
     std::env::var("OPENRAILSRS_VISIBLE_RADIUS_M")
         .ok()
         .and_then(|s| s.parse().ok())
-        .filter(|r| *r >= 512.0 && *r <= 64_000.0)
+        .filter(|r| *r >= 100.0 && *r <= 16_000.0)
         .unwrap_or(VISIBLE_RADIUS_M)
 }
 
-/// Shapes closer than this use the highest LOD; farther shapes use coarser LOD.
-pub const SHAPE_LOD_DISTANCE_M: f32 = 2000.0;
-
-/// Within this radius, spawn real `.s` meshes when the file resolves; beyond it, placeholders only.
-pub const SHAPE_MESH_RADIUS_M: f32 = 4_000.0;
+/// Within this radius, spawn real `.s` meshes when the file resolves; matches [`visible_radius_m`].
+pub fn shape_mesh_radius_m() -> f32 {
+    visible_radius_m()
+}
 
 /// Merge repeated `.s` instances into one baked mesh (small meshes only; disabled — breaks visuals on Chiltern).
 const ENABLE_SHAPE_INSTANCE_MERGE: bool = false;
@@ -104,6 +103,25 @@ const BUILD_QUEUE_SHAPES_PER_FRAME: usize = 32;
 
 /// Mesh entities spawned per frame.
 const SPAWN_ENTITIES_PER_FRAME: usize = 600;
+
+/// Fraction of normal world spawn rate while in driver view (VRAM). Set `OPENRAILSRS_CAB_PAUSE_WORLD=1` for full pause.
+fn driver_world_spawn_scale() -> f32 {
+    if matches!(
+        std::env::var("OPENRAILSRS_CAB_PAUSE_WORLD").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    ) {
+        return 0.0;
+    }
+    0.2
+}
+
+fn scaled_usize(base: usize, scale: f32) -> usize {
+    if scale <= 0.0 {
+        0
+    } else {
+        ((base as f32) * scale).ceil().max(1.0) as usize
+    }
+}
 
 /// Forest patch metadata from a `.w` `Forest` item.
 #[derive(Clone, Debug, PartialEq)]
@@ -875,6 +893,7 @@ pub struct WorldSpawnProgress {
     loading_shapes_started: Option<Instant>,
     build_queue_started: Option<Instant>,
     scenery_audit: Option<crate::scenery_audit::ShapeAuditSummary>,
+    paused_for_driver_log: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -931,6 +950,7 @@ impl WorldSpawnProgress {
             loading_shapes_started: None,
             build_queue_started: None,
             scenery_audit: None,
+            paused_for_driver_log: false,
         }
     }
 }
@@ -979,11 +999,11 @@ fn classify_one_object(
         return;
     }
 
-    if obj.kind == "TrackObj" && dist <= SHAPE_MESH_RADIUS_M {
+    if obj.kind == "TrackObj" && dist <= shape_mesh_radius_m() {
         progress.trackobj_seen += 1;
     }
 
-    if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
+    if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
         let cache_key = obj
             .shape_file
             .clone()
@@ -1037,12 +1057,12 @@ fn classify_one_object(
                 );
             }
         }
-    } else if obj.kind == "TrackObj" && dist <= SHAPE_MESH_RADIUS_M {
+    } else if obj.kind == "TrackObj" && dist <= shape_mesh_radius_m() {
         progress.trackobj_no_filename += 1;
     }
 
     if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-        if SPAWN_TRACKOBJ_PROCEDURAL && dist <= SHAPE_MESH_RADIUS_M {
+        if SPAWN_TRACKOBJ_PROCEDURAL && dist <= shape_mesh_radius_m() {
             let render_pos = focus.scenery_to_render(obj.position);
             progress
                 .trackobj_procedural
@@ -1052,7 +1072,7 @@ fn classify_one_object(
         }
         return;
     }
-    if dist > SHAPE_MESH_RADIUS_M {
+    if dist > shape_mesh_radius_m() {
         return;
     }
 
@@ -1237,6 +1257,7 @@ fn build_world_shape_asset(
             fallback_color,
             None,
             false,
+            false,
         ),
         None => {
             viewer_log!(
@@ -1313,6 +1334,7 @@ fn build_shape_lod_assets(
                 ace_cache,
                 fallback_color,
                 None,
+                false,
                 false,
             ))
         })
@@ -1422,7 +1444,7 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
     if progress.trackobj_seen > 0 {
         viewer_log!(
             "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
-            SHAPE_MESH_RADIUS_M as u32,
+            shape_mesh_radius_m() as u32,
             progress.trackobj_mesh_queued,
             progress.trackobj_no_filename,
             progress.trackobj_unresolved
@@ -1686,6 +1708,7 @@ pub fn world_tile_stream_system(
 /// Continue progressive world spawn across frames so the window stays responsive.
 #[allow(clippy::too_many_arguments)]
 pub fn progressive_world_spawn_system(
+    follow: Res<CameraFollowMode>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
@@ -1702,9 +1725,40 @@ pub fn progressive_world_spawn_system(
         return;
     };
 
+    let driver_throttle = if *follow == CameraFollowMode::DriverCam {
+        driver_world_spawn_scale()
+    } else {
+        1.0
+    };
+
+    if driver_throttle <= 0.0 {
+        if !progress.paused_for_driver_log {
+            viewer_log!(
+                "openrailsrs-viewer3d: pausing world scenery GPU load while in driver view (VRAM; OPENRAILSRS_CAB_PAUSE_WORLD=1)"
+            );
+            progress.paused_for_driver_log = true;
+        }
+        return;
+    }
+
+    if *follow == CameraFollowMode::DriverCam && !progress.paused_for_driver_log {
+        viewer_log!(
+            "openrailsrs-viewer3d: throttling world scenery GPU load in driver view ({:.0}% rate; set OPENRAILSRS_CAB_PAUSE_WORLD=1 to pause)",
+            driver_throttle * 100.0
+        );
+        progress.paused_for_driver_log = true;
+    } else if *follow != CameraFollowMode::DriverCam {
+        progress.paused_for_driver_log = false;
+    }
+
+    let classify_batch = scaled_usize(CLASSIFY_ITEMS_PER_FRAME, driver_throttle);
+    let asset_batch = scaled_usize(SHAPE_ASSETS_PER_FRAME, driver_throttle);
+    let build_batch = scaled_usize(BUILD_QUEUE_SHAPES_PER_FRAME, driver_throttle);
+    let spawn_batch = scaled_usize(SPAWN_ENTITIES_PER_FRAME, driver_throttle);
+
     match progress.phase {
         WorldSpawnPhase::Classifying => {
-            let end = (progress.item_index + CLASSIFY_ITEMS_PER_FRAME).min(world.items.len());
+            let end = (progress.item_index + classify_batch).min(world.items.len());
             for obj in &world.items[progress.item_index..end] {
                 classify_one_object(obj, &focus, &assets, *mode, &mut progress);
             }
@@ -1717,7 +1771,7 @@ pub fn progressive_world_spawn_system(
                 if progress.trackobj_seen > 0 {
                     viewer_log!(
                         "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
-                        SHAPE_MESH_RADIUS_M as u32,
+                        shape_mesh_radius_m() as u32,
                         progress.trackobj_mesh_queued,
                         progress.trackobj_no_filename,
                         progress.trackobj_unresolved
@@ -1746,8 +1800,7 @@ pub fn progressive_world_spawn_system(
             };
             let fallback_color = progress.shape_fallback_color;
             let ace_cache = progress.ace_cache.clone();
-            let end = (progress.asset_build_index + SHAPE_ASSETS_PER_FRAME)
-                .min(progress.parsed_shapes.len());
+            let end = (progress.asset_build_index + asset_batch).min(progress.parsed_shapes.len());
             let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> =
                 progress.parsed_shapes[progress.asset_build_index..end].to_vec();
             for (shape_path, loaded) in batch {
@@ -1796,8 +1849,7 @@ pub fn progressive_world_spawn_system(
             }
         }
         WorldSpawnPhase::BuildingQueue => {
-            let end = (progress.build_queue_index + BUILD_QUEUE_SHAPES_PER_FRAME)
-                .min(progress.instance_paths.len());
+            let end = (progress.build_queue_index + build_batch).min(progress.instance_paths.len());
             let paths: Vec<PathBuf> =
                 progress.instance_paths[progress.build_queue_index..end].to_vec();
             for shape_path in paths {
@@ -1834,8 +1886,7 @@ pub fn progressive_world_spawn_system(
                     progress.spawn_queue.len()
                 );
             }
-            let end =
-                (progress.spawn_index + SPAWN_ENTITIES_PER_FRAME).min(progress.spawn_queue.len());
+            let end = (progress.spawn_index + spawn_batch).min(progress.spawn_queue.len());
             let batch: Vec<ShapeSpawnBundle> =
                 progress.spawn_queue[progress.spawn_index..end].to_vec();
             commands.spawn_batch(batch);
@@ -2011,7 +2062,7 @@ pub fn spawn_world_boxes(
             continue;
         }
 
-        if shape_eligible(obj) && dist <= SHAPE_MESH_RADIUS_M {
+        if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
             let shape_path = resolve_object_shape_path(obj, &assets);
             if let Some(shape_path) = shape_path {
                 let render_pos = focus.scenery_to_render(obj.position);
@@ -2028,7 +2079,7 @@ pub fn spawn_world_boxes(
         }
 
         if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-            if SPAWN_TRACKOBJ_PROCEDURAL && dist <= SHAPE_MESH_RADIUS_M {
+            if SPAWN_TRACKOBJ_PROCEDURAL && dist <= shape_mesh_radius_m() {
                 trackobj_procedural.extend(trackobj_procedural_segments(
                     obj,
                     focus.scenery_to_render(obj.position),
@@ -2042,7 +2093,7 @@ pub fn spawn_world_boxes(
         }
 
         // Placeholders only near the camera; 4–8 km clutter dominated spawn time on large routes.
-        if dist > SHAPE_MESH_RADIUS_M {
+        if dist > shape_mesh_radius_m() {
             continue;
         }
 
@@ -2337,6 +2388,12 @@ mod tests {
     }
 
     #[test]
+    fn default_visible_radius_is_400m() {
+        assert_eq!(VISIBLE_RADIUS_M, 400.0);
+        assert_eq!(shape_mesh_radius_m(), visible_radius_m());
+    }
+
+    #[test]
     fn route_focus_scenery_uses_bbox_y_not_msl() {
         let focus = chiltern_like_focus();
         let obj = Vec3::new(12_494_900.0, 55.0, 30_600_300.0);
@@ -2444,8 +2501,8 @@ mod tests {
             all.tiles_loaded
         );
         assert!(
-            near.tiles_loaded >= 10,
-            "expected at least 10 tiles near centre, got {}",
+            near.tiles_loaded >= 1,
+            "expected at least 1 tile near centre, got {}",
             near.tiles_loaded
         );
         assert!(!near.items.is_empty(), "expected scenery items near centre");
@@ -2465,19 +2522,15 @@ mod tests {
         );
         let entries = discover_world_tile_entries(&route_dir, Some(anchor), VISIBLE_RADIUS_M);
         assert!(
-            entries.len() >= 10 && entries.len() <= 120,
-            "expected ~25–56 tiles at 8 km, got {}",
+            !entries.is_empty() && entries.len() <= 16,
+            "expected 1–16 tiles at {:.0} m, got {}",
+            VISIBLE_RADIUS_M,
             entries.len()
         );
-        // The anchor sits in tile (-6080, 14925); its own tile and an adjacent
-        // one must always be discovered within the visible radius.
+        // The anchor sits in tile (-6080, 14925); its own tile must be discovered.
         assert!(
             entries.iter().any(|(x, z, _)| *x == -6080 && *z == 14925),
             "expected tile w-006080+014925 (anchor tile) in discovered entries"
-        );
-        assert!(
-            entries.iter().any(|(x, z, _)| *x == -6081 && *z == 14925),
-            "expected west neighbour tile w-006081+014925 in discovered entries"
         );
     }
 }

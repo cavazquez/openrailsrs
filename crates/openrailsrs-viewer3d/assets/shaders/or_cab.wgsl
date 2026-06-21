@@ -29,9 +29,32 @@ const OR_KIND_HALF_BRIGHT: f32 = 2.0;
 const OR_KIND_DARK_SHADE: f32 = 3.0;
 const OR_KIND_FULL_BRIGHT: f32 = 4.0;
 const OR_FLAG_LIT: f32 = 1.0;
+const OR_FLAG_BLEND: f32 = 2.0;
+const OR_FLAG_OR_LIKE: f32 = 4.0;
+
+const OR_LIKE_AMBIENT: f32 = 0.78;
 
 fn or_half_lambert(normal: vec3<f32>, light_dir: vec3<f32>) -> f32 {
     return dot(normalize(normal), normalize(light_dir)) * 0.5 + 0.5;
+}
+
+fn or_apply_fixed_brightness(
+    rgb: vec3<f32>,
+    kind: f32,
+    shadow_b: f32,
+    full_b: f32,
+    half_b: f32,
+) -> vec3<f32> {
+    if (kind >= OR_KIND_FULL_BRIGHT) {
+        return rgb;
+    }
+    if (kind >= OR_KIND_HALF_BRIGHT && kind < OR_KIND_DARK_SHADE) {
+        return rgb * half_b;
+    }
+    if (kind >= OR_KIND_DARK_SHADE && kind < OR_KIND_FULL_BRIGHT) {
+        return rgb * shadow_b;
+    }
+    return rgb * mix(shadow_b, full_b, OR_LIKE_AMBIENT);
 }
 
 @fragment
@@ -39,7 +62,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(base_texture, base_sampler, in.uv)
         * vec4(params.tint_r, params.tint_g, params.tint_b, params.tint_a);
 #ifdef VERTEX_COLORS
-    // OR TexDiff: vertex colour × texture albedo (when mesh carries ATTRIBUTE_COLOR).
     color *= in.color;
 #endif
 
@@ -52,23 +74,37 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 #endif
 
 #ifdef OR_CAB_DEBUG_ALBEDO
-    if (color.a < params.reference_alpha) {
+    if (params.reference_alpha >= 0.0 && color.a < params.reference_alpha) {
         discard;
     }
     return vec4(color.rgb, color.a);
 #endif
 
-    // Blend / Add cab glass: output texture alpha as-is (no cutout discard).
-    if (params.flags >= 2.0) {
+    if (params.flags >= OR_FLAG_BLEND) {
         return vec4(color.rgb, color.a);
     }
 
-    if (color.a < params.reference_alpha) {
+    if (params.reference_alpha < 0.0) {
+        color.a = 1.0;
+    } else if (color.a < params.reference_alpha) {
         discard;
     }
 
     let kind = params.shader_kind;
-    let lit = params.flags >= OR_FLAG_LIT;
+    let lit = params.flags >= OR_FLAG_LIT && params.flags < OR_FLAG_BLEND;
+    let or_like = params.flags >= OR_FLAG_OR_LIKE;
+
+    if (or_like && !lit) {
+        var rgb = or_apply_fixed_brightness(
+            color.rgb,
+            kind,
+            params.shadow_brightness,
+            params.full_brightness,
+            params.half_shadow_brightness,
+        );
+        rgb = max(rgb, color.rgb * params.cab_min_brightness);
+        return vec4(rgb, color.a);
+    }
 
     if (!lit) {
         return vec4(color.rgb, color.a);

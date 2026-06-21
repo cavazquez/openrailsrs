@@ -24,6 +24,7 @@ openrailsrs-sim = { path = "../openrailsrs-sim" }
 openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-audio = { path = "../openrailsrs-audio" }
 openrailsrs-ace = { path = "../openrailsrs-ace" }
+openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
 openrailsrs-validate = { path = "../openrailsrs-validate" }
 anyhow.workspace = true
 clap.workspace = true

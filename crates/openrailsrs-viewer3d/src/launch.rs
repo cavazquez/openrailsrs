@@ -144,6 +144,8 @@ pub fn track_dev_active(mode: Res<ViewerSceneryMode>) -> bool {
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct ViewerLaunchOpts {
     pub live: bool,
+    /// Driver cab FOV override (degrees), from `--cab-fov`.
+    pub cab_fov_deg: Option<f32>,
 }
 
 /// Cap flat ground in live mode and track-dev debug (route bbox can be 100+ km).

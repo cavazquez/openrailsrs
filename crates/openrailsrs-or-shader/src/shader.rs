@@ -2,6 +2,12 @@
 //!
 //! Paridad con `Shapes.cs` (`ShaderNames`, `VertexLightModeMap`) en Open Rails.
 
+/// Open Rails `SceneryMaterial.SetState` alpha test when `alphatestmode == 1` (`ReferenceAlpha = 200`).
+pub const OR_MSTS_ALPHA_TEST_CUTOFF: f32 = 200.0 / 255.0;
+
+/// OR solid opaque materials force full alpha (`ReferenceAlpha = -1` in `SceneryShader.fx`).
+pub const OR_OPAQUE_REFERENCE_ALPHA: f32 = -1.0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrShaderKind {
     Unknown,

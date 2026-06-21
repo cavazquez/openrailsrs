@@ -238,6 +238,16 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Export a baked MSTS `.s` mesh (+ UVs/normals) as Wavefront OBJ for Blender inspection.
+    ShapeObjDump {
+        file: PathBuf,
+        /// Output `.obj` path.
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Camera distance (m) for LOD selection (matches live train when ~80).
+        #[arg(long)]
+        lod_distance_m: Option<f32>,
+    },
     /// Inspect an MSTS `.w` world tile file: prints item counts per kind.
     WorldDump {
         file: PathBuf,
@@ -961,6 +971,13 @@ fn main() -> anyhow::Result<()> {
         Commands::ShapeDump { file, json } => {
             run_shape_dump(&file, json)?;
         }
+        Commands::ShapeObjDump {
+            file,
+            out,
+            lod_distance_m,
+        } => {
+            run_shape_obj_dump(&file, &out, lod_distance_m)?;
+        }
         Commands::WorldDump { file, csv } => {
             run_world_dump(&file, csv.as_deref())?;
         }
@@ -1312,6 +1329,22 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+fn run_shape_obj_dump(
+    file: &std::path::Path,
+    out: &std::path::Path,
+    lod_distance_m: Option<f32>,
+) -> anyhow::Result<()> {
+    openrailsrs_bevy_scenery::shapes::write_shape_wavefront_from_path(file, out, lod_distance_m)
+        .map_err(anyhow::Error::msg)?;
+    let bytes = std::fs::metadata(out)?.len();
+    println!(
+        "✓ shape-obj-dump: {} → {} ({bytes} bytes, lod_distance_m={lod_distance_m:?})",
+        file.display(),
+        out.display(),
+    );
     Ok(())
 }
 

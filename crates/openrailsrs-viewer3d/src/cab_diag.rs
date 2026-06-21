@@ -159,14 +159,14 @@ fn log_one_cab_part(
             .map(|m| {
                 let p = &m.params;
                 format!(
-                    "OR kind={:.0} alpha={:?} tint=({:.3},{:.3},{:.3},{:.3}) lit={} min_b={:.2} sh={:.2} fb={:.2}",
+                    "OR kind={:.0} alpha={:?} tint=({:.3},{:.3},{:.3},{:.3}) flags={:.0} min_b={:.2} sh={:.2} fb={:.2}",
                     p.shader_kind,
                     m.alpha_mode,
                     p.tint_r,
                     p.tint_g,
                     p.tint_b,
                     p.tint_a,
-                    p.flags >= 1.0,
+                    p.flags,
                     p.cab_min_brightness,
                     p.shadow_brightness,
                     p.full_brightness,

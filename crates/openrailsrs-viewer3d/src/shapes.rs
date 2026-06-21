@@ -15,23 +15,30 @@ pub use openrailsrs_bevy_scenery::shapes::mesh::{
     MeshBuffers, ShapeMatrixRef, append_primitive_mesh_buffers, mesh_buffers_bounds,
 };
 pub use openrailsrs_bevy_scenery::shapes::{
-    DARK_TEXTURE_LUMA_THRESHOLD, LoadedShape, LoadedShapePart, MeshVertexColorMode,
-    MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST, SCENERY_TEXTURE_TARGET_LUMA, ace_mean_luma,
-    alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_z_buf_mode, brighten_cab_ace_rgba,
-    brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
-    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
+    DARK_TEXTURE_LUMA_THRESHOLD, LoadedShape, LoadedShapePart, MSTS_Z_BIAS_CLAMP,
+    MeshVertexColorMode, MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST,
+    SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ace_mean_luma, alpha_mode_from_prim_state,
+    apply_msts_vertex_tint, apply_shape_debug_material_overrides,
+    apply_train_debug_material_overrides, apply_train_exterior_culling, apply_z_buf_mode,
+    brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
+    build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
     cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
-    cab_or_scenery_material_with_texture, closest_lod_level, finalize_scenery_material,
+    cab_or_scenery_material_with_texture, clamp_msts_z_bias_for_bevy, closest_lod_level,
+    debug_materials_enabled, debug_shape_stats_enabled, finalize_scenery_material,
     legacy_standard_scenery_enabled, light_mat_idx_for_prim_state, lod_level_for_distance,
-    mesh_aabb, mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
+    log_shape_material_debug, mesh_aabb, mesh_has_uvs, mesh_position_count,
+    mesh_triangle_list_valid, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
     msts_shape_to_train_rotation, or_lighting_enabled, primary_texture_filename,
     resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
-    scenery_materials_lit, scenery_uses_or_wgsl_shaders, shader_name_for_prim_state,
-    shader_uses_vertex_color_multiply, shape_alpha_mode, shape_point_to_bevy,
-    shape_shader_requests_blending, texture_for_prim_state, texture_name_suggests_transparency,
+    scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
+    shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
+    shape_point_to_bevy, shape_shader_requests_blending, texture_for_prim_state,
+    texture_name_suggests_transparency, train_exterior_material_with_texture,
+    train_shape_debug_scope,
 };
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
+use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
 
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
 pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
@@ -681,7 +688,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 None => continue,
             };
             let prim_state_idx = prim.prim_state_idx;
-            let (alpha_test_mode, z_bias, z_buf_mode) = shape
+            let (alpha_test_mode, z_bias_raw, z_buf_mode) = shape
                 .prim_states
                 .get(prim_state_idx.max(0) as usize)
                 .map(|ps| {
@@ -692,6 +699,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                     )
                 })
                 .unwrap_or((-1, None, -1));
+            let z_bias = Some(clamp_msts_z_bias_for_bevy(z_bias_raw, None));
             parts.push(LoadedShapePart {
                 prim_state_idx,
                 sub_object_idx: sub_idx as u32,
@@ -1322,6 +1330,58 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
     dirs
 }
 
+/// Texture search dirs for CVF sprites (includes sibling `CabView/` on the trainset).
+pub fn cvf_texture_search_dirs(cvf_or_shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = texture_search_dirs_for_shape(cvf_or_shape_path, route_dir);
+    if let Some(cab_dir) = cvf_or_shape_path.parent() {
+        if let Some(trainset) = cab_dir.parent() {
+            for name in ["CabView", "Cabview", "CABVIEW", "Cabview3d"] {
+                let sibling = trainset.join(name);
+                if sibling.is_dir() {
+                    dirs.push(sibling);
+                }
+            }
+        }
+    }
+    dirs.sort();
+    dirs.dedup();
+    dirs
+}
+
+/// Resolve a CVF `Graphic` path (`hornlever.ace`, `../../KIHA31/CabView/foo.ace`, …).
+pub fn resolve_cvf_graphic_path(
+    search_dirs: &[&Path],
+    cab_dir: &Path,
+    graphic: &str,
+) -> Option<PathBuf> {
+    let g = graphic.trim().trim_matches('"');
+    if g.is_empty() {
+        return None;
+    }
+    let normalized = g.replace('\\', "/");
+    if normalized.contains("..") {
+        let mut path = cab_dir.to_path_buf();
+        for part in normalized.split('/') {
+            match part {
+                ".." => {
+                    path.pop();
+                }
+                "." | "" => {}
+                other => path.push(other),
+            }
+        }
+        if path.is_file() {
+            return Some(path);
+        }
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if let Some(found) = resolve_texture_path_in_dirs(search_dirs, name) {
+                return Some(found);
+            }
+        }
+    }
+    resolve_texture_path_in_dirs(search_dirs, g)
+}
+
 /// Basename of a `.w` `FileName` (strips `SHAPES\\foo.s` / `foo.s`).
 pub fn shape_file_basename(file_name: &str) -> &str {
     file_name
@@ -1496,17 +1556,45 @@ pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<P
 /// MSTS/Open Rails trainsets appear in both layouts:
 /// - `<trainset>/SHAPES/car.s` with textures in `<trainset>/TEXTURES/`
 /// - `<trainset>/car.s` with textures directly in `<trainset>/`
+///
+/// Open Rails passes this as `ReferencePath` on `SharedShape`; exterior textures
+/// resolve as `{ReferencePath}\{imageName}`, **not** from route `TEXTURES/`.
 pub fn vehicle_texture_root_for_shape_path(shape_path: &Path) -> Option<&Path> {
     let parent = shape_path.parent()?;
     if parent
         .file_name()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| name.eq_ignore_ascii_case("SHAPES"))
+        .is_some_and(|name| {
+            name.eq_ignore_ascii_case("SHAPES")
+                || name.eq_ignore_ascii_case("CABVIEW3D")
+                || name.eq_ignore_ascii_case("CABVIEW")
+                || name.eq_ignore_ascii_case("CabView")
+        })
     {
         parent.parent()
     } else {
         Some(parent)
     }
+}
+
+/// Texture search order for rolling-stock shapes (live train, replay markers).
+///
+/// Matches Open Rails `SharedShape.ReferencePath` + `GLOBAL` fallback — wagon folder
+/// first, route `TEXTURES/` only as last resort (OR never uses route for ReferencePath).
+pub fn vehicle_texture_search_dirs(shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Some(root) = vehicle_texture_root_for_shape_path(shape_path) {
+        dirs.push(root.to_path_buf());
+    }
+    for global in global_assets_dirs(route_dir) {
+        if !dirs.iter().any(|d| d.as_path() == global.as_path()) {
+            dirs.push(global);
+        }
+    }
+    if !dirs.iter().any(|d| d.as_path() == route_dir) {
+        dirs.push(route_dir.to_path_buf());
+    }
+    dirs
 }
 
 /// Load and decode an `.ace` file into a Bevy image (mip 0 only).
@@ -1531,9 +1619,13 @@ pub fn load_shape_render_asset_from_path(
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
     fallback_color: Color,
+    train_exterior: bool,
 ) -> Option<ShapeRenderAsset> {
+    if train_exterior {
+        set_train_shape_debug_scope(true);
+    }
     let loaded = load_shape_from_path(shape_path, camera_distance_m)?;
-    Some(shape_render_asset_from_loaded(
+    let result = shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
         meshes,
@@ -1544,7 +1636,12 @@ pub fn load_shape_render_asset_from_path(
         fallback_color,
         None,
         false,
-    ))
+        train_exterior,
+    );
+    if train_exterior {
+        set_train_shape_debug_scope(false);
+    }
+    Some(result)
 }
 
 /// Cab `CABVIEW3D` shapes: lit PBR + cab alpha/brighten (Bevy forward path; not unlit).
@@ -1573,6 +1670,7 @@ pub fn load_cab_interior_render_asset_from_path(
         fallback_color,
         Some(true),
         true,
+        false,
     ))
 }
 
@@ -1589,6 +1687,7 @@ pub fn shape_render_asset_from_loaded(
     fallback_color: Color,
     lit_override: Option<bool>,
     cab_interior: bool,
+    train_exterior: bool,
 ) -> ShapeRenderAsset {
     shape_render_asset_from_loaded_with_ace_cache(
         loaded,
@@ -1602,6 +1701,7 @@ pub fn shape_render_asset_from_loaded(
         fallback_color,
         lit_override,
         cab_interior,
+        train_exterior,
     )
 }
 
@@ -1619,7 +1719,13 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     fallback_color: Color,
     lit_override: Option<bool>,
     cab_interior: bool,
+    train_exterior: bool,
 ) -> ShapeRenderAsset {
+    let triangle_count_total: usize = loaded
+        .parts
+        .iter()
+        .map(|p| mesh_position_count(&p.mesh) / 3)
+        .sum();
     let combined_mesh = meshes.add(loaded.mesh);
 
     let mut has_any_texture = false;
@@ -1641,6 +1747,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             lit_override,
             None,
             cab_interior,
+            train_exterior,
             None,
         );
         has_any_texture |= has_texture;
@@ -1662,7 +1769,8 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             bounds_center: None,
         });
     }
-    for part in loaded.parts {
+    for part in &loaded.parts {
+        let tri_count = mesh_position_count(&part.mesh) / 3;
         let (material, or_cab_material, has_texture, is_transparent) = material_for_shape_texture(
             texture_dirs,
             part.texture_file.as_deref(),
@@ -1679,14 +1787,34 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             lit_override,
             part.solid_color,
             cab_interior,
+            train_exterior,
             part.light_mat_idx,
         );
+        if debug_materials_enabled() {
+            if let Some(mat) = materials.get(&material) {
+                log_shape_material_debug(
+                    &ShapeMaterialDebugCtx {
+                        shape_name: None,
+                        prim_state_idx: part.prim_state_idx,
+                        prim_state_name: None,
+                        shader_name: part.shader_name.clone(),
+                        texture_name: part.texture_file.clone(),
+                    },
+                    mat.alpha_mode,
+                    part.z_bias,
+                    mat.depth_bias,
+                    part.z_buf_mode,
+                    part.alpha_test_mode,
+                    tri_count,
+                );
+            }
+        }
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
             prim_state_idx: part.prim_state_idx,
             sub_object_idx: part.sub_object_idx,
             cab_matrix_idx: part.cab_matrix_idx,
-            mesh: meshes.add(part.mesh),
+            mesh: meshes.add(part.mesh.clone()),
             material,
             or_cab_material,
             has_texture,
@@ -1701,11 +1829,54 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         });
     }
 
-    ShapeRenderAsset {
+    let asset = ShapeRenderAsset {
         combined_mesh,
         parts,
         has_texture: has_any_texture,
+    };
+    if debug_shape_stats_enabled() {
+        log_shape_render_stats(&loaded.parts, triangle_count_total, &asset, materials);
     }
+    asset
+}
+
+fn log_shape_render_stats(
+    source_parts: &[LoadedShapePart],
+    triangle_count: usize,
+    asset: &ShapeRenderAsset,
+    materials: &Assets<StandardMaterial>,
+) {
+    let mut opaque = 0usize;
+    let mut blend = 0usize;
+    let mut mask = 0usize;
+    let mut suspicious_z = 0usize;
+    for part in &asset.parts {
+        if let Some(mat) = materials.get(&part.material) {
+            match mat.alpha_mode {
+                AlphaMode::Opaque => opaque += 1,
+                AlphaMode::Blend
+                | AlphaMode::Add
+                | AlphaMode::Premultiplied
+                | AlphaMode::Multiply
+                | AlphaMode::AlphaToCoverage => blend += 1,
+                AlphaMode::Mask(_) => mask += 1,
+            }
+            if mat.depth_bias.abs() > MSTS_Z_BIAS_CLAMP {
+                suspicious_z += 1;
+            }
+        }
+    }
+    viewer_log!(
+        "openrailsrs-viewer3d: shape-stats parts={} triangles={} textures={} \
+         alpha opaque={opaque} blend={blend} mask={mask} suspicious_z_bias={suspicious_z} \
+         mesh_valid={}",
+        asset.parts.len(),
+        triangle_count,
+        asset.parts.iter().filter(|p| p.has_texture).count(),
+        source_parts
+            .iter()
+            .all(|p| mesh_triangle_list_valid(&p.mesh))
+    );
 }
 
 /// Resolve on-disk paths for every ACE referenced by a parsed shape.
@@ -1744,6 +1915,7 @@ fn finish_shape_textured_part(
     shader_name: Option<&str>,
     solid_color: Option<[f32; 3]>,
     cab_interior: bool,
+    train_exterior: bool,
     or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
     materials: &mut Assets<StandardMaterial>,
     light_mat_idx: Option<i32>,
@@ -1753,6 +1925,7 @@ fn finish_shape_textured_part(
     bool,
     bool,
 ) {
+    let z_bias = clamp_msts_z_bias_for_bevy(Some(z_bias), None);
     let use_or_cab =
         cab_interior && crate::or_cab_material::or_cab_shaders_enabled() && or_materials.is_some();
     if use_or_cab {
@@ -1776,21 +1949,36 @@ fn finish_shape_textured_part(
             ..default()
         };
         apply_z_buf_mode(&mut placeholder, z_buf_mode);
+        apply_train_debug_material_overrides(&mut placeholder);
         let placeholder = materials.add(placeholder);
         return (placeholder, Some(or_mat), true, is_transparent);
     }
-    let mut mat = cab_or_scenery_material_with_texture(
-        tint,
-        handle,
-        rgba_for_luma,
-        alpha_mode,
-        z_bias,
-        lit,
-        shader_name,
-        solid_color,
-        cab_interior,
-    );
+    let mut mat = if train_exterior && !cab_interior {
+        train_exterior_material_with_texture(
+            tint,
+            handle,
+            rgba_for_luma,
+            alpha_mode,
+            z_bias,
+            lit,
+            shader_name,
+            solid_color,
+        )
+    } else {
+        cab_or_scenery_material_with_texture(
+            tint,
+            handle,
+            rgba_for_luma,
+            alpha_mode,
+            z_bias,
+            lit,
+            shader_name,
+            solid_color,
+            cab_interior,
+        )
+    };
     apply_z_buf_mode(&mut mat, z_buf_mode);
+    apply_train_debug_material_overrides(&mut mat);
     let material = materials.add(mat);
     (material, None, true, is_transparent)
 }
@@ -1803,7 +1991,7 @@ fn scenery_dds_alpha_mode(
 ) -> AlphaMode {
     match alpha_test_mode {
         0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
+        1 => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
         2 => return AlphaMode::Blend,
         _ => {}
     }
@@ -1818,7 +2006,7 @@ fn scenery_dds_alpha_mode(
     {
         AlphaMode::Blend
     } else {
-        AlphaMode::Mask(0.5)
+        AlphaMode::Opaque
     }
 }
 
@@ -1848,6 +2036,7 @@ fn material_for_shape_texture(
     lit_override: Option<bool>,
     solid_color: Option<[f32; 3]>,
     cab_interior: bool,
+    train_exterior: bool,
     light_mat_idx: Option<i32>,
 ) -> (
     Handle<StandardMaterial>,
@@ -1909,6 +2098,7 @@ fn material_for_shape_texture(
                                 shader_name,
                                 solid_color,
                                 cab_interior,
+                                train_exterior,
                                 or_materials,
                                 materials,
                                 light_mat_idx,
@@ -1970,6 +2160,7 @@ fn material_for_shape_texture(
                         shader_name,
                         solid_color,
                         cab_interior,
+                        train_exterior,
                         or_materials,
                         materials,
                         light_mat_idx,
@@ -1995,6 +2186,10 @@ fn material_for_shape_texture(
         ..default()
     };
     apply_z_buf_mode(&mut fallback_mat, z_buf_mode);
+    if train_exterior && !cab_interior {
+        apply_train_exterior_culling(&mut fallback_mat);
+    }
+    apply_train_debug_material_overrides(&mut fallback_mat);
     let material = materials.add(finalize_scenery_material(fallback_mat, lit));
     (material, None, false, false)
 }
@@ -2042,8 +2237,7 @@ fn cab_shape_alpha_mode_with_stats(
     alpha_test_mode: i32,
 ) -> AlphaMode {
     match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
+        1 => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
         2 => return AlphaMode::Blend,
         _ => {}
     }
@@ -2393,6 +2587,7 @@ mod tests {
             &mut materials,
             &mut texture_cache,
             Color::srgb(0.95, 0.25, 0.85),
+            false,
         )
         .expect("render asset");
 
@@ -2515,6 +2710,7 @@ mod tests {
                 None,
                 None,
                 false,
+                false,
                 None,
             );
             (handle, has_texture, is_transparent)
@@ -2586,12 +2782,13 @@ mod tests {
         let mut materials = Assets::<StandardMaterial>::default();
         let mut texture_cache = HashMap::new();
 
-        let (handle, _is_transparent) = {
+        // OR: TexDiff ignores ACE alpha unless prim_state requests alpha test.
+        let (opaque_handle, _) = {
             let (handle, _or, _has_texture, is_transparent) = material_for_shape_texture(
                 &[route.as_path()],
                 Some("body.ace"),
                 Some("TexDiff"),
-                -1, // no explicit alpha_test_mode → heuristic path
+                -1,
                 None,
                 -1,
                 &mut images,
@@ -2603,15 +2800,42 @@ mod tests {
                 None,
                 None,
                 false,
+                false,
                 None,
             );
             (handle, is_transparent)
         };
-        let has_texture = true;
+        assert!(matches!(
+            materials.get(&opaque_handle).expect("mat").alpha_mode,
+            AlphaMode::Opaque
+        ));
 
-        let material = materials.get(&handle).expect("material");
-        assert!(has_texture);
-        assert!(matches!(material.alpha_mode, AlphaMode::Mask(_)));
+        let (mask_handle, _) = {
+            let (handle, _or, _has_texture, _is_transparent) = material_for_shape_texture(
+                &[route.as_path()],
+                Some("body.ace"),
+                Some("TexDiff"),
+                1, // explicit alpha test
+                None,
+                -1,
+                &mut images,
+                &mut materials,
+                None,
+                &mut texture_cache,
+                &HashMap::new(),
+                Color::srgb(0.95, 0.25, 0.85),
+                None,
+                None,
+                false,
+                false,
+                None,
+            );
+            (handle, ())
+        };
+        assert!(matches!(
+            materials.get(&mask_handle).expect("mat").alpha_mode,
+            AlphaMode::Mask(_)
+        ));
 
         let _ = std::fs::remove_file(texture);
         let _ = std::fs::remove_dir_all(route);
@@ -3036,15 +3260,18 @@ mod tests {
         let mut images = Assets::<Image>::default();
         let mut materials = Assets::<StandardMaterial>::default();
         let mut texture_cache = HashMap::new();
+        let tex_dirs_owned = vehicle_texture_search_dirs(&path, &route);
+        let tex_dirs: Vec<&Path> = tex_dirs_owned.iter().map(|p| p.as_path()).collect();
         let asset = load_shape_render_asset_from_path(
             &path,
-            &[route.as_path(), texture_root],
+            &tex_dirs,
             Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
             &mut meshes,
             &mut images,
             &mut materials,
             &mut texture_cache,
             Color::srgb(0.55, 0.58, 0.62),
+            true,
         )
         .expect("render OR content Pullman shape");
         let textured_parts = asset.parts.iter().filter(|part| part.has_texture).count();
@@ -3052,6 +3279,349 @@ mod tests {
             textured_parts > 20,
             "expected most OR content Pullman parts to resolve textures, got {textured_parts}/{}",
             asset.parts.len()
+        );
+    }
+
+    #[test]
+    fn pullman_lod_levels_audit() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
+        for (i, lvl) in shape
+            .lod_controls
+            .first()
+            .map(|c| c.distance_levels.iter().enumerate())
+            .into_iter()
+            .flatten()
+        {
+            let parts = build_mesh_parts_from_shape_lod(&shape, lvl);
+            assert!(
+                !parts.is_empty(),
+                "LOD {i} selection_m={} should have parts",
+                lvl.selection_m
+            );
+        }
+        let at25 = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
+        let finest = build_mesh_parts_from_shape(&shape);
+        assert_eq!(
+            at25.len(),
+            finest.len(),
+            "live LOD distance should not drop exterior parts on DMBSA"
+        );
+    }
+
+    #[test]
+    fn pullman_consist_shapes_alpha_audit() {
+        let trainset = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman",
+        );
+        if !trainset.is_dir() {
+            return;
+        }
+        let shapes = [
+            "RF_WP_DMBSA.s",
+            "RF_WP_PSB.s",
+            "RF_WP_KFC.s",
+            "RF_BP_PCFfwd.s",
+            "RF_WP_PSG.s",
+        ];
+        let tex_dirs: Vec<PathBuf> =
+            vehicle_texture_search_dirs(&trainset.join(shapes[0]), &trainset);
+        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+        for name in shapes {
+            let shape_path = trainset.join(name);
+            if !shape_path.is_file() {
+                continue;
+            }
+            let _shape = ShapeFile::from_path(&shape_path).expect("parse");
+            let mut meshes = Assets::<Mesh>::default();
+            let mut images = Assets::<Image>::default();
+            let mut materials = Assets::<StandardMaterial>::default();
+            let mut cache = HashMap::new();
+            let Some(asset) = load_shape_render_asset_from_path(
+                &shape_path,
+                &tex_refs,
+                Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
+                &mut meshes,
+                &mut images,
+                &mut materials,
+                &mut cache,
+                Color::WHITE,
+                true,
+            ) else {
+                continue;
+            };
+            let mut opaque = 0usize;
+            let mut blend = 0usize;
+            let mut mask = 0usize;
+            for part in &asset.parts {
+                let mat = materials.get(&part.material).expect("mat");
+                match mat.alpha_mode {
+                    AlphaMode::Opaque => opaque += 1,
+                    AlphaMode::Blend | AlphaMode::Add => blend += 1,
+                    AlphaMode::Mask(_) => mask += 1,
+                    _ => {}
+                }
+            }
+            assert!(
+                mask == 0,
+                "{name}: {mask} Mask parts (holes) opaque={opaque} blend={blend}"
+            );
+        }
+    }
+
+    #[test]
+    fn pullman_exterior_alpha_modes_audit() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        let trainset = shape_path.parent().expect("trainset root");
+        if !shape_path.is_file() {
+            return;
+        }
+        let tex_dirs = vehicle_texture_search_dirs(&shape_path, trainset);
+        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &shape_path,
+            &tex_refs,
+            Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut cache,
+            Color::srgb(0.55, 0.58, 0.62),
+            true,
+        )
+        .expect("render asset");
+        let mut blend = 0usize;
+        let mut opaque = 0usize;
+        for part in &asset.parts {
+            let mat = materials.get(&part.material).expect("material");
+            match mat.alpha_mode {
+                AlphaMode::Opaque => opaque += 1,
+                AlphaMode::Blend | AlphaMode::Add | AlphaMode::AlphaToCoverage => blend += 1,
+                AlphaMode::Mask(_) => {}
+                AlphaMode::Premultiplied | AlphaMode::Multiply => blend += 1,
+            }
+        }
+        assert_eq!(opaque, 28, "shell + interior panels should be opaque");
+        assert_eq!(blend, 2, "only glass.ace parts should blend");
+    }
+
+    #[test]
+    fn pullman_exterior_texture_audit() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
+        let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
+        assert!(!parts.is_empty(), "DMBSA should have mesh parts at LOD 25m");
+        for part in &parts {
+            let strict = shape.texture_for_prim_state_idx(part.prim_state_idx);
+            let with_fallback = texture_for_prim_state(&shape, part.prim_state_idx);
+            assert_eq!(
+                strict, with_fallback,
+                "prim_state {} should not use fallback texture heuristics",
+                part.prim_state_idx
+            );
+            if let Some((min, max)) = mesh_uv_aabb(&part.mesh) {
+                assert!(
+                    (max - min).length_squared() >= 1e-6,
+                    "prim_state {} has degenerate UVs",
+                    part.prim_state_idx
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn pullman_prim_state_z_bias_sane() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
+        for (i, ps) in shape.prim_states.iter().enumerate() {
+            let z = ps.z_bias.unwrap_or(0.0);
+            assert!(
+                z.is_finite() && z.abs() < 100.0,
+                "prim_state {i} name={:?} shader={:?} tex={:?} z_bias={z} z_buf={}",
+                ps.name,
+                shape.shader_names.get(ps.shader_idx.max(0) as usize),
+                ps.tex_indices
+                    .first()
+                    .and_then(|ti| shape.texture_filenames.get(*ti as usize)),
+                ps.z_buf_mode
+            );
+        }
+    }
+
+    #[test]
+    fn no_huge_depth_bias_in_bevy_materials() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let trainset = shape_path.parent().expect("trainset");
+        let tex_dirs = vehicle_texture_search_dirs(&shape_path, trainset);
+        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &shape_path,
+            &tex_refs,
+            Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut cache,
+            Color::srgb(0.55, 0.58, 0.62),
+            true,
+        )
+        .expect("render asset");
+        for part in &asset.parts {
+            let mat = materials.get(&part.material).expect("material");
+            assert!(
+                mat.depth_bias.is_finite() && mat.depth_bias.abs() <= MSTS_Z_BIAS_CLAMP,
+                "prim_state {} depth_bias={}",
+                part.prim_state_idx,
+                mat.depth_bias
+            );
+        }
+    }
+
+    #[test]
+    fn pullman_train_exterior_single_sided_back_cull() {
+        use bevy::render::render_resource::Face;
+
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            let fixture = chiltern_shape_fixture("RF_WP_DMBSA.s");
+            if !fixture.is_file() {
+                return;
+            }
+        }
+        let path = if shape_path.is_file() {
+            shape_path
+        } else {
+            chiltern_shape_fixture("RF_WP_DMBSA.s")
+        };
+        let trainset = path.parent().expect("trainset");
+        let tex_dirs = vehicle_texture_search_dirs(&path, trainset);
+        let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &path,
+            &tex_refs,
+            Some(crate::launch::LIVE_TRAIN_LOD_DISTANCE_M),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut cache,
+            Color::srgb(0.55, 0.58, 0.62),
+            true,
+        )
+        .expect("render asset");
+        for part in &asset.parts {
+            let mat = materials.get(&part.material).expect("material");
+            assert!(
+                !mat.double_sided,
+                "prim_state {} should be single-sided train exterior",
+                part.prim_state_idx
+            );
+            assert_eq!(
+                mat.cull_mode,
+                Some(Face::Back),
+                "prim_state {} should cull back faces (OR CullCounterClockwise)",
+                part.prim_state_idx
+            );
+        }
+    }
+
+    #[test]
+    fn mesh_triangle_vertex_count_multiple_of_3() {
+        let shape_path = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
+        );
+        if !shape_path.is_file() {
+            let fixture = chiltern_shape_fixture("RF_WP_DMBSA.s");
+            if !fixture.is_file() {
+                return;
+            }
+            let shape = ShapeFile::from_path(&fixture).expect("parse");
+            let parts = build_mesh_parts_from_shape(&shape);
+            for part in &parts {
+                assert!(
+                    mesh_triangle_list_valid(&part.mesh),
+                    "prim_state {} vertex count not multiple of 3",
+                    part.prim_state_idx
+                );
+            }
+            return;
+        }
+        let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
+        let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
+        assert!(!parts.is_empty());
+        for part in &parts {
+            assert!(
+                mesh_triangle_list_valid(&part.mesh),
+                "prim_state {} invalid triangle list",
+                part.prim_state_idx
+            );
+        }
+        assert!(mesh_triangle_list_valid(
+            &build_mesh_from_shape_at_distance(&shape, 25.0).expect("combined mesh")
+        ));
+    }
+
+    #[test]
+    fn vehicle_texture_search_dirs_prefers_trainset_before_route() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let trainset = chiltern_route_dir();
+        if !trainset.join("TEXTURES/bp01.ace").exists() {
+            return;
+        }
+        let shape = trainset.join("SHAPES/RF_WP_DMBSA.s");
+        if !shape.is_file() {
+            return;
+        }
+        let dirs = vehicle_texture_search_dirs(&shape, &route);
+        assert!(
+            dirs.first()
+                .is_some_and(|d| d.as_path() == trainset.as_path()),
+            "trainset root must be first (OR ReferencePath), got {:?}",
+            dirs
+        );
+        let found = resolve_texture_path_in_dirs(
+            &dirs.iter().map(|p| p.as_path()).collect::<Vec<_>>(),
+            "bp01.ace",
+        );
+        assert!(found.is_some());
+        assert!(
+            found.unwrap().starts_with(&trainset),
+            "bp01.ace should resolve from trainset, not route TEXTURES/"
         );
     }
 

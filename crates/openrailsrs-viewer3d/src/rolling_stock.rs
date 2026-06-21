@@ -20,6 +20,8 @@ pub struct ConsistVehicleVisual {
 #[derive(Resource, Clone, Default)]
 pub struct TrainConsistScene {
     pub scenario_dir: Option<PathBuf>,
+    /// Primary consist path from `scenario.toml` (`train.consist`).
+    pub primary_consist_rel: Option<String>,
     pub by_label: HashMap<String, Vec<ConsistVehicleVisual>>,
     /// `examples/.../trains/*/SHAPES` (synced trainset meshes).
     trainset_shape_dirs: Vec<PathBuf>,

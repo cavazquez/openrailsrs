@@ -2,7 +2,7 @@
 
 Documento de trabajo para la depuración de **CABVIEW3D** en `openrailsrs-viewer3d` con Chiltern live (`RF_Blue_Pullman`, `PULLMAN_GR.s` + `.cvf`).
 
-Relacionado: [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [**`CABVIEW3D_MATRICES.md`**](CABVIEW3D_MATRICES.md) (qué son M0/M4/M8/M9/M10) · [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md) · [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) · Open Rails `ThreeDimentionCabViewer` (`MSTSLocomotiveViewer.cs`).
+Relacionado: [`CABVIEW3D_ROADMAP.md`](CABVIEW3D_ROADMAP.md) · [**`CABVIEW3D_MATRICES.md`**](CABVIEW3D_MATRICES.md) (qué son M0/M4/M8/M9/M10) · [`PULLMAN_EXTERIOR_SESSION_2026-06-21.md`](PULLMAN_EXTERIOR_SESSION_2026-06-21.md) (exterior DMBSA / PULLMAN espejado) · [`FULL_SCENERY_LIVE_CHILTERN.md`](FULL_SCENERY_LIVE_CHILTERN.md) · [`OPENBVE_REFERENCE.md`](OPENBVE_REFERENCE.md) · Open Rails `ThreeDimentionCabViewer` (`MSTSLocomotiveViewer.cs`).
 
 ---
 

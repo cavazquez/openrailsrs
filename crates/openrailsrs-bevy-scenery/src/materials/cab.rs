@@ -8,7 +8,8 @@ use bevy::render::render_resource::{AsBindGroup, RenderPipelineDescriptor, Shade
 use bevy::shader::{ShaderDefVal, ShaderRef};
 
 use openrailsrs_or_shader::{
-    OrShaderKind, or_cab_shader_kind_gpu_id, or_shader_kind_gpu_id, resolve_or_material_kind,
+    OR_OPAQUE_REFERENCE_ALPHA, OrShaderKind, or_cab_shader_kind_gpu_id, or_shader_kind_gpu_id,
+    resolve_or_material_kind,
 };
 
 /// Debug fragment path for `or_cab.wgsl` (`OPENRAILSRS_CAB_DEBUG`).
@@ -49,8 +50,10 @@ pub const OR_CAB_SHADER_PATH: &str = "shaders/or_cab.wgsl";
 
 const OR_FLAG_LIT: f32 = 1.0;
 const OR_FLAG_BLEND: f32 = 2.0;
+/// Fixed OR `PSImage`/`PSHalfBright`/`PSDarkShade` brightness without outdoor sun (default cab).
+pub const OR_FLAG_OR_LIKE: f32 = 4.0;
 
-/// Outdoor directional sun on cab TexDiff (`OPENRAILSRS_CAB_SUN=1`). Default off — flat interior.
+/// Outdoor directional sun on cab TexDiff (`OPENRAILSRS_CAB_SUN=1`).
 pub fn cab_interior_sun_enabled() -> bool {
     matches!(
         std::env::var("OPENRAILSRS_CAB_SUN").ok().as_deref(),
@@ -58,11 +61,22 @@ pub fn cab_interior_sun_enabled() -> bool {
     )
 }
 
+/// Legacy flat albedo (`OPENRAILSRS_CAB_RAW=1`) — pre-OR-like debugging only.
+pub fn cab_interior_raw_flat_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAB_RAW").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
 fn cab_min_brightness_default() -> f32 {
     if cab_interior_sun_enabled() {
         0.72
-    } else {
+    } else if cab_interior_raw_flat_enabled() {
         0.0
+    } else {
+        // Dark MSTS cab atlases (luma < 32): OR PSImage floor is not enough alone.
+        0.25
     }
 }
 
@@ -89,15 +103,25 @@ pub fn or_cab_shaders_enabled() -> bool {
     }
 }
 
-fn reference_alpha_from_mode(alpha_mode: AlphaMode) -> f32 {
+pub fn reference_alpha_from_mode(alpha_mode: AlphaMode) -> f32 {
     match alpha_mode {
+        AlphaMode::Opaque => OR_OPAQUE_REFERENCE_ALPHA,
         AlphaMode::Mask(c) => c,
         AlphaMode::Blend
-        | AlphaMode::Opaque
         | AlphaMode::Add
         | AlphaMode::Premultiplied
         | AlphaMode::AlphaToCoverage
         | AlphaMode::Multiply => 0.01,
+    }
+}
+
+fn cab_material_flags() -> f32 {
+    if cab_interior_sun_enabled() {
+        OR_FLAG_LIT
+    } else if cab_interior_raw_flat_enabled() {
+        0.0
+    } else {
+        OR_FLAG_OR_LIKE
     }
 }
 
@@ -119,11 +143,7 @@ pub fn build_or_cab_params(kind: OrShaderKind, reference_alpha: f32) -> OrCabGpu
         half_shadow_brightness: 0.75,
         shader_kind: or_shader_kind_gpu_id(kind),
         cab_min_brightness: cab_min,
-        flags: if cab_interior_sun_enabled() {
-            OR_FLAG_LIT
-        } else {
-            0.0
-        },
+        flags: cab_material_flags(),
     }
 }
 
@@ -184,8 +204,6 @@ pub fn create_or_cab_material(
     if matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add) {
         params.flags = OR_FLAG_BLEND;
         params.reference_alpha = 0.0;
-    } else if !cab_interior_sun_enabled() {
-        params.flags = 0.0;
     }
     let linear = tint.to_linear();
     params.tint_r = linear.red;
@@ -211,27 +229,45 @@ mod tests {
     }
 
     #[test]
-    fn cab_interior_flat_by_default() {
+    fn cab_env_toggles() {
         unsafe {
             std::env::remove_var("OPENRAILSRS_CAB_SUN");
+            std::env::remove_var("OPENRAILSRS_CAB_RAW");
             std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
-        let p = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
-        assert_eq!(p.flags, 0.0);
-        assert_eq!(p.cab_min_brightness, 0.0);
+        let default = build_or_cab_params(OrShaderKind::TexDiff, OR_OPAQUE_REFERENCE_ALPHA);
+        assert_eq!(default.flags, OR_FLAG_OR_LIKE);
+        assert!((default.cab_min_brightness - 0.25).abs() < 1e-3);
+
+        unsafe {
+            std::env::set_var("OPENRAILSRS_CAB_SUN", "1");
+            std::env::remove_var("OPENRAILSRS_CAB_RAW");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
+        }
+        let sun = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(sun.flags, OR_FLAG_LIT);
+        assert!((sun.cab_min_brightness - 0.72).abs() < 1e-3);
+
+        unsafe {
+            std::env::remove_var("OPENRAILSRS_CAB_SUN");
+            std::env::set_var("OPENRAILSRS_CAB_RAW", "1");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
+        }
+        let raw = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(raw.flags, 0.0);
+
+        unsafe {
+            std::env::remove_var("OPENRAILSRS_CAB_SUN");
+            std::env::remove_var("OPENRAILSRS_CAB_RAW");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
+        }
     }
 
     #[test]
-    fn cab_sun_opt_in() {
-        unsafe {
-            std::env::set_var("OPENRAILSRS_CAB_SUN", "1");
-            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
-        }
-        let p = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
-        assert_eq!(p.flags, OR_FLAG_LIT);
-        assert!((p.cab_min_brightness - 0.72).abs() < 1e-3);
-        unsafe {
-            std::env::remove_var("OPENRAILSRS_CAB_SUN");
-        }
+    fn cab_opaque_reference_alpha() {
+        assert_eq!(
+            reference_alpha_from_mode(AlphaMode::Opaque),
+            OR_OPAQUE_REFERENCE_ALPHA
+        );
     }
 }

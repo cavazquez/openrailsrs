@@ -2,7 +2,7 @@
 //!
 //! Usage:
 //!   openrailsrs-viewer3d [--route-root ROUTE_DIR] [route_dir | scenario.toml]
-//!   openrailsrs-viewer3d --live [--route-root ROUTE_DIR] scenario.toml
+//!   openrailsrs-viewer3d --live [--cab-fov DEG] [--route-root ROUTE_DIR] scenario.toml
 //!   openrailsrs-viewer3d --track-dev [--live] [--route-root ROUTE_DIR] scenario.toml
 //!   openrailsrs-viewer3d --run-corridor --live --route-root ROUTE_DIR scenario.toml
 //!
@@ -99,6 +99,7 @@ struct CliArgs {
     tile_lab: bool,
     path: PathBuf,
     route_root: Option<PathBuf>,
+    cab_fov_deg: Option<f32>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -154,6 +155,7 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
     let mut run_corridor = false;
     let mut tile_lab = false;
     let mut route_root = None;
+    let mut cab_fov_deg = None;
     let mut path = None;
     let mut args = args.into_iter().peekable();
     while let Some(arg) = args.next() {
@@ -169,6 +171,10 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
             route_root = args.next().map(PathBuf::from);
         } else if let Some(value) = arg.strip_prefix("--route-root=") {
             route_root = Some(PathBuf::from(value));
+        } else if arg == "--cab-fov" {
+            cab_fov_deg = args.next().and_then(|v| v.parse().ok());
+        } else if let Some(value) = arg.strip_prefix("--cab-fov=") {
+            cab_fov_deg = value.parse().ok();
         } else if !arg.starts_with('-') {
             path = Some(PathBuf::from(arg));
         }
@@ -180,6 +186,7 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
         tile_lab,
         path: path.unwrap_or_else(|| PathBuf::from("examples/smoke/routes/test")),
         route_root,
+        cab_fov_deg,
     }
 }
 
@@ -365,6 +372,7 @@ fn main() {
     )
     .insert_resource(ViewerLaunchOpts {
         live: config.live.is_some(),
+        cab_fov_deg: cli.cab_fov_deg,
     })
     .insert_resource(config.scenery_mode)
     .insert_resource(config.run_corridor_path)
@@ -1152,6 +1160,7 @@ fn load_train_consists(
     }
     let mut scene = TrainConsistScene::default();
     scene.set_scenario_dir(scenario_dir.to_path_buf());
+    scene.primary_consist_rel = Some(scenario.train.consist.clone());
     scene.by_label = by_label;
     scene
 }
@@ -1205,6 +1214,20 @@ mod tests {
 
         assert!(cli.track_dev);
         assert_eq!(cli.route_root, Some(PathBuf::from("/routes/Chiltern")));
+    }
+
+    #[test]
+    fn parse_cli_accepts_cab_fov() {
+        let cli = args(&[
+            "--live",
+            "--cab-fov",
+            "72",
+            "examples/chiltern/scenario.toml",
+        ]);
+        assert!((cli.cab_fov_deg.unwrap() - 72.0).abs() < f32::EPSILON);
+
+        let cli = args(&["--cab-fov=65", "examples/chiltern/scenario.toml"]);
+        assert!((cli.cab_fov_deg.unwrap() - 65.0).abs() < f32::EPSILON);
     }
 
     #[test]

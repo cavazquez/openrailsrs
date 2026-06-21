@@ -12,6 +12,11 @@ use openrailsrs_or_shader::coordinates::{
     matrix43_transform_point_xna, matrix43_transform_vector_xna, shape_point_to_bevy,
 };
 
+use super::debug::{
+    clamp_msts_z_bias_for_bevy, set_train_shape_debug_scope, shape_uv_to_bevy,
+    train_debug_flip_winding_active,
+};
+
 /// Parsed shape geometry plus optional primary texture filename from the shape.
 #[derive(Clone, Debug)]
 pub struct LoadedShape {
@@ -270,7 +275,7 @@ pub fn build_mesh_parts_from_shape_lod(
         .into_iter()
         .filter_map(|(prim_state_idx, buffers)| {
             let (mesh, solid_color) = buffers.into_mesh_with_color()?;
-            let (alpha_test_mode, z_bias, z_buf_mode) = shape
+            let (alpha_test_mode, z_bias_raw, z_buf_mode) = shape
                 .prim_states
                 .get(prim_state_idx.max(0) as usize)
                 .map(|ps| {
@@ -281,6 +286,7 @@ pub fn build_mesh_parts_from_shape_lod(
                     )
                 })
                 .unwrap_or((-1, None, -1));
+            let z_bias = Some(clamp_msts_z_bias_for_bevy(z_bias_raw, None));
             Some(LoadedShapePart {
                 prim_state_idx,
                 sub_object_idx: u32::MAX,
@@ -371,15 +377,32 @@ pub fn append_primitive_mesh_buffers(
         if tri.len() < 3 {
             continue;
         }
+        let mut resolved = Vec::with_capacity(3);
+        let mut skip_tri = false;
         for &vertex_idx in tri {
-            let Some((point_idx, normal_idx, uv_idx, vertex_color)) =
-                resolve_shape_vertex(shape, sub, vertex_idx)
-            else {
-                continue;
+            let Some(resolved_vertex) = resolve_shape_vertex(shape, sub, vertex_idx) else {
+                skip_tri = true;
+                break;
             };
-            let Some(point) = shape.points.get(point_idx) else {
-                continue;
-            };
+            resolved.push(resolved_vertex);
+        }
+        if skip_tri {
+            continue;
+        }
+        // Open Rails reverses winding when loading shapes into XNA (`Coordinates.cs`).
+        // MSTS→Bevy uses the same Z-handedness flip via [`shape_point_to_bevy`].
+        resolved.swap(1, 2);
+        if train_debug_flip_winding_active() {
+            resolved.swap(1, 2);
+        }
+        if !resolved
+            .iter()
+            .all(|(point_idx, ..)| shape.points.get(*point_idx).is_some())
+        {
+            continue;
+        }
+        for (point_idx, normal_idx, uv_idx, vertex_color) in resolved {
+            let point = shape.points.get(point_idx).expect("checked");
             buffers.positions.push(transform_shape_point(
                 shape_point_to_bevy(*point),
                 &matrix_chain,
@@ -394,8 +417,7 @@ pub fn append_primitive_mesh_buffers(
             let uv = uv_idx
                 .and_then(|idx| shape.uvs.get(idx).copied())
                 .unwrap_or_default();
-            // MSTS UV origin differs from Bevy; flip V for textured quads.
-            buffers.uvs.push(Vec2::new(uv.u as f32, 1.0 - uv.v as f32));
+            buffers.uvs.push(shape_uv_to_bevy(uv.u as f32, uv.v as f32));
             buffers.colors.push(vertex_color);
         }
     }
@@ -642,4 +664,105 @@ pub fn build_mesh_parts_from_shape_at_distance(
         return Vec::new();
     };
     build_mesh_parts_from_shape_lod(shape, level)
+}
+
+/// Write a baked Bevy mesh as Wavefront OBJ (positions, UVs, normals, triangle list).
+pub fn write_mesh_wavefront(
+    mesh: &Mesh,
+    w: &mut dyn std::io::Write,
+    obj_name: &str,
+) -> std::io::Result<()> {
+    use bevy::mesh::VertexAttributeValues;
+
+    writeln!(w, "# openrailsrs shape-obj-dump")?;
+    writeln!(w, "o {obj_name}")?;
+
+    let positions = mesh
+        .attribute(Mesh::ATTRIBUTE_POSITION)
+        .and_then(|a| match a {
+            VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+            _ => None,
+        })
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "missing positions"))?;
+    for p in positions {
+        writeln!(w, "v {} {} {}", p[0], p[1], p[2])?;
+    }
+
+    let uvs = mesh.attribute(Mesh::ATTRIBUTE_UV_0).and_then(|a| match a {
+        VertexAttributeValues::Float32x2(v) => Some(v.as_slice()),
+        _ => None,
+    });
+    if let Some(uvs) = uvs {
+        for uv in uvs {
+            writeln!(w, "vt {} {}", uv[0], uv[1])?;
+        }
+    }
+
+    let normals = mesh
+        .attribute(Mesh::ATTRIBUTE_NORMAL)
+        .and_then(|a| match a {
+            VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+            _ => None,
+        });
+    if let Some(normals) = normals {
+        for n in normals {
+            writeln!(w, "vn {} {} {}", n[0], n[1], n[2])?;
+        }
+    }
+
+    let has_uv = uvs.is_some();
+    let has_n = normals.is_some();
+    let n = positions.len();
+    for i in (0..n).step_by(3) {
+        let a = i + 1;
+        let b = i + 2;
+        let c = i + 3;
+        if has_uv && has_n {
+            writeln!(w, "f {a}/{a}/{a} {b}/{b}/{b} {c}/{c}/{c}")?;
+        } else if has_uv {
+            writeln!(w, "f {a}/{a} {b}/{b} {c}/{c}")?;
+        } else {
+            writeln!(w, "f {a} {b} {c}")?;
+        }
+    }
+    Ok(())
+}
+
+/// Bake an MSTS `.s` shape (Bevy path: coord flip + UV conversion) and write OBJ.
+///
+/// Enables [`set_train_shape_debug_scope`] so `OPENRAILSRS_DEBUG_*` UV/winding flags apply.
+pub fn write_shape_wavefront_from_path(
+    shape_path: &std::path::Path,
+    out_path: &std::path::Path,
+    distance_m: Option<f32>,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    set_train_shape_debug_scope(true);
+    let result = (|| {
+        let shape = openrailsrs_formats::ShapeFile::from_path(shape_path)
+            .map_err(|e| format!("parse {}: {e}", shape_path.display()))?;
+        let mesh = match distance_m {
+            Some(d) => build_mesh_from_shape_at_distance(&shape, d),
+            None => build_mesh_from_shape(&shape),
+        }
+        .ok_or_else(|| format!("no mesh geometry in {}", shape_path.display()))?;
+
+        let mut file = std::fs::File::create(out_path)
+            .map_err(|e| format!("create {}: {e}", out_path.display()))?;
+        write_mesh_wavefront(
+            &mesh,
+            &mut file,
+            shape_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("shape"),
+        )
+        .map_err(|e| format!("write {}: {e}", out_path.display()))?;
+        file.flush()
+            .map_err(|e| format!("flush {}: {e}", out_path.display()))?;
+        Ok(())
+    })();
+    set_train_shape_debug_scope(false);
+    result
 }
