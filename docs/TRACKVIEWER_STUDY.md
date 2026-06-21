@@ -229,9 +229,9 @@ length_m = 1000.0
 | Gap | Impacto sim | Impacto visual 3D | Nota futura |
 |-----|-------------|-------------------|-------------|
 | Vector → 1 edge | Alto en curvas | Medio (TrackObj cubre Full) | Splines en sim o grafo enriquecido |
-| Sin arcos en chords | Bajo sim | Alto en `--track-dev` | Usar `SectionCurve` + `FindLocationInSection` port |
-| `shape_idx == 0` skip | Bajo | Alto en rutas test | Tratar 0 como índice válido a tsection |
-| Junction face gaps | Bajo | Medio (huecos en rails dev) | Mejorar `facing_junction_endpoints` |
+| Sin arcos en chords | Bajo sim | Alto en `--track-dev` | **Parcial** — `section_path_spans` + arcos TSection ([`bevy-scenery/spawn/tdb_track.rs`](../crates/openrailsrs-bevy-scenery/src/spawn/tdb_track.rs)) |
+| `shape_idx == 0` skip | Bajo | Alto en rutas test | **Parcial** — `section_is_drawable(0)` con catálogo tsection |
+| Junction face gaps | Bajo | Medio (huecos en rails dev) | **Parcial** — `vector_junction_face_world` + junction endpoints con tsection |
 | Señales sin pos MSTS | Medio | Bajo (marcadores lógicos) | Opcional: pos 3D desde TrItem |
 | Sin mapa 2D estilo TV | — | — | Fase 15 editor / visor tdb 2D |
 | Sin editor `.pat` | Medio workflow MSTS | — | Parser existe; UI no |

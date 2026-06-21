@@ -346,6 +346,7 @@ fn main() {
                 radius_m,
                 &chords,
                 audit_route_dir,
+                Some(assets.tsection()),
             );
             if config.scenery_mode.is_track_dev() && !track_dev_render_enabled() {
                 viewer_log!(

@@ -1,118 +1,118 @@
 {
   "radius_m": 1500.0,
   "vector_nodes_in_radius": 679,
-  "tdb_chords": 4117,
+  "tdb_chords": 3580,
   "graph_nodes": 557,
   "graph_edges": 689,
   "graph_positions_available": true,
-  "graph_edge_match_pct": 97.96806966618288,
-  "chord_endpoint_snap_pct": 89.02798232695139,
+  "graph_edge_match_pct": 99.12917271407838,
+  "chord_endpoint_snap_pct": 88.2179675994109,
   "graph_midpoint_to_chord_m": {
     "count": 689,
-    "mean_m": 2.2452699082683236,
+    "mean_m": 1.0173484237515875,
     "p50_m": 0.0,
-    "p95_m": 6.0,
-    "max_m": 92.00543212890625
+    "p95_m": 2.8284270763397217,
+    "max_m": 50.990196228027344
   },
   "intra_node_chain_gap_m": {
-    "count": 2728,
-    "mean_m": 0.042606300622487,
+    "count": 2138,
+    "mean_m": 0.02035142775447264,
     "p50_m": 0.0,
     "p95_m": 0.0,
-    "max_m": 72.71863555908203
+    "max_m": 6.4031243324279785
   },
   "inter_node_chain_gap_m": {
-    "count": 1150,
-    "mean_m": 0.5541307532269022,
+    "count": 1149,
+    "mean_m": 2.305898004038838,
     "p50_m": 0.0,
-    "p95_m": 1.0,
-    "max_m": 34.828147888183594
+    "p95_m": 14.317821502685547,
+    "max_m": 88.48163604736328
   },
   "static_trackobj_to_chord_m": {
     "count": 2421,
-    "mean_m": 1.4507205022459728,
+    "mean_m": 1.1406419416047089,
     "p50_m": 0.0,
-    "p95_m": 1.0,
-    "max_m": 128.0
+    "p95_m": 2.0,
+    "max_m": 121.85237121582031
   },
   "static_trackobj_to_matching_chord_m": {
     "count": 2421,
-    "mean_m": 1.4807920522898597,
+    "mean_m": 1.2005580443579615,
     "p50_m": 0.0,
     "p95_m": 2.2360680103302,
-    "max_m": 128.0
+    "max_m": 121.85237121582031
   },
   "static_trackobj_count": 2421,
   "worst_inter_node_gaps": [
     {
-      "vector_a": 16897,
-      "vector_b": 17790,
-      "via_junction": 17283,
-      "gap_m": 34.828147888183594,
-      "junction_face_gap_m": 34.828147888183594
+      "vector_a": 16854,
+      "vector_b": 16893,
+      "via_junction": 16871,
+      "gap_m": 88.48163604736328,
+      "junction_face_gap_m": 319.2005615234375
+    },
+    {
+      "vector_a": 17522,
+      "vector_b": 17703,
+      "via_junction": 17705,
+      "gap_m": 71.28113555908203,
+      "junction_face_gap_m": 237.89283752441406
+    },
+    {
+      "vector_a": 17386,
+      "vector_b": 17633,
+      "via_junction": 17635,
+      "gap_m": 53.037723541259766,
+      "junction_face_gap_m": 87.6584243774414
+    },
+    {
+      "vector_a": 17187,
+      "vector_b": 17211,
+      "via_junction": 17183,
+      "gap_m": 47.53945541381836,
+      "junction_face_gap_m": 290.826416015625
+    },
+    {
+      "vector_a": 17309,
+      "vector_b": 17684,
+      "via_junction": 17685,
+      "gap_m": 39.20458984375,
+      "junction_face_gap_m": 47.423622131347656
+    },
+    {
+      "vector_a": 16820,
+      "vector_b": 17557,
+      "via_junction": 16874,
+      "gap_m": 34.885528564453125,
+      "junction_face_gap_m": 79.39773559570312
     },
     {
       "vector_a": 16701,
       "vector_b": 16976,
       "via_junction": 16978,
       "gap_m": 33.52610778808594,
-      "junction_face_gap_m": 33.52610778808594
+      "junction_face_gap_m": 228.23890686035156
     },
     {
-      "vector_a": 17301,
-      "vector_b": 17423,
-      "via_junction": 17382,
-      "gap_m": 30.528675079345703,
-      "junction_face_gap_m": 30.528675079345703
+      "vector_a": 16934,
+      "vector_b": 17557,
+      "via_junction": 16874,
+      "gap_m": 33.105892181396484,
+      "junction_face_gap_m": 81.83519744873047
     },
     {
-      "vector_a": 17394,
+      "vector_a": 17404,
       "vector_b": 17412,
       "via_junction": 17418,
-      "gap_m": 30.528675079345703,
-      "junction_face_gap_m": 30.528675079345703
+      "gap_m": 32.24903106689453,
+      "junction_face_gap_m": 178.70925903320312
     },
     {
-      "vector_a": 16997,
-      "vector_b": 17025,
-      "via_junction": 17023,
-      "gap_m": 26.925823211669922,
-      "junction_face_gap_m": 26.925823211669922
-    },
-    {
-      "vector_a": 16954,
-      "vector_b": 17007,
-      "via_junction": 17019,
-      "gap_m": 25.612497329711914,
-      "junction_face_gap_m": 25.612497329711914
-    },
-    {
-      "vector_a": 17300,
-      "vector_b": 17360,
-      "via_junction": 17378,
-      "gap_m": 25.0,
-      "junction_face_gap_m": 25.0
-    },
-    {
-      "vector_a": 17200,
+      "vector_a": 17199,
       "vector_b": 17215,
       "via_junction": 17202,
-      "gap_m": 24.83948516845703,
-      "junction_face_gap_m": 24.83948516845703
-    },
-    {
-      "vector_a": 16870,
-      "vector_b": 16910,
-      "via_junction": 16872,
-      "gap_m": 24.083189010620117,
-      "junction_face_gap_m": 29.120439529418945
-    },
-    {
-      "vector_a": 16870,
-      "vector_b": 16913,
-      "via_junction": 16872,
-      "gap_m": 24.083189010620117,
-      "junction_face_gap_m": 28.160255432128906
+      "gap_m": 29.546573638916016,
+      "junction_face_gap_m": 212.5582275390625
     }
   ],
   "worst_static_trackobj": [
@@ -124,23 +124,10 @@
       "y_m": 28.55769920349121,
       "z_m": -30566246.0,
       "section_idx": 16517,
-      "dist_any_m": 128.0,
-      "dist_matching_m": 128.0,
-      "vector_id": 17312,
-      "dist_m": 128.0
-    },
-    {
-      "uid": 9226,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450795.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566276.0,
-      "section_idx": 16584,
-      "dist_any_m": 125.06398010253906,
-      "dist_matching_m": 125.06398010253906,
-      "vector_id": 17312,
-      "dist_m": 125.06398010253906
+      "dist_any_m": 121.85237121582031,
+      "dist_matching_m": 121.85237121582031,
+      "vector_id": 17360,
+      "dist_m": 121.85237121582031
     },
     {
       "uid": 9265,
@@ -150,49 +137,23 @@
       "y_m": 28.55769920349121,
       "z_m": -30566246.0,
       "section_idx": 16517,
-      "dist_any_m": 123.0,
-      "dist_matching_m": 123.0,
-      "vector_id": 17312,
-      "dist_m": 123.0
+      "dist_any_m": 117.38824462890625,
+      "dist_matching_m": 117.38824462890625,
+      "vector_id": 17360,
+      "dist_m": 117.38824462890625
     },
     {
-      "uid": 9225,
+      "uid": 9226,
       "tile_x": -6079,
       "tile_z": 14925,
-      "x_m": -12450793.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566306.0,
-      "section_idx": 16584,
-      "dist_any_m": 122.0,
-      "dist_matching_m": 122.0,
-      "vector_id": 17300,
-      "dist_m": 122.0
-    },
-    {
-      "uid": 9228,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450790.0,
+      "x_m": -12450795.0,
       "y_m": 28.55769920349121,
       "z_m": -30566276.0,
       "section_idx": 16584,
-      "dist_any_m": 120.066650390625,
-      "dist_matching_m": 120.066650390625,
-      "vector_id": 17312,
-      "dist_m": 120.066650390625
-    },
-    {
-      "uid": 9227,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450788.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566306.0,
-      "section_idx": 16584,
-      "dist_any_m": 117.0,
-      "dist_matching_m": 117.0,
-      "vector_id": 17300,
-      "dist_m": 117.0
+      "dist_any_m": 108.46197509765625,
+      "dist_matching_m": 108.46197509765625,
+      "vector_id": 17360,
+      "dist_m": 108.46197509765625
     },
     {
       "uid": 9261,
@@ -202,36 +163,23 @@
       "y_m": 28.55769920349121,
       "z_m": -30566246.0,
       "section_idx": 16517,
-      "dist_any_m": 111.0,
-      "dist_matching_m": 111.0,
-      "vector_id": 17312,
-      "dist_m": 111.0
+      "dist_any_m": 106.6208267211914,
+      "dist_matching_m": 106.6208267211914,
+      "vector_id": 17360,
+      "dist_m": 106.6208267211914
     },
     {
-      "uid": 9230,
+      "uid": 9228,
       "tile_x": -6079,
       "tile_z": 14925,
-      "x_m": -12450779.0,
+      "x_m": -12450790.0,
       "y_m": 28.55769920349121,
       "z_m": -30566276.0,
       "section_idx": 16584,
-      "dist_any_m": 109.01834869384766,
-      "dist_matching_m": 109.01834869384766,
-      "vector_id": 17312,
-      "dist_m": 109.01834869384766
-    },
-    {
-      "uid": 9229,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450777.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566306.0,
-      "section_idx": 16584,
-      "dist_any_m": 106.0,
-      "dist_matching_m": 106.0,
-      "vector_id": 17300,
-      "dist_m": 106.0
+      "dist_any_m": 104.0,
+      "dist_matching_m": 104.0,
+      "vector_id": 17360,
+      "dist_m": 104.0
     },
     {
       "uid": 9263,
@@ -241,49 +189,36 @@
       "y_m": 28.55769920349121,
       "z_m": -30566246.0,
       "section_idx": 16517,
-      "dist_any_m": 106.0,
-      "dist_matching_m": 106.0,
-      "vector_id": 17312,
-      "dist_m": 106.0
+      "dist_any_m": 102.15674591064453,
+      "dist_matching_m": 102.15674591064453,
+      "vector_id": 17360,
+      "dist_m": 102.15674591064453
     },
     {
-      "uid": 9232,
+      "uid": 9225,
       "tile_x": -6079,
       "tile_z": 14925,
-      "x_m": -12450773.0,
+      "x_m": -12450793.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 94.93682098388672,
+      "dist_matching_m": 94.93682098388672,
+      "vector_id": 17360,
+      "dist_m": 94.93682098388672
+    },
+    {
+      "uid": 9230,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450779.0,
       "y_m": 28.55769920349121,
       "z_m": -30566276.0,
       "section_idx": 16584,
-      "dist_any_m": 103.01941680908203,
-      "dist_matching_m": 103.01941680908203,
-      "vector_id": 17312,
-      "dist_m": 103.01941680908203
-    },
-    {
-      "uid": 8977,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450771.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566306.0,
-      "section_idx": 16620,
-      "dist_any_m": 100.0,
-      "dist_matching_m": 100.0,
-      "vector_id": 17300,
-      "dist_m": 100.0
-    },
-    {
-      "uid": 9231,
-      "tile_x": -6079,
-      "tile_z": 14925,
-      "x_m": -12450771.0,
-      "y_m": 28.55769920349121,
-      "z_m": -30566306.0,
-      "section_idx": 16584,
-      "dist_any_m": 100.0,
-      "dist_matching_m": 100.0,
-      "vector_id": 17300,
-      "dist_m": 100.0
+      "dist_any_m": 93.23089599609375,
+      "dist_matching_m": 93.23089599609375,
+      "vector_id": 17360,
+      "dist_m": 93.23089599609375
     },
     {
       "uid": 9260,
@@ -293,10 +228,75 @@
       "y_m": 28.55769920349121,
       "z_m": -30566246.0,
       "section_idx": 16517,
-      "dist_any_m": 95.0,
-      "dist_matching_m": 95.0,
-      "vector_id": 17312,
-      "dist_m": 95.0
+      "dist_any_m": 92.30926513671875,
+      "dist_matching_m": 92.30926513671875,
+      "vector_id": 17360,
+      "dist_m": 92.30926513671875
+    },
+    {
+      "uid": 9227,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450788.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 90.47099304199219,
+      "dist_matching_m": 90.47099304199219,
+      "vector_id": 17360,
+      "dist_m": 90.47099304199219
+    },
+    {
+      "uid": 9232,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450773.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566276.0,
+      "section_idx": 16584,
+      "dist_any_m": 87.8464584350586,
+      "dist_matching_m": 87.8464584350586,
+      "vector_id": 17360,
+      "dist_m": 87.8464584350586
+    },
+    {
+      "uid": 9259,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450759.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566246.0,
+      "section_idx": 16517,
+      "dist_any_m": 86.92525482177734,
+      "dist_matching_m": 86.92525482177734,
+      "vector_id": 17360,
+      "dist_m": 86.92525482177734
+    },
+    {
+      "uid": 9229,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450777.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566306.0,
+      "section_idx": 16584,
+      "dist_any_m": 80.62257385253906,
+      "dist_matching_m": 80.62257385253906,
+      "vector_id": 17360,
+      "dist_m": 80.62257385253906
+    },
+    {
+      "uid": 9258,
+      "tile_x": -6079,
+      "tile_z": 14925,
+      "x_m": -12450749.0,
+      "y_m": 28.55769920349121,
+      "z_m": -30566244.0,
+      "section_idx": 16517,
+      "dist_any_m": 79.7057113647461,
+      "dist_matching_m": 79.7057113647461,
+      "vector_id": 17360,
+      "dist_m": 79.7057113647461
     },
     {
       "uid": 9234,
@@ -306,10 +306,10 @@
       "y_m": 28.55769920349121,
       "z_m": -30566276.0,
       "section_idx": 16584,
-      "dist_any_m": 92.02173614501953,
-      "dist_matching_m": 92.02173614501953,
-      "vector_id": 17312,
-      "dist_m": 92.02173614501953
+      "dist_any_m": 78.0,
+      "dist_matching_m": 78.0,
+      "vector_id": 17360,
+      "dist_m": 78.0
     }
   ],
   "verdict": "good"

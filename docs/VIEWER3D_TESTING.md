@@ -98,6 +98,8 @@ OPENRAILSRS_TRACK_AUDIT="$PWD/docs/fixtures/chiltern-track-audit.json" \
 
 Modo dev interactivo: `OPENRAILSRS_TRACK_DEV_RENDER=1` + `--track-dev --route-root …` (ver estudio §8).
 
+Geometría TSection (2026-06): chords y meshes usan [`section_path_spans`](../crates/openrailsrs-bevy-scenery/src/spawn/tdb_track.rs) (port de OR `FindLocationInSection`); tests `minimal_tdb_shape_zero_*`, `path_spans_chain_with_zero_intra_node_gap`.
+
 ## Track Viewer study — Parte 2 (pat / items / outliers)
 
 Profundización: TrItem, paths `.pat`, casos outlier Chiltern.

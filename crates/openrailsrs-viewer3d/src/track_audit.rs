@@ -289,6 +289,7 @@ pub struct TrackDevAuditInput<'a> {
     pub radius_m: f32,
     pub chords: &'a [TdbChord],
     pub route_dir: Option<&'a std::path::Path>,
+    pub tsection: Option<&'a TSectionCatalog>,
 }
 
 pub fn audit_track_dev(input: TrackDevAuditInput<'_>) -> TrackDevAuditReport {
@@ -300,6 +301,7 @@ pub fn audit_track_dev(input: TrackDevAuditInput<'_>) -> TrackDevAuditReport {
         radius_m,
         chords,
         route_dir,
+        tsection,
     } = input;
     let graph_nodes = collect_graph_node_positions(scene, offset, focus, radius_m);
     let graph_edges = collect_graph_edges(scene, offset, focus, radius_m);
@@ -316,7 +318,7 @@ pub fn audit_track_dev(input: TrackDevAuditInput<'_>) -> TrackDevAuditReport {
             (None, None, StatSummary::default())
         };
     let intra_node_chain_gap_m = summarize(&intra_node_chain_gaps(chords));
-    let inter_node_pairs = inter_node_gap_pairs(tdb, chords);
+    let inter_node_pairs = inter_node_gap_pairs(tdb, chords, tsection);
     let inter_node_chain_gap_m = summarize(
         &inter_node_pairs
             .iter()
@@ -851,7 +853,7 @@ fn collect_chord_terminals(chords: &[TdbChord]) -> Vec<ChordTerminals> {
     }
     let mut out = Vec::with_capacity(by_node.len());
     for (node_id, mut node_chords) in by_node {
-        node_chords.sort_by_key(|c| c.section_index);
+        node_chords.sort_by_key(|c| (c.section_index, c.span_index));
         let Some(first) = node_chords.first() else {
             continue;
         };
@@ -913,7 +915,7 @@ fn intra_node_chain_gaps(chords: &[TdbChord]) -> Vec<f32> {
         if node_chords.len() < 2 {
             continue;
         }
-        node_chords.sort_by_key(|c| c.section_index);
+        node_chords.sort_by_key(|c| (c.section_index, c.span_index));
         for pair in node_chords.windows(2) {
             gaps.push(distance_xz(pair[0].end_world, pair[1].start_world));
         }
@@ -921,7 +923,11 @@ fn intra_node_chain_gaps(chords: &[TdbChord]) -> Vec<f32> {
     gaps
 }
 
-fn inter_node_gap_pairs(tdb: &TrackDbFile, chords: &[TdbChord]) -> Vec<InterNodeGapPair> {
+fn inter_node_gap_pairs(
+    tdb: &TrackDbFile,
+    chords: &[TdbChord],
+    tsection: Option<&TSectionCatalog>,
+) -> Vec<InterNodeGapPair> {
     let vector_ids: HashSet<u32> = chords
         .iter()
         .map(|c| c.node_id)
@@ -942,7 +948,7 @@ fn inter_node_gap_pairs(tdb: &TrackDbFile, chords: &[TdbChord]) -> Vec<InterNode
             if !seen_pairs.insert(pair) {
                 continue;
             }
-            let junction_face_gap_m = inter_node_junction_gap_m(tdb, pair.0, pair.1);
+            let junction_face_gap_m = inter_node_junction_gap_m(tdb, pair.0, pair.1, tsection);
             let gap = match (
                 junction_face_gap_m,
                 min_chord_endpoint_gap(chords, pair.0, pair.1),
@@ -1106,6 +1112,7 @@ fn distance_xz(a: Vec3, b: Vec3) -> f32 {
     (dx * dx + dz * dz).sqrt()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_track_dev_audit(
     tdb: &TrackDbFile,
     scene: &TrackScene,
@@ -1114,6 +1121,7 @@ pub fn run_track_dev_audit(
     radius_m: f32,
     chords: &[TdbChord],
     route_dir: Option<&std::path::Path>,
+    tsection: Option<&TSectionCatalog>,
 ) {
     let report = audit_track_dev(TrackDevAuditInput {
         tdb,
@@ -1123,6 +1131,7 @@ pub fn run_track_dev_audit(
         radius_m,
         chords,
         route_dir,
+        tsection,
     });
     if track_audit_enabled() {
         report.log_detail();
@@ -1229,6 +1238,7 @@ mod tests {
             radius_m: 500.0,
             chords: &chords,
             route_dir: None,
+            tsection: None,
         });
         assert_eq!(report.verdict, TrackDevVerdict::Good);
         assert_eq!(report.graph_edge_match_pct, Some(100.0));
@@ -1411,6 +1421,7 @@ mod tests {
             radius_m: radius,
             chords: &chords,
             route_dir: Some(route_dir),
+            tsection: None,
         });
         report.log_detail();
         assert!(report.tdb_chords > 1000, "chords near Birmingham anchor");
@@ -1472,6 +1483,7 @@ mod tests {
             radius_m: radius,
             chords: &chords,
             route_dir: Some(&msts_route),
+            tsection: Some(tsection),
         });
         report.log_detail();
         report.write_json_if_requested();
@@ -1552,6 +1564,7 @@ mod tests {
             radius_m: 500.0,
             chords: &chords,
             route_dir: None,
+            tsection: None,
         });
         report.write_json_if_requested();
         assert_eq!(report.verdict, TrackDevVerdict::Good);
@@ -1652,7 +1665,7 @@ mod tests {
             if node_chords.len() < 2 {
                 continue;
             }
-            node_chords.sort_by_key(|c| c.section_index);
+            node_chords.sort_by_key(|c| (c.section_index, c.span_index));
             for pair in node_chords.windows(2) {
                 let gap = distance_xz(pair[0].end_world, pair[1].start_world);
                 if worst.as_ref().is_none_or(|(_, _, g)| gap > *g) {
