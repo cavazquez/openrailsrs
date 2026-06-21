@@ -80,6 +80,8 @@ fn init_signal_runtime(
 /// Scheduled stop along the route (cumulative distance from start).
 #[derive(Debug, Clone)]
 pub struct LiveStopTarget {
+    /// Graph node id (`n12345`) where the stop is scheduled.
+    pub node_id: String,
     pub cum_dist_m: f64,
     pub arrive_s: f64,
     pub name: String,
@@ -89,6 +91,8 @@ pub struct LiveStopTarget {
 #[derive(Debug, Clone)]
 pub struct LiveGameplay {
     pub destination: String,
+    /// Graph node id for the route destination (for 3D marker placement).
+    pub destination_node: String,
     pub penalty_per_second_late: f64,
     pub stop_targets: Vec<LiveStopTarget>,
     pub next_stop_idx: usize,
@@ -122,6 +126,7 @@ fn build_live_gameplay(
                     })
                     .unwrap_or_else(|| to_id.clone());
                 stop_targets.push(LiveStopTarget {
+                    node_id: to_id.clone(),
                     cum_dist_m: cum,
                     arrive_s: stop.arrive_s,
                     name,
@@ -131,6 +136,7 @@ fn build_live_gameplay(
     }
     LiveGameplay {
         destination: scenario.route.destination.clone(),
+        destination_node: scenario.route.destination.clone(),
         penalty_per_second_late: scenario.gameplay.penalty_per_second_late,
         stop_targets,
         next_stop_idx: 0,

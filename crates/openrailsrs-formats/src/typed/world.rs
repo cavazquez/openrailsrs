@@ -68,6 +68,28 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
+        /// Head signal units referencing TDB `TrItemId`s (TSRE `SignalObj::signalUnit`).
+        tr_item_ids: Vec<u32>,
+    },
+    /// Wayside speed post (`Speedpost` in `.w`).
+    Speedpost {
+        uid: u32,
+        file_name: Option<String>,
+        position: Vec3,
+        qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
+        tdb_id: u32,
+        tr_item_id: u32,
+    },
+    /// Ambient sound region anchored to track (`SoundRegion` in `.w`).
+    SoundRegion {
+        uid: u32,
+        file_name: Option<String>,
+        position: Vec3,
+        qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
+        tdb_id: u32,
+        tr_item_id: u32,
     },
     /// Horizontal water surface (`HWater` in `.w`).
     HWater {
@@ -105,6 +127,8 @@ impl WorldItem {
             WorldItem::Track { .. } => "TrackObj",
             WorldItem::Dyntrack { .. } => "Dyntrack",
             WorldItem::Signal { .. } => "Signal",
+            WorldItem::Speedpost { .. } => "Speedpost",
+            WorldItem::SoundRegion { .. } => "SoundRegion",
             WorldItem::HWater { .. } => "HWater",
             WorldItem::Transfer { .. } => "Transfer",
             WorldItem::Other { .. } => "Other",
@@ -118,6 +142,8 @@ impl WorldItem {
             | WorldItem::Track { uid, .. }
             | WorldItem::Dyntrack { uid, .. }
             | WorldItem::Signal { uid, .. }
+            | WorldItem::Speedpost { uid, .. }
+            | WorldItem::SoundRegion { uid, .. }
             | WorldItem::HWater { uid, .. }
             | WorldItem::Transfer { uid, .. } => Some(*uid),
             WorldItem::Other { uid, .. } => *uid,
@@ -129,6 +155,8 @@ impl WorldItem {
             WorldItem::Static { file_name, .. }
             | WorldItem::Track { file_name, .. }
             | WorldItem::Signal { file_name, .. }
+            | WorldItem::Speedpost { file_name, .. }
+            | WorldItem::SoundRegion { file_name, .. }
             | WorldItem::HWater { file_name, .. }
             | WorldItem::Transfer { file_name, .. } => file_name.as_deref(),
             WorldItem::Forest { tree_texture, .. } => tree_texture.as_deref(),
@@ -144,6 +172,8 @@ impl WorldItem {
             | WorldItem::Track { position, .. }
             | WorldItem::Dyntrack { position, .. }
             | WorldItem::Signal { position, .. }
+            | WorldItem::Speedpost { position, .. }
+            | WorldItem::SoundRegion { position, .. }
             | WorldItem::HWater { position, .. }
             | WorldItem::Transfer { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
@@ -156,6 +186,8 @@ impl WorldItem {
             | WorldItem::Track { qdir, .. }
             | WorldItem::Dyntrack { qdir, .. }
             | WorldItem::Signal { qdir, .. }
+            | WorldItem::Speedpost { qdir, .. }
+            | WorldItem::SoundRegion { qdir, .. }
             | WorldItem::Other { qdir, .. } => *qdir,
             _ => None,
         }
@@ -167,8 +199,20 @@ impl WorldItem {
             | WorldItem::Track { matrix3x3, .. }
             | WorldItem::Dyntrack { matrix3x3, .. }
             | WorldItem::Signal { matrix3x3, .. }
+            | WorldItem::Speedpost { matrix3x3, .. }
+            | WorldItem::SoundRegion { matrix3x3, .. }
             | WorldItem::Other { matrix3x3, .. } => *matrix3x3,
             _ => None,
+        }
+    }
+
+    /// TDB `TrItemId`s referenced by this world object (signals, speedposts, sound regions).
+    pub fn tr_item_ids(&self) -> Vec<u32> {
+        match self {
+            WorldItem::Signal { tr_item_ids, .. } => tr_item_ids.clone(),
+            WorldItem::Speedpost { tr_item_id, .. } => vec![*tr_item_id],
+            WorldItem::SoundRegion { tr_item_id, .. } => vec![*tr_item_id],
+            _ => Vec::new(),
         }
     }
 
@@ -355,7 +399,8 @@ fn is_object_entry(items: &[Ast]) -> bool {
         Some(Ast::Atom(Atom::Symbol(head)))
             if matches!(
                 head.as_str(),
-                "Static" | "TrackObj" | "Forest" | "Transfer" | "Dyntrack" | "Signal" | "HWater"
+                "Static" | "TrackObj" | "Forest" | "Transfer" | "Dyntrack" | "Signal" | "Speedpost"
+                    | "SoundRegion" | "HWater"
                     | "UiD"
             )
     )
@@ -481,7 +526,32 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position: position.unwrap_or_default(),
             qdir,
             matrix3x3,
+            tr_item_ids: find_signal_tr_item_ids(fields),
         },
+        s if s.eq_ignore_ascii_case("Speedpost") => {
+            let (tdb_id, tr_item_id) = find_tr_item_id_pair(fields).unwrap_or((0, 0));
+            WorldItem::Speedpost {
+                uid: uid.unwrap_or(0),
+                file_name,
+                position: position.unwrap_or_default(),
+                qdir,
+                matrix3x3,
+                tdb_id,
+                tr_item_id,
+            }
+        }
+        s if s.eq_ignore_ascii_case("SoundRegion") => {
+            let (tdb_id, tr_item_id) = find_tr_item_id_pair(fields).unwrap_or((0, 0));
+            WorldItem::SoundRegion {
+                uid: uid.unwrap_or(0),
+                file_name,
+                position: position.unwrap_or_default(),
+                qdir,
+                matrix3x3,
+                tdb_id,
+                tr_item_id,
+            }
+        }
         s if s.eq_ignore_ascii_case("HWater") => WorldItem::HWater {
             uid: uid.unwrap_or(0),
             file_name,
@@ -659,6 +729,74 @@ fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
         }
     }
     None
+}
+
+/// Parse `( TrItemId tdb_id item_id )` from Speedpost/SoundRegion `.w` bodies.
+fn find_tr_item_id_pair(items: &[Ast]) -> Option<(u32, u32)> {
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("TrItemId") {
+            continue;
+        }
+        let nums: Vec<u32> = sub
+            .iter()
+            .skip(1)
+            .filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                _ => None,
+            })
+            .collect();
+        if nums.len() >= 2 {
+            return Some((nums[0], nums[1]));
+        }
+    }
+    None
+}
+
+/// Parse `( SignalUnits N ( SignalUnit id tdbId itemId ) ... )` from Signal `.w` bodies.
+fn find_signal_tr_item_ids(items: &[Ast]) -> Vec<u32> {
+    let mut out = Vec::new();
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("SignalUnits") {
+            continue;
+        }
+        for unit in sub.iter().skip(1) {
+            let Ast::List(unit_sub) = unit else {
+                continue;
+            };
+            let Some(Ast::Atom(Atom::Symbol(unit_tag))) = unit_sub.first() else {
+                continue;
+            };
+            if !unit_tag.eq_ignore_ascii_case("SignalUnit") {
+                continue;
+            }
+            let nums: Vec<u32> = unit_sub
+                .iter()
+                .skip(1)
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                    _ => None,
+                })
+                .collect();
+            if nums.len() >= 3 {
+                out.push(nums[2]);
+            }
+        }
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
 }
 
 fn matches_head(items: &[Ast], expected: &str) -> bool {

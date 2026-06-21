@@ -450,7 +450,8 @@ CHILTERN_ROUTE="$HOME/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"
 cargo run -p openrailsrs-viewer3d -- --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 # El grafo/física sale de examples/chiltern; tren y vía .tdb salen de --route-root.
 # No carga WORLD/terreno/grilla/objetos estáticos.
-# Ajustes opcionales: OPENRAILSRS_RUN_CORRIDOR_WIDTH_M=240 y OPENRAILSRS_RUN_CORRIDOR_RADIUS_M=3000.
+# Ajustes opcionales: OPENRAILSRS_VIEW_RADIUS_M=120, OPENRAILSRS_RUN_CORRIDOR_WIDTH_M=240,
+# OPENRAILSRS_RUN_CORRIDOR_RADIUS_M=150, OPENRAILSRS_RUN_CORRIDOR_AHEAD_M=80, OPENRAILSRS_RUN_CORRIDOR_BEHIND_M=40.
 ```
 
 **Sonido:** `openrailsrs cab` o viewer `--live` (sintético; requiere dispositivo de audio).

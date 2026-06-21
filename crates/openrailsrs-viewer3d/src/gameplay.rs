@@ -5,8 +5,10 @@ use openrailsrs_sim::path_data::PathData;
 
 use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
+use crate::shapes::RouteAssets;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
+use crate::track_position::{TrackPositionResolver, marker_render_world_at_node};
 use crate::train::position_on_graph;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
@@ -232,6 +234,7 @@ pub(crate) fn spawn_gameplay_markers(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    assets: Res<RouteAssets>,
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
@@ -243,6 +246,10 @@ pub(crate) fn spawn_gameplay_markers(
     }
 
     let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::new(tdb, Some(assets.tsection())));
+    let resolver_ref = tdb_resolver.as_ref();
     let size = scene.bounds.edge_radius().max(2.0) * 1.8;
     let sphere = meshes.add(Sphere::new(size));
     let pole = meshes.add(Cylinder::new(size * 0.12, size * 3.0));
@@ -289,7 +296,7 @@ pub(crate) fn spawn_gameplay_markers(
         else {
             continue;
         };
-        let Some((world, _)) = position_on_graph(
+        let Some((graph_world, _)) = position_on_graph(
             &scene.graph,
             &edge_id,
             pos_m,
@@ -300,6 +307,17 @@ pub(crate) fn spawn_gameplay_markers(
         ) else {
             continue;
         };
+        let world = marker_render_world_at_node(
+            &stop.node_id,
+            0.0,
+            resolver_ref,
+            &scene,
+            *offset,
+            terrain_ref,
+            &focus,
+            Some(graph_world),
+        )
+        .unwrap_or(graph_world);
         let mat = if idx == 0 {
             next_mat.clone()
         } else {
@@ -350,7 +368,7 @@ pub(crate) fn spawn_gameplay_markers(
         if let Some((edge_id, pos_m)) =
             PathData::position_at_odometer(path_edges, &path_data.edges, dest_odom)
         {
-            if let Some((world, _)) = position_on_graph(
+            if let Some((graph_world, _)) = position_on_graph(
                 &scene.graph,
                 &edge_id,
                 pos_m,
@@ -359,6 +377,18 @@ pub(crate) fn spawn_gameplay_markers(
                 offset.delta,
                 &focus,
             ) {
+                let dest_node = &session.gameplay.destination_node;
+                let world = marker_render_world_at_node(
+                    dest_node,
+                    0.0,
+                    resolver_ref,
+                    &scene,
+                    *offset,
+                    terrain_ref,
+                    &focus,
+                    Some(graph_world),
+                )
+                .unwrap_or(graph_world);
                 let y = world.y + size * 2.8;
                 commands.spawn((
                     GameplayDestMarker,

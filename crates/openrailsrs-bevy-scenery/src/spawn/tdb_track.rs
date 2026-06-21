@@ -5,8 +5,8 @@
 
 use bevy::prelude::*;
 use openrailsrs_formats::{
-    TSectionCatalog, TrVectorSectionRecord, TrackProceduralLink, TrackVectorGeometry,
-    TrackVectorPoint,
+    TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackNodeKind, TrackProceduralLink,
+    TrackVectorGeometry, TrackVectorPoint,
 };
 
 pub use crate::spawn::dyntrack::{
@@ -617,6 +617,184 @@ pub fn vector_junction_face_world(
         }
         Some(section_world_vec3(last, near))
     }
+}
+
+/// World pose on the TDB centreline (port of OR `FindLocationInSection` / TSRE `getDrawPositionOnTrNode`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TrackPose {
+    pub position: Vec3,
+    pub yaw_deg: f32,
+}
+
+/// Position + heading on a `.tdb` node at `chainage_m` metres from the vector start.
+pub fn tdb_node_track_pose(
+    tdb: &TrackDbFile,
+    node_id: u32,
+    chainage_m: f64,
+    tsection: Option<&TSectionCatalog>,
+    near_hint: Option<Vec3>,
+) -> Option<TrackPose> {
+    let node = tdb.node_by_id(node_id)?;
+    match &node.kind {
+        TrackNodeKind::Vector {
+            length_m,
+            sections,
+            geometry,
+            ..
+        } => {
+            if sections.is_empty() {
+                if let Some(geom) = geometry {
+                    let (x0, y0, z0) = geom.start.bevy_position();
+                    let (x1, _, z1) = geom.end.bevy_position();
+                    let start = Vec3::new(x0, y0, z0);
+                    let end = Vec3::new(x1, y0, z1);
+                    let t = if *length_m > 1e-6 {
+                        (chainage_m / length_m).clamp(0.0, 1.0) as f32
+                    } else {
+                        0.0
+                    };
+                    let pos = start.lerp(end, t);
+                    let yaw = (end.x - start.x).atan2(end.z - start.z).to_degrees();
+                    return Some(TrackPose {
+                        position: pos,
+                        yaw_deg: yaw,
+                    });
+                }
+                return None;
+            }
+            let section_count = sections.len();
+            let mut accumulated = 0.0;
+            for (idx, section) in sections.iter().enumerate() {
+                let next_anchor = sections
+                    .get(idx + 1)
+                    .map(|s| section_world_vec3(*s, Some(section_world_vec3(*section, near_hint))));
+                let spans = section_path_spans(
+                    *section,
+                    tsection,
+                    near_hint,
+                    *length_m,
+                    section_count,
+                    next_anchor,
+                );
+                for span in &spans {
+                    let span_len = span_length_m(*span);
+                    if chainage_m <= accumulated + span_len + 1e-6 {
+                        let along = (chainage_m - accumulated).max(0.0);
+                        let pos = point_along_span(*span, along);
+                        return Some(TrackPose {
+                            position: pos,
+                            yaw_deg: span.world_yaw_deg as f32,
+                        });
+                    }
+                    accumulated += span_len;
+                }
+            }
+            sections.last().and_then(|section| {
+                find_location_in_section_world(
+                    *section,
+                    chainage_m,
+                    tsection,
+                    near_hint,
+                    *length_m,
+                    section_count,
+                )
+                .map(|pos| TrackPose {
+                    position: pos,
+                    yaw_deg: section.heading_deg().unwrap_or(0.0) as f32,
+                })
+            })
+        }
+        TrackNodeKind::Junction { .. } | TrackNodeKind::End => node.position.map(|p| {
+            let (x, y, z) = p.bevy_position_nearest_to(
+                near_hint.map(|v| v.x).unwrap_or(0.0),
+                near_hint.map(|v| v.z).unwrap_or(0.0),
+                near_hint.map(|_| (p.tile_x, p.tile_z)),
+                Some((p.tile_x, p.tile_z)),
+            );
+            TrackPose {
+                position: Vec3::new(x, y, z),
+                yaw_deg: 0.0,
+            }
+        }),
+    }
+}
+
+/// Nearest point on any TDB vector segment within `radius_m` of `world_xz` (TSRE `findNearestPositionOnTDB` spec).
+pub fn nearest_track_position(
+    tdb: &TrackDbFile,
+    world_xz: Vec2,
+    radius_m: f32,
+    tsection: Option<&TSectionCatalog>,
+    tile_filter: Option<(i32, i32)>,
+) -> Option<TrackPose> {
+    let mut best_dist = f64::from(radius_m);
+    let mut best: Option<TrackPose> = None;
+    let tile_index = tile_filter.is_some().then(|| tdb.index_nodes_by_tile());
+    let candidate_nodes: Vec<u32> = if let (Some((tx, tz)), Some(index)) = (tile_filter, tile_index)
+    {
+        index.get(&(tx, tz)).cloned().unwrap_or_default()
+    } else {
+        tdb.nodes.iter().map(|n| n.id).collect()
+    };
+    for node_id in candidate_nodes {
+        let Some(node) = tdb.node_by_id(node_id) else {
+            continue;
+        };
+        let TrackNodeKind::Vector {
+            length_m, sections, ..
+        } = &node.kind
+        else {
+            continue;
+        };
+        if sections.is_empty() {
+            continue;
+        }
+        let section_count = sections.len();
+        for (idx, section) in sections.iter().enumerate() {
+            let near = None;
+            let next_anchor = sections
+                .get(idx + 1)
+                .map(|s| section_world_vec3(*s, Some(section_world_vec3(*section, near))));
+            let spans = section_path_spans(
+                *section,
+                tsection,
+                near,
+                *length_m,
+                section_count,
+                next_anchor,
+            );
+            for span in spans {
+                let dist = point_segment_distance_xz(world_xz, span.start_world, span.end_world);
+                if dist >= best_dist {
+                    continue;
+                }
+                let seg_len = distance_xz(span.start_world, span.end_world).max(1e-6);
+                let t = ((world_xz - Vec2::new(span.start_world.x, span.start_world.z)).dot(
+                    Vec2::new(
+                        span.end_world.x - span.start_world.x,
+                        span.end_world.z - span.start_world.z,
+                    ),
+                ) / (seg_len * seg_len))
+                    .clamp(0.0, 1.0);
+                let pos = span.start_world.lerp(span.end_world, t);
+                best_dist = dist;
+                best = Some(TrackPose {
+                    position: pos,
+                    yaw_deg: span.world_yaw_deg as f32,
+                });
+            }
+        }
+    }
+    best
+}
+
+fn point_segment_distance_xz(p: Vec2, a: Vec3, b: Vec3) -> f64 {
+    let ap = p - Vec2::new(a.x, a.z);
+    let ab = Vec2::new(b.x - a.x, b.z - a.z);
+    let ab_len_sq = ab.length_squared().max(1e-9);
+    let t = (ap.dot(ab) / ab_len_sq).clamp(0.0, 1.0);
+    let closest = Vec2::new(a.x, a.z) + ab * t;
+    f64::from(ap.distance(closest))
 }
 
 #[cfg(test)]

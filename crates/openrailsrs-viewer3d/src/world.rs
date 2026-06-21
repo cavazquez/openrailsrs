@@ -1,6 +1,6 @@
 //! MSTS world tiles (`.w`) as coloured placeholder boxes (order 5 / issue #8).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -53,18 +53,13 @@ use rayon::prelude::*;
 /// Re-exported from [`crate::coordinates`] for callers that only import `world`.
 pub use crate::coordinates::MSTS_TILE_SIZE_M;
 
-/// Maximum distance (m) from the route focus at which world/terrain tiles load and
-/// scenery spawns. Kept small (400 m) so live mode loads only what the camera can see.
-pub const VISIBLE_RADIUS_M: f32 = 400.0;
+/// Default mobile view radius (alias of [`crate::launch::VIEW_RADIUS_M`]).
+pub const VISIBLE_RADIUS_M: f32 = crate::launch::VIEW_RADIUS_M;
 
-/// Visible scenery/terrain radius. Override with `OPENRAILSRS_VISIBLE_RADIUS_M`
-/// (100–16000 m) for wider views on fast GPUs.
+/// Visible scenery/terrain radius. Prefer `OPENRAILSRS_VIEW_RADIUS_M`; legacy alias
+/// `OPENRAILSRS_VISIBLE_RADIUS_M`.
 pub fn visible_radius_m() -> f32 {
-    std::env::var("OPENRAILSRS_VISIBLE_RADIUS_M")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .filter(|r| *r >= 100.0 && *r <= 16_000.0)
-        .unwrap_or(VISIBLE_RADIUS_M)
+    crate::launch::view_radius_m()
 }
 
 /// Within this radius, spawn real `.s` meshes when the file resolves; matches [`visible_radius_m`].
@@ -168,6 +163,8 @@ pub struct WorldObject {
     pub tile_z: i32,
     pub forest: Option<ForestPatch>,
     pub water: Option<WaterPatch>,
+    /// TDB `TrItemId`s when this object references track items (Signal, Speedpost, …).
+    pub tr_item_ids: Vec<u32>,
 }
 
 /// All world objects discovered under a route's `WORLD/` (or `world/`) folder.
@@ -426,6 +423,7 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         tile_z,
         forest,
         water,
+        tr_item_ids: item.tr_item_ids(),
     })
 }
 
@@ -434,7 +432,7 @@ pub fn load_world_from_route_dir(route_dir: &Path) -> WorldScene {
     load_world_from_route_dir_near(route_dir, None, f32::MAX)
 }
 
-fn tile_center_distance_m(tile_x: i32, tile_z: i32, center: Vec3) -> f32 {
+pub fn tile_center_distance_m(tile_x: i32, tile_z: i32, center: Vec3) -> f32 {
     let tile = MSTS_TILE_SIZE_M as f32;
     let half = tile * 0.5;
     let (ox, oz) = msts_tile_world_origin(tile_x, tile_z);
@@ -967,7 +965,7 @@ pub fn init_world_spawn_progress(
     mode: Res<ViewerSceneryMode>,
     mut commands: Commands,
 ) {
-    if world.is_empty() || mode.is_track_focused() {
+    if world.is_empty() || !mode.loads_msts_scenery() {
         return;
     }
     viewer_log!(
@@ -995,7 +993,7 @@ fn classify_one_object(
 
     let dist = focus.horizontal_distance(obj.position);
 
-    if mode.is_track_focused() {
+    if !mode.loads_msts_scenery() {
         return;
     }
 
@@ -1564,7 +1562,7 @@ pub fn world_stream_scenery_system(
         return;
     }
     let new_items = &world.items[state.processed_items..];
-    let forests = if mode.is_track_focused() {
+    let forests = if !mode.loads_msts_scenery() {
         0
     } else {
         new_items
@@ -1572,7 +1570,7 @@ pub fn world_stream_scenery_system(
             .filter(|obj| obj.kind == "Forest" && obj.forest.is_some())
             .count()
     };
-    let waters = if mode.is_track_focused() {
+    let waters = if !mode.loads_msts_scenery() {
         0
     } else {
         new_items
@@ -1629,12 +1627,14 @@ pub fn world_stream_scenery_system(
     state.processed_items = world.items.len();
 }
 
-/// Load `.w` tiles around the camera once initial spawn has finished.
+/// Load `.w` tiles around the view window (train in live, camera in replay).
 #[allow(clippy::too_many_arguments)]
 pub fn world_tile_stream_system(
     mut world: ResMut<WorldScene>,
     mut stream: ResMut<WorldTileStream>,
     focus: Res<RouteFocus>,
+    window: Res<crate::view_window::ViewWindow>,
+    opts: Res<crate::launch::ViewerLaunchOpts>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
     scene: Res<TrackScene>,
     camera: Query<&Transform, With<Camera3d>>,
@@ -1643,26 +1643,30 @@ pub fn world_tile_stream_system(
     mut commands: Commands,
 ) {
     // Tile-lab keeps exactly the tiles loaded at startup: no streaming.
-    if mode.is_track_focused() || mode.is_tile_lab() {
+    if mode.is_tile_lab() || !mode.loads_msts_scenery() {
         return;
     }
     if progress.is_some() {
         return;
     }
-    let Ok(cam) = camera.single() else {
-        return;
+    let center = if opts.live {
+        window.center_world
+    } else {
+        let Ok(cam) = camera.single() else {
+            return;
+        };
+        let msts_xz = camera_msts_xz(&focus, cam, &origin);
+        Vec3::new(msts_xz.x, focus.center.y, msts_xz.y)
     };
-    let msts_xz = camera_msts_xz(&focus, cam, &origin);
     let tile = MSTS_TILE_SIZE_M as f32;
-    let cam_tile_x = msts_tile_x_index_for_coord(msts_xz.x);
-    let cam_tile_z = msts_tile_z_index_for_coord(msts_xz.y);
-    if stream.last_camera_tile == Some((cam_tile_x, cam_tile_z)) {
+    let cam_tile_x = msts_tile_x_index_for_coord(center.x);
+    let cam_tile_z = msts_tile_z_index_for_coord(center.z);
+    if stream.last_camera_tile == Some((cam_tile_x, cam_tile_z)) && !opts.live {
         return;
     }
     stream.last_camera_tile = Some((cam_tile_x, cam_tile_z));
 
     let radius_tiles = (stream.radius_m / tile).ceil() as i32 + 1;
-    let center = Vec3::new(msts_xz.x, focus.center.y, msts_xz.y);
     let item_base = world.items.len();
     let mut tiles_loaded = 0usize;
 
@@ -1703,6 +1707,60 @@ pub fn world_tile_stream_system(
             item_base,
         ));
     }
+}
+
+/// Unload distant world tiles and despawn scenery meshes in live mode.
+#[allow(clippy::too_many_arguments)]
+pub fn world_tile_unload_system(
+    mut world: ResMut<WorldScene>,
+    mut stream: ResMut<WorldTileStream>,
+    window: Res<crate::view_window::ViewWindow>,
+    opts: Res<crate::launch::ViewerLaunchOpts>,
+    focus: Res<RouteFocus>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    mode: Res<ViewerSceneryMode>,
+    mut commands: Commands,
+    scenery: Query<(Entity, &Transform), With<WorldSceneryLod>>,
+    mut stream_state: ResMut<WorldSceneryStreamState>,
+) {
+    if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
+        return;
+    }
+    let tile = MSTS_TILE_SIZE_M as f32;
+    let unload_radius = window.radius_m + tile + 64.0;
+    let center = window.center_world;
+
+    let mut unloaded_tiles = HashSet::new();
+    stream.loaded.retain(|key| {
+        let keep = tile_center_distance_m(key.0, key.1, center) <= unload_radius;
+        if !keep {
+            unloaded_tiles.insert(*key);
+        }
+        keep
+    });
+    if unloaded_tiles.is_empty() {
+        return;
+    }
+    let before = world.items.len();
+    world
+        .items
+        .retain(|obj| !unloaded_tiles.contains(&(obj.tile_x, obj.tile_z)));
+    stream_state.processed_items = stream_state.processed_items.min(world.items.len());
+
+    for (entity, tf) in scenery.iter() {
+        let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
+        let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
+        let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
+        if dist > unload_radius {
+            commands.entity(entity).despawn();
+        }
+    }
+    viewer_log!(
+        "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items)",
+        unloaded_tiles.len(),
+        before,
+        world.items.len()
+    );
 }
 
 /// Continue progressive world spawn across frames so the window stays responsive.
@@ -2058,7 +2116,7 @@ pub fn spawn_world_boxes(
 
         let dist = focus.horizontal_distance(obj.position);
 
-        if mode.is_track_focused() {
+        if !mode.loads_msts_scenery() {
             continue;
         }
 
@@ -2389,7 +2447,7 @@ mod tests {
 
     #[test]
     fn default_visible_radius_is_400m() {
-        assert_eq!(VISIBLE_RADIUS_M, 400.0);
+        assert_eq!(VISIBLE_RADIUS_M, 120.0);
         assert_eq!(shape_mesh_radius_m(), visible_radius_m());
     }
 
@@ -2433,10 +2491,10 @@ mod tests {
     #[test]
     fn culling_uses_horizontal_distance_not_msl_y() {
         let focus = chiltern_like_focus();
-        let obj = Vec3::new(focus.center.x + 100.0, 55.0, focus.center.z + 80.0);
+        let obj = Vec3::new(focus.center.x + 80.0, 55.0, focus.center.z + 60.0);
         assert!(
             !should_cull_world_object(&focus, obj),
-            "object 130 m away horizontally must not be culled"
+            "object ~100 m away horizontally must not be culled (default view radius 120 m)"
         );
         let wrongly_vertical = Vec3::new(focus.center.x, 13_190.0, focus.center.z);
         assert!(

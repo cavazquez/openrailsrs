@@ -34,9 +34,22 @@ impl ViewerSceneryMode {
         matches!(self, Self::TrackDev | Self::RunCorridor)
     }
 
+    pub fn loads_msts_scenery(self) -> bool {
+        !self.is_track_focused() || (self.is_run_corridor() && run_corridor_scenery_enabled())
+    }
+
     pub fn draws_tdb_track(self) -> bool {
         matches!(self, Self::TrackDev | Self::RunCorridor)
     }
+}
+
+/// When set, `--run-corridor --live` also loads WORLD/terreno/shapes (estación, marquesina).
+/// Vía sigue siendo procedural `.tdb` en ventana móvil.
+pub fn run_corridor_scenery_enabled() -> bool {
+    std::env::var_os("OPENRAILSRS_RUN_CORRIDOR_SCENERY").is_some_and(|v| {
+        let s = v.to_string_lossy();
+        !matches!(s.as_ref(), "0" | "false" | "off")
+    })
 }
 
 /// Capas habilitadas en `--tile-lab` (todas opt-in salvo terreno).
@@ -125,7 +138,7 @@ pub const TILE_LAB_ORBIT_DISTANCE_M: f32 = 2_600.0;
 pub const TILE_LAB_ORBIT_MAX_M: f32 = 8_000.0;
 
 pub fn full_scenery_active(mode: Res<ViewerSceneryMode>) -> bool {
-    !mode.is_track_focused()
+    mode.loads_msts_scenery()
 }
 
 /// Sky dome for full routes and run_corridor (driver cab windows need a backdrop).
@@ -152,12 +165,50 @@ pub struct ViewerLaunchOpts {
 pub const LIVE_GROUND_HALF_MAX_M: f32 = 2000.0;
 pub const TRACK_DEV_GROUND_HALF_M: f32 = 600.0;
 
+/// Default mobile view radius (world, TDB collect, terrain stream).
+pub const VIEW_RADIUS_M: f32 = 120.0;
+
 /// Default cull radius for `.tdb` procedural track in `--track-dev` (metres).
 pub const TRACK_DEV_TDB_RADIUS_M: f32 = 1500.0;
 /// Default cull radius for `.tdb` procedural track in `--run-corridor` (metres).
-pub const RUN_CORRIDOR_TDB_RADIUS_M: f32 = 3000.0;
+pub const RUN_CORRIDOR_TDB_RADIUS_M: f32 = 150.0;
 /// Default corridor half-width around the scenario graph path in `--run-corridor`.
 pub const RUN_CORRIDOR_HALF_WIDTH_M: f32 = 120.0;
+/// Longitudinal window ahead of train in `--run-corridor` (metres).
+pub const RUN_CORRIDOR_AHEAD_M: f32 = 80.0;
+/// Longitudinal window behind train in `--run-corridor` (metres).
+pub const RUN_CORRIDOR_BEHIND_M: f32 = 40.0;
+
+/// Unified view/stream radius. Override with `OPENRAILSRS_VIEW_RADIUS_M` or legacy
+/// `OPENRAILSRS_VISIBLE_RADIUS_M`.
+pub fn view_radius_m() -> f32 {
+    parse_radius_env("OPENRAILSRS_VIEW_RADIUS_M")
+        .or_else(|| parse_radius_env("OPENRAILSRS_VISIBLE_RADIUS_M"))
+        .unwrap_or(VIEW_RADIUS_M)
+}
+
+fn parse_radius_env(key: &str) -> Option<f32> {
+    std::env::var(key)
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|r| *r >= 50.0 && *r <= 16_000.0)
+}
+
+pub fn run_corridor_ahead_m() -> f32 {
+    std::env::var("OPENRAILSRS_RUN_CORRIDOR_AHEAD_M")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|v| *v >= 10.0 && *v <= 2000.0)
+        .unwrap_or(RUN_CORRIDOR_AHEAD_M)
+}
+
+pub fn run_corridor_behind_m() -> f32 {
+    std::env::var("OPENRAILSRS_RUN_CORRIDOR_BEHIND_M")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|v| *v >= 10.0 && *v <= 2000.0)
+        .unwrap_or(RUN_CORRIDOR_BEHIND_M)
+}
 
 /// Max rail segments spawned in `--track-dev` (avoids OOM on large routes).
 pub const TRACK_DEV_MAX_SEGMENTS: usize = 4000;
@@ -197,6 +248,11 @@ pub fn tdb_radius_for_mode(mode: ViewerSceneryMode) -> f32 {
     } else {
         track_dev_tdb_radius_m()
     }
+}
+
+/// TDB collect radius for live mobile window (min of view radius and mode cap).
+pub fn tdb_stream_radius_m(mode: ViewerSceneryMode) -> f32 {
+    view_radius_m().min(tdb_radius_for_mode(mode))
 }
 
 /// Initial orbit distance in `--track-dev` (metres); avoids framing the whole route bbox.
@@ -245,6 +301,48 @@ impl RunCorridorPath {
             || self.distance_to_polyline_xz(end) <= half
     }
 
+    /// Lateral corridor filter plus longitudinal window around `center` on the scenario path.
+    pub fn contains_segment_near(
+        &self,
+        center: Vec3,
+        start: Vec3,
+        end: Vec3,
+        ahead_m: f32,
+        behind_m: f32,
+    ) -> bool {
+        if !self.active() {
+            return true;
+        }
+        if !self.contains_segment(start, end) {
+            return false;
+        }
+        let s_train = self.project_arclength_xz(center);
+        let s_mid = self.project_arclength_xz((start + end) * 0.5);
+        s_mid >= s_train - behind_m && s_mid <= s_train + ahead_m
+    }
+
+    /// Arclength (m) along the polyline to the closest point to `point` (XZ).
+    pub fn project_arclength_xz(&self, point: Vec3) -> f32 {
+        if self.points_world.len() < 2 {
+            return 0.0;
+        }
+        let mut cum = 0.0f32;
+        let mut best_dist = f32::INFINITY;
+        let mut best_s = 0.0f32;
+        for pair in self.points_world.windows(2) {
+            let a = pair[0];
+            let b = pair[1];
+            let seg_len = Vec2::new(b.x - a.x, b.z - a.z).length();
+            let (dist, t) = point_segment_distance_t_xz(point, a, b);
+            if dist < best_dist {
+                best_dist = dist;
+                best_s = cum + t * seg_len;
+            }
+            cum += seg_len;
+        }
+        best_s
+    }
+
     fn distance_to_polyline_xz(&self, point: Vec3) -> f32 {
         self.points_world
             .windows(2)
@@ -254,16 +352,20 @@ impl RunCorridorPath {
 }
 
 fn point_segment_distance_xz(point: Vec3, a: Vec3, b: Vec3) -> f32 {
+    point_segment_distance_t_xz(point, a, b).0
+}
+
+fn point_segment_distance_t_xz(point: Vec3, a: Vec3, b: Vec3) -> (f32, f32) {
     let p = Vec2::new(point.x, point.z);
     let a = Vec2::new(a.x, a.z);
     let b = Vec2::new(b.x, b.z);
     let ab = b - a;
     let len2 = ab.length_squared();
     if len2 <= f32::EPSILON {
-        return p.distance(a);
+        return (p.distance(a), 0.0);
     }
     let t = ((p - a).dot(ab) / len2).clamp(0.0, 1.0);
-    p.distance(a + ab * t)
+    (p.distance(a + ab * t), t)
 }
 
 /// Full TrPins branch walk only on small `.tdb` files (large routes OOM if walked globally).
@@ -274,3 +376,60 @@ pub const TRACK_DEV_BRANCH_WALK_MAX_NODES: usize = 800;
 /// The camera is often close to the consist in live mode; using a far-distance
 /// LOD can expose simplified/interior geometry instead of the exterior shell.
 pub const LIVE_TRAIN_LOD_DISTANCE_M: f32 = 25.0;
+
+#[cfg(test)]
+mod corridor_tests {
+    use super::*;
+
+    #[test]
+    fn corridor_longitudinal_clip_excludes_far_segment() {
+        let path = RunCorridorPath {
+            points_world: vec![Vec3::new(0.0, 0.0, 0.0), Vec3::new(1000.0, 0.0, 0.0)],
+            half_width_m: 120.0,
+        };
+        let train = Vec3::new(100.0, 0.0, 0.0);
+        let near = (Vec3::new(150.0, 0.0, 0.0), Vec3::new(170.0, 0.0, 0.0));
+        let far = (Vec3::new(600.0, 0.0, 0.0), Vec3::new(620.0, 0.0, 0.0));
+        assert!(path.contains_segment_near(
+            train,
+            near.0,
+            near.1,
+            RUN_CORRIDOR_AHEAD_M,
+            RUN_CORRIDOR_BEHIND_M
+        ));
+        assert!(!path.contains_segment_near(
+            train,
+            far.0,
+            far.1,
+            RUN_CORRIDOR_AHEAD_M,
+            RUN_CORRIDOR_BEHIND_M
+        ));
+    }
+
+    #[test]
+    fn snapped_corridor_path_has_points_on_fixture_tdb() {
+        use crate::track_position::build_snapped_corridor_path;
+        use openrailsrs_formats::TrackDbFile;
+
+        let tdb_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-formats/tests/fixtures/native_msts.tdb");
+        if !tdb_path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&tdb_path).expect("tdb");
+        let scenario_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/smoke/scenario.toml");
+        if !scenario_path.is_file() {
+            return;
+        }
+        let scenario = openrailsrs_scenarios::load_scenario(&scenario_path).expect("scenario");
+        let graph = openrailsrs_route::load_track_graph_from_route_dir(
+            scenario_path.parent().unwrap().join("routes/test"),
+        )
+        .expect("graph");
+        let scene = crate::track::TrackScene::from_graph(graph);
+        let path = build_snapped_corridor_path(&scene, &scenario, Vec3::ZERO, &tdb, None)
+            .expect("corridor");
+        assert!(path.active());
+    }
+}

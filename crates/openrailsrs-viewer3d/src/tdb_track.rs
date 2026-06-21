@@ -11,26 +11,30 @@ use openrailsrs_formats::{
 };
 use std::collections::{HashMap, HashSet};
 
+use crate::floating_origin::{FloatingOrigin, view_translation};
+use crate::launch::{
+    RunCorridorPath, TRACK_DEV_BRANCH_WALK_MAX_NODES, TRACK_DEV_MAX_BRANCHES,
+    TRACK_DEV_MAX_SEGMENTS, ViewerSceneryMode, run_corridor_ahead_m, run_corridor_behind_m,
+    tdb_radius_for_mode, tdb_stream_radius_m, track_dev_render_enabled,
+};
+use crate::live::LiveDrive;
+use crate::shapes::RouteAssets;
+use crate::track::TrackScene;
+use crate::track_audit::run_track_dev_audit;
+use crate::view_window::ViewWindow;
+use crate::viewer_log;
+use crate::world::{RouteFocus, RouteWorldOffset};
 use openrailsrs_bevy_scenery::spawn::dyntrack::ProceduralTrackSegment;
 use openrailsrs_bevy_scenery::spawn::dyntrack::{
     ProceduralTrackStyle, arc_local_frame, spawn_procedural_track_batch,
+    spawn_procedural_track_single,
 };
+pub use openrailsrs_bevy_scenery::spawn::tdb_track::{TDB_JUNCTION_BRIDGE_SECTION, TdbChord};
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
     chord_heading_and_length, point_world_vec3, procedural_segment_from_span, section_is_drawable,
     section_path_spans, section_single_curve_metadata, section_world_vec3,
     single_section_end_world, vector_junction_face_world,
 };
-
-use crate::launch::{
-    RunCorridorPath, TRACK_DEV_BRANCH_WALK_MAX_NODES, TRACK_DEV_MAX_BRANCHES,
-    TRACK_DEV_MAX_SEGMENTS, ViewerSceneryMode, tdb_radius_for_mode, track_dev_render_enabled,
-};
-use crate::shapes::RouteAssets;
-use crate::track::TrackScene;
-use crate::track_audit::run_track_dev_audit;
-use crate::viewer_log;
-use crate::world::{RouteFocus, RouteWorldOffset};
-pub use openrailsrs_bevy_scenery::spawn::tdb_track::{TDB_JUNCTION_BRIDGE_SECTION, TdbChord};
 
 #[derive(Clone, Copy, Debug)]
 struct BranchVectorStep {
@@ -1104,6 +1108,218 @@ fn procedural_segment_end_world(seg: &ProceduralTrackSegment) -> Vec3 {
     seg.position + seg.rotation * Vec3::new(0.0, 0.0, len)
 }
 
+/// MSTS world endpoints for a spawned TDB segment (mobile stream despawn).
+#[derive(Component, Clone, Copy, Debug)]
+pub struct TdbTrackSegment {
+    pub start_msts: Vec3,
+    pub end_msts: Vec3,
+}
+
+type SegmentKey = (i32, i32, i32, i32, i32, i32);
+
+fn quant_m(v: f32) -> i32 {
+    (v * 10.0).round() as i32
+}
+
+fn segment_key(start: Vec3, end: Vec3) -> SegmentKey {
+    let a = (quant_m(start.x), quant_m(start.y), quant_m(start.z));
+    let b = (quant_m(end.x), quant_m(end.y), quant_m(end.z));
+    if a <= b {
+        (a.0, a.1, a.2, b.0, b.1, b.2)
+    } else {
+        (b.0, b.1, b.2, a.0, a.1, a.2)
+    }
+}
+
+fn segment_end_msts(seg: &ProceduralTrackSegment, focus: &RouteFocus) -> Vec3 {
+    let render_end = procedural_segment_end_world(seg);
+    Vec3::new(
+        render_end.x + focus.center.x,
+        render_end.y + focus.height_origin,
+        render_end.z + focus.center.z,
+    )
+}
+
+fn segment_start_msts(seg: &ProceduralTrackSegment, focus: &RouteFocus) -> Vec3 {
+    Vec3::new(
+        seg.position.x + focus.center.x,
+        seg.position.y + focus.height_origin,
+        seg.position.z + focus.center.z,
+    )
+}
+
+const TDB_STREAM_CENTER_DELTA_M: f32 = 40.0;
+const TDB_STREAM_DESPAWN_HYSTERESIS_M: f32 = 24.0;
+
+#[derive(Resource, Default)]
+pub struct TdbTrackStream {
+    spawned: HashSet<SegmentKey>,
+    last_center: Option<Vec3>,
+    frames_since_tick: u32,
+    rail_material: Option<Handle<StandardMaterial>>,
+    audit_done: bool,
+}
+
+pub fn tdb_stream_active(live: Option<Res<LiveDrive>>, mode: Res<ViewerSceneryMode>) -> bool {
+    live.is_some() && mode.draws_tdb_track() && (!mode.is_track_dev() || track_dev_render_enabled())
+}
+
+pub fn tdb_startup_spawn_active(
+    live: Option<Res<LiveDrive>>,
+    mode: Res<ViewerSceneryMode>,
+) -> bool {
+    live.is_none() && mode.draws_tdb_track() && (!mode.is_track_dev() || track_dev_render_enabled())
+}
+
+fn segment_passes_corridor_filter(
+    corridor: &RunCorridorPath,
+    mode: ViewerSceneryMode,
+    center: Vec3,
+    start_msts: Vec3,
+    end_msts: Vec3,
+) -> bool {
+    if !mode.is_run_corridor() || !corridor.active() {
+        return true;
+    }
+    corridor.contains_segment_near(
+        center,
+        start_msts,
+        end_msts,
+        run_corridor_ahead_m(),
+        run_corridor_behind_m(),
+    )
+}
+
+/// Mobile TDB spawn/despawn around [`ViewWindow`] in live mode.
+#[allow(clippy::too_many_arguments)]
+pub fn tdb_track_stream_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    assets: Res<RouteAssets>,
+    focus: Res<RouteFocus>,
+    scene: Res<TrackScene>,
+    mode: Res<ViewerSceneryMode>,
+    corridor: Res<RunCorridorPath>,
+    window: Res<ViewWindow>,
+    origin: Res<FloatingOrigin>,
+    mut stream: ResMut<TdbTrackStream>,
+    segments_query: Query<(Entity, &TdbTrackSegment)>,
+) {
+    let Some(tdb) = assets.track_db() else {
+        return;
+    };
+    let radius_m = tdb_stream_radius_m(*mode);
+    let center = window.center_world;
+    stream.frames_since_tick += 1;
+    let moved = stream
+        .last_center
+        .map(|last| {
+            Vec2::new(last.x - center.x, last.z - center.z).length() > TDB_STREAM_CENTER_DELTA_M
+        })
+        .unwrap_or(true);
+    if !moved && stream.frames_since_tick % 30 != 0 {
+        return;
+    }
+    stream.last_center = Some(center);
+    stream.frames_since_tick = 0;
+
+    let focus_at = window.route_focus_at_center(focus.height_origin);
+    let despawn_radius = radius_m + TDB_STREAM_DESPAWN_HYSTERESIS_M;
+
+    for (entity, seg) in segments_query.iter() {
+        let d0 = window.horizontal_distance_world(seg.start_msts);
+        let d1 = window.horizontal_distance_world(seg.end_msts);
+        if d0 > despawn_radius && d1 > despawn_radius {
+            let key = segment_key(seg.start_msts, seg.end_msts);
+            stream.spawned.remove(&key);
+            commands.entity(entity).despawn();
+        }
+    }
+
+    if std::env::var_os("OPENRAILSRS_TRACK_AUDIT").is_some() && !stream.audit_done {
+        let chords = collect_tdb_chords(tdb, &focus_at, radius_m, Some(assets.tsection()));
+        run_track_dev_audit(
+            tdb,
+            &scene,
+            &focus_at,
+            RouteWorldOffset::default(),
+            radius_m,
+            &chords,
+            None,
+            Some(assets.tsection()),
+        );
+        stream.audit_done = true;
+    }
+
+    let mut raw: Vec<_> =
+        collect_tdb_path_segments(tdb, &focus_at, radius_m, Some(assets.tsection()))
+            .into_iter()
+            .map(|mut seg| {
+                let mut world = seg.position;
+                world.y = crate::terrain::ground_y_at(None, world.x, world.z, &scene);
+                let start_msts = world;
+                let render = focus.to_render_surface(world);
+                seg.position = view_translation(render, &origin);
+                let end_msts = segment_end_msts(
+                    &ProceduralTrackSegment {
+                        position: render,
+                        ..seg
+                    },
+                    &focus,
+                );
+                (seg, start_msts, end_msts)
+            })
+            .filter(|(_, start, end)| {
+                segment_passes_corridor_filter(&corridor, *mode, center, *start, *end)
+            })
+            .collect();
+
+    if raw.len() > TRACK_DEV_MAX_SEGMENTS {
+        raw.truncate(TRACK_DEV_MAX_SEGMENTS);
+    }
+
+    if stream.rail_material.is_none() {
+        stream.rail_material = Some(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.35, 0.38, 0.42),
+            emissive: LinearRgba::new(0.15, 0.16, 0.18, 1.0),
+            perceptual_roughness: 0.35,
+            metallic: 0.75,
+            ..default()
+        }));
+    }
+    let rail_material = stream.rail_material.clone().unwrap();
+
+    let mut spawned_now = 0usize;
+    for (seg, start_msts, end_msts) in raw {
+        let key = segment_key(start_msts, end_msts);
+        if stream.spawned.contains(&key) {
+            continue;
+        }
+        let entity = spawn_procedural_track_single(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            seg,
+            "tdb-graph",
+            ProceduralTrackStyle::RailsOnly,
+            &rail_material,
+        );
+        commands.entity(entity).insert(TdbTrackSegment {
+            start_msts,
+            end_msts,
+        });
+        stream.spawned.insert(key);
+        spawned_now += 1;
+    }
+    if spawned_now > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: tdb-stream — +{spawned_now} segment(s) within {:.0}m of train",
+            radius_m
+        );
+    }
+}
+
 /// Spawn merged procedural track along the `.tdb` vector graph (`--track-dev`).
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_tdb_graph_track(
@@ -1161,8 +1377,17 @@ pub fn spawn_tdb_graph_track(
             .collect();
     if mode.is_run_corridor() && corridor.active() {
         let before = segments.len();
+        let clip_center = focus.center;
         segments.retain(|seg| {
-            corridor.contains_segment(seg.position, procedural_segment_end_world(seg))
+            let start = segment_start_msts(seg, &focus);
+            let end = segment_end_msts(seg, &focus);
+            corridor.contains_segment_near(
+                clip_center,
+                start,
+                end,
+                run_corridor_ahead_m(),
+                run_corridor_behind_m(),
+            )
         });
         viewer_log!(
             "openrailsrs-viewer3d: run_corridor — corridor filter {} → {} segment(s), width {:.0}m",
@@ -1838,5 +2063,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn segment_key_stable_and_order_independent() {
+        let a = Vec3::new(1.0, 0.0, 2.0);
+        let b = Vec3::new(3.0, 0.0, 4.0);
+        assert_eq!(super::segment_key(a, b), super::segment_key(b, a));
+        assert_ne!(
+            super::segment_key(a, b),
+            super::segment_key(a, a + Vec3::new(50.0, 0.0, 0.0))
+        );
+    }
+
+    #[test]
+    fn view_window_120m_collects_limited_segments() {
+        let tdb = TrackDbFile::from_path(fixtures_tdb("native_msts.tdb")).expect("tdb");
+        let vector = tdb
+            .nodes
+            .iter()
+            .find(|n| matches!(n.kind, TrackNodeKind::Vector { .. }))
+            .expect("vector");
+        let TrackNodeKind::Vector { sections, .. } = &vector.kind else {
+            panic!("vector");
+        };
+        let world = section_world_vec3(sections[0], None);
+        let focus = RouteFocus {
+            center: world,
+            height_origin: world.y,
+        };
+        let near = collect_tdb_path_segments(&tdb, &focus, 120.0, None);
+        let far = collect_tdb_path_segments(&tdb, &focus, 5000.0, None);
+        assert!(!near.is_empty());
+        assert!(near.len() <= far.len());
     }
 }

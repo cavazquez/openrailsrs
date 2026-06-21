@@ -96,15 +96,14 @@ pub fn load_csv(path: &std::path::Path) -> Vec<CsvRow> {
     rdr.deserialize::<CsvRow>().filter_map(|r| r.ok()).collect()
 }
 
-/// World position and yaw (rad, around +Y) for a train on an edge.
-pub fn position_on_graph(
+/// Absolute MSTS world position on a graph edge (terrain MSL, before render rebase).
+pub fn graph_point_msts_world(
     graph: &TrackGraph,
     edge_id: &str,
     pos_on_edge_m: f64,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
     world_offset: Vec3,
-    focus: &RouteFocus,
 ) -> Option<(Vec3, f32)> {
     let edge = graph.edge(edge_id.trim())?;
     let from = graph.node(&edge.from.0)?;
@@ -120,7 +119,6 @@ pub fn position_on_graph(
     let y_m = from.y_m + frac * (to.y_m - from.y_m);
     let mut world = graph_to_world_with_offset(world_offset, x_m, y_m);
     world.y = ground_y_at(terrain, world.x, world.z, scene);
-    world = focus.to_render_surface(world);
 
     let dx = (to.x_m - from.x_m) as f32;
     let dz = (to.y_m - from.y_m) as f32;
@@ -131,6 +129,21 @@ pub fn position_on_graph(
     };
 
     Some((world, yaw))
+}
+
+/// World position and yaw (rad, around +Y) for a train on an edge.
+pub fn position_on_graph(
+    graph: &TrackGraph,
+    edge_id: &str,
+    pos_on_edge_m: f64,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
+    world_offset: Vec3,
+    focus: &RouteFocus,
+) -> Option<(Vec3, f32)> {
+    let (world, yaw) =
+        graph_point_msts_world(graph, edge_id, pos_on_edge_m, terrain, scene, world_offset)?;
+    Some((focus.to_render_surface(world), yaw))
 }
 
 /// Interpolate train world pose at simulation time `t`.

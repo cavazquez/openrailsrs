@@ -26,7 +26,7 @@ pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };
 pub use path::{PathDataPoint, PathFile};
-pub use route::RouteFile;
+pub use route::{RouteFile, RouteStart};
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LodControl, Matrix43, NamedMatrix,
     PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject, Vec2, Vec3, Vertex, VtxState,
@@ -39,8 +39,9 @@ pub use terrain::{
     read_y_raw, terrain_patches_per_side,
 };
 pub use track_db::{
-    IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemKind, TrPinRef, TrVectorSectionRecord,
-    TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry, TrackVectorPoint,
+    IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemHost, TrItemKind, TrPinRef,
+    TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
+    TrackVectorPoint,
 };
 pub use tsection::{
     SKEW_AS_CURVE_RADIUS_M, TSectionCatalog, TrackProceduralDims, TrackProceduralLink,

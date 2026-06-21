@@ -90,3 +90,31 @@ fn resolve_route_edges_uses_waypoints_when_present() {
     let bfs = edge_path(&graph, "n3", "n10770").expect("bfs");
     assert_eq!(via, bfs);
 }
+
+#[test]
+fn sim_runtime_path_has_birmingham_edges() {
+    use openrailsrs_route::load_track_graph_from_route_dir;
+    use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
+    use openrailsrs_sim::path::resolve_route_edges;
+    use openrailsrs_track::SwitchPosition;
+
+    let chiltern = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    if !chiltern.join("track.toml").exists() {
+        return;
+    }
+    let scenario_path = chiltern.join("scenario.toml");
+    let mut scenario = load_scenario(&scenario_path).expect("scenario");
+    apply_scenario_runtime_overlay_dir(&mut scenario, &chiltern).expect("overlay");
+    let mut graph = load_track_graph_from_route_dir(&chiltern).expect("graph");
+    for sw in &scenario.route.switches {
+        let pos = match sw.position {
+            openrailsrs_scenarios::model::SwitchPositionDef::Straight => SwitchPosition::Straight,
+            openrailsrs_scenarios::model::SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+        };
+        graph.set_switch(&sw.node, pos).expect("switch");
+    }
+    let path = resolve_route_edges(&graph, &scenario.route).expect("path");
+    eprintln!("sim runtime path: {} edges: {path:?}", path.len());
+    assert!(path.len() >= 6, "expected full Birmingham path");
+    assert!(path.contains(&"e10771".to_string()));
+}

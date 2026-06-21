@@ -4,7 +4,7 @@ Informe de aprendizaje (2026-06-21): cómo **Track Viewer** (OR Contrib) modela 
 
 **Alcance:** `.tdb` + `TSECTION.DAT`, geometría vectorial, junctions/items. Fuera de alcance: editor `.pat`, carreteras `.rdb`, terreno 2D aplanado, ejecutar Track Viewer en Linux.
 
-**Relacionado:** [`OPEN_RAILS_VIEWER_3D.md`](OPEN_RAILS_VIEWER_3D.md), [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md), [`SIMULACION_3D_ROADMAP.md`](SIMULACION_3D_ROADMAP.md) fase E (vía 3D).
+**Relacionado:** [`OPEN_RAILS_VIEWER_3D.md`](OPEN_RAILS_VIEWER_3D.md), [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md), [`SIMULACION_3D_ROADMAP.md`](SIMULACION_3D_ROADMAP.md) fase E (vía 3D), [`TSRE5_STUDY.md`](TSRE5_STUDY.md) (editor 3D MSTS con el mismo modelo geométrico que Track Viewer en 2D).
 
 ---
 

@@ -137,6 +137,7 @@ pub(crate) fn track_dev_recenter_at_subject(
 #[allow(clippy::type_complexity)]
 pub(crate) fn apply_floating_origin(
     mode: Res<ViewerSceneryMode>,
+    opts: Res<crate::launch::ViewerLaunchOpts>,
     follow: Res<CameraFollowMode>,
     mut origin: ResMut<FloatingOrigin>,
     mut queries: ParamSet<(
@@ -159,7 +160,11 @@ pub(crate) fn apply_floating_origin(
     )>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
 ) {
-    if mode.is_track_focused() || mode.is_tile_lab() {
+    if mode.is_tile_lab() {
+        return;
+    }
+    // `--track-dev` and static `--run-corridor` rely on the one-shot startup recenter.
+    if mode.is_track_dev() || (mode.is_run_corridor() && !opts.live) {
         return;
     }
 

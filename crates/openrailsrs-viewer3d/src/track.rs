@@ -13,9 +13,12 @@ use crate::launch::{
     TRACK_DEV_ORBIT_DISTANCE_M, TRACK_DEV_ORBIT_MAX_M, ViewerLaunchOpts, ViewerSceneryMode,
 };
 use crate::shapes::RouteAssets;
-use crate::terrain::{TerrainElevation, ground_y_at};
+use crate::terrain::TerrainElevation;
+use crate::track_position::{
+    TrackPositionResolver, marker_render_world_at_graph_node, msts_to_render_surface,
+};
 use crate::train::{ReplayState, pose_at_time};
-use crate::world::WorldScene;
+use crate::world::{RouteWorldOffset, WorldScene};
 
 // ── Colours (aligned with openrailsrs-viewer 2D) ─────────────────────────────
 
@@ -333,6 +336,7 @@ pub fn build_compact_track_line_mesh(
     focus: &crate::world::RouteFocus,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
+    tdb: Option<(&TrackPositionResolver<'_>, RouteWorldOffset)>,
 ) -> Mesh {
     let edge_count = graph.edges_iter().count();
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(edge_count * 4);
@@ -345,8 +349,8 @@ pub fn build_compact_track_line_mesh(
         };
         let w0 = graph_to_world_with_offset(offset, from.x_m, from.y_m);
         let w1 = graph_to_world_with_offset(offset, to.x_m, to.y_m);
-        let p0 = track_surface_render_pos(w0, terrain, scene, focus);
-        let p1 = track_surface_render_pos(w1, terrain, scene, focus);
+        let p0 = graph_endpoint_render_pos(&edge.from.0, w0, tdb, terrain, scene, focus);
+        let p1 = graph_endpoint_render_pos(&edge.to.0, w1, tdb, terrain, scene, focus);
         let dir = Vec2::new(p1.x - p0.x, p1.z - p0.z);
         let side = if dir.length_squared() > 1e-6 {
             let n = dir.normalize();
@@ -372,8 +376,30 @@ fn track_surface_render_pos(
     scene: &TrackScene,
     focus: &crate::world::RouteFocus,
 ) -> Vec3 {
-    let y = ground_y_at(terrain, world.x, world.z, scene);
-    focus.to_render_surface(Vec3::new(world.x, y, world.z))
+    msts_to_render_surface(world, terrain, scene, focus)
+}
+
+fn graph_endpoint_render_pos(
+    node_id: &str,
+    msts: Vec3,
+    tdb: Option<(&TrackPositionResolver<'_>, RouteWorldOffset)>,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
+    focus: &crate::world::RouteFocus,
+) -> Vec3 {
+    if let Some((resolver, route_offset)) = tdb {
+        marker_render_world_at_graph_node(
+            node_id,
+            msts,
+            Some(resolver),
+            scene,
+            route_offset,
+            terrain,
+            focus,
+        )
+    } else {
+        track_surface_render_pos(msts, terrain, scene, focus)
+    }
 }
 
 #[derive(Component)]
@@ -413,7 +439,13 @@ pub fn spawn_track_meshes(
         return;
     }
     let offset = offset.delta;
+    let route_offset = RouteWorldOffset { delta: offset };
     let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::new(tdb, Some(assets.tsection())));
+    let resolver_ref = tdb_resolver.as_ref();
+    let tdb_placement = resolver_ref.map(|res| (res, route_offset));
     let bounds = scene.bounds;
     let node_radius = bounds.node_radius();
 
@@ -438,6 +470,7 @@ pub fn spawn_track_meshes(
             &focus,
             terrain_ref,
             &scene,
+            tdb_placement,
         ));
         let line_material = materials.add(StandardMaterial {
             base_color: COLOR_TRACK_RAIL,
@@ -464,14 +497,20 @@ pub fn spawn_track_meshes(
             let Some(to) = scene.graph.node(&edge.to.0) else {
                 continue;
             };
-            let p0 = track_surface_render_pos(
-                graph_to_world_with_offset(offset, from.x_m, from.y_m),
+            let w0 = graph_to_world_with_offset(offset, from.x_m, from.y_m);
+            let w1 = graph_to_world_with_offset(offset, to.x_m, to.y_m);
+            let p0 = graph_endpoint_render_pos(
+                &edge.from.0,
+                w0,
+                tdb_placement,
                 terrain_ref,
                 &scene,
                 &focus,
             );
-            let p1 = track_surface_render_pos(
-                graph_to_world_with_offset(offset, to.x_m, to.y_m),
+            let p1 = graph_endpoint_render_pos(
+                &edge.to.0,
+                w1,
+                tdb_placement,
                 terrain_ref,
                 &scene,
                 &focus,
@@ -506,8 +545,11 @@ pub fn spawn_track_meshes(
             if !should_spawn_node(&node.kind, scene.render_mode) {
                 continue;
             }
-            let pos = track_surface_render_pos(
-                graph_to_world_with_offset(offset, node.x_m, node.y_m),
+            let msts = graph_to_world_with_offset(offset, node.x_m, node.y_m);
+            let pos = graph_endpoint_render_pos(
+                &node.id.0,
+                msts,
+                tdb_placement,
                 terrain_ref,
                 &scene,
                 &focus,
@@ -801,7 +843,8 @@ mod tests {
             height_origin: 0.0,
         };
         let scene = TrackScene::from_graph(sample_graph());
-        let mesh = build_compact_track_line_mesh(&scene.graph, Vec3::ZERO, &focus, None, &scene);
+        let mesh =
+            build_compact_track_line_mesh(&scene.graph, Vec3::ZERO, &focus, None, &scene, None);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         assert_eq!(positions.len(), 4);
     }

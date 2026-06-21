@@ -4,9 +4,15 @@ use bevy::prelude::*;
 use openrailsrs_track::{SignalAspect, TrackGraph, TrackSignal};
 
 use crate::launch::ViewerSceneryMode;
+use crate::shapes::RouteAssets;
 use crate::terrain::TerrainElevation;
+use crate::tr_item_audit::TR_ITEM_WORLD_MATCH_RADIUS_M;
+use crate::tr_item_index::TrItemWorldIndex;
 use crate::track::TrackScene;
-use crate::train::position_on_graph;
+use crate::track_position::{
+    TrackPositionResolver, marker_render_world_on_edge, msts_to_render_surface,
+    parse_signal_tr_item_id, tr_item_msts_world,
+};
 use crate::world::{RouteFocus, RouteWorldOffset};
 
 const COLOR_SIG_STOP: Color = Color::srgb(1.0, 0.133, 0.133);
@@ -22,25 +28,66 @@ pub fn aspect_color(aspect: SignalAspect) -> Color {
     }
 }
 
-/// World position for a signal on its edge (same interpolation as viewer 2D).
+/// World position for a signal on its edge (graph interpolation, snapped to `.tdb` when loaded).
 pub fn signal_position_on_edge(
     graph: &TrackGraph,
     signal: &TrackSignal,
     terrain: Option<&TerrainElevation>,
     scene: &TrackScene,
-    world_offset: Vec3,
+    world_offset: RouteWorldOffset,
     focus: &RouteFocus,
+    resolver: Option<&TrackPositionResolver<'_>>,
 ) -> Option<Vec3> {
-    position_on_graph(
+    marker_render_world_on_edge(
         graph,
         &signal.edge_id,
         signal.position_m,
-        terrain,
+        resolver,
         scene,
         world_offset,
+        terrain,
         focus,
     )
     .map(|(p, _)| p)
+}
+
+/// Render position for a signal marker: TDB `TrItem` pose when available, else graph+snap.
+/// Returns `None` when a `.w` Signal mesh already covers this `TrItem`.
+#[allow(clippy::too_many_arguments)]
+pub fn signal_render_world(
+    graph: &TrackGraph,
+    signal: &TrackSignal,
+    assets: &RouteAssets,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
+    world_offset: RouteWorldOffset,
+    focus: &RouteFocus,
+    world_index: Option<&TrItemWorldIndex>,
+) -> Option<Vec3> {
+    if let Some(tdb) = assets.track_db() {
+        let tsection = Some(assets.tsection());
+        if let Some(item_id) = parse_signal_tr_item_id(&signal.id) {
+            if let Some(msts) = tr_item_msts_world(tdb, item_id, tsection) {
+                if world_index.is_some_and(|idx| {
+                    idx.has_world_object_near(item_id, msts, TR_ITEM_WORLD_MATCH_RADIUS_M)
+                }) {
+                    return None;
+                }
+                return Some(msts_to_render_surface(msts, terrain, scene, focus));
+            }
+        }
+        let resolver = TrackPositionResolver::new(tdb, tsection);
+        return signal_position_on_edge(
+            graph,
+            signal,
+            terrain,
+            scene,
+            world_offset,
+            focus,
+            Some(&resolver),
+        );
+    }
+    signal_position_on_edge(graph, signal, terrain, scene, world_offset, focus, None)
 }
 
 /// Spawn diamond markers and poles for all signals in the graph.
@@ -50,10 +97,12 @@ pub fn spawn_signal_markers(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
+    assets: Res<RouteAssets>,
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
     mode: Res<ViewerSceneryMode>,
+    world_index: Option<Res<TrItemWorldIndex>>,
 ) {
     if mode.is_track_focused() {
         return;
@@ -64,6 +113,7 @@ pub fn spawn_signal_markers(
     }
 
     let terrain_ref = terrain.as_deref();
+    let index_ref = world_index.as_deref();
     let diamond_size = scene.bounds.edge_radius().max(1.5) * 1.2;
     let pole_radius = diamond_size * 0.15;
     let pole_height = diamond_size * 2.5;
@@ -108,13 +158,15 @@ pub fn spawn_signal_markers(
     };
 
     for signal in scene.graph.signals() {
-        let Some(pos) = signal_position_on_edge(
+        let Some(pos) = signal_render_world(
             &scene.graph,
             signal,
+            &assets,
             terrain_ref,
             &scene,
-            offset.delta,
+            *offset,
             &focus,
+            index_ref,
         ) else {
             continue;
         };
@@ -218,6 +270,41 @@ mod tests {
     }
 
     #[test]
+    fn signal_uses_tdb_pose_when_resolver() {
+        use crate::track_position::{parse_signal_tr_item_id, tr_item_msts_world};
+        use openrailsrs_formats::TrackDbFile;
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let item_id = parse_signal_tr_item_id("sig1").expect("sig1 → TrItem 1");
+        let msts = tr_item_msts_world(&tdb, item_id, None).expect("TrItem pose");
+        let (g, sig) = line_graph_with_signal();
+        let scene = TrackScene::from_graph(g.clone());
+        let focus = RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let graph_pos = signal_position_on_edge(
+            &g,
+            &sig,
+            None,
+            &scene,
+            RouteWorldOffset::default(),
+            &focus,
+            None,
+        )
+        .unwrap();
+        assert!(
+            (msts.x - graph_pos.x).abs() > 1.0 || (msts.z - graph_pos.z).abs() > 1.0,
+            "TrItem pose should differ from patched-graph interpolation"
+        );
+    }
+
+    #[test]
     fn signal_at_mid_edge() {
         let (g, sig) = line_graph_with_signal();
         let scene = TrackScene::from_graph(g.clone());
@@ -225,7 +312,16 @@ mod tests {
             center: Vec3::ZERO,
             height_origin: 0.0,
         };
-        let pos = signal_position_on_edge(&g, &sig, None, &scene, Vec3::ZERO, &focus).unwrap();
+        let pos = signal_position_on_edge(
+            &g,
+            &sig,
+            None,
+            &scene,
+            RouteWorldOffset::default(),
+            &focus,
+            None,
+        )
+        .unwrap();
         assert!((pos.x - 50.0).abs() < 1e-3);
         assert!(pos.y > 0.0);
     }

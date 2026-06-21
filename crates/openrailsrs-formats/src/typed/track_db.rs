@@ -249,6 +249,12 @@ pub struct TrItem {
     pub distance_m: f64,
 }
 
+/// Host vector node for a `TrItem` referenced via `TrItemRefs`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TrItemHost {
+    pub vector_id: u32,
+}
+
 /// Parsed representation of a `.tdb` file.
 #[derive(Clone, Debug, Default)]
 pub struct TrackDbFile {
@@ -392,6 +398,66 @@ impl TrackDbFile {
     /// Lookup a track node by its 1-based `.tdb` id.
     pub fn node_by_id(&self, id: u32) -> Option<&TrackDbNode> {
         self.nodes.iter().find(|n| n.id == id)
+    }
+
+    /// Lookup a `TrItemTable` entry by `TrItemId`.
+    pub fn item_by_id(&self, id: u32) -> Option<&TrItem> {
+        self.items.iter().find(|i| i.id == id)
+    }
+
+    /// Map each `TrItemId` to vector node id(s) that reference it via `TrItemRefs`.
+    pub fn index_item_hosts(&self) -> std::collections::HashMap<u32, Vec<u32>> {
+        let mut hosts: std::collections::HashMap<u32, Vec<u32>> = std::collections::HashMap::new();
+        for node in &self.nodes {
+            if let TrackNodeKind::Vector { item_ids, .. } = &node.kind {
+                for item_id in item_ids {
+                    hosts.entry(*item_id).or_default().push(node.id);
+                }
+            }
+        }
+        hosts
+    }
+
+    /// Single host vector for a `TrItemId` (TSRE expects exactly one for active items).
+    pub fn host_vector_for_item(&self, item_id: u32) -> Option<u32> {
+        let hosts_map = self.index_item_hosts();
+        let hosts = hosts_map.get(&item_id)?;
+        if hosts.len() == 1 {
+            Some(hosts[0])
+        } else {
+            None
+        }
+    }
+
+    pub fn tr_item_host(&self, item_id: u32) -> Option<TrItemHost> {
+        self.host_vector_for_item(item_id)
+            .map(|vector_id| TrItemHost { vector_id })
+    }
+
+    /// Map MSTS tile indices to vector/junction/end node ids whose anchors lie in that tile.
+    pub fn index_nodes_by_tile(&self) -> std::collections::HashMap<(i32, i32), Vec<u32>> {
+        let mut out: std::collections::HashMap<(i32, i32), Vec<u32>> =
+            std::collections::HashMap::new();
+        for node in &self.nodes {
+            let mut tiles = Vec::new();
+            if let Some(pos) = node.position {
+                tiles.push((pos.tile_x, pos.tile_z));
+            }
+            if let TrackNodeKind::Vector { sections, .. } = &node.kind {
+                for section in sections {
+                    tiles.push((section.start.tile_x, section.start.tile_z));
+                    tiles.push((section.header_tile_x, section.header_tile_z));
+                }
+            }
+            for (tx, tz) in tiles {
+                out.entry((tx, tz)).or_default().push(node.id);
+            }
+        }
+        for ids in out.values_mut() {
+            ids.sort_unstable();
+            ids.dedup();
+        }
+        out
     }
 
     /// True when `other_id` is reachable from `node_id` via a single `TrPin` hop.
@@ -1423,6 +1489,18 @@ mod tests {
 
     fn fixtures_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openrailsrs-msts/tests/fixtures")
+    }
+
+    #[test]
+    fn index_item_hosts_maps_tritem_to_vector() {
+        let tdb =
+            TrackDbFile::from_path(fixtures_dir().join("with_signals/route.tdb")).expect("tdb");
+        let hosts = tdb.index_item_hosts();
+        assert_eq!(hosts.get(&1), Some(&vec![2]));
+        assert_eq!(tdb.host_vector_for_item(1), Some(2));
+        assert_eq!(tdb.tr_item_host(1).map(|h| h.vector_id), Some(2));
+        let item = tdb.item_by_id(1).expect("item 1");
+        assert!(matches!(item.kind, TrItemKind::Signal { .. }));
     }
 
     #[test]

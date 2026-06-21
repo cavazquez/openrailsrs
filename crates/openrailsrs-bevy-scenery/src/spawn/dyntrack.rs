@@ -425,6 +425,57 @@ pub fn spawn_procedural_track_batch(
     }
 }
 
+/// Spawn one procedural segment as a single rail mesh entity (for mobile TDB streaming).
+pub fn spawn_procedural_track_single(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    _materials: &mut Assets<StandardMaterial>,
+    segment: ProceduralTrackSegment,
+    label: &str,
+    style: ProceduralTrackStyle,
+    rail_material: &Handle<StandardMaterial>,
+) -> Entity {
+    let mut seg_dims = procedural_segment_visual_dims(segment);
+    if style == ProceduralTrackStyle::RailsOnly {
+        seg_dims.rail_width *= 3.0;
+        seg_dims.rail_height *= 2.5;
+    }
+    let mut rail_pos: Vec<[f32; 3]> = Vec::new();
+    let mut rail_nrm: Vec<[f32; 3]> = Vec::new();
+    let mut rail_uv: Vec<[f32; 2]> = Vec::new();
+    let mut rail_idx: Vec<u32> = Vec::new();
+    append_procedural_track_segment(
+        &mut Vec::new(),
+        &mut Vec::new(),
+        &mut Vec::new(),
+        &mut Vec::new(),
+        &mut rail_pos,
+        &mut rail_nrm,
+        &mut rail_uv,
+        &mut rail_idx,
+        segment,
+        seg_dims,
+        style,
+    );
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, rail_pos);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, rail_nrm);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, rail_uv);
+    mesh.insert_indices(Indices::U32(rail_idx));
+    commands
+        .spawn((
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(rail_material.clone()),
+            Transform::IDENTITY,
+            Visibility::default(),
+            Name::new(format!("{label}:rail")),
+        ))
+        .id()
+}
+
 fn push_cuboid(
     positions: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,

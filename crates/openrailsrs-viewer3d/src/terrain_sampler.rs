@@ -28,6 +28,7 @@ impl LoadedTerrainTile {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct TerrainTileCache {
     tiles: HashMap<(i32, i32), LoadedTerrainTile>,
 }
@@ -42,6 +43,13 @@ impl TerrainTileCache {
             out.insert(Self::display_key(&tile.tile), tile);
         }
         Self { tiles: out }
+    }
+
+    pub(crate) fn insert_scene_tile(&mut self, terrain_tile: &TerrainTile) {
+        let Some(tile) = LoadedTerrainTile::from_scene_tile(terrain_tile) else {
+            return;
+        };
+        self.tiles.insert(Self::display_key(&tile.tile), tile);
     }
 
     #[cfg(test)]

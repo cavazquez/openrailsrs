@@ -19,7 +19,9 @@ use crate::viewer_log;
 use crate::world::MSTS_TILE_SIZE_M;
 
 pub use crate::terrain_spawn::{
-    init_terrain_spawn_progress, progressive_terrain_spawn_system, spawn_terrain_meshes,
+    TerrainTileStream, init_terrain_spawn_progress, progressive_terrain_spawn_system,
+    spawn_terrain_meshes, terrain_tile_spawn_stream_system, terrain_tile_stream_system,
+    terrain_tile_unload_system,
 };
 
 /// World-space offset for a textured patch inside a tile.
@@ -74,6 +76,27 @@ impl TerrainElevation {
 
     pub fn is_empty(&self) -> bool {
         self.tiles.is_empty()
+    }
+
+    pub fn merge_tile(&mut self, tile_x: i32, tile_z: i32, tile: Option<&TerrainTile>) {
+        let Some(tile) = tile else {
+            return;
+        };
+        let Some(data) = tile.data.as_ref() else {
+            return;
+        };
+        self.tiles.insert(
+            (tile_x, tile_z),
+            TileElevation {
+                grid: data.grid.clone(),
+                sample_size: tile.file.samples.sample_size,
+                features: data.features.clone(),
+            },
+        );
+    }
+
+    pub fn remove_tile(&mut self, tile_x: i32, tile_z: i32) {
+        self.tiles.remove(&(tile_x, tile_z));
     }
 
     fn sample_hidden(&self, tile_x: i32, tile_z: i32, x: f32, z: f32) -> bool {

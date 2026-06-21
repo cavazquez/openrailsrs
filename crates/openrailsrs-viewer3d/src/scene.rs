@@ -12,6 +12,7 @@ use bevy::prelude::*;
 
 use crate::launch::{
     LIVE_GROUND_HALF_MAX_M, TRACK_DEV_GROUND_HALF_M, ViewerLaunchOpts, ViewerSceneryMode,
+    view_radius_m,
 };
 use crate::terrain::TerrainScene;
 use crate::track::TrackScene;
@@ -43,7 +44,9 @@ pub fn spawn_ground_and_lights(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mut half = scene.bounds.ground_half();
-    if mode.is_track_focused() {
+    if mode.is_run_corridor() {
+        half = half.min(view_radius_m() * 1.5);
+    } else if mode.is_track_dev() {
         half = half.min(TRACK_DEV_GROUND_HALF_M);
     } else if opts.live {
         half = half.min(LIVE_GROUND_HALF_MAX_M);
@@ -116,7 +119,9 @@ fn spawn_grid_mesh(
     mode: ViewerSceneryMode,
 ) {
     let mut half = scene.bounds.ground_half();
-    if mode.is_track_focused() {
+    if mode.is_run_corridor() {
+        half = half.min(view_radius_m() * 1.5);
+    } else if mode.is_track_dev() {
         half = half.min(TRACK_DEV_GROUND_HALF_M);
     } else if live {
         half = half.min(LIVE_GROUND_HALF_MAX_M);

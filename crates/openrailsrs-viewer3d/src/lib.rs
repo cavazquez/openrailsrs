@@ -29,6 +29,7 @@ pub mod or_shader {
     pub use openrailsrs_or_shader::*;
 }
 pub mod overspeed_flash;
+pub mod placement_audit;
 pub mod precipitation;
 pub mod rolling_stock;
 pub mod scene;
@@ -44,10 +45,14 @@ pub(crate) mod terrain_io;
 pub mod terrain_material;
 pub(crate) mod terrain_sampler;
 pub(crate) mod terrain_spawn;
+pub mod tr_item_audit;
+pub mod tr_item_index;
 pub mod track;
 pub mod track_audit;
+pub mod track_position;
 pub mod train;
 pub mod train_diagnostics;
+pub mod view_window;
 pub mod water;
 pub mod world;
 
@@ -112,6 +117,8 @@ impl Plugin for ViewerPlugin {
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<launch::ViewerSceneryMode>()
             .init_resource::<launch::RunCorridorPath>()
+            .init_resource::<view_window::ViewWindow>()
+            .init_resource::<tdb_track::TdbTrackStream>()
             .add_systems(
                 Startup,
                 (
@@ -119,7 +126,7 @@ impl Plugin for ViewerPlugin {
                     sky::spawn_sky_dome.run_if(launch::sky_dome_active),
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
-                    tdb_track::spawn_tdb_graph_track,
+                    tdb_track::spawn_tdb_graph_track.run_if(tdb_track::tdb_startup_spawn_active),
                     dyntrack::spawn_dyntrack_segments.run_if(launch::full_scenery_active),
                     forest::spawn_forest_patches.run_if(launch::full_scenery_active),
                     water::spawn_water_patches.run_if(launch::full_scenery_active),
@@ -142,7 +149,41 @@ impl Plugin for ViewerPlugin {
                 Update,
                 world::update_world_scenery_lod.after(world::progressive_world_spawn_system),
             )
-            .add_systems(Update, world::world_tile_stream_system)
+            .add_systems(
+                Update,
+                (
+                    view_window::sync_view_window_from_train,
+                    tdb_track::tdb_track_stream_system.run_if(tdb_track::tdb_stream_active),
+                )
+                    .chain()
+                    .after(live::update_live_train_marker),
+            )
+            .add_systems(
+                Update,
+                world::world_tile_stream_system.after(view_window::sync_view_window_from_train),
+            )
+            .add_systems(
+                Update,
+                tr_item_index::sync_tr_item_world_index.after(world::world_tile_stream_system),
+            )
+            .add_systems(
+                Update,
+                world::world_tile_unload_system
+                    .after(world::world_tile_stream_system)
+                    .run_if(live::live_mode_active),
+            )
+            .add_systems(
+                Update,
+                (
+                    terrain::terrain_tile_stream_system,
+                    terrain::terrain_tile_spawn_stream_system,
+                    terrain::terrain_tile_unload_system,
+                )
+                    .chain()
+                    .after(view_window::sync_view_window_from_train)
+                    .run_if(live::live_mode_active)
+                    .run_if(launch::full_scenery_active),
+            )
             .add_systems(
                 Update,
                 world::world_stream_scenery_system.after(world::world_tile_stream_system),
