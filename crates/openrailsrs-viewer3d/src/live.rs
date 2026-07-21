@@ -637,7 +637,7 @@ pub fn spawn_live_train(
         log_consist_diagnostic(scenario_dir, consist_rel, vehicles, pos, yaw.to_degrees());
     }
     const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
-    let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
+    let mut texture_cache: HashMap<(PathBuf, i32), Handle<Image>> = HashMap::new();
     let mut shape_cars = 0usize;
     let mut fallback_cars = 0usize;
     let mut shape_parts = 0usize;

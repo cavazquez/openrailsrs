@@ -233,6 +233,55 @@ pub struct ShapeTextureSlot {
     pub image_idx: i32,
 }
 
+/// OR `TexAddrMode` from the first `uv_op` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MstsTexAddrMode {
+    Wrap,
+    Mirror,
+    Clamp,
+    Border,
+}
+
+/// Map raw OR `TexAddrMode` integer → [`MstsTexAddrMode`] (`Shapes.cs` UVTextureAddressModeMap).
+pub fn msts_tex_addr_mode(raw: i32) -> Option<MstsTexAddrMode> {
+    match raw {
+        1 => Some(MstsTexAddrMode::Wrap),
+        2 => Some(MstsTexAddrMode::Mirror),
+        3 => Some(MstsTexAddrMode::Clamp),
+        4 => Some(MstsTexAddrMode::Border),
+        _ => None,
+    }
+}
+
+/// Kind of `uv_op_*` recognised for address-mode extraction (v1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UvOpKind {
+    Copy,
+    ReflectMap,
+    ReflectMapFull,
+    UniformScale,
+    NonUniformScale,
+    /// Parsed but not used for sampling transforms (embossbump, spheremap, …).
+    Unsupported(String),
+}
+
+/// One `uv_op_*` entry inside `light_model_cfg / uv_ops`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct UvOp {
+    pub kind: UvOpKind,
+    /// OR `TexAddrMode` (1–4); first op drives the sampler.
+    pub tex_addr_mode: i32,
+    /// Source UV set index when present (`uv_op_copy`, scales).
+    pub src_uv_idx: Option<i32>,
+}
+
+/// One `light_model_cfg` (flags + UV ops).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LightModelCfg {
+    pub flags: i32,
+    pub uv_ops: Vec<UvOp>,
+}
+
 /// Parsed `.s` ASCII file.
 #[derive(Clone, Debug, Default)]
 pub struct ShapeFile {
@@ -250,6 +299,8 @@ pub struct ShapeFile {
     pub matrices: Vec<NamedMatrix>,
     /// Vertex states from `vtx_states` (empty if the shape has none).
     pub vtx_states: Vec<VtxState>,
+    /// OR `light_model_cfgs` (UV address modes via first `uv_op`).
+    pub light_model_cfgs: Vec<LightModelCfg>,
     /// Animations from `animations` (empty for static shapes).
     pub animations: Vec<Animation>,
 }
@@ -267,6 +318,7 @@ impl ShapeFile {
         let lod_controls = collect_lod_controls(ast);
         let matrices = collect_matrices(ast);
         let vtx_states = collect_vtx_states(ast);
+        let light_model_cfgs = collect_light_model_cfgs(ast);
 
         Ok(Self {
             texture_filenames,
@@ -279,8 +331,33 @@ impl ShapeFile {
             lod_controls,
             matrices,
             vtx_states,
+            light_model_cfgs,
             animations: collect_animations(ast),
         })
+    }
+
+    /// OR: `light_model_cfgs[vtx_state.LightCfgIdx].uv_ops[0].TexAddrMode`.
+    pub fn tex_addr_mode_for_prim_state(&self, prim_state_idx: i32) -> Option<i32> {
+        if prim_state_idx < 0 {
+            return None;
+        }
+        let ps = self.prim_states.get(prim_state_idx as usize)?;
+        if ps.vertex_state_idx < 0 {
+            return None;
+        }
+        let vs = self.vtx_states.get(ps.vertex_state_idx as usize)?;
+        if vs.light_cfg_idx < 0 {
+            return None;
+        }
+        let cfg = self.light_model_cfgs.get(vs.light_cfg_idx as usize)?;
+        cfg.uv_ops.first().map(|op| op.tex_addr_mode)
+    }
+
+    /// Resolved [`MstsTexAddrMode`] for a prim_state (defaults to Wrap when unset/unknown).
+    pub fn msts_tex_addr_mode_for_prim_state(&self, prim_state_idx: i32) -> MstsTexAddrMode {
+        self.tex_addr_mode_for_prim_state(prim_state_idx)
+            .and_then(msts_tex_addr_mode)
+            .unwrap_or(MstsTexAddrMode::Wrap)
     }
 
     /// Read and parse a `.s` file from disk (ASCII, zlib-compressed ASCII, or binary tokenized).
@@ -857,6 +934,83 @@ fn parse_vtx_state(items: &[Ast]) -> VtxState {
     }
 }
 
+fn collect_light_model_cfgs(ast: &Ast) -> Vec<LightModelCfg> {
+    let mut out = Vec::new();
+    walk_named_list(ast, "light_model_cfgs", &mut |items| {
+        for_each_tagged(items, "light_model_cfg", |sub| {
+            out.push(parse_light_model_cfg(sub));
+        });
+    });
+    out
+}
+
+fn parse_light_model_cfg(items: &[Ast]) -> LightModelCfg {
+    let body = shape_section_body(items);
+    let flags = body
+        .iter()
+        .find_map(|a| match a {
+            Ast::Atom(at) => shape_atom_to_i32(at),
+            _ => None,
+        })
+        .unwrap_or(0);
+    let mut uv_ops = Vec::new();
+    for_each_tagged(body, "uv_ops", |uv_items| {
+        for_each_tagged_ordered(
+            uv_items,
+            &[
+                "uv_op_copy",
+                "uvop_copy",
+                "uv_op_reflectmap",
+                "uv_op_reflectmapfull",
+                "uv_op_uniformscale",
+                "uv_op_nonuniformscale",
+                "uv_op_share",
+                "uv_op_transform",
+                "uv_op_user_transform",
+                "uv_op_reflectxy",
+                "uv_op_spheremap",
+                "uv_op_spheremapfull",
+                "uv_op_specularmap",
+                "uv_op_embossbump",
+            ],
+            |op| {
+                if let Some(parsed) = parse_uv_op(op) {
+                    uv_ops.push(parsed);
+                }
+            },
+        );
+    });
+    LightModelCfg { flags, uv_ops }
+}
+
+fn parse_uv_op(items: &[Ast]) -> Option<UvOp> {
+    let tag = match items.first() {
+        Some(Ast::Atom(Atom::Symbol(s))) => s.to_ascii_lowercase(),
+        _ => return None,
+    };
+    let nums: Vec<i32> = shape_section_body(items)
+        .iter()
+        .filter_map(|a| match a {
+            Ast::Atom(at) => shape_atom_to_i32(at),
+            _ => None,
+        })
+        .collect();
+    let tex_addr_mode = nums.first().copied().unwrap_or(1);
+    let (kind, src_uv_idx) = match tag.as_str() {
+        "uv_op_copy" | "uvop_copy" => (UvOpKind::Copy, nums.get(1).copied()),
+        "uv_op_reflectmap" => (UvOpKind::ReflectMap, None),
+        "uv_op_reflectmapfull" => (UvOpKind::ReflectMapFull, None),
+        "uv_op_uniformscale" => (UvOpKind::UniformScale, nums.get(1).copied()),
+        "uv_op_nonuniformscale" => (UvOpKind::NonUniformScale, nums.get(1).copied()),
+        other => (UvOpKind::Unsupported(other.to_string()), nums.get(1).copied()),
+    };
+    Some(UvOp {
+        kind,
+        tex_addr_mode,
+        src_uv_idx,
+    })
+}
+
 // ── small helpers ────────────────────────────────────────────────────────────
 
 /// Body of a MSTS section: either direct children or `( tag ( count ... ))` (JINX0s1t).
@@ -1271,5 +1425,76 @@ mod tests {
         let vs = parse_vtx_state(&items);
         assert_eq!(vs.light_mat_idx, -6);
         assert_eq!(vs.light_cfg_idx, 2);
+    }
+
+    #[test]
+    fn msts_tex_addr_mode_table_matches_or() {
+        assert_eq!(msts_tex_addr_mode(1), Some(MstsTexAddrMode::Wrap));
+        assert_eq!(msts_tex_addr_mode(2), Some(MstsTexAddrMode::Mirror));
+        assert_eq!(msts_tex_addr_mode(3), Some(MstsTexAddrMode::Clamp));
+        assert_eq!(msts_tex_addr_mode(4), Some(MstsTexAddrMode::Border));
+        assert_eq!(msts_tex_addr_mode(0), None);
+        assert_eq!(msts_tex_addr_mode(5), None);
+    }
+
+    #[test]
+    fn milemarker_light_model_cfg_wrap_from_uv_op_copy() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../TS_STARTER_ROUTE/GLOBAL/SHAPES/milemarker.s");
+        if !path.is_file() {
+            eprintln!("skip: milemarker.s missing at {}", path.display());
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse milemarker");
+        assert_eq!(shape.light_model_cfgs.len(), 1);
+        let op = &shape.light_model_cfgs[0].uv_ops[0];
+        assert_eq!(op.kind, UvOpKind::Copy);
+        assert_eq!(op.tex_addr_mode, 1);
+        assert_eq!(shape.tex_addr_mode_for_prim_state(0), Some(1));
+        assert_eq!(
+            shape.msts_tex_addr_mode_for_prim_state(0),
+            MstsTexAddrMode::Wrap
+        );
+    }
+
+    #[test]
+    fn light_model_cfgs_parse_mirror_and_clamp() {
+        // prim_state trailing: zbias, ivtx_state, alphatest, lightcfg, zbuf (OR layout).
+        let src = r#"
+        ( shape
+          ( vtx_states 1 ( vtx_state 0 0 -5 0 ) )
+          ( prim_states 1 ( prim_state "m" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 ) )
+          ( light_model_cfgs 2
+            ( light_model_cfg 0 ( uv_ops 1 ( uv_op_copy 2 0 ) ) )
+            ( light_model_cfg 0 ( uv_ops 1 ( uv_op_copy 3 0 ) ) )
+          )
+        )
+        "#;
+        // Force LightCfgIdx via vtx_state for clamp path.
+        let src_clamp = r#"
+        ( shape
+          ( vtx_states 1 ( vtx_state 0 0 -5 1 ) )
+          ( prim_states 1 ( prim_state "m" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 ) )
+          ( light_model_cfgs 2
+            ( light_model_cfg 0 ( uv_ops 1 ( uv_op_copy 2 0 ) ) )
+            ( light_model_cfg 0 ( uv_ops 1 ( uv_op_copy 3 0 ) ) )
+          )
+        )
+        "#;
+        let mirror = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        assert_eq!(mirror.tex_addr_mode_for_prim_state(0), Some(2));
+        assert_eq!(
+            mirror.msts_tex_addr_mode_for_prim_state(0),
+            MstsTexAddrMode::Mirror
+        );
+        let clamp =
+            ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src_clamp).unwrap())
+                .unwrap();
+        assert_eq!(clamp.tex_addr_mode_for_prim_state(0), Some(3));
+        assert_eq!(
+            clamp.msts_tex_addr_mode_for_prim_state(0),
+            MstsTexAddrMode::Clamp
+        );
     }
 }

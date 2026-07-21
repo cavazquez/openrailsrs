@@ -646,6 +646,18 @@ fn token_name(id: i32) -> &'static str {
         16 => "textures",
         17 => "light_material",
         18 => "light_materials",
+        19 => "linear_key",
+        20 => "tcb_key",
+        21 => "linear_pos",
+        22 => "tcb_pos",
+        23 => "slerp_rot",
+        24 => "tcb_rot",
+        25 => "controllers",
+        26 => "anim_node",
+        27 => "anim_nodes",
+        28 => "animation",
+        29 => "animations",
+        30 => "anim",
         31 => "lod_controls",
         32 => "lod_control",
         33 => "distance_levels_header",
@@ -691,14 +703,23 @@ fn token_name(id: i32) -> &'static str {
         79 => "light_model_cfgs",
         80 => "light_model_cfg",
         81 => "uv_ops",
-        90 => "animations",
-        91 => "animation",
-        92 => "anim_nodes",
-        93 => "anim_node",
-        94 => "controllers",
-        95 => "tcb_rot",
-        96 => "linear_pos",
-        97 => "slerp_rot",
+        82 => "uvop_copy",
+        83 => "uv_op_share",
+        84 => "uv_op_copy",
+        85 => "uv_op_uniformscale",
+        86 => "uv_op_user_uninformscale",
+        87 => "uv_op_nonuniformscale",
+        88 => "uv_op_user_nonuninformscale",
+        89 => "uv_op_transform",
+        90 => "uv_op_user_transform",
+        91 => "uv_op_reflectxy",
+        92 => "uv_op_reflectmap",
+        93 => "uv_op_reflectmapfull",
+        94 => "uv_op_spheremap",
+        95 => "uv_op_spheremapfull",
+        96 => "uv_op_specularmap",
+        97 => "uv_op_embossbump",
+        // Animation key leaves (controllers already mapped above).
         99 => "tcb_key",
         101 => "linear_key",
         103 => "slerp_key",
@@ -814,13 +835,12 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
     }
     matches!(
         id,
-        1..=18
+        1..=30
             | 31..=56
             | 60
             | 61
             | 63..=76
-            | 79..=81
-            | 90..=97
+            | 79..=97
             | 99
             | 101
             | 103
@@ -845,6 +865,12 @@ fn is_schema_collection_parent(parent: i32) -> bool {
             | 14
             | 16
             | 18
+            | 25 // controllers
+            | 24 // tcb_rot
+            | 21 // linear_pos
+            | 23 // slerp_rot
+            | 27 // anim_nodes
+            | 29 // animations
             | 31
             | 36
             | 38
@@ -859,16 +885,16 @@ fn is_schema_collection_parent(parent: i32) -> bool {
             | 68
             | 72
             | 74
-            | 90 // animations
-            | 92 // anim_nodes
-            | 94 // controllers
-            | 95 // tcb_rot
-            | 96 // linear_pos
-            | 97 // slerp_rot
+            | 79 // light_model_cfgs
+            | 80 // light_model_cfg (contains uv_ops)
+            | 81 // uv_ops
     )
 }
 
 fn is_expected_collection_child(parent: i32, child: i32) -> bool {
+    if parent == 81 && (82..=97).contains(&child) {
+        return true; // uv_ops -> uv_op_*
+    }
     matches!(
         (parent, child),
         (5, 3)    // normals -> vector
@@ -878,6 +904,16 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (14, 13) // images -> image
             | (16, 15) // textures -> texture
             | (18, 17) // light_materials -> light_material
+            | (29, 28) // animations -> animation
+            | (27, 26) // anim_nodes -> anim_node
+            | (25, 24) // controllers -> tcb_rot
+            | (25, 21) // controllers -> linear_pos
+            | (25, 23) // controllers -> slerp_rot
+            | (24, 20) // tcb_rot -> tcb_key (also 99 in some dumps)
+            | (24, 99)
+            | (21, 19) // linear_pos -> linear_key
+            | (21, 101)
+            | (23, 103) // slerp_rot -> slerp_key
             | (31, 32) // lod_controls -> lod_control
             | (36, 37) // distance_levels -> distance_level
             | (38, 39) // sub_objects -> sub_object
@@ -895,14 +931,8 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (68, 69) // volumes -> vol_sphere
             | (72, 129) // shader_names -> named_shader
             | (74, 125) // texture_filter_names -> named_filter_mode
-            | (90, 91) // animations -> animation
-            | (92, 93) // anim_nodes -> anim_node
-            | (94, 95) // controllers -> tcb_rot
-            | (94, 96) // controllers -> linear_pos
-            | (94, 97) // controllers -> slerp_rot
-            | (95, 99) // tcb_rot -> tcb_key
-            | (96, 101) // linear_pos -> linear_key
-            | (97, 103) // slerp_rot -> slerp_key
+            | (79, 80) // light_model_cfgs -> light_model_cfg
+            | (80, 81) // light_model_cfg -> uv_ops
     )
 }
 

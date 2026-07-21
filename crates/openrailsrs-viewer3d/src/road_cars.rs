@@ -128,7 +128,7 @@ pub fn spawn_road_car_objects(
     };
 
     let cull_at = cull_center.unwrap_or(focus.center);
-    let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
+    let mut texture_cache: HashMap<(PathBuf, i32), Handle<Image>> = HashMap::new();
     let mut shape_cache: HashMap<String, Option<ShapeRenderAsset>> = HashMap::new();
     let fallback_mat = materials.add(StandardMaterial {
         base_color: COLOR_CAR_FALLBACK,

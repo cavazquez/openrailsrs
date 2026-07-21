@@ -33,8 +33,9 @@ pub use hazard::{HazardFile, resolve_hazard_shape_name};
 pub use path::{PathDataPoint, PathFile};
 pub use route::{OverheadWireParams, RouteFile, RouteStart, find_trk_path};
 pub use shape::{
-    AnimController, AnimNode, Animation, DistanceLevel, LodControl, Matrix43, NamedMatrix,
-    PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject, Vec2, Vec3, Vertex, VtxState,
+    AnimController, AnimNode, Animation, DistanceLevel, LightModelCfg, LodControl, Matrix43,
+    MstsTexAddrMode, NamedMatrix, PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject,
+    UvOp, UvOpKind, Vec2, Vec3, Vertex, VtxState, msts_tex_addr_mode,
 };
 pub use sigcfg::{
     LightColour, LightTextureDef, SigCfgFile, SignalDrawStateDef, SignalLightDef, SignalShapeDef,

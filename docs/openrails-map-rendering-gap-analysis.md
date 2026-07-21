@@ -157,7 +157,7 @@ Archivos clave:
 | 15. Trenes visuales | viewers especializados y AnimatedPart | shape estática por vehículo + transform | Sin bogies/puertas/pantógrafo animados | Confirmada |
 | 16. Entidades | primitivas en RenderFrame | entidades Bevy y assets | Pipeline llega al render; no es causa raíz global | Confirmada |
 | 17. Transforms | matrices MSTS→XNA + jerarquía | matrices MSTS→Bevy + jerarquía | Base probada; raw node-ID TDB es incorrecto como mapping | Confirmada |
-| 18. Materiales | alpha test/blend, doble paso, fog | Standard + OR materials; Specular25/750 unificado (#47); fog (#39) | Alpha/sorting residual vs doble paso OR; wrap UV (#46) | Parcial |
+| 18. Materiales | alpha test/blend, doble paso, fog | Standard + OR; Specular (#47); fog (#39); TexAddrMode (#46) | Alpha/sorting residual vs doble paso OR | Parcial |
 | 19. Cámara | tile de cámara, far=`ViewingDistance` | orbit/chase/driver, floating origin XZ | Cámara inicia y renderiza; radio de escena domina visibilidad | Confirmada |
 | 20. Culling/orden | FOV + distancia + LOD + secuencias | frustum Bevy + stream por viewing distance + layers | Pop-in residual; fog y blend ordering menos fieles | Parcial (#30) |
 
@@ -312,7 +312,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#43](https://github.com/cavazquez/openrailsrs/issues/43) | P1 | `[Validation] Crear regresiones visuales reproducibles OpenRails↔Bevy` | #25–#29 |
 | [#44](https://github.com/cavazquez/openrailsrs/issues/44) | P3 | `[Materials] Añadir tangent space opcional para assets PBR con normal maps` | fuente normal-map, #48 |
 | [#45](https://github.com/cavazquez/openrailsrs/issues/45) | P2 | `[Meshes] Recomponer normales ausentes o degeneradas en shapes MSTS` | **Cerrado** — face normals selectivas en bevy-scenery (+ render3d); válidas se conservan |
-| [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | #48; `LightCfgIdx` tipado en `VtxState` |
+| [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | **Cerrado** — tipado + sampler Bevy (1–4); tokens binarios uv_op/anim corregidos |
 | [#47](https://github.com/cavazquez/openrailsrs/issues/47) | P2 | `[Materials] Unificar modos specular MSTS entre StandardMaterial y OrSceneryMaterial` | **Cerrado** — `resolve_or_material_kind` + PBR compartido en Standard/OR |
 | [#48](https://github.com/cavazquez/openrailsrs/issues/48) | P1 | `[Assets] Introducir tipos Asset y AssetLoader para formatos MSTS/OR` | — |
 | [#49](https://github.com/cavazquez/openrailsrs/issues/49) | P1 | `[Assets] Unificar RouteAssets y AssetIndex en un catálogo de ruta compartido` | #29, #48 |
@@ -341,7 +341,7 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 - **Confirmado en OpenRails:** el pipeline clásico usa `VertexPositionNormalTexture` y `SceneryShader.fx` consume la normal interpolada. No existe TBN/normal map moderno en la referencia inspeccionada.
 - **Conclusión:** la ausencia de tangentes/bitangentes no explica la diferencia visual de Chiltern. El issue #44 se clasifica P3 y opt-in para futuras extensiones PBR, no como paridad OpenRails.
 - ~~**Brecha visual real:** fallback de normal única~~ **(#45: normales de cara tras winding/Z-flip cuando índice OOB, cero o no finito; autorales válidas intactas)**.
-- **Brecha de formato/material:** `light_model_cfgs`/`uv_ops` contienen address modes que OpenRails sí aplica parcialmente; #46 no debe confundir `uv_op_embossbump` con normal mapping moderno. `VtxState` ya tipa `LightCfgIdx`.
+- ~~Address modes UV~~ **(#46: `light_model_cfgs`/`uv_ops` tipados; primer `TexAddrMode` → Repeat/Mirror/Clamp/Border; ops no soportadas como `Unsupported`)**.
 - ~~Specular25/750 divergente entre Standard y OR~~ **(#47: `resolve_or_material_pbr_ex` / `create_or_scenery_material_ex` con `LightMatIdx`)**.
 
 ### AssetLoader y arquitectura de assets

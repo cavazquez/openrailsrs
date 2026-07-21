@@ -804,6 +804,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 z_bias,
                 z_buf_mode,
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
+                tex_addr_mode: shape.tex_addr_mode_for_prim_state(prim_state_idx),
                 bounds_center: Some(bounds_center),
                 bounds_half_extent: Some(bounds_half_extent),
                 lever_pivot_at_mesh_center,
@@ -1203,7 +1204,16 @@ pub fn ace_to_scenery_image(ace: &AceFile) -> (Image, bool) {
 }
 
 fn ace_rgba_to_image(width: u32, height: u32, rgba: &[u8]) -> Image {
-    Image::new(
+    ace_rgba_to_image_with_addr(width, height, rgba, None)
+}
+
+fn ace_rgba_to_image_with_addr(
+    width: u32,
+    height: u32,
+    rgba: &[u8],
+    tex_addr_mode: Option<i32>,
+) -> Image {
+    let mut image = Image::new(
         Extent3d {
             width,
             height,
@@ -1213,7 +1223,13 @@ fn ace_rgba_to_image(width: u32, height: u32, rgba: &[u8]) -> Image {
         rgba.to_vec(),
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
-    )
+    );
+    openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+    image
+}
+
+fn texture_cache_addr_key(tex_addr_mode: Option<i32>) -> i32 {
+    tex_addr_mode.unwrap_or(1)
 }
 
 /// DDS header alpha class (DXT1 vs DXT3/DXT5).
@@ -1250,25 +1266,30 @@ pub fn dds_alpha_type(path: &Path) -> Option<DdsAlpha> {
 
 /// Decode a DDS file from raw bytes into a Bevy GPU image (keeps block compression).
 pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
-    use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
-    Image::from_buffer(
-        bytes,
-        ImageType::Extension("dds"),
-        CompressedImageFormats::all(),
-        false,
-        ImageSampler::Default,
-        RenderAssetUsages::default(),
-    )
-    .map_err(|e| e.to_string())
+    decode_dds_to_image_with_addr(bytes, None)
+}
+
+pub fn decode_dds_to_image_with_addr(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+) -> Result<Image, String> {
+    openrailsrs_bevy_scenery::textures::decode_dds_to_image_with_addr(bytes, tex_addr_mode)
 }
 
 /// Decode DDS mip0 to uncompressed RGBA8 (reliable alpha blend in custom shaders).
 pub fn decode_dds_to_rgba_image(bytes: &[u8]) -> Result<Image, String> {
+    decode_dds_to_rgba_image_with_addr(bytes, None)
+}
+
+pub fn decode_dds_to_rgba_image_with_addr(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+) -> Result<Image, String> {
     use image::ImageFormat;
     let dyn_img =
         image::load_from_memory_with_format(bytes, ImageFormat::Dds).map_err(|e| e.to_string())?;
     let rgba = dyn_img.to_rgba8();
-    Ok(Image::new(
+    let mut image = Image::new(
         Extent3d {
             width: rgba.width(),
             height: rgba.height(),
@@ -1278,7 +1299,9 @@ pub fn decode_dds_to_rgba_image(bytes: &[u8]) -> Result<Image, String> {
         rgba.into_raw(),
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
-    ))
+    );
+    openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+    Ok(image)
 }
 
 /// Optional MSTS install root (`Content/`) for `GLOBAL/SHAPES` lookup.
@@ -1709,7 +1732,7 @@ pub fn load_shape_render_asset_from_path(
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
     train_exterior: bool,
 ) -> Option<ShapeRenderAsset> {
@@ -1746,7 +1769,7 @@ pub fn load_cab_interior_render_asset_from_path(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     or_materials: &mut Assets<crate::or_cab_material::OrCabMaterial>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
     lever_matrices: &HashSet<usize>,
 ) -> Option<ShapeRenderAsset> {
@@ -1775,7 +1798,7 @@ pub fn shape_render_asset_from_loaded(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
     lit_override: Option<bool>,
     cab_interior: bool,
@@ -1806,7 +1829,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     mut or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     ace_cache: &HashMap<PathBuf, AceFile>,
     fallback_color: Color,
     lit_override: Option<bool>,
@@ -1840,6 +1863,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             None,
             cab_interior,
             train_exterior,
+            None,
             None,
         );
         has_any_texture |= has_texture;
@@ -1881,6 +1905,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             cab_interior,
             train_exterior,
             part.light_mat_idx,
+            part.tex_addr_mode,
         );
         if debug_materials_enabled() {
             if let Some(mat) = materials.get(&material) {
@@ -2127,7 +2152,7 @@ fn material_for_shape_texture(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     ace_cache: &HashMap<PathBuf, AceFile>,
     fallback_color: Color,
     lit_override: Option<bool>,
@@ -2135,6 +2160,7 @@ fn material_for_shape_texture(
     cab_interior: bool,
     train_exterior: bool,
     light_mat_idx: Option<i32>,
+    tex_addr_mode: Option<i32>,
 ) -> (
     Handle<StandardMaterial>,
     Option<Handle<crate::or_cab_material::OrCabMaterial>>,
@@ -2142,6 +2168,7 @@ fn material_for_shape_texture(
     bool,
 ) {
     let lit = lit_override.unwrap_or_else(scenery_materials_lit);
+    let addr_key = texture_cache_addr_key(tex_addr_mode);
     if let Some(tex_name) = texture_file {
         match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             None => {}
@@ -2163,13 +2190,13 @@ fn material_for_shape_texture(
                         let use_rgba =
                             cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
                         let image = if use_rgba {
-                            decode_dds_to_rgba_image(&bytes)
+                            decode_dds_to_rgba_image_with_addr(&bytes, tex_addr_mode)
                         } else {
-                            decode_dds_to_image(&bytes)
+                            decode_dds_to_image_with_addr(&bytes, tex_addr_mode)
                         };
                         if let Ok(image) = image {
                             let handle = texture_cache
-                                .entry(tex_path.clone())
+                                .entry((tex_path.clone(), addr_key))
                                 .or_insert_with(|| images.add(image))
                                 .clone();
                             let is_transparent =
@@ -2241,9 +2268,10 @@ fn material_for_shape_texture(
                     } else {
                         scenery_albedo_tint(pixel_brightened, lit)
                     };
-                    let image = ace_rgba_to_image(ace.width, ace.height, &rgba);
+                    let image =
+                        ace_rgba_to_image_with_addr(ace.width, ace.height, &rgba, tex_addr_mode);
                     let handle = texture_cache
-                        .entry(tex_path)
+                        .entry((tex_path, addr_key))
                         .or_insert_with(|| images.add(image))
                         .clone();
                     return finish_shape_textured_part(
@@ -2878,6 +2906,7 @@ mod tests {
                 false,
                 false,
                 None,
+                None,
             );
             (handle, has_texture, is_transparent)
         };
@@ -2968,6 +2997,7 @@ mod tests {
                 false,
                 false,
                 None,
+                None,
             );
             (handle, is_transparent)
         };
@@ -2994,6 +3024,7 @@ mod tests {
                 None,
                 false,
                 false,
+                None,
                 None,
             );
             (handle, ())

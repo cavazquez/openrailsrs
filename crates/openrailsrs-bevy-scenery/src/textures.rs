@@ -4,11 +4,14 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
-use bevy::image::{CompressedImageFormats, Image, ImageSampler, ImageType};
+use bevy::image::{
+    CompressedImageFormats, Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor,
+    ImageType,
+};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
-use openrailsrs_formats::resolve_path_case_insensitive;
+use openrailsrs_formats::{MstsTexAddrMode, msts_tex_addr_mode, resolve_path_case_insensitive};
 
 /// Estación activa (paridad Open Rails `SeasonType`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -549,7 +552,34 @@ fn resolve_texture_path_legacy(route_dir: &Path, file_name: &str) -> Option<Path
     )
 }
 
+/// Bevy address mode for OR `TexAddrMode` (default Wrap → Repeat).
+pub fn image_address_mode_from_msts(raw: Option<i32>) -> ImageAddressMode {
+    match raw.and_then(msts_tex_addr_mode).unwrap_or(MstsTexAddrMode::Wrap) {
+        MstsTexAddrMode::Wrap => ImageAddressMode::Repeat,
+        MstsTexAddrMode::Mirror => ImageAddressMode::MirrorRepeat,
+        MstsTexAddrMode::Clamp => ImageAddressMode::ClampToEdge,
+        MstsTexAddrMode::Border => ImageAddressMode::ClampToBorder,
+    }
+}
+
+/// Apply OR texture address mode to a Bevy [`Image`] sampler (U+V).
+pub fn apply_tex_addr_mode(image: &mut Image, tex_addr_mode: Option<i32>) {
+    let addr = image_address_mode_from_msts(tex_addr_mode);
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: addr,
+        address_mode_v: addr,
+        ..Default::default()
+    });
+}
+
 pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
+    decode_dds_to_image_with_addr(bytes, None)
+}
+
+pub fn decode_dds_to_image_with_addr(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+) -> Result<Image, String> {
     let mut image = Image::from_buffer(
         bytes,
         ImageType::Extension("dds"),
@@ -559,26 +589,24 @@ pub fn decode_dds_to_image(bytes: &[u8]) -> Result<Image, String> {
         RenderAssetUsages::default(),
     )
     .map_err(|e| e.to_string())?;
-
-    image.sampler = bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
-        address_mode_u: bevy::image::ImageAddressMode::Repeat,
-        address_mode_v: bevy::image::ImageAddressMode::Repeat,
-        ..Default::default()
-    });
-
+    apply_tex_addr_mode(&mut image, tex_addr_mode);
     Ok(image)
 }
 
 /// Decodifica `.ace` o `.dds` a `Image` Bevy (descomprimido para poder leer sus píxeles).
 /// Decodifica `.ace` o `.dds` a `Image` Bevy.
 pub fn load_texture_image(path: &Path) -> Option<Image> {
+    load_texture_image_with_addr(path, None)
+}
+
+pub fn load_texture_image_with_addr(path: &Path, tex_addr_mode: Option<i32>) -> Option<Image> {
     let ext = path.extension()?.to_str()?.to_ascii_lowercase();
     if ext == "dds" {
         let bytes = std::fs::read(path).ok()?;
-        return decode_dds_to_image(&bytes).ok();
+        return decode_dds_to_image_with_addr(&bytes, tex_addr_mode).ok();
     }
     let ace = read_ace(path).ok()?;
-    Some(ace_to_image(&ace))
+    Some(ace_to_image_with_addr(&ace, tex_addr_mode))
 }
 
 pub enum DdsAlpha {
@@ -619,6 +647,10 @@ pub fn load_ace_file(path: &Path) -> Option<AceFile> {
 }
 
 pub fn ace_to_image(ace: &AceFile) -> Image {
+    ace_to_image_with_addr(ace, None)
+}
+
+pub fn ace_to_image_with_addr(ace: &AceFile, tex_addr_mode: Option<i32>) -> Image {
     let mips = if ace.mips.is_empty() {
         vec![openrailsrs_ace::AceMipLevel {
             width: ace.width,
@@ -648,17 +680,37 @@ pub fn ace_to_image(ace: &AceFile) -> Image {
     if mips.len() > 1 {
         image.texture_descriptor.mip_level_count = mips.len() as u32;
     }
-    image.sampler = bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
-        address_mode_u: bevy::image::ImageAddressMode::Repeat,
-        address_mode_v: bevy::image::ImageAddressMode::Repeat,
-        ..default()
-    });
+    apply_tex_addr_mode(&mut image, tex_addr_mode);
     image
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tex_addr_modes_map_to_bevy_samplers() {
+        assert!(matches!(
+            image_address_mode_from_msts(Some(1)),
+            ImageAddressMode::Repeat
+        ));
+        assert!(matches!(
+            image_address_mode_from_msts(Some(2)),
+            ImageAddressMode::MirrorRepeat
+        ));
+        assert!(matches!(
+            image_address_mode_from_msts(Some(3)),
+            ImageAddressMode::ClampToEdge
+        ));
+        assert!(matches!(
+            image_address_mode_from_msts(Some(4)),
+            ImageAddressMode::ClampToBorder
+        ));
+        assert!(matches!(
+            image_address_mode_from_msts(None),
+            ImageAddressMode::Repeat
+        ));
+    }
 
     fn chiltern_route() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern")

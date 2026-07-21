@@ -34,6 +34,8 @@ pub struct ShapePart {
     pub shader_name: Option<String>,
     /// OR `vtx_state.LightMatIdx` (Specular25/750, HalfBright, …).
     pub light_mat_idx: Option<i32>,
+    /// OR first `uv_op.TexAddrMode` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
+    pub tex_addr_mode: Option<i32>,
     /// Color por vértice (RGBA lineal) cuando el shape no tiene textura.
     pub colors: Option<Vec<[f32; 4]>>,
     /// Color uniforme si todos los vértices comparten el mismo tono.
@@ -225,6 +227,7 @@ fn build_parts_for_level(shape: &ShapeFile, level: &DistanceLevel) -> Vec<ShapeP
                     .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
                     .cloned(),
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
+                tex_addr_mode: shape.tex_addr_mode_for_prim_state(prim_state_idx),
                 colors,
                 solid_color,
             }

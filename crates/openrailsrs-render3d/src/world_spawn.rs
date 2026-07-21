@@ -16,9 +16,9 @@ use crate::stream::TileContent;
 use crate::terrain::{PatchGeometry, TileGeometry};
 use crate::textures::{
     TextureEnvironment, TextureFlags, global_assets_dirs, index_textures_tree,
-    index_trainset_textures, load_ace_file, load_texture_image, resolve_shape_path,
-    resolve_shape_path_in_dirs, resolve_texture_with_index, shape_search_dirs, shape_texture_flags,
-    texture_search_dirs_for_shape,
+    index_trainset_textures, load_ace_file, load_texture_image, load_texture_image_with_addr,
+    resolve_shape_path, resolve_shape_path_in_dirs, resolve_texture_with_index, shape_search_dirs,
+    shape_texture_flags, texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
 use openrailsrs_or_shader::standard_pbr::{
@@ -471,11 +471,12 @@ fn normalize_alpha_mode(mode: AlphaMode, texture_name: &str) -> AlphaMode {
     }
 }
 
-fn prepared_ace(
+fn prepared_ace_with_addr(
     ace: &AceFile,
     texture_name: &str,
     alpha_mode: AlphaMode,
     lit: bool,
+    tex_addr_mode: Option<i32>,
 ) -> PreparedAce {
     let threshold = brighten_luma_threshold(texture_name, alpha_mode);
     let mean_luma = ace_mean_luma(&ace.mip0);
@@ -484,7 +485,7 @@ fn prepared_ace(
     prepared.mip0 = mip0;
     let additive = matches!(alpha_mode, AlphaMode::Add);
     PreparedAce {
-        image: ace_to_image(&prepared),
+        image: crate::textures::ace_to_image_with_addr(&prepared, tex_addr_mode),
         tint: msts_albedo_tint(brightened, additive, mean_luma, texture_name, lit),
     }
 }
@@ -1735,6 +1736,7 @@ fn build_shape(
                     p.alpha_test_mode,
                     p.shader_name.as_deref(),
                     p.light_mat_idx,
+                    p.tex_addr_mode,
                     p.solid_color,
                     &path,
                     index,
@@ -1840,6 +1842,7 @@ fn ukfs_untextured_material(
         part.alpha_test_mode,
         Some("TexDiff"),
         part.light_mat_idx,
+        part.tex_addr_mode,
         None,
         shape_path,
         index,
@@ -1932,6 +1935,7 @@ fn texture_material(
     alpha_test_mode: i32,
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
+    tex_addr_mode: Option<i32>,
     solid_color: Option<[f32; 3]>,
     shape_path: &Path,
     index: &AssetIndex,
@@ -2012,8 +2016,11 @@ fn texture_material(
         let lm = light_mat_idx
             .map(|i| i.to_string())
             .unwrap_or_else(|| "_".into());
+        let am = tex_addr_mode
+            .map(|i| i.to_string())
+            .unwrap_or_else(|| "1".into());
         format!(
-            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:lm={lm}:or={}",
+            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:lm={lm}:am={am}:or={}",
             tex_path.display(),
             use_or_shaders as u8
         )
@@ -2028,6 +2035,7 @@ fn texture_material(
                     name,
                     shader_name,
                     light_mat_idx,
+                    tex_addr_mode,
                     solid_color,
                     is_dds,
                     &tex_path,
@@ -2053,6 +2061,7 @@ fn texture_material(
                 name,
                 shader_name,
                 light_mat_idx,
+                tex_addr_mode,
                 solid_color,
                 is_dds,
                 &tex_path,
@@ -2074,6 +2083,7 @@ fn build_textured_standard_material(
     name: &str,
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
+    tex_addr_mode: Option<i32>,
     solid_color: Option<[f32; 3]>,
     is_dds: bool,
     tex_path: &Path,
@@ -2085,7 +2095,7 @@ fn build_textured_standard_material(
     lit: bool,
 ) -> Handle<StandardMaterial> {
     if is_dds {
-        let Some(image) = load_texture_image(tex_path) else {
+        let Some(image) = load_texture_image_with_addr(tex_path, tex_addr_mode) else {
             tex_stats.record_decode_failed(shape_file, name, tex_path);
             return untextured.clone();
         };
@@ -2153,7 +2163,7 @@ fn build_textured_standard_material(
                 &format!("{final_alpha:?}"),
             );
         }
-        let prep = prepared_ace(&ace, name, final_alpha, lit);
+        let prep = prepared_ace_with_addr(&ace, name, final_alpha, lit, tex_addr_mode);
         let tint = finalize_scenery_tint(
             name,
             apply_shader_vertex_tint(prep.tint, solid_color, shader_name),
@@ -2219,6 +2229,7 @@ fn build_textured_or_material(
     name: &str,
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
+    tex_addr_mode: Option<i32>,
     solid_color: Option<[f32; 3]>,
     is_dds: bool,
     tex_path: &Path,
@@ -2233,7 +2244,7 @@ fn build_textured_or_material(
 ) -> Handle<OrSceneryMaterial> {
     let night_texture = name.to_ascii_lowercase().contains("night");
     if is_dds {
-        let Some(image) = load_texture_image(tex_path) else {
+        let Some(image) = load_texture_image_with_addr(tex_path, tex_addr_mode) else {
             tex_stats.record_decode_failed(shape_file, name, tex_path);
             return or_scenery_fallback(
                 or_materials,
@@ -2303,7 +2314,7 @@ fn build_textured_or_material(
             },
             name,
         );
-        let prep = prepared_ace(&ace, name, final_alpha, lit);
+        let prep = prepared_ace_with_addr(&ace, name, final_alpha, lit, tex_addr_mode);
         let tint = finalize_scenery_tint(
             name,
             apply_shader_vertex_tint(prep.tint, solid_color, shader_name),
@@ -2607,7 +2618,7 @@ mod tests {
             has_mask_channel: false,
             alpha_bits: 8,
         };
-        let prep = prepared_ace(&ace, "brick.ace", AlphaMode::Opaque, false);
+        let prep = prepared_ace_with_addr(&ace, "brick.ace", AlphaMode::Opaque, false, None);
         assert_eq!(
             prep.tint,
             msts_albedo_tint(false, false, ace_mean_luma(&ace.mip0), "brick.ace", false)

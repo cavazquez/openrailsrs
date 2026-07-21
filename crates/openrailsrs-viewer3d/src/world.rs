@@ -57,7 +57,7 @@ pub struct WorldShapeLodCache {
     /// Primary spawn assets (Bevy handles) keyed by canonical `.s` path.
     pub shape_assets: HashMap<PathBuf, ShapeRenderAsset>,
     /// Decoded ACE → `Handle<Image>` shared across builds/streams.
-    pub texture_images: HashMap<PathBuf, Handle<Image>>,
+    pub texture_images: HashMap<(PathBuf, i32), Handle<Image>>,
     pub session_hits: u64,
     pub session_misses: u64,
     pub session_evictions: u64,
@@ -1133,7 +1133,7 @@ pub struct WorldSpawnProgress {
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
     parsed_shape_files: std::collections::HashMap<PathBuf, ShapeFile>,
     shape_lod_assets: std::collections::HashMap<PathBuf, Vec<ShapeRenderAsset>>,
-    texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>>,
+    texture_image_cache: std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     asset_build_index: usize,
     instance_paths: Vec<PathBuf>,
     build_queue_index: usize,
@@ -1224,10 +1224,10 @@ fn hydrate_spawn_from_session(progress: &mut WorldSpawnProgress, session: &mut W
     }
     progress.session_hydrated = true;
 
-    for (path, handle) in &session.texture_images {
+    for (key, handle) in &session.texture_images {
         progress
             .texture_image_cache
-            .entry(path.clone())
+            .entry(key.clone())
             .or_insert_with(|| handle.clone());
     }
 
@@ -1339,14 +1339,14 @@ fn evict_unreferenced_world_shapes(
     }
 
     let mut textures_evicted = 0usize;
-    let stale_textures: Vec<PathBuf> = session
+    let stale_textures: Vec<(PathBuf, i32)> = session
         .texture_images
         .iter()
         .filter(|(_, handle)| !still_needed_images.contains(&handle.id()))
-        .map(|(path, _)| path.clone())
+        .map(|(key, _)| key.clone())
         .collect();
-    for path in stale_textures {
-        if let Some(handle) = session.texture_images.remove(&path) {
+    for key in stale_textures {
+        if let Some(handle) = session.texture_images.remove(&key) {
             images.remove(handle.id());
             textures_evicted += 1;
         }
@@ -1767,7 +1767,7 @@ fn build_world_shape_asset(
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
-    texture_image_cache: &mut std::collections::HashMap<PathBuf, Handle<Image>>,
+    texture_image_cache: &mut std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     fallback_color: Color,
     fallback_material: &Handle<StandardMaterial>,
@@ -1829,7 +1829,7 @@ fn build_shape_lod_assets(
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
-    texture_image_cache: &mut std::collections::HashMap<PathBuf, Handle<Image>>,
+    texture_image_cache: &mut std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     fallback_color: Color,
     _fallback_material: &Handle<StandardMaterial>,
@@ -1930,9 +1930,12 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
         progress.texture_paths.sort_unstable();
         progress.texture_paths.dedup();
         // Skip ACE decode when the Image handle is already in the session cache (#50).
-        progress
-            .texture_paths
-            .retain(|p| !progress.texture_image_cache.contains_key(p));
+        progress.texture_paths.retain(|p| {
+            !progress
+                .texture_image_cache
+                .keys()
+                .any(|(path, _)| path == p)
+        });
         false
     } else {
         true
@@ -2816,7 +2819,7 @@ pub fn spawn_world_boxes(
     let base = scene.bounds.edge_radius().max(2.0) * 1.5;
     let mut shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset> =
         std::collections::HashMap::new();
-    let mut texture_image_cache: std::collections::HashMap<PathBuf, Handle<Image>> =
+    let mut texture_image_cache: std::collections::HashMap<(PathBuf, i32), Handle<Image>> =
         std::collections::HashMap::new();
     let mut shape_instances: std::collections::HashMap<PathBuf, Vec<Transform>> =
         std::collections::HashMap::new();
@@ -3521,10 +3524,10 @@ mod tests {
         );
         session
             .texture_images
-            .insert(PathBuf::from("shared.ace"), shared_tex.clone());
+            .insert((PathBuf::from("shared.ace"), 1), shared_tex.clone());
         session
             .texture_images
-            .insert(PathBuf::from("drop.ace"), drop_tex.clone());
+            .insert((PathBuf::from("drop.ace"), 1), drop_tex.clone());
         session
             .shapes
             .insert(keep_path.clone(), ShapeFile::default());
@@ -3544,8 +3547,12 @@ mod tests {
         assert_eq!(textures, 1);
         assert!(session.shape_assets.contains_key(&keep_path));
         assert!(!session.shape_assets.contains_key(&drop_path));
-        assert!(session.texture_images.contains_key(Path::new("shared.ace")));
-        assert!(!session.texture_images.contains_key(Path::new("drop.ace")));
+        assert!(session
+            .texture_images
+            .contains_key(&(PathBuf::from("shared.ace"), 1)));
+        assert!(!session
+            .texture_images
+            .contains_key(&(PathBuf::from("drop.ace"), 1)));
         assert!(meshes.get(keep_mesh.id()).is_some());
         assert!(meshes.get(drop_mesh.id()).is_none());
         assert!(images.get(shared_tex.id()).is_some());

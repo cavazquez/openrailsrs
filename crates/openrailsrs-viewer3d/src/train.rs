@@ -214,7 +214,7 @@ pub fn spawn_train_markers(
     let fallback_y = ground_y_at(terrain_ref, graph_world.x, graph_world.z, &scene);
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let mut shape_cache: ShapeCache = HashMap::new();
-    let mut texture_cache: HashMap<PathBuf, Handle<Image>> = HashMap::new();
+    let mut texture_cache: HashMap<(PathBuf, i32), Handle<Image>> = HashMap::new();
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
 
@@ -428,7 +428,7 @@ fn load_vehicle_shape_assets(
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
-    texture_cache: &mut HashMap<PathBuf, Handle<Image>>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
 ) -> ShapeRenderAsset {
     // Open Rails resolves rolling-stock textures from ReferencePath (trainset root),
