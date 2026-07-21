@@ -5,9 +5,7 @@ use std::path::PathBuf;
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
 use openrailsrs_ace::AceFile;
-use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, ShapeFile, TerrainFile, WorldFile,
-};
+use openrailsrs_formats::{ElevationGrid, FeatureGrid, ShapeFile, TerrainFile, WorldFile};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

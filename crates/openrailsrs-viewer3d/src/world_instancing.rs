@@ -18,6 +18,7 @@ use bevy::pbr::{
 };
 use bevy::prelude::*;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
+use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy::render::mesh::allocator::MeshAllocator;
 use bevy::render::mesh::{RenderMesh, RenderMeshBufferInfo};
 use bevy::render::render_asset::RenderAssets;
@@ -30,7 +31,6 @@ use bevy::render::render_resource::*;
 use bevy::render::renderer::RenderDevice;
 use bevy::render::sync_component::SyncComponent;
 use bevy::render::sync_world::MainEntity;
-use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy::render::view::ExtractedView;
 use bevy::render::{Render, RenderApp, RenderStartup, RenderSystems};
 use bevy::shader::Shader;
@@ -134,7 +134,7 @@ pub struct WorldInstancedGroup {
 }
 
 /// 1×1 white fallback when a part has no albedo texture.
-#[derive(Resource, Clone, ExtractResource)]
+#[derive(Resource, Clone, ExtractResource, Default)]
 pub struct WorldInstancingWhiteImage(pub Handle<Image>);
 
 /// Plugin: extract instance buffers and draw via a specialized mesh pipeline.
@@ -189,19 +189,15 @@ fn init_white_image(
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    image.texture_descriptor.usage =
-        TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
+    image.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
     white.0 = images.add(image);
 }
 
-impl Default for WorldInstancingWhiteImage {
-    fn default() -> Self {
-        Self(Handle::default())
-    }
-}
-
 /// Build a union AABB covering all instance translations with a margin for mesh extent.
-pub fn instances_aabb(instances: &[WorldInstanceData], margin: f32) -> bevy::camera::primitives::Aabb {
+pub fn instances_aabb(
+    instances: &[WorldInstanceData],
+    margin: f32,
+) -> bevy::camera::primitives::Aabb {
     let mut min = Vec3::splat(f32::MAX);
     let mut max = Vec3::splat(f32::MIN);
     for inst in instances {
@@ -215,7 +211,10 @@ pub fn instances_aabb(instances: &[WorldInstanceData], margin: f32) -> bevy::cam
             Vec3::splat(margin),
         );
     }
-    bevy::camera::primitives::Aabb::from_min_max(min - Vec3::splat(margin), max + Vec3::splat(margin))
+    bevy::camera::primitives::Aabb::from_min_max(
+        min - Vec3::splat(margin),
+        max + Vec3::splat(margin),
+    )
 }
 
 /// Spawn bundle helpers for the progressive WORLD queue.
@@ -404,6 +403,7 @@ fn prepare_world_instance_bind_groups(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn queue_world_instanced(
     opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
     custom_pipeline: Res<WorldInstancingPipeline>,
@@ -621,8 +621,7 @@ pub fn update_world_instanced_lod(
             .map(|a| gt.transform_point(a.center.into()))
             .unwrap_or_else(|| gt.translation());
         let instance_dist = cam_dist + center.distance(focus_pos);
-        let new_lod =
-            lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
+        let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
         if new_lod == group.lod_idx {
             continue;
         }
@@ -686,7 +685,9 @@ mod tests {
 
     #[test]
     fn four_opaque_placements_same_tile_meet_min() {
-        assert!(WORLD_INSTANCING_MIN <= 4);
+        const {
+            assert!(WORLD_INSTANCING_MIN <= 4);
+        }
         let placements: Vec<ShapeInstancePlacement> = (0..4)
             .map(|i| ShapeInstancePlacement {
                 transform: Transform::from_xyz(i as f32, 0.0, 0.0),
@@ -715,7 +716,9 @@ mod tests {
             appearance_from_standard_material(&materials, &opaque).alpha_cutoff,
             0.0
         );
-        assert!((appearance_from_standard_material(&materials, &mask).alpha_cutoff - 0.78).abs() < 1e-5);
+        assert!(
+            (appearance_from_standard_material(&materials, &mask).alpha_cutoff - 0.78).abs() < 1e-5
+        );
     }
 
     #[test]

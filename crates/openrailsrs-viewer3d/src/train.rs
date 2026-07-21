@@ -12,8 +12,8 @@ use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, resolve_shape_path_in_dirs,
-    vehicle_shape_local_transform, vehicle_texture_search_dirs,
+    RouteAssets, ShapeRenderAsset, resolve_shape_path_in_dirs, vehicle_shape_local_transform,
+    vehicle_texture_search_dirs,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
@@ -346,10 +346,11 @@ pub fn spawn_train_markers(
                                                     min_y = min_y.min(p[1]);
                                                     max_y = max_y.max(p[1]);
                                                 }
-                                                ((max_y - min_y) * 0.25)
-                                                    .clamp(0.25, 0.75)
+                                                ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
                                             })
-                                            .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M)
+                                            .unwrap_or(
+                                                crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M,
+                                            )
                                     })
                                     .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
                                 let local = meshes
@@ -548,6 +549,7 @@ pub fn advance_replay_time(time: Res<Time>, mut replay: ResMut<ReplayState>) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_train_markers(
     scene: Res<TrackScene>,
     offset: Res<RouteWorldOffset>,

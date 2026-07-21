@@ -946,7 +946,10 @@ pub fn read_y_raw(path: &Path, params: &TerrainSamples) -> Result<ElevationGrid,
 }
 
 /// Decode `_Y.RAW` bytes (same rules as [`read_y_raw`]).
-pub fn read_y_raw_bytes(bytes: &[u8], params: &TerrainSamples) -> Result<ElevationGrid, FormatError> {
+pub fn read_y_raw_bytes(
+    bytes: &[u8],
+    params: &TerrainSamples,
+) -> Result<ElevationGrid, FormatError> {
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)
@@ -1005,7 +1008,10 @@ pub fn read_f_raw(path: &Path, params: &TerrainSamples) -> Result<FeatureGrid, F
 }
 
 /// Decode `_F.RAW` bytes (same rules as [`read_f_raw`]).
-pub fn read_f_raw_bytes(bytes: Vec<u8>, params: &TerrainSamples) -> Result<FeatureGrid, FormatError> {
+pub fn read_f_raw_bytes(
+    bytes: Vec<u8>,
+    params: &TerrainSamples,
+) -> Result<FeatureGrid, FormatError> {
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)

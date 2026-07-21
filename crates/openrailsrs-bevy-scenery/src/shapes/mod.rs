@@ -53,7 +53,5 @@ pub use mesh::{
     render3d_world_mesh_options, shader_name_for_prim_state, shape_normal_is_usable,
     texture_for_prim_state, write_mesh_wavefront, write_shape_wavefront_from_path,
 };
-pub use pbr_sidecar::{
-    ShapePbrSidecar, load_shape_pbr_sidecar, shape_pbr_sidecar_path,
-};
 pub use openrailsrs_or_shader::coordinates::shape_point_to_bevy;
+pub use pbr_sidecar::{ShapePbrSidecar, load_shape_pbr_sidecar, shape_pbr_sidecar_path};

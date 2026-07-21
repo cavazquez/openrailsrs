@@ -93,12 +93,7 @@ pub fn clip_segment_to_box(
     if t0 > t1 {
         return None;
     }
-    Some((
-        ax + t0 * dx,
-        az + t0 * dz,
-        ax + t1 * dx,
-        az + t1 * dz,
-    ))
+    Some((ax + t0 * dx, az + t0 * dz, ax + t1 * dx, az + t1 * dz))
 }
 
 /// Clipped ribbon endpoints in scene XZ for one world-space chord.
@@ -112,11 +107,7 @@ pub fn ribbon_scene_segment(
 ) -> Option<(f32, f32, f32, f32)> {
     let (ax, az) = world_to_scene_xz(start, center_tile_x, center_tile_z, tile_size_m);
     let (bx, bz) = world_to_scene_xz(end, center_tile_x, center_tile_z, tile_size_m);
-    if ax.abs() > bound_m
-        && az.abs() > bound_m
-        && bx.abs() > bound_m
-        && bz.abs() > bound_m
-    {
+    if ax.abs() > bound_m && az.abs() > bound_m && bx.abs() > bound_m && bz.abs() > bound_m {
         return None;
     }
     clip_segment_to_box(ax, az, bx, bz, bound_m)

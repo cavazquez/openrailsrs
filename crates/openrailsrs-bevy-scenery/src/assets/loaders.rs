@@ -54,12 +54,13 @@ impl AssetLoader for MstsShapeAssetLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let shape = ShapeFile::from_bytes(&bytes).map_err(|e| MstsAssetError::ShapeParse {
             path: path.clone(),
             message: e.to_string(),
@@ -91,12 +92,13 @@ impl AssetLoader for MstsAceAssetLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let ace = AceFile::read_bytes(&bytes).map_err(|e| MstsAssetError::AceDecode {
             path: path.clone(),
             message: e.to_string(),
@@ -128,12 +130,13 @@ impl AssetLoader for MstsWorldTileAssetLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let hint = Path::new(load_context.path().path());
         let world =
             WorldFile::from_bytes(&bytes, Some(hint)).map_err(|e| MstsAssetError::WorldParse {
@@ -169,12 +172,13 @@ impl AssetLoader for MstsRouteCatalogLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let value: JsonValue =
             serde_json::from_slice(&bytes).map_err(|e| MstsAssetError::CatalogParse {
                 path: path.clone(),
@@ -209,12 +213,13 @@ impl AssetLoader for MstsTerrainTileAssetLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let hint = Path::new(load_context.path().path());
         let (tx, tz) = parse_tile_xz_from_filename(hint).unwrap_or((0, 0));
         let terrain = TerrainFile::from_bytes(&bytes, Some(hint), tx, tz).map_err(|e| {
@@ -363,12 +368,13 @@ impl AssetLoader for MstsTileBundleLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let path = path_label(load_context);
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(|source| {
-            MstsAssetError::Io {
+        reader
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|source| MstsAssetError::Io {
                 path: path.clone(),
                 source,
-            }
-        })?;
+            })?;
         let manifest: TileBundleManifest =
             serde_json::from_slice(&bytes).map_err(|e| MstsAssetError::BundleParse {
                 path: path.clone(),

@@ -10,13 +10,13 @@ use openrailsrs_formats::{
 use std::collections::{HashMap, HashSet};
 
 use crate::spawn::dyntrack::ProceduralTrackSegment;
+use crate::spawn::tdb_track::focus::{ChordCollectLimits, FocusQuery};
 use crate::spawn::tdb_track::geometry::{
     TDB_JUNCTION_BRIDGE_SECTION, TdbChord, chord_heading_and_length, point_world_vec3,
     procedural_segment_from_span, section_is_drawable, section_path_spans,
     section_single_curve_metadata, section_world_vec3, single_section_end_world,
     vector_junction_face_world,
 };
-use crate::spawn::tdb_track::focus::{ChordCollectLimits, FocusQuery};
 
 #[derive(Clone)]
 struct BranchVectorStep {
@@ -148,16 +148,11 @@ fn node_reaches_focus(
     match &node.kind {
         TrackNodeKind::Vector { sections, .. } => sections.iter().any(|s| {
             section_is_drawable(s, tsection)
-                && focus.horizontal_distance(section_world_vec3(*s, Some(focus.center))) <= focus.radius_m
+                && focus.horizontal_distance(section_world_vec3(*s, Some(focus.center)))
+                    <= focus.radius_m
         }),
         _ => node.pin_refs.iter().any(|pin| {
-            node_reaches_focus(
-                tdb,
-                pin.node_id,
-                focus,
-                hops.saturating_sub(1),
-                tsection,
-            )
+            node_reaches_focus(tdb, pin.node_id, focus, hops.saturating_sub(1), tsection)
         }),
     }
 }
@@ -1107,4 +1102,3 @@ mod tests {
         );
     }
 }
-

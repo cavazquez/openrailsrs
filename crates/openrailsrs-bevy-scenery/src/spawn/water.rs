@@ -10,7 +10,11 @@ pub const WATER_UV_TILES: f32 = 3.0;
 
 /// Build a horizontal water plane mesh of size `(width, depth)` metres.
 pub fn build_water_plane_mesh(meshes: &mut Assets<Mesh>, width: f32, depth: f32) -> Handle<Mesh> {
-    meshes.add(Plane3d::default().mesh().size(width.max(0.1), depth.max(0.1)))
+    meshes.add(
+        Plane3d::default()
+            .mesh()
+            .size(width.max(0.1), depth.max(0.1)),
+    )
 }
 
 /// Default translucent water material (apps may override fog/UV animation).

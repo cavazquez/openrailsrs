@@ -562,13 +562,8 @@ pub fn append_primitive_mesh_buffers_ex(
             .map(|vs| vs.matrix_idx)
             .unwrap_or(0)
     });
-    let matrix_chain = primitive_matrix_chain_bake_ex(
-        shape,
-        level,
-        start,
-        omit_leaf_matrix,
-        pose_matrices,
-    );
+    let matrix_chain =
+        primitive_matrix_chain_bake_ex(shape, level, start, omit_leaf_matrix, pose_matrices);
     for tri in prim.vertex_indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -644,7 +639,10 @@ pub fn shape_normal_is_usable(n: ShapeVec3) -> bool {
 }
 
 fn face_normal_from_triangle(p0: Vec3, p1: Vec3, p2: Vec3) -> Vec3 {
-    (p1 - p0).cross(p2 - p0).try_normalize().unwrap_or(Vec3::ZERO)
+    (p1 - p0)
+        .cross(p2 - p0)
+        .try_normalize()
+        .unwrap_or(Vec3::ZERO)
 }
 
 #[derive(Clone, Copy)]
@@ -1168,11 +1166,7 @@ mod tests {
             Vec::new()
         };
         let uv_for = |i: i32| {
-            if with_uvs {
-                vec![i]
-            } else {
-                Vec::new()
-            }
+            if with_uvs { vec![i] } else { Vec::new() }
         };
         ShapeFile {
             points: vec![
@@ -1281,7 +1275,10 @@ mod tests {
             })
             .expect("normals");
         for n in normals {
-            assert!((n[2] + 1.0).abs() < 1e-4, "authored Z+ became Bevy -Z: {n:?}");
+            assert!(
+                (n[2] + 1.0).abs() < 1e-4,
+                "authored Z+ became Bevy -Z: {n:?}"
+            );
         }
     }
 

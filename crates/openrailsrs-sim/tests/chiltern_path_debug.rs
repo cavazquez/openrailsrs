@@ -1,11 +1,42 @@
 //! Chiltern route path sanity (skipped when `examples/chiltern/track.toml` is absent).
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_sim::path::edge_path;
+use openrailsrs_scenarios::model::{RouteSection, SwitchDef, SwitchPositionDef};
+use openrailsrs_sim::path::resolve_route_edges;
 use openrailsrs_track::SwitchPosition;
 
-/// Minimum edges on n3 → n10770 with Birmingham Pullman switch overrides.
+/// Minimum edges on the historic n3 → n10770 corridor (OR-P6 / brake-coast).
 const MIN_PATH_EDGES: usize = 6;
+
+fn brake_coast_route() -> RouteSection {
+    RouteSection {
+        path: ".".into(),
+        start: "n3".into(),
+        destination: "n10770".into(),
+        start_offset_m: Some(305.576),
+        stops: vec![],
+        switches: vec![
+            SwitchDef {
+                node: "n10770".into(),
+                position: SwitchPositionDef::Diverging,
+            },
+            SwitchDef {
+                node: "n10780".into(),
+                position: SwitchPositionDef::Straight,
+            },
+        ],
+        // After #127 reverse edges, hop-count BFS prefers n3→n5 via e4_r.
+        waypoints: vec![
+            "n3".into(),
+            "n10780".into(),
+            "n10778".into(),
+            "n10776".into(),
+            "n10770".into(),
+        ],
+        assume_signals_clear: false,
+        edge_speed_limits: vec![],
+    }
+}
 
 #[test]
 fn chiltern_path_reaches_beyond_local_switch_back() {
@@ -17,7 +48,7 @@ fn chiltern_path_reaches_beyond_local_switch_back() {
     let mut g = load_track_graph_from_route_dir(&route_dir).unwrap();
     g.set_switch("n10770", SwitchPosition::Diverging).unwrap();
     g.set_switch("n10780", SwitchPosition::Straight).unwrap();
-    let path = edge_path(&g, "n3", "n10770").expect("path");
+    let path = resolve_route_edges(&g, &brake_coast_route()).expect("path");
     assert!(
         path.len() >= MIN_PATH_EDGES,
         "expected at least {MIN_PATH_EDGES} edges on Birmingham path, got {}: {path:?}",
@@ -43,7 +74,7 @@ fn chiltern_birmingham_stop_nodes_on_path() {
     let mut g = load_track_graph_from_route_dir(&route_dir).unwrap();
     g.set_switch("n10770", SwitchPosition::Diverging).unwrap();
     g.set_switch("n10780", SwitchPosition::Straight).unwrap();
-    let path = edge_path(&g, "n3", "n10770").expect("path");
+    let path = resolve_route_edges(&g, &brake_coast_route()).expect("path");
     let mut nodes_on_path = std::collections::HashSet::new();
     for eid in &path {
         if let Some(e) = g.edge(eid) {

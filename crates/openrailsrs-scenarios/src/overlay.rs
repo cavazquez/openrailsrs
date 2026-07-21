@@ -109,11 +109,16 @@ pub fn apply_scenario_runtime_overlay(scenario: &mut ScenarioFile, overlay: &Sce
         }
     }
     if let Some(sim) = &overlay.simulation {
-        if let Some(v) = sim.driver_brake_full_scale_psi {
-            scenario.simulation.driver_brake_full_scale_psi = Some(v);
+        // Scenario.toml wins when it already sets a scale (e.g. brake-coast identity 121 PSI).
+        if scenario.simulation.driver_brake_full_scale_psi.is_none() {
+            if let Some(v) = sim.driver_brake_full_scale_psi {
+                scenario.simulation.driver_brake_full_scale_psi = Some(v);
+            }
         }
-        if let Some(v) = sim.brake_cylinder_full_scale_psi {
-            scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
+        if scenario.simulation.brake_cylinder_full_scale_psi.is_none() {
+            if let Some(v) = sim.brake_cylinder_full_scale_psi {
+                scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
+            }
         }
     }
 }
@@ -305,6 +310,28 @@ brake_cylinder_full_scale_psi = 35.0
             Some(35.0)
         );
         assert!((scenario.brake_mapping().cylinder_full_scale_psi - 35.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn runtime_overlay_does_not_override_scenario_brake_scale() {
+        let overlay: ScenarioOverlay = toml::from_str(
+            r#"
+[simulation]
+brake_cylinder_full_scale_psi = 35.0
+driver_brake_full_scale_psi = 90.0
+"#,
+        )
+        .expect("parse overlay");
+
+        let mut scenario = minimal_scenario();
+        scenario.simulation.brake_cylinder_full_scale_psi = Some(121.0);
+        scenario.simulation.driver_brake_full_scale_psi = Some(121.0);
+        apply_scenario_runtime_overlay(&mut scenario, &overlay);
+        assert_eq!(
+            scenario.simulation.brake_cylinder_full_scale_psi,
+            Some(121.0)
+        );
+        assert_eq!(scenario.simulation.driver_brake_full_scale_psi, Some(121.0));
     }
 
     #[test]

@@ -164,11 +164,7 @@ pub struct ScenerySpawnProgress {
 }
 
 impl ScenerySpawnProgress {
-    pub fn new(
-        cycle: &ScenerySpawnCycle,
-        fraction: f32,
-        detail: impl Into<String>,
-    ) -> Self {
+    pub fn new(cycle: &ScenerySpawnCycle, fraction: f32, detail: impl Into<String>) -> Self {
         Self {
             generation: cycle.generation,
             phase: cycle.phase,
@@ -307,7 +303,10 @@ mod tests {
             cycle.begin(ScenerySpawnPhase::Objects);
         }
         app.update();
-        assert_eq!(app.world().resource::<ScenerySpawnCycle>().spawn_work_count, 1);
+        assert_eq!(
+            app.world().resource::<ScenerySpawnCycle>().spawn_work_count,
+            1
+        );
 
         app.world_mut().resource_mut::<ScenerySpawnCycle>().finish();
         app.update();

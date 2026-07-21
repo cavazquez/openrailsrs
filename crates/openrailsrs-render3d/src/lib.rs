@@ -92,8 +92,7 @@ impl Plugin for Render3dPlugin {
                 (
                     setup_loading_screen,
                     begin_load_stage.in_set(ScenerySpawnSet::Catalog),
-                    lighting::spawn_scene_sun
-                        .run_if(resource_exists::<crate::SceneExtent>),
+                    lighting::spawn_scene_sun.run_if(resource_exists::<crate::SceneExtent>),
                 )
                     .chain(),
             )

@@ -15,10 +15,7 @@ pub fn edge_path(
 }
 
 /// Apply `[route.switches]` positions onto `graph`.
-pub fn apply_route_switches(
-    graph: &mut TrackGraph,
-    route: &RouteSection,
-) -> Result<(), SimError> {
+pub fn apply_route_switches(graph: &mut TrackGraph, route: &RouteSection) -> Result<(), SimError> {
     for sw in &route.switches {
         let pos = match sw.position {
             SwitchPositionDef::Straight => SwitchPosition::Straight,
@@ -86,7 +83,9 @@ mod chiltern_path_smoke {
             return;
         }
         let g = load_track_graph_from_route_dir(&route).expect("graph");
-        assert!(edge_path(&g, "n5", "n10780").is_ok());
-        assert!(edge_path(&g, "n5", "n3").is_ok());
+        // Trailing leg e10783 stays open at n3 under default switch (stem e4_r).
+        assert!(edge_path(&g, "n3", "n10780").is_ok());
+        // Reverse of e4: n3 → n5 (stem when n3 is Straight).
+        assert!(edge_path(&g, "n3", "n5").is_ok());
     }
 }

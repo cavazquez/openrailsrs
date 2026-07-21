@@ -53,9 +53,8 @@ pub fn scatter_trees_in_patch(
     focus: &RouteFocus,
 ) -> Vec<TreePlacement> {
     let fallback_y = focus.scenery_y_to_msl(anchor.y);
-    let blocked = |x: f32, z: f32, clearance: f32| {
-        track_index.min_distance_xz(x, z, clearance) < clearance
-    };
+    let blocked =
+        |x: f32, z: f32, clearance: f32| track_index.min_distance_xz(x, z, clearance) < clearance;
     shared_scatter_trees_in_patch(
         anchor,
         patch_half_x,

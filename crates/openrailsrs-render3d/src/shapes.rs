@@ -58,7 +58,12 @@ pub fn load_shape_parts_at_distance(path: &Path, distance_m: f32) -> Option<Vec<
         distance_m,
         render3d_world_mesh_options(),
     );
-    Some(loaded.into_iter().filter_map(loaded_part_to_shape_part).collect())
+    Some(
+        loaded
+            .into_iter()
+            .filter_map(loaded_part_to_shape_part)
+            .collect(),
+    )
 }
 
 /// Carga un `.s` y construye sus partes de malla (LOD de mayor detalle).

@@ -96,7 +96,11 @@ impl MstsLoadDiagnostics {
 
     /// `requested == loaded + failed + fallback`.
     pub fn totals_ok(&self) -> bool {
-        self.requested == self.loaded.saturating_add(self.failed).saturating_add(self.fallback)
+        self.requested
+            == self
+                .loaded
+                .saturating_add(self.failed)
+                .saturating_add(self.fallback)
     }
 
     pub fn record_loaded(&mut self, _kind: MstsAssetKind) {
@@ -403,7 +407,12 @@ mod tests {
     fn totals_close_loaded_failed_fallback() {
         let mut d = MstsLoadDiagnostics::default();
         d.record_loaded(MstsAssetKind::Shape);
-        d.record_failed("missing.s", MstsAssetKind::Shape, MstsLoadCause::Missing, "gone");
+        d.record_failed(
+            "missing.s",
+            MstsAssetKind::Shape,
+            MstsLoadCause::Missing,
+            "gone",
+        );
         d.record_fallback("bad.ace", MstsAssetKind::Ace, "decode → fallback");
         assert_eq!(d.requested, 3);
         assert_eq!(d.loaded, 1);

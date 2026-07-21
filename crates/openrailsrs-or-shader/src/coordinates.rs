@@ -724,10 +724,7 @@ mod tests {
             .enumerate()
         {
             let d = (ca - cb).length();
-            assert!(
-                d < eps,
-                "col {i} diff {d} (eps {eps}): {ca:?} vs {cb:?}"
-            );
+            assert!(d < eps, "col {i} diff {d} (eps {eps}): {ca:?} vs {cb:?}");
         }
     }
 

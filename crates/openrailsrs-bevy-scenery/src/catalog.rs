@@ -355,11 +355,7 @@ mod tests {
         fs::remove_file(route.join("SHAPES/tier.s")).unwrap();
         let catalog = MstsRouteCatalog::build(&route, &msts);
         let path = catalog.resolve_shape("tier.s").unwrap();
-        assert!(
-            path.starts_with(&pack),
-            "pack > GLOBAL: {}",
-            path.display()
-        );
+        assert!(path.starts_with(&pack), "pack > GLOBAL: {}", path.display());
     }
 
     #[test]

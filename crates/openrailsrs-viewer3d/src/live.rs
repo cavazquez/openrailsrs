@@ -321,6 +321,7 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_live_train_marker(
     scene: Res<TrackScene>,
     offset: Res<crate::world::RouteWorldOffset>,
@@ -575,10 +576,7 @@ pub fn spawn_live_train(
     .unwrap_or({
         let w = scene.bounds.center + offset.delta;
         let y = ground_y_at(terrain_ref, w.x, w.z, &scene);
-        (
-            focus.to_render_surface(w + Vec3::Y * y),
-            Quat::IDENTITY,
-        )
+        (focus.to_render_surface(w + Vec3::Y * y), Quat::IDENTITY)
     });
     let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
 

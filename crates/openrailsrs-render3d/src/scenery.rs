@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::stream::TileContent;
-use bevy::math::{Affine2, Vec2};
-use bevy::prelude::*;
 use bevy::asset::RenderAssetUsages;
+use bevy::math::{Affine2, Vec2};
 use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::prelude::*;
 use openrailsrs_bevy_scenery::{
-    WATER_LIFT_M, WATER_UV_TILES, TreePlacement, scatter_trees_in_patch,
+    TreePlacement, WATER_LIFT_M, WATER_UV_TILES, scatter_trees_in_patch,
     water_material as shared_water_material, water_reflection_material,
 };
 

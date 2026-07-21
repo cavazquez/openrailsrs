@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
 use openrailsrs_ace::read_ace;
+pub use openrailsrs_bevy_scenery::terrain_shader_material_key;
 use openrailsrs_bevy_scenery::{
     sanitize_terrain_base_rgba, set_terrain_repeat_sampler, terrain_shader_overlay_scale,
 };
-pub use openrailsrs_bevy_scenery::terrain_shader_material_key;
 use openrailsrs_formats::TerrainShader;
 
 use crate::shapes::{ace_to_image, load_ace_image};

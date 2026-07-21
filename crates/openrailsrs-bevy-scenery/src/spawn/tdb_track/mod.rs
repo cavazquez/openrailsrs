@@ -23,7 +23,7 @@ pub use transforms::{
 };
 pub use ukfs::{
     UkfsWorldPlacement, procedural_fallback_shaped_chords, route_has_ukfs_tsection,
-    shaped_chords_from_tdb, shape_uses_ukfs_mesh, ukfs_placements_world,
+    shape_uses_ukfs_mesh, shaped_chords_from_tdb, ukfs_placements_world,
 };
 
 use std::collections::hash_map::DefaultHasher;
@@ -88,9 +88,6 @@ mod hash_tests {
             curve_radius_m: None,
             curve_angle_deg: None,
         };
-        assert_eq!(
-            tdb_chord_geometry_hash(&[c]),
-            tdb_chord_geometry_hash(&[c])
-        );
+        assert_eq!(tdb_chord_geometry_hash(&[c]), tdb_chord_geometry_hash(&[c]));
     }
 }

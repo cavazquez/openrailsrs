@@ -13,8 +13,8 @@ pub use loaders::{
 };
 pub use types::{
     MstsAceAsset, MstsAssetError, MstsRouteCatalogAsset, MstsShapeAsset, MstsTerrainTileAsset,
-    MstsTileBundleAsset, MstsWorldTileAsset, TerrainRawStatus, TileBundleManifest,
-    TileBundlePaths, TileBundleStatus, discover_tile_bundle_paths, write_tile_bundle_manifest,
+    MstsTileBundleAsset, MstsWorldTileAsset, TerrainRawStatus, TileBundleManifest, TileBundlePaths,
+    TileBundleStatus, discover_tile_bundle_paths, write_tile_bundle_manifest,
 };
 
 use bevy::asset::io::{AssetSourceBuilder, AssetSourceId};
@@ -162,8 +162,7 @@ mod tests {
                         "error should mention parse cause: {msg}"
                     );
                     assert!(
-                        lower.contains("msts/_corrupt_test.s")
-                            || lower.contains("corrupt_test"),
+                        lower.contains("msts/_corrupt_test.s") || lower.contains("corrupt_test"),
                         "error should include path: {msg}"
                     );
                     let _ = std::fs::remove_file(&bad);
@@ -251,11 +250,12 @@ mod tests {
             server.load("msts/tiles/complete/complete.tilebundle");
         wait_loaded(&mut app, &handle, "complete for unload");
         let id = handle.id();
-        assert!(app
-            .world()
-            .resource::<Assets<MstsTileBundleAsset>>()
-            .get(id)
-            .is_some());
+        assert!(
+            app.world()
+                .resource::<Assets<MstsTileBundleAsset>>()
+                .get(id)
+                .is_some()
+        );
 
         drop(handle);
         // Allow Bevy to process dropped strong handles.

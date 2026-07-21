@@ -79,10 +79,7 @@ mod tests {
 
     #[test]
     fn patch_offset_is_index_times_128m() {
-        assert_eq!(
-            terrain_patch_offset_in_tile(0, 0),
-            Vec3::new(0.0, 0.0, 0.0)
-        );
+        assert_eq!(terrain_patch_offset_in_tile(0, 0), Vec3::new(0.0, 0.0, 0.0));
         assert_eq!(
             terrain_patch_offset_in_tile(1, 0),
             Vec3::new(TERRAIN_PATCH_SIZE_M, 0.0, 0.0)

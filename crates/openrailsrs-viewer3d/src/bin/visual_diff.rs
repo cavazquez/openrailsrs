@@ -116,11 +116,7 @@ fn main() -> ExitCode {
                     out.put_pixel(x, y, Rgba([255, 32, 32, 255]));
                 } else {
                     // Dim actual for context.
-                    out.put_pixel(
-                        x,
-                        y,
-                        Rgba([a[0] / 3, a[1] / 3, a[2] / 3, 255]),
-                    );
+                    out.put_pixel(x, y, Rgba([a[0] / 3, a[1] / 3, a[2] / 3, 255]));
                 }
             }
         }

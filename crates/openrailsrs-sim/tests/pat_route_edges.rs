@@ -61,7 +61,10 @@ fn chiltern_pat_waypoints_build_connected_chain() {
     );
     assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
     assert_eq!(hints.start, "n17368");
-    assert_ne!(hints.destination, "n17381", "must not stop at the 3-node stub sink");
+    assert_ne!(
+        hints.destination, "n17381",
+        "must not stop at the 3-node stub sink"
+    );
 }
 
 #[test]

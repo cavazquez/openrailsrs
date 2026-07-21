@@ -6,13 +6,13 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 #[cfg(test)]
+use openrailsrs_formats::TerrainMeshData;
+#[cfg(test)]
 use openrailsrs_formats::parse_world_w_tile_xz;
 use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, TerrainFile, msts_tile_world_origin,
-    msts_tile_x_index_for_coord, msts_tile_z_index_for_coord, parse_tile_xz_from_filename,
+    ElevationGrid, FeatureGrid, TerrainFile, msts_tile_world_origin, msts_tile_x_index_for_coord,
+    msts_tile_z_index_for_coord, parse_tile_xz_from_filename,
 };
-#[cfg(test)]
-use openrailsrs_formats::TerrainMeshData;
 
 use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
 #[cfg(test)]
@@ -25,8 +25,8 @@ use crate::world::MSTS_TILE_SIZE_M;
 
 pub use crate::terrain_spawn::{
     TerrainTileStream, init_terrain_spawn_progress, progressive_terrain_spawn_system,
-    spawn_terrain_meshes, terrain_tile_bundle_materialize_system,
-    terrain_tile_spawn_stream_system, terrain_tile_stream_system, terrain_tile_unload_system,
+    spawn_terrain_meshes, terrain_tile_bundle_materialize_system, terrain_tile_spawn_stream_system,
+    terrain_tile_stream_system, terrain_tile_unload_system,
 };
 
 #[derive(Clone)]

@@ -165,9 +165,7 @@ where
     /// Insert or replace value; preserves existing tile refs when replacing.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         match self.entries.entry(key) {
-            Entry::Occupied(mut o) => {
-                Some(std::mem::replace(&mut o.get_mut().value, value))
-            }
+            Entry::Occupied(mut o) => Some(std::mem::replace(&mut o.get_mut().value, value)),
             Entry::Vacant(v) => {
                 v.insert(CacheEntry {
                     value,
@@ -214,10 +212,7 @@ where
         };
         entry.ever_retained = true;
         if entry.tiles.insert(tile) {
-            self.tile_keys
-                .entry(tile)
-                .or_default()
-                .insert(key.clone());
+            self.tile_keys.entry(tile).or_default().insert(key.clone());
         }
     }
 

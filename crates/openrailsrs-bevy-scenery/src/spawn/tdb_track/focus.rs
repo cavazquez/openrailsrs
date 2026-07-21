@@ -26,8 +26,7 @@ impl FocusQuery {
 
     /// True when either endpoint lies inside the radius.
     pub fn reaches_segment(&self, a: Vec3, b: Vec3) -> bool {
-        self.horizontal_distance(a) <= self.radius_m
-            || self.horizontal_distance(b) <= self.radius_m
+        self.horizontal_distance(a) <= self.radius_m || self.horizontal_distance(b) <= self.radius_m
     }
 
     /// Focus covering a tile of `tile_size_m` plus `margin_m` and optional

@@ -103,7 +103,7 @@ pub fn matrix_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> usiz
         .unwrap_or(0)
 }
 
-pub fn matrix_name<'a>(shape: &'a ShapeFile, matrix_idx: usize) -> &'a str {
+pub fn matrix_name(shape: &ShapeFile, matrix_idx: usize) -> &str {
     shape
         .matrices
         .get(matrix_idx)
@@ -139,6 +139,7 @@ fn stub_key_for_kind(kind: RollingStockPartKind, shape: &ShapeFile) -> f32 {
 }
 
 /// Build anim components for one exterior part, if the matrix name is animated.
+#[allow(clippy::type_complexity)]
 pub fn part_anim_bundle(
     shape: &ShapeFile,
     prim_state_idx: i32,
@@ -193,14 +194,7 @@ pub fn part_anim_bundle(
         kind,
         key: stub_key_for_kind(kind, shape),
     });
-    Some((
-        TrainExteriorAnimPart,
-        kind,
-        binding,
-        wheel,
-        bogie,
-        keyed,
-    ))
+    Some((TrainExteriorAnimPart, kind, binding, wheel, bogie, keyed))
 }
 
 /// Insert anim components on a freshly spawned exterior part entity.
@@ -295,6 +289,7 @@ fn head_graph_position(
     Some((row.edge_id.clone(), row.pos_on_edge_m))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn sample_yaw_at_path_offset(
     graph: &openrailsrs_track::TrackGraph,
     live: Option<&LiveDrive>,
@@ -326,6 +321,7 @@ fn sample_yaw_at_path_offset(
 }
 
 /// Advance wheel / bogie / keyed exterior parts each frame (#40 / #69).
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_rolling_stock_part_anim(
     time: Res<Time>,
     live: Option<Res<LiveDrive>>,
@@ -489,10 +485,7 @@ mod tests {
 
     #[test]
     fn classify_matrix_names() {
-        assert_eq!(
-            classify_matrix_name("WHEELS1"),
-            RollingStockPartKind::Wheel
-        );
+        assert_eq!(classify_matrix_name("WHEELS1"), RollingStockPartKind::Wheel);
         assert_eq!(classify_matrix_name("WHEEL"), RollingStockPartKind::Wheel);
         assert_eq!(classify_matrix_name("BOGIE2"), RollingStockPartKind::Bogie);
         assert_eq!(classify_matrix_name("bogie"), RollingStockPartKind::Bogie);

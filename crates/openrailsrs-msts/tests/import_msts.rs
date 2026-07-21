@@ -717,7 +717,10 @@ fn chiltern_birmingham_import_uses_pat_placement() {
     let pat = route_dir.join("PATHS/RS_Let's go to Birmingham.pat");
     let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
     let direct = placement_from_imported_route(&out, &pat, offset).expect("direct placement");
-    assert_eq!(direct.start, "n17368", "TrackPDP world snap at Paddington platform");
+    assert_eq!(
+        direct.start, "n17368",
+        "TrackPDP world snap at Paddington platform"
+    );
     assert!(
         (direct.start_offset_m - 166.735).abs() < 1.0,
         "expected ~167 m along platform edge, got {}",

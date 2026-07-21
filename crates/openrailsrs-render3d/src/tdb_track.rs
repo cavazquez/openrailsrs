@@ -13,10 +13,9 @@ use bevy::math::{EulerRot, Quat, Vec3};
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
     ChordCollectLimits, FocusQuery, MSTS_TILE_SIZE_M, TdbChord, collect_tdb_chords as collect_ssot,
     procedural_fallback_shaped_chords, route_has_ukfs_tsection as route_has_ukfs_ssot,
-    shaped_chords_from_tdb, ukfs_placements_world, world_to_scene_xz as world_to_scene_xz_ssot,
-    world_to_tile_local as world_to_tile_local_ssot,
+    scene_xz_to_world as scene_xz_to_world_ssot, shaped_chords_from_tdb, ukfs_placements_world,
+    world_to_scene_xz as world_to_scene_xz_ssot, world_to_tile_local as world_to_tile_local_ssot,
     world_to_tile_local_centered as world_to_tile_local_centered_ssot,
-    scene_xz_to_world as scene_xz_to_world_ssot,
 };
 use openrailsrs_formats::{
     TSectionCatalog, TrackDbFile, TrackNodeKind, TrackVectorGeometry, msts_tile_x_index_for_coord,
@@ -336,14 +335,8 @@ impl TileHeightIndex {
     }
 
     /// Compatibility wrapper over a temporary slice of references.
-    pub fn new(
-        tiles: &[(i32, i32, &crate::terrain::TileHeight)],
-        center_tile: (i32, i32),
-    ) -> Self {
-        Self::from_tile_heights(
-            tiles.iter().map(|(x, z, h)| (*x, *z, *h)),
-            center_tile,
-        )
+    pub fn new(tiles: &[(i32, i32, &crate::terrain::TileHeight)], center_tile: (i32, i32)) -> Self {
+        Self::from_tile_heights(tiles.iter().map(|(x, z, h)| (*x, *z, *h)), center_tile)
     }
 
     /// Sorted `(tile_x, tile_z)` keys — fingerprint for cache invalidation (#63).
@@ -588,7 +581,10 @@ mod tests {
         let tdb = TrackDbFile::default();
         let focus = FocusQuery::new(Vec3::ZERO, 100.0);
         let chords = collect_ssot(&tdb, &focus, None, ChordCollectLimits::PER_VECTOR_ONLY);
-        assert_eq!(tdb_chord_geometry_hash(&chords), tdb_chord_geometry_hash(&[]));
+        assert_eq!(
+            tdb_chord_geometry_hash(&chords),
+            tdb_chord_geometry_hash(&[])
+        );
     }
 
     #[test]

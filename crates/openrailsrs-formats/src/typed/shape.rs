@@ -1051,7 +1051,10 @@ fn parse_uv_op(items: &[Ast]) -> Option<UvOp> {
         "uv_op_reflectmapfull" => (UvOpKind::ReflectMapFull, None),
         "uv_op_uniformscale" => (UvOpKind::UniformScale, nums.get(1).copied()),
         "uv_op_nonuniformscale" => (UvOpKind::NonUniformScale, nums.get(1).copied()),
-        other => (UvOpKind::Unsupported(other.to_string()), nums.get(1).copied()),
+        other => (
+            UvOpKind::Unsupported(other.to_string()),
+            nums.get(1).copied(),
+        ),
     };
     Some(UvOp {
         kind,
@@ -1452,7 +1455,7 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Atom, Ast};
+    use crate::ast::{Ast, Atom};
 
     #[test]
     fn parse_vertex_uv_indices_strips_msts_count_prefix() {
@@ -1530,8 +1533,9 @@ mod tests {
           )
         )
         "#;
-        let mirror = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
-            .unwrap();
+        let mirror =
+            ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+                .unwrap();
         assert_eq!(mirror.tex_addr_mode_for_prim_state(0), Some(2));
         assert_eq!(
             mirror.msts_tex_addr_mode_for_prim_state(0),

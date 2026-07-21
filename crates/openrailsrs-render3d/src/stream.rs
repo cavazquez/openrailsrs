@@ -102,21 +102,16 @@ impl StreamHeightIndexCache {
             .map(|e| (e.geometry.tile_x, e.geometry.tile_z))
             .collect();
         keys.sort_unstable();
-        let reuse = self.index.is_some()
-            && self.fingerprint == keys
-            && self.center == center;
+        let reuse = self.index.is_some() && self.fingerprint == keys && self.center == center;
         if !reuse {
             self.builds += 1;
             self.fingerprint = keys;
             self.center = center;
             self.index = Some(crate::tdb_track::TileHeightIndex::from_tile_heights(
-                catalog.entries.iter().map(|e| {
-                    (
-                        e.geometry.tile_x,
-                        e.geometry.tile_z,
-                        &e.geometry.height,
-                    )
-                }),
+                catalog
+                    .entries
+                    .iter()
+                    .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height)),
                 center,
             ));
         }
@@ -431,10 +426,12 @@ pub fn tile_stream_system(
 
     let policy = config.stream_policy();
     let center = TileCoord::from(cam_tile);
-    let loaded_coords: HashSet<TileCoord> = state.loaded.iter().copied().map(TileCoord::from).collect();
-    let candidates = catalog.entries.iter().map(|e| {
-        TileCoord::new(e.geometry.tile_x, e.geometry.tile_z)
-    });
+    let loaded_coords: HashSet<TileCoord> =
+        state.loaded.iter().copied().map(TileCoord::from).collect();
+    let candidates = catalog
+        .entries
+        .iter()
+        .map(|e| TileCoord::new(e.geometry.tile_x, e.geometry.tile_z));
     let stream_diff = policy.diff(center, &loaded_coords, candidates);
 
     let mut unloading = HashSet::new();
@@ -561,7 +558,10 @@ mod tests {
         let y0 = cache.get_or_build(&catalog, center).scene_base_y();
         let y1 = cache.get_or_build(&catalog, center).scene_base_y();
         let y2 = cache.get_or_build(&catalog, center).scene_base_y();
-        assert_eq!(cache.builds, 1, "same catalog must build TileHeightIndex once");
+        assert_eq!(
+            cache.builds, 1,
+            "same catalog must build TileHeightIndex once"
+        );
         assert_eq!(y0, y1);
         assert_eq!(y1, y2);
 

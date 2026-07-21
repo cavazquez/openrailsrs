@@ -79,12 +79,8 @@ pub fn request_route_tile_bundle(
     terrain_path: Option<&Path>,
 ) -> Option<Handle<MstsTileBundleAsset>> {
     let discovered = discover_tile_bundle_paths(route_dir, tile_x, tile_z);
-    let world = world_path
-        .map(Path::to_path_buf)
-        .or(discovered.world);
-    let terrain = terrain_path
-        .map(Path::to_path_buf)
-        .or(discovered.terrain);
+    let world = world_path.map(Path::to_path_buf).or(discovered.world);
+    let terrain = terrain_path.map(Path::to_path_buf).or(discovered.terrain);
     if world.is_none() && terrain.is_none() {
         return None;
     }
@@ -92,12 +88,8 @@ pub fn request_route_tile_bundle(
     let manifest = TileBundleManifest {
         tile_x,
         tile_z,
-        world: world
-            .as_ref()
-            .map(|p| p.to_string_lossy().into_owned()),
-        terrain: terrain
-            .as_ref()
-            .map(|p| p.to_string_lossy().into_owned()),
+        world: world.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        terrain: terrain.as_ref().map(|p| p.to_string_lossy().into_owned()),
     };
     let out_dir = route_dir.join(".openrailsrs").join("tilebundles");
     let out_path = out_dir.join(format!("{tile_x}_{tile_z}.tilebundle"));
@@ -257,9 +249,7 @@ pub fn try_materialize_terrain_bundle(
         return None;
     }
     scene.load_diag.merge_from(&bundle.diag);
-    let Some(h) = bundle.terrain.as_ref() else {
-        return None;
-    };
+    let h = bundle.terrain.as_ref()?;
     let Some(terr) = terrains.get(h) else {
         scene.load_diag.record_failed_at(
             bundle.source_path.display().to_string(),
@@ -299,7 +289,12 @@ pub enum TileBundleLoadOutcome {
 }
 
 /// Record a failed AssetServer load into scene diagnostics (#54 / #78).
-pub fn record_bundle_load_failure(diag: &mut MstsLoadDiagnostics, tile_x: i32, tile_z: i32, path: &str) {
+pub fn record_bundle_load_failure(
+    diag: &mut MstsLoadDiagnostics,
+    tile_x: i32,
+    tile_z: i32,
+    path: &str,
+) {
     diag.record_failed_at(
         path.to_string(),
         MstsAssetKind::World,
@@ -367,8 +362,7 @@ mod tests {
         let mut app = fixture_app();
         let server = app.world().resource::<AssetServer>().clone();
         let complete = request_tile_bundle(&server, "msts/tiles/complete/complete.tilebundle");
-        let missing =
-            request_tile_bundle(&server, "msts/tiles/missing_raw/missing_raw.tilebundle");
+        let missing = request_tile_bundle(&server, "msts/tiles/missing_raw/missing_raw.tilebundle");
         wait_loaded(&mut app, &complete, "complete");
         wait_loaded(&mut app, &missing, "missing_raw");
 
@@ -448,10 +442,11 @@ mod tests {
         app.world_mut()
             .resource_mut::<TileBundleHandles>()
             .release(-1000, -1000);
-        assert!(!app
-            .world()
-            .resource::<TileBundleHandles>()
-            .by_tile
-            .contains_key(&(-1000, -1000)));
+        assert!(
+            !app.world()
+                .resource::<TileBundleHandles>()
+                .by_tile
+                .contains_key(&(-1000, -1000))
+        );
     }
 }

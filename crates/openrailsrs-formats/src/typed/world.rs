@@ -52,8 +52,7 @@ impl DyntrackSection {
 
     /// Curve angle in degrees when curved (Open Rails stores arc in radians).
     pub fn curve_angle_deg(&self) -> Option<f32> {
-        self.is_curve()
-            .then_some(self.param1.to_degrees())
+        self.is_curve().then_some(self.param1.to_degrees())
     }
 
     pub fn curve_radius_m(&self) -> Option<f32> {
@@ -576,8 +575,14 @@ fn select_better_world_ast(raw: &Ast, normalized: &Ast) -> Ast {
     // Tie: prefer the parse that keeps more non-zero UiDs. Name-normalization can
     // turn JINX flat `UiD ( n ) Width ( w )` bags into forms where find_uid fails
     // (Watersnake), while classic `Name ( … )` routes usually differ in count.
-    let uids_raw = items_raw.iter().filter(|i| i.uid().unwrap_or(0) != 0).count();
-    let uids_norm = items_norm.iter().filter(|i| i.uid().unwrap_or(0) != 0).count();
+    let uids_raw = items_raw
+        .iter()
+        .filter(|i| i.uid().unwrap_or(0) != 0)
+        .count();
+    let uids_norm = items_norm
+        .iter()
+        .filter(|i| i.uid().unwrap_or(0) != 0)
+        .count();
     if uids_raw >= uids_norm {
         raw.clone()
     } else {
@@ -708,9 +713,7 @@ fn walk_watermark_entries(entries: &[Ast], watermark: &mut u32, levels: &mut Vec
                 }
             }
             // JINX Transfer wrapper: emit levels for unwrapped children (not the wrapper).
-            Ast::List(items)
-                if matches_head(items, "Transfer") && !transfer_looks_typed(items) =>
-            {
+            Ast::List(items) if matches_head(items, "Transfer") && !transfer_looks_typed(items) => {
                 walk_jinx_transfer_watermark_children(&items[1..], watermark, levels);
                 i += 1;
             }
@@ -1402,9 +1405,7 @@ fn find_platform_data(items: &[Ast]) -> Option<u32> {
 
 /// First `( TrItemId db item_id )` pair (SoundRegion / Hazard convenience).
 fn find_tr_item_id_pair(items: &[Ast]) -> Option<(u32, u32)> {
-    find_tr_item_refs(items)
-        .first()
-        .map(|r| (r.db, r.item_id))
+    find_tr_item_refs(items).first().map(|r| (r.db, r.item_id))
 }
 
 /// All `TrItemId` pairs in file order (additive; not last-wins).
@@ -2083,27 +2084,15 @@ mod platform_siding_other_tests {
         assert_eq!(
             tr_item_refs,
             &vec![
-                WorldTrItemRef {
-                    db: 0,
-                    item_id: 10
-                },
-                WorldTrItemRef {
-                    db: 0,
-                    item_id: 11
-                }
+                WorldTrItemRef { db: 0, item_id: 10 },
+                WorldTrItemRef { db: 0, item_id: 11 }
             ]
         );
         assert_eq!(world.items[0].tr_item_ids(), vec![10, 11]);
         let WorldItem::Siding { tr_item_refs, .. } = &world.items[1] else {
             panic!("Siding");
         };
-        assert_eq!(
-            tr_item_refs,
-            &vec![WorldTrItemRef {
-                db: 0,
-                item_id: 20
-            }]
-        );
+        assert_eq!(tr_item_refs, &vec![WorldTrItemRef { db: 0, item_id: 20 }]);
     }
 }
 

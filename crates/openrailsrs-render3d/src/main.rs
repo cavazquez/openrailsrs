@@ -29,8 +29,7 @@ use openrailsrs_render3d::{
     DebugHudEnabled, FlySpeed, MstsRootDir, PlayerStartPoseResource, Render3dPlugin, RouteDir,
     SceneDebugContext, SceneExtent, TdbTrackResource, TileCatalog, TileParseRequest,
     TileStreamConfig, TilesToRender, activity, fly_camera, objects, quit_on_esc, scenery, sky,
-    stream, terrain, tile_bundle, toggle_debug_hud, track, update_debug_hud,
-    update_window_title,
+    stream, terrain, tile_bundle, toggle_debug_hud, track, update_debug_hud, update_window_title,
 };
 
 #[derive(Parser, Debug)]
@@ -154,9 +153,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     let r = cli.radius;
-    println!(
-        "render3d: abriendo ventana — tile ({cx}, {cz}) r={r} (parse async #55)"
-    );
+    println!("render3d: abriendo ventana — tile ({cx}, {cz}) r={r} (parse async #55)");
     println!(
         "controles: WASD mover · Q/E bajar/subir · Shift rápido · click derecho + mouse mirar · Esc salir"
     );

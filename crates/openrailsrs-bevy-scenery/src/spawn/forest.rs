@@ -80,9 +80,7 @@ pub fn scatter_trees_in_patch(
             } else {
                 track_clearance_m
             };
-            if clearance > 0.0
-                && track_blocked.is_some_and(|blocked| blocked(x, z, clearance))
-            {
+            if clearance > 0.0 && track_blocked.is_some_and(|blocked| blocked(x, z, clearance)) {
                 continue;
             }
             let t = forest_rng01(tile_x, tile_z, uid, i, ch + 2);

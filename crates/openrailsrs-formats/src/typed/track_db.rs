@@ -1802,7 +1802,7 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].node_id, 2);
         let by_section = tdb.index_vector_sections_by_section();
-        assert!(by_section.get(&38507).is_some());
+        assert!(by_section.contains_key(&38507));
     }
 
     #[test]

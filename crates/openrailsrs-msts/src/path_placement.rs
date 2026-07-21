@@ -225,11 +225,7 @@ pub fn point_along_world_polyline(
         }
         if walked + seg >= distance_m {
             let t = ((distance_m - walked) / seg).clamp(0.0, 1.0) as f32;
-            return Some((
-                ax + t * (bx - ax),
-                ay + t * (by - ay),
-                az + t * (bz - az),
-            ));
+            return Some((ax + t * (bx - ax), ay + t * (by - ay), az + t * (bz - az)));
         }
         walked += seg;
     }
@@ -889,8 +885,7 @@ mod tests {
         }
         let path_file = PathFile::from_path(pat).expect("parse pat");
         let loaded = load_route_from_dir(&route_dir).expect("load chiltern");
-        let hints =
-            placement_from_imported_route(&route_dir, pat, 194.424).expect("placement");
+        let hints = placement_from_imported_route(&route_dir, pat, 194.424).expect("placement");
         let mut graph = loaded.graph.clone();
         for sw in &hints.switches {
             let pos = match sw.position {
@@ -935,7 +930,11 @@ mod tests {
             "path should continue via e17466_r, got {:?}",
             &pat_path[..pat_path.len().min(8)]
         );
-        assert!(wps.len() >= 10, "expected many PAT waypoints, got {}", wps.len());
+        assert!(
+            wps.len() >= 10,
+            "expected many PAT waypoints, got {}",
+            wps.len()
+        );
         assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
         assert_eq!(hints.start, "n17368");
         let spawn_dist = spawn_distance_to_pat_start(&graph, &hints, &path_file);

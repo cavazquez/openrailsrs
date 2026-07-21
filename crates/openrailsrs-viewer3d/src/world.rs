@@ -15,10 +15,9 @@ use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
     ShapeAnimBinding, ShapeAnimState, animation_playback_speed, lod_level_index_for_distance,
-    primary_texture_filename,
-    shape_has_loop_animation,
+    primary_texture_filename, shape_has_loop_animation,
 };
-use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TileBound, TileCoord, TILE_SIZE_M};
+use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TILE_SIZE_M, TileBound, TileCoord};
 use openrailsrs_bevy_scenery::{
     FnPlacementAdapter, LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
     WorldObjectPlacement, object_placement, plan_shape_part_spawns, resolve_shape_parts,
@@ -30,11 +29,11 @@ use openrailsrs_formats::{
 };
 
 use crate::camera::CameraFollowMode;
+#[cfg(test)]
+use crate::coordinates::qdir_to_quat;
 use crate::coordinates::{
     matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy,
 };
-#[cfg(test)]
-use crate::coordinates::qdir_to_quat;
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
@@ -1936,8 +1935,9 @@ fn append_shape_spawn_entries_for_transforms(
                 inst.tile_x,
                 inst.tile_z,
             );
-            let adapter =
-                FnPlacementAdapter(|p: &WorldObjectPlacement| view_transform(p.transform(), origin));
+            let adapter = FnPlacementAdapter(|p: &WorldObjectPlacement| {
+                view_transform(p.transform(), origin)
+            });
             let parts = resolve_shape_parts(
                 shape_path,
                 asset.parts.iter().enumerate().map(|(part_index, part)| {
@@ -2201,10 +2201,12 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
                 .texture_paths
                 .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
             let pbr = load_shape_pbr_sidecar(&shape_path);
-            progress.texture_paths.extend(collect_pbr_normal_map_texture_paths(
-                pbr.as_ref(),
-                &tex_refs,
-            ));
+            progress
+                .texture_paths
+                .extend(collect_pbr_normal_map_texture_paths(
+                    pbr.as_ref(),
+                    &tex_refs,
+                ));
         } else {
             progress.load_diag.record_path_failed(
                 &shape_path,
@@ -2848,7 +2850,16 @@ pub fn world_tile_bundle_materialize_system(
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct WorldUnloadQueries<'w, 's> {
-    scenery: Query<'w, 's, (Entity, &'static Transform, &'static WorldSceneryLod, Option<&'static WorldTileBound>)>,
+    scenery: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static Transform,
+            &'static WorldSceneryLod,
+            Option<&'static WorldTileBound>,
+        ),
+    >,
     tile_bound: Query<'w, 's, (Entity, &'static WorldTileBound), Without<WorldSceneryLod>>,
     instanced: Query<
         'w,
@@ -2935,12 +2946,8 @@ pub fn world_tile_unload_system(
         let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
         let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
         let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
-        let unload = scenery_entity_should_unload(
-            bound.copied(),
-            &unloaded_tiles,
-            dist,
-            unload_radius,
-        );
+        let unload =
+            scenery_entity_should_unload(bound.copied(), &unloaded_tiles, dist, unload_radius);
         if unload {
             commands.entity(entity).despawn();
             despawned += 1;
@@ -3293,11 +3300,8 @@ pub fn progressive_world_spawn_system(
                     wire.style.height_m
                 );
             }
-            let load_diag = log_world_spawn_summary(
-                &progress,
-                Some(world.as_ref()),
-                terrain.as_deref(),
-            );
+            let load_diag =
+                log_world_spawn_summary(&progress, Some(world.as_ref()), terrain.as_deref());
             commands.insert_resource(load_diag);
             commit_spawn_to_session(&mut session, &mut progress);
             cycle.finish();
@@ -4198,12 +4202,16 @@ mod tests {
         assert_eq!(textures, 1);
         assert!(session.shape_assets.contains_key(&keep_path));
         assert!(!session.shape_assets.contains_key(&drop_path));
-        assert!(session
-            .texture_images
-            .contains_key(&(PathBuf::from("shared.ace"), 1)));
-        assert!(!session
-            .texture_images
-            .contains_key(&(PathBuf::from("drop.ace"), 1)));
+        assert!(
+            session
+                .texture_images
+                .contains_key(&(PathBuf::from("shared.ace"), 1))
+        );
+        assert!(
+            !session
+                .texture_images
+                .contains_key(&(PathBuf::from("drop.ace"), 1))
+        );
         assert!(meshes.get(keep_mesh.id()).is_some());
         assert!(meshes.get(drop_mesh.id()).is_none());
         assert!(images.get(shared_tex.id()).is_some());
@@ -4347,12 +4355,7 @@ mod tests {
             100.0
         ));
         // Matching tile → unload even if close.
-        assert!(scenery_entity_should_unload(
-            Some(a),
-            &unloaded,
-            1.0,
-            100.0
-        ));
+        assert!(scenery_entity_should_unload(Some(a), &unloaded, 1.0, 100.0));
         // Legacy without bound → distance.
         assert!(scenery_entity_should_unload(None, &unloaded, 200.0, 100.0));
         assert!(!scenery_entity_should_unload(None, &unloaded, 50.0, 100.0));

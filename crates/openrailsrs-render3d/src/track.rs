@@ -114,14 +114,9 @@ pub fn build_tdb_track_ribbon_scene(
     let bound = TILE_SIZE_M * 0.5 + TILE_MARGIN_M + grid_radius as f32 * TILE_SIZE_M;
 
     for &(start, end) in chords {
-        let Some((cax, caz, cbx, cbz)) = ribbon_scene_segment(
-            start,
-            end,
-            center_tile_x,
-            center_tile_z,
-            TILE_SIZE_M,
-            bound,
-        ) else {
+        let Some((cax, caz, cbx, cbz)) =
+            ribbon_scene_segment(start, end, center_tile_x, center_tile_z, TILE_SIZE_M, bound)
+        else {
             continue;
         };
         push_segment_scene(

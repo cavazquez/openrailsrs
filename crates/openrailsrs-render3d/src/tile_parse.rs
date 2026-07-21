@@ -107,8 +107,7 @@ pub fn parse_tiles_for_load(req: TileParseRequest) -> Result<ParsedTiles, String
             .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height))
             .collect();
         let height_index = tdb_track::TileHeightIndex::new(&height_rows, (cx, cz));
-        let scene_ribbon =
-            track::build_tdb_track_ribbon(chords, cx, cz, &height_index, req.radius);
+        let scene_ribbon = track::build_tdb_track_ribbon(chords, cx, cz, &height_index, req.radius);
         if let Some(entry) = entries
             .iter_mut()
             .find(|e| e.geometry.tile_x == cx && e.geometry.tile_z == cz)
@@ -171,9 +170,7 @@ pub fn parse_tiles_for_load(req: TileParseRequest) -> Result<ParsedTiles, String
         req.consist.as_deref(),
         req.activity_consist.as_deref(),
     )
-    .and_then(|path| {
-        load_consist_at_path(&path).map(|vehicles| StaticConsistPlan { vehicles })
-    });
+    .and_then(|path| load_consist_at_path(&path).map(|vehicles| StaticConsistPlan { vehicles }));
 
     let scene_side_m = tiles_to_render
         .0
@@ -206,12 +203,8 @@ pub fn tile_entry_from_snapshot(
 ) -> Option<TileEntry> {
     let terr = snap.terrain.as_ref()?;
     let elevation = terr.elevation.clone()?;
-    let geometry = terrain::tile_geometry_from_elevation(
-        snap.tile_x,
-        snap.tile_z,
-        &terr.terrain,
-        elevation,
-    );
+    let geometry =
+        terrain::tile_geometry_from_elevation(snap.tile_x, snap.tile_z, &terr.terrain, elevation);
     let base_y = geometry.height.base_y();
     let objects = snap
         .world
@@ -286,7 +279,10 @@ mod tests {
         );
         let entry = tile_entry_from_snapshot(&snap, Vec3::ZERO, TrackRibbon::default())
             .expect("complete fixture → TileEntry");
-        assert_eq!((entry.geometry.tile_x, entry.geometry.tile_z), (-1000, -1000));
+        assert_eq!(
+            (entry.geometry.tile_x, entry.geometry.tile_z),
+            (-1000, -1000)
+        );
         assert!(!entry.geometry.patches.is_empty());
         assert_eq!(entry.objects.len(), 5);
         assert!(entry.objects.iter().any(|o| o.forest.is_some()));

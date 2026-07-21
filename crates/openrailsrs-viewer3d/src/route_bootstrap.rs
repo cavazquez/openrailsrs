@@ -13,9 +13,9 @@ use crate::overhead_wire::RouteWireConfig;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::RouteAssets;
 use crate::terrain::{TerrainElevation, TerrainScene, TerrainTileStream};
+use crate::tr_item_index::TrItemWorldIndex;
 use crate::track::TrackScene;
 use crate::train::ReplayState;
-use crate::tr_item_index::TrItemWorldIndex;
 use crate::view_window::ViewWindow;
 use crate::world::{RouteFocus, RouteWorldOffset, WorldScene, WorldTileStream};
 use crate::{live::LiveDrive, view_radius_m};
@@ -293,13 +293,9 @@ mod tests {
     #[test]
     fn primary_window_presented_requires_nonzero_size() {
         let mut window = Window::default();
-        window
-            .resolution
-            .set_physical_resolution(0, 0);
+        window.resolution.set_physical_resolution(0, 0);
         assert!(!primary_window_is_presented(&window));
-        window
-            .resolution
-            .set_physical_resolution(1280, 720);
+        window.resolution.set_physical_resolution(1280, 720);
         assert!(primary_window_is_presented(&window));
     }
 

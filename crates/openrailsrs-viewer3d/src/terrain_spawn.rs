@@ -706,9 +706,7 @@ pub fn terrain_tile_bundle_materialize_system(
         loaded_now += 1;
     }
     if loaded_now > 0 {
-        viewer_log!(
-            "openrailsrs-viewer3d: terrain-stream — +{loaded_now} tile(s) via tilebundle"
-        );
+        viewer_log!("openrailsrs-viewer3d: terrain-stream — +{loaded_now} tile(s) via tilebundle");
     }
 }
 

@@ -89,13 +89,13 @@ pub use live::LiveDrive;
 pub use log::init as init_viewer_log;
 pub use log::log_step;
 pub use rolling_stock::TrainConsistScene;
+pub use route_bootstrap::{
+    ViewerAppState, ViewerBootClock, log_time_to_first_presented_frame, viewer_playing,
+};
 pub use shapes::RouteAssets;
 pub use terrain::{TerrainElevation, TerrainScene};
 pub use track::{TrackRenderMode, TrackScene};
 pub use train::ReplayState;
-pub use route_bootstrap::{
-    ViewerAppState, ViewerBootClock, log_time_to_first_presented_frame, viewer_playing,
-};
 pub use world::WorldScene;
 
 /// Plugin that wires up the camera, scene and update systems for the
@@ -107,8 +107,8 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
-        use openrailsrs_bevy_scenery::ScenerySpawnSet;
         use bevy::state::condition::in_state;
+        use openrailsrs_bevy_scenery::ScenerySpawnSet;
 
         app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
             .add_plugins(world_instancing::WorldInstancingPlugin)

@@ -20,10 +20,10 @@ pub use openrailsrs_bevy_scenery::shapes::{
     MeshVertexColorMode, MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST,
     SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ShapePbrSidecar, ace_mean_luma,
     alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
-    blend_alpha_passes_from_prim_state,
     apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
-    apply_z_buf_mode, brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
-    build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
+    apply_z_buf_mode, blend_alpha_passes_from_prim_state, brighten_cab_ace_rgba,
+    brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
+    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
     cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
     cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy, closest_lod_level,
@@ -489,10 +489,7 @@ pub fn vehicle_cab_frame_and_exterior_scale(
     offset_m: f32,
     length_m: f32,
 ) -> (Transform, f32) {
-    (
-        cab_shape_placement_transform(mesh, offset_m, length_m),
-        1.0,
-    )
+    (cab_shape_placement_transform(mesh, offset_m, length_m), 1.0)
 }
 
 /// Union AABB of several meshes in their local space.
@@ -1264,7 +1261,10 @@ pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
 ///
 /// Orden: **ruta → pack → GLOBAL** (sin `sort`, para preservar precedencia).
 pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
-    openrailsrs_bevy_scenery::textures::shape_search_dirs(route_dir, &msts_root_for_route(route_dir))
+    openrailsrs_bevy_scenery::textures::shape_search_dirs(
+        route_dir,
+        &msts_root_for_route(route_dir),
+    )
 }
 
 /// First `GLOBAL/` root, if any (legacy helper).
@@ -1588,26 +1588,27 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     let mut has_any_texture = false;
     let mut parts = Vec::with_capacity(loaded.parts.len().max(1));
     if loaded.parts.is_empty() {
-        let (material, or_cab_material, has_texture, is_transparent, _) = material_for_shape_texture(
-            texture_dirs,
-            loaded.texture_file.as_deref(),
-            None,
-            -1, // no prim_state for combined fallback
-            None,
-            -1,
-            images,
-            materials,
-            or_materials.as_deref_mut(),
-            texture_cache,
-            ace_cache,
-            fallback_color,
-            lit_override,
-            None,
-            cab_interior,
-            train_exterior,
-            None,
-            None,
-        );
+        let (material, or_cab_material, has_texture, is_transparent, _) =
+            material_for_shape_texture(
+                texture_dirs,
+                loaded.texture_file.as_deref(),
+                None,
+                -1, // no prim_state for combined fallback
+                None,
+                -1,
+                images,
+                materials,
+                or_materials.as_deref_mut(),
+                texture_cache,
+                ace_cache,
+                fallback_color,
+                lit_override,
+                None,
+                cab_interior,
+                train_exterior,
+                None,
+                None,
+            );
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
             prim_state_idx: -1,
@@ -1843,7 +1844,9 @@ fn load_normal_map_image_handle(
 ) -> Option<Handle<Image>> {
     let tex_path = resolve_texture_path_in_dirs(texture_dirs, file_name)?;
     // Distinct cache key from albedo sRGB entries (negative addr key).
-    let addr_key = -(texture_cache_addr_key(tex_addr_mode).saturating_abs().max(1));
+    let addr_key = -(texture_cache_addr_key(tex_addr_mode)
+        .saturating_abs()
+        .max(1));
     if let Some(h) = texture_cache.get(&(tex_path.clone(), addr_key)) {
         return Some(h.clone());
     }
@@ -2129,8 +2132,8 @@ fn material_for_shape_texture(
                         );
                         (passes[0].alpha_mode, passes.len() > 1)
                     };
-                    let is_transparent = dual_blend
-                        || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                    let is_transparent =
+                        dual_blend || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
                     let (rgba, pixel_brightened) = if cab_interior {
                         brighten_cab_ace_rgba(&ace.mip0)
                     } else {
@@ -2686,7 +2689,9 @@ mod tests {
         for _ in 0..4 {
             nm_rgba.extend_from_slice(&nm_pixel);
         }
-        let albedo = [200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255];
+        let albedo = [
+            200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255,
+        ];
         write_synthetic_ace(&dir.path().join("wagon.ace"), &albedo);
         write_synthetic_ace(&dir.path().join("wagon_n.ace"), &nm_rgba);
         std::fs::write(
@@ -2733,7 +2738,9 @@ mod tests {
             .join("../openrailsrs-bevy-scenery/assets/msts/minimal.s");
         let shape_path = dir.path().join("minimal.s");
         std::fs::copy(&shape_src, &shape_path).expect("copy shape");
-        let albedo = [200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255];
+        let albedo = [
+            200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255,
+        ];
         write_synthetic_ace(&dir.path().join("wagon.ace"), &albedo);
 
         let mut meshes = Assets::<Mesh>::default();
@@ -2882,7 +2889,10 @@ mod tests {
         let material = materials.get(&handle).expect("material");
         assert!(has_texture);
         assert!(is_transparent);
-        assert!(dual_blend, "BlendATexDiff with mid-alpha must dual-pass (#101)");
+        assert!(
+            dual_blend,
+            "BlendATexDiff with mid-alpha must dual-pass (#101)"
+        );
         // First pass is OR ReferenceAlpha=250 (Mask); Blend follow-up is spawned by caller.
         assert!(matches!(material.alpha_mode, AlphaMode::Mask(_)));
 

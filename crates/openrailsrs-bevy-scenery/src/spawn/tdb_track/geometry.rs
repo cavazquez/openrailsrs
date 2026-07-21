@@ -398,11 +398,16 @@ pub fn section_path_spans(
             return vec![span];
         }
     }
-    let len = section_track_length_m(tsection, section.section_index, node_length_m, section_count);
+    let len = section_track_length_m(
+        tsection,
+        section.section_index,
+        node_length_m,
+        section_count,
+    );
     if len < 0.5 {
         return Vec::new();
     }
-    let msts = msts_orient_ypr(ay, ax, az) * Vec3::new(0.0, 0.0, f32::from(len));
+    let msts = msts_orient_ypr(ay, ax, az) * Vec3::new(0.0, 0.0, len);
     vec![SectionPathSpan {
         start_world: anchor,
         end_world: anchor + bevy_delta_from_msts_vec(msts),
@@ -741,7 +746,12 @@ pub fn single_section_end_world(
         }
     }
     let heading = section.heading_deg()?;
-    let len = section_shape_length_m(tsection, section.section_index, node_length_m, section_count);
+    let len = section_shape_length_m(
+        tsection,
+        section.section_index,
+        node_length_m,
+        section_count,
+    );
     let h = if reversed { heading + 180.0 } else { heading };
     Some(end_from_heading(start, h, len))
 }

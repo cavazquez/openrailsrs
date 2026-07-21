@@ -105,7 +105,9 @@ pub fn try_materialize_tile_entry(
         terr_asset.map(|t| t.terrain.clone()),
         terr_asset.and_then(|t| t.elevation.clone()),
         terr_asset.and_then(|t| t.features.clone()),
-        terr_asset.map(|t| t.raw_status).or(bundle.terrain_raw_status),
+        terr_asset
+            .map(|t| t.raw_status)
+            .or(bundle.terrain_raw_status),
         terr_asset.map(|t| t.source_path.clone()),
         Some(route_dir),
         diag,
@@ -176,7 +178,11 @@ pub fn materialize_loaded_tile_bundles(
             continue;
         }
         // Wait until dependency assets are in `Assets` (LoadState already Loaded).
-        if bundle.world.as_ref().is_some_and(|h| worlds.get(h).is_none()) {
+        if bundle
+            .world
+            .as_ref()
+            .is_some_and(|h| worlds.get(h).is_none())
+        {
             continue;
         }
         if bundle
@@ -187,9 +193,7 @@ pub fn materialize_loaded_tile_bundles(
             continue;
         }
         let offset = Vec3::ZERO;
-        if let Some(entry) =
-            try_materialize_tile_entry(bundle, worlds, terrains, route, offset)
-        {
+        if let Some(entry) = try_materialize_tile_entry(bundle, worlds, terrains, route, offset) {
             catalog.entries.push(entry);
         }
     }
@@ -259,8 +263,7 @@ mod tests {
         let mut app = fixture_app();
         let server = app.world().resource::<AssetServer>().clone();
         let complete = request_tile_bundle(&server, "msts/tiles/complete/complete.tilebundle");
-        let missing =
-            request_tile_bundle(&server, "msts/tiles/missing_raw/missing_raw.tilebundle");
+        let missing = request_tile_bundle(&server, "msts/tiles/missing_raw/missing_raw.tilebundle");
         wait_loaded(&mut app, &complete, "complete");
         wait_loaded(&mut app, &missing, "missing_raw");
 
@@ -300,10 +303,11 @@ mod tests {
         app.world_mut()
             .resource_mut::<TileBundleHandles>()
             .release(-1000, -1000);
-        assert!(!app
-            .world()
-            .resource::<TileBundleHandles>()
-            .by_tile
-            .contains_key(&(-1000, -1000)));
+        assert!(
+            !app.world()
+                .resource::<TileBundleHandles>()
+                .by_tile
+                .contains_key(&(-1000, -1000))
+        );
     }
 }

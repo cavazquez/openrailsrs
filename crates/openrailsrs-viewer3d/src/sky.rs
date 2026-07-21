@@ -13,15 +13,9 @@ use crate::viewer_log;
 use crate::world::RouteFocus;
 
 /// Toggle atmospheric fog with `F`. Disabled by default (opt-in with `F`, #39).
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Default)]
 pub struct FogState {
     pub enabled: bool,
-}
-
-impl Default for FogState {
-    fn default() -> Self {
-        Self { enabled: false }
-    }
 }
 
 impl FogState {

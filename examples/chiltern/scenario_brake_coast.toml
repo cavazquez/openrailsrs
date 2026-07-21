@@ -10,6 +10,9 @@ start = "n3"
 destination = "n10770"
 start_offset_m = 305.576
 stops = []
+# Tras #127 (edges `_r`), el BFS por hops prefiere n3→n5 vía e4_r (5 hops) sobre
+# el corredor histórico e10783→e10779→e10777 (6 hops). Forzar el corredor OR-P6.
+waypoints = ["n3", "n10780", "n10778", "n10776", "n10770"]
 
 [[route.switches]]
 node = "n10770"

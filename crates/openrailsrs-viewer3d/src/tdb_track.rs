@@ -436,8 +436,8 @@ mod tests {
     use crate::launch::TRACK_DEV_BRANCH_WALK_MAX_NODES;
     use bevy::math::EulerRot;
     use openrailsrs_formats::{
-        TSectionCatalog, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
-        TrackVectorPoint, TrVectorSectionRecord,
+        TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
+        TrackVectorGeometry, TrackVectorPoint,
     };
     use std::path::PathBuf;
 

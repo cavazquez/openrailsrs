@@ -6,9 +6,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use openrailsrs_ace::AceFile;
 use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
-use openrailsrs_or_shader::standard_pbr::{
-    apply_albedo_scale, resolve_or_material_pbr_ex,
-};
+use openrailsrs_or_shader::standard_pbr::{apply_albedo_scale, resolve_or_material_pbr_ex};
 
 pub use crate::materials::or_scenery_shaders_enabled;
 
@@ -247,7 +245,11 @@ pub fn cab_or_scenery_material_with_texture_ex(
         (0.92, 0.0, 0.5, Color::WHITE)
     };
     let mut mat = StandardMaterial {
-        base_color: if cab_interior { Color::WHITE } else { base_color },
+        base_color: if cab_interior {
+            Color::WHITE
+        } else {
+            base_color
+        },
         base_color_texture: Some(handle),
         perceptual_roughness: if cab_interior { 0.92 } else { roughness },
         metallic: if cab_interior { 0.0 } else { metallic },
@@ -478,7 +480,8 @@ pub fn alpha_mode_from_prim_state(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
-    blend_alpha_passes_from_prim_state(ace, texture_file, shader_name, alpha_test_mode)[0].alpha_mode
+    blend_alpha_passes_from_prim_state(ace, texture_file, shader_name, alpha_test_mode)[0]
+        .alpha_mode
 }
 
 /// Open Rails dual-pass for BlendATex / BlendATexDiff (#101).

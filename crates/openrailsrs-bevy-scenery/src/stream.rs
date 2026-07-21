@@ -140,7 +140,9 @@ impl StreamWindowPolicy {
     /// All tile coords in the inclusive Chebyshev square around `center`.
     pub fn chebyshev_disk(center: TileCoord, radius: u32) -> impl Iterator<Item = TileCoord> {
         let r = radius as i32;
-        (-r..=r).flat_map(move |dx| (-r..=r).map(move |dz| TileCoord::new(center.x + dx, center.z + dz)))
+        (-r..=r).flat_map(move |dx| {
+            (-r..=r).map(move |dz| TileCoord::new(center.x + dx, center.z + dz))
+        })
     }
 
     /// Candidates inside the load window (order not guaranteed).
@@ -185,7 +187,11 @@ impl StreamWindowPolicy {
 
     /// Like [`Self::diff`], but candidates are the Chebyshev load disk (no catalog filter).
     pub fn diff_disk(self, center: TileCoord, loaded: &HashSet<TileCoord>) -> StreamDiff {
-        self.diff(center, loaded, Self::chebyshev_disk(center, self.load_radius))
+        self.diff(
+            center,
+            loaded,
+            Self::chebyshev_disk(center, self.load_radius),
+        )
     }
 }
 

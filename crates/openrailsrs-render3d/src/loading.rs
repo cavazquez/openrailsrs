@@ -423,6 +423,7 @@ pub fn begin_load_stage(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_indexing_from_parsed(
     commands: &mut Commands,
     parsed: ParsedTiles,
@@ -434,7 +435,12 @@ fn start_indexing_from_parsed(
     debug_ctx: &mut crate::debug_hud::SceneDebugContext,
 ) -> LoadStage {
     let n = parsed.tiles_to_render.0.len();
-    let object_count: usize = parsed.tiles_to_render.0.iter().map(|e| e.objects.len()).sum();
+    let object_count: usize = parsed
+        .tiles_to_render
+        .0
+        .iter()
+        .map(|e| e.objects.len())
+        .sum();
     println!(
         "render3d: {} tiles cargados ({} sin .t ignorados), {} patches, {} segmentos de vía, {} objetos",
         parsed.catalog.entries.len(),
@@ -804,9 +810,7 @@ pub fn progressive_world_load(
                     if perf_debug() {
                         perf.print_phase(
                             "Track",
-                            &format!(
-                                "{n_tiles} tiles, height_index_builds={height_index_builds}"
-                            ),
+                            &format!("{n_tiles} tiles, height_index_builds={height_index_builds}"),
                             elapsed,
                         );
                     }
@@ -832,13 +836,9 @@ pub fn progressive_world_load(
                 let center = stream_config.center_tile;
                 if height_index.is_none() {
                     *height_index = Some(crate::tdb_track::TileHeightIndex::from_tile_heights(
-                        slots.iter().map(|s| {
-                            (
-                                s.geometry.tile_x,
-                                s.geometry.tile_z,
-                                &s.geometry.height,
-                            )
-                        }),
+                        slots
+                            .iter()
+                            .map(|s| (s.geometry.tile_x, s.geometry.tile_z, &s.geometry.height)),
                         center,
                     ));
                     *height_index_builds += 1;
@@ -899,7 +899,7 @@ pub fn progressive_world_load(
                     &slot.track,
                     &slot.objects,
                     center,
-                    &height_index,
+                    height_index,
                     slot.world_offset,
                     materials_lit,
                     slot.geometry.tile_x,
@@ -1182,9 +1182,7 @@ pub fn finish_world_load(
     }
     cycle.set_phase(openrailsrs_bevy_scenery::ScenerySpawnPhase::Ready);
     progress_msg.write(openrailsrs_bevy_scenery::ScenerySpawnProgress::new(
-        cycle,
-        1.0,
-        "ready",
+        cycle, 1.0, "ready",
     ));
     cycle.note_spawn_work();
     cycle.finish();

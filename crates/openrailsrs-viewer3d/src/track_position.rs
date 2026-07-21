@@ -709,11 +709,7 @@ pub fn advance_along_graph(
             let next = graph
                 .outgoing_edges(to)
                 .iter()
-                .find(|cand| {
-                    graph
-                        .edge(cand)
-                        .is_some_and(|e| e.to.0.as_str() != from)
-                })
+                .find(|cand| graph.edge(cand).is_some_and(|e| e.to.0.as_str() != from))
                 .cloned()
                 .or_else(|| graph.outgoing_edges(to).first().cloned())?;
             eid = next;
@@ -729,9 +725,7 @@ pub fn advance_along_graph(
             let prev = graph
                 .edges_iter()
                 .find(|(id, e)| {
-                    e.to.0.as_str() == from
-                        && e.from.0.as_str() == to
-                        && *id != eid.as_str()
+                    e.to.0.as_str() == from && e.from.0.as_str() == to && *id != eid.as_str()
                 })
                 .map(|(id, _)| id.to_string())
                 .or_else(|| {
@@ -856,8 +850,8 @@ fn build_graph_corridor_waypoints(
     scenario: &ScenarioFile,
     route_delta: Vec3,
 ) -> Result<Vec<CorridorWaypoint>, String> {
-    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
-        .map_err(|e| e.to_string())?;
+    let path_edges =
+        resolve_scenario_route_edges(&scene.graph, &scenario.route).map_err(|e| e.to_string())?;
     let mut waypoints: Vec<CorridorWaypoint> = Vec::new();
     for edge_id in path_edges {
         let edge = scene
@@ -1298,11 +1292,17 @@ mod tests {
 
     #[test]
     fn parse_e_prefix_tdb_id_from_edge() {
-        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e10783"), Some(10783));
+        assert_eq!(
+            TrackPositionResolver::parse_e_prefix_tdb_id("e10783"),
+            Some(10783)
+        );
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e2"), Some(2));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("n2"), None);
         // Reverse import edges must not parse as TDB vector ids.
-        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e17466_r"), None);
+        assert_eq!(
+            TrackPositionResolver::parse_e_prefix_tdb_id("e17466_r"),
+            None
+        );
     }
 
     #[test]

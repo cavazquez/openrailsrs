@@ -606,7 +606,10 @@ pub fn resolve_texture_path_legacy_in_dirs(dirs: &[&Path], file_name: &str) -> O
 
 /// Bevy address mode for OR `TexAddrMode` (default Wrap → Repeat).
 pub fn image_address_mode_from_msts(raw: Option<i32>) -> ImageAddressMode {
-    match raw.and_then(msts_tex_addr_mode).unwrap_or(MstsTexAddrMode::Wrap) {
+    match raw
+        .and_then(msts_tex_addr_mode)
+        .unwrap_or(MstsTexAddrMode::Wrap)
+    {
         MstsTexAddrMode::Wrap => ImageAddressMode::Repeat,
         MstsTexAddrMode::Mirror => ImageAddressMode::MirrorRepeat,
         MstsTexAddrMode::Clamp => ImageAddressMode::ClampToEdge,

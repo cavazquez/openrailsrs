@@ -594,11 +594,7 @@ pub(crate) fn update_hud(
             &focus,
         )
     };
-    if let Some(diag) = atmosphere
-        .load_diag
-        .as_deref()
-        .filter(|d| d.requested > 0)
-    {
+    if let Some(diag) = atmosphere.load_diag.as_deref().filter(|d| d.requested > 0) {
         if !content.trains.is_empty() {
             content.trains.push_str("  |  ");
         }

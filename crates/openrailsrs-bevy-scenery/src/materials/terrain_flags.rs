@@ -64,8 +64,10 @@ mod tests {
 
     #[test]
     fn viewer_and_render3d_flags_differ_on_vsm() {
-        assert!(!TerrainPipelineFlags::VIEWER.vsm);
-        assert!(TerrainPipelineFlags::RENDER3D_LIT.vsm);
+        const {
+            assert!(!TerrainPipelineFlags::VIEWER.vsm);
+            assert!(TerrainPipelineFlags::RENDER3D_LIT.vsm);
+        }
         assert_eq!(
             TerrainPipelineFlags::VIEWER.cache_suffix(),
             "lit=true|night=false|vsm=false|fog=true"

@@ -560,7 +560,13 @@ fn matching_shape_distance_and_vector(
         }
     }
     if raw_near.is_empty() {
-        return supplement_matching_from_shape_index(point, track_shape_idx, by_shape, tdb, ref_tile);
+        return supplement_matching_from_shape_index(
+            point,
+            track_shape_idx,
+            by_shape,
+            tdb,
+            ref_tile,
+        );
     }
     raw_near.sort_by(|a, b| a.0.total_cmp(&b.0));
     let best_raw = raw_near[0].0;
@@ -573,7 +579,13 @@ fn matching_shape_distance_and_vector(
     }
 
     if candidates.is_empty() {
-        return supplement_matching_from_shape_index(point, track_shape_idx, by_shape, tdb, ref_tile);
+        return supplement_matching_from_shape_index(
+            point,
+            track_shape_idx,
+            by_shape,
+            tdb,
+            ref_tile,
+        );
     }
     select_spatial_match_with_shape_tie_break(candidates)
 }
@@ -1375,8 +1387,8 @@ mod tests {
         let graph_start = {
             use crate::track::graph_to_world;
             use openrailsrs_sim::path::resolve_scenario_route_edges;
-            let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
-                .expect("path");
+            let path_edges =
+                resolve_scenario_route_edges(&scene.graph, &scenario.route).expect("path");
             let mut remaining = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
             let mut pos = graph_to_world(0.0, 0.0);
             for edge_id in path_edges {
@@ -1609,7 +1621,10 @@ mod tests {
                             "  first sec shape_idx={} ay={:.3}",
                             first.shape_index, first.ay
                         );
-                        eprintln!("  last sec shape_idx={} ay={:.3}", last.shape_index, last.ay);
+                        eprintln!(
+                            "  last sec shape_idx={} ay={:.3}",
+                            last.shape_index, last.ay
+                        );
                     }
                 }
                 TrackNodeKind::Junction { pins, .. } => {

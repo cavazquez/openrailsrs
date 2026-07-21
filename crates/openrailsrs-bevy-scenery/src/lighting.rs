@@ -40,11 +40,7 @@ impl SceneSunLight {
     }
 
     pub fn for_night(night: bool) -> Self {
-        if night {
-            Self::night()
-        } else {
-            Self::day()
-        }
+        if night { Self::night() } else { Self::day() }
     }
 
     /// Sun / moon from MSTS activity `StartTime` (seconds since midnight).
@@ -82,7 +78,12 @@ impl SceneSunLight {
 
     /// Legacy tuple used by render3d before #124 (`rotation, illuminance, sun, ambient`).
     pub fn as_legacy_tuple(&self) -> (Quat, f32, Color, Color) {
-        (self.rotation(), self.illuminance, self.color, self.ambient_color)
+        (
+            self.rotation(),
+            self.illuminance,
+            self.color,
+            self.ambient_color,
+        )
     }
 }
 

@@ -44,9 +44,9 @@ use openrailsrs_formats::{
     msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
 };
 use openrailsrs_route::load_route_from_dir;
-use openrailsrs_sim::path::resolve_scenario_route_edges;
 use openrailsrs_scenarios::SCENARIO_OVERLAY_FILENAME;
 use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
+use openrailsrs_sim::path::resolve_scenario_route_edges;
 use openrailsrs_viewer3d::LiveDrive;
 use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainElevation;
@@ -54,10 +54,6 @@ use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
-use openrailsrs_viewer3d::route_bootstrap::{
-    PendingRouteLoad, RouteLoadBundle, ViewerAppState, ViewerBootClock,
-    log_time_to_first_presented_frame, poll_route_load, setup_viewer_loading_ui,
-};
 use openrailsrs_viewer3d::ViewerSceneryMode;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::init_viewer_log;
@@ -71,6 +67,10 @@ use openrailsrs_viewer3d::placement_audit::{
     CHILTERN_BIRMINGHAM_TILE, WorldAnchorInput, log_placement_audit, run_placement_audit,
 };
 use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
+use openrailsrs_viewer3d::route_bootstrap::{
+    PendingRouteLoad, RouteLoadBundle, ViewerAppState, ViewerBootClock,
+    log_time_to_first_presented_frame, poll_route_load, setup_viewer_loading_ui,
+};
 use openrailsrs_viewer3d::shapes::global_assets_dirs;
 use openrailsrs_viewer3d::tdb_track::collect_tdb_chords;
 use openrailsrs_viewer3d::teleport::TeleportDialog;
@@ -334,14 +334,8 @@ fn load_route_bundle_for_viewer(
     route_root: Option<&Path>,
     cab_fov_deg: Option<f32>,
 ) -> Result<RouteLoadBundle, String> {
-    let mut config = build_launch_config(
-        path,
-        live,
-        track_dev,
-        run_corridor,
-        tile_lab,
-        route_root,
-    )?;
+    let mut config =
+        build_launch_config(path, live, track_dev, run_corridor, tile_lab, route_root)?;
 
     let assets = RouteAssets::new(&config.route_dir);
 
@@ -481,10 +475,7 @@ fn load_route_bundle_for_viewer(
         route_focus,
         route_offset,
         assets,
-        launch_opts: ViewerLaunchOpts {
-            live,
-            cab_fov_deg,
-        },
+        launch_opts: ViewerLaunchOpts { live, cab_fov_deg },
     })
 }
 
@@ -1209,8 +1200,8 @@ fn graph_start_position(
     scene: &TrackScene,
     scenario: &openrailsrs_scenarios::ScenarioFile,
 ) -> Result<Vec3, String> {
-    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
-        .map_err(|e| e.to_string())?;
+    let path_edges =
+        resolve_scenario_route_edges(&scene.graph, &scenario.route).map_err(|e| e.to_string())?;
     let mut remaining = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
     for edge_id in path_edges {
         let edge = scene
@@ -1249,8 +1240,8 @@ fn build_run_corridor_path(
     scenario: &openrailsrs_scenarios::ScenarioFile,
     route_delta: Vec3,
 ) -> Result<RunCorridorPath, String> {
-    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
-        .map_err(|e| e.to_string())?;
+    let path_edges =
+        resolve_scenario_route_edges(&scene.graph, &scenario.route).map_err(|e| e.to_string())?;
     let mut points = Vec::new();
     for edge_id in path_edges {
         let edge = scene
@@ -1570,9 +1561,10 @@ mod tests {
             .expect("chiltern scenario");
         let offset = config.route_offset_override.unwrap_or_default();
         let dist = Vec2::new(offset.delta.x, offset.delta.z).length();
+        // After TrackPDP spawn (#127 / #126), graph start matches the OR world anchor.
         assert!(
-            dist > 100.0 && dist < 5000.0,
-            "expected km-scale trim from OR anchor, got {dist:.0} m"
+            dist < 50.0,
+            "expected graph start aligned with OR world anchor, got {dist:.0} m trim"
         );
     }
 

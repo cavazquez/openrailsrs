@@ -119,10 +119,10 @@ pub fn load_objects_with_diag(
     tile_x: i32,
     tile_z: i32,
     base_y: f32,
-    mut diag: Option<&mut MstsLoadDiagnostics>,
+    diag: Option<&mut MstsLoadDiagnostics>,
 ) -> Vec<ObjectMarker> {
     let snap = load_msts_tile_world_snapshot(route_dir, tile_x, tile_z);
-    if let Some(d) = diag.as_deref_mut() {
+    if let Some(d) = diag {
         d.merge_from(&snap.diag);
     }
     let Some(world) = snap.world.as_ref() else {

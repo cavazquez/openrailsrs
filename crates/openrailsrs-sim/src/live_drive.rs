@@ -568,8 +568,9 @@ mod tests {
 
     #[test]
     fn live_session_reaches_chiltern_destination_with_throttle() {
-        let scenario_path =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern/scenario.toml");
+        // Short corridor (brake-coast), not the full PAT in scenario.toml (~4000 km waypoints).
+        let scenario_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/scenario_brake_coast.toml");
         if !scenario_path.exists() {
             return;
         }
@@ -581,8 +582,8 @@ mod tests {
             return;
         };
         let start_odo = session.state.odometer_m;
-        // Chiltern n3 → n10770 is a ~29 km mainline run; at ~80 km/h that needs ~21 min
-        // of sim time. Step generously and assert the train both progresses and arrives.
+        let path_m = session.path_data.total_length_m();
+        // n3 → n10770 corridor is a few tens of km; 30 min at speed is enough to arrive.
         for _ in 0..1800 {
             session.driver_throttle = 1.0;
             session.driver_brake = 0.0;
@@ -593,9 +594,8 @@ mod tests {
         }
         assert!(
             session.arrived,
-            "train should reach destination n10770 under full throttle (odo={:.0}m of {:.0}m)",
-            session.state.odometer_m,
-            session.path_data.total_length_m(),
+            "train should reach destination {} under full throttle (odo={:.0}m of {:.0}m)",
+            scenario.route.destination, session.state.odometer_m, path_m,
         );
         assert!(
             session.state.odometer_m > start_odo,

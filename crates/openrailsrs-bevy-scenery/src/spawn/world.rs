@@ -268,12 +268,12 @@ pub fn plan_parts_with_ids<P: Clone>(
 }
 
 /// Look up (or insert) resolved parts in a [`SessionShapeCache`], retaining the tile ref.
-pub fn cached_shape_parts<'a, V>(
-    cache: &'a mut SessionShapeCache<ShapeCacheKey, V>,
+pub fn cached_shape_parts<V>(
+    cache: &mut SessionShapeCache<ShapeCacheKey, V>,
     key: ShapeCacheKey,
     tile: TileCoord,
     build: impl FnOnce() -> V,
-) -> &'a V {
+) -> &V {
     let _ = cache.get_or_insert_with(key.clone(), build);
     cache.retain_for_tile(tile, &key);
     cache

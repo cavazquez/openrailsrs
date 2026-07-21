@@ -23,10 +23,7 @@ pub struct MstsTileTerrainSnapshot {
 impl MstsTileTerrainSnapshot {
     /// Minimum elevation (MSL) used as Y=0 in centered render frames; `0.0` if no grid.
     pub fn base_y(&self) -> f32 {
-        self.elevation
-            .as_ref()
-            .map(elevation_base_y)
-            .unwrap_or(0.0)
+        self.elevation.as_ref().map(elevation_base_y).unwrap_or(0.0)
     }
 }
 
@@ -140,13 +137,7 @@ pub fn load_msts_tile_world_snapshot(
     tile_z: i32,
 ) -> MstsTileSnapshot {
     let world_path = resolve_world_tile_path(route_dir, tile_x, tile_z);
-    load_msts_tile_snapshot_from_paths(
-        world_path.as_deref(),
-        None,
-        tile_x,
-        tile_z,
-        Some(route_dir),
-    )
+    load_msts_tile_snapshot_from_paths(world_path.as_deref(), None, tile_x, tile_z, Some(route_dir))
 }
 
 /// Load only the terrain half.
@@ -169,7 +160,8 @@ pub fn load_msts_tile_snapshot_from_paths(
     route_dir: Option<&Path>,
 ) -> MstsTileSnapshot {
     let mut diag = MstsLoadDiagnostics::default();
-    let world = world_path.and_then(|path| load_world_half(path, tile_x, tile_z, route_dir, &mut diag));
+    let world =
+        world_path.and_then(|path| load_world_half(path, tile_x, tile_z, route_dir, &mut diag));
     let terrain = terrain_path.and_then(|path| load_terrain_half(path, tile_x, tile_z, &mut diag));
     MstsTileSnapshot {
         tile_x,
@@ -181,6 +173,7 @@ pub fn load_msts_tile_snapshot_from_paths(
 }
 
 /// Assemble a snapshot from already-parsed components (AssetServer / #53 bridge).
+#[allow(clippy::too_many_arguments)]
 pub fn snapshot_from_parsed(
     tile_x: i32,
     tile_z: i32,
@@ -381,13 +374,8 @@ mod tests {
         assert!(world.is_file(), "fixture world missing");
         assert!(terrain.is_file(), "fixture terrain missing");
 
-        let snap = load_msts_tile_snapshot_from_paths(
-            Some(&world),
-            Some(&terrain),
-            -1000,
-            -1000,
-            None,
-        );
+        let snap =
+            load_msts_tile_snapshot_from_paths(Some(&world), Some(&terrain), -1000, -1000, None);
 
         assert_eq!(snap.tile_x, -1000);
         assert_eq!(snap.tile_z, -1000);

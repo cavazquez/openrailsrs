@@ -25,9 +25,9 @@ use crate::textures::{
     texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
-use openrailsrs_or_shader::standard_pbr::{
-    apply_albedo_scale, resolve_or_material_pbr, resolve_or_material_pbr_ex,
-};
+#[cfg(test)]
+use openrailsrs_or_shader::standard_pbr::resolve_or_material_pbr;
+use openrailsrs_or_shader::standard_pbr::{apply_albedo_scale, resolve_or_material_pbr_ex};
 
 use crate::or_scenery_material::{
     OrSceneryMaterial, create_or_scenery_material, create_or_scenery_material_ex,
@@ -1320,12 +1320,12 @@ pub fn spawn_object_shape(
     let adapter = TileOffsetPlacementAdapter { tile_offset };
     let planned = plan_parts_with_ids(&shape_path, &parts, |_i, _| -1, placement, &adapter);
     debug_assert!(
-        planned
-            .first()
-            .is_none_or(|(_, _, tf, _)| tf.translation.distance_squared(transform.translation)
-                < 1e-6
-                && tf.rotation.abs_diff_eq(transform.rotation, 1e-5)
-                && tf.scale.abs_diff_eq(transform.scale, 1e-5)),
+        planned.first().is_none_or(|(_, _, tf, _)| tf
+            .translation
+            .distance_squared(transform.translation)
+            < 1e-6
+            && tf.rotation.abs_diff_eq(transform.rotation, 1e-5)
+            && tf.scale.abs_diff_eq(transform.scale, 1e-5)),
         "shared spawn core must preserve caller transform before material attach"
     );
     for (_id, part, tf, tile) in planned {
@@ -1663,7 +1663,7 @@ fn build_shape(
     );
     if let Some(cached) = ctx.shape_cache.get_hit(&cache_key).cloned() {
         if let Some(tile) = tile {
-            ctx.shape_cache.retain_for_tile(tile.into(), &cache_key);
+            ctx.shape_cache.retain_for_tile(tile, &cache_key);
         }
         return Some(cached);
     }
@@ -1755,7 +1755,7 @@ fn build_shape(
         .collect();
     ctx.shape_cache.insert(cache_key.clone(), handles.clone());
     if let Some(tile) = tile {
-        ctx.shape_cache.retain_for_tile(tile.into(), &cache_key);
+        ctx.shape_cache.retain_for_tile(tile, &cache_key);
     }
     Some(handles)
 }
@@ -2760,8 +2760,10 @@ mod tests {
                 material: SceneMaterialHandle::Standard(drop_mat.clone()),
             }],
         );
-        ctx.shape_cache.retain_for_tile(TileCoord::new(0, 0), &keep_key);
-        ctx.shape_cache.retain_for_tile(TileCoord::new(1, 0), &drop_key);
+        ctx.shape_cache
+            .retain_for_tile(TileCoord::new(0, 0), &keep_key);
+        ctx.shape_cache
+            .retain_for_tile(TileCoord::new(1, 0), &drop_key);
         ctx.release_tile_shapes(TileCoord::new(1, 0));
 
         let live = std::collections::HashSet::from([keep_mesh.id()]);

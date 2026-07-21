@@ -184,7 +184,7 @@ pub fn procedural_segments_from_dyntrack_sections(
         pos = segment_end_world(pos, rot, travel, curve_radius_m, curve_angle_deg);
         if let (Some(r), Some(a)) = (curve_radius_m, curve_angle_deg) {
             let (_, drot) = arc_local_frame(r, a, 1.0);
-            rot = rot * drot;
+            rot *= drot;
         }
     }
     if out.is_empty() {
