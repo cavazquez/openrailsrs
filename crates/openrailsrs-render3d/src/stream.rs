@@ -54,8 +54,9 @@ impl TileStreamConfig {
         }
     }
 
+    /// Live stream always runs so TileBundle can expand the catalog around the camera (#77).
     pub fn streaming_enabled(&self) -> bool {
-        self.stream_radius > self.initial_radius
+        true
     }
 
     /// Shared Chebyshev load/unload policy for the live stream window.
@@ -419,7 +420,12 @@ pub fn tile_stream_system(
         return;
     };
     let cam_tile = camera_tile(&config, cam_tf);
-    if state.last_camera_tile == Some(cam_tile) {
+    // Keep pumping while TileBundle handles are still pending materialize/spawn (#77).
+    let pending_bundle_work = bundle_handles
+        .by_tile
+        .keys()
+        .any(|key| config.tile_in_stream_radius(cam_tile, *key) && !state.loaded.contains(key));
+    if state.last_camera_tile == Some(cam_tile) && !pending_bundle_work {
         return;
     }
     state.last_camera_tile = Some(cam_tile);
@@ -428,11 +434,8 @@ pub fn tile_stream_system(
     let center = TileCoord::from(cam_tile);
     let loaded_coords: HashSet<TileCoord> =
         state.loaded.iter().copied().map(TileCoord::from).collect();
-    let candidates = catalog
-        .entries
-        .iter()
-        .map(|e| TileCoord::new(e.geometry.tile_x, e.geometry.tile_z));
-    let stream_diff = policy.diff(center, &loaded_coords, candidates);
+    // Disk window (not catalog-only) so newly materialized TileBundle tiles can spawn (#77).
+    let stream_diff = policy.diff_disk(center, &loaded_coords);
 
     let mut unloading = HashSet::new();
     for tile in &stream_diff.to_unload {
@@ -574,7 +577,9 @@ mod tests {
     fn initial_radius_matches_stream_radius() {
         let cfg = TileStreamConfig::new((0, 0), 2);
         assert_eq!(cfg.initial_radius, 2);
-        assert!(!cfg.streaming_enabled());
+        assert_eq!(cfg.stream_radius, 2);
+        // #77: stream always enabled for TileBundle catalog expansion.
+        assert!(cfg.streaming_enabled());
     }
 
     #[test]

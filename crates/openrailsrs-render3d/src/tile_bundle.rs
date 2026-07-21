@@ -1,12 +1,18 @@
-//! Bridge from [`MstsTileBundleAsset`] to render3d [`TileEntry`] (#53).
+//! Bridge from [`MstsTileBundleAsset`] to render3d [`TileEntry`] (#53 / #77).
+//!
+//! Hot path (#77): request `.tilebundle` around the camera → materialize into
+//! [`TileCatalog`] → [`crate::stream::tile_stream_system`] spawns GPU content.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+use bevy::asset::LoadState;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::stream::TILE_SIZE_M;
 use openrailsrs_bevy_scenery::{
     MstsLoadDiagnostics, MstsTerrainTileAsset, MstsTileBundleAsset, MstsWorldTileAsset,
-    TileBundleStatus, snapshot_from_parsed,
+    TileBundleManifest, TileBundleStatus, discover_tile_bundle_paths, snapshot_from_parsed,
+    write_tile_bundle_manifest,
 };
 
 use crate::objects::{self, ObjectMarker};
@@ -16,14 +22,21 @@ use crate::tile_parse::tile_entry_from_snapshot;
 use crate::track::TrackRibbon;
 
 /// Strong handles for tiles loaded via AssetServer (exact unload by dropping).
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone)]
 pub struct TileBundleHandles {
     pub by_tile: HashMap<(i32, i32), Handle<MstsTileBundleAsset>>,
+    /// Discovers that found neither WORLD nor terrain (skip re-scan each frame).
+    pub absent: HashSet<(i32, i32)>,
 }
 
 impl TileBundleHandles {
     pub fn insert(&mut self, tile_x: i32, tile_z: i32, handle: Handle<MstsTileBundleAsset>) {
+        self.absent.remove(&(tile_x, tile_z));
         self.by_tile.insert((tile_x, tile_z), handle);
+    }
+
+    pub fn get(&self, tile_x: i32, tile_z: i32) -> Option<&Handle<MstsTileBundleAsset>> {
+        self.by_tile.get(&(tile_x, tile_z))
     }
 
     /// Drop the strong handle for this tile (AssetServer may GC unused deps).
@@ -39,6 +52,10 @@ impl TileBundleHandles {
             self.by_tile.remove(key);
         }
     }
+
+    pub fn mark_absent(&mut self, tile_x: i32, tile_z: i32) {
+        self.absent.insert((tile_x, tile_z));
+    }
 }
 
 /// Kick off an AssetServer load of a `.tilebundle` path.
@@ -47,6 +64,82 @@ pub fn request_tile_bundle(
     asset_path: impl Into<String>,
 ) -> Handle<MstsTileBundleAsset> {
     server.load(asset_path.into())
+}
+
+/// Discover WORLD/terrain for `(tile_x, tile_z)`, write a `.tilebundle` under the route,
+/// and request it via AssetServer (#77).
+///
+/// Manifest paths are absolute; render3d uses [`render3d_asset_plugin`] (`UnapprovedPathMode::Allow`).
+pub fn request_route_tile_bundle(
+    server: &AssetServer,
+    route_dir: &Path,
+    tile_x: i32,
+    tile_z: i32,
+    world_path: Option<&Path>,
+    terrain_path: Option<&Path>,
+) -> Option<Handle<MstsTileBundleAsset>> {
+    let discovered = discover_tile_bundle_paths(route_dir, tile_x, tile_z);
+    let world = world_path.map(Path::to_path_buf).or(discovered.world);
+    let terrain = terrain_path.map(Path::to_path_buf).or(discovered.terrain);
+    if world.is_none() && terrain.is_none() {
+        return None;
+    }
+
+    let manifest = TileBundleManifest {
+        tile_x,
+        tile_z,
+        world: world.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        terrain: terrain.as_ref().map(|p| p.to_string_lossy().into_owned()),
+    };
+    let out_dir = route_dir.join(".openrailsrs").join("tilebundles");
+    let out_path = out_dir.join(format!("{tile_x}_{tile_z}.tilebundle"));
+    if write_tile_bundle_manifest(&out_path, &manifest).is_err() {
+        return None;
+    }
+    Some(request_tile_bundle(
+        server,
+        out_path.to_string_lossy().into_owned(),
+    ))
+}
+
+/// Ensure a handle exists in [`TileBundleHandles`] for this tile (reuse if present).
+pub fn ensure_tile_bundle_handle(
+    handles: &mut TileBundleHandles,
+    server: &AssetServer,
+    route_dir: &Path,
+    tile_x: i32,
+    tile_z: i32,
+    world_path: Option<&Path>,
+    terrain_path: Option<&Path>,
+) -> Option<Handle<MstsTileBundleAsset>> {
+    if let Some(h) = handles.get(tile_x, tile_z) {
+        return Some(h.clone());
+    }
+    let handle =
+        request_route_tile_bundle(server, route_dir, tile_x, tile_z, world_path, terrain_path)?;
+    handles.insert(tile_x, tile_z, handle.clone());
+    Some(handle)
+}
+
+/// World-space offset of `(tile_x, tile_z)` relative to the scene center tile.
+pub fn tile_world_offset(center: (i32, i32), tile_x: i32, tile_z: i32) -> Vec3 {
+    let (cx, cz) = center;
+    Vec3::new(
+        (tile_x - cx) as f32 * TILE_SIZE_M,
+        0.0,
+        (cz - tile_z) as f32 * TILE_SIZE_M,
+    )
+}
+
+/// Asset plugin: shared scenery root + allow absolute route paths in manifests (#77).
+pub fn render3d_asset_plugin() -> bevy::asset::AssetPlugin {
+    bevy::asset::AssetPlugin {
+        file_path: openrailsrs_bevy_scenery::asset_root()
+            .to_string_lossy()
+            .into_owned(),
+        unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
+        ..Default::default()
+    }
 }
 
 /// Build [`TileGeometry`] from a loaded terrain tile asset (requires elevation).
@@ -154,6 +247,32 @@ fn empty_tile_geometry(tile_x: i32, tile_z: i32) -> TileGeometry {
     terrain::tile_geometry_from_elevation(tile_x, tile_z, &tile, grid)
 }
 
+/// Whether a bundle asset and its declared deps are present in `Assets` stores.
+pub fn bundle_deps_ready(
+    bundle: &MstsTileBundleAsset,
+    worlds: &Assets<MstsWorldTileAsset>,
+    terrains: &Assets<MstsTerrainTileAsset>,
+) -> bool {
+    if bundle.status == TileBundleStatus::Failed {
+        return true;
+    }
+    if bundle
+        .world
+        .as_ref()
+        .is_some_and(|h| worlds.get(h).is_none())
+    {
+        return false;
+    }
+    if bundle
+        .terrain
+        .as_ref()
+        .is_some_and(|h| terrains.get(h).is_none())
+    {
+        return false;
+    }
+    true
+}
+
 /// Poll loaded bundles and materialize any that are Ready/Partial into the catalog.
 pub fn materialize_loaded_tile_bundles(
     handles: &TileBundleHandles,
@@ -161,7 +280,9 @@ pub fn materialize_loaded_tile_bundles(
     worlds: &Assets<MstsWorldTileAsset>,
     terrains: &Assets<MstsTerrainTileAsset>,
     route: &Path,
+    center_tile: (i32, i32),
     catalog: &mut crate::stream::TileCatalog,
+    mut load_diag: Option<&mut MstsLoadDiagnostics>,
 ) {
     for ((tx, tz), handle) in &handles.by_tile {
         if catalog
@@ -177,51 +298,99 @@ pub fn materialize_loaded_tile_bundles(
         if bundle.status == TileBundleStatus::Failed {
             continue;
         }
-        // Wait until dependency assets are in `Assets` (LoadState already Loaded).
-        if bundle
-            .world
-            .as_ref()
-            .is_some_and(|h| worlds.get(h).is_none())
-        {
+        if !bundle_deps_ready(bundle, worlds, terrains) {
             continue;
         }
-        if bundle
-            .terrain
-            .as_ref()
-            .is_some_and(|h| terrains.get(h).is_none())
-        {
-            continue;
-        }
-        let offset = Vec3::ZERO;
+        let offset = tile_world_offset(center_tile, *tx, *tz);
         if let Some(entry) = try_materialize_tile_entry(bundle, worlds, terrains, route, offset) {
+            if let Some(diag) = load_diag.as_mut() {
+                diag.merge_from(&bundle.diag);
+            }
             catalog.entries.push(entry);
         }
     }
 }
 
-/// Bevy system: append catalog entries from AssetServer-backed tile bundles (#53).
+/// Request TileBundle assets for tiles in the camera stream disk that are not yet catalogued (#77).
+pub fn request_tile_bundle_stream_system(
+    server: Res<AssetServer>,
+    route: Res<crate::runtime::RouteDir>,
+    config: Res<crate::stream::TileStreamConfig>,
+    catalog: Res<crate::stream::TileCatalog>,
+    camera: Query<&Transform, With<Camera3d>>,
+    mut handles: ResMut<TileBundleHandles>,
+) {
+    let Ok(cam_tf) = camera.single() else {
+        return;
+    };
+    let cam_tile = crate::stream::camera_tile(&config, cam_tf);
+    let policy = config.stream_policy();
+    let center = openrailsrs_bevy_scenery::stream::TileCoord::from(cam_tile);
+    for tile in openrailsrs_bevy_scenery::stream::StreamWindowPolicy::chebyshev_disk(
+        center,
+        policy.load_radius,
+    ) {
+        let key = (tile.x, tile.z);
+        if catalog
+            .entries
+            .iter()
+            .any(|e| e.geometry.tile_x == key.0 && e.geometry.tile_z == key.1)
+        {
+            continue;
+        }
+        if handles.get(key.0, key.1).is_some() || handles.absent.contains(&key) {
+            continue;
+        }
+        if ensure_tile_bundle_handle(&mut handles, &server, &route.0, key.0, key.1, None, None)
+            .is_none()
+        {
+            handles.mark_absent(key.0, key.1);
+        }
+    }
+}
+
+/// Bevy system: append catalog entries from AssetServer-backed tile bundles (#53 / #77).
 pub fn materialize_tile_bundle_system(
+    server: Res<AssetServer>,
     handles: Res<TileBundleHandles>,
     bundles: Res<Assets<MstsTileBundleAsset>>,
     worlds: Res<Assets<MstsWorldTileAsset>>,
     terrains: Res<Assets<MstsTerrainTileAsset>>,
     route: Res<crate::runtime::RouteDir>,
+    config: Res<crate::stream::TileStreamConfig>,
     mut catalog: ResMut<crate::stream::TileCatalog>,
+    mut load_diag: ResMut<MstsLoadDiagnostics>,
 ) {
+    // Skip handles that have not finished loading (or failed).
+    let ready_handles = {
+        let mut filtered = TileBundleHandles::default();
+        for ((tx, tz), handle) in &handles.by_tile {
+            match server.get_load_state(handle) {
+                Some(LoadState::Loaded) => {
+                    filtered.insert(*tx, *tz, handle.clone());
+                }
+                Some(LoadState::Failed(_)) => {}
+                _ => {}
+            }
+        }
+        filtered
+    };
     materialize_loaded_tile_bundles(
-        &handles,
+        &ready_handles,
         &bundles,
         &worlds,
         &terrains,
         &route.0,
+        config.center_tile,
         &mut catalog,
+        Some(&mut load_diag),
     );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::asset::{AssetPlugin, LoadState};
+    use bevy::asset::LoadState;
     use openrailsrs_bevy_scenery::{MstsAssetPlugin, TerrainRawStatus, TileBundleStatus};
     use std::time::Duration;
 
@@ -247,14 +416,14 @@ mod tests {
     fn fixture_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_plugins(AssetPlugin {
-                file_path: openrailsrs_bevy_scenery::asset_root()
-                    .to_string_lossy()
-                    .into_owned(),
-                ..default()
-            })
+            .add_plugins(render3d_asset_plugin())
             .add_plugins(MstsAssetPlugin)
-            .init_resource::<TileBundleHandles>();
+            .init_resource::<TileBundleHandles>()
+            .init_resource::<MstsLoadDiagnostics>()
+            .insert_resource(crate::stream::TileCatalog {
+                entries: Vec::new(),
+            })
+            .insert_resource(crate::stream::TileStreamConfig::new((-1000, -1000), 0));
         app
     }
 
@@ -309,5 +478,72 @@ mod tests {
                 .by_tile
                 .contains_key(&(-1000, -1000))
         );
+    }
+
+    #[test]
+    fn request_ready_materialize_and_spawn_tile_content() {
+        // #77 integration: request → Ready → catalog entry → TileContent spawn.
+        let mut app = fixture_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle = request_tile_bundle(&server, "msts/tiles/complete/complete.tilebundle");
+        {
+            let mut handles = app.world_mut().resource_mut::<TileBundleHandles>();
+            handles.insert(-1000, -1000, handle.clone());
+        }
+        assert!(
+            app.world()
+                .resource::<TileBundleHandles>()
+                .get(-1000, -1000)
+                .is_some(),
+            "request must register a real handle in TileBundleHandles"
+        );
+        wait_loaded(&mut app, &handle, "complete.tilebundle");
+
+        let handles = app.world().resource::<TileBundleHandles>().clone();
+        let mut catalog = crate::stream::TileCatalog {
+            entries: Vec::new(),
+        };
+        let mut diag = MstsLoadDiagnostics::default();
+        {
+            let world = app.world();
+            materialize_loaded_tile_bundles(
+                &handles,
+                world.resource::<Assets<MstsTileBundleAsset>>(),
+                world.resource::<Assets<MstsWorldTileAsset>>(),
+                world.resource::<Assets<MstsTerrainTileAsset>>(),
+                Path::new("."),
+                (-1000, -1000),
+                &mut catalog,
+                Some(&mut diag),
+            );
+        }
+        assert_eq!(catalog.entries.len(), 1);
+        let entry = catalog.entries[0].clone();
+        assert_eq!(
+            (entry.geometry.tile_x, entry.geometry.tile_z),
+            (-1000, -1000)
+        );
+        assert!(
+            !entry.geometry.patches.is_empty(),
+            "holes/textures path must still produce patches"
+        );
+        assert!(!entry.objects.is_empty());
+        assert_eq!(entry.world_offset, Vec3::ZERO);
+
+        app.world_mut()
+            .resource_mut::<crate::stream::TileCatalog>()
+            .entries = catalog.entries;
+
+        // Spawn marker for the materialized tile (stream would call spawn_tile_entry).
+        app.world_mut().spawn(crate::stream::TileContent {
+            tile_x: entry.geometry.tile_x,
+            tile_z: entry.geometry.tile_z,
+        });
+        let n = app
+            .world_mut()
+            .query::<&crate::stream::TileContent>()
+            .iter(app.world())
+            .count();
+        assert_eq!(n, 1, "spawn must produce a TileContent entity");
     }
 }

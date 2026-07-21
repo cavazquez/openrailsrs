@@ -205,7 +205,7 @@ fn main() -> anyhow::Result<()> {
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
-            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
+            .set(tile_bundle::render3d_asset_plugin())
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: format!("openrailsrs-render3d — tile ({cx}, {cz}) r={r}"),
@@ -261,6 +261,9 @@ fn main() -> anyhow::Result<()> {
             toggle_debug_hud.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
             scenery::update_water_surfaces
                 .run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            tile_bundle::request_tile_bundle_stream_system
+                .run_if(in_state(openrailsrs_render3d::AppState::Playing))
+                .before(tile_bundle::materialize_tile_bundle_system),
             tile_bundle::materialize_tile_bundle_system
                 .run_if(in_state(openrailsrs_render3d::AppState::Playing))
                 .before(stream::tile_stream_system),
