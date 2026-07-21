@@ -1,22 +1,19 @@
-//! Capa 4b: mallas reales de los shapes `.s`.
+//! Capa 4b: mallas de shapes `.s` — adaptador sobre `openrailsrs-bevy-scenery` (#56).
 //!
-//! Reutiliza el parser de datos `openrailsrs_formats::ShapeFile` y construye
-//! aquí la geometría Bevy (LOD de mayor detalle), aplicando la jerarquía de
-//! matrices y la conversión XNA. Una parte de malla por `prim_state` (textura).
-//!
-//! Los shapes animados (p. ej. columnas de agua `Pickup`) se evalúan en el
-//! fotograma 0 de su primera animación, igual que Open Rails en reposo.
+//! El builder geométrico canónico vive en `bevy-scenery`; este módulo solo carga
+//! archivos, aplica la política WORLD de render3d (sub-objetos + anim key 0) y
+//! expone [`ShapePart`] con buffers crudos para `world_spawn`.
 
-use std::collections::BTreeMap;
 use std::path::Path;
 
+use bevy::mesh::VertexAttributeValues;
 use bevy::prelude::*;
-use openrailsrs_formats::{AnimController, DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
-
-use openrailsrs_bevy_scenery::shapes::{light_mat_idx_for_prim_state, shape_normal_is_usable};
-use openrailsrs_or_shader::coordinates::{
-    matrix43_transform_point_xna, matrix43_transform_vector_xna, shape_point_to_bevy,
+use openrailsrs_bevy_scenery::shapes::{
+    LoadedShapePart, build_mesh_parts_from_shape_at_distance_with_options,
+    build_mesh_parts_from_shape_lod_with_options, lod_level_for_distance as scenery_lod_level,
+    render3d_world_mesh_options,
 };
+use openrailsrs_formats::{DistanceLevel, ShapeFile};
 
 /// Una parte de malla de un shape (todos los triángulos que comparten textura).
 #[derive(Clone, Debug)]
@@ -56,14 +53,96 @@ pub fn lod_cache_key(distance_m: f32) -> u32 {
 /// Carga un `.s` con el LOD apropiado para la distancia a cámara (metros).
 pub fn load_shape_parts_at_distance(path: &Path, distance_m: f32) -> Option<Vec<ShapePart>> {
     let shape = ShapeFile::from_path(path).ok()?;
-    let level = lod_level_for_distance(&shape, distance_m).or_else(|| closest_lod(&shape))?;
-    Some(build_parts_for_level(&shape, level))
+    let loaded = build_mesh_parts_from_shape_at_distance_with_options(
+        &shape,
+        distance_m,
+        render3d_world_mesh_options(),
+    );
+    Some(loaded.into_iter().filter_map(loaded_part_to_shape_part).collect())
 }
 
 /// Carga un `.s` y construye sus partes de malla (LOD de mayor detalle).
 #[allow(dead_code)]
 pub fn load_shape_parts(path: &Path) -> Option<Vec<ShapePart>> {
     load_shape_parts_at_distance(path, 0.0)
+}
+
+/// LOD para una distancia de cámara (delegado al builder canónico).
+pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
+    scenery_lod_level(shape, distance_m)
+}
+
+/// Construye partes de malla con la política WORLD de render3d.
+#[allow(dead_code)]
+pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
+    let Some(level) = scenery_lod_level(shape, 0.0) else {
+        return Vec::new();
+    };
+    build_mesh_parts_from_shape_lod_with_options(shape, level, render3d_world_mesh_options())
+        .into_iter()
+        .filter_map(loaded_part_to_shape_part)
+        .collect()
+}
+
+/// Sub-objeto nocturno (índice 1) oculto de día cuando el `.sd` declara `ESD_SubObj`.
+pub fn part_visible(
+    descriptor: &crate::shape_descriptor::ShapeDescriptor,
+    part: &ShapePart,
+    env: &crate::textures::TextureEnvironment,
+) -> bool {
+    !(descriptor.has_night_subobj && part.sub_object_idx == 1 && env.is_day())
+}
+
+fn loaded_part_to_shape_part(part: LoadedShapePart) -> Option<ShapePart> {
+    let positions = mesh_float3(&part.mesh, Mesh::ATTRIBUTE_POSITION)?;
+    let normals = mesh_float3(&part.mesh, Mesh::ATTRIBUTE_NORMAL)
+        .unwrap_or_else(|| vec![[0.0, 1.0, 0.0]; positions.len()]);
+    let uvs = mesh_float2(&part.mesh, Mesh::ATTRIBUTE_UV_0)
+        .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()]);
+    let colors = mesh_float4(&part.mesh, Mesh::ATTRIBUTE_COLOR);
+    Some(ShapePart {
+        sub_object_idx: part.sub_object_idx,
+        positions,
+        normals,
+        uvs,
+        texture: part.texture_file,
+        alpha_test_mode: part.alpha_test_mode,
+        shader_name: part.shader_name,
+        light_mat_idx: part.light_mat_idx,
+        tex_addr_mode: part.tex_addr_mode,
+        colors,
+        solid_color: part.solid_color,
+    })
+}
+
+fn mesh_float3(
+    mesh: &Mesh,
+    attr: impl Into<bevy::mesh::MeshVertexAttributeId>,
+) -> Option<Vec<[f32; 3]>> {
+    match mesh.attribute(attr)? {
+        VertexAttributeValues::Float32x3(v) => Some(v.clone()),
+        _ => None,
+    }
+}
+
+fn mesh_float2(
+    mesh: &Mesh,
+    attr: impl Into<bevy::mesh::MeshVertexAttributeId>,
+) -> Option<Vec<[f32; 2]>> {
+    match mesh.attribute(attr)? {
+        VertexAttributeValues::Float32x2(v) => Some(v.clone()),
+        _ => None,
+    }
+}
+
+fn mesh_float4(
+    mesh: &Mesh,
+    attr: impl Into<bevy::mesh::MeshVertexAttributeId>,
+) -> Option<Vec<[f32; 4]>> {
+    match mesh.attribute(attr)? {
+        VertexAttributeValues::Float32x4(v) => Some(v.clone()),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -78,454 +157,6 @@ fn shape_local_bounds(parts: &[ShapePart]) -> Option<(Vec3, Vec3)> {
         }
     }
     min.x.is_finite().then_some((min, max))
-}
-
-fn closest_lod(shape: &ShapeFile) -> Option<&DistanceLevel> {
-    shape
-        .lod_controls
-        .first()?
-        .distance_levels
-        .iter()
-        .min_by(|a, b| {
-            a.selection_m
-                .partial_cmp(&b.selection_m)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-}
-
-/// LOD para una distancia de cámara: el nivel más fino cuyo `selection_m` ≤ `distance_m`.
-pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
-    let control = shape.lod_controls.first()?;
-    let levels = &control.distance_levels;
-    if levels.is_empty() {
-        return None;
-    }
-    let mut best = levels.iter().min_by(|a, b| {
-        a.selection_m
-            .partial_cmp(&b.selection_m)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    })?;
-    for lvl in levels {
-        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= best.selection_m {
-            best = lvl;
-        }
-    }
-    Some(best)
-}
-
-#[derive(Default)]
-struct PartBuffers {
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    uvs: Vec<[f32; 2]>,
-    colors: Vec<[f32; 4]>,
-}
-
-/// Construye una parte de malla por `prim_state` del LOD de mayor detalle.
-#[allow(dead_code)]
-pub fn build_parts(shape: &ShapeFile) -> Vec<ShapePart> {
-    let Some(level) = closest_lod(shape) else {
-        return Vec::new();
-    };
-    build_parts_for_level(shape, level)
-}
-
-fn build_parts_for_level(shape: &ShapeFile, level: &DistanceLevel) -> Vec<ShapePart> {
-    let pose = animation_pose_matrices(shape, 0.0);
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-
-    let mut by_state: BTreeMap<(u32, i32), PartBuffers> = BTreeMap::new();
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for prim in &sub.primitives {
-            let chain = matrix_chain(shape, level, prim.prim_state_idx, &pose);
-            let buf = by_state
-                .entry((sub_idx as u32, prim.prim_state_idx))
-                .or_default();
-            for tri in prim.vertex_indices.chunks(3) {
-                if tri.len() < 3 {
-                    continue;
-                }
-                let mut resolved = Vec::with_capacity(3);
-                let mut skip = false;
-                for &vidx in tri {
-                    let Some(v) = resolve_vertex(shape, sub, vidx) else {
-                        skip = true;
-                        break;
-                    };
-                    if shape.points.get(v.0).is_none() {
-                        skip = true;
-                        break;
-                    }
-                    resolved.push(v);
-                }
-                if skip {
-                    continue;
-                }
-                // Face normals follow this builder's current winding (#56 will unify with bevy-scenery).
-                let positions: [Vec3; 3] = std::array::from_fn(|i| {
-                    let (pi, ..) = resolved[i];
-                    let point = shape.points.get(pi).expect("checked");
-                    transform_point(shape_point_to_bevy(*point), &chain)
-                });
-                let face_n = (positions[1] - positions[0])
-                    .cross(positions[2] - positions[0])
-                    .try_normalize()
-                    .unwrap_or(Vec3::ZERO);
-                let fallback_n = if shape_normal_is_usable(default_normal) {
-                    transform_normal(shape_point_to_bevy(default_normal), &chain)
-                } else {
-                    face_n
-                };
-                for ((pi, ni, ui, vertex_color), pos) in resolved.into_iter().zip(positions) {
-                    let _ = pi;
-                    let authored = ni
-                        .and_then(|i| shape.normals.get(i).copied())
-                        .filter(|n| shape_normal_is_usable(*n));
-                    let nrm = if let Some(n) = authored {
-                        transform_normal(shape_point_to_bevy(n), &chain)
-                    } else if face_n.length_squared() > 0.0 {
-                        face_n
-                    } else {
-                        fallback_n
-                    };
-                    let uv = ui
-                        .and_then(|i| shape.uvs.get(i))
-                        .copied()
-                        .unwrap_or_default();
-                    buf.positions.push(pos.to_array());
-                    buf.normals.push(nrm.to_array());
-                    buf.uvs.push([uv.u as f32, 1.0 - uv.v as f32]);
-                    buf.colors.push(vertex_color);
-                }
-            }
-        }
-    }
-
-    by_state
-        .into_iter()
-        .filter(|(_, b)| !b.positions.is_empty())
-        .map(|((sub_object_idx, prim_state_idx), b)| {
-            let (colors, solid_color) = part_vertex_colors(&b.colors);
-            ShapePart {
-                sub_object_idx,
-                positions: b.positions,
-                normals: b.normals,
-                uvs: b.uvs,
-                texture: texture_for_prim_state(shape, prim_state_idx),
-                alpha_test_mode: shape
-                    .prim_states
-                    .get(prim_state_idx.max(0) as usize)
-                    .map(|ps| ps.alpha_test_mode)
-                    .unwrap_or(-1),
-                shader_name: shape
-                    .prim_states
-                    .get(prim_state_idx.max(0) as usize)
-                    .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
-                    .cloned(),
-                light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
-                tex_addr_mode: shape.tex_addr_mode_for_prim_state(prim_state_idx),
-                colors,
-                solid_color,
-            }
-        })
-        .collect()
-}
-
-/// Sub-objeto nocturno (índice 1) oculto de día cuando el `.sd` declara `ESD_SubObj`.
-pub fn part_visible(
-    descriptor: &crate::shape_descriptor::ShapeDescriptor,
-    part: &ShapePart,
-    env: &crate::textures::TextureEnvironment,
-) -> bool {
-    !(descriptor.has_night_subobj && part.sub_object_idx == 1 && env.is_day())
-}
-
-/// Matrices de pose del shape en un fotograma de animación (Open Rails `AnimateMatrix`).
-fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
-    let mut pose: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
-    let Some(anim) = shape.animations.first() else {
-        return pose;
-    };
-
-    for (i, node) in anim.nodes.iter().enumerate() {
-        if node.controllers.is_empty() || i >= pose.len() {
-            continue;
-        }
-        pose[i] = animate_matrix(pose[i], &node.controllers, key);
-    }
-    pose
-}
-
-fn animate_matrix(base: Matrix43, controllers: &[AnimController], key: f32) -> Matrix43 {
-    let mut m = base;
-    for controller in controllers {
-        m = apply_controller(m, controller, key);
-    }
-    m
-}
-
-fn apply_controller(mut m: Matrix43, controller: &AnimController, key: f32) -> Matrix43 {
-    match controller {
-        AnimController::LinearPos { keys } => {
-            let Some((frame1, p1, frame2, p2)) = bracket_keys(keys, key) else {
-                return m;
-            };
-            let t = if (frame2 - frame1).abs() > 1e-6 {
-                ((key - frame1) / (frame2 - frame1)).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let pos = lerp3(p1, p2, t);
-            set_matrix_translation(&mut m, pos);
-            m
-        }
-        AnimController::SlerpRot { keys } | AnimController::TcbRot { keys } => {
-            let Some((frame1, q1, frame2, q2)) = bracket_quat_keys(keys, key) else {
-                return m;
-            };
-            let t = if (frame2 - frame1).abs() > 1e-6 {
-                ((key - frame1) / (frame2 - frame1)).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let translation = matrix_translation(m);
-            let q = msts_quat_to_bevy(q1).slerp(msts_quat_to_bevy(q2), t);
-            set_matrix_rotation(&mut m, q);
-            set_matrix_translation(&mut m, translation);
-            m
-        }
-    }
-}
-
-fn bracket_keys(keys: &[(f32, [f32; 3])], key: f32) -> Option<(f32, [f32; 3], f32, [f32; 3])> {
-    if keys.is_empty() {
-        return None;
-    }
-    let mut index = 0usize;
-    for (i, (frame, _)) in keys.iter().enumerate() {
-        if *frame <= key {
-            index = i;
-        } else {
-            break;
-        }
-    }
-    let (frame1, p1) = keys[index];
-    let (frame2, p2) = keys.get(index + 1).copied().unwrap_or(keys[index]);
-    Some((frame1, p1, frame2, p2))
-}
-
-fn bracket_quat_keys(keys: &[(f32, [f32; 4])], key: f32) -> Option<(f32, [f32; 4], f32, [f32; 4])> {
-    if keys.is_empty() {
-        return None;
-    }
-    let mut index = 0usize;
-    for (i, (frame, _)) in keys.iter().enumerate() {
-        if *frame <= key {
-            index = i;
-        } else {
-            break;
-        }
-    }
-    let (frame1, q1) = keys[index];
-    let (frame2, q2) = keys.get(index + 1).copied().unwrap_or(keys[index]);
-    Some((frame1, q1, frame2, q2))
-}
-
-fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [
-        a[0] + (b[0] - a[0]) * t,
-        a[1] + (b[1] - a[1]) * t,
-        a[2] + (b[2] - a[2]) * t,
-    ]
-}
-
-fn msts_quat_to_bevy(q: [f32; 4]) -> Quat {
-    Quat::from_xyzw(q[0], q[1], -q[2], q[3])
-}
-
-fn matrix_translation(m: Matrix43) -> [f32; 3] {
-    let d = m.rows[3];
-    [d[0] as f32, d[1] as f32, d[2] as f32]
-}
-
-fn set_matrix_translation(m: &mut Matrix43, pos: [f32; 3]) {
-    m.rows[3] = [pos[0] as f64, pos[1] as f64, pos[2] as f64];
-}
-
-fn set_matrix_rotation(m: &mut Matrix43, q: Quat) {
-    let m3 = Mat3::from_quat(q);
-    m.rows[0] = [m3.x_axis.x as f64, m3.x_axis.y as f64, m3.x_axis.z as f64];
-    m.rows[1] = [m3.y_axis.x as f64, m3.y_axis.y as f64, m3.y_axis.z as f64];
-    m.rows[2] = [m3.z_axis.x as f64, m3.z_axis.y as f64, m3.z_axis.z as f64];
-}
-
-#[derive(Clone, Copy)]
-struct MatrixRef {
-    matrix: Matrix43,
-    zero_translation: bool,
-}
-
-fn matrix_chain(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    prim_state_idx: i32,
-    pose: &[Matrix43],
-) -> Vec<MatrixRef> {
-    let Some(prim_state) = shape.prim_states.get(prim_state_idx.max(0) as usize) else {
-        return Vec::new();
-    };
-    let Some(vtx_state) = shape
-        .vtx_states
-        .get(prim_state.vertex_state_idx.max(0) as usize)
-    else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    let mut matrix_idx = vtx_state.matrix_idx;
-    let mut guard = 0usize;
-    while matrix_idx >= 0 && guard < shape.matrices.len() {
-        let idx = matrix_idx as usize;
-        let Some(matrix) = pose
-            .get(idx)
-            .copied()
-            .or_else(|| shape.matrices.get(idx).map(|m| m.matrix))
-        else {
-            break;
-        };
-        out.push(MatrixRef {
-            matrix,
-            zero_translation: idx == 0 && level.hierarchy.first().copied() == Some(-1),
-        });
-        matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
-        guard += 1;
-    }
-    out
-}
-
-fn transform_point(mut p: Vec3, chain: &[MatrixRef]) -> Vec3 {
-    for m in chain {
-        p = matrix43_transform_point_xna(&m.matrix, p, m.zero_translation);
-    }
-    p
-}
-
-fn transform_normal(mut n: Vec3, chain: &[MatrixRef]) -> Vec3 {
-    for m in chain {
-        n = matrix43_transform_vector_xna(&m.matrix, n);
-    }
-    n.try_normalize().unwrap_or(Vec3::Y)
-}
-
-#[allow(clippy::type_complexity)]
-fn resolve_vertex(
-    shape: &ShapeFile,
-    sub: &openrailsrs_formats::SubObject,
-    vertex_idx: u32,
-) -> Option<(usize, Option<usize>, Option<usize>, [f32; 4])> {
-    if let Some(v) = sub.vertices.get(vertex_idx as usize) {
-        return Some((
-            idx_to_usize(v.point_idx)?,
-            idx_to_usize(v.normal_idx),
-            v.uv_indices.first().copied().and_then(idx_to_usize),
-            v.color1.map(rgba_u8_to_f32).unwrap_or([1.0, 1.0, 1.0, 1.0]),
-        ));
-    }
-    let idx = vertex_idx as usize;
-    if idx < shape.points.len() {
-        return Some((idx, Some(idx), Some(idx), [1.0, 1.0, 1.0, 1.0]));
-    }
-    None
-}
-
-fn rgba_u8_to_f32([r, g, b, a]: [u8; 4]) -> [f32; 4] {
-    [
-        r as f32 / 255.0,
-        g as f32 / 255.0,
-        b as f32 / 255.0,
-        a as f32 / 255.0,
-    ]
-}
-
-fn part_vertex_colors(colors: &[[f32; 4]]) -> (Option<Vec<[f32; 4]>>, Option<[f32; 3]>) {
-    if colors.is_empty() || !colors.iter().any(color_is_meaningful) {
-        return (None, None);
-    }
-    let first = colors[0];
-    let uniform = colors.iter().all(|c| colors_close(c, &first));
-    if uniform {
-        return (None, Some([first[0], first[1], first[2]]));
-    }
-    (Some(colors.to_vec()), None)
-}
-
-fn color_is_meaningful(c: &[f32; 4]) -> bool {
-    (c[0] - 1.0).abs() > 0.02 || (c[1] - 1.0).abs() > 0.02 || (c[2] - 1.0).abs() > 0.02
-}
-
-fn colors_close(a: &[f32; 4], b: &[f32; 4]) -> bool {
-    (a[0] - b[0]).abs() < 0.02
-        && (a[1] - b[1]).abs() < 0.02
-        && (a[2] - b[2]).abs() < 0.02
-        && (a[3] - b[3]).abs() < 0.05
-}
-
-fn idx_to_usize(idx: i32) -> Option<usize> {
-    (idx >= 0).then_some(idx as usize)
-}
-
-fn texture_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    shape
-        .texture_for_prim_state_idx(prim_state_idx)
-        .or_else(|| fallback_shape_texture(shape, prim_state_idx))
-}
-
-/// Heurísticas cuando el `prim_state` no declara `tex_idxs` (paridad OR + extensiones).
-fn fallback_shape_texture(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
-    if shape.texture_filenames.is_empty() {
-        return None;
-    }
-    if shape.texture_filenames.len() == 1 {
-        return shape.texture_filenames.first().cloned();
-    }
-    for (i, other) in shape.prim_states.iter().enumerate() {
-        if i as i32 == prim_state_idx {
-            continue;
-        }
-        let tex_slot = other
-            .tex_indices
-            .first()
-            .copied()
-            .unwrap_or(other.texture_idx);
-        if let Some(name) = shape.resolve_texture_for_tex_slot(tex_slot) {
-            return Some(name);
-        }
-    }
-    let ps = shape.prim_states.get(prim_state_idx.max(0) as usize);
-    if ps.is_some_and(|ps| shader_requests_texture(shape, ps)) {
-        return shape
-            .primary_texture_filename()
-            .or_else(|| shape.texture_filenames.first().cloned());
-    }
-    None
-}
-
-fn shader_requests_texture(shape: &ShapeFile, ps: &openrailsrs_formats::PrimState) -> bool {
-    shape
-        .shader_names
-        .get(ps.shader_idx.max(0) as usize)
-        .is_some_and(|name| {
-            let n = name.to_ascii_lowercase();
-            // Open Rails SceneryShader names that expect a texture stage.
-            matches!(
-                n.as_str(),
-                "tex" | "texdiff" | "blendatex" | "blendatexdiff" | "addatex" | "addatexdiff"
-            ) || n.contains("tex")
-                || n.contains("blend")
-        })
 }
 
 #[cfg(test)]
@@ -647,6 +278,30 @@ mod tests {
         assert!(parts.iter().all(|p| p.texture.is_some()));
         let ace = openrailsrs_ace::read_ace(&tex).expect("ace");
         assert!(ace.width > 0);
+    }
+
+    #[test]
+    fn canonical_builder_matches_render3d_adapter_vertex_counts() {
+        let dir = chiltern_dir();
+        let path = dir.join("SHAPES");
+        let Ok(rd) = std::fs::read_dir(&path) else {
+            return;
+        };
+        let Some(shape_path) = rd
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("s")))
+        else {
+            return;
+        };
+        let shape = ShapeFile::from_path(&shape_path).expect("parse");
+        let via_api = load_shape_parts(&shape_path).expect("api");
+        let via_build = build_parts(&shape);
+        assert_eq!(via_api.len(), via_build.len());
+        let api_verts: usize = via_api.iter().map(|p| p.positions.len()).sum();
+        let build_verts: usize = via_build.iter().map(|p| p.positions.len()).sum();
+        assert_eq!(api_verts, build_verts);
+        assert!(api_verts > 0);
     }
 
     #[test]
@@ -827,18 +482,6 @@ mod tests {
         eprintln!("  total_parts={}", total.total_parts);
         eprintln!("  textured={}", total.textured_parts);
         eprintln!("  untextured={}", total.untextured_parts);
-        eprintln!(
-            "    con texturas en el shape pero prim_state sin tex_idxs={}",
-            total.untextured_with_shape_textures
-        );
-        eprintln!(
-            "    shape sin texture_filenames={}",
-            total.untextured_no_shape_textures
-        );
-        eprintln!("  top sin textura:");
-        for (name, n) in ranked.iter().take(12) {
-            eprintln!("    {n:4}  {name}");
-        }
     }
 
     #[test]

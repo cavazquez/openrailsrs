@@ -322,7 +322,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#53](https://github.com/cavazquez/openrailsrs/issues/53) | P1 | `[Assets] Modelar WORLD y terrain como assets compuestos por tile` | #29, #48, #49 |
 | [#54](https://github.com/cavazquez/openrailsrs/issues/54) | P1 | `[Assets] Exponer diagnósticos estructurados de carga y fallback` | #35, #48 |
 | [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | #48, #52, #53 |
-| [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | #47, #48 |
+| [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | **Cerrado** — `MeshPartBuildOptions` + `render3d_world_mesh_options`; render3d adaptador fino sobre canónico |
 | [#57](https://github.com/cavazquez/openrailsrs/issues/57) | P1 | `[Performance] Eliminar el doble parse de cada shape WORLD` | **Cerrado** — 1 `ShapeFile` parse / path único |
 | [#58](https://github.com/cavazquez/openrailsrs/issues/58) | P1 | `[Performance] Implementar instancing o batching seguro para objetos WORLD repetidos` | #34, #50 |
 | [#59](https://github.com/cavazquez/openrailsrs/issues/59) | P1 | `[Performance] Filtrar objetos WORLD por ventana durante el parse` | **Cerrado** — filtro XZ al materializar |
@@ -351,7 +351,8 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 - ~~`WorldSpawnProgress` conserva caches únicamente durante un ciclo de spawn~~ **(#50: `WorldShapeLodCache` de sesión con hit/miss; streams reutilizan Mesh/Image/ShapeFile)**.
 - ~~El unload despawnea entidades, pero no retira entradas de `Assets<Mesh/Image/Material>`~~ **(#51: eviction por refs vivas al unload en viewer3d + render3d; shapes/texturas compartidas se conservan)**.
 - `ScenerySpawnPlugin` sigue siendo un stub mientras los dos binarios mantienen máquinas de estados distintas; #52 y #55 migran scheduling y startup de forma incremental.
-- El refactor no debe ser cosmético: #48–#56 vinculan cada cambio a carga async, deduplicación, lifecycle, diagnóstico o eliminación de builders divergentes.
+- El refactor no debe ser cosmético: #48–#55 vinculan cada cambio a carga async, deduplicación, lifecycle o diagnóstico.
+- ~~Builders de shape divergentes entre render3d y bevy-scenery~~ **(#56: `render3d/src/shapes.rs` delega a `build_mesh_parts_from_shape_at_distance_with_options` + `render3d_world_mesh_options`; sub-objetos + bake anim key 0)**.
 
 ### Baseline de optimización reproducido
 

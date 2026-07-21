@@ -35,14 +35,16 @@ pub use material::{
     train_exterior_material_with_texture, train_exterior_material_with_texture_ex,
 };
 pub use mesh::{
-    LoadedShape, LoadedShapePart, MeshBuffers, MeshVertexColorMode, MeshVertexColorStats,
-    append_primitive_mesh_buffers, build_mesh_from_shape, build_mesh_from_shape_at_distance,
-    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
-    build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod, closest_lod_level,
-    light_mat_idx_for_prim_state, lod_level_for_distance, lod_level_index_for_distance, mesh_aabb,
-    mesh_buffers_bounds, mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
-    msts_shape_to_train_rotation, primary_texture_filename, shader_name_for_prim_state,
-    shape_normal_is_usable, texture_for_prim_state, write_mesh_wavefront,
-    write_shape_wavefront_from_path,
+    LoadedShape, LoadedShapePart, MeshBuffers, MeshPartBuildOptions, MeshVertexColorMode,
+    MeshVertexColorStats, append_primitive_mesh_buffers, append_primitive_mesh_buffers_ex,
+    build_mesh_from_shape, build_mesh_from_shape_at_distance, build_mesh_from_shape_lod,
+    build_mesh_parts_from_shape, build_mesh_parts_from_shape_at_distance,
+    build_mesh_parts_from_shape_at_distance_with_options, build_mesh_parts_from_shape_lod,
+    build_mesh_parts_from_shape_lod_with_options, closest_lod_level, light_mat_idx_for_prim_state,
+    lod_level_for_distance, lod_level_index_for_distance, mesh_aabb, mesh_buffers_bounds,
+    mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
+    msts_shape_to_train_rotation, primary_texture_filename, primitive_matrix_chain_bake_ex,
+    render3d_world_mesh_options, shader_name_for_prim_state, shape_normal_is_usable,
+    texture_for_prim_state, write_mesh_wavefront, write_shape_wavefront_from_path,
 };
 pub use openrailsrs_or_shader::coordinates::shape_point_to_bevy;

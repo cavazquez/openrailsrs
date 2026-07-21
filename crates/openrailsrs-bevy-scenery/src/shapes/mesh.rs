@@ -12,10 +12,22 @@ use openrailsrs_or_shader::coordinates::{
     matrix43_transform_point_xna, matrix43_transform_vector_xna, shape_point_to_bevy,
 };
 
+use super::anim::animation_pose_matrices;
 use super::debug::{
     clamp_msts_z_bias_for_bevy, set_train_shape_debug_scope, shape_uv_to_bevy,
     train_debug_flip_winding_active,
 };
+
+/// Options for [`build_mesh_parts_from_shape_lod_with_options`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MeshPartBuildOptions {
+    /// Keep one part per `(sub_object_idx, prim_state)` (night sub-objects, cab).
+    /// Default merges all sub-objects that share a `prim_state_idx`.
+    pub keep_sub_objects: bool,
+    /// When set, bake `animation_pose_matrices(shape, key)` into vertex positions
+    /// (render3d WORLD rest / water-column key `0`). Viewer WORLD prefers rest + runtime anim.
+    pub bake_animation_key: Option<f32>,
+}
 
 /// Parsed shape geometry plus optional primary texture filename from the shape.
 #[derive(Clone, Debug)]
@@ -250,17 +262,35 @@ pub fn build_mesh_parts_from_shape_lod(
     shape: &ShapeFile,
     level: &DistanceLevel,
 ) -> Vec<LoadedShapePart> {
+    build_mesh_parts_from_shape_lod_with_options(shape, level, MeshPartBuildOptions::default())
+}
+
+/// Like [`build_mesh_parts_from_shape_lod`] with sub-object split and optional anim bake.
+pub fn build_mesh_parts_from_shape_lod_with_options(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    options: MeshPartBuildOptions,
+) -> Vec<LoadedShapePart> {
     let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
         x: 0.0,
         y: 1.0,
         z: 0.0,
     });
-    let mut parts: BTreeMap<i32, MeshBuffers> = BTreeMap::new();
+    let pose = options
+        .bake_animation_key
+        .map(|key| animation_pose_matrices(shape, key));
+    let pose_matrices = pose.as_deref();
 
-    for sub in &level.sub_objects {
+    let mut parts: BTreeMap<(u32, i32), MeshBuffers> = BTreeMap::new();
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in &sub.primitives {
-            let buffers = parts.entry(prim.prim_state_idx).or_default();
-            append_primitive_mesh_buffers(
+            let key = if options.keep_sub_objects {
+                (sub_idx as u32, prim.prim_state_idx)
+            } else {
+                (u32::MAX, prim.prim_state_idx)
+            };
+            let buffers = parts.entry(key).or_default();
+            append_primitive_mesh_buffers_ex(
                 shape,
                 level,
                 sub,
@@ -269,13 +299,14 @@ pub fn build_mesh_parts_from_shape_lod(
                 buffers,
                 None,
                 false,
+                pose_matrices,
             );
         }
     }
 
     parts
         .into_iter()
-        .filter_map(|(prim_state_idx, buffers)| {
+        .filter_map(|((sub_object_idx, prim_state_idx), buffers)| {
             let (mesh, solid_color) = buffers.into_mesh_with_color()?;
             let (alpha_test_mode, z_bias_raw, z_buf_mode) = shape
                 .prim_states
@@ -291,7 +322,7 @@ pub fn build_mesh_parts_from_shape_lod(
             let z_bias = Some(clamp_msts_z_bias_for_bevy(z_bias_raw, None));
             Some(LoadedShapePart {
                 prim_state_idx,
-                sub_object_idx: u32::MAX,
+                sub_object_idx,
                 cab_matrix_idx: None,
                 mesh,
                 texture_file: texture_for_prim_state(shape, prim_state_idx),
@@ -367,6 +398,31 @@ pub fn append_primitive_mesh_buffers(
     chain_start: Option<i32>,
     omit_leaf_matrix: bool,
 ) {
+    append_primitive_mesh_buffers_ex(
+        shape,
+        level,
+        sub,
+        prim,
+        default_normal,
+        buffers,
+        chain_start,
+        omit_leaf_matrix,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn append_primitive_mesh_buffers_ex(
+    shape: &ShapeFile,
+    level: &DistanceLevel,
+    sub: &openrailsrs_formats::SubObject,
+    prim: &openrailsrs_formats::Primitive,
+    default_normal: ShapeVec3,
+    buffers: &mut MeshBuffers,
+    chain_start: Option<i32>,
+    omit_leaf_matrix: bool,
+    pose_matrices: Option<&[Matrix43]>,
+) {
     let start = chain_start.unwrap_or_else(|| {
         shape
             .prim_states
@@ -375,7 +431,13 @@ pub fn append_primitive_mesh_buffers(
             .map(|vs| vs.matrix_idx)
             .unwrap_or(0)
     });
-    let matrix_chain = primitive_matrix_chain_bake(shape, level, start, omit_leaf_matrix);
+    let matrix_chain = primitive_matrix_chain_bake_ex(
+        shape,
+        level,
+        start,
+        omit_leaf_matrix,
+        pose_matrices,
+    );
     for tri in prim.vertex_indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -466,16 +528,33 @@ pub fn primitive_matrix_chain_bake<'a>(
     chain_start: i32,
     omit_leaf_matrix: bool,
 ) -> Vec<ShapeMatrixRef<'a>> {
+    primitive_matrix_chain_bake_ex(shape, level, chain_start, omit_leaf_matrix, None)
+}
+
+/// Like [`primitive_matrix_chain_bake`], optionally substituting animated pose matrices.
+pub fn primitive_matrix_chain_bake_ex<'a>(
+    shape: &'a ShapeFile,
+    level: &DistanceLevel,
+    chain_start: i32,
+    omit_leaf_matrix: bool,
+    pose_matrices: Option<&'a [Matrix43]>,
+) -> Vec<ShapeMatrixRef<'a>> {
     let mut out = Vec::new();
     let mut matrix_idx = chain_start;
     let mut guard = 0usize;
-    while matrix_idx >= 0 && guard < shape.matrices.len() {
+    let n = pose_matrices
+        .map(|p| p.len())
+        .unwrap_or(shape.matrices.len());
+    while matrix_idx >= 0 && guard < n {
         let idx = matrix_idx as usize;
-        let Some(matrix) = shape.matrices.get(idx) else {
+        let Some(matrix) = pose_matrices
+            .and_then(|p| p.get(idx))
+            .or_else(|| shape.matrices.get(idx).map(|m| &m.matrix))
+        else {
             break;
         };
         out.push(ShapeMatrixRef {
-            matrix: &matrix.matrix,
+            matrix,
             zero_translation: idx == 0 && level.hierarchy.first().copied() == Some(-1),
         });
         matrix_idx = level.hierarchy.get(idx).copied().unwrap_or(-1);
@@ -689,12 +768,33 @@ pub fn build_mesh_parts_from_shape_at_distance(
     shape: &ShapeFile,
     distance_m: f32,
 ) -> Vec<LoadedShapePart> {
+    build_mesh_parts_from_shape_at_distance_with_options(
+        shape,
+        distance_m,
+        MeshPartBuildOptions::default(),
+    )
+}
+
+/// LOD-aware parts with [`MeshPartBuildOptions`] (sub-objects / anim bake).
+pub fn build_mesh_parts_from_shape_at_distance_with_options(
+    shape: &ShapeFile,
+    distance_m: f32,
+    options: MeshPartBuildOptions,
+) -> Vec<LoadedShapePart> {
     let Some(level) =
         lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))
     else {
         return Vec::new();
     };
-    build_mesh_parts_from_shape_lod(shape, level)
+    build_mesh_parts_from_shape_lod_with_options(shape, level, options)
+}
+
+/// Options used by render3d WORLD spawn: keep night sub-objects + bake anim key 0.
+pub fn render3d_world_mesh_options() -> MeshPartBuildOptions {
+    MeshPartBuildOptions {
+        keep_sub_objects: true,
+        bake_animation_key: Some(0.0),
+    }
 }
 
 /// Write a baked Bevy mesh as Wavefront OBJ (positions, UVs, normals, triangle list).
