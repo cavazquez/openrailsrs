@@ -396,6 +396,7 @@ pub fn tile_stream_system(
     assets: Option<ResMut<StreamWorldAssets>>,
     state: Option<ResMut<TileStreamState>>,
     mut height_cache: ResMut<StreamHeightIndexCache>,
+    mut bundle_handles: ResMut<crate::tile_bundle::TileBundleHandles>,
     route: Res<RouteDir>,
     msts_root: Res<MstsRootDir>,
     texture_env: Res<crate::textures::TextureEnvironment>,
@@ -439,6 +440,8 @@ pub fn tile_stream_system(
     }
 
     if !unloading.is_empty() {
+        // Exact tile unload for AssetServer-backed bundles (#53).
+        bundle_handles.release_all(unloading.iter());
         // Despawn is deferred: treat unloading-tile entities as already gone (#51).
         let mut live_shape_meshes = HashSet::new();
         let mut live_terrain_mats = HashSet::new();

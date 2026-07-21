@@ -46,7 +46,7 @@ pub use terrain::{
     TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, build_patch_mesh_data,
     build_patch_mesh_data_ex, build_patch_mesh_data_sampled, build_tile_mesh_data,
     build_tile_mesh_data_sampled, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
-    read_y_raw, terrain_patches_per_side,
+    read_f_raw_bytes, read_y_raw, read_y_raw_bytes, terrain_patches_per_side,
 };
 pub use track_db::{
     IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemHost, TrItemKind, TrItemWorldPose,

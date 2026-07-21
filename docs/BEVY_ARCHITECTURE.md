@@ -36,11 +36,11 @@ flowchart TB
 
 | Plugin | Crate | Registra |
 |--------|-------|----------|
-| `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` + `MaterialPlugin` terreno/scenery/cab, assets shaders |
+| `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` (`MstsTileBundleAsset` #53) + materiales terreno/scenery/cab |
 | `OrVsmPlugins` | bevy-scenery (feature `vsm`) | Pass momentos VSM, cascadas OR |
 | `ScenerySpawnPlugin` | bevy-scenery | `#52` sets Catalog→Ready, budgets, ciclo anti-doble-spawn, `ScenerySpawnProgress`; FSM local en cada app |
 | `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live; scenery en `OnEnter(Playing)` (#55) |
-| `Render3dPlugin` | render3d | Loading `AppState`, fly cam, HUD debug; `LoadStage::ParsingTiles` async (#55) |
+| `Render3dPlugin` | render3d | Loading `AppState`, fly cam, HUD debug; `LoadStage::ParsingTiles` async (#55); `TileBundleHandles` (#53) |
 
 ---
 

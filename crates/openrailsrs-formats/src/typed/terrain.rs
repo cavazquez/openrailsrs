@@ -167,10 +167,23 @@ impl TerrainFile {
             offset: 0,
             message: format!("failed to read {}: {e}", path.display()),
         })?;
-        if is_terrain_binary_file(&bytes) {
-            return Self::from_binary_tile(&bytes, path, tile_x, tile_z);
+        Self::from_bytes(&bytes, Some(path), tile_x, tile_z)
+    }
+
+    /// Parse terrain metadata from bytes (text `.y` / SIMISA, or binary `JINX0t*b`).
+    ///
+    /// `path_hint` is used for binary fallback to `_y.raw` sidecars and error context.
+    pub fn from_bytes(
+        bytes: &[u8],
+        path_hint: Option<&Path>,
+        tile_x: i32,
+        tile_z: i32,
+    ) -> Result<Self, FormatError> {
+        let path = path_hint.unwrap_or_else(|| Path::new("terrain.y"));
+        if is_terrain_binary_file(bytes) {
+            return Self::from_binary_tile(bytes, path, tile_x, tile_z);
         }
-        let text = crate::msts_file_text::read_msts_file_decoded(path)?;
+        let text = crate::msts_file_text::decode_msts_file_bytes(bytes)?;
         let ast = parse_from_first_paren(&text)?;
         Self::from_ast(&ast, tile_x, tile_z)
     }
@@ -913,6 +926,27 @@ pub fn terrain_patches_per_side(nsamples: usize) -> u32 {
 
 /// Decode a MSTS `_Y.RAW` height buffer using tile sample parameters.
 pub fn read_y_raw(path: &Path, params: &TerrainSamples) -> Result<ElevationGrid, FormatError> {
+    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
+        key: "read".into(),
+        context: path.display().to_string(),
+        expected: e.to_string(),
+    })?;
+    read_y_raw_bytes(&bytes, params).map_err(|e| match e {
+        FormatError::UnexpectedAtom {
+            key,
+            context: _,
+            expected,
+        } => FormatError::UnexpectedAtom {
+            key,
+            context: path.display().to_string(),
+            expected,
+        },
+        other => other,
+    })
+}
+
+/// Decode `_Y.RAW` bytes (same rules as [`read_y_raw`]).
+pub fn read_y_raw_bytes(bytes: &[u8], params: &TerrainSamples) -> Result<ElevationGrid, FormatError> {
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)
@@ -923,15 +957,10 @@ pub fn read_y_raw(path: &Path, params: &TerrainSamples) -> Result<ElevationGrid,
             expected: "grid dimensions overflow".into(),
         })?;
 
-    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
-        key: "read".into(),
-        context: path.display().to_string(),
-        expected: e.to_string(),
-    })?;
     if bytes.len() != expected {
         return Err(FormatError::UnexpectedAtom {
             key: "size".into(),
-            context: path.display().to_string(),
+            context: "terrain y raw".into(),
             expected: format!(
                 "expected {expected} bytes for {}×{} uint16 grid, got {}",
                 nsamples,
@@ -956,6 +985,27 @@ pub fn read_y_raw(path: &Path, params: &TerrainSamples) -> Result<ElevationGrid,
 
 /// Decode `_F.RAW` feature flags (OR: hidden when `(byte & 0x04) != 0`).
 pub fn read_f_raw(path: &Path, params: &TerrainSamples) -> Result<FeatureGrid, FormatError> {
+    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
+        key: "read".into(),
+        context: path.display().to_string(),
+        expected: e.to_string(),
+    })?;
+    read_f_raw_bytes(bytes, params).map_err(|e| match e {
+        FormatError::UnexpectedAtom {
+            key,
+            context: _,
+            expected,
+        } => FormatError::UnexpectedAtom {
+            key,
+            context: path.display().to_string(),
+            expected,
+        },
+        other => other,
+    })
+}
+
+/// Decode `_F.RAW` bytes (same rules as [`read_f_raw`]).
+pub fn read_f_raw_bytes(bytes: Vec<u8>, params: &TerrainSamples) -> Result<FeatureGrid, FormatError> {
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)
@@ -965,15 +1015,10 @@ pub fn read_f_raw(path: &Path, params: &TerrainSamples) -> Result<FeatureGrid, F
             expected: "grid dimensions overflow".into(),
         })?;
 
-    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
-        key: "read".into(),
-        context: path.display().to_string(),
-        expected: e.to_string(),
-    })?;
     if bytes.len() != expected {
         return Err(FormatError::UnexpectedAtom {
             key: "size".into(),
-            context: path.display().to_string(),
+            context: "terrain f raw".into(),
             expected: format!(
                 "expected {expected} bytes for {}×{} feature grid, got {}",
                 nsamples,

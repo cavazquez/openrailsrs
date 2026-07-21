@@ -1,16 +1,20 @@
-//! Bevy [`Asset`] / [`AssetLoader`] types for MSTS/Open Rails content (#48).
+//! Bevy [`Asset`] / [`AssetLoader`] types for MSTS/Open Rails content (#48, #53).
 //!
 //! v1 registers CPU-side assets and async loaders. Spawn pipelines may keep
 //! using synchronous parsers; consumers can opt into `AssetServer::load`.
+//! Composite [`MstsTileBundleAsset`] exposes WORLD+terrain lifecycle per tile.
 
 mod loaders;
 mod types;
 
 pub use loaders::{
-    MstsAceAssetLoader, MstsRouteCatalogLoader, MstsShapeAssetLoader, MstsWorldTileAssetLoader,
+    MstsAceAssetLoader, MstsRouteCatalogLoader, MstsShapeAssetLoader, MstsTerrainTileAssetLoader,
+    MstsTileBundleLoader, MstsWorldTileAssetLoader,
 };
 pub use types::{
-    MstsAceAsset, MstsAssetError, MstsRouteCatalogAsset, MstsShapeAsset, MstsWorldTileAsset,
+    MstsAceAsset, MstsAssetError, MstsRouteCatalogAsset, MstsShapeAsset, MstsTerrainTileAsset,
+    MstsTileBundleAsset, MstsWorldTileAsset, TerrainRawStatus, TileBundleManifest,
+    TileBundlePaths, TileBundleStatus, discover_tile_bundle_paths, write_tile_bundle_manifest,
 };
 
 use bevy::asset::io::{AssetSourceBuilder, AssetSourceId};
@@ -26,10 +30,14 @@ impl Plugin for MstsAssetPlugin {
             .init_asset::<MstsAceAsset>()
             .init_asset::<MstsWorldTileAsset>()
             .init_asset::<MstsRouteCatalogAsset>()
+            .init_asset::<MstsTerrainTileAsset>()
+            .init_asset::<MstsTileBundleAsset>()
             .init_asset_loader::<MstsShapeAssetLoader>()
             .init_asset_loader::<MstsAceAssetLoader>()
             .init_asset_loader::<MstsWorldTileAssetLoader>()
-            .init_asset_loader::<MstsRouteCatalogLoader>();
+            .init_asset_loader::<MstsRouteCatalogLoader>()
+            .init_asset_loader::<MstsTerrainTileAssetLoader>()
+            .init_asset_loader::<MstsTileBundleLoader>();
     }
 }
 
@@ -172,5 +180,94 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    fn tile_bundle_complete_is_ready() {
+        let mut app = msts_test_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle: Handle<MstsTileBundleAsset> =
+            server.load("msts/tiles/complete/complete.tilebundle");
+        wait_loaded(&mut app, &handle, "complete.tilebundle");
+
+        let bundles = app.world().resource::<Assets<MstsTileBundleAsset>>();
+        let bundle = bundles.get(&handle).expect("bundle");
+        assert_eq!(bundle.tile_x, -1000);
+        assert_eq!(bundle.tile_z, -1000);
+        assert_eq!(bundle.status, TileBundleStatus::Ready);
+        assert_eq!(bundle.terrain_raw_status, Some(TerrainRawStatus::Complete));
+        assert!(bundle.world.is_some());
+        assert!(bundle.terrain.is_some());
+
+        let world_h = bundle.world.clone().unwrap();
+        let terr_h = bundle.terrain.clone().unwrap();
+        wait_loaded(&mut app, &world_h, "bundle world");
+        wait_loaded(&mut app, &terr_h, "bundle terrain");
+
+        let worlds = app.world().resource::<Assets<MstsWorldTileAsset>>();
+        assert!(!worlds.get(&world_h).unwrap().world.items.is_empty());
+        let terrains = app.world().resource::<Assets<MstsTerrainTileAsset>>();
+        let terr = terrains.get(&terr_h).unwrap();
+        assert!(terr.elevation.is_some());
+        assert_eq!(terr.raw_status, TerrainRawStatus::Complete);
+    }
+
+    #[test]
+    fn tile_bundle_missing_raw_is_partial_with_diag() {
+        let mut app = msts_test_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle: Handle<MstsTileBundleAsset> =
+            server.load("msts/tiles/missing_raw/missing_raw.tilebundle");
+        wait_loaded(&mut app, &handle, "missing_raw.tilebundle");
+
+        let bundles = app.world().resource::<Assets<MstsTileBundleAsset>>();
+        let bundle = bundles.get(&handle).expect("bundle");
+        assert_eq!(bundle.status, TileBundleStatus::Partial);
+        assert!(
+            matches!(
+                bundle.terrain_raw_status,
+                Some(TerrainRawStatus::MissingY | TerrainRawStatus::MissingBoth)
+            ),
+            "expected missing Y RAW, got {:?}",
+            bundle.terrain_raw_status
+        );
+        assert!(bundle.world.is_some(), "world must still load");
+        assert!(
+            !bundle.diag.failures.is_empty() || bundle.diag.failed > 0,
+            "missing RAW must be recorded in diagnostics"
+        );
+
+        let world_h = bundle.world.clone().unwrap();
+        wait_loaded(&mut app, &world_h, "missing_raw world");
+        let worlds = app.world().resource::<Assets<MstsWorldTileAsset>>();
+        assert!(!worlds.get(&world_h).unwrap().world.items.is_empty());
+    }
+
+    #[test]
+    fn tile_bundle_unload_drops_asset() {
+        let mut app = msts_test_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle: Handle<MstsTileBundleAsset> =
+            server.load("msts/tiles/complete/complete.tilebundle");
+        wait_loaded(&mut app, &handle, "complete for unload");
+        let id = handle.id();
+        assert!(app
+            .world()
+            .resource::<Assets<MstsTileBundleAsset>>()
+            .get(id)
+            .is_some());
+
+        drop(handle);
+        // Allow Bevy to process dropped strong handles.
+        for _ in 0..8 {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .resource::<Assets<MstsTileBundleAsset>>()
+                .get(id)
+                .is_none(),
+            "bundle asset should unload when strong handles are dropped"
+        );
     }
 }

@@ -1,0 +1,6 @@
+{
+  "tile_x": -1000,
+  "tile_z": -1000,
+  "world": "msts/tiles/complete/w-001000-001000.w",
+  "terrain": "msts/tiles/complete/minimal_terrain.y"
+}

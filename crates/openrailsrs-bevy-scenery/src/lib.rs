@@ -18,8 +18,11 @@ pub mod test_harness;
 
 pub use assets::{
     MstsAceAsset, MstsAceAssetLoader, MstsAssetError, MstsAssetPlugin, MstsRouteCatalogAsset,
-    MstsRouteCatalogLoader, MstsShapeAsset, MstsShapeAssetLoader, MstsWorldTileAsset,
-    MstsWorldTileAssetLoader, register_msts_content_source,
+    MstsRouteCatalogLoader, MstsShapeAsset, MstsShapeAssetLoader, MstsTerrainTileAsset,
+    MstsTerrainTileAssetLoader, MstsTileBundleAsset, MstsTileBundleLoader, MstsWorldTileAsset,
+    MstsWorldTileAssetLoader, TerrainRawStatus, TileBundleManifest, TileBundlePaths,
+    TileBundleStatus, discover_tile_bundle_paths, register_msts_content_source,
+    write_tile_bundle_manifest,
 };
 pub use catalog::{MstsRouteCatalog, index_shapes_tree, route_pack_dir};
 pub use load_diagnostics::{

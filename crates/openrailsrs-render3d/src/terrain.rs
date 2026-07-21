@@ -189,7 +189,16 @@ pub fn load_tile_geometry(route_dir: &Path, tile_x: i32, tile_z: i32) -> Result<
     let y_path = tile.y_raw_path(&t_path);
     let grid = read_y_raw(&y_path, &tile.samples)
         .map_err(|e| anyhow!("lectura de {}: {e}", y_path.display()))?;
+    Ok(tile_geometry_from_elevation(tile_x, tile_z, &tile, grid))
+}
 
+/// Build [`TileGeometry`] from already-parsed terrain + elevation (#53).
+pub fn tile_geometry_from_elevation(
+    tile_x: i32,
+    tile_z: i32,
+    tile: &TerrainFile,
+    grid: ElevationGrid,
+) -> TileGeometry {
     let sample_size = tile.samples.sample_size;
     let (min_y, max_y) = elevation_range(&grid);
     let base_y = if min_y.is_finite() { min_y } else { 0.0 };
@@ -252,7 +261,7 @@ pub fn load_tile_geometry(route_dir: &Path, tile_x: i32, tile_z: i32) -> Result<
         }
     }
 
-    Ok(TileGeometry {
+    TileGeometry {
         tile_x,
         tile_z,
         side_m: patches_per_side as f32 * PATCH_SIZE_M,
@@ -265,7 +274,7 @@ pub fn load_tile_geometry(route_dir: &Path, tile_x: i32, tile_z: i32) -> Result<
             base_y,
             half,
         },
-    })
+    }
 }
 
 fn elevation_range(grid: &ElevationGrid) -> (f32, f32) {

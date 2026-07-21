@@ -233,6 +233,15 @@ pub fn load_objects_with_diag(
         }
     };
 
+    objects_from_world_file(&world, route_dir, base_y)
+}
+
+/// Materialize WORLD objects from an already-parsed [`WorldFile`] (#53).
+pub fn objects_from_world_file(
+    world: &WorldFile,
+    route_dir: &Path,
+    base_y: f32,
+) -> Vec<ObjectMarker> {
     let mut out = Vec::new();
     for item in &world.items {
         let Some(p) = item.position() else {

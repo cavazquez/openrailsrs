@@ -321,7 +321,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#50](https://github.com/cavazquez/openrailsrs/issues/50) | P1 | `[Assets] Mantener caché de shapes y texturas entre streams de tiles` | **Cerrado** — `WorldShapeLodCache` de sesión + hits/misses |
 | [#51](https://github.com/cavazquez/openrailsrs/issues/51) | P1 | `[Assets] Liberar meshes, imágenes y materiales GPU al descargar tiles` | **Cerrado** — eviction por refs vivas al unload |
 | [#52](https://github.com/cavazquez/openrailsrs/issues/52) | P1 | `[Bevy Integration] Implementar ScenerySpawnPlugin compartido para viewer3d y render3d` | **Cerrado** — `ScenerySpawnSet`+ciclo+budgets; ambos vía `OrSceneryPlugins` |
-| [#53](https://github.com/cavazquez/openrailsrs/issues/53) | P1 | `[Assets] Modelar WORLD y terrain como assets compuestos por tile` | #29, #48, #49 |
+| [#53](https://github.com/cavazquez/openrailsrs/issues/53) | P1 | `[Assets] Modelar WORLD y terrain como assets compuestos por tile` | **Cerrado** — `MstsTileBundleAsset` + terrain loader; fixtures RAW ok/faltante; puente render3d |
 | [#54](https://github.com/cavazquez/openrailsrs/issues/54) | P1 | `[Assets] Exponer diagnósticos estructurados de carga y fallback` | **Cerrado** — `MstsLoadDiagnostics` (bevy-scenery); CLI/HUD/`OPENRAILSRS_LOAD_AUDIT`; integra #35 |
 | [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | **Cerrado** — viewer3d `Loading`→`Playing` + hilo route-load; render3d `LoadStage::ParsingTiles` async |
 | [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | **Cerrado** — `MeshPartBuildOptions` + `render3d_world_mesh_options`; render3d adaptador fino sobre canónico |
@@ -348,7 +348,8 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 
 ### AssetLoader y arquitectura de assets
 
-- ~~**Confirmado:** no existe `AssetLoader` MSTS~~ **(#48: `MstsShapeAsset` / `MstsAceAsset` / `MstsWorldTileAsset` / `MstsRouteCatalogAsset` + loaders; `register_msts_content_source`; spawn aún no migrado)**.
+- ~~**Confirmado:** no existe `AssetLoader` MSTS~~ **(#48: `MstsShapeAsset` / `MstsAceAsset` / `MstsWorldTileAsset` / `MstsRouteCatalogAsset` + loaders; `register_msts_content_source`; spawn sync aún dominante)**.
+- ~~Tile no era unidad de asset lifecycle~~ **(#53: `MstsTerrainTileAsset` + `MstsTileBundleAsset` `.tilebundle`; deps world/terrain; RAW missing → Partial+diag; puente render3d `TileBundleHandles`; viewer3d pendiente)**.
 - ~~`RouteAssets` / `AssetIndex` duplicaban scans y precedencia~~ **(#49: `MstsRouteCatalog` CPU en bevy-scenery; un scan SHAPES/TEXTURES; wrappers finos; distinto de `MstsRouteCatalogAsset` `.routecat`)**.
 - ~~`WorldSpawnProgress` conserva caches únicamente durante un ciclo de spawn~~ **(#50: `WorldShapeLodCache` de sesión con hit/miss; streams reutilizan Mesh/Image/ShapeFile)**.
 - ~~El unload despawnea entidades, pero no retira entradas de `Assets<Mesh/Image/Material>`~~ **(#51: eviction por refs vivas al unload en viewer3d + render3d; shapes/texturas compartidas se conservan)**.

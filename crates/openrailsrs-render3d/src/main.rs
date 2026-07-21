@@ -29,7 +29,8 @@ use openrailsrs_render3d::{
     DebugHudEnabled, FlySpeed, MstsRootDir, PlayerStartPoseResource, Render3dPlugin, RouteDir,
     SceneDebugContext, SceneExtent, TdbTrackResource, TileCatalog, TileParseRequest,
     TileStreamConfig, TilesToRender, activity, fly_camera, objects, quit_on_esc, scenery, sky,
-    stream, terrain, toggle_debug_hud, track, update_debug_hud, update_window_title,
+    stream, terrain, tile_bundle, toggle_debug_hud, track, update_debug_hud,
+    update_window_title,
 };
 
 #[derive(Parser, Debug)]
@@ -263,6 +264,9 @@ fn main() -> anyhow::Result<()> {
             toggle_debug_hud.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
             scenery::update_water_surfaces
                 .run_if(in_state(openrailsrs_render3d::AppState::Playing)),
+            tile_bundle::materialize_tile_bundle_system
+                .run_if(in_state(openrailsrs_render3d::AppState::Playing))
+                .before(stream::tile_stream_system),
             stream::tile_stream_system.run_if(in_state(openrailsrs_render3d::AppState::Playing)),
             quit_on_esc,
         ),

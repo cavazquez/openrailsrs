@@ -73,7 +73,8 @@ pub use typed::{
     build_patch_mesh_data_ex, build_patch_mesh_data_sampled, build_tile_mesh_data,
     build_tile_mesh_data_sampled, find_trk_path, lit_light_indices_for_aspect,
     parse_orts_brake_shoe, parse_orts_friction_fields, parse_tile_xz_from_filename,
-    patch_affine_uv, read_f_raw, read_y_raw, resolve_brake_shoe_curve, resolve_hazard_shape_name,
+    patch_affine_uv, read_f_raw, read_f_raw_bytes, read_y_raw, read_y_raw_bytes,
+    resolve_brake_shoe_curve, resolve_hazard_shape_name,
     terrain_patches_per_side,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};

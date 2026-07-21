@@ -26,6 +26,7 @@ pub mod stream;
 pub mod tdb_track;
 pub mod terrain;
 pub mod textures;
+pub mod tile_bundle;
 pub mod tile_parse;
 pub mod track;
 pub mod transfer;
@@ -50,6 +51,10 @@ pub use runtime::{
 };
 pub use stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
 pub use terrain::TileGeometry;
+pub use tile_bundle::{
+    TileBundleHandles, materialize_loaded_tile_bundles, request_tile_bundle,
+    try_materialize_tile_entry,
+};
 pub use tile_parse::{ParsedTiles, TileParseRequest, parse_tiles_for_load};
 pub use track::{load_graph, load_tdb_context};
 
@@ -77,6 +82,7 @@ impl Plugin for Render3dPlugin {
             .add_plugins(FrameTimeDiagnosticsPlugin::default())
             .init_resource::<openrailsrs_bevy_scenery::MstsLoadDiagnostics>()
             .init_resource::<crate::stream::StreamHeightIndexCache>()
+            .init_resource::<crate::tile_bundle::TileBundleHandles>()
             .init_state::<AppState>()
             .add_systems(
                 Startup,
