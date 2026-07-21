@@ -9,6 +9,10 @@
 //! markers stay in the same placement frame as the trimmed graph (Chiltern
 //! `world_anchor`). Otherwise nearest-centreline snap or graph fallback is used
 //! (simulation odometry stays on the graph).
+//!
+//! Rolling stock (#67) uses [`vehicle_pose_on_graph_edge`]: imported `e{N}` edges
+//! map to TDB vector `N` with `pos_on_edge_m` as chainage. That path **keeps**
+//! TDB elevation (no `ground_y_at`) when the pose resolves.
 
 use std::collections::HashMap;
 
@@ -35,6 +39,11 @@ pub const TDB_ID_MAX_DELTA_M: f32 = 25.0;
 
 /// Max horizontal snap from graph hint to `.tdb` centreline (nearest fallback).
 pub const TDB_GRAPH_SNAP_RADIUS_M: f32 = 2500.0;
+
+/// Reject `e{N}`→vector mapping only when endpoints disagree by more than this (m).
+/// Mid-edge chord vs centreline can be far on long MSTS vectors; do not use
+/// [`TDB_ID_MAX_DELTA_M`] for vehicle chainage.
+pub const TDB_EDGE_ENDPOINT_MAX_DELTA_M: f32 = 250.0;
 
 /// Override via `OPENRAILSRS_TDB_SNAP_RADIUS_M` (50–10000 m).
 pub fn tdb_snap_radius_m() -> f32 {
@@ -161,6 +170,11 @@ impl<'a> TrackPositionResolver<'a> {
     /// Legacy helper: parse `nNNNN` only (no alias, no spatial check).
     pub fn parse_n_prefix_tdb_id(node_id: &str) -> Option<u32> {
         node_id.strip_prefix('n')?.parse().ok()
+    }
+
+    /// Parse import edge id `eNNNN` → TDB vector node id.
+    pub fn parse_e_prefix_tdb_id(edge_id: &str) -> Option<u32> {
+        edge_id.trim().strip_prefix('e')?.parse().ok()
     }
 
     /// Candidate TDB id from import alias, else `nNNNN` prefix.
@@ -521,6 +535,130 @@ pub fn marker_render_world_on_edge(
         .map(|p| -p.yaw_deg.to_radians())
         .unwrap_or(graph_yaw);
     Some((render, yaw))
+}
+
+/// Planar graph point on an edge (Bevy XZ, Y=0) without terrain or route offset.
+fn graph_edge_planar_msts(graph: &TrackGraph, edge_id: &str, pos_on_edge_m: f64) -> Option<Vec3> {
+    let edge = graph.edge(edge_id.trim())?;
+    let from = graph.node(&edge.from.0)?;
+    let to = graph.node(&edge.to.0)?;
+    let frac = if edge.length_m > 0.0 {
+        (pos_on_edge_m / edge.length_m).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let x_m = from.x_m + frac * (to.x_m - from.x_m);
+    let y_m = from.y_m + frac * (to.y_m - from.y_m);
+    Some(graph_to_world(x_m, y_m))
+}
+
+fn xz_delta(a: Vec3, b: Vec3) -> f32 {
+    Vec2::new(a.x - b.x, a.z - b.z).length()
+}
+
+/// Map graph `pos_on_edge_m` to TDB chainage, flipping when the edge is stored reverse of the vector.
+fn tdb_chainage_for_graph_edge(
+    resolver: &TrackPositionResolver<'_>,
+    graph: &TrackGraph,
+    edge_id: &str,
+    pos_on_edge_m: f64,
+    tdb_node_id: u32,
+) -> Option<f64> {
+    let edge = graph.edge(edge_id.trim())?;
+    let len = edge.length_m.max(0.0);
+    let pos = pos_on_edge_m.clamp(0.0, len);
+    let from = graph_edge_planar_msts(graph, edge_id, 0.0)?;
+    let to = graph_edge_planar_msts(graph, edge_id, len)?;
+    // Prefer start/end samples; if the vector is shorter than `len`, clamp samples still work.
+    let pose0 = resolver.tdb_pose(tdb_node_id, 0.0, Some(from))?;
+    let pose_end = resolver
+        .tdb_pose(tdb_node_id, len, Some(to))
+        .or_else(|| resolver.tdb_pose(tdb_node_id, 0.0, Some(to)))?;
+    let forward = xz_delta(from, pose0.position) + xz_delta(to, pose_end.position);
+    let reverse = xz_delta(from, pose_end.position) + xz_delta(to, pose0.position);
+    // Soft check: imported `e{N}` is authoritative; only skip reverse detection when
+    // endpoints are absurdly far (wrong id). Still return forward chainage.
+    if forward.min(reverse) > TDB_EDGE_ENDPOINT_MAX_DELTA_M * 2.0 {
+        return Some(pos);
+    }
+    if reverse + 1.0 < forward {
+        Some((len - pos).clamp(0.0, len))
+    } else {
+        Some(pos)
+    }
+}
+
+/// Render-space vehicle pose on a graph edge (#67).
+///
+/// Prefer TDB centreline position (including elevation) and yaw when the edge is
+/// an imported `e{N}` vector. Falls back to nearest snap, then graph+terrain.
+#[allow(clippy::too_many_arguments)]
+pub fn vehicle_pose_on_graph_edge(
+    graph: &TrackGraph,
+    edge_id: &str,
+    pos_on_edge_m: f64,
+    resolver: Option<&TrackPositionResolver<'_>>,
+    scene: &TrackScene,
+    route_offset: Vec3,
+    focus: &RouteFocus,
+    terrain: Option<&TerrainElevation>,
+) -> Option<(Vec3, Quat)> {
+    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
+        graph,
+        edge_id,
+        pos_on_edge_m,
+        resolver,
+        scene,
+        route_offset,
+        focus,
+        terrain,
+    )?;
+    Some((pos, Quat::from_rotation_y(yaw)))
+}
+
+/// Same as [`vehicle_pose_on_graph_edge`] but returns yaw in radians (around +Y).
+#[allow(clippy::too_many_arguments)]
+pub fn vehicle_position_yaw_on_graph_edge(
+    graph: &TrackGraph,
+    edge_id: &str,
+    pos_on_edge_m: f64,
+    resolver: Option<&TrackPositionResolver<'_>>,
+    scene: &TrackScene,
+    route_offset: Vec3,
+    focus: &RouteFocus,
+    terrain: Option<&TerrainElevation>,
+) -> Option<(Vec3, f32)> {
+    if let Some(res) = resolver {
+        if let Some(tdb_id) = TrackPositionResolver::parse_e_prefix_tdb_id(edge_id) {
+            if let Some(chainage) =
+                tdb_chainage_for_graph_edge(res, graph, edge_id, pos_on_edge_m, tdb_id)
+            {
+                let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
+                if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
+                    let placed = pose.position + route_offset;
+                    let yaw = -pose.yaw_deg.to_radians();
+                    // Keep TDB Y — do not flatten with ground_y_at (#67).
+                    return Some((focus.to_render_surface(placed), yaw));
+                }
+            }
+        }
+        if let Some(planar) = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m) {
+            let hint = planar + route_offset;
+            if let Some(pose) = snap_msts_to_tdb(res, hint, tdb_snap_radius_m()) {
+                let yaw = -pose.yaw_deg.to_radians();
+                return Some((focus.to_render_surface(pose.position), yaw));
+            }
+        }
+    }
+    crate::train::position_on_graph(
+        graph,
+        edge_id,
+        pos_on_edge_m,
+        terrain,
+        scene,
+        route_offset,
+        focus,
+    )
 }
 
 pub fn route_start_bevy(start: RouteStart) -> Vec3 {
@@ -1073,5 +1211,158 @@ mod tests {
             assert!(TDB_ID_MAX_DELTA_M <= 25.0);
         }
         assert!(tdb_snap_radius_m() >= TDB_ID_MAX_DELTA_M);
+    }
+
+    #[test]
+    fn parse_e_prefix_tdb_id_from_edge() {
+        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e10783"), Some(10783));
+        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e2"), Some(2));
+        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("n2"), None);
+    }
+
+    #[test]
+    fn vehicle_pose_keeps_tdb_y_not_terrain() {
+        use openrailsrs_core::{EdgeId, NodeId};
+        use openrailsrs_track::{Edge, Node, NodeKind};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let pose0 = resolver.tdb_pose(2, 0.0, None).expect("vector 2 start");
+        let pose_mid = resolver.tdb_pose(2, 50.0, None).expect("vector 2 mid");
+        let pose_end = resolver
+            .tdb_pose(2, 100.0, None)
+            .or_else(|| resolver.tdb_pose(2, 99.0, None))
+            .expect("vector 2 end");
+
+        let mut graph = TrackGraph::new();
+        // Import stores Bevy Z in `y_m` already (`graph_to_world` maps y_m → Z).
+        graph
+            .insert_node(Node {
+                id: NodeId("n_from".into()),
+                x_m: pose0.position.x as f64,
+                y_m: pose0.position.z as f64,
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        graph
+            .insert_node(Node {
+                id: NodeId("n_to".into()),
+                x_m: pose_end.position.x as f64,
+                y_m: pose_end.position.z as f64,
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        let len = f64::from(xz_delta(pose0.position, pose_end.position)).max(100.0);
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2".into()),
+                from: NodeId("n_from".into()),
+                to: NodeId("n_to".into()),
+                length_m: len,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+
+        let scene = TrackScene::from_graph(graph.clone());
+        let focus = RouteFocus {
+            center: Vec3::ZERO,
+            // Fake terrain origin well below TDB rail so a terrain flatten would show.
+            height_origin: pose_mid.position.y - 10.0,
+        };
+        let (render, _yaw) = vehicle_position_yaw_on_graph_edge(
+            &graph,
+            "e2",
+            50.0,
+            Some(&resolver),
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .expect("vehicle pose");
+        let expected_y = pose_mid.position.y - focus.height_origin;
+        assert!(
+            (render.y - expected_y).abs() < 0.2,
+            "vehicle must keep TDB Y (got {}, expected ~{})",
+            render.y,
+            expected_y
+        );
+        // Terrain fallback would sit near height_origin → render.y ≈ 0 (+rail bias).
+        assert!(
+            render.y > 5.0,
+            "pose must not collapse to terrain height_origin (y={})",
+            render.y
+        );
+    }
+
+    #[test]
+    fn vehicle_pose_reapplies_route_offset() {
+        use openrailsrs_core::{EdgeId, NodeId};
+        use openrailsrs_track::{Edge, Node, NodeKind};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let pose0 = resolver.tdb_pose(2, 0.0, None).expect("start");
+        let pose_end = resolver
+            .tdb_pose(2, 100.0, None)
+            .or_else(|| resolver.tdb_pose(2, 99.0, None))
+            .expect("end");
+        let mut graph = TrackGraph::new();
+        graph
+            .insert_node(Node {
+                id: NodeId("a".into()),
+                x_m: pose0.position.x as f64,
+                y_m: pose0.position.z as f64,
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        graph
+            .insert_node(Node {
+                id: NodeId("b".into()),
+                x_m: pose_end.position.x as f64,
+                y_m: pose_end.position.z as f64,
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2".into()),
+                from: NodeId("a".into()),
+                to: NodeId("b".into()),
+                length_m: 100.0,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let scene = TrackScene::from_graph(graph.clone());
+        let focus = test_focus();
+        let offset = Vec3::new(1835.0, 0.0, 12.0);
+        let (render, _) = vehicle_position_yaw_on_graph_edge(
+            &graph,
+            "e2",
+            0.0,
+            Some(&resolver),
+            &scene,
+            offset,
+            &focus,
+            None,
+        )
+        .expect("pose");
+        let expected = focus.to_render_surface(pose0.position + offset);
+        assert!(
+            Vec2::new(render.x - expected.x, render.z - expected.z).length() < 1.0,
+            "placement frame must include RouteWorldOffset"
+        );
     }
 }

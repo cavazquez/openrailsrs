@@ -17,6 +17,7 @@ use crate::shapes::{
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
+use crate::track_position::{TrackPositionResolver, vehicle_position_yaw_on_graph_edge};
 use crate::viewer_log;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
@@ -162,6 +163,21 @@ pub fn pose_at_time(
     world_offset: Vec3,
     focus: &RouteFocus,
 ) -> Option<(Vec3, f32, f64)> {
+    pose_at_time_with_tdb(graph, rows, t, terrain, scene, world_offset, focus, None)
+}
+
+/// Like [`pose_at_time`] but prefers TDB centreline elevation/yaw when `resolver` is set (#67).
+#[allow(clippy::too_many_arguments)]
+pub fn pose_at_time_with_tdb(
+    graph: &TrackGraph,
+    rows: &[CsvRow],
+    t: f64,
+    terrain: Option<&TerrainElevation>,
+    scene: &TrackScene,
+    world_offset: Vec3,
+    focus: &RouteFocus,
+    resolver: Option<&TrackPositionResolver<'_>>,
+) -> Option<(Vec3, f32, f64)> {
     if rows.is_empty() {
         return None;
     }
@@ -170,14 +186,15 @@ pub fn pose_at_time(
         .saturating_sub(1)
         .min(rows.len() - 1);
     let row = &rows[idx];
-    let (pos, yaw) = position_on_graph(
+    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
         graph,
         &row.edge_id,
         row.pos_on_edge_m,
-        terrain,
+        resolver,
         scene,
         world_offset,
         focus,
+        terrain,
     )?;
     Some((pos, yaw, row.velocity_mps))
 }
@@ -210,6 +227,10 @@ pub fn spawn_train_markers(
     }
 
     let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+    let resolver_ref = tdb_resolver.as_ref();
     let graph_world = scene.bounds.center + offset.delta;
     let fallback_y = ground_y_at(terrain_ref, graph_world.x, graph_world.z, &scene);
     let unit = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
@@ -241,7 +262,7 @@ pub fn spawn_train_markers(
             track.color
         };
 
-        let (pos, yaw, _) = pose_at_time(
+        let (pos, yaw, _) = pose_at_time_with_tdb(
             &scene.graph,
             &track.rows,
             0.0,
@@ -249,6 +270,7 @@ pub fn spawn_train_markers(
             &scene,
             offset.delta,
             &focus,
+            resolver_ref,
         )
         .unwrap_or((
             focus.to_render_surface(scene.bounds.center + offset.delta + Vec3::Y * fallback_y),
@@ -524,6 +546,7 @@ pub fn update_train_markers(
     offset: Res<RouteWorldOffset>,
     focus: Res<crate::world::RouteFocus>,
     replay: Res<ReplayState>,
+    assets: Res<RouteAssets>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
     mut query: Query<(&TrainMarker, &mut Transform), Without<Camera3d>>,
@@ -533,12 +556,16 @@ pub fn update_train_markers(
     }
 
     let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+    let resolver_ref = tdb_resolver.as_ref();
 
     for (marker, mut transform) in &mut query {
         let Some(track) = replay.tracks.get(marker.track_index) else {
             continue;
         };
-        let Some((pos, yaw, _)) = pose_at_time(
+        let Some((pos, yaw, _)) = pose_at_time_with_tdb(
             &scene.graph,
             &track.rows,
             replay.t_sim,
@@ -546,6 +573,7 @@ pub fn update_train_markers(
             &scene,
             offset.delta,
             &focus,
+            resolver_ref,
         ) else {
             continue;
         };

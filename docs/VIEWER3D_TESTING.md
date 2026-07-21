@@ -325,8 +325,9 @@ Referencia: [`track_position.rs`](../crates/openrailsrs-viewer3d/src/track_posit
 
 | Objeto | Motivo |
 |--------|--------|
-| Tren en `--live` | Física y odometría en grafo (`position_on_graph`) |
-| Vía `.tdb` procedural | Ya es la referencia MSTS (`tdb_track.rs`) |
+| Física / odometría | Siguen en el grafo lógico; solo el **render** del tren usa TDB (#67: `vehicle_pose_on_graph_edge`) |
+| Vía `.tdb` procedural | Ya es la referencia MSTS (`tdb_track.rs`); Y del ribbon aún puede aplanarse al terreno (#65) |
+| Pitch/roll del tren | `TrackPose` expone yaw + Y; AX/AZ pendientes de #65 |
 | Escenario `.w` | Posición nativa MSTS |
 
 ### Pipeline

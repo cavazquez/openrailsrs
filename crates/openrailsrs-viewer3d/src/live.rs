@@ -27,7 +27,8 @@ use crate::shapes::{
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
-use crate::train::{TRAIN_COLORS, position_on_graph, vehicle_local_transform};
+use crate::track_position::{TrackPositionResolver, vehicle_position_yaw_on_graph_edge};
+use crate::train::{TRAIN_COLORS, vehicle_local_transform};
 use crate::train_diagnostics::{log_consist_diagnostic, log_vehicle_transform_if_enabled};
 use crate::world::visible_radius_m;
 use crate::{log_step, viewer_log};
@@ -324,6 +325,7 @@ pub fn update_live_train_marker(
     scene: Res<TrackScene>,
     offset: Res<crate::world::RouteWorldOffset>,
     focus: Res<crate::world::RouteFocus>,
+    assets: Res<RouteAssets>,
     live: Res<LiveDrive>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
@@ -332,14 +334,18 @@ pub fn update_live_train_marker(
     let Some(edge) = live.session.current_edge_id() else {
         return;
     };
-    let Some((pos, yaw)) = position_on_graph(
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+    let Some((pos, yaw)) = vehicle_position_yaw_on_graph_edge(
         &scene.graph,
         edge,
         live.session.pos_on_edge_m(),
-        terrain.as_deref(),
+        tdb_resolver.as_ref(),
         &scene,
         offset.delta,
         &focus,
+        terrain.as_deref(),
     ) else {
         return;
     };
@@ -545,6 +551,9 @@ pub fn spawn_live_train(
     let spawn_start = Instant::now();
 
     let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
     let edge = live.session.current_edge_id().unwrap_or(
         scene
             .graph
@@ -553,14 +562,15 @@ pub fn spawn_live_train(
             .map(|(id, _)| id)
             .unwrap_or(""),
     );
-    let (pos, yaw) = position_on_graph(
+    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
         &scene.graph,
         edge,
         live.session.pos_on_edge_m(),
-        terrain_ref,
+        tdb_resolver.as_ref(),
         &scene,
         offset.delta,
         &focus,
+        terrain_ref,
     )
     .unwrap_or({
         let w = scene.bounds.center + offset.delta;
