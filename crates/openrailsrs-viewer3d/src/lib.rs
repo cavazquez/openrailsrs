@@ -130,6 +130,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<floating_origin::FloatingOrigin>()
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<world::WorldShapeLodCache>()
+            .init_resource::<world::WorldLodCameraState>()
             .init_resource::<launch::ViewerSceneryMode>()
             .init_resource::<launch::RunCorridorPath>()
             .init_resource::<view_window::ViewWindow>()

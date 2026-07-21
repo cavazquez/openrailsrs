@@ -32,7 +32,7 @@ use crate::shapes::{
     shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
 };
 
-/// WORLD-tile membership for non-shape scenery (Transfer, road cars, …) unload.
+/// WORLD-tile membership for scenery unload (shapes LOD, Transfer, road cars, …) (#62).
 #[derive(Component, Clone, Copy, Debug)]
 pub struct WorldTileBound {
     pub tile_x: i32,
@@ -47,6 +47,56 @@ pub struct WorldSceneryLod {
     pub prim_state_idx: i32,
     pub part_index: usize,
     pub lod_idx: usize,
+}
+
+/// Skip full LOD scan when camera/focus move less than this (metres, render space) (#62).
+pub const WORLD_LOD_EPS_M: f32 = 0.5;
+
+/// Last camera/focus positions used by [`update_world_scenery_lod`] early-out (#62).
+#[derive(Resource, Default, Debug)]
+pub struct WorldLodCameraState {
+    pub last_cam: Option<Vec3>,
+    pub last_focus: Option<Vec3>,
+}
+
+/// `true` when LOD should rescan (camera or focus moved ≥ ε) (#62).
+pub fn lod_camera_needs_update(
+    state: &WorldLodCameraState,
+    cam_pos: Vec3,
+    focus_pos: Vec3,
+    eps: f32,
+) -> bool {
+    let cam_moved = state
+        .last_cam
+        .map(|c| c.distance(cam_pos) >= eps)
+        .unwrap_or(true);
+    let focus_moved = state
+        .last_focus
+        .map(|f| f.distance(focus_pos) >= eps)
+        .unwrap_or(true);
+    cam_moved || focus_moved
+}
+
+/// Unload decision for a WORLD scenery entity (#62).
+pub fn scenery_entity_should_unload(
+    bound: Option<WorldTileBound>,
+    unloaded_tiles: &HashSet<(i32, i32)>,
+    dist_to_center: f32,
+    unload_radius: f32,
+) -> bool {
+    if let Some(b) = bound {
+        unloaded_tiles.contains(&(b.tile_x, b.tile_z))
+    } else {
+        dist_to_center > unload_radius
+    }
+}
+
+/// One WORLD shape instance queued for spawn, with tile membership (#62).
+#[derive(Clone, Copy, Debug)]
+pub struct ShapeInstancePlacement {
+    pub transform: Transform,
+    pub tile_x: i32,
+    pub tile_z: i32,
 }
 
 /// Session-long WORLD shape/texture cache shared across tile streams (#50).
@@ -1108,6 +1158,7 @@ type ShapeSpawnBundle = (
     MeshMaterial3d<StandardMaterial>,
     Name,
     WorldSceneryLod,
+    WorldTileBound,
 );
 
 /// WORLD shape part with loop animation (#34). Spawned individually (not `spawn_batch`).
@@ -1117,6 +1168,7 @@ type AnimatedShapeSpawnBundle = (
     MeshMaterial3d<StandardMaterial>,
     Name,
     WorldSceneryLod,
+    WorldTileBound,
     ShapeAnimState,
     ShapeAnimBinding,
 );
@@ -1127,7 +1179,7 @@ pub struct WorldSpawnProgress {
     started: Instant,
     item_index: usize,
     shape_path_cache: std::collections::HashMap<String, Option<PathBuf>>,
-    shape_instances: std::collections::HashMap<PathBuf, Vec<Transform>>,
+    shape_instances: std::collections::HashMap<PathBuf, Vec<ShapeInstancePlacement>>,
     shape_instance_min_dist: std::collections::HashMap<PathBuf, f32>,
     merged_boxes: std::collections::HashMap<String, MergedBoxGroup>,
     culled_count: usize,
@@ -1499,7 +1551,11 @@ fn classify_one_object(
                 .shape_instances
                 .entry(shape_path.clone())
                 .or_default()
-                .push(tf);
+                .push(ShapeInstancePlacement {
+                    transform: tf,
+                    tile_x: obj.tile_x,
+                    tile_z: obj.tile_z,
+                });
             progress
                 .shape_instance_min_dist
                 .entry(shape_path)
@@ -1559,7 +1615,11 @@ fn classify_one_object(
                 .shape_instances
                 .entry(shape_path.clone())
                 .or_default()
-                .push(tf);
+                .push(ShapeInstancePlacement {
+                    transform: tf,
+                    tile_x: obj.tile_x,
+                    tile_z: obj.tile_z,
+                });
             progress
                 .shape_instance_min_dist
                 .entry(shape_path)
@@ -1618,7 +1678,7 @@ fn append_shape_spawn_entries_for_transforms(
     asset: &ShapeRenderAsset,
     shape_file: Option<&ShapeFile>,
     meshes: &mut Assets<Mesh>,
-    transforms: &[Transform],
+    placements: &[ShapeInstancePlacement],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
     anim_spawn_queue: &mut Vec<AnimatedShapeSpawnBundle>,
     initial_lod_idx: usize,
@@ -1628,12 +1688,12 @@ fn append_shape_spawn_entries_for_transforms(
     origin: &FloatingOrigin,
 ) {
     if asset.has_texture {
-        *shape_texture_count += transforms.len();
+        *shape_texture_count += placements.len();
     }
     let animated = shape_file.is_some_and(shape_has_loop_animation);
     let mergeable = !animated
         && ENABLE_SHAPE_INSTANCE_MERGE
-        && transforms.len() >= SHAPE_INSTANCE_MERGE_MIN
+        && placements.len() >= SHAPE_INSTANCE_MERGE_MIN
         && asset.parts.iter().all(|part| {
             !part.is_transparent
                 && meshes
@@ -1645,12 +1705,21 @@ fn append_shape_spawn_entries_for_transforms(
     if mergeable {
         *merged_shape_groups += 1;
         *shape_mesh_count += asset.parts.len();
-        let view_transforms: Vec<Transform> = transforms
+        let view_transforms: Vec<Transform> = placements
             .iter()
-            .map(|tf| view_transform(*tf, origin))
+            .map(|p| view_transform(p.transform, origin))
             .collect();
+        // Merge is disabled in production; if enabled, tag with first instance tile
+        // (distance fallback unused). Prefer per-instance spawn for correct unload (#62).
+        let bound = placements.first().map(|p| WorldTileBound {
+            tile_x: p.tile_x,
+            tile_z: p.tile_z,
+        });
         for part in &asset.parts {
             if let Some(merged) = build_merged_instance_mesh(meshes, &part.mesh, &view_transforms) {
+                let Some(bound) = bound else {
+                    continue;
+                };
                 spawn_queue.push((
                     Transform::IDENTITY,
                     Mesh3d(meshes.add(merged)),
@@ -1663,6 +1732,7 @@ fn append_shape_spawn_entries_for_transforms(
                         part_index: 0,
                         lod_idx: 0,
                     },
+                    bound,
                 ));
             }
         }
@@ -1674,9 +1744,13 @@ fn append_shape_spawn_entries_for_transforms(
             .first()
             .map(|a| a.frame_count as f32)
             .unwrap_or(0.0);
-        *shape_mesh_count += asset.parts.len() * transforms.len();
-        for tf in transforms {
-            let placement = view_transform(*tf, origin);
+        *shape_mesh_count += asset.parts.len() * placements.len();
+        for inst in placements {
+            let placement = view_transform(inst.transform, origin);
+            let bound = WorldTileBound {
+                tile_x: inst.tile_x,
+                tile_z: inst.tile_z,
+            };
             for (part_index, part) in asset.parts.iter().enumerate() {
                 let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
                 anim_spawn_queue.push((
@@ -1692,6 +1766,7 @@ fn append_shape_spawn_entries_for_transforms(
                         part_index,
                         lod_idx: initial_lod_idx,
                     },
+                    bound,
                     ShapeAnimState {
                         key: 0.0,
                         matrix_idx,
@@ -1708,9 +1783,13 @@ fn append_shape_spawn_entries_for_transforms(
             }
         }
     } else {
-        *shape_mesh_count += asset.parts.len() * transforms.len();
-        for tf in transforms {
-            let tf = view_transform(*tf, origin);
+        *shape_mesh_count += asset.parts.len() * placements.len();
+        for inst in placements {
+            let tf = view_transform(inst.transform, origin);
+            let bound = WorldTileBound {
+                tile_x: inst.tile_x,
+                tile_z: inst.tile_z,
+            };
             for (part_index, part) in asset.parts.iter().enumerate() {
                 spawn_queue.push((
                     tf,
@@ -1724,6 +1803,7 @@ fn append_shape_spawn_entries_for_transforms(
                         part_index,
                         lod_idx: initial_lod_idx,
                     },
+                    bound,
                 ));
             }
         }
@@ -1737,7 +1817,7 @@ fn append_shape_spawn_entries(
     meshes: &mut Assets<Mesh>,
     origin: &FloatingOrigin,
 ) {
-    let Some(transforms) = progress.shape_instances.get(shape_path).cloned() else {
+    let Some(placements) = progress.shape_instances.get(shape_path).cloned() else {
         return;
     };
     let initial_lod_idx = progress
@@ -1757,7 +1837,7 @@ fn append_shape_spawn_entries(
         asset,
         shape_file,
         meshes,
-        &transforms,
+        &placements,
         &mut progress.spawn_queue,
         &mut progress.anim_spawn_queue,
         initial_lod_idx,
@@ -2469,8 +2549,8 @@ pub fn world_tile_unload_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    scenery: Query<(Entity, &Transform, &WorldSceneryLod)>,
-    tile_bound: Query<(Entity, &WorldTileBound)>,
+    scenery: Query<(Entity, &Transform, &WorldSceneryLod, Option<&WorldTileBound>)>,
+    tile_bound: Query<(Entity, &WorldTileBound), Without<WorldSceneryLod>>,
     mut stream_state: ResMut<WorldSceneryStreamState>,
 ) {
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
@@ -2494,6 +2574,7 @@ pub fn world_tile_unload_system(
     if unloaded_tiles.is_empty() {
         return;
     }
+    let unload_t0 = Instant::now();
     let before = world.items.len();
     world.note_tr_item_tiles_removed(unloaded_tiles.iter().copied());
     world
@@ -2506,13 +2587,20 @@ pub fn world_tile_unload_system(
     stream_state.processed_items = stream_state.processed_items.min(world.items.len());
 
     // Despawn is deferred: compute live shape refs from entities that stay (#51).
+    // Prefer tile membership (#62); distance only for legacy entities without WorldTileBound.
     let mut live_shape_paths = HashSet::new();
     let mut despawned = 0usize;
-    for (entity, tf, lod) in scenery.iter() {
+    for (entity, tf, lod, bound) in scenery.iter() {
         let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
         let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
         let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
-        if dist > unload_radius {
+        let unload = scenery_entity_should_unload(
+            bound.copied(),
+            &unloaded_tiles,
+            dist,
+            unload_radius,
+        );
+        if unload {
             commands.entity(entity).despawn();
             despawned += 1;
         } else if !lod.shape_path.as_os_str().is_empty() {
@@ -2532,6 +2620,14 @@ pub fn world_tile_unload_system(
         &mut images,
         &mut materials,
     );
+    if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
+        eprintln!(
+            "[PERF] world_tile_unload_ms={:.2} tiles={} despawned={}",
+            unload_t0.elapsed().as_secs_f64() * 1000.0,
+            unloaded_tiles.len(),
+            despawned
+        );
+    }
     viewer_log!(
         "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items; despawned {} entit(ies); evicted {} shape(s)/{} texture(s); session {}/{} )",
         unloaded_tiles.len(),
@@ -2858,6 +2954,7 @@ pub fn update_world_scenery_lod(
     cache: Option<Res<WorldShapeLodCache>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     focus: Option<Res<RouteFocus>>,
+    mut lod_cam: ResMut<WorldLodCameraState>,
     mut parts: Query<(&GlobalTransform, &mut WorldSceneryLod, &mut Mesh3d)>,
 ) {
     let Some(cache) = cache else {
@@ -2871,12 +2968,23 @@ pub fn update_world_scenery_lod(
         .as_ref()
         .map(|f| f.scenery_to_render(f.center))
         .unwrap_or(Vec3::ZERO);
+
+    if !lod_camera_needs_update(&lod_cam, cam_pos, focus_pos, WORLD_LOD_EPS_M) {
+        return;
+    }
+    lod_cam.last_cam = Some(cam_pos);
+    lod_cam.last_focus = Some(focus_pos);
+
+    let lod_t0 = Instant::now();
     let cam_dist = cam_pos.distance(focus_pos);
+    let mut scanned = 0u32;
+    let mut swapped = 0u32;
 
     for (gt, mut lod, mut mesh3d) in &mut parts {
         if !lod.enabled {
             continue;
         }
+        scanned += 1;
         let Some(shape) = cache.shapes.get(&lod.shape_path) else {
             continue;
         };
@@ -2899,6 +3007,13 @@ pub fn update_world_scenery_lod(
         };
         mesh3d.0 = part.mesh.clone();
         lod.lod_idx = new_lod;
+        swapped += 1;
+    }
+    if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() && scanned > 0 {
+        eprintln!(
+            "[PERF] world_scenery_lod_ms={:.2} scanned={scanned} swapped={swapped}",
+            lod_t0.elapsed().as_secs_f64() * 1000.0
+        );
     }
 }
 
@@ -2931,7 +3046,7 @@ pub fn spawn_world_boxes(
         std::collections::HashMap::new();
     let mut texture_image_cache: std::collections::HashMap<(PathBuf, i32), Handle<Image>> =
         std::collections::HashMap::new();
-    let mut shape_instances: std::collections::HashMap<PathBuf, Vec<Transform>> =
+    let mut shape_instances: std::collections::HashMap<PathBuf, Vec<ShapeInstancePlacement>> =
         std::collections::HashMap::new();
     let mut trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment> = Vec::new();
 
@@ -2983,10 +3098,14 @@ pub fn spawn_world_boxes(
                 shape_instances
                     .entry(shape_path)
                     .or_default()
-                    .push(Transform {
-                        translation: render_pos,
-                        rotation: obj.rotation,
-                        scale: obj.scale,
+                    .push(ShapeInstancePlacement {
+                        transform: Transform {
+                            translation: render_pos,
+                            rotation: obj.rotation,
+                            scale: obj.scale,
+                        },
+                        tile_x: obj.tile_x,
+                        tile_z: obj.tile_z,
                     });
                 continue;
             }
@@ -3013,10 +3132,14 @@ pub fn spawn_world_boxes(
                 shape_instances
                     .entry(shape_path)
                     .or_default()
-                    .push(Transform {
-                        translation: render_pos,
-                        rotation: obj.rotation,
-                        scale: obj.scale,
+                    .push(ShapeInstancePlacement {
+                        transform: Transform {
+                            translation: render_pos,
+                            rotation: obj.rotation,
+                            scale: obj.scale,
+                        },
+                        tile_x: obj.tile_x,
+                        tile_z: obj.tile_z,
                     });
                 continue;
             }
@@ -3116,7 +3239,7 @@ pub fn spawn_world_boxes(
     log_step("built world shape Bevy assets", asset_start);
 
     let mut anim_spawn_batches: Vec<AnimatedShapeSpawnBundle> = Vec::new();
-    for (shape_path, transforms) in shape_instances {
+    for (shape_path, placements) in shape_instances {
         let Some(asset) = shape_cache.get(&shape_path) else {
             continue;
         };
@@ -3125,7 +3248,7 @@ pub fn spawn_world_boxes(
             asset,
             parsed_shape_files.get(&shape_path),
             &mut meshes,
-            &transforms,
+            &placements,
             &mut shape_spawn_batches,
             &mut anim_spawn_batches,
             0,
@@ -3755,9 +3878,14 @@ mod tests {
 
         // Second stream cycle: same path must be a hit (zero additional ShapeFile parses).
         let mut progress = WorldSpawnProgress::new(1.0);
-        progress
-            .shape_instances
-            .insert(path.clone(), vec![Transform::default()]);
+        progress.shape_instances.insert(
+            path.clone(),
+            vec![ShapeInstancePlacement {
+                transform: Transform::default(),
+                tile_x: 0,
+                tile_z: 0,
+            }],
+        );
         prepare_shape_load_paths(&mut progress);
         hydrate_spawn_from_session(&mut progress, &mut session);
         assert_eq!(progress.cache_hits, 1);
@@ -3779,5 +3907,64 @@ mod tests {
         );
         assert!(!parse_next_shape_batch(&mut progress, Path::new(".")));
         assert_eq!(shape_file_parse_count(), before);
+    }
+
+    #[test]
+    fn unload_uses_tile_bound_not_distance_when_tagged() {
+        let mut unloaded = HashSet::new();
+        unloaded.insert((10, 20));
+        let a = WorldTileBound {
+            tile_x: 10,
+            tile_z: 20,
+        };
+        let b = WorldTileBound {
+            tile_x: 11,
+            tile_z: 20,
+        };
+        // Far from center but wrong tile → keep.
+        assert!(!scenery_entity_should_unload(
+            Some(b),
+            &unloaded,
+            9_999.0,
+            100.0
+        ));
+        // Matching tile → unload even if close.
+        assert!(scenery_entity_should_unload(
+            Some(a),
+            &unloaded,
+            1.0,
+            100.0
+        ));
+        // Legacy without bound → distance.
+        assert!(scenery_entity_should_unload(None, &unloaded, 200.0, 100.0));
+        assert!(!scenery_entity_should_unload(None, &unloaded, 50.0, 100.0));
+    }
+
+    #[test]
+    fn lod_early_out_when_camera_and_focus_still() {
+        let mut state = WorldLodCameraState {
+            last_cam: Some(Vec3::ZERO),
+            last_focus: Some(Vec3::new(10.0, 0.0, 0.0)),
+        };
+        assert!(!lod_camera_needs_update(
+            &state,
+            Vec3::new(0.1, 0.0, 0.0),
+            Vec3::new(10.2, 0.0, 0.0),
+            WORLD_LOD_EPS_M
+        ));
+        assert!(lod_camera_needs_update(
+            &state,
+            Vec3::new(2.0, 0.0, 0.0),
+            Vec3::new(10.2, 0.0, 0.0),
+            WORLD_LOD_EPS_M
+        ));
+        // First frame (no prior sample) always updates.
+        state.last_cam = None;
+        assert!(lod_camera_needs_update(
+            &state,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            WORLD_LOD_EPS_M
+        ));
     }
 }
