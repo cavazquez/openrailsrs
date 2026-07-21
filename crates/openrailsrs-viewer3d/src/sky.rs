@@ -12,7 +12,7 @@ const SKY_COLOR_ZENITH: Color = Color::srgb(0.38, 0.62, 0.92);
 const SKY_COLOR_HORIZON: Color = Color::srgb(0.72, 0.84, 0.96);
 const NIGHT_HORIZON: Color = Color::srgb(0.08, 0.10, 0.18);
 
-/// Toggle atmospheric fog with `F`. Enabled by default (#39).
+/// Toggle atmospheric fog with `F`. Disabled by default (opt-in with `F`, #39).
 #[derive(Resource, Clone, Debug)]
 pub struct FogState {
     pub enabled: bool,
@@ -20,7 +20,7 @@ pub struct FogState {
 
 impl Default for FogState {
     fn default() -> Self {
-        Self { enabled: true }
+        Self { enabled: false }
     }
 }
 
