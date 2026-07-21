@@ -9,7 +9,8 @@ mod types;
 
 pub use loaders::{
     MstsAceAssetLoader, MstsRouteCatalogLoader, MstsShapeAssetLoader, MstsTerrainTileAssetLoader,
-    MstsTileBundleLoader, MstsWorldTileAssetLoader,
+    MstsTileBundleLoader, MstsWorldTileAssetLoader, reset_terrain_tile_parse_count,
+    terrain_tile_parse_count, terrain_tile_parse_count_for,
 };
 pub use types::{
     MstsAceAsset, MstsAssetError, MstsRouteCatalogAsset, MstsShapeAsset, MstsTerrainTileAsset,
@@ -268,6 +269,73 @@ mod tests {
                 .get(id)
                 .is_none(),
             "bundle asset should unload when strong handles are dropped"
+        );
+    }
+
+    #[test]
+    fn tile_bundle_missing_world_is_not_loaded_with_diag() {
+        // #78: missing WORLD must not count as loaded; diagnostics must record failure.
+        let mut app = msts_test_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle: Handle<MstsTileBundleAsset> =
+            server.load("msts/tiles/missing_world/missing_world.tilebundle");
+        wait_loaded(&mut app, &handle, "missing_world.tilebundle");
+
+        let bundles = app.world().resource::<Assets<MstsTileBundleAsset>>();
+        let bundle = bundles.get(&handle).expect("bundle");
+        assert!(
+            bundle.world.is_none(),
+            "missing WORLD must not yield a world handle"
+        );
+        assert_ne!(
+            bundle.status,
+            TileBundleStatus::Ready,
+            "bundle must not be Ready without WORLD"
+        );
+        assert!(
+            matches!(
+                bundle.status,
+                TileBundleStatus::Partial | TileBundleStatus::Failed
+            ),
+            "expected Partial/Failed, got {:?}",
+            bundle.status
+        );
+        assert!(
+            bundle.diag.failed > 0 || !bundle.diag.failures.is_empty(),
+            "WORLD failure must appear in diagnostics"
+        );
+        assert!(
+            bundle
+                .diag
+                .failures
+                .iter()
+                .any(|f| matches!(f.kind, crate::MstsAssetKind::World)),
+            "diagnostics should mention World kind: {:?}",
+            bundle.diag.failures
+        );
+    }
+
+    #[test]
+    fn tile_bundle_loads_terrain_with_single_parse() {
+        // #79: load_value + labeled asset must not parse the same .y twice.
+        // Exclusive fixture path so parallel asset tests cannot inflate the counter.
+        let terrain_path = "msts/tiles/single_parse/minimal_terrain.y";
+        let mut app = msts_test_app();
+        let server = app.world().resource::<AssetServer>().clone();
+        let handle: Handle<MstsTileBundleAsset> =
+            server.load("msts/tiles/single_parse/single_parse.tilebundle");
+        wait_loaded(&mut app, &handle, "single_parse.tilebundle");
+
+        let bundles = app.world().resource::<Assets<MstsTileBundleAsset>>();
+        let bundle = bundles.get(&handle).expect("bundle");
+        assert!(bundle.terrain.is_some());
+        let terr_h = bundle.terrain.clone().unwrap();
+        wait_loaded(&mut app, &terr_h, "bundle terrain labeled");
+
+        assert_eq!(
+            terrain_tile_parse_count_for(terrain_path),
+            1,
+            "terrain path must be parsed once per tilebundle load"
         );
     }
 }

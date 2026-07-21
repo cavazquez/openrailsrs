@@ -1,6 +1,8 @@
 //! [`AssetLoader`] implementations for MSTS formats (#48, #53).
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
@@ -14,6 +16,45 @@ use openrailsrs_formats::{
 use serde_json::Value as JsonValue;
 
 use crate::load_diagnostics::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
+
+/// Per-path successful [`MstsTerrainTileAssetLoader`] parses (tests for #79).
+static TERRAIN_TILE_PARSE_COUNTS: LazyLock<Mutex<HashMap<String, usize>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Clear per-path terrain parse counters (tests).
+pub fn reset_terrain_tile_parse_count() {
+    TERRAIN_TILE_PARSE_COUNTS
+        .lock()
+        .expect("terrain parse counts")
+        .clear();
+}
+
+/// Successful terrain parses for `path` (asset path string as seen by the loader).
+pub fn terrain_tile_parse_count_for(path: &str) -> usize {
+    TERRAIN_TILE_PARSE_COUNTS
+        .lock()
+        .expect("terrain parse counts")
+        .get(path)
+        .copied()
+        .unwrap_or(0)
+}
+
+/// Total successful terrain parses across all paths since last reset.
+pub fn terrain_tile_parse_count() -> usize {
+    TERRAIN_TILE_PARSE_COUNTS
+        .lock()
+        .expect("terrain parse counts")
+        .values()
+        .sum()
+}
+
+fn note_terrain_tile_parse(path: &str) {
+    *TERRAIN_TILE_PARSE_COUNTS
+        .lock()
+        .expect("terrain parse counts")
+        .entry(path.to_string())
+        .or_insert(0) += 1;
+}
 
 use super::types::{
     MstsAceAsset, MstsAssetError, MstsRouteCatalogAsset, MstsShapeAsset, MstsTerrainTileAsset,
@@ -228,6 +269,7 @@ impl AssetLoader for MstsTerrainTileAssetLoader {
                 message: e.to_string(),
             }
         })?;
+        note_terrain_tile_parse(&path);
 
         let mut diag = MstsLoadDiagnostics::default();
         diag.record_loaded(MstsAssetKind::Terrain);
@@ -384,10 +426,30 @@ impl AssetLoader for MstsTileBundleLoader {
         let mut diag = MstsLoadDiagnostics::default();
         let world_path = manifest.world.clone();
         let terrain_path = manifest.terrain.clone();
+        // Eager load_value so failures are recorded before marking World loaded (#78).
         let world = match world_path {
             Some(ref p) => {
-                diag.record_loaded(MstsAssetKind::World);
-                Some(load_context.load::<MstsWorldTileAsset>(p.clone()))
+                match load_context
+                    .load_builder()
+                    .load_value::<MstsWorldTileAsset>(p.clone())
+                    .await
+                {
+                    Ok(loaded) => {
+                        diag.record_loaded(MstsAssetKind::World);
+                        Some(load_context.add_loaded_labeled_asset("world", loaded))
+                    }
+                    Err(e) => {
+                        diag.record_failed_at(
+                            p.clone(),
+                            MstsAssetKind::World,
+                            MstsLoadCause::Parse,
+                            e.to_string(),
+                            Some(manifest.tile_x),
+                            Some(manifest.tile_z),
+                        );
+                        None
+                    }
+                }
             }
             None => {
                 diag.record_failed_at(
@@ -405,18 +467,16 @@ impl AssetLoader for MstsTileBundleLoader {
         let mut terrain_raw_status = None;
         let terrain = match terrain_path {
             Some(ref p) => {
-                // Immediate load so missing RAW is reflected in bundle status (#53).
+                // Single parse via load_value; register labeled handle (no second load) (#79).
                 match load_context
                     .load_builder()
                     .load_value::<MstsTerrainTileAsset>(p.clone())
                     .await
                 {
                     Ok(loaded) => {
-                        let asset = loaded.take();
-                        terrain_raw_status = Some(asset.raw_status);
-                        diag.merge_from(&asset.diag);
-                        // Keep a shared Handle for consumers / dependency tracking.
-                        Some(load_context.load::<MstsTerrainTileAsset>(p.clone()))
+                        terrain_raw_status = Some(loaded.get().raw_status);
+                        diag.merge_from(&loaded.get().diag);
+                        Some(load_context.add_loaded_labeled_asset("terrain", loaded))
                     }
                     Err(e) => {
                         diag.record_failed_at(

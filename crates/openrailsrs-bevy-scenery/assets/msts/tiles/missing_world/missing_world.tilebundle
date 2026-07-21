@@ -1,0 +1,6 @@
+{
+  "tile_x": -1000,
+  "tile_z": -1000,
+  "world": "msts/tiles/missing_world/does-not-exist.w",
+  "terrain": "msts/tiles/missing_world/minimal_terrain.y"
+}

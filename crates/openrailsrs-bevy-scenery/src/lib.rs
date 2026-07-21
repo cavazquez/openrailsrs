@@ -27,6 +27,7 @@ pub use assets::{
     MstsTerrainTileAssetLoader, MstsTileBundleAsset, MstsTileBundleLoader, MstsWorldTileAsset,
     MstsWorldTileAssetLoader, TerrainRawStatus, TileBundleManifest, TileBundlePaths,
     TileBundleStatus, discover_tile_bundle_paths, register_msts_content_source,
+    reset_terrain_tile_parse_count, terrain_tile_parse_count, terrain_tile_parse_count_for,
     write_tile_bundle_manifest,
 };
 pub use atmosphere::{
