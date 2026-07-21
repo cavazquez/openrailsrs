@@ -27,7 +27,7 @@ use crate::shapes::{
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::TrackScene;
-use crate::track_position::{TrackPositionResolver, vehicle_position_yaw_on_graph_edge};
+use crate::track_position::{TrackPositionResolver, vehicle_pose_on_graph_edge};
 use crate::train::{TRAIN_COLORS, vehicle_local_transform};
 use crate::train_diagnostics::{log_consist_diagnostic, log_vehicle_transform_if_enabled};
 use crate::world::visible_radius_m;
@@ -337,7 +337,7 @@ pub fn update_live_train_marker(
     let tdb_resolver = assets
         .track_db()
         .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
-    let Some((pos, yaw)) = vehicle_position_yaw_on_graph_edge(
+    let Some((pos, rot)) = vehicle_pose_on_graph_edge(
         &scene.graph,
         edge,
         live.session.pos_on_edge_m(),
@@ -352,7 +352,7 @@ pub fn update_live_train_marker(
     let pos = view_position(pos, &origin);
     for mut transform in &mut query {
         transform.translation = pos;
-        transform.rotation = Quat::from_rotation_y(yaw);
+        transform.rotation = rot;
     }
 }
 
@@ -562,7 +562,7 @@ pub fn spawn_live_train(
             .map(|(id, _)| id)
             .unwrap_or(""),
     );
-    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
+    let (pos, rot) = vehicle_pose_on_graph_edge(
         &scene.graph,
         edge,
         live.session.pos_on_edge_m(),
@@ -575,8 +575,12 @@ pub fn spawn_live_train(
     .unwrap_or({
         let w = scene.bounds.center + offset.delta;
         let y = ground_y_at(terrain_ref, w.x, w.z, &scene);
-        (focus.to_render_surface(w + Vec3::Y * y), 0.0)
+        (
+            focus.to_render_surface(w + Vec3::Y * y),
+            Quat::IDENTITY,
+        )
     });
+    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
 
     let vehicles = consist.vehicles_for("primary");
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
@@ -596,7 +600,7 @@ pub fn spawn_live_train(
             LiveTrainBody,
             Mesh3d(unit),
             MeshMaterial3d(material),
-            Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
+            Transform::from_translation(pos).with_rotation(rot),
             Name::new("train:live:track_dev"),
         ));
         viewer_log!("openrailsrs-viewer3d: track_dev — live train as box (no Pullman meshes)");
@@ -631,7 +635,7 @@ pub fn spawn_live_train(
             LiveTrainBody,
             Mesh3d(unit),
             MeshMaterial3d(material),
-            Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
+            Transform::from_translation(pos).with_rotation(rot),
             Name::new("train:live:fallback"),
         ));
         viewer_log!("openrailsrs-viewer3d: live mode — consist mesh missing, using cube");
@@ -639,7 +643,7 @@ pub fn spawn_live_train(
         return;
     }
 
-    let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
+    let head = Transform::from_translation(pos).with_rotation(rot);
     if let (Some(scenario_dir), Some(consist_rel)) = (
         consist.scenario_dir.as_deref(),
         consist.primary_consist_rel.as_deref(),

@@ -17,7 +17,7 @@ use crate::shapes::{
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world_with_offset};
-use crate::track_position::{TrackPositionResolver, vehicle_position_yaw_on_graph_edge};
+use crate::track_position::{TrackPositionResolver, vehicle_pose_on_graph_edge};
 use crate::viewer_log;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
@@ -153,7 +153,7 @@ pub fn position_on_graph(
     Some((focus.to_render_surface(world), yaw))
 }
 
-/// Interpolate train world pose at simulation time `t`.
+/// Interpolate train world pose at simulation time `t` (yaw-only rotation).
 pub fn pose_at_time(
     graph: &TrackGraph,
     rows: &[CsvRow],
@@ -163,10 +163,13 @@ pub fn pose_at_time(
     world_offset: Vec3,
     focus: &RouteFocus,
 ) -> Option<(Vec3, f32, f64)> {
-    pose_at_time_with_tdb(graph, rows, t, terrain, scene, world_offset, focus, None)
+    let (pos, rot, vel) =
+        pose_at_time_with_tdb(graph, rows, t, terrain, scene, world_offset, focus, None)?;
+    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
+    Some((pos, yaw, vel))
 }
 
-/// Like [`pose_at_time`] but prefers TDB centreline elevation/yaw when `resolver` is set (#67).
+/// Like [`pose_at_time`] but prefers TDB centreline elevation + full orientation (#67).
 #[allow(clippy::too_many_arguments)]
 pub fn pose_at_time_with_tdb(
     graph: &TrackGraph,
@@ -177,7 +180,7 @@ pub fn pose_at_time_with_tdb(
     world_offset: Vec3,
     focus: &RouteFocus,
     resolver: Option<&TrackPositionResolver<'_>>,
-) -> Option<(Vec3, f32, f64)> {
+) -> Option<(Vec3, Quat, f64)> {
     if rows.is_empty() {
         return None;
     }
@@ -186,7 +189,7 @@ pub fn pose_at_time_with_tdb(
         .saturating_sub(1)
         .min(rows.len() - 1);
     let row = &rows[idx];
-    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
+    let (pos, rot) = vehicle_pose_on_graph_edge(
         graph,
         &row.edge_id,
         row.pos_on_edge_m,
@@ -196,7 +199,7 @@ pub fn pose_at_time_with_tdb(
         focus,
         terrain,
     )?;
-    Some((pos, yaw, row.velocity_mps))
+    Some((pos, rot, row.velocity_mps))
 }
 
 #[derive(Component)]
@@ -262,7 +265,7 @@ pub fn spawn_train_markers(
             track.color
         };
 
-        let (pos, yaw, _) = pose_at_time_with_tdb(
+        let (pos, rot, _) = pose_at_time_with_tdb(
             &scene.graph,
             &track.rows,
             0.0,
@@ -274,10 +277,10 @@ pub fn spawn_train_markers(
         )
         .unwrap_or((
             focus.to_render_surface(scene.bounds.center + offset.delta + Vec3::Y * fallback_y),
-            0.0,
+            Quat::IDENTITY,
             0.0,
         ));
-        let head = Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw));
+        let head = Transform::from_translation(pos).with_rotation(rot);
 
         if mode.is_track_dev() && !track_dev_render_enabled() {
             let unit = meshes.add(Cuboid::new(3.0, 3.5, 16.0));
@@ -565,7 +568,7 @@ pub fn update_train_markers(
         let Some(track) = replay.tracks.get(marker.track_index) else {
             continue;
         };
-        let Some((pos, yaw, _)) = pose_at_time_with_tdb(
+        let Some((pos, rot, _)) = pose_at_time_with_tdb(
             &scene.graph,
             &track.rows,
             replay.t_sim,
@@ -578,7 +581,7 @@ pub fn update_train_markers(
             continue;
         };
         transform.translation = view_position(pos, &origin);
-        transform.rotation = Quat::from_rotation_y(yaw);
+        transform.rotation = rot;
     }
 }
 

@@ -12,13 +12,14 @@
 //!
 //! Rolling stock (#67) uses [`vehicle_pose_on_graph_edge`]: imported `e{N}` edges
 //! map to TDB vector `N` with `pos_on_edge_m` as chainage. That path **keeps**
-//! TDB elevation (no `ground_y_at`) when the pose resolves.
+//! TDB elevation (no `ground_y_at`) and applies full yaw/pitch/roll when the
+//! pose resolves.
 
 use std::collections::HashMap;
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
-    TrackPose, nearest_track_position, tdb_node_track_pose,
+    TrackPose, bevy_track_quat, nearest_track_position, tdb_node_track_pose,
 };
 use openrailsrs_formats::{
     RouteStart, TSectionCatalog, TrackDbFile, msts_tile_x_index_for_coord,
@@ -591,10 +592,23 @@ fn tdb_chainage_for_graph_edge(
     }
 }
 
+/// Bevy vehicle orientation from a TDB [`TrackPose`] (#67).
+///
+/// Yaw uses the established vehicle convention (`−yaw_deg` vs track ribbon);
+/// pitch/roll follow [`bevy_track_quat`] (OR `CreateFromYawPitchRoll`).
+pub fn vehicle_rotation_from_track_pose(pose: &TrackPose) -> Quat {
+    bevy_track_quat(
+        -f64::from(pose.yaw_deg),
+        f64::from(pose.pitch_rad),
+        f64::from(pose.roll_rad),
+    )
+}
+
 /// Render-space vehicle pose on a graph edge (#67).
 ///
-/// Prefer TDB centreline position (including elevation) and yaw when the edge is
-/// an imported `e{N}` vector. Falls back to nearest snap, then graph+terrain.
+/// Prefer TDB centreline position (including elevation) and full orientation
+/// when the edge is an imported `e{N}` vector. Falls back to nearest snap, then
+/// graph+terrain (yaw-only).
 #[allow(clippy::too_many_arguments)]
 pub fn vehicle_pose_on_graph_edge(
     graph: &TrackGraph,
@@ -606,15 +620,40 @@ pub fn vehicle_pose_on_graph_edge(
     focus: &RouteFocus,
     terrain: Option<&TerrainElevation>,
 ) -> Option<(Vec3, Quat)> {
-    let (pos, yaw) = vehicle_position_yaw_on_graph_edge(
+    if let Some(res) = resolver {
+        if let Some(tdb_id) = TrackPositionResolver::parse_e_prefix_tdb_id(edge_id) {
+            if let Some(chainage) =
+                tdb_chainage_for_graph_edge(res, graph, edge_id, pos_on_edge_m, tdb_id)
+            {
+                let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
+                if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
+                    let placed = pose.position + route_offset;
+                    // Keep TDB Y — do not flatten with ground_y_at (#67).
+                    return Some((
+                        focus.to_render_surface(placed),
+                        vehicle_rotation_from_track_pose(&pose),
+                    ));
+                }
+            }
+        }
+        if let Some(planar) = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m) {
+            let hint = planar + route_offset;
+            if let Some(pose) = snap_msts_to_tdb(res, hint, tdb_snap_radius_m()) {
+                return Some((
+                    focus.to_render_surface(pose.position),
+                    vehicle_rotation_from_track_pose(&pose),
+                ));
+            }
+        }
+    }
+    let (pos, yaw) = crate::train::position_on_graph(
         graph,
         edge_id,
         pos_on_edge_m,
-        resolver,
+        terrain,
         scene,
         route_offset,
         focus,
-        terrain,
     )?;
     Some((pos, Quat::from_rotation_y(yaw)))
 }
@@ -631,37 +670,18 @@ pub fn vehicle_position_yaw_on_graph_edge(
     focus: &RouteFocus,
     terrain: Option<&TerrainElevation>,
 ) -> Option<(Vec3, f32)> {
-    if let Some(res) = resolver {
-        if let Some(tdb_id) = TrackPositionResolver::parse_e_prefix_tdb_id(edge_id) {
-            if let Some(chainage) =
-                tdb_chainage_for_graph_edge(res, graph, edge_id, pos_on_edge_m, tdb_id)
-            {
-                let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
-                if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
-                    let placed = pose.position + route_offset;
-                    let yaw = -pose.yaw_deg.to_radians();
-                    // Keep TDB Y — do not flatten with ground_y_at (#67).
-                    return Some((focus.to_render_surface(placed), yaw));
-                }
-            }
-        }
-        if let Some(planar) = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m) {
-            let hint = planar + route_offset;
-            if let Some(pose) = snap_msts_to_tdb(res, hint, tdb_snap_radius_m()) {
-                let yaw = -pose.yaw_deg.to_radians();
-                return Some((focus.to_render_surface(pose.position), yaw));
-            }
-        }
-    }
-    crate::train::position_on_graph(
+    let (pos, rot) = vehicle_pose_on_graph_edge(
         graph,
         edge_id,
         pos_on_edge_m,
-        terrain,
+        resolver,
         scene,
         route_offset,
         focus,
-    )
+        terrain,
+    )?;
+    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
+    Some((pos, yaw))
 }
 
 pub fn route_start_bevy(start: RouteStart) -> Vec3 {
@@ -1221,6 +1241,35 @@ mod tests {
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e10783"), Some(10783));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e2"), Some(2));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("n2"), None);
+    }
+
+    #[test]
+    fn vehicle_rotation_includes_tdb_pitch_and_roll() {
+        let pose = TrackPose {
+            position: Vec3::new(0.0, 35.8, 0.0),
+            yaw_deg: 30.0,
+            pitch_rad: 0.12,
+            roll_rad: -0.04,
+        };
+        let rot = vehicle_rotation_from_track_pose(&pose);
+        let (yaw, pitch, roll) = rot.to_euler(EulerRot::YXZ);
+        assert!(
+            (yaw - (-30.0f32).to_radians()).abs() < 1e-3,
+            "vehicle yaw convention is −TrackPose.yaw_deg, got {yaw}"
+        );
+        assert!(
+            (pitch - 0.12).abs() < 1e-3,
+            "pitch must come from TDB AX, got {pitch}"
+        );
+        assert!(
+            (roll - 0.04).abs() < 1e-3,
+            "roll must follow bevy_track_quat AZ negation, got {roll}"
+        );
+        let yaw_only = Quat::from_rotation_y(yaw);
+        assert!(
+            rot.angle_between(yaw_only) > 0.05,
+            "full pose must differ from yaw-only"
+        );
     }
 
     #[test]
