@@ -542,16 +542,16 @@ mod tests {
     }
 
     #[test]
-    fn scenery_ground_y_fallback_converts_scenery_y_to_msl() {
+    fn scenery_ground_y_fallback_keeps_absolute_scenery_y() {
         let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
         let focus = crate::world::RouteFocus {
-            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
-            height_origin: 13_184.0,
+            center: Vec3::new(-12_450_948.0, 35.7818, -30_566_982.0),
+            height_origin: 28.5,
         };
-        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 55.0, &focus);
+        let y = scenery_ground_y(None, 10.0, 10.0, &scene, 35.7818, &focus);
         assert!(
-            (y - 13_157.0).abs() < 1.0,
-            "tile-local scenery y must map to MSL, got {y}"
+            (y - 35.7818).abs() < 1e-3,
+            "fallback must keep absolute WORLD Y (#64), got {y}"
         );
     }
 

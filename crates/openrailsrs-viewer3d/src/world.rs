@@ -488,18 +488,23 @@ impl RouteFocus {
         )
     }
 
-    /// Convert `.w` tile-local Y to terrain MSL for [`Self::to_render_surface`].
+    /// Absolute MSTS / Open Rails height for a `.w` `Position.Y` (#64).
+    ///
+    /// WORLD Y shares the same vertical datum as TDB and terrain MSL samples.
+    /// Do **not** remap through `(scenery_y - center.y)` — that flattens embankments
+    /// and platforms onto the RAW heightfield (Chiltern rail ~35.8 vs terrain ~28.5).
     pub fn scenery_y_to_msl(&self, scenery_y: f32) -> f32 {
-        self.height_origin + (scenery_y - self.center.y)
+        let _ = self;
+        scenery_y
     }
 
-    /// MSTS world position from a `.w` item (scenery-local Y) → Bevy render space.
+    /// MSTS world position from a `.w` item → Bevy render space.
+    ///
+    /// XZ are recentred on [`Self::center`]; Y is absolute height minus
+    /// [`Self::height_origin`] (terrain sample at focus), preserving authored
+    /// vertical offsets vs the ground plane (#64).
     pub fn scenery_to_render(&self, scenery_world: Vec3) -> Vec3 {
-        self.to_render_surface(Vec3::new(
-            scenery_world.x,
-            self.scenery_y_to_msl(scenery_world.y),
-            scenery_world.z,
-        ))
+        self.to_render_surface(scenery_world)
     }
 
     /// Build focus at an explicit MSTS world centre, sampling terrain MSL when available.
@@ -3785,17 +3790,19 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         let scene = load_world_from_route_dir(&route_dir);
         assert_eq!(scene.tiles_loaded, 1);
-        assert_eq!(scene.items.len(), 6);
+        assert_eq!(scene.items.len(), 7);
         assert!(scene.items.iter().any(|o| o.kind == "Static"));
         assert!(scene.items.iter().any(|o| o.kind == "Forest"));
         assert!(scene.items.iter().any(|o| o.kind == "HWater"));
+        assert!(scene.items.iter().any(|o| o.kind == "Transfer"));
+        assert!(scene.items.iter().any(|o| o.kind == "Dyntrack"));
     }
 
-    /// Chiltern-like focus: MSTS bbox `y` is tile-local (~80 m) but terrain MSL is ~13 km.
+    /// Chiltern Birmingham-like focus: WORLD/TDB Y ~35–37 m, terrain RAW ~28.5 m.
     fn chiltern_like_focus() -> RouteFocus {
         RouteFocus {
-            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
-            height_origin: 13_184.0,
+            center: Vec3::new(-12_450_948.0, 35.7818, -30_566_982.0),
+            height_origin: 28.5,
         }
     }
 
@@ -3808,16 +3815,11 @@ mod tests {
     }
 
     #[test]
-    fn route_focus_scenery_uses_bbox_y_not_msl() {
+    fn route_focus_scenery_preserves_absolute_y_offset() {
         let focus = chiltern_like_focus();
-        let obj = Vec3::new(12_494_900.0, 55.0, 30_600_300.0);
+        let obj = Vec3::new(focus.center.x + 50.0, 55.0, focus.center.z + 60.0);
         let local = focus.to_render(obj);
-        assert!(
-            local.y.abs() < 200.0,
-            "scenery local y should be O(100 m), got {}",
-            local.y
-        );
-        assert!((local.y - (55.0 - 82.0)).abs() < 1.0);
+        assert!((local.y - (55.0 - focus.center.y)).abs() < 1e-3);
         assert!(
             local.x.abs() < 500.0 && local.z.abs() < 500.0,
             "horizontal rebasing failed: {:?}",
@@ -3826,20 +3828,21 @@ mod tests {
     }
 
     #[test]
-    fn scenery_y_to_msl_maps_tile_local_to_height_origin() {
+    fn scenery_y_to_msl_is_absolute_datum() {
         let focus = chiltern_like_focus();
-        assert!((focus.scenery_y_to_msl(55.0) - 13_157.0).abs() < 1.0);
-        assert!((focus.to_render_surface(Vec3::new(0.0, 13_157.0, 0.0)).y - (-27.0)).abs() < 1.0);
+        // #64: no (y - center.y) remap onto height_origin.
+        assert!((focus.scenery_y_to_msl(35.7818) - 35.7818).abs() < 1e-4);
+        assert!((focus.scenery_y_to_msl(55.0) - 55.0).abs() < 1e-4);
     }
 
     #[test]
     fn route_focus_surface_uses_height_origin() {
         let focus = chiltern_like_focus();
-        let rail = Vec3::new(focus.center.x, 13_190.0, focus.center.z);
+        let rail = Vec3::new(focus.center.x, 35.7818, focus.center.z);
         let local = focus.to_render_surface(rail);
         assert!(
-            (local.y - 6.0).abs() < 1.0,
-            "MSL rail height should be ~0 local, got {}",
+            (local.y - (35.7818 - 28.5)).abs() < 0.05,
+            "rail should sit ~7.3 m above terrain plane, got {}",
             local.y
         );
     }
@@ -3852,35 +3855,40 @@ mod tests {
             !should_cull_world_object(&focus, obj),
             "object ~100 m away horizontally must not be culled (default view radius 120 m)"
         );
-        let wrongly_vertical = Vec3::new(focus.center.x, 13_190.0, focus.center.z);
+        let high = Vec3::new(focus.center.x, 200.0, focus.center.z);
         assert!(
-            !should_cull_world_object(&focus, wrongly_vertical),
-            "same xz as centre must not be culled despite MSL y"
+            !should_cull_world_object(&focus, high),
+            "same xz as centre must not be culled despite high y"
         );
     }
 
     #[test]
-    fn scenery_at_bbox_center_renders_on_terrain_plane() {
+    fn scenery_rail_height_not_flattened_to_terrain() {
         let focus = chiltern_like_focus();
-        let obj = Vec3::new(focus.center.x, focus.center.y, focus.center.z);
-        let render = focus.scenery_to_render(obj);
+        // Object authored at OR rail height must NOT collapse to render Y≈0.
+        let rail_obj = Vec3::new(focus.center.x, 35.7818, focus.center.z);
+        let render = focus.scenery_to_render(rail_obj);
         assert!(
-            render.y.abs() < 1.0,
-            "object at bbox centre Y should sit on render Y≈0, got {}",
+            (render.y - (35.7818 - focus.height_origin)).abs() < 0.05,
+            "WORLD Y=35.78 must keep embankment offset, got {}",
+            render.y
+        );
+        assert!(
+            render.y > 5.0,
+            "rail-height WORLD must sit above terrain plane, got {}",
             render.y
         );
     }
 
     #[test]
-    fn using_height_origin_for_scenery_y_would_cull_everything() {
+    fn scenery_y_delta_vs_center_is_preserved_in_render() {
         let focus = chiltern_like_focus();
-        let obj = Vec3::new(focus.center.x + 50.0, 55.0, focus.center.z);
-        let buggy_y = obj.y - focus.height_origin;
+        let low = focus.scenery_to_render(Vec3::new(focus.center.x, 28.5, focus.center.z));
+        let high = focus.scenery_to_render(Vec3::new(focus.center.x, 35.7818, focus.center.z));
         assert!(
-            buggy_y.abs() > 10_000.0,
-            "sanity: old bug shifted scenery y by ~-13 km"
+            (high.y - low.y - (35.7818 - 28.5)).abs() < 0.05,
+            "vertical authored delta must survive scenery_to_render"
         );
-        assert!(!should_cull_world_object(&focus, obj));
     }
 
     #[test]

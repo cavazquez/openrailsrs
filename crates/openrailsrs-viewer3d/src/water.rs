@@ -11,7 +11,7 @@ use crate::world::WorldScene;
 const COLOR_WATER: Color = Color::srgba(0.08, 0.38, 0.62, 0.68);
 const COLOR_WATER_REFLECT: Color = Color::srgba(0.04, 0.22, 0.38, 0.28);
 
-/// Resolve the water surface height in terrain MSL: explicit `.w` Y (via [`crate::world::RouteFocus::scenery_y_to_msl`]), else terrain sample.
+/// Resolve the water surface height: explicit absolute `.w` Y (#64), else terrain sample.
 pub fn water_surface_y(
     anchor: Vec3,
     terrain: Option<&TerrainElevation>,
@@ -215,7 +215,8 @@ mod tests {
             height_origin: 5.0,
         };
         let y = water_surface_y(Vec3::new(10.0, 0.0, 10.0), None, 12.5, &focus);
-        assert!((y - 7.5).abs() < 1e-5);
+        // Explicit `.w` Y is absolute (#64); no `(y - center.y) + height_origin` remap.
+        assert!((y - 12.5).abs() < 1e-5);
     }
 
     #[test]

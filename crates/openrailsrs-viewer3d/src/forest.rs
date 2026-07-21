@@ -410,29 +410,29 @@ mod tests {
     }
 
     #[test]
-    fn scatter_fallback_y_is_msl_not_scenery_local() {
+    fn scatter_fallback_y_keeps_absolute_anchor_y() {
         let focus = RouteFocus {
-            center: Vec3::new(12_494_846.0, 82.0, 30_600_240.0),
-            height_origin: 13_184.0,
+            center: Vec3::new(-12_450_948.0, 35.7818, -30_566_982.0),
+            height_origin: 28.5,
         };
         let g = TrackGraph::new();
         let idx = TrackSegmentIndex::from_graph(&g, Vec3::ZERO);
-        let anchor = Vec3::new(focus.center.x, 55.0, focus.center.z);
+        let anchor = Vec3::new(focus.center.x, 35.7818, focus.center.z);
         let trees = scatter_trees_in_patch(
             anchor, 40.0, 40.0, 8, 1.0, 1.0, 0, 0, 1, &idx, None, 0.0, &focus,
         );
         assert!(!trees.is_empty());
-        let expected_msl = focus.scenery_y_to_msl(55.0);
+        let expected_y = focus.scenery_y_to_msl(35.7818);
         for tree in &trees {
             assert!(
-                (tree.position.y - expected_msl).abs() < 1.0,
-                "fallback tree y must be MSL (~{expected_msl}), got {}",
+                (tree.position.y - expected_y).abs() < 1.0,
+                "fallback tree y must keep absolute WORLD Y (~{expected_y}), got {}",
                 tree.position.y
             );
             let render_y = focus.to_render_surface(tree.position).y;
             assert!(
-                render_y.abs() < 50.0,
-                "render y must stay near ground, got {render_y}"
+                (render_y - (35.7818 - 28.5)).abs() < 1.0,
+                "render y must preserve embankment offset, got {render_y}"
             );
         }
     }

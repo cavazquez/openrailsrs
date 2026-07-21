@@ -39,9 +39,12 @@ if local_x < -1024:  local_x += 2048; tile_x -= 1
 
 ### 2. Render (`RouteFocus`)
 
-- Resta `center` (ancla MSTS world).
-- **Y:** usa `height_origin` = MSL del terreno en el ancla (`TerrainElevation::sample_world_y`), no el Y del bbox del `.w`.
-- API: `scenery_to_render`, `to_render_surface`.
+- Resta `center` (ancla MSTS world) en XZ.
+- **Y:** WORLD/TDB usan Y absoluto (MSL-like). Para render:
+  - `to_render_surface` → `world.y - height_origin` (terreno en ancla ≈ 0).
+  - `scenery_to_render` = `to_render_surface` sobre la posición WORLD (issue #64: **sin** remap `(scenery_y - center.y) + height_origin`, que aplastaba terraplenes).
+- `height_origin` = MSL del terreno en el ancla (`TerrainElevation::sample_world_y`), no el Y del bbox del `.w`.
+- API: `scenery_to_render`, `to_render_surface`, `scenery_y_to_msl` (identidad desde #64).
 
 ### 3. View (`FloatingOrigin`)
 
