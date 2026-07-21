@@ -625,7 +625,8 @@ pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
         },
         exposure,
         tonemapping,
-        // Fog off by default; `F` inserts DistanceFog via `toggle_distance_fog` (#39).
+        // Atmospheric fog on by default; `F` toggles via `toggle_distance_fog` (#39).
+        crate::sky::camera_distance_fog(),
         camera_layers_outdoor(),
         Name::new("viewer-camera"),
     ));

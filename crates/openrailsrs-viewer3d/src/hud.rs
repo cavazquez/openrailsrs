@@ -736,7 +736,7 @@ mod tests {
         assert!(content.row1.contains("test/route"));
         assert!(content.row1.contains("cam:orbit"));
         assert!(content.row1.contains("rain:on"));
-        assert!(content.row1.contains("fog:off"));
+        assert!(content.row1.contains("fog:on"));
         assert!(content.controls.contains("P:rain"));
         assert!(content.controls.contains("F:fog"));
         assert!(content.row2.contains("pos 120,35,8"));
@@ -781,7 +781,7 @@ mod tests {
         assert!(content.row1.contains("PLAY"));
         assert!(content.row1.contains("follow:orbit→primary"));
         assert!(content.row1.contains("rain:on"));
-        assert!(content.row1.contains("fog:off"));
+        assert!(content.row1.contains("fog:on"));
         assert!(content.controls.contains("P:rain"));
         assert!(content.controls.contains("F:fog"));
         assert!(content.row2.contains("pos 0,0,0"));

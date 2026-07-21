@@ -12,10 +12,16 @@ use crate::track::TrackScene;
 use crate::viewer_log;
 use crate::world::RouteFocus;
 
-/// Toggle atmospheric fog with `F`. Disabled by default (opt-in with `F`, #39).
-#[derive(Resource, Clone, Debug, Default)]
+/// Atmospheric fog on the playable camera (#39). Enabled by default; toggle with `F`.
+#[derive(Resource, Clone, Debug)]
 pub struct FogState {
     pub enabled: bool,
+}
+
+impl Default for FogState {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
 }
 
 impl FogState {
@@ -51,8 +57,12 @@ pub fn viewer_distance_fog(visibility_m: f32, night: bool) -> DistanceFog {
 }
 
 /// Fog for the playable camera using the process viewing-distance policy (#39 / #30).
+///
+/// Visibility tracks [`view_radius_m`] so scenery is not culled before the fog horizon.
 pub fn camera_distance_fog() -> DistanceFog {
-    viewer_distance_fog(view_radius_m(), false)
+    // Slightly beyond the view window so tiles at the rim fade instead of popping.
+    let visibility = (view_radius_m() * 1.15).max(view_radius_m());
+    viewer_distance_fog(visibility, false)
 }
 
 /// Toggle fog with `F` — inserts/removes [`DistanceFog`] on the playable camera.
@@ -138,5 +148,26 @@ mod tests {
     fn shared_palette_matches_clear_color() {
         let (horizon, _) = sky_palette(false);
         assert_eq!(horizon.to_srgba().blue, sky_clear_color().to_srgba().blue);
+    }
+
+    #[test]
+    fn fog_enabled_by_default() {
+        assert!(FogState::default().enabled);
+    }
+
+    #[test]
+    fn camera_fog_visibility_not_below_view_radius() {
+        let fog = camera_distance_fog();
+        let view = view_radius_m();
+        // Atmospheric extinction decreases as visibility grows; ensure we use ≥ view radius.
+        let at_view = viewer_distance_fog(view, false);
+        let dens = |f: &DistanceFog| match &f.falloff {
+            FogFalloff::Atmospheric { extinction, .. } => extinction.x,
+            other => panic!("expected atmospheric fog, got {other:?}"),
+        };
+        assert!(
+            dens(&fog) <= dens(&at_view) + 1e-6,
+            "camera fog must not be denser than view-radius fog (would hide tiles early)"
+        );
     }
 }
