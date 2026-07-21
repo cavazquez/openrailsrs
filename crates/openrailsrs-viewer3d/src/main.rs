@@ -283,6 +283,17 @@ fn main() {
         );
     }
 
+    let win_w = std::env::var("OPENRAILSRS_WINDOW_WIDTH")
+        .ok()
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .unwrap_or(1280)
+        .max(64);
+    let win_h = std::env::var("OPENRAILSRS_WINDOW_HEIGHT")
+        .ok()
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .unwrap_or(720)
+        .max(64);
+
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
@@ -290,7 +301,7 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "openrailsrs-viewer3d".into(),
-                    resolution: (1280u32, 720u32).into(),
+                    resolution: (win_w, win_h).into(),
                     present_mode: PresentMode::AutoNoVsync,
                     ..default()
                 }),

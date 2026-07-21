@@ -37,4 +37,12 @@ SIMISA@@@@@@@@@@JINX0w0t______
         ( Position 250.0 3.0 80.0 )
         ( Size 50.0 40.0 )
     )
+    ( Transfer
+        ( UiD 7 )
+        ( FileName "yard.ace" )
+        ( Position 140.0 0.1 40.0 )
+        ( Width 20.0 )
+        ( Height 12.0 )
+        ( QDirection 0.0 0.0 0.0 1.0 )
+    )
 )

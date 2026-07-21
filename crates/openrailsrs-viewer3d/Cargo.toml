@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "Experimental 3D viewer (Bevy) — track graph from track.toml + free camera"
+default-run = "openrailsrs-viewer3d"
 
 [lib]
 path = "src/lib.rs"
@@ -12,6 +13,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "openrailsrs-viewer3d"
 path = "src/main.rs"
+
+[[bin]]
+name = "openrailsrs-visual-diff"
+path = "src/bin/visual_diff.rs"
 
 [features]
 default = []

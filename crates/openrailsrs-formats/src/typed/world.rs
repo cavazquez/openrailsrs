@@ -587,6 +587,23 @@ fn atom_to_u32(at: &Atom) -> Option<u32> {
     None
 }
 
+/// Classic typed `Transfer` objects use nested field lists (`FileName`, `Position`, …).
+/// JINX wrappers only contain flat `UiD (…) Width (…) …` bags — no typed field heads.
+fn transfer_looks_typed(items: &[Ast]) -> bool {
+    items.iter().skip(1).any(|entry| match entry {
+        Ast::List(inner) => matches!(
+            inner.first(),
+            Some(Ast::Atom(Atom::Symbol(head)))
+                if matches!(
+                    head.as_str(),
+                    "FileName" | "Position" | "QDirection" | "Width" | "Height"
+                        | "StaticDetailLevel" | "VDbId" | "Matrix3x3"
+                )
+        ),
+        _ => false,
+    })
+}
+
 /// JINX-decompiled `.w` tiles often wrap every object in one `Transfer` block and
 /// flatten each entry to `( UiD ( n ) Width ( w ) … )` instead of typed wrappers.
 fn flatten_world_entries(root: &[Ast]) -> Vec<Vec<Ast>> {
@@ -603,6 +620,10 @@ fn flatten_world_entries(root: &[Ast]) -> Vec<Vec<Ast>> {
             .collect();
     }
     if matches_head(root, "Transfer") {
+        // Nested classic Transfer (smoke / Chiltern) must not use the JINX unwrap path.
+        if transfer_looks_typed(root) {
+            return vec![root.to_vec()];
+        }
         return root[1..]
             .iter()
             .filter_map(|entry| match entry {
@@ -1233,6 +1254,45 @@ mod watersnake_jinx_tests {
             "missing transfer uid 75 (got {} transfers)",
             transfers.len()
         );
+    }
+}
+
+#[cfg(test)]
+mod typed_transfer_tests {
+    use super::*;
+
+    #[test]
+    fn nested_transfer_not_unwrapped_as_jinx() {
+        let text = r#"
+SIMISA@@@@@@@@@@JINX0w0t______
+( Tr_Worldfile
+    ( Transfer
+        ( UiD 7 )
+        ( FileName "yard.ace" )
+        ( Position 140.0 0.1 40.0 )
+        ( Width 20.0 )
+        ( Height 12.0 )
+        ( QDirection 0.0 0.0 0.0 1.0 )
+    )
+)
+        "#;
+        let ast = load_world_ast(text).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(world.items.len(), 1);
+        let Some(WorldItem::Transfer {
+            uid,
+            file_name,
+            width,
+            height,
+            ..
+        }) = world.items.first()
+        else {
+            panic!("expected typed Transfer, got {:?}", world.items);
+        };
+        assert_eq!(*uid, 7);
+        assert_eq!(file_name.as_deref(), Some("yard.ace"));
+        assert!((*width - 20.0).abs() < 1e-6);
+        assert!((*height - 12.0).abs() < 1e-6);
     }
 }
 

@@ -54,6 +54,49 @@ Fixtures: [`examples/smoke`](../examples/smoke) (`scenario.toml`, `routes/test`)
 - **Live:** `LiveDrive` from `examples/smoke/scenario.toml`; sim stepping in `openrailsrs-sim` + Bevy wiring in `app_live`.
 - **Billboards:** `stop_billboard_ui_from_viewport` (unit) + `update_stop_billboards` (system smoke with mock `Window`).
 
+## Visual regression (#43)
+
+Deterministic smoke capture + structural metrics (no OpenRails/Wine automation).
+
+| Piece | Path |
+|-------|------|
+| Script | [`scripts/visual_regression_smoke.sh`](../scripts/visual_regression_smoke.sh) |
+| Golden | [`docs/fixtures/visual/smoke_orbit.png`](fixtures/visual/smoke_orbit.png) |
+| Diff tool | `cargo run -p openrailsrs-viewer3d --bin openrailsrs-visual-diff` |
+| Structural test | `smoke_route_structural_metrics` (headless, no GPU) |
+
+```bash
+./scripts/visual_regression_smoke.sh
+UPDATE_GOLDEN=1 ./scripts/visual_regression_smoke.sh   # regenerate golden
+```
+
+Key env (script sets defaults):
+
+| Variable | Role |
+|----------|------|
+| `OPENRAILSRS_SCREENSHOT` | Output PNG path |
+| `OPENRAILSRS_SCREENSHOT_AFTER_READY=1` | Capture after WORLD spawn done + N Playing frames |
+| `OPENRAILSRS_SCREENSHOT_READY_FRAMES` | Frames after ready (default 30 / script 45) |
+| `OPENRAILSRS_SCREENSHOT_DELAY_S` | Max wait / legacy delay |
+| `OPENRAILSRS_CAM_YAW` / `_PITCH` / `_DIST` | Fixed orbit |
+| `OPENRAILSRS_WINDOW_WIDTH` / `_HEIGHT` | Fixed resolution (golden 640×360) |
+| `OPENRAILSRS_VISUAL_TOL` | Hot ΔRGB per channel (default 16) |
+| `OPENRAILSRS_VISUAL_MAX_HOT_PCT` | Fail if hot pixels exceed % (default 2) |
+
+CI job `visual-smoke` runs the script under `xvfb-run` and uploads `actual.png` / `diff.png` on failure.
+
+### Manual OpenRails checklist (Chiltern Birmingham)
+
+Not automated. Useful when comparing Bevy vs OR at station tile **-6080 / 14925**:
+
+1. Content: `OPENRAILSRS_MSTS_CONTENT` → Chiltern route on disk.
+2. OpenRails (Wine or native): activity *RS_Let's go to Birmingham* (or free roam to Birmingham).
+3. Position near marquesina / tile **-6080, 14925**; note camera yaw/pitch/height roughly matching Bevy orbit if comparing screenshots.
+4. Bevy: `OPENRAILSRS_VIEW_RADIUS_M=300` + `--live --route-root … examples/chiltern/scenario.toml` (see commands below).
+5. Check: platform/canopy alignment vs track, Transfer/forest presence, no NaN/missing major Static. Pixel-perfect not required.
+
+OR speed-CSV capture helpers remain under `scripts/capture_chiltern_birmingham_or.sh` (physics baseline, not visual golden).
+
 ## Regressions (Chiltern / coordinates)
 
 Unit tests in `world.rs` / `terrain.rs` for `RouteFocus`, MSL vs scenery Y, terrain patch offset, hash tile discovery.

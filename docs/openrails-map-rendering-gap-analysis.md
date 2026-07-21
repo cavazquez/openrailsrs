@@ -285,7 +285,7 @@ Orden recomendado:
 5. Transfer, CarSpawner/RDB y animaciones WORLD.
 6. Señales y catenaria.
 7. Forest, fog, sombras y rolling stock.
-8. Infraestructura de regresión visual.
+8. ~~Infraestructura de regresión visual~~ **(#43 OK: smoke golden + structural + CI xvfb; OR Birmingham checklist manual)**.
 
 ## Issues
 
@@ -311,7 +311,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#40](https://github.com/cavazquez/openrailsrs/issues/40) | P2 | `[Rolling Stock Visuals] Animar bogies, ruedas, puertas y pantógrafo desde shapes MSTS` | animación shared |
 | [#41](https://github.com/cavazquez/openrailsrs/issues/41) | P2 | `[Rolling Stock Visuals] Permitir sombras del exterior del tren` | **Cerrado** — opacos sin `NotShadowCaster`; transparentes excluidos |
 | [#42](https://github.com/cavazquez/openrailsrs/issues/42) | P2 | `[Terrain] Integrar recepción de sombras en TerrainMaterial` | **Cerrado** — shadow sampling en `terrain.wgsl` (viewer); microtex + fog conservados |
-| [#43](https://github.com/cavazquez/openrailsrs/issues/43) | P1 | `[Validation] Crear regresiones visuales reproducibles OpenRails↔Bevy` | #25–#29 |
+| [#43](https://github.com/cavazquez/openrailsrs/issues/43) | P1 | `[Validation] Crear regresiones visuales reproducibles OpenRails↔Bevy` | **Cerrado** — viewer3d AFTER_READY + smoke golden PNG + visual-diff + métricas estructurales + CI xvfb; checklist OR Birmingham manual |
 | [#44](https://github.com/cavazquez/openrailsrs/issues/44) | P3 | `[Materials] Añadir tangent space opcional para assets PBR con normal maps` | fuente normal-map, #48 |
 | [#45](https://github.com/cavazquez/openrailsrs/issues/45) | P2 | `[Meshes] Recomponer normales ausentes o degeneradas en shapes MSTS` | **Cerrado** — face normals selectivas en bevy-scenery (+ render3d); válidas se conservan |
 | [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | **Cerrado** — tipado + sampler Bevy (1–4); tokens binarios uv_op/anim corregidos |

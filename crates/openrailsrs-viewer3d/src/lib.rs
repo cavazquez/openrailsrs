@@ -73,6 +73,8 @@ mod app_smoke;
 mod app_spawn;
 #[cfg(test)]
 mod test_harness;
+#[cfg(test)]
+mod visual_regression;
 
 use bevy::prelude::*;
 
