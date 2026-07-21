@@ -711,46 +711,31 @@ pub fn spawn_live_train(
                                     ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
                                 })
                                 .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
-                            let (car_transform, exterior_scale) = if is_lead {
-                                mesh_ref
-                                    .map(|m| {
+                            // Unit mesh scale (Open Rails): `length_m` / Size only for consist spacing.
+                            let car_transform = mesh_ref
+                                .map(|m| {
+                                    if is_lead {
                                         vehicle_cab_frame_and_exterior_scale(
                                             m,
                                             vehicle.offset_m,
                                             vehicle.length_m,
                                         )
-                                    })
-                                    .map(|(t, s)| (t, Some(s)))
-                                    .unwrap_or_else(|| {
-                                        (
-                                            vehicle_local_transform(
-                                                &scene,
-                                                vehicle.offset_m,
-                                                vehicle.length_m,
-                                            ),
-                                            None,
+                                        .0
+                                    } else {
+                                        vehicle_shape_local_transform(
+                                            m,
+                                            vehicle.offset_m,
+                                            vehicle.length_m,
                                         )
-                                    })
-                            } else {
-                                (
-                                    mesh_ref
-                                        .map(|m| {
-                                            vehicle_shape_local_transform(
-                                                m,
-                                                vehicle.offset_m,
-                                                vehicle.length_m,
-                                            )
-                                        })
-                                        .unwrap_or_else(|| {
-                                            vehicle_local_transform(
-                                                &scene,
-                                                vehicle.offset_m,
-                                                vehicle.length_m,
-                                            )
-                                        }),
-                                    None,
-                                )
-                            };
+                                    }
+                                })
+                                .unwrap_or_else(|| {
+                                    vehicle_local_transform(
+                                        &scene,
+                                        vehicle.offset_m,
+                                        vehicle.length_m,
+                                    )
+                                });
                             let mut car = train.spawn((
                                 car_transform,
                                 Visibility::default(),
@@ -789,16 +774,7 @@ pub fn spawn_live_train(
                                         );
                                     }
                                 };
-                                if let Some(scale) = exterior_scale {
-                                    car.spawn((
-                                        Transform::from_scale(Vec3::splat(scale)),
-                                        Visibility::default(),
-                                        Name::new(format!("train:live:car:{vi}:exterior_scale")),
-                                    ))
-                                    .with_children(|scaled| spawn_parts(scaled, &asset.parts));
-                                } else {
-                                    spawn_parts(car, &asset.parts);
-                                }
+                                spawn_parts(car, &asset.parts);
                             });
                             continue;
                         }

@@ -445,46 +445,20 @@ fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
     ]
 }
 
-/// Uniform scale so the shape's MSTS forward extent (or best fallback) matches `length_m`.
-pub fn vehicle_shape_fit_scale(extent: Vec3, length_m: f32) -> f32 {
-    let target = length_m.max(1.0);
-    let forward = extent.z;
-    if forward >= 0.1 {
-        return target / forward;
-    }
-    // Paper-thin along +Z (profile facing forward): scale from the largest visible axis.
-    let reference = extent.x.max(extent.y).max(0.01);
-    target / reference
-}
-
-/// Local transform for a vehicle `.s` mesh: MSTS→train rotation, bbox scale, front at `offset_m`.
+/// Local transform for a vehicle `.s` mesh: MSTS→train rotation, unit scale, front at `offset_m`.
+///
+/// Open Rails does **not** scale vehicle meshes to match `Size` / `length_m`. Those values
+/// control coupler spacing / consist offsets only; mesh proportions stay as authored
+/// (plus any Matrix3x3 baked into the shape hierarchy).
 pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) -> Transform {
-    let rotation = msts_shape_to_train_rotation();
-    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
-    let extent = max - min;
-    let center = (min + max) * 0.5;
-    let scale_factor = vehicle_shape_fit_scale(extent, length_m);
-    let scale = Vec3::splat(scale_factor);
-
-    let front = Vec3::new(center.x, center.y, min.z);
-    let front_local_x = (rotation * (scale * front)).x;
-
-    let min_y = aabb_corners(min, max)
-        .iter()
-        .map(|p| (rotation * (scale * *p)).y)
-        .fold(f32::INFINITY, f32::min);
-
-    Transform {
-        translation: Vec3::new(offset_m - front_local_x, -min_y, 0.0),
-        rotation,
-        scale,
-    }
+    cab_shape_placement_transform(mesh, offset_m, length_m)
 }
 
 /// Lead-vehicle placement for 3D cab (same origin/rotation as exterior `.s`, unit scale).
 ///
-/// Open Rails keeps `ORTS3DCabHeadPos` and `CABVIEW3D` meshes in unscaled MSTS shape
-/// metres; only the exterior body is length-fitted via a child scale node.
+/// Open Rails keeps `ORTS3DCabHeadPos`, `CABVIEW3D`, and exterior body meshes in unscaled
+/// MSTS shape metres. `length_m` is accepted for API symmetry with consist placement but
+/// does not affect mesh scale.
 pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32) -> Transform {
     let rotation = msts_shape_to_train_rotation();
     let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
@@ -505,17 +479,18 @@ pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32)
     }
 }
 
-/// Cab frame (unit MSTS scale) plus uniform length-fit scale for the exterior mesh child.
+/// Cab frame transform plus exterior child scale (always `1.0`; no length-fit).
+///
+/// Kept for call-site symmetry with the former length-fit path; exterior parts spawn at
+/// unit scale under the frame.
 pub fn vehicle_cab_frame_and_exterior_scale(
     mesh: &Mesh,
     offset_m: f32,
     length_m: f32,
 ) -> (Transform, f32) {
-    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
-    let scale = vehicle_shape_fit_scale(max - min, length_m);
     (
         cab_shape_placement_transform(mesh, offset_m, length_m),
-        scale,
+        1.0,
     )
 }
 
@@ -3199,13 +3174,26 @@ mod tests {
     }
 
     #[test]
-    fn vehicle_shape_scales_flat_profile_to_length() {
+    fn vehicle_shape_keeps_unit_scale() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
         let transform = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
-        assert!((transform.scale.x - 18.0).abs() < 1e-3);
+        assert!((transform.scale - Vec3::ONE).length() < 1e-4);
         let rotated = transform.rotation * Vec3::Z;
         assert!((rotated.x - 1.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn vehicle_shape_ignores_length_for_mesh_scale() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let t_short = vehicle_shape_local_transform(&mesh, 0.0, 10.0);
+        let t_long = vehicle_shape_local_transform(&mesh, 0.0, 30.0);
+        assert!((t_short.scale - Vec3::ONE).length() < 1e-4);
+        assert!((t_long.scale - Vec3::ONE).length() < 1e-4);
+        // Same mesh front → same local origin; length only affects consist offsets.
+        assert!((t_short.translation.x - t_long.translation.x).abs() < 1e-3);
+        assert!((t_short.translation.y - t_long.translation.y).abs() < 1e-3);
     }
 
     #[test]
@@ -3216,6 +3204,8 @@ mod tests {
         let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0);
         assert!(t0.translation.x.abs() < 1e-3);
         assert!((t1.translation.x + 18.0).abs() < 1e-3);
+        // Spacing uses Size/length offsets, not mesh stretch.
+        assert!((t1.translation.x - t0.translation.x + 18.0).abs() < 1e-3);
     }
 
     #[test]
@@ -3264,11 +3254,12 @@ mod tests {
     fn vehicle_cab_frame_keeps_unit_scale_on_lead_car() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let (frame, fit_scale) = vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0);
-        assert!((frame.scale.x - 1.0).abs() < 1e-4);
-        assert!((fit_scale - 18.0).abs() < 1e-3);
+        let (frame, exterior_scale) = vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0);
+        assert!((frame.scale - Vec3::ONE).length() < 1e-4);
+        assert!((exterior_scale - 1.0).abs() < 1e-4);
         let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
-        assert!((full.scale.x - fit_scale).abs() < 1e-3);
+        assert!((full.scale - Vec3::ONE).length() < 1e-4);
+        assert!((full.translation - frame.translation).length() < 1e-4);
     }
 
     #[test]

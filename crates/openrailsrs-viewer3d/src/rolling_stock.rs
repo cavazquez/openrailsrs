@@ -179,8 +179,11 @@ mod tests {
 
     #[test]
     fn offsets_chain_vehicles_nose_to_tail() {
-        let offsets = longitudinal_offsets_m(&[18.0, 14.0]);
+        // Size / length_m drive consist spacing (coupler offsets), not mesh scale (#68).
+        let lengths = [18.0_f32, 14.0];
+        let offsets = longitudinal_offsets_m(&lengths);
         assert_eq!(offsets, vec![0.0, -18.0]);
+        assert!((offsets[1] + lengths[0]).abs() < 1e-4);
     }
 
     #[test]
