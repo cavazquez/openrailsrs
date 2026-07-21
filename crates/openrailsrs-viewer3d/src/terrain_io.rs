@@ -1,24 +1,16 @@
 //! Shared terrain tile IO helpers.
+//!
+//! Thin re-export of bevy-scenery RAW loaders. Full tile CPU projection lives in
+//! [`openrailsrs_bevy_scenery::MstsTileSnapshot`] (#112); TerrainScene materialization
+//! from that snapshot is still TODO (paired with #111 tilebundle adoption).
 
 use std::path::Path;
-use std::sync::Arc;
 
-use openrailsrs_formats::{ElevationGrid, FeatureGrid, TerrainFile, read_f_raw, read_y_raw};
+pub use openrailsrs_bevy_scenery::{TerrainTileRawData as TerrainTileData, load_tile_raw};
 
-#[derive(Clone, Debug)]
-pub(crate) struct TerrainTileData {
-    pub(crate) grid: Arc<ElevationGrid>,
-    pub(crate) features: Option<Arc<FeatureGrid>>,
-}
-
-pub(crate) fn load_tile_data(tile: &TerrainFile, path: &Path) -> Option<TerrainTileData> {
-    let grid = Arc::new(read_y_raw(&tile.y_raw_path(path), &tile.samples).ok()?);
-    let features = if tile.samples.f_buffer_file.trim().is_empty() {
-        None
-    } else {
-        read_f_raw(&tile.f_raw_path(path), &tile.samples)
-            .ok()
-            .map(Arc::new)
-    };
-    Some(TerrainTileData { grid, features })
+pub(crate) fn load_tile_data(
+    tile: &openrailsrs_formats::TerrainFile,
+    path: &Path,
+) -> Option<TerrainTileData> {
+    load_tile_raw(tile, path)
 }

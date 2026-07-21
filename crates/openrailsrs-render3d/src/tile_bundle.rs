@@ -5,12 +5,14 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::{
-    MstsTerrainTileAsset, MstsTileBundleAsset, MstsWorldTileAsset, TileBundleStatus,
+    MstsLoadDiagnostics, MstsTerrainTileAsset, MstsTileBundleAsset, MstsWorldTileAsset,
+    TileBundleStatus, snapshot_from_parsed,
 };
 
 use crate::objects::{self, ObjectMarker};
 use crate::runtime::TileEntry;
 use crate::terrain::{self, TileGeometry};
+use crate::tile_parse::tile_entry_from_snapshot;
 use crate::track::TrackRibbon;
 
 /// Strong handles for tiles loaded via AssetServer (exact unload by dropping).
@@ -67,11 +69,11 @@ pub fn objects_from_world_asset(
     objects::objects_from_world_file(&world.world, route_dir, base_y)
 }
 
-/// Materialize a [`TileEntry`] from loaded bundle + component assets (#53).
+/// Materialize a [`TileEntry`] from loaded bundle + component assets (#53 / #112).
 ///
-/// Returns `None` if terrain elevation is unavailable (e.g. missing Y.RAW) and
-/// there is also no WORLD — or if the bundle itself failed. WORLD-only tiles
-/// still produce an entry with empty geometry patches when elevation is missing.
+/// Goes through [`openrailsrs_bevy_scenery::MstsTileSnapshot`]. Returns `None` if
+/// the bundle failed or neither WORLD nor terrain is present. WORLD-only tiles
+/// (missing elevation) still produce a stub geometry entry.
 pub fn try_materialize_tile_entry(
     bundle: &MstsTileBundleAsset,
     worlds: &Assets<MstsWorldTileAsset>,
@@ -83,25 +85,41 @@ pub fn try_materialize_tile_entry(
         return None;
     }
 
-    let terr = bundle
-        .terrain
-        .as_ref()
-        .and_then(|h| terrains.get(h));
-    let world = bundle.world.as_ref().and_then(|h| worlds.get(h));
-
-    let geometry = terr
-        .and_then(tile_geometry_from_terrain_asset)
-        .unwrap_or_else(|| empty_tile_geometry(bundle.tile_x, bundle.tile_z));
-
-    let base_y = geometry.height.base_y();
-    let objects = world
-        .map(|w| objects_from_world_asset(w, route_dir, base_y))
-        .unwrap_or_default();
-
-    if terr.is_none() && world.is_none() {
+    let terr_asset = bundle.terrain.as_ref().and_then(|h| terrains.get(h));
+    let world_asset = bundle.world.as_ref().and_then(|h| worlds.get(h));
+    if terr_asset.is_none() && world_asset.is_none() {
         return None;
     }
 
+    let mut diag = MstsLoadDiagnostics::default();
+    diag.merge_from(&bundle.diag);
+    if let Some(t) = terr_asset {
+        diag.merge_from(&t.diag);
+    }
+
+    let snap = snapshot_from_parsed(
+        bundle.tile_x,
+        bundle.tile_z,
+        world_asset.map(|w| w.world.clone()),
+        world_asset.map(|w| w.source_path.clone()),
+        terr_asset.map(|t| t.terrain.clone()),
+        terr_asset.and_then(|t| t.elevation.clone()),
+        terr_asset.and_then(|t| t.features.clone()),
+        terr_asset.map(|t| t.raw_status).or(bundle.terrain_raw_status),
+        terr_asset.map(|t| t.source_path.clone()),
+        Some(route_dir),
+        diag,
+    );
+
+    if let Some(entry) = tile_entry_from_snapshot(&snap, world_offset, TrackRibbon::default()) {
+        return Some(entry);
+    }
+
+    // WORLD present but no elevation: keep prior #53 behavior (stub geom + objects).
+    let world = world_asset?;
+    let geometry = empty_tile_geometry(bundle.tile_x, bundle.tile_z);
+    let base_y = geometry.height.base_y();
+    let objects = objects_from_world_asset(world, route_dir, base_y);
     Some(TileEntry {
         geometry,
         world_offset,

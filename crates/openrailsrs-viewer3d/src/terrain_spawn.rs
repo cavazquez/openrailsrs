@@ -5,19 +5,20 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
-use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use openrailsrs_bevy_scenery::{
+    MergedTerrainChunk, TerrainMeshMode, merge_patch_into_chunks, mesh_from_terrain_data_owned,
+    reduce_chunk_maps, set_terrain_repeat_sampler, terrain_patch_offset_in_tile,
+};
 use openrailsrs_formats::{
-    TerrainMeshData, TerrainPatch, build_patch_mesh_data_sampled, build_tile_mesh_data_sampled,
+    TerrainPatch, build_patch_mesh_data_sampled, build_tile_mesh_data_sampled,
     msts_tile_world_origin, terrain_patches_per_side,
 };
 use rayon::prelude::*;
 
 use crate::shapes::RouteAssets;
-use crate::terrain::{
-    TerrainScene, TerrainTile, mesh_from_terrain_data_owned, terrain_patch_offset_in_tile,
-};
+use crate::terrain::{TerrainScene, TerrainTile};
 use crate::terrain_assets::{terrain_material_textures, terrain_shader_material_key};
 use crate::terrain_material::TerrainMaterial;
 use crate::terrain_sampler::{LoadedTerrainTile, TerrainTileCache};
@@ -28,40 +29,8 @@ const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
 /// Update, avoiding wall-clock inflation from interleaving with WORLD spawn (#60).
 const TERRAIN_TILES_PER_FRAME: usize = 8;
 
-/// Append `src` into `dst`, translating patch-local positions into tile space.
-#[cfg(test)]
-fn append_terrain_mesh_data(dst: &mut TerrainMeshData, src: &TerrainMeshData, offset: Vec3) {
-    append_terrain_mesh_data_owned(dst, src.clone(), offset);
-}
-
-fn append_terrain_mesh_data_owned(
-    dst: &mut TerrainMeshData,
-    mut src: TerrainMeshData,
-    offset: Vec3,
-) {
-    let base = dst.positions.len() as u32;
-    if offset != Vec3::ZERO {
-        for p in &mut src.positions {
-            p[0] += offset.x;
-            p[1] += offset.y;
-            p[2] += offset.z;
-        }
-    }
-    dst.positions.append(&mut src.positions);
-    dst.normals.append(&mut src.normals);
-    dst.uvs.append(&mut src.uvs);
-    dst.indices
-        .extend(src.indices.into_iter().map(|i| i + base));
-}
-
-fn empty_terrain_mesh_data() -> TerrainMeshData {
-    TerrainMeshData {
-        positions: Vec::new(),
-        normals: Vec::new(),
-        uvs: Vec::new(),
-        indices: Vec::new(),
-    }
-}
+/// viewer3d terrain entity strategy (#122): merge by material key.
+const _: TerrainMeshMode = TerrainMeshMode::ChunkMerge;
 
 fn fallback_terrain_image(images: &mut Assets<Image>) -> Handle<Image> {
     let mut img = Image::new_fill(
@@ -75,11 +44,7 @@ fn fallback_terrain_image(images: &mut Assets<Image>) -> Handle<Image> {
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    img.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        ..default()
-    });
+    set_terrain_repeat_sampler(&mut img);
     images.add(img)
 }
 
@@ -151,9 +116,8 @@ fn spawn_textured_patches(
     }
 
     let sample_size = tile.samples.sample_size;
-    // Parallel build+merge by material key: each worker folds patches into tile-space
-    // chunks, then reduce concatenates worker maps (#60).
-    let merged: HashMap<String, (TerrainMeshData, usize, usize)> = jobs
+    // Parallel build+merge by material key via bevy-scenery::terrain (#60 / #122).
+    let merged: HashMap<String, MergedTerrainChunk> = jobs
         .into_par_iter()
         .fold(HashMap::new, |mut acc, (px, pz, patch, key)| {
             let mesh_data = build_patch_mesh_data_sampled(
@@ -169,43 +133,31 @@ fn spawn_textured_patches(
                 .features
                 .as_ref()
                 .is_some_and(|f| f.patch_has_hidden_vertices(px, pz));
-            let offset = terrain_patch_offset_in_tile(px, pz);
-            let entry = acc
-                .entry(key)
-                .or_insert_with(|| (empty_terrain_mesh_data(), 0usize, 0usize));
-            append_terrain_mesh_data_owned(&mut entry.0, mesh_data, offset);
-            entry.1 += 1;
-            if patch_holed {
-                entry.2 += 1;
-            }
+            merge_patch_into_chunks(
+                &mut acc,
+                key,
+                mesh_data,
+                terrain_patch_offset_in_tile(px, pz),
+                patch_holed,
+            );
             acc
         })
-        .reduce(HashMap::new, |mut a, b| {
-            for (key, (mesh_data, patches, holes)) in b {
-                let entry = a
-                    .entry(key)
-                    .or_insert_with(|| (empty_terrain_mesh_data(), 0usize, 0usize));
-                append_terrain_mesh_data_owned(&mut entry.0, mesh_data, Vec3::ZERO);
-                entry.1 += patches;
-                entry.2 += holes;
-            }
-            a
-        });
+        .reduce(HashMap::new, reduce_chunk_maps);
 
     let mut patch_count = 0usize;
     let mut holed = 0usize;
     let mut entities = 0usize;
-    for (key, (mesh_data, patches, holes)) in merged {
-        patch_count += patches;
-        holed += holes;
+    for (key, chunk) in merged {
+        patch_count += chunk.patch_count;
+        holed += chunk.holed_patches;
         let Some(material) = material_cache.get(&key).cloned() else {
             continue;
         };
-        if mesh_data.indices.is_empty() {
+        if chunk.mesh.indices.is_empty() {
             continue;
         }
         commands.spawn((
-            Mesh3d(meshes.add(mesh_from_terrain_data_owned(mesh_data, height_origin))),
+            Mesh3d(meshes.add(mesh_from_terrain_data_owned(chunk.mesh, height_origin))),
             MeshMaterial3d(material),
             Transform::from_translation(tile_origin),
             Name::new(format!(
@@ -557,11 +509,15 @@ pub struct TerrainTileTag {
 }
 
 /// Incremental terrain tile load around the mobile view window (live full mode).
+///
+/// Hot path requests `.tilebundle` via AssetServer (#111); GPU spawn stays in
+/// [`terrain_tile_spawn_stream_system`].
 #[derive(Resource)]
 pub struct TerrainTileStream {
     catalog: std::collections::HashMap<(i32, i32), PathBuf>,
     loaded: std::collections::HashSet<(i32, i32)>,
-    #[allow(dead_code)]
+    /// AssetServer request in flight (not yet in [`TerrainScene`]).
+    pending_load: std::collections::HashSet<(i32, i32)>,
     route_dir: PathBuf,
     radius_m: f32,
     last_center_tile: Option<(i32, i32)>,
@@ -591,6 +547,7 @@ impl TerrainTileStream {
         Self {
             catalog,
             loaded,
+            pending_load: std::collections::HashSet::new(),
             route_dir: route_dir.to_path_buf(),
             radius_m,
             last_center_tile: None,
@@ -606,11 +563,12 @@ impl TerrainTileStream {
     }
 }
 
+/// Request terrain `.tilebundle` loads near the view window (#111).
 #[allow(clippy::too_many_arguments)]
 pub fn terrain_tile_stream_system(
-    mut terrain: ResMut<TerrainScene>,
-    mut elevation: ResMut<crate::terrain::TerrainElevation>,
     mut stream: ResMut<TerrainTileStream>,
+    mut handles: ResMut<crate::tile_bundle::TileBundleHandles>,
+    asset_server: Res<AssetServer>,
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mode: Res<crate::launch::ViewerSceneryMode>,
@@ -622,17 +580,12 @@ pub fn terrain_tile_stream_system(
     if progress.is_some() {
         return;
     }
-    use crate::terrain::TerrainTile;
-    use crate::terrain_io::load_tile_data;
-    use crate::world::MSTS_TILE_SIZE_M;
-    use openrailsrs_formats::{
-        TerrainFile, msts_tile_world_origin, msts_tile_x_index_for_coord,
-        msts_tile_z_index_for_coord,
-    };
-    use std::sync::Arc;
+    use crate::world::view_stream_window_policy;
+    use openrailsrs_bevy_scenery::stream::TileCoord;
+    use openrailsrs_formats::{msts_tile_x_index_for_coord, msts_tile_z_index_for_coord};
+    use std::collections::HashSet;
 
     let center = window.center_world;
-    let tile = MSTS_TILE_SIZE_M as f32;
     let tile_x = msts_tile_x_index_for_coord(center.x);
     let tile_z = msts_tile_z_index_for_coord(center.z);
     if stream.last_center_tile == Some((tile_x, tile_z)) {
@@ -640,51 +593,121 @@ pub fn terrain_tile_stream_system(
     }
     stream.last_center_tile = Some((tile_x, tile_z));
 
-    let radius_tiles = (stream.radius_m / tile).ceil() as i32 + 1;
-    let mut loaded_now = 0usize;
-    for dtx in -radius_tiles..=radius_tiles {
-        for dtz in -radius_tiles..=radius_tiles {
-            let tx = tile_x + dtx;
-            let tz = tile_z + dtz;
-            let key = (tx, tz);
-            if stream.loaded.contains(&key) {
-                continue;
-            }
-            let (ox, oz) = msts_tile_world_origin(tx, tz);
-            let tcx = ox + tile * 0.5;
-            let tcz = oz + tile * 0.5;
-            if Vec2::new(tcx - center.x, tcz - center.z).length() > stream.radius_m + tile {
-                continue;
-            }
-            let Some(path) = stream.catalog.get(&key).cloned() else {
-                continue;
-            };
-            let Ok(file) = TerrainFile::from_path_with_coords(&path, tx, tz) else {
-                continue;
-            };
-            let data = load_tile_data(&file, &path).map(Arc::new);
-            let (wx, wz) = msts_tile_world_origin(tx, tz);
-            terrain.tiles.push(TerrainTile {
-                tile_x: tx,
-                tile_z: tz,
-                translation: Vec3::new(wx, 0.0, wz),
-                path,
-                file,
-                data,
-            });
-            terrain.tiles_loaded += 1;
-            stream.loaded.insert(key);
-            stream.pending_spawn.push(key);
-            if let Some(last) = terrain.tiles.last() {
-                stream.tile_cache.insert_scene_tile(last);
-                elevation.merge_tile(tx, tz, Some(last));
-            }
-            loaded_now += 1;
+    let policy = view_stream_window_policy(stream.radius_m);
+    let cam_coord = TileCoord::new(tile_x, tile_z);
+    let known: HashSet<TileCoord> = stream
+        .loaded
+        .iter()
+        .chain(stream.pending_load.iter())
+        .copied()
+        .map(TileCoord::from)
+        .collect();
+    // Prefer catalog keys that fall inside the load window (same Chebyshev policy as WORLD).
+    let candidates = stream.catalog.keys().copied().map(TileCoord::from);
+    let stream_diff = policy.diff(cam_coord, &known, candidates);
+
+    let mut requested = 0usize;
+    for tile in &stream_diff.to_load {
+        let key = (tile.x, tile.z);
+        if stream.loaded.contains(&key) || stream.pending_load.contains(&key) {
+            continue;
         }
+        let Some(path) = stream.catalog.get(&key).cloned() else {
+            continue;
+        };
+        if crate::tile_bundle::ensure_tile_bundle_handle(
+            &mut handles,
+            &asset_server,
+            &stream.route_dir,
+            tile.x,
+            tile.z,
+            None,
+            Some(path.as_path()),
+        )
+        .is_some()
+        {
+            stream.pending_load.insert(key);
+            requested += 1;
+        }
+    }
+    if requested > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: requested {requested} terrain tilebundle(s) near ({tile_x},{tile_z})"
+        );
+    }
+}
+
+/// Materialize Ready/Partial terrain from AssetServer tile bundles (#111).
+#[allow(clippy::too_many_arguments)]
+pub fn terrain_tile_bundle_materialize_system(
+    mut terrain: ResMut<TerrainScene>,
+    mut elevation: ResMut<crate::terrain::TerrainElevation>,
+    mut stream: ResMut<TerrainTileStream>,
+    handles: Res<crate::tile_bundle::TileBundleHandles>,
+    asset_server: Res<AssetServer>,
+    bundles: Res<Assets<openrailsrs_bevy_scenery::MstsTileBundleAsset>>,
+    worlds: Res<Assets<openrailsrs_bevy_scenery::MstsWorldTileAsset>>,
+    terrains: Res<Assets<openrailsrs_bevy_scenery::MstsTerrainTileAsset>>,
+    opts: Res<crate::launch::ViewerLaunchOpts>,
+    mode: Res<crate::launch::ViewerSceneryMode>,
+    progress: Option<Res<TerrainSpawnProgress>>,
+) {
+    if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() || progress.is_some() {
+        return;
+    }
+    if stream.pending_load.is_empty() {
+        return;
+    }
+    let pending: Vec<(i32, i32)> = stream.pending_load.iter().copied().collect();
+    let mut loaded_now = 0usize;
+    for key in pending {
+        let Some(handle) = handles.get(key.0, key.1).cloned() else {
+            stream.pending_load.remove(&key);
+            continue;
+        };
+        match crate::tile_bundle::tile_bundle_load_outcome(&asset_server, &handle) {
+            crate::tile_bundle::TileBundleLoadOutcome::Pending => continue,
+            crate::tile_bundle::TileBundleLoadOutcome::Failed => {
+                crate::tile_bundle::record_bundle_load_failure(
+                    &mut terrain.load_diag,
+                    key.0,
+                    key.1,
+                    &format!("tilebundle ({},{})", key.0, key.1),
+                );
+                stream.pending_load.remove(&key);
+                stream.loaded.insert(key);
+                continue;
+            }
+            crate::tile_bundle::TileBundleLoadOutcome::Loaded => {}
+        }
+        let Some(bundle) = bundles.get(&handle) else {
+            continue;
+        };
+        let Some(tile) = crate::tile_bundle::try_materialize_terrain_bundle(
+            bundle,
+            &worlds,
+            &terrains,
+            &mut terrain,
+        ) else {
+            // Deps not ready yet, or Failed/no terrain — if Failed, stop retrying.
+            if bundle.status == openrailsrs_bevy_scenery::TileBundleStatus::Failed
+                || bundle.terrain.is_none()
+            {
+                stream.pending_load.remove(&key);
+                stream.loaded.insert(key);
+            }
+            continue;
+        };
+        stream.pending_load.remove(&key);
+        stream.loaded.insert(key);
+        stream.pending_spawn.push(key);
+        stream.tile_cache.insert_scene_tile(&tile);
+        elevation.merge_tile(key.0, key.1, Some(&tile));
+        loaded_now += 1;
     }
     if loaded_now > 0 {
         viewer_log!(
-            "openrailsrs-viewer3d: terrain-stream — +{loaded_now} tile(s) near ({tile_x},{tile_z})"
+            "openrailsrs-viewer3d: terrain-stream — +{loaded_now} tile(s) via tilebundle"
         );
     }
 }
@@ -819,6 +842,7 @@ pub fn terrain_tile_unload_system(
     mut terrain: ResMut<TerrainScene>,
     mut elevation: ResMut<crate::terrain::TerrainElevation>,
     mut stream: ResMut<TerrainTileStream>,
+    mut handles: ResMut<crate::tile_bundle::TileBundleHandles>,
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mode: Res<crate::launch::ViewerSceneryMode>,
@@ -836,20 +860,36 @@ pub fn terrain_tile_unload_system(
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
         return;
     }
-    use crate::world::tile_center_distance_m;
-    let unload_radius = crate::launch::view_unload_radius_m().max(window.radius_m);
+    use crate::world::view_stream_window_policy;
+    use openrailsrs_bevy_scenery::stream::TileCoord;
+    use openrailsrs_formats::{msts_tile_x_index_for_coord, msts_tile_z_index_for_coord};
     let center = window.center_world;
+    let policy = view_stream_window_policy(window.radius_m.max(stream.radius_m));
+    let cam_coord = TileCoord::new(
+        msts_tile_x_index_for_coord(center.x),
+        msts_tile_z_index_for_coord(center.z),
+    );
+    let loaded_coords: std::collections::HashSet<TileCoord> = stream
+        .loaded
+        .iter()
+        .chain(stream.pending_load.iter())
+        .copied()
+        .map(TileCoord::from)
+        .collect();
+    let stream_diff = policy.diff_disk(cam_coord, &loaded_coords);
     let mut unloaded = std::collections::HashSet::new();
-    stream.loaded.retain(|key| {
-        let keep = tile_center_distance_m(key.0, key.1, center) <= unload_radius;
-        if !keep {
-            unloaded.insert(*key);
-        }
-        keep
-    });
+    for tile in &stream_diff.to_unload {
+        let key = (tile.x, tile.z);
+        unloaded.insert(key);
+        stream.loaded.remove(&key);
+        stream.pending_load.remove(&key);
+        stream.pending_spawn.retain(|k| *k != key);
+    }
     if unloaded.is_empty() {
         return;
     }
+    // Release shared tilebundle handles (#111). World unload may also release the same key.
+    handles.release_all(unloaded.iter());
     terrain
         .tiles
         .retain(|t| !unloaded.contains(&(t.tile_x, t.tile_z)));
@@ -891,6 +931,9 @@ pub fn terrain_tile_unload_system(
 
 #[cfg(test)]
 mod tests {
+    use openrailsrs_bevy_scenery::append_terrain_mesh_data;
+    use openrailsrs_formats::TerrainMeshData;
+
     use super::*;
 
     #[test]
@@ -912,5 +955,10 @@ mod tests {
         assert_eq!(dst.positions[1], [129.0, 2.0, 259.0]);
         assert_eq!(dst.positions[2], [132.0, 5.0, 262.0]);
         assert_eq!(dst.indices, vec![0, 1, 2, 1]);
+    }
+
+    #[test]
+    fn viewer_uses_chunk_merge_mode() {
+        assert_eq!(TerrainMeshMode::ChunkMerge.label(), "chunk_merge");
     }
 }

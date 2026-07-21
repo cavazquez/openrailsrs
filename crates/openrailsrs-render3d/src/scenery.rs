@@ -4,10 +4,14 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::stream::TileContent;
-use bevy::asset::RenderAssetUsages;
 use bevy::math::{Affine2, Vec2};
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
+use openrailsrs_bevy_scenery::{
+    WATER_LIFT_M, WATER_UV_TILES, TreePlacement, scatter_trees_in_patch,
+    water_material as shared_water_material, water_reflection_material,
+};
 
 use crate::objects::{ForestPatch, ObjectMarker};
 use crate::terrain::TileHeight;
@@ -17,11 +21,6 @@ use crate::textures::{
 use crate::world_spawn::{AssetIndex, ObjectSpawnCtx, TextureLoadStats};
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
-const COLOR_WATER: Color = Color::srgba(0.08, 0.38, 0.62, 0.68);
-const COLOR_WATER_REFLECT: Color = Color::srgba(0.04, 0.22, 0.38, 0.28);
-const WATER_LIFT_M: f32 = 0.08;
-/// Repeticiones de la textura `.ace` sobre el plano de agua.
-const WATER_UV_TILES: f32 = 3.0;
 /// Velocidad de corriente en UV/s (U = “a lo largo”, V = componente cruzada).
 const WATER_FLOW_U: f32 = 0.14;
 const WATER_FLOW_V: f32 = 0.045;
@@ -36,24 +35,6 @@ pub struct WaterSurface {
     pub flow_material: Option<Handle<StandardMaterial>>,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct TreePlacement {
-    position: Vec3,
-    scale: f32,
-}
-
-pub fn forest_rng01(tile_x: i32, tile_z: i32, uid: u32, tree_index: u32, channel: u32) -> f32 {
-    let mut x = (tile_x as u32)
-        ^ (tile_z as u32).rotate_left(7)
-        ^ uid.rotate_left(13)
-        ^ tree_index.rotate_left(3)
-        ^ channel.wrapping_mul(0x85EB_CA6B);
-    x ^= x >> 16;
-    x = x.wrapping_mul(0x7FEB_352D);
-    x ^= x >> 16;
-    (x as f32) / (u32::MAX as f32)
-}
-
 fn scatter_trees(
     anchor: Vec3,
     patch: &ForestPatch,
@@ -61,72 +42,54 @@ fn scatter_trees(
     tile_z: i32,
     height: &TileHeight,
 ) -> Vec<TreePlacement> {
-    let mut trees = Vec::with_capacity(patch.population as usize);
-    for i in 0..patch.population {
-        let ch = 0;
-        let rx = forest_rng01(tile_x, tile_z, patch.uid, i, ch) * 2.0 - 1.0;
-        let rz = forest_rng01(tile_x, tile_z, patch.uid, i, ch + 1) * 2.0 - 1.0;
-        let x = anchor.x + rx * patch.patch_half_x;
-        let z = anchor.z + rz * patch.patch_half_z;
-        let t = forest_rng01(tile_x, tile_z, patch.uid, i, ch + 2);
-        let scale = patch.scale_min + (patch.scale_max - patch.scale_min) * t;
-        let y = height.local_y(x, z);
-        trees.push(TreePlacement {
-            position: Vec3::new(x, y, z),
-            scale,
-        });
-    }
-    trees
+    scatter_trees_in_patch(
+        anchor,
+        patch.patch_half_x,
+        patch.patch_half_z,
+        patch.population,
+        patch.scale_min,
+        patch.scale_max,
+        tile_x,
+        tile_z,
+        patch.uid,
+        |x, z| height.local_y(x, z),
+        None,
+        0.0,
+    )
 }
 
-fn append_tree_cross(
-    positions: &mut Vec<[f32; 3]>,
-    normals: &mut Vec<[f32; 3]>,
-    uvs: &mut Vec<[f32; 2]>,
-    indices: &mut Vec<u32>,
-    origin: Vec3,
-    width: f32,
-    height: f32,
-) {
-    let base = positions.len() as u32;
-    let hw = width * 0.5;
-    positions.push([origin.x - hw, origin.y, origin.z]);
-    positions.push([origin.x + hw, origin.y, origin.z]);
-    positions.push([origin.x + hw, origin.y + height, origin.z]);
-    positions.push([origin.x - hw, origin.y + height, origin.z]);
-    for _ in 0..4 {
-        normals.push([0.0, 0.0, 1.0]);
-    }
-    uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
-    indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
-
-    let base2 = positions.len() as u32;
-    positions.push([origin.x, origin.y, origin.z - hw]);
-    positions.push([origin.x, origin.y, origin.z + hw]);
-    positions.push([origin.x, origin.y + height, origin.z + hw]);
-    positions.push([origin.x, origin.y + height, origin.z - hw]);
-    for _ in 0..4 {
-        normals.push([1.0, 0.0, 0.0]);
-    }
-    uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
-    indices.extend([base2, base2 + 1, base2 + 2, base2, base2 + 2, base2 + 3]);
-}
-
-fn build_forest_mesh(trees: &[TreePlacement], base_width: f32, base_height: f32) -> Mesh {
+/// Fixed cross-quads for `StandardMaterial` lab path (viewer uses OrForest billboards).
+fn build_forest_cross_mesh(trees: &[TreePlacement], base_width: f32, base_height: f32) -> Mesh {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     let mut uvs = Vec::new();
     let mut indices = Vec::new();
     for tree in trees {
-        append_tree_cross(
-            &mut positions,
-            &mut normals,
-            &mut uvs,
-            &mut indices,
-            tree.position,
-            base_width * tree.scale,
-            base_height * tree.scale,
-        );
+        let origin = tree.position;
+        let width = base_width * tree.scale;
+        let height = base_height * tree.scale;
+        let hw = width * 0.5;
+        let base = positions.len() as u32;
+        positions.push([origin.x - hw, origin.y, origin.z]);
+        positions.push([origin.x + hw, origin.y, origin.z]);
+        positions.push([origin.x + hw, origin.y + height, origin.z]);
+        positions.push([origin.x - hw, origin.y + height, origin.z]);
+        for _ in 0..4 {
+            normals.push([0.0, 0.0, 1.0]);
+        }
+        uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+        indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+
+        let base2 = positions.len() as u32;
+        positions.push([origin.x, origin.y, origin.z - hw]);
+        positions.push([origin.x, origin.y, origin.z + hw]);
+        positions.push([origin.x, origin.y + height, origin.z + hw]);
+        positions.push([origin.x, origin.y + height, origin.z - hw]);
+        for _ in 0..4 {
+            normals.push([1.0, 0.0, 0.0]);
+        }
+        uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+        indices.extend([base2, base2 + 1, base2 + 2, base2, base2 + 2, base2 + 3]);
     }
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
@@ -177,33 +140,21 @@ fn water_material(
     materials: &mut Assets<StandardMaterial>,
     texture: Option<Handle<Image>>,
 ) -> Handle<StandardMaterial> {
-    materials.add(StandardMaterial {
-        base_color: COLOR_WATER,
-        base_color_texture: texture,
-        emissive: LinearRgba::from(Color::srgb(0.08, 0.24, 0.42)) * 0.45,
-        perceptual_roughness: 0.06,
-        metallic: 0.05,
-        reflectance: 0.75,
-        alpha_mode: AlphaMode::Blend,
-        double_sided: true,
-        unlit: false,
-        fog_enabled: true,
-        uv_transform: Affine2::IDENTITY,
-        ..default()
-    })
+    let handle = shared_water_material(materials, texture);
+    if let Some(mut mat) = materials.get_mut(&handle) {
+        mat.fog_enabled = true;
+        mat.unlit = false;
+        mat.uv_transform = Affine2::IDENTITY;
+    }
+    handle
 }
 
 fn reflection_material(materials: &mut Assets<StandardMaterial>) -> Handle<StandardMaterial> {
-    materials.add(StandardMaterial {
-        base_color: COLOR_WATER_REFLECT,
-        emissive: LinearRgba::from(Color::srgb(0.05, 0.16, 0.28)) * 0.2,
-        perceptual_roughness: 0.02,
-        reflectance: 0.85,
-        alpha_mode: AlphaMode::Blend,
-        double_sided: true,
-        unlit: false,
-        ..default()
-    })
+    let handle = water_reflection_material(materials);
+    if let Some(mut mat) = materials.get_mut(&handle) {
+        mat.unlit = false;
+    }
+    handle
 }
 
 /// Ondas suaves en Y + scroll UV en texturas `.ace` (corriente).
@@ -261,7 +212,7 @@ pub fn spawn_tile_scenery(
             if trees.is_empty() {
                 continue;
             }
-            let mesh = meshes.add(build_forest_mesh(
+            let mesh = meshes.add(build_forest_cross_mesh(
                 &trees,
                 patch.tree_width,
                 patch.tree_height,
@@ -373,6 +324,7 @@ mod tests {
 
     #[test]
     fn forest_rng_is_deterministic() {
+        use openrailsrs_bevy_scenery::forest_rng01;
         let a = forest_rng01(-6131, 14898, 42, 3, 0);
         let b = forest_rng01(-6131, 14898, 42, 3, 0);
         assert!((a - b).abs() < f32::EPSILON);

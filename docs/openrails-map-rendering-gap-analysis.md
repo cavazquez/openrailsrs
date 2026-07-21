@@ -386,6 +386,32 @@ Hallazgos confirmados:
 
 El issue histórico #6 conserva el profiling transversal. Los issues #57–#63 contienen optimizaciones concretas con baseline y criterios de aceptación, evitando duplicar un issue genérico de rendimiento.
 
+## Arquitectura compartida (#109–#125)
+
+Autoridad de scenery en `openrailsrs-bevy-scenery`; `viewer3d` / `render3d` quedan como adapters (sin fusionar cab/floating-origin/instancing ni VSM/tile-lab).
+
+| Issue | Estado | Notas |
+|---|---|---|
+| [#109](https://github.com/cavazquez/openrailsrs/issues/109) | **Hecho** | `render3d/textures.rs` → re-export de `bevy-scenery::textures` |
+| [#110](https://github.com/cavazquez/openrailsrs/issues/110) | **Hecho** | Resolvers viewer vía `MstsRouteCatalog` / textures; cab/tren local |
+| [#111](https://github.com/cavazquez/openrailsrs/issues/111) | **Hecho** | Hot path stream: `.tilebundle` + AssetServer; bootstrap sync pendiente |
+| [#112](https://github.com/cavazquez/openrailsrs/issues/112) | **Hecho** | `MstsTileSnapshot` + classify; `tile_parse` / objects adapters |
+| [#113](https://github.com/cavazquez/openrailsrs/issues/113) | **Hecho** | `bevy-scenery::stream` (Chebyshev + histéresis); ambos apps |
+| [#114](https://github.com/cavazquez/openrailsrs/issues/114) | **Hecho** | `SessionShapeCache`; render3d + `WorldShapeLodCache.shape_assets` |
+| [#115](https://github.com/cavazquez/openrailsrs/issues/115) | **Hecho** | `spawn::world` (placement + plan/spawn parts); orquestación en apps |
+| [#116](https://github.com/cavazquez/openrailsrs/issues/116) | **Hecho** | `spawn::transfer` + adapters |
+| [#117](https://github.com/cavazquez/openrailsrs/issues/117) | **Hecho*** | RNG/scatter SSOT; mesh OrForest en viewer; render3d cross-quads lit |
+| [#118](https://github.com/cavazquez/openrailsrs/issues/118) | **Hecho** | Helpers water SSOT; anim/spawn en apps |
+| [#119](https://github.com/cavazquez/openrailsrs/issues/119) | **Hecho** | Dyntrack geometry canónica; render3d adapter |
+| [#120](https://github.com/cavazquez/openrailsrs/issues/120) | **Hecho** | `spawn::tdb_track/{collect,geometry,ukfs,transforms,focus}` |
+| [#121](https://github.com/cavazquez/openrailsrs/issues/121) | **Hecho*** | `terrain_common.wgsl` + `TerrainPipelineFlags`; dos Material types con flags |
+| [#122](https://github.com/cavazquez/openrailsrs/issues/122) | **Hecho** | `bevy-scenery::terrain` mesh/chunk/key; Patch vs ChunkMerge |
+| [#123](https://github.com/cavazquez/openrailsrs/issues/123) | **Hecho** | `atmosphere` (fog/palette/sky dome) |
+| [#124](https://github.com/cavazquez/openrailsrs/issues/124) | **Hecho** | `SceneSunLight` + hora MSTS; ambos viewers |
+| [#125](https://github.com/cavazquez/openrailsrs/issues/125) | **Hecho** | Shaders locales borrados; `shared_asset_plugin` → bevy-scenery |
+
+\* Paridad visual deliberadamente parcial donde el pipeline difiere (VSM / StandardMaterial forest).
+
 ## Comandos usados
 
 ```bash

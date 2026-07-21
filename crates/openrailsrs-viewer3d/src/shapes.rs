@@ -41,6 +41,8 @@ pub use openrailsrs_bevy_scenery::shapes::{
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
 
+pub use openrailsrs_bevy_scenery::textures::{DdsAlpha, ace_to_image, dds_alpha_type};
+
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
 pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
     let stem = route_dir.file_name()?.to_str()?;
@@ -384,6 +386,18 @@ impl RouteAssets {
         section_idx: Option<u32>,
     ) -> Option<PathBuf> {
         self.catalog.resolve_trackobj_shape(file_name, section_idx)
+    }
+
+    /// Resolve a texture via the shared catalog index (summer/day, no seasonal flags).
+    pub fn resolve_texture(&self, dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
+        self.catalog.resolve_texture(
+            dirs,
+            file_name,
+            &openrailsrs_bevy_scenery::textures::TextureEnvironment::summer_day(),
+            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+            ),
+        )
     }
 }
 
@@ -1140,11 +1154,6 @@ pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {
     })
 }
 
-/// Convert decoded ACE mip 0 (RGBA8) into a Bevy GPU image (raw mip0, no brightening).
-pub fn ace_to_image(ace: &AceFile) -> Image {
-    ace_rgba_to_image(ace.width, ace.height, &ace.mip0)
-}
-
 /// ACE → GPU image with dark-atlas normalization for world / train scenery.
 pub fn ace_to_scenery_image(ace: &AceFile) -> (Image, bool) {
     let (rgba, brightened) = brighten_dark_ace_rgba(&ace.mip0);
@@ -1178,38 +1187,6 @@ fn ace_rgba_to_image_with_addr(
 
 fn texture_cache_addr_key(tex_addr_mode: Option<i32>) -> i32 {
     tex_addr_mode.unwrap_or(1)
-}
-
-/// DDS header alpha class (DXT1 vs DXT3/DXT5).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DdsAlpha {
-    NoneOr1Bit,
-    Full,
-}
-
-/// Read DDS pixel-format flags to guess alpha support (paridad `openrailsrs-render3d`).
-pub fn dds_alpha_type(path: &Path) -> Option<DdsAlpha> {
-    use std::fs::File;
-    use std::io::Read;
-    let mut f = File::open(path).ok()?;
-    let mut header = [0u8; 128];
-    f.read_exact(&mut header).ok()?;
-    if &header[0..4] != b"DDS " {
-        return None;
-    }
-    let pf_flags = u32::from_le_bytes(header[80..84].try_into().ok()?);
-    if (pf_flags & 0x4) != 0 {
-        let fourcc = &header[84..88];
-        match fourcc {
-            b"DXT1" => Some(DdsAlpha::NoneOr1Bit),
-            b"DXT3" | b"DXT5" => Some(DdsAlpha::Full),
-            _ => Some(DdsAlpha::Full),
-        }
-    } else if (pf_flags & 0x1) != 0 {
-        Some(DdsAlpha::Full)
-    } else {
-        Some(DdsAlpha::NoneOr1Bit)
-    }
 }
 
 /// Decode a DDS file from raw bytes into a Bevy GPU image (keeps block compression).
@@ -1295,69 +1272,23 @@ pub fn msts_content_roots() -> Vec<PathBuf> {
     roots
 }
 
+fn msts_root_for_route(route_dir: &Path) -> PathBuf {
+    msts_content_root().unwrap_or_else(|| route_dir.to_path_buf())
+}
+
 /// All `GLOBAL/` asset roots under MSTS Content (OR uses per-route-pack trees like `Chiltern/GLOBAL/`).
 pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let Some(content) = msts_content_root() else {
         return Vec::new();
     };
-    let mut out = Vec::new();
-    let mut push = |p: PathBuf| {
-        let has_shapes = p.join("SHAPES").is_dir() || p.join("shapes").is_dir();
-        if has_shapes && !out.iter().any(|existing| existing == &p) {
-            out.push(p);
-        }
-    };
-    push(content.join("GLOBAL"));
-    let Some(stem) = route_dir.file_name().and_then(|s| s.to_str()) else {
-        return out;
-    };
-    push(content.join(stem).join("GLOBAL"));
-    if let Ok(entries) = std::fs::read_dir(&content) {
-        for entry in entries.flatten() {
-            if !entry.file_type().is_ok_and(|t| t.is_dir()) {
-                continue;
-            }
-            if entry
-                .file_name()
-                .to_string_lossy()
-                .eq_ignore_ascii_case(stem)
-            {
-                push(entry.path().join("GLOBAL"));
-            }
-        }
-    }
-    out
+    openrailsrs_bevy_scenery::textures::global_assets_dirs(route_dir, &content)
 }
 
 /// Route directory plus route-pack and root `GLOBAL` trees from [`msts_content_root`].
+///
+/// Orden: **ruta → pack → GLOBAL** (sin `sort`, para preservar precedencia).
 pub fn shape_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
-    let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(content) = msts_content_root() {
-        if let Some(stem) = route_dir.file_name().and_then(|s| s.to_str()) {
-            let pack = content.join(stem);
-            if pack.is_dir() {
-                dirs.push(pack);
-            } else if let Ok(rd) = std::fs::read_dir(&content) {
-                for entry in rd.flatten() {
-                    let path = entry.path();
-                    if path.is_dir()
-                        && path
-                            .file_name()
-                            .is_some_and(|n| n.eq_ignore_ascii_case(stem))
-                    {
-                        dirs.push(path);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    for global in global_assets_dirs(route_dir) {
-        dirs.push(global);
-    }
-    dirs.sort();
-    dirs.dedup();
-    dirs
+    openrailsrs_bevy_scenery::textures::shape_search_dirs(route_dir, &msts_root_for_route(route_dir))
 }
 
 /// First `GLOBAL/` root, if any (legacy helper).
@@ -1369,28 +1300,11 @@ pub fn global_assets_dir() -> Option<PathBuf> {
 
 /// Directories to search for `.ace` textures given a resolved shape path.
 pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
-    let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(parent) = shape_path.parent() {
-        let in_asset_subdir = parent.file_name().is_some_and(|n| {
-            n.eq_ignore_ascii_case("shapes")
-                || n.eq_ignore_ascii_case("cabview3d")
-                || n.eq_ignore_ascii_case("cabview")
-        });
-        if in_asset_subdir {
-            dirs.push(parent.to_path_buf());
-            if let Some(asset_root) = parent.parent() {
-                if asset_root != route_dir {
-                    dirs.push(asset_root.to_path_buf());
-                }
-            }
-        }
-    }
-    for global in global_assets_dirs(route_dir) {
-        dirs.push(global);
-    }
-    dirs.sort();
-    dirs.dedup();
-    dirs
+    openrailsrs_bevy_scenery::textures::texture_search_dirs_for_shape(
+        shape_path,
+        route_dir,
+        &msts_root_for_route(route_dir),
+    )
 }
 
 /// Texture search dirs for CVF sprites (includes sibling `CabView/` on the trainset).
@@ -1447,158 +1361,31 @@ pub fn resolve_cvf_graphic_path(
 
 /// Basename of a `.w` `FileName` (strips `SHAPES\\foo.s` / `foo.s`).
 pub fn shape_file_basename(file_name: &str) -> &str {
-    file_name
-        .rsplit(['\\', '/'])
-        .next()
-        .filter(|s| !s.is_empty())
-        .unwrap_or(file_name)
+    openrailsrs_bevy_scenery::textures::shape_file_basename(file_name)
 }
 
 /// Resolve `SHAPES/foo.s` under the route directory (case-insensitive on Linux).
 pub fn resolve_shape_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let base = shape_file_basename(file_name);
-    for subdir in ["SHAPES", "shapes"] {
-        let path = route_dir.join(subdir).join(base);
-        if path.is_file() {
-            return Some(path);
-        }
-        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
-            return Some(resolved);
-        }
-    }
-    // Open Rails / MSTS trainsets sometimes store `.s` in the trainset root.
-    let direct = route_dir.join(base);
-    if direct.is_file() {
-        return Some(direct);
-    }
-    openrailsrs_formats::resolve_path_case_insensitive(&direct)
+    openrailsrs_bevy_scenery::textures::resolve_shape_path(route_dir, file_name)
 }
 
 /// Search several asset roots (route dir, scenario dir, …) for a shape file.
 pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
-    for dir in dirs {
-        if let Some(path) = resolve_shape_path(dir, file_name) {
-            return Some(path);
-        }
-    }
-    None
+    openrailsrs_bevy_scenery::textures::resolve_shape_path_in_dirs(dirs, file_name)
 }
 
-/// Scan `SHAPES/` under each asset root once and map lowercase filename → path.
-///
-/// Recurses into nested subfolders (common in GLOBAL packs) and indexes every `.s` file.
-pub fn build_shape_path_index(dirs: &[PathBuf]) -> HashMap<String, PathBuf> {
-    let mut index = HashMap::new();
-    for dir in dirs {
-        for subdir in ["SHAPES", "shapes"] {
-            index_shapes_tree(&mut index, &dir.join(subdir));
-        }
-        index_shapes_tree(&mut index, dir);
-    }
-    index
-}
-
-fn index_shapes_tree(index: &mut HashMap<String, PathBuf>, root: &Path) {
-    if !root.is_dir() {
-        return;
-    }
-    let Ok(read_dir) = std::fs::read_dir(root) else {
-        return;
-    };
-    for entry in read_dir.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            index_shapes_tree(index, &path);
-            continue;
-        }
-        if !path
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("s"))
-        {
-            continue;
-        }
-        if let Some(name) = path.file_name() {
-            index
-                .entry(name.to_string_lossy().to_ascii_lowercase())
-                .or_insert(path);
-        }
-    }
-}
-
-/// Resolve using the pre-built index first, then fall back to per-directory search.
+/// Resolve using a pre-built index first, then fall back to per-directory search.
 pub fn resolve_shape_path_with_index(
     index: &HashMap<String, PathBuf>,
     dirs: &[&Path],
     file_name: &str,
 ) -> Option<PathBuf> {
-    let base = shape_file_basename(file_name);
-    if let Some(path) = index.get(&base.to_ascii_lowercase()) {
-        if path.is_file() {
-            return Some(path.clone());
-        }
-    }
-    resolve_shape_path_in_dirs(dirs, file_name)
+    openrailsrs_bevy_scenery::textures::resolve_shape_path_with_index(index, dirs, file_name)
 }
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let base = shape_file_basename(file_name);
-    if let Some(p) = resolve_texture_path_exact(route_dir, base) {
-        return Some(p);
-    }
-    if !base.eq_ignore_ascii_case(file_name)
-        && let Some(p) = resolve_texture_path_exact(route_dir, file_name)
-    {
-        return Some(p);
-    }
-    let path_obj = Path::new(base);
-    if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
-    {
-        let dds_name = path_obj
-            .with_extension("dds")
-            .to_string_lossy()
-            .into_owned();
-        if let Some(p) = resolve_texture_path_exact(route_dir, &dds_name) {
-            return Some(p);
-        }
-    }
-    None
-}
-
-fn resolve_texture_path_exact(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let direct = route_dir.join(file_name);
-    if direct.is_file() {
-        return Some(direct);
-    }
-    if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&direct) {
-        return Some(p);
-    }
-    for subdir in ["TEXTURES", "textures"] {
-        let textures_root = route_dir.join(subdir);
-        let direct = textures_root.join(file_name);
-        if direct.is_file() {
-            return Some(direct);
-        }
-        if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&direct) {
-            return Some(p);
-        }
-        // MSTS routes often store seasonal variants in TEXTURES/SPRING/, etc.
-        if let Ok(entries) = std::fs::read_dir(&textures_root) {
-            for entry in entries.flatten() {
-                if !entry.file_type().is_ok_and(|t| t.is_dir()) {
-                    continue;
-                }
-                let candidate = entry.path().join(file_name);
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
-                if let Some(p) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
-                    return Some(p);
-                }
-            }
-        }
-    }
-    None
+    openrailsrs_bevy_scenery::textures::resolve_texture_path_legacy(route_dir, file_name)
 }
 
 /// Search several asset roots for `TEXTURES/foo.ace`, returning the first match.
@@ -1606,19 +1393,15 @@ fn resolve_texture_path_exact(route_dir: &Path, file_name: &str) -> Option<PathB
 /// Use this instead of `resolve_texture_path` when a shape may live in a
 /// directory other than the route root (e.g. a trainset folder).
 pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
-    for dir in dirs {
-        if let Some(p) = resolve_texture_path(dir, file_name) {
-            return Some(p);
-        }
-    }
-    None
+    openrailsrs_bevy_scenery::textures::resolve_texture_path_legacy_in_dirs(dirs, file_name)
 }
 
-/// Root folder for a vehicle shape's textures.
+/// Root folder for a vehicle / cab shape's textures (viewer train/cab layout).
 ///
 /// MSTS/Open Rails trainsets appear in both layouts:
 /// - `<trainset>/SHAPES/car.s` with textures in `<trainset>/TEXTURES/`
 /// - `<trainset>/car.s` with textures directly in `<trainset>/`
+/// - `<trainset>/Cabview3d/cab.s` → trainset root (cab-specific; not in bevy-scenery)
 ///
 /// Open Rails passes this as `ReferencePath` on `SharedShape`; exterior textures
 /// resolve as `{ReferencePath}\{imageName}`, **not** from route `TEXTURES/`.

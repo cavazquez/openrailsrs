@@ -4,17 +4,19 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 #[cfg(test)]
 use openrailsrs_formats::parse_world_w_tile_xz;
 use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, msts_tile_world_origin,
+    ElevationGrid, FeatureGrid, TerrainFile, msts_tile_world_origin,
     msts_tile_x_index_for_coord, msts_tile_z_index_for_coord, parse_tile_xz_from_filename,
 };
+#[cfg(test)]
+use openrailsrs_formats::TerrainMeshData;
 
 use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
+#[cfg(test)]
+use openrailsrs_bevy_scenery::{mesh_from_terrain_data_owned, terrain_patch_offset_in_tile};
 
 use crate::terrain_io::{TerrainTileData, load_tile_data};
 use crate::track::TrackScene;
@@ -23,15 +25,9 @@ use crate::world::MSTS_TILE_SIZE_M;
 
 pub use crate::terrain_spawn::{
     TerrainTileStream, init_terrain_spawn_progress, progressive_terrain_spawn_system,
-    spawn_terrain_meshes, terrain_tile_spawn_stream_system, terrain_tile_stream_system,
-    terrain_tile_unload_system,
+    spawn_terrain_meshes, terrain_tile_bundle_materialize_system,
+    terrain_tile_spawn_stream_system, terrain_tile_stream_system, terrain_tile_unload_system,
 };
-
-/// World-space offset for a textured patch inside a tile.
-#[inline]
-pub(crate) fn terrain_patch_offset_in_tile(px: u32, pz: u32) -> Vec3 {
-    Vec3::new(px as f32 * 128.0, 0.0, pz as f32 * 128.0)
-}
 
 #[derive(Clone)]
 struct TileElevation {
@@ -184,27 +180,6 @@ impl TerrainScene {
     pub fn is_empty(&self) -> bool {
         self.tiles.is_empty()
     }
-}
-
-#[cfg(test)]
-pub(crate) fn mesh_from_terrain_data(data: &TerrainMeshData, height_origin: f32) -> Mesh {
-    mesh_from_terrain_data_owned(data.clone(), height_origin)
-}
-
-/// Consume mesh data to avoid cloning large attribute buffers (#60).
-pub(crate) fn mesh_from_terrain_data_owned(mut data: TerrainMeshData, height_origin: f32) -> Mesh {
-    for p in &mut data.positions {
-        p[1] -= height_origin;
-    }
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data.positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs);
-    mesh.insert_indices(Indices::U32(data.indices));
-    mesh
 }
 
 /// Scan terrain folders and parse tile metadata (see [`discover_terrain_files`]).
@@ -401,7 +376,6 @@ pub fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::mesh::VertexAttributeValues;
 
     #[test]
     fn load_smoke_route_terrain_tile() {
@@ -604,13 +578,15 @@ mod tests {
 
     #[test]
     fn mesh_from_terrain_data_rebases_msl_y() {
+        use bevy::mesh::VertexAttributeValues;
+
         let data = TerrainMeshData {
             positions: vec![[10.0, 13_200.0, 20.0]],
             normals: vec![[0.0, 1.0, 0.0]],
             uvs: vec![[0.0, 0.0]],
             indices: vec![0, 0, 0],
         };
-        let mesh = mesh_from_terrain_data(&data, 13_184.0);
+        let mesh = mesh_from_terrain_data_owned(data, 13_184.0);
         let pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
         let VertexAttributeValues::Float32x3(vals) = pos else {
             panic!("expected positions");

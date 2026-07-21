@@ -5,9 +5,10 @@
 
 use std::collections::HashMap;
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::{
+    TRANSFER_ALPHA_CUTOFF, build_transfer_mesh as shared_build_transfer_mesh,
+};
 
 use crate::shapes::{RouteAssets, load_ace_image};
 use crate::terrain::TerrainElevation;
@@ -16,11 +17,9 @@ use crate::world::{
     RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz, visible_radius_m,
 };
 
-const GRID_M: f32 = 8.0;
-/// Open Rails `TransferMaterial.ReferenceAlpha = 10` (0–255).
-const TRANSFER_ALPHA_CUTOFF: f32 = 10.0 / 255.0;
-const NORMAL_SAMPLE_M: f32 = 4.0;
 const COLOR_TRANSFER_FALLBACK: Color = Color::srgb(0.72, 0.70, 0.66);
+#[cfg(test)]
+const GRID_M: f32 = 8.0;
 
 fn sample_y(terrain: Option<&TerrainElevation>, x: f32, z: f32, fallback: f32) -> f32 {
     terrain
@@ -30,8 +29,7 @@ fn sample_y(terrain: Option<&TerrainElevation>, x: f32, z: f32, fallback: f32) -
 
 /// Terrain-following transfer mesh (parity with OR `TransferPrimitive` / render3d).
 ///
-/// `center` is world XZ with Y in terrain MSL. Vertex positions are relative to
-/// `center` so the entity transform can place the patch.
+/// Thin adapter over [`openrailsrs_bevy_scenery::build_transfer_mesh`] (#116).
 pub fn build_transfer_mesh(
     center: Vec3,
     width: f32,
@@ -39,79 +37,10 @@ pub fn build_transfer_mesh(
     inv_rot: Quat,
     terrain: Option<&TerrainElevation>,
 ) -> Option<Mesh> {
-    if width <= 0.0 || height <= 0.0 {
-        return None;
-    }
-    let radius = (width * width + height * height).sqrt() * 0.5;
-    let min_ix = ((center.x - radius) / GRID_M).floor() as i32;
-    let max_ix = ((center.x + radius) / GRID_M).ceil() as i32;
-    // OR indexes Z in MSTS (+Z south); Bevy scenery uses `-z`.
-    let center_msts_z = -center.z;
-    let min_iz = ((center_msts_z - radius) / GRID_M).floor() as i32;
-    let max_iz = ((center_msts_z + radius) / GRID_M).ceil() as i32;
-    if min_ix >= max_ix || min_iz >= max_iz {
-        return None;
-    }
-
-    let nx = (max_ix - min_ix + 1) as usize;
-    let nz = (max_iz - min_iz + 1) as usize;
-    let mut positions = Vec::with_capacity(nx * nz);
-    let mut normals = Vec::with_capacity(nx * nz);
-    let mut uvs = Vec::with_capacity(nx * nz);
-
-    for ix in min_ix..=max_ix {
-        for iz in min_iz..=max_iz {
-            let wx = ix as f32 * GRID_M;
-            let wz = -(iz as f32 * GRID_M);
-            let rel_x = wx - center.x;
-            let rel_z = wz - center.z;
-            let y = sample_y(terrain, wx, wz, center.y) - center.y;
-            positions.push([rel_x, y, rel_z]);
-
-            let y_dx0 = sample_y(terrain, wx - NORMAL_SAMPLE_M, wz, center.y);
-            let y_dx1 = sample_y(terrain, wx + NORMAL_SAMPLE_M, wz, center.y);
-            let y_dz0 = sample_y(terrain, wx, wz - NORMAL_SAMPLE_M, center.y);
-            let y_dz1 = sample_y(terrain, wx, wz + NORMAL_SAMPLE_M, center.y);
-            let n =
-                Vec3::new(y_dx0 - y_dx1, 2.0 * NORMAL_SAMPLE_M, y_dz0 - y_dz1).normalize_or_zero();
-            normals.push([n.x, n.y, n.z]);
-
-            let tc = inv_rot * Vec3::new(rel_x, 0.0, rel_z);
-            uvs.push([tc.x / width + 0.5, tc.z / height + 0.5]);
-        }
-    }
-
-    let mut indices = Vec::new();
-    let cols = nz;
-    let dx = (max_ix - min_ix) as usize;
-    let dz = (max_iz - min_iz) as usize;
-    for x in 0..dx {
-        for z in 0..dz {
-            let i00 = (x * cols + z) as u32;
-            let i10 = ((x + 1) * cols + z) as u32;
-            let i01 = (x * cols + z + 1) as u32;
-            let i11 = ((x + 1) * cols + z + 1) as u32;
-            if (x as i32 + min_ix) & 1 == (z as i32 + min_iz) & 1 {
-                indices.extend([i00, i11, i10, i00, i01, i11]);
-            } else {
-                indices.extend([i01, i11, i10, i01, i00, i10]);
-            }
-        }
-    }
-
-    if indices.is_empty() {
-        return None;
-    }
-
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_indices(Indices::U32(indices));
-    Some(mesh)
+    let fallback = center.y;
+    shared_build_transfer_mesh(center, width, height, inv_rot, &|x, z| {
+        sample_y(terrain, x, z, fallback)
+    })
 }
 
 fn transfer_material(

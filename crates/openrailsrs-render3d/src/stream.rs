@@ -1,9 +1,13 @@
 //! Streaming de tiles alrededor de la camara + marcador `TileContent`.
+//!
+//! Desired/diff de ventana vía [`openrailsrs_bevy_scenery::stream`] (#113);
+//! spawn/despawn/eviction GPU siguen locales a render3d.
 
 use std::collections::HashSet;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TileBound, TileCoord};
 
 use crate::objects::ObjectMarker;
 use crate::or_scenery_material::OrSceneryMaterial;
@@ -23,14 +27,10 @@ fn log_stream_eviction(shapes: usize, terrain_mats: usize, terrain_tex: usize, m
     );
 }
 
-pub const TILE_SIZE_M: f32 = 2048.0;
+pub use openrailsrs_bevy_scenery::stream::TILE_SIZE_M;
 
-/// Tile y su contenido 3D spawneado (para despawn).
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct TileContent {
-    pub tile_x: i32,
-    pub tile_z: i32,
-}
+/// Tile y su contenido 3D spawneado (para despawn) — alias del `TileBound` compartido (#113).
+pub type TileContent = TileBound;
 
 #[derive(Resource, Clone)]
 pub struct TileStreamConfig {
@@ -39,6 +39,8 @@ pub struct TileStreamConfig {
     pub stream_radius: u32,
     /// Tiles cargados al arrancar (igual que `stream_radius`: todo el grid visible).
     pub initial_radius: u32,
+    /// Extra Chebyshev tiles beyond [`Self::stream_radius`] before unload (#113).
+    pub unload_hysteresis: u32,
 }
 
 impl TileStreamConfig {
@@ -48,6 +50,7 @@ impl TileStreamConfig {
             center_tile: center,
             stream_radius,
             initial_radius,
+            unload_hysteresis: 0,
         }
     }
 
@@ -55,16 +58,19 @@ impl TileStreamConfig {
         self.stream_radius > self.initial_radius
     }
 
+    /// Shared Chebyshev load/unload policy for the live stream window.
+    pub fn stream_policy(&self) -> StreamWindowPolicy {
+        StreamWindowPolicy::chebyshev(self.stream_radius, self.unload_hysteresis)
+    }
+
     pub fn tile_in_stream_radius(&self, cam_tile: (i32, i32), tile: (i32, i32)) -> bool {
-        let dx = (tile.0 - cam_tile.0).unsigned_abs();
-        let dz = (tile.1 - cam_tile.1).unsigned_abs();
-        dx.max(dz) <= self.stream_radius
+        self.stream_policy()
+            .should_load(TileCoord::from(cam_tile), TileCoord::from(tile))
     }
 
     pub fn tile_in_initial_radius(&self, tile: (i32, i32)) -> bool {
-        let dx = (tile.0 - self.center_tile.0).unsigned_abs();
-        let dz = (tile.1 - self.center_tile.1).unsigned_abs();
-        dx.max(dz) <= self.initial_radius
+        StreamWindowPolicy::chebyshev(self.initial_radius, 0)
+            .should_load(TileCoord::from(self.center_tile), TileCoord::from(tile))
     }
 }
 
@@ -423,20 +429,19 @@ pub fn tile_stream_system(
     }
     state.last_camera_tile = Some(cam_tile);
 
-    let mut wanted = HashSet::new();
-    for entry in &catalog.entries {
-        let key = (entry.geometry.tile_x, entry.geometry.tile_z);
-        if config.tile_in_stream_radius(cam_tile, key) {
-            wanted.insert(key);
-        }
-    }
+    let policy = config.stream_policy();
+    let center = TileCoord::from(cam_tile);
+    let loaded_coords: HashSet<TileCoord> = state.loaded.iter().copied().map(TileCoord::from).collect();
+    let candidates = catalog.entries.iter().map(|e| {
+        TileCoord::new(e.geometry.tile_x, e.geometry.tile_z)
+    });
+    let stream_diff = policy.diff(center, &loaded_coords, candidates);
 
     let mut unloading = HashSet::new();
-    for key in state.loaded.iter().copied().collect::<Vec<_>>() {
-        if !wanted.contains(&key) {
-            unloading.insert(key);
-            state.loaded.remove(&key);
-        }
+    for tile in &stream_diff.to_unload {
+        let key = (tile.x, tile.z);
+        unloading.insert(key);
+        state.loaded.remove(&key);
     }
 
     if !unloading.is_empty() {
@@ -467,6 +472,9 @@ pub fn tile_stream_system(
         for entity in to_despawn {
             commands.entity(entity).despawn();
         }
+        for key in &unloading {
+            assets.obj_ctx.release_tile_shapes(TileCoord::from(*key));
+        }
         let mut meshes_freed = 0usize;
         for id in released_terrain_meshes {
             if gpu.meshes.remove(id).is_some() {
@@ -490,7 +498,8 @@ pub fn tile_stream_system(
     // Varios tiles por frame: el catálogo ya está en memoria; solo falta spawn 3D.
     const TILES_PER_FRAME: usize = 4;
     let mut spawned = 0usize;
-    for key in wanted.iter().copied() {
+    for tile in &stream_diff.to_load {
+        let key = (tile.x, tile.z);
         if state.loaded.contains(&key) {
             continue;
         }

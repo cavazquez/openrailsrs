@@ -7,7 +7,6 @@ use openrailsrs_formats::{msts_tile_x_index_for_coord, msts_tile_z_index_for_coo
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_track::TrackGraph;
 
-use crate::tdb_track;
 use crate::terrain::TileHeight;
 
 pub use crate::tdb_track::{collect_tdb_chords, load_tdb_context};
@@ -109,28 +108,33 @@ pub fn build_tdb_track_ribbon_scene(
     grid_radius: u32,
     heights: &crate::tdb_track::TileHeightIndex,
 ) -> TrackRibbon {
+    use openrailsrs_bevy_scenery::spawn::tdb_track::ribbon_scene_segment;
+
     let mut ribbon = TrackRibbon::default();
     let bound = TILE_SIZE_M * 0.5 + TILE_MARGIN_M + grid_radius as f32 * TILE_SIZE_M;
 
     for &(start, end) in chords {
-        let (ax, az) = tdb_track::world_to_scene_xz(start, center_tile_x, center_tile_z);
-        let (bx, bz) = tdb_track::world_to_scene_xz(end, center_tile_x, center_tile_z);
-        if ax.abs() > bound && az.abs() > bound && bx.abs() > bound && bz.abs() > bound {
+        let Some((cax, caz, cbx, cbz)) = ribbon_scene_segment(
+            start,
+            end,
+            center_tile_x,
+            center_tile_z,
+            TILE_SIZE_M,
+            bound,
+        ) else {
             continue;
-        }
-        if let Some((cax, caz, cbx, cbz)) = clip_segment_to_box(ax, az, bx, bz, bound) {
-            push_segment_scene(
-                &mut ribbon,
-                cax,
-                caz,
-                cbx,
-                cbz,
-                start,
-                end,
-                heights,
-                (center_tile_x, center_tile_z),
-            );
-        }
+        };
+        push_segment_scene(
+            &mut ribbon,
+            cax,
+            caz,
+            cbx,
+            cbz,
+            start,
+            end,
+            heights,
+            (center_tile_x, center_tile_z),
+        );
     }
     ribbon
 }
@@ -147,7 +151,6 @@ pub fn build_tdb_track_ribbon(
 }
 
 /// Recorta el segmento (a→b) a la caja `[-bound, bound]²` en XZ (Liang-Barsky).
-/// Devuelve `None` si queda totalmente fuera.
 fn clip_segment_to_box(
     ax: f32,
     az: f32,
@@ -155,41 +158,7 @@ fn clip_segment_to_box(
     bz: f32,
     bound: f32,
 ) -> Option<(f32, f32, f32, f32)> {
-    let dx = bx - ax;
-    let dz = bz - az;
-    let mut t0 = 0.0f32;
-    let mut t1 = 1.0f32;
-    let edges = [
-        (-dx, ax + bound),
-        (dx, bound - ax),
-        (-dz, az + bound),
-        (dz, bound - az),
-    ];
-    for (p, q) in edges {
-        if p == 0.0 {
-            if q < 0.0 {
-                return None;
-            }
-        } else {
-            let r = q / p;
-            if p < 0.0 {
-                if r > t1 {
-                    return None;
-                }
-                if r > t0 {
-                    t0 = r;
-                }
-            } else {
-                if r < t0 {
-                    return None;
-                }
-                if r < t1 {
-                    t1 = r;
-                }
-            }
-        }
-    }
-    Some((ax + dx * t0, az + dz * t0, ax + dx * t1, az + dz * t1))
+    openrailsrs_bevy_scenery::spawn::tdb_track::clip_segment_to_box(ax, az, bx, bz, bound)
 }
 
 #[allow(clippy::too_many_arguments)]

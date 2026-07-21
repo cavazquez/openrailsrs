@@ -1,12 +1,17 @@
 //! Parse CPU de tiles WORLD/terrain fuera del hilo de la ventana (#55).
+//!
+//! Thin adapter: loads [`openrailsrs_bevy_scenery::MstsTileSnapshot`] per tile
+//! and materializes render3d [`TileEntry`] (#112). Camera / consist / player pose
+//! stay here as render3d-specific post-processing.
 
 use std::path::PathBuf;
 
 use bevy::prelude::*;
-use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadDiagnostics};
+use openrailsrs_bevy_scenery::{MstsLoadDiagnostics, MstsTileSnapshot, load_msts_tile_snapshot};
 use openrailsrs_track::TrackGraph;
 
 use crate::consist::{StaticConsistPlan, load_consist_at_path, resolve_player_consist_path};
+use crate::objects::object_markers_from_classified;
 use crate::player_spawn::{
     PlayerStartPose, default_track_camera_pose, default_trackobj_camera_pose,
     resolve_pat_start_pose, resolve_player_start_pose,
@@ -14,8 +19,8 @@ use crate::player_spawn::{
 use crate::runtime::{TileEntry, TilesToRender};
 use crate::stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
 use crate::tdb_track::{self, TdbContext};
-use crate::track::{self, TILE_SIZE_M};
-use crate::{objects, terrain};
+use crate::terrain::{self, TileGeometry};
+use crate::track::{self, TILE_SIZE_M, TrackRibbon};
 
 /// Parámetros para parsear el grid de tiles en background.
 #[derive(Resource, Clone)]
@@ -79,32 +84,18 @@ pub fn parse_tiles_for_load(req: TileParseRequest) -> Result<ParsedTiles, String
             0.0,
             (cz - tz) as f32 * TILE_SIZE_M,
         );
-        match terrain::load_tile_geometry(&req.route, tx, tz) {
-            Ok(geom) => {
-                load_diag.record_loaded(MstsAssetKind::Terrain);
-                let base_y = geom.height.base_y();
-                let ribbon = if tdb_chords.is_some() {
-                    track::TrackRibbon::default()
-                } else if let Some(g) = req.graph.as_ref() {
-                    track::build_track_ribbon(g, tx, tz, &geom.height)
-                } else {
-                    track::TrackRibbon::default()
-                };
-                let objs = objects::load_objects_with_diag(
-                    &req.route,
-                    tx,
-                    tz,
-                    base_y,
-                    Some(&mut load_diag),
-                );
-                entries.push(TileEntry {
-                    geometry: geom,
-                    world_offset,
-                    track: ribbon,
-                    objects: objs,
-                });
+        let snap = load_msts_tile_snapshot(&req.route, tx, tz);
+        load_diag.merge_from(&snap.diag);
+        match tile_entry_from_snapshot(&snap, world_offset, TrackRibbon::default()) {
+            Some(mut entry) => {
+                if tdb_chords.is_none() {
+                    if let Some(g) = req.graph.as_ref() {
+                        entry.track = track::build_track_ribbon(g, tx, tz, &entry.geometry.height);
+                    }
+                }
+                entries.push(entry);
             }
-            Err(_) => {
+            None => {
                 skipped += 1;
             }
         }
@@ -205,9 +196,52 @@ pub fn parse_tiles_for_load(req: TileParseRequest) -> Result<ParsedTiles, String
     })
 }
 
+/// Materialize a render3d [`TileEntry`] from a canonical CPU snapshot (#112).
+///
+/// Requires terrain elevation (same rule as the previous direct `.t` load path).
+pub fn tile_entry_from_snapshot(
+    snap: &MstsTileSnapshot,
+    world_offset: Vec3,
+    track: TrackRibbon,
+) -> Option<TileEntry> {
+    let terr = snap.terrain.as_ref()?;
+    let elevation = terr.elevation.clone()?;
+    let geometry = terrain::tile_geometry_from_elevation(
+        snap.tile_x,
+        snap.tile_z,
+        &terr.terrain,
+        elevation,
+    );
+    let base_y = geometry.height.base_y();
+    let objects = snap
+        .world
+        .as_ref()
+        .map(|w| object_markers_from_classified(&w.items, base_y))
+        .unwrap_or_default();
+    Some(TileEntry {
+        geometry,
+        world_offset,
+        track,
+        objects,
+    })
+}
+
+/// Convenience: snapshot → [`TileGeometry`] when elevation is present.
+pub fn tile_geometry_from_snapshot(snap: &MstsTileSnapshot) -> Option<TileGeometry> {
+    let terr = snap.terrain.as_ref()?;
+    let elevation = terr.elevation.clone()?;
+    Some(terrain::tile_geometry_from_elevation(
+        snap.tile_x,
+        snap.tile_z,
+        &terr.terrain,
+        elevation,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_bevy_scenery::load_msts_tile_snapshot_from_paths;
 
     #[test]
     fn parse_smoke_route_or_skip() {
@@ -237,5 +271,30 @@ mod tests {
             "radio 0 debe producir al menos el tile central si existe"
         );
         assert_eq!(parsed.catalog.entries.len(), parsed.tiles_to_render.0.len());
+    }
+
+    #[test]
+    fn fixture_snapshot_materializes_tile_entry() {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-bevy-scenery/assets/msts/tiles/complete");
+        let snap = load_msts_tile_snapshot_from_paths(
+            Some(&dir.join("w-001000-001000.w")),
+            Some(&dir.join("minimal_terrain.y")),
+            -1000,
+            -1000,
+            None,
+        );
+        let entry = tile_entry_from_snapshot(&snap, Vec3::ZERO, TrackRibbon::default())
+            .expect("complete fixture → TileEntry");
+        assert_eq!((entry.geometry.tile_x, entry.geometry.tile_z), (-1000, -1000));
+        assert!(!entry.geometry.patches.is_empty());
+        assert_eq!(entry.objects.len(), 5);
+        assert!(entry.objects.iter().any(|o| o.forest.is_some()));
+        assert!(
+            entry
+                .objects
+                .iter()
+                .any(|o| o.kind == crate::objects::ObjectKind::Track)
+        );
     }
 }

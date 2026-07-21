@@ -5,9 +5,11 @@ pub mod forest;
 pub mod or_terrain;
 pub mod scenery;
 pub mod terrain;
+pub mod terrain_flags;
 
 pub use cab::*;
 pub use forest::*;
 pub use or_terrain::*;
 pub use scenery::*;
 pub use terrain::*;
+pub use terrain_flags::*;

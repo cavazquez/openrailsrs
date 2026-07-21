@@ -11,13 +11,13 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
+use openrailsrs_bevy_scenery::{
+    TERRAIN_PATCH_SIZE_M, terrain_patch_offset_centered, terrain_shader_overlay_scale,
+};
 use openrailsrs_formats::{
     ElevationGrid, TerrainFile, TerrainShader, build_patch_mesh_data_sampled,
     msts_tile_name_from_xz, parse_world_w_tile_xz, read_y_raw, terrain_patches_per_side,
 };
-
-/// Lado de un patch MSTS en metros (16 celdas × 8 m). Constante de Open Rails.
-const PATCH_SIZE_M: f32 = 128.0;
 
 /// Geometría de un patch de terreno (128 m), local al patch y re-basada a Y=0,
 /// más su posición dentro del tile centrado y la textura base a aplicar.
@@ -204,7 +204,7 @@ pub fn tile_geometry_from_elevation(
     let base_y = if min_y.is_finite() { min_y } else { 0.0 };
 
     let patches_per_side = terrain_patches_per_side(grid.nsamples);
-    let half = patches_per_side as f32 * PATCH_SIZE_M * 0.5;
+    let half = patches_per_side as f32 * TERRAIN_PATCH_SIZE_M * 0.5;
     let patch_set = tile.primary_patch_set();
 
     let mut patches = Vec::with_capacity((patches_per_side * patches_per_side) as usize);
@@ -244,16 +244,13 @@ pub fn tile_geometry_from_elevation(
                 .map(|[x, y, z]| [*x, *y - base_y, *z])
                 .collect();
 
+            let offset = terrain_patch_offset_centered(px, pz, half);
             patches.push(PatchGeometry {
                 positions,
                 normals: md.normals,
                 uvs: md.uvs,
                 indices: md.indices,
-                offset: [
-                    px as f32 * PATCH_SIZE_M - half,
-                    0.0,
-                    pz as f32 * PATCH_SIZE_M - half,
-                ],
+                offset: offset.to_array(),
                 texture,
                 overlay_texture,
                 overlay_scale,
@@ -264,7 +261,7 @@ pub fn tile_geometry_from_elevation(
     TileGeometry {
         tile_x,
         tile_z,
-        side_m: patches_per_side as f32 * PATCH_SIZE_M,
+        side_m: patches_per_side as f32 * TERRAIN_PATCH_SIZE_M,
         min_y,
         max_y,
         patches,
@@ -287,12 +284,7 @@ fn elevation_range(grid: &ElevationGrid) -> (f32, f32) {
 
 /// Escala UV del overlay desde `terrain_uvcalcs[1].d` (paridad OR TerrainMaterial).
 pub fn shader_overlay_scale(shader: &TerrainShader) -> f32 {
-    shader
-        .uvcalcs
-        .get(1)
-        .map(|c| c.d)
-        .map(crate::or_terrain_material::overlay_scale_from_uvcalc)
-        .unwrap_or(32.0)
+    terrain_shader_overlay_scale(shader)
 }
 
 #[cfg(test)]

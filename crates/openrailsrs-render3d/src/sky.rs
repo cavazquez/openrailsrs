@@ -1,54 +1,28 @@
 //! Cielo procedural y niebla atmosferica (paridad OR cielo nublado / horizonte suave).
+//!
+//! Thin adapter over [`openrailsrs_bevy_scenery::atmosphere`] (#123).
 
 use bevy::light::NotShadowCaster;
-use bevy::pbr::{DistanceFog, FogFalloff};
+use bevy::pbr::DistanceFog;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::{
+    distance_fog, fog_visibility_from_tile_span, sky_clear_color as shared_sky_clear_color,
+    sky_palette,
+};
 
 use crate::SceneExtent;
 
-const SKY_COLOR_ZENITH: Color = Color::srgb(0.38, 0.62, 0.92);
-const SKY_COLOR_HORIZON: Color = Color::srgb(0.72, 0.84, 0.96);
-const NIGHT_ZENITH: Color = Color::srgb(0.04, 0.06, 0.14);
-const NIGHT_HORIZON: Color = Color::srgb(0.08, 0.10, 0.18);
-
-/// Horizonte + zenit segun hora del dia.
-pub fn sky_palette(night: bool) -> (Color, Color) {
-    if night {
-        (NIGHT_HORIZON, NIGHT_ZENITH)
-    } else {
-        (SKY_COLOR_HORIZON, SKY_COLOR_ZENITH)
-    }
-}
-
 /// Color de fondo de ventana segun hora.
 pub fn sky_clear_color(night: bool) -> Color {
-    sky_palette(night).0
+    shared_sky_clear_color(night)
 }
 
 /// Niebla de camara: visibilidad ~3-6 km, tono del horizonte (dia) o exponencial suave (noche).
 pub fn scene_distance_fog(extent: &SceneExtent, tile_count: usize, night: bool) -> DistanceFog {
-    let tile_span = extent.side_m * (tile_count as f32).sqrt().max(1.0);
-    let visibility = (tile_span * 4.5).clamp(2_000.0, 6_500.0);
-    let (horizon, _zenith) = sky_palette(night);
-
-    if night {
-        return DistanceFog {
-            color: horizon.with_alpha(0.75),
-            directional_light_color: Color::NONE,
-            directional_light_exponent: 8.0,
-            falloff: FogFalloff::from_visibility_contrast(visibility * 0.55, 0.02),
-        };
-    }
-
-    // Extincion ligeramente gris-azul; inscattering del horizonte (cielo OR nublado).
-    let extinction = Color::srgba(0.62, 0.70, 0.80, 0.88);
-    let inscattering = horizon.with_alpha(0.96);
-    DistanceFog {
-        color: horizon.with_alpha(0.94),
-        directional_light_color: Color::srgba(1.0, 0.95, 0.86, 0.28),
-        directional_light_exponent: 10.0,
-        falloff: FogFalloff::from_visibility_colors(visibility, extinction, inscattering),
-    }
+    distance_fog(
+        fog_visibility_from_tile_span(extent.side_m, tile_count),
+        night,
+    )
 }
 
 /// Domo de cielo centrado en el origen del tile (escala negativa = cara interior).
@@ -63,9 +37,7 @@ pub fn spawn_scene_sky(
     let min_radius = 8_000.0;
     let tile_span = extent.side_m * (tile_count as f32).sqrt().max(1.0);
     let radius = (tile_span * 12.0).clamp(min_radius, 150_000.0);
-
     let (horizon, zenith) = sky_palette(night);
-
     let mesh = meshes.add(Sphere::new(radius));
     let material = materials.add(StandardMaterial {
         base_color: horizon,
@@ -78,7 +50,6 @@ pub fn spawn_scene_sky(
         fog_enabled: false,
         ..default()
     });
-
     commands.spawn((
         Mesh3d(mesh),
         MeshMaterial3d(material),
@@ -91,6 +62,7 @@ pub fn spawn_scene_sky(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::pbr::FogFalloff;
 
     #[test]
     fn clear_color_is_light_blue_by_day() {
@@ -120,6 +92,7 @@ mod tests {
             FogFalloff::Exponential { density } => density,
             _ => 0.0,
         };
-        assert!(vis(&large) <= vis(&small) || vis(&large) > 0.0);
+        // Larger span → larger visibility → smaller extinction.
+        assert!(vis(&large) < vis(&small));
     }
 }

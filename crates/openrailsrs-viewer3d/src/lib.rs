@@ -50,6 +50,7 @@ pub(crate) mod terrain_io;
 pub mod terrain_material;
 pub(crate) mod terrain_sampler;
 pub(crate) mod terrain_spawn;
+pub mod tile_bundle;
 pub mod tr_item_audit;
 pub mod tr_item_index;
 pub mod track;
@@ -136,6 +137,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<world::WorldShapeLodCache>()
             .init_resource::<world::WorldLodCameraState>()
+            .init_resource::<tile_bundle::TileBundleHandles>()
             .init_resource::<launch::ViewerSceneryMode>()
             .init_resource::<launch::RunCorridorPath>()
             .init_resource::<view_window::ViewWindow>()
@@ -214,25 +216,15 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
-                world::world_tile_stream_system
+                (
+                    world::world_tile_stream_system,
+                    world::world_tile_bundle_materialize_system,
+                    world::world_tile_unload_system.run_if(live::live_mode_active),
+                    tr_item_index::sync_tr_item_world_index,
+                    world::world_stream_scenery_system,
+                )
+                    .chain()
                     .after(view_window::sync_view_window_from_train)
-                    .run_if(in_state(ViewerAppState::Playing))
-                    .in_set(ScenerySpawnSet::Ready),
-            )
-            .add_systems(
-                Update,
-                world::world_tile_unload_system
-                    .after(world::world_tile_stream_system)
-                    .run_if(live::live_mode_active)
-                    .run_if(in_state(ViewerAppState::Playing))
-                    .in_set(ScenerySpawnSet::Ready),
-            )
-            .add_systems(
-                Update,
-                // After stream + unload so one delta batch covers the frame (#61).
-                tr_item_index::sync_tr_item_world_index
-                    .after(world::world_tile_stream_system)
-                    .after(world::world_tile_unload_system)
                     .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),
             )
@@ -240,6 +232,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 (
                     terrain::terrain_tile_stream_system,
+                    terrain::terrain_tile_bundle_materialize_system,
                     terrain::terrain_tile_spawn_stream_system,
                     terrain::terrain_tile_unload_system,
                 )
@@ -249,12 +242,6 @@ impl Plugin for ViewerPlugin {
                     .run_if(launch::full_scenery_active)
                     .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Terrain),
-            )
-            .add_systems(
-                Update,
-                world::world_stream_scenery_system
-                    .after(world::world_tile_stream_system)
-                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 OnEnter(ViewerAppState::Playing),

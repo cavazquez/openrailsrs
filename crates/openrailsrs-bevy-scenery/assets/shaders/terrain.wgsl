@@ -1,5 +1,6 @@
 // Dual-texture terrain for viewer3d (#42 shadows + #39 fog).
-// Lighting/shadows follow OpenRails PSTerrain / OrTerrainMaterial half-Lambert × cascade.
+// Pipeline flags: lit=true, night=false, vsm=false, fog=true (see TerrainPipelineFlags::VIEWER).
+// TODO(#121): unify overlay blend with or_terrain.wgsl (viewer uses alpha mix; OR uses *2 multiply).
 #import bevy_pbr::{
     forward_io::VertexOutput,
     mesh_view_bindings as view_bindings,
@@ -7,6 +8,7 @@
     shadows::fetch_directional_shadow,
     pbr_functions,
 }
+#import "shaders/terrain_common.wgsl"::terrain_half_lambert
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> overlay_scale: f32;
 @group(#{MATERIAL_BIND_GROUP}) @binding(1) var base_texture: texture_2d<f32>;
@@ -16,10 +18,6 @@
 
 const SHADOW_BRIGHTNESS: f32 = 0.5;
 const FULL_BRIGHTNESS: f32 = 1.0;
-
-fn half_lambert(normal: vec3<f32>, light_dir: vec3<f32>) -> f32 {
-    return dot(normalize(normal), normalize(light_dir)) * 0.5 + 0.5;
-}
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
@@ -33,7 +31,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let n = normalize(in.world_normal);
     let light = view_bindings::lights.directional_lights[0];
     let light_dir = light.direction_to_light;
-    let ambient = half_lambert(n, light_dir);
+    let ambient = terrain_half_lambert(n, light_dir);
     var shadow_mod = 1.0;
     if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
         let view_z = (view_bindings::view.view_from_world * in.world_position).z;

@@ -87,27 +87,11 @@ pub fn is_night_time(start_time_s: f64) -> bool {
 }
 
 /// Rotación del sol direccional según hora MSTS (`StartTime`).
+///
+/// SSOT: [`openrailsrs_bevy_scenery::SceneSunLight::from_msts_start_time`] (#124).
 pub fn sun_transform(start_time_s: f64, night: bool) -> (Quat, f32, Color, Color) {
-    use std::f32::consts::{FRAC_PI_4, PI};
-
-    if night {
-        return (
-            Quat::from_rotation_x(-PI * 0.85),
-            800.0,
-            Color::srgb(0.75, 0.78, 0.95),
-            Color::srgb(0.08, 0.10, 0.18),
-        );
-    }
-
-    let hour = (start_time_s / 3600.0).rem_euclid(24.0) as f32;
-    let daylight = ((hour - 6.0) / 14.0).clamp(0.0, 1.0);
-    let pitch = -0.25 - daylight * 1.05;
-    let yaw = FRAC_PI_4 + (hour - 12.0) * 0.04;
-    let rotation = Quat::from_euler(bevy::math::EulerRot::YXZ, yaw, pitch, 0.0);
-    let illuminance = 4_000.0 + daylight * 8_000.0;
-    let sun_color = Color::srgb(1.0, 0.96 + daylight * 0.02, 0.88 + daylight * 0.08);
-    let ambient = Color::srgb(0.45 + daylight * 0.15, 0.52 + daylight * 0.18, 0.65);
-    (rotation, illuminance, sun_color, ambient)
+    openrailsrs_bevy_scenery::SceneSunLight::from_msts_start_time(start_time_s, night)
+        .as_legacy_tuple()
 }
 
 pub fn resolve_activity_path(route_dir: &Path, activity: &Path) -> Option<PathBuf> {

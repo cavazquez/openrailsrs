@@ -297,7 +297,8 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
-            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
+            // Allow absolute WORLD/terrain paths inside generated `.tilebundle` manifests (#111).
+            .set(openrailsrs_viewer3d::tile_bundle::viewer_asset_plugin())
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "openrailsrs-viewer3d".into(),

@@ -1,4 +1,6 @@
 // Open Rails SceneryShader.fx PSTerrain (TerrainLevel9_3).
+// Pipeline flags: lit/night via uniforms; vsm=true in render3d app; fog via DISTANCE_FOG.
+// TODO(#121): unify overlay blend with terrain.wgsl (OR uses lit_rgb * overlay*2).
 #import bevy_pbr::{
     forward_io::VertexOutput,
     mesh_view_bindings as view_bindings,
@@ -6,6 +8,7 @@
     shadows::fetch_directional_shadow,
     pbr_functions,
 }
+#import "shaders/terrain_common.wgsl"::terrain_half_lambert
 
 struct OrTerrainParams {
     shadow_brightness: f32,
@@ -24,10 +27,6 @@ struct OrTerrainParams {
 @group(#{MATERIAL_BIND_GROUP}) @binding(3) var overlay_texture: texture_2d<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(4) var overlay_sampler: sampler;
 
-fn or_half_lambert(normal: vec3<f32>, light_dir: vec3<f32>) -> f32 {
-    return dot(normalize(normal), normalize(light_dir)) * 0.5 + 0.5;
-}
-
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = textureSample(base_texture, base_sampler, in.uv);
@@ -37,7 +36,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let n = normalize(in.world_normal);
         let light = view_bindings::lights.directional_lights[0];
         let light_dir = light.direction_to_light;
-        let ambient = or_half_lambert(n, light_dir);
+        let ambient = terrain_half_lambert(n, light_dir);
         var shadow_mod = 1.0;
         if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
             let view_z = (view_bindings::view.view_from_world * in.world_position).z;

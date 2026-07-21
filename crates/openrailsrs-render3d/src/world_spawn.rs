@@ -8,7 +8,11 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_ace::AceFile;
-use openrailsrs_bevy_scenery::MstsRouteCatalog;
+use openrailsrs_bevy_scenery::{
+    MstsRouteCatalog, SessionShapeCache, ShapeCacheKey, TerrainMeshMode, TileCoord,
+    TileOffsetPlacementAdapter, mesh_from_terrain_buffers, object_placement, plan_parts_with_ids,
+    sanitize_terrain_base_rgba, terrain_material_cache_key,
+};
 
 use crate::objects::{ObjectKind, ObjectMarker};
 use crate::shape_descriptor::ShapeDescriptor;
@@ -534,9 +538,16 @@ impl TerrainSpawnCtx {
     ) -> Handle<OrTerrainMaterial> {
         let base_name = patch.texture.as_deref().unwrap_or("grass.ace");
         let overlay_name = patch.overlay_texture.as_deref().unwrap_or(DEFAULT_MICROTEX);
-        let cache_key = format!(
-            "{base_name}|{overlay_name}|{:.3}|lit={}|night={}|or={}",
-            patch.overlay_scale, self.materials_lit, self.night, self.use_or_shaders
+        let flags = OrTerrainMaterial::pipeline_flags(self.materials_lit, self.night);
+        let cache_key = terrain_material_cache_key(
+            base_name,
+            overlay_name,
+            patch.overlay_scale,
+            Some(&format!(
+                "{}|or={}",
+                flags.cache_suffix(),
+                self.use_or_shaders
+            )),
         );
         if let Some(mat) = self.mat_cache.get(&cache_key) {
             return mat.clone();
@@ -632,48 +643,6 @@ fn or_terrain_fallback(
         lit,
         night,
     )
-}
-
-fn sanitize_terrain_base_rgba(data: Option<&mut Vec<u8>>) {
-    let Some(data) = data else {
-        return;
-    };
-    if data.chunks_exact(4).all(|rgba| rgba[3] >= 250) {
-        return;
-    }
-    let mut sum = [0u64; 3];
-    let mut count = 0u64;
-    for rgba in data.chunks_exact(4) {
-        if rgba[3] >= 250 && !looks_like_terrain_chroma_key(rgba) {
-            sum[0] += rgba[0] as u64;
-            sum[1] += rgba[1] as u64;
-            sum[2] += rgba[2] as u64;
-            count += 1;
-        }
-    }
-    let fill = count
-        .checked_sub(1)
-        .map(|_| {
-            [
-                (sum[0] / count) as u8,
-                (sum[1] / count) as u8,
-                (sum[2] / count) as u8,
-            ]
-        })
-        .unwrap_or([72, 107, 56]);
-    for rgba in data.chunks_exact_mut(4) {
-        if rgba[3] < 16 || looks_like_terrain_chroma_key(rgba) {
-            rgba[0] = fill[0];
-            rgba[1] = fill[1];
-            rgba[2] = fill[2];
-        }
-        rgba[3] = 255;
-    }
-}
-
-fn looks_like_terrain_chroma_key(rgba: &[u8]) -> bool {
-    let [r, g, b, _] = [rgba[0], rgba[1], rgba[2], rgba[3]];
-    b > 135 && g > 115 && r < 170 && b.saturating_sub(r) > 25 && b >= g
 }
 
 /// Contadores de resolución de texturas (diagnóstico al cargar objetos).
@@ -914,9 +883,12 @@ pub fn texture_debug_enabled() -> bool {
 }
 
 /// Caches de shapes/objetos.
+///
+/// Shape GPU handles live in shared [`SessionShapeCache`] (#114); material caches
+/// stay local to this ctx.
 #[derive(Clone)]
 pub struct ObjectSpawnCtx {
-    pub shape_cache: HashMap<String, Vec<PartHandles>>,
+    pub shape_cache: SessionShapeCache<ShapeCacheKey, Vec<PartHandles>>,
     pub tex_mat_cache: HashMap<String, Handle<StandardMaterial>>,
     pub or_tex_mat_cache: HashMap<String, Handle<OrSceneryMaterial>>,
     pub color_mat_cache: HashMap<[u8; 3], Handle<StandardMaterial>>,
@@ -945,7 +917,7 @@ impl ObjectSpawnCtx {
             ..default()
         });
         Self {
-            shape_cache: HashMap::new(),
+            shape_cache: SessionShapeCache::new(),
             tex_mat_cache: HashMap::new(),
             or_tex_mat_cache: HashMap::new(),
             color_mat_cache: HashMap::new(),
@@ -958,7 +930,12 @@ impl ObjectSpawnCtx {
         }
     }
 
-    /// Drop cached shapes whose meshes are no longer on any live tile entity (#51).
+    /// Drop per-tile refs when a streamed tile unloads (#114).
+    pub fn release_tile_shapes(&mut self, tile: TileCoord) {
+        self.shape_cache.release_tile(tile);
+    }
+
+    /// Drop cached shapes whose meshes are no longer on any live tile entity (#51 / #114).
     pub fn evict_unreferenced_shapes(
         &mut self,
         live_mesh_ids: &std::collections::HashSet<AssetId<Mesh>>,
@@ -966,23 +943,39 @@ impl ObjectSpawnCtx {
         materials: &mut Assets<StandardMaterial>,
         or_materials: &mut Assets<OrSceneryMaterial>,
     ) -> usize {
-        let before = self.shape_cache.len();
-        self.shape_cache.retain(|_, parts| {
-            let still_used = parts
-                .iter()
-                .any(|part| live_mesh_ids.contains(&part.mesh.id()));
-            if !still_used {
-                for part in parts.iter() {
-                    meshes.remove(part.mesh.id());
-                    part.material.asset_remove(materials, or_materials);
-                }
+        // Prefer tile-refcount orphans from prior `release_tile_shapes` calls.
+        let mut freed = 0usize;
+        for (_key, parts) in self.shape_cache.evict_unreferenced() {
+            for part in &parts {
+                meshes.remove(part.mesh.id());
+                part.material.asset_remove(materials, or_materials);
             }
-            still_used
-        });
-        before.saturating_sub(self.shape_cache.len())
+            freed += 1;
+        }
+
+        // Live-mesh sweep covers never-retained entries (e.g. static consist).
+        let live_keys: std::collections::HashSet<ShapeCacheKey> = self
+            .shape_cache
+            .iter()
+            .filter(|(_, parts)| {
+                parts
+                    .iter()
+                    .any(|part| live_mesh_ids.contains(&part.mesh.id()))
+            })
+            .map(|(k, _)| k.clone())
+            .collect();
+        for (_key, parts) in self.shape_cache.evict_except(&live_keys) {
+            for part in &parts {
+                meshes.remove(part.mesh.id());
+                part.material.asset_remove(materials, or_materials);
+            }
+            freed += 1;
+        }
+        freed
     }
 }
 
+/// Spawn terrain in [`TerrainMeshMode::Patch`] (one entity per drawable patch — #122).
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_terrain_patches(
     commands: &mut Commands,
@@ -998,6 +991,7 @@ pub fn spawn_terrain_patches(
     tile_x: i32,
     tile_z: i32,
 ) {
+    debug_assert_eq!(TerrainMeshMode::Patch.label(), "patch");
     for (i, patch) in tile
         .patches
         .iter()
@@ -1005,7 +999,12 @@ pub fn spawn_terrain_patches(
         .skip(from)
         .take(to.saturating_sub(from))
     {
-        let mesh_handle = meshes.add(patch_mesh(patch));
+        let mesh_handle = meshes.add(mesh_from_terrain_buffers(
+            patch.positions.clone(),
+            patch.normals.clone(),
+            patch.uvs.clone(),
+            patch.indices.clone(),
+        ));
         let material = ctx.material_for_patch(or_materials, images, route, patch);
         commands.spawn((
             Mesh3d(mesh_handle),
@@ -1236,6 +1235,7 @@ pub fn spawn_consist_vehicle_shape(
         texture_env,
         viewer_pos,
         tile_offset,
+        None,
     ) else {
         return 0;
     };
@@ -1284,6 +1284,9 @@ pub fn spawn_object_shape(
     tile_x: i32,
     tile_z: i32,
 ) -> bool {
+    let Some(shape_path) = resolve_object_shape_path(obj, index, route_dir, msts_root) else {
+        return false;
+    };
     let Some(parts) = build_shape(
         obj,
         index,
@@ -1298,29 +1301,56 @@ pub fn spawn_object_shape(
         texture_env,
         viewer_pos,
         tile_offset,
+        Some(TileCoord::new(tile_x, tile_z)),
     ) else {
         return false;
     };
     if parts.is_empty() {
         return false;
     }
-    for part in parts {
+    // Canonical pose is local; callers may refine rotation (TrackObj / TDB).
+    // Adapter applies tile_offset — same final transform as the previous inline spawn.
+    let placement = object_placement(
+        obj.position,
+        transform.rotation,
+        transform.scale,
+        tile_x,
+        tile_z,
+    );
+    let adapter = TileOffsetPlacementAdapter { tile_offset };
+    let planned = plan_parts_with_ids(&shape_path, &parts, |_i, _| -1, placement, &adapter);
+    debug_assert!(
+        planned
+            .first()
+            .is_none_or(|(_, _, tf, _)| tf.translation.distance_squared(transform.translation)
+                < 1e-6
+                && tf.rotation.abs_diff_eq(transform.rotation, 1e-5)
+                && tf.scale.abs_diff_eq(transform.scale, 1e-5)),
+        "shared spawn core must preserve caller transform before material attach"
+    );
+    for (_id, part, tf, tile) in planned {
         match &part.material {
             SceneMaterialHandle::Standard(mat) => {
                 commands.spawn((
-                    Mesh3d(part.mesh.clone()),
+                    Mesh3d(part.mesh),
                     MeshMaterial3d(mat.clone()),
-                    transform,
-                    TileContent { tile_x, tile_z },
+                    tf,
+                    TileContent {
+                        tile_x: tile.tile_x,
+                        tile_z: tile.tile_z,
+                    },
                     Name::new("object_shape"),
                 ));
             }
             SceneMaterialHandle::OrScenery(mat) => {
                 commands.spawn((
-                    Mesh3d(part.mesh.clone()),
+                    Mesh3d(part.mesh),
                     MeshMaterial3d(mat.clone()),
-                    transform,
-                    TileContent { tile_x, tile_z },
+                    tf,
+                    TileContent {
+                        tile_x: tile.tile_x,
+                        tile_z: tile.tile_z,
+                    },
                     Name::new("object_shape"),
                 ));
             }
@@ -1616,6 +1646,7 @@ fn build_shape(
     texture_env: &TextureEnvironment,
     viewer_pos: Vec3,
     tile_offset: Vec3,
+    tile: Option<TileCoord>,
 ) -> Option<Vec<PartHandles>> {
     let path = resolve_object_shape_path(obj, index, route_dir, msts_root)?;
     let file = path
@@ -1624,15 +1655,18 @@ fn build_shape(
         .unwrap_or("shape.s");
     let view_distance = viewer_pos.distance(obj.position + tile_offset);
     let lod_key = shapes::lod_cache_key(view_distance);
-    let cache_key = format!(
-        "{:?}:{}:lod={lod_key}:{}",
-        obj.kind,
-        file.to_ascii_lowercase(),
-        texture_env.cache_key()
+    let cache_key = ShapeCacheKey::new(
+        format!("{:?}:{}", obj.kind, file.to_ascii_lowercase()),
+        lod_key.to_string(),
+        texture_env.cache_key().to_string(),
     );
-    if let Some(cached) = ctx.shape_cache.get(&cache_key) {
-        return Some(cached.clone());
+    if let Some(cached) = ctx.shape_cache.get_hit(&cache_key).cloned() {
+        if let Some(tile) = tile {
+            ctx.shape_cache.retain_for_tile(tile.into(), &cache_key);
+        }
+        return Some(cached);
     }
+    ctx.shape_cache.record_miss();
     let descriptor = ShapeDescriptor::load_for_shape(&path);
     let shape_flags = shape_texture_flags(&path, descriptor.alternative_texture);
     let ukfs_track = is_ukfs_track_shape(file);
@@ -1718,7 +1752,10 @@ fn build_shape(
             }
         })
         .collect();
-    ctx.shape_cache.insert(cache_key, handles.clone());
+    ctx.shape_cache.insert(cache_key.clone(), handles.clone());
+    if let Some(tile) = tile {
+        ctx.shape_cache.retain_for_tile(tile.into(), &cache_key);
+    }
     Some(handles)
 }
 
@@ -2371,18 +2408,6 @@ fn texture_name_suggests_additive(texture_name: &str) -> bool {
     .any(|needle| lower.contains(needle))
 }
 
-fn patch_mesh(patch: &PatchGeometry) -> Mesh {
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, patch.positions.clone());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, patch.normals.clone());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, patch.uvs.clone());
-    mesh.insert_indices(Indices::U32(patch.indices.clone()));
-    mesh
-}
-
 fn shape_part_mesh(part: &shapes::ShapePart, textured: bool, ukfs_track: bool) -> Mesh {
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
@@ -2718,30 +2743,36 @@ mod tests {
         ));
         let keep_mat = materials.add(StandardMaterial::default());
         let drop_mat = materials.add(StandardMaterial::default());
+        let keep_key = ShapeCacheKey::shape_only("keep.s");
+        let drop_key = ShapeCacheKey::shape_only("drop.s");
         ctx.shape_cache.insert(
-            "keep.s".into(),
+            keep_key.clone(),
             vec![PartHandles {
                 mesh: keep_mesh.clone(),
                 material: SceneMaterialHandle::Standard(keep_mat.clone()),
             }],
         );
         ctx.shape_cache.insert(
-            "drop.s".into(),
+            drop_key.clone(),
             vec![PartHandles {
                 mesh: drop_mesh.clone(),
                 material: SceneMaterialHandle::Standard(drop_mat.clone()),
             }],
         );
+        ctx.shape_cache.retain_for_tile(TileCoord::new(0, 0), &keep_key);
+        ctx.shape_cache.retain_for_tile(TileCoord::new(1, 0), &drop_key);
+        ctx.release_tile_shapes(TileCoord::new(1, 0));
 
         let live = std::collections::HashSet::from([keep_mesh.id()]);
         let evicted =
             ctx.evict_unreferenced_shapes(&live, &mut meshes, &mut materials, &mut or_materials);
         assert_eq!(evicted, 1);
-        assert!(ctx.shape_cache.contains_key("keep.s"));
-        assert!(!ctx.shape_cache.contains_key("drop.s"));
+        assert!(ctx.shape_cache.contains_key(&keep_key));
+        assert!(!ctx.shape_cache.contains_key(&drop_key));
         assert!(meshes.get(keep_mesh.id()).is_some());
         assert!(meshes.get(drop_mesh.id()).is_none());
         assert!(materials.get(keep_mat.id()).is_some());
         assert!(materials.get(drop_mat.id()).is_none());
+        assert!(ctx.shape_cache.evictions() >= 1);
     }
 }

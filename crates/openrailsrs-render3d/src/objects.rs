@@ -1,63 +1,19 @@
 //! Capa 4a: objetos del `.w` como marcadores.
 //!
-//! Parsea el world tile (`.w`) con `openrailsrs-formats` y coloca un marcador
-//! (pilar) por objeto en su posición y rotación, en el mismo espacio local
-//! centrado que el terreno. El objetivo es validar la **ubicación** (que no
-//! queden bajo el terreno ni desplazados) antes de cargar las mallas `.s` reales.
+//! Thin adapter over [`openrailsrs_bevy_scenery::MstsTileSnapshot`] / classified
+//! WORLD items (#112). Places markers in the same centered local frame as terrain.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use bevy::math::{Mat3, Quat, Vec3};
-use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
-use openrailsrs_formats::{WorldFile, WorldItem, parse_world_w_tile_xz};
+use bevy::math::{Quat, Vec3};
+use openrailsrs_bevy_scenery::{
+    MstsClassifiedWorldItem, MstsForestPatch, MstsHWaterPatch, MstsLoadDiagnostics,
+    MstsTransferPatch, MstsWorldItemKind, classify_world_file, load_msts_tile_world_snapshot,
+};
+use openrailsrs_formats::{WorldFile, parse_world_w_tile_xz};
 
-/// Tipo de objeto del `.w` (para colorear el marcador).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ObjectKind {
-    Static,
-    Track,
-    Dyntrack,
-    Signal,
-    Forest,
-    HWater,
-    Pickup,
-    Transfer,
-    Hazard,
-    Other,
-}
-
-impl ObjectKind {
-    fn from_item(item: &WorldItem) -> Self {
-        match item.kind() {
-            "Static" => Self::Static,
-            "TrackObj" => Self::Track,
-            "Dyntrack" => Self::Dyntrack,
-            "Signal" => Self::Signal,
-            "Forest" => Self::Forest,
-            "HWater" => Self::HWater,
-            "Transfer" => Self::Transfer,
-            "Pickup" => Self::Pickup,
-            "Hazard" => Self::Hazard,
-            _ => Self::Other,
-        }
-    }
-
-    /// Color RGB del marcador.
-    pub fn color(self) -> (f32, f32, f32) {
-        match self {
-            Self::Static => (0.95, 0.55, 0.15),
-            Self::Track => (0.20, 0.80, 0.85),
-            Self::Dyntrack => (0.85, 0.25, 0.85),
-            Self::Signal => (0.90, 0.15, 0.15),
-            Self::Forest => (0.20, 0.70, 0.25),
-            Self::HWater => (0.20, 0.40, 0.95),
-            Self::Pickup => (0.55, 0.45, 0.35),
-            Self::Transfer => (0.45, 0.72, 0.38),
-            Self::Hazard => (0.85, 0.35, 0.25),
-            Self::Other => (0.65, 0.65, 0.65),
-        }
-    }
-}
+/// Tipo de objeto del `.w` (alias del kind canónico #112).
+pub type ObjectKind = MstsWorldItemKind;
 
 /// Con al menos un `TrackObj` se omiten cinta `.tdb` y shapes UKFS (Open Rails).
 pub const TDB_RIBBON_SUPPRESS_TRACK_OBJ_MIN: usize = 1;
@@ -110,34 +66,9 @@ fn is_animated_scenery_shape(lower: &str) -> bool {
         || (lower.contains("steam") && lower.ends_with(".s"))
 }
 
-#[derive(Clone, Debug)]
-pub struct ForestPatch {
-    pub uid: u32,
-    pub population: u32,
-    pub patch_half_x: f32,
-    pub patch_half_z: f32,
-    pub tree_width: f32,
-    pub tree_height: f32,
-    pub scale_min: f32,
-    pub scale_max: f32,
-    pub tree_texture: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct HWaterPatch {
-    pub uid: u32,
-    pub half_x: f32,
-    pub half_z: f32,
-    pub texture: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct TransferPatch {
-    pub uid: u32,
-    pub width: f32,
-    pub height: f32,
-    pub texture: Option<String>,
-}
+pub type ForestPatch = MstsForestPatch;
+pub type HWaterPatch = MstsHWaterPatch;
+pub type TransferPatch = MstsTransferPatch;
 
 #[derive(Clone, Debug)]
 pub struct ObjectMarker {
@@ -172,25 +103,6 @@ pub fn busiest_world_tile(route_dir: &Path) -> Option<(i32, i32)> {
     best.map(|(_, tile)| tile)
 }
 
-/// Ruta del `.w` del tile dentro de `WORLD/` (case-insensitive).
-fn world_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> Option<PathBuf> {
-    if let Some(path) = openrailsrs_formats::resolve_world_tile_file(route_dir, tile_x, tile_z) {
-        return Some(path);
-    }
-    if tile_x == 0 && tile_z == 0 {
-        // Algunas rutas de prueba usan `w-000000-000000.w` en lugar de `w+000000+000000.w`.
-        for dir in openrailsrs_formats::world_subdirs(route_dir) {
-            let candidate = dir.join("w-000000-000000.w");
-            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
-                if resolved.is_file() {
-                    return Some(resolved);
-                }
-            }
-        }
-    }
-    None
-}
-
 /// Carga los objetos del `.w` del tile en coords locales centradas.
 ///
 /// `base_y` es la altura MSL que corresponde a Y=0 local (mínimo del tile),
@@ -207,195 +119,59 @@ pub fn load_objects_with_diag(
     base_y: f32,
     mut diag: Option<&mut MstsLoadDiagnostics>,
 ) -> Vec<ObjectMarker> {
-    // No `.w` for this tile is normal (sparse WORLD); do not count as a failed request.
-    let Some(path) = world_path(route_dir, tile_x, tile_z) else {
+    let snap = load_msts_tile_world_snapshot(route_dir, tile_x, tile_z);
+    if let Some(d) = diag.as_deref_mut() {
+        d.merge_from(&snap.diag);
+    }
+    let Some(world) = snap.world.as_ref() else {
         return Vec::new();
     };
-    let world = match WorldFile::from_path(&path) {
-        Ok(w) => {
-            if let Some(d) = diag.as_deref_mut() {
-                d.record_path_loaded(&path, MstsAssetKind::World);
-            }
-            w
-        }
-        Err(e) => {
-            if let Some(d) = diag.as_deref_mut() {
-                d.record_failed_at(
-                    path.display().to_string(),
-                    MstsAssetKind::World,
-                    MstsLoadCause::Parse,
-                    e.to_string(),
-                    Some(tile_x),
-                    Some(tile_z),
-                );
-            }
-            return Vec::new();
-        }
-    };
-
-    objects_from_world_file(&world, route_dir, base_y)
+    object_markers_from_classified(&world.items, base_y)
 }
 
-/// Materialize WORLD objects from an already-parsed [`WorldFile`] (#53).
+/// Materialize WORLD objects from an already-parsed [`WorldFile`] (#53 / #112).
 pub fn objects_from_world_file(
     world: &WorldFile,
     route_dir: &Path,
     base_y: f32,
 ) -> Vec<ObjectMarker> {
-    let mut out = Vec::new();
-    for item in &world.items {
-        let Some(p) = item.position() else {
-            continue;
-        };
-        // `.w` es tile-local (X este, +Z "adelante"); render niega Z. Como el
-        // tile está centrado, la parte de tile se cancela: local = (x, y, -z).
-        let position = Vec3::new(p.x as f32, p.y as f32 - base_y, -(p.z as f32));
-        let (rotation, scale) = item_transform(item);
-        let (forest, hwater, transfer) = scenery_from_item(item);
-        let file_name = match item {
-            WorldItem::Hazard {
-                haz_file: Some(haz),
-                ..
-            } => openrailsrs_formats::resolve_hazard_shape_name(route_dir, haz)
-                .or_else(|| Some(haz.clone())),
-            _ => item.file_name().map(str::to_string),
-        };
-        out.push(ObjectMarker {
-            position,
-            rotation,
-            scale,
-            kind: ObjectKind::from_item(item),
-            file_name,
-            section_idx: item.section_idx(),
-            forest,
-            hwater,
-            transfer,
-        });
-    }
-    out
+    let items = classify_world_file(world, Some(route_dir));
+    object_markers_from_classified(&items, base_y)
 }
 
-fn scenery_from_item(
-    item: &WorldItem,
-) -> (
-    Option<ForestPatch>,
-    Option<HWaterPatch>,
-    Option<TransferPatch>,
-) {
-    match item {
-        WorldItem::Forest {
-            uid,
-            tree_texture,
-            scale_range,
-            patch_size,
-            tree_size,
-            population,
-            ..
-        } => {
-            let (scale_min, scale_max) = scale_range
-                .map(|r| (r[0].max(0.1) as f32, r[1].max(r[0] + 0.01) as f32))
-                .unwrap_or((0.85, 1.15));
-            let (patch_half_x, patch_half_z) = patch_size
-                .map(|a| ((a[0] * 0.5) as f32, (a[1] * 0.5) as f32))
-                .unwrap_or((128.0, 128.0));
-            let (tree_width, tree_height) = tree_size
-                .map(|s| (s[0].max(0.5) as f32, s[1].max(1.0) as f32))
-                .unwrap_or((5.0, 12.0));
-            (
-                Some(ForestPatch {
-                    uid: *uid,
-                    population: *population,
-                    patch_half_x,
-                    patch_half_z,
-                    tree_width,
-                    tree_height,
-                    scale_min,
-                    scale_max,
-                    tree_texture: tree_texture.clone(),
-                }),
-                None,
-                None,
-            )
-        }
-        WorldItem::HWater {
-            uid,
-            file_name,
-            size,
-            ..
-        } => (
-            None,
-            Some(HWaterPatch {
-                uid: *uid,
-                half_x: (size[0].max(0.5) * 0.5) as f32,
-                half_z: (size[1].max(0.5) * 0.5) as f32,
-                texture: file_name.clone(),
-            }),
-            None,
-        ),
-        WorldItem::Transfer {
-            uid,
-            file_name,
-            width,
-            height,
-            ..
-        } => (
-            None,
-            None,
-            Some(TransferPatch {
-                uid: *uid,
-                width: (*width).max(0.5) as f32,
-                height: (*height).max(0.5) as f32,
-                texture: file_name.clone(),
-            }),
-        ),
-        _ => (None, None, None),
-    }
-}
-
-/// Rotación + escala del objeto siguiendo la convención XNA de Open Rails.
-fn item_transform(item: &WorldItem) -> (Quat, Vec3) {
-    if let Some(m) = item.matrix3x3() {
-        let (rot, scale) = matrix3x3_to_rotation_scale(&m);
-        return (sanitize_quat(rot), scale);
-    }
-    let rot = item
-        .qdirection()
-        .map(|q| qdir_to_quat(&q))
-        .unwrap_or(Quat::IDENTITY);
-    (sanitize_quat(rot), Vec3::ONE)
-}
-
-/// Normaliza la rotación; si es inválida (NaN o casi nula), usa identidad.
-/// Algunos objetos del `.w` traen matrices degeneradas.
-fn sanitize_quat(q: Quat) -> Quat {
-    if q.is_finite() && q.length_squared() > 1e-6 {
-        q.normalize()
-    } else {
-        Quat::IDENTITY
-    }
-}
-
-/// MSTS `QDirection` `[qx, qy, qz, qw]` → Bevy `Quat` (Z negada).
-fn qdir_to_quat(q: &[f64; 4]) -> Quat {
-    Quat::from_xyzw(q[0] as f32, q[1] as f32, -(q[2] as f32), q[3] as f32)
-}
-
-/// MSTS `Matrix3x3` → rotación Bevy + escala (convención XNA: Z de columnas X/Y
-/// negada, X/Y de columna Z negadas).
-fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
-    let x = Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32));
-    let y = Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32));
-    let z = Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32);
-    let sx = x.length().max(1e-6);
-    let sy = y.length().max(1e-6);
-    let sz = z.length().max(1e-6);
-    let rot = Quat::from_mat3(&Mat3::from_cols(x / sx, y / sy, z / sz));
-    (rot, Vec3::new(sx, sy, sz))
+/// Convert classified snapshot items into render3d local-frame markers.
+pub fn object_markers_from_classified(
+    items: &[MstsClassifiedWorldItem],
+    base_y: f32,
+) -> Vec<ObjectMarker> {
+    items
+        .iter()
+        .map(|item| {
+            // `.w` es tile-local (X este, +Z "adelante"); render niega Z.
+            let position = Vec3::new(
+                item.position[0] as f32,
+                item.position[1] as f32 - base_y,
+                -(item.position[2] as f32),
+            );
+            ObjectMarker {
+                position,
+                rotation: item.rotation,
+                scale: item.scale,
+                kind: item.kind,
+                file_name: item.file_name.clone(),
+                section_idx: item.section_idx,
+                forest: item.forest.clone(),
+                hwater: item.hwater.clone(),
+                transfer: item.transfer.clone(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn chiltern_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern")
@@ -406,7 +182,7 @@ mod tests {
         let dir = chiltern_dir();
         // Tile poblado de Chiltern (w-006082+014925.w, ~2.3 MB).
         let (tx, tz) = (-6082, 14925);
-        if world_path(&dir, tx, tz).is_none() {
+        if openrailsrs_bevy_scenery::resolve_world_tile_path(&dir, tx, tz).is_none() {
             eprintln!("skip: .w de Chiltern no disponible");
             return;
         }
@@ -440,7 +216,7 @@ mod tests {
         use crate::terrain::load_tile_geometry;
         let dir = chiltern_dir();
         let (tx, tz) = (-6082, 14925);
-        if world_path(&dir, tx, tz).is_none() {
+        if openrailsrs_bevy_scenery::resolve_world_tile_path(&dir, tx, tz).is_none() {
             eprintln!("skip: .w no disponible");
             return;
         }

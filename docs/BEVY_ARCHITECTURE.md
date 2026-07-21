@@ -11,7 +11,7 @@ Relacionado: [`BEVY_MIGRATION_0_19.md`](BEVY_MIGRATION_0_19.md) · [`RENDER3D.md
 | Crate | Bevy | Rol |
 |-------|------|-----|
 | **`openrailsrs-or-shader`** | No | Clasificación shaders MSTS/OR, coordenadas MSTS→render |
-| **`openrailsrs-bevy-scenery`** | Sí | Materiales OR WGSL, texturas ACE, `MstsAssetPlugin` (#48), spawn WORLD/terreno, VSM |
+| **`openrailsrs-bevy-scenery`** | Sí | Materiales OR WGSL, texturas ACE, `MstsAssetPlugin` (#48), `terrain` mesh/chunk (#122), spawn WORLD, VSM |
 | **`openrailsrs-viewer3d`** | Sí | App jugable: live, cabina, HUD, cámara, floating origin |
 | **`openrailsrs-render3d`** | Sí | Validación visual OR: loading por tiles, stream, debug VSM |
 
@@ -36,7 +36,7 @@ flowchart TB
 
 | Plugin | Crate | Registra |
 |--------|-------|----------|
-| `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` (`MstsTileBundleAsset` #53) + materiales terreno/scenery/cab |
+| `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` (`MstsTileBundleAsset` #53) + materiales terreno/scenery/cab (`TerrainPipelineFlags` #121) |
 | `OrVsmPlugins` | bevy-scenery (feature `vsm`) | Pass momentos VSM, cascadas OR |
 | `ScenerySpawnPlugin` | bevy-scenery | `#52` sets Catalog→Ready, budgets, ciclo anti-doble-spawn, `ScenerySpawnProgress`; FSM local en cada app |
 | `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live; scenery en `OnEnter(Playing)` (#55) |

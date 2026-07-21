@@ -93,7 +93,15 @@ pub struct TextureEnvironment {
 }
 
 impl TextureEnvironment {
-    #[allow(dead_code)]
+    /// Verano diurno sin nieve — resolución “legacy” (todas las subcarpetas `TEXTURES/`).
+    pub fn summer_day() -> Self {
+        Self {
+            season: Season::Summer,
+            snow_weather: false,
+            night: false,
+        }
+    }
+
     pub fn from_cli(season: &str, weather: &str, night: bool) -> Self {
         Self {
             season: Season::parse(season),
@@ -529,6 +537,21 @@ pub fn resolve_shape_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<Pat
     None
 }
 
+/// Lookup por índice (basename lowercase) y fallback a [`resolve_shape_path_in_dirs`].
+pub fn resolve_shape_path_with_index(
+    index: &HashMap<String, PathBuf>,
+    dirs: &[&Path],
+    file_name: &str,
+) -> Option<PathBuf> {
+    let base = shape_file_basename(file_name);
+    if let Some(path) = index.get(&base.to_ascii_lowercase()) {
+        if path.is_file() {
+            return Some(path.clone());
+        }
+    }
+    resolve_shape_path_in_dirs(dirs, file_name)
+}
+
 /// Resuelve `TEXTURES/foo.ace` bajo una raíz (variantes estacionales / nocturnas).
 pub fn resolve_texture_path(
     route_dir: &Path,
@@ -547,7 +570,6 @@ pub fn resolve_texture_path(
     None
 }
 
-#[allow(dead_code)]
 pub fn resolve_texture_path_in_dirs(
     dirs: &[&Path],
     file_name: &str,
@@ -562,17 +584,22 @@ pub fn resolve_texture_path_in_dirs(
     None
 }
 
-#[allow(dead_code)]
-fn resolve_texture_path_legacy(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let env = TextureEnvironment {
-        season: Season::Summer,
-        snow_weather: false,
-        night: false,
-    };
+/// Resolución sin estación/noche (`TextureFlags::NONE` → también subcarpetas legacy).
+pub fn resolve_texture_path_legacy(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
     resolve_texture_path(
         route_dir,
         file_name,
-        &env,
+        &TextureEnvironment::summer_day(),
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
+}
+
+/// Como [`resolve_texture_path_legacy`] sobre varias raíces de assets.
+pub fn resolve_texture_path_legacy_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
+    resolve_texture_path_in_dirs(
+        dirs,
+        file_name,
+        &TextureEnvironment::summer_day(),
         TextureFlags::from_raw(TextureFlags::NONE),
     )
 }
@@ -634,6 +661,7 @@ pub fn load_texture_image_with_addr(path: &Path, tex_addr_mode: Option<i32>) -> 
     Some(ace_to_image_with_addr(&ace, tex_addr_mode))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DdsAlpha {
     NoneOr1Bit,
     Full,

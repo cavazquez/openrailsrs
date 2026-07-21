@@ -1,27 +1,33 @@
-//! Vía procedural desde el grafo `.tdb` (TrVectorSection), adaptado de `viewer3d`.
+//! Vía procedural desde el grafo `.tdb` — adapter sobre `bevy-scenery::spawn::tdb_track`.
 //!
-//! Emite pares de puntos Bevy world (X, Y, Z) por tramo de sección vectorial.
+//! Conserva carga de contexto, `TileHeightIndex` (altura/VSM) y proyección a escena.
+//! La recolección de chords, UKFS world placement y transforms métricos viven en el SSOT.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 
 #[cfg(test)]
 use std::path::PathBuf;
 
 use bevy::math::{EulerRot, Quat, Vec3};
+use openrailsrs_bevy_scenery::spawn::tdb_track::{
+    ChordCollectLimits, FocusQuery, MSTS_TILE_SIZE_M, TdbChord, collect_tdb_chords as collect_ssot,
+    procedural_fallback_shaped_chords, route_has_ukfs_tsection as route_has_ukfs_ssot,
+    shaped_chords_from_tdb, ukfs_placements_world, world_to_scene_xz as world_to_scene_xz_ssot,
+    world_to_tile_local as world_to_tile_local_ssot,
+    world_to_tile_local_centered as world_to_tile_local_centered_ssot,
+    scene_xz_to_world as scene_xz_to_world_ssot,
+};
 use openrailsrs_formats::{
-    TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
-    TrackVectorGeometry, TrackVectorPoint, msts_tile_x_index_for_coord,
+    TSectionCatalog, TrackDbFile, TrackNodeKind, TrackVectorGeometry, msts_tile_x_index_for_coord,
     msts_tile_z_index_for_coord,
 };
 
 use crate::track::TILE_SIZE_M;
 
-const DEFAULT_SECTION_LENGTH_M: f32 = 25.0;
 /// Radio de recolección extra alrededor del tile (m).
 const TILE_CHORD_MARGIN_M: f32 = 128.0;
-const JUNCTION_FACE_FALLBACK_DIST_M: f32 = 60.0;
-const SHORT_VECTOR_JUNCTION_FACE_FALLBACK_DIST_M: f32 = 30.0;
+const DEFAULT_SECTION_LENGTH_M: f32 = 25.0;
 
 #[derive(Clone, Debug)]
 pub struct TdbContext {
@@ -35,47 +41,6 @@ pub struct TdbSectionAnchor {
     pub bevy_x: f32,
     pub bevy_z: f32,
     pub heading_deg: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct TileFocus {
-    center: Vec3,
-    radius_m: f32,
-}
-
-impl TileFocus {
-    fn for_tile(tile_x: i32, tile_z: i32, extra_radius_m: f32) -> Self {
-        Self {
-            center: Vec3::new(
-                tile_x as f32 * TILE_SIZE_M,
-                0.0,
-                -(tile_z as f32 * TILE_SIZE_M),
-            ),
-            radius_m: TILE_SIZE_M * 0.5 + TILE_CHORD_MARGIN_M + extra_radius_m,
-        }
-    }
-
-    fn horizontal_distance(&self, p: Vec3) -> f32 {
-        let dx = p.x - self.center.x;
-        let dz = p.z - self.center.z;
-        (dx * dx + dz * dz).sqrt()
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-struct Chord {
-    start: Vec3,
-    end: Vec3,
-    node_id: u32,
-    shape_idx: u32,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct AnchorPoint {
-    world: Vec3,
-    node_id: u32,
-    section_index: usize,
-    shape_idx: u32,
 }
 
 pub fn load_tdb_context(route_dir: &Path) -> Option<TdbContext> {
@@ -223,6 +188,31 @@ fn load_track_db(route_dir: &Path) -> Option<TrackDbFile> {
     None
 }
 
+fn tile_focus(center_tile_x: i32, center_tile_z: i32, grid_radius: u32) -> FocusQuery {
+    let extra = grid_radius as f32 * TILE_SIZE_M;
+    FocusQuery::for_tile(
+        center_tile_x,
+        center_tile_z,
+        TILE_SIZE_M,
+        TILE_CHORD_MARGIN_M,
+        extra,
+    )
+}
+
+fn collect_tdb_chords_full(
+    ctx: &TdbContext,
+    center_tile_x: i32,
+    center_tile_z: i32,
+    grid_radius: u32,
+) -> Vec<TdbChord> {
+    collect_ssot(
+        &ctx.track_db,
+        &tile_focus(center_tile_x, center_tile_z, grid_radius),
+        Some(&ctx.tsection),
+        ChordCollectLimits::PER_VECTOR_ONLY,
+    )
+}
+
 /// Acordes `.tdb` cerca del tile `(center_x, center_z)` y tiles vecinos (`grid_radius`).
 pub fn collect_tdb_chords(
     ctx: &TdbContext,
@@ -230,14 +220,9 @@ pub fn collect_tdb_chords(
     center_tile_z: i32,
     grid_radius: u32,
 ) -> Vec<(Vec3, Vec3)> {
-    let extra = grid_radius as f32 * TILE_SIZE_M;
-    let focus = TileFocus::for_tile(center_tile_x, center_tile_z, extra);
-    let tsection = Some(&ctx.tsection);
-    let per_vector = collect_per_vector_chords(&ctx.track_db, &focus, tsection);
-    let bridges = collect_junction_bridge_chords(&ctx.track_db, &focus, &per_vector);
-    dedupe_chords(per_vector.into_iter().chain(bridges).collect())
+    collect_tdb_chords_full(ctx, center_tile_x, center_tile_z, grid_radius)
         .into_iter()
-        .map(|c| (c.start, c.end))
+        .map(|c| (c.start_world, c.end_world))
         .collect()
 }
 
@@ -248,14 +233,10 @@ pub fn collect_tdb_shaped_chords(
     center_tile_z: i32,
     grid_radius: u32,
 ) -> Vec<(Vec3, Vec3, u32)> {
-    let extra = grid_radius as f32 * TILE_SIZE_M;
-    let focus = TileFocus::for_tile(center_tile_x, center_tile_z, extra);
-    let tsection = Some(&ctx.tsection);
-    let per_vector = collect_per_vector_chords(&ctx.track_db, &focus, tsection);
-    let bridges = collect_junction_bridge_chords(&ctx.track_db, &focus, &per_vector);
-    dedupe_chords(per_vector.into_iter().chain(bridges).collect())
+    let chords = collect_tdb_chords_full(ctx, center_tile_x, center_tile_z, grid_radius);
+    shaped_chords_from_tdb(&chords, true)
         .into_iter()
-        .map(|c| (c.start, c.end, c.shape_idx))
+        .filter(|(_, _, shape_idx)| *shape_idx != 0)
         .collect()
 }
 
@@ -289,7 +270,7 @@ pub fn tdb_procedural_segments_for_tile(
 
 /// Rutas MSTS nativas con catálogo UKFS en `tsection.dat`.
 pub fn route_has_ukfs_tsection(tsection: &TSectionCatalog) -> bool {
-    tsection.shapes.len() > 500
+    route_has_ukfs_ssot(tsection)
 }
 
 /// Acordes que no llevan mesh UKFS (p. ej. `RoadShape`) → fallback procedural.
@@ -297,531 +278,30 @@ pub fn tdb_procedural_chords_for_tile(
     shaped_chords: &[(Vec3, Vec3, u32)],
     tsection: &TSectionCatalog,
 ) -> Vec<(Vec3, Vec3, u32)> {
-    shaped_chords
-        .iter()
-        .copied()
-        .filter(|(_, _, shape_idx)| {
-            *shape_idx != 0
-                && (tsection.is_road_shape(*shape_idx)
-                    || tsection.shape_file_name(*shape_idx).is_none())
-        })
-        .collect()
-}
-
-fn collect_per_vector_chords(
-    tdb: &TrackDbFile,
-    focus: &TileFocus,
-    tsection: Option<&TSectionCatalog>,
-) -> Vec<Chord> {
-    let mut out = Vec::new();
-    for node in &tdb.nodes {
-        let TrackNodeKind::Vector {
-            length_m: node_length_m,
-            sections,
-            geometry,
-            ..
-        } = &node.kind
-        else {
-            continue;
-        };
-        let sections: Vec<_> = sections
-            .iter()
-            .copied()
-            .filter(|s| s.shape_idx != 0)
-            .collect();
-        if sections.is_empty() {
-            continue;
-        }
-        out.extend(collect_vector_section_chords(
-            node.id,
-            &sections,
-            *geometry,
-            *node_length_m,
-            focus,
-            tsection,
-        ));
-    }
-    out
-}
-
-#[allow(clippy::too_many_arguments)]
-fn collect_vector_section_chords(
-    node_id: u32,
-    sections: &[TrVectorSectionRecord],
-    geometry: Option<TrackVectorGeometry>,
-    node_length_m: f64,
-    focus: &TileFocus,
-    tsection: Option<&TSectionCatalog>,
-) -> Vec<Chord> {
-    let mut chain_hint = Some(focus.center);
-    let mut out = Vec::new();
-    for (section_index, section) in sections.iter().enumerate() {
-        let start = section_world_vec3(*section, chain_hint);
-        let end = if section_index + 1 < sections.len() {
-            section_world_vec3(sections[section_index + 1], Some(start))
-        } else if let Some(exit) = single_section_end_world(
-            *section,
-            geometry,
-            node_length_m,
-            false,
-            Some(start),
-            tsection,
-            sections.len(),
-        ) {
-            exit
-        } else {
-            continue;
-        };
-        chain_hint = Some(end);
-        if focus.horizontal_distance(start) > focus.radius_m
-            && focus.horizontal_distance(end) > focus.radius_m
-        {
-            continue;
-        }
-        if chord_length_xz(start, end) < 0.5 {
-            continue;
-        }
-        out.push(Chord {
-            start,
-            end,
-            node_id,
-            shape_idx: section.shape_idx,
-        });
-    }
-    out
-}
-
-fn dedupe_chords(chords: Vec<Chord>) -> Vec<Chord> {
-    let mut seen = HashSet::new();
-    chords
-        .into_iter()
-        .filter(|c| {
-            let key = (
-                (c.start.x * 2.0).round() as i32,
-                (c.start.z * 2.0).round() as i32,
-                (c.end.x * 2.0).round() as i32,
-                (c.end.z * 2.0).round() as i32,
-            );
-            seen.insert(key)
-        })
-        .collect()
-}
-
-fn section_world_vec3(section: TrVectorSectionRecord, near_hint: Option<Vec3>) -> Vec3 {
-    let (dx, _, dz) = section.start.bevy_position();
-    let (near_x, near_z) = near_hint.map(|h| (h.x, h.z)).unwrap_or((dx, dz));
-    let (x, y, z) = section.bevy_position_nearest_to(
-        near_x,
-        near_z,
-        Some((section.header_tile_x, section.header_tile_z)),
-    );
-    Vec3::new(x, y, z)
-}
-
-fn point_world_vec3(
-    point: TrackVectorPoint,
-    header_tile: (i32, i32),
-    near_hint: Option<Vec3>,
-) -> Vec3 {
-    let (dx, _, dz) = point.bevy_position();
-    let (near_x, near_z) = near_hint.map(|h| (h.x, h.z)).unwrap_or((dx, dz));
-    let (x, y, z) =
-        point.bevy_position_nearest_to(near_x, near_z, Some(header_tile), Some(header_tile));
-    Vec3::new(x, y, z)
-}
-
-fn chord_length_xz(from: Vec3, to: Vec3) -> f32 {
-    let dx = to.x - from.x;
-    let dz = to.z - from.z;
-    (dx * dx + dz * dz).sqrt()
-}
-
-fn single_section_end_world(
-    section: TrVectorSectionRecord,
-    geometry: Option<TrackVectorGeometry>,
-    node_length_m: f64,
-    reversed: bool,
-    near_hint: Option<Vec3>,
-    tsection: Option<&TSectionCatalog>,
-    section_count: usize,
-) -> Option<Vec3> {
-    let start = section_world_vec3(section, near_hint);
-    if let Some(geom) = geometry {
-        let header = (section.header_tile_x, section.header_tile_z);
-        let end_pt = point_world_vec3(geom.end, header, near_hint);
-        if chord_length_xz(start, end_pt) >= 0.5 {
-            return Some(end_pt);
-        }
-    }
-    let heading = section.heading_deg()?;
-    let len = section_shape_length_m(tsection, section.shape_idx, node_length_m, section_count);
-    let h = if reversed { heading + 180.0 } else { heading };
-    Some(end_from_heading(start, h, len))
-}
-
-fn section_shape_length_m(
-    tsection: Option<&TSectionCatalog>,
-    shape_idx: u32,
-    node_length_m: f64,
-    section_count: usize,
-) -> f32 {
-    if let Some(cat) = tsection {
-        if let Some(dims) = cat.procedural_dims(shape_idx) {
-            if dims.length_m > 0.5 {
-                return dims.length_m as f32;
-            }
-        }
-    }
-    if section_count <= 1 && node_length_m > 0.5 {
-        return node_length_m as f32;
-    }
-    if section_count > 1 && node_length_m > 0.5 {
-        return (node_length_m / section_count as f64) as f32;
-    }
-    DEFAULT_SECTION_LENGTH_M
-}
-
-fn end_from_heading(start: Vec3, heading_deg: f64, length_m: f32) -> Vec3 {
-    let yaw = heading_deg.to_radians() as f32;
-    start + Vec3::new(yaw.sin() * length_m, 0.0, yaw.cos() * length_m)
-}
-
-fn collect_junction_bridge_chords(
-    tdb: &TrackDbFile,
-    focus: &TileFocus,
-    per_vector: &[Chord],
-) -> Vec<Chord> {
-    let vector_ids: HashSet<u32> = per_vector.iter().map(|c| c.node_id).collect();
-    if vector_ids.is_empty() {
-        return Vec::new();
-    }
-    let nodes_by_id: HashMap<u32, &TrackDbNode> = tdb.nodes.iter().map(|n| (n.id, n)).collect();
-    let mut seen_pairs = HashSet::new();
-    let mut out = Vec::new();
-
-    for &a in &vector_ids {
-        for b in connected_vector_neighbors(a, &vector_ids, &nodes_by_id) {
-            let pair = if a < b { (a, b) } else { (b, a) };
-            if !seen_pairs.insert(pair) {
-                continue;
-            }
-            let Some((side_a, anchor_a, side_b)) = facing_junction_endpoints(a, b, &nodes_by_id)
-            else {
-                continue;
-            };
-            if side_a.distance(side_b) < 0.25 {
-                continue;
-            }
-            if chord_length_xz(side_a, side_b) < 0.5 {
-                continue;
-            }
-            if focus.horizontal_distance(side_a) > focus.radius_m
-                && focus.horizontal_distance(side_b) > focus.radius_m
-            {
-                continue;
-            }
-            out.push(Chord {
-                start: side_a,
-                end: side_b,
-                node_id: anchor_a.node_id,
-                shape_idx: anchor_a.shape_idx,
-            });
-        }
-    }
-    out
-}
-
-fn connected_vector_neighbors(
-    vector_id: u32,
-    vector_ids: &HashSet<u32>,
-    nodes_by_id: &HashMap<u32, &TrackDbNode>,
-) -> Vec<u32> {
-    let Some(node) = nodes_by_id.get(&vector_id) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for pin in &node.pin_refs {
-        if pin.node_id != vector_id && vector_ids.contains(&pin.node_id) {
-            out.push(pin.node_id);
-        }
-        let Some(pin_node) = nodes_by_id.get(&pin.node_id) else {
-            continue;
-        };
-        for next in &pin_node.pin_refs {
-            if next.node_id != vector_id && vector_ids.contains(&next.node_id) {
-                out.push(next.node_id);
-            }
-        }
-    }
-    out
-}
-
-fn facing_junction_endpoints(
-    a: u32,
-    b: u32,
-    nodes_by_id: &HashMap<u32, &TrackDbNode>,
-) -> Option<(Vec3, AnchorPoint, Vec3)> {
-    let node_a = nodes_by_id.get(&a)?;
-    let node_b = nodes_by_id.get(&b)?;
-
-    if let Some(pin_a) = node_a.pin_refs.iter().position(|p| p.node_id == b) {
-        let pin_b = node_b.pin_refs.iter().position(|p| p.node_id == a)?;
-        let hint = direct_link_hint(node_a, pin_a, node_b, pin_b);
-        let anchor_a = nearest_oriented_anchor(node_a, pin_a, hint)?;
-        let anchor_b = nearest_oriented_anchor(node_b, pin_b, hint)?;
-        return Some((anchor_a.world, anchor_a, anchor_b.world));
-    }
-
-    for (pin_a_idx, pin_a) in node_a.pin_refs.iter().enumerate() {
-        let Some(mid) = nodes_by_id.get(&pin_a.node_id) else {
-            continue;
-        };
-        if !matches!(mid.kind, TrackNodeKind::Junction { .. }) {
-            continue;
-        }
-        if !node_b.pin_refs.iter().any(|p| p.node_id == pin_a.node_id) {
-            continue;
-        }
-        let pin_b_idx = node_b
-            .pin_refs
-            .iter()
-            .position(|p| p.node_id == pin_a.node_id)?;
-        let hint = junction_link_hint(node_a, pin_a_idx, node_b, pin_b_idx, mid)?;
-        let junction_point = mid.position?;
-        let anchor_a = nearest_junction_face_anchor(node_a, pin_a_idx, junction_point, hint)?;
-        let anchor_b = nearest_junction_face_anchor(node_b, pin_b_idx, junction_point, hint)?;
-        return Some((anchor_a.world, anchor_a, anchor_b.world));
-    }
-    None
-}
-
-fn junction_link_hint(
-    node_a: &TrackDbNode,
-    pin_a: usize,
-    node_b: &TrackDbNode,
-    pin_b: usize,
-    junction: &TrackDbNode,
-) -> Option<Vec3> {
-    if let Some(j) = node_world_position(junction) {
-        return Some(j);
-    }
-    let a0 = vector_oriented_anchors(node_a, pin_a, None, None)
-        .into_iter()
-        .next()
-        .map(|a| a.world);
-    let b0 = vector_oriented_anchors(node_b, pin_b, None, None)
-        .into_iter()
-        .next()
-        .map(|a| a.world);
-    match (a0, b0) {
-        (Some(wa), Some(wb)) => Some((wa + wb) * 0.5),
-        (Some(wa), None) => Some(wa),
-        (None, Some(wb)) => Some(wb),
-        (None, None) => None,
-    }
-}
-
-fn direct_link_hint(
-    node_a: &TrackDbNode,
-    pin_a: usize,
-    node_b: &TrackDbNode,
-    pin_b: usize,
-) -> Vec3 {
-    let mut pts = Vec::new();
-    if let Some(a) = vector_oriented_anchors(node_a, pin_a, None, None)
-        .into_iter()
-        .next()
-    {
-        pts.push(a.world);
-    }
-    if let Some(b) = vector_oriented_anchors(node_b, pin_b, None, None)
-        .into_iter()
-        .next()
-    {
-        pts.push(b.world);
-    }
-    if pts.is_empty() {
-        Vec3::ZERO
-    } else {
-        pts.iter().copied().sum::<Vec3>() / pts.len() as f32
-    }
-}
-
-fn node_world_position(node: &TrackDbNode) -> Option<Vec3> {
-    node.position.map(|p| {
-        let (x, y, z) = p.bevy_position();
-        Vec3::new(x, y, z)
-    })
-}
-
-fn nearest_oriented_anchor(
-    node: &TrackDbNode,
-    entry_pin: usize,
-    near: Vec3,
-) -> Option<AnchorPoint> {
-    vector_oriented_anchors(node, entry_pin, Some(near), None)
-        .into_iter()
-        .min_by(|a, b| {
-            a.world
-                .distance(near)
-                .partial_cmp(&b.world.distance(near))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-}
-
-fn nearest_junction_face_anchor(
-    node: &TrackDbNode,
-    entry_pin: usize,
-    junction_point: TrackVectorPoint,
-    hint: Vec3,
-) -> Option<AnchorPoint> {
-    let TrackNodeKind::Vector { sections, .. } = &node.kind else {
-        return nearest_oriented_anchor(node, entry_pin, hint);
-    };
-    let fallback_dist = if sections.len() <= 2 {
-        SHORT_VECTOR_JUNCTION_FACE_FALLBACK_DIST_M
-    } else {
-        JUNCTION_FACE_FALLBACK_DIST_M
-    };
-    let (jx, _, jz) = junction_point.bevy_position();
-    let near_hint = Some(Vec3::new(jx, hint.y, jz));
-    let ref_tile = Some(junction_point);
-    let mut best: Option<AnchorPoint> = None;
-    let mut best_dist = f32::INFINITY;
-    for anchor in vector_oriented_anchors(node, entry_pin, near_hint, None) {
-        let section = sections.get(anchor.section_index).copied();
-        let mut worlds = vec![anchor.world];
-        if let Some(section) = section {
-            worlds.extend(
-                section
-                    .bevy_position_candidates(ref_tile)
-                    .into_iter()
-                    .map(|(x, y, z)| Vec3::new(x, y, z)),
-            );
-        }
-        for world in worlds {
-            let dist = world.distance(hint);
-            if dist < best_dist {
-                best_dist = dist;
-                best = Some(AnchorPoint {
-                    world,
-                    node_id: anchor.node_id,
-                    section_index: anchor.section_index,
-                    shape_idx: anchor.shape_idx,
-                });
-            }
-        }
-    }
-    if let Some(anchor) = best {
-        if best_dist <= fallback_dist {
-            return Some(anchor);
-        }
-        return Some(AnchorPoint {
-            world: hint,
-            node_id: anchor.node_id,
-            section_index: anchor.section_index,
-            shape_idx: anchor.shape_idx,
-        });
-    }
-    nearest_oriented_anchor(node, entry_pin, hint)
-}
-
-fn vector_oriented_anchors(
-    node: &TrackDbNode,
-    entry_pin: usize,
-    near_hint: Option<Vec3>,
-    tsection: Option<&TSectionCatalog>,
-) -> Vec<AnchorPoint> {
-    let TrackNodeKind::Vector {
-        sections,
-        geometry,
-        length_m: node_length_m,
-        ..
-    } = &node.kind
-    else {
-        return Vec::new();
-    };
-
-    let sections: Vec<_> = sections
-        .iter()
-        .copied()
-        .filter(|s| s.shape_idx != 0)
-        .collect();
-    if sections.is_empty() {
-        return Vec::new();
-    }
-
-    let forward: Vec<(usize, TrVectorSectionRecord)> = sections.into_iter().enumerate().collect();
-    let ordered: Vec<(usize, TrVectorSectionRecord)> = if entry_pin == 0 {
-        forward
-    } else {
-        forward.into_iter().rev().collect()
-    };
-
-    let mut out = Vec::new();
-    let mut chain_hint = near_hint;
-    for (idx, section) in &ordered {
-        let world = section_world_vec3(*section, chain_hint);
-        out.push(AnchorPoint {
-            world,
-            node_id: node.id,
-            section_index: *idx,
-            shape_idx: section.shape_idx,
-        });
-        chain_hint = Some(world);
-    }
-
-    if let Some((idx, section)) = ordered.last().copied() {
-        let section_count = ordered.len();
-        if let Some(exit) = single_section_end_world(
-            section,
-            *geometry,
-            *node_length_m,
-            entry_pin != 0,
-            chain_hint,
-            tsection,
-            section_count,
-        ) && out
-            .last()
-            .is_none_or(|last| last.world.distance(exit) > 0.5)
-        {
-            out.push(AnchorPoint {
-                world: exit,
-                node_id: node.id,
-                section_index: idx,
-                shape_idx: section.shape_idx,
-            });
-        }
-    }
-    out
+    procedural_fallback_shaped_chords(shaped_chords, tsection)
 }
 
 /// Convierte posición Bevy world → coords locales del tile (origen en esquina SW).
 pub fn world_to_tile_local(world: Vec3, tile_x: i32, tile_z: i32) -> (f32, f32) {
-    let cx = tile_x as f32 * TILE_SIZE_M;
-    let cz = -(tile_z as f32 * TILE_SIZE_M);
-    (world.x - cx, world.z - cz)
+    world_to_tile_local_ssot(world, tile_x, tile_z, TILE_SIZE_M)
 }
 
 /// Convierte posición Bevy world → coords locales centradas del tile (espacio terreno/objetos).
 pub fn world_to_tile_local_centered(world: Vec3, tile_x: i32, tile_z: i32) -> (f32, f32) {
-    const HALF: f32 = crate::track::TILE_SIZE_M * 0.5;
-    let (lx, lz) = world_to_tile_local(world, tile_x, tile_z);
-    (lx - HALF, lz - HALF)
+    world_to_tile_local_centered_ssot(world, tile_x, tile_z, TILE_SIZE_M)
 }
 
 /// World Bevy → XZ en espacio de escena (origen = centro del tile focal).
 pub fn world_to_scene_xz(world: Vec3, center_tile_x: i32, center_tile_z: i32) -> (f32, f32) {
-    world_to_tile_local_centered(world, center_tile_x, center_tile_z)
+    world_to_scene_xz_ssot(world, center_tile_x, center_tile_z, TILE_SIZE_M)
 }
 
 /// XZ de escena → world Bevy (inverso de [`world_to_scene_xz`]).
 pub fn scene_xz_to_world(x: f32, z: f32, center_tile_x: i32, center_tile_z: i32) -> (f32, f32) {
-    const HALF: f32 = crate::track::TILE_SIZE_M * 0.5;
-    let cx = center_tile_x as f32 * TILE_SIZE_M;
-    let cz = -(center_tile_z as f32 * TILE_SIZE_M);
-    (x + cx + HALF, z + cz + HALF)
+    scene_xz_to_world_ssot(x, z, center_tile_x, center_tile_z, TILE_SIZE_M)
 }
+
+const _: () = assert!(TILE_SIZE_M == MSTS_TILE_SIZE_M);
 
 /// Referencia vertical de escena para colocar vía `.tdb`.
 ///
@@ -1033,41 +513,19 @@ pub fn tdb_ukfs_instances_scene(
     heights: &TileHeightIndex,
 ) -> Vec<TdbUkfsInstance> {
     let mut out = Vec::new();
-    for (start, end, shape_idx) in shaped_chords {
-        if *shape_idx == 0 || tsection.is_road_shape(*shape_idx) {
-            continue;
-        }
-        if tsection.shape_file_name(*shape_idx).is_none() {
-            continue;
-        }
-        let dx = end.x - start.x;
-        let dz = end.z - start.z;
-        let chord_len = (dx * dx + dz * dz).sqrt();
-        if chord_len < 0.5 {
-            continue;
-        }
-        let dir = Vec3::new(dx / chord_len, 0.0, dz / chord_len);
-        let heading = dx.atan2(dz);
-        let rot = Quat::from_rotation_y(heading);
-        let section_len = tsection
-            .procedural_dims(*shape_idx)
-            .map(|d| d.length_m as f32)
-            .filter(|l| *l > 0.5)
-            .unwrap_or(25.0);
-        let mut dist = 0.0f32;
-        while dist + 0.25 <= chord_len {
-            let t = dist / chord_len;
-            let wx = start.x + dir.x * dist;
-            let wy = start.y + (end.y - start.y) * t;
-            let wz = start.z + dir.z * dist;
-            let (sx, sz) = world_to_scene_xz(Vec3::new(wx, 0.0, wz), center_tile.0, center_tile.1);
-            let y = heights.rail_y_on_chord(Vec3::new(wx, wy, wz), *start, *end, center_tile);
+    for &(start, end, shape_idx) in shaped_chords {
+        for p in ukfs_placements_world(
+            &[(start, end, shape_idx)],
+            tsection,
+            DEFAULT_SECTION_LENGTH_M,
+        ) {
+            let (sx, sz) = world_to_scene_xz(p.position, center_tile.0, center_tile.1);
+            let y = heights.rail_y_on_chord(p.position, start, end, center_tile);
             out.push(TdbUkfsInstance {
-                section_idx: *shape_idx,
+                section_idx: p.shape_idx,
                 position: Vec3::new(sx, y, sz),
-                rotation: rot,
+                rotation: p.rotation,
             });
-            dist += section_len;
         }
     }
     out
@@ -1122,6 +580,16 @@ mod tests {
     use super::*;
     use crate::terrain::load_tile_geometry;
     use crate::track::build_tdb_track_ribbon;
+    use openrailsrs_bevy_scenery::spawn::tdb_track::tdb_chord_geometry_hash;
+
+    #[test]
+    fn ssot_chord_hash_matches_adapter_pairs() {
+        // Synthetic: empty TDB yields empty hash consistently.
+        let tdb = TrackDbFile::default();
+        let focus = FocusQuery::new(Vec3::ZERO, 100.0);
+        let chords = collect_ssot(&tdb, &focus, None, ChordCollectLimits::PER_VECTOR_ONLY);
+        assert_eq!(tdb_chord_geometry_hash(&chords), tdb_chord_geometry_hash(&[]));
+    }
 
     #[test]
     fn watersnake_center_tile_ribbon_supports_default_camera() {

@@ -9,6 +9,7 @@ use bevy::light::NotShadowCaster;
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::{SceneSunLight, directional_light_from_sun, sun_transform};
 
 use crate::launch::{
     LIVE_GROUND_HALF_MAX_M, TRACK_DEV_GROUND_HALF_M, ViewerLaunchOpts, ViewerSceneryMode,
@@ -87,14 +88,11 @@ pub fn spawn_ground_and_lights(
     }
 
     let outdoor = opts.live || !terrain.is_empty();
-    let illuminance = if outdoor { 75_000.0 } else { 10_000.0 };
-    let light_pos = center + Vec3::new(half * 0.2, half * 0.4, half * 0.3);
+    // Shared daylight defaults (#124); indoor corridor keeps a dimmer fill.
+    let mut sun = SceneSunLight::day();
+    sun.illuminance = if outdoor { 75_000.0 } else { 10_000.0 };
     commands.spawn((
-        DirectionalLight {
-            illuminance,
-            shadow_maps_enabled: true,
-            ..default()
-        },
+        directional_light_from_sun(&sun, true),
         CascadeShadowConfigBuilder {
             num_cascades: 3,
             minimum_distance: 0.1,
@@ -103,7 +101,7 @@ pub fn spawn_ground_and_lights(
             overlap_proportion: 0.2,
         }
         .build(),
-        Transform::from_translation(light_pos).looking_at(center, Vec3::Y),
+        sun_transform(&sun),
         Name::new("sun"),
     ));
     commands.insert_resource(DirectionalLightShadowMap { size: 2048 });

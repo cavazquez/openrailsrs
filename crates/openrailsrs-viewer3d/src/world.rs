@@ -1,4 +1,10 @@
 //! MSTS world tiles (`.w`) as coloured placeholder boxes (order 5 / issue #8).
+//!
+//! TODO(#112): materialize [`WorldScene`] / [`WorldObject`] from
+//! `openrailsrs_bevy_scenery::MstsTileSnapshot` (classify + coords), keeping
+//! RouteFocus / [`WorldItemWindow`] filtering as a viewer-only adapter.
+//! Stream hot path uses [`crate::tile_bundle`] / AssetServer (#111); bootstrap
+//! (`load_world_from_route_dir_*`) still parses via `WorldFile::from_path`.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -12,8 +18,11 @@ use openrailsrs_bevy_scenery::shapes::{
     build_mesh_parts_from_shape_lod, lod_level_index_for_distance, primary_texture_filename,
     shape_has_loop_animation,
 };
+use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TileBound, TileCoord, TILE_SIZE_M};
 use openrailsrs_bevy_scenery::{
-    LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
+    FnPlacementAdapter, LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
+    WorldObjectPlacement, object_placement, plan_shape_part_spawns, resolve_shape_parts,
+    world_item_placement,
 };
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
@@ -22,8 +31,10 @@ use openrailsrs_formats::{
 
 use crate::camera::CameraFollowMode;
 use crate::coordinates::{
-    matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy, qdir_to_quat,
+    matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy,
 };
+#[cfg(test)]
+use crate::coordinates::qdir_to_quat;
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
@@ -33,11 +44,17 @@ use crate::shapes::{
     shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
 };
 
-/// WORLD-tile membership for scenery unload (shapes LOD, Transfer, road cars, …) (#62).
-#[derive(Component, Clone, Copy, Debug)]
-pub struct WorldTileBound {
-    pub tile_x: i32,
-    pub tile_z: i32,
+/// WORLD-tile membership for scenery unload (shapes LOD, Transfer, road cars, …) (#62 / #113).
+pub type WorldTileBound = TileBound;
+
+/// Chebyshev stream policy from viewing metres (load = radius + one tile; hysteresis env/CLI).
+pub fn view_stream_window_policy(view_radius_m: f32) -> StreamWindowPolicy {
+    let tile = TILE_SIZE_M;
+    StreamWindowPolicy::chebyshev_from_meters(
+        view_radius_m + tile,
+        crate::launch::VIEW_UNLOAD_HYSTERESIS_M,
+        tile,
+    )
 }
 
 /// Tracks which LOD level a spawned world shape part is using (runtime swap).
@@ -100,8 +117,9 @@ pub struct ShapeInstancePlacement {
     pub tile_z: i32,
 }
 
-/// Session-long WORLD shape/texture cache shared across tile streams (#50).
+/// Session-long WORLD shape/texture cache shared across tile streams (#50 / #114).
 ///
+/// Shape GPU assets use shared [`SessionShapeCache`] (hit/miss/ref/evict telemetry).
 /// Also backs runtime LOD swaps (`update_world_scenery_lod`). Unused entries are
 /// evicted on tile unload so GPU `Assets` can drop (#51).
 #[derive(Resource, Default)]
@@ -109,12 +127,23 @@ pub struct WorldShapeLodCache {
     pub shapes: HashMap<PathBuf, ShapeFile>,
     pub assets_by_lod: HashMap<PathBuf, Vec<ShapeRenderAsset>>,
     /// Primary spawn assets (Bevy handles) keyed by canonical `.s` path.
-    pub shape_assets: HashMap<PathBuf, ShapeRenderAsset>,
+    pub shape_assets: openrailsrs_bevy_scenery::SessionShapeCache<PathBuf, ShapeRenderAsset>,
     /// Decoded ACE → `Handle<Image>` shared across builds/streams.
     pub texture_images: HashMap<(PathBuf, i32), Handle<Image>>,
-    pub session_hits: u64,
-    pub session_misses: u64,
-    pub session_evictions: u64,
+}
+
+impl WorldShapeLodCache {
+    pub fn session_hits(&self) -> u64 {
+        self.shape_assets.hits()
+    }
+
+    pub fn session_misses(&self) -> u64 {
+        self.shape_assets.misses()
+    }
+
+    pub fn session_evictions(&self) -> u64 {
+        self.shape_assets.evictions()
+    }
 }
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
@@ -553,17 +582,7 @@ pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
 }
 
 // `qdir_to_quat` and `matrix3x3_to_rotation_scale` are imported from `crate::coordinates`.
-
-fn world_item_transform(item: &WorldItem) -> (Quat, Vec3) {
-    if let Some(m) = item.matrix3x3() {
-        return matrix3x3_to_rotation_scale(&m);
-    }
-    let rot = item
-        .qdirection()
-        .map(|q| qdir_to_quat(&q))
-        .unwrap_or(Quat::IDENTITY);
-    (rot, Vec3::ONE)
-}
+// `.w` placement: shared [`world_item_placement`] (#115).
 
 fn object_label(item: &WorldItem) -> String {
     item.file_name()
@@ -580,16 +599,17 @@ fn try_object_from_item(
     item: &WorldItem,
     window: Option<WorldItemWindow>,
 ) -> Result<Option<WorldObject>, ()> {
-    let Some(local) = item.position() else {
+    let Some(placement) = world_item_placement(tile_x, tile_z, item) else {
         return Ok(None);
     };
-    let position = msts_to_bevy(tile_x, tile_z, local);
+    let position = placement.pose.position;
     if let Some(window) = window {
         if !window.contains_xz(position) {
             return Err(());
         }
     }
-    let (rotation, scale) = world_item_transform(item);
+    let rotation = placement.pose.rotation;
+    let scale = placement.pose.scale;
     let forest = match item {
         WorldItem::Forest {
             uid,
@@ -876,6 +896,16 @@ fn append_world_tile_file(
     item_window: Option<WorldItemWindow>,
 ) -> Result<(), String> {
     let world = WorldFile::from_path(path).map_err(|e| e.to_string())?;
+    append_world_tile(scene, &world, item_window);
+    Ok(())
+}
+
+/// Append objects from an already-parsed [`WorldFile`] (AssetServer / bootstrap).
+pub(crate) fn append_world_tile(
+    scene: &mut WorldScene,
+    world: &WorldFile,
+    item_window: Option<WorldItemWindow>,
+) {
     let key = (world.tile_x, world.tile_z);
     if scene.loaded_tiles.insert(key) {
         scene.tiles_loaded = scene.loaded_tiles.len();
@@ -887,7 +917,6 @@ fn append_world_tile_file(
             Err(()) => scene.items_skipped_out_of_window += 1,
         }
     }
-    Ok(())
 }
 
 fn discover_world_files(route_dir: &Path) -> Vec<PathBuf> {
@@ -1329,8 +1358,8 @@ fn hydrate_spawn_from_session(progress: &mut WorldSpawnProgress, session: &mut W
     let mut pending = Vec::with_capacity(progress.shape_load_paths.len());
     let mut hits = 0usize;
     for path in std::mem::take(&mut progress.shape_load_paths) {
-        if let Some(asset) = session.shape_assets.get(&path) {
-            progress.shape_cache.insert(path.clone(), asset.clone());
+        if let Some(asset) = session.shape_assets.get_hit(&path).cloned() {
+            progress.shape_cache.insert(path.clone(), asset);
             if let Some(shape) = session.shapes.get(&path) {
                 progress
                     .parsed_shape_files
@@ -1340,10 +1369,9 @@ fn hydrate_spawn_from_session(progress: &mut WorldSpawnProgress, session: &mut W
                 progress.shape_lod_assets.insert(path.clone(), lods.clone());
             }
             hits += 1;
-            session.session_hits += 1;
         } else {
             pending.push(path);
-            session.session_misses += 1;
+            session.shape_assets.record_miss();
         }
     }
     progress.cache_hits = hits;
@@ -1388,7 +1416,7 @@ fn release_shape_render_asset_gpu(
     }
 }
 
-/// Drop session entries (and GPU assets) for shapes with no remaining live entities (#51).
+/// Drop session entries (and GPU assets) for shapes with no remaining live entities (#51 / #114).
 fn evict_unreferenced_world_shapes(
     session: &mut WorldShapeLodCache,
     live_shape_paths: &HashSet<PathBuf>,
@@ -1396,25 +1424,18 @@ fn evict_unreferenced_world_shapes(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
 ) -> (usize, usize) {
-    let stale: Vec<PathBuf> = session
-        .shape_assets
-        .keys()
-        .filter(|path| !live_shape_paths.contains(*path))
-        .cloned()
-        .collect();
+    let stale = session.shape_assets.evict_except(live_shape_paths);
     if stale.is_empty() {
         return (0, 0);
     }
 
     let mut shapes_evicted = 0usize;
-    for path in stale {
-        if let Some(asset) = session.shape_assets.remove(&path) {
-            release_shape_render_asset_gpu(&asset, meshes, materials);
-            shapes_evicted += 1;
-        }
+    for (path, asset) in stale {
+        release_shape_render_asset_gpu(&asset, meshes, materials);
+        shapes_evicted += 1;
         if let Some(lods) = session.assets_by_lod.remove(&path) {
-            for asset in lods {
-                release_shape_render_asset_gpu(&asset, meshes, materials);
+            for lod_asset in lods {
+                release_shape_render_asset_gpu(&lod_asset, meshes, materials);
             }
         }
         session.shapes.remove(&path);
@@ -1447,7 +1468,6 @@ fn evict_unreferenced_world_shapes(
         }
     }
 
-    session.session_evictions += shapes_evicted as u64;
     (shapes_evicted, textures_evicted)
 }
 
@@ -1875,27 +1895,43 @@ fn append_shape_spawn_entries_for_transforms(
             }
         }
     } else {
+        // Static non-instanced path: shared plan core (#115). LOD/instancing/anim stay above.
         *shape_mesh_count += asset.parts.len() * placements.len();
         for inst in placements {
-            let tf = view_transform(inst.transform, origin);
-            let bound = WorldTileBound {
-                tile_x: inst.tile_x,
-                tile_z: inst.tile_z,
-            };
-            for (part_index, part) in asset.parts.iter().enumerate() {
+            let placement = object_placement(
+                inst.transform.translation,
+                inst.transform.rotation,
+                inst.transform.scale,
+                inst.tile_x,
+                inst.tile_z,
+            );
+            let adapter =
+                FnPlacementAdapter(|p: &WorldObjectPlacement| view_transform(p.transform(), origin));
+            let parts = resolve_shape_parts(
+                shape_path,
+                asset.parts.iter().enumerate().map(|(part_index, part)| {
+                    (
+                        part_index,
+                        part.prim_state_idx,
+                        part.mesh.clone(),
+                        part.material.clone(),
+                    )
+                }),
+            );
+            for planned in plan_shape_part_spawns(&parts, placement, &adapter) {
                 spawn_queue.push((
-                    tf,
-                    Mesh3d(part.mesh.clone()),
-                    MeshMaterial3d(part.material.clone()),
+                    planned.transform,
+                    Mesh3d(planned.part.mesh),
+                    MeshMaterial3d(planned.part.material),
                     Name::new("world:mesh"),
                     WorldSceneryLod {
                         enabled: true,
                         shape_path: shape_path.to_path_buf(),
-                        prim_state_idx: part.prim_state_idx,
-                        part_index,
+                        prim_state_idx: planned.part.id.prim_state_idx,
+                        part_index: planned.part.id.part_index,
                         lod_idx: initial_lod_idx,
                     },
-                    bound,
+                    planned.placement.tile,
                 ));
             }
         }
@@ -2345,10 +2381,14 @@ fn log_world_spawn_summary(
 }
 
 /// Index of every `.w` tile on disk; loads additional tiles as the camera moves (OR `SceneryDrawer`).
+///
+/// Hot path requests `.tilebundle` via AssetServer (#111); materialization is async.
 #[derive(Resource, Default)]
 pub struct WorldTileStream {
     catalog: std::collections::HashMap<(i32, i32), PathBuf>,
     loaded: std::collections::HashSet<(i32, i32)>,
+    /// Requested via AssetServer but not yet materialized into [`WorldScene`].
+    pending: std::collections::HashSet<(i32, i32)>,
     route_dir: PathBuf,
     radius_m: f32,
     last_camera_tile: Option<(i32, i32)>,
@@ -2361,9 +2401,13 @@ impl WorldTileStream {
         for obj in &world.items {
             loaded.insert((obj.tile_x, obj.tile_z));
         }
+        for key in &world.loaded_tiles {
+            loaded.insert(*key);
+        }
         Self {
             catalog,
             loaded,
+            pending: std::collections::HashSet::new(),
             route_dir: route_dir.to_path_buf(),
             radius_m,
             last_camera_tile: None,
@@ -2549,21 +2593,21 @@ pub fn world_stream_scenery_system(
     state.processed_items = world.items.len();
 }
 
-/// Load `.w` tiles around the view window (train when following in live; free camera when `follow:off` / replay).
+/// Request `.tilebundle` loads for WORLD tiles near the view window (#111).
+///
+/// Materialization runs in [`world_tile_bundle_materialize_system`].
 #[allow(clippy::too_many_arguments)]
 pub fn world_tile_stream_system(
-    mut world: ResMut<WorldScene>,
     mut stream: ResMut<WorldTileStream>,
+    mut handles: ResMut<crate::tile_bundle::TileBundleHandles>,
+    asset_server: Res<AssetServer>,
     focus: Res<RouteFocus>,
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
-    scene: Res<TrackScene>,
     camera: Query<&Transform, With<Camera3d>>,
     progress: Option<Res<WorldSpawnProgress>>,
-    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
     mode: Res<crate::launch::ViewerSceneryMode>,
-    mut commands: Commands,
 ) {
     // Tile-lab keeps exactly the tiles loaded at startup: no streaming.
     if mode.is_tile_lab() || !mode.loads_msts_scenery() {
@@ -2581,7 +2625,6 @@ pub fn world_tile_stream_system(
         let msts_xz = camera_msts_xz(&focus, cam, &origin);
         Vec3::new(msts_xz.x, focus.center.y, msts_xz.y)
     };
-    let tile = MSTS_TILE_SIZE_M as f32;
     let cam_tile_x = msts_tile_x_index_for_coord(center.x);
     let cam_tile_z = msts_tile_z_index_for_coord(center.z);
     if stream.last_camera_tile == Some((cam_tile_x, cam_tile_z)) && !opts.live {
@@ -2589,40 +2632,162 @@ pub fn world_tile_stream_system(
     }
     stream.last_camera_tile = Some((cam_tile_x, cam_tile_z));
 
-    let radius_tiles = (stream.radius_m / tile).ceil() as i32 + 1;
+    let policy = view_stream_window_policy(stream.radius_m);
+    let cam_coord = TileCoord::new(cam_tile_x, cam_tile_z);
+    let known: HashSet<TileCoord> = stream
+        .loaded
+        .iter()
+        .chain(stream.pending.iter())
+        .copied()
+        .map(TileCoord::from)
+        .collect();
+    let stream_diff = policy.diff_disk(cam_coord, &known);
+
+    let mut requested = 0usize;
+    for tile in &stream_diff.to_load {
+        let key = (tile.x, tile.z);
+        if stream.loaded.contains(&key) || stream.pending.contains(&key) {
+            continue;
+        }
+        let world_path = stream
+            .catalog
+            .get(&key)
+            .cloned()
+            .or_else(|| world_tile_path_for_coords(&stream.route_dir, tile.x, tile.z));
+        let Some(world_path) = world_path else {
+            continue;
+        };
+        if crate::tile_bundle::ensure_tile_bundle_handle(
+            &mut handles,
+            &asset_server,
+            &stream.route_dir,
+            tile.x,
+            tile.z,
+            Some(world_path.as_path()),
+            None,
+        )
+        .is_some()
+        {
+            stream.pending.insert(key);
+            requested += 1;
+        }
+    }
+    if requested > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: requested {requested} world tilebundle(s) near ({cam_tile_x},{cam_tile_z})"
+        );
+    }
+}
+
+/// Bundle AssetServer + tilebundle asset maps for materialize (keeps ≤16 system params).
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct WorldTileBundleAssets<'w> {
+    handles: Res<'w, crate::tile_bundle::TileBundleHandles>,
+    asset_server: Res<'w, AssetServer>,
+    bundles: Res<'w, Assets<openrailsrs_bevy_scenery::MstsTileBundleAsset>>,
+    worlds: Res<'w, Assets<openrailsrs_bevy_scenery::MstsWorldTileAsset>>,
+    terrains: Res<'w, Assets<openrailsrs_bevy_scenery::MstsTerrainTileAsset>>,
+}
+
+/// View / mode inputs for WORLD tilebundle materialize (param budget for schedule traits).
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct WorldTileMaterializeView<'w, 's> {
+    focus: Res<'w, RouteFocus>,
+    window: Res<'w, crate::view_window::ViewWindow>,
+    opts: Res<'w, crate::launch::ViewerLaunchOpts>,
+    origin: Res<'w, crate::floating_origin::FloatingOrigin>,
+    scene: Res<'w, TrackScene>,
+    camera: Query<'w, 's, &'static Transform, With<Camera3d>>,
+    progress: Option<Res<'w, WorldSpawnProgress>>,
+    mode: Res<'w, crate::launch::ViewerSceneryMode>,
+}
+
+/// Materialize Ready/Partial tile bundles into [`WorldScene`] (#111).
+pub fn world_tile_bundle_materialize_system(
+    mut world: ResMut<WorldScene>,
+    mut stream: ResMut<WorldTileStream>,
+    assets: WorldTileBundleAssets,
+    view: WorldTileMaterializeView,
+    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
+    mut commands: Commands,
+) {
+    let WorldTileBundleAssets {
+        handles,
+        asset_server,
+        bundles,
+        worlds,
+        terrains,
+    } = assets;
+    let WorldTileMaterializeView {
+        focus,
+        window,
+        opts,
+        origin,
+        scene,
+        camera,
+        progress,
+        mode,
+    } = view;
+    if mode.is_tile_lab() || !mode.loads_msts_scenery() || progress.is_some() {
+        return;
+    }
+    if stream.pending.is_empty() {
+        return;
+    }
+    let center = if opts.live {
+        window.center_world
+    } else {
+        let Ok(cam) = camera.single() else {
+            return;
+        };
+        let msts_xz = camera_msts_xz(&focus, cam, &origin);
+        Vec3::new(msts_xz.x, focus.center.y, msts_xz.y)
+    };
+    let item_window = Some(WorldItemWindow {
+        center,
+        radius_m: world_item_keep_radius_m(stream.radius_m),
+    });
     let item_base = world.items.len();
     let mut tiles_loaded = 0usize;
     let mut added_tile_keys = Vec::new();
+    let pending: Vec<(i32, i32)> = stream.pending.iter().copied().collect();
 
-    for dtx in -radius_tiles..=radius_tiles {
-        for dtz in -radius_tiles..=radius_tiles {
-            let tile_x = cam_tile_x + dtx;
-            let tile_z = cam_tile_z + dtz;
-            if tile_center_distance_m(tile_x, tile_z, center) > stream.radius_m + tile {
-                continue;
-            }
-            let key = (tile_x, tile_z);
-            if stream.loaded.contains(&key) {
-                continue;
-            }
-            let Some(path) = stream
-                .catalog
-                .get(&key)
-                .cloned()
-                .or_else(|| world_tile_path_for_coords(&stream.route_dir, tile_x, tile_z))
-            else {
-                continue;
-            };
-            let item_window = Some(WorldItemWindow {
-                center,
-                radius_m: world_item_keep_radius_m(stream.radius_m),
-            });
-            if append_world_tile_file(&mut world, &path, item_window).is_ok() {
+    for key in pending {
+        let Some(handle) = handles.get(key.0, key.1).cloned() else {
+            stream.pending.remove(&key);
+            continue;
+        };
+        match crate::tile_bundle::tile_bundle_load_outcome(&asset_server, &handle) {
+            crate::tile_bundle::TileBundleLoadOutcome::Pending => continue,
+            crate::tile_bundle::TileBundleLoadOutcome::Failed => {
+                crate::tile_bundle::record_bundle_load_failure(
+                    &mut world.load_diag,
+                    key.0,
+                    key.1,
+                    &format!("tilebundle ({},{})", key.0, key.1),
+                );
+                stream.pending.remove(&key);
                 stream.loaded.insert(key);
-                added_tile_keys.push(key);
-                tiles_loaded += 1;
+                continue;
             }
+            crate::tile_bundle::TileBundleLoadOutcome::Loaded => {}
         }
+        let Some(bundle) = bundles.get(&handle) else {
+            continue;
+        };
+        if !crate::tile_bundle::try_materialize_world_bundle(
+            bundle,
+            &worlds,
+            &terrains,
+            &mut world,
+            item_window,
+        ) {
+            continue;
+        }
+        stream.pending.remove(&key);
+        stream.loaded.insert(key);
+        added_tile_keys.push(key);
+        tiles_loaded += 1;
     }
 
     let new_items = world.items.len().saturating_sub(item_base);
@@ -2635,7 +2800,7 @@ pub fn world_tile_stream_system(
         world.note_tr_item_tiles_added(added_tile_keys);
         world.note_tr_item_objects_added(tr_item_objects);
         viewer_log!(
-            "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) near tile ({cam_tile_x},{cam_tile_z})"
+            "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) via tilebundle"
         );
         let placeholder_base = scene.bounds.edge_radius().max(2.0) * 1.5;
         cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Objects);
@@ -2665,6 +2830,7 @@ pub struct WorldUnloadQueries<'w, 's> {
 pub fn world_tile_unload_system(
     mut world: ResMut<WorldScene>,
     mut stream: ResMut<WorldTileStream>,
+    mut handles: ResMut<crate::tile_bundle::TileBundleHandles>,
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     focus: Res<RouteFocus>,
@@ -2688,18 +2854,32 @@ pub fn world_tile_unload_system(
     }
     let unload_radius = crate::launch::view_unload_radius_m().max(window.radius_m);
     let center = window.center_world;
+    let policy = view_stream_window_policy(window.radius_m.max(stream.radius_m));
+    let cam_coord = TileCoord::new(
+        msts_tile_x_index_for_coord(center.x),
+        msts_tile_z_index_for_coord(center.z),
+    );
+    let loaded_coords: HashSet<TileCoord> = stream
+        .loaded
+        .iter()
+        .chain(stream.pending.iter())
+        .copied()
+        .map(TileCoord::from)
+        .collect();
+    let stream_diff = policy.diff_disk(cam_coord, &loaded_coords);
 
     let mut unloaded_tiles = HashSet::new();
-    stream.loaded.retain(|key| {
-        let keep = tile_center_distance_m(key.0, key.1, center) <= unload_radius;
-        if !keep {
-            unloaded_tiles.insert(*key);
-        }
-        keep
-    });
+    for tile in &stream_diff.to_unload {
+        let key = (tile.x, tile.z);
+        unloaded_tiles.insert(key);
+        stream.loaded.remove(&key);
+        stream.pending.remove(&key);
+    }
     if unloaded_tiles.is_empty() {
         return;
     }
+    // Drop AssetServer strong handles for unloaded tiles (#111 / #51).
+    handles.release_all(unloaded_tiles.iter());
     let unload_t0 = Instant::now();
     let before = world.items.len();
     world.note_tr_item_tiles_removed(unloaded_tiles.iter().copied());
@@ -3973,12 +4153,12 @@ mod tests {
         assert_eq!(progress.shape_load_paths, vec![miss]);
         assert!(progress.shape_cache.contains_key(&hit));
         assert!(progress.parsed_shape_files.contains_key(&hit));
-        assert_eq!(session.session_hits, 1);
-        assert_eq!(session.session_misses, 1);
+        assert_eq!(session.session_hits(), 1);
+        assert_eq!(session.session_misses(), 1);
 
         // Second hydrate is a no-op for the same progress cycle.
         hydrate_spawn_from_session(&mut progress, &mut session);
-        assert_eq!(session.session_hits, 1);
+        assert_eq!(session.session_hits(), 1);
     }
 
     #[test]

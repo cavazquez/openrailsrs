@@ -4,9 +4,16 @@
 //! progress messages and a spawn-cycle guard. App-specific FSMs (`WorldSpawnProgress`,
 //! `LoadStage`) stay in each binary and schedule into these sets.
 
+pub mod cache;
 pub mod dyntrack;
+pub mod forest;
 pub mod tdb_track;
+pub mod transfer;
+pub mod water;
 pub mod wire;
+pub mod world;
+
+pub use cache::{SessionShapeCache, SessionShapeCacheTelemetry, ShapeCacheKey};
 
 use bevy::prelude::*;
 

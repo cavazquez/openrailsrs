@@ -55,7 +55,10 @@ pub use tile_bundle::{
     TileBundleHandles, materialize_loaded_tile_bundles, request_tile_bundle,
     try_materialize_tile_entry,
 };
-pub use tile_parse::{ParsedTiles, TileParseRequest, parse_tiles_for_load};
+pub use tile_parse::{
+    ParsedTiles, TileParseRequest, parse_tiles_for_load, tile_entry_from_snapshot,
+    tile_geometry_from_snapshot,
+};
 pub use track::{load_graph, load_tdb_context};
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;

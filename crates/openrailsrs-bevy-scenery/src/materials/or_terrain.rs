@@ -1,6 +1,10 @@
 //! Material WGSL estilo Open Rails PSTerrain (SceneryShader.fx TerrainLevel9_3).
+//!
+//! Pipeline: [`crate::materials::TerrainPipelineFlags::RENDER3D_LIT`] (lit/night
+//! via uniforms; `vsm=true` documented for the render3d stack). Shares
+//! `terrain_common.wgsl` half-Lambert with viewer [`super::TerrainMaterial`].
+//! Overlay blend remains OR `*2` multiply — TODO(#121) unify with viewer mix.
 
-use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::mesh::MeshVertexBufferLayoutRef;
 use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey};
 use bevy::prelude::*;
@@ -9,8 +13,12 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 
+use super::TerrainPipelineFlags;
+
 pub const OR_TERRAIN_SHADER_PATH: &str = "shaders/or_terrain.wgsl";
 pub const DEFAULT_MICROTEX: &str = "microtex.ace";
+
+pub use crate::terrain::set_terrain_repeat_sampler;
 
 #[derive(Clone, Copy, Debug, Default, bevy::render::render_resource::ShaderType)]
 pub struct OrTerrainGpuParams {
@@ -66,6 +74,20 @@ pub struct OrTerrainMaterial {
     pub overlay_texture: Handle<Image>,
 }
 
+impl OrTerrainMaterial {
+    /// Base documented flags (night toggled via [`build_or_terrain_params`]).
+    pub const PIPELINE_FLAGS: TerrainPipelineFlags = TerrainPipelineFlags::RENDER3D_LIT;
+
+    pub fn pipeline_flags(lit: bool, night: bool) -> TerrainPipelineFlags {
+        TerrainPipelineFlags {
+            lit,
+            night,
+            vsm: true,
+            fog: true,
+        }
+    }
+}
+
 impl Material for OrTerrainMaterial {
     fn fragment_shader() -> ShaderRef {
         OR_TERRAIN_SHADER_PATH.into()
@@ -80,14 +102,6 @@ impl Material for OrTerrainMaterial {
         descriptor.primitive.cull_mode = None;
         Ok(())
     }
-}
-
-pub fn set_terrain_repeat_sampler(image: &mut Image) {
-    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        ..default()
-    });
 }
 
 pub fn create_or_terrain_material(

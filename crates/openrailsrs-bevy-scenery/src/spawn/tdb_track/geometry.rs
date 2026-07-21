@@ -1,7 +1,7 @@
 //! `.tdb` vector-graph chord types and pure world-space helpers.
 //!
-//! Branch walking (`collect_tdb_chords`, junction bridges, …) remains in
-//! `openrailsrs-viewer3d::tdb_track` until `RouteFocus` moves here.
+//! Branch walking / chord collection lives in [`super::collect`] behind
+//! injectable [`super::FocusQuery`] (apps adapt `RouteFocus` / tile focus).
 
 use bevy::prelude::*;
 use openrailsrs_formats::{
