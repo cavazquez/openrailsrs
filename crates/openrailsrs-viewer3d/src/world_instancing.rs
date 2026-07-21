@@ -1,29 +1,29 @@
 //! GPU instancing for repeated static opaque WORLD shapes (#58).
 //!
 //! One Bevy entity per `(shape, part, material, tile)` with an instance buffer of
-//! transforms. Animated / transparent parts keep the per-entity spawn path.
+//! transforms. Animated / transparent (blend) parts keep the per-entity spawn path.
+//! Opaque + cutout draws are queued in Bevy [`Opaque3d`] (#106); the fragment shader
+//! alpha-discards cutout. True blend materials must not use this path.
 
 use std::path::PathBuf;
 
 use bevy::asset::RenderAssetUsages;
-use bevy::core_pipeline::core_3d::{Transparent3d, TransparentSortingInfo3d};
+use bevy::core_pipeline::core_3d::{Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey};
 use bevy::ecs::system::{SystemParamItem, lifetimeless::*};
 use bevy::ecs::{query::QueryItem, system::lifetimeless::Read};
 use bevy::mesh::{MeshVertexBufferLayoutRef, VertexBufferLayout};
 use bevy::pbr::{
-    self, MeshInputUniform, MeshPipeline, MeshPipelineKey, MeshPipelineSystems, MeshUniform,
-    RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup, SetMeshViewBindingArrayBindGroup,
-    ViewKeyCache,
+    MeshPipeline, MeshPipelineKey, MeshPipelineSystems, RenderMeshInstances, SetMeshBindGroup,
+    SetMeshViewBindGroup, SetMeshViewBindingArrayBindGroup, ViewKeyCache,
 };
 use bevy::prelude::*;
-use bevy::render::batching::gpu_preprocessing::BatchedInstanceBuffers;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
 use bevy::render::mesh::allocator::MeshAllocator;
 use bevy::render::mesh::{RenderMesh, RenderMeshBufferInfo};
 use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_phase::{
-    AddRenderCommand, DrawFunctions, PhaseItem, PhaseItemExtraIndex, RenderCommand,
-    RenderCommandResult, SetItemPipeline, TrackedRenderPass, ViewSortedRenderPhases,
+    AddRenderCommand, BinnedRenderPhaseType, DrawFunctions, PhaseItem, RenderCommand,
+    RenderCommandResult, SetItemPipeline, TrackedRenderPass, ViewBinnedRenderPhases,
 };
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::render_resource::*;
@@ -157,7 +157,7 @@ impl Plugin for WorldInstancingPlugin {
             return;
         };
         render_app
-            .add_render_command::<Transparent3d, DrawWorldInstanced>()
+            .add_render_command::<Opaque3d, DrawWorldInstanced>()
             .init_resource::<SpecializedMeshPipelines<WorldInstancingPipeline>>()
             .add_systems(
                 RenderStartup,
@@ -405,27 +405,24 @@ fn prepare_world_instance_bind_groups(
 }
 
 fn queue_world_instanced(
-    transparent_3d_draw_functions: Res<DrawFunctions<Transparent3d>>,
+    opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
     custom_pipeline: Res<WorldInstancingPipeline>,
     mut pipelines: ResMut<SpecializedMeshPipelines<WorldInstancingPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
-    maybe_batched_instance_buffers: Option<
-        Res<BatchedInstanceBuffers<MeshUniform, MeshInputUniform>>,
-    >,
+    mesh_allocator: Res<MeshAllocator>,
     material_meshes: Query<(Entity, &MainEntity), With<WorldInstanceBuffer>>,
-    mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
+    mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     views: Query<&ExtractedView>,
     view_key_cache: Res<ViewKeyCache>,
 ) {
-    let draw_custom = transparent_3d_draw_functions
-        .read()
-        .id::<DrawWorldInstanced>();
+    // Opaque WORLD instances only (#106). Cutout uses shader discard on this path;
+    // blend/transparent parts never get `WorldInstanceBuffer` (see world spawn).
+    let draw_custom = opaque_3d_draw_functions.read().id::<DrawWorldInstanced>();
 
     for view in &views {
-        let Some(transparent_phase) = transparent_render_phases.get_mut(&view.retained_view_entity)
-        else {
+        let Some(opaque_phase) = opaque_render_phases.get_mut(&view.retained_view_entity) else {
             continue;
         };
         let Some(&view_key) = view_key_cache.get(&view.retained_view_entity) else {
@@ -440,6 +437,9 @@ fn queue_world_instanced(
             let Some(mesh) = meshes.get(mesh_instance.mesh_asset_id()) else {
                 continue;
             };
+            let Some(mesh_slabs) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id()) else {
+                continue;
+            };
             let key = view_key
                 | MeshPipelineKey::from_primitive_topology_and_strip_index(
                     mesh.primitive_topology(),
@@ -450,27 +450,23 @@ fn queue_world_instanced(
             else {
                 continue;
             };
-            let mesh_center = pbr::get_mesh_instance_world_from_local(
-                *main_entity,
-                mesh_instance.current_uniform_index,
-                &render_mesh_instances,
-                maybe_batched_instance_buffers.as_deref(),
-            )
-            .transform_point3(mesh.aabb_center);
 
-            transparent_phase.add_retained(Transparent3d {
-                sorting_info: TransparentSortingInfo3d::Sorted {
-                    mesh_center,
-                    depth_bias: 0.0,
+            // Custom per-entity instance buffer: never multi-draw / batch with others.
+            opaque_phase.add(
+                Opaque3dBatchSetKey {
+                    pipeline,
+                    draw_function: draw_custom,
+                    material_bind_group_index: None,
+                    slabs: mesh_slabs,
+                    lightmap_slab: None,
                 },
-                entity: (entity, *main_entity),
-                pipeline,
-                draw_function: draw_custom,
-                distance: 0.0,
-                batch_range: 0..1,
-                extra_index: PhaseItemExtraIndex::None,
-                indexed: true,
-            });
+                Opaque3dBinKey {
+                    asset_id: mesh_instance.mesh_asset_id().into(),
+                },
+                (entity, *main_entity),
+                mesh_instance.current_uniform_index,
+                BinnedRenderPhaseType::UnbatchableMesh,
+            );
         }
     }
 }
@@ -701,5 +697,31 @@ mod tests {
         let grouped = group_placements_by_tile(&placements);
         let n = grouped.get(&(0, 0)).map(|v| v.len()).unwrap_or(0);
         assert!(n >= WORLD_INSTANCING_MIN);
+    }
+
+    #[test]
+    fn appearance_opaque_has_no_cutoff_mask_keeps_discard_threshold() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let opaque = materials.add(StandardMaterial {
+            alpha_mode: AlphaMode::Opaque,
+            ..default()
+        });
+        let mask = materials.add(StandardMaterial {
+            alpha_mode: AlphaMode::Mask(0.78),
+            ..default()
+        });
+        // Blend materials stay on the non-instanced path; cutout maps to opaque + discard.
+        assert_eq!(
+            appearance_from_standard_material(&materials, &opaque).alpha_cutoff,
+            0.0
+        );
+        assert!((appearance_from_standard_material(&materials, &mask).alpha_cutoff - 0.78).abs() < 1e-5);
+    }
+
+    #[test]
+    fn instanced_draws_target_opaque3d_phase() {
+        // Compile-time / type-level guard: WORLD GPU instances register on Opaque3d (#106).
+        fn _assert_phase<P: bevy::render::render_phase::BinnedPhaseItem>() {}
+        _assert_phase::<Opaque3d>();
     }
 }
