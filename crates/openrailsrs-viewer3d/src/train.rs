@@ -30,6 +30,12 @@ pub const TRAIN_COLORS: [Color; 4] = [
     Color::srgb(1.0, 0.5, 0.25),
 ];
 
+/// Opaque exterior parts cast sun shadows; blend/glass/additive skip (#41).
+#[inline]
+pub(crate) fn train_part_casts_shadow(is_transparent: bool) -> bool {
+    !is_transparent
+}
+
 /// One CSV time series for a train (primary or extra).
 #[derive(Clone, Debug)]
 pub struct TrainTrack {
@@ -260,7 +266,6 @@ pub fn spawn_train_markers(
                 ..default()
             });
             commands.spawn((
-                NotShadowCaster,
                 Mesh3d(unit),
                 MeshMaterial3d(material),
                 head,
@@ -331,8 +336,8 @@ pub fn spawn_train_markers(
                                     ))
                                     .with_children(|car| {
                                         for (pi, part) in asset.parts.iter().enumerate() {
-                                            car.spawn((
-                                                NotShadowCaster,
+                                            // Opaque exterior casts onto terrain (#41); glass/blend skip.
+                                            let mut part_entity = car.spawn((
                                                 Mesh3d(part.mesh.clone()),
                                                 MeshMaterial3d(part.material.clone()),
                                                 Transform::default(),
@@ -341,6 +346,9 @@ pub fn spawn_train_markers(
                                                     track.label, vehicle.name, part.prim_state_idx
                                                 )),
                                             ));
+                                            if !train_part_casts_shadow(part.is_transparent) {
+                                                part_entity.insert(NotShadowCaster);
+                                            }
                                         }
                                     });
                                 shape_mesh_count += asset.parts.len();
@@ -359,7 +367,6 @@ pub fn spawn_train_markers(
                             ..default()
                         });
                         train.spawn((
-                            NotShadowCaster,
                             Mesh3d(unit.clone()),
                             MeshMaterial3d(material),
                             local,
@@ -385,7 +392,6 @@ pub fn spawn_train_markers(
         });
 
         commands.spawn((
-            NotShadowCaster,
             Mesh3d(unit.clone()),
             MeshMaterial3d(material),
             head.with_scale(Vec3::new(body_len, body_h, body_w)),
@@ -596,6 +602,12 @@ mod tests {
             center: Vec3::ZERO,
             height_origin: 0.0,
         }
+    }
+
+    #[test]
+    fn opaque_train_parts_cast_shadows_transparent_do_not() {
+        assert!(train_part_casts_shadow(false));
+        assert!(!train_part_casts_shadow(true));
     }
 
     #[test]

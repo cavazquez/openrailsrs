@@ -584,7 +584,6 @@ pub fn spawn_live_train(
         commands.spawn((
             LiveTrainMarker,
             LiveTrainBody,
-            NotShadowCaster,
             Mesh3d(unit),
             MeshMaterial3d(material),
             Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
@@ -620,7 +619,6 @@ pub fn spawn_live_train(
         commands.spawn((
             LiveTrainMarker,
             LiveTrainBody,
-            NotShadowCaster,
             Mesh3d(unit),
             MeshMaterial3d(material),
             Transform::from_translation(pos).with_rotation(Quat::from_rotation_y(yaw)),
@@ -737,7 +735,7 @@ pub fn spawn_live_train(
                                 let spawn_parts = |parent: &mut ChildSpawnerCommands<'_>,
                                                    parts: &[crate::shapes::ShapePartAsset]| {
                                     for (pi, part) in parts.iter().enumerate() {
-                                        parent.spawn((
+                                        let mut entity = parent.spawn((
                                             LiveTrainBody,
                                             Mesh3d(part.mesh.clone()),
                                             MeshMaterial3d(part.material.clone()),
@@ -748,6 +746,11 @@ pub fn spawn_live_train(
                                                 part.prim_state_idx
                                             )),
                                         ));
+                                        if !crate::train::train_part_casts_shadow(
+                                            part.is_transparent,
+                                        ) {
+                                            entity.insert(NotShadowCaster);
+                                        }
                                     }
                                 };
                                 if let Some(scale) = exterior_scale {
@@ -879,6 +882,7 @@ pub fn spawn_live_train(
                         }
                         parent.spawn((
                             LiveTrainBody,
+                            NotShadowCaster,
                             Mesh3d(window_mesh.clone()),
                             MeshMaterial3d(glass_material.clone()),
                             Transform::from_xyz(x_pos, 0.1, 0.0),
@@ -918,6 +922,7 @@ pub fn spawn_live_train(
                         // Windshield
                         parent.spawn((
                             LiveTrainBody,
+                            NotShadowCaster,
                             Mesh3d(windshield_mesh.clone()),
                             MeshMaterial3d(glass_material.clone()),
                             Transform::from_xyz(0.42, 0.2, 0.0),
