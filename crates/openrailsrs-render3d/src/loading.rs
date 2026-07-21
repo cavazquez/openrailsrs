@@ -23,6 +23,7 @@ use crate::stream::{
 use crate::terrain::TileGeometry;
 use openrailsrs_bevy_scenery::MstsLoadDiagnostics;
 
+use crate::tile_parse::{ParsedTiles, TileParseRequest, parse_tiles_for_load};
 use crate::world_spawn::{
     AssetIndex, ObjectSpawnCtx, TerrainSpawnCtx, TextureLoadStats, TrackSpawnStats,
     spawn_objects_batch, spawn_terrain_patches, spawn_tile_track,
@@ -102,6 +103,10 @@ pub struct TileSlot {
 /// Estado interno del spawn por fases.
 #[derive(Resource)]
 pub enum LoadStage {
+    /// Parse CPU de tiles WORLD/terrain (hilo en background, #55).
+    ParsingTiles {
+        task: Task<Result<ParsedTiles, String>>,
+    },
     /// Indexando SHAPES/TEXTURES (hilo en background).
     Indexing {
         task: Task<AssetIndex>,
@@ -376,11 +381,7 @@ pub fn setup_loading_screen(mut commands: Commands) {
 #[allow(clippy::too_many_arguments)]
 pub fn begin_load_stage(
     mut commands: Commands,
-    tiles_res: Res<crate::TilesToRender>,
-    route: Res<crate::RouteDir>,
-    msts_root: Res<crate::MstsRootDir>,
-    extent: Res<crate::SceneExtent>,
-    player_start: Res<PlayerStartPoseResource>,
+    request: Res<TileParseRequest>,
     mut progress: ResMut<LoadProgress>,
     mut log: ResMut<LoadLog>,
     hud_enabled: Res<crate::debug_hud::DebugHudEnabled>,
@@ -388,19 +389,83 @@ pub fn begin_load_stage(
     mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
     mut progress_msg: MessageWriter<openrailsrs_bevy_scenery::ScenerySpawnProgress>,
 ) {
-    let n = tiles_res.0.len();
     cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Catalog);
-    progress.set(format!("Indexando shapes y texturas… ({n} tiles)"), 0.02);
-    log.push(format!("→ Indexando SHAPES y TEXTURES… ({n} tiles)"));
+    progress.set("Parseando tiles WORLD/terrain…", 0.01);
+    log.push(format!(
+        "→ Parseando tiles (centro {:?}, radio {})…",
+        request.center, request.radius
+    ));
     progress_msg.write(openrailsrs_bevy_scenery::ScenerySpawnProgress::new(
         &cycle,
-        0.02,
-        format!("indexing ({n} tiles)"),
+        0.01,
+        "parsing tiles",
     ));
 
-    // Clonar los datos de cada tile en TileSlots propios para esta máquina de estados.
+    commands.insert_resource(TextureLoadStats::default());
+    commands.insert_resource(TrackSpawnStats::default());
+    // Placeholders until parse finishes (sun/extent already seeded from main).
+    commands.insert_resource(LoadPerfState::new(
+        2048.0,
+        None,
+        hud_enabled.0,
+        !texture_env.night,
+        0,
+    ));
+
+    let req = request.clone();
+    let task = AsyncComputeTaskPool::get().spawn(async move { parse_tiles_for_load(req) });
+    commands.insert_resource(LoadStage::ParsingTiles { task });
+    if perf_debug() {
+        eprintln!(
+            "[PERF] begin_load_stage: ventana abierta → parse async tiles {:?}",
+            request.center
+        );
+    }
+}
+
+fn start_indexing_from_parsed(
+    commands: &mut Commands,
+    parsed: ParsedTiles,
+    route: &crate::RouteDir,
+    msts_root: &crate::MstsRootDir,
+    progress: &mut LoadProgress,
+    log: &mut LoadLog,
+    perf: &mut LoadPerfState,
+    debug_ctx: &mut crate::debug_hud::SceneDebugContext,
+) -> LoadStage {
+    let n = parsed.tiles_to_render.0.len();
+    let object_count: usize = parsed.tiles_to_render.0.iter().map(|e| e.objects.len()).sum();
+    println!(
+        "render3d: {} tiles cargados ({} sin .t ignorados), {} patches, {} segmentos de vía, {} objetos",
+        parsed.catalog.entries.len(),
+        parsed.skipped,
+        parsed.total_patches,
+        parsed.total_segments,
+        parsed.total_objects,
+    );
+    if let Some(pose) = &parsed.player_start {
+        println!(
+            "cámara: ({:.0}, {:.1}, {:.0}) yaw {:.0}°",
+            pose.position.x,
+            pose.position.y,
+            pose.position.z,
+            pose.yaw_rad.to_degrees()
+        );
+    }
+    if let Some(plan) = &parsed.consist_plan {
+        println!("consist: {} vehículo(s)", plan.vehicles.len());
+    }
+
+    let player_start = parsed.player_start;
+    debug_ctx.tile_count = n;
+    debug_ctx.object_count = object_count;
+    perf.scene_side_m = parsed.scene_side_m;
+    perf.player_start = player_start;
+    perf.tile_count = n;
+    perf.viewer_pos = player_start.map(|p| p.position).unwrap_or(Vec3::ZERO);
+
     let mut slots: Vec<TileSlot> = Vec::with_capacity(n);
-    for entry in tiles_res.0.iter() {
+    for entry in &parsed.tiles_to_render.0 {
         slots.push(TileSlot {
             geometry: entry.geometry.clone(),
             world_offset: entry.world_offset,
@@ -409,23 +474,29 @@ pub fn begin_load_stage(
         });
     }
 
-    commands.insert_resource(TextureLoadStats::default());
-    commands.insert_resource(TrackSpawnStats::default());
-    commands.insert_resource(LoadPerfState::new(
-        extent.side_m,
-        player_start.0,
-        hud_enabled.0,
-        !texture_env.night,
-        n,
-    ));
+    commands.insert_resource(parsed.catalog);
+    commands.insert_resource(parsed.stream_config);
+    commands.insert_resource(parsed.tiles_to_render);
+    commands.insert_resource(crate::SceneExtent {
+        side_m: parsed.scene_side_m,
+    });
+    commands.insert_resource(PlayerStartPoseResource(player_start));
+    commands.insert_resource(parsed.load_diag);
+    if let Some(plan) = parsed.consist_plan {
+        commands.insert_resource(plan);
+    }
+
+    progress.set(format!("Indexando shapes y texturas… ({n} tiles)"), 0.05);
+    log.push(format!("→ Indexando SHAPES y TEXTURES… ({n} tiles)"));
+
     let route_dir = route.0.clone();
     let msts_dir = msts_root.0.clone();
     let task =
         AsyncComputeTaskPool::get().spawn(async move { AssetIndex::build(&route_dir, &msts_dir) });
-    commands.insert_resource(LoadStage::Indexing { task, slots });
     if perf_debug() {
-        eprintln!("[PERF] begin_load_stage: {n} tiles → indexando shapes/texturas…");
+        eprintln!("[PERF] tiles parsed → indexing shapes/texturas ({n} tiles)");
     }
+    LoadStage::Indexing { task, slots }
 }
 
 // ─── UI update ───────────────────────────────────────────────────────────────
@@ -467,12 +538,18 @@ pub struct LoadRenderAssets<'w> {
     pub images: ResMut<'w, Assets<Image>>,
 }
 
+#[derive(SystemParam)]
+pub struct LoadProgressUi<'w> {
+    progress: ResMut<'w, LoadProgress>,
+    log: ResMut<'w, LoadLog>,
+    debug_ctx: ResMut<'w, crate::debug_hud::SceneDebugContext>,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn progressive_world_load(
     mut commands: Commands,
     mut stage: ResMut<LoadStage>,
-    mut progress: ResMut<LoadProgress>,
-    mut log: ResMut<LoadLog>,
+    ui: LoadProgressUi,
     mut load_assets: LoadRenderAssets,
     route: Res<crate::RouteDir>,
     msts_root: Res<crate::MstsRootDir>,
@@ -486,9 +563,61 @@ pub fn progressive_world_load(
     tdb_track: Option<Res<crate::TdbTrackResource>>,
     stream_config: Res<crate::stream::TileStreamConfig>,
 ) {
+    let LoadProgressUi {
+        mut progress,
+        mut log,
+        mut debug_ctx,
+    } = ui;
     let materials_lit = perf.materials_lit;
     'progress: loop {
         match &mut *stage {
+            // ── 0. Parse tiles (hilo async, #55) ─────────────────────────
+            LoadStage::ParsingTiles { task } => {
+                let Some(result) = check_ready(task) else {
+                    break 'progress;
+                };
+                match result {
+                    Ok(parsed) => {
+                        let elapsed = perf.elapsed_phase();
+                        if perf_debug() {
+                            perf.print_phase(
+                                "ParseTiles",
+                                &format!(
+                                    "{} tiles, {} objetos",
+                                    parsed.catalog.entries.len(),
+                                    parsed.total_objects
+                                ),
+                                elapsed,
+                            );
+                        }
+                        perf.reset_phase();
+                        log.push(format!(
+                            "✓ Tiles: {} cargados ({} huecos)",
+                            parsed.catalog.entries.len(),
+                            parsed.skipped
+                        ));
+                        *stage = start_indexing_from_parsed(
+                            &mut commands,
+                            parsed,
+                            &route,
+                            &msts_root,
+                            &mut progress,
+                            &mut log,
+                            &mut perf,
+                            &mut debug_ctx,
+                        );
+                        continue 'progress;
+                    }
+                    Err(err) => {
+                        progress.set(format!("Error: {err}"), 0.0);
+                        log.push(format!("✗ {err}"));
+                        error!("render3d tile parse failed: {err}");
+                        commands.remove_resource::<LoadStage>();
+                        break 'progress;
+                    }
+                }
+            }
+
             // ── 1. Indexado (hilo async) ──────────────────────────────────
             LoadStage::Indexing { task, slots } => {
                 if let Some(index) = check_ready(task) {

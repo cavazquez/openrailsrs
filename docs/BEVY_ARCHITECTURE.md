@@ -39,8 +39,8 @@ flowchart TB
 | `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` + `MaterialPlugin` terreno/scenery/cab, assets shaders |
 | `OrVsmPlugins` | bevy-scenery (feature `vsm`) | Pass momentos VSM, cascadas OR |
 | `ScenerySpawnPlugin` | bevy-scenery | `#52` sets Catalog→Ready, budgets, ciclo anti-doble-spawn, `ScenerySpawnProgress`; FSM local en cada app |
-| `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live |
-| `Render3dPlugin` | render3d | Loading `AppState`, fly cam, HUD debug |
+| `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live; scenery en `OnEnter(Playing)` (#55) |
+| `Render3dPlugin` | render3d | Loading `AppState`, fly cam, HUD debug; `LoadStage::ParsingTiles` async (#55) |
 
 ---
 
@@ -57,8 +57,8 @@ flowchart TB
 
 **0.19** (pin en `[workspace.dependencies]`). Migración: [`BEVY_MIGRATION_0_19.md`](BEVY_MIGRATION_0_19.md).
 
-- **viewer3d:** `bevy_gizmos`, `bevy_ui_render`
-- **render3d:** `bevy_text`, `bevy_state`, `multi_threaded`
+- **viewer3d:** `bevy_gizmos`, `bevy_ui_render`, `bevy_state` (ventana primero; parse ruta en background)
+- **render3d:** `bevy_text`, `bevy_state`, `multi_threaded` (parse tiles en `AsyncComputeTaskPool`)
 
 ---
 

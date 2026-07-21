@@ -34,6 +34,7 @@ pub mod placement_audit;
 pub mod precipitation;
 pub mod road_cars;
 pub mod rolling_stock;
+pub mod route_bootstrap;
 pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
@@ -87,20 +88,23 @@ pub use shapes::RouteAssets;
 pub use terrain::{TerrainElevation, TerrainScene};
 pub use track::{TrackRenderMode, TrackScene};
 pub use train::ReplayState;
+pub use route_bootstrap::{ViewerAppState, viewer_playing};
 pub use world::WorldScene;
 
 /// Plugin that wires up the camera, scene and update systems for the
 /// experimental 3D viewer. Add it on top of [`DefaultPlugins`].
 ///
-/// Requires [`TrackScene`], [`ReplayState`], [`HudTitle`], [`WorldScene`],
-/// [`TerrainScene`], [`TrainConsistScene`] and [`RouteAssets`] resources (insert before adding this plugin).
+/// Scenery startup runs on [`OnEnter(ViewerAppState::Playing)`] (#55). Insert route
+/// resources then enter `Playing`, or start directly in `Playing` (tests).
 pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         use openrailsrs_bevy_scenery::ScenerySpawnSet;
+        use bevy::state::condition::in_state;
 
         app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
+            .init_state::<ViewerAppState>()
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
@@ -131,7 +135,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<view_window::ViewWindow>()
             .init_resource::<tdb_track::TdbTrackStream>()
             .add_systems(
-                Startup,
+                OnEnter(ViewerAppState::Playing),
                 (
                     scene::spawn_ground_and_lights,
                     sky::spawn_sky_dome.run_if(launch::sky_dome_active),
@@ -149,7 +153,7 @@ impl Plugin for ViewerPlugin {
                     .chain(),
             )
             .add_systems(
-                Startup,
+                OnEnter(ViewerAppState::Playing),
                 signal_lamps::spawn_signal_lamps
                     .run_if(launch::full_scenery_active)
                     .after(world::init_scenery_stream_state),
@@ -157,13 +161,18 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 terrain::progressive_terrain_spawn_system
+                    .run_if(in_state(ViewerAppState::Playing))
                     .run_if(launch::full_scenery_active)
                     .in_set(ScenerySpawnSet::Terrain),
             )
-            .add_systems(Update, track::tile_lab_frame_camera_once)
             .add_systems(
                 Update,
-                openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
+                track::tile_lab_frame_camera_once.run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                openrailsrs_bevy_scenery::shapes::update_world_shape_anim
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
@@ -172,24 +181,28 @@ impl Plugin for ViewerPlugin {
                     tdb_track::tdb_track_stream_system.run_if(tdb_track::tdb_stream_active),
                 )
                     .chain()
-                    .after(live::update_live_train_marker),
+                    .after(live::update_live_train_marker)
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
                 world::progressive_world_spawn_system
                     .after(view_window::sync_view_window_from_train)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Objects),
             )
             .add_systems(
                 Update,
                 world::update_world_scenery_lod
                     .after(world::progressive_world_spawn_system)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
                 Update,
                 world::world_tile_stream_system
                     .after(view_window::sync_view_window_from_train)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
@@ -197,6 +210,7 @@ impl Plugin for ViewerPlugin {
                 world::world_tile_unload_system
                     .after(world::world_tile_stream_system)
                     .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
@@ -205,6 +219,7 @@ impl Plugin for ViewerPlugin {
                 tr_item_index::sync_tr_item_world_index
                     .after(world::world_tile_stream_system)
                     .after(world::world_tile_unload_system)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
@@ -218,14 +233,17 @@ impl Plugin for ViewerPlugin {
                     .after(view_window::sync_view_window_from_train)
                     .run_if(live::live_mode_active)
                     .run_if(launch::full_scenery_active)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Terrain),
             )
             .add_systems(
                 Update,
-                world::world_stream_scenery_system.after(world::world_tile_stream_system),
+                world::world_stream_scenery_system
+                    .after(world::world_tile_stream_system)
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
-                Startup,
+                OnEnter(ViewerAppState::Playing),
                 (
                     signals::spawn_signal_markers.run_if(live::live_mode_inactive),
                     precipitation::spawn_precipitation.run_if(launch::full_scenery_active),
@@ -241,13 +259,15 @@ impl Plugin for ViewerPlugin {
                     gameplay::spawn_gameplay_ui,
                     gameplay::spawn_gameplay_markers.run_if(live::live_mode_active),
                 )
-                    .chain(),
+                    .chain()
+                    .after(world::init_scenery_stream_state),
             )
             .add_systems(
                 Update,
                 floating_origin::apply_floating_origin
                     .before(live::update_live_train_marker)
-                    .before(train::update_train_markers),
+                    .before(train::update_train_markers)
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
@@ -276,13 +296,22 @@ impl Plugin for ViewerPlugin {
                     water::update_water_patches,
                     hud::tick_hud_fps,
                     hud::update_hud.after(hud::tick_hud_fps),
-                ),
+                )
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
-            .add_systems(Update, road_cars::update_road_cars)
-            .add_systems(Update, signal_lamps::update_signal_lamps)
             .add_systems(
                 Update,
-                sky::toggle_distance_fog.run_if(teleport::teleport_closed),
+                road_cars::update_road_cars.run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                signal_lamps::update_signal_lamps.run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                sky::toggle_distance_fog
+                    .run_if(teleport::teleport_closed)
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
@@ -309,18 +338,26 @@ impl Plugin for ViewerPlugin {
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
                     gameplay::update_stop_billboards.run_if(live::live_mode_active),
-                ),
+                )
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(Startup, capture::init_capture)
-            .add_systems(Update, capture::capture_system)
+            .add_systems(
+                Update,
+                capture::capture_system.run_if(in_state(ViewerAppState::Playing)),
+            )
             .add_systems(
                 Update,
                 live::live_autodrive
                     .run_if(live::live_mode_active)
                     .run_if(live::autodrive_enabled)
+                    .run_if(in_state(ViewerAppState::Playing))
                     .before(live::advance_live_sim),
             )
-            .add_systems(Update, hud::log_profile)
+            .add_systems(
+                Update,
+                hud::log_profile.run_if(in_state(ViewerAppState::Playing)),
+            )
             .add_systems(
                 Update,
                 (
@@ -340,7 +377,8 @@ impl Plugin for ViewerPlugin {
                         .run_if(camera::in_fly_mode)
                         .run_if(camera::fly_camera_allowed)
                         .run_if(teleport::teleport_closed),
-                ),
+                )
+                    .run_if(in_state(ViewerAppState::Playing)),
             );
     }
 }

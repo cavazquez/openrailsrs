@@ -104,22 +104,23 @@ Archivos clave:
 
 ```mermaid
 flowchart LR
-  CLI[viewer3d main] --> Config[LaunchConfig]
-  Config --> Parsers["formats route scenarios"]
-  Config --> Resources["TrackScene WorldScene TerrainScene RouteAssets(MstsRouteCatalog)"]
-  Resources --> Startup[ViewerPlugin Startup]
-  Startup --> Entities["Meshes Materials Entities"]
+  CLI[viewer3d main] --> App[App ventana Loading]
+  App --> Task[route-load thread]
+  Task --> Bundle["TrackScene WorldScene Terrain RouteAssets"]
+  Bundle --> Playing[OnEnter Playing]
+  Playing --> Entities["Meshes Materials Entities"]
   Entities --> Update["FloatingOrigin LiveTrain ViewWindow"]
   Update --> Stream["WORLD Terrain TDB streaming"]
   Stream --> Spawn[Progressive spawn]
   Spawn --> BevyRender[Bevy render world]
 ```
 
-El spawn WORLD sigue parseando de forma síncrona en CPU e insertando con `Assets::add`, pero ya existen loaders Bevy (#48) para `.s`/`.ace`/`.w`/`.routecat` vía `MstsAssetPlugin`. `ViewerPlugin` encadena el spawn inicial y luego actualiza floating origin, tren, `ViewWindow`, streaming y LOD.
+La ventana Bevy abre en `ViewerAppState::Loading` (#55); el parse de ruta corre en un hilo `route-load` y al completar se insertan resources y se pasa a `Playing` (`OnEnter` para scenery/cámara). En render3d el grid de tiles se parsea en `LoadStage::ParsingTiles` vía `AsyncComputeTaskPool` antes del indexing/spawn GPU. El spawn WORLD sigue insertando con `Assets::add`; hay loaders Bevy (#48) para `.s`/`.ace`/`.w`/`.routecat` vía `MstsAssetPlugin`.
 
 Archivos clave:
 
 - `crates/openrailsrs-viewer3d/src/main.rs`
+- `crates/openrailsrs-viewer3d/src/route_bootstrap.rs`
 - `crates/openrailsrs-viewer3d/src/lib.rs`
 - `crates/openrailsrs-viewer3d/src/launch.rs`
 - `crates/openrailsrs-viewer3d/src/world.rs`
@@ -322,7 +323,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#52](https://github.com/cavazquez/openrailsrs/issues/52) | P1 | `[Bevy Integration] Implementar ScenerySpawnPlugin compartido para viewer3d y render3d` | **Cerrado** — `ScenerySpawnSet`+ciclo+budgets; ambos vía `OrSceneryPlugins` |
 | [#53](https://github.com/cavazquez/openrailsrs/issues/53) | P1 | `[Assets] Modelar WORLD y terrain como assets compuestos por tile` | #29, #48, #49 |
 | [#54](https://github.com/cavazquez/openrailsrs/issues/54) | P1 | `[Assets] Exponer diagnósticos estructurados de carga y fallback` | **Cerrado** — `MstsLoadDiagnostics` (bevy-scenery); CLI/HUD/`OPENRAILSRS_LOAD_AUDIT`; integra #35 |
-| [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | #48, #52, #53 |
+| [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | **Cerrado** — viewer3d `Loading`→`Playing` + hilo route-load; render3d `LoadStage::ParsingTiles` async |
 | [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | **Cerrado** — `MeshPartBuildOptions` + `render3d_world_mesh_options`; render3d adaptador fino sobre canónico |
 | [#57](https://github.com/cavazquez/openrailsrs/issues/57) | P1 | `[Performance] Eliminar el doble parse de cada shape WORLD` | **Cerrado** — 1 `ShapeFile` parse / path único |
 | [#58](https://github.com/cavazquez/openrailsrs/issues/58) | P1 | `[Performance] Implementar instancing o batching seguro para objetos WORLD repetidos` | #34, #50 |
@@ -351,7 +352,8 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 - ~~`RouteAssets` / `AssetIndex` duplicaban scans y precedencia~~ **(#49: `MstsRouteCatalog` CPU en bevy-scenery; un scan SHAPES/TEXTURES; wrappers finos; distinto de `MstsRouteCatalogAsset` `.routecat`)**.
 - ~~`WorldSpawnProgress` conserva caches únicamente durante un ciclo de spawn~~ **(#50: `WorldShapeLodCache` de sesión con hit/miss; streams reutilizan Mesh/Image/ShapeFile)**.
 - ~~El unload despawnea entidades, pero no retira entradas de `Assets<Mesh/Image/Material>`~~ **(#51: eviction por refs vivas al unload en viewer3d + render3d; shapes/texturas compartidas se conservan)**.
-- ~~`ScenerySpawnPlugin` stub~~ **(#52: sets Catalog→Terrain→Track→Objects→Ready, `ScenerySpawnCycle`/`Budgets`/`Progress`; viewer/render3d adaptan FSM local; #55 sigue con startup no bloqueante)**.
+- ~~`ScenerySpawnPlugin` stub~~ **(#52: sets Catalog→Terrain→Track→Objects→Ready, `ScenerySpawnCycle`/`Budgets`/`Progress`; viewer/render3d adaptan FSM local)**.
+- ~~Carga de ruta bloqueaba la ventana~~ **(#55: viewer3d abre en Loading y parsea en background; render3d parsea tiles en `ParsingTiles` antes de Indexing/spawn; UI de progreso + `OPENRAILSRS_PERF_DEBUG`)**.
 - El refactor no debe ser cosmético: #48–#55 vinculan cada cambio a carga async, deduplicación, lifecycle o diagnóstico.
 - ~~Builders de shape divergentes entre render3d y bevy-scenery~~ **(#56: `render3d/src/shapes.rs` delega a `build_mesh_parts_from_shape_at_distance_with_options` + `render3d_world_mesh_options`; sub-objetos + bake anim key 0)**.
 - ~~Sin fuente única de fallos/fallback de carga~~ **(#54: `MstsLoadDiagnostics` con `requested=loaded+failed+fallback`; causas missing/parse/unsupported/fallback; TrackObj #35 ingerido; CLI+HUD+JSON audit)**.

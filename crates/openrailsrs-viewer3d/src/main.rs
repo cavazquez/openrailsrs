@@ -36,6 +36,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use bevy::prelude::*;
+use bevy::state::condition::in_state;
 use bevy::window::PresentMode;
 use openrailsrs_formats::RouteFile;
 use openrailsrs_formats::Vec3 as MstsVec3;
@@ -46,7 +47,6 @@ use openrailsrs_route::edge_path;
 use openrailsrs_route::load_route_from_dir;
 use openrailsrs_scenarios::SCENARIO_OVERLAY_FILENAME;
 use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
-use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::LiveDrive;
 use openrailsrs_viewer3d::RouteAssets;
 use openrailsrs_viewer3d::TerrainElevation;
@@ -54,16 +54,18 @@ use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
+use openrailsrs_viewer3d::route_bootstrap::{
+    PendingRouteLoad, RouteLoadBundle, ViewerAppState, poll_route_load, setup_viewer_loading_ui,
+};
 use openrailsrs_viewer3d::ViewerSceneryMode;
 use openrailsrs_viewer3d::WorldScene;
 use openrailsrs_viewer3d::init_viewer_log;
 use openrailsrs_viewer3d::launch::{
     RunCorridorPath, clamp_viewing_distance_m, run_corridor_half_width_m,
     run_corridor_scenery_enabled, scenery_content_radius_m, set_viewing_distance_m,
-    tdb_radius_for_mode, tile_lab_layers, track_dev_render_enabled, view_radius_m,
-    view_unload_radius_m, viewing_distance_tile_ring,
+    tdb_radius_for_mode, tile_lab_layers, view_radius_m, view_unload_radius_m,
+    viewing_distance_tile_ring,
 };
-use openrailsrs_viewer3d::overhead_wire::RouteWireConfig;
 use openrailsrs_viewer3d::placement_audit::{
     CHILTERN_BIRMINGHAM_TILE, WorldAnchorInput, log_placement_audit, run_placement_audit,
 };
@@ -71,7 +73,7 @@ use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::shapes::global_assets_dirs;
 use openrailsrs_viewer3d::tdb_track::collect_tdb_chords;
 use openrailsrs_viewer3d::teleport::TeleportDialog;
-use openrailsrs_viewer3d::terrain::{TerrainTileStream, load_terrain_from_route_dir_near};
+use openrailsrs_viewer3d::terrain::load_terrain_from_route_dir_near;
 use openrailsrs_viewer3d::tr_item_audit::{log_tr_item_audit, run_tr_item_audit_for_route};
 use openrailsrs_viewer3d::tr_item_index::TrItemWorldIndex;
 use openrailsrs_viewer3d::track::{TrackScene, graph_to_world};
@@ -80,10 +82,9 @@ use openrailsrs_viewer3d::track_position::{
     anchor_delta_xz, build_snapped_corridor_path, route_start_bevy,
 };
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
-use openrailsrs_viewer3d::view_window::ViewWindow;
 use openrailsrs_viewer3d::world::{
-    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, WorldTileStream,
-    load_world_from_route_dir_near, msts_to_bevy, world_tile_center_hint,
+    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, load_world_from_route_dir_near, msts_to_bevy,
+    world_tile_center_hint,
 };
 use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
@@ -249,23 +250,85 @@ fn main() {
     // Must run before route load: WORLD/terrain discovery uses view_radius_m().
     apply_viewing_distance_policy(&cli, &cli.path);
 
-    let mut config = match build_launch_config(
-        &cli.path,
-        cli.live,
-        cli.track_dev,
-        cli.run_corridor,
-        cli.tile_lab,
-        cli.route_root.as_deref(),
-    ) {
-        Ok(c) => c,
-        Err(err) => {
-            eprintln!("error: {err}");
-            eprintln!(
-                "usage: openrailsrs-viewer3d [--live] [--track-dev|--run-corridor|--tile-lab] [--viewing-distance M] [--route-root ROUTE_DIR] [route_dir | scenario.toml]"
+    let boot = Instant::now();
+    let path = cli.path.clone();
+    let live = cli.live;
+    let track_dev = cli.track_dev;
+    let run_corridor = cli.run_corridor;
+    let tile_lab = cli.tile_lab;
+    let route_root = cli.route_root.clone();
+    let cab_fov_deg = cli.cab_fov_deg;
+    let (tx, rx) = std::sync::mpsc::sync_channel::<Result<RouteLoadBundle, String>>(1);
+    std::thread::Builder::new()
+        .name("route-load".into())
+        .spawn(move || {
+            let result = load_route_bundle_for_viewer(
+                &path,
+                live,
+                track_dev,
+                run_corridor,
+                tile_lab,
+                route_root.as_deref(),
+                cab_fov_deg,
             );
-            std::process::exit(1);
-        }
-    };
+            let _ = tx.send(result);
+        })
+        .expect("spawn route-load thread");
+
+    viewer_log!("openrailsrs-viewer3d: starting Bevy app (route load in background, #55)");
+    if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
+        eprintln!(
+            "[PERF] time_to_window_ms={:.1}",
+            boot.elapsed().as_secs_f64() * 1000.0
+        );
+    }
+
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "openrailsrs-viewer3d".into(),
+                    resolution: (1280u32, 720u32).into(),
+                    present_mode: PresentMode::AutoNoVsync,
+                    ..default()
+                }),
+                ..default()
+            }),
+    )
+    .insert_resource(PendingRouteLoad {
+        rx: std::sync::Mutex::new(rx),
+        started: boot,
+    })
+    .add_plugins(ViewerPlugin)
+    .add_systems(Startup, setup_viewer_loading_ui)
+    .add_systems(
+        Update,
+        poll_route_load.run_if(in_state(ViewerAppState::Loading)),
+    )
+    .add_systems(Update, exit_on_esc);
+
+    app.run();
+}
+
+fn load_route_bundle_for_viewer(
+    path: &Path,
+    live: bool,
+    track_dev: bool,
+    run_corridor: bool,
+    tile_lab: bool,
+    route_root: Option<&Path>,
+    cab_fov_deg: Option<f32>,
+) -> Result<RouteLoadBundle, String> {
+    let mut config = build_launch_config(
+        path,
+        live,
+        track_dev,
+        run_corridor,
+        tile_lab,
+        route_root,
+    )?;
 
     let assets = RouteAssets::new(&config.route_dir);
 
@@ -345,7 +408,7 @@ fn main() {
         },
         if config.live.is_none()
             && !config.replay.is_active()
-            && cli.path.extension().and_then(|e| e.to_str()) == Some("toml")
+            && path.extension().and_then(|e| e.to_str()) == Some("toml")
         {
             "\n  hint: add --live or run: cargo run -p openrailsrs-cli -- sim <scenario.toml>"
                 .to_string()
@@ -353,30 +416,8 @@ fn main() {
             String::new()
         },
     );
-    if config.live.is_some()
-        && config.scene.render_mode == openrailsrs_viewer3d::track::TrackRenderMode::Compact
-        && cfg!(debug_assertions)
-    {
-        viewer_log!(
-            "openrailsrs-viewer3d: tip — large route in debug is very slow; use \
-             `cargo run --release -p openrailsrs-viewer3d -- --live …` for playable FPS"
-        );
-    }
 
     let route_focus = route_focus_for_config(&config);
-    if config.elevation.is_empty() {
-        viewer_log!(
-            "openrailsrs-viewer3d: render height origin {:.0} m (scenery bbox y {:.0}, no terrain RAW)",
-            route_focus.height_origin,
-            route_focus.center.y
-        );
-    } else if (route_focus.height_origin - route_focus.center.y).abs() > 0.5 {
-        viewer_log!(
-            "openrailsrs-viewer3d: render height origin {:.0} m terrain MSL (scenery bbox y {:.0})",
-            route_focus.height_origin,
-            route_focus.center.y
-        );
-    }
     let route_offset = config
         .route_offset_override
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
@@ -386,30 +427,14 @@ fn main() {
     if config.scenery_mode.draws_tdb_track() {
         if let Some(tdb) = assets.track_db() {
             let radius_m = tdb_radius_for_mode(config.scenery_mode);
-            viewer_log!(
-                "openrailsrs-viewer3d: {} — pre-audit {:.0}m radius (before Bevy)…",
-                if config.scenery_mode.is_run_corridor() {
-                    "run_corridor"
-                } else {
-                    "track_dev"
-                },
-                radius_m
-            );
             let mut chords =
                 collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
             if config.scenery_mode.is_run_corridor() && config.run_corridor_path.active() {
-                let before = chords.len();
                 chords.retain(|chord| {
                     config
                         .run_corridor_path
                         .contains_segment(chord.start_world, chord.end_world)
                 });
-                viewer_log!(
-                    "openrailsrs-viewer3d: run_corridor — corridor filter {} → {} chord(s), width {:.0}m",
-                    before,
-                    chords.len(),
-                    config.run_corridor_path.half_width_m * 2.0
-                );
             }
             let audit_route_dir = config
                 .scenery_mode
@@ -425,68 +450,29 @@ fn main() {
                 audit_route_dir,
                 Some(assets.tsection()),
             );
-            if config.scenery_mode.is_track_dev() && !track_dev_render_enabled() {
-                viewer_log!(
-                    "openrailsrs-viewer3d: track_dev — audit complete; OPENRAILSRS_TRACK_DEV_RENDER=1 to draw rails in window"
-                );
-            }
         }
     }
 
-    viewer_log!("openrailsrs-viewer3d: starting Bevy app");
-    let mut app = App::new();
-    app.add_plugins(
-        DefaultPlugins
-            .set(openrailsrs_bevy_scenery::shared_asset_plugin())
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: config.title.clone(),
-                    resolution: (1280u32, 720u32).into(),
-                    present_mode: PresentMode::AutoNoVsync,
-                    ..default()
-                }),
-                ..default()
-            }),
-    )
-    .insert_resource(ViewerLaunchOpts {
-        live: config.live.is_some(),
-        cab_fov_deg: cli.cab_fov_deg,
+    Ok(RouteLoadBundle {
+        title: config.title,
+        route_dir: config.route_dir,
+        scene: config.scene,
+        world: config.world,
+        terrain: config.terrain,
+        elevation: config.elevation,
+        replay: config.replay,
+        consist: config.consist,
+        live: config.live,
+        scenery_mode: config.scenery_mode,
+        run_corridor_path: config.run_corridor_path,
+        route_focus,
+        route_offset,
+        assets,
+        launch_opts: ViewerLaunchOpts {
+            live,
+            cab_fov_deg,
+        },
     })
-    .insert_resource(config.scenery_mode)
-    .insert_resource(config.run_corridor_path)
-    .insert_resource(config.scene)
-    .insert_resource(if config.scenery_mode.is_tile_lab() {
-        // No streaming catalog in tile-lab: only the startup tile is shown.
-        WorldTileStream::default()
-    } else {
-        WorldTileStream::new(&config.route_dir, &config.world, view_radius_m())
-    })
-    .insert_resource(ViewWindow::from_route_focus(&route_focus))
-    .insert_resource(TerrainTileStream::new(
-        &config.route_dir,
-        &config.terrain,
-        &route_focus,
-        view_radius_m(),
-    ))
-    .insert_resource(assets)
-    .insert_resource(RouteWireConfig::load_from_route_dir(&config.route_dir))
-    .insert_resource(route_focus)
-    .insert_resource(route_offset)
-    .insert_resource(config.world.clone())
-    .insert_resource(TrItemWorldIndex::rebuild_from_scene(&config.world))
-    .insert_resource(config.terrain)
-    .insert_resource(config.elevation)
-    .insert_resource(config.replay)
-    .insert_resource(config.consist)
-    .insert_resource(HudTitle(config.title))
-    .add_plugins(ViewerPlugin)
-    .add_systems(Update, exit_on_esc);
-
-    if let Some(live) = config.live {
-        app.insert_resource(live);
-    }
-
-    app.run();
 }
 
 fn build_launch_config(

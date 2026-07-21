@@ -26,6 +26,7 @@ pub mod stream;
 pub mod tdb_track;
 pub mod terrain;
 pub mod textures;
+pub mod tile_parse;
 pub mod track;
 pub mod transfer;
 pub mod world_spawn;
@@ -49,6 +50,7 @@ pub use runtime::{
 };
 pub use stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
 pub use terrain::TileGeometry;
+pub use tile_parse::{ParsedTiles, TileParseRequest, parse_tiles_for_load};
 pub use track::{load_graph, load_tdb_context};
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
@@ -81,7 +83,8 @@ impl Plugin for Render3dPlugin {
                 (
                     setup_loading_screen,
                     begin_load_stage.in_set(ScenerySpawnSet::Catalog),
-                    lighting::spawn_scene_sun,
+                    lighting::spawn_scene_sun
+                        .run_if(resource_exists::<crate::SceneExtent>),
                 )
                     .chain(),
             )

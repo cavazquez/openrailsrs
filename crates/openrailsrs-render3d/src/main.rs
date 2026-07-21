@@ -12,24 +12,24 @@
 //! Controles:
 //!   W/A/S/D  mover    Q/E  bajar/subir    Shift  más rápido
 //!   Botón derecho + mover el mouse  mirar    F3 HUD    F4-F8 VSM    F9 preset debug    Esc  salir
+//!
+//! #55: la ventana abre de inmediato; el parse de tiles corre en `AsyncComputeTaskPool`.
 
 //! CLI entry for `openrailsrs-render3d`. Core logic in [`openrailsrs_render3d`].
 
 use std::path::PathBuf;
+use std::time::Instant;
 
 use bevy::prelude::*;
 use bevy::state::condition::in_state;
 use clap::Parser;
 
-use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadDiagnostics};
+use openrailsrs_bevy_scenery::MstsLoadDiagnostics;
 use openrailsrs_render3d::{
     DebugHudEnabled, FlySpeed, MstsRootDir, PlayerStartPoseResource, Render3dPlugin, RouteDir,
-    SceneDebugContext, SceneExtent, StaticConsistPlan, TdbTrackResource, TileCatalog, TileEntry,
-    TileStreamConfig, TilesToRender, activity, catalog_entries_for_initial_load,
-    default_track_camera_pose, default_trackobj_camera_pose, fly_camera, load_consist_at_path,
-    objects, quit_on_esc, resolve_pat_start_pose, resolve_player_consist_path,
-    resolve_player_start_pose, scenery, sky, stream, tdb_track, terrain, toggle_debug_hud, track,
-    update_debug_hud, update_window_title,
+    SceneDebugContext, SceneExtent, TdbTrackResource, TileCatalog, TileParseRequest,
+    TileStreamConfig, TilesToRender, activity, fly_camera, objects, quit_on_esc, scenery, sky,
+    stream, terrain, toggle_debug_hud, track, update_debug_hud, update_window_title,
 };
 
 #[derive(Parser, Debug)]
@@ -84,6 +84,7 @@ struct Cli {
 }
 
 fn main() -> anyhow::Result<()> {
+    let boot = Instant::now();
     let cli = Cli::parse();
 
     // Deducir msts_root si no se especificó.
@@ -105,7 +106,7 @@ fn main() -> anyhow::Result<()> {
     };
     let graph = track::load_graph(&cli.route);
 
-    // Elegir el tile central.
+    // Elegir el tile central (descubrimiento ligero; sin parsear geometría).
     let (cx, cz) = if let Some(t) = center_tile {
         t
     } else if let Some(t) = objects::busiest_world_tile(&cli.route) {
@@ -150,103 +151,13 @@ fn main() -> anyhow::Result<()> {
             ctx.tsection.shapes.len()
         );
     }
-    let tdb_chords = tdb_ctx
-        .as_ref()
-        .map(|ctx| track::collect_tdb_chords(ctx, cx, cz, cli.radius));
 
-    // Construir la lista de tiles (grid de radio R, el central primero).
-    let r = cli.radius as i32;
-    let mut tile_coords: Vec<(i32, i32)> = Vec::new();
-    tile_coords.push((cx, cz)); // central siempre primero
-    for dz in -r..=r {
-        for dx in -r..=r {
-            if dx == 0 && dz == 0 {
-                continue; // ya está
-            }
-            tile_coords.push((cx + dx, cz + dz));
-        }
-    }
-
-    // Cargar cada tile (los que existan).
-    let tile_size_m = 2048.0_f32; // lado de un tile MSTS
-    let mut entries: Vec<TileEntry> = Vec::new();
-    let mut skipped = 0usize;
-    let mut load_diag = MstsLoadDiagnostics::default();
-
-    for &(tx, tz) in &tile_coords {
-        let world_offset = Vec3::new(
-            (tx - cx) as f32 * tile_size_m,
-            0.0,
-            (cz - tz) as f32 * tile_size_m,
-        );
-        match terrain::load_tile_geometry(&cli.route, tx, tz) {
-            Ok(geom) => {
-                load_diag.record_loaded(MstsAssetKind::Terrain);
-                let base_y = geom.height.base_y();
-                let ribbon = if tdb_chords.is_some() {
-                    track::TrackRibbon::default()
-                } else if let Some(g) = graph.as_ref() {
-                    track::build_track_ribbon(g, tx, tz, &geom.height)
-                } else {
-                    track::TrackRibbon::default()
-                };
-                let objs = objects::load_objects_with_diag(
-                    &cli.route,
-                    tx,
-                    tz,
-                    base_y,
-                    Some(&mut load_diag),
-                );
-                entries.push(TileEntry {
-                    geometry: geom,
-                    world_offset,
-                    track: ribbon,
-                    objects: objs,
-                });
-            }
-            Err(_) => {
-                // Grid holes (no `.t`) are normal; do not inflate failed counts.
-                skipped += 1;
-            }
-        }
-    }
-
-    if let Some(chords) = &tdb_chords {
-        let height_rows: Vec<_> = entries
-            .iter()
-            .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height))
-            .collect();
-        let height_index = tdb_track::TileHeightIndex::new(&height_rows, (cx, cz));
-        let scene_ribbon = track::build_tdb_track_ribbon(chords, cx, cz, &height_index, cli.radius);
-        if let Some(entry) = entries
-            .iter_mut()
-            .find(|e| e.geometry.tile_x == cx && e.geometry.tile_z == cz)
-        {
-            entry.track = scene_ribbon;
-        }
-    }
-
-    if entries.is_empty() {
-        anyhow::bail!("no se pudo cargar ningún tile en el radio={r} alrededor de ({cx}, {cz})");
-    }
-
-    // Estadísticas de la escena.
-    let total_patches: usize = entries.iter().map(|e| e.geometry.patches.len()).sum();
-    let total_segments: usize = entries.iter().map(|e| e.track.segment_count()).sum();
-    let total_objects: usize = entries.iter().map(|e| e.objects.len()).sum();
+    let r = cli.radius;
     println!(
-        "render3d: {} tiles cargados ({} sin .t ignorados), {} patches, {} segmentos de vía, {} objetos",
-        entries.len(),
-        skipped,
-        total_patches,
-        total_segments,
-        total_objects,
+        "render3d: abriendo ventana — tile ({cx}, {cz}) r={r} (parse async #55)"
     );
     println!(
         "controles: WASD mover · Q/E bajar/subir · Shift rápido · click derecho + mouse mirar · Esc salir"
-    );
-    println!(
-        "vía: OPENRAILSRS_TDB_UKFS=procedural fuerza rieles 3D (dyntrack); al cargar verás resumen vía:"
     );
     if let Some(act) = &activity_session {
         let (h, m, s) = act.start_time_hms();
@@ -270,118 +181,36 @@ fn main() -> anyhow::Result<()> {
         texture_env.night
     );
 
-    // Posición inicial de cámara: `.act` → `.pat` directo → vía del tile central.
-    let full_catalog = TileCatalog {
-        entries: entries.clone(),
-    };
-    let stream_config = TileStreamConfig::new((cx, cz), cli.radius);
-    let initial_entries = catalog_entries_for_initial_load(&full_catalog, &stream_config);
-    let n_initial = initial_entries.len();
-    if stream_config.streaming_enabled() {
-        println!(
-            "streaming: radio {} — carga inicial {n_initial}/{} tiles (resto bajo demanda)",
-            stream_config.stream_radius,
-            full_catalog.entries.len()
-        );
-    } else if stream_config.stream_radius > 0 {
-        println!(
-            "tiles: radio {} — {} tiles en escena",
-            stream_config.stream_radius, n_initial
-        );
-    }
-    let tiles_res = TilesToRender(initial_entries);
-    let tdb = tdb_ctx.as_ref().map(|c| &c.track_db);
-    let from_ribbon = default_track_camera_pose(&tiles_res);
-    let from_scenery = default_trackobj_camera_pose(&tiles_res);
-    let player_start = activity_session
-        .as_ref()
-        .and_then(|session| {
-            resolve_player_start_pose(
-                &cli.route,
-                &session.path,
-                graph.as_ref(),
-                tdb,
-                (cx, cz),
-                &tiles_res,
-            )
-        })
-        .or_else(|| {
-            cli.player_path.as_ref().and_then(|pat| {
-                resolve_pat_start_pose(
-                    &cli.route,
-                    pat,
-                    cli.path_offset_m.max(0.0),
-                    graph.as_ref(),
-                    tdb,
-                    (cx, cz),
-                    &tiles_res,
-                )
-            })
-        })
-        .or(from_ribbon)
-        .or(from_scenery);
-    if let Some(pose) = &player_start {
-        let src = if activity_session.is_some() {
-            "jugador (.act)"
-        } else if cli.player_path.is_some() {
-            "jugador (.pat)"
-        } else if Some(*pose) == from_ribbon {
-            "vía (tile central)"
-        } else {
-            "escenario (TrackObj/túnel)"
-        };
-        println!(
-            "cámara [{src}]: ({:.0}, {:.1}, {:.0}) yaw {:.0}°",
-            pose.position.x,
-            pose.position.y,
-            pose.position.z,
-            pose.yaw_rad.to_degrees()
-        );
-    } else {
-        println!("cámara [overview]: vista cenital del tile (sin .act/.pat/vía ribbon)");
-    }
-
     let activity_consist = activity_session.as_ref().and_then(|s| {
         if s.player_consist.is_empty() {
             None
         } else {
-            Some(s.player_consist.as_str())
+            Some(s.player_consist.clone())
         }
     });
-    let consist_plan =
-        resolve_player_consist_path(&cli.route, cli.consist.as_deref(), activity_consist).and_then(
-            |path| {
-                load_consist_at_path(&path).map(|vehicles| {
-                    println!(
-                        "consist: {} vehículo(s) desde {}",
-                        vehicles.len(),
-                        path.display()
-                    );
-                    StaticConsistPlan { vehicles }
-                })
-            },
-        );
+    let activity_path_for_pose = activity_session.as_ref().map(|s| s.path.clone());
 
-    // Ventana centrada en el tile principal.
-    let side = tiles_res
-        .0
-        .first()
-        .map(|e| e.geometry.side_m)
-        .unwrap_or(2048.0);
-    let n_tiles = tiles_res.0.len();
-    let _catalog_count = full_catalog.entries.len();
-    let object_count: usize = tiles_res.0.iter().map(|e| e.objects.len()).sum();
+    let parse_request = TileParseRequest {
+        route: cli.route.clone(),
+        center: (cx, cz),
+        radius: r,
+        player_path: cli.player_path.clone(),
+        path_offset_m: cli.path_offset_m,
+        consist: cli.consist.clone(),
+        activity_consist,
+        activity_path_for_pose,
+        graph,
+        tdb: tdb_ctx.clone(),
+    };
 
-    let mut app = App::new();
     let night_mode = texture_env.night;
+    let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
             .set(openrailsrs_bevy_scenery::shared_asset_plugin())
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: format!(
-                        "openrailsrs-render3d — tile ({cx}, {cz}) r={r} [{n_tiles} tiles]",
-                    ),
+                    title: format!("openrailsrs-render3d — tile ({cx}, {cz}) r={r}"),
                     ..default()
                 }),
                 ..default()
@@ -392,31 +221,38 @@ fn main() -> anyhow::Result<()> {
     .insert_resource(FlySpeed(120.0))
     .insert_resource(SceneDebugContext {
         center_tile: (cx, cz),
-        radius: r as u32,
-        tile_count: n_tiles,
-        object_count,
+        radius: r,
+        tile_count: 0,
+        object_count: 0,
     })
     .insert_resource(DebugHudEnabled(!cli.no_hud))
     .insert_resource(RouteDir(cli.route.clone()))
     .insert_resource(MstsRootDir(msts_root))
     .insert_resource(texture_env)
-    .insert_resource(full_catalog)
-    .insert_resource(stream_config)
-    .insert_resource(tiles_res)
-    .insert_resource(SceneExtent { side_m: side })
-    .insert_resource(PlayerStartPoseResource(player_start))
-    .insert_resource(load_diag);
+    .insert_resource(parse_request)
+    // Placeholders until async tile parse completes.
+    .insert_resource(TileCatalog {
+        entries: Vec::new(),
+    })
+    .insert_resource(TileStreamConfig::new((cx, cz), r))
+    .insert_resource(TilesToRender(Vec::new()))
+    .insert_resource(SceneExtent { side_m: 2048.0 })
+    .insert_resource(PlayerStartPoseResource(None))
+    .insert_resource(MstsLoadDiagnostics::default());
     if let Some(session) = activity_session {
         app.insert_resource(session);
-    }
-    if let Some(plan) = consist_plan {
-        app.insert_resource(plan);
     }
     if let Some(ctx) = tdb_ctx {
         app.insert_resource(TdbTrackResource {
             ctx,
-            grid_radius: r as u32,
+            grid_radius: r,
         });
+    }
+    if openrailsrs_render3d::loading::perf_debug() {
+        eprintln!(
+            "[PERF] time_to_app_ms={:.1}",
+            boot.elapsed().as_secs_f64() * 1000.0
+        );
     }
     app.add_systems(
         Update,
