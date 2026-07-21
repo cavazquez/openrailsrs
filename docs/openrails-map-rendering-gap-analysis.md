@@ -329,7 +329,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#60](https://github.com/cavazquez/openrailsrs/issues/60) | P1 | `[Performance] Reducir entidades y materiales por patch de terreno` | #31 |
 | [#61](https://github.com/cavazquez/openrailsrs/issues/61) | P2 | `[Performance] Actualizar TrItemWorldIndex incrementalmente por tile` | #28, #53 |
 | [#62](https://github.com/cavazquez/openrailsrs/issues/62) | P2 | `[Performance] Evitar scans globales por frame para unload y LOD WORLD` | #6, #30, #31 |
-| [#63](https://github.com/cavazquez/openrailsrs/issues/63) | P2 | `[Performance] Construir TileHeightIndex una vez por lote en render3d` | #6 |
+| [#63](https://github.com/cavazquez/openrailsrs/issues/63) | P2 | `[Performance] Construir TileHeightIndex una vez por lote en render3d` | **Cerrado** — índice owned cacheado en Track + `StreamHeightIndexCache` |
 
 Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinates`, `validation`, `needs-investigation`, `tiles`, `world-objects`, `assets`, `asset-loader`, `culling`, `track-rendering`, `sprites`, `materials`, `meshes`, `textures`, `terrain`, `rolling-stock-visuals`, `camera`, `performance` y `bevy`.
 
@@ -378,7 +378,7 @@ Hallazgos confirmados:
 4. ~~Cada patch de terreno crea entidad y material propios~~ **(#60: merge por `terrain_shader_material_key` + build paralelo; 1024→20/13, 2289→1137 ms)**.
 5. ~~`TrItemWorldIndex` se reconstruye completo cuando cambia la longitud de la escena~~ **(#61: delta por tile add/remove; rebuild solo recovery)**.
 6. Unload y LOD WORLD ejecutan queries globales cada frame; el coste exacto todavía requiere spans de profiling (#62).
-7. render3d reconstruye `TileHeightIndex` por tile aunque el lote no cambie (#63).
+7. ~~render3d reconstruye `TileHeightIndex` por tile aunque el lote no cambie~~ **(#63: una construcción por lote Track; stream invalida solo si cambia catálogo/centro)**.
 
 El issue histórico #6 conserva el profiling transversal. Los issues #57–#63 contienen optimizaciones concretas con baseline y criterios de aceptación, evitando duplicar un issue genérico de rendimiento.
 

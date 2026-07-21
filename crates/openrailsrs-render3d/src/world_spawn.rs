@@ -1121,7 +1121,7 @@ pub fn spawn_tile_track(
     ribbon: &TrackRibbon,
     objects: &[ObjectMarker],
     center_tile: (i32, i32),
-    heights: &crate::tdb_track::TileHeightIndex<'_>,
+    heights: &crate::tdb_track::TileHeightIndex,
     tile_offset: Vec3,
     materials_lit: bool,
     tile_x: i32,

@@ -1,6 +1,7 @@
 //! Streaming de tiles alrededor de la camara + marcador `TileContent`.
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use bevy::prelude::*;
 
@@ -70,6 +71,53 @@ impl TileStreamConfig {
 #[derive(Resource, Clone)]
 pub struct TileCatalog {
     pub entries: Vec<TileEntry>,
+}
+
+/// Cached [`TileHeightIndex`] for the stream catalog (#63).
+///
+/// Rebuilt only when the set of catalog tile coords or scene center changes.
+#[derive(Resource, Default)]
+pub struct StreamHeightIndexCache {
+    index: Option<crate::tdb_track::TileHeightIndex>,
+    fingerprint: Vec<(i32, i32)>,
+    center: (i32, i32),
+    pub builds: u32,
+}
+
+impl StreamHeightIndexCache {
+    pub fn get_or_build(
+        &mut self,
+        catalog: &TileCatalog,
+        center: (i32, i32),
+    ) -> &crate::tdb_track::TileHeightIndex {
+        let mut keys: Vec<_> = catalog
+            .entries
+            .iter()
+            .map(|e| (e.geometry.tile_x, e.geometry.tile_z))
+            .collect();
+        keys.sort_unstable();
+        let reuse = self.index.is_some()
+            && self.fingerprint == keys
+            && self.center == center;
+        if !reuse {
+            self.builds += 1;
+            self.fingerprint = keys;
+            self.center = center;
+            self.index = Some(crate::tdb_track::TileHeightIndex::from_tile_heights(
+                catalog.entries.iter().map(|e| {
+                    (
+                        e.geometry.tile_x,
+                        e.geometry.tile_z,
+                        &e.geometry.height,
+                    )
+                }),
+                center,
+            ));
+        }
+        self.index
+            .as_ref()
+            .expect("StreamHeightIndexCache index after get_or_build")
+    }
 }
 
 #[derive(Resource, Clone)]
@@ -144,6 +192,7 @@ pub fn spawn_tile_entry(
     tdb_track: Option<&crate::TdbTrackResource>,
     stream_config: &TileStreamConfig,
     catalog: &TileCatalog,
+    height_cache: &mut StreamHeightIndexCache,
 ) {
     let tile_x = entry.geometry.tile_x;
     let tile_z = entry.geometry.tile_z;
@@ -177,12 +226,7 @@ pub fn spawn_tile_entry(
                 )
             })
             .unwrap_or_default();
-        let height_buf: Vec<_> = catalog
-            .entries
-            .iter()
-            .map(|e| (e.geometry.tile_x, e.geometry.tile_z, &e.geometry.height))
-            .collect();
-        let height_index = crate::tdb_track::TileHeightIndex::new(&height_buf, center);
+        let height_index = height_cache.get_or_build(catalog, center);
         spawn_tile_track(
             commands,
             meshes,
@@ -198,7 +242,7 @@ pub fn spawn_tile_entry(
             &entry.track,
             &entry.objects,
             center,
-            &height_index,
+            height_index,
             offset,
             assets.materials_lit,
             tile_x,
@@ -341,6 +385,7 @@ pub fn tile_stream_system(
     catalog: Res<TileCatalog>,
     assets: Option<ResMut<StreamWorldAssets>>,
     state: Option<ResMut<TileStreamState>>,
+    mut height_cache: ResMut<StreamHeightIndexCache>,
     route: Res<RouteDir>,
     msts_root: Res<MstsRootDir>,
     texture_env: Res<crate::textures::TextureEnvironment>,
@@ -459,6 +504,7 @@ pub fn tile_stream_system(
             tdb_track.as_deref(),
             &config,
             &catalog,
+            &mut height_cache,
         );
         state.loaded.insert(key);
         spawned += 1;
@@ -471,6 +517,39 @@ pub fn tile_stream_system(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::terrain::load_tile_geometry;
+
+    #[test]
+    fn stream_height_index_builds_once_per_catalog() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let tiles = [(-6082, 14925), (-6081, 14925), (-6082, 14924)];
+        let mut entries = Vec::new();
+        for (tx, tz) in tiles {
+            let Ok(geom) = load_tile_geometry(&route, tx, tz) else {
+                eprintln!("skip: Chiltern tile ({tx},{tz}) missing");
+                return;
+            };
+            entries.push(crate::TileEntry {
+                geometry: geom,
+                world_offset: Vec3::ZERO,
+                track: crate::track::TrackRibbon::default(),
+                objects: Vec::new(),
+            });
+        }
+        let catalog = TileCatalog { entries };
+        let center = (-6082, 14925);
+        let mut cache = StreamHeightIndexCache::default();
+        let y0 = cache.get_or_build(&catalog, center).scene_base_y();
+        let y1 = cache.get_or_build(&catalog, center).scene_base_y();
+        let y2 = cache.get_or_build(&catalog, center).scene_base_y();
+        assert_eq!(cache.builds, 1, "same catalog must build TileHeightIndex once");
+        assert_eq!(y0, y1);
+        assert_eq!(y1, y2);
+
+        // Different center → rebuild (scene_base_y may change).
+        let _ = cache.get_or_build(&catalog, (-6081, 14925));
+        assert_eq!(cache.builds, 2);
+    }
 
     #[test]
     fn initial_radius_matches_stream_radius() {

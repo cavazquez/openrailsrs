@@ -272,7 +272,7 @@ pub fn tdb_ukfs_instances_for_tile(
     shaped_chords: &[(Vec3, Vec3, u32)],
     tsection: &TSectionCatalog,
     center_tile: (i32, i32),
-    heights: &TileHeightIndex<'_>,
+    heights: &TileHeightIndex,
 ) -> Vec<TdbUkfsInstance> {
     tdb_ukfs_instances_scene(shaped_chords, tsection, center_tile, heights)
 }
@@ -282,7 +282,7 @@ pub fn tdb_procedural_segments_for_tile(
     shaped_chords: &[(Vec3, Vec3, u32)],
     tsection: &TSectionCatalog,
     center_tile: (i32, i32),
-    heights: &TileHeightIndex<'_>,
+    heights: &TileHeightIndex,
 ) -> Vec<crate::dyntrack::ProceduralTrackSegment> {
     tdb_procedural_segments_scene(shaped_chords, tsection, center_tile, heights)
 }
@@ -824,16 +824,25 @@ pub fn scene_xz_to_world(x: f32, z: f32, center_tile_x: i32, center_tile_z: i32)
 }
 
 /// Referencia vertical de escena para colocar vía `.tdb`.
-pub struct TileHeightIndex<'a> {
-    tiles: &'a [(i32, i32, &'a crate::terrain::TileHeight)],
+///
+/// Owned (no lifetime) so a batch can build the index **once** and reuse it
+/// across all tiles in the Track phase / stream catalog (#63).
+#[derive(Clone)]
+pub struct TileHeightIndex {
+    tiles: Vec<(i32, i32, crate::terrain::TileHeight)>,
     scene_base_y: f32,
 }
 
-impl<'a> TileHeightIndex<'a> {
-    pub fn new(
-        tiles: &'a [(i32, i32, &'a crate::terrain::TileHeight)],
+impl TileHeightIndex {
+    /// Build from borrowed height rows (clones each [`TileHeight`] once).
+    pub fn from_tile_heights<'a>(
+        rows: impl IntoIterator<Item = (i32, i32, &'a crate::terrain::TileHeight)>,
         center_tile: (i32, i32),
     ) -> Self {
+        let tiles: Vec<_> = rows
+            .into_iter()
+            .map(|(x, z, height)| (x, z, height.clone()))
+            .collect();
         let scene_base_y = tiles
             .iter()
             .find(|(x, z, _)| *x == center_tile.0 && *z == center_tile.1)
@@ -844,6 +853,32 @@ impl<'a> TileHeightIndex<'a> {
             tiles,
             scene_base_y,
         }
+    }
+
+    /// Compatibility wrapper over a temporary slice of references.
+    pub fn new(
+        tiles: &[(i32, i32, &crate::terrain::TileHeight)],
+        center_tile: (i32, i32),
+    ) -> Self {
+        Self::from_tile_heights(
+            tiles.iter().map(|(x, z, h)| (*x, *z, *h)),
+            center_tile,
+        )
+    }
+
+    /// Sorted `(tile_x, tile_z)` keys — fingerprint for cache invalidation (#63).
+    pub fn fingerprint(&self) -> Vec<(i32, i32)> {
+        let mut keys: Vec<_> = self.tiles.iter().map(|(x, z, _)| (*x, *z)).collect();
+        keys.sort_unstable();
+        keys
+    }
+
+    pub fn scene_base_y(&self) -> f32 {
+        self.scene_base_y
+    }
+
+    pub fn tile_count(&self) -> usize {
+        self.tiles.len()
     }
 
     /// Y local del heightfield (misma convención que el mesh de terreno).
@@ -995,7 +1030,7 @@ pub fn tdb_ukfs_instances_scene(
     shaped_chords: &[(Vec3, Vec3, u32)],
     tsection: &TSectionCatalog,
     center_tile: (i32, i32),
-    heights: &TileHeightIndex<'_>,
+    heights: &TileHeightIndex,
 ) -> Vec<TdbUkfsInstance> {
     let mut out = Vec::new();
     for (start, end, shape_idx) in shaped_chords {
@@ -1043,7 +1078,7 @@ pub fn tdb_procedural_segments_scene(
     shaped_chords: &[(Vec3, Vec3, u32)],
     tsection: &TSectionCatalog,
     center_tile: (i32, i32),
-    heights: &TileHeightIndex<'_>,
+    heights: &TileHeightIndex,
 ) -> Vec<crate::dyntrack::ProceduralTrackSegment> {
     use crate::dyntrack::{MSTS_STANDARD_HALF_GAUGE_M, ProceduralTrackSegment};
 
@@ -1215,6 +1250,32 @@ mod tests {
             max_grade < 0.35,
             "pendiente máxima demasiado pronunciada (spike vertical?): {max_grade:.3}"
         );
+    }
+
+    #[test]
+    fn height_index_rail_y_stable_across_owned_rebuild() {
+        let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let (tx, tz) = (-6082, 14925);
+        let Ok(tile) = load_tile_geometry(&route, tx, tz) else {
+            eprintln!("skip: Chiltern tile missing");
+            return;
+        };
+        let rows = [(tx, tz, &tile.height)];
+        let a = TileHeightIndex::new(&rows, (tx, tz));
+        let b = TileHeightIndex::from_tile_heights([(tx, tz, &tile.height)], (tx, tz));
+        let world = Vec3::new(
+            tx as f32 * crate::track::TILE_SIZE_M + 100.0,
+            tile.height.base_y() + 10.0,
+            -(tz as f32 * crate::track::TILE_SIZE_M + 100.0),
+        );
+        let ya = a.rail_y_at_world(world);
+        let yb = b.rail_y_at_world(world);
+        assert!(
+            (ya - yb).abs() < 1e-4,
+            "owned rebuild must keep rail Y (a={ya} b={yb})"
+        );
+        assert_eq!(a.fingerprint(), b.fingerprint());
+        assert_eq!(a.scene_base_y(), b.scene_base_y());
     }
 
     #[test]

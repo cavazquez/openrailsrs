@@ -122,6 +122,10 @@ pub enum LoadStage {
         obj_ctx: ObjectSpawnCtx,
         slots: Vec<TileSlot>,
         tile_i: usize,
+        /// Built once for the whole Track batch (#63).
+        height_index: Option<crate::tdb_track::TileHeightIndex>,
+        /// How many times the height index was constructed (expect 1 per batch).
+        height_index_builds: u32,
     },
     /// Objetos `.s` en lotes.
     Objects {
@@ -566,6 +570,8 @@ pub fn progressive_world_load(
                         obj_ctx,
                         slots,
                         tile_i: 0,
+                        height_index: None,
+                        height_index_builds: 0,
                     };
                     progress.set("Vía…", terrain_fraction(n_tiles, n_tiles));
                     continue 'progress;
@@ -650,6 +656,8 @@ pub fn progressive_world_load(
                 obj_ctx,
                 slots,
                 tile_i,
+                height_index,
+                height_index_builds,
             } => {
                 let n_tiles = slots.len();
                 if *tile_i >= n_tiles {
@@ -657,8 +665,18 @@ pub fn progressive_world_load(
                     perf.secs_track = elapsed;
                     perf.reset_phase();
                     if perf_debug() {
-                        perf.print_phase("Track", &format!("{n_tiles} tiles"), elapsed);
+                        perf.print_phase(
+                            "Track",
+                            &format!(
+                                "{n_tiles} tiles, height_index_builds={height_index_builds}"
+                            ),
+                            elapsed,
+                        );
                     }
+                    debug_assert!(
+                        n_tiles == 0 || *height_index_builds == 1,
+                        "TileHeightIndex must be built once per Track batch (#63), got {height_index_builds} for {n_tiles} tiles"
+                    );
                     // Preparar Objects.
                     let slots = std::mem::take(slots);
                     let filtered = build_filtered_objects(&slots, 0);
@@ -674,10 +692,27 @@ pub fn progressive_world_load(
                     continue 'progress;
                 }
 
+                let center = stream_config.center_tile;
+                if height_index.is_none() {
+                    *height_index = Some(crate::tdb_track::TileHeightIndex::from_tile_heights(
+                        slots.iter().map(|s| {
+                            (
+                                s.geometry.tile_x,
+                                s.geometry.tile_z,
+                                &s.geometry.height,
+                            )
+                        }),
+                        center,
+                    ));
+                    *height_index_builds += 1;
+                }
+                let height_index = height_index
+                    .as_ref()
+                    .expect("height_index populated for Track batch");
+
                 let slot = &slots[*tile_i];
                 let segs = slot.track.segment_count();
                 let track_objs = crate::objects::count_track_objects(&slot.objects);
-                let center = stream_config.center_tile;
                 let shaped = tdb_track
                     .as_ref()
                     .map(|tdb| {
@@ -689,11 +724,6 @@ pub fn progressive_world_load(
                         )
                     })
                     .unwrap_or_default();
-                let height_buf: Vec<_> = slots
-                    .iter()
-                    .map(|s| (s.geometry.tile_x, s.geometry.tile_z, &s.geometry.height))
-                    .collect();
-                let height_index = crate::tdb_track::TileHeightIndex::new(&height_buf, center);
                 let batch_t = Instant::now();
                 let suppressed = crate::objects::tile_suppresses_tdb_ribbon(&slot.objects);
                 let bypass = suppressed && crate::world_spawn::tdb_procedural_forced();

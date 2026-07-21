@@ -107,7 +107,7 @@ pub fn build_tdb_track_ribbon_scene(
     center_tile_x: i32,
     center_tile_z: i32,
     grid_radius: u32,
-    heights: &crate::tdb_track::TileHeightIndex<'_>,
+    heights: &crate::tdb_track::TileHeightIndex,
 ) -> TrackRibbon {
     let mut ribbon = TrackRibbon::default();
     let bound = TILE_SIZE_M * 0.5 + TILE_MARGIN_M + grid_radius as f32 * TILE_SIZE_M;
@@ -140,7 +140,7 @@ pub fn build_tdb_track_ribbon(
     chords: &[(Vec3, Vec3)],
     center_tile_x: i32,
     center_tile_z: i32,
-    heights: &crate::tdb_track::TileHeightIndex<'_>,
+    heights: &crate::tdb_track::TileHeightIndex,
     grid_radius: u32,
 ) -> TrackRibbon {
     build_tdb_track_ribbon_scene(chords, center_tile_x, center_tile_z, grid_radius, heights)
@@ -201,7 +201,7 @@ fn push_segment_scene(
     bz: f32,
     world_start: Vec3,
     world_end: Vec3,
-    heights: &crate::tdb_track::TileHeightIndex<'_>,
+    heights: &crate::tdb_track::TileHeightIndex,
     center_tile: (i32, i32),
 ) {
     let dx = bx - ax;
