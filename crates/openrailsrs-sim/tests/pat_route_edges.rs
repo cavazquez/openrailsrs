@@ -175,3 +175,41 @@ fn sim_runtime_path_uses_scenario_spawn() {
         "live-drive must leave platform via e17466_r"
     );
 }
+
+#[test]
+fn live_drive_session_from_chiltern_scenario() {
+    use openrailsrs_sim::LiveDriveSession;
+    let scenario_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern/scenario.toml");
+    let scenario_dir = scenario_path.parent().unwrap();
+    let scenario = openrailsrs_scenarios::load_scenario(&scenario_path).expect("scenario");
+    assert!(
+        scenario.route.waypoints.len() >= 2,
+        "waypoints missing: {}",
+        scenario.route.waypoints.len()
+    );
+    LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
+}
+
+/// Viewer `graph_start_position` must not call bare BFS: default switch layout
+/// yields `no path from n17368 to n5158` even though reverse edges exist.
+#[test]
+fn resolve_scenario_route_edges_works_on_raw_graph() {
+    use openrailsrs_route::load_track_graph_from_route_dir;
+    use openrailsrs_scenarios::load_scenario;
+    use openrailsrs_sim::path::{edge_path, resolve_scenario_route_edges};
+
+    let chiltern = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+    if !chiltern.join("track.toml").exists() {
+        return;
+    }
+    let scenario = load_scenario(chiltern.join("scenario.toml")).expect("scenario");
+    let graph = load_track_graph_from_route_dir(&chiltern).expect("graph");
+    assert!(
+        edge_path(&graph, &scenario.route.start, &scenario.route.destination).is_err(),
+        "bare BFS should fail without applying scenario switches"
+    );
+    let path = resolve_scenario_route_edges(&graph, &scenario.route).expect("scenario path");
+    assert!(path.len() > 5);
+    assert!(path.contains(&"e17466_r".to_string()));
+}

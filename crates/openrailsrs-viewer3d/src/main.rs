@@ -43,8 +43,8 @@ use openrailsrs_formats::Vec3 as MstsVec3;
 use openrailsrs_formats::{
     msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
 };
-use openrailsrs_route::edge_path;
 use openrailsrs_route::load_route_from_dir;
+use openrailsrs_sim::path::resolve_scenario_route_edges;
 use openrailsrs_scenarios::SCENARIO_OVERLAY_FILENAME;
 use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
 use openrailsrs_viewer3d::LiveDrive;
@@ -1209,12 +1209,8 @@ fn graph_start_position(
     scene: &TrackScene,
     scenario: &openrailsrs_scenarios::ScenarioFile,
 ) -> Result<Vec3, String> {
-    let path_edges = edge_path(
-        &scene.graph,
-        &scenario.route.start,
-        &scenario.route.destination,
-    )
-    .map_err(|e| e.to_string())?;
+    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
+        .map_err(|e| e.to_string())?;
     let mut remaining = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
     for edge_id in path_edges {
         let edge = scene
@@ -1253,12 +1249,8 @@ fn build_run_corridor_path(
     scenario: &openrailsrs_scenarios::ScenarioFile,
     route_delta: Vec3,
 ) -> Result<RunCorridorPath, String> {
-    let path_edges = edge_path(
-        &scene.graph,
-        &scenario.route.start,
-        &scenario.route.destination,
-    )
-    .map_err(|e| e.to_string())?;
+    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
+        .map_err(|e| e.to_string())?;
     let mut points = Vec::new();
     for edge_id in path_edges {
         let edge = scene

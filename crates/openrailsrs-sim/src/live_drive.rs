@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use openrailsrs_route::load_track_graph_from_route_dir;
-use openrailsrs_scenarios::{RegionTracker, RegionTransition, ScenarioFile, SwitchPositionDef};
-use openrailsrs_track::{NodeKind, SignalAspect, SwitchPosition, TrackGraph};
+use openrailsrs_scenarios::{RegionTracker, RegionTransition, ScenarioFile};
+use openrailsrs_track::{NodeKind, SignalAspect, TrackGraph};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
 use crate::SimError;
@@ -176,14 +176,7 @@ impl LiveDriveSession {
     pub fn from_scenario(scenario_dir: &Path, scenario: &ScenarioFile) -> Result<Self, SimError> {
         let route_dir = scenario_dir.join(&scenario.route.path);
         let mut graph = load_track_graph_from_route_dir(&route_dir)?;
-
-        for sw in &scenario.route.switches {
-            let pos = match sw.position {
-                SwitchPositionDef::Straight => SwitchPosition::Straight,
-                SwitchPositionDef::Diverging => SwitchPosition::Diverging,
-            };
-            graph.set_switch(&sw.node, pos)?;
-        }
+        crate::path::apply_route_switches(&mut graph, &scenario.route)?;
         for cap in &scenario.route.edge_speed_limits {
             graph.cap_edge_speed_limit_kmh(&cap.edge, cap.speed_limit_kmh);
         }

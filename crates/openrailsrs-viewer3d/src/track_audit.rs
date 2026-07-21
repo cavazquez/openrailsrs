@@ -1374,13 +1374,9 @@ mod tests {
         let _world = crate::world::load_world_from_route_dir_near(route_dir, Some(anchor), 8000.0);
         let graph_start = {
             use crate::track::graph_to_world;
-            use openrailsrs_route::edge_path;
-            let path_edges = edge_path(
-                &scene.graph,
-                &scenario.route.start,
-                &scenario.route.destination,
-            )
-            .expect("path");
+            use openrailsrs_sim::path::resolve_scenario_route_edges;
+            let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
+                .expect("path");
             let mut remaining = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
             let mut pos = graph_to_world(0.0, 0.0);
             for edge_id in path_edges {

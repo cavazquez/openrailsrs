@@ -1,8 +1,8 @@
 //! Switch-aware pathfinding — delegates to [`openrailsrs_route::path`].
 
 use openrailsrs_route::path::edge_path as route_edge_path;
-use openrailsrs_scenarios::model::RouteSection;
-use openrailsrs_track::TrackGraph;
+use openrailsrs_scenarios::model::{RouteSection, SwitchPositionDef};
+use openrailsrs_track::{SwitchPosition, TrackGraph};
 
 use crate::SimError;
 
@@ -14,11 +14,32 @@ pub fn edge_path(
     route_edge_path(graph, start, destination).map_err(|e| SimError::Msg(e.to_string()))
 }
 
+/// Apply `[route.switches]` positions onto `graph`.
+pub fn apply_route_switches(
+    graph: &mut TrackGraph,
+    route: &RouteSection,
+) -> Result<(), SimError> {
+    for sw in &route.switches {
+        let pos = match sw.position {
+            SwitchPositionDef::Straight => SwitchPosition::Straight,
+            SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+        };
+        graph
+            .set_switch(&sw.node, pos)
+            .map_err(|e| SimError::Msg(e.to_string()))?;
+    }
+    Ok(())
+}
+
 /// Resolve the edge sequence for a scenario route.
 ///
 /// When `route.waypoints` has ≥2 entries (from MSTS `.pat` import), follows that
 /// ordered node list; if the last waypoint is not `destination`, appends a
 /// switch-aware BFS hop to the destination.
+///
+/// Callers that have not yet applied [`apply_route_switches`] should use
+/// [`resolve_scenario_route_edges`] instead — plain BFS on the default switch
+/// layout often fails on MSTS corridors (e.g. Chiltern Paddington → Birmingham).
 pub fn resolve_route_edges(
     graph: &TrackGraph,
     route: &RouteSection,
@@ -38,6 +59,18 @@ pub fn resolve_route_edges(
     } else {
         edge_path(graph, &route.start, &route.destination)
     }
+}
+
+/// Clone `graph`, apply scenario switches, then [`resolve_route_edges`].
+///
+/// Safe for read-only viewers that must not mutate the shared track scene.
+pub fn resolve_scenario_route_edges(
+    graph: &TrackGraph,
+    route: &RouteSection,
+) -> Result<Vec<String>, SimError> {
+    let mut g = graph.clone();
+    apply_route_switches(&mut g, route)?;
+    resolve_route_edges(&g, route)
 }
 
 #[cfg(test)]

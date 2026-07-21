@@ -25,8 +25,8 @@ use openrailsrs_formats::{
     RouteStart, TSectionCatalog, TrackDbFile, msts_tile_x_index_for_coord,
     msts_tile_z_index_for_coord,
 };
-use openrailsrs_route::edge_path;
 use openrailsrs_scenarios::ScenarioFile;
+use openrailsrs_sim::path::resolve_scenario_route_edges;
 use openrailsrs_track::TrackGraph;
 
 use crate::launch::{RunCorridorPath, run_corridor_half_width_m};
@@ -354,12 +354,7 @@ pub fn graph_position_at_route_node(
     offset: RouteWorldOffset,
     target_node: &str,
 ) -> Option<Vec3> {
-    let path_edges = edge_path(
-        &scene.graph,
-        &scenario.route.start,
-        &scenario.route.destination,
-    )
-    .ok()?;
+    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route).ok()?;
     let mut remaining_start = scenario.route.start_offset_m.unwrap_or(0.0).max(0.0);
     for edge_id in path_edges {
         let edge = scene.graph.edge(&edge_id)?;
@@ -792,12 +787,8 @@ fn build_graph_corridor_waypoints(
     scenario: &ScenarioFile,
     route_delta: Vec3,
 ) -> Result<Vec<CorridorWaypoint>, String> {
-    let path_edges = edge_path(
-        &scene.graph,
-        &scenario.route.start,
-        &scenario.route.destination,
-    )
-    .map_err(|e| e.to_string())?;
+    let path_edges = resolve_scenario_route_edges(&scene.graph, &scenario.route)
+        .map_err(|e| e.to_string())?;
     let mut waypoints: Vec<CorridorWaypoint> = Vec::new();
     for edge_id in path_edges {
         let edge = scene
