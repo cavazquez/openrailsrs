@@ -956,7 +956,24 @@ fn box_size_for_kind(kind: &str, base: f32) -> Vec3 {
     }
 }
 
+/// Open Rails treats Platform/Siding as TrItem labels only (`Scenery.cs`), not scenery meshes.
+/// Spawning them as placeholders/shapes produces giant grey cubes after #86.
+fn is_tr_item_label_only(kind: &str) -> bool {
+    matches!(kind, "Platform" | "Siding")
+}
+
+/// Kinds that may load a `.s` mesh but must never fall back to a debug cuboid.
+fn suppress_world_placeholder(kind: &str) -> bool {
+    matches!(
+        kind,
+        "Platform" | "Siding" | "Other" | "Speedpost" | "SoundRegion"
+    )
+}
+
 fn shape_eligible(obj: &WorldObject) -> bool {
+    if is_tr_item_label_only(obj.kind) {
+        return false;
+    }
     let Some(f) = trackobj_effective_shape_file(obj) else {
         return false;
     };
@@ -964,6 +981,7 @@ fn shape_eligible(obj: &WorldObject) -> bool {
     if obj.kind == "Hazard" {
         return lower.ends_with(".haz") || lower.ends_with(".s");
     }
+    // CollideObject/LevelCr/Gantry arrive as `Other` with a `.s` FileName (#86).
     lower.ends_with(".s")
 }
 
@@ -1546,6 +1564,7 @@ fn classify_one_object(
         || obj.kind == "HWater"
         || obj.kind == "Transfer"
         || obj.kind == "CarSpawner"
+        || is_tr_item_label_only(obj.kind)
     {
         return;
     }
@@ -1681,6 +1700,9 @@ fn classify_one_object(
     if dist > shape_mesh_radius_m() {
         return;
     }
+    if suppress_world_placeholder(obj.kind) {
+        return;
+    }
 
     let size = box_size_for_kind(obj.kind, progress.placeholder_base);
     let translation = focus.scenery_to_render(Vec3::new(
@@ -1688,10 +1710,11 @@ fn classify_one_object(
         obj.position.y + size.y * 0.5,
         obj.position.z,
     ));
+    // Size is already applied in local verts; keep transform scale at 1 to avoid size² cubes.
     let tf = Transform {
         translation,
         rotation: obj.rotation,
-        scale: size,
+        scale: Vec3::ONE,
     };
     let kind_entry = progress
         .merged_boxes
@@ -3405,6 +3428,7 @@ pub fn spawn_world_boxes(
             || obj.kind == "HWater"
             || obj.kind == "Transfer"
             || obj.kind == "CarSpawner"
+            || is_tr_item_label_only(obj.kind)
         {
             continue;
         }
@@ -3482,6 +3506,9 @@ pub fn spawn_world_boxes(
         if dist > shape_mesh_radius_m() {
             continue;
         }
+        if suppress_world_placeholder(obj.kind) {
+            continue;
+        }
 
         let size = box_size_for_kind(obj.kind, base);
         let translation = focus.scenery_to_render(Vec3::new(
@@ -3489,10 +3516,11 @@ pub fn spawn_world_boxes(
             obj.position.y + size.y * 0.5,
             obj.position.z,
         ));
+        // Size is already applied in local verts; keep transform scale at 1 to avoid size² cubes.
         let tf = Transform {
             translation,
             rotation: obj.rotation,
-            scale: size,
+            scale: Vec3::ONE,
         };
         let kind_entry = merged_boxes
             .entry(obj.kind)
@@ -3796,6 +3824,39 @@ mod tests {
         assert!(scene.items.iter().any(|o| o.kind == "HWater"));
         assert!(scene.items.iter().any(|o| o.kind == "Transfer"));
         assert!(scene.items.iter().any(|o| o.kind == "Dyntrack"));
+    }
+
+    #[test]
+    fn platform_siding_are_labels_not_shape_or_placeholder() {
+        assert!(is_tr_item_label_only("Platform"));
+        assert!(is_tr_item_label_only("Siding"));
+        assert!(!is_tr_item_label_only("Static"));
+        assert!(suppress_world_placeholder("Platform"));
+        assert!(suppress_world_placeholder("Other"));
+        let platform = WorldObject {
+            kind: "Platform",
+            uid: Some(1),
+            label: String::new(),
+            shape_file: Some("Platforms1and2.s".into()),
+            section_idx: None,
+            dyntrack_sections: Vec::new(),
+            position: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+            tile_x: 0,
+            tile_z: 0,
+            forest: None,
+            water: None,
+            transfer: None,
+            car_spawner: None,
+            signal: None,
+            tr_item_ids: Vec::new(),
+            static_detail_level: 0,
+        };
+        assert!(
+            !shape_eligible(&platform),
+            "OR draws Platform as TrItemLabel only, never as scenery mesh"
+        );
     }
 
     /// Chiltern Birmingham-like focus: WORLD/TDB Y ~35–37 m, terrain RAW ~28.5 m.
