@@ -12,7 +12,7 @@ use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path_in_dirs,
+    RouteAssets, ShapeRenderAsset, resolve_shape_path_in_dirs,
     vehicle_shape_local_transform, vehicle_texture_search_dirs,
 };
 use crate::terrain::{TerrainElevation, ground_y_at};
@@ -187,7 +187,7 @@ pub struct TrainMarker {
     pub track_index: usize,
 }
 
-type ShapeCache = HashMap<PathBuf, ShapeRenderAsset>;
+type ShapeCache = HashMap<PathBuf, (ShapeRenderAsset, Option<openrailsrs_formats::ShapeFile>)>;
 
 /// Spawn train visuals: consist meshes for the primary track when available, else cubes.
 #[allow(clippy::too_many_arguments)]
@@ -295,7 +295,7 @@ pub fn spawn_train_markers(
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
                             {
                                 let shape_path_key = shape_path.clone();
-                                let asset = shape_cache
+                                let (asset, shape_file) = shape_cache
                                     .entry(shape_path_key)
                                     .or_insert_with(|| {
                                         load_vehicle_shape_assets(
@@ -309,6 +309,24 @@ pub fn spawn_train_markers(
                                         )
                                     })
                                     .clone();
+                                let wheel_radius = meshes
+                                    .get(&asset.combined_mesh)
+                                    .map(|m| {
+                                        m.attribute(Mesh::ATTRIBUTE_POSITION)
+                                            .and_then(|a| a.as_float3())
+                                            .map(|pos| {
+                                                let mut min_y = f32::MAX;
+                                                let mut max_y = f32::MIN;
+                                                for p in pos {
+                                                    min_y = min_y.min(p[1]);
+                                                    max_y = max_y.max(p[1]);
+                                                }
+                                                ((max_y - min_y) * 0.25)
+                                                    .clamp(0.25, 0.75)
+                                            })
+                                            .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M)
+                                    })
+                                    .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
                                 let local = meshes
                                     .get(&asset.combined_mesh)
                                     .map(|m| {
@@ -348,6 +366,14 @@ pub fn spawn_train_markers(
                                             ));
                                             if !train_part_casts_shadow(part.is_transparent) {
                                                 part_entity.insert(NotShadowCaster);
+                                            }
+                                            if let Some(shape) = shape_file.as_ref() {
+                                                crate::rolling_stock_anim::insert_part_anim(
+                                                    &mut part_entity,
+                                                    shape,
+                                                    part.prim_state_idx,
+                                                    wheel_radius,
+                                                );
                                             }
                                         }
                                     });
@@ -430,13 +456,13 @@ fn load_vehicle_shape_assets(
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
-) -> ShapeRenderAsset {
+) -> (ShapeRenderAsset, Option<openrailsrs_formats::ShapeFile>) {
     // Open Rails resolves rolling-stock textures from ReferencePath (trainset root),
     // not route TEXTURES/ — see `vehicle_texture_search_dirs`.
     let tex_dirs_owned = vehicle_texture_search_dirs(shape_path, route_dir);
     let tex_dirs: Vec<&std::path::Path> = tex_dirs_owned.iter().map(|p| p.as_path()).collect();
 
-    load_shape_render_asset_from_path(
+    if let Some((asset, shape)) = crate::shapes::load_shape_render_asset_and_file_from_path(
         shape_path,
         &tex_dirs,
         None,
@@ -446,15 +472,17 @@ fn load_vehicle_shape_assets(
         texture_cache,
         fallback_color,
         true,
-    )
-    .unwrap_or_else(|| {
-        let mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-        let material = materials.add(StandardMaterial {
-            base_color: COLOR_TRAIN_FALLBACK,
-            perceptual_roughness: 0.75,
-            metallic: 0.1,
-            ..default()
-        });
+    ) {
+        return (asset, Some(shape));
+    }
+    let mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    let material = materials.add(StandardMaterial {
+        base_color: COLOR_TRAIN_FALLBACK,
+        perceptual_roughness: 0.75,
+        metallic: 0.1,
+        ..default()
+    });
+    (
         ShapeRenderAsset {
             combined_mesh: mesh.clone(),
             parts: vec![crate::shapes::ShapePartAsset {
@@ -475,8 +503,9 @@ fn load_vehicle_shape_assets(
                 bounds_center: None,
             }],
             has_texture: false,
-        }
-    })
+        },
+        None,
+    )
 }
 
 pub fn advance_replay_time(time: Res<Time>, mut replay: ResMut<ReplayState>) {

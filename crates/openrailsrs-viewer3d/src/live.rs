@@ -21,7 +21,7 @@ use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{LIVE_TRAIN_LOD_DISTANCE_M, ViewerSceneryMode, track_dev_render_enabled};
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
-    RouteAssets, load_shape_from_path, load_shape_render_asset_from_path,
+    RouteAssets, load_shape_from_path, load_shape_render_asset_and_file_from_path,
     resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
     vehicle_shape_local_transform, vehicle_texture_search_dirs,
 };
@@ -665,23 +665,38 @@ pub fn spawn_live_train(
                             vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
                         let tex_dirs: Vec<&Path> =
                             tex_dirs_owned.iter().map(|p| p.as_path()).collect();
-                        if let Some(asset) = load_shape_render_asset_from_path(
-                            &shape_path,
-                            &tex_dirs,
-                            Some(LIVE_TRAIN_LOD_DISTANCE_M),
-                            &mut meshes,
-                            &mut images,
-                            &mut materials,
-                            &mut texture_cache,
-                            TRAIN_SHAPE_FALLBACK,
-                            true,
-                        ) {
+                        if let Some((asset, shape_file)) =
+                            load_shape_render_asset_and_file_from_path(
+                                &shape_path,
+                                &tex_dirs,
+                                Some(LIVE_TRAIN_LOD_DISTANCE_M),
+                                &mut meshes,
+                                &mut images,
+                                &mut materials,
+                                &mut texture_cache,
+                                TRAIN_SHAPE_FALLBACK,
+                                true,
+                            )
+                        {
                             shape_cars += 1;
                             shape_parts += asset.parts.len();
                             textured_parts +=
                                 asset.parts.iter().filter(|part| part.has_texture).count();
                             let is_lead = vi == 0;
                             let mesh_ref = meshes.get(&asset.combined_mesh);
+                            let wheel_radius = mesh_ref
+                                .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
+                                .and_then(|a| a.as_float3())
+                                .map(|pos| {
+                                    let mut min_y = f32::MAX;
+                                    let mut max_y = f32::MIN;
+                                    for p in pos {
+                                        min_y = min_y.min(p[1]);
+                                        max_y = max_y.max(p[1]);
+                                    }
+                                    ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
+                                })
+                                .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
                             let (car_transform, exterior_scale) = if is_lead {
                                 mesh_ref
                                     .map(|m| {
@@ -751,6 +766,13 @@ pub fn spawn_live_train(
                                         ) {
                                             entity.insert(NotShadowCaster);
                                         }
+                                        // Exterior only (`LiveTrainBody`); cab interior is separate.
+                                        crate::rolling_stock_anim::insert_part_anim(
+                                            &mut entity,
+                                            &shape_file,
+                                            part.prim_state_idx,
+                                            wheel_radius,
+                                        );
                                     }
                                 };
                                 if let Some(scale) = exterior_scale {

@@ -1684,10 +1684,38 @@ pub fn load_shape_render_asset_from_path(
     fallback_color: Color,
     train_exterior: bool,
 ) -> Option<ShapeRenderAsset> {
+    load_shape_render_asset_and_file_from_path(
+        shape_path,
+        texture_dirs,
+        camera_distance_m,
+        meshes,
+        images,
+        materials,
+        texture_cache,
+        fallback_color,
+        train_exterior,
+    )
+    .map(|(asset, _)| asset)
+}
+
+/// Like [`load_shape_render_asset_from_path`] but also returns the parsed [`ShapeFile`]
+/// for rolling-stock exterior animation (#40) without a second disk parse.
+#[allow(clippy::too_many_arguments)]
+pub fn load_shape_render_asset_and_file_from_path(
+    shape_path: &Path,
+    texture_dirs: &[&Path],
+    camera_distance_m: Option<f32>,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
+    fallback_color: Color,
+    train_exterior: bool,
+) -> Option<(ShapeRenderAsset, ShapeFile)> {
     if train_exterior {
         set_train_shape_debug_scope(true);
     }
-    let loaded = load_shape_from_path(shape_path, camera_distance_m)?;
+    let (shape, loaded) = load_shape_file_and_loaded(shape_path, camera_distance_m)?;
     let result = shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
@@ -1704,7 +1732,7 @@ pub fn load_shape_render_asset_from_path(
     if train_exterior {
         set_train_shape_debug_scope(false);
     }
-    Some(result)
+    Some((result, shape))
 }
 
 /// Cab `CABVIEW3D` shapes: lit PBR + cab alpha/brighten (Bevy forward path; not unlit).

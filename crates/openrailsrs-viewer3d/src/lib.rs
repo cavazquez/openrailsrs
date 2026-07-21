@@ -34,6 +34,7 @@ pub mod placement_audit;
 pub mod precipitation;
 pub mod road_cars;
 pub mod rolling_stock;
+pub mod rolling_stock_anim;
 pub mod route_bootstrap;
 pub mod scene;
 pub mod scenery_audit;
@@ -176,7 +177,12 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
-                openrailsrs_bevy_scenery::shapes::update_world_shape_anim
+                (
+                    openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
+                    rolling_stock_anim::update_rolling_stock_part_anim
+                        .after(live::update_live_train_marker)
+                        .after(train::update_train_markers),
+                )
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

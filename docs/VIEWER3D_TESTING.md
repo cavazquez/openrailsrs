@@ -131,6 +131,26 @@ Regresiones y diagnóstico de carrocería + texto **PULLMAN** (alpha, winding, c
 - Doc: [`PULLMAN_EXTERIOR_SESSION_2026-06-21.md`](PULLMAN_EXTERIOR_SESSION_2026-06-21.md)
 - Tests: `pullman_exterior_alpha_modes_audit`, `pullman_train_exterior_single_sided_back_cull`, `pullman_prim_state_z_bias_sane`
 - Matriz visual: `./scripts/pullman_visual_matrix.sh` → `tmp/pullman_matrix/`
+
+## Rolling stock part animation (#40)
+
+Exterior parts (`LiveTrainBody` / `train:*:part:*`) get drivers from matrix names (`WHEEL*`, `BOGIE*`, `DOOR*`, `PANTO*`):
+
+| Kind | Driver |
+|------|--------|
+| Wheel | `angle += (v/r)*dt`; rotation X local; body transform unchanged |
+| Bogie | relative yaw clamp (curve lever approx.) |
+| Door / Panto | stub key `0` or `OPENRAILSRS_DEBUG_DOOR_KEY` / `OPENRAILSRS_DEBUG_PANTO_KEY` ∈ `[0,1]` |
+
+Module: [`rolling_stock_anim.rs`](../crates/openrailsrs-viewer3d/src/rolling_stock_anim.rs). Cab interior is not animated.
+
+**Manual checklist (Pullman Birmingham, lateral + curve):**
+
+1. Live or replay with exterior visible (chase / orbit).
+2. Wheels: rotation visible when speed ≠ 0; car body does not spin with wheels.
+3. Bogies: small relative yaw on curves (may be subtle on Pullman if few `BOGIE*` matrices).
+4. Optional: `OPENRAILSRS_DEBUG_DOOR_KEY=1` / `_PANTO_KEY=1` — keyed parts stay finite (no NaN / hierarchy break).
+5. Acceptance primaria: unit tests in `rolling_stock_anim`; Pullman is visual checklist.
 - CLI OBJ: `cargo run -p openrailsrs-cli -- shape-obj-dump …/RF_WP_DMBSA.s -o /tmp/DMBSA.obj`
 
 ## Floating origin
