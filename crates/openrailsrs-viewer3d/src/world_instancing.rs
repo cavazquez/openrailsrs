@@ -149,7 +149,10 @@ impl Plugin for WorldInstancingPlugin {
                 ExtractComponentPlugin::<WorldInstanceAppearance>::default(),
             ))
             .add_systems(Startup, init_white_image);
+    }
 
+    fn finish(&self, app: &mut App) {
+        // Register on RenderApp in `finish` (same pattern as OrVsmRenderPlugin / MaterialsPlugin).
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
@@ -265,10 +268,12 @@ struct WorldInstancingPipeline {
 
 fn init_world_instancing_pipeline(
     mut commands: Commands,
-    mut shaders: ResMut<Assets<Shader>>,
+    asset_server: Res<AssetServer>,
     mesh_pipeline: Res<MeshPipeline>,
 ) {
-    let shader = shaders.add(Shader::from_wgsl(SHADER_WGSL, "world_instancing.wgsl"));
+    // Bevy 0.19: `Assets<Shader>` lives in the main world, not RenderApp.
+    // Register via AssetServer (same approach as `init_mesh_pipeline`).
+    let shader = asset_server.add(Shader::from_wgsl(SHADER_WGSL, "world_instancing.wgsl"));
     let appearance_layout = BindGroupLayoutDescriptor::new(
         "world_instancing_appearance_layout",
         &BindGroupLayoutEntries::sequential(
