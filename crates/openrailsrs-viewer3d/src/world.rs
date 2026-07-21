@@ -8,8 +8,9 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
-    build_mesh_from_shape_lod, build_mesh_parts_from_shape_lod, lod_level_index_for_distance,
-    primary_texture_filename,
+    ShapeAnimBinding, ShapeAnimState, animation_playback_speed, build_mesh_from_shape_lod,
+    build_mesh_parts_from_shape_lod, lod_level_index_for_distance, primary_texture_filename,
+    shape_has_loop_animation,
 };
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
@@ -24,9 +25,8 @@ use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_file_and_loaded,
-    load_shape_from_path, prefetch_ace_textures, reset_shape_file_parse_count,
-    shape_file_parse_count, shape_render_asset_from_loaded_with_ace_cache,
-    texture_search_dirs_for_shape,
+    prefetch_ace_textures, reset_shape_file_parse_count, shape_file_parse_count,
+    shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
 };
 
 /// WORLD-tile membership for non-shape scenery (Transfer, road cars, …) unload.
@@ -806,6 +806,8 @@ fn kind_color(kind: &str) -> Color {
         "TrackObj" => Color::srgb(0.78, 0.48, 0.18),
         "Signal" => Color::srgb(1.0, 0.85, 0.2),
         "Dyntrack" => Color::srgb(0.58, 0.32, 0.82),
+        "Pickup" => Color::srgb(0.55, 0.45, 0.35),
+        "Hazard" => Color::srgb(0.85, 0.35, 0.25),
         _ => Color::srgb(0.45, 0.45, 0.5),
     }
 }
@@ -820,7 +822,14 @@ fn box_size_for_kind(kind: &str, base: f32) -> Vec3 {
 }
 
 fn shape_eligible(obj: &WorldObject) -> bool {
-    trackobj_effective_shape_file(obj).is_some_and(|f| f.to_ascii_lowercase().ends_with(".s"))
+    let Some(f) = trackobj_effective_shape_file(obj) else {
+        return false;
+    };
+    let lower = f.to_ascii_lowercase();
+    if obj.kind == "Hazard" {
+        return lower.ends_with(".haz") || lower.ends_with(".s");
+    }
+    lower.ends_with(".s")
 }
 
 fn trackobj_effective_shape_file(obj: &WorldObject) -> Option<String> {
@@ -1056,6 +1065,17 @@ type ShapeSpawnBundle = (
     WorldSceneryLod,
 );
 
+/// WORLD shape part with loop animation (#34). Spawned individually (not `spawn_batch`).
+type AnimatedShapeSpawnBundle = (
+    Transform,
+    Mesh3d,
+    MeshMaterial3d<StandardMaterial>,
+    Name,
+    WorldSceneryLod,
+    ShapeAnimState,
+    ShapeAnimBinding,
+);
+
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
     phase: WorldSpawnPhase,
@@ -1089,6 +1109,7 @@ pub struct WorldSpawnProgress {
     instance_paths: Vec<PathBuf>,
     build_queue_index: usize,
     spawn_queue: Vec<ShapeSpawnBundle>,
+    anim_spawn_queue: Vec<AnimatedShapeSpawnBundle>,
     spawn_index: usize,
     shape_mesh_count: usize,
     shape_texture_count: usize,
@@ -1150,6 +1171,7 @@ impl WorldSpawnProgress {
             instance_paths: Vec::new(),
             build_queue_index: 0,
             spawn_queue: Vec::new(),
+            anim_spawn_queue: Vec::new(),
             spawn_index: 0,
             shape_mesh_count: 0,
             shape_texture_count: 0,
@@ -1521,13 +1543,24 @@ fn classify_one_object(
     );
 }
 
+fn matrix_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> usize {
+    shape
+        .prim_states
+        .get(prim_state_idx.max(0) as usize)
+        .and_then(|ps| shape.vtx_states.get(ps.vertex_state_idx.max(0) as usize))
+        .map(|vs| vs.matrix_idx.max(0) as usize)
+        .unwrap_or(0)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn append_shape_spawn_entries_for_transforms(
     shape_path: &Path,
     asset: &ShapeRenderAsset,
+    shape_file: Option<&ShapeFile>,
     meshes: &mut Assets<Mesh>,
     transforms: &[Transform],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
+    anim_spawn_queue: &mut Vec<AnimatedShapeSpawnBundle>,
     initial_lod_idx: usize,
     shape_mesh_count: &mut usize,
     shape_texture_count: &mut usize,
@@ -1537,7 +1570,9 @@ fn append_shape_spawn_entries_for_transforms(
     if asset.has_texture {
         *shape_texture_count += transforms.len();
     }
-    let mergeable = ENABLE_SHAPE_INSTANCE_MERGE
+    let animated = shape_file.is_some_and(shape_has_loop_animation);
+    let mergeable = !animated
+        && ENABLE_SHAPE_INSTANCE_MERGE
         && transforms.len() >= SHAPE_INSTANCE_MERGE_MIN
         && asset.parts.iter().all(|part| {
             !part.is_transparent
@@ -1567,6 +1602,47 @@ fn append_shape_spawn_entries_for_transforms(
                         prim_state_idx: -1,
                         part_index: 0,
                         lod_idx: 0,
+                    },
+                ));
+            }
+        }
+    } else if animated {
+        let shape = shape_file.expect("animated branch requires ShapeFile");
+        let speed = animation_playback_speed(shape);
+        let frame_count = shape
+            .animations
+            .first()
+            .map(|a| a.frame_count as f32)
+            .unwrap_or(0.0);
+        *shape_mesh_count += asset.parts.len() * transforms.len();
+        for tf in transforms {
+            let placement = view_transform(*tf, origin);
+            for (part_index, part) in asset.parts.iter().enumerate() {
+                let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
+                anim_spawn_queue.push((
+                    placement,
+                    Mesh3d(part.mesh.clone()),
+                    MeshMaterial3d(part.material.clone()),
+                    Name::new("world:anim"),
+                    WorldSceneryLod {
+                        // LOD mesh swaps fight animated Transform updates.
+                        enabled: false,
+                        shape_path: shape_path.to_path_buf(),
+                        prim_state_idx: part.prim_state_idx,
+                        part_index,
+                        lod_idx: initial_lod_idx,
+                    },
+                    ShapeAnimState {
+                        key: 0.0,
+                        matrix_idx,
+                    },
+                    ShapeAnimBinding {
+                        shape: shape.clone(),
+                        matrix_idx,
+                        speed,
+                        frame_count,
+                        placement,
+                        baked_rest_mesh: true,
                     },
                 ));
             }
@@ -1615,12 +1691,15 @@ fn append_shape_spawn_entries(
                 .map(|d| lod_level_index_for_distance(shape, d))
         })
         .unwrap_or(0);
+    let shape_file = progress.parsed_shape_files.get(shape_path);
     append_shape_spawn_entries_for_transforms(
         shape_path,
         asset,
+        shape_file,
         meshes,
         &transforms,
         &mut progress.spawn_queue,
+        &mut progress.anim_spawn_queue,
         initial_lod_idx,
         &mut progress.shape_mesh_count,
         &mut progress.shape_texture_count,
@@ -2003,6 +2082,7 @@ pub fn world_stream_scenery_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut forest_materials: ResMut<Assets<openrailsrs_bevy_scenery::OrForestMaterial>>,
     track: Res<TrackScene>,
     terrain: Option<Res<TerrainElevation>>,
     assets: Res<RouteAssets>,
@@ -2059,7 +2139,7 @@ pub fn world_stream_scenery_system(
             &mut commands,
             &mut meshes,
             &mut images,
-            &mut materials,
+            &mut forest_materials,
             new_items,
             &track,
             terrain.as_deref(),
@@ -2496,10 +2576,13 @@ pub fn progressive_world_spawn_system(
             }
         }
         WorldSpawnPhase::SpawningEntities => {
-            if progress.spawn_index == 0 && !progress.spawn_queue.is_empty() {
+            if progress.spawn_index == 0
+                && (!progress.spawn_queue.is_empty() || !progress.anim_spawn_queue.is_empty())
+            {
                 viewer_log!(
-                    "openrailsrs-viewer3d: spawning {} world mesh entit(ies) progressively",
-                    progress.spawn_queue.len()
+                    "openrailsrs-viewer3d: spawning {} world mesh + {} animated entit(ies) progressively",
+                    progress.spawn_queue.len(),
+                    progress.anim_spawn_queue.len()
                 );
             }
             let end = (progress.spawn_index + spawn_batch).min(progress.spawn_queue.len());
@@ -2508,6 +2591,11 @@ pub fn progressive_world_spawn_system(
             commands.spawn_batch(batch);
             progress.spawn_index = end;
             if progress.spawn_index >= progress.spawn_queue.len() {
+                // Animated bundles carry cloned ShapeFile — spawn one-by-one.
+                let animated = std::mem::take(&mut progress.anim_spawn_queue);
+                for bundle in animated {
+                    commands.spawn(bundle);
+                }
                 progress.phase = WorldSpawnPhase::SpawningPlaceholders;
             }
         }
@@ -2770,10 +2858,11 @@ pub fn spawn_world_boxes(
 
     let shape_load_start = Instant::now();
     let unique_shape_paths: Vec<PathBuf> = shape_instances.keys().cloned().collect();
-    let parsed_shapes: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> = unique_shape_paths
-        .par_iter()
-        .map(|path| (path.clone(), load_shape_from_path(path, None)))
-        .collect();
+    let parsed_shapes: Vec<(PathBuf, Option<(ShapeFile, crate::shapes::LoadedShape)>)> =
+        unique_shape_paths
+            .par_iter()
+            .map(|path| (path.clone(), load_shape_file_and_loaded(path, None)))
+            .collect();
     log_step(
         &format!(
             "parsed {} unique world shape(s) in parallel",
@@ -2784,7 +2873,7 @@ pub fn spawn_world_boxes(
 
     let mut texture_paths = Vec::new();
     for (shape_path, loaded) in &parsed_shapes {
-        if let Some(loaded) = loaded {
+        if let Some((_, loaded)) = loaded {
             let tex_dirs = texture_search_dirs_for_shape(shape_path, &assets.route_dir);
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
             texture_paths.extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
@@ -2803,10 +2892,15 @@ pub fn spawn_world_boxes(
     );
 
     let asset_start = Instant::now();
+    let mut parsed_shape_files: HashMap<PathBuf, ShapeFile> = HashMap::new();
     for (shape_path, loaded) in parsed_shapes {
+        let loaded_mesh = loaded.map(|(sf, mesh)| {
+            parsed_shape_files.insert(shape_path.clone(), sf);
+            mesh
+        });
         let (shape_path, asset) = build_world_shape_asset(
             shape_path,
-            loaded,
+            loaded_mesh,
             &assets.route_dir,
             &mut meshes,
             &mut images,
@@ -2820,6 +2914,7 @@ pub fn spawn_world_boxes(
     }
     log_step("built world shape Bevy assets", asset_start);
 
+    let mut anim_spawn_batches: Vec<AnimatedShapeSpawnBundle> = Vec::new();
     for (shape_path, transforms) in shape_instances {
         let Some(asset) = shape_cache.get(&shape_path) else {
             continue;
@@ -2827,9 +2922,11 @@ pub fn spawn_world_boxes(
         append_shape_spawn_entries_for_transforms(
             &shape_path,
             asset,
+            parsed_shape_files.get(&shape_path),
             &mut meshes,
             &transforms,
             &mut shape_spawn_batches,
+            &mut anim_spawn_batches,
             0,
             &mut shape_mesh_count,
             &mut shape_texture_count,
@@ -2840,6 +2937,9 @@ pub fn spawn_world_boxes(
 
     if !shape_spawn_batches.is_empty() {
         commands.spawn_batch(shape_spawn_batches);
+    }
+    for bundle in anim_spawn_batches {
+        commands.spawn(bundle);
     }
 
     for (kind, group) in merged_boxes {

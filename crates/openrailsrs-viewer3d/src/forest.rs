@@ -1,11 +1,13 @@
-//! MSTS `Forest` patches from `.w` tiles (order 11 / issue #8).
+//! MSTS `Forest` patches from `.w` tiles (order 11 / issue #8 / #38).
 //!
-//! Each forest anchor spawns a population of cross-billboard trees with RNG
-//! seeded from tile + uid. Trees sample terrain height and avoid track centrelines.
+//! Each forest anchor spawns a population of OR-style camera-facing billboards
+//! (`VSForest`): one quad per tree, expanded in the vertex shader from base
+//! position + size packed in NORMAL. RNG seeded from tile + uid.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::{OrForestMaterial, create_or_forest_material};
 use std::time::Instant;
 
 use crate::shapes::load_ace_image;
@@ -114,8 +116,11 @@ pub fn scatter_trees_in_patch(
     trees
 }
 
-/// Append a vertical cross billboard (two quads) centred at `origin` with given size.
-pub fn append_tree_cross(
+/// Append one OR-style forest billboard (single quad).
+///
+/// All four corners share the tree base in `POSITION`; `NORMAL.xy` stores
+/// width/height so [`OrForestMaterial`] can expand toward the camera in VS.
+pub fn append_tree_billboard(
     positions: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
     uvs: &mut Vec<[f32; 2]>,
@@ -125,33 +130,17 @@ pub fn append_tree_cross(
     height: f32,
 ) {
     let base = positions.len() as u32;
-    let hw = width * 0.5;
-
-    // Quad in X–Y plane (normal +Z).
-    positions.push([origin.x - hw, origin.y, origin.z]);
-    positions.push([origin.x + hw, origin.y, origin.z]);
-    positions.push([origin.x + hw, origin.y + height, origin.z]);
-    positions.push([origin.x - hw, origin.y + height, origin.z]);
+    let size = [width, height, 0.0];
+    // Bottom-left, bottom-right, top-right, top-left (v=1 at ground).
     for _ in 0..4 {
-        normals.push([0.0, 0.0, 1.0]);
+        positions.push([origin.x, origin.y, origin.z]);
+        normals.push(size);
     }
     uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
     indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
-
-    // Quad in Z–Y plane (normal +X).
-    let base2 = positions.len() as u32;
-    positions.push([origin.x, origin.y, origin.z - hw]);
-    positions.push([origin.x, origin.y, origin.z + hw]);
-    positions.push([origin.x, origin.y + height, origin.z + hw]);
-    positions.push([origin.x, origin.y + height, origin.z - hw]);
-    for _ in 0..4 {
-        normals.push([1.0, 0.0, 0.0]);
-    }
-    uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
-    indices.extend([base2, base2 + 1, base2 + 2, base2, base2 + 2, base2 + 3]);
 }
 
-/// Merge cross-billboards for all trees into one mesh.
+/// Merge camera-facing billboards for all trees into one mesh (OR `ForestPrimitive`).
 pub fn build_forest_patch_mesh(trees: &[TreePlacement], base_width: f32, base_height: f32) -> Mesh {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
@@ -159,7 +148,7 @@ pub fn build_forest_patch_mesh(trees: &[TreePlacement], base_width: f32, base_he
     let mut indices = Vec::new();
 
     for tree in trees {
-        append_tree_cross(
+        append_tree_billboard(
             &mut positions,
             &mut normals,
             &mut uvs,
@@ -181,13 +170,34 @@ pub fn build_forest_patch_mesh(trees: &[TreePlacement], base_width: f32, base_he
     mesh
 }
 
+fn solid_color_image(color: Color) -> Image {
+    let linear = color.to_linear();
+    let rgba = [
+        (linear.red * 255.0) as u8,
+        (linear.green * 255.0) as u8,
+        (linear.blue * 255.0) as u8,
+        255,
+    ];
+    Image::new(
+        bevy::render::render_resource::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        bevy::render::render_resource::TextureDimension::D2,
+        rgba.to_vec(),
+        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}
+
 /// Spawn cross-billboard tree patches for every `Forest` in the world scene.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_forest_patches(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<OrForestMaterial>>,
     world: Res<WorldScene>,
     track: Res<TrackScene>,
     terrain: Option<Res<TerrainElevation>>,
@@ -224,7 +234,7 @@ pub fn spawn_forest_objects(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
-    materials: &mut Assets<StandardMaterial>,
+    materials: &mut Assets<OrForestMaterial>,
     items: &[WorldObject],
     track: &TrackScene,
     terrain: Option<&TerrainElevation>,
@@ -245,18 +255,11 @@ pub fn spawn_forest_objects(
     let default_half = default_patch_half(&track.bounds);
     let track_clearance = forest_track_clearance_m(&track.bounds);
     let track_index = TrackSegmentIndex::from_graph(&track.graph, offset.delta);
-    let mut material_cache: std::collections::HashMap<String, Handle<StandardMaterial>> =
+    let mut material_cache: std::collections::HashMap<String, Handle<OrForestMaterial>> =
         std::collections::HashMap::new();
 
-    let fallback_material = materials.add(StandardMaterial {
-        base_color: COLOR_TREE_FALLBACK,
-        emissive: LinearRgba::from(COLOR_TREE_FALLBACK) * 0.15,
-        perceptual_roughness: 0.95,
-        metallic: 0.0,
-        double_sided: true,
-        alpha_mode: AlphaMode::Mask(0.5),
-        ..default()
-    });
+    let fallback_tex = images.add(solid_color_image(COLOR_TREE_FALLBACK));
+    let fallback_material = create_or_forest_material(materials, fallback_tex);
 
     let patch_count = forests.len();
     let mut tree_count = 0usize;
@@ -309,15 +312,7 @@ pub fn spawn_forest_objects(
                 .or_insert_with(|| {
                     if let Some(image) = load_ace_image(&assets.route_dir, tex_name) {
                         let handle = images.add(image);
-                        materials.add(StandardMaterial {
-                            base_color: Color::WHITE,
-                            base_color_texture: Some(handle),
-                            perceptual_roughness: 0.95,
-                            metallic: 0.0,
-                            double_sided: true,
-                            alpha_mode: AlphaMode::Mask(0.35),
-                            ..default()
-                        })
+                        create_or_forest_material(materials, handle)
                     } else {
                         fallback_material.clone()
                     }
@@ -537,7 +532,7 @@ mod tests {
     }
 
     #[test]
-    fn cross_mesh_has_triangles_per_tree() {
+    fn billboard_mesh_has_one_quad_per_tree() {
         let g = TrackGraph::new();
         let idx = TrackSegmentIndex::from_graph(&g, Vec3::ZERO);
         let focus = zero_focus();
@@ -558,7 +553,15 @@ mod tests {
         );
         let mesh = build_forest_patch_mesh(&trees, 4.0, 12.0);
         let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
-        assert_eq!(positions.len(), 16);
+        // OR layout: 4 shared-base verts per tree (expanded in VS).
+        assert_eq!(positions.len(), 8);
+        let normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL).unwrap();
+        if let bevy::mesh::VertexAttributeValues::Float32x3(n) = normals {
+            assert!((n[0][0] - 4.0).abs() < 1e-3);
+            assert!((n[0][1] - 12.0).abs() < 1e-3);
+        } else {
+            panic!("expected Float32x3 normals");
+        }
     }
 
     #[test]

@@ -58,8 +58,8 @@ pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
     CabControl, CabView, CabViewFile, CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList,
     ConsistEntry, ConsistFile, ControlState, ControlType, DistanceLevel, ElevationGrid,
-    EngineCabView, EngineFile, FeatureGrid, IndexedTrVectorSection, LodControl, Matrix43,
-    MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields,
+    EngineCabView, EngineFile, FeatureGrid, HazardFile, IndexedTrVectorSection, LodControl,
+    Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields,
     OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile,
     RouteStart, SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, SignalAspectKind,
     SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData, TerrainPatch,
@@ -70,7 +70,7 @@ pub use typed::{
     WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex, build_patch_mesh_data_sampled,
     build_tile_mesh_data, build_tile_mesh_data_sampled, find_trk_path, parse_orts_brake_shoe,
     parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
-    read_y_raw, resolve_brake_shoe_curve, terrain_patches_per_side,
+    read_y_raw, resolve_brake_shoe_curve, resolve_hazard_shape_name, terrain_patches_per_side,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};
 pub use vehicle_audit::{

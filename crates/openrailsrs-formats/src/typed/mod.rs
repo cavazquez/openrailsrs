@@ -5,6 +5,7 @@ mod consist;
 mod cvf;
 mod engine;
 mod friction;
+mod hazard;
 mod path;
 mod route;
 mod shape;
@@ -27,6 +28,7 @@ pub use engine::{EngineCabView, EngineFile, MstsSteamFields};
 pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };
+pub use hazard::{HazardFile, resolve_hazard_shape_name};
 pub use path::{PathDataPoint, PathFile};
 pub use route::{RouteFile, RouteStart, find_trk_path};
 pub use shape::{

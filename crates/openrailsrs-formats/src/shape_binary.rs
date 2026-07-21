@@ -1026,6 +1026,7 @@ mod tests {
         assert_eq!(shape.animations.len(), 1);
         let anim = &shape.animations[0];
         assert_eq!(anim.frame_count, 30);
+        assert_eq!(anim.frame_rate, 30);
         assert_eq!(anim.nodes.len(), 1);
         let node = &anim.nodes[0];
         assert_eq!(node.name, "BOGIE1");

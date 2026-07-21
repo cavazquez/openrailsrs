@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, Matrix43, ShapeFile};
-use openrailsrs_or_shader::coordinates::{hierarchy_chain_transform, matrix43_to_transform};
+use openrailsrs_or_shader::coordinates::{
+    hierarchy_chain_transform, matrix43_to_transform, static_hierarchy_chain_transform,
+};
 
 /// Build animated pose matrices for all shape bones at animation key `key`.
 pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
@@ -11,12 +13,42 @@ pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
         return pose;
     };
     for (i, node) in anim.nodes.iter().enumerate() {
-        if node.controllers.is_empty() || i >= pose.len() {
+        if node.controllers.is_empty() {
             continue;
         }
-        pose[i] = animate_matrix(pose[i], &node.controllers, key);
+        let idx = shape
+            .matrices
+            .iter()
+            .position(|m| m.name.eq_ignore_ascii_case(&node.name))
+            .unwrap_or(i);
+        if idx >= pose.len() {
+            continue;
+        }
+        pose[idx] = animate_matrix(pose[idx], &node.controllers, key);
     }
     pose
+}
+
+/// True when the shape has a usable loop animation (controllers + frame count).
+pub fn shape_has_loop_animation(shape: &ShapeFile) -> bool {
+    shape
+        .animations
+        .first()
+        .is_some_and(|a| a.frame_count > 0 && a.nodes.iter().any(|n| !n.controllers.is_empty()))
+}
+
+/// Playback speed in keys/second (OR `FrameRate`).
+pub fn animation_playback_speed(shape: &ShapeFile) -> f32 {
+    let Some(anim) = shape.animations.first() else {
+        return 0.0;
+    };
+    if anim.frame_rate > 0 {
+        anim.frame_rate as f32
+    } else if anim.frame_count > 0 {
+        anim.frame_count.min(30) as f32
+    } else {
+        0.0
+    }
 }
 
 fn animate_matrix(base: Matrix43, controllers: &[AnimController], key: f32) -> Matrix43 {
@@ -183,6 +215,22 @@ pub fn animated_hierarchy_transform(
     hierarchy_chain_transform(shape, matrix_idx, pose_mats)
 }
 
+/// Entity transform for WORLD meshes baked at rest hierarchy (#34).
+///
+/// `placement` is the object WORLD pose; mesh vertices already include the rest
+/// bone chain, so we apply `anim * inv(rest)` as a delta.
+pub fn world_baked_anim_transform(
+    placement: Transform,
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    pose_mats: &[Matrix43],
+) -> Transform {
+    let rest = static_hierarchy_chain_transform(shape, matrix_idx);
+    let anim = animated_hierarchy_transform(shape, matrix_idx, pose_mats);
+    let rest_inv = Transform::from_matrix(rest.to_matrix().inverse());
+    placement * anim * rest_inv
+}
+
 /// Runtime state for a generic MSTS shape animation driven by a scalar key.
 #[derive(Component, Clone, Debug)]
 pub struct ShapeAnimState {
@@ -198,8 +246,18 @@ pub fn update_world_shape_anim(
     let dt = time.delta_secs();
     for (mut state, binding, mut transform) in &mut query {
         state.key += dt * binding.speed;
+        if binding.frame_count > 0.0 {
+            state.key %= binding.frame_count;
+            if state.key < 0.0 {
+                state.key += binding.frame_count;
+            }
+        }
         let pose = animation_pose_matrices(&binding.shape, state.key);
-        *transform = animated_hierarchy_transform(&binding.shape, state.matrix_idx, &pose);
+        *transform = if binding.baked_rest_mesh {
+            world_baked_anim_transform(binding.placement, &binding.shape, state.matrix_idx, &pose)
+        } else {
+            animated_hierarchy_transform(&binding.shape, state.matrix_idx, &pose)
+        };
     }
 }
 
@@ -208,5 +266,68 @@ pub fn update_world_shape_anim(
 pub struct ShapeAnimBinding {
     pub shape: ShapeFile,
     pub matrix_idx: usize,
+    /// Keys advanced per second (OR `FrameRate`).
     pub speed: f32,
+    /// Loop length in keys (OR `FrameCount`); `0` disables wrap.
+    pub frame_count: f32,
+    /// WORLD placement in view space (used when [`Self::baked_rest_mesh`] is set).
+    pub placement: Transform,
+    /// Mesh vertices already include the rest hierarchy (viewer3d WORLD path).
+    pub baked_rest_mesh: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_formats::{AnimController, AnimNode, Animation, Matrix43, NamedMatrix};
+
+    fn identity_matrix() -> Matrix43 {
+        Matrix43 {
+            rows: [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0],
+            ],
+        }
+    }
+
+    fn sliding_shape() -> ShapeFile {
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(NamedMatrix {
+            name: "MAIN".into(),
+            matrix: identity_matrix(),
+        });
+        shape.animations.push(Animation {
+            frame_count: 10,
+            frame_rate: 10,
+            nodes: vec![AnimNode {
+                name: "MAIN".into(),
+                controllers: vec![AnimController::LinearPos {
+                    keys: vec![(0.0, [0.0, 0.0, 0.0]), (10.0, [0.0, 5.0, 0.0])],
+                }],
+            }],
+        });
+        shape
+    }
+
+    #[test]
+    fn shape_has_loop_animation_detects_controllers() {
+        assert!(shape_has_loop_animation(&sliding_shape()));
+        assert!(!shape_has_loop_animation(&ShapeFile::default()));
+    }
+
+    #[test]
+    fn baked_world_anim_moves_from_rest() {
+        let shape = sliding_shape();
+        let placement = Transform::from_translation(Vec3::new(100.0, 0.0, 50.0));
+        let rest =
+            world_baked_anim_transform(placement, &shape, 0, &animation_pose_matrices(&shape, 0.0));
+        let mid =
+            world_baked_anim_transform(placement, &shape, 0, &animation_pose_matrices(&shape, 5.0));
+        assert!(rest.translation.is_finite());
+        assert!(mid.translation.is_finite());
+        assert!((rest.translation - placement.translation).length() < 1e-3);
+        assert!((mid.translation.y - rest.translation.y).abs() > 1.0);
+    }
 }

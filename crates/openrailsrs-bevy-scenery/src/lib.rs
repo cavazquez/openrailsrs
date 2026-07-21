@@ -14,8 +14,9 @@ pub mod vsm;
 pub mod test_harness;
 
 pub use materials::{
-    OrCabMaterial, OrSceneryMaterial, OrTerrainMaterial, TerrainMaterial, create_or_cab_material,
-    or_cab_shaders_enabled, or_scenery_shaders_enabled,
+    OrCabMaterial, OrForestMaterial, OrSceneryMaterial, OrTerrainMaterial, TerrainMaterial,
+    create_or_cab_material, create_or_forest_material, or_cab_shaders_enabled,
+    or_scenery_shaders_enabled,
 };
 pub use spawn::{ScenerySpawnMode, ScenerySpawnPlugin};
 
@@ -38,7 +39,8 @@ impl Plugin for OrSceneryPlugins {
         app.add_plugins(MaterialPlugin::<TerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrTerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrSceneryMaterial>::default())
-            .add_plugins(MaterialPlugin::<OrCabMaterial>::default());
+            .add_plugins(MaterialPlugin::<OrCabMaterial>::default())
+            .add_plugins(MaterialPlugin::<OrForestMaterial>::default());
     }
 }
 

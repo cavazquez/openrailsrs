@@ -21,16 +21,12 @@ pub enum ObjectKind {
     HWater,
     Pickup,
     Transfer,
+    Hazard,
     Other,
 }
 
 impl ObjectKind {
     fn from_item(item: &WorldItem) -> Self {
-        if let WorldItem::Other { tag, .. } = item {
-            if tag.eq_ignore_ascii_case("Pickup") {
-                return Self::Pickup;
-            }
-        }
         match item.kind() {
             "Static" => Self::Static,
             "TrackObj" => Self::Track,
@@ -39,6 +35,8 @@ impl ObjectKind {
             "Forest" => Self::Forest,
             "HWater" => Self::HWater,
             "Transfer" => Self::Transfer,
+            "Pickup" => Self::Pickup,
+            "Hazard" => Self::Hazard,
             _ => Self::Other,
         }
     }
@@ -54,6 +52,7 @@ impl ObjectKind {
             Self::HWater => (0.20, 0.40, 0.95),
             Self::Pickup => (0.55, 0.45, 0.35),
             Self::Transfer => (0.45, 0.72, 0.38),
+            Self::Hazard => (0.85, 0.35, 0.25),
             Self::Other => (0.65, 0.65, 0.65),
         }
     }
@@ -213,12 +212,20 @@ pub fn load_objects(route_dir: &Path, tile_x: i32, tile_z: i32, base_y: f32) -> 
         let position = Vec3::new(p.x as f32, p.y as f32 - base_y, -(p.z as f32));
         let (rotation, scale) = item_transform(item);
         let (forest, hwater, transfer) = scenery_from_item(item);
+        let file_name = match item {
+            WorldItem::Hazard {
+                haz_file: Some(haz),
+                ..
+            } => openrailsrs_formats::resolve_hazard_shape_name(route_dir, haz)
+                .or_else(|| Some(haz.clone())),
+            _ => item.file_name().map(str::to_string),
+        };
         out.push(ObjectMarker {
             position,
             rotation,
             scale,
             kind: ObjectKind::from_item(item),
-            file_name: item.file_name().map(str::to_string),
+            file_name,
             section_idx: item.section_idx(),
             forest,
             hwater,

@@ -369,10 +369,22 @@ impl RouteAssets {
             .cloned()
     }
 
-    /// Resolve scenery shapes; `TrackObj` prefers route-pack `GLOBAL/SHAPES/` (Open Rails layout).
+    /// Resolve scenery shapes; `TrackObj` / `Hazard` prefer route-pack `GLOBAL/SHAPES/`.
     pub fn resolve_world_shape(&self, kind: &str, file_name: &str) -> Option<PathBuf> {
         if file_name.is_empty() {
             return None;
+        }
+        // WORLD `Hazard` stores a `.haz` config; OpenRails loads the nested shape from Global.
+        if kind == "Hazard" {
+            let shape_name =
+                openrailsrs_formats::resolve_hazard_shape_name(&self.route_dir, file_name)?;
+            let base = shape_file_basename(&shape_name);
+            for global in global_assets_dirs(&self.route_dir) {
+                if let Some(path) = resolve_shape_path(&global, base) {
+                    return Some(path);
+                }
+            }
+            return self.resolve_shape(base);
         }
         if let Some(path) =
             openrailsrs_formats::resolve_route_relative_file(&self.route_dir, file_name)

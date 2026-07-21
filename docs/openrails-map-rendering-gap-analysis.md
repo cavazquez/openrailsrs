@@ -10,7 +10,7 @@ Alcance: mundo visual, infraestructura y material rodante visible. Se excluyen f
 
 1. ~~**La correspondencia grafo lógico ↔ TDB no está demostrada.**~~ **Resuelto en #26:** el ID `nNNNN`/alias solo se acepta si el pose TDB está a ≤25 m del hint del grafo; si no, se usa nearest o fallback de grafo. En Chiltern Birmingham, `n10778`/`n10770` rechazan el ID a ~1835 m (`mapping_method=graph_fallback`, `rejected_tdb_id` informado) y ya no teletransportan marcadores.
 2. **Los audits actuales producen resultados incompletos o engañosos.** ~~`--audit-placement` devolvió `null`…~~ **(#27 OK)**. ~~`--audit-tr-item` contó 6375 errores con 60 tiles~~ **(#28: solo evalúa señales cuyo tile está en cobertura WORLD; fuera → `outside_coverage`)**.
-3. **OpenRails tiene dispatch visual especializado que openrailsrs todavía no posee por completo.** ~~Transfer~~ **(#31 OK)**, ~~CarSpawner/RDB~~ **(#32 OK: v1 shape + motion sobre chord RDB)**, Pickup/Hazard, animaciones WORLD, catenaria y subobjetos/lámparas de señales tienen renderers propios en OpenRails. openrailsrs aún omite varios, los convierte en `Other`, usa un placeholder o carga la shape como un objeto estático.
+3. **OpenRails tiene dispatch visual especializado que openrailsrs todavía no posee por completo.** ~~Transfer~~ **(#31 OK)**, ~~CarSpawner/RDB~~ **(#32 OK: v1 shape + motion sobre chord RDB)**, ~~Pickup/Hazard~~ **(#33 OK: tipado + shape rest-pose; Hazard vía `.haz`→Global)**, ~~animaciones WORLD~~ **(#34 OK: loop `ShapeAnimBinding` sobre mesh horneada)**, catenaria y subobjetos/lámparas de señales tienen renderers propios en OpenRails. openrailsrs aún omite varios, los convierte en `Other`, usa un placeholder o carga la shape como un objeto estático.
 4. **El viewer jugable tiene política de distancia configurable** (default **2000 m**, CLI `--viewing-distance` / `[viewer3d].viewing_distance_m` / env), frente a tiles completos dentro de `ViewingDistance` (500–10000 m) en OpenRails. Fog solo existe en `openrailsrs-render3d`; el terreno custom y el exterior del tren tampoco reproducen por completo sombras/atmósfera.
 
 La conversión base MSTS→Bevy (`tile×2048`, Z global negado), `RouteFocus`, el floating origin XZ y el pipeline de shapes/ACE están implementados y funcionaron en la reproducción. No hay evidencia para reescribirlos de forma global.
@@ -27,7 +27,7 @@ La conversión base MSTS→Bevy (`tile×2048`, Z global negado), `RouteFocus`, e
 - `--audit-placement`: `max_scenery_to_tdb_xz_m = null`; 25 TrackObj de muestra tampoco obtuvieron nearest TDB.
 - `--audit-tr-item` (tras #28): 12818 items, 6183 señales, 60 tiles cobertura → 2241 evaluadas / 3918 `outside_coverage`, 223 enlaces WORLD, **2449 errores** (antes 6375).
 - El tile Birmingham `w-006080+014925.w` contiene 687 Static y 1659 TrackObj.
-- Chiltern contiene tokens WORLD visuales no cubiertos de extremo a extremo: ~~376 `CarSpawner`~~ **(#32: tráfico RDB)**, ~~858 `Transfer`~~ **(#31)**, 240 `Pickup` y 2 `Hazard`.
+- Chiltern contiene tokens WORLD visuales no cubiertos de extremo a extremo: ~~376 `CarSpawner`~~ **(#32: tráfico RDB)**, ~~858 `Transfer`~~ **(#31)**, ~~240 `Pickup` y 2 `Hazard`~~ **(#33: shape tipada; Hazard→Global)**.
 
 ## Caso reproducible
 
@@ -143,7 +143,7 @@ Archivos clave:
 | 1. Descubrimiento | Menú escanea `ROUTES/*` | CLI + escenario y `--route-root` | No hay selector de rutas; no bloquea el comando explícito | Alta |
 | 2. Configuración | TRK más overrides OR | scenario/overlay + TRK parcial | Dependencia fuerte del overlay `world_anchor` | Alta |
 | 3. Paths | `MSTSPath`, `ORFileHelper`, route/global | índices case-insensitive para shapes; lookup directo en streaming | `.W`/`.T` o nombre no canónico puede desaparecer en Linux | Confirmada |
-| 4. Parsing | Parsers especializados por formato/objeto | AST/typed parsers, desconocidos a `Other` | CarSpawner/Pickup/Hazard no llegan con semántica visual | Confirmada |
+| 4. Parsing | Parsers especializados por formato/objeto | AST/typed parsers, desconocidos a `Other` | ~~CarSpawner/Pickup/Hazard tipados~~ (#31–#33); quedan animaciones WORLD y otros | Confirmada |
 | 5. Coordenadas | `WorldLocation`/`WorldPosition`, Z→XNA | `MstsWorldPosition`, Z→Bevy | Conversión base coincide; mapeo grafo↔TDB no | Confirmada |
 | 6. Tiles | Radio por `ViewingDistance`, MRU 64 | radio métrico configurable (default 2000 m) + hystéresis unload | Pop-in residual vs OR | Parcial (#30) |
 | 7. Terreno | `.t`, Y/F RAW, patch 17×17 | `.t`, Y/F RAW, patch texturizado | Base funcional; sombras y edge cases incompletos | Alta |
@@ -153,7 +153,7 @@ Archivos clave:
 | 11. WORLD | dispatch por clase | diez tipos typed + `Other` | Faltan renderers especializados | Confirmada |
 | 12. Instanciación | StaticShape/Animated/Transfer/etc. | shape genérica, procedural o cubo | Transfer/animaciones no equivalentes | Confirmada |
 | 13. Modelos | `SharedShapeManager`, route/global | cache de sesión, route/global | Shapes observadas sí cargan; unresolved TrackObj puede quedar invisible | Confirmada en código |
-| 14. Sprites | Forest camera-facing, lights, labels | cross-quads forest, UI, precipitación | Árboles no miran a cámara como OR | Confirmada |
+| 14. Sprites | Forest camera-facing, lights, labels | `OrForestMaterial` + VS camera-facing; UI; precipitación | Alpha/sorting residual vs doble paso OR | Parcial (#38) |
 | 15. Trenes visuales | viewers especializados y AnimatedPart | shape estática por vehículo + transform | Sin bogies/puertas/pantógrafo animados | Confirmada |
 | 16. Entidades | primitivas en RenderFrame | entidades Bevy y assets | Pipeline llega al render; no es causa raíz global | Confirmada |
 | 17. Transforms | matrices MSTS→XNA + jerarquía | matrices MSTS→Bevy + jerarquía | Base probada; raw node-ID TDB es incorrecto como mapping | Confirmada |
@@ -218,12 +218,12 @@ Las posiciones absolutas Chiltern son aproximadamente X=-12,45 millones y Z=-30,
 ## Integración Bevy
 
 - No hay `AssetLoader` custom MSTS; no es por sí mismo un bug visual y no se crea issue de refactor.
-- `ViewerPlugin` registra `update_world_shape_anim`, pero no se encontraron inserciones de `ShapeAnimBinding`/`ShapeAnimState`.
+- ~~`ViewerPlugin` registra `update_world_shape_anim` sin bindings~~ **(#34: spawn WORLD inserta `ShapeAnimBinding`/`ShapeAnimState` para shapes con controllers; loop FrameRate)**.
 - `WorldItem::Other` conserva nombre/transform, pero pierde el dispatch especializado.
 - TrackObj sin shape resoluble usa procedural cuando puede; con placeholders desactivados puede quedar invisible.
 - `viewer3d` no configura `DistanceFog`; `render3d` sí tiene `scene_distance_fog`.
 - Exterior de tren y varios meshes usan `NotShadowCaster`.
-- Forest genera dos quads cruzados fijos, no billboards orientados a cámara.
+- ~~Forest genera dos quads cruzados fijos~~ **(#38: 1 quad/árbol + `or_forest.wgsl` SideVector/Eye; alpha mask 200/255)**.
 - La política de layers de cabina/exterior está implementada; no se observó que ocultara el mundo en chase.
 
 ## Errores confirmados
@@ -237,11 +237,11 @@ Las posiciones absolutas Chiltern son aproximadamente X=-12,45 millones y Z=-30,
 | C5 | P1 | Radio visual estrecho (hist. 120 m) | Mitigado (#30): default 2000 m + CLI/config; falta paridad total con OR |
 | C6 | P1 | TransferObj no tiene renderer de quad | Mitigado (#31): `transfer.rs` mesh terrain-following + alpha mask; Chiltern fixture 5/5 |
 | C7 | P1 | CarSpawner/RDB no llega al render | Mitigado (#32): `WorldItem::CarSpawner` + `.rdb`/`carspawn.dat` + `road_cars.rs` (1 coche/spawner, chord RDB) |
-| C8 | P2 | Pickup/Hazard pierden renderer especializado | tokens en Chiltern; no variantes typed |
-| C9 | P1 | Animación WORLD no está cableada | sistema registrado, componentes nunca insertados |
+| C8 | P2 | Pickup/Hazard pierden renderer especializado | Mitigado (#33): tipado + spawn shape; Hazard `.haz`→`Global/Shapes`; sin anim refill/scare |
+| C9 | P1 | Animación WORLD no está cableada | Mitigado (#34): bindings + loop; sin LevelCrossing/Pickup/turntable drivers |
 | C10 | P2 | Catenaria ausente | sin código render; OR `Wire.cs` |
 | C11 | P2 | Señales no reproducen subobjetos/lámparas | diamante/cilindro o shape estática genérica |
-| C12 | P2 | Forest no es camera-facing | quads XZ fijos vs `VSForest` de OR |
+| C12 | P2 | Forest no es camera-facing | Mitigado (#38): mesh OR + `OrForestMaterial`/`VSForest`; sin golden 4 ángulos |
 | C13 | P2 | Fog ausente del viewer jugable | solo `render3d::scene_distance_fog` |
 | C14 | P2 | Animaciones visuales del rolling stock ausentes | shapes estáticas, sin `AnimatedPart` equivalente |
 | C15 | P2 | Exterior del tren no proyecta sombras | `NotShadowCaster` |
@@ -299,12 +299,12 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#30](https://github.com/cavazquez/openrailsrs/issues/30) | P1 | `[Culling] Sustituir el radio visual fijo de 120 m por una política de distancia/tile` | **Cerrado** — default 2000 m + CLI/config/hystéresis |
 | [#31](https://github.com/cavazquez/openrailsrs/issues/31) | P1 | `[World Objects] Renderizar TransferObj como quad texturizado sobre terreno` | **Cerrado** — mesh terrain-following + alpha/depth_bias; Chiltern `w-006084+014930` 5/5 |
 | [#32](https://github.com/cavazquez/openrailsrs/issues/32) | P1 | `[World Objects] Parsear CarSpawner y renderizar tráfico visual sobre RDB` | **Cerrado** — dump tipado; pose `TrItemRData`; carspawn lists; 1 coche/spawner con motion |
-| [#33](https://github.com/cavazquez/openrailsrs/issues/33) | P2 | `[World Objects] Soportar visualmente PickupObj y HazardObj en WORLD` | #29 |
-| [#34](https://github.com/cavazquez/openrailsrs/issues/34) | P1 | `[World Objects] Conectar animaciones MSTS WORLD con ShapeAnimBinding` | assets/anim parser |
+| [#33](https://github.com/cavazquez/openrailsrs/issues/33) | P2 | `[World Objects] Soportar visualmente PickupObj y HazardObj en WORLD` | **Cerrado** — tipado + dump; Pickup shape de ruta; Hazard `.haz`→Global; rest pose (sin refill/scare) |
+| [#34](https://github.com/cavazquez/openrailsrs/issues/34) | P1 | `[World Objects] Conectar animaciones MSTS WORLD con ShapeAnimBinding` | **Cerrado** — `frame_rate`; spawn + update loop; delta sobre mesh rest-baked |
 | [#35](https://github.com/cavazquez/openrailsrs/issues/35) | P1 | `[Assets] No omitir silenciosamente TrackObj sin shape resoluble` | **Cerrado** — relative `FileName` + accounting mesh/procedural/failed; Birmingham 1659/1659 |
 | [#36](https://github.com/cavazquez/openrailsrs/issues/36) | P2 | `[Track] Renderizar catenaria y overhead wires desde TrackObj/Dyntrack` | #26, #35 |
 | [#37](https://github.com/cavazquez/openrailsrs/issues/37) | P2 | `[Signals] Renderizar shapes, subobjetos y lámparas MSTS visibles` | #28, #35 |
-| [#38](https://github.com/cavazquez/openrailsrs/issues/38) | P2 | `[Sprites] Orientar Forest billboards a cámara y validar alpha` | #29 |
+| [#38](https://github.com/cavazquez/openrailsrs/issues/38) | P2 | `[Sprites] Orientar Forest billboards a cámara y validar alpha` | **Cerrado** — 1 quad/árbol; `or_forest.wgsl` SideVector/Eye; alpha mask 200/255; test mesh |
 | [#39](https://github.com/cavazquez/openrailsrs/issues/39) | P2 | `[Materials] Aplicar fog atmosférico en openrailsrs-viewer3d` | #30 |
 | [#40](https://github.com/cavazquez/openrailsrs/issues/40) | P2 | `[Rolling Stock Visuals] Animar bogies, ruedas, puertas y pantógrafo desde shapes MSTS` | animación shared |
 | [#41](https://github.com/cavazquez/openrailsrs/issues/41) | P2 | `[Rolling Stock Visuals] Permitir sombras del exterior del tren` | #42 |

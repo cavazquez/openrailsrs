@@ -6,8 +6,9 @@ pub mod material;
 pub mod mesh;
 
 pub use anim::{
-    ShapeAnimBinding, ShapeAnimState, animated_hierarchy_transform, animation_pose_matrices,
-    lever_entity_transform_at_mesh_center, lever_entity_transform_rebased, update_world_shape_anim,
+    ShapeAnimBinding, ShapeAnimState, animated_hierarchy_transform, animation_playback_speed,
+    animation_pose_matrices, lever_entity_transform_at_mesh_center, lever_entity_transform_rebased,
+    shape_has_loop_animation, update_world_shape_anim, world_baked_anim_transform,
 };
 pub use debug::{
     DebugFaceColorMode, MSTS_Z_BIAS_CLAMP, MSTS_Z_BIAS_WARN_ABS, ShapeMaterialDebugCtx,

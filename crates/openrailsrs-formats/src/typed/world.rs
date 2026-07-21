@@ -121,6 +121,29 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
     },
+    /// Fuel / water / container pickup (`Pickup` in `.w`); `FileName` is a route `.s`.
+    Pickup {
+        uid: u32,
+        file_name: Option<String>,
+        position: Vec3,
+        qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
+        /// First value of `PickupType` (5=water, 6/2=coal, 7=diesel, …).
+        pickup_type: Option<u32>,
+        /// TDB `TrItemId` item ids (database index 0).
+        tr_item_ids: Vec<u32>,
+    },
+    /// Animal / worker hazard (`Hazard` in `.w`); `FileName` is a `.haz` config.
+    Hazard {
+        uid: u32,
+        /// WORLD `FileName` — typically `crow.haz` (not a mesh).
+        haz_file: Option<String>,
+        position: Vec3,
+        qdir: Option<[f64; 4]>,
+        matrix3x3: Option<[f64; 9]>,
+        /// TDB item id from `TrItemId (0 id)`.
+        tr_item_id: Option<u32>,
+    },
     Other {
         tag: String,
         uid: Option<u32>,
@@ -144,6 +167,8 @@ impl WorldItem {
             WorldItem::HWater { .. } => "HWater",
             WorldItem::Transfer { .. } => "Transfer",
             WorldItem::CarSpawner { .. } => "CarSpawner",
+            WorldItem::Pickup { .. } => "Pickup",
+            WorldItem::Hazard { .. } => "Hazard",
             WorldItem::Other { .. } => "Other",
         }
     }
@@ -159,7 +184,9 @@ impl WorldItem {
             | WorldItem::SoundRegion { uid, .. }
             | WorldItem::HWater { uid, .. }
             | WorldItem::Transfer { uid, .. }
-            | WorldItem::CarSpawner { uid, .. } => Some(*uid),
+            | WorldItem::CarSpawner { uid, .. }
+            | WorldItem::Pickup { uid, .. }
+            | WorldItem::Hazard { uid, .. } => Some(*uid),
             WorldItem::Other { uid, .. } => *uid,
         }
     }
@@ -172,7 +199,9 @@ impl WorldItem {
             | WorldItem::Speedpost { file_name, .. }
             | WorldItem::SoundRegion { file_name, .. }
             | WorldItem::HWater { file_name, .. }
-            | WorldItem::Transfer { file_name, .. } => file_name.as_deref(),
+            | WorldItem::Transfer { file_name, .. }
+            | WorldItem::Pickup { file_name, .. } => file_name.as_deref(),
+            WorldItem::Hazard { haz_file, .. } => haz_file.as_deref(),
             WorldItem::Forest { tree_texture, .. } => tree_texture.as_deref(),
             WorldItem::Other { file_name, .. } => file_name.as_deref(),
             _ => None,
@@ -190,7 +219,9 @@ impl WorldItem {
             | WorldItem::SoundRegion { position, .. }
             | WorldItem::HWater { position, .. }
             | WorldItem::Transfer { position, .. }
-            | WorldItem::CarSpawner { position, .. } => Some(*position),
+            | WorldItem::CarSpawner { position, .. }
+            | WorldItem::Pickup { position, .. }
+            | WorldItem::Hazard { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
         }
     }
@@ -204,6 +235,8 @@ impl WorldItem {
             | WorldItem::Speedpost { qdir, .. }
             | WorldItem::SoundRegion { qdir, .. }
             | WorldItem::CarSpawner { qdir, .. }
+            | WorldItem::Pickup { qdir, .. }
+            | WorldItem::Hazard { qdir, .. }
             | WorldItem::Other { qdir, .. } => *qdir,
             _ => None,
         }
@@ -217,6 +250,8 @@ impl WorldItem {
             | WorldItem::Signal { matrix3x3, .. }
             | WorldItem::Speedpost { matrix3x3, .. }
             | WorldItem::SoundRegion { matrix3x3, .. }
+            | WorldItem::Pickup { matrix3x3, .. }
+            | WorldItem::Hazard { matrix3x3, .. }
             | WorldItem::Other { matrix3x3, .. } => *matrix3x3,
             _ => None,
         }
@@ -225,9 +260,16 @@ impl WorldItem {
     /// TDB `TrItemId`s referenced by this world object (signals, speedposts, sound regions).
     pub fn tr_item_ids(&self) -> Vec<u32> {
         match self {
-            WorldItem::Signal { tr_item_ids, .. } => tr_item_ids.clone(),
-            WorldItem::Speedpost { tr_item_id, .. } => vec![*tr_item_id],
-            WorldItem::SoundRegion { tr_item_id, .. } => vec![*tr_item_id],
+            WorldItem::Signal { tr_item_ids, .. } | WorldItem::Pickup { tr_item_ids, .. } => {
+                tr_item_ids.clone()
+            }
+            WorldItem::Speedpost { tr_item_id, .. } | WorldItem::SoundRegion { tr_item_id, .. } => {
+                vec![*tr_item_id]
+            }
+            WorldItem::Hazard {
+                tr_item_id: Some(id),
+                ..
+            } => vec![*id],
             _ => Vec::new(),
         }
     }
@@ -416,7 +458,7 @@ fn is_object_entry(items: &[Ast]) -> bool {
             if matches!(
                 head.as_str(),
                 "Static" | "TrackObj" | "Forest" | "Transfer" | "Dyntrack" | "Signal" | "Speedpost"
-                    | "SoundRegion" | "HWater" | "CarSpawner"
+                    | "SoundRegion" | "HWater" | "CarSpawner" | "Pickup" | "Hazard"
                     | "UiD"
             )
     )
@@ -482,6 +524,14 @@ fn infer_object_tag(fields: &[Ast]) -> Option<String> {
         || find_named_string(fields, "ORTSListName").is_some()
     {
         return Some("CarSpawner".into());
+    }
+    if find_named_u32(fields, "PickupType").is_some() {
+        return Some("Pickup".into());
+    }
+    if find_named_string(fields, "FileName")
+        .is_some_and(|f| f.to_ascii_lowercase().ends_with(".haz"))
+    {
+        return Some("Hazard".into());
     }
     if find_named_string(fields, "FileName").is_some() {
         return Some("Static".into());
@@ -597,6 +647,23 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             rdb_tr_item_ids: find_rdb_tr_item_ids(fields),
             position: position.unwrap_or_default(),
             qdir,
+        },
+        s if s.eq_ignore_ascii_case("Pickup") => WorldItem::Pickup {
+            uid: uid.unwrap_or(0),
+            file_name,
+            position: position.unwrap_or_default(),
+            qdir,
+            matrix3x3,
+            pickup_type: find_named_u32(fields, "PickupType"),
+            tr_item_ids: find_tdb_tr_item_ids(fields),
+        },
+        s if s.eq_ignore_ascii_case("Hazard") => WorldItem::Hazard {
+            uid: uid.unwrap_or(0),
+            haz_file: file_name,
+            position: position.unwrap_or_default(),
+            qdir,
+            matrix3x3,
+            tr_item_id: find_tr_item_id_pair(fields).map(|(_, id)| id),
         },
         _ => WorldItem::Other {
             tag: effective_tag,
@@ -789,6 +856,34 @@ fn find_tr_item_id_pair(items: &[Ast]) -> Option<(u32, u32)> {
     None
 }
 
+/// Collect TDB item ids from `( TrItemId 0 item_id )` pairs (database index 0 = track DB).
+fn find_tdb_tr_item_ids(items: &[Ast]) -> Vec<u32> {
+    let mut out = Vec::new();
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("TrItemId") {
+            continue;
+        }
+        let nums: Vec<u32> = sub
+            .iter()
+            .skip(1)
+            .filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                _ => None,
+            })
+            .collect();
+        if nums.len() >= 2 && nums[0] == 0 {
+            out.push(nums[1]);
+        }
+    }
+    out
+}
+
 /// Collect RDB item ids from `( TrItemId 1 item_id )` pairs (database index 1 = road DB).
 fn find_rdb_tr_item_ids(items: &[Ast]) -> Vec<u32> {
     let mut out = Vec::new();
@@ -910,6 +1005,102 @@ mod watersnake_jinx_tests {
         assert!(
             transfers.iter().any(|t| t.uid() == Some(75)),
             "missing transfer uid 75"
+        );
+    }
+}
+
+#[cfg(test)]
+mod pickup_hazard_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn parse_pickup_and_hazard_nested() {
+        // Head-outside blocks like Chiltern; `load_world_ast` normalizes them.
+        let text = r#"
+SIMISA@@@@@@@@@@JINX0w0t______
+Tr_Worldfile (
+	Pickup (
+		UiD ( 512 )
+		PickupType ( 5 0 )
+		TrItemId ( 0 768 )
+		FileName ( RF_GW_WaterColumn.s )
+		Position ( -857.82 94.1064 -499.292 )
+		QDirection ( 0 0.983255 0 0.182235 )
+	)
+	Hazard (
+		UiD ( 1351 )
+		TrItemId ( 0 4938 )
+		FileName ( crow.haz )
+		Position ( 157.607 116.26 -917.42 )
+		QDirection ( 0 0.448149 0 0.893959 )
+	)
+)
+        "#;
+        let ast = load_world_ast(text).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(
+            world.items.iter().filter(|i| i.kind() == "Pickup").count(),
+            1
+        );
+        assert_eq!(
+            world.items.iter().filter(|i| i.kind() == "Hazard").count(),
+            1
+        );
+        let Some(WorldItem::Pickup {
+            file_name,
+            pickup_type,
+            tr_item_ids,
+            ..
+        }) = world.items.iter().find(|i| i.kind() == "Pickup")
+        else {
+            panic!("expected Pickup");
+        };
+        assert_eq!(file_name.as_deref(), Some("RF_GW_WaterColumn.s"));
+        assert_eq!(*pickup_type, Some(5));
+        assert_eq!(tr_item_ids, &vec![768]);
+        let Some(WorldItem::Hazard {
+            haz_file,
+            tr_item_id,
+            ..
+        }) = world.items.iter().find(|i| i.kind() == "Hazard")
+        else {
+            panic!("expected Hazard");
+        };
+        assert_eq!(haz_file.as_deref(), Some("crow.haz"));
+        assert_eq!(*tr_item_id, Some(4938));
+    }
+
+    #[test]
+    fn chiltern_tiles_count_pickup_and_hazard() {
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        let Some(home) = home else {
+            return;
+        };
+        let route = home.join("Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern");
+        let pickup_tile = route.join("WORLD/w-006100+014936.w");
+        let hazard_tile = route.join("WORLD/w-006097+014940.w");
+        if !pickup_tile.is_file() || !hazard_tile.is_file() {
+            return;
+        }
+        let pickups = WorldFile::from_path(&pickup_tile).expect("pickup tile");
+        let n_pickup = pickups
+            .items
+            .iter()
+            .filter(|i| i.kind() == "Pickup")
+            .count();
+        assert!(
+            n_pickup >= 2,
+            "expected ≥2 Pickup on water-column tile, got {n_pickup}"
+        );
+        let hazards = WorldFile::from_path(&hazard_tile).expect("hazard tile");
+        assert_eq!(
+            hazards
+                .items
+                .iter()
+                .filter(|i| i.kind() == "Hazard")
+                .count(),
+            2
         );
     }
 }

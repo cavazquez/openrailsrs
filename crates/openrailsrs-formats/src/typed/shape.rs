@@ -207,6 +207,8 @@ pub struct AnimNode {
 pub struct Animation {
     /// Total frame count declared in the animation header.
     pub frame_count: u32,
+    /// Frames advanced per second (`animation FrameCount FrameRate …` in MSTS/OR).
+    pub frame_rate: u32,
     pub nodes: Vec<AnimNode>,
 }
 
@@ -1099,6 +1101,7 @@ fn collect_animations(ast: &Ast) -> Vec<Animation> {
 
 fn parse_animation(items: &[Ast]) -> Option<Animation> {
     let mut frame_count = 0u32;
+    let mut frame_rate = 0u32;
     let mut nodes = Vec::new();
 
     let mut nums = Vec::new();
@@ -1124,7 +1127,17 @@ fn parse_animation(items: &[Ast]) -> Option<Animation> {
     if let Some(&fc) = nums.first() {
         frame_count = fc;
     }
-    Some(Animation { frame_count, nodes })
+    if let Some(&fr) = nums.get(1) {
+        frame_rate = fr;
+    } else if frame_count > 0 {
+        // Older ASCII sometimes omits FrameRate; OR defaults to usable playback.
+        frame_rate = frame_count.min(30);
+    }
+    Some(Animation {
+        frame_count,
+        frame_rate,
+        nodes,
+    })
 }
 
 fn parse_anim_node(items: &[Ast]) -> Option<AnimNode> {
