@@ -101,12 +101,7 @@ pub fn spawn_dyntrack_objects_with_wire(
             .collect();
         if !wire_segs.is_empty() {
             crate::overhead_wire::spawn_overhead_wire_batch(
-                commands,
-                meshes,
-                materials,
-                &wire_segs,
-                wire.style,
-                "dyntrack",
+                commands, meshes, materials, &wire_segs, wire.style, "dyntrack",
             );
         }
     }

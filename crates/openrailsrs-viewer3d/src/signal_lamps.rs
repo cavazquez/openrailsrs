@@ -86,9 +86,7 @@ pub fn spawn_signal_lamp_objects(
 
         for unit in &patch.units {
             // Only heads installed in the WORLD bitmask (bit i → sub_obj i).
-            if patch.signal_sub_obj != 0
-                && ((patch.signal_sub_obj >> unit.sub_obj) & 1) == 0
-            {
+            if patch.signal_sub_obj != 0 && ((patch.signal_sub_obj >> unit.sub_obj) & 1) == 0 {
                 continue;
             }
             let sub = shape_def

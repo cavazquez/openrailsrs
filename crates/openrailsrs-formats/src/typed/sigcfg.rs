@@ -91,7 +91,12 @@ pub struct SigCfgFile {
 
 impl SigCfgFile {
     pub fn load_for_route(route_dir: &Path) -> Result<Self, FormatError> {
-        for rel in ["sigcfg.dat", "SIGCFG.DAT", "OpenRails/sigcfg.dat", "openrails/sigcfg.dat"] {
+        for rel in [
+            "sigcfg.dat",
+            "SIGCFG.DAT",
+            "OpenRails/sigcfg.dat",
+            "openrails/sigcfg.dat",
+        ] {
             let path = route_dir.join(rel);
             if path.is_file() {
                 return Self::from_path(&path);
@@ -254,16 +259,11 @@ fn scan_light_textures(text: &str, out: &mut SigCfgFile) {
         }
         let nums = first_numbers(block, 8);
         // LightTex ( "name" "file" u0 v0 u1 v1 ) — numbers after strings.
-        let floats: Vec<f32> = nums.into_iter().skip(0).collect();
+        let floats: Vec<f32> = nums;
         // Prefer trailing 4 floats after the two strings; scan all numbers and take last 4 if >4.
         let (u0, v0, u1, v1) = if floats.len() >= 4 {
             let n = floats.len();
-            (
-                floats[n - 4],
-                floats[n - 3],
-                floats[n - 2],
-                floats[n - 1],
-            )
+            (floats[n - 4], floats[n - 3], floats[n - 2], floats[n - 1])
         } else {
             (0.0, 0.0, 1.0, 1.0)
         };
@@ -347,7 +347,10 @@ fn scan_signal_lights(block: &str) -> Vec<SignalLightDef> {
         let nums = first_numbers(light, 1);
         let strings = quoted_strings(light);
         let index = nums.first().copied().unwrap_or(0.0) as u32;
-        let colour_name = strings.first().cloned().unwrap_or_else(|| "White Light".into());
+        let colour_name = strings
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "White Light".into());
         let mut position = [0.0, 0.0, 0.0];
         let mut radius = 0.15;
         if let Some(pos_block) = find_keyword_blocks(light, "Position").first() {

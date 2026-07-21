@@ -269,8 +269,9 @@ fn build_hud_replay(
     };
     let progress_pct = (progress * 100.0).round() as u32;
 
-    let row1 =
-        format!("{title}    {status}    cam:{cam}  follow:{follow_label}  rain:{rain_label}  fog:{fog_label}");
+    let row1 = format!(
+        "{title}    {status}    cam:{cam}  follow:{follow_label}  rain:{rain_label}  fog:{fog_label}"
+    );
     let row2 = format!(
         "{coords}    t={:.1}s  {:.0} km/h  spd={:.0}x  {progress_pct}%",
         replay.t_sim, vel_kmh, replay.speed

@@ -11,7 +11,7 @@ Alcance: mundo visual, infraestructura y material rodante visible. Se excluyen f
 1. ~~**La correspondencia grafo lógico ↔ TDB no está demostrada.**~~ **Resuelto en #26:** el ID `nNNNN`/alias solo se acepta si el pose TDB está a ≤25 m del hint del grafo; si no, se usa nearest o fallback de grafo. En Chiltern Birmingham, `n10778`/`n10770` rechazan el ID a ~1835 m (`mapping_method=graph_fallback`, `rejected_tdb_id` informado) y ya no teletransportan marcadores.
 2. **Los audits actuales producen resultados incompletos o engañosos.** ~~`--audit-placement` devolvió `null`…~~ **(#27 OK)**. ~~`--audit-tr-item` contó 6375 errores con 60 tiles~~ **(#28: solo evalúa señales cuyo tile está en cobertura WORLD; fuera → `outside_coverage`)**.
 3. **OpenRails tiene dispatch visual especializado que openrailsrs todavía no posee por completo.** ~~Transfer~~ **(#31 OK)**, ~~CarSpawner/RDB~~ **(#32 OK: v1 shape + motion sobre chord RDB)**, ~~Pickup/Hazard~~ **(#33 OK: tipado + shape rest-pose; Hazard vía `.haz`→Global)**, ~~animaciones WORLD~~ **(#34 OK: loop `ShapeAnimBinding` sobre mesh horneada)**, ~~catenaria~~ **(#36 OK: wire procedural sobre TrackObj/Dyntrack)**, ~~señales/lámparas~~ **(#37 OK)**. Quedan rolling-stock animado y sombras.
-4. **El viewer jugable tiene política de distancia configurable** (default **2000 m**, CLI `--viewing-distance` / `[viewer3d].viewing_distance_m` / env), frente a tiles completos dentro de `ViewingDistance` (500–10000 m) en OpenRails. ~~Fog~~ **(#39 OK)**; el terreno custom y el exterior del tren todavía no reproducen por completo sombras.
+4. **El viewer jugable tiene política de distancia configurable** (default **2000 m**, CLI `--viewing-distance` / `[viewer3d].viewing_distance_m` / env), frente a tiles completos dentro de `ViewingDistance` (500–10000 m) en OpenRails. ~~Fog~~ **(#39 OK)**; ~~terreno recibe sombras~~ **(#42 OK)**; exterior del tren aún con `NotShadowCaster` (#41).
 
 La conversión base MSTS→Bevy (`tile×2048`, Z global negado), `RouteFocus`, el floating origin XZ y el pipeline de shapes/ACE están implementados y funcionaron en la reproducción. No hay evidencia para reescribirlos de forma global.
 
@@ -245,7 +245,7 @@ Las posiciones absolutas Chiltern son aproximadamente X=-12,45 millones y Z=-30,
 | C13 | P2 | Fog ausente del viewer jugable | Mitigado (#39): fog ≈ viewing distance; sin noche dinámica |
 | C14 | P2 | Animaciones visuales del rolling stock ausentes | shapes estáticas, sin `AnimatedPart` equivalente |
 | C15 | P2 | Exterior del tren no proyecta sombras | `NotShadowCaster` |
-| C16 | P2 | Terreno custom no recibe sombras equivalentes | shader/material de terrain sin shadow sampling |
+| C16 | P2 | Terreno custom no recibe sombras equivalentes | Mitigado (#42): `terrain.wgsl` half-Lambert + `fetch_directional_shadow`; dual-tex/fog/holes intactos |
 | C17 | P1 | TrackObj irresoluble puede omitirse silenciosamente | placeholders false + procedural condicional |
 
 ## Hipótesis pendientes
@@ -308,7 +308,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#39](https://github.com/cavazquez/openrailsrs/issues/39) | P2 | `[Materials] Aplicar fog atmosférico en openrailsrs-viewer3d` | **Cerrado** — `DistanceFog` en cámara + shaders OR; visibilidad = viewing distance |
 | [#40](https://github.com/cavazquez/openrailsrs/issues/40) | P2 | `[Rolling Stock Visuals] Animar bogies, ruedas, puertas y pantógrafo desde shapes MSTS` | animación shared |
 | [#41](https://github.com/cavazquez/openrailsrs/issues/41) | P2 | `[Rolling Stock Visuals] Permitir sombras del exterior del tren` | #42 |
-| [#42](https://github.com/cavazquez/openrailsrs/issues/42) | P2 | `[Terrain] Integrar recepción de sombras en TerrainMaterial` | — |
+| [#42](https://github.com/cavazquez/openrailsrs/issues/42) | P2 | `[Terrain] Integrar recepción de sombras en TerrainMaterial` | **Cerrado** — shadow sampling en `terrain.wgsl` (viewer); microtex + fog conservados |
 | [#43](https://github.com/cavazquez/openrailsrs/issues/43) | P1 | `[Validation] Crear regresiones visuales reproducibles OpenRails↔Bevy` | #25–#29 |
 | [#44](https://github.com/cavazquez/openrailsrs/issues/44) | P3 | `[Materials] Añadir tangent space opcional para assets PBR con normal maps` | fuente normal-map, #48 |
 | [#45](https://github.com/cavazquez/openrailsrs/issues/45) | P2 | `[Meshes] Recomponer normales ausentes o degeneradas en shapes MSTS` | — |

@@ -4,6 +4,8 @@
 //! at `OverheadWireHeight`. Optional messenger wire + droppers when double-wire
 //! is enabled in the route `.trk`.
 
+#![allow(clippy::too_many_arguments)]
+
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
@@ -105,6 +107,7 @@ pub fn append_overhead_wire_segment(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_wire_run(
     positions: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
@@ -145,6 +148,7 @@ fn append_wire_run(
     push_cuboid(positions, normals, uvs, indices, &tf, Vec3::splat(1.0));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_droppers(
     positions: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
@@ -373,10 +377,7 @@ mod tests {
                 double_wire_height_m: 1.0,
             },
         );
-        let max_y = pos
-            .iter()
-            .map(|p| p[1])
-            .fold(f32::NEG_INFINITY, f32::max);
+        let max_y = pos.iter().map(|p| p[1]).fold(f32::NEG_INFINITY, f32::max);
         assert!(max_y > 6.4, "max_y={max_y}");
     }
 }

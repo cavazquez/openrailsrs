@@ -15,19 +15,10 @@ pub use openrailsrs_bevy_scenery::spawn::wire::{
 };
 
 /// Runtime wire policy loaded from the route `.trk`.
-#[derive(Resource, Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct RouteWireConfig {
     pub enabled: bool,
     pub style: OverheadWireStyle,
-}
-
-impl Default for RouteWireConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            style: OverheadWireStyle::default(),
-        }
-    }
 }
 
 impl RouteWireConfig {

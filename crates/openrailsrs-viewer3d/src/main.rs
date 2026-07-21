@@ -49,7 +49,6 @@ use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::LiveDrive;
 use openrailsrs_viewer3d::RouteAssets;
-use openrailsrs_viewer3d::overhead_wire::RouteWireConfig;
 use openrailsrs_viewer3d::TerrainElevation;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
@@ -64,6 +63,7 @@ use openrailsrs_viewer3d::launch::{
     tdb_radius_for_mode, tile_lab_layers, track_dev_render_enabled, view_radius_m,
     view_unload_radius_m, viewing_distance_tile_ring,
 };
+use openrailsrs_viewer3d::overhead_wire::RouteWireConfig;
 use openrailsrs_viewer3d::placement_audit::{
     CHILTERN_BIRMINGHAM_TILE, WorldAnchorInput, log_placement_audit, run_placement_audit,
 };
