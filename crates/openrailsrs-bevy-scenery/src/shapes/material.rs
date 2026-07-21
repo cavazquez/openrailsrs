@@ -274,6 +274,18 @@ pub fn cab_or_scenery_material_with_texture_ex(
     finalize_scenery_material(mat, material_lit)
 }
 
+/// Assign a normal map on Bevy [`StandardMaterial`] (OpenGL Y by default) — #44.
+///
+/// Only call after [`crate::shapes::ensure_tangents_for_normal_mapping`] succeeded.
+pub fn apply_standard_normal_map(
+    mat: &mut StandardMaterial,
+    normal_map: Handle<Image>,
+    flip_normal_map_y: bool,
+) {
+    mat.normal_map_texture = Some(normal_map);
+    mat.flip_normal_map_y = flip_normal_map_y;
+}
+
 /// Rolling-stock exterior: Open Rails `CullCounterClockwise` (back-face cull, CCW front).
 pub fn apply_train_exterior_culling(mat: &mut StandardMaterial) {
     mat.double_sided = false;

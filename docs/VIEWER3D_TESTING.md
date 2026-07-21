@@ -68,6 +68,28 @@ Animated shapes (#34) and transparent parts stay on the per-entity path. LOD swa
 
 v1 shader: albedo + simple Lambert (not full `StandardMaterial` shadows/PBR).
 
+## PBR normal maps opt-in (#44)
+
+Classic MSTS shapes need no change. Optional sibling sidecar:
+
+`MiShape.s` → `MiShape.s.pbr.json`
+
+```json
+{
+  "normal_maps": { "body.ace": "body_n.ace" },
+  "flip_normal_map_y": false
+}
+```
+
+| Piece | Detail |
+|-------|--------|
+| Module | [`pbr_sidecar.rs`](../crates/openrailsrs-bevy-scenery/src/shapes/pbr_sidecar.rs) |
+| Tangents | `ensure_tangents_for_normal_mapping` (MikkTSpace) only when mapped |
+| Material | Bevy `StandardMaterial` + linear normal ACE; OpenGL Y default |
+| Tests | `pbr_sidecar_*`, `ensure_tangents_*`, `pbr_sidecar_adds_tangents_and_normal_map` |
+
+`OrSceneryMaterial` / cab OR shaders ignore the sidecar. Do not treat `uv_op_embossbump` as a modern normal map.
+
 ## Visual regression (#43)
 
 Deterministic smoke capture + structural metrics (no OpenRails/Wine automation).

@@ -27,7 +27,8 @@ use crate::coordinates::{
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_file_and_loaded,
+    RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths,
+    collect_pbr_normal_map_texture_paths, load_shape_file_and_loaded, load_shape_pbr_sidecar,
     prefetch_ace_textures, reset_shape_file_parse_count, shape_file_parse_count,
     shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
 };
@@ -1973,6 +1974,7 @@ fn build_world_shape_asset(
 ) -> (PathBuf, ShapeRenderAsset) {
     let tex_dirs = texture_search_dirs_for_shape(&shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+    let pbr = load_shape_pbr_sidecar(&shape_path);
     let asset = match loaded {
         Some(loaded) => shape_render_asset_from_loaded_with_ace_cache(
             loaded,
@@ -1987,6 +1989,7 @@ fn build_world_shape_asset(
             None,
             false,
             false,
+            pbr.as_ref(),
         ),
         None => {
             viewer_log!(
@@ -2041,6 +2044,7 @@ fn build_shape_lod_assets(
     }
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
+    let pbr = load_shape_pbr_sidecar(shape_path);
     control
         .distance_levels
         .iter()
@@ -2065,6 +2069,7 @@ fn build_shape_lod_assets(
                 None,
                 false,
                 false,
+                pbr.as_ref(),
             ))
         })
         .collect()
@@ -2124,6 +2129,11 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
             progress
                 .texture_paths
                 .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+            let pbr = load_shape_pbr_sidecar(&shape_path);
+            progress.texture_paths.extend(collect_pbr_normal_map_texture_paths(
+                pbr.as_ref(),
+                &tex_refs,
+            ));
         } else {
             progress.load_diag.record_path_failed(
                 &shape_path,
@@ -3336,6 +3346,11 @@ pub fn spawn_world_boxes(
             let tex_dirs = texture_search_dirs_for_shape(shape_path, &assets.route_dir);
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
             texture_paths.extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+            let pbr = load_shape_pbr_sidecar(shape_path);
+            texture_paths.extend(collect_pbr_normal_map_texture_paths(
+                pbr.as_ref(),
+                &tex_refs,
+            ));
         }
     }
     texture_paths.sort_unstable();

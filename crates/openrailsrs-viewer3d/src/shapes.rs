@@ -18,23 +18,23 @@ pub use openrailsrs_bevy_scenery::shapes::mesh::{
 pub use openrailsrs_bevy_scenery::shapes::{
     DARK_TEXTURE_LUMA_THRESHOLD, LoadedShape, LoadedShapePart, MSTS_Z_BIAS_CLAMP,
     MeshVertexColorMode, MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST,
-    SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ace_mean_luma, alpha_mode_from_prim_state,
-    apply_msts_vertex_tint, apply_shape_debug_material_overrides,
-    apply_train_debug_material_overrides, apply_train_exterior_culling, apply_z_buf_mode,
-    brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
+    SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ShapePbrSidecar, ace_mean_luma,
+    alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
+    apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
+    apply_z_buf_mode, brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
     build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
     cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
     cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy, closest_lod_level,
-    debug_materials_enabled, debug_shape_stats_enabled, finalize_scenery_material,
-    legacy_standard_scenery_enabled, light_mat_idx_for_prim_state, lod_level_for_distance,
-    log_shape_material_debug, mesh_aabb, mesh_has_uvs, mesh_position_count,
-    mesh_triangle_list_valid, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
-    msts_shape_to_train_rotation, or_lighting_enabled, primary_texture_filename,
-    resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
-    scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
-    shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
-    shape_point_to_bevy, shape_shader_requests_blending, texture_for_prim_state,
+    debug_materials_enabled, debug_shape_stats_enabled, ensure_tangents_for_normal_mapping,
+    finalize_scenery_material, legacy_standard_scenery_enabled, light_mat_idx_for_prim_state,
+    load_shape_pbr_sidecar, lod_level_for_distance, log_shape_material_debug, mesh_aabb,
+    mesh_has_uvs, mesh_position_count, mesh_triangle_list_valid, mesh_uv_aabb, mesh_uv_degenerate,
+    mesh_vertex_color_stats, msts_shape_to_train_rotation, or_lighting_enabled,
+    primary_texture_filename, resolve_or_lighting, scenery_albedo_tint, scenery_base_tint,
+    scenery_material_tint_for_ace, scenery_materials_lit, scenery_uses_or_wgsl_shaders,
+    set_train_shape_debug_scope, shader_name_for_prim_state, shader_uses_vertex_color_multiply,
+    shape_alpha_mode, shape_point_to_bevy, shape_shader_requests_blending, texture_for_prim_state,
     texture_name_suggests_transparency, train_exterior_material_with_texture_ex,
     train_shape_debug_scope,
 };
@@ -1716,6 +1716,7 @@ pub fn load_shape_render_asset_and_file_from_path(
         set_train_shape_debug_scope(true);
     }
     let (shape, loaded) = load_shape_file_and_loaded(shape_path, camera_distance_m)?;
+    let pbr = load_shape_pbr_sidecar(shape_path);
     let result = shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
@@ -1728,6 +1729,7 @@ pub fn load_shape_render_asset_and_file_from_path(
         None,
         false,
         train_exterior,
+        pbr.as_ref(),
     );
     if train_exterior {
         set_train_shape_debug_scope(false);
@@ -1750,6 +1752,7 @@ pub fn load_cab_interior_render_asset_from_path(
     lever_matrices: &HashSet<usize>,
 ) -> Option<ShapeRenderAsset> {
     let loaded = load_cab_shape_from_path(shape_path, camera_distance_m, lever_matrices)?;
+    // Cab interior uses OrCabMaterial / no PBR normal-map path (#44).
     Some(shape_render_asset_from_loaded(
         loaded,
         texture_dirs,
@@ -1762,6 +1765,7 @@ pub fn load_cab_interior_render_asset_from_path(
         Some(true),
         true,
         false,
+        None,
     ))
 }
 
@@ -1779,6 +1783,7 @@ pub fn shape_render_asset_from_loaded(
     lit_override: Option<bool>,
     cab_interior: bool,
     train_exterior: bool,
+    pbr: Option<&ShapePbrSidecar>,
 ) -> ShapeRenderAsset {
     shape_render_asset_from_loaded_with_ace_cache(
         loaded,
@@ -1793,6 +1798,7 @@ pub fn shape_render_asset_from_loaded(
         lit_override,
         cab_interior,
         train_exterior,
+        pbr,
     )
 }
 
@@ -1811,6 +1817,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     lit_override: Option<bool>,
     cab_interior: bool,
     train_exterior: bool,
+    pbr: Option<&ShapePbrSidecar>,
 ) -> ShapeRenderAsset {
     let triangle_count_total: usize = loaded
         .parts
@@ -1883,6 +1890,32 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             part.light_mat_idx,
             part.tex_addr_mode,
         );
+        let mut mesh = part.mesh.clone();
+        // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
+        if or_cab_material.is_none() && !cab_interior {
+            if let (Some(sidecar), Some(albedo)) = (pbr, part.texture_file.as_deref()) {
+                if let Some(nm_name) = sidecar.normal_map_for_albedo(albedo) {
+                    if ensure_tangents_for_normal_mapping(&mut mesh) {
+                        if let Some(nm_handle) = load_normal_map_image_handle(
+                            texture_dirs,
+                            nm_name,
+                            images,
+                            texture_cache,
+                            ace_cache,
+                            part.tex_addr_mode,
+                        ) {
+                            if let Some(mut mat) = materials.get_mut(&material) {
+                                apply_standard_normal_map(
+                                    &mut mat,
+                                    nm_handle,
+                                    sidecar.flip_normal_map_y,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if debug_materials_enabled() {
             if let Some(mat) = materials.get(&material) {
                 log_shape_material_debug(
@@ -1907,7 +1940,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             prim_state_idx: part.prim_state_idx,
             sub_object_idx: part.sub_object_idx,
             cab_matrix_idx: part.cab_matrix_idx,
-            mesh: meshes.add(part.mesh.clone()),
+            mesh: meshes.add(mesh),
             material,
             or_cab_material,
             has_texture,
@@ -1993,6 +2026,74 @@ pub fn collect_loaded_shape_texture_paths(
         }
     }
     paths
+}
+
+/// Append normal-map ACE/DDS paths from an optional PBR sidecar (#44).
+pub fn collect_pbr_normal_map_texture_paths(
+    pbr: Option<&ShapePbrSidecar>,
+    texture_dirs: &[&Path],
+) -> Vec<PathBuf> {
+    let Some(sidecar) = pbr else {
+        return Vec::new();
+    };
+    let mut paths = Vec::new();
+    for name in sidecar.normal_map_filenames() {
+        if let Some(path) = resolve_texture_path_in_dirs(texture_dirs, name) {
+            paths.push(path);
+        }
+    }
+    paths
+}
+
+/// Load a normal-map texture as a linear (`Rgba8Unorm`) image handle for PBR (#44).
+fn load_normal_map_image_handle(
+    texture_dirs: &[&Path],
+    file_name: &str,
+    images: &mut Assets<Image>,
+    texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
+    ace_cache: &HashMap<PathBuf, AceFile>,
+    tex_addr_mode: Option<i32>,
+) -> Option<Handle<Image>> {
+    let tex_path = resolve_texture_path_in_dirs(texture_dirs, file_name)?;
+    // Distinct cache key from albedo sRGB entries (negative addr key).
+    let addr_key = -(texture_cache_addr_key(tex_addr_mode).saturating_abs().max(1));
+    if let Some(h) = texture_cache.get(&(tex_path.clone(), addr_key)) {
+        return Some(h.clone());
+    }
+    let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
+        == Some(std::ffi::OsString::from("dds"));
+    let image = if is_dds {
+        let bytes = std::fs::read(&tex_path).ok()?;
+        let mut img = decode_dds_to_image_with_addr(&bytes, tex_addr_mode).ok()?;
+        // Prefer linear sampling for normal maps when decoded as uncompressed RGBA.
+        if img.texture_descriptor.format == TextureFormat::Rgba8UnormSrgb {
+            img.texture_descriptor.format = TextureFormat::Rgba8Unorm;
+        }
+        img
+    } else {
+        let ace = if let Some(ace) = ace_cache.get(&tex_path) {
+            ace.clone()
+        } else {
+            read_ace(&tex_path).ok()?
+        };
+        // No albedo brighten — raw mip0 as linear.
+        let mut image = Image::new(
+            Extent3d {
+                width: ace.width,
+                height: ace.height,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            ace.mip0.clone(),
+            TextureFormat::Rgba8Unorm,
+            RenderAssetUsages::default(),
+        );
+        openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+        image
+    };
+    let handle = images.add(image);
+    texture_cache.insert((tex_path, addr_key), handle.clone());
+    Some(handle)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2769,6 +2870,96 @@ mod tests {
                 .iter()
                 .all(|part| meshes.get(&part.mesh).is_some())
         );
+    }
+
+    #[test]
+    fn pbr_sidecar_adds_tangents_and_normal_map() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let shape_src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-bevy-scenery/assets/msts/minimal.s");
+        let shape_path = dir.path().join("minimal.s");
+        std::fs::copy(&shape_src, &shape_path).expect("copy shape");
+        // Flat OpenGL-style normal (0.5, 0.5, 1.0) × 255.
+        let nm_pixel = [128u8, 128, 255, 255];
+        let mut nm_rgba = Vec::new();
+        for _ in 0..4 {
+            nm_rgba.extend_from_slice(&nm_pixel);
+        }
+        let albedo = [200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255];
+        write_synthetic_ace(&dir.path().join("wagon.ace"), &albedo);
+        write_synthetic_ace(&dir.path().join("wagon_n.ace"), &nm_rgba);
+        std::fs::write(
+            dir.path().join("minimal.s.pbr.json"),
+            r#"{"normal_maps":{"wagon.ace":"wagon_n.ace"},"flip_normal_map_y":false}"#,
+        )
+        .expect("sidecar");
+
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &shape_path,
+            &[dir.path()],
+            None,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            Color::srgb(0.5, 0.5, 0.5),
+            false,
+        )
+        .expect("pbr render asset");
+
+        let part = asset.parts.first().expect("part");
+        let mesh = meshes.get(&part.mesh).expect("mesh");
+        assert!(
+            mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_some(),
+            "sidecar should generate tangents"
+        );
+        let mat = materials.get(&part.material).expect("material");
+        assert!(
+            mat.normal_map_texture.is_some(),
+            "sidecar should assign normal_map_texture"
+        );
+        assert!(!mat.flip_normal_map_y);
+    }
+
+    #[test]
+    fn without_pbr_sidecar_mesh_has_no_tangents() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let shape_src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-bevy-scenery/assets/msts/minimal.s");
+        let shape_path = dir.path().join("minimal.s");
+        std::fs::copy(&shape_src, &shape_path).expect("copy shape");
+        let albedo = [200u8, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255, 200, 180, 160, 255];
+        write_synthetic_ace(&dir.path().join("wagon.ace"), &albedo);
+
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let asset = load_shape_render_asset_from_path(
+            &shape_path,
+            &[dir.path()],
+            None,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            Color::srgb(0.5, 0.5, 0.5),
+            false,
+        )
+        .expect("classic render asset");
+
+        let part = asset.parts.first().expect("part");
+        let mesh = meshes.get(&part.mesh).expect("mesh");
+        assert!(
+            mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_none(),
+            "classic MSTS path must not add tangents"
+        );
+        let mat = materials.get(&part.material).expect("material");
+        assert!(mat.normal_map_texture.is_none());
     }
 
     /// Verify that `resolve_texture_path_in_dirs` finds a texture in the

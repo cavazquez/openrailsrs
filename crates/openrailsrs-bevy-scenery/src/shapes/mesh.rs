@@ -387,6 +387,23 @@ impl MeshBuffers {
     }
 }
 
+/// Generate MikkTSpace tangents for PBR normal mapping (#44).
+///
+/// Call only when a normal map will be assigned. Requires final POSITION/NORMAL/UV_0
+/// (post winding, Z-flip, and V-flip). Returns `false` on failure (degenerate UVs).
+pub fn ensure_tangents_for_normal_mapping(mesh: &mut Mesh) -> bool {
+    if mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_some() {
+        return true;
+    }
+    match mesh.generate_tangents() {
+        Ok(()) => true,
+        Err(e) => {
+            bevy::log::debug!("generate_tangents failed ({e:?}); skipping normal map");
+            false
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn append_primitive_mesh_buffers(
     shape: &ShapeFile,
@@ -917,6 +934,11 @@ mod tests {
     }
 
     fn unit_quad_shape(with_normals: bool) -> ShapeFile {
+        unit_triangle_shape(with_normals, false)
+    }
+
+    /// Unit right triangle in XY (MSTS Z+ face); optional authored normals and UVs.
+    fn unit_triangle_shape(with_normals: bool, with_uvs: bool) -> ShapeFile {
         let normals = if with_normals {
             vec![ShapeVec3 {
                 x: 0.0,
@@ -927,6 +949,22 @@ mod tests {
             Vec::new()
         };
         let normal_idx = if with_normals { 0 } else { -1 };
+        let uvs = if with_uvs {
+            vec![
+                openrailsrs_formats::Vec2 { u: 0.0, v: 0.0 },
+                openrailsrs_formats::Vec2 { u: 1.0, v: 0.0 },
+                openrailsrs_formats::Vec2 { u: 0.0, v: 1.0 },
+            ]
+        } else {
+            Vec::new()
+        };
+        let uv_for = |i: i32| {
+            if with_uvs {
+                vec![i]
+            } else {
+                Vec::new()
+            }
+        };
         ShapeFile {
             points: vec![
                 ShapeVec3 {
@@ -946,6 +984,7 @@ mod tests {
                 },
             ],
             normals,
+            uvs,
             prim_states: vec![PrimState {
                 shader_idx: 0,
                 vertex_state_idx: 0,
@@ -969,16 +1008,19 @@ mod tests {
                             Vertex {
                                 point_idx: 0,
                                 normal_idx,
+                                uv_indices: uv_for(0),
                                 ..Default::default()
                             },
                             Vertex {
                                 point_idx: 1,
                                 normal_idx,
+                                uv_indices: uv_for(1),
                                 ..Default::default()
                             },
                             Vertex {
                                 point_idx: 2,
                                 normal_idx,
+                                uv_indices: uv_for(2),
                                 ..Default::default()
                             },
                         ],
@@ -1054,5 +1096,44 @@ mod tests {
         for n in normals {
             assert!((n[2] + 1.0).abs() < 1e-4, "zero normal → face: {n:?}");
         }
+    }
+
+    #[test]
+    fn classic_shape_mesh_has_no_tangents() {
+        let shape = unit_triangle_shape(true, true);
+        let parts = build_mesh_parts_from_shape(&shape);
+        assert!(
+            parts[0].mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_none(),
+            "MSTS path must not generate tangents by default"
+        );
+    }
+
+    #[test]
+    fn ensure_tangents_on_uv_triangle_are_finite() {
+        let shape = unit_triangle_shape(true, true);
+        let parts = build_mesh_parts_from_shape(&shape);
+        let mut mesh = parts[0].mesh.clone();
+        assert!(ensure_tangents_for_normal_mapping(&mut mesh));
+        let tangents = mesh
+            .attribute(Mesh::ATTRIBUTE_TANGENT)
+            .and_then(|a| match a {
+                VertexAttributeValues::Float32x4(v) => Some(v.as_slice()),
+                _ => None,
+            })
+            .expect("ATTRIBUTE_TANGENT");
+        assert_eq!(tangents.len(), 3);
+        for t in tangents {
+            assert!(t.iter().all(|c| c.is_finite()), "tangent {t:?}");
+            let xyz = Vec3::new(t[0], t[1], t[2]);
+            assert!((xyz.length() - 1.0).abs() < 1e-2, "unit tangent {t:?}");
+            // Handedness / bitangent sign stored in W must be ±1.
+            assert!(
+                (t[3].abs() - 1.0).abs() < 1e-3,
+                "expected |w|≈1, got {}",
+                t[3]
+            );
+        }
+        // Idempotent.
+        assert!(ensure_tangents_for_normal_mapping(&mut mesh));
     }
 }

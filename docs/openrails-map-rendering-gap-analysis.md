@@ -312,7 +312,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#41](https://github.com/cavazquez/openrailsrs/issues/41) | P2 | `[Rolling Stock Visuals] Permitir sombras del exterior del tren` | **Cerrado** — opacos sin `NotShadowCaster`; transparentes excluidos |
 | [#42](https://github.com/cavazquez/openrailsrs/issues/42) | P2 | `[Terrain] Integrar recepción de sombras en TerrainMaterial` | **Cerrado** — shadow sampling en `terrain.wgsl` (viewer); microtex + fog conservados |
 | [#43](https://github.com/cavazquez/openrailsrs/issues/43) | P1 | `[Validation] Crear regresiones visuales reproducibles OpenRails↔Bevy` | **Cerrado** — viewer3d AFTER_READY + smoke golden PNG + visual-diff + métricas estructurales + CI xvfb; checklist OR Birmingham manual |
-| [#44](https://github.com/cavazquez/openrailsrs/issues/44) | P3 | `[Materials] Añadir tangent space opcional para assets PBR con normal maps` | fuente normal-map, #48 |
+| [#44](https://github.com/cavazquez/openrailsrs/issues/44) | P3 | `[Materials] Añadir tangent space opcional para assets PBR con normal maps` | **Cerrado** — sidecar `*.s.pbr.json` + MikkTSpace + `StandardMaterial` (OpenGL Y); MSTS sin sidecar sin coste |
 | [#45](https://github.com/cavazquez/openrailsrs/issues/45) | P2 | `[Meshes] Recomponer normales ausentes o degeneradas en shapes MSTS` | **Cerrado** — face normals selectivas en bevy-scenery (+ render3d); válidas se conservan |
 | [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | **Cerrado** — tipado + sampler Bevy (1–4); tokens binarios uv_op/anim corregidos |
 | [#47](https://github.com/cavazquez/openrailsrs/issues/47) | P2 | `[Materials] Unificar modos specular MSTS entre StandardMaterial y OrSceneryMaterial` | **Cerrado** — `resolve_or_material_kind` + PBR compartido en Standard/OR |
@@ -339,9 +339,9 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 
 ### Tangent space, normales y normal maps
 
-- **Confirmado:** los builders de shape insertan posición, normal y UV, pero no `Mesh::ATTRIBUTE_TANGENT`; los materiales no asignan `normal_map_texture`.
-- **Confirmado en OpenRails:** el pipeline clásico usa `VertexPositionNormalTexture` y `SceneryShader.fx` consume la normal interpolada. No existe TBN/normal map moderno en la referencia inspeccionada.
-- **Conclusión:** la ausencia de tangentes/bitangentes no explica la diferencia visual de Chiltern. El issue #44 se clasifica P3 y opt-in para futuras extensiones PBR, no como paridad OpenRails.
+- ~~**Confirmado:** sin `ATTRIBUTE_TANGENT` / `normal_map_texture`~~ **(#44 OK: opt-in).** Sidecar hermano `MiShape.s.pbr.json` mapea albedo ACE → normal ACE; solo entonces `ensure_tangents_for_normal_mapping` (MikkTSpace) + `StandardMaterial.normal_map_texture`. Convención **OpenGL** (`flip_normal_map_y = false` por defecto). Sin sidecar el path MSTS no genera tangentes ni cambia visualmente.
+- **Confirmado en OpenRails:** el pipeline clásico usa `VertexPositionNormalTexture` y `SceneryShader.fx` consume la normal interpolada. No existe TBN/normal map moderno en la referencia inspeccionada — #44 no es paridad OR.
+- **Fuera de #44:** `OrSceneryMaterial` WGSL, auto-descubrimiento `*_n.ace`, reinterpretar `uv_op_embossbump`.
 - ~~**Brecha visual real:** fallback de normal única~~ **(#45: normales de cara tras winding/Z-flip cuando índice OOB, cero o no finito; autorales válidas intactas)**.
 - ~~Address modes UV~~ **(#46: `light_model_cfgs`/`uv_ops` tipados; primer `TexAddrMode` → Repeat/Mirror/Clamp/Border; ops no soportadas como `Unsupported`)**.
 - ~~Specular25/750 divergente entre Standard y OR~~ **(#47: `resolve_or_material_pbr_ex` / `create_or_scenery_material_ex` con `LightMatIdx`)**.

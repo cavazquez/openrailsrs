@@ -4,6 +4,7 @@ pub mod anim;
 pub mod debug;
 pub mod material;
 pub mod mesh;
+pub mod pbr_sidecar;
 
 pub use anim::{
     ShapeAnimBinding, ShapeAnimState, animated_hierarchy_transform, animation_playback_speed,
@@ -24,7 +25,7 @@ pub use debug::{
 
 pub use material::{
     DARK_TEXTURE_LUMA_THRESHOLD, SCENERY_TEXTURE_ALBEDO_BOOST, SCENERY_TEXTURE_TARGET_LUMA,
-    ace_mean_luma, alpha_mode_from_prim_state, apply_msts_vertex_tint,
+    ace_mean_luma, alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_standard_normal_map,
     apply_train_exterior_culling, apply_z_buf_mode, brighten_cab_ace_rgba, brighten_dark_ace_rgba,
     cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
     cab_or_scenery_material_with_texture, cab_or_scenery_material_with_texture_ex,
@@ -40,11 +41,15 @@ pub use mesh::{
     build_mesh_from_shape, build_mesh_from_shape_at_distance, build_mesh_from_shape_lod,
     build_mesh_parts_from_shape, build_mesh_parts_from_shape_at_distance,
     build_mesh_parts_from_shape_at_distance_with_options, build_mesh_parts_from_shape_lod,
-    build_mesh_parts_from_shape_lod_with_options, closest_lod_level, light_mat_idx_for_prim_state,
-    lod_level_for_distance, lod_level_index_for_distance, mesh_aabb, mesh_buffers_bounds,
-    mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
-    msts_shape_to_train_rotation, primary_texture_filename, primitive_matrix_chain_bake_ex,
-    render3d_world_mesh_options, shader_name_for_prim_state, shape_normal_is_usable,
-    texture_for_prim_state, write_mesh_wavefront, write_shape_wavefront_from_path,
+    build_mesh_parts_from_shape_lod_with_options, closest_lod_level,
+    ensure_tangents_for_normal_mapping, light_mat_idx_for_prim_state, lod_level_for_distance,
+    lod_level_index_for_distance, mesh_aabb, mesh_buffers_bounds, mesh_has_uvs, mesh_uv_aabb,
+    mesh_uv_degenerate, mesh_vertex_color_stats, msts_shape_to_train_rotation,
+    primary_texture_filename, primitive_matrix_chain_bake_ex, render3d_world_mesh_options,
+    shader_name_for_prim_state, shape_normal_is_usable, texture_for_prim_state,
+    write_mesh_wavefront, write_shape_wavefront_from_path,
+};
+pub use pbr_sidecar::{
+    ShapePbrSidecar, load_shape_pbr_sidecar, shape_pbr_sidecar_path,
 };
 pub use openrailsrs_or_shader::coordinates::shape_point_to_bevy;
