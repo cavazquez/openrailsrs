@@ -96,6 +96,13 @@ pub fn lod_camera_needs_update(
     cam_moved || focus_moved
 }
 
+/// Camera→entity/group distance for WORLD LOD selection (render / floating-origin space) (#74).
+///
+/// Must be `length(cam - center)`, not `dist(cam, focus) + dist(center, focus)`.
+pub fn world_lod_distance_m(cam_pos: Vec3, entity_or_group_center: Vec3) -> f32 {
+    cam_pos.distance(entity_or_group_center)
+}
+
 /// Unload decision for a WORLD scenery entity (#62).
 pub fn scenery_entity_should_unload(
     bound: Option<WorldTileBound>,
@@ -3441,7 +3448,6 @@ pub fn update_world_scenery_lod(
     lod_cam.last_focus = Some(focus_pos);
 
     let lod_t0 = Instant::now();
-    let cam_dist = cam_pos.distance(focus_pos);
     let mut scanned = 0u32;
     let mut swapped = 0u32;
 
@@ -3459,7 +3465,7 @@ pub fn update_world_scenery_lod(
         if lod_assets.is_empty() {
             continue;
         }
-        let instance_dist = cam_dist + gt.translation().distance(focus_pos);
+        let instance_dist = world_lod_distance_m(cam_pos, gt.translation());
         let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
         if new_lod == lod.lod_idx {
             continue;
@@ -4524,5 +4530,27 @@ mod tests {
             Vec3::ZERO,
             WORLD_LOD_EPS_M
         ));
+    }
+
+    #[test]
+    fn world_lod_distance_is_camera_to_entity_not_sum_via_focus() {
+        // Camera and entity on the same side of a distant focus (#74).
+        let cam = Vec3::new(100.0, 0.0, 0.0);
+        let entity = Vec3::new(105.0, 0.0, 0.0);
+        let focus = Vec3::ZERO;
+        let correct = world_lod_distance_m(cam, entity);
+        let legacy_sum = cam.distance(focus) + entity.distance(focus);
+        assert!((correct - 5.0).abs() < 1e-4);
+        assert!(legacy_sum > 190.0, "legacy sum overestimates: {legacy_sum}");
+        assert!(correct < legacy_sum);
+
+        // Opposite sides of focus: sum ≈ correct (degenerate), still equal to cam→entity.
+        let cam2 = Vec3::new(-10.0, 0.0, 0.0);
+        let entity2 = Vec3::new(10.0, 0.0, 0.0);
+        let focus2 = Vec3::ZERO;
+        let correct2 = world_lod_distance_m(cam2, entity2);
+        let legacy2 = cam2.distance(focus2) + entity2.distance(focus2);
+        assert!((correct2 - 20.0).abs() < 1e-4);
+        assert!((legacy2 - correct2).abs() < 1e-4);
     }
 }

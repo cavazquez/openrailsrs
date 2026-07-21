@@ -583,7 +583,6 @@ pub fn group_placements_by_tile(
 pub fn update_world_instanced_lod(
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
-    focus: Option<Res<crate::world::RouteFocus>>,
     mut groups: Query<(
         &GlobalTransform,
         &mut WorldInstancedGroup,
@@ -598,11 +597,6 @@ pub fn update_world_instanced_lod(
         return;
     };
     let cam_pos = cam_gt.translation();
-    let focus_pos = focus
-        .as_ref()
-        .map(|f| f.scenery_to_render(f.center))
-        .unwrap_or(Vec3::ZERO);
-    let cam_dist = cam_pos.distance(focus_pos);
 
     for (gt, mut group, mut mesh3d, aabb) in &mut groups {
         if !group.lod_enabled {
@@ -620,7 +614,7 @@ pub fn update_world_instanced_lod(
         let center = aabb
             .map(|a| gt.transform_point(a.center.into()))
             .unwrap_or_else(|| gt.translation());
-        let instance_dist = cam_dist + center.distance(focus_pos);
+        let instance_dist = crate::world::world_lod_distance_m(cam_pos, center);
         let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
         if new_lod == group.lod_idx {
             continue;
@@ -734,5 +728,14 @@ mod tests {
         // Compile-time / type-level guard: WORLD GPU instances register on Opaque3d (#106).
         fn _assert_phase<P: bevy::render::render_phase::BinnedPhaseItem>() {}
         _assert_phase::<Opaque3d>();
+    }
+
+    #[test]
+    fn instanced_lod_uses_camera_to_center_distance() {
+        // Same convention as non-instanced path (#74).
+        let cam = Vec3::new(0.0, 0.0, 0.0);
+        let center = Vec3::new(30.0, 0.0, 40.0);
+        let d = crate::world::world_lod_distance_m(cam, center);
+        assert!((d - 50.0).abs() < 1e-4);
     }
 }
