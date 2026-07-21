@@ -138,13 +138,15 @@ pub fn shape_mesh_radius_m() -> f32 {
     visible_radius_m()
 }
 
-/// Merge repeated `.s` instances into one baked mesh (small meshes only; disabled — breaks visuals on Chiltern).
+/// Legacy bake-merge (disabled). GPU instancing (#58) replaces this path.
 const ENABLE_SHAPE_INSTANCE_MERGE: bool = false;
 
 /// Only bake merged instance meshes when the source part has at most this many vertices.
+#[allow(dead_code)]
 const SHAPE_INSTANCE_MERGE_MAX_VERTS: usize = 256;
 
-/// Minimum instances before merge is considered (ignored when [`ENABLE_SHAPE_INSTANCE_MERGE`] is false).
+/// Minimum instances before bake-merge is considered (unused while bake is off).
+#[allow(dead_code)]
 const SHAPE_INSTANCE_MERGE_MIN: usize = 12;
 
 /// Procedural sleepers/rails for TrackObj without a resolvable `.s` mesh (Open Rails TSection fallback).
@@ -1173,6 +1175,19 @@ type AnimatedShapeSpawnBundle = (
     ShapeAnimBinding,
 );
 
+/// GPU-instanced static opaque WORLD group (#58).
+type InstancedShapeSpawnBundle = (
+    Transform,
+    Mesh3d,
+    Name,
+    crate::world_instancing::WorldInstancedGroup,
+    WorldTileBound,
+    crate::world_instancing::WorldInstanceBuffer,
+    crate::world_instancing::WorldInstanceAppearance,
+    bevy::camera::visibility::NoFrustumCulling,
+    bevy::camera::primitives::Aabb,
+);
+
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
     phase: WorldSpawnPhase,
@@ -1209,10 +1224,13 @@ pub struct WorldSpawnProgress {
     build_queue_index: usize,
     spawn_queue: Vec<ShapeSpawnBundle>,
     anim_spawn_queue: Vec<AnimatedShapeSpawnBundle>,
+    instanced_spawn_queue: Vec<InstancedShapeSpawnBundle>,
     spawn_index: usize,
     shape_mesh_count: usize,
     shape_texture_count: usize,
     merged_shape_groups: usize,
+    instanced_groups: usize,
+    instanced_instances: usize,
     loading_shapes_started: Option<Instant>,
     build_queue_started: Option<Instant>,
     scenery_audit: Option<crate::scenery_audit::ShapeAuditSummary>,
@@ -1274,10 +1292,13 @@ impl WorldSpawnProgress {
             build_queue_index: 0,
             spawn_queue: Vec::new(),
             anim_spawn_queue: Vec::new(),
+            instanced_spawn_queue: Vec::new(),
             spawn_index: 0,
             shape_mesh_count: 0,
             shape_texture_count: 0,
             merged_shape_groups: 0,
+            instanced_groups: 0,
+            instanced_instances: 0,
             loading_shapes_started: None,
             build_queue_started: None,
             scenery_audit: None,
@@ -1678,15 +1699,25 @@ fn append_shape_spawn_entries_for_transforms(
     asset: &ShapeRenderAsset,
     shape_file: Option<&ShapeFile>,
     meshes: &mut Assets<Mesh>,
+    materials: &Assets<StandardMaterial>,
     placements: &[ShapeInstancePlacement],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
     anim_spawn_queue: &mut Vec<AnimatedShapeSpawnBundle>,
+    instanced_spawn_queue: &mut Vec<InstancedShapeSpawnBundle>,
     initial_lod_idx: usize,
     shape_mesh_count: &mut usize,
     shape_texture_count: &mut usize,
     merged_shape_groups: &mut usize,
+    instanced_groups: &mut usize,
+    instanced_instances: &mut usize,
     origin: &FloatingOrigin,
 ) {
+    use crate::world_instancing::{
+        WORLD_INSTANCING_MIN, WorldInstanceAppearance, WorldInstanceBuffer, WorldInstanceData,
+        WorldInstancedGroup, appearance_from_standard_material, group_placements_by_tile,
+        instances_aabb, world_instancing_enabled,
+    };
+
     if asset.has_texture {
         *shape_texture_count += placements.len();
     }
@@ -1709,8 +1740,6 @@ fn append_shape_spawn_entries_for_transforms(
             .iter()
             .map(|p| view_transform(p.transform, origin))
             .collect();
-        // Merge is disabled in production; if enabled, tag with first instance tile
-        // (distance fallback unused). Prefer per-instance spawn for correct unload (#62).
         let bound = placements.first().map(|p| WorldTileBound {
             tile_x: p.tile_x,
             tile_z: p.tile_z,
@@ -1734,6 +1763,68 @@ fn append_shape_spawn_entries_for_transforms(
                     },
                     bound,
                 ));
+            }
+        }
+    } else if !animated && world_instancing_enabled() {
+        // GPU instancing (#58): one entity per (part × tile) for opaque static repeats.
+        let by_tile = group_placements_by_tile(placements);
+        for ((tile_x, tile_z), indices) in by_tile {
+            let tile_placements: Vec<&ShapeInstancePlacement> =
+                indices.iter().map(|&i| &placements[i]).collect();
+            let use_gpu = tile_placements.len() >= WORLD_INSTANCING_MIN;
+            for (part_index, part) in asset.parts.iter().enumerate() {
+                if use_gpu && !part.is_transparent {
+                    let instances: Vec<WorldInstanceData> = tile_placements
+                        .iter()
+                        .map(|p| {
+                            WorldInstanceData::from_transform(view_transform(p.transform, origin))
+                        })
+                        .collect();
+                    let count = instances.len() as u32;
+                    let aabb = instances_aabb(&instances, 32.0);
+                    let appearance: WorldInstanceAppearance =
+                        appearance_from_standard_material(materials, &part.material);
+                    *instanced_groups += 1;
+                    *instanced_instances += instances.len();
+                    *shape_mesh_count += 1;
+                    instanced_spawn_queue.push((
+                        Transform::IDENTITY,
+                        Mesh3d(part.mesh.clone()),
+                        Name::new("world:instanced"),
+                        WorldInstancedGroup {
+                            shape_path: shape_path.to_path_buf(),
+                            part_index,
+                            prim_state_idx: part.prim_state_idx,
+                            lod_idx: initial_lod_idx,
+                            lod_enabled: true,
+                            instance_count: count,
+                        },
+                        WorldTileBound { tile_x, tile_z },
+                        WorldInstanceBuffer(instances),
+                        appearance,
+                        bevy::camera::visibility::NoFrustumCulling,
+                        aabb,
+                    ));
+                } else {
+                    *shape_mesh_count += tile_placements.len();
+                    for p in &tile_placements {
+                        let tf = view_transform(p.transform, origin);
+                        spawn_queue.push((
+                            tf,
+                            Mesh3d(part.mesh.clone()),
+                            MeshMaterial3d(part.material.clone()),
+                            Name::new("world:mesh"),
+                            WorldSceneryLod {
+                                enabled: true,
+                                shape_path: shape_path.to_path_buf(),
+                                prim_state_idx: part.prim_state_idx,
+                                part_index,
+                                lod_idx: initial_lod_idx,
+                            },
+                            WorldTileBound { tile_x, tile_z },
+                        ));
+                    }
+                }
             }
         }
     } else if animated {
@@ -1815,6 +1906,7 @@ fn append_shape_spawn_entries(
     shape_path: &Path,
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
+    materials: &Assets<StandardMaterial>,
     origin: &FloatingOrigin,
 ) {
     let Some(placements) = progress.shape_instances.get(shape_path).cloned() else {
@@ -1837,13 +1929,17 @@ fn append_shape_spawn_entries(
         asset,
         shape_file,
         meshes,
+        materials,
         &placements,
         &mut progress.spawn_queue,
         &mut progress.anim_spawn_queue,
+        &mut progress.instanced_spawn_queue,
         initial_lod_idx,
         &mut progress.shape_mesh_count,
         &mut progress.shape_texture_count,
         &mut progress.merged_shape_groups,
+        &mut progress.instanced_groups,
+        &mut progress.instanced_instances,
         origin,
     );
 }
@@ -2207,6 +2303,13 @@ fn log_world_spawn_summary(
             progress.merged_shape_groups
         );
     }
+    if progress.instanced_groups > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: GPU instanced {} group(s) covering {} instance(s) (#58)",
+            progress.instanced_groups,
+            progress.instanced_instances
+        );
+    }
     if progress.shape_mesh_count > 0 {
         viewer_log!(
             "openrailsrs-viewer3d: {} world shape part(s) spawned",
@@ -2533,6 +2636,20 @@ pub fn world_tile_stream_system(
     }
 }
 
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct WorldUnloadQueries<'w, 's> {
+    scenery: Query<'w, 's, (Entity, &'static Transform, &'static WorldSceneryLod, Option<&'static WorldTileBound>)>,
+    tile_bound: Query<'w, 's, (Entity, &'static WorldTileBound), Without<WorldSceneryLod>>,
+    instanced: Query<
+        'w,
+        's,
+        (
+            &'static crate::world_instancing::WorldInstancedGroup,
+            &'static WorldTileBound,
+        ),
+    >,
+}
+
 /// Unload distant world tiles and despawn scenery meshes in live mode.
 #[allow(clippy::too_many_arguments)]
 pub fn world_tile_unload_system(
@@ -2549,8 +2666,7 @@ pub fn world_tile_unload_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    scenery: Query<(Entity, &Transform, &WorldSceneryLod, Option<&WorldTileBound>)>,
-    tile_bound: Query<(Entity, &WorldTileBound), Without<WorldSceneryLod>>,
+    unload_q: WorldUnloadQueries,
     mut stream_state: ResMut<WorldSceneryStreamState>,
 ) {
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
@@ -2590,7 +2706,7 @@ pub fn world_tile_unload_system(
     // Prefer tile membership (#62); distance only for legacy entities without WorldTileBound.
     let mut live_shape_paths = HashSet::new();
     let mut despawned = 0usize;
-    for (entity, tf, lod, bound) in scenery.iter() {
+    for (entity, tf, lod, bound) in unload_q.scenery.iter() {
         let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
         let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
         let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
@@ -2607,7 +2723,15 @@ pub fn world_tile_unload_system(
             live_shape_paths.insert(lod.shape_path.clone());
         }
     }
-    for (entity, bound) in tile_bound.iter() {
+    // Collect instanced shape refs before tile-bound despawn (#58 / #51).
+    for (group, bound) in &unload_q.instanced {
+        if !unloaded_tiles.contains(&(bound.tile_x, bound.tile_z))
+            && !group.shape_path.as_os_str().is_empty()
+        {
+            live_shape_paths.insert(group.shape_path.clone());
+        }
+    }
+    for (entity, bound) in unload_q.tile_bound.iter() {
         if unloaded_tiles.contains(&(bound.tile_x, bound.tile_z)) {
             commands.entity(entity).despawn();
             despawned += 1;
@@ -2826,6 +2950,7 @@ pub fn progressive_world_spawn_system(
                     &shape_path,
                     &asset,
                     &mut meshes,
+                    &materials,
                     &origin,
                 );
             }
@@ -2846,11 +2971,14 @@ pub fn progressive_world_spawn_system(
         }
         WorldSpawnPhase::SpawningEntities => {
             if progress.spawn_index == 0
-                && (!progress.spawn_queue.is_empty() || !progress.anim_spawn_queue.is_empty())
+                && (!progress.spawn_queue.is_empty()
+                    || !progress.anim_spawn_queue.is_empty()
+                    || !progress.instanced_spawn_queue.is_empty())
             {
                 viewer_log!(
-                    "openrailsrs-viewer3d: spawning {} world mesh + {} animated entit(ies) progressively",
+                    "openrailsrs-viewer3d: spawning {} world mesh + {} instanced group(s) + {} animated entit(ies) progressively",
                     progress.spawn_queue.len(),
+                    progress.instanced_spawn_queue.len(),
                     progress.anim_spawn_queue.len()
                 );
             }
@@ -2860,6 +2988,10 @@ pub fn progressive_world_spawn_system(
             commands.spawn_batch(batch);
             progress.spawn_index = end;
             if progress.spawn_index >= progress.spawn_queue.len() {
+                let instanced = std::mem::take(&mut progress.instanced_spawn_queue);
+                for bundle in instanced {
+                    commands.spawn(bundle);
+                }
                 // Animated bundles carry cloned ShapeFile — spawn one-by-one.
                 let animated = std::mem::take(&mut progress.anim_spawn_queue);
                 for bundle in animated {
@@ -3064,7 +3196,10 @@ pub fn spawn_world_boxes(
     let mut trackobj_procedural_objects = 0usize;
     let mut trackobj_failed = 0usize;
     let mut shape_spawn_batches: Vec<ShapeSpawnBundle> = Vec::new();
+    let mut instanced_spawn_batches: Vec<InstancedShapeSpawnBundle> = Vec::new();
     let mut merged_shape_groups = 0usize;
+    let mut instanced_groups = 0usize;
+    let mut instanced_instances = 0usize;
 
     for obj in &world.items {
         if obj.kind == "Dyntrack"
@@ -3248,19 +3383,26 @@ pub fn spawn_world_boxes(
             asset,
             parsed_shape_files.get(&shape_path),
             &mut meshes,
+            &materials,
             &placements,
             &mut shape_spawn_batches,
             &mut anim_spawn_batches,
+            &mut instanced_spawn_batches,
             0,
             &mut shape_mesh_count,
             &mut shape_texture_count,
             &mut merged_shape_groups,
+            &mut instanced_groups,
+            &mut instanced_instances,
             &origin,
         );
     }
 
     if !shape_spawn_batches.is_empty() {
         commands.spawn_batch(shape_spawn_batches);
+    }
+    for bundle in instanced_spawn_batches {
+        commands.spawn(bundle);
     }
     for bundle in anim_spawn_batches {
         commands.spawn(bundle);
@@ -3328,6 +3470,11 @@ pub fn spawn_world_boxes(
     if merged_shape_groups > 0 {
         viewer_log!(
             "openrailsrs-viewer3d: merged {merged_shape_groups} repeated shape(s) (≥{SHAPE_INSTANCE_MERGE_MIN} instances)"
+        );
+    }
+    if instanced_groups > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: GPU instanced {instanced_groups} group(s) covering {instanced_instances} instance(s) (#58)"
         );
     }
     if shape_mesh_count > 0 {

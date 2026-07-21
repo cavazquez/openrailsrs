@@ -60,6 +60,7 @@ pub mod transfer;
 pub mod view_window;
 pub mod water;
 pub mod world;
+pub mod world_instancing;
 
 #[cfg(test)]
 mod app_floating;
@@ -106,6 +107,7 @@ impl Plugin for ViewerPlugin {
         use bevy::state::condition::in_state;
 
         app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
+            .add_plugins(world_instancing::WorldInstancingPlugin)
             .init_state::<ViewerAppState>()
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
@@ -196,7 +198,10 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
-                world::update_world_scenery_lod
+                (
+                    world::update_world_scenery_lod,
+                    world_instancing::update_world_instanced_lod,
+                )
                     .after(world::progressive_world_spawn_system)
                     .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),

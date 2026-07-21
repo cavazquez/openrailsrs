@@ -54,6 +54,20 @@ Fixtures: [`examples/smoke`](../examples/smoke) (`scenario.toml`, `routes/test`)
 - **Live:** `LiveDrive` from `examples/smoke/scenario.toml`; sim stepping in `openrailsrs-sim` + Bevy wiring in `app_live`.
 - **Billboards:** `stop_billboard_ui_from_viewport` (unit) + `update_stop_billboards` (system smoke with mock `Window`).
 
+## WORLD GPU instancing (#58)
+
+Repeated static **opaque** WORLD shapes share one entity per `(shape, part, tile)` with a GPU instance buffer.
+
+| Piece | Path |
+|-------|------|
+| Module | [`world_instancing.rs`](../crates/openrailsrs-viewer3d/src/world_instancing.rs) |
+| Min instances / tile | 4 (`WORLD_INSTANCING_MIN`) |
+| Opt-out | `OPENRAILSRS_WORLD_INSTANCING=0` |
+
+Animated shapes (#34) and transparent parts stay on the per-entity path. LOD swaps the group mesh (shared LOD per tile). Unload uses `WorldTileBound` (#62). Log line: `GPU instanced N group(s) covering M instance(s)`.
+
+v1 shader: albedo + simple Lambert (not full `StandardMaterial` shadows/PBR).
+
 ## Visual regression (#43)
 
 Deterministic smoke capture + structural metrics (no OpenRails/Wine automation).

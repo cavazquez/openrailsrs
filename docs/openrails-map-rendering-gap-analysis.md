@@ -326,7 +326,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | **Cerrado** — viewer3d `Loading`→`Playing` + hilo route-load; render3d `LoadStage::ParsingTiles` async |
 | [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | **Cerrado** — `MeshPartBuildOptions` + `render3d_world_mesh_options`; render3d adaptador fino sobre canónico |
 | [#57](https://github.com/cavazquez/openrailsrs/issues/57) | P1 | `[Performance] Eliminar el doble parse de cada shape WORLD` | **Cerrado** — 1 `ShapeFile` parse / path único |
-| [#58](https://github.com/cavazquez/openrailsrs/issues/58) | P1 | `[Performance] Implementar instancing o batching seguro para objetos WORLD repetidos` | #34, #50 |
+| [#58](https://github.com/cavazquez/openrailsrs/issues/58) | P1 | `[Performance] Implementar instancing o batching seguro para objetos WORLD repetidos` | **Cerrado** — GPU instancing por tile (opacos/estáticos); anim/alpha por entidad; LOD de grupo; opt-out `OPENRAILSRS_WORLD_INSTANCING=0`; sombras PBR v1 lit+albedo |
 | [#59](https://github.com/cavazquez/openrailsrs/issues/59) | P1 | `[Performance] Filtrar objetos WORLD por ventana durante el parse` | **Cerrado** — filtro XZ al materializar |
 | [#60](https://github.com/cavazquez/openrailsrs/issues/60) | P1 | `[Performance] Reducir entidades y materiales por patch de terreno` | #31 |
 | [#61](https://github.com/cavazquez/openrailsrs/issues/61) | P2 | `[Performance] Actualizar TrItemWorldIndex incrementalmente por tile` | #28, #53 |
@@ -377,7 +377,7 @@ Chiltern, build release, `OPENRAILSRS_VIEW_RADIUS_M=300`, modo `--live`:
 Hallazgos confirmados:
 
 1. ~~Cada `.s` se parsea dos veces en `parse_next_shape_batch`~~ **(#57: un parse → mesh + LOD file; Chiltern 300 m: 308/308 parses)**.
-2. El batching de shapes está deshabilitado porque la implementación previa rompe visuales; no debe reactivarse sin golden tests (#58).
+2. ~~El batching de shapes está deshabilitado~~ **(#58: GPU instancing por tile para opacos/estáticos; bake-merge sigue off)**.
 3. ~~El filtro radial ocurre después de materializar todo el `.w`~~ **(#59: skip al materializar; mismo set que retain)**.
 4. ~~Cada patch de terreno crea entidad y material propios~~ **(#60: merge por `terrain_shader_material_key` + build paralelo; 1024→20/13, 2289→1137 ms)**.
 5. ~~`TrItemWorldIndex` se reconstruye completo cuando cambia la longitud de la escena~~ **(#61: delta por tile add/remove; rebuild solo recovery)**.
