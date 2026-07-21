@@ -320,7 +320,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#51](https://github.com/cavazquez/openrailsrs/issues/51) | P1 | `[Assets] Liberar meshes, imágenes y materiales GPU al descargar tiles` | #50 |
 | [#52](https://github.com/cavazquez/openrailsrs/issues/52) | P1 | `[Bevy Integration] Implementar ScenerySpawnPlugin compartido para viewer3d y render3d` | #48–#50 |
 | [#53](https://github.com/cavazquez/openrailsrs/issues/53) | P1 | `[Assets] Modelar WORLD y terrain como assets compuestos por tile` | #29, #48, #49 |
-| [#54](https://github.com/cavazquez/openrailsrs/issues/54) | P1 | `[Assets] Exponer diagnósticos estructurados de carga y fallback` | #35, #48 |
+| [#54](https://github.com/cavazquez/openrailsrs/issues/54) | P1 | `[Assets] Exponer diagnósticos estructurados de carga y fallback` | **Cerrado** — `MstsLoadDiagnostics` (bevy-scenery); CLI/HUD/`OPENRAILSRS_LOAD_AUDIT`; integra #35 |
 | [#55](https://github.com/cavazquez/openrailsrs/issues/55) | P1 | `[Bevy Integration] Eliminar carga bloqueante de ruta antes de abrir la ventana` | #48, #52, #53 |
 | [#56](https://github.com/cavazquez/openrailsrs/issues/56) | P2 | `[Meshes] Unificar el builder de shapes de render3d con bevy-scenery` | **Cerrado** — `MeshPartBuildOptions` + `render3d_world_mesh_options`; render3d adaptador fino sobre canónico |
 | [#57](https://github.com/cavazquez/openrailsrs/issues/57) | P1 | `[Performance] Eliminar el doble parse de cada shape WORLD` | **Cerrado** — 1 `ShapeFile` parse / path único |
@@ -353,6 +353,7 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 - `ScenerySpawnPlugin` sigue siendo un stub mientras los dos binarios mantienen máquinas de estados distintas; #52 y #55 migran scheduling y startup de forma incremental.
 - El refactor no debe ser cosmético: #48–#55 vinculan cada cambio a carga async, deduplicación, lifecycle o diagnóstico.
 - ~~Builders de shape divergentes entre render3d y bevy-scenery~~ **(#56: `render3d/src/shapes.rs` delega a `build_mesh_parts_from_shape_at_distance_with_options` + `render3d_world_mesh_options`; sub-objetos + bake anim key 0)**.
+- ~~Sin fuente única de fallos/fallback de carga~~ **(#54: `MstsLoadDiagnostics` con `requested=loaded+failed+fallback`; causas missing/parse/unsupported/fallback; TrackObj #35 ingerido; CLI+HUD+JSON audit)**.
 
 ### Baseline de optimización reproducido
 

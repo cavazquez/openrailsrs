@@ -21,6 +21,7 @@ use bevy::prelude::*;
 use bevy::state::condition::in_state;
 use clap::Parser;
 
+use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadDiagnostics};
 use openrailsrs_render3d::{
     DebugHudEnabled, FlySpeed, MstsRootDir, PlayerStartPoseResource, Render3dPlugin, RouteDir,
     SceneDebugContext, SceneExtent, StaticConsistPlan, TdbTrackResource, TileCatalog, TileEntry,
@@ -170,6 +171,7 @@ fn main() -> anyhow::Result<()> {
     let tile_size_m = 2048.0_f32; // lado de un tile MSTS
     let mut entries: Vec<TileEntry> = Vec::new();
     let mut skipped = 0usize;
+    let mut load_diag = MstsLoadDiagnostics::default();
 
     for &(tx, tz) in &tile_coords {
         let world_offset = Vec3::new(
@@ -179,6 +181,7 @@ fn main() -> anyhow::Result<()> {
         );
         match terrain::load_tile_geometry(&cli.route, tx, tz) {
             Ok(geom) => {
+                load_diag.record_loaded(MstsAssetKind::Terrain);
                 let base_y = geom.height.base_y();
                 let ribbon = if tdb_chords.is_some() {
                     track::TrackRibbon::default()
@@ -187,7 +190,13 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     track::TrackRibbon::default()
                 };
-                let objs = objects::load_objects(&cli.route, tx, tz, base_y);
+                let objs = objects::load_objects_with_diag(
+                    &cli.route,
+                    tx,
+                    tz,
+                    base_y,
+                    Some(&mut load_diag),
+                );
                 entries.push(TileEntry {
                     geometry: geom,
                     world_offset,
@@ -196,6 +205,7 @@ fn main() -> anyhow::Result<()> {
                 });
             }
             Err(_) => {
+                // Grid holes (no `.t`) are normal; do not inflate failed counts.
                 skipped += 1;
             }
         }
@@ -394,7 +404,8 @@ fn main() -> anyhow::Result<()> {
     .insert_resource(stream_config)
     .insert_resource(tiles_res)
     .insert_resource(SceneExtent { side_m: side })
-    .insert_resource(PlayerStartPoseResource(player_start));
+    .insert_resource(PlayerStartPoseResource(player_start))
+    .insert_resource(load_diag);
     if let Some(session) = activity_session {
         app.insert_resource(session);
     }

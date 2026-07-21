@@ -12,6 +12,9 @@ use openrailsrs_bevy_scenery::shapes::{
     build_mesh_parts_from_shape_lod, lod_level_index_for_distance, primary_texture_filename,
     shape_has_loop_animation,
 };
+use openrailsrs_bevy_scenery::{
+    LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
+};
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
     msts_tile_z_index_for_coord, parse_world_w_tile_xz,
@@ -297,6 +300,8 @@ pub struct WorldScene {
     pub items_skipped_out_of_window: usize,
     /// Stream/unload deltas for incremental [`crate::tr_item_index::TrItemWorldIndex`] sync.
     pub tr_item_delta: TrItemIndexDelta,
+    /// `.w` load outcomes for shared [`MstsLoadDiagnostics`] (#54).
+    pub load_diag: MstsLoadDiagnostics,
 }
 
 impl WorldScene {
@@ -768,10 +773,23 @@ pub fn load_world_from_route_dir_near_filtered(
     let mut skip_count = 0usize;
     let mut skip_sample: Option<String> = None;
     for (_display_x, _display_z, path) in entries {
-        if append_world_tile_file(&mut scene, &path, item_window).is_err() {
-            skip_count += 1;
-            if skip_sample.is_none() {
-                skip_sample = Some(path.display().to_string());
+        match append_world_tile_file(&mut scene, &path, item_window) {
+            Ok(()) => {
+                scene
+                    .load_diag
+                    .record_path_loaded(&path, MstsAssetKind::World);
+            }
+            Err(err) => {
+                skip_count += 1;
+                scene.load_diag.record_path_failed(
+                    &path,
+                    MstsAssetKind::World,
+                    MstsLoadCause::Parse,
+                    err,
+                );
+                if skip_sample.is_none() {
+                    skip_sample = Some(path.display().to_string());
+                }
             }
         }
     }
@@ -1151,6 +1169,8 @@ pub struct WorldSpawnProgress {
     session_hydrated: bool,
     cache_hits: usize,
     cache_misses: usize,
+    /// Shape/ACE/TrackObj load bag merged into the app Resource at spawn end (#54).
+    load_diag: MstsLoadDiagnostics,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1213,6 +1233,7 @@ impl WorldSpawnProgress {
             session_hydrated: false,
             cache_hits: 0,
             cache_misses: 0,
+            load_diag: MstsLoadDiagnostics::default(),
         }
     }
 }
@@ -1917,11 +1938,21 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
                 .insert(shape_path.clone(), shape);
         }
         if let Some(ref loaded) = loaded {
+            progress
+                .load_diag
+                .record_path_loaded(&shape_path, MstsAssetKind::Shape);
             let tex_dirs = texture_search_dirs_for_shape(&shape_path, route_dir);
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
             progress
                 .texture_paths
                 .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+        } else {
+            progress.load_diag.record_path_failed(
+                &shape_path,
+                MstsAssetKind::Shape,
+                MstsLoadCause::Parse,
+                "shape parse/mesh failed",
+            );
         }
         progress.parsed_shapes.push((shape_path, loaded));
     }
@@ -1949,7 +1980,22 @@ fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool 
     let end = (progress.texture_prefetch_index + ACE_TEXTURES_PER_FRAME)
         .min(progress.texture_paths.len());
     let batch: Vec<PathBuf> = progress.texture_paths[progress.texture_prefetch_index..end].to_vec();
-    progress.ace_cache.extend(prefetch_ace_textures(&batch));
+    let decoded = prefetch_ace_textures(&batch);
+    for path in &batch {
+        if decoded.contains_key(path) {
+            progress
+                .load_diag
+                .record_path_loaded(path, MstsAssetKind::Ace);
+        } else {
+            progress.load_diag.record_path_failed(
+                path,
+                MstsAssetKind::Ace,
+                MstsLoadCause::Parse,
+                "ace decode failed",
+            );
+        }
+    }
+    progress.ace_cache.extend(decoded);
     progress.texture_prefetch_index = end;
     progress.texture_prefetch_index < progress.texture_paths.len()
 }
@@ -1987,7 +2033,44 @@ fn finish_shape_loading(
     }
 }
 
-fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
+fn finalize_load_diagnostics(
+    progress: &WorldSpawnProgress,
+    world: Option<&WorldScene>,
+    terrain: Option<&crate::terrain::TerrainScene>,
+) -> MstsLoadDiagnostics {
+    let mut diag = MstsLoadDiagnostics::default();
+    if let Some(world) = world {
+        diag.merge_from(&world.load_diag);
+    }
+    if let Some(terrain) = terrain {
+        diag.merge_from(&terrain.load_diag);
+    }
+    diag.merge_from(&progress.load_diag);
+    let track_samples = progress.trackobj_failures.iter().map(|f| LoadFailure {
+        path: f
+            .file_name
+            .clone()
+            .unwrap_or_else(|| format!("TrackObj:uid={:?}", f.uid)),
+        kind: MstsAssetKind::TrackObj,
+        cause: MstsLoadCause::Missing,
+        detail: f.reason.to_string(),
+        tile_x: Some(f.tile_x),
+        tile_z: Some(f.tile_z),
+    });
+    diag.ingest_trackobj_outcomes(
+        progress.trackobj_resolved as u64,
+        progress.trackobj_procedural_objects as u64,
+        progress.trackobj_failed as u64,
+        track_samples,
+    );
+    diag
+}
+
+fn log_world_spawn_summary(
+    progress: &WorldSpawnProgress,
+    world: Option<&WorldScene>,
+    terrain: Option<&crate::terrain::TerrainScene>,
+) -> MstsLoadDiagnostics {
     if progress.culled_count > 0 {
         let radius_m = visible_radius_m();
         viewer_log!(
@@ -2058,6 +2141,12 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
         audit.log_report("unique shapes at spawn");
     }
     log_step("spawned world objects (progressive)", progress.started);
+    let diag = finalize_load_diagnostics(progress, world, terrain);
+    for line in diag.summary_lines() {
+        viewer_log!("openrailsrs-viewer3d: {line}");
+    }
+    diag.maybe_write_audit_env();
+    diag
 }
 
 /// Index of every `.w` tile on disk; loads additional tiles as the camera moves (OR `SceneryDrawer`).
@@ -2461,6 +2550,7 @@ pub fn progressive_world_spawn_system(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
+    terrain: Option<Res<crate::terrain::TerrainScene>>,
     _scene: Res<TrackScene>,
     focus: Res<RouteFocus>,
     window: Res<crate::view_window::ViewWindow>,
@@ -2736,7 +2826,12 @@ pub fn progressive_world_spawn_system(
                     wire.style.height_m
                 );
             }
-            log_world_spawn_summary(&progress);
+            let load_diag = log_world_spawn_summary(
+                &progress,
+                Some(world.as_ref()),
+                terrain.as_deref(),
+            );
+            commands.insert_resource(load_diag);
             commit_spawn_to_session(&mut session, &mut progress);
             commands.remove_resource::<WorldSpawnProgress>();
         }

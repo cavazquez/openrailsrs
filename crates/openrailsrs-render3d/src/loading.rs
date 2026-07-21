@@ -21,6 +21,8 @@ use crate::stream::{
     initial_loaded_tiles,
 };
 use crate::terrain::TileGeometry;
+use openrailsrs_bevy_scenery::MstsLoadDiagnostics;
+
 use crate::world_spawn::{
     AssetIndex, ObjectSpawnCtx, TerrainSpawnCtx, TextureLoadStats, TrackSpawnStats,
     spawn_objects_batch, spawn_terrain_patches, spawn_tile_track,
@@ -983,6 +985,7 @@ pub fn finish_world_load(
     texture_env: Res<crate::textures::TextureEnvironment>,
     mut tex_stats: ResMut<TextureLoadStats>,
     track_stats: Res<TrackSpawnStats>,
+    mut load_diag: ResMut<MstsLoadDiagnostics>,
 ) {
     let WorldLoadFinish {
         stream_config,
@@ -1023,6 +1026,7 @@ pub fn finish_world_load(
             );
         }
 
+        load_diag.merge_from(&obj_ctx.load_diag);
         commands.insert_resource(StreamWorldAssets {
             index: index.clone(),
             terrain_ctx: terrain.0.clone(),
@@ -1043,7 +1047,17 @@ pub fn finish_world_load(
         commands.remove_resource::<SavedTerrainCtx>();
     } else if stream_config.streaming_enabled() {
         warn!("streaming: SavedTerrainCtx ausente — tiles extra no se cargarán");
+        load_diag.merge_from(&obj_ctx.load_diag);
+    } else {
+        load_diag.merge_from(&obj_ctx.load_diag);
     }
+    load_diag.ingest_texture_stats(
+        tex_stats.resolved,
+        tex_stats.unresolved,
+        tex_stats.decode_failed,
+        &tex_stats.unresolved_samples,
+        &tex_stats.decode_failed_samples,
+    );
     finish_loading(
         &mut commands,
         &mut meshes,
@@ -1053,6 +1067,7 @@ pub fn finish_world_load(
         &mut next_state,
         &tex_stats,
         &track_stats,
+        &load_diag,
         perf.scene_side_m,
         &perf,
         !texture_env.night,
@@ -1199,6 +1214,7 @@ fn finish_loading(
     next_state: &mut NextState<AppState>,
     tex_stats: &TextureLoadStats,
     track_stats: &TrackSpawnStats,
+    load_diag: &MstsLoadDiagnostics,
     side_m: f32,
     perf: &LoadPerfState,
     night: bool,
@@ -1237,6 +1253,8 @@ fn finish_loading(
     }
     tex_stats.report();
     track_stats.report();
+    load_diag.report();
+    load_diag.maybe_write_audit_env();
     let extent = crate::SceneExtent { side_m };
     crate::sky::spawn_scene_sky(commands, meshes, materials, &extent, perf.tile_count, night);
     commands.insert_resource(ClearColor(crate::sky::sky_clear_color(night)));

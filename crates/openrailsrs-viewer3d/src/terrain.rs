@@ -14,6 +14,8 @@ use openrailsrs_formats::{
     msts_tile_x_index_for_coord, msts_tile_z_index_for_coord, parse_tile_xz_from_filename,
 };
 
+use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
+
 use crate::terrain_io::{TerrainTileData, load_tile_data};
 use crate::track::TrackScene;
 use crate::viewer_log;
@@ -174,6 +176,8 @@ pub struct TerrainTile {
 pub struct TerrainScene {
     pub tiles_loaded: usize,
     pub tiles: Vec<TerrainTile>,
+    /// `.t` load outcomes for shared [`MstsLoadDiagnostics`] (#54).
+    pub load_diag: MstsLoadDiagnostics,
 }
 
 impl TerrainScene {
@@ -223,6 +227,9 @@ pub fn load_terrain_from_route_dir_near(
             Ok(tile) => {
                 let data = load_tile_data(&tile, &path).map(Arc::new);
                 scene.tiles_loaded += 1;
+                scene
+                    .load_diag
+                    .record_path_loaded(&path, MstsAssetKind::Terrain);
                 let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
                 scene.tiles.push(TerrainTile {
                     tile_x: tile.tile_x,
@@ -235,6 +242,14 @@ pub fn load_terrain_from_route_dir_near(
             }
             Err(err) => {
                 skip_count += 1;
+                scene.load_diag.record_failed_at(
+                    path.display().to_string(),
+                    MstsAssetKind::Terrain,
+                    MstsLoadCause::Parse,
+                    err.to_string(),
+                    Some(tile_x),
+                    Some(tile_z),
+                );
                 if skip_count == 1 {
                     viewer_log!(
                         "openrailsrs-viewer3d: skip terrain {} ({err})",

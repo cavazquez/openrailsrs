@@ -71,6 +71,7 @@ impl Plugin for Render3dPlugin {
             .add_plugins(OrVsmRenderPlugin)
             .add_plugins(OrVsmDebugPlugin)
             .add_plugins(FrameTimeDiagnosticsPlugin::default())
+            .init_resource::<openrailsrs_bevy_scenery::MstsLoadDiagnostics>()
             .init_state::<AppState>()
             .add_systems(
                 Startup,

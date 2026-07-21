@@ -5,6 +5,8 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use openrailsrs_formats::{msts_tile_x_index_for_coord, msts_tile_z_index_for_coord};
 
+use openrailsrs_bevy_scenery::MstsLoadDiagnostics;
+
 use crate::or_vsm_debug::{OrVsmDebugSettings, vsm_debug_hud_lines};
 use crate::or_vsm_moments::{OrMomentMaps, OrVsmCascadeLimits};
 use crate::textures::TextureEnvironment;
@@ -122,6 +124,7 @@ pub fn update_debug_hud(
     vsm_debug: Res<OrVsmDebugSettings>,
     vsm_limits: Res<OrVsmCascadeLimits>,
     vsm_moments: Res<OrMomentMaps>,
+    load_diag: Option<Res<MstsLoadDiagnostics>>,
     fly_cam: Query<&Transform, With<FlyCamera>>,
     mut hud_text: Query<&mut Text, With<DebugHudText>>,
 ) {
@@ -146,6 +149,7 @@ pub fn update_debug_hud(
         &vsm_debug,
         &vsm_limits,
         &vsm_moments,
+        load_diag.as_deref(),
     ));
 }
 
@@ -192,6 +196,7 @@ fn hud_body(
     vsm_debug: &OrVsmDebugSettings,
     vsm_limits: &OrVsmCascadeLimits,
     vsm_moments: &OrMomentMaps,
+    load_diag: Option<&MstsLoadDiagnostics>,
 ) -> String {
     let pos = tf.translation;
     let (tile_x, tile_z, wx, wy, wz) = scene_to_msts(pos, ctx.center_tile);
@@ -239,6 +244,9 @@ fn hud_body(
             },
         ),
     ];
+    if let Some(diag) = load_diag.filter(|d| d.requested > 0) {
+        lines.push(diag.summary_line());
+    }
 
     lines.extend(vsm_debug_hud_lines(vsm_debug, vsm_limits, vsm_moments));
     lines.push("F3 ocultar HUD | F4 VSM | Esc salir".to_string());

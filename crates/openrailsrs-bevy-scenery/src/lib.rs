@@ -3,6 +3,7 @@
 //! See `docs/BEVY_ARCHITECTURE.md`.
 
 pub mod gpu;
+pub mod load_diagnostics;
 pub mod materials;
 pub mod shapes;
 pub mod spawn;
@@ -13,6 +14,9 @@ pub mod vsm;
 #[cfg(test)]
 pub mod test_harness;
 
+pub use load_diagnostics::{
+    LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
+};
 pub use materials::{
     OrCabMaterial, OrForestMaterial, OrSceneryMaterial, OrTerrainMaterial, TerrainMaterial,
     create_or_cab_material, create_or_forest_material, or_cab_shaders_enabled,

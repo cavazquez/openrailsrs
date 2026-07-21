@@ -17,6 +17,7 @@ use crate::viewer_log;
 pub(crate) struct HudAtmosphere<'w> {
     precipitation: Res<'w, PrecipitationState>,
     fog: Res<'w, FogState>,
+    load_diag: Option<Res<'w, openrailsrs_bevy_scenery::MstsLoadDiagnostics>>,
 }
 
 /// Window / route title shown in the HUD (set from `main` at launch).
@@ -564,7 +565,7 @@ pub(crate) fn update_hud(
         None
     };
 
-    let content = if let Some(live) = live.as_deref() {
+    let mut content = if let Some(live) = live.as_deref() {
         build_hud_content_live(
             &title.0,
             live,
@@ -593,6 +594,16 @@ pub(crate) fn update_hud(
             &focus,
         )
     };
+    if let Some(diag) = atmosphere
+        .load_diag
+        .as_deref()
+        .filter(|d| d.requested > 0)
+    {
+        if !content.trains.is_empty() {
+            content.trains.push_str("  |  ");
+        }
+        content.trains.push_str(&diag.summary_line());
+    }
     write_fps_suffix(&mut cache.row1, &fps);
     let active = replay.is_active() || live.is_some();
 

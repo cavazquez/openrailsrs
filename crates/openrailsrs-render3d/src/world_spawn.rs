@@ -1013,6 +1013,8 @@ pub struct ObjectSpawnCtx {
     pub use_or_shaders: bool,
     pub moment_atlas: Handle<Image>,
     pub shadow_map_limits: [f32; 4],
+    /// Shape load outcomes for [`MstsLoadDiagnostics`] (#54).
+    pub load_diag: openrailsrs_bevy_scenery::MstsLoadDiagnostics,
 }
 
 impl ObjectSpawnCtx {
@@ -1040,6 +1042,7 @@ impl ObjectSpawnCtx {
             use_or_shaders: or_scenery_shaders_enabled(materials_lit),
             moment_atlas,
             shadow_map_limits,
+            load_diag: openrailsrs_bevy_scenery::MstsLoadDiagnostics::default(),
         }
     }
 
@@ -1721,7 +1724,18 @@ fn build_shape(
     let descriptor = ShapeDescriptor::load_for_shape(&path);
     let shape_flags = shape_texture_flags(&path, descriptor.alternative_texture);
     let ukfs_track = is_ukfs_track_shape(file);
-    let parts = shapes::load_shape_parts_at_distance(&path, view_distance)?
+    let Some(raw_parts) = shapes::load_shape_parts_at_distance(&path, view_distance) else {
+        ctx.load_diag.record_path_failed(
+            &path,
+            openrailsrs_bevy_scenery::MstsAssetKind::Shape,
+            openrailsrs_bevy_scenery::MstsLoadCause::Parse,
+            "shape parse/mesh failed",
+        );
+        return None;
+    };
+    ctx.load_diag
+        .record_path_loaded(&path, openrailsrs_bevy_scenery::MstsAssetKind::Shape);
+    let parts = raw_parts
         .into_iter()
         .filter(|p| shapes::part_visible(&descriptor, p, texture_env))
         .collect::<Vec<_>>();

@@ -8,6 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use bevy::math::{Mat3, Quat, Vec3};
+use openrailsrs_bevy_scenery::{MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
 use openrailsrs_formats::{WorldFile, WorldItem, parse_world_w_tile_xz};
 
 /// Tipo de objeto del `.w` (para colorear el marcador).
@@ -195,11 +196,41 @@ fn world_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> Option<PathBuf> {
 /// `base_y` es la altura MSL que corresponde a Y=0 local (mínimo del tile),
 /// para convertir la Y absoluta de cada objeto al espacio del terreno.
 pub fn load_objects(route_dir: &Path, tile_x: i32, tile_z: i32, base_y: f32) -> Vec<ObjectMarker> {
+    load_objects_with_diag(route_dir, tile_x, tile_z, base_y, None)
+}
+
+/// Like [`load_objects`], recording world tile success/failure into `#54` diagnostics.
+pub fn load_objects_with_diag(
+    route_dir: &Path,
+    tile_x: i32,
+    tile_z: i32,
+    base_y: f32,
+    mut diag: Option<&mut MstsLoadDiagnostics>,
+) -> Vec<ObjectMarker> {
+    // No `.w` for this tile is normal (sparse WORLD); do not count as a failed request.
     let Some(path) = world_path(route_dir, tile_x, tile_z) else {
         return Vec::new();
     };
-    let Ok(world) = WorldFile::from_path(&path) else {
-        return Vec::new();
+    let world = match WorldFile::from_path(&path) {
+        Ok(w) => {
+            if let Some(d) = diag.as_deref_mut() {
+                d.record_path_loaded(&path, MstsAssetKind::World);
+            }
+            w
+        }
+        Err(e) => {
+            if let Some(d) = diag.as_deref_mut() {
+                d.record_failed_at(
+                    path.display().to_string(),
+                    MstsAssetKind::World,
+                    MstsLoadCause::Parse,
+                    e.to_string(),
+                    Some(tile_x),
+                    Some(tile_z),
+                );
+            }
+            return Vec::new();
+        }
     };
 
     let mut out = Vec::new();
