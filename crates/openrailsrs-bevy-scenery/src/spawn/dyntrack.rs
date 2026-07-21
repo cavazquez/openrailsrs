@@ -142,6 +142,57 @@ impl ProceduralTrackSegment {
     }
 }
 
+/// Expand WORLD Dyntrack `TrackSections` into chained procedural segments (#87).
+///
+/// Empty `sections` → one fallback straight of [`MSTS_DEFAULT_SECTION_LENGTH_M`].
+pub fn procedural_segments_from_dyntrack_sections(
+    start: Vec3,
+    rotation: Quat,
+    sections: &[openrailsrs_formats::DyntrackSection],
+) -> Vec<ProceduralTrackSegment> {
+    if sections.is_empty() {
+        return vec![ProceduralTrackSegment {
+            position: start,
+            rotation,
+            length_m: None,
+            half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),
+            curve_radius_m: None,
+            curve_angle_deg: None,
+        }];
+    }
+    let mut out = Vec::with_capacity(sections.len());
+    let mut pos = start;
+    let mut rot = rotation;
+    for sec in sections {
+        let travel = sec.travel_length_m();
+        if travel < 0.05 {
+            continue;
+        }
+        let (curve_radius_m, curve_angle_deg) = if sec.is_curve() {
+            (sec.curve_radius_m(), sec.curve_angle_deg())
+        } else {
+            (None, None)
+        };
+        out.push(ProceduralTrackSegment {
+            position: pos,
+            rotation: rot,
+            length_m: Some(travel),
+            half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),
+            curve_radius_m,
+            curve_angle_deg,
+        });
+        pos = segment_end_world(pos, rot, travel, curve_radius_m, curve_angle_deg);
+        if let (Some(r), Some(a)) = (curve_radius_m, curve_angle_deg) {
+            let (_, drot) = arc_local_frame(r, a, 1.0);
+            rot = rot * drot;
+        }
+    }
+    if out.is_empty() {
+        return procedural_segments_from_dyntrack_sections(start, rotation, &[]);
+    }
+    out
+}
+
 /// Local position + tangent rotation along an MSTS circular arc (start at origin, tangent +Z).
 pub fn arc_local_frame(radius_m: f32, total_angle_deg: f32, fraction: f32) -> (Vec3, Quat) {
     let theta_rad = total_angle_deg.to_radians();

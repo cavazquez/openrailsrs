@@ -24,6 +24,43 @@ use super::shape::Vec3;
 /// Default tree count when a `.w` `Forest` omits `Population`.
 pub const DEFAULT_FOREST_POPULATION: u32 = 48;
 
+/// One authored segment inside WORLD `Dyntrack` / `TrackSections` (Open Rails `DyntrackObj.TrackSection`).
+///
+/// - `is_curved == 0`: `param1` = length (m), `param2` unused
+/// - `is_curved != 0`: `param1` = arc (radians), `param2` = radius (m)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DyntrackSection {
+    pub is_curved: u32,
+    pub uid: u32,
+    pub param1: f32,
+    pub param2: f32,
+}
+
+impl DyntrackSection {
+    pub fn is_curve(&self) -> bool {
+        self.is_curved != 0 && self.param2.abs() > 1e-6 && self.param1.abs() > 1e-9
+    }
+
+    /// Straight length (m), or arc length `radius * |arc_rad|` for curves.
+    pub fn travel_length_m(&self) -> f32 {
+        if self.is_curve() {
+            self.param2.abs() * self.param1.abs()
+        } else {
+            self.param1.abs()
+        }
+    }
+
+    /// Curve angle in degrees when curved (Open Rails stores arc in radians).
+    pub fn curve_angle_deg(&self) -> Option<f32> {
+        self.is_curve()
+            .then_some(self.param1.to_degrees())
+    }
+
+    pub fn curve_radius_m(&self) -> Option<f32> {
+        self.is_curve().then_some(self.param2)
+    }
+}
+
 /// Kind-aware view of a world item.
 #[derive(Clone, Debug, PartialEq)]
 pub enum WorldItem {
@@ -64,6 +101,10 @@ pub enum WorldItem {
         matrix3x3: Option<[f64; 9]>,
         /// From preceding `Tr_Watermark` (HideWire uses levels 2/3).
         static_detail_level: u32,
+        /// WORLD `SectionIdx` (path / elevation index in Open Rails).
+        section_idx: Option<u32>,
+        /// Up to five authored `TrackSection` entries (`SectionCurve` + params).
+        track_sections: Vec<DyntrackSection>,
     },
     Signal {
         uid: u32,
@@ -308,11 +349,21 @@ impl WorldItem {
         }
     }
 
-    /// `TrackObj` → `TrackShape` index in `tsection.dat`.
+    /// `TrackObj` → `TrackShape` index in `tsection.dat`, or Dyntrack `SectionIdx`.
     pub fn section_idx(&self) -> Option<u32> {
         match self {
-            WorldItem::Track { section_idx, .. } => *section_idx,
+            WorldItem::Track { section_idx, .. } | WorldItem::Dyntrack { section_idx, .. } => {
+                *section_idx
+            }
             _ => None,
+        }
+    }
+
+    /// Authored Dyntrack subsections (`TrackSections`), empty for other kinds.
+    pub fn dyntrack_sections(&self) -> &[DyntrackSection] {
+        match self {
+            WorldItem::Dyntrack { track_sections, .. } => track_sections.as_slice(),
+            _ => &[],
         }
     }
 
@@ -709,6 +760,19 @@ fn infer_object_tag(fields: &[Ast]) -> Option<String> {
     if find_named_f64(fields, "Width").is_some() && find_named_f64(fields, "Height").is_some() {
         return Some("Transfer".into());
     }
+    // Dyntrack also has SectionIdx; detect authored TrackSections first (#87).
+    if fields.iter().any(|item| {
+        matches!(
+            item,
+            Ast::List(sub)
+                if matches!(
+                    sub.first(),
+                    Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case("TrackSections")
+                )
+        )
+    }) {
+        return Some("Dyntrack".into());
+    }
     if find_named_u32(fields, "SectionIdx").is_some() {
         return Some("TrackObj".into());
     }
@@ -794,6 +858,8 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             qdir,
             matrix3x3,
             static_detail_level: 0,
+            section_idx: find_named_u32(fields, "SectionIdx"),
+            track_sections: parse_dyntrack_sections(fields),
         },
         s if s.eq_ignore_ascii_case("Signal") => WorldItem::Signal {
             uid: uid.unwrap_or(0),
@@ -1111,6 +1177,90 @@ fn find_rdb_tr_item_ids(items: &[Ast]) -> Vec<u32> {
             .collect();
         if nums.len() >= 2 && nums[0] == 1 {
             out.push(nums[1]);
+        }
+    }
+    out
+}
+
+/// Parse Dyntrack `TrackSections ( TrackSection ( SectionCurve ( c ) uid p1 p2 ) … )`.
+fn parse_dyntrack_sections(items: &[Ast]) -> Vec<DyntrackSection> {
+    let mut out = Vec::new();
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("TrackSections") {
+            continue;
+        }
+        for entry in sub.iter().skip(1) {
+            let Ast::List(sec) = entry else {
+                continue;
+            };
+            let Some(Ast::Atom(Atom::Symbol(sec_tag))) = sec.first() else {
+                continue;
+            };
+            if !sec_tag.eq_ignore_ascii_case("TrackSection") {
+                continue;
+            }
+            // OR: TrackSection ( SectionCurve ( isCurved ) uid param1 param2 )
+            let mut is_curved = 0u32;
+            let mut nums: Vec<f64> = Vec::new();
+            let mut i = 1usize;
+            while i < sec.len() {
+                match &sec[i] {
+                    Ast::List(curve)
+                        if matches!(
+                            curve.first(),
+                            Some(Ast::Atom(Atom::Symbol(s)))
+                                if s.eq_ignore_ascii_case("SectionCurve")
+                        ) =>
+                    {
+                        is_curved = curve
+                            .get(1)
+                            .and_then(|a| match a {
+                                Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                                _ => None,
+                            })
+                            .unwrap_or(0);
+                        i += 1;
+                    }
+                    Ast::Atom(Atom::Symbol(s)) if s.eq_ignore_ascii_case("SectionCurve") => {
+                        // Flat: SectionCurve isCurved uid p1 p2
+                        if let Some(Ast::Atom(at)) = sec.get(i + 1) {
+                            is_curved = atom_to_number(at).map(|n| n as u32).unwrap_or(0);
+                        }
+                        i += 2;
+                        while nums.len() < 3 {
+                            if let Some(Ast::Atom(at)) = sec.get(i) {
+                                if let Some(n) = atom_to_number(at) {
+                                    nums.push(n);
+                                    i += 1;
+                                    continue;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    Ast::Atom(at) => {
+                        if let Some(n) = atom_to_number(at) {
+                            nums.push(n);
+                        }
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
+            }
+            if nums.len() >= 3 {
+                out.push(DyntrackSection {
+                    is_curved,
+                    uid: nums[0] as u32,
+                    param1: nums[1] as f32,
+                    param2: nums[2] as f32,
+                });
+            }
         }
     }
     out
@@ -1434,6 +1584,60 @@ mod watermark_tests {
             .filter_map(|i| Some((i.uid()?, i.static_detail_level())))
             .collect();
         assert_eq!(levels, vec![(1, 0), (2, 2), (3, 3)]);
+    }
+
+    #[test]
+    fn dyntrack_parses_section_idx_and_track_sections() {
+        // Canonical S-expressions (bypass Name-normalize quirks for TrackSections nesting).
+        let src = r#"
+(Tr_Worldfile
+  (Dyntrack
+    (UiD 9)
+    (SectionIdx 3)
+    (Position 10 1 20)
+    (TrackSections
+      (TrackSection (SectionCurve 1) 40002 -0.3 120.0)
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(world.items.len(), 1, "items={:?}", world.items);
+        let WorldItem::Dyntrack {
+            section_idx,
+            track_sections,
+            ..
+        } = &world.items[0]
+        else {
+            panic!("expected Dyntrack, got {:?}", world.items[0].kind());
+        };
+        assert_eq!(*section_idx, Some(3));
+        assert_eq!(track_sections.len(), 1, "{track_sections:?}");
+        let sec = track_sections[0];
+        assert_eq!(sec.uid, 40002);
+        assert_eq!(sec.is_curved, 1);
+        assert!((sec.param1.abs() - 0.3).abs() < 1e-3);
+        assert!((sec.param2 - 120.0).abs() < 1e-3);
+        assert!(sec.is_curve());
+    }
+
+    #[test]
+    fn dyntrack_section_travel_length_helpers() {
+        let straight = DyntrackSection {
+            is_curved: 0,
+            uid: 1,
+            param1: 25.0,
+            param2: 0.0,
+        };
+        assert!((straight.travel_length_m() - 25.0).abs() < 1e-6);
+        let curve = DyntrackSection {
+            is_curved: 1,
+            uid: 2,
+            param1: -0.3,
+            param2: 120.0,
+        };
+        assert!((curve.travel_length_m() - 36.0).abs() < 1e-3);
     }
 }
 

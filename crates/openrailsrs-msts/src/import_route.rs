@@ -636,7 +636,7 @@ fn vector_endpoint_positions(
     let filtered: Vec<_> = sections
         .iter()
         .copied()
-        .filter(|s| s.shape_idx != 0)
+        .filter(|s| s.section_index != 0 || s.shape_index != 0)
         .collect();
     if !filtered.is_empty() {
         let start = Some(filtered[0].start);

@@ -58,35 +58,48 @@ pub struct TrackVectorGeometry {
 }
 
 /// One `TrVectorSection` entry inside a vector node (native or tagged layout).
+///
+/// Field order matches Open Rails `TrackDatabaseFile.TrVectorSection`:
+/// - field 0 → [`Self::section_index`] (`TrackSections.Get` / Traveller centreline)
+/// - field 1 → [`Self::shape_index`] (`TrackShapes.Get` / WORLD TrackObj appearance)
+/// - `AY` is stored in **radians** (Open Rails `Sin/Cos(tvs.AY)`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrVectorSectionRecord {
-    /// `TrackShape` index in `tsection.dat` (native section field 0).
-    pub shape_idx: u32,
-    /// Secondary native shape/section field when present.
-    pub aux_shape_idx: u32,
+    /// Native field 0: `SectionIndex` → `tsection.dat` `TrackSection`.
+    pub section_index: u32,
+    /// Native field 1: `ShapeIndex` → `tsection.dat` `TrackShape`.
+    pub shape_index: u32,
     /// Native `TrVectorSection` header tile (fields +2/+3); anchor `start` may use an adjacent tile.
     pub header_tile_x: i32,
     pub header_tile_z: i32,
     pub start: TrackVectorPoint,
-    /// Native section orientation fields (`AX`, `AY`, `AZ` in Open Rails).
+    /// Native section orientation (`AX`/`AY`/`AZ`). `AY` is radians.
     pub ax: f64,
     pub ay: f64,
     pub az: f64,
 }
 
 impl TrVectorSectionRecord {
-    /// Best-effort heading in degrees (Y-up) from native `AY` when plausible.
-    pub fn heading_deg(&self) -> Option<f64> {
+    /// Heading about +Y in **radians** from native `AY` when plausible.
+    ///
+    /// Open Rails uses `AY` directly with `Sin`/`Cos` / `CreateRotationY` (radians).
+    pub fn heading_rad(&self) -> Option<f64> {
+        // Pitch/roll stay near 0 for typical TDB; AY is a full-circle heading in radians.
         if self.ay.is_finite()
             && self.ay.abs() > 1e-9
-            && self.ay.abs() <= 360.0
-            && self.ax.abs() < 45.0
-            && self.az.abs() < 45.0
+            && self.ay.abs() <= std::f64::consts::TAU + 0.1
+            && self.ax.abs() < 1.0
+            && self.az.abs() < 1.0
         {
             Some(self.ay)
         } else {
             None
         }
+    }
+
+    /// Heading in degrees (convenience for Bevy yaw APIs). Prefer [`Self::heading_rad`] for math.
+    pub fn heading_deg(&self) -> Option<f64> {
+        self.heading_rad().map(|r| r.to_degrees())
     }
 
     /// Bevy world positions for this section anchor, including tile-boundary variants.
@@ -387,7 +400,7 @@ impl TrackDbFile {
         Ok(())
     }
 
-    /// Group vector sections by `tsection.dat` `TrackShape` index.
+    /// Group vector sections by `tsection.dat` `TrackShape` index ([`TrVectorSectionRecord::shape_index`]).
     pub fn index_vector_sections_by_shape(
         &self,
     ) -> std::collections::HashMap<u32, Vec<IndexedTrVectorSection>> {
@@ -398,10 +411,35 @@ impl TrackDbFile {
                 continue;
             };
             for record in sections {
-                if record.shape_idx == 0 {
+                if record.shape_index == 0 {
                     continue;
                 }
-                out.entry(record.shape_idx)
+                out.entry(record.shape_index)
+                    .or_default()
+                    .push(IndexedTrVectorSection {
+                        node_id: node.id,
+                        record: *record,
+                    });
+            }
+        }
+        out
+    }
+
+    /// Group vector sections by `TrackSection` index ([`TrVectorSectionRecord::section_index`]).
+    pub fn index_vector_sections_by_section(
+        &self,
+    ) -> std::collections::HashMap<u32, Vec<IndexedTrVectorSection>> {
+        let mut out: std::collections::HashMap<u32, Vec<IndexedTrVectorSection>> =
+            std::collections::HashMap::new();
+        for node in &self.nodes {
+            let TrackNodeKind::Vector { sections, .. } = &node.kind else {
+                continue;
+            };
+            for record in sections {
+                if record.section_index == 0 {
+                    continue;
+                }
+                out.entry(record.section_index)
                     .or_default()
                     .push(IndexedTrVectorSection {
                         node_id: node.id,
@@ -894,8 +932,8 @@ fn parse_vector_section_records(vector_node: &[Ast]) -> Vec<TrVectorSectionRecor
                 {
                     if let Some(point) = parse_tagged_vector_section_point(sec_items) {
                         list_records.push(TrVectorSectionRecord {
-                            shape_idx: sec_items.get(1).and_then(parse_u32).unwrap_or(0),
-                            aux_shape_idx: sec_items.get(2).and_then(parse_u32).unwrap_or(0),
+                            section_index: sec_items.get(1).and_then(parse_u32).unwrap_or(0),
+                            shape_index: sec_items.get(2).and_then(parse_u32).unwrap_or(0),
                             header_tile_x: point.tile_x,
                             header_tile_z: point.tile_z,
                             start: point,
@@ -1009,8 +1047,8 @@ fn parse_native_section_record(items: &[Ast], base: usize) -> Option<TrVectorSec
     }
 
     Some(TrVectorSectionRecord {
-        shape_idx: shape_a as u32,
-        aux_shape_idx: shape_b as u32,
+        section_index: shape_a as u32,
+        shape_index: shape_b as u32,
         header_tile_x: world_tile_x,
         header_tile_z: world_tile_z,
         start: point,
@@ -1617,8 +1655,8 @@ mod tests {
             z: -1016.008,
         };
         let section = TrVectorSectionRecord {
-            shape_idx: 38700,
-            aux_shape_idx: 38669,
+            section_index: 38700,
+            shape_index: 38669,
             header_tile_x: -6081,
             header_tile_z: 14926,
             start: TrackVectorPoint {
@@ -1659,8 +1697,8 @@ mod tests {
             z: 273.3258,
         };
         let section = TrVectorSectionRecord {
-            shape_idx: 38701,
-            aux_shape_idx: 38668,
+            section_index: 38701,
+            shape_index: 38668,
             header_tile_x: -6079,
             header_tile_z: 14925,
             start: TrackVectorPoint {
@@ -1718,9 +1756,12 @@ mod tests {
             assert_eq!(*pins, (3, 1));
             assert!(geometry.is_some(), "native section geometry should parse");
             assert_eq!(sections.len(), 1);
-            assert_eq!(sections[0].shape_idx, 38507);
+            // Native `38507 385675`: SectionIndex then ShapeIndex (OR TrackDatabaseFile).
+            assert_eq!(sections[0].section_index, 38507);
+            assert_eq!(sections[0].shape_index, 385675);
             assert!((sections[0].ay - 2.91349).abs() < 1e-4);
-            assert_eq!(sections[0].heading_deg(), Some(2.91349));
+            assert_eq!(sections[0].heading_rad(), Some(2.91349));
+            assert!((sections[0].heading_deg().unwrap() - 2.91349_f64.to_degrees()).abs() < 1e-3);
         }
         let junction = tdb
             .nodes
@@ -1733,10 +1774,12 @@ mod tests {
             assert_eq!(pins[0].branch_index, 0);
         }
         assert_eq!(tdb.items.len(), 1);
-        let index = tdb.index_vector_sections_by_shape();
-        let entries = index.get(&38507).expect("shape 38507");
+        let by_shape = tdb.index_vector_sections_by_shape();
+        let entries = by_shape.get(&385675).expect("ShapeIndex 385675");
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].node_id, 2);
+        let by_section = tdb.index_vector_sections_by_section();
+        assert!(by_section.get(&38507).is_some());
     }
 
     #[test]

@@ -315,7 +315,7 @@ fn branch_to_chords(
                 node_id: node.id,
                 section_index: *orig_idx,
                 span_index: 0,
-                shape_idx: section.shape_idx,
+                shape_idx: section.shape_index,
                 start_world: start,
                 end_world: end,
                 curve_radius_m,
@@ -512,14 +512,14 @@ pub fn vector_oriented_anchors(
                 world: start,
                 node_id: node.id,
                 section_index: *idx,
-                shape_idx: section.shape_idx,
+                shape_idx: section.shape_index,
             });
         }
         out.push(AnchorPoint {
             world: end,
             node_id: node.id,
             section_index: *idx,
-            shape_idx: section.shape_idx,
+            shape_idx: section.shape_index,
         });
         chain_hint = Some(end);
     }
@@ -618,7 +618,7 @@ fn collect_vector_section_chords(
             node_id,
             section_index: *orig_idx,
             span_index: 0,
-            shape_idx: section.shape_idx,
+            shape_idx: section.shape_index,
             start_world: start,
             end_world: end,
             curve_radius_m,
@@ -994,7 +994,7 @@ fn nearest_junction_face_anchor(
         let shape_idx = sections
             .iter()
             .find(|s| section_is_drawable(s, tsection))
-            .map(|s| s.shape_idx)
+            .map(|s| s.shape_index)
             .unwrap_or(0);
         return Some(AnchorPoint {
             world: face,
@@ -1064,8 +1064,8 @@ mod tests {
             z,
         };
         TrVectorSectionRecord {
-            shape_idx,
-            aux_shape_idx: 0,
+            section_index: shape_idx,
+            shape_index: 0,
             header_tile_x: start.tile_x,
             header_tile_z: start.tile_z,
             start,

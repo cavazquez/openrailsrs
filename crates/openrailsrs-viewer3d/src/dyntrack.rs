@@ -66,13 +66,12 @@ pub fn spawn_dyntrack_objects_with_wire(
     let segments: Vec<ProceduralTrackSegment> = items
         .iter()
         .filter(|obj| obj.kind == "Dyntrack")
-        .map(|obj| ProceduralTrackSegment {
-            position: focus.scenery_to_render(obj.position),
-            rotation: obj.rotation,
-            length_m: None,
-            half_gauge_m: None,
-            curve_radius_m: None,
-            curve_angle_deg: None,
+        .flat_map(|obj| {
+            openrailsrs_bevy_scenery::spawn::dyntrack::procedural_segments_from_dyntrack_sections(
+                focus.scenery_to_render(obj.position),
+                obj.rotation,
+                &obj.dyntrack_sections,
+            )
         })
         .collect();
     spawn_procedural_track_batch(

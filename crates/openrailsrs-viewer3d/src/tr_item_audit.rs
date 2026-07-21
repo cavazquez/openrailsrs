@@ -306,8 +306,8 @@ mod tests {
                 pins: (0, 0),
                 item_ids,
                 sections: vec![TrVectorSectionRecord {
-                    shape_idx: 1,
-                    aux_shape_idx: 0,
+                    section_index: 1,
+                    shape_index: 0,
                     header_tile_x: tile.0,
                     header_tile_z: tile.1,
                     start: TrackVectorPoint {
@@ -400,6 +400,7 @@ mod tests {
                 label: "box".into(),
                 shape_file: None,
                 section_idx: None,
+                dyntrack_sections: Vec::new(),
                 position: bevy_xz_on_tile(tile, 100.0, 200.0),
                 rotation: Quat::IDENTITY,
                 scale: Vec3::ONE,
@@ -445,6 +446,7 @@ mod tests {
                 label: "sig".into(),
                 shape_file: Some("sig.s".into()),
                 section_idx: None,
+                dyntrack_sections: Vec::new(),
                 position: pos,
                 rotation: Quat::IDENTITY,
                 scale: Vec3::ONE,

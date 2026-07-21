@@ -230,6 +230,7 @@ mod tests {
             label: "sig".into(),
             shape_file: Some("sig.s".into()),
             section_idx: None,
+            dyntrack_sections: Vec::new(),
             position: pos,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,

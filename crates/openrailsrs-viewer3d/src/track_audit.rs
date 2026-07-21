@@ -546,8 +546,9 @@ fn matching_shape_distance_and_vector(
     point: Vec3,
     display_tile_x: i32,
     display_tile_z: i32,
-    shape_idx: u32,
-    shape_index: &HashMap<u32, Vec<openrailsrs_formats::IndexedTrVectorSection>>,
+    // WORLD TrackObj.SectionIdx (= TDB ShapeIndex).
+    track_shape_idx: u32,
+    by_shape: &HashMap<u32, Vec<openrailsrs_formats::IndexedTrVectorSection>>,
     tdb: &TrackDbFile,
     chords: &[TdbChord],
 ) -> (Option<f32>, Option<u32>) {
@@ -559,7 +560,7 @@ fn matching_shape_distance_and_vector(
         }
     }
     if raw_near.is_empty() {
-        return supplement_matching_from_shape_index(point, shape_idx, shape_index, tdb, ref_tile);
+        return supplement_matching_from_shape_index(point, track_shape_idx, by_shape, tdb, ref_tile);
     }
     raw_near.sort_by(|a, b| a.0.total_cmp(&b.0));
     let best_raw = raw_near[0].0;
@@ -568,23 +569,23 @@ fn matching_shape_distance_and_vector(
     let mut candidates: Vec<(f32, u32, bool)> = Vec::new();
     for (d, i) in raw_near.iter().take_while(|(d, _)| *d <= rebase_cutoff) {
         let chord = &chords[*i];
-        candidates.push((*d, chord.node_id, chord.shape_idx == shape_idx));
+        candidates.push((*d, chord.node_id, chord.shape_idx == track_shape_idx));
     }
 
     if candidates.is_empty() {
-        return supplement_matching_from_shape_index(point, shape_idx, shape_index, tdb, ref_tile);
+        return supplement_matching_from_shape_index(point, track_shape_idx, by_shape, tdb, ref_tile);
     }
     select_spatial_match_with_shape_tie_break(candidates)
 }
 
 fn supplement_matching_from_shape_index(
     point: Vec3,
-    shape_idx: u32,
-    shape_index: &HashMap<u32, Vec<openrailsrs_formats::IndexedTrVectorSection>>,
+    track_shape_idx: u32,
+    by_shape: &HashMap<u32, Vec<openrailsrs_formats::IndexedTrVectorSection>>,
     tdb: &TrackDbFile,
     ref_tile: (i32, i32),
 ) -> (Option<f32>, Option<u32>) {
-    let Some(entries) = shape_index.get(&shape_idx) else {
+    let Some(entries) = by_shape.get(&track_shape_idx) else {
         return (None, None);
     };
     let max_dist_sq = STATIC_TRACKOBJ_SHAPE_INDEX_MAX_DIST_M.powi(2);
@@ -640,7 +641,7 @@ fn indexed_section_segment_distance(
         return None;
     };
     let section_index = sections.iter().position(|s| {
-        s.shape_idx == entry.record.shape_idx && section_records_match(s, &entry.record)
+        s.shape_index == entry.record.shape_index && section_records_match(s, &entry.record)
     })?;
     let section = sections[section_index];
     let (sx, _, sz) = section.bevy_position_nearest_to(point.x, point.z, Some(ref_tile));
@@ -674,7 +675,7 @@ fn section_records_match(
     a: &openrailsrs_formats::TrVectorSectionRecord,
     b: &openrailsrs_formats::TrVectorSectionRecord,
 ) -> bool {
-    a.shape_idx == b.shape_idx
+    a.shape_index == b.shape_index
         && (a.start.x - b.start.x).abs() < 0.01
         && (a.start.z - b.start.z).abs() < 0.01
 }
@@ -1162,8 +1163,8 @@ mod tests {
             z,
         };
         TrVectorSectionRecord {
-            shape_idx: 1,
-            aux_shape_idx: 0,
+            section_index: 1,
+            shape_index: 0,
             header_tile_x: start.tile_x,
             header_tile_z: start.tile_z,
             start,
@@ -1610,9 +1611,9 @@ mod tests {
                     if let (Some(first), Some(last)) = (sections.first(), sections.last()) {
                         eprintln!(
                             "  first sec shape_idx={} ay={:.3}",
-                            first.shape_idx, first.ay
+                            first.shape_index, first.ay
                         );
-                        eprintln!("  last sec shape_idx={} ay={:.3}", last.shape_idx, last.ay);
+                        eprintln!("  last sec shape_idx={} ay={:.3}", last.shape_index, last.ay);
                     }
                 }
                 TrackNodeKind::Junction { pins, .. } => {

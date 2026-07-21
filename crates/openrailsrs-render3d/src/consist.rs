@@ -170,6 +170,7 @@ pub fn spawn_static_consist(
             kind: crate::objects::ObjectKind::Static,
             file_name: Some(shape_file.to_string()),
             section_idx: None,
+            dyntrack_sections: Vec::new(),
             forest: None,
             hwater: None,
             transfer: None,

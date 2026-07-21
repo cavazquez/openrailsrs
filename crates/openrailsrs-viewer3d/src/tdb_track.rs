@@ -451,8 +451,8 @@ mod tests {
     fn section_at(x: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
         let start = point_at(x, z);
         TrVectorSectionRecord {
-            shape_idx,
-            aux_shape_idx: 0,
+            section_index: shape_idx,
+            shape_index: 0,
             header_tile_x: start.tile_x,
             header_tile_z: start.tile_z,
             start,
@@ -853,12 +853,12 @@ mod tests {
             );
             let dist = (trackobj.x - x).hypot(trackobj.z - z);
             let len = tsection
-                .procedural_dims(s.shape_idx)
+                .procedural_dims(s.shape_index)
                 .map(|d| d.length_m)
                 .unwrap_or(0.0);
             eprintln!(
                 "  sec[{i}] shape={} dist_obj={dist:.1}m tsection_len={len:.1}m heading={:?}",
-                s.shape_idx,
+                s.shape_index,
                 s.heading_deg()
             );
         }

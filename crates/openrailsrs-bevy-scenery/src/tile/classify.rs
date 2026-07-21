@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use bevy::math::{Mat3, Quat, Vec3};
-use openrailsrs_formats::WorldItem;
+use openrailsrs_formats::{DyntrackSection, WorldItem};
 
 /// Classified WORLD item kind (independent of render marker colors).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -111,6 +111,8 @@ pub struct MstsClassifiedWorldItem {
     pub scale: Vec3,
     pub file_name: Option<String>,
     pub section_idx: Option<u32>,
+    /// Authored Dyntrack subsections (#87); empty for other kinds.
+    pub dyntrack_sections: Vec<DyntrackSection>,
     pub forest: Option<MstsForestPatch>,
     pub hwater: Option<MstsHWaterPatch>,
     pub transfer: Option<MstsTransferPatch>,
@@ -154,6 +156,7 @@ pub fn classify_world_item(
         scale,
         file_name,
         section_idx: item.section_idx(),
+        dyntrack_sections: item.dyntrack_sections().to_vec(),
         forest,
         hwater,
         transfer,

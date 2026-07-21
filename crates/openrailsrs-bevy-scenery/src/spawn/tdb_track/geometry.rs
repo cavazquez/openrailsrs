@@ -56,16 +56,21 @@ pub fn section_is_drawable(
     section: &TrVectorSectionRecord,
     tsection: Option<&TSectionCatalog>,
 ) -> bool {
-    if section.shape_idx != 0 {
+    // Road filter uses ShapeIndex (OR TrackShapes), not SectionIndex.
+    if section.shape_index != 0 {
         if let Some(cat) = tsection {
-            return !cat.is_road_shape(section.shape_idx);
+            return !cat.is_road_shape(section.shape_index);
         }
+        return true;
+    }
+    // No ShapeIndex: still drawable when SectionIndex is set (or section 0 exists in catalog).
+    if section.section_index != 0 {
         return true;
     }
     let Some(cat) = tsection else {
         return false;
     };
-    cat.procedural_dims(0).is_some() || cat.sections.contains_key(&0)
+    cat.sections.contains_key(&0)
 }
 
 pub fn chord_heading_and_length(from: Vec3, to: Vec3) -> Option<(f64, f32)> {
@@ -78,33 +83,36 @@ pub fn chord_heading_and_length(from: Vec3, to: Vec3) -> Option<(f64, f32)> {
     Some((f64::from(dx).atan2(f64::from(dz)).to_degrees(), len))
 }
 
+/// Advance in Bevy XZ using a Bevy yaw in degrees (chord helpers).
 pub fn end_from_heading(start: Vec3, heading_deg: f64, length_m: f32) -> Vec3 {
     let yaw = heading_deg.to_radians() as f32;
     start + Vec3::new(yaw.sin() * length_m, 0.0, yaw.cos() * length_m)
 }
 
-pub fn single_section_length(node_length_m: f64, _shape_idx: u32) -> f32 {
+pub fn single_section_length(node_length_m: f64, _section_index: u32) -> f32 {
     if node_length_m > 0.5 {
         return node_length_m as f32;
     }
     MSTS_DEFAULT_SECTION_LENGTH_M
 }
 
-pub fn section_shape_length_m(
+/// Centreline travel length from `TrackSection` (`SectionIndex`).
+pub fn section_track_length_m(
     tsection: Option<&TSectionCatalog>,
-    shape_idx: u32,
+    section_index: u32,
     node_length_m: f64,
     section_count: usize,
 ) -> f32 {
     if let Some(cat) = tsection {
-        if let Some(dims) = cat.procedural_dims(shape_idx) {
-            if dims.length_m > 0.5 {
-                return dims.length_m as f32;
+        if let Some(def) = cat.sections.get(&section_index) {
+            let len = def.effective_length_m();
+            if len > 0.5 {
+                return len as f32;
             }
         }
     }
     if section_count <= 1 {
-        return single_section_length(node_length_m, shape_idx);
+        return single_section_length(node_length_m, section_index);
     }
     if node_length_m > 0.5 {
         return (node_length_m / section_count as f64) as f32;
@@ -112,7 +120,18 @@ pub fn section_shape_length_m(
     MSTS_DEFAULT_SECTION_LENGTH_M
 }
 
-/// Map a flat local XZ offset into world XZ using MSTS/Bevy heading (tangent +Z at yaw 0).
+/// Alias kept for call sites; resolves length via [`section_track_length_m`].
+#[inline]
+pub fn section_shape_length_m(
+    tsection: Option<&TSectionCatalog>,
+    section_index: u32,
+    node_length_m: f64,
+    section_count: usize,
+) -> f32 {
+    section_track_length_m(tsection, section_index, node_length_m, section_count)
+}
+
+/// Map a flat local XZ offset into Bevy world XZ (tangent +Z at yaw 0, yaw in degrees).
 pub fn local_flat_to_world(dx: f64, dz: f64, heading_deg: f64) -> (f32, f32) {
     let r = heading_deg.to_radians();
     let c = r.cos();
@@ -122,7 +141,41 @@ pub fn local_flat_to_world(dx: f64, dz: f64, heading_deg: f64) -> (f32, f32) {
     (wx as f32, wz as f32)
 }
 
-/// Open Rails `FindLocationInSection` — position at `distance_m` along the section centreline.
+/// Open Rails `FindLocationInSection` MSTS XZ displacement (`AY` in radians).
+fn msts_delta_along_track_section(
+    ay_rad: f64,
+    def: &openrailsrs_formats::typed::TrackSectionDef,
+    distance_m: f64,
+) -> (f64, f64) {
+    if def.is_curved() {
+        let radius = def.curve_radius_m.unwrap();
+        let angle_deg = def.curve_angle_deg.unwrap();
+        let sign = if angle_deg > 0.0 { -1.0 } else { 1.0 };
+        let cos_a = ay_rad.cos();
+        let sin_a = ay_rad.sin();
+        let angle_radians = -distance_m / radius;
+        let cos_ar = (ay_rad + sign * angle_radians).cos();
+        let sin_ar = (ay_rad + sign * angle_radians).sin();
+        let delta_x = sign * radius * (cos_a - cos_ar);
+        let delta_z = sign * radius * (sin_a - sin_ar);
+        (-delta_x, delta_z)
+    } else {
+        (ay_rad.sin() * distance_m, ay_rad.cos() * distance_m)
+    }
+}
+
+#[inline]
+fn bevy_delta_from_msts(dx_msts: f64, dz_msts: f64) -> Vec3 {
+    Vec3::new(dx_msts as f32, 0.0, -dz_msts as f32)
+}
+
+/// Bevy yaw (degrees) for a MSTS `AY` heading (radians), accounting for Z flip.
+fn bevy_yaw_deg_from_msts_ay(ay_rad: f64) -> f64 {
+    // MSTS forward (sin A, cos A) → Bevy (sin A, -cos A).
+    ay_rad.sin().atan2(-ay_rad.cos()).to_degrees()
+}
+
+/// Open Rails `FindLocationInSection` — Bevy world position at `distance_m`.
 pub fn find_location_in_section_world(
     section: TrVectorSectionRecord,
     distance_m: f64,
@@ -131,30 +184,20 @@ pub fn find_location_in_section_world(
     node_length_m: f64,
     section_count: usize,
 ) -> Option<Vec3> {
+    let start = section_world_vec3(section, near_hint);
     if distance_m <= 1e-6 {
-        return Some(section_world_vec3(section, near_hint));
+        return Some(start);
     }
-    let spans = section_path_spans(
-        section,
-        tsection,
-        near_hint,
-        node_length_m,
-        section_count,
-        None,
-    );
-    if spans.is_empty() {
-        return None;
-    }
-    let last_end = spans.last().unwrap().end_world;
-    let mut remaining = distance_m;
-    for span in &spans {
-        let span_len = span_length_m(*span);
-        if remaining <= span_len + 1e-6 {
-            return Some(point_along_span(*span, remaining));
+    let ay = section.heading_rad().unwrap_or(0.0);
+    if let Some(cat) = tsection {
+        if let Some(def) = cat.sections.get(&section.section_index) {
+            let (dx, dz) = msts_delta_along_track_section(ay, def, distance_m);
+            return Some(start + bevy_delta_from_msts(dx, dz));
         }
-        remaining -= span_len;
     }
-    Some(last_end)
+    let _ = (node_length_m, section_count);
+    let (dx, dz) = (ay.sin() * distance_m, ay.cos() * distance_m);
+    Some(start + bevy_delta_from_msts(dx, dz))
 }
 
 fn span_length_m(span: SectionPathSpan) -> f64 {
@@ -176,11 +219,14 @@ fn distance_xz(a: Vec3, b: Vec3) -> f32 {
 
 fn point_along_span(span: SectionPathSpan, distance_m: f64) -> Vec3 {
     if span.is_curved() {
+        // Prefer OR centreline math when start/end already baked; interpolate by arc fraction
+        // using the same FindLocation displacement ratio along the chord envelope.
+        let span_len = span_length_m(span).max(1e-6);
+        let t = (distance_m / span_len).clamp(0.0, 1.0) as f32;
+        // Fall back to local arc frame in Bevy yaw (used for sleeper orientation).
         let r = span.curve_radius_m.unwrap();
         let angle = span.curve_angle_deg.unwrap();
-        let span_len = span_length_m(span);
-        let fraction = (distance_m / span_len).clamp(0.0, 1.0) as f32;
-        let (local, _) = arc_local_frame(r, angle, fraction);
+        let (local, _) = arc_local_frame(r, angle, t);
         let (wx, wz) =
             local_flat_to_world(f64::from(local.x), f64::from(local.z), span.world_yaw_deg);
         return span.start_world + Vec3::new(wx, 0.0, wz);
@@ -190,7 +236,7 @@ fn point_along_span(span: SectionPathSpan, distance_m: f64) -> Vec3 {
     span.start_world.lerp(span.end_world, t)
 }
 
-/// Walk the TSection primary path for one `TrVectorSection` in world space.
+/// One `TrVectorSection` → one centreline span from `TrackSection` (OR Traveller / #104).
 pub fn section_path_spans(
     section: TrVectorSectionRecord,
     tsection: Option<&TSectionCatalog>,
@@ -203,75 +249,94 @@ pub fn section_path_spans(
         return Vec::new();
     }
     let anchor = section_world_vec3(section, near_hint);
-    let base_yaw = section.heading_deg().unwrap_or(0.0);
-    let Some(cat) = tsection else {
-        if let Some(next) = next_section_anchor {
-            if let Some(span) = straight_span_to(next, anchor, None) {
-                return vec![span];
+    let ay = section.heading_rad().unwrap_or(0.0);
+    let bevy_yaw = bevy_yaw_deg_from_msts_ay(ay);
+    let half = tsection.and_then(|cat| {
+        cat.sections
+            .get(&section.section_index)
+            .map(|d| (d.gauge_m * 0.5) as f32)
+            .or_else(|| {
+                cat.procedural_dims(section.shape_index)
+                    .map(|d| d.half_gauge_m as f32)
+            })
+    });
+
+    if let Some(cat) = tsection {
+        if let Some(def) = cat.sections.get(&section.section_index).copied() {
+            let len = def.effective_length_m();
+            if len < 0.5 && next_section_anchor.is_none() {
+                return Vec::new();
             }
-            if section_count <= 1 {
-                let len =
-                    section_shape_length_m(None, section.shape_idx, node_length_m, section_count);
-                if len >= 0.5 {
-                    return vec![straight_span(anchor, base_yaw, len, None)];
-                }
-            }
-            return Vec::new();
-        }
-        let len = section_shape_length_m(None, section.shape_idx, node_length_m, section_count);
-        if len < 0.5 {
-            return Vec::new();
-        }
-        return vec![straight_span(anchor, base_yaw, len, None)];
-    };
-    let links = cat.procedural_links_primary_path(section.shape_idx);
-    if links.is_empty() {
-        if let Some(next) = next_section_anchor {
-            let half = cat
-                .procedural_dims(section.shape_idx)
-                .map(|d| d.half_gauge_m as f32);
-            if let Some(span) = straight_span_to(next, anchor, half) {
-                return vec![span];
-            }
-            if section_count <= 1 {
-                let len = section_shape_length_m(
+            let travel = if len > 0.5 {
+                len
+            } else {
+                f64::from(section_track_length_m(
                     Some(cat),
-                    section.shape_idx,
+                    section.section_index,
                     node_length_m,
                     section_count,
-                );
-                if len >= 0.5 {
-                    return vec![straight_span(anchor, base_yaw, len, half)];
+                ))
+            };
+            let (dx, dz) = msts_delta_along_track_section(ay, &def, travel);
+            let mut end = anchor + bevy_delta_from_msts(dx, dz);
+            if let Some(next) = next_section_anchor {
+                if !def.is_curved() {
+                    if let Some(span) = straight_span_to(next, anchor, half) {
+                        return vec![span];
+                    }
                 }
+                // Keep geometric end for curves; next anchor is only a rebase hint.
+                let _ = next;
             }
-            return Vec::new();
+            if def.is_curved() {
+                return vec![SectionPathSpan {
+                    start_world: anchor,
+                    end_world: end,
+                    world_yaw_deg: bevy_yaw,
+                    half_gauge_m: half,
+                    length_m: None,
+                    curve_radius_m: def.curve_radius_m.map(|r| r as f32),
+                    curve_angle_deg: def.curve_angle_deg.map(|a| a as f32),
+                }];
+            }
+            if next_section_anchor.is_none() {
+                end = anchor + bevy_delta_from_msts(dx, dz);
+            }
+            return vec![SectionPathSpan {
+                start_world: anchor,
+                end_world: end,
+                world_yaw_deg: bevy_yaw,
+                half_gauge_m: half,
+                length_m: Some(travel as f32),
+                curve_radius_m: None,
+                curve_angle_deg: None,
+            }];
         }
-        let len =
-            section_shape_length_m(Some(cat), section.shape_idx, node_length_m, section_count);
-        if len < 0.5 {
-            return Vec::new();
-        }
-        let half = cat
-            .procedural_dims(section.shape_idx)
-            .map(|d| d.half_gauge_m as f32);
-        return vec![straight_span(anchor, base_yaw, len, half)];
     }
-    let mut spans: Vec<SectionPathSpan> = links
-        .iter()
-        .map(|link| span_from_link(anchor, base_yaw, link))
-        .collect();
+
+    // No TrackSection: chord to next anchor or straight along AY.
     if let Some(next) = next_section_anchor {
-        if let Some(last) = spans.last_mut() {
-            if !last.is_curved() {
-                if let Some(span) = straight_span_to(next, last.start_world, last.half_gauge_m) {
-                    *last = span;
-                }
-            }
+        if let Some(span) = straight_span_to(next, anchor, half) {
+            return vec![span];
         }
     }
-    spans
+    let len = section_track_length_m(tsection, section.section_index, node_length_m, section_count);
+    if len < 0.5 {
+        return Vec::new();
+    }
+    let (dx, dz) = (ay.sin() * f64::from(len), ay.cos() * f64::from(len));
+    vec![SectionPathSpan {
+        start_world: anchor,
+        end_world: anchor + bevy_delta_from_msts(dx, dz),
+        world_yaw_deg: bevy_yaw,
+        half_gauge_m: half,
+        length_m: Some(len),
+        curve_radius_m: None,
+        curve_angle_deg: None,
+    }]
 }
 
+#[allow(dead_code)] // kept for chord helpers / future path expansion
 fn straight_span(
     start: Vec3,
     yaw_deg: f64,
@@ -307,6 +372,7 @@ fn straight_span_to(end: Vec3, start: Vec3, half_gauge_m: Option<f32>) -> Option
     })
 }
 
+#[allow(dead_code)] // TrackShape path expansion retained for WORLD TrackObj helpers
 fn span_from_link(anchor: Vec3, base_yaw: f64, link: &TrackProceduralLink) -> SectionPathSpan {
     let link_yaw = base_yaw + link.shape_local_yaw_deg;
     let (lx, _, lz) = (
@@ -403,7 +469,7 @@ pub fn section_path_envelope_chords(
         node_id,
         section_index,
         span_index: 0,
-        shape_idx: section.shape_idx,
+        shape_idx: section.shape_index,
         start_world: start,
         end_world: end,
         curve_radius_m,
@@ -440,7 +506,7 @@ pub fn section_path_span_chords(
             node_id,
             section_index,
             span_index: span_index as u16,
-            shape_idx: section.shape_idx,
+            shape_idx: section.shape_index,
             start_world: span.start_world,
             end_world: span.end_world,
             curve_radius_m: span.curve_radius_m,
@@ -574,7 +640,7 @@ pub fn single_section_end_world(
         }
     }
     let heading = section.heading_deg()?;
-    let len = section_shape_length_m(tsection, section.shape_idx, node_length_m, section_count);
+    let len = section_shape_length_m(tsection, section.section_index, node_length_m, section_count);
     let h = if reversed { heading + 180.0 } else { heading };
     Some(end_from_heading(start, h, len))
 }
@@ -804,7 +870,16 @@ mod tests {
     use openrailsrs_formats::TrackDbNode;
     use openrailsrs_formats::typed::{TrackSectionDef, TrackShapeDef, TrackShapePath};
 
-    fn section_at(x: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
+    fn section_at(x: f64, z: f64, section_index: u32) -> TrVectorSectionRecord {
+        section_at_with_shape(x, z, section_index, section_index)
+    }
+
+    fn section_at_with_shape(
+        x: f64,
+        z: f64,
+        section_index: u32,
+        shape_index: u32,
+    ) -> TrVectorSectionRecord {
         let start = TrackVectorPoint {
             tile_x: 0,
             tile_z: 0,
@@ -813,8 +888,8 @@ mod tests {
             z,
         };
         TrVectorSectionRecord {
-            shape_idx,
-            aux_shape_idx: 0,
+            section_index,
+            shape_index,
             header_tile_x: start.tile_x,
             header_tile_z: start.tile_z,
             start,
@@ -917,7 +992,8 @@ mod tests {
 
     #[test]
     fn curved_section_span_is_longer_than_chord() {
-        let mut section = section_at(0.0, 0.0, 99);
+        // SectionIndex 5005, ShapeIndex 99 — centreline uses TrackSection (#84/#104).
+        let mut section = section_at_with_shape(0.0, 0.0, 5005, 99);
         section.ay = 0.0;
         let cat = catalog_with_curve_shape();
         let spans = section_path_spans(section, Some(&cat), None, 0.0, 1, None);
@@ -930,7 +1006,7 @@ mod tests {
 
     #[test]
     fn find_location_reaches_arc_end() {
-        let section = section_at(0.0, 0.0, 99);
+        let section = section_at_with_shape(0.0, 0.0, 5005, 99);
         let cat = catalog_with_curve_shape();
         let spans = section_path_spans(section, Some(&cat), None, 0.0, 1, None);
         let end = find_location_in_section_world(
@@ -943,6 +1019,31 @@ mod tests {
         )
         .unwrap();
         assert!((end - spans[0].end_world).length() < 0.05);
+    }
+
+    #[test]
+    fn ay_is_radians_quarter_turn_heading_deg() {
+        let mut section = section_at(0.0, 0.0, 1);
+        section.ay = std::f64::consts::FRAC_PI_2;
+        assert!((section.heading_deg().unwrap() - 90.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn find_location_100m_matches_open_rails_ay_fixture() {
+        // Issue #85: AY=2.91349 rad, 100 m straight → MSTS ΔX≈22.6, ΔZ≈-97.4.
+        let mut section = section_at(0.0, 0.0, 1);
+        section.ay = 2.91349;
+        let cat = catalog_with_straight_shape(1, 1000.0);
+        let start = section_world_vec3(section, None);
+        let at = find_location_in_section_world(section, 100.0, Some(&cat), None, 1000.0, 1)
+            .expect("location");
+        let dx = f64::from(at.x - start.x);
+        let dz_bevy = f64::from(at.z - start.z);
+        let dz_msts = -dz_bevy;
+        assert!(
+            (dx - 22.6).abs() < 0.5 && (dz_msts - (-97.4)).abs() < 0.5,
+            "got MSTS delta ({dx:.3}, {dz_msts:.3}), expected ~(22.6, -97.4)"
+        );
     }
 
     #[test]

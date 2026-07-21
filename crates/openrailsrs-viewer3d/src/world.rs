@@ -295,6 +295,8 @@ pub struct WorldObject {
     pub shape_file: Option<String>,
     /// `TrackObj` → `TrackShape` index in `tsection.dat`.
     pub section_idx: Option<u32>,
+    /// Authored Dyntrack subsections (#87).
+    pub dyntrack_sections: Vec<openrailsrs_formats::DyntrackSection>,
     pub position: Vec3,
     pub rotation: Quat,
     /// Non-uniform scale from `.w` `Matrix3x3` when present.
@@ -710,6 +712,7 @@ fn try_object_from_item(
         label: object_label(item),
         shape_file: item.file_name().map(str::to_string),
         section_idx: item.section_idx(),
+        dyntrack_sections: item.dyntrack_sections().to_vec(),
         position,
         rotation,
         scale,

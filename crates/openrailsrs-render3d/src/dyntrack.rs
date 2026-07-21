@@ -250,13 +250,12 @@ pub fn spawn_tile_dyntrack(
     let segments: Vec<ProceduralTrackSegment> = objects
         .iter()
         .filter(|obj| obj.kind == ObjectKind::Dyntrack)
-        .map(|obj| ProceduralTrackSegment {
-            position: obj.position + tile_offset,
-            rotation: obj.rotation,
-            length_m: None,
-            half_gauge_m: None,
-            curve_radius_m: None,
-            curve_angle_deg: None,
+        .flat_map(|obj| {
+            openrailsrs_bevy_scenery::spawn::dyntrack::procedural_segments_from_dyntrack_sections(
+                obj.position + tile_offset,
+                obj.rotation,
+                &obj.dyntrack_sections,
+            )
         })
         .collect();
 

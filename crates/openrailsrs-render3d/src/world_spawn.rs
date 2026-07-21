@@ -1407,6 +1407,7 @@ pub fn spawn_tdb_ukfs_shapes(
             kind: ObjectKind::Track,
             file_name,
             section_idx: Some(inst.section_idx),
+            dyntrack_sections: Vec::new(),
             forest: None,
             hwater: None,
             transfer: None,

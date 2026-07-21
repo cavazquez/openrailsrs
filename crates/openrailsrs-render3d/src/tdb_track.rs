@@ -771,9 +771,11 @@ mod tests {
             shaped.len(),
             instances.len()
         );
+        // After #84/#85 centreline uses ShapeIndex + AY radians; count is lower than the
+        // pre-fix inflated chord fan-out, but still dozens of UKFS placements.
         assert!(
-            instances.len() > 40,
-            "tile central deberia tener decenas de instancias UKFS desde .tdb, tuvo {}",
+            instances.len() >= 20,
+            "tile central deberia tener instancias UKFS desde .tdb, tuvo {}",
             instances.len()
         );
         for inst in instances.iter().take(5) {
