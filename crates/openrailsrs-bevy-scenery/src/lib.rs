@@ -30,7 +30,10 @@ pub use materials::{
     create_or_cab_material, create_or_forest_material, or_cab_shaders_enabled,
     or_scenery_shaders_enabled,
 };
-pub use spawn::{ScenerySpawnMode, ScenerySpawnPlugin};
+pub use spawn::{
+    ScenerySpawnBudgets, ScenerySpawnCycle, ScenerySpawnMode, ScenerySpawnPhase,
+    ScenerySpawnPlugin, ScenerySpawnProgress, ScenerySpawnSet, scenery_spawn_cycle_active,
+};
 
 use std::path::PathBuf;
 
@@ -49,6 +52,7 @@ pub struct OrSceneryPlugins;
 impl Plugin for OrSceneryPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(MstsAssetPlugin)
+            .add_plugins(ScenerySpawnPlugin)
             .add_plugins(MaterialPlugin::<TerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrTerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrSceneryMaterial>::default())

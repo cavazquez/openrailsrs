@@ -66,6 +66,8 @@ pub struct Render3dPlugin;
 
 impl Plugin for Render3dPlugin {
     fn build(&self, app: &mut App) {
+        use openrailsrs_bevy_scenery::ScenerySpawnSet;
+
         app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
             .add_plugins(OrVsmPlugin)
             .add_plugins(OrVsmRenderPlugin)
@@ -78,7 +80,7 @@ impl Plugin for Render3dPlugin {
                 Startup,
                 (
                     setup_loading_screen,
-                    begin_load_stage,
+                    begin_load_stage.in_set(ScenerySpawnSet::Catalog),
                     lighting::spawn_scene_sun,
                 )
                     .chain(),
@@ -87,8 +89,14 @@ impl Plugin for Render3dPlugin {
                 Update,
                 (
                     update_loading_ui.run_if(in_state(AppState::Loading)),
-                    progressive_world_load.run_if(in_state(AppState::Loading)),
-                    finish_world_load.run_if(in_state(AppState::Loading)),
+                    // Internal LoadStage still advances Catalog→Terrain→Track→Objects;
+                    // the shared set places the progressive pump before Ready/finish.
+                    progressive_world_load
+                        .run_if(in_state(AppState::Loading))
+                        .in_set(ScenerySpawnSet::Objects),
+                    finish_world_load
+                        .run_if(in_state(AppState::Loading))
+                        .in_set(ScenerySpawnSet::Ready),
                 ),
             );
     }
@@ -105,5 +113,19 @@ pub mod test_harness {
             .add_plugins(openrailsrs_bevy_scenery::shared_asset_plugin())
             .add_plugins(OrSceneryPlugins);
         app
+    }
+
+    #[test]
+    fn both_viewers_share_scenery_spawn_plugin_via_or_scenery() {
+        let app = minimal_render_app();
+        assert!(
+            app.world()
+                .contains_resource::<openrailsrs_bevy_scenery::ScenerySpawnCycle>(),
+            "OrSceneryPlugins must register ScenerySpawnPlugin (#52)"
+        );
+        assert!(
+            app.world()
+                .contains_resource::<openrailsrs_bevy_scenery::ScenerySpawnBudgets>()
+        );
     }
 }

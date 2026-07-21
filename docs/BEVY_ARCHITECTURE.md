@@ -38,7 +38,7 @@ flowchart TB
 |--------|-------|----------|
 | `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` + `MaterialPlugin` terreno/scenery/cab, assets shaders |
 | `OrVsmPlugins` | bevy-scenery (feature `vsm`) | Pass momentos VSM, cascadas OR |
-| `ScenerySpawnPlugin` | bevy-scenery | Spawn progresivo WORLD + terreno |
+| `ScenerySpawnPlugin` | bevy-scenery | `#52` sets Catalog→Ready, budgets, ciclo anti-doble-spawn, `ScenerySpawnProgress`; FSM local en cada app |
 | `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live |
 | `Render3dPlugin` | render3d | Loading `AppState`, fly cam, HUD debug |
 

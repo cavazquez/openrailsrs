@@ -385,10 +385,18 @@ pub fn begin_load_stage(
     mut log: ResMut<LoadLog>,
     hud_enabled: Res<crate::debug_hud::DebugHudEnabled>,
     texture_env: Res<crate::textures::TextureEnvironment>,
+    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
+    mut progress_msg: MessageWriter<openrailsrs_bevy_scenery::ScenerySpawnProgress>,
 ) {
     let n = tiles_res.0.len();
+    cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Catalog);
     progress.set(format!("Indexando shapes y texturas… ({n} tiles)"), 0.02);
     log.push(format!("→ Indexando SHAPES y TEXTURES… ({n} tiles)"));
+    progress_msg.write(openrailsrs_bevy_scenery::ScenerySpawnProgress::new(
+        &cycle,
+        0.02,
+        format!("indexing ({n} tiles)"),
+    ));
 
     // Clonar los datos de cada tile en TileSlots propios para esta máquina de estados.
     let mut slots: Vec<TileSlot> = Vec::with_capacity(n);
@@ -997,6 +1005,8 @@ pub struct WorldLoadFinish<'w> {
     player_start: Res<'w, PlayerStartPoseResource>,
     route: Res<'w, crate::RouteDir>,
     msts_root: Res<'w, crate::MstsRootDir>,
+    cycle: ResMut<'w, openrailsrs_bevy_scenery::ScenerySpawnCycle>,
+    progress_msg: MessageWriter<'w, openrailsrs_bevy_scenery::ScenerySpawnProgress>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1011,7 +1021,7 @@ pub fn finish_world_load(
     screen: Res<LoadingScreen>,
     loading_cams: Query<Entity, With<Camera2d>>,
     perf: Res<LoadPerfState>,
-    finish: WorldLoadFinish,
+    mut finish: WorldLoadFinish,
     texture_env: Res<crate::textures::TextureEnvironment>,
     mut tex_stats: ResMut<TextureLoadStats>,
     track_stats: Res<TrackSpawnStats>,
@@ -1025,6 +1035,8 @@ pub fn finish_world_load(
         player_start,
         route,
         msts_root,
+        ref mut cycle,
+        ref mut progress_msg,
     } = finish;
     let LoadStage::Finished {
         index,
@@ -1034,6 +1046,19 @@ pub fn finish_world_load(
     else {
         return;
     };
+
+    // Guard: LoadStage::Finished can be observed only once per cycle (#52).
+    if !cycle.active {
+        return;
+    }
+    cycle.set_phase(openrailsrs_bevy_scenery::ScenerySpawnPhase::Ready);
+    progress_msg.write(openrailsrs_bevy_scenery::ScenerySpawnProgress::new(
+        cycle,
+        1.0,
+        "ready",
+    ));
+    cycle.note_spawn_work();
+    cycle.finish();
 
     if let Some(terrain) = terrain_saved.as_ref() {
         let mut obj_ctx = obj_ctx.clone();

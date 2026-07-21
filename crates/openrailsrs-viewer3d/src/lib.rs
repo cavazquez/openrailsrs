@@ -98,6 +98,8 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        use openrailsrs_bevy_scenery::ScenerySpawnSet;
+
         app.add_plugins(openrailsrs_bevy_scenery::OrSceneryPlugins)
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
@@ -141,8 +143,8 @@ impl Plugin for ViewerPlugin {
                     water::spawn_water_patches.run_if(launch::full_scenery_active),
                     transfer::spawn_transfer_patches.run_if(launch::full_scenery_active),
                     road_cars::spawn_road_cars.run_if(launch::full_scenery_active),
-                    world::init_world_spawn_progress,
-                    world::init_scenery_stream_state,
+                    world::init_world_spawn_progress.in_set(ScenerySpawnSet::Catalog),
+                    world::init_scenery_stream_state.in_set(ScenerySpawnSet::Ready),
                 )
                     .chain(),
             )
@@ -156,7 +158,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 terrain::progressive_terrain_spawn_system
                     .run_if(launch::full_scenery_active)
-                    .before(world::progressive_world_spawn_system),
+                    .in_set(ScenerySpawnSet::Terrain),
             )
             .add_systems(Update, track::tile_lab_frame_camera_once)
             .add_systems(
@@ -175,28 +177,35 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 world::progressive_world_spawn_system
-                    .after(view_window::sync_view_window_from_train),
+                    .after(view_window::sync_view_window_from_train)
+                    .in_set(ScenerySpawnSet::Objects),
             )
             .add_systems(
                 Update,
-                world::update_world_scenery_lod.after(world::progressive_world_spawn_system),
+                world::update_world_scenery_lod
+                    .after(world::progressive_world_spawn_system)
+                    .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
                 Update,
-                world::world_tile_stream_system.after(view_window::sync_view_window_from_train),
+                world::world_tile_stream_system
+                    .after(view_window::sync_view_window_from_train)
+                    .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
                 Update,
                 world::world_tile_unload_system
                     .after(world::world_tile_stream_system)
-                    .run_if(live::live_mode_active),
+                    .run_if(live::live_mode_active)
+                    .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
                 Update,
                 // After stream + unload so one delta batch covers the frame (#61).
                 tr_item_index::sync_tr_item_world_index
                     .after(world::world_tile_stream_system)
-                    .after(world::world_tile_unload_system),
+                    .after(world::world_tile_unload_system)
+                    .in_set(ScenerySpawnSet::Ready),
             )
             .add_systems(
                 Update,
@@ -208,7 +217,8 @@ impl Plugin for ViewerPlugin {
                     .chain()
                     .after(view_window::sync_view_window_from_train)
                     .run_if(live::live_mode_active)
-                    .run_if(launch::full_scenery_active),
+                    .run_if(launch::full_scenery_active)
+                    .in_set(ScenerySpawnSet::Terrain),
             )
             .add_systems(
                 Update,

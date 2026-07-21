@@ -1414,6 +1414,7 @@ pub fn init_world_spawn_progress(
     world: Res<WorldScene>,
     scene: Res<TrackScene>,
     mode: Res<ViewerSceneryMode>,
+    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
     mut commands: Commands,
 ) {
     if world.is_empty() || !mode.loads_msts_scenery() {
@@ -1424,6 +1425,7 @@ pub fn init_world_spawn_progress(
         world.items.len()
     );
     let placeholder_base = scene.bounds.edge_radius().max(2.0) * 1.5;
+    cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Objects);
     commands.insert_resource(WorldSpawnProgress::new(placeholder_base));
 }
 
@@ -2366,6 +2368,7 @@ pub fn world_tile_stream_system(
     scene: Res<TrackScene>,
     camera: Query<&Transform, With<Camera3d>>,
     progress: Option<Res<WorldSpawnProgress>>,
+    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
     mode: Res<crate::launch::ViewerSceneryMode>,
     mut commands: Commands,
 ) {
@@ -2442,6 +2445,7 @@ pub fn world_tile_stream_system(
             "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) near tile ({cam_tile_x},{cam_tile_z})"
         );
         let placeholder_base = scene.bounds.edge_radius().max(2.0) * 1.5;
+        cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Objects);
         commands.insert_resource(WorldSpawnProgress::new_from_item_index(
             placeholder_base,
             item_base,
@@ -2541,6 +2545,12 @@ pub fn world_tile_unload_system(
     );
 }
 
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct WorldSpawnSession<'w> {
+    session: ResMut<'w, WorldShapeLodCache>,
+    cycle: ResMut<'w, openrailsrs_bevy_scenery::ScenerySpawnCycle>,
+}
+
 /// Continue progressive world spawn across frames so the window stays responsive.
 #[allow(clippy::too_many_arguments)]
 pub fn progressive_world_spawn_system(
@@ -2558,12 +2568,16 @@ pub fn progressive_world_spawn_system(
     assets: Res<RouteAssets>,
     mode: Res<ViewerSceneryMode>,
     wire: Res<crate::overhead_wire::RouteWireConfig>,
-    mut session: ResMut<WorldShapeLodCache>,
+    spawn_session: WorldSpawnSession,
     progress: Option<ResMut<WorldSpawnProgress>>,
 ) {
     let Some(mut progress) = progress else {
         return;
     };
+    let WorldSpawnSession {
+        mut session,
+        mut cycle,
+    } = spawn_session;
     // Spawn culling must follow the mobile view window (camera/train), not only the
     // startup RouteFocus — otherwise streamed tiles far from the anchor never appear.
     let cull_center = window.center_world;
@@ -2833,6 +2847,7 @@ pub fn progressive_world_spawn_system(
             );
             commands.insert_resource(load_diag);
             commit_spawn_to_session(&mut session, &mut progress);
+            cycle.finish();
             commands.remove_resource::<WorldSpawnProgress>();
         }
     }
