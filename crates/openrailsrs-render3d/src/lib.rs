@@ -52,9 +52,10 @@ pub use runtime::{
 pub use stream::{TileCatalog, TileStreamConfig, catalog_entries_for_initial_load};
 pub use terrain::TileGeometry;
 pub use tile_bundle::{
-    TileBundleHandles, ensure_tile_bundle_handle, materialize_loaded_tile_bundles,
-    materialize_tile_bundle_system, render3d_asset_plugin, request_route_tile_bundle,
-    request_tile_bundle, request_tile_bundle_stream_system, try_materialize_tile_entry,
+    MaterializeTileBundles, TileBundleHandles, ensure_tile_bundle_handle,
+    materialize_loaded_tile_bundles, materialize_tile_bundle_system, render3d_asset_plugin,
+    request_route_tile_bundle, request_tile_bundle, request_tile_bundle_stream_system,
+    try_materialize_tile_entry,
 };
 pub use tile_parse::{
     ParsedTiles, TileParseRequest, parse_tiles_for_load, tile_entry_from_snapshot,

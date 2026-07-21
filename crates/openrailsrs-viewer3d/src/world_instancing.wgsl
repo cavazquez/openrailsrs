@@ -1,5 +1,10 @@
+// WORLD GPU instancing (#58): albedo + alpha cutoff + scene directional light + fog (#76).
+// Shadows: #72 (not sampled here).
 #import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
-#import bevy_pbr::mesh_view_bindings::view
+#import bevy_pbr::{
+    mesh_view_bindings as view_bindings,
+    pbr_functions,
+}
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -60,10 +65,30 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     if cutoff > 0.0 && color.a < cutoff {
         discard;
     }
-    // Simple Lambert using view forward as a stand-in light (v1; full PBR later).
+
     let n = normalize(in.world_normal);
-    let light_dir = normalize(vec3<f32>(0.35, 0.9, 0.25));
-    let ndotl = clamp(dot(n, light_dir), 0.25, 1.0);
-    color = vec4<f32>(color.rgb * ndotl, color.a);
-    return color;
+    var lit = color.rgb;
+    let ambient = view_bindings::lights.ambient_color.rgb;
+    if (view_bindings::lights.n_directional_lights > 0u) {
+        let light = view_bindings::lights.directional_lights[0];
+        let light_dir = light.direction_to_light;
+        // Half-Lambert-ish floor so unlit faces stay visible (parity with scenery paths).
+        let ndotl = clamp(dot(n, light_dir) * 0.5 + 0.5, 0.25, 1.0);
+        let light_rgb = light.color.rgb;
+        lit = color.rgb * (ambient + light_rgb * ndotl);
+    } else {
+        lit = color.rgb * max(ambient, vec3<f32>(0.35));
+    }
+
+    var out_color = vec4<f32>(lit, color.a);
+#ifdef DISTANCE_FOG
+    out_color = pbr_functions::apply_fog(
+        view_bindings::fog,
+        out_color,
+        in.world_position.xyz,
+        view_bindings::view.world_position.xyz,
+        in.clip_position.xy,
+    );
+#endif
+    return out_color;
 }

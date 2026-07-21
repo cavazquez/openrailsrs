@@ -212,18 +212,18 @@ Las posiciones absolutas Chiltern son aproximadamente X=-12,45 millones y Z=-30,
 | `.ace` | textura/material | textura/material | Soportado con fallbacks |
 | `.dds` | preferencia OR | soporte parcial según path | Pendiente de validación específica |
 | `sigcfg.dat` | subobjetos/lámparas | loader visual + lámparas (#37) | Filtro mesh por matrix residual |
-| `carspawn.dat` | coches/RDB | sin renderer | No soportado |
+| `carspawn.dat` | coches/RDB | renderer v1 (#32) | Shape + motion sobre chord RDB |
 | `TrProfile` | dyntrack | procedural propio | Parcial, no paridad completa |
 | `.eng/.wag/.con` | shapes + partes animadas | shapes + consist | Modelos sí; animaciones parciales/ausentes |
 | `.cvf` | cabina | cabina 3D/overlay | Parcial, fuera del núcleo de mapa salvo visual |
 
 ## Integración Bevy
 
-- No hay `AssetLoader` custom MSTS; no es por sí mismo un bug visual y no se crea issue de refactor.
+- ~~No hay `AssetLoader` custom MSTS~~ **(#48+: `MstsShape/Ace/World/Terrain/TileBundle` loaders; spawn sync aún coexistente)**.
 - ~~`ViewerPlugin` registra `update_world_shape_anim` sin bindings~~ **(#34: spawn WORLD inserta `ShapeAnimBinding`/`ShapeAnimState` para shapes con controllers; loop FrameRate)**.
 - `WorldItem::Other` conserva nombre/transform, pero pierde el dispatch especializado.
 - TrackObj sin shape resoluble usa procedural cuando puede; con placeholders desactivados puede quedar invisible.
-- ~~`viewer3d` no configura `DistanceFog`~~ **(#39: `camera_distance_fog` + fog en OrTerrain/OrScenery/OrForest; sky-dome sin fog)**.
+- ~~`viewer3d` no configura `DistanceFog`~~ **(#39: `DistanceFog` on by default en cámara jugable; `F` toggle; shaders OrTerrain/OrScenery/OrForest + WORLD instanced (#76); sky-dome sin fog)**.
 - Exterior de tren y varios meshes usan `NotShadowCaster`.
 - ~~Forest genera dos quads cruzados fijos~~ **(#38: 1 quad/árbol + `or_forest.wgsl` SideVector/Eye; alpha mask 200/255)**.
 - La política de layers de cabina/exterior está implementada; no se observó que ocultara el mundo en chase.
@@ -307,7 +307,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#36](https://github.com/cavazquez/openrailsrs/issues/36) | P2 | `[Track] Renderizar catenaria y overhead wires desde TrackObj/Dyntrack` | **Cerrado** — TRK params + wire procedural; RoadShape/HideWire omitidos; Chiltern height 10000 m oculta wire |
 | [#37](https://github.com/cavazquez/openrailsrs/issues/37) | P2 | `[Signals] Renderizar shapes, subobjetos y lámparas MSTS visibles` | **Cerrado** — `SignalUnit`/`SignalSubObj`; `sigcfg` visual; lámparas emisivas; diamante oculto con TrItem |
 | [#38](https://github.com/cavazquez/openrailsrs/issues/38) | P2 | `[Sprites] Orientar Forest billboards a cámara y validar alpha` | **Cerrado** — 1 quad/árbol; `or_forest.wgsl` SideVector/Eye; alpha mask 200/255; test mesh |
-| [#39](https://github.com/cavazquez/openrailsrs/issues/39) | P2 | `[Materials] Aplicar fog atmosférico en openrailsrs-viewer3d` | **Cerrado** — `DistanceFog` en cámara + shaders OR; visibilidad = viewing distance |
+| [#39](https://github.com/cavazquez/openrailsrs/issues/39) | P2 | `[Materials] Aplicar fog atmosférico en openrailsrs-viewer3d` | **Cerrado** — `DistanceFog` on by default (≥ view radius); `F` toggle; shaders OR + instanced (#76) |
 | [#40](https://github.com/cavazquez/openrailsrs/issues/40) | P2 | `[Rolling Stock Visuals] Animar bogies, ruedas, puertas y pantógrafo desde shapes MSTS` | **Cerrado** — drivers v1 (wheel/bogie) + stubs puerta/panto; mesh rest-bake + `ShapeAnimBinding` |
 | [#41](https://github.com/cavazquez/openrailsrs/issues/41) | P2 | `[Rolling Stock Visuals] Permitir sombras del exterior del tren` | **Cerrado** — opacos sin `NotShadowCaster`; transparentes excluidos |
 | [#42](https://github.com/cavazquez/openrailsrs/issues/42) | P2 | `[Terrain] Integrar recepción de sombras en TerrainMaterial` | **Cerrado** — shadow sampling en `terrain.wgsl` (viewer); microtex + fog conservados |
@@ -385,6 +385,25 @@ Hallazgos confirmados:
 7. ~~render3d reconstruye `TileHeightIndex` por tile aunque el lote no cambie~~ **(#63: una construcción por lote Track; stream invalida solo si cambia catálogo/centro)**.
 
 El issue histórico #6 conserva el profiling transversal. Los issues #57–#63 contienen optimizaciones concretas con baseline y criterios de aceptación, evitando duplicar un issue genérico de rendimiento.
+
+## Estado 2026-07-21 (reconciliación #83)
+
+Actualización puntual frente a afirmaciones obsoletas del snapshot 2026-07-20:
+
+| Tema | Antes (doc) | Ahora |
+|---|---|---|
+| Fog viewer (#39) | A veces “OK” con default OFF | **On by default**; visibilidad ≥ `view_radius_m`; `F` apaga |
+| Unload WORLD (#62/#75) | “scans globales resueltos” solo por TileBound | **#75**: índice tile→entity; unload O(candidatos) |
+| LOD distancia (#74) | — | `world_lod_distance_m` = cámara→centro (no suma vía foco) |
+| TileBundle render3d (#77) | Solo bridge/tests | Stream request→materialize→spawn activo |
+| TileBundle loader (#78/#79) | WORLD `loaded` prematuro; doble parse terrain | Eager `load_value` + labeled assets |
+| Instancing shading (#76) | Lambert luz fija | Luz direccional de escena + `apply_fog` (sombras → #72) |
+| CarSpawner (#32) | `carspawn.dat: sin renderer` | Renderer v1 (`road_cars.rs`) |
+| AssetLoaders (#48+) | “no hay AssetLoader MSTS” | Loaders shape/ace/world/terrain/tilebundle |
+| Goldens | “no hay screenshots/golden” | Hay smoke visual CI (`scripts/visual_regression_smoke.sh` / #43); golden OR completo → #71 |
+| CI (#73) | Históricamente rojo por `fmt` temprano | `check.sh` debe completar fmt→clippy→tests→build |
+
+Issues abiertas relevantes tras este corte: [#72](https://github.com/cavazquez/openrailsrs/issues/72) sombras instanced, [#73](https://github.com/cavazquez/openrailsrs/issues/73) CI verde, [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR, [#81](https://github.com/cavazquez/openrailsrs/issues/81)/[#69](https://github.com/cavazquez/openrailsrs/issues/69) rolling stock.
 
 ## Arquitectura compartida (#109–#125)
 

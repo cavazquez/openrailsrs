@@ -273,17 +273,30 @@ pub fn bundle_deps_ready(
     true
 }
 
+/// Inputs for [`materialize_loaded_tile_bundles`] (keeps the helper under clippy arity).
+pub struct MaterializeTileBundles<'a> {
+    pub handles: &'a TileBundleHandles,
+    pub bundles: &'a Assets<MstsTileBundleAsset>,
+    pub worlds: &'a Assets<MstsWorldTileAsset>,
+    pub terrains: &'a Assets<MstsTerrainTileAsset>,
+    pub route: &'a Path,
+    pub center_tile: (i32, i32),
+    pub catalog: &'a mut crate::stream::TileCatalog,
+    pub load_diag: Option<&'a mut MstsLoadDiagnostics>,
+}
+
 /// Poll loaded bundles and materialize any that are Ready/Partial into the catalog.
-pub fn materialize_loaded_tile_bundles(
-    handles: &TileBundleHandles,
-    bundles: &Assets<MstsTileBundleAsset>,
-    worlds: &Assets<MstsWorldTileAsset>,
-    terrains: &Assets<MstsTerrainTileAsset>,
-    route: &Path,
-    center_tile: (i32, i32),
-    catalog: &mut crate::stream::TileCatalog,
-    mut load_diag: Option<&mut MstsLoadDiagnostics>,
-) {
+pub fn materialize_loaded_tile_bundles(ctx: MaterializeTileBundles<'_>) {
+    let MaterializeTileBundles {
+        handles,
+        bundles,
+        worlds,
+        terrains,
+        route,
+        center_tile,
+        catalog,
+        mut load_diag,
+    } = ctx;
     for ((tx, tz), handle) in &handles.by_tile {
         if catalog
             .entries
@@ -349,23 +362,26 @@ pub fn request_tile_bundle_stream_system(
     }
 }
 
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct MaterializeTileBundleParams<'w> {
+    server: Res<'w, AssetServer>,
+    handles: Res<'w, TileBundleHandles>,
+    bundles: Res<'w, Assets<MstsTileBundleAsset>>,
+    worlds: Res<'w, Assets<MstsWorldTileAsset>>,
+    terrains: Res<'w, Assets<MstsTerrainTileAsset>>,
+    route: Res<'w, crate::runtime::RouteDir>,
+    config: Res<'w, crate::stream::TileStreamConfig>,
+    catalog: ResMut<'w, crate::stream::TileCatalog>,
+    load_diag: ResMut<'w, MstsLoadDiagnostics>,
+}
+
 /// Bevy system: append catalog entries from AssetServer-backed tile bundles (#53 / #77).
-pub fn materialize_tile_bundle_system(
-    server: Res<AssetServer>,
-    handles: Res<TileBundleHandles>,
-    bundles: Res<Assets<MstsTileBundleAsset>>,
-    worlds: Res<Assets<MstsWorldTileAsset>>,
-    terrains: Res<Assets<MstsTerrainTileAsset>>,
-    route: Res<crate::runtime::RouteDir>,
-    config: Res<crate::stream::TileStreamConfig>,
-    mut catalog: ResMut<crate::stream::TileCatalog>,
-    mut load_diag: ResMut<MstsLoadDiagnostics>,
-) {
+pub fn materialize_tile_bundle_system(mut p: MaterializeTileBundleParams) {
     // Skip handles that have not finished loading (or failed).
     let ready_handles = {
         let mut filtered = TileBundleHandles::default();
-        for ((tx, tz), handle) in &handles.by_tile {
-            match server.get_load_state(handle) {
+        for ((tx, tz), handle) in &p.handles.by_tile {
+            match p.server.get_load_state(handle) {
                 Some(LoadState::Loaded) => {
                     filtered.insert(*tx, *tz, handle.clone());
                 }
@@ -375,16 +391,16 @@ pub fn materialize_tile_bundle_system(
         }
         filtered
     };
-    materialize_loaded_tile_bundles(
-        &ready_handles,
-        &bundles,
-        &worlds,
-        &terrains,
-        &route.0,
-        config.center_tile,
-        &mut catalog,
-        Some(&mut load_diag),
-    );
+    materialize_loaded_tile_bundles(MaterializeTileBundles {
+        handles: &ready_handles,
+        bundles: &p.bundles,
+        worlds: &p.worlds,
+        terrains: &p.terrains,
+        route: &p.route.0,
+        center_tile: p.config.center_tile,
+        catalog: &mut p.catalog,
+        load_diag: Some(&mut p.load_diag),
+    });
 }
 
 #[cfg(test)]
@@ -506,16 +522,16 @@ mod tests {
         let mut diag = MstsLoadDiagnostics::default();
         {
             let world = app.world();
-            materialize_loaded_tile_bundles(
-                &handles,
-                world.resource::<Assets<MstsTileBundleAsset>>(),
-                world.resource::<Assets<MstsWorldTileAsset>>(),
-                world.resource::<Assets<MstsTerrainTileAsset>>(),
-                Path::new("."),
-                (-1000, -1000),
-                &mut catalog,
-                Some(&mut diag),
-            );
+            materialize_loaded_tile_bundles(MaterializeTileBundles {
+                handles: &handles,
+                bundles: world.resource::<Assets<MstsTileBundleAsset>>(),
+                worlds: world.resource::<Assets<MstsWorldTileAsset>>(),
+                terrains: world.resource::<Assets<MstsTerrainTileAsset>>(),
+                route: Path::new("."),
+                center_tile: (-1000, -1000),
+                catalog: &mut catalog,
+                load_diag: Some(&mut diag),
+            });
         }
         assert_eq!(catalog.entries.len(), 1);
         let entry = catalog.entries[0].clone();

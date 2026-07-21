@@ -738,4 +738,26 @@ mod tests {
         let d = crate::world::world_lod_distance_m(cam, center);
         assert!((d - 50.0).abs() < 1e-4);
     }
+
+    #[test]
+    fn instancing_shader_uses_scene_light_and_fog() {
+        // #76: must not hardcode a fixed light_dir; fog via Bevy DISTANCE_FOG.
+        let src = include_str!("world_instancing.wgsl");
+        assert!(
+            src.contains("directional_lights"),
+            "shader must sample scene directional light"
+        );
+        assert!(
+            !src.contains("vec3<f32>(0.35, 0.9, 0.25)"),
+            "hardcoded Lambert light_dir must be removed"
+        );
+        assert!(
+            src.contains("apply_fog") && src.contains("DISTANCE_FOG"),
+            "shader must apply Bevy distance fog when the view key enables it"
+        );
+        assert!(
+            src.contains("alpha_cutoff") || src.contains("cutoff"),
+            "alpha cutoff path must remain"
+        );
+    }
 }
