@@ -50,10 +50,12 @@ pub fn resolve_pat_start_pose(
         return None;
     }
 
-    let global = if let Some(g) = graph {
-        global_from_graph(g, &path, distance_m)?
-    } else if path.pdps.iter().any(|p| p.world.is_some()) {
+    // Prefer TrackPDP world polyline when present — graph placement must not invent
+    // TDB node ids from OR junction/invalid flags.
+    let global = if path.has_world_pdps() {
         global_from_pat_world(&path, distance_m)?
+    } else if let Some(g) = graph {
+        global_from_graph(g, &path, distance_m)?
     } else {
         let tdb = tdb?;
         global_from_tdb(tdb, &path, distance_m)?
@@ -219,8 +221,11 @@ fn global_from_graph(graph: &TrackGraph, path: &PathFile, distance_m: f64) -> Op
     let pat_nodes: Vec<String> = path
         .pdps
         .iter()
-        .map(|p| format!("n{}", p.node_id))
+        .filter_map(|p| p.node_id.map(|id| format!("n{id}")))
         .collect();
+    if pat_nodes.is_empty() {
+        return None;
+    }
     let (start_node, offset) = placement_from_pat_distance(graph, &pat_nodes, distance_m)?;
     let destination = pat_nodes.last()?.clone();
     let edge_ids = edge_path(graph, &start_node, &destination).ok()?;
@@ -290,7 +295,7 @@ fn global_from_pat_world(path: &PathFile, distance_m: f64) -> Option<(Vec3, f32)
 
 fn global_from_tdb(tdb: &TrackDbFile, path: &PathFile, distance_m: f64) -> Option<(Vec3, f32)> {
     let (node_idx, offset) = pat_node_at_distance(path, distance_m)?;
-    let node_id = path.pdps.get(node_idx)?.node_id;
+    let node_id = path.pdps.get(node_idx)?.node_id?;
     let node = tdb.node_by_id(node_id)?;
     let base = tdb_node_world(node)?;
     let yaw = tdb_node_heading(node).unwrap_or(0.0);
@@ -578,8 +583,9 @@ mod tests {
             name: String::new(),
             pdps: vec![
                 PathDataPoint {
-                    node_id: 1,
-                    junction_flag: 0,
+                    node_id: None,
+                    junction_flag: 1,
+                    invalid_flag: 0,
                     world: Some(TrackVectorPoint {
                         tile_x: 0,
                         tile_z: 0,
@@ -589,8 +595,9 @@ mod tests {
                     }),
                 },
                 PathDataPoint {
-                    node_id: 2,
-                    junction_flag: 0,
+                    node_id: None,
+                    junction_flag: 2,
+                    invalid_flag: 0,
                     world: Some(TrackVectorPoint {
                         tile_x: 0,
                         tile_z: 0,

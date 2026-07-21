@@ -695,11 +695,16 @@ fn chiltern_birmingham_import_uses_pat_placement() {
     let pat = route_dir.join("PATHS/RS_Let's go to Birmingham.pat");
     let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
     let direct = placement_from_imported_route(&out, &pat, offset).expect("direct placement");
-    assert_eq!(direct.start, "n3", "direct placement start");
+    assert_eq!(direct.start, "n17368", "TrackPDP world snap at Paddington platform");
+    assert!(
+        (direct.start_offset_m - 166.735).abs() < 1.0,
+        "expected ~167 m along platform edge, got {}",
+        direct.start_offset_m
+    );
     let (toml, _, overlay_applied) =
         import_activity_with_summary(route_dir, &act, Some(&out)).expect("import activity");
     assert!(
-        toml.contains("start = \"n3\""),
+        toml.contains("start = \"n17368\""),
         "player_path={} service={:?} offset={offset} direct_start={} scenario:\n{}",
         activity.player_path,
         activity.player_service_id,
@@ -742,9 +747,15 @@ fn document_birmingham_pat_for_study() {
     let path_file = PathFile::from_path(&pat).expect("parse Birmingham.pat");
     eprintln!("pat name: {}", path_file.name);
     eprintln!("pdps: {}", path_file.pdps.len());
-    eprintln!("first 10 PDPs (tdb_id, junction_flag):");
+    eprintln!("first 10 PDPs (node_id?, junction_flag, invalid_flag, world?):");
     for (i, p) in path_file.pdps.iter().take(10).enumerate() {
-        eprintln!("  [{i}] {} {}", p.node_id, p.junction_flag);
+        eprintln!(
+            "  [{i}] {:?} {} {} world={}",
+            p.node_id,
+            p.junction_flag,
+            p.invalid_flag,
+            p.world.is_some()
+        );
     }
     eprintln!("last 5 PDPs:");
     for (i, p) in path_file
@@ -753,7 +764,10 @@ fn document_birmingham_pat_for_study() {
         .enumerate()
         .skip(path_file.pdps.len().saturating_sub(5))
     {
-        eprintln!("  [{i}] {} {}", p.node_id, p.junction_flag);
+        eprintln!(
+            "  [{i}] {:?} {} {}",
+            p.node_id, p.junction_flag, p.invalid_flag
+        );
     }
 
     let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);

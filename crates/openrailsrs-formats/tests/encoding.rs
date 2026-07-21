@@ -183,5 +183,12 @@ fn chiltern_birmingham_pat_start_node() {
     }
     let pat = openrailsrs_formats::PathFile::from_path(path).expect("parse pat");
     assert!(pat.pdps.len() > 10);
-    assert!(pat.start_node().is_some());
+    assert!(pat.has_world_pdps());
+    // Native TrackPDP: last two ints are junction/invalid flags, not TDB node ids.
+    assert!(pat.pdps[0].node_id.is_none());
+    assert_eq!(pat.pdps[0].junction_flag, 1);
+    assert_eq!(pat.pdps[0].invalid_flag, 0);
+    let w = pat.pdps[0].world.expect("PAT start world");
+    assert_eq!(w.tile_x, -6079);
+    assert_eq!(w.tile_z, 14925);
 }

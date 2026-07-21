@@ -1,11 +1,11 @@
 //! Parser for MSTS Path (`.pat`) files.
 //!
-//! A `.pat` file describes an ordered sequence of track nodes that constitute
-//! a train path through the route.  The key section is `TrackPDP` (Track Path
-//! Data Points), each of which references a `TrackNode` ID and carries a
-//! junction-direction flag.
+//! A `.pat` file describes an ordered sequence of track path data points.
+//! Native MSTS editor files use `TrackPDP (tileX tileZ x y z flag1 flag2)` where
+//! `flag1`/`flag2` are junction/invalid flags (Open Rails `PathFile.cs`) — **not**
+//! TDB node IDs. Compact fixtures may use `TrPathPDP (node_id junction_flag)`.
 //!
-//! Example (simplified):
+//! Example (simplified TrPathPDP fixture):
 //! ```text
 //! SIMISA@@@@@@@@@@JINX0T0t______
 //! (TrPathNode
@@ -29,12 +29,21 @@ use super::{atom_to_number, atom_to_string};
 /// One point along the path.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PathDataPoint {
-    /// `TrackNode` ID referenced by this data point.
-    pub node_id: u32,
-    /// Junction direction:  0 = straight / main, 1 = diverging, -1 = reverse.
+    /// TDB `TrackNode` ID when present (`TrPathPDP` / legacy). Native `TrackPDP` has none.
+    pub node_id: Option<u32>,
+    /// Junction flag (OR `flag1`): 2 ≈ junction, 1 ≈ endpoint / intermediate, etc.
     pub junction_flag: i32,
+    /// Invalid / broken-path flag (OR `flag2`). Bit 3 set (8/9/12/13) often means broken.
+    pub invalid_flag: i32,
     /// World position from native `TrackPDP` lines, when present.
     pub world: Option<TrackVectorPoint>,
+}
+
+impl PathDataPoint {
+    /// True when Open Rails would treat this PDP as invalid (`invalidFlag == 9`).
+    pub fn is_invalid(&self) -> bool {
+        self.invalid_flag == 9
+    }
 }
 
 /// Parsed representation of a `.pat` file.
@@ -42,7 +51,7 @@ pub struct PathDataPoint {
 pub struct PathFile {
     /// Human-readable name of the path (from `TrPathName`).
     pub name: String,
-    /// Ordered sequence of node references.
+    /// Ordered sequence of path data points.
     pub pdps: Vec<PathDataPoint>,
 }
 
@@ -73,14 +82,19 @@ impl PathFile {
         Ok(file)
     }
 
-    /// First node ID in the path (start).
+    /// First TDB node ID in the path, when PDPs carry node ids (`TrPathPDP`).
     pub fn start_node(&self) -> Option<u32> {
-        self.pdps.first().map(|p| p.node_id)
+        self.pdps.iter().find_map(|p| p.node_id)
     }
 
-    /// Last node ID in the path (destination).
+    /// Last TDB node ID in the path, when PDPs carry node ids (`TrPathPDP`).
     pub fn end_node(&self) -> Option<u32> {
-        self.pdps.last().map(|p| p.node_id)
+        self.pdps.iter().rev().find_map(|p| p.node_id)
+    }
+
+    /// True when any PDP carries a native world position.
+    pub fn has_world_pdps(&self) -> bool {
+        self.pdps.iter().any(|p| p.world.is_some())
     }
 }
 
@@ -112,17 +126,16 @@ fn collect_pdps(ast: &Ast, out: &mut Vec<PathDataPoint>) {
     let Ast::List(items) = ast else { return };
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        // TrPathPDP <node_id> <junction_flag>
+        // TrPathPDP <node_id> <junction_flag>  (compact / fixture format with real TDB ids)
         if head.eq_ignore_ascii_case("TrPathPDP") && items.len() >= 3 {
-            if let Some(pdp) = pdp_from_node_and_flag(items.get(1), items.get(2)) {
+            if let Some(pdp) = pdp_from_tr_path_pdp(items.get(1), items.get(2)) {
                 out.push(pdp);
                 return;
             }
         }
-        // TrackPDP tileX tileZ x y z node_id junction_flag  (native MSTS editor format)
+        // TrackPDP tileX tileZ x y z junction_flag invalid_flag  (native MSTS / OR PathFile.cs)
         if head.eq_ignore_ascii_case("TrackPDP") && items.len() >= 8 {
-            if let Some(mut pdp) = pdp_from_node_and_flag(items.get(6), items.get(7)) {
-                pdp.world = track_pdp_world_from_ast(items);
+            if let Some(pdp) = pdp_from_track_pdp(items) {
                 out.push(pdp);
             }
             return;
@@ -134,7 +147,7 @@ fn collect_pdps(ast: &Ast, out: &mut Vec<PathDataPoint>) {
     }
 }
 
-fn pdp_from_node_and_flag(node: Option<&Ast>, flag: Option<&Ast>) -> Option<PathDataPoint> {
+fn pdp_from_tr_path_pdp(node: Option<&Ast>, flag: Option<&Ast>) -> Option<PathDataPoint> {
     let node_id = node.and_then(|a| match a {
         Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
         _ => None,
@@ -144,31 +157,37 @@ fn pdp_from_node_and_flag(node: Option<&Ast>, flag: Option<&Ast>) -> Option<Path
         _ => None,
     })?;
     Some(PathDataPoint {
-        node_id,
+        node_id: Some(node_id),
         junction_flag,
+        invalid_flag: 0,
         world: None,
     })
 }
 
-fn track_pdp_world_from_ast(items: &[Ast]) -> Option<TrackVectorPoint> {
+fn pdp_from_track_pdp(items: &[Ast]) -> Option<PathDataPoint> {
     let nums: Vec<f64> = items
         .iter()
         .skip(1)
-        .take(6)
+        .take(7)
         .filter_map(|a| match a {
             Ast::Atom(at) => atom_to_number(at),
             _ => None,
         })
         .collect();
-    if nums.len() < 6 {
+    if nums.len() < 7 {
         return None;
     }
-    Some(TrackVectorPoint {
-        tile_x: nums[0] as i32,
-        tile_z: nums[1] as i32,
-        x: nums[2],
-        y: nums[3],
-        z: nums[4],
+    Some(PathDataPoint {
+        node_id: None,
+        junction_flag: nums[5] as i32,
+        invalid_flag: nums[6] as i32,
+        world: Some(TrackVectorPoint {
+            tile_x: nums[0] as i32,
+            tile_z: nums[1] as i32,
+            x: nums[2],
+            y: nums[3],
+            z: nums[4],
+        }),
     })
 }
 
@@ -192,24 +211,27 @@ fn extract_track_pdps_from_text(text: &str) -> Vec<PathDataPoint> {
             .split_whitespace()
             .filter_map(|t| t.parse().ok())
             .collect();
-        if nums.len() >= 2 {
-            let node_id = nums[nums.len() - 2] as u32;
-            let junction_flag = nums[nums.len() - 1] as i32;
-            let world = if nums.len() >= 7 {
-                Some(TrackVectorPoint {
+        // Native: tileX tileZ x y z junction_flag invalid_flag
+        if nums.len() >= 7 {
+            out.push(PathDataPoint {
+                node_id: None,
+                junction_flag: nums[5] as i32,
+                invalid_flag: nums[6] as i32,
+                world: Some(TrackVectorPoint {
                     tile_x: nums[0] as i32,
                     tile_z: nums[1] as i32,
                     x: nums[2],
                     y: nums[3],
                     z: nums[4],
-                })
-            } else {
-                None
-            };
+                }),
+            });
+        } else if nums.len() >= 2 {
+            // Legacy compact fallback: node_id junction_flag (no world).
             out.push(PathDataPoint {
-                node_id,
-                junction_flag,
-                world,
+                node_id: Some(nums[nums.len() - 2] as u32),
+                junction_flag: nums[nums.len() - 1] as i32,
+                invalid_flag: 0,
+                world: None,
             });
         }
     }
@@ -222,26 +244,51 @@ mod tests {
     use crate::parser::parse_from_first_paren;
 
     #[test]
-    fn parse_track_pdp_native_pat() {
+    fn parse_track_pdp_native_pat_flags_not_node_ids() {
         let text = r#"
 ( TrPathNode
     ( TrPathName "Test" )
     ( TrackPDPs 2
-        ( TrackPDP -6079 14925 -961.337 28.558 -71.912 42 0 )
-        ( TrackPDP -6080 14925 998.528 28.558 306.463 99 1 )
+        ( TrackPDP -6079 14925 -961.337 28.558 -71.912 1 0 )
+        ( TrackPDP -6080 14925 998.528 28.558 306.463 2 0 )
     )
 )"#;
         let ast = parse_from_first_paren(text).expect("parse pat");
         let path = PathFile::from_ast(&ast).expect("path");
         assert_eq!(path.pdps.len(), 2);
-        assert_eq!(path.pdps[0].node_id, 42);
-        assert_eq!(path.pdps[0].junction_flag, 0);
+        assert_eq!(path.pdps[0].node_id, None);
+        assert_eq!(path.pdps[0].junction_flag, 1);
+        assert_eq!(path.pdps[0].invalid_flag, 0);
         let w = path.pdps[0].world.expect("world");
         assert_eq!(w.tile_x, -6079);
         assert!((w.x + 961.337).abs() < 0.01);
-        assert_eq!(path.pdps[1].node_id, 99);
+        assert_eq!(path.pdps[1].node_id, None);
+        assert_eq!(path.pdps[1].junction_flag, 2);
+        assert_eq!(path.pdps[1].invalid_flag, 0);
+        assert!(path.has_world_pdps());
+        assert_eq!(path.start_node(), None);
+        assert_eq!(path.end_node(), None);
+    }
+
+    #[test]
+    fn parse_tr_path_pdp_keeps_real_node_ids() {
+        let text = r#"
+( TrPathNode
+    ( TrPathName "Fixture" )
+    ( TrPathPDPs 2
+        ( TrPathPDP 1 0 )
+        ( TrPathPDP 3 1 )
+    )
+)"#;
+        let ast = parse_from_first_paren(text).expect("parse pat");
+        let path = PathFile::from_ast(&ast).expect("path");
+        assert_eq!(path.pdps.len(), 2);
+        assert_eq!(path.pdps[0].node_id, Some(1));
+        assert_eq!(path.pdps[0].junction_flag, 0);
+        assert_eq!(path.pdps[1].node_id, Some(3));
         assert_eq!(path.pdps[1].junction_flag, 1);
-        assert_eq!(path.start_node(), Some(42));
-        assert_eq!(path.end_node(), Some(99));
+        assert_eq!(path.start_node(), Some(1));
+        assert_eq!(path.end_node(), Some(3));
+        assert!(!path.has_world_pdps());
     }
 }

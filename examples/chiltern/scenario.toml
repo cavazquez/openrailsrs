@@ -6,19 +6,16 @@ description = "Imported from MSTS activity: /home/cristian/Documentos/Open Rails
 
 [route]
 path = "."
-start = "n3"
-destination = "n10770"
-start_offset_m = 305.576
-waypoints = ["n3", "n10770"]
+# Spawn snapped from TrackPDP world start (Paddington Pfm area), not mis-parsed flag→n1→n3+305.
+start = "n17368"
+destination = "n17381"
+start_offset_m = 166.735
+waypoints = ["n17368", "n17381"]
 stops = []
 
 [[route.switches]]
-node = "n10770"
+node = "n17381"
 position = "diverging"
-
-[[route.switches]]
-node = "n10780"
-position = "straight"
 
 [train]
 consist = "consists/birmingham_pullman.con"

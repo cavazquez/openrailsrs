@@ -26,16 +26,9 @@ speed_limit_kmh = 80.467
 edge = "e10771"
 speed_limit_kmh = 80.467
 
-# Live-drive timetable (Birmingham Pullman shuttle, ~136 s OR eval window).
-[[route.stops]]
-node = "n10778"
-arrive_s = 95.0
-depart_s = 100.0
-
-[[route.stops]]
-node = "n10770"
-arrive_s = 136.0
-depart_s = 136.0
+# Stops from the old n3→n10770 corridor are invalid after TrackPDP world spawn
+# (train now starts on Paddington platform track near PAT start). Re-add when the
+# directed graph can follow the full Birmingham PAT outbound.
 
 [gameplay]
 objective = "arrive_on_time"
@@ -45,14 +38,13 @@ penalty_per_second_late = 8.0
 consist = "consists/birmingham_pullman.con"
 
 [viewer3d.world_anchor]
-# Visual-only anchor from Open Rails log near the Birmingham activity start area:
-# {TileX:-6080 TileZ:14925 X:891.831 Y:35.7818 Z:582.756}
-# The viewer accepts the negative OR/internal tile X and maps it to `.w` display X.
-tile_x = -6080
+# PAT TrackPDP start (Paddington platform area) — matches live-drive spawn.
+# TrackPDP ( -6079 14925 -961.337 28.558 -71.912 1 0 )
+tile_x = -6079
 tile_z = 14925
-local_x_m = 891.831
-local_y_m = 35.7818
-local_z_m = 582.756
+local_x_m = -961.337
+local_y_m = 28.558
+local_z_m = -71.912
 
 # Uncomment to hide terrain/shapes and draw continuous track from .tdb (not TrackObj):
 # [viewer3d]
