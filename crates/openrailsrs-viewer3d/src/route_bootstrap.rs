@@ -2,8 +2,10 @@
 
 use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, TryRecvError};
+use std::time::Instant;
 
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 use crate::HudTitle;
 use crate::launch::{RunCorridorPath, ViewerLaunchOpts, ViewerSceneryMode};
@@ -17,6 +19,10 @@ use crate::tr_item_index::TrItemWorldIndex;
 use crate::view_window::ViewWindow;
 use crate::world::{RouteFocus, RouteWorldOffset, WorldScene, WorldTileStream};
 use crate::{live::LiveDrive, view_radius_m};
+
+fn perf_debug_enabled() -> bool {
+    std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some()
+}
 
 /// Estados de arranque del viewer (#55).
 #[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -49,7 +55,59 @@ pub struct RouteLoadBundle {
 pub struct PendingRouteLoad {
     /// `Mutex` porque `mpsc::Receiver` no es `Sync` y Bevy exige `Resource: Sync`.
     pub rx: Mutex<Receiver<Result<RouteLoadBundle, String>>>,
-    pub started: std::time::Instant,
+    pub started: Instant,
+}
+
+/// Process boot clock for startup presentation metrics (#82).
+///
+/// Insert before [`App::run`]. [`log_time_to_first_presented_frame`] reports once
+/// when the primary window has a non-zero size (first Update after Winit/GPU init).
+#[derive(Resource, Debug)]
+pub struct ViewerBootClock {
+    pub started: Instant,
+    pub first_presented_logged: bool,
+}
+
+impl ViewerBootClock {
+    pub fn new(started: Instant) -> Self {
+        Self {
+            started,
+            first_presented_logged: false,
+        }
+    }
+}
+
+/// True when the primary window is sized (proxy for “window actually presented”).
+pub fn primary_window_is_presented(window: &Window) -> bool {
+    window.physical_width() > 0 && window.physical_height() > 0
+}
+
+/// Log `[PERF] time_to_first_presented_ms` once (#82).
+///
+/// Includes Bevy/Winit/GPU plugin init through the first Update with a sized
+/// primary window. Does **not** wait for route parse (`time_to_ready_ms`) or
+/// scenery spawn. Historical “&lt;500 ms to window” claims are not enforced.
+pub fn log_time_to_first_presented_frame(
+    mut clock: ResMut<ViewerBootClock>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+) {
+    if clock.first_presented_logged {
+        return;
+    }
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    if !primary_window_is_presented(window) {
+        return;
+    }
+    clock.first_presented_logged = true;
+    if !perf_debug_enabled() {
+        return;
+    }
+    let ms = clock.started.elapsed().as_secs_f64() * 1000.0;
+    eprintln!(
+        "[PERF] time_to_first_presented_ms={ms:.1} (Bevy+Winit+GPU init → first sized primary window; excludes route parse #55)"
+    );
 }
 
 #[derive(Resource)]
@@ -126,8 +184,10 @@ pub fn poll_route_load(
     match recv {
         Ok(Ok(bundle)) => {
             let elapsed_ms = pending.started.elapsed().as_secs_f64() * 1000.0;
-            if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
-                eprintln!("[PERF] time_to_ready_ms={elapsed_ms:.1}");
+            if perf_debug_enabled() {
+                eprintln!(
+                    "[PERF] time_to_ready_ms={elapsed_ms:.1} (boot → route bundle ready; may be after first presented frame)"
+                );
             }
             crate::viewer_log!(
                 "openrailsrs-viewer3d: route ready in {elapsed_ms:.0} ms — inserting scenes"
@@ -229,6 +289,25 @@ mod tests {
     use super::*;
     use bevy::state::app::StatesPlugin;
     use bevy::state::condition::in_state;
+
+    #[test]
+    fn primary_window_presented_requires_nonzero_size() {
+        let mut window = Window::default();
+        window
+            .resolution
+            .set_physical_resolution(0, 0);
+        assert!(!primary_window_is_presented(&window));
+        window
+            .resolution
+            .set_physical_resolution(1280, 720);
+        assert!(primary_window_is_presented(&window));
+    }
+
+    #[test]
+    fn boot_clock_starts_unlogged() {
+        let clock = ViewerBootClock::new(Instant::now());
+        assert!(!clock.first_presented_logged);
+    }
 
     #[derive(Resource, Default)]
     struct PlayingTicks(u32);

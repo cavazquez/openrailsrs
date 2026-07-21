@@ -55,7 +55,8 @@ use openrailsrs_viewer3d::TrainConsistScene;
 use openrailsrs_viewer3d::ViewerLaunchOpts;
 use openrailsrs_viewer3d::ViewerPlugin;
 use openrailsrs_viewer3d::route_bootstrap::{
-    PendingRouteLoad, RouteLoadBundle, ViewerAppState, poll_route_load, setup_viewer_loading_ui,
+    PendingRouteLoad, RouteLoadBundle, ViewerAppState, ViewerBootClock,
+    log_time_to_first_presented_frame, poll_route_load, setup_viewer_loading_ui,
 };
 use openrailsrs_viewer3d::ViewerSceneryMode;
 use openrailsrs_viewer3d::WorldScene;
@@ -276,12 +277,8 @@ fn main() {
         .expect("spawn route-load thread");
 
     viewer_log!("openrailsrs-viewer3d: starting Bevy app (route load in background, #55)");
-    if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
-        eprintln!(
-            "[PERF] time_to_window_ms={:.1}",
-            boot.elapsed().as_secs_f64() * 1000.0
-        );
-    }
+    // #82: do not log time_to_window here — App/plugins/event loop have not started.
+    // See `log_time_to_first_presented_frame` → `[PERF] time_to_first_presented_ms=…`.
 
     let win_w = std::env::var("OPENRAILSRS_WINDOW_WIDTH")
         .ok()
@@ -313,13 +310,17 @@ fn main() {
         rx: std::sync::Mutex::new(rx),
         started: boot,
     })
+    .insert_resource(ViewerBootClock::new(boot))
     .add_plugins(ViewerPlugin)
     .add_systems(Startup, setup_viewer_loading_ui)
     .add_systems(
         Update,
-        poll_route_load.run_if(in_state(ViewerAppState::Loading)),
-    )
-    .add_systems(Update, exit_on_esc);
+        (
+            log_time_to_first_presented_frame,
+            poll_route_load.run_if(in_state(ViewerAppState::Loading)),
+            exit_on_esc,
+        ),
+    );
 
     app.run();
 }

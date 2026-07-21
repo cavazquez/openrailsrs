@@ -93,7 +93,9 @@ pub use shapes::RouteAssets;
 pub use terrain::{TerrainElevation, TerrainScene};
 pub use track::{TrackRenderMode, TrackScene};
 pub use train::ReplayState;
-pub use route_bootstrap::{ViewerAppState, viewer_playing};
+pub use route_bootstrap::{
+    ViewerAppState, ViewerBootClock, log_time_to_first_presented_frame, viewer_playing,
+};
 pub use world::WorldScene;
 
 /// Plugin that wires up the camera, scene and update systems for the

@@ -338,11 +338,23 @@ Referencia: [`track_position.rs`](../crates/openrailsrs-viewer3d/src/track_posit
 3. Y: TDB absoluto + RouteFocus.to_render_surface (sin aplanar con ground_y_at; #65/#67)
 ```
 
+### Startup PERF (#82 / #55)
+
+With `OPENRAILSRS_PERF_DEBUG=1`:
+
+| Metric | When | Includes |
+|--------|------|----------|
+| `time_to_first_presented_ms` | First Update with a sized primary window | Bevy plugins, Winit, GPU/swapchain init — **not** route parse |
+| `time_to_ready_ms` | Route background thread finishes | Boot → `RouteLoadBundle` ready (may be after first presented frame) |
+
+Do **not** treat a pre-`App::run` “time_to_window” stamp as “window visible”. There is no fixed &lt;500 ms SLO without a measured baseline on target hardware.
+
 ### Variables
 
 | Variable | Default | Rol |
 |----------|---------|-----|
 | `OPENRAILSRS_TDB_SNAP_RADIUS_M` | 2500 | Radio máximo XZ hint grafo → centreline TDB (50–10000 m) |
+| `OPENRAILSRS_PERF_DEBUG` | unset | Log `[PERF]` spans (startup presentation, LOD, unload, …) |
 
 Constante: `TDB_GRAPH_SNAP_RADIUS_M` en `track_position.rs` (cubre desfase Chiltern ~1835 m).
 
