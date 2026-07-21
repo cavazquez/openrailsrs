@@ -1901,8 +1901,8 @@ fn append_shape_spawn_entries_for_transforms(
                     MeshMaterial3d(part.material.clone()),
                     Name::new("world:anim"),
                     WorldSceneryLod {
-                        // LOD mesh swaps fight animated Transform updates.
-                        enabled: false,
+                        // LOD stays on; swap re-applies anim delta without resetting key (#100).
+                        enabled: true,
                         shape_path: shape_path.to_path_buf(),
                         prim_state_idx: part.prim_state_idx,
                         part_index,
@@ -3311,12 +3311,23 @@ pub fn progressive_world_spawn_system(
 }
 
 /// Swap world shape meshes when the camera crosses MSTS `dlevel_selection` thresholds.
+///
+/// Animated WORLD parts keep [`ShapeAnimState::key`] across swaps and re-apply the
+/// baked-rest delta on the new mesh (#100).
+#[allow(clippy::type_complexity)]
 pub fn update_world_scenery_lod(
     cache: Option<Res<WorldShapeLodCache>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     focus: Option<Res<RouteFocus>>,
     mut lod_cam: ResMut<WorldLodCameraState>,
-    mut parts: Query<(&GlobalTransform, &mut WorldSceneryLod, &mut Mesh3d)>,
+    mut parts: Query<(
+        &GlobalTransform,
+        &mut WorldSceneryLod,
+        &mut Mesh3d,
+        Option<&mut ShapeAnimState>,
+        Option<&mut ShapeAnimBinding>,
+        Option<&mut Transform>,
+    )>,
 ) {
     let Some(cache) = cache else {
         return;
@@ -3341,7 +3352,7 @@ pub fn update_world_scenery_lod(
     let mut scanned = 0u32;
     let mut swapped = 0u32;
 
-    for (gt, mut lod, mut mesh3d) in &mut parts {
+    for (gt, mut lod, mut mesh3d, anim_state, anim_binding, transform) in &mut parts {
         if !lod.enabled {
             continue;
         }
@@ -3368,6 +3379,26 @@ pub fn update_world_scenery_lod(
         };
         mesh3d.0 = part.mesh.clone();
         lod.lod_idx = new_lod;
+        lod.prim_state_idx = part.prim_state_idx;
+        if let (Some(mut state), Some(mut binding), Some(mut tf)) =
+            (anim_state, anim_binding, transform)
+        {
+            let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
+            state.matrix_idx = matrix_idx;
+            binding.matrix_idx = matrix_idx;
+            if binding.baked_rest_mesh {
+                let pose = openrailsrs_bevy_scenery::shapes::animation_pose_matrices(
+                    &binding.shape,
+                    state.key,
+                );
+                *tf = openrailsrs_bevy_scenery::shapes::world_baked_anim_transform(
+                    binding.placement,
+                    &binding.shape,
+                    matrix_idx,
+                    &pose,
+                );
+            }
+        }
         swapped += 1;
     }
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() && scanned > 0 {

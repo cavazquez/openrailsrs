@@ -3,12 +3,22 @@
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, Matrix43, ShapeFile};
 use openrailsrs_or_shader::coordinates::{
-    hierarchy_chain_transform, matrix43_to_transform, static_hierarchy_chain_transform,
+    hierarchy_chain_transform, matrix43_to_transform, shape_zero_root_translation,
+    static_hierarchy_chain_transform,
 };
 
 /// Build animated pose matrices for all shape bones at animation key `key`.
+///
+/// Open Rails applies `anim_nodes[i]` to matrix `i` (`AnimateOneMatrix(iMatrix)`);
+/// the node name is diagnostic only (#99). When the shape uses a zero-root hierarchy,
+/// matrix 0 translation is cleared before controllers run (OR `SharedShape` load, #94).
 pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
     let mut pose: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
+    if shape_zero_root_translation(shape) {
+        if let Some(root) = pose.get_mut(0) {
+            root.rows[3] = [0.0, 0.0, 0.0];
+        }
+    }
     let Some(anim) = shape.animations.first() else {
         return pose;
     };
@@ -16,15 +26,10 @@ pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
         if node.controllers.is_empty() {
             continue;
         }
-        let idx = shape
-            .matrices
-            .iter()
-            .position(|m| m.name.eq_ignore_ascii_case(&node.name))
-            .unwrap_or(i);
-        if idx >= pose.len() {
+        if i >= pose.len() {
             continue;
         }
-        pose[idx] = animate_matrix(pose[idx], &node.controllers, key);
+        pose[i] = animate_matrix(pose[i], &node.controllers, key);
     }
     pose
 }
@@ -329,5 +334,92 @@ mod tests {
         assert!(mid.translation.is_finite());
         assert!((rest.translation - placement.translation).length() < 1e-3);
         assert!((mid.translation.y - rest.translation.y).abs() > 1.0);
+    }
+
+    /// Root static translation must not leak into the baked-rest delta (#94).
+    #[test]
+    fn zero_root_keeps_key0_at_placement() {
+        use openrailsrs_formats::{DistanceLevel, LodControl};
+
+        let mut root = identity_matrix();
+        root.rows[3] = [5.0, 0.0, 0.0];
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(NamedMatrix {
+            name: "ROOT".into(),
+            matrix: root,
+        });
+        shape.lod_controls.push(LodControl {
+            distance_levels: vec![DistanceLevel {
+                selection_m: 1000.0,
+                hierarchy: vec![-1],
+                sub_objects: vec![],
+            }],
+        });
+        // LinearPos keys are absolute in the post-zero-root space (OR SharedShape).
+        shape.animations.push(Animation {
+            frame_count: 10,
+            frame_rate: 10,
+            nodes: vec![AnimNode {
+                name: "ROOT".into(),
+                controllers: vec![AnimController::LinearPos {
+                    keys: vec![(0.0, [0.0, 0.0, 0.0]), (10.0, [10.0, 0.0, 0.0])],
+                }],
+            }],
+        });
+        let placement = Transform::from_translation(Vec3::new(100.0, 0.0, 0.0));
+        let rest =
+            world_baked_anim_transform(placement, &shape, 0, &animation_pose_matrices(&shape, 0.0));
+        let mid =
+            world_baked_anim_transform(placement, &shape, 0, &animation_pose_matrices(&shape, 5.0));
+        assert!(
+            (rest.translation - placement.translation).length() < 1e-3,
+            "key0 must match placement; got {:?} vs {:?}",
+            rest.translation,
+            placement.translation
+        );
+        // Without zero-root, rest would keep static +5 and mid (5) would delta≈0;
+        // with OR policy, mid absolute +5 from zeroed rest → delta ≈ +5 Bevy X.
+        let dx = mid.translation.x - rest.translation.x;
+        assert!(
+            (dx - 5.0).abs() < 0.5,
+            "mid key should advance ~5 along X (OR absolute on zeroed root), got {dx}"
+        );
+    }
+
+    /// Controllers bind by anim_node index, not matrix name (#99).
+    #[test]
+    fn anim_nodes_bind_by_matrix_index() {
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(NamedMatrix {
+            name: "BONE_A".into(),
+            matrix: identity_matrix(),
+        });
+        shape.matrices.push(NamedMatrix {
+            name: "BONE_B".into(),
+            matrix: identity_matrix(),
+        });
+        // Node 0 named like bone B, but must drive matrix 0.
+        shape.animations.push(Animation {
+            frame_count: 10,
+            frame_rate: 10,
+            nodes: vec![
+                AnimNode {
+                    name: "BONE_B".into(),
+                    controllers: vec![AnimController::LinearPos {
+                        keys: vec![(0.0, [0.0, 0.0, 0.0]), (10.0, [0.0, 10.0, 0.0])],
+                    }],
+                },
+                AnimNode {
+                    name: "BONE_A".into(),
+                    controllers: vec![],
+                },
+            ],
+        });
+        let pose = animation_pose_matrices(&shape, 10.0);
+        assert!((pose[0].rows[3][1] - 10.0).abs() < 1e-4, "index 0 must move");
+        assert!(
+            pose[1].rows[3][1].abs() < 1e-4,
+            "index 1 must stay at rest despite name match"
+        );
     }
 }

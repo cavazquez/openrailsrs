@@ -270,8 +270,9 @@ pub fn matrix43_to_transform(m: &Matrix43) -> Transform {
 
 /// True when LOD0 hierarchy marks matrix 0 as root (`hierarchy[0] == -1`).
 ///
-/// Cab mesh bake uses `zero_translation` on that root so rebased lever poses must match.
-fn shape_zero_root_translation(shape: &ShapeFile) -> bool {
+/// Mesh bake (`primitive_matrix_chain_bake_ex`) and OR runtime zero the root
+/// translation (M41/M42/M43); pose chains must match (#94).
+pub fn shape_zero_root_translation(shape: &ShapeFile) -> bool {
     shape
         .lod_controls
         .first()
@@ -349,6 +350,10 @@ fn transform_from_xna_matrix_chain(chain: &[(&Matrix43, bool)]) -> Transform {
 }
 
 /// Walk shape hierarchy from `leaf` to root, multiplying pose matrices (OR `PrepareFrame` order).
+///
+/// Pose matrices are used as-is (OR already zeros root translation in the shared
+/// rest copy before controllers run). Use [`static_hierarchy_chain_transform`] for
+/// rest poses that still need root zeroing (#94).
 pub fn hierarchy_chain_transform(
     shape: &ShapeFile,
     leaf: usize,
@@ -406,10 +411,13 @@ fn hierarchy_chain_transform_inner(
         .unwrap_or(Transform::IDENTITY)
 }
 
-/// Static rest pose for a cab bone (shape file matrices, no animation).
+/// Static rest pose for a bone (shape file matrices, no animation).
+///
+/// Matches mesh bake / OR `SharedShape` load: when hierarchy root is matrix 0,
+/// its translation is zeroed (#94).
 pub fn static_hierarchy_chain_transform(shape: &ShapeFile, leaf: usize) -> Transform {
     let mats: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
-    hierarchy_chain_transform(shape, leaf, &mats)
+    hierarchy_chain_transform_inner(shape, leaf, &mats, shape_zero_root_translation(shape))
 }
 
 /// Static cab bone pose aligned with cab mesh bake (`zero_translation` on matrix 0).
