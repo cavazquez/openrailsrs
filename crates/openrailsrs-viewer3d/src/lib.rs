@@ -64,6 +64,7 @@ pub mod view_window;
 pub mod water;
 pub mod world;
 pub mod world_instancing;
+pub mod world_tile_index;
 
 #[cfg(test)]
 mod app_floating;
@@ -140,6 +141,8 @@ impl Plugin for ViewerPlugin {
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<world::WorldShapeLodCache>()
             .init_resource::<world::WorldLodCameraState>()
+            .init_resource::<world_tile_index::WorldTileEntityIndex>()
+            .init_resource::<world_tile_index::WorldShapeLiveRefs>()
             .init_resource::<tile_bundle::TileBundleHandles>()
             .init_resource::<launch::ViewerSceneryMode>()
             .init_resource::<launch::RunCorridorPath>()
@@ -220,6 +223,17 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 (
+                    world_tile_index::index_world_tile_bound_added,
+                    world_tile_index::index_world_tile_bound_removed,
+                    world_tile_index::track_world_shape_live_refs_added,
+                    world_tile_index::track_world_shape_live_refs_removed,
+                )
+                    .run_if(in_state(ViewerAppState::Playing))
+                    .in_set(ScenerySpawnSet::Ready),
+            )
+            .add_systems(
+                Update,
+                (
                     world::world_tile_stream_system,
                     world::world_tile_bundle_materialize_system,
                     world::world_tile_unload_system.run_if(live::live_mode_active),
@@ -227,6 +241,8 @@ impl Plugin for ViewerPlugin {
                     world::world_stream_scenery_system,
                 )
                     .chain()
+                    .after(world_tile_index::index_world_tile_bound_added)
+                    .after(world_tile_index::track_world_shape_live_refs_added)
                     .after(view_window::sync_view_window_from_train)
                     .run_if(in_state(ViewerAppState::Playing))
                     .in_set(ScenerySpawnSet::Ready),

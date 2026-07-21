@@ -2948,66 +2948,55 @@ pub fn world_tile_bundle_materialize_system(
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
-pub struct WorldUnloadQueries<'w, 's> {
-    scenery: Query<
+pub struct WorldUnloadParams<'w, 's> {
+    world: ResMut<'w, WorldScene>,
+    stream: ResMut<'w, WorldTileStream>,
+    handles: ResMut<'w, crate::tile_bundle::TileBundleHandles>,
+    tile_index: ResMut<'w, crate::world_tile_index::WorldTileEntityIndex>,
+    shape_refs: Res<'w, crate::world_tile_index::WorldShapeLiveRefs>,
+    window: Res<'w, crate::view_window::ViewWindow>,
+    opts: Res<'w, crate::launch::ViewerLaunchOpts>,
+    focus: Res<'w, RouteFocus>,
+    origin: Res<'w, crate::floating_origin::FloatingOrigin>,
+    mode: Res<'w, ViewerSceneryMode>,
+    progress: Option<Res<'w, WorldSpawnProgress>>,
+    session: ResMut<'w, WorldShapeLodCache>,
+    commands: Commands<'w, 's>,
+    meshes: ResMut<'w, Assets<Mesh>>,
+    images: ResMut<'w, Assets<Image>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    legacy_scenery: Query<
         'w,
         's,
-        (
-            Entity,
-            &'static Transform,
-            &'static WorldSceneryLod,
-            Option<&'static WorldTileBound>,
-        ),
+        (Entity, &'static Transform, &'static WorldSceneryLod),
+        Without<WorldTileBound>,
     >,
-    tile_bound: Query<'w, 's, (Entity, &'static WorldTileBound), Without<WorldSceneryLod>>,
-    instanced: Query<
-        'w,
-        's,
-        (
-            &'static crate::world_instancing::WorldInstancedGroup,
-            &'static WorldTileBound,
-        ),
-    >,
+    stream_state: ResMut<'w, WorldSceneryStreamState>,
 }
 
 /// Unload distant world tiles and despawn scenery meshes in live mode.
-#[allow(clippy::too_many_arguments)]
-pub fn world_tile_unload_system(
-    mut world: ResMut<WorldScene>,
-    mut stream: ResMut<WorldTileStream>,
-    mut handles: ResMut<crate::tile_bundle::TileBundleHandles>,
-    window: Res<crate::view_window::ViewWindow>,
-    opts: Res<crate::launch::ViewerLaunchOpts>,
-    focus: Res<RouteFocus>,
-    origin: Res<crate::floating_origin::FloatingOrigin>,
-    mode: Res<ViewerSceneryMode>,
-    progress: Option<Res<WorldSpawnProgress>>,
-    mut session: ResMut<WorldShapeLodCache>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    unload_q: WorldUnloadQueries,
-    mut stream_state: ResMut<WorldSceneryStreamState>,
-) {
-    if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
+///
+/// Despawn walks only entities indexed on candidate tiles (#75), not all WORLD entities.
+pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
+    if !p.opts.live || !p.mode.loads_msts_scenery() || p.mode.is_tile_lab() {
         return;
     }
     // Same gate as stream: mutating `world.items` mid-classify invalidates `item_index`.
-    if progress.is_some() {
+    if p.progress.is_some() {
         return;
     }
-    let unload_radius = crate::launch::view_unload_radius_m().max(window.radius_m);
-    let center = window.center_world;
-    let policy = view_stream_window_policy(window.radius_m.max(stream.radius_m));
+    let unload_radius = crate::launch::view_unload_radius_m().max(p.window.radius_m);
+    let center = p.window.center_world;
+    let policy = view_stream_window_policy(p.window.radius_m.max(p.stream.radius_m));
     let cam_coord = TileCoord::new(
         msts_tile_x_index_for_coord(center.x),
         msts_tile_z_index_for_coord(center.z),
     );
-    let loaded_coords: HashSet<TileCoord> = stream
+    let loaded_coords: HashSet<TileCoord> = p
+        .stream
         .loaded
         .iter()
-        .chain(stream.pending.iter())
+        .chain(p.stream.pending.iter())
         .copied()
         .map(TileCoord::from)
         .collect();
@@ -3017,69 +3006,60 @@ pub fn world_tile_unload_system(
     for tile in &stream_diff.to_unload {
         let key = (tile.x, tile.z);
         unloaded_tiles.insert(key);
-        stream.loaded.remove(&key);
-        stream.pending.remove(&key);
+        p.stream.loaded.remove(&key);
+        p.stream.pending.remove(&key);
     }
     if unloaded_tiles.is_empty() {
         return;
     }
     // Drop AssetServer strong handles for unloaded tiles (#111 / #51).
-    handles.release_all(unloaded_tiles.iter());
+    p.handles.release_all(unloaded_tiles.iter());
     let unload_t0 = Instant::now();
-    let before = world.items.len();
-    world.note_tr_item_tiles_removed(unloaded_tiles.iter().copied());
-    world
+    let before = p.world.items.len();
+    p.world
+        .note_tr_item_tiles_removed(unloaded_tiles.iter().copied());
+    p.world
         .items
         .retain(|obj| !unloaded_tiles.contains(&(obj.tile_x, obj.tile_z)));
     for key in &unloaded_tiles {
-        world.loaded_tiles.remove(key);
+        p.world.loaded_tiles.remove(key);
     }
-    world.tiles_loaded = world.loaded_tiles.len();
-    stream_state.processed_items = stream_state.processed_items.min(world.items.len());
+    p.world.tiles_loaded = p.world.loaded_tiles.len();
+    p.stream_state.processed_items = p.stream_state.processed_items.min(p.world.items.len());
 
-    // Despawn is deferred: compute live shape refs from entities that stay (#51).
-    // Prefer tile membership (#62); distance only for legacy entities without WorldTileBound.
-    let mut live_shape_paths = HashSet::new();
-    let mut despawned = 0usize;
-    for (entity, tf, lod, bound) in unload_q.scenery.iter() {
-        let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
-        let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
+    // O(candidates): only entities indexed on unloaded tiles (#75).
+    let mut to_despawn = p.tile_index.take_tiles(&unloaded_tiles);
+    let visited = to_despawn.len();
+
+    // Legacy scenery without WorldTileBound: distance fallback (#62).
+    for (entity, tf, _lod) in &p.legacy_scenery {
+        let msts_x = tf.translation.x + p.focus.center.x + p.origin.shift.x;
+        let msts_z = tf.translation.z + p.focus.center.z + p.origin.shift.z;
         let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
-        let unload =
-            scenery_entity_should_unload(bound.copied(), &unloaded_tiles, dist, unload_radius);
-        if unload {
-            commands.entity(entity).despawn();
-            despawned += 1;
-        } else if !lod.shape_path.as_os_str().is_empty() {
-            live_shape_paths.insert(lod.shape_path.clone());
+        if scenery_entity_should_unload(None, &unloaded_tiles, dist, unload_radius) {
+            to_despawn.push(entity);
         }
     }
-    // Collect instanced shape refs before tile-bound despawn (#58 / #51).
-    for (group, bound) in &unload_q.instanced {
-        if !unloaded_tiles.contains(&(bound.tile_x, bound.tile_z))
-            && !group.shape_path.as_os_str().is_empty()
-        {
-            live_shape_paths.insert(group.shape_path.clone());
-        }
+
+    let live_shape_paths = p.shape_refs.live_paths_after_releasing(&to_despawn);
+    let despawned = to_despawn.len();
+    for entity in to_despawn {
+        p.commands.entity(entity).despawn();
     }
-    for (entity, bound) in unload_q.tile_bound.iter() {
-        if unloaded_tiles.contains(&(bound.tile_x, bound.tile_z)) {
-            commands.entity(entity).despawn();
-            despawned += 1;
-        }
-    }
+
     let (shapes_evicted, textures_evicted) = evict_unreferenced_world_shapes(
-        &mut session,
+        &mut p.session,
         &live_shape_paths,
-        &mut meshes,
-        &mut images,
-        &mut materials,
+        &mut p.meshes,
+        &mut p.images,
+        &mut p.materials,
     );
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
         eprintln!(
-            "[PERF] world_tile_unload_ms={:.2} tiles={} despawned={}",
+            "[PERF] world_tile_unload_ms={:.2} tiles={} visited={} despawned={}",
             unload_t0.elapsed().as_secs_f64() * 1000.0,
             unloaded_tiles.len(),
+            visited,
             despawned
         );
     }
@@ -3087,12 +3067,12 @@ pub fn world_tile_unload_system(
         "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items; despawned {} entit(ies); evicted {} shape(s)/{} texture(s); session {}/{} )",
         unloaded_tiles.len(),
         before,
-        world.items.len(),
+        p.world.items.len(),
         despawned,
         shapes_evicted,
         textures_evicted,
-        session.shape_assets.len(),
-        session.texture_images.len()
+        p.session.shape_assets.len(),
+        p.session.texture_images.len()
     );
 }
 
