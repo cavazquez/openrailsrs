@@ -857,6 +857,18 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern")
     }
 
+    /// TEXTURES/SHAPES are gitignored; skip unless `sync_chiltern_assets` was run (#73).
+    fn chiltern_has_synced_textures() -> bool {
+        chiltern_route().join("TEXTURES/poplar15_1.ace").is_file()
+    }
+
+    fn chiltern_has_synced_shapes() -> bool {
+        chiltern_route().join("SHAPES").is_dir()
+            && std::fs::read_dir(chiltern_route().join("SHAPES"))
+                .map(|mut d| d.next().is_some())
+                .unwrap_or(false)
+    }
+
     fn summer_env() -> TextureEnvironment {
         TextureEnvironment {
             season: Season::Summer,
@@ -871,10 +883,10 @@ mod tests {
 
     #[test]
     fn resolve_texture_strips_msts_prefix() {
-        let route = chiltern_route();
-        if !route.is_dir() {
+        if !chiltern_has_synced_textures() {
             return;
         }
+        let route = chiltern_route();
         let env = summer_env();
         assert!(
             resolve_texture_path(&route, r"TEXTURES\poplar15_1.ace", &env, default_flags())
@@ -884,10 +896,10 @@ mod tests {
 
     #[test]
     fn resolve_texture_finds_seasonal_subdir() {
-        let route = chiltern_route();
-        if !route.is_dir() {
+        if !chiltern_has_synced_textures() {
             return;
         }
+        let route = chiltern_route();
         let env = summer_env();
         assert!(resolve_texture_path(&route, "poplar15_1.ace", &env, default_flags()).is_some());
     }
@@ -968,10 +980,31 @@ mod tests {
 
     #[test]
     fn resolve_shape_in_chiltern_shapes() {
-        let route = chiltern_route();
-        if !route.is_dir() {
+        if !chiltern_has_synced_shapes() {
             return;
         }
-        assert!(resolve_shape_path(&route, "smoke1.s").is_some());
+        let route = chiltern_route();
+        // Prefer a well-known Chiltern shape (Windows install uses `Smoke1.s`).
+        let candidate = if resolve_shape_path(&route, "Smoke1.s").is_some() {
+            "Smoke1.s".to_string()
+        } else if resolve_shape_path(&route, "smoke1.s").is_some() {
+            "smoke1.s".to_string()
+        } else {
+            let Some(name) = std::fs::read_dir(route.join("SHAPES"))
+                .ok()
+                .into_iter()
+                .flatten()
+                .filter_map(|e| e.ok())
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .find(|n| n.to_ascii_lowercase().ends_with(".s"))
+            else {
+                return;
+            };
+            name
+        };
+        assert!(
+            resolve_shape_path(&route, &candidate).is_some(),
+            "expected to resolve {candidate}"
+        );
     }
 }

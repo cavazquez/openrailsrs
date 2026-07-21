@@ -1,8 +1,10 @@
-// WORLD GPU instancing (#58): albedo + alpha cutoff + scene directional light + fog (#76).
-// Shadows: #72 (not sampled here).
+// WORLD GPU instancing (#58): albedo + alpha cutoff + scene light + fog (#76) + receive shadows (#72).
+// Casting into the shadow map is still Bevy StandardMaterial / deferred (#72 follow-up).
 #import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
 #import bevy_pbr::{
     mesh_view_bindings as view_bindings,
+    mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT,
+    shadows::fetch_directional_shadow,
     pbr_functions,
 }
 
@@ -74,8 +76,20 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let light_dir = light.direction_to_light;
         // Half-Lambert-ish floor so unlit faces stay visible (parity with scenery paths).
         let ndotl = clamp(dot(n, light_dir) * 0.5 + 0.5, 0.25, 1.0);
+        var shadow_mod = 1.0;
+        if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
+            let world_pos4 = vec4<f32>(in.world_position, 1.0);
+            let view_z = (view_bindings::view.view_from_world * world_pos4).z;
+            shadow_mod = fetch_directional_shadow(
+                0u,
+                world_pos4,
+                n,
+                view_z,
+                in.clip_position.xy,
+            );
+        }
         let light_rgb = light.color.rgb;
-        lit = color.rgb * (ambient + light_rgb * ndotl);
+        lit = color.rgb * (ambient + light_rgb * ndotl * shadow_mod);
     } else {
         lit = color.rgb * max(ambient, vec3<f32>(0.35));
     }

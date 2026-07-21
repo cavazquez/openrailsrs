@@ -760,4 +760,18 @@ mod tests {
             "alpha cutoff path must remain"
         );
     }
+
+    #[test]
+    fn instancing_shader_receives_directional_shadows() {
+        // #72: sample Bevy cascade shadow map (receive). Casting remains StandardMaterial path.
+        let src = include_str!("world_instancing.wgsl");
+        assert!(
+            src.contains("fetch_directional_shadow"),
+            "shader must receive directional shadows"
+        );
+        assert!(
+            src.contains("DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT"),
+            "shadow sampling must respect light flags"
+        );
+    }
 }
