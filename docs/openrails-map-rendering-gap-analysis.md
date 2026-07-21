@@ -106,7 +106,7 @@ Archivos clave:
 flowchart LR
   CLI[viewer3d main] --> Config[LaunchConfig]
   Config --> Parsers["formats route scenarios"]
-  Config --> Resources["TrackScene WorldScene TerrainScene RouteAssets"]
+  Config --> Resources["TrackScene WorldScene TerrainScene RouteAssets(MstsRouteCatalog)"]
   Resources --> Startup[ViewerPlugin Startup]
   Startup --> Entities["Meshes Materials Entities"]
   Entities --> Update["FloatingOrigin LiveTrain ViewWindow"]
@@ -135,6 +135,7 @@ Archivos clave:
 - `crates/openrailsrs-viewer3d/src/camera.rs`
 - `crates/openrailsrs-or-shader/src/coordinates.rs`
 - `crates/openrailsrs-bevy-scenery/src/shapes/`
+- `crates/openrailsrs-bevy-scenery/src/catalog.rs`
 
 ## Comparación de las 20 etapas
 
@@ -142,7 +143,7 @@ Archivos clave:
 |---|---|---|---|---|
 | 1. Descubrimiento | Menú escanea `ROUTES/*` | CLI + escenario y `--route-root` | No hay selector de rutas; no bloquea el comando explícito | Alta |
 | 2. Configuración | TRK más overrides OR | scenario/overlay + TRK parcial | Dependencia fuerte del overlay `world_anchor` | Alta |
-| 3. Paths | `MSTSPath`, `ORFileHelper`, route/global | índices case-insensitive para shapes; lookup directo en streaming | `.W`/`.T` o nombre no canónico puede desaparecer en Linux | Confirmada |
+| 3. Paths | `MSTSPath`, `ORFileHelper`, route/global | `MstsRouteCatalog` compartido (#49); tiles case-insensitive (#29) | Precedencia ruta>pack>GLOBAL unificada; residual en spawn async | Confirmada |
 | 4. Parsing | Parsers especializados por formato/objeto | AST/typed parsers, desconocidos a `Other` | ~~CarSpawner/Pickup/Hazard tipados~~ (#31–#33); ~~Electrified/wire~~ (#36); residual LevelCrossing/etc. | Confirmada |
 | 5. Coordenadas | `WorldLocation`/`WorldPosition`, Z→XNA | `MstsWorldPosition`, Z→Bevy | Conversión base coincide; mapeo grafo↔TDB no | Confirmada |
 | 6. Tiles | Radio por `ViewingDistance`, MRU 64 | radio métrico configurable (default 2000 m) + hystéresis unload | Pop-in residual vs OR | Parcial (#30) |
@@ -315,7 +316,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | **Cerrado** — tipado + sampler Bevy (1–4); tokens binarios uv_op/anim corregidos |
 | [#47](https://github.com/cavazquez/openrailsrs/issues/47) | P2 | `[Materials] Unificar modos specular MSTS entre StandardMaterial y OrSceneryMaterial` | **Cerrado** — `resolve_or_material_kind` + PBR compartido en Standard/OR |
 | [#48](https://github.com/cavazquez/openrailsrs/issues/48) | P1 | `[Assets] Introducir tipos Asset y AssetLoader para formatos MSTS/OR` | **Cerrado** — `MstsAssetPlugin`: shape/ace/world/routecat loaders; fixtures + LoadState tests |
-| [#49](https://github.com/cavazquez/openrailsrs/issues/49) | P1 | `[Assets] Unificar RouteAssets y AssetIndex en un catálogo de ruta compartido` | #29, #48 |
+| [#49](https://github.com/cavazquez/openrailsrs/issues/49) | P1 | `[Assets] Unificar RouteAssets y AssetIndex en un catálogo de ruta compartido` | **Cerrado** — `MstsRouteCatalog` (bevy-scenery); precedencia ruta>pack>GLOBAL; wrappers en ambos viewers |
 | [#50](https://github.com/cavazquez/openrailsrs/issues/50) | P1 | `[Assets] Mantener caché de shapes y texturas entre streams de tiles` | #48, #49 |
 | [#51](https://github.com/cavazquez/openrailsrs/issues/51) | P1 | `[Assets] Liberar meshes, imágenes y materiales GPU al descargar tiles` | #50 |
 | [#52](https://github.com/cavazquez/openrailsrs/issues/52) | P1 | `[Bevy Integration] Implementar ScenerySpawnPlugin compartido para viewer3d y render3d` | #48–#50 |
@@ -347,7 +348,7 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 ### AssetLoader y arquitectura de assets
 
 - ~~**Confirmado:** no existe `AssetLoader` MSTS~~ **(#48: `MstsShapeAsset` / `MstsAceAsset` / `MstsWorldTileAsset` / `MstsRouteCatalogAsset` + loaders; `register_msts_content_source`; spawn aún no migrado)**.
-- `RouteAssets` (viewer3d) y `AssetIndex` (render3d) duplican scans y resolución de precedencia; #49 propone un catálogo compartido.
+- ~~`RouteAssets` / `AssetIndex` duplicaban scans y precedencia~~ **(#49: `MstsRouteCatalog` CPU en bevy-scenery; un scan SHAPES/TEXTURES; wrappers finos; distinto de `MstsRouteCatalogAsset` `.routecat`)**.
 - ~~`WorldSpawnProgress` conserva caches únicamente durante un ciclo de spawn~~ **(#50: `WorldShapeLodCache` de sesión con hit/miss; streams reutilizan Mesh/Image/ShapeFile)**.
 - ~~El unload despawnea entidades, pero no retira entradas de `Assets<Mesh/Image/Material>`~~ **(#51: eviction por refs vivas al unload en viewer3d + render3d; shapes/texturas compartidas se conservan)**.
 - `ScenerySpawnPlugin` sigue siendo un stub mientras los dos binarios mantienen máquinas de estados distintas; #52 y #55 migran scheduling y startup de forma incremental.

@@ -93,22 +93,6 @@ pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-fn load_tsection_catalog(route_dir: &Path) -> openrailsrs_formats::TSectionCatalog {
-    if let Ok(catalog) = openrailsrs_formats::TSectionCatalog::load_for_route(route_dir) {
-        if !catalog.shapes.is_empty() {
-            return catalog;
-        }
-    }
-    if let Some(msts_route) = resolve_msts_route_dir(route_dir) {
-        if let Ok(catalog) = openrailsrs_formats::TSectionCatalog::load_for_route(&msts_route) {
-            if !catalog.shapes.is_empty() {
-                return catalog;
-            }
-        }
-    }
-    openrailsrs_formats::TSectionCatalog::default()
-}
-
 fn track_db_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
     if let Some(msts_route) = resolve_msts_route_dir(route_dir) {
@@ -229,8 +213,8 @@ fn build_tdb_section_index(
 #[derive(Resource, Clone)]
 pub struct RouteAssets {
     pub route_dir: PathBuf,
-    shape_path_index: HashMap<String, PathBuf>,
-    tsection: openrailsrs_formats::TSectionCatalog,
+    /// Catálogo compartido (#49): shapes/texturas/tsection con precedencia ruta > pack > GLOBAL.
+    catalog: openrailsrs_bevy_scenery::MstsRouteCatalog,
     track_db: Option<openrailsrs_formats::TrackDbFile>,
     /// Road database (`.rdb`) — same schema as TDB; used for CarSpawner endpoints (#32).
     road_db: Option<openrailsrs_formats::TrackDbFile>,
@@ -242,23 +226,29 @@ pub struct RouteAssets {
 impl RouteAssets {
     pub fn new(route_dir: impl Into<PathBuf>) -> Self {
         let route_dir = route_dir.into();
-        let shape_path_index = build_shape_path_index(&shape_search_dirs(&route_dir));
-        let tsection = load_tsection_catalog(&route_dir);
-        if !tsection.shapes.is_empty() {
-            let junction_clearance = tsection
+        let msts_root = msts_content_root().unwrap_or_else(|| route_dir.clone());
+        let catalog = openrailsrs_bevy_scenery::MstsRouteCatalog::build(&route_dir, &msts_root);
+        if !catalog.tsection.shapes.is_empty() {
+            let junction_clearance = catalog
+                .tsection
                 .shapes
                 .iter()
                 .filter(|(id, shape)| {
-                    shape.is_junction() && tsection.clearance_dist_m(**id).is_some()
+                    shape.is_junction() && catalog.tsection.clearance_dist_m(**id).is_some()
                 })
                 .count();
             crate::viewer_log!(
                 "openrailsrs-viewer3d: tsection — {} shape(s), {} section(s), {} junction(s) with ClearanceDist",
-                tsection.shapes.len(),
-                tsection.sections.len(),
+                catalog.tsection.shapes.len(),
+                catalog.tsection.sections.len(),
                 junction_clearance
             );
         }
+        crate::viewer_log!(
+            "openrailsrs-viewer3d: route catalog — {} shape(s), {} texture(s)",
+            catalog.shape_count(),
+            catalog.texture_count()
+        );
         let (track_db, tdb_sections_by_shape) = load_track_db(&route_dir)
             .map(|tdb| {
                 let indexed_shapes = tdb.index_vector_sections_by_shape().len();
@@ -305,14 +295,17 @@ impl RouteAssets {
         }
         Self {
             route_dir,
-            shape_path_index,
-            tsection,
+            catalog,
             track_db,
             road_db,
             carspawn,
             sigcfg,
             tdb_sections_by_shape,
         }
+    }
+
+    pub fn catalog(&self) -> &openrailsrs_bevy_scenery::MstsRouteCatalog {
+        &self.catalog
     }
 
     pub fn track_db(&self) -> Option<&openrailsrs_formats::TrackDbFile> {
@@ -332,7 +325,7 @@ impl RouteAssets {
     }
 
     pub fn tsection(&self) -> &openrailsrs_formats::TSectionCatalog {
-        &self.tsection
+        &self.catalog.tsection
     }
 
     /// Refine TrackObj yaw from `.tdb` `TrVectorSection` when a nearby anchor matches `SectionIdx`.
@@ -376,46 +369,12 @@ impl RouteAssets {
 
     /// Resolve a shape filename using a pre-built index (case-insensitive).
     pub fn resolve_shape(&self, file_name: &str) -> Option<PathBuf> {
-        if file_name.is_empty() {
-            return None;
-        }
-        let base = shape_file_basename(file_name);
-        self.shape_path_index
-            .get(&base.to_ascii_lowercase())
-            .cloned()
+        self.catalog.resolve_shape(file_name)
     }
 
     /// Resolve scenery shapes; `TrackObj` / `Hazard` prefer route-pack `GLOBAL/SHAPES/`.
     pub fn resolve_world_shape(&self, kind: &str, file_name: &str) -> Option<PathBuf> {
-        if file_name.is_empty() {
-            return None;
-        }
-        // WORLD `Hazard` stores a `.haz` config; OpenRails loads the nested shape from Global.
-        if kind == "Hazard" {
-            let shape_name =
-                openrailsrs_formats::resolve_hazard_shape_name(&self.route_dir, file_name)?;
-            let base = shape_file_basename(&shape_name);
-            for global in global_assets_dirs(&self.route_dir) {
-                if let Some(path) = resolve_shape_path(&global, base) {
-                    return Some(path);
-                }
-            }
-            return self.resolve_shape(base);
-        }
-        if let Some(path) =
-            openrailsrs_formats::resolve_route_relative_file(&self.route_dir, file_name)
-        {
-            return Some(path);
-        }
-        let base = shape_file_basename(file_name);
-        if kind == "TrackObj" {
-            for global in global_assets_dirs(&self.route_dir) {
-                if let Some(path) = resolve_shape_path(&global, base) {
-                    return Some(path);
-                }
-            }
-        }
-        self.resolve_shape(base)
+        self.catalog.resolve_world_shape(kind, file_name)
     }
 
     /// Resolve `TrackObj` mesh path using `.w` `FileName` and/or `SectionIdx` → `tsection.dat`.
@@ -424,18 +383,7 @@ impl RouteAssets {
         file_name: Option<&str>,
         section_idx: Option<u32>,
     ) -> Option<PathBuf> {
-        let name = file_name
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-            .or_else(|| {
-                section_idx.and_then(|idx| self.tsection.shape_file_name(idx).map(str::to_string))
-            })?;
-        // Prefer route-relative FileName (`../../ROUTES/.../DYNATRAX/foo.s`) before basename (#35).
-        if let Some(path) = openrailsrs_formats::resolve_route_relative_file(&self.route_dir, &name)
-        {
-            return Some(path);
-        }
-        self.resolve_world_shape("TrackObj", &name)
+        self.catalog.resolve_trackobj_shape(file_name, section_idx)
     }
 }
 

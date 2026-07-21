@@ -1,13 +1,14 @@
 //! Spawn del mundo 3D (terreno, vía, objetos) — usado de forma progresiva desde `loading`.
 
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_ace::AceFile;
-use openrailsrs_formats::TSectionCatalog;
+use openrailsrs_bevy_scenery::MstsRouteCatalog;
 
 use crate::objects::{ObjectKind, ObjectMarker};
 use crate::shape_descriptor::ShapeDescriptor;
@@ -15,10 +16,9 @@ use crate::shapes;
 use crate::stream::TileContent;
 use crate::terrain::{PatchGeometry, TileGeometry};
 use crate::textures::{
-    TextureEnvironment, TextureFlags, global_assets_dirs, index_textures_tree,
-    index_trainset_textures, load_ace_file, load_texture_image, load_texture_image_with_addr,
-    resolve_shape_path, resolve_shape_path_in_dirs, resolve_texture_with_index, shape_search_dirs,
-    shape_texture_flags, texture_search_dirs_for_shape,
+    TextureEnvironment, TextureFlags, load_ace_file, load_texture_image,
+    load_texture_image_with_addr, resolve_texture_with_index, shape_texture_flags,
+    texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
 use openrailsrs_or_shader::standard_pbr::{
@@ -66,58 +66,33 @@ impl SceneMaterialHandle {
     }
 }
 
-/// Índice case-insensitive de assets `.s` / `.ace`.
+/// Índice case-insensitive de assets `.s` / `.ace` (wrapper sobre [`MstsRouteCatalog`]).
 #[derive(Clone)]
 pub struct AssetIndex {
-    shapes: HashMap<String, PathBuf>,
-    textures: HashMap<String, PathBuf>,
-    pub tsection: TSectionCatalog,
+    catalog: MstsRouteCatalog,
+}
+
+impl Deref for AssetIndex {
+    type Target = MstsRouteCatalog;
+
+    fn deref(&self) -> &Self::Target {
+        &self.catalog
+    }
 }
 
 impl AssetIndex {
     pub fn build(route_dir: &Path, msts_root: &Path) -> Self {
-        let mut shapes = HashMap::new();
-        let mut textures = HashMap::new();
-
-        // 1. Indexar GLOBAL primero para que la ruta pueda sobrescribir con SHAPES/TEXTURES locales
-        let global = msts_root.join("GLOBAL");
-        for sub in ["SHAPES", "shapes"] {
-            index_shapes_tree(&mut shapes, &global.join(sub));
-        }
-        index_textures_tree(&mut textures, &global);
-
-        // 2. Indexar la ruta (sobrescribe GLOBAL)
-        for sub in ["SHAPES", "shapes"] {
-            index_shapes_tree(&mut shapes, &route_dir.join(sub));
-        }
-        index_textures_tree(&mut textures, route_dir);
-        // UKFS y alias de ruta suelen vivir en `Alias/` además de `TEXTURES/`.
-        for sub in ["Alias", "alias"] {
-            index_textures_tree(&mut textures, &route_dir.join(sub));
-        }
-
-        // 3. Trainsets del content pack (vehículos rolling stock)
-        index_trainset_textures(&mut textures, msts_root);
-
-        let tsection = TSectionCatalog::load_for_route(route_dir).unwrap_or_default();
-
         Self {
-            shapes,
-            textures,
-            tsection,
+            catalog: MstsRouteCatalog::build(route_dir, msts_root),
         }
     }
 
     pub fn shape_count(&self) -> usize {
-        self.shapes.len()
+        self.catalog.shape_count()
     }
 
     pub fn texture_count(&self) -> usize {
-        self.textures.len()
-    }
-
-    fn shape(&self, file: &str) -> Option<&PathBuf> {
-        self.shapes.get(&base_lower(file)?)
+        self.catalog.texture_count()
     }
 
     pub fn resolve_texture(
@@ -127,71 +102,10 @@ impl AssetIndex {
         env: &TextureEnvironment,
         flags: TextureFlags,
     ) -> Option<PathBuf> {
-        resolve_texture_with_index(&self.textures, dirs, file_name, env, flags)
+        // render3d still hosts its own TextureEnvironment/Flags types (duplicated);
+        // the path index itself comes from the shared catalog.
+        resolve_texture_with_index(self.catalog.textures(), dirs, file_name, env, flags)
     }
-}
-
-/// Resuelve el `.s` de un objeto del `.w`.
-pub fn resolve_object_shape_path(
-    obj: &ObjectMarker,
-    index: &AssetIndex,
-    route_dir: &Path,
-    msts_root: &Path,
-) -> Option<PathBuf> {
-    if obj.kind == ObjectKind::Track {
-        return resolve_trackobj_shape_path(
-            route_dir,
-            msts_root,
-            index,
-            obj.file_name.as_deref(),
-            obj.section_idx,
-        );
-    }
-    let file = obj.file_name.as_deref()?;
-    resolve_shape_file(index, route_dir, msts_root, file)
-}
-
-/// `TrackObj` usa shapes de `GLOBAL/SHAPES` (Open Rails `Scenery.cs`).
-pub fn resolve_trackobj_shape_path(
-    route_dir: &Path,
-    msts_root: &Path,
-    index: &AssetIndex,
-    file_name: Option<&str>,
-    section_idx: Option<u32>,
-) -> Option<PathBuf> {
-    let name = file_name
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-        .or_else(|| {
-            section_idx.and_then(|idx| index.tsection.shape_file_name(idx).map(str::to_string))
-        })?;
-    // Route-relative FileName (`../../ROUTES/.../DYNATRAX/foo.s`) before basename (#35).
-    if let Some(path) = openrailsrs_formats::resolve_route_relative_file(route_dir, &name) {
-        return Some(path);
-    }
-    for global in global_assets_dirs(route_dir, msts_root) {
-        if let Some(path) = resolve_shape_path(&global, &name) {
-            return Some(path);
-        }
-    }
-    if let Some(path) = resolve_shape_path(&msts_root.join("GLOBAL"), &name) {
-        return Some(path);
-    }
-    index.shape(&name).cloned()
-}
-
-fn resolve_shape_file(
-    index: &AssetIndex,
-    route: &Path,
-    msts_root: &Path,
-    file: &str,
-) -> Option<PathBuf> {
-    if let Some(path) = index.shape(file) {
-        return Some(path.clone());
-    }
-    let dirs = shape_search_dirs(route, msts_root);
-    let refs: Vec<&Path> = dirs.iter().map(|p| p.as_path()).collect();
-    resolve_shape_path_in_dirs(&refs, file)
 }
 
 fn base_lower(file: &str) -> Option<String> {
@@ -201,31 +115,29 @@ fn base_lower(file: &str) -> Option<String> {
         .map(|s| s.to_ascii_lowercase())
 }
 
-fn index_dir(map: &mut HashMap<String, PathBuf>, dir: &Path) {
-    let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in rd.flatten() {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-            map.entry(name.to_ascii_lowercase()).or_insert(path);
-        }
+/// Resuelve el `.s` de un objeto del `.w`.
+pub fn resolve_object_shape_path(
+    obj: &ObjectMarker,
+    index: &AssetIndex,
+    _route_dir: &Path,
+    _msts_root: &Path,
+) -> Option<PathBuf> {
+    if obj.kind == ObjectKind::Track {
+        return index.resolve_trackobj_shape(obj.file_name.as_deref(), obj.section_idx);
     }
+    let file = obj.file_name.as_deref()?;
+    index.resolve_shape(file)
 }
 
-fn index_shapes_tree(map: &mut HashMap<String, PathBuf>, dir: &Path) {
-    index_dir(map, dir);
-    let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in rd.flatten() {
-        if entry.file_type().is_ok_and(|t| t.is_dir()) {
-            index_dir(map, &entry.path());
-        }
-    }
+/// `TrackObj` usa shapes de `GLOBAL/SHAPES` (Open Rails `Scenery.cs`).
+pub fn resolve_trackobj_shape_path(
+    _route_dir: &Path,
+    _msts_root: &Path,
+    index: &AssetIndex,
+    file_name: Option<&str>,
+    section_idx: Option<u32>,
+) -> Option<PathBuf> {
+    index.resolve_trackobj_shape(file_name, section_idx)
 }
 
 /// Texturas MSTS/OR: albedo oscuro pensado para fixed-function + unlit.
@@ -2664,6 +2576,37 @@ mod tests {
         let (_, brightened) = brighten_dark_ace_rgba(&rgba, FOLIAGE_LUMA_THRESHOLD);
         assert!(brightened);
     }
+    #[test]
+    fn asset_index_shares_catalog_resolution() {
+        let tmp = tempfile::tempdir().unwrap();
+        let msts = tmp.path().join("Content");
+        let route = msts.join("ROUTES").join("Demo");
+        std::fs::create_dir_all(msts.join("GLOBAL/SHAPES")).unwrap();
+        std::fs::create_dir_all(route.join("SHAPES")).unwrap();
+        std::fs::write(
+            msts.join("GLOBAL/SHAPES/shared.s"),
+            b"SIMISA@@@@@@@@@@JINX0s1t______\nshape ()\n",
+        )
+        .unwrap();
+        std::fs::write(
+            route.join("SHAPES/shared.s"),
+            b"SIMISA@@@@@@@@@@JINX0s1t______\nshape ( route )\n",
+        )
+        .unwrap();
+
+        let catalog = MstsRouteCatalog::build(&route, &msts);
+        let index = AssetIndex::build(&route, &msts);
+        assert_eq!(
+            index.resolve_shape("SHARED.s"),
+            catalog.resolve_shape("shared.s")
+        );
+        let path = index.resolve_shape("shared.s").unwrap();
+        assert!(
+            path.starts_with(&route),
+            "AssetIndex debe heredar precedencia ruta > GLOBAL"
+        );
+    }
+
     #[test]
     fn trackobj_resolves_from_global_shapes() {
         use crate::objects::{ObjectKind, load_objects};

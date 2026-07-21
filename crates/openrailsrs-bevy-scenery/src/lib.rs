@@ -3,6 +3,7 @@
 //! See `docs/BEVY_ARCHITECTURE.md`.
 
 pub mod assets;
+pub mod catalog;
 pub mod gpu;
 pub mod load_diagnostics;
 pub mod materials;
@@ -20,6 +21,7 @@ pub use assets::{
     MstsRouteCatalogLoader, MstsShapeAsset, MstsShapeAssetLoader, MstsWorldTileAsset,
     MstsWorldTileAssetLoader, register_msts_content_source,
 };
+pub use catalog::{MstsRouteCatalog, index_shapes_tree, route_pack_dir};
 pub use load_diagnostics::{
     LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
 };

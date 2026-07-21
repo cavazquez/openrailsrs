@@ -4176,6 +4176,7 @@ dependencies = [
  "openrailsrs-track",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 
@@ -4317,6 +4318,7 @@ dependencies = [
  "openrailsrs-route",
  "openrailsrs-track",
  "openrailsrs-train",
+ "tempfile",
 ]
 
 [[package]]

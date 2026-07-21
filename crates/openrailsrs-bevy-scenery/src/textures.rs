@@ -168,12 +168,20 @@ pub fn global_assets_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
 }
 
 /// Directorios donde buscar texturas dado el path del `.s` resuelto.
+///
+/// Conserva el orden de inserción (ruta / shape root antes que GLOBAL).
 pub fn texture_search_dirs_for_shape(
     shape_path: &Path,
     route_dir: &Path,
     msts_root: &Path,
 ) -> Vec<PathBuf> {
-    let mut dirs = vec![route_dir.to_path_buf()];
+    let mut dirs = Vec::new();
+    let mut push = |p: PathBuf| {
+        if !dirs.iter().any(|existing| existing == &p) {
+            dirs.push(p);
+        }
+    };
+    push(route_dir.to_path_buf());
     if let Some(parent) = shape_path.parent() {
         let in_asset_subdir = parent.file_name().is_some_and(|n| {
             n.eq_ignore_ascii_case("shapes")
@@ -181,24 +189,20 @@ pub fn texture_search_dirs_for_shape(
                 || n.eq_ignore_ascii_case("cabview")
         });
         if in_asset_subdir {
-            dirs.push(parent.to_path_buf());
+            push(parent.to_path_buf());
             if let Some(asset_root) = parent.parent() {
                 if asset_root != route_dir {
-                    dirs.push(asset_root.to_path_buf());
+                    push(asset_root.to_path_buf());
                 }
             }
         }
     }
     for global in global_assets_dirs(route_dir, msts_root) {
-        dirs.push(global);
+        push(global);
     }
     if let Some(trainset_root) = vehicle_texture_root_for_shape_path(shape_path) {
-        if !dirs.iter().any(|d| d.as_path() == trainset_root) {
-            dirs.push(trainset_root.to_path_buf());
-        }
+        push(trainset_root.to_path_buf());
     }
-    dirs.sort();
-    dirs.dedup();
     dirs
 }
 
@@ -216,7 +220,10 @@ pub fn vehicle_texture_root_for_shape_path(shape_path: &Path) -> Option<&Path> {
     }
 }
 
-/// Indexa recursivamente `TEXTURES/` (estaciones, estaciones, subcarpetas).
+/// Indexa recursivamente `TEXTURES/` (estaciones, subcarpetas).
+///
+/// Usa `insert` (última escritura gana). El catálogo de ruta indexa de baja→alta
+/// prioridad (trainsets → GLOBAL → pack → ruta).
 pub fn index_textures_tree(map: &mut HashMap<String, PathBuf>, root: &Path) {
     for sub in ["TEXTURES", "textures"] {
         index_textures_dir(map, &root.join(sub));
@@ -234,7 +241,7 @@ fn index_textures_dir(map: &mut HashMap<String, PathBuf>, dir: &Path) {
             if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
                 if ext.eq_ignore_ascii_case("ace") || ext.eq_ignore_ascii_case("dds") {
-                    map.entry(name.to_ascii_lowercase()).or_insert(path);
+                    map.insert(name.to_ascii_lowercase(), path);
                 }
             }
             continue;
@@ -441,19 +448,37 @@ fn texture_name_candidates(file_name: &str) -> Vec<String> {
 }
 
 /// Directorios para resolver shapes (ruta + pack MSTS + GLOBAL).
+///
+/// Orden de búsqueda: **ruta → pack → GLOBAL** (sin `sort`, para no romper precedencia).
 pub fn shape_search_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
-    let mut dirs = vec![route_dir.to_path_buf()];
+    let mut dirs = Vec::new();
+    let mut push = |p: PathBuf| {
+        if !dirs.iter().any(|existing| existing == &p) {
+            dirs.push(p);
+        }
+    };
+    push(route_dir.to_path_buf());
     if let Some(stem) = route_dir.file_name() {
         let pack = msts_root.join(stem);
         if pack.is_dir() {
-            dirs.push(pack);
+            push(pack);
+        } else if let Ok(rd) = std::fs::read_dir(msts_root) {
+            for entry in rd.flatten() {
+                let path = entry.path();
+                if path.is_dir()
+                    && path
+                        .file_name()
+                        .is_some_and(|n| n.eq_ignore_ascii_case(stem))
+                {
+                    push(path);
+                    break;
+                }
+            }
         }
     }
     for global in global_assets_dirs(route_dir, msts_root) {
-        dirs.push(global);
+        push(global);
     }
-    dirs.sort();
-    dirs.dedup();
     dirs
 }
 
