@@ -15,7 +15,6 @@ use std::path::Path;
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
-use crate::msts_file_text::read_msts_file_decoded;
 use crate::parser::parse_from_first_paren;
 
 use super::atom_to_number;
@@ -353,9 +352,20 @@ impl WorldFile {
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
-        let text = read_msts_file_decoded(path)?;
+        let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedToken {
+            offset: 0,
+            message: format!("failed to read {}: {e}", path.display()),
+        })?;
+        Self::from_bytes(&bytes, Some(path))
+    }
+
+    /// Parse world tile bytes; optional `path_hint` supplies tile XZ from the filename.
+    pub fn from_bytes(bytes: &[u8], path_hint: Option<&Path>) -> Result<Self, FormatError> {
+        let text = crate::msts_file_text::decode_msts_file_bytes(bytes)?;
         let ast = load_world_ast(&text)?;
-        let (tile_x, tile_z) = parse_tile_xz_from_filename(path).unwrap_or((0, 0));
+        let (tile_x, tile_z) = path_hint
+            .and_then(parse_tile_xz_from_filename)
+            .unwrap_or((0, 0));
         Ok(Self::from_ast(&ast, tile_x, tile_z))
     }
 }

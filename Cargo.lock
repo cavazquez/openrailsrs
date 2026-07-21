@@ -4170,11 +4170,13 @@ dependencies = [
  "bytemuck",
  "image",
  "openrailsrs-ace",
- "openrailsrs-core",
  "openrailsrs-formats",
  "openrailsrs-or-shader",
  "openrailsrs-route",
  "openrailsrs-track",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

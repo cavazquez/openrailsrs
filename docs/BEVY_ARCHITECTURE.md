@@ -11,7 +11,7 @@ Relacionado: [`BEVY_MIGRATION_0_19.md`](BEVY_MIGRATION_0_19.md) · [`RENDER3D.md
 | Crate | Bevy | Rol |
 |-------|------|-----|
 | **`openrailsrs-or-shader`** | No | Clasificación shaders MSTS/OR, coordenadas MSTS→render |
-| **`openrailsrs-bevy-scenery`** | Sí | Materiales OR WGSL, texturas ACE, spawn WORLD/terreno, VSM |
+| **`openrailsrs-bevy-scenery`** | Sí | Materiales OR WGSL, texturas ACE, `MstsAssetPlugin` (#48), spawn WORLD/terreno, VSM |
 | **`openrailsrs-viewer3d`** | Sí | App jugable: live, cabina, HUD, cámara, floating origin |
 | **`openrailsrs-render3d`** | Sí | Validación visual OR: loading por tiles, stream, debug VSM |
 
@@ -36,7 +36,7 @@ flowchart TB
 
 | Plugin | Crate | Registra |
 |--------|-------|----------|
-| `OrSceneryPlugins` | bevy-scenery | `MaterialPlugin` terreno/scenery/cab, assets shaders |
+| `OrSceneryPlugins` | bevy-scenery | `MstsAssetPlugin` + `MaterialPlugin` terreno/scenery/cab, assets shaders |
 | `OrVsmPlugins` | bevy-scenery (feature `vsm`) | Pass momentos VSM, cascadas OR |
 | `ScenerySpawnPlugin` | bevy-scenery | Spawn progresivo WORLD + terreno |
 | `ViewerPlugin` | viewer3d | Gameplay, cabina, cámara, sim live |

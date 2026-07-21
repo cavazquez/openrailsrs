@@ -115,7 +115,7 @@ flowchart LR
   Spawn --> BevyRender[Bevy render world]
 ```
 
-El contenido MSTS no usa `AssetLoader`: se parsea de forma síncrona en CPU y se inserta mediante `Assets::add`. `ViewerPlugin` encadena el spawn inicial y luego actualiza floating origin, tren, `ViewWindow`, streaming y LOD. Los sistemas sí crean `Mesh3d`, materiales, transforms y visibilidad; no se confirmó un fallo general de extracción al render world.
+El spawn WORLD sigue parseando de forma síncrona en CPU e insertando con `Assets::add`, pero ya existen loaders Bevy (#48) para `.s`/`.ace`/`.w`/`.routecat` vía `MstsAssetPlugin`. `ViewerPlugin` encadena el spawn inicial y luego actualiza floating origin, tren, `ViewWindow`, streaming y LOD.
 
 Archivos clave:
 
@@ -314,7 +314,7 @@ Se revisaron todos los issues existentes antes de publicar. El issue #5 trata co
 | [#45](https://github.com/cavazquez/openrailsrs/issues/45) | P2 | `[Meshes] Recomponer normales ausentes o degeneradas en shapes MSTS` | **Cerrado** — face normals selectivas en bevy-scenery (+ render3d); válidas se conservan |
 | [#46](https://github.com/cavazquez/openrailsrs/issues/46) | P2 | `[Textures] Parsear light_model_cfgs y uv_ops para modos wrap/mirror/clamp` | **Cerrado** — tipado + sampler Bevy (1–4); tokens binarios uv_op/anim corregidos |
 | [#47](https://github.com/cavazquez/openrailsrs/issues/47) | P2 | `[Materials] Unificar modos specular MSTS entre StandardMaterial y OrSceneryMaterial` | **Cerrado** — `resolve_or_material_kind` + PBR compartido en Standard/OR |
-| [#48](https://github.com/cavazquez/openrailsrs/issues/48) | P1 | `[Assets] Introducir tipos Asset y AssetLoader para formatos MSTS/OR` | — |
+| [#48](https://github.com/cavazquez/openrailsrs/issues/48) | P1 | `[Assets] Introducir tipos Asset y AssetLoader para formatos MSTS/OR` | **Cerrado** — `MstsAssetPlugin`: shape/ace/world/routecat loaders; fixtures + LoadState tests |
 | [#49](https://github.com/cavazquez/openrailsrs/issues/49) | P1 | `[Assets] Unificar RouteAssets y AssetIndex en un catálogo de ruta compartido` | #29, #48 |
 | [#50](https://github.com/cavazquez/openrailsrs/issues/50) | P1 | `[Assets] Mantener caché de shapes y texturas entre streams de tiles` | #48, #49 |
 | [#51](https://github.com/cavazquez/openrailsrs/issues/51) | P1 | `[Assets] Liberar meshes, imágenes y materiales GPU al descargar tiles` | #50 |
@@ -346,7 +346,7 @@ Etiquetas creadas y aplicadas cuando correspondía: `map-rendering`, `coordinate
 
 ### AssetLoader y arquitectura de assets
 
-- **Confirmado:** no existe ninguna implementación de `AssetLoader` ni registro de loaders MSTS. `AssetServer` solo se usa para shaders WGSL internos.
+- ~~**Confirmado:** no existe `AssetLoader` MSTS~~ **(#48: `MstsShapeAsset` / `MstsAceAsset` / `MstsWorldTileAsset` / `MstsRouteCatalogAsset` + loaders; `register_msts_content_source`; spawn aún no migrado)**.
 - `RouteAssets` (viewer3d) y `AssetIndex` (render3d) duplican scans y resolución de precedencia; #49 propone un catálogo compartido.
 - ~~`WorldSpawnProgress` conserva caches únicamente durante un ciclo de spawn~~ **(#50: `WorldShapeLodCache` de sesión con hit/miss; streams reutilizan Mesh/Image/ShapeFile)**.
 - ~~El unload despawnea entidades, pero no retira entradas de `Assets<Mesh/Image/Material>`~~ **(#51: eviction por refs vivas al unload en viewer3d + render3d; shapes/texturas compartidas se conservan)**.

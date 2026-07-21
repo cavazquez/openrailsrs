@@ -2,6 +2,7 @@
 //!
 //! See `docs/BEVY_ARCHITECTURE.md`.
 
+pub mod assets;
 pub mod gpu;
 pub mod load_diagnostics;
 pub mod materials;
@@ -14,6 +15,11 @@ pub mod vsm;
 #[cfg(test)]
 pub mod test_harness;
 
+pub use assets::{
+    MstsAceAsset, MstsAceAssetLoader, MstsAssetError, MstsAssetPlugin, MstsRouteCatalogAsset,
+    MstsRouteCatalogLoader, MstsShapeAsset, MstsShapeAssetLoader, MstsWorldTileAsset,
+    MstsWorldTileAssetLoader, register_msts_content_source,
+};
 pub use load_diagnostics::{
     LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
 };
@@ -40,7 +46,8 @@ pub struct OrSceneryPlugins;
 
 impl Plugin for OrSceneryPlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<TerrainMaterial>::default())
+        app.add_plugins(MstsAssetPlugin)
+            .add_plugins(MaterialPlugin::<TerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrTerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrSceneryMaterial>::default())
             .add_plugins(MaterialPlugin::<OrCabMaterial>::default())

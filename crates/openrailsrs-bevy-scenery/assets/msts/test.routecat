@@ -1,0 +1,5 @@
+{
+  "shapes": ["minimal.s"],
+  "textures": ["test.ace"],
+  "world_tiles": ["w-001000-001000.w"]
+}

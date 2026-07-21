@@ -1,8 +1,8 @@
 //! Streaming de tiles alrededor de la camara + marcador `TileContent`.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::objects::ObjectMarker;
@@ -378,6 +378,16 @@ type TileEntityQuery<'w, 's> = Query<
     ),
 >;
 
+/// Bundle stream GPU asset stores so `tile_stream_system` stays under Bevy's param limit.
+#[derive(SystemParam)]
+pub struct StreamGpuAssets<'w> {
+    meshes: ResMut<'w, Assets<Mesh>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    or_materials: ResMut<'w, Assets<OrSceneryMaterial>>,
+    or_terrain_materials: ResMut<'w, Assets<OrTerrainMaterial>>,
+    images: ResMut<'w, Assets<Image>>,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn tile_stream_system(
     mut commands: Commands,
@@ -392,11 +402,7 @@ pub fn tile_stream_system(
     tdb_track: Option<Res<crate::TdbTrackResource>>,
     camera: Query<&Transform, With<Camera3d>>,
     tile_entities: TileEntityQuery,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut or_materials: ResMut<Assets<OrSceneryMaterial>>,
-    mut or_terrain_materials: ResMut<Assets<OrTerrainMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    mut gpu: StreamGpuAssets,
 ) {
     if !config.streaming_enabled() {
         return;
@@ -460,20 +466,20 @@ pub fn tile_stream_system(
         }
         let mut meshes_freed = 0usize;
         for id in released_terrain_meshes {
-            if meshes.remove(id).is_some() {
+            if gpu.meshes.remove(id).is_some() {
                 meshes_freed += 1;
             }
         }
         let shapes = assets.obj_ctx.evict_unreferenced_shapes(
             &live_shape_meshes,
-            &mut meshes,
-            &mut materials,
-            &mut or_materials,
+            &mut gpu.meshes,
+            &mut gpu.materials,
+            &mut gpu.or_materials,
         );
         let (terrain_mats, terrain_tex) = assets.terrain_ctx.evict_unreferenced(
             &live_terrain_mats,
-            &mut images,
-            &mut or_terrain_materials,
+            &mut gpu.images,
+            &mut gpu.or_terrain_materials,
         );
         log_stream_eviction(shapes, terrain_mats, terrain_tex, meshes_freed);
     }
@@ -490,11 +496,11 @@ pub fn tile_stream_system(
         };
         spawn_tile_entry(
             &mut commands,
-            &mut meshes,
-            &mut materials,
-            &mut or_materials,
-            &mut or_terrain_materials,
-            &mut images,
+            &mut gpu.meshes,
+            &mut gpu.materials,
+            &mut gpu.or_materials,
+            &mut gpu.or_terrain_materials,
+            &mut gpu.images,
             &mut assets,
             &route,
             &msts_root,
@@ -518,6 +524,7 @@ pub fn tile_stream_system(
 mod tests {
     use super::*;
     use crate::terrain::load_tile_geometry;
+    use std::path::PathBuf;
 
     #[test]
     fn stream_height_index_builds_once_per_catalog() {
