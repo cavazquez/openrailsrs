@@ -118,6 +118,8 @@ pub struct ShapeInstancePlacement {
     pub tile_z: i32,
     /// Open Rails `ShapeFlags.AutoZBias` (TrackObj / switch track) (#103).
     pub auto_z_bias: bool,
+    /// WORLD `SignalSubObj` bitmask when this instance is a Signal mesh (#80).
+    pub signal_sub_obj: Option<u32>,
 }
 
 /// Clone material with OR AutoZBias when the shared cache asset has ZBias≈0 (#103).
@@ -1649,6 +1651,7 @@ fn classify_one_object(
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
                     auto_z_bias: true,
+                    signal_sub_obj: None,
                 });
             progress
                 .shape_instance_min_dist
@@ -1714,6 +1717,9 @@ fn classify_one_object(
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
                     auto_z_bias: false,
+                    signal_sub_obj: (obj.kind == "Signal")
+                        .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
+                        .flatten(),
                 });
             progress
                 .shape_instance_min_dist
@@ -1789,7 +1795,9 @@ fn append_shape_spawn_entries_for_transforms(
     instanced_groups: &mut usize,
     instanced_instances: &mut usize,
     origin: &FloatingOrigin,
+    sigcfg: Option<&openrailsrs_formats::SigCfgFile>,
 ) {
+    use crate::signal_subobj::{signal_part_visible, signal_subobj_visible};
     use crate::world_instancing::{
         WORLD_INSTANCING_MIN, WorldInstanceAppearance, WorldInstanceBuffer, WorldInstanceData,
         WorldInstancedGroup, appearance_from_standard_material, group_placements_by_tile,
@@ -1798,19 +1806,48 @@ fn append_shape_spawn_entries_for_transforms(
 
     // viewer3d scenery uses daylight sun by default (#95).
     const IS_DAY: bool = true;
-    let visible_parts: Vec<(usize, &crate::shapes::ShapePartAsset)> = asset
+    let day_parts: Vec<(usize, &crate::shapes::ShapePartAsset)> = asset
         .parts
         .iter()
         .enumerate()
         .filter(|(_, part)| shape_part_visible_for_day_night(asset, part, IS_DAY))
         .collect();
     let batch_auto_z = placements.iter().any(|p| p.auto_z_bias);
+    // Distinct SignalSubObj masks cannot share merged/instanced batches (#80).
+    let has_signal_filter = placements.iter().any(|p| p.signal_sub_obj.is_some());
+    let shape_file_name = shape_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+    let signal_vis_for = |mask: Option<u32>| -> Option<Vec<bool>> {
+        let mask = mask?;
+        let shape = shape_file?;
+        let def = sigcfg?.signal_shape(shape_file_name)?;
+        signal_subobj_visible(shape, def, mask)
+    };
+    let parts_for_mask = |mask: Option<u32>| -> Vec<(usize, &crate::shapes::ShapePartAsset)> {
+        match signal_vis_for(mask) {
+            Some(vis) => day_parts
+                .iter()
+                .copied()
+                .filter(|(_, part)| signal_part_visible(&vis, part.sub_object_idx))
+                .collect(),
+            None => day_parts.clone(),
+        }
+    };
+    // Default day-only list when no signal filter on the batch.
+    let visible_parts = if has_signal_filter {
+        Vec::new()
+    } else {
+        day_parts.clone()
+    };
 
     if asset.has_texture {
         *shape_texture_count += placements.len();
     }
     let animated = shape_file.is_some_and(shape_has_loop_animation);
-    let mergeable = !animated
+    let mergeable = !has_signal_filter
+        && !animated
         && ENABLE_SHAPE_INSTANCE_MERGE
         && placements.len() >= SHAPE_INSTANCE_MERGE_MIN
         && visible_parts.iter().all(|(_, part)| {
@@ -1854,7 +1891,7 @@ fn append_shape_spawn_entries_for_transforms(
                 ));
             }
         }
-    } else if !animated && world_instancing_enabled() {
+    } else if !has_signal_filter && !animated && world_instancing_enabled() {
         // GPU instancing (#58): one entity per (part × tile) for opaque static repeats.
         let by_tile = group_placements_by_tile(placements);
         for ((tile_x, tile_z), indices) in by_tile {
@@ -1928,14 +1965,15 @@ fn append_shape_spawn_entries_for_transforms(
             .first()
             .map(|a| a.frame_count as f32)
             .unwrap_or(0.0);
-        *shape_mesh_count += visible_parts.len() * placements.len();
         for inst in placements {
+            let inst_parts = parts_for_mask(inst.signal_sub_obj);
+            *shape_mesh_count += inst_parts.len();
             let placement = view_transform(inst.transform, origin);
             let bound = WorldTileBound {
                 tile_x: inst.tile_x,
                 tile_z: inst.tile_z,
             };
-            for &(part_index, part) in &visible_parts {
+            for &(part_index, part) in &inst_parts {
                 let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
                 let material =
                     material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
@@ -1970,8 +2008,10 @@ fn append_shape_spawn_entries_for_transforms(
         }
     } else {
         // Static non-instanced path: shared plan core (#115). LOD/instancing/anim stay above.
-        *shape_mesh_count += visible_parts.len() * placements.len();
+        // Also used for SignalSubObj-filtered instances (#80).
         for inst in placements {
+            let inst_parts = parts_for_mask(inst.signal_sub_obj);
+            *shape_mesh_count += inst_parts.len();
             let placement = object_placement(
                 inst.transform.translation,
                 inst.transform.rotation,
@@ -1984,7 +2024,7 @@ fn append_shape_spawn_entries_for_transforms(
             });
             let parts = resolve_shape_parts(
                 shape_path,
-                visible_parts.iter().map(|&(part_index, part)| {
+                inst_parts.iter().map(|&(part_index, part)| {
                     (
                         part_index,
                         part.prim_state_idx,
@@ -2020,6 +2060,7 @@ fn append_shape_spawn_entries(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     origin: &FloatingOrigin,
+    sigcfg: Option<&openrailsrs_formats::SigCfgFile>,
 ) {
     let Some(placements) = progress.shape_instances.get(shape_path).cloned() else {
         return;
@@ -2053,6 +2094,7 @@ fn append_shape_spawn_entries(
         &mut progress.instanced_groups,
         &mut progress.instanced_instances,
         origin,
+        sigcfg,
     );
 }
 
@@ -3234,6 +3276,7 @@ pub fn progressive_world_spawn_system(
                     &mut meshes,
                     &mut materials,
                     &origin,
+                    Some(assets.sigcfg()),
                 );
             }
             progress.build_queue_index = end;
@@ -3553,6 +3596,7 @@ pub fn spawn_world_boxes(
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
                         auto_z_bias: true,
+                        signal_sub_obj: None,
                     });
                 continue;
             }
@@ -3588,6 +3632,9 @@ pub fn spawn_world_boxes(
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
                         auto_z_bias: false,
+                        signal_sub_obj: (obj.kind == "Signal")
+                            .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
+                            .flatten(),
                     });
                 continue;
             }
@@ -3717,6 +3764,7 @@ pub fn spawn_world_boxes(
             &mut instanced_groups,
             &mut instanced_instances,
             &origin,
+            Some(assets.sigcfg()),
         );
     }
 
@@ -4398,6 +4446,7 @@ mod tests {
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
+                signal_sub_obj: None,
             }],
         );
         prepare_shape_load_paths(&mut progress);

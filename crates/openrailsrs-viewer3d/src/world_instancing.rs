@@ -649,18 +649,21 @@ mod tests {
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
+                signal_sub_obj: None,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(1.0, 0.0, 0.0),
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
+                signal_sub_obj: None,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(2.0, 0.0, 0.0),
                 tile_x: 1,
                 tile_z: 0,
                 auto_z_bias: false,
+                signal_sub_obj: None,
             },
         ];
         let grouped = group_placements_by_tile(&placements);
@@ -697,6 +700,7 @@ mod tests {
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
+                signal_sub_obj: None,
             })
             .collect();
         let grouped = group_placements_by_tile(&placements);

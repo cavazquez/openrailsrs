@@ -40,6 +40,7 @@ pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
 pub mod signal_lamps;
+pub mod signal_subobj;
 pub mod signals;
 pub mod sky;
 pub mod tdb_track;
