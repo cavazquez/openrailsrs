@@ -580,7 +580,7 @@ pub fn spawn_live_train(
             Quat::IDENTITY,
         )
     });
-    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
+    let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
 
     let vehicles = consist.vehicles_for("primary");
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
@@ -739,6 +739,10 @@ pub fn spawn_live_train(
                             let mut car = train.spawn((
                                 car_transform,
                                 Visibility::default(),
+                                crate::rolling_stock_anim::TrainCarTrackOffset {
+                                    offset_m: vehicle.offset_m,
+                                    track_index: 0,
+                                },
                                 Name::new(format!("train:live:car:{vi}")),
                             ));
                             log_vehicle_transform_if_enabled(vi, vehicle, &car_transform, &head);

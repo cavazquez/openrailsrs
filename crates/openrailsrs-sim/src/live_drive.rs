@@ -309,6 +309,18 @@ impl LiveDriveSession {
         self.state.pos_on_edge_m
     }
 
+    /// Graph position of a point `offset_along_path_m` ahead of (or behind) the head.
+    ///
+    /// Used by rolling-stock bogie articulation (#69): car/bogie longitudinal
+    /// offsets are metres along the path from the consist head.
+    pub fn position_at_head_offset(&self, offset_along_path_m: f64) -> Option<(String, f64)> {
+        PathData::position_at_odometer(
+            &self.state.path_edges,
+            &self.path_data.edges,
+            (self.state.odometer_m + offset_along_path_m).max(0.0),
+        )
+    }
+
     pub fn speed_limit_mps(&self) -> f64 {
         self.path_data
             .get(self.state.edge_index)

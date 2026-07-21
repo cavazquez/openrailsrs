@@ -1,7 +1,10 @@
-//! Exterior rolling-stock part animation (#40): wheels, bogies, door/panto stubs.
+//! Exterior rolling-stock part animation (#40 / #69): wheels, bogies, door/panto stubs.
 //!
 //! Meshes stay rest-baked (same pattern as WORLD #34). Drivers update each part's
 //! local `Transform` without moving the car body.
+//!
+//! Bogie yaw (#69) samples track heading at the car pivot and at the bogie's
+//! longitudinal offset (TDB via [`vehicle_position_yaw_on_graph_edge`], graph fallback).
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
@@ -10,14 +13,19 @@ use openrailsrs_bevy_scenery::shapes::{
 use openrailsrs_formats::ShapeFile;
 
 use crate::live::LiveDrive;
-use crate::train::ReplayState;
+use crate::shapes::RouteAssets;
+use crate::terrain::TerrainElevation;
+use crate::track::TrackScene;
+use crate::track_position::{
+    TrackPositionResolver, advance_along_graph, vehicle_position_yaw_on_graph_edge,
+};
+use crate::train::{CsvRow, ReplayState, TrainMarker};
+use crate::world::{RouteFocus, RouteWorldOffset};
 
 /// Default wheel radius when shape bounds are unavailable (metres).
 pub const DEFAULT_WHEEL_RADIUS_M: f32 = 0.46;
-/// Look-ahead distance for bogie yaw approximation (metres).
-const BOGIE_LOOKAHEAD_M: f32 = 12.0;
 /// Max |relative yaw| applied to a bogie (radians).
-const BOGIE_YAW_CLAMP: f32 = 0.35;
+pub const BOGIE_YAW_CLAMP: f32 = 0.35;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RollingStockPartKind {
@@ -54,12 +62,22 @@ pub struct TrainWheelAnim {
     pub angle_rad: f32,
 }
 
-/// Bogie yaw relative to the car body (curve approximation).
+/// Bogie yaw relative to the car body (track samples at ±longitudinal offset).
 #[derive(Component, Clone, Debug)]
 pub struct TrainBogieAnim {
     pub matrix_idx: usize,
-    /// Longitudinal offset hint along the car (+forward), metres; used for curve lever.
+    /// Longitudinal offset in shape space (MSTS matrix Z, metres). After
+    /// `msts_shape_to_train_rotation` this is along train +X (forward).
     pub long_offset_m: f32,
+}
+
+/// Path offset of a consist car relative to the train head (#69).
+#[derive(Component, Clone, Debug)]
+pub struct TrainCarTrackOffset {
+    /// Metres along the path from the consist head (negative = behind).
+    pub offset_m: f32,
+    /// Replay track index; live drive ignores this (always primary).
+    pub track_index: usize,
 }
 
 /// Door / pantograph stub driven by a scalar key (shape anim or debug env).
@@ -209,10 +227,7 @@ pub fn insert_part_anim(
     }
 }
 
-fn train_speed_mps(
-    live: Option<&LiveDrive>,
-    replay: Option<&ReplayState>,
-) -> f32 {
+fn train_speed_mps(live: Option<&LiveDrive>, replay: Option<&ReplayState>) -> f32 {
     if let Some(live) = live {
         return live.session.velocity_mps() as f32;
     }
@@ -245,11 +260,81 @@ fn wrap_angle(a: f32) -> f32 {
     x
 }
 
-/// Advance wheel / bogie / keyed exterior parts each frame (#40).
+/// Relative bogie yaw from track headings at car pivot and bogie sample (#69).
+pub fn bogie_relative_yaw(car_yaw: f32, bogie_track_yaw: f32) -> f32 {
+    wrap_angle(bogie_track_yaw - car_yaw).clamp(-BOGIE_YAW_CLAMP, BOGIE_YAW_CLAMP)
+}
+
+fn csv_row_at(rows: &[CsvRow], t: f64) -> Option<&CsvRow> {
+    if rows.is_empty() {
+        return None;
+    }
+    let idx = rows
+        .partition_point(|r| r.time_s <= t)
+        .saturating_sub(1)
+        .min(rows.len() - 1);
+    Some(&rows[idx])
+}
+
+/// Head `(edge_id, pos_on_edge_m)` for a consist car (live path or replay CSV).
+fn head_graph_position(
+    live: Option<&LiveDrive>,
+    replay: Option<&ReplayState>,
+    track_index: usize,
+) -> Option<(String, f64)> {
+    if let Some(live) = live {
+        let edge = live.session.current_edge_id()?.to_string();
+        return Some((edge, live.session.pos_on_edge_m()));
+    }
+    let replay = replay.filter(|r| r.is_active())?;
+    let track = replay.tracks.get(track_index)?;
+    let row = csv_row_at(&track.rows, replay.t_sim)?;
+    if row.edge_id.trim().is_empty() {
+        return None;
+    }
+    Some((row.edge_id.clone(), row.pos_on_edge_m))
+}
+
+fn sample_yaw_at_path_offset(
+    graph: &openrailsrs_track::TrackGraph,
+    live: Option<&LiveDrive>,
+    head_edge: &str,
+    head_pos: f64,
+    path_offset_m: f64,
+    resolver: Option<&TrackPositionResolver<'_>>,
+    scene: &TrackScene,
+    route_offset: Vec3,
+    focus: &RouteFocus,
+    terrain: Option<&TerrainElevation>,
+) -> Option<f32> {
+    let (edge_id, pos) = if let Some(live) = live {
+        live.session.position_at_head_offset(path_offset_m)?
+    } else {
+        advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
+    };
+    vehicle_position_yaw_on_graph_edge(
+        graph,
+        &edge_id,
+        pos,
+        resolver,
+        scene,
+        route_offset,
+        focus,
+        terrain,
+    )
+    .map(|(_, yaw)| yaw)
+}
+
+/// Advance wheel / bogie / keyed exterior parts each frame (#40 / #69).
 pub fn update_rolling_stock_part_anim(
     time: Res<Time>,
     live: Option<Res<LiveDrive>>,
     replay: Option<Res<ReplayState>>,
+    scene: Res<TrackScene>,
+    assets: Res<RouteAssets>,
+    offset: Res<RouteWorldOffset>,
+    focus: Res<RouteFocus>,
+    terrain: Option<Res<TerrainElevation>>,
     mut wheels: Query<
         (&mut TrainWheelAnim, &ShapeAnimBinding, &mut Transform),
         With<TrainExteriorAnimPart>,
@@ -258,7 +343,9 @@ pub fn update_rolling_stock_part_anim(
         (&TrainBogieAnim, &ShapeAnimBinding, &mut Transform, &ChildOf),
         (With<TrainExteriorAnimPart>, Without<TrainWheelAnim>),
     >,
-    cars: Query<&Transform, Without<TrainExteriorAnimPart>>,
+    cars: Query<&TrainCarTrackOffset, Without<TrainExteriorAnimPart>>,
+    train_markers: Query<&TrainMarker>,
+    car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
         (&TrainKeyedAnim, &ShapeAnimBinding, &mut Transform),
         (
@@ -269,7 +356,9 @@ pub fn update_rolling_stock_part_anim(
     >,
 ) {
     let dt = time.delta_secs();
-    let speed = train_speed_mps(live.as_deref(), replay.as_deref());
+    let live_ref = live.as_deref();
+    let replay_ref = replay.as_deref();
+    let speed = train_speed_mps(live_ref, replay_ref);
 
     for (mut wheel, binding, mut tf) in &mut wheels {
         let r = wheel.radius_m.max(0.15);
@@ -287,20 +376,69 @@ pub fn update_rolling_stock_part_anim(
         let _ = binding; // wheel uses speed, not shape keys
     }
 
-    // Bogie: relative yaw from car heading vs a synthetic look-ahead (curve lever).
-    let look_ahead_yaw = {
-        // Prefer car parent yaw + small bias from speed sign as a cheap curve cue when
-        // we lack per-bogie track samples; relative stays near 0 on straight.
-        0.0f32
-    };
+    let terrain_ref = terrain.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+    let resolver_ref = tdb_resolver.as_ref();
+
     for (bogie, binding, mut tf, child_of) in &mut bogies {
-        let Ok(car_tf) = cars.get(child_of.parent()) else {
+        let Ok(car_off) = cars.get(child_of.parent()) else {
+            // No path offset on parent (e.g. fallback cube) — leave bogie straight.
+            *tf = Transform::IDENTITY;
+            let _ = binding;
             continue;
         };
-        let car_yaw = car_tf.rotation.to_euler(EulerRot::YXZ).0;
-        let dyaw = wrap_angle(look_ahead_yaw - car_yaw);
-        let lever = (bogie.long_offset_m / BOGIE_LOOKAHEAD_M).clamp(-1.0, 1.0);
-        let rel = (dyaw * lever + speed.signum() * lever * 0.02).clamp(-BOGIE_YAW_CLAMP, BOGIE_YAW_CLAMP);
+        let track_index = car_parents
+            .get(child_of.parent())
+            .ok()
+            .and_then(|p| train_markers.get(p.parent()).ok())
+            .map(|m| m.track_index)
+            .unwrap_or(car_off.track_index);
+
+        let Some((head_edge, head_pos)) = head_graph_position(live_ref, replay_ref, track_index)
+        else {
+            *tf = Transform::IDENTITY;
+            let _ = binding;
+            continue;
+        };
+
+        let car_path = f64::from(car_off.offset_m);
+        let bogie_path = car_path + f64::from(bogie.long_offset_m);
+        let Some(car_yaw) = sample_yaw_at_path_offset(
+            &scene.graph,
+            live_ref,
+            &head_edge,
+            head_pos,
+            car_path,
+            resolver_ref,
+            &scene,
+            offset.delta,
+            &focus,
+            terrain_ref,
+        ) else {
+            *tf = Transform::IDENTITY;
+            let _ = binding;
+            continue;
+        };
+        let Some(bogie_yaw) = sample_yaw_at_path_offset(
+            &scene.graph,
+            live_ref,
+            &head_edge,
+            head_pos,
+            bogie_path,
+            resolver_ref,
+            &scene,
+            offset.delta,
+            &focus,
+            terrain_ref,
+        ) else {
+            *tf = Transform::IDENTITY;
+            let _ = binding;
+            continue;
+        };
+
+        let rel = bogie_relative_yaw(car_yaw, bogie_yaw);
         let next = Transform {
             translation: Vec3::ZERO,
             rotation: Quat::from_rotation_y(rel),
@@ -332,7 +470,11 @@ pub fn update_rolling_stock_part_anim(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_core::{EdgeId, NodeId};
     use openrailsrs_formats::{Matrix43, NamedMatrix, PrimState, VtxState};
+    use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
+
+    use crate::track_position::advance_along_graph;
 
     fn identity_matrix() -> Matrix43 {
         Matrix43 {
@@ -421,11 +563,131 @@ mod tests {
     }
 
     #[test]
+    fn bogie_relative_yaw_zero_on_matching_headings() {
+        let rel = bogie_relative_yaw(1.2, 1.2);
+        assert!(rel.abs() < 1e-5);
+    }
+
+    #[test]
+    fn bogie_relative_yaw_nonzero_on_curve_and_clamped() {
+        let rel = bogie_relative_yaw(0.0, 0.2);
+        assert!(rel > 0.05, "expected non-zero relative yaw, got {rel}");
+        let big = bogie_relative_yaw(0.0, 1.5);
+        assert!((big.abs() - BOGIE_YAW_CLAMP).abs() < 1e-5);
+    }
+
+    #[test]
     fn bogie_yaw_clamp_finite() {
-        let lever = (5.0_f32 / BOGIE_LOOKAHEAD_M).clamp(-1.0, 1.0);
-        let rel = (0.5 * lever).clamp(-BOGIE_YAW_CLAMP, BOGIE_YAW_CLAMP);
+        let rel = bogie_relative_yaw(0.0, 0.5);
         assert!(rel.is_finite());
         assert!(rel.abs() <= BOGIE_YAW_CLAMP);
+    }
+
+    /// L-shaped graph: e1 along +X, e2 along +Z — yaw changes at the corner.
+    fn elbow_graph() -> TrackGraph {
+        let mut g = TrackGraph::new();
+        for (id, x_m, y_m) in [("a", 0.0, 0.0), ("b", 100.0, 0.0), ("c", 100.0, 100.0)] {
+            g.insert_node(Node {
+                id: NodeId(id.into()),
+                kind: NodeKind::Plain,
+                x_m,
+                y_m,
+            })
+            .unwrap();
+        }
+        g.insert_edge(Edge {
+            id: EdgeId("e1".into()),
+            from: NodeId("a".into()),
+            to: NodeId("b".into()),
+            length_m: 100.0,
+            speed_limit_mps: 20.0,
+            grade_percent: 0.0,
+        })
+        .unwrap();
+        g.insert_edge(Edge {
+            id: EdgeId("e2".into()),
+            from: NodeId("b".into()),
+            to: NodeId("c".into()),
+            length_m: 100.0,
+            speed_limit_mps: 20.0,
+            grade_percent: 0.0,
+        })
+        .unwrap();
+        g
+    }
+
+    #[test]
+    fn advance_along_graph_crosses_elbow() {
+        let g = elbow_graph();
+        let (eid, pos) = advance_along_graph(&g, "e1", 90.0, 20.0).expect("advance");
+        assert_eq!(eid, "e2");
+        assert!((pos - 10.0).abs() < 1e-6);
+        let (back_e, back_p) = advance_along_graph(&g, "e2", 10.0, -20.0).expect("back");
+        assert_eq!(back_e, "e1");
+        assert!((back_p - 90.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn track_yaw_differs_across_elbow_for_bogie_sample() {
+        let g = elbow_graph();
+        let scene = TrackScene::from_graph(g.clone());
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let (_, yaw_car) = vehicle_position_yaw_on_graph_edge(
+            &g,
+            "e1",
+            50.0,
+            None,
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .expect("car yaw");
+        let (e_bogie, p_bogie) = advance_along_graph(&g, "e1", 95.0, 10.0).expect("bogie pos");
+        assert_eq!(e_bogie, "e2");
+        let (_, yaw_bogie) = vehicle_position_yaw_on_graph_edge(
+            &g,
+            &e_bogie,
+            p_bogie,
+            None,
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .expect("bogie yaw");
+        let rel = bogie_relative_yaw(yaw_car, yaw_bogie);
+        assert!(
+            rel.abs() > 0.05,
+            "curve sample should steer bogie, car={yaw_car} bogie={yaw_bogie} rel={rel}"
+        );
+        // Straight: same edge, same heading → ~0.
+        let (_, yaw_a) = vehicle_position_yaw_on_graph_edge(
+            &g,
+            "e1",
+            40.0,
+            None,
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .unwrap();
+        let (_, yaw_b) = vehicle_position_yaw_on_graph_edge(
+            &g,
+            "e1",
+            60.0,
+            None,
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .unwrap();
+        assert!(bogie_relative_yaw(yaw_a, yaw_b).abs() < 1e-4);
     }
 
     #[test]

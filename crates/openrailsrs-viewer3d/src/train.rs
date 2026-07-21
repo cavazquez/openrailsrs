@@ -165,7 +165,7 @@ pub fn pose_at_time(
 ) -> Option<(Vec3, f32, f64)> {
     let (pos, rot, vel) =
         pose_at_time_with_tdb(graph, rows, t, terrain, scene, world_offset, focus, None)?;
-    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
+    let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
     Some((pos, yaw, vel))
 }
 
@@ -372,6 +372,10 @@ pub fn spawn_train_markers(
                                     .spawn((
                                         local,
                                         Visibility::default(),
+                                        crate::rolling_stock_anim::TrainCarTrackOffset {
+                                            offset_m: vehicle.offset_m,
+                                            track_index: i,
+                                        },
                                         Name::new(format!(
                                             "train:{}:car:{vi}:{}",
                                             track.label, vehicle.name

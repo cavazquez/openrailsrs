@@ -675,8 +675,77 @@ pub fn vehicle_position_yaw_on_graph_edge(
         focus,
         terrain,
     )?;
-    let (_, yaw, _) = rot.to_euler(EulerRot::YXZ);
+    let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
     Some((pos, yaw))
+}
+
+/// Move `delta_m` along the directed graph from `(edge_id, pos_on_edge_m)`.
+///
+/// Positive distance follows the edge toward `to` and continues on an outgoing
+/// edge that does not U-turn; negative walks toward `from` via an incoming edge.
+/// Used for bogie track samples (#69) when a full path odometer is unavailable.
+pub fn advance_along_graph(
+    graph: &TrackGraph,
+    edge_id: &str,
+    pos_on_edge_m: f64,
+    delta_m: f64,
+) -> Option<(String, f64)> {
+    const MAX_HOPS: usize = 48;
+    let mut eid = edge_id.trim().to_string();
+    let mut pos = pos_on_edge_m;
+    let mut remaining = delta_m;
+    for _ in 0..MAX_HOPS {
+        let edge = graph.edge(&eid)?;
+        let len = edge.length_m.max(0.0);
+        pos = pos.clamp(0.0, len);
+        if remaining >= 0.0 {
+            let room = len - pos;
+            if remaining <= room + 1e-9 {
+                return Some((eid, (pos + remaining).clamp(0.0, len)));
+            }
+            remaining -= room;
+            let to = edge.to.0.as_str();
+            let from = edge.from.0.as_str();
+            let next = graph
+                .outgoing_edges(to)
+                .iter()
+                .find(|cand| {
+                    graph
+                        .edge(cand)
+                        .is_some_and(|e| e.to.0.as_str() != from)
+                })
+                .cloned()
+                .or_else(|| graph.outgoing_edges(to).first().cloned())?;
+            eid = next;
+            pos = 0.0;
+        } else {
+            if pos + remaining >= -1e-9 {
+                return Some((eid, (pos + remaining).clamp(0.0, len)));
+            }
+            remaining += pos;
+            let from = edge.from.0.as_str();
+            let to = edge.to.0.as_str();
+            // Prefer the geometric reverse (to→from), else any edge ending at `from`.
+            let prev = graph
+                .edges_iter()
+                .find(|(id, e)| {
+                    e.to.0.as_str() == from
+                        && e.from.0.as_str() == to
+                        && *id != eid.as_str()
+                })
+                .map(|(id, _)| id.to_string())
+                .or_else(|| {
+                    graph
+                        .edges_iter()
+                        .find(|(id, e)| e.to.0.as_str() == from && *id != eid.as_str())
+                        .map(|(id, _)| id.to_string())
+                })?;
+            let prev_len = graph.edge(&prev)?.length_m.max(0.0);
+            eid = prev;
+            pos = prev_len;
+        }
+    }
+    None
 }
 
 pub fn route_start_bevy(start: RouteStart) -> Vec3 {
