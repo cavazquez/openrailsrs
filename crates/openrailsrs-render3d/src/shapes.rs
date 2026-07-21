@@ -282,8 +282,13 @@ mod tests {
     fn water_column_resolves_shape_and_texture() {
         let dir = chiltern_dir();
         let tex = dir.join("TEXTURES/RFwatercolumn.ace");
-        assert!(tex.is_file(), "RFwatercolumn.ace en ruta local");
+        // TEXTURES/ is gitignored; CI has no synced Chiltern assets (#73).
+        if !tex.is_file() {
+            eprintln!("skip: RFwatercolumn.ace no disponible (sync_chiltern_assets)");
+            return;
+        }
         let Some(path) = water_column_path() else {
+            eprintln!("skip: RF_GW_WaterColumn.s no disponible");
             return;
         };
         let parts = load_shape_parts(&path).expect("shape");
@@ -324,7 +329,11 @@ mod tests {
 
         let dir = chiltern_dir();
         let (tx, tz) = (-6082, 14925);
-        let loaded = load_tile_geometry(&dir, tx, tz).expect("tile");
+        // TILES/ is gitignored; skip unless local sync (#73).
+        let Ok(loaded) = load_tile_geometry(&dir, tx, tz) else {
+            eprintln!("skip: tile Chiltern ({tx},{tz}) no disponible");
+            return;
+        };
         let base = loaded.height.base_y();
         let markers = load_objects(&dir, tx, tz, base);
         let shape_dirs = shape_search_dirs(&dir, &dir);

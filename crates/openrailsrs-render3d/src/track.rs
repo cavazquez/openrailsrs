@@ -255,7 +255,11 @@ mod tests {
             return;
         };
         let (tx, tz) = graph_centroid_tile(&graph).expect("centroide de nodos");
-        let tile = load_tile_geometry(&dir, tx, tz).expect("tile del centroide");
+        // TILES/ is gitignored; track.toml alone is not enough for CI (#73).
+        let Ok(tile) = load_tile_geometry(&dir, tx, tz) else {
+            eprintln!("skip: tile Chiltern del centroide ({tx},{tz}) no disponible");
+            return;
+        };
         let ribbon = build_track_ribbon(&graph, tx, tz, &tile.height);
 
         assert!(
