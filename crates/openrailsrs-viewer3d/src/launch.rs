@@ -1,5 +1,8 @@
 //! Launch-time options (set from `main` before the viewer plugin runs).
 
+use std::sync::OnceLock;
+
+use crate::coordinates::MSTS_TILE_SIZE_M;
 use bevy::prelude::*;
 
 /// What to draw from `.w` / terrain (full route vs track-focused views).
@@ -165,8 +168,21 @@ pub struct ViewerLaunchOpts {
 pub const LIVE_GROUND_HALF_MAX_M: f32 = 2000.0;
 pub const TRACK_DEV_GROUND_HALF_M: f32 = 600.0;
 
-/// Default mobile view radius (world, TDB collect, terrain stream).
-pub const VIEW_RADIUS_M: f32 = 120.0;
+/// Default viewing distance (metres) — ≈ one MSTS tile (2048 m), Open Rails–style.
+///
+/// Historical alias [`VIEW_RADIUS_M`] kept for callers; prefer
+/// [`VIEWING_DISTANCE_M`] / [`view_radius_m`].
+pub const VIEWING_DISTANCE_M: f32 = 2000.0;
+/// Backward-compatible name for [`VIEWING_DISTANCE_M`].
+pub const VIEW_RADIUS_M: f32 = VIEWING_DISTANCE_M;
+
+/// Extra metres beyond the load radius before a tile is unloaded (hysteresis).
+/// Half a tile keeps neighbours active while crossing a boundary.
+pub const VIEW_UNLOAD_HYSTERESIS_M: f32 = 1024.0;
+
+/// Allowed viewing-distance range (CLI / config / env).
+pub const VIEWING_DISTANCE_MIN_M: f32 = 50.0;
+pub const VIEWING_DISTANCE_MAX_M: f32 = 16_000.0;
 
 /// Default cull radius for `.tdb` procedural track in `--track-dev` (metres).
 pub const TRACK_DEV_TDB_RADIUS_M: f32 = 1500.0;
@@ -179,19 +195,67 @@ pub const RUN_CORRIDOR_AHEAD_M: f32 = 80.0;
 /// Longitudinal window behind train in `--run-corridor` (metres).
 pub const RUN_CORRIDOR_BEHIND_M: f32 = 40.0;
 
-/// Unified view/stream radius. Override with `OPENRAILSRS_VIEW_RADIUS_M` or legacy
-/// `OPENRAILSRS_VISIBLE_RADIUS_M`.
+static VIEWING_DISTANCE_OVERRIDE: OnceLock<f32> = OnceLock::new();
+
+/// Pin the process-wide viewing distance (CLI / scenario config). Call once at startup.
+pub fn set_viewing_distance_m(meters: f32) {
+    let clamped = meters.clamp(VIEWING_DISTANCE_MIN_M, VIEWING_DISTANCE_MAX_M);
+    let _ = VIEWING_DISTANCE_OVERRIDE.set(clamped);
+}
+
+/// Resolve viewing distance: CLI/config override → env → default.
+///
+/// Env: `OPENRAILSRS_VIEW_RADIUS_M` or legacy `OPENRAILSRS_VISIBLE_RADIUS_M`.
 pub fn view_radius_m() -> f32 {
-    parse_radius_env("OPENRAILSRS_VIEW_RADIUS_M")
+    VIEWING_DISTANCE_OVERRIDE
+        .get()
+        .copied()
+        .or_else(|| parse_radius_env("OPENRAILSRS_VIEW_RADIUS_M"))
         .or_else(|| parse_radius_env("OPENRAILSRS_VISIBLE_RADIUS_M"))
-        .unwrap_or(VIEW_RADIUS_M)
+        .unwrap_or(VIEWING_DISTANCE_M)
+}
+
+/// Max tile-centre distance for stream/load (viewing distance + one tile).
+///
+/// Matches `world_tile_stream_system` / terrain discovery: a tile whose centre is
+/// just outside the viewing distance can still contain visible content.
+pub fn view_load_radius_m() -> f32 {
+    view_radius_m() + MSTS_TILE_SIZE_M as f32
+}
+
+/// Radius used to keep WORLD objects from loaded tiles (tile ring, not fine cull).
+pub fn scenery_content_radius_m() -> f32 {
+    view_load_radius_m()
+}
+
+/// Unload threshold for streamed tiles.
+///
+/// Must stay **≥** [`view_load_radius_m`] so stream/unload cannot thrash
+/// (load at ~radius+tile, unload at a smaller radius).
+pub fn view_unload_radius_m() -> f32 {
+    view_load_radius_m() + VIEW_UNLOAD_HYSTERESIS_M
+}
+
+/// Approximate tile ring radius for logs (`ceil(distance / 2048)`).
+pub fn viewing_distance_tile_ring() -> i32 {
+    let tile = MSTS_TILE_SIZE_M as f32;
+    (view_radius_m() / tile).ceil().max(1.0) as i32
 }
 
 fn parse_radius_env(key: &str) -> Option<f32> {
     std::env::var(key)
         .ok()
         .and_then(|s| s.parse().ok())
-        .filter(|r| *r >= 50.0 && *r <= 16_000.0)
+        .filter(|r| *r >= VIEWING_DISTANCE_MIN_M && *r <= VIEWING_DISTANCE_MAX_M)
+}
+
+/// Clamp a user-supplied viewing distance; `None` if out of range / non-finite.
+pub fn clamp_viewing_distance_m(meters: f32) -> Option<f32> {
+    if meters.is_finite() && (VIEWING_DISTANCE_MIN_M..=VIEWING_DISTANCE_MAX_M).contains(&meters) {
+        Some(meters)
+    } else {
+        None
+    }
 }
 
 pub fn run_corridor_ahead_m() -> f32 {
@@ -376,6 +440,45 @@ pub const TRACK_DEV_BRANCH_WALK_MAX_NODES: usize = 800;
 /// The camera is often close to the consist in live mode; using a far-distance
 /// LOD can expose simplified/interior geometry instead of the exterior shell.
 pub const LIVE_TRAIN_LOD_DISTANCE_M: f32 = 25.0;
+
+#[cfg(test)]
+mod viewing_distance_tests {
+    use super::*;
+
+    #[test]
+    fn default_viewing_distance_is_one_tile_scale() {
+        assert!((VIEWING_DISTANCE_M - 2000.0).abs() < 0.1);
+        assert!(VIEWING_DISTANCE_M < MSTS_TILE_SIZE_M as f32 + 1.0);
+        let ring = ((VIEWING_DISTANCE_M / MSTS_TILE_SIZE_M as f32).ceil() as i32).max(1);
+        assert_eq!(ring, 1);
+        const {
+            assert!(VIEW_UNLOAD_HYSTERESIS_M > 0.0);
+        }
+        assert!(scenery_content_radius_m() >= VIEWING_DISTANCE_M);
+    }
+
+    #[test]
+    fn clamp_viewing_distance_rejects_out_of_range() {
+        assert_eq!(clamp_viewing_distance_m(2000.0), Some(2000.0));
+        assert_eq!(clamp_viewing_distance_m(49.0), None);
+        assert_eq!(clamp_viewing_distance_m(20_000.0), None);
+    }
+
+    #[test]
+    fn unload_radius_covers_stream_load_plus_hysteresis() {
+        const {
+            assert!(VIEW_UNLOAD_HYSTERESIS_M >= 512.0);
+        }
+        let stream_max = VIEWING_DISTANCE_M + MSTS_TILE_SIZE_M as f32;
+        let unload = stream_max + VIEW_UNLOAD_HYSTERESIS_M;
+        // Must not thrash: unload ≥ stream inclusion distance.
+        assert!(unload >= stream_max);
+        assert!(
+            (view_load_radius_m() - stream_max).abs() < 0.1
+                || view_radius_m() != VIEWING_DISTANCE_M
+        );
+    }
+}
 
 #[cfg(test)]
 mod corridor_tests {

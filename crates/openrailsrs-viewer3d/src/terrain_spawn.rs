@@ -9,21 +9,59 @@ use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_formats::{
-    build_patch_mesh_data_sampled, build_tile_mesh_data_sampled, msts_tile_world_origin,
-    terrain_patches_per_side,
+    TerrainMeshData, TerrainPatch, build_patch_mesh_data_sampled, build_tile_mesh_data_sampled,
+    msts_tile_world_origin, terrain_patches_per_side,
 };
+use rayon::prelude::*;
 
 use crate::shapes::RouteAssets;
 use crate::terrain::{
-    TerrainScene, TerrainTile, mesh_from_terrain_data, terrain_patch_offset_in_tile,
+    TerrainScene, TerrainTile, mesh_from_terrain_data_owned, terrain_patch_offset_in_tile,
 };
-use crate::terrain_assets::terrain_material_textures;
+use crate::terrain_assets::{terrain_material_textures, terrain_shader_material_key};
 use crate::terrain_material::TerrainMaterial;
 use crate::terrain_sampler::{LoadedTerrainTile, TerrainTileCache};
 use crate::{log_step, viewer_log};
 
 const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
-const TERRAIN_TILES_PER_FRAME: usize = 1;
+/// Merged material chunks are cheap enough to finish the initial tile set in one
+/// Update, avoiding wall-clock inflation from interleaving with WORLD spawn (#60).
+const TERRAIN_TILES_PER_FRAME: usize = 8;
+
+/// Append `src` into `dst`, translating patch-local positions into tile space.
+#[cfg(test)]
+fn append_terrain_mesh_data(dst: &mut TerrainMeshData, src: &TerrainMeshData, offset: Vec3) {
+    append_terrain_mesh_data_owned(dst, src.clone(), offset);
+}
+
+fn append_terrain_mesh_data_owned(
+    dst: &mut TerrainMeshData,
+    mut src: TerrainMeshData,
+    offset: Vec3,
+) {
+    let base = dst.positions.len() as u32;
+    if offset != Vec3::ZERO {
+        for p in &mut src.positions {
+            p[0] += offset.x;
+            p[1] += offset.y;
+            p[2] += offset.z;
+        }
+    }
+    dst.positions.append(&mut src.positions);
+    dst.normals.append(&mut src.normals);
+    dst.uvs.append(&mut src.uvs);
+    dst.indices
+        .extend(src.indices.into_iter().map(|i| i + base));
+}
+
+fn empty_terrain_mesh_data() -> TerrainMeshData {
+    TerrainMeshData {
+        positions: Vec::new(),
+        normals: Vec::new(),
+        uvs: Vec::new(),
+        indices: Vec::new(),
+    }
+}
 
 fn fallback_terrain_image(images: &mut Assets<Image>) -> Handle<Image> {
     let mut img = Image::new_fill(
@@ -55,15 +93,16 @@ fn spawn_textured_patches(
     current: &LoadedTerrainTile,
     tile_cache: &TerrainTileCache,
     texture_cache: &mut HashMap<String, Handle<Image>>,
+    material_cache: &mut HashMap<String, Handle<TerrainMaterial>>,
     fallback_tex: &Handle<Image>,
     render_origin: Vec3,
     height_origin: f32,
     origin_shift: Vec3,
-) -> (usize, usize) {
+) -> (usize, usize, usize) {
     let tile = &current.tile;
     let patch_set = match tile.primary_patch_set() {
         Some(set) => set,
-        None => return (0, 0),
+        None => return (0, 0, 0),
     };
     let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
     let tile_origin = Vec3::new(
@@ -71,12 +110,12 @@ fn spawn_textured_patches(
         0.0,
         wz - render_origin.z - origin_shift.z,
     );
-    let mut spawned = 0usize;
-    let mut holed = 0usize;
 
+    // Collect drawable patches, then build meshes in parallel before merging (#60).
+    let mut jobs: Vec<(u32, u32, TerrainPatch, String)> = Vec::new();
     for pz in 0..patch_set.npatches {
         for px in 0..patch_set.npatches {
-            let Some(patch) = patch_set.patch_at(px, pz) else {
+            let Some(patch) = patch_set.patch_at(px, pz).cloned() else {
                 continue;
             };
             if !patch.drawing_enabled() {
@@ -89,55 +128,98 @@ fn spawn_textured_patches(
             let Some(shader) = shader else {
                 continue;
             };
+            let key = terrain_shader_material_key(shader);
+            if !material_cache.contains_key(&key) {
+                let (base, overlay, overlay_scale) = terrain_material_textures(
+                    route_dir,
+                    images,
+                    texture_cache,
+                    shader,
+                    fallback_tex.clone(),
+                );
+                material_cache.insert(
+                    key.clone(),
+                    materials.add(TerrainMaterial {
+                        overlay_scale,
+                        base_texture: base,
+                        overlay_texture: overlay,
+                    }),
+                );
+            }
+            jobs.push((px, pz, patch, key));
+        }
+    }
 
+    let sample_size = tile.samples.sample_size;
+    // Parallel build+merge by material key: each worker folds patches into tile-space
+    // chunks, then reduce concatenates worker maps (#60).
+    let merged: HashMap<String, (TerrainMeshData, usize, usize)> = jobs
+        .into_par_iter()
+        .fold(HashMap::new, |mut acc, (px, pz, patch, key)| {
             let mesh_data = build_patch_mesh_data_sampled(
-                tile.samples.sample_size,
+                sample_size,
                 px,
                 pz,
-                Some(patch),
+                Some(&patch),
                 true,
                 |ux, uz| tile_cache.sample_elevation(current, ux, uz),
                 |ux, uz| tile_cache.sample_hidden(current, ux, uz),
             );
-            if current
+            let patch_holed = current
                 .features
                 .as_ref()
-                .is_some_and(|f| f.patch_has_hidden_vertices(px, pz))
-            {
-                holed += 1;
+                .is_some_and(|f| f.patch_has_hidden_vertices(px, pz));
+            let offset = terrain_patch_offset_in_tile(px, pz);
+            let entry = acc
+                .entry(key)
+                .or_insert_with(|| (empty_terrain_mesh_data(), 0usize, 0usize));
+            append_terrain_mesh_data_owned(&mut entry.0, mesh_data, offset);
+            entry.1 += 1;
+            if patch_holed {
+                entry.2 += 1;
             }
+            acc
+        })
+        .reduce(HashMap::new, |mut a, b| {
+            for (key, (mesh_data, patches, holes)) in b {
+                let entry = a
+                    .entry(key)
+                    .or_insert_with(|| (empty_terrain_mesh_data(), 0usize, 0usize));
+                append_terrain_mesh_data_owned(&mut entry.0, mesh_data, Vec3::ZERO);
+                entry.1 += patches;
+                entry.2 += holes;
+            }
+            a
+        });
 
-            let (base, overlay, overlay_scale) = terrain_material_textures(
-                route_dir,
-                images,
-                texture_cache,
-                shader,
-                fallback_tex.clone(),
-            );
-            let material = materials.add(TerrainMaterial {
-                overlay_scale,
-                base_texture: base,
-                overlay_texture: overlay,
-            });
-
-            let patch_offset = terrain_patch_offset_in_tile(px, pz);
-            commands.spawn((
-                Mesh3d(meshes.add(mesh_from_terrain_data(&mesh_data, height_origin))),
-                MeshMaterial3d(material),
-                Transform::from_translation(tile_origin + patch_offset),
-                Name::new(format!(
-                    "terrain-patch:{}:{}:{}:{}",
-                    tile.tile_x, tile.tile_z, px, pz
-                )),
-                TerrainTileTag {
-                    tile_x: tile.tile_x,
-                    tile_z: tile.tile_z,
-                },
-            ));
-            spawned += 1;
+    let mut patch_count = 0usize;
+    let mut holed = 0usize;
+    let mut entities = 0usize;
+    for (key, (mesh_data, patches, holes)) in merged {
+        patch_count += patches;
+        holed += holes;
+        let Some(material) = material_cache.get(&key).cloned() else {
+            continue;
+        };
+        if mesh_data.indices.is_empty() {
+            continue;
         }
+        commands.spawn((
+            Mesh3d(meshes.add(mesh_from_terrain_data_owned(mesh_data, height_origin))),
+            MeshMaterial3d(material),
+            Transform::from_translation(tile_origin),
+            Name::new(format!(
+                "terrain-chunk:{}:{}:{}",
+                tile.tile_x, tile.tile_z, key
+            )),
+            TerrainTileTag {
+                tile_x: tile.tile_x,
+                tile_z: tile.tile_z,
+            },
+        ));
+        entities += 1;
     }
-    (spawned, holed)
+    (patch_count, entities, holed)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -165,7 +247,7 @@ fn spawn_legacy_tile(
         wz - render_origin.z - origin_shift.z,
     );
     commands.spawn((
-        Mesh3d(meshes.add(mesh_from_terrain_data(&data, height_origin))),
+        Mesh3d(meshes.add(mesh_from_terrain_data_owned(data, height_origin))),
         MeshMaterial3d(material.clone()),
         Transform::from_translation(translation),
         Name::new(format!("terrain:{}:{}", tile.tile_x, tile.tile_z)),
@@ -186,12 +268,13 @@ fn spawn_loaded_terrain_tile(
     current: &LoadedTerrainTile,
     tile_cache: &TerrainTileCache,
     texture_cache: &mut HashMap<String, Handle<Image>>,
+    material_cache: &mut HashMap<String, Handle<TerrainMaterial>>,
     fallback_tex: &Handle<Image>,
     fallback_material: &Handle<StandardMaterial>,
     render_origin: Vec3,
     height_origin: f32,
     origin_shift: Vec3,
-) -> (bool, usize, usize) {
+) -> (bool, usize, usize, usize) {
     let tile = &current.tile;
     let grid = &current.grid;
 
@@ -212,7 +295,7 @@ fn spawn_loaded_terrain_tile(
     }
 
     if tile.has_textured_patches() {
-        let (patches, holed) = spawn_textured_patches(
+        let (patches, entities, holed) = spawn_textured_patches(
             commands,
             meshes,
             terrain_materials,
@@ -221,13 +304,14 @@ fn spawn_loaded_terrain_tile(
             current,
             tile_cache,
             texture_cache,
+            material_cache,
             fallback_tex,
             render_origin,
             height_origin,
             origin_shift,
         );
         if patches > 0 {
-            return (true, patches, holed);
+            return (true, patches, entities, holed);
         }
     }
 
@@ -241,7 +325,7 @@ fn spawn_loaded_terrain_tile(
         height_origin,
         origin_shift,
     );
-    (true, 0, 0)
+    (true, 0, 1, 0)
 }
 
 #[derive(Resource)]
@@ -250,9 +334,11 @@ pub struct TerrainSpawnProgress {
     tile_index: usize,
     spawned_tiles: usize,
     spawned_patches: usize,
+    spawned_chunks: usize,
     holed_patches: usize,
     tile_cache: TerrainTileCache,
     texture_cache: HashMap<String, Handle<Image>>,
+    material_cache: HashMap<String, Handle<TerrainMaterial>>,
     fallback_tex: Handle<Image>,
     fallback_material: Handle<StandardMaterial>,
     render_origin: Vec3,
@@ -278,9 +364,11 @@ impl TerrainSpawnProgress {
             tile_index: 0,
             spawned_tiles: 0,
             spawned_patches: 0,
+            spawned_chunks: 0,
             holed_patches: 0,
             tile_cache: TerrainTileCache::from_scene_tiles(&terrain.tiles),
             texture_cache: HashMap::new(),
+            material_cache: HashMap::new(),
             fallback_tex: fallback_terrain_image(images),
             fallback_material,
             render_origin: focus.center,
@@ -291,9 +379,11 @@ impl TerrainSpawnProgress {
     fn log_summary(&self) {
         if self.spawned_patches > 0 {
             viewer_log!(
-                "openrailsrs-viewer3d: {} terrain tile(s), {} textured patch(es){}",
+                "openrailsrs-viewer3d: {} terrain tile(s), {} patch(es) → {} chunk(s)/{} material(s){}",
                 self.spawned_tiles,
                 self.spawned_patches,
+                self.spawned_chunks,
+                self.material_cache.len(),
                 if self.holed_patches > 0 {
                     format!(" ({} with holes)", self.holed_patches)
                 } else {
@@ -323,12 +413,14 @@ impl TerrainSpawnProgress {
         let TerrainSpawnProgress {
             tile_cache,
             texture_cache,
+            material_cache,
             fallback_tex,
             fallback_material,
             render_origin,
             height_origin,
             spawned_tiles,
             spawned_patches,
+            spawned_chunks,
             holed_patches,
             ..
         } = self;
@@ -340,7 +432,7 @@ impl TerrainSpawnProgress {
         };
         let fallback_tex = fallback_tex.clone();
         let fallback_material = fallback_material.clone();
-        let (spawned, patches, holed) = spawn_loaded_terrain_tile(
+        let (spawned, patches, chunks, holed) = spawn_loaded_terrain_tile(
             commands,
             meshes,
             images,
@@ -349,6 +441,7 @@ impl TerrainSpawnProgress {
             &loaded,
             &*tile_cache,
             texture_cache,
+            material_cache,
             &fallback_tex,
             &fallback_material,
             *render_origin,
@@ -358,6 +451,7 @@ impl TerrainSpawnProgress {
         if spawned {
             *spawned_tiles += 1;
             *spawned_patches += patches;
+            *spawned_chunks += chunks;
             *holed_patches += holed;
         }
     }
@@ -474,6 +568,7 @@ pub struct TerrainTileStream {
     pending_spawn: Vec<(i32, i32)>,
     tile_cache: TerrainTileCache,
     texture_cache: std::collections::HashMap<String, Handle<Image>>,
+    material_cache: std::collections::HashMap<String, Handle<TerrainMaterial>>,
     fallback_tex: Option<Handle<Image>>,
     fallback_material: Option<Handle<StandardMaterial>>,
     render_origin: Vec3,
@@ -487,6 +582,7 @@ impl TerrainTileStream {
         focus: &crate::world::RouteFocus,
         radius_m: f32,
     ) -> Self {
+        // Hash TILES and legacy TERRAIN/.t share the same case-insensitive discovery.
         let catalog = crate::terrain::discover_terrain_tile_entries(route_dir, None, f32::MAX)
             .into_iter()
             .map(|(x, z, p)| ((x, z), p))
@@ -501,6 +597,7 @@ impl TerrainTileStream {
             pending_spawn: Vec::new(),
             tile_cache: TerrainTileCache::from_scene_tiles(&terrain.tiles),
             texture_cache: std::collections::HashMap::new(),
+            material_cache: std::collections::HashMap::new(),
             fallback_tex: None,
             fallback_material: None,
             render_origin: focus.center,
@@ -632,9 +729,11 @@ pub fn terrain_tile_spawn_stream_system(
         tile_index: 0,
         spawned_tiles: 0,
         spawned_patches: 0,
+        spawned_chunks: 0,
         holed_patches: 0,
         tile_cache: stream.tile_cache.clone(),
         texture_cache: std::mem::take(&mut stream.texture_cache),
+        material_cache: std::mem::take(&mut stream.material_cache),
         fallback_tex: stream.fallback_tex.clone().unwrap(),
         fallback_material: stream.fallback_material.clone().unwrap(),
         render_origin: stream.render_origin,
@@ -650,7 +749,69 @@ pub fn terrain_tile_spawn_stream_system(
         &mut terrain_materials,
     );
     stream.texture_cache = scratch.texture_cache;
+    stream.material_cache = scratch.material_cache;
     stream.tile_cache = scratch.tile_cache;
+}
+
+/// Release terrain meshes for unloaded tiles and drop material/texture cache
+/// entries no longer referenced by remaining tiles (#51).
+fn evict_unreferenced_terrain_assets(
+    stream: &mut TerrainTileStream,
+    live_material_ids: &std::collections::HashSet<AssetId<TerrainMaterial>>,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    terrain_materials: &mut Assets<TerrainMaterial>,
+    released_meshes: impl IntoIterator<Item = AssetId<Mesh>>,
+) -> (usize, usize, usize) {
+    let mut meshes_removed = 0usize;
+    for id in released_meshes {
+        if meshes.remove(id).is_some() {
+            meshes_removed += 1;
+        }
+    }
+
+    let mut materials_removed = 0usize;
+    let stale_mats: Vec<String> = stream
+        .material_cache
+        .iter()
+        .filter(|(_, handle)| !live_material_ids.contains(&handle.id()))
+        .map(|(key, _)| key.clone())
+        .collect();
+    for key in stale_mats {
+        if let Some(handle) = stream.material_cache.remove(&key) {
+            if terrain_materials.remove(handle.id()).is_some() {
+                materials_removed += 1;
+            }
+        }
+    }
+
+    let mut still_needed_images = std::collections::HashSet::new();
+    if let Some(fallback) = &stream.fallback_tex {
+        still_needed_images.insert(fallback.id());
+    }
+    for handle in stream.material_cache.values() {
+        if let Some(mat) = terrain_materials.get(handle) {
+            still_needed_images.insert(mat.base_texture.id());
+            still_needed_images.insert(mat.overlay_texture.id());
+        }
+    }
+
+    let mut textures_removed = 0usize;
+    let stale_tex: Vec<String> = stream
+        .texture_cache
+        .iter()
+        .filter(|(_, handle)| !still_needed_images.contains(&handle.id()))
+        .map(|(key, _)| key.clone())
+        .collect();
+    for key in stale_tex {
+        if let Some(handle) = stream.texture_cache.remove(&key) {
+            if images.remove(handle.id()).is_some() {
+                textures_removed += 1;
+            }
+        }
+    }
+
+    (meshes_removed, materials_removed, textures_removed)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -662,14 +823,21 @@ pub fn terrain_tile_unload_system(
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mode: Res<crate::launch::ViewerSceneryMode>,
     mut commands: Commands,
-    tagged: Query<(Entity, &TerrainTileTag)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut terrain_materials: ResMut<Assets<TerrainMaterial>>,
+    tagged: Query<(
+        Entity,
+        &TerrainTileTag,
+        &Mesh3d,
+        &MeshMaterial3d<TerrainMaterial>,
+    )>,
 ) {
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
         return;
     }
-    use crate::world::{MSTS_TILE_SIZE_M, tile_center_distance_m};
-    let tile = MSTS_TILE_SIZE_M as f32;
-    let unload_radius = window.radius_m + tile + 64.0;
+    use crate::world::tile_center_distance_m;
+    let unload_radius = crate::launch::view_unload_radius_m().max(window.radius_m);
     let center = window.center_world;
     let mut unloaded = std::collections::HashSet::new();
     stream.loaded.retain(|key| {
@@ -688,9 +856,61 @@ pub fn terrain_tile_unload_system(
     for key in &unloaded {
         elevation.remove_tile(key.0, key.1);
     }
-    for (entity, tag) in tagged.iter() {
+
+    let mut live_material_ids = std::collections::HashSet::new();
+    let mut released_meshes = Vec::new();
+    let mut despawned = 0usize;
+    for (entity, tag, mesh3d, mat3d) in tagged.iter() {
         if unloaded.contains(&(tag.tile_x, tag.tile_z)) {
+            released_meshes.push(mesh3d.id());
             commands.entity(entity).despawn();
+            despawned += 1;
+        } else {
+            live_material_ids.insert(mat3d.id());
         }
+    }
+    let (meshes_removed, materials_removed, textures_removed) = evict_unreferenced_terrain_assets(
+        &mut stream,
+        &live_material_ids,
+        &mut meshes,
+        &mut images,
+        &mut terrain_materials,
+        released_meshes,
+    );
+    viewer_log!(
+        "openrailsrs-viewer3d: unloaded {} terrain tile(s) (despawned {}; freed {} mesh(es)/{} material(s)/{} texture(s); cache {}/{} )",
+        unloaded.len(),
+        despawned,
+        meshes_removed,
+        materials_removed,
+        textures_removed,
+        stream.material_cache.len(),
+        stream.texture_cache.len()
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn append_terrain_mesh_data_offsets_and_reindexes() {
+        let mut dst = TerrainMeshData {
+            positions: vec![[0.0, 0.0, 0.0]],
+            normals: vec![[0.0, 1.0, 0.0]],
+            uvs: vec![[0.0, 0.0]],
+            indices: vec![0],
+        };
+        let src = TerrainMeshData {
+            positions: vec![[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            normals: vec![[0.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
+            uvs: vec![[0.5, 0.5], [1.0, 1.0]],
+            indices: vec![0, 1, 0],
+        };
+        append_terrain_mesh_data(&mut dst, &src, Vec3::new(128.0, 0.0, 256.0));
+        assert_eq!(dst.positions.len(), 3);
+        assert_eq!(dst.positions[1], [129.0, 2.0, 259.0]);
+        assert_eq!(dst.positions[2], [132.0, 5.0, 262.0]);
+        assert_eq!(dst.indices, vec![0, 1, 2, 1]);
     }
 }

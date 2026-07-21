@@ -248,7 +248,7 @@ pub(crate) fn spawn_gameplay_markers(
     let terrain_ref = terrain.as_deref();
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::new(tdb, Some(assets.tsection())));
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
     let resolver_ref = tdb_resolver.as_ref();
     let size = scene.bounds.edge_radius().max(2.0) * 1.8;
     let sphere = meshes.add(Sphere::new(size));

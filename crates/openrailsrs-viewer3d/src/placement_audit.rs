@@ -56,6 +56,11 @@ pub struct StopPlacementSample {
     /// Position used by gameplay markers (TDB when available).
     pub marker_bevy: Option<[f32; 3]>,
     pub delta_graph_tdb_xz_m: Option<f32>,
+    /// `id_validated` | `nearest` | `graph_fallback`
+    pub mapping_method: String,
+    /// XZ distance to the raw/alias ID pose even when rejected.
+    pub id_delta_m: Option<f32>,
+    pub rejected_tdb_id: Option<u32>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -66,6 +71,9 @@ pub struct SceneryCandidate {
     pub bevy: [f32; 3],
     pub delta_to_nearest_tdb_xz_m: Option<f32>,
     pub delta_to_graph_stop_xz_m: Option<f32>,
+    /// Present when `delta_to_nearest_tdb_xz_m` is `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nearest_tdb_miss_reason: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -74,7 +82,16 @@ pub struct PlacementDeltas {
     pub anchor_vs_graph_start_xz_m: Option<f32>,
     pub graph_start_vs_trk_start_xz_m: Option<f32>,
     pub max_scenery_to_tdb_xz_m: Option<f32>,
+    /// Vector nodes indexed on the audit tile (exact).
+    pub tdb_vector_nodes_on_tile: usize,
+    /// Vector nodes in the 3×3 tile ring around the audit tile.
+    pub tdb_vector_nodes_in_ring: usize,
+    pub scenery_with_tdb_match: usize,
+    pub scenery_without_tdb_match: usize,
 }
+
+/// Search radius for WORLD→TDB centreline (metres).
+const SCENERY_TDB_RADIUS_M: f32 = 250.0;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WorldAnchorInput {
@@ -111,11 +128,28 @@ pub fn run_placement_audit(
     let assets = RouteAssets::new(route_dir);
     let tdb = assets.track_db().cloned().unwrap_or_default();
     let tsection = assets.tsection();
-    let resolver = TrackPositionResolver::new(&tdb, Some(tsection));
+    let resolver = TrackPositionResolver::from_track_scene(&tdb, Some(tsection), scene);
 
-    let trk_start = RouteFile::from_route_dir(route_dir)
-        .ok()
-        .and_then(|r| r.route_start);
+    let trk_start = match RouteFile::from_route_dir(route_dir) {
+        Ok(route) => {
+            if let Some(path) = route.source_path.as_ref() {
+                eprintln!(
+                    "openrailsrs-viewer3d: placement-audit .trk {}",
+                    path.display()
+                );
+            }
+            if route.route_start.is_none() {
+                eprintln!(
+                    "openrailsrs-viewer3d: placement-audit .trk has no RouteStart (fallback to overlay/graph)"
+                );
+            }
+            route.route_start
+        }
+        Err(err) => {
+            eprintln!("openrailsrs-viewer3d: placement-audit failed to load .trk: {err}");
+            None
+        }
+    };
     let anchor_bevy = world_anchor.map(|a| a.bevy());
     let trk_bevy = trk_start.map(route_start_bevy);
 
@@ -141,12 +175,35 @@ pub fn run_placement_audit(
         .first()
         .and_then(|s| s.tdb_bevy.map(vec3_from_arr))
         .or_else(|| stops.first().and_then(|s| s.graph_bevy.map(vec3_from_arr)));
-    let scenery_candidates = collect_scenery_candidates(&world, tile, &resolver, scenery_stop);
+    let tdb_on_tile = resolver.vector_node_count_on_tile(tile.0, tile.1);
+    let mut tdb_in_ring = 0usize;
+    for dx in -1..=1 {
+        for dz in -1..=1 {
+            tdb_in_ring += resolver.vector_node_count_on_tile(tile.0 + dx, tile.1 + dz);
+        }
+    }
+    eprintln!(
+        "openrailsrs-viewer3d: placement-audit TDB vectors on tile {},{}: {tdb_on_tile} (3×3 ring: {tdb_in_ring})",
+        tile.0, tile.1
+    );
+    let scenery_candidates = collect_scenery_candidates(
+        &world,
+        tile,
+        &resolver,
+        scenery_stop,
+        tdb_on_tile,
+        tdb_in_ring,
+    );
 
     let max_scenery_tdb = scenery_candidates
         .iter()
         .filter_map(|c| c.delta_to_nearest_tdb_xz_m)
         .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let scenery_with_tdb_match = scenery_candidates
+        .iter()
+        .filter(|c| c.delta_to_nearest_tdb_xz_m.is_some())
+        .count();
+    let scenery_without_tdb_match = scenery_candidates.len() - scenery_with_tdb_match;
 
     PlacementAuditReport {
         tile_x: tile.0,
@@ -184,6 +241,10 @@ pub fn run_placement_audit(
                 _ => None,
             },
             max_scenery_to_tdb_xz_m: max_scenery_tdb,
+            tdb_vector_nodes_on_tile: tdb_on_tile,
+            tdb_vector_nodes_in_ring: tdb_in_ring,
+            scenery_with_tdb_match,
+            scenery_without_tdb_match,
         },
     }
 }
@@ -236,6 +297,9 @@ fn stop_sample(
         tdb_bevy: p.tdb_pose.map(|pose| vec3_to_arr(pose.position)),
         marker_bevy: marker.map(vec3_to_arr),
         delta_graph_tdb_xz_m: delta,
+        mapping_method: p.method.as_str().to_string(),
+        id_delta_m: p.id_delta_m,
+        rejected_tdb_id: p.rejected_tdb_id,
     }
 }
 
@@ -244,8 +308,12 @@ fn collect_scenery_candidates(
     tile: (i32, i32),
     resolver: &TrackPositionResolver<'_>,
     graph_stop: Option<Vec3>,
+    tdb_on_tile: usize,
+    tdb_in_ring: usize,
 ) -> Vec<SceneryCandidate> {
-    let mut out = Vec::new();
+    // Preselect near the stop (or all TrackObj) before the expensive TDB nearest query.
+    const PRESELECT: usize = 80;
+    let mut pre: Vec<&crate::world::WorldObject> = Vec::new();
     for obj in &world.items {
         if obj.tile_x != tile.0 || obj.tile_z != tile.1 {
             continue;
@@ -253,16 +321,40 @@ fn collect_scenery_candidates(
         if obj.kind != "Static" && obj.kind != "TrackObj" {
             continue;
         }
-        let name = obj.shape_file.clone();
-        let is_candidate = name.as_deref().is_some_and(canopy_like_shape) || obj.kind == "TrackObj";
-        if !is_candidate && obj.kind == "Static" {
+        let is_candidate =
+            obj.shape_file.as_deref().is_some_and(canopy_like_shape) || obj.kind == "TrackObj";
+        if !is_candidate {
             continue;
         }
+        pre.push(obj);
+    }
+    if let Some(g) = graph_stop {
+        pre.sort_by(|a, b| {
+            let da = Vec2::new(a.position.x - g.x, a.position.z - g.z).length();
+            let db = Vec2::new(b.position.x - g.x, b.position.z - g.z).length();
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    pre.truncate(PRESELECT);
+
+    let mut out = Vec::new();
+    for obj in pre {
+        let name = obj.shape_file.clone();
         let xz = Vec2::new(obj.position.x, obj.position.z);
-        let tdb_near = resolver.nearest_on_tile(xz, 250.0, tile.0, tile.1);
+        let tdb_near = resolver.nearest_on_tile_ring(xz, SCENERY_TDB_RADIUS_M, tile.0, tile.1);
         let delta_tdb = tdb_near.map(|p| {
             Vec2::new(obj.position.x - p.position.x, obj.position.z - p.position.z).length()
         });
+        let miss_reason = if delta_tdb.is_some() {
+            None
+        } else {
+            Some(nearest_tdb_miss_reason(
+                name.as_deref(),
+                tdb_on_tile,
+                tdb_in_ring,
+                SCENERY_TDB_RADIUS_M,
+            ))
+        };
         let delta_graph =
             graph_stop.map(|g| Vec2::new(obj.position.x - g.x, obj.position.z - g.z).length());
         out.push(SceneryCandidate {
@@ -272,16 +364,38 @@ fn collect_scenery_candidates(
             bevy: vec3_to_arr(obj.position),
             delta_to_nearest_tdb_xz_m: delta_tdb,
             delta_to_graph_stop_xz_m: delta_graph,
+            nearest_tdb_miss_reason: miss_reason,
         });
     }
-    out.sort_by(|a, b| {
-        b.delta_to_nearest_tdb_xz_m
-            .unwrap_or(0.0)
-            .partial_cmp(&a.delta_to_nearest_tdb_xz_m.unwrap_or(0.0))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    // Prefer candidates with a TDB match; among matches, largest delta first (worst cases).
+    out.sort_by(
+        |a, b| match (a.delta_to_nearest_tdb_xz_m, b.delta_to_nearest_tdb_xz_m) {
+            (Some(da), Some(db)) => db.partial_cmp(&da).unwrap_or(std::cmp::Ordering::Equal),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        },
+    );
     out.truncate(25);
     out
+}
+
+fn nearest_tdb_miss_reason(
+    file_name: Option<&str>,
+    tdb_on_tile: usize,
+    tdb_in_ring: usize,
+    radius_m: f32,
+) -> String {
+    if tdb_on_tile == 0 && tdb_in_ring == 0 {
+        return "tile_without_tdb_vectors".into();
+    }
+    if file_name.is_some_and(|n| {
+        let lower = n.to_ascii_lowercase();
+        lower.contains("road") || lower.contains("street") || lower.contains("hwy")
+    }) {
+        return "likely_road_shape_outside_rail_radius".into();
+    }
+    format!("outside_{radius_m:.0}m_tdb_centreline_ring")
 }
 
 fn canopy_like_shape(name: &str) -> bool {
@@ -304,19 +418,31 @@ fn vec3_from_arr(a: [f32; 3]) -> Vec3 {
 
 pub fn log_placement_audit(report: &PlacementAuditReport) {
     crate::viewer_log!(
-        "openrailsrs-viewer3d: placement-audit tile {},{} — anchor vs trk {:.1}m | anchor vs graph {:.1}m | max scenery→tdb {:.1}m",
+        "openrailsrs-viewer3d: placement-audit tile {},{} — anchor vs trk {} | anchor vs graph {} | max scenery→tdb {} | tdb match {}/{} (vectors tile/ring {}/{})",
         report.tile_x,
         report.tile_z,
-        report.deltas.anchor_vs_trk_start_xz_m.unwrap_or(f32::NAN),
-        report.deltas.anchor_vs_graph_start_xz_m.unwrap_or(f32::NAN),
-        report.deltas.max_scenery_to_tdb_xz_m.unwrap_or(f32::NAN),
+        fmt_opt_m(report.deltas.anchor_vs_trk_start_xz_m),
+        fmt_opt_m(report.deltas.anchor_vs_graph_start_xz_m),
+        fmt_opt_m(report.deltas.max_scenery_to_tdb_xz_m),
+        report.deltas.scenery_with_tdb_match,
+        report.deltas.scenery_with_tdb_match + report.deltas.scenery_without_tdb_match,
+        report.deltas.tdb_vector_nodes_on_tile,
+        report.deltas.tdb_vector_nodes_in_ring,
     );
     for stop in &report.stops {
         crate::viewer_log!(
-            "  stop {} — graph/tdb delta {:.1}m",
+            "  stop {} — graph/tdb delta {} ({})",
             stop.node_id,
-            stop.delta_graph_tdb_xz_m.unwrap_or(f32::NAN),
+            fmt_opt_m(stop.delta_graph_tdb_xz_m),
+            stop.mapping_method,
         );
+    }
+}
+
+fn fmt_opt_m(v: Option<f32>) -> String {
+    match v {
+        Some(m) if m.is_finite() => format!("{m:.1}m"),
+        _ => "n/a".into(),
     }
 }
 
@@ -363,5 +489,84 @@ mod tests {
         );
         assert!(report.deltas.anchor_vs_graph_start_xz_m.unwrap_or(999.0) < 1.0);
         assert!(report.stops.iter().any(|s| s.node_id == "n10778"));
+    }
+
+    #[test]
+    fn nearest_miss_reason_codes_are_structured() {
+        assert_eq!(
+            nearest_tdb_miss_reason(None, 0, 0, 250.0),
+            "tile_without_tdb_vectors"
+        );
+        assert_eq!(
+            nearest_tdb_miss_reason(Some("hwy2l2wnaT20m90dhwy2l.s"), 10, 20, 250.0),
+            "likely_road_shape_outside_rail_radius"
+        );
+        assert_eq!(
+            nearest_tdb_miss_reason(Some("A1t100mStrt.s"), 10, 20, 250.0),
+            "outside_250m_tdb_centreline_ring"
+        );
+        assert_eq!(fmt_opt_m(None), "n/a");
+        assert_eq!(fmt_opt_m(Some(12.34)), "12.3m");
+    }
+
+    #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT / Chiltern route"]
+    fn chiltern_birmingham_trackobj_has_finite_tdb_nearest() {
+        let route = std::env::var("CHILTERN_ROUTE")
+            .or_else(|_| {
+                std::env::var("OPENRAILSRS_MSTS_CONTENT")
+                    .map(|root| format!("{root}/Chiltern/ROUTES/Chiltern"))
+            })
+            .map(std::path::PathBuf::from)
+            .expect("CHILTERN_ROUTE or OPENRAILSRS_MSTS_CONTENT");
+        if !route.is_dir() {
+            return;
+        }
+        let scenario_dir =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let scenario = load_scenario(scenario_dir.join("scenario.toml")).expect("scenario");
+        let graph = load_track_graph_from_route_dir(&scenario_dir).expect("graph");
+        let scene = TrackScene::from_graph(graph);
+        let anchor = WorldAnchorInput {
+            tile_x: -6080,
+            tile_z: 14925,
+            local_x_m: 891.831,
+            local_y_m: 35.7818,
+            local_z_m: 582.756,
+        };
+        let graph_start = graph_start_from_scenario(&scene, &scenario, RouteWorldOffset::default());
+        let offset = RouteWorldOffset {
+            delta: Vec3::new(
+                anchor.bevy().x - graph_start.unwrap().x,
+                0.0,
+                anchor.bevy().z - graph_start.unwrap().z,
+            ),
+        };
+        let report = run_placement_audit(
+            &route,
+            &scene,
+            &scenario,
+            offset,
+            Some(anchor),
+            CHILTERN_BIRMINGHAM_TILE,
+            &["n10778", "n3"],
+        );
+        assert!(
+            report.deltas.tdb_vector_nodes_on_tile > 0,
+            "expected TDB vectors on Birmingham tile"
+        );
+        assert!(
+            report.deltas.scenery_with_tdb_match > 0,
+            "expected finite TrackObj→TDB deltas"
+        );
+        assert!(
+            report
+                .scenery_candidates
+                .iter()
+                .filter_map(|c| c.delta_to_nearest_tdb_xz_m)
+                .all(|d| d.is_finite()),
+            "deltas must be finite (not NaN)"
+        );
+        assert!(report.deltas.max_scenery_to_tdb_xz_m.is_some());
     }
 }

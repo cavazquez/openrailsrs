@@ -109,6 +109,18 @@ pub enum WorldItem {
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
     },
+    /// Road traffic spawner (`CarSpawner` in `.w`); poses come from RDB `TrItemId (1 …)`.
+    CarSpawner {
+        uid: u32,
+        car_frequency: f64,
+        car_av_speed: f64,
+        /// `ORTSListName` when present (OpenRails multi-list `carspawn.dat`).
+        list_name: Option<String>,
+        /// RDB item ids (`TrItemId` with database index 1), typically start then end.
+        rdb_tr_item_ids: Vec<u32>,
+        position: Vec3,
+        qdir: Option<[f64; 4]>,
+    },
     Other {
         tag: String,
         uid: Option<u32>,
@@ -131,6 +143,7 @@ impl WorldItem {
             WorldItem::SoundRegion { .. } => "SoundRegion",
             WorldItem::HWater { .. } => "HWater",
             WorldItem::Transfer { .. } => "Transfer",
+            WorldItem::CarSpawner { .. } => "CarSpawner",
             WorldItem::Other { .. } => "Other",
         }
     }
@@ -145,7 +158,8 @@ impl WorldItem {
             | WorldItem::Speedpost { uid, .. }
             | WorldItem::SoundRegion { uid, .. }
             | WorldItem::HWater { uid, .. }
-            | WorldItem::Transfer { uid, .. } => Some(*uid),
+            | WorldItem::Transfer { uid, .. }
+            | WorldItem::CarSpawner { uid, .. } => Some(*uid),
             WorldItem::Other { uid, .. } => *uid,
         }
     }
@@ -175,7 +189,8 @@ impl WorldItem {
             | WorldItem::Speedpost { position, .. }
             | WorldItem::SoundRegion { position, .. }
             | WorldItem::HWater { position, .. }
-            | WorldItem::Transfer { position, .. } => Some(*position),
+            | WorldItem::Transfer { position, .. }
+            | WorldItem::CarSpawner { position, .. } => Some(*position),
             WorldItem::Other { position, .. } => *position,
         }
     }
@@ -188,6 +203,7 @@ impl WorldItem {
             | WorldItem::Signal { qdir, .. }
             | WorldItem::Speedpost { qdir, .. }
             | WorldItem::SoundRegion { qdir, .. }
+            | WorldItem::CarSpawner { qdir, .. }
             | WorldItem::Other { qdir, .. } => *qdir,
             _ => None,
         }
@@ -400,7 +416,7 @@ fn is_object_entry(items: &[Ast]) -> bool {
             if matches!(
                 head.as_str(),
                 "Static" | "TrackObj" | "Forest" | "Transfer" | "Dyntrack" | "Signal" | "Speedpost"
-                    | "SoundRegion" | "HWater"
+                    | "SoundRegion" | "HWater" | "CarSpawner"
                     | "UiD"
             )
     )
@@ -460,6 +476,12 @@ fn infer_object_tag(fields: &[Ast]) -> Option<String> {
     }
     if find_named_pair(fields, "Size").is_some() {
         return Some("HWater".into());
+    }
+    if find_named_f64(fields, "CarFrequency").is_some()
+        || find_named_f64(fields, "CarAvSpeed").is_some()
+        || find_named_string(fields, "ORTSListName").is_some()
+    {
+        return Some("CarSpawner".into());
     }
     if find_named_string(fields, "FileName").is_some() {
         return Some("Static".into());
@@ -566,6 +588,15 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             height: find_named_f64(fields, "Height").unwrap_or(10.0),
             qdir,
             matrix3x3,
+        },
+        s if s.eq_ignore_ascii_case("CarSpawner") => WorldItem::CarSpawner {
+            uid: uid.unwrap_or(0),
+            car_frequency: find_named_f64(fields, "CarFrequency").unwrap_or(5.0),
+            car_av_speed: find_named_f64(fields, "CarAvSpeed").unwrap_or(20.0),
+            list_name: find_named_string(fields, "ORTSListName"),
+            rdb_tr_item_ids: find_rdb_tr_item_ids(fields),
+            position: position.unwrap_or_default(),
+            qdir,
         },
         _ => WorldItem::Other {
             tag: effective_tag,
@@ -756,6 +787,34 @@ fn find_tr_item_id_pair(items: &[Ast]) -> Option<(u32, u32)> {
         }
     }
     None
+}
+
+/// Collect RDB item ids from `( TrItemId 1 item_id )` pairs (database index 1 = road DB).
+fn find_rdb_tr_item_ids(items: &[Ast]) -> Vec<u32> {
+    let mut out = Vec::new();
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("TrItemId") {
+            continue;
+        }
+        let nums: Vec<u32> = sub
+            .iter()
+            .skip(1)
+            .filter_map(|a| match a {
+                Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                _ => None,
+            })
+            .collect();
+        if nums.len() >= 2 && nums[0] == 1 {
+            out.push(nums[1]);
+        }
+    }
+    out
 }
 
 /// Parse `( SignalUnits N ( SignalUnit id tdbId itemId ) ... )` from Signal `.w` bodies.

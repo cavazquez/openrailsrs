@@ -11,7 +11,9 @@ use std::time::Instant;
 use crate::shapes::load_ace_image;
 use crate::terrain::TerrainElevation;
 use crate::track::{SceneBounds, TrackScene, TrackSegmentIndex, forest_track_clearance_m};
-use crate::world::{RouteFocus, RouteWorldOffset, WorldObject, WorldScene};
+use crate::world::{
+    RouteFocus, RouteWorldOffset, WorldObject, WorldScene, horizontal_distance_xz, visible_radius_m,
+};
 use crate::{log_step, viewer_log};
 
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
@@ -212,6 +214,7 @@ pub fn spawn_forest_patches(
         &assets,
         &focus,
         &offset,
+        None,
     );
 }
 
@@ -228,6 +231,7 @@ pub fn spawn_forest_objects(
     assets: &crate::shapes::RouteAssets,
     focus: &RouteFocus,
     offset: &RouteWorldOffset,
+    cull_center: Option<Vec3>,
 ) {
     let spawn_start = Instant::now();
     let forests: Vec<_> = items
@@ -256,6 +260,7 @@ pub fn spawn_forest_objects(
 
     let patch_count = forests.len();
     let mut tree_count = 0usize;
+    let cull_at = cull_center.unwrap_or(focus.center);
 
     for obj in forests {
         let patch = obj.forest.as_ref().expect("filtered");
@@ -270,7 +275,7 @@ pub fn spawn_forest_objects(
             default_half
         };
         let (base_w, base_h) = forest_tree_size(patch.tree_width, patch.tree_height);
-        if focus.horizontal_distance(obj.position) > crate::world::visible_radius_m() {
+        if horizontal_distance_xz(cull_at, obj.position) > visible_radius_m() {
             continue;
         }
         let trees_world = scatter_trees_in_patch(

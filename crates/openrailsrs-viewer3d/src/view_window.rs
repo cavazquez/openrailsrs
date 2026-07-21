@@ -1,12 +1,15 @@
-//! Mobile view window centred on the train (or route anchor when static).
+//! Mobile view window centred on the train (or free camera when exploring).
 
 use bevy::prelude::*;
 
+use crate::camera::{CameraFollowMode, CameraMode, OrbitState};
 use crate::launch::{run_corridor_half_width_m, view_radius_m};
 use crate::live::LiveTrainMarker;
 use crate::world::RouteFocus;
 
-/// Horizontal cull/stream radius around [`Self::center_world`] (default 120 m).
+/// Horizontal cull/stream radius around [`Self::center_world`].
+///
+/// Default follows [`crate::launch::view_radius_m`] (≈ one MSTS tile).
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct ViewWindow {
     pub center_world: Vec3,
@@ -52,22 +55,46 @@ impl ViewWindow {
     }
 }
 
-/// Keep [`ViewWindow`] aligned with the live train head (MSTS world XZ + render Y from marker).
+/// Keep [`ViewWindow`] aligned with the live train, or the free camera when `follow:off`.
+///
+/// Exploring with `G` / fly / orbit pan must stream WORLD + terrain around the camera;
+/// otherwise teleporting away from the train shows empty sky.
+#[allow(clippy::too_many_arguments)]
 pub fn sync_view_window_from_train(
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mut window: ResMut<ViewWindow>,
     focus: Res<RouteFocus>,
+    follow: Res<CameraFollowMode>,
+    camera_mode: Res<CameraMode>,
     train: Query<&Transform, With<LiveTrainMarker>>,
+    camera: Query<(&Transform, Option<&OrbitState>), With<Camera3d>>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
 ) {
     if !opts.live {
         return;
     }
-    let Ok(tf) = train.single() else {
-        return;
+
+    let (msts_x, msts_z) = if *follow == CameraFollowMode::Off {
+        let Ok((cam, orbit)) = camera.single() else {
+            return;
+        };
+        let render = match (*camera_mode, orbit) {
+            (CameraMode::Orbit, Some(orbit)) => orbit.focus,
+            _ => cam.translation,
+        };
+        (
+            render.x + focus.center.x + origin.shift.x,
+            render.z + focus.center.z + origin.shift.z,
+        )
+    } else {
+        let Ok(tf) = train.single() else {
+            return;
+        };
+        (
+            tf.translation.x + focus.center.x + origin.shift.x,
+            tf.translation.z + focus.center.z + origin.shift.z,
+        )
     };
-    let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
-    let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
     window.center_world = Vec3::new(msts_x, focus.center.y, msts_z);
 }
 
@@ -84,9 +111,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_radius_is_120() {
+    fn default_radius_matches_viewing_distance_policy() {
         let w = ViewWindow::default();
-        assert!((w.radius_m - 120.0).abs() < 0.1);
+        assert!((w.radius_m - crate::launch::VIEWING_DISTANCE_M).abs() < 0.1);
+        assert!(crate::launch::view_unload_radius_m() > w.radius_m);
     }
 
     #[test]

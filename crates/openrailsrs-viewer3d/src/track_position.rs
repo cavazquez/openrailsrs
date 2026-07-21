@@ -1,6 +1,13 @@
 //! Track position on the logical graph and MSTS `.tdb` centreline.
 //!
 //! Spec reference: TSRE5 `getDrawPositionOnTrNode`, OR `FindLocationInSection`.
+//!
+//! Visual graph↔TDB correspondence must be spatially validated: a raw `nNNNN` /
+//! import alias ID is accepted only when the TDB pose lies within
+//! [`TDB_ID_MAX_DELTA_M`] of the graph hint. Otherwise nearest-centreline snap
+//! or graph fallback is used (simulation odometry stays on the graph).
+
+use std::collections::HashMap;
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
@@ -20,7 +27,10 @@ use crate::track::{TrackScene, graph_to_world, graph_to_world_with_offset};
 use crate::train::graph_point_msts_world;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
-/// Max horizontal snap from graph hint to `.tdb` centreline (Chiltern patched import ~1.8 km).
+/// Max XZ distance (m) between graph hint and TDB node pose for accepting an ID.
+pub const TDB_ID_MAX_DELTA_M: f32 = 25.0;
+
+/// Max horizontal snap from graph hint to `.tdb` centreline (nearest fallback).
 pub const TDB_GRAPH_SNAP_RADIUS_M: f32 = 2500.0;
 
 /// Override via `OPENRAILSRS_TDB_SNAP_RADIUS_M` (50–10000 m).
@@ -30,6 +40,39 @@ pub fn tdb_snap_radius_m() -> f32 {
         .and_then(|s| s.parse().ok())
         .filter(|r: &f32| (50.0..=10_000.0).contains(r))
         .unwrap_or(TDB_GRAPH_SNAP_RADIUS_M)
+}
+
+/// How a graph node was placed onto the TDB centreline for rendering.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum GraphTdbMethod {
+    /// Import alias / `nNNNN` candidate within [`TDB_ID_MAX_DELTA_M`].
+    IdValidated,
+    /// Spatial nearest centreline within snap radius.
+    Nearest,
+    /// No usable TDB pose; keep graph hint.
+    #[default]
+    GraphFallback,
+}
+
+impl GraphTdbMethod {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::IdValidated => "id_validated",
+            Self::Nearest => "nearest",
+            Self::GraphFallback => "graph_fallback",
+        }
+    }
+}
+
+/// Result of resolving a graph node to a visual TDB pose.
+#[derive(Clone, Debug)]
+pub struct GraphTdbResolution {
+    pub method: GraphTdbMethod,
+    pub tdb_node_id: Option<u32>,
+    pub pose: Option<TrackPose>,
+    /// XZ distance from graph hint to the candidate ID pose (even if rejected).
+    pub id_delta_m: Option<f32>,
+    pub rejected_tdb_id: Option<u32>,
 }
 
 pub fn msts_to_render_surface(
@@ -84,7 +127,9 @@ pub fn marker_render_world_from_msts_hint(
 pub struct TrackPositionResolver<'a> {
     pub tdb: &'a TrackDbFile,
     pub tsection: Option<&'a TSectionCatalog>,
-    pub tile_index: std::collections::HashMap<(i32, i32), Vec<u32>>,
+    pub tile_index: HashMap<(i32, i32), Vec<u32>>,
+    /// Graph node id → TDB id from import aliases (preferred over `n` prefix).
+    pub graph_node_to_tdb: HashMap<String, u32>,
 }
 
 impl<'a> TrackPositionResolver<'a> {
@@ -93,11 +138,92 @@ impl<'a> TrackPositionResolver<'a> {
             tdb,
             tsection,
             tile_index: tdb.index_nodes_by_tile(),
+            graph_node_to_tdb: HashMap::new(),
         }
     }
 
-    pub fn graph_node_to_tdb_id(node_id: &str) -> Option<u32> {
+    pub fn from_track_scene(
+        tdb: &'a TrackDbFile,
+        tsection: Option<&'a TSectionCatalog>,
+        scene: &TrackScene,
+    ) -> Self {
+        Self::new(tdb, tsection).with_graph_tdb_map(scene.graph_node_to_tdb.clone())
+    }
+
+    pub fn with_graph_tdb_map(mut self, map: HashMap<String, u32>) -> Self {
+        self.graph_node_to_tdb = map;
+        self
+    }
+
+    /// Legacy helper: parse `nNNNN` only (no alias, no spatial check).
+    pub fn parse_n_prefix_tdb_id(node_id: &str) -> Option<u32> {
         node_id.strip_prefix('n')?.parse().ok()
+    }
+
+    /// Candidate TDB id from import alias, else `nNNNN` prefix.
+    pub fn candidate_tdb_id(&self, node_id: &str) -> Option<u32> {
+        self.graph_node_to_tdb
+            .get(node_id)
+            .copied()
+            .or_else(|| Self::parse_n_prefix_tdb_id(node_id))
+    }
+
+    /// Resolve a graph node to a visual TDB pose with spatial ID validation.
+    pub fn resolve_graph_node_visual(
+        &self,
+        node_id: &str,
+        chainage_m: f64,
+        graph_hint: Option<Vec3>,
+        snap_radius_m: f32,
+    ) -> GraphTdbResolution {
+        let mut id_delta_m = None;
+        let mut rejected_tdb_id = None;
+
+        if let Some(id) = self.candidate_tdb_id(node_id) {
+            if let Some(pose) = self.tdb_pose(id, chainage_m, graph_hint) {
+                match graph_hint {
+                    Some(hint) => {
+                        let delta =
+                            Vec2::new(hint.x - pose.position.x, hint.z - pose.position.z).length();
+                        id_delta_m = Some(delta);
+                        if delta <= TDB_ID_MAX_DELTA_M {
+                            return GraphTdbResolution {
+                                method: GraphTdbMethod::IdValidated,
+                                tdb_node_id: Some(id),
+                                pose: Some(pose),
+                                id_delta_m,
+                                rejected_tdb_id: None,
+                            };
+                        }
+                        rejected_tdb_id = Some(id);
+                    }
+                    // Without a spatial hint the numeric ID alone is not trusted.
+                    None => {
+                        rejected_tdb_id = Some(id);
+                    }
+                }
+            }
+        }
+
+        if let Some(hint) = graph_hint {
+            if let Some(pose) = snap_msts_to_tdb(self, hint, snap_radius_m) {
+                return GraphTdbResolution {
+                    method: GraphTdbMethod::Nearest,
+                    tdb_node_id: None,
+                    pose: Some(pose),
+                    id_delta_m,
+                    rejected_tdb_id,
+                };
+            }
+        }
+
+        GraphTdbResolution {
+            method: GraphTdbMethod::GraphFallback,
+            tdb_node_id: None,
+            pose: None,
+            id_delta_m,
+            rejected_tdb_id,
+        }
     }
 
     pub fn tdb_pose(
@@ -123,6 +249,62 @@ impl<'a> TrackPositionResolver<'a> {
             self.tsection,
             Some((tile_x, tile_z)),
         )
+    }
+
+    /// Nearest TDB centreline within `radius_m`, searching the query tile and its 8 neighbours.
+    ///
+    /// Sections often cross tile boundaries; exact-tile filtering alone misses edge TrackObj.
+    /// Tries the exact tile first (common case) before expanding the ring.
+    pub fn nearest_on_tile_ring(
+        &self,
+        world_xz: Vec2,
+        radius_m: f32,
+        tile_x: i32,
+        tile_z: i32,
+    ) -> Option<TrackPose> {
+        if let Some(pose) = self.nearest_on_tile(world_xz, radius_m, tile_x, tile_z) {
+            return Some(pose);
+        }
+        let mut best: Option<TrackPose> = None;
+        let mut best_dist = f64::from(radius_m);
+        for dx in -1..=1 {
+            for dz in -1..=1 {
+                if dx == 0 && dz == 0 {
+                    continue;
+                }
+                let Some(pose) = self.nearest_on_tile(world_xz, radius_m, tile_x + dx, tile_z + dz)
+                else {
+                    continue;
+                };
+                let d = f64::from(
+                    Vec2::new(world_xz.x - pose.position.x, world_xz.y - pose.position.z).length(),
+                );
+                if d < best_dist {
+                    best_dist = d;
+                    best = Some(pose);
+                }
+            }
+        }
+        best
+    }
+
+    /// Count vector nodes indexed on `tile` (diagnostic for placement audit).
+    pub fn vector_node_count_on_tile(&self, tile_x: i32, tile_z: i32) -> usize {
+        self.tile_index
+            .get(&(tile_x, tile_z))
+            .map(|ids| {
+                ids.iter()
+                    .filter(|id| {
+                        self.tdb.node_by_id(**id).is_some_and(|n| {
+                            matches!(
+                                n.kind,
+                                openrailsrs_formats::typed::TrackNodeKind::Vector { .. }
+                            )
+                        })
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
     }
 }
 
@@ -182,7 +364,7 @@ pub fn graph_position_at_route_node(
     graph_node_world(scene, offset, target_node)
 }
 
-/// Combined graph + TDB pose for a stop node (chainage 0 on the homologous TDB node).
+/// Combined graph + TDB pose for a stop node (spatially validated correspondence).
 pub fn track_position_on_graph_node(
     scene: &TrackScene,
     scenario: &ScenarioFile,
@@ -192,14 +374,16 @@ pub fn track_position_on_graph_node(
     chainage_m: f64,
 ) -> TrackNodePlacement {
     let graph_world = graph_position_at_route_node(scene, scenario, offset, node_id);
-    let tdb_id = TrackPositionResolver::graph_node_to_tdb_id(node_id);
-    let near = graph_world;
-    let tdb_pose = tdb_id.and_then(|id| resolver.tdb_pose(id, chainage_m, near));
+    let resolved =
+        resolver.resolve_graph_node_visual(node_id, chainage_m, graph_world, tdb_snap_radius_m());
     TrackNodePlacement {
         node_id: node_id.to_string(),
         graph_world,
-        tdb_node_id: tdb_id,
-        tdb_pose,
+        tdb_node_id: resolved.tdb_node_id,
+        tdb_pose: resolved.pose,
+        method: resolved.method,
+        id_delta_m: resolved.id_delta_m,
+        rejected_tdb_id: resolved.rejected_tdb_id,
     }
 }
 
@@ -209,6 +393,9 @@ pub struct TrackNodePlacement {
     pub graph_world: Option<Vec3>,
     pub tdb_node_id: Option<u32>,
     pub tdb_pose: Option<TrackPose>,
+    pub method: GraphTdbMethod,
+    pub id_delta_m: Option<f32>,
+    pub rejected_tdb_id: Option<u32>,
 }
 
 impl TrackNodePlacement {
@@ -252,13 +439,13 @@ pub fn marker_render_world_at_node(
     graph_fallback: Option<Vec3>,
 ) -> Option<Vec3> {
     if let Some(res) = resolver {
-        if let Some(tdb_id) = TrackPositionResolver::graph_node_to_tdb_id(node_id) {
-            let near = graph_node_world(scene, offset, node_id).or(graph_fallback);
-            if let Some(pose) = res.tdb_pose(tdb_id, chainage_m, near) {
-                let mut world = pose.position;
-                world.y = ground_y_at(terrain, world.x, world.z, scene);
-                return Some(focus.to_render_surface(world));
-            }
+        let near = graph_node_world(scene, offset, node_id).or(graph_fallback);
+        let resolved =
+            res.resolve_graph_node_visual(node_id, chainage_m, near, tdb_snap_radius_m());
+        if let Some(pose) = resolved.pose {
+            let mut world = pose.position;
+            world.y = ground_y_at(terrain, world.x, world.z, scene);
+            return Some(focus.to_render_surface(world));
         }
     }
     graph_fallback
@@ -331,6 +518,7 @@ pub struct CorridorSnapStats {
     pub snapped_tdb_node: usize,
     pub snapped_nearest: usize,
     pub fallback_graph: usize,
+    pub rejected_tdb_id: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -343,18 +531,39 @@ fn snap_waypoint_msts(
     wp: &CorridorWaypoint,
     resolver: &TrackPositionResolver<'_>,
     snap_radius_m: f32,
-) -> (Vec3, u8) {
+) -> (Vec3, GraphTdbResolution) {
     if let Some(node_id) = &wp.node_id {
-        if let Some(tdb_id) = TrackPositionResolver::graph_node_to_tdb_id(node_id) {
-            if let Some(pose) = resolver.tdb_pose(tdb_id, 0.0, Some(wp.msts_hint)) {
-                return (pose.position, 0);
-            }
-        }
+        let resolved =
+            resolver.resolve_graph_node_visual(node_id, 0.0, Some(wp.msts_hint), snap_radius_m);
+        let pos = resolved
+            .pose
+            .as_ref()
+            .map(|p| p.position)
+            .unwrap_or(wp.msts_hint);
+        return (pos, resolved);
     }
     if let Some(pose) = snap_msts_to_tdb(resolver, wp.msts_hint, snap_radius_m) {
-        return (pose.position, 1);
+        return (
+            pose.position,
+            GraphTdbResolution {
+                method: GraphTdbMethod::Nearest,
+                tdb_node_id: None,
+                pose: Some(pose),
+                id_delta_m: None,
+                rejected_tdb_id: None,
+            },
+        );
     }
-    (wp.msts_hint, 2)
+    (
+        wp.msts_hint,
+        GraphTdbResolution {
+            method: GraphTdbMethod::GraphFallback,
+            tdb_node_id: None,
+            pose: None,
+            id_delta_m: None,
+            rejected_tdb_id: None,
+        },
+    )
 }
 
 /// Snap scenario corridor polyline vertices to the `.tdb` centreline (MSTS world space).
@@ -373,12 +582,15 @@ pub fn snap_corridor_path_to_tdb(
             msts_hint: *pt,
             node_id: node_id.clone(),
         };
-        let (snapped, kind) = snap_waypoint_msts(&wp, resolver, snap_radius_m);
+        let (snapped, resolved) = snap_waypoint_msts(&wp, resolver, snap_radius_m);
         *pt = snapped;
-        match kind {
-            0 => stats.snapped_tdb_node += 1,
-            1 => stats.snapped_nearest += 1,
-            _ => stats.fallback_graph += 1,
+        if resolved.rejected_tdb_id.is_some() {
+            stats.rejected_tdb_id += 1;
+        }
+        match resolved.method {
+            GraphTdbMethod::IdValidated => stats.snapped_tdb_node += 1,
+            GraphTdbMethod::Nearest => stats.snapped_nearest += 1,
+            GraphTdbMethod::GraphFallback => stats.fallback_graph += 1,
         }
     }
     stats
@@ -457,7 +669,7 @@ pub fn build_snapped_corridor_path(
     tsection: Option<&TSectionCatalog>,
 ) -> Result<RunCorridorPath, String> {
     let mut waypoints = build_graph_corridor_waypoints(scene, scenario, route_delta)?;
-    let resolver = TrackPositionResolver::new(tdb, tsection);
+    let resolver = TrackPositionResolver::from_track_scene(tdb, tsection, scene);
     let node_ids: Vec<Option<String>> = waypoints.iter().map(|w| w.node_id.clone()).collect();
     let mut points: Vec<Vec3> = waypoints.iter().map(|w| w.msts_hint).collect();
     let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, tdb_snap_radius_m());
@@ -465,13 +677,15 @@ pub fn build_snapped_corridor_path(
         wp.msts_hint = *pt;
     }
     crate::viewer_log!(
-        "openrailsrs-viewer3d: run_corridor TDB snap — {}/{} node, {}/{} nearest, {}/{} graph fallback (radius {:.0}m)",
+        "openrailsrs-viewer3d: run_corridor TDB snap — {}/{} id_validated, {}/{} nearest, {}/{} graph fallback, {} id_rejected (id≤{:.0}m, nearest≤{:.0}m)",
         stats.snapped_tdb_node,
         stats.total,
         stats.snapped_nearest,
         stats.total,
         stats.fallback_graph,
         stats.total,
+        stats.rejected_tdb_id,
+        TDB_ID_MAX_DELTA_M,
         tdb_snap_radius_m()
     );
     Ok(waypoints_to_corridor_path(&waypoints))
@@ -513,12 +727,56 @@ mod tests {
     }
 
     #[test]
-    fn graph_node_to_tdb_id_parses_n_prefix() {
-        assert_eq!(
-            TrackPositionResolver::graph_node_to_tdb_id("n10778"),
-            Some(10778)
-        );
-        assert_eq!(TrackPositionResolver::graph_node_to_tdb_id("bad"), None);
+    fn candidate_tdb_id_prefers_alias_over_n_prefix() {
+        let tdb = TrackDbFile::default();
+        let resolver = TrackPositionResolver::new(&tdb, None).with_graph_tdb_map(HashMap::from([
+            ("jn_alpha".to_string(), 42),
+            ("n10778".to_string(), 999),
+        ]));
+        assert_eq!(resolver.candidate_tdb_id("jn_alpha"), Some(42));
+        assert_eq!(resolver.candidate_tdb_id("n10778"), Some(999));
+        assert_eq!(resolver.candidate_tdb_id("n12"), Some(12));
+        assert_eq!(resolver.candidate_tdb_id("bad"), None);
+    }
+
+    #[test]
+    fn resolve_rejects_numeric_id_far_from_graph_hint() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let tdb_pos = resolver
+            .tdb_pose(2, 0.0, None)
+            .expect("vector node 2 on fixture");
+        let far_hint = tdb_pos.position + Vec3::new(1800.0, 0.0, 1800.0);
+        let resolved =
+            resolver.resolve_graph_node_visual("n2", 0.0, Some(far_hint), tdb_snap_radius_m());
+        assert_eq!(resolved.rejected_tdb_id, Some(2));
+        assert_ne!(resolved.method, GraphTdbMethod::IdValidated);
+        assert!(resolved.id_delta_m.unwrap_or(0.0) > TDB_ID_MAX_DELTA_M);
+    }
+
+    #[test]
+    fn resolve_accepts_numeric_id_near_graph_hint() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let tdb_pos = resolver
+            .tdb_pose(2, 0.0, None)
+            .expect("vector node 2 on fixture");
+        let near_hint = tdb_pos.position + Vec3::new(5.0, 0.0, 0.0);
+        let resolved =
+            resolver.resolve_graph_node_visual("n2", 0.0, Some(near_hint), tdb_snap_radius_m());
+        assert_eq!(resolved.method, GraphTdbMethod::IdValidated);
+        assert_eq!(resolved.tdb_node_id, Some(2));
+        assert!(resolved.id_delta_m.unwrap_or(999.0) <= TDB_ID_MAX_DELTA_M);
     }
 
     #[test]
@@ -535,7 +793,40 @@ mod tests {
     }
 
     #[test]
-    fn marker_render_world_prefers_tdb_on_fixture() {
+    fn marker_render_world_uses_validated_tdb_when_near() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let tdb_pos = resolver
+            .tdb_pose(2, 0.0, None)
+            .expect("vector node 2 on fixture");
+        let scene = empty_scene();
+        let focus = test_focus();
+        let graph_hint = tdb_pos.position + Vec3::new(8.0, 0.0, 0.0);
+        let world = marker_render_world_at_node(
+            "n2",
+            0.0,
+            Some(&resolver),
+            &scene,
+            RouteWorldOffset::default(),
+            None,
+            &focus,
+            Some(graph_hint),
+        )
+        .expect("tdb marker");
+        let expected = msts_to_render_surface(tdb_pos.position, None, &scene, &focus);
+        assert!(
+            Vec2::new(world.x - expected.x, world.z - expected.z).length() < 5.0,
+            "near ID should keep validated TDB centreline"
+        );
+    }
+
+    #[test]
+    fn marker_render_world_does_not_teleport_on_far_raw_id() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
         if !path.is_file() {
@@ -559,11 +850,12 @@ mod tests {
             &focus,
             Some(graph_hint),
         )
-        .expect("tdb marker");
-        let expected = msts_to_render_surface(tdb_pos.position, None, &scene, &focus);
+        .expect("marker");
+        let teleported = msts_to_render_surface(tdb_pos.position, None, &scene, &focus);
+        let dist_to_raw_id = Vec2::new(world.x - teleported.x, world.z - teleported.z).length();
         assert!(
-            Vec2::new(world.x - expected.x, world.z - expected.z).length() < 5.0,
-            "marker should use TDB centreline, not patched graph hint"
+            dist_to_raw_id > 100.0,
+            "far raw ID must not place the marker on the distant TDB node"
         );
     }
 
@@ -628,7 +920,28 @@ mod tests {
     }
 
     #[test]
-    fn snap_corridor_path_moves_off_graph_hint() {
+    fn snap_corridor_path_validates_near_id() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let tdb_pos = resolver
+            .tdb_pose(2, 0.0, None)
+            .expect("vector node 2 on fixture");
+        let hint = tdb_pos.position + Vec3::new(8.0, 0.0, 0.0);
+        let mut points = vec![hint];
+        let node_ids = vec![Some("n2".to_string())];
+        let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0);
+        assert_eq!(stats.snapped_tdb_node, 1);
+        assert_eq!(stats.rejected_tdb_id, 0);
+        assert!((points[0] - tdb_pos.position).length() < 5.0);
+    }
+
+    #[test]
+    fn snap_corridor_path_rejects_far_raw_id() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
         if !path.is_file() {
@@ -643,8 +956,9 @@ mod tests {
         let mut points = vec![hint];
         let node_ids = vec![Some("n2".to_string())];
         let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0);
-        assert!(stats.snapped_tdb_node >= 1 || stats.snapped_nearest >= 1);
-        assert!((points[0] - tdb_pos.position).length() < 5.0);
+        assert_eq!(stats.snapped_tdb_node, 0);
+        assert_eq!(stats.rejected_tdb_id, 1);
+        assert!((points[0] - tdb_pos.position).length() > 100.0);
     }
 
     #[test]
@@ -672,7 +986,10 @@ mod tests {
     }
 
     #[test]
-    fn tdb_snap_radius_default_covers_chiltern_patch() {
-        assert!(tdb_snap_radius_m() >= 2000.0);
+    fn tdb_id_max_delta_is_tight() {
+        const {
+            assert!(TDB_ID_MAX_DELTA_M <= 25.0);
+        }
+        assert!(tdb_snap_radius_m() >= TDB_ID_MAX_DELTA_M);
     }
 }

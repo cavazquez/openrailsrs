@@ -3,10 +3,13 @@
 //! Planar graph coordinates (`x_m`, `y_m`) map to Bevy world space with Y up:
 //! `X = x_m`, `Z = y_m` (same convention as the 2D viewer's horizontal axes).
 
+use std::collections::HashMap;
+
 use bevy::asset::RenderAssetUsages;
 use bevy::light::NotShadowCaster;
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
+use openrailsrs_route::{LoadedRoute, MstsAlias};
 use openrailsrs_track::{NodeKind, TrackGraph};
 
 use crate::launch::{
@@ -58,6 +61,8 @@ impl TrackRenderMode {
 #[derive(Resource, Clone)]
 pub struct TrackScene {
     pub graph: TrackGraph,
+    /// Import metadata: graph node id → TDB node id (from `[[msts_aliases]]`).
+    pub graph_node_to_tdb: HashMap<String, u32>,
     pub bounds: SceneBounds,
     pub render_mode: TrackRenderMode,
     pub edge_count: usize,
@@ -65,6 +70,17 @@ pub struct TrackScene {
 
 impl TrackScene {
     pub fn from_graph(graph: TrackGraph) -> Self {
+        Self::from_graph_with_tdb_map(graph, HashMap::new())
+    }
+
+    pub fn from_loaded_route(loaded: LoadedRoute) -> Self {
+        Self::from_graph_with_tdb_map(loaded.graph, node_alias_map(&loaded.msts_aliases))
+    }
+
+    pub fn from_graph_with_tdb_map(
+        graph: TrackGraph,
+        graph_node_to_tdb: HashMap<String, u32>,
+    ) -> Self {
         let edge_count = graph.edges_iter().count();
         let bounds = SceneBounds::from_graph(&graph);
         let render_mode = if edge_count > COMPACT_EDGE_THRESHOLD {
@@ -74,11 +90,20 @@ impl TrackScene {
         };
         Self {
             graph,
+            graph_node_to_tdb,
             bounds,
             render_mode,
             edge_count,
         }
     }
+}
+
+fn node_alias_map(aliases: &HashMap<u32, MstsAlias>) -> HashMap<String, u32> {
+    aliases
+        .values()
+        .filter(|a| a.is_node())
+        .map(|a| (a.id.clone(), a.tdb_id))
+        .collect()
 }
 
 /// Axis-aligned bounds of the track graph in world space (metres).
@@ -443,7 +468,7 @@ pub fn spawn_track_meshes(
     let terrain_ref = terrain.as_deref();
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::new(tdb, Some(assets.tsection())));
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
     let resolver_ref = tdb_resolver.as_ref();
     let tdb_placement = resolver_ref.map(|res| (res, route_offset));
     let bounds = scene.bounds;

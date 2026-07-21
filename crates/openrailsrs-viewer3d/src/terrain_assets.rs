@@ -49,6 +49,24 @@ pub fn load_terrtex_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     Some(image)
 }
 
+/// Stable key for sharing [`crate::terrain_material::TerrainMaterial`] across patches/tiles.
+pub fn terrain_shader_material_key(shader: &TerrainShader) -> String {
+    let base_name = shader
+        .texslots
+        .first()
+        .map(|s| s.filename.as_str())
+        .unwrap_or("grass.ace");
+    let overlay_name = shader
+        .texslots
+        .get(1)
+        .map(|s| s.filename.as_str())
+        .unwrap_or(DEFAULT_MICROTEX);
+    format!(
+        "{base_name}|{overlay_name}|{:.6}",
+        overlay_scale_from_shader(shader)
+    )
+}
+
 /// Load/cache base + overlay handles for one terrain shader.
 pub fn terrain_material_textures(
     route_dir: &Path,

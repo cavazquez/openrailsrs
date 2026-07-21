@@ -239,6 +239,28 @@ pub enum TrItemKind {
     Other,
 }
 
+/// World pose from `TrItemRData ( x y z tileX tileZ )` (TDB/RDB).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TrItemWorldPose {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub tile_x: i32,
+    pub tile_z: i32,
+}
+
+impl TrItemWorldPose {
+    /// Bevy world position (same convention as [`TrackVectorPoint::bevy_position`]).
+    pub fn bevy_position(self) -> (f32, f32, f32) {
+        const TILE: f64 = 2048.0;
+        (
+            (self.tile_x as f64 * TILE + self.x) as f32,
+            self.y as f32,
+            (-(self.tile_z as f64 * TILE + self.z)) as f32,
+        )
+    }
+}
+
 /// One entry of `TrItemTable`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrItem {
@@ -247,6 +269,8 @@ pub struct TrItem {
     pub kind: TrItemKind,
     /// Distance in metres from the start of the parent vector node (`TrItemSData`).
     pub distance_m: f64,
+    /// Absolute pose when `TrItemRData` is present (required for RDB CarSpawner endpoints).
+    pub world: Option<TrItemWorldPose>,
 }
 
 /// Host vector node for a `TrItem` referenced via `TrItemRefs`.
@@ -401,6 +425,12 @@ impl TrackDbFile {
     }
 
     /// Lookup a `TrItemTable` entry by `TrItemId`.
+    /// Bevy world position of a `TrItem` that carries `TrItemRData` (RDB CarSpawner endpoints).
+    pub fn item_bevy_position(&self, id: u32) -> Option<(f32, f32, f32)> {
+        self.item_by_id(id)
+            .and_then(|item| item.world.map(|w| w.bevy_position()))
+    }
+
     pub fn item_by_id(&self, id: u32) -> Option<&TrItem> {
         self.items.iter().find(|i| i.id == id)
     }
@@ -1367,7 +1397,74 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
         id,
         kind,
         distance_m,
+        world: find_tr_item_world_pose(items),
     })
+}
+
+/// `( TrItemRData x y z tileX tileZ )`.
+fn find_tr_item_world_pose(item: &[Ast]) -> Option<TrItemWorldPose> {
+    let mut i = 0;
+    while i < item.len() {
+        match &item[i] {
+            Ast::List(sub) => {
+                let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+                    i += 1;
+                    continue;
+                };
+                if tag.eq_ignore_ascii_case("TrItemRData") {
+                    let nums: Vec<f64> = sub
+                        .iter()
+                        .skip(1)
+                        .filter_map(|a| match a {
+                            Ast::Atom(at) => atom_to_number(at),
+                            _ => None,
+                        })
+                        .collect();
+                    if nums.len() >= 5 {
+                        return Some(TrItemWorldPose {
+                            x: nums[0],
+                            y: nums[1],
+                            z: nums[2],
+                            tile_x: nums[3] as i32,
+                            tile_z: nums[4] as i32,
+                        });
+                    }
+                }
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemRData") => {
+                // JINX: `TrItemRData ( x y z tileX tileZ )` → Symbol + List(args).
+                let nums: Vec<f64> = match item.get(i + 1) {
+                    Some(Ast::List(inner)) => inner
+                        .iter()
+                        .filter_map(|a| match a {
+                            Ast::Atom(at) => atom_to_number(at),
+                            _ => None,
+                        })
+                        .collect(),
+                    _ => item[i + 1..]
+                        .iter()
+                        .take(5)
+                        .filter_map(|a| match a {
+                            Ast::Atom(at) => atom_to_number(at),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                if nums.len() >= 5 {
+                    return Some(TrItemWorldPose {
+                        x: nums[0],
+                        y: nums[1],
+                        z: nums[2],
+                        tile_x: nums[3] as i32,
+                        tile_z: nums[4] as i32,
+                    });
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
 }
 
 fn find_tr_item_id(item: &[Ast]) -> Option<u32> {

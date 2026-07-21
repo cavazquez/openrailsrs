@@ -4248,6 +4248,7 @@ dependencies = [
  "flate2",
  "openrailsrs-core",
  "pretty_assertions",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 
@@ -4426,6 +4427,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "tempfile",
  "toml",
 ]
 

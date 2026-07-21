@@ -655,7 +655,8 @@ fn indexed_section_segment_distance(
             geom.end
                 .bevy_position_nearest_to(point.x, point.z, Some(ref_tile), Some(header));
         Vec3::new(ex, 0.0, ez)
-    } else if let Some(h) = section.heading_deg() {
+    } else {
+        let h = section.heading_deg()?;
         let len = if *length_m > 0.5 {
             *length_m as f32
         } else {
@@ -663,8 +664,6 @@ fn indexed_section_segment_distance(
         };
         let yaw = h.to_radians() as f32;
         start + Vec3::new(yaw.sin() * len, 0.0, yaw.cos() * len)
-    } else {
-        return None;
     };
     Some(point_segment_distance_xz(
         point.x, point.z, start.x, start.z, end.x, end.z,

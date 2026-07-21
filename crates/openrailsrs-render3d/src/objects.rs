@@ -8,9 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use bevy::math::{Mat3, Quat, Vec3};
-use openrailsrs_formats::{
-    WorldFile, WorldItem, parse_world_w_tile_xz, world_w_filename_from_tile_xz,
-};
+use openrailsrs_formats::{WorldFile, WorldItem, parse_world_w_tile_xz};
 
 /// Tipo de objeto del `.w` (para colorear el marcador).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -162,22 +160,13 @@ pub struct ObjectMarker {
 /// Útil como tile por defecto: suele tener terreno, vía y objetos juntos.
 pub fn busiest_world_tile(route_dir: &Path) -> Option<(i32, i32)> {
     let mut best: Option<(u64, (i32, i32))> = None;
-    for subdir in ["WORLD", "world"] {
-        let Ok(rd) = std::fs::read_dir(route_dir.join(subdir)) else {
+    for (_x, _z, path) in openrailsrs_formats::scan_world_tile_files(route_dir) {
+        let Some(tile) = parse_world_w_tile_xz(&path) else {
             continue;
         };
-        for entry in rd.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|x| x.to_str()) != Some("w") {
-                continue;
-            }
-            let Some(tile) = parse_world_w_tile_xz(&path) else {
-                continue;
-            };
-            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
-            if best.is_none_or(|(s, _)| size > s) {
-                best = Some((size, tile));
-            }
+        let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+        if best.is_none_or(|(s, _)| size > s) {
+            best = Some((size, tile));
         }
     }
     best.map(|(_, tile)| tile)
@@ -185,16 +174,17 @@ pub fn busiest_world_tile(route_dir: &Path) -> Option<(i32, i32)> {
 
 /// Ruta del `.w` del tile dentro de `WORLD/` (case-insensitive).
 fn world_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> Option<PathBuf> {
-    let mut names = vec![world_w_filename_from_tile_xz(tile_x, tile_z)];
+    if let Some(path) = openrailsrs_formats::resolve_world_tile_file(route_dir, tile_x, tile_z) {
+        return Some(path);
+    }
     if tile_x == 0 && tile_z == 0 {
         // Algunas rutas de prueba usan `w-000000-000000.w` en lugar de `w+000000+000000.w`.
-        names.push("w-000000-000000.w".to_string());
-    }
-    for subdir in ["WORLD", "world"] {
-        for name in &names {
-            let path = route_dir.join(subdir).join(name);
-            if path.is_file() {
-                return Some(path);
+        for dir in openrailsrs_formats::world_subdirs(route_dir) {
+            let candidate = dir.join("w-000000-000000.w");
+            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
+                if resolved.is_file() {
+                    return Some(resolved);
+                }
             }
         }
     }

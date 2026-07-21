@@ -14,6 +14,7 @@ pub mod parser;
 pub mod shape_binary;
 pub mod shape_binary_direct;
 pub mod shape_binary_reader;
+pub mod tile_paths;
 pub mod typed;
 pub mod units;
 pub mod vehicle_audit;
@@ -26,8 +27,9 @@ pub use cab_link::{
 };
 pub use dispatch::{MstsFile, parse_msts_file};
 pub use encoding::{
-    decode_msts_bytes, msts_latin_bytes, read_msts_file_case_insensitive, read_msts_file_to_string,
-    resolve_path_case_insensitive, utf16le_msts_to_latin_bytes,
+    decode_msts_bytes, msts_filename_is_relative_path, msts_latin_bytes, normalize_msts_filename,
+    read_msts_file_case_insensitive, read_msts_file_to_string, resolve_path_case_insensitive,
+    resolve_route_relative_file, utf16le_msts_to_latin_bytes,
 };
 pub use error::FormatError;
 pub use msts_tile_name::{
@@ -47,20 +49,26 @@ pub use shape_binary_direct::{
     binary_shape_to_ast, is_binary_shape_payload, shape_from_binary_payload,
 };
 pub use shape_binary_reader::{BinaryBlockReader, apply_token_offset};
+pub use tile_paths::{
+    build_terrain_tile_catalog, build_world_tile_catalog, find_named_subdir,
+    resolve_hash_terrain_tile_file, resolve_world_tile_file, scan_hash_terrain_tiles_from_world,
+    scan_world_tile_files, terrain_subdirs, tiles_subdirs, world_subdirs,
+};
 pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
-    CabControl, CabView, CabViewFile, ConsistEntry, ConsistFile, ControlState, ControlType,
-    DistanceLevel, ElevationGrid, EngineCabView, EngineFile, FeatureGrid, IndexedTrVectorSection,
-    LodControl, Matrix43, MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType,
-    OrtsFrictionFields, OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive,
-    RestrictedZone, RouteFile, RouteStart, SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile,
-    SignalAspectKind, SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile,
-    TerrainMeshData, TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot,
-    TerrainUvCalc, TrItem, TrItemHost, TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile,
+    CabControl, CabView, CabViewFile, CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList,
+    ConsistEntry, ConsistFile, ControlState, ControlType, DistanceLevel, ElevationGrid,
+    EngineCabView, EngineFile, FeatureGrid, IndexedTrVectorSection, LodControl, Matrix43,
+    MstsSteamFields, NamedMatrix, OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields,
+    OrtsWagonType, PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile,
+    RouteStart, SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, SignalAspectKind,
+    SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData, TerrainPatch,
+    TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc, TrItem,
+    TrItemHost, TrItemKind, TrItemWorldPose, TrPinRef, TrVectorSectionRecord, TrackDbFile,
     TrackDbNode, TrackNodeKind, TrackProceduralDims, TrackProceduralLink, TrackVectorGeometry,
     TrackVectorPoint, TrafficServiceDef, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile,
     WorldItem, build_patch_mesh_data, build_patch_mesh_data_ex, build_patch_mesh_data_sampled,
-    build_tile_mesh_data, build_tile_mesh_data_sampled, parse_orts_brake_shoe,
+    build_tile_mesh_data, build_tile_mesh_data_sampled, find_trk_path, parse_orts_brake_shoe,
     parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
     read_y_raw, resolve_brake_shoe_curve, terrain_patches_per_side,
 };

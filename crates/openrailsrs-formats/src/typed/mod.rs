@@ -1,5 +1,6 @@
 mod activity;
 mod brake_shoe;
+mod carspawn;
 mod consist;
 mod cvf;
 mod engine;
@@ -19,6 +20,7 @@ pub use activity::{
 pub use brake_shoe::{
     BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe, resolve_brake_shoe_curve,
 };
+pub use carspawn::{CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList};
 pub use consist::{ConsistEntry, ConsistFile};
 pub use cvf::{CabControl, CabView, CabViewFile, ControlState, ControlType, ScreenRect};
 pub use engine::{EngineCabView, EngineFile, MstsSteamFields};
@@ -26,7 +28,7 @@ pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };
 pub use path::{PathDataPoint, PathFile};
-pub use route::{RouteFile, RouteStart};
+pub use route::{RouteFile, RouteStart, find_trk_path};
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LodControl, Matrix43, NamedMatrix,
     PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject, Vec2, Vec3, Vertex, VtxState,
@@ -39,8 +41,8 @@ pub use terrain::{
     read_y_raw, terrain_patches_per_side,
 };
 pub use track_db::{
-    IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemHost, TrItemKind, TrPinRef,
-    TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
+    IndexedTrVectorSection, SignalAspectKind, TrItem, TrItemHost, TrItemKind, TrItemWorldPose,
+    TrPinRef, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorGeometry,
     TrackVectorPoint,
 };
 pub use tsection::{

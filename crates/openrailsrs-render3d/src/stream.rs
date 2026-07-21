@@ -13,6 +13,15 @@ use crate::world_spawn::{
 };
 use crate::{MstsRootDir, RouteDir, TileEntry};
 
+fn log_stream_eviction(shapes: usize, terrain_mats: usize, terrain_tex: usize, meshes: usize) {
+    if shapes == 0 && terrain_mats == 0 && terrain_tex == 0 && meshes == 0 {
+        return;
+    }
+    bevy::log::info!(
+        "openrailsrs-render3d: stream eviction — {shapes} shape(s), {meshes} terrain mesh(es), {terrain_mats} terrain mat(s), {terrain_tex} terrain tex(s)"
+    );
+}
+
 pub const TILE_SIZE_M: f32 = 2048.0;
 
 /// Tile y su contenido 3D spawneado (para despawn).
@@ -314,6 +323,17 @@ pub fn despawn_tile(
     }
 }
 
+type TileEntityQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static TileContent,
+        Option<&'static Mesh3d>,
+        Option<&'static MeshMaterial3d<OrTerrainMaterial>>,
+    ),
+>;
+
 #[allow(clippy::too_many_arguments)]
 pub fn tile_stream_system(
     mut commands: Commands,
@@ -326,7 +346,7 @@ pub fn tile_stream_system(
     texture_env: Res<crate::textures::TextureEnvironment>,
     tdb_track: Option<Res<crate::TdbTrackResource>>,
     camera: Query<&Transform, With<Camera3d>>,
-    tile_entities: Query<(Entity, &TileContent)>,
+    tile_entities: TileEntityQuery,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut or_materials: ResMut<Assets<OrSceneryMaterial>>,
@@ -359,11 +379,58 @@ pub fn tile_stream_system(
         }
     }
 
+    let mut unloading = HashSet::new();
     for key in state.loaded.iter().copied().collect::<Vec<_>>() {
         if !wanted.contains(&key) {
-            despawn_tile(&mut commands, key.0, key.1, &tile_entities);
+            unloading.insert(key);
             state.loaded.remove(&key);
         }
+    }
+
+    if !unloading.is_empty() {
+        // Despawn is deferred: treat unloading-tile entities as already gone (#51).
+        let mut live_shape_meshes = HashSet::new();
+        let mut live_terrain_mats = HashSet::new();
+        let mut released_terrain_meshes = Vec::new();
+        let mut to_despawn = Vec::new();
+        for (entity, content, mesh3d, terrain_mat) in tile_entities.iter() {
+            let key = (content.tile_x, content.tile_z);
+            if unloading.contains(&key) {
+                to_despawn.push(entity);
+                if let (Some(mesh), Some(_)) = (mesh3d, terrain_mat) {
+                    // Terrain patches are not shape-cached; free their meshes now.
+                    released_terrain_meshes.push(mesh.id());
+                }
+                continue;
+            }
+            if let Some(mesh) = mesh3d {
+                live_shape_meshes.insert(mesh.id());
+            }
+            if let Some(mat) = terrain_mat {
+                live_terrain_mats.insert(mat.id());
+            }
+        }
+        for entity in to_despawn {
+            commands.entity(entity).despawn();
+        }
+        let mut meshes_freed = 0usize;
+        for id in released_terrain_meshes {
+            if meshes.remove(id).is_some() {
+                meshes_freed += 1;
+            }
+        }
+        let shapes = assets.obj_ctx.evict_unreferenced_shapes(
+            &live_shape_meshes,
+            &mut meshes,
+            &mut materials,
+            &mut or_materials,
+        );
+        let (terrain_mats, terrain_tex) = assets.terrain_ctx.evict_unreferenced(
+            &live_terrain_mats,
+            &mut images,
+            &mut or_terrain_materials,
+        );
+        log_stream_eviction(shapes, terrain_mats, terrain_tex, meshes_freed);
     }
 
     // Varios tiles por frame: el catálogo ya está en memoria; solo falta spawn 3D.

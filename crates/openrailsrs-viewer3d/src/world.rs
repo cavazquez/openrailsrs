@@ -13,7 +13,7 @@ use openrailsrs_bevy_scenery::shapes::{
 };
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
-    msts_tile_z_index_for_coord, parse_world_w_tile_xz, world_w_filename_from_tile_xz,
+    msts_tile_z_index_for_coord, parse_world_w_tile_xz,
 };
 
 use crate::camera::CameraFollowMode;
@@ -23,10 +23,18 @@ use crate::coordinates::{
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_from_path,
-    prefetch_ace_textures, shape_render_asset_from_loaded_with_ace_cache,
+    RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths, load_shape_file_and_loaded,
+    load_shape_from_path, prefetch_ace_textures, reset_shape_file_parse_count,
+    shape_file_parse_count, shape_render_asset_from_loaded_with_ace_cache,
     texture_search_dirs_for_shape,
 };
+
+/// WORLD-tile membership for non-shape scenery (Transfer, road cars, …) unload.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct WorldTileBound {
+    pub tile_x: i32,
+    pub tile_z: i32,
+}
 
 /// Tracks which LOD level a spawned world shape part is using (runtime swap).
 #[derive(Component, Clone, Debug)]
@@ -38,11 +46,21 @@ pub struct WorldSceneryLod {
     pub lod_idx: usize,
 }
 
-/// Cached parsed shapes + pre-built assets per LOD level for runtime swaps.
+/// Session-long WORLD shape/texture cache shared across tile streams (#50).
+///
+/// Also backs runtime LOD swaps (`update_world_scenery_lod`). Unused entries are
+/// evicted on tile unload so GPU `Assets` can drop (#51).
 #[derive(Resource, Default)]
 pub struct WorldShapeLodCache {
     pub shapes: HashMap<PathBuf, ShapeFile>,
     pub assets_by_lod: HashMap<PathBuf, Vec<ShapeRenderAsset>>,
+    /// Primary spawn assets (Bevy handles) keyed by canonical `.s` path.
+    pub shape_assets: HashMap<PathBuf, ShapeRenderAsset>,
+    /// Decoded ACE → `Handle<Image>` shared across builds/streams.
+    pub texture_images: HashMap<PathBuf, Handle<Image>>,
+    pub session_hits: u64,
+    pub session_misses: u64,
+    pub session_evictions: u64,
 }
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
@@ -76,10 +94,27 @@ const SHAPE_INSTANCE_MERGE_MAX_VERTS: usize = 256;
 /// Minimum instances before merge is considered (ignored when [`ENABLE_SHAPE_INSTANCE_MERGE`] is false).
 const SHAPE_INSTANCE_MERGE_MIN: usize = 12;
 
-/// Set to `false` to skip TrackObj placeholder cuboids (tiny rail clutter, very numerous).
-const SPAWN_TRACKOBJ_PLACEHOLDERS: bool = false;
 /// Procedural sleepers/rails for TrackObj without a resolvable `.s` mesh (Open Rails TSection fallback).
 const SPAWN_TRACKOBJ_PROCEDURAL: bool = true;
+
+/// Opt-in debug cuboids for TrackObj that failed mesh+procedural (`OPENRAILSRS_TRACKOBJ_PLACEHOLDERS=1`).
+fn trackobj_placeholders_enabled() -> bool {
+    std::env::var_os("OPENRAILSRS_TRACKOBJ_PLACEHOLDERS").is_some_and(|v| {
+        let v = v.to_string_lossy();
+        v == "1" || v.eq_ignore_ascii_case("true") || v.eq_ignore_ascii_case("yes")
+    })
+}
+
+/// Why a TrackObj did not get a real `.s` mesh (#35).
+#[derive(Clone, Debug)]
+pub struct TrackObjFailure {
+    pub tile_x: i32,
+    pub tile_z: i32,
+    pub uid: Option<u32>,
+    pub file_name: Option<String>,
+    pub section_idx: Option<u32>,
+    pub reason: &'static str,
+}
 
 /// World items classified per frame during progressive spawn.
 const CLASSIFY_ITEMS_PER_FRAME: usize = 12_000;
@@ -145,6 +180,26 @@ pub struct WaterPatch {
     pub texture_file: Option<String>,
 }
 
+/// Ground decal metadata from a `.w` `Transfer` item (`FileName` is a texture).
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransferPatch {
+    pub uid: u32,
+    pub width: f32,
+    pub height: f32,
+    pub texture: Option<String>,
+}
+
+/// Road traffic spawner from a `.w` `CarSpawner` item (poses from RDB TrItems).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CarSpawnerPatch {
+    pub uid: u32,
+    pub car_frequency: f32,
+    pub car_av_speed: f32,
+    pub list_name: Option<String>,
+    /// RDB `TrItemId`s (typically start, end).
+    pub rdb_tr_item_ids: Vec<u32>,
+}
+
 /// One scenery object from a loaded `.w` tile, ready for 3D spawn.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldObject {
@@ -163,15 +218,73 @@ pub struct WorldObject {
     pub tile_z: i32,
     pub forest: Option<ForestPatch>,
     pub water: Option<WaterPatch>,
+    pub transfer: Option<TransferPatch>,
+    pub car_spawner: Option<CarSpawnerPatch>,
     /// TDB `TrItemId`s when this object references track items (Signal, Speedpost, …).
     pub tr_item_ids: Vec<u32>,
+}
+
+/// Optional XZ window applied while materializing `.w` items (#59).
+#[derive(Clone, Copy, Debug)]
+pub struct WorldItemWindow {
+    pub center: Vec3,
+    pub radius_m: f32,
+}
+
+impl WorldItemWindow {
+    #[inline]
+    pub fn contains_xz(&self, world: Vec3) -> bool {
+        let dx = world.x - self.center.x;
+        let dz = world.z - self.center.z;
+        dx * dx + dz * dz <= self.radius_m * self.radius_m
+    }
+}
+
+/// Keep radius for WORLD *items* given the tile-stream radius (matches
+/// [`crate::launch::scenery_content_radius_m`] relative to viewing distance).
+pub fn world_item_keep_radius_m(tile_radius_m: f32) -> f32 {
+    if tile_radius_m.is_finite() && tile_radius_m < f32::MAX / 4.0 {
+        tile_radius_m + MSTS_TILE_SIZE_M as f32
+    } else {
+        f32::MAX
+    }
+}
+
+/// Pending TrItem index updates produced by WORLD tile stream/unload (#61).
+#[derive(Clone, Debug, Default)]
+pub struct TrItemIndexDelta {
+    /// Tiles newly present in [`WorldScene::loaded_tiles`] (may have zero TrItem objects).
+    pub added_tiles: std::collections::HashSet<(i32, i32)>,
+    pub removed_tiles: std::collections::HashSet<(i32, i32)>,
+    /// Signal/Speedpost/SoundRegion objects appended with those tiles (cloned, small set).
+    pub added_objects: Vec<WorldObject>,
+}
+
+impl TrItemIndexDelta {
+    pub fn is_empty(&self) -> bool {
+        self.added_tiles.is_empty()
+            && self.removed_tiles.is_empty()
+            && self.added_objects.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.added_tiles.clear();
+        self.removed_tiles.clear();
+        self.added_objects.clear();
+    }
 }
 
 /// All world objects discovered under a route's `WORLD/` (or `world/`) folder.
 #[derive(Resource, Clone, Default)]
 pub struct WorldScene {
     pub tiles_loaded: usize,
+    /// Tiles successfully parsed into this scene (coverage for TrItem audits).
+    pub loaded_tiles: std::collections::HashSet<(i32, i32)>,
     pub items: Vec<WorldObject>,
+    /// Items skipped during materialization because they were outside [`WorldItemWindow`].
+    pub items_skipped_out_of_window: usize,
+    /// Stream/unload deltas for incremental [`crate::tr_item_index::TrItemWorldIndex`] sync.
+    pub tr_item_delta: TrItemIndexDelta,
 }
 
 impl WorldScene {
@@ -203,6 +316,25 @@ impl WorldScene {
             viewer_log!(
                 "openrailsrs-viewer3d: dropped {removed} world object(s) at load (>{radius_m:.0}m from focus)"
             );
+        }
+    }
+
+    /// Record tiles/objects added by streaming (not used for the initial full load).
+    pub fn note_tr_item_tiles_added(&mut self, tiles: impl IntoIterator<Item = (i32, i32)>) {
+        self.tr_item_delta.added_tiles.extend(tiles);
+    }
+
+    pub fn note_tr_item_objects_added(&mut self, objects: impl IntoIterator<Item = WorldObject>) {
+        self.tr_item_delta.added_objects.extend(objects);
+    }
+
+    pub fn note_tr_item_tiles_removed(&mut self, tiles: impl IntoIterator<Item = (i32, i32)>) {
+        for tile in tiles {
+            self.tr_item_delta.added_tiles.remove(&tile);
+            self.tr_item_delta
+                .added_objects
+                .retain(|o| (o.tile_x, o.tile_z) != tile);
+            self.tr_item_delta.removed_tiles.insert(tile);
         }
     }
 }
@@ -282,15 +414,26 @@ impl RouteFocus {
 
     /// Horizontal distance from route centre in render space (for culling).
     pub fn horizontal_distance(&self, world: Vec3) -> f32 {
-        let local = self.to_render(world);
-        Vec2::new(local.x, local.z).length()
+        horizontal_distance_xz(self.center, world)
     }
+}
+
+/// Horizontal XZ distance from an arbitrary world-space centre (view window / camera).
+#[inline]
+pub fn horizontal_distance_xz(center: Vec3, world: Vec3) -> f32 {
+    Vec2::new(world.x - center.x, world.z - center.z).length()
 }
 
 /// Whether a world object should be culled for being outside [`VISIBLE_RADIUS_M`].
 #[inline]
 pub fn should_cull_world_object(focus: &RouteFocus, world: Vec3) -> bool {
-    focus.horizontal_distance(world) > visible_radius_m()
+    should_cull_world_object_at(focus.center, world)
+}
+
+/// Cull against a mobile centre (live [`crate::view_window::ViewWindow`], free camera, …).
+#[inline]
+pub fn should_cull_world_object_at(center: Vec3, world: Vec3) -> bool {
+    horizontal_distance_xz(center, world) > visible_radius_m()
 }
 
 /// Translates abstract graph coordinates into MSTS world space when the two diverge.
@@ -358,8 +501,24 @@ fn object_label(item: &WorldItem) -> String {
         .unwrap_or_else(|| item.kind().to_string())
 }
 
-fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldObject> {
-    let position = msts_to_bevy(tile_x, tile_z, item.position()?);
+/// Materialize a `.w` item, optionally rejecting it before heavy forest/water payloads (#59).
+///
+/// Returns `Ok(None)` when the item has no position; `Err(())` when skipped by the window.
+fn try_object_from_item(
+    tile_x: i32,
+    tile_z: i32,
+    item: &WorldItem,
+    window: Option<WorldItemWindow>,
+) -> Result<Option<WorldObject>, ()> {
+    let Some(local) = item.position() else {
+        return Ok(None);
+    };
+    let position = msts_to_bevy(tile_x, tile_z, local);
+    if let Some(window) = window {
+        if !window.contains_xz(position) {
+            return Err(());
+        }
+    }
     let (rotation, scale) = world_item_transform(item);
     let forest = match item {
         WorldItem::Forest {
@@ -410,7 +569,39 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         }),
         _ => None,
     };
-    Some(WorldObject {
+    let transfer = match item {
+        WorldItem::Transfer {
+            uid,
+            file_name,
+            width,
+            height,
+            ..
+        } => Some(TransferPatch {
+            uid: *uid,
+            width: (*width).max(0.5) as f32,
+            height: (*height).max(0.5) as f32,
+            texture: file_name.clone(),
+        }),
+        _ => None,
+    };
+    let car_spawner = match item {
+        WorldItem::CarSpawner {
+            uid,
+            car_frequency,
+            car_av_speed,
+            list_name,
+            rdb_tr_item_ids,
+            ..
+        } => Some(CarSpawnerPatch {
+            uid: *uid,
+            car_frequency: *car_frequency as f32,
+            car_av_speed: *car_av_speed as f32,
+            list_name: list_name.clone(),
+            rdb_tr_item_ids: rdb_tr_item_ids.clone(),
+        }),
+        _ => None,
+    };
+    Ok(Some(WorldObject {
         kind: item.kind(),
         uid: item.uid(),
         label: object_label(item),
@@ -423,8 +614,10 @@ fn object_from_item(tile_x: i32, tile_z: i32, item: &WorldItem) -> Option<WorldO
         tile_z,
         forest,
         water,
+        transfer,
+        car_spawner,
         tr_item_ids: item.tr_item_ids(),
-    })
+    }))
 }
 
 /// Scan `route_dir/WORLD` and `route_dir/world` for `.w` files and parse them.
@@ -485,14 +678,7 @@ pub fn discover_world_tile_entries(
 }
 
 fn world_tile_path_for_coords(route_dir: &Path, tile_x: i32, tile_z: i32) -> Option<PathBuf> {
-    let name = world_w_filename_from_tile_xz(tile_x, tile_z);
-    for subdir in ["WORLD", "world"] {
-        let path = route_dir.join(subdir).join(&name);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    None
+    openrailsrs_formats::resolve_world_tile_file(route_dir, tile_x, tile_z)
 }
 
 /// MSTS world XZ centre from `.w` filenames (no parse) — used before the route anchor is known.
@@ -519,19 +705,43 @@ pub fn world_tile_center_hint(route_dir: &Path) -> Option<Vec3> {
 }
 
 /// Parse only `.w` tiles within `radius_m` of `center` (Open Rails tile streaming at load).
+///
+/// When `center` is set and `radius_m` is finite, items outside
+/// [`world_item_keep_radius_m`]`(radius_m)` are never materialized into [`WorldScene`] (#59).
 pub fn load_world_from_route_dir_near(
     route_dir: &Path,
     center: Option<Vec3>,
     radius_m: f32,
 ) -> WorldScene {
+    load_world_from_route_dir_near_filtered(route_dir, center, radius_m, true)
+}
+
+/// Same as [`load_world_from_route_dir_near`], with optional early item-window filter.
+pub fn load_world_from_route_dir_near_filtered(
+    route_dir: &Path,
+    center: Option<Vec3>,
+    radius_m: f32,
+    filter_items: bool,
+) -> WorldScene {
     let mut entries = discover_world_tile_entries(route_dir, center, radius_m);
     entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+
+    let item_window = if filter_items {
+        center
+            .filter(|_| radius_m.is_finite() && radius_m < f32::MAX / 2.0)
+            .map(|c| WorldItemWindow {
+                center: c,
+                radius_m: world_item_keep_radius_m(radius_m),
+            })
+    } else {
+        None
+    };
 
     let mut scene = WorldScene::default();
     let mut skip_count = 0usize;
     let mut skip_sample: Option<String> = None;
     for (_display_x, _display_z, path) in entries {
-        if append_world_tile_file(&mut scene, &path).is_err() {
+        if append_world_tile_file(&mut scene, &path, item_window).is_err() {
             skip_count += 1;
             if skip_sample.is_none() {
                 skip_sample = Some(path.display().to_string());
@@ -540,9 +750,11 @@ pub fn load_world_from_route_dir_near(
     }
     if let Some(c) = center.filter(|_| radius_m.is_finite() && radius_m < f32::MAX / 2.0) {
         viewer_log!(
-            "openrailsrs-viewer3d: loaded {} world tile(s) ({} item(s)) within {:.0}m of ({:.0},{:.0})",
+            "openrailsrs-viewer3d: loaded {} world tile(s) ({} item(s), {} skipped out of window @{:.0}m) within {:.0}m of ({:.0},{:.0})",
             scene.tiles_loaded,
             scene.items.len(),
+            scene.items_skipped_out_of_window,
+            item_window.map(|w| w.radius_m).unwrap_or(0.0),
             radius_m,
             c.x,
             c.z
@@ -560,38 +772,31 @@ pub fn load_world_from_route_dir_near(
     scene
 }
 
-fn append_world_tile_file(scene: &mut WorldScene, path: &Path) -> Result<(), String> {
+fn append_world_tile_file(
+    scene: &mut WorldScene,
+    path: &Path,
+    item_window: Option<WorldItemWindow>,
+) -> Result<(), String> {
     let world = WorldFile::from_path(path).map_err(|e| e.to_string())?;
-    scene.tiles_loaded += 1;
+    let key = (world.tile_x, world.tile_z);
+    if scene.loaded_tiles.insert(key) {
+        scene.tiles_loaded = scene.loaded_tiles.len();
+    }
     for item in &world.items {
-        if let Some(obj) = object_from_item(world.tile_x, world.tile_z, item) {
-            scene.items.push(obj);
+        match try_object_from_item(world.tile_x, world.tile_z, item, item_window) {
+            Ok(Some(obj)) => scene.items.push(obj),
+            Ok(None) => {}
+            Err(()) => scene.items_skipped_out_of_window += 1,
         }
     }
     Ok(())
 }
 
 fn discover_world_files(route_dir: &Path) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    for subdir in ["WORLD", "world"] {
-        let dir = route_dir.join(subdir);
-        if !dir.is_dir() {
-            continue;
-        }
-        let Ok(read_dir) = std::fs::read_dir(&dir) else {
-            continue;
-        };
-        for entry in read_dir.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("w"))
-            {
-                out.push(path);
-            }
-        }
-    }
-    out
+    openrailsrs_formats::scan_world_tile_files(route_dir)
+        .into_iter()
+        .map(|(_, _, path)| path)
+        .collect()
 }
 
 fn kind_color(kind: &str) -> Color {
@@ -861,11 +1066,11 @@ pub struct WorldSpawnProgress {
     shape_instance_min_dist: std::collections::HashMap<PathBuf, f32>,
     merged_boxes: std::collections::HashMap<String, MergedBoxGroup>,
     culled_count: usize,
-    skipped_trackobj_placeholders: usize,
     trackobj_seen: usize,
-    trackobj_mesh_queued: usize,
-    trackobj_no_filename: usize,
-    trackobj_unresolved: usize,
+    trackobj_resolved: usize,
+    trackobj_procedural_objects: usize,
+    trackobj_failed: usize,
+    trackobj_failures: Vec<TrackObjFailure>,
     trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment>,
     placeholder_base: f32,
     shape_fallback_color: Color,
@@ -892,6 +1097,10 @@ pub struct WorldSpawnProgress {
     build_queue_started: Option<Instant>,
     scenery_audit: Option<crate::scenery_audit::ShapeAuditSummary>,
     paused_for_driver_log: bool,
+    /// True after [`hydrate_spawn_from_session`] ran for this cycle.
+    session_hydrated: bool,
+    cache_hits: usize,
+    cache_misses: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -918,11 +1127,11 @@ impl WorldSpawnProgress {
             shape_instance_min_dist: std::collections::HashMap::new(),
             merged_boxes: std::collections::HashMap::new(),
             culled_count: 0,
-            skipped_trackobj_placeholders: 0,
             trackobj_seen: 0,
-            trackobj_mesh_queued: 0,
-            trackobj_no_filename: 0,
-            trackobj_unresolved: 0,
+            trackobj_resolved: 0,
+            trackobj_procedural_objects: 0,
+            trackobj_failed: 0,
+            trackobj_failures: Vec::new(),
             trackobj_procedural: Vec::new(),
             placeholder_base,
             shape_fallback_color: Color::srgb(0.72, 0.55, 0.42),
@@ -949,7 +1158,176 @@ impl WorldSpawnProgress {
             build_queue_started: None,
             scenery_audit: None,
             paused_for_driver_log: false,
+            session_hydrated: false,
+            cache_hits: 0,
+            cache_misses: 0,
         }
+    }
+}
+
+/// Reuse session shape/texture handles for paths already loaded; leave misses to parse (#50).
+fn hydrate_spawn_from_session(progress: &mut WorldSpawnProgress, session: &mut WorldShapeLodCache) {
+    if progress.session_hydrated {
+        return;
+    }
+    progress.session_hydrated = true;
+
+    for (path, handle) in &session.texture_images {
+        progress
+            .texture_image_cache
+            .entry(path.clone())
+            .or_insert_with(|| handle.clone());
+    }
+
+    let mut pending = Vec::with_capacity(progress.shape_load_paths.len());
+    let mut hits = 0usize;
+    for path in std::mem::take(&mut progress.shape_load_paths) {
+        if let Some(asset) = session.shape_assets.get(&path) {
+            progress.shape_cache.insert(path.clone(), asset.clone());
+            if let Some(shape) = session.shapes.get(&path) {
+                progress
+                    .parsed_shape_files
+                    .insert(path.clone(), shape.clone());
+            }
+            if let Some(lods) = session.assets_by_lod.get(&path) {
+                progress.shape_lod_assets.insert(path.clone(), lods.clone());
+            }
+            hits += 1;
+            session.session_hits += 1;
+        } else {
+            pending.push(path);
+            session.session_misses += 1;
+        }
+    }
+    progress.cache_hits = hits;
+    progress.cache_misses = pending.len();
+    progress.shape_load_paths = pending;
+
+    if hits > 0 || progress.cache_misses > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: shape session cache — {} hit(s), {} miss(es) (session {} shape(s), {} texture(s))",
+            hits,
+            progress.cache_misses,
+            session.shape_assets.len(),
+            session.texture_images.len()
+        );
+    }
+}
+
+fn standard_material_image_ids(
+    mat: &StandardMaterial,
+) -> impl Iterator<Item = AssetId<Image>> + '_ {
+    [
+        mat.base_color_texture.as_ref(),
+        mat.emissive_texture.as_ref(),
+        mat.metallic_roughness_texture.as_ref(),
+        mat.normal_map_texture.as_ref(),
+        mat.occlusion_texture.as_ref(),
+    ]
+    .into_iter()
+    .flatten()
+    .map(Handle::id)
+}
+
+fn release_shape_render_asset_gpu(
+    asset: &ShapeRenderAsset,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    meshes.remove(asset.combined_mesh.id());
+    for part in &asset.parts {
+        meshes.remove(part.mesh.id());
+        materials.remove(part.material.id());
+    }
+}
+
+/// Drop session entries (and GPU assets) for shapes with no remaining live entities (#51).
+fn evict_unreferenced_world_shapes(
+    session: &mut WorldShapeLodCache,
+    live_shape_paths: &HashSet<PathBuf>,
+    meshes: &mut Assets<Mesh>,
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+) -> (usize, usize) {
+    let stale: Vec<PathBuf> = session
+        .shape_assets
+        .keys()
+        .filter(|path| !live_shape_paths.contains(*path))
+        .cloned()
+        .collect();
+    if stale.is_empty() {
+        return (0, 0);
+    }
+
+    let mut shapes_evicted = 0usize;
+    for path in stale {
+        if let Some(asset) = session.shape_assets.remove(&path) {
+            release_shape_render_asset_gpu(&asset, meshes, materials);
+            shapes_evicted += 1;
+        }
+        if let Some(lods) = session.assets_by_lod.remove(&path) {
+            for asset in lods {
+                release_shape_render_asset_gpu(&asset, meshes, materials);
+            }
+        }
+        session.shapes.remove(&path);
+    }
+
+    let mut still_needed_images = HashSet::new();
+    for asset in session
+        .shape_assets
+        .values()
+        .chain(session.assets_by_lod.values().flatten())
+    {
+        for part in &asset.parts {
+            if let Some(mat) = materials.get(&part.material) {
+                still_needed_images.extend(standard_material_image_ids(mat));
+            }
+        }
+    }
+
+    let mut textures_evicted = 0usize;
+    let stale_textures: Vec<PathBuf> = session
+        .texture_images
+        .iter()
+        .filter(|(_, handle)| !still_needed_images.contains(&handle.id()))
+        .map(|(path, _)| path.clone())
+        .collect();
+    for path in stale_textures {
+        if let Some(handle) = session.texture_images.remove(&path) {
+            images.remove(handle.id());
+            textures_evicted += 1;
+        }
+    }
+
+    session.session_evictions += shapes_evicted as u64;
+    (shapes_evicted, textures_evicted)
+}
+
+/// Merge this spawn cycle's newly built assets into the session cache (#50).
+fn commit_spawn_to_session(session: &mut WorldShapeLodCache, progress: &mut WorldSpawnProgress) {
+    let shapes_before = session.shape_assets.len();
+    let textures_before = session.texture_images.len();
+    session.shapes.extend(progress.parsed_shape_files.drain());
+    session
+        .assets_by_lod
+        .extend(progress.shape_lod_assets.drain());
+    session.shape_assets.extend(progress.shape_cache.drain());
+    session
+        .texture_images
+        .extend(progress.texture_image_cache.drain());
+    let shapes_added = session.shape_assets.len().saturating_sub(shapes_before);
+    let textures_added = session.texture_images.len().saturating_sub(textures_before);
+    if shapes_added > 0 || textures_added > 0 || progress.cache_hits > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: shape session cache commit — +{} shape(s)/+{} texture(s) → session {}/{} (hits {} / misses {} this cycle)",
+            shapes_added,
+            textures_added,
+            session.shape_assets.len(),
+            session.texture_images.len(),
+            progress.cache_hits,
+            progress.cache_misses
+        );
     }
 }
 
@@ -979,29 +1357,37 @@ pub fn init_world_spawn_progress(
 fn classify_one_object(
     obj: &WorldObject,
     focus: &RouteFocus,
+    // World-space XZ centre for distance culling (view window / camera, not only route anchor).
+    cull_center: Vec3,
     assets: &RouteAssets,
     mode: ViewerSceneryMode,
     progress: &mut WorldSpawnProgress,
 ) {
-    if obj.kind == "Dyntrack" || obj.kind == "Forest" || obj.kind == "HWater" {
+    if obj.kind == "Dyntrack"
+        || obj.kind == "Forest"
+        || obj.kind == "HWater"
+        || obj.kind == "Transfer"
+        || obj.kind == "CarSpawner"
+    {
         return;
     }
-    if should_cull_world_object(focus, obj.position) {
+    if should_cull_world_object_at(cull_center, obj.position) {
         progress.culled_count += 1;
         return;
     }
 
-    let dist = focus.horizontal_distance(obj.position);
+    let dist = horizontal_distance_xz(cull_center, obj.position);
 
     if !mode.loads_msts_scenery() {
         return;
     }
 
-    if obj.kind == "TrackObj" && dist <= shape_mesh_radius_m() {
+    // TrackObj: exclusive outcome mesh | procedural | failed (#35). Never silent omit in-radius.
+    if obj.kind == "TrackObj" {
+        if dist > shape_mesh_radius_m() {
+            return;
+        }
         progress.trackobj_seen += 1;
-    }
-
-    if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
         let cache_key = obj
             .shape_file
             .clone()
@@ -1010,15 +1396,17 @@ fn classify_one_object(
                     .and_then(|idx| assets.tsection().shape_file_name(idx).map(str::to_string))
             })
             .unwrap_or_default();
-        let shape_path = progress
-            .shape_path_cache
-            .entry(cache_key)
-            .or_insert_with(|| resolve_object_shape_path(obj, assets))
-            .clone();
+        let shape_path = if cache_key.is_empty() && !shape_eligible(obj) {
+            None
+        } else {
+            progress
+                .shape_path_cache
+                .entry(cache_key)
+                .or_insert_with(|| resolve_object_shape_path(obj, assets))
+                .clone()
+        };
         if let Some(shape_path) = shape_path {
-            if obj.kind == "TrackObj" {
-                progress.trackobj_mesh_queued += 1;
-            }
+            progress.trackobj_resolved += 1;
             let render_pos = focus.scenery_to_render(obj.position);
             let tf = Transform {
                 translation: render_pos,
@@ -1037,38 +1425,66 @@ fn classify_one_object(
                 .or_insert(dist);
             return;
         }
-        if obj.kind == "TrackObj" {
-            progress.trackobj_unresolved += 1;
-            if progress.trackobj_unresolved <= 8 {
-                let name = obj
-                    .shape_file
-                    .as_deref()
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| {
-                        obj.section_idx
-                            .and_then(|idx| assets.tsection().shape_file_name(idx))
-                    })
-                    .unwrap_or("<sin nombre>");
-                viewer_log!(
-                    "openrailsrs-viewer3d: TrackObj sin .s resuelto: {name} (section={:?})",
-                    obj.section_idx
-                );
+
+        let render_pos = focus.scenery_to_render(obj.position);
+        if SPAWN_TRACKOBJ_PROCEDURAL {
+            let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
+            if !segs.is_empty() {
+                progress.trackobj_procedural_objects += 1;
+                progress.trackobj_procedural.extend(segs);
+                return;
             }
         }
-    } else if obj.kind == "TrackObj" && dist <= shape_mesh_radius_m() {
-        progress.trackobj_no_filename += 1;
-    }
 
-    if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-        if SPAWN_TRACKOBJ_PROCEDURAL && dist <= shape_mesh_radius_m() {
-            let render_pos = focus.scenery_to_render(obj.position);
-            progress
-                .trackobj_procedural
-                .extend(trackobj_procedural_segments(obj, render_pos, assets, mode));
-        } else {
-            progress.skipped_trackobj_placeholders += 1;
+        let reason =
+            if obj.shape_file.as_ref().is_none_or(|s| s.is_empty()) && obj.section_idx.is_none() {
+                "no_filename_or_section"
+            } else if obj.shape_file.as_ref().is_some_and(|s| !s.is_empty()) {
+                "shape_unresolved_and_no_procedural"
+            } else {
+                "section_without_procedural_links"
+            };
+        progress.trackobj_failed += 1;
+        if progress.trackobj_failures.len() < 64 {
+            progress.trackobj_failures.push(TrackObjFailure {
+                tile_x: obj.tile_x,
+                tile_z: obj.tile_z,
+                uid: obj.uid,
+                file_name: obj.shape_file.clone(),
+                section_idx: obj.section_idx,
+                reason,
+            });
         }
-        return;
+        if !trackobj_placeholders_enabled() {
+            return;
+        }
+        // Fall through to placeholder cuboid when opt-in.
+    } else if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
+        let cache_key = obj.shape_file.clone().unwrap_or_default();
+        let shape_path = progress
+            .shape_path_cache
+            .entry(cache_key)
+            .or_insert_with(|| resolve_object_shape_path(obj, assets))
+            .clone();
+        if let Some(shape_path) = shape_path {
+            let render_pos = focus.scenery_to_render(obj.position);
+            let tf = Transform {
+                translation: render_pos,
+                rotation: obj.rotation,
+                scale: obj.scale,
+            };
+            progress
+                .shape_instances
+                .entry(shape_path.clone())
+                .or_default()
+                .push(tf);
+            progress
+                .shape_instance_min_dist
+                .entry(shape_path)
+                .and_modify(|d| *d = d.min(dist))
+                .or_insert(dist);
+            return;
+        }
     }
     if dist > shape_mesh_radius_m() {
         return;
@@ -1340,7 +1756,9 @@ fn build_shape_lod_assets(
 }
 
 fn prepare_shape_load_paths(progress: &mut WorldSpawnProgress) {
-    if !progress.shape_load_paths.is_empty() {
+    // After session hydrate, an empty miss-list means "all hits" — do not refill
+    // from `shape_instances` or the next frame would reparse every shared path (#50).
+    if progress.session_hydrated || !progress.shape_load_paths.is_empty() {
         return;
     }
     progress.shape_load_paths = progress.shape_instances.keys().cloned().collect();
@@ -1355,35 +1773,50 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
     if progress.shape_parse_index >= progress.shape_load_paths.len() {
         return false;
     }
+    if progress.shape_parse_index == 0 {
+        reset_shape_file_parse_count();
+    }
     let end =
         (progress.shape_parse_index + SHAPE_PARSE_PER_FRAME).min(progress.shape_load_paths.len());
     let batch: Vec<PathBuf> = progress.shape_load_paths[progress.shape_parse_index..end].to_vec();
-    let parsed: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> = batch
+    // One `ShapeFile::from_path` per unique path → mesh + LOD/anim file (#57).
+    let parsed: Vec<(
+        PathBuf,
+        Option<ShapeFile>,
+        Option<crate::shapes::LoadedShape>,
+    )> = batch
         .par_iter()
         .map(|path| {
             let lod_dist = progress.shape_instance_min_dist.get(path).copied();
-            (path.clone(), load_shape_from_path(path, lod_dist))
+            match load_shape_file_and_loaded(path, lod_dist) {
+                Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
+                None => (path.clone(), None, None),
+            }
         })
         .collect();
-    for path in &batch {
-        if let Ok(shape) = ShapeFile::from_path(path) {
-            progress.parsed_shape_files.insert(path.clone(), shape);
+    for (shape_path, shape_file, loaded) in parsed {
+        if let Some(shape) = shape_file {
+            progress
+                .parsed_shape_files
+                .insert(shape_path.clone(), shape);
         }
-    }
-    for (shape_path, loaded) in &parsed {
-        if let Some(loaded) = loaded {
-            let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
+        if let Some(ref loaded) = loaded {
+            let tex_dirs = texture_search_dirs_for_shape(&shape_path, route_dir);
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
             progress
                 .texture_paths
                 .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
         }
+        progress.parsed_shapes.push((shape_path, loaded));
     }
-    progress.parsed_shapes.extend(parsed);
     progress.shape_parse_index = end;
     if progress.shape_parse_index >= progress.shape_load_paths.len() {
         progress.texture_paths.sort_unstable();
         progress.texture_paths.dedup();
+        // Skip ACE decode when the Image handle is already in the session cache (#50).
+        progress
+            .texture_paths
+            .retain(|p| !progress.texture_image_cache.contains_key(p));
         false
     } else {
         true
@@ -1412,11 +1845,21 @@ fn finish_shape_loading(
     }
     let color = progress.shape_fallback_color;
     progress.shape_fallback_material = Some(add_shape_fallback_material(materials, color));
+    let parses = shape_file_parse_count();
+    let unique = progress.shape_load_paths.len();
     viewer_log!(
-        "openrailsrs-viewer3d: parsed {} shape(s), prefetched {} texture(s)",
+        "openrailsrs-viewer3d: parsed {} shape(s) ({} ShapeFile parse(s) for {} miss path(s); {} session hit(s)), prefetched {} texture(s)",
         progress.parsed_shapes.len(),
+        parses,
+        unique,
+        progress.cache_hits,
         progress.ace_cache.len()
     );
+    if unique > 0 && parses > unique {
+        viewer_log!(
+            "openrailsrs-viewer3d: WARNING shape parse amplification {parses}/{unique} (expected 1 parse per unique .s)"
+        );
+    }
     if progress.scenery_audit.is_none() && crate::scenery_audit::scenery_audit_enabled() {
         progress.scenery_audit = Some(crate::scenery_audit::audit_parsed_shapes(
             &progress.parsed_shapes,
@@ -1433,31 +1876,45 @@ fn log_world_spawn_summary(progress: &WorldSpawnProgress) {
             culled = progress.culled_count
         );
     }
-    if progress.skipped_trackobj_placeholders > 0 {
-        viewer_log!(
-            "openrailsrs-viewer3d: TrackObj sin mesh visible: {} omitido(s) (sin placeholder)",
-            progress.skipped_trackobj_placeholders
-        );
-    }
     if progress.trackobj_seen > 0 {
+        let accounted = progress.trackobj_resolved
+            + progress.trackobj_procedural_objects
+            + progress.trackobj_failed;
         viewer_log!(
-            "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
+            "openrailsrs-viewer3d: TrackObj <={}m: {} seen = {} mesh + {} procedural + {} failed{}",
             shape_mesh_radius_m() as u32,
-            progress.trackobj_mesh_queued,
-            progress.trackobj_no_filename,
-            progress.trackobj_unresolved
+            progress.trackobj_seen,
+            progress.trackobj_resolved,
+            progress.trackobj_procedural_objects,
+            progress.trackobj_failed,
+            if accounted != progress.trackobj_seen {
+                format!(" (WARNING accounted {accounted})")
+            } else {
+                String::new()
+            }
         );
+        for fail in progress.trackobj_failures.iter().take(12) {
+            viewer_log!(
+                "openrailsrs-viewer3d: TrackObj failed uid={:?} file={:?} section={:?} tile={},{} — {}",
+                fail.uid,
+                fail.file_name.as_deref().unwrap_or(""),
+                fail.section_idx,
+                fail.tile_x,
+                fail.tile_z,
+                fail.reason
+            );
+        }
+        if progress.trackobj_failed > progress.trackobj_failures.len() {
+            viewer_log!(
+                "openrailsrs-viewer3d: … {} more TrackObj failure(s) omitted from sample",
+                progress.trackobj_failed - progress.trackobj_failures.len()
+            );
+        }
     }
     if !progress.trackobj_procedural.is_empty() {
         viewer_log!(
             "openrailsrs-viewer3d: {} TrackObj procedural segment(s) (tsection/tdb)",
             progress.trackobj_procedural.len()
-        );
-    }
-    if progress.skipped_trackobj_placeholders > 0 && progress.trackobj_seen == 0 {
-        viewer_log!(
-            "openrailsrs-viewer3d: skipped {} TrackObj placeholder(s) (no .s mesh)",
-            progress.skipped_trackobj_placeholders
         );
     }
     if progress.merged_shape_groups > 0 {
@@ -1496,10 +1953,7 @@ pub struct WorldTileStream {
 
 impl WorldTileStream {
     pub fn new(route_dir: &Path, world: &WorldScene, radius_m: f32) -> Self {
-        let catalog = discover_world_files(route_dir)
-            .into_iter()
-            .filter_map(|path| parse_world_w_tile_xz(&path).map(|xz| (xz, path)))
-            .collect();
+        let catalog = openrailsrs_formats::build_world_tile_catalog(route_dir);
         let mut loaded = std::collections::HashSet::new();
         for obj in &world.items {
             loaded.insert((obj.tile_x, obj.tile_z));
@@ -1525,13 +1979,13 @@ fn camera_msts_xz(
     )
 }
 
-/// Tracks how many world items already have forest / water / dyntrack GPU spawns.
+/// Tracks how many world items already have forest / water / transfer / dyntrack GPU spawns.
 #[derive(Resource, Default)]
 pub struct WorldSceneryStreamState {
     pub processed_items: usize,
 }
 
-/// After startup (or tile stream), spawn forest / water / dyntrack for newly loaded items.
+/// After startup (or tile stream), spawn forest / water / transfer / dyntrack for newly loaded items.
 pub fn init_scenery_stream_state(
     world: Res<WorldScene>,
     mut state: ResMut<WorldSceneryStreamState>,
@@ -1553,6 +2007,7 @@ pub fn world_stream_scenery_system(
     terrain: Option<Res<TerrainElevation>>,
     assets: Res<RouteAssets>,
     focus: Res<RouteFocus>,
+    window: Res<crate::view_window::ViewWindow>,
     offset: Res<RouteWorldOffset>,
 ) {
     if progress.is_some() {
@@ -1562,6 +2017,7 @@ pub fn world_stream_scenery_system(
         return;
     }
     let new_items = &world.items[state.processed_items..];
+    let cull_center = window.center_world;
     let forests = if !mode.loads_msts_scenery() {
         0
     } else {
@@ -1576,6 +2032,22 @@ pub fn world_stream_scenery_system(
         new_items
             .iter()
             .filter(|obj| obj.kind == "HWater" && obj.water.is_some())
+            .count()
+    };
+    let transfers = if !mode.loads_msts_scenery() {
+        0
+    } else {
+        new_items
+            .iter()
+            .filter(|obj| obj.kind == "Transfer" && obj.transfer.is_some())
+            .count()
+    };
+    let road_cars = if !mode.loads_msts_scenery() {
+        0
+    } else {
+        new_items
+            .iter()
+            .filter(|obj| obj.kind == "CarSpawner" && obj.car_spawner.is_some())
             .count()
     };
     let dyntracks = new_items
@@ -1594,6 +2066,7 @@ pub fn world_stream_scenery_system(
             &assets,
             &focus,
             &offset,
+            Some(cull_center),
         );
     }
     if waters > 0 {
@@ -1609,6 +2082,31 @@ pub fn world_stream_scenery_system(
             &focus,
         );
     }
+    if transfers > 0 {
+        crate::transfer::spawn_transfer_objects(
+            &mut commands,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            new_items,
+            terrain.as_deref(),
+            &assets,
+            &focus,
+            Some(window.center_world),
+        );
+    }
+    if road_cars > 0 {
+        crate::road_cars::spawn_road_car_objects(
+            &mut commands,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            new_items,
+            &assets,
+            &focus,
+            Some(cull_center),
+        );
+    }
     if dyntracks > 0 {
         crate::dyntrack::spawn_dyntrack_objects(
             &mut commands,
@@ -1619,15 +2117,15 @@ pub fn world_stream_scenery_system(
             &focus,
         );
     }
-    if forests + waters + dyntracks > 0 {
+    if forests + waters + transfers + road_cars + dyntracks > 0 {
         viewer_log!(
-            "openrailsrs-viewer3d: streamed scenery — {forests} forest, {waters} water, {dyntracks} dyntrack"
+            "openrailsrs-viewer3d: streamed scenery — {forests} forest, {waters} water, {transfers} transfer, {road_cars} roadcar, {dyntracks} dyntrack"
         );
     }
     state.processed_items = world.items.len();
 }
 
-/// Load `.w` tiles around the view window (train in live, camera in replay).
+/// Load `.w` tiles around the view window (train when following in live; free camera when `follow:off` / replay).
 #[allow(clippy::too_many_arguments)]
 pub fn world_tile_stream_system(
     mut world: ResMut<WorldScene>,
@@ -1669,6 +2167,7 @@ pub fn world_tile_stream_system(
     let radius_tiles = (stream.radius_m / tile).ceil() as i32 + 1;
     let item_base = world.items.len();
     let mut tiles_loaded = 0usize;
+    let mut added_tile_keys = Vec::new();
 
     for dtx in -radius_tiles..=radius_tiles {
         for dtz in -radius_tiles..=radius_tiles {
@@ -1689,8 +2188,13 @@ pub fn world_tile_stream_system(
             else {
                 continue;
             };
-            if append_world_tile_file(&mut world, &path).is_ok() {
+            let item_window = Some(WorldItemWindow {
+                center,
+                radius_m: world_item_keep_radius_m(stream.radius_m),
+            });
+            if append_world_tile_file(&mut world, &path, item_window).is_ok() {
                 stream.loaded.insert(key);
+                added_tile_keys.push(key);
                 tiles_loaded += 1;
             }
         }
@@ -1698,6 +2202,13 @@ pub fn world_tile_stream_system(
 
     let new_items = world.items.len().saturating_sub(item_base);
     if tiles_loaded > 0 {
+        let tr_item_objects: Vec<WorldObject> = world.items[item_base..]
+            .iter()
+            .filter(|o| matches!(o.kind, "Signal" | "Speedpost" | "SoundRegion"))
+            .cloned()
+            .collect();
+        world.note_tr_item_tiles_added(added_tile_keys);
+        world.note_tr_item_objects_added(tr_item_objects);
         viewer_log!(
             "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) near tile ({cam_tile_x},{cam_tile_z})"
         );
@@ -1719,15 +2230,24 @@ pub fn world_tile_unload_system(
     focus: Res<RouteFocus>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
     mode: Res<ViewerSceneryMode>,
+    progress: Option<Res<WorldSpawnProgress>>,
+    mut session: ResMut<WorldShapeLodCache>,
     mut commands: Commands,
-    scenery: Query<(Entity, &Transform), With<WorldSceneryLod>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    scenery: Query<(Entity, &Transform, &WorldSceneryLod)>,
+    tile_bound: Query<(Entity, &WorldTileBound)>,
     mut stream_state: ResMut<WorldSceneryStreamState>,
 ) {
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
         return;
     }
-    let tile = MSTS_TILE_SIZE_M as f32;
-    let unload_radius = window.radius_m + tile + 64.0;
+    // Same gate as stream: mutating `world.items` mid-classify invalidates `item_index`.
+    if progress.is_some() {
+        return;
+    }
+    let unload_radius = crate::launch::view_unload_radius_m().max(window.radius_m);
     let center = window.center_world;
 
     let mut unloaded_tiles = HashSet::new();
@@ -1742,24 +2262,53 @@ pub fn world_tile_unload_system(
         return;
     }
     let before = world.items.len();
+    world.note_tr_item_tiles_removed(unloaded_tiles.iter().copied());
     world
         .items
         .retain(|obj| !unloaded_tiles.contains(&(obj.tile_x, obj.tile_z)));
+    for key in &unloaded_tiles {
+        world.loaded_tiles.remove(key);
+    }
+    world.tiles_loaded = world.loaded_tiles.len();
     stream_state.processed_items = stream_state.processed_items.min(world.items.len());
 
-    for (entity, tf) in scenery.iter() {
+    // Despawn is deferred: compute live shape refs from entities that stay (#51).
+    let mut live_shape_paths = HashSet::new();
+    let mut despawned = 0usize;
+    for (entity, tf, lod) in scenery.iter() {
         let msts_x = tf.translation.x + focus.center.x + origin.shift.x;
         let msts_z = tf.translation.z + focus.center.z + origin.shift.z;
         let dist = Vec2::new(msts_x - center.x, msts_z - center.z).length();
         if dist > unload_radius {
             commands.entity(entity).despawn();
+            despawned += 1;
+        } else if !lod.shape_path.as_os_str().is_empty() {
+            live_shape_paths.insert(lod.shape_path.clone());
         }
     }
+    for (entity, bound) in tile_bound.iter() {
+        if unloaded_tiles.contains(&(bound.tile_x, bound.tile_z)) {
+            commands.entity(entity).despawn();
+            despawned += 1;
+        }
+    }
+    let (shapes_evicted, textures_evicted) = evict_unreferenced_world_shapes(
+        &mut session,
+        &live_shape_paths,
+        &mut meshes,
+        &mut images,
+        &mut materials,
+    );
     viewer_log!(
-        "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items)",
+        "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items; despawned {} entit(ies); evicted {} shape(s)/{} texture(s); session {}/{} )",
         unloaded_tiles.len(),
         before,
-        world.items.len()
+        world.items.len(),
+        despawned,
+        shapes_evicted,
+        textures_evicted,
+        session.shape_assets.len(),
+        session.texture_images.len()
     );
 }
 
@@ -1774,14 +2323,19 @@ pub fn progressive_world_spawn_system(
     world: Res<WorldScene>,
     _scene: Res<TrackScene>,
     focus: Res<RouteFocus>,
+    window: Res<crate::view_window::ViewWindow>,
     origin: Res<FloatingOrigin>,
     assets: Res<RouteAssets>,
     mode: Res<ViewerSceneryMode>,
+    mut session: ResMut<WorldShapeLodCache>,
     progress: Option<ResMut<WorldSpawnProgress>>,
 ) {
     let Some(mut progress) = progress else {
         return;
     };
+    // Spawn culling must follow the mobile view window (camera/train), not only the
+    // startup RouteFocus — otherwise streamed tiles far from the anchor never appear.
+    let cull_center = window.center_world;
 
     let driver_throttle = if *follow == CameraFollowMode::DriverCam {
         driver_world_spawn_scale()
@@ -1816,9 +2370,11 @@ pub fn progressive_world_spawn_system(
 
     match progress.phase {
         WorldSpawnPhase::Classifying => {
+            // Defense: never slice past `world.items` if another system shrank the vec.
+            progress.item_index = progress.item_index.min(world.items.len());
             let end = (progress.item_index + classify_batch).min(world.items.len());
             for obj in &world.items[progress.item_index..end] {
-                classify_one_object(obj, &focus, &assets, *mode, &mut progress);
+                classify_one_object(obj, &focus, cull_center, &assets, *mode, &mut progress);
             }
             progress.item_index = end;
             if progress.item_index >= world.items.len() {
@@ -1828,11 +2384,12 @@ pub fn progressive_world_spawn_system(
                 );
                 if progress.trackobj_seen > 0 {
                     viewer_log!(
-                        "openrailsrs-viewer3d: TrackObj <={}m: {} con mesh, {} sin FileName, {} .s no resuelto",
+                        "openrailsrs-viewer3d: TrackObj <={}m: {} seen = {} mesh + {} procedural + {} failed",
                         shape_mesh_radius_m() as u32,
-                        progress.trackobj_mesh_queued,
-                        progress.trackobj_no_filename,
-                        progress.trackobj_unresolved
+                        progress.trackobj_seen,
+                        progress.trackobj_resolved,
+                        progress.trackobj_procedural_objects,
+                        progress.trackobj_failed
                     );
                 }
                 progress.phase = if progress.shape_instances.is_empty() {
@@ -1845,6 +2402,7 @@ pub fn progressive_world_spawn_system(
         }
         WorldSpawnPhase::LoadingShapes => {
             prepare_shape_load_paths(&mut progress);
+            hydrate_spawn_from_session(&mut progress, &mut session);
             if parse_next_shape_batch(&mut progress, &assets.route_dir) {
                 return;
             }
@@ -2000,10 +2558,7 @@ pub fn progressive_world_spawn_system(
                 );
             }
             log_world_spawn_summary(&progress);
-            commands.insert_resource(WorldShapeLodCache {
-                shapes: std::mem::take(&mut progress.parsed_shape_files),
-                assets_by_lod: std::mem::take(&mut progress.shape_lod_assets),
-            });
+            commit_spawn_to_session(&mut session, &mut progress);
             commands.remove_resource::<WorldSpawnProgress>();
         }
     }
@@ -2100,12 +2655,20 @@ pub fn spawn_world_boxes(
     let mut shape_mesh_count = 0usize;
     let mut shape_texture_count = 0usize;
     let mut culled_count = 0usize;
-    let mut skipped_trackobj_placeholders = 0usize;
+    let mut trackobj_seen = 0usize;
+    let mut trackobj_resolved = 0usize;
+    let mut trackobj_procedural_objects = 0usize;
+    let mut trackobj_failed = 0usize;
     let mut shape_spawn_batches: Vec<ShapeSpawnBundle> = Vec::new();
     let mut merged_shape_groups = 0usize;
 
     for obj in &world.items {
-        if obj.kind == "Dyntrack" || obj.kind == "Forest" || obj.kind == "HWater" {
+        if obj.kind == "Dyntrack"
+            || obj.kind == "Forest"
+            || obj.kind == "HWater"
+            || obj.kind == "Transfer"
+            || obj.kind == "CarSpawner"
+        {
             continue;
         }
 
@@ -2120,9 +2683,13 @@ pub fn spawn_world_boxes(
             continue;
         }
 
-        if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
-            let shape_path = resolve_object_shape_path(obj, &assets);
-            if let Some(shape_path) = shape_path {
+        if obj.kind == "TrackObj" {
+            if dist > shape_mesh_radius_m() {
+                continue;
+            }
+            trackobj_seen += 1;
+            if let Some(shape_path) = resolve_object_shape_path(obj, &assets) {
+                trackobj_resolved += 1;
                 let render_pos = focus.scenery_to_render(obj.position);
                 shape_instances
                     .entry(shape_path)
@@ -2134,20 +2701,36 @@ pub fn spawn_world_boxes(
                     });
                 continue;
             }
-        }
-
-        if obj.kind == "TrackObj" && !SPAWN_TRACKOBJ_PLACEHOLDERS {
-            if SPAWN_TRACKOBJ_PROCEDURAL && dist <= shape_mesh_radius_m() {
-                trackobj_procedural.extend(trackobj_procedural_segments(
+            if SPAWN_TRACKOBJ_PROCEDURAL {
+                let segs = trackobj_procedural_segments(
                     obj,
                     focus.scenery_to_render(obj.position),
                     &assets,
                     *mode,
-                ));
-            } else {
-                skipped_trackobj_placeholders += 1;
+                );
+                if !segs.is_empty() {
+                    trackobj_procedural_objects += 1;
+                    trackobj_procedural.extend(segs);
+                    continue;
+                }
             }
-            continue;
+            trackobj_failed += 1;
+            if !trackobj_placeholders_enabled() {
+                continue;
+            }
+        } else if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
+            if let Some(shape_path) = resolve_object_shape_path(obj, &assets) {
+                let render_pos = focus.scenery_to_render(obj.position);
+                shape_instances
+                    .entry(shape_path)
+                    .or_default()
+                    .push(Transform {
+                        translation: render_pos,
+                        rotation: obj.rotation,
+                        scale: obj.scale,
+                    });
+                continue;
+            }
         }
 
         // Placeholders only near the camera; 4–8 km clutter dominated spawn time on large routes.
@@ -2312,9 +2895,10 @@ pub fn spawn_world_boxes(
             "openrailsrs-viewer3d: {culled_count} world object(s) culled (>{radius_m:.0}m from centre)"
         );
     }
-    if skipped_trackobj_placeholders > 0 {
+    if trackobj_seen > 0 {
         viewer_log!(
-            "openrailsrs-viewer3d: skipped {skipped_trackobj_placeholders} TrackObj placeholder(s) (no .s mesh)"
+            "openrailsrs-viewer3d: TrackObj <={}m: {trackobj_seen} seen = {trackobj_resolved} mesh + {trackobj_procedural_objects} procedural + {trackobj_failed} failed",
+            shape_mesh_radius_m() as u32
         );
     }
     if merged_shape_groups > 0 {
@@ -2334,6 +2918,7 @@ pub fn spawn_world_boxes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shapes::ShapePartAsset;
     use openrailsrs_formats::Vec3 as FVec3;
 
     #[test]
@@ -2446,9 +3031,11 @@ mod tests {
     }
 
     #[test]
-    fn default_visible_radius_is_400m() {
-        assert_eq!(VISIBLE_RADIUS_M, 120.0);
+    fn default_visible_radius_matches_viewing_distance() {
+        assert_eq!(VISIBLE_RADIUS_M, crate::launch::VIEWING_DISTANCE_M);
         assert_eq!(shape_mesh_radius_m(), visible_radius_m());
+        assert!(crate::launch::scenery_content_radius_m() > visible_radius_m());
+        assert!(crate::launch::view_unload_radius_m() > visible_radius_m());
     }
 
     #[test]
@@ -2567,6 +3154,73 @@ mod tests {
     }
 
     #[test]
+    fn early_item_window_matches_post_retain_set() {
+        let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        if !route_dir.join("WORLD").is_dir() {
+            return;
+        }
+        let center = world_tile_center_hint(&route_dir).expect("tile hint");
+        let tile_radius = 300.0_f32;
+        let keep = world_item_keep_radius_m(tile_radius);
+        let filtered =
+            load_world_from_route_dir_near_filtered(&route_dir, Some(center), tile_radius, true);
+        let mut unfiltered =
+            load_world_from_route_dir_near_filtered(&route_dir, Some(center), tile_radius, false);
+        assert!(
+            filtered.items_skipped_out_of_window > 0,
+            "expected early skips on Chiltern overlay tiles"
+        );
+        assert!(
+            unfiltered.items.len() > filtered.items.len(),
+            "unfiltered materialization should keep more objects before retain"
+        );
+        let focus = RouteFocus::at_world_center(center, None);
+        unfiltered.retain_within_visible_radius(&focus, keep);
+        let key = |o: &WorldObject| {
+            (
+                o.tile_x,
+                o.tile_z,
+                o.uid,
+                o.kind,
+                o.position.x.to_bits(),
+                o.position.z.to_bits(),
+            )
+        };
+        let mut a: Vec<_> = filtered.items.iter().map(key).collect();
+        let mut b: Vec<_> = unfiltered.items.iter().map(key).collect();
+        a.sort_unstable();
+        b.sort_unstable();
+        assert_eq!(
+            a,
+            b,
+            "early filter must match retain set ({} vs {} items)",
+            a.len(),
+            b.len()
+        );
+        let window = WorldItemWindow {
+            center,
+            radius_m: keep,
+        };
+        assert!(
+            filtered
+                .items
+                .iter()
+                .all(|o| window.contains_xz(o.position)),
+            "no out-of-window objects may remain in WorldScene"
+        );
+    }
+
+    #[test]
+    fn world_item_window_rejects_far_points() {
+        let w = WorldItemWindow {
+            center: Vec3::new(0.0, 0.0, 0.0),
+            radius_m: 100.0,
+        };
+        assert!(w.contains_xz(Vec3::new(50.0, 999.0, 0.0)));
+        assert!(!w.contains_xz(Vec3::new(101.0, 0.0, 0.0)));
+    }
+
+    #[test]
     fn discover_world_tile_entries_matches_chiltern_anchor() {
         let route_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         if !route_dir.join("WORLD").is_dir() {
@@ -2590,5 +3244,235 @@ mod tests {
             entries.iter().any(|(x, z, _)| *x == -6080 && *z == 14925),
             "expected tile w-006080+014925 (anchor tile) in discovered entries"
         );
+    }
+
+    #[test]
+    fn world_tile_path_resolves_mixed_case_fixture() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let world = dir.path().join("World");
+        std::fs::create_dir_all(&world).expect("mkdir");
+        let canonical = openrailsrs_formats::world_w_filename_from_tile_xz(-1, 2);
+        let on_disk = world.join(canonical.replace(".w", ".W"));
+        std::fs::write(&on_disk, b"x").expect("write");
+        let resolved = world_tile_path_for_coords(dir.path(), -1, 2).expect("resolve");
+        assert!(resolved.is_file());
+        let catalog = openrailsrs_formats::build_world_tile_catalog(dir.path());
+        assert!(catalog.contains_key(&(-1, 2)));
+    }
+
+    fn dummy_shape_asset() -> ShapeRenderAsset {
+        ShapeRenderAsset {
+            combined_mesh: Handle::default(),
+            parts: Vec::new(),
+            has_texture: false,
+        }
+    }
+
+    #[test]
+    fn evict_unreferenced_world_shapes_keeps_shared_and_frees_unused() {
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+
+        let keep_path = PathBuf::from("/shapes/keep.s");
+        let drop_path = PathBuf::from("/shapes/drop.s");
+        let shared_tex = images.add(Image::default());
+        let drop_tex = images.add(Image::default());
+
+        let keep_mat = materials.add(StandardMaterial {
+            base_color_texture: Some(shared_tex.clone()),
+            ..default()
+        });
+        let drop_mat = materials.add(StandardMaterial {
+            base_color_texture: Some(drop_tex.clone()),
+            ..default()
+        });
+        let keep_mesh = meshes.add(Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        ));
+        let drop_mesh = meshes.add(Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        ));
+
+        let make_part = |mesh: Handle<Mesh>, material: Handle<StandardMaterial>| ShapePartAsset {
+            prim_state_idx: 0,
+            sub_object_idx: 0,
+            cab_matrix_idx: None,
+            mesh,
+            material,
+            or_cab_material: None,
+            has_texture: true,
+            is_transparent: false,
+            texture_name: None,
+            shader_name: None,
+            light_mat_idx: None,
+            solid_color: None,
+            lever_pivot_at_mesh_center: false,
+            lever_local_axis: None,
+            bounds_center: None,
+        };
+
+        let mut session = WorldShapeLodCache::default();
+        session.shape_assets.insert(
+            keep_path.clone(),
+            ShapeRenderAsset {
+                combined_mesh: keep_mesh.clone(),
+                parts: vec![make_part(keep_mesh.clone(), keep_mat)],
+                has_texture: true,
+            },
+        );
+        session.shape_assets.insert(
+            drop_path.clone(),
+            ShapeRenderAsset {
+                combined_mesh: drop_mesh.clone(),
+                parts: vec![make_part(drop_mesh.clone(), drop_mat)],
+                has_texture: true,
+            },
+        );
+        session
+            .texture_images
+            .insert(PathBuf::from("shared.ace"), shared_tex.clone());
+        session
+            .texture_images
+            .insert(PathBuf::from("drop.ace"), drop_tex.clone());
+        session
+            .shapes
+            .insert(keep_path.clone(), ShapeFile::default());
+        session
+            .shapes
+            .insert(drop_path.clone(), ShapeFile::default());
+
+        let live = HashSet::from([keep_path.clone()]);
+        let (shapes, textures) = evict_unreferenced_world_shapes(
+            &mut session,
+            &live,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+        );
+        assert_eq!(shapes, 1);
+        assert_eq!(textures, 1);
+        assert!(session.shape_assets.contains_key(&keep_path));
+        assert!(!session.shape_assets.contains_key(&drop_path));
+        assert!(session.texture_images.contains_key(Path::new("shared.ace")));
+        assert!(!session.texture_images.contains_key(Path::new("drop.ace")));
+        assert!(meshes.get(keep_mesh.id()).is_some());
+        assert!(meshes.get(drop_mesh.id()).is_none());
+        assert!(images.get(shared_tex.id()).is_some());
+        assert!(images.get(drop_tex.id()).is_none());
+    }
+
+    #[test]
+    fn hydrate_spawn_from_session_skips_cached_paths() {
+        let hit = PathBuf::from("/shapes/shared.s");
+        let miss = PathBuf::from("/shapes/new.s");
+        let mut session = WorldShapeLodCache::default();
+        session
+            .shape_assets
+            .insert(hit.clone(), dummy_shape_asset());
+        session.shapes.insert(hit.clone(), ShapeFile::default());
+
+        let mut progress = WorldSpawnProgress::new(1.0);
+        progress.shape_load_paths = vec![hit.clone(), miss.clone()];
+        hydrate_spawn_from_session(&mut progress, &mut session);
+
+        assert_eq!(progress.cache_hits, 1);
+        assert_eq!(progress.cache_misses, 1);
+        assert_eq!(progress.shape_load_paths, vec![miss]);
+        assert!(progress.shape_cache.contains_key(&hit));
+        assert!(progress.parsed_shape_files.contains_key(&hit));
+        assert_eq!(session.session_hits, 1);
+        assert_eq!(session.session_misses, 1);
+
+        // Second hydrate is a no-op for the same progress cycle.
+        hydrate_spawn_from_session(&mut progress, &mut session);
+        assert_eq!(session.session_hits, 1);
+    }
+
+    #[test]
+    fn commit_spawn_to_session_merges_without_dropping_priors() {
+        let prior = PathBuf::from("/shapes/prior.s");
+        let fresh = PathBuf::from("/shapes/fresh.s");
+        let mut session = WorldShapeLodCache::default();
+        session
+            .shape_assets
+            .insert(prior.clone(), dummy_shape_asset());
+        session.shapes.insert(prior.clone(), ShapeFile::default());
+
+        let mut progress = WorldSpawnProgress::new(1.0);
+        progress.cache_hits = 1;
+        progress
+            .shape_cache
+            .insert(fresh.clone(), dummy_shape_asset());
+        progress
+            .parsed_shape_files
+            .insert(fresh.clone(), ShapeFile::default());
+
+        commit_spawn_to_session(&mut session, &mut progress);
+        assert!(session.shape_assets.contains_key(&prior));
+        assert!(session.shape_assets.contains_key(&fresh));
+        assert_eq!(session.shape_assets.len(), 2);
+        assert!(progress.shape_cache.is_empty());
+    }
+
+    #[test]
+    fn session_cache_second_spawn_does_not_reparse_shared_shape() {
+        let route = PathBuf::from(std::env::var("HOME").unwrap_or_default())
+            .join("Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern");
+        let Some(path) = std::fs::read_dir(route.join("DYNATRAX"))
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| {
+                p.extension()
+                    .and_then(|e| e.to_str())
+                    .is_some_and(|e| e.eq_ignore_ascii_case("s"))
+            })
+        else {
+            eprintln!("skip: Chiltern DYNATRAX shapes not available");
+            return;
+        };
+
+        reset_shape_file_parse_count();
+        let (shape, _loaded) =
+            load_shape_file_and_loaded(&path, None).expect("parse Chiltern shape once");
+        assert_eq!(shape_file_parse_count(), 1);
+
+        let mut session = WorldShapeLodCache::default();
+        session.shapes.insert(path.clone(), shape);
+        session
+            .shape_assets
+            .insert(path.clone(), dummy_shape_asset());
+
+        // Second stream cycle: same path must be a hit (zero additional ShapeFile parses).
+        let mut progress = WorldSpawnProgress::new(1.0);
+        progress
+            .shape_instances
+            .insert(path.clone(), vec![Transform::default()]);
+        prepare_shape_load_paths(&mut progress);
+        hydrate_spawn_from_session(&mut progress, &mut session);
+        assert_eq!(progress.cache_hits, 1);
+        assert!(progress.shape_load_paths.is_empty());
+
+        let before = shape_file_parse_count();
+        assert!(!parse_next_shape_batch(&mut progress, Path::new(".")));
+        assert_eq!(
+            shape_file_parse_count(),
+            before,
+            "shared shape must not call ShapeFile::from_path again"
+        );
+
+        // Simulate the next Update: prepare must not refill all-hit miss list.
+        prepare_shape_load_paths(&mut progress);
+        assert!(
+            progress.shape_load_paths.is_empty(),
+            "all-hit cycle must not re-queue shapes for parse"
+        );
+        assert!(!parse_next_shape_batch(&mut progress, Path::new(".")));
+        assert_eq!(shape_file_parse_count(), before);
     }
 }

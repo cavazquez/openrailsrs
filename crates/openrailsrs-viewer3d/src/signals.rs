@@ -76,7 +76,7 @@ pub fn signal_render_world(
                 return Some(msts_to_render_surface(msts, terrain, scene, focus));
             }
         }
-        let resolver = TrackPositionResolver::new(tdb, tsection);
+        let resolver = TrackPositionResolver::from_track_scene(tdb, tsection, scene);
         return signal_position_on_edge(
             graph,
             signal,

@@ -7,10 +7,11 @@ use std::sync::Arc;
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+#[cfg(test)]
+use openrailsrs_formats::parse_world_w_tile_xz;
 use openrailsrs_formats::{
-    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, msts_tile_name_from_xz,
-    msts_tile_world_origin, msts_tile_x_index_for_coord, msts_tile_z_index_for_coord,
-    parse_tile_xz_from_filename, parse_world_w_tile_xz,
+    ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, msts_tile_world_origin,
+    msts_tile_x_index_for_coord, msts_tile_z_index_for_coord, parse_tile_xz_from_filename,
 };
 
 use crate::terrain_io::{TerrainTileData, load_tile_data};
@@ -181,20 +182,24 @@ impl TerrainScene {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn mesh_from_terrain_data(data: &TerrainMeshData, height_origin: f32) -> Mesh {
-    let positions: Vec<[f32; 3]> = data
-        .positions
-        .iter()
-        .map(|p| [p[0], p[1] - height_origin, p[2]])
-        .collect();
+    mesh_from_terrain_data_owned(data.clone(), height_origin)
+}
+
+/// Consume mesh data to avoid cloning large attribute buffers (#60).
+pub(crate) fn mesh_from_terrain_data_owned(mut data: TerrainMeshData, height_origin: f32) -> Mesh {
+    for p in &mut data.positions {
+        p[1] -= height_origin;
+    }
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(),
     );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals.clone());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs.clone());
-    mesh.insert_indices(Indices::U32(data.indices.clone()));
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data.positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs);
+    mesh.insert_indices(Indices::U32(data.indices));
     mesh
 }
 
@@ -243,12 +248,14 @@ pub fn load_terrain_from_route_dir_near(
         viewer_log!("openrailsrs-viewer3d: skipped {skip_count} terrain tile(s)");
     }
     if scene.tiles.is_empty() {
-        let tiles_dir = route_dir.join("TILES");
-        if tiles_dir.is_dir()
-            && std::fs::read_dir(&tiles_dir)
-                .ok()
-                .is_some_and(|rd| rd.flatten().any(|e| e.path().extension().is_some()))
-        {
+        let has_tile_files = openrailsrs_formats::tiles_subdirs(route_dir)
+            .into_iter()
+            .any(|tiles_dir| {
+                std::fs::read_dir(&tiles_dir)
+                    .ok()
+                    .is_some_and(|rd| rd.flatten().any(|e| e.path().extension().is_some()))
+            });
+        if has_tile_files {
             viewer_log!(
                 "openrailsrs-viewer3d: no terrain tiles near route focus (check TILES/ + *_y.raw)"
             );
@@ -285,18 +292,18 @@ pub fn discover_terrain_tile_entries(
 }
 
 fn uses_hash_tile_names(route_dir: &Path) -> bool {
-    let dir = route_dir.join("TILES");
-    if !dir.is_dir() {
-        return false;
-    }
-    std::fs::read_dir(&dir).ok().is_some_and(|rd| {
-        rd.flatten().any(|e| {
-            e.path()
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .is_some_and(|stem| stem.starts_with('-') && stem.len() >= 9)
+    openrailsrs_formats::tiles_subdirs(route_dir)
+        .into_iter()
+        .any(|dir| {
+            std::fs::read_dir(&dir).ok().is_some_and(|rd| {
+                rd.flatten().any(|e| {
+                    e.path()
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .is_some_and(|stem| stem.starts_with('-') && stem.len() >= 9)
+                })
+            })
         })
-    })
 }
 
 fn discover_hash_terrain_tiles(
@@ -304,8 +311,6 @@ fn discover_hash_terrain_tiles(
     center: Option<Vec3>,
     radius_m: f32,
 ) -> Vec<(i32, i32, PathBuf)> {
-    let tiles_dir = route_dir.join("TILES");
-    let world_dir = route_dir.join("WORLD");
     let mut out = Vec::new();
 
     if let Some(c) = center {
@@ -320,76 +325,48 @@ fn discover_hash_terrain_tiles(
                 if tile_center_distance_m(tile_x, tile_z, c) > radius_m + tile {
                     continue;
                 }
-                push_hash_tile(&mut out, &tiles_dir, tile_x, tile_z);
+                push_hash_tile(route_dir, &mut out, tile_x, tile_z);
             }
         }
         if out.is_empty() {
-            push_hash_tiles_from_world_near(&mut out, &world_dir, &tiles_dir, c, radius_m);
+            push_hash_tiles_from_world_near(route_dir, &mut out, c, radius_m);
         }
         return out;
     }
 
-    if world_dir.is_dir() {
-        for entry in std::fs::read_dir(&world_dir)
-            .into_iter()
-            .flatten()
-            .flatten()
-        {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("w") {
-                continue;
-            }
-            let Some((tile_x, tile_z)) = parse_world_w_tile_xz(&path) else {
-                continue;
-            };
-            push_hash_tile(&mut out, &tiles_dir, tile_x, tile_z);
-        }
-    }
-    out
+    openrailsrs_formats::scan_hash_terrain_tiles_from_world(route_dir)
 }
 
-fn push_hash_tile(out: &mut Vec<(i32, i32, PathBuf)>, tiles_dir: &Path, tile_x: i32, tile_z: i32) {
-    let hash = msts_tile_name_from_xz(tile_x, tile_z).to_ascii_lowercase();
-    let path = tiles_dir.join(format!("{hash}.t"));
-    if path.is_file() {
+fn push_hash_tile(route_dir: &Path, out: &mut Vec<(i32, i32, PathBuf)>, tile_x: i32, tile_z: i32) {
+    if let Some(path) =
+        openrailsrs_formats::resolve_hash_terrain_tile_file(route_dir, tile_x, tile_z)
+    {
         out.push((tile_x, tile_z, path));
     }
 }
 
 fn push_hash_tiles_from_world_near(
+    route_dir: &Path,
     out: &mut Vec<(i32, i32, PathBuf)>,
-    world_dir: &Path,
-    tiles_dir: &Path,
     center: Vec3,
     radius_m: f32,
 ) {
-    if !world_dir.is_dir() {
-        return;
-    }
     let tile = MSTS_TILE_SIZE_M as f32;
-    for entry in std::fs::read_dir(world_dir).into_iter().flatten().flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("w") {
-            continue;
-        }
-        let Some((tile_x, tile_z)) = parse_world_w_tile_xz(&path) else {
-            continue;
-        };
+    for (tile_x, tile_z, _) in openrailsrs_formats::scan_world_tile_files(route_dir) {
         if tile_center_distance_m(tile_x, tile_z, center) > radius_m + tile {
             continue;
         }
-        push_hash_tile(out, tiles_dir, tile_x, tile_z);
+        push_hash_tile(route_dir, out, tile_x, tile_z);
     }
 }
 
 /// Scan `TERRAIN/` (`.y`) and `TILES/` (`.t`) under the route (legacy `+000000+000000` names).
 pub fn discover_terrain_files(route_dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
-    for subdir in ["TERRAIN", "terrain", "TILES", "tiles"] {
-        let dir = route_dir.join(subdir);
-        if !dir.is_dir() {
-            continue;
-        }
+    let dirs = openrailsrs_formats::terrain_subdirs(route_dir)
+        .into_iter()
+        .chain(openrailsrs_formats::tiles_subdirs(route_dir));
+    for dir in dirs {
         let Ok(read_dir) = std::fs::read_dir(&dir) else {
             continue;
         };

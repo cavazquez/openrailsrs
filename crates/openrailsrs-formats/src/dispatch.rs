@@ -24,6 +24,10 @@ pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> 
         .and_then(|value| value.to_str())
         .map(str::to_ascii_lowercase);
 
+    if ext.as_deref() == Some("trk") {
+        return Ok(MstsFile::Route(RouteFile::from_trk_path(path)?));
+    }
+
     let source = if ext.as_deref() == Some("cvf") {
         read_msts_file_decoded(path)?
     } else {
@@ -35,7 +39,6 @@ pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> 
         Some("eng") => Ok(MstsFile::Engine(Box::new(EngineFile::from_ast(&ast)?))),
         Some("wag") => Ok(MstsFile::Wagon(WagonFile::from_ast(&ast)?)),
         Some("con") => Ok(MstsFile::Consist(ConsistFile::from_ast(&ast)?)),
-        Some("trk") => Ok(MstsFile::Route(RouteFile::from_ast(&ast)?)),
         Some("cvf") => Ok(MstsFile::CabView(CabViewFile::from_ast(&ast)?)),
         _ => Ok(MstsFile::Unknown(ast)),
     }

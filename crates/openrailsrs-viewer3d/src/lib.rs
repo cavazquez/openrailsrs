@@ -31,6 +31,7 @@ pub mod or_shader {
 pub mod overspeed_flash;
 pub mod placement_audit;
 pub mod precipitation;
+pub mod road_cars;
 pub mod rolling_stock;
 pub mod scene;
 pub mod scenery_audit;
@@ -52,6 +53,7 @@ pub mod track_audit;
 pub mod track_position;
 pub mod train;
 pub mod train_diagnostics;
+pub mod transfer;
 pub mod view_window;
 pub mod water;
 pub mod world;
@@ -72,7 +74,9 @@ mod test_harness;
 use bevy::prelude::*;
 
 pub use hud::HudTitle;
-pub use launch::{RunCorridorPath, ViewerLaunchOpts, ViewerSceneryMode};
+pub use launch::{
+    RunCorridorPath, VIEWING_DISTANCE_M, ViewerLaunchOpts, ViewerSceneryMode, view_radius_m,
+};
 pub use live::LiveDrive;
 pub use log::init as init_viewer_log;
 pub use log::log_step;
@@ -115,6 +119,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<overspeed_flash::OverspeedFlash>()
             .init_resource::<floating_origin::FloatingOrigin>()
             .init_resource::<world::WorldSceneryStreamState>()
+            .init_resource::<world::WorldShapeLodCache>()
             .init_resource::<launch::ViewerSceneryMode>()
             .init_resource::<launch::RunCorridorPath>()
             .init_resource::<view_window::ViewWindow>()
@@ -130,6 +135,8 @@ impl Plugin for ViewerPlugin {
                     dyntrack::spawn_dyntrack_segments.run_if(launch::full_scenery_active),
                     forest::spawn_forest_patches.run_if(launch::full_scenery_active),
                     water::spawn_water_patches.run_if(launch::full_scenery_active),
+                    transfer::spawn_transfer_patches.run_if(launch::full_scenery_active),
+                    road_cars::spawn_road_cars.run_if(launch::full_scenery_active),
                     world::init_world_spawn_progress,
                     world::init_scenery_stream_state,
                 )
@@ -137,17 +144,14 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
-                terrain::progressive_terrain_spawn_system.run_if(launch::full_scenery_active),
+                terrain::progressive_terrain_spawn_system
+                    .run_if(launch::full_scenery_active)
+                    .before(world::progressive_world_spawn_system),
             )
             .add_systems(Update, track::tile_lab_frame_camera_once)
             .add_systems(
                 Update,
                 openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
-            )
-            .add_systems(Update, world::progressive_world_spawn_system)
-            .add_systems(
-                Update,
-                world::update_world_scenery_lod.after(world::progressive_world_spawn_system),
             )
             .add_systems(
                 Update,
@@ -160,17 +164,29 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
-                world::world_tile_stream_system.after(view_window::sync_view_window_from_train),
+                world::progressive_world_spawn_system
+                    .after(view_window::sync_view_window_from_train),
             )
             .add_systems(
                 Update,
-                tr_item_index::sync_tr_item_world_index.after(world::world_tile_stream_system),
+                world::update_world_scenery_lod.after(world::progressive_world_spawn_system),
+            )
+            .add_systems(
+                Update,
+                world::world_tile_stream_system.after(view_window::sync_view_window_from_train),
             )
             .add_systems(
                 Update,
                 world::world_tile_unload_system
                     .after(world::world_tile_stream_system)
                     .run_if(live::live_mode_active),
+            )
+            .add_systems(
+                Update,
+                // After stream + unload so one delta batch covers the frame (#61).
+                tr_item_index::sync_tr_item_world_index
+                    .after(world::world_tile_stream_system)
+                    .after(world::world_tile_unload_system),
             )
             .add_systems(
                 Update,
@@ -242,6 +258,7 @@ impl Plugin for ViewerPlugin {
                     hud::update_hud.after(hud::tick_hud_fps),
                 ),
             )
+            .add_systems(Update, road_cars::update_road_cars)
             .add_systems(
                 Update,
                 (

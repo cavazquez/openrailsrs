@@ -42,8 +42,25 @@ pub(crate) enum SceneMaterialHandle {
 /// Handles de una parte de shape ya en GPU.
 #[derive(Clone)]
 pub struct PartHandles {
-    mesh: Handle<Mesh>,
-    material: SceneMaterialHandle,
+    pub(crate) mesh: Handle<Mesh>,
+    pub(crate) material: SceneMaterialHandle,
+}
+
+impl SceneMaterialHandle {
+    fn asset_remove(
+        &self,
+        materials: &mut Assets<StandardMaterial>,
+        or_materials: &mut Assets<OrSceneryMaterial>,
+    ) {
+        match self {
+            Self::Standard(h) => {
+                materials.remove(h.id());
+            }
+            Self::OrScenery(h) => {
+                or_materials.remove(h.id());
+            }
+        }
+    }
 }
 
 /// Índice case-insensitive de assets `.s` / `.ace`.
@@ -145,6 +162,10 @@ pub fn resolve_trackobj_shape_path(
         .or_else(|| {
             section_idx.and_then(|idx| index.tsection.shape_file_name(idx).map(str::to_string))
         })?;
+    // Route-relative FileName (`../../ROUTES/.../DYNATRAX/foo.s`) before basename (#35).
+    if let Some(path) = openrailsrs_formats::resolve_route_relative_file(route_dir, &name) {
+        return Some(path);
+    }
     for global in global_assets_dirs(route_dir, msts_root) {
         if let Some(path) = resolve_shape_path(&global, &name) {
             return Some(path);
@@ -532,6 +553,59 @@ impl TerrainSpawnCtx {
             night,
             use_or_shaders: or_terrain_shaders_enabled(materials_lit),
         }
+    }
+
+    /// Drop terrain materials/textures not referenced by remaining live tile entities (#51).
+    pub fn evict_unreferenced(
+        &mut self,
+        live_material_ids: &std::collections::HashSet<AssetId<OrTerrainMaterial>>,
+        images: &mut Assets<Image>,
+        or_materials: &mut Assets<OrTerrainMaterial>,
+    ) -> (usize, usize) {
+        let mut mats_removed = 0usize;
+        let stale_mats: Vec<String> = self
+            .mat_cache
+            .iter()
+            .filter(|(_, handle)| {
+                handle.id() != self.fallback.id() && !live_material_ids.contains(&handle.id())
+            })
+            .map(|(key, _)| key.clone())
+            .collect();
+        for key in stale_mats {
+            if let Some(handle) = self.mat_cache.remove(&key) {
+                if or_materials.remove(handle.id()).is_some() {
+                    mats_removed += 1;
+                }
+            }
+        }
+
+        let mut still_needed = std::collections::HashSet::new();
+        if let Some(mat) = or_materials.get(&self.fallback) {
+            still_needed.insert(mat.base_texture.id());
+            still_needed.insert(mat.overlay_texture.id());
+        }
+        for handle in self.mat_cache.values() {
+            if let Some(mat) = or_materials.get(handle) {
+                still_needed.insert(mat.base_texture.id());
+                still_needed.insert(mat.overlay_texture.id());
+            }
+        }
+
+        let mut tex_removed = 0usize;
+        let stale_tex: Vec<String> = self
+            .tex_cache
+            .iter()
+            .filter(|(_, handle)| !still_needed.contains(&handle.id()))
+            .map(|(key, _)| key.clone())
+            .collect();
+        for key in stale_tex {
+            if let Some(handle) = self.tex_cache.remove(&key) {
+                if images.remove(handle.id()).is_some() {
+                    tex_removed += 1;
+                }
+            }
+        }
+        (mats_removed, tex_removed)
     }
 
     fn material_for_patch(
@@ -962,6 +1036,30 @@ impl ObjectSpawnCtx {
             moment_atlas,
             shadow_map_limits,
         }
+    }
+
+    /// Drop cached shapes whose meshes are no longer on any live tile entity (#51).
+    pub fn evict_unreferenced_shapes(
+        &mut self,
+        live_mesh_ids: &std::collections::HashSet<AssetId<Mesh>>,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        or_materials: &mut Assets<OrSceneryMaterial>,
+    ) -> usize {
+        let before = self.shape_cache.len();
+        self.shape_cache.retain(|_, parts| {
+            let still_used = parts
+                .iter()
+                .any(|part| live_mesh_ids.contains(&part.mesh.id()));
+            if !still_used {
+                for part in parts.iter() {
+                    meshes.remove(part.mesh.id());
+                    part.material.asset_remove(materials, or_materials);
+                }
+            }
+            still_used
+        });
+        before.saturating_sub(self.shape_cache.len())
     }
 }
 
@@ -2615,5 +2713,49 @@ mod tests {
             resolved > track_count / 2,
             "mayoria de TrackObj deberian resolver shape, got {resolved}/{track_count}"
         );
+    }
+
+    #[test]
+    fn evict_unreferenced_shapes_frees_unused_gpu_handles() {
+        let mut meshes = Assets::<Mesh>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut or_materials = Assets::<OrSceneryMaterial>::default();
+        let mut ctx = ObjectSpawnCtx::new(&mut materials, false, Handle::default(), [0.0; 4]);
+
+        let keep_mesh = meshes.add(Mesh::new(
+            bevy::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        ));
+        let drop_mesh = meshes.add(Mesh::new(
+            bevy::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        ));
+        let keep_mat = materials.add(StandardMaterial::default());
+        let drop_mat = materials.add(StandardMaterial::default());
+        ctx.shape_cache.insert(
+            "keep.s".into(),
+            vec![PartHandles {
+                mesh: keep_mesh.clone(),
+                material: SceneMaterialHandle::Standard(keep_mat.clone()),
+            }],
+        );
+        ctx.shape_cache.insert(
+            "drop.s".into(),
+            vec![PartHandles {
+                mesh: drop_mesh.clone(),
+                material: SceneMaterialHandle::Standard(drop_mat.clone()),
+            }],
+        );
+
+        let live = std::collections::HashSet::from([keep_mesh.id()]);
+        let evicted =
+            ctx.evict_unreferenced_shapes(&live, &mut meshes, &mut materials, &mut or_materials);
+        assert_eq!(evicted, 1);
+        assert!(ctx.shape_cache.contains_key("keep.s"));
+        assert!(!ctx.shape_cache.contains_key("drop.s"));
+        assert!(meshes.get(keep_mesh.id()).is_some());
+        assert!(meshes.get(drop_mesh.id()).is_none());
+        assert!(materials.get(keep_mat.id()).is_some());
+        assert!(materials.get(drop_mat.id()).is_none());
     }
 }

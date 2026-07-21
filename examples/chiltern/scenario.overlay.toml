@@ -58,6 +58,11 @@ local_z_m = 582.756
 # [viewer3d]
 # scenery_mode = "track_dev"
 
+# Viewing / tile-stream distance (metres). Default 2000 ≈ one MSTS tile.
+# CLI: --viewing-distance 1000
+# [viewer3d]
+# viewing_distance_m = 2000
+
 [validate]
 baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
 max_velocity_rms = 4.5

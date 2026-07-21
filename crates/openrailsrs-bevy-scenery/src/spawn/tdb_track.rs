@@ -789,17 +789,19 @@ pub fn nearest_track_position(
 }
 
 fn point_segment_distance_xz(p: Vec2, a: Vec3, b: Vec3) -> f64 {
-    let ap = p - Vec2::new(a.x, a.z);
+    let a_xz = Vec2::new(a.x, a.z);
     let ab = Vec2::new(b.x - a.x, b.z - a.z);
     let ab_len_sq = ab.length_squared().max(1e-9);
-    let t = (ap.dot(ab) / ab_len_sq).clamp(0.0, 1.0);
-    let closest = Vec2::new(a.x, a.z) + ab * t;
-    f64::from(ap.distance(closest))
+    let t = ((p - a_xz).dot(ab) / ab_len_sq).clamp(0.0, 1.0);
+    let closest = a_xz + ab * t;
+    // `closest` is absolute XZ; must compare against `p`, not the relative `p - a`.
+    f64::from(p.distance(closest))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_formats::TrackDbNode;
     use openrailsrs_formats::typed::{TrackSectionDef, TrackShapeDef, TrackShapePath};
 
     fn section_at(x: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
@@ -941,5 +943,56 @@ mod tests {
         )
         .unwrap();
         assert!((end - spans[0].end_world).length() < 0.05);
+    }
+
+    #[test]
+    fn nearest_track_position_finds_point_on_section() {
+        let section = section_at(0.0, 0.0, 1);
+        let cat = catalog_with_straight_shape(1, 100.0);
+        let mut tdb = TrackDbFile::default();
+        tdb.nodes.push(TrackDbNode {
+            id: 1,
+            position: Some(TrackVectorPoint {
+                tile_x: 0,
+                tile_z: 0,
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            }),
+            pin_refs: Vec::new(),
+            kind: TrackNodeKind::Vector {
+                length_m: 100.0,
+                speed_limit_mps: 0.0,
+                pins: (0, 0),
+                item_ids: Vec::new(),
+                sections: vec![section],
+                geometry: None,
+            },
+        });
+        let start = section_world_vec3(section, None);
+        let spans = section_path_spans(section, Some(&cat), None, 100.0, 1, None);
+        assert!(!spans.is_empty());
+        let mid = spans[0].start_world.lerp(spans[0].end_world, 0.5);
+        // 10 m beside the mid-span in world XZ.
+        let query = Vec2::new(mid.x + 10.0, mid.z);
+        let pose = nearest_track_position(&tdb, query, 50.0, Some(&cat), Some((0, 0)))
+            .expect("nearest within 50 m");
+        let dist = Vec2::new(query.x - pose.position.x, query.y - pose.position.z).length();
+        assert!(
+            (dist - 10.0).abs() < 0.5,
+            "expected ~10 m lateral distance, got {dist} (start={start:?} pose={:?})",
+            pose.position
+        );
+    }
+
+    #[test]
+    fn point_segment_distance_uses_absolute_coordinates() {
+        // Regression #27: relative `ap.distance(closest)` yielded ~world-magnitude errors.
+        let d = point_segment_distance_xz(
+            Vec2::new(50.0, 10.0),
+            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(100.0, 0.0, 0.0),
+        );
+        assert!((d - 10.0).abs() < 1e-3, "got {d}");
     }
 }

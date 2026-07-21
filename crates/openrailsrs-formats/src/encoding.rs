@@ -86,6 +86,43 @@ pub fn resolve_path_case_insensitive(path: &Path) -> Option<std::path::PathBuf> 
     Some(resolved)
 }
 
+/// Normalize a `.w` `FileName` (`SHAPES\foo.s`, `../../ROUTES/.../bar.s`).
+pub fn normalize_msts_filename(file_name: &str) -> String {
+    file_name
+        .trim()
+        .trim_matches('"')
+        .replace('\\', "/")
+        .trim()
+        .to_string()
+}
+
+/// True when `FileName` carries directories or `..` (not a bare `foo.s`).
+pub fn msts_filename_is_relative_path(file_name: &str) -> bool {
+    let n = normalize_msts_filename(file_name);
+    n.contains('/') || n.contains("..")
+}
+
+/// Resolve a route-relative MSTS `FileName` under `route_dir` (case-insensitive).
+///
+/// Open Rails resolves paths such as `../../ROUTES/Chiltern/DYNATRAX/foo.s` from the
+/// route folder. Returns `None` for bare basenames (caller should use SHAPES/index).
+pub fn resolve_route_relative_file(
+    route_dir: &Path,
+    file_name: &str,
+) -> Option<std::path::PathBuf> {
+    let normalized = normalize_msts_filename(file_name);
+    if normalized.is_empty() || !msts_filename_is_relative_path(&normalized) {
+        return None;
+    }
+    let candidate = route_dir.join(&normalized);
+    let resolved = resolve_path_case_insensitive(&candidate)?;
+    if resolved.is_file() {
+        Some(resolved)
+    } else {
+        None
+    }
+}
+
 /// Like [`read_msts_file_to_string`] but retries with a case-insensitive path
 /// scan when the initial read fails.  This is useful for MSTS content where
 /// file extensions or folder names may differ in case from the stored paths.
@@ -268,5 +305,29 @@ mod tests {
         let latin = utf16le_msts_to_latin_bytes(&bytes).expect("hybrid");
         assert!(latin.starts_with(b"SIMISA@F"));
         assert!(latin.windows(2).any(|w| w == [0x78, 0x9c]));
+    }
+
+    #[test]
+    fn resolve_route_relative_file_normalizes_and_is_case_insensitive() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let route = dir.path().join("ROUTES").join("Chiltern");
+        let dynatrax = route.join("DYNATRAX");
+        std::fs::create_dir_all(&dynatrax).expect("mkdir");
+        let shape = dynatrax.join("DynaTrax-42142.s");
+        std::fs::write(&shape, b"x").expect("write");
+
+        assert!(msts_filename_is_relative_path(
+            r"..\..\ROUTES\Chiltern\DYNATRAX\DynaTrax-42142.s"
+        ));
+        assert!(!msts_filename_is_relative_path("ukfs_s_1x2m.s"));
+
+        let resolved =
+            resolve_route_relative_file(&route, r"..\..\ROUTES\Chiltern\dynatrax\dynatrax-42142.s")
+                .expect("relative resolve");
+        assert!(resolved.is_file());
+        assert_eq!(
+            resolved.file_name().and_then(|n| n.to_str()),
+            Some("DynaTrax-42142.s")
+        );
     }
 }

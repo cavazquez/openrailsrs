@@ -38,3 +38,4 @@ image.workspace = true
 
 [dev-dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
+tempfile = "3"

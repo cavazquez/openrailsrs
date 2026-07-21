@@ -54,10 +54,9 @@ pub fn resolve_pat_start_pose(
         global_from_graph(g, &path, distance_m)?
     } else if path.pdps.iter().any(|p| p.world.is_some()) {
         global_from_pat_world(&path, distance_m)?
-    } else if let Some(tdb) = tdb {
-        global_from_tdb(tdb, &path, distance_m)?
     } else {
-        return None;
+        let tdb = tdb?;
+        global_from_tdb(tdb, &path, distance_m)?
     };
 
     Some(scene_pose_from_global(

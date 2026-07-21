@@ -102,7 +102,7 @@ Geometría TSection (2026-06): chords y meshes usan [`section_path_spans`](../cr
 
 ## Ventana móvil ~120 m (live)
 
-En `--live`, el centro de carga/despawn es la cabeza del tren ([`ViewWindow`](../crates/openrailsrs-viewer3d/src/view_window.rs)), no el anchor fijo de la ruta.
+En `--live`, el centro de carga/despawn es la cabeza del tren cuando hay follow activo; con `follow:off` sigue la cámara libre ([`ViewWindow`](../crates/openrailsrs-viewer3d/src/view_window.rs)).
 
 | Variable | Default | Rol |
 |----------|---------|-----|

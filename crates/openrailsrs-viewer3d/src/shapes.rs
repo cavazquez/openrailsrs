@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::coordinates::{
     matrix43_to_transform, rebase_points_to_bone_local, rebase_vectors_to_bone_local,
@@ -143,6 +144,27 @@ fn load_track_db(route_dir: &Path) -> Option<openrailsrs_formats::TrackDbFile> {
     None
 }
 
+fn load_road_db(route_dir: &Path) -> Option<openrailsrs_formats::TrackDbFile> {
+    for dir in track_db_search_dirs(route_dir) {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("rdb"))
+            {
+                continue;
+            }
+            if let Ok(rdb) = openrailsrs_formats::TrackDbFile::from_path(&path) {
+                return Some(rdb);
+            }
+        }
+    }
+    None
+}
+
 #[derive(Clone, Copy, Debug)]
 struct TdbSectionAnchor {
     bevy_x: f32,
@@ -210,6 +232,9 @@ pub struct RouteAssets {
     shape_path_index: HashMap<String, PathBuf>,
     tsection: openrailsrs_formats::TSectionCatalog,
     track_db: Option<openrailsrs_formats::TrackDbFile>,
+    /// Road database (`.rdb`) — same schema as TDB; used for CarSpawner endpoints (#32).
+    road_db: Option<openrailsrs_formats::TrackDbFile>,
+    carspawn: openrailsrs_formats::CarSpawnerCatalog,
     tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
 }
 
@@ -248,17 +273,46 @@ impl RouteAssets {
                 (Some(tdb), anchors)
             })
             .unwrap_or((None, HashMap::new()));
+        let road_db = load_road_db(&route_dir).inspect(|rdb| {
+            let posed = rdb.items.iter().filter(|i| i.world.is_some()).count();
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: rdb — {} node(s), {} item(s) ({} with TrItemRData)",
+                rdb.nodes.len(),
+                rdb.items.len(),
+                posed
+            );
+        });
+        let carspawn =
+            openrailsrs_formats::CarSpawnerCatalog::load_for_route(&route_dir).unwrap_or_default();
+        if !carspawn.lists.is_empty() {
+            let models: usize = carspawn.lists.iter().map(|l| l.items.len()).sum();
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: carspawn — {} list(s), {} model(s)",
+                carspawn.lists.len(),
+                models
+            );
+        }
         Self {
             route_dir,
             shape_path_index,
             tsection,
             track_db,
+            road_db,
+            carspawn,
             tdb_sections_by_shape,
         }
     }
 
     pub fn track_db(&self) -> Option<&openrailsrs_formats::TrackDbFile> {
         self.track_db.as_ref()
+    }
+
+    pub fn road_db(&self) -> Option<&openrailsrs_formats::TrackDbFile> {
+        self.road_db.as_ref()
+    }
+
+    pub fn carspawn(&self) -> &openrailsrs_formats::CarSpawnerCatalog {
+        &self.carspawn
     }
 
     pub fn tsection(&self) -> &openrailsrs_formats::TSectionCatalog {
@@ -320,6 +374,11 @@ impl RouteAssets {
         if file_name.is_empty() {
             return None;
         }
+        if let Some(path) =
+            openrailsrs_formats::resolve_route_relative_file(&self.route_dir, file_name)
+        {
+            return Some(path);
+        }
         let base = shape_file_basename(file_name);
         if kind == "TrackObj" {
             for global in global_assets_dirs(&self.route_dir) {
@@ -343,6 +402,11 @@ impl RouteAssets {
             .or_else(|| {
                 section_idx.and_then(|idx| self.tsection.shape_file_name(idx).map(str::to_string))
             })?;
+        // Prefer route-relative FileName (`../../ROUTES/.../DYNATRAX/foo.s`) before basename (#35).
+        if let Some(path) = openrailsrs_formats::resolve_route_relative_file(&self.route_dir, &name)
+        {
+            return Some(path);
+        }
         self.resolve_world_shape("TrackObj", &name)
     }
 }
@@ -2306,13 +2370,62 @@ fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
     stats
 }
 
+/// Process-wide count of successful `ShapeFile::from_path` calls via this module's loaders.
+/// Used to verify WORLD spawn parses each unique `.s` once (#57).
+static SHAPE_FILE_PARSE_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+pub fn shape_file_parse_count() -> usize {
+    SHAPE_FILE_PARSE_COUNT.load(Ordering::Relaxed)
+}
+
+pub fn reset_shape_file_parse_count() {
+    SHAPE_FILE_PARSE_COUNT.store(0, Ordering::Relaxed);
+}
+
+fn parse_shape_file(path: &Path) -> Option<ShapeFile> {
+    let shape = ShapeFile::from_path(path).ok()?;
+    SHAPE_FILE_PARSE_COUNT.fetch_add(1, Ordering::Relaxed);
+    Some(shape)
+}
+
+/// Build render geometry from an already-parsed `ShapeFile` (no disk I/O).
+pub fn loaded_shape_from_shape_file(
+    shape: &ShapeFile,
+    camera_distance_m: Option<f32>,
+) -> Option<LoadedShape> {
+    let parts = match camera_distance_m {
+        Some(d) => build_mesh_parts_from_shape_at_distance(shape, d),
+        None => build_mesh_parts_from_shape(shape),
+    };
+    let mesh = match camera_distance_m {
+        Some(d) => build_mesh_from_shape_at_distance(shape, d)?,
+        None => build_mesh_from_shape(shape)?,
+    };
+    let texture_file = primary_texture_filename(shape);
+    Some(LoadedShape {
+        mesh,
+        texture_file,
+        parts,
+    })
+}
+
+/// Single parse → typed file (LOD/anim) + render mesh. Prefer this over separate loads.
+pub fn load_shape_file_and_loaded(
+    path: &Path,
+    camera_distance_m: Option<f32>,
+) -> Option<(ShapeFile, LoadedShape)> {
+    let shape = parse_shape_file(path)?;
+    let loaded = loaded_shape_from_shape_file(&shape, camera_distance_m)?;
+    Some((shape, loaded))
+}
+
 /// Load cab interior shape; lever matrix indices omit leaf bone from vertex bake (CVF anim).
 pub fn load_cab_shape_from_path(
     path: &Path,
     camera_distance_m: Option<f32>,
     lever_matrices: &HashSet<usize>,
 ) -> Option<LoadedShape> {
-    let shape = ShapeFile::from_path(path).ok()?;
+    let shape = parse_shape_file(path)?;
     let level = match camera_distance_m {
         Some(d) => lod_level_for_distance(&shape, d).or_else(|| closest_lod_level(&shape))?,
         None => closest_lod_level(&shape)?,
@@ -2331,21 +2444,7 @@ pub fn load_cab_shape_from_path(
 ///
 /// When `camera_distance_m` is set, picks a coarser LOD farther from the camera.
 pub fn load_shape_from_path(path: &Path, camera_distance_m: Option<f32>) -> Option<LoadedShape> {
-    let shape = ShapeFile::from_path(path).ok()?;
-    let parts = match camera_distance_m {
-        Some(d) => build_mesh_parts_from_shape_at_distance(&shape, d),
-        None => build_mesh_parts_from_shape(&shape),
-    };
-    let mesh = match camera_distance_m {
-        Some(d) => build_mesh_from_shape_at_distance(&shape, d)?,
-        None => build_mesh_from_shape(&shape)?,
-    };
-    let texture_file = primary_texture_filename(&shape);
-    Some(LoadedShape {
-        mesh,
-        texture_file,
-        parts,
-    })
+    load_shape_file_and_loaded(path, camera_distance_m).map(|(_, loaded)| loaded)
 }
 
 /// Load a shape as one mesh per `prim_state_idx`.
@@ -2353,7 +2452,7 @@ pub fn load_shape_parts_from_path(
     path: &Path,
     camera_distance_m: Option<f32>,
 ) -> Option<Vec<LoadedShapePart>> {
-    let shape = ShapeFile::from_path(path).ok()?;
+    let shape = parse_shape_file(path)?;
     let parts = match camera_distance_m {
         Some(d) => build_mesh_parts_from_shape_at_distance(&shape, d),
         None => build_mesh_parts_from_shape(&shape),
@@ -2411,6 +2510,38 @@ mod tests {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse minimal.s");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
         assert_eq!(mesh.count_vertices(), 6);
+    }
+
+    #[test]
+    fn load_shape_file_and_loaded_parses_once_per_path() {
+        let path = minimal_shape_fixture();
+        reset_shape_file_parse_count();
+        let (shape, loaded) =
+            load_shape_file_and_loaded(&path, None).expect("parse+load minimal.s");
+        assert_eq!(shape_file_parse_count(), 1);
+        assert!(!loaded.parts.is_empty() || loaded.mesh.count_vertices() > 0);
+        // LOD/anim consumers reuse the same ShapeFile without a second disk parse.
+        let again = loaded_shape_from_shape_file(&shape, Some(50.0)).expect("lod from file");
+        assert_eq!(shape_file_parse_count(), 1);
+        assert!(again.mesh.count_vertices() > 0);
+    }
+
+    #[test]
+    fn world_style_batch_does_not_double_parse_unique_paths() {
+        let path = minimal_shape_fixture();
+        let paths = [path.clone(), path.clone(), path];
+        reset_shape_file_parse_count();
+        let mut files = HashMap::new();
+        let mut loaded_n = 0usize;
+        for p in paths.iter().collect::<HashSet<_>>().into_iter() {
+            if let Some((shape, _loaded)) = load_shape_file_and_loaded(p, None) {
+                files.insert(p.clone(), shape);
+                loaded_n += 1;
+            }
+        }
+        assert_eq!(loaded_n, 1);
+        assert_eq!(files.len(), 1);
+        assert_eq!(shape_file_parse_count(), 1);
     }
 
     #[test]
@@ -3189,6 +3320,77 @@ mod tests {
             "ukfs_s_1x10m.s"
         );
         assert_eq!(super::shape_file_basename("yard_shed.s"), "yard_shed.s");
+    }
+
+    #[test]
+    fn resolve_trackobj_relative_dynatrax_on_chiltern() {
+        let Some(route) = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"))
+        else {
+            return;
+        };
+        if !route.is_dir() {
+            eprintln!("skip: Chiltern route not available");
+            return;
+        }
+        let assets = RouteAssets::new(&route);
+        let relative = "../../ROUTES/Chiltern/DYNATRAX/DynaTrax-42142.s";
+        let path = assets
+            .resolve_trackobj_shape(Some(relative), None)
+            .expect("relative DYNATRAX TrackObj shape");
+        assert!(path.is_file(), "{}", path.display());
+        assert!(
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.eq_ignore_ascii_case("DynaTrax-42142.s"))
+        );
+    }
+
+    #[test]
+    fn birmingham_trackobj_resolution_accounts_all_1659() {
+        let Some(route) = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|h| h.join("Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern"))
+        else {
+            return;
+        };
+        let world_path = route.join("WORLD/w-006080+014925.w");
+        if !world_path.is_file() {
+            eprintln!("skip: Birmingham .w not available");
+            return;
+        }
+        let assets = RouteAssets::new(&route);
+        let world = openrailsrs_formats::WorldFile::from_path(&world_path).expect("parse .w");
+        let mut trackobj = 0usize;
+        let mut resolved = 0usize;
+        let mut unresolved = 0usize;
+        for item in &world.items {
+            let openrailsrs_formats::WorldItem::Track {
+                file_name,
+                section_idx,
+                ..
+            } = item
+            else {
+                continue;
+            };
+            trackobj += 1;
+            if assets
+                .resolve_trackobj_shape(file_name.as_deref(), *section_idx)
+                .is_some()
+            {
+                resolved += 1;
+            } else {
+                unresolved += 1;
+            }
+        }
+        assert_eq!(trackobj, 1659, "Birmingham TrackObj count");
+        // Relative DYNATRAX + indexed SHAPES should resolve the vast majority.
+        assert!(
+            resolved >= 1600,
+            "expected ≥1600 resolved TrackObj shapes, got {resolved} resolved / {unresolved} unresolved"
+        );
+        eprintln!("Birmingham TrackObj resolve: {resolved}/{trackobj} (unresolved {unresolved})");
     }
 
     #[test]
