@@ -507,6 +507,7 @@ mod tests {
             },
             qdir: Some([0.0, 0.0, 0.0, 1.0]),
             matrix3x3: None,
+            static_detail_level: 0,
         };
         let p = world_item_placement(0, 0, &item).expect("placement");
         assert_eq!(p.pose.position, Vec3::new(10.0, 2.0, -30.0));

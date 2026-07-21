@@ -58,7 +58,7 @@ pub use tsection::{
     TrackSectionDef, TrackShapeDef, TrackShapePath,
 };
 pub use wagon::WagonFile;
-pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem};
+pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem, WorldTrItemRef};
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;

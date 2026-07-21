@@ -69,7 +69,7 @@ pub use typed::{
     TrItemWorldPose, TrPinRef, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
     TrackProceduralDims, TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint,
     TrafficServiceDef, UvOp, UvOpKind, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile,
-    WorldItem, DyntrackSection, build_patch_mesh_data, msts_tex_addr_mode,
+    WorldItem, WorldTrItemRef, DyntrackSection, build_patch_mesh_data, msts_tex_addr_mode,
     build_patch_mesh_data_ex, build_patch_mesh_data_sampled, build_tile_mesh_data,
     build_tile_mesh_data_sampled, find_trk_path, lit_light_indices_for_aspect,
     parse_orts_brake_shoe, parse_orts_friction_fields, parse_tile_xz_from_filename,
