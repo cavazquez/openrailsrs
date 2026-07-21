@@ -66,7 +66,8 @@ fn transfer_material(
         alpha_mode: AlphaMode::Mask(TRANSFER_ALPHA_CUTOFF),
         double_sided: true,
         cull_mode: None,
-        depth_bias: 0.0005,
+        // OR TransferObj uses ShapeFlags.AutoZBias → ZBias=1 when unset (#103).
+        depth_bias: openrailsrs_bevy_scenery::shapes::apply_shape_auto_z_bias(0.0, true),
         perceptual_roughness: 0.88,
         metallic: 0.0,
         ..default()
@@ -251,7 +252,7 @@ mod tests {
         let handle = transfer_material(&mut materials, None, "ChalkCliff.ace");
         let m = materials.get(&handle).expect("mat");
         assert!(matches!(m.alpha_mode, AlphaMode::Mask(_)));
-        assert!((m.depth_bias - 0.0005).abs() < 1e-6);
+        assert!((m.depth_bias - 1.0).abs() < 1e-6);
     }
 
     #[test]

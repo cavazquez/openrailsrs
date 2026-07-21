@@ -518,6 +518,7 @@ fn load_vehicle_shape_assets(
             parts: vec![crate::shapes::ShapePartAsset {
                 prim_state_idx: -1,
                 sub_object_idx: u32::MAX,
+                sort_index: 0,
                 cab_matrix_idx: None,
                 mesh,
                 material,
@@ -533,6 +534,7 @@ fn load_vehicle_shape_assets(
                 bounds_center: None,
             }],
             has_texture: false,
+            has_night_subobj: false,
         },
         None,
     )

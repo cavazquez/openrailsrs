@@ -24,21 +24,23 @@ pub use openrailsrs_bevy_scenery::shapes::{
     apply_z_buf_mode, blend_alpha_passes_from_prim_state, brighten_cab_ace_rgba,
     brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
     build_mesh_from_shape_lod, build_mesh_parts_from_shape,
-    build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
-    cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
-    cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy, closest_lod_level,
-    debug_materials_enabled, debug_shape_stats_enabled, ensure_tangents_for_normal_mapping,
-    finalize_scenery_material, legacy_standard_scenery_enabled, light_mat_idx_for_prim_state,
-    load_shape_pbr_sidecar, lod_level_for_distance, log_shape_material_debug, mesh_aabb,
-    mesh_has_uvs, mesh_position_count, mesh_triangle_list_valid, mesh_uv_aabb, mesh_uv_degenerate,
-    mesh_vertex_color_stats, msts_shape_to_train_rotation, or_lighting_enabled,
-    primary_texture_filename, resolve_or_lighting, scenery_albedo_tint, scenery_base_tint,
-    scenery_material_tint_for_ace, scenery_materials_lit, scenery_uses_or_wgsl_shaders,
-    set_train_shape_debug_scope, shader_name_for_prim_state, shader_uses_vertex_color_multiply,
-    shape_alpha_mode, shape_point_to_bevy, shape_shader_requests_blending, texture_for_prim_state,
-    texture_name_suggests_transparency, train_exterior_material_with_texture_ex,
-    train_shape_debug_scope,
+    build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_at_distance_with_options,
+    build_mesh_parts_from_shape_lod, cab_ace_brighten_enabled, cab_albedo_tint,
+    cab_interior_albedo_boost, cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy,
+    closest_lod_level, debug_materials_enabled, debug_shape_stats_enabled,
+    ensure_tangents_for_normal_mapping, finalize_scenery_material, legacy_standard_scenery_enabled,
+    light_mat_idx_for_prim_state, load_shape_pbr_sidecar, lod_level_for_distance,
+    log_shape_material_debug, mesh_aabb, mesh_has_uvs, mesh_position_count,
+    mesh_triangle_list_valid, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
+    msts_shape_to_train_rotation, or_lighting_enabled, primary_texture_filename,
+    resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
+    scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
+    shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
+    shape_point_to_bevy, shape_shader_requests_blending, sort_index_depth_nudge,
+    texture_for_prim_state, texture_name_suggests_transparency,
+    train_exterior_material_with_texture_ex, train_shape_debug_scope, world_mesh_options_for_shape,
 };
+use openrailsrs_bevy_scenery::shapes::{ShapeDescriptor, night_subobj_part_visible};
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
 
@@ -407,6 +409,8 @@ impl RouteAssets {
 pub struct ShapePartAsset {
     pub prim_state_idx: i32,
     pub sub_object_idx: u32,
+    /// Open Rails `SortIndex` (first file-order primitive in this part) (#102).
+    pub sort_index: u32,
     pub cab_matrix_idx: Option<usize>,
     pub mesh: Handle<Mesh>,
     pub material: Handle<StandardMaterial>,
@@ -431,6 +435,8 @@ pub struct ShapeRenderAsset {
     pub combined_mesh: Handle<Mesh>,
     pub parts: Vec<ShapePartAsset>,
     pub has_texture: bool,
+    /// `.sd` `ESD_SubObj`: sub-object 1 is night-only geometry (#95).
+    pub has_night_subobj: bool,
 }
 
 fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
@@ -730,6 +736,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
             parts.push(LoadedShapePart {
                 prim_state_idx,
                 sub_object_idx: sub_idx as u32,
+                sort_index: parts.len() as u32,
                 cab_matrix_idx,
                 mesh,
                 texture_file: texture_for_prim_state(shape, prim_state_idx),
@@ -1613,6 +1620,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         parts.push(ShapePartAsset {
             prim_state_idx: -1,
             sub_object_idx: u32::MAX,
+            sort_index: 0,
             cab_matrix_idx: None,
             mesh: combined_mesh.clone(),
             material,
@@ -1630,13 +1638,16 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     }
     for part in &loaded.parts {
         let tri_count = mesh_position_count(&part.mesh) / 3;
+        let z_bias = part
+            .z_bias
+            .map(|z| z + sort_index_depth_nudge(part.sort_index));
         let (material, or_cab_material, has_texture, is_transparent, dual_blend) =
             material_for_shape_texture(
                 texture_dirs,
                 part.texture_file.as_deref(),
                 part.shader_name.as_deref(),
                 part.alpha_test_mode,
-                part.z_bias,
+                z_bias,
                 part.z_buf_mode,
                 images,
                 materials,
@@ -1701,6 +1712,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         parts.push(ShapePartAsset {
             prim_state_idx: part.prim_state_idx,
             sub_object_idx: part.sub_object_idx,
+            sort_index: part.sort_index,
             cab_matrix_idx: part.cab_matrix_idx,
             mesh: mesh_handle.clone(),
             material: material.clone(),
@@ -1725,6 +1737,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 parts.push(ShapePartAsset {
                     prim_state_idx: part.prim_state_idx,
                     sub_object_idx: part.sub_object_idx,
+                    sort_index: part.sort_index,
                     cab_matrix_idx: part.cab_matrix_idx,
                     mesh: mesh_handle,
                     material: blend_handle,
@@ -1747,6 +1760,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         combined_mesh,
         parts,
         has_texture: has_any_texture,
+        has_night_subobj: false,
     };
     if debug_shape_stats_enabled() {
         log_shape_render_stats(&loaded.parts, triangle_count_total, &asset, materials);
@@ -2337,9 +2351,32 @@ pub fn loaded_shape_from_shape_file(
     shape: &ShapeFile,
     camera_distance_m: Option<f32>,
 ) -> Option<LoadedShape> {
+    loaded_shape_from_shape_file_with_options(
+        shape,
+        camera_distance_m,
+        openrailsrs_bevy_scenery::shapes::MeshPartBuildOptions::default(),
+    )
+}
+
+/// Like [`loaded_shape_from_shape_file`] with mesh bake options (night sub-objects, …).
+pub fn loaded_shape_from_shape_file_with_options(
+    shape: &ShapeFile,
+    camera_distance_m: Option<f32>,
+    options: openrailsrs_bevy_scenery::shapes::MeshPartBuildOptions,
+) -> Option<LoadedShape> {
     let parts = match camera_distance_m {
-        Some(d) => build_mesh_parts_from_shape_at_distance(shape, d),
-        None => build_mesh_parts_from_shape(shape),
+        Some(d) => build_mesh_parts_from_shape_at_distance_with_options(shape, d, options),
+        None => {
+            let mut parts = Vec::new();
+            for level in openrailsrs_bevy_scenery::shapes::closest_lod_levels(shape) {
+                parts.extend(
+                    openrailsrs_bevy_scenery::shapes::build_mesh_parts_from_shape_lod_with_options(
+                        shape, level, options,
+                    ),
+                );
+            }
+            parts
+        }
     };
     let mesh = match camera_distance_m {
         Some(d) => build_mesh_from_shape_at_distance(shape, d)?,
@@ -2354,13 +2391,31 @@ pub fn loaded_shape_from_shape_file(
 }
 
 /// Single parse → typed file (LOD/anim) + render mesh. Prefer this over separate loads.
+///
+/// When the sibling `.sd` declares `ESD_SubObj`, keeps per-sub-object parts so night
+/// geometry (index 1) can be filtered of day (#95).
 pub fn load_shape_file_and_loaded(
     path: &Path,
     camera_distance_m: Option<f32>,
 ) -> Option<(ShapeFile, LoadedShape)> {
     let shape = parse_shape_file(path)?;
-    let loaded = loaded_shape_from_shape_file(&shape, camera_distance_m)?;
+    let options = world_mesh_options_for_shape(path);
+    let loaded = loaded_shape_from_shape_file_with_options(&shape, camera_distance_m, options)?;
     Some((shape, loaded))
+}
+
+/// Attach `.sd` night-subobj flag after building GPU assets (#95).
+pub fn apply_shape_descriptor_to_asset(shape_path: &Path, asset: &mut ShapeRenderAsset) {
+    asset.has_night_subobj = ShapeDescriptor::load_for_shape(shape_path).has_night_subobj;
+}
+
+/// Whether a shape part should spawn for the current day/night (#95).
+pub fn shape_part_visible_for_day_night(
+    asset: &ShapeRenderAsset,
+    part: &ShapePartAsset,
+    is_day: bool,
+) -> bool {
+    night_subobj_part_visible(asset.has_night_subobj, part.sub_object_idx, is_day)
 }
 
 /// Load cab interior shape; lever matrix indices omit leaf bone from vertex bake (CVF anim).
@@ -2414,6 +2469,56 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::path::PathBuf;
+
+    #[test]
+    fn night_subobj_part_hidden_of_day_on_asset() {
+        let asset = ShapeRenderAsset {
+            combined_mesh: Handle::default(),
+            parts: vec![
+                ShapePartAsset {
+                    prim_state_idx: 0,
+                    sub_object_idx: 0,
+                    sort_index: 0,
+                    cab_matrix_idx: None,
+                    mesh: Handle::default(),
+                    material: Handle::default(),
+                    or_cab_material: None,
+                    has_texture: false,
+                    is_transparent: false,
+                    texture_name: None,
+                    shader_name: None,
+                    light_mat_idx: None,
+                    solid_color: None,
+                    lever_pivot_at_mesh_center: false,
+                    lever_local_axis: None,
+                    bounds_center: None,
+                },
+                ShapePartAsset {
+                    prim_state_idx: 1,
+                    sub_object_idx: 1,
+                    sort_index: 1,
+                    cab_matrix_idx: None,
+                    mesh: Handle::default(),
+                    material: Handle::default(),
+                    or_cab_material: None,
+                    has_texture: false,
+                    is_transparent: false,
+                    texture_name: None,
+                    shader_name: None,
+                    light_mat_idx: None,
+                    solid_color: None,
+                    lever_pivot_at_mesh_center: false,
+                    lever_local_axis: None,
+                    bounds_center: None,
+                },
+            ],
+            has_texture: false,
+            has_night_subobj: true,
+        };
+        assert!(shape_part_visible_for_day_night(&asset, &asset.parts[0], true));
+        assert!(!shape_part_visible_for_day_night(&asset, &asset.parts[1], true));
+        assert!(shape_part_visible_for_day_night(&asset, &asset.parts[1], false));
+    }
 
     fn minimal_shape_fixture() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))

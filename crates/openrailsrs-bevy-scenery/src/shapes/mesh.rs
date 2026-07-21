@@ -1,6 +1,7 @@
 //! MSTS `.s` shape → Bevy mesh builders (shared; cab-specific paths stay in viewer3d).
 
-use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::path::Path;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::PrimitiveTopology;
@@ -17,6 +18,7 @@ use super::debug::{
     clamp_msts_z_bias_for_bevy, set_train_shape_debug_scope, shape_uv_to_bevy,
     train_debug_flip_winding_active,
 };
+use super::descriptor::ShapeDescriptor;
 
 /// Options for [`build_mesh_parts_from_shape_lod_with_options`].
 #[derive(Clone, Copy, Debug, Default)]
@@ -43,6 +45,8 @@ pub struct LoadedShapePart {
     pub prim_state_idx: i32,
     /// Source `sub_object` index (cab CVF binding); `u32::MAX` when merged across sub-objects.
     pub sub_object_idx: u32,
+    /// Open Rails `SortIndex` of the first file-order primitive merged into this part (#102).
+    pub sort_index: u32,
     /// Animated MSTS matrix for cab levers (`sub_object_idx == matrix_idx` convention).
     pub cab_matrix_idx: Option<usize>,
     pub mesh: Mesh,
@@ -65,6 +69,20 @@ pub struct LoadedShapePart {
     pub lever_pivot_at_mesh_center: bool,
     /// Override local rotation axis for fallback lever animation.
     pub lever_local_axis: Option<Vec3>,
+}
+
+/// Tiny monotonic depth nudge so coplanar blend parts follow OR `SortIndex` order (#102).
+pub fn sort_index_depth_nudge(sort_index: u32) -> f32 {
+    sort_index as f32 * 1e-5
+}
+
+/// WORLD mesh options from the shape `.sd` (keep night sub-objects when `ESD_SubObj`).
+pub fn world_mesh_options_for_shape(shape_path: &Path) -> MeshPartBuildOptions {
+    let desc = ShapeDescriptor::load_for_shape(shape_path);
+    MeshPartBuildOptions {
+        keep_sub_objects: desc.has_night_subobj,
+        bake_animation_key: None,
+    }
 }
 pub fn msts_shape_to_train_rotation() -> Quat {
     Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
@@ -395,7 +413,14 @@ pub fn build_mesh_parts_from_shape_lod_with_options(
         .map(|key| animation_pose_matrices(shape, key));
     let pose_matrices = pose.as_deref();
 
-    let mut parts: BTreeMap<(u32, i32), MeshBuffers> = BTreeMap::new();
+    // Preserve Open Rails `SortIndex` / file order (#102). Do not use BTreeMap key order.
+    struct PartAccum {
+        sort_index: u32,
+        buffers: MeshBuffers,
+    }
+    let mut order: Vec<(u32, i32)> = Vec::new();
+    let mut parts: HashMap<(u32, i32), PartAccum> = HashMap::new();
+    let mut next_sort = 0u32;
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in &sub.primitives {
             let key = if options.keep_sub_objects {
@@ -403,24 +428,39 @@ pub fn build_mesh_parts_from_shape_lod_with_options(
             } else {
                 (u32::MAX, prim.prim_state_idx)
             };
-            let buffers = parts.entry(key).or_default();
+            let accum = parts.entry(key).or_insert_with(|| {
+                let sort_index = next_sort;
+                order.push(key);
+                PartAccum {
+                    sort_index,
+                    buffers: MeshBuffers::default(),
+                }
+            });
             append_primitive_mesh_buffers_ex(
                 shape,
                 level,
                 sub,
                 prim,
                 default_normal,
-                buffers,
+                &mut accum.buffers,
                 None,
                 false,
                 pose_matrices,
             );
+            // Advance like OR `SortIndex = ++totalPrimitiveIndex` so later distinct
+            // groups get indices matching their first file-order primitive.
+            next_sort += 1;
         }
     }
 
-    parts
+    order
         .into_iter()
-        .filter_map(|((sub_object_idx, prim_state_idx), buffers)| {
+        .filter_map(|key| {
+            let PartAccum {
+                sort_index,
+                buffers,
+            } = parts.remove(&key)?;
+            let (sub_object_idx, prim_state_idx) = key;
             let (mesh, solid_color) = buffers.into_mesh_with_color()?;
             let (alpha_test_mode, z_bias_raw, z_buf_mode) = shape
                 .prim_states
@@ -437,6 +477,7 @@ pub fn build_mesh_parts_from_shape_lod_with_options(
             Some(LoadedShapePart {
                 prim_state_idx,
                 sub_object_idx,
+                sort_index,
                 cab_matrix_idx: None,
                 mesh,
                 texture_file: texture_for_prim_state(shape, prim_state_idx),
@@ -1236,6 +1277,41 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn parts_preserve_file_order_sort_index_not_btree_key_order() {
+        // Prim states 1 then 0 in file order — BTreeMap would emit 0 before 1.
+        let mut shape = unit_quad_shape(true);
+        shape.prim_states = vec![
+            PrimState {
+                shader_idx: 0,
+                vertex_state_idx: 0,
+                ..Default::default()
+            },
+            PrimState {
+                shader_idx: 0,
+                vertex_state_idx: 0,
+                ..Default::default()
+            },
+        ];
+        shape.lod_controls[0].distance_levels[0].sub_objects[0].primitives = vec![
+            Primitive {
+                prim_state_idx: 1,
+                vertex_indices: vec![0, 1, 2],
+            },
+            Primitive {
+                prim_state_idx: 0,
+                vertex_indices: vec![0, 1, 2],
+            },
+        ];
+        let parts = build_mesh_parts_from_shape(&shape);
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0].prim_state_idx, 1);
+        assert_eq!(parts[0].sort_index, 0);
+        assert_eq!(parts[1].prim_state_idx, 0);
+        assert_eq!(parts[1].sort_index, 1);
+        assert!(parts[0].sort_index < parts[1].sort_index);
     }
 
     #[test]

@@ -59,7 +59,8 @@ fn transfer_material_for_ace(
         fog_enabled: lit,
         double_sided: true,
         cull_mode: None,
-        depth_bias: 0.0005,
+        // OR TransferObj uses ShapeFlags.AutoZBias → ZBias=1 when unset (#103).
+        depth_bias: openrailsrs_bevy_scenery::shapes::apply_shape_auto_z_bias(0.0, true),
         perceptual_roughness: if lit { 0.88 } else { 1.0 },
         ..default()
     })

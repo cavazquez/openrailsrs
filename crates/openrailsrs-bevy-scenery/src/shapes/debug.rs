@@ -175,6 +175,16 @@ pub fn clamp_msts_z_bias_for_bevy(raw: Option<f32>, ctx: Option<&ShapeMaterialDe
     v.clamp(-MSTS_Z_BIAS_CLAMP, MSTS_Z_BIAS_CLAMP)
 }
 
+/// Open Rails `ShapeFlags.AutoZBias`: when set and primitive `ZBias == 0`, force `ZBias = 1`
+/// ([`RenderFrame.AddPrimitive`](https://github.com/openrails/openrails)).
+pub fn apply_shape_auto_z_bias(raw_z_bias: f32, auto_z_bias: bool) -> f32 {
+    if auto_z_bias && raw_z_bias.abs() < 1e-6 {
+        1.0
+    } else {
+        raw_z_bias
+    }
+}
+
 fn format_ctx_suffix(ctx: &ShapeMaterialDebugCtx) -> String {
     format!(
         " shape={:?} prim_state={} name={:?} shader={:?} texture={:?}",
@@ -296,6 +306,13 @@ mod tests {
         };
         let clamped = clamp_msts_z_bias_for_bevy(Some(16777216.0), Some(&ctx));
         assert!(clamped.abs() <= MSTS_Z_BIAS_CLAMP);
+    }
+
+    #[test]
+    fn auto_z_bias_only_when_raw_is_zero() {
+        assert!((apply_shape_auto_z_bias(0.0, true) - 1.0).abs() < 1e-6);
+        assert!((apply_shape_auto_z_bias(0.25, true) - 0.25).abs() < 1e-6);
+        assert!((apply_shape_auto_z_bias(0.0, false) - 0.0).abs() < 1e-6);
     }
 
     #[test]

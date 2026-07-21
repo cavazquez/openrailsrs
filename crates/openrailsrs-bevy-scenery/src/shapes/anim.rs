@@ -416,7 +416,10 @@ mod tests {
             ],
         });
         let pose = animation_pose_matrices(&shape, 10.0);
-        assert!((pose[0].rows[3][1] - 10.0).abs() < 1e-4, "index 0 must move");
+        assert!(
+            (pose[0].rows[3][1] - 10.0).abs() < 1e-4,
+            "index 0 must move"
+        );
         assert!(
             pose[1].rows[3][1].abs() < 1e-4,
             "index 1 must stay at rest despite name match"

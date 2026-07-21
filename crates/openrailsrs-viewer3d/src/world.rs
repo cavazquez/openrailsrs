@@ -14,8 +14,9 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
-    ShapeAnimBinding, ShapeAnimState, animation_playback_speed, lod_level_index_for_distance,
-    primary_texture_filename, shape_has_loop_animation,
+    ShapeAnimBinding, ShapeAnimState, animation_playback_speed, apply_shape_auto_z_bias,
+    lod_level_index_for_distance, primary_texture_filename, shape_has_loop_animation,
+    world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TILE_SIZE_M, TileBound, TileCoord};
 use openrailsrs_bevy_scenery::{
@@ -37,9 +38,10 @@ use crate::coordinates::{
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
-    RouteAssets, ShapeRenderAsset, collect_loaded_shape_texture_paths,
-    collect_pbr_normal_map_texture_paths, load_shape_file_and_loaded, load_shape_pbr_sidecar,
-    prefetch_ace_textures, reset_shape_file_parse_count, shape_file_parse_count,
+    RouteAssets, ShapeRenderAsset, apply_shape_descriptor_to_asset,
+    collect_loaded_shape_texture_paths, collect_pbr_normal_map_texture_paths,
+    load_shape_file_and_loaded, load_shape_pbr_sidecar, prefetch_ace_textures,
+    reset_shape_file_parse_count, shape_file_parse_count, shape_part_visible_for_day_night,
     shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
 };
 
@@ -114,6 +116,29 @@ pub struct ShapeInstancePlacement {
     pub transform: Transform,
     pub tile_x: i32,
     pub tile_z: i32,
+    /// Open Rails `ShapeFlags.AutoZBias` (TrackObj / switch track) (#103).
+    pub auto_z_bias: bool,
+}
+
+/// Clone material with OR AutoZBias when the shared cache asset has ZBias≈0 (#103).
+fn material_with_auto_z_bias(
+    materials: &mut Assets<StandardMaterial>,
+    handle: &Handle<StandardMaterial>,
+    auto_z_bias: bool,
+) -> Handle<StandardMaterial> {
+    if !auto_z_bias {
+        return handle.clone();
+    }
+    let Some(base) = materials.get(handle) else {
+        return handle.clone();
+    };
+    let effective = apply_shape_auto_z_bias(base.depth_bias, true);
+    if (effective - base.depth_bias).abs() < 1e-6 {
+        return handle.clone();
+    }
+    let mut cloned = base.clone();
+    cloned.depth_bias = effective;
+    materials.add(cloned)
 }
 
 /// Session-long WORLD shape/texture cache shared across tile streams (#50 / #114).
@@ -1623,6 +1648,7 @@ fn classify_one_object(
                     transform: tf,
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
+                    auto_z_bias: true,
                 });
             progress
                 .shape_instance_min_dist
@@ -1687,6 +1713,7 @@ fn classify_one_object(
                     transform: tf,
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
+                    auto_z_bias: false,
                 });
             progress
                 .shape_instance_min_dist
@@ -1750,7 +1777,7 @@ fn append_shape_spawn_entries_for_transforms(
     asset: &ShapeRenderAsset,
     shape_file: Option<&ShapeFile>,
     meshes: &mut Assets<Mesh>,
-    materials: &Assets<StandardMaterial>,
+    materials: &mut Assets<StandardMaterial>,
     placements: &[ShapeInstancePlacement],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
     anim_spawn_queue: &mut Vec<AnimatedShapeSpawnBundle>,
@@ -1769,6 +1796,16 @@ fn append_shape_spawn_entries_for_transforms(
         instances_aabb, world_instancing_enabled,
     };
 
+    // viewer3d scenery uses daylight sun by default (#95).
+    const IS_DAY: bool = true;
+    let visible_parts: Vec<(usize, &crate::shapes::ShapePartAsset)> = asset
+        .parts
+        .iter()
+        .enumerate()
+        .filter(|(_, part)| shape_part_visible_for_day_night(asset, part, IS_DAY))
+        .collect();
+    let batch_auto_z = placements.iter().any(|p| p.auto_z_bias);
+
     if asset.has_texture {
         *shape_texture_count += placements.len();
     }
@@ -1776,7 +1813,7 @@ fn append_shape_spawn_entries_for_transforms(
     let mergeable = !animated
         && ENABLE_SHAPE_INSTANCE_MERGE
         && placements.len() >= SHAPE_INSTANCE_MERGE_MIN
-        && asset.parts.iter().all(|part| {
+        && visible_parts.iter().all(|(_, part)| {
             !part.is_transparent
                 && meshes
                     .get(&part.mesh)
@@ -1786,7 +1823,7 @@ fn append_shape_spawn_entries_for_transforms(
 
     if mergeable {
         *merged_shape_groups += 1;
-        *shape_mesh_count += asset.parts.len();
+        *shape_mesh_count += visible_parts.len();
         let view_transforms: Vec<Transform> = placements
             .iter()
             .map(|p| view_transform(p.transform, origin))
@@ -1795,15 +1832,16 @@ fn append_shape_spawn_entries_for_transforms(
             tile_x: p.tile_x,
             tile_z: p.tile_z,
         });
-        for part in &asset.parts {
+        for (_, part) in &visible_parts {
             if let Some(merged) = build_merged_instance_mesh(meshes, &part.mesh, &view_transforms) {
                 let Some(bound) = bound else {
                     continue;
                 };
+                let material = material_with_auto_z_bias(materials, &part.material, batch_auto_z);
                 spawn_queue.push((
                     Transform::IDENTITY,
                     Mesh3d(meshes.add(merged)),
-                    MeshMaterial3d(part.material.clone()),
+                    MeshMaterial3d(material),
                     Name::new("world:merged"),
                     WorldSceneryLod {
                         enabled: false,
@@ -1823,7 +1861,9 @@ fn append_shape_spawn_entries_for_transforms(
             let tile_placements: Vec<&ShapeInstancePlacement> =
                 indices.iter().map(|&i| &placements[i]).collect();
             let use_gpu = tile_placements.len() >= WORLD_INSTANCING_MIN;
-            for (part_index, part) in asset.parts.iter().enumerate() {
+            let tile_auto_z = tile_placements.iter().any(|p| p.auto_z_bias);
+            for &(part_index, part) in &visible_parts {
+                let material = material_with_auto_z_bias(materials, &part.material, tile_auto_z);
                 if use_gpu && !part.is_transparent {
                     let instances: Vec<WorldInstanceData> = tile_placements
                         .iter()
@@ -1834,7 +1874,7 @@ fn append_shape_spawn_entries_for_transforms(
                     let count = instances.len() as u32;
                     let aabb = instances_aabb(&instances, 32.0);
                     let appearance: WorldInstanceAppearance =
-                        appearance_from_standard_material(materials, &part.material);
+                        appearance_from_standard_material(materials, &material);
                     *instanced_groups += 1;
                     *instanced_instances += instances.len();
                     *shape_mesh_count += 1;
@@ -1860,10 +1900,12 @@ fn append_shape_spawn_entries_for_transforms(
                     *shape_mesh_count += tile_placements.len();
                     for p in &tile_placements {
                         let tf = view_transform(p.transform, origin);
+                        let mat =
+                            material_with_auto_z_bias(materials, &part.material, p.auto_z_bias);
                         spawn_queue.push((
                             tf,
                             Mesh3d(part.mesh.clone()),
-                            MeshMaterial3d(part.material.clone()),
+                            MeshMaterial3d(mat),
                             Name::new("world:mesh"),
                             WorldSceneryLod {
                                 enabled: true,
@@ -1886,19 +1928,21 @@ fn append_shape_spawn_entries_for_transforms(
             .first()
             .map(|a| a.frame_count as f32)
             .unwrap_or(0.0);
-        *shape_mesh_count += asset.parts.len() * placements.len();
+        *shape_mesh_count += visible_parts.len() * placements.len();
         for inst in placements {
             let placement = view_transform(inst.transform, origin);
             let bound = WorldTileBound {
                 tile_x: inst.tile_x,
                 tile_z: inst.tile_z,
             };
-            for (part_index, part) in asset.parts.iter().enumerate() {
+            for &(part_index, part) in &visible_parts {
                 let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
+                let material =
+                    material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
                 anim_spawn_queue.push((
                     placement,
                     Mesh3d(part.mesh.clone()),
-                    MeshMaterial3d(part.material.clone()),
+                    MeshMaterial3d(material),
                     Name::new("world:anim"),
                     WorldSceneryLod {
                         // LOD stays on; swap re-applies anim delta without resetting key (#100).
@@ -1926,7 +1970,7 @@ fn append_shape_spawn_entries_for_transforms(
         }
     } else {
         // Static non-instanced path: shared plan core (#115). LOD/instancing/anim stay above.
-        *shape_mesh_count += asset.parts.len() * placements.len();
+        *shape_mesh_count += visible_parts.len() * placements.len();
         for inst in placements {
             let placement = object_placement(
                 inst.transform.translation,
@@ -1940,12 +1984,12 @@ fn append_shape_spawn_entries_for_transforms(
             });
             let parts = resolve_shape_parts(
                 shape_path,
-                asset.parts.iter().enumerate().map(|(part_index, part)| {
+                visible_parts.iter().map(|&(part_index, part)| {
                     (
                         part_index,
                         part.prim_state_idx,
                         part.mesh.clone(),
-                        part.material.clone(),
+                        material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias),
                     )
                 }),
             );
@@ -1974,7 +2018,7 @@ fn append_shape_spawn_entries(
     shape_path: &Path,
     asset: &ShapeRenderAsset,
     meshes: &mut Assets<Mesh>,
-    materials: &Assets<StandardMaterial>,
+    materials: &mut Assets<StandardMaterial>,
     origin: &FloatingOrigin,
 ) {
     let Some(placements) = progress.shape_instances.get(shape_path).cloned() else {
@@ -2069,6 +2113,7 @@ fn build_world_shape_asset(
                 parts: vec![crate::shapes::ShapePartAsset {
                     prim_state_idx: -1,
                     sub_object_idx: u32::MAX,
+                    sort_index: 0,
                     cab_matrix_idx: None,
                     mesh: unit,
                     material: fallback_material.clone(),
@@ -2084,9 +2129,12 @@ fn build_world_shape_asset(
                     bounds_center: None,
                 }],
                 has_texture: false,
+                has_night_subobj: false,
             }
         }
     };
+    let mut asset = asset;
+    apply_shape_descriptor_to_asset(&shape_path, &mut asset);
     (shape_path, asset)
 }
 
@@ -2115,7 +2163,7 @@ fn build_shape_lod_assets(
             let parts = openrailsrs_bevy_scenery::shapes::build_mesh_parts_for_lod_band(
                 shape,
                 band,
-                openrailsrs_bevy_scenery::shapes::MeshPartBuildOptions::default(),
+                world_mesh_options_for_shape(shape_path),
             );
             if parts.is_empty() {
                 return None;
@@ -2127,7 +2175,7 @@ fn build_shape_lod_assets(
                 texture_file: primary_texture_filename(shape),
                 parts,
             };
-            Some(shape_render_asset_from_loaded_with_ace_cache(
+            let mut asset = shape_render_asset_from_loaded_with_ace_cache(
                 loaded,
                 &tex_refs,
                 meshes,
@@ -2141,7 +2189,9 @@ fn build_shape_lod_assets(
                 false,
                 false,
                 pbr.as_ref(),
-            ))
+            );
+            apply_shape_descriptor_to_asset(shape_path, &mut asset);
+            Some(asset)
         })
         .collect()
 }
@@ -3182,7 +3232,7 @@ pub fn progressive_world_spawn_system(
                     &shape_path,
                     &asset,
                     &mut meshes,
-                    &materials,
+                    &mut materials,
                     &origin,
                 );
             }
@@ -3502,6 +3552,7 @@ pub fn spawn_world_boxes(
                         },
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
+                        auto_z_bias: true,
                     });
                 continue;
             }
@@ -3536,6 +3587,7 @@ pub fn spawn_world_boxes(
                         },
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
+                        auto_z_bias: false,
                     });
                 continue;
             }
@@ -3653,7 +3705,7 @@ pub fn spawn_world_boxes(
             asset,
             parsed_shape_files.get(&shape_path),
             &mut meshes,
-            &materials,
+            &mut materials,
             &placements,
             &mut shape_spawn_batches,
             &mut anim_spawn_batches,
@@ -4142,6 +4194,7 @@ mod tests {
             combined_mesh: Handle::default(),
             parts: Vec::new(),
             has_texture: false,
+            has_night_subobj: false,
         }
     }
 
@@ -4176,6 +4229,7 @@ mod tests {
         let make_part = |mesh: Handle<Mesh>, material: Handle<StandardMaterial>| ShapePartAsset {
             prim_state_idx: 0,
             sub_object_idx: 0,
+            sort_index: 0,
             cab_matrix_idx: None,
             mesh,
             material,
@@ -4198,6 +4252,7 @@ mod tests {
                 combined_mesh: keep_mesh.clone(),
                 parts: vec![make_part(keep_mesh.clone(), keep_mat)],
                 has_texture: true,
+                has_night_subobj: false,
             },
         );
         session.shape_assets.insert(
@@ -4206,6 +4261,7 @@ mod tests {
                 combined_mesh: drop_mesh.clone(),
                 parts: vec![make_part(drop_mesh.clone(), drop_mat)],
                 has_texture: true,
+                has_night_subobj: false,
             },
         );
         session
@@ -4341,6 +4397,7 @@ mod tests {
                 transform: Transform::default(),
                 tile_x: 0,
                 tile_z: 0,
+                auto_z_bias: false,
             }],
         );
         prepare_shape_load_paths(&mut progress);

@@ -2,6 +2,7 @@
 
 pub mod anim;
 pub mod debug;
+pub mod descriptor;
 pub mod material;
 pub mod mesh;
 pub mod pbr_sidecar;
@@ -13,15 +14,16 @@ pub use anim::{
 };
 pub use debug::{
     DebugFaceColorMode, MSTS_Z_BIAS_CLAMP, MSTS_Z_BIAS_WARN_ABS, ShapeMaterialDebugCtx,
-    apply_shape_debug_material_overrides, apply_train_debug_material_overrides,
-    clamp_msts_z_bias_for_bevy, debug_consist_enabled, debug_cull_front, debug_cull_normal,
-    debug_face_color_mode, debug_flip_u, debug_flip_uv, debug_flip_v, debug_force_double_sided,
-    debug_force_opaque, debug_force_single_sided, debug_force_unlit, debug_materials_enabled,
-    debug_no_uv_flip, debug_shape_stats_enabled, debug_vehicle_transforms_enabled,
-    log_shape_material_debug, mesh_position_count, mesh_triangle_list_valid,
-    set_train_shape_debug_scope, shape_uv_to_bevy, train_debug_flip_winding_active,
-    train_shape_debug_active, train_shape_debug_scope,
+    apply_shape_auto_z_bias, apply_shape_debug_material_overrides,
+    apply_train_debug_material_overrides, clamp_msts_z_bias_for_bevy, debug_consist_enabled,
+    debug_cull_front, debug_cull_normal, debug_face_color_mode, debug_flip_u, debug_flip_uv,
+    debug_flip_v, debug_force_double_sided, debug_force_opaque, debug_force_single_sided,
+    debug_force_unlit, debug_materials_enabled, debug_no_uv_flip, debug_shape_stats_enabled,
+    debug_vehicle_transforms_enabled, log_shape_material_debug, mesh_position_count,
+    mesh_triangle_list_valid, set_train_shape_debug_scope, shape_uv_to_bevy,
+    train_debug_flip_winding_active, train_shape_debug_active, train_shape_debug_scope,
 };
+pub use descriptor::{ShapeDescriptor, night_subobj_part_visible};
 
 pub use material::{
     BlendAlphaPass, DARK_TEXTURE_LUMA_THRESHOLD, OR_BLEND_PASS_OPAQUE_CUTOFF,
@@ -51,7 +53,8 @@ pub use mesh::{
     mesh_buffers_bounds, mesh_has_uvs, mesh_uv_aabb, mesh_uv_degenerate, mesh_vertex_color_stats,
     msts_shape_to_train_rotation, primary_texture_filename, primitive_matrix_chain_bake_ex,
     render3d_world_mesh_options, shader_name_for_prim_state, shape_normal_is_usable,
-    texture_for_prim_state, write_mesh_wavefront, write_shape_wavefront_from_path,
+    sort_index_depth_nudge, texture_for_prim_state, world_mesh_options_for_shape,
+    write_mesh_wavefront, write_shape_wavefront_from_path,
 };
 pub use openrailsrs_or_shader::coordinates::shape_point_to_bevy;
 pub use pbr_sidecar::{ShapePbrSidecar, load_shape_pbr_sidecar, shape_pbr_sidecar_path};

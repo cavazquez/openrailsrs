@@ -95,7 +95,11 @@ pub fn part_visible(
     part: &ShapePart,
     env: &crate::textures::TextureEnvironment,
 ) -> bool {
-    !(descriptor.has_night_subobj && part.sub_object_idx == 1 && env.is_day())
+    crate::shape_descriptor::night_subobj_part_visible(
+        descriptor.has_night_subobj,
+        part.sub_object_idx,
+        env.is_day(),
+    )
 }
 
 fn loaded_part_to_shape_part(part: LoadedShapePart) -> Option<ShapePart> {

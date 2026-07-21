@@ -648,16 +648,19 @@ mod tests {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 tile_x: 0,
                 tile_z: 0,
+                auto_z_bias: false,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(1.0, 0.0, 0.0),
                 tile_x: 0,
                 tile_z: 0,
+                auto_z_bias: false,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(2.0, 0.0, 0.0),
                 tile_x: 1,
                 tile_z: 0,
+                auto_z_bias: false,
             },
         ];
         let grouped = group_placements_by_tile(&placements);
@@ -693,6 +696,7 @@ mod tests {
                 transform: Transform::from_xyz(i as f32, 0.0, 0.0),
                 tile_x: 0,
                 tile_z: 0,
+                auto_z_bias: false,
             })
             .collect();
         let grouped = group_placements_by_tile(&placements);
