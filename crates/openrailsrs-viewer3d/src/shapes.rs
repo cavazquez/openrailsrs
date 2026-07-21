@@ -25,7 +25,7 @@ pub use openrailsrs_bevy_scenery::shapes::{
     build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_lod,
     cab_ace_brighten_enabled, cab_albedo_tint, cab_interior_albedo_boost,
-    cab_or_scenery_material_with_texture, clamp_msts_z_bias_for_bevy, closest_lod_level,
+    cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy, closest_lod_level,
     debug_materials_enabled, debug_shape_stats_enabled, finalize_scenery_material,
     legacy_standard_scenery_enabled, light_mat_idx_for_prim_state, lod_level_for_distance,
     log_shape_material_debug, mesh_aabb, mesh_has_uvs, mesh_position_count,
@@ -35,7 +35,7 @@ pub use openrailsrs_bevy_scenery::shapes::{
     scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
     shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
     shape_point_to_bevy, shape_shader_requests_blending, texture_for_prim_state,
-    texture_name_suggests_transparency, train_exterior_material_with_texture,
+    texture_name_suggests_transparency, train_exterior_material_with_texture_ex,
     train_shape_debug_scope,
 };
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
@@ -2005,6 +2005,7 @@ fn finish_shape_textured_part(
     z_buf_mode: i32,
     lit: bool,
     shader_name: Option<&str>,
+    texture_name: &str,
     solid_color: Option<[f32; 3]>,
     cab_interior: bool,
     train_exterior: bool,
@@ -2046,7 +2047,7 @@ fn finish_shape_textured_part(
         return (placeholder, Some(or_mat), true, is_transparent);
     }
     let mut mat = if train_exterior && !cab_interior {
-        train_exterior_material_with_texture(
+        train_exterior_material_with_texture_ex(
             tint,
             handle,
             rgba_for_luma,
@@ -2054,10 +2055,12 @@ fn finish_shape_textured_part(
             z_bias,
             lit,
             shader_name,
+            light_mat_idx,
+            texture_name,
             solid_color,
         )
     } else {
-        cab_or_scenery_material_with_texture(
+        cab_or_scenery_material_with_texture_ex(
             tint,
             handle,
             rgba_for_luma,
@@ -2065,6 +2068,8 @@ fn finish_shape_textured_part(
             z_bias,
             lit,
             shader_name,
+            light_mat_idx,
+            texture_name,
             solid_color,
             cab_interior,
         )
@@ -2188,6 +2193,7 @@ fn material_for_shape_texture(
                                 z_buf_mode,
                                 lit,
                                 shader_name,
+                                tex_name,
                                 solid_color,
                                 cab_interior,
                                 train_exterior,
@@ -2250,6 +2256,7 @@ fn material_for_shape_texture(
                         z_buf_mode,
                         lit,
                         shader_name,
+                        tex_name,
                         solid_color,
                         cab_interior,
                         train_exterior,

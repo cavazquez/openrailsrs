@@ -8,7 +8,7 @@ use bevy::render::render_resource::{RenderPipelineDescriptor, SpecializedMeshPip
 use bevy::shader::{ShaderDefVal, ShaderRef};
 
 use crate::vsm::OrVsmMode;
-use openrailsrs_or_shader::{OrShaderKind, classify_or_shader};
+use openrailsrs_or_shader::{OrShaderKind, resolve_or_material_kind};
 
 pub const OR_SCENERY_SHADER_PATH: &str = "shaders/or_scenery.wgsl";
 
@@ -207,7 +207,39 @@ pub fn create_or_scenery_material(
     night: bool,
     night_texture: bool,
 ) -> Handle<OrSceneryMaterial> {
-    let kind = classify_or_shader(shader_name);
+    create_or_scenery_material_ex(
+        materials,
+        texture,
+        moment_atlas,
+        shadow_map_limits,
+        tint,
+        alpha_mode,
+        shader_name,
+        None,
+        texture_name,
+        lit,
+        night,
+        night_texture,
+    )
+}
+
+/// Like [`create_or_scenery_material`], honouring OR `vtx_state.LightMatIdx` (Specular25/750…).
+#[allow(clippy::too_many_arguments)]
+pub fn create_or_scenery_material_ex(
+    materials: &mut Assets<OrSceneryMaterial>,
+    texture: Handle<Image>,
+    moment_atlas: Handle<Image>,
+    shadow_map_limits: [f32; 4],
+    tint: Color,
+    alpha_mode: AlphaMode,
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    texture_name: &str,
+    lit: bool,
+    night: bool,
+    night_texture: bool,
+) -> Handle<OrSceneryMaterial> {
+    let kind = resolve_or_material_kind(shader_name, light_mat_idx);
     let reference_alpha = reference_alpha_from_mode(alpha_mode);
     let mut params = build_or_scenery_params(
         kind,

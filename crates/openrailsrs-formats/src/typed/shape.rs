@@ -170,17 +170,31 @@ pub struct NamedMatrix {
     pub matrix: Matrix43,
 }
 
-/// A `vtx_state` entry: links a vertex state index to a matrix and lighting model.
+/// A `vtx_state` entry: matrix + OR light material / light-model config indices.
 ///
-/// MSTS layout (lenient): `( vtx_state flags matrix_idx lighting_model ... )`
-#[derive(Clone, Debug, Default, PartialEq)]
+/// MSTS layout (lenient): `( vtx_state flags matrix_idx LightMatIdx LightCfgIdx … )`
+/// — see Open Rails `Orts.Formats.Msts.vtx_state`.
+#[derive(Clone, Debug, PartialEq)]
 pub struct VtxState {
     /// Raw flags word.
     pub flags: i32,
     /// Index into [`ShapeFile::matrices`] (-1 = identity / world space).
     pub matrix_idx: i32,
-    /// Lighting model index (0 = lit, 1 = unlit, …).
-    pub lighting_model: i32,
+    /// OR `LightMatIdx` (`12 + idx` → HalfBright / Specular25 / …). Default `-5` (unset).
+    pub light_mat_idx: i32,
+    /// OR `LightCfgIdx` into `light_model_cfgs` (UV address modes, etc.).
+    pub light_cfg_idx: i32,
+}
+
+impl Default for VtxState {
+    fn default() -> Self {
+        Self {
+            flags: 0,
+            matrix_idx: -1,
+            light_mat_idx: -5,
+            light_cfg_idx: 0,
+        }
+    }
 }
 
 /// Animation key types supported by MSTS shapes.
@@ -827,7 +841,7 @@ fn collect_vtx_states(ast: &Ast) -> Vec<VtxState> {
 }
 
 fn parse_vtx_state(items: &[Ast]) -> VtxState {
-    // Layout (lenient): ( vtx_state flags matrix_idx lighting_model ... )
+    // Layout (OR): flags, matrix_idx, LightMatIdx, LightCfgIdx, …
     let nums: Vec<i32> = shape_section_body(items)
         .iter()
         .filter_map(|a| match a {
@@ -838,7 +852,8 @@ fn parse_vtx_state(items: &[Ast]) -> VtxState {
     VtxState {
         flags: nums.first().copied().unwrap_or(0),
         matrix_idx: nums.get(1).copied().unwrap_or(-1),
-        lighting_model: nums.get(2).copied().unwrap_or(0),
+        light_mat_idx: nums.get(2).copied().unwrap_or(-5),
+        light_cfg_idx: nums.get(3).copied().unwrap_or(0),
     }
 }
 
@@ -1233,12 +1248,28 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_vertex_uv_indices;
+    use super::*;
+    use crate::ast::{Atom, Ast};
 
     #[test]
     fn parse_vertex_uv_indices_strips_msts_count_prefix() {
         assert_eq!(parse_vertex_uv_indices(&[1, 42]), vec![42]);
         assert_eq!(parse_vertex_uv_indices(&[3, 10, 11, 12]), vec![10, 11, 12]);
         assert_eq!(parse_vertex_uv_indices(&[5]), vec![5]);
+    }
+
+    #[test]
+    fn vtx_state_parses_light_mat_and_cfg_idx() {
+        // OR: flags, matrix, LightMatIdx=-6 (Specular25), LightCfgIdx=2
+        let items = vec![
+            Ast::Atom(Atom::Symbol("vtx_state".into())),
+            Ast::Atom(Atom::Integer(0)),
+            Ast::Atom(Atom::Integer(0)),
+            Ast::Atom(Atom::Integer(-6)),
+            Ast::Atom(Atom::Integer(2)),
+        ];
+        let vs = parse_vtx_state(&items);
+        assert_eq!(vs.light_mat_idx, -6);
+        assert_eq!(vs.light_cfg_idx, 2);
     }
 }

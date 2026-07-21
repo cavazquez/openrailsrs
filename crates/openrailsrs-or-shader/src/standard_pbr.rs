@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::shader::{OrShaderKind, classify_or_shader};
+use crate::shader::{OrShaderKind, resolve_or_material_kind};
 
 #[derive(Debug, Clone, Copy)]
 pub struct OrShaderPbr {
@@ -44,14 +44,28 @@ fn texture_name_suggests_sleeper(texture_name: &str) -> bool {
     lower.contains("tie") || lower.contains("sleeper") || lower.contains("ukfs_t")
 }
 
-/// PBR + flags según shader OR y nombre de textura (rieles UKFS, etc.).
+/// PBR + flags según shader OR, `LightMatIdx` y nombre de textura (rieles UKFS, etc.).
+///
+/// Usa [`resolve_or_material_kind`] para que Specular25/750 / HalfBright coincidan con
+/// `OrSceneryMaterial` (viewer3d `StandardMaterial` y render3d).
 pub fn resolve_or_material_pbr(
     texture_name: &str,
     shader_name: Option<&str>,
     lit: bool,
     default_roughness: f32,
 ) -> OrShaderPbr {
-    let kind = classify_or_shader(shader_name);
+    resolve_or_material_pbr_ex(texture_name, shader_name, None, lit, default_roughness)
+}
+
+/// Como [`resolve_or_material_pbr`], honrando `vtx_state.LightMatIdx`.
+pub fn resolve_or_material_pbr_ex(
+    texture_name: &str,
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    lit: bool,
+    default_roughness: f32,
+) -> OrShaderPbr {
+    let kind = resolve_or_material_kind(shader_name, light_mat_idx);
     let mut hints = OrShaderPbr::base(lit, default_roughness);
 
     if !lit {
@@ -156,5 +170,29 @@ mod tests {
     fn ukfs_rail_stays_metallic_with_texdiff() {
         let p = resolve_or_material_pbr("ukfs_rail.ace", Some("TexDiff"), true, 0.85);
         assert!(p.metallic > 0.7);
+    }
+
+    #[test]
+    fn specular25_and_750_are_distinguishable() {
+        let s25 = resolve_or_material_pbr("metal.ace", Some("Specular25"), true, 0.85);
+        let s750 = resolve_or_material_pbr("metal.ace", Some("Specular750"), true, 0.85);
+        assert!(s750.metallic > s25.metallic);
+        assert!(s750.roughness < s25.roughness);
+    }
+
+    #[test]
+    fn light_mat_specular25_overrides_texdiff() {
+        // OR VertexLightModeMap: 12 + (-6) = 6 → Specular25
+        let p = resolve_or_material_pbr_ex("body.ace", Some("TexDiff"), Some(-6), true, 0.85);
+        assert!((p.metallic - 0.35).abs() < 0.01);
+        assert!((p.roughness - 0.48).abs() < 0.01);
+    }
+
+    #[test]
+    fn light_mat_specular750_overrides_texdiff() {
+        // OR VertexLightModeMap: 12 + (-7) = 5 → Specular750
+        let p = resolve_or_material_pbr_ex("body.ace", Some("TexDiff"), Some(-7), true, 0.85);
+        assert!((p.metallic - 0.78).abs() < 0.01);
+        assert!((p.roughness - 0.24).abs() < 0.01);
     }
 }

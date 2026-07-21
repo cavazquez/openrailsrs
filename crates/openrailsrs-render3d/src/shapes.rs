@@ -13,6 +13,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, DistanceLevel, Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
+use openrailsrs_bevy_scenery::shapes::{light_mat_idx_for_prim_state, shape_normal_is_usable};
 use openrailsrs_or_shader::coordinates::{
     matrix43_transform_point_xna, matrix43_transform_vector_xna, shape_point_to_bevy,
 };
@@ -31,6 +32,8 @@ pub struct ShapePart {
     pub alpha_test_mode: i32,
     /// Nombre del shader MSTS de este prim_state (ej. "AddATex", "BlendATex", "TexDiff").
     pub shader_name: Option<String>,
+    /// OR `vtx_state.LightMatIdx` (Specular25/750, HalfBright, …).
+    pub light_mat_idx: Option<i32>,
     /// Color por vértice (RGBA lineal) cuando el shape no tiene textura.
     pub colors: Option<Vec<[f32; 4]>>,
     /// Color uniforme si todos los vértices comparten el mismo tono.
@@ -144,18 +147,49 @@ fn build_parts_for_level(shape: &ShapeFile, level: &DistanceLevel) -> Vec<ShapeP
                 if tri.len() < 3 {
                     continue;
                 }
+                let mut resolved = Vec::with_capacity(3);
+                let mut skip = false;
                 for &vidx in tri {
-                    let Some((pi, ni, ui, vertex_color)) = resolve_vertex(shape, sub, vidx) else {
-                        continue;
+                    let Some(v) = resolve_vertex(shape, sub, vidx) else {
+                        skip = true;
+                        break;
                     };
-                    let Some(point) = shape.points.get(pi) else {
-                        continue;
-                    };
-                    let pos = transform_point(shape_point_to_bevy(*point), &chain);
-                    let normal = ni
+                    if shape.points.get(v.0).is_none() {
+                        skip = true;
+                        break;
+                    }
+                    resolved.push(v);
+                }
+                if skip {
+                    continue;
+                }
+                // Face normals follow this builder's current winding (#56 will unify with bevy-scenery).
+                let positions: [Vec3; 3] = std::array::from_fn(|i| {
+                    let (pi, ..) = resolved[i];
+                    let point = shape.points.get(pi).expect("checked");
+                    transform_point(shape_point_to_bevy(*point), &chain)
+                });
+                let face_n = (positions[1] - positions[0])
+                    .cross(positions[2] - positions[0])
+                    .try_normalize()
+                    .unwrap_or(Vec3::ZERO);
+                let fallback_n = if shape_normal_is_usable(default_normal) {
+                    transform_normal(shape_point_to_bevy(default_normal), &chain)
+                } else {
+                    face_n
+                };
+                for ((pi, ni, ui, vertex_color), pos) in resolved.into_iter().zip(positions) {
+                    let _ = pi;
+                    let authored = ni
                         .and_then(|i| shape.normals.get(i).copied())
-                        .unwrap_or(default_normal);
-                    let nrm = transform_normal(shape_point_to_bevy(normal), &chain);
+                        .filter(|n| shape_normal_is_usable(*n));
+                    let nrm = if let Some(n) = authored {
+                        transform_normal(shape_point_to_bevy(n), &chain)
+                    } else if face_n.length_squared() > 0.0 {
+                        face_n
+                    } else {
+                        fallback_n
+                    };
                     let uv = ui
                         .and_then(|i| shape.uvs.get(i))
                         .copied()
@@ -190,6 +224,7 @@ fn build_parts_for_level(shape: &ShapeFile, level: &DistanceLevel) -> Vec<ShapeP
                     .get(prim_state_idx.max(0) as usize)
                     .and_then(|ps| shape.shader_names.get(ps.shader_idx.max(0) as usize))
                     .cloned(),
+                light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
                 colors,
                 solid_color,
             }

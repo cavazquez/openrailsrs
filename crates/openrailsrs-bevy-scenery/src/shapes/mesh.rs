@@ -401,19 +401,37 @@ pub fn append_primitive_mesh_buffers(
         {
             continue;
         }
-        for (point_idx, normal_idx, uv_idx, vertex_color) in resolved {
+        // Face normal from post-winding Bevy positions (matches OR Z-flip + XNA bake).
+        let bevy_pts: [Vec3; 3] = std::array::from_fn(|i| {
+            let (point_idx, ..) = resolved[i];
             let point = shape.points.get(point_idx).expect("checked");
-            buffers.positions.push(transform_shape_point(
-                shape_point_to_bevy(*point),
-                &matrix_chain,
-            ));
-            let normal = normal_idx
+            transform_shape_point(shape_point_to_bevy(*point), &matrix_chain)
+        });
+        let face_normal = face_normal_from_triangle(bevy_pts[0], bevy_pts[1], bevy_pts[2]);
+        let fallback_normal = if shape_normal_is_usable(default_normal) {
+            transform_shape_normal(shape_point_to_bevy(default_normal), &matrix_chain)
+        } else {
+            face_normal
+        };
+
+        for ((_point_idx, normal_idx, uv_idx, vertex_color), position) in
+            resolved.into_iter().zip(bevy_pts)
+        {
+            buffers.positions.push(position);
+            let authored = normal_idx
                 .and_then(|idx| shape.normals.get(idx).copied())
-                .unwrap_or(default_normal);
-            buffers.normals.push(transform_shape_normal(
-                shape_point_to_bevy(normal),
-                &matrix_chain,
-            ));
+                .filter(|n| shape_normal_is_usable(*n));
+            let normal = if let Some(n) = authored {
+                transform_shape_normal(shape_point_to_bevy(n), &matrix_chain)
+            } else {
+                // Prefer geometric face normal over a single shape-wide default.
+                if face_normal.length_squared() > 0.0 {
+                    face_normal
+                } else {
+                    fallback_normal
+                }
+            };
+            buffers.normals.push(normal);
             let uv = uv_idx
                 .and_then(|idx| shape.uvs.get(idx).copied())
                 .unwrap_or_default();
@@ -421,6 +439,16 @@ pub fn append_primitive_mesh_buffers(
             buffers.colors.push(vertex_color);
         }
     }
+}
+
+/// True when an authored MSTS normal can be used for lighting (finite, non-zero).
+pub fn shape_normal_is_usable(n: ShapeVec3) -> bool {
+    let len2 = n.x * n.x + n.y * n.y + n.z * n.z;
+    n.x.is_finite() && n.y.is_finite() && n.z.is_finite() && len2 > 1e-12
+}
+
+fn face_normal_from_triangle(p0: Vec3, p1: Vec3, p2: Vec3) -> Vec3 {
+    (p1 - p0).cross(p2 - p0).try_normalize().unwrap_or(Vec3::ZERO)
 }
 
 #[derive(Clone, Copy)]
@@ -534,7 +562,7 @@ pub fn light_mat_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> O
     shape
         .vtx_states
         .get(ps.vertex_state_idx as usize)
-        .map(|vs| vs.lighting_model)
+        .map(|vs| vs.light_mat_idx)
 }
 
 pub fn shader_name_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Option<String> {
@@ -765,4 +793,163 @@ pub fn write_shape_wavefront_from_path(
     })();
     set_train_shape_debug_scope(false);
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_formats::{
+        DistanceLevel, LodControl, NamedMatrix, PrimState, Primitive, SubObject, Vertex, VtxState,
+    };
+
+    fn identity_matrix() -> Matrix43 {
+        Matrix43 {
+            rows: [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0],
+            ],
+        }
+    }
+
+    fn unit_quad_shape(with_normals: bool) -> ShapeFile {
+        let normals = if with_normals {
+            vec![ShapeVec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            }]
+        } else {
+            Vec::new()
+        };
+        let normal_idx = if with_normals { 0 } else { -1 };
+        ShapeFile {
+            points: vec![
+                ShapeVec3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                ShapeVec3 {
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                ShapeVec3 {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                },
+            ],
+            normals,
+            prim_states: vec![PrimState {
+                shader_idx: 0,
+                vertex_state_idx: 0,
+                ..Default::default()
+            }],
+            vtx_states: vec![VtxState {
+                matrix_idx: 0,
+                ..Default::default()
+            }],
+            matrices: vec![NamedMatrix {
+                name: "MAIN".into(),
+                matrix: identity_matrix(),
+            }],
+            lod_controls: vec![LodControl {
+                distance_levels: vec![DistanceLevel {
+                    selection_m: 200.0,
+                    hierarchy: vec![-1],
+                    sub_objects: vec![SubObject {
+                        vertex_count: 3,
+                        vertices: vec![
+                            Vertex {
+                                point_idx: 0,
+                                normal_idx,
+                                ..Default::default()
+                            },
+                            Vertex {
+                                point_idx: 1,
+                                normal_idx,
+                                ..Default::default()
+                            },
+                            Vertex {
+                                point_idx: 2,
+                                normal_idx,
+                                ..Default::default()
+                            },
+                        ],
+                        primitives: vec![Primitive {
+                            prim_state_idx: 0,
+                            vertex_indices: vec![0, 1, 2],
+                        }],
+                    }],
+                }],
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn missing_normals_get_face_normal_after_z_flip() {
+        let shape = unit_quad_shape(false);
+        let parts = build_mesh_parts_from_shape(&shape);
+        assert_eq!(parts.len(), 1);
+        let normals = parts[0]
+            .mesh
+            .attribute(Mesh::ATTRIBUTE_NORMAL)
+            .and_then(|a| match a {
+                VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+                _ => None,
+            })
+            .expect("normals");
+        assert_eq!(normals.len(), 3);
+        for n in normals {
+            // MSTS (0,0,1) → Bevy (0,0,-1); face normal after winding swap matches.
+            assert!(
+                (n[2] + 1.0).abs() < 1e-4,
+                "expected -Z face normal, got {n:?}"
+            );
+            assert!(n[0].abs() < 1e-4 && n[1].abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn authored_normals_are_preserved() {
+        let shape = unit_quad_shape(true);
+        let parts = build_mesh_parts_from_shape(&shape);
+        let normals = parts[0]
+            .mesh
+            .attribute(Mesh::ATTRIBUTE_NORMAL)
+            .and_then(|a| match a {
+                VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+                _ => None,
+            })
+            .expect("normals");
+        for n in normals {
+            assert!((n[2] + 1.0).abs() < 1e-4, "authored Z+ became Bevy -Z: {n:?}");
+        }
+    }
+
+    #[test]
+    fn degenerate_normal_falls_back_to_face() {
+        let mut shape = unit_quad_shape(true);
+        shape.normals[0] = ShapeVec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let parts = build_mesh_parts_from_shape(&shape);
+        let normals = parts[0]
+            .mesh
+            .attribute(Mesh::ATTRIBUTE_NORMAL)
+            .and_then(|a| match a {
+                VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+                _ => None,
+            })
+            .expect("normals");
+        for n in normals {
+            assert!((n[2] + 1.0).abs() < 1e-4, "zero normal → face: {n:?}");
+        }
+    }
 }

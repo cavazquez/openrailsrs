@@ -21,10 +21,13 @@ use crate::textures::{
     texture_search_dirs_for_shape,
 };
 use crate::track::TrackRibbon;
-use openrailsrs_or_shader::standard_pbr::{apply_albedo_scale, resolve_or_material_pbr};
+use openrailsrs_or_shader::standard_pbr::{
+    apply_albedo_scale, resolve_or_material_pbr, resolve_or_material_pbr_ex,
+};
 
 use crate::or_scenery_material::{
-    OrSceneryMaterial, create_or_scenery_material, or_scenery_shaders_enabled,
+    OrSceneryMaterial, create_or_scenery_material, create_or_scenery_material_ex,
+    or_scenery_shaders_enabled,
 };
 use crate::or_terrain_material::{
     DEFAULT_MICROTEX, OrTerrainMaterial, create_or_terrain_material, or_terrain_shaders_enabled,
@@ -497,8 +500,9 @@ fn msts_material(
     lit: bool,
     texture_name: &str,
     shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
 ) -> Handle<StandardMaterial> {
-    let pbr = resolve_or_material_pbr(texture_name, shader_name, lit, roughness);
+    let pbr = resolve_or_material_pbr_ex(texture_name, shader_name, light_mat_idx, lit, roughness);
     let material_lit = lit && !pbr.force_unlit;
     let mut mat = StandardMaterial {
         base_color: apply_albedo_scale(tint, pbr.albedo_scale),
@@ -1730,6 +1734,7 @@ fn build_shape(
                     name,
                     p.alpha_test_mode,
                     p.shader_name.as_deref(),
+                    p.light_mat_idx,
                     p.solid_color,
                     &path,
                     index,
@@ -1834,6 +1839,7 @@ fn ukfs_untextured_material(
         tex_name,
         part.alpha_test_mode,
         Some("TexDiff"),
+        part.light_mat_idx,
         None,
         shape_path,
         index,
@@ -1925,6 +1931,7 @@ fn texture_material(
     name: &str,
     alpha_test_mode: i32,
     shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
     solid_color: Option<[f32; 3]>,
     shape_path: &Path,
     index: &AssetIndex,
@@ -2002,8 +2009,11 @@ fn texture_material(
             .map(|c| format!("{:.3},{:.3},{:.3}", c[0], c[1], c[2]))
             .unwrap_or_default();
         let sh = shader_name.unwrap_or("");
+        let lm = light_mat_idx
+            .map(|i| i.to_string())
+            .unwrap_or_else(|| "_".into());
         format!(
-            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:or={}",
+            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:lm={lm}:or={}",
             tex_path.display(),
             use_or_shaders as u8
         )
@@ -2017,6 +2027,7 @@ fn texture_material(
                     shape_file,
                     name,
                     shader_name,
+                    light_mat_idx,
                     solid_color,
                     is_dds,
                     &tex_path,
@@ -2041,6 +2052,7 @@ fn texture_material(
                 shape_file,
                 name,
                 shader_name,
+                light_mat_idx,
                 solid_color,
                 is_dds,
                 &tex_path,
@@ -2061,6 +2073,7 @@ fn build_textured_standard_material(
     shape_file: &str,
     name: &str,
     shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
     solid_color: Option<[f32; 3]>,
     is_dds: bool,
     tex_path: &Path,
@@ -2110,6 +2123,7 @@ fn build_textured_standard_material(
             lit,
             name,
             shader_name,
+            light_mat_idx,
         )
     } else {
         let ace = match load_ace_file(tex_path) {
@@ -2157,6 +2171,7 @@ fn build_textured_standard_material(
             lit,
             name,
             shader_name,
+            light_mat_idx,
         )
     }
 }
@@ -2203,6 +2218,7 @@ fn build_textured_or_material(
     shape_file: &str,
     name: &str,
     shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
     solid_color: Option<[f32; 3]>,
     is_dds: bool,
     tex_path: &Path,
@@ -2245,7 +2261,7 @@ fn build_textured_or_material(
             solid_color,
             shader_name,
         );
-        create_or_scenery_material(
+        create_or_scenery_material_ex(
             or_materials,
             tex,
             moment_atlas.clone(),
@@ -2253,6 +2269,7 @@ fn build_textured_or_material(
             tint,
             final_alpha,
             shader_name,
+            light_mat_idx,
             name,
             lit,
             texture_env.night,
@@ -2293,7 +2310,7 @@ fn build_textured_or_material(
             lit,
         );
         let tex = images.add(prep.image);
-        create_or_scenery_material(
+        create_or_scenery_material_ex(
             or_materials,
             tex,
             moment_atlas.clone(),
@@ -2301,6 +2318,7 @@ fn build_textured_or_material(
             tint,
             final_alpha,
             shader_name,
+            light_mat_idx,
             name,
             lit,
             texture_env.night,

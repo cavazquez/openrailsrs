@@ -6,6 +6,9 @@ use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use openrailsrs_ace::AceFile;
 use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
+use openrailsrs_or_shader::standard_pbr::{
+    apply_albedo_scale, resolve_or_material_pbr_ex,
+};
 
 pub use crate::materials::or_scenery_shaders_enabled;
 
@@ -185,18 +188,70 @@ pub fn cab_or_scenery_material_with_texture(
     solid_color: Option<[f32; 3]>,
     cab_interior: bool,
 ) -> StandardMaterial {
+    cab_or_scenery_material_with_texture_ex(
+        tint,
+        handle,
+        rgba_for_luma,
+        alpha_mode,
+        z_bias,
+        lit,
+        shader_name,
+        None,
+        "",
+        solid_color,
+        cab_interior,
+    )
+}
+
+/// Like [`cab_or_scenery_material_with_texture`], with shared OR PBR hints (#47).
+#[allow(clippy::too_many_arguments)]
+pub fn cab_or_scenery_material_with_texture_ex(
+    tint: Color,
+    handle: Handle<Image>,
+    rgba_for_luma: &[u8],
+    alpha_mode: AlphaMode,
+    z_bias: f32,
+    lit: bool,
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    texture_name: &str,
+    solid_color: Option<[f32; 3]>,
+    cab_interior: bool,
+) -> StandardMaterial {
     let tint = apply_msts_vertex_tint(tint, solid_color, shader_name);
+    let pbr = if cab_interior {
+        None
+    } else {
+        Some(resolve_or_material_pbr_ex(
+            texture_name,
+            shader_name,
+            light_mat_idx,
+            lit,
+            0.85,
+        ))
+    };
     let material_lit = if cab_interior {
         // Bevy 0.18 forward: `unlit` skips PBR lighting; cab needs lit + point lights.
         true
     } else {
-        lit
+        lit && !pbr.is_some_and(|p| p.force_unlit)
+    };
+    let (roughness, metallic, reflectance, base_color) = if let Some(p) = pbr {
+        (
+            p.roughness,
+            p.metallic,
+            p.reflectance,
+            apply_albedo_scale(tint, p.albedo_scale),
+        )
+    } else {
+        (0.92, 0.0, 0.5, Color::WHITE)
     };
     let mut mat = StandardMaterial {
-        base_color: if cab_interior { Color::WHITE } else { tint },
+        base_color: if cab_interior { Color::WHITE } else { base_color },
         base_color_texture: Some(handle),
-        perceptual_roughness: if cab_interior { 0.92 } else { 0.85 },
-        metallic: if cab_interior { 0.0 } else { 0.05 },
+        perceptual_roughness: if cab_interior { 0.92 } else { roughness },
+        metallic: if cab_interior { 0.0 } else { metallic },
+        reflectance: if cab_interior { 0.5 } else { reflectance },
         double_sided: true,
         cull_mode: None,
         alpha_mode,
@@ -211,6 +266,10 @@ pub fn cab_or_scenery_material_with_texture(
     } else if !material_lit && scenery_needs_emissive_texture(rgba_for_luma) {
         mat.emissive = SCENERY_DARK_EMISSIVE;
         mat.emissive_texture = mat.base_color_texture.clone();
+    } else if let Some(p) = pbr {
+        if material_lit && p.ambient_fill != LinearRgba::new(0.0, 0.0, 0.0, 1.0) {
+            mat.emissive = p.ambient_fill;
+        }
     }
     finalize_scenery_material(mat, material_lit)
 }
@@ -233,7 +292,7 @@ pub fn train_exterior_material_with_texture(
     shader_name: Option<&str>,
     solid_color: Option<[f32; 3]>,
 ) -> StandardMaterial {
-    let mut mat = cab_or_scenery_material_with_texture(
+    train_exterior_material_with_texture_ex(
         tint,
         handle,
         rgba_for_luma,
@@ -241,6 +300,36 @@ pub fn train_exterior_material_with_texture(
         z_bias,
         lit,
         shader_name,
+        None,
+        "",
+        solid_color,
+    )
+}
+
+/// Like [`train_exterior_material_with_texture`], with shared OR PBR hints (#47).
+#[allow(clippy::too_many_arguments)]
+pub fn train_exterior_material_with_texture_ex(
+    tint: Color,
+    handle: Handle<Image>,
+    rgba_for_luma: &[u8],
+    alpha_mode: AlphaMode,
+    z_bias: f32,
+    lit: bool,
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    texture_name: &str,
+    solid_color: Option<[f32; 3]>,
+) -> StandardMaterial {
+    let mut mat = cab_or_scenery_material_with_texture_ex(
+        tint,
+        handle,
+        rgba_for_luma,
+        alpha_mode,
+        z_bias,
+        lit,
+        shader_name,
+        light_mat_idx,
+        texture_name,
         solid_color,
         false,
     );
