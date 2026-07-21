@@ -3,32 +3,20 @@
 
 [simulation]
 duration = 65.0
+legacy_power_cap = false
+train_air_lap_hold = true
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+# OR driver CSV uses PSI/121; Westinghouse cylinder force calibrated at 35 PSI (Chiltern).
+brake_cylinder_full_scale_psi = 35.0
 
 [route]
 # OR evaluation baseline uses AUTO_SIGNAL with CLEAR aspects; imported TDB defaults to Stop.
 # Applied at sim runtime via scenario.overlay.toml (OR-P7: replace with real signal scripts).
 assume_signals_clear = true
 
-# OR MAXSPEED drops to ~50 mph beyond ~1490 m (start of e10777 on Birmingham path).
-[[route.edge_speed_limits]]
-edge = "e10777"
-speed_limit_kmh = 80.467
-
-[[route.edge_speed_limits]]
-edge = "e10775"
-speed_limit_kmh = 80.467
-
-[[route.edge_speed_limits]]
-edge = "e10773"
-speed_limit_kmh = 80.467
-
-[[route.edge_speed_limits]]
-edge = "e10771"
-speed_limit_kmh = 80.467
-
-# Stops from the old n3→n10770 corridor are invalid after TrackPDP world spawn
-# (train now starts on Paddington platform track near PAT start). Re-add when the
-# directed graph can follow the full Birmingham PAT outbound.
+# Old n3→n10770 corridor speed caps (e10777…) do not lie on the TrackPDP Paddington
+# PAT outbound (n17368 → … → n5158 via e17466_r). Re-add limits once measured on this path.
 
 [gameplay]
 objective = "arrive_on_time"

@@ -7,6 +7,10 @@ use openrailsrs_track::{NodeKind, SwitchPosition, TrackGraph};
 use crate::RouteError;
 
 /// Outgoing edge ids traversable from a node, respecting switch position.
+///
+/// At a 3-pin junction the blades select between `stem_edge` and `diverging_edge`;
+/// any other outgoing edge is the trailing leg and stays open so pathfinding can
+/// leave toward the third pin (needed for MSTS PAT corridors that reverse a vector).
 pub fn allowed_outgoing_edges(graph: &TrackGraph, node: &str) -> Vec<String> {
     let all = graph.outgoing_edges(node).to_vec();
     match graph.node(node).map(|n| &n.kind) {
@@ -21,9 +25,14 @@ pub fn allowed_outgoing_edges(graph: &TrackGraph, node: &str) -> Vec<String> {
                 SwitchPosition::Straight => stem_edge.0.as_str(),
                 SwitchPosition::Diverging => diverging_edge.0.as_str(),
             };
+            let stem = stem_edge.0.as_str();
+            let div = diverging_edge.0.as_str();
             let filtered: Vec<String> = all
                 .iter()
-                .filter(|e| e.as_str() == chosen)
+                .filter(|e| {
+                    let id = e.as_str();
+                    id == chosen || (id != stem && id != div)
+                })
                 .cloned()
                 .collect();
             if filtered.is_empty() { all } else { filtered }
@@ -38,6 +47,27 @@ pub fn edge_path(
     start: &str,
     destination: &str,
 ) -> Result<Vec<String>, RouteError> {
+    edge_path_with(graph, start, destination, true)
+}
+
+/// Like [`edge_path`] but traverses every outgoing edge, ignoring switch position.
+///
+/// Used when deriving a player `.pat` corridor: the path file defines the route;
+/// switch positions are computed afterwards to match that corridor.
+pub fn edge_path_ignoring_switches(
+    graph: &TrackGraph,
+    start: &str,
+    destination: &str,
+) -> Result<Vec<String>, RouteError> {
+    edge_path_with(graph, start, destination, false)
+}
+
+fn edge_path_with(
+    graph: &TrackGraph,
+    start: &str,
+    destination: &str,
+    switch_aware: bool,
+) -> Result<Vec<String>, RouteError> {
     if start == destination {
         return Ok(Vec::new());
     }
@@ -47,7 +77,12 @@ pub fn edge_path(
     parent.insert(start.to_string(), (String::new(), String::new()));
 
     while let Some(node) = q.pop_front() {
-        for eid in allowed_outgoing_edges(graph, &node) {
+        let outgoing = if switch_aware {
+            allowed_outgoing_edges(graph, &node)
+        } else {
+            graph.outgoing_edges(&node).to_vec()
+        };
+        for eid in outgoing {
             let edge = graph
                 .edge(&eid)
                 .ok_or_else(|| RouteError::Msg(format!("missing edge {eid}")))?;
@@ -175,5 +210,66 @@ mod tests {
         let bfs = edge_path(&g, "start", "dest_b").expect("bfs");
         assert_eq!(via, bfs);
         assert_eq!(via, vec!["e1", "e3"]);
+    }
+
+    /// 3-pin junction: stem/div blades + trailing reverse leg (MSTS PAT outbound).
+    fn trailing_junction_graph(switch_pos: SwitchPosition) -> TrackGraph {
+        let mut g = TrackGraph::new();
+        for (id, x) in [
+            ("approach", 0.0),
+            ("junction", 1000.0),
+            ("stem_end", 2000.0),
+            ("div_end", 2000.0),
+        ] {
+            let kind = if id == "junction" {
+                NodeKind::Switch {
+                    stem_edge: EdgeId("e_stem".into()),
+                    diverging_edge: EdgeId("e_div".into()),
+                }
+            } else {
+                NodeKind::Plain
+            };
+            g.insert_node(Node {
+                id: NodeId(id.into()),
+                kind,
+                x_m: x,
+                y_m: 0.0,
+            })
+            .unwrap();
+        }
+        for (id, from, to) in [
+            ("e_app", "approach", "junction"),
+            ("e_stem", "junction", "stem_end"),
+            ("e_div", "junction", "div_end"),
+            // Trailing reverse: leave junction back toward a PAT continuation.
+            ("e_trail_r", "junction", "approach"),
+        ] {
+            g.insert_edge(Edge {
+                id: EdgeId(id.into()),
+                from: NodeId(from.into()),
+                to: NodeId(to.into()),
+                length_m: 1000.0,
+                speed_limit_mps: 20.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        }
+        g.set_switch("junction", switch_pos).unwrap();
+        g
+    }
+
+    #[test]
+    fn switch_keeps_trailing_leg_open() {
+        let g = trailing_junction_graph(SwitchPosition::Straight);
+        let out = allowed_outgoing_edges(&g, "junction");
+        assert!(out.contains(&"e_stem".to_string()));
+        assert!(out.contains(&"e_trail_r".to_string()));
+        assert!(!out.contains(&"e_div".to_string()));
+    }
+
+    #[test]
+    fn reverse_edge_ids_do_not_parse_as_plain_e_prefix() {
+        // Document contract for MSTS import: `e{N}_r` must not parse as TDB id N.
+        assert!("17466_r".parse::<u32>().is_err());
     }
 }

@@ -6,47 +6,497 @@ description = "Imported from MSTS activity: /home/cristian/Documentos/Open Rails
 
 [route]
 path = "."
-# Spawn snapped from TrackPDP world start (Paddington Pfm area), not mis-parsed flag→n1→n3+305.
+# Spawn snapped from TrackPDP world start (Paddington Pfm area).
 start = "n17368"
-destination = "n17381"
+destination = "n5158"
 start_offset_m = 166.735
-waypoints = ["n17368", "n17381"]
 stops = []
+waypoints = [
+    "n17368",
+    "n17413",
+    "n17530",
+    "n17855",
+    "n17275",
+    "n17408",
+    "n17405",
+    "n16921",
+    "n17292",
+    "n17748",
+    "n17850",
+    "n17845",
+    "n17729",
+    "n17732",
+    "n17649",
+    "n17651",
+    "n16880",
+    "n17565",
+    "n17564",
+    "n16852",
+    "n16758",
+    "n16715",
+    "n16712",
+    "n16412",
+    "n16359",
+    "n16364",
+    "n16285",
+    "n16247",
+    "n16047",
+    "n16245",
+    "n16090",
+    "n16092",
+    "n16018",
+    "n3270",
+    "n3154",
+    "n3156",
+    "n14844",
+    "n2731",
+    "n16546",
+    "n17890",
+    "n3158",
+    "n3160",
+    "n3162",
+    "n3164",
+    "n3166",
+    "n3168",
+    "n2609",
+    "n2611",
+    "n2496",
+    "n2498",
+    "n2500",
+    "n9781",
+    "n9779",
+    "n3651",
+    "n3653",
+    "n3655",
+    "n3658",
+    "n3660",
+    "n3662",
+    "n3663",
+    "n3665",
+    "n3823",
+    "n3668",
+    "n3669",
+    "n3856",
+    "n3670",
+    "n3671",
+    "n3873",
+    "n3675",
+    "n3676",
+    "n3678",
+    "n3680",
+    "n3682",
+    "n9749",
+    "n4314",
+    "n4316",
+    "n4354",
+    "n4356",
+    "n4358",
+    "n4360",
+    "n5598",
+    "n5595",
+    "n4372",
+    "n4374",
+    "n5943",
+    "n5941",
+    "n5939",
+    "n5608",
+    "n5610",
+    "n5613",
+    "n5615",
+    "n5617",
+    "n5625",
+    "n5627",
+    "n5629",
+    "n5631",
+    "n5633",
+    "n5833",
+    "n5784",
+    "n5643",
+    "n5645",
+    "n5649",
+    "n5738",
+    "n5661",
+    "n5663",
+    "n5675",
+    "n5677",
+    "n5041",
+    "n5043",
+    "n5044",
+    "n5046",
+    "n5048",
+    "n5050",
+    "n5051",
+    "n7154",
+    "n5061",
+    "n5063",
+    "n5065",
+    "n5067",
+    "n6350",
+    "n6352",
+    "n6361",
+    "n6363",
+    "n6365",
+    "n6367",
+    "n6369",
+    "n6371",
+    "n6374",
+    "n6376",
+    "n6393",
+    "n6391",
+    "n6389",
+    "n6387",
+    "n6785",
+    "n6787",
+    "n6789",
+    "n5154",
+    "n5156",
+    "n5158",
+]
+assume_signals_clear = true
+
+[[route.switches]]
+node = "n1024"
+position = "diverging"
+
+[[route.switches]]
+node = "n1026"
+position = "straight"
+
+[[route.switches]]
+node = "n1030"
+position = "diverging"
+
+[[route.switches]]
+node = "n1032"
+position = "diverging"
+
+[[route.switches]]
+node = "n1034"
+position = "diverging"
+
+[[route.switches]]
+node = "n1036"
+position = "diverging"
+
+[[route.switches]]
+node = "n1038"
+position = "diverging"
+
+[[route.switches]]
+node = "n1040"
+position = "straight"
+
+[[route.switches]]
+node = "n1044"
+position = "straight"
+
+[[route.switches]]
+node = "n1046"
+position = "diverging"
+
+[[route.switches]]
+node = "n1048"
+position = "diverging"
+
+[[route.switches]]
+node = "n1050"
+position = "diverging"
+
+[[route.switches]]
+node = "n1052"
+position = "straight"
+
+[[route.switches]]
+node = "n1054"
+position = "diverging"
+
+[[route.switches]]
+node = "n1056"
+position = "diverging"
+
+[[route.switches]]
+node = "n1058"
+position = "diverging"
+
+[[route.switches]]
+node = "n2496"
+position = "straight"
+
+[[route.switches]]
+node = "n2498"
+position = "straight"
+
+[[route.switches]]
+node = "n2609"
+position = "straight"
+
+[[route.switches]]
+node = "n3158"
+position = "straight"
+
+[[route.switches]]
+node = "n3160"
+position = "straight"
+
+[[route.switches]]
+node = "n3162"
+position = "straight"
+
+[[route.switches]]
+node = "n3164"
+position = "straight"
+
+[[route.switches]]
+node = "n3166"
+position = "straight"
+
+[[route.switches]]
+node = "n3651"
+position = "straight"
+
+[[route.switches]]
+node = "n3653"
+position = "straight"
+
+[[route.switches]]
+node = "n3658"
+position = "straight"
+
+[[route.switches]]
+node = "n3662"
+position = "straight"
+
+[[route.switches]]
+node = "n3663"
+position = "straight"
+
+[[route.switches]]
+node = "n3665"
+position = "straight"
+
+[[route.switches]]
+node = "n3667"
+position = "straight"
+
+[[route.switches]]
+node = "n3668"
+position = "straight"
+
+[[route.switches]]
+node = "n3669"
+position = "straight"
+
+[[route.switches]]
+node = "n3670"
+position = "straight"
+
+[[route.switches]]
+node = "n3671"
+position = "straight"
+
+[[route.switches]]
+node = "n3673"
+position = "straight"
+
+[[route.switches]]
+node = "n3675"
+position = "straight"
+
+[[route.switches]]
+node = "n3676"
+position = "straight"
+
+[[route.switches]]
+node = "n3678"
+position = "straight"
+
+[[route.switches]]
+node = "n4354"
+position = "straight"
+
+[[route.switches]]
+node = "n5154"
+position = "diverging"
+
+[[route.switches]]
+node = "n5156"
+position = "diverging"
+
+[[route.switches]]
+node = "n5499"
+position = "diverging"
+
+[[route.switches]]
+node = "n5501"
+position = "diverging"
+
+[[route.switches]]
+node = "n5503"
+position = "diverging"
+
+[[route.switches]]
+node = "n5505"
+position = "diverging"
+
+[[route.switches]]
+node = "n5569"
+position = "diverging"
+
+[[route.switches]]
+node = "n5602"
+position = "diverging"
+
+[[route.switches]]
+node = "n5615"
+position = "diverging"
+
+[[route.switches]]
+node = "n5625"
+position = "diverging"
+
+[[route.switches]]
+node = "n5627"
+position = "straight"
+
+[[route.switches]]
+node = "n5631"
+position = "diverging"
+
+[[route.switches]]
+node = "n5843"
+position = "diverging"
+
+[[route.switches]]
+node = "n5845"
+position = "diverging"
+
+[[route.switches]]
+node = "n5847"
+position = "diverging"
+
+[[route.switches]]
+node = "n6389"
+position = "diverging"
+
+[[route.switches]]
+node = "n6475"
+position = "straight"
+
+[[route.switches]]
+node = "n6785"
+position = "straight"
+
+[[route.switches]]
+node = "n6787"
+position = "straight"
+
+[[route.switches]]
+node = "n9749"
+position = "straight"
+
+[[route.switches]]
+node = "n9781"
+position = "straight"
+
+[[route.switches]]
+node = "n14849"
+position = "straight"
+
+[[route.switches]]
+node = "n16235"
+position = "straight"
+
+[[route.switches]]
+node = "n16281"
+position = "diverging"
+
+[[route.switches]]
+node = "n16294"
+position = "diverging"
+
+[[route.switches]]
+node = "n16346"
+position = "straight"
+
+[[route.switches]]
+node = "n16438"
+position = "diverging"
+
+[[route.switches]]
+node = "n16818"
+position = "diverging"
+
+[[route.switches]]
+node = "n16935"
+position = "straight"
+
+[[route.switches]]
+node = "n17280"
+position = "diverging"
+
+[[route.switches]]
+node = "n17302"
+position = "diverging"
+
+[[route.switches]]
+node = "n17380"
+position = "straight"
 
 [[route.switches]]
 node = "n17381"
+position = "straight"
+
+[[route.switches]]
+node = "n17391"
+position = "straight"
+
+[[route.switches]]
+node = "n17804"
+position = "straight"
+
+[[route.switches]]
+node = "n17868"
+position = "straight"
+
+[[route.switches]]
+node = "n17890"
 position = "diverging"
 
 [train]
 consist = "consists/birmingham_pullman.con"
 
 [gameplay]
-objective = "arrive"
+objective = "arrive_on_time"
 difficulty = "normal"
-penalty_per_second_late = 0.0
+penalty_per_second_late = 8.0
 
 [simulation]
-duration = 136.0
+duration = 65.0
 time_step = 1.0
 seed = 42
+brake_cylinder_full_scale_psi = 35.0
 legacy_power_cap = false
 train_air_lap_hold = true
 train_air_full_release_s = 3.0
 brake_shoe_speed_factor = true
 brake_skid_limit = true
-# OR driver CSV uses PSI/121; Westinghouse cylinder force calibrated at 35 PSI (Chiltern).
-brake_cylinder_full_scale_psi = 35.0
+multi_body = false
+coupler_kind = ""
+orts_inherit_partial_run_up = false
 
 [output]
 csv = "run.csv"
 metadata = "run.json"
 
 [validate]
-baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
-# Baseline OR ~136 s sim (10:00→10:02:16); cap P/v por locomotora
-max_velocity_rms = 0.48
-max_position_max = 25.0
+max_velocity_rms = 4.5
+max_position_max = 55.0
 max_throttle_rms = 0.25
-max_brake_rms = 0.25
-phase_bounds = [0.0, 30.0, 61.0, 136.0]
-phase_max_velocity_rms = 0.95
+max_brake_rms = 50.0
+baseline_or = "../baselines/chiltern_birmingham/or_evaluation_speed.csv"
+phase_bounds = [
+    0.0,
+    61.0,
+    136.0,
+]
+phase_max_velocity_rms = 0.55

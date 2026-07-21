@@ -100,9 +100,31 @@ fn import_route_produces_valid_toml() {
         .expect("edges array missing");
 
     assert!(!nodes.is_empty(), "nodes array is empty");
-    assert_eq!(edges.len(), 1, "expected 1 edge, got {}", edges.len());
+    assert_eq!(
+        edges.len(),
+        2,
+        "expected forward + reverse edges, got {}",
+        edges.len()
+    );
 
-    let length = edges[0]
+    let forward = edges
+        .iter()
+        .find(|e| e.get("id").and_then(|v| v.as_str()) == Some("e2"))
+        .expect("forward e2");
+    let reverse = edges
+        .iter()
+        .find(|e| e.get("id").and_then(|v| v.as_str()) == Some("e2_r"))
+        .expect("reverse e2_r");
+    assert_eq!(
+        forward.get("from").and_then(|v| v.as_str()),
+        reverse.get("to").and_then(|v| v.as_str())
+    );
+    assert_eq!(
+        forward.get("to").and_then(|v| v.as_str()),
+        reverse.get("from").and_then(|v| v.as_str())
+    );
+
+    let length = forward
         .get("length_m")
         .and_then(|v| v.as_float())
         .expect("edge.length_m missing");
@@ -111,7 +133,7 @@ fn import_route_produces_valid_toml() {
         "edge length should be ~1000 m, got {length}"
     );
 
-    let speed_kmh = edges[0]
+    let speed_kmh = forward
         .get("speed_limit_kmh")
         .and_then(|v| v.as_float())
         .expect("edge.speed_limit_kmh missing");
@@ -701,6 +723,10 @@ fn chiltern_birmingham_import_uses_pat_placement() {
         "expected ~167 m along platform edge, got {}",
         direct.start_offset_m
     );
+    assert_ne!(
+        direct.destination, "n17381",
+        "with reverse edges, destination must leave the n17368→n17381 stub"
+    );
     let (toml, _, overlay_applied) =
         import_activity_with_summary(route_dir, &act, Some(&out)).expect("import activity");
     assert!(
@@ -710,6 +736,10 @@ fn chiltern_birmingham_import_uses_pat_placement() {
         activity.player_service_id,
         direct.start,
         toml.lines().take(20).collect::<Vec<_>>().join("\n")
+    );
+    assert!(
+        !toml.contains("destination = \"n17381\""),
+        "scenario must not keep the 3-node stub destination"
     );
     if out.join("scenario.overlay.toml").exists() {
         assert!(overlay_applied, "expected scenario.overlay.toml merge");

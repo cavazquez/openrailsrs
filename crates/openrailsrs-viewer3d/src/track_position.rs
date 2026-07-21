@@ -1241,6 +1241,8 @@ mod tests {
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e10783"), Some(10783));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e2"), Some(2));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("n2"), None);
+        // Reverse import edges must not parse as TDB vector ids.
+        assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e17466_r"), None);
     }
 
     #[test]

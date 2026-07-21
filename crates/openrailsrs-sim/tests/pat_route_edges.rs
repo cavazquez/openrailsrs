@@ -54,13 +54,18 @@ fn chiltern_pat_waypoints_build_connected_chain() {
         hints.start_offset_m,
     )
     .expect("waypoints");
-    assert!(wps.len() >= 2);
+    assert!(
+        wps.len() >= 10,
+        "expected long PAT waypoint chain after reverse edges, got {}",
+        wps.len()
+    );
     assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
     assert_eq!(hints.start, "n17368");
+    assert_ne!(hints.destination, "n17381", "must not stop at the 3-node stub sink");
 }
 
 #[test]
-fn chiltern_pat_edges_match_bfs_with_switches() {
+fn chiltern_pat_edges_leave_platform_via_reverse() {
     let Some((graph, pat, hints, aliases)) = birmingham_graph_pat_and_hints() else {
         return;
     };
@@ -73,9 +78,26 @@ fn chiltern_pat_edges_match_bfs_with_switches() {
         hints.start_offset_m,
     )
     .expect("pat path");
-    let bfs = edge_path(&graph, &hints.start, &hints.destination).expect("bfs");
-    assert_eq!(pat_edges, bfs);
-    assert!(!pat_edges.is_empty());
+    assert!(
+        pat_edges.len() > 5,
+        "expected ≫ stub path, got {} edges",
+        pat_edges.len()
+    );
+    let dist: f64 = pat_edges
+        .iter()
+        .filter_map(|e| graph.edge(e).map(|ed| ed.length_m))
+        .sum();
+    assert!(
+        dist > 5_000.0,
+        "expected ≥5 km PAT corridor, got {dist:.0} m"
+    );
+    assert!(
+        pat_edges.iter().any(|e| e == "e17466_r"),
+        "outbound must continue via reverse of e17466, got {:?}",
+        &pat_edges[..pat_edges.len().min(8)]
+    );
+    // Global BFS may shortcut the PAT; waypoint resolution must stay connected.
+    assert!(edge_path(&graph, &hints.start, &hints.destination).is_ok());
 }
 
 #[test]
@@ -98,14 +120,24 @@ fn resolve_route_edges_uses_waypoints_when_present() {
         destination: hints.destination.clone(),
         start_offset_m: Some(hints.start_offset_m),
         stops: vec![],
-        switches: vec![],
+        switches: hints.switches.clone(),
         waypoints,
         assume_signals_clear: false,
         edge_speed_limits: vec![],
     };
     let via = resolve_route_edges(&graph, &route).expect("resolve");
-    let bfs = edge_path(&graph, &hints.start, &hints.destination).expect("bfs");
-    assert_eq!(via, bfs);
+    assert!(via.len() > 5);
+    assert!(via.iter().any(|e| e == "e17466_r"));
+    let pat_edges = pat_edge_path_with_offset(
+        &graph,
+        &aliases,
+        &pat,
+        &hints.start,
+        &hints.destination,
+        hints.start_offset_m,
+    )
+    .expect("pat edges");
+    assert_eq!(via, pat_edges);
 }
 
 #[test]
@@ -131,7 +163,15 @@ fn sim_runtime_path_uses_scenario_spawn() {
         graph.set_switch(&sw.node, pos).expect("switch");
     }
     let path = resolve_route_edges(&graph, &scenario.route).expect("path");
-    eprintln!("sim runtime path: {} edges: {path:?}", path.len());
-    assert!(!path.is_empty(), "expected path from corrected spawn");
-    assert!(path.contains(&"e17369".to_string()) || path.contains(&"e17383".to_string()));
+    eprintln!("sim runtime path: {} edges", path.len());
+    assert!(
+        path.len() > 5,
+        "expected long path from corrected spawn, got {} edges",
+        path.len()
+    );
+    assert!(path.contains(&"e17369".to_string()));
+    assert!(
+        path.contains(&"e17466_r".to_string()),
+        "live-drive must leave platform via e17466_r"
+    );
 }

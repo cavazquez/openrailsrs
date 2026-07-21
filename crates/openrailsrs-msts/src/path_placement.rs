@@ -6,7 +6,7 @@ use std::path::Path;
 use openrailsrs_formats::PathFile;
 use openrailsrs_route::{
     MstsAlias, load_route_from_dir,
-    path::{edge_path, edge_path_via_waypoints},
+    path::{edge_path, edge_path_ignoring_switches, edge_path_via_waypoints},
 };
 use openrailsrs_scenarios::model::{SwitchDef, SwitchPositionDef};
 use openrailsrs_track::TrackGraph;
@@ -156,13 +156,19 @@ fn world_pdps_for_placement(path_file: &PathFile) -> Vec<openrailsrs_formats::Tr
         .collect()
 }
 
-/// Pick the farthest world-snapped node still reachable on the directed graph.
+/// Pick the last world-PDP node still reachable along the directed graph.
+///
+/// Walks TrackPDP order (PAT polyline), not global graph distance — otherwise reverse
+/// edges can invent multi-thousand-km detours to unrelated snaps. Switch positions are
+/// ignored here; [`switches_for_route`] aligns them to the chosen corridor afterwards.
 fn destination_from_world_pdps(
     graph: &TrackGraph,
     start: &str,
     world_pdps: &[openrailsrs_formats::TrackVectorPoint],
 ) -> Result<String, MstsError> {
-    let mut best: Option<(String, f64)> = None;
+    let mut last_ok: Option<(String, f64)> = None;
+    let mut useful: Option<(String, f64)> = None;
+    const USEFUL_PATH_M: f64 = 5_000.0;
     for w in world_pdps {
         let Some(cand) = nearest_node_id(graph, w) else {
             continue;
@@ -170,18 +176,23 @@ fn destination_from_world_pdps(
         if cand == start {
             continue;
         }
-        let Ok(edges) = edge_path(graph, start, &cand) else {
+        let Ok(edges) = edge_path_ignoring_switches(graph, start, &cand) else {
             continue;
         };
         let dist: f64 = edges
             .iter()
             .filter_map(|eid| graph.edge(eid).map(|e| e.length_m))
             .sum();
-        if best.as_ref().is_none_or(|(_, d)| dist > *d) {
-            best = Some((cand, dist));
+        // Prefer the furthest PDP along the file that remains on a directed path.
+        if last_ok.as_ref().is_none_or(|(n, _)| n != &cand) {
+            last_ok = Some((cand.clone(), dist));
+        }
+        if dist >= USEFUL_PATH_M {
+            useful = Some((cand, dist));
         }
     }
-    if let Some((node, _)) = best {
+    // Prefer a ≥5 km corridor when the PAT reaches that far; else the last reachable PDP.
+    if let Some((node, _)) = useful.or(last_ok) {
         return Ok(node);
     }
     bfs_far_node(graph, start).ok_or_else(|| {
@@ -408,13 +419,15 @@ pub fn pat_waypoints_from_world(
             continue;
         }
         let tail = waypoints.last().expect("non-empty");
-        if edge_path(graph, tail, &nid).is_ok() {
+        // Ignore switches while chaining PAT snaps; runtime switches are derived later.
+        if edge_path_ignoring_switches(graph, tail, &nid).is_ok() {
             waypoints.push(nid);
         }
     }
     if !waypoints.iter().any(|n| n == destination) {
         if let Some(tail) = waypoints.last() {
-            if edge_path(graph, tail, destination).is_ok() && tail != destination {
+            if edge_path_ignoring_switches(graph, tail, destination).is_ok() && tail != destination
+            {
                 waypoints.push(destination.to_string());
             }
         }
@@ -680,7 +693,7 @@ fn pick_destination_node(
         if graph.outgoing_edges(&p.graph_node).is_empty() {
             continue;
         }
-        let Ok(edges) = edge_path(graph, start, &p.graph_node) else {
+        let Ok(edges) = edge_path_ignoring_switches(graph, start, &p.graph_node) else {
             continue;
         };
         let dist: f64 = edges
@@ -713,8 +726,8 @@ fn bfs_far_node(graph: &TrackGraph, start: &str) -> Option<String> {
             best_depth = depth;
             best = node.clone();
         }
-        for eid in openrailsrs_route::path::allowed_outgoing_edges(graph, &node) {
-            let Some(edge) = graph.edge(&eid) else {
+        for eid in graph.outgoing_edges(&node) {
+            let Some(edge) = graph.edge(eid) else {
                 continue;
             };
             let next = edge.to.0.clone();
@@ -767,8 +780,8 @@ fn switches_for_route(
     start: &str,
     destination: &str,
 ) -> Result<Vec<SwitchDef>, MstsError> {
-    let edge_ids =
-        edge_path(graph, start, destination).map_err(|e| MstsError::Msg(e.to_string()))?;
+    let edge_ids = edge_path_ignoring_switches(graph, start, destination)
+        .map_err(|e| MstsError::Msg(e.to_string()))?;
     let mut out = Vec::new();
     for (node_id, node) in graph.nodes_iter() {
         let openrailsrs_track::NodeKind::Switch {
@@ -912,8 +925,19 @@ mod tests {
             wps.len()
         );
 
-        assert!(!pat_path.is_empty(), "expected a directed path from spawn");
+        assert!(
+            pat_path.len() > 5,
+            "expected long PAT path after reverse edges, got {} edges",
+            pat_path.len()
+        );
+        assert!(
+            pat_path.iter().any(|e| e == "e17466_r"),
+            "path should continue via e17466_r, got {:?}",
+            &pat_path[..pat_path.len().min(8)]
+        );
+        assert!(wps.len() >= 10, "expected many PAT waypoints, got {}", wps.len());
         assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
+        assert_eq!(hints.start, "n17368");
         let spawn_dist = spawn_distance_to_pat_start(&graph, &hints, &path_file);
         assert!(
             spawn_dist < 150.0,

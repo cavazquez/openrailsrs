@@ -3,7 +3,12 @@
 //! The mapping is:
 //! - `TrEndNode`      → plain node
 //! - `TrJunctionNode` → switch node (`stem_edge` / `diverging_edge` inferred from pins)
-//! - `TrVectorNode`   → two endpoint nodes + one directed edge
+//! - `TrVectorNode`   → two endpoint nodes + forward edge `e{N}` and reverse `e{N}_r`
+//!
+//! Reverse edges mirror OSM bidirectional import so directed pathfinding can follow
+//! PAT corridors that travel against a TrVectorNode pin order. Reverse ids keep the
+//! `_r` suffix so `parse_e_prefix_tdb_id("e{N}_r")` fails and vehicle TDB pose still
+//! binds only forward `e{N}`.
 //!
 //! Output matches [`openrailsrs_route::load::RouteLayoutFile`] (see `examples/` and OSM import).
 
@@ -260,7 +265,8 @@ fn count_nodes_edges(tdb: &TrackDbFile) -> (usize, usize) {
             TrackNodeKind::End | TrackNodeKind::Junction { .. } => nodes += 1,
             TrackNodeKind::Vector { .. } => {
                 nodes += 2;
-                edges += 1;
+                // Forward `e{N}` plus reverse `e{N}_r` (OSM-style bidirectional).
+                edges += 2;
             }
         }
     }
@@ -343,6 +349,8 @@ fn convert_tdb_to_toml(
                 set_node_position(&mut nodes, &to_id, end);
             }
             let edge_id = format!("e{}", n.id);
+            let reverse_id = format!("{edge_id}_r");
+            let speed_limit_kmh = *speed_limit_mps * 3.6;
             for item_id in item_ids {
                 item_to_edge.insert(*item_id, edge_id.clone());
             }
@@ -351,7 +359,17 @@ fn convert_tdb_to_toml(
                 from: from_id.clone(),
                 to: to_id.clone(),
                 length_m: *length_m,
-                speed_limit_kmh: *speed_limit_mps * 3.6,
+                speed_limit_kmh,
+                grade_percent: 0.0,
+            });
+            // Bidirectional travel: PAT / live-drive often continue against pin order.
+            // Keep `_r` so TDB pose lookup only binds forward `e{N}`.
+            edges.push(EdgeToml {
+                id: reverse_id,
+                from: to_id.clone(),
+                to: from_id.clone(),
+                length_m: *length_m,
+                speed_limit_kmh,
                 grade_percent: 0.0,
             });
             msts_aliases.push(MstsAliasToml {
@@ -364,7 +382,7 @@ fn convert_tdb_to_toml(
         }
     }
 
-    configure_switch_nodes(&mut nodes, &mut edges, &junction_pins, &msts_aliases);
+    configure_switch_nodes(&mut nodes, &edges, &junction_pins, &msts_aliases);
     apply_tdb_world_positions(tdb, &node_map, &mut nodes);
 
     let mut signals = build_signals(&tdb.items, &item_to_edge);
@@ -392,7 +410,7 @@ fn convert_tdb_to_toml(
 /// Attach switch metadata to junction nodes once all edges exist.
 fn configure_switch_nodes(
     nodes: &mut [NodeToml],
-    edges: &mut [EdgeToml],
+    edges: &[EdgeToml],
     junction_pins: &HashMap<u32, Vec<TrPinRef>>,
     aliases: &[MstsAliasToml],
 ) {
@@ -419,10 +437,10 @@ fn configure_switch_nodes(
 
         let stem_id = stem_target
             .as_ref()
-            .and_then(|t| find_or_orient_edge(edges, &node.id, t, true));
+            .and_then(|t| find_outgoing_edge(edges, &node.id, t));
         let div_id = div_target
             .as_ref()
-            .and_then(|t| find_or_orient_edge(edges, &node.id, t, false));
+            .and_then(|t| find_outgoing_edge(edges, &node.id, t));
 
         let (stem_id, div_id) = match (stem_id, div_id) {
             (Some(s), Some(d)) if s != d => (s, d),
@@ -470,38 +488,28 @@ fn resolve_pin_endpoint(
     }
 }
 
-/// Find an edge leaving `node_id` toward `target`, flipping direction if needed.
-fn find_or_orient_edge(
-    edges: &mut [EdgeToml],
-    node_id: &str,
-    target: &str,
-    prefer_stem: bool,
-) -> Option<String> {
-    for edge in edges.iter_mut() {
+/// Find a directed edge leaving `node_id` toward `target`.
+///
+/// With reverse edges (`e{N}_r`) both pin orders are present, so we never mutate
+/// forward TDB edges (vehicle pose still keys off `e{N}`).
+fn find_outgoing_edge(edges: &[EdgeToml], node_id: &str, target: &str) -> Option<String> {
+    for edge in edges {
         if edge.from == node_id && edge.to == target {
             return Some(edge.id.clone());
         }
-        if edge.to == node_id && edge.from == target {
-            std::mem::swap(&mut edge.from, &mut edge.to);
-            return Some(edge.id.clone());
-        }
     }
-    // Fallback: first outgoing edge toward target via BFS neighbor
-    for edge in edges.iter_mut() {
-        if edge.from == node_id {
-            return Some(edge.id.clone());
-        }
-        if edge.to == node_id && prefer_stem {
-            std::mem::swap(&mut edge.from, &mut edge.to);
-            return Some(edge.id.clone());
-        }
-    }
-    let _ = target;
-    None
+    edges
+        .iter()
+        .find(|e| e.from == node_id)
+        .map(|e| e.id.clone())
 }
 
 fn node_id_num(id: &str) -> Option<u32> {
     id.strip_prefix('n')?.parse().ok()
+}
+
+fn edge_id_matches_forward_or_reverse(edge_id: &str, forward_id: &str) -> bool {
+    edge_id == forward_id || edge_id == format!("{forward_id}_r")
 }
 
 fn build_signals(items: &[TrItem], item_to_edge: &HashMap<u32, String>) -> Vec<SignalToml> {
@@ -555,9 +563,10 @@ fn apply_speed_posts(
         let Some(edge_id) = item_to_edge.get(&item.id) else {
             continue;
         };
+        let reverse_id = format!("{edge_id}_r");
         let cap_kmh = speed_mph * 1.609_344;
         for edge in edges.iter_mut() {
-            if &edge.id == edge_id {
+            if &edge.id == edge_id || edge.id == reverse_id {
                 edge.speed_limit_kmh = edge.speed_limit_kmh.min(cap_kmh);
             }
         }
@@ -584,8 +593,8 @@ fn apply_restricted_zones(
         let end_edge = item_to_edge.get(&zone.item_id_end);
         for edge in edges.iter_mut() {
             let touches = match (start_edge, end_edge) {
-                (Some(s), _) if *s == edge.id => true,
-                (_, Some(e)) if *e == edge.id => true,
+                (Some(s), _) if edge_id_matches_forward_or_reverse(&edge.id, s) => true,
+                (_, Some(e)) if edge_id_matches_forward_or_reverse(&edge.id, e) => true,
                 _ => false,
             };
             if touches {
