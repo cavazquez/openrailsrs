@@ -14,8 +14,8 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
-    ShapeAnimBinding, ShapeAnimState, animation_playback_speed, build_mesh_from_shape_lod,
-    build_mesh_parts_from_shape_lod, lod_level_index_for_distance, primary_texture_filename,
+    ShapeAnimBinding, ShapeAnimState, animation_playback_speed, lod_level_index_for_distance,
+    primary_texture_filename,
     shape_has_loop_animation,
 };
 use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TileBound, TileCoord, TILE_SIZE_M};
@@ -2103,21 +2103,25 @@ fn build_shape_lod_assets(
     fallback_color: Color,
     _fallback_material: &Handle<StandardMaterial>,
 ) -> Vec<ShapeRenderAsset> {
-    let Some(control) = shape.lod_controls.first() else {
-        return Vec::new();
-    };
-    if control.distance_levels.len() <= 1 {
+    let band_count = openrailsrs_bevy_scenery::shapes::lod_band_count(shape);
+    if band_count <= 1 {
         return Vec::new();
     }
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let pbr = load_shape_pbr_sidecar(shape_path);
-    control
-        .distance_levels
-        .iter()
-        .filter_map(|level| {
-            let mesh = build_mesh_from_shape_lod(shape, level)?;
-            let parts = build_mesh_parts_from_shape_lod(shape, level);
+    (0..band_count)
+        .filter_map(|band| {
+            let parts = openrailsrs_bevy_scenery::shapes::build_mesh_parts_for_lod_band(
+                shape,
+                band,
+                openrailsrs_bevy_scenery::shapes::MeshPartBuildOptions::default(),
+            );
+            if parts.is_empty() {
+                return None;
+            }
+            // Bounds/combined mesh: first part is enough for WORLD LOD bookkeeping.
+            let mesh = parts.first()?.mesh.clone();
             let loaded = openrailsrs_bevy_scenery::shapes::LoadedShape {
                 mesh,
                 texture_file: primary_texture_filename(shape),

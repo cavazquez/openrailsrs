@@ -20,6 +20,7 @@ pub use openrailsrs_bevy_scenery::shapes::{
     MeshVertexColorMode, MeshVertexColorStats, SCENERY_TEXTURE_ALBEDO_BOOST,
     SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ShapePbrSidecar, ace_mean_luma,
     alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
+    blend_alpha_passes_from_prim_state,
     apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
     apply_z_buf_mode, brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
     build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
@@ -1587,7 +1588,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     let mut has_any_texture = false;
     let mut parts = Vec::with_capacity(loaded.parts.len().max(1));
     if loaded.parts.is_empty() {
-        let (material, or_cab_material, has_texture, is_transparent) = material_for_shape_texture(
+        let (material, or_cab_material, has_texture, is_transparent, _) = material_for_shape_texture(
             texture_dirs,
             loaded.texture_file.as_deref(),
             None,
@@ -1628,26 +1629,27 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     }
     for part in &loaded.parts {
         let tri_count = mesh_position_count(&part.mesh) / 3;
-        let (material, or_cab_material, has_texture, is_transparent) = material_for_shape_texture(
-            texture_dirs,
-            part.texture_file.as_deref(),
-            part.shader_name.as_deref(),
-            part.alpha_test_mode,
-            part.z_bias,
-            part.z_buf_mode,
-            images,
-            materials,
-            or_materials.as_deref_mut(),
-            texture_cache,
-            ace_cache,
-            fallback_color,
-            lit_override,
-            part.solid_color,
-            cab_interior,
-            train_exterior,
-            part.light_mat_idx,
-            part.tex_addr_mode,
-        );
+        let (material, or_cab_material, has_texture, is_transparent, dual_blend) =
+            material_for_shape_texture(
+                texture_dirs,
+                part.texture_file.as_deref(),
+                part.shader_name.as_deref(),
+                part.alpha_test_mode,
+                part.z_bias,
+                part.z_buf_mode,
+                images,
+                materials,
+                or_materials.as_deref_mut(),
+                texture_cache,
+                ace_cache,
+                fallback_color,
+                lit_override,
+                part.solid_color,
+                cab_interior,
+                train_exterior,
+                part.light_mat_idx,
+                part.tex_addr_mode,
+            );
         let mut mesh = part.mesh.clone();
         // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
         if or_cab_material.is_none() && !cab_interior {
@@ -1694,12 +1696,13 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             }
         }
         has_any_texture |= has_texture;
+        let mesh_handle = meshes.add(mesh);
         parts.push(ShapePartAsset {
             prim_state_idx: part.prim_state_idx,
             sub_object_idx: part.sub_object_idx,
             cab_matrix_idx: part.cab_matrix_idx,
-            mesh: meshes.add(mesh),
-            material,
+            mesh: mesh_handle.clone(),
+            material: material.clone(),
             or_cab_material,
             has_texture,
             is_transparent,
@@ -1711,6 +1714,32 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             lever_local_axis: part.lever_local_axis,
             bounds_center: part.bounds_center,
         });
+        // OR BlendATexDiff second pass: soft alpha with depth read (#101).
+        if dual_blend {
+            if let Some(base) = materials.get(&material) {
+                let mut blend_mat = base.clone();
+                blend_mat.alpha_mode = AlphaMode::Blend;
+                blend_mat.depth_bias += 0.0002;
+                let blend_handle = materials.add(blend_mat);
+                parts.push(ShapePartAsset {
+                    prim_state_idx: part.prim_state_idx,
+                    sub_object_idx: part.sub_object_idx,
+                    cab_matrix_idx: part.cab_matrix_idx,
+                    mesh: mesh_handle,
+                    material: blend_handle,
+                    or_cab_material: None,
+                    has_texture,
+                    is_transparent: true,
+                    texture_name: part.texture_file.clone(),
+                    shader_name: part.shader_name.clone(),
+                    light_mat_idx: part.light_mat_idx,
+                    solid_color: part.solid_color,
+                    lever_pivot_at_mesh_center: part.lever_pivot_at_mesh_center,
+                    lever_local_axis: part.lever_local_axis,
+                    bounds_center: part.bounds_center,
+                });
+            }
+        }
     }
 
     let asset = ShapeRenderAsset {
@@ -1878,6 +1907,7 @@ fn finish_shape_textured_part(
     bool,
     bool,
 ) {
+    // Note: dual-pass follow-up is decided by the caller (#101).
     let z_bias = clamp_msts_z_bias_for_bevy(Some(z_bias), None);
     let use_or_cab =
         cab_interior && crate::or_cab_material::or_cab_shaders_enabled() && or_materials.is_some();
@@ -2001,6 +2031,8 @@ fn material_for_shape_texture(
     Option<Handle<crate::or_cab_material::OrCabMaterial>>,
     bool,
     bool,
+    // dual_blend: spawn a second Blend draw (OR BlendATexDiff dual-pass #101).
+    bool,
 ) {
     let lit = lit_override.unwrap_or_else(scenery_materials_lit);
     let addr_key = texture_cache_addr_key(tex_addr_mode);
@@ -2045,7 +2077,7 @@ fn material_for_shape_texture(
                                 solid_color,
                                 shader_name,
                             );
-                            return finish_shape_textured_part(
+                            let (m, o, ht, it) = finish_shape_textured_part(
                                 handle,
                                 &[],
                                 tint,
@@ -2063,6 +2095,7 @@ fn material_for_shape_texture(
                                 materials,
                                 light_mat_idx,
                             );
+                            return (m, o, ht, it, false);
                         }
                     }
                 }
@@ -2082,13 +2115,22 @@ fn material_for_shape_texture(
                     }
                 };
                 if let Some(ace) = ace {
-                    let alpha_mode = if cab_interior {
-                        cab_shape_alpha_mode(&ace, tex_name, shader_name, alpha_test_mode)
+                    let (alpha_mode, dual_blend) = if cab_interior {
+                        (
+                            cab_shape_alpha_mode(&ace, tex_name, shader_name, alpha_test_mode),
+                            false,
+                        )
                     } else {
-                        alpha_mode_from_prim_state(&ace, tex_name, shader_name, alpha_test_mode)
+                        let passes = blend_alpha_passes_from_prim_state(
+                            &ace,
+                            tex_name,
+                            shader_name,
+                            alpha_test_mode,
+                        );
+                        (passes[0].alpha_mode, passes.len() > 1)
                     };
-                    let is_transparent =
-                        !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                    let is_transparent = dual_blend
+                        || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
                     let (rgba, pixel_brightened) = if cab_interior {
                         brighten_cab_ace_rgba(&ace.mip0)
                     } else {
@@ -2109,7 +2151,7 @@ fn material_for_shape_texture(
                         .entry((tex_path, addr_key))
                         .or_insert_with(|| images.add(image))
                         .clone();
-                    return finish_shape_textured_part(
+                    let (m, o, ht, it) = finish_shape_textured_part(
                         handle,
                         &rgba,
                         tint,
@@ -2127,6 +2169,7 @@ fn material_for_shape_texture(
                         materials,
                         light_mat_idx,
                     );
+                    return (m, o, ht, it, dual_blend);
                 }
             }
         }
@@ -2153,7 +2196,7 @@ fn material_for_shape_texture(
     }
     apply_train_debug_material_overrides(&mut fallback_mat);
     let material = materials.add(finalize_scenery_material(fallback_mat, lit));
-    (material, None, false, false)
+    (material, None, false, false, false)
 }
 
 /// Alpha mode for CABVIEW3D interiors (paridad `openrailsrs-render3d` / OR `TexDiff`).
@@ -2812,8 +2855,8 @@ mod tests {
         let mut materials = Assets::<StandardMaterial>::default();
         let mut texture_cache = HashMap::new();
 
-        let (handle, has_texture, is_transparent) = {
-            let (handle, _or, has_texture, is_transparent) = material_for_shape_texture(
+        let (handle, has_texture, is_transparent, dual_blend) = {
+            let (handle, _or, has_texture, is_transparent, dual_blend) = material_for_shape_texture(
                 &[route.as_path()],
                 Some("alpha_test.ace"),
                 Some("BlendATexDiff"),
@@ -2833,13 +2876,15 @@ mod tests {
                 None,
                 None,
             );
-            (handle, has_texture, is_transparent)
+            (handle, has_texture, is_transparent, dual_blend)
         };
 
         let material = materials.get(&handle).expect("material");
         assert!(has_texture);
         assert!(is_transparent);
-        assert!(matches!(material.alpha_mode, AlphaMode::Blend));
+        assert!(dual_blend, "BlendATexDiff with mid-alpha must dual-pass (#101)");
+        // First pass is OR ReferenceAlpha=250 (Mask); Blend follow-up is spawned by caller.
+        assert!(matches!(material.alpha_mode, AlphaMode::Mask(_)));
 
         let _ = std::fs::remove_file(texture);
         let _ = std::fs::remove_dir_all(route);
@@ -2904,7 +2949,7 @@ mod tests {
 
         // OR: TexDiff ignores ACE alpha unless prim_state requests alpha test.
         let (opaque_handle, _) = {
-            let (handle, _or, _has_texture, is_transparent) = material_for_shape_texture(
+            let (handle, _or, _has_texture, is_transparent, _) = material_for_shape_texture(
                 &[route.as_path()],
                 Some("body.ace"),
                 Some("TexDiff"),
@@ -2932,7 +2977,7 @@ mod tests {
         ));
 
         let (mask_handle, _) = {
-            let (handle, _or, _has_texture, _is_transparent) = material_for_shape_texture(
+            let (handle, _or, _has_texture, _is_transparent, _) = material_for_shape_texture(
                 &[route.as_path()],
                 Some("body.ace"),
                 Some("TexDiff"),
@@ -3567,18 +3612,28 @@ mod tests {
             let mut opaque = 0usize;
             let mut blend = 0usize;
             let mut mask = 0usize;
+            let mut dual_mask = 0usize;
             for part in &asset.parts {
                 let mat = materials.get(&part.material).expect("mat");
                 match mat.alpha_mode {
                     AlphaMode::Opaque => opaque += 1,
                     AlphaMode::Blend | AlphaMode::Add => blend += 1,
+                    AlphaMode::Mask(c)
+                        if (c - openrailsrs_bevy_scenery::shapes::OR_BLEND_PASS_OPAQUE_CUTOFF)
+                            .abs()
+                            < 1e-4 =>
+                    {
+                        // OR BlendATexDiff first pass (ReferenceAlpha=250), not cutout holes.
+                        dual_mask += 1;
+                        mask += 1;
+                    }
                     AlphaMode::Mask(_) => mask += 1,
                     _ => {}
                 }
             }
             assert!(
-                mask == 0,
-                "{name}: {mask} Mask parts (holes) opaque={opaque} blend={blend}"
+                mask == 0 || (dual_mask == mask && blend >= dual_mask),
+                "{name}: unexpected Mask parts (holes) mask={mask} dual={dual_mask} opaque={opaque} blend={blend}"
             );
         }
     }

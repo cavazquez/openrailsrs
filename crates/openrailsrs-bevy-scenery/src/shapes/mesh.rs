@@ -182,7 +182,102 @@ pub fn mesh_vertex_color_stats(mesh: &Mesh) -> MeshVertexColorStats {
         count: slice.len(),
     }
 }
-/// Pick the highest-detail distance level (lowest `dlevel_selection` metres).
+/// Open Rails LOD selection policy (`UserSettings.LODBias` / `LODViewingExtension`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LodPolicy {
+    /// −100…100; `100` forces highest detail (LOD0) with coarsest viewing distance.
+    pub bias: i32,
+    /// When true, the coarsest LOD keeps drawing past the shape's declared viewing distance.
+    pub viewing_extension: bool,
+    /// Global camera viewing distance cap (metres), mirrors OR `ViewingDistance`.
+    pub viewing_distance_m: f32,
+}
+
+impl Default for LodPolicy {
+    fn default() -> Self {
+        Self {
+            bias: std::env::var("OPENRAILSRS_LOD_BIAS")
+                .ok()
+                .and_then(|v| v.trim().parse().ok())
+                .unwrap_or(0)
+                .clamp(-100, 100),
+            viewing_extension: std::env::var("OPENRAILSRS_LOD_VIEWING_EXTENSION")
+                .ok()
+                .map(|v| {
+                    let t = v.trim();
+                    !(t == "0" || t.eq_ignore_ascii_case("false") || t.eq_ignore_ascii_case("off"))
+                })
+                .unwrap_or(true),
+            viewing_distance_m: std::env::var("OPENRAILSRS_VIEWING_DISTANCE")
+                .ok()
+                .and_then(|v| v.trim().parse::<f32>().ok())
+                .unwrap_or(2000.0)
+                .clamp(50.0, 20_000.0),
+        }
+    }
+}
+
+/// Indices of `control.distance_levels` sorted finest→coarsest (`dlevel_selection` ascending).
+fn sorted_level_indices(control: &openrailsrs_formats::LodControl) -> Vec<usize> {
+    let mut idxs: Vec<usize> = (0..control.distance_levels.len()).collect();
+    idxs.sort_by(|&a, &b| {
+        control.distance_levels[a]
+            .selection_m
+            .partial_cmp(&control.distance_levels[b].selection_m)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    idxs
+}
+
+/// OR `Camera.InRange` (XZ approximated by camera–object distance).
+fn lod_in_range(
+    distance_m: f32,
+    view_sphere_radius: f32,
+    viewing_distance_m: f32,
+    global_viewing_distance_m: f32,
+) -> bool {
+    let vd = viewing_distance_m.min(global_viewing_distance_m);
+    distance_m < view_sphere_radius + vd
+}
+
+/// Per-control LOD index (into `distance_levels`) using Open Rails bias / sphere / extension (#96).
+pub fn lod_level_index_for_control(
+    shape: &ShapeFile,
+    control: &openrailsrs_formats::LodControl,
+    distance_m: f32,
+    policy: LodPolicy,
+) -> usize {
+    let levels = &control.distance_levels;
+    if levels.is_empty() {
+        return 0;
+    }
+    let sorted = sorted_level_indices(control);
+    let coarsest_pos = sorted.len() - 1;
+    let sphere = shape.view_sphere_radius_or_default();
+    let lod_bias = (policy.bias as f32 / 100.0) + 1.0;
+
+    let mut display_pos = coarsest_pos;
+    if policy.bias == 100 {
+        // Maximum detail; viewing distance still uses the coarsest level (OR special case).
+        display_pos = 0;
+    } else if policy.bias > -100 {
+        while display_pos > 0 {
+            let candidate = sorted[display_pos - 1];
+            let viewing = levels[candidate].selection_m as f32 * lod_bias;
+            if lod_in_range(distance_m, sphere, viewing, policy.viewing_distance_m) {
+                display_pos -= 1;
+            } else {
+                break;
+            }
+        }
+    }
+    // `viewing_extension` is applied by callers when culling the coarsest band
+    // (OR sets that level's ViewingDistance to MaxValue after selection).
+    let _ = policy.viewing_extension;
+    sorted[display_pos]
+}
+
+/// Pick the highest-detail distance level (lowest `dlevel_selection` metres) of the first control.
 pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
     shape
         .lod_controls
@@ -196,24 +291,43 @@ pub fn closest_lod_level(shape: &ShapeFile) -> Option<&DistanceLevel> {
         })
 }
 
-/// LOD level for a camera distance (m): finest level whose `dlevel_selection` ≤ `distance_m`.
+/// Finest distance level of every `lod_control` (#97).
+pub fn closest_lod_levels(shape: &ShapeFile) -> Vec<&DistanceLevel> {
+    shape
+        .lod_controls
+        .iter()
+        .filter_map(|control| {
+            control.distance_levels.iter().min_by(|a, b| {
+                a.selection_m
+                    .partial_cmp(&b.selection_m)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+        })
+        .collect()
+}
+
+/// Selected distance level per `lod_control` at `distance_m` (#96 / #97).
+pub fn lod_levels_for_distance(
+    shape: &ShapeFile,
+    distance_m: f32,
+    policy: LodPolicy,
+) -> Vec<&DistanceLevel> {
+    shape
+        .lod_controls
+        .iter()
+        .filter_map(|control| {
+            let idx = lod_level_index_for_control(shape, control, distance_m, policy);
+            control.distance_levels.get(idx)
+        })
+        .collect()
+}
+
+/// LOD level for a camera distance (m) — first control only (compat).
 pub fn lod_level_for_distance(shape: &ShapeFile, distance_m: f32) -> Option<&DistanceLevel> {
-    let control = shape.lod_controls.first()?;
-    let levels = &control.distance_levels;
-    if levels.is_empty() {
-        return None;
-    }
-    let mut best = levels.iter().min_by(|a, b| {
-        a.selection_m
-            .partial_cmp(&b.selection_m)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    })?;
-    for lvl in levels {
-        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= best.selection_m {
-            best = lvl;
-        }
-    }
-    Some(best)
+    lod_levels_for_distance(shape, distance_m, LodPolicy::default())
+        .into_iter()
+        .next()
+        .or_else(|| closest_lod_level(shape))
 }
 
 /// Resolve the first texture referenced by the closest LOD (prim_state → `texture_filenames`).
@@ -741,43 +855,100 @@ pub fn index_to_usize(idx: i32) -> Option<usize> {
     (idx >= 0).then_some(idx as usize)
 }
 
-/// Build a Bevy mesh from the closest LOD of a parsed shape.
+/// Build a Bevy mesh from the closest LOD of every `lod_control` (#97).
 pub fn build_mesh_from_shape(shape: &ShapeFile) -> Option<Mesh> {
-    let level = closest_lod_level(shape)?;
-    build_mesh_from_shape_lod(shape, level)
+    let levels = closest_lod_levels(shape);
+    if levels.is_empty() {
+        return None;
+    }
+    if levels.len() == 1 {
+        return build_mesh_from_shape_lod(shape, levels[0]);
+    }
+    let mut buffers = MeshBuffers::default();
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    for level in levels {
+        for sub in &level.sub_objects {
+            for prim in &sub.primitives {
+                append_primitive_mesh_buffers(
+                    shape,
+                    level,
+                    sub,
+                    prim,
+                    default_normal,
+                    &mut buffers,
+                    None,
+                    false,
+                );
+            }
+        }
+    }
+    buffers.into_mesh()
 }
 
-/// Build one Bevy mesh per `prim_state_idx` from the closest LOD.
+/// Build one Bevy mesh per `prim_state_idx` from every control's closest LOD (#97).
 pub fn build_mesh_parts_from_shape(shape: &ShapeFile) -> Vec<LoadedShapePart> {
-    let Some(level) = closest_lod_level(shape) else {
-        return Vec::new();
-    };
-    build_mesh_parts_from_shape_lod(shape, level)
+    let mut parts = Vec::new();
+    for level in closest_lod_levels(shape) {
+        parts.extend(build_mesh_parts_from_shape_lod(shape, level));
+    }
+    parts
 }
 
-/// Index of the distance level chosen for `distance_m` (0 = finest declared LOD).
+/// Index of the distance level chosen for `distance_m` on the first `lod_control`.
+///
+/// Uses Open Rails LODBias / ViewSphereRadius / viewing-distance policy (#96).
 pub fn lod_level_index_for_distance(shape: &ShapeFile, distance_m: f32) -> usize {
+    lod_level_index_for_distance_with_policy(shape, distance_m, LodPolicy::default())
+}
+
+/// Like [`lod_level_index_for_distance`] with an explicit [`LodPolicy`].
+pub fn lod_level_index_for_distance_with_policy(
+    shape: &ShapeFile,
+    distance_m: f32,
+    policy: LodPolicy,
+) -> usize {
     let Some(control) = shape.lod_controls.first() else {
         return 0;
     };
-    let levels = &control.distance_levels;
-    if levels.is_empty() {
-        return 0;
-    }
-    let mut best_idx = 0usize;
-    for (i, lvl) in levels.iter().enumerate() {
-        if (lvl.selection_m as f32) <= distance_m && lvl.selection_m >= levels[best_idx].selection_m
-        {
-            best_idx = i;
-        }
-    }
-    best_idx
+    lod_level_index_for_control(shape, control, distance_m, policy)
 }
 
 /// Build mesh choosing LOD from camera distance (m) to the shape origin.
 pub fn build_mesh_from_shape_at_distance(shape: &ShapeFile, distance_m: f32) -> Option<Mesh> {
-    let level = lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))?;
-    build_mesh_from_shape_lod(shape, level)
+    let levels = lod_levels_for_distance(shape, distance_m, LodPolicy::default());
+    if levels.is_empty() {
+        return build_mesh_from_shape(shape);
+    }
+    if levels.len() == 1 {
+        return build_mesh_from_shape_lod(shape, levels[0]);
+    }
+    let mut buffers = MeshBuffers::default();
+    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    });
+    for level in levels {
+        for sub in &level.sub_objects {
+            for prim in &sub.primitives {
+                append_primitive_mesh_buffers(
+                    shape,
+                    level,
+                    sub,
+                    prim,
+                    default_normal,
+                    &mut buffers,
+                    None,
+                    false,
+                );
+            }
+        }
+    }
+    buffers.into_mesh()
 }
 
 /// Build mesh parts choosing LOD from camera distance (m) to the shape origin.
@@ -798,12 +969,50 @@ pub fn build_mesh_parts_from_shape_at_distance_with_options(
     distance_m: f32,
     options: MeshPartBuildOptions,
 ) -> Vec<LoadedShapePart> {
-    let Some(level) =
-        lod_level_for_distance(shape, distance_m).or_else(|| closest_lod_level(shape))
-    else {
-        return Vec::new();
-    };
-    build_mesh_parts_from_shape_lod_with_options(shape, level, options)
+    let levels = lod_levels_for_distance(shape, distance_m, LodPolicy::default());
+    if levels.is_empty() {
+        return build_mesh_parts_from_shape(shape);
+    }
+    let mut parts = Vec::new();
+    for level in levels {
+        parts.extend(build_mesh_parts_from_shape_lod_with_options(
+            shape, level, options,
+        ));
+    }
+    parts
+}
+
+/// Merge geometry from every `lod_control` at sorted level band `band_idx` (#97).
+///
+/// `band_idx` 0 = finest declared band across controls; higher = coarser.
+pub fn build_mesh_parts_for_lod_band(
+    shape: &ShapeFile,
+    band_idx: usize,
+    options: MeshPartBuildOptions,
+) -> Vec<LoadedShapePart> {
+    let mut parts = Vec::new();
+    for control in &shape.lod_controls {
+        let sorted = sorted_level_indices(control);
+        if sorted.is_empty() {
+            continue;
+        }
+        let pos = band_idx.min(sorted.len() - 1);
+        let level = &control.distance_levels[sorted[pos]];
+        parts.extend(build_mesh_parts_from_shape_lod_with_options(
+            shape, level, options,
+        ));
+    }
+    parts
+}
+
+/// Number of LOD bands for WORLD asset caching (max levels across controls).
+pub fn lod_band_count(shape: &ShapeFile) -> usize {
+    shape
+        .lod_controls
+        .iter()
+        .map(|c| c.distance_levels.len())
+        .max()
+        .unwrap_or(0)
 }
 
 /// Options used by render3d WORLD spawn: keep night sub-objects + bake anim key 0.
@@ -1135,5 +1344,56 @@ mod tests {
         }
         // Idempotent.
         assert!(ensure_tangents_for_normal_mapping(&mut mesh));
+    }
+
+    fn two_level_shape() -> ShapeFile {
+        let mut shape = unit_quad_shape(true);
+        shape.view_sphere_radius = 50.0;
+        let fine = shape.lod_controls[0].distance_levels[0].clone();
+        let mut coarse = fine.clone();
+        coarse.selection_m = 2000.0;
+        shape.lod_controls[0].distance_levels = vec![fine, coarse];
+        shape
+    }
+
+    #[test]
+    fn lod_bias_100_selects_finest_level() {
+        let shape = two_level_shape();
+        let policy = LodPolicy {
+            bias: 100,
+            viewing_extension: true,
+            viewing_distance_m: 2000.0,
+        };
+        let idx = lod_level_index_for_distance_with_policy(&shape, 1500.0, policy);
+        assert_eq!(idx, 0, "LODBias=100 must force highest detail");
+    }
+
+    #[test]
+    fn lod_policy_picks_coarser_level_at_long_range() {
+        let shape = two_level_shape();
+        let policy = LodPolicy {
+            bias: 0,
+            viewing_extension: true,
+            viewing_distance_m: 4000.0,
+        };
+        let near = lod_level_index_for_distance_with_policy(&shape, 100.0, policy);
+        let far = lod_level_index_for_distance_with_policy(&shape, 2500.0, policy);
+        assert_eq!(near, 0);
+        assert_eq!(far, 1);
+    }
+
+    #[test]
+    fn multi_lod_control_builds_parts_from_all_controls() {
+        let mut shape = unit_quad_shape(true);
+        let second = shape.lod_controls[0].clone();
+        shape.lod_controls.push(second);
+        assert_eq!(closest_lod_levels(&shape).len(), 2);
+        let parts = build_mesh_parts_from_shape(&shape);
+        // Two controls × one prim_state each → two parts (same prim idx, both kept).
+        assert!(
+            parts.len() >= 2,
+            "expected geometry from both lod_controls, got {}",
+            parts.len()
+        );
     }
 }

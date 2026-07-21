@@ -303,9 +303,20 @@ pub struct ShapeFile {
     pub light_model_cfgs: Vec<LightModelCfg>,
     /// Animations from `animations` (empty for static shapes).
     pub animations: Vec<Animation>,
+    /// First `volumes/vol_sphere` radius (Open Rails `ViewSphereRadius`); default 100.
+    pub view_sphere_radius: f32,
 }
 
 impl ShapeFile {
+    /// Open Rails `ViewSphereRadius` (first volume sphere, else 100 m).
+    pub fn view_sphere_radius_or_default(&self) -> f32 {
+        if self.view_sphere_radius.is_finite() && self.view_sphere_radius > 0.0 {
+            self.view_sphere_radius
+        } else {
+            DEFAULT_VIEW_SPHERE_RADIUS
+        }
+    }
+
     /// Parse from a pre-built AST.
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let texture_filenames = collect_texture_filenames(ast);
@@ -319,6 +330,7 @@ impl ShapeFile {
         let matrices = collect_matrices(ast);
         let vtx_states = collect_vtx_states(ast);
         let light_model_cfgs = collect_light_model_cfgs(ast);
+        let view_sphere_radius = collect_view_sphere_radius(ast);
 
         Ok(Self {
             texture_filenames,
@@ -333,6 +345,7 @@ impl ShapeFile {
             vtx_states,
             light_model_cfgs,
             animations: collect_animations(ast),
+            view_sphere_radius,
         })
     }
 
@@ -699,6 +712,42 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
         alpha_test_mode,
         z_buf_mode,
     }
+}
+
+/// Open Rails default when a shape has no `volumes` entry.
+pub const DEFAULT_VIEW_SPHERE_RADIUS: f32 = 100.0;
+
+/// First `vol_sphere` radius under `volumes` (OR `ViewSphereRadius`).
+fn collect_view_sphere_radius(ast: &Ast) -> f32 {
+    let mut radius = None;
+    walk_named_list(ast, "volumes", &mut |items| {
+        if radius.is_some() {
+            return;
+        }
+        for_each_tagged(items, "vol_sphere", |sphere| {
+            if radius.is_some() {
+                return;
+            }
+            // Typical: ( vol_sphere ( vector x y z ) <radius> ) — take last number.
+            let mut last = None;
+            for item in sphere.iter().skip(1) {
+                match item {
+                    Ast::Atom(at) => {
+                        if let Some(n) = atom_to_number(at) {
+                            last = Some(n as f32);
+                        }
+                    }
+                    Ast::List(_) => {
+                        // vector block — ignore; radius is a top-level atom
+                    }
+                }
+            }
+            if let Some(r) = last.filter(|r| r.is_finite() && *r > 0.0) {
+                radius = Some(r);
+            }
+        });
+    });
+    radius.unwrap_or(DEFAULT_VIEW_SPHERE_RADIUS)
 }
 
 fn collect_lod_controls(ast: &Ast) -> Vec<LodControl> {

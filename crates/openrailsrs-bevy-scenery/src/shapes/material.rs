@@ -451,32 +451,80 @@ pub fn apply_z_buf_mode(mat: &mut StandardMaterial, z_buf_mode: i32) {
     }
 }
 
+/// Open Rails dual-pass cutoffs for BlendATex* (`ReferenceAlpha` 250 then 10).
+pub const OR_BLEND_PASS_OPAQUE_CUTOFF: f32 = 250.0 / 255.0;
+pub const OR_BLEND_PASS_TRANS_CUTOFF: f32 = 10.0 / 255.0;
+
+/// One draw for Open Rails BlendATex* dual-pass (#101).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BlendAlphaPass {
+    pub alpha_mode: AlphaMode,
+    /// True for the nearly-opaque pass (depth write via Mask).
+    pub depth_write_pass: bool,
+}
+
 /// Determine the Bevy [`AlphaMode`] for a texture+shader combination.
 ///
 /// Priority order:
 /// 1. `prim_state.alpha_test_mode` when explicitly set (0 = opaque, 1 = test, 2 = blend).
 /// 2. Texture pixel analysis (semi-transparent pixels → blend, alpha-only → mask).
 /// 3. Shader name / texture name heuristics.
+///
+/// For BlendATex* with semi-transparent texels, prefer [`blend_alpha_passes_from_prim_state`]
+/// so callers can spawn Open Rails' dual draw (Mask 250 + Blend).
 pub fn alpha_mode_from_prim_state(
     ace: &AceFile,
     texture_file: &str,
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
+    blend_alpha_passes_from_prim_state(ace, texture_file, shader_name, alpha_test_mode)[0].alpha_mode
+}
+
+/// Open Rails dual-pass for BlendATex / BlendATexDiff (#101).
+///
+/// Returns two passes when the shader is blend-capable and the ACE has
+/// semi-transparent texels: (1) `Mask(250/255)` depth-write, (2) `Blend`
+/// for the soft edges. Otherwise a single pass.
+pub fn blend_alpha_passes_from_prim_state(
+    ace: &AceFile,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> Vec<BlendAlphaPass> {
     let blend_shader = shader_name
         .map(shape_shader_requests_blending)
         .unwrap_or(false);
 
     // Honour explicit prim_state flags, except alpha-test on blend-capable shaders:
     // OR still runs BlendATexDiff via dual-pass blend (ReferenceAlpha 250/10), not cutout.
-    match alpha_test_mode {
-        0 if !blend_shader => return AlphaMode::Opaque,
-        1 if !blend_shader => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
-        2 => return AlphaMode::Blend,
-        _ => {}
+    let single = match alpha_test_mode {
+        0 if !blend_shader => AlphaMode::Opaque,
+        1 if !blend_shader => AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
+        2 => AlphaMode::Blend,
+        _ => shape_alpha_mode(ace, texture_file, shader_name),
+    };
+
+    if blend_shader && matches!(single, AlphaMode::Blend) {
+        let stats = shape_alpha_stats(ace);
+        if stats.has_semitransparent || texture_name_suggests_transparency(texture_file) {
+            return vec![
+                BlendAlphaPass {
+                    alpha_mode: AlphaMode::Mask(OR_BLEND_PASS_OPAQUE_CUTOFF),
+                    depth_write_pass: true,
+                },
+                BlendAlphaPass {
+                    alpha_mode: AlphaMode::Blend,
+                    depth_write_pass: false,
+                },
+            ];
+        }
     }
-    // Fall back to the per-texture heuristic.
-    shape_alpha_mode(ace, texture_file, shader_name)
+
+    vec![BlendAlphaPass {
+        alpha_mode: single,
+        depth_write_pass: matches!(single, AlphaMode::Opaque | AlphaMode::Mask(_)),
+    }]
 }
 
 pub fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
@@ -537,4 +585,51 @@ pub fn shape_shader_requests_blending(shader_name: &str) -> bool {
         shader_name,
         "BlendATex" | "BlendATexDiff" | "AddATex" | "AddATexDiff"
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_ace::AceFile;
+
+    fn ace_with_semitransparent() -> AceFile {
+        // 2×2 RGBA with mid-alpha texels.
+        let mut mip0 = Vec::new();
+        for a in [255u8, 128, 64, 255] {
+            mip0.extend_from_slice(&[200, 200, 200, a]);
+        }
+        AceFile {
+            width: 2,
+            height: 2,
+            format: openrailsrs_ace::AceFormat::Rgba8,
+            mips_count: 1,
+            mip0,
+            mips: Vec::new(),
+            has_mask_channel: false,
+            alpha_bits: 8,
+        }
+    }
+
+    #[test]
+    fn blend_atex_diff_dual_pass_when_semitransparent() {
+        let ace = ace_with_semitransparent();
+        let passes =
+            blend_alpha_passes_from_prim_state(&ace, "glass.ace", Some("BlendATexDiff"), -1);
+        assert_eq!(passes.len(), 2);
+        assert!(matches!(
+            passes[0].alpha_mode,
+            AlphaMode::Mask(c) if (c - OR_BLEND_PASS_OPAQUE_CUTOFF).abs() < 1e-5
+        ));
+        assert!(matches!(passes[1].alpha_mode, AlphaMode::Blend));
+        assert!(passes[0].depth_write_pass);
+        assert!(!passes[1].depth_write_pass);
+    }
+
+    #[test]
+    fn texdiff_stays_single_opaque_pass() {
+        let ace = ace_with_semitransparent();
+        let passes = blend_alpha_passes_from_prim_state(&ace, "body.ace", Some("TexDiff"), -1);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(passes[0].alpha_mode, AlphaMode::Opaque));
+    }
 }

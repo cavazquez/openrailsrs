@@ -34,9 +34,19 @@ pub(crate) struct WaterSurface {
     is_reflection: bool,
 }
 
+/// Bevy approximation of OR `RenderItem.Comparer` water Y tie-break (#107).
+///
+/// Higher surfaces get a more negative `depth_bias` so they win over lower
+/// HWater layers when distances are nearly equal and the camera is above water.
+/// Exact OR sort (distance + Y sign) is not available in Bevy's transparent pass.
+fn water_depth_bias_for_surface_y(surface_y: f32) -> f32 {
+    -surface_y * 0.002
+}
+
 fn water_material(
     materials: &mut Assets<StandardMaterial>,
     texture: Option<Handle<Image>>,
+    surface_y: f32,
 ) -> Handle<StandardMaterial> {
     materials.add(StandardMaterial {
         base_color: COLOR_WATER,
@@ -47,11 +57,15 @@ fn water_material(
         reflectance: 0.75,
         alpha_mode: AlphaMode::Blend,
         double_sided: true,
+        depth_bias: water_depth_bias_for_surface_y(surface_y),
         ..default()
     })
 }
 
-fn reflection_material(materials: &mut Assets<StandardMaterial>) -> Handle<StandardMaterial> {
+fn reflection_material(
+    materials: &mut Assets<StandardMaterial>,
+    surface_y: f32,
+) -> Handle<StandardMaterial> {
     materials.add(StandardMaterial {
         base_color: COLOR_WATER_REFLECT,
         emissive: LinearRgba::from(Color::srgb(0.05, 0.16, 0.28)) * 0.2,
@@ -59,6 +73,8 @@ fn reflection_material(materials: &mut Assets<StandardMaterial>) -> Handle<Stand
         reflectance: 0.85,
         alpha_mode: AlphaMode::Blend,
         double_sided: true,
+        // Slightly behind the main surface at the same Y.
+        depth_bias: water_depth_bias_for_surface_y(surface_y) + 0.0005,
         ..default()
     })
 }
@@ -110,8 +126,6 @@ pub fn spawn_water_objects(
         return;
     }
 
-    let default_material = water_material(materials, None);
-    let reflect_material = reflection_material(materials);
     let mut texture_cache: std::collections::HashMap<String, Handle<Image>> =
         std::collections::HashMap::new();
 
@@ -142,10 +156,11 @@ pub fn spawn_water_objects(
 
         let material = if texture.is_some() {
             textured += 1;
-            water_material(materials, texture)
+            water_material(materials, texture, base_y)
         } else {
-            default_material.clone()
+            water_material(materials, None, base_y)
         };
+        let reflect_mat = reflection_material(materials, base_y);
 
         let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z));
         commands.spawn((
@@ -169,7 +184,7 @@ pub fn spawn_water_objects(
                 is_reflection: true,
             },
             Mesh3d(mesh),
-            MeshMaterial3d(reflect_material.clone()),
+            MeshMaterial3d(reflect_mat),
             Transform::from_translation(reflect_render)
                 .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
             Name::new(format!("water-reflect:{}:{}", obj.label, patch.uid)),
@@ -207,6 +222,13 @@ mod tests {
 
     use crate::terrain::TerrainElevation;
     use crate::world::load_world_from_route_dir;
+
+    #[test]
+    fn higher_water_gets_more_negative_depth_bias() {
+        let low = water_depth_bias_for_surface_y(10.0);
+        let high = water_depth_bias_for_surface_y(20.0);
+        assert!(high < low, "higher Y must sort nearer from above (OR #107)");
+    }
 
     #[test]
     fn explicit_y_overrides_terrain() {
