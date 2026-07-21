@@ -4,8 +4,11 @@
 //!
 //! Visual graph↔TDB correspondence must be spatially validated: a raw `nNNNN` /
 //! import alias ID is accepted only when the TDB pose lies within
-//! [`TDB_ID_MAX_DELTA_M`] of the graph hint. Otherwise nearest-centreline snap
-//! or graph fallback is used (simulation odometry stays on the graph).
+//! [`TDB_ID_MAX_DELTA_M`] of the **absolute** graph position (before
+//! [`RouteWorldOffset`]). The offset is re-applied to the accepted pose so
+//! markers stay in the same placement frame as the trimmed graph (Chiltern
+//! `world_anchor`). Otherwise nearest-centreline snap or graph fallback is used
+//! (simulation odometry stays on the graph).
 
 use std::collections::HashMap;
 
@@ -169,28 +172,37 @@ impl<'a> TrackPositionResolver<'a> {
     }
 
     /// Resolve a graph node to a visual TDB pose with spatial ID validation.
+    ///
+    /// `graph_hint` is in the **placement frame** (graph + `route_offset`).
+    /// ID acceptance compares `graph_hint - route_offset` to the absolute TDB
+    /// pose; on success the returned pose is shifted by `route_offset` so it
+    /// stays aligned with the trimmed graph / `world_anchor` scenery.
     pub fn resolve_graph_node_visual(
         &self,
         node_id: &str,
         chainage_m: f64,
         graph_hint: Option<Vec3>,
         snap_radius_m: f32,
+        route_offset: Vec3,
     ) -> GraphTdbResolution {
         let mut id_delta_m = None;
         let mut rejected_tdb_id = None;
+        let absolute_hint = graph_hint.map(|h| h - route_offset);
 
         if let Some(id) = self.candidate_tdb_id(node_id) {
-            if let Some(pose) = self.tdb_pose(id, chainage_m, graph_hint) {
-                match graph_hint {
+            if let Some(pose) = self.tdb_pose(id, chainage_m, absolute_hint) {
+                match absolute_hint {
                     Some(hint) => {
                         let delta =
                             Vec2::new(hint.x - pose.position.x, hint.z - pose.position.z).length();
                         id_delta_m = Some(delta);
                         if delta <= TDB_ID_MAX_DELTA_M {
+                            let mut placed = pose;
+                            placed.position += route_offset;
                             return GraphTdbResolution {
                                 method: GraphTdbMethod::IdValidated,
                                 tdb_node_id: Some(id),
-                                pose: Some(pose),
+                                pose: Some(placed),
                                 id_delta_m,
                                 rejected_tdb_id: None,
                             };
@@ -374,8 +386,13 @@ pub fn track_position_on_graph_node(
     chainage_m: f64,
 ) -> TrackNodePlacement {
     let graph_world = graph_position_at_route_node(scene, scenario, offset, node_id);
-    let resolved =
-        resolver.resolve_graph_node_visual(node_id, chainage_m, graph_world, tdb_snap_radius_m());
+    let resolved = resolver.resolve_graph_node_visual(
+        node_id,
+        chainage_m,
+        graph_world,
+        tdb_snap_radius_m(),
+        offset.delta,
+    );
     TrackNodePlacement {
         node_id: node_id.to_string(),
         graph_world,
@@ -440,8 +457,13 @@ pub fn marker_render_world_at_node(
 ) -> Option<Vec3> {
     if let Some(res) = resolver {
         let near = graph_node_world(scene, offset, node_id).or(graph_fallback);
-        let resolved =
-            res.resolve_graph_node_visual(node_id, chainage_m, near, tdb_snap_radius_m());
+        let resolved = res.resolve_graph_node_visual(
+            node_id,
+            chainage_m,
+            near,
+            tdb_snap_radius_m(),
+            offset.delta,
+        );
         if let Some(pose) = resolved.pose {
             let mut world = pose.position;
             world.y = ground_y_at(terrain, world.x, world.z, scene);
@@ -531,10 +553,16 @@ fn snap_waypoint_msts(
     wp: &CorridorWaypoint,
     resolver: &TrackPositionResolver<'_>,
     snap_radius_m: f32,
+    route_offset: Vec3,
 ) -> (Vec3, GraphTdbResolution) {
     if let Some(node_id) = &wp.node_id {
-        let resolved =
-            resolver.resolve_graph_node_visual(node_id, 0.0, Some(wp.msts_hint), snap_radius_m);
+        let resolved = resolver.resolve_graph_node_visual(
+            node_id,
+            0.0,
+            Some(wp.msts_hint),
+            snap_radius_m,
+            route_offset,
+        );
         let pos = resolved
             .pose
             .as_ref()
@@ -572,6 +600,7 @@ pub fn snap_corridor_path_to_tdb(
     node_ids: &[Option<String>],
     resolver: &TrackPositionResolver<'_>,
     snap_radius_m: f32,
+    route_offset: Vec3,
 ) -> CorridorSnapStats {
     let mut stats = CorridorSnapStats {
         total: points.len(),
@@ -582,7 +611,7 @@ pub fn snap_corridor_path_to_tdb(
             msts_hint: *pt,
             node_id: node_id.clone(),
         };
-        let (snapped, resolved) = snap_waypoint_msts(&wp, resolver, snap_radius_m);
+        let (snapped, resolved) = snap_waypoint_msts(&wp, resolver, snap_radius_m, route_offset);
         *pt = snapped;
         if resolved.rejected_tdb_id.is_some() {
             stats.rejected_tdb_id += 1;
@@ -672,7 +701,13 @@ pub fn build_snapped_corridor_path(
     let resolver = TrackPositionResolver::from_track_scene(tdb, tsection, scene);
     let node_ids: Vec<Option<String>> = waypoints.iter().map(|w| w.node_id.clone()).collect();
     let mut points: Vec<Vec3> = waypoints.iter().map(|w| w.msts_hint).collect();
-    let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, tdb_snap_radius_m());
+    let stats = snap_corridor_path_to_tdb(
+        &mut points,
+        &node_ids,
+        &resolver,
+        tdb_snap_radius_m(),
+        route_delta,
+    );
     for (wp, pt) in waypoints.iter_mut().zip(points.iter()) {
         wp.msts_hint = *pt;
     }
@@ -752,8 +787,13 @@ mod tests {
             .tdb_pose(2, 0.0, None)
             .expect("vector node 2 on fixture");
         let far_hint = tdb_pos.position + Vec3::new(1800.0, 0.0, 1800.0);
-        let resolved =
-            resolver.resolve_graph_node_visual("n2", 0.0, Some(far_hint), tdb_snap_radius_m());
+        let resolved = resolver.resolve_graph_node_visual(
+            "n2",
+            0.0,
+            Some(far_hint),
+            tdb_snap_radius_m(),
+            Vec3::ZERO,
+        );
         assert_eq!(resolved.rejected_tdb_id, Some(2));
         assert_ne!(resolved.method, GraphTdbMethod::IdValidated);
         assert!(resolved.id_delta_m.unwrap_or(0.0) > TDB_ID_MAX_DELTA_M);
@@ -772,11 +812,51 @@ mod tests {
             .tdb_pose(2, 0.0, None)
             .expect("vector node 2 on fixture");
         let near_hint = tdb_pos.position + Vec3::new(5.0, 0.0, 0.0);
-        let resolved =
-            resolver.resolve_graph_node_visual("n2", 0.0, Some(near_hint), tdb_snap_radius_m());
+        let resolved = resolver.resolve_graph_node_visual(
+            "n2",
+            0.0,
+            Some(near_hint),
+            tdb_snap_radius_m(),
+            Vec3::ZERO,
+        );
         assert_eq!(resolved.method, GraphTdbMethod::IdValidated);
         assert_eq!(resolved.tdb_node_id, Some(2));
         assert!(resolved.id_delta_m.unwrap_or(999.0) <= TDB_ID_MAX_DELTA_M);
+    }
+
+    #[test]
+    fn resolve_accepts_id_when_hint_includes_world_anchor_offset() {
+        // Chiltern-style: placement hint carries RouteWorldOffset (~km), but the
+        // absolute graph↔TDB match is centimetres — must still IdValidate.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let tdb_pos = resolver
+            .tdb_pose(2, 0.0, None)
+            .expect("vector node 2 on fixture");
+        let offset = Vec3::new(1835.0, 0.0, 12.0);
+        let placement_hint = tdb_pos.position + Vec3::new(3.0, 0.0, 0.0) + offset;
+        let resolved = resolver.resolve_graph_node_visual(
+            "n2",
+            0.0,
+            Some(placement_hint),
+            tdb_snap_radius_m(),
+            offset,
+        );
+        assert_eq!(resolved.method, GraphTdbMethod::IdValidated);
+        assert_eq!(resolved.tdb_node_id, Some(2));
+        assert!(resolved.rejected_tdb_id.is_none());
+        assert!(resolved.id_delta_m.unwrap_or(999.0) <= TDB_ID_MAX_DELTA_M);
+        let placed = resolved.pose.expect("placed pose").position;
+        let expected = tdb_pos.position + offset;
+        assert!(
+            Vec2::new(placed.x - expected.x, placed.z - expected.z).length() < 1.0,
+            "validated pose must re-apply route offset for placement frame"
+        );
     }
 
     #[test]
@@ -934,7 +1014,8 @@ mod tests {
         let hint = tdb_pos.position + Vec3::new(8.0, 0.0, 0.0);
         let mut points = vec![hint];
         let node_ids = vec![Some("n2".to_string())];
-        let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0);
+        let stats =
+            snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0, Vec3::ZERO);
         assert_eq!(stats.snapped_tdb_node, 1);
         assert_eq!(stats.rejected_tdb_id, 0);
         assert!((points[0] - tdb_pos.position).length() < 5.0);
@@ -955,7 +1036,8 @@ mod tests {
         let hint = tdb_pos.position + Vec3::new(1800.0, 0.0, 1800.0);
         let mut points = vec![hint];
         let node_ids = vec![Some("n2".to_string())];
-        let stats = snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0);
+        let stats =
+            snap_corridor_path_to_tdb(&mut points, &node_ids, &resolver, 2500.0, Vec3::ZERO);
         assert_eq!(stats.snapped_tdb_node, 0);
         assert_eq!(stats.rejected_tdb_id, 1);
         assert!((points[0] - tdb_pos.position).length() > 100.0);
