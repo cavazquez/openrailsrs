@@ -56,6 +56,8 @@ pub struct StopPlacementSample {
     /// Position used by gameplay markers (TDB when available).
     pub marker_bevy: Option<[f32; 3]>,
     pub delta_graph_tdb_xz_m: Option<f32>,
+    /// Marker Y − TDB Y when both exist (render-space vs MSTS absolute — see note in audit).
+    pub delta_marker_tdb_y_m: Option<f32>,
     /// `id_validated` | `nearest` | `graph_fallback`
     pub mapping_method: String,
     /// XZ distance to the raw/alias ID pose even when rejected.
@@ -70,6 +72,14 @@ pub struct SceneryCandidate {
     pub file_name: Option<String>,
     pub bevy: [f32; 3],
     pub delta_to_nearest_tdb_xz_m: Option<f32>,
+    /// Object Y − nearest TDB centreline Y (metres). Negative ⇒ object below rail.
+    pub delta_y_m: Option<f32>,
+    /// `|pitch_obj − pitch_tdb|` when both poses expose pitch (#65); else omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delta_pitch_rad: Option<f32>,
+    /// `|roll_obj − roll_tdb|` when both poses expose roll (#65); else omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delta_roll_rad: Option<f32>,
     pub delta_to_graph_stop_xz_m: Option<f32>,
     /// Present when `delta_to_nearest_tdb_xz_m` is `None`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -82,16 +92,27 @@ pub struct PlacementDeltas {
     pub anchor_vs_graph_start_xz_m: Option<f32>,
     pub graph_start_vs_trk_start_xz_m: Option<f32>,
     pub max_scenery_to_tdb_xz_m: Option<f32>,
+    /// Largest |ΔY| among scenery with a TDB match (metres).
+    pub max_scenery_to_tdb_abs_dy_m: Option<f32>,
     /// Vector nodes indexed on the audit tile (exact).
     pub tdb_vector_nodes_on_tile: usize,
     /// Vector nodes in the 3×3 tile ring around the audit tile.
     pub tdb_vector_nodes_in_ring: usize,
     pub scenery_with_tdb_match: usize,
     pub scenery_without_tdb_match: usize,
+    /// Scenery Y significantly below nearest TDB (`delta_y_m < -`[`BURIED_Y_THRESHOLD_M`]).
+    pub scenery_buried_vs_tdb: usize,
+    /// Scenery Y significantly above nearest TDB (`delta_y_m > `[`FLOATING_Y_THRESHOLD_M`]).
+    pub scenery_floating_vs_tdb: usize,
 }
 
 /// Search radius for WORLD→TDB centreline (metres).
 const SCENERY_TDB_RADIUS_M: f32 = 250.0;
+
+/// Object below TDB rail by more than this (m) → buried (e.g. rail flattened to terrain).
+pub const BURIED_Y_THRESHOLD_M: f32 = 2.0;
+/// Object above TDB by more than this (m) → floating.
+pub const FLOATING_Y_THRESHOLD_M: f32 = 5.0;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WorldAnchorInput {
@@ -199,11 +220,23 @@ pub fn run_placement_audit(
         .iter()
         .filter_map(|c| c.delta_to_nearest_tdb_xz_m)
         .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let max_scenery_abs_dy = scenery_candidates
+        .iter()
+        .filter_map(|c| c.delta_y_m.map(f32::abs))
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let scenery_with_tdb_match = scenery_candidates
         .iter()
         .filter(|c| c.delta_to_nearest_tdb_xz_m.is_some())
         .count();
     let scenery_without_tdb_match = scenery_candidates.len() - scenery_with_tdb_match;
+    let scenery_buried_vs_tdb = scenery_candidates
+        .iter()
+        .filter(|c| c.delta_y_m.is_some_and(|dy| dy < -BURIED_Y_THRESHOLD_M))
+        .count();
+    let scenery_floating_vs_tdb = scenery_candidates
+        .iter()
+        .filter(|c| c.delta_y_m.is_some_and(|dy| dy > FLOATING_Y_THRESHOLD_M))
+        .count();
 
     PlacementAuditReport {
         tile_x: tile.0,
@@ -241,10 +274,13 @@ pub fn run_placement_audit(
                 _ => None,
             },
             max_scenery_to_tdb_xz_m: max_scenery_tdb,
+            max_scenery_to_tdb_abs_dy_m: max_scenery_abs_dy,
             tdb_vector_nodes_on_tile: tdb_on_tile,
             tdb_vector_nodes_in_ring: tdb_in_ring,
             scenery_with_tdb_match,
             scenery_without_tdb_match,
+            scenery_buried_vs_tdb,
+            scenery_floating_vs_tdb,
         },
     }
 }
@@ -290,6 +326,14 @@ fn stop_sample(
         focus,
         p.graph_world,
     );
+    // Compare absolute TDB Y to marker after undoing height_origin (same MSTS frame).
+    let delta_marker_tdb_y = match (marker, p.tdb_pose) {
+        (Some(m), Some(pose)) => {
+            let marker_msl = m.y + focus.height_origin;
+            Some(marker_msl - pose.position.y)
+        }
+        _ => None,
+    };
     StopPlacementSample {
         node_id: p.node_id,
         graph_bevy: p.graph_world.map(vec3_to_arr),
@@ -297,6 +341,7 @@ fn stop_sample(
         tdb_bevy: p.tdb_pose.map(|pose| vec3_to_arr(pose.position)),
         marker_bevy: marker.map(vec3_to_arr),
         delta_graph_tdb_xz_m: delta,
+        delta_marker_tdb_y_m: delta_marker_tdb_y,
         mapping_method: p.method.as_str().to_string(),
         id_delta_m: p.id_delta_m,
         rejected_tdb_id: p.rejected_tdb_id,
@@ -345,6 +390,18 @@ fn collect_scenery_candidates(
         let delta_tdb = tdb_near.map(|p| {
             Vec2::new(obj.position.x - p.position.x, obj.position.z - p.position.z).length()
         });
+        let delta_y = tdb_near.map(|p| obj.position.y - p.position.y);
+        // WORLD Matrix3×3 / QDirection pitch-roll vs TDB pose when available (#65/#70).
+        let (delta_pitch, delta_roll) = match tdb_near {
+            Some(pose) => {
+                let (obj_pitch, obj_roll) = world_object_pitch_roll(obj);
+                (
+                    Some((obj_pitch - pose.pitch_rad).abs()),
+                    Some((obj_roll - pose.roll_rad).abs()),
+                )
+            }
+            None => (None, None),
+        };
         let miss_reason = if delta_tdb.is_some() {
             None
         } else {
@@ -363,6 +420,9 @@ fn collect_scenery_candidates(
             file_name: name,
             bevy: vec3_to_arr(obj.position),
             delta_to_nearest_tdb_xz_m: delta_tdb,
+            delta_y_m: delta_y,
+            delta_pitch_rad: delta_pitch,
+            delta_roll_rad: delta_roll,
             delta_to_graph_stop_xz_m: delta_graph,
             nearest_tdb_miss_reason: miss_reason,
         });
@@ -418,12 +478,15 @@ fn vec3_from_arr(a: [f32; 3]) -> Vec3 {
 
 pub fn log_placement_audit(report: &PlacementAuditReport) {
     crate::viewer_log!(
-        "openrailsrs-viewer3d: placement-audit tile {},{} — anchor vs trk {} | anchor vs graph {} | max scenery→tdb {} | tdb match {}/{} (vectors tile/ring {}/{})",
+        "openrailsrs-viewer3d: placement-audit tile {},{} — anchor vs trk {} | anchor vs graph {} | max scenery→tdb {} | max |ΔY| {} | buried/floating {}/{} | tdb match {}/{} (vectors tile/ring {}/{})",
         report.tile_x,
         report.tile_z,
         fmt_opt_m(report.deltas.anchor_vs_trk_start_xz_m),
         fmt_opt_m(report.deltas.anchor_vs_graph_start_xz_m),
         fmt_opt_m(report.deltas.max_scenery_to_tdb_xz_m),
+        fmt_opt_m(report.deltas.max_scenery_to_tdb_abs_dy_m),
+        report.deltas.scenery_buried_vs_tdb,
+        report.deltas.scenery_floating_vs_tdb,
         report.deltas.scenery_with_tdb_match,
         report.deltas.scenery_with_tdb_match + report.deltas.scenery_without_tdb_match,
         report.deltas.tdb_vector_nodes_on_tile,
@@ -431,12 +494,19 @@ pub fn log_placement_audit(report: &PlacementAuditReport) {
     );
     for stop in &report.stops {
         crate::viewer_log!(
-            "  stop {} — graph/tdb delta {} ({})",
+            "  stop {} — graph/tdb Δxz {} ΔY {} ({})",
             stop.node_id,
             fmt_opt_m(stop.delta_graph_tdb_xz_m),
+            fmt_opt_m(stop.delta_marker_tdb_y_m),
             stop.mapping_method,
         );
     }
+}
+
+/// Best-effort pitch/roll from a WORLD object transform (radians).
+fn world_object_pitch_roll(obj: &crate::world::WorldObject) -> (f32, f32) {
+    let (_yaw, pitch, roll) = obj.rotation.to_euler(EulerRot::YXZ);
+    (pitch, roll)
 }
 
 fn fmt_opt_m(v: Option<f32>) -> String {
@@ -507,6 +577,49 @@ mod tests {
         );
         assert_eq!(fmt_opt_m(None), "n/a");
         assert_eq!(fmt_opt_m(Some(12.34)), "12.3m");
+    }
+
+    #[test]
+    fn delta_y_fields_and_buried_threshold_flag_rail_at_terrain() {
+        // Birmingham-like: TDB rail Y=35.8, object flattened to terrain Y=28.5 → ΔY≈−7.3.
+        let dy = 28.5 - 35.7818;
+        assert!(dy < -BURIED_Y_THRESHOLD_M, "must count as buried, dy={dy}");
+        let floating_dy = 35.7818 + FLOATING_Y_THRESHOLD_M + 0.1 - 35.7818;
+        assert!(floating_dy > FLOATING_Y_THRESHOLD_M);
+
+        let candidate = SceneryCandidate {
+            kind: "TrackObj".into(),
+            uid: 1,
+            file_name: Some("A1t100mStrt.s".into()),
+            bevy: [0.0, 28.5, 0.0],
+            delta_to_nearest_tdb_xz_m: Some(0.5),
+            delta_y_m: Some(dy),
+            delta_pitch_rad: Some(0.0),
+            delta_roll_rad: Some(0.0),
+            delta_to_graph_stop_xz_m: None,
+            nearest_tdb_miss_reason: None,
+        };
+        assert!(candidate.delta_y_m.is_some());
+        let buried = candidate
+            .delta_y_m
+            .is_some_and(|d| d < -BURIED_Y_THRESHOLD_M);
+        assert!(buried, "rail-at-terrain must be flagged buried");
+
+        let deltas = PlacementDeltas {
+            anchor_vs_trk_start_xz_m: None,
+            anchor_vs_graph_start_xz_m: None,
+            graph_start_vs_trk_start_xz_m: None,
+            max_scenery_to_tdb_xz_m: Some(0.5),
+            max_scenery_to_tdb_abs_dy_m: Some(dy.abs()),
+            tdb_vector_nodes_on_tile: 1,
+            tdb_vector_nodes_in_ring: 1,
+            scenery_with_tdb_match: 1,
+            scenery_without_tdb_match: 0,
+            scenery_buried_vs_tdb: 1,
+            scenery_floating_vs_tdb: 0,
+        };
+        assert!(deltas.max_scenery_to_tdb_abs_dy_m.unwrap() > BURIED_Y_THRESHOLD_M);
+        assert_eq!(deltas.scenery_buried_vs_tdb, 1);
     }
 
     #[test]

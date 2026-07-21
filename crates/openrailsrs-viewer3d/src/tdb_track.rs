@@ -76,6 +76,9 @@ pub fn collect_tdb_path_segments(
 }
 
 /// Build procedural segments for vector nodes within `radius_m` of `focus`.
+///
+/// Preserves TDB absolute Y via [`RouteFocus::to_render_surface`] (#65). Terrain
+/// sampling is only a fallback when the section pose has no finite Y.
 pub fn tdb_procedural_segments_near(
     tdb: &TrackDbFile,
     tsection: &TSectionCatalog,
@@ -86,12 +89,19 @@ pub fn tdb_procedural_segments_near(
     collect_tdb_path_segments(tdb, focus, radius_m, Some(tsection))
         .into_iter()
         .map(|mut seg| {
-            let mut world = seg.position;
-            world.y = crate::terrain::ground_y_at(None, world.x, world.z, scene);
+            let world = preserve_tdb_world_y(seg.position, scene);
             seg.position = focus.to_render_surface(world);
             seg
         })
         .collect()
+}
+
+/// Keep TDB elevation; fall back to terrain only when Y is missing/non-finite.
+fn preserve_tdb_world_y(mut world: Vec3, scene: &TrackScene) -> Vec3 {
+    if !world.y.is_finite() {
+        world.y = crate::terrain::ground_y_at(None, world.x, world.z, scene);
+    }
+    world
 }
 
 fn procedural_segment_end_world(seg: &ProceduralTrackSegment) -> Vec3 {
@@ -253,8 +263,7 @@ pub fn tdb_track_stream_system(
         collect_tdb_path_segments(tdb, &focus_at, radius_m, Some(assets.tsection()))
             .into_iter()
             .map(|mut seg| {
-                let mut world = seg.position;
-                world.y = crate::terrain::ground_y_at(None, world.x, world.z, &scene);
+                let world = preserve_tdb_world_y(seg.position, &scene);
                 let start_msts = world;
                 let render = focus.to_render_surface(world);
                 seg.position = view_translation(render, &origin);
@@ -366,8 +375,7 @@ pub fn spawn_tdb_graph_track(
         collect_tdb_path_segments(tdb, &focus, radius_m, Some(assets.tsection()))
             .into_iter()
             .map(|mut seg| {
-                let mut world = seg.position;
-                world.y = crate::terrain::ground_y_at(None, world.x, world.z, &scene);
+                let world = preserve_tdb_world_y(seg.position, &scene);
                 seg.position = focus.to_render_surface(world);
                 seg
             })
@@ -438,18 +446,18 @@ mod tests {
             .join(format!("../openrailsrs-msts/tests/fixtures/{name}"))
     }
 
-    fn point_at(x: f64, z: f64) -> TrackVectorPoint {
-        TrackVectorPoint {
+    fn section_at(x: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
+        section_at_y(x, 0.0, z, shape_idx)
+    }
+
+    fn section_at_y(x: f64, y: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
+        let start = TrackVectorPoint {
             tile_x: 0,
             tile_z: 0,
             x,
-            y: 0.0,
+            y,
             z,
-        }
-    }
-
-    fn section_at(x: f64, z: f64, shape_idx: u32) -> TrVectorSectionRecord {
-        let start = point_at(x, z);
+        };
         TrVectorSectionRecord {
             section_index: shape_idx,
             shape_index: 0,
@@ -1074,6 +1082,58 @@ mod tests {
         assert_ne!(
             super::segment_key(a, b),
             super::segment_key(a, a + Vec3::new(50.0, 0.0, 0.0))
+        );
+    }
+
+    #[test]
+    fn birmingham_like_placement_keeps_tdb_y_not_terrain() {
+        // Rail MSL ≈ 35.8; terrain/height_origin ≈ 28.5. Must not flatten to ground_y_at (0.3).
+        let section = section_at_y(0.0, 35.7818, 0.0, 1);
+        let mut cat = TSectionCatalog::default();
+        cat.sections.insert(
+            1,
+            openrailsrs_formats::typed::TrackSectionDef {
+                gauge_m: 1.435,
+                length_m: 100.0,
+                curve_radius_m: None,
+                curve_angle_deg: None,
+                skew_deg: None,
+            },
+        );
+        let tdb = TrackDbFile {
+            nodes: vec![TrackDbNode {
+                id: 1,
+                position: None,
+                pin_refs: Vec::new(),
+                kind: TrackNodeKind::Vector {
+                    length_m: 100.0,
+                    speed_limit_mps: 0.0,
+                    pins: (0, 0),
+                    item_ids: Vec::new(),
+                    sections: vec![section],
+                    geometry: None,
+                },
+            }],
+            items: Vec::new(),
+        };
+        let focus = RouteFocus {
+            center: Vec3::new(0.0, 35.7818, 0.0),
+            height_origin: 28.5,
+        };
+        let scene = TrackScene::from_graph(openrailsrs_track::TrackGraph::new());
+        let segments = tdb_procedural_segments_near(&tdb, &cat, &scene, &focus, 500.0);
+        assert!(!segments.is_empty());
+        let expected_render_y = 35.7818 - 28.5;
+        assert!(
+            (segments[0].position.y - expected_render_y).abs() < 0.05,
+            "expected render Y≈{expected_render_y} (TDB−terrain), got {}",
+            segments[0].position.y
+        );
+        // Old bug flattened to ground_y_at≈0.3 → render Y ≈ 0.3−28.5.
+        assert!(
+            segments[0].position.y > 5.0,
+            "rail must sit above terrain plane, got {}",
+            segments[0].position.y
         );
     }
 

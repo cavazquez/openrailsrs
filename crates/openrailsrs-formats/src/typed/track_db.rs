@@ -102,6 +102,25 @@ impl TrVectorSectionRecord {
         self.heading_rad().map(|r| r.to_degrees())
     }
 
+    /// Native pitch `AX` (radians). Open Rails `CreateFromYawPitchRoll(AY, AX, AZ)`.
+    #[inline]
+    pub fn pitch_rad(&self) -> f64 {
+        self.ax
+    }
+
+    /// Native roll `AZ` (radians). Open Rails `CreateFromYawPitchRoll(AY, AX, AZ)`.
+    #[inline]
+    pub fn roll_rad(&self) -> f64 {
+        self.az
+    }
+
+    /// `(yaw, pitch, roll)` = `(AY, AX, AZ)` in radians — same argument order as
+    /// Open Rails / XNA `Matrix.CreateFromYawPitchRoll`.
+    #[inline]
+    pub fn orientation_yaw_pitch_roll(&self) -> (f64, f64, f64) {
+        (self.ay, self.ax, self.az)
+    }
+
     /// Bevy world positions for this section anchor, including tile-boundary variants.
     pub fn bevy_position_candidates(
         &self,
@@ -1762,6 +1781,10 @@ mod tests {
             assert!((sections[0].ay - 2.91349).abs() < 1e-4);
             assert_eq!(sections[0].heading_rad(), Some(2.91349));
             assert!((sections[0].heading_deg().unwrap() - 2.91349_f64.to_degrees()).abs() < 1e-3);
+            let (yaw, pitch, roll) = sections[0].orientation_yaw_pitch_roll();
+            assert!((yaw - 2.91349).abs() < 1e-4);
+            assert_eq!(pitch, sections[0].pitch_rad());
+            assert_eq!(roll, sections[0].roll_rad());
         }
         let junction = tdb
             .nodes

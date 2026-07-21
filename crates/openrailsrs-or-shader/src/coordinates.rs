@@ -182,16 +182,28 @@ pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
 /// Follows Open Rails XNA convention (`Scenery.cs`): each column's Z component is negated,
 /// and the third column's X/Y components are negated.
 ///
+/// Scale components are **signed**: when the XNA matrix has `det < 0` (reflection / mirrored
+/// placement), the reflection is absorbed into the Z scale axis so
+/// `Mat3::from_quat(rot) * Mat3::from_diagonal(scale)` round-trips the affine linear part
+/// within ~`1e-4` (see unit tests).
+///
 /// Row-major storage: `m[0..3]` = first row, etc.
 pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
     let raw = matrix3x3_to_xna_mat3(m);
     let sx = raw.x_axis.length().max(1e-6);
     let sy = raw.y_axis.length().max(1e-6);
-    let sz = raw.z_axis.length().max(1e-6);
-    let scale = Vec3::new(sx, sy, sz);
-    let normalized = Mat3::from_cols(raw.x_axis / sx, raw.y_axis / sy, raw.z_axis / sz);
-    let rot = Quat::from_mat3(&normalized);
-    (rot, scale)
+    let mut sz = raw.z_axis.length().max(1e-6);
+    let x = raw.x_axis / sx;
+    let y = raw.y_axis / sy;
+    let mut z = raw.z_axis / sz;
+    // Column lengths alone lose reflections (det < 0). Flip one axis and negate its scale
+    // so the rotation stays proper (det ≈ +1) while scale carries the mirror.
+    if Mat3::from_cols(x, y, z).determinant() < 0.0 {
+        z = -z;
+        sz = -sz;
+    }
+    let rot = Quat::from_mat3(&Mat3::from_cols(x, y, z));
+    (rot, Vec3::new(sx, sy, sz))
 }
 
 /// Extract only the rotation from an MSTS `Matrix3×3`.
@@ -647,6 +659,76 @@ mod tests {
         assert!((scale.z - 1.0).abs() < 1e-4);
         // The quaternion should be a valid unit quaternion.
         assert!((rot.length() - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn matrix3x3_preserves_non_uniform_scale_2_1_1() {
+        // Columns already in MSTS row-major; XNA path will flip Z terms.
+        // Build a Bevy linear map with scale (2,1,1), convert back through XNA inverse
+        // so the public API sees an MSTS Matrix3×3.
+        let bevy = Mat3::from_diagonal(Vec3::new(2.0, 1.0, 1.0));
+        let m = bevy_mat3_to_msts_matrix3x3(bevy);
+        let (rot, scale) = matrix3x3_to_rotation_scale(&m);
+        assert!(
+            (scale.x.abs() - 2.0).abs() < 1e-3 && (scale.y.abs() - 1.0).abs() < 1e-3,
+            "scale={scale:?}"
+        );
+        assert!((scale.z.abs() - 1.0).abs() < 1e-3, "scale={scale:?}");
+        let rebuilt = Mat3::from_quat(rot) * Mat3::from_diagonal(scale);
+        assert_mat3_close(bevy, rebuilt, 1e-3);
+    }
+
+    #[test]
+    fn matrix3x3_preserves_negative_determinant_reflection() {
+        // Mirror in X (det < 0) with unit lengths — must keep a signed scale axis.
+        let bevy = Mat3::from_cols(
+            Vec3::new(-1.0, 0.0, 0.0),
+            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        assert!(bevy.determinant() < 0.0);
+        let m = bevy_mat3_to_msts_matrix3x3(bevy);
+        let (rot, scale) = matrix3x3_to_rotation_scale(&m);
+        assert!(
+            scale.x * scale.y * scale.z < 0.0,
+            "reflection must yield signed scale product < 0, got {scale:?}"
+        );
+        let rebuilt = Mat3::from_quat(rot) * Mat3::from_diagonal(scale);
+        assert_mat3_close(bevy, rebuilt, 1e-3);
+    }
+
+    /// Inverse of [`matrix3x3_to_xna_mat3`] for unit tests (row-major MSTS Matrix3×3).
+    fn bevy_mat3_to_msts_matrix3x3(bevy: Mat3) -> [f64; 9] {
+        // matrix3x3_to_xna_mat3:
+        //   X col: (m0, m1, -m2)  Y col: (m3, m4, -m5)  Z col: (-m6, -m7, m8)
+        let x = bevy.x_axis;
+        let y = bevy.y_axis;
+        let z = bevy.z_axis;
+        [
+            f64::from(x.x),
+            f64::from(x.y),
+            f64::from(-x.z),
+            f64::from(y.x),
+            f64::from(y.y),
+            f64::from(-y.z),
+            f64::from(-z.x),
+            f64::from(-z.y),
+            f64::from(z.z),
+        ]
+    }
+
+    fn assert_mat3_close(a: Mat3, b: Mat3, eps: f32) {
+        for (i, (ca, cb)) in [a.x_axis, a.y_axis, a.z_axis]
+            .into_iter()
+            .zip([b.x_axis, b.y_axis, b.z_axis])
+            .enumerate()
+        {
+            let d = (ca - cb).length();
+            assert!(
+                d < eps,
+                "col {i} diff {d} (eps {eps}): {ca:?} vs {cb:?}"
+            );
+        }
     }
 
     // ── train / track yaw ────────────────────────────────────────────────────

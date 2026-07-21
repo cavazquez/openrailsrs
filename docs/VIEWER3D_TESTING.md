@@ -274,7 +274,7 @@ cargo run --release -p openrailsrs-viewer3d -- \
   --audit-placement --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
-Salida JSON: posiciones grafo / TDB / `.w` / `world_anchor` y deltas XZ. Criterio visual: marquesina–riel **< 5 m** XZ.
+Salida JSON: posiciones grafo / TDB / `.w` / `world_anchor`, deltas XZ y **ΔY** (`delta_y_m` scenery→TDB; `delta_marker_tdb_y_m` en paradas). Contadores `scenery_buried_vs_tdb` / `scenery_floating_vs_tdb` (umbrales: buried si ΔY < −2 m, floating si ΔY > +5 m). Criterio visual: marquesina–riel **< 5 m** XZ.
 
 **Audit TrItem** (TSRE `checkDatabase`, headless):
 
@@ -326,8 +326,8 @@ Referencia: [`track_position.rs`](../crates/openrailsrs-viewer3d/src/track_posit
 | Objeto | Motivo |
 |--------|--------|
 | Física / odometría | Siguen en el grafo lógico; solo el **render** del tren usa TDB (#67: `vehicle_pose_on_graph_edge`) |
-| Vía `.tdb` procedural | Ya es la referencia MSTS (`tdb_track.rs`); Y del ribbon aún puede aplanarse al terreno (#65) |
-| Pitch/roll del tren | `TrackPose` expone yaw + Y; AX/AZ pendientes de #65 |
+| Vía `.tdb` procedural | Referencia MSTS; Y/pitch/roll desde TDB (`CreateFromYawPitchRoll`, #65) |
+| Pitch/roll del tren | `TrackPose` expone yaw + `pitch_rad`/`roll_rad` (#65); vehículo aún usa yaw-only en Quat (#67) |
 | Escenario `.w` | Posición nativa MSTS |
 
 ### Pipeline
@@ -335,7 +335,7 @@ Referencia: [`track_position.rs`](../crates/openrailsrs-viewer3d/src/track_posit
 ```text
 1. Hint MSTS: grafo + RouteWorldOffset (o nodo TDB directo si id nNNNN)
 2. Snap: nearest_track_position en tile del hint (radio configurable)
-3. Y: ground_y_at + RouteFocus.to_render_surface
+3. Y: TDB absoluto + RouteFocus.to_render_surface (sin aplanar con ground_y_at; #65/#67)
 ```
 
 ### Variables

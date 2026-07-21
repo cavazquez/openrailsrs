@@ -127,9 +127,11 @@ pub fn marker_render_world_from_msts_hint(
     scene: &TrackScene,
     focus: &RouteFocus,
 ) -> Vec3 {
+    let _ = (terrain, scene); // retained for API; graph fallback already has terrain Y
     if let Some(res) = resolver {
         if let Some(pose) = snap_msts_to_tdb(res, msts_hint, tdb_snap_radius_m()) {
-            return msts_to_render_surface(pose.position, terrain, scene, focus);
+            // Keep TDB Y — do not flatten with ground_y_at (#65 / #67).
+            return focus.to_render_surface(pose.position);
         }
     }
     graph_render_fallback
@@ -437,6 +439,9 @@ impl TrackNodePlacement {
     }
 
     /// Render-space position for gameplay markers: TDB when available, else graph.
+    ///
+    /// When a TDB pose exists, keeps its absolute Y (#65 / #67). Graph fallback still
+    /// samples terrain via [`ground_y_at`].
     pub fn marker_render_world(
         &self,
         terrain: Option<&TerrainElevation>,
@@ -444,11 +449,10 @@ impl TrackNodePlacement {
         focus: &RouteFocus,
         graph_fallback: Option<Vec3>,
     ) -> Option<Vec3> {
-        let mut world = if let Some(pose) = self.tdb_pose {
-            pose.position
-        } else {
-            graph_fallback.or(self.graph_world)?
-        };
+        if let Some(pose) = self.tdb_pose {
+            return Some(focus.to_render_surface(pose.position));
+        }
+        let mut world = graph_fallback.or(self.graph_world)?;
         world.y = ground_y_at(terrain, world.x, world.z, scene);
         Some(focus.to_render_surface(world))
     }
@@ -465,7 +469,7 @@ pub fn marker_render_world_at_node(
     resolver: Option<&TrackPositionResolver<'_>>,
     scene: &TrackScene,
     offset: RouteWorldOffset,
-    terrain: Option<&TerrainElevation>,
+    _terrain: Option<&TerrainElevation>,
     focus: &RouteFocus,
     graph_fallback: Option<Vec3>,
 ) -> Option<Vec3> {
@@ -479,9 +483,8 @@ pub fn marker_render_world_at_node(
             offset.delta,
         );
         if let Some(pose) = resolved.pose {
-            let mut world = pose.position;
-            world.y = ground_y_at(terrain, world.x, world.z, scene);
-            return Some(focus.to_render_surface(world));
+            // Keep TDB Y — do not flatten with ground_y_at (#65 / #67).
+            return Some(focus.to_render_surface(pose.position));
         }
     }
     graph_fallback

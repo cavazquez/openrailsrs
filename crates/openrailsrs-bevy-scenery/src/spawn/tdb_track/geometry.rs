@@ -36,6 +36,10 @@ pub struct SectionPathSpan {
     pub start_world: Vec3,
     pub end_world: Vec3,
     pub world_yaw_deg: f64,
+    /// MSTS `AX` (radians) — Open Rails pitch in `CreateFromYawPitchRoll(AY, AX, AZ)`.
+    pub pitch_rad: f64,
+    /// MSTS `AZ` (radians) — Open Rails roll.
+    pub roll_rad: f64,
     pub half_gauge_m: Option<f32>,
     pub length_m: Option<f32>,
     pub curve_radius_m: Option<f32>,
@@ -48,6 +52,11 @@ impl SectionPathSpan {
             (self.curve_radius_m, self.curve_angle_deg),
             (Some(r), Some(a)) if r.abs() > 1e-6 && a.abs() > 1e-6
         )
+    }
+
+    /// Full Bevy orientation (yaw + pitch + roll) for procedural track meshes.
+    pub fn world_rotation(&self) -> Quat {
+        bevy_track_quat(self.world_yaw_deg, self.pitch_rad, self.roll_rad)
     }
 }
 
@@ -142,6 +151,9 @@ pub fn local_flat_to_world(dx: f64, dz: f64, heading_deg: f64) -> (f32, f32) {
 }
 
 /// Open Rails `FindLocationInSection` MSTS XZ displacement (`AY` in radians).
+///
+/// Kept for flat (AX=AZ=0) equivalence checks; 3D path uses
+/// [`msts_world_delta_along_section`].
 fn msts_delta_along_track_section(
     ay_rad: f64,
     def: &openrailsrs_formats::typed::TrackSectionDef,
@@ -164,9 +176,53 @@ fn msts_delta_along_track_section(
     }
 }
 
+/// Local-section displacement before `CreateFromYawPitchRoll` (OR Traveller):
+/// straight along +Z, curve in the section XZ plane with `AY = 0`.
+fn msts_local_delta_along_section(
+    def: &openrailsrs_formats::typed::TrackSectionDef,
+    distance_m: f64,
+) -> Vec3 {
+    if def.is_curved() {
+        let (dx, dz) = msts_delta_along_track_section(0.0, def, distance_m);
+        Vec3::new(dx as f32, 0.0, dz as f32)
+    } else {
+        Vec3::new(0.0, 0.0, distance_m as f32)
+    }
+}
+
+/// Open Rails Traveller: `Matrix.CreateFromYawPitchRoll(AY, AX, AZ)` then transform
+/// the local section displacement into MSTS world space.
+fn msts_world_delta_along_section(
+    ax: f64,
+    ay: f64,
+    az: f64,
+    def: &openrailsrs_formats::typed::TrackSectionDef,
+    distance_m: f64,
+) -> Vec3 {
+    let local = msts_local_delta_along_section(def, distance_m);
+    msts_orient_ypr(ay, ax, az) * local
+}
+
+/// XNA / Open Rails `Quaternion.CreateFromYawPitchRoll(yaw, pitch, roll)`.
 #[inline]
-fn bevy_delta_from_msts(dx_msts: f64, dz_msts: f64) -> Vec3 {
-    Vec3::new(dx_msts as f32, 0.0, -dz_msts as f32)
+fn msts_orient_ypr(yaw_ay: f64, pitch_ax: f64, roll_az: f64) -> Quat {
+    Quat::from_euler(
+        EulerRot::YXZ,
+        yaw_ay as f32,
+        pitch_ax as f32,
+        roll_az as f32,
+    )
+}
+
+/// MSTS world offset → Bevy (`Y` preserved, whole-world `Z` negated).
+#[inline]
+fn bevy_delta_from_msts_3d(dx: f64, dy: f64, dz: f64) -> Vec3 {
+    Vec3::new(dx as f32, dy as f32, -dz as f32)
+}
+
+#[inline]
+fn bevy_delta_from_msts_vec(msts: Vec3) -> Vec3 {
+    bevy_delta_from_msts_3d(f64::from(msts.x), f64::from(msts.y), f64::from(msts.z))
 }
 
 /// Bevy yaw (degrees) for a MSTS `AY` heading (radians), accounting for Z flip.
@@ -175,7 +231,23 @@ fn bevy_yaw_deg_from_msts_ay(ay_rad: f64) -> f64 {
     ay_rad.sin().atan2(-ay_rad.cos()).to_degrees()
 }
 
+/// Bevy track orientation from Bevy yaw (degrees) + MSTS pitch/roll (radians).
+///
+/// Pitch (`AX`) keeps its MSTS sign (Y-up unchanged). Roll (`AZ`) is negated with the
+/// MSTS→Bevy Z flip so the right-handed frame stays consistent.
+pub fn bevy_track_quat(bevy_yaw_deg: f64, pitch_rad: f64, roll_rad: f64) -> Quat {
+    Quat::from_euler(
+        EulerRot::YXZ,
+        bevy_yaw_deg.to_radians() as f32,
+        pitch_rad as f32,
+        -(roll_rad as f32),
+    )
+}
+
 /// Open Rails `FindLocationInSection` — Bevy world position at `distance_m`.
+///
+/// Advances in 3D using TDB `AX`/`AY`/`AZ` (OR `CreateFromYawPitchRoll`), so pitch
+/// changes Y along the section.
 pub fn find_location_in_section_world(
     section: TrVectorSectionRecord,
     distance_m: f64,
@@ -188,16 +260,16 @@ pub fn find_location_in_section_world(
     if distance_m <= 1e-6 {
         return Some(start);
     }
-    let ay = section.heading_rad().unwrap_or(0.0);
+    let (ay, ax, az) = section.orientation_yaw_pitch_roll();
     if let Some(cat) = tsection {
         if let Some(def) = cat.sections.get(&section.section_index) {
-            let (dx, dz) = msts_delta_along_track_section(ay, def, distance_m);
-            return Some(start + bevy_delta_from_msts(dx, dz));
+            let msts = msts_world_delta_along_section(ax, ay, az, def, distance_m);
+            return Some(start + bevy_delta_from_msts_vec(msts));
         }
     }
     let _ = (node_length_m, section_count);
-    let (dx, dz) = (ay.sin() * distance_m, ay.cos() * distance_m);
-    Some(start + bevy_delta_from_msts(dx, dz))
+    let msts = msts_orient_ypr(ay, ax, az) * Vec3::new(0.0, 0.0, distance_m as f32);
+    Some(start + bevy_delta_from_msts_vec(msts))
 }
 
 fn span_length_m(span: SectionPathSpan) -> f64 {
@@ -229,7 +301,9 @@ fn point_along_span(span: SectionPathSpan, distance_m: f64) -> Vec3 {
         let (local, _) = arc_local_frame(r, angle, t);
         let (wx, wz) =
             local_flat_to_world(f64::from(local.x), f64::from(local.z), span.world_yaw_deg);
-        return span.start_world + Vec3::new(wx, 0.0, wz);
+        // Preserve TDB grade: lerp Y between pitched start/end anchors.
+        let y = span.start_world.y + (span.end_world.y - span.start_world.y) * t;
+        return Vec3::new(span.start_world.x + wx, y, span.start_world.z + wz);
     }
     let span_len = span_length_m(span).max(1e-6);
     let t = (distance_m / span_len).clamp(0.0, 1.0) as f32;
@@ -249,7 +323,7 @@ pub fn section_path_spans(
         return Vec::new();
     }
     let anchor = section_world_vec3(section, near_hint);
-    let ay = section.heading_rad().unwrap_or(0.0);
+    let (ay, ax, az) = section.orientation_yaw_pitch_roll();
     let bevy_yaw = bevy_yaw_deg_from_msts_ay(ay);
     let half = tsection.and_then(|cat| {
         cat.sections
@@ -277,11 +351,11 @@ pub fn section_path_spans(
                     section_count,
                 ))
             };
-            let (dx, dz) = msts_delta_along_track_section(ay, &def, travel);
-            let mut end = anchor + bevy_delta_from_msts(dx, dz);
+            let msts = msts_world_delta_along_section(ax, ay, az, &def, travel);
+            let mut end = anchor + bevy_delta_from_msts_vec(msts);
             if let Some(next) = next_section_anchor {
                 if !def.is_curved() {
-                    if let Some(span) = straight_span_to(next, anchor, half) {
+                    if let Some(span) = straight_span_to(next, anchor, half, ax, az) {
                         return vec![span];
                     }
                 }
@@ -293,6 +367,8 @@ pub fn section_path_spans(
                     start_world: anchor,
                     end_world: end,
                     world_yaw_deg: bevy_yaw,
+                    pitch_rad: ax,
+                    roll_rad: az,
                     half_gauge_m: half,
                     length_m: None,
                     curve_radius_m: def.curve_radius_m.map(|r| r as f32),
@@ -300,12 +376,14 @@ pub fn section_path_spans(
                 }];
             }
             if next_section_anchor.is_none() {
-                end = anchor + bevy_delta_from_msts(dx, dz);
+                end = anchor + bevy_delta_from_msts_vec(msts);
             }
             return vec![SectionPathSpan {
                 start_world: anchor,
                 end_world: end,
                 world_yaw_deg: bevy_yaw,
+                pitch_rad: ax,
+                roll_rad: az,
                 half_gauge_m: half,
                 length_m: Some(travel as f32),
                 curve_radius_m: None,
@@ -314,9 +392,9 @@ pub fn section_path_spans(
         }
     }
 
-    // No TrackSection: chord to next anchor or straight along AY.
+    // No TrackSection: chord to next anchor or straight along AY (+ pitch/roll).
     if let Some(next) = next_section_anchor {
-        if let Some(span) = straight_span_to(next, anchor, half) {
+        if let Some(span) = straight_span_to(next, anchor, half, ax, az) {
             return vec![span];
         }
     }
@@ -324,11 +402,13 @@ pub fn section_path_spans(
     if len < 0.5 {
         return Vec::new();
     }
-    let (dx, dz) = (ay.sin() * f64::from(len), ay.cos() * f64::from(len));
+    let msts = msts_orient_ypr(ay, ax, az) * Vec3::new(0.0, 0.0, f32::from(len));
     vec![SectionPathSpan {
         start_world: anchor,
-        end_world: anchor + bevy_delta_from_msts(dx, dz),
+        end_world: anchor + bevy_delta_from_msts_vec(msts),
         world_yaw_deg: bevy_yaw,
+        pitch_rad: ax,
+        roll_rad: az,
         half_gauge_m: half,
         length_m: Some(len),
         curve_radius_m: None,
@@ -348,6 +428,8 @@ fn straight_span(
         start_world: start,
         end_world: start + Vec3::new(wx, 0.0, wz),
         world_yaw_deg: yaw_deg,
+        pitch_rad: 0.0,
+        roll_rad: 0.0,
         half_gauge_m,
         length_m: Some(length_m),
         curve_radius_m: None,
@@ -355,16 +437,31 @@ fn straight_span(
     }
 }
 
-fn straight_span_to(end: Vec3, start: Vec3, half_gauge_m: Option<f32>) -> Option<SectionPathSpan> {
+fn straight_span_to(
+    end: Vec3,
+    start: Vec3,
+    half_gauge_m: Option<f32>,
+    pitch_rad: f64,
+    roll_rad: f64,
+) -> Option<SectionPathSpan> {
     let len = distance_xz(start, end);
     if len < 0.5 {
         return None;
     }
     let yaw_deg = f64::from((end.x - start.x).atan2(end.z - start.z)).to_degrees();
+    // When the next TDB anchor supplies a different Y, prefer grade from the chord.
+    let dy = f64::from(end.y - start.y);
+    let pitch = if dy.abs() > 1e-4 {
+        (dy / f64::from(len).max(1e-6)).atan()
+    } else {
+        pitch_rad
+    };
     Some(SectionPathSpan {
         start_world: start,
         end_world: end,
         world_yaw_deg: yaw_deg,
+        pitch_rad: pitch,
+        roll_rad,
         half_gauge_m,
         length_m: Some(len),
         curve_radius_m: None,
@@ -393,6 +490,8 @@ fn span_from_link(anchor: Vec3, base_yaw: f64, link: &TrackProceduralLink) -> Se
             start_world: start,
             end_world: start + Vec3::new(ex, 0.0, ez),
             world_yaw_deg: link_yaw,
+            pitch_rad: 0.0,
+            roll_rad: 0.0,
             half_gauge_m: half_gauge,
             length_m: None,
             curve_radius_m: Some(r),
@@ -405,6 +504,8 @@ fn span_from_link(anchor: Vec3, base_yaw: f64, link: &TrackProceduralLink) -> Se
         start_world: start,
         end_world: start + Vec3::new(ex, 0.0, ez),
         world_yaw_deg: link_yaw,
+        pitch_rad: 0.0,
+        roll_rad: 0.0,
         half_gauge_m: half_gauge,
         length_m: Some(len),
         curve_radius_m: None,
@@ -520,7 +621,7 @@ pub fn section_path_span_chords(
 pub fn procedural_segment_from_span(span: SectionPathSpan) -> ProceduralTrackSegment {
     ProceduralTrackSegment {
         position: span.start_world,
-        rotation: Quat::from_rotation_y(span.world_yaw_deg.to_radians() as f32),
+        rotation: span.world_rotation(),
         length_m: span.length_m,
         half_gauge_m: span.half_gauge_m,
         curve_radius_m: span.curve_radius_m,
@@ -686,10 +787,27 @@ pub fn vector_junction_face_world(
 }
 
 /// World pose on the TDB centreline (port of OR `FindLocationInSection` / TSRE `getDrawPositionOnTrNode`).
+///
+/// Orientation follows Open Rails `CreateFromYawPitchRoll(AY, AX, AZ)`:
+/// - [`Self::yaw_deg`]: Bevy yaw (degrees, Z-flip applied)
+/// - [`Self::pitch_rad`] / [`Self::roll_rad`]: MSTS `AX` / `AZ` (radians)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrackPose {
     pub position: Vec3,
     pub yaw_deg: f32,
+    pub pitch_rad: f32,
+    pub roll_rad: f32,
+}
+
+impl TrackPose {
+    /// Full Bevy orientation for the pose (yaw + pitch + roll).
+    pub fn rotation(&self) -> Quat {
+        bevy_track_quat(
+            f64::from(self.yaw_deg),
+            f64::from(self.pitch_rad),
+            f64::from(self.roll_rad),
+        )
+    }
 }
 
 /// Position + heading on a `.tdb` node at `chainage_m` metres from the vector start.
@@ -724,6 +842,8 @@ pub fn tdb_node_track_pose(
                     return Some(TrackPose {
                         position: pos,
                         yaw_deg: yaw,
+                        pitch_rad: 0.0,
+                        roll_rad: 0.0,
                     });
                 }
                 return None;
@@ -750,6 +870,8 @@ pub fn tdb_node_track_pose(
                         return Some(TrackPose {
                             position: pos,
                             yaw_deg: span.world_yaw_deg as f32,
+                            pitch_rad: span.pitch_rad as f32,
+                            roll_rad: span.roll_rad as f32,
                         });
                     }
                     accumulated += span_len;
@@ -766,7 +888,9 @@ pub fn tdb_node_track_pose(
                 )
                 .map(|pos| TrackPose {
                     position: pos,
-                    yaw_deg: section.heading_deg().unwrap_or(0.0) as f32,
+                    yaw_deg: bevy_yaw_deg_from_msts_ay(section.ay) as f32,
+                    pitch_rad: section.pitch_rad() as f32,
+                    roll_rad: section.roll_rad() as f32,
                 })
             })
         }
@@ -780,6 +904,8 @@ pub fn tdb_node_track_pose(
             TrackPose {
                 position: Vec3::new(x, y, z),
                 yaw_deg: 0.0,
+                pitch_rad: 0.0,
+                roll_rad: 0.0,
             }
         }),
     }
@@ -847,6 +973,8 @@ pub fn nearest_track_position(
                 best = Some(TrackPose {
                     position: pos,
                     yaw_deg: span.world_yaw_deg as f32,
+                    pitch_rad: span.pitch_rad as f32,
+                    roll_rad: span.roll_rad as f32,
                 });
             }
         }
@@ -880,11 +1008,21 @@ mod tests {
         section_index: u32,
         shape_index: u32,
     ) -> TrVectorSectionRecord {
+        section_at_xyz(x, 0.0, z, section_index, shape_index)
+    }
+
+    fn section_at_xyz(
+        x: f64,
+        y: f64,
+        z: f64,
+        section_index: u32,
+        shape_index: u32,
+    ) -> TrVectorSectionRecord {
         let start = TrackVectorPoint {
             tile_x: 0,
             tile_z: 0,
             x,
-            y: 0.0,
+            y,
             z,
         };
         TrVectorSectionRecord {
@@ -1095,5 +1233,84 @@ mod tests {
             Vec3::new(100.0, 0.0, 0.0),
         );
         assert!((d - 10.0).abs() < 1e-3, "got {d}");
+    }
+
+    #[test]
+    fn pitched_section_advances_y_and_rotation_has_pitch() {
+        // XNA CreateFromYawPitchRoll(0, AX, 0): +Z → Y = -sin(AX) (MonoGame CreateRotationX).
+        // AX = 0.1 rad; 100 m → ΔY ≈ -sin(0.1)*100.
+        let mut section = section_at(0.0, 0.0, 1);
+        section.ax = 0.1;
+        section.ay = 0.0;
+        let cat = catalog_with_straight_shape(1, 1000.0);
+        let start = section_world_vec3(section, None);
+        let at = find_location_in_section_world(section, 100.0, Some(&cat), None, 1000.0, 1)
+            .expect("location");
+        let dy = f64::from(at.y - start.y);
+        let expected_dy = -0.1_f64.sin() * 100.0;
+        assert!(
+            (dy - expected_dy).abs() < 0.05,
+            "expected ΔY≈{expected_dy:.3}, got {dy:.3}"
+        );
+        assert!(
+            dy.abs() > 1.0,
+            "pitched section must change Y along span, got {dy}"
+        );
+        let spans = section_path_spans(section, Some(&cat), None, 1000.0, 1, None);
+        assert_eq!(spans.len(), 1);
+        let seg = procedural_segment_from_span(spans[0]);
+        let (_yaw, pitch, _roll) = seg.rotation.to_euler(EulerRot::YXZ);
+        assert!(
+            pitch.abs() > 0.05,
+            "procedural rotation must include pitch, got {pitch}"
+        );
+        assert!((pitch - 0.1).abs() < 0.02, "pitch={pitch}");
+        // Mesh forward (+Z) must land near the pitched end (not yaw-only flat).
+        let len = spans[0].length_m.unwrap_or(100.0);
+        let mesh_end = seg.position + seg.rotation * Vec3::new(0.0, 0.0, len);
+        assert!(
+            (mesh_end.y - spans[0].end_world.y).abs() < 0.2,
+            "mesh end Y {} vs span end {}",
+            mesh_end.y,
+            spans[0].end_world.y
+        );
+    }
+
+    #[test]
+    fn birmingham_like_section_preserves_tdb_y() {
+        // Chiltern Birmingham-ish: rail MSL ≈ 35.8 m, terrain ≈ 28.5 m.
+        let section = section_at_xyz(0.0, 35.7818, 0.0, 1, 1);
+        let cat = catalog_with_straight_shape(1, 100.0);
+        let spans = section_path_spans(section, Some(&cat), None, 100.0, 1, None);
+        assert_eq!(spans.len(), 1);
+        assert!(
+            (spans[0].start_world.y - 35.7818).abs() < 0.01,
+            "TDB Y must survive span build, got {}",
+            spans[0].start_world.y
+        );
+        let seg = procedural_segment_from_span(spans[0]);
+        assert!(
+            (seg.position.y - 35.7818).abs() < 0.01,
+            "procedural segment must keep TDB Y (not terrain 28.5), got {}",
+            seg.position.y
+        );
+    }
+
+    #[test]
+    fn flat_pitch_keeps_ay_fixture_xz() {
+        // Regression: AX=0 path must still match issue #85 XZ fixture.
+        let mut section = section_at(0.0, 0.0, 1);
+        section.ay = 2.91349;
+        let cat = catalog_with_straight_shape(1, 1000.0);
+        let start = section_world_vec3(section, None);
+        let at = find_location_in_section_world(section, 100.0, Some(&cat), None, 1000.0, 1)
+            .expect("location");
+        let dx = f64::from(at.x - start.x);
+        let dz_msts = -f64::from(at.z - start.z);
+        assert!(
+            (dx - 22.6).abs() < 0.5 && (dz_msts - (-97.4)).abs() < 0.5,
+            "got MSTS delta ({dx:.3}, {dz_msts:.3})"
+        );
+        assert!(at.y.abs() < 1e-3, "flat pitch must not invent Y");
     }
 }

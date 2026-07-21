@@ -2,8 +2,9 @@
 
 use std::path::Path;
 
-use bevy::math::{Mat3, Quat, Vec3};
+use bevy::math::{Quat, Vec3};
 use openrailsrs_formats::{DyntrackSection, WorldItem};
+pub use openrailsrs_or_shader::coordinates::{matrix3x3_to_rotation_scale, qdir_to_quat};
 
 /// Classified WORLD item kind (independent of render marker colors).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -259,21 +260,4 @@ fn sanitize_quat(q: Quat) -> Quat {
     } else {
         Quat::IDENTITY
     }
-}
-
-/// MSTS `QDirection` `[qx, qy, qz, qw]` → Bevy `Quat` (Z negated).
-pub fn qdir_to_quat(q: &[f64; 4]) -> Quat {
-    Quat::from_xyzw(q[0] as f32, q[1] as f32, -(q[2] as f32), q[3] as f32)
-}
-
-/// MSTS `Matrix3x3` → Bevy rotation + scale (XNA Z convention).
-pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
-    let x = Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32));
-    let y = Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32));
-    let z = Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32);
-    let sx = x.length().max(1e-6);
-    let sy = y.length().max(1e-6);
-    let sz = z.length().max(1e-6);
-    let rot = Quat::from_mat3(&Mat3::from_cols(x / sx, y / sy, z / sz));
-    (rot, Vec3::new(sx, sy, sz))
 }

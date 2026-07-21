@@ -94,7 +94,7 @@ flowchart TD
   G["Grafo + RouteWorldOffset\n(hint MSTS)"]
   N["Nodo nNNNN?\n→ tdb_node_track_pose"]
   S["Punto en arista?\n→ nearest_track_position"]
-  R["ground_y_at + RouteFocus"]
+  R["TDB Y + RouteFocus.to_render_surface\n(fallback ground_y_at solo sin pose)"]
   G --> N
   G --> S
   N --> R
@@ -117,6 +117,18 @@ Radio snap: `OPENRAILSRS_TDB_SNAP_RADIUS_M` (default 2500 m). Detalle y validaci
 2. Visual parada: `marker_render_world_at_node` sobre nodo homólogo TDB (`n10778` → id 10778).
 3. Visual señal: `marker_render_world_on_edge` (hint grafo → snap centreline).
 4. Comparar con objetos `.w` en el mismo tile (`--audit-placement`).
+
+---
+
+## Matrix3×3 (WORLD) → Bevy
+
+`matrix3x3_to_rotation_scale` ([`coordinates.rs`](../crates/openrailsrs-or-shader/src/coordinates.rs)):
+
+1. Aplica la convención XNA de Open Rails (negar Z de columnas X/Y y X/Y de la columna Z).
+2. Descompone en rotación + escala **con signo**: si `det < 0` (objeto espejado), la reflexión se absorbe en el eje de escala Z; el cuaternión queda propio (`det ≈ +1`).
+3. Round-trip típico: `Mat3::from_quat(rot) * Mat3::from_diagonal(scale)` ≈ matriz XNA (ε ≈ `1e-3`…`1e-4`).
+
+No confundir con `matrix43_to_transform` (jerarquía `.s`), que fija `scale = Vec3::ONE` a propósito.
 
 ---
 
