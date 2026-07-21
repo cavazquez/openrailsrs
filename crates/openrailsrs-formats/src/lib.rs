@@ -62,7 +62,7 @@ pub use typed::{
     LightModelCfg, LodControl, Matrix43, MstsSteamFields, MstsTexAddrMode, NamedMatrix,
     OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, OverheadWireParams,
     PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile, RouteStart,
-    SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, SigCfgFile, SignalAspectKind,
+    SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, ShapeTextureSlot, SigCfgFile, SignalAspectKind,
     SignalDrawStateDef, SignalLightDef, SignalShapeDef, SignalShapeSubObjDef, SignalTypeDef,
     SignalUnitRef, SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData,
     TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc,

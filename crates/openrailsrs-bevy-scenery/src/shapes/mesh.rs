@@ -62,6 +62,8 @@ pub struct LoadedShapePart {
     pub light_mat_idx: Option<i32>,
     /// OR first `uv_op.TexAddrMode` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
     pub tex_addr_mode: Option<i32>,
+    /// MSTS `texture.MipMapLODBias` for this part's texture slot (#108).
+    pub mip_map_lod_bias: Option<f32>,
     /// Baked mesh AABB (cab CVF proximity filter).
     pub bounds_center: Option<Vec3>,
     pub bounds_half_extent: Option<Vec3>,
@@ -488,6 +490,7 @@ pub fn build_mesh_parts_from_shape_lod_with_options(
                 z_buf_mode,
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
                 tex_addr_mode: shape.tex_addr_mode_for_prim_state(prim_state_idx),
+                mip_map_lod_bias: Some(shape.mip_map_lod_bias_for_prim_state(prim_state_idx)),
                 bounds_center: None,
                 bounds_half_extent: None,
                 lever_pivot_at_mesh_center: false,
@@ -1272,6 +1275,7 @@ mod tests {
                             prim_state_idx: 0,
                             vertex_indices: vec![0, 1, 2],
                         }],
+                        ..Default::default()
                     }],
                 }],
             }],

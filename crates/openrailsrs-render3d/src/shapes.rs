@@ -33,6 +33,8 @@ pub struct ShapePart {
     pub light_mat_idx: Option<i32>,
     /// OR first `uv_op.TexAddrMode` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
     pub tex_addr_mode: Option<i32>,
+    /// MSTS `texture.MipMapLODBias` (#108).
+    pub mip_map_lod_bias: Option<f32>,
     /// Color por vértice (RGBA lineal) cuando el shape no tiene textura.
     pub colors: Option<Vec<[f32; 4]>>,
     /// Color uniforme si todos los vértices comparten el mismo tono.
@@ -119,6 +121,7 @@ fn loaded_part_to_shape_part(part: LoadedShapePart) -> Option<ShapePart> {
         shader_name: part.shader_name,
         light_mat_idx: part.light_mat_idx,
         tex_addr_mode: part.tex_addr_mode,
+        mip_map_lod_bias: part.mip_map_lod_bias,
         colors,
         solid_color: part.solid_color,
     })

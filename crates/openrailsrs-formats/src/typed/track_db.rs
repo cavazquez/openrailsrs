@@ -301,7 +301,9 @@ pub struct TrItem {
     pub kind: TrItemKind,
     /// Distance in metres from the start of the parent vector node (`TrItemSData`).
     pub distance_m: f64,
-    /// Absolute pose when `TrItemRData` is present (required for RDB CarSpawner endpoints).
+    /// Absolute pose from `TrItemRData`, or `TrItemPData` fallback (Y=0) when RData is absent (#91).
+    ///
+    /// Policy (Open Rails parity): RData always wins when present; PData never overwrites it.
     pub world: Option<TrItemWorldPose>,
 }
 
@@ -1458,8 +1460,41 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     })
 }
 
-/// `( TrItemRData x y z tileX tileZ )`.
+/// Resolve item world pose: prefer `TrItemRData`, else `TrItemPData` with Y=0 (#91).
 fn find_tr_item_world_pose(item: &[Ast]) -> Option<TrItemWorldPose> {
+    if let Some(pose) = find_tr_item_rdata(item) {
+        return Some(pose);
+    }
+    find_tr_item_pdata(item)
+}
+
+/// `( TrItemRData x y z tileX tileZ )`.
+fn find_tr_item_rdata(item: &[Ast]) -> Option<TrItemWorldPose> {
+    find_tr_item_numbered_block(item, "TrItemRData", 5).and_then(|nums| {
+        (nums.len() >= 5).then_some(TrItemWorldPose {
+            x: nums[0],
+            y: nums[1],
+            z: nums[2],
+            tile_x: nums[3] as i32,
+            tile_z: nums[4] as i32,
+        })
+    })
+}
+
+/// `( TrItemPData PX PZ TilePX TilePZ )` — no Y; used when RData is absent (#91).
+fn find_tr_item_pdata(item: &[Ast]) -> Option<TrItemWorldPose> {
+    find_tr_item_numbered_block(item, "TrItemPData", 4).and_then(|nums| {
+        (nums.len() >= 4).then_some(TrItemWorldPose {
+            x: nums[0],
+            y: 0.0,
+            z: nums[1],
+            tile_x: nums[2] as i32,
+            tile_z: nums[3] as i32,
+        })
+    })
+}
+
+fn find_tr_item_numbered_block(item: &[Ast], tag_name: &str, min_nums: usize) -> Option<Vec<f64>> {
     let mut i = 0;
     while i < item.len() {
         match &item[i] {
@@ -1468,7 +1503,7 @@ fn find_tr_item_world_pose(item: &[Ast]) -> Option<TrItemWorldPose> {
                     i += 1;
                     continue;
                 };
-                if tag.eq_ignore_ascii_case("TrItemRData") {
+                if tag.eq_ignore_ascii_case(tag_name) {
                     let nums: Vec<f64> = sub
                         .iter()
                         .skip(1)
@@ -1477,19 +1512,13 @@ fn find_tr_item_world_pose(item: &[Ast]) -> Option<TrItemWorldPose> {
                             _ => None,
                         })
                         .collect();
-                    if nums.len() >= 5 {
-                        return Some(TrItemWorldPose {
-                            x: nums[0],
-                            y: nums[1],
-                            z: nums[2],
-                            tile_x: nums[3] as i32,
-                            tile_z: nums[4] as i32,
-                        });
+                    if nums.len() >= min_nums {
+                        return Some(nums);
                     }
                 }
             }
-            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemRData") => {
-                // JINX: `TrItemRData ( x y z tileX tileZ )` → Symbol + List(args).
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case(tag_name) => {
+                // JINX: `Tag ( … )` → Symbol + List(args).
                 let nums: Vec<f64> = match item.get(i + 1) {
                     Some(Ast::List(inner)) => inner
                         .iter()
@@ -1500,21 +1529,15 @@ fn find_tr_item_world_pose(item: &[Ast]) -> Option<TrItemWorldPose> {
                         .collect(),
                     _ => item[i + 1..]
                         .iter()
-                        .take(5)
+                        .take(min_nums)
                         .filter_map(|a| match a {
                             Ast::Atom(at) => atom_to_number(at),
                             _ => None,
                         })
                         .collect(),
                 };
-                if nums.len() >= 5 {
-                    return Some(TrItemWorldPose {
-                        x: nums[0],
-                        y: nums[1],
-                        z: nums[2],
-                        tile_x: nums[3] as i32,
-                        tile_z: nums[4] as i32,
-                    });
+                if nums.len() >= min_nums {
+                    return Some(nums);
                 }
             }
             _ => {}
@@ -1845,5 +1868,113 @@ mod tests {
         assert!(
             matches!(post.kind, TrItemKind::SpeedPost { speed_mph } if (speed_mph - 50.0).abs() < 1e-6)
         );
+    }
+
+    #[test]
+    fn parse_tr_item_pdata_only_signal() {
+        use crate::parser::parse_from_first_paren;
+        let src = r#"( 1
+  SignalItem
+  (
+    TrItemId ( 1 )
+    TrItemSData ( 10.0 0 )
+    TrItemPData ( 12.5 34.5 -6084 14930 )
+    TrSignalType 0 0 0 "SIG"
+  )
+)"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let mut tdb = TrackDbFile::default();
+        if let Ast::List(root) = &ast {
+            parse_tr_item_table_entries(root, &mut tdb.items);
+        }
+        let item = tdb.items.iter().find(|i| i.id == 1).expect("item");
+        let world = item.world.expect("PData → world");
+        assert!((world.x - 12.5).abs() < 1e-9);
+        assert!((world.y - 0.0).abs() < 1e-9);
+        assert!((world.z - 34.5).abs() < 1e-9);
+        assert_eq!(world.tile_x, -6084);
+        assert_eq!(world.tile_z, 14930);
+    }
+
+    #[test]
+    fn parse_tr_item_pdata_only_speedpost() {
+        use crate::parser::parse_from_first_paren;
+        let src = r#"( 1
+  SpeedPostItem
+  (
+    TrItemId ( 3 )
+    TrItemSData ( 1.0 0 )
+    TrItemPData ( 1.0 2.0 10 20 )
+    SpeedpostTrItemData ( 898 40 0.0 )
+  )
+)"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let mut tdb = TrackDbFile::default();
+        if let Ast::List(root) = &ast {
+            parse_tr_item_table_entries(root, &mut tdb.items);
+        }
+        let post = tdb.items.iter().find(|i| i.id == 3).expect("post");
+        assert!(matches!(
+            post.kind,
+            TrItemKind::SpeedPost { speed_mph } if (speed_mph - 40.0).abs() < 1e-6
+        ));
+        let world = post.world.expect("PData");
+        assert_eq!(world.tile_x, 10);
+        assert_eq!(world.tile_z, 20);
+        assert!((world.y - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn parse_rdata_not_overwritten_by_pdata() {
+        use crate::parser::parse_from_first_paren;
+        let src = r#"( 1
+  SignalItem
+  (
+    TrItemId ( 9 )
+    TrItemSData ( 0.0 0 )
+    TrItemRData ( 100.0 55.0 200.0 -1 2 )
+    TrItemPData ( 1.0 2.0 99 88 )
+    TrSignalType 0 0 0 "SIG"
+  )
+)"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let mut tdb = TrackDbFile::default();
+        if let Ast::List(root) = &ast {
+            parse_tr_item_table_entries(root, &mut tdb.items);
+        }
+        let world = tdb.items[0].world.expect("RData");
+        assert!((world.x - 100.0).abs() < 1e-9);
+        assert!((world.y - 55.0).abs() < 1e-9);
+        assert!((world.z - 200.0).abs() < 1e-9);
+        assert_eq!(world.tile_x, -1);
+        assert_eq!(world.tile_z, 2);
+    }
+
+    #[test]
+    fn parse_rdb_levelcr_pdata_pose() {
+        use crate::parser::parse_from_first_paren;
+        // RDB LevelCrItem uses the same TrItemPData layout as TDB (#91).
+        let src = r#"( 1
+  LevelCrItem
+  (
+    TrItemId ( 42 )
+    TrItemSData ( 0.0 0 )
+    TrItemPData ( 5.0 6.0 7 8 )
+  )
+)"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let mut tdb = TrackDbFile::default();
+        if let Ast::List(root) = &ast {
+            parse_tr_item_table_entries(root, &mut tdb.items);
+        }
+        let item = tdb.items.iter().find(|i| i.id == 42).expect("42");
+        let world = item.world.expect("PData");
+        assert!((world.x - 5.0).abs() < 1e-9);
+        assert!((world.z - 6.0).abs() < 1e-9);
+        assert_eq!(world.tile_x, 7);
+        assert_eq!(world.tile_z, 8);
+        let (bx, by, bz) = tdb.item_bevy_position(42).expect("bevy");
+        let (ex, ey, ez) = world.bevy_position();
+        assert!((bx - ex).abs() < 1e-3 && (by - ey).abs() < 1e-3 && (bz - ez).abs() < 1e-3);
     }
 }

@@ -747,6 +747,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 z_buf_mode,
                 light_mat_idx: light_mat_idx_for_prim_state(shape, prim_state_idx),
                 tex_addr_mode: shape.tex_addr_mode_for_prim_state(prim_state_idx),
+                mip_map_lod_bias: Some(shape.mip_map_lod_bias_for_prim_state(prim_state_idx)),
                 bounds_center: Some(bounds_center),
                 bounds_half_extent: Some(bounds_half_extent),
                 lever_pivot_at_mesh_center,
@@ -1150,6 +1151,16 @@ fn ace_rgba_to_image_with_addr(
     rgba: &[u8],
     tex_addr_mode: Option<i32>,
 ) -> Image {
+    ace_rgba_to_image_with_sampler(width, height, rgba, tex_addr_mode, None)
+}
+
+fn ace_rgba_to_image_with_sampler(
+    width: u32,
+    height: u32,
+    rgba: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Image {
     let mut image = Image::new(
         Extent3d {
             width,
@@ -1161,12 +1172,23 @@ fn ace_rgba_to_image_with_addr(
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+    openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
+        &mut image,
+        tex_addr_mode,
+        mip_map_lod_bias,
+    );
     image
 }
 
 fn texture_cache_addr_key(tex_addr_mode: Option<i32>) -> i32 {
-    tex_addr_mode.unwrap_or(1)
+    texture_cache_sampler_key(tex_addr_mode, None)
+}
+
+/// Pack address mode + quantized mip bias into the image cache key (#108).
+fn texture_cache_sampler_key(tex_addr_mode: Option<i32>, mip_map_lod_bias: Option<f32>) -> i32 {
+    let addr = tex_addr_mode.unwrap_or(1).clamp(0, 15);
+    let bias_cents = (mip_map_lod_bias.unwrap_or(-3.0) * 100.0).round() as i32;
+    addr + bias_cents.saturating_mul(16)
 }
 
 /// Decode a DDS file from raw bytes into a Bevy GPU image (keeps block compression).
@@ -1178,7 +1200,19 @@ pub fn decode_dds_to_image_with_addr(
     bytes: &[u8],
     tex_addr_mode: Option<i32>,
 ) -> Result<Image, String> {
-    openrailsrs_bevy_scenery::textures::decode_dds_to_image_with_addr(bytes, tex_addr_mode)
+    decode_dds_to_image_with_sampler(bytes, tex_addr_mode, None)
+}
+
+pub fn decode_dds_to_image_with_sampler(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Result<Image, String> {
+    openrailsrs_bevy_scenery::textures::decode_dds_to_image_with_sampler(
+        bytes,
+        tex_addr_mode,
+        mip_map_lod_bias,
+    )
 }
 
 /// Decode DDS mip0 to uncompressed RGBA8 (reliable alpha blend in custom shaders).
@@ -1189,6 +1223,14 @@ pub fn decode_dds_to_rgba_image(bytes: &[u8]) -> Result<Image, String> {
 pub fn decode_dds_to_rgba_image_with_addr(
     bytes: &[u8],
     tex_addr_mode: Option<i32>,
+) -> Result<Image, String> {
+    decode_dds_to_rgba_image_with_sampler(bytes, tex_addr_mode, None)
+}
+
+pub fn decode_dds_to_rgba_image_with_sampler(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
 ) -> Result<Image, String> {
     use image::ImageFormat;
     let dyn_img =
@@ -1205,7 +1247,11 @@ pub fn decode_dds_to_rgba_image_with_addr(
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+    openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
+        &mut image,
+        tex_addr_mode,
+        mip_map_lod_bias,
+    );
     Ok(image)
 }
 
@@ -1615,6 +1661,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 train_exterior,
                 None,
                 None,
+                None,
             );
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
@@ -1661,6 +1708,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 train_exterior,
                 part.light_mat_idx,
                 part.tex_addr_mode,
+                part.mip_map_lod_bias,
             );
         let mut mesh = part.mesh.clone();
         // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
@@ -2043,6 +2091,7 @@ fn material_for_shape_texture(
     train_exterior: bool,
     light_mat_idx: Option<i32>,
     tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
 ) -> (
     Handle<StandardMaterial>,
     Option<Handle<crate::or_cab_material::OrCabMaterial>>,
@@ -2052,7 +2101,7 @@ fn material_for_shape_texture(
     bool,
 ) {
     let lit = lit_override.unwrap_or_else(scenery_materials_lit);
-    let addr_key = texture_cache_addr_key(tex_addr_mode);
+    let addr_key = texture_cache_sampler_key(tex_addr_mode, mip_map_lod_bias);
     if let Some(tex_name) = texture_file {
         match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
             None => {}
@@ -2074,9 +2123,17 @@ fn material_for_shape_texture(
                         let use_rgba =
                             cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
                         let image = if use_rgba {
-                            decode_dds_to_rgba_image_with_addr(&bytes, tex_addr_mode)
+                            decode_dds_to_rgba_image_with_sampler(
+                                &bytes,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
                         } else {
-                            decode_dds_to_image_with_addr(&bytes, tex_addr_mode)
+                            decode_dds_to_image_with_sampler(
+                                &bytes,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
                         };
                         if let Ok(image) = image {
                             let handle = texture_cache
@@ -2162,8 +2219,13 @@ fn material_for_shape_texture(
                     } else {
                         scenery_albedo_tint(pixel_brightened, lit)
                     };
-                    let image =
-                        ace_rgba_to_image_with_addr(ace.width, ace.height, &rgba, tex_addr_mode);
+                    let image = ace_rgba_to_image_with_sampler(
+                        ace.width,
+                        ace.height,
+                        &rgba,
+                        tex_addr_mode,
+                        mip_map_lod_bias,
+                    );
                     let handle = texture_cache
                         .entry((tex_path, addr_key))
                         .or_insert_with(|| images.add(image))
@@ -2515,9 +2577,21 @@ mod tests {
             has_texture: false,
             has_night_subobj: true,
         };
-        assert!(shape_part_visible_for_day_night(&asset, &asset.parts[0], true));
-        assert!(!shape_part_visible_for_day_night(&asset, &asset.parts[1], true));
-        assert!(shape_part_visible_for_day_night(&asset, &asset.parts[1], false));
+        assert!(shape_part_visible_for_day_night(
+            &asset,
+            &asset.parts[0],
+            true
+        ));
+        assert!(!shape_part_visible_for_day_night(
+            &asset,
+            &asset.parts[1],
+            true
+        ));
+        assert!(shape_part_visible_for_day_night(
+            &asset,
+            &asset.parts[1],
+            false
+        ));
     }
 
     fn minimal_shape_fixture() -> PathBuf {
@@ -2987,6 +3061,7 @@ mod tests {
                 false,
                 None,
                 None,
+                None,
             );
             (handle, has_texture, is_transparent, dual_blend)
         };
@@ -3083,6 +3158,7 @@ mod tests {
                 false,
                 None,
                 None,
+                None,
             );
             (handle, is_transparent)
         };
@@ -3109,6 +3185,7 @@ mod tests {
                 None,
                 false,
                 false,
+                None,
                 None,
                 None,
             );

@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::{
-    CompressedImageFormats, Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor,
-    ImageType,
+    CompressedImageFormats, Image, ImageAddressMode, ImageFilterMode, ImageSampler,
+    ImageSamplerDescriptor, ImageType,
 };
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -617,12 +617,42 @@ pub fn image_address_mode_from_msts(raw: Option<i32>) -> ImageAddressMode {
     }
 }
 
+/// Open Rails clamps applied `MipMapLODBias` to ≥ −1 (`Materials.cs`).
+pub fn clamp_or_mip_map_lod_bias(bias: f32) -> f32 {
+    bias.max(-1.0)
+}
+
 /// Apply OR texture address mode to a Bevy [`Image`] sampler (U+V).
+///
+/// Uses Open Rails scenery defaults: anisotropic 16 + linear filters (#108).
+/// `MipMapLODBias` is not available on wgpu; pass via
+/// [`apply_msts_texture_sampler`] for the documented `lod_min_clamp` approximation.
 pub fn apply_tex_addr_mode(image: &mut Image, tex_addr_mode: Option<i32>) {
+    apply_msts_texture_sampler(image, tex_addr_mode, None);
+}
+
+/// Address mode + OR-parity filter/aniso, with optional MSTS mip bias approximation (#108).
+///
+/// Bevy/wgpu has no `MipMapLevelOfDetailBias`. Approximation:
+/// - always anisotropic 16 / linear (OR ignores FilterMode at runtime);
+/// - positive bias → `lod_min_clamp = bias` (softer mips);
+/// - negative/zero bias → `lod_min_clamp = 0` (sharpest available; OR uses −3/−1).
+pub fn apply_msts_texture_sampler(
+    image: &mut Image,
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) {
     let addr = image_address_mode_from_msts(tex_addr_mode);
+    let bias = mip_map_lod_bias.map(clamp_or_mip_map_lod_bias);
+    let lod_min_clamp = bias.filter(|&b| b > 0.0).unwrap_or(0.0);
     image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
         address_mode_u: addr,
         address_mode_v: addr,
+        mag_filter: ImageFilterMode::Linear,
+        min_filter: ImageFilterMode::Linear,
+        mipmap_filter: ImageFilterMode::Linear,
+        lod_min_clamp,
+        anisotropy_clamp: 16,
         ..Default::default()
     });
 }
@@ -635,6 +665,14 @@ pub fn decode_dds_to_image_with_addr(
     bytes: &[u8],
     tex_addr_mode: Option<i32>,
 ) -> Result<Image, String> {
+    decode_dds_to_image_with_sampler(bytes, tex_addr_mode, None)
+}
+
+pub fn decode_dds_to_image_with_sampler(
+    bytes: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Result<Image, String> {
     let mut image = Image::from_buffer(
         bytes,
         ImageType::Extension("dds"),
@@ -644,7 +682,7 @@ pub fn decode_dds_to_image_with_addr(
         RenderAssetUsages::default(),
     )
     .map_err(|e| e.to_string())?;
-    apply_tex_addr_mode(&mut image, tex_addr_mode);
+    apply_msts_texture_sampler(&mut image, tex_addr_mode, mip_map_lod_bias);
     Ok(image)
 }
 
@@ -655,13 +693,25 @@ pub fn load_texture_image(path: &Path) -> Option<Image> {
 }
 
 pub fn load_texture_image_with_addr(path: &Path, tex_addr_mode: Option<i32>) -> Option<Image> {
+    load_texture_image_with_sampler(path, tex_addr_mode, None)
+}
+
+pub fn load_texture_image_with_sampler(
+    path: &Path,
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Option<Image> {
     let ext = path.extension()?.to_str()?.to_ascii_lowercase();
     if ext == "dds" {
         let bytes = std::fs::read(path).ok()?;
-        return decode_dds_to_image_with_addr(&bytes, tex_addr_mode).ok();
+        return decode_dds_to_image_with_sampler(&bytes, tex_addr_mode, mip_map_lod_bias).ok();
     }
     let ace = read_ace(path).ok()?;
-    Some(ace_to_image_with_addr(&ace, tex_addr_mode))
+    Some(ace_to_image_with_sampler(
+        &ace,
+        tex_addr_mode,
+        mip_map_lod_bias,
+    ))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -707,6 +757,14 @@ pub fn ace_to_image(ace: &AceFile) -> Image {
 }
 
 pub fn ace_to_image_with_addr(ace: &AceFile, tex_addr_mode: Option<i32>) -> Image {
+    ace_to_image_with_sampler(ace, tex_addr_mode, None)
+}
+
+pub fn ace_to_image_with_sampler(
+    ace: &AceFile,
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Image {
     let mips = if ace.mips.is_empty() {
         vec![openrailsrs_ace::AceMipLevel {
             width: ace.width,
@@ -736,13 +794,40 @@ pub fn ace_to_image_with_addr(ace: &AceFile, tex_addr_mode: Option<i32>) -> Imag
     if mips.len() > 1 {
         image.texture_descriptor.mip_level_count = mips.len() as u32;
     }
-    apply_tex_addr_mode(&mut image, tex_addr_mode);
+    apply_msts_texture_sampler(&mut image, tex_addr_mode, mip_map_lod_bias);
     image
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn msts_sampler_uses_aniso_and_positive_bias_lod_clamp() {
+        let mut image = Image::new(
+            Extent3d {
+                width: 4,
+                height: 4,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            vec![0u8; 4 * 4 * 4],
+            TextureFormat::Rgba8UnormSrgb,
+            RenderAssetUsages::default(),
+        );
+        apply_msts_texture_sampler(&mut image, Some(1), Some(-3.0));
+        let ImageSampler::Descriptor(desc) = &image.sampler else {
+            panic!("expected descriptor sampler");
+        };
+        assert_eq!(desc.anisotropy_clamp, 16);
+        assert!((desc.lod_min_clamp - 0.0).abs() < 1e-6);
+        apply_msts_texture_sampler(&mut image, Some(1), Some(2.0));
+        let ImageSampler::Descriptor(desc) = &image.sampler else {
+            panic!("expected descriptor sampler");
+        };
+        assert!((desc.lod_min_clamp - 2.0).abs() < 1e-6);
+        assert!((clamp_or_mip_map_lod_bias(-3.0) - (-1.0)).abs() < 1e-6);
+    }
 
     #[test]
     fn tex_addr_modes_map_to_bevy_samplers() {

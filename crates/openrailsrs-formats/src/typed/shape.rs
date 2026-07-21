@@ -135,6 +135,8 @@ pub struct SubObject {
     /// Vertex table addressed by [`Primitive::vertex_indices`].
     pub vertices: Vec<Vertex>,
     pub primitives: Vec<Primitive>,
+    /// `geometry_info/geometry_node_map` — matrix index → geometry node (−1 unused) (#98).
+    pub geometry_node_map: Vec<i32>,
 }
 
 /// One LOD entry: a draw distance and the meshes drawn at that distance.
@@ -227,10 +229,29 @@ pub struct Animation {
 }
 
 /// Slot in the shape `textures` table (maps to `images` via `image_idx`).
-#[derive(Clone, Debug, Default, PartialEq)]
+///
+/// Open Rails layout: `texture ( ImageIdx FilterMode MipMapLODBias [BorderColor] )`.
+#[derive(Clone, Debug, PartialEq)]
 pub struct ShapeTextureSlot {
     /// Index into [`ShapeFile::texture_filenames`] / `images`.
     pub image_idx: i32,
+    /// Parsed FilterMode (OR does **not** apply this to the sampler; always anisotropic).
+    pub filter_mode: i32,
+    /// MSTS `MipMapLODBias` (OR default −3; applied sampler clamps values &lt; −1 to −1).
+    pub mip_map_lod_bias: f32,
+    /// Optional border colour dword (`0xff000000` when present in OR defaults).
+    pub border_color: Option<u32>,
+}
+
+impl Default for ShapeTextureSlot {
+    fn default() -> Self {
+        Self {
+            image_idx: -1,
+            filter_mode: 0,
+            mip_map_lod_bias: -3.0,
+            border_color: Some(0xff00_0000),
+        }
+    }
 }
 
 /// OR `TexAddrMode` from the first `uv_op` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
@@ -373,6 +394,44 @@ impl ShapeFile {
             .unwrap_or(MstsTexAddrMode::Wrap)
     }
 
+    /// Texture slot for a `prim_state` (`tex_idxs[0]` → `textures[]`).
+    pub fn texture_slot_for_prim_state(&self, prim_state_idx: i32) -> Option<&ShapeTextureSlot> {
+        if prim_state_idx < 0 {
+            return None;
+        }
+        let ps = self.prim_states.get(prim_state_idx as usize)?;
+        let tex_slot = ps.tex_indices.first().copied().unwrap_or(ps.texture_idx);
+        if tex_slot < 0 {
+            return None;
+        }
+        self.texture_slots.get(tex_slot as usize)
+    }
+
+    /// MSTS `MipMapLODBias` for a prim_state (OR default −3 when slot missing) (#108).
+    pub fn mip_map_lod_bias_for_prim_state(&self, prim_state_idx: i32) -> f32 {
+        self.texture_slot_for_prim_state(prim_state_idx)
+            .map(|s| s.mip_map_lod_bias)
+            .unwrap_or(-3.0)
+    }
+
+    /// Open Rails `SharedShape.RootSubObjectIndex`: first sub-object whose
+    /// `geometry_node_map[0] == 0` (ProTrain signals may not use index 0) (#98).
+    pub fn root_sub_object_index(&self) -> usize {
+        let Some(level) = self
+            .lod_controls
+            .first()
+            .and_then(|c| c.distance_levels.first())
+        else {
+            return 0;
+        };
+        for (so_index, sub) in level.sub_objects.iter().enumerate() {
+            if sub.geometry_node_map.first().copied() == Some(0) {
+                return so_index;
+            }
+        }
+        0
+    }
+
     /// Read and parse a `.s` file from disk (ASCII, zlib-compressed ASCII, or binary tokenized).
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
@@ -493,18 +552,31 @@ fn collect_texture_slots(ast: &Ast) -> Vec<ShapeTextureSlot> {
     let mut out = Vec::new();
     walk_named_list(ast, "textures", &mut |items| {
         for_each_tagged(items, "texture", |sub| {
-            let image_idx = first_number_after_head(sub)
-                .map(|n| n as i32)
-                .or_else(|| {
-                    shape_section_body(sub).iter().find_map(|a| match a {
-                        Ast::Atom(at) => shape_atom_to_i32(at),
+            let nums: Vec<f64> = shape_section_body(sub)
+                .iter()
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => match at {
+                        Atom::Number(v) => Some(*v),
+                        Atom::Integer(v) => Some(*v as f64),
                         _ => None,
-                    })
+                    },
+                    _ => None,
                 })
-                .unwrap_or(-1);
-            if image_idx >= 0 {
-                out.push(ShapeTextureSlot { image_idx });
+                .collect();
+            let image_idx = nums.first().copied().unwrap_or(-1.0) as i32;
+            if image_idx < 0 {
+                return;
             }
+            // OR defaults when FilterMode / bias omitted: 0 / -3 / 0xff000000.
+            let filter_mode = nums.get(1).copied().unwrap_or(0.0) as i32;
+            let mip_map_lod_bias = nums.get(2).copied().unwrap_or(-3.0) as f32;
+            let border_color = nums.get(3).map(|n| *n as u32);
+            out.push(ShapeTextureSlot {
+                image_idx,
+                filter_mode,
+                mip_map_lod_bias,
+                border_color,
+            });
         });
     });
     out
@@ -800,6 +872,22 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
     let mut vertex_count: usize = 0;
     let mut vertices = Vec::new();
     let mut primitives = Vec::new();
+    let mut geometry_node_map = Vec::new();
+
+    // Nested OR layout: sub_object_header → geometry_info → geometry_node_map (#98).
+    for_each_tagged(items, "sub_object_header", |hdr| {
+        for_each_tagged(hdr, "geometry_info", |gi| {
+            for_each_tagged(gi, "geometry_node_map", |m| {
+                geometry_node_map = parse_counted_i32_list(m);
+            });
+        });
+    });
+    // Flattened / direct map (some dumps).
+    if geometry_node_map.is_empty() {
+        for_each_tagged(items, "geometry_node_map", |m| {
+            geometry_node_map = parse_counted_i32_list(m);
+        });
+    }
 
     for_each_tagged(items, "vertices", |sub| {
         if let Some(n) = first_number_in_section(sub) {
@@ -846,6 +934,7 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
         vertex_count,
         vertices,
         primitives,
+        geometry_node_map,
     }
 }
 
@@ -1487,6 +1576,76 @@ mod tests {
         assert_eq!(msts_tex_addr_mode(4), Some(MstsTexAddrMode::Border));
         assert_eq!(msts_tex_addr_mode(0), None);
         assert_eq!(msts_tex_addr_mode(5), None);
+    }
+
+    #[test]
+    fn root_sub_object_index_from_geometry_node_map() {
+        // ProTrain-style: first subobj map[0]=-1, second map[0]=0 → root = 1 (#98).
+        let src = r#"
+        ( shape
+          ( lod_controls 1
+            ( lod_control
+              ( distance_levels 1
+                ( distance_level
+                  ( distance_level_header ( dlevel_selection 200 ) )
+                  ( sub_objects 2
+                    ( sub_object
+                      ( sub_object_header
+                        ( geometry_info
+                          ( geometry_node_map 2 -1 0 )
+                        )
+                      )
+                      ( vertices 0 )
+                      ( primitives 0 )
+                    )
+                    ( sub_object
+                      ( sub_object_header
+                        ( geometry_info
+                          ( geometry_node_map 2 0 1 )
+                        )
+                      )
+                      ( vertices 0 )
+                      ( primitives 0 )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        "#;
+        let shape = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        assert_eq!(
+            shape.lod_controls[0].distance_levels[0].sub_objects[0].geometry_node_map,
+            vec![-1, 0]
+        );
+        assert_eq!(
+            shape.lod_controls[0].distance_levels[0].sub_objects[1].geometry_node_map,
+            vec![0, 1]
+        );
+        assert_eq!(shape.root_sub_object_index(), 1);
+    }
+
+    #[test]
+    fn texture_slot_parses_filter_mode_and_mip_bias() {
+        let src = r#"
+        ( shape
+          ( images 1 "a.ace" )
+          ( textures 1 ( texture 0 0 -3 4278190080 ) )
+          ( vtx_states 1 ( vtx_state 0 0 -5 0 ) )
+          ( prim_states 1 ( prim_state "m" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 ) )
+        )
+        "#;
+        let shape = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        assert_eq!(shape.texture_slots.len(), 1);
+        let slot = &shape.texture_slots[0];
+        assert_eq!(slot.image_idx, 0);
+        assert_eq!(slot.filter_mode, 0);
+        assert!((slot.mip_map_lod_bias - (-3.0)).abs() < 1e-5);
+        assert_eq!(slot.border_color, Some(0xff00_0000));
+        assert!((shape.mip_map_lod_bias_for_prim_state(0) - (-3.0)).abs() < 1e-5);
     }
 
     #[test]
