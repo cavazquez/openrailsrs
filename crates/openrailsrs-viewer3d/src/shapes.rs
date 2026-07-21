@@ -235,6 +235,7 @@ pub struct RouteAssets {
     /// Road database (`.rdb`) — same schema as TDB; used for CarSpawner endpoints (#32).
     road_db: Option<openrailsrs_formats::TrackDbFile>,
     carspawn: openrailsrs_formats::CarSpawnerCatalog,
+    sigcfg: openrailsrs_formats::SigCfgFile,
     tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
 }
 
@@ -292,6 +293,16 @@ impl RouteAssets {
                 models
             );
         }
+        let sigcfg =
+            openrailsrs_formats::SigCfgFile::load_for_route(&route_dir).unwrap_or_default();
+        if !sigcfg.signal_shapes.is_empty() {
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: sigcfg — {} shape(s), {} type(s), {} light colour(s)",
+                sigcfg.signal_shapes.len(),
+                sigcfg.signal_types.len(),
+                sigcfg.lights_tab.len()
+            );
+        }
         Self {
             route_dir,
             shape_path_index,
@@ -299,6 +310,7 @@ impl RouteAssets {
             track_db,
             road_db,
             carspawn,
+            sigcfg,
             tdb_sections_by_shape,
         }
     }
@@ -313,6 +325,10 @@ impl RouteAssets {
 
     pub fn carspawn(&self) -> &openrailsrs_formats::CarSpawnerCatalog {
         &self.carspawn
+    }
+
+    pub fn sigcfg(&self) -> &openrailsrs_formats::SigCfgFile {
+        &self.sigcfg
     }
 
     pub fn tsection(&self) -> &openrailsrs_formats::TSectionCatalog {

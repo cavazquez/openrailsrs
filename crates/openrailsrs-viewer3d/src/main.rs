@@ -49,6 +49,7 @@ use openrailsrs_scenarios::{apply_scenario_runtime_overlay_dir, load_scenario};
 use openrailsrs_viewer3d::HudTitle;
 use openrailsrs_viewer3d::LiveDrive;
 use openrailsrs_viewer3d::RouteAssets;
+use openrailsrs_viewer3d::overhead_wire::RouteWireConfig;
 use openrailsrs_viewer3d::TerrainElevation;
 use openrailsrs_viewer3d::TerrainScene;
 use openrailsrs_viewer3d::TrainConsistScene;
@@ -468,6 +469,7 @@ fn main() {
         view_radius_m(),
     ))
     .insert_resource(assets)
+    .insert_resource(RouteWireConfig::load_from_route_dir(&config.route_dir))
     .insert_resource(route_focus)
     .insert_resource(route_offset)
     .insert_resource(config.world.clone())

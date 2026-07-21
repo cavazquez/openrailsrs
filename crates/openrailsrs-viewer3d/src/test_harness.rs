@@ -278,6 +278,9 @@ pub fn insert_route_dir_bundle(app: &mut App, route_dir: &Path) {
     app.insert_resource(focus);
     app.insert_resource(offset);
     app.insert_resource(RouteAssets::new(route_dir));
+    app.insert_resource(crate::overhead_wire::RouteWireConfig::load_from_route_dir(
+        route_dir,
+    ));
 }
 
 pub fn with_route_dir_world(route_dir: &Path, f: impl FnOnce(&mut World)) {

@@ -55,12 +55,16 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
+        /// From preceding `Tr_Watermark` (HideWire uses levels 2/3).
+        static_detail_level: u32,
     },
     Dyntrack {
         uid: u32,
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
+        /// From preceding `Tr_Watermark` (HideWire uses levels 2/3).
+        static_detail_level: u32,
     },
     Signal {
         uid: u32,
@@ -68,8 +72,10 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
-        /// Head signal units referencing TDB `TrItemId`s (TSRE `SignalObj::signalUnit`).
-        tr_item_ids: Vec<u32>,
+        /// Bitmask of installed `SignalSubObj` entries from `sigcfg.dat` (OR `SignalSubObj`).
+        signal_sub_obj: u32,
+        /// Head units: `(SubObj index, TDB TrItemId)` from `SignalUnit` / nested `TrItemId`.
+        signal_units: Vec<SignalUnitRef>,
     },
     /// Wayside speed post (`Speedpost` in `.w`).
     Speedpost {
@@ -152,6 +158,15 @@ pub enum WorldItem {
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
     },
+}
+
+/// One WORLD `SignalUnit ( SubObj ( TrItemId db itemId ) )` entry (#37).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignalUnitRef {
+    /// Index into `sigcfg` `SignalShape.SignalSubObjs`.
+    pub sub_obj: u32,
+    /// TDB `TrItem` id for this head.
+    pub tr_item_id: u32,
 }
 
 impl WorldItem {
@@ -260,9 +275,13 @@ impl WorldItem {
     /// TDB `TrItemId`s referenced by this world object (signals, speedposts, sound regions).
     pub fn tr_item_ids(&self) -> Vec<u32> {
         match self {
-            WorldItem::Signal { tr_item_ids, .. } | WorldItem::Pickup { tr_item_ids, .. } => {
-                tr_item_ids.clone()
+            WorldItem::Signal { signal_units, .. } => {
+                let mut ids: Vec<u32> = signal_units.iter().map(|u| u.tr_item_id).collect();
+                ids.sort_unstable();
+                ids.dedup();
+                ids
             }
+            WorldItem::Pickup { tr_item_ids, .. } => tr_item_ids.clone(),
             WorldItem::Speedpost { tr_item_id, .. } | WorldItem::SoundRegion { tr_item_id, .. } => {
                 vec![*tr_item_id]
             }
@@ -274,11 +293,42 @@ impl WorldItem {
         }
     }
 
+    /// Signal head units (`SignalUnit` / `SignalSubObj` bitmask) when this is a Signal.
+    pub fn signal_units(&self) -> &[SignalUnitRef] {
+        match self {
+            WorldItem::Signal { signal_units, .. } => signal_units.as_slice(),
+            _ => &[],
+        }
+    }
+
+    /// WORLD `SignalSubObj` bitmask (installed optional heads/decor).
+    pub fn signal_sub_obj_mask(&self) -> Option<u32> {
+        match self {
+            WorldItem::Signal { signal_sub_obj, .. } => Some(*signal_sub_obj),
+            _ => None,
+        }
+    }
+
     /// `TrackObj` → `TrackShape` index in `tsection.dat`.
     pub fn section_idx(&self) -> Option<u32> {
         match self {
             WorldItem::Track { section_idx, .. } => *section_idx,
             _ => None,
+        }
+    }
+
+    /// Detail band from `Tr_Watermark` (0 when absent). HideWire uses 2/3.
+    pub fn static_detail_level(&self) -> u32 {
+        match self {
+            WorldItem::Track {
+                static_detail_level,
+                ..
+            }
+            | WorldItem::Dyntrack {
+                static_detail_level,
+                ..
+            } => *static_detail_level,
+            _ => 0,
         }
     }
 }
@@ -325,13 +375,14 @@ fn load_world_ast(text: &str) -> Result<Ast, FormatError> {
     }
 }
 
-fn select_better_world_ast(a: &Ast, b: &Ast) -> Ast {
-    let count_a = collect_items(a).len();
-    let count_b = collect_items(b).len();
-    if count_a >= count_b {
-        a.clone()
+fn select_better_world_ast(raw: &Ast, normalized: &Ast) -> Ast {
+    let count_raw = collect_items(raw).len();
+    let count_norm = collect_items(normalized).len();
+    // Prefer the richer parse; on ties prefer normalized (`Name ( … )` → canonical).
+    if count_raw > count_norm {
+        raw.clone()
     } else {
-        b.clone()
+        normalized.clone()
     }
 }
 
@@ -409,10 +460,119 @@ fn collect_items(ast: &Ast) -> Vec<WorldItem> {
     let Ast::List(root) = ast else {
         return Vec::new();
     };
-    flatten_world_entries(root)
+    let mut items = flatten_world_entries(root)
         .into_iter()
         .filter_map(|items| parse_world_item(&items))
-        .collect()
+        .collect::<Vec<_>>();
+    // Overlay HideWire bands without changing classic flatten/JINX Transfer parsing.
+    let levels = collect_track_watermark_levels(root);
+    apply_track_watermark_levels(&mut items, &levels);
+    items
+}
+
+/// Ordered `static_detail_level` for each TrackObj/Dyntrack as `Tr_Watermark` advances.
+fn collect_track_watermark_levels(root: &[Ast]) -> Vec<u32> {
+    let body = if matches_head(root, "Tr_Worldfile") {
+        &root[1..]
+    } else {
+        root
+    };
+    let mut watermark = 0u32;
+    let mut levels = Vec::new();
+    walk_watermark_entries(body, &mut watermark, &mut levels);
+    levels
+}
+
+fn walk_watermark_entries(entries: &[Ast], watermark: &mut u32, levels: &mut Vec<u32>) {
+    let mut i = 0usize;
+    while i < entries.len() {
+        match &entries[i] {
+            Ast::List(items) if matches_head(items, "Tr_Watermark") => {
+                if let Some(level) = parse_watermark_level(items) {
+                    *watermark = level;
+                }
+                i += 1;
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("Tr_Watermark") => {
+                if let Some(Ast::List(vals)) = entries.get(i + 1) {
+                    if let Some(level) = parse_watermark_level_from_values(vals) {
+                        *watermark = level;
+                    }
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            Ast::List(items) if matches_head(items, "TrackObj") || matches_head(items, "Dyntrack") => {
+                levels.push(*watermark);
+                i += 1;
+            }
+            Ast::Atom(Atom::Symbol(tag))
+                if tag.eq_ignore_ascii_case("TrackObj") || tag.eq_ignore_ascii_case("Dyntrack") =>
+            {
+                levels.push(*watermark);
+                // Flat `TrackObj ( … )` — skip the following field list.
+                if matches!(entries.get(i + 1), Some(Ast::List(_))) {
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            Ast::List(items) => {
+                walk_watermark_entries(items, watermark, levels);
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+}
+
+fn apply_track_watermark_levels(items: &mut [WorldItem], levels: &[u32]) {
+    let mut idx = 0usize;
+    for item in items {
+        match item {
+            WorldItem::Track {
+                static_detail_level,
+                ..
+            }
+            | WorldItem::Dyntrack {
+                static_detail_level,
+                ..
+            } => {
+                if let Some(level) = levels.get(idx) {
+                    *static_detail_level = *level;
+                }
+                idx += 1;
+            }
+            _ => {}
+        }
+    }
+}
+
+fn parse_watermark_level_from_values(vals: &[Ast]) -> Option<u32> {
+    match vals.first()? {
+        Ast::Atom(at) => atom_to_u32(at),
+        Ast::List(inner) => parse_watermark_level_from_values(inner),
+    }
+}
+
+fn parse_watermark_level(items: &[Ast]) -> Option<u32> {
+    match items.get(1)? {
+        Ast::Atom(at) => atom_to_u32(at),
+        Ast::List(inner) => parse_watermark_level_from_values(inner),
+    }
+}
+
+fn atom_to_u32(at: &Atom) -> Option<u32> {
+    if let Some(n) = atom_to_number(at) {
+        return Some(n.round() as u32);
+    }
+    if let Atom::Symbol(s) | Atom::String(s) = at {
+        if let Ok(v) = s.trim().parse::<u32>() {
+            return Some(v);
+        }
+    }
+    None
 }
 
 /// JINX-decompiled `.w` tiles often wrap every object in one `Transfer` block and
@@ -465,14 +625,22 @@ fn is_object_entry(items: &[Ast]) -> bool {
 }
 
 /// JINX flat `( UiD ( 75 ) Width ( 30 ) … )` → nested `( UiD ( 75 ) ) ( Width ( 30 ) ) …`.
+///
+/// When `items` is a typed object (`Signal`, `Static`, …), the type atom is kept and
+/// pairing starts at the first field so we do not absorb `UiD` into the type head.
 fn normalize_jinx_flat_fields(items: &[Ast]) -> Cow<'_, [Ast]> {
-    if !is_jinx_flat_alternating(items) {
+    let field_start = if is_object_entry(items) { 1 } else { 0 };
+    let fields = &items[field_start.min(items.len())..];
+    if !is_jinx_flat_alternating(fields) {
         return Cow::Borrowed(items);
     }
-    let mut out = Vec::with_capacity(items.len() / 2);
+    let mut out = Vec::with_capacity(fields.len() / 2 + field_start);
+    if field_start == 1 {
+        out.push(items[0].clone());
+    }
     let mut i = 0usize;
-    while i + 1 < items.len() {
-        let (Ast::Atom(Atom::Symbol(key)), Ast::List(val)) = (&items[i], &items[i + 1]) else {
+    while i + 1 < fields.len() {
+        let (Ast::Atom(Atom::Symbol(key)), Ast::List(val)) = (&fields[i], &fields[i + 1]) else {
             break;
         };
         let mut sub = vec![Ast::Atom(Atom::Symbol(key.clone()))];
@@ -484,7 +652,7 @@ fn normalize_jinx_flat_fields(items: &[Ast]) -> Cow<'_, [Ast]> {
         out.push(Ast::List(sub));
         i += 2;
     }
-    if out.is_empty() {
+    if out.len() <= field_start {
         Cow::Borrowed(items)
     } else {
         Cow::Owned(out)
@@ -585,12 +753,14 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position: position.unwrap_or_default(),
             qdir,
             matrix3x3,
+            static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Dyntrack") => WorldItem::Dyntrack {
             uid: uid.unwrap_or(0),
             position: position.unwrap_or_default(),
             qdir,
             matrix3x3,
+            static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Signal") => WorldItem::Signal {
             uid: uid.unwrap_or(0),
@@ -598,7 +768,8 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             position: position.unwrap_or_default(),
             qdir,
             matrix3x3,
-            tr_item_ids: find_signal_tr_item_ids(fields),
+            signal_sub_obj: find_signal_sub_obj_mask(fields),
+            signal_units: parse_signal_units(fields),
         },
         s if s.eq_ignore_ascii_case("Speedpost") => {
             let (tdb_id, tr_item_id) = find_tr_item_id_pair(fields).unwrap_or((0, 0));
@@ -912,8 +1083,36 @@ fn find_rdb_tr_item_ids(items: &[Ast]) -> Vec<u32> {
     out
 }
 
-/// Parse `( SignalUnits N ( SignalUnit id tdbId itemId ) ... )` from Signal `.w` bodies.
-fn find_signal_tr_item_ids(items: &[Ast]) -> Vec<u32> {
+/// Parse `SignalSubObj ( 00000007 )` bitmask (hex or decimal flags).
+fn find_signal_sub_obj_mask(items: &[Ast]) -> u32 {
+    for item in items {
+        let Ast::List(sub) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
+            continue;
+        };
+        if !tag.eq_ignore_ascii_case("SignalSubObj") {
+            continue;
+        }
+        if let Some(Ast::Atom(at)) = sub.get(1) {
+            if let Some(n) = atom_to_number(at) {
+                return n as u32;
+            }
+            if let Atom::Symbol(s) | Atom::String(s) = at {
+                if let Ok(v) = u32::from_str_radix(s.trim(), 16) {
+                    return v;
+                }
+            }
+        }
+    }
+    0
+}
+
+/// Parse `SignalUnits ( N ( SignalUnit SubObj ( TrItemId db itemId ) ) … )`.
+///
+/// Also accepts the rare flattened form `SignalUnit ( SubObj db itemId )`.
+fn parse_signal_units(items: &[Ast]) -> Vec<SignalUnitRef> {
     let mut out = Vec::new();
     for item in items {
         let Ast::List(sub) = item else {
@@ -935,7 +1134,22 @@ fn find_signal_tr_item_ids(items: &[Ast]) -> Vec<u32> {
             if !unit_tag.eq_ignore_ascii_case("SignalUnit") {
                 continue;
             }
-            let nums: Vec<u32> = unit_sub
+            let sub_obj = unit_sub.get(1).and_then(|a| match a {
+                Ast::Atom(at) => atom_to_number(at).map(|n| n as u32),
+                _ => None,
+            });
+            // Nested `TrItemId ( db itemId )` (Chiltern / OR form).
+            if let (Some(sub_obj), Some((_, tr_item_id))) =
+                (sub_obj, find_tr_item_id_pair(unit_sub))
+            {
+                out.push(SignalUnitRef {
+                    sub_obj,
+                    tr_item_id,
+                });
+                continue;
+            }
+            // Flattened legacy: SignalUnit ( subObj db itemId )
+            let flat_nums: Vec<u32> = unit_sub
                 .iter()
                 .skip(1)
                 .filter_map(|a| match a {
@@ -943,13 +1157,14 @@ fn find_signal_tr_item_ids(items: &[Ast]) -> Vec<u32> {
                     _ => None,
                 })
                 .collect();
-            if nums.len() >= 3 {
-                out.push(nums[2]);
+            if flat_nums.len() >= 3 {
+                out.push(SignalUnitRef {
+                    sub_obj: flat_nums[0],
+                    tr_item_id: flat_nums[2],
+                });
             }
         }
     }
-    out.sort_unstable();
-    out.dedup();
     out
 }
 
@@ -1038,6 +1253,19 @@ Tr_Worldfile (
 )
         "#;
         let ast = load_world_ast(text).expect("parse");
+        fn dump(ast: &Ast, indent: usize) {
+            let pad = "  ".repeat(indent);
+            match ast {
+                Ast::Atom(a) => eprintln!("{pad}{a:?}"),
+                Ast::List(items) => {
+                    eprintln!("{pad}(");
+                    for it in items.iter().take(40) { dump(it, indent + 1); }
+                    if items.len() > 40 { eprintln!("{pad}  ..."); }
+                    eprintln!("{pad})");
+                }
+            }
+        }
+        dump(&ast, 0);
         let world = WorldFile::from_ast(&ast, 0, 0);
         assert_eq!(
             world.items.iter().filter(|i| i.kind() == "Pickup").count(),
@@ -1102,5 +1330,70 @@ Tr_Worldfile (
                 .count(),
             2
         );
+    }
+}
+
+
+#[cfg(test)]
+mod watermark_tests {
+    use super::*;
+    use crate::parser::parse_from_first_paren;
+
+    #[test]
+    fn tr_watermark_assigns_static_detail_level() {
+        // Nested S-expr; UiD atoms (not nested lists) match find_uid.
+        let src = r#"
+(Tr_Worldfile
+  (TrackObj (UiD 1) (SectionIdx 10) (Position 0 0 0))
+  (Tr_Watermark 2)
+  (TrackObj (UiD 2) (SectionIdx 11) (Position 1 0 0))
+  (Tr_Watermark 3)
+  (Dyntrack (UiD 3) (Position 2 0 0))
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        let levels: Vec<(u32, u32)> = world
+            .items
+            .iter()
+            .filter_map(|i| Some((i.uid()?, i.static_detail_level())))
+            .collect();
+        assert_eq!(levels, vec![(1, 0), (2, 2), (3, 3)]);
+    }
+}
+
+#[cfg(test)]
+mod signal_unit_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn chiltern_signal_tr_item_ids_populated() {
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        let Some(home) = home else { return };
+        let path = home.join(
+            "Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/WORLD/w-006080+014925.w",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let world = WorldFile::from_path(&path).expect("world");
+        let signals: Vec<_> = world.items.iter().filter(|i| i.kind() == "Signal").collect();
+        assert!(!signals.is_empty());
+        let with_ids = signals.iter().filter(|i| !i.tr_item_ids().is_empty()).count();
+        assert!(
+            with_ids > signals.len() / 2,
+            "expected most signals to have TrItemIds, got {with_ids}/{}",
+            signals.len()
+        );
+        let theatre = signals
+            .iter()
+            .find(|i| matches!(i.file_name(), Some(n) if n.eq_ignore_ascii_case("TheatreBoxSQ.s")));
+        if let Some(s) = theatre {
+            eprintln!("theatre units={:?} mask={:?}", s.signal_units(), s.signal_sub_obj_mask());
+            assert_eq!(s.tr_item_ids(), vec![11481, 11482]);
+            assert_eq!(s.signal_units().len(), 2);
+            assert_eq!(s.signal_sub_obj_mask(), Some(7));
+        }
     }
 }

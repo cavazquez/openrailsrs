@@ -28,6 +28,7 @@ pub mod or_cab_material;
 pub mod or_shader {
     pub use openrailsrs_or_shader::*;
 }
+pub mod overhead_wire;
 pub mod overspeed_flash;
 pub mod placement_audit;
 pub mod precipitation;
@@ -36,6 +37,7 @@ pub mod rolling_stock;
 pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
+pub mod signal_lamps;
 pub mod signals;
 pub mod sky;
 pub mod tdb_track;
@@ -105,6 +107,8 @@ impl Plugin for ViewerPlugin {
             .init_resource::<camera::LiveDriverCab>()
             .init_resource::<camera::DriverLookOffset>()
             .init_resource::<precipitation::PrecipitationState>()
+            .init_resource::<sky::FogState>()
+            .init_resource::<overhead_wire::RouteWireConfig>()
             .init_resource::<teleport::TeleportDialog>()
             .init_resource::<cab_panel::CabPanelVisible>()
             .init_resource::<cab_view::CabInteriorState>()
@@ -141,6 +145,12 @@ impl Plugin for ViewerPlugin {
                     world::init_scenery_stream_state,
                 )
                     .chain(),
+            )
+            .add_systems(
+                Startup,
+                signal_lamps::spawn_signal_lamps
+                    .run_if(launch::full_scenery_active)
+                    .after(world::init_scenery_stream_state),
             )
             .add_systems(
                 Update,
@@ -259,6 +269,11 @@ impl Plugin for ViewerPlugin {
                 ),
             )
             .add_systems(Update, road_cars::update_road_cars)
+            .add_systems(Update, signal_lamps::update_signal_lamps)
+            .add_systems(
+                Update,
+                sky::toggle_distance_fog.run_if(teleport::teleport_closed),
+            )
             .add_systems(
                 Update,
                 (

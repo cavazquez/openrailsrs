@@ -220,8 +220,20 @@ pub struct WorldObject {
     pub water: Option<WaterPatch>,
     pub transfer: Option<TransferPatch>,
     pub car_spawner: Option<CarSpawnerPatch>,
+    /// Signal head units / bitmask for lamp spawn (#37).
+    pub signal: Option<SignalPatch>,
     /// TDB `TrItemId`s when this object references track items (Signal, Speedpost, …).
     pub tr_item_ids: Vec<u32>,
+    /// From `.w` `Tr_Watermark` — HideWire uses levels 2/3 (#36).
+    pub static_detail_level: u32,
+}
+
+/// WORLD Signal metadata for specialised lamp rendering (#37).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SignalPatch {
+    pub uid: u32,
+    pub signal_sub_obj: u32,
+    pub units: Vec<openrailsrs_formats::SignalUnitRef>,
 }
 
 /// Optional XZ window applied while materializing `.w` items (#59).
@@ -601,6 +613,19 @@ fn try_object_from_item(
         }),
         _ => None,
     };
+    let signal = match item {
+        WorldItem::Signal {
+            uid,
+            signal_sub_obj,
+            signal_units,
+            ..
+        } => Some(SignalPatch {
+            uid: *uid,
+            signal_sub_obj: *signal_sub_obj,
+            units: signal_units.clone(),
+        }),
+        _ => None,
+    };
     Ok(Some(WorldObject {
         kind: item.kind(),
         uid: item.uid(),
@@ -616,7 +641,9 @@ fn try_object_from_item(
         water,
         transfer,
         car_spawner,
+        signal,
         tr_item_ids: item.tr_item_ids(),
+        static_detail_level: item.static_detail_level(),
     }))
 }
 
@@ -1092,6 +1119,8 @@ pub struct WorldSpawnProgress {
     trackobj_failed: usize,
     trackobj_failures: Vec<TrackObjFailure>,
     trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment>,
+    /// Overhead wire centreline segments (#36).
+    trackobj_wire: Vec<crate::dyntrack::ProceduralTrackSegment>,
     placeholder_base: f32,
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
@@ -1154,6 +1183,7 @@ impl WorldSpawnProgress {
             trackobj_failed: 0,
             trackobj_failures: Vec::new(),
             trackobj_procedural: Vec::new(),
+            trackobj_wire: Vec::new(),
             placeholder_base,
             shape_fallback_color: Color::srgb(0.72, 0.55, 0.42),
             shape_fallback_material: None,
@@ -1383,6 +1413,7 @@ fn classify_one_object(
     cull_center: Vec3,
     assets: &RouteAssets,
     mode: ViewerSceneryMode,
+    wire: &crate::overhead_wire::RouteWireConfig,
     progress: &mut WorldSpawnProgress,
 ) {
     if obj.kind == "Dyntrack"
@@ -1410,6 +1441,12 @@ fn classify_one_object(
             return;
         }
         progress.trackobj_seen += 1;
+        // Wire is independent of mesh vs procedural (#36 / OR Wire.DecomposeStaticWire).
+        if crate::overhead_wire::should_draw_wire_for(obj, assets, wire) {
+            let render_pos = focus.scenery_to_render(obj.position);
+            let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
+            progress.trackobj_wire.extend(segs);
+        }
         let cache_key = obj
             .shape_file
             .clone()
@@ -2089,6 +2126,7 @@ pub fn world_stream_scenery_system(
     focus: Res<RouteFocus>,
     window: Res<crate::view_window::ViewWindow>,
     offset: Res<RouteWorldOffset>,
+    wire: Res<crate::overhead_wire::RouteWireConfig>,
 ) {
     if progress.is_some() {
         return;
@@ -2187,14 +2225,33 @@ pub fn world_stream_scenery_system(
             Some(cull_center),
         );
     }
-    if dyntracks > 0 {
-        crate::dyntrack::spawn_dyntrack_objects(
+    let signal_lamps = if !mode.loads_msts_scenery() {
+        0
+    } else {
+        new_items
+            .iter()
+            .filter(|obj| obj.kind == "Signal" && obj.signal.is_some())
+            .count()
+    };
+    if signal_lamps > 0 {
+        crate::signal_lamps::spawn_signal_lamp_objects(
             &mut commands,
             &mut meshes,
             &mut materials,
             new_items,
-            &track,
+            &assets,
             &focus,
+            Some(cull_center),
+        );
+    }
+    if dyntracks > 0 {
+        crate::dyntrack::spawn_dyntrack_objects_with_wire(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            new_items,
+            &focus,
+            Some(&wire),
         );
     }
     if forests + waters + transfers + road_cars + dyntracks > 0 {
@@ -2407,6 +2464,7 @@ pub fn progressive_world_spawn_system(
     origin: Res<FloatingOrigin>,
     assets: Res<RouteAssets>,
     mode: Res<ViewerSceneryMode>,
+    wire: Res<crate::overhead_wire::RouteWireConfig>,
     mut session: ResMut<WorldShapeLodCache>,
     progress: Option<ResMut<WorldSpawnProgress>>,
 ) {
@@ -2454,7 +2512,15 @@ pub fn progressive_world_spawn_system(
             progress.item_index = progress.item_index.min(world.items.len());
             let end = (progress.item_index + classify_batch).min(world.items.len());
             for obj in &world.items[progress.item_index..end] {
-                classify_one_object(obj, &focus, cull_center, &assets, *mode, &mut progress);
+                classify_one_object(
+                    obj,
+                    &focus,
+                    cull_center,
+                    &assets,
+                    *mode,
+                    &wire,
+                    &mut progress,
+                );
             }
             progress.item_index = end;
             if progress.item_index >= world.items.len() {
@@ -2643,6 +2709,28 @@ pub fn progressive_world_spawn_system(
                     &segments,
                     "trackobj",
                     crate::dyntrack::ProceduralTrackStyle::Full,
+                );
+            }
+            if !progress.trackobj_wire.is_empty() {
+                let wire_count = progress.trackobj_wire.len();
+                let segments = std::mem::take(&mut progress.trackobj_wire)
+                    .into_iter()
+                    .map(|mut seg| {
+                        seg.position = view_translation(seg.position, &origin);
+                        seg
+                    })
+                    .collect::<Vec<_>>();
+                crate::overhead_wire::spawn_overhead_wire_batch(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &segments,
+                    wire.style,
+                    "trackobj",
+                );
+                viewer_log!(
+                    "openrailsrs-viewer3d: overhead wire {wire_count} segment(s) at {:.2} m",
+                    wire.style.height_m
                 );
             }
             log_world_spawn_summary(&progress);

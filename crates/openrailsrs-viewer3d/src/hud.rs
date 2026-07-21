@@ -1,14 +1,23 @@
 //! On-screen HUD strip (mirrors the 2D viewer layout).
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::camera::{CameraFollowMode, CameraFollowTarget, CameraMode};
 use crate::live::LiveDrive;
 use crate::precipitation::PrecipitationState;
+use crate::sky::FogState;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::train::{ReplayState, pose_at_time};
 use crate::viewer_log;
+
+/// Bundled HUD resources so `update_hud` stays under Bevy's system-param limit.
+#[derive(SystemParam)]
+pub(crate) struct HudAtmosphere<'w> {
+    precipitation: Res<'w, PrecipitationState>,
+    fog: Res<'w, FogState>,
+}
 
 /// Window / route title shown in the HUD (set from `main` at launch).
 #[derive(Resource, Clone, Default)]
@@ -142,6 +151,7 @@ pub fn build_hud_content(
     follow: CameraFollowMode,
     follow_target: &CameraFollowTarget,
     precipitation: &PrecipitationState,
+    fog: &FogState,
     terrain: Option<&TerrainElevation>,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
@@ -150,6 +160,7 @@ pub fn build_hud_content(
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let rain_hint = "P:rain";
+    let fog_hint = "F:fog";
     let controls = if replay.is_active() {
         let train_hint = if replay.tracks.len() > 1 {
             "  [/]:train"
@@ -157,20 +168,21 @@ pub fn build_hud_content(
             ""
         };
         format!(
-            "Space:pause  R:reset  +/-:spd  T:cam  V:driver{train_hint}  {rain_hint}  G:goto  F2:fly  Esc:quit"
+            "Space:pause  R:reset  +/-:spd  T:cam  V:driver{train_hint}  {rain_hint}  {fog_hint}  G:goto  F2:fly  Esc:quit"
         )
     } else {
         format!(
-            "Orbit: LMB=rotate  RMB↑↓=zoom  RMB←→=spin  Shift+drag/WASD=pan  wheel=zoom  G:goto  {rain_hint}  F2:fly  Esc:quit"
+            "Orbit: LMB=rotate  RMB↑↓=zoom  RMB←→=spin  Shift+drag/WASD=pan  wheel=zoom  G:goto  {rain_hint}  {fog_hint}  F2:fly  Esc:quit"
         )
     };
 
     let rain_label = precipitation.hud_label();
+    let fog_label = fog.hud_label();
 
     if !replay.is_active() {
         return HudContent {
             row1: format!(
-                "{title}    cam:{}  rain:{rain_label}",
+                "{title}    cam:{}  rain:{rain_label}  fog:{fog_label}",
                 camera_mode_label(camera_mode)
             ),
             row2: coords,
@@ -190,6 +202,7 @@ pub fn build_hud_content(
         follow,
         follow_target,
         rain_label,
+        fog_label,
         coords,
         controls,
         terrain,
@@ -207,6 +220,7 @@ fn build_hud_replay(
     follow: CameraFollowMode,
     follow_target: &CameraFollowTarget,
     rain_label: &str,
+    fog_label: &str,
     coords: String,
     controls: String,
     terrain: Option<&TerrainElevation>,
@@ -256,7 +270,7 @@ fn build_hud_replay(
     let progress_pct = (progress * 100.0).round() as u32;
 
     let row1 =
-        format!("{title}    {status}    cam:{cam}  follow:{follow_label}  rain:{rain_label}");
+        format!("{title}    {status}    cam:{cam}  follow:{follow_label}  rain:{rain_label}  fog:{fog_label}");
     let row2 = format!(
         "{coords}    t={:.1}s  {:.0} km/h  spd={:.0}x  {progress_pct}%",
         replay.t_sim, vel_kmh, replay.speed
@@ -403,12 +417,14 @@ pub fn build_hud_content_live(
     camera_mode: CameraMode,
     follow: CameraFollowMode,
     precipitation: &PrecipitationState,
+    fog: &FogState,
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
     cab_render_diag: Option<&str>,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let rain_label = precipitation.hud_label();
+    let fog_label = fog.hud_label();
     let status = if live.session.arrived {
         "ARRIVED"
     } else if live.paused {
@@ -456,10 +472,10 @@ pub fn build_hud_content_live(
         )
     };
     let controls = if follow == CameraFollowMode::DriverCam {
-        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  C:cab  T:cam  V:chase  Space:emerg  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  C:cab  T:cam  V:chase  Space:emerg  F:fog  G:goto  F2:fly  Esc:quit"
             .to_string()
     } else {
-        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  ,/.:zoom  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  ,/.:zoom  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  F:fog  G:goto  F2:fly  Esc:quit"
             .to_string()
     };
     let mut row2 = format!(
@@ -479,7 +495,7 @@ pub fn build_hud_content_live(
     }
     HudContent {
         row1: format!(
-            "{title}    {status}    {cam_label}  follow:{follow_label}  rain:{rain_label}  {game_line}",
+            "{title}    {status}    {cam_label}  follow:{follow_label}  rain:{rain_label}  fog:{fog_label}  {game_line}",
         ),
         row2,
         progress: live.session.route_progress() as f32,
@@ -506,7 +522,7 @@ pub(crate) fn update_hud(
     camera_mode: Res<CameraMode>,
     follow: Res<CameraFollowMode>,
     follow_target: Res<CameraFollowTarget>,
-    precipitation: Res<PrecipitationState>,
+    atmosphere: HudAtmosphere,
     cab_diag: Option<Res<crate::cab_render::CabRenderDiagnostic>>,
     terrain: Option<Res<TerrainElevation>>,
     camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
@@ -553,7 +569,8 @@ pub(crate) fn update_hud(
             live,
             *camera_mode,
             *follow,
-            &precipitation,
+            &atmosphere.precipitation,
+            &atmosphere.fog,
             camera_pos,
             orbit_focus,
             cab_diag.as_ref().and_then(|d| d.hud_line.as_deref()),
@@ -566,7 +583,8 @@ pub(crate) fn update_hud(
             *camera_mode,
             *follow,
             &follow_target,
-            &precipitation,
+            &atmosphere.precipitation,
+            &atmosphere.fog,
             terrain.as_deref(),
             camera_pos,
             orbit_focus,
@@ -697,6 +715,7 @@ mod tests {
                 enabled: true,
                 ..Default::default()
             },
+            &FogState::default(),
             None,
             Vec3::new(120.0, 35.0, 8.0),
             Some(Vec3::new(5000.0, 0.0, 25.0)),
@@ -709,7 +728,9 @@ mod tests {
         assert!(content.row1.contains("test/route"));
         assert!(content.row1.contains("cam:orbit"));
         assert!(content.row1.contains("rain:on"));
+        assert!(content.row1.contains("fog:on"));
         assert!(content.controls.contains("P:rain"));
+        assert!(content.controls.contains("F:fog"));
         assert!(content.row2.contains("pos 120,35,8"));
         assert!(content.row2.contains("focus 5000,0,25"));
         assert!(content.show_row2);
@@ -739,6 +760,7 @@ mod tests {
                 enabled: true,
                 ..Default::default()
             },
+            &FogState::default(),
             None,
             Vec3::ZERO,
             None,
@@ -751,7 +773,9 @@ mod tests {
         assert!(content.row1.contains("PLAY"));
         assert!(content.row1.contains("follow:orbit→primary"));
         assert!(content.row1.contains("rain:on"));
+        assert!(content.row1.contains("fog:on"));
         assert!(content.controls.contains("P:rain"));
+        assert!(content.controls.contains("F:fog"));
         assert!(content.row2.contains("pos 0,0,0"));
         assert!(content.row2.contains("t=5.0s"));
         assert!(content.row2.contains("spd=2x"));
@@ -790,6 +814,7 @@ mod tests {
                 enabled: false,
                 ..Default::default()
             },
+            &FogState::default(),
             None,
             Vec3::ZERO,
             None,

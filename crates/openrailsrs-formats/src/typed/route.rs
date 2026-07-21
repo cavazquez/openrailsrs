@@ -32,6 +32,30 @@ impl RouteStart {
     }
 }
 
+/// Visual overhead-wire parameters from `.trk` (`Electrified` / `OverheadWireHeight` / ORTS*).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OverheadWireParams {
+    /// `Electrified` — Open Rails default is `true` when the token is absent.
+    pub electrified: bool,
+    /// Contact-wire height above rail (metres). OR default `6.0`.
+    pub height_m: f32,
+    /// `ORTSDoubleWireEnabled` interpreted as on (`"On"` / non-empty truthy).
+    pub double_wire: bool,
+    /// Vertical offset of the messenger wire above the contact wire (metres).
+    pub double_wire_height_m: f32,
+}
+
+impl Default for OverheadWireParams {
+    fn default() -> Self {
+        Self {
+            electrified: true,
+            height_m: 6.0,
+            double_wire: false,
+            double_wire_height_m: 1.0,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct RouteFile {
     pub route_id: String,
@@ -39,6 +63,8 @@ pub struct RouteFile {
     pub route_start: Option<RouteStart>,
     /// Path of the `.trk` that was loaded (OpenRails override when present).
     pub source_path: Option<PathBuf>,
+    /// Overhead wire / electrification visual flags (#36).
+    pub overhead_wire: OverheadWireParams,
 }
 
 impl RouteFile {
@@ -55,6 +81,7 @@ impl RouteFile {
             name,
             route_start,
             source_path: None,
+            overhead_wire: parse_overhead_wire_params(ast),
         })
     }
 
@@ -226,6 +253,36 @@ fn parse_route_start(ast: &Ast) -> Option<RouteStart> {
     })
 }
 
+fn parse_overhead_wire_params(ast: &Ast) -> OverheadWireParams {
+    let mut params = OverheadWireParams::default();
+    if let Some(nums) = find_numeric_field(ast, "Electrified") {
+        if let Some(v) = nums.first() {
+            // MSTS often stores flags as hex ints (`00000001`); non-zero ⇒ true.
+            params.electrified = *v != 0.0;
+        }
+    }
+    if let Some(nums) = find_numeric_field(ast, "OverheadWireHeight") {
+        if let Some(v) = nums.first() {
+            if v.is_finite() && *v > 0.0 {
+                params.height_m = *v as f32;
+            }
+        }
+    }
+    if let Some(enabled) = find_string_field(ast, &["ORTSDoubleWireEnabled"]) {
+        params.double_wire = enabled.eq_ignore_ascii_case("On")
+            || enabled.eq_ignore_ascii_case("true")
+            || enabled == "1";
+    }
+    if let Some(nums) = find_numeric_field(ast, "ORTSDoubleWireHeight") {
+        if let Some(v) = nums.first() {
+            if v.is_finite() && *v > 0.0 {
+                params.double_wire_height_m = *v as f32;
+            }
+        }
+    }
+    params
+}
+
 /// Nested `(RouteStart n n n n)` / `(RouteStart (n n n n))` and flat `RouteStart ( n n n n )`.
 fn find_numeric_field(ast: &Ast, key: &str) -> Option<Vec<f64>> {
     let Ast::List(items) = ast else {
@@ -316,6 +373,41 @@ Tr_RouteFile (
         assert_eq!(start.tile_z, 14925);
         assert!((start.local_x_m - -896.0).abs() < 0.001);
         assert!((start.local_z_m - 182.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn parse_overhead_wire_from_trk() {
+        let src = r#"
+Tr_RouteFile (
+	RouteID ( Demo )
+	Name ( "Demo" )
+	Electrified ( 00000001 )
+	OverheadWireHeight ( 7.23 )
+	ORTSDoubleWireEnabled ( On )
+	ORTSDoubleWireHeight ( 1.5 )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let route = RouteFile::from_ast(&ast).expect("route");
+        assert!(route.overhead_wire.electrified);
+        assert!((route.overhead_wire.height_m - 7.23).abs() < 0.001);
+        assert!(route.overhead_wire.double_wire);
+        assert!((route.overhead_wire.double_wire_height_m - 1.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn electrified_zero_disables_wire() {
+        let src = r#"
+Tr_RouteFile (
+	RouteID ( Demo )
+	Name ( "Demo" )
+	Electrified ( 00000000 )
+	OverheadWireHeight ( 6.0 )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let route = RouteFile::from_ast(&ast).expect("route");
+        assert!(!route.overhead_wire.electrified);
     }
 
     #[test]

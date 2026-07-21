@@ -29,16 +29,16 @@ pub fn spawn_dyntrack_segments(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     world: Res<WorldScene>,
-    track: Res<TrackScene>,
     focus: Res<crate::world::RouteFocus>,
+    wire: Res<crate::overhead_wire::RouteWireConfig>,
 ) {
-    spawn_dyntrack_objects(
+    spawn_dyntrack_objects_with_wire(
         &mut commands,
         &mut meshes,
         &mut materials,
         &world.items,
-        &track,
         &focus,
+        Some(&wire),
     );
 }
 
@@ -50,6 +50,18 @@ pub fn spawn_dyntrack_objects(
     items: &[crate::world::WorldObject],
     _track: &TrackScene,
     focus: &crate::world::RouteFocus,
+) {
+    spawn_dyntrack_objects_with_wire(commands, meshes, materials, items, focus, None);
+}
+
+/// Same as [`spawn_dyntrack_objects`], optionally drawing overhead wire (#36).
+pub fn spawn_dyntrack_objects_with_wire(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[crate::world::WorldObject],
+    focus: &crate::world::RouteFocus,
+    wire: Option<&crate::overhead_wire::RouteWireConfig>,
 ) {
     let segments: Vec<ProceduralTrackSegment> = items
         .iter()
@@ -71,6 +83,33 @@ pub fn spawn_dyntrack_objects(
         "dyntrack",
         ProceduralTrackStyle::Full,
     );
+    if let Some(wire) = wire.filter(|w| w.enabled) {
+        let wire_segs: Vec<ProceduralTrackSegment> = items
+            .iter()
+            .filter(|obj| {
+                obj.kind == "Dyntrack"
+                    && !crate::overhead_wire::is_hide_wire_detail_level(obj.static_detail_level)
+            })
+            .map(|obj| ProceduralTrackSegment {
+                position: focus.scenery_to_render(obj.position),
+                rotation: obj.rotation,
+                length_m: Some(MSTS_DEFAULT_SECTION_LENGTH_M),
+                half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),
+                curve_radius_m: None,
+                curve_angle_deg: None,
+            })
+            .collect();
+        if !wire_segs.is_empty() {
+            crate::overhead_wire::spawn_overhead_wire_batch(
+                commands,
+                meshes,
+                materials,
+                &wire_segs,
+                wire.style,
+                "dyntrack",
+            );
+        }
+    }
     viewer_log!(
         "openrailsrs-viewer3d: {} dyntrack segment(s)",
         segments.len()

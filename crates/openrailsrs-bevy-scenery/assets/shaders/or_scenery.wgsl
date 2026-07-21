@@ -254,5 +254,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     lit_rgb *= params.night_color_modifier;
-    return vec4(lit_rgb, color.a);
+    var out_color = vec4(lit_rgb, color.a);
+#ifdef DISTANCE_FOG
+    out_color = pbr_functions::apply_fog(
+        view_bindings::fog,
+        out_color,
+        in.world_position.xyz,
+        view_bindings::view.world_position.xyz,
+        in.position.xy,
+    );
+#endif
+    return out_color;
 }

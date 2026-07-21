@@ -9,6 +9,7 @@ mod hazard;
 mod path;
 mod route;
 mod shape;
+mod sigcfg;
 mod terrain;
 mod track_db;
 mod tsection;
@@ -30,10 +31,14 @@ pub use friction::{
 };
 pub use hazard::{HazardFile, resolve_hazard_shape_name};
 pub use path::{PathDataPoint, PathFile};
-pub use route::{RouteFile, RouteStart, find_trk_path};
+pub use route::{OverheadWireParams, RouteFile, RouteStart, find_trk_path};
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LodControl, Matrix43, NamedMatrix,
     PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject, Vec2, Vec3, Vertex, VtxState,
+};
+pub use sigcfg::{
+    LightColour, LightTextureDef, SigCfgFile, SignalDrawStateDef, SignalLightDef, SignalShapeDef,
+    SignalShapeSubObjDef, SignalTypeDef, lit_light_indices_for_aspect,
 };
 pub use terrain::{
     ElevationGrid, FeatureGrid, TerrainFile, TerrainMeshData, TerrainPatch, TerrainPatchSet,
@@ -52,7 +57,7 @@ pub use tsection::{
     TrackSectionDef, TrackShapeDef, TrackShapePath,
 };
 pub use wagon::WagonFile;
-pub use world::{WorldFile, WorldItem};
+pub use world::{SignalUnitRef, WorldFile, WorldItem};
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;

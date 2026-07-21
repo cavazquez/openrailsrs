@@ -4,6 +4,7 @@
     mesh_view_bindings as view_bindings,
     mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT,
     shadows::fetch_directional_shadow,
+    pbr_functions,
 }
 
 struct OrTerrainParams {
@@ -50,5 +51,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let overlay = textureSample(overlay_texture, overlay_sampler, in.uv * params.overlay_scale).rgb * 2.0;
     lit_rgb = lit_rgb * overlay;
     lit_rgb = lit_rgb * params.night_color_modifier;
-    return vec4(lit_rgb, color.a);
+    var out_color = vec4(lit_rgb, color.a);
+#ifdef DISTANCE_FOG
+    out_color = pbr_functions::apply_fog(
+        view_bindings::fog,
+        out_color,
+        in.world_position.xyz,
+        view_bindings::view.world_position.xyz,
+        in.position.xy,
+    );
+#endif
+    return out_color;
 }

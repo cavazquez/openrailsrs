@@ -409,7 +409,9 @@ mod tests {
                 water: None,
                 transfer: None,
                 car_spawner: None,
+                signal: None,
                 tr_item_ids: vec![],
+                static_detail_level: 0,
             }],
             coverage,
         );
@@ -452,7 +454,9 @@ mod tests {
                 water: None,
                 transfer: None,
                 car_spawner: None,
+                signal: None,
                 tr_item_ids: vec![11],
+                static_detail_level: 0,
             }],
             coverage,
         );

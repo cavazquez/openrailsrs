@@ -3,7 +3,8 @@
     mesh_functions,
     view_transformations::position_world_to_clip,
     forward_io::{Vertex, VertexOutput},
-    mesh_view_bindings::view,
+    mesh_view_bindings as view_bindings,
+    pbr_functions,
 }
 
 struct OrForestParams {
@@ -30,7 +31,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     // OR: EyeVector = normalize(View.M13,M23,M33); Side = normalize(cross(Eye, Down)).
     // Bevy camera looks down -Z of world_from_view.
-    let eye = normalize(-view.world_from_view[2].xyz);
+    let eye = normalize(-view_bindings::view.world_from_view[2].xyz);
     var side = cross(eye, vec3(0.0, -1.0, 0.0));
     let side_len = length(side);
     if (side_len < 1e-4) {
@@ -69,5 +70,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     // Soft vegetation lighting (OR Normal_Light carries Eye + N·L term; keep simple).
     let rgb = color.rgb * params.ambient;
-    return vec4(rgb, color.a);
+    var out_color = vec4(rgb, color.a);
+#ifdef DISTANCE_FOG
+    out_color = pbr_functions::apply_fog(
+        view_bindings::fog,
+        out_color,
+        in.world_position.xyz,
+        view_bindings::view.world_position.xyz,
+        in.position.xy,
+    );
+#endif
+    return out_color;
 }

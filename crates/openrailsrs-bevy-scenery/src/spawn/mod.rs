@@ -2,6 +2,7 @@
 
 pub mod dyntrack;
 pub mod tdb_track;
+pub mod wire;
 
 use bevy::prelude::*;
 
