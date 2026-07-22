@@ -488,11 +488,45 @@ pub(crate) fn driver_cab_from_lead_vehicle(
     };
     if let Some(shape_name) = vehicle.shape_file.as_deref() {
         if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
-            cab.head_msts = Some(orts.head_pos_msts);
-            let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts);
-            cab.head_lead_local = Some(head_bevy);
-            cab.head_pos_train = Some(placement.transform_point(head_bevy));
-            cab.look_pitch = orts.look_pitch;
+            let mut eyepoints = Vec::new();
+            for vp in &orts.viewpoints {
+                eyepoints.push(crate::camera::DriverEyepoint {
+                    head_msts: vp.head_pos_msts,
+                    look_pitch: vp.look_pitch,
+                    look_yaw: vp.look_yaw,
+                    pitch_limit: vp.pitch_limit,
+                    yaw_limit: vp.yaw_limit,
+                    slot: crate::camera::DriverViewSlot::CabViewpoint,
+                });
+            }
+            for head in &orts.head_out_msts {
+                eyepoints.push(crate::camera::DriverEyepoint {
+                    head_msts: *head,
+                    look_pitch: 0.0,
+                    look_yaw: 0.0,
+                    pitch_limit: None,
+                    yaw_limit: None,
+                    slot: crate::camera::DriverViewSlot::HeadOut,
+                });
+            }
+            cab.eyepoints = eyepoints;
+            cab.eyepoint_index = 0;
+            if let Some(eye) = cab.eyepoints.first().copied() {
+                cab.apply_eyepoint(eye, placement);
+            } else {
+                cab.head_msts = Some(orts.head_pos_msts);
+                let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts);
+                cab.head_lead_local = Some(head_bevy);
+                cab.head_pos_train = Some(placement.transform_point(head_bevy));
+                cab.look_pitch = orts.look_pitch;
+                cab.look_yaw = orts.look_yaw;
+                if let Some(p) = orts.pitch_limit {
+                    cab.pitch_limit = p;
+                }
+                if let Some(y) = orts.yaw_limit {
+                    cab.yaw_limit = y;
+                }
+            }
         }
     }
     cab
@@ -526,6 +560,13 @@ pub(crate) fn live_driver_cab_from_vehicles(
             }
             if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
                 cab.look_pitch = orts.look_pitch;
+                cab.look_yaw = orts.look_yaw;
+                if let Some(p) = orts.pitch_limit {
+                    cab.pitch_limit = p;
+                }
+                if let Some(y) = orts.yaw_limit {
+                    cab.yaw_limit = y;
+                }
             }
         }
     }
@@ -584,7 +625,7 @@ pub fn spawn_live_train(
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs, &assets.route_dir);
-    commands.insert_resource(driver_cab);
+    commands.insert_resource(driver_cab.clone());
 
     if mode.is_track_dev() && !track_dev_render_enabled() {
         let unit = meshes.add(Cuboid::new(2.0, 2.5, 14.0));
@@ -1016,15 +1057,11 @@ mod tests {
     use crate::rolling_stock::TrainConsistScene;
 
     #[test]
-    fn pullman_dmbsa_driver_cab_near_front() {
+    fn pullman_dmbsa_driver_cab_from_stub_eng() {
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         let mut consist = TrainConsistScene::default();
         consist.set_scenario_dir(route.clone());
-        let mut shape_dirs_bufs = consist.shape_search_dirs(&route);
-        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
-        if content.is_dir() {
-            shape_dirs_bufs.push(content.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman"));
-        }
+        let shape_dirs_bufs = consist.shape_search_dirs(&route);
         let shape_dirs: Vec<&Path> = shape_dirs_bufs.iter().map(|p| p.as_path()).collect();
         let cab = live_driver_cab_from_vehicles(
             &[ConsistVehicleVisual {
@@ -1047,10 +1084,11 @@ mod tests {
             cab.height_m
         );
         assert!((cab.back_m - 3.13).abs() < 0.2);
-        if content.is_dir() {
-            let head = cab.head_pos_train.expect("ORTS3DCabHeadPos");
-            assert!(head.y > 2.0 && head.y < 4.5, "head height={head:?}");
-            assert!(head.x.abs() < 12.0, "head forward={head:?}");
-        }
+        let head = cab.head_pos_train.expect("ORTS3DCabHeadPos from stub eng");
+        assert!(head.y > 2.0 && head.y < 4.5, "head height={head:?}");
+        assert!(head.x.abs() < 12.0, "head forward={head:?}");
+        assert!((cab.pitch_limit - 10f32.to_radians()).abs() < 1e-3);
+        assert!((cab.yaw_limit - 90f32.to_radians()).abs() < 1e-3);
+        assert!(!cab.eyepoints.is_empty());
     }
 }

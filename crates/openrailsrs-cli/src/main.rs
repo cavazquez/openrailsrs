@@ -1534,6 +1534,18 @@ fn print_engine_cab_summary(eng_path: &std::path::Path, cab: &openrailsrs_format
             dir[0], dir[1], dir[2]
         );
     }
+    if let Some(limit) = cab.rotation_limit_deg {
+        println!(
+            "    RotationLimit: ({:.1}, {:.1}, {:.1}) deg",
+            limit[0], limit[1], limit[2]
+        );
+    }
+    if cab.viewpoints.len() > 1 {
+        println!("    viewpoints: {}", cab.viewpoints.len());
+    }
+    if !cab.head_out_m.is_empty() {
+        println!("    HeadOut points: {}", cab.head_out_m.len());
+    }
     if let Some(trainset_root) = eng_path.parent() {
         if let Some(assets) = resolve_cab_assets(trainset_root, cab) {
             println!("    resolved shape: {}", assets.shape_path.display());

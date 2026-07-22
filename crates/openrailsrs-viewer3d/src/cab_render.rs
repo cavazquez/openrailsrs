@@ -132,7 +132,7 @@ pub fn update_cab_render_diagnostic(
     let Ok((cam_global, projection)) = camera_q.single() else {
         return;
     };
-    let cab_res = driver_cab.as_deref().copied();
+    let cab_res = driver_cab.as_deref();
     let eye = lead_car
         .iter()
         .next()

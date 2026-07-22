@@ -493,12 +493,18 @@ pub static VEHICLE_FIELD_CATALOG: &[VehicleFieldSpec] = &[
     ),
     field(
         "ORTS3DCabHeadPos",
-        &["StartDirection"],
+        &[
+            "StartDirection",
+            "RotationLimit",
+            "ORTSAlternate3DCabViewPoints",
+            "ORTSAlternate3DCabViewPoint",
+            "HeadOut",
+        ],
         VehicleKind::Engine,
         ParserSupport::Parsed,
         ParserSupport::NotApplicable,
         "cab",
-        "EngineCabView; used by viewer3d cab camera",
+        "EngineCabView viewpoints; used by viewer3d cab camera",
     ),
     field(
         "Sound",

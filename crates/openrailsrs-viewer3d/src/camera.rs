@@ -16,6 +16,7 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
 use crate::cab_render::camera_layers_outdoor;
 use crate::launch::ViewerLaunchOpts;
+use crate::viewer_log;
 
 /// Ambient fill for live drive / terrain routes (MSTS `.ace` albedos are often very dark).
 pub const LIVE_OUTDOOR_AMBIENT: f32 = 15000.0;
@@ -163,8 +164,27 @@ pub const DRIVER_LOOK_PITCH_MIN: f32 = -0.65;
 /// [`crate::shapes::msts_shape_to_train_rotation`]).
 pub const DRIVER_CAB_FORWARD_YAW_OFFSET: f32 = -std::f32::consts::FRAC_PI_2;
 
+/// Which eyepoint is active in driver view (3D cab viewpoint vs HeadOut).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DriverViewSlot {
+    #[default]
+    CabViewpoint,
+    HeadOut,
+}
+
+/// One selectable driver eyepoint (cab viewpoint or HeadOut).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DriverEyepoint {
+    pub head_msts: Vec3,
+    pub look_pitch: f32,
+    pub look_yaw: f32,
+    pub pitch_limit: Option<f32>,
+    pub yaw_limit: Option<f32>,
+    pub slot: DriverViewSlot,
+}
+
 /// Per-consist cab eye placement (set when the live train spawns).
-#[derive(Resource, Clone, Copy, Debug)]
+#[derive(Resource, Clone, Debug)]
 pub struct LiveDriverCab {
     /// Metres behind the train head along the consist axis (fallback when no ORTS head pos).
     pub back_m: f32,
@@ -173,12 +193,21 @@ pub struct LiveDriverCab {
     pub head_pos_train: Option<Vec3>,
     /// ORTS eyepoint in **lead vehicle local** space (same as `PULLMAN_GR.s` mesh coords).
     pub head_lead_local: Option<Vec3>,
-    /// Look pitch (rad) from `StartDirection` or default.
+    /// Look pitch (rad) from `StartDirection.X` or default.
     pub look_pitch: f32,
-    /// Cab `.s` placement on the train root (lead vehicle origin, unit scale).
+    /// Look yaw (rad) from `StartDirection.Y` (rear cab ≈ ±π).
+    pub look_yaw: f32,
+    /// Mouse-look pitch clamp (±rad) from `RotationLimit.X`, else default.
+    pub pitch_limit: f32,
+    /// Mouse-look yaw clamp (±rad) from `RotationLimit.Y`, else default.
+    pub yaw_limit: f32,
+    /// Cab `.s` placement on the train root (lead vehicle authored origin, unit scale).
     pub interior_placement: Transform,
     /// Raw `ORTS3DCabHeadPos` in MSTS shape metres (for camera-attached cab).
     pub head_msts: Option<Vec3>,
+    /// All cab + HeadOut eyepoints for cycling (Shift+V in driver cam).
+    pub eyepoints: Vec<DriverEyepoint>,
+    pub eyepoint_index: usize,
 }
 
 /// Extra yaw/pitch applied with the mouse while in driver view (head stays fixed).
@@ -190,10 +219,14 @@ pub struct DriverLookOffset {
 
 impl DriverLookOffset {
     pub fn apply_drag(&mut self, delta: Vec2) {
-        self.yaw = (self.yaw - delta.x * DRIVER_LOOK_SENSITIVITY)
-            .clamp(-DRIVER_LOOK_YAW_MAX, DRIVER_LOOK_YAW_MAX);
-        self.pitch = (self.pitch - delta.y * DRIVER_LOOK_SENSITIVITY)
-            .clamp(DRIVER_LOOK_PITCH_MIN, DRIVER_LOOK_PITCH_MAX);
+        self.apply_drag_clamped(delta, DRIVER_LOOK_YAW_MAX, DRIVER_LOOK_PITCH_MAX);
+    }
+
+    pub fn apply_drag_clamped(&mut self, delta: Vec2, yaw_limit: f32, pitch_limit: f32) {
+        let yaw_max = yaw_limit.abs().max(1e-3);
+        let pitch_max = pitch_limit.abs().max(1e-3);
+        self.yaw = (self.yaw - delta.x * DRIVER_LOOK_SENSITIVITY).clamp(-yaw_max, yaw_max);
+        self.pitch = (self.pitch - delta.y * DRIVER_LOOK_SENSITIVITY).clamp(-pitch_max, pitch_max);
     }
 
     pub fn reset(&mut self) {
@@ -209,12 +242,49 @@ impl Default for LiveDriverCab {
             head_pos_train: None,
             head_lead_local: None,
             look_pitch: DRIVER_LOOK_PITCH,
+            look_yaw: 0.0,
+            pitch_limit: DRIVER_LOOK_PITCH_MAX,
+            yaw_limit: DRIVER_LOOK_YAW_MAX,
             interior_placement: Transform {
                 rotation: crate::shapes::msts_shape_to_train_rotation(),
                 ..default()
             },
             head_msts: None,
+            eyepoints: Vec::new(),
+            eyepoint_index: 0,
         }
+    }
+}
+
+impl LiveDriverCab {
+    /// Apply an ORTS eyepoint (cab or HeadOut) onto the active camera fields.
+    pub fn apply_eyepoint(&mut self, eye: DriverEyepoint, placement: Transform) {
+        let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(eye.head_msts);
+        self.head_msts = Some(eye.head_msts);
+        self.head_lead_local = Some(head_bevy);
+        self.head_pos_train = Some(placement.transform_point(head_bevy));
+        self.look_pitch = eye.look_pitch;
+        self.look_yaw = eye.look_yaw;
+        self.pitch_limit = eye.pitch_limit.unwrap_or(DRIVER_LOOK_PITCH_MAX);
+        self.yaw_limit = eye.yaw_limit.unwrap_or(DRIVER_LOOK_YAW_MAX);
+    }
+
+    pub fn cycle_eyepoint(&mut self) -> bool {
+        if self.eyepoints.len() <= 1 {
+            return false;
+        }
+        self.eyepoint_index = (self.eyepoint_index + 1) % self.eyepoints.len();
+        let eye = self.eyepoints[self.eyepoint_index];
+        let placement = self.interior_placement;
+        self.apply_eyepoint(eye, placement);
+        true
+    }
+
+    pub fn active_slot(&self) -> DriverViewSlot {
+        self.eyepoints
+            .get(self.eyepoint_index)
+            .map(|e| e.slot)
+            .unwrap_or(DriverViewSlot::CabViewpoint)
     }
 }
 
@@ -499,7 +569,7 @@ pub fn camera_transform_from_orbit_state(
 /// First-person driver view locked to the train head pose.
 pub fn driver_camera_transform(
     train: TrainFollowPose,
-    cab: LiveDriverCab,
+    cab: &LiveDriverCab,
     look: DriverLookOffset,
 ) -> Transform {
     driver_camera_transform_at_eye(driver_eye_world(train, cab), train.yaw, cab, look)
@@ -509,11 +579,11 @@ pub fn driver_camera_transform(
 pub fn driver_camera_transform_at_eye(
     eye: Vec3,
     train_yaw: f32,
-    cab: LiveDriverCab,
+    cab: &LiveDriverCab,
     look: DriverLookOffset,
 ) -> Transform {
     let user = driver_user_look_quat(look);
-    let base = driver_cab_base_pitch(cab);
+    let base = driver_cab_base_orientation(cab);
     Transform {
         translation: eye,
         rotation: Quat::from_rotation_y(train_yaw) * user * base,
@@ -522,7 +592,7 @@ pub fn driver_camera_transform_at_eye(
 }
 
 /// Fallback eyepoint when the lead vehicle [`GlobalTransform`] is not available yet.
-pub fn driver_eye_world(train: TrainFollowPose, cab: LiveDriverCab) -> Vec3 {
+pub fn driver_eye_world(train: TrainFollowPose, cab: &LiveDriverCab) -> Vec3 {
     let rot = Quat::from_rotation_y(train.yaw);
     if let Some(head) = cab.head_pos_train {
         train.translation + rot * head
@@ -533,7 +603,7 @@ pub fn driver_eye_world(train: TrainFollowPose, cab: LiveDriverCab) -> Vec3 {
 }
 
 /// ORTS eyepoint in world space via the lead vehicle hierarchy (preferred in live mode).
-pub fn driver_eye_from_lead(lead_global: &GlobalTransform, cab: LiveDriverCab) -> Option<Vec3> {
+pub fn driver_eye_from_lead(lead_global: &GlobalTransform, cab: &LiveDriverCab) -> Option<Vec3> {
     cab.head_lead_local
         .map(|local| lead_global.transform_point(local))
 }
@@ -543,22 +613,27 @@ pub fn driver_user_look_quat(look: DriverLookOffset) -> Quat {
     Quat::from_euler(EulerRot::YXZ, look.yaw, look.pitch, 0.0)
 }
 
-/// Default cab downward pitch from `.eng` / `StartDirection`.
-pub fn driver_cab_base_pitch(cab: LiveDriverCab) -> Quat {
+/// Default cab orientation from `.eng` `StartDirection` (yaw + pitch).
+pub fn driver_cab_base_orientation(cab: &LiveDriverCab) -> Quat {
+    Quat::from_euler(EulerRot::YXZ, cab.look_yaw, cab.look_pitch, 0.0)
+}
+
+/// Default cab downward pitch from `.eng` / `StartDirection` (compat helper).
+pub fn driver_cab_base_pitch(cab: &LiveDriverCab) -> Quat {
     Quat::from_rotation_x(cab.look_pitch)
 }
 
 /// Inverse local rotation for camera-attached cab mesh (world cab stays fixed while the head turns).
-pub fn driver_cab_counter_look(look: DriverLookOffset, cab: LiveDriverCab) -> Quat {
+pub fn driver_cab_counter_look(look: DriverLookOffset, cab: &LiveDriverCab) -> Quat {
     let user = driver_user_look_quat(look);
-    let base = driver_cab_base_pitch(cab);
+    let base = driver_cab_base_orientation(cab);
     base.inverse() * user.inverse() * base
 }
 
-/// Driver camera aligned to the lead vehicle (cab shape space + `look_pitch`).
+/// Driver camera aligned to the lead vehicle (cab shape space + `StartDirection`).
 pub fn driver_camera_transform_from_lead(
     lead_global: &GlobalTransform,
-    cab: LiveDriverCab,
+    cab: &LiveDriverCab,
     look: DriverLookOffset,
 ) -> Transform {
     let eye = cab
@@ -566,7 +641,7 @@ pub fn driver_camera_transform_from_lead(
         .map(|local| lead_global.transform_point(local))
         .unwrap_or_else(|| lead_global.translation());
     let user = driver_user_look_quat(look);
-    let base = driver_cab_base_pitch(cab);
+    let base = driver_cab_base_orientation(cab);
     Transform {
         translation: eye,
         rotation: lead_global.rotation() * user * base,
@@ -806,7 +881,8 @@ pub fn follow_train_camera(
     if *follow == CameraFollowMode::DriverCam {
         orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
         orbit.yaw = train_pose.yaw;
-        let cab = cab.as_deref().copied().unwrap_or_default();
+        let default_cab = LiveDriverCab::default();
+        let cab = cab.as_deref().unwrap_or(&default_cab);
         let look = look.as_deref().copied().unwrap_or_default();
         *transform = lead_car
             .iter()
@@ -893,6 +969,7 @@ pub fn orbit_camera_system(
     keys: Res<ButtonInput<KeyCode>>,
     mut follow: ResMut<CameraFollowMode>,
     mut look: ResMut<DriverLookOffset>,
+    driver_cab: Option<ResMut<LiveDriverCab>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
@@ -916,10 +993,28 @@ pub fn orbit_camera_system(
         if keys.just_pressed(KeyCode::Home) {
             look.reset();
         }
+        if keys.just_pressed(KeyCode::KeyV) && shift_held(&keys) {
+            if let Some(mut cab) = driver_cab {
+                if cab.cycle_eyepoint() {
+                    look.reset();
+                    viewer_log!(
+                        "openrailsrs-viewer3d: driver eyepoint {}/{} ({:?})",
+                        cab.eyepoint_index + 1,
+                        cab.eyepoints.len(),
+                        cab.active_slot()
+                    );
+                }
+            }
+            return;
+        }
         let dragging =
             mouse_buttons.pressed(MouseButton::Left) || mouse_buttons.pressed(MouseButton::Right);
         if dragging && delta != Vec2::ZERO {
-            look.apply_drag(delta);
+            let (yaw_lim, pitch_lim) = driver_cab
+                .as_ref()
+                .map(|c| (c.yaw_limit, c.pitch_limit))
+                .unwrap_or((DRIVER_LOOK_YAW_MAX, DRIVER_LOOK_PITCH_MAX));
+            look.apply_drag_clamped(delta, yaw_lim, pitch_lim);
         }
         return;
     }
@@ -1417,18 +1512,19 @@ mod tests {
 
     #[test]
     fn driver_camera_transform_places_eye_in_cab() {
+        let cab = LiveDriverCab {
+            back_m: 3.0,
+            height_m: 2.5,
+            head_pos_train: None,
+            look_pitch: DRIVER_LOOK_PITCH,
+            ..Default::default()
+        };
         let tf = driver_camera_transform(
             TrainFollowPose {
                 translation: Vec3::new(10.0, 0.0, 20.0),
                 yaw: 0.0,
             },
-            LiveDriverCab {
-                back_m: 3.0,
-                height_m: 2.5,
-                head_pos_train: None,
-                look_pitch: DRIVER_LOOK_PITCH,
-                ..Default::default()
-            },
+            &cab,
             DriverLookOffset::default(),
         );
         assert!((tf.translation.x - 7.0).abs() < 1e-5);
@@ -1439,18 +1535,19 @@ mod tests {
     #[test]
     fn driver_camera_uses_orts_head_pos_when_set() {
         let head_train = Vec3::new(1.7, 3.63, 0.8);
+        let cab = LiveDriverCab {
+            back_m: 3.0,
+            height_m: 2.5,
+            head_pos_train: Some(head_train),
+            look_pitch: -15.0_f32.to_radians(),
+            ..Default::default()
+        };
         let tf = driver_camera_transform(
             TrainFollowPose {
                 translation: Vec3::new(100.0, 0.0, 50.0),
                 yaw: 0.0,
             },
-            LiveDriverCab {
-                back_m: 3.0,
-                height_m: 2.5,
-                head_pos_train: Some(head_train),
-                look_pitch: -15.0_f32.to_radians(),
-                ..Default::default()
-            },
+            &cab,
             DriverLookOffset::default(),
         );
         assert!((tf.translation.x - 101.7).abs() < 1e-4);
@@ -1473,7 +1570,7 @@ mod tests {
             head_lead_local: Some(head_lead),
             ..Default::default()
         };
-        let eye = driver_eye_from_lead(&lead_global, cab).expect("head_lead_local");
+        let eye = driver_eye_from_lead(&lead_global, &cab).expect("head_lead_local");
         let expected = lead_global.transform_point(head_lead);
         assert!((eye - expected).length() < 1e-4);
     }
@@ -1491,10 +1588,10 @@ mod tests {
             look_pitch: -15.0_f32.to_radians(),
             ..Default::default()
         };
-        let a = driver_camera_transform_from_lead(&lead_global, cab, DriverLookOffset::default());
+        let a = driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
         let b = driver_camera_transform_from_lead(
             &lead_global,
-            cab,
+            &cab,
             DriverLookOffset {
                 yaw: 0.5,
                 pitch: 0.25,
@@ -1521,10 +1618,10 @@ mod tests {
             ..Default::default()
         };
         let base =
-            driver_camera_transform_from_lead(&lead_global, cab, DriverLookOffset::default());
+            driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
         let turned = driver_camera_transform_from_lead(
             &lead_global,
-            cab,
+            &cab,
             DriverLookOffset {
                 yaw: 0.4,
                 pitch: 0.0,
@@ -1539,6 +1636,86 @@ mod tests {
     }
 
     #[test]
+    fn driver_camera_applies_start_direction_yaw() {
+        let lead_global = GlobalTransform::from(Transform {
+            rotation: crate::shapes::msts_shape_to_train_rotation(),
+            ..default()
+        });
+        let front = LiveDriverCab {
+            look_pitch: 0.0,
+            look_yaw: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let rear = LiveDriverCab {
+            look_pitch: 0.0,
+            look_yaw: std::f32::consts::PI,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let front_fwd = driver_camera_transform_from_lead(
+            &lead_global,
+            &front,
+            DriverLookOffset::default(),
+        )
+        .forward()
+        .as_vec3();
+        let rear_fwd = driver_camera_transform_from_lead(
+            &lead_global,
+            &rear,
+            DriverLookOffset::default(),
+        )
+        .forward()
+        .as_vec3();
+        assert!(
+            front_fwd.dot(rear_fwd) < -0.9,
+            "rear StartDirection.Y=180 should look opposite: {front_fwd:?} vs {rear_fwd:?}"
+        );
+    }
+
+    #[test]
+    fn driver_look_respects_rotation_limit() {
+        let mut look = DriverLookOffset::default();
+        look.apply_drag_clamped(Vec2::new(10_000.0, 0.0), 10f32.to_radians(), 5f32.to_radians());
+        assert!((look.yaw.abs() - 10f32.to_radians()).abs() < 1e-3);
+        look.apply_drag_clamped(Vec2::new(0.0, 10_000.0), 10f32.to_radians(), 5f32.to_radians());
+        assert!((look.pitch.abs() - 5f32.to_radians()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn cycle_eyepoint_advances_head_and_slot() {
+        let placement = crate::shapes::vehicle_authored_frame_transform(0.0);
+        let mut cab = LiveDriverCab {
+            interior_placement: placement,
+            eyepoints: vec![
+                DriverEyepoint {
+                    head_msts: Vec3::new(-0.8, 2.875, 8.60),
+                    look_pitch: -15f32.to_radians(),
+                    look_yaw: 0.0,
+                    pitch_limit: Some(10f32.to_radians()),
+                    yaw_limit: Some(90f32.to_radians()),
+                    slot: DriverViewSlot::CabViewpoint,
+                },
+                DriverEyepoint {
+                    head_msts: Vec3::new(1.2, 2.5, 7.0),
+                    look_pitch: 0.0,
+                    look_yaw: 0.0,
+                    pitch_limit: None,
+                    yaw_limit: None,
+                    slot: DriverViewSlot::HeadOut,
+                },
+            ],
+            ..Default::default()
+        };
+        cab.apply_eyepoint(cab.eyepoints[0], placement);
+        assert_eq!(cab.active_slot(), DriverViewSlot::CabViewpoint);
+        assert!(cab.cycle_eyepoint());
+        assert_eq!(cab.eyepoint_index, 1);
+        assert_eq!(cab.active_slot(), DriverViewSlot::HeadOut);
+        assert_eq!(cab.head_msts, Some(Vec3::new(1.2, 2.5, 7.0)));
+    }
+
+    #[test]
     fn driver_camera_looks_along_cab_forward() {
         let train_yaw = 0.35;
         let placement = Transform {
@@ -1547,13 +1724,14 @@ mod tests {
         };
         let train = Transform::from_rotation(Quat::from_rotation_y(train_yaw));
         let lead_global = GlobalTransform::from(train.mul_transform(placement));
+        let cab = LiveDriverCab {
+            look_pitch: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
         let tf = driver_camera_transform_from_lead(
             &lead_global,
-            LiveDriverCab {
-                look_pitch: 0.0,
-                head_lead_local: Some(Vec3::ZERO),
-                ..Default::default()
-            },
+            &cab,
             DriverLookOffset::default(),
         );
         let cam_fwd = tf.forward().as_vec3();

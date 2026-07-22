@@ -204,11 +204,31 @@ fn log_cab_missing_once(
     );
 }
 
-/// Open Rails `ORTS3DCabHeadPos` / `StartDirection` from a `.eng` file.
+/// One Open Rails 3D cab / head-out eyepoint ready for the viewer camera.
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Orts3dCabViewpointConfig {
+    pub head_pos_msts: Vec3,
+    /// Look pitch (rad); `.eng` `StartDirection.X` positive = look down → negative pitch.
+    pub look_pitch: f32,
+    /// Look yaw (rad) from `StartDirection.Y` (rear cab ≈ ±π).
+    pub look_yaw: f32,
+    /// Optional pitch clamp half-range from `RotationLimit.X` (rad).
+    pub pitch_limit: Option<f32>,
+    /// Optional yaw clamp half-range from `RotationLimit.Y` (rad).
+    pub yaw_limit: Option<f32>,
+}
+
+/// Open Rails `ORTS3DCabHeadPos` / `StartDirection` / `RotationLimit` / `HeadOut` from a `.eng`.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Orts3dCabConfig {
+    /// Active / primary eyepoint (first `ORTS3DCab`).
     pub head_pos_msts: Vec3,
     pub look_pitch: f32,
+    pub look_yaw: f32,
+    pub pitch_limit: Option<f32>,
+    pub yaw_limit: Option<f32>,
+    pub viewpoints: Vec<Orts3dCabViewpointConfig>,
+    pub head_out_msts: Vec<Vec3>,
 }
 
 /// Cab shape local transform on the train (same MSTS→train rotation as rolling stock).
@@ -235,14 +255,56 @@ fn parse_float_triplet(text: &str, tag: &str) -> Option<Vec3> {
     }
 }
 
+fn viewpoint_from_eng_fields(
+    head: [f64; 3],
+    start: [f64; 3],
+    limit: Option<[f64; 3]>,
+) -> Orts3dCabViewpointConfig {
+    Orts3dCabViewpointConfig {
+        head_pos_msts: Vec3::new(head[0] as f32, head[1] as f32, head[2] as f32),
+        look_pitch: -(start[0] as f32).to_radians(),
+        look_yaw: (start[1] as f32).to_radians(),
+        pitch_limit: limit.map(|l| (l[0] as f32).to_radians().abs()),
+        yaw_limit: limit.map(|l| (l[1] as f32).to_radians().abs()),
+    }
+}
+
 fn orts_3d_cab_from_engine_cab(
     cab: &openrailsrs_formats::EngineCabView,
 ) -> Option<Orts3dCabConfig> {
-    let head = cab.orts_3d_cab_head_pos_m?;
-    let start = cab.start_direction_deg.unwrap_or([0.0, 0.0, 0.0]);
+    let viewpoints: Vec<Orts3dCabViewpointConfig> = if cab.viewpoints.is_empty() {
+        let head = cab.orts_3d_cab_head_pos_m?;
+        vec![viewpoint_from_eng_fields(
+            head,
+            cab.start_direction_deg.unwrap_or([0.0, 0.0, 0.0]),
+            cab.rotation_limit_deg,
+        )]
+    } else {
+        cab.viewpoints
+            .iter()
+            .map(|vp| {
+                viewpoint_from_eng_fields(
+                    vp.head_pos_m,
+                    vp.start_direction_deg,
+                    vp.rotation_limit_deg.or(cab.rotation_limit_deg),
+                )
+            })
+            .collect()
+    };
+    let primary = *viewpoints.first()?;
+    let head_out_msts = cab
+        .head_out_m
+        .iter()
+        .map(|p| Vec3::new(p[0] as f32, p[1] as f32, p[2] as f32))
+        .collect();
     Some(Orts3dCabConfig {
-        head_pos_msts: Vec3::new(head[0] as f32, head[1] as f32, head[2] as f32),
-        look_pitch: -(start[0] as f32).to_radians(),
+        head_pos_msts: primary.head_pos_msts,
+        look_pitch: primary.look_pitch,
+        look_yaw: primary.look_yaw,
+        pitch_limit: primary.pitch_limit,
+        yaw_limit: primary.yaw_limit,
+        viewpoints,
+        head_out_msts,
     })
 }
 
@@ -265,9 +327,22 @@ fn parse_orts_3d_cab_from_eng_text(eng_path: &Path) -> Option<Orts3dCabConfig> {
     }
     let head_pos_msts = parse_float_triplet(&text, "ORTS3DCabHeadPos")?;
     let start_dir = parse_float_triplet(&text, "StartDirection").unwrap_or(Vec3::ZERO);
-    Some(Orts3dCabConfig {
+    let limit = parse_float_triplet(&text, "RotationLimit");
+    let vp = Orts3dCabViewpointConfig {
         head_pos_msts,
         look_pitch: -start_dir.x.to_radians(),
+        look_yaw: start_dir.y.to_radians(),
+        pitch_limit: limit.map(|l| l.x.to_radians().abs()),
+        yaw_limit: limit.map(|l| l.y.to_radians().abs()),
+    };
+    Some(Orts3dCabConfig {
+        head_pos_msts: vp.head_pos_msts,
+        look_pitch: vp.look_pitch,
+        look_yaw: vp.look_yaw,
+        pitch_limit: vp.pitch_limit,
+        yaw_limit: vp.yaw_limit,
+        viewpoints: vec![vp],
+        head_out_msts: Vec::new(),
     })
 }
 
@@ -333,9 +408,15 @@ pub fn orts_3d_cab_from_shape_path(shape_path: &Path) -> Option<Orts3dCabConfig>
 
 impl Orts3dCabConfig {
     /// Eyepoint in train-local metres (transformed with the lead vehicle placement matrix).
-    pub fn head_pos_in_train(self, vehicle_placement: Transform) -> Vec3 {
+    pub fn head_pos_in_train(&self, vehicle_placement: Transform) -> Vec3 {
         vehicle_placement
             .transform_point(crate::shapes::msts_shape_vec3_to_bevy(self.head_pos_msts))
+    }
+
+    /// True when `StartDirection.Y` selects a rear-facing 3D cab (Open Rails CabViewType.Rear).
+    pub fn primary_is_rear_cab(&self) -> bool {
+        let yaw_deg = self.look_yaw.to_degrees().abs();
+        (90.0..=270.0).contains(&yaw_deg)
     }
 }
 
@@ -590,6 +671,20 @@ mod tests {
     use crate::rolling_stock::ConsistVehicleVisual;
     use std::path::PathBuf;
 
+    fn cab_fixture_eng() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/fixtures/cab/orts3d_viewpoints.eng")
+    }
+
+    fn msts_content_root() -> Option<PathBuf> {
+        std::env::var_os("OPENRAILSRS_MSTS_CONTENT").map(PathBuf::from)
+    }
+
+    fn or_pullman_trainset() -> Option<PathBuf> {
+        let root = msts_content_root()?;
+        let trainset = root.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman");
+        trainset.is_dir().then_some(trainset)
+    }
+
     #[test]
     fn resolve_cab_shape_prefers_cab_s() {
         let dir =
@@ -634,12 +729,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn chiltern_or_pullman_cab_shape_loads_when_content_present() {
-        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
-        if !content.is_dir() {
-            return;
-        }
-        let trainset = content.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman");
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
         let shape = resolve_cab_shape_path(&trainset).expect("PULLMAN cab shape");
         let loaded = crate::shapes::load_shape_from_path(&shape, Some(2.0));
         assert!(loaded.is_some(), "parse {}", shape.display());
@@ -665,11 +757,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_cab_shape_for_consist_finds_or_content() {
-        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
-        if !content.is_dir() {
-            return;
-        }
+        let _ = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         let mut consist = TrainConsistScene::default();
         consist.set_scenario_dir(route.clone());
@@ -687,40 +777,46 @@ mod tests {
     }
 
     #[test]
-    fn parse_pullman_orts_3d_cab_head_pos() {
-        let eng = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.eng",
-        );
-        if !eng.is_file() {
-            return;
-        }
-        let config = parse_orts_3d_cab_from_eng(&eng).expect("ORTS3DCab");
+    fn parse_fixture_orts_3d_cab_head_pos_and_limits() {
+        let eng = cab_fixture_eng();
+        let config = parse_orts_3d_cab_from_eng(&eng).expect("ORTS3DCab fixture");
         assert!((config.head_pos_msts.x + 0.8).abs() < 1e-3);
         assert!((config.head_pos_msts.y - 2.875).abs() < 1e-3);
         assert!((config.head_pos_msts.z - 8.60).abs() < 1e-2);
-        let vehicle_t = Transform {
-            rotation: msts_shape_to_train_rotation(),
-            ..default()
-        };
+        assert!((config.look_pitch + 15f32.to_radians()).abs() < 1e-3);
+        assert!(config.look_yaw.abs() < 1e-4);
+        assert!((config.pitch_limit.unwrap() - 10f32.to_radians()).abs() < 1e-3);
+        assert!((config.yaw_limit.unwrap() - 90f32.to_radians()).abs() < 1e-3);
+        assert_eq!(config.viewpoints.len(), 2);
+        assert!((config.viewpoints[1].look_yaw.abs() - std::f32::consts::PI).abs() < 1e-3);
+        assert_eq!(config.head_out_msts.len(), 2);
+        let vehicle_t = crate::shapes::vehicle_authored_frame_transform(0.0);
         let head = config.head_pos_in_train(vehicle_t);
         assert!((head.x - (-8.60)).abs() < 1e-2);
         assert!((head.y - 2.875).abs() < 1e-3);
     }
 
     #[test]
+    fn authored_frame_keeps_orts_head_in_lead_local_space() {
+        let config = parse_orts_3d_cab_from_eng(&cab_fixture_eng()).expect("fixture");
+        let placement = crate::shapes::vehicle_authored_frame_transform(0.0);
+        let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(config.head_pos_msts);
+        let head_train = placement.transform_point(head_bevy);
+        // Same transform as exterior/cab lead frame: no AABB shift between spaces.
+        assert!((head_train - config.head_pos_in_train(placement)).length() < 1e-4);
+        assert!((head_train.x - (-8.60)).abs() < 1e-2);
+        assert!(!config.primary_is_rear_cab());
+        let rear = viewpoint_from_eng_fields([-0.8, 2.875, 8.60], [15.0, 180.0, 0.0], None);
+        assert!((rear.look_yaw.to_degrees().abs() - 180.0).abs() < 1e-2);
+    }
+
+    #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman shapes"]
     fn pullman_cab_geometry_diagnostic() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        let ext_or = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        let ext_stub = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../examples/chiltern/trains/RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s");
-        let ext = if ext_or.is_file() { ext_or } else { ext_stub };
-        if !cab.is_file() || !ext.is_file() {
-            return;
-        }
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
+        let cab = trainset.join("Cabview3d/PULLMAN_GR.s");
+        let ext = trainset.join("RF_WP_DMBSA.s");
+        assert!(cab.is_file() && ext.is_file(), "missing Pullman shapes");
         let cab_loaded = crate::shapes::load_shape_from_path(&cab, Some(2.0)).unwrap();
         let ext_loaded = crate::shapes::load_shape_from_path(&ext, Some(50.0)).unwrap();
         let cab_meshes: Vec<&Mesh> = cab_loaded.parts.iter().map(|p| &p.mesh).collect();
@@ -737,18 +833,16 @@ mod tests {
                 0.0,
                 20.879,
             ),
-            "ORTS head must lie inside cab AABB after cab frame transform"
+            "ORTS head must lie inside cab AABB after authored cab frame transform"
         );
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman cab textures"]
     fn pullman_cab_render_asset_textures_load_from_or_content() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !cab.is_file() {
-            return;
-        }
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
+        let cab = trainset.join("Cabview3d/PULLMAN_GR.s");
+        assert!(cab.is_file(), "missing PULLMAN_GR.s");
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         let tex_dirs: Vec<PathBuf> = crate::shapes::texture_search_dirs_for_shape(&cab, &route);
         let tex_refs: Vec<&std::path::Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -846,13 +940,11 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman cab shape"]
     fn cab_transform_on_camera_pullman_head_in_mesh_space() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !cab.is_file() {
-            return;
-        }
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
+        let cab = trainset.join("Cabview3d/PULLMAN_GR.s");
+        assert!(cab.is_file(), "missing PULLMAN_GR.s");
         let head_msts = Vec3::new(-0.8, 2.875, 8.60);
         let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(head_msts);
         let mount = cab_transform_on_camera(head_msts);
@@ -870,13 +962,11 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn orts_3d_cab_from_or_trainset_root_shape_path() {
-        let shape = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape.is_file() {
-            return;
-        }
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
+        let shape = trainset.join("RF_WP_DMBSA.s");
+        assert!(shape.is_file(), "missing RF_WP_DMBSA.s");
         let config = orts_3d_cab_from_shape_path(&shape).expect("ORTS from OR root .s");
         assert!((config.head_pos_msts.y - 2.875).abs() < 1e-3);
     }

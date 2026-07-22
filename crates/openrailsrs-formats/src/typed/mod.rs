@@ -25,7 +25,7 @@ pub use brake_shoe::{
 pub use carspawn::{CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList};
 pub use consist::{ConsistEntry, ConsistFile};
 pub use cvf::{CabControl, CabView, CabViewFile, ControlState, ControlType, ScreenRect};
-pub use engine::{EngineCabView, EngineFile, MstsSteamFields};
+pub use engine::{EngineCabView, EngineFile, MstsSteamFields, Orts3dCabViewpoint};
 pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };
@@ -135,5 +135,22 @@ where
             None
         }
         Ast::Atom(_) => None,
+    }
+}
+
+/// Visit every list node (does not short-circuit). Used when collecting repeated blocks
+/// such as multiple `ORTS3DCab` / `HeadOut` entries.
+fn walk_lists_visit<'a, F>(ast: &'a Ast, f: &mut F)
+where
+    F: FnMut(&'a [Ast]),
+{
+    match ast {
+        Ast::List(items) => {
+            f(items);
+            for item in items {
+                walk_lists_visit(item, f);
+            }
+        }
+        Ast::Atom(_) => {}
     }
 }

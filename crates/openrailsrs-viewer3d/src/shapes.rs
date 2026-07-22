@@ -452,36 +452,31 @@ fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
     ]
 }
 
-/// Local transform for a vehicle `.s` mesh: MSTS→train rotation, unit scale, front at `offset_m`.
+/// Local transform for a vehicle `.s` mesh: authored shape origin at `offset_m`, unit scale.
 ///
-/// Open Rails does **not** scale vehicle meshes to match `Size` / `length_m`. Those values
-/// control coupler spacing / consist offsets only; mesh proportions stay as authored
-/// (plus any Matrix3x3 baked into the shape hierarchy).
+/// Open Rails does **not** scale vehicle meshes to match `Size` / `length_m`, and does **not**
+/// re-anchor meshes by AABB `min.z` / `min.y`. Those Size values control coupler spacing /
+/// consist offsets only; mesh proportions and the shape origin stay as authored (plus any
+/// Matrix3x3 baked into the shape hierarchy). Exterior and 3D cab share this frame so
+/// `ORTS3DCabHeadPos` stays in the same local space as the body mesh.
 pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) -> Transform {
     cab_shape_placement_transform(mesh, offset_m, length_m)
 }
 
-/// Lead-vehicle placement for 3D cab (same origin/rotation as exterior `.s`, unit scale).
+/// Shared exterior / 3D-cab vehicle frame: MSTS→train rotation, authored origin at `offset_m`.
 ///
-/// Open Rails keeps `ORTS3DCabHeadPos`, `CABVIEW3D`, and exterior body meshes in unscaled
-/// MSTS shape metres. `length_m` is accepted for API symmetry with consist placement but
-/// does not affect mesh scale.
+/// The `mesh` argument is accepted for call-site symmetry but does **not** shift the frame
+/// (no AABB front/ground compensation). `length_m` likewise does not affect mesh scale.
 pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32) -> Transform {
-    let rotation = msts_shape_to_train_rotation();
-    let (min, max) = mesh_aabb(mesh).unwrap_or((Vec3::ZERO, Vec3::splat(0.01)));
-    let center = (min + max) * 0.5;
+    let _ = mesh;
+    vehicle_authored_frame_transform(offset_m)
+}
 
-    let front = Vec3::new(center.x, center.y, min.z);
-    let front_local_x = (rotation * front).x;
-
-    let min_y = aabb_corners(min, max)
-        .iter()
-        .map(|p| (rotation * *p).y)
-        .fold(f32::INFINITY, f32::min);
-
+/// Train-local vehicle frame with authored shape origin at `offset_m` (Open Rails parity).
+pub fn vehicle_authored_frame_transform(offset_m: f32) -> Transform {
     Transform {
-        translation: Vec3::new(offset_m - front_local_x, -min_y, 0.0),
-        rotation,
+        translation: Vec3::new(offset_m, 0.0, 0.0),
+        rotation: msts_shape_to_train_rotation(),
         scale: Vec3::ONE,
     }
 }
@@ -3434,15 +3429,39 @@ mod tests {
     }
 
     #[test]
-    fn vehicle_shape_front_stays_at_offset() {
+    fn vehicle_shape_authored_origin_stays_at_offset() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
         let t0 = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
         let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0);
         assert!(t0.translation.x.abs() < 1e-3);
+        assert!(t0.translation.y.abs() < 1e-3);
         assert!((t1.translation.x + 18.0).abs() < 1e-3);
-        // Spacing uses Size/length offsets, not mesh stretch.
+        // Spacing uses Size/length offsets, not mesh stretch or AABB anchors.
         assert!((t1.translation.x - t0.translation.x + 18.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn vehicle_and_cab_frame_share_authored_origin() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let exterior = vehicle_shape_local_transform(&mesh, -5.0, 18.0);
+        let cab = cab_shape_placement_transform(&mesh, -5.0, 18.0);
+        let authored = vehicle_authored_frame_transform(-5.0);
+        assert!((exterior.translation - cab.translation).length() < 1e-5);
+        assert!((exterior.translation - authored.translation).length() < 1e-5);
+        assert!((exterior.rotation.xyz() - cab.rotation.xyz()).length() < 1e-5);
+    }
+
+    #[test]
+    fn vehicle_frame_ignores_mesh_aabb() {
+        let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
+        let mesh = build_mesh_from_shape(&shape).expect("mesh");
+        let with_mesh = cab_shape_placement_transform(&mesh, 3.0, 20.0);
+        let authored = vehicle_authored_frame_transform(3.0);
+        assert!((with_mesh.translation - authored.translation).length() < 1e-5);
+        assert!((with_mesh.translation.x - 3.0).abs() < 1e-5);
+        assert!(with_mesh.translation.y.abs() < 1e-5);
     }
 
     #[test]

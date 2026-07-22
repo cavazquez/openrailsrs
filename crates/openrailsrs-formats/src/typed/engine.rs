@@ -10,8 +10,19 @@ use super::brake_shoe::{BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_br
 use super::friction::parse_orts_friction_fields;
 use super::{
     OrtsFrictionFields, atom_to_number, atom_to_string, find_list_value,
-    find_optional_string_field, walk_lists_find,
+    find_optional_string_field, walk_lists_find, walk_lists_visit,
 };
+
+/// One Open Rails 3D cab eyepoint (`ORTS3DCab` / `ORTSAlternate3DCabViewPoint`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Orts3dCabViewpoint {
+    /// Eyepoint in MSTS shape metres (`ORTS3DCabHeadPos`).
+    pub head_pos_m: [f64; 3],
+    /// `StartDirection` (degrees); X = pitch (look down), Y = yaw (rear cab ≈ ±180).
+    pub start_direction_deg: [f64; 3],
+    /// Optional `RotationLimit` (degrees) about StartDirection; typically (pitch, yaw, roll).
+    pub rotation_limit_deg: Option<[f64; 3]>,
+}
 
 /// Cab view references from an MSTS `.eng` (`CabView`, `ORTS3DCab`, …).
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -20,10 +31,16 @@ pub struct EngineCabView {
     pub cab_view_file: Option<String>,
     /// OR 3D cab shape from `ORTS3DCabFile` (e.g. `PULLMAN_GR.s`).
     pub orts_3d_cab_shape: Option<String>,
-    /// Eyepoint in MSTS shape metres (`ORTS3DCabHeadPos`).
+    /// Eyepoint in MSTS shape metres (`ORTS3DCabHeadPos`) — first / primary viewpoint.
     pub orts_3d_cab_head_pos_m: Option<[f64; 3]>,
-    /// MSTS `StartDirection` (degrees); X = pitch (positive = look down).
+    /// MSTS `StartDirection` (degrees); X = pitch (positive = look down), Y = yaw.
     pub start_direction_deg: Option<[f64; 3]>,
+    /// `RotationLimit` (degrees) for the primary 3D cab viewpoint.
+    pub rotation_limit_deg: Option<[f64; 3]>,
+    /// Primary + alternate 3D cab viewpoints (Open Rails `CabViewpoints`).
+    pub viewpoints: Vec<Orts3dCabViewpoint>,
+    /// `HeadOut` eyepoints in MSTS metres (includes OR mirrored opposite-side copy).
+    pub head_out_m: Vec<[f64; 3]>,
 }
 
 /// Optional MSTS steam parameters parsed from `.eng` (mapped to `SteamParams` in train crate).
@@ -381,18 +398,30 @@ fn parse_engine_cab_view(ast: &Ast) -> EngineCabView {
     if let Ok(Some(path)) = find_optional_string_field(ast, &["CabView"], "cab") {
         cab.cab_view_file = Some(normalize_cab_asset_name(&path));
     }
-    let _ = walk_lists_find(ast, &mut |items| {
-        if !matches!(
-            items.first(),
-            Some(Ast::Atom(Atom::Symbol(head))) if head.eq_ignore_ascii_case("ORTS3DCab")
-        ) {
-            return None;
+
+    // Primary + nested `ORTS3DCab` blocks (including under ORTSAlternate3DCabViewPoints).
+    walk_lists_visit(ast, &mut |items| {
+        let Some(Ast::Atom(Atom::Symbol(head))) = items.first() else {
+            return;
+        };
+        if !head.eq_ignore_ascii_case("ORTS3DCab") {
+            return;
         }
-        for item in items.iter().skip(1) {
-            apply_cab_subfield(item, &mut cab);
+        let (shape, viewpoint) = parse_orts3d_cab_block(items);
+        if cab.orts_3d_cab_shape.is_none() {
+            if let Some(shape) = shape {
+                cab.orts_3d_cab_shape = Some(shape);
+            }
         }
-        Some(())
+        if viewpoint.head_pos_m != [0.0, 0.0, 0.0]
+            || viewpoint.start_direction_deg != [0.0, 0.0, 0.0]
+            || viewpoint.rotation_limit_deg.is_some()
+        {
+            cab.viewpoints.push(viewpoint);
+        }
     });
+
+    // Loose top-level fields (some .eng files omit the ORTS3DCab wrapper).
     if cab.orts_3d_cab_shape.is_none() {
         if let Some(shape) = parse_cab_shape_ref(ast, "ORTS3DCabFile") {
             cab.orts_3d_cab_shape = Some(shape);
@@ -404,30 +433,109 @@ fn parse_engine_cab_view(ast: &Ast) -> EngineCabView {
     if cab.start_direction_deg.is_none() {
         cab.start_direction_deg = parse_f64_triplet_field(ast, "StartDirection");
     }
+    if cab.rotation_limit_deg.is_none() {
+        cab.rotation_limit_deg = parse_f64_triplet_field(ast, "RotationLimit");
+    }
+
+    // Synthesize a primary viewpoint when only loose fields were present.
+    if cab.viewpoints.is_empty() {
+        if let Some(head) = cab.orts_3d_cab_head_pos_m {
+            cab.viewpoints.push(Orts3dCabViewpoint {
+                head_pos_m: head,
+                start_direction_deg: cab.start_direction_deg.unwrap_or([0.0, 0.0, 0.0]),
+                rotation_limit_deg: cab.rotation_limit_deg,
+            });
+        }
+    } else {
+        let primary = &cab.viewpoints[0];
+        if cab.orts_3d_cab_head_pos_m.is_none() {
+            cab.orts_3d_cab_head_pos_m = Some(primary.head_pos_m);
+        }
+        if cab.start_direction_deg.is_none() {
+            cab.start_direction_deg = Some(primary.start_direction_deg);
+        }
+        if cab.rotation_limit_deg.is_none() {
+            cab.rotation_limit_deg = primary.rotation_limit_deg;
+        }
+    }
+
+    // `HeadOut ( x y z )` — Open Rails also adds the mirrored opposite-side point.
+    walk_lists_visit(ast, &mut |items| {
+        let Some(Ast::Atom(Atom::Symbol(head))) = items.first() else {
+            return;
+        };
+        if !head.eq_ignore_ascii_case("HeadOut") {
+            return;
+        }
+        let pos = if items.len() >= 2 {
+            f64_triplet_from_ast(&items[1])
+        } else {
+            None
+        }
+        .or_else(|| {
+            let values: Vec<f64> = items
+                .iter()
+                .skip(1)
+                .filter_map(|item| {
+                    if let Ast::Atom(atom) = item {
+                        atom_to_number(atom)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            (values.len() >= 3).then_some([values[0], values[1], values[2]])
+        });
+        let Some(pos) = pos else {
+            return;
+        };
+        cab.head_out_m.push(pos);
+        cab.head_out_m.push([-pos[0], pos[1], -pos[2]]);
+    });
+
     cab
 }
 
-fn apply_cab_subfield(item: &Ast, cab: &mut EngineCabView) {
-    let Ast::List(pair) = item else {
-        return;
-    };
-    let Some(Ast::Atom(Atom::Symbol(key))) = pair.first() else {
-        return;
-    };
-    match key.to_ascii_lowercase().as_str() {
-        "orts3dcabfile" if pair.len() >= 2 => {
-            if let Some(shape) = string_from_ast_value(&pair[1]) {
-                cab.orts_3d_cab_shape = Some(normalize_cab_asset_name(&shape));
+fn parse_orts3d_cab_block(items: &[Ast]) -> (Option<String>, Orts3dCabViewpoint) {
+    let mut shape = None;
+    let mut head = None;
+    let mut start = [0.0, 0.0, 0.0];
+    let mut limit = None;
+    for item in items.iter().skip(1) {
+        let Ast::List(pair) = item else {
+            continue;
+        };
+        let Some(Ast::Atom(Atom::Symbol(key))) = pair.first() else {
+            continue;
+        };
+        match key.to_ascii_lowercase().as_str() {
+            "orts3dcabfile" if pair.len() >= 2 => {
+                if let Some(s) = string_from_ast_value(&pair[1]) {
+                    shape = Some(normalize_cab_asset_name(&s));
+                }
             }
+            "orts3dcabheadpos" if pair.len() >= 2 => {
+                head = f64_triplet_from_ast(&pair[1]);
+            }
+            "startdirection" if pair.len() >= 2 => {
+                if let Some(v) = f64_triplet_from_ast(&pair[1]) {
+                    start = v;
+                }
+            }
+            "rotationlimit" if pair.len() >= 2 => {
+                limit = f64_triplet_from_ast(&pair[1]);
+            }
+            _ => {}
         }
-        "orts3dcabheadpos" if pair.len() >= 2 => {
-            cab.orts_3d_cab_head_pos_m = f64_triplet_from_ast(&pair[1]);
-        }
-        "startdirection" if pair.len() >= 2 => {
-            cab.start_direction_deg = f64_triplet_from_ast(&pair[1]);
-        }
-        _ => {}
     }
+    (
+        shape,
+        Orts3dCabViewpoint {
+            head_pos_m: head.unwrap_or([0.0, 0.0, 0.0]),
+            start_direction_deg: start,
+            rotation_limit_deg: limit,
+        },
+    )
 }
 
 fn parse_cab_shape_ref(ast: &Ast, key: &str) -> Option<String> {
@@ -1326,6 +1434,29 @@ mod tests {
         assert_eq!(eng.cab.orts_3d_cab_shape.as_deref(), Some("PULLMAN_GR.s"));
         assert_eq!(eng.cab.orts_3d_cab_head_pos_m, Some([-0.8, 2.875, 8.60]));
         assert_eq!(eng.cab.start_direction_deg, Some([15.0, 0.0, 0.0]));
+        assert_eq!(eng.cab.rotation_limit_deg, Some([10.0, 90.0, 90.0]));
+        assert_eq!(eng.cab.viewpoints.len(), 1);
+    }
+
+    #[test]
+    fn parse_orts3d_cab_viewpoints_rotation_limit_and_head_out() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/fixtures/cab/orts3d_viewpoints.eng");
+        let text = std::fs::read_to_string(&path).expect("fixture eng");
+        let ast = parse_from_first_paren(&text).expect("parse");
+        let eng = EngineFile::from_ast(&ast).expect("engine");
+        assert_eq!(eng.cab.orts_3d_cab_shape.as_deref(), Some("PULLMAN_GR.s"));
+        assert_eq!(eng.cab.orts_3d_cab_head_pos_m, Some([-0.8, 2.875, 8.60]));
+        assert_eq!(eng.cab.start_direction_deg, Some([15.0, 0.0, 0.0]));
+        assert_eq!(eng.cab.rotation_limit_deg, Some([10.0, 90.0, 90.0]));
+        assert_eq!(eng.cab.viewpoints.len(), 2);
+        assert_eq!(
+            eng.cab.viewpoints[1].start_direction_deg,
+            [10.0, 180.0, 0.0]
+        );
+        assert_eq!(eng.cab.head_out_m.len(), 2);
+        assert_eq!(eng.cab.head_out_m[0], [1.2, 2.5, 7.0]);
+        assert_eq!(eng.cab.head_out_m[1], [-1.2, 2.5, -7.0]);
     }
 
     #[test]
