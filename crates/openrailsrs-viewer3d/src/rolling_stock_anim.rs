@@ -123,20 +123,10 @@ fn env_key_frac(name: &str) -> Option<f32> {
 /// Normalized [0, 1] target from live exterior state (no env override).
 pub fn frac_for_kind(kind: RollingStockPartKind, exterior: &RollingStockExteriorState) -> f32 {
     match kind {
-        RollingStockPartKind::Door => {
-            if exterior.door.anim_open_target() {
-                1.0
-            } else {
-                0.0
-            }
-        }
-        RollingStockPartKind::Pantograph => {
-            if exterior.pantograph_command_up {
-                1.0
-            } else {
-                0.0
-            }
-        }
+        RollingStockPartKind::Door if exterior.door.anim_open_target() => 1.0,
+        RollingStockPartKind::Door => 0.0,
+        RollingStockPartKind::Pantograph if exterior.pantograph_command_up => 1.0,
+        RollingStockPartKind::Pantograph => 0.0,
         _ => 0.0,
     }
 }

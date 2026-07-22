@@ -1,5 +1,5 @@
-// WORLD GPU instancing (#58): albedo + alpha cutoff + scene light + fog (#76) + receive shadows (#72).
-// Casting into the shadow map is still Bevy StandardMaterial / deferred (#72 follow-up).
+// WORLD GPU instancing (#58): albedo + alpha cutoff + scene light + fog (#76) +
+// receive + cast directional shadows (#72).
 #import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
 #import bevy_pbr::{
     mesh_view_bindings as view_bindings,
@@ -105,4 +105,38 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     );
 #endif
     return out_color;
+}
+
+// ─── Shadow map cast (#72): depth-only with optional alpha discard ────────────
+
+struct ShadowVertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+};
+
+@vertex
+fn vertex_shadow(vertex: Vertex) -> ShadowVertexOutput {
+    let model = mat4x4<f32>(
+        vertex.i_col0,
+        vertex.i_col1,
+        vertex.i_col2,
+        vertex.i_col3,
+    );
+    let local_pos = model * vec4<f32>(vertex.position, 1.0);
+    let world_from_local = get_world_from_local(0u);
+    var out: ShadowVertexOutput;
+    out.clip_position = mesh_position_local_to_clip(world_from_local, local_pos);
+    out.uv = vertex.uv;
+    return out;
+}
+
+@fragment
+fn fragment_shadow(in: ShadowVertexOutput) {
+    let cutoff = appearance.params.x;
+    if cutoff > 0.0 {
+        let color = appearance.base_color * textureSample(base_color_texture, base_color_sampler, in.uv);
+        if color.a < cutoff {
+            discard;
+        }
+    }
 }

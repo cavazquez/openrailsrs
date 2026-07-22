@@ -397,14 +397,15 @@ Actualización puntual frente a afirmaciones obsoletas del snapshot 2026-07-20:
 | LOD distancia (#74) | — | `world_lod_distance_m` = cámara→centro (no suma vía foco) |
 | TileBundle render3d (#77) | Solo bridge/tests | Stream request→materialize→spawn activo |
 | TileBundle loader (#78/#79) | WORLD `loaded` prematuro; doble parse terrain | Eager `load_value` + labeled assets |
-| Instancing shading (#76) | Lambert luz fija | Luz direccional de escena + `apply_fog` (sombras → #72) |
+| Instancing shading (#76) | Lambert luz fija | Luz direccional de escena + `apply_fog` |
+| Instancing shadows (#72) | Sin receive/cast | Receive `fetch_directional_shadow` + cast fase `Shadow` instanced |
 | CarSpawner (#32) | `carspawn.dat: sin renderer` | Renderer v1 (`road_cars.rs`) |
 | AssetLoaders (#48+) | “no hay AssetLoader MSTS” | Loaders shape/ace/world/terrain/tilebundle |
 | Goldens | “no hay screenshots/golden” | Hay smoke visual CI (`scripts/visual_regression_smoke.sh` / #43); golden OR completo → #71 |
 | CI (#73) | Históricamente rojo por `fmt` temprano | **Verde** en `main` (lavapipe + skips Chiltern sin assets) |
 | Bogies (#69) | Stub `look_ahead_yaw=0` | Samples TDB/grafo en `long_offset_m` |
 
-Issues abiertas relevantes tras este corte: [#72](https://github.com/cavazquez/openrailsrs/issues/72) cast sombras instanced (receive OK), [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR, [#81](https://github.com/cavazquez/openrailsrs/issues/81) puertas/panto ↔ sim.
+Issues abiertas relevantes tras este corte: [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR/Chiltern.
 
 ## Arquitectura compartida (#109–#125)
 

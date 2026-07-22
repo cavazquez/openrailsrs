@@ -4,17 +4,22 @@
 //! transforms. Animated / transparent (blend) parts keep the per-entity spawn path.
 //! Opaque + cutout draws are queued in Bevy [`Opaque3d`] (#106); the fragment shader
 //! alpha-discards cutout. True blend materials must not use this path.
+//! Directional shadow cast uses the [`Shadow`] phase with the same instance buffer (#72).
 
 use std::path::PathBuf;
 
 use bevy::asset::RenderAssetUsages;
-use bevy::core_pipeline::core_3d::{Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey};
+use bevy::core_pipeline::core_3d::{
+    CORE_3D_DEPTH_FORMAT, Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey,
+};
 use bevy::ecs::system::{SystemParamItem, lifetimeless::*};
 use bevy::ecs::{query::QueryItem, system::lifetimeless::Read};
 use bevy::mesh::{MeshVertexBufferLayoutRef, VertexBufferLayout};
 use bevy::pbr::{
-    MeshPipeline, MeshPipelineKey, MeshPipelineSystems, RenderMeshInstances, SetMeshBindGroup,
-    SetMeshViewBindGroup, SetMeshViewBindingArrayBindGroup, ViewKeyCache,
+    LightEntity, LightKeyCache, MeshPipeline, MeshPipelineKey, MeshPipelineSystems,
+    PrepassPipeline, RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup,
+    SetMeshViewBindingArrayBindGroup, SetPrepassViewBindGroup, SetPrepassViewEmptyBindGroup,
+    Shadow, ShadowBatchSetKey, ShadowBinKey, ViewKeyCache, init_prepass_pipeline,
 };
 use bevy::prelude::*;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
@@ -158,17 +163,21 @@ impl Plugin for WorldInstancingPlugin {
         };
         render_app
             .add_render_command::<Opaque3d, DrawWorldInstanced>()
+            .add_render_command::<Shadow, DrawWorldInstancedShadow>()
             .init_resource::<SpecializedMeshPipelines<WorldInstancingPipeline>>()
             .add_systems(
                 RenderStartup,
-                init_world_instancing_pipeline.after(MeshPipelineSystems),
+                init_world_instancing_pipeline
+                    .after(MeshPipelineSystems)
+                    .after(init_prepass_pipeline),
             )
             .add_systems(
                 Render,
                 (
                     prepare_world_instance_buffers.in_set(RenderSystems::PrepareResources),
                     prepare_world_instance_bind_groups.in_set(RenderSystems::PrepareBindGroups),
-                    queue_world_instanced.in_set(RenderSystems::QueueMeshes),
+                    (queue_world_instanced, queue_world_instanced_shadows)
+                        .in_set(RenderSystems::QueueMeshes),
                 ),
             );
     }
@@ -263,12 +272,47 @@ struct WorldInstancingPipeline {
     shader: Handle<Shader>,
     mesh_pipeline: MeshPipeline,
     appearance_layout: BindGroupLayoutDescriptor,
+    /// Prepass/shadow view layout (group 0) — matches [`SetPrepassViewBindGroup`].
+    shadow_view_layout: BindGroupLayoutDescriptor,
+    shadow_empty_layout: BindGroupLayoutDescriptor,
+    depth_clip_control_supported: bool,
+}
+
+fn instance_vertex_buffer_layout() -> VertexBufferLayout {
+    VertexBufferLayout {
+        array_stride: size_of::<WorldInstanceData>() as u64,
+        step_mode: VertexStepMode::Instance,
+        attributes: vec![
+            VertexAttribute {
+                format: VertexFormat::Float32x4,
+                offset: 0,
+                shader_location: 3,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x4,
+                offset: 16,
+                shader_location: 4,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x4,
+                offset: 32,
+                shader_location: 5,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x4,
+                offset: 48,
+                shader_location: 6,
+            },
+        ],
+    }
 }
 
 fn init_world_instancing_pipeline(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mesh_pipeline: Res<MeshPipeline>,
+    prepass_pipeline: Res<PrepassPipeline>,
+    render_device: Res<RenderDevice>,
 ) {
     // Bevy 0.19: `Assets<Shader>` lives in the main world, not RenderApp.
     // Register via AssetServer (same approach as `init_mesh_pipeline`).
@@ -288,6 +332,11 @@ fn init_world_instancing_pipeline(
         shader,
         mesh_pipeline: mesh_pipeline.clone(),
         appearance_layout,
+        shadow_view_layout: prepass_pipeline.view_layout_no_motion_vectors.clone(),
+        shadow_empty_layout: prepass_pipeline.empty_layout.clone(),
+        depth_clip_control_supported: render_device
+            .features()
+            .contains(WgpuFeatures::DEPTH_CLIP_CONTROL),
     });
 }
 
@@ -299,40 +348,95 @@ impl SpecializedMeshPipeline for WorldInstancingPipeline {
         key: Self::Key,
         layout: &MeshVertexBufferLayoutRef,
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
+        // Shadow / depth-prepass: depth-only pipeline with prepass view layouts (#72).
+        if key.contains(MeshPipelineKey::DEPTH_PREPASS) {
+            return self.specialize_shadow(key, layout);
+        }
+
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
         descriptor.vertex.shader = self.shader.clone();
-        descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: size_of::<WorldInstanceData>() as u64,
-            step_mode: VertexStepMode::Instance,
-            attributes: vec![
-                VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: 0,
-                    shader_location: 3,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: 16,
-                    shader_location: 4,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: 32,
-                    shader_location: 5,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32x4,
-                    offset: 48,
-                    shader_location: 6,
-                },
-            ],
-        });
+        descriptor
+            .vertex
+            .buffers
+            .push(instance_vertex_buffer_layout());
         if let Some(fragment) = descriptor.fragment.as_mut() {
             fragment.shader = self.shader.clone();
         }
         // Insert appearance bind group at index 3 (after view/array/mesh).
         descriptor.layout.push(self.appearance_layout.clone());
         Ok(descriptor)
+    }
+}
+
+impl WorldInstancingPipeline {
+    fn specialize_shadow(
+        &self,
+        key: MeshPipelineKey,
+        layout: &MeshVertexBufferLayoutRef,
+    ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
+        let mut vertex_attributes = vec![Mesh::ATTRIBUTE_POSITION.at_shader_location(0)];
+        if layout.0.contains(Mesh::ATTRIBUTE_NORMAL) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_NORMAL.at_shader_location(1));
+        }
+        if layout.0.contains(Mesh::ATTRIBUTE_UV_0) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_UV_0.at_shader_location(2));
+        }
+        let vertex_buffer_layout = layout.0.get_layout(&vertex_attributes)?;
+
+        let unclipped_depth = key.contains(MeshPipelineKey::UNCLIPPED_DEPTH_ORTHO)
+            && self.depth_clip_control_supported;
+
+        Ok(RenderPipelineDescriptor {
+            label: Some("world_instancing_shadow_pipeline".into()),
+            layout: vec![
+                self.shadow_view_layout.clone(),
+                self.shadow_empty_layout.clone(),
+                self.mesh_pipeline.mesh_layouts.model_only.clone(),
+                self.appearance_layout.clone(),
+            ],
+            vertex: VertexState {
+                shader: self.shader.clone(),
+                entry_point: Some("vertex_shadow".into()),
+                buffers: vec![vertex_buffer_layout, instance_vertex_buffer_layout()],
+                ..default()
+            },
+            fragment: Some(FragmentState {
+                shader: self.shader.clone(),
+                entry_point: Some("fragment_shadow".into()),
+                // Depth-only: no color targets; FS only for alpha discard.
+                targets: vec![],
+                ..default()
+            }),
+            primitive: PrimitiveState {
+                topology: key.primitive_topology(),
+                strip_index_format: key.strip_index_format(),
+                cull_mode: Some(Face::Back),
+                unclipped_depth,
+                ..default()
+            },
+            depth_stencil: Some(DepthStencilState {
+                format: CORE_3D_DEPTH_FORMAT,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(CompareFunction::GreaterEqual),
+                stencil: StencilState {
+                    front: StencilFaceState::IGNORE,
+                    back: StencilFaceState::IGNORE,
+                    read_mask: 0,
+                    write_mask: 0,
+                },
+                bias: DepthBiasState {
+                    constant: 0,
+                    slope_scale: 0.0,
+                    clamp: 0.0,
+                },
+            }),
+            multisample: MultisampleState {
+                count: key.msaa_samples(),
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            ..default()
+        })
     }
 }
 
@@ -471,10 +575,101 @@ fn queue_world_instanced(
     }
 }
 
+/// Queue WORLD instances into each directional/point/spot shadow cascade (#72 cast).
+#[allow(clippy::too_many_arguments)]
+fn queue_world_instanced_shadows(
+    shadow_draw_functions: Res<DrawFunctions<Shadow>>,
+    custom_pipeline: Res<WorldInstancingPipeline>,
+    mut pipelines: ResMut<SpecializedMeshPipelines<WorldInstancingPipeline>>,
+    pipeline_cache: Res<PipelineCache>,
+    meshes: Res<RenderAssets<RenderMesh>>,
+    render_mesh_instances: Res<RenderMeshInstances>,
+    mesh_allocator: Res<MeshAllocator>,
+    material_meshes: Query<
+        (Entity, &MainEntity, Option<&WorldInstanceAppearance>),
+        With<WorldInstanceBuffer>,
+    >,
+    mut shadow_render_phases: ResMut<ViewBinnedRenderPhases<Shadow>>,
+    view_lights: Query<(&LightEntity, &ExtractedView)>,
+    light_key_cache: Res<LightKeyCache>,
+) {
+    let draw_shadow = shadow_draw_functions
+        .read()
+        .id::<DrawWorldInstancedShadow>();
+
+    for (_light_entity, view) in &view_lights {
+        let Some(shadow_phase) = shadow_render_phases.get_mut(&view.retained_view_entity) else {
+            continue;
+        };
+        let Some(&light_key) = light_key_cache.get(&view.retained_view_entity) else {
+            continue;
+        };
+
+        for (entity, main_entity, appearance) in &material_meshes {
+            let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*main_entity)
+            else {
+                continue;
+            };
+            if !mesh_instance
+                .flags()
+                .contains(bevy::pbr::RenderMeshInstanceFlags::SHADOW_CASTER)
+            {
+                continue;
+            }
+            let Some(mesh) = meshes.get(mesh_instance.mesh_asset_id()) else {
+                continue;
+            };
+            let Some(mesh_slabs) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id()) else {
+                continue;
+            };
+
+            let mut key = light_key
+                | MeshPipelineKey::from_primitive_topology_and_strip_index(
+                    mesh.primitive_topology(),
+                    mesh.index_format(),
+                );
+            if appearance.is_some_and(|a| a.alpha_cutoff > 0.0) {
+                key |= MeshPipelineKey::MAY_DISCARD;
+            }
+
+            let Ok(pipeline) =
+                pipelines.specialize(&pipeline_cache, &custom_pipeline, key, &mesh.layout)
+            else {
+                continue;
+            };
+
+            shadow_phase.add(
+                ShadowBatchSetKey {
+                    pipeline,
+                    draw_function: draw_shadow,
+                    material_bind_group_index: None,
+                    slabs: mesh_slabs,
+                },
+                ShadowBinKey {
+                    asset_id: mesh_instance.mesh_asset_id().into(),
+                },
+                (entity, *main_entity),
+                mesh_instance.current_uniform_index,
+                BinnedRenderPhaseType::UnbatchableMesh,
+            );
+        }
+    }
+}
+
 type DrawWorldInstanced = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
     SetMeshViewBindingArrayBindGroup<1>,
+    SetMeshBindGroup<2>,
+    SetWorldInstanceAppearanceBindGroup<3>,
+    DrawMeshWorldInstanced,
+);
+
+/// Shadow pass: prepass view bind groups + instance draw (#72).
+type DrawWorldInstancedShadow = (
+    SetItemPipeline,
+    SetPrepassViewBindGroup<0>,
+    SetPrepassViewEmptyBindGroup<1>,
     SetMeshBindGroup<2>,
     SetWorldInstanceAppearanceBindGroup<3>,
     DrawMeshWorldInstanced,
@@ -763,7 +958,7 @@ mod tests {
 
     #[test]
     fn instancing_shader_receives_directional_shadows() {
-        // #72: sample Bevy cascade shadow map (receive). Casting remains StandardMaterial path.
+        // #72 receive: sample Bevy cascade shadow map.
         let src = include_str!("world_instancing.wgsl");
         assert!(
             src.contains("fetch_directional_shadow"),
@@ -773,5 +968,21 @@ mod tests {
             src.contains("DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT"),
             "shadow sampling must respect light flags"
         );
+    }
+
+    #[test]
+    fn instancing_shader_casts_directional_shadows() {
+        // #72 cast: depth-only entry points used by Shadow phase.
+        let src = include_str!("world_instancing.wgsl");
+        assert!(
+            src.contains("fn vertex_shadow") && src.contains("fn fragment_shadow"),
+            "shader must expose shadow cast entry points"
+        );
+    }
+
+    #[test]
+    fn instanced_draws_target_shadow_phase() {
+        fn _assert_phase<P: bevy::render::render_phase::BinnedPhaseItem>() {}
+        _assert_phase::<Shadow>();
     }
 }
