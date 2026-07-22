@@ -245,7 +245,7 @@ Las posiciones absolutas Chiltern son aproximadamente X=-12,45 millones y Z=-30,
 | C11 | P2 | Señales no reproducen subobjetos/lámparas | Mitigado (#37): `sigcfg` + lámparas; bitmask heads; mesh subobj completo residual |
 | C12 | P2 | Forest no es camera-facing | Mitigado (#38): mesh OR + `OrForestMaterial`/`VSForest`; sin golden 4 ángulos |
 | C13 | P2 | Fog ausente del viewer jugable | Mitigado (#39): fog ≈ viewing distance; sin noche dinámica |
-| C14 | P2 | Animaciones visuales del rolling stock ausentes | Mitigado (#40): `rolling_stock_anim` — rueda por velocidad, bogie yaw aprox., stubs puerta/panto; sin DoorState/CommandUp |
+| C14 | P2 | Animaciones visuales del rolling stock ausentes | Mitigado (#40/#69/#81): rueda, bogie TDB, puertas/panto ↔ `RollingStockExteriorState` |
 | C15 | P2 | Exterior del tren no proyecta sombras | Mitigado (#41): opacos castean; glass/blend conservan `NotShadowCaster` |
 | C16 | P2 | Terreno custom no recibe sombras equivalentes | Mitigado (#42): `terrain.wgsl` half-Lambert + `fetch_directional_shadow`; dual-tex/fog/holes intactos |
 | C17 | P1 | TrackObj irresoluble puede omitirse silenciosamente | placeholders false + procedural condicional |
@@ -401,9 +401,10 @@ Actualización puntual frente a afirmaciones obsoletas del snapshot 2026-07-20:
 | CarSpawner (#32) | `carspawn.dat: sin renderer` | Renderer v1 (`road_cars.rs`) |
 | AssetLoaders (#48+) | “no hay AssetLoader MSTS” | Loaders shape/ace/world/terrain/tilebundle |
 | Goldens | “no hay screenshots/golden” | Hay smoke visual CI (`scripts/visual_regression_smoke.sh` / #43); golden OR completo → #71 |
-| CI (#73) | Históricamente rojo por `fmt` temprano | `check.sh` debe completar fmt→clippy→tests→build |
+| CI (#73) | Históricamente rojo por `fmt` temprano | **Verde** en `main` (lavapipe + skips Chiltern sin assets) |
+| Bogies (#69) | Stub `look_ahead_yaw=0` | Samples TDB/grafo en `long_offset_m` |
 
-Issues abiertas relevantes tras este corte: [#72](https://github.com/cavazquez/openrailsrs/issues/72) sombras instanced, [#73](https://github.com/cavazquez/openrailsrs/issues/73) CI verde, [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR, [#81](https://github.com/cavazquez/openrailsrs/issues/81)/[#69](https://github.com/cavazquez/openrailsrs/issues/69) rolling stock.
+Issues abiertas relevantes tras este corte: [#72](https://github.com/cavazquez/openrailsrs/issues/72) cast sombras instanced (receive OK), [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR, [#81](https://github.com/cavazquez/openrailsrs/issues/81) puertas/panto ↔ sim.
 
 ## Arquitectura compartida (#109–#125)
 

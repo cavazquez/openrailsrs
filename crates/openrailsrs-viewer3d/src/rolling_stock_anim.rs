@@ -1,16 +1,18 @@
-//! Exterior rolling-stock part animation (#40 / #69): wheels, bogies, door/panto stubs.
+//! Exterior rolling-stock part animation (#40 / #69 / #81): wheels, bogies, doors/panto.
 //!
 //! Meshes stay rest-baked (same pattern as WORLD #34). Drivers update each part's
 //! local `Transform` without moving the car body.
 //!
 //! Bogie yaw (#69) samples track heading at the car pivot and at the bogie's
 //! longitudinal offset (TDB via [`vehicle_position_yaw_on_graph_edge`], graph fallback).
+//! Door/panto keys (#81) follow [`RollingStockExteriorState`] (env debug overrides).
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
     ShapeAnimBinding, animation_pose_matrices, world_baked_anim_transform,
 };
 use openrailsrs_formats::ShapeFile;
+use openrailsrs_sim::RollingStockExteriorState;
 
 use crate::live::LiveDrive;
 use crate::shapes::RouteAssets;
@@ -118,24 +120,62 @@ fn env_key_frac(name: &str) -> Option<f32> {
         .map(|v| v.clamp(0.0, 1.0))
 }
 
-fn stub_key_for_kind(kind: RollingStockPartKind, shape: &ShapeFile) -> f32 {
-    let frac = match kind {
-        RollingStockPartKind::Door => env_key_frac("OPENRAILSRS_DEBUG_DOOR_KEY").unwrap_or(0.0),
+/// Normalized [0, 1] target from live exterior state (no env override).
+pub fn frac_for_kind(kind: RollingStockPartKind, exterior: &RollingStockExteriorState) -> f32 {
+    match kind {
+        RollingStockPartKind::Door => {
+            if exterior.door.anim_open_target() {
+                1.0
+            } else {
+                0.0
+            }
+        }
         RollingStockPartKind::Pantograph => {
-            env_key_frac("OPENRAILSRS_DEBUG_PANTO_KEY").unwrap_or(0.0)
+            if exterior.pantograph_command_up {
+                1.0
+            } else {
+                0.0
+            }
         }
         _ => 0.0,
-    };
-    let frame_count = shape
-        .animations
-        .first()
-        .map(|a| a.frame_count as f32)
-        .unwrap_or(0.0);
+    }
+}
+
+/// Map normalized fraction to shape animation key.
+pub fn key_from_frac(frac: f32, frame_count: f32) -> f32 {
+    let frac = frac.clamp(0.0, 1.0);
     if frame_count > 0.0 {
         frac * (frame_count - 1.0).max(0.0)
     } else {
         frac
     }
+}
+
+/// Env debug overrides sim; otherwise use exterior (or 0 if no live session).
+pub fn resolve_keyed_frac(
+    kind: RollingStockPartKind,
+    exterior: Option<&RollingStockExteriorState>,
+) -> f32 {
+    let env_name = match kind {
+        RollingStockPartKind::Door => Some("OPENRAILSRS_DEBUG_DOOR_KEY"),
+        RollingStockPartKind::Pantograph => Some("OPENRAILSRS_DEBUG_PANTO_KEY"),
+        _ => None,
+    };
+    if let Some(name) = env_name
+        && let Some(frac) = env_key_frac(name)
+    {
+        return frac;
+    }
+    exterior.map(|ext| frac_for_kind(kind, ext)).unwrap_or(0.0)
+}
+
+fn stub_key_for_kind(kind: RollingStockPartKind, shape: &ShapeFile) -> f32 {
+    let frame_count = shape
+        .animations
+        .first()
+        .map(|a| a.frame_count as f32)
+        .unwrap_or(0.0);
+    key_from_frac(resolve_keyed_frac(kind, None), frame_count)
 }
 
 /// Build anim components for one exterior part, if the matrix name is animated.
@@ -343,7 +383,7 @@ pub fn update_rolling_stock_part_anim(
     train_markers: Query<&TrainMarker>,
     car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
-        (&TrainKeyedAnim, &ShapeAnimBinding, &mut Transform),
+        (&mut TrainKeyedAnim, &ShapeAnimBinding, &mut Transform),
         (
             With<TrainExteriorAnimPart>,
             Without<TrainWheelAnim>,
@@ -355,6 +395,7 @@ pub fn update_rolling_stock_part_anim(
     let live_ref = live.as_deref();
     let replay_ref = replay.as_deref();
     let speed = train_speed_mps(live_ref, replay_ref);
+    let exterior = live_ref.map(|l| &l.session.exterior);
 
     for (mut wheel, binding, mut tf) in &mut wheels {
         let r = wheel.radius_m.max(0.15);
@@ -446,7 +487,9 @@ pub fn update_rolling_stock_part_anim(
         let _ = binding;
     }
 
-    for (keyed_anim, binding, mut tf) in &mut keyed {
+    for (mut keyed_anim, binding, mut tf) in &mut keyed {
+        let frac = resolve_keyed_frac(keyed_anim.kind, exterior);
+        keyed_anim.key = key_from_frac(frac, binding.frame_count);
         let key = keyed_anim.key;
         if binding.frame_count > 0.0 && !binding.shape.animations.is_empty() {
             let pose = animation_pose_matrices(&binding.shape, key);
@@ -691,5 +734,56 @@ mod tests {
         let keyed = bundle.5.expect("keyed");
         assert_eq!(keyed.matrix_idx, 0);
         assert!(keyed.key.is_finite());
+    }
+
+    #[test]
+    fn door_state_maps_to_key() {
+        use openrailsrs_sim::DoorState;
+        let mut ext = RollingStockExteriorState::new();
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Door, &ext), 11.0),
+            0.0
+        );
+        ext.set_door(DoorState::Opening);
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Door, &ext), 11.0),
+            10.0
+        );
+        ext.set_door(DoorState::Open);
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Door, &ext), 11.0),
+            10.0
+        );
+        ext.set_door(DoorState::Closing);
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Door, &ext), 11.0),
+            0.0
+        );
+    }
+
+    #[test]
+    fn panto_command_maps_to_key() {
+        let mut ext = RollingStockExteriorState::new();
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Pantograph, &ext), 5.0),
+            0.0
+        );
+        ext.set_pantograph_up(true);
+        assert_eq!(
+            key_from_frac(frac_for_kind(RollingStockPartKind::Pantograph, &ext), 5.0),
+            4.0
+        );
+    }
+
+    #[test]
+    fn resolve_keyed_frac_uses_exterior_without_env() {
+        use openrailsrs_sim::DoorState;
+        let mut ext = RollingStockExteriorState::new();
+        ext.set_door(DoorState::Open);
+        assert_eq!(
+            resolve_keyed_frac(RollingStockPartKind::Door, Some(&ext)),
+            1.0
+        );
+        assert_eq!(resolve_keyed_frac(RollingStockPartKind::Door, None), 0.0);
     }
 }

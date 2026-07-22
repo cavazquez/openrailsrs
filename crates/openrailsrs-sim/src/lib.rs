@@ -4,6 +4,7 @@ pub mod brake;
 pub mod coupler;
 pub mod csv_out;
 pub mod error;
+pub mod exterior;
 pub mod live_drive;
 pub mod multi_runner;
 pub mod path;
@@ -20,6 +21,7 @@ pub use brake::{
 };
 pub use coupler::{CouplerKind, CouplerState, VehicleState};
 pub use error::SimError;
+pub use exterior::{DoorState, RollingStockExteriorState};
 pub use live_drive::{CabTelemetry, LiveDriveSession, LiveGameplay, LiveStopTarget};
 pub use multi_runner::{
     LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,

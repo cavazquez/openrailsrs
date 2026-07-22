@@ -11,6 +11,7 @@ use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asse
 use crate::SimError;
 use crate::brake::BrakeSystem;
 use crate::coupler::CouplerKind;
+use crate::exterior::RollingStockExteriorState;
 use crate::path::resolve_route_edges;
 use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
@@ -164,6 +165,8 @@ pub struct LiveDriveSession {
     pub driver_brake: f64,
     /// Reverser: 0 = REV, 0.5 = neutral, 1 = FWD (cab CVF / HUD).
     pub driver_direction: f64,
+    /// Door / pantograph presentation for exterior shape keys (#81).
+    pub exterior: RollingStockExteriorState,
     /// Sim time until which horn button appears pressed (cab M5).
     horn_pressed_until_s: f64,
     pub speed_mul: f64,
@@ -281,6 +284,7 @@ impl LiveDriveSession {
             driver_throttle: 0.0,
             driver_brake: 0.0,
             driver_direction: 0.5,
+            exterior: RollingStockExteriorState::new(),
             horn_pressed_until_s: 0.0,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
@@ -465,6 +469,7 @@ impl LiveDriveSession {
     where
         F: FnMut(&RegionTransition),
     {
+        self.exterior.tick(self.dt);
         self.tick_signals();
         self.tick_gameplay();
 
