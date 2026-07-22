@@ -78,6 +78,7 @@ mod app_smoke;
 mod app_spawn;
 #[cfg(test)]
 mod test_harness;
+pub mod visual_diff_core;
 #[cfg(test)]
 mod visual_regression;
 

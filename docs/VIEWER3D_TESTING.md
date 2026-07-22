@@ -121,14 +121,42 @@ Key env (script sets defaults):
 
 CI job `visual-smoke` runs the script under `xvfb-run` and uploads `actual.png` / `diff.png` on failure.
 
+### Chiltern Birmingham exterior + cabina (#71)
+
+Deterministic dual-camera capture vs **openrailsrs** baseline goldens (local; needs MSTS content + GPU).
+
+| Piece | Path |
+|-------|------|
+| Script | [`scripts/visual_regression_chiltern.sh`](../scripts/visual_regression_chiltern.sh) |
+| Goldens | [`docs/fixtures/visual/chiltern/`](fixtures/visual/chiltern/) (`birmingham_exterior.png`, `birmingham_cabina.png`) |
+| Diff | `openrailsrs-visual-diff` (shared core: `visual_diff_core`) |
+| Injection tests | `visual_diff_core::tests` — synthetic train ×1.5 / sink must fail hot-% budget |
+
+```bash
+export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
+UPDATE_GOLDEN=1 ./scripts/visual_regression_chiltern.sh   # first run / refresh baselines
+./scripts/visual_regression_chiltern.sh                         # compare
+```
+
+Views:
+
+| Name | Camera |
+|------|--------|
+| `birmingham_exterior` | `OPENRAILSRS_FOLLOW=orbit` + fixed yaw/pitch/dist near tile −6080/14925 |
+| `birmingham_cabina` | `OPENRAILSRS_FOLLOW=driver` |
+
+Optional OR references (manual only): `docs/fixtures/visual/or_reference/{desdeafuera,cabina}.png`.
+
+Not wired into GitHub Actions (Chiltern assets not on runners); smoke CI remains #43.
+
 ### Manual OpenRails checklist (Chiltern Birmingham)
 
-Not automated. Useful when comparing Bevy vs OR at station tile **-6080 / 14925**:
+Useful when comparing Bevy vs OR at station tile **-6080 / 14925**:
 
 1. Content: `OPENRAILSRS_MSTS_CONTENT` → Chiltern route on disk.
 2. OpenRails (Wine or native): activity *RS_Let's go to Birmingham* (or free roam to Birmingham).
 3. Position near marquesina / tile **-6080, 14925**; note camera yaw/pitch/height roughly matching Bevy orbit if comparing screenshots.
-4. Bevy: `OPENRAILSRS_VIEW_RADIUS_M=300` + `--live --route-root … examples/chiltern/scenario.toml` (see commands below).
+4. Bevy: `./scripts/visual_regression_chiltern.sh` or `OPENRAILSRS_VIEW_RADIUS_M=400` + `--live --route-root … examples/chiltern/scenario.toml`.
 5. Check: platform/canopy alignment vs track, Transfer/forest presence, no NaN/missing major Static. Pixel-perfect not required.
 
 OR speed-CSV capture helpers remain under `scripts/capture_chiltern_birmingham_or.sh` (physics baseline, not visual golden).

@@ -401,11 +401,11 @@ Actualización puntual frente a afirmaciones obsoletas del snapshot 2026-07-20:
 | Instancing shadows (#72) | Sin receive/cast | Receive `fetch_directional_shadow` + cast fase `Shadow` instanced |
 | CarSpawner (#32) | `carspawn.dat: sin renderer` | Renderer v1 (`road_cars.rs`) |
 | AssetLoaders (#48+) | “no hay AssetLoader MSTS” | Loaders shape/ace/world/terrain/tilebundle |
-| Goldens | “no hay screenshots/golden” | Hay smoke visual CI (`scripts/visual_regression_smoke.sh` / #43); golden OR completo → #71 |
+| Goldens | “no hay screenshots/golden” | Smoke CI (#43) + Chiltern exterior/cabina harness (#71: script + injection tests; baselines locales) |
 | CI (#73) | Históricamente rojo por `fmt` temprano | **Verde** en `main` (lavapipe + skips Chiltern sin assets) |
 | Bogies (#69) | Stub `look_ahead_yaw=0` | Samples TDB/grafo en `long_offset_m` |
 
-Issues abiertas relevantes tras este corte: [#71](https://github.com/cavazquez/openrailsrs/issues/71) golden OR/Chiltern.
+Issues abiertas relevantes tras este corte: ninguna del lote map-rendering P1/P2 previo (residuales: paridad pixel OR manual).
 
 ## Arquitectura compartida (#109–#125)
 
