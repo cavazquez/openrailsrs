@@ -354,13 +354,16 @@ impl SpecializedMeshPipeline for WorldInstancingPipeline {
         }
 
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
+        // Same WGSL as shadow pass — must name entry points (wgpu rejects multi-EP modules).
         descriptor.vertex.shader = self.shader.clone();
+        descriptor.vertex.entry_point = Some("vertex".into());
         descriptor
             .vertex
             .buffers
             .push(instance_vertex_buffer_layout());
         if let Some(fragment) = descriptor.fragment.as_mut() {
             fragment.shader = self.shader.clone();
+            fragment.entry_point = Some("fragment".into());
         }
         // Insert appearance bind group at index 3 (after view/array/mesh).
         descriptor.layout.push(self.appearance_layout.clone());
@@ -973,10 +976,14 @@ mod tests {
     #[test]
     fn instancing_shader_casts_directional_shadows() {
         // #72 cast: depth-only entry points used by Shadow phase.
+        // Opaque specialize must set entry_point = "vertex"/"fragment" (multi-EP module).
         let src = include_str!("world_instancing.wgsl");
         assert!(
-            src.contains("fn vertex_shadow") && src.contains("fn fragment_shadow"),
-            "shader must expose shadow cast entry points"
+            src.contains("fn vertex(")
+                && src.contains("fn fragment(")
+                && src.contains("fn vertex_shadow")
+                && src.contains("fn fragment_shadow"),
+            "shader must expose opaque + shadow cast entry points"
         );
     }
 
