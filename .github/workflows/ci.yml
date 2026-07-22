@@ -54,16 +54,22 @@ jobs:
         with:
           shared-key: workspace-cache
 
-      - name: System libs (X11 + ALSA + Bevy + xvfb)
+      - name: System libs (X11 + ALSA + Bevy + xvfb + lavapipe)
         run: |
           sudo apt-get update
+          # mesa-vulkan-drivers = lavapipe (Vulkan CPU); libgl1-mesa-dri = llvmpipe (GL).
+          # Sin esto Bevy 0.19 paniquea: "Unable to find a GPU!" en runners sin GPU.
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb
+            libasound2-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb \
+            libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
 
       - name: Visual regression smoke
+        env:
+          # Lavapipe a veces se marca non-conformant; wgpu lo rechaza sin esto.
+          WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER: "1"
         run: |
           chmod +x scripts/visual_regression_smoke.sh
-          xvfb-run -a ./scripts/visual_regression_smoke.sh
+          xvfb-run -a -s "-screen 0 1280x720x24" ./scripts/visual_regression_smoke.sh
 
       - name: Upload visual artifacts
         if: failure()
