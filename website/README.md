@@ -40,4 +40,4 @@ python3 -m http.server 8080 --directory website
 
 - Actualizar métricas en `paridad-or.html` cuando cambien umbrales Chiltern/SCE en CI.
 - Añadir secciones en `fisica.html` al implementar nuevas fases OR-P (p. ej. OR-P6c skid).
-- Documentación canónica en el repo: `docs/OR_PARITY_ROADMAP.md`, `CALIBRATION.md`.
+- Documentación canónica en el repo: `docs/OR_PARITY.md`, `docs/OR_PARITY.md`.

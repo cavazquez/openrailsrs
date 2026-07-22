@@ -754,7 +754,7 @@ fn chiltern_birmingham_import_uses_pat_placement() {
     }
 }
 
-/// Headless dump for [`docs/TRACKVIEWER_STUDY_PART2.md`]: Birmingham `.pat` PDPs vs placement.
+/// Headless dump for [`docs/TRACK_MSTS.md`]: Birmingham `.pat` PDPs vs placement.
 ///
 /// ```bash
 /// cargo test -p openrailsrs-msts document_birmingham_pat_for_study -- --ignored --nocapture

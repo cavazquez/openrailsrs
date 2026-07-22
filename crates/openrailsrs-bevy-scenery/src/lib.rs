@@ -1,6 +1,6 @@
 //! Shared Bevy layer for MSTS/Open Rails scenery rendering.
 //!
-//! See `docs/BEVY_ARCHITECTURE.md`.
+//! See `docs/BEVY.md`.
 
 pub mod assets;
 pub mod atmosphere;

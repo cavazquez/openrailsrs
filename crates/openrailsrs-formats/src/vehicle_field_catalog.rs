@@ -1,7 +1,7 @@
 //! Static catalog of MSTS `.eng` / `.wag` tokens for cross-reference audits.
 //!
 //! Sources: openrailsrs typed parsers, OpenBVE `VehicleParser.cs`, Open Rails
-//! `EngineFile.cs` / `MSTSLocomotive.cs` (documented in `docs/PARSER_CROSS_VALIDATION.md`).
+//! `EngineFile.cs` / `MSTSLocomotive.cs` (documented in `docs/FORMATS.md`).
 
 /// Which vehicle files a catalog entry applies to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

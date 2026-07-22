@@ -5,7 +5,7 @@
 //! Plain, cyan Switch, yellow Station). Optionally replays train position from
 //! simulation CSV when launched with a `scenario.toml`.
 //!
-//! See `docs/OPEN_RAILS_VIEWER_3D.md` for the full roadmap (issue #8).
+//! See `docs/VIEWER3D.md` for the full roadmap (issue #8).
 
 pub mod cab_cvf;
 pub mod cab_cvf_overlay;

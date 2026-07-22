@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Shared Bevy OR scenery: materials, spawn, VSM (see docs/BEVY_ARCHITECTURE.md)"
+description = "Shared Bevy OR scenery: materials, spawn, VSM (see docs/BEVY.md)"
 
 [lib]
 path = "src/lib.rs"

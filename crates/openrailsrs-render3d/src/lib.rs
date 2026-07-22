@@ -1,6 +1,6 @@
 //! Render 3D validation against Open Rails (tile stream, VSM, OR shaders).
 //!
-//! See `docs/RENDER3D.md`.
+//! See `docs/BEVY.md`.
 
 pub mod activity;
 pub mod consist;

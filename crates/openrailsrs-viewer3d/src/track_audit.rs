@@ -1578,7 +1578,7 @@ mod tests {
         assert_eq!(report.verdict, TrackDevVerdict::Good);
     }
 
-    /// Headless dump for [`docs/TRACKVIEWER_STUDY_PART2.md`]: outlier TDB nodes near Birmingham.
+    /// Headless dump for [`docs/TRACK_MSTS.md`]: outlier TDB nodes near Birmingham.
     ///
     /// ```bash
     /// cargo test -p openrailsrs-viewer3d --lib document_chiltern_outlier_nodes -- --ignored --nocapture

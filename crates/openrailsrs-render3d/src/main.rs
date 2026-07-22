@@ -7,7 +7,7 @@
 //! Uso:
 //!   cargo run -p openrailsrs-render3d -- [--route DIR] [--activity ACT.act] [--tile-x N --tile-z N] [--radius R]
 //!
-//! Rutas OR recomendadas (scripts): ver [`docs/RENDER3D.md`](../../docs/RENDER3D.md) y `./scripts/run_render3d_*.sh`.
+//! Rutas OR recomendadas (scripts): ver [`docs/BEVY.md`](../../docs/BEVY.md) y `./scripts/run_render3d_*.sh`.
 //!
 //! Controles:
 //!   W/A/S/D  mover    Q/E  bajar/subir    Shift  más rápido
