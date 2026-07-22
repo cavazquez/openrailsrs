@@ -1,6 +1,6 @@
 //! Procedural sky dome and atmospheric distance fog (#8 / #39 / #123).
 
-use bevy::pbr::DistanceFog;
+use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::{
     distance_fog, sky_clear_color as shared_sky_clear_color,
@@ -65,7 +65,30 @@ pub fn camera_distance_fog() -> DistanceFog {
     viewer_distance_fog(visibility, false)
 }
 
-/// Toggle fog with `F` — inserts/removes [`DistanceFog`] on the playable camera.
+/// Keep [`DistanceFog`] on the camera with zero density.
+///
+/// Bevy's mesh view bind group layout includes fog binding 13 only when the
+/// component is present. Removing it while pipelines still carry
+/// `MeshPipelineKey::DISTANCE_FOG` triggers a wgpu validation crash on toggle.
+pub fn disabled_distance_fog() -> DistanceFog {
+    DistanceFog {
+        color: Color::srgba(0.0, 0.0, 0.0, 0.0),
+        directional_light_color: Color::NONE,
+        directional_light_exponent: 1.0,
+        falloff: FogFalloff::Exponential { density: 0.0 },
+    }
+}
+
+/// Apply [`FogState::enabled`] without adding/removing the fog component.
+pub fn sync_camera_fog(fog: &mut DistanceFog, enabled: bool) {
+    *fog = if enabled {
+        camera_distance_fog()
+    } else {
+        disabled_distance_fog()
+    };
+}
+
+/// Toggle fog with `F` — zeros falloff instead of removing [`DistanceFog`].
 pub fn toggle_distance_fog(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<FogState>,
@@ -81,12 +104,15 @@ pub fn toggle_distance_fog(
     }
     state.enabled = !state.enabled;
     for (entity, fog) in &mut cameras {
-        if state.enabled {
-            if fog.is_none() {
-                commands.entity(entity).insert(camera_distance_fog());
+        match fog {
+            Some(mut fog) => sync_camera_fog(&mut fog, state.enabled),
+            None => {
+                // Camera missing the component (e.g. after hot-reload) — always insert
+                // so the DISTANCE_FOG view layout stays stable across toggles.
+                let mut fog = camera_distance_fog();
+                sync_camera_fog(&mut fog, state.enabled);
+                commands.entity(entity).insert(fog);
             }
-        } else if fog.is_some() {
-            commands.entity(entity).remove::<DistanceFog>();
         }
     }
     viewer_log!(
@@ -168,6 +194,21 @@ mod tests {
         assert!(
             dens(&fog) <= dens(&at_view) + 1e-6,
             "camera fog must not be denser than view-radius fog (would hide tiles early)"
+        );
+    }
+
+    #[test]
+    fn toggle_off_keeps_distance_fog_component_with_zero_density() {
+        let mut fog = camera_distance_fog();
+        sync_camera_fog(&mut fog, false);
+        match fog.falloff {
+            FogFalloff::Exponential { density } => assert_eq!(density, 0.0),
+            other => panic!("disabled fog must stay Exponential(0), got {other:?}"),
+        }
+        sync_camera_fog(&mut fog, true);
+        assert!(
+            matches!(fog.falloff, FogFalloff::Atmospheric { .. }),
+            "re-enable must restore atmospheric camera fog"
         );
     }
 }
