@@ -614,8 +614,16 @@ pub fn driver_user_look_quat(look: DriverLookOffset) -> Quat {
 }
 
 /// Default cab orientation from `.eng` `StartDirection` (yaw + pitch).
+///
+/// Applies [`DRIVER_CAB_FORWARD_YAW_OFFSET`] so Bevy camera −Z aligns with train
+/// travel +X (`StartDirection.Y = 0` looks forward; ≈180° looks rear).
 pub fn driver_cab_base_orientation(cab: &LiveDriverCab) -> Quat {
-    Quat::from_euler(EulerRot::YXZ, cab.look_yaw, cab.look_pitch, 0.0)
+    Quat::from_euler(
+        EulerRot::YXZ,
+        cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET,
+        cab.look_pitch,
+        0.0,
+    )
 }
 
 /// Default cab downward pitch from `.eng` / `StartDirection` (compat helper).
@@ -1667,6 +1675,18 @@ mod tests {
         )
         .forward()
         .as_vec3();
+        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        let front_h = Vec3::new(front_fwd.x, 0.0, front_fwd.z).normalize();
+        let rear_h = Vec3::new(rear_fwd.x, 0.0, rear_fwd.z).normalize();
+        assert!(
+            front_h.dot(travel_h) > 0.99,
+            "front StartDirection.Y=0 should look along travel +X: {front_h:?} vs {travel_h:?}"
+        );
+        assert!(
+            rear_h.dot(-travel_h) > 0.99,
+            "rear StartDirection.Y=180 should look opposite travel: {rear_h:?} vs {travel_h:?}"
+        );
         assert!(
             front_fwd.dot(rear_fwd) < -0.9,
             "rear StartDirection.Y=180 should look opposite: {front_fwd:?} vs {rear_fwd:?}"
@@ -1735,10 +1755,43 @@ mod tests {
             DriverLookOffset::default(),
         );
         let cam_fwd = tf.forward().as_vec3();
-        let cab_fwd = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
+        // Travel / MSTS cab +Z maps to train-local +X after shape→train rotation.
+        let travel_fwd = lead_global.rotation().mul_vec3(Vec3::X);
         let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
-        let cab_h = Vec3::new(cab_fwd.x, 0.0, cab_fwd.z).normalize();
-        assert!(cam_h.dot(cab_h) > 0.99, "cam={cam_h:?} cab={cab_h:?}");
+        let travel_h = Vec3::new(travel_fwd.x, 0.0, travel_fwd.z).normalize();
+        assert!(
+            cam_h.dot(travel_h) > 0.99,
+            "cam={cam_h:?} travel={travel_h:?}"
+        );
+    }
+
+    #[test]
+    fn driver_camera_aligns_with_train_travel_forward() {
+        let train_yaw = -0.7;
+        let placement = Transform {
+            rotation: crate::shapes::msts_shape_to_train_rotation(),
+            ..default()
+        };
+        let train = Transform::from_rotation(Quat::from_rotation_y(train_yaw));
+        let lead_global = GlobalTransform::from(train.mul_transform(placement));
+        let cab = LiveDriverCab {
+            look_pitch: -15f32.to_radians(),
+            look_yaw: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let cam_fwd = driver_camera_transform_from_lead(
+            &lead_global,
+            &cab,
+            DriverLookOffset::default(),
+        )
+        .forward()
+        .as_vec3();
+        // Lead frame already includes shape→train (+90° Y); travel is local +X.
+        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
+        let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        assert!(cam_h.dot(travel_h) > 0.99, "cam={cam_h:?} travel={travel_h:?}");
     }
 
     #[test]

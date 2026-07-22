@@ -112,6 +112,82 @@ pub struct ControlState {
     pub switch_val: f64,
 }
 
+/// Discrete ACE frames for a CVF `Lever` (Open Rails `CVCWithFrames` subset).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabLeverFrames {
+    pub frames_count: u32,
+    pub frames_x: u32,
+    pub frames_y: u32,
+    /// 0 = horizontal, 1 = vertical (MSTS/OR `Orientation`).
+    pub orientation: i32,
+    /// When false, mouse/input direction is inverted (`DirIncrease 0`).
+    pub dir_increase: bool,
+    /// Normalized control values per frame (ascending). Empty until normalized.
+    pub values: Vec<f64>,
+    pub min_value: f64,
+    pub max_value: f64,
+}
+
+impl Default for CabLeverFrames {
+    fn default() -> Self {
+        Self {
+            frames_count: 0,
+            frames_x: 0,
+            frames_y: 0,
+            orientation: 0,
+            dir_increase: true,
+            values: Vec::new(),
+            min_value: 0.0,
+            max_value: 1.0,
+        }
+    }
+}
+
+impl CabLeverFrames {
+    /// Open Rails `PercentToIndex` for lever/discrete ACE frames.
+    pub fn percent_to_index(&self, percent: f64) -> usize {
+        let mut percent = percent;
+        if percent > 1.0 {
+            percent /= 100.0;
+        }
+        if self.min_value != self.max_value {
+            percent = percent.clamp(self.min_value, self.max_value);
+        }
+        let frames = self.frames_count.max(1) as usize;
+        if self.values.len() > 1 {
+            let mut best = 0usize;
+            let mut best_dist = f64::INFINITY;
+            for (i, v) in self.values.iter().enumerate() {
+                let dist = (v - percent).abs();
+                if dist < best_dist {
+                    best_dist = dist;
+                    best = i;
+                }
+            }
+            return best.min(frames.saturating_sub(1));
+        }
+        if self.max_value != self.min_value {
+            let span = self.max_value - self.min_value;
+            let idx = ((percent - self.min_value) / span * self.frames_count as f64).floor() as isize;
+            return idx.clamp(0, frames as isize - 1) as usize;
+        }
+        0
+    }
+
+    /// Pixel rect of frame `index` inside a packed ACE sheet (row-major, OR order).
+    pub fn frame_rect(&self, image_w: f32, image_h: f32, index: usize) -> (f32, f32, f32, f32) {
+        let fx = self.frames_x.max(1) as f32;
+        let fy = self.frames_y.max(1) as f32;
+        let cell_w = image_w / fx;
+        let cell_h = image_h / fy;
+        let max_index = (self.frames_count.max(1) as usize).saturating_sub(1);
+        let idx = index.min(max_index);
+        let x = (idx as u32 % self.frames_x.max(1)) as f32;
+        let y = (idx as u32 / self.frames_x.max(1)) as f32;
+        (x * cell_w, y * cell_h, cell_w, cell_h)
+    }
+}
+
 /// Cab control element (display, dial, digital readout, …).
 #[derive(Clone, Debug, PartialEq)]
 pub enum CabControl {
@@ -141,11 +217,12 @@ pub enum CabControl {
         position: ScreenRect,
         graphic: String,
     },
-    /// Continuous lever (3D cab): throttle, train brake, …
+    /// Discrete lever (CVF ACE frames): throttle, train brake, …
     Lever {
         control_type: ControlType,
         position: Option<ScreenRect>,
         graphic: String,
+        frames: CabLeverFrames,
     },
     Unknown {
         kind: String,
@@ -678,11 +755,125 @@ fn parse_lever(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
     let position = find_screen_rect(items, "Lever").ok();
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    let frames = normalize_lever_frames(parse_lever_frames(items));
     Ok(CabControl::Lever {
         control_type,
         position,
         graphic,
+        frames,
     })
+}
+
+fn parse_lever_frames(items: &[Ast]) -> CabLeverFrames {
+    let mut frames = CabLeverFrames::default();
+    if let Some(nums) = find_named_numbers(items, "NumFrames") {
+        if !nums.is_empty() {
+            frames.frames_count = nums[0].max(0.0) as u32;
+        }
+        if nums.len() >= 2 {
+            frames.frames_x = nums[1].max(0.0) as u32;
+        }
+        if nums.len() >= 3 {
+            frames.frames_y = nums[2].max(0.0) as u32;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "NumPositions") {
+        // Count is nums[0]; optional explicit position indices follow.
+        let _count = nums.first().copied().unwrap_or(0.0);
+        let _ = _count;
+    }
+    if let Some(nums) = find_named_numbers(items, "NumValues") {
+        if nums.len() > 1 {
+            frames.values = nums[1..].to_vec();
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "Orientation") {
+        if let Some(v) = nums.first() {
+            frames.orientation = *v as i32;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
+        if let Some(v) = nums.first() {
+            frames.dir_increase = *v != 0.0;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
+        if nums.len() >= 2 {
+            frames.min_value = nums[0];
+            frames.max_value = nums[1];
+        }
+    }
+    frames
+}
+
+/// Fill missing frame metadata the way Open Rails does for abbreviated levers.
+fn normalize_lever_frames(mut frames: CabLeverFrames) -> CabLeverFrames {
+    if frames.frames_count == 0 && frames.frames_x > 0 && frames.frames_y > 0 {
+        frames.frames_count = frames.frames_x.saturating_mul(frames.frames_y);
+    }
+    if frames.frames_x == 0 && frames.frames_count > 0 {
+        frames.frames_x = frames.frames_count;
+        frames.frames_y = 1;
+    }
+    if frames.values.len() <= 1 && frames.frames_count > 1 {
+        let n = frames.frames_count as usize;
+        let span = frames.max_value - frames.min_value;
+        frames.values = (0..n)
+            .map(|i| frames.min_value + span * (i as f64) / ((n - 1) as f64))
+            .collect();
+    } else if frames.values.is_empty() && frames.frames_count == 1 {
+        frames.values.push(frames.min_value);
+    }
+    if frames.values.len() >= 2 && frames.values[0] > *frames.values.last().unwrap_or(&0.0) {
+        frames.values.reverse();
+    }
+    frames
+}
+
+fn find_named_numbers(items: &[Ast], key: &str) -> Option<Vec<f64>> {
+    if let Some(nums) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() >= 2 {
+            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
+                if head.eq_ignore_ascii_case(key) {
+                    let nums = flatten_numbers(&list[1..]);
+                    if !nums.is_empty() {
+                        return Some(nums);
+                    }
+                }
+            }
+        }
+        None
+    }) {
+        return Some(nums);
+    }
+    for (i, item) in items.iter().enumerate() {
+        if let Ast::Atom(Atom::Symbol(head)) = item {
+            if head.eq_ignore_ascii_case(key) {
+                if let Some(rest) = items.get(i + 1..) {
+                    let nums = flatten_numbers(rest);
+                    if !nums.is_empty() {
+                        return Some(nums);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn flatten_numbers(items: &[Ast]) -> Vec<f64> {
+    let mut nums = Vec::new();
+    for item in items {
+        match item {
+            Ast::Atom(atom) => {
+                if let Some(n) = atom_to_number(atom) {
+                    nums.push(n);
+                }
+            }
+            Ast::List(sub) => nums.extend(flatten_numbers(sub)),
+        }
+    }
+    nums
 }
 
 fn parse_control_type(items: &[Ast]) -> Result<ControlType, FormatError> {
@@ -1037,5 +1228,85 @@ mod tests {
             }
             other => panic!("expected MultiStateDisplay, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parse_lever_num_frames_and_positions() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (Lever
+      (Type ( THROTTLE LEVER ))
+      (Position (471 374 169 106))
+      (Graphic "Throttle.ace")
+      (NumFrames ( 10 5 2 ))
+      (NumPositions ( 10 ))
+      (NumValues ( 10 ))
+      (Orientation ( 1 ))
+      (DirIncrease ( 0 ))
+      (ScaleRange ( 0 1 ))
+    )
+    (Lever
+      (Type ( TRAIN_BRAKE LEVER ))
+      (Position (53 344 150 98))
+      (Graphic "BrakeHandle.ace")
+      (NumFrames ( 22 11 2 ))
+      (NumPositions ( 22 ))
+      (Orientation ( 0 ))
+      (DirIncrease ( 0 ))
+      (ScaleRange ( 0 1 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        assert_eq!(cvf.controls.len(), 2);
+        match &cvf.controls[0] {
+            CabControl::Lever { frames, graphic, .. } => {
+                assert_eq!(graphic, "Throttle.ace");
+                assert_eq!(frames.frames_count, 10);
+                assert_eq!(frames.frames_x, 5);
+                assert_eq!(frames.frames_y, 2);
+                assert_eq!(frames.orientation, 1);
+                assert!(!frames.dir_increase);
+                assert_eq!(frames.values.len(), 10);
+                assert_eq!(frames.percent_to_index(0.0), 0);
+                assert_eq!(frames.percent_to_index(1.0), 9);
+                assert_eq!(frames.percent_to_index(0.35), 3);
+            }
+            other => panic!("expected Lever, got {other:?}"),
+        }
+        match &cvf.controls[1] {
+            CabControl::Lever { frames, .. } => {
+                assert_eq!(frames.frames_count, 22);
+                assert_eq!(frames.frames_x, 11);
+                assert_eq!(frames.frames_y, 2);
+                assert_eq!(frames.values.len(), 22);
+                assert_eq!(frames.percent_to_index(0.0), 0);
+                assert_eq!(frames.percent_to_index(1.0), 21);
+            }
+            other => panic!("expected Lever, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn lever_frame_rect_is_row_major() {
+        let frames = CabLeverFrames {
+            frames_count: 10,
+            frames_x: 5,
+            frames_y: 2,
+            ..Default::default()
+        };
+        let (x, y, w, h) = frames.frame_rect(500.0, 200.0, 0);
+        assert!((w - 100.0).abs() < 1e-3 && (h - 100.0).abs() < 1e-3);
+        assert!((x - 0.0).abs() < 1e-3 && (y - 0.0).abs() < 1e-3);
+        let (x, y, _, _) = frames.frame_rect(500.0, 200.0, 5);
+        assert!((x - 0.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
+        let (x, y, _, _) = frames.frame_rect(500.0, 200.0, 6);
+        assert!((x - 100.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
     }
 }

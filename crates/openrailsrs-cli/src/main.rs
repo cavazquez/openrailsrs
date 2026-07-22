@@ -1613,14 +1613,18 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             control_type,
             graphic,
             position,
+            frames,
         } => {
             let pos = position
                 .as_ref()
                 .map(|p| format!("({:.0},{:.0})", p.x, p.y))
                 .unwrap_or_else(|| "(3D)".into());
             println!(
-                "    [{index}] Lever {} graphic={graphic} @ {pos}",
+                "    [{index}] Lever {} graphic={graphic} frames={}x{} count={} @ {pos}",
                 control_type.as_str(),
+                frames.frames_x,
+                frames.frames_y,
+                frames.frames_count,
             );
         }
         CabControl::Unknown { kind } => {

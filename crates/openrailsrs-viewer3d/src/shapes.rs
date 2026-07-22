@@ -631,23 +631,10 @@ pub fn build_mesh_parts_from_shape_lod_cab(
         y: 1.0,
         z: 0.0,
     });
-    let exclusive_throttle = pick_exclusive_controller_base_throttle(shape, level, lever_matrices);
-    let exclusive_brake_wheel = pick_exclusive_brake_wheel(shape, level, lever_matrices);
-    let exclusive_brake_lever_m9 =
-        pick_exclusive_controls_lever(shape, level, lever_matrices, 9, 0.15);
-    let exclusive_brake_lever_m10 = pick_exclusive_controls_lever_excluding(
-        shape,
-        level,
-        lever_matrices,
-        10,
-        0.15,
-        &exclusive_brake_lever_m9,
-    );
-    let exclusive_direction = pick_exclusive_direction_lever(shape, level, lever_matrices);
     let mut parts = Vec::new();
 
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+        for prim in sub.primitives.iter() {
             let mut buffers = MeshBuffers::default();
             append_primitive_mesh_buffers(
                 shape,
@@ -660,40 +647,18 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 false,
             );
             let (bounds_center, bounds_half_extent) = mesh_buffers_bounds(&buffers);
-            let cab_matrix_idx = cab_matrix_for_prim(
-                shape,
-                sub_idx,
-                sub,
-                prim.prim_state_idx,
-                prim_ord,
-                lever_matrices,
-                bounds_center,
-                bounds_half_extent,
-                &exclusive_throttle,
-                &exclusive_brake_wheel,
-                &exclusive_brake_lever_m9,
-                &exclusive_brake_lever_m10,
-                &exclusive_direction,
-            );
+            let cab_matrix_idx =
+                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices);
             let matrix_needs_rebase =
                 cab_matrix_idx.is_some_and(|idx| lever_matrices.contains(&idx));
-            let lever_pivot_at_mesh_center = cab_matrix_idx.is_some_and(|_| {
-                matrix_needs_rebase
-                    && texture_for_prim_state(shape, prim.prim_state_idx)
-                        .is_some_and(|t| t.to_ascii_lowercase().contains("brake_wheel"))
-            });
-            let lever_local_axis = cab_lever_local_axis(shape, prim.prim_state_idx, cab_matrix_idx);
             let lever_bone = cab_matrix_idx.and_then(|idx| {
                 if !matrix_needs_rebase {
                     return None;
                 }
-                shape.matrices.get(idx).map(|m| {
-                    let mut bone = matrix43_to_transform(&m.matrix);
-                    if lever_pivot_at_mesh_center {
-                        bone.translation = bounds_center;
-                    }
-                    bone
-                })
+                shape
+                    .matrices
+                    .get(idx)
+                    .map(|m| matrix43_to_transform(&m.matrix))
             });
 
             let mut buffers = MeshBuffers::default();
@@ -745,8 +710,8 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 mip_map_lod_bias: Some(shape.mip_map_lod_bias_for_prim_state(prim_state_idx)),
                 bounds_center: Some(bounds_center),
                 bounds_half_extent: Some(bounds_half_extent),
-                lever_pivot_at_mesh_center,
-                lever_local_axis,
+                lever_pivot_at_mesh_center: false,
+                lever_local_axis: None,
             });
         }
     }
@@ -754,369 +719,24 @@ pub fn build_mesh_parts_from_shape_lod_cab(
     parts
 }
 
-/// CVF matrix for one cab primitive (texture + dedicated sub_object heuristics).
+/// CVF matrix for one cab primitive — **authored** hierarchy only (#146).
 ///
-/// Only **lever** bones (M4/M8/M9/M10 on Pullman) are bound to 3D meshes. Gauges,
-/// horn and wipers are drawn by the CVF 2D overlay ([`crate::cab_cvf_overlay`]).
-#[allow(clippy::too_many_arguments)]
+/// Bind only when `vtx_state.matrix_idx` names a lever bone (≠ MAIN/0).
+/// Never promote MAIN geometry by texture, proximity, or sub_object index
+/// coincidence (Pullman has small 1-prim subobjects 4/8 that are still MAIN).
 pub fn cab_matrix_for_prim(
     shape: &ShapeFile,
-    sub_idx: usize,
-    sub: &openrailsrs_formats::SubObject,
+    _sub_idx: usize,
+    _sub: &openrailsrs_formats::SubObject,
     prim_state_idx: i32,
-    prim_ord: usize,
     lever_matrices: &HashSet<usize>,
-    _bounds_center: Vec3,
-    _bounds_half_extent: Vec3,
-    exclusive_throttle: &HashSet<(usize, usize)>,
-    exclusive_brake_wheel: &HashSet<(usize, usize)>,
-    exclusive_brake_lever_m9: &HashSet<(usize, usize)>,
-    exclusive_brake_lever_m10: &HashSet<(usize, usize)>,
-    exclusive_direction: &HashSet<(usize, usize)>,
 ) -> Option<usize> {
-    let tex = texture_for_prim_state(shape, prim_state_idx)
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-
-    // 3D brake handwheel on the right — same TRAIN_BRAKE value, pivot at mesh center.
-    if tex.contains("brake_wheel") {
-        if exclusive_brake_wheel.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&9) {
-            return Some(9);
-        }
-        return None;
+    let idx = crate::cab_cvf::matrix_idx_for_prim_state(shape, prim_state_idx)?;
+    if idx != 0 && lever_matrices.contains(&idx) {
+        Some(idx)
+    } else {
+        None
     }
-
-    // Left train-brake lever plate (CVF `BrakeHandle` analogue).
-    if tex.contains("controls.ace") && !tex.contains("controls2") {
-        if exclusive_brake_lever_m9.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&9) {
-            return Some(9);
-        }
-        if exclusive_brake_lever_m10.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&10)
-        {
-            return Some(10);
-        }
-        return None;
-    }
-
-    // Reverser / direction lever (vertical switch panel near DIRECTION pivot).
-    if tex.contains("switch panel") {
-        if exclusive_direction.contains(&(sub_idx, prim_ord)) && lever_matrices.contains(&4) {
-            return Some(4);
-        }
-        return None;
-    }
-
-    // Controller_base — only the largest regulator wheel near THROTTLE pivot.
-    if tex.contains("controller_base") {
-        if lever_matrices.contains(&8) && exclusive_throttle.contains(&(sub_idx, prim_ord)) {
-            return Some(8);
-        }
-        return None;
-    }
-
-    // Dedicated 1-prim sub_object *i* → matrix *i* (small bone meshes only).
-    const DEDICATED_MAX_VERTS: usize = 500;
-    if sub.vertices.len() <= DEDICATED_MAX_VERTS
-        && sub.primitives.len() == 1
-        && sub_idx < shape.matrices.len()
-        && lever_matrices.contains(&sub_idx)
-    {
-        if sub_idx == 8 && tex.contains("controls") {
-            return None;
-        }
-        return Some(sub_idx);
-    }
-
-    None
-}
-
-fn cab_lever_local_axis(
-    shape: &ShapeFile,
-    prim_state_idx: i32,
-    cab_matrix_idx: Option<usize>,
-) -> Option<Vec3> {
-    let tex = texture_for_prim_state(shape, prim_state_idx)
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    if tex.contains("brake_wheel") {
-        return Some(Vec3::Y);
-    }
-    if tex.contains("switch panel") {
-        return Some(Vec3::X);
-    }
-    if tex.contains("controls.ace") && !tex.contains("controls2") {
-        return Some(Vec3::X);
-    }
-    if cab_matrix_idx == Some(8) {
-        return Some(Vec3::Y);
-    }
-    None
-}
-
-fn cab_part_near_matrix(
-    shape: &ShapeFile,
-    matrix_idx: usize,
-    center: Vec3,
-    half_extent: Vec3,
-    max_dist: f32,
-    min_radius: f32,
-) -> bool {
-    let Some(pivot) = matrix_pivot_bevy(shape, matrix_idx) else {
-        return false;
-    };
-    let radius = half_extent.max_element();
-    if radius < min_radius {
-        return false;
-    }
-    center.distance(pivot) <= max_dist
-}
-
-/// Pick the single `Controller_base` primitive nearest the throttle pivot with the largest extent.
-fn pick_exclusive_controller_base_throttle(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    lever_matrices: &HashSet<usize>,
-) -> HashSet<(usize, usize)> {
-    if !lever_matrices.contains(&8) {
-        return HashSet::new();
-    }
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut best: Option<(usize, usize, f32)> = None;
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
-            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
-                .unwrap_or_default()
-                .to_ascii_lowercase();
-            if !tex.contains("controller_base") {
-                continue;
-            }
-            let mut buffers = MeshBuffers::default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-            let (center, half) = mesh_buffers_bounds(&buffers);
-            if !cab_part_near_matrix(shape, 8, center, half, 0.35, 0.02) {
-                continue;
-            }
-            let radius = half.max_element();
-            if best.as_ref().is_none_or(|(_, _, r)| radius > *r) {
-                best = Some((sub_idx, prim_ord, radius));
-            }
-        }
-    }
-    best.map(|(s, p, _)| HashSet::from([(s, p)]))
-        .unwrap_or_default()
-}
-
-/// Pick the largest `Brake_wheel` mesh (3D handwheel on the right).
-fn pick_exclusive_brake_wheel(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    lever_matrices: &HashSet<usize>,
-) -> HashSet<(usize, usize)> {
-    if !lever_matrices.contains(&9) {
-        return HashSet::new();
-    }
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut best: Option<(usize, usize, f32)> = None;
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
-            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
-                .unwrap_or_default()
-                .to_ascii_lowercase();
-            if !tex.contains("brake_wheel") {
-                continue;
-            }
-            let mut buffers = MeshBuffers::default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-            let (_, half) = mesh_buffers_bounds(&buffers);
-            let radius = half.max_element();
-            if radius < 0.05 {
-                continue;
-            }
-            if best.as_ref().is_none_or(|(_, _, r)| radius > *r) {
-                best = Some((sub_idx, prim_ord, radius));
-            }
-        }
-    }
-    best.map(|(s, p, _)| HashSet::from([(s, p)]))
-        .unwrap_or_default()
-}
-
-/// Pick the single `Controls.ace` lever plate nearest a TRAIN_BRAKE matrix pivot.
-fn pick_exclusive_controls_lever(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    lever_matrices: &HashSet<usize>,
-    matrix_idx: usize,
-    max_dist: f32,
-) -> HashSet<(usize, usize)> {
-    if !lever_matrices.contains(&matrix_idx) {
-        return HashSet::new();
-    }
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut best: Option<(usize, usize, f32)> = None;
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
-            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
-                .unwrap_or_default()
-                .to_ascii_lowercase();
-            if !tex.contains("controls.ace") || tex.contains("controls2") {
-                continue;
-            }
-            let mut buffers = MeshBuffers::default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-            let (center, half) = mesh_buffers_bounds(&buffers);
-            if !cab_part_near_matrix(shape, matrix_idx, center, half, max_dist, 0.04) {
-                continue;
-            }
-            let dist = center.distance(matrix_pivot_bevy(shape, matrix_idx).unwrap_or(Vec3::ZERO));
-            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
-                best = Some((sub_idx, prim_ord, dist));
-            }
-        }
-    }
-    best.map(|(s, p, _)| HashSet::from([(s, p)]))
-        .unwrap_or_default()
-}
-
-/// Like [`pick_exclusive_controls_lever`] but skips prims already claimed by another matrix.
-fn pick_exclusive_controls_lever_excluding(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    lever_matrices: &HashSet<usize>,
-    matrix_idx: usize,
-    max_dist: f32,
-    exclude: &HashSet<(usize, usize)>,
-) -> HashSet<(usize, usize)> {
-    if !lever_matrices.contains(&matrix_idx) {
-        return HashSet::new();
-    }
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut best: Option<(usize, usize, f32)> = None;
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
-            if exclude.contains(&(sub_idx, prim_ord)) {
-                continue;
-            }
-            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
-                .unwrap_or_default()
-                .to_ascii_lowercase();
-            if !tex.contains("controls.ace") || tex.contains("controls2") {
-                continue;
-            }
-            let mut buffers = MeshBuffers::default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-            let (center, half) = mesh_buffers_bounds(&buffers);
-            if !cab_part_near_matrix(shape, matrix_idx, center, half, max_dist, 0.04) {
-                continue;
-            }
-            let dist = center.distance(matrix_pivot_bevy(shape, matrix_idx).unwrap_or(Vec3::ZERO));
-            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
-                best = Some((sub_idx, prim_ord, dist));
-            }
-        }
-    }
-    best.map(|(s, p, _)| HashSet::from([(s, p)]))
-        .unwrap_or_default()
-}
-
-/// Pick the switch-panel mesh nearest the DIRECTION matrix pivot (reverser lever).
-fn pick_exclusive_direction_lever(
-    shape: &ShapeFile,
-    level: &DistanceLevel,
-    lever_matrices: &HashSet<usize>,
-) -> HashSet<(usize, usize)> {
-    if !lever_matrices.contains(&4) {
-        return HashSet::new();
-    }
-    let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
-    });
-    let mut best: Option<(usize, usize, f32)> = None;
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for (prim_ord, prim) in sub.primitives.iter().enumerate() {
-            let tex = texture_for_prim_state(shape, prim.prim_state_idx)
-                .unwrap_or_default()
-                .to_ascii_lowercase();
-            if !tex.contains("switch panel") {
-                continue;
-            }
-            let mut buffers = MeshBuffers::default();
-            append_primitive_mesh_buffers(
-                shape,
-                level,
-                sub,
-                prim,
-                default_normal,
-                &mut buffers,
-                None,
-                false,
-            );
-            let (center, half) = mesh_buffers_bounds(&buffers);
-            if !cab_part_near_matrix(shape, 4, center, half, 0.45, 0.05) {
-                continue;
-            }
-            let dist = center.distance(matrix_pivot_bevy(shape, 4).unwrap_or(Vec3::ZERO));
-            if best.as_ref().is_none_or(|(_, _, d)| dist < *d) {
-                best = Some((sub_idx, prim_ord, dist));
-            }
-        }
-    }
-    best.map(|(s, p, _)| HashSet::from([(s, p)]))
-        .unwrap_or_default()
 }
 
 pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {

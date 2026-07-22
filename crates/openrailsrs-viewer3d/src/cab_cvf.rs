@@ -164,7 +164,8 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
     match control {
         ControlType::Throttle | ControlType::ThrottleDisplay => tel.throttle_pct / 100.0,
         ControlType::TrainBrake => tel.brake_pct / 100.0,
-        ControlType::DynamicBrakeDisplay => tel.brake_pct / 100.0,
+        // Distinct from train brake; no dedicated telemetry yet.
+        ControlType::DynamicBrakeDisplay => 0.0,
         ControlType::DirectionDisplay => tel.direction,
         ControlType::Speedometer => {
             let scale = tel.limit_kmh.max(40.0);
@@ -298,6 +299,15 @@ pub fn static_lever_transform(
     t
 }
 
+/// True when the shape exposes MSTS animation controllers for this lever bone.
+pub fn lever_has_authored_animation(shape: &ShapeFile, anim_node: Option<usize>) -> bool {
+    shape.animations.first().is_some_and(|anim| {
+        anim_node
+            .and_then(|i| anim.nodes.get(i))
+            .is_some_and(|n| !n.controllers.is_empty())
+    })
+}
+
 fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -> f32 {
     let Some(anim) = shape.animations.first() else {
         return value as f32;
@@ -318,47 +328,6 @@ fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -
         })
         .fold(1.0f32, f32::max);
     (value as f32 * max_frame).clamp(0.0, max_frame)
-}
-
-fn fallback_lever_rotation(
-    _shape: &ShapeFile,
-    _matrix_idx: usize,
-    control: &ControlType,
-    value: f64,
-    local_axis: Option<Vec3>,
-) -> Quat {
-    let angle = match control {
-        ControlType::Throttle => -0.75 + value * 0.75,
-        ControlType::TrainBrake => -1.25 + value * 1.25,
-        ControlType::DirectionDisplay => -0.35 + value * 0.70,
-        _ => value * 0.5 - 0.25,
-    };
-    let local_axis = local_axis.unwrap_or(match control {
-        ControlType::Throttle | ControlType::TrainBrake => Vec3::Y,
-        ControlType::DirectionDisplay => Vec3::X,
-        _ => Vec3::X,
-    });
-    Quat::from_axis_angle(local_axis, angle as f32)
-}
-
-fn lever_pose_from_fallback(
-    shape: &ShapeFile,
-    matrix_idx: usize,
-    control: &ControlType,
-    value: f64,
-    pivot_at_mesh: Option<Vec3>,
-    local_axis: Option<Vec3>,
-) -> Transform {
-    let Some(rest) = shape.matrices.get(matrix_idx) else {
-        return Transform::IDENTITY;
-    };
-    let bone = matrix43_to_transform(&rest.matrix);
-    Transform {
-        translation: pivot_at_mesh.unwrap_or(bone.translation),
-        rotation: bone.rotation
-            * fallback_lever_rotation(shape, matrix_idx, control, value, local_axis),
-        scale: Vec3::ONE,
-    }
 }
 
 /// Apply CVF / matrix animation from live telemetry.
@@ -396,6 +365,17 @@ pub fn update_cab_cvf_controls(
         match driver {
             MatrixDriver::Lever { control, anim_node } => {
                 *visibility = Visibility::Visible;
+                let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
+                if !has_anim {
+                    // OR leaves static 3D meshes when the shape has no controllers;
+                    // CVF 2D overlay provides the visible lever animation (#147/#148).
+                    *transform = static_lever_transform(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        part.pivot_at_mesh,
+                    );
+                    continue;
+                }
                 let value = control_value(control, &tel);
                 let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
                 let key = cvf_state
@@ -404,31 +384,15 @@ pub fn update_cab_cvf_controls(
                     .and_modify(|current| *current += (target_key - *current) * smooth)
                     .or_insert(target_key);
                 let pose_mats = animation_pose_matrices(&runtime.shape, *key);
-                let has_anim = runtime.shape.animations.first().is_some_and(|anim| {
-                    anim_node
-                        .and_then(|i| anim.nodes.get(i))
-                        .is_some_and(|n| !n.controllers.is_empty())
-                });
-                *transform = if has_anim {
-                    if let Some(center) = part.pivot_at_mesh {
-                        lever_entity_transform_at_mesh_center(
-                            &runtime.shape,
-                            part.matrix_idx,
-                            center,
-                            &pose_mats,
-                        )
-                    } else {
-                        lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
-                    }
-                } else {
-                    lever_pose_from_fallback(
+                *transform = if let Some(center) = part.pivot_at_mesh {
+                    lever_entity_transform_at_mesh_center(
                         &runtime.shape,
                         part.matrix_idx,
-                        control,
-                        value,
-                        part.pivot_at_mesh,
-                        part.local_spin_axis,
+                        center,
+                        &pose_mats,
                     )
+                } else {
+                    lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
                 };
             }
             MatrixDriver::MultiState { .. } => {
@@ -720,14 +684,9 @@ mod tests {
         }
     }
 
-    /// Rebaked cab lever mesh + cab hierarchy must agree at rest; throttle rotation stays on pivot.
+    /// Pullman has no authored lever geometry (`vtx_state` → MAIN); no 3D rebase.
     #[test]
-    fn pullman_throttle_rebased_rest_pose_matches_bake() {
-        use openrailsrs_bevy_scenery::shapes::{
-            MeshBuffers, append_primitive_mesh_buffers, mesh_buffers_bounds,
-        };
-        use openrailsrs_formats::{SubObject, Vec3 as ShapeVec3};
-
+    fn pullman_static_cab_has_no_dynamic_lever_bindings() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -735,6 +694,10 @@ mod tests {
             return;
         }
         let shape = ShapeFile::from_path(shape_path).expect("shape");
+        assert!(
+            shape.animations.is_empty(),
+            "Pullman cab shape must remain animation-free for this regression"
+        );
         let cvf_path = shape_path.with_extension("cvf");
         let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
             openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
@@ -749,61 +712,22 @@ mod tests {
             .expect("lod0");
         let parts =
             crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
-        let throttle = parts
-            .iter()
-            .find(|p| p.cab_matrix_idx == Some(8))
-            .expect("Controller_base throttle part");
-
-        // Reference: world-space bake with THROTTLE matrix chain (same as runtime mesh).
-        let sub: &SubObject = &level.sub_objects[throttle.sub_object_idx as usize];
-        let prim = sub
-            .primitives
-            .iter()
-            .find(|p| p.prim_state_idx == throttle.prim_state_idx)
-            .expect("prim for throttle part");
-        let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
-            x: 0.0,
-            y: 1.0,
-            z: 0.0,
-        });
-        let mut world_buffers = MeshBuffers::default();
-        append_primitive_mesh_buffers(
-            &shape,
-            level,
-            sub,
-            prim,
-            default_normal,
-            &mut world_buffers,
-            None,
-            false,
-        );
-        let (baked_center, _) = mesh_buffers_bounds(&world_buffers);
-
-        let positions = match throttle.mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-            Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) => pos,
-            _ => panic!("positions"),
-        };
-        let local_center: Vec3 = positions.iter().map(|p| Vec3::from_array(*p)).sum::<Vec3>()
-            / positions.len().max(1) as f32;
-
-        let rest = lever_pose_from_fallback(&shape, 8, &ControlType::Throttle, 0.0, None, None);
-        let full = lever_pose_from_fallback(&shape, 8, &ControlType::Throttle, 1.0, None, None);
-        let world_at_rest = rest.transform_point(local_center);
-        let pivot_at_rest = rest.transform_point(Vec3::ZERO);
-        let pivot_at_full = full.transform_point(Vec3::ZERO);
-
         assert!(
-            (world_at_rest - baked_center).length() < 0.20,
-            "rest pose mismatch: rebased={world_at_rest} baked={baked_center}"
+            parts.iter().all(|p| p.cab_matrix_idx.is_none()),
+            "Pullman MAIN geometry must stay static (#146); got {:?}",
+            parts
+                .iter()
+                .filter_map(|p| p.cab_matrix_idx)
+                .collect::<Vec<_>>()
         );
-        assert!(
-            (rest.translation - full.translation).length() < 1e-4,
-            "lever translation must not drift with throttle"
-        );
-        assert!(
-            (pivot_at_rest - pivot_at_full).length() < 1e-4,
-            "pivot must stay fixed when throttle changes"
-        );
+        for driver in runtime.matrix_drivers.values() {
+            if let MatrixDriver::Lever { anim_node, .. } = driver {
+                assert!(
+                    !lever_has_authored_animation(&runtime.shape, *anim_node),
+                    "Pullman levers must not invent 3D animation (#147)"
+                );
+            }
+        }
     }
 
     /// Scan cab LOD0 primitives near lever matrix pivots (content diagnostic).
@@ -871,7 +795,7 @@ mod tests {
     }
 
     #[test]
-    fn pullman_cab_lever_bindings_when_content_present() {
+    fn pullman_named_lever_matrices_exist_but_stay_unbound() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -886,71 +810,9 @@ mod tests {
         };
         let runtime = build_cab_cvf_runtime(cvf, shape.clone());
         let lever_matrices = cab_lever_matrix_indices(&runtime);
-        let level = shape
-            .lod_controls
-            .first()
-            .and_then(|c| c.distance_levels.first())
-            .expect("lod0");
-        let parts =
-            crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
-        assert!(
-            parts.iter().any(|p| {
-                p.cab_matrix_idx == Some(8)
-                    && p.texture_file
-                        .as_deref()
-                        .is_some_and(|t| t.to_ascii_lowercase().contains("controller_base"))
-            }),
-            "throttle wheel bound to M8"
-        );
-        assert!(
-            parts.iter().any(|p| {
-                p.cab_matrix_idx == Some(4)
-                    && p.texture_file
-                        .as_deref()
-                        .is_some_and(|t| t.to_ascii_lowercase().contains("switch panel"))
-            }),
-            "direction reverser bound to M4"
-        );
-        assert!(
-            parts.iter().any(|p| {
-                p.cab_matrix_idx == Some(9)
-                    && p.texture_file
-                        .as_deref()
-                        .is_some_and(|t| t.to_ascii_lowercase().contains("controls.ace"))
-            }),
-            "train brake lever bound to M9"
-        );
-        let brake_wheel = parts
-            .iter()
-            .find(|p| {
-                p.cab_matrix_idx == Some(9)
-                    && p.texture_file
-                        .as_deref()
-                        .is_some_and(|t| t.to_ascii_lowercase().contains("brake_wheel"))
-            })
-            .expect("3D brake wheel bound to M9");
-        assert!(
-            brake_wheel.lever_pivot_at_mesh_center,
-            "brake wheel pivots at mesh center"
-        );
-    }
-
-    #[test]
-    fn pullman_only_lever_matrices_bound_to_3d_when_content_present() {
-        let shape_path = std::path::Path::new(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !shape_path.is_file() {
-            return;
-        }
-        let shape = ShapeFile::from_path(shape_path).expect("shape");
-        let cvf_path = shape_path.with_extension("cvf");
-        let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
-            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
-            other => panic!("expected CabView, got {other:?}"),
-        };
-        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
-        let lever_matrices = cab_lever_matrix_indices(&runtime);
+        assert!(lever_matrices.contains(&4));
+        assert!(lever_matrices.contains(&8));
+        assert!(lever_matrices.contains(&9));
         let level = shape
             .lod_controls
             .first()
@@ -959,19 +821,20 @@ mod tests {
         let parts =
             crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
         let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
-        for idx in &lever_matrices {
-            assert!(
-                bound.contains(idx),
-                "lever matrix {idx} should have a 3D mesh binding"
-            );
-        }
         assert!(
-            !bound.contains(&1) && !bound.contains(&6),
-            "gauge matrices M1/M6 must not be forced to 3D meshes (CVF 2D overlay)"
+            bound.is_empty(),
+            "authored MAIN cab must not bind lever bones by texture (#146): {bound:?}"
         );
         assert!(
             !runtime.cvf.controls.is_empty(),
-            "Pullman CVF should drive gauges via 2D overlay"
+            "Pullman CVF should drive gauges/levers via 2D overlay"
         );
+    }
+
+    #[test]
+    fn lever_has_authored_animation_false_without_controllers() {
+        let shape = ShapeFile::default();
+        assert!(!lever_has_authored_animation(&shape, None));
+        assert!(!lever_has_authored_animation(&shape, Some(0)));
     }
 }

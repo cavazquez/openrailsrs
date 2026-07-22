@@ -1,21 +1,23 @@
 //! CVF 2D control sprites in driver view (Open Rails `CabRenderer` analogue).
 //!
-//! Pullman and similar cabs without shape `animations` draw gauges, horn and wipers
-//! from `.cvf` ACE sprites. 3D lever meshes (M4/M8/M9/M10) stay in [`crate::cab_cvf`].
+//! Pullman and similar cabs without shape `animations` draw gauges **and levers**
+//! from `.cvf` ACE sprites (#148/#150). 3D lever meshes animate only when the
+//! shape exposes authored controllers (#147).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use bevy::math::Rot2;
+use bevy::math::{Rect, Rot2};
 use bevy::prelude::*;
 use bevy::ui::UiTransform;
 use bevy::ui::Val2;
 use bevy::ui::widget::ImageNode;
 use openrailsrs_ace::read_ace;
-use openrailsrs_formats::{CabControl, CabViewFile, ControlType, ScreenRect};
+use openrailsrs_formats::{CabControl, CabLeverFrames, CabViewFile, ControlType, ScreenRect};
 
 use crate::cab_cvf::{
-    self, CabCvfRuntime, CabCvfState, MatrixDriver, control_value, pick_multi_state_index,
+    self, CabCvfRuntime, CabCvfState, MatrixDriver, control_value, lever_has_authored_animation,
+    pick_multi_state_index,
 };
 use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
@@ -44,10 +46,10 @@ pub struct CabCvfOverlayWidget {
     pub kind: CabCvfOverlayKind,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CabCvfOverlayKind {
     DialNeedle,
-    Lever,
+    Lever { frames: CabLeverFrames },
     TwoState,
     TriState,
     MultiState { state_index: usize },
@@ -106,13 +108,16 @@ fn load_graphic(
     Some(handle)
 }
 
-fn control_has_3d_lever(runtime: &CabCvfRuntime, control: &ControlType) -> bool {
-    runtime.matrix_drivers.values().any(|driver| {
-        matches!(
-            driver,
-            MatrixDriver::Lever { control: lever, .. }
-                if cab_cvf::types_match(lever, control)
-        )
+/// Overlay is suppressed only when a matching lever matrix has authored animation.
+pub fn control_has_animated_3d_lever(runtime: &CabCvfRuntime, control: &ControlType) -> bool {
+    runtime.matrix_drivers.values().any(|driver| match driver {
+        MatrixDriver::Lever {
+            control: lever,
+            anim_node,
+        } if cab_cvf::types_match(lever, control) => {
+            lever_has_authored_animation(&runtime.shape, *anim_node)
+        }
+        _ => false,
     })
 }
 
@@ -121,11 +126,14 @@ fn spawn_widget_image(
     node: Node,
     handle: Handle<Image>,
     widget: CabCvfOverlayWidget,
+    rect: Option<Rect>,
 ) {
+    let mut image = ImageNode::new(handle);
+    image.rect = rect;
     parent.spawn((
         widget,
         node,
-        ImageNode::new(handle),
+        image,
         UiTransform::default(),
         Visibility::Visible,
     ));
@@ -253,6 +261,7 @@ fn spawn_one_widget(
     panel_h: f32,
     scale: f32,
     graphic: &str,
+    rect: Option<Rect>,
 ) -> usize {
     let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
         return 0;
@@ -262,8 +271,16 @@ fn spawn_one_widget(
         ui_node_for_rect(position, panel_h, scale),
         handle,
         CabCvfOverlayWidget { control_type, kind },
+        rect,
     );
     1
+}
+
+fn lever_frame_rect(images: &Assets<Image>, handle: &Handle<Image>, frames: &CabLeverFrames) -> Option<Rect> {
+    let image = images.get(handle)?;
+    let size = image.size();
+    let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, 0);
+    Some(Rect::new(x, y, x + w, y + h))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -286,7 +303,7 @@ fn spawn_cvf_control(
             position,
             graphic,
         } => {
-            if control_has_3d_lever(runtime, control_type) {
+            if control_has_animated_3d_lever(runtime, control_type) {
                 return (0, 0);
             }
             let n = spawn_one_widget(
@@ -301,6 +318,7 @@ fn spawn_cvf_control(
                 panel_h,
                 scale,
                 graphic,
+                None,
             );
             if n == 0 {
                 skip = 1;
@@ -311,27 +329,32 @@ fn spawn_cvf_control(
             control_type,
             position: Some(position),
             graphic,
+            frames,
         } => {
-            if control_has_3d_lever(runtime, control_type) {
+            if control_has_animated_3d_lever(runtime, control_type) {
                 return (0, 0);
             }
-            let n = spawn_one_widget(
+            let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
+                return (0, 1);
+            };
+            let rect = if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
+                lever_frame_rect(images, &handle, frames)
+            } else {
+                None
+            };
+            spawn_widget_image(
                 panel,
-                cab_dir,
-                tex_dirs,
-                images,
-                cache,
-                control_type.clone(),
-                CabCvfOverlayKind::Lever,
-                position,
-                panel_h,
-                scale,
-                graphic,
+                ui_node_for_rect(position, panel_h, scale),
+                handle,
+                CabCvfOverlayWidget {
+                    control_type: control_type.clone(),
+                    kind: CabCvfOverlayKind::Lever {
+                        frames: frames.clone(),
+                    },
+                },
+                rect,
             );
-            if n == 0 {
-                skip = 1;
-            }
-            (n, skip)
+            (1, 0)
         }
         CabControl::TwoStateDisplay {
             control_type,
@@ -350,6 +373,7 @@ fn spawn_cvf_control(
                 panel_h,
                 scale,
                 graphic,
+                None,
             );
             if n == 0 {
                 skip = 1;
@@ -376,6 +400,7 @@ fn spawn_cvf_control(
                 panel_h,
                 scale,
                 graphic,
+                None,
             );
             if n == 0 {
                 skip = 1;
@@ -388,7 +413,7 @@ fn spawn_cvf_control(
             graphic,
             states,
         } => {
-            if control_has_3d_lever(runtime, control_type) {
+            if control_has_animated_3d_lever(runtime, control_type) {
                 return (0, 0);
             }
             let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
@@ -404,6 +429,7 @@ fn spawn_cvf_control(
                         control_type: control_type.clone(),
                         kind: CabCvfOverlayKind::MultiState { state_index },
                     },
+                    None,
                 );
             }
             (states.len().max(1), 0)
@@ -419,9 +445,15 @@ pub(crate) fn update_cab_cvf_overlay(
     follow: Res<CameraFollowMode>,
     cvf_state: Res<CabCvfState>,
     live: Option<Res<LiveDrive>>,
+    images: Res<Assets<Image>>,
     mut roots: Query<&mut Visibility, With<CabCvfOverlayRoot>>,
     mut widgets: Query<
-        (&CabCvfOverlayWidget, &mut UiTransform, &mut Visibility),
+        (
+            &CabCvfOverlayWidget,
+            &mut UiTransform,
+            &mut Visibility,
+            &mut ImageNode,
+        ),
         Without<CabCvfOverlayRoot>,
     >,
 ) {
@@ -443,20 +475,28 @@ pub(crate) fn update_cab_cvf_overlay(
     *root_vis = Visibility::Visible;
     let tel = live.session.cab_telemetry();
 
-    for (widget, mut ui, mut visibility) in &mut widgets {
+    for (widget, mut ui, mut visibility, mut image_node) in &mut widgets {
         let value = control_value(&widget.control_type, &tel);
-        match widget.kind {
+        match &widget.kind {
             CabCvfOverlayKind::DialNeedle => {
                 *visibility = Visibility::Visible;
                 let angle = -0.65 + value * 1.3;
                 ui.rotation = Rot2::radians(angle as f32);
                 ui.translation = Val2::ZERO;
             }
-            CabCvfOverlayKind::Lever => {
+            CabCvfOverlayKind::Lever { frames } => {
                 *visibility = Visibility::Visible;
-                let travel = (value * 0.85 - 0.425) as f32;
                 ui.rotation = Rot2::IDENTITY;
-                ui.translation = Val2::px(0.0, travel * 24.0);
+                ui.translation = Val2::ZERO;
+                if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
+                    if let Some(image) = images.get(&image_node.image) {
+                        let size = image.size();
+                        let index = frames.percent_to_index(value);
+                        let (x, y, w, h) =
+                            frames.frame_rect(size.x as f32, size.y as f32, index);
+                        image_node.rect = Some(Rect::new(x, y, x + w, y + h));
+                    }
+                }
             }
             CabCvfOverlayKind::TwoState => {
                 *visibility = Visibility::Visible;
@@ -478,7 +518,7 @@ pub(crate) fn update_cab_cvf_overlay(
             }
             CabCvfOverlayKind::MultiState { state_index } => {
                 let active = pick_multi_state_index(&runtime.cvf, &widget.control_type, value);
-                *visibility = if active == state_index {
+                *visibility = if active == *state_index {
                     Visibility::Visible
                 } else {
                     Visibility::Hidden
@@ -495,6 +535,7 @@ pub(crate) fn update_cab_cvf_overlay(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_formats::{AnimController, AnimNode, Animation, ShapeFile};
     use std::path::PathBuf;
 
     #[test]
@@ -532,5 +573,67 @@ mod tests {
                 || crate::shapes::resolve_cvf_graphic_path(&refs, &cab_dir, "HornLever.ace")
                     .is_some()
         );
+    }
+
+    #[test]
+    fn overlay_shows_lever_when_matrix_has_no_authored_anim() {
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(Default::default());
+        let mut runtime = CabCvfRuntime {
+            cvf: CabViewFile {
+                cab_view_type: None,
+                views: vec![],
+                controls: vec![],
+            },
+            shape,
+            matrix_drivers: HashMap::new(),
+        };
+        runtime.matrix_drivers.insert(
+            8,
+            MatrixDriver::Lever {
+                control: ControlType::Throttle,
+                anim_node: None,
+            },
+        );
+        assert!(!control_has_animated_3d_lever(
+            &runtime,
+            &ControlType::Throttle
+        ));
+    }
+
+    #[test]
+    fn overlay_hides_lever_when_matrix_has_authored_anim() {
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(Default::default());
+        shape.animations.push(Animation {
+            frame_count: 10,
+            frame_rate: 30,
+            nodes: vec![AnimNode {
+                name: "THROTTLE:0:0".into(),
+                controllers: vec![AnimController::SlerpRot {
+                    keys: vec![(0.0, [0.0, 0.0, 0.0, 1.0]), (1.0, [0.0, 0.0, 0.0, 1.0])],
+                }],
+            }],
+        });
+        let mut runtime = CabCvfRuntime {
+            cvf: CabViewFile {
+                cab_view_type: None,
+                views: vec![],
+                controls: vec![],
+            },
+            shape,
+            matrix_drivers: HashMap::new(),
+        };
+        runtime.matrix_drivers.insert(
+            0,
+            MatrixDriver::Lever {
+                control: ControlType::Throttle,
+                anim_node: Some(0),
+            },
+        );
+        assert!(control_has_animated_3d_lever(
+            &runtime,
+            &ControlType::Throttle
+        ));
     }
 }
