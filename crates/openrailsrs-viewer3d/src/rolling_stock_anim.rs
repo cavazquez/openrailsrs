@@ -6,6 +6,8 @@
 //! Bogie yaw (#69) samples track heading at the car pivot and at the bogie's
 //! longitudinal offset (TDB via [`vehicle_position_yaw_on_graph_edge`], graph fallback).
 //! Door/panto keys (#81) follow [`RollingStockExteriorState`] (env debug overrides).
+//!
+//! Car bodies follow per-vehicle TDB/graph chainage (#128), not a rigid bar on the lead.
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
@@ -14,12 +16,14 @@ use openrailsrs_bevy_scenery::shapes::{
 use openrailsrs_formats::ShapeFile;
 use openrailsrs_sim::RollingStockExteriorState;
 
-use crate::live::LiveDrive;
-use crate::shapes::RouteAssets;
+use crate::floating_origin::{FloatingOrigin, view_position};
+use crate::live::{LiveDrive, LiveTrainMarker};
+use crate::shapes::{RouteAssets, vehicle_authored_frame_transform};
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::track_position::{
-    TrackPositionResolver, advance_along_graph, vehicle_position_yaw_on_graph_edge,
+    TrackPositionResolver, advance_along_graph, vehicle_pose_on_graph_edge,
+    vehicle_position_yaw_on_graph_edge,
 };
 use crate::train::{CsvRow, ReplayState, TrainMarker};
 use crate::world::{RouteFocus, RouteWorldOffset};
@@ -73,13 +77,111 @@ pub struct TrainBogieAnim {
     pub long_offset_m: f32,
 }
 
-/// Path offset of a consist car relative to the train head (#69).
+/// Path offset of a consist car relative to the train head (#69 / #128).
 #[derive(Component, Clone, Debug)]
 pub struct TrainCarTrackOffset {
     /// Metres along the path from the consist head (negative = behind).
     pub offset_m: f32,
     /// Replay track index; live drive ignores this (always primary).
     pub track_index: usize,
+    /// `.con` Flip — applied in the authored vehicle frame (#130 / #128).
+    pub flipped: bool,
+}
+
+/// World pose for a car at `path_offset_m` from the consist head (#128).
+pub fn car_world_pose_at_head_offset(
+    graph: &openrailsrs_track::TrackGraph,
+    live: Option<&LiveDrive>,
+    head_edge: &str,
+    head_pos: f64,
+    path_offset_m: f64,
+    flipped: bool,
+    resolver: Option<&TrackPositionResolver<'_>>,
+    scene: &TrackScene,
+    route_offset: Vec3,
+    focus: &RouteFocus,
+    terrain: Option<&TerrainElevation>,
+    origin: &FloatingOrigin,
+) -> Option<Transform> {
+    let (edge_id, pos) = if let Some(live) = live {
+        live.session.position_at_head_offset(path_offset_m)?
+    } else {
+        advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
+    };
+    let (world_pos, world_rot) = vehicle_pose_on_graph_edge(
+        graph,
+        &edge_id,
+        pos,
+        resolver,
+        scene,
+        route_offset,
+        focus,
+        terrain,
+    )?;
+    let track = Transform::from_translation(view_position(world_pos, origin)).with_rotation(world_rot);
+    let authored = vehicle_authored_frame_transform(0.0, flipped);
+    Some(track * authored)
+}
+
+/// Local child transform so `parent * local ≈ car_world` (#128).
+pub fn car_local_from_parent_and_world(parent: &Transform, car_world: &Transform) -> Transform {
+    let parent_m = parent.to_matrix();
+    let car_m = car_world.to_matrix();
+    Transform::from_matrix(parent_m.inverse() * car_m)
+}
+
+/// Update consist car bodies to individual track chainage (#128).
+///
+/// Runs after the lead marker pose is written; children keep authored mesh frame + Flip.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn update_consist_car_track_poses(
+    live: Option<Res<LiveDrive>>,
+    replay: Option<Res<ReplayState>>,
+    scene: Res<TrackScene>,
+    assets: Res<RouteAssets>,
+    offset: Res<RouteWorldOffset>,
+    focus: Res<RouteFocus>,
+    terrain: Option<Res<TerrainElevation>>,
+    origin: Res<FloatingOrigin>,
+    parents: Query<
+        &Transform,
+        Or<(With<LiveTrainMarker>, With<TrainMarker>)>,
+    >,
+    mut cars: Query<(&TrainCarTrackOffset, &ChildOf, &mut Transform), Without<TrainMarker>>,
+) {
+    let live_ref = live.as_deref();
+    let replay_ref = replay.as_deref();
+    let tdb_resolver = assets
+        .track_db()
+        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+    let terrain_ref = terrain.as_deref();
+
+    for (car, child_of, mut tf) in &mut cars {
+        let Ok(parent_tf) = parents.get(child_of.parent()) else {
+            continue;
+        };
+        let Some((head_edge, head_pos)) = head_graph_position(live_ref, replay_ref, car.track_index)
+        else {
+            continue;
+        };
+        let Some(car_world) = car_world_pose_at_head_offset(
+            &scene.graph,
+            live_ref,
+            &head_edge,
+            head_pos,
+            f64::from(car.offset_m),
+            car.flipped,
+            tdb_resolver.as_ref(),
+            &scene,
+            offset.delta,
+            &focus,
+            terrain_ref,
+            &origin,
+        ) else {
+            continue;
+        };
+        *tf = car_local_from_parent_and_world(parent_tf, &car_world);
+    }
 }
 
 /// Door / pantograph stub driven by a scalar key (shape anim or debug env).
@@ -651,6 +753,57 @@ mod tests {
         let (back_e, back_p) = advance_along_graph(&g, "e2", 10.0, -20.0).expect("back");
         assert_eq!(back_e, "e1");
         assert!((back_p - 90.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn three_cars_on_elbow_are_not_colinear_in_world() {
+        // #128: per-car chainage → lead and rear have distinct yaw / non-colinear positions.
+        let g = elbow_graph();
+        let scene = TrackScene::from_graph(g.clone());
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let origin = FloatingOrigin::default();
+        // Head just past the elbow on e2; followers still on e1 → distinct yaw.
+        let offsets = [0.0_f64, -40.0, -80.0];
+        let mut poses = Vec::new();
+        for &off in &offsets {
+            let pose = car_world_pose_at_head_offset(
+                &g,
+                None,
+                "e2",
+                20.0,
+                off,
+                false,
+                None,
+                &scene,
+                Vec3::ZERO,
+                &focus,
+                None,
+                &origin,
+            )
+            .expect("car pose");
+            poses.push(pose);
+        }
+        let yaw = |t: &Transform| t.rotation.to_euler(EulerRot::YXZ).0;
+        assert!(
+            (yaw(&poses[0]) - yaw(&poses[2])).abs() > 0.2,
+            "lead vs rear yaw should differ on elbow, got {} vs {}",
+            yaw(&poses[0]),
+            yaw(&poses[2])
+        );
+        let v01 = (poses[1].translation - poses[0].translation).normalize_or_zero();
+        let v12 = (poses[2].translation - poses[1].translation).normalize_or_zero();
+        let colinear = v01.dot(v12).abs();
+        assert!(
+            colinear < 0.98,
+            "three cars on a curve must not stay colinear (dot={colinear})"
+        );
+        let parent = poses[0];
+        let local = car_local_from_parent_and_world(&parent, &poses[2]);
+        let rebuilt = parent * local;
+        assert!(rebuilt.translation.distance(poses[2].translation) < 1e-3);
     }
 
     #[test]

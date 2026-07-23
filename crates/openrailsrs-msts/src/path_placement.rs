@@ -18,8 +18,24 @@ use crate::error::MstsError;
 pub struct RouteHints {
     pub start: String,
     pub destination: String,
+    /// Path metres from [`Self::start`] to the **consist head** (#132).
     pub start_offset_m: f64,
     pub switches: Vec<SwitchDef>,
+}
+
+/// Convert an OR rear-traveller snap into a head `start_offset_m` (#132).
+///
+/// `rear_snap_offset_m` is the graph offset of TrackPDP[0]; `consist_length_m` is the
+/// sum of vehicle lengths (head origin → rear of last car).
+#[inline]
+pub fn head_offset_from_rear_snap(rear_snap_offset_m: f64, consist_length_m: f64) -> f64 {
+    (rear_snap_offset_m + consist_length_m.max(0.0)).max(0.0)
+}
+
+/// Sum of vehicle lengths for PAT rear→head conversion (#132).
+#[inline]
+pub fn consist_length_from_vehicle_lengths(lengths_m: &[f64]) -> f64 {
+    lengths_m.iter().copied().map(|l| l.max(0.0)).sum()
 }
 
 /// Read the first `DistanceDownPath` from `SERVICES/<id>.srv`.
@@ -75,15 +91,30 @@ fn parse_distance_down_path_line(line: &str) -> Option<f64> {
 }
 
 /// Resolve player start/destination on an imported graph using `.pat` + offset.
+///
+/// For TrackPDP (world) paths, `start_offset_m` / `DistanceDownPath` is **ignored** —
+/// spawn snaps PDP[0]. Pass [`Some`]`consist_length_m` to convert that rear snap into a
+/// head offset (#132). Non-world PAT sequences still walk `start_offset_m` as head metres.
 pub fn placement_for_pat(
     graph: &TrackGraph,
     aliases: &HashMap<u32, MstsAlias>,
     pat_path: &Path,
     start_offset_m: f64,
 ) -> Result<RouteHints, MstsError> {
+    placement_for_pat_with_consist(graph, aliases, pat_path, start_offset_m, None)
+}
+
+/// Like [`placement_for_pat`], optionally converting TrackPDP rear snap → head (#132).
+pub fn placement_for_pat_with_consist(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    pat_path: &Path,
+    start_offset_m: f64,
+    consist_length_m: Option<f64>,
+) -> Result<RouteHints, MstsError> {
     let path_file = PathFile::from_path(pat_path)?;
     if path_file.has_world_pdps() {
-        return placement_from_world(graph, aliases, &path_file, start_offset_m);
+        return placement_from_world(graph, aliases, &path_file, consist_length_m);
     }
 
     let resolved = resolve_pat_sequence(graph, aliases, &path_file)?;
@@ -101,14 +132,13 @@ pub fn placement_for_pat(
 
 /// Place using native `TrackPDP` world coordinates (Open Rails `PathFile` semantics).
 ///
-/// Builds a polyline from PDP world positions, samples at the path start (rear-traveller
-/// parity with OR; `DistanceDownPath` is not inverted through a fake `n1` platform),
-/// and snaps to the nearest graph edge → `start` + `start_offset_m`.
+/// Snaps TrackPDP[0] (OR rear traveller). `DistanceDownPath` is never used as spawn offset.
+/// When `consist_length_m` is set, writes **head** offset = rear snap + length (#132).
 fn placement_from_world(
     graph: &TrackGraph,
     aliases: &HashMap<u32, MstsAlias>,
     path_file: &PathFile,
-    distance_m: f64,
+    consist_length_m: Option<f64>,
 ) -> Result<RouteHints, MstsError> {
     let world_pdps = world_pdps_for_placement(path_file);
     if world_pdps.is_empty() {
@@ -117,10 +147,6 @@ fn placement_from_world(
         ));
     }
 
-    // Rear traveller at path start. Walking `DistanceDownPath` along the polyline is
-    // available via `point_along_world_polyline`, but using it here would put Chiltern
-    // ~194 m from the PAT start and re-introduce platform-offset confusion.
-    let _ = distance_m;
     let sample = world_pdps[0];
     let path_dir = world_pdps.get(1).map(|next| {
         (
@@ -128,12 +154,18 @@ fn placement_from_world(
             (next.graph_z_m() - sample.graph_z_m()) as f32,
         )
     });
-    let (start, offset) = snap_world_to_edge(
+    let (start, rear_offset) = snap_world_to_edge(
         graph,
         sample.graph_x_m() as f32,
         sample.graph_z_m() as f32,
         path_dir,
     )?;
+    // Default: keep rear snap as written offset (Chiltern scenario.toml is calibrated).
+    // With consist length: convert to head for OR rear-traveller parity (#132).
+    let start_offset_m = match consist_length_m {
+        Some(len) if len > 0.0 => head_offset_from_rear_snap(rear_offset, len),
+        _ => rear_offset,
+    };
 
     let destination = destination_from_world_pdps(graph, &start, &world_pdps)?;
 
@@ -142,7 +174,7 @@ fn placement_from_world(
     Ok(RouteHints {
         start,
         destination,
-        start_offset_m: offset,
+        start_offset_m,
         switches,
     })
 }
@@ -317,12 +349,23 @@ pub fn placement_from_imported_route(
     pat_path: &Path,
     start_offset_m: f64,
 ) -> Result<RouteHints, MstsError> {
+    placement_from_imported_route_with_consist(route_dir, pat_path, start_offset_m, None)
+}
+
+/// Like [`placement_from_imported_route`] with optional rear→head conversion (#132).
+pub fn placement_from_imported_route_with_consist(
+    route_dir: &Path,
+    pat_path: &Path,
+    start_offset_m: f64,
+    consist_length_m: Option<f64>,
+) -> Result<RouteHints, MstsError> {
     let loaded = load_route_from_dir(route_dir).map_err(|e| MstsError::Msg(e.to_string()))?;
-    placement_for_pat(
+    placement_for_pat_with_consist(
         &loaded.graph,
         &loaded.msts_aliases,
         pat_path,
         start_offset_m,
+        consist_length_m,
     )
 }
 
@@ -807,6 +850,16 @@ fn switches_for_route(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn head_offset_from_rear_snap_adds_consist_length() {
+        // #132: same rear snap + length → unique head offset.
+        assert!((head_offset_from_rear_snap(100.0, 50.0) - 150.0).abs() < 1e-9);
+        assert!((head_offset_from_rear_snap(166.735, 165.8) - 332.535).abs() < 1e-6);
+        assert_eq!(consist_length_from_vehicle_lengths(&[20.0, 20.0, 18.5]), 58.5);
+        // Without consist length, world placement keeps rear snap (not DistanceDownPath).
+        assert_eq!(head_offset_from_rear_snap(166.735, 0.0), 166.735);
+    }
 
     #[test]
     fn chiltern_srv_distance_down_path() {

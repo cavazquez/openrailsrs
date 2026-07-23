@@ -6,7 +6,7 @@ description = "Imported from MSTS activity: /home/cristian/Documentos/Open Rails
 
 [route]
 path = "."
-# Spawn snapped from TrackPDP world start (Paddington Pfm area).
+# Spawn snapped from TrackPDP[0] (Paddington Pfm). start_offset_m = consist HEAD (#132).
 start = "n17368"
 destination = "n5158"
 start_offset_m = 166.735

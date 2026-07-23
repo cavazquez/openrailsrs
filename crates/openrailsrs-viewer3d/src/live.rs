@@ -957,6 +957,7 @@ pub fn spawn_live_train(
                                 crate::rolling_stock_anim::TrainCarTrackOffset {
                                     offset_m: vehicle.offset_m,
                                     track_index: 0,
+                                    flipped: vehicle.flipped,
                                 },
                                 Name::new(format!("train:live:car:{vi}")),
                             ));

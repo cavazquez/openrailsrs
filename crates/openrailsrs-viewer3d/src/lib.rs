@@ -191,10 +191,13 @@ impl Plugin for ViewerPlugin {
                 Update,
                 (
                     openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
-                    rolling_stock_anim::update_rolling_stock_part_anim
+                    rolling_stock_anim::update_consist_car_track_poses
                         .after(live::update_live_train_marker)
                         .after(train::update_train_markers),
+                    rolling_stock_anim::update_rolling_stock_part_anim
+                        .after(rolling_stock_anim::update_consist_car_track_poses),
                 )
+                    .chain()
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

@@ -50,10 +50,16 @@ pub fn import_activity_with_summary(
     let path_file_opt = PathFile::from_path(&pat_path).ok();
 
     let service_id = service_id_for_player(&activity);
-    let start_offset_m = service_id
-        .as_deref()
-        .and_then(|id| read_distance_down_path(route_dir, id))
-        .unwrap_or(0.0);
+    // DistanceDownPath is OR service metadata — never a silent alias for spawn offset (#132).
+    // TrackPDP world paths ignore it; non-world PAT may still walk an explicit offset.
+    let start_offset_m = if path_file_opt.as_ref().is_some_and(|p| p.has_world_pdps()) {
+        0.0
+    } else {
+        service_id
+            .as_deref()
+            .and_then(|id| read_distance_down_path(route_dir, id))
+            .unwrap_or(0.0)
+    };
 
     let (start_node, destination_node, route_switches, start_offset_m) =
         if let Some(track_dir) = imported_route_dir {

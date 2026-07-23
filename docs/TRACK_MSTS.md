@@ -15,6 +15,8 @@ Lecciones para alinear grafo lógico ↔ geometría TDB (no portar Track Viewer)
 3. Señales TrItem: solo evaluar si el tile WORLD está cargado (`outside_coverage`).
 4. Paths `.pat`: PDPs vs nodos; outliers Birmingham documentados en audits.
 5. `--track-dev` / audit: comparar chords vs `FindLocationInSection` OR.
+6. **`start_offset_m` = cabeza del consist** (#132), no `DistanceDownPath` ni cola OR. TrackPDP[0] es cola; conversión opcional `head_offset_from_rear_snap`.
+7. **Pose por coche** (#128): cada vehículo samplea chainage TDB/grafo; no barra rígida en el eje del lead.
 
 ## Comandos
 

@@ -101,7 +101,11 @@ pub struct RouteSection {
     pub path: String,
     pub start: String,
     pub destination: String,
-    /// Distance in metres from `start` along the first edge(s) of the computed path.
+    /// Metres from [`Self::start`] along the resolved path to the **consist head**
+    /// (lead vehicle reference used by the sim / viewer) (#132).
+    ///
+    /// Not Open Rails `DistanceDownPath` and not the rear traveller. TrackPDP import
+    /// snaps PDP[0] (OR rear); optional rear→head conversion uses consist length.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_offset_m: Option<f64>,
     #[serde(default)]

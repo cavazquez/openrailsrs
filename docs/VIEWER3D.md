@@ -41,6 +41,8 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 | Affine Matrix3x3 (#139) | `linear: Mat3` en pose + GPU instance Mat4 (shear); Transform TRS solo aproximación |
 | Night/Underground (#142) | Flag Underground; selector sol/túnel; Night local→padre DDS→ACE; `OPENRAILSRS_SCENERY_NIGHT` |
 | Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
+| PAT `start_offset_m` (#132) | Ancla = cabeza; TrackPDP ignora `DistanceDownPath` |
+| Pose por coche (#128) | `update_consist_car_track_poses` — chainage individual en curvas |
 
 ## Comando rápido
 
