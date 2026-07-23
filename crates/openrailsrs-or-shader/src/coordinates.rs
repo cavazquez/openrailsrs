@@ -49,7 +49,7 @@
 //! ```
 //! `Matrix3×3` uses the same XNA convention; see [`matrix3x3_to_rotation_scale`].
 
-use bevy::math::{Mat3, Quat, Vec3};
+use bevy::math::{Affine3A, Mat3, Quat, Vec3};
 use bevy::prelude::Transform;
 use openrailsrs_formats::{Matrix43, ShapeFile, Vec3 as ShapeVec3};
 
@@ -177,6 +177,25 @@ pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
     )
 }
 
+/// MSTS `Matrix3×3` → Bevy/XNA linear `Mat3` (Open Rails `Scenery.cs` convention).
+///
+/// Negates Z of the X/Y columns and X/Y of the Z column. **Preserves shear** — unlike
+/// [`matrix3x3_to_rotation_scale`], this does not force a TRS decomposition (#139).
+///
+/// Row-major storage: `m[0..3]` = first row, etc.
+pub fn matrix3x3_to_xna_mat3(m: &[f64; 9]) -> Mat3 {
+    Mat3::from_cols(
+        Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32)),
+        Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32)),
+        Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32),
+    )
+}
+
+/// Full affine pose from MSTS `Matrix3×3` + Bevy translation (#139).
+pub fn matrix3x3_to_affine(m: &[f64; 9], translation: Vec3) -> Affine3A {
+    Affine3A::from_mat3_translation(matrix3x3_to_xna_mat3(m), translation)
+}
+
 /// Decompose an MSTS `Matrix3×3` into a Bevy `Quat` and a non-uniform scale `Vec3`.
 ///
 /// Follows Open Rails XNA convention (`Scenery.cs`): each column's Z component is negated,
@@ -186,6 +205,9 @@ pub fn qdir_to_quat(qdir: &[f64; 4]) -> Quat {
 /// placement), the reflection is absorbed into the Z scale axis so
 /// `Mat3::from_quat(rot) * Mat3::from_diagonal(scale)` round-trips the affine linear part
 /// within ~`1e-4` (see unit tests).
+///
+/// **Shear is discarded** — prefer [`matrix3x3_to_xna_mat3`] / [`matrix3x3_to_affine`] when
+/// the full linear map must be preserved (#139).
 ///
 /// Row-major storage: `m[0..3]` = first row, etc.
 pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
@@ -209,15 +231,6 @@ pub fn matrix3x3_to_rotation_scale(m: &[f64; 9]) -> (Quat, Vec3) {
 /// Extract only the rotation from an MSTS `Matrix3×3`.
 pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
     matrix3x3_to_rotation_scale(m).0
-}
-
-fn matrix3x3_to_xna_mat3(m: &[f64; 9]) -> Mat3 {
-    // Open Rails XNA convention: negate Z-component of X/Y cols and negate X/Y of Z col.
-    Mat3::from_cols(
-        Vec3::new(m[0] as f32, m[1] as f32, -(m[2] as f32)),
-        Vec3::new(m[3] as f32, m[4] as f32, -(m[5] as f32)),
-        Vec3::new(-(m[6] as f32), -(m[7] as f32), m[8] as f32),
-    )
 }
 
 // ── Matrix43 (shape hierarchy) ────────────────────────────────────────────────
@@ -703,6 +716,30 @@ mod tests {
         );
         let rebuilt = Mat3::from_quat(rot) * Mat3::from_diagonal(scale);
         assert_mat3_close(bevy, rebuilt, 1e-3);
+    }
+
+    #[test]
+    fn matrix3x3_to_xna_mat3_preserves_shear() {
+        // #139: shear must survive; TRS decomposition cannot represent it.
+        let bevy = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.35, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let m = bevy_mat3_to_msts_matrix3x3(bevy);
+        let linear = matrix3x3_to_xna_mat3(&m);
+        assert_mat3_close(bevy, linear, 1e-4);
+        let (rot, scale) = matrix3x3_to_rotation_scale(&m);
+        let trs = Mat3::from_quat(rot) * Mat3::from_diagonal(scale);
+        assert!(
+            (trs.y_axis.x - bevy.y_axis.x).abs() > 0.1,
+            "TRS path must lose shear (got trs.y.x={}, expected {})",
+            trs.y_axis.x,
+            bevy.y_axis.x
+        );
+        let affine = matrix3x3_to_affine(&m, Vec3::new(10.0, 2.0, -3.0));
+        assert_mat3_close(bevy, Mat3::from(affine.matrix3), 1e-4);
+        assert!((affine.translation.x - 10.0).abs() < 1e-4);
     }
 
     /// Inverse of [`matrix3x3_to_xna_mat3`] for unit tests (row-major MSTS Matrix3×3).

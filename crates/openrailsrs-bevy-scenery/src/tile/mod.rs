@@ -9,7 +9,7 @@ mod snapshot;
 pub use classify::{
     MstsClassifiedWorldItem, MstsForestPatch, MstsHWaterPatch, MstsTransferPatch,
     MstsWorldItemKind, classify_world_file, classify_world_item, item_transform,
-    matrix3x3_to_rotation_scale, qdir_to_quat,
+    matrix3x3_to_affine, matrix3x3_to_rotation_scale, matrix3x3_to_xna_mat3, qdir_to_quat,
 };
 pub use snapshot::{
     MstsTileSnapshot, MstsTileTerrainSnapshot, MstsTileWorldSnapshot, elevation_base_y,

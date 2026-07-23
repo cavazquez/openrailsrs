@@ -304,4 +304,61 @@ mod tests {
         let diff = policy.diff_disk(center, &loaded);
         assert_eq!(diff.to_unload, vec![TileCoord::new(2, 0)]);
     }
+
+    #[test]
+    fn streaming_a_to_b_to_a_reloads_without_duplicate_loads() {
+        // #144: simulate WORLD/terrain tile membership A → B → A.
+        // load ≤0 (only centre), unload ≤0 (no hysteresis) so leaving A unloads it.
+        let policy = StreamWindowPolicy::chebyshev(0, 0);
+        let tile_a = TileCoord::new(10, 20);
+        let tile_b = TileCoord::new(12, 20);
+        let mut loaded: HashSet<TileCoord> = HashSet::new();
+        let mut load_events = Vec::new();
+        let mut unload_events = Vec::new();
+
+        // Arrive at A.
+        let d0 = policy.diff_disk(tile_a, &loaded);
+        assert!(d0.to_load.contains(&tile_a));
+        for t in &d0.to_load {
+            loaded.insert(*t);
+            load_events.push(*t);
+        }
+
+        // Move to B: A unloads, B loads.
+        let d1 = policy.diff_disk(tile_b, &loaded);
+        assert!(d1.to_unload.contains(&tile_a), "A must unload when centre is B");
+        assert!(d1.to_load.contains(&tile_b));
+        for t in &d1.to_unload {
+            loaded.remove(t);
+            unload_events.push(*t);
+        }
+        for t in &d1.to_load {
+            loaded.insert(*t);
+            load_events.push(*t);
+        }
+        assert!(!loaded.contains(&tile_a));
+        assert!(loaded.contains(&tile_b));
+
+        // Return to A: B unloads, A loads again (cache may keep GPU handles — membership must reload).
+        let d2 = policy.diff_disk(tile_a, &loaded);
+        assert!(d2.to_unload.contains(&tile_b));
+        assert!(d2.to_load.contains(&tile_a));
+        for t in &d2.to_unload {
+            loaded.remove(t);
+            unload_events.push(*t);
+        }
+        for t in &d2.to_load {
+            loaded.insert(*t);
+            load_events.push(*t);
+        }
+        assert!(loaded.contains(&tile_a));
+        assert!(!loaded.contains(&tile_b));
+
+        assert_eq!(
+            load_events,
+            vec![tile_a, tile_b, tile_a],
+            "A→B→A must load A, then B, then A again"
+        );
+        assert_eq!(unload_events, vec![tile_a, tile_b]);
+    }
 }

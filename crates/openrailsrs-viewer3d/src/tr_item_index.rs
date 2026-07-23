@@ -234,6 +234,7 @@ mod tests {
             position: pos,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
+            linear: None,
             tile_x,
             tile_z,
             forest: None,

@@ -21,6 +21,7 @@ use bevy::pbr::{
     SetMeshViewBindingArrayBindGroup, SetPrepassViewBindGroup, SetPrepassViewEmptyBindGroup,
     Shadow, ShadowBatchSetKey, ShadowBinKey, ViewKeyCache, init_prepass_pipeline,
 };
+use bevy::math::{Affine3A, Mat3, Mat4};
 use bevy::prelude::*;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
 use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
@@ -70,7 +71,11 @@ pub struct WorldInstanceData {
 
 impl WorldInstanceData {
     pub fn from_transform(tf: Transform) -> Self {
-        let m = tf.to_matrix();
+        Self::from_mat4(tf.to_matrix())
+    }
+
+    /// Full Mat4 instance (preserves Matrix3x3 shear when built from affine) (#139).
+    pub fn from_mat4(m: Mat4) -> Self {
         let cols = m.to_cols_array_2d();
         Self {
             col0: cols[0],
@@ -80,8 +85,30 @@ impl WorldInstanceData {
         }
     }
 
+    pub fn from_affine(affine: Affine3A) -> Self {
+        Self::from_mat4(Mat4::from(affine))
+    }
+
+    /// View-space instance: TRS transform with optional Matrix3x3 linear override (#139).
+    pub fn from_view_placement(tf: Transform, linear: Option<Mat3>) -> Self {
+        if let Some(linear) = linear {
+            Self::from_affine(Affine3A::from_mat3_translation(linear, tf.translation))
+        } else {
+            Self::from_transform(tf)
+        }
+    }
+
     pub fn translation(&self) -> Vec3 {
         Vec3::new(self.col3[0], self.col3[1], self.col3[2])
+    }
+
+    /// Upper-left 3×3 (column-major instance matrix).
+    pub fn linear(&self) -> Mat3 {
+        Mat3::from_cols(
+            Vec3::new(self.col0[0], self.col0[1], self.col0[2]),
+            Vec3::new(self.col1[0], self.col1[1], self.col1[2]),
+            Vec3::new(self.col2[0], self.col2[1], self.col2[2]),
+        )
     }
 }
 
@@ -895,6 +922,7 @@ mod tests {
         let placements = vec![
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                linear: None,
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
@@ -902,6 +930,7 @@ mod tests {
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(1.0, 0.0, 0.0),
+                linear: None,
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
@@ -909,6 +938,7 @@ mod tests {
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(2.0, 0.0, 0.0),
+                linear: None,
                 tile_x: 1,
                 tile_z: 0,
                 auto_z_bias: false,
@@ -946,6 +976,7 @@ mod tests {
         let placements: Vec<ShapeInstancePlacement> = (0..4)
             .map(|i| ShapeInstancePlacement {
                 transform: Transform::from_xyz(i as f32, 0.0, 0.0),
+                linear: None,
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,
@@ -955,6 +986,28 @@ mod tests {
         let grouped = group_placements_by_tile(&placements);
         let n = grouped.get(&(0, 0)).map(|v| v.len()).unwrap_or(0);
         assert!(n >= WORLD_INSTANCING_MIN);
+    }
+
+    #[test]
+    fn instance_data_from_view_placement_preserves_shear() {
+        // #139: GPU instance Mat4 keeps Matrix3x3 shear (TRS Transform would drop it).
+        let shear = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.35, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let d = WorldInstanceData::from_view_placement(
+            Transform::from_xyz(10.0, 0.0, -2.0),
+            Some(shear),
+        );
+        assert!((d.linear().y_axis.x - 0.35).abs() < 1e-4);
+        assert!((d.translation().x - 10.0).abs() < 1e-4);
+        let trs_only = WorldInstanceData::from_transform(Transform {
+            translation: Vec3::new(10.0, 0.0, -2.0),
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        });
+        assert!(trs_only.linear().y_axis.x.abs() < 1e-4);
     }
 
     #[test]

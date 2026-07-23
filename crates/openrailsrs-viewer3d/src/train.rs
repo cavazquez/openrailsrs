@@ -536,6 +536,9 @@ fn load_vehicle_shape_assets(
             }],
             has_texture: false,
             has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+            ),
         },
         None,
     )

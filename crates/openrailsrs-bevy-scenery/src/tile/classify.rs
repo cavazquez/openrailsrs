@@ -4,7 +4,9 @@ use std::path::Path;
 
 use bevy::math::{Quat, Vec3};
 use openrailsrs_formats::{DyntrackSection, WorldItem};
-pub use openrailsrs_or_shader::coordinates::{matrix3x3_to_rotation_scale, qdir_to_quat};
+pub use openrailsrs_or_shader::coordinates::{
+    matrix3x3_to_affine, matrix3x3_to_rotation_scale, matrix3x3_to_xna_mat3, qdir_to_quat,
+};
 
 /// Classified WORLD item kind (independent of render marker colors).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

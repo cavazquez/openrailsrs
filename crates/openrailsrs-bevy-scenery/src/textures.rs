@@ -58,6 +58,8 @@ impl TextureFlags {
     pub const AUTUMN_SNOW: u32 = 0x40;
     pub const WINTER_SNOW: u32 = 0x80;
     pub const NIGHT: u32 = 0x100;
+    /// Open Rails `Helpers.TextureFlags.Underground` — when to apply night textures in tunnels (#142).
+    pub const UNDERGROUND: u32 = 0x4000_0000;
 
     /// Flags que Open Rails usa para bosques (`GetForestTextureFile`).
     pub const FOREST: u32 = Self::SPRING
@@ -81,6 +83,10 @@ impl TextureFlags {
 
     pub const fn intersects(self, mask: u32) -> bool {
         (self.0 & mask) != 0
+    }
+
+    pub const fn with(self, flag: u32) -> Self {
+        Self(self.0 | flag)
     }
 }
 
@@ -126,13 +132,50 @@ impl TextureEnvironment {
 }
 
 /// Flags de textura para un shape concreto (`.sd` + heurísticas de ruta).
+///
+/// OR `Shapes.cs`: Night + path under `trainset` → also set Underground (#142).
 pub fn shape_texture_flags(shape_path: &Path, alternative_texture: u32) -> TextureFlags {
     let mut flags = TextureFlags::from_raw(alternative_texture);
     let path = shape_path.to_string_lossy().to_ascii_lowercase();
     if path.contains("/global/") || path.contains("\\global\\") {
-        flags = TextureFlags::from_raw(flags.bits() | TextureFlags::SNOW_TRACK);
+        flags = flags.with(TextureFlags::SNOW_TRACK);
+    }
+    if flags.contains(TextureFlags::NIGHT)
+        && (path.contains("/trainset/") || path.contains("\\trainset\\"))
+    {
+        flags = flags.with(TextureFlags::UNDERGROUND);
     }
     flags
+}
+
+/// Open Rails night-texture selection (`Materials.cs` / sun + tunnel) (#142).
+///
+/// Night textures apply when:
+/// - `sun_y < 0` (sun below horizon), or
+/// - shape has `Underground` and (`sun_y < -0.085` or camera is underground).
+pub fn use_night_texture(flags: TextureFlags, sun_y: f32, camera_underground: bool) -> bool {
+    if !flags.contains(TextureFlags::NIGHT) {
+        return false;
+    }
+    if sun_y < 0.0 {
+        return true;
+    }
+    flags.contains(TextureFlags::UNDERGROUND) && (sun_y < -0.085 || camera_underground)
+}
+
+/// Build a [`TextureEnvironment`] with night selected from OR sun/tunnel rules (#142).
+pub fn texture_environment_for_lighting(
+    season: Season,
+    snow_weather: bool,
+    flags: TextureFlags,
+    sun_y: f32,
+    camera_underground: bool,
+) -> TextureEnvironment {
+    TextureEnvironment {
+        season,
+        snow_weather,
+        night: use_night_texture(flags, sun_y, camera_underground),
+    }
 }
 
 /// Basename de un path MSTS (`TEXTURES\foo.ace` → `foo.ace`).
@@ -404,7 +447,7 @@ pub fn texture_path_candidates(
     out
 }
 
-/// Paridad OR `GetNightTextureFile`.
+/// Paridad OR `GetNightTextureFile`: local → padre, DDS → ACE (#142).
 fn night_texture_candidates(textures_root: &Path, file_name: &str) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let local_night = textures_root.join("Night");
@@ -414,9 +457,25 @@ fn night_texture_candidates(textures_root: &Path, file_name: &str) -> Vec<PathBu
         .unwrap_or_else(|| textures_root.join("Night"));
 
     for night_dir in [local_night, parent_night] {
-        push_file_variant(&mut out, &night_dir, file_name);
+        push_file_variant_dds_first(&mut out, &night_dir, file_name);
     }
     out
+}
+
+/// Like [`push_file_variant`] but DDS before ACE (OR night cascade).
+fn push_file_variant_dds_first(out: &mut Vec<PathBuf>, dir: &Path, file_name: &str) {
+    let path_obj = Path::new(file_name);
+    let stem_dds = path_obj.with_extension("dds");
+    out.push(dir.join(&stem_dds));
+    out.push(dir.join(file_name));
+    if path_obj
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("dds"))
+    {
+        let ace = path_obj.with_extension("ace");
+        out.push(dir.join(ace));
+    }
 }
 
 /// Variantes de nombre para texturas MSTS mal referenciadas o con prefijos de pack distintos.
@@ -976,6 +1035,47 @@ mod tests {
                 .is_some_and(|p| { p.to_string_lossy().to_ascii_lowercase().contains("night") }),
             "expected NIGHT variant for {name}, got {resolved:?}"
         );
+    }
+
+    #[test]
+    fn use_night_texture_matches_openrails_sun_and_underground() {
+        // #142 — Underground adds night while sun is still above horizon (tunnel).
+        let night = TextureFlags::from_raw(TextureFlags::NIGHT);
+        let under = night.with(TextureFlags::UNDERGROUND);
+        assert!(!use_night_texture(TextureFlags::from_raw(0), -1.0, false));
+        assert!(use_night_texture(night, -0.01, false));
+        assert!(!use_night_texture(night, 0.2, false));
+        assert!(!use_night_texture(night, 0.2, true)); // Night without Underground bit
+        assert!(!use_night_texture(under, 0.2, false)); // day, not in tunnel
+        assert!(use_night_texture(under, 0.2, true)); // day + tunnel camera
+        assert!(use_night_texture(under, -0.09, false)); // sun.Y < 0 → night for all
+    }
+
+    #[test]
+    fn shape_texture_flags_trainset_night_sets_underground() {
+        // #142: OR Shapes.cs trainset + Night → Underground.
+        let path = Path::new("/content/TRAINSET/loco/shapes/cab.s");
+        let flags = shape_texture_flags(path, TextureFlags::NIGHT);
+        assert!(flags.contains(TextureFlags::NIGHT));
+        assert!(flags.contains(TextureFlags::UNDERGROUND));
+        let scenery = shape_texture_flags(
+            Path::new("/routes/Chiltern/SHAPES/bench.s"),
+            TextureFlags::NIGHT,
+        );
+        assert!(scenery.contains(TextureFlags::NIGHT));
+        assert!(!scenery.contains(TextureFlags::UNDERGROUND));
+    }
+
+    #[test]
+    fn night_texture_candidates_are_local_then_parent_dds_then_ace() {
+        // #142 cascade order.
+        let root = Path::new("/route/TEXTURES");
+        let cands = night_texture_candidates(root, "lamp.ace");
+        assert!(cands.len() >= 4);
+        assert_eq!(cands[0], Path::new("/route/TEXTURES/Night/lamp.dds"));
+        assert_eq!(cands[1], Path::new("/route/TEXTURES/Night/lamp.ace"));
+        assert_eq!(cands[2], Path::new("/route/Night/lamp.dds"));
+        assert_eq!(cands[3], Path::new("/route/Night/lamp.ace"));
     }
 
     #[test]

@@ -41,6 +41,9 @@ pub use openrailsrs_bevy_scenery::shapes::{
     train_exterior_material_with_texture_ex, train_shape_debug_scope, world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::shapes::{ShapeDescriptor, night_subobj_part_visible};
+use openrailsrs_bevy_scenery::textures::{
+    TextureEnvironment, TextureFlags, shape_texture_flags,
+};
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 pub use openrailsrs_bevy_scenery::textures::{DdsAlpha, ace_to_image, dds_alpha_type};
 
@@ -389,17 +392,58 @@ impl RouteAssets {
         self.catalog.resolve_trackobj_shape(file_name, section_idx)
     }
 
-    /// Resolve a texture via the shared catalog index (summer/day, no seasonal flags).
+    /// Resolve a texture via the shared catalog index (honours scenery night env #142).
     pub fn resolve_texture(&self, dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
         self.catalog.resolve_texture(
             dirs,
             file_name,
-            &openrailsrs_bevy_scenery::textures::TextureEnvironment::summer_day(),
-            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
-                openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
-            ),
+            &scenery_texture_environment(TextureFlags::from_raw(TextureFlags::NONE)),
+            TextureFlags::from_raw(TextureFlags::NONE),
         )
     }
+}
+
+/// `OPENRAILSRS_SCENERY_NIGHT=1` forces night texture selection (#142).
+pub fn scenery_night_forced() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_SCENERY_NIGHT")
+            .ok()
+            .as_deref()
+            .map(str::trim),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
+/// `OPENRAILSRS_CAMERA_UNDERGROUND=1` — tunnel camera for Underground night rules (#142).
+pub fn camera_underground_forced() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAMERA_UNDERGROUND")
+            .ok()
+            .as_deref()
+            .map(str::trim),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
+/// Active scenery [`TextureEnvironment`] for WORLD/train textures (#142).
+pub fn scenery_texture_environment(flags: TextureFlags) -> TextureEnvironment {
+    use openrailsrs_bevy_scenery::textures::{Season, use_night_texture};
+    let night = if scenery_night_forced() {
+        true
+    } else {
+        // Day sun_y = +1 unless forced underground with Underground bit.
+        use_night_texture(flags, 1.0, camera_underground_forced())
+    };
+    TextureEnvironment {
+        season: Season::Summer,
+        snow_weather: false,
+        night,
+    }
+}
+
+/// Whether scenery is currently in daytime for night-subobj visibility (#95/#142).
+pub fn scenery_is_day(flags: TextureFlags) -> bool {
+    !scenery_texture_environment(flags).night
 }
 
 /// Bevy asset handles for one renderable shape part.
@@ -435,6 +479,8 @@ pub struct ShapeRenderAsset {
     pub has_texture: bool,
     /// `.sd` `ESD_SubObj`: sub-object 1 is night-only geometry (#95).
     pub has_night_subobj: bool,
+    /// `.sd` `ESD_Alternative_Texture` (+ trainset Underground) (#142).
+    pub texture_flags: TextureFlags,
 }
 
 fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
@@ -1265,7 +1311,26 @@ pub fn resolve_shape_path_with_index(
 
 /// Resolve `TEXTURES/foo.ace` under one asset root directory.
 pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    openrailsrs_bevy_scenery::textures::resolve_texture_path_legacy(route_dir, file_name)
+    resolve_texture_path_with_flags(
+        route_dir,
+        file_name,
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
+}
+
+/// Resolve with shape `.sd` flags (Night/Underground) (#142).
+pub fn resolve_texture_path_with_flags(
+    route_dir: &Path,
+    file_name: &str,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
+    let env = scenery_texture_environment(flags);
+    let flags = if env.night {
+        flags.with(TextureFlags::NIGHT)
+    } else {
+        flags
+    };
+    openrailsrs_bevy_scenery::textures::resolve_texture_path(route_dir, file_name, &env, flags)
 }
 
 /// Search several asset roots for `TEXTURES/foo.ace`, returning the first match.
@@ -1273,7 +1338,27 @@ pub fn resolve_texture_path(route_dir: &Path, file_name: &str) -> Option<PathBuf
 /// Use this instead of `resolve_texture_path` when a shape may live in a
 /// directory other than the route root (e.g. a trainset folder).
 pub fn resolve_texture_path_in_dirs(dirs: &[&Path], file_name: &str) -> Option<PathBuf> {
-    openrailsrs_bevy_scenery::textures::resolve_texture_path_legacy_in_dirs(dirs, file_name)
+    resolve_texture_path_in_dirs_with_flags(
+        dirs,
+        file_name,
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
+}
+
+/// Like [`resolve_texture_path_in_dirs`] with Night/Underground flags (#142).
+pub fn resolve_texture_path_in_dirs_with_flags(
+    dirs: &[&Path],
+    file_name: &str,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
+    let env = scenery_texture_environment(flags);
+    // Night folder search requires the Night bit (`texture_path_candidates`).
+    let flags = if env.night {
+        flags.with(TextureFlags::NIGHT)
+    } else {
+        flags
+    };
+    openrailsrs_bevy_scenery::textures::resolve_texture_path_in_dirs(dirs, file_name, &env, flags)
 }
 
 /// Root folder for a vehicle / cab shape's textures (viewer train/cab layout).
@@ -1660,6 +1745,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         parts,
         has_texture: has_any_texture,
         has_night_subobj: false,
+        texture_flags: TextureFlags::from_raw(TextureFlags::NONE),
     };
     if debug_shape_stats_enabled() {
         log_shape_render_stats(&loaded.parts, triangle_count_total, &asset, materials);
@@ -2257,9 +2343,11 @@ pub fn load_shape_file_and_loaded(
     Some((shape, loaded))
 }
 
-/// Attach `.sd` night-subobj flag after building GPU assets (#95).
+/// Attach `.sd` night-subobj + texture flags after building GPU assets (#95/#142).
 pub fn apply_shape_descriptor_to_asset(shape_path: &Path, asset: &mut ShapeRenderAsset) {
-    asset.has_night_subobj = ShapeDescriptor::load_for_shape(shape_path).has_night_subobj;
+    let desc = ShapeDescriptor::load_for_shape(shape_path);
+    asset.has_night_subobj = desc.has_night_subobj;
+    asset.texture_flags = shape_texture_flags(shape_path, desc.alternative_texture);
 }
 
 /// Whether a shape part should spawn for the current day/night (#95).
@@ -2367,6 +2455,7 @@ mod tests {
             ],
             has_texture: false,
             has_night_subobj: true,
+            texture_flags: TextureFlags::from_raw(TextureFlags::NONE),
         };
         assert!(shape_part_visible_for_day_night(
             &asset,

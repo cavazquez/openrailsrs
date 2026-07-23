@@ -53,8 +53,8 @@ pub use spawn::water::{
 pub use spawn::world::{
     FnPlacementAdapter, IdentityPlacementAdapter, PlacementAdapter, PlannedShapePartSpawn,
     ResolvedShapePart, ShapePartId, TileOffsetPlacementAdapter, WorldObjectPlacement,
-    WorldObjectPose, cached_shape_parts, object_placement, plan_parts_with_ids,
-    plan_shape_part_spawns, resolve_shape_parts, spawn_resolved_shape_parts,
+    WorldObjectPose, cached_shape_parts, object_placement, object_placement_with_linear,
+    plan_parts_with_ids, plan_shape_part_spawns, resolve_shape_parts, spawn_resolved_shape_parts,
     spawn_resolved_shape_parts_bound, spawn_shape_parts_with, spawn_standard_shape_parts,
     spawn_standard_shape_parts_bound, world_item_placement, world_item_rotation_scale,
 };
@@ -79,7 +79,8 @@ pub use tile::{
     MstsTileTerrainSnapshot, MstsTileWorldSnapshot, MstsTransferPatch, MstsWorldItemKind,
     classify_world_file, classify_world_item, elevation_base_y, item_transform,
     load_msts_tile_snapshot, load_msts_tile_snapshot_from_paths, load_msts_tile_terrain_snapshot,
-    load_msts_tile_world_snapshot, matrix3x3_to_rotation_scale, qdir_to_quat,
+    load_msts_tile_world_snapshot, matrix3x3_to_affine, matrix3x3_to_rotation_scale,
+    matrix3x3_to_xna_mat3, qdir_to_quat,
     resolve_world_tile_path, snapshot_from_parsed,
 };
 

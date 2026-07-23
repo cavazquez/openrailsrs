@@ -27,17 +27,20 @@ App jugable Bevy (`openrailsrs-viewer3d`). Arquitectura: [`BEVY.md`](BEVY.md). T
 Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #25–#83, #109–#125). Residuales típicos:
 
 - Paridad pixel OR (checklist manual / goldens Chiltern locales #71).
-- Pop-in vs `ViewingDistance` OR; night/underground texture selection (#142).
+- Pop-in vs `ViewingDistance` OR.
 - Cabina: palancas CVF parciales; puertas/panto sim → visual (#81).
 - Cast/receive sombras instanced ✅ (#72); VSM completo solo en render3d.
 
-### Alpha / sorting / instancing (cerrados)
+### Alpha / sorting / instancing / night (cerrados)
 
 | Tema | Notas |
 |------|--------|
 | SortIndex (#102) | Bake conserva orden de archivo; `depth_bias` nudge en viewer3d + render3d |
 | Dual-pass BlendATex* (#101) | Mask(250)+Blend en ACE/DDS scenery (StandardMaterial); cab single-pass |
 | Instancing light model (#138) | Batch GPU solo TexDiff/Unknown sin unlit/emissive; Tex→FullBright y resto → entity path |
+| Affine Matrix3x3 (#139) | `linear: Mat3` en pose + GPU instance Mat4 (shear); Transform TRS solo aproximación |
+| Night/Underground (#142) | Flag Underground; selector sol/túnel; Night local→padre DDS→ACE; `OPENRAILSRS_SCENERY_NIGHT` |
+| Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
 
 ## Comando rápido
 

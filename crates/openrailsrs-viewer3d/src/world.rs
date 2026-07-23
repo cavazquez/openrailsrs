@@ -121,6 +121,8 @@ pub fn scenery_entity_should_unload(
 #[derive(Clone, Copy, Debug)]
 pub struct ShapeInstancePlacement {
     pub transform: Transform,
+    /// Full Matrix3x3 linear when present (shear); overrides TRS in GPU instancing (#139).
+    pub linear: Option<Mat3>,
     pub tile_x: i32,
     pub tile_z: i32,
     /// Open Rails `ShapeFlags.AutoZBias` (TrackObj / switch track) (#103).
@@ -351,6 +353,8 @@ pub struct WorldObject {
     pub rotation: Quat,
     /// Non-uniform scale from `.w` `Matrix3x3` when present.
     pub scale: Vec3,
+    /// Full XNA linear from Matrix3x3 (shear); `None` for QDirection (#139).
+    pub linear: Option<Mat3>,
     pub tile_x: i32,
     pub tile_z: i32,
     pub forest: Option<ForestPatch>,
@@ -682,6 +686,7 @@ fn try_object_from_item(
     }
     let rotation = placement.pose.rotation;
     let scale = placement.pose.scale;
+    let linear = placement.pose.linear;
     let forest = match item {
         WorldItem::Forest {
             uid,
@@ -786,6 +791,7 @@ fn try_object_from_item(
         position,
         rotation,
         scale,
+        linear,
         tile_x,
         tile_z,
         forest,
@@ -1698,6 +1704,7 @@ fn classify_one_object(
                 .or_default()
                 .push(ShapeInstancePlacement {
                     transform: tf,
+                    linear: obj.linear,
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
                     auto_z_bias: true,
@@ -1764,6 +1771,7 @@ fn classify_one_object(
                 .or_default()
                 .push(ShapeInstancePlacement {
                     transform: tf,
+                    linear: obj.linear,
                     tile_x: obj.tile_x,
                     tile_z: obj.tile_z,
                     auto_z_bias: false,
@@ -1855,12 +1863,12 @@ fn append_shape_spawn_entries_for_transforms(
     };
 
     // viewer3d scenery uses daylight sun by default (#95).
-    const IS_DAY: bool = true;
+    let is_day = crate::shapes::scenery_is_day(asset.texture_flags);
     let day_parts: Vec<(usize, &crate::shapes::ShapePartAsset)> = asset
         .parts
         .iter()
         .enumerate()
-        .filter(|(_, part)| shape_part_visible_for_day_night(asset, part, IS_DAY))
+        .filter(|(_, part)| shape_part_visible_for_day_night(asset, part, is_day))
         .collect();
     let batch_auto_z = placements.iter().any(|p| p.auto_z_bias);
     // Distinct SignalSubObj masks cannot share merged/instanced batches (#80).
@@ -1963,7 +1971,10 @@ fn append_shape_spawn_entries_for_transforms(
                     let instances: Vec<WorldInstanceData> = tile_placements
                         .iter()
                         .map(|p| {
-                            WorldInstanceData::from_transform(view_transform(p.transform, origin))
+                            WorldInstanceData::from_view_placement(
+                                view_transform(p.transform, origin),
+                                p.linear,
+                            )
                         })
                         .collect();
                     let count = instances.len() as u32;
@@ -2230,6 +2241,7 @@ fn build_world_shape_asset(
                 }],
                 has_texture: false,
                 has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
             }
         }
     };
@@ -3630,6 +3642,7 @@ pub fn spawn_world_boxes(
                             rotation: obj.rotation,
                             scale: obj.scale,
                         },
+                        linear: obj.linear,
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
                         auto_z_bias: true,
@@ -3666,6 +3679,7 @@ pub fn spawn_world_boxes(
                             rotation: obj.rotation,
                             scale: obj.scale,
                         },
+                        linear: obj.linear,
                         tile_x: obj.tile_x,
                         tile_z: obj.tile_z,
                         auto_z_bias: false,
@@ -4065,6 +4079,7 @@ mod tests {
             position: Vec3::ZERO,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
+            linear: None,
             tile_x: 0,
             tile_z: 0,
             forest: None,
@@ -4326,6 +4341,7 @@ mod tests {
             parts: Vec::new(),
             has_texture: false,
             has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
         }
     }
 
@@ -4384,6 +4400,7 @@ mod tests {
                 parts: vec![make_part(keep_mesh.clone(), keep_mat)],
                 has_texture: true,
                 has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
             },
         );
         session.shape_assets.insert(
@@ -4393,6 +4410,7 @@ mod tests {
                 parts: vec![make_part(drop_mesh.clone(), drop_mat)],
                 has_texture: true,
                 has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
             },
         );
         session
@@ -4526,6 +4544,7 @@ mod tests {
             path.clone(),
             vec![ShapeInstancePlacement {
                 transform: Transform::default(),
+                linear: None,
                 tile_x: 0,
                 tile_z: 0,
                 auto_z_bias: false,

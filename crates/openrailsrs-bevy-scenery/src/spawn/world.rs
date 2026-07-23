@@ -11,9 +11,10 @@
 
 use std::path::{Path, PathBuf};
 
+use bevy::math::{Affine3A, Mat3, Mat4};
 use bevy::prelude::*;
 use openrailsrs_formats::WorldItem;
-use openrailsrs_or_shader::coordinates::msts_tile_local_to_bevy;
+use openrailsrs_or_shader::coordinates::{matrix3x3_to_xna_mat3, msts_tile_local_to_bevy};
 
 use crate::spawn::cache::{SessionShapeCache, ShapeCacheKey};
 use crate::stream::{TileBound, TileCoord};
@@ -25,15 +26,31 @@ pub struct WorldObjectPose {
     pub position: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
+    /// Full XNA linear map from `.w` `Matrix3x3` (includes shear). `None` for QDirection (#139).
+    pub linear: Option<Mat3>,
 }
 
 impl WorldObjectPose {
+    /// Bevy TRS approximation (loses shear). Prefer [`Self::affine`] / [`Self::mat4`] (#139).
     pub fn transform(&self) -> Transform {
         Transform {
             translation: self.position,
             rotation: self.rotation,
             scale: self.scale,
         }
+    }
+
+    /// Affine pose preserving Matrix3x3 shear when present (#139).
+    pub fn affine(&self) -> Affine3A {
+        if let Some(linear) = self.linear {
+            Affine3A::from_mat3_translation(linear, self.position)
+        } else {
+            Affine3A::from_scale_rotation_translation(self.scale, self.rotation, self.position)
+        }
+    }
+
+    pub fn mat4(&self) -> Mat4 {
+        Mat4::from(self.affine())
     }
 }
 
@@ -130,11 +147,13 @@ pub trait PlacementAdapter {
 
     fn adapt_placement(&self, placement: WorldObjectPlacement) -> WorldObjectPlacement {
         let tf = self.adapt_transform(&placement);
+        // Keep Matrix3x3 linear (shear); only rewrite translation from the adapted TRS (#139).
         WorldObjectPlacement {
             pose: WorldObjectPose {
                 position: tf.translation,
-                rotation: tf.rotation,
-                scale: tf.scale,
+                rotation: placement.pose.rotation,
+                scale: placement.pose.scale,
+                linear: placement.pose.linear,
             },
             tile: placement.tile,
         }
@@ -188,11 +207,13 @@ pub fn world_item_placement(
     let local = item.position()?;
     let position = msts_tile_local_to_bevy(tile_x, tile_z, local);
     let (rotation, scale) = world_item_rotation_scale(item);
+    let linear = item.matrix3x3().map(|m| matrix3x3_to_xna_mat3(&m));
     Some(WorldObjectPlacement {
         pose: WorldObjectPose {
             position,
             rotation,
             scale,
+            linear,
         },
         tile: TileBound::new(tile_x, tile_z),
     })
@@ -206,11 +227,24 @@ pub fn object_placement(
     tile_x: i32,
     tile_z: i32,
 ) -> WorldObjectPlacement {
+    object_placement_with_linear(position, rotation, scale, None, tile_x, tile_z)
+}
+
+/// Like [`object_placement`], optionally preserving a Matrix3x3 linear map (#139).
+pub fn object_placement_with_linear(
+    position: Vec3,
+    rotation: Quat,
+    scale: Vec3,
+    linear: Option<Mat3>,
+    tile_x: i32,
+    tile_z: i32,
+) -> WorldObjectPlacement {
     WorldObjectPlacement {
         pose: WorldObjectPose {
             position,
             rotation,
             scale,
+            linear,
         },
         tile: TileBound::new(tile_x, tile_z),
     }
@@ -389,6 +423,28 @@ mod tests {
         assert_eq!(tf.translation, Vec3::new(10.0, 2.0, -3.0));
         assert_eq!(tf.scale, Vec3::new(1.0, 2.0, 1.0));
         assert_eq!(p.tile, TileBound::new(4, -7));
+        assert!(p.pose.linear.is_none());
+    }
+
+    #[test]
+    fn world_object_pose_affine_preserves_shear_linear() {
+        // #139: Matrix3x3 shear stays on pose.affine(), not on Transform TRS.
+        let shear = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.4, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let pose = WorldObjectPose {
+            position: Vec3::new(1.0, 2.0, 3.0),
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+            linear: Some(shear),
+        };
+        let a = pose.affine();
+        assert!((a.matrix3.y_axis.x - 0.4).abs() < 1e-5);
+        assert_eq!(Vec3::from(a.translation), Vec3::new(1.0, 2.0, 3.0));
+        // TRS Transform cannot carry shear.
+        assert!((pose.transform().to_matrix().y_axis.x).abs() < 1e-4);
     }
 
     #[test]
