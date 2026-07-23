@@ -1021,9 +1021,9 @@ mod tests {
         }
     }
 
-    /// Pullman has no authored lever geometry (`vtx_state` → MAIN); no 3D rebase.
+    /// Pullman: desk MAIN stays static; bone-local MAIN orphans bind to lever matrices.
     #[test]
-    fn pullman_static_cab_has_no_dynamic_lever_bindings() {
+    fn pullman_static_cab_desk_stays_unbound_orphans_bind_levers() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1049,13 +1049,23 @@ mod tests {
             .expect("lod0");
         let parts =
             crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
+        // Desk/body MAIN geometry (|center| ≫ 1 m) must not be ripped to lever bones (#146).
+        for part in &parts {
+            let c = part.bounds_center.unwrap_or(Vec3::ZERO);
+            if c.length() > 1.0 {
+                assert!(
+                    part.cab_matrix_idx.is_none(),
+                    "desk MAIN part sub={} prim={} must stay static (#146), got {:?}",
+                    part.sub_object_idx,
+                    part.prim_state_idx,
+                    part.cab_matrix_idx
+                );
+            }
+        }
+        let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
         assert!(
-            parts.iter().all(|p| p.cab_matrix_idx.is_none()),
-            "Pullman MAIN geometry must stay static (#146); got {:?}",
-            parts
-                .iter()
-                .filter_map(|p| p.cab_matrix_idx)
-                .collect::<Vec<_>>()
+            bound.contains(&4) && bound.contains(&8) && bound.contains(&9) && bound.contains(&10),
+            "bone-local orphan sticks must bind all four lever matrices, got {bound:?}"
         );
         for driver in runtime.matrix_drivers.values() {
             if let MatrixDriver::Lever { anim_node, .. } = driver {
@@ -1132,7 +1142,7 @@ mod tests {
     }
 
     #[test]
-    fn pullman_named_lever_matrices_exist_but_stay_unbound() {
+    fn pullman_orphan_lever_sticks_rest_near_pivots() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1147,9 +1157,6 @@ mod tests {
         };
         let runtime = build_cab_cvf_runtime(cvf, shape.clone());
         let lever_matrices = cab_lever_matrix_indices(&runtime);
-        assert!(lever_matrices.contains(&4));
-        assert!(lever_matrices.contains(&8));
-        assert!(lever_matrices.contains(&9));
         let level = shape
             .lod_controls
             .first()
@@ -1157,15 +1164,29 @@ mod tests {
             .expect("lod0");
         let parts =
             crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
-        let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
-        assert!(
-            bound.is_empty(),
-            "authored MAIN cab must not bind lever bones by texture (#146): {bound:?}"
-        );
-        assert!(
-            !runtime.cvf.controls.is_empty(),
-            "Pullman CVF should drive gauges/levers via 2D overlay"
-        );
+        // Tall sticks: after omit-leaf + entity hierarchy, rest pose must sit on the pivot.
+        for part in parts.iter().filter(|p| {
+            p.cab_matrix_idx.is_some()
+                && p.bounds_half_extent
+                    .is_some_and(|h| h.y > 0.15 && h.x < 0.05 && h.z < 0.05)
+        }) {
+            let m = part.cab_matrix_idx.expect("bound");
+            let local = part.bounds_center.unwrap_or(Vec3::ZERO);
+            // bounds_center is still from the pre-rebase MAIN bake (local/orphan space).
+            let world = static_hierarchy_chain_transform_cab(&shape, m).transform_point(local);
+            let pivot = crate::shapes::matrix_pivot_bevy(&shape, m).unwrap();
+            assert!(
+                world.distance(pivot) < 0.35,
+                "orphan stick sub={} → M{m} rest ({:.2},{:.2},{:.2}) far from pivot ({:.2},{:.2},{:.2})",
+                part.sub_object_idx,
+                world.x,
+                world.y,
+                world.z,
+                pivot.x,
+                pivot.y,
+                pivot.z
+            );
+        }
     }
 
     #[test]
