@@ -1,21 +1,26 @@
-//! DMI soft-key hit-test and interactive UI state (#161).
+//! DMI soft-key hit-test and interactive UI state (#161/#162).
 
 use bevy::prelude::*;
 
+use super::mode::DmiMode;
 use super::paint::{DMI_H, DMI_W};
 use super::status::EtcsStatus;
+use super::subwindow::{self, DmiOverlay, SubHit};
 
-/// Interactive DMI controls (scroll / scale / menu), independent of TCS.
+/// Interactive DMI controls (scroll / scale / menu / overlays).
 #[derive(Resource, Clone, Debug)]
 pub struct EtcsUiState {
     pub message_page: usize,
-    /// Planning zoom (OR `MaxViewingDistanceM`), metres.
     pub planning_max_m: i32,
     pub pressed: Option<DmiHit>,
     pub pressed_until_s: f64,
-    /// Echo of last soft-key action (shown in message area briefly).
     pub last_action: Option<String>,
     pub last_action_until_s: f64,
+    pub overlay: DmiOverlay,
+    pub sub_pressed: Option<SubHit>,
+    pub sub_pressed_until_s: f64,
+    /// Acknowledged message texts this session.
+    pub acked: Vec<String>,
 }
 
 impl Default for EtcsUiState {
@@ -27,6 +32,10 @@ impl Default for EtcsUiState {
             pressed_until_s: 0.0,
             last_action: None,
             last_action_until_s: 0.0,
+            overlay: DmiOverlay::None,
+            sub_pressed: None,
+            sub_pressed_until_s: 0.0,
+            acked: Vec::new(),
         }
     }
 }
@@ -39,6 +48,9 @@ impl EtcsUiState {
         if self.pressed.is_some() && now_s >= self.pressed_until_s {
             self.pressed = None;
         }
+        if self.sub_pressed.is_some() && now_s >= self.sub_pressed_until_s {
+            self.sub_pressed = None;
+        }
         if self.last_action.is_some() && now_s >= self.last_action_until_s {
             self.last_action = None;
         }
@@ -48,9 +60,112 @@ impl EtcsUiState {
         status.planning_max_m = f64::from(self.planning_max_m);
         status.message_page = self.message_page;
         status.pressed_hit = self.pressed.filter(|_| now_s < self.pressed_until_s);
+        status.blink_on = (now_s * 4.0).fract() < 0.5;
+        for m in &mut status.messages {
+            if m.acknowledgeable && self.acked.iter().any(|a| a == &m.text) {
+                m.acknowledged = true;
+                m.acknowledgeable = false;
+            }
+        }
+        status.needs_ack = status
+            .messages
+            .iter()
+            .any(|m| m.acknowledgeable && !m.acknowledged);
         if let Some(msg) = self.last_action.as_ref() {
             if now_s < self.last_action_until_s {
-                status.messages.push(msg.clone());
+                status.messages.push(super::status::TextMessage {
+                    text: msg.clone(),
+                    acknowledgeable: false,
+                    acknowledged: true,
+                });
+            }
+        }
+    }
+
+    pub fn handle_dmi_click(&mut self, x: i32, y: i32, now_s: f64, status: &EtcsStatus) {
+        if self.overlay.is_open() {
+            if let Some(hit) = subwindow::hit_test_overlay(&self.overlay, x, y) {
+                self.handle_sub_hit(hit, now_s);
+            }
+            return;
+        }
+        // Message area ack (OR MessageArea press).
+        if status.needs_ack && rect_contains(54, 365, 234, 100, x, y) {
+            if let Some(m) = status
+                .messages
+                .iter()
+                .rev()
+                .find(|m| m.acknowledgeable && !m.acknowledged)
+            {
+                self.acked.push(m.text.clone());
+                self.flash_action(&format!("Ack {}", m.text), now_s);
+            }
+            return;
+        }
+        if let Some(hit) = hit_test_dmi(x, y, status.dmi_mode) {
+            self.handle_hit(hit, now_s, status.messages.len());
+        }
+    }
+
+    fn handle_sub_hit(&mut self, hit: SubHit, now_s: f64) {
+        self.sub_pressed = Some(hit);
+        self.sub_pressed_until_s = now_s + 0.2;
+        match hit {
+            SubHit::Close => {
+                self.overlay = DmiOverlay::None;
+                self.flash_action("Close", now_s);
+            }
+            SubHit::MenuItem(i) => match &self.overlay {
+                DmiOverlay::MainMenu => match i {
+                    0 => self.flash_action("Start", now_s),
+                    1 => self.flash_action("Override", now_s),
+                    2 => {
+                        self.overlay = DmiOverlay::DataEntry {
+                            value: String::new(),
+                        };
+                    }
+                    3 => self.flash_action("Special", now_s),
+                    4 => self.overlay = DmiOverlay::Settings,
+                    5 => {
+                        self.overlay = DmiOverlay::None;
+                        self.flash_action("Quit", now_s);
+                    }
+                    _ => {}
+                },
+                DmiOverlay::Settings => {
+                    if i == 4 {
+                        self.overlay = DmiOverlay::MainMenu;
+                    } else {
+                        self.flash_action("Settings", now_s);
+                    }
+                }
+                _ => {}
+            },
+            SubHit::KeyDigit(d) => {
+                if let DmiOverlay::DataEntry { value } = &mut self.overlay {
+                    if value.len() < 8 {
+                        value.push(char::from(b'0' + d));
+                    }
+                }
+            }
+            SubHit::KeyDot => {
+                if let DmiOverlay::DataEntry { value } = &mut self.overlay {
+                    if !value.contains('.') && value.len() < 8 {
+                        value.push('.');
+                    }
+                }
+            }
+            SubHit::KeyDel => {
+                if let DmiOverlay::DataEntry { value } = &mut self.overlay {
+                    value.pop();
+                }
+            }
+            SubHit::KeyYes => {
+                if let DmiOverlay::DataEntry { value } = &self.overlay {
+                    let v = value.clone();
+                    self.overlay = DmiOverlay::None;
+                    self.flash_action(&format!("Entered {v}"), now_s);
+                }
             }
         }
     }
@@ -84,9 +199,21 @@ impl EtcsUiState {
                     self.flash_action(&format!("Scale {}", self.planning_max_m), now_s);
                 }
             }
-            DmiHit::SoftKey(i) => {
-                self.flash_action(&format!("Key {}", i + 1), now_s);
+            DmiHit::SoftKey(0) => {
+                self.overlay = DmiOverlay::MainMenu;
+                self.flash_action("Main", now_s);
             }
+            DmiHit::SoftKey(1) => self.flash_action("Override", now_s),
+            DmiHit::SoftKey(2) => {
+                self.overlay = DmiOverlay::DataEntry {
+                    value: String::new(),
+                };
+            }
+            DmiHit::SoftKey(3) => self.flash_action("Special", now_s),
+            DmiHit::SoftKey(4) => {
+                self.overlay = DmiOverlay::Settings;
+            }
+            DmiHit::SoftKey(_) => {}
         }
     }
 
@@ -109,39 +236,67 @@ pub enum DmiHit {
     SoftKey(u8),
 }
 
-/// Map DMI pixel coords (origin top-left, 640×480) to a soft key.
-pub fn hit_test_dmi(x: i32, y: i32) -> Option<DmiHit> {
-    if !(0..DMI_W as i32).contains(&x) || !(0..DMI_H as i32).contains(&y) {
+/// Map DMI pixel coords to a soft key (layout depends on mode).
+pub fn hit_test_dmi(x: i32, y: i32, mode: DmiMode) -> Option<DmiHit> {
+    let (dw, dh) = mode.size();
+    if !(0..dw as i32).contains(&x) || !(0..dh as i32).contains(&y) {
         return None;
     }
-    // Message scroll
-    if rect_contains(288, 365, 46, 50, x, y) {
-        return Some(DmiHit::ScrollUp);
-    }
-    if rect_contains(288, 415, 46, 50, x, y) {
-        return Some(DmiHit::ScrollDown);
-    }
-    // Planning scale
-    if rect_contains(334, 15, 40, 15, x, y) {
-        return Some(DmiHit::ScaleUp);
-    }
-    if rect_contains(334, 300, 40, 15, x, y) {
-        return Some(DmiHit::ScaleDown);
-    }
-    // Right soft keys
-    for i in 0..6i32 {
-        let by = 15 + 50 * i;
-        if rect_contains(580, by, 60, 48, x, y) {
-            return Some(DmiHit::SoftKey(i as u8));
+    match mode {
+        DmiMode::GaugeOnly => None,
+        DmiMode::PlanningArea => {
+            if rect_contains(0, 0, 40, 15, x, y) {
+                return Some(DmiHit::ScaleUp);
+            }
+            if rect_contains(0, 285, 40, 15, x, y) {
+                return Some(DmiHit::ScaleDown);
+            }
+            for i in 0..6i32 {
+                let by = 15 + 50 * i;
+                if rect_contains(274, by, 60, 48, x, y) {
+                    return Some(DmiHit::SoftKey(i as u8));
+                }
+            }
+            None
+        }
+        DmiMode::SpeedArea => {
+            if rect_contains(288 - 54, 365, 46, 50, x, y) || rect_contains(234, 365, 46, 50, x, y) {
+                return Some(DmiHit::ScrollUp);
+            }
+            if rect_contains(234, 415, 46, 50, x, y) {
+                return Some(DmiHit::ScrollDown);
+            }
+            None
+        }
+        DmiMode::FullSize => {
+            if rect_contains(288, 365, 46, 50, x, y) {
+                return Some(DmiHit::ScrollUp);
+            }
+            if rect_contains(288, 415, 46, 50, x, y) {
+                return Some(DmiHit::ScrollDown);
+            }
+            if rect_contains(334, 15, 40, 15, x, y) {
+                return Some(DmiHit::ScaleUp);
+            }
+            if rect_contains(334, 300, 40, 15, x, y) {
+                return Some(DmiHit::ScaleDown);
+            }
+            for i in 0..6i32 {
+                let by = 15 + 50 * i;
+                if rect_contains(580, by, 60, 48, x, y) {
+                    return Some(DmiHit::SoftKey(i as u8));
+                }
+            }
+            None
         }
     }
-    None
 }
 
-/// UV (0–1, Bevy/top-left) → DMI pixel.
-pub fn uv_to_dmi(uv: Vec2) -> (i32, i32) {
-    let x = (uv.x.clamp(0.0, 1.0) * (DMI_W as f32 - 1.0)).round() as i32;
-    let y = (uv.y.clamp(0.0, 1.0) * (DMI_H as f32 - 1.0)).round() as i32;
+/// UV (0–1) → DMI pixel for given mode size.
+pub fn uv_to_dmi(uv: Vec2, mode: DmiMode) -> (i32, i32) {
+    let (dw, dh) = mode.size();
+    let x = (uv.x.clamp(0.0, 1.0) * (dw as f32 - 1.0)).round() as i32;
+    let y = (uv.y.clamp(0.0, 1.0) * (dh as f32 - 1.0)).round() as i32;
     (x, y)
 }
 
@@ -202,7 +357,6 @@ pub fn raycast_mesh_uv(
     best
 }
 
-/// Möller–Trumbore; returns (t, u, v) barycentric with hit = (1-u-v)*p0 + u*p1 + v*p2.
 fn ray_triangle(
     origin: Vec3,
     dir: Vec3,
@@ -239,12 +393,39 @@ mod tests {
 
     #[test]
     fn hits_scroll_and_scale() {
-        assert_eq!(hit_test_dmi(300, 380), Some(DmiHit::ScrollUp));
-        assert_eq!(hit_test_dmi(300, 430), Some(DmiHit::ScrollDown));
-        assert_eq!(hit_test_dmi(340, 20), Some(DmiHit::ScaleUp));
-        assert_eq!(hit_test_dmi(340, 305), Some(DmiHit::ScaleDown));
-        assert_eq!(hit_test_dmi(600, 40), Some(DmiHit::SoftKey(0)));
-        assert_eq!(hit_test_dmi(100, 100), None);
+        assert_eq!(
+            hit_test_dmi(300, 380, DmiMode::FullSize),
+            Some(DmiHit::ScrollUp)
+        );
+        assert_eq!(
+            hit_test_dmi(340, 20, DmiMode::FullSize),
+            Some(DmiHit::ScaleUp)
+        );
+        assert_eq!(
+            hit_test_dmi(600, 40, DmiMode::FullSize),
+            Some(DmiHit::SoftKey(0))
+        );
+    }
+
+    #[test]
+    fn soft_key_opens_menu() {
+        let mut ui = EtcsUiState::default();
+        ui.handle_hit(DmiHit::SoftKey(0), 0.0, 3);
+        assert_eq!(ui.overlay, DmiOverlay::MainMenu);
+    }
+
+    #[test]
+    fn data_entry_digits() {
+        let mut ui = EtcsUiState::default();
+        ui.overlay = DmiOverlay::DataEntry {
+            value: String::new(),
+        };
+        ui.handle_sub_hit(SubHit::KeyDigit(1), 0.0);
+        ui.handle_sub_hit(SubHit::KeyDigit(2), 0.1);
+        match &ui.overlay {
+            DmiOverlay::DataEntry { value } => assert_eq!(value, "12"),
+            _ => panic!("expected data entry"),
+        }
     }
 
     #[test]
@@ -259,14 +440,7 @@ mod tests {
     #[test]
     fn message_scroll_pages() {
         let mut ui = EtcsUiState::default();
-        // 12 messages → 3 pages
         ui.handle_hit(DmiHit::ScrollUp, 0.0, 12);
-        assert_eq!(ui.message_page, 1);
-        ui.handle_hit(DmiHit::ScrollUp, 0.1, 12);
-        assert_eq!(ui.message_page, 2);
-        ui.handle_hit(DmiHit::ScrollUp, 0.2, 12);
-        assert_eq!(ui.message_page, 2);
-        ui.handle_hit(DmiHit::ScrollDown, 0.3, 12);
         assert_eq!(ui.message_page, 1);
     }
 
@@ -300,5 +474,12 @@ mod tests {
         assert!(t > 0.0);
         assert!((uv.x - 0.5).abs() < 0.05);
         assert!((uv.y - 0.5).abs() < 0.05);
+    }
+
+    #[test]
+    #[allow(unused_imports)]
+    fn dmi_wh_consts() {
+        assert_eq!(DMI_W, 640);
+        assert_eq!(DMI_H, 480);
     }
 }

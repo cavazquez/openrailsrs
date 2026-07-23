@@ -84,13 +84,22 @@ const REQUIRED_SYMBOLS: &[&str] = &[
     "NA_04.bmp",
     "NA_05.bmp",
     "NA_06.bmp",
+    "NA_11.bmp",
+    "NA_12.bmp",
     "NA_13.bmp",
     "NA_14.bmp",
     "NA_15.bmp",
     "NA_16.bmp",
+    "NA_21.bmp",
     "PL_21.png",
     "PL_22.png",
     "PL_23.png",
+    "PL_tunnel.png",
+    "PL_bridge.png",
+    "PL_station.png",
+    "PL_endoftrack.png",
+    "SE_01.bmp",
+    "SE_02.bmp",
 ];
 
 /// Resolve `Content/ETCS` (OR RunActivity content, not MSTS route pack).

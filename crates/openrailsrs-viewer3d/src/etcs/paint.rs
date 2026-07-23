@@ -1,17 +1,30 @@
-//! Full DMI layout painter (OR non-soft FullSize 640×480).
+//! DMI layout painter (OR Full / Speed / Planning / GaugeOnly, #159–#162).
 
 use super::colors::{self, Rgba};
 use super::gauge::{self, paint_circular_gauge};
+use super::input::{DmiHit, EtcsUiState};
+use super::mode::DmiMode;
 use super::planning::paint_planning;
-use super::input::DmiHit;
 use super::status::{EtcsStatus, EtcsSupervision};
+use super::subwindow;
 use super::symbols::EtcsSymbols;
 
 pub const DMI_W: u32 = 640;
 pub const DMI_H: u32 = 480;
 
-/// Paint a recognisable ERA-style DMI into `rgba` (row-major RGBA8).
+/// Paint DMI into `rgba` (row-major RGBA8). Uses `status.dmi_mode` for layout.
 pub fn paint_dmi_full(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
+    paint_dmi(rgba, w, h, status, &EtcsUiState::default());
+}
+
+/// Paint with interactive overlay state (#162).
+pub fn paint_dmi(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    status: &EtcsStatus,
+    ui: &EtcsUiState,
+) {
     if w == 0 || h == 0 || rgba.len() < (w * h * 4) as usize {
         return;
     }
@@ -20,53 +33,92 @@ pub fn paint_dmi_full(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
         return;
     }
 
-    // Scale logical 640×480 into actual buffer (usually 1:1).
-    let sx = w as f32 / DMI_W as f32;
-    let sy = h as f32 / DMI_H as f32;
+    let (lw, lh) = status.dmi_mode.size();
+    let sx = w as f32 / lw as f32;
+    let sy = h as f32 / lh as f32;
     if (sx - 1.0).abs() > 0.01 || (sy - 1.0).abs() > 0.01 {
-        // Non-1:1: paint into temp 640×480 then nearest-neighbour scale.
-        let mut tmp = vec![0u8; (DMI_W * DMI_H * 4) as usize];
-        paint_dmi_full_1x(&mut tmp, status);
-        scale_nearest(&tmp, DMI_W, DMI_H, rgba, w, h);
+        let mut tmp = vec![0u8; (lw * lh * 4) as usize];
+        paint_dmi_1x(&mut tmp, lw, lh, status, ui);
+        scale_nearest(&tmp, lw, lh, rgba, w, h);
         return;
     }
-    paint_dmi_full_1x(rgba, status);
+    paint_dmi_1x(rgba, w, h, status, ui);
 }
 
-fn paint_dmi_full_1x(rgba: &mut [u8], status: &EtcsStatus) {
-    let w = DMI_W;
-    let h = DMI_H;
+fn paint_dmi_1x(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    status: &EtcsStatus,
+    ui: &EtcsUiState,
+) {
     let symbols = EtcsSymbols::global();
     fill_rect(rgba, w, h, 0, 0, w as i32, h as i32, colors::BG);
 
-    // Top margin strip
+    match status.dmi_mode {
+        DmiMode::GaugeOnly => {
+            paint_circular_gauge(rgba, w, h, 0, 0, status);
+            return;
+        }
+        DmiMode::SpeedArea => {
+            paint_speed_column(rgba, w, h, status, symbols);
+            return;
+        }
+        DmiMode::PlanningArea => {
+            paint_planning(rgba, w, h, 0, 15, status, symbols);
+            paint_scale_buttons(rgba, w, h, 0, status, symbols);
+            paint_soft_keys_at(rgba, w, h, 274, status);
+            return;
+        }
+        DmiMode::FullSize => {}
+    }
+
     fill_rect(rgba, w, h, 0, 0, 640, 15, colors::BG);
-
-    // TTI / LSSM (0,15) 54×54 — OR `TTIandLSSMArea`
     paint_tti(rgba, w, h, 0, 15, status);
-
-    // Target distance column (0, 69) 54×221
+    paint_mode_level(rgba, w, h, status);
     paint_target_distance(rgba, w, h, 0, 69, 54, 221, status);
-
-    // Circular gauge (54, 15)
     paint_circular_gauge(rgba, w, h, 54, 15, status);
     stroke_rect(rgba, w, h, 54, 15, gauge::GAUGE_W, gauge::GAUGE_H, colors::FRAME);
-
-    // Message area (54, 365) 234×100 + scroll soft keys
     paint_message_area(rgba, w, h, status, symbols);
-
-    // Planning (334, 15)
     paint_planning(rgba, w, h, 334, 15, status, symbols);
     stroke_rect(rgba, w, h, 334, 15, 246, 300, colors::FRAME);
+    paint_scale_buttons(rgba, w, h, 334, status, symbols);
+    paint_soft_keys_at(rgba, w, h, 580, status);
 
-    // Scale soft keys (NA_03/04 enabled, NA_05/06 disabled)
+    if ui.overlay.is_open() {
+        subwindow::paint_overlay(rgba, w, h, &ui.overlay, symbols, ui.sub_pressed);
+    }
+}
+
+fn paint_speed_column(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    status: &EtcsStatus,
+    symbols: &EtcsSymbols,
+) {
+    paint_tti(rgba, w, h, 0, 15, status);
+    paint_mode_level(rgba, w, h, status);
+    paint_target_distance(rgba, w, h, 0, 69, 54, 221, status);
+    paint_circular_gauge(rgba, w, h, 54, 15, status);
+    paint_message_area(rgba, w, h, status, symbols);
+}
+
+fn paint_scale_buttons(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    origin_x: i32,
+    status: &EtcsStatus,
+    symbols: &EtcsSymbols,
+) {
     let scale_up_en = status.planning_max_m > 1000.0;
     let scale_dn_en = status.planning_max_m < 32_000.0;
     paint_icon_button(
         rgba,
         w,
         h,
-        334,
+        origin_x,
         15,
         40,
         15,
@@ -78,7 +130,7 @@ fn paint_dmi_full_1x(rgba: &mut [u8], status: &EtcsStatus) {
         rgba,
         w,
         h,
-        334,
+        origin_x,
         300,
         40,
         15,
@@ -86,14 +138,23 @@ fn paint_dmi_full_1x(rgba: &mut [u8], status: &EtcsStatus) {
         if scale_dn_en { "NA_04.bmp" } else { "NA_06.bmp" },
         status.pressed_hit == Some(DmiHit::ScaleDown),
     );
+}
 
-    // Right menu bar soft keys (text; TCS icons TBD)
-    paint_soft_keys(rgba, w, h, status);
-
-    // Mode label FS in TTI cell when no TTI square
-    if status.tti_indication_s.is_none() && status.tti_permitted_s.is_none() {
-        blit_digit3x5(rgba, w, h, 8, 28, 10, 14, 'F', colors::WHITE);
-        blit_digit3x5(rgba, w, h, 20, 28, 10, 14, 'S', colors::WHITE);
+fn paint_mode_level(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
+    // Mode/level under TTI when no TTI square, else bottom of TTI cell.
+    let has_tti = status.tti_indication_s.is_some() || status.tti_permitted_s.is_some();
+    let y = if has_tti { 48 } else { 28 };
+    let mode = status.mode.label();
+    let mut x = 6;
+    for ch in mode.chars() {
+        blit_digit3x5(rgba, w, h, x, y, 8, 12, ch, colors::WHITE);
+        x += 9;
+    }
+    blit_digit3x5(rgba, w, h, x, y, 6, 10, '/', colors::GREY);
+    x += 8;
+    for ch in status.level.label().chars() {
+        blit_digit3x5(rgba, w, h, x, y, 8, 12, ch, colors::GREY);
+        x += 9;
     }
 }
 
@@ -150,7 +211,7 @@ fn paint_message_area(
     stroke_rect(rgba, w, h, 54, 365, 234, 100, colors::FRAME);
 
     // Newest-first list, 5 lines/page (OR MessageArea).
-    let newest_first: Vec<&str> = status.messages.iter().rev().map(|s| s.as_str()).collect();
+    let newest_first: Vec<&str> = status.message_lines().into_iter().rev().collect();
     let pages = ((newest_first.len().max(1) + 4) / 5).max(1);
     let page = status.message_page.min(pages - 1);
     let start = page * 5;
@@ -158,6 +219,9 @@ fn paint_message_area(
     for (i, line) in chunk.iter().enumerate() {
         let ly = 365 + 4 + (i as i32) * 18;
         blit_text(rgba, w, h, 60, ly, 8, 12, line, colors::GREY);
+    }
+    if status.needs_ack && status.blink_on {
+        stroke_rect(rgba, w, h, 54, 365, 234, 100, colors::YELLOW);
     }
 
     let can_up = page + 1 < pages;
@@ -188,7 +252,7 @@ fn paint_message_area(
     );
 }
 
-fn paint_soft_keys(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
+fn paint_soft_keys_at(rgba: &mut [u8], w: u32, h: u32, x: i32, status: &EtcsStatus) {
     for i in 0..6 {
         let y = 15 + 50 * i;
         let pressed = status.pressed_hit == Some(DmiHit::SoftKey(i as u8));
@@ -196,16 +260,16 @@ fn paint_soft_keys(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
             rgba,
             w,
             h,
-            580,
+            x,
             y,
             60,
             48,
             if pressed { colors::DARK_GREY } else { colors::PANEL },
         );
-        stroke_rect(rgba, w, h, 580, y, 60, 48, colors::FRAME);
+        stroke_rect(rgba, w, h, x, y, 60, 48, colors::FRAME);
         if let Some(label) = status.soft_keys.get(i as usize) {
             if !label.is_empty() {
-                blit_text(rgba, w, h, 586, y + 18, 7, 10, label, colors::GREY);
+                blit_text(rgba, w, h, x + 6, y + 18, 7, 10, label, colors::GREY);
             }
         }
     }
@@ -268,31 +332,38 @@ fn paint_target_distance(
 ) {
     fill_rect(rgba, w, h, x, y, bw, bh, colors::PANEL);
     stroke_rect(rgba, w, h, x, y, bw, bh, colors::FRAME);
+    // OR hides target distance in OS/SR.
+    if matches!(status.mode, super::status::EtcsMode::Os | super::status::EtcsMode::Sr) {
+        return;
+    }
     let Some(dist) = status.target_distance_m else {
         return;
     };
-    // Bar fill from bottom: 0–planning_max_m
-    let t = (dist / status.planning_max_m.max(1.0)).clamp(0.0, 1.0);
-    let fill_h = ((1.0 - t) * (bh - 8) as f64) as i32;
+    // OR TargetDistance: log bar 0–1000 m.
+    let d = dist.min(1000.0);
+    let h_bar = if d < 100.0 {
+        d / 100.0 * (185.0 - 152.0)
+    } else {
+        let mut hb = 185.0 - 152.0;
+        hb += (d.log10() - 2.0) * (152.0 + 1.0);
+        hb
+    };
+    let fill_h = h_bar.clamp(2.0, (bh - 8) as f64) as i32;
     fill_rect(
         rgba,
         w,
         h,
-        x + 12,
+        x + 29,
         y + bh - 4 - fill_h,
-        bw - 24,
-        fill_h.max(2),
-        colors::YELLOW,
+        10,
+        fill_h,
+        colors::GREY,
     );
-    let label = if dist >= 1000.0 {
-        format!("{:.1}", dist / 1000.0)
-    } else {
-        format!("{:.0}", dist)
-    };
+    let label = format!("{}", ((dist / 10.0) as i32) * 10);
     let mut lx = x + 6;
     let ly = y + 8;
     for ch in label.chars().take(5) {
-        blit_digit3x5(rgba, w, h, lx, ly, 8, 12, ch, colors::WHITE);
+        blit_digit3x5(rgba, w, h, lx, ly, 8, 12, ch, colors::GREY);
         lx += 9;
     }
 }

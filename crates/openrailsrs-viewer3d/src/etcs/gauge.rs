@@ -227,6 +227,41 @@ pub fn paint_circular_gauge(
         );
         ux += 9;
     }
+
+    // Release speed digit (OR bottom-left of gauge ~26,274 local).
+    if let Some(rel) = status.release_kmh {
+        let txt = format!("{:.0}", rel);
+        let mut rx = origin_x + 20;
+        let ry = origin_y + GAUGE_H - 28;
+        for ch in txt.chars() {
+            blit_digit3x5(
+                rgba,
+                stride_w,
+                stride_h,
+                rx,
+                ry,
+                12,
+                16,
+                ch,
+                colors::GREY,
+            );
+            rx += 13;
+        }
+        // Thin release arc marker at release speed.
+        let ar = speed2angle(rel as f32, max);
+        stroke_arc(
+            rgba,
+            stride_w,
+            stride_h,
+            cx,
+            cy,
+            RADIUS_OUT - 14.0,
+            ar - 0.03,
+            ar + 0.03,
+            4.0,
+            colors::GREY,
+        );
+    }
 }
 
 /// Needle colours follow OR FS mode + `SupervisionStatus` / `Monitor`.

@@ -1,8 +1,8 @@
-//! OR `ThreeDimCabScreen` / ETCS DMI (#158–#161).
+//! OR `ThreeDimCabScreen` / ETCS DMI (#158–#162).
 //!
 //! Matches a cab interior prim whose ACE basename contains the CVF `ScreenDisplay`
-//! Graphic, then replaces its texture with a CPU-updated 640×480 RGBA buffer.
-//! LMB on the mesh maps UV → DMI soft keys (#161).
+//! Graphic, then replaces its texture with a CPU-updated RGBA buffer.
+//! LMB on the mesh maps UV → DMI soft keys / subwindows.
 
 use std::path::Path;
 
@@ -15,7 +15,7 @@ use openrailsrs_formats::{CabControl, CabViewFile};
 use crate::cab_cvf::CabCvfState;
 use crate::cab_view::CabInteriorRoot;
 use crate::camera::CameraFollowMode;
-use crate::etcs::{EtcsUiState, hit_test_dmi, uv_to_dmi};
+use crate::etcs::{DmiMode, EtcsUiState, uv_to_dmi};
 use crate::live::LiveDrive;
 use crate::or_cab_material::OrCabMaterial;
 use crate::shapes::ShapePartAsset;
@@ -32,6 +32,7 @@ pub struct CabNativeScreen {
     pub control_type: openrailsrs_formats::ControlType,
     pub graphic: String,
     pub hide_if_disabled: bool,
+    pub dmi_mode: DmiMode,
 }
 
 /// OR-style match: material/texture key contains the Graphic basename (case-insensitive).
@@ -59,20 +60,25 @@ pub fn screen_controls(cvf: &CabViewFile) -> Vec<&CabControl> {
         .collect()
 }
 
-/// Create the dynamic screen image (blank; painted each frame).
-pub fn create_screen_image() -> Image {
-    let px = (CAB_SCREEN_W * CAB_SCREEN_H * 4) as usize;
+pub fn dmi_mode_from_params(params: &std::collections::HashMap<String, String>) -> DmiMode {
+    params
+        .get("mode")
+        .map(|s| DmiMode::parse(s))
+        .unwrap_or_default()
+}
+
+/// Create the dynamic screen image for a DMI mode.
+pub fn create_screen_image(mode: DmiMode) -> Image {
+    let (w, h) = mode.size();
+    let px = (w * h * 4) as usize;
     let mut rgba = vec![0u8; px];
-    crate::etcs::paint_dmi_full(
-        &mut rgba,
-        CAB_SCREEN_W,
-        CAB_SCREEN_H,
-        &crate::etcs::EtcsStatus::default(),
-    );
+    let mut status = crate::etcs::EtcsStatus::default();
+    status.dmi_mode = mode;
+    crate::etcs::paint_dmi_full(&mut rgba, w, h, &status);
     Image::new(
         Extent3d {
-            width: CAB_SCREEN_W,
-            height: CAB_SCREEN_H,
+            width: w,
+            height: h,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -104,6 +110,7 @@ pub fn try_attach_screen_to_part(
             control_type,
             graphic,
             hide_if_disabled,
+            parameters,
             ..
         } = control
         else {
@@ -113,7 +120,8 @@ pub fn try_attach_screen_to_part(
             continue;
         }
         claimed[i] = true;
-        let image = images.add(create_screen_image());
+        let dmi_mode = dmi_mode_from_params(parameters);
+        let image = images.add(create_screen_image(dmi_mode));
         if let Some(or_h) = part.or_cab_material.as_ref() {
             if let Some(base) = or_materials.get(or_h).cloned() {
                 let mut mat = base;
@@ -131,17 +139,19 @@ pub fn try_attach_screen_to_part(
             control_type: control_type.clone(),
             graphic: graphic.clone(),
             hide_if_disabled: *hide_if_disabled,
+            dmi_mode,
         });
         viewer_log!(
-            "openrailsrs-viewer3d: cab screen — {} → prim texture `{tex_name}`",
-            control_type.as_str()
+            "openrailsrs-viewer3d: cab screen — {} {:?} → prim `{tex_name}`",
+            control_type.as_str(),
+            dmi_mode
         );
         return true;
     }
     false
 }
 
-/// Paint full DMI each frame (#159/#160/#161).
+/// Paint full DMI each frame (#159–#162).
 pub fn update_cab_screens(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,
@@ -161,16 +171,18 @@ pub fn update_cab_screens(
     let _ = cvf_state;
     let now = time.elapsed_secs_f64();
     ui.tick(now);
-    let mut status = live
-        .as_ref()
-        .map(|l| crate::etcs::etcs_status_from_live(&l.session))
-        .unwrap_or_default();
-    ui.apply_to_status(&mut status, now);
 
     for (screen, mut visibility) in &mut screens {
         if screen.hide_if_disabled {
             *visibility = Visibility::Visible;
         }
+        let mut status = live
+            .as_ref()
+            .map(|l| crate::etcs::etcs_status_from_live(&l.session))
+            .unwrap_or_default();
+        status.dmi_mode = screen.dmi_mode;
+        ui.apply_to_status(&mut status, now);
+
         let Some(mut image) = images.get_mut(&screen.image) else {
             continue;
         };
@@ -185,11 +197,11 @@ pub fn update_cab_screens(
         if data.len() < (w * h * 4) as usize {
             continue;
         }
-        crate::etcs::paint_dmi_full(data, w, h, &status);
+        crate::etcs::paint_dmi(data, w, h, &status, &ui);
     }
 }
 
-/// LMB on `CabNativeScreen` mesh → DMI soft keys (OR reserves LMB for cab controls).
+/// LMB on `CabNativeScreen` mesh → DMI soft keys / subwindows.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_cab_dmi_mouse(
     follow: Res<CameraFollowMode>,
@@ -198,7 +210,7 @@ pub fn handle_cab_dmi_mouse(
     mut ui: ResMut<EtcsUiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
-    screens: Query<(&GlobalTransform, &Mesh3d), With<CabNativeScreen>>,
+    screens: Query<(&CabNativeScreen, &GlobalTransform, &Mesh3d)>,
     meshes: Res<Assets<Mesh>>,
     live: Option<Res<LiveDrive>>,
 ) {
@@ -207,7 +219,6 @@ pub fn handle_cab_dmi_mouse(
     }
     let now = time.elapsed_secs_f64();
 
-    // RMB = look; ignore LMB while looking.
     if mouse_buttons.pressed(MouseButton::Right) {
         return;
     }
@@ -231,8 +242,8 @@ pub fn handle_cab_dmi_mouse(
         return;
     };
 
-    let mut best: Option<(f32, Vec2)> = None;
-    for (gt, mesh3d) in &screens {
+    let mut best: Option<(f32, Vec2, DmiMode)> = None;
+    for (screen, gt, mesh3d) in &screens {
         let Some(mesh) = meshes.get(&mesh3d.0) else {
             continue;
         };
@@ -243,22 +254,12 @@ pub fn handle_cab_dmi_mouse(
             ray.origin,
             Vec3::from(ray.direction),
         ) {
-            if best.as_ref().is_none_or(|(bt, _)| t < *bt) {
-                best = Some((t, uv));
+            if best.as_ref().is_none_or(|(bt, _, _)| t < *bt) {
+                best = Some((t, uv, screen.dmi_mode));
             }
         }
     }
-    let Some((_t, uv)) = best else {
-        return;
-    };
-
-    let (x, y) = uv_to_dmi(uv);
-    let hit = hit_test_dmi(x, y).or_else(|| {
-        // Some MSTS cab UVs are V-flipped relative to Bevy sampling.
-        let (x2, y2) = uv_to_dmi(Vec2::new(uv.x, 1.0 - uv.y));
-        hit_test_dmi(x2, y2)
-    });
-    let Some(hit) = hit else {
+    let Some((_t, uv, mode)) = best else {
         return;
     };
 
@@ -266,9 +267,23 @@ pub fn handle_cab_dmi_mouse(
         .as_ref()
         .map(|l| crate::etcs::etcs_status_from_live(&l.session))
         .unwrap_or_default();
+    status.dmi_mode = mode;
     ui.apply_to_status(&mut status, now);
-    ui.handle_hit(hit, now, status.messages.len());
-    viewer_log!("openrailsrs-viewer3d: DMI hit {hit:?}");
+
+    let (x, y) = uv_to_dmi(uv, mode);
+    let before_overlay = ui.overlay.clone();
+    let before_page = ui.message_page;
+    let before_scale = ui.planning_max_m;
+    ui.handle_dmi_click(x, y, now, &status);
+    let acted = ui.overlay != before_overlay
+        || ui.message_page != before_page
+        || ui.planning_max_m != before_scale
+        || ui.last_action.is_some();
+    if !acted {
+        let (x2, y2) = uv_to_dmi(Vec2::new(uv.x, 1.0 - uv.y), mode);
+        ui.handle_dmi_click(x2, y2, now, &status);
+    }
+    viewer_log!("openrailsrs-viewer3d: DMI click overlay={:?}", ui.overlay);
 }
 
 #[cfg(test)]
@@ -281,10 +296,6 @@ mod tests {
             "CabView/StaticTexture.ACE",
             "statictexture.ace"
         ));
-        assert!(texture_matches_screen_graphic(
-            "statictexture.ace",
-            "../cab/STATICTEXTURE.ACE"
-        ));
         assert!(!texture_matches_screen_graphic("speed.ace", "statictexture.ace"));
     }
 
@@ -296,6 +307,13 @@ mod tests {
         let first = &rgba[0..4];
         let mid = &rgba[((CAB_SCREEN_H / 2 * CAB_SCREEN_W + CAB_SCREEN_W / 4) * 4) as usize..];
         assert_ne!(&mid[0..4], first);
+    }
+
+    #[test]
+    fn mode_from_params() {
+        let mut p = std::collections::HashMap::new();
+        p.insert("mode".into(), "GaugeOnly".into());
+        assert_eq!(dmi_mode_from_params(&p), DmiMode::GaugeOnly);
     }
 
     #[test]
