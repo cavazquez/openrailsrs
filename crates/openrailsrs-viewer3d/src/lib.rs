@@ -129,7 +129,9 @@ impl Plugin for ViewerPlugin {
             .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
             .init_resource::<camera::LiveDriverCab>()
-            .init_resource::<camera::DriverLookOffset>()
+            .insert_resource(camera::driver_look_with_env_overrides(
+                camera::DriverLookOffset::default(),
+            ))
             .init_resource::<camera::PassengerCamState>()
             .init_resource::<camera::PassengerSeatCatalog>()
             .init_resource::<precipitation::PrecipitationState>()

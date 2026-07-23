@@ -25,6 +25,16 @@ use openrailsrs_formats::ShapeFile;
 #[derive(Component)]
 pub struct CabInteriorMarker;
 
+/// Per-part metadata for occluder / SortIndex diagnostics (#167).
+#[derive(Component, Debug, Clone)]
+pub struct CabPartInfo {
+    pub prim_state_idx: i32,
+    pub sort_index: u32,
+    pub texture_name: Option<String>,
+    pub shader_name: Option<String>,
+    pub cab_matrix_idx: Option<usize>,
+}
+
 /// Root node for the cab interior hierarchy (despawn this only).
 #[derive(Component)]
 pub struct CabInteriorRoot;
@@ -645,6 +655,13 @@ pub fn sync_cab_interior(
                     });
                     let mut entity = root.spawn((
                         CabInteriorMarker,
+                        CabPartInfo {
+                            prim_state_idx: part.prim_state_idx,
+                            sort_index: part.sort_index,
+                            texture_name: part.texture_name.clone(),
+                            shader_name: part.shader_name.clone(),
+                            cab_matrix_idx: part.cab_matrix_idx,
+                        },
                         NotShadowCaster,
                         NotShadowReceiver,
                         Mesh3d(part.mesh.clone()),

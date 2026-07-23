@@ -48,17 +48,24 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 
 ## Visual regression
 
-| | Smoke (#43) | Chiltern (#71) |
+| | Smoke (#43) | Chiltern (#71 / #170 cab slice) |
 |---|---|---|
 | Script | `./scripts/visual_regression_smoke.sh` | `./scripts/visual_regression_chiltern.sh` |
 | Golden | `docs/fixtures/visual/smoke_orbit.png` | `docs/fixtures/visual/chiltern/` |
 | CI | job `visual-smoke` (xvfb + lavapipe) | local (necesita Content) |
 
+Vistas Chiltern: `birmingham_exterior`, `birmingham_cabina` (frente), `_up`, `_left`, `_right`. Look cabina: `OPENRAILSRS_LOOK_YAW` / `_PITCH` (radianes). Chase/orbit cab2d y máscaras estructurales → follow-up #170.
+
 ```bash
 export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
-UPDATE_GOLDEN=1 ./scripts/visual_regression_smoke.sh
-UPDATE_GOLDEN=1 ./scripts/visual_regression_chiltern.sh   # exterior + cabina Birmingham
+# Env limpio recomendado (sin vars de sesión heredadas):
+env -i HOME="$HOME" USER="$USER" PATH="$PATH" \
+  DISPLAY="${DISPLAY:-}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+  XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" \
+  OPENRAILSRS_MSTS_CONTENT="$OPENRAILSRS_MSTS_CONTENT" \
+  UPDATE_GOLDEN=1 ./scripts/visual_regression_chiltern.sh
 ./scripts/visual_regression_chiltern.sh                     # compara vs goldens
+UPDATE_GOLDEN=1 ./scripts/visual_regression_smoke.sh
 # Diff suelto: cargo run -p openrailsrs-viewer3d --bin openrailsrs-visual-diff -- actual.png golden.png
 ```
 

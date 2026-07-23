@@ -26,12 +26,14 @@ pub enum CabDebugView {
     Albedo,
     /// Per-vertex `ATTRIBUTE_COLOR` (no texture/lighting).
     VertexColor,
+    /// Log first cab AABB hit along look (no shader override) (#167).
+    Occluder,
 }
 
 impl CabDebugView {
     pub fn shader_def(self) -> Option<&'static str> {
         match self {
-            Self::Off => None,
+            Self::Off | Self::Occluder => None,
             Self::Uv => Some("OR_CAB_DEBUG_UV"),
             Self::Albedo => Some("OR_CAB_DEBUG_ALBEDO"),
             Self::VertexColor => Some("OR_CAB_DEBUG_VCOLOR"),
@@ -44,11 +46,17 @@ impl CabDebugView {
             Self::Uv => "uv",
             Self::Albedo => "albedo",
             Self::VertexColor => "vcolor",
+            Self::Occluder => "occluder",
         }
     }
 }
 
-/// `OPENRAILSRS_CAB_DEBUG`: `uv` | `albedo` | `1`/`on` (albedo).
+/// True when `OPENRAILSRS_CAB_DEBUG=occluder` (ray / AABB hit logging) (#167).
+pub fn cab_occluder_debug_enabled() -> bool {
+    matches!(cab_debug_view(), CabDebugView::Occluder)
+}
+
+/// `OPENRAILSRS_CAB_DEBUG`: `uv` | `albedo` | `vcolor` | `occluder` | `1`/`on` (albedo).
 pub fn cab_debug_view() -> CabDebugView {
     match std::env::var("OPENRAILSRS_CAB_DEBUG")
         .ok()
@@ -77,9 +85,16 @@ pub fn cab_debug_view() -> CabDebugView {
         {
             CabDebugView::VertexColor
         }
+        Some(s)
+            if s.eq_ignore_ascii_case("occluder")
+                || s.eq_ignore_ascii_case("occluders")
+                || s.eq_ignore_ascii_case("hit") =>
+        {
+            CabDebugView::Occluder
+        }
         Some(other) => {
             crate::viewer_log!(
-                "openrailsrs-viewer3d: cab debug — unknown OPENRAILSRS_CAB_DEBUG={other:?}, use uv|albedo|vcolor"
+                "openrailsrs-viewer3d: cab debug — unknown OPENRAILSRS_CAB_DEBUG={other:?}, use uv|albedo|vcolor|occluder"
             );
             CabDebugView::Off
         }
@@ -318,6 +333,12 @@ mod tests {
             std::env::set_var("OPENRAILSRS_CAB_DEBUG", "vcolor");
         }
         assert_eq!(cab_debug_view(), CabDebugView::VertexColor);
+        unsafe {
+            std::env::set_var("OPENRAILSRS_CAB_DEBUG", "occluder");
+        }
+        assert_eq!(cab_debug_view(), CabDebugView::Occluder);
+        assert!(cab_occluder_debug_enabled());
+        assert!(cab_debug_view().shader_def().is_none());
         unsafe {
             std::env::remove_var("OPENRAILSRS_CAB_DEBUG");
         }

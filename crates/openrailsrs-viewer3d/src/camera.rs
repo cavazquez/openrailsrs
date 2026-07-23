@@ -821,6 +821,22 @@ pub fn orbit_state_with_env_overrides(mut orbit: OrbitState) -> OrbitState {
     orbit
 }
 
+/// Capture / golden override for driver mouse-look (`OPENRAILSRS_LOOK_YAW` / `_PITCH`, radians).
+pub fn driver_look_with_env_overrides(mut look: DriverLookOffset) -> DriverLookOffset {
+    let env_f32 = |key: &str| {
+        std::env::var(key)
+            .ok()
+            .and_then(|v| v.trim().parse::<f32>().ok())
+    };
+    if let Some(yaw) = env_f32("OPENRAILSRS_LOOK_YAW") {
+        look.yaw = yaw.clamp(-DRIVER_LOOK_YAW_MAX, DRIVER_LOOK_YAW_MAX);
+    }
+    if let Some(pitch) = env_f32("OPENRAILSRS_LOOK_PITCH") {
+        look.pitch = pitch.clamp(-DRIVER_LOOK_PITCH_MAX, DRIVER_LOOK_PITCH_MAX);
+    }
+    look
+}
+
 pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
     let orbit = orbit_state_with_env_overrides(OrbitState::default());
     let transform =

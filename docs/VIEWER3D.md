@@ -16,7 +16,7 @@ App jugable Bevy (`openrailsrs-viewer3d`). Arquitectura: [`BEVY.md`](BEVY.md). T
 |------|------|--------|
 | A | `--live` + física en viewer | ✅ |
 | B | Terreno + WORLD + stream | ✅ (paridad visual residual) |
-| C | Cabina 3D + CVF | 🔶 UV canónicas ✅ (#165); resto [`CABVIEW3D.md`](CABVIEW3D.md) |
+| C | Cabina 3D + CVF | 🔶 #165–#167 ✅; goldens cab slice #170; resto [`CABVIEW3D.md`](CABVIEW3D.md) |
 | D | Audio en viewer | 🔲 |
 | E | Vía TDB/peralte vs grafo | 🔶 [`TRACK_MSTS.md`](TRACK_MSTS.md) |
 | F | Activity / señales sin assume-clear | 🔶 |

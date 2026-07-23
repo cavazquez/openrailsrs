@@ -18,6 +18,9 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
 | UV canónicas OR (#165) | ✅ smoke Pullman Chiltern OK (2026-07) |
+| Jerarquía / SortIndex / winding (#166) | ✅ bake cab = OR `totalPrimitiveIndex`; opacos Back-cull |
+| Oclusores al mirar (#167) | ✅ diag `OPENRAILSRS_CAB_DEBUG=occluder`; opacos sin double-sided |
+| Goldens cab multi-vista (#170 slice) | 🔶 `visual_regression_chiltern.sh` (frente/arriba/izq/der) |
 
 ## UV (#165)
 
@@ -27,7 +30,15 @@ Conversión única en `shape_uv_to_bevy` (`openrailsrs-bevy-scenery`): coords OR
 - Tests: anti-resurrección de helpers UV180-by-name; fixture asimétrico Instruments/Instruments2.
 - Smoke: `viewer3d --live` Chiltern → tecla **1** → pupitre/instrumentos correctos (confirmado).
 
-Siguiente cola visual cabina: **#166** (jerarquía/winding/SortIndex) → **#167** → **#170**.
+Cola visual: **#166** / **#167** cerrados en bake+diag; **#170** slice cab multi-vista en `./scripts/visual_regression_chiltern.sh` (chase/orbit/máscaras OR quedan abiertos).
+
+### SortIndex / winding (#166)
+
+`build_mesh_parts_from_shape_lod_cab` avanza `SortIndex` como OR (`++totalPrimitiveIndex`) aunque un prim se descarte. Opacos `OrCabMaterial` hacen **Back cull** (overlays sin depth-write siguen double-sided).
+
+### Oclusores (#167)
+
+Con `OPENRAILSRS_CAB_DEBUG=occluder`, el HUD/log atribuye el primer AABB de cabina bajo el rayo de mirada (`prim_state`, textura, distancia, `EYE_INSIDE`). No son sombras Bevy (`NotShadowCaster`).
 
 ## Matrices CVF (Pullman)
 

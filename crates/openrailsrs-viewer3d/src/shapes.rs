@@ -703,9 +703,14 @@ pub fn build_mesh_parts_from_shape_lod_cab(
         z: 0.0,
     });
 
+    // Match OR `SortIndex = ++totalPrimitiveIndex` / WORLD path (#102 / #166): advance once
+    // per file-order primitive even when the mesh is empty and skipped.
+    let mut next_sort = 0u32;
     let mut parts = Vec::new();
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in sub.primitives.iter() {
+            let sort_index = next_sort;
+            next_sort += 1;
             let mut bounds_buffers = MeshBuffers::default();
             append_primitive_mesh_buffers(
                 shape,
@@ -772,7 +777,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
             parts.push(LoadedShapePart {
                 prim_state_idx,
                 sub_object_idx: sub_idx as u32,
-                sort_index: parts.len() as u32,
+                sort_index,
                 cab_matrix_idx,
                 mesh,
                 texture_file,
@@ -2633,6 +2638,181 @@ mod tests {
                 "forbidden UV180-by-name definition `{needle}` must stay removed (#165)"
             );
         }
+    }
+
+    /// Three coplanar-ish XY panels at distinct Z + one XYZ axis marker triangle (#166).
+    fn cab_sort_winding_fixture() -> ShapeFile {
+        let ascii = r#"
+        ( shape
+            ( images 3
+                ( image "Near.ace" )
+                ( image "Mid.ace" )
+                ( image "Far.ace" )
+            )
+            ( textures 3 ( texture 0 0 0 ) ( texture 1 0 0 ) ( texture 2 0 0 ) )
+            ( points 6
+                ( point -0.5 -0.5 0.0 )
+                ( point  0.5 -0.5 0.0 )
+                ( point  0.0  0.5 0.0 )
+                ( point 0 0 0 )
+                ( point 1 0 0 )
+                ( point 0 1 0 )
+            )
+            ( uv_points 3
+                ( uv_point 0 0 )
+                ( uv_point 1 0 )
+                ( uv_point 0.5 1 )
+            )
+            ( normals 1 ( vector 0 0 1 ) )
+            ( vtx_states 2
+                ( vtx_state 0 0 -5 0 )
+                ( vtx_state 0 1 -5 0 )
+            )
+            ( prim_states 4
+                ( prim_state "near" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 )
+                ( prim_state "mid" 0 0 ( tex_idxs 1 1 ) 0 0 0 0 1 )
+                ( prim_state "far" 0 0 ( tex_idxs 1 2 ) 0 0 0 0 1 )
+                ( prim_state "axes" 0 0 ( tex_idxs 1 0 ) 0 1 0 0 1 )
+            )
+            ( lod_controls 1
+                ( lod_control
+                    ( distance_levels_header )
+                    ( distance_levels 1
+                        ( distance_level
+                            ( distance_level_header
+                                ( dlevel_selection 100 )
+                                ( hierarchy 2 -1 0 )
+                            )
+                            ( sub_objects 1
+                                ( sub_object
+                                    ( vertices 6
+                                        ( vertex 0 0 0 ( vertex_uvs 1 0 ) )
+                                        ( vertex 0 1 0 ( vertex_uvs 1 1 ) )
+                                        ( vertex 0 2 0 ( vertex_uvs 1 2 ) )
+                                        ( vertex 0 3 0 ( vertex_uvs 1 0 ) )
+                                        ( vertex 0 4 0 ( vertex_uvs 1 1 ) )
+                                        ( vertex 0 5 0 ( vertex_uvs 1 2 ) )
+                                    )
+                                    ( primitives 4
+                                        ( prim_state_idx 2 )
+                                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                                        ( prim_state_idx 1 )
+                                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                                        ( prim_state_idx 0 )
+                                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                                        ( prim_state_idx 3 )
+                                        ( indexed_trilist ( vertex_idxs 3 3 4 5 ) )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+            ( matrices 2
+                ( matrix "MAIN"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 0 0
+                )
+                ( matrix "CTRL"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 0.2 0
+                )
+            )
+        )
+        "#;
+        let ast = openrailsrs_formats::parse_first_from_first_paren(ascii).expect("ast");
+        ShapeFile::from_ast(&ast).expect("shape")
+    }
+
+    #[test]
+    fn cab_parts_sort_index_matches_or_total_primitive_index() {
+        // File order prim_state 2,1,0,3 — SortIndex must follow encounter order, not BTree key (#166).
+        let shape = cab_sort_winding_fixture();
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, &HashSet::new());
+        assert_eq!(parts.len(), 4);
+        assert_eq!(parts[0].prim_state_idx, 2);
+        assert_eq!(parts[0].sort_index, 0);
+        assert_eq!(parts[1].prim_state_idx, 1);
+        assert_eq!(parts[1].sort_index, 1);
+        assert_eq!(parts[2].prim_state_idx, 0);
+        assert_eq!(parts[2].sort_index, 2);
+        assert_eq!(parts[3].prim_state_idx, 3);
+        assert_eq!(parts[3].sort_index, 3);
+        for w in parts.windows(2) {
+            assert!(
+                w[0].sort_index < w[1].sort_index,
+                "SortIndex must be strictly increasing in file order"
+            );
+        }
+        // Depth nudge preserves order: later prims get larger bias.
+        assert!(
+            sort_index_depth_nudge(parts[0].sort_index)
+                < sort_index_depth_nudge(parts[2].sort_index)
+        );
+    }
+
+    #[test]
+    fn cab_fixture_winding_normals_point_bevy_neg_z_after_bake() {
+        // Authored MSTS +Z normals → Bevy −Z after Z-flip + index swap (#166).
+        let shape = cab_sort_winding_fixture();
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, &HashSet::new());
+        for part in &parts {
+            let normals = part
+                .mesh
+                .attribute(Mesh::ATTRIBUTE_NORMAL)
+                .and_then(|a| match a {
+                    bevy::mesh::VertexAttributeValues::Float32x3(v) => Some(v.as_slice()),
+                    _ => None,
+                })
+                .expect("normals");
+            assert!(!normals.is_empty());
+            for n in normals {
+                assert!(
+                    (n[2] + 1.0).abs() < 1e-3,
+                    "expected Bevy −Z normal on cab fixture part prim={} sort={}, got {n:?}",
+                    part.prim_state_idx,
+                    part.sort_index
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn cab_rebased_lever_keeps_static_desk_on_main() {
+        // CTRL bone in lever set → rebase; MAIN panels stay unbound (#166 / #171).
+        let shape = cab_sort_winding_fixture();
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let mut levers = HashSet::new();
+        levers.insert(1usize); // CTRL
+        let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, &levers);
+        let static_desk: Vec<_> = parts.iter().filter(|p| p.prim_state_idx != 3).collect();
+        let ctrl = parts
+            .iter()
+            .find(|p| p.prim_state_idx == 3)
+            .expect("axes/CTRL part");
+        for p in static_desk {
+            assert!(
+                p.cab_matrix_idx.is_none(),
+                "desk prim {} must stay static (MAIN), got {:?}",
+                p.prim_state_idx,
+                p.cab_matrix_idx
+            );
+        }
+        assert_eq!(ctrl.cab_matrix_idx, Some(1));
+        // CTRL translation is Y+0.2 in Matrix43; after omit-leaf rebase verts are bone-local
+        // (origin) so entity Transform carries the authored offset — mesh center near 0.
+        let (c, _) = mesh_aabb(&ctrl.mesh).expect("ctrl aabb");
+        assert!(
+            c.length() < 0.75,
+            "rebased CTRL mesh should be bone-local, center={c:?}"
+        );
     }
 
     /// Asymmetric UP/L/R UV island: authored (u,v) must survive cab bake unchanged (#165).

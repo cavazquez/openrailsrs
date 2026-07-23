@@ -4,7 +4,7 @@ use bevy::mesh::MeshVertexBufferLayoutRef;
 use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey};
 use bevy::prelude::*;
 use bevy::render::render_resource::SpecializedMeshPipelineError;
-use bevy::render::render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderType};
+use bevy::render::render_resource::{AsBindGroup, Face, RenderPipelineDescriptor, ShaderType};
 use bevy::shader::{ShaderDefVal, ShaderRef};
 
 use openrailsrs_or_shader::{
@@ -237,7 +237,13 @@ impl Material for OrCabMaterial {
         layout: &MeshVertexBufferLayoutRef,
         key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.primitive.cull_mode = None;
+        // Opaque cab writes depth: cull back faces once winding matches OR (#166).
+        // Transparent overlays (needles/glass, no depth write) stay double-sided (#167).
+        descriptor.primitive.cull_mode = if key.bind_group_data.depth_write {
+            Some(Face::Back)
+        } else {
+            None
+        };
         if let Some(depth_stencil) = descriptor.depth_stencil.as_mut() {
             depth_stencil.bias.constant = key.bind_group_data.depth_bias;
             depth_stencil.depth_write_enabled = Some(key.bind_group_data.depth_write);
@@ -340,6 +346,13 @@ mod tests {
         // Pullman marks floor/DESK1 as ZBufMode=1; Bevy still needs depth write.
         assert!(or_cab_depth_write_for_alpha(AlphaMode::Opaque, 1));
         assert!(or_cab_depth_write_for_alpha(AlphaMode::Mask(0.5), 1));
+        assert!(!or_cab_depth_write_for_alpha(AlphaMode::Blend, 1));
+    }
+
+    #[test]
+    fn opaque_cab_depth_write_implies_back_face_cull_policy() {
+        // Policy for specialize(): opaque/mask → Back cull; blend overlays → none (#166/#167).
+        assert!(or_cab_depth_write_for_alpha(AlphaMode::Opaque, 0));
         assert!(!or_cab_depth_write_for_alpha(AlphaMode::Blend, 1));
     }
 

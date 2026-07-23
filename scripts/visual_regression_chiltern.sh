@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Visual regression Chiltern Birmingham — exterior + cabina (#71).
+# Visual regression Chiltern Birmingham — exterior + cab multi-view (#71 / #170).
 #
-# Captures two fixed views against baseline openrailsrs goldens (or regenerates
+# Captures fixed views against baseline openrailsrs goldens (or regenerates
 # them). Optional OR side-by-side: place cabina.png / desdeafuera.png under
 # docs/fixtures/visual/or_reference/ for manual checklist (not CI).
 #
@@ -9,12 +9,18 @@
 #   ./scripts/visual_regression_chiltern.sh
 #   UPDATE_GOLDEN=1 ./scripts/visual_regression_chiltern.sh
 #
+# Clean capture env (recommended for goldens):
+#   env -i HOME="$HOME" USER="$USER" PATH="$PATH" DISPLAY="${DISPLAY:-}" \
+#     WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" \
+#     OPENRAILSRS_MSTS_CONTENT="$OPENRAILSRS_MSTS_CONTENT" \
+#     ./scripts/visual_regression_chiltern.sh
+#
 # Requires:
 #   OPENRAILSRS_MSTS_CONTENT → Chiltern route on disk
 #   GPU / xvfb for capture (same as visual_regression_smoke.sh)
 #
 # Exit codes:
-#   0 — both views within thresholds (or goldens updated)
+#   0 — all views within thresholds (or goldens updated)
 #   1 — capture/compare failed
 #   2 — Chiltern content missing
 #   3 — screenshot not written (GPU/env)
@@ -95,7 +101,7 @@ capture_view() {
   )
 }
 
-echo "=== visual regression Chiltern (#71) ==="
+echo "=== visual regression Chiltern (#71 / #170 cab slice) ==="
 echo "route:    $CHILTERN_ROUTE"
 echo "scenario: $SCENARIO"
 echo "out:      $OUT_DIR"
@@ -109,10 +115,27 @@ capture_view "birmingham_exterior" \
   "OPENRAILSRS_CAM_PITCH=-0.28" \
   "OPENRAILSRS_CAM_DIST=220"
 
-# Cabina: first-person driver view (cab mesh + CVF).
+# Cabina: first-person driver views (cab mesh + CVF). LOOK_* in radians (#170).
 capture_view "birmingham_cabina" \
-  "OPENRAILSRS_FOLLOW=driver"
+  "OPENRAILSRS_FOLLOW=driver" \
+  "OPENRAILSRS_LOOK_YAW=0" \
+  "OPENRAILSRS_LOOK_PITCH=0"
 
-echo "OK — Chiltern exterior + cabina within thresholds (tol=$TOL, max hot %=$MAX_HOT_PCT)"
+capture_view "birmingham_cabina_up" \
+  "OPENRAILSRS_FOLLOW=driver" \
+  "OPENRAILSRS_LOOK_YAW=0" \
+  "OPENRAILSRS_LOOK_PITCH=0.55"
+
+capture_view "birmingham_cabina_left" \
+  "OPENRAILSRS_FOLLOW=driver" \
+  "OPENRAILSRS_LOOK_YAW=0.7" \
+  "OPENRAILSRS_LOOK_PITCH=0"
+
+capture_view "birmingham_cabina_right" \
+  "OPENRAILSRS_FOLLOW=driver" \
+  "OPENRAILSRS_LOOK_YAW=-0.7" \
+  "OPENRAILSRS_LOOK_PITCH=0"
+
+echo "OK — Chiltern exterior + cab multi-view within thresholds (tol=$TOL, max hot %=$MAX_HOT_PCT)"
 echo "OR reference (manual): docs/fixtures/visual/or_reference/{desdeafuera,cabina}.png"
 exit 0
