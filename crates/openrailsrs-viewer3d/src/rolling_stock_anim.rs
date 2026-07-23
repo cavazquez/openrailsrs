@@ -143,11 +143,12 @@ pub fn update_consist_car_track_poses(
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
-    parents: Query<
-        &Transform,
-        Or<(With<LiveTrainMarker>, With<TrainMarker>)>,
+    parents: Query<&Transform, Or<(With<LiveTrainMarker>, With<TrainMarker>)>>,
+    // Disjoint from `parents`: lead may be LiveTrainMarker without TrainMarker (Bevy B0001).
+    mut cars: Query<
+        (&TrainCarTrackOffset, &ChildOf, &mut Transform),
+        (Without<TrainMarker>, Without<LiveTrainMarker>),
     >,
-    mut cars: Query<(&TrainCarTrackOffset, &ChildOf, &mut Transform), Without<TrainMarker>>,
 ) {
     let live_ref = live.as_deref();
     let replay_ref = replay.as_deref();

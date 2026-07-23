@@ -253,6 +253,7 @@ pub fn control_has_animated_3d_lever(runtime: &CabCvfRuntime, control: &ControlT
         MatrixDriver::Lever {
             control: lever,
             anim_node,
+            ..
         } if cab_cvf::types_match(lever, control) => {
             lever_has_authored_animation(&runtime.shape, *anim_node)
         }
@@ -1157,6 +1158,7 @@ mod tests {
             8,
             MatrixDriver::Lever {
                 control: ControlType::Throttle,
+                order: 0,
                 anim_node: None,
             },
         );
@@ -1193,6 +1195,7 @@ mod tests {
             0,
             MatrixDriver::Lever {
                 control: ControlType::Throttle,
+                order: 0,
                 anim_node: Some(0),
             },
         );

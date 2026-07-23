@@ -55,11 +55,16 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | CI | job `visual-smoke` (xvfb + lavapipe) | local (necesita Content) |
 
 ```bash
+export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
 UPDATE_GOLDEN=1 ./scripts/visual_regression_smoke.sh
-# Diff: cargo run -p openrailsrs-viewer3d --bin openrailsrs-visual-diff -- actual.png golden.png
+UPDATE_GOLDEN=1 ./scripts/visual_regression_chiltern.sh   # exterior + cabina Birmingham
+./scripts/visual_regression_chiltern.sh                     # compara vs goldens
+# Diff suelto: cargo run -p openrailsrs-viewer3d --bin openrailsrs-visual-diff -- actual.png golden.png
 ```
 
-Inyección (escala/sink): tests en `visual_diff_core`.
+Inyección (escala×1.5 / sink ~5 m): tests en `visual_diff_core` (`scale_train_1_5x_fails_diff`, `sink_train_5m_equivalent_fails_diff`).
+
+OR lado a lado (manual): `docs/fixtures/visual/or_reference/{desdeafuera,cabina}.png`.
 
 ## Coords / audit
 

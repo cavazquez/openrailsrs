@@ -42,15 +42,48 @@ pub struct CabCvfRuntime {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MatrixDriver {
+    /// Shape-animated lever (`THROTTLE:0:0`, …).
     Lever {
         control: ControlType,
+        /// Nth CVF control of this type (OR `TYPE:Order`).
+        order: u32,
         anim_node: Option<usize>,
     },
+    /// OR `AnimatedPartMultiState` — dial needles / POINTER gauges / discrete parts.
     MultiState {
         control: ControlType,
-        state_index: u32,
+        order: u32,
+        /// Matrix `param1` (often 0; POINTER sub-index for `TRAIN_BRAKE:0:0` / `:0:1`).
+        param1: u32,
         sub_part: u32,
+        anim_node: Option<usize>,
     },
+    /// OR `ThreeDimCabGaugeNative` — solid colour quad (width×length mm).
+    GaugeNative {
+        control: ControlType,
+        order: u32,
+        width_mm: f32,
+        length_mm: f32,
+    },
+    /// OR `ThreeDimCabDigit` — ACE font digits at the matrix pivot.
+    Digit {
+        control: ControlType,
+        order: u32,
+        /// Font height in mm (`SPEEDOMETER:1:14`).
+        height_mm: f32,
+        /// Optional custom font ACE stem (`CLOCK:1:15:CLOCKS` → `CLOCKS`).
+        font_ace: Option<String>,
+    },
+}
+
+/// Parsed `TYPE:Order[:P1[:P2]][-PartN]` matrix name (OR `ThreeDimentionCabViewer`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct MatrixControlName {
+    pub control: ControlType,
+    pub order: u32,
+    pub param1: String,
+    pub param2: String,
+    pub sub_part: u32,
 }
 
 /// Marks a cab mesh part driven by a shape matrix index.
@@ -67,11 +100,10 @@ pub struct CabCvfPart {
 pub fn build_cab_cvf_runtime(cvf: CabViewFile, shape: ShapeFile) -> CabCvfRuntime {
     let mut matrix_drivers = HashMap::new();
     for (idx, matrix) in shape.matrices.iter().enumerate() {
-        if let Some(driver) = matrix_driver_from_name(&matrix.name, &shape, idx) {
+        if let Some(driver) = matrix_driver_from_name(&matrix.name, &shape, idx, &cvf) {
             matrix_drivers.insert(idx, driver);
         }
     }
-    let _ = &cvf; // CVF validates control types exist; matrix names are authoritative for 3D.
     CabCvfRuntime {
         cvf,
         shape,
@@ -79,24 +111,60 @@ pub fn build_cab_cvf_runtime(cvf: CabViewFile, shape: ShapeFile) -> CabCvfRuntim
     }
 }
 
-fn matrix_driver_from_name(
-    name: &str,
-    shape: &ShapeFile,
-    matrix_idx: usize,
-) -> Option<MatrixDriver> {
+/// Parse OR matrix naming `TYPE:Order[:P1[:P2]][-PartN]`.
+pub fn parse_matrix_control_name(name: &str) -> Option<MatrixControlName> {
     let head = name.split('-').next()?.trim();
     let parts: Vec<&str> = head.split(':').collect();
     if parts.len() < 2 {
         return None;
     }
     let control = control_type_from_matrix_prefix(parts[0].trim())?;
+    let order: u32 = parts[1].trim().parse().ok()?;
+    let param1 = parts.get(2).map(|s| s.trim().to_string()).unwrap_or_default();
+    let param2 = parts.get(3).map(|s| s.trim().to_string()).unwrap_or_default();
     let sub_part = name
         .split('-')
         .nth(1)
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
-    let state_index = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);
+    Some(MatrixControlName {
+        control,
+        order,
+        param1,
+        param2,
+        sub_part,
+    })
+}
 
+/// Nth CVF control matching `control` (OR `ControlMap` key order).
+pub fn cvf_control_at_order<'a>(
+    cvf: &'a CabViewFile,
+    control: &ControlType,
+    order: u32,
+) -> Option<&'a CabControl> {
+    let mut seen = 0u32;
+    for cab in &cvf.controls {
+        let Some(ct) = cab.control_type() else {
+            continue;
+        };
+        if !types_match(ct, control) {
+            continue;
+        }
+        if seen == order {
+            return Some(cab);
+        }
+        seen += 1;
+    }
+    None
+}
+
+fn matrix_driver_from_name(
+    name: &str,
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    cvf: &CabViewFile,
+) -> Option<MatrixDriver> {
+    let parsed = parse_matrix_control_name(name)?;
     let anim_node = shape.animations.first().and_then(|anim| {
         if matrix_idx < anim.nodes.len() && !anim.nodes[matrix_idx].controllers.is_empty() {
             Some(matrix_idx)
@@ -107,14 +175,43 @@ fn matrix_driver_from_name(
         }
     });
 
-    if control_is_lever(&control) {
-        Some(MatrixDriver::Lever { control, anim_node })
-    } else {
-        Some(MatrixDriver::MultiState {
-            control,
-            state_index,
-            sub_part,
-        })
+    let style = cvf_control_at_order(cvf, &parsed.control, parsed.order);
+    match style {
+        Some(CabControl::Digital { .. }) => {
+            let height_mm = parsed.param1.parse().unwrap_or(14.0);
+            let font_ace = if parsed.param2.is_empty() {
+                None
+            } else {
+                Some(parsed.param2.clone())
+            };
+            Some(MatrixDriver::Digit {
+                control: parsed.control,
+                order: parsed.order,
+                height_mm,
+                font_ace,
+            })
+        }
+        Some(CabControl::Unknown { kind }) if kind.eq_ignore_ascii_case("GAUGE") => {
+            // formats::CabControl::Gauge TBD; non-POINTER → solid native (OR default).
+            Some(MatrixDriver::GaugeNative {
+                control: parsed.control,
+                order: parsed.order,
+                width_mm: parsed.param1.parse().unwrap_or(10.0),
+                length_mm: parsed.param2.parse().unwrap_or(100.0),
+            })
+        }
+        _ if control_is_lever(&parsed.control) => Some(MatrixDriver::Lever {
+            control: parsed.control,
+            order: parsed.order,
+            anim_node,
+        }),
+        _ => Some(MatrixDriver::MultiState {
+            control: parsed.control,
+            order: parsed.order,
+            param1: parsed.param1.parse().unwrap_or(0),
+            sub_part: parsed.sub_part,
+            anim_node,
+        }),
     }
 }
 
@@ -413,7 +510,11 @@ pub fn update_cab_cvf_controls(
             continue;
         };
         match driver {
-            MatrixDriver::Lever { control, anim_node } => {
+            MatrixDriver::Lever {
+                control,
+                anim_node,
+                ..
+            } => {
                 *visibility = Visibility::Visible;
                 let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
                 if !has_anim {
@@ -445,10 +546,89 @@ pub fn update_cab_cvf_controls(
                     lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
                 };
             }
-            MatrixDriver::MultiState { .. } => {
-                // Gauges, horn and wipers: CVF 2D overlay (`cab_cvf_overlay`), not 3D mesh.
+            MatrixDriver::MultiState {
+                control,
+                order,
+                anim_node,
+                ..
+            } => {
+                *visibility = Visibility::Visible;
+                let value = multi_state_normalized_value(&runtime.cvf, control, *order, &tel);
+                if lever_has_authored_animation(&runtime.shape, *anim_node) {
+                    let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
+                    let key = cvf_state
+                        .lever_keys
+                        .entry(part.matrix_idx)
+                        .and_modify(|current| *current += (target_key - *current) * smooth)
+                        .or_insert(target_key);
+                    let pose_mats = animation_pose_matrices(&runtime.shape, *key);
+                    *transform = if let Some(center) = part.pivot_at_mesh {
+                        lever_entity_transform_at_mesh_center(
+                            &runtime.shape,
+                            part.matrix_idx,
+                            center,
+                            &pose_mats,
+                        )
+                    } else {
+                        lever_entity_transform_rebased(
+                            &runtime.shape,
+                            part.matrix_idx,
+                            &pose_mats,
+                        )
+                    };
+                } else if let Some(CabControl::Dial { dial, .. }) =
+                    cvf_control_at_order(&runtime.cvf, control, *order)
+                {
+                    // Needle rotation when the shape has no anim controllers (OR MultiState
+                    // still drives dials via GetRangeFraction when frames exist).
+                    let reading = dial_control_value(control, dial, &tel);
+                    let angle = dial.rotation_radians(reading);
+                    let mut base = static_lever_transform(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        part.pivot_at_mesh,
+                    );
+                    let axis = part.local_spin_axis.unwrap_or(Vec3::NEG_Z);
+                    base.rotation *= Quat::from_axis_angle(axis, angle);
+                    *transform = base;
+                } else {
+                    *transform = static_lever_transform(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        part.pivot_at_mesh,
+                    );
+                }
+            }
+            MatrixDriver::GaugeNative { .. } | MatrixDriver::Digit { .. } => {
+                // Quads spawned by cab native instruments (#157 follow-up); matrix pivot only.
             }
         }
+    }
+}
+
+fn multi_state_normalized_value(
+    cvf: &CabViewFile,
+    control: &ControlType,
+    order: u32,
+    tel: &CabTelemetry,
+) -> f64 {
+    match cvf_control_at_order(cvf, control, order) {
+        Some(CabControl::Dial { dial, .. }) => dial.range_fraction(dial_control_value(control, dial, tel)),
+        Some(CabControl::Digital { digital, .. }) => {
+            let v = digital_control_value(control, digital, tel);
+            if (digital.scale_max - digital.scale_min).abs() < f64::EPSILON {
+                0.0
+            } else {
+                ((v - digital.scale_min) / (digital.scale_max - digital.scale_min)).clamp(0.0, 1.0)
+            }
+        }
+        Some(CabControl::MultiStateDisplay { .. }) => {
+            let v = control_value(control, tel);
+            let idx = pick_multi_state_index(cvf, control, v);
+            // Approximate frame fraction from discrete index.
+            (idx as f64 / 7.0).clamp(0.0, 1.0)
+        }
+        _ => control_value(control, tel),
     }
 }
 
@@ -528,17 +708,113 @@ mod tests {
         assert!((mph - 50.0 * 0.621_371).abs() < 1e-3);
     }
 
+    fn empty_rect() -> openrailsrs_formats::ScreenRect {
+        openrailsrs_formats::ScreenRect {
+            x: 0.0,
+            y: 0.0,
+            width: 1.0,
+            height: 1.0,
+        }
+    }
+
     #[test]
     fn matrix_driver_parses_or_throttle_name() {
         let shape = ShapeFile::default();
-        let driver = matrix_driver_from_name("THROTTLE:0:0", &shape, 8).expect("driver");
+        let cvf = CabViewFile {
+            cab_view_type: None,
+            views: vec![],
+            controls: vec![],
+        };
+        let driver = matrix_driver_from_name("THROTTLE:0:0", &shape, 8, &cvf).expect("driver");
         assert!(matches!(
             driver,
             MatrixDriver::Lever {
                 control: ControlType::Throttle,
+                order: 0,
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn parse_matrix_control_name_type_order_params_and_subpart() {
+        let p = parse_matrix_control_name("SPEEDOMETER:1:14").expect("parse");
+        assert_eq!(p.control, ControlType::Speedometer);
+        assert_eq!(p.order, 1);
+        assert_eq!(p.param1, "14");
+        assert!(p.param2.is_empty());
+        assert_eq!(p.sub_part, 0);
+
+        let g = parse_matrix_control_name("AMMETER:1:10:100").expect("gauge");
+        assert_eq!(g.param1, "10");
+        assert_eq!(g.param2, "100");
+
+        let brake = parse_matrix_control_name("TRAIN_BRAKE:0:0-1").expect("sub");
+        assert_eq!(brake.order, 0);
+        assert_eq!(brake.sub_part, 1);
+    }
+
+    #[test]
+    fn matrix_driver_digital_cvf_becomes_digit() {
+        let shape = ShapeFile::default();
+        let cvf = CabViewFile {
+            cab_view_type: None,
+            views: vec![],
+            controls: vec![CabControl::Digital {
+                control_type: ControlType::Speedometer,
+                position: empty_rect(),
+                digital: Default::default(),
+            }],
+        };
+        let driver =
+            matrix_driver_from_name("SPEEDOMETER:0:14", &shape, 3, &cvf).expect("digit driver");
+        assert_eq!(
+            driver,
+            MatrixDriver::Digit {
+                control: ControlType::Speedometer,
+                order: 0,
+                height_mm: 14.0,
+                font_ace: None,
+            }
+        );
+    }
+
+    #[test]
+    fn cvf_control_at_order_skips_other_types() {
+        let cvf = CabViewFile {
+            cab_view_type: None,
+            views: vec![],
+            controls: vec![
+                CabControl::Dial {
+                    control_type: ControlType::Ammeter,
+                    position: empty_rect(),
+                    graphic: String::new(),
+                    dial: Default::default(),
+                },
+                CabControl::Dial {
+                    control_type: ControlType::Speedometer,
+                    position: empty_rect(),
+                    graphic: String::new(),
+                    dial: Default::default(),
+                },
+                CabControl::Dial {
+                    control_type: ControlType::Speedometer,
+                    position: openrailsrs_formats::ScreenRect {
+                        x: 1.0,
+                        y: 0.0,
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                    graphic: "b.ace".into(),
+                    dial: Default::default(),
+                },
+            ],
+        };
+        let second = cvf_control_at_order(&cvf, &ControlType::Speedometer, 1).expect("order 1");
+        match second {
+            CabControl::Dial { graphic, .. } => assert_eq!(graphic, "b.ace"),
+            other => panic!("expected Dial, got {other:?}"),
+        }
     }
 
     #[test]

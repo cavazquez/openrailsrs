@@ -388,14 +388,21 @@ impl CabViewFile {
 }
 
 fn control_type(control: &CabControl) -> Option<&ControlType> {
-    match control {
-        CabControl::MultiStateDisplay { control_type, .. }
-        | CabControl::Dial { control_type, .. }
-        | CabControl::Digital { control_type, .. }
-        | CabControl::TwoStateDisplay { control_type, .. }
-        | CabControl::TriStateDisplay { control_type, .. } => Some(control_type),
-        CabControl::Lever { control_type, .. } => Some(control_type),
-        CabControl::Unknown { .. } => None,
+    control.control_type()
+}
+
+impl CabControl {
+    /// Control type token when this entry is a typed instrument/lever.
+    pub fn control_type(&self) -> Option<&ControlType> {
+        match self {
+            CabControl::MultiStateDisplay { control_type, .. }
+            | CabControl::Dial { control_type, .. }
+            | CabControl::Digital { control_type, .. }
+            | CabControl::TwoStateDisplay { control_type, .. }
+            | CabControl::TriStateDisplay { control_type, .. }
+            | CabControl::Lever { control_type, .. } => Some(control_type),
+            CabControl::Unknown { .. } => None,
+        }
     }
 }
 
