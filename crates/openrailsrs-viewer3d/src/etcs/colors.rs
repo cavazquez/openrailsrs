@@ -13,3 +13,5 @@ pub const WHITE: Rgba = [255, 255, 255, 255];
 pub const BLACK: Rgba = [0, 0, 0, 255];
 pub const PANEL: Rgba = [8, 28, 48, 255];
 pub const FRAME: Rgba = [80, 100, 120, 255];
+/// OR `ColorDarkGrey` — TTI CSM background.
+pub const DARK_GREY: Rgba = [47, 47, 47, 255];

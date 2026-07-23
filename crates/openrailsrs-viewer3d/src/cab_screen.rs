@@ -1,4 +1,4 @@
-//! OR `ThreeDimCabScreen` / ETCS DMI stub (#158).
+//! OR `ThreeDimCabScreen` / ETCS DMI (#158/#159/#160).
 //!
 //! Matches a cab interior prim whose ACE basename contains the CVF `ScreenDisplay`
 //! Graphic, then replaces its texture with a CPU-updated 640×480 RGBA buffer.
@@ -138,7 +138,7 @@ pub fn try_attach_screen_to_part(
     false
 }
 
-/// Paint full DMI each frame (#159).
+/// Paint full DMI each frame (#159/#160).
 pub fn update_cab_screens(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,

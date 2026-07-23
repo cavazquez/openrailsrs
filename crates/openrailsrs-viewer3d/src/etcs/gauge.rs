@@ -2,7 +2,7 @@
 
 use super::colors::{self, Rgba};
 use super::paint::{blit_digit3x5, fill_rect, stroke_circle, stroke_line};
-use super::status::EtcsStatus;
+use super::status::{EtcsMonitor, EtcsStatus, EtcsSupervision};
 
 /// Local rect: OR place at (54, 15), size 280×300.
 pub const GAUGE_W: i32 = 280;
@@ -85,16 +85,15 @@ pub fn paint_circular_gauge(
         speed += 10;
     }
 
-    // Gauge arcs: target→allowed (yellow/white), allowed→intervention (orange/red).
+    // Gauge arcs: target→allowed (yellow in TSM/RSM, white in CSM), then warn arc.
     let allowed = status.allowed_kmh as f32;
     let target = status
         .target_kmh
         .unwrap_or(status.allowed_kmh) as f32;
     let intervention = status.intervention_kmh as f32;
-    let gauge_color = if status.target_kmh.is_some_and(|t| t + 0.5 < status.allowed_kmh) {
-        colors::YELLOW
-    } else {
-        colors::WHITE
+    let gauge_color = match status.monitor {
+        EtcsMonitor::TargetSpeed | EtcsMonitor::ReleaseSpeed => colors::YELLOW,
+        EtcsMonitor::CeilingSpeed => colors::WHITE,
     };
     let a0 = speed2angle(target.min(allowed), max);
     let a1 = speed2angle(allowed, max);
@@ -111,12 +110,17 @@ pub fn paint_circular_gauge(
         6.0,
         gauge_color,
     );
-    let warn = if status.overspeed {
+    let warn = if status.supervision == EtcsSupervision::Intervention {
         colors::RED
     } else {
         colors::ORANGE
     };
-    if intervention > allowed + 0.5 {
+    // OR hides the orange/red arc while supervision is Normal.
+    let show_warn_arc = matches!(
+        status.supervision,
+        EtcsSupervision::Overspeed | EtcsSupervision::Warning | EtcsSupervision::Intervention
+    ) || status.overspeed;
+    if show_warn_arc && intervention > allowed + 0.5 {
         stroke_arc(
             rgba,
             stride_w,
@@ -225,20 +229,23 @@ pub fn paint_circular_gauge(
     }
 }
 
+/// Needle colours follow OR FS mode + `SupervisionStatus` / `Monitor`.
 fn needle_color(status: &EtcsStatus) -> Rgba {
-    if status.overspeed || status.speed_kmh > status.allowed_kmh {
-        if status.speed_kmh > status.intervention_kmh {
-            colors::RED
-        } else {
-            colors::ORANGE
-        }
-    } else if status
-        .target_kmh
-        .is_some_and(|t| status.speed_kmh + 0.5 >= t && t + 0.5 < status.allowed_kmh)
-    {
-        colors::YELLOW
-    } else {
-        colors::GREY
+    match status.supervision {
+        EtcsSupervision::Intervention => colors::RED,
+        EtcsSupervision::Warning | EtcsSupervision::Overspeed => colors::ORANGE,
+        EtcsSupervision::Indication => colors::YELLOW,
+        EtcsSupervision::Normal => match status.monitor {
+            EtcsMonitor::TargetSpeed | EtcsMonitor::ReleaseSpeed => {
+                let target = status.target_kmh.unwrap_or(status.allowed_kmh);
+                if status.speed_kmh + 0.5 >= target && target + 0.5 < status.allowed_kmh {
+                    colors::WHITE
+                } else {
+                    colors::GREY
+                }
+            }
+            EtcsMonitor::CeilingSpeed => colors::GREY,
+        },
     }
 }
 

@@ -3,6 +3,7 @@
 use super::colors;
 use super::paint::{blit_digit3x5, fill_rect, stroke_line};
 use super::status::EtcsStatus;
+use super::symbols::EtcsSymbols;
 
 pub const PLAN_W: i32 = 246;
 pub const PLAN_H: i32 = 300;
@@ -17,6 +18,7 @@ pub fn paint_planning(
     origin_x: i32,
     origin_y: i32,
     status: &EtcsStatus,
+    symbols: &EtcsSymbols,
 ) {
     fill_rect(
         rgba,
@@ -80,7 +82,7 @@ pub fn paint_planning(
         }
     }
 
-    // Target marker
+    // Target marker + PL_ speed change symbol
     if let (Some(td), Some(ts)) = (status.target_distance_m, status.target_kmh) {
         let y = dist_to_y(td.min(4000.0), origin_y);
         stroke_line(
@@ -93,6 +95,9 @@ pub fn paint_planning(
             y,
             colors::YELLOW,
         );
+        if let Some(tex) = status.planning_symbol.texture() {
+            let _ = symbols.blit(rgba, stride_w, stride_h, origin_x + 44, y - 18, tex);
+        }
         let txt = format!("{:.0}", ts);
         let mut tx = origin_x + PLAN_W - 50;
         for ch in txt.chars() {
