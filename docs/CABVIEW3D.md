@@ -11,7 +11,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Shader `or_cab` (TexDiff) | ✅ |
 | Cámara `ORTS3DCabHeadPos` | ✅ |
 | Ocultar exterior en L1 | ✅ |
-| CVF palancas (thr/brk/rev) | 🔶 parcial |
+| CVF overlay 2D en cabina 3D | ❌ off (#151; vista 2D: #152) |
 | Panel HUD | ✅ |
 
 ## Matrices CVF (Pullman)
@@ -29,7 +29,10 @@ Detalle de bindings: `cab_cvf.rs` + tests Pullman. Debug: `OPENRAILSRS_CAB_DEBUG
 | Variable | Default | Efecto |
 |----------|---------|--------|
 | `OPENRAILSRS_CAB_ALBEDO` | `1.0` | Tint |
-| `OPENRAILSRS_CAB_SUN` | off | Sol en TexDiff |
+| `OPENRAILSRS_CAB_SUN` | on | Sol/ambiente OR en TexDiff (`0` apaga) |
+| `OPENRAILSRS_CAB_OR_LIKE` | off | Brillo fijo legacy (debug) |
+| `OPENRAILSRS_CAB_MIN_BRIGHT` | `0` | Piso de brillo opcional |
+| `OPENRAILSRS_CAB_CVF_OVERLAY` | off | Overlay ACE 2D en cabina 3D (debug; #151) |
 | `OPENRAILSRS_CAB_BRIGHTEN` | off | Levantar ACE oscuros |
 | `OPENRAILSRS_FOLLOW` | — | `driver`/`cab` fuerza DriverCam (capturas) |
 

@@ -1,8 +1,8 @@
-//! CVF 2D control sprites in driver view (Open Rails `CabRenderer` analogue).
+//! CVF 2D control sprites for a future Open Rails–style 2D `Cab` view (#152).
 //!
-//! Pullman and similar cabs without shape `animations` draw gauges **and levers**
-//! from `.cvf` ACE sprites (#148/#150). 3D lever meshes animate only when the
-//! shape exposes authored controllers (#147).
+//! **Not used on 3D cab (`DriverCam`)** — Open Rails never composites CVF ACE
+//! sprites onto `ThreeDimCab` (#151). Lever/gauge ACE frame helpers stay here
+//! for the 2D path; 3D lever meshes animate only with authored controllers (#147).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -26,6 +26,15 @@ use crate::viewer_log;
 
 const OVERLAY_PANEL_WIDTH_PX: f32 = 480.0;
 const OVERLAY_BOTTOM_PX: f32 = 300.0;
+
+/// Open Rails never draws CVF ACE sprites in `ThreeDimCab` (#151).
+/// Opt-in only for debugging until the 2D `Cab` view lands (#152).
+fn cvf_overlay_in_3d_cab_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAB_CVF_OVERLAY").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    )
+}
 
 #[derive(Resource, Default, Debug)]
 pub struct CabCvfOverlayState {
@@ -148,6 +157,15 @@ pub(crate) fn sync_cab_cvf_overlay(
     mut images: ResMut<Assets<Image>>,
     roots: Query<Entity, With<CabCvfOverlayRoot>>,
 ) {
+    if !cvf_overlay_in_3d_cab_enabled() {
+        for entity in roots.iter() {
+            commands.entity(entity).despawn();
+        }
+        overlay_state.spawned_cvf = None;
+        overlay_state.image_cache.clear();
+        return;
+    }
+
     let in_cab = *follow == CameraFollowMode::DriverCam;
     let Some(runtime) = cvf_state.runtime.as_ref() else {
         for entity in roots.iter() {
@@ -537,6 +555,14 @@ mod tests {
     use super::*;
     use openrailsrs_formats::{AnimController, AnimNode, Animation, ShapeFile};
     use std::path::PathBuf;
+
+    #[test]
+    fn cvf_overlay_disabled_by_default_in_3d_cab() {
+        unsafe {
+            std::env::remove_var("OPENRAILSRS_CAB_CVF_OVERLAY");
+        }
+        assert!(!cvf_overlay_in_3d_cab_enabled());
+    }
 
     #[test]
     fn reference_panel_size_uses_cabview_window() {

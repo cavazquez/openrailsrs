@@ -50,18 +50,24 @@ pub const OR_CAB_SHADER_PATH: &str = "shaders/or_cab.wgsl";
 
 const OR_FLAG_LIT: f32 = 1.0;
 const OR_FLAG_BLEND: f32 = 2.0;
-/// Fixed OR `PSImage`/`PSHalfBright`/`PSDarkShade` brightness without outdoor sun (default cab).
+/// Legacy fixed brightness without outdoor sun — opt-in via `OPENRAILSRS_CAB_OR_LIKE=1`.
 pub const OR_FLAG_OR_LIKE: f32 = 4.0;
 
-/// Outdoor directional sun on cab TexDiff (`OPENRAILSRS_CAB_SUN=1`).
+/// Outdoor directional sun on cab TexDiff — default ON for OR SceneryShader parity (#153).
+/// Set `OPENRAILSRS_CAB_SUN=0` to disable.
 pub fn cab_interior_sun_enabled() -> bool {
-    matches!(
-        std::env::var("OPENRAILSRS_CAB_SUN").ok().as_deref(),
-        Some("1") | Some("true") | Some("on")
-    )
+    match std::env::var("OPENRAILSRS_CAB_SUN")
+        .ok()
+        .as_deref()
+        .map(str::trim)
+    {
+        Some("0") | Some("false") | Some("off") => false,
+        Some("1") | Some("true") | Some("on") => true,
+        _ => !cab_or_like_enabled() && !cab_interior_raw_flat_enabled(),
+    }
 }
 
-/// Legacy flat albedo (`OPENRAILSRS_CAB_RAW=1`) — pre-OR-like debugging only.
+/// Legacy flat albedo (`OPENRAILSRS_CAB_RAW=1`) — debugging only.
 pub fn cab_interior_raw_flat_enabled() -> bool {
     matches!(
         std::env::var("OPENRAILSRS_CAB_RAW").ok().as_deref(),
@@ -69,15 +75,18 @@ pub fn cab_interior_raw_flat_enabled() -> bool {
     )
 }
 
+/// Legacy fixed ambient mix (`OPENRAILSRS_CAB_OR_LIKE=1`) — debugging only (#153).
+pub fn cab_or_like_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_CAB_OR_LIKE").ok().as_deref(),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
+/// No invented brightness floor; OR SceneryShader has none (#153).
+/// Optional lift via `OPENRAILSRS_CAB_MIN_BRIGHT`.
 fn cab_min_brightness_default() -> f32 {
-    if cab_interior_sun_enabled() {
-        0.72
-    } else if cab_interior_raw_flat_enabled() {
-        0.0
-    } else {
-        // Dark MSTS cab atlases (luma < 32): OR PSImage floor is not enough alone.
-        0.25
-    }
+    0.0
 }
 
 #[derive(Clone, Copy, Debug, Default, ShaderType)]
@@ -116,12 +125,14 @@ pub fn reference_alpha_from_mode(alpha_mode: AlphaMode) -> f32 {
 }
 
 fn cab_material_flags() -> f32 {
-    if cab_interior_sun_enabled() {
-        OR_FLAG_LIT
-    } else if cab_interior_raw_flat_enabled() {
+    if cab_interior_raw_flat_enabled() {
         0.0
-    } else {
+    } else if cab_or_like_enabled() {
         OR_FLAG_OR_LIKE
+    } else if cab_interior_sun_enabled() {
+        OR_FLAG_LIT
+    } else {
+        0.0
     }
 }
 
@@ -233,24 +244,36 @@ mod tests {
         unsafe {
             std::env::remove_var("OPENRAILSRS_CAB_SUN");
             std::env::remove_var("OPENRAILSRS_CAB_RAW");
+            std::env::remove_var("OPENRAILSRS_CAB_OR_LIKE");
             std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
         let default = build_or_cab_params(OrShaderKind::TexDiff, OR_OPAQUE_REFERENCE_ALPHA);
-        assert_eq!(default.flags, OR_FLAG_OR_LIKE);
-        assert!((default.cab_min_brightness - 0.25).abs() < 1e-3);
+        assert_eq!(default.flags, OR_FLAG_LIT);
+        assert!(default.cab_min_brightness.abs() < 1e-3);
 
         unsafe {
-            std::env::set_var("OPENRAILSRS_CAB_SUN", "1");
+            std::env::set_var("OPENRAILSRS_CAB_OR_LIKE", "1");
+            std::env::remove_var("OPENRAILSRS_CAB_SUN");
             std::env::remove_var("OPENRAILSRS_CAB_RAW");
             std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
-        let sun = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
-        assert_eq!(sun.flags, OR_FLAG_LIT);
-        assert!((sun.cab_min_brightness - 0.72).abs() < 1e-3);
+        let or_like = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(or_like.flags, OR_FLAG_OR_LIKE);
+        assert!(or_like.cab_min_brightness.abs() < 1e-3);
+
+        unsafe {
+            std::env::set_var("OPENRAILSRS_CAB_SUN", "0");
+            std::env::remove_var("OPENRAILSRS_CAB_OR_LIKE");
+            std::env::remove_var("OPENRAILSRS_CAB_RAW");
+            std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
+        }
+        let sun_off = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
+        assert_eq!(sun_off.flags, 0.0);
 
         unsafe {
             std::env::remove_var("OPENRAILSRS_CAB_SUN");
             std::env::set_var("OPENRAILSRS_CAB_RAW", "1");
+            std::env::remove_var("OPENRAILSRS_CAB_OR_LIKE");
             std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
         let raw = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
@@ -259,6 +282,7 @@ mod tests {
         unsafe {
             std::env::remove_var("OPENRAILSRS_CAB_SUN");
             std::env::remove_var("OPENRAILSRS_CAB_RAW");
+            std::env::remove_var("OPENRAILSRS_CAB_OR_LIKE");
             std::env::remove_var("OPENRAILSRS_CAB_MIN_BRIGHT");
         }
     }

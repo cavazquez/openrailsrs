@@ -30,6 +30,7 @@ const OR_KIND_DARK_SHADE: f32 = 3.0;
 const OR_KIND_FULL_BRIGHT: f32 = 4.0;
 const OR_FLAG_LIT: f32 = 1.0;
 const OR_FLAG_BLEND: f32 = 2.0;
+// Legacy fixed path (`OPENRAILSRS_CAB_OR_LIKE=1`); default cab uses sun (#153).
 const OR_FLAG_OR_LIKE: f32 = 4.0;
 
 const OR_LIKE_AMBIENT: f32 = 0.78;
