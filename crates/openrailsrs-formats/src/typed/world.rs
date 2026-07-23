@@ -599,6 +599,9 @@ fn select_better_world_ast(raw: &Ast, normalized: &Ast) -> Ast {
 /// S-expressions `( Name ... )`.  The generic parser expects the latter, so
 /// convert only symbol-prefix block openers while leaving existing canonical
 /// blocks, strings and scalar values untouched.
+///
+/// Must stay UTF-8 safe: Chiltern `FileName` values use `ß` (`groß.s`). Copying
+/// bytes with `b as char` double-encodes them and breaks shape lookup.
 fn normalize_world_text(source: &str) -> String {
     let mut out = String::with_capacity(source.len() + source.len() / 8);
     let bytes = source.as_bytes();
@@ -610,8 +613,8 @@ fn normalize_world_text(source: &str) -> String {
         let b = bytes[i];
         if b == b'"' {
             in_string = !in_string;
-            out.push(b as char);
-            prev_non_ws = Some(b);
+            out.push('"');
+            prev_non_ws = Some(b'"');
             i += 1;
             continue;
         }
@@ -620,7 +623,7 @@ fn normalize_world_text(source: &str) -> String {
             let start = i;
             i += 1;
             while i < bytes.len() && is_symbol_continue(bytes[i]) {
-                i += 1;
+                i += utf8_char_len(bytes[i]);
             }
             let end = i;
             let mut j = i;
@@ -642,14 +645,26 @@ fn normalize_world_text(source: &str) -> String {
             continue;
         }
 
-        out.push(b as char);
+        let len = utf8_char_len(b);
+        out.push_str(&source[i..i + len]);
         if !b.is_ascii_whitespace() {
             prev_non_ws = Some(b);
         }
-        i += 1;
+        i += len;
     }
 
     out
+}
+
+fn utf8_char_len(first: u8) -> usize {
+    match first {
+        0x00..=0x7F => 1,
+        0xC2..=0xDF => 2,
+        0xE0..=0xEF => 3,
+        0xF0..=0xF4 => 4,
+        // Continuation / invalid: advance one byte so we cannot stall.
+        _ => 1,
+    }
 }
 
 fn is_symbol_start(b: u8) -> bool {
@@ -657,7 +672,8 @@ fn is_symbol_start(b: u8) -> bool {
 }
 
 fn is_symbol_continue(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.')
+    // Non-ASCII (e.g. UTF-8 `ß` in `groß.s`) must stay inside the symbol span.
+    b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.') || b >= 0x80
 }
 
 fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
@@ -1812,6 +1828,129 @@ SIMISA@@@@@@@@@@JINX0w0t______
         assert_eq!(file_name.as_deref(), Some("yard.ace"));
         assert!((*width - 20.0).abs() < 1e-6);
         assert!((*height - 12.0).abs() < 1e-6);
+    }
+}
+
+#[cfg(test)]
+mod filename_lexer_tests {
+    use super::*;
+
+    #[test]
+    fn filename_keeps_digit_prefixed_shape_basename() {
+        // Chiltern Birmingham uses names like `50x150_building.s`. Splitting the
+        // leading digits turns FileName into `x150_building.s` → grey Static cubes.
+        let text = r#"
+SIMISA@@@@@@@@@@JINX0w0t______
+Tr_Worldfile (
+    Static (
+        UiD ( 1 )
+        FileName ( 50x150_building.s )
+        Position ( 0 0 0 )
+        QDirection ( 0 0 0 1 )
+    )
+    Static (
+        UiD ( 2 )
+        FileName ( 650vcabinet.s )
+        Position ( 1 0 0 )
+        QDirection ( 0 0 0 1 )
+    )
+)
+        "#;
+        let ast = load_world_ast(text).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        let names: Vec<_> = world.items.iter().filter_map(|i| i.file_name()).collect();
+        assert_eq!(names, ["50x150_building.s", "650vcabinet.s"]);
+    }
+
+    #[test]
+    fn filename_preserves_utf8_sharp_s_through_normalize() {
+        let text = r#"
+SIMISA@@@@@@@@@@JINX0w0t______
+Tr_Worldfile (
+    Static (
+        UiD ( 1 )
+        FileName ( mm_baum_gruppe_mischwald_groß.s )
+        Position ( 0 0 0 )
+        QDirection ( 0 0 0 1 )
+    )
+)
+        "#;
+        let ast = load_world_ast(text).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(
+            world.items[0].file_name(),
+            Some("mm_baum_gruppe_mischwald_groß.s")
+        );
+    }
+
+    #[test]
+    fn chiltern_birmingham_static_filenames_match_shapes_on_disk() {
+        let msts =
+            std::path::PathBuf::from(std::env::var("OPENRAILSRS_MSTS_CONTENT").unwrap_or_default());
+        let route = msts.join("Chiltern/ROUTES/Chiltern");
+        let tile = route.join("WORLD/w-006111+014955.w");
+        if !tile.is_file() {
+            eprintln!("skip: no Chiltern content");
+            return;
+        }
+        fn index_s(dir: &std::path::Path, out: &mut std::collections::HashSet<String>) {
+            let Ok(rd) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for e in rd.flatten() {
+                let path = e.path();
+                if path.is_dir() {
+                    index_s(&path, out);
+                    continue;
+                }
+                let name = e.file_name().to_string_lossy().to_ascii_lowercase();
+                if name.ends_with(".s") {
+                    out.insert(name);
+                }
+            }
+        }
+        let mut indexed = std::collections::HashSet::new();
+        index_s(&route, &mut indexed);
+        index_s(&msts.join("Chiltern/GLOBAL"), &mut indexed);
+        let world = WorldFile::from_path(&tile).expect("birmingham tile");
+        let mut missing = Vec::new();
+        let mut saw_digit_prefix = false;
+        let mut saw_sharp_s = false;
+        for item in &world.items {
+            let Some(fname) = item.file_name() else {
+                continue;
+            };
+            let base = fname
+                .replace('\\', "/")
+                .rsplit('/')
+                .next()
+                .unwrap_or(fname)
+                .to_ascii_lowercase();
+            if base.starts_with(|c: char| c.is_ascii_digit()) {
+                saw_digit_prefix = true;
+            }
+            if base.contains('ß') {
+                saw_sharp_s = true;
+            }
+            assert!(
+                !base.starts_with("x150_building")
+                    && !base.starts_with("vcabinet.")
+                    && !base.starts_with("mberm."),
+                "FileName looks truncated: {base}"
+            );
+            if base.ends_with(".s") && !indexed.contains(&base) {
+                missing.push(base);
+            }
+        }
+        assert!(
+            saw_digit_prefix,
+            "fixture tile should include digit-prefix .s"
+        );
+        assert!(saw_sharp_s, "fixture tile should include groß.s names");
+        assert!(
+            missing.is_empty(),
+            "unresolved Static FileName(s): {missing:?}"
+        );
     }
 }
 

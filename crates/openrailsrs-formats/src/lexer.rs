@@ -71,16 +71,87 @@ impl<'a> Lexer<'a> {
                 Ok(Some(Token::RParen))
             }
             Some(b'"') => Ok(Some(self.read_string()?)),
+            // Open Rails `STFReader.ReadItem` is whitespace-delimited: `50x150_building.s`
+            // is one token. Only emit Number/Integer when the *whole* item is numeric
+            // (incl. scientific); otherwise keep digit-leading filenames as Symbol.
             Some(b'-' | b'+')
                 if self
                     .input
                     .get(self.pos + 1)
                     .is_some_and(|b| b.is_ascii_digit()) =>
             {
-                Ok(Some(self.read_number()?))
+                Ok(Some(self.read_number_or_digit_symbol()?))
             }
-            Some(b) if b.is_ascii_digit() => Ok(Some(self.read_number()?)),
+            Some(b) if b.is_ascii_digit() => Ok(Some(self.read_number_or_digit_symbol()?)),
             Some(_) => Ok(Some(self.read_symbol()?)),
+        }
+    }
+
+    fn item_end_from(&self, start: usize) -> usize {
+        let mut end = start;
+        while let Some(b) = self.input.get(end).copied() {
+            if matches!(b, b'(' | b')' | b'"' | b' ' | b'\t' | b'\r' | b'\n' | b';') {
+                break;
+            }
+            end += 1;
+        }
+        end
+    }
+
+    /// True when `text` is entirely an integer/float (optional `e`/`E` exponent with digits).
+    fn is_numeric_item(text: &str) -> bool {
+        let bytes = text.as_bytes();
+        let mut i = 0usize;
+        if matches!(bytes.first(), Some(b'+' | b'-')) {
+            i = 1;
+        }
+        let int_start = i;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            i += 1;
+        }
+        if i == int_start {
+            return false;
+        }
+        if i < bytes.len() && bytes[i] == b'.' {
+            i += 1;
+            let frac_start = i;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+            if i == frac_start {
+                return false;
+            }
+        }
+        if i < bytes.len() && matches!(bytes[i], b'e' | b'E') {
+            let mut j = i + 1;
+            if j < bytes.len() && matches!(bytes[j], b'+' | b'-') {
+                j += 1;
+            }
+            if j >= bytes.len() || !bytes[j].is_ascii_digit() {
+                // `4994E` / incomplete exponent → not a number (STF keeps one item).
+                return false;
+            }
+            i = j;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+        }
+        i == bytes.len()
+    }
+
+    fn read_number_or_digit_symbol(&mut self) -> Result<Token, FormatError> {
+        let start = self.pos;
+        let end = self.item_end_from(start);
+        let text = std::str::from_utf8(&self.input[start..end]).map_err(|_| {
+            FormatError::UnexpectedToken {
+                offset: start,
+                message: "invalid utf-8".into(),
+            }
+        })?;
+        if Self::is_numeric_item(text) {
+            self.read_number()
+        } else {
+            self.read_symbol()
         }
     }
 
@@ -233,9 +304,17 @@ mod tests {
     }
 
     #[test]
-    fn digit_prefixed_symbol_is_not_mistaken_for_an_exponent() {
-        let mut lexer = Lexer::new("4994E");
-        assert_eq!(lexer.next_token().unwrap(), Some(Token::Integer(4994)));
-        assert_eq!(lexer.next_token().unwrap(), Some(Token::Symbol("E".into())));
+    fn digit_prefixed_filename_stays_one_symbol() {
+        assert_eq!(
+            token("50x150_building.s"),
+            Token::Symbol("50x150_building.s".into())
+        );
+        assert_eq!(
+            token("650vcabinet.s"),
+            Token::Symbol("650vcabinet.s".into())
+        );
+        assert_eq!(token("20mberm.s"), Token::Symbol("20mberm.s".into()));
+        // Incomplete exponent is still one STF item (not Integer + Symbol).
+        assert_eq!(token("4994E"), Token::Symbol("4994E".into()));
     }
 }
