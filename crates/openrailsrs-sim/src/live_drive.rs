@@ -169,6 +169,8 @@ pub struct LiveDriveSession {
     pub exterior: RollingStockExteriorState,
     /// Sim time until which horn button appears pressed (cab M5).
     horn_pressed_until_s: f64,
+    /// Wiper switch (cab CVF TWO_STATE / EXTERNALWIPERS).
+    pub wiper_active: bool,
     pub speed_mul: f64,
     sim_time_remainder: f64,
     signal_steps: u64,
@@ -286,6 +288,7 @@ impl LiveDriveSession {
             driver_direction: 0.5,
             exterior: RollingStockExteriorState::new(),
             horn_pressed_until_s: 0.0,
+            wiper_active: false,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
             signal_steps: 0,
@@ -295,6 +298,10 @@ impl LiveDriveSession {
 
     pub fn trigger_horn(&mut self, hold_s: f64) {
         self.horn_pressed_until_s = self.time_s() + hold_s.max(0.05);
+    }
+
+    pub fn toggle_wiper(&mut self) {
+        self.wiper_active = !self.wiper_active;
     }
 
     pub fn time_s(&self) -> f64 {
@@ -408,6 +415,7 @@ impl LiveDriveSession {
             brake_pct: self.driver_brake * 100.0,
             direction: self.driver_direction.clamp(0.0, 1.0),
             horn_active: self.time_s() < self.horn_pressed_until_s,
+            wiper_active: self.wiper_active,
             main_res_bar,
             brake_pipe_bar,
             brake_cyl_bar,
@@ -429,6 +437,7 @@ pub struct CabTelemetry {
     /// Reverser position 0–1 (0 = REV, 0.5 = neutral, 1 = FWD).
     pub direction: f64,
     pub horn_active: bool,
+    pub wiper_active: bool,
     pub main_res_bar: f64,
     pub brake_pipe_bar: f64,
     pub brake_cyl_bar: f64,
@@ -438,7 +447,18 @@ pub struct CabTelemetry {
     pub overspeed: bool,
 }
 
+/// Max physics quantum when stepping from wall-clock (viewer / interactive).
+///
+/// Headless Chiltern scenarios use `time_step = 1.0` for OR compare; without a
+/// cap the live train sits still for ~1 s then teleports — feels like jumps.
+const LIVE_REALTIME_MAX_DT_S: f64 = 0.05;
+
 impl LiveDriveSession {
+    /// Physics dt used by [`Self::step_realtime`] (scenario dt, capped for smoothness).
+    pub fn realtime_physics_dt(&self) -> f64 {
+        self.dt.min(LIVE_REALTIME_MAX_DT_S).max(1e-4)
+    }
+
     /// Advance simulation by `real_dt` seconds of wall-clock time (scaled by `speed_mul`).
     ///
     /// `on_region_transition` is invoked for each sound-region enter/leave (e.g. audio engine).
@@ -450,12 +470,12 @@ impl LiveDriveSession {
             return;
         }
         let mut budget = self.sim_time_remainder + real_dt * self.speed_mul;
-        let dt = self.dt;
+        let dt = self.realtime_physics_dt();
         while budget >= dt {
             self.state.throttle = self.driver_throttle;
             self.state.brake = self.driver_brake;
             let res = step(&mut self.state, &self.path_data, &self.physics, dt);
-            self.tick_after_physics_step(&mut on_region_transition);
+            self.tick_after_physics_step(dt, &mut on_region_transition);
             if res.arrived {
                 self.arrived = true;
                 break;
@@ -465,12 +485,12 @@ impl LiveDriveSession {
         self.sim_time_remainder = budget;
     }
 
-    fn tick_after_physics_step<F>(&mut self, on_region_transition: &mut F)
+    fn tick_after_physics_step<F>(&mut self, step_dt: f64, on_region_transition: &mut F)
     where
         F: FnMut(&RegionTransition),
     {
-        self.exterior.tick(self.dt);
-        self.tick_signals();
+        self.exterior.tick(step_dt);
+        self.tick_signals(step_dt);
         self.tick_gameplay();
 
         if let Some(edge_id) = self.state.current_edge() {
@@ -481,7 +501,7 @@ impl LiveDriveSession {
         }
     }
 
-    fn tick_signals(&mut self) {
+    fn tick_signals(&mut self, step_dt: f64) {
         let t = self.state.time_s();
         for sig in self.graph.signals() {
             let id = sig.id.clone();
@@ -492,7 +512,7 @@ impl LiveDriveSession {
         }
 
         self.signal_steps += 1;
-        let every = (1.0 / self.dt).round() as u64;
+        let every = (1.0 / step_dt).round().max(1.0) as u64;
         if every > 0 && self.signal_steps % every == 0 {
             let mut block_map = HashMap::new();
             if let Some(eid) = self.state.current_edge() {
@@ -548,6 +568,39 @@ mod tests {
         assert_eq!(session.time_s(), 0.0);
         session.step_realtime(5.0, |_| {});
         assert!(session.time_s() > 0.0);
+    }
+
+    #[test]
+    fn live_realtime_caps_large_scenario_dt() {
+        // Chiltern headless uses time_step=1.0; interactive must still advance every frame.
+        let scenario_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern/scenario_brake_coast.toml");
+        if !scenario_path.exists() {
+            return;
+        }
+        let scenario_dir = scenario_path.parent().unwrap();
+        let Ok(scenario) = load_scenario(&scenario_path) else {
+            return;
+        };
+        let Ok(mut session) = LiveDriveSession::from_scenario(scenario_dir, &scenario) else {
+            return;
+        };
+        assert!(
+            (session.dt - 1.0).abs() < 1e-9,
+            "fixture should keep headless dt=1; got {}",
+            session.dt
+        );
+        assert!(
+            (session.realtime_physics_dt() - LIVE_REALTIME_MAX_DT_S).abs() < 1e-12,
+            "realtime dt must be capped"
+        );
+        session.driver_throttle = 1.0;
+        session.step_realtime(0.2, |_| {});
+        assert!(
+            session.time_s() >= 0.15,
+            "0.2s wall-clock must advance sim (~0.2s), not wait for a 1s quantum; got {}",
+            session.time_s()
+        );
     }
 
     #[test]

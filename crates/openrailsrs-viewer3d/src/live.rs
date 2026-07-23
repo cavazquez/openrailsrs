@@ -153,7 +153,8 @@ pub fn enable_live_defaults(
     if let Ok(mode) = std::env::var("OPENRAILSRS_FOLLOW") {
         match mode.trim().to_ascii_lowercase().as_str() {
             "chase" => *follow = CameraFollowMode::ChaseCam,
-            "driver" | "cab" => *follow = CameraFollowMode::DriverCam,
+            "driver" | "cab3d" => *follow = CameraFollowMode::DriverCam,
+            "cab" | "cab2d" | "2d" => *follow = CameraFollowMode::Cab2d,
             "orbit" | "orbitfollow" => *follow = CameraFollowMode::OrbitFollow,
             "off" => *follow = CameraFollowMode::Off,
             _ => {}
@@ -313,6 +314,9 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
             audio.send(AudioCmd::Horn);
         }
     }
+    if keys.just_pressed(KeyCode::KeyU) {
+        live.session.toggle_wiper();
+    }
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
         live.session.speed_mul = (live.session.speed_mul * 2.0).min(16.0);
     }
@@ -410,7 +414,7 @@ pub fn update_driver_train_visibility(
     mut visibility_query: Query<&mut Visibility, Without<crate::cab_view::CabInteriorMarker>>,
     mut cab_parts: Query<&mut Visibility, With<crate::cab_view::CabInteriorMarker>>,
 ) {
-    let hide = *follow == CameraFollowMode::DriverCam;
+    let hide = *follow == CameraFollowMode::DriverCam || follow.is_cab2d();
     let mode_changed = hide != cam_state.was_driver;
     cam_state.was_driver = hide;
 

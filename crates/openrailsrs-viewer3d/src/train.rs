@@ -598,7 +598,7 @@ pub fn update_replay_train_visibility(
     follow: Res<crate::camera::CameraFollowMode>,
     mut markers: Query<&mut Visibility, With<TrainMarker>>,
 ) {
-    let hide = *follow == CameraFollowMode::DriverCam;
+    let hide = *follow == CameraFollowMode::DriverCam || follow.is_cab2d();
     for mut vis in &mut markers {
         *vis = if hide {
             Visibility::Hidden

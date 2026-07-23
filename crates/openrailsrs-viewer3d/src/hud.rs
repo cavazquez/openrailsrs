@@ -121,6 +121,8 @@ pub fn camera_mode_label(mode: CameraMode) -> &'static str {
 pub fn camera_status_label(mode: CameraMode, follow: CameraFollowMode) -> String {
     if follow == CameraFollowMode::DriverCam {
         "CABINA".into()
+    } else if follow.is_cab2d() {
+        "CABINA2D".into()
     } else {
         format!("cam:{}", camera_mode_label(mode))
     }
@@ -231,6 +233,8 @@ fn build_hud_replay(
     let status = if replay.paused { "PAUSED" } else { "PLAY" };
     let follow_label = if follow == CameraFollowMode::DriverCam {
         "CABINA".to_string()
+    } else if follow.is_cab2d() {
+        "CABINA2D".to_string()
     } else {
         follow_display_label(follow, follow_target, replay)
     };
@@ -436,6 +440,8 @@ pub fn build_hud_content_live(
     };
     let follow_label = if follow == CameraFollowMode::DriverCam {
         "CABINA".to_string()
+    } else if follow.is_cab2d() {
+        "CABINA2D".to_string()
     } else if follow == CameraFollowMode::Off {
         "off".to_string()
     } else {
@@ -474,10 +480,13 @@ pub fn build_hud_content_live(
         )
     };
     let controls = if follow == CameraFollowMode::DriverCam {
-        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  C:cab  T:cam  V:chase  Space:emerg  F:fog  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  U:wiper  1:cab2d  C:panel  T:cam  V:chase  Space:emerg  F:fog  Esc:quit"
+            .to_string()
+    } else if follow.is_cab2d() {
+        "↑/↓:thr/brk  ←/→:vista  H:horn  U:wiper  1:salir  V:cab3d  T:cam  Space:emerg  Esc:quit"
             .to_string()
     } else {
-        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  ,/.:zoom  Space:emerg  H:horn  C:cab  T:cam  V:driver  P:pause  R:reset  +/-:sim  F:fog  G:goto  F2:fly  Esc:quit"
+        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  Space:emerg  H:horn  U:wiper  1:cab2d  C:panel  T:cam  V:driver  P:pause  R:reset  +/-:sim  F:fog  Esc:quit"
             .to_string()
     };
     let mut row2 = format!(

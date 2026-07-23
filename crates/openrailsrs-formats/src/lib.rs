@@ -56,7 +56,8 @@ pub use tile_paths::{
 };
 pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
-    CabControl, CabLeverFrames, CabView, CabViewFile, CarSpawnerCatalog, CarSpawnerItem,
+    CabControl, CabDialParams, CabLeverFrames, CabView, CabViewFile, CarSpawnerCatalog,
+    CarSpawnerItem,
     CarSpawnerList, ConsistEntry, ConsistFile, ControlState, ControlType, DistanceLevel,
     DyntrackSection,
     ElevationGrid, EngineCabView, EngineFile, FeatureGrid, HazardFile, IndexedTrVectorSection,

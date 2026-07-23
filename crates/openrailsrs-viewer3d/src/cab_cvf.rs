@@ -180,12 +180,47 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
             (bar / 5.0).clamp(0.0, 1.0)
         }
         ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") && tel.horn_active => 1.0,
-        ControlType::Generic(name) if name.contains("WIPER") && tel.speed_kmh > 5.0 => 1.0,
+        ControlType::Generic(name) if name.contains("WIPER") && tel.wiper_active => 1.0,
         ControlType::Ammeter => tel
             .diesel_rpm
             .map(|r| (r / 1500.0).clamp(0.0, 1.0))
             .unwrap_or(0.0),
         _ => 0.0,
+    }
+}
+
+/// Absolute dial reading in CVF `ScaleRange` units (Open Rails gauge value).
+pub fn dial_control_value(
+    control: &ControlType,
+    dial: &openrailsrs_formats::CabDialParams,
+    tel: &CabTelemetry,
+) -> f64 {
+    let units = dial.units.as_deref().unwrap_or("");
+    match control {
+        ControlType::Speedometer => {
+            if units.eq_ignore_ascii_case("MILES_PER_HOUR") {
+                tel.speed_kmh * 0.621_371
+            } else {
+                tel.speed_kmh
+            }
+        }
+        ControlType::MainRes | ControlType::BrakeCyl | ControlType::BrakePipe => {
+            let bar = match control {
+                ControlType::MainRes => tel.main_res_bar,
+                ControlType::BrakeCyl => tel.brake_cyl_bar,
+                _ => tel.brake_pipe_bar,
+            };
+            if units.eq_ignore_ascii_case("PSI") {
+                bar * 14.503_773_8
+            } else {
+                bar
+            }
+        }
+        ControlType::Ammeter => tel.diesel_rpm.unwrap_or(0.0),
+        _ => {
+            let n = control_value(control, tel);
+            dial.scale_min + n * (dial.scale_max - dial.scale_min)
+        }
     }
 }
 
@@ -452,6 +487,7 @@ mod tests {
             brake_pct: 25.0,
             direction: 0.5,
             horn_active: false,
+            wiper_active: false,
             main_res_bar: 8.0,
             brake_pipe_bar: 4.0,
             brake_cyl_bar: 1.0,
@@ -463,6 +499,18 @@ mod tests {
         assert!((control_value(&ControlType::Throttle, &tel) - 0.75).abs() < 1e-6);
         assert!((control_value(&ControlType::TrainBrake, &tel) - 0.25).abs() < 1e-6);
         assert!((control_value(&ControlType::DirectionDisplay, &tel) - 0.5).abs() < 1e-6);
+        assert!((control_value(&ControlType::Generic("WIPERS".into()), &tel) - 0.0).abs() < 1e-6);
+        let mut tel_w = tel.clone();
+        tel_w.wiper_active = true;
+        assert!((control_value(&ControlType::Generic("WIPERS".into()), &tel_w) - 1.0).abs() < 1e-6);
+        let dial = openrailsrs_formats::CabDialParams {
+            scale_min: 0.0,
+            scale_max: 100.0,
+            units: Some("MILES_PER_HOUR".into()),
+            ..Default::default()
+        };
+        let mph = dial_control_value(&ControlType::Speedometer, &dial, &tel);
+        assert!((mph - 50.0 * 0.621_371).abs() < 1e-3);
     }
 
     #[test]

@@ -323,8 +323,10 @@ pub enum CameraFollowMode {
     Off,
     OrbitFollow,
     ChaseCam,
-    /// First-person view from the locomotive cab (live mode).
+    /// First-person view from the locomotive 3D cab (live mode).
     DriverCam,
+    /// Open Rails 2D `Cab` view: CVF ACE background + control sprites (#152).
+    Cab2d,
 }
 
 impl CameraFollowMode {
@@ -334,6 +336,8 @@ impl CameraFollowMode {
             Self::OrbitFollow => Self::ChaseCam,
             Self::ChaseCam => Self::DriverCam,
             Self::DriverCam => Self::Off,
+            // Digit1 toggles Cab2d; T-cycle leaves it via Off.
+            Self::Cab2d => Self::Off,
         }
     }
 
@@ -343,7 +347,13 @@ impl CameraFollowMode {
             Self::OrbitFollow => "orbit",
             Self::ChaseCam => "chase",
             Self::DriverCam => "driver",
+            Self::Cab2d => "cab2d",
         }
+    }
+
+    /// True for the 2D CVF cab panel (not the 3D CABVIEW3D mesh).
+    pub fn is_cab2d(self) -> bool {
+        matches!(self, Self::Cab2d)
     }
 }
 
@@ -788,6 +798,17 @@ pub fn cycle_follow_mode(
         replay.as_ref().map(|r| r.tracks.len()).unwrap_or(0)
     };
     target.clamp_to(count);
+
+    if keys.just_pressed(KeyCode::Digit1) || keys.just_pressed(KeyCode::Numpad1) {
+        if *follow == CameraFollowMode::Cab2d {
+            *follow = CameraFollowMode::ChaseCam;
+        } else {
+            *follow = CameraFollowMode::Cab2d;
+            *mode = CameraMode::Orbit;
+        }
+        look.reset();
+        return;
+    }
 
     if keys.just_pressed(KeyCode::KeyV) && !shift_held(&keys) {
         if *follow == CameraFollowMode::DriverCam {
@@ -1508,6 +1529,7 @@ mod tests {
             CameraFollowMode::DriverCam
         );
         assert_eq!(CameraFollowMode::DriverCam.cycle(), CameraFollowMode::Off);
+        assert_eq!(CameraFollowMode::Cab2d.cycle(), CameraFollowMode::Off);
     }
 
     #[test]
@@ -1516,6 +1538,9 @@ mod tests {
         assert_eq!(CameraFollowMode::OrbitFollow.hud_label(), "orbit");
         assert_eq!(CameraFollowMode::ChaseCam.hud_label(), "chase");
         assert_eq!(CameraFollowMode::DriverCam.hud_label(), "driver");
+        assert_eq!(CameraFollowMode::Cab2d.hud_label(), "cab2d");
+        assert!(CameraFollowMode::Cab2d.is_cab2d());
+        assert!(!CameraFollowMode::DriverCam.is_cab2d());
     }
 
     #[test]

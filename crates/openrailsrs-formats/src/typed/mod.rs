@@ -25,7 +25,8 @@ pub use brake_shoe::{
 pub use carspawn::{CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList};
 pub use consist::{ConsistEntry, ConsistFile};
 pub use cvf::{
-    CabControl, CabLeverFrames, CabView, CabViewFile, ControlState, ControlType, ScreenRect,
+    CabControl, CabDialParams, CabLeverFrames, CabView, CabViewFile, ControlState, ControlType,
+    ScreenRect,
 };
 pub use engine::{EngineCabView, EngineFile, MstsSteamFields, Orts3dCabViewpoint};
 pub use friction::{

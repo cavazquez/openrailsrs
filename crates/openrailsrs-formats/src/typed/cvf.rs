@@ -188,6 +188,67 @@ impl CabLeverFrames {
     }
 }
 
+/// Dial needle metadata (`ScaleRange` / `ScalePos` / `Pivot` / `DirIncrease`).
+///
+/// Open Rails maps `ScalePos (from to)` → `FromDegree` / `ToDegree` (not a separate
+/// `FromDegree` token). Degrees: 0° = 12 o'clock, 90° = 3 o'clock.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabDialParams {
+    pub scale_min: f64,
+    pub scale_max: f64,
+    pub from_degree: f64,
+    pub to_degree: f64,
+    /// Pivot Y in unscaled ACE pixels; `None` → half texture height at draw time.
+    pub pivot: Option<f64>,
+    /// When false (`DirIncrease 0`), needle sweeps the opposite way.
+    pub dir_increase: bool,
+    pub units: Option<String>,
+}
+
+impl Default for CabDialParams {
+    fn default() -> Self {
+        Self {
+            scale_min: 0.0,
+            scale_max: 1.0,
+            from_degree: 0.0,
+            to_degree: 0.0,
+            pivot: None,
+            dir_increase: true,
+            units: None,
+        }
+    }
+}
+
+impl CabDialParams {
+    /// Open Rails `GetRangeFraction` against `ScaleRange`.
+    pub fn range_fraction(&self, value: f64) -> f64 {
+        if (self.scale_max - self.scale_min).abs() < f64::EPSILON {
+            return 0.0;
+        }
+        ((value - self.scale_min) / (self.scale_max - self.scale_min)).clamp(0.0, 1.0)
+    }
+
+    /// Needle rotation in radians (OR `CabViewDialRenderer`).
+    pub fn rotation_radians(&self, value: f64) -> f32 {
+        let fraction = self.range_fraction(value);
+        let direction = if self.dir_increase { 1.0 } else { -1.0 };
+        let mut range_degrees = direction * (self.to_degree - self.from_degree);
+        while range_degrees <= 0.0 {
+            range_degrees += 360.0;
+        }
+        let deg = self.from_degree + direction * range_degrees * fraction;
+        // Wrap to [-π, π] like MathHelper.WrapAngle.
+        let mut rad = (deg as f32).to_radians();
+        const PI: f32 = std::f32::consts::PI;
+        const TAU: f32 = std::f32::consts::TAU;
+        rad = rad.rem_euclid(TAU);
+        if rad > PI {
+            rad -= TAU;
+        }
+        rad
+    }
+}
+
 /// Cab control element (display, dial, digital readout, …).
 #[derive(Clone, Debug, PartialEq)]
 pub enum CabControl {
@@ -201,6 +262,7 @@ pub enum CabControl {
         control_type: ControlType,
         position: ScreenRect,
         graphic: String,
+        dial: CabDialParams,
     },
     Digital {
         control_type: ControlType,
@@ -211,11 +273,13 @@ pub enum CabControl {
         control_type: ControlType,
         position: ScreenRect,
         graphic: String,
+        frames: CabLeverFrames,
     },
     TriStateDisplay {
         control_type: ControlType,
         position: ScreenRect,
         graphic: String,
+        frames: CabLeverFrames,
     },
     /// Discrete lever (CVF ACE frames): throttle, train brake, …
     Lever {
@@ -710,7 +774,37 @@ fn parse_dial(items: &[Ast]) -> Result<CabControl, FormatError> {
         control_type,
         position,
         graphic,
+        dial: parse_dial_params(items),
     })
+}
+
+fn parse_dial_params(items: &[Ast]) -> CabDialParams {
+    let mut dial = CabDialParams::default();
+    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
+        if nums.len() >= 2 {
+            dial.scale_min = nums[0];
+            dial.scale_max = nums[1];
+        }
+    }
+    // Open Rails: ScalePos (from to) → FromDegree / ToDegree.
+    if let Some(nums) = find_named_numbers(items, "ScalePos") {
+        if nums.len() >= 2 {
+            dial.from_degree = nums[0];
+            dial.to_degree = nums[1];
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "Pivot") {
+        if let Some(v) = nums.first() {
+            dial.pivot = Some(*v);
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
+        if let Some(v) = nums.first() {
+            dial.dir_increase = *v != 0.0;
+        }
+    }
+    dial.units = find_string_in_list(items, "Units");
+    dial
 }
 
 fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
@@ -732,6 +826,7 @@ fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
         control_type,
         position,
         graphic,
+        frames: normalize_lever_frames(parse_lever_frames(items)),
     })
 }
 
@@ -748,6 +843,7 @@ fn parse_tri_state(items: &[Ast]) -> Result<CabControl, FormatError> {
             height: 0.0,
         }),
         graphic,
+        frames: normalize_lever_frames(parse_lever_frames(items)),
     })
 }
 
@@ -1118,8 +1214,13 @@ fn find_string_in_list(items: &[Ast], key: &str) -> Option<String> {
         if list.len() >= 2 {
             if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
                 if head.eq_ignore_ascii_case(key) {
-                    if let Ast::Atom(atom) = &list[1] {
-                        return atom_to_string(atom);
+                    match &list[1] {
+                        Ast::Atom(atom) => return atom_to_string(atom),
+                        Ast::List(sub) => {
+                            if let Some(Ast::Atom(atom)) = sub.first() {
+                                return atom_to_string(atom);
+                            }
+                        }
                     }
                 }
             }
@@ -1308,5 +1409,95 @@ mod tests {
         assert!((x - 0.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
         let (x, y, _, _) = frames.frame_rect(500.0, 200.0, 6);
         assert!((x - 100.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn parse_dial_scale_pos_and_pivot() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (Dial
+      (Type ( SPEEDOMETER DIAL ))
+      (Position (427 303 19 30))
+      (Graphic "../../KIHA31/CabView/KMHNeedle.ace")
+      (Style ( NEEDLE ))
+      (ScaleRange ( 0 100 ))
+      (ScalePos ( 190 150 ))
+      (Units ( MILES_PER_HOUR ))
+      (Pivot ( 21 ))
+      (DirIncrease ( 0 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::Dial { dial, graphic, .. } => {
+                assert!(graphic.contains("KMHNeedle"));
+                assert!((dial.scale_min - 0.0).abs() < 1e-9);
+                assert!((dial.scale_max - 100.0).abs() < 1e-9);
+                assert!((dial.from_degree - 190.0).abs() < 1e-9);
+                assert!((dial.to_degree - 150.0).abs() < 1e-9);
+                assert_eq!(dial.pivot, Some(21.0));
+                assert!(!dial.dir_increase);
+                assert_eq!(dial.units.as_deref(), Some("MILES_PER_HOUR"));
+                assert!((dial.range_fraction(50.0) - 0.5).abs() < 1e-6);
+                let angle0 = dial.rotation_radians(0.0);
+                let angle1 = dial.rotation_radians(100.0);
+                assert!(angle0.is_finite() && angle1.is_finite());
+                assert!((angle0 - angle1).abs() > 0.01);
+            }
+            other => panic!("expected Dial, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_tristate_num_frames() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (TriState
+      (Type ( FRONT_HLIGHT TRI_STATE ))
+      (Position (339 411 42 25))
+      (Graphic "Headlight.ace")
+      (NumFrames ( 3 3 1 ))
+      (Style ( NONE ))
+      (Orientation ( 0 ))
+      (DirIncrease ( 1 ))
+    )
+    (TwoState
+      (Type ( HORN TWO_STATE ))
+      (Position (193 378 36 57))
+      (Graphic "hornlever.ace")
+      (NumFrames ( 2 2 1 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::TriStateDisplay { frames, .. } => {
+                assert_eq!(frames.frames_count, 3);
+                assert_eq!(frames.frames_x, 3);
+                assert_eq!(frames.frames_y, 1);
+            }
+            other => panic!("expected TriStateDisplay, got {other:?}"),
+        }
+        match &cvf.controls[1] {
+            CabControl::TwoStateDisplay { frames, .. } => {
+                assert_eq!(frames.frames_count, 2);
+                assert_eq!(frames.frames_x, 2);
+                assert_eq!(frames.frames_y, 1);
+            }
+            other => panic!("expected TwoStateDisplay, got {other:?}"),
+        }
     }
 }

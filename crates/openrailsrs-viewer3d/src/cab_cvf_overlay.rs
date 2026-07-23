@@ -1,8 +1,7 @@
-//! CVF 2D control sprites for a future Open Rails–style 2D `Cab` view (#152).
+//! Open Rails–style 2D `Cab` view: CVF ACE background + control sprites (#152).
 //!
-//! **Not used on 3D cab (`DriverCam`)** — Open Rails never composites CVF ACE
-//! sprites onto `ThreeDimCab` (#151). Lever/gauge ACE frame helpers stay here
-//! for the 2D path; 3D lever meshes animate only with authored controllers (#147).
+//! Active only in [`CameraFollowMode::Cab2d`]. Never composites onto the 3D cab
+//! (`DriverCam`) — matching Open Rails `Camera.Styles.Cab` vs `ThreeDimCab` (#151).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -13,33 +12,25 @@ use bevy::ui::UiTransform;
 use bevy::ui::Val2;
 use bevy::ui::widget::ImageNode;
 use openrailsrs_ace::read_ace;
-use openrailsrs_formats::{CabControl, CabLeverFrames, CabViewFile, ControlType, ScreenRect};
+use openrailsrs_formats::{
+    CabControl, CabDialParams, CabLeverFrames, CabViewFile, ControlType, ScreenRect,
+};
 
 use crate::cab_cvf::{
-    self, CabCvfRuntime, CabCvfState, MatrixDriver, control_value, lever_has_authored_animation,
-    pick_multi_state_index,
+    self, CabCvfRuntime, CabCvfState, MatrixDriver, control_value, dial_control_value,
+    lever_has_authored_animation, pick_multi_state_index,
 };
 use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
 use crate::shapes::{RouteAssets, ace_to_image, cvf_texture_search_dirs, resolve_cvf_graphic_path};
 use crate::viewer_log;
 
-const OVERLAY_PANEL_WIDTH_PX: f32 = 480.0;
-const OVERLAY_BOTTOM_PX: f32 = 300.0;
-
-/// Open Rails never draws CVF ACE sprites in `ThreeDimCab` (#151).
-/// Opt-in only for debugging until the 2D `Cab` view lands (#152).
-fn cvf_overlay_in_3d_cab_enabled() -> bool {
-    matches!(
-        std::env::var("OPENRAILSRS_CAB_CVF_OVERLAY").ok().as_deref(),
-        Some("1") | Some("true") | Some("on")
-    )
-}
-
 #[derive(Resource, Default, Debug)]
 pub struct CabCvfOverlayState {
     pub spawned_cvf: Option<PathBuf>,
     pub panel_size: (f32, f32),
+    /// Active `CabView` index (front / left / right).
+    pub view_index: usize,
     image_cache: HashMap<String, Handle<Image>>,
 }
 
@@ -49,6 +40,9 @@ pub(crate) struct CabCvfOverlayRoot;
 #[derive(Component)]
 struct CabCvfOverlayPanel;
 
+#[derive(Component)]
+struct CabCvfOverlayBackground;
+
 #[derive(Component, Clone, Debug)]
 pub struct CabCvfOverlayWidget {
     pub control_type: ControlType,
@@ -57,10 +51,17 @@ pub struct CabCvfOverlayWidget {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CabCvfOverlayKind {
-    DialNeedle,
+    DialNeedle {
+        dial: CabDialParams,
+        /// Pivot Y in ACE pixels (resolved at spawn).
+        pivot_y: f32,
+        tex_w: f32,
+        tex_h: f32,
+        draw_scale: f32,
+    },
     Lever { frames: CabLeverFrames },
-    TwoState,
-    TriState,
+    TwoState { frames: CabLeverFrames },
+    TriState { frames: CabLeverFrames },
     MultiState { state_index: usize },
 }
 
@@ -76,8 +77,21 @@ pub fn reference_panel_size(cvf: &CabViewFile) -> (f32, f32) {
         .unwrap_or((640.0, 480.0))
 }
 
-fn panel_scale(panel_w: f32) -> f32 {
-    OVERLAY_PANEL_WIDTH_PX / panel_w.max(1.0)
+/// Letterbox scale so the CVF window fits inside the screen.
+fn letterbox_layout(
+    panel_w: f32,
+    panel_h: f32,
+    screen_w: f32,
+    screen_h: f32,
+) -> (f32, f32, f32, f32) {
+    let panel_w = panel_w.max(1.0);
+    let panel_h = panel_h.max(1.0);
+    let scale = (screen_w / panel_w).min(screen_h / panel_h);
+    let draw_w = panel_w * scale;
+    let draw_h = panel_h * scale;
+    let left = (screen_w - draw_w) * 0.5;
+    let bottom = (screen_h - draw_h) * 0.5;
+    (left, bottom, draw_w, draw_h)
 }
 
 fn ui_node_for_rect(rect: &ScreenRect, panel_h: f32, scale: f32) -> Node {
@@ -148,16 +162,30 @@ fn spawn_widget_image(
     ));
 }
 
+fn discrete_frame_rect(
+    images: &Assets<Image>,
+    handle: &Handle<Image>,
+    frames: &CabLeverFrames,
+    index: usize,
+) -> Option<Rect> {
+    let image = images.get(handle)?;
+    let size = image.size();
+    let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, index);
+    Some(Rect::new(x, y, x + w, y + h))
+}
+
 pub(crate) fn sync_cab_cvf_overlay(
     follow: Res<CameraFollowMode>,
     cvf_state: Res<CabCvfState>,
     assets: Res<RouteAssets>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut overlay_state: ResMut<CabCvfOverlayState>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     roots: Query<Entity, With<CabCvfOverlayRoot>>,
 ) {
-    if !cvf_overlay_in_3d_cab_enabled() {
+    if !follow.is_cab2d() {
         for entity in roots.iter() {
             commands.entity(entity).despawn();
         }
@@ -166,7 +194,6 @@ pub(crate) fn sync_cab_cvf_overlay(
         return;
     }
 
-    let in_cab = *follow == CameraFollowMode::DriverCam;
     let Some(runtime) = cvf_state.runtime.as_ref() else {
         for entity in roots.iter() {
             commands.entity(entity).despawn();
@@ -186,15 +213,27 @@ pub(crate) fn sync_cab_cvf_overlay(
     let Some(cab_dir) = cab_shape.parent() else {
         return;
     };
-    if !in_cab {
-        for entity in roots.iter() {
-            commands.entity(entity).despawn();
-        }
-        overlay_state.spawned_cvf = None;
-        overlay_state.image_cache.clear();
-        return;
+
+    // ArrowLeft/Right switch CabView (front/left/right). Avoids [ ] reverser conflict.
+    let view_count = runtime.cvf.views.len().max(1);
+    let mut view_changed = false;
+    if keys.just_pressed(KeyCode::ArrowLeft) {
+        overlay_state.view_index = (overlay_state.view_index + view_count - 1) % view_count;
+        view_changed = true;
     }
-    if overlay_state.spawned_cvf.as_deref() == cvf_state.cvf_path.as_deref() && !roots.is_empty() {
+    if keys.just_pressed(KeyCode::ArrowRight) {
+        overlay_state.view_index = (overlay_state.view_index + 1) % view_count;
+        view_changed = true;
+    }
+    if overlay_state.view_index >= view_count {
+        overlay_state.view_index = 0;
+        view_changed = true;
+    }
+
+    if overlay_state.spawned_cvf.as_deref() == cvf_state.cvf_path.as_deref()
+        && !roots.is_empty()
+        && !view_changed
+    {
         return;
     }
     for entity in roots.iter() {
@@ -205,8 +244,31 @@ pub(crate) fn sync_cab_cvf_overlay(
     let tex_dirs = cvf_texture_search_dirs(&cab_shape, &assets.route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let (panel_w, panel_h) = reference_panel_size(&runtime.cvf);
-    let scale = panel_scale(panel_w);
     overlay_state.panel_size = (panel_w, panel_h);
+
+    let (screen_w, screen_h) = windows
+        .iter()
+        .next()
+        .map(|w| (w.resolution.width(), w.resolution.height()))
+        .unwrap_or((1280.0, 720.0));
+    let (panel_left, panel_bottom, draw_w, draw_h) =
+        letterbox_layout(panel_w, panel_h, screen_w, screen_h);
+    let scale = draw_w / panel_w.max(1.0);
+
+    let view = runtime
+        .cvf
+        .views
+        .get(overlay_state.view_index)
+        .or_else(|| runtime.cvf.views.first());
+    let bg_handle = view.and_then(|v| {
+        load_graphic(
+            cab_dir,
+            &tex_refs,
+            &mut images,
+            &mut overlay_state.image_cache,
+            &v.texture_ace,
+        )
+    });
 
     let mut spawned = 0usize;
     let mut skipped = 0usize;
@@ -219,6 +281,7 @@ pub(crate) fn sync_cab_cvf_overlay(
                 height: Val::Percent(100.0),
                 ..default()
             },
+            BackgroundColor(Color::BLACK),
             UiTransform::default(),
             ZIndex(90),
             Visibility::Visible,
@@ -229,16 +292,31 @@ pub(crate) fn sync_cab_cvf_overlay(
                     CabCvfOverlayPanel,
                     Node {
                         position_type: PositionType::Absolute,
-                        bottom: Val::Px(OVERLAY_BOTTOM_PX),
-                        left: Val::Percent(50.0),
-                        margin: UiRect::left(Val::Px(-OVERLAY_PANEL_WIDTH_PX * 0.5)),
-                        width: Val::Px(panel_w * scale),
-                        height: Val::Px(panel_h * scale),
+                        left: Val::Px(panel_left),
+                        bottom: Val::Px(panel_bottom),
+                        width: Val::Px(draw_w),
+                        height: Val::Px(draw_h),
                         ..default()
                     },
                     UiTransform::default(),
                 ))
                 .with_children(|panel| {
+                    if let Some(handle) = bg_handle {
+                        panel.spawn((
+                            CabCvfOverlayBackground,
+                            Node {
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                bottom: Val::Px(0.0),
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                ..default()
+                            },
+                            ImageNode::new(handle),
+                            UiTransform::default(),
+                            ZIndex(0),
+                        ));
+                    }
                     for control in &runtime.cvf.controls {
                         let (n, skip) = spawn_cvf_control(
                             panel,
@@ -259,46 +337,94 @@ pub(crate) fn sync_cab_cvf_overlay(
 
     overlay_state.spawned_cvf = cvf_state.cvf_path.clone();
     viewer_log!(
-        "openrailsrs-viewer3d: cab CVF overlay — {} controls, {} widgets ({} skipped, no ACE)",
+        "openrailsrs-viewer3d: cab 2D CVF — view {}/{} — {} controls, {} widgets ({} skipped)",
+        overlay_state.view_index + 1,
+        view_count,
         runtime.cvf.controls.len(),
         spawned,
         skipped,
     );
 }
 
-#[allow(clippy::too_many_arguments)]
-fn spawn_one_widget(
+fn spawn_dial_widget(
     panel: &mut ChildSpawnerCommands,
     cab_dir: &Path,
     tex_dirs: &[&Path],
     images: &mut Assets<Image>,
     cache: &mut HashMap<String, Handle<Image>>,
     control_type: ControlType,
-    kind: CabCvfOverlayKind,
+    dial: &CabDialParams,
     position: &ScreenRect,
     panel_h: f32,
     scale: f32,
     graphic: &str,
-    rect: Option<Rect>,
 ) -> usize {
     let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
         return 0;
     };
-    spawn_widget_image(
-        panel,
-        ui_node_for_rect(position, panel_h, scale),
-        handle,
-        CabCvfOverlayWidget { control_type, kind },
-        rect,
-    );
-    1
-}
+    let Some(image) = images.get(&handle) else {
+        return 0;
+    };
+    let tex_w = image.size().x as f32;
+    let tex_h = image.size().y as f32;
+    // OR: Scale = min(1, Control.Height / Texture.Height)
+    let draw_scale = if tex_h > 0.0 {
+        ((position.height as f32) / tex_h).min(1.0)
+    } else {
+        1.0
+    };
+    let pivot_y = dial.pivot.unwrap_or((tex_h * 0.5) as f64) as f32;
+    let origin_x = tex_w * 0.5 * draw_scale * scale;
+    let origin_y = pivot_y * draw_scale * scale;
+    let draw_w = tex_w * draw_scale * scale;
+    let draw_h = tex_h * draw_scale * scale;
 
-fn lever_frame_rect(images: &Assets<Image>, handle: &Handle<Image>, frames: &CabLeverFrames) -> Option<Rect> {
-    let image = images.get(handle)?;
-    let size = image.size();
-    let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, 0);
-    Some(Rect::new(x, y, x + w, y + h))
+    // Parent at pivot screen location (CVF Y from top).
+    let pivot_left = (position.x as f32) * scale + origin_x;
+    let pivot_from_top = (position.y as f32) * scale + origin_y;
+    let pivot_bottom = panel_h * scale - pivot_from_top;
+
+    panel
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(pivot_left),
+                bottom: Val::Px(pivot_bottom),
+                width: Val::Px(0.0),
+                height: Val::Px(0.0),
+                ..default()
+            },
+            UiTransform::default(),
+            ZIndex(10),
+        ))
+        .with_children(|pivot| {
+            let mut image_node = ImageNode::new(handle);
+            image_node.rect = None;
+            pivot.spawn((
+                CabCvfOverlayWidget {
+                    control_type,
+                    kind: CabCvfOverlayKind::DialNeedle {
+                        dial: dial.clone(),
+                        pivot_y,
+                        tex_w,
+                        tex_h,
+                        draw_scale,
+                    },
+                },
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(-origin_x),
+                    bottom: Val::Px(-(draw_h - origin_y)),
+                    width: Val::Px(draw_w.max(1.0)),
+                    height: Val::Px(draw_h.max(1.0)),
+                    ..default()
+                },
+                image_node,
+                UiTransform::default(),
+                Visibility::Visible,
+            ));
+        });
+    1
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -320,23 +446,23 @@ fn spawn_cvf_control(
             control_type,
             position,
             graphic,
+            dial,
         } => {
             if control_has_animated_3d_lever(runtime, control_type) {
                 return (0, 0);
             }
-            let n = spawn_one_widget(
+            let n = spawn_dial_widget(
                 panel,
                 cab_dir,
                 tex_dirs,
                 images,
                 cache,
                 control_type.clone(),
-                CabCvfOverlayKind::DialNeedle,
+                dial,
                 position,
                 panel_h,
                 scale,
                 graphic,
-                None,
             );
             if n == 0 {
                 skip = 1;
@@ -356,7 +482,7 @@ fn spawn_cvf_control(
                 return (0, 1);
             };
             let rect = if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
-                lever_frame_rect(images, &handle, frames)
+                discrete_frame_rect(images, &handle, frames, 0)
             } else {
                 None
             };
@@ -378,52 +504,60 @@ fn spawn_cvf_control(
             control_type,
             position,
             graphic,
+            frames,
         } => {
-            let n = spawn_one_widget(
+            let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
+                return (0, 1);
+            };
+            let rect = if frames.frames_count > 1 {
+                discrete_frame_rect(images, &handle, frames, 0)
+            } else {
+                None
+            };
+            spawn_widget_image(
                 panel,
-                cab_dir,
-                tex_dirs,
-                images,
-                cache,
-                control_type.clone(),
-                CabCvfOverlayKind::TwoState,
-                position,
-                panel_h,
-                scale,
-                graphic,
-                None,
+                ui_node_for_rect(position, panel_h, scale),
+                handle,
+                CabCvfOverlayWidget {
+                    control_type: control_type.clone(),
+                    kind: CabCvfOverlayKind::TwoState {
+                        frames: frames.clone(),
+                    },
+                },
+                rect,
             );
-            if n == 0 {
-                skip = 1;
-            }
-            (n, skip)
+            (1, 0)
         }
         CabControl::TriStateDisplay {
             control_type,
             position,
             graphic,
+            frames,
         } => {
             if position.width <= 0.0 || position.height <= 0.0 {
                 return (0, 1);
             }
-            let n = spawn_one_widget(
+            let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic) else {
+                return (0, 1);
+            };
+            let rect = if frames.frames_count > 1 {
+                discrete_frame_rect(images, &handle, frames, 0)
+            } else {
+                None
+            };
+            spawn_widget_image(
                 panel,
-                cab_dir,
-                tex_dirs,
-                images,
-                cache,
-                control_type.clone(),
-                CabCvfOverlayKind::TriState,
-                position,
-                panel_h,
-                scale,
-                graphic,
-                None,
+                ui_node_for_rect(position, panel_h, scale),
+                handle,
+                CabCvfOverlayWidget {
+                    control_type: control_type.clone(),
+                    kind: CabCvfOverlayKind::TriState {
+                        frames: frames.clone(),
+                    },
+                },
+                rect,
             );
-            if n == 0 {
-                skip = 1;
-            }
-            (n, skip)
+            (1, 0)
         }
         CabControl::MultiStateDisplay {
             control_type,
@@ -458,8 +592,22 @@ fn spawn_cvf_control(
     }
 }
 
+fn apply_discrete_frame(
+    images: &Assets<Image>,
+    image_node: &mut ImageNode,
+    frames: &CabLeverFrames,
+    index: usize,
+) {
+    if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
+        if let Some(image) = images.get(&image_node.image) {
+            let size = image.size();
+            let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, index);
+            image_node.rect = Some(Rect::new(x, y, x + w, y + h));
+        }
+    }
+}
+
 pub(crate) fn update_cab_cvf_overlay(
-    time: Res<Time>,
     follow: Res<CameraFollowMode>,
     cvf_state: Res<CabCvfState>,
     live: Option<Res<LiveDrive>>,
@@ -478,7 +626,7 @@ pub(crate) fn update_cab_cvf_overlay(
     let Ok(mut root_vis) = roots.single_mut() else {
         return;
     };
-    if *follow != CameraFollowMode::DriverCam {
+    if !follow.is_cab2d() {
         *root_vis = Visibility::Hidden;
         return;
     }
@@ -496,43 +644,38 @@ pub(crate) fn update_cab_cvf_overlay(
     for (widget, mut ui, mut visibility, mut image_node) in &mut widgets {
         let value = control_value(&widget.control_type, &tel);
         match &widget.kind {
-            CabCvfOverlayKind::DialNeedle => {
+            CabCvfOverlayKind::DialNeedle { dial, .. } => {
                 *visibility = Visibility::Visible;
-                let angle = -0.65 + value * 1.3;
-                ui.rotation = Rot2::radians(angle as f32);
+                let reading = dial_control_value(&widget.control_type, dial, &tel);
+                ui.rotation = Rot2::radians(dial.rotation_radians(reading));
                 ui.translation = Val2::ZERO;
             }
             CabCvfOverlayKind::Lever { frames } => {
                 *visibility = Visibility::Visible;
                 ui.rotation = Rot2::IDENTITY;
                 ui.translation = Val2::ZERO;
-                if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
-                    if let Some(image) = images.get(&image_node.image) {
-                        let size = image.size();
-                        let index = frames.percent_to_index(value);
-                        let (x, y, w, h) =
-                            frames.frame_rect(size.x as f32, size.y as f32, index);
-                        image_node.rect = Some(Rect::new(x, y, x + w, y + h));
-                    }
-                }
+                let index = frames.percent_to_index(value);
+                apply_discrete_frame(&images, &mut image_node, frames, index);
             }
-            CabCvfOverlayKind::TwoState => {
+            CabCvfOverlayKind::TwoState { frames } => {
                 *visibility = Visibility::Visible;
-                let pressed = value > 0.5;
                 ui.rotation = Rot2::IDENTITY;
-                ui.translation = Val2::px(0.0, if pressed { -6.0 } else { 0.0 });
+                ui.translation = Val2::ZERO;
+                let index = if value > 0.5 { 1 } else { 0 };
+                apply_discrete_frame(&images, &mut image_node, frames, index);
             }
-            CabCvfOverlayKind::TriState => {
+            CabCvfOverlayKind::TriState { frames } => {
                 *visibility = Visibility::Visible;
-                let slot = if value <= 0.25 {
-                    -1.0
+                ui.rotation = Rot2::IDENTITY;
+                ui.translation = Val2::ZERO;
+                let index = if value <= 0.25 {
+                    0
                 } else if value >= 0.75 {
-                    1.0
+                    2
                 } else {
-                    0.0
+                    1
                 };
-                ui.rotation = Rot2::IDENTITY;
-                ui.translation = Val2::px(slot * 10.0, 0.0);
+                apply_discrete_frame(&images, &mut image_node, frames, index);
             }
             CabCvfOverlayKind::MultiState { state_index } => {
                 let active = pick_multi_state_index(&runtime.cvf, &widget.control_type, value);
@@ -542,10 +685,6 @@ pub(crate) fn update_cab_cvf_overlay(
                     Visibility::Hidden
                 };
             }
-        }
-        if widget.control_type.as_str().contains("WIPER") && tel.speed_kmh > 5.0 {
-            let angle = (time.elapsed_secs() * 6.0).sin() * 0.9;
-            ui.rotation = Rot2::radians(angle);
         }
     }
 }
@@ -557,11 +696,12 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn cvf_overlay_disabled_by_default_in_3d_cab() {
-        unsafe {
-            std::env::remove_var("OPENRAILSRS_CAB_CVF_OVERLAY");
-        }
-        assert!(!cvf_overlay_in_3d_cab_enabled());
+    fn letterbox_centers_panel() {
+        let (left, bottom, w, h) = letterbox_layout(640.0, 480.0, 1280.0, 720.0);
+        assert!((w - 960.0).abs() < 1.0);
+        assert!((h - 720.0).abs() < 1.0);
+        assert!((left - 160.0).abs() < 1.0);
+        assert!(bottom.abs() < 1.0);
     }
 
     #[test]
@@ -661,5 +801,39 @@ mod tests {
             &runtime,
             &ControlType::Throttle
         ));
+    }
+
+    #[test]
+    fn dial_rotation_uses_scale_pos() {
+        let dial = CabDialParams {
+            scale_min: 0.0,
+            scale_max: 100.0,
+            from_degree: 190.0,
+            to_degree: 150.0,
+            pivot: Some(21.0),
+            dir_increase: false,
+            units: Some("MILES_PER_HOUR".into()),
+        };
+        assert!((dial.range_fraction(0.0) - 0.0).abs() < 1e-6);
+        assert!((dial.range_fraction(100.0) - 1.0).abs() < 1e-6);
+        let a0 = dial.rotation_radians(0.0);
+        let a1 = dial.rotation_radians(100.0);
+        assert!((a0 - a1).abs() > 0.1);
+    }
+
+    #[test]
+    fn two_state_frame_index_from_value() {
+        let frames = CabLeverFrames {
+            frames_count: 2,
+            frames_x: 2,
+            frames_y: 1,
+            ..Default::default()
+        };
+        assert_eq!(if 0.2_f64 > 0.5 { 1 } else { 0 }, 0);
+        assert_eq!(if 0.8_f64 > 0.5 { 1 } else { 0 }, 1);
+        let (x0, _, w, _) = frames.frame_rect(100.0, 50.0, 0);
+        let (x1, _, _, _) = frames.frame_rect(100.0, 50.0, 1);
+        assert!((w - 50.0).abs() < 1e-3);
+        assert!((x1 - x0 - 50.0).abs() < 1e-3);
     }
 }

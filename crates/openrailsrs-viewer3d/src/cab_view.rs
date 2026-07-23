@@ -454,17 +454,16 @@ pub fn sync_cab_interior(
     driver_cab: Option<Res<crate::camera::LiveDriverCab>>,
 ) {
     let driver = *follow == CameraFollowMode::DriverCam;
-    if !driver {
+    let cab2d = follow.is_cab2d();
+    if !driver && !cab2d {
         cab_cvf::reset_cab_cvf_state(&mut cvf_state);
         for entity in &existing {
             commands.entity(entity).despawn();
         }
         return;
     }
-    if !existing.is_empty() {
-        return;
-    }
 
+    // Resolve cab shape / CVF for both 3D and 2D cab views.
     let cab_shape = if let Some(path) = state.cab_shape.clone() {
         Some(path)
     } else if state.lookup == CabInteriorLookup::Missing
@@ -500,6 +499,18 @@ pub fn sync_cab_interior(
                 cab_cvf::load_cab_cvf_runtime(&mut cvf_state, &trainset, &eng.cab, &cab_shape);
             }
         }
+    }
+
+    // 2D Cab: CVF runtime only — no CABVIEW3D mesh (#152).
+    if cab2d {
+        for entity in &existing {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+
+    if !existing.is_empty() {
+        return;
     }
 
     let _head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
