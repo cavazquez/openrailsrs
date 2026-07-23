@@ -21,8 +21,8 @@ use openrailsrs_bevy_scenery::shapes::{
 use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TILE_SIZE_M, TileBound, TileCoord};
 use openrailsrs_bevy_scenery::{
     FnPlacementAdapter, LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
-    WorldObjectPlacement, object_placement, plan_shape_part_spawns, resolve_shape_parts,
-    world_item_placement,
+    WorldObjectPlacement, object_placement_with_linear, plan_shape_part_spawns,
+    resolve_shape_parts, world_item_placement,
 };
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
@@ -1857,9 +1857,10 @@ fn append_shape_spawn_entries_for_transforms(
 ) {
     use crate::signal_subobj::{signal_part_visible, signal_subobj_visible};
     use crate::world_instancing::{
-        WORLD_INSTANCING_MIN, WorldInstanceAppearance, WorldInstanceBuffer, WorldInstanceData,
-        WorldInstancedGroup, appearance_from_standard_material, group_placements_by_tile,
-        instances_aabb, instancing_part_supported, world_instancing_enabled,
+        WorldInstanceAppearance, WorldInstanceBuffer, WorldInstanceData, WorldInstancedGroup,
+        appearance_from_standard_material, group_placements_by_tile, instances_aabb,
+        instancing_part_supported, placement_requires_affine_gpu,
+        tile_placements_use_gpu_instancing, world_instancing_enabled,
     };
 
     // viewer3d scenery uses daylight sun by default (#95).
@@ -1949,13 +1950,17 @@ fn append_shape_spawn_entries_for_transforms(
                 ));
             }
         }
-    } else if !has_signal_filter && !animated && world_instancing_enabled() {
+    } else if !has_signal_filter
+        && !animated
+        && (world_instancing_enabled() || placements.iter().any(|p| p.linear.is_some()))
+    {
         // GPU instancing (#58): one entity per (part × tile) for opaque static repeats.
+        // Matrix3x3 shear always takes this path (N can be 1) — TRS drops linear (#139).
         let by_tile = group_placements_by_tile(placements);
         for ((tile_x, tile_z), indices) in by_tile {
             let tile_placements: Vec<&ShapeInstancePlacement> =
                 indices.iter().map(|&i| &placements[i]).collect();
-            let use_gpu = tile_placements.len() >= WORLD_INSTANCING_MIN;
+            let use_gpu = tile_placements_use_gpu_instancing(&tile_placements);
             let tile_auto_z = tile_placements.iter().any(|p| p.auto_z_bias);
             for &(part_index, part) in &visible_parts {
                 let material = material_with_auto_z_bias(materials, &part.material, tile_auto_z);
@@ -2003,25 +2008,66 @@ fn append_shape_spawn_entries_for_transforms(
                         aabb,
                     ));
                 } else {
-                    *shape_mesh_count += tile_placements.len();
+                    // Part not batch-instanced: still force N=1 GPU when Matrix3x3 shear
+                    // is present (entity Transform cannot represent it).
                     for p in &tile_placements {
-                        let tf = view_transform(p.transform, origin);
                         let mat =
                             material_with_auto_z_bias(materials, &part.material, p.auto_z_bias);
-                        spawn_queue.push((
-                            tf,
-                            Mesh3d(part.mesh.clone()),
-                            MeshMaterial3d(mat),
-                            Name::new("world:mesh"),
-                            WorldSceneryLod {
-                                enabled: true,
-                                shape_path: shape_path.to_path_buf(),
-                                prim_state_idx: part.prim_state_idx,
-                                part_index,
-                                lod_idx: initial_lod_idx,
-                            },
-                            WorldTileBound { tile_x, tile_z },
-                        ));
+                        let force_affine = placement_requires_affine_gpu(p)
+                            && !part.is_transparent
+                            && instancing_part_supported(
+                                part.shader_name.as_deref(),
+                                part.light_mat_idx,
+                                materials,
+                                &mat,
+                            );
+                        if force_affine {
+                            let instances = vec![WorldInstanceData::from_view_placement(
+                                view_transform(p.transform, origin),
+                                p.linear,
+                            )];
+                            let aabb = instances_aabb(&instances, 32.0);
+                            let appearance: WorldInstanceAppearance =
+                                appearance_from_standard_material(materials, &mat);
+                            *instanced_groups += 1;
+                            *instanced_instances += 1;
+                            *shape_mesh_count += 1;
+                            instanced_spawn_queue.push((
+                                Transform::IDENTITY,
+                                Mesh3d(part.mesh.clone()),
+                                Name::new("world:instanced"),
+                                WorldInstancedGroup {
+                                    shape_path: shape_path.to_path_buf(),
+                                    part_index,
+                                    prim_state_idx: part.prim_state_idx,
+                                    lod_idx: initial_lod_idx,
+                                    lod_enabled: true,
+                                    instance_count: 1,
+                                },
+                                WorldTileBound { tile_x, tile_z },
+                                WorldInstanceBuffer(instances),
+                                appearance,
+                                bevy::camera::visibility::NoFrustumCulling,
+                                aabb,
+                            ));
+                        } else {
+                            *shape_mesh_count += 1;
+                            let tf = view_transform(p.transform, origin);
+                            spawn_queue.push((
+                                tf,
+                                Mesh3d(part.mesh.clone()),
+                                MeshMaterial3d(mat),
+                                Name::new("world:mesh"),
+                                WorldSceneryLod {
+                                    enabled: true,
+                                    shape_path: shape_path.to_path_buf(),
+                                    prim_state_idx: part.prim_state_idx,
+                                    part_index,
+                                    lod_idx: initial_lod_idx,
+                                },
+                                WorldTileBound { tile_x, tile_z },
+                            ));
+                        }
                     }
                 }
             }
@@ -2078,13 +2124,81 @@ fn append_shape_spawn_entries_for_transforms(
     } else {
         // Static non-instanced path: shared plan core (#115). LOD/instancing/anim stay above.
         // Also used for SignalSubObj-filtered instances (#80).
+        // Matrix3x3 shear still uses N=1 GPU instances — entity TRS cannot keep linear (#139).
         for inst in placements {
             let inst_parts = parts_for_mask(inst.signal_sub_obj);
+            if placement_requires_affine_gpu(inst) {
+                for &(part_index, part) in &inst_parts {
+                    let mat =
+                        material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
+                    let can_affine = !part.is_transparent
+                        && instancing_part_supported(
+                            part.shader_name.as_deref(),
+                            part.light_mat_idx,
+                            materials,
+                            &mat,
+                        );
+                    if can_affine {
+                        let instances = vec![WorldInstanceData::from_view_placement(
+                            view_transform(inst.transform, origin),
+                            inst.linear,
+                        )];
+                        let aabb = instances_aabb(&instances, 32.0);
+                        let appearance: WorldInstanceAppearance =
+                            appearance_from_standard_material(materials, &mat);
+                        *instanced_groups += 1;
+                        *instanced_instances += 1;
+                        *shape_mesh_count += 1;
+                        instanced_spawn_queue.push((
+                            Transform::IDENTITY,
+                            Mesh3d(part.mesh.clone()),
+                            Name::new("world:instanced"),
+                            WorldInstancedGroup {
+                                shape_path: shape_path.to_path_buf(),
+                                part_index,
+                                prim_state_idx: part.prim_state_idx,
+                                lod_idx: initial_lod_idx,
+                                lod_enabled: true,
+                                instance_count: 1,
+                            },
+                            WorldTileBound {
+                                tile_x: inst.tile_x,
+                                tile_z: inst.tile_z,
+                            },
+                            WorldInstanceBuffer(instances),
+                            appearance,
+                            bevy::camera::visibility::NoFrustumCulling,
+                            aabb,
+                        ));
+                        continue;
+                    }
+                    *shape_mesh_count += 1;
+                    spawn_queue.push((
+                        view_transform(inst.transform, origin),
+                        Mesh3d(part.mesh.clone()),
+                        MeshMaterial3d(mat),
+                        Name::new("world:mesh"),
+                        WorldSceneryLod {
+                            enabled: true,
+                            shape_path: shape_path.to_path_buf(),
+                            prim_state_idx: part.prim_state_idx,
+                            part_index,
+                            lod_idx: initial_lod_idx,
+                        },
+                        WorldTileBound {
+                            tile_x: inst.tile_x,
+                            tile_z: inst.tile_z,
+                        },
+                    ));
+                }
+                continue;
+            }
             *shape_mesh_count += inst_parts.len();
-            let placement = object_placement(
+            let placement = object_placement_with_linear(
                 inst.transform.translation,
                 inst.transform.rotation,
                 inst.transform.scale,
+                inst.linear,
                 inst.tile_x,
                 inst.tile_z,
             );

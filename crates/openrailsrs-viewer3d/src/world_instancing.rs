@@ -43,12 +43,15 @@ use bevy::shader::Shader;
 use bytemuck::{Pod, Zeroable};
 use openrailsrs_bevy_scenery::shapes::lod_level_index_for_distance;
 
-/// Minimum placements in one tile before GPU instancing is used.
+/// Minimum placements in one tile before GPU instancing is used for TRS-only poses.
 pub const WORLD_INSTANCING_MIN: usize = 4;
 
 const SHADER_WGSL: &str = include_str!("world_instancing.wgsl");
 
 /// Opt-out: `OPENRAILSRS_WORLD_INSTANCING=0`.
+///
+/// Matrix3x3 shear (`linear`) still uses the GPU instance path even when this is
+/// off — Bevy `Transform` TRS cannot represent shear (#139 residual).
 pub fn world_instancing_enabled() -> bool {
     match std::env::var("OPENRAILSRS_WORLD_INSTANCING") {
         Ok(v) => {
@@ -57,6 +60,20 @@ pub fn world_instancing_enabled() -> bool {
         }
         Err(_) => true,
     }
+}
+
+/// True when a tile batch should use GPU instancing: enough repeats, or any
+/// placement carries a Matrix3x3 linear map that TRS would drop (#139).
+pub fn tile_placements_use_gpu_instancing(
+    placements: &[&crate::world::ShapeInstancePlacement],
+) -> bool {
+    placements.len() >= WORLD_INSTANCING_MIN || placements.iter().any(|p| p.linear.is_some())
+}
+
+/// True when this single placement must use the GPU Mat4 path (N can be 1).
+#[inline]
+pub fn placement_requires_affine_gpu(p: &crate::world::ShapeInstancePlacement) -> bool {
+    p.linear.is_some()
 }
 
 /// One instance transform (column-major Mat4) in the entity local / view frame.
@@ -1008,6 +1025,50 @@ mod tests {
             scale: Vec3::ONE,
         });
         assert!(trs_only.linear().y_axis.x.abs() < 1e-4);
+    }
+
+    #[test]
+    fn single_matrix3x3_placement_forces_gpu_below_instancing_min() {
+        // Unique station Static (N=1) with shear must not stay on entity TRS.
+        let shear = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.5, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let one = ShapeInstancePlacement {
+            transform: Transform::from_xyz(1.0, 2.0, 3.0),
+            linear: Some(shear),
+            tile_x: -6080,
+            tile_z: 14925,
+            auto_z_bias: false,
+            signal_sub_obj: None,
+        };
+        assert!(placement_requires_affine_gpu(&one));
+        let refs = [&one];
+        assert!(
+            refs.len() < WORLD_INSTANCING_MIN,
+            "fixture must be below repeat threshold"
+        );
+        assert!(
+            tile_placements_use_gpu_instancing(&refs),
+            "Matrix3x3 linear must force GPU even when N < WORLD_INSTANCING_MIN"
+        );
+        let d = WorldInstanceData::from_view_placement(one.transform, one.linear);
+        assert!((d.linear().y_axis.x - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn trs_only_singleton_does_not_force_gpu() {
+        let one = ShapeInstancePlacement {
+            transform: Transform::IDENTITY,
+            linear: None,
+            tile_x: 0,
+            tile_z: 0,
+            auto_z_bias: false,
+            signal_sub_obj: None,
+        };
+        assert!(!placement_requires_affine_gpu(&one));
+        assert!(!tile_placements_use_gpu_instancing(&[&one]));
     }
 
     #[test]
