@@ -134,6 +134,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         davis: crate::model::DavisCoefficients::default(),
         brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType::default(),
         brake_shoe_friction: None,
+        flipped: false,
     })
 }
 

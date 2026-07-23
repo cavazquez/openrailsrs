@@ -14,6 +14,8 @@ pub struct ConsistVehicleVisual {
     pub length_m: f32,
     /// Metres behind the train head along the travel axis (negative X local).
     pub offset_m: f32,
+    /// `.con` Flip — Y 180° on the vehicle shape; consist order unchanged (#130).
+    pub flipped: bool,
 }
 
 /// Loaded consists keyed by replay track label (`primary`, extra `id`, …).
@@ -104,12 +106,14 @@ pub fn vehicles_from_consist(consist: &Consist) -> Vec<ConsistVehicleVisual> {
                 shape_file: l.wagon_shape.clone(),
                 length_m: l.length_m as f32,
                 offset_m,
+                flipped: l.flipped,
             },
             Vehicle::Wagon(w) => ConsistVehicleVisual {
                 name: w.name.clone(),
                 shape_file: w.wagon_shape.clone(),
                 length_m: w.length_m as f32,
                 offset_m,
+                flipped: w.flipped,
             },
         })
         .collect()
@@ -184,6 +188,46 @@ mod tests {
         let offsets = longitudinal_offsets_m(&lengths);
         assert_eq!(offsets, vec![0.0, -18.0]);
         assert!((offsets[1] + lengths[0]).abs() < 1e-4);
+    }
+
+    #[test]
+    fn flip_flags_preserve_consist_order() {
+        // #130: Flip is per-vehicle orientation only; lead→tail order matches `.con`.
+        use openrailsrs_train::{Consist, DavisCoefficients, Vehicle, Wagon};
+        let consist = Consist {
+            vehicles: vec![
+                Vehicle::Wagon(Wagon {
+                    name: "a".into(),
+                    mass_kg: 1.0,
+                    max_brake_force_n: 0.0,
+                    length_m: 10.0,
+                    davis: DavisCoefficients::default(),
+                    wagon_shape: Some("a.s".into()),
+                    brake_shoe_type: Default::default(),
+                    brake_shoe_friction: None,
+                    flipped: false,
+                }),
+                Vehicle::Wagon(Wagon {
+                    name: "b".into(),
+                    mass_kg: 1.0,
+                    max_brake_force_n: 0.0,
+                    length_m: 10.0,
+                    davis: DavisCoefficients::default(),
+                    wagon_shape: Some("b.s".into()),
+                    brake_shoe_type: Default::default(),
+                    brake_shoe_friction: None,
+                    flipped: true,
+                }),
+            ],
+            davis: DavisCoefficients::default(),
+        };
+        let visuals = vehicles_from_consist(&consist);
+        assert_eq!(visuals.len(), 2);
+        assert_eq!(visuals[0].name, "a");
+        assert!(!visuals[0].flipped);
+        assert_eq!(visuals[1].name, "b");
+        assert!(visuals[1].flipped);
+        assert!((visuals[1].offset_m + 10.0).abs() < 1e-4);
     }
 
     #[test]

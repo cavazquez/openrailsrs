@@ -38,8 +38,8 @@ pub use lighting::{SceneSunLight, directional_light_from_sun, sun_transform};
 pub use load_diagnostics::{LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics};
 pub use materials::{
     OrCabMaterial, OrForestMaterial, OrSceneryMaterial, OrTerrainMaterial, TerrainMaterial,
-    TerrainPipelineFlags, create_or_cab_material, create_or_forest_material,
-    or_cab_shaders_enabled, or_scenery_shaders_enabled,
+    TerrainPipelineFlags, create_or_cab_material, create_or_cab_material_ex,
+    create_or_forest_material, or_cab_shaders_enabled, or_scenery_shaders_enabled,
 };
 pub use spawn::forest::{
     DEFAULT_TREE_HEIGHT_M, DEFAULT_TREE_WIDTH_M, TreePlacement, append_tree_billboard,

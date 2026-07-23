@@ -90,7 +90,8 @@ pub fn sync_camera_render_layers(
     follow: Res<CameraFollowMode>,
     mut cameras: Query<&mut RenderLayers, With<Camera3d>>,
 ) {
-    let target = if *follow == CameraFollowMode::DriverCam {
+    // Cab2d needs world through ACE window alpha; hide train exterior via visibility.
+    let target = if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() {
         camera_layers_driver()
     } else {
         camera_layers_outdoor()

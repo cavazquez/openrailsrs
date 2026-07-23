@@ -54,6 +54,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
                 wagon_shape: None,
                 brake_shoe_type: Default::default(),
                 brake_shoe_friction: None,
+                flipped: false,
             }),
             Vehicle::Wagon(Wagon {
                 name: "rear".into(),
@@ -68,6 +69,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
                 wagon_shape: None,
                 brake_shoe_type: Default::default(),
                 brake_shoe_friction: None,
+                flipped: false,
             }),
         ],
         davis: DavisCoefficients::default(),

@@ -355,21 +355,34 @@ impl SpecializedMeshPipeline for WorldInstancingPipeline {
 
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
         // Same WGSL as shadow pass — must name entry points (wgpu rejects multi-EP modules).
-        descriptor.vertex.shader = self.shader.clone();
-        descriptor.vertex.entry_point = Some("vertex".into());
+        apply_opaque_instancing_shaders(&mut descriptor, &self.shader);
         descriptor
             .vertex
             .buffers
             .push(instance_vertex_buffer_layout());
-        if let Some(fragment) = descriptor.fragment.as_mut() {
-            fragment.shader = self.shader.clone();
-            fragment.entry_point = Some("fragment".into());
-        }
         // Insert appearance bind group at index 3 (after view/array/mesh).
         descriptor.layout.push(self.appearance_layout.clone());
         Ok(descriptor)
     }
 }
+
+/// Bind the shared multi-EP WGSL module and force opaque `vertex`/`fragment` (#143).
+pub(crate) fn apply_opaque_instancing_shaders(
+    descriptor: &mut RenderPipelineDescriptor,
+    shader: &Handle<Shader>,
+) {
+    descriptor.vertex.shader = shader.clone();
+    descriptor.vertex.entry_point = Some(OPAQUE_INSTANCING_VERTEX_EP.into());
+    if let Some(fragment) = descriptor.fragment.as_mut() {
+        fragment.shader = shader.clone();
+        fragment.entry_point = Some(OPAQUE_INSTANCING_FRAGMENT_EP.into());
+    }
+}
+
+pub(crate) const OPAQUE_INSTANCING_VERTEX_EP: &str = "vertex";
+pub(crate) const OPAQUE_INSTANCING_FRAGMENT_EP: &str = "fragment";
+pub(crate) const SHADOW_INSTANCING_VERTEX_EP: &str = "vertex_shadow";
+pub(crate) const SHADOW_INSTANCING_FRAGMENT_EP: &str = "fragment_shadow";
 
 impl WorldInstancingPipeline {
     fn specialize_shadow(
@@ -399,13 +412,13 @@ impl WorldInstancingPipeline {
             ],
             vertex: VertexState {
                 shader: self.shader.clone(),
-                entry_point: Some("vertex_shadow".into()),
+                entry_point: Some(SHADOW_INSTANCING_VERTEX_EP.into()),
                 buffers: vec![vertex_buffer_layout, instance_vertex_buffer_layout()],
                 ..default()
             },
             fragment: Some(FragmentState {
                 shader: self.shader.clone(),
-                entry_point: Some("fragment_shadow".into()),
+                entry_point: Some(SHADOW_INSTANCING_FRAGMENT_EP.into()),
                 // Depth-only: no color targets; FS only for alpha discard.
                 targets: vec![],
                 ..default()
@@ -985,6 +998,49 @@ mod tests {
                 && src.contains("fn fragment_shadow"),
             "shader must expose opaque + shadow cast entry points"
         );
+    }
+
+    #[test]
+    fn specialize_sets_explicit_opaque_entry_points() {
+        // #143: regression guard on the Rust descriptor path (not WGSL grepping).
+        let mut descriptor = RenderPipelineDescriptor {
+            vertex: VertexState {
+                entry_point: None,
+                ..default()
+            },
+            fragment: Some(FragmentState {
+                entry_point: None,
+                ..default()
+            }),
+            ..default()
+        };
+        let shader = Handle::<Shader>::default();
+        apply_opaque_instancing_shaders(&mut descriptor, &shader);
+        assert_eq!(
+            descriptor.vertex.entry_point.as_deref(),
+            Some(OPAQUE_INSTANCING_VERTEX_EP)
+        );
+        assert_eq!(
+            descriptor
+                .fragment
+                .as_ref()
+                .and_then(|f| f.entry_point.as_deref()),
+            Some(OPAQUE_INSTANCING_FRAGMENT_EP)
+        );
+        assert_eq!(descriptor.vertex.shader, shader);
+        assert_eq!(
+            descriptor.fragment.as_ref().map(|f| &f.shader),
+            Some(&shader)
+        );
+    }
+
+    #[test]
+    fn shadow_instancing_entry_point_names_are_explicit() {
+        // #143: shadow specialize must keep distinct multi-EP names.
+        assert_eq!(SHADOW_INSTANCING_VERTEX_EP, "vertex_shadow");
+        assert_eq!(SHADOW_INSTANCING_FRAGMENT_EP, "fragment_shadow");
+        assert_ne!(SHADOW_INSTANCING_VERTEX_EP, OPAQUE_INSTANCING_VERTEX_EP);
+        assert_ne!(SHADOW_INSTANCING_FRAGMENT_EP, OPAQUE_INSTANCING_FRAGMENT_EP);
     }
 
     #[test]

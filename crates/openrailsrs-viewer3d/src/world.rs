@@ -196,6 +196,23 @@ pub fn visible_radius_m() -> f32 {
     crate::launch::view_radius_m()
 }
 
+/// Open Rails `WorldObjectDensity` default (0–99). Higher keeps more detail levels.
+pub const DEFAULT_WORLD_OBJECT_DENSITY: u32 = 49;
+
+/// Prefer `OPENRAILSRS_WORLD_OBJECT_DENSITY` (clamped 0–99); else [`DEFAULT_WORLD_OBJECT_DENSITY`].
+pub fn world_object_density() -> u32 {
+    std::env::var("OPENRAILSRS_WORLD_OBJECT_DENSITY")
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(DEFAULT_WORLD_OBJECT_DENSITY)
+        .min(99)
+}
+
+/// Keep WORLD item when its `StaticDetailLevel` is within the configured density (#141).
+pub fn keep_by_world_object_density(static_detail_level: u32, density: u32) -> bool {
+    static_detail_level <= density
+}
+
 /// Within this radius, spawn real `.s` meshes when the file resolves; matches [`visible_radius_m`].
 pub fn shape_mesh_radius_m() -> f32 {
     visible_radius_m()
@@ -415,6 +432,10 @@ pub struct WorldScene {
     pub items: Vec<WorldObject>,
     /// Items skipped during materialization because they were outside [`WorldItemWindow`].
     pub items_skipped_out_of_window: usize,
+    /// WORLD objects omitted at parse time (no Position / no Matrix3x3|QDirection) (#140).
+    pub items_skipped_invalid_pose: usize,
+    /// WORLD objects omitted by `StaticDetailLevel` vs [`world_object_density`] (#141).
+    pub items_skipped_by_density: usize,
     /// Stream/unload deltas for incremental [`crate::tr_item_index::TrItemWorldIndex`] sync.
     pub tr_item_delta: TrItemIndexDelta,
     /// `.w` load outcomes for shared [`MstsLoadDiagnostics`] (#54).
@@ -630,22 +651,33 @@ fn object_label(item: &WorldItem) -> String {
         .unwrap_or_else(|| item.kind().to_string())
 }
 
+/// Why [`try_object_from_item`] rejected a WORLD item during materialization.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ObjectSkip {
+    OutOfWindow,
+    Density,
+}
+
 /// Materialize a `.w` item, optionally rejecting it before heavy forest/water payloads (#59).
 ///
-/// Returns `Ok(None)` when the item has no position; `Err(())` when skipped by the window.
+/// Returns `Ok(None)` when the item has no position; `Err` when skipped by window/density.
 fn try_object_from_item(
     tile_x: i32,
     tile_z: i32,
     item: &WorldItem,
     window: Option<WorldItemWindow>,
-) -> Result<Option<WorldObject>, ()> {
+    density: u32,
+) -> Result<Option<WorldObject>, ObjectSkip> {
+    if !keep_by_world_object_density(item.static_detail_level(), density) {
+        return Err(ObjectSkip::Density);
+    }
     let Some(placement) = world_item_placement(tile_x, tile_z, item) else {
         return Ok(None);
     };
     let position = placement.pose.position;
     if let Some(window) = window {
         if !window.contains_xz(position) {
-            return Err(());
+            return Err(ObjectSkip::OutOfWindow);
         }
     }
     let rotation = placement.pose.rotation;
@@ -947,15 +979,26 @@ pub(crate) fn append_world_tile(
     world: &WorldFile,
     item_window: Option<WorldItemWindow>,
 ) {
+    append_world_tile_with_density(scene, world, item_window, world_object_density());
+}
+
+pub(crate) fn append_world_tile_with_density(
+    scene: &mut WorldScene,
+    world: &WorldFile,
+    item_window: Option<WorldItemWindow>,
+    density: u32,
+) {
     let key = (world.tile_x, world.tile_z);
     if scene.loaded_tiles.insert(key) {
         scene.tiles_loaded = scene.loaded_tiles.len();
     }
+    scene.items_skipped_invalid_pose += world.skipped_invalid_pose;
     for item in &world.items {
-        match try_object_from_item(world.tile_x, world.tile_z, item, item_window) {
+        match try_object_from_item(world.tile_x, world.tile_z, item, item_window, density) {
             Ok(Some(obj)) => scene.items.push(obj),
             Ok(None) => {}
-            Err(()) => scene.items_skipped_out_of_window += 1,
+            Err(ObjectSkip::OutOfWindow) => scene.items_skipped_out_of_window += 1,
+            Err(ObjectSkip::Density) => scene.items_skipped_by_density += 1,
         }
     }
 }
@@ -3935,6 +3978,52 @@ mod tests {
         );
         // z = -(1*2048 + 20) = -2068 (whole-world Z negation).
         assert_eq!(p, Vec3::new(4106.0, 0.0, -2068.0));
+    }
+
+    #[test]
+    fn world_object_density_keeps_levels_at_or_below_threshold() {
+        // #141: StaticDetailLevel > density → omit (OR WorldObjectDensity).
+        assert!(keep_by_world_object_density(0, 49));
+        assert!(keep_by_world_object_density(49, 49));
+        assert!(!keep_by_world_object_density(50, 49));
+        assert!(!keep_by_world_object_density(99, 10));
+        assert!(keep_by_world_object_density(10, 10));
+    }
+
+    #[test]
+    fn density_filter_selects_uids_from_synthetic_multi_level_world() {
+        use openrailsrs_formats::parser::parse_from_first_paren;
+
+        let src = r#"
+(Tr_Worldfile
+  (Tr_Watermark 5)
+  (Static (UiD 1) (FileName "a.s") (Position 0 0 0) (QDirection 0 0 0 1))
+  (Tr_Watermark 20)
+  (Static (UiD 2) (FileName "b.s") (Position 1 0 0) (QDirection 0 0 0 1))
+  (Tr_Watermark 60)
+  (Static (UiD 3) (FileName "c.s") (Position 2 0 0) (QDirection 0 0 0 1))
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(world.items.len(), 3);
+
+        let mut dense = WorldScene::default();
+        append_world_tile_with_density(&mut dense, &world, None, 49);
+        let uids: Vec<u32> = dense.items.iter().filter_map(|o| o.uid).collect();
+        assert_eq!(uids, vec![1, 2]);
+        assert_eq!(dense.items_skipped_by_density, 1);
+
+        let mut sparse = WorldScene::default();
+        append_world_tile_with_density(&mut sparse, &world, None, 10);
+        let uids: Vec<u32> = sparse.items.iter().filter_map(|o| o.uid).collect();
+        assert_eq!(uids, vec![1]);
+        assert_eq!(sparse.items_skipped_by_density, 2);
+
+        let mut all = WorldScene::default();
+        append_world_tile_with_density(&mut all, &world, None, 99);
+        assert_eq!(all.items.len(), 3);
+        assert_eq!(all.items_skipped_by_density, 0);
     }
 
     #[test]

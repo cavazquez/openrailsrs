@@ -153,12 +153,17 @@ pub const DRIVER_NEAR_CLIP_M: f32 = 0.1;
 /// Mouse-look sensitivity in cab (rad / pixel).
 pub const DRIVER_LOOK_SENSITIVITY: f32 = 0.004;
 
-/// Max head-turn left/right in cab (rad).
+/// Max head-turn left/right in cab (rad) — fallback when no authored limit.
 pub const DRIVER_LOOK_YAW_MAX: f32 = 0.85;
 
-/// Max look up/down relative to default cab pitch (rad).
+/// Max look up/down relative to default cab pitch (rad) — fallback.
 pub const DRIVER_LOOK_PITCH_MAX: f32 = 0.55;
 pub const DRIVER_LOOK_PITCH_MIN: f32 = -0.65;
+
+/// Open Rails `InsideThreeDimCamera` does not clamp to `.eng` `RotationLimit`;
+/// use a soft vertical clamper (~±85°) and free yaw for 3D cab mouse look.
+pub const DRIVER_CAM_FREE_YAW_MAX: f32 = std::f32::consts::PI;
+pub const DRIVER_CAM_FREE_PITCH_MAX: f32 = 1.48;
 
 /// Yaw offset so the camera −Z axis aligns with MSTS shape +Z (train-local +X after
 /// [`crate::shapes::msts_shape_to_train_rotation`]).
@@ -316,6 +321,17 @@ impl CameraFollowTarget {
     }
 }
 
+/// Like Open Rails `Use3DCab`: key **1** enters 3D cab when true, 2D when false.
+/// Toggled with **Alt+1** (`CameraToggleThreeDimensionalCab`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Prefer3dCab(pub bool);
+
+impl Default for Prefer3dCab {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
 /// Train-tracking camera behaviour (cycle with `T` during replay).
 #[derive(Resource, Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CameraFollowMode {
@@ -327,6 +343,8 @@ pub enum CameraFollowMode {
     DriverCam,
     /// Open Rails 2D `Cab` view: CVF ACE background + control sprites (#152).
     Cab2d,
+    /// Open Rails camera 5 — passenger seat; **5** cycles cars with `Inside`.
+    PassengerCam,
 }
 
 impl CameraFollowMode {
@@ -336,8 +354,9 @@ impl CameraFollowMode {
             Self::OrbitFollow => Self::ChaseCam,
             Self::ChaseCam => Self::DriverCam,
             Self::DriverCam => Self::Off,
-            // Digit1 toggles Cab2d; T-cycle leaves it via Off.
+            // Cab2d left via T-cycle / outside cams (OR: 1 stays in cab).
             Self::Cab2d => Self::Off,
+            Self::PassengerCam => Self::Off,
         }
     }
 
@@ -348,12 +367,86 @@ impl CameraFollowMode {
             Self::ChaseCam => "chase",
             Self::DriverCam => "driver",
             Self::Cab2d => "cab2d",
+            Self::PassengerCam => "passenger",
         }
     }
 
     /// True for the 2D CVF cab panel (not the 3D CABVIEW3D mesh).
     pub fn is_cab2d(self) -> bool {
         matches!(self, Self::Cab2d)
+    }
+
+    pub fn is_passenger(self) -> bool {
+        matches!(self, Self::PassengerCam)
+    }
+}
+
+/// Active passenger seat (OR camera 5).
+#[derive(Resource, Clone, Debug)]
+pub struct PassengerCamState {
+    /// Slot among cars that have ≥1 passenger viewpoint.
+    pub car_slot: usize,
+    /// Viewpoint within the current car.
+    pub view_index: usize,
+    /// Consist car index (`LiveTrainCar.index`).
+    pub consist_car: usize,
+    pub head_msts: Vec3,
+    pub look_pitch: f32,
+    pub look_yaw: f32,
+    pub pitch_limit: f32,
+    pub yaw_limit: f32,
+}
+
+impl Default for PassengerCamState {
+    fn default() -> Self {
+        Self {
+            car_slot: 0,
+            view_index: 0,
+            consist_car: 0,
+            head_msts: Vec3::ZERO,
+            look_pitch: 0.0,
+            look_yaw: 0.0,
+            pitch_limit: 30f32.to_radians(),
+            yaw_limit: 70f32.to_radians(),
+        }
+    }
+}
+
+impl PassengerCamState {
+    pub fn apply_viewpoint(&mut self, vp: &PassengerViewpointAuthored, consist_car: usize) {
+        self.consist_car = consist_car;
+        self.head_msts = vp.head_msts;
+        self.look_pitch = vp.look_pitch;
+        self.look_yaw = vp.look_yaw;
+        self.pitch_limit = vp.pitch_limit.unwrap_or(30f32.to_radians());
+        self.yaw_limit = vp.yaw_limit.unwrap_or(70f32.to_radians());
+    }
+}
+
+/// One authored passenger seat from `.wag` / `.eng` `Inside`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PassengerViewpointAuthored {
+    pub head_msts: Vec3,
+    pub look_pitch: f32,
+    pub look_yaw: f32,
+    pub pitch_limit: Option<f32>,
+    pub yaw_limit: Option<f32>,
+}
+
+/// Per-consist-car passenger viewpoints (empty vec = no seat on that car).
+#[derive(Resource, Clone, Debug, Default)]
+pub struct PassengerSeatCatalog {
+    pub by_car: Vec<Vec<PassengerViewpointAuthored>>,
+}
+
+impl PassengerSeatCatalog {
+    /// `(consist_car_index, viewpoints)` for cars that have seats.
+    pub fn seat_cars(&self) -> Vec<(usize, &Vec<PassengerViewpointAuthored>)> {
+        self.by_car
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| !v.is_empty())
+            .collect()
     }
 }
 
@@ -592,11 +685,9 @@ pub fn driver_camera_transform_at_eye(
     cab: &LiveDriverCab,
     look: DriverLookOffset,
 ) -> Transform {
-    let user = driver_user_look_quat(look);
-    let base = driver_cab_base_orientation(cab);
     Transform {
         translation: eye,
-        rotation: Quat::from_rotation_y(train_yaw) * user * base,
+        rotation: Quat::from_rotation_y(train_yaw) * driver_combined_look_quat(look, cab),
         scale: Vec3::ONE,
     }
 }
@@ -623,6 +714,17 @@ pub fn driver_user_look_quat(look: DriverLookOffset) -> Quat {
     Quat::from_euler(EulerRot::YXZ, look.yaw, look.pitch, 0.0)
 }
 
+/// CVF `Direction` / MSTS `StartDirection` → Bevy look offset.
+///
+/// X = pitch degrees (positive = look down) → negated Bevy pitch.
+/// Y = yaw degrees (rear cab ≈ ±180).
+pub fn msts_direction_to_look_offset(direction_deg: [f64; 3]) -> DriverLookOffset {
+    DriverLookOffset {
+        pitch: -(direction_deg[0] as f32).to_radians(),
+        yaw: (direction_deg[1] as f32).to_radians(),
+    }
+}
+
 /// Default cab orientation from `.eng` `StartDirection` (yaw + pitch).
 ///
 /// Applies [`DRIVER_CAB_FORWARD_YAW_OFFSET`] so Bevy camera −Z aligns with train
@@ -636,6 +738,20 @@ pub fn driver_cab_base_orientation(cab: &LiveDriverCab) -> Quat {
     )
 }
 
+/// Cab base look + mouse offset in one YXZ euler (FPS-style).
+///
+/// Must not be `user * base`: with [`DRIVER_CAB_FORWARD_YAW_OFFSET`] = −π/2 baked
+/// into `base`, a separate `user` pitch rotates around train +X (roll), so
+/// horizontal look works but up/down does not.
+pub fn driver_combined_look_quat(look: DriverLookOffset, cab: &LiveDriverCab) -> Quat {
+    Quat::from_euler(
+        EulerRot::YXZ,
+        cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET + look.yaw,
+        cab.look_pitch + look.pitch,
+        0.0,
+    )
+}
+
 /// Default cab downward pitch from `.eng` / `StartDirection` (compat helper).
 pub fn driver_cab_base_pitch(cab: &LiveDriverCab) -> Quat {
     Quat::from_rotation_x(cab.look_pitch)
@@ -643,9 +759,9 @@ pub fn driver_cab_base_pitch(cab: &LiveDriverCab) -> Quat {
 
 /// Inverse local rotation for camera-attached cab mesh (world cab stays fixed while the head turns).
 pub fn driver_cab_counter_look(look: DriverLookOffset, cab: &LiveDriverCab) -> Quat {
-    let user = driver_user_look_quat(look);
+    let combined = driver_combined_look_quat(look, cab);
     let base = driver_cab_base_orientation(cab);
-    base.inverse() * user.inverse() * base
+    combined.inverse() * base
 }
 
 /// Driver camera aligned to the lead vehicle (cab shape space + `StartDirection`).
@@ -658,11 +774,9 @@ pub fn driver_camera_transform_from_lead(
         .head_lead_local
         .map(|local| lead_global.transform_point(local))
         .unwrap_or_else(|| lead_global.translation());
-    let user = driver_user_look_quat(look);
-    let base = driver_cab_base_orientation(cab);
     Transform {
         translation: eye,
-        rotation: lead_global.rotation() * user * base,
+        rotation: lead_global.rotation() * driver_combined_look_quat(look, cab),
         scale: Vec3::ONE,
     }
 }
@@ -778,6 +892,120 @@ fn enter_driver_cam(
     look.reset();
 }
 
+fn enter_cab2d_cam(
+    follow: &mut CameraFollowMode,
+    mode: &mut CameraMode,
+    look: &mut DriverLookOffset,
+    overlay: Option<&mut crate::cab_cvf_overlay::CabCvfOverlayState>,
+) {
+    *follow = CameraFollowMode::Cab2d;
+    *mode = CameraMode::Orbit;
+    look.reset();
+    if let Some(o) = overlay {
+        o.view_index = 0;
+    }
+}
+
+fn enter_preferred_cab(
+    prefer_3d: bool,
+    follow: &mut CameraFollowMode,
+    mode: &mut CameraMode,
+    look: &mut DriverLookOffset,
+    overlay: Option<&mut crate::cab_cvf_overlay::CabCvfOverlayState>,
+) {
+    if prefer_3d {
+        enter_driver_cam(follow, mode, look);
+    } else {
+        enter_cab2d_cam(follow, mode, look, overlay);
+    }
+}
+
+fn alt_held(keys: &ButtonInput<KeyCode>) -> bool {
+    keys.pressed(KeyCode::AltLeft) || keys.pressed(KeyCode::AltRight)
+}
+
+fn ctrl_held(keys: &ButtonInput<KeyCode>) -> bool {
+    keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight)
+}
+
+fn handle_passenger_camera_key(
+    keys: &ButtonInput<KeyCode>,
+    follow: &mut CameraFollowMode,
+    mode: &mut CameraMode,
+    look: &mut DriverLookOffset,
+    passenger: Option<&mut PassengerCamState>,
+    catalog: Option<&PassengerSeatCatalog>,
+) {
+    let Some(catalog) = catalog else {
+        return;
+    };
+    let Some(pass) = passenger else {
+        return;
+    };
+    let seats = catalog.seat_cars();
+    if seats.is_empty() {
+        viewer_log!("openrailsrs-viewer3d: passenger cam — no Inside viewpoints");
+        return;
+    }
+
+    let ctrl = ctrl_held(keys);
+    let shift = shift_held(keys);
+    let alt = alt_held(keys);
+
+    // Ctrl+Shift+5 — cycle viewpoints within the current car
+    if ctrl && shift && !alt && *follow == CameraFollowMode::PassengerCam {
+        let Some(&(consist_car, views)) = seats.get(pass.car_slot % seats.len()) else {
+            return;
+        };
+        if views.len() <= 1 {
+            return;
+        }
+        pass.view_index = (pass.view_index + 1) % views.len();
+        if let Some(vp) = views.get(pass.view_index) {
+            pass.apply_viewpoint(vp, consist_car);
+            look.reset();
+            viewer_log!(
+                "openrailsrs-viewer3d: passenger viewpoint {}/{} car={}",
+                pass.view_index + 1,
+                views.len(),
+                consist_car
+            );
+        }
+        return;
+    }
+
+    if alt || ctrl {
+        return;
+    }
+
+    // 5 — enter or advance to next car with seats (OR OnActivate sameCamera)
+    if *follow == CameraFollowMode::PassengerCam {
+        pass.car_slot = (pass.car_slot + 1) % seats.len();
+        pass.view_index = 0;
+    } else {
+        pass.car_slot = 0;
+        pass.view_index = 0;
+    }
+    let Some(&(consist_car, views)) = seats.get(pass.car_slot) else {
+        return;
+    };
+    if let Some(vp) = views.first() {
+        pass.apply_viewpoint(vp, consist_car);
+        *follow = CameraFollowMode::PassengerCam;
+        *mode = CameraMode::Orbit;
+        look.reset();
+        viewer_log!(
+            "openrailsrs-viewer3d: passenger cam car {}/{} (consist #{})",
+            pass.car_slot + 1,
+            seats.len(),
+            consist_car
+        );
+    }
+}
+
+/// Open Rails camera keys (InputSettings defaults):
+/// **1** cab · **Alt+1** toggle 2D/3D · **Ctrl+Shift+1** 3D eyepoint ·
+/// **2** outside front · **3** outside rear · **5** passenger · **8** free/fly.
 pub fn cycle_follow_mode(
     keys: Res<ButtonInput<KeyCode>>,
     replay: Option<Res<crate::train::ReplayState>>,
@@ -786,6 +1014,11 @@ pub fn cycle_follow_mode(
     mut follow: ResMut<CameraFollowMode>,
     mut look: ResMut<DriverLookOffset>,
     mut target: ResMut<CameraFollowTarget>,
+    mut prefer_3d: ResMut<Prefer3dCab>,
+    mut driver_cab: Option<ResMut<LiveDriverCab>>,
+    mut overlay: Option<ResMut<crate::cab_cvf_overlay::CabCvfOverlayState>>,
+    mut passenger: Option<ResMut<PassengerCamState>>,
+    catalog: Option<Res<PassengerSeatCatalog>>,
 ) {
     let replay_active = replay.as_ref().is_some_and(|r| r.is_active());
     let live_active = live.is_some();
@@ -799,24 +1032,95 @@ pub fn cycle_follow_mode(
     };
     target.clamp_to(count);
 
-    if keys.just_pressed(KeyCode::Digit1) || keys.just_pressed(KeyCode::Numpad1) {
-        if *follow == CameraFollowMode::Cab2d {
-            *follow = CameraFollowMode::ChaseCam;
-        } else {
-            *follow = CameraFollowMode::Cab2d;
-            *mode = CameraMode::Orbit;
+    let digit1 = keys.just_pressed(KeyCode::Digit1) || keys.just_pressed(KeyCode::Numpad1);
+    if digit1 {
+        let alt = alt_held(&keys);
+        let ctrl = ctrl_held(&keys);
+        let shift = shift_held(&keys);
+
+        // Ctrl+Shift+1 — CameraChange3DCabViewPoint
+        if ctrl && shift && !alt {
+            if *follow == CameraFollowMode::DriverCam {
+                if let Some(ref mut cab) = driver_cab {
+                    if cab.cycle_eyepoint() {
+                        look.reset();
+                        viewer_log!(
+                            "openrailsrs-viewer3d: driver eyepoint {}/{} ({:?})",
+                            cab.eyepoint_index + 1,
+                            cab.eyepoints.len(),
+                            cab.active_slot()
+                        );
+                    }
+                }
+            }
+            return;
         }
+
+        // Alt+1 — CameraToggleThreeDimensionalCab
+        if alt && !ctrl {
+            prefer_3d.0 = !prefer_3d.0;
+            enter_preferred_cab(
+                prefer_3d.0,
+                &mut follow,
+                &mut mode,
+                &mut look,
+                overlay.as_deref_mut(),
+            );
+            viewer_log!(
+                "openrailsrs-viewer3d: cab toggle → {}",
+                if prefer_3d.0 { "3D" } else { "2D" }
+            );
+            return;
+        }
+
+        // 1 — Camera Cab (enter preferred 2D/3D; stays in cab if already there)
+        if !alt && !ctrl {
+            enter_preferred_cab(
+                prefer_3d.0,
+                &mut follow,
+                &mut mode,
+                &mut look,
+                overlay.as_deref_mut(),
+            );
+            return;
+        }
+    }
+
+    // 2 — Camera Outside Front
+    if keys.just_pressed(KeyCode::Digit2) || keys.just_pressed(KeyCode::Numpad2) {
+        *follow = CameraFollowMode::ChaseCam;
+        *mode = CameraMode::Orbit;
         look.reset();
         return;
     }
 
-    if keys.just_pressed(KeyCode::KeyV) && !shift_held(&keys) {
-        if *follow == CameraFollowMode::DriverCam {
-            *follow = CameraFollowMode::ChaseCam;
-            look.reset();
-        } else {
-            enter_driver_cam(&mut follow, &mut mode, &mut look);
-        }
+    // 3 — Camera Outside Rear (orbit follow as external alternate)
+    if keys.just_pressed(KeyCode::Digit3) || keys.just_pressed(KeyCode::Numpad3) {
+        *follow = CameraFollowMode::OrbitFollow;
+        *mode = CameraMode::Orbit;
+        look.reset();
+        return;
+    }
+
+    // 5 — Passenger camera (cycle cars with Inside viewpoints)
+    let digit5 = keys.just_pressed(KeyCode::Digit5) || keys.just_pressed(KeyCode::Numpad5);
+    if digit5 {
+        handle_passenger_camera_key(
+            &keys,
+            &mut follow,
+            &mut mode,
+            &mut look,
+            passenger.as_deref_mut(),
+            catalog.as_deref(),
+        );
+        return;
+    }
+
+    // 8 — Camera Free
+    if keys.just_pressed(KeyCode::Digit8) || keys.just_pressed(KeyCode::Numpad8) {
+        *follow = CameraFollowMode::Off;
+        *mode = CameraMode::Fly;
+        look.reset();
         return;
     }
 
@@ -824,7 +1128,7 @@ pub fn cycle_follow_mode(
         if keys.just_pressed(KeyCode::KeyT) && !shift_held(&keys) {
             let next = follow.cycle();
             *follow = next;
-            if next == CameraFollowMode::DriverCam {
+            if next == CameraFollowMode::DriverCam || next.is_cab2d() {
                 *mode = CameraMode::Orbit;
             }
             look.reset();
@@ -862,12 +1166,15 @@ pub fn follow_train_camera(
     live: Option<Res<crate::live::LiveDrive>>,
     cab: Option<Res<LiveDriverCab>>,
     look: Option<Res<DriverLookOffset>>,
+    overlay: Option<Res<crate::cab_cvf_overlay::CabCvfOverlayState>>,
+    passenger: Option<Res<PassengerCamState>>,
     train_query: Query<
         (&Transform, Option<&crate::train::TrainMarker>),
         (Without<OrbitState>, Without<crate::live::LiveTrainMarker>),
     >,
     live_train: Query<&Transform, (With<crate::live::LiveTrainMarker>, Without<OrbitState>)>,
     lead_car: Query<&GlobalTransform, With<crate::cab_view::CabLeadVehicle>>,
+    passenger_cars: Query<(&GlobalTransform, &crate::live::LiveTrainCar)>,
     mut orbit_query: Query<
         (&mut Transform, &mut OrbitState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
@@ -881,7 +1188,11 @@ pub fn follow_train_camera(
     if !replay_active && !live_active {
         return;
     }
-    if *mode != CameraMode::Orbit && *follow != CameraFollowMode::DriverCam {
+    if *mode != CameraMode::Orbit
+        && *follow != CameraFollowMode::DriverCam
+        && !follow.is_cab2d()
+        && !follow.is_passenger()
+    {
         return;
     }
 
@@ -907,6 +1218,29 @@ pub fn follow_train_camera(
         yaw: yaw_from_transform(train_tf),
     };
 
+    // Cab2d: same eyepoint as 3D cab so ACE window alpha shows the forward world.
+    // Look uses CVF `Direction` with the same Bevy sign as `StartDirection`.
+    if follow.is_cab2d() {
+        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
+        orbit.yaw = train_pose.yaw;
+        let default_cab = LiveDriverCab::default();
+        let cab = cab.as_deref().unwrap_or(&default_cab);
+        let mut cab_flat = cab.clone();
+        cab_flat.look_pitch = 0.0;
+        cab_flat.look_yaw = 0.0;
+        let dir = overlay
+            .as_ref()
+            .map(|o| o.view_direction_deg)
+            .unwrap_or([0.0; 3]);
+        let look = msts_direction_to_look_offset(dir);
+        *transform = lead_car
+            .iter()
+            .next()
+            .map(|lead| driver_camera_transform_from_lead(lead, &cab_flat, look))
+            .unwrap_or_else(|| driver_camera_transform(train_pose, &cab_flat, look));
+        return;
+    }
+
     if *follow == CameraFollowMode::DriverCam {
         orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
         orbit.yaw = train_pose.yaw;
@@ -918,6 +1252,33 @@ pub fn follow_train_camera(
             .next()
             .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
             .unwrap_or_else(|| driver_camera_transform(train_pose, cab, look));
+        return;
+    }
+
+    if follow.is_passenger() {
+        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
+        orbit.yaw = train_pose.yaw;
+        let Some(pass) = passenger.as_deref() else {
+            return;
+        };
+        let look = look.as_deref().copied().unwrap_or_default();
+        let mut seat_cab = LiveDriverCab {
+            look_pitch: pass.look_pitch,
+            look_yaw: pass.look_yaw,
+            head_lead_local: Some(crate::shapes::msts_shape_vec3_to_bevy(pass.head_msts)),
+            head_msts: Some(pass.head_msts),
+            ..Default::default()
+        };
+        seat_cab.head_pos_train = seat_cab.head_lead_local;
+        let car_gt = passenger_cars
+            .iter()
+            .find(|(_, car)| car.index == pass.consist_car)
+            .map(|(gt, _)| *gt);
+        if let Some(gt) = car_gt {
+            *transform = driver_camera_transform_from_lead(&gt, &seat_cab, look);
+        } else {
+            *transform = driver_camera_transform(train_pose, &seat_cab, look);
+        }
         return;
     }
 
@@ -936,12 +1297,18 @@ fn shift_held(keys: &ButtonInput<KeyCode>) -> bool {
 fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>, live_mode: bool) -> Vec3 {
     let mut axes = Vec3::ZERO;
     if live_mode {
-        // In live mode W/S are not used for throttle; I/K pan forward/back instead.
+        // OR: A/D=throttle, W/S=reverser — pan with I/J/K/L instead.
         if keys.pressed(KeyCode::KeyI) {
             axes.z += 1.0;
         }
         if keys.pressed(KeyCode::KeyK) {
             axes.z -= 1.0;
+        }
+        if keys.pressed(KeyCode::KeyL) {
+            axes.x += 1.0;
+        }
+        if keys.pressed(KeyCode::KeyJ) {
+            axes.x -= 1.0;
         }
     } else {
         if keys.pressed(KeyCode::KeyW) {
@@ -950,12 +1317,12 @@ fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>, live_mode: bool) -> Vec3 {
         if keys.pressed(KeyCode::KeyS) {
             axes.z -= 1.0;
         }
-    }
-    if keys.pressed(KeyCode::KeyD) {
-        axes.x += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyA) {
-        axes.x -= 1.0;
+        if keys.pressed(KeyCode::KeyD) {
+            axes.x += 1.0;
+        }
+        if keys.pressed(KeyCode::KeyA) {
+            axes.x -= 1.0;
+        }
     }
     if keys.pressed(KeyCode::KeyE) {
         axes.y += 1.0;
@@ -998,7 +1365,7 @@ pub fn orbit_camera_system(
     keys: Res<ButtonInput<KeyCode>>,
     mut follow: ResMut<CameraFollowMode>,
     mut look: ResMut<DriverLookOffset>,
-    driver_cab: Option<ResMut<LiveDriverCab>>,
+    passenger: Option<Res<PassengerCamState>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
@@ -1013,7 +1380,14 @@ pub fn orbit_camera_system(
         return;
     }
 
-    if *follow == CameraFollowMode::DriverCam {
+    if follow.is_cab2d() {
+        // Fixed ACE views (←/→); look comes from CVF Direction in follow_train_camera.
+        motion.clear();
+        wheel.clear();
+        return;
+    }
+
+    if *follow == CameraFollowMode::DriverCam || follow.is_passenger() {
         let mut delta = Vec2::ZERO;
         for ev in motion.read() {
             delta += ev.delta;
@@ -1022,27 +1396,20 @@ pub fn orbit_camera_system(
         if keys.just_pressed(KeyCode::Home) {
             look.reset();
         }
-        if keys.just_pressed(KeyCode::KeyV) && shift_held(&keys) {
-            if let Some(mut cab) = driver_cab {
-                if cab.cycle_eyepoint() {
-                    look.reset();
-                    viewer_log!(
-                        "openrailsrs-viewer3d: driver eyepoint {}/{} ({:?})",
-                        cab.eyepoint_index + 1,
-                        cab.eyepoints.len(),
-                        cab.active_slot()
-                    );
-                }
-            }
-            return;
-        }
-        let dragging =
-            mouse_buttons.pressed(MouseButton::Left) || mouse_buttons.pressed(MouseButton::Right);
-        if dragging && delta != Vec2::ZERO {
-            let (yaw_lim, pitch_lim) = driver_cab
+        // Look via mouse (OR RMB). Arrows stay throttle aliases in live.
+        let (yaw_lim, pitch_lim) = if *follow == CameraFollowMode::DriverCam {
+            // OR InsideThreeDimCamera ignores eng RotationLimit for 3D cab.
+            (DRIVER_CAM_FREE_YAW_MAX, DRIVER_CAM_FREE_PITCH_MAX)
+        } else {
+            passenger
                 .as_ref()
-                .map(|c| (c.yaw_limit, c.pitch_limit))
-                .unwrap_or((DRIVER_LOOK_YAW_MAX, DRIVER_LOOK_PITCH_MAX));
+                .map(|p| (p.yaw_limit, p.pitch_limit))
+                .unwrap_or((70f32.to_radians(), 30f32.to_radians()))
+        };
+        look.yaw = look.yaw.clamp(-yaw_lim, yaw_lim);
+        look.pitch = look.pitch.clamp(-pitch_lim, pitch_lim);
+        // OR RotateByMouse: right mouse button only (LMB reserved for cab controls).
+        if mouse_buttons.pressed(MouseButton::Right) && delta != Vec2::ZERO {
             look.apply_drag_clamped(delta, yaw_lim, pitch_lim);
         }
         return;
@@ -1162,6 +1529,7 @@ pub fn fly_camera_system(
     keys: Res<ButtonInput<KeyCode>>,
     follow: Res<CameraFollowMode>,
     replay: Option<Res<crate::train::ReplayState>>,
+    live: Option<Res<crate::live::LiveDrive>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
@@ -1170,7 +1538,7 @@ pub fn fly_camera_system(
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
-    if *follow == CameraFollowMode::DriverCam {
+    if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() || follow.is_passenger() {
         motion.clear();
         wheel.clear();
         return;
@@ -1195,7 +1563,8 @@ pub fn fly_camera_system(
         fly.pitch = clamp_pitch(fly.pitch - delta.y * FLY_LOOK_SENSITIVITY);
     }
 
-    let axes = read_fly_axes(&keys, replay.as_deref());
+    // OR: Space = horn in live — never use it as fly-up while driving.
+    let axes = read_fly_axes(&keys, replay.as_deref(), live.is_some());
     let mut speed = FLY_BASE_SPEED;
     if keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight) {
         speed *= 4.0;
@@ -1218,7 +1587,11 @@ fn replay_blocks_space(replay: Option<&crate::train::ReplayState>) -> bool {
     replay.is_some_and(|r| r.is_active())
 }
 
-fn read_fly_axes(keys: &ButtonInput<KeyCode>, replay: Option<&crate::train::ReplayState>) -> Vec3 {
+fn read_fly_axes(
+    keys: &ButtonInput<KeyCode>,
+    replay: Option<&crate::train::ReplayState>,
+    live_blocks_space: bool,
+) -> Vec3 {
     let mut axes = Vec3::ZERO;
     if keys.pressed(KeyCode::KeyW) {
         axes.z += 1.0;
@@ -1235,7 +1608,7 @@ fn read_fly_axes(keys: &ButtonInput<KeyCode>, replay: Option<&crate::train::Repl
     if keys.pressed(KeyCode::KeyE) {
         axes.y += 1.0;
     }
-    if keys.pressed(KeyCode::Space) && !replay_blocks_space(replay) {
+    if keys.pressed(KeyCode::Space) && !replay_blocks_space(replay) && !live_blocks_space {
         axes.y += 1.0;
     }
     if keys.pressed(KeyCode::KeyQ) {
@@ -1267,11 +1640,14 @@ pub fn follow_train_camera_active(
     if !sim_active {
         return false;
     }
-    *follow == CameraFollowMode::DriverCam || *mode == CameraMode::Orbit
+    *follow == CameraFollowMode::DriverCam
+        || follow.is_cab2d()
+        || follow.is_passenger()
+        || *mode == CameraMode::Orbit
 }
 
 pub fn fly_camera_allowed(follow: Res<CameraFollowMode>) -> bool {
-    *follow != CameraFollowMode::DriverCam
+    *follow != CameraFollowMode::DriverCam && !follow.is_cab2d() && !follow.is_passenger()
 }
 
 /// Widen FOV, tighten near clip, and tune exposure/ambient per camera mode.
@@ -1295,13 +1671,21 @@ pub fn update_driver_camera_fov(
     let Projection::Perspective(persp) = &mut *projection else {
         return;
     };
-    if *follow == CameraFollowMode::DriverCam {
+    if *follow == CameraFollowMode::DriverCam
+        || follow.is_cab2d()
+        || follow.is_passenger()
+    {
+        // Cab2d needs the forward world through ACE window alpha.
+        // Passenger uses the same near clip as InsideThreeDimCamera.
         persp.fov = driver_cab_fov_deg(&opts).to_radians();
         persp.near = DRIVER_NEAR_CLIP_M;
         ambient.brightness = 350.0;
         ambient.color = Color::srgb(0.95, 0.94, 0.92);
         *tonemapping = Tonemapping::None;
         *exposure = Exposure::BLENDER;
+        // Do not toggle `Msaa` here: Bevy 0.19 crashes when the main pass switches to
+        // sample count 4 while cached `opaque_mesh_pipeline` (world/StandardMaterial)
+        // is still specialized for sample count 1. Keep camera `Msaa::Off` for the session.
     } else if opts.live {
         persp.fov = std::f32::consts::FRAC_PI_4;
         persp.near = 0.1;
@@ -1530,6 +1914,7 @@ mod tests {
         );
         assert_eq!(CameraFollowMode::DriverCam.cycle(), CameraFollowMode::Off);
         assert_eq!(CameraFollowMode::Cab2d.cycle(), CameraFollowMode::Off);
+        assert_eq!(CameraFollowMode::PassengerCam.cycle(), CameraFollowMode::Off);
     }
 
     #[test]
@@ -1539,8 +1924,25 @@ mod tests {
         assert_eq!(CameraFollowMode::ChaseCam.hud_label(), "chase");
         assert_eq!(CameraFollowMode::DriverCam.hud_label(), "driver");
         assert_eq!(CameraFollowMode::Cab2d.hud_label(), "cab2d");
+        assert_eq!(CameraFollowMode::PassengerCam.hud_label(), "passenger");
         assert!(CameraFollowMode::Cab2d.is_cab2d());
         assert!(!CameraFollowMode::DriverCam.is_cab2d());
+        assert!(CameraFollowMode::PassengerCam.is_passenger());
+    }
+
+    #[test]
+    fn msts_direction_matches_start_direction_pitch_sign() {
+        let from_dir = msts_direction_to_look_offset([10.0, 0.0, 0.0]);
+        let cab = LiveDriverCab {
+            look_pitch: -(10f32).to_radians(),
+            look_yaw: 0.0,
+            ..Default::default()
+        };
+        assert!((from_dir.pitch - cab.look_pitch).abs() < 1e-5);
+        assert!(
+            from_dir.pitch < 0.0,
+            "positive MSTS X = look down = negative Bevy pitch"
+        );
     }
 
     #[test]
@@ -1669,6 +2071,36 @@ mod tests {
     }
 
     #[test]
+    fn driver_look_pitch_changes_vertical_forward() {
+        // Regression: user * base made pitch roll around train +X after −π/2 cab yaw.
+        let lead_global = GlobalTransform::from(Transform {
+            rotation: crate::shapes::msts_shape_to_train_rotation(),
+            ..default()
+        });
+        let cab = LiveDriverCab {
+            look_pitch: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let level =
+            driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
+        let pitched = driver_camera_transform_from_lead(
+            &lead_global,
+            &cab,
+            DriverLookOffset {
+                yaw: 0.0,
+                pitch: 0.35,
+            },
+        );
+        let level_y = level.forward().as_vec3().y;
+        let pitched_y = pitched.forward().as_vec3().y;
+        assert!(
+            (pitched_y - level_y).abs() > 0.2,
+            "pitch must tilt view up/down, not roll: level_y={level_y} pitched_y={pitched_y}"
+        );
+    }
+
+    #[test]
     fn driver_camera_applies_start_direction_yaw() {
         let lead_global = GlobalTransform::from(Transform {
             rotation: crate::shapes::msts_shape_to_train_rotation(),
@@ -1729,7 +2161,7 @@ mod tests {
 
     #[test]
     fn cycle_eyepoint_advances_head_and_slot() {
-        let placement = crate::shapes::vehicle_authored_frame_transform(0.0);
+        let placement = crate::shapes::vehicle_authored_frame_transform(0.0, false);
         let mut cab = LiveDriverCab {
             interior_placement: placement,
             eyepoints: vec![
@@ -1911,7 +2343,7 @@ mod tests {
         keys.press(KeyCode::KeyW);
         keys.press(KeyCode::KeyD);
         keys.press(KeyCode::KeyQ);
-        let axes = read_fly_axes(&keys, None);
+        let axes = read_fly_axes(&keys, None, false);
         assert_eq!(axes, Vec3::new(1.0, -1.0, 1.0));
     }
 
@@ -1932,7 +2364,15 @@ mod tests {
                 }],
             }],
         );
-        let axes = read_fly_axes(&keys, Some(&replay));
+        let axes = read_fly_axes(&keys, Some(&replay), false);
+        assert_eq!(axes.y, 0.0);
+    }
+
+    #[test]
+    fn read_fly_axes_space_blocked_during_live() {
+        let mut keys = ButtonInput::<KeyCode>::default();
+        keys.press(KeyCode::Space);
+        let axes = read_fly_axes(&keys, None, true);
         assert_eq!(axes.y, 0.0);
     }
 }

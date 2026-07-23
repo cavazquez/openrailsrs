@@ -465,15 +465,12 @@ pub struct BlendAlphaPass {
     pub depth_write_pass: bool,
 }
 
-/// Determine the Bevy [`AlphaMode`] for a texture+shader combination.
+/// Determine the Bevy [`AlphaMode`] for a texture+shader combination (#136).
 ///
-/// Priority order:
-/// 1. `prim_state.alpha_test_mode` when explicitly set (0 = opaque, 1 = test, 2 = blend).
-/// 2. Texture pixel analysis (semi-transparent pixels → blend, alpha-only → mask).
-/// 3. Shader name / texture name heuristics.
-///
-/// For BlendATex* with semi-transparent texels, prefer [`blend_alpha_passes_from_prim_state`]
-/// so callers can spawn Open Rails' dual draw (Mask 250 + Blend).
+/// Open Rails `SceneryMaterial.GetBlending()`: blend-capable shader ∧
+/// (`AceAlphaBits > 1` ∨ (`AceAlphaBits == 1` ∧ ¬AlphaTest)).
+/// Prefer [`blend_alpha_passes_from_prim_state`] for BlendATex* dual-pass (#101)
+/// and AddATex additive (#137).
 pub fn alpha_mode_from_prim_state(
     ace: &AceFile,
     texture_file: &str,
@@ -484,71 +481,132 @@ pub fn alpha_mode_from_prim_state(
         .alpha_mode
 }
 
-/// Open Rails dual-pass for BlendATex / BlendATexDiff (#101).
+/// Open Rails `GetBlending()` predicate (#136).
 ///
-/// Returns two passes when the shader is blend-capable and the ACE has
-/// semi-transparent texels: (1) `Mask(250/255)` depth-write, (2) `Blend`
-/// for the soft edges. Otherwise a single pass.
+/// `blend_capable` = shader carries `AlphaBlendingMask` (BlendATex* or AddATex*).
+/// `alpha_test_requested` = `prim_state` AlphaTest / `alpha_test_mode == 1`.
+pub fn or_ace_requests_blending(
+    ace_alpha_bits: u8,
+    alpha_test_requested: bool,
+    blend_capable_shader: bool,
+) -> bool {
+    blend_capable_shader
+        && (ace_alpha_bits > 1 || (ace_alpha_bits == 1 && !alpha_test_requested))
+}
+
+/// Opt-in legacy name/pixel heuristics (`OPENRAILSRS_ALPHA_NAME_HEURISTIC=1`). Off by default (#136).
+pub fn alpha_name_heuristic_enabled() -> bool {
+    matches!(
+        std::env::var("OPENRAILSRS_ALPHA_NAME_HEURISTIC")
+            .ok()
+            .as_deref()
+            .map(str::trim),
+        Some("1") | Some("true") | Some("on")
+    )
+}
+
+/// Open Rails dual-pass for BlendATex* (#101) and single AddATex additive (#137).
 pub fn blend_alpha_passes_from_prim_state(
     ace: &AceFile,
     texture_file: &str,
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> Vec<BlendAlphaPass> {
-    let blend_shader = shader_name
-        .map(shape_shader_requests_blending)
+    let additive = shader_name
+        .map(shape_shader_requests_additive)
         .unwrap_or(false);
+    let blend_shader = shader_name
+        .map(shape_shader_requests_blend)
+        .unwrap_or(false);
+    let blend_capable = additive || blend_shader;
+    let alpha_test_requested = alpha_test_mode == 1;
 
-    // Honour explicit prim_state flags, except alpha-test on blend-capable shaders:
-    // OR still runs BlendATexDiff via dual-pass blend (ReferenceAlpha 250/10), not cutout.
-    let single = match alpha_test_mode {
-        0 if !blend_shader => AlphaMode::Opaque,
-        1 if !blend_shader => AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
-        2 => AlphaMode::Blend,
-        _ => shape_alpha_mode(ace, texture_file, shader_name),
-    };
-
-    if blend_shader && matches!(single, AlphaMode::Blend) {
-        let stats = shape_alpha_stats(ace);
-        if stats.has_semitransparent || texture_name_suggests_transparency(texture_file) {
-            return vec![
-                BlendAlphaPass {
-                    alpha_mode: AlphaMode::Mask(OR_BLEND_PASS_OPAQUE_CUTOFF),
-                    depth_write_pass: true,
-                },
-                BlendAlphaPass {
-                    alpha_mode: AlphaMode::Blend,
-                    depth_write_pass: false,
-                },
-            ];
-        }
+    // Artist forced opaque on a non-blend shader.
+    if alpha_test_mode == 0 && !blend_capable {
+        return vec![single_alpha_pass(AlphaMode::Opaque)];
     }
 
-    vec![BlendAlphaPass {
-        alpha_mode: single,
-        depth_write_pass: matches!(single, AlphaMode::Opaque | AlphaMode::Mask(_)),
-    }]
+    // Explicit blend flag on prim_state (rare); still honour Add vs Blend shader family.
+    if alpha_test_mode == 2 && blend_capable {
+        if additive {
+            return vec![single_alpha_pass(AlphaMode::Add)];
+        }
+        return blend_atex_dual_pass();
+    }
+
+    let blending = or_ace_requests_blending(ace.alpha_bits, alpha_test_requested, blend_capable);
+
+    if !blending {
+        if alpha_test_requested {
+            return vec![single_alpha_pass(AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF))];
+        }
+        if alpha_name_heuristic_enabled() {
+            let legacy = legacy_shape_alpha_mode_heuristic(ace, texture_file, shader_name);
+            return vec![single_alpha_pass(legacy)];
+        }
+        return vec![single_alpha_pass(AlphaMode::Opaque)];
+    }
+
+    // GetBlending() == true
+    if additive {
+        // OR: Additive + DepthRead, no opaque ReferenceAlpha-250 pre-pass (#137).
+        return vec![BlendAlphaPass {
+            alpha_mode: AlphaMode::Add,
+            depth_write_pass: false,
+        }];
+    }
+
+    // BlendATex*: dual pass Mask(250) + Blend (#101).
+    blend_atex_dual_pass()
 }
 
+fn single_alpha_pass(alpha_mode: AlphaMode) -> BlendAlphaPass {
+    BlendAlphaPass {
+        alpha_mode,
+        depth_write_pass: matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_)),
+    }
+}
+
+fn blend_atex_dual_pass() -> Vec<BlendAlphaPass> {
+    vec![
+        BlendAlphaPass {
+            alpha_mode: AlphaMode::Mask(OR_BLEND_PASS_OPAQUE_CUTOFF),
+            depth_write_pass: true,
+        },
+        BlendAlphaPass {
+            alpha_mode: AlphaMode::Blend,
+            depth_write_pass: false,
+        },
+    ]
+}
+
+/// Classify without an explicit `alpha_test_mode` (defaults to −1 / unset).
 pub fn shape_alpha_mode(ace: &AceFile, texture_file: &str, shader_name: Option<&str>) -> AlphaMode {
-    let blend_shader = shader_name
+    alpha_mode_from_prim_state(ace, texture_file, shader_name, -1)
+}
+
+/// Legacy name/pixel path retained behind [`alpha_name_heuristic_enabled`].
+fn legacy_shape_alpha_mode_heuristic(
+    ace: &AceFile,
+    texture_file: &str,
+    shader_name: Option<&str>,
+) -> AlphaMode {
+    let blend_capable = shader_name
         .map(shape_shader_requests_blending)
         .unwrap_or(false);
-
-    // Open Rails: Tex/TexDiff only alpha-test when `prim_state` requests it (see Shapes.cs).
-    if !blend_shader {
+    if !blend_capable {
         return AlphaMode::Opaque;
     }
-
+    if shape_shader_requests_additive(shader_name.unwrap_or("")) {
+        return AlphaMode::Add;
+    }
     let alpha = shape_alpha_stats(ace);
     if !alpha.has_any {
         return AlphaMode::Opaque;
     }
-
     if alpha.has_semitransparent || texture_name_suggests_transparency(texture_file) {
         AlphaMode::Blend
     } else {
-        // BlendATex on solid panels (bp01, wheels): OR draws them opaque unless alpha-tested.
         AlphaMode::Opaque
     }
 }
@@ -561,7 +619,7 @@ pub(crate) struct ShapeAlphaStats {
 
 pub(crate) fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
     let mut stats = ShapeAlphaStats {
-        has_any: ace.has_mask_channel,
+        has_any: ace.has_mask_channel || ace.alpha_bits > 0,
         has_semitransparent: false,
     };
     for rgba in ace.mip0.chunks_exact(4) {
@@ -583,11 +641,25 @@ pub fn texture_name_suggests_transparency(file_name: &str) -> bool {
         .any(|needle| lower.contains(needle))
 }
 
+/// BlendATex* only (OR `AlphaBlendingBlend`) — not AddATex (#137).
+pub fn shape_shader_requests_blend(shader_name: &str) -> bool {
+    matches_shader_name(shader_name, &["BlendATex", "BlendATexDiff"])
+}
+
+/// AddATex* (OR `AlphaBlendingAdd`) (#137).
+pub fn shape_shader_requests_additive(shader_name: &str) -> bool {
+    matches_shader_name(shader_name, &["AddATex", "AddATexDiff"])
+}
+
+/// Any shader with OR `AlphaBlendingMask` (Blend or Add).
 pub fn shape_shader_requests_blending(shader_name: &str) -> bool {
-    matches!(
-        shader_name,
-        "BlendATex" | "BlendATexDiff" | "AddATex" | "AddATexDiff"
-    )
+    shape_shader_requests_blend(shader_name) || shape_shader_requests_additive(shader_name)
+}
+
+fn matches_shader_name(shader_name: &str, names: &[&str]) -> bool {
+    names
+        .iter()
+        .any(|n| shader_name.eq_ignore_ascii_case(n))
 }
 
 #[cfg(test)]
@@ -613,11 +685,25 @@ mod tests {
         }
     }
 
+    fn ace_bits(bits: u8) -> AceFile {
+        AceFile {
+            width: 1,
+            height: 1,
+            format: openrailsrs_ace::AceFormat::Rgba8,
+            mips_count: 1,
+            mip0: vec![200, 200, 200, if bits > 0 { 128 } else { 255 }],
+            mips: Vec::new(),
+            has_mask_channel: bits == 1,
+            alpha_bits: bits,
+        }
+    }
+
     #[test]
-    fn blend_atex_diff_dual_pass_when_semitransparent() {
-        let ace = ace_with_semitransparent();
+    fn blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1() {
+        // #136: AceAlphaBits > 1 → GetBlending; #101 dual-pass (not name "glass").
+        let ace = ace_bits(8);
         let passes =
-            blend_alpha_passes_from_prim_state(&ace, "glass.ace", Some("BlendATexDiff"), -1);
+            blend_alpha_passes_from_prim_state(&ace, "station_wall.ace", Some("BlendATexDiff"), -1);
         assert_eq!(passes.len(), 2);
         assert!(matches!(
             passes[0].alpha_mode,
@@ -634,5 +720,55 @@ mod tests {
         let passes = blend_alpha_passes_from_prim_state(&ace, "body.ace", Some("TexDiff"), -1);
         assert_eq!(passes.len(), 1);
         assert!(matches!(passes[0].alpha_mode, AlphaMode::Opaque));
+    }
+
+    #[test]
+    fn addatex_is_additive_without_opaque_prepass() {
+        // #137: AddATex → AlphaMode::Add, depth read-only, no Mask(250) pass.
+        let ace = ace_bits(8);
+        let passes = blend_alpha_passes_from_prim_state(&ace, "glow.ace", Some("AddATex"), -1);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(passes[0].alpha_mode, AlphaMode::Add));
+        assert!(!passes[0].depth_write_pass);
+    }
+
+    #[test]
+    fn addatex_zero_alpha_bits_is_opaque() {
+        let ace = ace_bits(0);
+        let passes = blend_alpha_passes_from_prim_state(&ace, "glow.ace", Some("AddATexDiff"), -1);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(passes[0].alpha_mode, AlphaMode::Opaque));
+        assert!(passes[0].depth_write_pass);
+    }
+
+    #[test]
+    fn blendatex_one_bit_with_alpha_test_is_mask() {
+        // #136: AceAlphaBits==1 ∧ AlphaTest → no GetBlending → Mask(200/255).
+        let ace = ace_bits(1);
+        let passes =
+            blend_alpha_passes_from_prim_state(&ace, "fence.ace", Some("BlendATexDiff"), 1);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(
+            passes[0].alpha_mode,
+            AlphaMode::Mask(c) if (c - OR_MSTS_ALPHA_TEST_CUTOFF).abs() < 1e-5
+        ));
+    }
+
+    #[test]
+    fn blendatex_zero_alpha_bits_is_opaque_without_name_heuristic() {
+        let ace = ace_bits(0);
+        let passes =
+            blend_alpha_passes_from_prim_state(&ace, "window_frame.ace", Some("BlendATex"), -1);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(passes[0].alpha_mode, AlphaMode::Opaque));
+    }
+
+    #[test]
+    fn or_ace_requests_blending_matches_openrails() {
+        assert!(!or_ace_requests_blending(0, false, true));
+        assert!(or_ace_requests_blending(1, false, true));
+        assert!(!or_ace_requests_blending(1, true, true));
+        assert!(or_ace_requests_blending(8, true, true));
+        assert!(!or_ace_requests_blending(8, false, false));
     }
 }

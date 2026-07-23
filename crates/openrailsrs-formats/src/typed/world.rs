@@ -351,6 +351,7 @@ impl WorldItem {
             | WorldItem::Signal { qdir, .. }
             | WorldItem::Speedpost { qdir, .. }
             | WorldItem::SoundRegion { qdir, .. }
+            | WorldItem::Transfer { qdir, .. }
             | WorldItem::CarSpawner { qdir, .. }
             | WorldItem::Pickup { qdir, .. }
             | WorldItem::Hazard { qdir, .. }
@@ -369,6 +370,7 @@ impl WorldItem {
             | WorldItem::Signal { matrix3x3, .. }
             | WorldItem::Speedpost { matrix3x3, .. }
             | WorldItem::SoundRegion { matrix3x3, .. }
+            | WorldItem::Transfer { matrix3x3, .. }
             | WorldItem::Pickup { matrix3x3, .. }
             | WorldItem::Hazard { matrix3x3, .. }
             | WorldItem::Platform { matrix3x3, .. }
@@ -513,15 +515,18 @@ pub struct WorldFile {
     pub tile_x: i32,
     pub tile_z: i32,
     pub items: Vec<WorldItem>,
+    /// Objects skipped because they lacked `Position` and/or orientation (#140).
+    pub skipped_invalid_pose: usize,
 }
 
 impl WorldFile {
     pub fn from_ast(ast: &Ast, tile_x: i32, tile_z: i32) -> Self {
-        let items = collect_items(ast);
+        let (items, skipped_invalid_pose) = collect_items(ast);
         Self {
             tile_x,
             tile_z,
             items,
+            skipped_invalid_pose,
         }
     }
 
@@ -561,8 +566,8 @@ fn load_world_ast(text: &str) -> Result<Ast, FormatError> {
 }
 
 fn select_better_world_ast(raw: &Ast, normalized: &Ast) -> Ast {
-    let items_raw = collect_items(raw);
-    let items_norm = collect_items(normalized);
+    let (items_raw, _) = collect_items(raw);
+    let (items_norm, _) = collect_items(normalized);
     let count_raw = items_raw.len();
     let count_norm = items_norm.len();
     // Prefer the richer parse.
@@ -660,22 +665,60 @@ fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
     crate::msts_tile_name::parse_world_w_tile_xz(path)
 }
 
-fn collect_items(ast: &Ast) -> Vec<WorldItem> {
+fn collect_items(ast: &Ast) -> (Vec<WorldItem>, usize) {
     let Ast::List(root) = ast else {
-        return Vec::new();
+        return (Vec::new(), 0);
     };
     let entries = flatten_world_entries(root);
     // One level per flattened object, same order as `flatten_world_entries`.
     let levels = collect_object_watermark_levels(root);
     let mut items = Vec::with_capacity(entries.len());
+    let mut skipped_invalid_pose = 0usize;
     for (i, entry) in entries.iter().enumerate() {
         let level = levels.get(i).copied().unwrap_or(0);
-        if let Some(mut item) = parse_world_item(entry) {
-            set_static_detail_level(&mut item, level);
-            items.push(item);
+        match parse_world_item(entry) {
+            ParseWorldItem::Item(mut item) => {
+                set_static_detail_level(&mut item, level);
+                items.push(item);
+            }
+            ParseWorldItem::SkippedInvalidPose => skipped_invalid_pose += 1,
+            ParseWorldItem::Ignore => {}
         }
     }
-    items
+    (items, skipped_invalid_pose)
+}
+
+enum ParseWorldItem {
+    Item(WorldItem),
+    SkippedInvalidPose,
+    Ignore,
+}
+
+/// Shape-bearing WORLD kinds that Open Rails refuses without Matrix3x3/QDirection.
+fn world_tag_requires_orientation(tag: &str) -> bool {
+    matches!(
+        tag.to_ascii_lowercase().as_str(),
+        "static"
+            | "trackobj"
+            | "dyntrack"
+            | "signal"
+            | "speedpost"
+            | "soundregion"
+            | "transfer"
+            | "carspawner"
+            | "pickup"
+            | "hazard"
+            | "platform"
+            | "siding"
+    )
+}
+
+/// Kinds that must have an authored `Position` (Forest/HWater included; Other optional).
+fn world_tag_requires_position(tag: &str) -> bool {
+    !tag.eq_ignore_ascii_case("other")
+        && (world_tag_requires_orientation(tag)
+            || tag.eq_ignore_ascii_case("forest")
+            || tag.eq_ignore_ascii_case("hwater"))
 }
 
 /// Ordered `static_detail_level` for each object emitted by [`flatten_world_entries`].
@@ -1038,17 +1081,20 @@ fn infer_object_tag(fields: &[Ast]) -> Option<String> {
     None
 }
 
-fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
-    let tag = match items.first()? {
-        Ast::Atom(Atom::Symbol(s)) => s.clone(),
-        _ => return None,
+fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
+    let tag = match items.first() {
+        Some(Ast::Atom(Atom::Symbol(s))) => s.clone(),
+        _ => return ParseWorldItem::Ignore,
     };
 
     let normalized = normalize_jinx_flat_fields(items);
     let fields = normalized.as_ref();
 
     let effective_tag = if tag.eq_ignore_ascii_case("UiD") {
-        infer_object_tag(fields)?
+        match infer_object_tag(fields) {
+            Some(t) => t,
+            None => return ParseWorldItem::Ignore,
+        }
     } else {
         tag
     };
@@ -1059,11 +1105,21 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
     let qdir = find_qdirection(fields);
     let matrix3x3 = find_matrix3x3(fields);
 
-    Some(match effective_tag.as_str() {
+    // Open Rails omits incomplete objects instead of spawning at identity (#140).
+    if world_tag_requires_position(&effective_tag) && position.is_none() {
+        return ParseWorldItem::SkippedInvalidPose;
+    }
+    if world_tag_requires_orientation(&effective_tag) && qdir.is_none() && matrix3x3.is_none() {
+        return ParseWorldItem::SkippedInvalidPose;
+    }
+
+    let position_or_zero = position.unwrap_or_default();
+
+    ParseWorldItem::Item(match effective_tag.as_str() {
         s if s.eq_ignore_ascii_case("Static") => WorldItem::Static {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             static_detail_level: 0,
@@ -1072,7 +1128,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             uid: uid.unwrap_or(0),
             tree_texture: find_named_string(fields, "TreeTexture")
                 .or_else(|| find_named_string(fields, "FileName")),
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             scale_range: find_named_pair(fields, "ScaleRange"),
             patch_size: find_named_pair(fields, "Area"),
             tree_size: find_named_pair(fields, "TreeSize"),
@@ -1083,14 +1139,14 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             uid: uid.unwrap_or(0),
             section_idx: find_named_u32(fields, "SectionIdx"),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Dyntrack") => WorldItem::Dyntrack {
             uid: uid.unwrap_or(0),
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             static_detail_level: 0,
@@ -1100,7 +1156,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         s if s.eq_ignore_ascii_case("Signal") => WorldItem::Signal {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             signal_sub_obj: find_signal_sub_obj_mask(fields),
@@ -1110,7 +1166,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         s if s.eq_ignore_ascii_case("Speedpost") => WorldItem::Speedpost {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             tr_item_refs: find_tr_item_refs(fields),
@@ -1121,7 +1177,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             WorldItem::SoundRegion {
                 uid: uid.unwrap_or(0),
                 file_name,
-                position: position.unwrap_or_default(),
+                position: position_or_zero,
                 qdir,
                 matrix3x3,
                 tdb_id,
@@ -1132,14 +1188,14 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         s if s.eq_ignore_ascii_case("HWater") => WorldItem::HWater {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             size: find_named_pair(fields, "Size").unwrap_or([100.0, 100.0]),
             static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Transfer") => WorldItem::Transfer {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             width: find_named_f64(fields, "Width").unwrap_or(10.0),
             height: find_named_f64(fields, "Height").unwrap_or(10.0),
             qdir,
@@ -1152,14 +1208,14 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
             car_av_speed: find_named_f64(fields, "CarAvSpeed").unwrap_or(20.0),
             list_name: find_named_string(fields, "ORTSListName"),
             rdb_tr_item_ids: find_rdb_tr_item_ids(fields),
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Pickup") => WorldItem::Pickup {
             uid: uid.unwrap_or(0),
             file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             pickup_type: find_named_u32(fields, "PickupType"),
@@ -1169,7 +1225,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         s if s.eq_ignore_ascii_case("Hazard") => WorldItem::Hazard {
             uid: uid.unwrap_or(0),
             haz_file: file_name,
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             // Only TDB (db == 0); RDB collisions must not become TDB ids (#105).
@@ -1178,7 +1234,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         },
         s if s.eq_ignore_ascii_case("Platform") => WorldItem::Platform {
             uid: uid.unwrap_or(0),
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             file_name,
@@ -1188,7 +1244,7 @@ fn parse_world_item(items: &[Ast]) -> Option<WorldItem> {
         },
         s if s.eq_ignore_ascii_case("Siding") => WorldItem::Siding {
             uid: uid.unwrap_or(0),
-            position: position.unwrap_or_default(),
+            position: position_or_zero,
             qdir,
             matrix3x3,
             file_name,
@@ -1882,11 +1938,11 @@ mod watermark_tests {
         // Nested S-expr; UiD atoms (not nested lists) match find_uid.
         let src = r#"
 (Tr_Worldfile
-  (TrackObj (UiD 1) (SectionIdx 10) (Position 0 0 0))
+  (TrackObj (UiD 1) (SectionIdx 10) (Position 0 0 0) (QDirection 0 0 0 1))
   (Tr_Watermark 2)
-  (TrackObj (UiD 2) (SectionIdx 11) (Position 1 0 0))
+  (TrackObj (UiD 2) (SectionIdx 11) (Position 1 0 0) (QDirection 0 0 0 1))
   (Tr_Watermark 3)
-  (Dyntrack (UiD 3) (Position 2 0 0))
+  (Dyntrack (UiD 3) (Position 2 0 0) (QDirection 0 0 0 1))
 )
 "#;
         let ast = parse_from_first_paren(src).expect("parse");
@@ -1904,11 +1960,11 @@ mod watermark_tests {
         let src = r#"
 (Tr_Worldfile
   (Tr_Watermark 5)
-  (Static (UiD 1) (FileName "a.s") (Position 0 0 0))
+  (Static (UiD 1) (FileName "a.s") (Position 0 0 0) (QDirection 0 0 0 1))
   (Forest (UiD 2) (TreeTexture "t.ace") (Position 1 0 0) (Population 10))
-  (Transfer (UiD 3) (FileName "x.ace") (Position 2 0 0) (Width 4) (Height 5))
+  (Transfer (UiD 3) (FileName "x.ace") (Position 2 0 0) (Width 4) (Height 5) (QDirection 0 0 0 1))
   (Tr_Watermark 7)
-  (Static (UiD 4) (FileName "b.s") (Position 3 0 0))
+  (Static (UiD 4) (FileName "b.s") (Position 3 0 0) (QDirection 0 0 0 1))
 )
 "#;
         let ast = parse_from_first_paren(src).expect("parse");
@@ -1932,6 +1988,7 @@ mod watermark_tests {
     (UiD 9)
     (SectionIdx 3)
     (Position 10 1 20)
+    (QDirection 0 0 0 1)
     (TrackSections
       (TrackSection (SectionCurve 1) 40002 -0.3 120.0)
     )
@@ -1993,6 +2050,7 @@ mod last_wins_scalar_tests {
     (FileName "second.s")
     (Position 1 2 3)
     (Position 10 20 30)
+    (QDirection 0 0 0 1)
   )
   (Pickup
     (UiD 2)
@@ -2001,6 +2059,7 @@ mod last_wins_scalar_tests {
     (TrItemId 0 200)
     (FileName "p.s")
     (Position 0 0 0)
+    (QDirection 0 0 0 1)
   )
 )
 "#;
@@ -2047,6 +2106,7 @@ mod platform_siding_other_tests {
     (UiD 2)
     (TrItemId 0 20)
     (Position 2 0 0)
+    (QDirection 0 0 0 1)
   )
   (LevelCr (UiD 3) (Position 3 0 0) (FileName "lc.s"))
   (CollideObject (UiD 4) (Position 4 0 0) (FileName "col.s"))
@@ -2112,6 +2172,7 @@ mod speedpost_tr_item_tests {
     (TrItemId 0 200)
     (TrItemId 1 300)
     (Position 0 0 0)
+    (QDirection 0 0 0 1)
   )
 )
 "#;
@@ -2155,12 +2216,14 @@ mod hazard_db_tests {
     (TrItemId 1 42)
     (FileName "crow.haz")
     (Position 0 0 0)
+    (QDirection 0 0 0 1)
   )
   (Hazard
     (UiD 2)
     (TrItemId 0 42)
     (FileName "crow.haz")
     (Position 1 0 0)
+    (QDirection 0 0 0 1)
   )
 )
 "#;
@@ -2187,6 +2250,29 @@ mod hazard_db_tests {
 }
 
 #[cfg(test)]
+mod invalid_pose_skip_tests {
+    use super::*;
+    use crate::parser::parse_from_first_paren;
+
+    #[test]
+    fn static_without_position_or_orientation_is_skipped() {
+        let src = r#"
+(Tr_Worldfile
+  (Static (UiD 1) (FileName "a.s"))
+  (Static (UiD 2) (FileName "b.s") (Position 1 0 0))
+  (Static (UiD 3) (FileName "c.s") (Position 2 0 0) (QDirection 0 0 0 1))
+  (Forest (UiD 4) (TreeTexture "t.ace"))
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let world = WorldFile::from_ast(&ast, 0, 0);
+        assert_eq!(world.items.len(), 1);
+        assert_eq!(world.items[0].uid(), Some(3));
+        assert_eq!(world.skipped_invalid_pose, 3);
+    }
+}
+
+#[cfg(test)]
 mod jinx_transfer_sibling_tests {
     use super::*;
     use crate::parser::parse_from_first_paren;
@@ -2197,8 +2283,8 @@ mod jinx_transfer_sibling_tests {
         let src = r#"
 (Tr_Worldfile
   (Transfer
-    (UiD (75) Width (30) Height (12) Position (1 2 3))
-    (TrackObj (UiD 99) (SectionIdx 7) (Position 4 5 6) (FileName "rail.s"))
+    (UiD (75) Width (30) Height (12) Position (1 2 3) QDirection (0 0 0 1))
+    (TrackObj (UiD 99) (SectionIdx 7) (Position 4 5 6) (FileName "rail.s") (QDirection 0 0 0 1))
   )
 )
 "#;

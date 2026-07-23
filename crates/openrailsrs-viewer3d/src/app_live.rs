@@ -174,7 +174,7 @@ mod tests {
         with_live_world(|world| {
             {
                 let mut keys = world.resource_mut::<ButtonInput<KeyCode>>();
-                keys.press(KeyCode::ArrowUp);
+                keys.press(KeyCode::KeyD); // OR ControlThrottleIncrease
             }
             world.run_system_once(live_driver_input).unwrap();
             assert!(
@@ -188,7 +188,7 @@ mod tests {
             {
                 let mut keys = world.resource_mut::<ButtonInput<KeyCode>>();
                 keys.clear();
-                keys.press(KeyCode::Space);
+                keys.press(KeyCode::Backspace); // OR emergency
             }
             world.run_system_once(live_driver_input).unwrap();
             let live = world.resource::<crate::live::LiveDrive>();

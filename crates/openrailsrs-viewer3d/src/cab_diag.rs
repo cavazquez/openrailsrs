@@ -227,7 +227,7 @@ fn cab_min_brightness_env() -> f32 {
     std::env::var("OPENRAILSRS_CAB_MIN_BRIGHT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(0.0_f32)
+        .unwrap_or(0.55_f32)
         .clamp(0.0, 1.0)
 }
 

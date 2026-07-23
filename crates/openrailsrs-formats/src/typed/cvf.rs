@@ -249,6 +249,65 @@ impl CabDialParams {
     }
 }
 
+/// Digital readout metadata (`Accuracy` / `LeadingZeros` / `Justification` / …).
+///
+/// Open Rails: `CabViewDigitalRenderer` / `CVCDigital`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabDigitalParams {
+    pub scale_min: f64,
+    pub scale_max: f64,
+    /// Decimal places (`Accuracy`).
+    pub accuracy: i32,
+    pub leading_zeros: u32,
+    /// 1 = center, 2 = left, 3 = right (OR `Justification`).
+    pub justification: u32,
+    pub units: Option<String>,
+}
+
+impl Default for CabDigitalParams {
+    fn default() -> Self {
+        Self {
+            scale_min: 0.0,
+            scale_max: 999.0,
+            accuracy: 0,
+            leading_zeros: 0,
+            justification: 1,
+            units: None,
+        }
+    }
+}
+
+impl CabDigitalParams {
+    /// Format a numeric reading like Open Rails digital cab displays.
+    pub fn format_value(&self, value: f64) -> String {
+        let v = value.clamp(self.scale_min, self.scale_max);
+        let decimals = self.accuracy.max(0) as usize;
+        let body = if decimals == 0 {
+            format!("{}", v.round() as i64)
+        } else {
+            format!("{v:.decimals$}")
+        };
+        if self.leading_zeros == 0 {
+            return body;
+        }
+        let (sign, digits) = if let Some(rest) = body.strip_prefix('-') {
+            ("-", rest)
+        } else {
+            ("", body.as_str())
+        };
+        let (int_part, frac) = match digits.split_once('.') {
+            Some((i, f)) => (i, Some(f)),
+            None => (digits, None),
+        };
+        let width = self.leading_zeros as usize;
+        let padded = format!("{int_part:0>width$}");
+        match frac {
+            Some(f) => format!("{sign}{padded}.{f}"),
+            None => format!("{sign}{padded}"),
+        }
+    }
+}
+
 /// Cab control element (display, dial, digital readout, …).
 #[derive(Clone, Debug, PartialEq)]
 pub enum CabControl {
@@ -267,19 +326,25 @@ pub enum CabControl {
     Digital {
         control_type: ControlType,
         position: ScreenRect,
-        units: Option<String>,
+        digital: CabDigitalParams,
     },
     TwoStateDisplay {
         control_type: ControlType,
         position: ScreenRect,
         graphic: String,
         frames: CabLeverFrames,
+        /// CVF `MouseControl ( 1 )`.
+        mouse_control: bool,
+        /// CVF `Style` token (`ONOFF`, `WHILE_PRESSED`, …).
+        style: Option<String>,
     },
     TriStateDisplay {
         control_type: ControlType,
         position: ScreenRect,
         graphic: String,
         frames: CabLeverFrames,
+        mouse_control: bool,
+        style: Option<String>,
     },
     /// Discrete lever (CVF ACE frames): throttle, train brake, …
     Lever {
@@ -287,6 +352,8 @@ pub enum CabControl {
         position: Option<ScreenRect>,
         graphic: String,
         frames: CabLeverFrames,
+        mouse_control: bool,
+        style: Option<String>,
     },
     Unknown {
         kind: String,
@@ -810,12 +877,50 @@ fn parse_dial_params(items: &[Ast]) -> CabDialParams {
 fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
     let position = find_screen_rect(items, "Digital")?;
-    let units = find_string_in_list(items, "Units");
     Ok(CabControl::Digital {
         control_type,
         position,
-        units,
+        digital: parse_digital_params(items),
     })
+}
+
+fn parse_digital_params(items: &[Ast]) -> CabDigitalParams {
+    let mut digital = CabDigitalParams {
+        units: find_string_in_list(items, "Units"),
+        ..Default::default()
+    };
+    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
+        if nums.len() >= 2 {
+            digital.scale_min = nums[0];
+            digital.scale_max = nums[1];
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "Accuracy") {
+        if let Some(v) = nums.first() {
+            digital.accuracy = *v as i32;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "LeadingZeros") {
+        if let Some(v) = nums.first() {
+            digital.leading_zeros = (*v).max(0.0) as u32;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "Justification") {
+        if let Some(v) = nums.first() {
+            digital.justification = (*v).max(0.0) as u32;
+        }
+    }
+    digital
+}
+
+fn parse_mouse_control(items: &[Ast]) -> bool {
+    find_named_numbers(items, "MouseControl")
+        .and_then(|n| n.first().copied())
+        .is_some_and(|v| v != 0.0)
+}
+
+fn parse_control_style(items: &[Ast]) -> Option<String> {
+    find_string_in_list(items, "Style").map(|s| s.to_ascii_uppercase())
 }
 
 fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
@@ -827,6 +932,8 @@ fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
         position,
         graphic,
         frames: normalize_lever_frames(parse_lever_frames(items)),
+        mouse_control: parse_mouse_control(items),
+        style: parse_control_style(items),
     })
 }
 
@@ -844,6 +951,8 @@ fn parse_tri_state(items: &[Ast]) -> Result<CabControl, FormatError> {
         }),
         graphic,
         frames: normalize_lever_frames(parse_lever_frames(items)),
+        mouse_control: parse_mouse_control(items),
+        style: parse_control_style(items),
     })
 }
 
@@ -857,6 +966,8 @@ fn parse_lever(items: &[Ast]) -> Result<CabControl, FormatError> {
         position,
         graphic,
         frames,
+        mouse_control: parse_mouse_control(items),
+        style: parse_control_style(items),
     })
 }
 
@@ -1498,6 +1609,94 @@ mod tests {
                 assert_eq!(frames.frames_y, 1);
             }
             other => panic!("expected TwoStateDisplay, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_digital_accuracy_and_leading_zeros() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (Digital
+      (Type ( SPEEDOMETER DIGITAL ))
+      (Position (102 282 16 16))
+      (ScaleRange ( 0 99 ))
+      (Accuracy ( 0 ))
+      (LeadingZeros ( 2 ))
+      (Justification ( 3 ))
+      (Units ( MILES_PER_HOUR ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::Digital { digital, .. } => {
+                assert_eq!(digital.scale_max, 99.0);
+                assert_eq!(digital.leading_zeros, 2);
+                assert_eq!(digital.justification, 3);
+                assert_eq!(digital.units.as_deref(), Some("MILES_PER_HOUR"));
+                assert_eq!(digital.format_value(7.0), "07");
+                assert_eq!(digital.format_value(42.0), "42");
+            }
+            other => panic!("expected Digital, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_mouse_control_and_style_on_lever() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (Lever
+      (Type ( THROTTLE LEVER ))
+      (Position (471 374 169 106))
+      (Graphic "Throttle.ace")
+      (NumFrames ( 10 5 2 ))
+      (MouseControl ( 1 ))
+      (Style ( SPRUNG ))
+    )
+    (TwoState
+      (Type ( HORN TWO_STATE ))
+      (Position (193 378 36 57))
+      (Graphic "hornlever.ace")
+      (NumFrames ( 2 2 1 ))
+      (Style ( ONOFF ))
+      (MouseControl ( 1 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::Lever {
+                mouse_control,
+                style,
+                ..
+            } => {
+                assert!(*mouse_control);
+                assert_eq!(style.as_deref(), Some("SPRUNG"));
+            }
+            other => panic!("expected Lever, got {other:?}"),
+        }
+        match &cvf.controls[1] {
+            CabControl::TwoStateDisplay {
+                mouse_control,
+                style,
+                ..
+            } => {
+                assert!(*mouse_control);
+                assert_eq!(style.as_deref(), Some("ONOFF"));
+            }
+            other => panic!("expected TwoState, got {other:?}"),
         }
     }
 }

@@ -1,0 +1,20 @@
+( Train
+  ( TrainCfg
+    ( Name "typed_flip_uid" )
+    ( Engine
+      ( UiD 1 )
+      ( Flip ( ) )
+      ( EngineData ( typed_minimal typed_set ) )
+    )
+    ( Wagon
+      ( UiD 2 )
+      ( Flip ( 1 ) )
+      ( WagonData ( typed_wagon typed_set ) )
+    )
+    ( Wagon
+      ( UiD 3 )
+      ( Flip ( 0 ) )
+      ( WagonData ( typed_trailer typed_set ) )
+    )
+  )
+)

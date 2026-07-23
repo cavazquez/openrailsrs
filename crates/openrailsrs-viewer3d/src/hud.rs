@@ -123,6 +123,8 @@ pub fn camera_status_label(mode: CameraMode, follow: CameraFollowMode) -> String
         "CABINA".into()
     } else if follow.is_cab2d() {
         "CABINA2D".into()
+    } else if follow.is_passenger() {
+        "PASAJERO".into()
     } else {
         format!("cam:{}", camera_mode_label(mode))
     }
@@ -171,7 +173,7 @@ pub fn build_hud_content(
             ""
         };
         format!(
-            "Space:pause  R:reset  +/-:spd  T:cam  V:driver{train_hint}  {rain_hint}  {fog_hint}  G:goto  F2:fly  Esc:quit"
+            "Space:pause  R:reset  +/-:spd  T:cam  1:cab  2:chase{train_hint}  {rain_hint}  {fog_hint}  G:goto  8:fly  Esc:quit"
         )
     } else {
         format!(
@@ -480,13 +482,16 @@ pub fn build_hud_content_live(
         )
     };
     let controls = if follow == CameraFollowMode::DriverCam {
-        "↑/↓:thr/brk  LMB/RMB:mirar  Home:centrar  H:horn  U:wiper  1:cab2d  C:panel  T:cam  V:chase  Space:emerg  F:fog  Esc:quit"
+        "A/D:thr  ;/':brk  W/S:dir  Space:horn  V:wiper  Bksp:emerg  RMB:mirar  Home:centrar  Alt+1:2D/3D  C:panel  2:chase  5:pasajero  Esc:quit"
             .to_string()
     } else if follow.is_cab2d() {
-        "↑/↓:thr/brk  ←/→:vista  H:horn  U:wiper  1:salir  V:cab3d  T:cam  Space:emerg  Esc:quit"
+        "A/D:thr  ;/':brk  ←/→:vista  Space:horn  V:wiper  Alt+1:3D  2:chase  5:pasajero  Esc:quit"
+            .to_string()
+    } else if follow.is_passenger() {
+        "A/D:thr  ;/':brk  RMB:mirar  5:sig.vagon  Ctrl+Shift+5:asiento  1:cab  2:chase  Esc:quit"
             .to_string()
     } else {
-        "↑/↓:thr/brk  I/K:pan  WASD:pan  LMB:rotate  RMB↑↓:zoom  wheel:zoom  Space:emerg  H:horn  U:wiper  1:cab2d  C:panel  T:cam  V:driver  P:pause  R:reset  +/-:sim  F:fog  Esc:quit"
+        "A/D:thr  ;/':brk  W/S:dir  Space:horn  V:wiper  1:cab  Alt+1:2D/3D  2:chase  3:orbit  5:pasajero  8:fly  IJKL:pan  P:pause  Esc:quit"
             .to_string()
     };
     let mut row2 = format!(

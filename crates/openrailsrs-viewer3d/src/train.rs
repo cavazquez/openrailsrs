@@ -360,6 +360,7 @@ pub fn spawn_train_markers(
                                             m,
                                             vehicle.offset_m,
                                             vehicle.length_m,
+                                            vehicle.flipped,
                                         )
                                     })
                                     .unwrap_or_else(|| {

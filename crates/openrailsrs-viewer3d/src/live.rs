@@ -14,8 +14,9 @@ use openrailsrs_sim::LiveDriveSession;
 use crate::cab_view::{CabLeadVehicle, CabTrainParent, orts_3d_cab_for_vehicle};
 use crate::camera::{
     CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitDistanceLimit,
-    OrbitState, camera_transform_from_orbit_state, chase_yaw_from_train, clamp_distance_to_limit,
-    orbit_user_zoom_max, yaw_from_transform,
+    OrbitState, PassengerSeatCatalog, PassengerViewpointAuthored,
+    camera_transform_from_orbit_state, chase_yaw_from_train, clamp_distance_to_limit,
+    msts_direction_to_look_offset, orbit_user_zoom_max, yaw_from_transform,
 };
 use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::launch::{LIVE_TRAIN_LOD_DISTANCE_M, ViewerSceneryMode, track_dev_render_enabled};
@@ -137,6 +138,7 @@ pub fn live_mode_inactive(live: Option<Res<LiveDrive>>) -> bool {
 #[allow(clippy::type_complexity)]
 pub fn enable_live_defaults(
     mut follow: ResMut<CameraFollowMode>,
+    mut prefer_3d: ResMut<crate::camera::Prefer3dCab>,
     scene: Res<crate::track::TrackScene>,
     focus: Res<crate::world::RouteFocus>,
     mode: Res<ViewerSceneryMode>,
@@ -153,8 +155,14 @@ pub fn enable_live_defaults(
     if let Ok(mode) = std::env::var("OPENRAILSRS_FOLLOW") {
         match mode.trim().to_ascii_lowercase().as_str() {
             "chase" => *follow = CameraFollowMode::ChaseCam,
-            "driver" | "cab3d" => *follow = CameraFollowMode::DriverCam,
-            "cab" | "cab2d" | "2d" => *follow = CameraFollowMode::Cab2d,
+            "driver" | "cab3d" => {
+                *follow = CameraFollowMode::DriverCam;
+                prefer_3d.0 = true;
+            }
+            "cab" | "cab2d" | "2d" => {
+                *follow = CameraFollowMode::Cab2d;
+                prefer_3d.0 = false;
+            }
             "orbit" | "orbitfollow" => *follow = CameraFollowMode::OrbitFollow,
             "off" => *follow = CameraFollowMode::Off,
             _ => {}
@@ -270,7 +278,9 @@ pub fn live_audio_frame(live: Res<LiveDrive>) {
     audio.send(AudioCmd::SetBraking(live.session.driver_brake));
 }
 
-/// Driver controls (same as `openrailsrs cab`). Throttle/brake use arrow keys so W/S stay free for camera pan.
+/// Driver controls — Open Rails default InputSettings:
+/// **A/D** throttle · **;/'** train brake · **W/S** reverser · **Space** horn ·
+/// **V** wiper · **Backspace** emergency · arrows kept as aliases.
 pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveDrive>) {
     if keys.just_pressed(KeyCode::KeyP) {
         live.paused = !live.paused;
@@ -280,43 +290,61 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
             viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
         }
     }
-    let throttle_up = keys.just_pressed(KeyCode::ArrowUp) || keys.just_pressed(KeyCode::PageUp);
-    let throttle_down =
-        keys.just_pressed(KeyCode::ArrowDown) || keys.just_pressed(KeyCode::PageDown);
+
+    // OR ControlThrottleIncrease/Decrease (D / A); arrows still work.
+    let throttle_up = keys.just_pressed(KeyCode::KeyD)
+        || keys.just_pressed(KeyCode::ArrowUp)
+        || keys.just_pressed(KeyCode::PageUp);
+    let throttle_down = keys.just_pressed(KeyCode::KeyA)
+        || keys.just_pressed(KeyCode::ArrowDown)
+        || keys.just_pressed(KeyCode::PageDown);
     if throttle_up {
         live.session.driver_brake = 0.0;
         live.session.driver_throttle = (live.session.driver_throttle + 0.1).min(1.0);
     }
     if throttle_down {
-        if live.session.driver_throttle > 0.0 {
-            live.session.driver_throttle = (live.session.driver_throttle - 0.1).max(0.0);
-        } else {
-            live.session.driver_brake = (live.session.driver_brake + 0.15).min(1.0);
-        }
+        live.session.driver_throttle = (live.session.driver_throttle - 0.1).max(0.0);
     }
-    if keys.just_pressed(KeyCode::Space) {
+
+    // OR ControlTrainBrakeIncrease/Decrease (' / ;)
+    if keys.just_pressed(KeyCode::Quote) {
+        live.session.driver_throttle = 0.0;
+        live.session.driver_brake = (live.session.driver_brake + 0.15).min(1.0);
+    }
+    if keys.just_pressed(KeyCode::Semicolon) {
+        live.session.driver_brake = (live.session.driver_brake - 0.15).max(0.0);
+    }
+
+    // OR ControlEmergencyPushButton (Backspace)
+    if keys.just_pressed(KeyCode::Backspace) {
         live.session.driver_throttle = 0.0;
         live.session.driver_brake = 1.0;
     }
-    // Reverser (cab CVF): [ = REV, ] = FWD, \ = neutral (Open Rails style 3-position).
-    if keys.just_pressed(KeyCode::BracketLeft) {
-        live.session.driver_direction = 0.0;
-    }
-    if keys.just_pressed(KeyCode::BracketRight) {
+
+    // OR ControlForwards / ControlBackwards (W / S); \ = neutral.
+    if keys.just_pressed(KeyCode::KeyW) {
         live.session.driver_direction = 1.0;
+    }
+    if keys.just_pressed(KeyCode::KeyS) {
+        live.session.driver_direction = 0.0;
     }
     if keys.just_pressed(KeyCode::Backslash) {
         live.session.driver_direction = 0.5;
     }
-    if keys.just_pressed(KeyCode::KeyH) {
+
+    // OR ControlHorn (Space); H kept as alias.
+    if keys.just_pressed(KeyCode::Space) || keys.just_pressed(KeyCode::KeyH) {
         live.session.trigger_horn(0.35);
         if let Some(ref audio) = live.audio {
             audio.send(AudioCmd::Horn);
         }
     }
-    if keys.just_pressed(KeyCode::KeyU) {
+
+    // OR ControlWiper (V); U kept as alias.
+    if keys.just_pressed(KeyCode::KeyV) || keys.just_pressed(KeyCode::KeyU) {
         live.session.toggle_wiper();
     }
+
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
         live.session.speed_mul = (live.session.speed_mul * 2.0).min(16.0);
     }
@@ -367,6 +395,12 @@ pub struct LiveTrainMarker;
 /// Visual mesh under the live train (hidden in driver view).
 #[derive(Component)]
 pub struct LiveTrainBody;
+
+/// Consist car index for passenger camera attach (OR camera 5).
+#[derive(Component, Clone, Copy, Debug)]
+pub struct LiveTrainCar {
+    pub index: usize,
+}
 
 /// Tracks the last driver-cam state to emit the diagnostic log only once per transition.
 #[derive(Resource, Default)]
@@ -435,16 +469,28 @@ pub fn update_driver_train_visibility(
         );
     }
 
+    // Cab2d: ACE panel replaces the 3D cab mesh (despawned in cab_view); do not
+    // force leftover interior parts visible or they fill the window alpha.
     let mut cab_count = 0usize;
-    if hide {
+    if *follow == CameraFollowMode::DriverCam {
         for mut vis in &mut cab_parts {
             *vis = Visibility::Visible;
+            cab_count += 1;
+        }
+    } else if follow.is_cab2d() {
+        for mut vis in &mut cab_parts {
+            *vis = Visibility::Hidden;
             cab_count += 1;
         }
     }
 
     if mode_changed {
-        if hide {
+        if follow.is_cab2d() {
+            viewer_log!(
+                "openrailsrs-viewer3d: cab2d view → {exterior_count} exterior hidden, \
+                 {cab_count} cab parts hidden (ACE overlay)"
+            );
+        } else if hide {
             viewer_log!(
                 "openrailsrs-viewer3d: driver view → {exterior_count} exterior hidden, \
                  {cab_count} cab parts visible"
@@ -482,8 +528,12 @@ pub(crate) fn driver_cab_from_lead_vehicle(
     lead_mesh: &bevy::mesh::Mesh,
 ) -> LiveDriverCab {
     let head_len = vehicle.length_m;
-    let placement =
-        crate::shapes::cab_shape_placement_transform(lead_mesh, vehicle.offset_m, vehicle.length_m);
+    let placement = crate::shapes::cab_shape_placement_transform(
+        lead_mesh,
+        vehicle.offset_m,
+        vehicle.length_m,
+        vehicle.flipped,
+    );
     let mut cab = LiveDriverCab {
         back_m: (head_len * 0.15).clamp(1.8, 4.5),
         height_m: (head_len * 0.14).clamp(2.4, 3.2),
@@ -534,6 +584,120 @@ pub(crate) fn driver_cab_from_lead_vehicle(
         }
     }
     cab
+}
+
+fn authored_passenger_viewpoint(
+    vp: &openrailsrs_formats::PassengerViewpoint,
+) -> PassengerViewpointAuthored {
+    let look = msts_direction_to_look_offset(vp.start_direction_deg);
+    PassengerViewpointAuthored {
+        head_msts: Vec3::new(
+            vp.head_pos_m[0] as f32,
+            vp.head_pos_m[1] as f32,
+            vp.head_pos_m[2] as f32,
+        ),
+        look_pitch: look.pitch,
+        look_yaw: look.yaw,
+        pitch_limit: vp
+            .rotation_limit_deg
+            .map(|l| (l[0] as f32).to_radians().abs()),
+        yaw_limit: vp
+            .rotation_limit_deg
+            .map(|l| (l[1] as f32).to_radians().abs()),
+    }
+}
+
+fn parse_passenger_views_from_vehicle_file(path: &Path) -> Vec<PassengerViewpointAuthored> {
+    let Ok(text) = openrailsrs_formats::read_msts_file_to_string(path) else {
+        return Vec::new();
+    };
+    // Prefer trailing-tolerant parse: many `.wag` files are not a single clean sexp.
+    let mut views = Vec::new();
+    if let Ok(ast) = openrailsrs_formats::parse_first_from_first_paren(&text) {
+        views.extend(
+            openrailsrs_formats::parse_passenger_viewpoints(&ast)
+                .iter()
+                .map(authored_passenger_viewpoint),
+        );
+    }
+    if views.is_empty() {
+        // Scan for `Inside (` blocks (MSTS `Wagon ( name … Inside ( … ) )`).
+        let lower = text.to_ascii_lowercase();
+        let mut search_from = 0;
+        while let Some(rel) = lower[search_from..].find("inside") {
+            let abs = search_from + rel;
+            let slice = &text[abs..];
+            if let Ok(ast) = openrailsrs_formats::parse_first_from_first_paren(slice) {
+                views.extend(
+                    openrailsrs_formats::parse_passenger_viewpoints(&ast)
+                        .iter()
+                        .map(authored_passenger_viewpoint),
+                );
+            }
+            search_from = abs + 6;
+        }
+    }
+    views
+}
+
+/// Resolve `Inside` passenger seats for a vehicle shape (`.wag` then `.eng`).
+pub(crate) fn passenger_viewpoints_for_vehicle(
+    shape_dirs: &[&Path],
+    shape_file: &str,
+    route_dir: &Path,
+) -> Vec<PassengerViewpointAuthored> {
+    let Some(stem) = Path::new(shape_file).file_stem().and_then(|s| s.to_str()) else {
+        return Vec::new();
+    };
+    let try_roots = |roots: &[PathBuf]| -> Vec<PassengerViewpointAuthored> {
+        for root in roots {
+            for ext in ["wag", "eng"] {
+                let path = root.join(format!("{stem}.{ext}"));
+                let views = parse_passenger_views_from_vehicle_file(&path);
+                if !views.is_empty() {
+                    return views;
+                }
+                if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+                    let views = parse_passenger_views_from_vehicle_file(&resolved);
+                    if !views.is_empty() {
+                        return views;
+                    }
+                }
+            }
+        }
+        Vec::new()
+    };
+    if let Some(name) = crate::shapes::trainset_name_from_shape_search(shape_dirs, shape_file) {
+        let roots = crate::shapes::or_content_trainset_roots(route_dir, &name);
+        let views = try_roots(&roots);
+        if !views.is_empty() {
+            return views;
+        }
+    }
+    let local: Vec<PathBuf> = shape_dirs.iter().map(|p| p.to_path_buf()).collect();
+    try_roots(&local)
+}
+
+pub(crate) fn build_passenger_seat_catalog(
+    vehicles: &[crate::rolling_stock::ConsistVehicleVisual],
+    shape_dirs: &[&Path],
+    route_dir: &Path,
+) -> PassengerSeatCatalog {
+    let by_car = vehicles
+        .iter()
+        .map(|v| match v.shape_file.as_deref() {
+            Some(shape) => passenger_viewpoints_for_vehicle(shape_dirs, shape, route_dir),
+            None => Vec::new(),
+        })
+        .collect();
+    let catalog = PassengerSeatCatalog { by_car };
+    let seats = catalog.seat_cars().len();
+    if seats > 0 {
+        viewer_log!(
+            "openrailsrs-viewer3d: passenger seats on {seats} car(s) (key 5)"
+        );
+    }
+    catalog
 }
 
 pub(crate) fn live_driver_cab_from_vehicles(
@@ -630,6 +794,11 @@ pub fn spawn_live_train(
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs, &assets.route_dir);
     commands.insert_resource(driver_cab.clone());
+    commands.insert_resource(build_passenger_seat_catalog(
+        vehicles,
+        &shape_dirs,
+        &assets.route_dir,
+    ));
 
     if mode.is_track_dev() && !track_dev_render_enabled() {
         let unit = meshes.add(Cuboid::new(2.0, 2.5, 14.0));
@@ -762,6 +931,7 @@ pub fn spawn_live_train(
                                             m,
                                             vehicle.offset_m,
                                             vehicle.length_m,
+                                            vehicle.flipped,
                                         )
                                         .0
                                     } else {
@@ -769,6 +939,7 @@ pub fn spawn_live_train(
                                             m,
                                             vehicle.offset_m,
                                             vehicle.length_m,
+                                            vehicle.flipped,
                                         )
                                     }
                                 })
@@ -782,6 +953,7 @@ pub fn spawn_live_train(
                             let mut car = train.spawn((
                                 car_transform,
                                 Visibility::default(),
+                                LiveTrainCar { index: vi },
                                 crate::rolling_stock_anim::TrainCarTrackOffset {
                                     offset_m: vehicle.offset_m,
                                     track_index: 0,
@@ -907,6 +1079,7 @@ pub fn spawn_live_train(
                 let mut fallback = train.spawn((
                     local,
                     Visibility::default(),
+                    LiveTrainCar { index: vi },
                     Name::new(format!("train:live:car:{vi}:fallback")),
                 ));
                 if is_lead {
@@ -1073,6 +1246,7 @@ mod tests {
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 length_m: 20.879,
                 offset_m: 0.0,
+                flipped: false,
             }],
             &shape_dirs,
             &route,

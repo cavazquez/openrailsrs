@@ -25,8 +25,8 @@ pub use brake_shoe::{
 pub use carspawn::{CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList};
 pub use consist::{ConsistEntry, ConsistFile};
 pub use cvf::{
-    CabControl, CabDialParams, CabLeverFrames, CabView, CabViewFile, ControlState, ControlType,
-    ScreenRect,
+    CabControl, CabDialParams, CabDigitalParams, CabLeverFrames, CabView, CabViewFile, ControlState,
+    ControlType, ScreenRect,
 };
 pub use engine::{EngineCabView, EngineFile, MstsSteamFields, Orts3dCabViewpoint};
 pub use friction::{
@@ -60,7 +60,7 @@ pub use tsection::{
     SKEW_AS_CURVE_RADIUS_M, TSectionCatalog, TrackProceduralDims, TrackProceduralLink,
     TrackSectionDef, TrackShapeDef, TrackShapePath,
 };
-pub use wagon::WagonFile;
+pub use wagon::{PassengerViewpoint, WagonFile, parse_passenger_viewpoints};
 pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem, WorldTrItemRef};
 
 use crate::ast::{Ast, Atom};

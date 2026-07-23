@@ -8,6 +8,7 @@ use crate::units::kmh_to_mps;
 
 use super::brake_shoe::{BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe};
 use super::friction::parse_orts_friction_fields;
+use super::wagon::{PassengerViewpoint, parse_passenger_viewpoints};
 use super::{
     OrtsFrictionFields, atom_to_number, atom_to_string, find_list_value,
     find_optional_string_field, walk_lists_find, walk_lists_visit,
@@ -127,6 +128,8 @@ pub struct EngineFile {
     pub brake_shoe_type: OrtsBrakeShoeType,
     pub brake_shoe_friction: Option<BrakeShoeFrictionCurve>,
     pub cab: EngineCabView,
+    /// `Inside` / alternate passenger seats (OR camera 5), if present on the loco.
+    pub passenger_viewpoints: Vec<PassengerViewpoint>,
 }
 
 impl EngineFile {
@@ -340,6 +343,7 @@ impl EngineFile {
         let friction = parse_orts_friction_fields(ast, true, &name);
         let (brake_shoe_type, brake_shoe_friction) = parse_orts_brake_shoe(ast);
         let cab = parse_engine_cab_view(ast);
+        let passenger_viewpoints = parse_passenger_viewpoints(ast);
 
         Ok(Self {
             name,
@@ -389,6 +393,7 @@ impl EngineFile {
             brake_shoe_type,
             brake_shoe_friction,
             cab,
+            passenger_viewpoints,
         })
     }
 }

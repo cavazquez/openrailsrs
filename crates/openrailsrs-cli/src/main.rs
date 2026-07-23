@@ -1585,12 +1585,12 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
         ),
         CabControl::Digital {
             control_type,
-            units,
+            digital,
             position,
         } => println!(
             "    [{index}] Digital {} units={} @ ({:.0},{:.0})",
             control_type.as_str(),
-            units.as_deref().unwrap_or("-"),
+            digital.units.as_deref().unwrap_or("-"),
             position.x,
             position.y,
         ),
@@ -1599,6 +1599,7 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             graphic,
             position,
             frames,
+            ..
         } => println!(
             "    [{index}] TwoStateDisplay {} graphic={graphic} frames={} @ ({:.0},{:.0})",
             control_type.as_str(),
@@ -1611,6 +1612,7 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             graphic,
             position,
             frames,
+            ..
         } => println!(
             "    [{index}] TriStateDisplay {} graphic={graphic} frames={} @ ({:.0},{:.0})",
             control_type.as_str(),
@@ -1623,6 +1625,7 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             graphic,
             position,
             frames,
+            ..
         } => {
             let pos = position
                 .as_ref()

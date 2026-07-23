@@ -119,10 +119,13 @@ impl Plugin for ViewerPlugin {
             .insert_resource(ClearColor(sky::sky_clear_color()))
             .init_resource::<camera::CameraMode>()
             .init_resource::<camera::CameraFollowMode>()
+            .init_resource::<camera::Prefer3dCab>()
             .init_resource::<camera::CameraFollowTarget>()
             .init_resource::<camera::OrbitDistanceLimit>()
             .init_resource::<camera::LiveDriverCab>()
             .init_resource::<camera::DriverLookOffset>()
+            .init_resource::<camera::PassengerCamState>()
+            .init_resource::<camera::PassengerSeatCatalog>()
             .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<sky::FogState>()
             .init_resource::<overhead_wire::RouteWireConfig>()
@@ -351,6 +354,9 @@ impl Plugin for ViewerPlugin {
                     cab_cvf::update_cab_cvf_controls.after(cab_view::sync_cab_interior),
                     cab_cvf_overlay::update_cab_cvf_overlay
                         .after(cab_cvf_overlay::sync_cab_cvf_overlay),
+                    cab_cvf_overlay::handle_cab2d_mouse_controls
+                        .after(cab_cvf_overlay::update_cab_cvf_overlay)
+                        .run_if(live::live_mode_active),
                     cab_render::update_cab_render_diagnostic
                         .after(cab_render::tag_cab_interior_render_layers)
                         .after(camera::follow_train_camera)

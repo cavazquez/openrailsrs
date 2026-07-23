@@ -22,6 +22,8 @@ pub struct ConsistVehicleVisual {
     pub length_m: f32,
     /// Metros detras de la cabeza del tren (negativo hacia cola).
     pub offset_m: f32,
+    /// `.con` Flip — giro Y 180°; el orden lead→tail no cambia (#130).
+    pub flipped: bool,
 }
 
 /// Plan de spawn cargado al arrancar (`--consist` o `.act`).
@@ -76,12 +78,14 @@ fn vehicles_from_consist(consist: &openrailsrs_train::Consist) -> Vec<ConsistVeh
                 shape_file: l.wagon_shape.clone(),
                 length_m: l.length_m as f32,
                 offset_m,
+                flipped: l.flipped,
             },
             Vehicle::Wagon(w) => ConsistVehicleVisual {
                 name: w.name.clone(),
                 shape_file: w.wagon_shape.clone(),
                 length_m: w.length_m as f32,
                 offset_m,
+                flipped: w.flipped,
             },
         })
         .collect()
@@ -158,9 +162,13 @@ pub fn spawn_static_consist(
             continue;
         };
         let vehicle_pos = pose.position + forward * vehicle.offset_m;
+        let mut rotation = Quat::from_rotation_y(pose.yaw_rad);
+        if vehicle.flipped {
+            rotation *= Quat::from_rotation_y(std::f32::consts::PI);
+        }
         let vehicle_tf = Transform {
             translation: vehicle_pos,
-            rotation: Quat::from_rotation_y(pose.yaw_rad),
+            rotation,
             scale: Vec3::ONE,
         };
         let obj = ObjectMarker {

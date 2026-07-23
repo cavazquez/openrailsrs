@@ -83,10 +83,11 @@ pub fn cab_or_like_enabled() -> bool {
     )
 }
 
-/// No invented brightness floor; OR SceneryShader has none (#153).
-/// Optional lift via `OPENRAILSRS_CAB_MIN_BRIGHT`.
+/// Floor so underside / sun-facing-away cab panels keep albedo detail (labels, plaques).
+/// Pure OR SceneryShader has no floor (#153); Bevy half-Lambert + no cab ambient otherwise
+/// crushes dark ACE lettering. Override with `OPENRAILSRS_CAB_MIN_BRIGHT` (`0` = OR-strict).
 fn cab_min_brightness_default() -> f32 {
-    0.0
+    0.55
 }
 
 #[derive(Clone, Copy, Debug, Default, ShaderType)]
@@ -102,6 +103,22 @@ pub struct OrCabGpuParams {
     pub shader_kind: f32,
     pub cab_min_brightness: f32,
     pub flags: f32,
+}
+
+/// Pipeline key: polygon depth bias + whether to write the depth buffer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct OrCabMaterialKey {
+    pub depth_bias: i32,
+    pub depth_write: bool,
+}
+
+impl From<&OrCabMaterial> for OrCabMaterialKey {
+    fn from(material: &OrCabMaterial) -> Self {
+        Self {
+            depth_bias: material.depth_bias as i32,
+            depth_write: material.depth_write,
+        }
+    }
 }
 
 pub fn or_cab_shaders_enabled() -> bool {
@@ -149,16 +166,45 @@ pub fn build_or_cab_params(kind: OrShaderKind, reference_alpha: f32) -> OrCabGpu
         tint_b: 1.0,
         tint_a: 1.0,
         reference_alpha,
-        shadow_brightness: 0.5,
+        // Slightly above OR outdoor 0.5 so enclosed cab shade still reads textures.
+        shadow_brightness: 0.72,
         full_brightness: 1.0,
-        half_shadow_brightness: 0.75,
+        half_shadow_brightness: 0.85,
         shader_kind: or_shader_kind_gpu_id(kind),
         cab_min_brightness: cab_min,
         flags: cab_material_flags(),
     }
 }
 
+/// MSTS `z_buf_mode` → OrCab polygon bias + depth-write hint.
+///
+/// Pullman `PULLMAN_GR.s` marks **every** prim (including opaque desk/floor) as
+/// `ZBufMode=1`. Open Rails still occludes the world because the cab is drawn in a
+/// late pass; Bevy shares one opaque pass with scenery, so callers must treat
+/// opaque/mask materials as depth-writing via [`or_cab_depth_write_for_alpha`].
+pub fn or_cab_depth_from_z_buf(z_buf_mode: i32, depth_bias: f32) -> (f32, bool) {
+    match z_buf_mode {
+        // Depth test, no write (OR typical for overlays / needles / late cab pass).
+        1 => (depth_bias.max(1.0), false),
+        // Prefer drawing on top.
+        2 => (depth_bias.max(2.0), false),
+        _ => (depth_bias, true),
+    }
+}
+
+/// Effective depth-write for cab materials in Bevy's shared opaque pass.
+///
+/// Opaque/Mask always write depth so WORLD TrackObj cannot stomp the desk/floor.
+/// Blend/Add keep MSTS `z_buf_mode` (glass/overlays).
+pub fn or_cab_depth_write_for_alpha(alpha_mode: AlphaMode, z_buf_mode: i32) -> bool {
+    match alpha_mode {
+        AlphaMode::Opaque | AlphaMode::Mask(_) => true,
+        _ => or_cab_depth_from_z_buf(z_buf_mode, 0.0).1,
+    }
+}
+
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[bind_group_data(OrCabMaterialKey)]
 pub struct OrCabMaterial {
     #[uniform(0)]
     pub params: OrCabGpuParams,
@@ -166,6 +212,10 @@ pub struct OrCabMaterial {
     #[sampler(2)]
     pub base_texture: Handle<Image>,
     pub alpha_mode: AlphaMode,
+    /// Polygon / sort depth bias (Bevy `Material::depth_bias`; integer part → GPU constant).
+    pub depth_bias: f32,
+    /// When false, match MSTS `z_buf_mode=1` (read depth, do not write).
+    pub depth_write: bool,
 }
 
 impl Material for OrCabMaterial {
@@ -177,13 +227,21 @@ impl Material for OrCabMaterial {
         self.alpha_mode
     }
 
+    fn depth_bias(&self) -> f32 {
+        self.depth_bias
+    }
+
     fn specialize(
         _pipeline: &MaterialPipeline,
         descriptor: &mut RenderPipelineDescriptor,
         layout: &MeshVertexBufferLayoutRef,
-        _key: MaterialPipelineKey<Self>,
+        key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.primitive.cull_mode = None;
+        if let Some(depth_stencil) = descriptor.depth_stencil.as_mut() {
+            depth_stencil.bias.constant = key.bind_group_data.depth_bias;
+            depth_stencil.depth_write_enabled = Some(key.bind_group_data.depth_write);
+        }
         if layout.0.contains(Mesh::ATTRIBUTE_COLOR) {
             if let Some(fragment) = descriptor.fragment.as_mut() {
                 fragment
@@ -208,6 +266,29 @@ pub fn create_or_cab_material(
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
 ) -> Handle<OrCabMaterial> {
+    create_or_cab_material_ex(
+        materials,
+        texture,
+        tint,
+        alpha_mode,
+        shader_name,
+        light_mat_idx,
+        0.0,
+        -1,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn create_or_cab_material_ex(
+    materials: &mut Assets<OrCabMaterial>,
+    texture: Handle<Image>,
+    tint: Color,
+    alpha_mode: AlphaMode,
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    depth_bias: f32,
+    z_buf_mode: i32,
+) -> Handle<OrCabMaterial> {
     let kind = resolve_or_material_kind(shader_name, light_mat_idx);
     let reference_alpha = reference_alpha_from_mode(alpha_mode);
     let mut params = build_or_cab_params(kind, reference_alpha);
@@ -221,10 +302,21 @@ pub fn create_or_cab_material(
     params.tint_g = linear.green;
     params.tint_b = linear.blue;
     params.tint_a = linear.alpha;
+    let (raw_bias, _) = or_cab_depth_from_z_buf(z_buf_mode, depth_bias);
+    // Opaque cab must write depth (shared pass with WORLD). Keep overlay bias only
+    // for transparent / non-writing paths; solid geometry uses authored bias as-is.
+    let depth_write = or_cab_depth_write_for_alpha(alpha_mode, z_buf_mode);
+    let depth_bias = if depth_write {
+        depth_bias
+    } else {
+        raw_bias
+    };
     materials.add(OrCabMaterial {
         params,
         base_texture: texture,
         alpha_mode,
+        depth_bias,
+        depth_write,
     })
 }
 
@@ -236,7 +328,23 @@ mod tests {
     fn halfbright_kind_id() {
         let p = build_or_cab_params(OrShaderKind::HalfBright, 0.01);
         assert_eq!(p.shader_kind, 2.0);
-        assert_eq!(p.half_shadow_brightness, 0.75);
+        assert!((p.half_shadow_brightness - 0.85).abs() < 1e-3);
+        assert!((p.shadow_brightness - 0.72).abs() < 1e-3);
+    }
+
+    #[test]
+    fn z_buf_mode_one_disables_depth_write() {
+        let (bias, write) = or_cab_depth_from_z_buf(1, 0.0);
+        assert!(!write);
+        assert!(bias >= 1.0);
+    }
+
+    #[test]
+    fn opaque_cab_writes_depth_despite_z_buf_mode_one() {
+        // Pullman marks floor/DESK1 as ZBufMode=1; Bevy still needs depth write.
+        assert!(or_cab_depth_write_for_alpha(AlphaMode::Opaque, 1));
+        assert!(or_cab_depth_write_for_alpha(AlphaMode::Mask(0.5), 1));
+        assert!(!or_cab_depth_write_for_alpha(AlphaMode::Blend, 1));
     }
 
     #[test]
@@ -249,7 +357,7 @@ mod tests {
         }
         let default = build_or_cab_params(OrShaderKind::TexDiff, OR_OPAQUE_REFERENCE_ALPHA);
         assert_eq!(default.flags, OR_FLAG_LIT);
-        assert!(default.cab_min_brightness.abs() < 1e-3);
+        assert!((default.cab_min_brightness - 0.55).abs() < 1e-3);
 
         unsafe {
             std::env::set_var("OPENRAILSRS_CAB_OR_LIKE", "1");
@@ -259,7 +367,7 @@ mod tests {
         }
         let or_like = build_or_cab_params(OrShaderKind::TexDiff, 0.01);
         assert_eq!(or_like.flags, OR_FLAG_OR_LIKE);
-        assert!(or_like.cab_min_brightness.abs() < 1e-3);
+        assert!((or_like.cab_min_brightness - 0.55).abs() < 1e-3);
 
         unsafe {
             std::env::set_var("OPENRAILSRS_CAB_SUN", "0");

@@ -6,7 +6,7 @@ App jugable Bevy (`openrailsrs-viewer3d`). Arquitectura: [`BEVY.md`](BEVY.md). T
 
 1. **Datos:** `.trk` / TDB / WORLD `.w` / shapes `.s` + ACE → parsers en `formats` + `MstsRouteCatalog`.
 2. **Espacios:** MSTS world → render (resta foco + `height_origin`) → view (floating origin XZ). Detalle: [`MSTS_COORDINATES.md`](MSTS_COORDINATES.md).
-3. **Stream:** radio `OPENRAILSRS_VIEW_RADIUS_M` (default 2000 m) + tilebundles; unload con histéresis.
+3. **Stream:** radio `OPENRAILSRS_VIEW_RADIUS_M` (default 2000 m) + tilebundles; unload con histéresis. Densidad scenery OR: `OPENRAILSRS_WORLD_OBJECT_DENSITY` (0–99, default 49) vs `StaticDetailLevel` (#141).
 4. **Spawn:** terreno chunked, WORLD (instancing opacos #58), Transfer/Forest/agua/señales/carspawn, tren + cabina.
 5. **Materiales:** Standard + OrScenery/OrTerrain/OrForest; fog on by default (`F` pone densidad 0, no quita el componente).
 

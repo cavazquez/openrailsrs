@@ -41,15 +41,34 @@ fn consist_file_from_ast_extracts_entries() {
     assert_eq!(
         consist.entries[0],
         ConsistEntry::Engine {
-            path: "typed_minimal.eng".to_string()
+            path: "typed_minimal.eng".to_string(),
+            uid: None,
+            flipped: false,
         }
     );
     assert_eq!(
         consist.entries[1],
         ConsistEntry::Wagon {
-            path: "typed_minimal.wag".to_string()
+            path: "typed_minimal.wag".to_string(),
+            uid: None,
+            flipped: false,
         }
     );
+}
+
+#[test]
+fn consist_file_preserves_flip_and_uid() {
+    let src = read_fixture("typed_flip_uid.con");
+    let ast = parse_from_first_paren(&src).expect("parse");
+    let consist = ConsistFile::from_ast(&ast).expect("typed parse");
+    assert_eq!(consist.entries.len(), 3);
+    assert_eq!(consist.entries[0].uid(), Some(1));
+    assert!(consist.entries[0].flipped());
+    assert!(consist.entries[0].path().contains("typed_minimal"));
+    assert_eq!(consist.entries[1].uid(), Some(2));
+    assert!(consist.entries[1].flipped());
+    assert_eq!(consist.entries[2].uid(), Some(3));
+    assert!(!consist.entries[2].flipped());
 }
 
 #[test]

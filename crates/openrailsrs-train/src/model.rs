@@ -182,6 +182,8 @@ pub struct Locomotive {
     /// OR brake shoe type / optional user μ(v) curve.
     pub brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType,
     pub brake_shoe_friction: Option<openrailsrs_formats::BrakeShoeFrictionCurve>,
+    /// `.con` `Flip` — rotate the vehicle 180° about vertical; order is unchanged (#130).
+    pub flipped: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -198,12 +200,23 @@ pub struct Wagon {
     /// OR brake shoe type / optional user μ(v) curve.
     pub brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType,
     pub brake_shoe_friction: Option<openrailsrs_formats::BrakeShoeFrictionCurve>,
+    /// `.con` `Flip` — rotate the vehicle 180° about vertical; order is unchanged (#130).
+    pub flipped: bool,
 }
 
 #[derive(Clone, Debug)]
 pub enum Vehicle {
     Loco(Locomotive),
     Wagon(Wagon),
+}
+
+impl Vehicle {
+    pub fn flipped(&self) -> bool {
+        match self {
+            Self::Loco(l) => l.flipped,
+            Self::Wagon(w) => w.flipped,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -224,6 +224,21 @@ pub fn dial_control_value(
     }
 }
 
+/// Absolute digital readout in CVF `ScaleRange` units (`CabViewDigitalRenderer`).
+pub fn digital_control_value(
+    control: &ControlType,
+    digital: &openrailsrs_formats::CabDigitalParams,
+    tel: &CabTelemetry,
+) -> f64 {
+    let dial = openrailsrs_formats::CabDialParams {
+        scale_min: digital.scale_min,
+        scale_max: digital.scale_max,
+        units: digital.units.clone(),
+        ..Default::default()
+    };
+    dial_control_value(control, &dial, tel)
+}
+
 /// Load CVF + shape runtime when cab interior assets are known.
 pub fn load_cab_cvf_runtime(
     state: &mut CabCvfState,

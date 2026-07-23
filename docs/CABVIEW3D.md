@@ -6,14 +6,15 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 
 | Pieza | Estado |
 |-------|--------|
-| `DriverCam` (C/V) | ✅ |
+| `DriverCam` (**1** / Alt+1, paridad OR) | ✅ |
 | Mesh `CABVIEW3D/*.s` + ACE | ✅ |
 | Shader `or_cab` (TexDiff) | ✅ |
 | Cámara `ORTS3DCabHeadPos` | ✅ |
 | Ocultar exterior en L1 | ✅ |
 | CVF overlay en cabina 3D | ❌ off (#151) |
-| Vista cabina 2D (`1`) | ✅ fondo ACE + controles CVF (#152) |
-| Panel HUD (tecla C) | ✅ (solo cabina 3D) |
+| Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
+| Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
+| Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
 
 ## Matrices CVF (Pullman)
 
@@ -32,9 +33,39 @@ Detalle de bindings: `cab_cvf.rs` + tests Pullman. Debug: `OPENRAILSRS_CAB_DEBUG
 | `OPENRAILSRS_CAB_ALBEDO` | `1.0` | Tint |
 | `OPENRAILSRS_CAB_SUN` | on | Sol/ambiente OR en TexDiff (`0` apaga) |
 | `OPENRAILSRS_CAB_OR_LIKE` | off | Brillo fijo legacy (debug) |
-| `OPENRAILSRS_CAB_MIN_BRIGHT` | `0` | Piso de brillo opcional |
-| `OPENRAILSRS_CAB_BRIGHTEN` | off | Levantar ACE oscuros |
+| `OPENRAILSRS_CAB_MIN_BRIGHT` | `0.55` | Piso de brillo (techo/placas); `0` = estricto OR |
+| `OPENRAILSRS_CAB_BRIGHTEN` | off | Levantar ACE oscuros (`1` si aún se ven apagados) |
 | `OPENRAILSRS_FOLLOW` | — | `driver`/`cab3d` → 3D; `cab`/`cab2d` → 2D |
+| `OPENRAILSRS_CAB_NIGHT` | off | Forzar ACE `NIGHT/` en Cab2d |
+
+Teclas Cab2d: **←/→** vista (Direction CVF) · click/arrastre en palancas con `MouseControl`.
+
+Cab2d `Direction` usa el mismo signo Bevy que `StartDirection` (X positivo = mirar abajo).
+
+Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR).
+
+Instrumentos (`Instruments*.ace`): mips ACE completos; agujas con offset 1.5 mm. Pullman marca casi todo `ZBufMode=1` (OR dibuja la cabina en un pase tardío); en Bevy los materiales **opacos** escriben depth para que el WORLD no tape pupitre/suelo. MSAA no se activa al entrar en cabina (toggle en runtime rompe pipelines Bevy 0.19).
+
+UV 180° en caras grandes de atlas “invertidos” tras el V-flip MSTS (`Instruments2`, `Cab2`, `Loudaphone2`, `handbook`, techo, asiento, etc.). Sin rotar: `Instruments`, `Cab1`, `DESK1`, `Controls` (ya correctos).
+
+## Teclas (paridad Open Rails)
+
+| Tecla | OR / ORRS |
+|-------|-----------|
+| **1** | Entrar cabina (3D por defecto, como `Use3DCab`) |
+| **Alt+1** | Alternar cabina 2D ↔ 3D |
+| **Ctrl+Shift+1** | Ciclar eyepoint 3D |
+| **2** | Exterior frontal (chase) |
+| **3** | Exterior órbita |
+| **5** | Pasajero (asiento; cicla vagones con `Inside`) |
+| **Ctrl+Shift+5** | Ciclar asientos del vagón actual |
+| **8** | Cámara libre (fly) |
+| **A** / **D** | Throttle − / + |
+| **;** / **'** | Freno tren − / + |
+| **W** / **S** | Reverser FWD / REV |
+| **Space** | Bocina |
+| **V** | Limpiaparabrisas |
+| **Backspace** | Emergencia (freno a fondo) |
 
 ## Arranque
 
@@ -44,4 +75,4 @@ cargo run --release -p openrailsrs-viewer3d -- \
 # Full scenery: omitir --run-corridor
 ```
 
-Teclas: **1** cabina 2D · **V** cabina 3D · **←/→** vista 2D · **↑/↓** thr/brk · **H** bocina · **U** wiper · **Home** centrar (3D). Setup: [`CHILTERN.md`](CHILTERN.md).
+Setup: [`CHILTERN.md`](CHILTERN.md).

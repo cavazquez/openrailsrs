@@ -50,13 +50,17 @@ fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
     let mut vehicles = Vec::with_capacity(consist_file.entries.len());
     for entry in consist_file.entries {
         match entry {
-            ConsistEntry::Engine { path } => {
+            ConsistEntry::Engine { path, flipped, .. } => {
                 let p = resolve_path(base, &path);
-                vehicles.push(Vehicle::Loco(load_engine_from_path(&p)?));
+                let mut loco = load_engine_from_path(&p)?;
+                loco.flipped = flipped;
+                vehicles.push(Vehicle::Loco(loco));
             }
-            ConsistEntry::Wagon { path } => {
+            ConsistEntry::Wagon { path, flipped, .. } => {
                 let p = resolve_path(base, &path);
-                vehicles.push(Vehicle::Wagon(load_wagon_from_path(&p)?));
+                let mut wagon = load_wagon_from_path(&p)?;
+                wagon.flipped = flipped;
+                vehicles.push(Vehicle::Wagon(wagon));
             }
         }
     }
@@ -289,6 +293,7 @@ impl From<EngineFile> for Locomotive {
             davis,
             brake_shoe_type: value.brake_shoe_type,
             brake_shoe_friction: value.brake_shoe_friction,
+            flipped: false,
         }
     }
 }
@@ -313,6 +318,7 @@ impl From<WagonFile> for Wagon {
             wagon_shape: value.wagon_shape,
             brake_shoe_type: value.brake_shoe_type,
             brake_shoe_friction: value.brake_shoe_friction,
+            flipped: false,
         }
     }
 }

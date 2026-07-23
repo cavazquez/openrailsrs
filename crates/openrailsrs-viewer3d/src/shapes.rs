@@ -459,24 +459,42 @@ fn aabb_corners(min: Vec3, max: Vec3) -> [Vec3; 8] {
 /// consist offsets only; mesh proportions and the shape origin stay as authored (plus any
 /// Matrix3x3 baked into the shape hierarchy). Exterior and 3D cab share this frame so
 /// `ORTS3DCabHeadPos` stays in the same local space as the body mesh.
-pub fn vehicle_shape_local_transform(mesh: &Mesh, offset_m: f32, length_m: f32) -> Transform {
-    cab_shape_placement_transform(mesh, offset_m, length_m)
+pub fn vehicle_shape_local_transform(
+    mesh: &Mesh,
+    offset_m: f32,
+    length_m: f32,
+    flipped: bool,
+) -> Transform {
+    cab_shape_placement_transform(mesh, offset_m, length_m, flipped)
 }
 
 /// Shared exterior / 3D-cab vehicle frame: MSTS→train rotation, authored origin at `offset_m`.
 ///
 /// The `mesh` argument is accepted for call-site symmetry but does **not** shift the frame
 /// (no AABB front/ground compensation). `length_m` likewise does not affect mesh scale.
-pub fn cab_shape_placement_transform(mesh: &Mesh, offset_m: f32, _length_m: f32) -> Transform {
+/// `flipped` applies `.con` Flip as +Y 180° after the MSTS→train basis (#130).
+pub fn cab_shape_placement_transform(
+    mesh: &Mesh,
+    offset_m: f32,
+    _length_m: f32,
+    flipped: bool,
+) -> Transform {
     let _ = mesh;
-    vehicle_authored_frame_transform(offset_m)
+    vehicle_authored_frame_transform(offset_m, flipped)
 }
 
 /// Train-local vehicle frame with authored shape origin at `offset_m` (Open Rails parity).
-pub fn vehicle_authored_frame_transform(offset_m: f32) -> Transform {
+///
+/// When `flipped`, compose `Quat::from_rotation_y(π)` so local forward is reversed without
+/// changing consist order / offsets (#130).
+pub fn vehicle_authored_frame_transform(offset_m: f32, flipped: bool) -> Transform {
+    let mut rotation = msts_shape_to_train_rotation();
+    if flipped {
+        rotation *= Quat::from_rotation_y(std::f32::consts::PI);
+    }
     Transform {
         translation: Vec3::new(offset_m, 0.0, 0.0),
-        rotation: msts_shape_to_train_rotation(),
+        rotation,
         scale: Vec3::ONE,
     }
 }
@@ -489,8 +507,12 @@ pub fn vehicle_cab_frame_and_exterior_scale(
     mesh: &Mesh,
     offset_m: f32,
     length_m: f32,
+    flipped: bool,
 ) -> (Transform, f32) {
-    (cab_shape_placement_transform(mesh, offset_m, length_m), 1.0)
+    (
+        cab_shape_placement_transform(mesh, offset_m, length_m, flipped),
+        1.0,
+    )
 }
 
 /// Union AABB of several meshes in their local space.
@@ -539,7 +561,7 @@ pub fn orts_head_inside_cab_train_space(
     offset_m: f32,
     length_m: f32,
 ) -> bool {
-    let frame = cab_shape_placement_transform(exterior_mesh, offset_m, length_m);
+    let frame = cab_shape_placement_transform(exterior_mesh, offset_m, length_m, false);
     let head_shape = msts_shape_vec3_to_bevy(head_msts);
     let head_train = frame.transform_point(head_shape);
     let Some((min, max)) = union_meshes_aabb(cab_meshes) else {
@@ -672,6 +694,19 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 None,
                 false,
             );
+            let prim_state_idx = prim.prim_state_idx;
+            let texture_file = texture_for_prim_state(shape, prim_state_idx);
+            // Some Pullman cab atlases are authored opposite to the default MSTS V-flip
+            // (upside-down + L/R swap vs OR). Full-atlas 180° fixes those faces; small
+            // UV islands (needles / switches) are left alone.
+            if cab_face_needs_uv180(texture_file.as_deref(), &buffers.uvs) {
+                apply_uv_rotate_180(&mut buffers.uvs);
+            }
+            // Needle/overlay quads are authored coplanar with the dial face → z-fight
+            // stripes at glancing angles. Nudge them along the normal toward the driver.
+            if cab_instrument_needle_needs_offset(texture_file.as_deref(), &buffers.uvs) {
+                offset_mesh_along_avg_normal(&mut buffers.positions, &buffers.normals, 0.0015);
+            }
             if let Some(bone) = lever_bone.as_ref() {
                 rebase_points_to_bone_local(&mut buffers.positions, *bone);
                 rebase_vectors_to_bone_local(&mut buffers.normals, *bone);
@@ -680,7 +715,6 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 Some(v) => v,
                 None => continue,
             };
-            let prim_state_idx = prim.prim_state_idx;
             let (alpha_test_mode, z_bias_raw, z_buf_mode) = shape
                 .prim_states
                 .get(prim_state_idx.max(0) as usize)
@@ -699,7 +733,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 sort_index: parts.len() as u32,
                 cab_matrix_idx,
                 mesh,
-                texture_file: texture_for_prim_state(shape, prim_state_idx),
+                texture_file,
                 shader_name: shader_name_for_prim_state(shape, prim_state_idx),
                 solid_color,
                 alpha_test_mode,
@@ -717,6 +751,98 @@ pub fn build_mesh_parts_from_shape_lod_cab(
     }
 
     parts
+}
+
+fn cab_uv_span(uvs: &[Vec2]) -> Option<(f32, f32)> {
+    if uvs.is_empty() {
+        return None;
+    }
+    let (mut min_u, mut max_u) = (f32::MAX, f32::MIN);
+    let (mut min_v, mut max_v) = (f32::MAX, f32::MIN);
+    for uv in uvs {
+        min_u = min_u.min(uv.x);
+        max_u = max_u.max(uv.x);
+        min_v = min_v.min(uv.y);
+        max_v = max_v.max(uv.y);
+    }
+    Some((max_u - min_u, max_v - min_v))
+}
+
+/// Cab textures that need a 180° UV rotate on large faces after the default V-flip.
+///
+/// Verified OK without this (do **not** list): `Instruments.ace`, `Cab1.ace`,
+/// `DESK1.ace`, `Controls.ace` — upright in Pullman screenshots / OR.
+fn cab_texture_wants_uv180(texture: &str) -> bool {
+    let lower = texture.to_ascii_lowercase().replace('\\', "/");
+    let file = lower.rsplit('/').next().unwrap_or(&lower);
+    // Stem match (ignore extension).
+    let stem = file.rsplit_once('.').map(|(s, _)| s).unwrap_or(file);
+    matches!(
+        stem,
+        "instruments2"
+            | "cab2"
+            | "loudaphone2"
+            | "handbook"
+            | "cooker"
+            | "cupboard"
+            | "cab_roof"
+            | "wiper_motor"
+            | "panel_box"
+            | "seat"
+            | "floor"
+            | "brake_wheel"
+            | "controls2"
+            | "controller_base"
+            | "switch panel"
+            | "switch_panel"
+    )
+}
+
+/// Large-span cab face on a texture that needs the Instruments2-style UV180.
+fn cab_face_needs_uv180(texture: Option<&str>, uvs: &[Vec2]) -> bool {
+    let Some(name) = texture else {
+        return false;
+    };
+    if !cab_texture_wants_uv180(name) {
+        return false;
+    }
+    cab_uv_span(uvs).is_some_and(|(du, dv)| du > 0.5 && dv > 0.5)
+}
+
+/// Small UV islands on Instruments*.ace (needles / overlays), not the full dial face.
+fn cab_instrument_needle_needs_offset(texture: Option<&str>, uvs: &[Vec2]) -> bool {
+    let Some(name) = texture else {
+        return false;
+    };
+    let lower = name.to_ascii_lowercase();
+    if !lower.contains("instrument") {
+        return false;
+    }
+    cab_uv_span(uvs).is_some_and(|(du, dv)| du <= 0.5 || dv <= 0.5)
+}
+
+fn apply_uv_rotate_180(uvs: &mut [Vec2]) {
+    for uv in uvs {
+        *uv = Vec2::new(1.0 - uv.x, 1.0 - uv.y);
+    }
+}
+
+fn offset_mesh_along_avg_normal(positions: &mut [Vec3], normals: &[Vec3], meters: f32) {
+    if positions.is_empty() || normals.is_empty() {
+        return;
+    }
+    let mut sum = Vec3::ZERO;
+    for n in normals {
+        sum += *n;
+    }
+    let dir = sum.normalize_or_zero();
+    if dir.length_squared() < 1e-8 {
+        return;
+    }
+    let delta = dir * meters;
+    for p in positions.iter_mut() {
+        *p += delta;
+    }
 }
 
 /// CVF matrix for one cab primitive — **authored** hierarchy only (#146).
@@ -787,6 +913,50 @@ fn ace_rgba_to_image_with_sampler(
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
+    openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
+        &mut image,
+        tex_addr_mode,
+        mip_map_lod_bias,
+    );
+    image
+}
+
+/// Cab ACE with pixel brighten applied to every mip level (opt-in `CAB_BRIGHTEN`).
+fn cab_ace_brightened_to_image(
+    ace: &AceFile,
+    bright_mip0: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Image {
+    let mut data = Vec::new();
+    let mut mip_count = 1u32;
+    if ace.mips.is_empty() {
+        data.extend_from_slice(bright_mip0);
+    } else {
+        mip_count = ace.mips.len() as u32;
+        for (i, mip) in ace.mips.iter().enumerate() {
+            if i == 0 {
+                data.extend_from_slice(bright_mip0);
+            } else {
+                let (rgba, _) = brighten_cab_ace_rgba(&mip.rgba);
+                data.extend_from_slice(&rgba);
+            }
+        }
+    }
+    let mut image = Image::new(
+        Extent3d {
+            width: ace.width,
+            height: ace.height,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    if mip_count > 1 {
+        image.texture_descriptor.mip_level_count = mip_count;
+    }
     openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
         &mut image,
         tex_addr_mode,
@@ -951,12 +1121,21 @@ pub fn texture_search_dirs_for_shape(shape_path: &Path, route_dir: &Path) -> Vec
     )
 }
 
-/// Texture search dirs for CVF sprites (includes sibling `CabView/` on the trainset).
-pub fn cvf_texture_search_dirs(cvf_or_shape_path: &Path, route_dir: &Path) -> Vec<PathBuf> {
-    let mut dirs = texture_search_dirs_for_shape(cvf_or_shape_path, route_dir);
+/// Texture search dirs for CVF sprites / cab panel ACE.
+///
+/// Restricted to the trainset cab folders so a missing `cab.ace` does not
+/// silently resolve to another loco under Content/ (#152 follow-up).
+pub fn cvf_texture_search_dirs(cvf_or_shape_path: &Path, _route_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
     if let Some(cab_dir) = cvf_or_shape_path.parent() {
+        if cab_dir.is_dir() {
+            dirs.push(cab_dir.to_path_buf());
+        }
         if let Some(trainset) = cab_dir.parent() {
-            for name in ["CabView", "Cabview", "CABVIEW", "Cabview3d"] {
+            if trainset.is_dir() {
+                dirs.push(trainset.to_path_buf());
+            }
+            for name in ["CabView", "Cabview", "CABVIEW", "Cabview3d", "CABVIEW3D"] {
                 let sibling = trainset.join(name);
                 if sibling.is_dir() {
                     dirs.push(sibling);
@@ -1001,6 +1180,65 @@ pub fn resolve_cvf_graphic_path(
         }
     }
     resolve_texture_path_in_dirs(search_dirs, g)
+}
+
+/// Prefer `NIGHT/` (OR `CABTextureManager`) when night cab textures are active.
+pub fn resolve_cvf_graphic_path_night(
+    search_dirs: &[&Path],
+    cab_dir: &Path,
+    graphic: &str,
+    night: bool,
+) -> Option<PathBuf> {
+    if night {
+        let g = graphic.trim().trim_matches('"').replace('\\', "/");
+        if let Some(name) = Path::new(&g).file_name().and_then(|n| n.to_str()) {
+            for dir in search_dirs {
+                for folder in ["NIGHT", "Night", "night"] {
+                    let candidate = dir.join(folder).join(name);
+                    if candidate.is_file() {
+                        return Some(candidate);
+                    }
+                    if let Some(resolved) =
+                        openrailsrs_formats::resolve_path_case_insensitive(&candidate)
+                    {
+                        if resolved.is_file() {
+                            return Some(resolved);
+                        }
+                    }
+                }
+            }
+        }
+        // Relative day path → sibling NIGHT/ next to the day ACE.
+        if let Some(day) = resolve_cvf_graphic_path(search_dirs, cab_dir, graphic) {
+            if let (Some(parent), Some(name)) = (day.parent(), day.file_name()) {
+                for folder in ["NIGHT", "Night", "night"] {
+                    let candidate = parent.join(folder).join(name);
+                    if candidate.is_file() {
+                        return Some(candidate);
+                    }
+                    if let Some(resolved) =
+                        openrailsrs_formats::resolve_path_case_insensitive(&candidate)
+                    {
+                        if resolved.is_file() {
+                            return Some(resolved);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    resolve_cvf_graphic_path(search_dirs, cab_dir, graphic)
+}
+
+/// `OPENRAILSRS_CAB_NIGHT=1` forces night ACE lookup (OR dark / underground).
+pub fn cab_night_textures_enabled() -> bool {
+    match std::env::var("OPENRAILSRS_CAB_NIGHT") {
+        Ok(v) => matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => false,
+    }
 }
 
 /// Basename of a `.w` `FileName` (strips `SHAPES\\foo.s` / `foo.s`).
@@ -1593,13 +1831,15 @@ fn finish_shape_textured_part(
         cab_interior && crate::or_cab_material::or_cab_shaders_enabled() && or_materials.is_some();
     if use_or_cab {
         let or_materials = or_materials.expect("checked is_some");
-        let or_mat = crate::or_cab_material::create_or_cab_material(
+        let or_mat = crate::or_cab_material::create_or_cab_material_ex(
             or_materials,
             handle.clone(),
             tint,
             alpha_mode,
             shader_name,
             light_mat_idx,
+            z_bias,
+            z_buf_mode,
         );
         let mut placeholder = StandardMaterial {
             base_color: Color::WHITE,
@@ -1820,10 +2060,35 @@ fn material_for_shape_texture(
                     };
                     let is_transparent =
                         dual_blend || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
-                    let (rgba, pixel_brightened) = if cab_interior {
-                        brighten_cab_ace_rgba(&ace.mip0)
+                    let (image, rgba, pixel_brightened) = if cab_interior {
+                        // Full ACE mip chain so anisotropic filtering works on dial faces
+                        // at glancing angles (mip0-only looked soft/pixelated).
+                        let (mip0, brightened) = brighten_cab_ace_rgba(&ace.mip0);
+                        let image = if brightened {
+                            cab_ace_brightened_to_image(
+                                &ace,
+                                &mip0,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
+                        } else {
+                            openrailsrs_bevy_scenery::textures::ace_to_image_with_sampler(
+                                &ace,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
+                        };
+                        (image, mip0, brightened)
                     } else {
-                        brighten_dark_ace_rgba(&ace.mip0)
+                        let (rgba, pixel_brightened) = brighten_dark_ace_rgba(&ace.mip0);
+                        let image = ace_rgba_to_image_with_sampler(
+                            ace.width,
+                            ace.height,
+                            &rgba,
+                            tex_addr_mode,
+                            mip_map_lod_bias,
+                        );
+                        (image, rgba, pixel_brightened)
                     };
                     let tint = if cab_interior {
                         apply_msts_vertex_tint(
@@ -1834,13 +2099,6 @@ fn material_for_shape_texture(
                     } else {
                         scenery_albedo_tint(pixel_brightened, lit)
                     };
-                    let image = ace_rgba_to_image_with_sampler(
-                        ace.width,
-                        ace.height,
-                        &rgba,
-                        tex_addr_mode,
-                        mip_map_lod_bias,
-                    );
                     let handle = texture_cache
                         .entry((tex_path, addr_key))
                         .or_insert_with(|| images.add(image))
@@ -1903,12 +2161,8 @@ fn cab_shape_alpha_mode(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
-    cab_shape_alpha_mode_with_stats(
-        shape_alpha_stats(ace),
-        texture_file,
-        shader_name,
-        alpha_test_mode,
-    )
+    // Prefer AceAlphaBits + shader + AlphaTestMode (#136 / #137); cab DDS path keeps stats helper.
+    alpha_mode_from_prim_state(ace, texture_file, shader_name, alpha_test_mode)
 }
 
 fn cab_dds_alpha_mode(
@@ -1917,92 +2171,19 @@ fn cab_dds_alpha_mode(
     shader_name: Option<&str>,
     alpha_test_mode: i32,
 ) -> AlphaMode {
+    // DDS lacks AceAlphaBits; Full/unknown alpha ≈ 8-bit for GetBlending (#136).
     let has_alpha = matches!(dds_alpha_type(dds_path), Some(DdsAlpha::Full) | None);
-    cab_shape_alpha_mode_with_stats(
-        ShapeAlphaStats {
-            has_any: has_alpha,
-            has_semitransparent: has_alpha,
-        },
-        texture_file,
-        shader_name,
-        alpha_test_mode,
-    )
-}
-
-fn cab_shape_alpha_mode_with_stats(
-    alpha: ShapeAlphaStats,
-    texture_file: &str,
-    shader_name: Option<&str>,
-    alpha_test_mode: i32,
-) -> AlphaMode {
-    match alpha_test_mode {
-        1 => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
-        2 => return AlphaMode::Blend,
-        _ => {}
-    }
-
-    if let Some(shader) = shader_name {
-        if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
-            return AlphaMode::Add;
-        }
-        let blend_shader = shader.eq_ignore_ascii_case("BlendATex")
-            || shader.eq_ignore_ascii_case("BlendATexDiff");
-        if blend_shader {
-            if alpha.has_semitransparent && texture_name_suggests_transparency(texture_file) {
-                return AlphaMode::Blend;
-            }
-            if alpha.has_any {
-                return AlphaMode::Mask(0.5);
-            }
-            return AlphaMode::Opaque;
-        }
-        // TexDiff / Tex / HalfBright / FullBright: draw opaque unless explicitly alpha-tested.
-        if alpha_test_mode != 1 {
-            if !alpha.has_any {
-                return AlphaMode::Opaque;
-            }
-            if alpha.has_semitransparent && texture_name_suggests_transparency(texture_file) {
-                return AlphaMode::Blend;
-            }
-            return AlphaMode::Opaque;
-        }
-    }
-
-    if !alpha.has_any {
-        return AlphaMode::Opaque;
-    }
-    if alpha.has_semitransparent
-        && shader_name
-            .map(shape_shader_requests_blending)
-            .unwrap_or_else(|| texture_name_suggests_transparency(texture_file))
-    {
-        AlphaMode::Blend
-    } else {
-        AlphaMode::Mask(0.5)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ShapeAlphaStats {
-    has_any: bool,
-    has_semitransparent: bool,
-}
-
-fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
-    let mut stats = ShapeAlphaStats {
-        has_any: ace.has_mask_channel,
-        has_semitransparent: false,
+    let stub = AceFile {
+        width: 1,
+        height: 1,
+        format: openrailsrs_ace::AceFormat::Rgba8,
+        mips_count: 1,
+        mip0: vec![255, 255, 255, if has_alpha { 128 } else { 255 }],
+        mips: Vec::new(),
+        has_mask_channel: false,
+        alpha_bits: if has_alpha { 8 } else { 0 },
     };
-    for rgba in ace.mip0.chunks_exact(4) {
-        let a = rgba[3];
-        if a < 250 {
-            stats.has_any = true;
-        }
-        if (9..248).contains(&a) {
-            stats.has_semitransparent = true;
-        }
-    }
-    stats
+    alpha_mode_from_prim_state(&stub, texture_file, shader_name, alpha_test_mode)
 }
 
 /// Process-wide count of successful `ShapeFile::from_path` calls via this module's loaders.
@@ -2382,14 +2563,86 @@ mod tests {
         assert!(parts.iter().any(|part| part.texture_file.is_some()));
     }
 
+    fn test_msts_content_root() -> Option<PathBuf> {
+        // Prefer crate helper; fall back to env for local Content installs.
+        crate::shapes::msts_content_root().or_else(|| {
+            std::env::var_os("OPENRAILSRS_MSTS_CONTENT").map(PathBuf::from)
+        })
+    }
+
+    fn or_pullman_cabview3d() -> Option<PathBuf> {
+        let root = test_msts_content_root()?;
+        let p = root.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d");
+        p.is_dir().then_some(p)
+    }
+
+    fn or_pullman_trainset() -> Option<PathBuf> {
+        let root = test_msts_content_root()?;
+        let p = root.join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman");
+        p.is_dir().then_some(p)
+    }
+
     #[test]
+    fn cab_face_uv180_matches_large_span_on_listed_textures_only() {
+        assert!(cab_face_needs_uv180(
+            Some("Instruments2.ace"),
+            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
+        ));
+        assert!(cab_face_needs_uv180(
+            Some("Cab2.ace"),
+            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
+        ));
+        assert!(cab_face_needs_uv180(
+            Some("Loudaphone2.ace"),
+            &[Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)]
+        ));
+        // Needle island — leave alone.
+        assert!(!cab_face_needs_uv180(
+            Some("Instruments2.ace"),
+            &[Vec2::new(0.57, 0.70), Vec2::new(0.58, 0.83)]
+        ));
+        // Known-good with default V-flip only.
+        assert!(!cab_face_needs_uv180(
+            Some("Instruments.ace"),
+            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
+        ));
+        assert!(!cab_face_needs_uv180(
+            Some("Cab1.ace"),
+            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
+        ));
+        assert!(!cab_face_needs_uv180(
+            Some("DESK1.ace"),
+            &[Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)]
+        ));
+        let mut uvs = [Vec2::new(0.25, 0.25), Vec2::new(0.75, 0.75)];
+        apply_uv_rotate_180(&mut uvs);
+        assert!((uvs[0] - Vec2::new(0.75, 0.75)).length() < 1e-5);
+        assert!((uvs[1] - Vec2::new(0.25, 0.25)).length() < 1e-5);
+    }
+
+    #[test]
+    fn instrument_needle_offset_targets_small_uv_islands() {
+        assert!(cab_instrument_needle_needs_offset(
+            Some("Instruments2.ace"),
+            &[Vec2::new(0.57, 0.70), Vec2::new(0.58, 0.83)]
+        ));
+        assert!(!cab_instrument_needle_needs_offset(
+            Some("Instruments2.ace"),
+            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
+        ));
+        let mut positions = [Vec3::ZERO, Vec3::X];
+        let normals = [Vec3::Y, Vec3::Y];
+        offset_mesh_along_avg_normal(&mut positions, &normals, 0.0015);
+        assert!((positions[0] - Vec3::new(0.0, 0.0015, 0.0)).length() < 1e-6);
+    }
+
+    #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_cab_mesh_uvs_are_not_degenerate() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !cab.is_file() {
-            return;
-        }
+        let cab = or_pullman_cabview3d()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d")
+            .join("PULLMAN_GR.s");
+        assert!(cab.is_file(), "missing {}", cab.display());
         let loaded = load_shape_from_path(&cab, Some(2.0)).expect("cab shape");
         let mut degenerate = 0usize;
         for part in &loaded.parts {
@@ -2408,13 +2661,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_cab_texture_slots_match_or_resolution() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !cab.is_file() {
-            return;
-        }
+        let cab = or_pullman_cabview3d()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d")
+            .join("PULLMAN_GR.s");
+        assert!(cab.is_file(), "missing {}", cab.display());
         let shape = openrailsrs_formats::ShapeFile::from_path(&cab).expect("parse cab");
         let loaded = load_shape_from_path(&cab, Some(2.0)).expect("cab shape");
         let mut mismatches = 0_u32;
@@ -2719,16 +2971,22 @@ mod tests {
 
     #[test]
     fn cab_shape_alpha_mode_addatex_uses_additive() {
-        let route =
-            std::env::temp_dir().join(format!("openrailsrs_cab_alpha_add_{}", std::process::id()));
-        let textures = route.join("TEXTURES");
-        std::fs::create_dir_all(&textures).unwrap();
-        let texture = textures.join("glow.ace");
-        write_synthetic_ace(&texture, &[255, 255, 255, 255]);
-        let ace = read_ace(&texture).expect("ace");
+        // #137: AceAlphaBits > 1 + AddATex → Add (synthetic @ACE defaults alpha_bits=0).
+        let mut ace = AceFile {
+            width: 1,
+            height: 1,
+            format: openrailsrs_ace::AceFormat::Rgba8,
+            mips_count: 1,
+            mip0: vec![255, 255, 255, 128],
+            mips: Vec::new(),
+            has_mask_channel: false,
+            alpha_bits: 8,
+        };
         let mode = cab_shape_alpha_mode(&ace, "glow.ace", Some("AddATex"), -1);
         assert!(matches!(mode, AlphaMode::Add));
-        let _ = std::fs::remove_dir_all(route);
+        ace.alpha_bits = 0;
+        let opaque = cab_shape_alpha_mode(&ace, "glow.ace", Some("AddATex"), -1);
+        assert!(matches!(opaque, AlphaMode::Opaque));
     }
 
     #[test]
@@ -2863,13 +3121,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn window_dds_decodes_with_semitransparent_alpha() {
-        let path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/Window_front.dds",
-        );
-        if !path.is_file() {
-            return;
-        }
+        let path = or_pullman_cabview3d()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d")
+            .join("Window_front.dds");
+        assert!(path.is_file(), "missing {}", path.display());
         let bytes = std::fs::read(&path).expect("read dds");
         let img = decode_dds_to_rgba_image(&bytes).expect("decode rgba");
         assert_eq!(img.texture_descriptor.size.width, 1024);
@@ -2885,13 +3142,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn cab_dds_window_textures_use_blend_alpha() {
-        let dds = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/Window_front.dds",
-        );
-        if !dds.is_file() {
-            return;
-        }
+        let dds = or_pullman_cabview3d()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d")
+            .join("Window_front.dds");
+        assert!(dds.is_file(), "missing {}", dds.display());
         assert_eq!(
             cab_dds_alpha_mode(&dds, "Window_front.ace", Some("BlendATexDiff"), -1),
             AlphaMode::Blend
@@ -2899,13 +3155,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_texture_path_dds_fallback_in_cabview3d() {
-        let cab_dir = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d",
-        );
-        if !cab_dir.is_dir() {
-            return;
-        }
+        let cab_dir = or_pullman_cabview3d().expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d");
         for ace_name in ["Window_front.ace", "Window_front4.ace"] {
             let found = resolve_texture_path(&cab_dir, ace_name);
             assert!(
@@ -2924,13 +3176,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_cab_window_parts_use_or_shader_on_dds() {
-        let cab = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
-        );
-        if !cab.is_file() {
-            return;
-        }
+        let cab = or_pullman_cabview3d()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d")
+            .join("PULLMAN_GR.s");
+        assert!(cab.is_file(), "missing {}", cab.display());
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab, &route);
         let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -2982,13 +3233,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_texture_path_finds_ace_in_cabview3d_folder() {
-        let cab_dir = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d",
-        );
-        if !cab_dir.is_dir() {
-            return;
-        }
+        let cab_dir = or_pullman_cabview3d().expect("OPENRAILSRS_MSTS_CONTENT Pullman Cabview3d");
         let found = resolve_texture_path(&cab_dir, "Cab1.ace");
         assert!(
             found.is_some(),
@@ -3029,18 +3276,31 @@ mod tests {
     fn vehicle_shape_keeps_unit_scale() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let transform = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
+        let transform = vehicle_shape_local_transform(&mesh, 0.0, 18.0, false);
         assert!((transform.scale - Vec3::ONE).length() < 1e-4);
         let rotated = transform.rotation * Vec3::Z;
         assert!((rotated.x - 1.0).abs() < 1e-3);
     }
 
     #[test]
+    fn vehicle_flip_reverses_local_forward_without_moving_offset() {
+        // #130: Flip = Y π; same chainage / offset as non-flip.
+        let normal = vehicle_authored_frame_transform(-12.0, false);
+        let flipped = vehicle_authored_frame_transform(-12.0, true);
+        assert!((normal.translation - flipped.translation).length() < 1e-5);
+        let fwd = normal.rotation * Vec3::Z;
+        let fwd_flip = flipped.rotation * Vec3::Z;
+        assert!((fwd.x - 1.0).abs() < 1e-3);
+        assert!((fwd_flip.x + 1.0).abs() < 1e-3);
+        assert!((fwd + fwd_flip).length() < 1e-3);
+    }
+
+    #[test]
     fn vehicle_shape_ignores_length_for_mesh_scale() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let t_short = vehicle_shape_local_transform(&mesh, 0.0, 10.0);
-        let t_long = vehicle_shape_local_transform(&mesh, 0.0, 30.0);
+        let t_short = vehicle_shape_local_transform(&mesh, 0.0, 10.0, false);
+        let t_long = vehicle_shape_local_transform(&mesh, 0.0, 30.0, false);
         assert!((t_short.scale - Vec3::ONE).length() < 1e-4);
         assert!((t_long.scale - Vec3::ONE).length() < 1e-4);
         // Same mesh front → same local origin; length only affects consist offsets.
@@ -3052,8 +3312,8 @@ mod tests {
     fn vehicle_shape_authored_origin_stays_at_offset() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let t0 = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
-        let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0);
+        let t0 = vehicle_shape_local_transform(&mesh, 0.0, 18.0, false);
+        let t1 = vehicle_shape_local_transform(&mesh, -18.0, 14.0, false);
         assert!(t0.translation.x.abs() < 1e-3);
         assert!(t0.translation.y.abs() < 1e-3);
         assert!((t1.translation.x + 18.0).abs() < 1e-3);
@@ -3065,9 +3325,9 @@ mod tests {
     fn vehicle_and_cab_frame_share_authored_origin() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let exterior = vehicle_shape_local_transform(&mesh, -5.0, 18.0);
-        let cab = cab_shape_placement_transform(&mesh, -5.0, 18.0);
-        let authored = vehicle_authored_frame_transform(-5.0);
+        let exterior = vehicle_shape_local_transform(&mesh, -5.0, 18.0, false);
+        let cab = cab_shape_placement_transform(&mesh, -5.0, 18.0, false);
+        let authored = vehicle_authored_frame_transform(-5.0, false);
         assert!((exterior.translation - cab.translation).length() < 1e-5);
         assert!((exterior.translation - authored.translation).length() < 1e-5);
         assert!((exterior.rotation.xyz() - cab.rotation.xyz()).length() < 1e-5);
@@ -3077,8 +3337,8 @@ mod tests {
     fn vehicle_frame_ignores_mesh_aabb() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let with_mesh = cab_shape_placement_transform(&mesh, 3.0, 20.0);
-        let authored = vehicle_authored_frame_transform(3.0);
+        let with_mesh = cab_shape_placement_transform(&mesh, 3.0, 20.0, false);
+        let authored = vehicle_authored_frame_transform(3.0, false);
         assert!((with_mesh.translation - authored.translation).length() < 1e-5);
         assert!((with_mesh.translation.x - 3.0).abs() < 1e-5);
         assert!(with_mesh.translation.y.abs() < 1e-5);
@@ -3130,10 +3390,11 @@ mod tests {
     fn vehicle_cab_frame_keeps_unit_scale_on_lead_car() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let (frame, exterior_scale) = vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0);
+        let (frame, exterior_scale) =
+            vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0, false);
         assert!((frame.scale - Vec3::ONE).length() < 1e-4);
         assert!((exterior_scale - 1.0).abs() < 1e-4);
-        let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0);
+        let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0, false);
         assert!((full.scale - Vec3::ONE).length() < 1e-4);
         assert!((full.translation - frame.translation).length() < 1e-4);
     }
@@ -3206,6 +3467,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_trackobj_relative_dynatrax_on_chiltern() {
         let Some(route) = std::env::var_os("HOME")
             .map(PathBuf::from)
@@ -3231,6 +3493,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn birmingham_trackobj_resolution_accounts_all_1659() {
         let Some(route) = std::env::var_os("HOME")
             .map(PathBuf::from)
@@ -3277,6 +3540,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_chiltern_pack_global_trackobj() {
         let content = PathBuf::from(env!("HOME")).join("Documentos/Open Rails/Content");
         if !content
@@ -3310,11 +3574,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn resolve_vehicle_shape_prefers_or_content_when_present() {
-        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content");
-        if !content.is_dir() {
-            return;
-        }
+        let content = test_msts_content_root().expect("OPENRAILSRS_MSTS_CONTENT");
+        assert!(content.is_dir(), "missing {}", content.display());
         let route = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
         let stub = route.join("trains/RF_Blue_Pullman");
         let shape_dirs: Vec<&Path> = vec![stub.as_path()];
@@ -3368,13 +3631,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_lod_levels_audit() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            return;
-        }
+        let shape_path = or_pullman_trainset()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset")
+            .join("RF_WP_DMBSA.s");
+        assert!(shape_path.is_file(), "missing {}", shape_path.display());
         let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
         for (i, lvl) in shape
             .lod_controls
@@ -3400,13 +3662,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_consist_shapes_alpha_audit() {
-        let trainset = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman",
-        );
-        if !trainset.is_dir() {
-            return;
-        }
+        let trainset = or_pullman_trainset().expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset");
         let shapes = [
             "RF_WP_DMBSA.s",
             "RF_WP_PSB.s",
@@ -3470,10 +3728,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_exterior_alpha_modes_audit() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
+        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
         let trainset = shape_path.parent().expect("trainset root");
         if !shape_path.is_file() {
             return;
@@ -3512,13 +3769,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_exterior_texture_audit() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            return;
-        }
+        let shape_path = or_pullman_trainset()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset")
+            .join("RF_WP_DMBSA.s");
+        assert!(shape_path.is_file(), "missing {}", shape_path.display());
         let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
         let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
         assert!(!parts.is_empty(), "DMBSA should have mesh parts at LOD 25m");
@@ -3541,13 +3797,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_prim_state_z_bias_sane() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            return;
-        }
+        let shape_path = or_pullman_trainset()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset")
+            .join("RF_WP_DMBSA.s");
+        assert!(shape_path.is_file(), "missing {}", shape_path.display());
         let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
         for (i, ps) in shape.prim_states.iter().enumerate() {
             let z = ps.z_bias.unwrap_or(0.0);
@@ -3565,13 +3820,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn no_huge_depth_bias_in_bevy_materials() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            return;
-        }
+        let shape_path = or_pullman_trainset()
+            .expect("OPENRAILSRS_MSTS_CONTENT Pullman trainset")
+            .join("RF_WP_DMBSA.s");
+        assert!(shape_path.is_file(), "missing {}", shape_path.display());
         let trainset = shape_path.parent().expect("trainset");
         let tex_dirs = vehicle_texture_search_dirs(&shape_path, trainset);
         let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -3603,23 +3857,13 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_train_exterior_single_sided_back_cull() {
         use bevy::render::render_resource::Face;
 
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            let fixture = chiltern_shape_fixture("RF_WP_DMBSA.s");
-            if !fixture.is_file() {
-                return;
-            }
-        }
-        let path = if shape_path.is_file() {
-            shape_path
-        } else {
-            chiltern_shape_fixture("RF_WP_DMBSA.s")
-        };
+        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
+        let path = shape_path;
+        assert!(path.is_file(), "missing Pullman or examples fixture {}", path.display());
         let trainset = path.parent().expect("trainset");
         let tex_dirs = vehicle_texture_search_dirs(&path, trainset);
         let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -3656,26 +3900,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn mesh_triangle_vertex_count_multiple_of_3() {
-        let shape_path = PathBuf::from(
-            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s",
-        );
-        if !shape_path.is_file() {
-            let fixture = chiltern_shape_fixture("RF_WP_DMBSA.s");
-            if !fixture.is_file() {
-                return;
-            }
-            let shape = ShapeFile::from_path(&fixture).expect("parse");
-            let parts = build_mesh_parts_from_shape(&shape);
-            for part in &parts {
-                assert!(
-                    mesh_triangle_list_valid(&part.mesh),
-                    "prim_state {} vertex count not multiple of 3",
-                    part.prim_state_idx
-                );
-            }
-            return;
-        }
+        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
+        assert!(shape_path.is_file(), "missing shape {}", shape_path.display());
         let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
         let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
         assert!(!parts.is_empty());

@@ -761,6 +761,7 @@ mod tests {
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 length_m: 20.879,
                 offset_m: 0.0,
+                flipped: false,
             }],
         );
         let root = lead_trainset_root(&consist, &route).expect("trainset root");
@@ -781,6 +782,7 @@ mod tests {
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 length_m: 20.879,
                 offset_m: 0.0,
+                flipped: false,
             }],
         );
         let shape = resolve_cab_shape_for_consist(&consist, &route).expect("OR cab shape");
@@ -801,7 +803,7 @@ mod tests {
         assert_eq!(config.viewpoints.len(), 2);
         assert!((config.viewpoints[1].look_yaw.abs() - std::f32::consts::PI).abs() < 1e-3);
         assert_eq!(config.head_out_msts.len(), 2);
-        let vehicle_t = crate::shapes::vehicle_authored_frame_transform(0.0);
+        let vehicle_t = crate::shapes::vehicle_authored_frame_transform(0.0, false);
         let head = config.head_pos_in_train(vehicle_t);
         assert!((head.x - (-8.60)).abs() < 1e-2);
         assert!((head.y - 2.875).abs() < 1e-3);
@@ -810,7 +812,7 @@ mod tests {
     #[test]
     fn authored_frame_keeps_orts_head_in_lead_local_space() {
         let config = parse_orts_3d_cab_from_eng(&cab_fixture_eng()).expect("fixture");
-        let placement = crate::shapes::vehicle_authored_frame_transform(0.0);
+        let placement = crate::shapes::vehicle_authored_frame_transform(0.0, false);
         let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(config.head_pos_msts);
         let head_train = placement.transform_point(head_bevy);
         // Same transform as exterior/cab lead frame: no AABB shift between spaces.
@@ -1004,6 +1006,7 @@ mod tests {
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 length_m: 20.879,
                 offset_m: 0.0,
+                flipped: false,
             }],
         );
         let mut state = CabInteriorState::default();

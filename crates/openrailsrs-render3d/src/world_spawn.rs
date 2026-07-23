@@ -1935,14 +1935,13 @@ fn texture_material(
         use crate::textures::{DdsAlpha, dds_alpha_type};
         let dds_alpha = dds_alpha_type(&tex_path).unwrap_or(DdsAlpha::Full);
         let has_alpha = matches!(dds_alpha, DdsAlpha::Full);
-        let has_semitransparent = has_alpha;
 
         alpha_mode_from_shader(
             shader_name,
             name,
             alpha_test_mode,
-            has_semitransparent,
-            has_alpha,
+            // DDS: treat Full alpha as 8-bit AceAlphaBits for GetBlending (#136).
+            if has_alpha { 8 } else { 0 },
         )
     } else {
         let Some(ace) = load_ace_file(&tex_path) else {
@@ -1950,25 +1949,7 @@ fn texture_material(
             return SceneMaterialHandle::Standard(untextured.clone());
         };
 
-        let mut has_alpha = ace.has_mask_channel;
-        let mut has_semitransparent = false;
-        for rgba in ace.mip0.chunks_exact(4) {
-            let alpha = rgba[3];
-            if alpha < 250 {
-                has_alpha = true;
-            }
-            if (9..248).contains(&alpha) {
-                has_semitransparent = true;
-            }
-        }
-
-        alpha_mode_from_shader(
-            shader_name,
-            name,
-            alpha_test_mode,
-            has_semitransparent,
-            has_alpha,
-        )
+        alpha_mode_from_shader(shader_name, name, alpha_test_mode, ace.alpha_bits)
     };
 
     let cache_key = {
@@ -2304,65 +2285,46 @@ fn build_textured_or_material(
 
 fn alpha_mode_from_shader(
     shader_name: Option<&str>,
-    texture_name: &str,
+    _texture_name: &str,
     alpha_test_mode: i32,
-    has_semitransparent: bool,
-    has_alpha: bool,
+    ace_alpha_bits: u8,
 ) -> AlphaMode {
-    // Igual que viewer3d: prim_state explícito manda.
-    match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(0.5),
-        2 => return AlphaMode::Blend,
-        _ => {}
+    use openrailsrs_bevy_scenery::shapes::{
+        or_ace_requests_blending, shape_shader_requests_additive, shape_shader_requests_blend,
+        shape_shader_requests_blending,
+    };
+    use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
+
+    // Artist forced opaque on a non-blend shader.
+    let blend_capable = shader_name
+        .map(shape_shader_requests_blending)
+        .unwrap_or(false);
+    if alpha_test_mode == 0 && !blend_capable {
+        return AlphaMode::Opaque;
+    }
+    if alpha_test_mode == 2 && blend_capable {
+        if shader_name.is_some_and(shape_shader_requests_additive) {
+            return AlphaMode::Add;
+        }
+        return AlphaMode::Blend;
     }
 
     let alpha_test_requested = alpha_test_mode == 1;
-
-    let Some(shader) = shader_name else {
-        if alpha_test_requested {
-            return AlphaMode::Mask(0.5);
-        }
-        if !has_alpha {
-            return AlphaMode::Opaque;
-        }
-        if texture_name_suggests_blend(texture_name) && has_semitransparent {
-            return AlphaMode::Blend;
-        }
-        if texture_name_suggests_cutout(texture_name) {
-            return AlphaMode::Mask(0.5);
-        }
-        return AlphaMode::Opaque;
-    };
-
-    if shader.eq_ignore_ascii_case("AddATex") || shader.eq_ignore_ascii_case("AddATexDiff") {
-        return AlphaMode::Add;
-    }
-
-    let alpha_blend_requested =
-        shader.eq_ignore_ascii_case("BlendATex") || shader.eq_ignore_ascii_case("BlendATexDiff");
-
-    // Lógica inteligente (diferente de OR pero mejor para Bevy):
-    // 1. Si no hay pixeles transparentes (<250), es Opaque.
-    // 2. Si es blend-shader y hay píxeles semi-transparentes Y su nombre sugiere blend, es Blend.
-    // 3. De lo contrario, usamos Mask(0.5) o Opaque dependiendo de los flags.
-
-    if !has_alpha {
-        AlphaMode::Opaque
-    } else if alpha_blend_requested {
-        if has_semitransparent && texture_name_suggests_blend(texture_name) {
-            AlphaMode::Blend
-        } else {
-            // Solo tiene máscara binaria, o es un objeto que debe usar Z-sorting (árboles, vías)
-            AlphaMode::Mask(0.5)
-        }
-    } else {
-        // Shader no es de blend (TexDiff).
-        if alpha_test_requested {
-            AlphaMode::Mask(0.5)
+    let blending = or_ace_requests_blending(ace_alpha_bits, alpha_test_requested, blend_capable);
+    if !blending {
+        return if alpha_test_requested {
+            AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF)
         } else {
             AlphaMode::Opaque
-        }
+        };
+    }
+
+    if shader_name.is_some_and(shape_shader_requests_additive) {
+        AlphaMode::Add
+    } else if shader_name.is_some_and(shape_shader_requests_blend) {
+        AlphaMode::Blend
+    } else {
+        AlphaMode::Opaque
     }
 }
 
@@ -2517,21 +2479,26 @@ mod tests {
     }
 
     #[test]
-    fn inferred_shape_alpha_uses_ace_cutout_when_prim_state_unspecified() {
+    fn inferred_shape_alpha_uses_ace_bits_and_shader() {
+        // #136/#137: no blend-capable shader → Opaque even with alpha bits.
         assert!(matches!(
-            alpha_mode_from_shader(None, "tree.ace", -1, false, true),
+            alpha_mode_from_shader(None, "tree.ace", -1, 8),
+            AlphaMode::Opaque
+        ));
+        assert!(matches!(
+            alpha_mode_from_shader(Some("BlendATexDiff"), "fence.ace", 1, 1),
             AlphaMode::Mask(_)
         ));
         assert!(matches!(
-            alpha_mode_from_shader(None, "brickwall.ace", -1, false, true),
-            AlphaMode::Opaque
+            alpha_mode_from_shader(Some("AddATex"), "glow.ace", -1, 8),
+            AlphaMode::Add
         ));
     }
 
     #[test]
     fn explicit_opaque_prim_state_wins_over_texture_alpha() {
         assert!(matches!(
-            alpha_mode_from_shader(None, "glass.ace", 0, true, true),
+            alpha_mode_from_shader(None, "glass.ace", 0, 8),
             AlphaMode::Opaque
         ));
     }

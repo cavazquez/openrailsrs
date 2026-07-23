@@ -33,7 +33,7 @@ cargo run --release -p openrailsrs-viewer3d -- \
   --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
-Teclas: **C** cabina · **V** chase · **↑/↓** throttle/freno · **F** fog · **F2** fly · **G** teleport. Spawn WORLD progresivo (~10–30 s según radio).
+Teclas (estilo OR): **1** cabina · **Alt+1** 2D/3D · **2** chase · **3** orbit · **5** pasajero · **8** fly · **A/D** throttle · **;/'** freno · **W/S** reverser · **Space** bocina · **V** wiper · **Backspace** emergencia · **RMB** mirar (cab/pasajero) · **F** fog · **G** teleport. Spawn WORLD progresivo (~10–30 s según radio).
 
 Ancla típica Birmingham: tile **−6079…−6080 / 14925**. Ver [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
 

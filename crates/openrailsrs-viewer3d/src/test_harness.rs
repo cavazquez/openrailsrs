@@ -122,6 +122,9 @@ pub fn minimal_app() -> App {
     app.init_resource::<ButtonInput<MouseButton>>();
     app.init_resource::<CameraMode>();
     app.init_resource::<CameraFollowMode>();
+    app.init_resource::<crate::camera::Prefer3dCab>();
+    app.init_resource::<crate::camera::PassengerCamState>();
+    app.init_resource::<crate::camera::PassengerSeatCatalog>();
     app.init_resource::<CameraFollowTarget>();
     app.init_resource::<OrbitDistanceLimit>();
     app.init_resource::<crate::floating_origin::FloatingOrigin>();

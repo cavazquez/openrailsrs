@@ -56,12 +56,13 @@ pub use tile_paths::{
 };
 pub use typed::{
     ActivityFile, ActivityObjectDef, AnimController, AnimNode, Animation, BrakeShoeFrictionCurve,
-    CabControl, CabDialParams, CabLeverFrames, CabView, CabViewFile, CarSpawnerCatalog,
+    CabControl, CabDialParams, CabDigitalParams, CabLeverFrames, CabView, CabViewFile,
+    CarSpawnerCatalog,
     CarSpawnerItem,
     CarSpawnerList, ConsistEntry, ConsistFile, ControlState, ControlType, DistanceLevel,
     DyntrackSection,
     ElevationGrid, EngineCabView, EngineFile, FeatureGrid, HazardFile, IndexedTrVectorSection,
-    Orts3dCabViewpoint,
+    Orts3dCabViewpoint, PassengerViewpoint,
     LightModelCfg, LodControl, Matrix43, MstsSteamFields, MstsTexAddrMode, NamedMatrix,
     OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, OverheadWireParams,
     PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile, RouteStart,
@@ -75,7 +76,8 @@ pub use typed::{
     WorldFile, WorldItem, WorldTrItemRef, build_patch_mesh_data, build_patch_mesh_data_ex,
     build_patch_mesh_data_sampled, build_tile_mesh_data, build_tile_mesh_data_sampled,
     find_trk_path, lit_light_indices_for_aspect, msts_tex_addr_mode, parse_orts_brake_shoe,
-    parse_orts_friction_fields, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
+    parse_orts_friction_fields, parse_passenger_viewpoints, parse_tile_xz_from_filename,
+    patch_affine_uv, read_f_raw,
     read_f_raw_bytes, read_y_raw, read_y_raw_bytes, resolve_brake_shoe_curve,
     resolve_hazard_shape_name, terrain_patches_per_side,
 };
