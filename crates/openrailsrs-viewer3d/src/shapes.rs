@@ -37,7 +37,7 @@ pub use openrailsrs_bevy_scenery::shapes::{
     resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
     scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
     shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
-    shape_point_to_bevy, sort_index_depth_nudge, texture_for_prim_state,
+    shape_point_to_bevy, shape_uv_to_bevy, sort_index_depth_nudge, texture_for_prim_state,
     train_exterior_material_with_texture_ex, train_shape_debug_scope, world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::shapes::{ShapeDescriptor, night_subobj_part_visible};
@@ -738,12 +738,8 @@ pub fn build_mesh_parts_from_shape_lod_cab(
             );
             let prim_state_idx = prim.prim_state_idx;
             let texture_file = texture_for_prim_state(shape, prim_state_idx);
-            // Some Pullman cab atlases are authored opposite to the default MSTS V-flip
-            // (upside-down + L/R swap vs OR). Full-atlas 180° fixes those faces; small
-            // UV islands (needles / switches) are left alone.
-            if cab_face_needs_uv180(texture_file.as_deref(), &buffers.uvs) {
-                apply_uv_rotate_180(&mut buffers.uvs);
-            }
+            // UV orientation is canonical via `shape_uv_to_bevy` (OR authored u,v) — no
+            // per-texture UV180 allowlist (#165).
             // Needle/overlay quads are authored coplanar with the dial face → z-fight
             // stripes at glancing angles. Nudge them along the normal toward the driver.
             if cab_instrument_needle_needs_offset(texture_file.as_deref(), &buffers.uvs) {
@@ -814,47 +810,6 @@ fn cab_uv_span(uvs: &[Vec2]) -> Option<(f32, f32)> {
     Some((max_u - min_u, max_v - min_v))
 }
 
-/// Cab textures that need a 180° UV rotate on large faces after the default V-flip.
-///
-/// Verified OK without this (do **not** list): `Instruments.ace`, `Cab1.ace`,
-/// `DESK1.ace`, `Controls.ace` — upright in Pullman screenshots / OR.
-fn cab_texture_wants_uv180(texture: &str) -> bool {
-    let lower = texture.to_ascii_lowercase().replace('\\', "/");
-    let file = lower.rsplit('/').next().unwrap_or(&lower);
-    // Stem match (ignore extension).
-    let stem = file.rsplit_once('.').map(|(s, _)| s).unwrap_or(file);
-    matches!(
-        stem,
-        "instruments2"
-            | "cab2"
-            | "loudaphone2"
-            | "handbook"
-            | "cooker"
-            | "cupboard"
-            | "cab_roof"
-            | "wiper_motor"
-            | "panel_box"
-            | "seat"
-            | "floor"
-            | "brake_wheel"
-            | "controls2"
-            | "controller_base"
-            | "switch panel"
-            | "switch_panel"
-    )
-}
-
-/// Large-span cab face on a texture that needs the Instruments2-style UV180.
-fn cab_face_needs_uv180(texture: Option<&str>, uvs: &[Vec2]) -> bool {
-    let Some(name) = texture else {
-        return false;
-    };
-    if !cab_texture_wants_uv180(name) {
-        return false;
-    }
-    cab_uv_span(uvs).is_some_and(|(du, dv)| du > 0.5 && dv > 0.5)
-}
-
 /// Small UV islands on Instruments*.ace (needles / overlays), not the full dial face.
 fn cab_instrument_needle_needs_offset(texture: Option<&str>, uvs: &[Vec2]) -> bool {
     let Some(name) = texture else {
@@ -865,12 +820,6 @@ fn cab_instrument_needle_needs_offset(texture: Option<&str>, uvs: &[Vec2]) -> bo
         return false;
     }
     cab_uv_span(uvs).is_some_and(|(du, dv)| du <= 0.5 || dv <= 0.5)
-}
-
-fn apply_uv_rotate_180(uvs: &mut [Vec2]) {
-    for uv in uvs {
-        *uv = Vec2::new(1.0 - uv.x, 1.0 - uv.y);
-    }
 }
 
 fn offset_mesh_along_avg_normal(positions: &mut [Vec3], normals: &[Vec3], meters: f32) {
@@ -2667,41 +2616,173 @@ mod tests {
     }
 
     #[test]
-    fn cab_face_uv180_matches_large_span_on_listed_textures_only() {
-        assert!(cab_face_needs_uv180(
-            Some("Instruments2.ace"),
-            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
-        ));
-        assert!(cab_face_needs_uv180(
-            Some("Cab2.ace"),
-            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
-        ));
-        assert!(cab_face_needs_uv180(
-            Some("Loudaphone2.ace"),
-            &[Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)]
-        ));
-        // Needle island — leave alone.
-        assert!(!cab_face_needs_uv180(
-            Some("Instruments2.ace"),
-            &[Vec2::new(0.57, 0.70), Vec2::new(0.58, 0.83)]
-        ));
-        // Known-good with default V-flip only.
-        assert!(!cab_face_needs_uv180(
-            Some("Instruments.ace"),
-            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
-        ));
-        assert!(!cab_face_needs_uv180(
-            Some("Cab1.ace"),
-            &[Vec2::new(0.01, 0.02), Vec2::new(0.96, 0.98)]
-        ));
-        assert!(!cab_face_needs_uv180(
-            Some("DESK1.ace"),
-            &[Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)]
-        ));
-        let mut uvs = [Vec2::new(0.25, 0.25), Vec2::new(0.75, 0.75)];
-        apply_uv_rotate_180(&mut uvs);
-        assert!((uvs[0] - Vec2::new(0.75, 0.75)).length() < 1e-5);
-        assert!((uvs[1] - Vec2::new(0.25, 0.25)).length() < 1e-5);
+    fn cab_bake_has_no_texture_name_uv180_allowlist() {
+        // #165: production must not resurrect per-stem UV180 helpers.
+        // Build needles at runtime so this assert text does not match itself via include_str.
+        let src = include_str!("shapes.rs");
+        let defs = [
+            "cab_texture_wants_uv180",
+            "cab_face_needs_uv180",
+            "apply_uv_rotate_180",
+        ];
+        for name in defs {
+            let needle = format!("fn {name}");
+            let def_count = src.matches(&needle).count();
+            assert_eq!(
+                def_count, 0,
+                "forbidden UV180-by-name definition `{needle}` must stay removed (#165)"
+            );
+        }
+    }
+
+    /// Asymmetric UP/L/R UV island: authored (u,v) must survive cab bake unchanged (#165).
+    fn cab_asym_uv_fixture() -> ShapeFile {
+        let ascii = r#"
+        ( shape
+            ( images 2
+                ( image "Instruments.ace" )
+                ( image "Instruments2.ace" )
+            )
+            ( textures 2 ( texture 0 0 0 ) ( texture 1 0 0 ) )
+            ( points 3
+                ( point 0 0 0 )
+                ( point 1 0 0 )
+                ( point 0.5 1 0 )
+            )
+            ( uv_points 3
+                ( uv_point 0.1 0.9 )
+                ( uv_point 0.9 0.9 )
+                ( uv_point 0.5 0.1 )
+            )
+            ( normals 1 ( vector 0 0 1 ) )
+            ( vtx_states 1 ( vtx_state 0 0 -5 0 ) )
+            ( prim_states 2
+                ( prim_state "instruments" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 )
+                ( prim_state "instruments2" 0 0 ( tex_idxs 1 1 ) 0 0 0 0 1 )
+            )
+            ( lod_controls 1
+                ( lod_control
+                    ( distance_levels_header )
+                    ( distance_levels 1
+                        ( distance_level
+                            ( distance_level_header
+                                ( dlevel_selection 100 )
+                                ( hierarchy 1 -1 )
+                            )
+                            ( sub_objects 1
+                                ( sub_object
+                                    ( vertices 3
+                                        ( vertex 0 0 0 ( vertex_uvs 1 0 ) )
+                                        ( vertex 0 1 0 ( vertex_uvs 1 1 ) )
+                                        ( vertex 0 2 0 ( vertex_uvs 1 2 ) )
+                                    )
+                                    ( primitives 2
+                                        ( prim_state_idx 0 )
+                                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                                        ( prim_state_idx 1 )
+                                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+            ( matrices 1
+                ( matrix "MAIN"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 0 0
+                )
+            )
+        )
+        "#;
+        let ast = openrailsrs_formats::parse_first_from_first_paren(ascii).expect("ast");
+        ShapeFile::from_ast(&ast).expect("shape")
+    }
+
+    fn mesh_uv0(mesh: &Mesh) -> Vec<Vec2> {
+        match mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
+            Some(bevy::mesh::VertexAttributeValues::Float32x2(v)) => {
+                v.iter().map(|a| Vec2::from_array(*a)).collect()
+            }
+            _ => panic!("expected UV0"),
+        }
+    }
+
+    fn uv_set_contains(uvs: &[Vec2], target: Vec2) -> bool {
+        uvs.iter().any(|uv| (*uv - target).length() < 1e-4)
+    }
+
+    #[test]
+    fn cab_bake_preserves_authored_uv_for_instruments_and_instruments2() {
+        let shape = cab_asym_uv_fixture();
+        let level = &shape.lod_controls[0].distance_levels[0];
+        assert_eq!(
+            shape.texture_filenames,
+            vec![
+                String::from("Instruments.ace"),
+                String::from("Instruments2.ace")
+            ],
+            "fixture images"
+        );
+        let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, &HashSet::new());
+        assert_eq!(parts.len(), 2);
+        let mut by_tex: HashMap<String, Vec<Vec2>> = HashMap::new();
+        for part in &parts {
+            let tex = part
+                .texture_file
+                .clone()
+                .unwrap_or_else(|| format!("prim{}", part.prim_state_idx));
+            by_tex.insert(tex, mesh_uv0(&part.mesh));
+        }
+        let keys: Vec<_> = by_tex.keys().cloned().collect();
+        let instruments = by_tex
+            .get("Instruments.ace")
+            .unwrap_or_else(|| panic!("Instruments.ace part missing; got keys={keys:?}"));
+        let instruments2 = by_tex
+            .get("Instruments2.ace")
+            .unwrap_or_else(|| panic!("Instruments2.ace part missing; got keys={keys:?}"));
+        // Same conversion for formerly "listed" and "unlisted" atlases.
+        assert_eq!(instruments.len(), instruments2.len());
+        for (a, b) in instruments.iter().zip(instruments2.iter()) {
+            assert!(
+                (*a - *b).length() < 1e-5,
+                "Instruments vs Instruments2 UV diverge: {a:?} vs {b:?}"
+            );
+        }
+        // Authored L/R/UP markers (not V-flipped, not UV180).
+        let left_up = shape_uv_to_bevy(0.1, 0.9);
+        let right_up = shape_uv_to_bevy(0.9, 0.9);
+        let bottom = shape_uv_to_bevy(0.5, 0.1);
+        assert!(
+            uv_set_contains(instruments, left_up),
+            "missing L/UP {instruments:?}"
+        );
+        assert!(
+            uv_set_contains(instruments, right_up),
+            "missing R/UP {instruments:?}"
+        );
+        assert!(
+            uv_set_contains(instruments, bottom),
+            "missing bottom {instruments:?}"
+        );
+        // Relative L/R: left U < right U (no mirror).
+        let u_left = instruments
+            .iter()
+            .find(|uv| (**uv - left_up).length() < 1e-4)
+            .unwrap()
+            .x;
+        let u_right = instruments
+            .iter()
+            .find(|uv| (**uv - right_up).length() < 1e-4)
+            .unwrap()
+            .x;
+        assert!(
+            u_left < u_right,
+            "L/R mirrored: left={u_left} right={u_right}"
+        );
     }
 
     #[test]

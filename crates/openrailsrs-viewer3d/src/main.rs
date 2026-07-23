@@ -7,6 +7,9 @@
 //!   openrailsrs-viewer3d --audit-placement [--route-root ROUTE_DIR] scenario.toml
 //!   openrailsrs-viewer3d --audit-tr-item [--route-root ROUTE_DIR] scenario.toml
 //!
+//! Env: `OPENRAILSRS_PRESENT_MODE=auto_vsync|fifo|mailbox|immediate|auto_no_vsync`
+//! (default `auto_vsync`; prefer over `auto_no_vsync` on RADV/X11).
+//!
 //! - `route_dir` — static graph only (default: `examples/smoke/routes/test`).
 //! - `scenario.toml` — graph + animated train marker(s) from simulation CSV.
 //! - `--route-root` — load MSTS/OR scenery assets from an external route dir while keeping
@@ -169,6 +172,62 @@ struct WorldAnchorToml {
     local_z_m: f64,
 }
 
+/// Warn when `/dev/dri` has multiple GPUs but NVIDIA userspace looks broken — a common
+/// cause of Wayland `dmabufs … CoglTexture2D` protocol errors (RADV render + NVIDIA present).
+fn warn_hybrid_gpu_display_if_needed() {
+    let Ok(entries) = std::fs::read_dir("/dev/dri") else {
+        return;
+    };
+    let render_nodes = entries
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_name().to_string_lossy().starts_with("renderD"))
+        .count();
+    if render_nodes < 2 {
+        return;
+    }
+    let nvidia_smi = std::process::Command::new("nvidia-smi")
+        .arg("-L")
+        .output()
+        .ok();
+    let nvidia_broken = nvidia_smi.as_ref().is_none_or(|o| {
+        !o.status.success()
+            || String::from_utf8_lossy(&o.stderr).contains("Driver/library version mismatch")
+            || String::from_utf8_lossy(&o.stdout).contains("Driver/library version mismatch")
+    });
+    if !nvidia_broken {
+        return;
+    }
+    eprintln!(
+        "openrailsrs-viewer3d: hybrid GPU detected ({render_nodes} render nodes) but NVIDIA \
+         userspace looks broken (nvidia-smi Driver/library version mismatch).\n\
+         Wayland often crashes with: failed to import supplied dmabufs / CoglTexture2D.\n\
+         Fix: reboot to reload the NVIDIA kernel module, then retry. Alternatives: log into \
+         an Xorg session, or make Mutter use the AMD iGPU as primary (see docs/VIEWER3D.md)."
+    );
+}
+
+/// `OPENRAILSRS_PRESENT_MODE`: `auto_vsync` (default), `auto_no_vsync`, `fifo`, `mailbox`, `immediate`.
+fn present_mode_from_env() -> PresentMode {
+    match std::env::var("OPENRAILSRS_PRESENT_MODE")
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "auto_no_vsync" | "novsync" | "no_vsync" => PresentMode::AutoNoVsync,
+        "fifo" | "vsync" => PresentMode::Fifo,
+        "mailbox" => PresentMode::Mailbox,
+        "immediate" => PresentMode::Immediate,
+        "auto_vsync" | "auto" | "" => PresentMode::AutoVsync,
+        other => {
+            eprintln!(
+                "openrailsrs-viewer3d: unknown OPENRAILSRS_PRESENT_MODE={other:?}, using AutoVsync"
+            );
+            PresentMode::AutoVsync
+        }
+    }
+}
+
 fn parse_cli() -> CliArgs {
     parse_cli_from(std::env::args().skip(1))
 }
@@ -297,6 +356,11 @@ fn main() {
         resolution =
             bevy::window::WindowResolution::new(win_w, win_h).with_scale_factor_override(1.0);
     }
+    // Default AutoVsync (Fifo): AutoNoVsync/Immediate often yields
+    // `Surface::configure → Invalid surface` on RADV+X11 (Mesa 26 / Raphael iGPU).
+    // Override: OPENRAILSRS_PRESENT_MODE=auto_no_vsync|fifo|mailbox|immediate|auto_vsync
+    let present_mode = present_mode_from_env();
+    warn_hybrid_gpu_display_if_needed();
 
     let mut app = App::new();
     app.add_plugins(
@@ -307,7 +371,7 @@ fn main() {
                 primary_window: Some(Window {
                     title: "openrailsrs-viewer3d".into(),
                     resolution,
-                    present_mode: PresentMode::AutoNoVsync,
+                    present_mode,
                     // Keep goldens from inheriting a maximized/restored desktop size.
                     resizable: !screenshot_lock,
                     ..default()

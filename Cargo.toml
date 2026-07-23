@@ -46,6 +46,8 @@ indexmap = "2.7"
 bevy = { version = "0.19", default-features = false, features = [
     "bevy_winit",
     "x11",
+    # Native Wayland: XWayland + RADV often hits `Surface::configure → Invalid surface`.
+    "wayland",
     "bevy_window",
     "bevy_render",
     "bevy_core_pipeline",

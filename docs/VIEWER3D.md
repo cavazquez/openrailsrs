@@ -16,7 +16,7 @@ App jugable Bevy (`openrailsrs-viewer3d`). Arquitectura: [`BEVY.md`](BEVY.md). T
 |------|------|--------|
 | A | `--live` + física en viewer | ✅ |
 | B | Terreno + WORLD + stream | ✅ (paridad visual residual) |
-| C | Cabina 3D + CVF | 🔶 [`CABVIEW3D.md`](CABVIEW3D.md) |
+| C | Cabina 3D + CVF | 🔶 UV canónicas ✅ (#165); resto [`CABVIEW3D.md`](CABVIEW3D.md) |
 | D | Audio en viewer | 🔲 |
 | E | Vía TDB/peralte vs grafo | 🔶 [`TRACK_MSTS.md`](TRACK_MSTS.md) |
 | F | Activity / señales sin assume-clear | 🔶 |
@@ -54,3 +54,26 @@ OPENRAILSRS_VIEW_RADIUS_M=300 cargo run --release -p openrailsrs-viewer3d -- \
 ```
 
 Setup Wine/OR: [`CHILTERN.md`](CHILTERN.md). Física vs OR: [`OR_PARITY.md`](OR_PARITY.md).
+
+## Troubleshooting ventana / GPU
+
+### Wayland + GPU híbrida (AMD iGPU + NVIDIA)
+
+Síntoma típico tras cargar el mundo:
+
+```text
+failed to import supplied dmabufs: Could not bind the given EGLImage to a CoglTexture2D
+Protocol error 7 on object @0
+winit event loop returned an error: Exit Failure: 1
+```
+
+Causa habitual: Bevy/Vulkan renderiza en **RADV (AMD)** mientras Mutter presenta con **NVIDIA**, o el driver NVIDIA está en **Driver/library version mismatch** (`nvidia-smi` falla). El compositor no puede importar los dmabufs.
+
+Mitigaciones (en orden):
+
+1. **Reiniciar** para alinear módulo kernel NVIDIA y userspace (`nvidia-smi -L` debe listar la GPU sin mismatch).
+2. Sesión **Ubuntu on Xorg** (no Wayland).
+3. Forzar Mutter/primary GPU AMD si el escritorio usa NVIDIA.
+4. Present mode: `OPENRAILSRS_PRESENT_MODE=fifo` (default es `auto_vsync`). El workspace ya habilita features Bevy `wayland` + `x11`.
+
+El viewer imprime un aviso al arrancar si detecta varios `/dev/dri/renderD*` y `nvidia-smi` roto.

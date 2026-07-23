@@ -17,6 +17,17 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
+| UV canónicas OR (#165) | ✅ smoke Pullman Chiltern OK (2026-07) |
+
+## UV (#165)
+
+Conversión única en `shape_uv_to_bevy` (`openrailsrs-bevy-scenery`): coords OR authored `(u, v)` → Bevy `Vec2`, **sin** V-flip global ni allowlist UV180 por nombre de atlas (`Instruments2`, etc.).
+
+- Debug opcional: `OPENRAILSRS_DEBUG_FLIP_U` / `_V` / `_UV` / `OPENRAILSRS_DEBUG_NO_UV_FLIP`.
+- Tests: anti-resurrección de helpers UV180-by-name; fixture asimétrico Instruments/Instruments2.
+- Smoke: `viewer3d --live` Chiltern → tecla **1** → pupitre/instrumentos correctos (confirmado).
+
+Siguiente cola visual cabina: **#166** (jerarquía/winding/SortIndex) → **#167** → **#170**.
 
 ## Matrices CVF (Pullman)
 
@@ -53,8 +64,6 @@ TCS: `openrailsrs_sim::etcs::BasicEtcsTcs` (sin scripts C#). Soft keys / menús 
 Símbolos ERA: `Content/ETCS` (o `OPENRAILSRS_ETCS_CONTENT` / fixtures `docs/fixtures/etcs`).
 
 Instrumentos (`Instruments*.ace`): mips ACE completos; agujas con offset 1.5 mm. Pullman marca casi todo `ZBufMode=1` (OR dibuja la cabina en un pase tardío); en Bevy los materiales **opacos** escriben depth para que el WORLD no tape pupitre/suelo. MSAA no se activa al entrar en cabina (toggle en runtime rompe pipelines Bevy 0.19).
-
-UV 180° en caras grandes de atlas “invertidos” tras el V-flip MSTS (`Instruments2`, `Cab2`, `Loudaphone2`, `handbook`, techo, asiento, etc.). Sin rotar: `Instruments`, `Cab1`, `DESK1`, `Controls` (ya correctos).
 
 ## Teclas (paridad Open Rails)
 

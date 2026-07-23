@@ -1012,9 +1012,7 @@ pub fn validate_sub_object_trilist_topology(
                     sub_object_idx,
                     prim_ord,
                     prim_state_idx: prim.prim_state_idx,
-                    message: format!(
-                        "vertex_idx[{slot}]={idx} out of local vertices range 0..{n}"
-                    ),
+                    message: format!("vertex_idx[{slot}]={idx} out of local vertices range 0..{n}"),
                 });
             }
         }

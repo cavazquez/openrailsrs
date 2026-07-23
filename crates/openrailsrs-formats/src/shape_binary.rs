@@ -883,7 +883,8 @@ fn is_scalar_only_leaf_block(token_id: i32) -> bool {
             | 82
             | 83
             | 84 // uv_op_copy / aliases
-            | 91..=97 // uv_op_* with integer-only payloads
+            | 91
+            ..=97 // uv_op_* with integer-only payloads
             | 99
             | 101
             | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, hierarchy, anim_keys
@@ -1196,11 +1197,7 @@ mod tests {
             "vtx_state[19] should be M17, got {}",
             shape.vtx_states[19].matrix_idx
         );
-        let non_main = shape
-            .vtx_states
-            .iter()
-            .filter(|v| v.matrix_idx > 0)
-            .count();
+        let non_main = shape.vtx_states.iter().filter(|v| v.matrix_idx > 0).count();
         assert!(
             non_main >= 17,
             "expected authored non-MAIN vtx_states, got {non_main} (parser still reading i32 as f32?)"

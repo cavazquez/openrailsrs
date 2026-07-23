@@ -1196,8 +1196,7 @@ mod tests {
         // bounds_center comes from a full-hierarchy bake (world / MAIN space).
         let mut checked = 0usize;
         for part in parts.iter().filter(|p| {
-            p.cab_matrix_idx
-                .is_some_and(|m| lever_only.contains(&m))
+            p.cab_matrix_idx.is_some_and(|m| lever_only.contains(&m))
                 && p.bounds_half_extent
                     .is_some_and(|h| h.max_element() < 0.25 && h.max_element() > 0.02)
         }) {

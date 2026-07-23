@@ -2,6 +2,10 @@
 
 Presentación 3D separada del núcleo headless. Pin: **Bevy 0.19** (`[workspace.dependencies]`).
 
+Features de ventana: `x11` + `wayland`. En sesiones Wayland, sin `wayland` winit cae a XWayland y RADV suele fallar con `Surface::configure → Invalid surface`.
+
+Present mode del viewer: default `AutoVsync` (`Fifo`). Override: `OPENRAILSRS_PRESENT_MODE=auto_vsync|auto_no_vsync|fifo|mailbox|immediate`. En híbridas AMD+NVIDIA rotas, ver troubleshooting en [`VIEWER3D.md`](VIEWER3D.md).
+
 ## Crates
 
 | Crate | Rol |

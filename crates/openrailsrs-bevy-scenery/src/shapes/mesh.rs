@@ -548,7 +548,8 @@ impl MeshBuffers {
 /// Generate MikkTSpace tangents for PBR normal mapping (#44).
 ///
 /// Call only when a normal map will be assigned. Requires final POSITION/NORMAL/UV_0
-/// (post winding, Z-flip, and V-flip). Returns `false` on failure (degenerate UVs).
+/// (post winding and Z-flip; UV via authored `shape_uv_to_bevy`). Returns `false` on
+/// failure (degenerate UVs).
 pub fn ensure_tangents_for_normal_mapping(mesh: &mut Mesh) -> bool {
     if mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_some() {
         return true;
@@ -1646,10 +1647,7 @@ mod tests {
                 );
                 let (center, half) = mesh_buffers_bounds(&buffers);
                 let r = half.max_element();
-                assert!(
-                    buffers.positions.len() >= 3,
-                    "tex={tex} expected triangles"
-                );
+                assert!(buffers.positions.len() >= 3, "tex={tex} expected triangles");
                 // Flat material probe: compact cab props, not kilometre-long fans.
                 assert!(
                     r.is_finite() && r > 0.01 && r < 3.0,
@@ -1658,6 +1656,9 @@ mod tests {
                 checked += 1;
             }
         }
-        assert!(checked >= 2, "expected Loudaphone2 + Panel_box prims, got {checked}");
+        assert!(
+            checked >= 2,
+            "expected Loudaphone2 + Panel_box prims, got {checked}"
+        );
     }
 }

@@ -117,29 +117,24 @@ pub fn train_shape_debug_active() -> bool {
     train_shape_debug_scope() && train_uv_or_cull_env_active()
 }
 
-/// Convert MSTS `.s` UV to Bevy mesh UV (production default: flip V like legacy path).
+/// Convert MSTS `.s` UV to Bevy mesh UV.
+///
+/// Production matches Open Rails: authored `(u, v)` with no flip (#165).
+/// Train debug envs can experiment with axis flips (`OPENRAILSRS_DEBUG_FLIP_*`).
 pub fn shape_uv_to_bevy(u: f32, v: f32) -> Vec2 {
     if train_shape_debug_scope() && train_uv_or_cull_env_active() {
         return apply_train_uv_debug(u, v);
     }
-    Vec2::new(u, 1.0 - v)
+    Vec2::new(u, v)
 }
 
 fn apply_train_uv_debug(u: f32, v: f32) -> Vec2 {
+    // Production is authored (u, v). `NO_UV_FLIP` forces identity; FLIP_* experiment.
     if debug_no_uv_flip() {
-        let mut uu = u;
-        let mut vv = v;
-        if debug_flip_u() || debug_flip_uv() {
-            uu = 1.0 - uu;
-        }
-        if debug_flip_v() || debug_flip_uv() {
-            vv = 1.0 - vv;
-        }
-        return Vec2::new(uu, vv);
+        return Vec2::new(u, v);
     }
-    // Start from production conversion, then apply experimental toggles.
     let mut uu = u;
-    let mut vv = 1.0 - v;
+    let mut vv = v;
     if debug_flip_u() || debug_flip_uv() {
         uu = 1.0 - uu;
     }
@@ -316,13 +311,13 @@ mod tests {
     }
 
     #[test]
-    fn no_uv_flip_matches_or_raw_coords() {
-        set_train_shape_debug_scope(true);
-        // Cannot reset OnceLock env flags in test; verify helper logic via apply path
-        // when NO_UV_FLIP is unset, production flip V applies outside train debug env.
+    fn shape_uv_to_bevy_matches_or_authored_coords() {
         set_train_shape_debug_scope(false);
         let uv = shape_uv_to_bevy(0.25, 0.75);
         assert!((uv.x - 0.25).abs() < 1e-5);
-        assert!((uv.y - 0.25).abs() < 1e-5);
+        assert!(
+            (uv.y - 0.75).abs() < 1e-5,
+            "OR parity: no V-flip (#165), got {uv:?}"
+        );
     }
 }

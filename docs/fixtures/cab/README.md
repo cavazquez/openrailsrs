@@ -15,7 +15,7 @@ Content-heavy Pullman `.s` / ACE tests live in `openrailsrs-viewer3d` and are ma
 
 They use `OPENRAILSRS_MSTS_CONTENT` (no hardcoded `/home/...` paths, no silent `return`).
 
-CI always runs redistributable cab logic tests (UV180 heuristics, cab shape resolve temp dirs, `orts3d_viewpoints.eng`).
+CI always runs redistributable cab logic tests (canonical UV / needle offset, cab shape resolve temp dirs, `orts3d_viewpoints.eng`).
 
 Run Content-heavy tests locally with:
 
