@@ -38,7 +38,9 @@ pub use route::{OverheadWireParams, RouteFile, RouteStart, find_trk_path};
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LightModelCfg, LodControl, Matrix43,
     MstsTexAddrMode, NamedMatrix, PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject,
-    UvOp, UvOpKind, Vec2, Vec3, Vertex, VtxState, msts_tex_addr_mode,
+    TrilistTopologyError, UvOp, UvOpKind, Vec2, Vec3, Vertex, VtxState,
+    materialize_legacy_point_index_vertices, msts_tex_addr_mode, take_indexed_trilist_indices,
+    validate_shape_trilist_topology, validate_sub_object_trilist_topology,
 };
 pub use sigcfg::{
     LightColour, LightTextureDef, SigCfgFile, SignalDrawStateDef, SignalLightDef, SignalShapeDef,

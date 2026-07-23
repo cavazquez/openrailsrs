@@ -58,10 +58,14 @@ fn parse_minimal_shape_collects_lods_and_prims() {
 
     let sub0 = &lod.distance_levels[0].sub_objects[0];
     assert_eq!(sub0.vertex_count, 4);
+    // Legacy count-only `vertices` expand to a local table (#173).
+    assert_eq!(sub0.vertices.len(), 4);
+    assert_eq!(sub0.vertices[3].point_idx, 3);
     assert_eq!(sub0.primitives.len(), 1);
     assert_eq!(sub0.primitives[0].prim_state_idx, 0);
     assert_eq!(sub0.primitives[0].triangle_count(), 2);
     assert_eq!(sub0.primitives[0].vertex_indices.len(), 6);
+    openrailsrs_formats::validate_sub_object_trilist_topology(0, sub0).expect("local topology");
 }
 
 #[test]

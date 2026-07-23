@@ -93,13 +93,14 @@ pub struct PrimState {
 
 /// A single triangle list block (`indexed_trilist`).
 ///
-/// `vertex_indices` holds raw indices in groups of three (i, j, k); the helper
+/// `vertex_indices` holds local `sub_object.vertices` indices in groups of three
+/// `(a,b,c)` after the MSTS count prefix is stripped (#173). The helper
 /// [`Primitive::triangle_count`] returns `vertex_indices.len() / 3`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Primitive {
-    /// Index into the parent shape's `prim_states` table (-1 if missing).
+    /// Index into the parent shape's `prim_states` table (OR default `0`).
     pub prim_state_idx: i32,
-    /// Flat list of vertex indices (length is a multiple of 3).
+    /// Flat list of **local** vertex indices (length is a multiple of 3).
     pub vertex_indices: Vec<u32>,
 }
 
@@ -900,42 +901,140 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
         });
     });
     for_each_tagged(items, "primitives", |sub| {
-        let mut current_state_idx: i32 = -1;
+        // Open Rails `primitives`: `last_prim_state_idx = 0` before the first entry.
+        let mut current_state_idx: i32 = 0;
         for_each_tagged_ordered(sub, &["prim_state_idx", "indexed_trilist"], |prim| {
             if matches_head(prim, "prim_state_idx") {
                 if let Some(n) = first_number_after_head(prim) {
                     current_state_idx = n as i32;
                 }
             } else if matches_head(prim, "indexed_trilist") {
-                let mut p = Primitive {
-                    prim_state_idx: current_state_idx,
-                    vertex_indices: Vec::new(),
-                };
+                let mut raw = Vec::new();
                 for_each_tagged(prim, "vertex_idxs", |idx| {
                     for v in shape_section_body(idx) {
                         if let Ast::Atom(at) = v {
                             if let Some(n) = shape_atom_to_i32(at) {
                                 if n >= 0 {
-                                    p.vertex_indices.push(n as u32);
+                                    raw.push(n as u32);
                                 }
                             }
                         }
                     }
                 });
-                if !p.vertex_indices.is_empty() {
-                    p.vertex_indices.remove(0);
-                }
-                primitives.push(p);
+                primitives.push(Primitive {
+                    prim_state_idx: current_state_idx,
+                    // Fail closed on count / %3 mismatch (#173) — never invent topology.
+                    vertex_indices: take_indexed_trilist_indices(&raw).unwrap_or_default(),
+                });
             }
         });
     });
 
-    SubObject {
+    let mut sub = SubObject {
         vertex_count,
         vertices,
         primitives,
         geometry_node_map,
+    };
+    // Legacy ASCII fixtures declare `(vertices N)` without `vertex` rows; expand to an
+    // explicit local table so mesh code never indexes `shape.points` directly (#173).
+    materialize_legacy_point_index_vertices(&mut sub);
+    sub
+}
+
+/// Strip the MSTS `vertex_idxs` count prefix (OR: first int = scalar count, then `a,b,c`…).
+///
+/// Returns `None` when the declared count does not match the body or is not a multiple of 3.
+pub fn take_indexed_trilist_indices(raw: &[u32]) -> Option<Vec<u32>> {
+    if raw.is_empty() {
+        return Some(Vec::new());
     }
+    let declared = raw[0] as usize;
+    let body = &raw[1..];
+    if declared == body.len() && declared % 3 == 0 {
+        Some(body.to_vec())
+    } else {
+        None
+    }
+}
+
+/// Expand count-only `vertices` tables into synthetic local rows (`point_idx = i`).
+///
+/// Used only for legacy ASCII fixtures; real MSTS/Open Rails shapes always emit
+/// `vertex` entries. Keeps mesh resolvers free of a global-points fallback (#173).
+pub fn materialize_legacy_point_index_vertices(sub: &mut SubObject) {
+    if !sub.vertices.is_empty() || sub.vertex_count == 0 {
+        return;
+    }
+    sub.vertices = (0..sub.vertex_count)
+        .map(|i| {
+            let i32i = i as i32;
+            Vertex {
+                point_idx: i32i,
+                normal_idx: i32i,
+                uv_indices: vec![i32i],
+                ..Default::default()
+            }
+        })
+        .collect();
+}
+
+/// Topology error for an `indexed_trilist` that violates the OR local-index contract (#173).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TrilistTopologyError {
+    pub sub_object_idx: usize,
+    pub prim_ord: usize,
+    pub prim_state_idx: i32,
+    pub message: String,
+}
+
+/// Validate that every `vertex_idx` addresses `sub.vertices` (never raw `shape.points`).
+pub fn validate_sub_object_trilist_topology(
+    sub_object_idx: usize,
+    sub: &SubObject,
+) -> Result<(), TrilistTopologyError> {
+    let n = sub.vertices.len();
+    for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+        if prim.vertex_indices.len() % 3 != 0 {
+            return Err(TrilistTopologyError {
+                sub_object_idx,
+                prim_ord,
+                prim_state_idx: prim.prim_state_idx,
+                message: format!(
+                    "vertex_indices len {} is not a multiple of 3",
+                    prim.vertex_indices.len()
+                ),
+            });
+        }
+        for (slot, &idx) in prim.vertex_indices.iter().enumerate() {
+            if idx as usize >= n {
+                return Err(TrilistTopologyError {
+                    sub_object_idx,
+                    prim_ord,
+                    prim_state_idx: prim.prim_state_idx,
+                    message: format!(
+                        "vertex_idx[{slot}]={idx} out of local vertices range 0..{n}"
+                    ),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Walk all LOD0 sub-objects and validate trilist local indexing (#173).
+pub fn validate_shape_trilist_topology(shape: &ShapeFile) -> Result<(), TrilistTopologyError> {
+    let Some(level) = shape
+        .lod_controls
+        .first()
+        .and_then(|c| c.distance_levels.first())
+    else {
+        return Ok(());
+    };
+    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+        validate_sub_object_trilist_topology(sub_idx, sub)?;
+    }
+    Ok(())
 }
 
 fn parse_vertex(items: &[Ast]) -> Option<Vertex> {
@@ -1625,6 +1724,179 @@ mod tests {
             vec![0, 1]
         );
         assert_eq!(shape.root_sub_object_index(), 1);
+    }
+
+    #[test]
+    fn take_indexed_trilist_indices_requires_count_and_mod3() {
+        assert_eq!(
+            take_indexed_trilist_indices(&[6, 0, 1, 2, 0, 2, 3]),
+            Some(vec![0, 1, 2, 0, 2, 3])
+        );
+        assert_eq!(take_indexed_trilist_indices(&[0]), Some(vec![]));
+        // Declared count mismatch → fail closed (no invented topology).
+        assert_eq!(take_indexed_trilist_indices(&[6, 0, 1, 2]), None);
+        assert_eq!(take_indexed_trilist_indices(&[4, 0, 1, 2, 3]), None);
+        // Missing count prefix must not be treated as indices.
+        assert_eq!(take_indexed_trilist_indices(&[0, 1, 2]), None);
+    }
+
+    #[test]
+    fn trilist_without_prim_state_idx_defaults_to_zero_like_or() {
+        let src = r#"
+        ( shape
+          ( points 3 ( point 0 0 0 ) ( point 1 0 0 ) ( point 0 1 0 ) )
+          ( normals 1 ( vector 0 0 1 ) )
+          ( prim_states 1 ( prim_state "m" 0 0 ( tex_idxs 1 0 ) 0 0 0 0 1 ) )
+          ( lod_controls 1
+            ( lod_control
+              ( distance_levels 1
+                ( distance_level
+                  ( distance_level_header ( dlevel_selection 200 ) )
+                  ( sub_objects 1
+                    ( sub_object
+                      ( vertices 3
+                        ( vertex 0 0 0 ( vertex_uvs 1 0 ) )
+                        ( vertex 0 1 0 ( vertex_uvs 1 0 ) )
+                        ( vertex 0 2 0 ( vertex_uvs 1 0 ) )
+                      )
+                      ( primitives 1
+                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        "#;
+        let shape = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        let prim = &shape.lod_controls[0].distance_levels[0].sub_objects[0].primitives[0];
+        assert_eq!(prim.prim_state_idx, 0);
+        assert_eq!(prim.vertex_indices, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn mismatched_vertex_idxs_count_yields_empty_trilist() {
+        let src = r#"
+        ( shape
+          ( points 4 ( point 0 0 0 ) ( point 1 0 0 ) ( point 1 1 0 ) ( point 0 1 0 ) )
+          ( lod_controls 1
+            ( lod_control
+              ( distance_levels 1
+                ( distance_level
+                  ( distance_level_header ( dlevel_selection 200 ) )
+                  ( sub_objects 1
+                    ( sub_object
+                      ( vertices 4
+                        ( vertex 0 0 0 ) ( vertex 0 1 0 ) ( vertex 0 2 0 ) ( vertex 0 3 0 )
+                      )
+                      ( primitives 1
+                        ( prim_state_idx 0 )
+                        ( indexed_trilist ( vertex_idxs 6 0 1 2 ) )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        "#;
+        let shape = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        let prim = &shape.lod_controls[0].distance_levels[0].sub_objects[0].primitives[0];
+        assert!(
+            prim.vertex_indices.is_empty(),
+            "count mismatch must fail closed, got {:?}",
+            prim.vertex_indices
+        );
+    }
+
+    #[test]
+    fn legacy_count_only_vertices_materialize_local_table() {
+        let src = r#"
+        ( shape
+          ( points 3 ( point 0 0 0 ) ( point 1 0 0 ) ( point 0 1 0 ) )
+          ( lod_controls 1
+            ( lod_control
+              ( distance_levels 1
+                ( distance_level
+                  ( distance_level_header ( dlevel_selection 200 ) )
+                  ( sub_objects 1
+                    ( sub_object
+                      ( vertices 3 )
+                      ( primitives 1
+                        ( prim_state_idx 0 )
+                        ( indexed_trilist ( vertex_idxs 3 0 1 2 ) )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        "#;
+        let shape = ShapeFile::from_ast(&crate::parser::parse_first_from_first_paren(src).unwrap())
+            .unwrap();
+        let sub = &shape.lod_controls[0].distance_levels[0].sub_objects[0];
+        assert_eq!(sub.vertices.len(), 3);
+        assert_eq!(sub.vertices[2].point_idx, 2);
+        validate_sub_object_trilist_topology(0, sub).expect("local topology");
+    }
+
+    #[test]
+    fn pullman_cab_trilist_topology_is_local_only() {
+        let path = std::path::PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse Pullman cab");
+        validate_shape_trilist_topology(&shape).expect("Pullman LOD0 trilist topology");
+
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let mut found_loudaphone = false;
+        let mut found_panel = false;
+        for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
+            for (prim_ord, prim) in sub.primitives.iter().enumerate() {
+                let tex = shape
+                    .texture_for_prim_state_idx(prim.prim_state_idx)
+                    .unwrap_or_default()
+                    .to_ascii_lowercase();
+                let want = if tex.contains("loudaphone") {
+                    found_loudaphone = true;
+                    true
+                } else if tex.contains("panel_box") {
+                    found_panel = true;
+                    true
+                } else {
+                    false
+                };
+                if !want {
+                    continue;
+                }
+                assert!(
+                    !prim.vertex_indices.is_empty() && prim.vertex_indices.len() % 3 == 0,
+                    "sub={sub_idx} prim={prim_ord} tex={tex} bad index count"
+                );
+                for tri in prim.vertex_indices.chunks_exact(3) {
+                    for &vi in tri {
+                        let v = &sub.vertices[vi as usize];
+                        assert!(
+                            (v.point_idx as usize) < shape.points.len(),
+                            "sub={sub_idx} prim={prim_ord} local vtx {vi} → bad point {}",
+                            v.point_idx
+                        );
+                    }
+                }
+            }
+        }
+        assert!(found_loudaphone, "expected Loudaphone2 prim on Pullman cab");
+        assert!(found_panel, "expected Panel_box prim on Pullman cab");
     }
 
     #[test]

@@ -831,34 +831,31 @@ pub fn shader_name_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Opt
     shape.shader_names.get(ps.shader_idx as usize).cloned()
 }
 
+/// Resolve a trilist index against the **local** `sub_object.vertices` table (#173).
+///
+/// Never falls back to `shape.points[vertex_idx]` — a missing local row returns `None`
+/// so invalid connectivity cannot fabricate long triangles. Legacy ASCII fixtures that
+/// omit `vertex` rows are expanded at parse time via
+/// [`openrailsrs_formats::materialize_legacy_point_index_vertices`].
 #[allow(clippy::type_complexity)]
 pub fn resolve_shape_vertex(
-    shape: &ShapeFile,
+    _shape: &ShapeFile,
     sub: &openrailsrs_formats::SubObject,
     vertex_idx: u32,
 ) -> Option<(usize, Option<usize>, Option<usize>, [f32; 4])> {
-    if let Some(vertex) = sub.vertices.get(vertex_idx as usize) {
-        return Some((
-            index_to_usize(vertex.point_idx)?,
-            index_to_usize(vertex.normal_idx),
-            vertex
-                .uv_indices
-                .first()
-                .and_then(|idx| index_to_usize(*idx)),
-            vertex
-                .color1
-                .map(rgba_u8_to_f32)
-                .unwrap_or([1.0, 1.0, 1.0, 1.0]),
-        ));
-    }
-
-    // Older ASCII fixtures can use `vertex_idxs` directly against points.
-    let idx = vertex_idx as usize;
-    if idx < shape.points.len() {
-        return Some((idx, Some(idx), Some(idx), [1.0, 1.0, 1.0, 1.0]));
-    }
-
-    None
+    let vertex = sub.vertices.get(vertex_idx as usize)?;
+    Some((
+        index_to_usize(vertex.point_idx)?,
+        index_to_usize(vertex.normal_idx),
+        vertex
+            .uv_indices
+            .first()
+            .and_then(|idx| index_to_usize(*idx)),
+        vertex
+            .color1
+            .map(rgba_u8_to_f32)
+            .unwrap_or([1.0, 1.0, 1.0, 1.0]),
+    ))
 }
 
 pub fn rgba_u8_to_f32([r, g, b, a]: [u8; 4]) -> [f32; 4] {
@@ -1539,5 +1536,128 @@ mod tests {
             ratio > 0.55,
             "Pullman exterior winding looks inverted: {outward}/{total} outward (ratio={ratio:.3})"
         );
+    }
+
+    #[test]
+    fn resolve_shape_vertex_never_falls_back_to_global_points() {
+        // Local table has 1 vertex; index 2 is in range of `points` but must not resolve (#173).
+        let shape = ShapeFile {
+            points: vec![
+                ShapeVec3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                ShapeVec3 {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                ShapeVec3 {
+                    x: 0.0,
+                    y: 10.0,
+                    z: 0.0,
+                },
+            ],
+            lod_controls: vec![LodControl {
+                distance_levels: vec![DistanceLevel {
+                    selection_m: 200.0,
+                    hierarchy: vec![-1],
+                    sub_objects: vec![SubObject {
+                        vertex_count: 1,
+                        vertices: vec![Vertex {
+                            point_idx: 0,
+                            normal_idx: -1,
+                            ..Default::default()
+                        }],
+                        primitives: vec![Primitive {
+                            prim_state_idx: 0,
+                            // Would invent a huge triangle via the old points fallback.
+                            vertex_indices: vec![0, 1, 2],
+                        }],
+                        ..Default::default()
+                    }],
+                }],
+            }],
+            ..Default::default()
+        };
+        let sub = &shape.lod_controls[0].distance_levels[0].sub_objects[0];
+        assert!(resolve_shape_vertex(&shape, sub, 0).is_some());
+        assert!(resolve_shape_vertex(&shape, sub, 1).is_none());
+        assert!(resolve_shape_vertex(&shape, sub, 2).is_none());
+
+        let mut buffers = MeshBuffers::default();
+        append_primitive_mesh_buffers(
+            &shape,
+            &shape.lod_controls[0].distance_levels[0],
+            sub,
+            &sub.primitives[0],
+            ShapeVec3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            &mut buffers,
+            Some(0),
+            false,
+        );
+        assert!(
+            buffers.positions.is_empty(),
+            "invalid local indices must not fabricate triangles, got {} verts",
+            buffers.positions.len()
+        );
+    }
+
+    #[test]
+    fn pullman_cab_loudaphone_panel_flat_aabb_sane() {
+        let path = Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !path.is_file() {
+            return;
+        }
+        let shape = ShapeFile::from_path(path).expect("parse Pullman cab");
+        openrailsrs_formats::validate_shape_trilist_topology(&shape).expect("topology");
+        let level = &shape.lod_controls[0].distance_levels[0];
+        let default_normal = shape.normals.first().copied().unwrap_or(ShapeVec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        });
+        let mut checked = 0usize;
+        for sub in &level.sub_objects {
+            for prim in &sub.primitives {
+                let tex = texture_for_prim_state(&shape, prim.prim_state_idx)
+                    .unwrap_or_default()
+                    .to_ascii_lowercase();
+                if !(tex.contains("loudaphone") || tex.contains("panel_box")) {
+                    continue;
+                }
+                let mut buffers = MeshBuffers::default();
+                append_primitive_mesh_buffers(
+                    &shape,
+                    level,
+                    sub,
+                    prim,
+                    default_normal,
+                    &mut buffers,
+                    None,
+                    false,
+                );
+                let (center, half) = mesh_buffers_bounds(&buffers);
+                let r = half.max_element();
+                assert!(
+                    buffers.positions.len() >= 3,
+                    "tex={tex} expected triangles"
+                );
+                // Flat material probe: compact cab props, not kilometre-long fans.
+                assert!(
+                    r.is_finite() && r > 0.01 && r < 3.0,
+                    "tex={tex} AABB half-extent {r:.3} at center {center:?} looks corrupted"
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked >= 2, "expected Loudaphone2 + Panel_box prims, got {checked}");
     }
 }
