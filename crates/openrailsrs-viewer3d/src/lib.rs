@@ -137,6 +137,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<cab_view::CabInteriorState>()
             .init_resource::<cab_cvf::CabCvfState>()
             .init_resource::<cab_cvf_overlay::CabCvfOverlayState>()
+            .init_resource::<etcs::EtcsUiState>()
             .init_resource::<cab_render::CabRenderDiagnostic>()
             .init_resource::<cab_render::CabRenderDiagLatch>()
             .init_resource::<live::DriverCamState>()
@@ -374,6 +375,15 @@ impl Plugin for ViewerPlugin {
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
                 )
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            // Separate tuple: Bevy ~20-system limit on one `.add_systems` group.
+            .add_systems(
+                Update,
+                cab_screen::handle_cab_dmi_mouse
+                    .after(cab_view::sync_cab_interior)
+                    .before(cab_screen::update_cab_screens)
+                    .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

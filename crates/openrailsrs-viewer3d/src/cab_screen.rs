@@ -1,18 +1,21 @@
-//! OR `ThreeDimCabScreen` / ETCS DMI (#158/#159/#160).
+//! OR `ThreeDimCabScreen` / ETCS DMI (#158–#161).
 //!
 //! Matches a cab interior prim whose ACE basename contains the CVF `ScreenDisplay`
 //! Graphic, then replaces its texture with a CPU-updated 640×480 RGBA buffer.
+//! LMB on the mesh maps UV → DMI soft keys (#161).
 
 use std::path::Path;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::window::PrimaryWindow;
 use openrailsrs_formats::{CabControl, CabViewFile};
 
 use crate::cab_cvf::CabCvfState;
 use crate::cab_view::CabInteriorRoot;
 use crate::camera::CameraFollowMode;
+use crate::etcs::{EtcsUiState, hit_test_dmi, uv_to_dmi};
 use crate::live::LiveDrive;
 use crate::or_cab_material::OrCabMaterial;
 use crate::shapes::ShapePartAsset;
@@ -138,11 +141,13 @@ pub fn try_attach_screen_to_part(
     false
 }
 
-/// Paint full DMI each frame (#159/#160).
+/// Paint full DMI each frame (#159/#160/#161).
 pub fn update_cab_screens(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,
     cvf_state: Option<Res<CabCvfState>>,
+    mut ui: ResMut<EtcsUiState>,
+    time: Res<Time>,
     interior: Query<Entity, With<CabInteriorRoot>>,
     mut screens: Query<(&CabNativeScreen, &mut Visibility)>,
     mut images: ResMut<Assets<Image>>,
@@ -154,10 +159,13 @@ pub fn update_cab_screens(
         return;
     }
     let _ = cvf_state;
-    let status = live
+    let now = time.elapsed_secs_f64();
+    ui.tick(now);
+    let mut status = live
         .as_ref()
         .map(|l| crate::etcs::etcs_status_from_live(&l.session))
         .unwrap_or_default();
+    ui.apply_to_status(&mut status, now);
 
     for (screen, mut visibility) in &mut screens {
         if screen.hide_if_disabled {
@@ -179,6 +187,88 @@ pub fn update_cab_screens(
         }
         crate::etcs::paint_dmi_full(data, w, h, &status);
     }
+}
+
+/// LMB on `CabNativeScreen` mesh → DMI soft keys (OR reserves LMB for cab controls).
+#[allow(clippy::too_many_arguments)]
+pub fn handle_cab_dmi_mouse(
+    follow: Res<CameraFollowMode>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    time: Res<Time>,
+    mut ui: ResMut<EtcsUiState>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    screens: Query<(&GlobalTransform, &Mesh3d), With<CabNativeScreen>>,
+    meshes: Res<Assets<Mesh>>,
+    live: Option<Res<LiveDrive>>,
+) {
+    if *follow != CameraFollowMode::DriverCam {
+        return;
+    }
+    let now = time.elapsed_secs_f64();
+
+    // RMB = look; ignore LMB while looking.
+    if mouse_buttons.pressed(MouseButton::Right) {
+        return;
+    }
+    if !mouse_buttons.just_pressed(MouseButton::Left) {
+        return;
+    }
+    if screens.is_empty() {
+        return;
+    }
+
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Some(cursor) = window.cursor_position() else {
+        return;
+    };
+    let Ok((camera, cam_tf)) = cameras.single() else {
+        return;
+    };
+    let Ok(ray) = camera.viewport_to_world(cam_tf, cursor) else {
+        return;
+    };
+
+    let mut best: Option<(f32, Vec2)> = None;
+    for (gt, mesh3d) in &screens {
+        let Some(mesh) = meshes.get(&mesh3d.0) else {
+            continue;
+        };
+        let world = gt.to_matrix();
+        if let Some((t, uv)) = crate::etcs::input::raycast_mesh_uv(
+            mesh,
+            world,
+            ray.origin,
+            Vec3::from(ray.direction),
+        ) {
+            if best.as_ref().is_none_or(|(bt, _)| t < *bt) {
+                best = Some((t, uv));
+            }
+        }
+    }
+    let Some((_t, uv)) = best else {
+        return;
+    };
+
+    let (x, y) = uv_to_dmi(uv);
+    let hit = hit_test_dmi(x, y).or_else(|| {
+        // Some MSTS cab UVs are V-flipped relative to Bevy sampling.
+        let (x2, y2) = uv_to_dmi(Vec2::new(uv.x, 1.0 - uv.y));
+        hit_test_dmi(x2, y2)
+    });
+    let Some(hit) = hit else {
+        return;
+    };
+
+    let mut status = live
+        .as_ref()
+        .map(|l| crate::etcs::etcs_status_from_live(&l.session))
+        .unwrap_or_default();
+    ui.apply_to_status(&mut status, now);
+    ui.handle_hit(hit, now, status.messages.len());
+    viewer_log!("openrailsrs-viewer3d: DMI hit {hit:?}");
 }
 
 #[cfg(test)]

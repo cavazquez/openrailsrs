@@ -13,7 +13,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Ocultar exterior en L1 | ✅ |
 | CVF overlay en cabina 3D | ❌ off (#151) |
 | Matrices nativas `TYPE:orden[:p1[:p2]]` (#157) | ✅ parse + MultiState/Dial + Digit/GaugeNative quads |
-| Pantalla ETCS / `ScreenDisplay` (#158–#160) | ✅ DMI Full: dial, planning, TTI, mensajes, NA_/PL_ |
+| Pantalla ETCS / `ScreenDisplay` (#158–#161) | ✅ DMI Full + soft keys clicables (LMB → UV) |
 | Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
@@ -44,7 +44,9 @@ Teclas Cab2d: **←/→** vista (Direction CVF) · click/arrastre en palancas co
 
 Cab2d `Direction` usa el mismo signo Bevy que `StartDirection` (X positivo = mirar abajo).
 
-Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR).
+Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR). **LMB** en la pantalla ETCS (`ScreenDisplay`) activa soft keys del DMI (scroll mensajes, scale planning, menú).
+
+Símbolos ERA: `Content/ETCS` (o `OPENRAILSRS_ETCS_CONTENT` / fixtures `docs/fixtures/etcs`).
 
 Instrumentos (`Instruments*.ace`): mips ACE completos; agujas con offset 1.5 mm. Pullman marca casi todo `ZBufMode=1` (OR dibuja la cabina en un pase tardío); en Bevy los materiales **opacos** escriben depth para que el WORLD no tape pupitre/suelo. MSAA no se activa al entrar en cabina (toggle en runtime rompe pipelines Bevy 0.19).
 

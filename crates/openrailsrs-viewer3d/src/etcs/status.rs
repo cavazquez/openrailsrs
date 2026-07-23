@@ -58,10 +58,16 @@ pub struct EtcsStatus {
     /// TSM/RSM TTI (yellow/orange/red); OR `TimeToPermittedS`.
     pub tti_permitted_s: Option<f64>,
     pub planning_symbol: PlanningSymbol,
-    /// Message-area lines (newest last; painter shows last N).
+    /// Message-area lines (newest last; painter pages with `message_page`).
     pub messages: Vec<String>,
     /// Soft-key labels for the right menu bar (up to 6).
     pub soft_keys: Vec<String>,
+    /// Planning distance scale (m), OR `MaxViewingDistanceM`.
+    pub planning_max_m: f64,
+    /// Message list page (0 = newest chunk).
+    pub message_page: usize,
+    /// Soft key currently drawn as pressed (#161).
+    pub pressed_hit: Option<super::input::DmiHit>,
 }
 
 impl Default for EtcsStatus {
@@ -82,6 +88,9 @@ impl Default for EtcsStatus {
             planning_symbol: PlanningSymbol::None,
             messages: vec!["FS / L1".into()],
             soft_keys: default_soft_keys(),
+            planning_max_m: 4000.0,
+            message_page: 0,
+            pressed_hit: None,
         }
     }
 }
@@ -167,6 +176,9 @@ impl EtcsStatus {
             planning_symbol,
             messages,
             soft_keys: default_soft_keys(),
+            planning_max_m: 4000.0,
+            message_page: 0,
+            pressed_hit: None,
         }
     }
 }

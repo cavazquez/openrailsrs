@@ -3,6 +3,7 @@
 use super::colors::{self, Rgba};
 use super::gauge::{self, paint_circular_gauge};
 use super::planning::paint_planning;
+use super::input::DmiHit;
 use super::status::{EtcsStatus, EtcsSupervision};
 use super::symbols::EtcsSymbols;
 
@@ -58,17 +59,33 @@ fn paint_dmi_full_1x(rgba: &mut [u8], status: &EtcsStatus) {
     paint_planning(rgba, w, h, 334, 15, status, symbols);
     stroke_rect(rgba, w, h, 334, 15, 246, 300, colors::FRAME);
 
-    // Scale soft keys (NA_03/04 enabled)
-    fill_rect(rgba, w, h, 334, 15, 40, 15, colors::PANEL);
-    stroke_rect(rgba, w, h, 334, 15, 40, 15, colors::FRAME);
-    if !symbols.blit_centered(rgba, w, h, 334, 15, 40, 15, "NA_03.bmp") {
-        fill_rect(rgba, w, h, 334, 15, 40, 15, colors::GREY);
-    }
-    fill_rect(rgba, w, h, 334, 300, 40, 15, colors::PANEL);
-    stroke_rect(rgba, w, h, 334, 300, 40, 15, colors::FRAME);
-    if !symbols.blit_centered(rgba, w, h, 334, 300, 40, 15, "NA_04.bmp") {
-        fill_rect(rgba, w, h, 334, 300, 40, 15, colors::GREY);
-    }
+    // Scale soft keys (NA_03/04 enabled, NA_05/06 disabled)
+    let scale_up_en = status.planning_max_m > 1000.0;
+    let scale_dn_en = status.planning_max_m < 32_000.0;
+    paint_icon_button(
+        rgba,
+        w,
+        h,
+        334,
+        15,
+        40,
+        15,
+        symbols,
+        if scale_up_en { "NA_03.bmp" } else { "NA_05.bmp" },
+        status.pressed_hit == Some(DmiHit::ScaleUp),
+    );
+    paint_icon_button(
+        rgba,
+        w,
+        h,
+        334,
+        300,
+        40,
+        15,
+        symbols,
+        if scale_dn_en { "NA_04.bmp" } else { "NA_06.bmp" },
+        status.pressed_hit == Some(DmiHit::ScaleDown),
+    );
 
     // Right menu bar soft keys (text; TCS icons TBD)
     paint_soft_keys(rgba, w, h, status);
@@ -132,31 +149,93 @@ fn paint_message_area(
     fill_rect(rgba, w, h, 54, 365, 234, 100, colors::PANEL);
     stroke_rect(rgba, w, h, 54, 365, 234, 100, colors::FRAME);
 
-    // Up to 5 rows × 20 px (OR Full layout).
-    let lines: Vec<&str> = status.messages.iter().rev().take(5).map(|s| s.as_str()).collect();
-    for (i, line) in lines.iter().rev().enumerate() {
+    // Newest-first list, 5 lines/page (OR MessageArea).
+    let newest_first: Vec<&str> = status.messages.iter().rev().map(|s| s.as_str()).collect();
+    let pages = ((newest_first.len().max(1) + 4) / 5).max(1);
+    let page = status.message_page.min(pages - 1);
+    let start = page * 5;
+    let chunk = &newest_first[start..newest_first.len().min(start + 5)];
+    for (i, line) in chunk.iter().enumerate() {
         let ly = 365 + 4 + (i as i32) * 18;
         blit_text(rgba, w, h, 60, ly, 8, 12, line, colors::GREY);
     }
 
-    fill_rect(rgba, w, h, 288, 365, 46, 50, colors::PANEL);
-    fill_rect(rgba, w, h, 288, 415, 46, 50, colors::PANEL);
-    stroke_rect(rgba, w, h, 288, 365, 46, 50, colors::FRAME);
-    stroke_rect(rgba, w, h, 288, 415, 46, 50, colors::FRAME);
-    let _ = symbols.blit_centered(rgba, w, h, 288, 365, 46, 50, "NA_13.bmp");
-    let _ = symbols.blit_centered(rgba, w, h, 288, 415, 46, 50, "NA_14.bmp");
+    let can_up = page + 1 < pages;
+    let can_down = page > 0;
+    paint_icon_button(
+        rgba,
+        w,
+        h,
+        288,
+        365,
+        46,
+        50,
+        symbols,
+        if can_up { "NA_13.bmp" } else { "NA_15.bmp" },
+        status.pressed_hit == Some(DmiHit::ScrollUp),
+    );
+    paint_icon_button(
+        rgba,
+        w,
+        h,
+        288,
+        415,
+        46,
+        50,
+        symbols,
+        if can_down { "NA_14.bmp" } else { "NA_16.bmp" },
+        status.pressed_hit == Some(DmiHit::ScrollDown),
+    );
 }
 
 fn paint_soft_keys(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
     for i in 0..6 {
         let y = 15 + 50 * i;
-        fill_rect(rgba, w, h, 580, y, 60, 48, colors::PANEL);
+        let pressed = status.pressed_hit == Some(DmiHit::SoftKey(i as u8));
+        fill_rect(
+            rgba,
+            w,
+            h,
+            580,
+            y,
+            60,
+            48,
+            if pressed { colors::DARK_GREY } else { colors::PANEL },
+        );
         stroke_rect(rgba, w, h, 580, y, 60, 48, colors::FRAME);
         if let Some(label) = status.soft_keys.get(i as usize) {
             if !label.is_empty() {
                 blit_text(rgba, w, h, 586, y + 18, 7, 10, label, colors::GREY);
             }
         }
+    }
+}
+
+fn paint_icon_button(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    x: i32,
+    y: i32,
+    bw: i32,
+    bh: i32,
+    symbols: &EtcsSymbols,
+    icon: &str,
+    pressed: bool,
+) {
+    fill_rect(
+        rgba,
+        w,
+        h,
+        x,
+        y,
+        bw,
+        bh,
+        if pressed { colors::DARK_GREY } else { colors::PANEL },
+    );
+    stroke_rect(rgba, w, h, x, y, bw, bh, colors::FRAME);
+    if !symbols.blit_centered(rgba, w, h, x, y, bw, bh, icon) {
+        fill_rect(rgba, w, h, x + 4, y + 4, bw - 8, bh - 8, colors::GREY);
     }
 }
 
@@ -192,8 +271,8 @@ fn paint_target_distance(
     let Some(dist) = status.target_distance_m else {
         return;
     };
-    // Bar fill from bottom: log-ish 0–4000 m
-    let t = (dist / 4000.0).clamp(0.0, 1.0);
+    // Bar fill from bottom: 0–planning_max_m
+    let t = (dist / status.planning_max_m.max(1.0)).clamp(0.0, 1.0);
     let fill_h = ((1.0 - t) * (bh - 8) as f64) as i32;
     fill_rect(
         rgba,
