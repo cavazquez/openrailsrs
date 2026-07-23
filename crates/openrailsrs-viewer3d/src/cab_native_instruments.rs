@@ -10,9 +10,7 @@ use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use openrailsrs_ace::read_ace;
-use openrailsrs_formats::{
-    CabControl, CabDigitalParams, CabGaugeParams, ControlType, ShapeFile,
-};
+use openrailsrs_formats::{CabControl, CabDigitalParams, CabGaugeParams, ControlType};
 
 use crate::cab_cvf::{
     CabCvfRuntime, CabCvfState, MatrixDriver, cvf_control_at_order, dial_control_value,
@@ -460,6 +458,7 @@ fn digit_font_file_name(control: &ControlType, font_ace: Option<&str>) -> String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_formats::ShapeFile;
 
     #[test]
     fn gauge_horizontal_grows_positive_x() {

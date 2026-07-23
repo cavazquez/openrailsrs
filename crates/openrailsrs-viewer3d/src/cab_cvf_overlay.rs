@@ -799,6 +799,7 @@ fn spawn_cvf_control(
         }
         CabControl::Lever { .. }
         | CabControl::Gauge { .. }
+        | CabControl::Screen { .. }
         | CabControl::Unknown { .. } => (0, 0),
     }
 }

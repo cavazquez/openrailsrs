@@ -1607,6 +1607,18 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             position.x,
             position.y,
         ),
+        CabControl::Screen {
+            control_type,
+            graphic,
+            position,
+            hide_if_disabled,
+            ..
+        } => println!(
+            "    [{index}] Screen {} graphic={graphic} hide_if_disabled={hide_if_disabled} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            position.x,
+            position.y,
+        ),
         CabControl::TwoStateDisplay {
             control_type,
             graphic,

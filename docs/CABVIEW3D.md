@@ -13,6 +13,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Ocultar exterior en L1 | ✅ |
 | CVF overlay en cabina 3D | ❌ off (#151) |
 | Matrices nativas `TYPE:orden[:p1[:p2]]` (#157) | ✅ parse + MultiState/Dial + Digit/GaugeNative quads |
+| Pantalla ETCS / `ScreenDisplay` (#158) | ✅ stub DMI (velocidad/límite) en prim ACE coincidente |
 | Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |

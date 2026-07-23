@@ -49,6 +49,8 @@ pub enum ControlType {
     EqRes,
     LoadMeter,
     PenaltyApp,
+    /// OR `ORTS_ETCS` screen / DMI.
+    OrtsEtcs,
     Generic(String),
 }
 
@@ -79,6 +81,7 @@ impl ControlType {
                 "EQ_RES" => return Self::EqRes,
                 "LOAD_METER" => return Self::LoadMeter,
                 "PENALTY_APP" => return Self::PenaltyApp,
+                "ORTS_ETCS" => return Self::OrtsEtcs,
                 _ => {}
             }
         }
@@ -100,6 +103,7 @@ impl ControlType {
             Self::EqRes => "EQ_RES",
             Self::LoadMeter => "LOAD_METER",
             Self::PenaltyApp => "PENALTY_APP",
+            Self::OrtsEtcs => "ORTS_ETCS",
             Self::Generic(s) => s.as_str(),
         }
     }
@@ -395,6 +399,15 @@ pub enum CabControl {
         graphic: String,
         gauge: CabGaugeParams,
     },
+    /// OR `ScreenDisplay` (ETCS DMI / animated cab screen).
+    Screen {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+        /// `Parameters ( key value … )` lowercased.
+        parameters: std::collections::HashMap<String, String>,
+        hide_if_disabled: bool,
+    },
     TwoStateDisplay {
         control_type: ControlType,
         position: ScreenRect,
@@ -466,6 +479,7 @@ impl CabControl {
             | CabControl::Dial { control_type, .. }
             | CabControl::Digital { control_type, .. }
             | CabControl::Gauge { control_type, .. }
+            | CabControl::Screen { control_type, .. }
             | CabControl::TwoStateDisplay { control_type, .. }
             | CabControl::TriStateDisplay { control_type, .. }
             | CabControl::Lever { control_type, .. } => Some(control_type),
@@ -717,6 +731,7 @@ fn parse_control_entry(entry: &[Ast]) -> Result<Option<CabControl>, FormatError>
         "DIAL" => parse_dial(entry)?,
         "DIGITAL" => parse_digital(entry)?,
         "GAUGE" => parse_gauge(entry)?,
+        "SCREENDISPLAY" | "SCREEN" => parse_screen(entry)?,
         "TWOSTATEDISPLAY" | "TWOSTATE" => parse_two_state(entry)?,
         "TRISTATEDISPLAY" | "TRISTATE" => parse_tri_state(entry)?,
         "LEVER" => parse_lever(entry)?,
@@ -975,6 +990,80 @@ fn parse_gauge(items: &[Ast]) -> Result<CabControl, FormatError> {
         graphic,
         gauge: parse_gauge_params(items),
     })
+}
+
+fn parse_screen(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "ScreenDisplay").unwrap_or(ScreenRect {
+        x: 0.0,
+        y: 0.0,
+        width: 640.0,
+        height: 480.0,
+    });
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::Screen {
+        control_type,
+        position,
+        graphic,
+        parameters: parse_screen_parameters(items),
+        hide_if_disabled: parse_hide_if_disabled(items),
+    })
+}
+
+fn parse_hide_if_disabled(items: &[Ast]) -> bool {
+    find_named_numbers(items, "HideIfDisabled")
+        .and_then(|n| n.first().copied())
+        .is_some_and(|v| v != 0.0)
+}
+
+fn parse_screen_parameters(items: &[Ast]) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    let _ = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() < 2 {
+            return None::<()>;
+        }
+        let Ast::Atom(Atom::Symbol(head)) = &list[0] else {
+            return None;
+        };
+        if !head.eq_ignore_ascii_case("Parameters") {
+            return None;
+        }
+        // `(Parameters ( Mode Full Size 640 ))` or flat key/value pairs / `(Key ( Value ))`.
+        let body: &[Ast] = if list.len() == 2 {
+            if let Ast::List(inner) = &list[1] {
+                inner.as_slice()
+            } else {
+                &list[1..]
+            }
+        } else {
+            &list[1..]
+        };
+        let tokens = flatten_param_tokens(body);
+        for pair in tokens.chunks(2) {
+            if pair.len() == 2 {
+                out.insert(pair[0].clone(), pair[1].clone());
+            }
+        }
+        Some(())
+    });
+    out
+}
+
+fn flatten_param_tokens(items: &[Ast]) -> Vec<String> {
+    let mut tokens = Vec::new();
+    for item in items {
+        match item {
+            Ast::Atom(a) => {
+                if let Some(s) = atom_to_string(a) {
+                    tokens.push(s.to_ascii_lowercase());
+                } else if let Some(n) = atom_to_number(a) {
+                    tokens.push(format!("{n}"));
+                }
+            }
+            Ast::List(sub) => tokens.extend(flatten_param_tokens(sub)),
+        }
+    }
+    tokens
 }
 
 fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
@@ -1677,6 +1766,43 @@ mod tests {
         assert!((x - 0.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
         let (x, y, _, _) = frames.frame_rect(500.0, 200.0, 6);
         assert!((x - 100.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn parse_screen_display_etcs() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (ScreenDisplay
+      (Type ( ORTS_ETCS SCREEN_DISPLAY ))
+      (Position (0 0 640 480))
+      (Graphic ( statictexture.ace ))
+      (Parameters ( Mode Full Size 640 ))
+      (HideIfDisabled ( 1 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::Screen {
+                control_type,
+                graphic,
+                parameters,
+                hide_if_disabled,
+                ..
+            } => {
+                assert_eq!(*control_type, ControlType::OrtsEtcs);
+                assert!(graphic.to_ascii_lowercase().contains("statictexture"));
+                assert!(*hide_if_disabled);
+                assert_eq!(parameters.get("mode").map(String::as_str), Some("full"));
+            }
+            other => panic!("expected Screen, got {other:?}"),
+        }
     }
 
     #[test]

@@ -612,6 +612,12 @@ pub fn sync_cab_interior(
                 Name::new("cab:interior:root"),
             ))
             .with_children(|root| {
+                let screen_ctrls: Vec<&openrailsrs_formats::CabControl> = cvf_state
+                    .runtime
+                    .as_ref()
+                    .map(|rt| crate::cab_screen::screen_controls(&rt.cvf))
+                    .unwrap_or_default();
+                let mut screen_claimed = vec![false; screen_ctrls.len()];
                 // Open Rails cab 3D uses SceneryShader (ambient/sun), not Bevy point lights.
                 for (pi, part) in asset.parts.iter().enumerate() {
                     let matrix_idx = part.cab_matrix_idx.or_else(|| {
@@ -664,6 +670,15 @@ pub fn sync_cab_interior(
                             });
                         }
                     }
+                    let _ = crate::cab_screen::try_attach_screen_to_part(
+                        &mut entity,
+                        part,
+                        &screen_ctrls,
+                        &mut screen_claimed,
+                        &mut images,
+                        &mut materials,
+                        &mut or_materials,
+                    );
                 }
                 if let Some(runtime) = cvf_state.runtime.as_ref() {
                     crate::cab_native_instruments::spawn_cab_native_instruments(
