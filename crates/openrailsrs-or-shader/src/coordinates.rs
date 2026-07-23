@@ -196,6 +196,18 @@ pub fn matrix3x3_to_affine(m: &[f64; 9], translation: Vec3) -> Affine3A {
     Affine3A::from_mat3_translation(matrix3x3_to_xna_mat3(m), translation)
 }
 
+/// True when `linear` cannot be represented as `Quat` × diagonal `scale` (true shear).
+///
+/// Orthogonal Matrix3x3 (rotation / non-uniform scale / reflection) returns `false` so we do
+/// **not** force special paths for ordinary props (#174 regression: `linear.is_some()` ≠ shear).
+pub fn linear_requires_affine(linear: Mat3, rotation: Quat, scale: Vec3) -> bool {
+    let trs = Mat3::from_quat(rotation) * Mat3::from_diagonal(scale);
+    const EPS: f32 = 1.5e-3;
+    (linear.x_axis - trs.x_axis).length() > EPS
+        || (linear.y_axis - trs.y_axis).length() > EPS
+        || (linear.z_axis - trs.z_axis).length() > EPS
+}
+
 /// Decompose an MSTS `Matrix3×3` into a Bevy `Quat` and a non-uniform scale `Vec3`.
 ///
 /// Follows Open Rails XNA convention (`Scenery.cs`): each column's Z component is negated,
@@ -757,6 +769,23 @@ mod tests {
         let affine = matrix3x3_to_affine(&m, Vec3::new(10.0, 2.0, -3.0));
         assert_mat3_close(bevy, Mat3::from(affine.matrix3), 1e-4);
         assert!((affine.translation.x - 10.0).abs() < 1e-4);
+        assert!(
+            linear_requires_affine(linear, rot, scale),
+            "shear must trip linear_requires_affine"
+        );
+    }
+
+    #[test]
+    fn linear_requires_affine_false_for_orthogonal_matrix3x3() {
+        // Pure non-uniform scale + Y rotation — TRS round-trips; do not force affine paths (#174).
+        let m = [
+            0.0_f64, 0.0, 2.0, //
+            0.0, 1.5, 0.0, //
+            -2.0, 0.0, 0.0,
+        ];
+        let linear = matrix3x3_to_xna_mat3(&m);
+        let (rot, scale) = matrix3x3_to_rotation_scale(&m);
+        assert!(!linear_requires_affine(linear, rot, scale));
     }
 
     /// Inverse of [`matrix3x3_to_xna_mat3`] for unit tests (row-major MSTS Matrix3×3).

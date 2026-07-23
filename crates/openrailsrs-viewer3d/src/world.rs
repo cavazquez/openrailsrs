@@ -20,9 +20,7 @@ use openrailsrs_bevy_scenery::shapes::{
 };
 use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TILE_SIZE_M, TileBound, TileCoord};
 use openrailsrs_bevy_scenery::{
-    FnPlacementAdapter, LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics,
-    WorldObjectPlacement, object_placement, plan_shape_part_spawns, resolve_shape_parts,
-    world_item_placement,
+    LoadFailure, MstsAssetKind, MstsLoadCause, MstsLoadDiagnostics, world_item_placement,
 };
 use openrailsrs_formats::{
     ShapeFile, WorldFile, WorldItem, msts_tile_world_origin, msts_tile_x_index_for_coord,
@@ -33,7 +31,8 @@ use crate::camera::CameraFollowMode;
 #[cfg(test)]
 use crate::coordinates::qdir_to_quat;
 use crate::coordinates::{
-    matrix3x3_to_rotation_scale, msts_local_offset_to_bevy, msts_tile_local_to_bevy,
+    linear_requires_affine, matrix3x3_to_rotation_scale, msts_local_offset_to_bevy,
+    msts_tile_local_to_bevy,
 };
 use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
@@ -129,6 +128,68 @@ pub struct ShapeInstancePlacement {
     pub auto_z_bias: bool,
     /// WORLD `SignalSubObj` bitmask when this instance is a Signal mesh (#80).
     pub signal_sub_obj: Option<u32>,
+}
+
+/// True shear: `linear` does not round-trip via Quat×scale (#139 / #174).
+///
+/// Ordinary Matrix3x3 (rotation/scale/reflection) must stay on the TRS entity path —
+/// do **not** treat `linear.is_some()` as shear.
+fn placement_has_shear(p: &ShapeInstancePlacement) -> bool {
+    p.linear
+        .is_some_and(|lin| linear_requires_affine(lin, p.transform.rotation, p.transform.scale))
+}
+
+/// Bake XNA linear into mesh positions/normals; Transform keeps translation only (#139).
+fn bake_linear_into_mesh(mesh: &Mesh, linear: Mat3) -> Mesh {
+    let mut out = mesh.clone();
+    if let Some(VertexAttributeValues::Float32x3(positions)) =
+        out.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+    {
+        for p in positions.iter_mut() {
+            let v = linear * Vec3::from_array(*p);
+            *p = v.to_array();
+        }
+    }
+    // Normal transform: inverse-transpose of linear (safe for shear).
+    let normal_m = if linear.determinant().abs() > 1e-8 {
+        linear.inverse().transpose()
+    } else {
+        linear
+    };
+    if let Some(VertexAttributeValues::Float32x3(normals)) =
+        out.attribute_mut(Mesh::ATTRIBUTE_NORMAL)
+    {
+        for n in normals.iter_mut() {
+            let v = (normal_m * Vec3::from_array(*n)).normalize_or_zero();
+            *n = if v.length_squared() > 1e-12 {
+                v.to_array()
+            } else {
+                *n
+            };
+        }
+    }
+    out
+}
+
+/// View Transform + mesh handle: bake shear into mesh when needed; else TRS as authored.
+fn view_mesh_for_placement(
+    meshes: &mut Assets<Mesh>,
+    part_mesh: &Handle<Mesh>,
+    p: &ShapeInstancePlacement,
+    origin: &FloatingOrigin,
+) -> (Transform, Handle<Mesh>) {
+    let mut tf = view_transform(p.transform, origin);
+    if let Some(linear) = p.linear.filter(|_| placement_has_shear(p)) {
+        let Some(src) = meshes.get(part_mesh) else {
+            return (tf, part_mesh.clone());
+        };
+        let baked = bake_linear_into_mesh(src, linear);
+        tf.rotation = Quat::IDENTITY;
+        tf.scale = Vec3::ONE;
+        (tf, meshes.add(baked))
+    } else {
+        (tf, part_mesh.clone())
+    }
 }
 
 /// Clone material with OR AutoZBias when the shared cache asset has ZBias≈0 (#103).
@@ -2005,12 +2066,12 @@ fn append_shape_spawn_entries_for_transforms(
                 } else {
                     *shape_mesh_count += tile_placements.len();
                     for p in &tile_placements {
-                        let tf = view_transform(p.transform, origin);
+                        let (tf, mesh) = view_mesh_for_placement(meshes, &part.mesh, p, origin);
                         let mat =
                             material_with_auto_z_bias(materials, &part.material, p.auto_z_bias);
                         spawn_queue.push((
                             tf,
-                            Mesh3d(part.mesh.clone()),
+                            Mesh3d(mesh),
                             MeshMaterial3d(mat),
                             Name::new("world:mesh"),
                             WorldSceneryLod {
@@ -2076,46 +2137,30 @@ fn append_shape_spawn_entries_for_transforms(
             }
         }
     } else {
-        // Static non-instanced path: shared plan core (#115). LOD/instancing/anim stay above.
-        // Also used for SignalSubObj-filtered instances (#80).
+        // Static non-instanced path (#115 / SignalSubObj #80). Shear → bake into mesh (#139).
         for inst in placements {
             let inst_parts = parts_for_mask(inst.signal_sub_obj);
             *shape_mesh_count += inst_parts.len();
-            let placement = object_placement(
-                inst.transform.translation,
-                inst.transform.rotation,
-                inst.transform.scale,
-                inst.tile_x,
-                inst.tile_z,
-            );
-            let adapter = FnPlacementAdapter(|p: &WorldObjectPlacement| {
-                view_transform(p.transform(), origin)
-            });
-            let parts = resolve_shape_parts(
-                shape_path,
-                inst_parts.iter().map(|&(part_index, part)| {
-                    (
-                        part_index,
-                        part.prim_state_idx,
-                        part.mesh.clone(),
-                        material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias),
-                    )
-                }),
-            );
-            for planned in plan_shape_part_spawns(&parts, placement, &adapter) {
+            for &(part_index, part) in &inst_parts {
+                let (tf, mesh) = view_mesh_for_placement(meshes, &part.mesh, inst, origin);
+                let material =
+                    material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
                 spawn_queue.push((
-                    planned.transform,
-                    Mesh3d(planned.part.mesh),
-                    MeshMaterial3d(planned.part.material),
+                    tf,
+                    Mesh3d(mesh),
+                    MeshMaterial3d(material),
                     Name::new("world:mesh"),
                     WorldSceneryLod {
                         enabled: true,
                         shape_path: shape_path.to_path_buf(),
-                        prim_state_idx: planned.part.id.prim_state_idx,
-                        part_index: planned.part.id.part_index,
+                        prim_state_idx: part.prim_state_idx,
+                        part_index,
                         lod_idx: initial_lod_idx,
                     },
-                    planned.placement.tile,
+                    WorldTileBound {
+                        tile_x: inst.tile_x,
+                        tile_z: inst.tile_z,
+                    },
                 ));
             }
         }
@@ -3973,6 +4018,77 @@ mod tests {
         assert!((q.y - 0.0).abs() < 1e-4);
         assert!((q.z - 0.0).abs() < 1e-4);
         assert!((q.w - 1.0).abs() < 1e-4 || (q.w + 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn placement_has_shear_only_for_true_shear() {
+        let shear = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.35, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let sheared = ShapeInstancePlacement {
+            transform: Transform {
+                translation: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            linear: Some(shear),
+            tile_x: 0,
+            tile_z: 0,
+            auto_z_bias: false,
+            signal_sub_obj: None,
+        };
+        assert!(placement_has_shear(&sheared));
+
+        let (rot, scale) =
+            matrix3x3_to_rotation_scale(&[2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0]);
+        let orthogonal = ShapeInstancePlacement {
+            transform: Transform {
+                translation: Vec3::ZERO,
+                rotation: rot,
+                scale,
+            },
+            linear: Some(Mat3::from_quat(rot) * Mat3::from_diagonal(scale)),
+            tile_x: 0,
+            tile_z: 0,
+            auto_z_bias: false,
+            signal_sub_obj: None,
+        };
+        assert!(
+            !placement_has_shear(&orthogonal),
+            "orthogonal Matrix3x3 must not force shear bake (#174)"
+        );
+    }
+
+    #[test]
+    fn bake_linear_into_mesh_applies_shear_to_positions() {
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![[1.0_f32, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        );
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_NORMAL,
+            vec![[0.0_f32, 1.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
+        );
+        let shear = Mat3::from_cols(
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.5, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        );
+        let baked = bake_linear_into_mesh(&mesh, shear);
+        let VertexAttributeValues::Float32x3(pos) =
+            baked.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+        else {
+            panic!("positions");
+        };
+        // (0,1,0) → (0.5, 1, 0) under this shear.
+        assert!((pos[1][0] - 0.5).abs() < 1e-4);
+        assert!((pos[1][1] - 1.0).abs() < 1e-4);
     }
 
     #[test]

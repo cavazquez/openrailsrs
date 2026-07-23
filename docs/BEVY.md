@@ -54,4 +54,4 @@ Scripts: `./scripts/run_render3d_*.sh`. Controles render3d: WASD/QE · RMB · F3
 
 Sim live, cabina CVF, floating origin, `--run-corridor`, parse `.act` (local a render3d).
 
-Ver también: [`VIEWER3D.md`](VIEWER3D.md) · [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
+Ver también: [`VIEWER3D.md`](VIEWER3D.md) · [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md) · [`BEVY_TRANSFORMS.md`](BEVY_TRANSFORMS.md) (DirectX/MSTS → `Transform` / `Mat4`).

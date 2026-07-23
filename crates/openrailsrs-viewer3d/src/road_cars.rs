@@ -2,21 +2,55 @@
 //!
 //! v1: one deterministic car per spawner, posed on the RDB segment between the
 //! two `TrItemId (1 …)` endpoints, with simple ping-pong motion at `CarAvSpeed`.
+//! Shapes spawn **per prim_state part** (like train cars). Materials are unlit
+//! with albedo ×1: lit PBR under station ambient washes pale ACE vans to white,
+//! and legacy scenery unlit×4 clips the same cream albedos.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, load_shape_render_asset_from_path, resolve_shape_path,
+    texture_search_dirs_for_shape,
 };
+use crate::train::train_part_casts_shadow;
 use crate::viewer_log;
 use crate::world::{
     RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz, visible_radius_m,
 };
 
 const COLOR_CAR_FALLBACK: Color = Color::srgb(0.75, 0.22, 0.18);
+
+/// MSTS carspawn atlases are fixed-function albedos (cream Escort vans, etc.).
+/// Draw **unlit** with albedo ×1 and the ACE also on emissive so station ambient /
+/// PBR cannot wash pale vans to solid white (and so missing-bind is obvious).
+fn apply_road_car_albedo_materials(
+    asset: &ShapeRenderAsset,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    for part in &asset.parts {
+        let Some(mut mat) = materials.get_mut(&part.material) else {
+            continue;
+        };
+        mat.unlit = true;
+        mat.base_color = Color::WHITE;
+        mat.metallic = 0.0;
+        mat.reflectance = 0.5;
+        mat.perceptual_roughness = 1.0;
+        mat.fog_enabled = false;
+        // Same atlas on emissive: survives lit/unlit path quirks under bright interiors.
+        if let Some(tex) = mat.base_color_texture.clone() {
+            mat.emissive = LinearRgba::WHITE;
+            mat.emissive_texture = Some(tex);
+        } else {
+            mat.emissive = LinearRgba::BLACK;
+            mat.emissive_texture = None;
+        }
+    }
+}
 /// Convert `CarAvSpeed` (OR stores ~km/h style values used as m/s*scale in viewer).
 /// OpenRails treats `CarAvSpeed` as m/s in RoadCars; Chiltern uses 20 → 20 m/s.
 fn car_speed_mps(car_av_speed: f32) -> f32 {
@@ -183,6 +217,7 @@ pub fn spawn_road_car_objects(
                 rotation: rot,
                 scale: Vec3::ONE,
             },
+            Visibility::default(),
             Name::new(format!(
                 "roadcar:{}:{}",
                 patch.list_name.as_deref().unwrap_or("Default"),
@@ -197,10 +232,13 @@ pub fn spawn_road_car_objects(
                 .or_insert_with(|| {
                     let path = resolve_shape_path(&assets.route_dir, &car.shape)
                         .or_else(|| assets.resolve_shape(&car.shape))?;
-                    let dirs = [assets.route_dir.as_path()];
-                    load_shape_render_asset_from_path(
+                    // Same TEXTURES/GLOBAL search as WORLD/train (not just route_dir).
+                    let tex_dirs = texture_search_dirs_for_shape(&path, &assets.route_dir);
+                    let dir_refs: Vec<&std::path::Path> =
+                        tex_dirs.iter().map(PathBuf::as_path).collect();
+                    let asset = load_shape_render_asset_from_path(
                         &path,
-                        &dirs,
+                        &dir_refs,
                         Some(80.0),
                         meshes,
                         images,
@@ -208,21 +246,41 @@ pub fn spawn_road_car_objects(
                         &mut texture_cache,
                         COLOR_CAR_FALLBACK,
                         false,
-                    )
+                    )?;
+                    apply_road_car_albedo_materials(&asset, materials);
+                    let textured = asset.parts.iter().filter(|p| p.has_texture).count();
+                    viewer_log!(
+                        "openrailsrs-viewer3d: roadcar shape {} — {} part(s), {} textured",
+                        path.file_name().and_then(|n| n.to_str()).unwrap_or("?"),
+                        asset.parts.len(),
+                        textured
+                    );
+                    Some(asset)
                 })
                 .clone();
             if let Some(asset) = asset {
-                used_shape = true;
-                shaped += 1;
-                let material = asset
-                    .parts
-                    .first()
-                    .map(|p| p.material.clone())
-                    .unwrap_or_else(|| fallback_mat.clone());
-                entity.insert((
-                    Mesh3d(asset.combined_mesh.clone()),
-                    MeshMaterial3d(material),
-                ));
+                if asset.parts.is_empty() {
+                    // Keep fallback below.
+                } else {
+                    used_shape = true;
+                    shaped += 1;
+                    // One MeshMaterial3d on combined_mesh painted the whole car with the
+                    // first prim_state (often glass) → full-bright white on the platform.
+                    entity.with_children(|parent| {
+                        for (pi, part) in asset.parts.iter().enumerate() {
+                            let mut part_entity = parent.spawn((
+                                Mesh3d(part.mesh.clone()),
+                                MeshMaterial3d(part.material.clone()),
+                                Transform::default(),
+                                Visibility::Visible,
+                                Name::new(format!("roadcar:part:{pi}:{}", part.prim_state_idx)),
+                            ));
+                            if !train_part_casts_shadow(part.is_transparent) {
+                                part_entity.insert(NotShadowCaster);
+                            }
+                        }
+                    });
+                }
             }
         }
         if !used_shape {
@@ -347,5 +405,92 @@ mod tests {
                 p.list_name
             );
         }
+    }
+
+    /// Mini1 (carspawn.dat) has body + glass; a single combined material paints everything white.
+    #[test]
+    fn chiltern_mini1_road_car_has_distinct_part_materials() {
+        let Some(route) = chiltern_route() else {
+            return;
+        };
+        let shape = route.join("SHAPES/MINI1.S");
+        if !shape.is_file() || !route.join("TEXTURES/MiniTexture1.ace").is_file() {
+            return;
+        }
+
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let tex_dirs = texture_search_dirs_for_shape(&shape, &route);
+        let dir_refs: Vec<&std::path::Path> = tex_dirs.iter().map(PathBuf::as_path).collect();
+        let asset = load_shape_render_asset_from_path(
+            &shape,
+            &dir_refs,
+            Some(80.0),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            COLOR_CAR_FALLBACK,
+            false,
+        )
+        .expect("MINI1.S load");
+        assert!(
+            asset.parts.len() >= 2,
+            "expected multi-part Mini1, got {}",
+            asset.parts.len()
+        );
+        assert!(
+            asset.parts.iter().any(|p| p.has_texture),
+            "expected at least one textured part"
+        );
+        let first = asset.parts[0].material.id();
+        assert!(
+            asset.parts.iter().any(|p| p.material.id() != first),
+            "parts must not share a single material handle (combined-mesh bug)"
+        );
+    }
+
+    /// Escort van ACE is pale cream; lit station wash / unlit×4 both read as solid white.
+    #[test]
+    fn chiltern_tbescvan_road_car_materials_are_unlit_albedo() {
+        let Some(route) = chiltern_route() else {
+            return;
+        };
+        let shape = route.join("SHAPES/TBescvan.s");
+        if !shape.is_file() || !route.join("TEXTURES/Escortvan.ace").is_file() {
+            return;
+        }
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut texture_cache = HashMap::new();
+        let tex_dirs = texture_search_dirs_for_shape(&shape, &route);
+        let dir_refs: Vec<&std::path::Path> = tex_dirs.iter().map(PathBuf::as_path).collect();
+        let asset = load_shape_render_asset_from_path(
+            &shape,
+            &dir_refs,
+            Some(80.0),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut texture_cache,
+            COLOR_CAR_FALLBACK,
+            false,
+        )
+        .expect("TBescvan.s load");
+        apply_road_car_albedo_materials(&asset, &mut materials);
+        let mat = materials.get(&asset.parts[0].material).expect("material");
+        assert!(mat.unlit, "road cars must sample ACE unlit");
+        assert!(mat.base_color_texture.is_some());
+        assert!(mat.emissive_texture.is_some(), "ACE also on emissive");
+        let c = mat.base_color.to_linear();
+        assert!(
+            (c.red - 1.0).abs() < 0.01 && (c.green - 1.0).abs() < 0.01,
+            "albedo tint must be ×1 (not scenery×4), got {:?}",
+            mat.base_color
+        );
+        assert!((mat.emissive.red - 1.0).abs() < 0.01);
     }
 }

@@ -3,6 +3,7 @@
 | Doc | Contenido |
 |-----|-----------|
 | [`BEVY.md`](BEVY.md) | Crates Bevy, viewer3d vs render3d |
+| [`BEVY_TRANSFORMS.md`](BEVY_TRANSFORMS.md) | DirectX/MSTS → Bevy `Transform` / `Mat4` |
 | [`VIEWER3D.md`](VIEWER3D.md) | Estado viewer / gaps |
 | [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md) | Tests, check.sh, live, goldens |
 | [`CHILTERN.md`](CHILTERN.md) | Content OR + comandos Chiltern |

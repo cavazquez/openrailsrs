@@ -1816,6 +1816,37 @@ SIMISA@@@@@@@@@@JINX0w0t______
 }
 
 #[cfg(test)]
+mod scientific_notation_tests {
+    use super::*;
+
+    #[test]
+    fn qdirection_preserves_scientific_notation() {
+        // Chiltern `Doc_OrsettTerrace.s` uses this tiny Z component. Dropping
+        // `e-05` turns it into -1.29716 and rolls the whole building onto its side.
+        let text = r#"
+SIMISA@@@@@@@@@@JINX0w0t______
+Tr_Worldfile (
+    Static (
+        UiD ( 9457 )
+        FileName ( Doc_OrsettTerrace.s )
+        Position ( 799.741 34.3371 339.414 )
+        QDirection ( -0.000318248 -0.670762 -1.29716e-05 0.741673 )
+    )
+)
+        "#;
+        let ast = load_world_ast(text).expect("parse");
+        let world = WorldFile::from_ast(&ast, -6080, 14925);
+        let item = world.items.first().expect("static item");
+        let qdir = item.qdirection().expect("QDirection");
+
+        assert!((qdir[0] - -0.000318248).abs() < 1e-12);
+        assert!((qdir[1] - -0.670762).abs() < 1e-12);
+        assert!((qdir[2] - -1.29716e-05).abs() < 1e-12);
+        assert!((qdir[3] - 0.741673).abs() < 1e-12);
+    }
+}
+
+#[cfg(test)]
 mod pickup_hazard_tests {
     use super::*;
     use std::path::PathBuf;

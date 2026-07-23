@@ -10,4 +10,6 @@
 - Floating origin **no mueve Y** (altura ya normalizada).
 - Snap TDB: `OPENRAILSRS_TDB_SNAP_RADIUS_M` (default 2500). Mapping grafo→TDB: ID validado ≤25 m al grafo **absoluto**.
 
+Matrices / TRS vs shear: [`BEVY_TRANSFORMS.md`](BEVY_TRANSFORMS.md).
+
 Detalle de tests: [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md). Vía: [`TRACK_MSTS.md`](TRACK_MSTS.md).

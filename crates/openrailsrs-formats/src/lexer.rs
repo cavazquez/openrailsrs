@@ -71,7 +71,7 @@ impl<'a> Lexer<'a> {
                 Ok(Some(Token::RParen))
             }
             Some(b'"') => Ok(Some(self.read_string()?)),
-            Some(b'-')
+            Some(b'-' | b'+')
                 if self
                     .input
                     .get(self.pos + 1)
@@ -119,9 +119,7 @@ impl<'a> Lexer<'a> {
 
     fn read_number(&mut self) -> Result<Token, FormatError> {
         let start = self.pos;
-        let mut neg = false;
-        if self.peek_byte() == Some(b'-') {
-            neg = true;
+        if matches!(self.peek_byte(), Some(b'-' | b'+')) {
             self.pos += 1;
         }
         let int_start = self.pos;
@@ -134,13 +132,9 @@ impl<'a> Lexer<'a> {
                 text: "expected digit".into(),
             });
         }
-        let int_slice = std::str::from_utf8(&self.input[int_start..self.pos]).unwrap();
-        let int_val: i64 = int_slice.parse().map_err(|_| FormatError::InvalidNumber {
-            offset: start,
-            text: int_slice.into(),
-        })?;
-
+        let mut is_float = false;
         if self.peek_byte() == Some(b'.') {
+            is_float = true;
             self.pos += 1;
             let frac_start = self.pos;
             while matches!(self.peek_byte(), Some(b) if b.is_ascii_digit()) {
@@ -152,15 +146,42 @@ impl<'a> Lexer<'a> {
                     text: "expected fractional digits".into(),
                 });
             }
-            let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-            let n: f64 = s.parse().map_err(|_| FormatError::InvalidNumber {
-                offset: start,
-                text: s.into(),
-            })?;
-            return Ok(Token::Number(if neg { -n.abs() } else { n }));
         }
 
-        Ok(Token::Integer(if neg { -int_val } else { int_val }))
+        let exponent_is_numeric = matches!(self.peek_byte(), Some(b'e' | b'E')) && {
+            let mut lookahead = self.pos + 1;
+            if matches!(self.input.get(lookahead), Some(b'-' | b'+')) {
+                lookahead += 1;
+            }
+            self.input
+                .get(lookahead)
+                .is_some_and(|b| b.is_ascii_digit())
+        };
+        if exponent_is_numeric {
+            is_float = true;
+            self.pos += 1;
+            if matches!(self.peek_byte(), Some(b'-' | b'+')) {
+                self.pos += 1;
+            }
+            while matches!(self.peek_byte(), Some(b) if b.is_ascii_digit()) {
+                self.pos += 1;
+            }
+        }
+
+        let text = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
+        if is_float {
+            let value: f64 = text.parse().map_err(|_| FormatError::InvalidNumber {
+                offset: start,
+                text: text.into(),
+            })?;
+            Ok(Token::Number(value))
+        } else {
+            let value: i64 = text.parse().map_err(|_| FormatError::InvalidNumber {
+                offset: start,
+                text: text.into(),
+            })?;
+            Ok(Token::Integer(value))
+        }
     }
 
     fn read_symbol(&mut self) -> Result<Token, FormatError> {
@@ -184,5 +205,37 @@ impl<'a> Lexer<'a> {
             })?
             .to_string();
         Ok(Token::Symbol(s))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn token(text: &str) -> Token {
+        Lexer::new(text)
+            .next_token()
+            .expect("valid token")
+            .expect("one token")
+    }
+
+    #[test]
+    fn lexes_scientific_notation_as_one_number() {
+        assert_eq!(token("-1.29716e-05"), Token::Number(-1.29716e-05));
+        assert_eq!(token("2E+3"), Token::Number(2_000.0));
+        assert_eq!(token("+4.5e1"), Token::Number(45.0));
+    }
+
+    #[test]
+    fn keeps_plain_integers_and_decimals_compatible() {
+        assert_eq!(token("-12"), Token::Integer(-12));
+        assert_eq!(token("3.25"), Token::Number(3.25));
+    }
+
+    #[test]
+    fn digit_prefixed_symbol_is_not_mistaken_for_an_exponent() {
+        let mut lexer = Lexer::new("4994E");
+        assert_eq!(lexer.next_token().unwrap(), Some(Token::Integer(4994)));
+        assert_eq!(lexer.next_token().unwrap(), Some(Token::Symbol("E".into())));
     }
 }
