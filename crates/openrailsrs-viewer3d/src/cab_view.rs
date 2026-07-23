@@ -665,6 +665,17 @@ pub fn sync_cab_interior(
                         }
                     }
                 }
+                if let Some(runtime) = cvf_state.runtime.as_ref() {
+                    crate::cab_native_instruments::spawn_cab_native_instruments(
+                        root,
+                        runtime,
+                        &cab_shape,
+                        &assets.route_dir,
+                        &mut meshes,
+                        &mut images,
+                        &mut materials,
+                    );
+                }
             });
     });
 

@@ -5,6 +5,7 @@ Redistributable `.eng` snippets for cab/viewpoint unit tests. These always run i
 | File | Purpose |
 |------|---------|
 | `orts3d_viewpoints.eng` | `ORTS3DCab` + `RotationLimit` + `StartDirection` + alternate rear viewpoint + `HeadOut` |
+| `speed.ace` | Atlas de dígitos OR (`ThreeDimCabDigit`, desde Open Rails Addons) |
 
 Content-heavy Pullman `.s` / ACE tests live in `openrailsrs-viewer3d` and are marked:
 

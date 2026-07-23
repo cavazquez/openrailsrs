@@ -158,7 +158,7 @@ pub fn cvf_control_at_order<'a>(
     None
 }
 
-fn matrix_driver_from_name(
+pub(crate) fn matrix_driver_from_name(
     name: &str,
     shape: &ShapeFile,
     matrix_idx: usize,
@@ -191,15 +191,21 @@ fn matrix_driver_from_name(
                 font_ace,
             })
         }
-        Some(CabControl::Unknown { kind }) if kind.eq_ignore_ascii_case("GAUGE") => {
-            // formats::CabControl::Gauge TBD; non-POINTER → solid native (OR default).
-            Some(MatrixDriver::GaugeNative {
+        Some(CabControl::Gauge { gauge, .. }) if gauge.is_pointer() => {
+            Some(MatrixDriver::MultiState {
                 control: parsed.control,
                 order: parsed.order,
-                width_mm: parsed.param1.parse().unwrap_or(10.0),
-                length_mm: parsed.param2.parse().unwrap_or(100.0),
+                param1: parsed.param1.parse().unwrap_or(0),
+                sub_part: parsed.sub_part,
+                anim_node,
             })
         }
+        Some(CabControl::Gauge { .. }) => Some(MatrixDriver::GaugeNative {
+            control: parsed.control,
+            order: parsed.order,
+            width_mm: parsed.param1.parse().unwrap_or(10.0),
+            length_mm: parsed.param2.parse().unwrap_or(100.0),
+        }),
         _ if control_is_lever(&parsed.control) => Some(MatrixDriver::Lever {
             control: parsed.control,
             order: parsed.order,
@@ -600,7 +606,7 @@ pub fn update_cab_cvf_controls(
                 }
             }
             MatrixDriver::GaugeNative { .. } | MatrixDriver::Digit { .. } => {
-                // Quads spawned by cab native instruments (#157 follow-up); matrix pivot only.
+                // Quads: `cab_native_instruments` (own entities, not shape parts).
             }
         }
     }

@@ -10,6 +10,7 @@
 pub mod cab_cvf;
 pub mod cab_cvf_overlay;
 pub mod cab_diag;
+pub mod cab_native_instruments;
 pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_view;
@@ -355,6 +356,8 @@ impl Plugin for ViewerPlugin {
                     cab_cvf_overlay::sync_cab_cvf_overlay.after(cab_view::sync_cab_interior),
                     cab_render::tag_cab_interior_render_layers.after(cab_view::sync_cab_interior),
                     cab_cvf::update_cab_cvf_controls.after(cab_view::sync_cab_interior),
+                    cab_native_instruments::update_cab_native_instruments
+                        .after(cab_view::sync_cab_interior),
                     cab_cvf_overlay::update_cab_cvf_overlay
                         .after(cab_cvf_overlay::sync_cab_cvf_overlay),
                     cab_cvf_overlay::handle_cab2d_mouse_controls

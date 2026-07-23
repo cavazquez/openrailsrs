@@ -277,6 +277,67 @@ impl Default for CabDigitalParams {
     }
 }
 
+/// Gauge bar metadata (`Orientation` / `DirIncrease` / colours / `Style`).
+///
+/// Open Rails: `CVCGauge` / `CabViewGaugeRenderer` — used by `ThreeDimCabGaugeNative`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CabGaugeParams {
+    pub scale_min: f64,
+    pub scale_max: f64,
+    /// 0 = horizontal, 1 = vertical.
+    pub orientation: i32,
+    /// `DirIncrease` (0/1); XOR with negative fraction flips growth axis.
+    pub direction: i32,
+    /// `POINTER` → shape MultiState; otherwise solid/liquid native quad.
+    pub style: Option<String>,
+    pub units: Option<String>,
+    /// RGBA 0–1 (`PositiveColour` / `ControlColour`).
+    pub positive_colour: Option<[f32; 4]>,
+    pub negative_colour: Option<[f32; 4]>,
+}
+
+impl Default for CabGaugeParams {
+    fn default() -> Self {
+        Self {
+            scale_min: 0.0,
+            scale_max: 1.0,
+            orientation: 0,
+            direction: 1,
+            style: None,
+            units: None,
+            positive_colour: Some([1.0, 1.0, 0.0, 1.0]),
+            negative_colour: Some([1.0, 0.0, 0.0, 1.0]),
+        }
+    }
+}
+
+impl CabGaugeParams {
+    /// OR `GetRangeFraction(offsetFromZero)`.
+    pub fn range_fraction(&self, value: f64, offset_from_zero: bool) -> f64 {
+        if value < self.scale_min {
+            return 0.0;
+        }
+        if value > self.scale_max {
+            return 1.0;
+        }
+        if (self.scale_max - self.scale_min).abs() < f64::EPSILON {
+            return 0.0;
+        }
+        let base = if offset_from_zero && self.scale_min < 0.0 {
+            0.0
+        } else {
+            self.scale_min
+        };
+        (value - base) / (self.scale_max - self.scale_min)
+    }
+
+    pub fn is_pointer(&self) -> bool {
+        self.style
+            .as_deref()
+            .is_some_and(|s| s.eq_ignore_ascii_case("POINTER"))
+    }
+}
+
 impl CabDigitalParams {
     /// Format a numeric reading like Open Rails digital cab displays.
     pub fn format_value(&self, value: f64) -> String {
@@ -327,6 +388,12 @@ pub enum CabControl {
         control_type: ControlType,
         position: ScreenRect,
         digital: CabDigitalParams,
+    },
+    Gauge {
+        control_type: ControlType,
+        position: ScreenRect,
+        graphic: String,
+        gauge: CabGaugeParams,
     },
     TwoStateDisplay {
         control_type: ControlType,
@@ -398,6 +465,7 @@ impl CabControl {
             CabControl::MultiStateDisplay { control_type, .. }
             | CabControl::Dial { control_type, .. }
             | CabControl::Digital { control_type, .. }
+            | CabControl::Gauge { control_type, .. }
             | CabControl::TwoStateDisplay { control_type, .. }
             | CabControl::TriStateDisplay { control_type, .. }
             | CabControl::Lever { control_type, .. } => Some(control_type),
@@ -648,6 +716,7 @@ fn parse_control_entry(entry: &[Ast]) -> Result<Option<CabControl>, FormatError>
         "MULTISTATEDISPLAY" => parse_multi_state(entry)?,
         "DIAL" => parse_dial(entry)?,
         "DIGITAL" => parse_digital(entry)?,
+        "GAUGE" => parse_gauge(entry)?,
         "TWOSTATEDISPLAY" | "TWOSTATE" => parse_two_state(entry)?,
         "TRISTATEDISPLAY" | "TRISTATE" => parse_tri_state(entry)?,
         "LEVER" => parse_lever(entry)?,
@@ -888,6 +957,87 @@ fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
         control_type,
         position,
         digital: parse_digital_params(items),
+    })
+}
+
+fn parse_gauge(items: &[Ast]) -> Result<CabControl, FormatError> {
+    let control_type = parse_control_type(items)?;
+    let position = find_screen_rect(items, "Gauge").unwrap_or(ScreenRect {
+        x: 0.0,
+        y: 0.0,
+        width: 1.0,
+        height: 1.0,
+    });
+    let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
+    Ok(CabControl::Gauge {
+        control_type,
+        position,
+        graphic,
+        gauge: parse_gauge_params(items),
+    })
+}
+
+fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
+    let mut gauge = CabGaugeParams::default();
+    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
+        if nums.len() >= 2 {
+            gauge.scale_min = nums[0];
+            gauge.scale_max = nums[1];
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "Orientation") {
+        if let Some(v) = nums.first() {
+            gauge.orientation = *v as i32;
+        }
+    }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
+        if let Some(v) = nums.first() {
+            gauge.direction = *v as i32;
+        }
+    }
+    gauge.style = parse_control_style(items);
+    gauge.units = find_string_in_list(items, "Units");
+    gauge.positive_colour = parse_named_control_colour(items, "PositiveColour")
+        .or(gauge.positive_colour);
+    gauge.negative_colour = parse_named_control_colour(items, "NegativeColour")
+        .or(gauge.negative_colour);
+    gauge
+}
+
+/// `PositiveColour ( n (ControlColour ( r g b )) … )` → RGBA 0–1 (A=1).
+fn parse_named_control_colour(items: &[Ast], key: &str) -> Option<[f32; 4]> {
+    walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
+        if list.len() < 2 {
+            return None;
+        }
+        let Ast::Atom(Atom::Symbol(head)) = &list[0] else {
+            return None;
+        };
+        if !head.eq_ignore_ascii_case(key) {
+            return None;
+        }
+        walk_lists_find(&Ast::List(list[1..].to_vec()), &mut |inner| {
+            if inner.len() < 2 {
+                return None;
+            }
+            let Ast::Atom(Atom::Symbol(h)) = &inner[0] else {
+                return None;
+            };
+            if !h.eq_ignore_ascii_case("ControlColour") {
+                return None;
+            }
+            let nums = flatten_numbers(&inner[1..]);
+            if nums.len() >= 3 {
+                Some([
+                    1.0,
+                    (nums[0] as f32 / 255.0).clamp(0.0, 1.0),
+                    (nums[1] as f32 / 255.0).clamp(0.0, 1.0),
+                    (nums[2] as f32 / 255.0).clamp(0.0, 1.0),
+                ])
+            } else {
+                None
+            }
+        })
     })
 }
 
@@ -1527,6 +1677,58 @@ mod tests {
         assert!((x - 0.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
         let (x, y, _, _) = frames.frame_rect(500.0, 200.0, 6);
         assert!((x - 100.0).abs() < 1e-3 && (y - 100.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn parse_gauge_orientation_colour_and_style() {
+        let src = r#"
+(Tr_CabViewFile
+  (CabViewType 2)
+  (CabViewFile "panel.ace")
+  (CabViewWindow (0 0 640 480))
+  (CabViewControls
+    (Gauge
+      (Type ( AMMETER ))
+      (Position (10 10 20 80))
+      (Style ( SOLID ))
+      (ScaleRange ( -100 100 ))
+      (Orientation ( 1 ))
+      (DirIncrease ( 1 ))
+      (Units ( AMPS ))
+      (PositiveColour ( 1 (ControlColour ( 0 255 0 )) ))
+      (NegativeColour ( 1 (ControlColour ( 255 0 0 )) ))
+    )
+    (Gauge
+      (Type ( BRAKE_PIPE ))
+      (Position (0 0 10 10))
+      (Style ( POINTER ))
+      (ScaleRange ( 0 5 ))
+    )
+  )
+)
+"#;
+        let ast = parse_from_first_paren(src).expect("parse");
+        let cvf = CabViewFile::from_ast(&ast).expect("typed");
+        match &cvf.controls[0] {
+            CabControl::Gauge { gauge, .. } => {
+                assert_eq!(gauge.orientation, 1);
+                assert_eq!(gauge.direction, 1);
+                assert!(!gauge.is_pointer());
+                assert_eq!(gauge.units.as_deref(), Some("AMPS"));
+                let pos = gauge.positive_colour.expect("pos");
+                assert!((pos[2] - 1.0).abs() < 1e-3); // G
+                assert!((gauge.range_fraction(0.0, true) - 0.0).abs() < 1e-6);
+                assert!((gauge.range_fraction(100.0, true) - 0.5).abs() < 1e-6);
+                // offsetFromZero: numerador = data − 0 → −100/200 = −0.5
+                assert!((gauge.range_fraction(-100.0, true) + 0.5).abs() < 1e-6);
+                assert!((gauge.range_fraction(-101.0, true) - 0.0).abs() < 1e-6);
+            }
+            other => panic!("expected Gauge, got {other:?}"),
+        }
+        match &cvf.controls[1] {
+            CabControl::Gauge { gauge, .. } => assert!(gauge.is_pointer()),
+            other => panic!("expected Gauge POINTER, got {other:?}"),
+        }
     }
 
     #[test]

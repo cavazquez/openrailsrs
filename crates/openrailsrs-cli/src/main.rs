@@ -1594,6 +1594,19 @@ fn print_cab_control_summary(index: usize, control: &CabControl) {
             position.x,
             position.y,
         ),
+        CabControl::Gauge {
+            control_type,
+            gauge,
+            position,
+            ..
+        } => println!(
+            "    [{index}] Gauge {} style={} ori={} @ ({:.0},{:.0})",
+            control_type.as_str(),
+            gauge.style.as_deref().unwrap_or("-"),
+            gauge.orientation,
+            position.x,
+            position.y,
+        ),
         CabControl::TwoStateDisplay {
             control_type,
             graphic,
