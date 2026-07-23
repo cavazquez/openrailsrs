@@ -60,7 +60,12 @@ pub fn screen_controls(cvf: &CabViewFile) -> Vec<&CabControl> {
 pub fn create_screen_image() -> Image {
     let px = (CAB_SCREEN_W * CAB_SCREEN_H * 4) as usize;
     let mut rgba = vec![0u8; px];
-    paint_dmi_stub(&mut rgba, CAB_SCREEN_W, CAB_SCREEN_H, 0.0, 0.0);
+    crate::etcs::paint_dmi_full(
+        &mut rgba,
+        CAB_SCREEN_W,
+        CAB_SCREEN_H,
+        &crate::etcs::EtcsStatus::default(),
+    );
     Image::new(
         Extent3d {
             width: CAB_SCREEN_W,
@@ -133,7 +138,7 @@ pub fn try_attach_screen_to_part(
     false
 }
 
-/// Paint stub DMI each frame (speed + limit). Full ETCS UI is out of scope.
+/// Paint full DMI each frame (#159).
 pub fn update_cab_screens(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,
@@ -149,16 +154,12 @@ pub fn update_cab_screens(
         return;
     }
     let _ = cvf_state;
-    let (speed_kmh, limit_kmh) = live
+    let status = live
         .as_ref()
-        .map(|l| {
-            let t = l.session.cab_telemetry();
-            (t.speed_kmh, t.limit_kmh)
-        })
-        .unwrap_or((0.0, 0.0));
+        .map(|l| crate::etcs::etcs_status_from_live(&l.session))
+        .unwrap_or_default();
 
     for (screen, mut visibility) in &mut screens {
-        // Power / HideIfDisabled: no power model yet — always show stub.
         if screen.hide_if_disabled {
             *visibility = Visibility::Visible;
         }
@@ -176,122 +177,7 @@ pub fn update_cab_screens(
         if data.len() < (w * h * 4) as usize {
             continue;
         }
-        paint_dmi_stub(data, w, h, speed_kmh, limit_kmh);
-    }
-}
-
-/// CPU stub: dark panel + speed / limit readout (7-seg style digits).
-pub fn paint_dmi_stub(rgba: &mut [u8], w: u32, h: u32, speed_kmh: f64, limit_kmh: f64) {
-    let bg = [12u8, 18, 28, 255];
-    let accent = [40u8, 180, 90, 255];
-    let text = [230u8, 240, 255, 255];
-    for px in rgba.chunks_exact_mut(4) {
-        px.copy_from_slice(&bg);
-    }
-    // Top bar
-    fill_rect(rgba, w, h, 0, 0, w, (h / 12).max(8), [20, 40, 70, 255]);
-    // Speed box
-    let box_x = w / 8;
-    let box_y = h / 4;
-    let box_w = w / 2;
-    let box_h = h / 3;
-    fill_rect(rgba, w, h, box_x, box_y, box_w, box_h, [8, 12, 20, 255]);
-    stroke_rect(rgba, w, h, box_x, box_y, box_w, box_h, accent);
-
-    let speed = format!("{:.0}", speed_kmh.max(0.0));
-    let limit = format!("{:.0}", limit_kmh.max(0.0));
-    let digit_h = (box_h / 2).max(24);
-    let digit_w = digit_h * 3 / 5;
-    let mut x = box_x + box_w / 8;
-    let y = box_y + box_h / 4;
-    for ch in speed.chars() {
-        blit_digit(rgba, w, h, x, y, digit_w, digit_h, ch, text);
-        x += digit_w + digit_w / 5;
-    }
-    // Limit small
-    let mut lx = box_x + box_w * 3 / 4;
-    let ly = box_y + box_h / 8;
-    let sw = digit_w / 2;
-    let sh = digit_h / 2;
-    for ch in limit.chars() {
-        blit_digit(rgba, w, h, lx, ly, sw, sh, ch, [180, 200, 220, 255]);
-        lx += sw + sw / 5;
-    }
-    // Bottom caption strip
-    fill_rect(
-        rgba,
-        w,
-        h,
-        0,
-        h.saturating_sub(h / 16),
-        w,
-        h / 16,
-        [30, 90, 50, 255],
-    );
-}
-
-fn fill_rect(rgba: &mut [u8], w: u32, h: u32, x: u32, y: u32, rw: u32, rh: u32, c: [u8; 4]) {
-    let x1 = x.min(w);
-    let y1 = y.min(h);
-    let x2 = (x + rw).min(w);
-    let y2 = (y + rh).min(h);
-    for yy in y1..y2 {
-        for xx in x1..x2 {
-            let i = ((yy * w + xx) * 4) as usize;
-            if i + 3 < rgba.len() {
-                rgba[i..i + 4].copy_from_slice(&c);
-            }
-        }
-    }
-}
-
-fn stroke_rect(rgba: &mut [u8], w: u32, h: u32, x: u32, y: u32, rw: u32, rh: u32, c: [u8; 4]) {
-    let t = 2u32;
-    fill_rect(rgba, w, h, x, y, rw, t, c);
-    fill_rect(rgba, w, h, x, y + rh.saturating_sub(t), rw, t, c);
-    fill_rect(rgba, w, h, x, y, t, rh, c);
-    fill_rect(rgba, w, h, x + rw.saturating_sub(t), y, t, rh, c);
-}
-
-/// Tiny 3×5 digit glyphs (bits rows).
-fn blit_digit(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    x: u32,
-    y: u32,
-    dw: u32,
-    dh: u32,
-    ch: char,
-    c: [u8; 4],
-) {
-    let glyph = digit_glyph(ch);
-    for row in 0..5u32 {
-        for col in 0..3u32 {
-            if (glyph[row as usize] >> (2 - col)) & 1 == 0 {
-                continue;
-            }
-            let px = x + col * dw / 3;
-            let py = y + row * dh / 5;
-            fill_rect(rgba, w, h, px, py, (dw / 3).max(1), (dh / 5).max(1), c);
-        }
-    }
-}
-
-fn digit_glyph(ch: char) -> [u8; 5] {
-    match ch {
-        '0' => [0b111, 0b101, 0b101, 0b101, 0b111],
-        '1' => [0b010, 0b110, 0b010, 0b010, 0b111],
-        '2' => [0b111, 0b001, 0b111, 0b100, 0b111],
-        '3' => [0b111, 0b001, 0b111, 0b001, 0b111],
-        '4' => [0b101, 0b101, 0b111, 0b001, 0b001],
-        '5' => [0b111, 0b100, 0b111, 0b001, 0b111],
-        '6' => [0b111, 0b100, 0b111, 0b101, 0b111],
-        '7' => [0b111, 0b001, 0b010, 0b010, 0b010],
-        '8' => [0b111, 0b101, 0b111, 0b101, 0b111],
-        '9' => [0b111, 0b101, 0b111, 0b001, 0b111],
-        '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
-        _ => [0b000, 0b000, 0b000, 0b000, 0b000],
+        crate::etcs::paint_dmi_full(data, w, h, &status);
     }
 }
 
@@ -313,9 +199,10 @@ mod tests {
     }
 
     #[test]
-    fn paint_stub_writes_non_uniform_pixels() {
+    fn paint_full_dmi_writes_non_uniform_pixels() {
         let mut rgba = vec![0u8; (CAB_SCREEN_W * CAB_SCREEN_H * 4) as usize];
-        paint_dmi_stub(&mut rgba, CAB_SCREEN_W, CAB_SCREEN_H, 72.0, 100.0);
+        let status = crate::etcs::EtcsStatus::from_telemetry(72.0, 100.0, false, Some(800.0));
+        crate::etcs::paint_dmi_full(&mut rgba, CAB_SCREEN_W, CAB_SCREEN_H, &status);
         let first = &rgba[0..4];
         let mid = &rgba[((CAB_SCREEN_H / 2 * CAB_SCREEN_W + CAB_SCREEN_W / 4) * 4) as usize..];
         assert_ne!(&mid[0..4], first);

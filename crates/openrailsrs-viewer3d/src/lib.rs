@@ -15,6 +15,7 @@ pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_screen;
 pub mod cab_view;
+pub mod etcs;
 pub mod camera;
 pub mod capture;
 pub use openrailsrs_or_shader::coordinates;
