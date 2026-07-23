@@ -124,9 +124,8 @@ pub fn resolve_etcs_content_dir() -> Option<PathBuf> {
         let home = PathBuf::from(home);
         candidates.push(home.join("Documentos/Open Rails/Content/ETCS"));
         candidates.push(home.join("Documents/Open Rails/Content/ETCS"));
-        candidates.push(
-            home.join("wine64-OpenRails/drive_c/Program Files/Open Rails/Content/ETCS"),
-        );
+        candidates
+            .push(home.join("wine64-OpenRails/drive_c/Program Files/Open Rails/Content/ETCS"));
     }
     // Sibling Open Rails source tree (dev checkout).
     candidates.push(
@@ -135,12 +134,9 @@ pub fn resolve_etcs_content_dir() -> Option<PathBuf> {
     );
     candidates.push(fixture);
 
-    for c in candidates {
-        if c.is_dir() && (c.join("NA_13.bmp").is_file() || c.join("PL_22.png").is_file()) {
-            return Some(c);
-        }
-    }
-    None
+    candidates
+        .into_iter()
+        .find(|c| c.is_dir() && (c.join("NA_13.bmp").is_file() || c.join("PL_22.png").is_file()))
 }
 
 fn load_symbol(dir: &Path, name: &str) -> Option<RgbaImage> {

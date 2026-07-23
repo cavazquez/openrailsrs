@@ -22,9 +22,8 @@ pub use openrailsrs_bevy_scenery::shapes::{
     alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
     apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
     apply_z_buf_mode, blend_alpha_passes_from_ace_bits, blend_alpha_passes_from_prim_state,
-    brighten_cab_ace_rgba,
-    brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
-    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
+    brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
+    build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_at_distance_with_options,
     build_mesh_parts_from_shape_lod, cab_ace_brighten_enabled, cab_albedo_tint,
     cab_interior_albedo_boost, cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy,
@@ -41,11 +40,9 @@ pub use openrailsrs_bevy_scenery::shapes::{
     train_exterior_material_with_texture_ex, train_shape_debug_scope, world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::shapes::{ShapeDescriptor, night_subobj_part_visible};
-use openrailsrs_bevy_scenery::textures::{
-    TextureEnvironment, TextureFlags, shape_texture_flags,
-};
-use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 pub use openrailsrs_bevy_scenery::textures::{DdsAlpha, ace_to_image, dds_alpha_type};
+use openrailsrs_bevy_scenery::textures::{TextureEnvironment, TextureFlags, shape_texture_flags};
+use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
 
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
 pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
@@ -2649,9 +2646,8 @@ mod tests {
 
     fn test_msts_content_root() -> Option<PathBuf> {
         // Prefer crate helper; fall back to env for local Content installs.
-        crate::shapes::msts_content_root().or_else(|| {
-            std::env::var_os("OPENRAILSRS_MSTS_CONTENT").map(PathBuf::from)
-        })
+        crate::shapes::msts_content_root()
+            .or_else(|| std::env::var_os("OPENRAILSRS_MSTS_CONTENT").map(PathBuf::from))
     }
 
     fn or_pullman_cabview3d() -> Option<PathBuf> {
@@ -3479,8 +3475,7 @@ mod tests {
     fn vehicle_cab_frame_keeps_unit_scale_on_lead_car() {
         let shape = ShapeFile::from_path(minimal_shape_fixture()).expect("parse");
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
-        let (frame, exterior_scale) =
-            vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0, false);
+        let (frame, exterior_scale) = vehicle_cab_frame_and_exterior_scale(&mesh, 0.0, 18.0, false);
         assert!((frame.scale - Vec3::ONE).length() < 1e-4);
         assert!((exterior_scale - 1.0).abs() < 1e-4);
         let full = vehicle_shape_local_transform(&mesh, 0.0, 18.0, false);
@@ -3819,7 +3814,10 @@ mod tests {
     #[test]
     #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn pullman_exterior_alpha_modes_audit() {
-        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
+        let shape_path = or_pullman_trainset()
+            .map(|t| t.join("RF_WP_DMBSA.s"))
+            .filter(|p| p.is_file())
+            .unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
         let trainset = shape_path.parent().expect("trainset root");
         if !shape_path.is_file() {
             return;
@@ -3950,9 +3948,16 @@ mod tests {
     fn pullman_train_exterior_single_sided_back_cull() {
         use bevy::render::render_resource::Face;
 
-        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
+        let shape_path = or_pullman_trainset()
+            .map(|t| t.join("RF_WP_DMBSA.s"))
+            .filter(|p| p.is_file())
+            .unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
         let path = shape_path;
-        assert!(path.is_file(), "missing Pullman or examples fixture {}", path.display());
+        assert!(
+            path.is_file(),
+            "missing Pullman or examples fixture {}",
+            path.display()
+        );
         let trainset = path.parent().expect("trainset");
         let tex_dirs = vehicle_texture_search_dirs(&path, trainset);
         let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
@@ -3991,8 +3996,15 @@ mod tests {
     #[test]
     #[ignore = "requires OPENRAILSRS_MSTS_CONTENT with Chiltern RF_Blue_Pullman"]
     fn mesh_triangle_vertex_count_multiple_of_3() {
-        let shape_path = or_pullman_trainset().map(|t| t.join("RF_WP_DMBSA.s")).filter(|p| p.is_file()).unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
-        assert!(shape_path.is_file(), "missing shape {}", shape_path.display());
+        let shape_path = or_pullman_trainset()
+            .map(|t| t.join("RF_WP_DMBSA.s"))
+            .filter(|p| p.is_file())
+            .unwrap_or_else(|| chiltern_shape_fixture("RF_WP_DMBSA.s"));
+        assert!(
+            shape_path.is_file(),
+            "missing shape {}",
+            shape_path.display()
+        );
         let shape = ShapeFile::from_path(&shape_path).expect("parse DMBSA");
         let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
         assert!(!parts.is_empty());

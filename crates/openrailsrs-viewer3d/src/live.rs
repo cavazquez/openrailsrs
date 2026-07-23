@@ -693,9 +693,7 @@ pub(crate) fn build_passenger_seat_catalog(
     let catalog = PassengerSeatCatalog { by_car };
     let seats = catalog.seat_cars().len();
     if seats > 0 {
-        viewer_log!(
-            "openrailsrs-viewer3d: passenger seats on {seats} car(s) (key 5)"
-        );
+        viewer_log!("openrailsrs-viewer3d: passenger seats on {seats} car(s) (key 5)");
     }
     catalog
 }

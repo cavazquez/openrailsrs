@@ -709,7 +709,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn cab_fixture_eng() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/fixtures/cab/orts3d_viewpoints.eng")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/fixtures/cab/orts3d_viewpoints.eng")
     }
 
     fn msts_content_root() -> Option<PathBuf> {

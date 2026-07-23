@@ -1,9 +1,7 @@
 //! Viewer ETCS status: TCS core ([`openrailsrs_sim::etcs`]) + UI-only fields (#163).
 
 use openrailsrs_sim::LiveDriveSession;
-use openrailsrs_sim::etcs::{
-    self as sim_etcs, BasicEtcsTcs, EtcsTcsStatus, MenuWindowDef, SoftKeyDef,
-};
+use openrailsrs_sim::etcs::{BasicEtcsTcs, EtcsTcsStatus, MenuWindowDef, SoftKeyDef};
 
 pub use openrailsrs_sim::etcs::{
     EtcsLevel, EtcsMode, EtcsMonitor, EtcsSupervision, GradientSegment, PlanningSymbol,
@@ -134,6 +132,6 @@ mod tests {
 
     #[test]
     fn dial_scale_reexport() {
-        assert_eq!(sim_etcs::pick_dial_scale(90.0), 140);
+        assert_eq!(openrailsrs_sim::etcs::pick_dial_scale(90.0), 140);
     }
 }

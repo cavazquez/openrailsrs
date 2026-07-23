@@ -17,8 +17,8 @@ pub use input::{DmiHit, EtcsUiState, hit_test_dmi, uv_to_dmi};
 pub use mode::DmiMode;
 pub use paint::{paint_dmi, paint_dmi_full};
 pub use status::{
-    EtcsLevel, EtcsMode, EtcsMonitor, EtcsStatus, EtcsSupervision, PlanningSymbol,
-    SoftKeyAction, etcs_status_from_live,
+    EtcsLevel, EtcsMode, EtcsMonitor, EtcsStatus, EtcsSupervision, PlanningSymbol, SoftKeyAction,
+    etcs_status_from_live,
 };
 pub use subwindow::DmiOverlay;
 pub use symbols::{EtcsSymbols, resolve_etcs_content_dir};

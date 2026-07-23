@@ -178,7 +178,6 @@ fn scan_entry_meta(ast: &Ast, meta: &mut EntryMeta) {
                 Some(_) => true,
             },
         };
-        return;
     }
 }
 
@@ -251,11 +250,7 @@ mod tests {
         let con = ConsistFile::from_ast(&ast).expect("consist");
         assert_eq!(con.entries.len(), 2);
         match &con.entries[0] {
-            ConsistEntry::Engine {
-                path,
-                uid,
-                flipped,
-            } => {
+            ConsistEntry::Engine { path, uid, flipped } => {
                 assert!(path.contains("RF_WP_DMBSA"));
                 assert_eq!(*uid, Some(0));
                 assert!(!*flipped);
@@ -263,11 +258,7 @@ mod tests {
             other => panic!("expected engine, got {other:?}"),
         }
         match &con.entries[1] {
-            ConsistEntry::Wagon {
-                path,
-                uid,
-                flipped,
-            } => {
+            ConsistEntry::Wagon { path, uid, flipped } => {
                 assert!(path.contains("RF_WP_PSB"));
                 assert_eq!(*uid, None);
                 assert!(!*flipped);

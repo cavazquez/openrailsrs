@@ -82,7 +82,17 @@ pub fn paint_overlay(
     );
     stroke_rect(rgba, w, h, SW_X + SW_W - 50, SW_Y, 50, 50, colors::FRAME);
     if !symbols.blit_centered(rgba, w, h, SW_X + SW_W - 50, SW_Y, 50, 50, "NA_11.bmp") {
-        blit_text(rgba, w, h, SW_X + SW_W - 36, SW_Y + 18, 8, 12, "X", colors::WHITE);
+        blit_text(
+            rgba,
+            w,
+            h,
+            SW_X + SW_W - 36,
+            SW_Y + 18,
+            8,
+            12,
+            "X",
+            colors::WHITE,
+        );
     }
 
     match overlay {
@@ -93,13 +103,7 @@ pub fn paint_overlay(
     }
 }
 
-fn paint_menu_def(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    def: &MenuWindowDef,
-    pressed: Option<SubHit>,
-) {
+fn paint_menu_def(rgba: &mut [u8], w: u32, h: u32, def: &MenuWindowDef, pressed: Option<SubHit>) {
     for (i, btn) in def.buttons.iter().enumerate() {
         if btn.label.is_empty() {
             continue;
@@ -117,7 +121,11 @@ fn paint_menu_def(
             y,
             123,
             48,
-            if is_p { colors::DARK_GREY } else { colors::PANEL },
+            if is_p {
+                colors::DARK_GREY
+            } else {
+                colors::PANEL
+            },
         );
         stroke_rect(rgba, w, h, x, y, 123, 48, colors::FRAME);
         let c = if btn.enabled {
@@ -139,7 +147,16 @@ fn paint_data_entry(
 ) {
     // Value field
     fill_rect(rgba, w, h, SW_X + 8, SW_Y + 60, SW_W - 16, 36, colors::BG);
-    stroke_rect(rgba, w, h, SW_X + 8, SW_Y + 60, SW_W - 16, 36, colors::FRAME);
+    stroke_rect(
+        rgba,
+        w,
+        h,
+        SW_X + 8,
+        SW_Y + 60,
+        SW_W - 16,
+        36,
+        colors::FRAME,
+    );
     blit_text(
         rgba,
         w,
@@ -182,7 +199,11 @@ fn paint_data_entry(
             y,
             74,
             46,
-            if is_p { colors::DARK_GREY } else { colors::PANEL },
+            if is_p {
+                colors::DARK_GREY
+            } else {
+                colors::PANEL
+            },
         );
         stroke_rect(rgba, w, h, x, y, 74, 46, colors::FRAME);
         blit_text(rgba, w, h, x + 20, y + 16, 10, 14, label, colors::GREY);
@@ -198,11 +219,34 @@ fn paint_data_entry(
         SW_Y + 320,
         SW_W - 16,
         40,
-        if del_p { colors::DARK_GREY } else { colors::PANEL },
+        if del_p {
+            colors::DARK_GREY
+        } else {
+            colors::PANEL
+        },
     );
-    stroke_rect(rgba, w, h, SW_X + 8, SW_Y + 320, SW_W - 16, 40, colors::FRAME);
+    stroke_rect(
+        rgba,
+        w,
+        h,
+        SW_X + 8,
+        SW_Y + 320,
+        SW_W - 16,
+        40,
+        colors::FRAME,
+    );
     if !symbols.blit_centered(rgba, w, h, SW_X + 8, SW_Y + 320, SW_W - 16, 40, "NA_21.bmp") {
-        blit_text(rgba, w, h, SW_X + 90, SW_Y + 332, 8, 12, "Del", colors::GREY);
+        blit_text(
+            rgba,
+            w,
+            h,
+            SW_X + 90,
+            SW_Y + 332,
+            8,
+            12,
+            "Del",
+            colors::GREY,
+        );
     }
 }
 

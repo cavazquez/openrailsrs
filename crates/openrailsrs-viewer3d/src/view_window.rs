@@ -113,7 +113,8 @@ mod tests {
     #[test]
     fn default_radius_matches_viewing_distance_policy() {
         let w = ViewWindow::default();
-        assert!((w.radius_m - crate::launch::VIEWING_DISTANCE_M).abs() < 0.1);
+        // Couples to live policy (`view_radius_m`), including env override when set.
+        assert!((w.radius_m - crate::launch::view_radius_m()).abs() < 0.1);
         assert!(crate::launch::view_unload_radius_m() > w.radius_m);
     }
 

@@ -168,8 +168,7 @@ where
             while i < inner.len() {
                 if matches!(&inner[i], Ast::Atom(Atom::Symbol(_))) {
                     let mut end = i + 1;
-                    while end < inner.len() && !matches!(&inner[end], Ast::Atom(Atom::Symbol(_)))
-                    {
+                    while end < inner.len() && !matches!(&inner[end], Ast::Atom(Atom::Symbol(_))) {
                         end += 1;
                     }
                     out.push(&inner[i..end]);
@@ -184,7 +183,9 @@ where
     }
 }
 
-fn parse_passenger_viewpoint_from_field_nodes(field_nodes: &[&[Ast]]) -> Option<PassengerViewpoint> {
+fn parse_passenger_viewpoint_from_field_nodes(
+    field_nodes: &[&[Ast]],
+) -> Option<PassengerViewpoint> {
     let mut cabin_file = None;
     let mut head = None;
     let mut start = [0.0, 0.0, 0.0];

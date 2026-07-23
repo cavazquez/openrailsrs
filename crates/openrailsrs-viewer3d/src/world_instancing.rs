@@ -14,6 +14,7 @@ use bevy::core_pipeline::core_3d::{
 };
 use bevy::ecs::system::{SystemParamItem, lifetimeless::*};
 use bevy::ecs::{query::QueryItem, system::lifetimeless::Read};
+use bevy::math::{Affine3A, Mat3, Mat4};
 use bevy::mesh::{MeshVertexBufferLayoutRef, VertexBufferLayout};
 use bevy::pbr::{
     LightEntity, LightKeyCache, MeshPipeline, MeshPipelineKey, MeshPipelineSystems,
@@ -21,7 +22,6 @@ use bevy::pbr::{
     SetMeshViewBindingArrayBindGroup, SetPrepassViewBindGroup, SetPrepassViewEmptyBindGroup,
     Shadow, ShadowBatchSetKey, ShadowBinKey, ViewKeyCache, init_prepass_pipeline,
 };
-use bevy::math::{Affine3A, Mat3, Mat4};
 use bevy::prelude::*;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
 use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
@@ -1106,16 +1106,21 @@ mod tests {
         assert!(!instancing_light_model_supported(Some("HalfBright"), None));
         assert!(!instancing_light_model_supported(Some("Specular25"), None));
         // LightMatIdx HalfBright (12 + (-11) = 1).
-        assert!(!instancing_light_model_supported(Some("TexDiff"), Some(-11)));
+        assert!(!instancing_light_model_supported(
+            Some("TexDiff"),
+            Some(-11)
+        ));
         // LightMatIdx Specular25 (12 + (-6) = 6).
         assert!(!instancing_light_model_supported(Some("TexDiff"), Some(-6)));
     }
 
     #[test]
     fn instancing_material_rejects_unlit_and_emissive_fill() {
-        let mut lit = StandardMaterial::default();
-        lit.unlit = false;
-        lit.emissive = LinearRgba::BLACK;
+        let mut lit = StandardMaterial {
+            unlit: false,
+            emissive: LinearRgba::BLACK,
+            ..Default::default()
+        };
         assert!(instancing_material_supported(&lit));
 
         lit.unlit = true;

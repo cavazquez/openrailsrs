@@ -172,7 +172,8 @@ impl CabLeverFrames {
         }
         if self.max_value != self.min_value {
             let span = self.max_value - self.min_value;
-            let idx = ((percent - self.min_value) / span * self.frames_count as f64).floor() as isize;
+            let idx =
+                ((percent - self.min_value) / span * self.frames_count as f64).floor() as isize;
             return idx.clamp(0, frames as isize - 1) as usize;
         }
         0
@@ -1086,10 +1087,10 @@ fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
     }
     gauge.style = parse_control_style(items);
     gauge.units = find_string_in_list(items, "Units");
-    gauge.positive_colour = parse_named_control_colour(items, "PositiveColour")
-        .or(gauge.positive_colour);
-    gauge.negative_colour = parse_named_control_colour(items, "NegativeColour")
-        .or(gauge.negative_colour);
+    gauge.positive_colour =
+        parse_named_control_colour(items, "PositiveColour").or(gauge.positive_colour);
+    gauge.negative_colour =
+        parse_named_control_colour(items, "NegativeColour").or(gauge.negative_colour);
     gauge
 }
 
@@ -1724,7 +1725,9 @@ mod tests {
         let cvf = CabViewFile::from_ast(&ast).expect("typed");
         assert_eq!(cvf.controls.len(), 2);
         match &cvf.controls[0] {
-            CabControl::Lever { frames, graphic, .. } => {
+            CabControl::Lever {
+                frames, graphic, ..
+            } => {
                 assert_eq!(graphic, "Throttle.ace");
                 assert_eq!(frames.frames_count, 10);
                 assert_eq!(frames.frames_x, 5);

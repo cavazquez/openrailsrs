@@ -326,7 +326,10 @@ mod tests {
 
         // Move to B: A unloads, B loads.
         let d1 = policy.diff_disk(tile_b, &loaded);
-        assert!(d1.to_unload.contains(&tile_a), "A must unload when centre is B");
+        assert!(
+            d1.to_unload.contains(&tile_a),
+            "A must unload when centre is B"
+        );
         assert!(d1.to_load.contains(&tile_b));
         for t in &d1.to_unload {
             loaded.remove(t);

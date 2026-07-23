@@ -87,9 +87,7 @@ pub fn paint_circular_gauge(
 
     // Gauge arcs: target→allowed (yellow in TSM/RSM, white in CSM), then warn arc.
     let allowed = status.allowed_kmh as f32;
-    let target = status
-        .target_kmh
-        .unwrap_or(status.allowed_kmh) as f32;
+    let target = status.target_kmh.unwrap_or(status.allowed_kmh) as f32;
     let intervention = status.intervention_kmh as f32;
     let gauge_color = match status.monitor {
         EtcsMonitor::TargetSpeed | EtcsMonitor::ReleaseSpeed => colors::YELLOW,
@@ -195,15 +193,7 @@ pub fn paint_circular_gauge(
     for ch in speed_text.chars() {
         if ch != ' ' {
             blit_digit3x5(
-                rgba,
-                stride_w,
-                stride_h,
-                dx,
-                dy,
-                digit_w,
-                digit_h,
-                ch,
-                text_color,
+                rgba, stride_w, stride_h, dx, dy, digit_w, digit_h, ch, text_color,
             );
         }
         dx += digit_w + 2;
@@ -214,17 +204,7 @@ pub fn paint_circular_gauge(
     let mut ux = cx as i32 - 18;
     let uy = cy as i32 + 28;
     for ch in unit.chars() {
-        blit_digit3x5(
-            rgba,
-            stride_w,
-            stride_h,
-            ux,
-            uy,
-            8,
-            10,
-            ch,
-            colors::GREY,
-        );
+        blit_digit3x5(rgba, stride_w, stride_h, ux, uy, 8, 10, ch, colors::GREY);
         ux += 9;
     }
 
@@ -234,17 +214,7 @@ pub fn paint_circular_gauge(
         let mut rx = origin_x + 20;
         let ry = origin_y + GAUGE_H - 28;
         for ch in txt.chars() {
-            blit_digit3x5(
-                rgba,
-                stride_w,
-                stride_h,
-                rx,
-                ry,
-                12,
-                16,
-                ch,
-                colors::GREY,
-            );
+            blit_digit3x5(rgba, stride_w, stride_h, rx, ry, 12, 16, ch, colors::GREY);
             rx += 13;
         }
         // Thin release arc marker at release speed.
@@ -323,14 +293,7 @@ fn stroke_arc(
         let (x0, y0) = polar(radius - thickness * 0.5, a, cx, cy);
         let (x1, y1) = polar(radius + thickness * 0.5, a, cx, cy);
         stroke_line(
-            rgba,
-            w,
-            h,
-            x0 as i32,
-            y0 as i32,
-            x1 as i32,
-            y1 as i32,
-            color,
+            rgba, w, h, x0 as i32, y0 as i32, x1 as i32, y1 as i32, color,
         );
     }
 }

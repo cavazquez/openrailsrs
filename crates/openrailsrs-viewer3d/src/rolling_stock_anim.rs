@@ -118,7 +118,8 @@ pub fn car_world_pose_at_head_offset(
         focus,
         terrain,
     )?;
-    let track = Transform::from_translation(view_position(world_pos, origin)).with_rotation(world_rot);
+    let track =
+        Transform::from_translation(view_position(world_pos, origin)).with_rotation(world_rot);
     let authored = vehicle_authored_frame_transform(0.0, flipped);
     Some(track * authored)
 }
@@ -161,7 +162,8 @@ pub fn update_consist_car_track_poses(
         let Ok(parent_tf) = parents.get(child_of.parent()) else {
             continue;
         };
-        let Some((head_edge, head_pos)) = head_graph_position(live_ref, replay_ref, car.track_index)
+        let Some((head_edge, head_pos)) =
+            head_graph_position(live_ref, replay_ref, car.track_index)
         else {
             continue;
         };

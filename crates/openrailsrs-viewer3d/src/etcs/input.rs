@@ -256,7 +256,7 @@ impl EtcsUiState {
 }
 
 fn message_pages(message_count: usize) -> usize {
-    ((message_count.max(1) + 4) / 5).max(1)
+    message_count.max(1).div_ceil(5).max(1)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -348,9 +348,7 @@ pub fn raycast_mesh_uv(
     if positions.len() != uvs.len() {
         return None;
     }
-    let Some(indices) = mesh.indices() else {
-        return None;
-    };
+    let indices = mesh.indices()?;
     let mut best: Option<(f32, Vec2)> = None;
     let mut tri = [0u32; 3];
     let mut tix = 0usize;
@@ -376,22 +374,14 @@ pub fn raycast_mesh_uv(
                 continue;
             }
             let a = 1.0 - b - c;
-            let uv = Vec2::from(uvs[i0]) * a
-                + Vec2::from(uvs[i1]) * b
-                + Vec2::from(uvs[i2]) * c;
+            let uv = Vec2::from(uvs[i0]) * a + Vec2::from(uvs[i1]) * b + Vec2::from(uvs[i2]) * c;
             best = Some((t, uv));
         }
     }
     best
 }
 
-fn ray_triangle(
-    origin: Vec3,
-    dir: Vec3,
-    p0: Vec3,
-    p1: Vec3,
-    p2: Vec3,
-) -> Option<(f32, f32, f32)> {
+fn ray_triangle(origin: Vec3, dir: Vec3, p0: Vec3, p1: Vec3, p2: Vec3) -> Option<(f32, f32, f32)> {
     const EPS: f32 = 1e-6;
     let e1 = p1 - p0;
     let e2 = p2 - p0;
@@ -428,8 +418,10 @@ mod tests {
 
     #[test]
     fn menu_action_opens_data() {
-        let mut ui = EtcsUiState::default();
-        ui.overlay = DmiOverlay::MainMenu;
+        let mut ui = EtcsUiState {
+            overlay: DmiOverlay::MainMenu,
+            ..Default::default()
+        };
         ui.handle_sub_hit(SubHit::MenuItem(2), 0.0);
         assert!(matches!(ui.overlay, DmiOverlay::DataEntry { .. }));
     }

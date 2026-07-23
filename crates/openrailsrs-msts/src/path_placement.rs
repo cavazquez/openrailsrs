@@ -856,7 +856,10 @@ mod tests {
         // #132: same rear snap + length → unique head offset.
         assert!((head_offset_from_rear_snap(100.0, 50.0) - 150.0).abs() < 1e-9);
         assert!((head_offset_from_rear_snap(166.735, 165.8) - 332.535).abs() < 1e-6);
-        assert_eq!(consist_length_from_vehicle_lengths(&[20.0, 20.0, 18.5]), 58.5);
+        assert_eq!(
+            consist_length_from_vehicle_lengths(&[20.0, 20.0, 18.5]),
+            58.5
+        );
         // Without consist length, world placement keeps rear snap (not DistanceDownPath).
         assert_eq!(head_offset_from_rear_snap(166.735, 0.0), 166.735);
     }

@@ -679,7 +679,7 @@ fn collect_items(ast: &Ast) -> (Vec<WorldItem>, usize) {
         match parse_world_item(entry) {
             ParseWorldItem::Item(mut item) => {
                 set_static_detail_level(&mut item, level);
-                items.push(item);
+                items.push(*item);
             }
             ParseWorldItem::SkippedInvalidPose => skipped_invalid_pose += 1,
             ParseWorldItem::Ignore => {}
@@ -689,7 +689,7 @@ fn collect_items(ast: &Ast) -> (Vec<WorldItem>, usize) {
 }
 
 enum ParseWorldItem {
-    Item(WorldItem),
+    Item(Box<WorldItem>),
     SkippedInvalidPose,
     Ignore,
 }
@@ -1115,7 +1115,7 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
 
     let position_or_zero = position.unwrap_or_default();
 
-    ParseWorldItem::Item(match effective_tag.as_str() {
+    ParseWorldItem::Item(Box::new(match effective_tag.as_str() {
         s if s.eq_ignore_ascii_case("Static") => WorldItem::Static {
             uid: uid.unwrap_or(0),
             file_name,
@@ -1260,7 +1260,7 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
             matrix3x3,
             static_detail_level: 0,
         },
-    })
+    }))
 }
 
 /// Last matching `UiD` wins (Open Rails sequential assign).

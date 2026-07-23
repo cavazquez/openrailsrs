@@ -97,8 +97,12 @@ pub enum CabCvfOverlayKind {
         mouse_control: bool,
         style: Option<String>,
     },
-    MultiState { state_index: usize },
-    Digital { digital: CabDigitalParams },
+    MultiState {
+        state_index: usize,
+    },
+    Digital {
+        digital: CabDigitalParams,
+    },
 }
 
 pub fn reference_panel_size(cvf: &CabViewFile) -> (f32, f32) {
@@ -976,24 +980,22 @@ pub(crate) fn handle_cab2d_mouse_controls(
                     &widget.control_type,
                     ControlType::Generic(n) if n.eq_ignore_ascii_case("HORN")
                 );
-                if style == "WHILE_PRESSED" || style == "PRESSED" {
+                if (style == "WHILE_PRESSED" || style == "PRESSED")
+                    && is_horn
+                    && *interaction == Interaction::Pressed
+                {
+                    live.session.trigger_horn(0.2);
+                } else if (style == "ONOFF" || style.is_empty())
+                    && mouse_buttons.just_pressed(MouseButton::Left)
+                    && *interaction == Interaction::Pressed
+                {
                     if is_horn {
-                        if *interaction == Interaction::Pressed {
-                            live.session.trigger_horn(0.2);
-                        }
-                    }
-                } else if style == "ONOFF" || style.is_empty() {
-                    if mouse_buttons.just_pressed(MouseButton::Left)
-                        && *interaction == Interaction::Pressed
-                    {
-                        if is_horn {
-                            live.session.trigger_horn(0.35);
-                        } else if matches!(
-                            &widget.control_type,
-                            ControlType::Generic(n) if n.contains("WIPER")
-                        ) {
-                            live.session.toggle_wiper();
-                        }
+                        live.session.trigger_horn(0.35);
+                    } else if matches!(
+                        &widget.control_type,
+                        ControlType::Generic(n) if n.contains("WIPER")
+                    ) {
+                        live.session.toggle_wiper();
                     }
                 }
             }
@@ -1103,8 +1105,7 @@ mod tests {
         let dirs = cvf_texture_search_dirs(&cab3d.join("PULLMAN_GR.s"), &cab3d);
         let refs: Vec<&Path> = dirs.iter().map(|p| p.as_path()).collect();
         let day = crate::shapes::resolve_cvf_graphic_path(&refs, &cab3d, "Cab1.ace");
-        let night =
-            crate::shapes::resolve_cvf_graphic_path_night(&refs, &cab3d, "Cab1.ace", true);
+        let night = crate::shapes::resolve_cvf_graphic_path_night(&refs, &cab3d, "Cab1.ace", true);
         assert!(day.is_some());
         assert!(night.is_some());
         let night = night.unwrap();
@@ -1121,7 +1122,9 @@ mod tests {
     fn missing_cab_ace_does_not_resolve_outside_trainset() {
         // Pullman CVF references bare `cab.ace` (KIHA leftovers) with huge Positions.
         // Must not pick another loco's cab.ace under Content/.
-        let content = PathBuf::from("/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d");
+        let content = PathBuf::from(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d",
+        );
         if !content.is_dir() {
             return;
         }

@@ -9,8 +9,10 @@ use super::status::{EtcsStatus, EtcsSupervision};
 use super::subwindow;
 use super::symbols::EtcsSymbols;
 
-pub const DMI_W: u32 = 640;
-pub const DMI_H: u32 = 480;
+#[cfg(test)]
+const DMI_W: u32 = 640;
+#[cfg(test)]
+const DMI_H: u32 = 480;
 
 /// Paint DMI into `rgba` (row-major RGBA8). Uses `status.dmi_mode` for layout.
 pub fn paint_dmi_full(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
@@ -18,13 +20,7 @@ pub fn paint_dmi_full(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus) {
 }
 
 /// Paint with interactive overlay state (#162).
-pub fn paint_dmi(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    status: &EtcsStatus,
-    ui: &EtcsUiState,
-) {
+pub fn paint_dmi(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus, ui: &EtcsUiState) {
     if w == 0 || h == 0 || rgba.len() < (w * h * 4) as usize {
         return;
     }
@@ -45,13 +41,7 @@ pub fn paint_dmi(
     paint_dmi_1x(rgba, w, h, status, ui);
 }
 
-fn paint_dmi_1x(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    status: &EtcsStatus,
-    ui: &EtcsUiState,
-) {
+fn paint_dmi_1x(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus, ui: &EtcsUiState) {
     let symbols = EtcsSymbols::global();
     fill_rect(rgba, w, h, 0, 0, w as i32, h as i32, colors::BG);
 
@@ -78,7 +68,16 @@ fn paint_dmi_1x(
     paint_mode_level(rgba, w, h, status);
     paint_target_distance(rgba, w, h, 0, 69, 54, 221, status);
     paint_circular_gauge(rgba, w, h, 54, 15, status);
-    stroke_rect(rgba, w, h, 54, 15, gauge::GAUGE_W, gauge::GAUGE_H, colors::FRAME);
+    stroke_rect(
+        rgba,
+        w,
+        h,
+        54,
+        15,
+        gauge::GAUGE_W,
+        gauge::GAUGE_H,
+        colors::FRAME,
+    );
     paint_message_area(rgba, w, h, status, symbols);
     paint_planning(rgba, w, h, 334, 15, status, symbols);
     stroke_rect(rgba, w, h, 334, 15, 246, 300, colors::FRAME);
@@ -99,13 +98,7 @@ fn paint_dmi_1x(
     }
 }
 
-fn paint_speed_column(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    status: &EtcsStatus,
-    symbols: &EtcsSymbols,
-) {
+fn paint_speed_column(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus, symbols: &EtcsSymbols) {
     paint_tti(rgba, w, h, 0, 15, status);
     paint_mode_level(rgba, w, h, status);
     paint_target_distance(rgba, w, h, 0, 69, 54, 221, status);
@@ -132,7 +125,11 @@ fn paint_scale_buttons(
         40,
         15,
         symbols,
-        if scale_up_en { "NA_03.bmp" } else { "NA_05.bmp" },
+        if scale_up_en {
+            "NA_03.bmp"
+        } else {
+            "NA_05.bmp"
+        },
         status.pressed_hit == Some(DmiHit::ScaleUp),
     );
     paint_icon_button(
@@ -144,7 +141,11 @@ fn paint_scale_buttons(
         40,
         15,
         symbols,
-        if scale_dn_en { "NA_04.bmp" } else { "NA_06.bmp" },
+        if scale_dn_en {
+            "NA_04.bmp"
+        } else {
+            "NA_06.bmp"
+        },
         status.pressed_hit == Some(DmiHit::ScaleDown),
     );
 }
@@ -209,19 +210,13 @@ fn paint_tti(rgba: &mut [u8], w: u32, h: u32, x: i32, y: i32, status: &EtcsStatu
     fill_rect(rgba, w, h, ox, oy, width, width, color);
 }
 
-fn paint_message_area(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    status: &EtcsStatus,
-    symbols: &EtcsSymbols,
-) {
+fn paint_message_area(rgba: &mut [u8], w: u32, h: u32, status: &EtcsStatus, symbols: &EtcsSymbols) {
     fill_rect(rgba, w, h, 54, 365, 234, 100, colors::PANEL);
     stroke_rect(rgba, w, h, 54, 365, 234, 100, colors::FRAME);
 
     // Newest-first list, 5 lines/page (OR MessageArea).
     let newest_first: Vec<&str> = status.message_lines().into_iter().rev().collect();
-    let pages = ((newest_first.len().max(1) + 4) / 5).max(1);
+    let pages = newest_first.len().max(1).div_ceil(5).max(1);
     let page = status.message_page.min(pages - 1);
     let start = page * 5;
     let chunk = &newest_first[start..newest_first.len().min(start + 5)];
@@ -273,7 +268,11 @@ fn paint_soft_keys_at(rgba: &mut [u8], w: u32, h: u32, x: i32, status: &EtcsStat
             y,
             60,
             48,
-            if pressed { colors::DARK_GREY } else { colors::PANEL },
+            if pressed {
+                colors::DARK_GREY
+            } else {
+                colors::PANEL
+            },
         );
         stroke_rect(rgba, w, h, x, y, 60, 48, colors::FRAME);
         if let Some(key) = status.soft_keys.get(i as usize) {
@@ -309,7 +308,11 @@ fn paint_icon_button(
         y,
         bw,
         bh,
-        if pressed { colors::DARK_GREY } else { colors::PANEL },
+        if pressed {
+            colors::DARK_GREY
+        } else {
+            colors::PANEL
+        },
     );
     stroke_rect(rgba, w, h, x, y, bw, bh, colors::FRAME);
     if !symbols.blit_centered(rgba, w, h, x, y, bw, bh, icon) {
@@ -347,7 +350,10 @@ fn paint_target_distance(
     fill_rect(rgba, w, h, x, y, bw, bh, colors::PANEL);
     stroke_rect(rgba, w, h, x, y, bw, bh, colors::FRAME);
     // OR hides target distance in OS/SR.
-    if matches!(status.mode, super::status::EtcsMode::Os | super::status::EtcsMode::Sr) {
+    if matches!(
+        status.mode,
+        super::status::EtcsMode::Os | super::status::EtcsMode::Sr
+    ) {
         return;
     }
     let Some(dist) = status.target_distance_m else {
@@ -460,15 +466,7 @@ pub(crate) fn stroke_line(
     }
 }
 
-pub(crate) fn stroke_circle(
-    rgba: &mut [u8],
-    w: u32,
-    h: u32,
-    cx: i32,
-    cy: i32,
-    r: i32,
-    c: Rgba,
-) {
+pub(crate) fn stroke_circle(rgba: &mut [u8], w: u32, h: u32, cx: i32, cy: i32, r: i32, c: Rgba) {
     let mut x = r;
     let mut y = 0;
     let mut err = 0;
@@ -523,16 +521,7 @@ pub(crate) fn blit_digit3x5(
             }
             let px = x + col * dw / 3;
             let py = y + row * dh / 5;
-            fill_rect(
-                rgba,
-                w,
-                h,
-                px,
-                py,
-                (dw / 3).max(1),
-                (dh / 5).max(1),
-                c,
-            );
+            fill_rect(rgba, w, h, px, py, (dw / 3).max(1), (dh / 5).max(1), c);
         }
     }
 }
@@ -579,14 +568,7 @@ fn glyph(ch: char) -> [u8; 5] {
     }
 }
 
-fn scale_nearest(
-    src: &[u8],
-    sw: u32,
-    sh: u32,
-    dst: &mut [u8],
-    dw: u32,
-    dh: u32,
-) {
+fn scale_nearest(src: &[u8], sw: u32, sh: u32, dst: &mut [u8], dw: u32, dh: u32) {
     for y in 0..dh {
         let sy = y * sh / dh;
         for x in 0..dw {

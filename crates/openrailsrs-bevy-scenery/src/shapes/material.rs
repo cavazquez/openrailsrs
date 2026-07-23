@@ -490,8 +490,7 @@ pub fn or_ace_requests_blending(
     alpha_test_requested: bool,
     blend_capable_shader: bool,
 ) -> bool {
-    blend_capable_shader
-        && (ace_alpha_bits > 1 || (ace_alpha_bits == 1 && !alpha_test_requested))
+    blend_capable_shader && (ace_alpha_bits > 1 || (ace_alpha_bits == 1 && !alpha_test_requested))
 }
 
 /// Opt-in legacy name/pixel heuristics (`OPENRAILSRS_ALPHA_NAME_HEURISTIC=1`). Off by default (#136).
@@ -520,12 +519,7 @@ pub fn blend_alpha_passes_from_ace_bits(
         height: 1,
         format: openrailsrs_ace::AceFormat::Rgba8,
         mips_count: 1,
-        mip0: vec![
-            200,
-            200,
-            200,
-            if ace_alpha_bits > 0 { 128 } else { 255 },
-        ],
+        mip0: vec![200, 200, 200, if ace_alpha_bits > 0 { 128 } else { 255 }],
         mips: Vec::new(),
         has_mask_channel,
         alpha_bits: ace_alpha_bits,
@@ -566,7 +560,9 @@ pub fn blend_alpha_passes_from_prim_state(
 
     if !blending {
         if alpha_test_requested {
-            return vec![single_alpha_pass(AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF))];
+            return vec![single_alpha_pass(AlphaMode::Mask(
+                OR_MSTS_ALPHA_TEST_CUTOFF,
+            ))];
         }
         if alpha_name_heuristic_enabled() {
             let legacy = legacy_shape_alpha_mode_heuristic(ace, texture_file, shader_name);
@@ -685,9 +681,7 @@ pub fn shape_shader_requests_blending(shader_name: &str) -> bool {
 }
 
 fn matches_shader_name(shader_name: &str, names: &[&str]) -> bool {
-    names
-        .iter()
-        .any(|n| shader_name.eq_ignore_ascii_case(n))
+    names.iter().any(|n| shader_name.eq_ignore_ascii_case(n))
 }
 
 #[cfg(test)]

@@ -1671,10 +1671,7 @@ pub fn update_driver_camera_fov(
     let Projection::Perspective(persp) = &mut *projection else {
         return;
     };
-    if *follow == CameraFollowMode::DriverCam
-        || follow.is_cab2d()
-        || follow.is_passenger()
-    {
+    if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() || follow.is_passenger() {
         // Cab2d needs the forward world through ACE window alpha.
         // Passenger uses the same near clip as InsideThreeDimCamera.
         persp.fov = driver_cab_fov_deg(&opts).to_radians();
@@ -1914,7 +1911,10 @@ mod tests {
         );
         assert_eq!(CameraFollowMode::DriverCam.cycle(), CameraFollowMode::Off);
         assert_eq!(CameraFollowMode::Cab2d.cycle(), CameraFollowMode::Off);
-        assert_eq!(CameraFollowMode::PassengerCam.cycle(), CameraFollowMode::Off);
+        assert_eq!(
+            CameraFollowMode::PassengerCam.cycle(),
+            CameraFollowMode::Off
+        );
     }
 
     #[test]
@@ -2118,20 +2118,14 @@ mod tests {
             head_lead_local: Some(Vec3::ZERO),
             ..Default::default()
         };
-        let front_fwd = driver_camera_transform_from_lead(
-            &lead_global,
-            &front,
-            DriverLookOffset::default(),
-        )
-        .forward()
-        .as_vec3();
-        let rear_fwd = driver_camera_transform_from_lead(
-            &lead_global,
-            &rear,
-            DriverLookOffset::default(),
-        )
-        .forward()
-        .as_vec3();
+        let front_fwd =
+            driver_camera_transform_from_lead(&lead_global, &front, DriverLookOffset::default())
+                .forward()
+                .as_vec3();
+        let rear_fwd =
+            driver_camera_transform_from_lead(&lead_global, &rear, DriverLookOffset::default())
+                .forward()
+                .as_vec3();
         let travel = lead_global.rotation().mul_vec3(Vec3::X);
         let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
         let front_h = Vec3::new(front_fwd.x, 0.0, front_fwd.z).normalize();
@@ -2153,9 +2147,17 @@ mod tests {
     #[test]
     fn driver_look_respects_rotation_limit() {
         let mut look = DriverLookOffset::default();
-        look.apply_drag_clamped(Vec2::new(10_000.0, 0.0), 10f32.to_radians(), 5f32.to_radians());
+        look.apply_drag_clamped(
+            Vec2::new(10_000.0, 0.0),
+            10f32.to_radians(),
+            5f32.to_radians(),
+        );
         assert!((look.yaw.abs() - 10f32.to_radians()).abs() < 1e-3);
-        look.apply_drag_clamped(Vec2::new(0.0, 10_000.0), 10f32.to_radians(), 5f32.to_radians());
+        look.apply_drag_clamped(
+            Vec2::new(0.0, 10_000.0),
+            10f32.to_radians(),
+            5f32.to_radians(),
+        );
         assert!((look.pitch.abs() - 5f32.to_radians()).abs() < 1e-3);
     }
 
@@ -2206,11 +2208,7 @@ mod tests {
             head_lead_local: Some(Vec3::ZERO),
             ..Default::default()
         };
-        let tf = driver_camera_transform_from_lead(
-            &lead_global,
-            &cab,
-            DriverLookOffset::default(),
-        );
+        let tf = driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
         let cam_fwd = tf.forward().as_vec3();
         // Travel / MSTS cab +Z maps to train-local +X after shape→train rotation.
         let travel_fwd = lead_global.rotation().mul_vec3(Vec3::X);
@@ -2237,18 +2235,18 @@ mod tests {
             head_lead_local: Some(Vec3::ZERO),
             ..Default::default()
         };
-        let cam_fwd = driver_camera_transform_from_lead(
-            &lead_global,
-            &cab,
-            DriverLookOffset::default(),
-        )
-        .forward()
-        .as_vec3();
+        let cam_fwd =
+            driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default())
+                .forward()
+                .as_vec3();
         // Lead frame already includes shape→train (+90° Y); travel is local +X.
         let travel = lead_global.rotation().mul_vec3(Vec3::X);
         let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
         let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
-        assert!(cam_h.dot(travel_h) > 0.99, "cam={cam_h:?} travel={travel_h:?}");
+        assert!(
+            cam_h.dot(travel_h) > 0.99,
+            "cam={cam_h:?} travel={travel_h:?}"
+        );
     }
 
     #[test]

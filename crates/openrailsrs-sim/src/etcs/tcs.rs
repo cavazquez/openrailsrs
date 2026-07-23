@@ -64,9 +64,7 @@ impl BasicEtcsTcs {
         let target_mps = target_kmh.map(|t| t / 3.6).unwrap_or(limit_mps);
 
         let brake_dist = if target_kmh.is_some_and(|t| t + 0.5 < limit) {
-            indication_distance_m(limit_mps.max(speed_mps), target_mps)
-                .max(200.0)
-                .min(4000.0)
+            indication_distance_m(limit_mps.max(speed_mps), target_mps).clamp(200.0, 4000.0)
         } else {
             0.0
         };
@@ -89,8 +87,7 @@ impl BasicEtcsTcs {
         let allowed = allowed_mps * 3.6;
 
         // Intervention ≈ permitted + margin (OR SetIntervention / built-in).
-        let mut intervention_mps =
-            allowed_mps + (allowed_mps * 0.05).max(5.0 / 3.6);
+        let mut intervention_mps = allowed_mps + (allowed_mps * 0.05).max(5.0 / 3.6);
         if overspeed_flag || speed_mps > allowed_mps {
             intervention_mps = intervention_mps.max(speed_mps + 1.0 / 3.6);
         }
@@ -215,8 +212,10 @@ fn derive_supervision(
         }
         return EtcsSupervision::Overspeed;
     }
-    if matches!(monitor, EtcsMonitor::TargetSpeed | EtcsMonitor::ReleaseSpeed)
-        && speed_mps + 0.15 >= target_mps
+    if matches!(
+        monitor,
+        EtcsMonitor::TargetSpeed | EtcsMonitor::ReleaseSpeed
+    ) && speed_mps + 0.15 >= target_mps
         && target_mps + 0.15 < allowed_mps
     {
         return EtcsSupervision::Indication;
@@ -262,11 +261,7 @@ fn derive_tti(
     }
 }
 
-fn build_speed_targets(
-    limit: f64,
-    target: Option<f64>,
-    dist: Option<f64>,
-) -> Vec<SpeedTarget> {
+fn build_speed_targets(limit: f64, target: Option<f64>, dist: Option<f64>) -> Vec<SpeedTarget> {
     let mut v = vec![SpeedTarget {
         distance_m: 0.0,
         speed_kmh: limit,
@@ -319,6 +314,7 @@ fn build_track_conditions(dist: Option<f64>) -> Vec<TrackCondition> {
     v
 }
 
+#[allow(clippy::too_many_arguments)]
 fn derive_messages(
     supervision: EtcsSupervision,
     monitor: EtcsMonitor,

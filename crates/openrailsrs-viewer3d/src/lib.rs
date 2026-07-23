@@ -7,6 +7,9 @@
 //!
 //! See `docs/VIEWER3D.md` for the full roadmap (issue #8).
 
+// Bevy systems/queries routinely exceed Clippy's default thresholds.
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
+
 pub mod cab_cvf;
 pub mod cab_cvf_overlay;
 pub mod cab_diag;
@@ -15,9 +18,9 @@ pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_screen;
 pub mod cab_view;
-pub mod etcs;
 pub mod camera;
 pub mod capture;
+pub mod etcs;
 pub use openrailsrs_or_shader::coordinates;
 pub mod dyntrack;
 pub mod floating_origin;

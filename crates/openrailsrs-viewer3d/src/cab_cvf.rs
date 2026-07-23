@@ -120,8 +120,14 @@ pub fn parse_matrix_control_name(name: &str) -> Option<MatrixControlName> {
     }
     let control = control_type_from_matrix_prefix(parts[0].trim())?;
     let order: u32 = parts[1].trim().parse().ok()?;
-    let param1 = parts.get(2).map(|s| s.trim().to_string()).unwrap_or_default();
-    let param2 = parts.get(3).map(|s| s.trim().to_string()).unwrap_or_default();
+    let param1 = parts
+        .get(2)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let param2 = parts
+        .get(3)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
     let sub_part = name
         .split('-')
         .nth(1)
@@ -517,20 +523,15 @@ pub fn update_cab_cvf_controls(
         };
         match driver {
             MatrixDriver::Lever {
-                control,
-                anim_node,
-                ..
+                control, anim_node, ..
             } => {
                 *visibility = Visibility::Visible;
                 let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
                 if !has_anim {
                     // OR leaves static 3D meshes when the shape has no controllers;
                     // CVF 2D overlay provides the visible lever animation (#147/#148).
-                    *transform = static_lever_transform(
-                        &runtime.shape,
-                        part.matrix_idx,
-                        part.pivot_at_mesh,
-                    );
+                    *transform =
+                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
                     continue;
                 }
                 let value = control_value(control, &tel);
@@ -576,11 +577,7 @@ pub fn update_cab_cvf_controls(
                             &pose_mats,
                         )
                     } else {
-                        lever_entity_transform_rebased(
-                            &runtime.shape,
-                            part.matrix_idx,
-                            &pose_mats,
-                        )
+                        lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
                     };
                 } else if let Some(CabControl::Dial { dial, .. }) =
                     cvf_control_at_order(&runtime.cvf, control, *order)
@@ -589,20 +586,14 @@ pub fn update_cab_cvf_controls(
                     // still drives dials via GetRangeFraction when frames exist).
                     let reading = dial_control_value(control, dial, &tel);
                     let angle = dial.rotation_radians(reading);
-                    let mut base = static_lever_transform(
-                        &runtime.shape,
-                        part.matrix_idx,
-                        part.pivot_at_mesh,
-                    );
+                    let mut base =
+                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
                     let axis = part.local_spin_axis.unwrap_or(Vec3::NEG_Z);
                     base.rotation *= Quat::from_axis_angle(axis, angle);
                     *transform = base;
                 } else {
-                    *transform = static_lever_transform(
-                        &runtime.shape,
-                        part.matrix_idx,
-                        part.pivot_at_mesh,
-                    );
+                    *transform =
+                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
                 }
             }
             MatrixDriver::GaugeNative { .. } | MatrixDriver::Digit { .. } => {
@@ -619,7 +610,9 @@ fn multi_state_normalized_value(
     tel: &CabTelemetry,
 ) -> f64 {
     match cvf_control_at_order(cvf, control, order) {
-        Some(CabControl::Dial { dial, .. }) => dial.range_fraction(dial_control_value(control, dial, tel)),
+        Some(CabControl::Dial { dial, .. }) => {
+            dial.range_fraction(dial_control_value(control, dial, tel))
+        }
         Some(CabControl::Digital { digital, .. }) => {
             let v = digital_control_value(control, digital, tel);
             if (digital.scale_max - digital.scale_min).abs() < f64::EPSILON {

@@ -203,7 +203,9 @@ fn read_consist_entries(con_path: &Path) -> Vec<(ConsistEntry, String)> {
         .into_iter()
         .map(|e| {
             let path = match &e {
-                ConsistEntry::Engine { path, .. } | ConsistEntry::Wagon { path, .. } => path.clone(),
+                ConsistEntry::Engine { path, .. } | ConsistEntry::Wagon { path, .. } => {
+                    path.clone()
+                }
             };
             (e, path)
         })

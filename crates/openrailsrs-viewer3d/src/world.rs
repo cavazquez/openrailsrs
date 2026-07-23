@@ -2241,7 +2241,9 @@ fn build_world_shape_asset(
                 }],
                 has_texture: false,
                 has_night_subobj: false,
-            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
+                texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                    openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+                ),
             }
         }
     };
@@ -4341,7 +4343,9 @@ mod tests {
             parts: Vec::new(),
             has_texture: false,
             has_night_subobj: false,
-            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+            ),
         }
     }
 
@@ -4400,7 +4404,9 @@ mod tests {
                 parts: vec![make_part(keep_mesh.clone(), keep_mat)],
                 has_texture: true,
                 has_night_subobj: false,
-            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
+                texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                    openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+                ),
             },
         );
         session.shape_assets.insert(
@@ -4410,7 +4416,9 @@ mod tests {
                 parts: vec![make_part(drop_mesh.clone(), drop_mat)],
                 has_texture: true,
                 has_night_subobj: false,
-            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(openrailsrs_bevy_scenery::textures::TextureFlags::NONE),
+                texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                    openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
+                ),
             },
         );
         session

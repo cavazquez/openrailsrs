@@ -82,9 +82,7 @@ pub fn spawn_cab_native_instruments(
                 let width_m = (*width_mm / 1000.0).max(1e-4);
                 let max_len_m = (*length_mm / 1000.0).max(1e-4);
                 let mesh = meshes.add(gauge_mesh(width_m, max_len_m, 0.0, gauge));
-                let rgba = gauge
-                    .positive_colour
-                    .unwrap_or([1.0, 1.0, 0.0, 1.0]);
+                let rgba = gauge.positive_colour.unwrap_or([1.0, 1.0, 0.0, 1.0]);
                 let material = materials.add(StandardMaterial {
                     base_color: Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0]),
                     unlit: true,
@@ -125,13 +123,12 @@ pub fn spawn_cab_native_instruments(
                     _ => CabDigitalParams::default(),
                 };
                 let size_m = (*height_mm / 1000.0).max(1e-4);
-                let max_digits = if control.as_str().eq_ignore_ascii_case("CLOCK")
-                    && digital.accuracy > 0
-                {
-                    8
-                } else {
-                    MAX_DIGITS_DEFAULT
-                };
+                let max_digits =
+                    if control.as_str().eq_ignore_ascii_case("CLOCK") && digital.accuracy > 0 {
+                        8
+                    } else {
+                        MAX_DIGITS_DEFAULT
+                    };
                 let Some(image) =
                     load_digit_font_image(cab_shape, route_dir, control, font_ace.as_deref())
                 else {
@@ -226,10 +223,7 @@ pub fn update_cab_native_instruments(
                 .or(gauge.gauge.positive_colour)
                 .unwrap_or([1.0, 1.0, 0.0, 1.0])
         } else {
-            gauge
-                .gauge
-                .positive_colour
-                .unwrap_or([1.0, 1.0, 0.0, 1.0])
+            gauge.gauge.positive_colour.unwrap_or([1.0, 1.0, 0.0, 1.0])
         };
         if let Some(mut mat) = materials.get_mut(&mat3d.0) {
             mat.base_color = Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0]);
@@ -360,7 +354,7 @@ pub fn format_3d_digits(digital: &CabDigitalParams, value: f64, max_digits: usiz
     }
     let leading = match digital.justification {
         // Cab3D: 4=center, 5=left, 6=right; MSTS 1–3 → left in 3D
-        4 => (max_digits.saturating_sub(text.len()) + 1) / 2,
+        4 => max_digits.saturating_sub(text.len()).div_ceil(2),
         6 => max_digits.saturating_sub(text.len()),
         _ => 0,
     };
@@ -424,12 +418,8 @@ fn load_digit_font_image(
         dirs.push(c.join("Chiltern/GLOBAL/TEXTURES"));
     }
     // Repo fixture + OR Addons (dev).
-    dirs.push(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/fixtures/cab"),
-    );
-    dirs.push(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../openrails/Addons"),
-    );
+    dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/fixtures/cab"));
+    dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../openrails/Addons"));
     if let Some(addons) = std::env::var_os("OPENRAILSRS_OR_ADDONS") {
         dirs.push(PathBuf::from(addons));
     }
@@ -542,8 +532,7 @@ mod tests {
                 },
             }],
         };
-        let driver =
-            crate::cab_cvf::matrix_driver_from_name("BRAKE_PIPE:0:0", &shape, 0, &cvf);
+        let driver = crate::cab_cvf::matrix_driver_from_name("BRAKE_PIPE:0:0", &shape, 0, &cvf);
         assert!(matches!(driver, Some(MatrixDriver::MultiState { .. })));
     }
 
@@ -568,8 +557,7 @@ mod tests {
                 },
             }],
         };
-        let driver =
-            crate::cab_cvf::matrix_driver_from_name("AMMETER:0:10:100", &shape, 2, &cvf);
+        let driver = crate::cab_cvf::matrix_driver_from_name("AMMETER:0:10:100", &shape, 2, &cvf);
         assert_eq!(
             driver,
             Some(MatrixDriver::GaugeNative {

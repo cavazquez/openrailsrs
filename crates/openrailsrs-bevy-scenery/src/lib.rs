@@ -80,8 +80,7 @@ pub use tile::{
     classify_world_file, classify_world_item, elevation_base_y, item_transform,
     load_msts_tile_snapshot, load_msts_tile_snapshot_from_paths, load_msts_tile_terrain_snapshot,
     load_msts_tile_world_snapshot, matrix3x3_to_affine, matrix3x3_to_rotation_scale,
-    matrix3x3_to_xna_mat3, qdir_to_quat,
-    resolve_world_tile_path, snapshot_from_parsed,
+    matrix3x3_to_xna_mat3, qdir_to_quat, resolve_world_tile_path, snapshot_from_parsed,
 };
 
 use std::path::PathBuf;

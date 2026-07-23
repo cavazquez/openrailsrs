@@ -72,8 +72,10 @@ pub fn create_screen_image(mode: DmiMode) -> Image {
     let (w, h) = mode.size();
     let px = (w * h * 4) as usize;
     let mut rgba = vec![0u8; px];
-    let mut status = crate::etcs::EtcsStatus::default();
-    status.dmi_mode = mode;
+    let status = crate::etcs::EtcsStatus {
+        dmi_mode: mode,
+        ..Default::default()
+    };
     crate::etcs::paint_dmi_full(&mut rgba, w, h, &status);
     Image::new(
         Extent3d {
@@ -248,12 +250,9 @@ pub fn handle_cab_dmi_mouse(
             continue;
         };
         let world = gt.to_matrix();
-        if let Some((t, uv)) = crate::etcs::input::raycast_mesh_uv(
-            mesh,
-            world,
-            ray.origin,
-            Vec3::from(ray.direction),
-        ) {
+        if let Some((t, uv)) =
+            crate::etcs::input::raycast_mesh_uv(mesh, world, ray.origin, Vec3::from(ray.direction))
+        {
             if best.as_ref().is_none_or(|(bt, _, _)| t < *bt) {
                 best = Some((t, uv, screen.dmi_mode));
             }
@@ -296,7 +295,10 @@ mod tests {
             "CabView/StaticTexture.ACE",
             "statictexture.ace"
         ));
-        assert!(!texture_matches_screen_graphic("speed.ace", "statictexture.ace"));
+        assert!(!texture_matches_screen_graphic(
+            "speed.ace",
+            "statictexture.ace"
+        ));
     }
 
     #[test]

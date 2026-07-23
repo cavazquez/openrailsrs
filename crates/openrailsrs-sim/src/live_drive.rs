@@ -462,7 +462,7 @@ const LIVE_REALTIME_MAX_DT_S: f64 = 0.05;
 impl LiveDriveSession {
     /// Physics dt used by [`Self::step_realtime`] (scenario dt, capped for smoothness).
     pub fn realtime_physics_dt(&self) -> f64 {
-        self.dt.min(LIVE_REALTIME_MAX_DT_S).max(1e-4)
+        self.dt.clamp(1e-4, LIVE_REALTIME_MAX_DT_S)
     }
 
     /// Advance simulation by `real_dt` seconds of wall-clock time (scaled by `speed_mul`).

@@ -60,17 +60,7 @@ pub fn paint_planning(
         };
         let mut lx = origin_x + 4;
         for ch in label.chars().take(4) {
-            blit_digit3x5(
-                rgba,
-                stride_w,
-                stride_h,
-                lx,
-                y - 5,
-                6,
-                9,
-                ch,
-                colors::GREY,
-            );
+            blit_digit3x5(rgba, stride_w, stride_h, lx, y - 5, 6, 9, ch, colors::GREY);
             lx += 7;
         }
     }
@@ -145,17 +135,7 @@ pub fn paint_planning(
     let mut ax = origin_x + 50;
     let ay = origin_y + PLAN_H - 22;
     for ch in allow.chars() {
-        blit_digit3x5(
-            rgba,
-            stride_w,
-            stride_h,
-            ax,
-            ay,
-            12,
-            16,
-            ch,
-            colors::WHITE,
-        );
+        blit_digit3x5(rgba, stride_w, stride_h, ax, ay, 12, 16, ch, colors::WHITE);
         ax += 13;
     }
 }
@@ -255,8 +235,7 @@ fn paint_gradient(
 pub fn planning_height(distance_m: f64, max_m: f64) -> i32 {
     let first_line = LINE_DIST[1] * max_m / 1000.0;
     if distance_m < first_line {
-        LINE_POS[0]
-            - ((LINE_POS[0] - LINE_POS[1]) as f64 / first_line.max(1.0) * distance_m) as i32
+        LINE_POS[0] - ((LINE_POS[0] - LINE_POS[1]) as f64 / first_line.max(1.0) * distance_m) as i32
     } else {
         let log_span = (max_m / first_line.max(1.0)).log10().max(1e-6);
         let t = (distance_m / first_line.max(1.0)).log10() / log_span;

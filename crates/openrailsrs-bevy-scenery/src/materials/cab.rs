@@ -306,11 +306,7 @@ pub fn create_or_cab_material_ex(
     // Opaque cab must write depth (shared pass with WORLD). Keep overlay bias only
     // for transparent / non-writing paths; solid geometry uses authored bias as-is.
     let depth_write = or_cab_depth_write_for_alpha(alpha_mode, z_buf_mode);
-    let depth_bias = if depth_write {
-        depth_bias
-    } else {
-        raw_bias
-    };
+    let depth_bias = if depth_write { depth_bias } else { raw_bias };
     materials.add(OrCabMaterial {
         params,
         base_texture: texture,

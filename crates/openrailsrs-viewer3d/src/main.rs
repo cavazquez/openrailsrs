@@ -291,12 +291,11 @@ fn main() {
         .unwrap_or(720)
         .max(64);
     // Screenshots / visual goldens: lock physical pixels (ignore HiDPI scale).
-    let screenshot_lock = std::env::var_os("OPENRAILSRS_SCREENSHOT")
-        .is_some_and(|v| !v.is_empty());
+    let screenshot_lock = std::env::var_os("OPENRAILSRS_SCREENSHOT").is_some_and(|v| !v.is_empty());
     let mut resolution: bevy::window::WindowResolution = (win_w, win_h).into();
     if screenshot_lock {
-        resolution = bevy::window::WindowResolution::new(win_w, win_h)
-            .with_scale_factor_override(1.0);
+        resolution =
+            bevy::window::WindowResolution::new(win_w, win_h).with_scale_factor_override(1.0);
     }
 
     let mut app = App::new();
