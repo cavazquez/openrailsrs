@@ -266,6 +266,10 @@ pub fn paint_circular_gauge(
 
 /// Needle colours follow OR FS mode + `SupervisionStatus` / `Monitor`.
 fn needle_color(status: &EtcsStatus) -> Rgba {
+    // STM / SN: leave colour management to national system (OR TODO) — grey stub.
+    if matches!(status.mode, super::status::EtcsMode::Sn) {
+        return colors::GREY;
+    }
     match status.supervision {
         EtcsSupervision::Intervention => colors::RED,
         EtcsSupervision::Warning | EtcsSupervision::Overspeed => colors::ORANGE,

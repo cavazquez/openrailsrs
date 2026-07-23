@@ -1,6 +1,7 @@
-//! ETCS Driver Machine Interface (OR `DriverMachineInterface` subset, #159–#162).
+//! ETCS Driver Machine Interface (OR `DriverMachineInterface` subset, #159–#163).
 //!
-//! CPU raster into the cab `ScreenDisplay` texture.
+//! CPU raster into the cab `ScreenDisplay` texture. Status comes from
+//! [`openrailsrs_sim::etcs::BasicEtcsTcs`].
 
 mod colors;
 mod gauge;
@@ -17,7 +18,7 @@ pub use mode::DmiMode;
 pub use paint::{paint_dmi, paint_dmi_full};
 pub use status::{
     EtcsLevel, EtcsMode, EtcsMonitor, EtcsStatus, EtcsSupervision, PlanningSymbol,
-    etcs_status_from_live,
+    SoftKeyAction, etcs_status_from_live,
 };
 pub use subwindow::DmiOverlay;
 pub use symbols::{EtcsSymbols, resolve_etcs_content_dir};

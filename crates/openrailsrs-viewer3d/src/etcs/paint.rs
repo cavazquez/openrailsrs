@@ -86,7 +86,16 @@ fn paint_dmi_1x(
     paint_soft_keys_at(rgba, w, h, 580, status);
 
     if ui.overlay.is_open() {
-        subwindow::paint_overlay(rgba, w, h, &ui.overlay, symbols, ui.sub_pressed);
+        subwindow::paint_overlay(
+            rgba,
+            w,
+            h,
+            &ui.overlay,
+            symbols,
+            ui.sub_pressed,
+            &ui.main_menu,
+            &ui.settings_menu,
+        );
     }
 }
 
@@ -267,9 +276,14 @@ fn paint_soft_keys_at(rgba: &mut [u8], w: u32, h: u32, x: i32, status: &EtcsStat
             if pressed { colors::DARK_GREY } else { colors::PANEL },
         );
         stroke_rect(rgba, w, h, x, y, 60, 48, colors::FRAME);
-        if let Some(label) = status.soft_keys.get(i as usize) {
-            if !label.is_empty() {
-                blit_text(rgba, w, h, x + 6, y + 18, 7, 10, label, colors::GREY);
+        if let Some(key) = status.soft_keys.get(i as usize) {
+            if !key.label.is_empty() {
+                let c = if key.enabled {
+                    colors::GREY
+                } else {
+                    colors::DARK_GREY
+                };
+                blit_text(rgba, w, h, x + 6, y + 18, 7, 10, &key.label, c);
             }
         }
     }

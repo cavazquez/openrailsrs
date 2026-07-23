@@ -1,4 +1,6 @@
-//! DMI subwindows: Menu + DataEntry demo (#162), no TCS scripting.
+//! DMI subwindows: Menu + DataEntry (#162/#163), menus from TCS defs.
+
+use openrailsrs_sim::etcs::MenuWindowDef;
 
 use super::colors;
 use super::paint::{blit_text, fill_rect, stroke_rect};
@@ -17,15 +19,6 @@ pub enum DmiOverlay {
 }
 
 impl DmiOverlay {
-    pub fn title(&self) -> &str {
-        match self {
-            Self::None => "",
-            Self::MainMenu => "Main",
-            Self::Settings => "Settings",
-            Self::DataEntry { .. } => "Data entry",
-        }
-    }
-
     pub fn is_open(&self) -> bool {
         !matches!(self, Self::None)
     }
@@ -54,6 +47,8 @@ pub fn paint_overlay(
     overlay: &DmiOverlay,
     symbols: &EtcsSymbols,
     pressed: Option<SubHit>,
+    main_menu: &MenuWindowDef,
+    settings_menu: &MenuWindowDef,
 ) {
     if matches!(overlay, DmiOverlay::None) {
         return;
@@ -61,19 +56,15 @@ pub fn paint_overlay(
     fill_rect(rgba, w, h, SW_X, SW_Y, SW_W, SW_H, colors::PANEL);
     stroke_rect(rgba, w, h, SW_X, SW_Y, SW_W, SW_H, colors::FRAME);
 
-    // Title bar + close
+    let title = match overlay {
+        DmiOverlay::MainMenu => main_menu.title.as_str(),
+        DmiOverlay::Settings => settings_menu.title.as_str(),
+        DmiOverlay::DataEntry { .. } => "Data entry",
+        DmiOverlay::None => "",
+    };
+
     fill_rect(rgba, w, h, SW_X, SW_Y, SW_W, 50, colors::DARK_GREY);
-    blit_text(
-        rgba,
-        w,
-        h,
-        SW_X + 8,
-        SW_Y + 18,
-        8,
-        12,
-        overlay.title(),
-        colors::WHITE,
-    );
+    blit_text(rgba, w, h, SW_X + 8, SW_Y + 18, 8, 12, title, colors::WHITE);
     let close_pressed = pressed == Some(SubHit::Close);
     fill_rect(
         rgba,
@@ -96,33 +87,21 @@ pub fn paint_overlay(
 
     match overlay {
         DmiOverlay::None => {}
-        DmiOverlay::MainMenu => paint_menu_grid(
-            rgba,
-            w,
-            h,
-            &["Start", "Override", "Data", "Special", "Settings", "Quit"],
-            pressed,
-        ),
-        DmiOverlay::Settings => paint_menu_grid(
-            rgba,
-            w,
-            h,
-            &["Brightness", "Volume", "Language", "Units", "Back", ""],
-            pressed,
-        ),
+        DmiOverlay::MainMenu => paint_menu_def(rgba, w, h, main_menu, pressed),
+        DmiOverlay::Settings => paint_menu_def(rgba, w, h, settings_menu, pressed),
         DmiOverlay::DataEntry { value } => paint_data_entry(rgba, w, h, value, symbols, pressed),
     }
 }
 
-fn paint_menu_grid(
+fn paint_menu_def(
     rgba: &mut [u8],
     w: u32,
     h: u32,
-    labels: &[&str],
+    def: &MenuWindowDef,
     pressed: Option<SubHit>,
 ) {
-    for (i, label) in labels.iter().enumerate() {
-        if label.is_empty() {
+    for (i, btn) in def.buttons.iter().enumerate() {
+        if btn.label.is_empty() {
             continue;
         }
         let col = (i % 2) as i32;
@@ -141,7 +120,12 @@ fn paint_menu_grid(
             if is_p { colors::DARK_GREY } else { colors::PANEL },
         );
         stroke_rect(rgba, w, h, x, y, 123, 48, colors::FRAME);
-        blit_text(rgba, w, h, x + 10, y + 18, 7, 10, label, colors::GREY);
+        let c = if btn.enabled {
+            colors::GREY
+        } else {
+            colors::DARK_GREY
+        };
+        blit_text(rgba, w, h, x + 10, y + 18, 7, 10, &btn.label, c);
     }
 }
 

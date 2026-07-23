@@ -384,6 +384,12 @@ impl LiveDriveSession {
         }
     }
 
+    /// ETCS status from the built-in Rust TCS (#163).
+    pub fn etcs_status(&self) -> crate::etcs::EtcsTcsStatus {
+        use crate::etcs::{BasicEtcsTcs, EtcsTcs};
+        BasicEtcsTcs::default().compute(self)
+    }
+
     /// Snapshot for the live cab panel (Fase C3).
     pub fn cab_telemetry(&self) -> CabTelemetry {
         let speed_kmh = self.state.velocity_mps * 3.6;

@@ -13,7 +13,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Ocultar exterior en L1 | ✅ |
 | CVF overlay en cabina 3D | ❌ off (#151) |
 | Matrices nativas `TYPE:orden[:p1[:p2]]` (#157) | ✅ parse + MultiState/Dial + Digit/GaugeNative quads |
-| Pantalla ETCS / `ScreenDisplay` (#158–#162) | ✅ DMI Full/modos + subventanas Menu/Data + planning OR |
+| Pantalla ETCS / `ScreenDisplay` (#158–#163) | ✅ DMI + TCS Rust (`BasicEtcsTcs`: supervisión/TTI/menús) |
 | Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
@@ -47,6 +47,8 @@ Cab2d `Direction` usa el mismo signo Bevy que `StartDirection` (X positivo = mir
 Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR). **LMB** en la pantalla ETCS (`ScreenDisplay`) activa soft keys del DMI (scroll, scale, Main/Data/Sett. → subventanas, ack mensajes).
 
 Parámetro CVF `mode`: `full` (default) · `SpeedArea` · `PlanningArea` · `GaugeOnly`.
+
+TCS: `openrailsrs_sim::etcs::BasicEtcsTcs` (sin scripts C#). Soft keys / menús desde defs del TCS; supervisión y TTI desde límite + distancia a parada + curva de frenado.
 
 Símbolos ERA: `Content/ETCS` (o `OPENRAILSRS_ETCS_CONTENT` / fixtures `docs/fixtures/etcs`).
 
