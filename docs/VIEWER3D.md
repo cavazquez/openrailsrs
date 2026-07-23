@@ -38,7 +38,7 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 | SortIndex (#102) | Bake conserva orden de archivo; `depth_bias` nudge en viewer3d + render3d |
 | Dual-pass BlendATex* (#101) | Mask(250)+Blend en ACE/DDS scenery (StandardMaterial); cab single-pass |
 | Instancing light model (#138) | Batch GPU solo TexDiff/Unknown sin unlit/emissive; Tex→FullBright y resto → entity path |
-| Affine Matrix3x3 (#139) | `linear: Mat3` → GPU instance Mat4 (shear); **N≥1** si hay `linear` (entity TRS lo pierde; edificios únicos) |
+| Affine Matrix3x3 (#139) | `linear: Mat3` en pose + GPU instance Mat4 (shear); Transform TRS solo aproximación |
 | Night/Underground (#142) | Flag Underground; selector sol/túnel; Night local→padre DDS→ACE; `OPENRAILSRS_SCENERY_NIGHT` |
 | Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
 | PAT `start_offset_m` (#132) | Ancla = cabeza; TrackPDP ignora `DistanceDownPath` |
