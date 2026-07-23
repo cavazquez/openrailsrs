@@ -1851,7 +1851,7 @@ fn append_shape_spawn_entries_for_transforms(
     use crate::world_instancing::{
         WORLD_INSTANCING_MIN, WorldInstanceAppearance, WorldInstanceBuffer, WorldInstanceData,
         WorldInstancedGroup, appearance_from_standard_material, group_placements_by_tile,
-        instances_aabb, world_instancing_enabled,
+        instances_aabb, instancing_part_supported, world_instancing_enabled,
     };
 
     // viewer3d scenery uses daylight sun by default (#95).
@@ -1951,7 +1951,15 @@ fn append_shape_spawn_entries_for_transforms(
             let tile_auto_z = tile_placements.iter().any(|p| p.auto_z_bias);
             for &(part_index, part) in &visible_parts {
                 let material = material_with_auto_z_bias(materials, &part.material, tile_auto_z);
-                if use_gpu && !part.is_transparent {
+                let can_instance = use_gpu
+                    && !part.is_transparent
+                    && instancing_part_supported(
+                        part.shader_name.as_deref(),
+                        part.light_mat_idx,
+                        materials,
+                        &material,
+                    );
+                if can_instance {
                     let instances: Vec<WorldInstanceData> = tile_placements
                         .iter()
                         .map(|p| {

@@ -21,7 +21,8 @@ pub use openrailsrs_bevy_scenery::shapes::{
     SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ShapePbrSidecar, ace_mean_luma,
     alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
     apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
-    apply_z_buf_mode, blend_alpha_passes_from_prim_state, brighten_cab_ace_rgba,
+    apply_z_buf_mode, blend_alpha_passes_from_ace_bits, blend_alpha_passes_from_prim_state,
+    brighten_cab_ace_rgba,
     brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
     build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_at_distance_with_options,
@@ -36,14 +37,11 @@ pub use openrailsrs_bevy_scenery::shapes::{
     resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
     scenery_materials_lit, scenery_uses_or_wgsl_shaders, set_train_shape_debug_scope,
     shader_name_for_prim_state, shader_uses_vertex_color_multiply, shape_alpha_mode,
-    shape_point_to_bevy, shape_shader_requests_blending, sort_index_depth_nudge,
-    texture_for_prim_state, texture_name_suggests_transparency,
+    shape_point_to_bevy, sort_index_depth_nudge, texture_for_prim_state,
     train_exterior_material_with_texture_ex, train_shape_debug_scope, world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::shapes::{ShapeDescriptor, night_subobj_part_visible};
 use openrailsrs_formats::{DistanceLevel, ShapeFile, Vec3 as ShapeVec3};
-use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
-
 pub use openrailsrs_bevy_scenery::textures::{DdsAlpha, ace_to_image, dds_alpha_type};
 
 /// MSTS `ROUTES/<name>/` when the repo only ships a slim `examples/<name>/` overlay.
@@ -1890,31 +1888,22 @@ fn finish_shape_textured_part(
     (material, None, true, is_transparent)
 }
 
-fn scenery_dds_alpha_mode(
+/// DDS scenery alpha: AceAlphaBits stub + BlendATex* dual-pass (#101 / #136).
+fn scenery_dds_alpha_passes(
     dds_path: &Path,
     texture_file: &str,
     shader_name: Option<&str>,
     alpha_test_mode: i32,
-) -> AlphaMode {
-    match alpha_test_mode {
-        0 => return AlphaMode::Opaque,
-        1 => return AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF),
-        2 => return AlphaMode::Blend,
-        _ => {}
-    }
+) -> Vec<openrailsrs_bevy_scenery::shapes::BlendAlphaPass> {
+    // Full/unknown alpha ≈ 8-bit AceAlphaBits for GetBlending (same as cab DDS).
     let has_alpha = matches!(dds_alpha_type(dds_path), Some(DdsAlpha::Full) | None);
-    if !has_alpha {
-        return AlphaMode::Opaque;
-    }
-    if shader_name
-        .map(shape_shader_requests_blending)
-        .unwrap_or(false)
-        && texture_name_suggests_transparency(texture_file)
-    {
-        AlphaMode::Blend
-    } else {
-        AlphaMode::Opaque
-    }
+    blend_alpha_passes_from_ace_bits(
+        if has_alpha { 8 } else { 0 },
+        false,
+        texture_file,
+        shader_name,
+        alpha_test_mode,
+    )
 }
 
 /// Decode `.ace` files in parallel (safe before inserting into Bevy `Assets`).
@@ -1965,15 +1954,24 @@ fn material_for_shape_texture(
                     == Some(std::ffi::OsString::from("dds"));
                 if is_dds {
                     if let Ok(bytes) = std::fs::read(&tex_path) {
-                        let alpha_mode = if cab_interior {
-                            cab_dds_alpha_mode(&tex_path, tex_name, shader_name, alpha_test_mode)
+                        let (alpha_mode, dual_blend) = if cab_interior {
+                            (
+                                cab_dds_alpha_mode(
+                                    &tex_path,
+                                    tex_name,
+                                    shader_name,
+                                    alpha_test_mode,
+                                ),
+                                false,
+                            )
                         } else {
-                            scenery_dds_alpha_mode(
+                            let passes = scenery_dds_alpha_passes(
                                 &tex_path,
                                 tex_name,
                                 shader_name,
                                 alpha_test_mode,
-                            )
+                            );
+                            (passes[0].alpha_mode, passes.len() > 1)
                         };
                         let use_rgba =
                             cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
@@ -1995,8 +1993,8 @@ fn material_for_shape_texture(
                                 .entry((tex_path.clone(), addr_key))
                                 .or_insert_with(|| images.add(image))
                                 .clone();
-                            let is_transparent =
-                                !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                            let is_transparent = dual_blend
+                                || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
                             let tint = apply_msts_vertex_tint(
                                 if cab_interior {
                                     Color::WHITE
@@ -2024,7 +2022,7 @@ fn material_for_shape_texture(
                                 materials,
                                 light_mat_idx,
                             );
-                            return (m, o, ht, it, false);
+                            return (m, o, ht, it, dual_blend);
                         }
                     }
                 }
@@ -2173,17 +2171,14 @@ fn cab_dds_alpha_mode(
 ) -> AlphaMode {
     // DDS lacks AceAlphaBits; Full/unknown alpha ≈ 8-bit for GetBlending (#136).
     let has_alpha = matches!(dds_alpha_type(dds_path), Some(DdsAlpha::Full) | None);
-    let stub = AceFile {
-        width: 1,
-        height: 1,
-        format: openrailsrs_ace::AceFormat::Rgba8,
-        mips_count: 1,
-        mip0: vec![255, 255, 255, if has_alpha { 128 } else { 255 }],
-        mips: Vec::new(),
-        has_mask_channel: false,
-        alpha_bits: if has_alpha { 8 } else { 0 },
-    };
-    alpha_mode_from_prim_state(&stub, texture_file, shader_name, alpha_test_mode)
+    blend_alpha_passes_from_ace_bits(
+        if has_alpha { 8 } else { 0 },
+        false,
+        texture_file,
+        shader_name,
+        alpha_test_mode,
+    )[0]
+    .alpha_mode
 }
 
 /// Process-wide count of successful `ShapeFile::from_path` calls via this module's loaders.
@@ -2903,6 +2898,11 @@ mod tests {
         std::fs::create_dir_all(&textures).unwrap();
         let texture = textures.join("alpha_test.ace");
         write_synthetic_ace(&texture, &[0xFF, 0xFF, 0xFF, 0x80]);
+        // @ACE synthetic path always reports alpha_bits=0; force AceAlphaBits>1 (#136/#101).
+        let mut ace = read_ace(&texture).expect("ace");
+        ace.alpha_bits = 8;
+        let mut ace_cache = HashMap::new();
+        ace_cache.insert(texture.clone(), ace);
 
         let mut images = Assets::<Image>::default();
         let mut materials = Assets::<StandardMaterial>::default();
@@ -2913,14 +2913,14 @@ mod tests {
                 &[route.as_path()],
                 Some("alpha_test.ace"),
                 Some("BlendATexDiff"),
-                -1, // no explicit alpha_test_mode → heuristic path
+                -1,
                 None,
                 -1,
                 &mut images,
                 &mut materials,
                 None,
                 &mut texture_cache,
-                &HashMap::new(),
+                &ace_cache,
                 Color::srgb(0.95, 0.25, 0.85),
                 None,
                 None,
@@ -2938,7 +2938,7 @@ mod tests {
         assert!(is_transparent);
         assert!(
             dual_blend,
-            "BlendATexDiff with mid-alpha must dual-pass (#101)"
+            "BlendATexDiff + AceAlphaBits>1 must dual-pass (#101)"
         );
         // First pass is OR ReferenceAlpha=250 (Mask); Blend follow-up is spawned by caller.
         assert!(matches!(material.alpha_mode, AlphaMode::Mask(_)));

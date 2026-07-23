@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
     LoadedShapePart, build_mesh_parts_from_shape_at_distance_with_options,
     build_mesh_parts_from_shape_lod_with_options, lod_level_for_distance as scenery_lod_level,
-    render3d_world_mesh_options,
+    render3d_world_mesh_options, sort_index_depth_nudge,
 };
 use openrailsrs_formats::{DistanceLevel, ShapeFile};
 
@@ -35,6 +35,10 @@ pub struct ShapePart {
     pub tex_addr_mode: Option<i32>,
     /// MSTS `texture.MipMapLODBias` (#108).
     pub mip_map_lod_bias: Option<f32>,
+    /// Open Rails `SortIndex` of the first file-order primitive in this part (#102).
+    pub sort_index: u32,
+    /// MSTS `z_bias` plus SortIndex depth nudge for coplanar blend (#102).
+    pub depth_bias: f32,
     /// Color por vértice (RGBA lineal) cuando el shape no tiene textura.
     pub colors: Option<Vec<[f32; 4]>>,
     /// Color uniforme si todos los vértices comparten el mismo tono.
@@ -111,6 +115,7 @@ fn loaded_part_to_shape_part(part: LoadedShapePart) -> Option<ShapePart> {
     let uvs = mesh_float2(&part.mesh, Mesh::ATTRIBUTE_UV_0)
         .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()]);
     let colors = mesh_float4(&part.mesh, Mesh::ATTRIBUTE_COLOR);
+    let z = part.z_bias.unwrap_or(0.0) + sort_index_depth_nudge(part.sort_index);
     Some(ShapePart {
         sub_object_idx: part.sub_object_idx,
         positions,
@@ -122,6 +127,8 @@ fn loaded_part_to_shape_part(part: LoadedShapePart) -> Option<ShapePart> {
         light_mat_idx: part.light_mat_idx,
         tex_addr_mode: part.tex_addr_mode,
         mip_map_lod_bias: part.mip_map_lod_bias,
+        sort_index: part.sort_index,
+        depth_bias: z,
         colors,
         solid_color: part.solid_color,
     })

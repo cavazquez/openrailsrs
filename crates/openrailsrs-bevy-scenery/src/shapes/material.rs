@@ -505,6 +505,34 @@ pub fn alpha_name_heuristic_enabled() -> bool {
     )
 }
 
+/// Dual-pass / additive selection when only `AceAlphaBits` is known (DDS stubs, render3d).
+///
+/// `has_mask_channel` mirrors one-bit ACE masks (`AceAlphaBits == 1`).
+pub fn blend_alpha_passes_from_ace_bits(
+    ace_alpha_bits: u8,
+    has_mask_channel: bool,
+    texture_file: &str,
+    shader_name: Option<&str>,
+    alpha_test_mode: i32,
+) -> Vec<BlendAlphaPass> {
+    let stub = AceFile {
+        width: 1,
+        height: 1,
+        format: openrailsrs_ace::AceFormat::Rgba8,
+        mips_count: 1,
+        mip0: vec![
+            200,
+            200,
+            200,
+            if ace_alpha_bits > 0 { 128 } else { 255 },
+        ],
+        mips: Vec::new(),
+        has_mask_channel,
+        alpha_bits: ace_alpha_bits,
+    };
+    blend_alpha_passes_from_prim_state(&stub, texture_file, shader_name, alpha_test_mode)
+}
+
 /// Open Rails dual-pass for BlendATex* (#101) and single AddATex additive (#137).
 pub fn blend_alpha_passes_from_prim_state(
     ace: &AceFile,
@@ -770,5 +798,15 @@ mod tests {
         assert!(!or_ace_requests_blending(1, true, true));
         assert!(or_ace_requests_blending(8, true, true));
         assert!(!or_ace_requests_blending(8, false, false));
+    }
+
+    #[test]
+    fn blend_alpha_passes_from_ace_bits_matches_prim_state() {
+        let from_bits =
+            blend_alpha_passes_from_ace_bits(8, false, "wall.ace", Some("BlendATexDiff"), -1);
+        let from_ace =
+            blend_alpha_passes_from_prim_state(&ace_bits(8), "wall.ace", Some("BlendATexDiff"), -1);
+        assert_eq!(from_bits, from_ace);
+        assert_eq!(from_bits.len(), 2);
     }
 }

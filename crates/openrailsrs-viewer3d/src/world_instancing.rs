@@ -249,6 +249,50 @@ pub fn appearance_from_standard_material(
     }
 }
 
+/// Light models the instanced Lambert path can represent without visual error (#138).
+///
+/// **Supported (stay in GPU batch):** effective `TexDiff` / `Unknown` (+ Mask cutout).
+/// Note: OR maps bare `Tex` → FullBright, so it falls back.
+/// **Fallback (entity path):** HalfBright, FullBright/Bright/`Tex`, Dark/DarkShade, Specular*,
+/// AddATex/BlendATex, or StandardMaterial with unlit / emissive fill.
+pub fn instancing_light_model_supported(
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+) -> bool {
+    use openrailsrs_or_shader::{OrShaderKind, resolve_or_material_kind};
+    matches!(
+        resolve_or_material_kind(shader_name, light_mat_idx),
+        OrShaderKind::TexDiff | OrShaderKind::Unknown
+    )
+}
+
+/// True when albedo+cutoff packing is enough for this [`StandardMaterial`] (#138).
+pub fn instancing_material_supported(mat: &StandardMaterial) -> bool {
+    if mat.unlit {
+        return false;
+    }
+    if mat.emissive_texture.is_some() {
+        return false;
+    }
+    let e = mat.emissive;
+    e.red <= 0.02 && e.green <= 0.02 && e.blue <= 0.02
+}
+
+/// Combined gate used by WORLD spawn (#138).
+pub fn instancing_part_supported(
+    shader_name: Option<&str>,
+    light_mat_idx: Option<i32>,
+    materials: &Assets<StandardMaterial>,
+    material: &Handle<StandardMaterial>,
+) -> bool {
+    if !instancing_light_model_supported(shader_name, light_mat_idx) {
+        return false;
+    }
+    materials
+        .get(material)
+        .is_some_and(instancing_material_supported)
+}
+
 // ─── Render-world plumbing ───────────────────────────────────────────────────
 
 #[derive(Component)]
@@ -998,6 +1042,35 @@ mod tests {
                 && src.contains("fn fragment_shadow"),
             "shader must expose opaque + shadow cast entry points"
         );
+    }
+
+    #[test]
+    fn instancing_light_model_gates_halfbright_and_specular() {
+        // #138: TexDiff/Unknown stay in batch; Tex→FullBright and light models fall back.
+        assert!(instancing_light_model_supported(Some("TexDiff"), None));
+        assert!(instancing_light_model_supported(None, None));
+        assert!(!instancing_light_model_supported(Some("Tex"), None));
+        assert!(!instancing_light_model_supported(Some("HalfBright"), None));
+        assert!(!instancing_light_model_supported(Some("Specular25"), None));
+        // LightMatIdx HalfBright (12 + (-11) = 1).
+        assert!(!instancing_light_model_supported(Some("TexDiff"), Some(-11)));
+        // LightMatIdx Specular25 (12 + (-6) = 6).
+        assert!(!instancing_light_model_supported(Some("TexDiff"), Some(-6)));
+    }
+
+    #[test]
+    fn instancing_material_rejects_unlit_and_emissive_fill() {
+        let mut lit = StandardMaterial::default();
+        lit.unlit = false;
+        lit.emissive = LinearRgba::BLACK;
+        assert!(instancing_material_supported(&lit));
+
+        lit.unlit = true;
+        assert!(!instancing_material_supported(&lit));
+
+        lit.unlit = false;
+        lit.emissive = LinearRgba::new(0.11, 0.12, 0.14, 1.0);
+        assert!(!instancing_material_supported(&lit));
     }
 
     #[test]

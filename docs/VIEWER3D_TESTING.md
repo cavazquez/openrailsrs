@@ -38,6 +38,8 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | Tema | Notas |
 |------|--------|
 | Instancing WORLD (#58) | `world_instancing`; opt-out `OPENRAILSRS_WORLD_INSTANCING=0` |
+| Instancing light model (#138) | TexDiff/Unknown only; HalfBright/Tex→FullBright/Specular*/emissive → entity path |
+| SortIndex (#102) / dual-pass (#101) | `mesh.rs` order; `blend_alpha_passes_*`; DDS scenery dual_blend |
 | Sombras instanced (#72) | receive + cast Shadow phase |
 | Fog (#39) | on by default; `F` → densidad 0 (no quitar componente) |
 | PBR sidecar (#44) | `*.s.pbr.json` → tangents + normal map |

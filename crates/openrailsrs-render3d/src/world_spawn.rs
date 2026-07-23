@@ -378,7 +378,10 @@ fn brighten_luma_threshold(texture_name: &str, alpha_mode: AlphaMode) -> f32 {
 }
 
 fn normalize_alpha_mode(mode: AlphaMode, texture_name: &str) -> AlphaMode {
+    use openrailsrs_bevy_scenery::shapes::OR_BLEND_PASS_OPAQUE_CUTOFF;
     match mode {
+        // Preserve OR BlendATex* ReferenceAlpha=250 pre-pass (#101).
+        AlphaMode::Mask(c) if (c - OR_BLEND_PASS_OPAQUE_CUTOFF).abs() < 1e-5 => mode,
         AlphaMode::Mask(_) if texture_name_suggests_cutout(texture_name) => {
             AlphaMode::Mask(FOLIAGE_MASK_CUTOFF)
         }
@@ -418,6 +421,7 @@ fn msts_material(
     texture_name: &str,
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
+    depth_bias: f32,
 ) -> Handle<StandardMaterial> {
     let pbr = resolve_or_material_pbr_ex(texture_name, shader_name, light_mat_idx, lit, roughness);
     let material_lit = lit && !pbr.force_unlit;
@@ -428,6 +432,7 @@ fn msts_material(
         metallic: pbr.metallic,
         reflectance: pbr.reflectance,
         alpha_mode,
+        depth_bias,
         double_sided: true,
         cull_mode: None,
         unlit: !material_lit,
@@ -1689,8 +1694,8 @@ fn build_shape(
     let handles: Vec<PartHandles> = parts
         .into_iter()
         .filter(|p| !p.positions.is_empty())
-        .map(|p| {
-            let material = match &p.texture {
+        .flat_map(|p| {
+            let (material, dual_blend) = match &p.texture {
                 Some(name) => texture_material(
                     file,
                     name,
@@ -1699,6 +1704,7 @@ fn build_shape(
                     p.light_mat_idx,
                     p.tex_addr_mode,
                     p.solid_color,
+                    p.depth_bias,
                     &path,
                     index,
                     route_dir,
@@ -1717,40 +1723,62 @@ fn build_shape(
                     &ctx.moment_atlas,
                     ctx.shadow_map_limits,
                 ),
-                None if ukfs_track => ukfs_untextured_material(
-                    file,
-                    &p,
-                    &path,
-                    index,
-                    route_dir,
-                    msts_root,
-                    shape_flags,
-                    texture_env,
-                    &mut ctx.tex_mat_cache,
-                    or_materials,
-                    &mut ctx.or_tex_mat_cache,
-                    ctx.use_or_shaders,
-                    materials,
-                    images,
-                    &ctx.untextured,
-                    tex_stats,
-                    ctx.materials_lit,
-                    &ctx.moment_atlas,
-                    ctx.shadow_map_limits,
+                None if ukfs_track => (
+                    ukfs_untextured_material(
+                        file,
+                        &p,
+                        &path,
+                        index,
+                        route_dir,
+                        msts_root,
+                        shape_flags,
+                        texture_env,
+                        &mut ctx.tex_mat_cache,
+                        or_materials,
+                        &mut ctx.or_tex_mat_cache,
+                        ctx.use_or_shaders,
+                        materials,
+                        images,
+                        &ctx.untextured,
+                        tex_stats,
+                        ctx.materials_lit,
+                        &ctx.moment_atlas,
+                        ctx.shadow_map_limits,
+                    ),
+                    false,
                 ),
-                None => material_for_untextured_part(
-                    &p,
-                    materials,
-                    &mut ctx.color_mat_cache,
-                    &ctx.untextured,
-                    tex_stats,
-                    ctx.materials_lit,
+                None => (
+                    material_for_untextured_part(
+                        &p,
+                        materials,
+                        &mut ctx.color_mat_cache,
+                        &ctx.untextured,
+                        tex_stats,
+                        ctx.materials_lit,
+                    ),
+                    false,
                 ),
             };
-            PartHandles {
-                mesh: meshes.add(shape_part_mesh(&p, p.texture.is_some(), ukfs_track)),
+            let mesh = meshes.add(shape_part_mesh(&p, p.texture.is_some(), ukfs_track));
+            let mut out = vec![PartHandles {
+                mesh: mesh.clone(),
                 material,
+            }];
+            // OR BlendATex* second pass (Standard path only; OrScenery keeps single draw).
+            if dual_blend {
+                if let SceneMaterialHandle::Standard(h) = &out[0].material {
+                    if let Some(base) = materials.get(h) {
+                        let mut blend_mat = base.clone();
+                        blend_mat.alpha_mode = AlphaMode::Blend;
+                        blend_mat.depth_bias += 0.0002;
+                        out.push(PartHandles {
+                            mesh,
+                            material: SceneMaterialHandle::Standard(materials.add(blend_mat)),
+                        });
+                    }
+                }
             }
+            out
         })
         .collect();
     ctx.shape_cache.insert(cache_key.clone(), handles.clone());
@@ -1808,6 +1836,7 @@ fn ukfs_untextured_material(
         part.light_mat_idx,
         part.tex_addr_mode,
         None,
+        part.depth_bias,
         shape_path,
         index,
         route_dir,
@@ -1826,6 +1855,7 @@ fn ukfs_untextured_material(
         moment_atlas,
         shadow_map_limits,
     )
+    .0
 }
 
 fn clamp_lit_vertex_color(color: Color) -> Color {
@@ -1901,6 +1931,7 @@ fn texture_material(
     light_mat_idx: Option<i32>,
     tex_addr_mode: Option<i32>,
     solid_color: Option<[f32; 3]>,
+    depth_bias: f32,
     shape_path: &Path,
     index: &AssetIndex,
     route_dir: &Path,
@@ -1918,12 +1949,12 @@ fn texture_material(
     lit: bool,
     moment_atlas: &Handle<Image>,
     shadow_map_limits: [f32; 4],
-) -> SceneMaterialHandle {
+) -> (SceneMaterialHandle, bool) {
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir, msts_root);
     let dir_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let Some(tex_path) = index.resolve_texture(&dir_refs, name, texture_env, shape_flags) else {
         tex_stats.record_unresolved(shape_file, name, shape_path);
-        return SceneMaterialHandle::Standard(untextured.clone());
+        return (SceneMaterialHandle::Standard(untextured.clone()), false);
     };
 
     let is_dds = tex_path
@@ -1931,12 +1962,12 @@ fn texture_material(
         .and_then(|e| e.to_str())
         .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
 
-    let alpha_mode = if is_dds {
+    let (alpha_mode, dual_blend) = if is_dds {
         use crate::textures::{DdsAlpha, dds_alpha_type};
         let dds_alpha = dds_alpha_type(&tex_path).unwrap_or(DdsAlpha::Full);
         let has_alpha = matches!(dds_alpha, DdsAlpha::Full);
 
-        alpha_mode_from_shader(
+        alpha_passes_from_shader(
             shader_name,
             name,
             alpha_test_mode,
@@ -1946,11 +1977,13 @@ fn texture_material(
     } else {
         let Some(ace) = load_ace_file(&tex_path) else {
             tex_stats.record_decode_failed(shape_file, name, &tex_path);
-            return SceneMaterialHandle::Standard(untextured.clone());
+            return (SceneMaterialHandle::Standard(untextured.clone()), false);
         };
 
-        alpha_mode_from_shader(shader_name, name, alpha_test_mode, ace.alpha_bits)
+        alpha_passes_from_shader(shader_name, name, alpha_test_mode, ace.alpha_bits)
     };
+    // OrScenery path keeps a single draw; dual Mask+Blend is StandardMaterial only (#101).
+    let dual_blend = dual_blend && !use_or_shaders;
 
     let cache_key = {
         let vtx = solid_color
@@ -1965,7 +1998,7 @@ fn texture_material(
             .map(|i| i.to_string())
             .unwrap_or_else(|| "1".into());
         format!(
-            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:lm={lm}:am={am}:or={}",
+            "{}:{alpha_mode:?}:{vtx}:lit={lit}:sh={sh}:lm={lm}:am={am}:bias={depth_bias:.6}:or={}",
             tex_path.display(),
             use_or_shaders as u8
         )
@@ -1995,7 +2028,7 @@ fn texture_material(
                 )
             })
             .clone();
-        return SceneMaterialHandle::OrScenery(handle);
+        return (SceneMaterialHandle::OrScenery(handle), false);
     }
 
     let handle = tex_mat_cache
@@ -2011,6 +2044,7 @@ fn texture_material(
                 is_dds,
                 &tex_path,
                 alpha_mode,
+                depth_bias,
                 materials,
                 images,
                 untextured,
@@ -2019,7 +2053,7 @@ fn texture_material(
             )
         })
         .clone();
-    SceneMaterialHandle::Standard(handle)
+    (SceneMaterialHandle::Standard(handle), dual_blend)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2033,6 +2067,7 @@ fn build_textured_standard_material(
     is_dds: bool,
     tex_path: &Path,
     alpha_mode: AlphaMode,
+    depth_bias: f32,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     untextured: &Handle<StandardMaterial>,
@@ -2079,6 +2114,7 @@ fn build_textured_standard_material(
             name,
             shader_name,
             light_mat_idx,
+            depth_bias,
         )
     } else {
         let ace = match load_ace_file(tex_path) {
@@ -2127,6 +2163,7 @@ fn build_textured_standard_material(
             name,
             shader_name,
             light_mat_idx,
+            depth_bias,
         )
     }
 }
@@ -2283,51 +2320,35 @@ fn build_textured_or_material(
     }
 }
 
+/// First draw alpha + whether a second Blend draw is needed (#101 dual-pass).
+fn alpha_passes_from_shader(
+    shader_name: Option<&str>,
+    texture_name: &str,
+    alpha_test_mode: i32,
+    ace_alpha_bits: u8,
+) -> (AlphaMode, bool) {
+    use openrailsrs_bevy_scenery::shapes::blend_alpha_passes_from_ace_bits;
+    let passes = blend_alpha_passes_from_ace_bits(
+        ace_alpha_bits,
+        ace_alpha_bits == 1,
+        texture_name,
+        shader_name,
+        alpha_test_mode,
+    );
+    (passes[0].alpha_mode, passes.len() > 1)
+}
+
+#[cfg(test)]
 fn alpha_mode_from_shader(
     shader_name: Option<&str>,
-    _texture_name: &str,
+    texture_name: &str,
     alpha_test_mode: i32,
     ace_alpha_bits: u8,
 ) -> AlphaMode {
-    use openrailsrs_bevy_scenery::shapes::{
-        or_ace_requests_blending, shape_shader_requests_additive, shape_shader_requests_blend,
-        shape_shader_requests_blending,
-    };
-    use openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF;
-
-    // Artist forced opaque on a non-blend shader.
-    let blend_capable = shader_name
-        .map(shape_shader_requests_blending)
-        .unwrap_or(false);
-    if alpha_test_mode == 0 && !blend_capable {
-        return AlphaMode::Opaque;
-    }
-    if alpha_test_mode == 2 && blend_capable {
-        if shader_name.is_some_and(shape_shader_requests_additive) {
-            return AlphaMode::Add;
-        }
-        return AlphaMode::Blend;
-    }
-
-    let alpha_test_requested = alpha_test_mode == 1;
-    let blending = or_ace_requests_blending(ace_alpha_bits, alpha_test_requested, blend_capable);
-    if !blending {
-        return if alpha_test_requested {
-            AlphaMode::Mask(OR_MSTS_ALPHA_TEST_CUTOFF)
-        } else {
-            AlphaMode::Opaque
-        };
-    }
-
-    if shader_name.is_some_and(shape_shader_requests_additive) {
-        AlphaMode::Add
-    } else if shader_name.is_some_and(shape_shader_requests_blend) {
-        AlphaMode::Blend
-    } else {
-        AlphaMode::Opaque
-    }
+    alpha_passes_from_shader(shader_name, texture_name, alpha_test_mode, ace_alpha_bits).0
 }
 
+#[cfg(test)]
 fn texture_name_suggests_blend(texture_name: &str) -> bool {
     let lower = texture_name.to_ascii_lowercase();
     [
@@ -2493,6 +2514,15 @@ mod tests {
             alpha_mode_from_shader(Some("AddATex"), "glow.ace", -1, 8),
             AlphaMode::Add
         ));
+    }
+
+    #[test]
+    fn blend_atex_diff_dual_pass_first_is_mask_250() {
+        // #101: BlendATex* + AceAlphaBits>1 → Mask(250) then Blend spawn.
+        let (mode, dual) = alpha_passes_from_shader(Some("BlendATexDiff"), "wall.ace", -1, 8);
+        assert!(matches!(mode, AlphaMode::Mask(c) if (c - 250.0 / 255.0).abs() < 1e-5));
+        assert!(dual);
+        assert!(!alpha_passes_from_shader(Some("AddATex"), "glow.ace", -1, 8).1);
     }
 
     #[test]
