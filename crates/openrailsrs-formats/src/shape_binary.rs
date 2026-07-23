@@ -603,8 +603,16 @@ fn format_float(v: f64) -> String {
 fn token_scalars_are_i32(id: i32) -> bool {
     matches!(
         id,
-        48  // vertex: flags, point index, normal index, colors
+        28 // animation: FrameCount, FrameRate (then anim_nodes sub-block)
+            | 40 // sub_object_header leading ints (before geometry_info / shader lists)
+            | 41 // geometry_info: ten ReadInt counts (then geometry_nodes / map)
+            | 43 // geometry_node: five ReadInt (then cullable_prims)
+            | 44 // geometry_node_map: count + signed matrix→node indices
+            | 45 // cullable_prims: NumPrims, NumFlatSections, NumPrimIdxs
+            | 46 // vtx_state: flags, imatrix, LightMatIdx, LightCfgIdx, … (#172)
+            | 48 // vertex: flags, point index, normal index, colors
             | 49 // vertex_uvs
+            | 51 // vertex_set: VtxStateIdx, StartVtxIdx, VtxCount
             // 54 prim_state: handled by dump_prim_state_content (mixed i32 + float ZBias)
             | 56 // prim_state_idx
             | 61 // tex_idxs
@@ -612,6 +620,17 @@ fn token_scalars_are_i32(id: i32) -> bool {
             | 64 // flags
             | 67 // hierarchy
             | 70 // shape_header
+            | 80 // light_model_cfg: leading int (then uv_ops)
+            | 82 // uvop_copy (alias)
+            | 83 // uv_op_share
+            | 84 // uv_op_copy: TexAddrMode, SrcUVIdx
+            | 91 // uv_op_reflectxy
+            | 92 // uv_op_reflectmap
+            | 93 // uv_op_reflectmapfull
+            | 94 // uv_op_spheremap
+            | 95 // uv_op_spheremapfull
+            | 96 // uv_op_specularmap
+            | 97 // uv_op_embossbump
             // World tokens whose payload is u32 (not f32):
             | 401 // StaticDetailLevel
             | 404 // StaticFlags
@@ -852,7 +871,22 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
 fn is_scalar_only_leaf_block(token_id: i32) -> bool {
     matches!(
         token_id,
-        2 | 3 | 6 | 8 | 56 | 63 | 64 | 67 | 99 | 101 | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, hierarchy, anim_keys
+        2 | 3 | 6 | 8
+            | 44 // geometry_node_map
+            | 45 // cullable_prims
+            | 46 // vtx_state
+            | 51 // vertex_set
+            | 56
+            | 63
+            | 64
+            | 67
+            | 82
+            | 83
+            | 84 // uv_op_copy / aliases
+            | 91..=97 // uv_op_* with integer-only payloads
+            | 99
+            | 101
+            | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, hierarchy, anim_keys
     )
 }
 
@@ -1146,6 +1180,31 @@ mod tests {
         {
             eprintln!("hierarchy: {:?}", level.hierarchy);
         }
+        // #172: vtx_state imatrix must decode as i32 (not f32→format_float→0).
+        assert!(
+            shape.vtx_states.len() >= 20,
+            "Pullman cab expected ≥20 vtx_states, got {}",
+            shape.vtx_states.len()
+        );
+        assert_eq!(
+            shape.vtx_states[10].matrix_idx, 8,
+            "vtx_state[10] should be THROTTLE (M8), got {}",
+            shape.vtx_states[10].matrix_idx
+        );
+        assert_eq!(
+            shape.vtx_states[19].matrix_idx, 17,
+            "vtx_state[19] should be M17, got {}",
+            shape.vtx_states[19].matrix_idx
+        );
+        let non_main = shape
+            .vtx_states
+            .iter()
+            .filter(|v| v.matrix_idx > 0)
+            .count();
+        assert!(
+            non_main >= 17,
+            "expected authored non-MAIN vtx_states, got {non_main} (parser still reading i32 as f32?)"
+        );
     }
 
     #[test]

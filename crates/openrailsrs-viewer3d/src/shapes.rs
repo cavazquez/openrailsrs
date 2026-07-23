@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::coordinates::{
     rebase_points_to_bone_local, rebase_vectors_to_bone_local,
-    static_hierarchy_chain_transform_cab, static_parent_hierarchy_chain_transform_cab,
+    static_parent_hierarchy_chain_transform_cab,
 };
 use crate::viewer_log;
 use bevy::asset::RenderAssetUsages;
@@ -689,10 +689,9 @@ pub fn resolve_vehicle_shape_path(
 /// Lever vertices: parent-chain bake → rebase to bone-local; entity `Transform` applies the
 /// full leaf→root hierarchy exactly once (`static_hierarchy_chain_transform_cab` / anim).
 ///
-/// Pullman quirk: some `Controls*.ace` lever sticks are authored in bone-local space but still
-/// tagged `vtx_state → MAIN`. Those orphans sit near the shape origin after a MAIN bake; we
-/// reattach only that near-origin set to CVF lever matrices (desk MAIN geometry at |z|≈9 stays
-/// static — #146).
+/// Bindings follow authored `prim_state → vtx_state.imatrix` only (#146 / #172). Parts whose
+/// matrix is in `lever_matrices` (CVF levers + MultiState) bake with omit-leaf + bone-local
+/// rebase; MAIN desk geometry stays static.
 pub fn build_mesh_parts_from_shape_lod_cab(
     shape: &ShapeFile,
     level: &DistanceLevel,
@@ -704,9 +703,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
         z: 0.0,
     });
 
-    // Pass 1: bounds + detect bone-local MAIN orphans (center near origin).
-    let mut prim_bounds: Vec<(usize, i32, Vec3, Vec3)> = Vec::new();
-    let mut orphan_sub_centers: HashMap<usize, Vec3> = HashMap::new();
+    let mut parts = Vec::new();
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in sub.primitives.iter() {
             let mut bounds_buffers = MeshBuffers::default();
@@ -721,40 +718,13 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 false,
             );
             let (bounds_center, bounds_half_extent) = mesh_buffers_bounds(&bounds_buffers);
-            prim_bounds.push((
-                sub_idx,
-                prim.prim_state_idx,
-                bounds_center,
-                bounds_half_extent,
-            ));
-            let authored =
-                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices);
-            if authored.is_none() && is_bone_local_orphan_center(bounds_center) {
-                orphan_sub_centers
-                    .entry(sub_idx)
-                    .and_modify(|c| *c = (*c + bounds_center) * 0.5)
-                    .or_insert(bounds_center);
-            }
-        }
-    }
-    let orphan_assign =
-        assign_orphan_subs_to_lever_matrices(shape, lever_matrices, &orphan_sub_centers);
-
-    let mut parts = Vec::new();
-    let mut bounds_iter = prim_bounds.into_iter();
-    for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
-        for prim in sub.primitives.iter() {
-            let Some((_, _, bounds_center, bounds_half_extent)) = bounds_iter.next() else {
-                break;
-            };
             let cab_matrix_idx =
-                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices)
-                    .or_else(|| orphan_assign.get(&sub_idx).copied());
+                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices);
             let matrix_needs_rebase =
                 cab_matrix_idx.is_some_and(|idx| lever_matrices.contains(&idx));
 
             let mut buffers = MeshBuffers::default();
-            // Orphans keep vtx_state→MAIN; force chain_start to the assigned lever bone.
+            // Authored chain start from vtx_state; omit leaf only for CVF-driven bones.
             let bake_start = cab_matrix_idx.map(|i| i as i32);
             append_primitive_mesh_buffers(
                 shape,
@@ -764,7 +734,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 default_normal,
                 &mut buffers,
                 bake_start,
-                matrix_needs_rebase, // omit leaf when this prim is a CVF lever bone
+                matrix_needs_rebase, // omit leaf when this prim is a CVF-driven bone
             );
             let prim_state_idx = prim.prim_state_idx;
             let texture_file = texture_for_prim_state(shape, prim_state_idx);
@@ -921,12 +891,10 @@ fn offset_mesh_along_avg_normal(positions: &mut [Vec3], normals: &[Vec3], meters
     }
 }
 
-/// CVF matrix for one cab primitive — **authored** hierarchy only (#146).
+/// CVF matrix for one cab primitive — **authored** hierarchy only (#146 / #172).
 ///
-/// Bind only when `vtx_state.matrix_idx` names a lever bone (≠ MAIN/0).
-/// Never promote MAIN desk geometry by texture, proximity, or sub_object index
-/// coincidence. Bone-local MAIN orphans (center near origin) are assigned later in
-/// [`build_mesh_parts_from_shape_lod_cab`].
+/// Bind only when `vtx_state.matrix_idx` names a CVF-driven bone (≠ MAIN/0).
+/// Never promote MAIN desk geometry by texture, proximity, or AABB heuristics.
 pub fn cab_matrix_for_prim(
     shape: &ShapeFile,
     _sub_idx: usize,
@@ -940,49 +908,6 @@ pub fn cab_matrix_for_prim(
     } else {
         None
     }
-}
-
-/// Pullman lever sticks live in bone-local space but keep `vtx_state → MAIN`; after a MAIN
-/// bake their bounds sit near the shape origin. Desk MAIN parts are ~9 m away.
-fn is_bone_local_orphan_center(center: Vec3) -> bool {
-    center.length() < 0.75
-}
-
-/// Map each orphan sub-object to a CVF lever matrix (nearest rest pivot, load-balanced).
-fn assign_orphan_subs_to_lever_matrices(
-    shape: &ShapeFile,
-    lever_matrices: &HashSet<usize>,
-    orphan_sub_centers: &HashMap<usize, Vec3>,
-) -> HashMap<usize, usize> {
-    let mut levers: Vec<usize> = lever_matrices.iter().copied().collect();
-    levers.sort_unstable();
-    if levers.is_empty() || orphan_sub_centers.is_empty() {
-        return HashMap::new();
-    }
-    let mut usage: HashMap<usize, usize> = HashMap::new();
-    let mut out = HashMap::new();
-    let mut subs: Vec<(usize, Vec3)> = orphan_sub_centers.iter().map(|(&s, &c)| (s, c)).collect();
-    subs.sort_by_key(|(s, _)| *s);
-    for (sub_idx, local_c) in subs {
-        let mut best: Option<usize> = None;
-        let mut best_key = (i32::MAX, i32::MAX, usize::MAX);
-        for &lev in &levers {
-            let world = static_hierarchy_chain_transform_cab(shape, lev).transform_point(local_c);
-            let pivot = matrix_pivot_bevy(shape, lev).unwrap_or(Vec3::ZERO);
-            let dist_mm = (world.distance(pivot) * 1000.0) as i32;
-            let used = *usage.get(&lev).unwrap_or(&0) as i32;
-            let key = (dist_mm, used, lev);
-            if key < best_key {
-                best_key = key;
-                best = Some(lev);
-            }
-        }
-        if let Some(lev) = best {
-            *usage.entry(lev).or_insert(0) += 1;
-            out.insert(sub_idx, lev);
-        }
-    }
-    out
 }
 
 pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {

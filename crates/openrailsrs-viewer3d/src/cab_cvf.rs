@@ -255,16 +255,25 @@ fn control_is_lever(control: &ControlType) -> bool {
     )
 }
 
-/// Matrices whose bound meshes are rebaked to bone-local space (3D levers only).
+/// Matrices whose bound meshes are rebaked to bone-local space (entity transform).
+///
+/// Includes 3D levers and MultiState dials/needles so omit-leaf bake +
+/// `static_lever_transform` apply once (no double hierarchy after #172).
 pub fn cab_rebase_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
     runtime
         .matrix_drivers
         .iter()
-        .filter_map(|(idx, driver)| matches!(driver, MatrixDriver::Lever { .. }).then_some(*idx))
+        .filter_map(|(idx, driver)| {
+            matches!(
+                driver,
+                MatrixDriver::Lever { .. } | MatrixDriver::MultiState { .. }
+            )
+            .then_some(*idx)
+        })
         .collect()
 }
 
-/// Matrix indices with dedicated 3D lever meshes (Pullman: M4, M8, M9, M10).
+/// Matrix indices rebaked for CVF-driven cab parts (levers + MultiState).
 pub fn cab_lever_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
     cab_rebase_matrix_indices(runtime)
 }
@@ -1021,9 +1030,9 @@ mod tests {
         }
     }
 
-    /// Pullman: desk MAIN stays static; bone-local MAIN orphans bind to lever matrices.
+    /// Pullman: desk MAIN stays static; authored vtx_state binds levers (#146 / #172).
     #[test]
-    fn pullman_static_cab_desk_stays_unbound_orphans_bind_levers() {
+    fn pullman_static_cab_desk_stays_unbound_authored_levers_bind() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1034,6 +1043,11 @@ mod tests {
         assert!(
             shape.animations.is_empty(),
             "Pullman cab shape must remain animation-free for this regression"
+        );
+        assert_eq!(
+            shape.vtx_states.get(10).map(|v| v.matrix_idx),
+            Some(8),
+            "parser must decode vtx_state imatrix as i32 (#172)"
         );
         let cvf_path = shape_path.with_extension("cvf");
         let cvf = match parse_msts_file(&cvf_path).expect("cvf") {
@@ -1049,23 +1063,33 @@ mod tests {
             .expect("lod0");
         let parts =
             crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
-        // Desk/body MAIN geometry (|center| ≫ 1 m) must not be ripped to lever bones (#146).
+        // MAIN-authored primitives must stay static; CVF bones bind only via vtx_state (#146).
         for part in &parts {
-            let c = part.bounds_center.unwrap_or(Vec3::ZERO);
-            if c.length() > 1.0 {
+            let authored = matrix_idx_for_prim_state(&shape, part.prim_state_idx);
+            if authored.is_none_or(|m| m == 0) {
                 assert!(
                     part.cab_matrix_idx.is_none(),
-                    "desk MAIN part sub={} prim={} must stay static (#146), got {:?}",
+                    "MAIN part sub={} prim={} must stay static (#146), got {:?}",
                     part.sub_object_idx,
                     part.prim_state_idx,
                     part.cab_matrix_idx
                 );
+            } else if let Some(m) = authored {
+                if lever_matrices.contains(&m) {
+                    assert_eq!(
+                        part.cab_matrix_idx,
+                        Some(m),
+                        "authored M{m} part sub={} prim={} must bind",
+                        part.sub_object_idx,
+                        part.prim_state_idx
+                    );
+                }
             }
         }
         let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
         assert!(
             bound.contains(&4) && bound.contains(&8) && bound.contains(&9) && bound.contains(&10),
-            "bone-local orphan sticks must bind all four lever matrices, got {bound:?}"
+            "authored vtx_state must bind all four lever matrices, got {bound:?}"
         );
         for driver in runtime.matrix_drivers.values() {
             if let MatrixDriver::Lever { anim_node, .. } = driver {
@@ -1142,7 +1166,7 @@ mod tests {
     }
 
     #[test]
-    fn pullman_orphan_lever_sticks_rest_near_pivots() {
+    fn pullman_authored_lever_sticks_rest_near_pivots() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1156,28 +1180,33 @@ mod tests {
             other => panic!("expected CabView, got {other:?}"),
         };
         let runtime = build_cab_cvf_runtime(cvf, shape.clone());
-        let lever_matrices = cab_lever_matrix_indices(&runtime);
+        let lever_only: HashSet<usize> = runtime
+            .matrix_drivers
+            .iter()
+            .filter_map(|(i, d)| matches!(d, MatrixDriver::Lever { .. }).then_some(*i))
+            .collect();
+        let rebase = cab_lever_matrix_indices(&runtime);
         let level = shape
             .lod_controls
             .first()
             .and_then(|c| c.distance_levels.first())
             .expect("lod0");
-        let parts =
-            crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &lever_matrices);
-        // Tall sticks: after omit-leaf + entity hierarchy, rest pose must sit on the pivot.
+        let parts = crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &rebase);
+        // Lever-bound sticks: authored vtx_state hierarchy places rest pose on the pivot.
+        // bounds_center comes from a full-hierarchy bake (world / MAIN space).
+        let mut checked = 0usize;
         for part in parts.iter().filter(|p| {
-            p.cab_matrix_idx.is_some()
+            p.cab_matrix_idx
+                .is_some_and(|m| lever_only.contains(&m))
                 && p.bounds_half_extent
-                    .is_some_and(|h| h.y > 0.15 && h.x < 0.05 && h.z < 0.05)
+                    .is_some_and(|h| h.max_element() < 0.25 && h.max_element() > 0.02)
         }) {
             let m = part.cab_matrix_idx.expect("bound");
-            let local = part.bounds_center.unwrap_or(Vec3::ZERO);
-            // bounds_center is still from the pre-rebase MAIN bake (local/orphan space).
-            let world = static_hierarchy_chain_transform_cab(&shape, m).transform_point(local);
+            let world = part.bounds_center.unwrap_or(Vec3::ZERO);
             let pivot = crate::shapes::matrix_pivot_bevy(&shape, m).unwrap();
             assert!(
                 world.distance(pivot) < 0.35,
-                "orphan stick sub={} → M{m} rest ({:.2},{:.2},{:.2}) far from pivot ({:.2},{:.2},{:.2})",
+                "lever stick sub={} → M{m} rest ({:.2},{:.2},{:.2}) far from pivot ({:.2},{:.2},{:.2})",
                 part.sub_object_idx,
                 world.x,
                 world.y,
@@ -1186,7 +1215,12 @@ mod tests {
                 pivot.y,
                 pivot.z
             );
+            checked += 1;
         }
+        assert!(
+            checked >= 4,
+            "expected ≥4 authored lever sticks near pivots, checked {checked}"
+        );
     }
 
     #[test]
