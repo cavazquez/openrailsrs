@@ -725,17 +725,35 @@ pub fn msts_direction_to_look_offset(direction_deg: [f64; 3]) -> DriverLookOffse
     }
 }
 
+/// Viewpoint delta from a CVF `CabView.Direction` (degrees).
+///
+/// `StartDirection` lives on [`LiveDriverCab`] (`look_yaw` / `look_pitch`) and is applied by
+/// [`driver_camera_transform_from_lead`] / [`cab_view_orientation_quat`] — this helper only
+/// returns the CVF viewpoint offset so Cab2d and DriverCam compose the same way (#169).
+pub fn cab_view_look_offset(
+    _cab: &LiveDriverCab,
+    view_direction_deg: [f64; 3],
+) -> DriverLookOffset {
+    msts_direction_to_look_offset(view_direction_deg)
+}
+
+/// Cab orientation for a viewpoint: `StartDirection` + CVF `Direction` + Bevy −Z offset.
+pub fn cab_view_orientation_quat(cab: &LiveDriverCab, view_direction_deg: [f64; 3]) -> Quat {
+    let view = cab_view_look_offset(cab, view_direction_deg);
+    Quat::from_euler(
+        EulerRot::YXZ,
+        cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET + view.yaw,
+        cab.look_pitch + view.pitch,
+        0.0,
+    )
+}
+
 /// Default cab orientation from `.eng` `StartDirection` (yaw + pitch).
 ///
 /// Applies [`DRIVER_CAB_FORWARD_YAW_OFFSET`] so Bevy camera −Z aligns with train
 /// travel +X (`StartDirection.Y = 0` looks forward; ≈180° looks rear).
 pub fn driver_cab_base_orientation(cab: &LiveDriverCab) -> Quat {
-    Quat::from_euler(
-        EulerRot::YXZ,
-        cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET,
-        cab.look_pitch,
-        0.0,
-    )
+    cab_view_orientation_quat(cab, [0.0; 3])
 }
 
 /// Cab base look + mouse offset in one YXZ euler (FPS-style).
@@ -1219,25 +1237,22 @@ pub fn follow_train_camera(
     };
 
     // Cab2d: same eyepoint as 3D cab so ACE window alpha shows the forward world.
-    // Look uses CVF `Direction` with the same Bevy sign as `StartDirection`.
+    // Compose `.eng` StartDirection + CVF Direction (same forward as DriverCam, #169).
     if follow.is_cab2d() {
         orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
         orbit.yaw = train_pose.yaw;
         let default_cab = LiveDriverCab::default();
         let cab = cab.as_deref().unwrap_or(&default_cab);
-        let mut cab_flat = cab.clone();
-        cab_flat.look_pitch = 0.0;
-        cab_flat.look_yaw = 0.0;
         let dir = overlay
             .as_ref()
             .map(|o| o.view_direction_deg)
             .unwrap_or([0.0; 3]);
-        let look = msts_direction_to_look_offset(dir);
+        let look = cab_view_look_offset(cab, dir);
         *transform = lead_car
             .iter()
             .next()
-            .map(|lead| driver_camera_transform_from_lead(lead, &cab_flat, look))
-            .unwrap_or_else(|| driver_camera_transform(train_pose, &cab_flat, look));
+            .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
+            .unwrap_or_else(|| driver_camera_transform(train_pose, cab, look));
         return;
     }
 
@@ -2141,6 +2156,101 @@ mod tests {
         assert!(
             front_fwd.dot(rear_fwd) < -0.9,
             "rear StartDirection.Y=180 should look opposite: {front_fwd:?} vs {rear_fwd:?}"
+        );
+    }
+
+    #[test]
+    fn cab2d_and_driver_share_forward_for_frontal_view() {
+        let train_yaw = 0.4;
+        let placement = Transform {
+            rotation: crate::shapes::msts_shape_to_train_rotation(),
+            ..default()
+        };
+        let train = Transform::from_rotation(Quat::from_rotation_y(train_yaw));
+        let lead_global = GlobalTransform::from(train.mul_transform(placement));
+        let cab = LiveDriverCab {
+            look_pitch: -15f32.to_radians(),
+            look_yaw: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        // Cab2d frontal CVF Direction (0,0,0) + StartDirection — same as DriverCam idle.
+        let look_2d = cab_view_look_offset(&cab, [0.0; 3]);
+        let fwd_2d = driver_camera_transform_from_lead(&lead_global, &cab, look_2d)
+            .forward()
+            .as_vec3();
+        let fwd_3d =
+            driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default())
+                .forward()
+                .as_vec3();
+        assert!(
+            fwd_2d.dot(fwd_3d) > 0.99,
+            "2D/3D frontal forwards must match: 2d={fwd_2d:?} 3d={fwd_3d:?}"
+        );
+        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let h2 = Vec3::new(fwd_2d.x, 0.0, fwd_2d.z).normalize();
+        let ht = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        assert!(
+            h2.dot(ht) > 0.99,
+            "both should face travel: {h2:?} vs {ht:?}"
+        );
+    }
+
+    #[test]
+    fn cab_view_rear_direction_inverts_once() {
+        let lead_global = GlobalTransform::from(Transform {
+            rotation: crate::shapes::msts_shape_to_train_rotation(),
+            ..default()
+        });
+        let cab = LiveDriverCab {
+            look_pitch: 0.0,
+            look_yaw: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let front = driver_camera_transform_from_lead(
+            &lead_global,
+            &cab,
+            cab_view_look_offset(&cab, [0.0; 3]),
+        )
+        .forward()
+        .as_vec3();
+        let rear = driver_camera_transform_from_lead(
+            &lead_global,
+            &cab,
+            cab_view_look_offset(&cab, [0.0, 180.0, 0.0]),
+        )
+        .forward()
+        .as_vec3();
+        let fh = Vec3::new(front.x, 0.0, front.z).normalize();
+        let rh = Vec3::new(rear.x, 0.0, rear.z).normalize();
+        assert!(
+            fh.dot(rh) < -0.99,
+            "rear CVF Direction flips once: {fh:?} {rh:?}"
+        );
+    }
+
+    #[test]
+    fn cab_view_respects_flipped_lead_frame() {
+        let placement = crate::shapes::vehicle_authored_frame_transform(0.0, true);
+        let train = Transform::from_rotation(Quat::from_rotation_y(0.25));
+        let lead_global = GlobalTransform::from(train.mul_transform(placement));
+        let cab = LiveDriverCab {
+            look_pitch: 0.0,
+            look_yaw: 0.0,
+            head_lead_local: Some(Vec3::ZERO),
+            ..Default::default()
+        };
+        let look = cab_view_look_offset(&cab, [0.0; 3]);
+        let fwd = driver_camera_transform_from_lead(&lead_global, &cab, look)
+            .forward()
+            .as_vec3();
+        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let fh = Vec3::new(fwd.x, 0.0, fwd.z).normalize();
+        let th = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        assert!(
+            fh.dot(th) > 0.99,
+            "Flip lead frame: camera still looks along lead +X: {fh:?} vs {th:?}"
         );
     }
 

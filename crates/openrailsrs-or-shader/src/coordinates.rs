@@ -439,6 +439,23 @@ pub fn static_hierarchy_chain_transform_cab(shape: &ShapeFile, leaf: usize) -> T
     hierarchy_chain_transform_cab(shape, leaf, &mats)
 }
 
+/// Parent-chain rest pose above `leaf` (Identity when `leaf` is hierarchy root).
+///
+/// Used to rebase omit-leaf cab lever bakes back to bone-local space (#171).
+pub fn static_parent_hierarchy_chain_transform_cab(shape: &ShapeFile, leaf: usize) -> Transform {
+    let parent = shape
+        .lod_controls
+        .first()
+        .and_then(|lc| lc.distance_levels.first())
+        .and_then(|level| level.hierarchy.get(leaf).copied())
+        .unwrap_or(-1);
+    if parent < 0 {
+        Transform::IDENTITY
+    } else {
+        static_hierarchy_chain_transform_cab(shape, parent as usize)
+    }
+}
+
 /// Re-express baked cab vertices in bone-local space so entity `Transform` can carry the pose.
 pub fn rebase_points_to_bone_local(points: &mut [Vec3], bone_world: Transform) {
     let inv = bone_world.rotation.inverse();
@@ -774,6 +791,76 @@ mod tests {
     }
 
     // ── train / track yaw ────────────────────────────────────────────────────
+
+    #[test]
+    fn cab_lever_omit_leaf_entity_matches_full_hierarchy_bake() {
+        // 3-level hierarchy: ROOT(0) ← MID(1) ← LEAF(2). Leaf verts at origin;
+        // parent bake + leaf entity must equal a full leaf→root bake (#171).
+        let ascii = r#"
+        ( shape
+            ( points 1 ( point 0 0 0 ) )
+            ( normals 1 ( vector 0 1 0 ) )
+            ( matrices 3
+                ( matrix "ROOT"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 0 0
+                )
+                ( matrix "MID"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    5 0 0
+                )
+                ( matrix "LEAF"
+                    1 0 0
+                    0 1 0
+                    0 0 1
+                    0 3 0
+                )
+            )
+            ( lod_controls 1
+                ( lod_control
+                    ( distance_levels 1
+                        ( distance_level
+                            ( distance_level_header
+                                ( dlevel_selection 100 )
+                                ( hierarchy 3 -1 0 1 )
+                            )
+                            ( sub_objects 0 )
+                        )
+                    )
+                )
+            )
+        )
+        "#;
+        let ast = openrailsrs_formats::parse_first_from_first_paren(ascii).expect("ast");
+        let shape = ShapeFile::from_ast(&ast).expect("shape");
+        assert_eq!(shape.matrices.len(), 3);
+        let leaf = 2usize;
+        let rest_full = static_hierarchy_chain_transform_cab(&shape, leaf);
+        let parent = static_parent_hierarchy_chain_transform_cab(&shape, leaf);
+        // Local origin through omit-leaf bake (= parent chain) then entity (= full chain).
+        let mut p = Vec3::ZERO;
+        p = parent.transform_point(p); // omit-leaf bake of leaf-local origin
+        // Rebase to bone-local (inverse parent), then entity reapplies full chain.
+        let mut local = [p];
+        rebase_points_to_bone_local(&mut local, parent);
+        let via_entity = rest_full.transform_point(local[0]);
+        let via_full = rest_full.transform_point(Vec3::ZERO);
+        assert!(
+            (via_entity - via_full).length() < 1e-4,
+            "entity∘rebase∘parent_bake must match full hierarchy: {via_entity:?} vs {via_full:?}"
+        );
+        // Rest pose of animated helper must equal static (no first-frame jump).
+        let mats: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
+        let anim_rest = hierarchy_chain_transform_cab(&shape, leaf, &mats);
+        assert!(
+            (anim_rest.translation - rest_full.translation).length() < 1e-5,
+            "animated rest must not jump vs static"
+        );
+    }
 
     #[test]
     fn train_yaw_facing_plus_x() {

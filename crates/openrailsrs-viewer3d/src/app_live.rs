@@ -169,6 +169,79 @@ mod tests {
         });
     }
 
+    /// CAB-B regression (#168): DriverCam → ChaseCam restores exterior Visibility and
+    /// outdoor camera layers `[0,1]` with every `LiveTrainBody` tagged on layer 1.
+    #[test]
+    fn driver_to_chase_restores_exterior_visibility_and_layers() {
+        with_live_world(|world| {
+            world.run_system_once(spawn_camera).unwrap();
+            world.run_system_once(spawn_live_train).unwrap();
+            world
+                .run_system_once(tag_train_exterior_render_layers)
+                .unwrap();
+            world.flush();
+
+            let body_count = world
+                .query_filtered::<Entity, With<LiveTrainBody>>()
+                .iter(world)
+                .count();
+            assert!(body_count >= 1, "need LiveTrainBody entities");
+
+            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
+            world
+                .run_system_once(update_driver_train_visibility)
+                .unwrap();
+            world.run_system_once(sync_camera_render_layers).unwrap();
+
+            let driver_layers = world
+                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .single(world)
+                .expect("camera");
+            assert_eq!(*driver_layers, camera_layers_driver());
+
+            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
+            world
+                .run_system_once(update_driver_train_visibility)
+                .unwrap();
+            world.run_system_once(sync_camera_render_layers).unwrap();
+            world
+                .run_system_once(tag_train_exterior_render_layers)
+                .unwrap();
+            world.flush();
+
+            let all_bodies_visible = world
+                .query_filtered::<&Visibility, With<LiveTrainBody>>()
+                .iter(world)
+                .all(|v| *v == Visibility::Visible);
+            assert!(
+                all_bodies_visible,
+                "all LiveTrainBody must be Visible in ChaseCam after DriverCam"
+            );
+
+            let outdoor = camera_layers_outdoor();
+            let cam_layers = world
+                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .single(world)
+                .expect("camera layers chase");
+            assert_eq!(*cam_layers, outdoor, "chase camera must use layers [0,1]");
+            assert!(
+                outdoor.intersects(&RenderLayers::layer(1)),
+                "outdoor mask must include train exterior layer 1"
+            );
+
+            let layer1 = RenderLayers::layer(1);
+            let tagged_on_l1 = world
+                .query_filtered::<&RenderLayers, With<LiveTrainBody>>()
+                .iter(world)
+                .filter(|layers| layers.intersects(&layer1))
+                .count();
+            assert_eq!(
+                tagged_on_l1, body_count,
+                "every LiveTrainBody must be tagged on layer 1 (got {tagged_on_l1}/{body_count})"
+            );
+        });
+    }
+
     #[test]
     fn live_driver_input_throttle_brake_and_pause() {
         with_live_world(|world| {

@@ -42,7 +42,7 @@ Detalle de bindings: `cab_cvf.rs` + tests Pullman. Debug: `OPENRAILSRS_CAB_DEBUG
 
 Teclas Cab2d: **←/→** vista (Direction CVF) · click/arrastre en palancas con `MouseControl`.
 
-Cab2d `Direction` usa el mismo signo Bevy que `StartDirection` (X positivo = mirar abajo).
+Cab2d y cabina 3D componen el mismo forward: `.eng` `StartDirection` + `CabView.Direction` del CVF (X positivo = mirar abajo). Cab2d no anula el pitch/yaw authored (#169).
 
 Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR). **LMB** en la pantalla ETCS (`ScreenDisplay`) activa soft keys del DMI (scroll, scale, Main/Data/Sett. → subventanas, ack mensajes).
 

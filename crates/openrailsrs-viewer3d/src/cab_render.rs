@@ -54,6 +54,8 @@ pub struct CabRenderDiagnostic {
 #[derive(Resource, Default, Debug)]
 pub struct CabRenderDiagLatch {
     pub was_driver: bool,
+    /// True while the last logged mode was outdoor (Chase / Orbit / Off).
+    pub was_outdoor: bool,
     pub last_eye: Option<Vec3>,
 }
 
@@ -103,7 +105,28 @@ pub fn sync_camera_render_layers(
     }
 }
 
-/// Log + HUD line once each time driver view is entered (CAB-A).
+fn count_exterior_visibility(
+    exterior: &Query<
+        (&Visibility, Option<&RenderLayers>),
+        (With<LiveTrainBody>, Without<CabInteriorMarker>),
+    >,
+) -> (usize, usize, usize) {
+    let mut exterior_total = 0usize;
+    let mut exterior_visible = 0usize;
+    let mut exterior_layer1 = 0usize;
+    for (vis, layers) in exterior {
+        exterior_total += 1;
+        if *vis != Visibility::Hidden {
+            exterior_visible += 1;
+        }
+        if layers.is_some_and(|l| l.iter().any(|n| n == LAYER_TRAIN_EXTERIOR)) {
+            exterior_layer1 += 1;
+        }
+    }
+    (exterior_total, exterior_visible, exterior_layer1)
+}
+
+/// Log + HUD line for driver view (CAB-A) and chase/outdoor exterior visibility (#168).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_cab_render_diagnostic(
     follow: Res<CameraFollowMode>,
@@ -120,28 +143,58 @@ pub fn update_cab_render_diagnostic(
     >,
 ) {
     let driver = *follow == CameraFollowMode::DriverCam;
-    if !driver {
-        state.was_driver = false;
-        diag.hud_line = None;
-        return;
-    }
+    let outdoor = !driver && !follow.is_cab2d();
 
-    if cab_parts.is_empty() {
+    if follow.is_cab2d() {
+        state.was_driver = false;
+        state.was_outdoor = false;
+        diag.hud_line = None;
         return;
     }
 
     let Ok((cam_global, projection)) = camera_q.single() else {
         return;
     };
+    let cam_eye = cam_global.translation();
+
+    // Chase / Orbit / Off: single log when entering outdoor from cab (#168).
+    // Do not re-log on free-fly eye motion — that floods the console in Off mode.
+    if outdoor {
+        diag.hud_line = None;
+        if state.was_outdoor {
+            return;
+        }
+        state.was_outdoor = true;
+        state.was_driver = false;
+        let (exterior_total, exterior_visible, exterior_layer1) =
+            count_exterior_visibility(&exterior);
+        let mode = follow.hud_label();
+        viewer_log!(
+            "openrailsrs-viewer3d: {mode} render diag — eye=({:.2},{:.2},{:.2}) | ext vis {exterior_visible}/{exterior_total} on_L1={exterior_layer1} | camera layers [0,1]",
+            cam_eye.x,
+            cam_eye.y,
+            cam_eye.z,
+        );
+        return;
+    }
+
+    // DriverCam (CAB-A)
+    if cab_parts.is_empty() {
+        return;
+    }
+
     let cab_res = driver_cab.as_deref();
     let eye = lead_car
         .iter()
         .next()
         .and_then(|lead| cab_res.and_then(|cab| driver_eye_from_lead(lead, cab)))
-        .unwrap_or_else(|| cam_global.translation());
+        .unwrap_or(cam_eye);
+
+    let (exterior_total, exterior_visible, exterior_layer1) = count_exterior_visibility(&exterior);
 
     if !state.was_driver {
         state.was_driver = true;
+        state.was_outdoor = false;
     } else if state.last_eye.is_some_and(|last| last.distance(eye) < 0.05) {
         return;
     }
@@ -156,19 +209,6 @@ pub fn update_cab_render_diagnostic(
     let cab_world_aabb = cab_interior_world_aabb(&cab_parts, &meshes);
     let head_inside_world = cab_world_aabb.map(|(min, max)| point_in_aabb(eye, min, max));
     let head_inside = head_inside_local.or(head_inside_world);
-
-    let mut exterior_total = 0usize;
-    let mut exterior_visible = 0usize;
-    let mut exterior_layer1 = 0usize;
-    for (vis, layers) in &exterior {
-        exterior_total += 1;
-        if *vis == Visibility::Visible {
-            exterior_visible += 1;
-        }
-        if layers.is_some_and(|l| l.iter().any(|n| n == LAYER_TRAIN_EXTERIOR)) {
-            exterior_layer1 += 1;
-        }
-    }
 
     let cab_part_count = cab_parts.iter().count();
     let aabb_line = mesh_local_aabb

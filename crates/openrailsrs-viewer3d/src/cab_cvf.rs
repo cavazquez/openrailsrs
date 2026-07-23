@@ -18,7 +18,7 @@ use openrailsrs_sim::CabTelemetry;
 
 use crate::cab_view::{CabInteriorMarker, CabInteriorRoot};
 use crate::camera::CameraFollowMode;
-use crate::coordinates::matrix43_to_transform;
+use crate::coordinates::static_hierarchy_chain_transform_cab;
 use crate::live::LiveDrive;
 use crate::viewer_log;
 
@@ -436,13 +436,12 @@ pub fn matrix_idx_for_prim_state(shape: &ShapeFile, prim_state_idx: i32) -> Opti
     }
 }
 
-/// Static bone transform for cab lever spawn (M0-baked mesh, pivot at matrix translation).
+/// Static bone transform for cab lever spawn (full leaf→root hierarchy, #171).
 pub fn static_matrix_transform(shape: &ShapeFile, matrix_idx: usize) -> Transform {
-    shape
-        .matrices
-        .get(matrix_idx)
-        .map(|m| matrix43_to_transform(&m.matrix))
-        .unwrap_or(Transform::IDENTITY)
+    if matrix_idx >= shape.matrices.len() {
+        return Transform::IDENTITY;
+    }
+    static_hierarchy_chain_transform_cab(shape, matrix_idx)
 }
 
 /// Spawn transform for a rebased cab lever (optional mesh-center pivot).

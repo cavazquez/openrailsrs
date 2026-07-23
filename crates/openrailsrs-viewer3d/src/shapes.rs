@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::coordinates::{
-    matrix43_to_transform, rebase_points_to_bone_local, rebase_vectors_to_bone_local,
+    rebase_points_to_bone_local, rebase_vectors_to_bone_local,
+    static_parent_hierarchy_chain_transform_cab,
 };
 use crate::viewer_log;
 use bevy::asset::RenderAssetUsages;
@@ -683,7 +684,10 @@ pub fn resolve_vehicle_shape_path(
     resolve_shape_path_in_dirs(shape_dirs, shape_file)
 }
 
-/// Cab interior: one part per (`sub_object`, `prim_state`); lever matrix bones omit leaf from bake.
+/// Cab interior: one part per (`sub_object`, `prim_state`); lever bones omit leaf from bake (#171).
+///
+/// Lever vertices: parent-chain bake → rebase to bone-local; entity `Transform` applies the
+/// full leaf→root hierarchy exactly once (`static_hierarchy_chain_transform_cab` / anim).
 pub fn build_mesh_parts_from_shape_lod_cab(
     shape: &ShapeFile,
     level: &DistanceLevel,
@@ -698,31 +702,23 @@ pub fn build_mesh_parts_from_shape_lod_cab(
 
     for (sub_idx, sub) in level.sub_objects.iter().enumerate() {
         for prim in sub.primitives.iter() {
-            let mut buffers = MeshBuffers::default();
+            let cab_matrix_idx =
+                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices);
+            let matrix_needs_rebase =
+                cab_matrix_idx.is_some_and(|idx| lever_matrices.contains(&idx));
+            // Bounds from a full bake (pre-rebase) for diagnostics / pivot helpers.
+            let mut bounds_buffers = MeshBuffers::default();
             append_primitive_mesh_buffers(
                 shape,
                 level,
                 sub,
                 prim,
                 default_normal,
-                &mut buffers,
+                &mut bounds_buffers,
                 None,
                 false,
             );
-            let (bounds_center, bounds_half_extent) = mesh_buffers_bounds(&buffers);
-            let cab_matrix_idx =
-                cab_matrix_for_prim(shape, sub_idx, sub, prim.prim_state_idx, lever_matrices);
-            let matrix_needs_rebase =
-                cab_matrix_idx.is_some_and(|idx| lever_matrices.contains(&idx));
-            let lever_bone = cab_matrix_idx.and_then(|idx| {
-                if !matrix_needs_rebase {
-                    return None;
-                }
-                shape
-                    .matrices
-                    .get(idx)
-                    .map(|m| matrix43_to_transform(&m.matrix))
-            });
+            let (bounds_center, bounds_half_extent) = mesh_buffers_bounds(&bounds_buffers);
 
             let mut buffers = MeshBuffers::default();
             append_primitive_mesh_buffers(
@@ -733,7 +729,7 @@ pub fn build_mesh_parts_from_shape_lod_cab(
                 default_normal,
                 &mut buffers,
                 None,
-                false,
+                matrix_needs_rebase, // omit leaf when this prim is a CVF lever bone
             );
             let prim_state_idx = prim.prim_state_idx;
             let texture_file = texture_for_prim_state(shape, prim_state_idx);
@@ -748,9 +744,13 @@ pub fn build_mesh_parts_from_shape_lod_cab(
             if cab_instrument_needle_needs_offset(texture_file.as_deref(), &buffers.uvs) {
                 offset_mesh_along_avg_normal(&mut buffers.positions, &buffers.normals, 0.0015);
             }
-            if let Some(bone) = lever_bone.as_ref() {
-                rebase_points_to_bone_local(&mut buffers.positions, *bone);
-                rebase_vectors_to_bone_local(&mut buffers.normals, *bone);
+            if matrix_needs_rebase {
+                if let Some(idx) = cab_matrix_idx {
+                    // Omit-leaf bake left parent∘…∘root(v); undo parents → bone-local.
+                    let parent_bone = static_parent_hierarchy_chain_transform_cab(shape, idx);
+                    rebase_points_to_bone_local(&mut buffers.positions, parent_bone);
+                    rebase_vectors_to_bone_local(&mut buffers.normals, parent_bone);
+                }
             }
             let (mesh, solid_color) = match buffers.into_mesh_with_color() {
                 Some(v) => v,

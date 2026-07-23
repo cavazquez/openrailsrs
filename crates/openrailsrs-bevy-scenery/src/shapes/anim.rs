@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, Matrix43, ShapeFile};
 use openrailsrs_or_shader::coordinates::{
-    hierarchy_chain_transform, matrix43_to_transform, shape_zero_root_translation,
+    hierarchy_chain_transform, hierarchy_chain_transform_cab, shape_zero_root_translation,
     static_hierarchy_chain_transform,
 };
 
@@ -166,26 +166,16 @@ fn set_matrix_rotation(m: &mut Matrix43, q: Quat) {
     ];
 }
 
-/// World-space bone transform for rebased cab meshes (M0 bake + single-matrix pivot).
+/// World-space bone transform for omit-leaf cab lever meshes (#171).
+///
+/// Vertices are bone-local (parent chain baked then rebased); the entity carries the
+/// full leaf→root hierarchy once — rest or animated pose.
 pub fn lever_entity_transform_rebased(
     shape: &ShapeFile,
     matrix_idx: usize,
     pose_mats: &[Matrix43],
 ) -> Transform {
-    let Some(rest) = shape.matrices.get(matrix_idx) else {
-        return Transform::IDENTITY;
-    };
-    let rest_t = matrix43_to_transform(&rest.matrix);
-    let Some(animated) = pose_mats.get(matrix_idx) else {
-        return rest_t;
-    };
-    let anim_t = matrix43_to_transform(animated);
-    let delta_rot = rest_t.rotation.inverse() * anim_t.rotation;
-    Transform {
-        translation: rest_t.translation,
-        rotation: rest_t.rotation * delta_rot,
-        scale: Vec3::ONE,
-    }
+    hierarchy_chain_transform_cab(shape, matrix_idx, pose_mats)
 }
 
 /// Like [`lever_entity_transform_rebased`] but keeps translation at baked mesh center (far 3D wheel).
@@ -195,20 +185,9 @@ pub fn lever_entity_transform_at_mesh_center(
     mesh_center: Vec3,
     pose_mats: &[Matrix43],
 ) -> Transform {
-    let Some(rest) = shape.matrices.get(matrix_idx) else {
-        return Transform::from_translation(mesh_center);
-    };
-    let rest_t = matrix43_to_transform(&rest.matrix);
-    let anim_t = pose_mats
-        .get(matrix_idx)
-        .map(matrix43_to_transform)
-        .unwrap_or(rest_t);
-    let delta_rot = rest_t.rotation.inverse() * anim_t.rotation;
-    Transform {
-        translation: mesh_center,
-        rotation: rest_t.rotation * delta_rot,
-        scale: Vec3::ONE,
-    }
+    let mut t = hierarchy_chain_transform_cab(shape, matrix_idx, pose_mats);
+    t.translation = mesh_center;
+    t
 }
 
 /// Full hierarchy transform (non-rebased meshes / world objects).

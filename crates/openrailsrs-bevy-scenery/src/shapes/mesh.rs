@@ -1473,4 +1473,71 @@ mod tests {
             parts.len()
         );
     }
+
+    /// Geometric winding check: face normals should point away from the mesh centroid.
+    /// Used to decide whether production exterior bake needs a winding flip (#168).
+    fn outward_face_ratio(parts: &[LoadedShapePart]) -> (usize, usize, f32) {
+        let mut positions: Vec<Vec3> = Vec::new();
+        for part in parts {
+            let Some(VertexAttributeValues::Float32x3(v)) =
+                part.mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                continue;
+            };
+            positions.extend(v.iter().map(|p| Vec3::from_array(*p)));
+        }
+        assert!(positions.len() >= 3, "need triangles");
+        let centroid = positions.iter().copied().sum::<Vec3>() / positions.len() as f32;
+        let mut outward = 0usize;
+        let mut total = 0usize;
+        for tri in positions.chunks_exact(3) {
+            let n = (tri[1] - tri[0])
+                .cross(tri[2] - tri[0])
+                .try_normalize()
+                .unwrap_or(Vec3::ZERO);
+            if n == Vec3::ZERO {
+                continue;
+            }
+            let mid = (tri[0] + tri[1] + tri[2]) / 3.0;
+            total += 1;
+            if n.dot(mid - centroid) > 0.0 {
+                outward += 1;
+            }
+        }
+        let ratio = if total == 0 {
+            0.0
+        } else {
+            outward as f32 / total as f32
+        };
+        (outward, total, ratio)
+    }
+
+    #[test]
+    fn pullman_exterior_face_normals_mostly_outward() {
+        let content = std::env::var("OPENRAILSRS_MSTS_CONTENT").ok();
+        let Some(root) = content else {
+            eprintln!("skip: OPENRAILSRS_MSTS_CONTENT unset");
+            return;
+        };
+        let path = Path::new(&root).join("Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSA.s");
+        if !path.is_file() {
+            eprintln!("skip: missing {}", path.display());
+            return;
+        }
+        let shape = ShapeFile::from_path(&path).expect("parse Pullman DMBSA");
+        let parts = build_mesh_parts_from_shape_at_distance(&shape, 25.0);
+        let (outward, total, ratio) = outward_face_ratio(&parts);
+        eprintln!("Pullman DMBSA outward faces: {outward}/{total} (ratio={ratio:.3})");
+        assert!(
+            total > 100,
+            "expected dense exterior mesh, got {total} tris"
+        );
+        // Closed-ish rolling stock: clear majority of geometric faces must point out.
+        // If this fails, production bake winding (or un-baked leaf matrices) is inverted (#168).
+        // Current bake already majority-outward — do not flip production winding / force double-sided.
+        assert!(
+            ratio > 0.55,
+            "Pullman exterior winding looks inverted: {outward}/{total} outward (ratio={ratio:.3})"
+        );
+    }
 }
