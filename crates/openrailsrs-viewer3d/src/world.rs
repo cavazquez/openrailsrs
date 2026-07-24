@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
+use bevy::math::DVec3;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
@@ -62,7 +63,10 @@ pub fn view_stream_window_policy(view_radius_m: f32) -> StreamWindowPolicy {
 pub struct WorldSceneryLod {
     pub enabled: bool,
     pub shape_path: PathBuf,
+    /// Stable identity within a shape. LOD bands may omit or reorder parts.
+    pub sub_object_idx: u32,
     pub prim_state_idx: i32,
+    /// Current vector position, retained for diagnostics only.
     pub part_index: usize,
     pub lod_idx: usize,
 }
@@ -100,6 +104,21 @@ pub fn lod_camera_needs_update(
 /// Must be `length(cam - center)`, not `dist(cam, focus) + dist(center, focus)`.
 pub fn world_lod_distance_m(cam_pos: Vec3, entity_or_group_center: Vec3) -> f32 {
     cam_pos.distance(entity_or_group_center)
+}
+
+/// Find the same logical shape part in another LOD band.
+///
+/// Vector positions are not stable in MSTS shapes: a band can remove an earlier
+/// primitive group and shift every later part. `sub_object_idx + prim_state_idx`
+/// is the stable identity used by Open Rails' primitive groups.
+pub fn shape_lod_part_by_identity(
+    asset: &ShapeRenderAsset,
+    sub_object_idx: u32,
+    prim_state_idx: i32,
+) -> Option<(usize, &crate::shapes::ShapePartAsset)> {
+    asset.parts.iter().enumerate().find(|(_, part)| {
+        part.sub_object_idx == sub_object_idx && part.prim_state_idx == prim_state_idx
+    })
 }
 
 /// Unload decision for a WORLD scenery entity (#62).
@@ -410,7 +429,11 @@ pub struct WorldObject {
     pub section_idx: Option<u32>,
     /// Authored Dyntrack subsections (#87).
     pub dyntrack_sections: Vec<openrailsrs_formats::DyntrackSection>,
+    /// Quantized absolute Bevy position, retained for world/TDB indexing.
     pub position: Vec3,
+    /// Sub-metre remainder lost when a ~10,000 km MSTS absolute coordinate is
+    /// converted to `f32`. Apply only after subtracting the render focus.
+    pub position_precision_offset: Vec3,
     pub rotation: Quat,
     /// Non-uniform scale from `.w` `Matrix3x3` when present.
     pub scale: Vec3,
@@ -428,6 +451,13 @@ pub struct WorldObject {
     pub tr_item_ids: Vec<u32>,
     /// From `.w` `Tr_Watermark` — HideWire uses levels 2/3 (#36).
     pub static_detail_level: u32,
+}
+
+impl WorldObject {
+    /// Rebase first, then restore the sub-metre component of the WORLD position.
+    pub fn render_position(&self, focus: &RouteFocus) -> Vec3 {
+        focus.scenery_to_render(self.position) + self.position_precision_offset
+    }
 }
 
 /// WORLD Signal metadata for specialised lamp rendering (#37).
@@ -702,6 +732,25 @@ pub fn msts_to_bevy(tile_x: i32, tile_z: i32, local: openrailsrs_formats::Vec3) 
     msts_tile_local_to_bevy(tile_x, tile_z, local)
 }
 
+/// Remainder lost by the absolute `f64 → f32` MSTS conversion.
+///
+/// Near Chiltern (`|x| ≈ 12.5 Mm`, `|z| ≈ 30.6 Mm`) an absolute `f32` advances
+/// in 1–2 metre steps. Keeping this remainder until after rebasing prevents
+/// adjacent authored track pieces from separating.
+fn msts_position_precision_offset(
+    tile_x: i32,
+    tile_z: i32,
+    local: openrailsrs_formats::Vec3,
+    quantized: Vec3,
+) -> Vec3 {
+    let precise = DVec3::new(
+        tile_x as f64 * MSTS_TILE_SIZE_M + local.x,
+        local.y,
+        -(tile_z as f64 * MSTS_TILE_SIZE_M + local.z),
+    );
+    (precise - quantized.as_dvec3()).as_vec3()
+}
+
 /// MSTS `Matrix3x3` → Bevy rotation.
 pub fn matrix3x3_to_quat(m: &[f64; 9]) -> Quat {
     matrix3x3_to_rotation_scale(m).0
@@ -736,10 +785,15 @@ fn try_object_from_item(
     if !keep_by_world_object_density(item.static_detail_level(), density) {
         return Err(ObjectSkip::Density);
     }
+    let Some(local_position) = item.position() else {
+        return Ok(None);
+    };
     let Some(placement) = world_item_placement(tile_x, tile_z, item) else {
         return Ok(None);
     };
     let position = placement.pose.position;
+    let position_precision_offset =
+        msts_position_precision_offset(tile_x, tile_z, local_position, position);
     if let Some(window) = window {
         if !window.contains_xz(position) {
             return Err(ObjectSkip::OutOfWindow);
@@ -850,6 +904,7 @@ fn try_object_from_item(
         section_idx: item.section_idx(),
         dyntrack_sections: item.dyntrack_sections().to_vec(),
         position,
+        position_precision_offset,
         rotation,
         scale,
         linear,
@@ -1394,7 +1449,6 @@ pub struct WorldSpawnProgress {
     item_index: usize,
     shape_path_cache: std::collections::HashMap<String, Option<PathBuf>>,
     shape_instances: std::collections::HashMap<PathBuf, Vec<ShapeInstancePlacement>>,
-    shape_instance_min_dist: std::collections::HashMap<PathBuf, f32>,
     merged_boxes: std::collections::HashMap<String, MergedBoxGroup>,
     culled_count: usize,
     trackobj_seen: usize,
@@ -1495,7 +1549,6 @@ impl WorldSpawnProgress {
             item_index,
             shape_path_cache: std::collections::HashMap::new(),
             shape_instances: std::collections::HashMap::new(),
-            shape_instance_min_dist: std::collections::HashMap::new(),
             merged_boxes: std::collections::HashMap::new(),
             culled_count: 0,
             trackobj_seen: 0,
@@ -1762,7 +1815,7 @@ fn classify_one_object(
         progress.trackobj_seen += 1;
         // Wire is independent of mesh vs procedural (#36 / OR Wire.DecomposeStaticWire).
         if crate::overhead_wire::should_draw_wire_for(obj, assets, wire) {
-            let render_pos = focus.scenery_to_render(obj.position);
+            let render_pos = obj.render_position(focus);
             let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
             progress.trackobj_wire.extend(segs);
         }
@@ -1785,7 +1838,7 @@ fn classify_one_object(
         };
         if let Some(shape_path) = shape_path {
             progress.trackobj_resolved += 1;
-            let render_pos = focus.scenery_to_render(obj.position);
+            let render_pos = obj.render_position(focus);
             let tf = Transform {
                 translation: render_pos,
                 rotation: obj.rotation,
@@ -1803,15 +1856,10 @@ fn classify_one_object(
                     auto_z_bias: true,
                     signal_sub_obj: None,
                 });
-            progress
-                .shape_instance_min_dist
-                .entry(shape_path)
-                .and_modify(|d| *d = d.min(dist))
-                .or_insert(dist);
             return;
         }
 
-        let render_pos = focus.scenery_to_render(obj.position);
+        let render_pos = obj.render_position(focus);
         if SPAWN_TRACKOBJ_PROCEDURAL {
             let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
             if !segs.is_empty() {
@@ -1852,7 +1900,7 @@ fn classify_one_object(
             .or_insert_with(|| resolve_object_shape_path(obj, assets))
             .clone();
         if let Some(shape_path) = shape_path {
-            let render_pos = focus.scenery_to_render(obj.position);
+            let render_pos = obj.render_position(focus);
             let tf = Transform {
                 translation: render_pos,
                 rotation: obj.rotation,
@@ -1872,11 +1920,6 @@ fn classify_one_object(
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
                 });
-            progress
-                .shape_instance_min_dist
-                .entry(shape_path)
-                .and_modify(|d| *d = d.min(dist))
-                .or_insert(dist);
             return;
         }
     }
@@ -1888,11 +1931,7 @@ fn classify_one_object(
     }
 
     let size = box_size_for_kind(obj.kind, progress.placeholder_base);
-    let translation = focus.scenery_to_render(Vec3::new(
-        obj.position.x,
-        obj.position.y + size.y * 0.5,
-        obj.position.z,
-    ));
+    let translation = obj.render_position(focus) + Vec3::Y * (size.y * 0.5);
     // Size is already applied in local verts; keep transform scale at 1 to avoid size² cubes.
     let tf = Transform {
         translation,
@@ -2034,6 +2073,7 @@ fn append_shape_spawn_entries_for_transforms(
                     WorldSceneryLod {
                         enabled: false,
                         shape_path: PathBuf::new(),
+                        sub_object_idx: u32::MAX,
                         prim_state_idx: -1,
                         part_index: 0,
                         lod_idx: 0,
@@ -2085,6 +2125,7 @@ fn append_shape_spawn_entries_for_transforms(
                         WorldInstancedGroup {
                             shape_path: shape_path.to_path_buf(),
                             part_index,
+                            sub_object_idx: part.sub_object_idx,
                             prim_state_idx: part.prim_state_idx,
                             lod_idx: initial_lod_idx,
                             lod_enabled: true,
@@ -2110,6 +2151,7 @@ fn append_shape_spawn_entries_for_transforms(
                             WorldSceneryLod {
                                 enabled: true,
                                 shape_path: shape_path.to_path_buf(),
+                                sub_object_idx: part.sub_object_idx,
                                 prim_state_idx: part.prim_state_idx,
                                 part_index,
                                 lod_idx: initial_lod_idx,
@@ -2149,6 +2191,7 @@ fn append_shape_spawn_entries_for_transforms(
                         // LOD stays on; swap re-applies anim delta without resetting key (#100).
                         enabled: true,
                         shape_path: shape_path.to_path_buf(),
+                        sub_object_idx: part.sub_object_idx,
                         prim_state_idx: part.prim_state_idx,
                         part_index,
                         lod_idx: initial_lod_idx,
@@ -2186,6 +2229,7 @@ fn append_shape_spawn_entries_for_transforms(
                     WorldSceneryLod {
                         enabled: true,
                         shape_path: shape_path.to_path_buf(),
+                        sub_object_idx: part.sub_object_idx,
                         prim_state_idx: part.prim_state_idx,
                         part_index,
                         lod_idx: initial_lod_idx,
@@ -2212,17 +2256,9 @@ fn append_shape_spawn_entries(
     let Some(placements) = progress.shape_instances.get(shape_path).cloned() else {
         return;
     };
-    let initial_lod_idx = progress
-        .parsed_shape_files
-        .get(shape_path)
-        .and_then(|shape| {
-            progress
-                .shape_instance_min_dist
-                .get(shape_path)
-                .copied()
-                .map(|d| lod_level_index_for_distance(shape, d))
-        })
-        .unwrap_or(0);
+    // Spawn the finest band so every stable part identity exists. The runtime LOD
+    // system immediately selects the correct band for each placement independently.
+    let initial_lod_idx = 0;
     let shape_file = progress.parsed_shape_files.get(shape_path);
     append_shape_spawn_entries_for_transforms(
         shape_path,
@@ -2419,12 +2455,9 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
         Option<crate::shapes::LoadedShape>,
     )> = batch
         .par_iter()
-        .map(|path| {
-            let lod_dist = progress.shape_instance_min_dist.get(path).copied();
-            match load_shape_file_and_loaded(path, lod_dist) {
-                Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
-                None => (path.clone(), None, None),
-            }
+        .map(|path| match load_shape_file_and_loaded(path, None) {
+            Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
+            None => (path.clone(), None, None),
         })
         .collect();
     for (shape_path, shape_file, loaded) in parsed {
@@ -3540,6 +3573,7 @@ pub fn progressive_world_spawn_system(
 #[allow(clippy::type_complexity)]
 pub fn update_world_scenery_lod(
     cache: Option<Res<WorldShapeLodCache>>,
+    progress: Option<Res<WorldSpawnProgress>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     focus: Option<Res<RouteFocus>>,
     mut lod_cam: ResMut<WorldLodCameraState>,
@@ -3547,6 +3581,7 @@ pub fn update_world_scenery_lod(
         &GlobalTransform,
         &mut WorldSceneryLod,
         &mut Mesh3d,
+        &mut Visibility,
         Option<&mut ShapeAnimState>,
         Option<&mut ShapeAnimBinding>,
         Option<&mut Transform>,
@@ -3564,6 +3599,14 @@ pub fn update_world_scenery_lod(
         .map(|f| f.scenery_to_render(f.center))
         .unwrap_or(Vec3::ZERO);
 
+    // A streaming cycle can add parts while the session LOD cache is incomplete.
+    // Force a full pass as soon as the cycle commits, even if the camera stayed still.
+    if progress.is_some() {
+        lod_cam.last_cam = None;
+        lod_cam.last_focus = None;
+        return;
+    }
+
     if !lod_camera_needs_update(&lod_cam, cam_pos, focus_pos, WORLD_LOD_EPS_M) {
         return;
     }
@@ -3574,7 +3617,8 @@ pub fn update_world_scenery_lod(
     let mut scanned = 0u32;
     let mut swapped = 0u32;
 
-    for (gt, mut lod, mut mesh3d, anim_state, anim_binding, transform) in &mut parts {
+    for (gt, mut lod, mut mesh3d, mut visibility, anim_state, anim_binding, transform) in &mut parts
+    {
         if !lod.enabled {
             continue;
         }
@@ -3596,12 +3640,19 @@ pub fn update_world_scenery_lod(
         let Some(asset) = lod_assets.get(new_lod) else {
             continue;
         };
-        let Some(part) = asset.parts.get(lod.part_index) else {
+        let Some((part_index, part)) =
+            shape_lod_part_by_identity(asset, lod.sub_object_idx, lod.prim_state_idx)
+        else {
+            // The target band intentionally omits this primitive group.
+            *visibility = Visibility::Hidden;
+            lod.lod_idx = new_lod;
+            swapped += 1;
             continue;
         };
         mesh3d.0 = part.mesh.clone();
+        *visibility = Visibility::Inherited;
+        lod.part_index = part_index;
         lod.lod_idx = new_lod;
-        lod.prim_state_idx = part.prim_state_idx;
         if let (Some(mut state), Some(mut binding), Some(mut tf)) =
             (anim_state, anim_binding, transform)
         {
@@ -3712,7 +3763,7 @@ pub fn spawn_world_boxes(
             trackobj_seen += 1;
             if let Some(shape_path) = resolve_object_shape_path(obj, &assets) {
                 trackobj_resolved += 1;
-                let render_pos = focus.scenery_to_render(obj.position);
+                let render_pos = obj.render_position(&focus);
                 shape_instances
                     .entry(shape_path)
                     .or_default()
@@ -3731,12 +3782,8 @@ pub fn spawn_world_boxes(
                 continue;
             }
             if SPAWN_TRACKOBJ_PROCEDURAL {
-                let segs = trackobj_procedural_segments(
-                    obj,
-                    focus.scenery_to_render(obj.position),
-                    &assets,
-                    *mode,
-                );
+                let segs =
+                    trackobj_procedural_segments(obj, obj.render_position(&focus), &assets, *mode);
                 if !segs.is_empty() {
                     trackobj_procedural_objects += 1;
                     trackobj_procedural.extend(segs);
@@ -3749,7 +3796,7 @@ pub fn spawn_world_boxes(
             }
         } else if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
             if let Some(shape_path) = resolve_object_shape_path(obj, &assets) {
-                let render_pos = focus.scenery_to_render(obj.position);
+                let render_pos = obj.render_position(&focus);
                 shape_instances
                     .entry(shape_path)
                     .or_default()
@@ -3780,11 +3827,7 @@ pub fn spawn_world_boxes(
         }
 
         let size = box_size_for_kind(obj.kind, base);
-        let translation = focus.scenery_to_render(Vec3::new(
-            obj.position.x,
-            obj.position.y + size.y * 0.5,
-            obj.position.z,
-        ));
+        let translation = obj.render_position(&focus) + Vec3::Y * (size.y * 0.5);
         // Size is already applied in local verts; keep transform scale at 1 to avoid size² cubes.
         let tf = Transform {
             translation,
@@ -4154,6 +4197,53 @@ mod tests {
     }
 
     #[test]
+    fn world_position_rebase_restores_sub_metre_track_placement() {
+        let tile_x = -6079;
+        let tile_z = 14925;
+        let anchor_local = FVec3 {
+            x: -961.3,
+            y: 28.5577,
+            z: -71.9,
+        };
+        let object_a_local = FVec3 {
+            x: -949.815,
+            y: 28.5577,
+            z: -125.436,
+        };
+        let object_b_local = FVec3 {
+            x: -947.852,
+            y: 28.5577,
+            z: -95.5,
+        };
+        let anchor = msts_to_bevy(tile_x, tile_z, anchor_local);
+        let quantized_a = msts_to_bevy(tile_x, tile_z, object_a_local);
+        let quantized_b = msts_to_bevy(tile_x, tile_z, object_b_local);
+        let precision_a =
+            msts_position_precision_offset(tile_x, tile_z, object_a_local, quantized_a);
+        let precision_b =
+            msts_position_precision_offset(tile_x, tile_z, object_b_local, quantized_b);
+        let focus = RouteFocus::at_world_center(anchor, None);
+
+        let quantized_delta =
+            focus.scenery_to_render(quantized_b) - focus.scenery_to_render(quantized_a);
+        let precise_delta = quantized_delta + precision_b - precision_a;
+        let expected = Vec3::new(
+            (object_b_local.x - object_a_local.x) as f32,
+            0.0,
+            (object_a_local.z - object_b_local.z) as f32,
+        );
+
+        assert!(
+            precise_delta.distance(expected) < 1e-4,
+            "precise={precise_delta:?} expected={expected:?}"
+        );
+        assert!(
+            quantized_delta.distance(expected) > 0.01,
+            "fixture must expose absolute-f32 quantization"
+        );
+    }
+
+    #[test]
     fn world_object_density_keeps_levels_at_or_below_threshold() {
         // #141: StaticDetailLevel > density → omit (OR WorldObjectDensity).
         assert!(keep_by_world_object_density(0, 49));
@@ -4228,6 +4318,7 @@ mod tests {
             section_idx: None,
             dyntrack_sections: Vec::new(),
             position: Vec3::ZERO,
+            position_precision_offset: Vec3::ZERO,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             linear: None,
@@ -4496,6 +4587,45 @@ mod tests {
                 openrailsrs_bevy_scenery::textures::TextureFlags::NONE,
             ),
         }
+    }
+
+    fn dummy_shape_part(sub_object_idx: u32, prim_state_idx: i32) -> ShapePartAsset {
+        ShapePartAsset {
+            prim_state_idx,
+            sub_object_idx,
+            sort_index: 0,
+            cab_matrix_idx: None,
+            mesh: Handle::default(),
+            material: Handle::default(),
+            or_cab_material: None,
+            has_texture: false,
+            is_transparent: false,
+            texture_name: None,
+            shader_name: None,
+            light_mat_idx: None,
+            solid_color: None,
+            lever_pivot_at_mesh_center: false,
+            lever_local_axis: None,
+            bounds_center: None,
+        }
+    }
+
+    #[test]
+    fn lod_part_lookup_survives_omitted_and_reordered_groups() {
+        // Real track shapes do this: a coarser band removes prim-state 1, so
+        // prim-state 2 shifts from vector index 2 to index 1.
+        let mut asset = dummy_shape_asset();
+        asset.parts = vec![
+            dummy_shape_part(u32::MAX, 0),
+            dummy_shape_part(u32::MAX, 2),
+            dummy_shape_part(u32::MAX, 4),
+        ];
+
+        let (index, part) =
+            shape_lod_part_by_identity(&asset, u32::MAX, 2).expect("stable part identity");
+        assert_eq!(index, 1);
+        assert_eq!(part.prim_state_idx, 2);
+        assert!(shape_lod_part_by_identity(&asset, u32::MAX, 1).is_none());
     }
 
     #[test]

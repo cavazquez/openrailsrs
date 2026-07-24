@@ -204,7 +204,7 @@ pub fn spawn_forest_objects(
         let trees: Vec<TreePlacement> = trees_world
             .iter()
             .map(|t| TreePlacement {
-                position: focus.to_render_surface(t.position),
+                position: focus.to_render_surface(t.position) + obj.position_precision_offset,
                 scale: t.scale,
             })
             .collect();

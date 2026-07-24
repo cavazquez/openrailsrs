@@ -40,6 +40,8 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | Instancing WORLD (#58) | `world_instancing`; opt-out `OPENRAILSRS_WORLD_INSTANCING=0` |
 | Instancing light model (#138) | TexDiff/Unknown only; HalfBright/Tex→FullBright/Specular*/emissive/`metallic>0.1`/metallic-roughness → entity path |
 | Instancing HDR | Luz física escalada por `view.exposure`; diffuse Lambert normalizado con `1/π` para evitar scenery blanco |
+| LOD WORLD / continuidad de vía | Emparejamiento estable `(sub_object_idx, prim_state_idx)` aunque una banda omita o reordene grupos; test `lod_part_lookup_survives_omitted_and_reordered_groups` |
+| Precisión WORLD / continuidad de vía | Residuo `f64→f32` restaurado después del rebase; test `world_position_rebase_restores_sub_metre_track_placement` con coordenadas reales Chiltern |
 | SortIndex (#102) / dual-pass (#101) | `mesh.rs` order; `blend_alpha_passes_*`; DDS scenery dual_blend |
 | Sombras instanced (#72) | receive + cast Shadow phase |
 | Fog (#39) | on by default; `F` → densidad 0 (no quitar componente) |

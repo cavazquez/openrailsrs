@@ -67,7 +67,7 @@ pub fn spawn_signal_lamp_objects(
             continue;
         };
         let base = Transform {
-            translation: focus.scenery_to_render(obj.position),
+            translation: obj.render_position(focus),
             rotation: obj.rotation,
             scale: obj.scale,
         };

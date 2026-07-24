@@ -68,6 +68,30 @@ El camino instanciado conserva sombras y niebla, pero ahora calcula:
 `albedo × exposure × (ambient + sun × NdotL/π × shadow)`. Los materiales PBR
 fuertemente metálicos continúan en el camino entity/PBR descrito arriba.
 
+#### Continuidad de vías al cambiar LOD
+
+Las bandas LOD de una shape MSTS no conservan necesariamente la posición de sus
+submallas. Una vía puede pasar de `[balasto, lateral, sillas, cabeza, durmientes]`
+a `[balasto, lateral, cabeza, durmientes]`; usar el índice del vector hacía que
+`cabeza` se reemplazara por `durmientes` y el riel pareciera terminar en seco al
+cruzar el umbral de distancia.
+
+El cambio de LOD WORLD identifica ahora cada parte por
+`(sub_object_idx, prim_state_idx)`, tanto en entidades como en grupos GPU. La
+geometría base se crea desde la banda más detallada para no perder partes que
+puedan reaparecer al acercar la cámara. Si una banda omite deliberadamente una
+parte, se oculta y vuelve a mostrarse cuando esa identidad existe otra vez.
+
+Había además una pérdida de precisión anterior al floating origin: convertir
+directamente la posición absoluta MSTS (~12–30 millones de metros en Chiltern) a
+`f32` cuantizaba X/Z en pasos de 1–2 m. Cada `WorldObject` conserva ahora el
+residuo submétrico de la conversión y lo suma sólo después de restar
+`RouteFocus`, cuando la posición ya está cerca de cero. Así dos tramos
+consecutivos mantienen las coordenadas decimales escritas en `.w`.
+
+Para aislar visualmente un problema de LOD se puede forzar la banda más detallada
+con `OPENRAILSRS_LOD_BIAS=100`.
+
 ## Comando rápido
 
 ```bash

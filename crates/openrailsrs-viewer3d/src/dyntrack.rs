@@ -68,7 +68,7 @@ pub fn spawn_dyntrack_objects_with_wire(
         .filter(|obj| obj.kind == "Dyntrack")
         .flat_map(|obj| {
             openrailsrs_bevy_scenery::spawn::dyntrack::procedural_segments_from_dyntrack_sections(
-                focus.scenery_to_render(obj.position),
+                obj.render_position(focus),
                 obj.rotation,
                 &obj.dyntrack_sections,
             )
@@ -90,7 +90,7 @@ pub fn spawn_dyntrack_objects_with_wire(
                     && !crate::overhead_wire::is_hide_wire_detail_level(obj.static_detail_level)
             })
             .map(|obj| ProceduralTrackSegment {
-                position: focus.scenery_to_render(obj.position),
+                position: obj.render_position(focus),
                 rotation: obj.rotation,
                 length_m: Some(MSTS_DEFAULT_SECTION_LENGTH_M),
                 half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),

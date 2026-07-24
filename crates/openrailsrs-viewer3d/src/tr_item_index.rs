@@ -232,6 +232,7 @@ mod tests {
             section_idx: None,
             dyntrack_sections: Vec::new(),
             position: pos,
+            position_precision_offset: Vec3::ZERO,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             linear: None,

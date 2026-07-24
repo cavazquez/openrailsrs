@@ -168,7 +168,7 @@ pub fn spawn_transfer_objects(
             mat
         };
 
-        let render = focus.to_render_surface(center);
+        let render = focus.to_render_surface(center) + obj.position_precision_offset;
         commands.spawn((
             WorldTileBound {
                 tile_x: obj.tile_x,

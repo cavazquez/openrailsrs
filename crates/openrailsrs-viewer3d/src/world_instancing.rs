@@ -165,6 +165,8 @@ impl ExtractComponent for WorldInstanceAppearance {
 pub struct WorldInstancedGroup {
     pub shape_path: PathBuf,
     pub part_index: usize,
+    /// Stable identity within a shape. LOD bands may omit or reorder parts.
+    pub sub_object_idx: u32,
     pub prim_state_idx: i32,
     pub lod_idx: usize,
     pub lod_enabled: bool,
@@ -912,6 +914,7 @@ pub fn update_world_instanced_lod(
         &GlobalTransform,
         &mut WorldInstancedGroup,
         &mut Mesh3d,
+        &mut Visibility,
         Option<&bevy::camera::primitives::Aabb>,
     )>,
 ) {
@@ -923,7 +926,7 @@ pub fn update_world_instanced_lod(
     };
     let cam_pos = cam_gt.translation();
 
-    for (gt, mut group, mut mesh3d, aabb) in &mut groups {
+    for (gt, mut group, mut mesh3d, mut visibility, aabb) in &mut groups {
         if !group.lod_enabled {
             continue;
         }
@@ -947,10 +950,18 @@ pub fn update_world_instanced_lod(
         let Some(asset) = lod_assets.get(new_lod) else {
             continue;
         };
-        let Some(part) = asset.parts.get(group.part_index) else {
+        let Some((part_index, part)) = crate::world::shape_lod_part_by_identity(
+            asset,
+            group.sub_object_idx,
+            group.prim_state_idx,
+        ) else {
+            *visibility = Visibility::Hidden;
+            group.lod_idx = new_lod;
             continue;
         };
         mesh3d.0 = part.mesh.clone();
+        *visibility = Visibility::Inherited;
+        group.part_index = part_index;
         group.lod_idx = new_lod;
     }
 }

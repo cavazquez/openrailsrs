@@ -162,7 +162,8 @@ pub fn spawn_water_objects(
         };
         let reflect_mat = reflection_material(materials, base_y);
 
-        let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z));
+        let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z))
+            + obj.position_precision_offset;
         commands.spawn((
             WaterSurface {
                 render_base_y: render.y,
@@ -176,7 +177,8 @@ pub fn spawn_water_objects(
         ));
 
         let reflect_render =
-            focus.to_render_surface(Vec3::new(obj.position.x, base_y - 0.05, obj.position.z));
+            focus.to_render_surface(Vec3::new(obj.position.x, base_y - 0.05, obj.position.z))
+                + obj.position_precision_offset;
         commands.spawn((
             WaterSurface {
                 render_base_y: reflect_render.y,
