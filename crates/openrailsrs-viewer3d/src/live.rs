@@ -483,13 +483,31 @@ pub fn update_driver_train_visibility(
             Without<crate::cab_view::CabInteriorMarker>,
         ),
     >,
+    added_bodies: Query<
+        Entity,
+        (
+            With<LiveTrainBody>,
+            Added<LiveTrainBody>,
+            Without<crate::cab_view::CabInteriorMarker>,
+        ),
+    >,
     children_query: Query<&Children>,
     mut visibility_query: Query<&mut Visibility, Without<crate::cab_view::CabInteriorMarker>>,
     mut cab_parts: Query<&mut Visibility, With<crate::cab_view::CabInteriorMarker>>,
+    added_cab_parts: Query<
+        Entity,
+        (
+            With<crate::cab_view::CabInteriorMarker>,
+            Added<crate::cab_view::CabInteriorMarker>,
+        ),
+    >,
 ) {
     let hide = *follow == CameraFollowMode::DriverCam || follow.is_cab2d();
     let mode_changed = hide != cam_state.was_driver;
     cam_state.was_driver = hide;
+    if !mode_changed && added_bodies.is_empty() && added_cab_parts.is_empty() {
+        return;
+    }
 
     let visibility = if hide {
         Visibility::Hidden
@@ -513,12 +531,12 @@ pub fn update_driver_train_visibility(
     let mut cab_count = 0usize;
     if *follow == CameraFollowMode::DriverCam {
         for mut vis in &mut cab_parts {
-            *vis = Visibility::Visible;
+            vis.set_if_neq(Visibility::Visible);
             cab_count += 1;
         }
     } else if follow.is_cab2d() {
         for mut vis in &mut cab_parts {
-            *vis = Visibility::Hidden;
+            vis.set_if_neq(Visibility::Hidden);
             cab_count += 1;
         }
     }

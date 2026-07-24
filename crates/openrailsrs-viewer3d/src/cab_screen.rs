@@ -24,6 +24,9 @@ use crate::viewer_log;
 /// Default OR DMI FullSize.
 pub const CAB_SCREEN_W: u32 = 640;
 pub const CAB_SCREEN_H: u32 = 480;
+/// CPU repaint/upload cadence. This keeps the DMI fluid without transferring
+/// a 640×480 RGBA texture on every render frame.
+pub const CAB_SCREEN_REFRESH_HZ: f64 = 20.0;
 
 /// Marks a cab mesh part driven as a live screen texture.
 #[derive(Component, Clone, Debug)]
@@ -33,6 +36,15 @@ pub struct CabNativeScreen {
     pub graphic: String,
     pub hide_if_disabled: bool,
     pub dmi_mode: DmiMode,
+}
+
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct CabScreenRenderClock {
+    last_paint_s: Option<f64>,
+}
+
+fn cab_screen_repaint_due(last_paint_s: Option<f64>, now_s: f64) -> bool {
+    last_paint_s.is_none_or(|last| now_s < last || now_s - last >= 1.0 / CAB_SCREEN_REFRESH_HZ)
 }
 
 /// OR-style match: material/texture key contains the Graphic basename (case-insensitive).
@@ -143,6 +155,7 @@ pub fn try_attach_screen_to_part(
             hide_if_disabled: *hide_if_disabled,
             dmi_mode,
         });
+        entity.insert(CabScreenRenderClock::default());
         viewer_log!(
             "openrailsrs-viewer3d: cab screen — {} {:?} → prim `{tex_name}`",
             control_type.as_str(),
@@ -153,7 +166,7 @@ pub fn try_attach_screen_to_part(
     false
 }
 
-/// Paint full DMI each frame (#159–#162).
+/// Paint the DMI at a bounded cadence (#159–#163).
 pub fn update_cab_screens(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,
@@ -161,7 +174,7 @@ pub fn update_cab_screens(
     mut ui: ResMut<EtcsUiState>,
     time: Res<Time>,
     interior: Query<Entity, With<CabInteriorRoot>>,
-    mut screens: Query<(&CabNativeScreen, &mut Visibility)>,
+    mut screens: Query<(&CabNativeScreen, &mut CabScreenRenderClock, &mut Visibility)>,
     mut images: ResMut<Assets<Image>>,
 ) {
     if *follow != CameraFollowMode::DriverCam {
@@ -174,10 +187,14 @@ pub fn update_cab_screens(
     let now = time.elapsed_secs_f64();
     ui.tick(now);
 
-    for (screen, mut visibility) in &mut screens {
+    for (screen, mut clock, mut visibility) in &mut screens {
         if screen.hide_if_disabled {
-            *visibility = Visibility::Visible;
+            visibility.set_if_neq(Visibility::Visible);
         }
+        if !cab_screen_repaint_due(clock.last_paint_s, now) {
+            continue;
+        }
+        clock.last_paint_s = Some(now);
         let mut status = live
             .as_ref()
             .map(|l| crate::etcs::etcs_status_from_live(&l.session))
@@ -299,6 +316,14 @@ mod tests {
             "speed.ace",
             "statictexture.ace"
         ));
+    }
+
+    #[test]
+    fn dmi_repaint_is_bounded_to_twenty_hz() {
+        assert!(cab_screen_repaint_due(None, 10.0));
+        assert!(!cab_screen_repaint_due(Some(10.0), 10.02));
+        assert!(cab_screen_repaint_due(Some(10.0), 10.05));
+        assert!(cab_screen_repaint_due(Some(10.0), 9.0));
     }
 
     #[test]

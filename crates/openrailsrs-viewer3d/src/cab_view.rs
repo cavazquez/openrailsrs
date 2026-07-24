@@ -473,6 +473,18 @@ pub fn sync_cab_interior(
         return;
     }
 
+    // Steady-state cab rendering must not resolve paths or parse the `.eng` every frame.
+    // Cab2d keeps the CVF runtime but replaces any existing 3D interior.
+    if driver && !existing.is_empty() {
+        return;
+    }
+    if cab2d && cvf_state.runtime.is_some() {
+        for entity in &existing {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+
     // Resolve cab shape / CVF for both 3D and 2D cab views.
     let cab_shape = if let Some(path) = state.cab_shape.clone() {
         Some(path)
@@ -516,10 +528,6 @@ pub fn sync_cab_interior(
         for entity in &existing {
             commands.entity(entity).despawn();
         }
-        return;
-    }
-
-    if !existing.is_empty() {
         return;
     }
 

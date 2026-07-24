@@ -5,10 +5,13 @@
 //! bounds when present.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::light::DirectionalLightShadowMap;
 use bevy::light::NotShadowCaster;
-use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
+use openrailsrs_bevy_scenery::vsm::{
+    cascade_shadow_config_from_or_limits, or_limits_from_view_distance, or_max_shadow_view_distance,
+};
 use openrailsrs_bevy_scenery::{SceneSunLight, directional_light_from_sun, sun_transform};
 
 use crate::launch::{
@@ -91,16 +94,19 @@ pub fn spawn_ground_and_lights(
     // Shared daylight defaults (#124); indoor corridor keeps a dimmer fill.
     let mut sun = SceneSunLight::day();
     sun.illuminance = if outdoor { 75_000.0 } else { 10_000.0 };
+    // Match the shadow coverage to the actual scenery window. The previous
+    // fixed 200 m limit produced a camera-centred ring where shadows abruptly
+    // disappeared. OR-style mixed logarithmic/uniform splits preserve nearby
+    // detail while the outer cascade reaches the loaded view.
+    let shadow_distance = or_max_shadow_view_distance(view_radius_m());
+    let shadow_cascades = cascade_shadow_config_from_or_limits(
+        or_limits_from_view_distance(shadow_distance),
+        0.5,
+        0.2,
+    );
     commands.spawn((
         directional_light_from_sun(&sun, true),
-        CascadeShadowConfigBuilder {
-            num_cascades: 3,
-            minimum_distance: 0.1,
-            maximum_distance: 200.0,
-            first_cascade_far_bound: 10.0,
-            overlap_proportion: 0.2,
-        }
-        .build(),
+        shadow_cascades,
         sun_transform(&sun),
         Name::new("sun"),
     ));
@@ -207,5 +213,15 @@ mod tests {
     fn grid_step_scales_up_for_large_routes() {
         assert!(grid_step_for_extent(100.0) <= GRID_MINOR_STEP);
         assert!(grid_step_for_extent(50_000.0) > GRID_MINOR_STEP);
+    }
+
+    #[test]
+    fn outdoor_shadow_cascades_cover_default_view_without_an_abrupt_near_ring() {
+        let distance = or_max_shadow_view_distance(crate::launch::VIEWING_DISTANCE_M);
+        let config =
+            cascade_shadow_config_from_or_limits(or_limits_from_view_distance(distance), 0.5, 0.2);
+        assert_eq!(config.bounds.len(), 4);
+        assert!(config.bounds.last().copied().unwrap_or_default() >= 2000.0);
+        assert!(config.bounds.windows(2).all(|pair| pair[0] < pair[1]));
     }
 }

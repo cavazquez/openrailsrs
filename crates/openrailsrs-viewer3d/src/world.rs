@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
+use bevy::camera::primitives::MeshAabb;
 use bevy::math::DVec3;
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
@@ -1438,7 +1439,6 @@ type InstancedShapeSpawnBundle = (
     WorldTileBound,
     crate::world_instancing::WorldInstanceBuffer,
     crate::world_instancing::WorldInstanceAppearance,
-    bevy::camera::visibility::NoFrustumCulling,
     bevy::camera::primitives::Aabb,
 );
 
@@ -2112,7 +2112,8 @@ fn append_shape_spawn_entries_for_transforms(
                         })
                         .collect();
                     let count = instances.len() as u32;
-                    let aabb = instances_aabb(&instances, 32.0);
+                    let local_aabb = meshes.get(&part.mesh).and_then(MeshAabb::compute_aabb);
+                    let aabb = instances_aabb(&instances, local_aabb.as_ref());
                     let appearance: WorldInstanceAppearance =
                         appearance_from_standard_material(materials, &material);
                     *instanced_groups += 1;
@@ -2132,9 +2133,8 @@ fn append_shape_spawn_entries_for_transforms(
                             instance_count: count,
                         },
                         WorldTileBound { tile_x, tile_z },
-                        WorldInstanceBuffer(instances),
+                        WorldInstanceBuffer(instances.into()),
                         appearance,
-                        bevy::camera::visibility::NoFrustumCulling,
                         aabb,
                     ));
                 } else {

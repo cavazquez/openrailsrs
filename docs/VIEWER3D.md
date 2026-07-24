@@ -69,6 +69,26 @@ El camino instanciado conserva sombras y niebla, pero ahora calcula:
 `albedo × exposure × (ambient + sun × NdotL/π × shadow)`. Los materiales PBR
 fuertemente metálicos continúan en el camino entity/PBR descrito arriba.
 
+#### Rendimiento del instanciado y las sombras
+
+Los datos de transformación de cada grupo WORLD son inmutables y se comparten entre
+el mundo principal y el mundo de render mediante `Arc<[WorldInstanceData]>`. El
+buffer GPU y el bind group de apariencia permanecen vivos mientras no cambien esos
+datos o el material; ya no se recrean en cada frame.
+
+Cada grupo calcula un AABB agregado a partir del AABB real del mesh y de todas sus
+matrices de instancia. El cálculo incluye rotación, escala no uniforme y shear.
+Bevy usa ese límite para descartar el grupo tanto de la vista principal como de
+cada subvista de sombra. Las colas custom `Opaque3d` y `Shadow` respetan las listas
+de visibilidad de Bevy, evitando enviar a todas las cascadas grupos de otros tiles.
+
+El sol usa cuatro splits mixtos logarítmico/uniformes compatibles con Open Rails.
+Su alcance deriva de `OPENRAILSRS_VIEW_RADIUS_M` y queda limitado por
+`or_max_shadow_view_distance` (120–2500 m). Esto reemplaza el límite fijo anterior
+de 200 m, cuyo borde se movía con la cámara y podía parecer una “sombra de cámara”.
+La resolución continúa en 2048 por cascada; el culling por AABB compensa el cuarto
+split evitando draw calls fuera de cada volumen.
+
 #### Continuidad de vías al cambiar LOD
 
 Las bandas LOD de una shape MSTS no conservan necesariamente la posición de sus

@@ -43,7 +43,9 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | LOD WORLD / continuidad de vía | Emparejamiento estable `(sub_object_idx, prim_state_idx)` aunque una banda omita o reordene grupos; test `lod_part_lookup_survives_omitted_and_reordered_groups` |
 | Precisión WORLD / continuidad de vía | Residuo `f64→f32` restaurado después del rebase; test `world_position_rebase_restores_sub_metre_track_placement` con coordenadas reales Chiltern |
 | SortIndex (#102) / dual-pass (#101) | `mesh.rs` order; `blend_alpha_passes_*`; DDS scenery dual_blend |
-| Sombras instanced (#72) | receive + cast Shadow phase |
+| Sombras instanced (#72) | receive + cast Shadow phase; AABB agregado con scale/shear y culling por vista/cascada |
+| Cascadas de sol | 4 splits OR hasta la distancia visible (cap 2500 m); sin anillo fijo de 200 m |
+| Cabina / trabajo estable | runtime CVF sin deep clone; gauges/dígitos cacheados; DMI repinta a 20 Hz |
 | Fog (#39) | on by default; `F` → densidad 0 (no quitar componente) |
 | PBR sidecar (#44) | `*.s.pbr.json` → tangents + normal map |
 | Bogies (#69) / puertas (#81) | `rolling_stock_anim` |

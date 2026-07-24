@@ -7,6 +7,7 @@
 //! Directional shadow cast uses the [`Shadow`] phase with the same instance buffer (#72).
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::core_pipeline::core_3d::{
@@ -37,7 +38,9 @@ use bevy::render::render_resource::*;
 use bevy::render::renderer::RenderDevice;
 use bevy::render::sync_component::SyncComponent;
 use bevy::render::sync_world::MainEntity;
-use bevy::render::view::ExtractedView;
+use bevy::render::view::{
+    ExtractedView, RenderShadowMapVisibleEntities, RenderVisibleEntities, RetainedViewEntity,
+};
 use bevy::render::{Render, RenderApp, RenderStartup, RenderSystems};
 use bevy::shader::Shader;
 use bytemuck::{Pod, Zeroable};
@@ -120,8 +123,8 @@ impl WorldInstanceData {
 }
 
 /// CPU instance list extracted to the render world.
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct WorldInstanceBuffer(pub Vec<WorldInstanceData>);
+#[derive(Component, Clone, Debug, Deref)]
+pub struct WorldInstanceBuffer(pub Arc<[WorldInstanceData]>);
 
 impl SyncComponent for WorldInstanceBuffer {
     type Target = Self;
@@ -133,12 +136,14 @@ impl ExtractComponent for WorldInstanceBuffer {
     type Out = Self;
 
     fn extract_component(item: QueryItem<'_, '_, Self::QueryData>) -> Option<Self> {
-        Some(WorldInstanceBuffer(item.0.clone()))
+        // Extraction runs every render frame. Arc keeps the immutable placement
+        // data shared instead of cloning every instance transform.
+        Some(item.clone())
     }
 }
 
 /// Albedo + optional alpha cutout for the instanced draw (#58 v1 lit shader).
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, PartialEq)]
 pub struct WorldInstanceAppearance {
     pub base_color: LinearRgba,
     pub base_color_texture: Option<Handle<Image>>,
@@ -242,28 +247,40 @@ fn init_fallback_image(
     fallback.0 = images.add(image);
 }
 
-/// Build a union AABB covering all instance translations with a margin for mesh extent.
+/// Build a conservative union AABB for all instances of one mesh.
+///
+/// Transforming the local centre and absolute half-extents accounts for rotation,
+/// non-uniform scale and the Matrix3x3 shear used by some MSTS scenery. This lets
+/// Bevy safely cull a whole instanced tile group for both the camera and each
+/// shadow cascade.
 pub fn instances_aabb(
     instances: &[WorldInstanceData],
-    margin: f32,
+    local_aabb: Option<&bevy::camera::primitives::Aabb>,
 ) -> bevy::camera::primitives::Aabb {
+    const FALLBACK_HALF_EXTENT_M: f32 = 32.0;
+    let (local_center, local_half_extents) = local_aabb
+        .map(|aabb| (Vec3::from(aabb.center), Vec3::from(aabb.half_extents)))
+        .unwrap_or((Vec3::ZERO, Vec3::splat(FALLBACK_HALF_EXTENT_M)));
     let mut min = Vec3::splat(f32::MAX);
     let mut max = Vec3::splat(f32::MIN);
     for inst in instances {
-        let p = inst.translation();
-        min = min.min(p);
-        max = max.max(p);
+        let linear = inst.linear();
+        let center = inst.translation() + linear * local_center;
+        // For a matrix represented by columns, |M|e is the enclosing
+        // axis-aligned half-extent after applying M.
+        let half_extents = linear.x_axis.abs() * local_half_extents.x
+            + linear.y_axis.abs() * local_half_extents.y
+            + linear.z_axis.abs() * local_half_extents.z;
+        min = min.min(center - half_extents);
+        max = max.max(center + half_extents);
     }
     if !min.is_finite() || !max.is_finite() {
         return bevy::camera::primitives::Aabb::from_min_max(
-            Vec3::splat(-margin),
-            Vec3::splat(margin),
+            -local_half_extents,
+            local_half_extents,
         );
     }
-    bevy::camera::primitives::Aabb::from_min_max(
-        min - Vec3::splat(margin),
-        max + Vec3::splat(margin),
-    )
+    bevy::camera::primitives::Aabb::from_min_max(min, max)
 }
 
 /// Spawn bundle helpers for the progressive WORLD queue.
@@ -363,10 +380,14 @@ pub fn instancing_part_supported(
 struct GpuWorldInstanceBuffer {
     buffer: Buffer,
     length: usize,
+    source: Arc<[WorldInstanceData]>,
 }
 
 #[derive(Component)]
-struct GpuWorldInstanceBindGroup(BindGroup);
+struct GpuWorldInstanceBindGroup {
+    bind_group: BindGroup,
+    source: WorldInstanceAppearance,
+}
 
 #[derive(Clone, Copy, ShaderType, Pod, Zeroable)]
 #[repr(C)]
@@ -566,21 +587,29 @@ impl WorldInstancingPipeline {
 
 fn prepare_world_instance_buffers(
     mut commands: Commands,
-    query: Query<(Entity, &WorldInstanceBuffer)>,
+    query: Query<(
+        Entity,
+        &WorldInstanceBuffer,
+        Option<&GpuWorldInstanceBuffer>,
+    )>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, data) in &query {
+    for (entity, data, existing) in &query {
         if data.is_empty() {
+            continue;
+        }
+        if existing.is_some_and(|gpu| Arc::ptr_eq(&gpu.source, &data.0)) {
             continue;
         }
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("world_instance_buffer"),
-            contents: bytemuck::cast_slice(data.as_slice()),
+            contents: bytemuck::cast_slice(data.0.as_ref()),
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
         });
         commands.entity(entity).insert(GpuWorldInstanceBuffer {
             buffer,
             length: data.len(),
+            source: data.0.clone(),
         });
     }
 }
@@ -592,14 +621,21 @@ fn prepare_world_instance_bind_groups(
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<bevy::render::texture::GpuImage>>,
     fallback_image: Option<Res<WorldInstancingFallbackImage>>,
-    query: Query<(Entity, &WorldInstanceAppearance)>,
+    query: Query<(
+        Entity,
+        &WorldInstanceAppearance,
+        Option<&GpuWorldInstanceBindGroup>,
+    )>,
 ) {
     let Some(fallback_image) = fallback_image else {
         return;
     };
     let layout = pipeline_cache.get_bind_group_layout(&pipeline.appearance_layout);
     let fallback = fallback_image.0.clone();
-    for (entity, appearance) in &query {
+    for (entity, appearance, existing) in &query {
+        if existing.is_some_and(|gpu| gpu.source.eq(appearance)) {
+            continue;
+        }
         // Prefer the part albedo. If the GPU upload is not ready yet, wait — never
         // substitute white (that paints solid-white buildings for a whole stream).
         // Terracotta 1×1 is only for the rare None-texture edge case.
@@ -633,9 +669,10 @@ fn prepare_world_instance_bind_groups(
                 &gpu_image.sampler,
             )),
         );
-        commands
-            .entity(entity)
-            .insert(GpuWorldInstanceBindGroup(bind_group));
+        commands.entity(entity).insert(GpuWorldInstanceBindGroup {
+            bind_group,
+            source: appearance.clone(),
+        });
     }
 }
 
@@ -650,22 +687,29 @@ fn queue_world_instanced(
     mesh_allocator: Res<MeshAllocator>,
     material_meshes: Query<(Entity, &MainEntity), With<WorldInstanceBuffer>>,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
-    views: Query<&ExtractedView>,
+    views: Query<(&ExtractedView, &RenderVisibleEntities)>,
     view_key_cache: Res<ViewKeyCache>,
 ) {
     // Opaque WORLD instances only (#106). Cutout uses shader discard on this path;
     // blend/transparent parts never get `WorldInstanceBuffer` (see world spawn).
     let draw_custom = opaque_3d_draw_functions.read().id::<DrawWorldInstanced>();
 
-    for view in &views {
+    for (view, visible_entities) in &views {
         let Some(opaque_phase) = opaque_render_phases.get_mut(&view.retained_view_entity) else {
             continue;
         };
         let Some(&view_key) = view_key_cache.get(&view.retained_view_entity) else {
             continue;
         };
+        let Some(visible_meshes) = visible_entities.get::<Mesh3d>() else {
+            continue;
+        };
 
         for (entity, main_entity) in &material_meshes {
+            if !visible_meshes.entity_pair_is_visible(entity, *main_entity) {
+                opaque_phase.remove(*main_entity);
+                continue;
+            }
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*main_entity)
             else {
                 continue;
@@ -723,21 +767,31 @@ fn queue_world_instanced_shadows(
     >,
     mut shadow_render_phases: ResMut<ViewBinnedRenderPhases<Shadow>>,
     view_lights: Query<(&LightEntity, &ExtractedView)>,
+    shadow_visible_entities: Query<&RenderShadowMapVisibleEntities>,
     light_key_cache: Res<LightKeyCache>,
 ) {
     let draw_shadow = shadow_draw_functions
         .read()
         .id::<DrawWorldInstancedShadow>();
 
-    for (_light_entity, view) in &view_lights {
+    for (light_entity, view) in &view_lights {
         let Some(shadow_phase) = shadow_render_phases.get_mut(&view.retained_view_entity) else {
             continue;
         };
         let Some(&light_key) = light_key_cache.get(&view.retained_view_entity) else {
             continue;
         };
+        let Some(visible_meshes) =
+            shadow_visible_meshes(&shadow_visible_entities, light_entity, view)
+        else {
+            continue;
+        };
 
         for (entity, main_entity, appearance) in &material_meshes {
+            if !visible_meshes.entity_pair_is_visible(entity, *main_entity) {
+                shadow_phase.remove(*main_entity);
+                continue;
+            }
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*main_entity)
             else {
                 continue;
@@ -788,6 +842,45 @@ fn queue_world_instanced_shadows(
     }
 }
 
+/// Resolve Bevy's CPU-culling table for one shadow subview.
+///
+/// Directional lights have one retained view per cascade. Point and spot
+/// lights share placeholder auxiliary entities, matching Bevy's own PBR
+/// shadow queue.
+fn shadow_visible_meshes<'w, 's: 'w>(
+    query: &'w Query<'w, 's, &'_ RenderShadowMapVisibleEntities>,
+    light_entity: &LightEntity,
+    view: &ExtractedView,
+) -> Option<&'w bevy::render::view::RenderVisibleEntitiesClass> {
+    let visible = match light_entity {
+        LightEntity::Directional { light_entity, .. } => query
+            .get(*light_entity)
+            .ok()?
+            .subviews
+            .get(&view.retained_view_entity)?,
+        LightEntity::Point {
+            light_entity,
+            face_index,
+        } => {
+            let retained = RetainedViewEntity {
+                main_entity: view.retained_view_entity.main_entity,
+                auxiliary_entity: MainEntity::from(Entity::PLACEHOLDER),
+                subview_index: *face_index as u32,
+            };
+            query.get(*light_entity).ok()?.subviews.get(&retained)?
+        }
+        LightEntity::Spot { light_entity } => {
+            let retained = RetainedViewEntity {
+                main_entity: view.retained_view_entity.main_entity,
+                auxiliary_entity: MainEntity::from(Entity::PLACEHOLDER),
+                subview_index: 0,
+            };
+            query.get(*light_entity).ok()?.subviews.get(&retained)?
+        }
+    };
+    visible.get::<Mesh3d>()
+}
+
 type DrawWorldInstanced = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
@@ -825,7 +918,7 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetWorldInstanceAppearan
         let Some(bg) = bind_group else {
             return RenderCommandResult::Skip;
         };
-        pass.set_bind_group(I, &bg.0, &[]);
+        pass.set_bind_group(I, &bg.bind_group, &[]);
         RenderCommandResult::Success
     }
 }
@@ -1012,6 +1105,33 @@ mod tests {
         assert!((t.x - 10.0).abs() < 1e-4);
         assert!((t.y - 2.0).abs() < 1e-4);
         assert!((t.z + 3.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn instance_buffer_clone_shares_immutable_placement_storage() {
+        let original = WorldInstanceBuffer(
+            vec![WorldInstanceData::from_transform(Transform::IDENTITY)].into(),
+        );
+        let extracted = original.clone();
+        assert!(Arc::ptr_eq(&original.0, &extracted.0));
+    }
+
+    #[test]
+    fn aggregate_aabb_covers_scaled_and_sheared_mesh() {
+        let local =
+            bevy::camera::primitives::Aabb::from_min_max(Vec3::splat(-1.0), Vec3::splat(1.0));
+        let linear = Mat3::from_cols(
+            Vec3::new(2.0, 0.0, 0.0),
+            Vec3::new(1.0, 3.0, 0.0),
+            Vec3::new(0.0, 0.0, 4.0),
+        );
+        let instance = WorldInstanceData::from_affine(Affine3A::from_mat3_translation(
+            linear,
+            Vec3::new(10.0, 2.0, -3.0),
+        ));
+        let aggregate = instances_aabb(&[instance], Some(&local));
+        assert_eq!(Vec3::from(aggregate.min()), Vec3::new(7.0, -1.0, -7.0));
+        assert_eq!(Vec3::from(aggregate.max()), Vec3::new(13.0, 5.0, 1.0));
     }
 
     #[test]

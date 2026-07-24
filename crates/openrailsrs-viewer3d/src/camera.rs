@@ -11,6 +11,7 @@
 use bevy::camera::Exposure;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
@@ -913,6 +914,9 @@ pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
         // Atmospheric fog on by default; `F` toggles via `toggle_distance_fog` (#39).
         crate::sky::camera_distance_fog(),
         camera_layers_outdoor(),
+        // A camera has no render mesh; keep the non-caster intent explicit so
+        // diagnostics cannot mistake this entity for shadow geometry.
+        NotShadowCaster,
         Name::new("viewer-camera"),
     ));
 }
@@ -1864,6 +1868,7 @@ pub fn update_primary_window_cursor(
 mod tests {
     use super::*;
     use crate::train::{CsvRow, ReplayState, TrainTrack};
+    use bevy::ecs::system::RunSystemOnce;
     use bevy::input::touch::TouchPhase;
     use std::f32::consts::FRAC_PI_2;
 
@@ -1876,6 +1881,20 @@ mod tests {
         assert_eq!(parse_tonemapping(None), Tonemapping::TonyMcMapface);
         assert_eq!(parse_tonemapping(Some("")), Tonemapping::TonyMcMapface);
         assert_eq!(parse_tonemapping(Some("tony")), Tonemapping::TonyMcMapface);
+    }
+
+    #[test]
+    fn viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster() {
+        let mut app = App::new();
+        app.insert_resource(ViewerLaunchOpts::default());
+        app.world_mut().run_system_once(spawn_camera).unwrap();
+
+        let world = app.world_mut();
+        let mut cameras =
+            world.query_filtered::<(Option<&Mesh3d>, Option<&NotShadowCaster>), With<Camera3d>>();
+        let (mesh, no_shadow) = cameras.single(world).expect("viewer camera");
+        assert!(mesh.is_none());
+        assert!(no_shadow.is_some());
     }
 
     #[test]

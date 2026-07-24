@@ -582,7 +582,12 @@ pub fn update_cab_cvf_controls(
     let Some(cvf_state) = cvf_state.as_mut() else {
         return;
     };
-    let Some(runtime) = cvf_state.runtime.clone() else {
+    let CabCvfState {
+        runtime,
+        lever_keys,
+        ..
+    } = &mut **cvf_state;
+    let Some(runtime) = runtime.as_ref() else {
         return;
     };
     if interior.is_empty() {
@@ -600,17 +605,12 @@ pub fn update_cab_cvf_controls(
             MatrixDriver::Lever {
                 control, anim_node, ..
             } => {
-                *visibility = Visibility::Visible;
+                visibility.set_if_neq(Visibility::Visible);
                 let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
                 if !has_anim {
                     let target = control_value(control, &tel) as f32;
-                    let value = smoothed_control_value(
-                        &mut cvf_state.lever_keys,
-                        part.matrix_idx,
-                        target,
-                        smooth,
-                    );
-                    *transform = procedural_control_transform(
+                    let value = smoothed_control_value(lever_keys, part.matrix_idx, target, smooth);
+                    let next_transform = procedural_control_transform(
                         &runtime.shape,
                         part.matrix_idx,
                         part.pivot_at_mesh,
@@ -621,18 +621,14 @@ pub fn update_cab_cvf_controls(
                     .unwrap_or_else(|| {
                         static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh)
                     });
+                    transform.set_if_neq(next_transform);
                     continue;
                 }
                 let value = control_value(control, &tel);
                 let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
-                let key = smoothed_control_value(
-                    &mut cvf_state.lever_keys,
-                    part.matrix_idx,
-                    target_key,
-                    smooth,
-                );
+                let key = smoothed_control_value(lever_keys, part.matrix_idx, target_key, smooth);
                 let pose_mats = animation_pose_matrices(&runtime.shape, key);
-                *transform = if let Some(center) = part.pivot_at_mesh {
+                let next_transform = if let Some(center) = part.pivot_at_mesh {
                     lever_entity_transform_at_mesh_center(
                         &runtime.shape,
                         part.matrix_idx,
@@ -642,6 +638,7 @@ pub fn update_cab_cvf_controls(
                 } else {
                     lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
                 };
+                transform.set_if_neq(next_transform);
             }
             MatrixDriver::MultiState {
                 control,
@@ -649,18 +646,14 @@ pub fn update_cab_cvf_controls(
                 anim_node,
                 ..
             } => {
-                *visibility = Visibility::Visible;
+                visibility.set_if_neq(Visibility::Visible);
                 let value = multi_state_normalized_value(&runtime.cvf, control, *order, &tel);
                 if lever_has_authored_animation(&runtime.shape, *anim_node) {
                     let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
-                    let key = smoothed_control_value(
-                        &mut cvf_state.lever_keys,
-                        part.matrix_idx,
-                        target_key,
-                        smooth,
-                    );
+                    let key =
+                        smoothed_control_value(lever_keys, part.matrix_idx, target_key, smooth);
                     let pose_mats = animation_pose_matrices(&runtime.shape, key);
-                    *transform = if let Some(center) = part.pivot_at_mesh {
+                    let next_transform = if let Some(center) = part.pivot_at_mesh {
                         lever_entity_transform_at_mesh_center(
                             &runtime.shape,
                             part.matrix_idx,
@@ -670,6 +663,7 @@ pub fn update_cab_cvf_controls(
                     } else {
                         lever_entity_transform_rebased(&runtime.shape, part.matrix_idx, &pose_mats)
                     };
+                    transform.set_if_neq(next_transform);
                 } else if let Some(CabControl::Dial { dial, .. }) =
                     cvf_control_at_order(&runtime.cvf, control, *order)
                 {
@@ -681,26 +675,26 @@ pub fn update_cab_cvf_controls(
                         static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
                     let axis = part.local_spin_axis.unwrap_or(Vec3::NEG_Z);
                     base.rotation *= Quat::from_axis_angle(axis, angle);
-                    *transform = base;
+                    transform.set_if_neq(base);
                 } else {
                     // A discrete CVF display uses frame_index / frame_count, which
                     // is not the physical 0/1 state needed by a horn push button.
                     let procedural_target = control_value(control, &tel);
                     if procedural_cab_motion(control, procedural_target).is_none() {
-                        *transform = static_lever_transform(
+                        transform.set_if_neq(static_lever_transform(
                             &runtime.shape,
                             part.matrix_idx,
                             part.pivot_at_mesh,
-                        );
+                        ));
                         continue;
                     }
                     let procedural_value = smoothed_control_value(
-                        &mut cvf_state.lever_keys,
+                        lever_keys,
                         part.matrix_idx,
                         procedural_target as f32,
                         smooth,
                     );
-                    *transform = procedural_control_transform(
+                    let next_transform = procedural_control_transform(
                         &runtime.shape,
                         part.matrix_idx,
                         part.pivot_at_mesh,
@@ -709,6 +703,7 @@ pub fn update_cab_cvf_controls(
                         procedural_value as f64,
                     )
                     .expect("motion was checked above");
+                    transform.set_if_neq(next_transform);
                 }
             }
             MatrixDriver::GaugeNative { .. } | MatrixDriver::Digit { .. } => {

@@ -84,6 +84,18 @@ Símbolos ERA: `Content/ETCS` (o `OPENRAILSRS_ETCS_CONTENT` / fixtures `docs/fix
 
 Instrumentos (`Instruments*.ace`): mips ACE completos; agujas con offset 1.5 mm. Pullman marca casi todo `ZBufMode=1` (OR dibuja la cabina en un pase tardío); en Bevy los materiales **opacos** escriben depth para que el WORLD no tape pupitre/suelo. MSAA no se activa al entrar en cabina (toggle en runtime rompe pipelines Bevy 0.19).
 
+## Rendimiento de cabina
+
+La cabina conserva su respuesta física a la frecuencia de simulación/render, pero evita trabajo visual que no produce un cambio:
+
+- Entrar en `DriverCam` resuelve y parsea `.eng`/`.cvf`/shape una sola vez; el estado ya cargado se reutiliza mientras la cabina siga activa.
+- La actualización de palancas usa por referencia el runtime CVF y sólo marca `Transform`/`Visibility` como cambiados cuando el valor resultante difiere.
+- `GaugeNative` sólo reconstruye geometría cuando cambia su fracción visible; `Digit` sólo cuando cambia el texto formateado.
+- La pantalla ETCS mantiene lógica e input por frame, pero limita el repintado y la subida de su imagen RGBA de 640×480 a **20 Hz**.
+- Cambiar la visibilidad del tren/cabina recorre la jerarquía únicamente al cambiar de cámara o aparecer una nueva entidad.
+
+Toda la geometría de la cabina, sus instrumentos y la cámara lleva la exclusión de emisión de sombra. La cámara no contiene un `Mesh3d`, por lo que no puede proyectar una sombra; un borde que se desplace con ella debe diagnosticarse como límite de cascada, no como geometría de cámara.
+
 ## Teclas (paridad Open Rails)
 
 | Tecla | OR / ORRS |

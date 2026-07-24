@@ -39,6 +39,12 @@ pub struct CabNativeGauge {
     pub material: Handle<StandardMaterial>,
 }
 
+#[derive(Component, Clone, Debug)]
+pub(crate) struct CabNativeGaugeCache {
+    fraction: f32,
+    rgba: Option<[f32; 4]>,
+}
+
 /// ACE font digits (OR `ThreeDimCabDigit`).
 #[derive(Component, Clone, Debug)]
 pub struct CabNativeDigit {
@@ -49,6 +55,15 @@ pub struct CabNativeDigit {
     pub max_digits: usize,
     pub digital: CabDigitalParams,
     pub mesh: Handle<Mesh>,
+}
+
+#[derive(Component, Clone, Debug, Default)]
+pub(crate) struct CabNativeDigitCache {
+    text: String,
+}
+
+fn gauge_fraction_changed(previous: f32, next: f32) -> bool {
+    !previous.is_finite() || (previous - next).abs() >= 0.0005
 }
 
 /// Spawn Digit/GaugeNative quads under an existing cab interior root.
@@ -101,6 +116,10 @@ pub fn spawn_cab_native_instruments(
                         gauge: gauge.clone(),
                         mesh: mesh.clone(),
                         material: material.clone(),
+                    },
+                    CabNativeGaugeCache {
+                        fraction: f32::NAN,
+                        rgba: None,
                     },
                     Mesh3d(mesh),
                     MeshMaterial3d(material),
@@ -158,6 +177,7 @@ pub fn spawn_cab_native_instruments(
                         digital,
                         mesh: mesh.clone(),
                     },
+                    CabNativeDigitCache::default(),
                     Mesh3d(mesh),
                     MeshMaterial3d(material),
                     transform,
@@ -179,17 +199,18 @@ pub fn spawn_cab_native_instruments(
 }
 
 /// Update gauge / digit geometry from live telemetry.
-pub fn update_cab_native_instruments(
+pub(crate) fn update_cab_native_instruments(
     follow: Res<CameraFollowMode>,
     live: Option<Res<LiveDrive>>,
     cvf_state: Option<Res<CabCvfState>>,
     interior: Query<Entity, With<CabInteriorRoot>>,
     mut gauges: Query<(
         &CabNativeGauge,
-        &mut Mesh3d,
+        &Mesh3d,
         &MeshMaterial3d<StandardMaterial>,
+        &mut CabNativeGaugeCache,
     )>,
-    digits: Query<&CabNativeDigit>,
+    mut digits: Query<(&CabNativeDigit, &mut CabNativeDigitCache)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -210,11 +231,14 @@ pub fn update_cab_native_instruments(
     }
     let tel = live.session.cab_telemetry();
 
-    for (gauge, mesh3d, mat3d) in &mut gauges {
+    for (gauge, mesh3d, mat3d, mut cache) in &mut gauges {
         let reading = gauge_control_value(&gauge.control, &gauge.gauge, &tel);
         let fraction = gauge.gauge.range_fraction(reading, true) as f32;
-        if let Some(mut mesh) = meshes.get_mut(&mesh3d.0) {
-            *mesh = gauge_mesh(gauge.width_m, gauge.max_len_m, fraction, &gauge.gauge);
+        if gauge_fraction_changed(cache.fraction, fraction) {
+            if let Some(mut mesh) = meshes.get_mut(&mesh3d.0) {
+                *mesh = gauge_mesh(gauge.width_m, gauge.max_len_m, fraction, &gauge.gauge);
+            }
+            cache.fraction = fraction;
         }
         let rgba = if fraction < 0.0 {
             gauge
@@ -225,18 +249,25 @@ pub fn update_cab_native_instruments(
         } else {
             gauge.gauge.positive_colour.unwrap_or([1.0, 1.0, 0.0, 1.0])
         };
-        if let Some(mut mat) = materials.get_mut(&mat3d.0) {
-            mat.base_color = Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0]);
+        if cache.rgba != Some(rgba) {
+            if let Some(mut mat) = materials.get_mut(&mat3d.0) {
+                mat.base_color = Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0]);
+            }
+            cache.rgba = Some(rgba);
         }
         let _ = runtime; // keep matrix drivers authoritative at spawn
     }
 
-    for digit in &digits {
+    for (digit, mut cache) in &mut digits {
         let reading = digital_control_value(&digit.control, &digit.digital, &tel);
         let text = format_3d_digits(&digit.digital, reading, digit.max_digits);
+        if cache.text == text {
+            continue;
+        }
         if let Some(mut mesh) = meshes.get_mut(&digit.mesh) {
             *mesh = digit_mesh(digit.size_m, digit.max_digits, &text);
         }
+        cache.text = text;
     }
 }
 
@@ -449,6 +480,13 @@ fn digit_font_file_name(control: &ControlType, font_ace: Option<&str>) -> String
 mod tests {
     use super::*;
     use openrailsrs_formats::ShapeFile;
+
+    #[test]
+    fn gauge_cache_ignores_subpixel_fraction_noise() {
+        assert!(gauge_fraction_changed(f32::NAN, 0.0));
+        assert!(!gauge_fraction_changed(0.5, 0.5001));
+        assert!(gauge_fraction_changed(0.5, 0.501));
+    }
 
     #[test]
     fn gauge_horizontal_grows_positive_x() {
