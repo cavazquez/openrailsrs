@@ -17,6 +17,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Pantalla ETCS / `ScreenDisplay` (#158–#163) | ✅ DMI + TCS Rust (`BasicEtcsTcs`: supervisión/TTI/menús) |
 | Vista cabina 2D (**Alt+1** si preferís 3D; o **1** con prefer 2D) | ✅ ACE + CVF (#152) |
 | Cab2d Digital / MouseControl / Direction / NIGHT | ✅ |
+| Mandos 3D (acelerador/freno/inversor/bocina) | ✅ animación `.s`; fallback CVF sobre el pivote authored si faltan controladores |
 | Panel HUD (tecla **C**) | ✅ (solo cabina 3D; cámara = **1**) |
 | UV canónicas OR (#165) | ✅ smoke Pullman Chiltern OK (2026-07) |
 | Jerarquía / SortIndex / winding (#166) | ✅ bake cab = OR `totalPrimitiveIndex`; opacos Back-cull |
@@ -47,9 +48,12 @@ Con `OPENRAILSRS_CAB_DEBUG=occluder`, el HUD/log atribuye el primer AABB de cabi
 |--------|------------|
 | M0 | Raíz / body cab |
 | M4 | Inversor / selector |
+| M5 | Bocina |
 | M8–M10 | Palancas thr/brk (bindings `.cvf`) |
 
-Detalle de bindings: `cab_cvf.rs` + tests Pullman. Debug: `OPENRAILSRS_CAB_DEBUG=uv|albedo|vcolor`.
+Detalle de bindings: `cab_cvf.rs` + tests Pullman. Si el `.s` trae controladores MSTS, se respetan sus keyframes. En cabinas como `PULLMAN_GR.s`, que declaran los huesos `DIRECTION`, `HORN`, `THROTTLE` y `TRAIN_BRAKE` pero no incluyen ningún bloque de animación, el viewer aplica un fallback suave sobre la matriz y el pivote authored: acelerador y freno recorren su arco, el inversor centra neutral entre avance/retroceso y la bocina se deprime mientras está activa. Otros huesos desconocidos permanecen estáticos.
+
+Debug: `OPENRAILSRS_CAB_DEBUG=uv|albedo|vcolor`.
 
 ## Env
 
@@ -95,6 +99,7 @@ Instrumentos (`Instruments*.ace`): mips ACE completos; agujas con offset 1.5 m
 | **A** / **D** | Throttle − / + |
 | **;** / **'** | Freno tren − / + |
 | **W** / **S** | Reverser FWD / REV |
+| **\\** | Reverser neutral |
 | **Space** | Bocina |
 | **V** | Limpiaparabrisas |
 | **Backspace** | Emergencia (freno a fondo) |

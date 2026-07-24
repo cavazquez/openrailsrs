@@ -27,7 +27,7 @@ use crate::viewer_log;
 pub struct CabCvfState {
     pub cvf_path: Option<PathBuf>,
     pub runtime: Option<CabCvfRuntime>,
-    /// Smoothed lever animation keys (matrix index → shape anim frame).
+    /// Smoothed control positions (matrix index → shape frame or normalized fallback).
     pub lever_keys: HashMap<usize, f32>,
 }
 
@@ -475,6 +475,73 @@ pub fn lever_has_authored_animation(shape: &ShapeFile, anim_node: Option<usize>)
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ProceduralCabMotion {
+    local_axis: Vec3,
+    angle_radians: f32,
+    local_translation: Vec3,
+}
+
+/// Conservative motion for cab controls whose `.s` bone has no animation controller.
+///
+/// The authored matrix remains the rest pose. Continuous levers rotate around the
+/// bone-local vertical axis; the reverser is centred at neutral and the horn button
+/// is depressed along its local vertical axis.
+fn procedural_cab_motion(
+    control: &ControlType,
+    normalized_value: f64,
+) -> Option<ProceduralCabMotion> {
+    let value = normalized_value.clamp(0.0, 1.0) as f32;
+    let (angle_radians, local_translation) = match control {
+        ControlType::Throttle | ControlType::ThrottleDisplay => {
+            (-50.0_f32.to_radians() * value, Vec3::ZERO)
+        }
+        ControlType::TrainBrake => (65.0_f32.to_radians() * value, Vec3::ZERO),
+        ControlType::DynamicBrakeDisplay => (-50.0_f32.to_radians() * value, Vec3::ZERO),
+        ControlType::DirectionDisplay => (70.0_f32.to_radians() * (value - 0.5), Vec3::ZERO),
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") => {
+            (0.0, Vec3::NEG_Y * (0.018 * value))
+        }
+        _ => return None,
+    };
+    Some(ProceduralCabMotion {
+        local_axis: Vec3::Y,
+        angle_radians,
+        local_translation,
+    })
+}
+
+fn procedural_control_transform(
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    pivot_at_mesh: Option<Vec3>,
+    local_axis_override: Option<Vec3>,
+    control: &ControlType,
+    normalized_value: f64,
+) -> Option<Transform> {
+    let motion = procedural_cab_motion(control, normalized_value)?;
+    let mut transform = static_lever_transform(shape, matrix_idx, pivot_at_mesh);
+    let axis = local_axis_override
+        .unwrap_or(motion.local_axis)
+        .try_normalize()
+        .unwrap_or(motion.local_axis);
+    transform.rotation *= Quat::from_axis_angle(axis, motion.angle_radians);
+    transform.translation += transform.rotation * motion.local_translation;
+    Some(transform)
+}
+
+fn smoothed_control_value(
+    lever_keys: &mut HashMap<usize, f32>,
+    matrix_idx: usize,
+    target: f32,
+    smooth: f32,
+) -> f32 {
+    *lever_keys
+        .entry(matrix_idx)
+        .and_modify(|current| *current += (target - *current) * smooth)
+        .or_insert(target)
+}
+
 fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -> f32 {
     let Some(anim) = shape.animations.first() else {
         return value as f32;
@@ -536,20 +603,35 @@ pub fn update_cab_cvf_controls(
                 *visibility = Visibility::Visible;
                 let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
                 if !has_anim {
-                    // OR leaves static 3D meshes when the shape has no controllers;
-                    // CVF 2D overlay provides the visible lever animation (#147/#148).
-                    *transform =
-                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
+                    let target = control_value(control, &tel) as f32;
+                    let value = smoothed_control_value(
+                        &mut cvf_state.lever_keys,
+                        part.matrix_idx,
+                        target,
+                        smooth,
+                    );
+                    *transform = procedural_control_transform(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        part.pivot_at_mesh,
+                        part.local_spin_axis,
+                        control,
+                        value as f64,
+                    )
+                    .unwrap_or_else(|| {
+                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh)
+                    });
                     continue;
                 }
                 let value = control_value(control, &tel);
                 let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
-                let key = cvf_state
-                    .lever_keys
-                    .entry(part.matrix_idx)
-                    .and_modify(|current| *current += (target_key - *current) * smooth)
-                    .or_insert(target_key);
-                let pose_mats = animation_pose_matrices(&runtime.shape, *key);
+                let key = smoothed_control_value(
+                    &mut cvf_state.lever_keys,
+                    part.matrix_idx,
+                    target_key,
+                    smooth,
+                );
+                let pose_mats = animation_pose_matrices(&runtime.shape, key);
                 *transform = if let Some(center) = part.pivot_at_mesh {
                     lever_entity_transform_at_mesh_center(
                         &runtime.shape,
@@ -571,12 +653,13 @@ pub fn update_cab_cvf_controls(
                 let value = multi_state_normalized_value(&runtime.cvf, control, *order, &tel);
                 if lever_has_authored_animation(&runtime.shape, *anim_node) {
                     let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
-                    let key = cvf_state
-                        .lever_keys
-                        .entry(part.matrix_idx)
-                        .and_modify(|current| *current += (target_key - *current) * smooth)
-                        .or_insert(target_key);
-                    let pose_mats = animation_pose_matrices(&runtime.shape, *key);
+                    let key = smoothed_control_value(
+                        &mut cvf_state.lever_keys,
+                        part.matrix_idx,
+                        target_key,
+                        smooth,
+                    );
+                    let pose_mats = animation_pose_matrices(&runtime.shape, key);
                     *transform = if let Some(center) = part.pivot_at_mesh {
                         lever_entity_transform_at_mesh_center(
                             &runtime.shape,
@@ -600,8 +683,32 @@ pub fn update_cab_cvf_controls(
                     base.rotation *= Quat::from_axis_angle(axis, angle);
                     *transform = base;
                 } else {
-                    *transform =
-                        static_lever_transform(&runtime.shape, part.matrix_idx, part.pivot_at_mesh);
+                    // A discrete CVF display uses frame_index / frame_count, which
+                    // is not the physical 0/1 state needed by a horn push button.
+                    let procedural_target = control_value(control, &tel);
+                    if procedural_cab_motion(control, procedural_target).is_none() {
+                        *transform = static_lever_transform(
+                            &runtime.shape,
+                            part.matrix_idx,
+                            part.pivot_at_mesh,
+                        );
+                        continue;
+                    }
+                    let procedural_value = smoothed_control_value(
+                        &mut cvf_state.lever_keys,
+                        part.matrix_idx,
+                        procedural_target as f32,
+                        smooth,
+                    );
+                    *transform = procedural_control_transform(
+                        &runtime.shape,
+                        part.matrix_idx,
+                        part.pivot_at_mesh,
+                        part.local_spin_axis,
+                        control,
+                        procedural_value as f64,
+                    )
+                    .expect("motion was checked above");
                 }
             }
             MatrixDriver::GaugeNative { .. } | MatrixDriver::Digit { .. } => {
@@ -677,6 +784,7 @@ pub fn types_match(a: &ControlType, b: &ControlType) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::ecs::system::RunSystemOnce;
     use openrailsrs_formats::ControlState;
     use std::collections::HashSet;
 
@@ -702,9 +810,13 @@ mod tests {
         assert!((control_value(&ControlType::TrainBrake, &tel) - 0.25).abs() < 1e-6);
         assert!((control_value(&ControlType::DirectionDisplay, &tel) - 0.5).abs() < 1e-6);
         assert!((control_value(&ControlType::Generic("WIPERS".into()), &tel) - 0.0).abs() < 1e-6);
+        assert!((control_value(&ControlType::Generic("HORN".into()), &tel) - 0.0).abs() < 1e-6);
         let mut tel_w = tel.clone();
         tel_w.wiper_active = true;
         assert!((control_value(&ControlType::Generic("WIPERS".into()), &tel_w) - 1.0).abs() < 1e-6);
+        let mut tel_h = tel.clone();
+        tel_h.horn_active = true;
+        assert!((control_value(&ControlType::Generic("HORN".into()), &tel_h) - 1.0).abs() < 1e-6);
         let dial = openrailsrs_formats::CabDialParams {
             scale_min: 0.0,
             scale_max: 100.0,
@@ -885,6 +997,14 @@ mod tests {
             .filter(|d| matches!(d, MatrixDriver::Lever { .. }))
             .count();
         assert!(levers >= 1, "expected at least one lever matrix");
+        assert!(matches!(
+            runtime.matrix_drivers.get(&5),
+            Some(MatrixDriver::MultiState {
+                control: ControlType::Generic(name),
+                anim_node: None,
+                ..
+            }) if name.eq_ignore_ascii_case("HORN")
+        ));
     }
 
     #[test]
@@ -1088,14 +1208,14 @@ mod tests {
         }
         let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();
         assert!(
-            bound.contains(&4) && bound.contains(&8) && bound.contains(&9) && bound.contains(&10),
-            "authored vtx_state must bind all four lever matrices, got {bound:?}"
+            [4, 5, 8, 9, 10].into_iter().all(|m| bound.contains(&m)),
+            "authored vtx_state must bind reverser, horn, throttle and brake matrices, got {bound:?}"
         );
         for driver in runtime.matrix_drivers.values() {
             if let MatrixDriver::Lever { anim_node, .. } = driver {
                 assert!(
                     !lever_has_authored_animation(&runtime.shape, *anim_node),
-                    "Pullman levers must not invent 3D animation (#147)"
+                    "Pullman levers must remain classified as animation-free"
                 );
             }
         }
@@ -1227,5 +1347,172 @@ mod tests {
         let shape = ShapeFile::default();
         assert!(!lever_has_authored_animation(&shape, None));
         assert!(!lever_has_authored_animation(&shape, Some(0)));
+    }
+
+    #[test]
+    fn procedural_levers_move_from_the_authored_rest_pose() {
+        let shape = ShapeFile::default();
+        let rest = static_lever_transform(&shape, 0, None);
+
+        let throttle =
+            procedural_control_transform(&shape, 0, None, None, &ControlType::Throttle, 1.0)
+                .expect("throttle fallback");
+        let brake =
+            procedural_control_transform(&shape, 0, None, None, &ControlType::TrainBrake, 1.0)
+                .expect("brake fallback");
+        assert!(
+            rest.rotation.dot(throttle.rotation).abs() < 0.95,
+            "full throttle must visibly rotate its authored bone"
+        );
+        assert!(
+            rest.rotation.dot(brake.rotation).abs() < 0.90,
+            "full brake must visibly rotate its authored bone"
+        );
+
+        let neutral = procedural_control_transform(
+            &shape,
+            0,
+            None,
+            None,
+            &ControlType::DirectionDisplay,
+            0.5,
+        )
+        .expect("reverser fallback");
+        let reverse = procedural_control_transform(
+            &shape,
+            0,
+            None,
+            None,
+            &ControlType::DirectionDisplay,
+            0.0,
+        )
+        .expect("reverser reverse");
+        let forward = procedural_control_transform(
+            &shape,
+            0,
+            None,
+            None,
+            &ControlType::DirectionDisplay,
+            1.0,
+        )
+        .expect("reverser forward");
+        assert!(neutral.rotation.dot(rest.rotation).abs() > 0.9999);
+        assert!(reverse.rotation.dot(forward.rotation).abs() < 0.85);
+    }
+
+    #[test]
+    fn procedural_horn_depresses_and_returns_to_rest() {
+        let shape = ShapeFile::default();
+        let released = procedural_control_transform(
+            &shape,
+            0,
+            None,
+            None,
+            &ControlType::Generic("HORN".into()),
+            0.0,
+        )
+        .expect("horn fallback");
+        let pressed = procedural_control_transform(
+            &shape,
+            0,
+            None,
+            None,
+            &ControlType::Generic("horn".into()),
+            1.0,
+        )
+        .expect("horn fallback");
+        assert_eq!(released, Transform::IDENTITY);
+        assert!((pressed.translation.y + 0.018).abs() < 1e-6);
+        assert_eq!(pressed.rotation, released.rotation);
+    }
+
+    #[test]
+    fn pullman_live_telemetry_moves_all_animation_free_controls() {
+        let shape_path = std::path::Path::new(
+            "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
+        );
+        if !shape_path.is_file() {
+            return;
+        }
+        let Some(mut live) = crate::test_harness::try_smoke_live_drive() else {
+            return;
+        };
+        let shape = ShapeFile::from_path(shape_path).expect("shape");
+        let cvf = match parse_msts_file(shape_path.with_extension("cvf")).expect("cvf") {
+            openrailsrs_formats::MstsFile::CabView(cvf) => cvf,
+            other => panic!("expected CabView, got {other:?}"),
+        };
+        let runtime = build_cab_cvf_runtime(cvf, shape.clone());
+
+        live.session.driver_throttle = 0.8;
+        live.session.driver_brake = 0.6;
+        live.session.driver_direction = 1.0;
+        live.session.trigger_horn(0.35);
+
+        let mut app = crate::test_harness::minimal_app();
+        app.insert_resource(live);
+        app.insert_resource(CameraFollowMode::DriverCam);
+        app.insert_resource(CabCvfState {
+            runtime: Some(runtime),
+            lever_keys: HashMap::from([
+                (4, 0.5), // reverser starts neutral
+                (5, 0.0),
+                (8, 0.0),
+                (9, 0.0),
+                (10, 0.0),
+            ]),
+            ..Default::default()
+        });
+        app.world_mut().spawn(CabInteriorRoot);
+
+        let mut entities = HashMap::new();
+        for matrix_idx in [4usize, 5, 8, 9, 10] {
+            let entity = app
+                .world_mut()
+                .spawn((
+                    CabInteriorMarker,
+                    CabCvfPart {
+                        matrix_idx,
+                        pivot_at_mesh: None,
+                        local_spin_axis: None,
+                    },
+                    static_lever_transform(&shape, matrix_idx, None),
+                    Visibility::Hidden,
+                ))
+                .id();
+            entities.insert(matrix_idx, entity);
+        }
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(100));
+        app.world_mut()
+            .run_system_once(update_cab_cvf_controls)
+            .expect("CVF control system");
+
+        for matrix_idx in [4usize, 8, 9, 10] {
+            let entity = entities[&matrix_idx];
+            let actual = app
+                .world()
+                .entity(entity)
+                .get::<Transform>()
+                .copied()
+                .expect("control transform");
+            let rest = static_lever_transform(&shape, matrix_idx, None);
+            assert!(
+                actual.rotation.dot(rest.rotation).abs() < 0.99,
+                "M{matrix_idx} must rotate from its authored rest pose"
+            );
+        }
+
+        let horn = *app
+            .world()
+            .entity(entities[&5])
+            .get::<Transform>()
+            .expect("horn transform");
+        let horn_rest = static_lever_transform(&shape, 5, None);
+        assert!(
+            horn.translation.distance(horn_rest.translation) > 0.01,
+            "M5 horn must visibly depress while telemetry says it is active"
+        );
     }
 }
