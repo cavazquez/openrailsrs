@@ -165,22 +165,25 @@ pub struct WorldInstancedGroup {
     pub instance_count: u32,
 }
 
-/// 1×1 white fallback when a part has no albedo texture.
+/// 1×1 terracotta fallback when a part has no albedo (matches entity-path missing-ACE).
+///
+/// Never use pure white here: WHITE × 1×1 white is exactly the “solid white buildings”
+/// failure mode when `base_color_texture` is missing on the instanced path.
 #[derive(Resource, Clone, ExtractResource, Default)]
-pub struct WorldInstancingWhiteImage(pub Handle<Image>);
+pub struct WorldInstancingFallbackImage(pub Handle<Image>);
 
 /// Plugin: extract instance buffers and draw via a specialized mesh pipeline.
 pub struct WorldInstancingPlugin;
 
 impl Plugin for WorldInstancingPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<WorldInstancingWhiteImage>()
+        app.init_resource::<WorldInstancingFallbackImage>()
             .add_plugins((
-                ExtractResourcePlugin::<WorldInstancingWhiteImage>::default(),
+                ExtractResourcePlugin::<WorldInstancingFallbackImage>::default(),
                 ExtractComponentPlugin::<WorldInstanceBuffer>::default(),
                 ExtractComponentPlugin::<WorldInstanceAppearance>::default(),
             ))
-            .add_systems(Startup, init_white_image);
+            .add_systems(Startup, init_fallback_image);
     }
 
     fn finish(&self, app: &mut App) {
@@ -210,10 +213,11 @@ impl Plugin for WorldInstancingPlugin {
     }
 }
 
-fn init_white_image(
+fn init_fallback_image(
     mut images: ResMut<Assets<Image>>,
-    mut white: ResMut<WorldInstancingWhiteImage>,
+    mut fallback: ResMut<WorldInstancingFallbackImage>,
 ) {
+    // Terracotta ≈ entity-path `shape_fallback_color` (0.72, 0.55, 0.42) in sRGB 8-bit.
     let mut image = Image::new_fill(
         Extent3d {
             width: 1,
@@ -221,12 +225,12 @@ fn init_white_image(
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        &[255, 255, 255, 255],
+        &[184, 140, 107, 255],
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
     image.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
-    white.0 = images.add(image);
+    fallback.0 = images.add(image);
 }
 
 /// Build a union AABB covering all instance translations with a margin for mesh extent.
@@ -259,9 +263,10 @@ pub fn appearance_from_standard_material(
     handle: &Handle<StandardMaterial>,
 ) -> WorldInstanceAppearance {
     let mat = materials.get(handle);
+    // Missing material must not become WHITE×no-texture (solid white buildings).
     let base_color = mat
         .map(|m| LinearRgba::from(m.base_color))
-        .unwrap_or(LinearRgba::WHITE);
+        .unwrap_or(LinearRgba::new(0.72, 0.55, 0.42, 1.0));
     let base_color_texture = mat.and_then(|m| m.base_color_texture.clone());
     let alpha_cutoff = mat
         .map(|m| match m.alpha_mode {
@@ -274,6 +279,16 @@ pub fn appearance_from_standard_material(
         base_color_texture,
         alpha_cutoff,
     }
+}
+
+/// True when the material has an albedo handle suitable for the instanced shader.
+pub fn material_has_albedo_texture(
+    materials: &Assets<StandardMaterial>,
+    handle: &Handle<StandardMaterial>,
+) -> bool {
+    materials
+        .get(handle)
+        .is_some_and(|m| m.base_color_texture.is_some())
 }
 
 /// Light models the instanced Lambert path can represent without visual error (#138).
@@ -306,6 +321,9 @@ pub fn instancing_material_supported(mat: &StandardMaterial) -> bool {
 }
 
 /// Combined gate used by WORLD spawn (#138).
+///
+/// Requires a real albedo texture: the instanced shader always samples a 2D texture, and the
+/// old 1×1 white fallback turned missing/late binds into solid-white scenery.
 pub fn instancing_part_supported(
     shader_name: Option<&str>,
     light_mat_idx: Option<i32>,
@@ -313,6 +331,9 @@ pub fn instancing_part_supported(
     material: &Handle<StandardMaterial>,
 ) -> bool {
     if !instancing_light_model_supported(shader_name, light_mat_idx) {
+        return false;
+    }
+    if !material_has_albedo_texture(materials, material) {
         return false;
     }
     materials
@@ -554,19 +575,27 @@ fn prepare_world_instance_bind_groups(
     pipeline_cache: Res<PipelineCache>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<bevy::render::texture::GpuImage>>,
-    white: Option<Res<WorldInstancingWhiteImage>>,
+    fallback_image: Option<Res<WorldInstancingFallbackImage>>,
     query: Query<(Entity, &WorldInstanceAppearance)>,
 ) {
-    let Some(white) = white else {
+    let Some(fallback_image) = fallback_image else {
         return;
     };
     let layout = pipeline_cache.get_bind_group_layout(&pipeline.appearance_layout);
-    let fallback = white.0.clone();
+    let fallback = fallback_image.0.clone();
     for (entity, appearance) in &query {
-        let image_handle = appearance
-            .base_color_texture
-            .clone()
-            .unwrap_or_else(|| fallback.clone());
+        // Prefer the part albedo. If the GPU upload is not ready yet, wait — never
+        // substitute white (that paints solid-white buildings for a whole stream).
+        // Terracotta 1×1 is only for the rare None-texture edge case.
+        let image_handle = match &appearance.base_color_texture {
+            Some(handle) => {
+                if gpu_images.get(handle).is_none() {
+                    continue;
+                }
+                handle.clone()
+            }
+            None => fallback.clone(),
+        };
         let Some(gpu_image) = gpu_images.get(&image_handle) else {
             continue;
         };
@@ -1029,6 +1058,44 @@ mod tests {
         assert!(
             (appearance_from_standard_material(&materials, &mask).alpha_cutoff - 0.78).abs() < 1e-5
         );
+    }
+
+    #[test]
+    fn missing_material_appearance_is_not_solid_white() {
+        let materials = Assets::<StandardMaterial>::default();
+        let dangling = Handle::default();
+        let appearance = appearance_from_standard_material(&materials, &dangling);
+        assert!(appearance.base_color_texture.is_none());
+        // Must stay terracotta-ish, not LinearRgba::WHITE (× white 1×1 → solid white).
+        assert!(appearance.base_color.red < 0.95);
+        assert!(appearance.base_color.green < 0.85);
+        assert!(!material_has_albedo_texture(&materials, &dangling));
+    }
+
+    #[test]
+    fn instancing_requires_albedo_texture() {
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut images = Assets::<Image>::default();
+        let tex = images.add(Image::default());
+        let textured = materials.add(StandardMaterial {
+            base_color_texture: Some(tex),
+            ..default()
+        });
+        let bare = materials.add(StandardMaterial::default());
+        assert!(material_has_albedo_texture(&materials, &textured));
+        assert!(!material_has_albedo_texture(&materials, &bare));
+        assert!(instancing_part_supported(
+            Some("TexDiff"),
+            None,
+            &materials,
+            &textured
+        ));
+        assert!(!instancing_part_supported(
+            Some("TexDiff"),
+            None,
+            &materials,
+            &bare
+        ));
     }
 
     #[test]

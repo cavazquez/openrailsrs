@@ -1459,19 +1459,19 @@ impl WorldSpawnProgress {
             }
             WorldSpawnPhase::LoadingShapes => {
                 let total = self.shape_load_paths.len();
-                if total > 0 {
-                    let pct = (self.shape_parse_index * 100) / total;
-                    format!(
+                match self
+                    .shape_parse_index
+                    .checked_mul(100)
+                    .and_then(|n| n.checked_div(total))
+                {
+                    Some(pct) => format!(
                         "Cargando mallas 3D y texturas ({}% — {}/{})",
                         pct, self.shape_parse_index, total
-                    )
-                } else {
-                    "Cargando mallas 3D y texturas...".into()
+                    ),
+                    None => "Cargando mallas 3D y texturas...".into(),
                 }
             }
-            WorldSpawnPhase::BuildingQueue => {
-                "Agrupando instancias en GPU...".into()
-            }
+            WorldSpawnPhase::BuildingQueue => "Agrupando instancias en GPU...".into(),
             WorldSpawnPhase::SpawningEntities | WorldSpawnPhase::SpawningPlaceholders => {
                 let total = (self.spawn_queue.len() + self.instanced_spawn_queue.len()).max(1);
                 let current = self.spawn_index.min(total);
@@ -2054,6 +2054,7 @@ fn append_shape_spawn_entries_for_transforms(
                 let material = material_with_auto_z_bias(materials, &part.material, tile_auto_z);
                 let can_instance = use_gpu
                     && !part.is_transparent
+                    && part.has_texture
                     && instancing_part_supported(
                         part.shader_name.as_deref(),
                         part.light_mat_idx,
