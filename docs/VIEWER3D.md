@@ -42,7 +42,8 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 | Night/Underground (#142) | Flag Underground; selector sol/túnel; Night local→padre DDS→ACE; `OPENRAILSRS_SCENERY_NIGHT` |
 | Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
 | PAT `start_offset_m` (#132) | Ancla = cabeza; TrackPDP ignora `DistanceDownPath` |
-| Pose por coche (#128) | `update_consist_car_track_poses` — chainage individual en curvas |
+| Pose por coche (#128) | `update_consist_car_track_poses` — chainage absoluto (incluye `start_offset_m`) e individual en curvas |
+| Inicio live + cámara | ID `eNNNN` validado espacialmente; chase cercano sobre los coches delanteros |
 
 #### Materiales metálicos e instancing
 
@@ -91,6 +92,24 @@ consecutivos mantienen las coordenadas decimales escritas en `.w`.
 
 Para aislar visualmente un problema de LOD se puede forzar la banda más detallada
 con `OPENRAILSRS_LOD_BIAS=100`.
+
+#### Tren y cámara al iniciar una actividad live
+
+El ID numérico de una arista del grafo no se acepta automáticamente como el mismo
+vector TDB. Sus extremos deben coincidir espacialmente; si están lejos, la pose usa
+el centro de vía TDB más cercano al punto del grafo. Esto evita que el consist
+aparezca en otro sector de la ruta aunque `eNNNN` exista en ambas fuentes.
+
+La posición de cada coche se calcula desde el *chainage* absoluto de la cabeza,
+incluido `start_offset_m`, y luego aplica su desplazamiento dentro del consist. La
+orientación convierte explícitamente `TrackPose +Z` a `train +X`, por lo que la
+carrocería queda longitudinal sobre el riel.
+
+En `--live` el modo inicial es `chase`: la cámara apunta unos metros delante del
+coche de cabeza y queda elevada sobre los primeros vehículos. Así permanece dentro
+de estaciones cubiertas como Paddington. La dirección se deriva de las posiciones
+reales del primer y último coche; `OPENRAILSRS_FOLLOW` continúa permitiendo
+sobrescribir el modo inicial.
 
 ## Comando rápido
 

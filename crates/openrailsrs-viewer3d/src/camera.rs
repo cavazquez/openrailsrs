@@ -111,14 +111,18 @@ const FLY_WHEEL_DOLLY_STEP_M: f32 = 8.0;
 /// Orbit focus lerp speed when following the train (1/s).
 const FOLLOW_LERP_SPEED: f32 = 8.0;
 
-/// Fixed pitch (rad) for chase camera behind the train.
-pub(crate) const CHASE_PITCH: f32 = 0.5;
+/// Fixed pitch (rad) for the close chase camera above the leading vehicles.
+pub(crate) const CHASE_PITCH: f32 = 0.24;
 
 /// Minimum orbit distance while following (avoids clipping into the marker).
 pub(crate) const FOLLOW_MIN_DISTANCE: f32 = 5.0;
 
-/// Target orbit distance for chase follow in live mode (m).
-pub const LIVE_CHASE_DISTANCE: f32 = 120.0;
+/// Target orbit distance for the close live chase camera (m).
+pub const LIVE_CHASE_DISTANCE: f32 = 28.0;
+
+/// Put the chase focus beyond the leading vehicle, leaving the camera above
+/// the first two cars while it looks forward over the train.
+const LIVE_CHASE_LOOK_AHEAD_M: f32 = 12.0;
 
 /// Driver eye height above track (m); overridden per consist when spawned.
 pub const DRIVER_EYE_HEIGHT_M: f32 = 2.4;
@@ -590,10 +594,14 @@ pub fn lerp_yaw_toward(current: f32, target: f32, dt: f32) -> f32 {
     current + delta * t
 }
 
-/// Yaw for a chase camera sitting behind the train (looks toward +travel).
+/// Orbit yaw for a chase camera behind a train whose longitudinal axis is local `+X`.
+///
+/// [`orbit_position`] uses `yaw=0` for an offset on `+Z`, while rolling stock uses
+/// `Transform::rotation * Vec3::X` as travel.  Therefore the camera's behind-train
+/// offset is the train root yaw minus 90°, not the opposite of Bevy's local `-Z`.
 #[inline]
 pub fn chase_yaw_from_train(train_yaw: f32) -> f32 {
-    train_yaw + std::f32::consts::PI
+    train_yaw - std::f32::consts::FRAC_PI_2
 }
 
 /// Extract yaw (rotation around Y) from a train marker transform.
@@ -607,6 +615,29 @@ pub fn yaw_from_transform(transform: &Transform) -> f32 {
 pub struct TrainFollowPose {
     pub translation: Vec3,
     pub yaw: f32,
+}
+
+/// Close chase target from the first/last car origins after path placement.
+///
+/// This intentionally derives the longitudinal axis from actual car positions:
+/// a nearest-TDB fallback can have a different yaw convention than the train root.
+fn consist_chase_pose(head: Vec3, tail: Vec3) -> Option<(TrainFollowPose, f32)> {
+    let travel = head - tail;
+    let planar = Vec2::new(travel.x, travel.z);
+    let origin_span_m = planar.length();
+    if origin_span_m < 1.0 {
+        return None;
+    }
+    // For Quat::from_rotation_y(yaw), local +X maps to (cos(yaw), -sin(yaw)).
+    let yaw = (-planar.y).atan2(planar.x);
+    let forward = travel / origin_span_m;
+    Some((
+        TrainFollowPose {
+            translation: head + forward * LIVE_CHASE_LOOK_AHEAD_M,
+            yaw,
+        },
+        LIVE_CHASE_DISTANCE,
+    ))
 }
 
 /// Orbit camera state after one follow update (before building the view transform).
@@ -623,6 +654,7 @@ pub fn apply_orbit_follow(
     orbit: OrbitState,
     follow: CameraFollowMode,
     train: TrainFollowPose,
+    chase_distance_m: f32,
     dt: f32,
 ) -> OrbitFollowUpdate {
     let target_focus = Vec3::new(
@@ -638,7 +670,7 @@ pub fn apply_orbit_follow(
     if follow == CameraFollowMode::ChaseCam {
         yaw = lerp_yaw_toward(yaw, chase_yaw_from_train(train.yaw), dt);
         pitch = lerp_yaw_toward(pitch, CHASE_PITCH, dt);
-        distance = lerp_yaw_toward(distance, LIVE_CHASE_DISTANCE, dt);
+        distance = lerp_yaw_toward(distance, chase_distance_m, dt);
     }
 
     if distance < FOLLOW_MIN_DISTANCE {
@@ -1198,17 +1230,37 @@ pub fn follow_train_camera(
     target: Res<CameraFollowTarget>,
     replay: Option<Res<crate::train::ReplayState>>,
     live: Option<Res<crate::live::LiveDrive>>,
+    live_framing: Option<Res<crate::live::LiveTrainCameraFrame>>,
     cab: Option<Res<LiveDriverCab>>,
     look: Option<Res<DriverLookOffset>>,
     overlay: Option<Res<crate::cab_cvf_overlay::CabCvfOverlayState>>,
     passenger: Option<Res<PassengerCamState>>,
     train_query: Query<
         (&Transform, Option<&crate::train::TrainMarker>),
-        (Without<OrbitState>, Without<crate::live::LiveTrainMarker>),
+        (
+            Without<OrbitState>,
+            Without<crate::live::LiveTrainMarker>,
+            Without<crate::live::LiveTrainCar>,
+        ),
     >,
-    live_train: Query<&Transform, (With<crate::live::LiveTrainMarker>, Without<OrbitState>)>,
+    live_train: Query<
+        &Transform,
+        (
+            With<crate::live::LiveTrainMarker>,
+            Without<OrbitState>,
+            Without<crate::live::LiveTrainCar>,
+        ),
+    >,
     lead_car: Query<&GlobalTransform, With<crate::cab_view::CabLeadVehicle>>,
-    passenger_cars: Query<(&GlobalTransform, &crate::live::LiveTrainCar)>,
+    passenger_cars: Query<
+        (&Transform, &GlobalTransform, &crate::live::LiveTrainCar),
+        (
+            Without<crate::live::LiveTrainMarker>,
+            Without<crate::train::TrainMarker>,
+            Without<OrbitState>,
+            Without<Camera3d>,
+        ),
+    >,
     mut orbit_query: Query<
         (&mut Transform, &mut OrbitState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
@@ -1247,7 +1299,7 @@ pub fn follow_train_camera(
     };
 
     let dt = time.delta_secs();
-    let train_pose = TrainFollowPose {
+    let train_root_pose = TrainFollowPose {
         translation: train_tf.translation,
         yaw: yaw_from_transform(train_tf),
     };
@@ -1255,8 +1307,8 @@ pub fn follow_train_camera(
     // Cab2d: same eyepoint as 3D cab so ACE window alpha shows the forward world.
     // Compose `.eng` StartDirection + CVF Direction (same forward as DriverCam, #169).
     if follow.is_cab2d() {
-        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
-        orbit.yaw = train_pose.yaw;
+        orbit.focus = lerp_follow_focus(orbit.focus, train_root_pose.translation, dt);
+        orbit.yaw = train_root_pose.yaw;
         let default_cab = LiveDriverCab::default();
         let cab = cab.as_deref().unwrap_or(&default_cab);
         let dir = overlay
@@ -1268,13 +1320,13 @@ pub fn follow_train_camera(
             .iter()
             .next()
             .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
-            .unwrap_or_else(|| driver_camera_transform(train_pose, cab, look));
+            .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
         return;
     }
 
     if *follow == CameraFollowMode::DriverCam {
-        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
-        orbit.yaw = train_pose.yaw;
+        orbit.focus = lerp_follow_focus(orbit.focus, train_root_pose.translation, dt);
+        orbit.yaw = train_root_pose.yaw;
         let default_cab = LiveDriverCab::default();
         let cab = cab.as_deref().unwrap_or(&default_cab);
         let look = look.as_deref().copied().unwrap_or_default();
@@ -1282,13 +1334,13 @@ pub fn follow_train_camera(
             .iter()
             .next()
             .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
-            .unwrap_or_else(|| driver_camera_transform(train_pose, cab, look));
+            .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
         return;
     }
 
     if follow.is_passenger() {
-        orbit.focus = lerp_follow_focus(orbit.focus, train_pose.translation, dt);
-        orbit.yaw = train_pose.yaw;
+        orbit.focus = lerp_follow_focus(orbit.focus, train_root_pose.translation, dt);
+        orbit.yaw = train_root_pose.yaw;
         let Some(pass) = passenger.as_deref() else {
             return;
         };
@@ -1303,17 +1355,54 @@ pub fn follow_train_camera(
         seat_cab.head_pos_train = seat_cab.head_lead_local;
         let car_gt = passenger_cars
             .iter()
-            .find(|(_, car)| car.index == pass.consist_car)
-            .map(|(gt, _)| *gt);
+            .find(|(_, _, car)| car.index == pass.consist_car)
+            .map(|(_, gt, _)| *gt);
         if let Some(gt) = car_gt {
             *transform = driver_camera_transform_from_lead(&gt, &seat_cab, look);
         } else {
-            *transform = driver_camera_transform(train_pose, &seat_cab, look);
+            *transform = driver_camera_transform(train_root_pose, &seat_cab, look);
         }
         return;
     }
 
-    let update = apply_orbit_follow(*orbit, *follow, train_pose, dt);
+    let frame = live_framing.as_deref().copied().unwrap_or_default();
+    let live_car_pose = if live_active {
+        let mut first: Option<(usize, Vec3)> = None;
+        let mut last: Option<(usize, Vec3)> = None;
+        for (local, _, car) in &passenger_cars {
+            let world = train_tf.mul_transform(*local).translation;
+            if first.is_none_or(|(index, _)| car.index < index) {
+                first = Some((car.index, world));
+            }
+            if last.is_none_or(|(index, _)| car.index > index) {
+                last = Some((car.index, world));
+            }
+        }
+        first
+            .zip(last)
+            .and_then(|((_, head), (_, tail))| consist_chase_pose(head, tail))
+    } else {
+        None
+    };
+    let (train_pose, chase_distance_m) = live_car_pose.unwrap_or_else(|| {
+        let train_focus = if live_active {
+            frame.focus_from_train(train_tf)
+        } else {
+            train_root_pose.translation
+        };
+        (
+            TrainFollowPose {
+                translation: train_focus,
+                yaw: train_root_pose.yaw,
+            },
+            if live_active {
+                frame.chase_distance_m
+            } else {
+                LIVE_CHASE_DISTANCE
+            },
+        )
+    });
+    let update = apply_orbit_follow(*orbit, *follow, train_pose, chase_distance_m, dt);
     orbit.focus = update.focus;
     orbit.yaw = update.yaw;
     orbit.pitch = update.pitch;
@@ -1924,9 +2013,44 @@ mod tests {
     }
 
     #[test]
-    fn chase_yaw_from_train_is_opposite_travel() {
+    fn chase_yaw_from_train_uses_local_x_travel_axis() {
         let yaw = chase_yaw_from_train(0.0);
-        assert!((yaw - std::f32::consts::PI).abs() < 1e-5);
+        assert!((yaw + std::f32::consts::FRAC_PI_2).abs() < 1e-5);
+        let camera_offset = orbit_position(Vec3::ZERO, yaw, 0.0, 10.0);
+        assert!(
+            camera_offset.x < -9.99 && camera_offset.z.abs() < 1e-4,
+            "train yaw 0 travels +X, so chase camera must sit on -X: {camera_offset:?}"
+        );
+    }
+
+    #[test]
+    fn consist_chase_pose_uses_placed_head_and_tail() {
+        let head = Vec3::new(81.0, 0.0, -4.0);
+        let tail = Vec3::new(84.0, 0.0, 74.0);
+        let (pose, distance) = consist_chase_pose(head, tail).expect("consist pose");
+        let forward = (head - tail).normalize();
+        assert!(((pose.translation - head).dot(forward) - 12.0).abs() < 1e-4);
+        assert!((distance - LIVE_CHASE_DISTANCE).abs() < 1e-4);
+        let camera = orbit_position(
+            pose.translation,
+            chase_yaw_from_train(pose.yaw),
+            CHASE_PITCH,
+            distance,
+        );
+        let behind_head_m = (camera - head).xz().dot((tail - head).xz().normalize());
+        let toward_tail = (tail - head).xz().normalize();
+        assert!(
+            (camera - pose.translation)
+                .xz()
+                .normalize()
+                .dot(toward_tail)
+                > 0.99,
+            "camera must sit behind the placed head: {camera:?}"
+        );
+        assert!(
+            behind_head_m > 14.0 && behind_head_m < 16.0 && camera.y > 6.0,
+            "camera should be close and above the leading cars: {camera:?}"
+        );
     }
 
     #[test]
@@ -2398,7 +2522,13 @@ mod tests {
             translation: Vec3::new(200.0, 5.0, 100.0),
             yaw: 0.0,
         };
-        let update = apply_orbit_follow(orbit, CameraFollowMode::OrbitFollow, train, 0.05);
+        let update = apply_orbit_follow(
+            orbit,
+            CameraFollowMode::OrbitFollow,
+            train,
+            LIVE_CHASE_DISTANCE,
+            0.05,
+        );
         assert!(update.focus.x > 0.0 && update.focus.x < 200.0);
         assert!(update.focus.y > 0.0 && update.focus.y < 5.0);
         assert!(update.focus.z > 0.0 && update.focus.z < 100.0);
@@ -2415,8 +2545,17 @@ mod tests {
             translation: Vec3::new(50.0, 0.0, 0.0),
             yaw: 0.0,
         };
-        let update = apply_orbit_follow(orbit, CameraFollowMode::ChaseCam, train, 0.5);
-        assert!(update.yaw > 0.0);
+        let update = apply_orbit_follow(
+            orbit,
+            CameraFollowMode::ChaseCam,
+            train,
+            LIVE_CHASE_DISTANCE,
+            0.5,
+        );
+        assert!(
+            update.yaw < 0.0,
+            "local +X travel puts the chase camera toward -X"
+        );
         assert!(update.pitch > 0.0);
     }
 
@@ -2430,7 +2569,13 @@ mod tests {
             translation: Vec3::ZERO,
             yaw: 0.0,
         };
-        let update = apply_orbit_follow(orbit, CameraFollowMode::OrbitFollow, train, 0.016);
+        let update = apply_orbit_follow(
+            orbit,
+            CameraFollowMode::OrbitFollow,
+            train,
+            LIVE_CHASE_DISTANCE,
+            0.016,
+        );
         assert!((update.distance - FOLLOW_MIN_DISTANCE).abs() < 1e-5);
     }
 

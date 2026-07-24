@@ -47,6 +47,8 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | Fog (#39) | on by default; `F` → densidad 0 (no quitar componente) |
 | PBR sidecar (#44) | `*.s.pbr.json` → tangents + normal map |
 | Bogies (#69) / puertas (#81) | `rolling_stock_anim` |
+| Inicio live / consist | `chainage_at_edge_position`, offsets relativos a la cabeza y rechazo de ID TDB numérico distante |
+| Orientación / cámara live | `vehicle_rotation_includes_tdb_pitch_and_roll`, `consist_chase_pose_uses_placed_head_and_tail`, `enable_live_defaults_starts_in_chase_at_train` |
 | Pullman exterior | alpha/cull tests; `./scripts/pullman_visual_matrix.sh` |
 
 ## Visual regression
@@ -83,6 +85,9 @@ Grafo→TDB: ID solo si pose ≤25 m al grafo absoluto ([`MSTS_COORDINATES.md`](
 ```bash
 cargo test -p openrailsrs-viewer3d track_audit -- --nocapture
 # Ignored (Content): chiltern_live_startup_no_panic
+# Regresión local Paddington: spawn, separación y orientación longitudinal del consist
+cargo test -p openrailsrs-viewer3d --bin openrailsrs-viewer3d \
+  chiltern_live_start_pose_stays_at_paddington -- --ignored --nocapture
 ```
 
 Checklist OR manual Birmingham: tile **−6080 / 14925** — plataforma/canopy vs vía, sin NaN.

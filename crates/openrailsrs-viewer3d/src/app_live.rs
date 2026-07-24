@@ -11,11 +11,12 @@ mod tests {
     };
     use bevy::camera::visibility::RenderLayers;
 
-    use crate::camera::{CameraFollowMode, LIVE_CHASE_DISTANCE, OrbitState, spawn_camera};
+    use crate::camera::{CameraFollowMode, OrbitState, spawn_camera};
     use crate::launch::ViewerSceneryMode;
     use crate::live::{
-        LiveTrainBody, LiveTrainMarker, advance_live_sim, enable_live_defaults, live_driver_input,
-        spawn_live_train, update_driver_train_visibility, update_live_train_marker,
+        LiveTrainBody, LiveTrainCameraFrame, LiveTrainMarker, advance_live_sim,
+        enable_live_defaults, live_driver_input, spawn_live_train, update_driver_train_visibility,
+        update_live_train_marker,
     };
     use crate::test_harness::{
         count_components, count_named, try_smoke_live_drive, with_live_world,
@@ -59,8 +60,20 @@ mod tests {
                 *world.resource::<CameraFollowMode>(),
                 CameraFollowMode::ChaseCam
             );
-            let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
-            assert!((orbit.distance - LIVE_CHASE_DISTANCE).abs() < 1e-3);
+            let orbit = *world.query::<&OrbitState>().single(world).expect("orbit");
+            let frame = *world.resource::<LiveTrainCameraFrame>();
+            assert!((orbit.distance - frame.chase_distance_m).abs() < 1e-3);
+            let train = *world
+                .query_filtered::<&Transform, With<LiveTrainMarker>>()
+                .single(world)
+                .expect("live train");
+            let expected_focus = frame.focus_from_train(&train) + Vec3::Y * 2.0;
+            assert!(
+                orbit.focus.distance(expected_focus) < 1e-3,
+                "focus should sit beyond the leading vehicle: {:?} vs {:?}",
+                orbit.focus,
+                expected_focus,
+            );
             let cam = world
                 .query_filtered::<&Transform, With<Camera3d>>()
                 .single(world)
@@ -73,7 +86,7 @@ mod tests {
     }
 
     #[test]
-    fn run_corridor_live_defaults_start_in_chase() {
+    fn run_corridor_live_defaults_frame_the_consist() {
         with_live_world(|world| {
             world.insert_resource(ViewerSceneryMode::RunCorridor);
             world.run_system_once(spawn_track_meshes).unwrap();
@@ -85,7 +98,8 @@ mod tests {
                 CameraFollowMode::ChaseCam
             );
             let orbit = world.query::<&OrbitState>().single(world).expect("orbit");
-            assert!(orbit.distance < LIVE_CHASE_DISTANCE);
+            let frame = *world.resource::<LiveTrainCameraFrame>();
+            assert!((orbit.distance - frame.chase_distance_m).abs() < 1e-3);
         });
     }
 

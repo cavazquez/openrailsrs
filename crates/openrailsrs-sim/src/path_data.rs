@@ -56,6 +56,24 @@ impl PathData {
         self.edges.iter().map(|e| e.length_m).sum()
     }
 
+    /// Absolute path chainage for an edge index and an offset on that edge.
+    ///
+    /// Unlike the train odometer, this includes any scenario `start_offset_m`.
+    pub fn chainage_at_edge_position(&self, edge_index: usize, pos_on_edge_m: f64) -> f64 {
+        let before: f64 = self
+            .edges
+            .iter()
+            .take(edge_index)
+            .map(|edge| edge.length_m.max(0.0))
+            .sum();
+        let on_edge = self
+            .edges
+            .get(edge_index)
+            .map(|edge| pos_on_edge_m.clamp(0.0, edge.length_m.max(0.0)))
+            .unwrap_or(0.0);
+        before + on_edge
+    }
+
     /// Map a distance along the path to `(edge_id, pos_on_edge_m)`.
     pub fn position_at_odometer(
         path_edges: &[String],
@@ -122,5 +140,13 @@ mod tests {
         let (eid, pos) = PathData::position_at_odometer(&path, &pd.edges, 120.0).unwrap();
         assert_eq!(eid, "e2");
         assert!((pos - 20.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn chainage_at_edge_position_includes_prior_edges() {
+        let g = two_edge_graph();
+        let path = vec!["e1".into(), "e2".into()];
+        let pd = PathData::from_path(&path, &g);
+        assert!((pd.chainage_at_edge_position(1, 20.0) - 120.0).abs() < 1e-6);
     }
 }

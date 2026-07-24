@@ -1644,6 +1644,108 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "regression: needs the local Chiltern MSTS installation"]
+    fn chiltern_live_start_pose_stays_at_paddington() {
+        let scenario_dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let scenario_path = scenario_dir.join("scenario.toml");
+        let route_dir =
+            Path::new("/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern");
+        if !scenario_path.is_file() || !route_dir.is_dir() {
+            return;
+        }
+        let config = load_from_scenario(&scenario_path, true, false, false, false, Some(route_dir))
+            .expect("chiltern scenario");
+        let focus = route_focus_for_config(&config);
+        let offset = config.route_offset_override.unwrap_or_default();
+        let assets = RouteAssets::new(route_dir);
+        let resolver = assets.track_db().map(|tdb| {
+            openrailsrs_viewer3d::track_position::TrackPositionResolver::from_track_scene(
+                tdb,
+                Some(assets.tsection()),
+                &config.scene,
+            )
+        });
+        let live = config.live.as_ref().expect("live drive");
+        let edge = live.session.current_edge_id().expect("start edge");
+        let pos_on_edge = live.session.pos_on_edge_m();
+        let tdb_pose = openrailsrs_viewer3d::track_position::vehicle_pose_on_graph_edge(
+            &config.scene.graph,
+            edge,
+            pos_on_edge,
+            resolver.as_ref(),
+            &config.scene,
+            offset.delta,
+            &focus,
+            Some(&config.elevation),
+        )
+        .expect("TDB pose");
+        let graph_pose = openrailsrs_viewer3d::track_position::vehicle_pose_on_graph_edge(
+            &config.scene.graph,
+            edge,
+            pos_on_edge,
+            None,
+            &config.scene,
+            offset.delta,
+            &focus,
+            Some(&config.elevation),
+        )
+        .expect("graph pose");
+        let anchor_distance_m = tdb_pose.0.xz().length();
+        let graph_delta_m = tdb_pose.0.xz().distance(graph_pose.0.xz());
+        assert!(
+            anchor_distance_m < 100.0 && graph_delta_m < 100.0,
+            "player consist must start at Paddington, not a distant numeric TDB match: \
+             edge={edge}+{pos_on_edge:.3}, tdb={:?} ({anchor_distance_m:.1}m from anchor), \
+             graph={:?}, delta={graph_delta_m:.1}m",
+            tdb_pose.0,
+            graph_pose.0,
+        );
+
+        let vehicles = config.consist.vehicles_for("primary");
+        let mut car_positions = Vec::new();
+        let mut car_forwards = Vec::new();
+        for vehicle in vehicles {
+            let car = openrailsrs_viewer3d::rolling_stock_anim::car_world_pose_at_head_offset(
+                &config.scene.graph,
+                Some(live),
+                edge,
+                pos_on_edge,
+                f64::from(vehicle.offset_m),
+                vehicle.flipped,
+                resolver.as_ref(),
+                &config.scene,
+                offset.delta,
+                &focus,
+                Some(&config.elevation),
+                &openrailsrs_viewer3d::floating_origin::FloatingOrigin::default(),
+            )
+            .expect("car pose");
+            eprintln!(
+                "car {:>6.1}m -> ({:>7.1}, {:>5.1}, {:>7.1})",
+                vehicle.offset_m, car.translation.x, car.translation.y, car.translation.z
+            );
+            car_positions.push(car.translation);
+            car_forwards.push((car.rotation * Vec3::Z).xz().normalize());
+        }
+        assert!(
+            car_positions
+                .windows(2)
+                .all(|pair| pair[0].distance(pair[1]) > 5.0),
+            "consist cars must not collapse at the path origin: {car_positions:?}"
+        );
+        for (index, pair) in car_positions.windows(2).enumerate() {
+            let along_consist = (pair[0] - pair[1]).xz().normalize();
+            assert!(
+                car_forwards[index + 1].dot(along_consist).abs() > 0.9,
+                "car {} must be longitudinal on the rail: forward={:?}, path={along_consist:?}",
+                index + 1,
+                car_forwards[index + 1],
+            );
+        }
+    }
+
+    #[test]
     fn parse_cli_accepts_run_corridor() {
         let cli = args(&[
             "--run-corridor",

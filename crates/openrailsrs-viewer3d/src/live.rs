@@ -44,6 +44,46 @@ pub struct LiveDrive {
     scenario_path: PathBuf,
 }
 
+/// Initial close-chase framing derived from the player consist.
+///
+/// The focus sits just beyond the leading vehicle, so the eye remains above the
+/// first two cars instead of moving outside a covered station to frame the whole
+/// consist.
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct LiveTrainCameraFrame {
+    /// Train-local `X` offset from the head origin to the chase look-at point.
+    pub focus_offset_m: f32,
+    /// Close chase distance above the leading vehicles.
+    pub chase_distance_m: f32,
+}
+
+impl Default for LiveTrainCameraFrame {
+    fn default() -> Self {
+        Self {
+            focus_offset_m: 0.0,
+            chase_distance_m: LIVE_CHASE_DISTANCE,
+        }
+    }
+}
+
+impl LiveTrainCameraFrame {
+    pub fn from_vehicles(vehicles: &[crate::rolling_stock::ConsistVehicleVisual]) -> Self {
+        let Some(first) = vehicles.first() else {
+            return Self::default();
+        };
+        Self {
+            // The authored origin is at the vehicle centre. Look slightly past
+            // its nose so the body remains in the lower chase-camera foreground.
+            focus_offset_m: first.length_m.max(0.0) * 0.5 + 2.0,
+            chase_distance_m: LIVE_CHASE_DISTANCE,
+        }
+    }
+
+    pub fn focus_from_train(self, train: &Transform) -> Vec3 {
+        train.translation + train.rotation * Vec3::X * self.focus_offset_m
+    }
+}
+
 impl LiveDrive {
     pub fn from_scenario_path(path: &std::path::Path) -> Result<Self, String> {
         let scenario_dir = path
@@ -143,6 +183,7 @@ pub fn enable_live_defaults(
     focus: Res<crate::world::RouteFocus>,
     mode: Res<ViewerSceneryMode>,
     live: Res<LiveDrive>,
+    framing: Option<Res<LiveTrainCameraFrame>>,
     mut limit: ResMut<OrbitDistanceLimit>,
     train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
     mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
@@ -175,9 +216,10 @@ pub fn enable_live_defaults(
     let Ok((mut transform, mut orbit)) = cam.single_mut() else {
         return;
     };
+    let frame = framing.as_deref().copied().unwrap_or_default();
     let (focus_pt, yaw) = if let Ok(train_tf) = train.single() {
         (
-            train_tf.translation + Vec3::Y * 2.0,
+            frame.focus_from_train(train_tf) + Vec3::Y * 2.0,
             yaw_from_transform(train_tf),
         )
     } else {
@@ -190,25 +232,19 @@ pub fn enable_live_defaults(
     } else {
         CHASE_PITCH
     };
-    orbit.distance = clamp_distance_to_limit(
-        if mode.is_run_corridor() {
-            32.0
-        } else {
-            LIVE_CHASE_DISTANCE
-        },
-        orbit_user_zoom_max(),
-    );
+    orbit.distance = clamp_distance_to_limit(frame.chase_distance_m, orbit_user_zoom_max());
     *orbit = crate::camera::orbit_state_with_env_overrides(*orbit);
     *transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
     let edge = live.session.current_edge_id().unwrap_or("?");
     let dest = live.session.gameplay.destination_node.as_str();
     viewer_log!(
-        "openrailsrs-viewer3d: live camera chase at route START edge {}+{:.0}m (dest {}, odo={:.0}m) dist={:.0}m",
+        "openrailsrs-viewer3d: live camera chase over lead at route START edge {}+{:.0}m (dest {}, odo={:.0}m) focus=+{:.0}m dist={:.0}m",
         edge,
         live.session.pos_on_edge_m(),
         dest,
         live.session.state.odometer_m,
+        frame.focus_offset_m,
         orbit.distance,
     );
 }
@@ -793,6 +829,7 @@ pub fn spawn_live_train(
     let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
 
     let vehicles = consist.vehicles_for("primary");
+    commands.insert_resource(LiveTrainCameraFrame::from_vehicles(vehicles));
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
     let shape_dirs: Vec<&std::path::Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let driver_cab = live_driver_cab_from_vehicles(vehicles, &shape_dirs, &assets.route_dir);
@@ -1236,6 +1273,28 @@ mod tests {
     use super::*;
     use crate::rolling_stock::ConsistVehicleVisual;
     use crate::rolling_stock::TrainConsistScene;
+
+    #[test]
+    fn live_camera_frame_stays_close_to_the_leading_cars() {
+        let vehicles: Vec<_> = (0..8)
+            .map(|i| ConsistVehicleVisual {
+                name: format!("car-{i}"),
+                shape_file: None,
+                length_m: 20.0,
+                offset_m: -(i as f32) * 20.0,
+                flipped: false,
+            })
+            .collect();
+        let frame = LiveTrainCameraFrame::from_vehicles(&vehicles);
+        assert!((frame.focus_offset_m - 12.0).abs() < 1e-4);
+        assert!((frame.chase_distance_m - LIVE_CHASE_DISTANCE).abs() < 1e-4);
+        let train = Transform::from_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2));
+        let focus = frame.focus_from_train(&train);
+        assert!(
+            focus.z < -11.9 && focus.x.abs() < 1e-3,
+            "lead focus offset must rotate with train-local +X: {focus:?}"
+        );
+    }
 
     #[test]
     fn pullman_dmbsa_driver_cab_from_stub_eng() {

@@ -428,7 +428,8 @@ impl Plugin for ViewerPlugin {
                         .run_if(camera::follow_train_camera_active)
                         .run_if(teleport::teleport_closed)
                         .after(train::update_train_markers)
-                        .after(live::update_live_train_marker),
+                        .after(live::update_live_train_marker)
+                        .after(rolling_stock_anim::update_consist_car_track_poses),
                     camera::fly_camera_system
                         .run_if(camera::in_fly_mode)
                         .run_if(camera::fly_camera_allowed)

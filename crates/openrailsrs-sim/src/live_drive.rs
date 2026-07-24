@@ -325,10 +325,13 @@ impl LiveDriveSession {
     /// Used by rolling-stock bogie articulation (#69): car/bogie longitudinal
     /// offsets are metres along the path from the consist head.
     pub fn position_at_head_offset(&self, offset_along_path_m: f64) -> Option<(String, f64)> {
+        let head_chainage_m = self
+            .path_data
+            .chainage_at_edge_position(self.state.edge_index, self.state.pos_on_edge_m);
         PathData::position_at_odometer(
             &self.state.path_edges,
             &self.path_data.edges,
-            (self.state.odometer_m + offset_along_path_m).max(0.0),
+            (head_chainage_m + offset_along_path_m).max(0.0),
         )
     }
 
@@ -627,6 +630,35 @@ mod tests {
                 .iter()
                 .any(|s| s.name == "mid"),
             "smoke scenario should schedule stop at node mid"
+        );
+    }
+
+    #[test]
+    fn consist_offsets_are_relative_to_head_after_scenario_start_offset() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern/scenario.toml");
+        if !scenario_path.exists() {
+            return;
+        }
+        let scenario_dir = scenario_path.parent().unwrap();
+        let scenario = load_scenario(&scenario_path).expect("scenario");
+        let session =
+            LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
+        let head_edge = session.current_edge_id().expect("head edge");
+        let head_pos = session.pos_on_edge_m();
+        let (same_edge, same_pos) = session.position_at_head_offset(0.0).expect("head pose");
+        assert_eq!(same_edge, head_edge);
+        assert!((same_pos - head_pos).abs() < 1e-6);
+
+        let (rear_edge, rear_pos) = session.position_at_head_offset(-100.0).expect("rear pose");
+        assert_eq!(
+            rear_edge, head_edge,
+            "Paddington start has enough chainage behind the head"
+        );
+        assert!(
+            (rear_pos - (head_pos - 100.0)).abs() < 1e-6,
+            "rear must be 100 m behind the head, not clamped to path origin: \
+             head={head_pos:.3}, rear={rear_pos:.3}"
         );
     }
 

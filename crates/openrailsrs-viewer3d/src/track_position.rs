@@ -575,10 +575,12 @@ fn tdb_chainage_for_graph_edge(
         .or_else(|| resolver.tdb_pose(tdb_node_id, 0.0, Some(to)))?;
     let forward = xz_delta(from, pose0.position) + xz_delta(to, pose_end.position);
     let reverse = xz_delta(from, pose_end.position) + xz_delta(to, pose0.position);
-    // Soft check: imported `e{N}` is authoritative; only skip reverse detection when
-    // endpoints are absurdly far (wrong id). Still return forward chainage.
+    // A numeric `e{N}` is only a candidate: imported graphs can renumber/split
+    // edges independently from the source TDB.  Do not teleport rolling stock to
+    // a distant vector merely because the numbers happen to match.  Returning
+    // `None` lets the caller spatially snap from the graph position instead.
     if forward.min(reverse) > TDB_EDGE_ENDPOINT_MAX_DELTA_M * 2.0 {
-        return Some(pos);
+        return None;
     }
     if reverse + 1.0 < forward {
         Some((len - pos).clamp(0.0, len))
@@ -589,14 +591,16 @@ fn tdb_chainage_for_graph_edge(
 
 /// Bevy vehicle orientation from a TDB [`TrackPose`] (#67).
 ///
-/// Yaw uses the established vehicle convention (`−yaw_deg` vs track ribbon);
-/// pitch/roll follow [`bevy_track_quat`] (OR `CreateFromYawPitchRoll`).
+/// A [`TrackPose`] points its local `+Z` along the centreline, while rolling-stock
+/// placement points train-local `+X` forward. Compose the fixed basis rotation
+/// after the full TDB yaw/pitch/roll so the vehicle is longitudinal on the rail.
 pub fn vehicle_rotation_from_track_pose(pose: &TrackPose) -> Quat {
-    bevy_track_quat(
-        -f64::from(pose.yaw_deg),
+    let track_rotation = bevy_track_quat(
+        f64::from(pose.yaw_deg),
         f64::from(pose.pitch_rad),
         f64::from(pose.roll_rad),
-    )
+    );
+    track_rotation * Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)
 }
 
 /// Render-space vehicle pose on a graph edge (#67).
@@ -1306,6 +1310,58 @@ mod tests {
     }
 
     #[test]
+    fn vehicle_chainage_rejects_a_distant_matching_numeric_edge_id() {
+        use openrailsrs_core::{EdgeId, NodeId};
+        use openrailsrs_track::{Edge, Node, NodeKind};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        if !path.is_file() {
+            return;
+        }
+        let tdb = TrackDbFile::from_path(&path).expect("tdb");
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let pose0 = resolver.tdb_pose(2, 0.0, None).expect("vector start");
+        let pose_end = resolver
+            .tdb_pose(2, 100.0, None)
+            .or_else(|| resolver.tdb_pose(2, 99.0, None))
+            .expect("vector end");
+        let shift = Vec3::new(4000.0, 0.0, 4000.0);
+        let mut graph = TrackGraph::new();
+        graph
+            .insert_node(Node {
+                id: NodeId("a".into()),
+                x_m: f64::from(pose0.position.x + shift.x),
+                y_m: f64::from(pose0.position.z + shift.z),
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        graph
+            .insert_node(Node {
+                id: NodeId("b".into()),
+                x_m: f64::from(pose_end.position.x + shift.x),
+                y_m: f64::from(pose_end.position.z + shift.z),
+                kind: NodeKind::Plain,
+            })
+            .unwrap();
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2".into()),
+                from: NodeId("a".into()),
+                to: NodeId("b".into()),
+                length_m: 100.0,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+
+        assert!(
+            tdb_chainage_for_graph_edge(&resolver, &graph, "e2", 50.0, 2).is_none(),
+            "matching digits must not teleport the train onto a distant TDB vector"
+        );
+    }
+
+    #[test]
     fn vehicle_rotation_includes_tdb_pitch_and_roll() {
         let pose = TrackPose {
             position: Vec3::new(0.0, 35.8, 0.0),
@@ -1314,23 +1370,18 @@ mod tests {
             roll_rad: -0.04,
         };
         let rot = vehicle_rotation_from_track_pose(&pose);
-        let (yaw, pitch, roll) = rot.to_euler(EulerRot::YXZ);
+        let expected_track = pose.rotation();
         assert!(
-            (yaw - (-30.0f32).to_radians()).abs() < 1e-3,
-            "vehicle yaw convention is −TrackPose.yaw_deg, got {yaw}"
+            (rot * Vec3::X - expected_track * Vec3::Z).length() < 1e-4,
+            "train-local +X must follow the TDB centreline"
         );
         assert!(
-            (pitch - 0.12).abs() < 1e-3,
-            "pitch must come from TDB AX, got {pitch}"
+            (rot * Vec3::Y - expected_track * Vec3::Y).length() < 1e-4,
+            "vehicle up must preserve TDB pitch and roll"
         );
         assert!(
-            (roll - 0.04).abs() < 1e-3,
-            "roll must follow bevy_track_quat AZ negation, got {roll}"
-        );
-        let yaw_only = Quat::from_rotation_y(yaw);
-        assert!(
-            rot.angle_between(yaw_only) > 0.05,
-            "full pose must differ from yaw-only"
+            (rot * Vec3::X).y.abs() > 0.05,
+            "full pose must include the TDB pitch"
         );
     }
 
