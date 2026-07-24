@@ -47,7 +47,10 @@ use bytemuck::{Pod, Zeroable};
 use openrailsrs_bevy_scenery::shapes::lod_level_index_for_distance;
 
 /// Minimum placements in one tile before GPU instancing is used.
-pub const WORLD_INSTANCING_MIN: usize = 4;
+///
+/// Two already save one entity/draw while sharing the immutable instance buffer.
+/// The old threshold of four left many paired trackside assets on the entity path.
+pub const WORLD_INSTANCING_MIN: usize = 2;
 
 /// Highest scalar metallic value the albedo-only instancing shader may approximate.
 ///
@@ -1143,11 +1146,11 @@ mod tests {
     }
 
     #[test]
-    fn four_opaque_placements_same_tile_meet_min() {
+    fn paired_opaque_placements_same_tile_meet_min() {
         const {
-            assert!(WORLD_INSTANCING_MIN <= 4);
+            assert!(WORLD_INSTANCING_MIN <= 2);
         }
-        let placements: Vec<ShapeInstancePlacement> = (0..4)
+        let placements: Vec<ShapeInstancePlacement> = (0..2)
             .map(|i| ShapeInstancePlacement {
                 transform: Transform::from_xyz(i as f32, 0.0, 0.0),
                 linear: None,

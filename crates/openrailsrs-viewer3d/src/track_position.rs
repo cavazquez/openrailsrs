@@ -15,11 +15,13 @@
 //! TDB elevation (no `ground_y_at`) and applies full yaw/pitch/roll when the
 //! pose resolves.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
-    TrackPose, bevy_track_quat, nearest_track_position, tdb_node_track_pose,
+    TrackPose, bevy_track_quat, nearest_track_position, nearest_track_position_on_indexed_tile,
+    tdb_node_track_pose,
 };
 use openrailsrs_formats::{
     RouteStart, TSectionCatalog, TrackDbFile, msts_tile_x_index_for_coord,
@@ -142,9 +144,64 @@ pub fn marker_render_world_from_msts_hint(
 pub struct TrackPositionResolver<'a> {
     pub tdb: &'a TrackDbFile,
     pub tsection: Option<&'a TSectionCatalog>,
-    pub tile_index: HashMap<(i32, i32), Vec<u32>>,
+    pub tile_index: Cow<'a, HashMap<(i32, i32), Vec<u32>>>,
     /// Graph node id → TDB id from import aliases (preferred over `n` prefix).
-    pub graph_node_to_tdb: HashMap<String, u32>,
+    pub graph_node_to_tdb: Cow<'a, HashMap<String, u32>>,
+}
+
+/// Route-stable spatial maps shared by every train-pose system.
+///
+/// Building `TrackDbFile::index_nodes_by_tile()` and cloning the graph alias map
+/// once per system per frame is O(route size). Chiltern has 18k TDB nodes, so the
+/// repeated construction dominated the render loop even when scenery distance was
+/// reduced. The cache owns only the derived maps; resolvers still borrow the source
+/// TDB/TSection resources.
+#[derive(Resource, Default)]
+pub struct TrackPositionResolverCache {
+    tile_index: HashMap<(i32, i32), Vec<u32>>,
+    graph_node_to_tdb: HashMap<String, u32>,
+    ready: bool,
+}
+
+impl TrackPositionResolverCache {
+    pub fn resolver<'a>(
+        &'a self,
+        tdb: &'a TrackDbFile,
+        tsection: Option<&'a TSectionCatalog>,
+    ) -> TrackPositionResolver<'a> {
+        TrackPositionResolver {
+            tdb,
+            tsection,
+            tile_index: Cow::Borrowed(&self.tile_index),
+            graph_node_to_tdb: Cow::Borrowed(&self.graph_node_to_tdb),
+        }
+    }
+}
+
+/// Populate the route-stable resolver maps once after route resources are inserted.
+pub fn populate_track_position_resolver_cache(
+    scene: Res<TrackScene>,
+    assets: Res<crate::shapes::RouteAssets>,
+    mut cache: ResMut<TrackPositionResolverCache>,
+) {
+    if cache.ready {
+        return;
+    }
+    let Some(tdb) = assets.track_db() else {
+        return;
+    };
+    let started = std::time::Instant::now();
+    cache.tile_index = tdb.index_nodes_by_tile();
+    cache.graph_node_to_tdb.clone_from(&scene.graph_node_to_tdb);
+    cache.ready = true;
+    if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
+        eprintln!(
+            "[PERF] track_position_cache_ms={:.2} tiles={} aliases={}",
+            started.elapsed().as_secs_f64() * 1000.0,
+            cache.tile_index.len(),
+            cache.graph_node_to_tdb.len(),
+        );
+    }
 }
 
 impl<'a> TrackPositionResolver<'a> {
@@ -152,8 +209,8 @@ impl<'a> TrackPositionResolver<'a> {
         Self {
             tdb,
             tsection,
-            tile_index: tdb.index_nodes_by_tile(),
-            graph_node_to_tdb: HashMap::new(),
+            tile_index: Cow::Owned(tdb.index_nodes_by_tile()),
+            graph_node_to_tdb: Cow::Owned(HashMap::new()),
         }
     }
 
@@ -166,7 +223,7 @@ impl<'a> TrackPositionResolver<'a> {
     }
 
     pub fn with_graph_tdb_map(mut self, map: HashMap<String, u32>) -> Self {
-        self.graph_node_to_tdb = map;
+        self.graph_node_to_tdb = Cow::Owned(map);
         self
     }
 
@@ -271,12 +328,13 @@ impl<'a> TrackPositionResolver<'a> {
         tile_x: i32,
         tile_z: i32,
     ) -> Option<TrackPose> {
-        openrailsrs_bevy_scenery::spawn::tdb_track::nearest_track_position(
+        nearest_track_position_on_indexed_tile(
             self.tdb,
             world_xz,
             radius_m,
             self.tsection,
-            Some((tile_x, tile_z)),
+            &self.tile_index,
+            (tile_x, tile_z),
         )
     }
 

@@ -134,6 +134,7 @@ pub fn minimal_app() -> App {
     app.init_resource::<crate::live::DriverCamState>();
     app.init_resource::<crate::cab_render::CabRenderDiagnostic>();
     app.init_resource::<crate::cab_render::CabRenderDiagLatch>();
+    app.init_resource::<crate::track_position::TrackPositionResolverCache>();
     app.insert_resource(ViewerLaunchOpts::default());
     app.insert_resource(crate::launch::ViewerSceneryMode::default());
     app.insert_resource(TerrainElevation::default());

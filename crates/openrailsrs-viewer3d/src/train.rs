@@ -563,6 +563,7 @@ pub fn update_train_markers(
     focus: Res<crate::world::RouteFocus>,
     replay: Res<ReplayState>,
     assets: Res<RouteAssets>,
+    resolver_cache: Res<crate::track_position::TrackPositionResolverCache>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
     mut query: Query<(&TrainMarker, &mut Transform), Without<Camera3d>>,
@@ -574,7 +575,7 @@ pub fn update_train_markers(
     let terrain_ref = terrain.as_deref();
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+        .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let resolver_ref = tdb_resolver.as_ref();
 
     for (marker, mut transform) in &mut query {

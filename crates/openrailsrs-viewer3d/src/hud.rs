@@ -525,7 +525,7 @@ pub fn build_hud_content_live(
     }
 }
 
-pub(crate) fn tick_hud_fps(time: Res<Time>, mut fps: ResMut<HudFps>) {
+pub(crate) fn tick_hud_fps(time: Res<Time<Real>>, mut fps: ResMut<HudFps>) {
     fps.tick(time.delta_secs());
 }
 
@@ -642,11 +642,7 @@ pub(crate) fn update_hud(
             // an opaque black strip under the coords row).
             let show = (active || live.is_some()) && content.progress > 0.005;
             if let Some(node) = node.as_mut() {
-                node.display = if show {
-                    Display::Flex
-                } else {
-                    Display::None
-                };
+                node.display = if show { Display::Flex } else { Display::None };
             }
             *vis = if show {
                 Visibility::Inherited

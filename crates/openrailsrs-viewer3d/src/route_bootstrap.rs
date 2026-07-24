@@ -251,6 +251,7 @@ pub fn update_loading_screen_progress(
     mut commands: Commands,
     screen: Option<ResMut<ViewerLoadingScreen>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    app_state: Res<State<ViewerAppState>>,
     mut texts: Query<&mut Text>,
 ) {
     let Some(mut screen) = screen else {
@@ -262,11 +263,19 @@ pub fn update_loading_screen_progress(
         if let Ok(mut t) = texts.get_mut(screen.status) {
             *t = Text::new(progress.status_text());
         }
-    } else if screen.scenery_spawn_started {
-        // Progressive world spawn finished!
-        crate::viewer_log!(
-            "openrailsrs-viewer3d: progressive spawn complete — entering simulation"
-        );
+    } else if screen.scenery_spawn_started || *app_state.get() == ViewerAppState::Playing {
+        // Progressive world spawn finished, or this mode deliberately has no
+        // WORLD spawn (run-corridor/track-dev). The old condition left the
+        // loading camera permanently covering an otherwise running corridor.
+        if screen.scenery_spawn_started {
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: progressive spawn complete — entering simulation"
+            );
+        } else {
+            crate::viewer_log!(
+                "openrailsrs-viewer3d: no progressive WORLD spawn — entering simulation"
+            );
+        }
         let root = screen.root;
         let camera = screen.camera;
         commands.remove_resource::<ViewerLoadingScreen>();

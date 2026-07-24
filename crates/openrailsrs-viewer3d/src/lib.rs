@@ -154,6 +154,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<world::WorldShapeLodCache>()
             .init_resource::<world::WorldLodCameraState>()
+            .init_resource::<track_position::TrackPositionResolverCache>()
             .init_resource::<world_tile_index::WorldTileEntityIndex>()
             .init_resource::<world_tile_index::WorldShapeLiveRefs>()
             .init_resource::<tile_bundle::TileBundleHandles>()
@@ -164,6 +165,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 OnEnter(ViewerAppState::Playing),
                 (
+                    track_position::populate_track_position_resolver_cache,
                     scene::spawn_ground_and_lights,
                     sky::spawn_sky_dome.run_if(launch::sky_dome_active),
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),

@@ -485,19 +485,19 @@ impl<'a> BinaryReader<'a> {
             }
             // Animation keys mix an integer frame with floating-point values.
             // Open Rails reads these as `ReadInt()` followed by `ReadFloat()`.
-            19 | 101 => {
+            19 => {
                 self.dump_animation_key_content(block_end, 3, &mut out)?;
                 self.pos = block_end;
                 out.push_str(" )");
                 return Ok(out);
             }
-            20 | 99 => {
+            20 => {
                 self.dump_animation_key_content(block_end, 9, &mut out)?;
                 self.pos = block_end;
                 out.push_str(" )");
                 return Ok(out);
             }
-            23 | 103 => {
+            23 => {
                 self.dump_animation_key_content(block_end, 4, &mut out)?;
                 self.pos = block_end;
                 out.push_str(" )");
@@ -781,12 +781,40 @@ fn token_name(id: i32) -> &'static str {
         95 => "uv_op_spheremapfull",
         96 => "uv_op_specularmap",
         97 => "uv_op_embossbump",
-        // Animation key leaves (controllers already mapped above).
-        99 => "tcb_key",
-        101 => "linear_key",
-        103 => "slerp_key",
+        98 => "user_uv_args",
+        99 => "io_dev",
+        100 => "io_map",
+        101 => "sguid",
+        102 => "dlev_cfg_table",
+        103 => "dlev_cfg",
+        104 => "subobject_shaders",
+        105 => "subobject_light_cfgs",
+        106 => "shape_named_data",
+        107 => "shape_named_data_header",
+        108 => "shape_named_geometry",
+        109 => "shape_geom_ref",
+        110 => "material_palette",
+        111 => "blend_config",
+        112 => "blend_config_header",
+        113 => "filtermode_cfgs",
+        114 => "filter_mode_cfg",
+        115 => "blend_mode_cfgs",
+        116 => "blend_mode_cfg",
+        117 => "texture_stage_progs",
+        118 => "texture_stage_prog",
+        119 => "blend_mode_cfg_refs",
+        120 => "shader_cfgs",
+        121 => "shader_cfg",
+        122 => "texture_slots",
+        123 => "texture_slot",
+        124 => "named_filter_modes",
         125 => "named_filter_mode",
+        126 => "filtermode_cfg_refs",
+        127 => "filtermode_cfg_ref",
+        128 => "named_shaders",
         129 => "named_shader",
+        130 => "shader_cfg_refs",
+        131 => "shader_cfg_ref",
         // World tokens: raw binary value + 300, matching Open Rails `TokenID.cs`.
         303 => "Static",
         305 => "TrackObj",
@@ -903,9 +931,6 @@ fn is_known_binary_token(id: i32, token_offset: i32) -> bool {
             | 61
             | 63..=76
             | 79..=97
-            | 99
-            | 101
-            | 103
             | 125
             | 129
     )
@@ -926,11 +951,7 @@ fn is_scalar_only_leaf_block(token_id: i32) -> bool {
             | 82
             | 83
             | 84 // uv_op_copy / aliases
-            | 91
-            ..=97 // uv_op_* with integer-only payloads
-            | 99
-            | 101
-            | 103 // point, vector, normal_idxs, uv_point, prim_state_idx, vertex_idxs, flags, hierarchy, anim_keys
+            | 91..=97 // uv_op_* with integer-only payloads
     )
 }
 
@@ -986,12 +1007,9 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (25, 24) // controllers -> tcb_rot
             | (25, 21) // controllers -> linear_pos
             | (25, 23) // controllers -> slerp_rot
-            | (24, 20) // tcb_rot -> tcb_key (also 99 in some dumps)
-            | (24, 99)
+            | (24, 20) // tcb_rot -> tcb_key
             | (24, 23) // tcb_rot -> slerp_rot key
-            | (24, 103) // tcb_rot -> slerp_key alias
             | (21, 19) // linear_pos -> linear_key
-            | (21, 101)
             | (31, 32) // lod_controls -> lod_control
             | (36, 37) // distance_levels -> distance_level
             | (38, 39) // sub_objects -> sub_object
@@ -1047,6 +1065,41 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn core_token_catalog_matches_open_rails_ids() {
+        assert_eq!(super::token_name(19), "linear_key");
+        assert_eq!(super::token_name(20), "tcb_key");
+        assert_eq!(super::token_name(23), "slerp_rot");
+        assert_eq!(super::token_name(29), "animations");
+        assert_eq!(super::token_name(90), "uv_op_user_transform");
+        assert_eq!(super::token_name(99), "io_dev");
+        assert_eq!(super::token_name(101), "sguid");
+        assert_eq!(super::token_name(103), "dlev_cfg");
+        assert_eq!(super::token_name(125), "named_filter_mode");
+        assert_eq!(super::token_name(129), "named_shader");
+
+        assert!(super::is_known_binary_token(29, 0));
+        assert!(super::is_known_binary_token(90, 0));
+        assert!(!super::is_known_binary_token(99, 0));
+        assert!(!super::is_known_binary_token(101, 0));
+        assert!(!super::is_known_binary_token(103, 0));
+
+        let admitted_shape = (0..=131)
+            .filter(|id| super::is_known_binary_token(*id, 0))
+            .count();
+        assert_eq!(admitted_shape, 93);
+
+        let admitted_world: Vec<_> = (300..=1563)
+            .filter(|id| super::is_known_binary_token(*id, 300))
+            .collect();
+        let named_world = admitted_world
+            .iter()
+            .filter(|id| !super::token_name(**id).starts_with('_'))
+            .count();
+        assert_eq!(admitted_world.len(), 175);
+        assert_eq!(named_world, 68);
     }
 
     #[test]

@@ -929,15 +929,61 @@ pub fn nearest_track_position(
     tsection: Option<&TSectionCatalog>,
     tile_filter: Option<(i32, i32)>,
 ) -> Option<TrackPose> {
+    if let Some(tile) = tile_filter {
+        let tile_index = tdb.index_nodes_by_tile();
+        return nearest_track_position_on_indexed_tile(
+            tdb,
+            world_xz,
+            radius_m,
+            tsection,
+            &tile_index,
+            tile,
+        );
+    }
+    nearest_track_position_in_nodes(
+        tdb,
+        world_xz,
+        radius_m,
+        tsection,
+        tdb.nodes.iter().map(|node| node.id),
+    )
+}
+
+/// Nearest TDB position on one tile using a caller-owned, route-stable index.
+///
+/// The viewer samples track below every bogie each frame. Rebuilding
+/// [`TrackDbFile::index_nodes_by_tile`] for each sample is O(all route nodes)
+/// before doing any spatial work, so hot paths must keep this index in a
+/// resource and call this variant.
+pub fn nearest_track_position_on_indexed_tile(
+    tdb: &TrackDbFile,
+    world_xz: Vec2,
+    radius_m: f32,
+    tsection: Option<&TSectionCatalog>,
+    tile_index: &std::collections::HashMap<(i32, i32), Vec<u32>>,
+    tile: (i32, i32),
+) -> Option<TrackPose> {
+    nearest_track_position_in_nodes(
+        tdb,
+        world_xz,
+        radius_m,
+        tsection,
+        tile_index
+            .get(&tile)
+            .into_iter()
+            .flat_map(|ids| ids.iter().copied()),
+    )
+}
+
+fn nearest_track_position_in_nodes(
+    tdb: &TrackDbFile,
+    world_xz: Vec2,
+    radius_m: f32,
+    tsection: Option<&TSectionCatalog>,
+    candidate_nodes: impl Iterator<Item = u32>,
+) -> Option<TrackPose> {
     let mut best_dist = f64::from(radius_m);
     let mut best: Option<TrackPose> = None;
-    let tile_index = tile_filter.is_some().then(|| tdb.index_nodes_by_tile());
-    let candidate_nodes: Vec<u32> = if let (Some((tx, tz)), Some(index)) = (tile_filter, tile_index)
-    {
-        index.get(&(tx, tz)).cloned().unwrap_or_default()
-    } else {
-        tdb.nodes.iter().map(|n| n.id).collect()
-    };
     for node_id in candidate_nodes {
         let Some(node) = tdb.node_by_id(node_id) else {
             continue;
@@ -1226,6 +1272,20 @@ mod tests {
         let query = Vec2::new(mid.x + 10.0, mid.z);
         let pose = nearest_track_position(&tdb, query, 50.0, Some(&cat), Some((0, 0)))
             .expect("nearest within 50 m");
+        let tile_index = tdb.index_nodes_by_tile();
+        let indexed_pose = nearest_track_position_on_indexed_tile(
+            &tdb,
+            query,
+            50.0,
+            Some(&cat),
+            &tile_index,
+            (0, 0),
+        )
+        .expect("nearest with caller-owned index");
+        assert!(
+            indexed_pose.position.distance(pose.position) < 1e-4,
+            "indexed hot path must preserve the legacy spatial result"
+        );
         let dist = Vec2::new(query.x - pose.position.x, query.y - pose.position.z).length();
         assert!(
             (dist - 10.0).abs() < 0.5,

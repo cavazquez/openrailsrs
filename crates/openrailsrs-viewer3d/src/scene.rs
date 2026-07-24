@@ -5,13 +5,11 @@
 //! bounds when present.
 
 use bevy::asset::RenderAssetUsages;
-use bevy::light::DirectionalLightShadowMap;
-use bevy::light::NotShadowCaster;
+use bevy::light::{
+    CascadeShadowConfig, CascadeShadowConfigBuilder, DirectionalLightShadowMap, NotShadowCaster,
+};
 use bevy::mesh::PrimitiveTopology;
 use bevy::prelude::*;
-use openrailsrs_bevy_scenery::vsm::{
-    cascade_shadow_config_from_or_limits, or_limits_from_view_distance, or_max_shadow_view_distance,
-};
 use openrailsrs_bevy_scenery::{SceneSunLight, directional_light_from_sun, sun_transform};
 
 use crate::launch::{
@@ -32,6 +30,63 @@ const COLOR_AXIS_X: Color = Color::srgb(0.95, 0.20, 0.20);
 const COLOR_AXIS_Y: Color = Color::srgb(0.20, 0.95, 0.30);
 const COLOR_AXIS_Z: Color = Color::srgb(0.25, 0.50, 1.00);
 const AXIS_LENGTH: f32 = 5.0;
+
+/// Default reach of the directional-light shadow maps.
+///
+/// This is intentionally independent from the scenery viewing distance. Raising
+/// it from 200 m to the full 2 km view made Bevy render a fourth, very large
+/// shadow cascade and added avoidable GPU work on dense routes.
+pub const DEFAULT_SHADOW_DISTANCE_M: f32 = 200.0;
+const MIN_SHADOW_DISTANCE_M: f32 = 25.0;
+const MAX_SHADOW_DISTANCE_M: f32 = 2_500.0;
+
+/// `OPENRAILSRS_SHADOWS=0|false|off` disables the outdoor sun shadow passes.
+///
+/// Kept as a public policy helper so visual/performance tests can compare the
+/// exact same scene without rebuilding the light setup.
+pub fn shadows_enabled() -> bool {
+    !matches!(
+        std::env::var("OPENRAILSRS_SHADOWS")
+            .ok()
+            .as_deref()
+            .map(str::trim),
+        Some("0") | Some("false") | Some("off")
+    )
+}
+
+/// Resolve shadow reach independently from the scenery viewing radius.
+///
+/// `OPENRAILSRS_SHADOW_DISTANCE_M` is an opt-in visual-quality override. The
+/// default stays at the former, substantially cheaper 200 m budget.
+pub fn shadow_distance_m() -> f32 {
+    parse_shadow_distance_m(
+        std::env::var("OPENRAILSRS_SHADOW_DISTANCE_M")
+            .ok()
+            .as_deref(),
+    )
+}
+
+fn parse_shadow_distance_m(raw: Option<&str>) -> f32 {
+    raw.and_then(|value| value.trim().parse::<f32>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .map(|value| value.clamp(MIN_SHADOW_DISTANCE_M, MAX_SHADOW_DISTANCE_M))
+        .unwrap_or(DEFAULT_SHADOW_DISTANCE_M)
+}
+
+fn shadow_cascade_config(distance_m: f32) -> CascadeShadowConfig {
+    CascadeShadowConfigBuilder {
+        num_cascades: if distance_m > DEFAULT_SHADOW_DISTANCE_M {
+            4
+        } else {
+            3
+        },
+        minimum_distance: 0.1,
+        maximum_distance: distance_m,
+        first_cascade_far_bound: 10.0,
+        overlap_proportion: 0.2,
+    }
+    .build()
+}
 
 /// One-shot startup: spawn the reference ground/grid and the lights.
 ///
@@ -94,23 +149,28 @@ pub fn spawn_ground_and_lights(
     // Shared daylight defaults (#124); indoor corridor keeps a dimmer fill.
     let mut sun = SceneSunLight::day();
     sun.illuminance = if outdoor { 75_000.0 } else { 10_000.0 };
-    // Match the shadow coverage to the actual scenery window. The previous
-    // fixed 200 m limit produced a camera-centred ring where shadows abruptly
-    // disappeared. OR-style mixed logarithmic/uniform splits preserve nearby
-    // detail while the outer cascade reaches the loaded view.
-    let shadow_distance = or_max_shadow_view_distance(view_radius_m());
-    let shadow_cascades = cascade_shadow_config_from_or_limits(
-        or_limits_from_view_distance(shadow_distance),
-        0.5,
-        0.2,
+    // Keep shadow cost bounded independently of the 2 km scenery window. Every
+    // cascade renders its visible casters again, so matching shadow reach to the
+    // full route view is prohibitively expensive on large MSTS yards.
+    let shadow_distance = shadow_distance_m();
+    let shadow_cascades = shadow_cascade_config(shadow_distance);
+    let shadows_enabled = shadows_enabled();
+    crate::viewer_log!(
+        "openrailsrs-viewer3d: sun shadows {} — {:.0} m, {} cascades (scenery view {:.0} m)",
+        if shadows_enabled { "on" } else { "off" },
+        shadow_distance,
+        shadow_cascades.bounds.len(),
+        view_radius_m()
     );
     commands.spawn((
-        directional_light_from_sun(&sun, true),
+        directional_light_from_sun(&sun, shadows_enabled),
         shadow_cascades,
         sun_transform(&sun),
         Name::new("sun"),
     ));
-    commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
+    if shadows_enabled {
+        commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
+    }
 }
 
 fn spawn_grid_mesh(
@@ -216,12 +276,29 @@ mod tests {
     }
 
     #[test]
-    fn outdoor_shadow_cascades_cover_default_view_without_an_abrupt_near_ring() {
-        let distance = or_max_shadow_view_distance(crate::launch::VIEWING_DISTANCE_M);
-        let config =
-            cascade_shadow_config_from_or_limits(or_limits_from_view_distance(distance), 0.5, 0.2);
-        assert_eq!(config.bounds.len(), 4);
-        assert!(config.bounds.last().copied().unwrap_or_default() >= 2000.0);
+    fn default_shadow_budget_is_200_m_with_three_cascades() {
+        let config = shadow_cascade_config(DEFAULT_SHADOW_DISTANCE_M);
+        assert_eq!(config.bounds.len(), 3);
+        assert_eq!(
+            config.bounds.last().copied().unwrap_or_default(),
+            DEFAULT_SHADOW_DISTANCE_M
+        );
         assert!(config.bounds.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    #[test]
+    fn shadow_distance_override_is_validated_and_bounded() {
+        assert_eq!(parse_shadow_distance_m(None), DEFAULT_SHADOW_DISTANCE_M);
+        assert_eq!(
+            parse_shadow_distance_m(Some("invalid")),
+            DEFAULT_SHADOW_DISTANCE_M
+        );
+        assert_eq!(parse_shadow_distance_m(Some("10")), MIN_SHADOW_DISTANCE_M);
+        assert_eq!(
+            parse_shadow_distance_m(Some("10000")),
+            MAX_SHADOW_DISTANCE_M
+        );
+        assert_eq!(parse_shadow_distance_m(Some("500")), 500.0);
+        assert_eq!(shadow_cascade_config(500.0).bounds.len(), 4);
     }
 }

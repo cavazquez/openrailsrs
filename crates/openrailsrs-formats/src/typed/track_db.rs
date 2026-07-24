@@ -480,7 +480,17 @@ impl TrackDbFile {
 
     /// Lookup a track node by its 1-based `.tdb` id.
     pub fn node_by_id(&self, id: u32) -> Option<&TrackDbNode> {
-        self.nodes.iter().find(|n| n.id == id)
+        // MSTS normally stores TrNodeId as the 1-based position in TrackNodes.
+        // Some generated fixtures/routes use zero-based or sparse IDs, so retain
+        // the linear fallback after checking both direct slots. Vehicle pose calls
+        // this several times per car per frame; always scanning a large TDB made
+        // render time proportional to the complete route.
+        let zero_based = id as usize;
+        id.checked_sub(1)
+            .and_then(|idx| self.nodes.get(idx as usize))
+            .filter(|node| node.id == id)
+            .or_else(|| self.nodes.get(zero_based).filter(|node| node.id == id))
+            .or_else(|| self.nodes.iter().find(|node| node.id == id))
     }
 
     /// Lookup a `TrItemTable` entry by `TrItemId`.
@@ -491,7 +501,17 @@ impl TrackDbFile {
     }
 
     pub fn item_by_id(&self, id: u32) -> Option<&TrItem> {
-        self.items.iter().find(|i| i.id == id)
+        // TrItemId is commonly zero-based, but accept 1-based and sparse tables.
+        let zero_based = id as usize;
+        self.items
+            .get(zero_based)
+            .filter(|item| item.id == id)
+            .or_else(|| {
+                id.checked_sub(1)
+                    .and_then(|idx| self.items.get(idx as usize))
+                    .filter(|item| item.id == id)
+            })
+            .or_else(|| self.items.iter().find(|item| item.id == id))
     }
 
     /// Map each `TrItemId` to vector node id(s) that reference it via `TrItemRefs`.
@@ -1666,6 +1686,33 @@ mod tests {
 
     fn fixtures_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openrailsrs-msts/tests/fixtures")
+    }
+
+    #[test]
+    fn id_lookup_handles_native_slots_and_sparse_fallback() {
+        let node = |id| TrackDbNode {
+            id,
+            position: None,
+            pin_refs: vec![],
+            kind: TrackNodeKind::End,
+        };
+        let item = |id| TrItem {
+            id,
+            kind: TrItemKind::Other,
+            distance_m: 0.0,
+            world: None,
+        };
+        let tdb = TrackDbFile {
+            nodes: vec![node(1), node(2), node(99)],
+            items: vec![item(1), item(2), item(77)],
+        };
+
+        assert_eq!(tdb.node_by_id(2).map(|entry| entry.id), Some(2));
+        assert_eq!(tdb.node_by_id(99).map(|entry| entry.id), Some(99));
+        assert_eq!(tdb.item_by_id(2).map(|entry| entry.id), Some(2));
+        assert_eq!(tdb.item_by_id(77).map(|entry| entry.id), Some(77));
+        assert!(tdb.node_by_id(1234).is_none());
+        assert!(tdb.item_by_id(1234).is_none());
     }
 
     #[test]

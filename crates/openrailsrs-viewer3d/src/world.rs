@@ -18,7 +18,7 @@ use bevy::prelude::*;
 use openrailsrs_bevy_scenery::shapes::{
     ShapeAnimBinding, ShapeAnimState, animation_playback_speed, apply_shape_auto_z_bias,
     lod_level_index_for_distance, primary_texture_filename, shape_has_loop_animation,
-    world_mesh_options_for_shape,
+    shape_matrix_chain_is_animated, world_mesh_options_for_shape,
 };
 use openrailsrs_bevy_scenery::stream::{StreamWindowPolicy, TILE_SIZE_M, TileBound, TileCoord};
 use openrailsrs_bevy_scenery::{
@@ -2164,6 +2164,7 @@ fn append_shape_spawn_entries_for_transforms(
         }
     } else if animated {
         let shape = shape_file.expect("animated branch requires ShapeFile");
+        let shared_shape = std::sync::Arc::new(shape.clone());
         let speed = animation_playback_speed(shape);
         let frame_count = shape
             .animations
@@ -2182,34 +2183,49 @@ fn append_shape_spawn_entries_for_transforms(
                 let matrix_idx = matrix_idx_for_prim_state(shape, part.prim_state_idx);
                 let material =
                     material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
-                anim_spawn_queue.push((
-                    placement,
-                    Mesh3d(part.mesh.clone()),
-                    MeshMaterial3d(material),
-                    Name::new("world:anim"),
-                    WorldSceneryLod {
-                        // LOD stays on; swap re-applies anim delta without resetting key (#100).
-                        enabled: true,
-                        shape_path: shape_path.to_path_buf(),
-                        sub_object_idx: part.sub_object_idx,
-                        prim_state_idx: part.prim_state_idx,
-                        part_index,
-                        lod_idx: initial_lod_idx,
-                    },
-                    bound,
-                    ShapeAnimState {
-                        key: 0.0,
-                        matrix_idx,
-                    },
-                    ShapeAnimBinding {
-                        shape: shape.clone(),
-                        matrix_idx,
-                        speed,
-                        frame_count,
+                let lod = WorldSceneryLod {
+                    // LOD stays on; animated swaps re-apply the current pose (#100).
+                    enabled: true,
+                    shape_path: shape_path.to_path_buf(),
+                    sub_object_idx: part.sub_object_idx,
+                    prim_state_idx: part.prim_state_idx,
+                    part_index,
+                    lod_idx: initial_lod_idx,
+                };
+                if shape_matrix_chain_is_animated(shape, matrix_idx) {
+                    anim_spawn_queue.push((
                         placement,
-                        baked_rest_mesh: true,
-                    },
-                ));
+                        Mesh3d(part.mesh.clone()),
+                        MeshMaterial3d(material),
+                        Name::new("world:anim"),
+                        lod,
+                        bound,
+                        ShapeAnimState {
+                            key: 0.0,
+                            matrix_idx,
+                        },
+                        ShapeAnimBinding {
+                            shape: shared_shape.clone(),
+                            matrix_idx,
+                            speed,
+                            frame_count,
+                            placement,
+                            baked_rest_mesh: true,
+                        },
+                    ));
+                } else {
+                    // A shape can animate one small matrix while most of its parts
+                    // remain static. Keep those parts out of the per-frame query.
+                    let (tf, mesh) = view_mesh_for_placement(meshes, &part.mesh, inst, origin);
+                    spawn_queue.push((
+                        tf,
+                        Mesh3d(mesh),
+                        MeshMaterial3d(material),
+                        Name::new("world:mesh"),
+                        lod,
+                        bound,
+                    ));
+                }
             }
         }
     } else {

@@ -13,6 +13,7 @@
 | [`OR_PARITY.md`](OR_PARITY.md) | Paridad física |
 | [`OR_TRACE_COMPARISON.md`](OR_TRACE_COMPARISON.md) | `compare-or` |
 | [`FORMATS.md`](FORMATS.md) | Shapes / audit-vehicle |
+| [`MSTS_BINARY_TOKENS.md`](MSTS_BINARY_TOKENS.md) | Tokens binarios shape/WORLD: admitidos, genéricos y no soportados |
 | [`THIRD_PARTY.md`](THIRD_PARTY.md) | Licencias externas |
 
 Raíz del repo: [`README.md`](../README.md) · [`ROADMAP.md`](../ROADMAP.md).

@@ -3,6 +3,9 @@
 //! Spawns emissive discs for WORLD `Signal` heads. Aspect comes from the track
 //! graph / live session; signalling logic is not altered.
 
+use std::collections::HashMap;
+
+use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 use openrailsrs_formats::lit_light_indices_for_aspect;
 use openrailsrs_or_shader::coordinates::msts_shape_vec3_to_bevy;
@@ -17,9 +20,13 @@ use crate::world::{RouteFocus, WorldObject, WorldScene};
 /// One emissive lamp quad belonging to a WORLD signal head.
 #[derive(Component, Debug, Clone)]
 pub struct SignalLamp {
-    pub tr_item_id: u32,
-    pub light_index: u32,
-    pub signal_type: String,
+    /// Runtime graph/sim key, built once instead of formatting every frame.
+    pub signal_id: String,
+    /// Whether this physical lamp is lit for Stop / Caution / Clear.
+    pub lit_for_aspect: [bool; 3],
+    pub fallback_aspect: SignalAspect,
+    /// Last state already uploaded to the material asset.
+    pub is_on: bool,
 }
 
 /// Root marker for a WORLD signal's lamp set (despawn / stream accounting).
@@ -46,6 +53,11 @@ pub fn spawn_signal_lamp_objects(
         return;
     }
     let mut spawned = 0usize;
+    // Signal configs reuse a small palette of colours/radii. Sharing these assets
+    // lets Bevy batch visible lamps instead of creating one mesh and material per
+    // disc (1k+ at a large station).
+    let mut mesh_cache: HashMap<u32, Handle<Mesh>> = HashMap::new();
+    let mut material_cache: HashMap<[u32; 4], Handle<StandardMaterial>> = HashMap::new();
     for obj in objects {
         if obj.kind != "Signal" {
             continue;
@@ -104,7 +116,12 @@ pub fn spawn_signal_lamp_objects(
                 continue;
             };
             let aspect = aspect_for_tr_item(assets, unit.tr_item_id);
-            let lit = lit_light_indices_for_aspect(sig_type, aspect_to_code(aspect));
+            let lit_by_aspect = [
+                lit_light_indices_for_aspect(sig_type, 0),
+                lit_light_indices_for_aspect(sig_type, 1),
+                lit_light_indices_for_aspect(sig_type, 2),
+            ];
+            let signal_id = format!("sig{}", unit.tr_item_id);
             for light in &sig_type.lights {
                 let colour = sigcfg
                     .light_colour(&light.colour_name)
@@ -113,7 +130,9 @@ pub fn spawn_signal_lamp_objects(
                         Color::linear_rgb(rgb[0], rgb[1], rgb[2])
                     })
                     .unwrap_or(Color::srgb(1.0, 1.0, 1.0));
-                let on = lit.contains(&light.index);
+                let lit_for_aspect =
+                    std::array::from_fn(|idx| lit_by_aspect[idx].contains(&light.index));
+                let on = lit_for_aspect[aspect_to_code(aspect) as usize];
                 // OR: Vector3(-X, Y, Z) then Bevy Z-flip → (-X, Y, -Z).
                 let local = msts_shape_vec3_to_bevy(Vec3::new(
                     -light.position[0],
@@ -121,35 +140,49 @@ pub fn spawn_signal_lamp_objects(
                     light.position[2],
                 ));
                 let radius = light.radius.max(0.05);
-                let mesh = meshes.add(Circle::new(radius));
-                let material = materials.add(StandardMaterial {
-                    base_color: colour,
-                    emissive: if on {
-                        LinearRgba::from(colour) * 4.0
-                    } else {
-                        LinearRgba::BLACK
-                    },
-                    unlit: true,
-                    alpha_mode: AlphaMode::Blend,
-                    double_sided: true,
-                    cull_mode: None,
-                    fog_enabled: true,
-                    ..default()
-                });
+                let mesh = mesh_cache
+                    .entry(radius.to_bits())
+                    .or_insert_with(|| meshes.add(Circle::new(radius)))
+                    .clone();
+                let rgba = colour.to_srgba().to_f32_array().map(f32::to_bits);
+                let material = material_cache
+                    .entry(rgba)
+                    .or_insert_with(|| {
+                        materials.add(StandardMaterial {
+                            base_color: colour,
+                            // The physical unlit lens is part of the signal shape.
+                            // This overlay exists only for the currently lit aspect.
+                            emissive: LinearRgba::from(colour) * 4.0,
+                            unlit: true,
+                            alpha_mode: AlphaMode::Blend,
+                            double_sided: true,
+                            cull_mode: None,
+                            fog_enabled: true,
+                            ..default()
+                        })
+                    })
+                    .clone();
                 let mut tf = base;
                 tf.translation += base.rotation * local;
                 // Face along signal forward (−Z local after placement).
-                let type_owned = type_name.to_string();
                 commands.entity(root).with_children(|parent| {
                     parent.spawn((
                         SignalLamp {
-                            tr_item_id: unit.tr_item_id,
-                            light_index: light.index,
-                            signal_type: type_owned,
+                            signal_id: signal_id.clone(),
+                            lit_for_aspect,
+                            fallback_aspect: aspect,
+                            is_on: on,
                         },
+                        NotShadowCaster,
+                        NotShadowReceiver,
                         Mesh3d(mesh),
                         MeshMaterial3d(material),
                         tf,
+                        if on {
+                            Visibility::Visible
+                        } else {
+                            Visibility::Hidden
+                        },
                         Name::new(format!(
                             "signal-lamp:{}:{}:{}",
                             unit.tr_item_id, light.index, light.colour_name
@@ -219,42 +252,30 @@ fn aspect_for_tr_item(assets: &RouteAssets, tr_item_id: u32) -> SignalAspect {
 pub fn update_signal_lamps(
     scene: Res<TrackScene>,
     live: Option<Res<crate::live::LiveDrive>>,
-    assets: Res<RouteAssets>,
-    lamps: Query<(&SignalLamp, &MeshMaterial3d<StandardMaterial>)>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut lamps: Query<(&mut SignalLamp, &mut Visibility)>,
 ) {
-    let sigcfg = assets.sigcfg();
-    if sigcfg.signal_types.is_empty() {
-        return;
-    }
-    for (lamp, mat_handle) in &lamps {
-        let sig_id = format!("sig{}", lamp.tr_item_id);
+    for (mut lamp, mut visibility) in &mut lamps {
         let aspect = live
             .as_ref()
             .and_then(|l| {
                 if l.session.assume_signals_clear {
                     Some(SignalAspect::Clear)
                 } else {
-                    l.session.signal_aspect(&sig_id)
+                    l.session.signal_aspect(&lamp.signal_id)
                 }
             })
-            .or_else(|| scene.graph.signal(&sig_id).map(|s| s.aspect))
-            .unwrap_or_else(|| aspect_for_tr_item(&assets, lamp.tr_item_id));
-
-        let Some(sig_type) = sigcfg.signal_type(&lamp.signal_type) else {
+            .or_else(|| scene.graph.signal(&lamp.signal_id).map(|s| s.aspect))
+            .unwrap_or(lamp.fallback_aspect);
+        let on = lamp.lit_for_aspect[aspect_to_code(aspect) as usize];
+        if lamp.is_on == on {
             continue;
-        };
-        let lit = lit_light_indices_for_aspect(sig_type, aspect_to_code(aspect));
-        let on = lit.contains(&lamp.light_index);
-        let Some(mut mat) = materials.get_mut(mat_handle) else {
-            continue;
-        };
-        let base = mat.base_color;
-        mat.emissive = if on {
-            LinearRgba::from(base) * 4.0
+        }
+        *visibility = if on {
+            Visibility::Visible
         } else {
-            LinearRgba::BLACK
+            Visibility::Hidden
         };
+        lamp.is_on = on;
     }
 }
 

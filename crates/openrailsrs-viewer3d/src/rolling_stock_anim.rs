@@ -14,6 +14,7 @@ use openrailsrs_bevy_scenery::shapes::{
     ShapeAnimBinding, animation_pose_matrices, world_baked_anim_transform,
 };
 use openrailsrs_formats::ShapeFile;
+use openrailsrs_or_shader::coordinates::static_hierarchy_chain_transform;
 use openrailsrs_sim::RollingStockExteriorState;
 
 use crate::floating_origin::{FloatingOrigin, view_position};
@@ -131,6 +132,20 @@ pub fn car_local_from_parent_and_world(parent: &Transform, car_world: &Transform
     Transform::from_matrix(parent_m.inverse() * car_m)
 }
 
+/// Apply a local bone rotation to rest-baked mesh vertices without moving the pivot.
+///
+/// Rolling-stock part meshes already contain their complete rest hierarchy. A raw
+/// entity rotation would rotate them around the car origin and detach wheels/bogies.
+fn baked_part_local_rotation(
+    shape: &ShapeFile,
+    matrix_idx: usize,
+    local_rotation: Quat,
+) -> Transform {
+    let rest = static_hierarchy_chain_transform(shape, matrix_idx);
+    rest * Transform::from_rotation(local_rotation)
+        * Transform::from_matrix(rest.to_matrix().inverse())
+}
+
 /// Update consist car bodies to individual track chainage (#128).
 ///
 /// Runs after the lead marker pose is written; children keep authored mesh frame + Flip.
@@ -140,6 +155,7 @@ pub fn update_consist_car_track_poses(
     replay: Option<Res<ReplayState>>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
+    resolver_cache: Res<crate::track_position::TrackPositionResolverCache>,
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
@@ -155,7 +171,7 @@ pub fn update_consist_car_track_poses(
     let replay_ref = replay.as_deref();
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+        .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let terrain_ref = terrain.as_deref();
 
     for (car, child_of, mut tf) in &mut cars {
@@ -293,7 +309,7 @@ pub fn part_anim_bundle(
         return None;
     }
     let binding = ShapeAnimBinding {
-        shape: shape.clone(),
+        shape: std::sync::Arc::new(shape.clone()),
         matrix_idx,
         speed: 0.0,
         frame_count: shape
@@ -463,6 +479,7 @@ pub fn update_rolling_stock_part_anim(
     replay: Option<Res<ReplayState>>,
     scene: Res<TrackScene>,
     assets: Res<RouteAssets>,
+    resolver_cache: Res<crate::track_position::TrackPositionResolverCache>,
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
@@ -495,23 +512,18 @@ pub fn update_rolling_stock_part_anim(
     for (mut wheel, binding, mut tf) in &mut wheels {
         let r = wheel.radius_m.max(0.15);
         wheel.angle_rad += (speed / r) * dt;
-        // Bevy: +X lateral; negative angle so +Z forward motion rolls "forward".
+        // Rotate about the authored axle while retaining its baked pivot.
         let rot = Quat::from_rotation_x(-wheel.angle_rad);
-        let next = Transform {
-            translation: Vec3::ZERO,
-            rotation: rot,
-            scale: Vec3::ONE,
-        };
+        let next = baked_part_local_rotation(&binding.shape, wheel.matrix_idx, rot);
         if next.translation.is_finite() && next.rotation.is_finite() {
             *tf = next;
         }
-        let _ = binding; // wheel uses speed, not shape keys
     }
 
     let terrain_ref = terrain.as_deref();
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+        .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let resolver_ref = tdb_resolver.as_ref();
 
     for (bogie, binding, mut tf, child_of) in &mut bogies {
@@ -571,15 +583,11 @@ pub fn update_rolling_stock_part_anim(
         };
 
         let rel = bogie_relative_yaw(car_yaw, bogie_yaw);
-        let next = Transform {
-            translation: Vec3::ZERO,
-            rotation: Quat::from_rotation_y(rel),
-            scale: Vec3::ONE,
-        };
+        let next =
+            baked_part_local_rotation(&binding.shape, bogie.matrix_idx, Quat::from_rotation_y(rel));
         if next.rotation.is_finite() {
             *tf = next;
         }
-        let _ = binding;
     }
 
     for (mut keyed_anim, binding, mut tf) in &mut keyed {
@@ -691,6 +699,25 @@ mod tests {
         assert!((wheel.angle_rad - 2.0).abs() < 1e-4);
         // Body transform is independent of wheel angle.
         assert!((body.translation.x - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn rest_baked_wheel_rotation_keeps_authored_pivot_fixed() {
+        let mut shape = shape_with_named_matrix("WHEELS1");
+        shape.matrices[0].matrix.rows[3] = [3.0, 2.0, 7.0];
+        let rest = static_hierarchy_chain_transform(&shape, 0);
+        let pivot = rest.translation;
+        let delta = baked_part_local_rotation(&shape, 0, Quat::from_rotation_x(0.8));
+
+        assert!(
+            delta.transform_point(pivot).distance(pivot) < 1e-4,
+            "wheel animation moved its authored pivot: {pivot:?} -> {:?}",
+            delta.transform_point(pivot)
+        );
+        assert!(
+            delta.rotation.dot(Quat::IDENTITY).abs() < 0.999,
+            "wheel must still rotate around the retained pivot"
+        );
     }
 
     #[test]

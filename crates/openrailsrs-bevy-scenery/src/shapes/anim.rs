@@ -1,5 +1,8 @@
 //! MSTS shape matrix animation (OR `PrepareFrame` subset) — reusable for cab, bogies, world.
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use bevy::prelude::*;
 use openrailsrs_formats::{AnimController, Matrix43, ShapeFile};
 use openrailsrs_or_shader::coordinates::{
@@ -40,6 +43,42 @@ pub fn shape_has_loop_animation(shape: &ShapeFile) -> bool {
         .animations
         .first()
         .is_some_and(|a| a.frame_count > 0 && a.nodes.iter().any(|n| !n.controllers.is_empty()))
+}
+
+/// True when `matrix_idx` or one of its hierarchy parents has an authored controller.
+///
+/// A shape-level `animations` block does not imply that every primitive moves. Large
+/// WORLD shapes commonly animate one small sub-object while the building / signal
+/// structure remains static. Treating all parts as animated defeats Bevy batching and
+/// needlessly evaluates the complete shape pose once per part and placement.
+pub fn shape_matrix_chain_is_animated(shape: &ShapeFile, matrix_idx: usize) -> bool {
+    let Some(anim) = shape.animations.first() else {
+        return false;
+    };
+    if anim.frame_count == 0 {
+        return false;
+    }
+    let hierarchy = shape
+        .lod_controls
+        .first()
+        .and_then(|lod| lod.distance_levels.first())
+        .map(|level| level.hierarchy.as_slice())
+        .unwrap_or(&[]);
+    let mut current = matrix_idx as i32;
+    let mut guard = 0usize;
+    while current >= 0 && guard < shape.matrices.len().max(1) {
+        let idx = current as usize;
+        if anim
+            .nodes
+            .get(idx)
+            .is_some_and(|node| !node.controllers.is_empty())
+        {
+            return true;
+        }
+        current = hierarchy.get(idx).copied().unwrap_or(-1);
+        guard += 1;
+    }
+    false
 }
 
 /// Playback speed in keys/second (OR `FrameRate`).
@@ -234,10 +273,19 @@ pub struct ShapeAnimState {
 /// World / bogie pilot: advance animation key and apply hierarchy pose each frame.
 pub fn update_world_shape_anim(
     time: Res<Time>,
-    mut query: Query<(&mut ShapeAnimState, &ShapeAnimBinding, &mut Transform)>,
+    mut query: Query<(
+        &mut ShapeAnimState,
+        &ShapeAnimBinding,
+        &ViewVisibility,
+        &mut Transform,
+    )>,
 ) {
     let dt = time.delta_secs();
-    for (mut state, binding, mut transform) in &mut query {
+    // Placements of one WORLD shape advance with the same key. Cache both the
+    // complete authored pose and the matrix-local delta for this frame.
+    let mut pose_cache: HashMap<(usize, u32), Vec<Matrix43>> = HashMap::new();
+    let mut local_cache: HashMap<(usize, usize, u32, bool), Transform> = HashMap::new();
+    for (mut state, binding, view_visibility, mut transform) in &mut query {
         state.key += dt * binding.speed;
         if binding.frame_count > 0.0 {
             state.key %= binding.frame_count;
@@ -245,19 +293,51 @@ pub fn update_world_shape_anim(
                 state.key += binding.frame_count;
             }
         }
-        let pose = animation_pose_matrices(&binding.shape, state.key);
-        *transform = if binding.baked_rest_mesh {
-            world_baked_anim_transform(binding.placement, &binding.shape, state.matrix_idx, &pose)
+        // Keep the clock current while culled, but avoid hierarchy work and
+        // Transform change propagation until the part is visible again.
+        if !view_visibility.get() {
+            continue;
+        }
+        let shape_id = Arc::as_ptr(&binding.shape) as usize;
+        let key_bits = state.key.to_bits();
+        let pose = pose_cache
+            .entry((shape_id, key_bits))
+            .or_insert_with(|| animation_pose_matrices(binding.shape.as_ref(), state.key));
+        let local = *local_cache
+            .entry((
+                shape_id,
+                state.matrix_idx,
+                key_bits,
+                binding.baked_rest_mesh,
+            ))
+            .or_insert_with(|| {
+                if binding.baked_rest_mesh {
+                    let rest =
+                        static_hierarchy_chain_transform(binding.shape.as_ref(), state.matrix_idx);
+                    let anim = animated_hierarchy_transform(
+                        binding.shape.as_ref(),
+                        state.matrix_idx,
+                        pose,
+                    );
+                    anim * Transform::from_matrix(rest.to_matrix().inverse())
+                } else {
+                    animated_hierarchy_transform(binding.shape.as_ref(), state.matrix_idx, pose)
+                }
+            });
+        let next = if binding.baked_rest_mesh {
+            binding.placement * local
         } else {
-            animated_hierarchy_transform(&binding.shape, state.matrix_idx, &pose)
+            local
         };
+        transform.set_if_neq(next);
     }
 }
 
 /// Binds a cloned shape + matrix index for generic world animation.
 #[derive(Component, Clone)]
 pub struct ShapeAnimBinding {
-    pub shape: ShapeFile,
+    /// Shared authored data; WORLD placements must not deep-clone a complete shape.
+    pub shape: Arc<ShapeFile>,
     pub matrix_idx: usize,
     /// Keys advanced per second (OR `FrameRate`).
     pub speed: f32,
@@ -308,6 +388,35 @@ mod tests {
     fn shape_has_loop_animation_detects_controllers() {
         assert!(shape_has_loop_animation(&sliding_shape()));
         assert!(!shape_has_loop_animation(&ShapeFile::default()));
+    }
+
+    #[test]
+    fn only_controlled_matrix_and_descendants_are_animated() {
+        use openrailsrs_formats::{DistanceLevel, LodControl};
+
+        let mut shape = sliding_shape();
+        shape.matrices.resize_with(3, || NamedMatrix {
+            name: String::new(),
+            matrix: identity_matrix(),
+        });
+        shape.animations[0].nodes.resize_with(3, Default::default);
+        shape.lod_controls.push(LodControl {
+            distance_levels: vec![DistanceLevel {
+                selection_m: 1000.0,
+                hierarchy: vec![-1, 0, -1],
+                sub_objects: vec![],
+            }],
+        });
+
+        assert!(shape_matrix_chain_is_animated(&shape, 0));
+        assert!(
+            shape_matrix_chain_is_animated(&shape, 1),
+            "a child inherits its animated parent transform"
+        );
+        assert!(
+            !shape_matrix_chain_is_animated(&shape, 2),
+            "an unrelated static branch must stay out of the runtime animation query"
+        );
     }
 
     #[test]

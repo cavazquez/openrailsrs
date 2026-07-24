@@ -398,6 +398,7 @@ pub fn update_live_train_marker(
     offset: Res<crate::world::RouteWorldOffset>,
     focus: Res<crate::world::RouteFocus>,
     assets: Res<RouteAssets>,
+    resolver_cache: Res<crate::track_position::TrackPositionResolverCache>,
     live: Res<LiveDrive>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
@@ -408,7 +409,7 @@ pub fn update_live_train_marker(
     };
     let tdb_resolver = assets
         .track_db()
-        .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
+        .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let Some((pos, rot)) = vehicle_pose_on_graph_edge(
         &scene.graph,
         edge,

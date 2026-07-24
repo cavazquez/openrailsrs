@@ -82,12 +82,36 @@ Bevy usa ese límite para descartar el grupo tanto de la vista principal como de
 cada subvista de sombra. Las colas custom `Opaque3d` y `Shadow` respetan las listas
 de visibilidad de Bevy, evitando enviar a todas las cascadas grupos de otros tiles.
 
-El sol usa cuatro splits mixtos logarítmico/uniformes compatibles con Open Rails.
-Su alcance deriva de `OPENRAILSRS_VIEW_RADIUS_M` y queda limitado por
-`or_max_shadow_view_distance` (120–2500 m). Esto reemplaza el límite fijo anterior
-de 200 m, cuyo borde se movía con la cámara y podía parecer una “sombra de cámara”.
-La resolución continúa en 2048 por cascada; el culling por AABB compensa el cuarto
-split evitando draw calls fuera de cada volumen.
+El alcance de las sombras del sol vuelve a estar desacoplado de la distancia de
+dibujado: por defecto son **200 m y tres cascadas**, mientras que la geometría y
+el terreno conservan su ventana normal de 2000 m. Hacer coincidir las sombras con
+los 2000–2500 m de la vista agregaba una cuarta cascada enorme; Bevy debía volver
+a dibujar sus casters en cada subvista. Era trabajo GPU innecesario, aunque el
+cuello de botella que dejaba Birmingham en un dígito era la reconstrucción del
+índice TDB descrita más abajo.
+
+Para comparar calidad y rendimiento, `OPENRAILSRS_SHADOWS=0` desactiva las sombras.
+`OPENRAILSRS_SHADOW_DISTANCE_M=500` permite ampliar explícitamente su alcance
+(25–2500 m); una distancia mayor a 200 m usa cuatro cascadas y tiene un coste
+considerable. El visor registra al iniciar tanto el alcance de sombras como el de
+escena para evitar confundir ambos límites. La resolución continúa en 2048 por
+cascada.
+
+#### Seguimiento TDB del tren y coste por frame
+
+La cabeza, cada coche y los bogies consultan la misma `.tdb`. El índice espacial
+`tile → node IDs` se construye una sola vez al entrar en la ruta y se conserva en
+`TrackPositionResolverCache`. No debe reconstruirse dentro de
+`nearest_track_position` por cada muestra de rueda/bogie: en Chiltern eso recorría
+18194 nodos varias veces por frame y dejaba incluso el corredor sin WORLD en
+7,9–8,2 FPS. Con el índice compartido, la misma prueba alcanzó 36–38 FPS en una
+GTX 1060, con sombras de 200 m activas.
+
+Cada carrocería se coloca por su propio desplazamiento sobre el camino desde la
+cabeza; no se arrastra como una barra rígida. Las ruedas y bogies son mallas con la
+jerarquía de reposo ya horneada. Su animación compone
+`rest × rotación_local × inverse(rest)` para conservar el pivote MSTS; aplicar una
+rotación directa al `Transform` de entidad las hacía orbitar y separarse del coche.
 
 #### Continuidad de vías al cambiar LOD
 

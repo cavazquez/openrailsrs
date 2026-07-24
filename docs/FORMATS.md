@@ -4,6 +4,8 @@
 
 Parser en `openrailsrs-formats` (compressed + classic). Pipeline viewer: LOD, matrices, prim_states intercalados con trilists (orden OR). Plan residual / notas: crate `formats` + tests `parse_compressed_binary_shape_*`.
 
+Inventario de IDs admitidos, genéricos y no soportados: [`MSTS_BINARY_TOKENS.md`](MSTS_BINARY_TOKENS.md).
+
 Normal maps PBR: sidecar opcional `MiShape.s.pbr.json` (#44) — ver [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
 
 ## Audit vehículo (OR ↔ OpenBVE)

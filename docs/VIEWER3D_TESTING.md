@@ -29,6 +29,15 @@ cargo run --release -p openrailsrs-viewer3d -- \
 # Corredor (cabina sin WORLD pesado)
 cargo run --release -p openrailsrs-viewer3d -- \
   --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+
+# Regresión de movimiento: ocho coches, vía TDB y cámara alta
+OPENRAILSRS_AUTODRIVE=1 \
+OPENRAILSRS_FOLLOW=orbit \
+OPENRAILSRS_CAM_YAW=1.0 \
+OPENRAILSRS_CAM_PITCH=0.38 \
+OPENRAILSRS_CAM_DIST=120 \
+cargo run --release -p openrailsrs-viewer3d -- \
+  --run-corridor --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
 ```
 
 Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
@@ -44,11 +53,12 @@ Setup: [`CHILTERN.md`](CHILTERN.md). Cabina: [`CABVIEW3D.md`](CABVIEW3D.md).
 | Precisión WORLD / continuidad de vía | Residuo `f64→f32` restaurado después del rebase; test `world_position_rebase_restores_sub_metre_track_placement` con coordenadas reales Chiltern |
 | SortIndex (#102) / dual-pass (#101) | `mesh.rs` order; `blend_alpha_passes_*`; DDS scenery dual_blend |
 | Sombras instanced (#72) | receive + cast Shadow phase; AABB agregado con scale/shear y culling por vista/cascada |
-| Cascadas de sol | 4 splits OR hasta la distancia visible (cap 2500 m); sin anillo fijo de 200 m |
+| Cascadas de sol | 200 m / 3 cascadas por defecto, separado de los 2000 m de escena; `OPENRAILSRS_SHADOW_DISTANCE_M` permite ampliar |
+| Caché de posición TDB | `TrackPositionResolverCache`; `nearest_track_position_on_indexed_tile` no reconstruye el índice de 18k nodos por bogie/frame |
 | Cabina / trabajo estable | runtime CVF sin deep clone; gauges/dígitos cacheados; DMI repinta a 20 Hz |
 | Fog (#39) | on by default; `F` → densidad 0 (no quitar componente) |
 | PBR sidecar (#44) | `*.s.pbr.json` → tangents + normal map |
-| Bogies (#69) / puertas (#81) | `rolling_stock_anim` |
+| Bogies (#69) / puertas (#81) | `rolling_stock_anim`; rotación rest-baked conserva el pivote MSTS |
 | Inicio live / consist | `chainage_at_edge_position`, offsets relativos a la cabeza y rechazo de ID TDB numérico distante |
 | Orientación / cámara live | `vehicle_rotation_includes_tdb_pitch_and_roll`, `consist_chase_pose_uses_placed_head_and_tail`, `enable_live_defaults_starts_in_chase_at_train` |
 | Pullman exterior | alpha/cull tests; `./scripts/pullman_visual_matrix.sh` |
