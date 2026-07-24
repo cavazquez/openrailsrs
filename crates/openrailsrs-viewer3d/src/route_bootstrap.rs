@@ -110,14 +110,34 @@ pub fn log_time_to_first_presented_frame(
     );
 }
 
+/// Marker for the Camera2d that owns the loading overlay (not every Camera2d in the app).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct LoadingScreenCamera;
+
 #[derive(Resource)]
 pub struct ViewerLoadingScreen {
     pub root: Entity,
     pub status: Entity,
+    pub camera: Entity,
     pub scenery_spawn_started: bool,
 }
 
 pub fn setup_viewer_loading_ui(mut commands: Commands) {
+    // Pin the overlay to this Camera2d. When Playing starts, Camera3d becomes
+    // `IsDefaultUiCamera` — without `UiTargetCamera` the text jumps to the 3D camera
+    // while this Camera2d keeps clearing the whole framebuffer → solid opaque screen.
+    let camera = commands
+        .spawn((
+            LoadingScreenCamera,
+            Camera2d,
+            Camera {
+                order: 10,
+                clear_color: ClearColorConfig::Custom(Color::srgb(0.08, 0.10, 0.14)),
+                ..default()
+            },
+            Name::new("loading-screen-camera"),
+        ))
+        .id();
     let root = commands
         .spawn((
             Node {
@@ -130,6 +150,7 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
                 ..default()
             },
             BackgroundColor(Color::srgb(0.08, 0.10, 0.14)),
+            UiTargetCamera(camera),
         ))
         .id();
     let title = commands
@@ -153,20 +174,15 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
         ))
         .id();
     commands.entity(root).add_children(&[title, status]);
-    commands.spawn((
-        Camera2d,
-        Camera {
-            order: 10,
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.08, 0.10, 0.14)),
-            ..default()
-        },
-    ));
     commands.insert_resource(ViewerLoadingScreen {
         root,
         status,
+        camera,
         scenery_spawn_started: false,
     });
-    crate::viewer_log!("openrailsrs-viewer3d: loading screen active — waiting for world progressive spawn");
+    crate::viewer_log!(
+        "openrailsrs-viewer3d: loading screen active — waiting for world progressive spawn"
+    );
 }
 
 pub fn poll_route_load(
@@ -236,7 +252,6 @@ pub fn update_loading_screen_progress(
     screen: Option<ResMut<ViewerLoadingScreen>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
     mut texts: Query<&mut Text>,
-    loading_cams: Query<Entity, With<Camera2d>>,
 ) {
     let Some(mut screen) = screen else {
         return;
@@ -249,12 +264,14 @@ pub fn update_loading_screen_progress(
         }
     } else if screen.scenery_spawn_started {
         // Progressive world spawn finished!
-        crate::viewer_log!("openrailsrs-viewer3d: progressive spawn complete — entering simulation");
-        commands.entity(screen.root).despawn();
+        crate::viewer_log!(
+            "openrailsrs-viewer3d: progressive spawn complete — entering simulation"
+        );
+        let root = screen.root;
+        let camera = screen.camera;
         commands.remove_resource::<ViewerLoadingScreen>();
-        for e in &loading_cams {
-            commands.entity(e).despawn();
-        }
+        commands.entity(root).despawn();
+        commands.entity(camera).despawn();
     }
 }
 

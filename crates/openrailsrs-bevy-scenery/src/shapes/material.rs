@@ -168,7 +168,8 @@ pub fn scenery_material_tint_for_ace(pixel_brightened: bool) -> Color {
 }
 
 /// Emissive lift for atlases that stay near-black after pixel normalization (MSTS night/signal tex).
-const SCENERY_DARK_EMISSIVE: LinearRgba = LinearRgba::new(0.4, 0.4, 0.45, 1.0);
+// Neutral grey (was 0.4/0.4/0.45 — a cool bias that tinted dark buildings blue-white).
+const SCENERY_DARK_EMISSIVE: LinearRgba = LinearRgba::new(0.38, 0.38, 0.38, 1.0);
 
 pub(crate) fn scenery_needs_emissive_texture(rgba: &[u8]) -> bool {
     ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD

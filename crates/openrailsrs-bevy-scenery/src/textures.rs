@@ -839,17 +839,19 @@ pub fn ace_to_image_with_sampler(
         data.extend_from_slice(&mip.rgba);
     }
 
-    let mut image = Image::new(
+    // `Image::new` debug-asserts data.len() == mip0 only; concatenated mips need
+    // `new_uninit` + manual data (Bevy 0.19).
+    let mut image = Image::new_uninit(
         Extent3d {
             width: ace.width,
             height: ace.height,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        data,
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
+    image.data = Some(data);
     if mips.len() > 1 {
         image.texture_descriptor.mip_level_count = mips.len() as u32;
     }

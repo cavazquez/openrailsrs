@@ -876,48 +876,17 @@ pub fn matrix_pivot_bevy(shape: &ShapeFile, matrix_idx: usize) -> Option<Vec3> {
 }
 
 /// ACE → GPU image with dark-atlas normalization for world / train scenery.
+///
+/// Preserves the ACE mip chain (same as cab / render3d) so anisotropic filtering
+/// can kill ballast/track moiré at glancing angles.
 pub fn ace_to_scenery_image(ace: &AceFile) -> (Image, bool) {
     let (rgba, brightened) = brighten_dark_ace_rgba(&ace.mip0);
-    (ace_rgba_to_image(ace.width, ace.height, &rgba), brightened)
-}
-
-fn ace_rgba_to_image(width: u32, height: u32, rgba: &[u8]) -> Image {
-    ace_rgba_to_image_with_addr(width, height, rgba, None)
-}
-
-fn ace_rgba_to_image_with_addr(
-    width: u32,
-    height: u32,
-    rgba: &[u8],
-    tex_addr_mode: Option<i32>,
-) -> Image {
-    ace_rgba_to_image_with_sampler(width, height, rgba, tex_addr_mode, None)
-}
-
-fn ace_rgba_to_image_with_sampler(
-    width: u32,
-    height: u32,
-    rgba: &[u8],
-    tex_addr_mode: Option<i32>,
-    mip_map_lod_bias: Option<f32>,
-) -> Image {
-    let mut image = Image::new(
-        Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        rgba.to_vec(),
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    );
-    openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
-        &mut image,
-        tex_addr_mode,
-        mip_map_lod_bias,
-    );
-    image
+    let image = if brightened {
+        scenery_ace_brightened_to_image(ace, &rgba, None, None)
+    } else {
+        openrailsrs_bevy_scenery::textures::ace_to_image_with_sampler(ace, None, None)
+    };
+    (image, brightened)
 }
 
 /// Cab ACE with pixel brighten applied to every mip level (opt-in `CAB_BRIGHTEN`).
@@ -926,6 +895,38 @@ fn cab_ace_brightened_to_image(
     bright_mip0: &[u8],
     tex_addr_mode: Option<i32>,
     mip_map_lod_bias: Option<f32>,
+) -> Image {
+    ace_brightened_mips_to_image(
+        ace,
+        bright_mip0,
+        tex_addr_mode,
+        mip_map_lod_bias,
+        brighten_cab_ace_rgba,
+    )
+}
+
+/// Scenery ACE with dark-atlas brighten on every mip (keeps anisotropic mip chain).
+fn scenery_ace_brightened_to_image(
+    ace: &AceFile,
+    bright_mip0: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> Image {
+    ace_brightened_mips_to_image(
+        ace,
+        bright_mip0,
+        tex_addr_mode,
+        mip_map_lod_bias,
+        brighten_dark_ace_rgba,
+    )
+}
+
+fn ace_brightened_mips_to_image(
+    ace: &AceFile,
+    bright_mip0: &[u8],
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+    brighten: fn(&[u8]) -> (Vec<u8>, bool),
 ) -> Image {
     let mut data = Vec::new();
     let mut mip_count = 1u32;
@@ -937,22 +938,23 @@ fn cab_ace_brightened_to_image(
             if i == 0 {
                 data.extend_from_slice(bright_mip0);
             } else {
-                let (rgba, _) = brighten_cab_ace_rgba(&mip.rgba);
+                let (rgba, _) = brighten(&mip.rgba);
                 data.extend_from_slice(&rgba);
             }
         }
     }
-    let mut image = Image::new(
+    // See `ace_to_image_with_sampler`: concatenated mips bypass `Image::new` size assert.
+    let mut image = Image::new_uninit(
         Extent3d {
             width: ace.width,
             height: ace.height,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        data,
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
+    image.data = Some(data);
     if mip_count > 1 {
         image.texture_descriptor.mip_level_count = mip_count;
     }
@@ -2119,14 +2121,22 @@ fn material_for_shape_texture(
                         };
                         (image, mip0, brightened)
                     } else {
+                        // Keep ACE mips (render3d / cab path). mip0-only + aniso = track moiré.
                         let (rgba, pixel_brightened) = brighten_dark_ace_rgba(&ace.mip0);
-                        let image = ace_rgba_to_image_with_sampler(
-                            ace.width,
-                            ace.height,
-                            &rgba,
-                            tex_addr_mode,
-                            mip_map_lod_bias,
-                        );
+                        let image = if pixel_brightened {
+                            scenery_ace_brightened_to_image(
+                                &ace,
+                                &rgba,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
+                        } else {
+                            openrailsrs_bevy_scenery::textures::ace_to_image_with_sampler(
+                                &ace,
+                                tex_addr_mode,
+                                mip_map_lod_bias,
+                            )
+                        };
                         (image, rgba, pixel_brightened)
                     };
                     let tint = if cab_interior {
@@ -3239,6 +3249,40 @@ mod tests {
         let (out, brightened) = brighten_dark_ace_rgba(&rgba);
         assert!(!brightened);
         assert_eq!(out, rgba);
+    }
+
+    #[test]
+    fn ace_to_scenery_image_preserves_mip_chain() {
+        use openrailsrs_ace::{AceFile, AceFormat, AceMipLevel};
+        let mip0 = vec![200u8; 4 * 4 * 4];
+        let mip1 = vec![180u8; 2 * 2 * 4];
+        let ace = AceFile {
+            width: 4,
+            height: 4,
+            format: AceFormat::Rgba8,
+            mips_count: 2,
+            mip0: mip0.clone(),
+            mips: vec![
+                AceMipLevel {
+                    width: 4,
+                    height: 4,
+                    rgba: mip0,
+                },
+                AceMipLevel {
+                    width: 2,
+                    height: 2,
+                    rgba: mip1,
+                },
+            ],
+            has_mask_channel: false,
+            alpha_bits: 0,
+        };
+        let (image, brightened) = ace_to_scenery_image(&ace);
+        assert!(!brightened, "bright atlas should skip pixel brighten");
+        assert_eq!(
+            image.texture_descriptor.mip_level_count, 2,
+            "scenery ACE must keep mips for anisotropic track/ballast filtering"
+        );
     }
 
     #[test]

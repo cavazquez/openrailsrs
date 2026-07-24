@@ -7,6 +7,7 @@
     shadows::fetch_directional_shadow,
     pbr_functions,
 }
+#import bevy_render::maths::PI
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -71,11 +72,13 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let n = normalize(in.world_normal);
     var lit = color.rgb;
     let ambient = view_bindings::lights.ambient_color.rgb;
+    let exposure = view_bindings::view.exposure;
     if (view_bindings::lights.n_directional_lights > 0u) {
         let light = view_bindings::lights.directional_lights[0];
         let light_dir = light.direction_to_light;
-        // Half-Lambert-ish floor so unlit faces stay visible (parity with scenery paths).
-        let ndotl = clamp(dot(n, light_dir) * 0.5 + 0.5, 0.25, 1.0);
+        // Physical directional lights are stored in lux. Match Bevy's diffuse BRDF
+        // normalization and camera exposure; omitting both clips ordinary scenery white.
+        let ndotl = max(dot(n, light_dir), 0.0);
         var shadow_mod = 1.0;
         if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
             let world_pos4 = vec4<f32>(in.world_position, 1.0);
@@ -89,9 +92,10 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
             );
         }
         let light_rgb = light.color.rgb;
-        lit = color.rgb * (ambient + light_rgb * ndotl * shadow_mod);
+        let diffuse_sun = light_rgb * (ndotl / PI) * shadow_mod;
+        lit = color.rgb * exposure * (ambient + diffuse_sun);
     } else {
-        lit = color.rgb * max(ambient, vec3<f32>(0.35));
+        lit = color.rgb * exposure * max(ambient, vec3<f32>(0.35));
     }
 
     var out_color = vec4<f32>(lit, color.a);

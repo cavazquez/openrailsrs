@@ -378,6 +378,9 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
                     HudProgressBar,
                     Visibility::Hidden,
                     Node {
+                        // Hidden from layout until there is real route progress —
+                        // otherwise a solid empty track bar sits between HUD rows.
+                        display: Display::None,
                         width: Val::Percent(100.0),
                         height: Val::Px(8.0),
                         margin: UiRect::vertical(Val::Px(1.0)),
@@ -635,7 +638,17 @@ pub(crate) fn update_hud(
                 Visibility::Hidden
             };
         } else if bar.is_some() {
-            *vis = if active || live.is_some() {
+            // Only reserve HUD space when the fill would be visible (live@0% looked like
+            // an opaque black strip under the coords row).
+            let show = (active || live.is_some()) && content.progress > 0.005;
+            if let Some(node) = node.as_mut() {
+                node.display = if show {
+                    Display::Flex
+                } else {
+                    Display::None
+                };
+            }
+            *vis = if show {
                 Visibility::Inherited
             } else {
                 Visibility::Hidden

@@ -47,7 +47,10 @@ fn wall_hms_ms() -> String {
     let mut tm = Tm::default();
     let ptr = unsafe { localtime_r(&secs, &mut tm) };
     if !ptr.is_null() {
-        format!("{:02}:{:02}:{:02}.{:03}", tm.tm_hour, tm.tm_min, tm.tm_sec, ms)
+        format!(
+            "{:02}:{:02}:{:02}.{:03}",
+            tm.tm_hour, tm.tm_min, tm.tm_sec, ms
+        )
     } else {
         let total_s = duration.as_secs();
         let s = total_s % 60;

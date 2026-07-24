@@ -37,12 +37,36 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 |------|--------|
 | SortIndex (#102) | Bake conserva orden de archivo; `depth_bias` nudge en viewer3d + render3d |
 | Dual-pass BlendATex* (#101) | Mask(250)+Blend en ACE/DDS scenery (StandardMaterial); cab single-pass |
-| Instancing light model (#138) | Batch GPU solo TexDiff/Unknown sin unlit/emissive; Tex→FullBright y resto → entity path |
+| Instancing light model (#138) | Batch GPU solo TexDiff/Unknown sin unlit/emissive ni PBR metálico fuerte; Tex→FullBright, `metallic>0.1`, textura metallic-roughness y resto → entity path |
 | Affine Matrix3x3 (#139/#174) | Shear = `linear_requires_affine` (no `linear.is_some`); GPU Mat4 si N≥4, else bake mesh + TRS traslación |
 | Night/Underground (#142) | Flag Underground; selector sol/túnel; Night local→padre DDS→ACE; `OPENRAILSRS_SCENERY_NIGHT` |
 | Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
 | PAT `start_offset_m` (#132) | Ancla = cabeza; TrackPDP ignora `DistanceDownPath` |
 | Pose por coche (#128) | `update_consist_car_track_poses` — chainage individual en curvas |
+
+#### Materiales metálicos e instancing
+
+El shader WORLD instanciado transporta únicamente albedo y corte alpha; no transporta
+`metallic`, `roughness` ni `reflectance`. Iluminar como Lambert un material fuertemente
+metálico satura a blanco las cabezas de riel (`RailHead_*.ace`, `ukfs_rail.ACE`) bajo
+el sol HDR. Por eso los materiales con `metallic > 0.1` o textura
+metallic-roughness usan automáticamente el camino entity/PBR. El resto de cada shape
+puede continuar instanciado.
+
+Para diagnóstico, `OPENRAILSRS_WORLD_INSTANCING=0` mantiene disponible el opt-out
+global, con mayor cantidad de entidades y draw calls.
+
+#### Iluminación HDR de instancias WORLD
+
+Las luces exteriores usan unidades físicas (sol y ambiente en lux) junto con
+`Exposure::SUNLIGHT`. El shader instanciado debe aplicar tanto la exposición de la
+cámara como la normalización Lambert `1/π`. Multiplicar directamente el albedo por
+los valores físicos —el comportamiento anterior— saturaba a blanco edificios,
+andenes y otras shapes repetidas aunque sus texturas ACE estuvieran cargadas.
+
+El camino instanciado conserva sombras y niebla, pero ahora calcula:
+`albedo × exposure × (ambient + sun × NdotL/π × shadow)`. Los materiales PBR
+fuertemente metálicos continúan en el camino entity/PBR descrito arriba.
 
 ## Comando rápido
 

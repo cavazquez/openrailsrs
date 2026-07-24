@@ -15,8 +15,13 @@ use crate::track_position::{
 use crate::world::{RouteWorldOffset, load_world_from_route_dir_near, msts_to_bevy};
 use openrailsrs_formats::Vec3 as MstsVec3;
 
-/// Default Birmingham station tile for Chiltern validation.
+/// Paddington / London end of Chiltern (`RS_Let's go to Birmingham` **start**).
+///
+/// Historical name kept for callers; this is **not** Birmingham Snow Hill (dest ~−6111/14957).
 pub const CHILTERN_BIRMINGHAM_TILE: (i32, i32) = (-6080, 14925);
+
+/// Alias: scenario start / TrackPDP[0] area (Paddington platforms).
+pub const CHILTERN_PADDINGTON_TILE: (i32, i32) = CHILTERN_BIRMINGHAM_TILE;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct PlacementAuditReport {

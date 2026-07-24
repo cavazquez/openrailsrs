@@ -134,7 +134,7 @@ pub fn live_mode_inactive(live: Option<Res<LiveDrive>>) -> bool {
     live.is_none()
 }
 
-/// Orbit framing for live mode: free pan/rotate (T cycles chase / driver later).
+/// Frame the camera on the live train at route start (chase). `OPENRAILSRS_FOLLOW` overrides.
 #[allow(clippy::type_complexity)]
 pub fn enable_live_defaults(
     mut follow: ResMut<CameraFollowMode>,
@@ -142,16 +142,15 @@ pub fn enable_live_defaults(
     scene: Res<crate::track::TrackScene>,
     focus: Res<crate::world::RouteFocus>,
     mode: Res<ViewerSceneryMode>,
+    live: Res<LiveDrive>,
     mut limit: ResMut<OrbitDistanceLimit>,
     train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
     mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
 ) {
-    *follow = if mode.is_run_corridor() {
-        CameraFollowMode::ChaseCam
-    } else {
-        CameraFollowMode::Off
-    };
-    // Optional override for demos / capture: keep the camera locked to the train.
+    // Always start in chase so the first view is the consist at the scenario *start*
+    // (Paddington for Chiltern), not free-orbit far from the train / destination marker.
+    *follow = CameraFollowMode::ChaseCam;
+    // Optional override for demos / capture / free look.
     if let Ok(mode) = std::env::var("OPENRAILSRS_FOLLOW") {
         match mode.trim().to_ascii_lowercase().as_str() {
             "chase" => *follow = CameraFollowMode::ChaseCam,
@@ -202,13 +201,16 @@ pub fn enable_live_defaults(
     *orbit = crate::camera::orbit_state_with_env_overrides(*orbit);
     *transform =
         camera_transform_from_orbit_state(orbit.focus, orbit.yaw, orbit.pitch, orbit.distance);
-    if mode.is_run_corridor() {
-        viewer_log!(
-            "openrailsrs-viewer3d: run_corridor — camera chase init dist={:.0}m pitch={:.0}°",
-            orbit.distance,
-            orbit.pitch.to_degrees()
-        );
-    }
+    let edge = live.session.current_edge_id().unwrap_or("?");
+    let dest = live.session.gameplay.destination_node.as_str();
+    viewer_log!(
+        "openrailsrs-viewer3d: live camera chase at route START edge {}+{:.0}m (dest {}, odo={:.0}m) dist={:.0}m",
+        edge,
+        live.session.pos_on_edge_m(),
+        dest,
+        live.session.state.odometer_m,
+        orbit.distance,
+    );
 }
 
 pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {

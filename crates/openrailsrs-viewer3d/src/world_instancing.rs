@@ -46,6 +46,13 @@ use openrailsrs_bevy_scenery::shapes::lod_level_index_for_distance;
 /// Minimum placements in one tile before GPU instancing is used.
 pub const WORLD_INSTANCING_MIN: usize = 4;
 
+/// Highest scalar metallic value the albedo-only instancing shader may approximate.
+///
+/// Strongly metallic materials (notably `RailHead_*.ace` / `ukfs_rail.ACE`) need
+/// Bevy's PBR path. Treating their albedo as Lambert diffuse clips rail heads white
+/// under the outdoor HDR sun.
+const WORLD_INSTANCING_MAX_METALLIC: f32 = 0.1;
+
 const SHADER_WGSL: &str = include_str!("world_instancing.wgsl");
 
 /// Opt-out: `OPENRAILSRS_WORLD_INSTANCING=0`.
@@ -309,11 +316,18 @@ pub fn instancing_light_model_supported(
 }
 
 /// True when albedo+cutoff packing is enough for this [`StandardMaterial`] (#138).
+///
+/// The custom instancing shader does not carry metallic/roughness parameters. Keep
+/// strongly metallic materials and metallic-roughness textures on Bevy's entity PBR
+/// path; otherwise rail-head albedo is lit as diffuse and saturates to white.
 pub fn instancing_material_supported(mat: &StandardMaterial) -> bool {
     if mat.unlit {
         return false;
     }
     if mat.emissive_texture.is_some() {
+        return false;
+    }
+    if mat.metallic > WORLD_INSTANCING_MAX_METALLIC || mat.metallic_roughness_texture.is_some() {
         return false;
     }
     let e = mat.emissive;
@@ -1116,11 +1130,24 @@ mod tests {
 
     #[test]
     fn instancing_shader_uses_scene_light_and_fog() {
-        // #76: must not hardcode a fixed light_dir; fog via Bevy DISTANCE_FOG.
+        // #76: physical scene light must use camera exposure + diffuse BRDF
+        // normalization; fog uses Bevy DISTANCE_FOG.
         let src = include_str!("world_instancing.wgsl");
         assert!(
             src.contains("directional_lights"),
             "shader must sample scene directional light"
+        );
+        assert!(
+            src.contains("view.exposure"),
+            "physical sun/ambient light must be scaled by camera exposure"
+        );
+        assert!(
+            src.contains("ndotl / PI"),
+            "Lambert diffuse light must include its 1/PI BRDF normalization"
+        );
+        assert!(
+            !src.contains("ambient + light_rgb * ndotl * shadow_mod"),
+            "raw physical light multiplication clips textured scenery white"
         );
         assert!(
             !src.contains("vec3<f32>(0.35, 0.9, 0.25)"),
@@ -1182,10 +1209,11 @@ mod tests {
     }
 
     #[test]
-    fn instancing_material_rejects_unlit_and_emissive_fill() {
+    fn instancing_material_rejects_unlit_emissive_and_strong_metallic() {
         let mut lit = StandardMaterial {
             unlit: false,
             emissive: LinearRgba::BLACK,
+            metallic: 0.05,
             ..Default::default()
         };
         assert!(instancing_material_supported(&lit));
@@ -1195,6 +1223,19 @@ mod tests {
 
         lit.unlit = false;
         lit.emissive = LinearRgba::new(0.11, 0.12, 0.14, 1.0);
+        assert!(!instancing_material_supported(&lit));
+
+        lit.emissive = LinearRgba::BLACK;
+        lit.metallic = 0.82;
+        assert!(
+            !instancing_material_supported(&lit),
+            "rail-style metallic material must keep the entity PBR path"
+        );
+
+        lit.metallic = WORLD_INSTANCING_MAX_METALLIC;
+        assert!(instancing_material_supported(&lit));
+
+        lit.metallic_roughness_texture = Some(Handle::default());
         assert!(!instancing_material_supported(&lit));
     }
 

@@ -35,7 +35,7 @@ cargo run --release -p openrailsrs-viewer3d -- \
 
 Teclas (estilo OR): **1** cabina · **Alt+1** 2D/3D · **2** chase · **3** orbit · **5** pasajero · **8** fly · **A/D** throttle · **;/'** freno · **W/S** reverser · **Space** bocina · **V** wiper · **Backspace** emergencia · **RMB** mirar (cab/pasajero) · **F** fog · **G** teleport. Spawn WORLD progresivo (~10–30 s según radio).
 
-Ancla típica Birmingham: tile **−6079…−6080 / 14925**. Ver [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
+Ancla de **salida** (Paddington / TrackPDP[0]): tile **−6079…−6080 / 14925**. Destino Birmingham ~**−6111 / 14957**. Ver [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
 
 ## Goldens visuales
 
