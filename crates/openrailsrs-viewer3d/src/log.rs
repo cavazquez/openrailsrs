@@ -17,17 +17,45 @@ fn elapsed_ms() -> f64 {
 }
 
 fn wall_hms_ms() -> String {
-    let duration = SystemTime::now()
+    let now = SystemTime::now();
+    let duration = now
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default();
-    let total_ms = duration.as_millis();
-    let ms = total_ms % 1000;
-    let total_s = total_ms / 1000;
-    let s = total_s % 60;
-    let total_m = total_s / 60;
-    let m = total_m % 60;
-    let h = (total_m / 60) % 24;
-    format!("{h:02}:{m:02}:{s:02}.{ms:03}")
+    let ms = duration.subsec_millis();
+    let secs = duration.as_secs() as i64;
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct Tm {
+        tm_sec: i32,
+        tm_min: i32,
+        tm_hour: i32,
+        tm_mday: i32,
+        tm_mon: i32,
+        tm_year: i32,
+        tm_wday: i32,
+        tm_yday: i32,
+        tm_isdst: i32,
+        tm_gmtoff: i64,
+        tm_zone: *const i8,
+    }
+
+    unsafe extern "C" {
+        fn localtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
+    }
+
+    let mut tm = Tm::default();
+    let ptr = unsafe { localtime_r(&secs, &mut tm) };
+    if !ptr.is_null() {
+        format!("{:02}:{:02}:{:02}.{:03}", tm.tm_hour, tm.tm_min, tm.tm_sec, ms)
+    } else {
+        let total_s = duration.as_secs();
+        let s = total_s % 60;
+        let total_m = total_s / 60;
+        let m = total_m % 60;
+        let h = (total_m / 60) % 24;
+        format!("{h:02}:{m:02}:{s:02}.{ms:03}")
+    }
 }
 
 fn use_color() -> bool {
