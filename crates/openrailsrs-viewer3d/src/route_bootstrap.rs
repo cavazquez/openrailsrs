@@ -156,6 +156,7 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Camera {
+            order: 10,
             clear_color: ClearColorConfig::Custom(Color::srgb(0.08, 0.10, 0.14)),
             ..default()
         },
