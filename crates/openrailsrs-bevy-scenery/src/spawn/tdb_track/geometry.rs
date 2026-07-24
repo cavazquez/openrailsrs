@@ -310,6 +310,30 @@ fn point_along_span(span: SectionPathSpan, distance_m: f64) -> Vec3 {
     span.start_world.lerp(span.end_world, t)
 }
 
+/// Bevy yaw (degrees) at `distance_m` along a span.
+///
+/// Straights keep the section entry heading. Curves advance the same signed turn
+/// as [`arc_local_frame`] (`Quat::from_rotation_y(-φ)` with `φ = angle·t`), so the
+/// vehicle tangent tracks the centreline instead of snapping only at section joints.
+fn yaw_along_span(span: SectionPathSpan, distance_m: f64) -> f64 {
+    if !span.is_curved() {
+        return span.world_yaw_deg;
+    }
+    let span_len = span_length_m(span).max(1e-6);
+    let t = (distance_m / span_len).clamp(0.0, 1.0);
+    let angle_deg = f64::from(span.curve_angle_deg.unwrap());
+    span.world_yaw_deg - angle_deg * t
+}
+
+fn track_pose_along_span(span: SectionPathSpan, distance_m: f64) -> TrackPose {
+    TrackPose {
+        position: point_along_span(span, distance_m),
+        yaw_deg: yaw_along_span(span, distance_m) as f32,
+        pitch_rad: span.pitch_rad as f32,
+        roll_rad: span.roll_rad as f32,
+    }
+}
+
 /// One `TrVectorSection` → one centreline span from `TrackSection` (OR Traveller / #104).
 pub fn section_path_spans(
     section: TrVectorSectionRecord,
@@ -876,13 +900,7 @@ pub fn tdb_node_track_pose(
                     let span_len = span_length_m(*span);
                     if chainage_m <= accumulated + span_len + 1e-6 {
                         let along = (chainage_m - accumulated).max(0.0);
-                        let pos = point_along_span(*span, along);
-                        return Some(TrackPose {
-                            position: pos,
-                            yaw_deg: span.world_yaw_deg as f32,
-                            pitch_rad: span.pitch_rad as f32,
-                            roll_rad: span.roll_rad as f32,
-                        });
+                        return Some(track_pose_along_span(*span, along));
                     }
                     accumulated += span_len;
                 }
@@ -1024,14 +1042,21 @@ fn nearest_track_position_in_nodes(
                     ),
                 ) / (seg_len * seg_len))
                     .clamp(0.0, 1.0);
-                let pos = span.start_world.lerp(span.end_world, t);
+                // Prefer arc centreline + tangent when the span is curved; chord
+                // projection only supplies the along-span fraction.
+                let along = f64::from(t) * span_length_m(span);
+                let pose = if span.is_curved() {
+                    track_pose_along_span(span, along)
+                } else {
+                    TrackPose {
+                        position: span.start_world.lerp(span.end_world, t),
+                        yaw_deg: span.world_yaw_deg as f32,
+                        pitch_rad: span.pitch_rad as f32,
+                        roll_rad: span.roll_rad as f32,
+                    }
+                };
                 best_dist = dist;
-                best = Some(TrackPose {
-                    position: pos,
-                    yaw_deg: span.world_yaw_deg as f32,
-                    pitch_rad: span.pitch_rad as f32,
-                    roll_rad: span.roll_rad as f32,
-                });
+                best = Some(pose);
             }
         }
     }
@@ -1237,6 +1262,52 @@ mod tests {
         assert!(
             (dx - 22.6).abs() < 0.5 && (dz_msts - (-97.4)).abs() < 0.5,
             "got MSTS delta ({dx:.3}, {dz_msts:.3}), expected ~(22.6, -97.4)"
+        );
+    }
+
+    #[test]
+    fn curved_track_pose_yaw_follows_arc_tangent() {
+        // Section AY=0, curve −5°: mid-span yaw must be halfway (− entry + turn),
+        // not stuck at the entry heading (the live-train “step / lean” bug).
+        let mut section = section_at_with_shape(0.0, 0.0, 5005, 99);
+        section.ay = 0.0;
+        let cat = catalog_with_curve_shape();
+        let arc_len = 500.0_f64 * 5.0_f64.to_radians();
+        let mut tdb = TrackDbFile::default();
+        tdb.nodes.push(TrackDbNode {
+            id: 1,
+            position: Some(TrackVectorPoint {
+                tile_x: 0,
+                tile_z: 0,
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            }),
+            pin_refs: Vec::new(),
+            kind: TrackNodeKind::Vector {
+                length_m: arc_len,
+                speed_limit_mps: 0.0,
+                pins: (0, 0),
+                item_ids: Vec::new(),
+                sections: vec![section],
+                geometry: None,
+            },
+        });
+
+        let entry = tdb_node_track_pose(&tdb, 1, 0.0, Some(&cat), None).expect("entry");
+        let mid = tdb_node_track_pose(&tdb, 1, arc_len * 0.5, Some(&cat), None).expect("mid");
+        let end = tdb_node_track_pose(&tdb, 1, arc_len, Some(&cat), None).expect("end");
+
+        // AY=0 → Bevy yaw 180° (Z-flip). Curve angle −5° → Δyaw = −angle·t.
+        let d_mid = mid.yaw_deg - entry.yaw_deg;
+        let d_end = end.yaw_deg - entry.yaw_deg;
+        assert!(
+            (d_mid - 2.5).abs() < 0.1,
+            "mid-curve Δyaw must be +2.5°, got {d_mid} (stuck entry would be ~0)"
+        );
+        assert!(
+            (d_end - 5.0).abs() < 0.15,
+            "end-of-curve Δyaw must be +5°, got {d_end}"
         );
     }
 

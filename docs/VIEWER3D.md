@@ -43,6 +43,7 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 | Streaming A→B→A (#144) | Test de membresía load/unload en `stream.rs` |
 | PAT `start_offset_m` (#132) | Ancla = cabeza; TrackPDP ignora `DistanceDownPath` |
 | Pose por coche (#128) | `update_consist_car_track_poses` — chainage absoluto (incluye `start_offset_m`) e individual en curvas |
+| Yaw en curvas TDB | `TrackPose` sigue la tangente del arco (`AY ± ángulo·t`), no el heading fijo del tramo |
 | Inicio live + cámara | ID `eNNNN` validado espacialmente; chase cercano sobre los coches delanteros |
 
 #### Materiales metálicos e instancing

@@ -19,6 +19,7 @@ Lecciones para alinear grafo lógico ↔ geometría TDB (no portar Track Viewer)
 7. **Pose por coche** (#128): cada vehículo samplea chainage absoluto TDB/grafo, incluido el offset inicial; no barra rígida ni offsets relativos al origen del path.
 8. Un `eNNNN` del grafo solo reutiliza el vector TDB `NNNN` si sus extremos son cercanos; si no, se hace *nearest snap* desde la posición espacial del grafo.
 9. `TrackPose` orienta `+Z` por la vía y el frame de tren usa `+X`: la rotación de vehículo debe componer ese cambio de base después del yaw/pitch/roll TDB.
+10. En **curvas**, el yaw de `TrackPose` sigue la tangente del arco (`AY` de entrada ± ángulo·t), no el `AY` fijo del tramo. Si no, el tren avanza “a pasos” y se ladea izquierda/derecha al cruzar secciones.
 
 ## Comandos
 
