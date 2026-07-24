@@ -73,6 +73,7 @@ use openrailsrs_viewer3d::rolling_stock::try_load_consist_vehicles;
 use openrailsrs_viewer3d::route_bootstrap::{
     PendingRouteLoad, RouteLoadBundle, ViewerAppState, ViewerBootClock,
     log_time_to_first_presented_frame, poll_route_load, setup_viewer_loading_ui,
+    update_loading_screen_progress,
 };
 use openrailsrs_viewer3d::shapes::global_assets_dirs;
 use openrailsrs_viewer3d::tdb_track::collect_tdb_chords;
@@ -391,6 +392,7 @@ fn main() {
         (
             log_time_to_first_presented_frame,
             poll_route_load.run_if(in_state(ViewerAppState::Loading)),
+            update_loading_screen_progress,
             exit_on_esc,
         ),
     );

@@ -171,30 +171,11 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
 pub fn poll_route_load(
     mut commands: Commands,
     pending: Option<ResMut<PendingRouteLoad>>,
-    progress: Option<Res<crate::world::WorldSpawnProgress>>,
-    screen: Option<ResMut<ViewerLoadingScreen>>,
+    screen: Option<Res<ViewerLoadingScreen>>,
     mut texts: Query<&mut Text>,
     mut next: ResMut<NextState<ViewerAppState>>,
-    loading_cams: Query<Entity, With<Camera2d>>,
 ) {
     let Some(pending) = pending else {
-        if let Some(mut screen) = screen {
-            if let Some(progress) = progress.as_ref() {
-                screen.scenery_spawn_started = true;
-                if let Ok(mut t) = texts.get_mut(screen.status) {
-                    *t = Text::new(progress.status_text());
-                }
-            } else if screen.scenery_spawn_started {
-                // Progressive world spawn finished!
-                crate::viewer_log!("openrailsrs-viewer3d: progressive spawn complete — entering simulation");
-                commands.entity(screen.root).despawn();
-                commands.remove_resource::<ViewerLoadingScreen>();
-                for e in &loading_cams {
-                    commands.entity(e).despawn();
-                }
-                next.set(ViewerAppState::Playing);
-            }
-        }
         return;
     };
     let recv = match pending.rx.lock() {
@@ -223,6 +204,7 @@ pub fn poll_route_load(
                 }
             }
             commands.remove_resource::<PendingRouteLoad>();
+            next.set(ViewerAppState::Playing);
         }
         Ok(Err(err)) => {
             if let Some(screen) = screen.as_ref() {
@@ -244,6 +226,33 @@ pub fn poll_route_load(
         Err(TryRecvError::Disconnected) => {
             eprintln!("error: route load thread disconnected");
             commands.remove_resource::<PendingRouteLoad>();
+        }
+    }
+}
+
+pub fn update_loading_screen_progress(
+    mut commands: Commands,
+    screen: Option<ResMut<ViewerLoadingScreen>>,
+    progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    mut texts: Query<&mut Text>,
+    loading_cams: Query<Entity, With<Camera2d>>,
+) {
+    let Some(mut screen) = screen else {
+        return;
+    };
+
+    if let Some(progress) = progress.as_ref() {
+        screen.scenery_spawn_started = true;
+        if let Ok(mut t) = texts.get_mut(screen.status) {
+            *t = Text::new(progress.status_text());
+        }
+    } else if screen.scenery_spawn_started {
+        // Progressive world spawn finished!
+        crate::viewer_log!("openrailsrs-viewer3d: progressive spawn complete — entering simulation");
+        commands.entity(screen.root).despawn();
+        commands.remove_resource::<ViewerLoadingScreen>();
+        for e in &loading_cams {
+            commands.entity(e).despawn();
         }
     }
 }
