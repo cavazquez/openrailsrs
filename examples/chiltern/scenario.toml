@@ -4,6 +4,13 @@ extra_trains = []
 name = "RS_Let's go to Birmingham"
 description = "Imported from MSTS activity: /home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act"
 
+[viewer3d.world_anchor]
+tile_x = -6079
+tile_z = 14925
+local_x_m = -961.337
+local_y_m = 28.558
+local_z_m = -71.912
+
 [route]
 path = "."
 # Spawn snapped from TrackPDP[0] (Paddington Pfm). start_offset_m = consist HEAD (#132).

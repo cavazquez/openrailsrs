@@ -114,6 +114,7 @@ pub fn log_time_to_first_presented_frame(
 pub struct ViewerLoadingScreen {
     pub root: Entity,
     pub status: Entity,
+    pub scenery_spawn_started: bool,
 }
 
 pub fn setup_viewer_loading_ui(mut commands: Commands) {
@@ -159,18 +160,41 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
             ..default()
         },
     ));
-    commands.insert_resource(ViewerLoadingScreen { root, status });
+    commands.insert_resource(ViewerLoadingScreen {
+        root,
+        status,
+        scenery_spawn_started: false,
+    });
+    crate::viewer_log!("openrailsrs-viewer3d: loading screen active — waiting for world progressive spawn");
 }
 
 pub fn poll_route_load(
     mut commands: Commands,
     pending: Option<ResMut<PendingRouteLoad>>,
-    screen: Option<Res<ViewerLoadingScreen>>,
+    progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    screen: Option<ResMut<ViewerLoadingScreen>>,
     mut texts: Query<&mut Text>,
     mut next: ResMut<NextState<ViewerAppState>>,
     loading_cams: Query<Entity, With<Camera2d>>,
 ) {
     let Some(pending) = pending else {
+        if let Some(mut screen) = screen {
+            if let Some(progress) = progress.as_ref() {
+                screen.scenery_spawn_started = true;
+                if let Ok(mut t) = texts.get_mut(screen.status) {
+                    *t = Text::new(progress.status_text());
+                }
+            } else if screen.scenery_spawn_started {
+                // Progressive world spawn finished!
+                crate::viewer_log!("openrailsrs-viewer3d: progressive spawn complete — entering simulation");
+                commands.entity(screen.root).despawn();
+                commands.remove_resource::<ViewerLoadingScreen>();
+                for e in &loading_cams {
+                    commands.entity(e).despawn();
+                }
+                next.set(ViewerAppState::Playing);
+            }
+        }
         return;
     };
     let recv = match pending.rx.lock() {
@@ -193,15 +217,12 @@ pub fn poll_route_load(
                 "openrailsrs-viewer3d: route ready in {elapsed_ms:.0} ms — inserting scenes"
             );
             insert_route_bundle(&mut commands, bundle);
-            if let Some(screen) = screen {
-                commands.entity(screen.root).despawn();
-                commands.remove_resource::<ViewerLoadingScreen>();
-            }
-            for e in &loading_cams {
-                commands.entity(e).despawn();
+            if let Some(screen) = screen.as_ref() {
+                if let Ok(mut t) = texts.get_mut(screen.status) {
+                    *t = Text::new("Generando escenografía y mallas 3D...".to_string());
+                }
             }
             commands.remove_resource::<PendingRouteLoad>();
-            next.set(ViewerAppState::Playing);
         }
         Ok(Err(err)) => {
             if let Some(screen) = screen.as_ref() {

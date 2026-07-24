@@ -1452,6 +1452,38 @@ enum WorldSpawnPhase {
 }
 
 impl WorldSpawnProgress {
+    pub fn status_text(&self) -> String {
+        match self.phase {
+            WorldSpawnPhase::Classifying => {
+                format!("Clasificando objetos 3D ({})", self.item_index)
+            }
+            WorldSpawnPhase::LoadingShapes => {
+                let total = self.shape_load_paths.len();
+                if total > 0 {
+                    let pct = (self.shape_parse_index * 100) / total;
+                    format!(
+                        "Cargando mallas 3D y texturas ({}% — {}/{})",
+                        pct, self.shape_parse_index, total
+                    )
+                } else {
+                    "Cargando mallas 3D y texturas...".into()
+                }
+            }
+            WorldSpawnPhase::BuildingQueue => {
+                "Agrupando instancias en GPU...".into()
+            }
+            WorldSpawnPhase::SpawningEntities | WorldSpawnPhase::SpawningPlaceholders => {
+                let total = (self.spawn_queue.len() + self.instanced_spawn_queue.len()).max(1);
+                let current = self.spawn_index.min(total);
+                let pct = (current * 100) / total;
+                format!(
+                    "Instanciando objetos en el mundo ({}% — {}/{})",
+                    pct, current, total
+                )
+            }
+        }
+    }
+
     fn new(placeholder_base: f32) -> Self {
         Self::new_from_item_index(placeholder_base, 0)
     }

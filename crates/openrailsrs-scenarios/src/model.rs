@@ -9,6 +9,7 @@ pub struct ScenarioFile {
     pub train: TrainSection,
     pub gameplay: GameplaySection,
     pub simulation: SimulationSection,
+    #[serde(default)]
     pub output: OutputSection,
     /// Additional trains for multi-train simulation (optional).
     #[serde(default)]
@@ -293,6 +294,15 @@ fn default_seed() -> u64 {
 pub struct OutputSection {
     pub csv: String,
     pub metadata: String,
+}
+
+impl Default for OutputSection {
+    fn default() -> Self {
+        Self {
+            csv: "run.csv".to_string(),
+            metadata: "run.json".to_string(),
+        }
+    }
 }
 
 impl ScenarioFile {

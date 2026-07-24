@@ -26,7 +26,7 @@ use crate::shapes::{
     resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
     vehicle_shape_local_transform, vehicle_texture_search_dirs,
 };
-use crate::terrain::{TerrainElevation, ground_y_at};
+use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
 use crate::track_position::{TrackPositionResolver, vehicle_pose_on_graph_edge};
 use crate::train::{TRAIN_COLORS, vehicle_local_transform};
@@ -282,7 +282,8 @@ pub fn live_audio_frame(live: Res<LiveDrive>) {
 /// **A/D** throttle · **;/'** train brake · **W/S** reverser · **Space** horn ·
 /// **V** wiper · **Backspace** emergency · arrows kept as aliases.
 pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveDrive>) {
-    if keys.just_pressed(KeyCode::KeyP) {
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    if keys.just_pressed(KeyCode::KeyP) && !shift {
         live.paused = !live.paused;
     }
     if keys.just_pressed(KeyCode::KeyR) {
@@ -770,7 +771,7 @@ pub fn spawn_live_train(
             .map(|(id, _)| id)
             .unwrap_or(""),
     );
-    let (pos, rot) = vehicle_pose_on_graph_edge(
+    let Some((pos, rot)) = vehicle_pose_on_graph_edge(
         &scene.graph,
         edge,
         live.session.pos_on_edge_m(),
@@ -779,12 +780,14 @@ pub fn spawn_live_train(
         offset.delta,
         &focus,
         terrain_ref,
-    )
-    .unwrap_or({
-        let w = scene.bounds.center + offset.delta;
-        let y = ground_y_at(terrain_ref, w.x, w.z, &scene);
-        (focus.to_render_surface(w + Vec3::Y * y), Quat::IDENTITY)
-    });
+    ) else {
+        viewer_log!(
+            "openrailsrs-viewer3d: train start edge '{}' is outside loaded 3D tiles; skipping train spawn",
+            edge
+        );
+        log_step("skipped live train (out of bounds)", spawn_start);
+        return;
+    };
     let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
 
     let vehicles = consist.vehicles_for("primary");
