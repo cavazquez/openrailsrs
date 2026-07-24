@@ -10,6 +10,7 @@ Vista conductor en `viewer3d --live` (Pullman Chiltern: `RF_Blue_Pullman` / `PUL
 | Mesh `CABVIEW3D/*.s` + ACE | ✅ |
 | Shader `or_cab` (TexDiff) | ✅ |
 | Cámara `ORTS3DCabHeadPos` | ✅ |
+| Dirección inicial / FOV Open Rails | ✅ `StartDirection` en espacio de la cabina + 45° vertical |
 | Ocultar exterior en L1 | ✅ |
 | CVF overlay en cabina 3D | ❌ off (#151) |
 | Matrices nativas `TYPE:orden[:p1[:p2]]` (#157) | ✅ parse + MultiState/Dial + Digit/GaugeNative quads |
@@ -59,12 +60,15 @@ Detalle de bindings: `cab_cvf.rs` + tests Pullman. Debug: `OPENRAILSRS_CAB_DEBUG
 | `OPENRAILSRS_CAB_OR_LIKE` | off | Brillo fijo legacy (debug) |
 | `OPENRAILSRS_CAB_MIN_BRIGHT` | `0.55` | Piso de brillo (techo/placas); `0` = estricto OR |
 | `OPENRAILSRS_CAB_BRIGHTEN` | off | Levantar ACE oscuros (`1` si aún se ven apagados) |
+| `OPENRAILSRS_CAB_FOV` | `45` | FOV vertical; equivale al `ViewingFOV` predeterminado de Open Rails |
 | `OPENRAILSRS_FOLLOW` | — | `driver`/`cab3d` → 3D; `cab`/`cab2d` → 2D |
 | `OPENRAILSRS_CAB_NIGHT` | off | Forzar ACE `NIGHT/` en Cab2d |
 
 Teclas Cab2d: **←/→** vista (Direction CVF) · click/arrastre en palancas con `MouseControl`.
 
-Cab2d y cabina 3D componen el mismo forward: `.eng` `StartDirection` + `CabView.Direction` del CVF (X positivo = mirar abajo). Cab2d no anula el pitch/yaw authored (#169).
+Cab2d y cabina 3D componen el mismo forward: `.eng` `StartDirection` + `CabView.Direction` del CVF (X positivo = mirar abajo). La cámara que sigue al coche usa directamente el eje −Z de la malla convertida, que apunta al parabrisas; la corrección −90° shape→tren queda reservada al fallback sin entidad de coche. Así no se duplica el cambio de base cuando la orientación física del tren ya está aplicada. Cab2d no anula el pitch/yaw authored (#169).
+
+El valor de referencia es FOV vertical 45°: `UserSettings.ViewingFOV` de Open Rails declara `Default(45)`. Puede sobrescribirse con `--cab-fov DEG` o `OPENRAILSRS_CAB_FOV`. Open Rails conserva el mouse-look al volver a la cabina; por eso una captura guardada puede tener una elevación distinta de `StartDirection` aunque use el mismo eyepoint.
 
 Cabina 3D: mirada con **RMB** (límites amplios; no se aplica `RotationLimit` del `.eng`, como OR). **LMB** en la pantalla ETCS (`ScreenDisplay`) activa soft keys del DMI (scroll, scale, Main/Data/Sett. → subventanas, ack mensajes).
 

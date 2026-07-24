@@ -133,8 +133,11 @@ pub const DRIVER_CAB_BACK_M: f32 = 2.8;
 /// Slight downward pitch for driver view (rad).
 pub const DRIVER_LOOK_PITCH: f32 = -0.04;
 
-/// FOV in driver view (degrees) — Open Rails default `ViewingFOV` is often ~60.
-pub const DRIVER_FOV_DEG_DEFAULT: f32 = 60.0;
+/// Vertical FOV in driver view (degrees).
+///
+/// Open Rails declares `ViewingFOV` as `Default(45)`: MSTS' 60° horizontal
+/// field on a 4:3 display is approximately 45° vertically.
+pub const DRIVER_FOV_DEG_DEFAULT: f32 = 45.0;
 
 /// Resolve driver cab FOV: CLI `--cab-fov`, then `OPENRAILSRS_CAB_FOV`, else [`DRIVER_FOV_DEG_DEFAULT`].
 pub fn driver_cab_fov_deg(opts: &ViewerLaunchOpts) -> f32 {
@@ -169,8 +172,11 @@ pub const DRIVER_LOOK_PITCH_MIN: f32 = -0.65;
 pub const DRIVER_CAM_FREE_YAW_MAX: f32 = std::f32::consts::PI;
 pub const DRIVER_CAM_FREE_PITCH_MAX: f32 = 1.48;
 
-/// Yaw offset so the camera −Z axis aligns with MSTS shape +Z (train-local +X after
-/// [`crate::shapes::msts_shape_to_train_rotation`]).
+/// Yaw offset so the camera −Z axis aligns with train-local +X.
+///
+/// This is only needed by the fallback camera built from the train root.  A camera
+/// built from the lead vehicle already lives in converted MSTS shape space, where
+/// its neutral −Z axis points through the cab windshield.
 pub const DRIVER_CAB_FORWARD_YAW_OFFSET: f32 = -std::f32::consts::FRAC_PI_2;
 
 /// Which eyepoint is active in driver view (3D cab viewpoint vs HeadOut).
@@ -719,7 +725,7 @@ pub fn driver_camera_transform_at_eye(
 ) -> Transform {
     Transform {
         translation: eye,
-        rotation: Quat::from_rotation_y(train_yaw) * driver_combined_look_quat(look, cab),
+        rotation: Quat::from_rotation_y(train_yaw) * driver_train_look_quat(look, cab),
         scale: Vec3::ONE,
     }
 }
@@ -769,31 +775,37 @@ pub fn cab_view_look_offset(
     msts_direction_to_look_offset(view_direction_deg)
 }
 
-/// Cab orientation for a viewpoint: `StartDirection` + CVF `Direction` + Bevy −Z offset.
+/// Cab orientation in converted MSTS shape space: `StartDirection` + CVF `Direction`.
+///
+/// Bevy camera −Z is already the neutral windshield direction in this space, so
+/// no shape→train axis correction belongs here.
 pub fn cab_view_orientation_quat(cab: &LiveDriverCab, view_direction_deg: [f64; 3]) -> Quat {
     let view = cab_view_look_offset(cab, view_direction_deg);
     Quat::from_euler(
         EulerRot::YXZ,
-        cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET + view.yaw,
+        cab.look_yaw + view.yaw,
         cab.look_pitch + view.pitch,
         0.0,
     )
 }
 
 /// Default cab orientation from `.eng` `StartDirection` (yaw + pitch).
-///
-/// Applies [`DRIVER_CAB_FORWARD_YAW_OFFSET`] so Bevy camera −Z aligns with train
-/// travel +X (`StartDirection.Y = 0` looks forward; ≈180° looks rear).
 pub fn driver_cab_base_orientation(cab: &LiveDriverCab) -> Quat {
     cab_view_orientation_quat(cab, [0.0; 3])
 }
 
-/// Cab base look + mouse offset in one YXZ euler (FPS-style).
-///
-/// Must not be `user * base`: with [`DRIVER_CAB_FORWARD_YAW_OFFSET`] = −π/2 baked
-/// into `base`, a separate `user` pitch rotates around train +X (roll), so
-/// horizontal look works but up/down does not.
+/// Cab base look + mouse offset in one YXZ euler (FPS-style, shape-local).
 pub fn driver_combined_look_quat(look: DriverLookOffset, cab: &LiveDriverCab) -> Quat {
+    Quat::from_euler(
+        EulerRot::YXZ,
+        cab.look_yaw + look.yaw,
+        cab.look_pitch + look.pitch,
+        0.0,
+    )
+}
+
+/// Cab look relative to the train root when no lead-vehicle transform is available.
+fn driver_train_look_quat(look: DriverLookOffset, cab: &LiveDriverCab) -> Quat {
     Quat::from_euler(
         EulerRot::YXZ,
         cab.look_yaw + DRIVER_CAB_FORWARD_YAW_OFFSET + look.yaw,
@@ -814,7 +826,7 @@ pub fn driver_cab_counter_look(look: DriverLookOffset, cab: &LiveDriverCab) -> Q
     combined.inverse() * base
 }
 
-/// Driver camera aligned to the lead vehicle (cab shape space + `StartDirection`).
+/// Driver camera aligned to the lead vehicle (converted MSTS cab shape space).
 pub fn driver_camera_transform_from_lead(
     lead_global: &GlobalTransform,
     cab: &LiveDriverCab,
@@ -2146,6 +2158,22 @@ mod tests {
     }
 
     #[test]
+    fn driver_root_fallback_looks_along_train_local_x() {
+        let yaw = 0.37;
+        let cab = LiveDriverCab {
+            look_pitch: 0.0,
+            look_yaw: 0.0,
+            ..Default::default()
+        };
+        let tf = driver_camera_transform_at_eye(Vec3::ZERO, yaw, &cab, DriverLookOffset::default());
+        let expected = Quat::from_rotation_y(yaw).mul_vec3(Vec3::X);
+        assert!(
+            tf.forward().as_vec3().dot(expected) > 0.99,
+            "train-root fallback must retain its −90° axis conversion"
+        );
+    }
+
+    #[test]
     fn driver_eye_from_lead_uses_head_lead_local() {
         let head_lead = crate::shapes::msts_shape_vec3_to_bevy(Vec3::new(-0.8, 2.875, 8.60));
         let placement = Transform {
@@ -2281,13 +2309,13 @@ mod tests {
             driver_camera_transform_from_lead(&lead_global, &rear, DriverLookOffset::default())
                 .forward()
                 .as_vec3();
-        let travel = lead_global.rotation().mul_vec3(Vec3::X);
-        let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        let cab_forward = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
+        let travel_h = Vec3::new(cab_forward.x, 0.0, cab_forward.z).normalize();
         let front_h = Vec3::new(front_fwd.x, 0.0, front_fwd.z).normalize();
         let rear_h = Vec3::new(rear_fwd.x, 0.0, rear_fwd.z).normalize();
         assert!(
             front_h.dot(travel_h) > 0.99,
-            "front StartDirection.Y=0 should look along travel +X: {front_h:?} vs {travel_h:?}"
+            "front StartDirection.Y=0 should look through cab-local -Z: {front_h:?} vs {travel_h:?}"
         );
         assert!(
             rear_h.dot(-travel_h) > 0.99,
@@ -2327,12 +2355,12 @@ mod tests {
             fwd_2d.dot(fwd_3d) > 0.99,
             "2D/3D frontal forwards must match: 2d={fwd_2d:?} 3d={fwd_3d:?}"
         );
-        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let cab_forward = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
         let h2 = Vec3::new(fwd_2d.x, 0.0, fwd_2d.z).normalize();
-        let ht = Vec3::new(travel.x, 0.0, travel.z).normalize();
+        let ht = Vec3::new(cab_forward.x, 0.0, cab_forward.z).normalize();
         assert!(
             h2.dot(ht) > 0.99,
-            "both should face travel: {h2:?} vs {ht:?}"
+            "both should face the windshield: {h2:?} vs {ht:?}"
         );
     }
 
@@ -2385,12 +2413,12 @@ mod tests {
         let fwd = driver_camera_transform_from_lead(&lead_global, &cab, look)
             .forward()
             .as_vec3();
-        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        let travel = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
         let fh = Vec3::new(fwd.x, 0.0, fwd.z).normalize();
         let th = Vec3::new(travel.x, 0.0, travel.z).normalize();
         assert!(
             fh.dot(th) > 0.99,
-            "Flip lead frame: camera still looks along lead +X: {fh:?} vs {th:?}"
+            "Flip lead frame: camera still looks along cab-local -Z: {fh:?} vs {th:?}"
         );
     }
 
@@ -2460,8 +2488,8 @@ mod tests {
         };
         let tf = driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
         let cam_fwd = tf.forward().as_vec3();
-        // Travel / MSTS cab +Z maps to train-local +X after shape→train rotation.
-        let travel_fwd = lead_global.rotation().mul_vec3(Vec3::X);
+        // Converted MSTS cab forward is lead-local −Z.
+        let travel_fwd = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
         let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
         let travel_h = Vec3::new(travel_fwd.x, 0.0, travel_fwd.z).normalize();
         assert!(
@@ -2471,7 +2499,7 @@ mod tests {
     }
 
     #[test]
-    fn driver_camera_aligns_with_train_travel_forward() {
+    fn driver_camera_aligns_with_cab_windshield_forward() {
         let train_yaw = -0.7;
         let placement = Transform {
             rotation: crate::shapes::msts_shape_to_train_rotation(),
@@ -2489,8 +2517,8 @@ mod tests {
             driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default())
                 .forward()
                 .as_vec3();
-        // Lead frame already includes shape→train (+90° Y); travel is local +X.
-        let travel = lead_global.rotation().mul_vec3(Vec3::X);
+        // Lead frame already includes shape→train; do not apply that basis twice.
+        let travel = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
         let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
         let travel_h = Vec3::new(travel.x, 0.0, travel.z).normalize();
         assert!(
