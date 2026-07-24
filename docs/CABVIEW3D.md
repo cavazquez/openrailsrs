@@ -51,7 +51,7 @@ Con `OPENRAILSRS_CAB_DEBUG=occluder`, el HUD/log atribuye el primer AABB de cabi
 | M5 | Bocina |
 | M8–M10 | Palancas thr/brk (bindings `.cvf`) |
 
-Detalle de bindings: `cab_cvf.rs` + tests Pullman. Si el `.s` trae controladores MSTS, se respetan sus keyframes. En cabinas como `PULLMAN_GR.s`, que declaran los huesos `DIRECTION`, `HORN`, `THROTTLE` y `TRAIN_BRAKE` pero no incluyen ningún bloque de animación, el viewer aplica un fallback suave sobre la matriz y el pivote authored: acelerador y freno recorren su arco, el inversor centra neutral entre avance/retroceso y la bocina se deprime mientras está activa. Otros huesos desconocidos permanecen estáticos.
+Detalle de bindings: `cab_cvf.rs` + tests Pullman. `PULLMAN_GR.s` sí contiene un bloque binario `animations`: 18 nodos y keyframes authored para `DIRECTION`, `HORN`, `THROTTLE`, `TRAIN_BRAKE`, agujas y limpiaparabrisas. El lector conserva el token MSTS `animations` (29), decodifica cada clave como `Frame:int + valores:float` y admite las claves `slerp_rot` dentro del controlador `tcb_rot`, igual que Open Rails. Así las piezas usan la traslación, rotación y pivote definidos por el modelo; no se intenta inferir el punto de apoyo desde el volumen de la malla. El fallback CVF suave queda reservado a shapes que realmente no traen controladores.
 
 Debug: `OPENRAILSRS_CAB_DEBUG=uv|albedo|vcolor`.
 

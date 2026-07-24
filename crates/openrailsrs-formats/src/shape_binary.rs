@@ -3,6 +3,8 @@
 use crate::error::FormatError;
 use crate::msts_simisa::SimisaPayload;
 
+const ANIMATIONS_TOKEN_ID: i32 = 29;
+
 /// Convert a binary shape payload to ASCII `( shape ... )` text.
 pub fn binary_shape_to_ascii(payload: &SimisaPayload) -> Result<String, FormatError> {
     if payload.is_text {
@@ -381,6 +383,27 @@ impl<'a> BinaryReader<'a> {
         Ok(())
     }
 
+    fn dump_animation_key_content(
+        &mut self,
+        block_end: usize,
+        float_count: usize,
+        out: &mut String,
+    ) -> Result<(), FormatError> {
+        if self.pos + 4 > block_end {
+            return Ok(());
+        }
+        out.push(' ');
+        out.push_str(&(self.read_u32()? as i32).to_string());
+        for _ in 0..float_count {
+            if self.pos + 4 > block_end {
+                break;
+            }
+            out.push(' ');
+            out.push_str(&format_float(self.read_f32()? as f64));
+        }
+        Ok(())
+    }
+
     fn dump_block(&mut self) -> Result<String, FormatError> {
         let token_id = self.read_token_id()?;
         let _flags = self.read_u16()?;
@@ -460,6 +483,26 @@ impl<'a> BinaryReader<'a> {
                 out.push_str(" )");
                 return Ok(out);
             }
+            // Animation keys mix an integer frame with floating-point values.
+            // Open Rails reads these as `ReadInt()` followed by `ReadFloat()`.
+            19 | 101 => {
+                self.dump_animation_key_content(block_end, 3, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            20 | 99 => {
+                self.dump_animation_key_content(block_end, 9, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
+            23 | 103 => {
+                self.dump_animation_key_content(block_end, 4, &mut out)?;
+                self.pos = block_end;
+                out.push_str(" )");
+                return Ok(out);
+            }
             // Open Rails `prim_state`: flags, shader, tex_idxs, **ZBias float**, ivtx, alphatest, LightCfgIdx, ZBufMode
             // (`ShapeFile.cs` prim_state constructor).
             54 => {
@@ -490,7 +533,7 @@ impl<'a> BinaryReader<'a> {
                 }
                 if self.pos < block_end
                     && self.peek_subblock_header_at(self.pos, block_end)
-                    && self.peek_token_id_at(self.pos) == Some(90)
+                    && self.peek_token_id_at(self.pos) == Some(ANIMATIONS_TOKEN_ID)
                 {
                     out.push(' ');
                     out.push_str(&self.dump_block()?);
@@ -903,7 +946,6 @@ fn is_schema_collection_parent(parent: i32) -> bool {
             | 25 // controllers
             | 24 // tcb_rot
             | 21 // linear_pos
-            | 23 // slerp_rot
             | 27 // anim_nodes
             | 29 // animations
             | 31
@@ -946,9 +988,10 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
             | (25, 23) // controllers -> slerp_rot
             | (24, 20) // tcb_rot -> tcb_key (also 99 in some dumps)
             | (24, 99)
+            | (24, 23) // tcb_rot -> slerp_rot key
+            | (24, 103) // tcb_rot -> slerp_key alias
             | (21, 19) // linear_pos -> linear_key
             | (21, 101)
-            | (23, 103) // slerp_rot -> slerp_key
             | (31, 32) // lod_controls -> lod_control
             | (36, 37) // distance_levels -> distance_level
             | (38, 39) // sub_objects -> sub_object
@@ -974,8 +1017,27 @@ fn is_expected_collection_child(parent: i32, child: i32) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::ShapeFile;
-    use crate::msts_simisa::decode_simisa_container;
+    use crate::msts_simisa::{SimisaPayload, decode_simisa_container};
     use crate::shape_binary::binary_shape_to_ascii;
+
+    fn binary_block(token: u16, payload: &[u8]) -> Vec<u8> {
+        binary_block_with_label(token, "", payload)
+    }
+
+    fn binary_block_with_label(token: u16, label: &str, payload: &[u8]) -> Vec<u8> {
+        let label_utf16: Vec<u16> = label.encode_utf16().collect();
+        let mut bytes = Vec::with_capacity(9 + label_utf16.len() * 2 + payload.len());
+        bytes.extend_from_slice(&token.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes
+            .extend_from_slice(&((payload.len() + 1 + label_utf16.len() * 2) as u32).to_le_bytes());
+        bytes.push(label_utf16.len() as u8);
+        for code_unit in label_utf16 {
+            bytes.extend_from_slice(&code_unit.to_le_bytes());
+        }
+        bytes.extend_from_slice(payload);
+        bytes
+    }
 
     #[test]
     fn minimal_ascii_shape_still_parses_via_container() {
@@ -985,6 +1047,62 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn binary_shape_preserves_optional_animations_block() {
+        let mut shape_payload = Vec::new();
+        // Open Rails reads 17 mandatory shape children before the optional
+        // animations block. Empty shape_header blocks are enough to exercise
+        // the binary block boundary logic here.
+        for _ in 0..17 {
+            shape_payload.extend(binary_block(70, &[]));
+        }
+
+        let mut key_payload = Vec::new();
+        key_payload.extend_from_slice(&7u32.to_le_bytes());
+        for value in [0.0f32, 0.25, -0.5, 0.75] {
+            key_payload.extend_from_slice(&value.to_le_bytes());
+        }
+        let key = binary_block(23, &key_payload);
+        let mut tcb_payload = 1u32.to_le_bytes().to_vec();
+        tcb_payload.extend(key);
+        let tcb = binary_block(24, &tcb_payload);
+        let mut controllers_payload = 1u32.to_le_bytes().to_vec();
+        controllers_payload.extend(tcb);
+        let controllers = binary_block(25, &controllers_payload);
+        let anim_node = binary_block_with_label(26, "LEVER", &controllers);
+        let mut nodes_payload = 1u32.to_le_bytes().to_vec();
+        nodes_payload.extend(anim_node);
+        let nodes = binary_block(27, &nodes_payload);
+        let mut animation_payload = Vec::new();
+        animation_payload.extend_from_slice(&12u32.to_le_bytes());
+        animation_payload.extend_from_slice(&30u32.to_le_bytes());
+        animation_payload.extend(nodes);
+        let animation = binary_block(28, &animation_payload);
+        let mut animations_payload = 1u32.to_le_bytes().to_vec();
+        animations_payload.extend(animation);
+        shape_payload.extend(binary_block(
+            super::ANIMATIONS_TOKEN_ID as u16,
+            &animations_payload,
+        ));
+        let root = binary_block(71, &shape_payload);
+        let payload = SimisaPayload {
+            bytes: root,
+            is_text: false,
+            data_offset: 0,
+            token_offset: 0,
+        };
+
+        let ascii = binary_shape_to_ascii(&payload).expect("decode binary shape");
+        assert!(
+            ascii.contains("( animations 1 ( animation 12 30"),
+            "optional token 29 block was dropped: {ascii}"
+        );
+        assert!(
+            ascii.contains("( tcb_rot 1 ( slerp_rot 7 0 0.250000 -0.500000 0.750000 )"),
+            "mixed integer/float animation key was decoded incorrectly: {ascii}"
+        );
     }
 
     #[test]
@@ -1103,6 +1221,39 @@ mod tests {
                 assert_eq!(keys[1], (1.0, [4.0, 5.0, 6.0]));
             }
             _ => panic!("Expected LinearPos controller"),
+        }
+    }
+
+    #[test]
+    fn parse_open_rails_slerp_keys_inside_tcb_controller() {
+        let ascii = r#"
+        ( shape
+            ( animations 1
+                ( animation 12 30
+                    ( anim_nodes 1
+                        ( anim_node "LEVER"
+                            ( controllers 1
+                                ( tcb_rot 2
+                                    ( slerp_rot 0 0.0 0.0 0.0 1.0 )
+                                    ( slerp_rot 7 0.0 0.25 -0.5 0.75 )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        "#;
+        let ast = crate::parser::parse_first_from_first_paren(ascii).expect("parse AST");
+        let shape = ShapeFile::from_ast(&ast).expect("parse ShapeFile");
+        let controller = &shape.animations[0].nodes[0].controllers[0];
+        match controller {
+            crate::AnimController::SlerpRot { keys } => {
+                assert_eq!(keys.len(), 2);
+                assert_eq!(keys[0], (0.0, [0.0, 0.0, 0.0, 1.0]));
+                assert_eq!(keys[1], (7.0, [0.0, 0.25, -0.5, 0.75]));
+            }
+            other => panic!("expected Open Rails slerp controller, got {other:?}"),
         }
     }
 

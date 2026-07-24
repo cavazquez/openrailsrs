@@ -992,14 +992,16 @@ mod tests {
             .filter(|d| matches!(d, MatrixDriver::Lever { .. }))
             .count();
         assert!(levers >= 1, "expected at least one lever matrix");
-        assert!(matches!(
-            runtime.matrix_drivers.get(&5),
+        let horn_anim_node = match runtime.matrix_drivers.get(&5) {
             Some(MatrixDriver::MultiState {
                 control: ControlType::Generic(name),
-                anim_node: None,
+                anim_node,
                 ..
-            }) if name.eq_ignore_ascii_case("HORN")
-        ));
+            }) if name.eq_ignore_ascii_case("HORN") => *anim_node,
+            other => panic!("expected M5 HORN MultiState, got {other:?}"),
+        };
+        assert_eq!(horn_anim_node, Some(5));
+        assert!(lever_has_authored_animation(&runtime.shape, horn_anim_node));
     }
 
     #[test]
@@ -1145,9 +1147,9 @@ mod tests {
         }
     }
 
-    /// Pullman: desk MAIN stays static; authored vtx_state binds levers (#146 / #172).
+    /// Pullman: desk MAIN stays static; authored vtx_state and animation bind levers.
     #[test]
-    fn pullman_static_cab_desk_stays_unbound_authored_levers_bind() {
+    fn pullman_static_desk_stays_unbound_and_authored_levers_animate() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1155,9 +1157,14 @@ mod tests {
             return;
         }
         let shape = ShapeFile::from_path(shape_path).expect("shape");
-        assert!(
-            shape.animations.is_empty(),
-            "Pullman cab shape must remain animation-free for this regression"
+        let animation = shape
+            .animations
+            .first()
+            .expect("binary shape must preserve its authored animations block");
+        assert_eq!(
+            animation.nodes.len(),
+            shape.matrices.len(),
+            "Open Rails indexes cab animation nodes by matrix index"
         );
         assert_eq!(
             shape.vtx_states.get(10).map(|v| v.matrix_idx),
@@ -1206,13 +1213,20 @@ mod tests {
             [4, 5, 8, 9, 10].into_iter().all(|m| bound.contains(&m)),
             "authored vtx_state must bind reverser, horn, throttle and brake matrices, got {bound:?}"
         );
-        for driver in runtime.matrix_drivers.values() {
-            if let MatrixDriver::Lever { anim_node, .. } = driver {
-                assert!(
-                    !lever_has_authored_animation(&runtime.shape, *anim_node),
-                    "Pullman levers must remain classified as animation-free"
-                );
-            }
+        for matrix_idx in [4usize, 5, 8, 9, 10] {
+            let driver = runtime
+                .matrix_drivers
+                .get(&matrix_idx)
+                .unwrap_or_else(|| panic!("M{matrix_idx} must have a CVF driver"));
+            let anim_node = match driver {
+                MatrixDriver::Lever { anim_node, .. }
+                | MatrixDriver::MultiState { anim_node, .. } => *anim_node,
+                other => panic!("M{matrix_idx} must be animated, got {other:?}"),
+            };
+            assert!(
+                lever_has_authored_animation(&runtime.shape, anim_node),
+                "M{matrix_idx} must use the authored Open Rails controller"
+            );
         }
     }
 
@@ -1422,7 +1436,7 @@ mod tests {
     }
 
     #[test]
-    fn pullman_live_telemetry_moves_all_animation_free_controls() {
+    fn pullman_live_telemetry_drives_authored_control_keyframes() {
         let shape_path = std::path::Path::new(
             "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/Cabview3d/PULLMAN_GR.s",
         );
@@ -1493,9 +1507,11 @@ mod tests {
                 .copied()
                 .expect("control transform");
             let rest = static_lever_transform(&shape, matrix_idx, None);
+            let rotation_changed = actual.rotation.dot(rest.rotation).abs() < 0.9999;
+            let translation_changed = actual.translation.distance(rest.translation) > 1e-4;
             assert!(
-                actual.rotation.dot(rest.rotation).abs() < 0.99,
-                "M{matrix_idx} must rotate from its authored rest pose"
+                rotation_changed || translation_changed,
+                "M{matrix_idx} must move from its authored rest pose"
             );
         }
 
@@ -1505,9 +1521,11 @@ mod tests {
             .get::<Transform>()
             .expect("horn transform");
         let horn_rest = static_lever_transform(&shape, 5, None);
+        let horn_rotation_changed = horn.rotation.dot(horn_rest.rotation).abs() < 0.9999;
+        let horn_translation_changed = horn.translation.distance(horn_rest.translation) > 1e-4;
         assert!(
-            horn.translation.distance(horn_rest.translation) > 0.01,
-            "M5 horn must visibly depress while telemetry says it is active"
+            horn_rotation_changed || horn_translation_changed,
+            "M5 horn must move while telemetry says it is active"
         );
     }
 }

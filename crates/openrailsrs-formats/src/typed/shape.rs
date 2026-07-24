@@ -1601,7 +1601,28 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             Some(AnimController::LinearPos { keys })
         }
         "tcb_rot" => {
-            let mut keys = Vec::new();
+            // Open Rails accepts both `tcb_key` and `slerp_rot` key blocks
+            // inside a `tcb_rot` controller. Most binary MSTS cabs use the
+            // latter even though the outer controller keeps the tcb_rot name.
+            let mut slerp_keys = Vec::new();
+            for_each_tagged_ordered(items, &["slerp_rot", "slerp_key"], |sub| {
+                let mut nums = Vec::new();
+                for at in sub.iter().skip(1) {
+                    if let Ast::Atom(atom) = at {
+                        if let Some(n) = atom_to_number(atom) {
+                            nums.push(n as f32);
+                        }
+                    }
+                }
+                if nums.len() >= 5 {
+                    slerp_keys.push((nums[0], [nums[1], nums[2], nums[3], nums[4]]));
+                }
+            });
+            if !slerp_keys.is_empty() {
+                return Some(AnimController::SlerpRot { keys: slerp_keys });
+            }
+
+            let mut tcb_keys = Vec::new();
             for_each_tagged(items, "tcb_key", |sub| {
                 let mut nums = Vec::new();
                 for at in sub.iter().skip(1) {
@@ -1612,10 +1633,10 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
                     }
                 }
                 if nums.len() >= 5 {
-                    keys.push((nums[0], [nums[1], nums[2], nums[3], nums[4]]));
+                    tcb_keys.push((nums[0], [nums[1], nums[2], nums[3], nums[4]]));
                 }
             });
-            Some(AnimController::TcbRot { keys })
+            Some(AnimController::TcbRot { keys: tcb_keys })
         }
         "slerp_rot" => {
             let mut keys = Vec::new();

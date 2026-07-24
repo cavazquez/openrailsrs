@@ -149,20 +149,29 @@ fn set_matrix_rotation(m: &mut Matrix43, q: Quat) {
     let wx = w * x;
     let wy = w * y;
     let wz = w * z;
+    let xna_rows = [
+        [1.0 - 2.0 * (yy + zz), 2.0 * (xy + wz), 2.0 * (xz - wy)],
+        [2.0 * (xy - wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz + wx)],
+        [2.0 * (xz + wy), 2.0 * (yz - wx), 1.0 - 2.0 * (xx + yy)],
+    ];
+    // `q` is already in Open Rails/XNA coordinates (`z` negated above).
+    // Pose matrices are kept in MSTS coordinates until the hierarchy conversion,
+    // so store the inverse of `XNAMatrixFromMSTS` here to avoid applying the
+    // handedness conversion twice.
     m.rows[0] = [
-        (1.0 - 2.0 * (yy + zz)) as f64,
-        (2.0 * (xy + wz)) as f64,
-        (2.0 * (xz - wy)) as f64,
+        xna_rows[0][0] as f64,
+        xna_rows[0][1] as f64,
+        -xna_rows[0][2] as f64,
     ];
     m.rows[1] = [
-        (2.0 * (xy - wz)) as f64,
-        (1.0 - 2.0 * (xx + zz)) as f64,
-        (2.0 * (yz + wx)) as f64,
+        xna_rows[1][0] as f64,
+        xna_rows[1][1] as f64,
+        -xna_rows[1][2] as f64,
     ];
     m.rows[2] = [
-        (2.0 * (xz + wy)) as f64,
-        (2.0 * (yz - wx)) as f64,
-        (1.0 - 2.0 * (xx + yy)) as f64,
+        -xna_rows[2][0] as f64,
+        -xna_rows[2][1] as f64,
+        xna_rows[2][2] as f64,
     ];
 }
 
@@ -299,6 +308,36 @@ mod tests {
     fn shape_has_loop_animation_detects_controllers() {
         assert!(shape_has_loop_animation(&sliding_shape()));
         assert!(!shape_has_loop_animation(&ShapeFile::default()));
+    }
+
+    #[test]
+    fn slerp_rotation_matches_open_rails_xna_handedness_once() {
+        let mut shape = ShapeFile::default();
+        shape.matrices.push(NamedMatrix {
+            name: "LEVER".into(),
+            matrix: identity_matrix(),
+        });
+        shape.animations.push(Animation {
+            frame_count: 1,
+            frame_rate: 30,
+            nodes: vec![AnimNode {
+                name: "LEVER".into(),
+                controllers: vec![AnimController::SlerpRot {
+                    keys: vec![
+                        (0.0, [0.0, 0.0, 0.0, 1.0]),
+                        (1.0, [0.0, 0.0, 0.5, 0.866_025_4]),
+                    ],
+                }],
+            }],
+        });
+
+        let pose = animation_pose_matrices(&shape, 1.0);
+        let actual = openrailsrs_or_shader::coordinates::matrix43_to_transform(&pose[0]).rotation;
+        let expected = Quat::from_xyzw(0.0, 0.0, -0.5, 0.866_025_4);
+        assert!(
+            actual.dot(expected).abs() > 0.9999,
+            "animation handedness applied more than once: {actual:?} vs {expected:?}"
+        );
     }
 
     #[test]
