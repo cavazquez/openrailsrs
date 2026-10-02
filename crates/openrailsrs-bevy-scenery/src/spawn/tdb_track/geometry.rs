@@ -116,7 +116,7 @@ pub fn section_track_length_m(
         && let Some(def) = cat.sections.get(&section_index)
     {
         let len = def.effective_length_m();
-        if len > 0.5 {
+        if len > 1e-6 {
             return len as f32;
         }
     }
@@ -363,10 +363,10 @@ pub fn section_path_spans(
         && let Some(def) = cat.sections.get(&section.section_index).copied()
     {
         let len = def.effective_length_m();
-        if len < 0.5 && next_section_anchor.is_none() {
+        if len <= 1e-6 && next_section_anchor.is_none() {
             return Vec::new();
         }
-        let travel = if len > 0.5 {
+        let travel = if len > 1e-6 {
             len
         } else {
             f64::from(section_track_length_m(
@@ -380,8 +380,11 @@ pub fn section_path_spans(
         let mut end = anchor + bevy_delta_from_msts_vec(msts);
         if let Some(next) = next_section_anchor {
             if !def.is_curved()
-                && let Some(span) = straight_span_to(next, anchor, half, ax, az)
+                && let Some(mut span) = straight_span_to(next, anchor, half, ax, az)
             {
+                // Native anchors are rounded; chainage still follows the
+                // physical TrackSection length, as in the simulation/importer.
+                span.length_m = Some(travel as f32);
                 return vec![span];
             }
             // Keep geometric end for curves; next anchor is only a rebase hint.
@@ -884,6 +887,7 @@ pub fn tdb_node_track_pose(
             }
             let section_count = sections.len();
             let mut accumulated = 0.0;
+            let mut final_pose = None;
             for (idx, section) in sections.iter().enumerate() {
                 let next_anchor = sections
                     .get(idx + 1)
@@ -903,24 +907,10 @@ pub fn tdb_node_track_pose(
                         return Some(track_pose_along_span(*span, along));
                     }
                     accumulated += span_len;
+                    final_pose = Some(track_pose_along_span(*span, span_len));
                 }
             }
-            sections.last().and_then(|section| {
-                find_location_in_section_world(
-                    *section,
-                    chainage_m,
-                    tsection,
-                    near_hint,
-                    *length_m,
-                    section_count,
-                )
-                .map(|pos| TrackPose {
-                    position: pos,
-                    yaw_deg: bevy_yaw_deg_from_msts_ay(section.ay) as f32,
-                    pitch_rad: section.pitch_rad() as f32,
-                    roll_rad: section.roll_rad() as f32,
-                })
-            })
+            final_pose
         }
         TrackNodeKind::Junction { .. } | TrackNodeKind::End => node.position.map(|p| {
             let (x, y, z) = p.bevy_position_nearest_to(
@@ -1238,6 +1228,56 @@ mod tests {
         )
         .unwrap();
         assert!((end - spans[0].end_world).length() < 0.05);
+    }
+
+    #[test]
+    fn signed_curve_mesh_and_openrails_traveller_positions_agree() {
+        for angle in [-5.0, 5.0] {
+            let mut section = section_at_with_shape(0.0, 0.0, 5005, 99);
+            section.ay = 0.7;
+            let mut catalog = catalog_with_curve_shape();
+            catalog.sections.get_mut(&5005).unwrap().curve_angle_deg = Some(angle);
+            let span = section_path_spans(section, Some(&catalog), None, 0.0, 1, None)[0];
+            for fraction in [0.5, 1.0] {
+                let distance = span_length_m(span) * fraction;
+                let reference =
+                    find_location_in_section_world(section, distance, Some(&catalog), None, 0.0, 1)
+                        .unwrap();
+                assert!((point_along_span(span, distance) - reference).length() < 0.01);
+            }
+        }
+    }
+
+    #[test]
+    fn short_native_sections_preserve_chainage_and_clamp_at_vector_end() {
+        let mut first = section_at(0.0, 0.0, 1);
+        first.ay = 0.0;
+        let mut second = section_at(0.0, 0.254, 2);
+        second.ay = 0.0;
+        let mut catalog = catalog_with_straight_shape(1, 0.254);
+        catalog
+            .sections
+            .extend(catalog_with_straight_shape(2, 100.0).sections);
+        let mut tdb = TrackDbFile::default();
+        tdb.nodes.push(TrackDbNode {
+            id: 1,
+            position: Some(first.start),
+            pin_refs: Vec::new(),
+            kind: TrackNodeKind::Vector {
+                length_m: 100.254,
+                speed_limit_mps: 0.0,
+                pins: (0, 0),
+                item_ids: Vec::new(),
+                sections: vec![first, second],
+                geometry: None,
+            },
+        });
+        let middle = tdb_node_track_pose(&tdb, 1, 50.254, Some(&catalog), None).unwrap();
+        assert!((middle.position - Vec3::new(0.0, 0.0, -50.254)).length() < 0.001);
+        let end = tdb_node_track_pose(&tdb, 1, 100.254, Some(&catalog), None).unwrap();
+        let beyond = tdb_node_track_pose(&tdb, 1, 101.0, Some(&catalog), None).unwrap();
+        assert!((end.position - Vec3::new(0.0, 0.0, -100.254)).length() < 0.001);
+        assert_eq!(end, beyond);
     }
 
     #[test]

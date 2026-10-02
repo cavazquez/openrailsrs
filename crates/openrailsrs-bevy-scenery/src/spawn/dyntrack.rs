@@ -199,9 +199,9 @@ pub fn arc_local_frame(radius_m: f32, total_angle_deg: f32, fraction: f32) -> (V
     let theta_rad = total_angle_deg.to_radians();
     let r = radius_m.abs();
     let sign = if total_angle_deg >= 0.0 { 1.0 } else { -1.0 };
-    let center = Vec3::new(sign * r, 0.0, 0.0);
+    let center = Vec3::new(-sign * r, 0.0, 0.0);
     let phi = theta_rad * fraction.clamp(0.0, 1.0);
-    let from_center = Vec3::new(-sign * r, 0.0, 0.0);
+    let from_center = Vec3::new(sign * r, 0.0, 0.0);
     let rotated = Quat::from_rotation_y(-phi) * from_center;
     let pos = center + rotated;
     (pos, Quat::from_rotation_y(-phi))
@@ -655,5 +655,16 @@ mod tests {
         let tangent = rot * Vec3::Z;
         assert!((tangent.z - 1.0).abs() < 1e-4);
         assert!(tangent.x.abs() < 1e-4);
+    }
+
+    #[test]
+    fn both_curve_signs_advance_along_their_reported_tangent() {
+        for angle in [-15.0, 15.0] {
+            let (end, _) = arc_local_frame(500.0, angle, 1.0);
+            assert!(end.z > 0.0, "curve must advance along +Z for either turn");
+            let (a, rotation) = arc_local_frame(500.0, angle, 0.5);
+            let (b, _) = arc_local_frame(500.0, angle, 0.501);
+            assert!((b - a).normalize().dot(rotation * Vec3::Z) > 0.999);
+        }
     }
 }

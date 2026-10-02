@@ -143,7 +143,17 @@ impl TSectionCatalog {
         if let Some(global) = discover_global_tsection(route_dir) {
             Self::merge_file(&global, &mut catalog)?;
         }
-        if let Some(path) = discover_route_tsection(route_dir) {
+        let overlay = discover_route_tsection(route_dir);
+        if let Some(path) = overlay.as_ref() {
+            Self::merge_file(path, &mut catalog)?;
+        }
+        // OR first loads the global/OpenRails definitions, then calls
+        // AddRouteTSectionDatFile for the route's dynamic sections.
+        let dynamic = route_dir.join("tsection.dat");
+        if let Some(path) = resolve_path_case_insensitive(&dynamic)
+            && path.is_file()
+            && overlay.as_ref() != Some(&path)
+        {
             Self::merge_file(&path, &mut catalog)?;
         }
         Ok(catalog)
@@ -342,12 +352,12 @@ fn arc_end_local(radius_m: f64, total_angle_deg: f64) -> ([f64; 3], f64) {
     let theta_rad = total_angle_deg.to_radians();
     let r = radius_m.abs();
     let sign = if total_angle_deg >= 0.0 { 1.0 } else { -1.0 };
-    let from_center_x = -sign * r;
+    let from_center_x = sign * r;
     let cos = theta_rad.cos();
     let sin = theta_rad.sin();
     let rotated_x = from_center_x * cos;
     let rotated_z = -from_center_x * sin;
-    let pos_x = sign * r + rotated_x;
+    let pos_x = -sign * r + rotated_x;
     ([pos_x, 0.0, rotated_z], -total_angle_deg)
 }
 
@@ -448,9 +458,7 @@ fn scan_tagged_entries(text: &str, tag: &str, mut apply: impl FnMut(&[Ast])) {
             continue;
         }
         let open = after_tag + rel_paren;
-        if let Ok(Ast::List(items)) = parse_first(&text[open..])
-            && (matches_head(&items, tag) || items.first().and_then(ast_to_u32).is_some())
-        {
+        if let Ok(Ast::List(items)) = parse_first(&text[open..]) {
             apply(&items);
         }
         pos = open + 1;
@@ -552,6 +560,31 @@ fn collect_shapes(items: &[Ast], out: &mut HashMap<u32, TrackShapeDef>) {
 }
 
 fn parse_track_section(items: &[Ast]) -> Option<(u32, TrackSectionDef)> {
+    // RouteTrackSection: SectionCurve (flag) ID A B. The marker is skipped;
+    // B=0 means A metres straight, otherwise A radians and B metres radius.
+    let start = usize::from(matches_head(items, "TrackSection"));
+    let dynamic_id = match items.get(start) {
+        Some(Ast::Atom(Atom::Symbol(tag))) if tag.eq_ignore_ascii_case("SectionCurve") => {
+            Some(start + 2)
+        }
+        Some(Ast::List(marker)) if matches_head(marker, "SectionCurve") => Some(start + 1),
+        _ => None,
+    };
+    if let Some(index) = dynamic_id {
+        let id = items.get(index).and_then(ast_to_u32)?;
+        let a = items.get(index + 1).and_then(ast_to_f64)?;
+        let b = items.get(index + 2).and_then(ast_to_f64)?;
+        return Some((
+            id,
+            TrackSectionDef {
+                gauge_m: 0.0,
+                length_m: if b == 0.0 { a } else { 0.0 },
+                curve_radius_m: (b != 0.0).then_some(b),
+                curve_angle_deg: (b != 0.0).then_some(a.to_degrees()),
+                skew_deg: None,
+            },
+        ));
+    }
     let (id, body_start) = section_id_and_body(items)?;
     let mut gauge_m = 0.0;
     let mut length_m = 0.0;
@@ -1036,6 +1069,24 @@ TrackShape ( 1
         assert!((dims.length_m - arc).abs() < 1e-2);
         assert_eq!(dims.curve_radius_m, Some(500.0));
         assert_eq!(dims.curve_angle_deg, Some(-5.0));
+    }
+
+    #[test]
+    fn route_dynamic_sections_survive_openrails_overlay_and_use_radians() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("OpenRails")).unwrap();
+        std::fs::write(
+            dir.path().join("OpenRails/tsection.dat"),
+            "TrackSections ( 1 TrackSection ( 5 SectionSize ( 1.435 25 ) ) )",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("tsection.dat"), "TrackSections ( 2 TrackSection ( SectionCurve ( 0 ) 40000 5 0 ) TrackSection ( SectionCurve ( 1 ) 40871 -0.054 980.79 ) )").unwrap();
+        let catalog = TSectionCatalog::load_for_route(dir.path()).unwrap();
+        assert_eq!(catalog.sections[&5].effective_length_m(), 25.0);
+        assert_eq!(catalog.sections[&40000].effective_length_m(), 5.0);
+        let curve = catalog.sections[&40871];
+        assert!((curve.effective_length_m() - 0.054 * 980.79).abs() < 1e-6);
+        assert!((curve.curve_angle_deg.unwrap() - (-0.054_f64).to_degrees()).abs() < 1e-6);
     }
 
     #[test]

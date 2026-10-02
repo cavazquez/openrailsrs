@@ -7,14 +7,14 @@ start_time_s = 35700
 path = "."
 start = "n95"
 destination = "n105"
-start_offset_m = 264.48412978746114
+start_offset_m = 264.9375896317198
 assume_signals_clear = false
 waypoints = ["n95", "n97", "n99", "n101", "n103", "n105"]
 
 [[route.stops]]
 node = "n97"
 name = "Northolt Park"
-offset_m = -3403.245530621014
+offset_m = -3409.0804182928355
 arrive_s = 0.0
 depart_s = 20.0
 dwell_s = 20.0

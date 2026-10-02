@@ -7,8 +7,8 @@ compartida en `../chiltern/consists`, sin duplicar el Content.
 
 El recorrido utiliza `RS_Maryleb-WRuislip0955.pat`, cuyos primeros puntos están
 en Northolt Park aunque el nombre mencione Marylebone. Sus puntos 0, 3 y 6
-definen las tres estaciones. La longitud de servicio es 6890,28 m; el odómetro
-arranca en cero y la geometría conserva 264,48 m de vía antes de la cabeza.
+definen las tres estaciones. La longitud de servicio es 6937,11 m; el odómetro
+arranca en cero y la geometría conserva 264,94 m de vía antes de la cabeza.
 `provenance.json` identifica PAT, TDB y catálogos tsection mediante SHA-256.
 
 El horario de esta partida se ha creado aquí: salida de Northolt después de

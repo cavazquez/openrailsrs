@@ -39,7 +39,9 @@ fn drive(frame_dt: f64) -> LiveDriveSession {
     }
     assert_eq!(train.state.passengers, 0);
     assert_eq!(train.exterior.door, DoorState::Closed);
-    assert!(train.state.odometer_m > 6800.0 && train.state.odometer_m < 6900.0);
+    // Native PAT/TDB + all three tsection catalogs define this service length.
+    // The head may stop within the same 10 m station acceptance window.
+    assert!((train.state.odometer_m - 6937.114942143).abs() <= 10.0);
     train
 }
 

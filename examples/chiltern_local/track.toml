@@ -36,14 +36,14 @@ y_m = -30573382.918
 id = "e96_r"
 from = "n95"
 to = "n97"
-length_m = 3667.7296604084754
+length_m = 3674.0180079245556
 speed_limit_kmh = 56.327040000000004
 
 [[edges]]
 id = "e98"
 from = "n97"
 to = "n99"
-length_m = 143.8325731200609
+length_m = 159.79026389394392
 speed_limit_kmh = 65.0
 
 [[edges]]
@@ -57,7 +57,7 @@ speed_limit_kmh = 65.0
 id = "e102"
 from = "n101"
 to = "n103"
-length_m = 2726.603465558379
+length_m = 2751.65846
 speed_limit_kmh = 65.0
 
 [[edges]]
@@ -70,7 +70,7 @@ speed_limit_kmh = 65.0
 [[signals]]
 id = "sig561"
 edge_id = "e96_r"
-position_m = 2793.9524604084754
+position_m = 2800.2408079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -80,7 +80,7 @@ default = "clear"
 [[signals]]
 id = "sig688"
 edge_id = "e96_r"
-position_m = 143.70966040847543
+position_m = 149.99800792455562
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -90,7 +90,7 @@ default = "clear"
 [[signals]]
 id = "sig689"
 edge_id = "e96_r"
-position_m = 3664.0577814084754
+position_m = 3670.3461289245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -100,7 +100,7 @@ default = "clear"
 [[signals]]
 id = "sig690"
 edge_id = "e96_r"
-position_m = 3664.0577814084754
+position_m = 3670.3461289245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -110,7 +110,7 @@ default = "clear"
 [[signals]]
 id = "sig691"
 edge_id = "e96_r"
-position_m = 1969.6896604084754
+position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -220,7 +220,7 @@ default = "clear"
 [[signals]]
 id = "sig1066"
 edge_id = "e96_r"
-position_m = 1969.6896604084754
+position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -230,7 +230,7 @@ default = "clear"
 [[signals]]
 id = "sig1067"
 edge_id = "e96_r"
-position_m = 1969.6896604084754
+position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -260,7 +260,7 @@ default = "clear"
 [[signals]]
 id = "sig8517"
 edge_id = "e96_r"
-position_m = 3665.4605604084754
+position_m = 3671.7489079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -270,7 +270,7 @@ default = "clear"
 [[signals]]
 id = "sig8518"
 edge_id = "e96_r"
-position_m = 3665.4605604084754
+position_m = 3671.7489079245556
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -280,7 +280,7 @@ default = "clear"
 [[signals]]
 id = "sig8519"
 edge_id = "e96_r"
-position_m = 3179.8966604084753
+position_m = 3186.1850079245555
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -290,7 +290,7 @@ default = "clear"
 [[signals]]
 id = "sig8520"
 edge_id = "e96_r"
-position_m = 3179.8966604084753
+position_m = 3186.1850079245555
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"

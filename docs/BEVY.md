@@ -19,6 +19,18 @@ Los vértices MSTS ya invierten Z al convertirse a Bevy: la base del coche
 rota −90° sobre Y para que el frente de la cabina siga el +X del recorrido.
 La prueba de cámara compara esa vista contra la dirección real de marcha.
 
+Los catálogos combinan GLOBAL, la variante OpenRails y las secciones dinámicas
+del `tsection.dat` de la ruta. Las secciones cortas conservan su longitud
+física; los arcos avanzan según la tangente del Traveller de Open Rails.
+Los tiles de terreno con nombre hash se colocan con las coordenadas de su
+bundle, evitando que varias elevaciones se superpongan en el tile cero.
+La prueba opcional con Content original verifica las tres estaciones contra
+los puntos PAT con tolerancia de 3 m, incluyendo la cuantización de coordenadas.
+
+```bash
+OPENRAILSRS_NATIVE_ROUTE="$CHILTERN_ROUTE" ./check.sh
+```
+
 Features de ventana: `x11` + `wayland`. En sesiones Wayland, sin `wayland` winit cae a XWayland y RADV suele fallar con `Surface::configure → Invalid surface`.
 
 Present mode del viewer: default `AutoVsync` (`Fifo`). Override: `OPENRAILSRS_PRESENT_MODE=auto_vsync|auto_no_vsync|fifo|mailbox|immediate`. En híbridas AMD+NVIDIA rotas, ver troubleshooting en [`VIEWER3D.md`](VIEWER3D.md).

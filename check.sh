@@ -5,6 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+# Match the playable launcher and share one compact Bevy build across checks.
+export CARGO_PROFILE_DEV_OPT_LEVEL="${CARGO_PROFILE_DEV_OPT_LEVEL:-1}"
+export CARGO_PROFILE_TEST_OPT_LEVEL="${CARGO_PROFILE_TEST_OPT_LEVEL:-1}"
+export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-0}"
+export CARGO_PROFILE_TEST_DEBUG="${CARGO_PROFILE_TEST_DEBUG:-0}"
+export CARGO_PROFILE_DEV_STRIP="${CARGO_PROFILE_DEV_STRIP:-symbols}"
+export CARGO_PROFILE_TEST_STRIP="${CARGO_PROFILE_TEST_STRIP:-symbols}"
+export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}"
 export OPENRAILSRS_DISABLE_AUDIO=1
 # Clear session/visual overrides that leak into unit tests (view radius, camera, screenshots).
 unset OPENRAILSRS_FOLLOW OPENRAILSRS_CAM_YAW OPENRAILSRS_CAM_PITCH OPENRAILSRS_CAM_DIST
@@ -22,6 +30,11 @@ echo "==> tests"
 # Serial: several suites share process-global counters and environment variables.
 # All focused regressions are already included here; keep one Bevy feature set.
 cargo test --locked --workspace --all-features -- --test-threads=1
+
+if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
+    echo "==> native PAT station geometry"
+    cargo test --locked --workspace --all-features native_service_stations_match_pat_world_positions -- --ignored --nocapture
+fi
 
 echo "==> build"
 cargo build --locked --workspace --all-features

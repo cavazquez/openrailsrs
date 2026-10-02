@@ -1045,6 +1045,56 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_NATIVE_ROUTE with original Chiltern content"]
+    fn native_service_stations_match_pat_world_positions() {
+        let route = std::path::PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").unwrap());
+        let scenario_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern_local");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(scenario_dir.join("scenario.toml")).unwrap();
+        let session =
+            openrailsrs_sim::LiveDriveSession::from_scenario(&scenario_dir, &scenario).unwrap();
+        let scene = TrackScene::from_graph(session.graph.clone());
+        let tdb = TrackDbFile::from_path(route.join("Chiltern.tdb")).unwrap();
+        let catalog = TSectionCatalog::load_for_route(&route).unwrap();
+        let resolver = TrackPositionResolver::new(&tdb, Some(&catalog));
+        let path = openrailsrs_formats::PathFile::from_path(
+            route.join("PATHS/RS_Maryleb-WRuislip0955.pat"),
+        )
+        .unwrap();
+        for (target, pdp) in session.gameplay.stop_targets.iter().zip([0, 3, 6]) {
+            let (edge, chainage) = session
+                .position_at_head_offset(
+                    target.cum_dist_m - scenario.route.start_offset_m.unwrap_or(0.0),
+                )
+                .unwrap();
+            let (position, _) = vehicle_pose_on_graph_edge(
+                &scene.graph,
+                &edge,
+                chainage,
+                Some(&resolver),
+                &scene,
+                Vec3::ZERO,
+                &test_focus(),
+                None,
+            )
+            .unwrap();
+            let (x, y, z) = path.pdps[pdp].world.unwrap().bevy_position();
+            let expected = Vec3::new(x, y, z);
+            let error = (position - expected).length();
+            eprintln!(
+                "{}: native={position:?}, PAT={expected:?}, error={error:.3}m",
+                target.name
+            );
+            assert!(
+                error <= 3.0,
+                "station {} differs from its original PAT marker by {error}m",
+                target.name
+            );
+        }
+    }
+
+    #[test]
     fn candidate_tdb_id_prefers_alias_over_n_prefix() {
         let tdb = TrackDbFile::default();
         let resolver = TrackPositionResolver::new(&tdb, None).with_graph_tdb_map(HashMap::from([

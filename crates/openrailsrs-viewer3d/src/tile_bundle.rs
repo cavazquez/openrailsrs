@@ -161,29 +161,49 @@ pub fn materialize_world_from_asset(
 
 /// Build a [`TerrainTile`] from a loaded terrain asset (elevation may be absent → Partial).
 pub fn terrain_tile_from_asset(terr: &MstsTerrainTileAsset) -> TerrainTile {
+    terrain_tile_from_asset_at(terr, terr.tile_x, terr.tile_z)
+}
+
+fn terrain_tile_from_asset_at(
+    terr: &MstsTerrainTileAsset,
+    tile_x: i32,
+    tile_z: i32,
+) -> TerrainTile {
     let data = terr.elevation.as_ref().map(|grid| {
         Arc::new(TerrainTileData {
             grid: Arc::new(grid.clone()),
             features: terr.features.clone().map(Arc::new),
         })
     });
-    let (wx, wz) = msts_tile_world_origin(terr.tile_x, terr.tile_z);
+    let (wx, wz) = msts_tile_world_origin(tile_x, tile_z);
+    let mut file = terr.terrain.clone();
+    file.tile_x = tile_x;
+    file.tile_z = tile_z;
     TerrainTile {
-        tile_x: terr.tile_x,
-        tile_z: terr.tile_z,
+        tile_x,
+        tile_z,
         translation: Vec3::new(wx, 0.0, wz),
         path: terr.source_path.clone(),
-        file: terr.terrain.clone(),
+        file,
         data,
     }
 }
 
 /// Append a terrain tile from a loaded terrain asset; merge loader diagnostics (#54).
 pub fn materialize_terrain_from_asset(scene: &mut TerrainScene, terr: &MstsTerrainTileAsset) {
+    materialize_terrain_from_asset_at(scene, terr, terr.tile_x, terr.tile_z);
+}
+
+fn materialize_terrain_from_asset_at(
+    scene: &mut TerrainScene,
+    terr: &MstsTerrainTileAsset,
+    tile_x: i32,
+    tile_z: i32,
+) {
     if scene
         .tiles
         .iter()
-        .any(|t| t.tile_x == terr.tile_x && t.tile_z == terr.tile_z)
+        .any(|t| t.tile_x == tile_x && t.tile_z == tile_z)
     {
         return;
     }
@@ -193,7 +213,9 @@ pub fn materialize_terrain_from_asset(scene: &mut TerrainScene, terr: &MstsTerra
             .load_diag
             .record_path_loaded(&terr.source_path, MstsAssetKind::Terrain);
     }
-    scene.tiles.push(terrain_tile_from_asset(terr));
+    scene
+        .tiles
+        .push(terrain_tile_from_asset_at(terr, tile_x, tile_z));
     scene.tiles_loaded = scene.tiles.len();
 }
 
@@ -261,11 +283,13 @@ pub fn try_materialize_terrain_bundle(
         );
         return None;
     };
-    materialize_terrain_from_asset(scene, terr);
+    // Hash-named native .t files do not encode signed coordinates readable by
+    // the generic asset loader. The bundle manifest owns the placement frame.
+    materialize_terrain_from_asset_at(scene, terr, bundle.tile_x, bundle.tile_z);
     scene
         .tiles
         .iter()
-        .find(|t| t.tile_x == terr.tile_x && t.tile_z == terr.tile_z)
+        .find(|t| t.tile_x == bundle.tile_x && t.tile_z == bundle.tile_z)
         .cloned()
 }
 
@@ -322,6 +346,64 @@ mod tests {
     use bevy::asset::{AssetPlugin, LoadState};
     use openrailsrs_bevy_scenery::{MstsAssetPlugin, TerrainRawStatus, TileBundleStatus};
     use std::time::Duration;
+
+    #[test]
+    fn hash_named_terrain_bundles_keep_distinct_native_coordinates() {
+        use openrailsrs_formats::{ElevationGrid, TerrainFile, TerrainSamples};
+        let worlds = Assets::<MstsWorldTileAsset>::default();
+        let mut terrains = Assets::<MstsTerrainTileAsset>::default();
+        let mut scene = TerrainScene::default();
+        for (tile_x, height) in [(-6086, 60.0), (-6085, 40.0)] {
+            let handle = terrains.add(MstsTerrainTileAsset {
+                terrain: TerrainFile {
+                    tile_x: 0,
+                    tile_z: 0,
+                    samples: TerrainSamples {
+                        nsamples: 2,
+                        sample_size: 8.0,
+                        ..default()
+                    },
+                    shaders: vec![],
+                    patch_sets: vec![],
+                },
+                tile_x: 0,
+                tile_z: 0,
+                source_path: "TILES/-11cf2910.t".into(),
+                y_raw_path: None,
+                f_raw_path: None,
+                elevation: Some(ElevationGrid {
+                    nsamples: 2,
+                    elevations: vec![height; 4],
+                }),
+                features: None,
+                raw_status: TerrainRawStatus::Complete,
+                diag: default(),
+            });
+            let bundle = MstsTileBundleAsset {
+                tile_x,
+                tile_z: 14927,
+                terrain: Some(handle),
+                world: None,
+                terrain_raw_status: Some(TerrainRawStatus::Complete),
+                status: TileBundleStatus::Partial,
+                diag: default(),
+                source_path: "tile.tilebundle".into(),
+            };
+            let tile =
+                try_materialize_terrain_bundle(&bundle, &worlds, &terrains, &mut scene).unwrap();
+            assert_eq!((tile.tile_x, tile.tile_z), (tile_x, 14927));
+            assert_eq!((tile.file.tile_x, tile.file.tile_z), (tile_x, 14927));
+            let (x, z) = msts_tile_world_origin(tile_x, 14927);
+            let elevation = crate::terrain::TerrainElevation::from_terrain_scene(&scene);
+            // At native million-metre coordinates Z has 2 m precision; sample
+            // safely inside the tile, rather than rounding onto its boundary.
+            assert_eq!(elevation.sample_world_y(x + 4.0, z + 4.0), Some(height));
+        }
+        assert_eq!(scene.tiles.len(), 2);
+        let elevation = crate::terrain::TerrainElevation::from_terrain_scene(&scene);
+        let (x, z) = msts_tile_world_origin(-6086, 14927);
+        assert_eq!(elevation.sample_world_y(x + 4.0, z + 4.0), Some(60.0));
+    }
 
     fn wait_loaded<A: Asset>(app: &mut App, handle: &Handle<A>, label: &str) {
         let deadline = std::time::Instant::now() + Duration::from_secs(5);

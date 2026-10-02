@@ -41,6 +41,17 @@ funcional no sustituye una captura OR completa del nuevo recorrido, que
 todavía falta; tampoco certifica SIGSCR completo, retroceso ni paridad visual.
 El caso regulador 75 % no se declara aprobado: aún falta su CSV OR.
 
+Con el Content original disponible, este comando agrega la comparación
+espacial de las tres estaciones contra los puntos PAT originales:
+
+```bash
+OPENRAILSRS_NATIVE_ROUTE="$CHILTERN_ROUTE" ./check.sh
+```
+
+La tolerancia es 3 m por la cuantización a coordenadas
+de renderizado; esta prueba detecta errores de longitudes, sentido y curvas,
+sin afirmar equivalencia visual ni física de la partida completa.
+
 ## Modelo (importante)
 
 | | Open Rails | openrailsrs default | `multi_body = true` |

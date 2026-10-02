@@ -854,7 +854,7 @@ fn load_from_scenario(
         let drive = LiveDrive::from_scenario_path(path)?;
         log_step("initialized live drive session", t);
         viewer_log!(
-            "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, ↑/↓ throttle/brake, F2 fly, G teleport)",
+            "openrailsrs-viewer3d: live drive on \"{}\" (dt={:.2}s, A/D throttle, ;/' train brake, W/S reverser, Q doors)",
             drive.session.scenario_name,
             drive.session.dt,
         );

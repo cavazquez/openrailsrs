@@ -828,6 +828,20 @@ pub fn spawn_live_train(
     };
     let (yaw, _, _) = rot.to_euler(EulerRot::YXZ);
 
+    viewer_log!(
+        "openrailsrs-viewer3d: live start placement — render {pos:?}, native {:?}, terrain {:?}, offset {:?}, height origin {:.3}",
+        Vec3::new(
+            pos.x + focus.center.x,
+            pos.y + focus.height_origin,
+            pos.z + focus.center.z
+        ),
+        terrain_ref.and_then(
+            |terrain| terrain.sample_world_y(pos.x + focus.center.x, pos.z + focus.center.z)
+        ),
+        offset.delta,
+        focus.height_origin,
+    );
+
     let vehicles = consist.vehicles_for("primary");
     commands.insert_resource(LiveTrainCameraFrame::from_vehicles(vehicles));
     let shape_dir_bufs = consist.shape_search_dirs(&assets.route_dir);
