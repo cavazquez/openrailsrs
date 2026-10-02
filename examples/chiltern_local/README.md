@@ -6,13 +6,19 @@ La cabina CVF/ORTS y los modelos exteriores se resuelven desde la formación
 compartida en `../chiltern/consists`, sin duplicar el Content.
 
 El recorrido utiliza `RS_Maryleb-WRuislip0955.pat`, cuyos primeros puntos están
-en Northolt Park aunque el nombre mencione Marylebone. Sus puntos 0, 3 y 6
-definen las tres estaciones. La longitud de servicio es 6937,11 m; el odómetro
-arranca en cero y la geometría conserva 264,94 m de vía antes de la cabeza.
+en Northolt Park aunque el nombre mencione Marylebone. El PAT define el camino;
+las paradas usan los extremos de salida de los andenes originales: Northolt
+Park 2 (TDB 1286), South Ruislip 3 (1290) y West Ruislip 3 (1080).
+El primer punto del PAT está unos 122 m después del andén, por lo que se
+retrocede el inicio al andén de Northolt. La longitud de servicio es 7058,02 m;
+el odómetro arranca en cero. Se conserva también el vector principal anterior
+(TDB 94), de modo que los ocho coches caben detrás de la cabeza sin amontonarse
+en el primer nudo del PAT.
 `provenance.json` identifica PAT, TDB y catálogos tsection mediante SHA-256.
 
-El horario de esta partida se ha creado aquí: salida de Northolt después de
-20 s, llegada a South Ruislip a los 360 s y a West Ruislip a los 720 s, con
+El horario, pasajeros y tiempos de embarque de esta partida se han creado
+aquí, sin reproducir una actividad OR concreta: salida de Northolt después de
+20 s, llegada a South Ruislip a los 390 s y a West Ruislip a los 720 s, con
 30 s de embarque en ambas. Se cuentan únicamente las paradas servidas.
 Pasar de largo más de 10 m o rebasar una señal de parada termina el servicio
 como fallido. El resultado final muestra las paradas y penalizaciones.

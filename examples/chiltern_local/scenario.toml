@@ -5,16 +5,16 @@ start_time_s = 35700
 
 [route]
 path = "."
-start = "n95"
+start = "n93"
 destination = "n105"
-start_offset_m = 264.9375896317198
+start_offset_m = 1385.9003278212956
 assume_signals_clear = false
-waypoints = ["n95", "n97", "n99", "n101", "n103", "n105"]
+waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105"]
 
 [[route.stops]]
 node = "n97"
 name = "Northolt Park"
-offset_m = -3409.0804182928355
+offset_m = -3531.682
 arrive_s = 0.0
 depart_s = 20.0
 dwell_s = 20.0
@@ -24,9 +24,9 @@ passengers_off = 0
 [[route.stops]]
 node = "n101"
 name = "South Ruislip"
-offset_m = -335.82113991194643
-arrive_s = 360.0
-depart_s = 390.0
+offset_m = -329.501
+arrive_s = 390.0
+depart_s = 420.0
 dwell_s = 30.0
 passengers_on = 20
 passengers_off = 0
@@ -34,7 +34,7 @@ passengers_off = 0
 [[route.stops]]
 node = "n105"
 name = "West Ruislip"
-offset_m = -27.668200043942594
+offset_m = -29.362650000000002
 arrive_s = 720.0
 depart_s = 750.0
 dwell_s = 30.0

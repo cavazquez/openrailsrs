@@ -3,6 +3,11 @@
 id = "chiltern_local"
 
 [[nodes]]
+id = "n93"
+x_m = -12462102.2842
+y_m = -30571720.05
+
+[[nodes]]
 id = "n95"
 x_m = -12463292.836
 y_m = -30571473.309
@@ -31,6 +36,13 @@ y_m = -30573287.756
 id = "n105"
 x_m = -12469070.499
 y_m = -30573382.918
+
+[[edges]]
+id = "e94_r"
+from = "n93"
+to = "n95"
+length_m = 1243.5643198967398
+speed_limit_kmh = 65.0
 
 [[edges]]
 id = "e96_r"
@@ -71,6 +83,36 @@ speed_limit_kmh = 65.0
 id = "sig561"
 edge_id = "e96_r"
 position_m = 2800.2408079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig685"
+edge_id = "e94_r"
+position_m = 1196.5319198967397
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig686"
+edge_id = "e94_r"
+position_m = 549.1843198967398
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig687"
+edge_id = "e94_r"
+position_m = 152.76431989673983
 aspect = "clear"
 [signals.script]
 on_block_ahead = "stop"
@@ -318,6 +360,11 @@ on_second_block_ahead = "caution"
 default = "clear"
 
 [[msts_aliases]]
+tdb_id = 93
+kind = "node"
+id = "n93"
+
+[[msts_aliases]]
 tdb_id = 95
 kind = "node"
 id = "n95"
@@ -346,6 +393,13 @@ id = "n103"
 tdb_id = 105
 kind = "node"
 id = "n105"
+
+[[msts_aliases]]
+tdb_id = 94
+kind = "edge"
+id = "e94"
+from = "n95"
+to = "n93"
 
 [[msts_aliases]]
 tdb_id = 96

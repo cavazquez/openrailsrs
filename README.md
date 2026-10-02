@@ -33,7 +33,7 @@ cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
 ```
 
 ```bash
-# Servicio completo: Northolt Park → South Ruislip → West Ruislip (6,89 km).
+# Servicio completo: Northolt Park → South Ruislip → West Ruislip (7,06 km).
 # Necesita el Content Chiltern instalado; CHILTERN_ROUTE permite cambiar su ubicación.
 ./scripts/run_chiltern_service.sh
 ./scripts/run_chiltern_service.sh --autodrive --cab

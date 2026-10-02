@@ -25,7 +25,8 @@ física; los arcos avanzan según la tangente del Traveller de Open Rails.
 Los tiles de terreno con nombre hash se colocan con las coordenadas de su
 bundle, evitando que varias elevaciones se superpongan en el tile cero.
 La prueba opcional con Content original verifica las tres estaciones contra
-los puntos PAT con tolerancia de 3 m, incluyendo la cuantización de coordenadas.
+los extremos de andén del TDB con tolerancia de 3 m, incluyendo la cuantización
+de coordenadas, y comprueba que la formación completa cabe sobre la vía nativa.
 
 ```bash
 OPENRAILSRS_NATIVE_ROUTE="$CHILTERN_ROUTE" ./check.sh

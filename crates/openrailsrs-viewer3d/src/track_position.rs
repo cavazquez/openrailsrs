@@ -1046,7 +1046,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires OPENRAILSRS_NATIVE_ROUTE with original Chiltern content"]
-    fn native_service_stations_match_pat_world_positions() {
+    fn native_service_stations_match_platform_world_positions() {
         let route = std::path::PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").unwrap());
         let scenario_dir =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern_local");
@@ -1058,11 +1058,27 @@ mod tests {
         let tdb = TrackDbFile::from_path(route.join("Chiltern.tdb")).unwrap();
         let catalog = TSectionCatalog::load_for_route(&route).unwrap();
         let resolver = TrackPositionResolver::new(&tdb, Some(&catalog));
-        let path = openrailsrs_formats::PathFile::from_path(
-            route.join("PATHS/RS_Maryleb-WRuislip0955.pat"),
-        )
-        .unwrap();
-        for (target, pdp) in session.gameplay.stop_targets.iter().zip([0, 3, 6]) {
+        let vehicles =
+            crate::rolling_stock::try_load_consist_vehicles(&scenario_dir, &scenario.train.consist)
+                .unwrap();
+        assert_eq!(vehicles.len(), 8);
+        for vehicle in vehicles {
+            let rear = f64::from(vehicle.offset_m - vehicle.length_m * 0.5);
+            assert!(session.start_chainage_m + rear > 0.0);
+            let (_, chainage) = session.position_at_head_offset(rear).unwrap();
+            assert!(
+                chainage > 0.0,
+                "rear of {} clamps to path origin",
+                vehicle.name
+            );
+        }
+        for (target, (item_id, host)) in
+            session
+                .gameplay
+                .stop_targets
+                .iter()
+                .zip([(1286, 96), (1290, 100), (1080, 104)])
+        {
             let (edge, chainage) = session
                 .position_at_head_offset(
                     target.cum_dist_m - scenario.route.start_offset_m.unwrap_or(0.0),
@@ -1079,16 +1095,21 @@ mod tests {
                 None,
             )
             .unwrap();
-            let (x, y, z) = path.pdps[pdp].world.unwrap().bevy_position();
+            let platform = tdb.item_by_id(item_id).unwrap();
+            assert_eq!(tdb.host_vector_for_item(item_id), Some(host));
+            assert_eq!(edge, format!("e{host}_r"));
+            let physical_length = scene.graph.edge(&edge).unwrap().length_m;
+            assert!((chainage - (physical_length - platform.distance_m)).abs() < 1e-6);
+            let (x, y, z) = platform.world.unwrap().bevy_position();
             let expected = Vec3::new(x, y, z);
             let error = (position - expected).length();
             eprintln!(
-                "{}: native={position:?}, PAT={expected:?}, error={error:.3}m",
+                "{}: native={position:?}, platform {item_id}={expected:?}, error={error:.3}m",
                 target.name
             );
             assert!(
                 error <= 3.0,
-                "station {} differs from its original PAT marker by {error}m",
+                "station {} differs from its original platform endpoint by {error}m",
                 target.name
             );
         }

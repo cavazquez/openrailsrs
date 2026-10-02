@@ -2,8 +2,8 @@
 """Build a small, reproducible service from Chiltern's native PAT/TDB data.
 
 The Rust importer resolves physical lengths through tsection.dat. Native TDB
-section anchors are used to snap stops onto the correct track, rather than onto
-the straight chord between distant junctions. Bulk scenery stays in Content.
+platforms define station stops; section anchors resolve the PAT corridor.
+Bulk scenery stays in Content.
 """
 
 import argparse
@@ -19,11 +19,80 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 PAT = "RS_Maryleb-WRuislip0955.pat"
+APPROACH_VECTOR = 94  # Main-line track behind Northolt, used by the rear cars.
+STATIONS = [("Northolt Park", 1286, 0.0, 20.0),
+            ("South Ruislip", 1290, 390.0, 30.0),
+            ("West Ruislip", 1080, 720.0, 30.0)]
 
 
 def msts_text(path):
     data = path.read_bytes()
     return data.decode("utf-16") if data[:2] in (b"\xff\xfe", b"\xfe\xff") else data.decode("cp1252")
+
+
+def msts_blocks(text, name):
+    """Read balanced native blocks, including quoted names containing parentheses."""
+    for match in re.finditer(r"\b" + re.escape(name) + r"\s*\(", text):
+        depth, quoted, escaped = 1, False, False
+        for index in range(match.end(), len(text)):
+            char = text[index]
+            if escaped:
+                escaped = False
+            elif quoted and char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = not quoted
+            elif not quoted:
+                depth += (char == "(") - (char == ")")
+                if depth == 0:
+                    yield text[match.end():index]
+                    break
+        else:
+            raise ValueError(f"Unterminated native {name} block")
+
+
+def native_station_markers(route_root, path):
+    """Use platform SData chainage on its host vector, never PAT spawn positions."""
+    text = msts_text(route_root / "Chiltern.tdb")
+    hosts = {}
+    for block in msts_blocks(text, "TrackNode"):
+        node_id = int(block.split()[0])
+        for item in re.findall(r"TrItemRef\s*\(\s*(\d+)\s*\)", block):
+            if int(item) in hosts:
+                raise ValueError(f"Ambiguous host for native item {item}")
+            hosts[int(item)] = node_id
+    platforms = {}
+    for block in msts_blocks(text, "PlatformItem"):
+        def field(name):
+            match = re.search(r"\b" + name + r"\s*\(([^)]+)\)", block)
+            if not match:
+                raise ValueError(f"Missing {name} in native platform")
+            return match[1].strip().strip('"')
+        item_id = int(field("TrItemId"))
+        platforms[item_id] = dict(item_id=item_id, station=field("Station"),
+            platform=field("PlatformName"), distance_m=float(field("TrItemSData").split()[0]),
+            pair=int(field("PlatformTrItemData").split()[1]))
+    markers = []
+    for name, item_id, arrival, dwell in STATIONS:
+        platform = platforms[item_id]
+        pair = platforms[platform["pair"]]
+        host = hosts[item_id]
+        if (platform["station"] != name or pair["station"] != name
+                or pair["pair"] != item_id or pair["platform"] != platform["platform"]
+                or hosts[pair["item_id"]] != host):
+            raise ValueError(f"Invalid native platform pair for {name}")
+        edge = next(edge for edge in path if edge["id"].removesuffix("_r") == f"e{host}")
+        def directed_chainage(item):
+            distance = item["distance_m"]
+            if not math.isfinite(distance) or not 0 <= distance <= edge["length_m"]:
+                raise ValueError(f"Platform {item['item_id']} lies outside its physical vector")
+            return edge["length_m"] - distance if edge["id"].endswith("_r") else distance
+        chainage, other = directed_chainage(platform), directed_chainage(pair)
+        if chainage <= other:
+            raise ValueError(f"Chosen stop for {name} is not the platform's departure end")
+        markers.append(dict(**platform, edge_id=edge["id"], chainage_m=chainage,
+            platform_length_m=chainage-other, arrival_s=arrival, dwell_s=dwell))
+    return markers
 
 
 def native_polylines(route_root, graph):
@@ -125,15 +194,23 @@ def prepare(route_root, imported_track, output):
     points = [(p[0] * 2048 + p[2], -(p[1] * 2048 + p[4])) for p in pdps]
     direction = (points[1][0] - points[0][0], points[1][1] - points[0][1])
     by_id = {edge["id"]: edge for edge in graph["edges"]}
-    first_id, first_fraction, _ = nearest(points[0], graph["edges"], polylines, direction)
+    first_id, _, _ = nearest(points[0], graph["edges"], polylines, direction)
     last_direction = (points[-1][0] - points[-2][0], points[-1][1] - points[-2][1])
     last_id, _, _ = nearest(points[-1], graph["edges"], polylines, last_direction)
     first, last = by_id[first_id], by_id[last_id]
     path = [first] + shortest_path(graph["edges"], first["to"], last["from"]) + [last]
+    # Retain the preceding native vector so the full eight-car consist can sit
+    # at the platform without rear vehicles clamping to the PAT's first junction.
+    approach = next(edge for edge in graph["edges"]
+        if edge["id"].removesuffix("_r") == f"e{APPROACH_VECTOR}" and edge["to"] == first["from"])
+    path.insert(0, approach)
     if len({edge["id"] for edge in path}) != len(path):
         raise ValueError("Service route contains a repeated edge")
     total = sum(edge["length_m"] for edge in path)
-    start_offset = first_fraction * first["length_m"]
+    markers = native_station_markers(route_root, path)
+    if markers[0]["edge_id"] != first_id:
+        raise ValueError("Northolt platform is not on the PAT's initial vector")
+    start_offset = approach["length_m"] + markers[0]["chainage_m"]
     if not 3000 < total - start_offset < 8000:
         raise ValueError(f"Unexpected corridor length: {total - start_offset:.1f} m")
     chainages, before = {}, 0.0
@@ -141,17 +218,15 @@ def prepare(route_root, imported_track, output):
         chainages[edge["id"]] = before
         before += edge["length_m"]
     stops = []
-    for name, point, arrival, dwell in [("Northolt Park", points[0], 0.0, 20.0),
-            ("South Ruislip", points[3], 360.0, 30.0), ("West Ruislip", points[6], 720.0, 30.0)]:
-        edge_id, fraction, error = nearest(point, path, polylines)
+    for marker in markers:
+        name, edge_id = marker["station"], marker["edge_id"]
+        arrival, dwell = marker["arrival_s"], marker["dwell_s"]
         edge = by_id[edge_id]
-        # PAT points are used as head stop markers for this explicitly authored
-        # local service. Its departure point is not an OR activity rear spawn.
-        target = chainages[edge_id] + fraction * edge["length_m"]
-        stops.append(dict(node=edge["to"], name=name, offset_m=-(1.0-fraction)*edge["length_m"],
+        target = chainages[edge_id] + marker["chainage_m"]
+        stops.append(dict(node=edge["to"], name=name, offset_m=marker["chainage_m"]-edge["length_m"],
             arrive_s=arrival, depart_s=arrival+dwell, dwell_s=dwell, passengers_on=20 if len(stops)<2 else 0,
             passengers_off=40 if len(stops)==2 else 0))
-        print(f"{name}: {target - start_offset:.1f} m · snap error {error:.3f} m · {edge_id}")
+        print(f"{name}: {target - start_offset:.1f} m · native platform {marker['item_id']} · {edge_id}")
     # Terminal node remains the incoming native edge endpoint; the stopping
     # offset ends the service at the station before the final PAT exit point.
     terminal = stops[-1]["node"]
@@ -191,7 +266,10 @@ def prepare(route_root, imported_track, output):
     provenance = dict(path_file=PAT, pat_sha256=hashlib.sha256(pat_path.read_bytes()).hexdigest(),
         tdb_sha256=hashlib.sha256((route_root/"Chiltern.tdb").read_bytes()).hexdigest(),
         physical_path_length_m=sum(edge["length_m"] for edge in path), start_chainage_m=start_offset,
-        station_points=[0, 3, 6], signal_policy="single train, three aspect occupancy script; source SIGSCR not translated")
+        service_length_m=chainages[markers[-1]["edge_id"]]+markers[-1]["chainage_m"]-start_offset,
+        approach_vector_id=APPROACH_VECTOR,
+        station_markers=[{key: marker[key] for key in ("station", "platform", "item_id", "pair", "edge_id", "chainage_m", "platform_length_m")} for marker in markers],
+        signal_policy="single train, three aspect occupancy script; source SIGSCR not translated")
     provenance["tsection_sha256"] = {
         str(path.relative_to(route_root.parent.parent)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in [route_root.parent.parent/"GLOBAL/tsection.dat", route_root/"tsection.dat", route_root/"OpenRails/tsection.dat"]

@@ -42,14 +42,16 @@ todavía falta; tampoco certifica SIGSCR completo, retroceso ni paridad visual.
 El caso regulador 75 % no se declara aprobado: aún falta su CSV OR.
 
 Con el Content original disponible, este comando agrega la comparación
-espacial de las tres estaciones contra los puntos PAT originales:
+espacial de las tres estaciones contra los extremos de andén del TDB original:
 
 ```bash
 OPENRAILSRS_NATIVE_ROUTE="$CHILTERN_ROUTE" ./check.sh
 ```
 
 La tolerancia es 3 m por la cuantización a coordenadas
-de renderizado; esta prueba detecta errores de longitudes, sentido y curvas,
+de renderizado; se comprueba además el vector anfitrión y la distancia exacta
+registrada en `TrItemSData`. Esta prueba detecta errores de longitudes,
+sentido, curvas y confusiones entre un punto PAT y un andén,
 sin afirmar equivalencia visual ni física de la partida completa.
 
 ## Modelo (importante)

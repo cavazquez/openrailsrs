@@ -39,9 +39,9 @@ fn drive(frame_dt: f64) -> LiveDriveSession {
     }
     assert_eq!(train.state.passengers, 0);
     assert_eq!(train.exterior.door, DoorState::Closed);
-    // Native PAT/TDB + all three tsection catalogs define this service length.
+    // Native platform endpoints + all three tsection catalogs define this length.
     // The head may stop within the same 10 m station acceptance window.
-    assert!((train.state.odometer_m - 6937.114942143).abs() <= 10.0);
+    assert!((train.state.odometer_m - 7058.022073894).abs() <= 10.0);
     train
 }
 
@@ -65,7 +65,10 @@ fn all_stations_are_served_independently_of_render_frame_rate() {
 #[test]
 fn spawn_offset_is_included_in_stops_and_neutral_or_open_doors_cut_traction() {
     let mut train = session();
-    assert!(train.start_chainage_m > 250.0);
+    assert!((train.pos_on_edge_m() - 142.336007925).abs() < 1e-6);
+    assert_eq!(train.current_edge_id(), Some("e96_r"));
+    // The complete consist extends onto the preceding main-line vector.
+    assert_eq!(train.position_at_head_offset(-160.0).unwrap().0, "e94_r");
     assert!(train.distance_to_next_stop_m().unwrap() < 1e-6);
     assert_eq!(train.route_progress(), 0.0);
     train.gameplay.stop_targets.clear();
