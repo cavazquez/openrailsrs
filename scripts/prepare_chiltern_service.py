@@ -260,7 +260,7 @@ def prepare(route_root, imported_track, output):
         scenario += "\n[[route.stops]]\n" + fields(stop)
     scenario += "\n[train]\nconsist = \"../chiltern/consists/birmingham_pullman.con\"\n"
     scenario += "\n[gameplay]\nobjective = \"arrive_on_time\"\ndifficulty = \"normal\"\npenalty_per_second_late = 2.0\n"
-    scenario += "\n[simulation]\nduration = 1800.0\ntime_step = 0.05\nseed = 42\nmulti_body = true\ncoupler_kind = \"pullman\"\nlegacy_power_cap = false\ntrain_air_lap_hold = true\ntrain_air_full_release_s = 3.0\nbrake_shoe_speed_factor = true\nbrake_skid_limit = true\nbrake_cylinder_full_scale_psi = 35.0\n"
+    scenario += "\n[simulation]\nduration = 1800.0\ntime_step = 0.05\nseed = 42\nmulti_body = true\ncoupler_kind = \"pullman\"\nlegacy_power_cap = false\ntrain_air_lap_hold = true\ntrain_air_full_release_s = 3.0\nbrake_shoe_speed_factor = true\nbrake_skid_limit = true\ndriver_brake_full_scale_psi = 45.0\nbrake_cylinder_full_scale_psi = 45.0\n"
     scenario += "\n[output]\ncsv = \"run.csv\"\nmetadata = \"run.json\"\n"
     (output / "scenario.toml").write_text(scenario)
     provenance = dict(path_file=PAT, pat_sha256=hashlib.sha256(pat_path.read_bytes()).hexdigest(),

@@ -1,0 +1,8 @@
+HeadlessCapture.exe Warning: 0 : File Default.cs missing from Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\Script
+HeadlessCapture.exe Warning: 0 : Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PCFD.wag references non-existent shape Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_BP_PCFC.s
+HeadlessCapture.exe Warning: 0 : Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PCFE.wag references non-existent shape Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_BP_PCFD.s
+HeadlessCapture.exe Warning: 0 : Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PSG.wag references non-existent shape Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\or_service_reference\service_07\content\Chiltern\trains\trainset\RF_Blue_Pullman\RF_WP_PFC.s
+Arrived at platform 1286 at 0 s
+HeadlessCapture.exe Information: 0 : At 0 secs, advanced adhesion model switched to low precision after low frame rate 20.0 below limit 30
+Arrived at platform 1290 at 328.95 s
+Arrived at platform 1080 at 691.4 s

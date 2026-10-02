@@ -1,3 +1,5 @@
+# Physics replay only. Stops and signals are represented by the frozen native driver;
+# the station service contracts are checked separately by play-service.
 [scenario]
 name = "Chiltern local: Northolt Park → West Ruislip"
 description = "Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas."
@@ -8,38 +10,8 @@ path = "."
 start = "n93"
 destination = "n105"
 start_offset_m = 1385.9003278212956
-assume_signals_clear = false
+assume_signals_clear = true
 waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105"]
-
-[[route.stops]]
-node = "n97"
-name = "Northolt Park"
-offset_m = -3531.682
-arrive_s = 0.0
-depart_s = 20.0
-dwell_s = 20.0
-passengers_on = 20
-passengers_off = 0
-
-[[route.stops]]
-node = "n101"
-name = "South Ruislip"
-offset_m = -329.501
-arrive_s = 390.0
-depart_s = 420.0
-dwell_s = 30.0
-passengers_on = 20
-passengers_off = 0
-
-[[route.stops]]
-node = "n105"
-name = "West Ruislip"
-offset_m = -29.362650000000002
-arrive_s = 720.0
-depart_s = 750.0
-dwell_s = 30.0
-passengers_on = 0
-passengers_off = 40
 
 [train]
 consist = "../chiltern/consists/birmingham_pullman.con"
@@ -50,9 +22,9 @@ difficulty = "normal"
 penalty_per_second_late = 2.0
 
 [simulation]
-duration = 1800.0
+duration = 750.1
 time_step = 0.05
-seed = 42
+seed = 0
 multi_body = true
 coupler_kind = "pullman"
 legacy_power_cap = false

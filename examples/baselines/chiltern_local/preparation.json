@@ -1,0 +1,193 @@
+{
+  "cars": 8,
+  "length_m": 166.164,
+  "mass_kg": 440906.3984375,
+  "rear": {
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "x": 856.592468,
+    "y": 61.84373,
+    "z": 987.5429,
+    "node": 94,
+    "offset_m": 1219.81714,
+    "direction": "Backward"
+  },
+  "initial_front": {
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "x": 448.8445,
+    "y": 59.5745277,
+    "z": 786.2661,
+    "node": 96,
+    "offset_m": 431.051025,
+    "direction": "Backward"
+  },
+  "front": {
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "x": 706.647949,
+    "y": 61.0375137,
+    "z": 915.942566,
+    "node": 96,
+    "offset_m": 142.416748,
+    "direction": "Backward"
+  },
+  "junction": {
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "x": 835.164,
+    "y": 61.7561,
+    "z": 977.309
+  },
+  "stations": [
+    {
+      "item_id": 1286,
+      "host": 96,
+      "name": "Northolt Park",
+      "point": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 706.647949,
+        "y": 61.0375137,
+        "z": 915.942566,
+        "node": 96,
+        "offset_m": 142.416748,
+        "direction": "Backward"
+      }
+    },
+    {
+      "item_id": 1290,
+      "host": 100,
+      "name": "South Ruislip",
+      "point": {
+        "tile_x": -6087,
+        "tile_z": 14927,
+        "x": -603.612732,
+        "y": 42.6157,
+        "z": 626.503235,
+        "node": 100,
+        "offset_m": 176.753326,
+        "direction": "Backward"
+      }
+    },
+    {
+      "item_id": 1080,
+      "host": 104,
+      "name": "West Ruislip",
+      "point": {
+        "tile_x": -6088,
+        "tile_z": 14928,
+        "x": -825.2346,
+        "y": 45.4542,
+        "z": 818.671143,
+        "node": 104,
+        "offset_m": 108.638153,
+        "direction": "Backward"
+      }
+    }
+  ],
+  "vehicles": [
+    {
+      "length_m": 20.602,
+      "mass_kg": 69091.4,
+      "source": "RF_WP_DMBSA.eng"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_PSB.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_KFC.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_PCFD.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_PCFE.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_KFF.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "source": "RF_WP_PSG.wag"
+    },
+    {
+      "length_m": 20.602,
+      "mass_kg": 67000.0,
+      "source": "RF_WP_DMBSH.eng"
+    }
+  ],
+  "speed_posts": [
+    {
+      "id": 1548,
+      "node": 96,
+      "direction": 1,
+      "chainage_forward_m": 852.9882,
+      "speed_mps": 22.352,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    },
+    {
+      "id": 1549,
+      "node": 96,
+      "direction": 1,
+      "chainage_forward_m": 116.81,
+      "speed_mps": 15.6464,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    },
+    {
+      "id": 1551,
+      "node": 100,
+      "direction": 1,
+      "chainage_forward_m": 461.806,
+      "speed_mps": 31.2928,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    },
+    {
+      "id": 1694,
+      "node": 104,
+      "direction": 1,
+      "chainage_forward_m": 124.617,
+      "speed_mps": 31.2928,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    },
+    {
+      "id": 1705,
+      "node": 94,
+      "direction": 1,
+      "chainage_forward_m": 1167.26,
+      "speed_mps": 31.2928,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    },
+    {
+      "id": 3198,
+      "node": 96,
+      "direction": 1,
+      "chainage_forward_m": 3669.02,
+      "speed_mps": 26.8224,
+      "resume": false,
+      "passenger": true,
+      "freight": true
+    }
+  ]
+}

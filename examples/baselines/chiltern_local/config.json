@@ -1,0 +1,35 @@
+{
+  "step_s": 0.05,
+  "stops": [
+    {
+      "node": "n97",
+      "name": "Northolt Park",
+      "offset_m": -3531.682,
+      "arrive_s": 0.0,
+      "depart_s": 20.0,
+      "dwell_s": 20.0,
+      "passengers_on": 20,
+      "passengers_off": 0
+    },
+    {
+      "node": "n101",
+      "name": "South Ruislip",
+      "offset_m": -329.501,
+      "arrive_s": 390.0,
+      "depart_s": 420.0,
+      "dwell_s": 30.0,
+      "passengers_on": 20,
+      "passengers_off": 0
+    },
+    {
+      "node": "n105",
+      "name": "West Ruislip",
+      "offset_m": -29.362650000000002,
+      "arrive_s": 720.0,
+      "depart_s": 750.0,
+      "dwell_s": 30.0,
+      "passengers_on": 0,
+      "passengers_off": 40
+    }
+  ]
+}

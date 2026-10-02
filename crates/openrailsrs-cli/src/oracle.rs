@@ -23,6 +23,10 @@ struct Case {
     scenario: PathBuf,
     driver: PathBuf,
     baseline: PathBuf,
+    /// Explicit columns and units for captures made directly from the OR DLL.
+    /// Existing performance dumps retain the logger's default MPH convention.
+    #[serde(default)]
+    reference_columns: OrColumnMap,
     thresholds: ValidationConfig,
     #[serde(default)]
     phase_bounds: Vec<f64>,
@@ -61,7 +65,7 @@ fn run_case(root: &Path, case: &Case, out_dir: &Path) -> Result<CaseReport> {
     scenario.output.metadata = output.join("run.json").display().to_string();
     let mut driver = ScriptedDriver::from_csv(root.join(&case.driver))?;
     run_scenario_headless_with_driver(scenario_dir, &scenario, &mut driver)?;
-    let mut reference = parse_or_dump_csv(&root.join(&case.baseline), &OrColumnMap::default())?;
+    let mut reference = parse_or_dump_csv(&root.join(&case.baseline), &case.reference_columns)?;
     let reference_duplicate_times =
         openrailsrs_validate::oracle::canonicalize_reference_time(&mut reference)?;
     normalize_trace_brake_to_fraction(&mut reference, None);
@@ -167,4 +171,42 @@ pub fn run(manifest: &Path, out_dir: &Path) -> Result<bool> {
         }))?,
     )?;
     Ok(pass)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_validate::trace::OrSpeedUnit;
+
+    #[test]
+    fn native_capture_units_are_explicit_and_legacy_cases_still_use_mph() {
+        let legacy = "reference_version = '1.6.1'\n[[cases]]\nid = 'test'\nscenario = 'scenario.toml'\ndriver = 'driver.csv'\nbaseline = 'reference.csv'\n[cases.thresholds]\nmax_velocity_rms = 0.75\n";
+        let legacy_suite: Suite = toml::from_str(legacy).unwrap();
+        assert_eq!(
+            legacy_suite.cases[0].reference_columns.speed_unit,
+            OrSpeedUnit::Mph
+        );
+        let native_suite: Suite = toml::from_str(&format!(
+            "{legacy}\n[cases.reference_columns]\ntime_column = 'time_s'\nspeed_column = 'velocity_mps'\ndistance_column = 'odometer_m'\nspeed_unit = 'mps'\nthrottle_column = 'throttle'\nbrake_column = 'brake'\n"
+        )).unwrap();
+        let case = &native_suite.cases[0];
+        let path = std::env::temp_dir().join(format!("native-or-units-{}.csv", std::process::id()));
+        std::fs::write(
+            &path,
+            "time_s,velocity_mps,odometer_m,throttle,brake\n0,0,0,0,1\n1,10,100,0.75,0\n",
+        )
+        .unwrap();
+        let trace = parse_or_dump_csv(&path, &case.reference_columns).unwrap();
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(trace.samples[1].velocity_mps, 10.0);
+        assert_eq!(trace.samples[1].distance_m, 100.0);
+        assert_eq!(trace.samples[1].throttle, Some(0.75));
+        assert_eq!(trace.samples[0].brake, Some(1.0));
+        assert!(
+            toml::from_str::<Suite>(&format!(
+                "{legacy}\n[cases.reference_columns]\nspeed_unit = 'guess'\n"
+            ))
+            .is_err()
+        );
+    }
 }

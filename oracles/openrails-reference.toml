@@ -56,3 +56,53 @@ sha256 = "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2"
 [[binaries]]
 name = "Orts.Simulation.dll"
 sha256 = "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679"
+
+# Complete native local service: generated ACT/SRV/PAT, original DLL client and outputs.
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/ACTIVITIES/openrailsrs_chiltern_local.act"
+sha256 = "ad543163934063408abd2d6acc21a43b5f157708664d4d67c7a74b6fcba3fcc9"
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/SERVICES/openrailsrs_chiltern_local.srv"
+sha256 = "71b102acbe77107a478de42063f99fbfee07a0acc00d0343765f1265ca2a4308"
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/PATHS/openrailsrs_chiltern_local.pat"
+sha256 = "d0a32b9bc436c870799762f58a6e162b9fed26dedead4685c05383c2d157c9cb"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/trace.csv"
+sha256 = "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/initial.json"
+sha256 = "aa7611255dff6b69654a15c674b246f21dbed69241e14dfbb2125ce23162e716"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/outcome.json"
+sha256 = "3b5a0af595220a98a86320beacc6d7feaeb9714dc688ebd42b3d131e54098310"
+
+[[files]]
+path = "examples/baselines/chiltern_local/config.json"
+sha256 = "abd72e6dcdd7ef0eef163108f4cda961d51510902f88e0f20c56c060eedc9207"
+
+[[files]]
+path = "examples/baselines/chiltern_local/driver.csv"
+sha256 = "78e5ac1e27abeac774ac10410da7dabf8b1aa89bd9da5da034321d14d04c143e"
+
+[[files]]
+path = "examples/baselines/chiltern_local/preparation.json"
+sha256 = "3a2e535474b85f83680d9f8a0cdf3844803b9f3b9aa3373e14a322c27fb6cda0"
+
+[[files]]
+path = "examples/baselines/chiltern_local/HeadlessCapture.cs"
+sha256 = "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0"
+
+[[files]]
+path = "examples/baselines/chiltern_local/manifest.json"
+sha256 = "22ab7fea6aee4c836c10758f6c8544f298edcf9636af5ebd4838499c15e0d9c1"
+
+[[files]]
+path = "examples/baselines/chiltern_local/reproducibility.json"
+sha256 = "1c54758f0b5dbc3a46f2d6db2fee820fe4af8251281bd058833c353bff285b8e"

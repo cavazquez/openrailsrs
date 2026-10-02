@@ -8,6 +8,8 @@ import subprocess
 import sys
 import tomllib
 
+from verify_chiltern_service_capture import BASELINE, verify_capture
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -17,6 +19,7 @@ def verify(pin, source_root=None, installation_root=None):
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual != entry["sha256"]:
             raise ValueError(f"Reference changed: {entry['path']}; recapture and review explicitly")
+    verify_capture(BASELINE)
     log = (ROOT / pin["version_evidence"]).read_text()
     if f"Version    = {pin['version']}" not in log:
         raise ValueError("Capture log does not match the pinned Open Rails version")
@@ -45,6 +48,8 @@ def main():
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/openrailsrs")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "tmp/oracles")
+    parser.add_argument("--suite", choices=("acceptance", "service"), default="acceptance",
+        help="The new full-service physics target remains diagnostic and currently returns FAIL")
     args = parser.parse_args()
     pin = tomllib.loads((ROOT / "oracles/openrails-reference.toml").read_text())
     source = args.source_root
@@ -55,7 +60,8 @@ def main():
     if args.verify_only:
         return 0
     return subprocess.run([
-        str(args.binary.resolve()), "oracle-suite", "--manifest", str(ROOT / "oracles/chiltern.toml"),
+        str(args.binary.resolve()), "oracle-suite", "--manifest",
+        str(ROOT / "oracles" / ("chiltern-service.toml" if args.suite == "service" else "chiltern.toml")),
         "--out-dir", str(args.out_dir.resolve()),
     ], cwd=ROOT).returncode
 

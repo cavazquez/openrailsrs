@@ -1,0 +1,26 @@
+# Full-service physics target, currently FAIL: do not treat this diagnostic as
+# an accepted parity certificate or relax its thresholds to match the output.
+# The existing accepted short captures remain in chiltern.toml.
+reference_version = "1.6.1"
+
+[[cases]]
+id = "chiltern_local_native_controls"
+scenario = "examples/chiltern_local/scenario_oracle.toml"
+driver = "examples/baselines/chiltern_local/driver.csv"
+baseline = "examples/baselines/chiltern_local/capture/trace.csv"
+phase_bounds = [0.0, 20.1, 329.0, 420.1, 691.45, 750.1]
+phase_max_velocity_rms = 1.10
+[cases.reference_columns]
+time_column = "time_s"
+speed_column = "velocity_mps"
+distance_column = "odometer_m"
+speed_unit = "mps"
+distance_unit = "meters"
+throttle_column = "throttle"
+brake_column = "brake"
+[cases.thresholds]
+max_velocity_rms = 0.75
+max_velocity_max = 2.0
+max_position_max = 45.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05

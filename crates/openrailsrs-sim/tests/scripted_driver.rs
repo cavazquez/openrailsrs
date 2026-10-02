@@ -116,3 +116,31 @@ fn scripted_driver_hold_last_keyframes() {
     assert_eq!(input.throttle, 0.7);
     assert_eq!(input.brake, 0.0);
 }
+
+#[test]
+fn decimal_capture_command_is_applied_on_its_physics_tick() {
+    use openrailsrs_core::SimTime;
+    use openrailsrs_sim::{Keyframe, TrainSimState, runner::Driver};
+    let mut driver = ScriptedDriver::new(vec![
+        Keyframe {
+            time_s: 0.0,
+            throttle: 0.0,
+            brake: 1.0,
+        },
+        Keyframe {
+            time_s: 70.0,
+            throttle: 0.75,
+            brake: 0.0,
+        },
+    ]);
+    let mut state = TrainSimState::new(vec!["e1".into()]);
+    state.time = SimTime(69.95);
+    assert_eq!(driver.decide(&state, 30.0).brake, 1.0);
+    state.time = SimTime((0..1400).fold(0.0, |time, _| time + 0.05));
+    assert!(
+        state.time_s() < 70.0,
+        "fixture must exercise rounding below the CSV timestamp"
+    );
+    assert_eq!(driver.decide(&state, 30.0).throttle, 0.75);
+    assert_eq!(driver.decide(&state, 30.0).brake, 0.0);
+}

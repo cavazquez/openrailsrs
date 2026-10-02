@@ -37,9 +37,33 @@ La partida [`chiltern_local`](../examples/chiltern_local/README.md) tiene
 oráculos de servicio independientes: parada real ≤0,1 m/s dentro de ±10 m,
 embarque con puertas abiertas, salida autorizada y puertas cerradas,
 pasajeros y llegada terminal. Se prueba a 30 y 144 FPS. Esta aceptación
-funcional no sustituye una captura OR completa del nuevo recorrido, que
-todavía falta; tampoco certifica SIGSCR completo, retroceso ni paridad visual.
+funcional se complementa ahora con la [captura OR completa](../examples/baselines/chiltern_local/README.md)
+del mismo recorrido: 15 003 muestras, ocho coches, 7054,788 m, tres tareas
+nativas de estación aprobadas y reproducción exacta con las órdenes exportadas.
+Todavía no certifica SIGSCR completo en Bevy, retroceso ni paridad visual.
 El caso regulador 75 % no se declara aprobado: aún falta su CSV OR.
+
+```bash
+python3 scripts/verify_chiltern_service_capture.py
+python3 scripts/run_oracles.py --suite service --out-dir tmp/service-parity
+```
+
+El nuevo objetivo de `oracles/chiltern-service.toml` es diagnóstico y devuelve
+**FAIL** con RMS 7,5153 m/s, pico 16,6450 m/s y odómetro máximo 3029,15 m,
+frente a los presupuestos existentes de 0,75 m/s, 2 m/s y 45 m. Utiliza
+columnas y unidades explícitas en m/s, controles aplicados en su tick y
+cobertura completa. Se aíslan las órdenes del freno/regulador mediante un
+escenario de replay sin intervenciones automáticas del runner antiguo.
+`check.sh` verifica la integridad y contratos de la referencia completa,
+además de los cuatro casos físicos ya aceptados y el servicio Bevy.
+
+La siguiente corrección se concentra en el poste de 35 mph aplicado a todo
+el vector 96, pendientes nativas ausentes en la física del mapa y siete
+frenos EP originales frente a la clasificación simplificada del perfil
+convertido. El servicio usa ahora una demanda de freno EP en [0,1], con
+escalas de conductor/cilindro ambas de 45 PSI. Las capturas anteriores
+conservan su propio convenio de presión. Los objetivos de aceptación de
+velocidad/distancia y las referencias anteriores permanecen iguales.
 
 Con el Content original disponible, este comando agrega la comparación
 espacial de las tres estaciones contra los extremos de andén del TDB original:

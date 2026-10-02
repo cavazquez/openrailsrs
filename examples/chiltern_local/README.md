@@ -52,7 +52,14 @@ formación; todavía no se ha traducido el SIGSCR completo de Chiltern.
 El selector de marcha y el corte en neutro funcionan; las maniobras de
 retroceso quedan pendientes en el modelo de física de recorrido dirigido.
 
-Las capturas OR congeladas verifican aceleración, frenado y costa; todavía
-no existe una captura OR de esta partida completa ni un certificado de
-paridad visual de todas sus estaciones. La prueba de servicio valida su
-ejecución completa y su independencia de la frecuencia de renderizado.
+La captura [OR nativa completa](../baselines/chiltern_local/README.md) ya
+recorre las tres estaciones con las DLL originales 1.6.1 y controles
+exportados reproducibles. El mando de este servicio expresa demanda EP;
+sus escalas de conductor y cilindro coinciden en 45 PSI, sin reutilizar
+la conversión de presión del logger de las capturas anteriores.
+
+La nueva comparación física de recorrido completo todavía falla: necesita
+límites por posición, pendientes y especificación nativa de frenos. Los
+cuatro oráculos breves anteriores siguen aprobados. La prueba de servicio
+valida ejecución completa e independencia de la frecuencia de renderizado;
+la paridad visual de todas las estaciones sigue pendiente.

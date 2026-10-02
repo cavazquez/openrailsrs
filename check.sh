@@ -31,6 +31,9 @@ echo "==> tests"
 # All focused regressions are already included here; keep one Bevy feature set.
 cargo test --locked --workspace --all-features -- --test-threads=1
 
+echo "==> native service capture integrity and replay regressions"
+python3 -m unittest discover -s scripts -p test_service_capture.py
+
 if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
     echo "==> native platform geometry and continuous train motion"
     cargo test --locked --workspace --all-features native_service_ -- --ignored --nocapture --test-threads=1

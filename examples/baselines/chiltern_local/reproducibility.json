@@ -1,0 +1,18 @@
+{
+  "exact_native_physics_replay": true,
+  "samples": 15003,
+  "fields": [
+    "time_s",
+    "velocity_mps",
+    "odometer_m",
+    "pos_on_edge_m",
+    "native_brake_handle",
+    "cylinder_psi",
+    "brake_pipe_psi",
+    "allowed_speed_mps",
+    "mass_kg"
+  ],
+  "reference_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "replay_trace_sha256": "11813b2139b764fd74a9c918cbbd8da8a7a1386d151fb903c78c0421e3b4aca5",
+  "driver_sha256": "78e5ac1e27abeac774ac10410da7dabf8b1aa89bd9da5da034321d14d04c143e"
+}

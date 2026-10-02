@@ -107,7 +107,8 @@ impl Driver for ScriptedDriver {
 
         // Advance current_idx to the last keyframe whose time_s ≤ t (hold-last).
         while self.current_idx + 1 < self.keyframes.len()
-            && self.keyframes[self.current_idx + 1].time_s <= t
+            // Decimal 20 Hz timestamps and accumulated dt differ by rounding.
+            && self.keyframes[self.current_idx + 1].time_s <= t + 1e-9
         {
             self.current_idx += 1;
         }
