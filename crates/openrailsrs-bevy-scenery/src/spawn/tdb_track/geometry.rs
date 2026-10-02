@@ -3,10 +3,11 @@
 //! Branch walking / chord collection lives in [`super::collect`] behind
 //! injectable [`super::FocusQuery`] (apps adapt `RouteFocus` / tile focus).
 
+use bevy::math::DVec3;
 use bevy::prelude::*;
 use openrailsrs_formats::{
-    TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackNodeKind, TrackProceduralLink,
-    TrackVectorGeometry, TrackVectorPoint,
+    TSectionCatalog, TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind,
+    TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint,
 };
 
 pub use crate::spawn::dyntrack::{
@@ -844,6 +845,123 @@ impl TrackPose {
             f64::from(self.pitch_rad),
             f64::from(self.roll_rad),
         )
+    }
+}
+
+/// A native vector compiled in a small tile-relative frame.
+///
+/// Absolute Chiltern coordinates have a 1–2 m `f32` spacing. Rebasing the native
+/// tile indices before building spans preserves centimetres of vehicle motion;
+/// the double-precision origin is only combined with the render origin at sample
+/// time. Compile once per route, then reuse the spans for cars and bogies.
+#[derive(Clone, Debug)]
+pub struct TrackVectorPath {
+    origin: DVec3,
+    spans: Vec<SectionPathSpan>,
+    cumulative_ends_m: Vec<f64>,
+}
+
+impl TrackVectorPath {
+    pub fn new(node: &TrackDbNode, tsection: Option<&TSectionCatalog>) -> Option<Self> {
+        let TrackNodeKind::Vector {
+            length_m,
+            sections,
+            geometry,
+            ..
+        } = &node.kind
+        else {
+            return None;
+        };
+        let anchor = sections
+            .first()
+            .map(|s| s.start)
+            .or_else(|| geometry.map(|g| g.start))?;
+        let origin = DVec3::new(
+            f64::from(anchor.tile_x) * 2048.0,
+            0.0,
+            -f64::from(anchor.tile_z) * 2048.0,
+        );
+        let rebase = |mut point: TrackVectorPoint| {
+            point.tile_x -= anchor.tile_x;
+            point.tile_z -= anchor.tile_z;
+            point
+        };
+        let local_sections: Vec<_> = sections
+            .iter()
+            .map(|section| {
+                let mut local = *section;
+                local.start = rebase(local.start);
+                local.header_tile_x -= anchor.tile_x;
+                local.header_tile_z -= anchor.tile_z;
+                local
+            })
+            .collect();
+        let mut spans = Vec::new();
+        if local_sections.is_empty() {
+            let geometry = geometry.as_ref()?;
+            let (x, y, z) = rebase(geometry.start).bevy_position();
+            let start = Vec3::new(x, y, z);
+            let (x, _, z) = rebase(geometry.end).bevy_position();
+            let end = Vec3::new(x, y, z);
+            spans.push(SectionPathSpan {
+                start_world: start,
+                end_world: end,
+                world_yaw_deg: f64::from((end.x - start.x).atan2(end.z - start.z).to_degrees()),
+                pitch_rad: 0.0,
+                roll_rad: 0.0,
+                half_gauge_m: None,
+                length_m: Some(*length_m as f32),
+                curve_radius_m: None,
+                curve_angle_deg: None,
+            });
+        } else {
+            for (index, section) in local_sections.iter().enumerate() {
+                let next = local_sections.get(index + 1).map(|next| {
+                    section_world_vec3(*next, Some(section_world_vec3(*section, None)))
+                });
+                spans.extend(section_path_spans(
+                    *section,
+                    tsection,
+                    None,
+                    *length_m,
+                    local_sections.len(),
+                    next,
+                ));
+            }
+        }
+        if spans.is_empty() {
+            return None;
+        }
+        let mut accumulated = 0.0;
+        let cumulative_ends_m = spans
+            .iter()
+            .map(|span| {
+                accumulated += span_length_m(*span);
+                accumulated
+            })
+            .collect();
+        Some(Self {
+            origin,
+            spans,
+            cumulative_ends_m,
+        })
+    }
+
+    /// Centreline pose relative to an absolute Bevy/MSTS `frame_origin`.
+    pub fn pose_in_frame(&self, chainage_m: f64, frame_origin: DVec3) -> TrackPose {
+        let index = self
+            .cumulative_ends_m
+            .partition_point(|end| chainage_m > *end + 1e-6)
+            .min(self.spans.len() - 1);
+        let before = if index == 0 {
+            0.0
+        } else {
+            self.cumulative_ends_m[index - 1]
+        };
+        let along = (chainage_m - before).clamp(0.0, span_length_m(self.spans[index]));
+        let mut pose = track_pose_along_span(self.spans[index], along);
+        pose.position += (self.origin - frame_origin).as_vec3();
+        pose
     }
 }
 

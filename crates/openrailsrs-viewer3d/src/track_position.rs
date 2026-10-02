@@ -18,10 +18,11 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use bevy::math::DVec3;
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::spawn::tdb_track::{
-    TrackPose, bevy_track_quat, nearest_track_position, nearest_track_position_on_indexed_tile,
-    tdb_node_track_pose,
+    TrackPose, TrackVectorPath, bevy_track_quat, nearest_track_position,
+    nearest_track_position_on_indexed_tile, tdb_node_track_pose,
 };
 use openrailsrs_formats::{
     RouteStart, TSectionCatalog, TrackDbFile, msts_tile_x_index_for_coord,
@@ -146,6 +147,7 @@ pub struct TrackPositionResolver<'a> {
     pub tile_index: Cow<'a, HashMap<(i32, i32), Vec<u32>>>,
     /// Graph node id → TDB id from import aliases (preferred over `n` prefix).
     pub graph_node_to_tdb: Cow<'a, HashMap<String, u32>>,
+    paths: Cow<'a, HashMap<u32, TrackVectorPath>>,
 }
 
 /// Route-stable spatial maps shared by every train-pose system.
@@ -159,6 +161,7 @@ pub struct TrackPositionResolver<'a> {
 pub struct TrackPositionResolverCache {
     tile_index: HashMap<(i32, i32), Vec<u32>>,
     graph_node_to_tdb: HashMap<String, u32>,
+    paths: HashMap<u32, TrackVectorPath>,
     ready: bool,
 }
 
@@ -173,6 +176,7 @@ impl TrackPositionResolverCache {
             tsection,
             tile_index: Cow::Borrowed(&self.tile_index),
             graph_node_to_tdb: Cow::Borrowed(&self.graph_node_to_tdb),
+            paths: Cow::Borrowed(&self.paths),
         }
     }
 }
@@ -192,6 +196,7 @@ pub fn populate_track_position_resolver_cache(
     let started = std::time::Instant::now();
     cache.tile_index = tdb.index_nodes_by_tile();
     cache.graph_node_to_tdb.clone_from(&scene.graph_node_to_tdb);
+    cache.paths = compile_vector_paths(tdb, Some(assets.tsection()));
     cache.ready = true;
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
         eprintln!(
@@ -203,6 +208,16 @@ pub fn populate_track_position_resolver_cache(
     }
 }
 
+fn compile_vector_paths(
+    tdb: &TrackDbFile,
+    tsection: Option<&TSectionCatalog>,
+) -> HashMap<u32, TrackVectorPath> {
+    tdb.nodes
+        .iter()
+        .filter_map(|node| TrackVectorPath::new(node, tsection).map(|path| (node.id, path)))
+        .collect()
+}
+
 impl<'a> TrackPositionResolver<'a> {
     pub fn new(tdb: &'a TrackDbFile, tsection: Option<&'a TSectionCatalog>) -> Self {
         Self {
@@ -210,6 +225,7 @@ impl<'a> TrackPositionResolver<'a> {
             tsection,
             tile_index: Cow::Owned(tdb.index_nodes_by_tile()),
             graph_node_to_tdb: Cow::Owned(HashMap::new()),
+            paths: Cow::Owned(compile_vector_paths(tdb, tsection)),
         }
     }
 
@@ -323,6 +339,18 @@ impl<'a> TrackPositionResolver<'a> {
         near: Option<Vec3>,
     ) -> Option<TrackPose> {
         tdb_node_track_pose(self.tdb, tdb_node_id, chainage_m, self.tsection, near)
+    }
+
+    /// Native vector pose rebased before conversion to render-space `f32`.
+    pub fn tdb_pose_in_frame(
+        &self,
+        tdb_node_id: u32,
+        chainage_m: f64,
+        origin: DVec3,
+    ) -> Option<TrackPose> {
+        self.paths
+            .get(&tdb_node_id)
+            .map(|path| path.pose_in_frame(chainage_m, origin))
     }
 
     pub fn nearest_on_tile(
@@ -628,15 +656,16 @@ fn tdb_chainage_for_graph_edge(
     let edge = graph.edge(edge_id.trim())?;
     let len = edge.length_m.max(0.0);
     let pos = pos_on_edge_m.clamp(0.0, len);
-    let from = graph_edge_planar_msts(graph, edge_id, 0.0)?;
-    let to = graph_edge_planar_msts(graph, edge_id, len)?;
-    // Prefer start/end samples; if the vector is shorter than `len`, clamp samples still work.
-    let pose0 = resolver.tdb_pose(tdb_node_id, 0.0, Some(from))?;
-    let pose_end = resolver
-        .tdb_pose(tdb_node_id, len, Some(to))
-        .or_else(|| resolver.tdb_pose(tdb_node_id, 0.0, Some(to)))?;
-    let forward = xz_delta(from, pose0.position) + xz_delta(to, pose_end.position);
-    let reverse = xz_delta(from, pose_end.position) + xz_delta(to, pose0.position);
+    let from = graph.node(&edge.from.0)?;
+    let to = graph.node(&edge.to.0)?;
+    let origin = DVec3::new(from.x_m, 0.0, from.y_m);
+    let end = (DVec3::new(to.x_m, 0.0, to.y_m) - origin).as_vec3();
+    // Validate in a local frame too: absolute f32 endpoints can collapse short
+    // reverse vectors onto the same point and invert the vehicle's direction.
+    let pose0 = resolver.tdb_pose_in_frame(tdb_node_id, 0.0, origin)?;
+    let pose_end = resolver.tdb_pose_in_frame(tdb_node_id, len, origin)?;
+    let forward = xz_delta(Vec3::ZERO, pose0.position) + xz_delta(end, pose_end.position);
+    let reverse = xz_delta(Vec3::ZERO, pose_end.position) + xz_delta(end, pose0.position);
     // A numeric `e{N}` is only a candidate: imported graphs can renumber/split
     // edges independently from the source TDB.  Do not teleport rolling stock to
     // a distant vector merely because the numbers happen to match.  Returning
@@ -644,7 +673,7 @@ fn tdb_chainage_for_graph_edge(
     if forward.min(reverse) > TDB_EDGE_ENDPOINT_MAX_DELTA_M * 2.0 {
         return None;
     }
-    if reverse + 1.0 < forward {
+    if reverse + 1e-3 < forward {
         Some(((len - pos).clamp(0.0, len), true))
     } else {
         Some((pos, false))
@@ -686,9 +715,12 @@ pub fn vehicle_pose_on_graph_edge(
             && let Some((chainage, reversed)) =
                 tdb_chainage_for_graph_edge(res, graph, edge_id, pos_on_edge_m, tdb_id)
         {
-            let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
-            if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
-                let placed = pose.position + route_offset;
+            let render_origin = DVec3::new(
+                f64::from(focus.center.x),
+                f64::from(focus.height_origin),
+                f64::from(focus.center.z),
+            ) - route_offset.as_dvec3();
+            if let Some(pose) = res.tdb_pose_in_frame(tdb_id, chainage, render_origin) {
                 // Keep TDB Y — do not flatten with ground_y_at (#67).
                 let rotation = vehicle_rotation_from_track_pose(&pose);
                 let rotation = if reversed {
@@ -696,7 +728,7 @@ pub fn vehicle_pose_on_graph_edge(
                 } else {
                     rotation
                 };
-                return Some((focus.to_render_surface(placed), rotation));
+                return Some((pose.position, rotation));
             }
         }
         if let Some(planar) = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m) {
@@ -1116,6 +1148,66 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_NATIVE_ROUTE with original Chiltern content"]
+    fn native_service_motion_is_continuous_at_low_speed() {
+        let route = std::path::PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").unwrap());
+        let scenario_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern_local");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(scenario_dir.join("scenario.toml")).unwrap();
+        let session =
+            openrailsrs_sim::LiveDriveSession::from_scenario(&scenario_dir, &scenario).unwrap();
+        let scene = TrackScene::from_graph(session.graph.clone());
+        let tdb = TrackDbFile::from_path(route.join("Chiltern.tdb")).unwrap();
+        let catalog = TSectionCatalog::load_for_route(&route).unwrap();
+        let resolver = TrackPositionResolver::new(&tdb, Some(&catalog));
+        let focus = RouteFocus {
+            center: scene.bounds.center,
+            height_origin: 0.0,
+        };
+        let path_length: f64 = session
+            .state
+            .path_edges
+            .iter()
+            .map(|edge| scene.graph.edge(edge).unwrap().length_m)
+            .sum();
+        let remaining = path_length - session.start_chainage_m;
+        let sample = |offset| {
+            let (edge, chainage) = session.position_at_head_offset(offset).unwrap();
+            vehicle_pose_on_graph_edge(
+                &scene.graph,
+                &edge,
+                chainage,
+                Some(&resolver),
+                &scene,
+                Vec3::ZERO,
+                &focus,
+                None,
+            )
+            .unwrap()
+            .0
+        };
+        // Include the trailing cars' initial track and every section/edge boundary
+        // through the destination, using quarter-metre movement (slow driving).
+        let mut previous = sample(-200.0);
+        let mut max_step = 0.0_f32;
+        for index in 1..=((remaining + 200.0) / 0.25).floor() as usize {
+            let offset = -200.0 + index as f64 * 0.25;
+            let next = sample(offset);
+            let step = next.distance(previous);
+            max_step = max_step.max(step);
+            assert!(
+                step < 0.30,
+                "native train jumps {step:.3} m at service offset {offset:.2} m"
+            );
+            previous = next;
+        }
+        eprintln!(
+            "Native Chiltern motion: {remaining:.3} m service, maximum 25 cm step {max_step:.6} m"
+        );
+    }
+
+    #[test]
     fn candidate_tdb_id_prefers_alias_over_n_prefix() {
         let tdb = TrackDbFile::default();
         let resolver = TrackPositionResolver::new(&tdb, None).with_graph_tdb_map(HashMap::from([
@@ -1521,6 +1613,128 @@ mod tests {
             (rot * Vec3::X).y.abs() > 0.05,
             "full pose must include the TDB pitch"
         );
+    }
+
+    #[test]
+    fn reverse_direction_survives_collapsed_absolute_endpoints() {
+        use openrailsrs_core::{EdgeId, NodeId};
+        use openrailsrs_formats::{TrackNodeKind, TrackVectorGeometry, TrackVectorPoint};
+        use openrailsrs_track::{Edge, Node, NodeKind};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        let mut tdb = TrackDbFile::from_path(path).unwrap();
+        let start = TrackVectorPoint {
+            tile_x: -6079,
+            tile_z: 14925,
+            x: 123.05,
+            y: 37.0,
+            z: 456.1,
+        };
+        let end = TrackVectorPoint { x: 123.45, ..start };
+        // Both native endpoints become the same absolute f32 point.
+        assert_eq!(start.bevy_position(), end.bevy_position());
+        let TrackNodeKind::Vector {
+            length_m,
+            sections,
+            geometry,
+            ..
+        } = &mut tdb.nodes.iter_mut().find(|node| node.id == 2).unwrap().kind
+        else {
+            panic!("vector")
+        };
+        *length_m = 0.4;
+        sections.clear();
+        *geometry = Some(TrackVectorGeometry { start, end });
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let mut graph = TrackGraph::new();
+        for (id, point) in [("a", start), ("b", end)] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind: NodeKind::Plain,
+                    x_m: point.graph_x_m(),
+                    y_m: point.graph_z_m(),
+                })
+                .unwrap();
+        }
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2_r".into()),
+                from: NodeId("b".into()),
+                to: NodeId("a".into()),
+                length_m: 0.4,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let (chainage, reversed) =
+            tdb_chainage_for_graph_edge(&resolver, &graph, "e2_r", 0.1, 2).unwrap();
+        assert!(reversed);
+        assert!((chainage - 0.3).abs() < 1e-9);
+    }
+
+    #[test]
+    fn vehicle_motion_preserves_centimetres_on_distant_msts_tiles() {
+        use openrailsrs_core::{EdgeId, NodeId};
+        use openrailsrs_track::{Edge, Node, NodeKind};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../openrailsrs-msts/tests/fixtures/native_msts.tdb");
+        let tdb = TrackDbFile::from_path(path).unwrap();
+        let resolver = TrackPositionResolver::new(&tdb, None);
+        let start = resolver.tdb_pose(2, 0.0, None).unwrap().position;
+        let end = resolver.tdb_pose(2, 100.0, None).unwrap().position;
+        let mut graph = TrackGraph::new();
+        for (id, position) in [("a", start), ("b", end)] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    x_m: f64::from(position.x),
+                    y_m: f64::from(position.z),
+                    kind: NodeKind::Plain,
+                })
+                .unwrap();
+        }
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2".into()),
+                from: NodeId("a".into()),
+                to: NodeId("b".into()),
+                length_m: 100.0,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let scene = TrackScene::from_graph(graph.clone());
+        let focus = RouteFocus {
+            center: start,
+            height_origin: start.y,
+        };
+        let pose = |distance| {
+            vehicle_pose_on_graph_edge(
+                &graph,
+                "e2",
+                distance,
+                Some(&resolver),
+                &scene,
+                Vec3::ZERO,
+                &focus,
+                None,
+            )
+            .unwrap()
+            .0
+        };
+        let mut previous = pose(0.0);
+        for i in 1..=200 {
+            let next = pose(f64::from(i) * 0.05);
+            let movement = next.distance(previous);
+            assert!(
+                (movement - 0.05).abs() < 0.002,
+                "5 cm of travel must remain 5 cm after rebasing, got {movement} m at sample {i}"
+            );
+            previous = next;
+        }
     }
 
     #[test]

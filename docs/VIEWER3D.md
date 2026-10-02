@@ -135,6 +135,14 @@ residuo submétrico de la conversión y lo suma sólo después de restar
 `RouteFocus`, cuando la posición ya está cerca de cero. Así dos tramos
 consecutivos mantienen las coordenadas decimales escritas en `.w`.
 
+El tren conserva también esa precisión: las curvas TDB se compilan una vez en
+un marco local por vector. Se interpola la distancia recorrida entre los pasos
+físicos, usando el tiempo restante de `Time<Fixed>` de Bevy para dibujar cada
+cuadro. Locomotora, coches y bogies muestrean la misma distancia sobre la vía;
+la simulación y sus oráculos siguen usando los estados físicos originales.
+Las cámaras de cabina y pasajeros se componen con la pose local del coche del
+cuadro actual, sin esperar la propagación de `GlobalTransform` del cuadro siguiente.
+
 Para aislar visualmente un problema de LOD se puede forzar la banda más detallada
 con `OPENRAILSRS_LOD_BIAS=100`.
 

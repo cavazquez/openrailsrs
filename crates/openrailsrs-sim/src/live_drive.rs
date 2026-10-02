@@ -171,6 +171,7 @@ pub struct LiveDriveSession {
     pub wiper_active: bool,
     pub speed_mul: f64,
     sim_time_remainder: f64,
+    previous_render_chainage_m: f64,
     signal_steps: u64,
     pub arrived: bool,
     pub start_chainage_m: f64,
@@ -292,6 +293,7 @@ impl LiveDriveSession {
             wiper_active: false,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
+            previous_render_chainage_m: start_chainage_m,
             signal_steps: 0,
             arrived: false,
             start_chainage_m,
@@ -334,6 +336,31 @@ impl LiveDriveSession {
             &self.state.path_edges,
             &self.path_data.edges,
             (head_chainage_m + offset_along_path_m).max(0.0),
+        )
+    }
+
+    /// Presentation position between completed physics steps, along the same
+    /// routed centreline as every car. This does not advance simulation state.
+    /// `frame_remainder_s` is time left over by the host's fixed-step scheduler.
+    pub fn render_position_at_head_offset(
+        &self,
+        offset_along_path_m: f64,
+        frame_remainder_s: f64,
+    ) -> Option<(String, f64)> {
+        let current = self.head_chainage_m();
+        let fraction = if self.arrived {
+            1.0
+        } else {
+            ((self.sim_time_remainder + frame_remainder_s.max(0.0) * self.speed_mul)
+                / self.realtime_physics_dt())
+            .clamp(0.0, 1.0)
+        };
+        let interpolated = self.previous_render_chainage_m
+            + (current - self.previous_render_chainage_m) * fraction;
+        PathData::position_at_odometer(
+            &self.state.path_edges,
+            &self.path_data.edges,
+            (interpolated + offset_along_path_m).max(0.0),
         )
     }
 
@@ -603,6 +630,7 @@ impl LiveDriveSession {
             self.state.brake = self.driver_brake;
             let red_distance = self.distance_to_red_signal_m();
             let previous_odometer = self.state.odometer_m;
+            self.previous_render_chainage_m = self.head_chainage_m();
             let res = step(&mut self.state, &self.path_data, &self.physics, dt);
             if red_distance
                 .is_some_and(|distance| self.state.odometer_m - previous_odometer > distance + 0.01)
@@ -796,6 +824,68 @@ mod tests {
             "0.2s wall-clock must advance sim (~0.2s), not wait for a 1s quantum; got {}",
             session.time_s()
         );
+    }
+
+    #[test]
+    fn render_interpolation_moves_between_physics_steps_without_advancing_state() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        let scenario = load_scenario(&scenario_path).unwrap();
+        let mut session =
+            LiveDriveSession::from_scenario(scenario_path.parent().unwrap(), &scenario).unwrap();
+        session.state.velocity_mps = 10.0;
+        let before = session.head_chainage_m();
+        session.step_realtime(0.05, |_| {});
+        let after = session.head_chainage_m();
+        let physics_time = session.time_s();
+        assert!(after > before);
+        for index in 0..=10 {
+            let (edge, position) = session
+                .render_position_at_head_offset(0.0, f64::from(index) * 0.005)
+                .unwrap();
+            assert_eq!(edge, session.state.path_edges[0]);
+            let expected = before + (after - before) * f64::from(index) / 10.0;
+            assert!((position - expected).abs() < 1e-9);
+        }
+        assert_eq!(session.head_chainage_m(), after);
+        assert_eq!(session.time_s(), physics_time);
+        session.arrived = true;
+        assert_eq!(
+            session.render_position_at_head_offset(0.0, 0.0),
+            session.position_at_head_offset(0.0)
+        );
+    }
+
+    #[test]
+    fn render_interpolation_keeps_consist_spacing_across_an_edge_boundary() {
+        let scenario_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        let scenario = load_scenario(&scenario_path).unwrap();
+        let mut session =
+            LiveDriveSession::from_scenario(scenario_path.parent().unwrap(), &scenario).unwrap();
+        let boundary = session.path_data.edges[0].length_m;
+        session.previous_render_chainage_m = boundary - 0.5;
+        apply_start_offset(&mut session.state, &session.path_data, boundary + 0.5);
+        for index in 0..=10 {
+            let remainder = f64::from(index) * 0.005;
+            let chainage = |offset| {
+                let (edge, position) = session
+                    .render_position_at_head_offset(offset, remainder)
+                    .unwrap();
+                let edge_index = session
+                    .state
+                    .path_edges
+                    .iter()
+                    .position(|id| id == &edge)
+                    .unwrap();
+                session
+                    .path_data
+                    .chainage_at_edge_position(edge_index, position)
+            };
+            let head = chainage(0.0);
+            assert!((head - (boundary - 0.5 + f64::from(index) * 0.1)).abs() < 1e-9);
+            assert!((head - chainage(-20.0) - 20.0).abs() < 1e-9);
+        }
     }
 
     #[test]

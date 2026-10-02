@@ -142,6 +142,46 @@ mod tests {
     }
 
     #[test]
+    fn driver_camera_follows_car_before_global_transform_propagation() {
+        with_live_world(|world| {
+            world.run_system_once(spawn_camera).unwrap();
+            *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
+            let root =
+                Transform::from_xyz(50.0, 5.0, 25.0).with_rotation(Quat::from_rotation_y(1.2));
+            let local = Transform::from_xyz(-10.0, 0.0, 0.0)
+                .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2));
+            let train = world
+                .spawn((LiveTrainMarker, root, GlobalTransform::IDENTITY))
+                .id();
+            world.spawn((
+                crate::cab_view::CabLeadVehicle,
+                local,
+                GlobalTransform::IDENTITY,
+                ChildOf(train),
+            ));
+            let cab = crate::camera::LiveDriverCab {
+                head_lead_local: Some(Vec3::new(0.0, 2.0, 3.0)),
+                ..Default::default()
+            };
+            let expected = crate::camera::driver_camera_transform_from_lead(
+                &GlobalTransform::from(root.mul_transform(local)),
+                &cab,
+                Default::default(),
+            );
+            world.insert_resource(cab);
+            world
+                .run_system_once(crate::camera::follow_train_camera)
+                .unwrap();
+            let actual = world
+                .query_filtered::<&Transform, With<Camera3d>>()
+                .single(world)
+                .unwrap();
+            assert!(actual.translation.distance(expected.translation) < 1e-5);
+            assert!(actual.rotation.angle_between(expected.rotation) < 1e-5);
+        });
+    }
+
+    #[test]
     fn update_driver_train_visibility_hides_in_driver_cam() {
         with_live_world(|world| {
             world.run_system_once(spawn_live_train).unwrap();

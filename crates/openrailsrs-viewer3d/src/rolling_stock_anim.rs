@@ -105,7 +105,7 @@ pub fn car_world_pose_at_head_offset(
     origin: &FloatingOrigin,
 ) -> Option<Transform> {
     let (edge_id, pos) = if let Some(live) = live {
-        live.session.position_at_head_offset(path_offset_m)?
+        live.visual_position_at_head_offset(path_offset_m)?
     } else {
         advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
     };
@@ -428,8 +428,7 @@ fn head_graph_position(
     track_index: usize,
 ) -> Option<(String, f64)> {
     if let Some(live) = live {
-        let edge = live.session.current_edge_id()?.to_string();
-        return Some((edge, live.session.pos_on_edge_m()));
+        return live.visual_position_at_head_offset(0.0);
     }
     let replay = replay.filter(|r| r.is_active())?;
     let track = replay.tracks.get(track_index)?;
@@ -454,7 +453,7 @@ fn sample_yaw_at_path_offset(
     terrain: Option<&TerrainElevation>,
 ) -> Option<f32> {
     let (edge_id, pos) = if let Some(live) = live {
-        live.session.position_at_head_offset(path_offset_m)?
+        live.visual_position_at_head_offset(path_offset_m)?
     } else {
         advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
     };

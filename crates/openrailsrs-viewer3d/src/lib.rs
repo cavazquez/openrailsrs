@@ -331,12 +331,21 @@ impl Plugin for ViewerPlugin {
                     live::live_audio_frame.run_if(live::live_mode_active),
                     signals::update_live_signal_markers.run_if(live::live_mode_active),
                     train::update_train_markers.run_if(live::live_mode_inactive),
-                    live::update_live_train_marker.run_if(live::live_mode_active),
+                    live::update_live_train_marker
+                        .after(live::sync_live_render_clock)
+                        .run_if(live::live_mode_active),
                     precipitation::update_precipitation,
                     water::update_water_patches,
                     hud::tick_hud_fps,
                     hud::update_hud.after(hud::tick_hud_fps),
                 )
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                live::sync_live_render_clock
+                    .after(live::live_driver_input)
+                    .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

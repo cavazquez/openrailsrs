@@ -20,6 +20,14 @@ Para renderizar se resta primero `RouteFocus` y recién entonces se suma ese
 residuo. El orden es importante: sumarlo antes volvería a perderlo. Esto mantiene
 unidos rieles consecutivos con placements submétricos.
 
+Las poses del tren TDB requieren el mismo cuidado: `TrackVectorPath` compila
+cada vector con tiles relativos a su primer ancla. Conserva el origen absoluto
+en `DVec3`, resta el origen de render antes de convertirlo a `Vec3` y reutiliza
+los tramos para locomotora, coches y bogies. Calcular primero la pose absoluta
+en `f32` hacía que el tren saltara lateralmente 1–2 m aun con WORLD correcto.
+La prueba nativa recorre toda la ruta Chiltern en pasos de 25 cm y exige que
+cada desplazamiento sea menor a 30 cm, incluidos los cambios de vector.
+
 Matrices / TRS vs shear: [`BEVY_TRANSFORMS.md`](BEVY_TRANSFORMS.md).
 
 Detalle de tests: [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md). Vía: [`TRACK_MSTS.md`](TRACK_MSTS.md).

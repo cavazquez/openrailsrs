@@ -40,6 +40,7 @@ pub struct LiveDrive {
     pub session: LiveDriveSession,
     pub audio: Option<AudioEngine>,
     pub paused: bool,
+    render_frame_remainder_s: f64,
     scenario_dir: PathBuf,
     scenario_path: PathBuf,
 }
@@ -131,6 +132,7 @@ impl LiveDrive {
             session,
             audio,
             paused: false,
+            render_frame_remainder_s: 0.0,
             scenario_dir: scenario_dir.to_path_buf(),
             scenario_path: scenario_path.to_path_buf(),
         })
@@ -145,7 +147,13 @@ impl LiveDrive {
         self.session = LiveDriveSession::from_scenario(&self.scenario_dir, &scenario)
             .map_err(|e| e.to_string())?;
         self.paused = false;
+        self.render_frame_remainder_s = 0.0;
         Ok(())
+    }
+
+    pub fn visual_position_at_head_offset(&self, offset_m: f64) -> Option<(String, f64)> {
+        self.session
+            .render_position_at_head_offset(offset_m, self.render_frame_remainder_s)
     }
 }
 
@@ -172,6 +180,13 @@ pub fn live_mode_active(live: Option<Res<LiveDrive>>) -> bool {
 
 pub fn live_mode_inactive(live: Option<Res<LiveDrive>>) -> bool {
     live.is_none()
+}
+
+/// All vehicles and attached cameras sample the same presentation clock.
+pub fn sync_live_render_clock(time: Res<Time<Fixed>>, mut live: ResMut<LiveDrive>) {
+    if !live.paused {
+        live.render_frame_remainder_s = time.overstep().as_secs_f64();
+    }
 }
 
 /// Frame the camera on the live train at route start (chase). `OPENRAILSRS_FOLLOW` overrides.
@@ -393,7 +408,7 @@ pub fn update_live_train_marker(
     origin: Res<FloatingOrigin>,
     mut query: Query<&mut Transform, With<LiveTrainMarker>>,
 ) {
-    let Some(edge) = live.session.current_edge_id() else {
+    let Some((edge, position)) = live.visual_position_at_head_offset(0.0) else {
         return;
     };
     let tdb_resolver = assets
@@ -401,8 +416,8 @@ pub fn update_live_train_marker(
         .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let Some((pos, rot)) = vehicle_pose_on_graph_edge(
         &scene.graph,
-        edge,
-        live.session.pos_on_edge_m(),
+        &edge,
+        position,
         tdb_resolver.as_ref(),
         &scene,
         offset.delta,

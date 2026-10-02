@@ -32,8 +32,8 @@ echo "==> tests"
 cargo test --locked --workspace --all-features -- --test-threads=1
 
 if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
-    echo "==> native platform station geometry"
-    cargo test --locked --workspace --all-features native_service_stations_match_platform_world_positions -- --ignored --nocapture
+    echo "==> native platform geometry and continuous train motion"
+    cargo test --locked --workspace --all-features native_service_ -- --ignored --nocapture --test-threads=1
 fi
 
 echo "==> build"

@@ -1266,7 +1266,7 @@ pub fn follow_train_camera(
             Without<crate::live::LiveTrainCar>,
         ),
     >,
-    lead_car: Query<&GlobalTransform, With<crate::cab_view::CabLeadVehicle>>,
+    lead_car: Query<&Transform, (With<crate::cab_view::CabLeadVehicle>, Without<Camera3d>)>,
     passenger_cars: Query<
         (&Transform, &GlobalTransform, &crate::live::LiveTrainCar),
         (
@@ -1334,7 +1334,13 @@ pub fn follow_train_camera(
         *transform = lead_car
             .iter()
             .next()
-            .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
+            .map(|lead| {
+                driver_camera_transform_from_lead(
+                    &GlobalTransform::from(train_tf.mul_transform(*lead)),
+                    cab,
+                    look,
+                )
+            })
             .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
         return;
     }
@@ -1348,7 +1354,13 @@ pub fn follow_train_camera(
         *transform = lead_car
             .iter()
             .next()
-            .map(|lead| driver_camera_transform_from_lead(lead, cab, look))
+            .map(|lead| {
+                driver_camera_transform_from_lead(
+                    &GlobalTransform::from(train_tf.mul_transform(*lead)),
+                    cab,
+                    look,
+                )
+            })
             .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
         return;
     }
@@ -1371,7 +1383,7 @@ pub fn follow_train_camera(
         let car_gt = passenger_cars
             .iter()
             .find(|(_, _, car)| car.index == pass.consist_car)
-            .map(|(_, gt, _)| *gt);
+            .map(|(local, _, _)| GlobalTransform::from(train_tf.mul_transform(*local)));
         if let Some(gt) = car_gt {
             *transform = driver_camera_transform_from_lead(&gt, &seat_cab, look);
         } else {
