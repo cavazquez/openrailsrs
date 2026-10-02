@@ -197,7 +197,12 @@ fn is_utf16le_interleaved_ascii(bytes: &[u8]) -> bool {
         && bytes.len().is_multiple_of(2)
         && bytes[1] == 0
         && bytes[3] == 0
-        && bytes.chunks_exact(2).take(8).all(|pair| pair[1] == 0)
+        && bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .take(8)
+            .all(|pair| pair[1] == 0)
 }
 
 /// Normalize MSTS on-disk bytes to a single-byte SIMISA / text stream.

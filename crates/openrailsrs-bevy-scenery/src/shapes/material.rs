@@ -125,7 +125,7 @@ pub fn ace_mean_luma(rgba: &[u8]) -> f32 {
     }
     let mut sum = 0.0f64;
     let mut n = 0usize;
-    for px in rgba.chunks_exact(4) {
+    for px in rgba.as_chunks::<4>().0 {
         if px[3] < 8 {
             continue;
         }
@@ -147,7 +147,7 @@ pub fn brighten_dark_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
     }
     let scale = (SCENERY_TEXTURE_TARGET_LUMA / mean.max(1.0)).min(SCENERY_TEXTURE_MAX_PIXEL_SCALE);
     let mut out = rgba.to_vec();
-    for px in out.chunks_exact_mut(4) {
+    for px in out.as_chunks_mut::<4>().0 {
         if px[3] < 8 {
             continue;
         }
@@ -397,7 +397,7 @@ pub fn brighten_cab_ace_rgba(rgba: &[u8]) -> (Vec<u8>, bool) {
     }
     let scale = (CAB_TEXTURE_TARGET_LUMA / mean.max(1.0)).min(SCENERY_TEXTURE_MAX_PIXEL_SCALE);
     let mut out = rgba.to_vec();
-    for px in out.chunks_exact_mut(4) {
+    for px in out.as_chunks_mut::<4>().0 {
         if px[3] < 8 {
             continue;
         }
@@ -648,7 +648,7 @@ pub(crate) fn shape_alpha_stats(ace: &AceFile) -> ShapeAlphaStats {
         has_any: ace.has_mask_channel || ace.alpha_bits > 0,
         has_semitransparent: false,
     };
-    for rgba in ace.mip0.chunks_exact(4) {
+    for rgba in ace.mip0.as_chunks::<4>().0 {
         let a = rgba[3];
         if a < 250 {
             stats.has_any = true;

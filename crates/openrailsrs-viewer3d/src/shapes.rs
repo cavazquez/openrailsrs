@@ -3502,7 +3502,9 @@ mod tests {
         assert_eq!(img.texture_descriptor.size.width, 1024);
         let data = img.data.as_ref().expect("pixel data");
         let semi = data
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .filter(|px| (9..250).contains(&px[3]))
             .count();
         assert!(

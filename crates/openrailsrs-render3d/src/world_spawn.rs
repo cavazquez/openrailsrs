@@ -166,7 +166,7 @@ fn ace_mean_luma(rgba: &[u8]) -> f32 {
     }
     let mut sum = 0.0f64;
     let mut n = 0usize;
-    for px in rgba.chunks_exact(4) {
+    for px in rgba.as_chunks::<4>().0 {
         // MSTS a veces deja alpha=0 en mip0 aunque el RGB sea válido; no excluir esos píxeles.
         let luma = 0.299 * f64::from(px[0]) + 0.587 * f64::from(px[1]) + 0.114 * f64::from(px[2]);
         if luma < 1.0 && px[3] < 8 {
@@ -185,7 +185,7 @@ fn brighten_dark_ace_rgba(rgba: &[u8], luma_threshold: f32) -> (Vec<u8>, bool) {
     }
     let scale = (TARGET_TEXTURE_LUMA / mean.max(1.0)).min(128.0);
     let mut out = rgba.to_vec();
-    for px in out.chunks_exact_mut(4) {
+    for px in out.as_chunks_mut::<4>().0 {
         let luma = 0.299 * f32::from(px[0]) + 0.587 * f32::from(px[1]) + 0.114 * f32::from(px[2]);
         if luma < 1.0 && px[3] < 8 {
             continue;

@@ -285,7 +285,7 @@ fn ace_sample_stats(ace: &AceFile) -> (f32, f32, f32, f32, u8, u8, f32) {
     let mut min_a = 255u8;
     let mut max_a = 0u8;
     let mut opaque = 0u64;
-    for px in ace.mip0.chunks_exact(4) {
+    for px in ace.mip0.as_chunks::<4>().0 {
         if px[3] < 8 {
             continue;
         }

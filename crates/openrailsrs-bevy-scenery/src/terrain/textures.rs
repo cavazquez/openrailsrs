@@ -17,13 +17,13 @@ pub fn sanitize_terrain_base_rgba(data: Option<&mut Vec<u8>>) {
     let Some(data) = data else {
         return;
     };
-    if data.chunks_exact(4).all(|rgba| rgba[3] >= 250) {
+    if data.as_chunks::<4>().0.iter().all(|rgba| rgba[3] >= 250) {
         return;
     }
 
     let mut sum = [0u64; 3];
     let mut count = 0u64;
-    for rgba in data.chunks_exact(4) {
+    for rgba in data.as_chunks::<4>().0 {
         if rgba[3] >= 250 && !looks_like_terrain_chroma_key(rgba) {
             sum[0] += rgba[0] as u64;
             sum[1] += rgba[1] as u64;
@@ -42,7 +42,7 @@ pub fn sanitize_terrain_base_rgba(data: Option<&mut Vec<u8>>) {
         })
         .unwrap_or([72, 107, 56]);
 
-    for rgba in data.chunks_exact_mut(4) {
+    for rgba in data.as_chunks_mut::<4>().0 {
         if rgba[3] < 16 || looks_like_terrain_chroma_key(rgba) {
             rgba[0] = fill[0];
             rgba[1] = fill[1];

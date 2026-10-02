@@ -147,7 +147,7 @@ fn read_dxt1_4x4_decodes_solid_red() {
 
     // Every pixel should be (~) red.  texpresso decompresses to 8-bit RGBA;
     // R=31/31 → 255 exactly, G=B=0.
-    for chunk in ace.mip0.chunks_exact(4) {
+    for chunk in ace.mip0.as_chunks::<4>().0 {
         assert_eq!(chunk[0], 0xFF, "R");
         assert_eq!(chunk[1], 0x00, "G");
         assert_eq!(chunk[2], 0x00, "B");

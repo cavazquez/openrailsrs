@@ -1900,7 +1900,7 @@ mod tests {
                     !prim.vertex_indices.is_empty() && prim.vertex_indices.len() % 3 == 0,
                     "sub={sub_idx} prim={prim_ord} tex={tex} bad index count"
                 );
-                for tri in prim.vertex_indices.chunks_exact(3) {
+                for tri in prim.vertex_indices.as_chunks::<3>().0 {
                     for &vi in tri {
                         let v = &sub.vertices[vi as usize];
                         assert!(

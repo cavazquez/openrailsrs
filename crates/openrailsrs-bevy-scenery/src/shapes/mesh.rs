@@ -1490,7 +1490,7 @@ mod tests {
         let centroid = positions.iter().copied().sum::<Vec3>() / positions.len() as f32;
         let mut outward = 0usize;
         let mut total = 0usize;
-        for tri in positions.chunks_exact(3) {
+        for tri in positions.as_chunks::<3>().0 {
             let n = (tri[1] - tri[0])
                 .cross(tri[2] - tri[0])
                 .try_normalize()

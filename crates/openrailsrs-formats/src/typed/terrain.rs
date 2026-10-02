@@ -394,7 +394,9 @@ impl<'a> SbrCursor<'a> {
         let raw = &self.buf[self.pos..self.pos + count * 2];
         self.pos += count * 2;
         let chars: Vec<u16> = raw
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
             .collect();
         Some(String::from_utf16_lossy(&chars))
@@ -974,7 +976,7 @@ pub fn read_y_raw_bytes(
     }
 
     let mut elevations = Vec::with_capacity(nsamples * nsamples);
-    for chunk in bytes.chunks_exact(2) {
+    for chunk in bytes.as_chunks::<2>().0 {
         let raw = u16::from_le_bytes([chunk[0], chunk[1]]);
         let h = params.sample_floor + f64::from(raw) * params.sample_scale;
         elevations.push(h as f32);
@@ -1296,7 +1298,7 @@ pub fn build_tile_mesh_data(grid: &ElevationGrid, sample_size: f64) -> TerrainMe
 fn compute_indexed_vertex_normals(positions: &[[f32; 3]], indices: &[u32]) -> Vec<[f32; 3]> {
     let mut normals = vec![[0.0f32; 3]; positions.len()];
 
-    for tri in indices.chunks_exact(3) {
+    for tri in indices.as_chunks::<3>().0 {
         let i0 = tri[0] as usize;
         let i1 = tri[1] as usize;
         let i2 = tri[2] as usize;
