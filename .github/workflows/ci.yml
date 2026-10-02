@@ -30,11 +30,11 @@ jobs:
         with:
           shared-key: workspace-cache
 
-      - name: System libs (X11 + ALSA + Bevy)
+      - name: System libs (X11 + Wayland + ALSA + Bevy)
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libxkbcommon-dev libxkbcommon-x11-dev
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev
 
       - name: Run check.sh
         run: chmod +x check.sh && ./check.sh
@@ -54,13 +54,13 @@ jobs:
         with:
           shared-key: workspace-cache
 
-      - name: System libs (X11 + ALSA + Bevy + xvfb + lavapipe)
+      - name: System libs (X11 + Wayland + ALSA + Bevy + xvfb + lavapipe)
         run: |
           sudo apt-get update
           # mesa-vulkan-drivers = lavapipe (Vulkan CPU); libgl1-mesa-dri = llvmpipe (GL).
           # Sin esto Bevy 0.19 paniquea: "Unable to find a GPU!" en runners sin GPU.
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb \
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb \
             libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
 
       - name: Visual regression smoke
@@ -96,11 +96,11 @@ jobs:
           shared-key: workspace-cache
           cache-directories: ~/.cargo/bin
 
-      - name: System libs (X11 + ALSA + Bevy)
+      - name: System libs (X11 + Wayland + ALSA + Bevy)
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libxkbcommon-dev libxkbcommon-x11-dev
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev
 
       - uses: taiki-e/install-action@cargo-llvm-cov
 
