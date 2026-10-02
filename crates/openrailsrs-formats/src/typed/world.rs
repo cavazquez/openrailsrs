@@ -902,10 +902,10 @@ fn atom_to_u32(at: &Atom) -> Option<u32> {
     if let Some(n) = atom_to_number(at) {
         return Some(n.round() as u32);
     }
-    if let Atom::Symbol(s) | Atom::String(s) = at {
-        if let Ok(v) = s.trim().parse::<u32>() {
-            return Some(v);
-        }
+    if let Atom::Symbol(s) | Atom::String(s) = at
+        && let Ok(v) = s.trim().parse::<u32>()
+    {
+        return Some(v);
     }
     None
 }
@@ -1283,14 +1283,12 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
 fn find_uid(items: &[Ast]) -> Option<u32> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, "UiD") {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        found = Some(n as u32);
-                    }
-                }
-            }
+        if let Ast::List(sub) = item
+            && matches_head(sub, "UiD")
+            && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(n) = atom_to_number(at)
+        {
+            found = Some(n as u32);
         }
     }
     found
@@ -1300,23 +1298,23 @@ fn find_uid(items: &[Ast]) -> Option<u32> {
 fn find_position(items: &[Ast]) -> Option<Vec3> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, "Position") {
-                let nums: Vec<f64> = sub
-                    .iter()
-                    .skip(1)
-                    .filter_map(|a| match a {
-                        Ast::Atom(at) => atom_to_number(at),
-                        _ => None,
-                    })
-                    .collect();
-                if nums.len() >= 3 {
-                    found = Some(Vec3 {
-                        x: nums[0],
-                        y: nums[1],
-                        z: nums[2],
-                    });
-                }
+        if let Ast::List(sub) = item
+            && matches_head(sub, "Position")
+        {
+            let nums: Vec<f64> = sub
+                .iter()
+                .skip(1)
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at),
+                    _ => None,
+                })
+                .collect();
+            if nums.len() >= 3 {
+                found = Some(Vec3 {
+                    x: nums[0],
+                    y: nums[1],
+                    z: nums[2],
+                });
             }
         }
     }
@@ -1327,19 +1325,19 @@ fn find_position(items: &[Ast]) -> Option<Vec3> {
 fn find_qdirection(items: &[Ast]) -> Option<[f64; 4]> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, "QDirection") {
-                let nums: Vec<f64> = sub
-                    .iter()
-                    .skip(1)
-                    .filter_map(|a| match a {
-                        Ast::Atom(at) => atom_to_number(at),
-                        _ => None,
-                    })
-                    .collect();
-                if nums.len() >= 4 {
-                    found = Some([nums[0], nums[1], nums[2], nums[3]]);
-                }
+        if let Ast::List(sub) = item
+            && matches_head(sub, "QDirection")
+        {
+            let nums: Vec<f64> = sub
+                .iter()
+                .skip(1)
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at),
+                    _ => None,
+                })
+                .collect();
+            if nums.len() >= 4 {
+                found = Some([nums[0], nums[1], nums[2], nums[3]]);
             }
         }
     }
@@ -1350,22 +1348,21 @@ fn find_qdirection(items: &[Ast]) -> Option<[f64; 4]> {
 fn find_matrix3x3(items: &[Ast]) -> Option<[f64; 9]> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, "Matrix3x3") {
-                let nums: Vec<f64> = sub
-                    .iter()
-                    .skip(1)
-                    .filter_map(|a| match a {
-                        Ast::Atom(at) => atom_to_number(at),
-                        _ => None,
-                    })
-                    .collect();
-                if nums.len() >= 9 {
-                    found = Some([
-                        nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], nums[6], nums[7],
-                        nums[8],
-                    ]);
-                }
+        if let Ast::List(sub) = item
+            && matches_head(sub, "Matrix3x3")
+        {
+            let nums: Vec<f64> = sub
+                .iter()
+                .skip(1)
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at),
+                    _ => None,
+                })
+                .collect();
+            if nums.len() >= 9 {
+                found = Some([
+                    nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], nums[6], nums[7], nums[8],
+                ]);
             }
         }
     }
@@ -1376,15 +1373,15 @@ fn find_matrix3x3(items: &[Ast]) -> Option<[f64; 9]> {
 fn find_named_string(items: &[Ast], key: &str) -> Option<String> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, key) {
-                for child in sub.iter().skip(1) {
-                    if let Ast::Atom(at) = child {
-                        if let Some(s) = atom_to_string(at) {
-                            found = Some(s);
-                            break;
-                        }
-                    }
+        if let Ast::List(sub) = item
+            && matches_head(sub, key)
+        {
+            for child in sub.iter().skip(1) {
+                if let Ast::Atom(at) = child
+                    && let Some(s) = atom_to_string(at)
+                {
+                    found = Some(s);
+                    break;
                 }
             }
         }
@@ -1396,19 +1393,19 @@ fn find_named_string(items: &[Ast], key: &str) -> Option<String> {
 fn find_named_pair(items: &[Ast], key: &str) -> Option<[f64; 2]> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, key) {
-                let nums: Vec<f64> = sub
-                    .iter()
-                    .skip(1)
-                    .filter_map(|a| match a {
-                        Ast::Atom(at) => atom_to_number(at),
-                        _ => None,
-                    })
-                    .collect();
-                if nums.len() >= 2 {
-                    found = Some([nums[0], nums[1]]);
-                }
+        if let Ast::List(sub) = item
+            && matches_head(sub, key)
+        {
+            let nums: Vec<f64> = sub
+                .iter()
+                .skip(1)
+                .filter_map(|a| match a {
+                    Ast::Atom(at) => atom_to_number(at),
+                    _ => None,
+                })
+                .collect();
+            if nums.len() >= 2 {
+                found = Some([nums[0], nums[1]]);
             }
         }
     }
@@ -1419,14 +1416,12 @@ fn find_named_pair(items: &[Ast], key: &str) -> Option<[f64; 2]> {
 fn find_named_f64(items: &[Ast], key: &str) -> Option<f64> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, key) {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        found = Some(n);
-                    }
-                }
-            }
+        if let Ast::List(sub) = item
+            && matches_head(sub, key)
+            && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(n) = atom_to_number(at)
+        {
+            found = Some(n);
         }
     }
     found
@@ -1436,14 +1431,12 @@ fn find_named_f64(items: &[Ast], key: &str) -> Option<f64> {
 fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
     let mut found = None;
     for item in items {
-        if let Ast::List(sub) = item {
-            if matches_head(sub, key) {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        found = Some(n.max(0.0) as u32);
-                    }
-                }
-            }
+        if let Ast::List(sub) = item
+            && matches_head(sub, key)
+            && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(n) = atom_to_number(at)
+        {
+            found = Some(n.max(0.0) as u32);
         }
     }
     found
@@ -1619,12 +1612,12 @@ fn parse_dyntrack_sections(items: &[Ast]) -> Vec<DyntrackSection> {
                         }
                         i += 2;
                         while nums.len() < 3 {
-                            if let Some(Ast::Atom(at)) = sec.get(i) {
-                                if let Some(n) = atom_to_number(at) {
-                                    nums.push(n);
-                                    i += 1;
-                                    continue;
-                                }
+                            if let Some(Ast::Atom(at)) = sec.get(i)
+                                && let Some(n) = atom_to_number(at)
+                            {
+                                nums.push(n);
+                                i += 1;
+                                continue;
                             }
                             break;
                         }
@@ -1667,10 +1660,10 @@ fn find_signal_sub_obj_mask(items: &[Ast]) -> u32 {
         if let Some(Ast::Atom(at)) = sub.get(1) {
             if let Some(n) = atom_to_number(at) {
                 found = n as u32;
-            } else if let Atom::Symbol(s) | Atom::String(s) = at {
-                if let Ok(v) = u32::from_str_radix(s.trim(), 16) {
-                    found = v;
-                }
+            } else if let Atom::Symbol(s) | Atom::String(s) = at
+                && let Ok(v) = u32::from_str_radix(s.trim(), 16)
+            {
+                found = v;
             }
         }
     }

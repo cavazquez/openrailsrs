@@ -191,13 +191,12 @@ impl EngineFile {
         let length_m = parse_length_from_ast(ast).unwrap_or(18.0);
         let mut traction_curve = parse_traction_curve(ast);
         let diesel_notch_curves = parse_orts_notch_curves(ast);
-        if traction_curve.is_empty() {
-            if let Some((_, curve)) = diesel_notch_curves
+        if traction_curve.is_empty()
+            && let Some((_, curve)) = diesel_notch_curves
                 .iter()
                 .max_by(|a, b| a.0.total_cmp(&b.0))
-            {
-                traction_curve = curve.clone();
-            }
+        {
+            traction_curve = curve.clone();
         }
         let steam = parse_steam_fields(ast);
         let mut diesel_power_tab = parse_rpm_power_tab(ast);
@@ -413,10 +412,10 @@ fn parse_engine_cab_view(ast: &Ast) -> EngineCabView {
             return;
         }
         let (shape, viewpoint) = parse_orts3d_cab_block(items);
-        if cab.orts_3d_cab_shape.is_none() {
-            if let Some(shape) = shape {
-                cab.orts_3d_cab_shape = Some(shape);
-            }
+        if cab.orts_3d_cab_shape.is_none()
+            && let Some(shape) = shape
+        {
+            cab.orts_3d_cab_shape = Some(shape);
         }
         if viewpoint.head_pos_m != [0.0, 0.0, 0.0]
             || viewpoint.start_direction_deg != [0.0, 0.0, 0.0]
@@ -427,10 +426,10 @@ fn parse_engine_cab_view(ast: &Ast) -> EngineCabView {
     });
 
     // Loose top-level fields (some .eng files omit the ORTS3DCab wrapper).
-    if cab.orts_3d_cab_shape.is_none() {
-        if let Some(shape) = parse_cab_shape_ref(ast, "ORTS3DCabFile") {
-            cab.orts_3d_cab_shape = Some(shape);
-        }
+    if cab.orts_3d_cab_shape.is_none()
+        && let Some(shape) = parse_cab_shape_ref(ast, "ORTS3DCabFile")
+    {
+        cab.orts_3d_cab_shape = Some(shape);
     }
     if cab.orts_3d_cab_head_pos_m.is_none() {
         cab.orts_3d_cab_head_pos_m = parse_f64_triplet_field(ast, "ORTS3DCabHeadPos");
@@ -753,23 +752,23 @@ fn parse_length_from_ast(ast: &Ast) -> Option<f64> {
         "Length",
         "WagonLength",
     ] {
-        if let Some(v) = find_list_value(ast, key) {
-            if let Some(len) = parse_length_ast(v) {
-                return Some(len);
-            }
+        if let Some(v) = find_list_value(ast, key)
+            && let Some(len) = parse_length_ast(v)
+        {
+            return Some(len);
         }
     }
     let mut found = None;
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("Size") {
-                if items.len() >= 4 {
-                    found = parse_length_ast(&items[3]);
-                } else if let Some(Ast::List(dims)) = items.get(1) {
-                    if dims.len() >= 3 {
-                        found = parse_length_ast(&dims[2]);
-                    }
-                }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("Size")
+        {
+            if items.len() >= 4 {
+                found = parse_length_ast(&items[3]);
+            } else if let Some(Ast::List(dims)) = items.get(1)
+                && dims.len() >= 3
+            {
+                found = parse_length_ast(&dims[2]);
             }
         }
         None
@@ -856,16 +855,16 @@ struct OrtsDieselEngineBlock {
 /// fields directly under `ORTSDieselEngines`.
 fn parse_ortsdieselengines_diesel(ast: &Ast) -> Option<OrtsDieselEngineBlock> {
     walk_lists_find::<OrtsDieselEngineBlock, _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("ORTSDieselEngines") {
-                let block = parse_diesel_block_fields(items);
-                if !block.power_tab.is_empty()
-                    || !block.throttle_rpm_tab.is_empty()
-                    || block.idle_rpm > 0.0
-                    || block.rate_of_change_up_rpm_pss > 0.0
-                {
-                    return Some(block);
-                }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("ORTSDieselEngines")
+        {
+            let block = parse_diesel_block_fields(items);
+            if !block.power_tab.is_empty()
+                || !block.throttle_rpm_tab.is_empty()
+                || block.idle_rpm > 0.0
+                || block.rate_of_change_up_rpm_pss > 0.0
+            {
+                return Some(block);
             }
         }
         None
@@ -913,18 +912,18 @@ fn parse_drive_wheel_mass_kg(ast: &Ast) -> f64 {
 
 fn parse_curtius_kniffler(ast: &Ast) -> (f64, f64, f64) {
     walk_lists_find::<(f64, f64, f64), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("ORTSCurtius_Kniffler") {
-                let coeffs: Vec<f64> = if items.len() >= 4 {
-                    (1..4).filter_map(|i| parse_scalar_ast(&items[i])).collect()
-                } else if let Some(Ast::List(nested)) = items.get(1) {
-                    nested.iter().filter_map(parse_scalar_ast).collect()
-                } else {
-                    Vec::new()
-                };
-                if coeffs.len() >= 3 {
-                    return Some((coeffs[0], coeffs[1], coeffs[2]));
-                }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("ORTSCurtius_Kniffler")
+        {
+            let coeffs: Vec<f64> = if items.len() >= 4 {
+                (1..4).filter_map(|i| parse_scalar_ast(&items[i])).collect()
+            } else if let Some(Ast::List(nested)) = items.get(1) {
+                nested.iter().filter_map(parse_scalar_ast).collect()
+            } else {
+                Vec::new()
+            };
+            if coeffs.len() >= 3 {
+                return Some((coeffs[0], coeffs[1], coeffs[2]));
             }
         }
         None
@@ -981,10 +980,10 @@ fn parse_orts_davis(ast: &Ast) -> (f64, f64, f64) {
 fn parse_rpm_power_tab(ast: &Ast) -> Vec<(f64, f64)> {
     let mut found = Vec::new();
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("DieselPowerTab") {
-                found = extract_pair_tab(items);
-            }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("DieselPowerTab")
+        {
+            found = extract_pair_tab(items);
         }
         None
     });
@@ -1004,11 +1003,11 @@ fn parse_orts_bool_field(ast: &Ast, keys: &[&str]) -> bool {
 fn parse_reverse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
     let mut found = Vec::new();
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("ReverseThrottleRPMTab") {
-                let raw = extract_pair_tab(items);
-                found = raw.into_iter().map(|(r, t)| (r, t / 100.0)).collect();
-            }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("ReverseThrottleRPMTab")
+        {
+            let raw = extract_pair_tab(items);
+            found = raw.into_iter().map(|(r, t)| (r, t / 100.0)).collect();
         }
         None
     });
@@ -1019,11 +1018,11 @@ fn parse_reverse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
 fn parse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
     let mut found = Vec::new();
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("ThrottleRPMTab") {
-                let raw = extract_pair_tab(items);
-                found = raw.into_iter().map(|(t, r)| (t / 100.0, r)).collect();
-            }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("ThrottleRPMTab")
+        {
+            let raw = extract_pair_tab(items);
+            found = raw.into_iter().map(|(t, r)| (t / 100.0, r)).collect();
         }
         None
     });
@@ -1033,31 +1032,31 @@ fn parse_throttle_rpm_tab(ast: &Ast) -> Vec<(f64, f64)> {
 fn parse_diesel_power_tab_max(ast: &Ast) -> Option<f64> {
     let mut best = 0.0_f64;
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("DieselPowerTab") {
-                let mut nums = Vec::new();
-                for item in items.iter().skip(1) {
-                    match item {
-                        Ast::List(row) if row.len() >= 2 => {
-                            if let Some(p) = row.get(1).and_then(parse_scalar_ast) {
-                                best = best.max(p);
-                            }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("DieselPowerTab")
+        {
+            let mut nums = Vec::new();
+            for item in items.iter().skip(1) {
+                match item {
+                    Ast::List(row) if row.len() >= 2 => {
+                        if let Some(p) = row.get(1).and_then(parse_scalar_ast) {
+                            best = best.max(p);
                         }
-                        Ast::Atom(atom) => {
-                            if let Some(v) = quantity_from_atom(atom)
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .or_else(|| atom_to_number(atom))
-                            {
-                                nums.push(v);
-                            }
-                        }
-                        _ => {}
                     }
+                    Ast::Atom(atom) => {
+                        if let Some(v) = quantity_from_atom(atom)
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .or_else(|| atom_to_number(atom))
+                        {
+                            nums.push(v);
+                        }
+                    }
+                    _ => {}
                 }
-                for chunk in nums.chunks(2) {
-                    if chunk.len() == 2 {
-                        best = best.max(chunk[1]);
-                    }
+            }
+            for chunk in nums.chunks(2) {
+                if chunk.len() == 2 {
+                    best = best.max(chunk[1]);
                 }
             }
         }
@@ -1143,19 +1142,19 @@ fn parse_traction_curve(ast: &Ast) -> Vec<(f64, f64)> {
     let mut points: Vec<(f64, f64)> = Vec::new();
 
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("MaxTractiveEffortCurves") {
-                for item in items.iter().skip(1) {
-                    if let Ast::List(entry_items) = item {
-                        if let Some(Ast::Atom(Atom::Symbol(tag))) = entry_items.first() {
-                            if tag.eq_ignore_ascii_case("CurveEntry") && entry_items.len() >= 3 {
-                                let v = entry_items.get(1).and_then(parse_scalar_ast);
-                                let f = entry_items.get(2).and_then(parse_scalar_ast);
-                                if let (Some(v_val), Some(f_val)) = (v, f) {
-                                    points.push((kmh_to_mps(v_val), f_val));
-                                }
-                            }
-                        }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("MaxTractiveEffortCurves")
+        {
+            for item in items.iter().skip(1) {
+                if let Ast::List(entry_items) = item
+                    && let Some(Ast::Atom(Atom::Symbol(tag))) = entry_items.first()
+                    && tag.eq_ignore_ascii_case("CurveEntry")
+                    && entry_items.len() >= 3
+                {
+                    let v = entry_items.get(1).and_then(parse_scalar_ast);
+                    let f = entry_items.get(2).and_then(parse_scalar_ast);
+                    if let (Some(v_val), Some(f_val)) = (v, f) {
+                        points.push((kmh_to_mps(v_val), f_val));
                     }
                 }
             }
@@ -1184,11 +1183,10 @@ fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
     let mut i = 0;
     while i < items.len() {
         if let Ast::List(pair) = &items[i] {
-            if pair.len() >= 2 {
-                if let (Some(v), Some(f)) = (parse_scalar_ast(&pair[0]), parse_scalar_ast(&pair[1]))
-                {
-                    curve.push((v, orts_curve_force_n(f)));
-                }
+            if pair.len() >= 2
+                && let (Some(v), Some(f)) = (parse_scalar_ast(&pair[0]), parse_scalar_ast(&pair[1]))
+            {
+                curve.push((v, orts_curve_force_n(f)));
             }
             i += 1;
             continue;
@@ -1211,43 +1209,41 @@ fn parse_orts_notch_curves(ast: &Ast) -> Vec<(f64, Vec<(f64, f64)>)> {
     let mut out: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
 
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("ORTSMaxTractiveForceCurves") {
-                let mut i = 1;
-                while i < items.len() {
-                    match &items[i] {
-                        Ast::List(group) if group.len() >= 2 => {
-                            let mut j = 0;
-                            while j + 1 < group.len() {
-                                if let Some(throttle) = parse_scalar_ast(&group[j]) {
-                                    let curve = match &group[j + 1] {
-                                        Ast::List(curve_items) => {
-                                            parse_orts_curve_points(curve_items)
-                                        }
-                                        _ => parse_orts_curve_points(&group[j + 1..]),
-                                    };
-                                    if !curve.is_empty() {
-                                        out.push((throttle, curve));
-                                        j += 2;
-                                        continue;
-                                    }
-                                }
-                                j += 1;
-                            }
-                            i += 1;
-                        }
-                        throttle_ast => {
-                            if let (Some(throttle), Some(Ast::List(curve_items))) =
-                                (parse_scalar_ast(throttle_ast), items.get(i + 1))
-                            {
-                                let curve = parse_orts_curve_points(curve_items);
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("ORTSMaxTractiveForceCurves")
+        {
+            let mut i = 1;
+            while i < items.len() {
+                match &items[i] {
+                    Ast::List(group) if group.len() >= 2 => {
+                        let mut j = 0;
+                        while j + 1 < group.len() {
+                            if let Some(throttle) = parse_scalar_ast(&group[j]) {
+                                let curve = match &group[j + 1] {
+                                    Ast::List(curve_items) => parse_orts_curve_points(curve_items),
+                                    _ => parse_orts_curve_points(&group[j + 1..]),
+                                };
                                 if !curve.is_empty() {
                                     out.push((throttle, curve));
+                                    j += 2;
+                                    continue;
                                 }
-                                i += 2;
-                            } else {
-                                i += 1;
                             }
+                            j += 1;
+                        }
+                        i += 1;
+                    }
+                    throttle_ast => {
+                        if let (Some(throttle), Some(Ast::List(curve_items))) =
+                            (parse_scalar_ast(throttle_ast), items.get(i + 1))
+                        {
+                            let curve = parse_orts_curve_points(curve_items);
+                            if !curve.is_empty() {
+                                out.push((throttle, curve));
+                            }
+                            i += 2;
+                        } else {
+                            i += 1;
                         }
                     }
                 }

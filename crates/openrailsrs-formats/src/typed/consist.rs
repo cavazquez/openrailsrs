@@ -85,26 +85,25 @@ fn collect_entries(ast: &Ast, out: &mut Vec<ConsistEntry>) -> Result<(), FormatE
 
 fn parse_engine_entry(items: &[Ast]) -> Result<Option<ConsistEntry>, FormatError> {
     let meta = entry_meta(items);
-    if items.len() >= 2 {
-        if let Some(path) = path_from_simple_entry(&items[1]) {
+    if items.len() >= 2
+        && let Some(path) = path_from_simple_entry(&items[1])
+    {
+        return Ok(Some(ConsistEntry::Engine {
+            path,
+            uid: meta.uid,
+            flipped: meta.flipped,
+        }));
+    }
+    for item in items.iter().skip(1) {
+        if let Ast::List(sub) = item
+            && let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && tag.eq_ignore_ascii_case("EngineData")
+        {
             return Ok(Some(ConsistEntry::Engine {
-                path,
+                path: trainset_path(sub),
                 uid: meta.uid,
                 flipped: meta.flipped,
             }));
-        }
-    }
-    for item in items.iter().skip(1) {
-        if let Ast::List(sub) = item {
-            if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-                if tag.eq_ignore_ascii_case("EngineData") {
-                    return Ok(Some(ConsistEntry::Engine {
-                        path: trainset_path(sub),
-                        uid: meta.uid,
-                        flipped: meta.flipped,
-                    }));
-                }
-            }
         }
     }
     Ok(None)
@@ -112,26 +111,25 @@ fn parse_engine_entry(items: &[Ast]) -> Result<Option<ConsistEntry>, FormatError
 
 fn parse_wagon_entry(items: &[Ast]) -> Result<Option<ConsistEntry>, FormatError> {
     let meta = entry_meta(items);
-    if items.len() >= 2 {
-        if let Some(path) = path_from_simple_entry(&items[1]) {
+    if items.len() >= 2
+        && let Some(path) = path_from_simple_entry(&items[1])
+    {
+        return Ok(Some(ConsistEntry::Wagon {
+            path,
+            uid: meta.uid,
+            flipped: meta.flipped,
+        }));
+    }
+    for item in items.iter().skip(1) {
+        if let Ast::List(sub) = item
+            && let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && tag.eq_ignore_ascii_case("WagonData")
+        {
             return Ok(Some(ConsistEntry::Wagon {
-                path,
+                path: trainset_path(sub),
                 uid: meta.uid,
                 flipped: meta.flipped,
             }));
-        }
-    }
-    for item in items.iter().skip(1) {
-        if let Ast::List(sub) = item {
-            if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-                if tag.eq_ignore_ascii_case("WagonData") {
-                    return Ok(Some(ConsistEntry::Wagon {
-                        path: trainset_path(sub),
-                        uid: meta.uid,
-                        flipped: meta.flipped,
-                    }));
-                }
-            }
         }
     }
     Ok(None)
@@ -160,10 +158,10 @@ fn scan_entry_meta(ast: &Ast, meta: &mut EntryMeta) {
         return;
     };
     if tag.eq_ignore_ascii_case("UiD") {
-        if let Some(Ast::Atom(at)) = sub.get(1) {
-            if let Some(n) = super::atom_to_number(at) {
-                meta.uid = Some(n as u32);
-            }
+        if let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(n) = super::atom_to_number(at)
+        {
+            meta.uid = Some(n as u32);
         }
         return;
     }

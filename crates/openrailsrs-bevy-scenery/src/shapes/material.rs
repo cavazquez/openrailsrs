@@ -269,10 +269,11 @@ pub fn cab_or_scenery_material_with_texture_ex(
     } else if !material_lit && scenery_needs_emissive_texture(rgba_for_luma) {
         mat.emissive = SCENERY_DARK_EMISSIVE;
         mat.emissive_texture = mat.base_color_texture.clone();
-    } else if let Some(p) = pbr {
-        if material_lit && p.ambient_fill != LinearRgba::new(0.0, 0.0, 0.0, 1.0) {
-            mat.emissive = p.ambient_fill;
-        }
+    } else if let Some(p) = pbr
+        && material_lit
+        && p.ambient_fill != LinearRgba::new(0.0, 0.0, 0.0, 1.0)
+    {
+        mat.emissive = p.ambient_fill;
     }
     finalize_scenery_material(mat, material_lit)
 }

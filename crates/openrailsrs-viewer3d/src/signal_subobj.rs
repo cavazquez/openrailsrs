@@ -33,10 +33,10 @@ pub fn signal_subobj_visible(
             continue;
         }
         let want = sub.matrix_name.to_ascii_uppercase();
-        if let Some(idx) = matrix_names.iter().position(|n| n == &want) {
-            if idx < visible_matrix.len() {
-                visible_matrix[idx] = true;
-            }
+        if let Some(idx) = matrix_names.iter().position(|n| n == &want)
+            && idx < visible_matrix.len()
+        {
+            visible_matrix[idx] = true;
         }
     }
 

@@ -1,6 +1,23 @@
 # Bevy — arquitectura 3D
 
-Presentación 3D separada del núcleo headless. Pin: **Bevy 0.19** (`[workspace.dependencies]`).
+Presentación 3D separada del núcleo headless. Versión **Bevy 0.19.1** (`Cargo.lock`), con Rust mínimo 1.95 por el requisito de Bevy.
+
+La física interactiva se ejecuta en `FixedUpdate` con reloj Bevy de 60 Hz y
+cuantos físicos de hasta 0,05 s. La representación, cámaras, cabina y HUD se
+actualizan en `Update`. `LiveDriveSession` y la máquina de estados de servicio
+son Rust independiente de Bevy; `play-service` usa exactamente la misma
+sesión y el mismo conductor automático. El test de recorrido completo
+compara 30 y 144 FPS sin cambiar las llegadas ni las posiciones.
+
+`DrivingHudPlugin` separa la presentación de conducción del núcleo. Utiliza
+`Text`, `FontSource`, recursos de visibilidad y consultas Bevy disjuntas,
+actualizando textos sólo cuando cambian y como máximo a 20 Hz. La fuente
+DejaVu Sans Mono está incluida con su licencia para representar el español.
+Los vectores TDB conservan posición, elevación, tangente y sentido de marcha,
+incluyendo las aristas inversas `eNNN_r` y los offsets de andén.
+Los vértices MSTS ya invierten Z al convertirse a Bevy: la base del coche
+rota −90° sobre Y para que el frente de la cabina siga el +X del recorrido.
+La prueba de cámara compara esa vista contra la dirección real de marcha.
 
 Features de ventana: `x11` + `wayland`. En sesiones Wayland, sin `wayland` winit cae a XWayland y RADV suele fallar con `Surface::configure → Invalid surface`.
 
@@ -34,9 +51,8 @@ flowchart LR
 | VSM | Opcional | Completo (`OPENRAILSRS_OR_VSM`) |
 
 ```bash
-# Jugable Chiltern
-cargo run --release -p openrailsrs-viewer3d -- \
-  --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+# Jugable Chiltern: tres estaciones, cabina y exterior
+./scripts/run_chiltern_service.sh
 
 # Validación por tiles
 cargo run -p openrailsrs-render3d -- \

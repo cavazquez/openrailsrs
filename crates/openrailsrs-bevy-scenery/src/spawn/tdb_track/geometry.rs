@@ -112,12 +112,12 @@ pub fn section_track_length_m(
     node_length_m: f64,
     section_count: usize,
 ) -> f32 {
-    if let Some(cat) = tsection {
-        if let Some(def) = cat.sections.get(&section_index) {
-            let len = def.effective_length_m();
-            if len > 0.5 {
-                return len as f32;
-            }
+    if let Some(cat) = tsection
+        && let Some(def) = cat.sections.get(&section_index)
+    {
+        let len = def.effective_length_m();
+        if len > 0.5 {
+            return len as f32;
         }
     }
     if section_count <= 1 {
@@ -261,11 +261,11 @@ pub fn find_location_in_section_world(
         return Some(start);
     }
     let (ay, ax, az) = section.orientation_yaw_pitch_roll();
-    if let Some(cat) = tsection {
-        if let Some(def) = cat.sections.get(&section.section_index) {
-            let msts = msts_world_delta_along_section(ax, ay, az, def, distance_m);
-            return Some(start + bevy_delta_from_msts_vec(msts));
-        }
+    if let Some(cat) = tsection
+        && let Some(def) = cat.sections.get(&section.section_index)
+    {
+        let msts = msts_world_delta_along_section(ax, ay, az, def, distance_m);
+        return Some(start + bevy_delta_from_msts_vec(msts));
     }
     let _ = (node_length_m, section_count);
     let msts = msts_orient_ypr(ay, ax, az) * Vec3::new(0.0, 0.0, distance_m as f32);
@@ -359,49 +359,35 @@ pub fn section_path_spans(
             })
     });
 
-    if let Some(cat) = tsection {
-        if let Some(def) = cat.sections.get(&section.section_index).copied() {
-            let len = def.effective_length_m();
-            if len < 0.5 && next_section_anchor.is_none() {
-                return Vec::new();
+    if let Some(cat) = tsection
+        && let Some(def) = cat.sections.get(&section.section_index).copied()
+    {
+        let len = def.effective_length_m();
+        if len < 0.5 && next_section_anchor.is_none() {
+            return Vec::new();
+        }
+        let travel = if len > 0.5 {
+            len
+        } else {
+            f64::from(section_track_length_m(
+                Some(cat),
+                section.section_index,
+                node_length_m,
+                section_count,
+            ))
+        };
+        let msts = msts_world_delta_along_section(ax, ay, az, &def, travel);
+        let mut end = anchor + bevy_delta_from_msts_vec(msts);
+        if let Some(next) = next_section_anchor {
+            if !def.is_curved()
+                && let Some(span) = straight_span_to(next, anchor, half, ax, az)
+            {
+                return vec![span];
             }
-            let travel = if len > 0.5 {
-                len
-            } else {
-                f64::from(section_track_length_m(
-                    Some(cat),
-                    section.section_index,
-                    node_length_m,
-                    section_count,
-                ))
-            };
-            let msts = msts_world_delta_along_section(ax, ay, az, &def, travel);
-            let mut end = anchor + bevy_delta_from_msts_vec(msts);
-            if let Some(next) = next_section_anchor {
-                if !def.is_curved() {
-                    if let Some(span) = straight_span_to(next, anchor, half, ax, az) {
-                        return vec![span];
-                    }
-                }
-                // Keep geometric end for curves; next anchor is only a rebase hint.
-                let _ = next;
-            }
-            if def.is_curved() {
-                return vec![SectionPathSpan {
-                    start_world: anchor,
-                    end_world: end,
-                    world_yaw_deg: bevy_yaw,
-                    pitch_rad: ax,
-                    roll_rad: az,
-                    half_gauge_m: half,
-                    length_m: None,
-                    curve_radius_m: def.curve_radius_m.map(|r| r as f32),
-                    curve_angle_deg: def.curve_angle_deg.map(|a| a as f32),
-                }];
-            }
-            if next_section_anchor.is_none() {
-                end = anchor + bevy_delta_from_msts_vec(msts);
-            }
+            // Keep geometric end for curves; next anchor is only a rebase hint.
+            let _ = next;
+        }
+        if def.is_curved() {
             return vec![SectionPathSpan {
                 start_world: anchor,
                 end_world: end,
@@ -409,18 +395,32 @@ pub fn section_path_spans(
                 pitch_rad: ax,
                 roll_rad: az,
                 half_gauge_m: half,
-                length_m: Some(travel as f32),
-                curve_radius_m: None,
-                curve_angle_deg: None,
+                length_m: None,
+                curve_radius_m: def.curve_radius_m.map(|r| r as f32),
+                curve_angle_deg: def.curve_angle_deg.map(|a| a as f32),
             }];
         }
+        if next_section_anchor.is_none() {
+            end = anchor + bevy_delta_from_msts_vec(msts);
+        }
+        return vec![SectionPathSpan {
+            start_world: anchor,
+            end_world: end,
+            world_yaw_deg: bevy_yaw,
+            pitch_rad: ax,
+            roll_rad: az,
+            half_gauge_m: half,
+            length_m: Some(travel as f32),
+            curve_radius_m: None,
+            curve_angle_deg: None,
+        }];
     }
 
     // No TrackSection: chord to next anchor or straight along AY (+ pitch/roll).
-    if let Some(next) = next_section_anchor {
-        if let Some(span) = straight_span_to(next, anchor, half, ax, az) {
-            return vec![span];
-        }
+    if let Some(next) = next_section_anchor
+        && let Some(span) = straight_span_to(next, anchor, half, ax, az)
+    {
+        return vec![span];
     }
     let len = section_track_length_m(
         tsection,
@@ -764,10 +764,10 @@ pub fn single_section_end_world(
         section_count,
         None,
     );
-    if let Some(last) = spans.last() {
-        if distance_xz(start, last.end_world) >= 0.5 {
-            return Some(last.end_world);
-        }
+    if let Some(last) = spans.last()
+        && distance_xz(start, last.end_world) >= 0.5
+    {
+        return Some(last.end_world);
     }
     let heading = section.heading_deg()?;
     let len = section_shape_length_m(

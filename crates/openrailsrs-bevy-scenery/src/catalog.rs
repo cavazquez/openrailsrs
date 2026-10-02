@@ -178,16 +178,16 @@ pub fn route_pack_dir(route_dir: &Path, msts_root: &Path) -> Option<PathBuf> {
 }
 
 fn load_tsection_catalog(route_dir: &Path, msts_root: &Path) -> TSectionCatalog {
-    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir) {
-        if !catalog.shapes.is_empty() {
-            return catalog;
-        }
+    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir)
+        && !catalog.shapes.is_empty()
+    {
+        return catalog;
     }
     for candidate in msts_route_dir_candidates(route_dir, msts_root) {
-        if let Ok(catalog) = TSectionCatalog::load_for_route(&candidate) {
-            if !catalog.shapes.is_empty() {
-                return catalog;
-            }
+        if let Ok(catalog) = TSectionCatalog::load_for_route(&candidate)
+            && !catalog.shapes.is_empty()
+        {
+            return catalog;
         }
     }
     TSectionCatalog::load_for_route(route_dir).unwrap_or_default()

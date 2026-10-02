@@ -29,15 +29,9 @@ const COL_BRAKE: Color = Color::srgb(0.95, 0.3, 0.3);
 const COL_BAR_TRACK: Color = Color::srgb(0.12, 0.16, 0.22);
 
 /// Whether the cab panel is shown (toggle with `C` in live mode).
-#[derive(Resource, Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct CabPanelVisible {
     pub open: bool,
-}
-
-impl Default for CabPanelVisible {
-    fn default() -> Self {
-        Self { open: true }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

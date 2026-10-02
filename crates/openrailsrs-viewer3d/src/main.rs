@@ -414,23 +414,24 @@ fn load_route_bundle_for_viewer(
 
     let assets = RouteAssets::new(&config.route_dir);
 
-    if config.scenery_mode.is_run_corridor() && config.run_corridor_path.active() {
-        if let (Some(scenario), Some(tdb)) = (&config.scenario, assets.track_db()) {
-            let delta = config
-                .route_offset_override
-                .map(|o| o.delta)
-                .unwrap_or_default();
-            match build_snapped_corridor_path(
-                &config.scene,
-                scenario,
-                delta,
-                tdb,
-                Some(assets.tsection()),
-            ) {
-                Ok(snapped) => config.run_corridor_path = snapped,
-                Err(err) => {
-                    viewer_log!("openrailsrs-viewer3d: run_corridor TDB snap failed: {err}")
-                }
+    if config.scenery_mode.is_run_corridor()
+        && config.run_corridor_path.active()
+        && let (Some(scenario), Some(tdb)) = (&config.scenario, assets.track_db())
+    {
+        let delta = config
+            .route_offset_override
+            .map(|o| o.delta)
+            .unwrap_or_default();
+        match build_snapped_corridor_path(
+            &config.scene,
+            scenario,
+            delta,
+            tdb,
+            Some(assets.tsection()),
+        ) {
+            Ok(snapped) => config.run_corridor_path = snapped,
+            Err(err) => {
+                viewer_log!("openrailsrs-viewer3d: run_corridor TDB snap failed: {err}")
             }
         }
     }
@@ -506,33 +507,32 @@ fn load_route_bundle_for_viewer(
     log_coord_debug_if_enabled(&config.scene, &config.world, route_offset);
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
-    if config.scenery_mode.draws_tdb_track() {
-        if let Some(tdb) = assets.track_db() {
-            let radius_m = tdb_radius_for_mode(config.scenery_mode);
-            let mut chords =
-                collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
-            if config.scenery_mode.is_run_corridor() && config.run_corridor_path.active() {
-                chords.retain(|chord| {
-                    config
-                        .run_corridor_path
-                        .contains_segment(chord.start_world, chord.end_world)
-                });
-            }
-            let audit_route_dir = config
-                .scenery_mode
-                .is_track_dev()
-                .then_some(config.route_dir.as_path());
-            run_track_dev_audit(
-                tdb,
-                &config.scene,
-                &route_focus,
-                route_offset,
-                radius_m,
-                &chords,
-                audit_route_dir,
-                Some(assets.tsection()),
-            );
+    if config.scenery_mode.draws_tdb_track()
+        && let Some(tdb) = assets.track_db()
+    {
+        let radius_m = tdb_radius_for_mode(config.scenery_mode);
+        let mut chords = collect_tdb_chords(tdb, &route_focus, radius_m, Some(assets.tsection()));
+        if config.scenery_mode.is_run_corridor() && config.run_corridor_path.active() {
+            chords.retain(|chord| {
+                config
+                    .run_corridor_path
+                    .contains_segment(chord.start_world, chord.end_world)
+            });
         }
+        let audit_route_dir = config
+            .scenery_mode
+            .is_track_dev()
+            .then_some(config.route_dir.as_path());
+        run_track_dev_audit(
+            tdb,
+            &config.scene,
+            &route_focus,
+            route_offset,
+            radius_m,
+            &chords,
+            audit_route_dir,
+            Some(assets.tsection()),
+        );
     }
 
     Ok(RouteLoadBundle {

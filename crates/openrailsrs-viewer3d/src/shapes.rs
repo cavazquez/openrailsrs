@@ -99,10 +99,10 @@ pub fn resolve_msts_route_dir(route_dir: &Path) -> Option<PathBuf> {
 
 fn track_db_search_dirs(route_dir: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![route_dir.to_path_buf()];
-    if let Some(msts_route) = resolve_msts_route_dir(route_dir) {
-        if msts_route != route_dir {
-            dirs.push(msts_route);
-        }
+    if let Some(msts_route) = resolve_msts_route_dir(route_dir)
+        && msts_route != route_dir
+    {
+        dirs.push(msts_route);
     }
     dirs
 }
@@ -750,13 +750,11 @@ pub fn build_mesh_parts_from_shape_lod_cab(
             if cab_instrument_needle_needs_offset(texture_file.as_deref(), &buffers.uvs) {
                 offset_mesh_along_avg_normal(&mut buffers.positions, &buffers.normals, 0.0015);
             }
-            if matrix_needs_rebase {
-                if let Some(idx) = cab_matrix_idx {
-                    // Omit-leaf bake left parent∘…∘root(v); undo parents → bone-local.
-                    let parent_bone = static_parent_hierarchy_chain_transform_cab(shape, idx);
-                    rebase_points_to_bone_local(&mut buffers.positions, parent_bone);
-                    rebase_vectors_to_bone_local(&mut buffers.normals, parent_bone);
-                }
+            if matrix_needs_rebase && let Some(idx) = cab_matrix_idx {
+                // Omit-leaf bake left parent∘…∘root(v); undo parents → bone-local.
+                let parent_bone = static_parent_hierarchy_chain_transform_cab(shape, idx);
+                rebase_points_to_bone_local(&mut buffers.positions, parent_bone);
+                rebase_vectors_to_bone_local(&mut buffers.normals, parent_bone);
             }
             let (mesh, solid_color) = match buffers.into_mesh_with_color() {
                 Some(v) => v,
@@ -1174,10 +1172,10 @@ pub fn resolve_cvf_graphic_path(
         if path.is_file() {
             return Some(path);
         }
-        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if let Some(found) = resolve_texture_path_in_dirs(search_dirs, name) {
-                return Some(found);
-            }
+        if let Some(name) = path.file_name().and_then(|n| n.to_str())
+            && let Some(found) = resolve_texture_path_in_dirs(search_dirs, name)
+        {
+            return Some(found);
         }
     }
     resolve_texture_path_in_dirs(search_dirs, g)
@@ -1201,29 +1199,27 @@ pub fn resolve_cvf_graphic_path_night(
                     }
                     if let Some(resolved) =
                         openrailsrs_formats::resolve_path_case_insensitive(&candidate)
+                        && resolved.is_file()
                     {
-                        if resolved.is_file() {
-                            return Some(resolved);
-                        }
+                        return Some(resolved);
                     }
                 }
             }
         }
         // Relative day path → sibling NIGHT/ next to the day ACE.
-        if let Some(day) = resolve_cvf_graphic_path(search_dirs, cab_dir, graphic) {
-            if let (Some(parent), Some(name)) = (day.parent(), day.file_name()) {
-                for folder in ["NIGHT", "Night", "night"] {
-                    let candidate = parent.join(folder).join(name);
-                    if candidate.is_file() {
-                        return Some(candidate);
-                    }
-                    if let Some(resolved) =
-                        openrailsrs_formats::resolve_path_case_insensitive(&candidate)
-                    {
-                        if resolved.is_file() {
-                            return Some(resolved);
-                        }
-                    }
+        if let Some(day) = resolve_cvf_graphic_path(search_dirs, cab_dir, graphic)
+            && let (Some(parent), Some(name)) = (day.parent(), day.file_name())
+        {
+            for folder in ["NIGHT", "Night", "night"] {
+                let candidate = parent.join(folder).join(name);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+                if let Some(resolved) =
+                    openrailsrs_formats::resolve_path_case_insensitive(&candidate)
+                    && resolved.is_file()
+                {
+                    return Some(resolved);
                 }
             }
         }
@@ -1605,48 +1601,41 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             );
         let mut mesh = part.mesh.clone();
         // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
-        if or_cab_material.is_none() && !cab_interior {
-            if let (Some(sidecar), Some(albedo)) = (pbr, part.texture_file.as_deref()) {
-                if let Some(nm_name) = sidecar.normal_map_for_albedo(albedo) {
-                    if ensure_tangents_for_normal_mapping(&mut mesh) {
-                        if let Some(nm_handle) = load_normal_map_image_handle(
-                            texture_dirs,
-                            nm_name,
-                            images,
-                            texture_cache,
-                            ace_cache,
-                            part.tex_addr_mode,
-                        ) {
-                            if let Some(mut mat) = materials.get_mut(&material) {
-                                apply_standard_normal_map(
-                                    &mut mat,
-                                    nm_handle,
-                                    sidecar.flip_normal_map_y,
-                                );
-                            }
-                        }
-                    }
-                }
-            }
+        if or_cab_material.is_none()
+            && !cab_interior
+            && let (Some(sidecar), Some(albedo)) = (pbr, part.texture_file.as_deref())
+            && let Some(nm_name) = sidecar.normal_map_for_albedo(albedo)
+            && ensure_tangents_for_normal_mapping(&mut mesh)
+            && let Some(nm_handle) = load_normal_map_image_handle(
+                texture_dirs,
+                nm_name,
+                images,
+                texture_cache,
+                ace_cache,
+                part.tex_addr_mode,
+            )
+            && let Some(mut mat) = materials.get_mut(&material)
+        {
+            apply_standard_normal_map(&mut mat, nm_handle, sidecar.flip_normal_map_y);
         }
-        if debug_materials_enabled() {
-            if let Some(mat) = materials.get(&material) {
-                log_shape_material_debug(
-                    &ShapeMaterialDebugCtx {
-                        shape_name: None,
-                        prim_state_idx: part.prim_state_idx,
-                        prim_state_name: None,
-                        shader_name: part.shader_name.clone(),
-                        texture_name: part.texture_file.clone(),
-                    },
-                    mat.alpha_mode,
-                    part.z_bias,
-                    mat.depth_bias,
-                    part.z_buf_mode,
-                    part.alpha_test_mode,
-                    tri_count,
-                );
-            }
+        if debug_materials_enabled()
+            && let Some(mat) = materials.get(&material)
+        {
+            log_shape_material_debug(
+                &ShapeMaterialDebugCtx {
+                    shape_name: None,
+                    prim_state_idx: part.prim_state_idx,
+                    prim_state_name: None,
+                    shader_name: part.shader_name.clone(),
+                    texture_name: part.texture_file.clone(),
+                },
+                mat.alpha_mode,
+                part.z_bias,
+                mat.depth_bias,
+                part.z_buf_mode,
+                part.alpha_test_mode,
+                tri_count,
+            );
         }
         has_any_texture |= has_texture;
         let mesh_handle = meshes.add(mesh);
@@ -1669,31 +1658,29 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             bounds_center: part.bounds_center,
         });
         // OR BlendATexDiff second pass: soft alpha with depth read (#101).
-        if dual_blend {
-            if let Some(base) = materials.get(&material) {
-                let mut blend_mat = base.clone();
-                blend_mat.alpha_mode = AlphaMode::Blend;
-                blend_mat.depth_bias += 0.0002;
-                let blend_handle = materials.add(blend_mat);
-                parts.push(ShapePartAsset {
-                    prim_state_idx: part.prim_state_idx,
-                    sub_object_idx: part.sub_object_idx,
-                    sort_index: part.sort_index,
-                    cab_matrix_idx: part.cab_matrix_idx,
-                    mesh: mesh_handle,
-                    material: blend_handle,
-                    or_cab_material: None,
-                    has_texture,
-                    is_transparent: true,
-                    texture_name: part.texture_file.clone(),
-                    shader_name: part.shader_name.clone(),
-                    light_mat_idx: part.light_mat_idx,
-                    solid_color: part.solid_color,
-                    lever_pivot_at_mesh_center: part.lever_pivot_at_mesh_center,
-                    lever_local_axis: part.lever_local_axis,
-                    bounds_center: part.bounds_center,
-                });
-            }
+        if dual_blend && let Some(base) = materials.get(&material) {
+            let mut blend_mat = base.clone();
+            blend_mat.alpha_mode = AlphaMode::Blend;
+            blend_mat.depth_bias += 0.0002;
+            let blend_handle = materials.add(blend_mat);
+            parts.push(ShapePartAsset {
+                prim_state_idx: part.prim_state_idx,
+                sub_object_idx: part.sub_object_idx,
+                sort_index: part.sort_index,
+                cab_matrix_idx: part.cab_matrix_idx,
+                mesh: mesh_handle,
+                material: blend_handle,
+                or_cab_material: None,
+                has_texture,
+                is_transparent: true,
+                texture_name: part.texture_file.clone(),
+                shader_name: part.shader_name.clone(),
+                light_mat_idx: part.light_mat_idx,
+                solid_color: part.solid_color,
+                lever_pivot_at_mesh_center: part.lever_pivot_at_mesh_center,
+                lever_local_axis: part.lever_local_axis,
+                bounds_center: part.bounds_center,
+            });
         }
     }
 
@@ -1995,78 +1982,67 @@ fn material_for_shape_texture(
             Some(tex_path) => {
                 let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
                     == Some(std::ffi::OsString::from("dds"));
-                if is_dds {
-                    if let Ok(bytes) = std::fs::read(&tex_path) {
-                        let (alpha_mode, dual_blend) = if cab_interior {
-                            (
-                                cab_dds_alpha_mode(
-                                    &tex_path,
-                                    tex_name,
-                                    shader_name,
-                                    alpha_test_mode,
-                                ),
-                                false,
-                            )
-                        } else {
-                            let passes = scenery_dds_alpha_passes(
-                                &tex_path,
-                                tex_name,
-                                shader_name,
-                                alpha_test_mode,
-                            );
-                            (passes[0].alpha_mode, passes.len() > 1)
-                        };
-                        let use_rgba =
-                            cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
-                        let image = if use_rgba {
-                            decode_dds_to_rgba_image_with_sampler(
-                                &bytes,
-                                tex_addr_mode,
-                                mip_map_lod_bias,
-                            )
-                        } else {
-                            decode_dds_to_image_with_sampler(
-                                &bytes,
-                                tex_addr_mode,
-                                mip_map_lod_bias,
-                            )
-                        };
-                        if let Ok(image) = image {
-                            let handle = texture_cache
-                                .entry((tex_path.clone(), addr_key))
-                                .or_insert_with(|| images.add(image))
-                                .clone();
-                            let is_transparent = dual_blend
-                                || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
-                            let tint = apply_msts_vertex_tint(
-                                if cab_interior {
-                                    Color::WHITE
-                                } else {
-                                    scenery_base_tint(lit)
-                                },
-                                solid_color,
-                                shader_name,
-                            );
-                            let (m, o, ht, it) = finish_shape_textured_part(
-                                handle,
-                                &[],
-                                tint,
-                                alpha_mode,
-                                is_transparent,
-                                z_bias.unwrap_or(0.0),
-                                z_buf_mode,
-                                lit,
-                                shader_name,
-                                tex_name,
-                                solid_color,
-                                cab_interior,
-                                train_exterior,
-                                or_materials,
-                                materials,
-                                light_mat_idx,
-                            );
-                            return (m, o, ht, it, dual_blend);
-                        }
+                if is_dds && let Ok(bytes) = std::fs::read(&tex_path) {
+                    let (alpha_mode, dual_blend) = if cab_interior {
+                        (
+                            cab_dds_alpha_mode(&tex_path, tex_name, shader_name, alpha_test_mode),
+                            false,
+                        )
+                    } else {
+                        let passes = scenery_dds_alpha_passes(
+                            &tex_path,
+                            tex_name,
+                            shader_name,
+                            alpha_test_mode,
+                        );
+                        (passes[0].alpha_mode, passes.len() > 1)
+                    };
+                    let use_rgba =
+                        cab_interior && matches!(alpha_mode, AlphaMode::Blend | AlphaMode::Add);
+                    let image = if use_rgba {
+                        decode_dds_to_rgba_image_with_sampler(
+                            &bytes,
+                            tex_addr_mode,
+                            mip_map_lod_bias,
+                        )
+                    } else {
+                        decode_dds_to_image_with_sampler(&bytes, tex_addr_mode, mip_map_lod_bias)
+                    };
+                    if let Ok(image) = image {
+                        let handle = texture_cache
+                            .entry((tex_path.clone(), addr_key))
+                            .or_insert_with(|| images.add(image))
+                            .clone();
+                        let is_transparent = dual_blend
+                            || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                        let tint = apply_msts_vertex_tint(
+                            if cab_interior {
+                                Color::WHITE
+                            } else {
+                                scenery_base_tint(lit)
+                            },
+                            solid_color,
+                            shader_name,
+                        );
+                        let (m, o, ht, it) = finish_shape_textured_part(
+                            handle,
+                            &[],
+                            tint,
+                            alpha_mode,
+                            is_transparent,
+                            z_bias.unwrap_or(0.0),
+                            z_buf_mode,
+                            lit,
+                            shader_name,
+                            tex_name,
+                            solid_color,
+                            cab_interior,
+                            train_exterior,
+                            or_materials,
+                            materials,
+                            light_mat_idx,
+                        );
+                        return (m, o, ht, it, dual_blend);
                     }
                 }
 
@@ -3001,10 +2977,10 @@ mod tests {
         let loaded = load_shape_from_path(&cab, Some(2.0)).expect("cab shape");
         let mut degenerate = 0usize;
         for part in &loaded.parts {
-            if let Some((mn, mx)) = mesh_uv_aabb(&part.mesh) {
-                if mesh_uv_degenerate(mn, mx) {
-                    degenerate += 1;
-                }
+            if let Some((mn, mx)) = mesh_uv_aabb(&part.mesh)
+                && mesh_uv_degenerate(mn, mx)
+            {
+                degenerate += 1;
             }
         }
         assert_eq!(
@@ -3661,7 +3637,7 @@ mod tests {
 
     #[test]
     fn msts_forward_maps_to_train_plus_x() {
-        let forward = msts_shape_to_train_rotation() * Vec3::Z;
+        let forward = msts_shape_to_train_rotation() * msts_shape_vec3_to_bevy(Vec3::Z);
         assert!((forward.x - 1.0).abs() < 1e-4);
         assert!(forward.z.abs() < 1e-4);
     }
@@ -3672,7 +3648,7 @@ mod tests {
         let mesh = build_mesh_from_shape(&shape).expect("mesh");
         let transform = vehicle_shape_local_transform(&mesh, 0.0, 18.0, false);
         assert!((transform.scale - Vec3::ONE).length() < 1e-4);
-        let rotated = transform.rotation * Vec3::Z;
+        let rotated = transform.rotation * msts_shape_vec3_to_bevy(Vec3::Z);
         assert!((rotated.x - 1.0).abs() < 1e-3);
     }
 
@@ -3682,8 +3658,8 @@ mod tests {
         let normal = vehicle_authored_frame_transform(-12.0, false);
         let flipped = vehicle_authored_frame_transform(-12.0, true);
         assert!((normal.translation - flipped.translation).length() < 1e-5);
-        let fwd = normal.rotation * Vec3::Z;
-        let fwd_flip = flipped.rotation * Vec3::Z;
+        let fwd = normal.rotation * msts_shape_vec3_to_bevy(Vec3::Z);
+        let fwd_flip = flipped.rotation * msts_shape_vec3_to_bevy(Vec3::Z);
         assert!((fwd.x - 1.0).abs() < 1e-3);
         assert!((fwd_flip.x + 1.0).abs() < 1e-3);
         assert!((fwd + fwd_flip).length() < 1e-3);

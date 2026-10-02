@@ -359,10 +359,10 @@ fn scan_signal_lights(block: &str) -> Vec<SignalLightDef> {
                 position = [p[0], p[1], p[2]];
             }
         }
-        if let Some(r_block) = find_keyword_blocks(light, "Radius").first() {
-            if let Some(r) = first_numbers(r_block, 1).first() {
-                radius = *r;
-            }
+        if let Some(r_block) = find_keyword_blocks(light, "Radius").first()
+            && let Some(r) = first_numbers(r_block, 1).first()
+        {
+            radius = *r;
         }
         out.push(SignalLightDef {
             index,
@@ -502,14 +502,13 @@ pub fn lit_light_indices_for_aspect(
         _ => &["CLEAR_1", "CLEAR_2", "CLEAR"],
     };
     for (asp, ds_name) in &signal_type.aspects {
-        if aliases.iter().any(|a| asp.eq_ignore_ascii_case(a)) {
-            if let Some(ds) = signal_type
+        if aliases.iter().any(|a| asp.eq_ignore_ascii_case(a))
+            && let Some(ds) = signal_type
                 .draw_states
                 .iter()
                 .find(|d| d.name.eq_ignore_ascii_case(ds_name))
-            {
-                return ds.draw_lights.clone();
-            }
+        {
+            return ds.draw_lights.clone();
         }
     }
     let want = match aspect_stop_caution_clear {

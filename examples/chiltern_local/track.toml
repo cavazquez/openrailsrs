@@ -1,0 +1,383 @@
+# Generated from native Chiltern PAT/TDB + tsection.dat.
+[route]
+id = "chiltern_local"
+
+[[nodes]]
+id = "n95"
+x_m = -12463292.836
+y_m = -30571473.309
+
+[[nodes]]
+id = "n97"
+x_m = -12466561.037
+y_m = -30570867.727
+
+[[nodes]]
+id = "n99"
+x_m = -12466657.045
+y_m = -30570995.151
+
+[[nodes]]
+id = "n101"
+x_m = -12467008.077
+y_m = -30571359.876
+
+[[nodes]]
+id = "n103"
+x_m = -12468970.558
+y_m = -30573287.756
+
+[[nodes]]
+id = "n105"
+x_m = -12469070.499
+y_m = -30573382.918
+
+[[edges]]
+id = "e96_r"
+from = "n95"
+to = "n97"
+length_m = 3667.7296604084754
+speed_limit_kmh = 56.327040000000004
+
+[[edges]]
+id = "e98"
+from = "n97"
+to = "n99"
+length_m = 143.8325731200609
+speed_limit_kmh = 65.0
+
+[[edges]]
+id = "e100_r"
+from = "n99"
+to = "n101"
+length_m = 506.254
+speed_limit_kmh = 65.0
+
+[[edges]]
+id = "e102"
+from = "n101"
+to = "n103"
+length_m = 2726.603465558379
+speed_limit_kmh = 65.0
+
+[[edges]]
+id = "e104_r"
+from = "n103"
+to = "n105"
+length_m = 138.0
+speed_limit_kmh = 65.0
+
+[[signals]]
+id = "sig561"
+edge_id = "e96_r"
+position_m = 2793.9524604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig688"
+edge_id = "e96_r"
+position_m = 143.70966040847543
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig689"
+edge_id = "e96_r"
+position_m = 3664.0577814084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig690"
+edge_id = "e96_r"
+position_m = 3664.0577814084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig691"
+edge_id = "e96_r"
+position_m = 1969.6896604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig694"
+edge_id = "e102"
+position_m = 1287.87
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig696"
+edge_id = "e102"
+position_m = 2724.35
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig698"
+edge_id = "e104_r"
+position_m = 132.15789
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig699"
+edge_id = "e104_r"
+position_m = 132.15789
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig700"
+edge_id = "e104_r"
+position_m = 134.99381
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig932"
+edge_id = "e104_r"
+position_m = 6.634999999999991
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig941"
+edge_id = "e102"
+position_m = 3.12757
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1058"
+edge_id = "e102"
+position_m = 2380.5
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1060"
+edge_id = "e100_r"
+position_m = 384.688
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1065"
+edge_id = "e100_r"
+position_m = 197.98790000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1066"
+edge_id = "e96_r"
+position_m = 1969.6896604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1067"
+edge_id = "e96_r"
+position_m = 1969.6896604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1184"
+edge_id = "e102"
+position_m = 2724.35
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig4140"
+edge_id = "e104_r"
+position_m = 98.2989
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8517"
+edge_id = "e96_r"
+position_m = 3665.4605604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8518"
+edge_id = "e96_r"
+position_m = 3665.4605604084754
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8519"
+edge_id = "e96_r"
+position_m = 3179.8966604084753
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8520"
+edge_id = "e96_r"
+position_m = 3179.8966604084753
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8522"
+edge_id = "e100_r"
+position_m = 197.98790000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8537"
+edge_id = "e102"
+position_m = 177.938
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[msts_aliases]]
+tdb_id = 95
+kind = "node"
+id = "n95"
+
+[[msts_aliases]]
+tdb_id = 97
+kind = "node"
+id = "n97"
+
+[[msts_aliases]]
+tdb_id = 99
+kind = "node"
+id = "n99"
+
+[[msts_aliases]]
+tdb_id = 101
+kind = "node"
+id = "n101"
+
+[[msts_aliases]]
+tdb_id = 103
+kind = "node"
+id = "n103"
+
+[[msts_aliases]]
+tdb_id = 105
+kind = "node"
+id = "n105"
+
+[[msts_aliases]]
+tdb_id = 96
+kind = "edge"
+id = "e96"
+from = "n97"
+to = "n95"
+
+[[msts_aliases]]
+tdb_id = 98
+kind = "edge"
+id = "e98"
+from = "n97"
+to = "n99"
+
+[[msts_aliases]]
+tdb_id = 100
+kind = "edge"
+id = "e100"
+from = "n101"
+to = "n99"
+
+[[msts_aliases]]
+tdb_id = 102
+kind = "edge"
+id = "e102"
+from = "n101"
+to = "n103"
+
+[[msts_aliases]]
+tdb_id = 104
+kind = "edge"
+id = "e104"
+from = "n105"
+to = "n103"

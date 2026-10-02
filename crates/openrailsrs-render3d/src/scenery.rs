@@ -109,10 +109,10 @@ fn forest_material(
     tex_name: Option<&str>,
     lit: bool,
 ) -> Handle<StandardMaterial> {
-    if let Some(name) = tex_name {
-        if let Some(mat) = cache.get(name) {
-            return mat.clone();
-        }
+    if let Some(name) = tex_name
+        && let Some(mat) = cache.get(name)
+    {
+        return mat.clone();
     }
     let mat = materials.add(StandardMaterial {
         base_color: COLOR_TREE_FALLBACK,

@@ -1,5 +1,7 @@
 mod cab;
 mod dispatch;
+mod oracle;
+mod service;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -68,6 +70,21 @@ enum Commands {
     },
     /// Run simulation and evaluate game rules (writes outcome.toml).
     PlayHeadless { scenario: PathBuf },
+    /// Drive a complete station service using the Bevy player's physics and controller.
+    PlayService {
+        scenario: PathBuf,
+        #[arg(long, default_value = "tmp/service")]
+        out_dir: PathBuf,
+        #[arg(long, default_value_t = 0.05)]
+        frame_dt: f64,
+    },
+    /// Run fixed-reference physics oracles and write a machine-readable report.
+    OracleSuite {
+        #[arg(long, default_value = "oracles/chiltern.toml")]
+        manifest: PathBuf,
+        #[arg(long, default_value = "tmp/oracles")]
+        out_dir: PathBuf,
+    },
     /// Compare two run CSV files (velocity, position, energy) with optional tolerances.
     Compare {
         run_a: PathBuf,
@@ -968,6 +985,20 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        Commands::PlayService {
+            scenario,
+            out_dir,
+            frame_dt,
+        } => {
+            if !service::run(&scenario, &out_dir, frame_dt)? {
+                std::process::exit(1);
+            }
+        }
+        Commands::OracleSuite { manifest, out_dir } => {
+            if !oracle::run(&manifest, &out_dir)? {
+                std::process::exit(1);
+            }
+        }
         Commands::ShapeDump { file, json } => {
             run_shape_dump(&file, json)?;
         }
@@ -1546,11 +1577,11 @@ fn print_engine_cab_summary(eng_path: &std::path::Path, cab: &openrailsrs_format
     if !cab.head_out_m.is_empty() {
         println!("    HeadOut points: {}", cab.head_out_m.len());
     }
-    if let Some(trainset_root) = eng_path.parent() {
-        if let Some(assets) = resolve_cab_assets(trainset_root, cab) {
-            println!("    resolved shape: {}", assets.shape_path.display());
-            println!("    resolved cvf:   {}", assets.cvf_path.display());
-        }
+    if let Some(trainset_root) = eng_path.parent()
+        && let Some(assets) = resolve_cab_assets(trainset_root, cab)
+    {
+        println!("    resolved shape: {}", assets.shape_path.display());
+        println!("    resolved cvf:   {}", assets.cvf_path.display());
     }
 }
 

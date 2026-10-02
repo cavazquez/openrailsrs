@@ -1,0 +1,58 @@
+# Reference changes require an explicit recapture and review, never cargo update.
+version = "1.6.1"
+tag = "1.6.1"
+commit = "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+repository = "https://github.com/openrails/openrails"
+release = "https://www.openrails.org/download/program/"
+version_evidence = "examples/baselines/chiltern_birmingham/openrails_evaluation_log.txt"
+
+# The other Chiltern captures use scripts documented for this same installation.
+# Explorer logs expose speed/controls; their DISTANCETRAVELLED is always zero.
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/or_evaluation_speed.csv"
+sha256 = "a6a388ef71b406c262754f97b0051d9077bda47d69c50bcf3cbdc2597891ced3"
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/openrails_log.txt"
+sha256 = "d0758d1598b77875da5a79d95f91fff85782d6f2ea9d594659ac7ab2379bbcca"
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/openrails_evaluation_log.txt"
+sha256 = "e3a1454d0aa7d2e41e943349137ebf39e3d77ffac5b39dfa673e99cee6325c95"
+
+[[files]]
+path = "examples/baselines/chiltern_fullthrottle/or_evaluation_speed.csv"
+sha256 = "699ce89c1e837d39f9afe632e6840dbb9fcdb8790b02ce2230e60ccd232bb56b"
+
+[[files]]
+path = "examples/baselines/chiltern_brake_coast/or_evaluation_speed.csv"
+sha256 = "edebe28164fa9ca625a92604f4799e53751aab4ce39dcb6a4772ab3204f9c124"
+
+[[files]]
+path = "examples/baselines/chiltern_throttle50/or_evaluation_speed.csv"
+sha256 = "345357742e9de1e241307844da7c5c9d83ef37c53cb7ab367c0f5ba975b29400"
+
+[[files]]
+path = "examples/chiltern/driver_or.csv"
+sha256 = "4e6481a854b801255c0caf9e62119a1495a80bd1d94bb32b29f67a4818c97699"
+
+[[files]]
+path = "examples/chiltern/driver_throttle100.csv"
+sha256 = "e706b2183a3d32df1179d05846562e366c42996b1c4353562eee594b91bc5bb0"
+
+[[files]]
+path = "examples/chiltern/driver_brake_coast.csv"
+sha256 = "a0579cf883bf462acbdca04c640151dd986a7f307c6ba27cbf285cdc64168a00"
+
+[[files]]
+path = "examples/chiltern/driver_throttle50.csv"
+sha256 = "1781ec1a79532fadbb52083c1014632b7f88db2e398e21502670e3499d6637c7"
+
+[[binaries]]
+name = "RunActivity.exe"
+sha256 = "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2"
+
+[[binaries]]
+name = "Orts.Simulation.dll"
+sha256 = "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679"

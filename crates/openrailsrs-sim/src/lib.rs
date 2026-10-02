@@ -24,7 +24,8 @@ pub use coupler::{CouplerKind, CouplerState, VehicleState};
 pub use error::SimError;
 pub use etcs::{BasicEtcsTcs, EtcsTcs, EtcsTcsStatus};
 pub use exterior::{DoorState, RollingStockExteriorState};
-pub use live_drive::{CabTelemetry, LiveDriveSession, LiveGameplay, LiveStopTarget};
+pub use live_drive::{CabTelemetry, LiveDriveSession};
+pub mod service;
 pub use multi_runner::{
     LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,
     run_multi_train_from_scenario_file, run_scenario_multi_train,
@@ -35,5 +36,6 @@ pub use runner::{
     run_from_scenario_file_with_driver, run_scenario_headless, run_scenario_headless_with_driver,
 };
 pub use scripted_driver::{Keyframe, ScriptedDriver};
+pub use service::{LiveGameplay, LiveStopTarget, ServicePhase, ServiceStopResult};
 pub use state::TrainSimState;
 pub use steam::BoilerState;

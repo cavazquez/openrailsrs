@@ -105,11 +105,12 @@ fn preserve_tdb_world_y(mut world: Vec3, scene: &TrackScene) -> Vec3 {
 }
 
 fn procedural_segment_end_world(seg: &ProceduralTrackSegment) -> Vec3 {
-    if let (Some(r), Some(a)) = (seg.curve_radius_m, seg.curve_angle_deg) {
-        if r.abs() > 1e-6 && a.abs() > 1e-6 {
-            let (local, _) = arc_local_frame(r, a, 1.0);
-            return seg.position + seg.rotation * local;
-        }
+    if let (Some(r), Some(a)) = (seg.curve_radius_m, seg.curve_angle_deg)
+        && r.abs() > 1e-6
+        && a.abs() > 1e-6
+    {
+        let (local, _) = arc_local_frame(r, a, 1.0);
+        return seg.position + seg.rotation * local;
     }
     let len = seg.length_m.unwrap_or(0.0);
     seg.position + seg.rotation * Vec3::new(0.0, 0.0, len)
@@ -225,7 +226,7 @@ pub fn tdb_track_stream_system(
             Vec2::new(last.x - center.x, last.z - center.z).length() > TDB_STREAM_CENTER_DELTA_M
         })
         .unwrap_or(true);
-    if !moved && stream.frames_since_tick % 30 != 0 {
+    if !moved && !stream.frames_since_tick.is_multiple_of(30) {
         return;
     }
     stream.last_center = Some(center);

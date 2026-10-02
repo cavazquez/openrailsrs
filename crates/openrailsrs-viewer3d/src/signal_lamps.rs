@@ -234,16 +234,15 @@ fn aspect_to_code(aspect: SignalAspect) -> u8 {
 fn aspect_for_tr_item(assets: &RouteAssets, tr_item_id: u32) -> SignalAspect {
     // Prefer graph signal `sig{id}` when present.
     // TrackScene is not passed here at spawn; use TDB initial aspect as fallback.
-    if let Some(tdb) = assets.track_db() {
-        if let Some(item) = tdb.items.iter().find(|i| i.id == tr_item_id) {
-            if let openrailsrs_formats::TrItemKind::Signal { aspect_initial } = &item.kind {
-                return match aspect_initial {
-                    openrailsrs_formats::SignalAspectKind::Stop => SignalAspect::Stop,
-                    openrailsrs_formats::SignalAspectKind::Caution => SignalAspect::Caution,
-                    openrailsrs_formats::SignalAspectKind::Clear => SignalAspect::Clear,
-                };
-            }
-        }
+    if let Some(tdb) = assets.track_db()
+        && let Some(item) = tdb.items.iter().find(|i| i.id == tr_item_id)
+        && let openrailsrs_formats::TrItemKind::Signal { aspect_initial } = &item.kind
+    {
+        return match aspect_initial {
+            openrailsrs_formats::SignalAspectKind::Stop => SignalAspect::Stop,
+            openrailsrs_formats::SignalAspectKind::Caution => SignalAspect::Caution,
+            openrailsrs_formats::SignalAspectKind::Clear => SignalAspect::Clear,
+        };
     }
     SignalAspect::Stop
 }

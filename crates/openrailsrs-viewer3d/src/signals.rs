@@ -66,15 +66,15 @@ pub fn signal_render_world(
 ) -> Option<Vec3> {
     if let Some(tdb) = assets.track_db() {
         let tsection = Some(assets.tsection());
-        if let Some(item_id) = parse_signal_tr_item_id(&signal.id) {
-            if let Some(msts) = tr_item_msts_world(tdb, item_id, tsection) {
-                if world_index.is_some_and(|idx| {
-                    idx.has_world_object_near(item_id, msts, TR_ITEM_WORLD_MATCH_RADIUS_M)
-                }) {
-                    return None;
-                }
-                return Some(msts_to_render_surface(msts, terrain, scene, focus));
+        if let Some(item_id) = parse_signal_tr_item_id(&signal.id)
+            && let Some(msts) = tr_item_msts_world(tdb, item_id, tsection)
+        {
+            if world_index.is_some_and(|idx| {
+                idx.has_world_object_near(item_id, msts, TR_ITEM_WORLD_MATCH_RADIUS_M)
+            }) {
+                return None;
             }
+            return Some(msts_to_render_surface(msts, terrain, scene, focus));
         }
         let resolver = TrackPositionResolver::from_track_scene(tdb, tsection, scene);
         return signal_position_on_edge(
@@ -103,6 +103,7 @@ pub fn spawn_signal_markers(
     terrain: Option<Res<TerrainElevation>>,
     mode: Res<ViewerSceneryMode>,
     world_index: Option<Res<TrItemWorldIndex>>,
+    live: Option<Res<crate::live::LiveDrive>>,
 ) {
     if mode.is_track_focused() {
         return;
@@ -114,7 +115,11 @@ pub fn spawn_signal_markers(
 
     let terrain_ref = terrain.as_deref();
     let index_ref = world_index.as_deref();
-    let diamond_size = scene.bounds.edge_radius().max(1.5) * 1.2;
+    let diamond_size = if live.is_some() {
+        0.6
+    } else {
+        scene.bounds.edge_radius().max(1.5) * 1.2
+    };
     let pole_radius = diamond_size * 0.15;
     let pole_height = diamond_size * 2.5;
 

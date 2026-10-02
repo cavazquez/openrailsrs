@@ -28,7 +28,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-only"
-rust-version = "1.85"
+rust-version = "1.95"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -43,7 +43,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rayon = "1.10"
 indexmap = "2.7"
 # Bevy pin — see docs/BEVY.md.
-bevy = { version = "0.19", default-features = false, features = [
+bevy = { version = "0.19.1", default-features = false, features = [
     "bevy_winit",
     "x11",
     # Native Wayland: XWayland + RADV often hits `Surface::configure → Invalid surface`.

@@ -1,0 +1,18 @@
+{
+  "path_file": "RS_Maryleb-WRuislip0955.pat",
+  "pat_sha256": "ee9518d145b7363408106193e48359367a8f0f7b9a260fd17177da1f82ac3d61",
+  "tdb_sha256": "acc945a063dce6a3272bfae610c48b2aff939d2435d5b1db07f2b36614e7b47a",
+  "physical_path_length_m": 7182.419699086915,
+  "start_chainage_m": 264.48412978746114,
+  "station_points": [
+    0,
+    3,
+    6
+  ],
+  "signal_policy": "single train, three aspect occupancy script; source SIGSCR not translated",
+  "tsection_sha256": {
+    "GLOBAL/tsection.dat": "7e05b50bb86a279c0881d05248da220b0804e34aa0452633baf8ba95361888fa",
+    "ROUTES/Chiltern/tsection.dat": "d3461dc5ab7c88442905ded34e7947c7374f45034f0f7f8bbdbecf40d92e9dc9",
+    "ROUTES/Chiltern/OpenRails/tsection.dat": "fff0b45ddf8387f6746f765868f1298760a45cd6693b5b08d5ebac65818726a4"
+  }
+}

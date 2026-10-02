@@ -91,11 +91,12 @@ pub fn segment_end_world(
     curve_radius_m: Option<f32>,
     curve_angle_deg: Option<f32>,
 ) -> Vec3 {
-    if let (Some(r), Some(a)) = (curve_radius_m, curve_angle_deg) {
-        if r.abs() > 1e-6 && a.abs() > 1e-6 {
-            let (local, _) = arc_local_frame(r, a, 1.0);
-            return position + rotation * local;
-        }
+    if let (Some(r), Some(a)) = (curve_radius_m, curve_angle_deg)
+        && r.abs() > 1e-6
+        && a.abs() > 1e-6
+    {
+        let (local, _) = arc_local_frame(r, a, 1.0);
+        return position + rotation * local;
     }
     position + rotation * Vec3::new(0.0, 0.0, length_m)
 }

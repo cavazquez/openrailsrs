@@ -106,10 +106,10 @@ pub fn resolve_world_tile_path(route_dir: &Path, tile_x: i32, tile_z: i32) -> Op
     if tile_x == 0 && tile_z == 0 {
         for dir in openrailsrs_formats::world_subdirs(route_dir) {
             let candidate = dir.join("w-000000-000000.w");
-            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
-                if resolved.is_file() {
-                    return Some(resolved);
-                }
+            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&candidate)
+                && resolved.is_file()
+            {
+                return Some(resolved);
             }
         }
     }

@@ -767,12 +767,11 @@ fn parse_u32_from_ast(value: &Ast) -> Result<u32, FormatError> {
                 })
         }
         Ast::List(items) => {
-            if items.len() == 1 {
-                if let Ast::Atom(atom) = &items[0] {
-                    if let Some(v) = atom_to_number(atom) {
-                        return Ok(v as u32);
-                    }
-                }
+            if items.len() == 1
+                && let Ast::Atom(atom) = &items[0]
+                && let Some(v) = atom_to_number(atom)
+            {
+                return Ok(v as u32);
             }
             parse_coordinate_numbers(items)?
                 .first()
@@ -888,15 +887,15 @@ fn flush_pending_view(
     has_position: bool,
     has_direction: bool,
 ) {
-    if let Some(texture_ace) = pending_texture.take() {
-        if has_position || has_direction || !texture_ace.is_empty() {
-            views.push(CabView {
-                texture_ace,
-                window: window.clone(),
-                position_m,
-                direction_deg,
-            });
-        }
+    if let Some(texture_ace) = pending_texture.take()
+        && (has_position || has_direction || !texture_ace.is_empty())
+    {
+        views.push(CabView {
+            texture_ace,
+            window: window.clone(),
+            position_m,
+            direction_deg,
+        });
     }
 }
 
@@ -939,28 +938,28 @@ fn parse_dial(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_dial_params(items: &[Ast]) -> CabDialParams {
     let mut dial = CabDialParams::default();
-    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
-        if nums.len() >= 2 {
-            dial.scale_min = nums[0];
-            dial.scale_max = nums[1];
-        }
+    if let Some(nums) = find_named_numbers(items, "ScaleRange")
+        && nums.len() >= 2
+    {
+        dial.scale_min = nums[0];
+        dial.scale_max = nums[1];
     }
     // Open Rails: ScalePos (from to) → FromDegree / ToDegree.
-    if let Some(nums) = find_named_numbers(items, "ScalePos") {
-        if nums.len() >= 2 {
-            dial.from_degree = nums[0];
-            dial.to_degree = nums[1];
-        }
+    if let Some(nums) = find_named_numbers(items, "ScalePos")
+        && nums.len() >= 2
+    {
+        dial.from_degree = nums[0];
+        dial.to_degree = nums[1];
     }
-    if let Some(nums) = find_named_numbers(items, "Pivot") {
-        if let Some(v) = nums.first() {
-            dial.pivot = Some(*v);
-        }
+    if let Some(nums) = find_named_numbers(items, "Pivot")
+        && let Some(v) = nums.first()
+    {
+        dial.pivot = Some(*v);
     }
-    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
-        if let Some(v) = nums.first() {
-            dial.dir_increase = *v != 0.0;
-        }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease")
+        && let Some(v) = nums.first()
+    {
+        dial.dir_increase = *v != 0.0;
     }
     dial.units = find_string_in_list(items, "Units");
     dial
@@ -1069,21 +1068,21 @@ fn flatten_param_tokens(items: &[Ast]) -> Vec<String> {
 
 fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
     let mut gauge = CabGaugeParams::default();
-    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
-        if nums.len() >= 2 {
-            gauge.scale_min = nums[0];
-            gauge.scale_max = nums[1];
-        }
+    if let Some(nums) = find_named_numbers(items, "ScaleRange")
+        && nums.len() >= 2
+    {
+        gauge.scale_min = nums[0];
+        gauge.scale_max = nums[1];
     }
-    if let Some(nums) = find_named_numbers(items, "Orientation") {
-        if let Some(v) = nums.first() {
-            gauge.orientation = *v as i32;
-        }
+    if let Some(nums) = find_named_numbers(items, "Orientation")
+        && let Some(v) = nums.first()
+    {
+        gauge.orientation = *v as i32;
     }
-    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
-        if let Some(v) = nums.first() {
-            gauge.direction = *v as i32;
-        }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease")
+        && let Some(v) = nums.first()
+    {
+        gauge.direction = *v as i32;
     }
     gauge.style = parse_control_style(items);
     gauge.units = find_string_in_list(items, "Units");
@@ -1136,26 +1135,26 @@ fn parse_digital_params(items: &[Ast]) -> CabDigitalParams {
         units: find_string_in_list(items, "Units"),
         ..Default::default()
     };
-    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
-        if nums.len() >= 2 {
-            digital.scale_min = nums[0];
-            digital.scale_max = nums[1];
-        }
+    if let Some(nums) = find_named_numbers(items, "ScaleRange")
+        && nums.len() >= 2
+    {
+        digital.scale_min = nums[0];
+        digital.scale_max = nums[1];
     }
-    if let Some(nums) = find_named_numbers(items, "Accuracy") {
-        if let Some(v) = nums.first() {
-            digital.accuracy = *v as i32;
-        }
+    if let Some(nums) = find_named_numbers(items, "Accuracy")
+        && let Some(v) = nums.first()
+    {
+        digital.accuracy = *v as i32;
     }
-    if let Some(nums) = find_named_numbers(items, "LeadingZeros") {
-        if let Some(v) = nums.first() {
-            digital.leading_zeros = (*v).max(0.0) as u32;
-        }
+    if let Some(nums) = find_named_numbers(items, "LeadingZeros")
+        && let Some(v) = nums.first()
+    {
+        digital.leading_zeros = (*v).max(0.0) as u32;
     }
-    if let Some(nums) = find_named_numbers(items, "Justification") {
-        if let Some(v) = nums.first() {
-            digital.justification = (*v).max(0.0) as u32;
-        }
+    if let Some(nums) = find_named_numbers(items, "Justification")
+        && let Some(v) = nums.first()
+    {
+        digital.justification = (*v).max(0.0) as u32;
     }
     digital
 }
@@ -1236,26 +1235,26 @@ fn parse_lever_frames(items: &[Ast]) -> CabLeverFrames {
         let _count = nums.first().copied().unwrap_or(0.0);
         let _ = _count;
     }
-    if let Some(nums) = find_named_numbers(items, "NumValues") {
-        if nums.len() > 1 {
-            frames.values = nums[1..].to_vec();
-        }
+    if let Some(nums) = find_named_numbers(items, "NumValues")
+        && nums.len() > 1
+    {
+        frames.values = nums[1..].to_vec();
     }
-    if let Some(nums) = find_named_numbers(items, "Orientation") {
-        if let Some(v) = nums.first() {
-            frames.orientation = *v as i32;
-        }
+    if let Some(nums) = find_named_numbers(items, "Orientation")
+        && let Some(v) = nums.first()
+    {
+        frames.orientation = *v as i32;
     }
-    if let Some(nums) = find_named_numbers(items, "DirIncrease") {
-        if let Some(v) = nums.first() {
-            frames.dir_increase = *v != 0.0;
-        }
+    if let Some(nums) = find_named_numbers(items, "DirIncrease")
+        && let Some(v) = nums.first()
+    {
+        frames.dir_increase = *v != 0.0;
     }
-    if let Some(nums) = find_named_numbers(items, "ScaleRange") {
-        if nums.len() >= 2 {
-            frames.min_value = nums[0];
-            frames.max_value = nums[1];
-        }
+    if let Some(nums) = find_named_numbers(items, "ScaleRange")
+        && nums.len() >= 2
+    {
+        frames.min_value = nums[0];
+        frames.max_value = nums[1];
     }
     frames
 }
@@ -1286,14 +1285,13 @@ fn normalize_lever_frames(mut frames: CabLeverFrames) -> CabLeverFrames {
 
 fn find_named_numbers(items: &[Ast], key: &str) -> Option<Vec<f64>> {
     if let Some(nums) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
-        if list.len() >= 2 {
-            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
-                if head.eq_ignore_ascii_case(key) {
-                    let nums = flatten_numbers(&list[1..]);
-                    if !nums.is_empty() {
-                        return Some(nums);
-                    }
-                }
+        if list.len() >= 2
+            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+            && head.eq_ignore_ascii_case(key)
+        {
+            let nums = flatten_numbers(&list[1..]);
+            if !nums.is_empty() {
+                return Some(nums);
             }
         }
         None
@@ -1301,14 +1299,13 @@ fn find_named_numbers(items: &[Ast], key: &str) -> Option<Vec<f64>> {
         return Some(nums);
     }
     for (i, item) in items.iter().enumerate() {
-        if let Ast::Atom(Atom::Symbol(head)) = item {
-            if head.eq_ignore_ascii_case(key) {
-                if let Some(rest) = items.get(i + 1..) {
-                    let nums = flatten_numbers(rest);
-                    if !nums.is_empty() {
-                        return Some(nums);
-                    }
-                }
+        if let Ast::Atom(Atom::Symbol(head)) = item
+            && head.eq_ignore_ascii_case(key)
+            && let Some(rest) = items.get(i + 1..)
+        {
+            let nums = flatten_numbers(rest);
+            if !nums.is_empty() {
+                return Some(nums);
             }
         }
     }
@@ -1337,12 +1334,11 @@ fn parse_control_type(items: &[Ast]) -> Result<ControlType, FormatError> {
 
 fn find_type_tokens(items: &[Ast]) -> Result<Vec<String>, FormatError> {
     if let Some(tokens) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
-        if list.len() >= 2 {
-            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
-                if head.eq_ignore_ascii_case("Type") {
-                    return Some(collect_type_token_strings(&list[1..]));
-                }
-            }
+        if list.len() >= 2
+            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+            && head.eq_ignore_ascii_case("Type")
+        {
+            return Some(collect_type_token_strings(&list[1..]));
         }
         None
     }) {
@@ -1350,15 +1346,14 @@ fn find_type_tokens(items: &[Ast]) -> Result<Vec<String>, FormatError> {
     }
 
     for (i, item) in items.iter().enumerate() {
-        if let Ast::Atom(Atom::Symbol(head)) = item {
-            if head.eq_ignore_ascii_case("Type") {
-                if let Some(next) = items.get(i + 1) {
-                    return Ok(match next {
-                        Ast::List(sub) => collect_type_token_strings(sub),
-                        Ast::Atom(atom) => atom_to_string(atom).into_iter().collect(),
-                    });
-                }
-            }
+        if let Ast::Atom(Atom::Symbol(head)) = item
+            && head.eq_ignore_ascii_case("Type")
+            && let Some(next) = items.get(i + 1)
+        {
+            return Ok(match next {
+                Ast::List(sub) => collect_type_token_strings(sub),
+                Ast::Atom(atom) => atom_to_string(atom).into_iter().collect(),
+            });
         }
     }
 
@@ -1385,12 +1380,11 @@ fn collect_type_token_strings(items: &[Ast]) -> Vec<String> {
 
 fn find_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
     if let Some(rect) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
-        if list.len() >= 2 {
-            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
-                if head.eq_ignore_ascii_case("Position") {
-                    return parse_screen_rect(list, "Position").ok();
-                }
-            }
+        if list.len() >= 2
+            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+            && head.eq_ignore_ascii_case("Position")
+        {
+            return parse_screen_rect(list, "Position").ok();
         }
         None
     }) {
@@ -1398,12 +1392,11 @@ fn find_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatEr
     }
 
     for (i, item) in items.iter().enumerate() {
-        if let Ast::Atom(Atom::Symbol(head)) = item {
-            if head.eq_ignore_ascii_case("Position") {
-                if let Some(next) = items.get(i + 1) {
-                    return parse_screen_rect_value(None, Some(next));
-                }
-            }
+        if let Ast::Atom(Atom::Symbol(head)) = item
+            && head.eq_ignore_ascii_case("Position")
+            && let Some(next) = items.get(i + 1)
+        {
+            return parse_screen_rect_value(None, Some(next));
         }
     }
 
@@ -1495,14 +1488,12 @@ fn parse_states(items: &[Ast]) -> Result<Vec<ControlState>, FormatError> {
 
 fn collect_states(ast: &Ast, out: &mut Vec<ControlState>) {
     if let Ast::List(list) = ast {
-        if list.len() >= 2 {
-            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
-                if head.eq_ignore_ascii_case("State") {
-                    if let Ok(state) = parse_state(list) {
-                        out.push(state);
-                    }
-                }
-            }
+        if list.len() >= 2
+            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+            && head.eq_ignore_ascii_case("State")
+            && let Ok(state) = parse_state(list)
+        {
+            out.push(state);
         }
         for item in list {
             collect_states(item, out);
@@ -1522,17 +1513,17 @@ fn parse_state(items: &[Ast]) -> Result<ControlState, FormatError> {
         };
         match key.to_ascii_uppercase().as_str() {
             "STYLE" => {
-                if let Ok(nums) = parse_coordinate_numbers(entry) {
-                    if let Some(v) = nums.first() {
-                        style = *v as u32;
-                    }
+                if let Ok(nums) = parse_coordinate_numbers(entry)
+                    && let Some(v) = nums.first()
+                {
+                    style = *v as u32;
                 }
             }
             "SWITCHVAL" => {
-                if let Ok(nums) = parse_coordinate_numbers(entry) {
-                    if let Some(v) = nums.first() {
-                        switch_val = *v;
-                    }
+                if let Ok(nums) = parse_coordinate_numbers(entry)
+                    && let Some(v) = nums.first()
+                {
+                    switch_val = *v;
                 }
             }
             _ => {}
@@ -1553,32 +1544,31 @@ fn parse_u32_field(items: &[Ast], context: &str) -> Result<Option<u32>, FormatEr
 }
 
 fn parse_string_field(items: &[Ast], context: &str) -> Result<Option<String>, FormatError> {
-    if items.len() >= 2 {
-        if let Ast::Atom(atom) = &items[1] {
-            return atom_to_string(atom)
-                .map(Some)
-                .ok_or_else(|| FormatError::UnexpectedAtom {
-                    key: context.to_string(),
-                    context: "cvf".to_string(),
-                    expected: "string".to_string(),
-                });
-        }
+    if items.len() >= 2
+        && let Ast::Atom(atom) = &items[1]
+    {
+        return atom_to_string(atom)
+            .map(Some)
+            .ok_or_else(|| FormatError::UnexpectedAtom {
+                key: context.to_string(),
+                context: "cvf".to_string(),
+                expected: "string".to_string(),
+            });
     }
     Ok(None)
 }
 
 fn find_string_in_list(items: &[Ast], key: &str) -> Option<String> {
     if let Some(value) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
-        if list.len() >= 2 {
-            if let Ast::Atom(Atom::Symbol(head)) = &list[0] {
-                if head.eq_ignore_ascii_case(key) {
-                    match &list[1] {
-                        Ast::Atom(atom) => return atom_to_string(atom),
-                        Ast::List(sub) => {
-                            if let Some(Ast::Atom(atom)) = sub.first() {
-                                return atom_to_string(atom);
-                            }
-                        }
+        if list.len() >= 2
+            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+            && head.eq_ignore_ascii_case(key)
+        {
+            match &list[1] {
+                Ast::Atom(atom) => return atom_to_string(atom),
+                Ast::List(sub) => {
+                    if let Some(Ast::Atom(atom)) = sub.first() {
+                        return atom_to_string(atom);
                     }
                 }
             }
@@ -1589,16 +1579,16 @@ fn find_string_in_list(items: &[Ast], key: &str) -> Option<String> {
     }
 
     for (i, item) in items.iter().enumerate() {
-        if let Ast::Atom(Atom::Symbol(head)) = item {
-            if head.eq_ignore_ascii_case(key) {
-                if let Some(Ast::Atom(atom)) = items.get(i + 1) {
-                    return atom_to_string(atom);
-                }
-                if let Some(Ast::List(sub)) = items.get(i + 1) {
-                    if let Some(Ast::Atom(atom)) = sub.first() {
-                        return atom_to_string(atom);
-                    }
-                }
+        if let Ast::Atom(Atom::Symbol(head)) = item
+            && head.eq_ignore_ascii_case(key)
+        {
+            if let Some(Ast::Atom(atom)) = items.get(i + 1) {
+                return atom_to_string(atom);
+            }
+            if let Some(Ast::List(sub)) = items.get(i + 1)
+                && let Some(Ast::Atom(atom)) = sub.first()
+            {
+                return atom_to_string(atom);
             }
         }
     }

@@ -44,12 +44,11 @@ pub fn parse_length_m(raw: &str) -> Option<f64> {
     let s = raw.trim();
     if s.contains(' ') {
         let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.len() == 2 {
-            if let (Some(feet), Some(inches)) =
+        if parts.len() == 2
+            && let (Some(feet), Some(inches)) =
                 (parse_leading_number(parts[0]), parse_inches(parts[1]))
-            {
-                return Some(feet.0 * 0.3048 + inches);
-            }
+        {
+            return Some(feet.0 * 0.3048 + inches);
         }
     }
     if let Some(v) = parse_leading_number(s) {

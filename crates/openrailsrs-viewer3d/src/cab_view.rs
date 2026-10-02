@@ -179,10 +179,9 @@ pub fn resolve_cab_shape_for_consist(
                 openrailsrs_formats::resolve_path_case_insensitive(&eng_path).unwrap_or(eng_path);
             if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
                 openrailsrs_formats::parse_msts_file(&eng_path)
+                && let Some(assets) = resolve_cab_assets_for_trainset(&root, &eng.cab)
             {
-                if let Some(assets) = resolve_cab_assets_for_trainset(&root, &eng.cab) {
-                    return Some(assets.shape_path);
-                }
+                return Some(assets.shape_path);
             }
         }
         if let Some(path) = resolve_cab_shape_path(&root) {
@@ -322,10 +321,9 @@ fn orts_3d_cab_from_engine_cab(
 pub fn parse_orts_3d_cab_from_eng(eng_path: &Path) -> Option<Orts3dCabConfig> {
     if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
         openrailsrs_formats::parse_msts_file(eng_path)
+        && let Some(config) = orts_3d_cab_from_engine_cab(&eng.cab)
     {
-        if let Some(config) = orts_3d_cab_from_engine_cab(&eng.cab) {
-            return Some(config);
-        }
+        return Some(config);
     }
     parse_orts_3d_cab_from_eng_text(eng_path)
 }
@@ -382,10 +380,10 @@ pub fn orts_3d_cab_for_vehicle(
             if let Some(config) = parse_orts_3d_cab_from_eng(&eng) {
                 return Some(config);
             }
-            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng) {
-                if let Some(config) = parse_orts_3d_cab_from_eng(&resolved) {
-                    return Some(config);
-                }
+            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng)
+                && let Some(config) = parse_orts_3d_cab_from_eng(&resolved)
+            {
+                return Some(config);
             }
         }
     }
@@ -394,10 +392,10 @@ pub fn orts_3d_cab_for_vehicle(
         if let Some(config) = parse_orts_3d_cab_from_eng(&eng) {
             return Some(config);
         }
-        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng) {
-            if let Some(config) = parse_orts_3d_cab_from_eng(&resolved) {
-                return Some(config);
-            }
+        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&eng)
+            && let Some(config) = parse_orts_3d_cab_from_eng(&resolved)
+        {
+            return Some(config);
         }
     }
     let shape_path = crate::shapes::resolve_vehicle_shape_path(shape_dirs, shape_file, route_dir)?;
@@ -573,10 +571,10 @@ pub fn sync_cab_interior(
         .count();
     let mut shader_kinds: std::collections::HashMap<i32, u32> = std::collections::HashMap::new();
     for part in &asset.parts {
-        if let Some(h) = part.or_cab_material.as_ref() {
-            if let Some(m) = or_materials.get(h) {
-                *shader_kinds.entry(m.params.shader_kind as i32).or_insert(0) += 1;
-            }
+        if let Some(h) = part.or_cab_material.as_ref()
+            && let Some(m) = or_materials.get(h)
+        {
+            *shader_kinds.entry(m.params.shader_kind as i32).or_insert(0) += 1;
         }
     }
     if !shader_kinds.is_empty() {
@@ -601,18 +599,16 @@ pub fn sync_cab_interior(
         or_textured,
     );
 
-    if let Some(cab_res) = driver_cab.as_ref() {
-        if let Some(head_msts) = cab_res.head_msts {
-            let cab_mesh_refs: Vec<&Mesh> = asset
-                .parts
-                .iter()
-                .filter_map(|p| meshes.get(&p.mesh))
-                .collect();
-            let aligned = crate::shapes::orts_head_inside_cab_aabb(head_msts, &cab_mesh_refs);
-            viewer_log!(
-                "openrailsrs-viewer3d: cab alignment ORTS head in cab AABB (MSTS): {aligned}"
-            );
-        }
+    if let Some(cab_res) = driver_cab.as_ref()
+        && let Some(head_msts) = cab_res.head_msts
+    {
+        let cab_mesh_refs: Vec<&Mesh> = asset
+            .parts
+            .iter()
+            .filter_map(|p| meshes.get(&p.mesh))
+            .collect();
+        let aligned = crate::shapes::orts_head_inside_cab_aabb(head_msts, &cab_mesh_refs);
+        viewer_log!("openrailsrs-viewer3d: cab alignment ORTS head in cab AABB (MSTS): {aligned}");
     }
 
     let Ok(lead_entity) = lead_car.single() else {
@@ -682,18 +678,17 @@ pub fn sync_cab_interior(
                     } else {
                         entity.insert(MeshMaterial3d(part.material.clone()));
                     }
-                    if let Some(matrix_idx) = matrix_idx {
-                        if cvf_state
+                    if let Some(matrix_idx) = matrix_idx
+                        && cvf_state
                             .runtime
                             .as_ref()
                             .is_some_and(|rt| rt.matrix_drivers.contains_key(&matrix_idx))
-                        {
-                            entity.insert(CabCvfPart {
-                                matrix_idx,
-                                pivot_at_mesh,
-                                local_spin_axis: part.lever_local_axis,
-                            });
-                        }
+                    {
+                        entity.insert(CabCvfPart {
+                            matrix_idx,
+                            pivot_at_mesh,
+                            local_spin_axis: part.lever_local_axis,
+                        });
                     }
                     let _ = crate::cab_screen::try_attach_screen_to_part(
                         &mut entity,
@@ -857,7 +852,7 @@ mod tests {
         assert_eq!(config.head_out_msts.len(), 2);
         let vehicle_t = crate::shapes::vehicle_authored_frame_transform(0.0, false);
         let head = config.head_pos_in_train(vehicle_t);
-        assert!((head.x - (-8.60)).abs() < 1e-2);
+        assert!((head.x - 8.60).abs() < 1e-2);
         assert!((head.y - 2.875).abs() < 1e-3);
     }
 
@@ -869,7 +864,7 @@ mod tests {
         let head_train = placement.transform_point(head_bevy);
         // Same transform as exterior/cab lead frame: no AABB shift between spaces.
         assert!((head_train - config.head_pos_in_train(placement)).length() < 1e-4);
-        assert!((head_train.x - (-8.60)).abs() < 1e-2);
+        assert!((head_train.x - 8.60).abs() < 1e-2);
         assert!(!config.primary_is_rear_cab());
         let rear = viewpoint_from_eng_fields([-0.8, 2.875, 8.60], [15.0, 180.0, 0.0], None);
         assert!((rear.look_yaw.to_degrees().abs() - 180.0).abs() < 1e-2);

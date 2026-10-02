@@ -8,7 +8,7 @@ use crate::live::LiveDrive;
 use crate::shapes::RouteAssets;
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
-use crate::track_position::{TrackPositionResolver, marker_render_world_at_node};
+use crate::track_position::{TrackPositionResolver, marker_render_world_on_edge};
 use crate::train::position_on_graph;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
@@ -144,7 +144,7 @@ pub(crate) fn spawn_gameplay_ui(mut commands: Commands) {
                 ))
                 .with_children(|panel| {
                     panel.spawn((
-                        Text::new("DESTINO ALCANZADO"),
+                        Text::new("RESUMEN DEL SERVICIO"),
                         TextFont {
                             font_size: FontSize::Px(22.0),
                             ..default()
@@ -250,7 +250,8 @@ pub(crate) fn spawn_gameplay_markers(
         .track_db()
         .map(|tdb| TrackPositionResolver::from_track_scene(tdb, Some(assets.tsection()), &scene));
     let resolver_ref = tdb_resolver.as_ref();
-    let size = scene.bounds.edge_radius().max(2.0) * 1.8;
+    // Markers have physical dimensions independent of the length of the route.
+    let size = 1.0;
     let sphere = meshes.add(Sphere::new(size));
     let pole = meshes.add(Cylinder::new(size * 0.12, size * 3.0));
 
@@ -307,16 +308,17 @@ pub(crate) fn spawn_gameplay_markers(
         ) else {
             continue;
         };
-        let world = marker_render_world_at_node(
-            &stop.node_id,
-            0.0,
+        let world = marker_render_world_on_edge(
+            &scene.graph,
+            &edge_id,
+            pos_m,
             resolver_ref,
             &scene,
             *offset,
             terrain_ref,
             &focus,
-            Some(graph_world),
         )
+        .map(|(world, yaw)| world + Quat::from_rotation_y(yaw) * Vec3::Z * 6.0)
         .unwrap_or(graph_world);
         let mat = if idx == 0 {
             next_mat.clone()
@@ -363,42 +365,46 @@ pub(crate) fn spawn_gameplay_markers(
         ));
     }
 
-    let dest_odom = path_data.total_length_m();
-    if dest_odom > 0.0 {
-        if let Some((edge_id, pos_m)) =
+    let dest_odom = session
+        .gameplay
+        .stop_targets
+        .last()
+        .filter(|stop| stop.is_terminal)
+        .map(|stop| stop.cum_dist_m)
+        .unwrap_or_else(|| path_data.total_length_m());
+    if dest_odom > 0.0
+        && let Some((edge_id, pos_m)) =
             PathData::position_at_odometer(path_edges, &path_data.edges, dest_odom)
-        {
-            if let Some((graph_world, _)) = position_on_graph(
-                &scene.graph,
-                &edge_id,
-                pos_m,
-                terrain_ref,
-                &scene,
-                offset.delta,
-                &focus,
-            ) {
-                let dest_node = &session.gameplay.destination_node;
-                let world = marker_render_world_at_node(
-                    dest_node,
-                    0.0,
-                    resolver_ref,
-                    &scene,
-                    *offset,
-                    terrain_ref,
-                    &focus,
-                    Some(graph_world),
-                )
-                .unwrap_or(graph_world);
-                let y = world.y + size * 2.8;
-                commands.spawn((
-                    GameplayDestMarker,
-                    Mesh3d(sphere.clone()),
-                    MeshMaterial3d(dest_mat),
-                    Transform::from_translation(Vec3::new(world.x, y, world.z)),
-                    Name::new("gameplay:dest"),
-                ));
-            }
-        }
+        && let Some((graph_world, _)) = position_on_graph(
+            &scene.graph,
+            &edge_id,
+            pos_m,
+            terrain_ref,
+            &scene,
+            offset.delta,
+            &focus,
+        )
+    {
+        let world = marker_render_world_on_edge(
+            &scene.graph,
+            &edge_id,
+            pos_m,
+            resolver_ref,
+            &scene,
+            *offset,
+            terrain_ref,
+            &focus,
+        )
+        .map(|(world, yaw)| world + Quat::from_rotation_y(yaw) * Vec3::Z * 9.0)
+        .unwrap_or(graph_world);
+        let y = world.y + size * 2.8;
+        commands.spawn((
+            GameplayDestMarker,
+            Mesh3d(sphere.clone()),
+            MeshMaterial3d(dest_mat),
+            Transform::from_translation(Vec3::new(world.x, y, world.z)),
+            Name::new("gameplay:dest"),
+        ));
     }
 }
 
@@ -486,6 +492,11 @@ pub(crate) fn update_arrival_overlay(
         live.session.time_s(),
         gp.accrued_penalty,
     );
+    if let Some(failure) = &gp.failure {
+        lines.insert_str(0, &format!("Servicio interrumpido: {failure}\n\n"));
+    } else {
+        lines.insert_str(0, "Servicio completado\n\n");
+    }
     if gp.passed_stops.is_empty() {
         lines.push_str("\nSin paradas programadas.");
     } else {
@@ -550,6 +561,10 @@ pub(crate) fn update_stop_billboards(
     let w = window.width();
     let h = window.height();
     for (billboard, mut node, mut vis) in &mut labels {
+        if billboard.world.distance_squared(cam_tf.translation()) > 250.0 * 250.0 {
+            *vis = Visibility::Hidden;
+            continue;
+        }
         let Some((left, top)) =
             stop_billboard_screen_pos(w, h, scale, billboard.world, cam, cam_tf)
         else {

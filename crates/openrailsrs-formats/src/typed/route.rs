@@ -120,10 +120,10 @@ pub fn find_trk_path(route_dir: &Path) -> Option<PathBuf> {
         route_dir.join(&named),
     ];
     for candidate in &preferred {
-        if let Some(resolved) = resolve_path_case_insensitive(candidate) {
-            if resolved.is_file() {
-                return Some(resolved);
-            }
+        if let Some(resolved) = resolve_path_case_insensitive(candidate)
+            && resolved.is_file()
+        {
+            return Some(resolved);
         }
         if candidate.is_file() {
             return Some(candidate.clone());
@@ -206,10 +206,10 @@ fn scan_trk_includes(text: &str, base: &Path) -> Vec<PathBuf> {
             continue;
         };
         let open = after_tag + rel_paren;
-        if let Ok(Ast::List(items)) = parse_first(&text[open..]) {
-            if let Some(rel) = items.first().and_then(ast_to_include_path) {
-                paths.push(base.join(rel.trim()));
-            }
+        if let Ok(Ast::List(items)) = parse_first(&text[open..])
+            && let Some(rel) = items.first().and_then(ast_to_include_path)
+        {
+            paths.push(base.join(rel.trim()));
         }
         pos = open + 1;
     }
@@ -255,30 +255,30 @@ fn parse_route_start(ast: &Ast) -> Option<RouteStart> {
 
 fn parse_overhead_wire_params(ast: &Ast) -> OverheadWireParams {
     let mut params = OverheadWireParams::default();
-    if let Some(nums) = find_numeric_field(ast, "Electrified") {
-        if let Some(v) = nums.first() {
-            // MSTS often stores flags as hex ints (`00000001`); non-zero ⇒ true.
-            params.electrified = *v != 0.0;
-        }
+    if let Some(nums) = find_numeric_field(ast, "Electrified")
+        && let Some(v) = nums.first()
+    {
+        // MSTS often stores flags as hex ints (`00000001`); non-zero ⇒ true.
+        params.electrified = *v != 0.0;
     }
-    if let Some(nums) = find_numeric_field(ast, "OverheadWireHeight") {
-        if let Some(v) = nums.first() {
-            if v.is_finite() && *v > 0.0 {
-                params.height_m = *v as f32;
-            }
-        }
+    if let Some(nums) = find_numeric_field(ast, "OverheadWireHeight")
+        && let Some(v) = nums.first()
+        && v.is_finite()
+        && *v > 0.0
+    {
+        params.height_m = *v as f32;
     }
     if let Some(enabled) = find_string_field(ast, &["ORTSDoubleWireEnabled"]) {
         params.double_wire = enabled.eq_ignore_ascii_case("On")
             || enabled.eq_ignore_ascii_case("true")
             || enabled == "1";
     }
-    if let Some(nums) = find_numeric_field(ast, "ORTSDoubleWireHeight") {
-        if let Some(v) = nums.first() {
-            if v.is_finite() && *v > 0.0 {
-                params.double_wire_height_m = *v as f32;
-            }
-        }
+    if let Some(nums) = find_numeric_field(ast, "ORTSDoubleWireHeight")
+        && let Some(v) = nums.first()
+        && v.is_finite()
+        && *v > 0.0
+    {
+        params.double_wire_height_m = *v as f32;
     }
     params
 }
@@ -289,22 +289,22 @@ fn find_numeric_field(ast: &Ast, key: &str) -> Option<Vec<f64>> {
         return None;
     };
 
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case(key) {
-            let nums = collect_numbers_from_tail(&items[1..]);
-            if !nums.is_empty() {
-                return Some(nums);
-            }
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case(key)
+    {
+        let nums = collect_numbers_from_tail(&items[1..]);
+        if !nums.is_empty() {
+            return Some(nums);
         }
     }
 
     for i in 0..items.len().saturating_sub(1) {
-        if let Ast::Atom(Atom::Symbol(sym)) = &items[i] {
-            if sym.eq_ignore_ascii_case(key) {
-                let nums = collect_numbers(&items[i + 1]);
-                if !nums.is_empty() {
-                    return Some(nums);
-                }
+        if let Ast::Atom(Atom::Symbol(sym)) = &items[i]
+            && sym.eq_ignore_ascii_case(key)
+        {
+            let nums = collect_numbers(&items[i + 1]);
+            if !nums.is_empty() {
+                return Some(nums);
             }
         }
     }

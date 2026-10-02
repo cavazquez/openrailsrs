@@ -248,17 +248,17 @@ impl Material for OrCabMaterial {
             depth_stencil.bias.constant = key.bind_group_data.depth_bias;
             depth_stencil.depth_write_enabled = Some(key.bind_group_data.depth_write);
         }
-        if layout.0.contains(Mesh::ATTRIBUTE_COLOR) {
-            if let Some(fragment) = descriptor.fragment.as_mut() {
-                fragment
-                    .shader_defs
-                    .push(ShaderDefVal::from("VERTEX_COLORS"));
-            }
+        if layout.0.contains(Mesh::ATTRIBUTE_COLOR)
+            && let Some(fragment) = descriptor.fragment.as_mut()
+        {
+            fragment
+                .shader_defs
+                .push(ShaderDefVal::from("VERTEX_COLORS"));
         }
-        if let Some(def) = cab_debug_view().shader_def() {
-            if let Some(fragment) = descriptor.fragment.as_mut() {
-                fragment.shader_defs.push(ShaderDefVal::from(def));
-            }
+        if let Some(def) = cab_debug_view().shader_def()
+            && let Some(fragment) = descriptor.fragment.as_mut()
+        {
+            fragment.shader_defs.push(ShaderDefVal::from(def));
         }
         Ok(())
     }

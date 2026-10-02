@@ -20,15 +20,15 @@ pub struct ResolvedCabAssets {
 ///
 /// Priority: `ORTS3DCabFile` → `CabView` → first `.s` with sibling `.cvf` in a cabview folder.
 pub fn resolve_cab_assets(trainset_root: &Path, cab: &EngineCabView) -> Option<ResolvedCabAssets> {
-    if let Some(shape_ref) = cab.orts_3d_cab_shape.as_deref() {
-        if let Some(assets) = resolve_from_shape_ref(trainset_root, shape_ref) {
-            return Some(assets);
-        }
+    if let Some(shape_ref) = cab.orts_3d_cab_shape.as_deref()
+        && let Some(assets) = resolve_from_shape_ref(trainset_root, shape_ref)
+    {
+        return Some(assets);
     }
-    if let Some(cvf_ref) = cab.cab_view_file.as_deref() {
-        if let Some(assets) = resolve_from_cab_view_ref(trainset_root, cvf_ref) {
-            return Some(assets);
-        }
+    if let Some(cvf_ref) = cab.cab_view_file.as_deref()
+        && let Some(assets) = resolve_from_cab_view_ref(trainset_root, cvf_ref)
+    {
+        return Some(assets);
     }
     resolve_cab_assets_scan(trainset_root)
 }
@@ -101,10 +101,10 @@ pub fn pick_cab_shape_in_dir(cab_dir: &Path) -> Option<PathBuf> {
         if cvf.is_file() {
             return Some(path.clone());
         }
-        if let Some(resolved) = resolve_path_case_insensitive(&cvf) {
-            if resolved.is_file() {
-                return Some(path.clone());
-            }
+        if let Some(resolved) = resolve_path_case_insensitive(&cvf)
+            && resolved.is_file()
+        {
+            return Some(path.clone());
         }
     }
     for preferred in ["cab.s", "Cab.s", "CAB.s"] {

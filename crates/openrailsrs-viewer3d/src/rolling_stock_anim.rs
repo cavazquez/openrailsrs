@@ -376,20 +376,20 @@ fn train_speed_mps(live: Option<&LiveDrive>, replay: Option<&ReplayState>) -> f3
     if let Some(live) = live {
         return live.session.velocity_mps() as f32;
     }
-    if let Some(replay) = replay.filter(|r| r.is_active()) {
-        if let Some(track) = replay.tracks.first() {
-            // Nearest row by time for visual wheel speed.
-            let mut best = 0.0f32;
-            let mut best_dt = f64::MAX;
-            for row in &track.rows {
-                let dt = (row.time_s - replay.t_sim).abs();
-                if dt < best_dt {
-                    best_dt = dt;
-                    best = row.velocity_mps as f32;
-                }
+    if let Some(replay) = replay.filter(|r| r.is_active())
+        && let Some(track) = replay.tracks.first()
+    {
+        // Nearest row by time for visual wheel speed.
+        let mut best = 0.0f32;
+        let mut best_dt = f64::MAX;
+        for row in &track.rows {
+            let dt = (row.time_s - replay.t_sim).abs();
+            if dt < best_dt {
+                best_dt = dt;
+                best = row.velocity_mps as f32;
             }
-            return best;
         }
+        return best;
     }
     0.0
 }

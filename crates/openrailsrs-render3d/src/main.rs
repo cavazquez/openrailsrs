@@ -91,10 +91,10 @@ fn main() -> anyhow::Result<()> {
     let msts_root = cli.msts_root.unwrap_or_else(|| {
         let route_canonical =
             std::fs::canonicalize(&cli.route).unwrap_or_else(|_| cli.route.clone());
-        if let Some(parent) = route_canonical.parent() {
-            if let Some(grandparent) = parent.parent() {
-                return grandparent.to_path_buf();
-            }
+        if let Some(parent) = route_canonical.parent()
+            && let Some(grandparent) = parent.parent()
+        {
+            return grandparent.to_path_buf();
         }
         PathBuf::from(".")
     });

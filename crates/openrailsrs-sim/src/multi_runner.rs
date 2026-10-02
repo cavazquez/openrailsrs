@@ -345,10 +345,10 @@ pub fn run_scenario_multi_train(
     // block_map: edge_id → train_id that currently occupies it.
     let mut block_map: HashMap<String, String> = HashMap::new();
     for agent in &agents {
-        if agent.start_time_s <= 0.0 {
-            if let Some(eid) = agent.state.current_edge() {
-                block_map.insert(eid.to_string(), agent.id.clone());
-            }
+        if agent.start_time_s <= 0.0
+            && let Some(eid) = agent.state.current_edge()
+        {
+            block_map.insert(eid.to_string(), agent.id.clone());
         }
     }
 
@@ -368,12 +368,13 @@ pub fn run_scenario_multi_train(
             }
 
             // Claim starting edge on first active tick.
-            if (t - agent.start_time_s).abs() < dt * 0.5 && t >= agent.start_time_s {
-                if let Some(eid) = agent.state.current_edge() {
-                    block_map
-                        .entry(eid.to_string())
-                        .or_insert_with(|| agent.id.clone());
-                }
+            if (t - agent.start_time_s).abs() < dt * 0.5
+                && t >= agent.start_time_s
+                && let Some(eid) = agent.state.current_edge()
+            {
+                block_map
+                    .entry(eid.to_string())
+                    .or_insert_with(|| agent.id.clone());
             }
 
             match agent.phase {
@@ -556,7 +557,7 @@ pub fn run_scenario_multi_train(
 
         // Evaluate scripted signals every ~1 s of simulation time.
         let eval_period = (1.0 / dt).round() as u64;
-        if global_steps % eval_period.max(1) == 0 {
+        if global_steps.is_multiple_of(eval_period.max(1)) {
             graph.evaluate_signals(&block_map);
             // Sync each agent's signal_runtime map with the updated aspects.
             for agent in agents.iter_mut() {
@@ -792,10 +793,10 @@ impl LiveMultiSim {
         // Initial block map
         let mut block_map: HashMap<String, String> = HashMap::new();
         for agent in &agents {
-            if agent.start_time_s <= 0.0 {
-                if let Some(eid) = agent.state.current_edge() {
-                    block_map.insert(eid.to_string(), agent.id.clone());
-                }
+            if agent.start_time_s <= 0.0
+                && let Some(eid) = agent.state.current_edge()
+            {
+                block_map.insert(eid.to_string(), agent.id.clone());
             }
         }
 
@@ -864,10 +865,10 @@ impl LiveMultiSim {
 
         let mut block_map: HashMap<String, String> = HashMap::new();
         for agent in &agents {
-            if agent.start_time_s <= 0.0 {
-                if let Some(eid) = agent.state.current_edge() {
-                    block_map.insert(eid.to_string(), agent.id.clone());
-                }
+            if agent.start_time_s <= 0.0
+                && let Some(eid) = agent.state.current_edge()
+            {
+                block_map.insert(eid.to_string(), agent.id.clone());
             }
         }
 
@@ -899,12 +900,12 @@ impl LiveMultiSim {
                 }
 
                 // Claim starting edge on first active tick.
-                if (self.t - agent.start_time_s).abs() < dt * 0.5 {
-                    if let Some(eid) = agent.state.current_edge() {
-                        self.block_map
-                            .entry(eid.to_string())
-                            .or_insert_with(|| agent.id.clone());
-                    }
+                if (self.t - agent.start_time_s).abs() < dt * 0.5
+                    && let Some(eid) = agent.state.current_edge()
+                {
+                    self.block_map
+                        .entry(eid.to_string())
+                        .or_insert_with(|| agent.id.clone());
                 }
 
                 match agent.phase {

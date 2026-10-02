@@ -55,10 +55,9 @@ pub fn read_distance_down_path(route_dir: &Path, service_id: &str) -> Option<f64
     for &id in candidates {
         let srv_path = route_dir.join("SERVICES").join(format!("{id}.srv"));
         if let Ok(text) = openrailsrs_formats::encoding::read_msts_file_case_insensitive(&srv_path)
+            && let Some(dist) = parse_first_distance_down_path(&text)
         {
-            if let Some(dist) = parse_first_distance_down_path(&text) {
-                return Some(dist);
-            }
+            return Some(dist);
         }
     }
     None
@@ -463,13 +462,12 @@ pub fn pat_waypoints_from_world(
             waypoints.push(nid);
         }
     }
-    if !waypoints.iter().any(|n| n == destination) {
-        if let Some(tail) = waypoints.last() {
-            if edge_path_ignoring_switches(graph, tail, destination).is_ok() && tail != destination
-            {
-                waypoints.push(destination.to_string());
-            }
-        }
+    if !waypoints.iter().any(|n| n == destination)
+        && let Some(tail) = waypoints.last()
+        && edge_path_ignoring_switches(graph, tail, destination).is_ok()
+        && tail != destination
+    {
+        waypoints.push(destination.to_string());
     }
     let start_idx = waypoints.iter().position(|n| n == start).unwrap_or(0);
     if let Some(dest_offset) = waypoints[start_idx..].iter().position(|n| n == destination) {
@@ -743,10 +741,10 @@ fn pick_destination_node(
             best = Some((p.graph_node.clone(), dist));
         }
     }
-    if let Some((node, dist)) = &best {
-        if *dist > 1000.0 {
-            return Ok(node.clone());
-        }
+    if let Some((node, dist)) = &best
+        && *dist > 1000.0
+    {
+        return Ok(node.clone());
     }
     if let Some(far) = bfs_far_node(graph, start) {
         return Ok(far);

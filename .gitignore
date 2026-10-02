@@ -76,6 +76,9 @@ examples/chiltern/rpm_sweep_results.csv
 examples/chiltern/driver_brake_coast_or_aligned.csv
 
 # Debug / temp
+/tmp/
+examples/chiltern_local/run.csv
+examples/chiltern_local/run.json
 backtrace.txt
 **/*.bak.*
 scripts/__pycache__/

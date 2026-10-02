@@ -86,8 +86,10 @@ pub fn world_mesh_options_for_shape(shape_path: &Path) -> MeshPartBuildOptions {
         bake_animation_key: None,
     }
 }
+/// Shape vertices already have their MSTS Z axis negated. Authored forward
+/// (+Z in MSTS, -Z after conversion) must follow the train's +X travel axis.
 pub fn msts_shape_to_train_rotation() -> Quat {
-    Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+    Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)
 }
 
 /// Axis-aligned bounds of mesh positions (metres, shape local space).

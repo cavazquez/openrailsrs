@@ -60,6 +60,13 @@ pub struct ScenarioMeta {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StopDef {
     pub node: String,
+    /// Display name when the stop lies on a plain MSTS junction node.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Signed metres along the route from this node to the stopping point.
+    /// Negative values place the stop inside the incoming edge (MSTS platforms).
+    #[serde(default)]
+    pub offset_m: f64,
     pub arrive_s: f64,
     pub depart_s: f64,
     /// How long the train must dwell at this stop before departing (seconds, default 0).
@@ -312,12 +319,12 @@ impl ScenarioFile {
                 "scenario.name must not be empty".into(),
             ));
         }
-        if self.simulation.duration <= 0.0 {
+        if !self.simulation.duration.is_finite() || self.simulation.duration <= 0.0 {
             return Err(ScenarioError::Validation(
                 "simulation.duration must be positive".into(),
             ));
         }
-        if self.simulation.time_step <= 0.0 {
+        if !self.simulation.time_step.is_finite() || self.simulation.time_step <= 0.0 {
             return Err(ScenarioError::Validation(
                 "simulation.time_step must be positive".into(),
             ));
@@ -331,6 +338,18 @@ impl ScenarioFile {
             ));
         }
         for stop in &self.route.stops {
+            if !stop.arrive_s.is_finite()
+                || !stop.depart_s.is_finite()
+                || !stop.dwell_s.is_finite()
+                || !stop.offset_m.is_finite()
+                || stop.arrive_s < 0.0
+                || stop.dwell_s < 0.0
+            {
+                return Err(ScenarioError::Validation(format!(
+                    "stop '{}': times and offset must be finite; arrival and dwell must be non-negative",
+                    stop.node
+                )));
+            }
             if stop.arrive_s > stop.depart_s {
                 return Err(ScenarioError::Validation(format!(
                     "stop '{}': arrive_s ({}) must be <= depart_s ({})",

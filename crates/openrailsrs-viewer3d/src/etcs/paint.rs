@@ -275,15 +275,15 @@ fn paint_soft_keys_at(rgba: &mut [u8], w: u32, h: u32, x: i32, status: &EtcsStat
             },
         );
         stroke_rect(rgba, w, h, x, y, 60, 48, colors::FRAME);
-        if let Some(key) = status.soft_keys.get(i as usize) {
-            if !key.label.is_empty() {
-                let c = if key.enabled {
-                    colors::GREY
-                } else {
-                    colors::DARK_GREY
-                };
-                blit_text(rgba, w, h, x + 6, y + 18, 7, 10, &key.label, c);
-            }
+        if let Some(key) = status.soft_keys.get(i as usize)
+            && !key.label.is_empty()
+        {
+            let c = if key.enabled {
+                colors::GREY
+            } else {
+                colors::DARK_GREY
+            };
+            blit_text(rgba, w, h, x + 6, y + 18, 7, 10, &key.label, c);
         }
     }
 }

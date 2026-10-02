@@ -12,7 +12,7 @@
 
 ## Qué es
 
-Núcleo de simulación **sin gráficos** (Linux-first, Rust estable). CSV para series temporales; TOML para escenarios. Viewer 2D (`minifb`) y 3D (Bevy 0.19) en crates aparte.
+Núcleo de simulación **sin gráficos** (Linux-first, Rust ≥1.95). CSV para series temporales; TOML para escenarios. Viewer 2D (`minifb`) y 3D (Bevy 0.19.1) en crates aparte. Referencia de paridad fijada en **Open Rails 1.6.1**; commit y hashes en [`oracles/openrails-reference.toml`](oracles/openrails-reference.toml).
 
 Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/README.md).
 
@@ -33,12 +33,19 @@ cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
 ```
 
 ```bash
-# Viewer 3D Chiltern (necesita Content OR)
-export OPENRAILSRS_MSTS_CONTENT="$HOME/Documentos/Open Rails/Content"
-export CHILTERN_ROUTE="$OPENRAILSRS_MSTS_CONTENT/Chiltern/ROUTES/Chiltern"
-cargo run --release -p openrailsrs-viewer3d -- \
-  --live --route-root "$CHILTERN_ROUTE" examples/chiltern/scenario.toml
+# Servicio completo: Northolt Park → South Ruislip → West Ruislip (6,89 km).
+# Necesita el Content Chiltern instalado; CHILTERN_ROUTE permite cambiar su ubicación.
+./scripts/run_chiltern_service.sh
+./scripts/run_chiltern_service.sh --autodrive --cab
+
+# La misma partida y conductor automático sin ventana.
+target/debug/openrailsrs play-service examples/chiltern_local/scenario.toml --out-dir tmp/service
+
+# Verifica versión/hashes y compara física con las capturas OR congeladas.
+python3 scripts/run_oracles.py
 ```
+
+`1` cabina, `Alt+1` alterna 2D/3D, `2` exterior; `W/S` inversor, `A/D` regulador, `;/'` freno, `Q` puertas, `Pause` pausa. `F5` información de conducción, `F4` monitor de vía. En cada estación: detenerse a ≤0,1 m/s dentro de ±10 m, abrir puertas, completar el embarque y cerrar puertas; el HUD indica cuándo salir. Detalles y límites de paridad: [`examples/chiltern_local/README.md`](examples/chiltern_local/README.md).
 
 Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](docs/VIEWER3D_TESTING.md) · [`docs/BEVY.md`](docs/BEVY.md).
 

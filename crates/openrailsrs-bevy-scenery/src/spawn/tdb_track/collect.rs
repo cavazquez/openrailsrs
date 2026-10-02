@@ -744,10 +744,9 @@ fn vector_chain_seed(
         if matches!(
             neighbor.kind,
             TrackNodeKind::Junction { .. } | TrackNodeKind::End
-        ) {
-            if let Some(p) = node_world_position(neighbor) {
-                hints.push(p);
-            }
+        ) && let Some(p) = node_world_position(neighbor)
+        {
+            hints.push(p);
         }
     }
     hints

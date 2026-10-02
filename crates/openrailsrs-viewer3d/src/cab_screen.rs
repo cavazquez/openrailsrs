@@ -269,10 +269,9 @@ pub fn handle_cab_dmi_mouse(
         let world = gt.to_matrix();
         if let Some((t, uv)) =
             crate::etcs::input::raycast_mesh_uv(mesh, world, ray.origin, Vec3::from(ray.direction))
+            && best.as_ref().is_none_or(|(bt, _, _)| t < *bt)
         {
-            if best.as_ref().is_none_or(|(bt, _, _)| t < *bt) {
-                best = Some((t, uv, screen.dmi_mode));
-            }
+            best = Some((t, uv, screen.dmi_mode));
         }
     }
     let Some((_t, uv, mode)) = best else {

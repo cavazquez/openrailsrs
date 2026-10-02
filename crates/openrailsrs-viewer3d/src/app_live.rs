@@ -120,10 +120,11 @@ mod tests {
             {
                 let mut live = world.resource_mut::<crate::live::LiveDrive>();
                 live.session.driver_throttle = 1.0;
+                live.session.driver_direction = 1.0;
                 live.paused = false;
             }
             world
-                .resource_mut::<Time>()
+                .resource_mut::<Time<Fixed>>()
                 .advance_by(std::time::Duration::from_secs(2));
             world.run_system_once(advance_live_sim).unwrap();
             world.run_system_once(update_live_train_marker).unwrap();
@@ -302,13 +303,14 @@ mod tests {
         };
         live.paused = false;
         live.session.driver_throttle = 1.0;
+        live.session.driver_direction = 1.0;
         let t0 = live.session.time_s();
 
         let mut app = crate::test_harness::minimal_app();
         app.insert_resource(live);
         app.update();
         app.world_mut()
-            .resource_mut::<Time>()
+            .resource_mut::<Time<Fixed>>()
             .advance_by(std::time::Duration::from_secs(1));
         app.world_mut().run_system_once(advance_live_sim).unwrap();
         assert!(

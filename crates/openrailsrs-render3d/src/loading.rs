@@ -526,10 +526,10 @@ pub fn update_loading_ui(
             node.width = Val::Percent(progress.fraction * 100.0);
         }
     }
-    if log.is_changed() {
-        if let Ok(mut t) = texts.get_mut(screen.log) {
-            *t = Text::new(log.body());
-        }
+    if log.is_changed()
+        && let Ok(mut t) = texts.get_mut(screen.log)
+    {
+        *t = Text::new(log.body());
     }
 }
 
@@ -1507,10 +1507,10 @@ fn terrain_texture_names(tile: &TileGeometry, from: usize, to: usize) -> Vec<Str
     let mut seen = HashSet::new();
     let mut names = Vec::new();
     for patch in tile.patches.iter().take(to).skip(from) {
-        if let Some(name) = &patch.texture {
-            if seen.insert(name.clone()) {
-                names.push(name.clone());
-            }
+        if let Some(name) = &patch.texture
+            && seen.insert(name.clone())
+        {
+            names.push(name.clone());
         }
     }
     names.sort_unstable();

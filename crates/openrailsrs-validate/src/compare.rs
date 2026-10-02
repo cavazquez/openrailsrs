@@ -649,15 +649,15 @@ pub fn phase_report_passes(phase: &PhaseReport, config: &ValidationConfig) -> bo
 }
 
 pub(crate) fn column_passes(s: &SeriesStats, max_rms: Option<f64>, max_abs: Option<f64>) -> bool {
-    if let Some(limit) = max_rms {
-        if s.rms_diff > limit {
-            return false;
-        }
+    if let Some(limit) = max_rms
+        && s.rms_diff > limit
+    {
+        return false;
     }
-    if let Some(limit) = max_abs {
-        if s.max_abs_diff > limit {
-            return false;
-        }
+    if let Some(limit) = max_abs
+        && s.max_abs_diff > limit
+    {
+        return false;
     }
     true
 }

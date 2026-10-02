@@ -249,17 +249,24 @@ pub fn enable_live_defaults(
     );
 }
 
-pub fn advance_live_sim(time: Res<Time>, mut live: ResMut<LiveDrive>) {
+pub fn advance_live_sim(time: Res<Time<Fixed>>, mut live: ResMut<LiveDrive>) {
     if live.paused {
         return;
     }
     let was_arrived = live.session.arrived;
     let audio = live.audio.take();
-    live.session.step_realtime(time.delta_secs() as f64, |t| {
+    let mut on_transition = |t: &RegionTransition| {
         if let Some(ref a) = audio {
             apply_region_transition(a, t);
         }
-    });
+    };
+    if autodrive_enabled() {
+        live.session
+            .step_autodrive(time.delta_secs_f64(), autodrive_notch(), &mut on_transition);
+    } else {
+        live.session
+            .step_realtime(time.delta_secs_f64(), &mut on_transition);
+    }
     live.audio = audio;
     if live.session.arrived && !was_arrived {
         viewer_log!(
@@ -286,27 +293,6 @@ fn autodrive_notch() -> f64 {
         .unwrap_or(1.0)
 }
 
-pub fn live_autodrive(mut live: ResMut<LiveDrive>) {
-    if live.paused || live.session.arrived {
-        return;
-    }
-    let target = autodrive_notch();
-    let v = live.session.velocity_mps();
-    let limit = live.session.effective_speed_limit_mps();
-    let cap = if limit.is_finite() {
-        limit * 0.95
-    } else {
-        f64::INFINITY
-    };
-    if v < cap {
-        live.session.driver_brake = 0.0;
-        live.session.driver_throttle = target;
-    } else {
-        live.session.driver_throttle = 0.0;
-        live.session.driver_brake = 0.2;
-    }
-}
-
 /// Engine / brake loops once per frame (independent of physics sub-steps).
 pub fn live_audio_frame(live: Res<LiveDrive>) {
     let Some(ref audio) = live.audio else {
@@ -321,13 +307,13 @@ pub fn live_audio_frame(live: Res<LiveDrive>) {
 /// **V** wiper · **Backspace** emergency · arrows kept as aliases.
 pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveDrive>) {
     let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
-    if keys.just_pressed(KeyCode::KeyP) && !shift {
+    if (keys.just_pressed(KeyCode::KeyP) && !shift) || keys.just_pressed(KeyCode::Pause) {
         live.paused = !live.paused;
     }
-    if keys.just_pressed(KeyCode::KeyR) {
-        if let Err(err) = live.reset() {
-            viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
-        }
+    if keys.just_pressed(KeyCode::KeyR)
+        && let Err(err) = live.reset()
+    {
+        viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
     }
 
     // OR ControlThrottleIncrease/Decrease (D / A); arrows still work.
@@ -338,7 +324,6 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
         || keys.just_pressed(KeyCode::ArrowDown)
         || keys.just_pressed(KeyCode::PageDown);
     if throttle_up {
-        live.session.driver_brake = 0.0;
         live.session.driver_throttle = (live.session.driver_throttle + 0.1).min(1.0);
     }
     if throttle_down {
@@ -347,7 +332,6 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
 
     // OR ControlTrainBrakeIncrease/Decrease (' / ;)
     if keys.just_pressed(KeyCode::Quote) {
-        live.session.driver_throttle = 0.0;
         live.session.driver_brake = (live.session.driver_brake + 0.15).min(1.0);
     }
     if keys.just_pressed(KeyCode::Semicolon) {
@@ -382,6 +366,11 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
     // OR ControlWiper (V); U kept as alias.
     if keys.just_pressed(KeyCode::KeyV) || keys.just_pressed(KeyCode::KeyU) {
         live.session.toggle_wiper();
+    }
+
+    // OR Q / Shift+Q doors. This consist currently has one shared door target.
+    if keys.just_pressed(KeyCode::KeyQ) {
+        live.session.toggle_doors();
     }
 
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
@@ -598,46 +587,46 @@ pub(crate) fn driver_cab_from_lead_vehicle(
         interior_placement: placement,
         ..Default::default()
     };
-    if let Some(shape_name) = vehicle.shape_file.as_deref() {
-        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
-            let mut eyepoints = Vec::new();
-            for vp in &orts.viewpoints {
-                eyepoints.push(crate::camera::DriverEyepoint {
-                    head_msts: vp.head_pos_msts,
-                    look_pitch: vp.look_pitch,
-                    look_yaw: vp.look_yaw,
-                    pitch_limit: vp.pitch_limit,
-                    yaw_limit: vp.yaw_limit,
-                    slot: crate::camera::DriverViewSlot::CabViewpoint,
-                });
+    if let Some(shape_name) = vehicle.shape_file.as_deref()
+        && let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir)
+    {
+        let mut eyepoints = Vec::new();
+        for vp in &orts.viewpoints {
+            eyepoints.push(crate::camera::DriverEyepoint {
+                head_msts: vp.head_pos_msts,
+                look_pitch: vp.look_pitch,
+                look_yaw: vp.look_yaw,
+                pitch_limit: vp.pitch_limit,
+                yaw_limit: vp.yaw_limit,
+                slot: crate::camera::DriverViewSlot::CabViewpoint,
+            });
+        }
+        for head in &orts.head_out_msts {
+            eyepoints.push(crate::camera::DriverEyepoint {
+                head_msts: *head,
+                look_pitch: 0.0,
+                look_yaw: 0.0,
+                pitch_limit: None,
+                yaw_limit: None,
+                slot: crate::camera::DriverViewSlot::HeadOut,
+            });
+        }
+        cab.eyepoints = eyepoints;
+        cab.eyepoint_index = 0;
+        if let Some(eye) = cab.eyepoints.first().copied() {
+            cab.apply_eyepoint(eye, placement);
+        } else {
+            cab.head_msts = Some(orts.head_pos_msts);
+            let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts);
+            cab.head_lead_local = Some(head_bevy);
+            cab.head_pos_train = Some(placement.transform_point(head_bevy));
+            cab.look_pitch = orts.look_pitch;
+            cab.look_yaw = orts.look_yaw;
+            if let Some(p) = orts.pitch_limit {
+                cab.pitch_limit = p;
             }
-            for head in &orts.head_out_msts {
-                eyepoints.push(crate::camera::DriverEyepoint {
-                    head_msts: *head,
-                    look_pitch: 0.0,
-                    look_yaw: 0.0,
-                    pitch_limit: None,
-                    yaw_limit: None,
-                    slot: crate::camera::DriverViewSlot::HeadOut,
-                });
-            }
-            cab.eyepoints = eyepoints;
-            cab.eyepoint_index = 0;
-            if let Some(eye) = cab.eyepoints.first().copied() {
-                cab.apply_eyepoint(eye, placement);
-            } else {
-                cab.head_msts = Some(orts.head_pos_msts);
-                let head_bevy = crate::shapes::msts_shape_vec3_to_bevy(orts.head_pos_msts);
-                cab.head_lead_local = Some(head_bevy);
-                cab.head_pos_train = Some(placement.transform_point(head_bevy));
-                cab.look_pitch = orts.look_pitch;
-                cab.look_yaw = orts.look_yaw;
-                if let Some(p) = orts.pitch_limit {
-                    cab.pitch_limit = p;
-                }
-                if let Some(y) = orts.yaw_limit {
-                    cab.yaw_limit = y;
-                }
+            if let Some(y) = orts.yaw_limit {
+                cab.yaw_limit = y;
             }
         }
     }
@@ -767,30 +756,22 @@ pub(crate) fn live_driver_cab_from_vehicles(
         height_m: (head_len * 0.14).clamp(2.4, 3.2),
         ..Default::default()
     };
-    if let Some(vehicle) = vehicles.first() {
-        if let Some(shape_name) = vehicle.shape_file.as_deref() {
-            if let Some(shape_path) = resolve_vehicle_shape_path(shape_dirs, shape_name, route_dir)
-            {
-                if let Some(loaded) =
-                    load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
-                {
-                    return driver_cab_from_lead_vehicle(
-                        vehicle,
-                        shape_dirs,
-                        route_dir,
-                        &loaded.mesh,
-                    );
-                }
+    if let Some(vehicle) = vehicles.first()
+        && let Some(shape_name) = vehicle.shape_file.as_deref()
+    {
+        if let Some(shape_path) = resolve_vehicle_shape_path(shape_dirs, shape_name, route_dir)
+            && let Some(loaded) = load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
+        {
+            return driver_cab_from_lead_vehicle(vehicle, shape_dirs, route_dir, &loaded.mesh);
+        }
+        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
+            cab.look_pitch = orts.look_pitch;
+            cab.look_yaw = orts.look_yaw;
+            if let Some(p) = orts.pitch_limit {
+                cab.pitch_limit = p;
             }
-            if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
-                cab.look_pitch = orts.look_pitch;
-                cab.look_yaw = orts.look_yaw;
-                if let Some(p) = orts.pitch_limit {
-                    cab.pitch_limit = p;
-                }
-                if let Some(y) = orts.yaw_limit {
-                    cab.yaw_limit = y;
-                }
+            if let Some(y) = orts.yaw_limit {
+                cab.yaw_limit = y;
             }
         }
     }
@@ -942,90 +923,82 @@ pub fn spawn_live_train(
                     .shape_file
                     .as_deref()
                     .filter(|s| !s.eq_ignore_ascii_case("test.s"))
-                {
-                    if let Some(shape_path) =
+                    && let Some(shape_path) =
                         resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
-                    {
-                        let tex_dirs_owned =
-                            vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
-                        let tex_dirs: Vec<&Path> =
-                            tex_dirs_owned.iter().map(|p| p.as_path()).collect();
-                        if let Some((asset, shape_file)) =
-                            load_shape_render_asset_and_file_from_path(
-                                &shape_path,
-                                &tex_dirs,
-                                Some(LIVE_TRAIN_LOD_DISTANCE_M),
-                                &mut meshes,
-                                &mut images,
-                                &mut materials,
-                                &mut texture_cache,
-                                TRAIN_SHAPE_FALLBACK,
-                                true,
-                            )
-                        {
-                            shape_cars += 1;
-                            shape_parts += asset.parts.len();
-                            textured_parts +=
-                                asset.parts.iter().filter(|part| part.has_texture).count();
-                            let is_lead = vi == 0;
-                            let mesh_ref = meshes.get(&asset.combined_mesh);
-                            let wheel_radius = mesh_ref
-                                .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
-                                .and_then(|a| a.as_float3())
-                                .map(|pos| {
-                                    let mut min_y = f32::MAX;
-                                    let mut max_y = f32::MIN;
-                                    for p in pos {
-                                        min_y = min_y.min(p[1]);
-                                        max_y = max_y.max(p[1]);
-                                    }
-                                    ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
-                                })
-                                .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
-                            // Unit mesh scale (Open Rails): `length_m` / Size only for consist spacing.
-                            let car_transform = mesh_ref
-                                .map(|m| {
-                                    if is_lead {
-                                        vehicle_cab_frame_and_exterior_scale(
-                                            m,
-                                            vehicle.offset_m,
-                                            vehicle.length_m,
-                                            vehicle.flipped,
-                                        )
-                                        .0
-                                    } else {
-                                        vehicle_shape_local_transform(
-                                            m,
-                                            vehicle.offset_m,
-                                            vehicle.length_m,
-                                            vehicle.flipped,
-                                        )
-                                    }
-                                })
-                                .unwrap_or_else(|| {
-                                    vehicle_local_transform(
-                                        &scene,
+                {
+                    let tex_dirs_owned =
+                        vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
+                    let tex_dirs: Vec<&Path> = tex_dirs_owned.iter().map(|p| p.as_path()).collect();
+                    if let Some((asset, shape_file)) = load_shape_render_asset_and_file_from_path(
+                        &shape_path,
+                        &tex_dirs,
+                        Some(LIVE_TRAIN_LOD_DISTANCE_M),
+                        &mut meshes,
+                        &mut images,
+                        &mut materials,
+                        &mut texture_cache,
+                        TRAIN_SHAPE_FALLBACK,
+                        true,
+                    ) {
+                        shape_cars += 1;
+                        shape_parts += asset.parts.len();
+                        textured_parts +=
+                            asset.parts.iter().filter(|part| part.has_texture).count();
+                        let is_lead = vi == 0;
+                        let mesh_ref = meshes.get(&asset.combined_mesh);
+                        let wheel_radius = mesh_ref
+                            .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
+                            .and_then(|a| a.as_float3())
+                            .map(|pos| {
+                                let mut min_y = f32::MAX;
+                                let mut max_y = f32::MIN;
+                                for p in pos {
+                                    min_y = min_y.min(p[1]);
+                                    max_y = max_y.max(p[1]);
+                                }
+                                ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
+                            })
+                            .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
+                        // Unit mesh scale (Open Rails): `length_m` / Size only for consist spacing.
+                        let car_transform = mesh_ref
+                            .map(|m| {
+                                if is_lead {
+                                    vehicle_cab_frame_and_exterior_scale(
+                                        m,
                                         vehicle.offset_m,
                                         vehicle.length_m,
+                                        vehicle.flipped,
                                     )
-                                });
-                            let mut car = train.spawn((
-                                car_transform,
-                                Visibility::default(),
-                                LiveTrainCar { index: vi },
-                                crate::rolling_stock_anim::TrainCarTrackOffset {
-                                    offset_m: vehicle.offset_m,
-                                    track_index: 0,
-                                    flipped: vehicle.flipped,
-                                },
-                                Name::new(format!("train:live:car:{vi}")),
-                            ));
-                            log_vehicle_transform_if_enabled(vi, vehicle, &car_transform, &head);
-                            if is_lead {
-                                car.insert(CabLeadVehicle);
-                            }
-                            car.with_children(|car| {
-                                let spawn_parts = |parent: &mut ChildSpawnerCommands<'_>,
+                                    .0
+                                } else {
+                                    vehicle_shape_local_transform(
+                                        m,
+                                        vehicle.offset_m,
+                                        vehicle.length_m,
+                                        vehicle.flipped,
+                                    )
+                                }
+                            })
+                            .unwrap_or_else(|| {
+                                vehicle_local_transform(&scene, vehicle.offset_m, vehicle.length_m)
+                            });
+                        let mut car = train.spawn((
+                            car_transform,
+                            Visibility::default(),
+                            LiveTrainCar { index: vi },
+                            crate::rolling_stock_anim::TrainCarTrackOffset {
+                                offset_m: vehicle.offset_m,
+                                track_index: 0,
+                                flipped: vehicle.flipped,
+                            },
+                            Name::new(format!("train:live:car:{vi}")),
+                        ));
+                        log_vehicle_transform_if_enabled(vi, vehicle, &car_transform, &head);
+                        if is_lead {
+                            car.insert(CabLeadVehicle);
+                        }
+                        car.with_children(|car| {
+                            let spawn_parts = |parent: &mut ChildSpawnerCommands<'_>,
                                                    parts: &[crate::shapes::ShapePartAsset]| {
                                     for (pi, part) in parts.iter().enumerate() {
                                         let mut entity = parent.spawn((
@@ -1053,10 +1026,9 @@ pub fn spawn_live_train(
                                         );
                                     }
                                 };
-                                spawn_parts(car, &asset.parts);
-                            });
-                            continue;
-                        }
+                            spawn_parts(car, &asset.parts);
+                        });
+                        continue;
                     }
                 }
                 let is_lead = vi == 0;

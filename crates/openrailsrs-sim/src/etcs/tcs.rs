@@ -79,10 +79,11 @@ impl BasicEtcsTcs {
 
         // Allowed follows braking envelope when inside brake_dist of target.
         let mut allowed_mps = limit_mps;
-        if let Some(d) = dist {
-            if brake_dist > 0.0 && target_kmh.is_some_and(|t| t + 0.5 < limit) {
-                allowed_mps = allowed_on_curve(d, brake_dist, limit_mps, target_mps);
-            }
+        if let Some(d) = dist
+            && brake_dist > 0.0
+            && target_kmh.is_some_and(|t| t + 0.5 < limit)
+        {
+            allowed_mps = allowed_on_curve(d, brake_dist, limit_mps, target_mps);
         }
         let allowed = allowed_mps * 3.6;
 
@@ -351,10 +352,10 @@ fn derive_messages(
         };
         msgs.push(ack(&text));
     }
-    if let (Some(t), Some(d)) = (target_kmh, target_distance_m) {
-        if d < 5000.0 {
-            msgs.push(plain(&format!("Target {t:.0} in {d:.0}m")));
-        }
+    if let (Some(t), Some(d)) = (target_kmh, target_distance_m)
+        && d < 5000.0
+    {
+        msgs.push(plain(&format!("Target {t:.0} in {d:.0}m")));
     }
     msgs
 }

@@ -524,18 +524,18 @@ fn consume_or_formatted_decimal(parts: &[&str], idx: usize) -> (f64, usize) {
     if t1.is_empty() {
         return (0.0, 1);
     }
-    if let Some(v) = parse_f64(Some(t1)) {
-        if t1.contains('.') || t1.contains('e') || t1.contains('E') {
-            return (v, 1);
-        }
+    if let Some(v) = parse_f64(Some(t1))
+        && (t1.contains('.') || t1.contains('e') || t1.contains('E'))
+    {
+        return (v, 1);
     }
     if let Some(t2) = parts.get(idx + 1) {
         let t2 = t2.trim();
         if is_or_decimal_fragment(t2) {
-            if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
-                if v <= 9999.9 {
-                    return (v, 2);
-                }
+            if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}")))
+                && v <= 9999.9
+            {
+                return (v, 2);
             }
             let v = parse_or_int_field(t1) as f64 / 10.0 + parse_or_int_field(t2) as f64 / 100.0;
             return (v, 2);
@@ -549,10 +549,10 @@ fn consume_or_distance(parts: &[&str], idx: usize) -> (f64, usize) {
     if t1.is_empty() {
         return (0.0, 1);
     }
-    if let Some(v) = parse_f64(Some(t1)) {
-        if t1.contains('.') || t1.contains('e') || t1.contains('E') {
-            return (v, 1);
-        }
+    if let Some(v) = parse_f64(Some(t1))
+        && (t1.contains('.') || t1.contains('e') || t1.contains('E'))
+    {
+        return (v, 1);
     }
     if let Some(t2) = parts.get(idx + 1) {
         let t2 = t2.trim();
@@ -560,10 +560,10 @@ fn consume_or_distance(parts: &[&str], idx: usize) -> (f64, usize) {
             if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
                 return (v, 2);
             }
-            if t2.contains('E') || t2.contains('e') {
-                if let Some(v) = parse_f64(Some(&format!("{t1}.{t2}"))) {
-                    return (v, 2);
-                }
+            if (t2.contains('E') || t2.contains('e'))
+                && let Some(v) = parse_f64(Some(&format!("{t1}.{t2}")))
+            {
+                return (v, 2);
             }
         }
     }
@@ -774,10 +774,10 @@ fn parse_perf_row_line(line: &str, map: &OrColumnMap) -> Option<PerfRow> {
             time_idx = Some(i);
             if let Some(next) = parts.get(i + 1) {
                 let n = next.trim();
-                if let Ok(v) = n.parse::<f64>() {
-                    if (0.0..=100.0).contains(&v) {
-                        throttle = Some(v / 100.0);
-                    }
+                if let Ok(v) = n.parse::<f64>()
+                    && (0.0..=100.0).contains(&v)
+                {
+                    throttle = Some(v / 100.0);
                 }
             }
         }

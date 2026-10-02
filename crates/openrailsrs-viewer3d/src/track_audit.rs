@@ -464,10 +464,10 @@ fn static_trackobj_to_chord_summary(
 }
 
 fn load_tsection_for_trackobj_audit(route_dir: &std::path::Path) -> Option<TSectionCatalog> {
-    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir) {
-        if !catalog.shapes.is_empty() {
-            return Some(catalog);
-        }
+    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir)
+        && !catalog.shapes.is_empty()
+    {
+        return Some(catalog);
     }
     let msts_route = crate::shapes::resolve_msts_route_dir(route_dir)?;
     TSectionCatalog::load_for_route(&msts_route)
@@ -806,17 +806,14 @@ fn edge_matches_chord(
     terminals: &[ChordTerminals],
     chords: &[TdbChord],
 ) -> bool {
-    if let Some(node_id) = edge.tdb_node_id {
-        if let Some(terminal) = terminals
+    if let Some(node_id) = edge.tdb_node_id
+        && let Some(terminal) = terminals
             .iter()
             .find(|terminal| terminal.node_id == node_id)
-        {
-            if endpoints_snap(edge.a, edge.b, terminal.start_world, terminal.end_world)
-                || endpoints_snap(edge.a, edge.b, terminal.end_world, terminal.start_world)
-            {
-                return true;
-            }
-        }
+        && (endpoints_snap(edge.a, edge.b, terminal.start_world, terminal.end_world)
+            || endpoints_snap(edge.a, edge.b, terminal.end_world, terminal.start_world))
+    {
+        return true;
     }
     let mid = edge.a.lerp(edge.b, 0.5);
     if min_distance_point_to_chords_xz(mid.x, mid.z, chords) <= GRAPH_MIDPOINT_MATCH_TOLERANCE_M {

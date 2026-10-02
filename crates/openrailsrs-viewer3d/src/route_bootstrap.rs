@@ -215,29 +215,29 @@ pub fn poll_route_load(
                 "openrailsrs-viewer3d: route ready in {elapsed_ms:.0} ms — inserting scenes"
             );
             insert_route_bundle(&mut commands, bundle);
-            if let Some(screen) = screen.as_ref() {
-                if let Ok(mut t) = texts.get_mut(screen.status) {
-                    *t = Text::new("Generando escenografía y mallas 3D...".to_string());
-                }
+            if let Some(screen) = screen.as_ref()
+                && let Ok(mut t) = texts.get_mut(screen.status)
+            {
+                *t = Text::new("Generando escenografía y mallas 3D...".to_string());
             }
             commands.remove_resource::<PendingRouteLoad>();
             next.set(ViewerAppState::Playing);
         }
         Ok(Err(err)) => {
-            if let Some(screen) = screen.as_ref() {
-                if let Ok(mut t) = texts.get_mut(screen.status) {
-                    *t = Text::new(format!("Error: {err}"));
-                }
+            if let Some(screen) = screen.as_ref()
+                && let Ok(mut t) = texts.get_mut(screen.status)
+            {
+                *t = Text::new(format!("Error: {err}"));
             }
             eprintln!("error: {err}");
             commands.remove_resource::<PendingRouteLoad>();
         }
         Err(TryRecvError::Empty) => {
-            if let Some(screen) = screen.as_ref() {
-                if let Ok(mut t) = texts.get_mut(screen.status) {
-                    let secs = pending.started.elapsed().as_secs();
-                    *t = Text::new(format!("Cargando ruta… ({secs}s)"));
-                }
+            if let Some(screen) = screen.as_ref()
+                && let Ok(mut t) = texts.get_mut(screen.status)
+            {
+                let secs = pending.started.elapsed().as_secs();
+                *t = Text::new(format!("Cargando ruta… ({secs}s)"));
             }
         }
         Err(TryRecvError::Disconnected) => {

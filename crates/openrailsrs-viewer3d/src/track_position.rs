@@ -34,7 +34,6 @@ use openrailsrs_track::TrackGraph;
 use crate::launch::{RunCorridorPath, run_corridor_half_width_m};
 use crate::terrain::{TerrainElevation, ground_y_at};
 use crate::track::{TrackScene, graph_to_world, graph_to_world_with_offset};
-use crate::train::graph_point_msts_world;
 use crate::world::{RouteFocus, RouteWorldOffset};
 
 /// Max XZ distance (m) between graph hint and TDB node pose for accepting an ID.
@@ -131,11 +130,11 @@ pub fn marker_render_world_from_msts_hint(
     focus: &RouteFocus,
 ) -> Vec3 {
     let _ = (terrain, scene); // retained for API; graph fallback already has terrain Y
-    if let Some(res) = resolver {
-        if let Some(pose) = snap_msts_to_tdb(res, msts_hint, tdb_snap_radius_m()) {
-            // Keep TDB Y — do not flatten with ground_y_at (#65 / #67).
-            return focus.to_render_surface(pose.position);
-        }
+    if let Some(res) = resolver
+        && let Some(pose) = snap_msts_to_tdb(res, msts_hint, tdb_snap_radius_m())
+    {
+        // Keep TDB Y — do not flatten with ground_y_at (#65 / #67).
+        return focus.to_render_surface(pose.position);
     }
     graph_render_fallback
 }
@@ -232,9 +231,14 @@ impl<'a> TrackPositionResolver<'a> {
         node_id.strip_prefix('n')?.parse().ok()
     }
 
-    /// Parse import edge id `eNNNN` → TDB vector node id.
+    /// Parse an imported vector, including its reverse travel edge `eNNNN_r`.
     pub fn parse_e_prefix_tdb_id(edge_id: &str) -> Option<u32> {
-        edge_id.trim().strip_prefix('e')?.parse().ok()
+        let edge = edge_id.trim();
+        edge.strip_suffix("_r")
+            .unwrap_or(edge)
+            .strip_prefix('e')?
+            .parse()
+            .ok()
     }
 
     /// Candidate TDB id from import alias, else `nNNNN` prefix.
@@ -263,44 +267,44 @@ impl<'a> TrackPositionResolver<'a> {
         let mut rejected_tdb_id = None;
         let absolute_hint = graph_hint.map(|h| h - route_offset);
 
-        if let Some(id) = self.candidate_tdb_id(node_id) {
-            if let Some(pose) = self.tdb_pose(id, chainage_m, absolute_hint) {
-                match absolute_hint {
-                    Some(hint) => {
-                        let delta =
-                            Vec2::new(hint.x - pose.position.x, hint.z - pose.position.z).length();
-                        id_delta_m = Some(delta);
-                        if delta <= TDB_ID_MAX_DELTA_M {
-                            let mut placed = pose;
-                            placed.position += route_offset;
-                            return GraphTdbResolution {
-                                method: GraphTdbMethod::IdValidated,
-                                tdb_node_id: Some(id),
-                                pose: Some(placed),
-                                id_delta_m,
-                                rejected_tdb_id: None,
-                            };
-                        }
-                        rejected_tdb_id = Some(id);
+        if let Some(id) = self.candidate_tdb_id(node_id)
+            && let Some(pose) = self.tdb_pose(id, chainage_m, absolute_hint)
+        {
+            match absolute_hint {
+                Some(hint) => {
+                    let delta =
+                        Vec2::new(hint.x - pose.position.x, hint.z - pose.position.z).length();
+                    id_delta_m = Some(delta);
+                    if delta <= TDB_ID_MAX_DELTA_M {
+                        let mut placed = pose;
+                        placed.position += route_offset;
+                        return GraphTdbResolution {
+                            method: GraphTdbMethod::IdValidated,
+                            tdb_node_id: Some(id),
+                            pose: Some(placed),
+                            id_delta_m,
+                            rejected_tdb_id: None,
+                        };
                     }
-                    // Without a spatial hint the numeric ID alone is not trusted.
-                    None => {
-                        rejected_tdb_id = Some(id);
-                    }
+                    rejected_tdb_id = Some(id);
+                }
+                // Without a spatial hint the numeric ID alone is not trusted.
+                None => {
+                    rejected_tdb_id = Some(id);
                 }
             }
         }
 
-        if let Some(hint) = graph_hint {
-            if let Some(pose) = snap_msts_to_tdb(self, hint, snap_radius_m) {
-                return GraphTdbResolution {
-                    method: GraphTdbMethod::Nearest,
-                    tdb_node_id: None,
-                    pose: Some(pose),
-                    id_delta_m,
-                    rejected_tdb_id,
-                };
-            }
+        if let Some(hint) = graph_hint
+            && let Some(pose) = snap_msts_to_tdb(self, hint, snap_radius_m)
+        {
+            return GraphTdbResolution {
+                method: GraphTdbMethod::Nearest,
+                tdb_node_id: None,
+                pose: Some(pose),
+                id_delta_m,
+                rejected_tdb_id,
+            };
         }
 
         GraphTdbResolution {
@@ -582,16 +586,16 @@ pub fn marker_render_world_on_edge(
     terrain: Option<&TerrainElevation>,
     focus: &RouteFocus,
 ) -> Option<(Vec3, f32)> {
-    let (msts, graph_yaw) =
-        graph_point_msts_world(graph, edge_id, pos_on_edge_m, terrain, scene, offset.delta)?;
-    let graph_render = msts_to_render_surface(msts, terrain, scene, focus);
-    let render =
-        marker_render_world_from_msts_hint(msts, resolver, graph_render, terrain, scene, focus);
-    let yaw = resolver
-        .and_then(|res| snap_msts_to_tdb(res, msts, tdb_snap_radius_m()))
-        .map(|p| -p.yaw_deg.to_radians())
-        .unwrap_or(graph_yaw);
-    Some((render, yaw))
+    vehicle_position_yaw_on_graph_edge(
+        graph,
+        edge_id,
+        pos_on_edge_m,
+        resolver,
+        scene,
+        offset.delta,
+        focus,
+        terrain,
+    )
 }
 
 /// Planar graph point on an edge (Bevy XZ, Y=0) without terrain or route offset.
@@ -620,7 +624,7 @@ fn tdb_chainage_for_graph_edge(
     edge_id: &str,
     pos_on_edge_m: f64,
     tdb_node_id: u32,
-) -> Option<f64> {
+) -> Option<(f64, bool)> {
     let edge = graph.edge(edge_id.trim())?;
     let len = edge.length_m.max(0.0);
     let pos = pos_on_edge_m.clamp(0.0, len);
@@ -641,9 +645,9 @@ fn tdb_chainage_for_graph_edge(
         return None;
     }
     if reverse + 1.0 < forward {
-        Some((len - pos).clamp(0.0, len))
+        Some(((len - pos).clamp(0.0, len), true))
     } else {
-        Some(pos)
+        Some((pos, false))
     }
 }
 
@@ -678,19 +682,21 @@ pub fn vehicle_pose_on_graph_edge(
     terrain: Option<&TerrainElevation>,
 ) -> Option<(Vec3, Quat)> {
     if let Some(res) = resolver {
-        if let Some(tdb_id) = TrackPositionResolver::parse_e_prefix_tdb_id(edge_id) {
-            if let Some(chainage) =
+        if let Some(tdb_id) = TrackPositionResolver::parse_e_prefix_tdb_id(edge_id)
+            && let Some((chainage, reversed)) =
                 tdb_chainage_for_graph_edge(res, graph, edge_id, pos_on_edge_m, tdb_id)
-            {
-                let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
-                if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
-                    let placed = pose.position + route_offset;
-                    // Keep TDB Y — do not flatten with ground_y_at (#67).
-                    return Some((
-                        focus.to_render_surface(placed),
-                        vehicle_rotation_from_track_pose(&pose),
-                    ));
-                }
+        {
+            let near = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m);
+            if let Some(pose) = res.tdb_pose(tdb_id, chainage, near) {
+                let placed = pose.position + route_offset;
+                // Keep TDB Y — do not flatten with ground_y_at (#67).
+                let rotation = vehicle_rotation_from_track_pose(&pose);
+                let rotation = if reversed {
+                    rotation * Quat::from_rotation_y(std::f32::consts::PI)
+                } else {
+                    rotation
+                };
+                return Some((focus.to_render_surface(placed), rotation));
             }
         }
         if let Some(planar) = graph_edge_planar_msts(graph, edge_id, pos_on_edge_m) {
@@ -930,10 +936,10 @@ fn build_graph_corridor_waypoints(
             .ok_or_else(|| format!("missing node {}", edge.to.0))?;
         let mut a = graph_to_world(from.x_m, from.y_m) + route_delta;
         let mut b = graph_to_world(to.x_m, to.y_m) + route_delta;
-        if let Some(last) = waypoints.last() {
-            if last.msts_hint.distance_squared(b) < last.msts_hint.distance_squared(a) {
-                std::mem::swap(&mut a, &mut b);
-            }
+        if let Some(last) = waypoints.last()
+            && last.msts_hint.distance_squared(b) < last.msts_hint.distance_squared(a)
+        {
+            std::mem::swap(&mut a, &mut b);
         }
         let push = |wps: &mut Vec<CorridorWaypoint>, msts: Vec3, node_id: Option<String>| {
             if wps
@@ -1360,9 +1366,12 @@ mod tests {
         );
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("e2"), Some(2));
         assert_eq!(TrackPositionResolver::parse_e_prefix_tdb_id("n2"), None);
-        // Reverse import edges must not parse as TDB vector ids.
         assert_eq!(
             TrackPositionResolver::parse_e_prefix_tdb_id("e17466_r"),
+            Some(17466)
+        );
+        assert_eq!(
+            TrackPositionResolver::parse_e_prefix_tdb_id("e2_wrong"),
             None
         );
     }
@@ -1521,6 +1530,39 @@ mod tests {
             render.y > 5.0,
             "pose must not collapse to terrain height_origin (y={})",
             render.y
+        );
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("e2_r".into()),
+                from: NodeId("n_to".into()),
+                to: NodeId("n_from".into()),
+                length_m: len,
+                speed_limit_mps: 30.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let native = resolver.tdb_pose(2, 30.0, None).unwrap();
+        let (reverse_position, reverse_rotation) = vehicle_pose_on_graph_edge(
+            &graph,
+            "e2_r",
+            len - 30.0,
+            Some(&resolver),
+            &scene,
+            Vec3::ZERO,
+            &focus,
+            None,
+        )
+        .unwrap();
+        assert!((reverse_position - focus.to_render_surface(native.position)).length() < 0.2);
+        assert!(
+            (reverse_rotation * Vec3::X + vehicle_rotation_from_track_pose(&native) * Vec3::X)
+                .length()
+                < 1e-4
+        );
+        assert!(
+            (reverse_rotation * Vec3::Y - vehicle_rotation_from_track_pose(&native) * Vec3::Y)
+                .length()
+                < 1e-4
         );
     }
 

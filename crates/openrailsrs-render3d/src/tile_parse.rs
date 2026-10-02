@@ -88,10 +88,10 @@ pub fn parse_tiles_for_load(req: TileParseRequest) -> Result<ParsedTiles, String
         load_diag.merge_from(&snap.diag);
         match tile_entry_from_snapshot(&snap, world_offset, TrackRibbon::default()) {
             Some(mut entry) => {
-                if tdb_chords.is_none() {
-                    if let Some(g) = req.graph.as_ref() {
-                        entry.track = track::build_track_ribbon(g, tx, tz, &entry.geometry.height);
-                    }
+                if tdb_chords.is_none()
+                    && let Some(g) = req.graph.as_ref()
+                {
+                    entry.track = track::build_track_ribbon(g, tx, tz, &entry.geometry.height);
                 }
                 entries.push(entry);
             }

@@ -496,10 +496,9 @@ fn read_distance_down_path(route_dir: &Path, service_id: &str) -> Option<f64> {
     for &id in candidates {
         let srv_path = route_dir.join("SERVICES").join(format!("{id}.srv"));
         if let Ok(text) = openrailsrs_formats::encoding::read_msts_file_case_insensitive(&srv_path)
+            && let Some(dist) = parse_first_distance_down_path(&text)
         {
-            if let Some(dist) = parse_first_distance_down_path(&text) {
-                return Some(dist);
-            }
+            return Some(dist);
         }
     }
     None
@@ -541,10 +540,10 @@ fn resolve_player_pat(route_dir: &Path, activity: &ActivityFile) -> PathBuf {
 }
 
 fn service_id_for_player(activity: &ActivityFile) -> Option<String> {
-    if let Some(id) = &activity.player_service_id {
-        if !id.trim().is_empty() {
-            return Some(id.trim().to_string());
-        }
+    if let Some(id) = &activity.player_service_id
+        && !id.trim().is_empty()
+    {
+        return Some(id.trim().to_string());
     }
     let path = activity.player_path.trim();
     if path.is_empty() {

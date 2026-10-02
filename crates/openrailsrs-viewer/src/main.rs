@@ -474,31 +474,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // ── Draw signals ─────────────────────────────────────────────────
         for sig in graph.signals() {
-            if let Some(edge) = graph.edge(&sig.edge_id) {
-                if let (Some(a), Some(b)) = (graph.node(&edge.from.0), graph.node(&edge.to.0)) {
-                    let frac = if edge.length_m > 0.0 {
-                        (sig.position_m / edge.length_m).clamp(0.0, 1.0)
-                    } else {
-                        0.0
-                    };
-                    let x_m = a.x_m + frac * (b.x_m - a.x_m);
-                    let y_m = a.y_m + frac * (b.y_m - a.y_m);
-                    let (px, py) = vp.world_to_px(x_m, y_m);
-                    let col = match sig.aspect {
-                        SignalAspect::Stop => COL_SIG_STOP,
-                        SignalAspect::Caution => COL_SIG_CAUTION,
-                        SignalAspect::Clear => COL_SIG_CLEAR,
-                    };
-                    // Outer ring (black) + inner diamond.
-                    draw_diamond(&mut buffer, px, py, 7, 0x00_00_00_00);
-                    draw_diamond(&mut buffer, px, py, 5, col);
-                    // Signal pole (vertical line down).
-                    for dy in 1..=10 {
-                        set_pixel(&mut buffer, px, py + dy, 0x00_88_88_88);
-                    }
-                    // Label above.
-                    draw_str(&mut buffer, &sig.id, px + 7, py - 12, col);
+            if let Some(edge) = graph.edge(&sig.edge_id)
+                && let (Some(a), Some(b)) = (graph.node(&edge.from.0), graph.node(&edge.to.0))
+            {
+                let frac = if edge.length_m > 0.0 {
+                    (sig.position_m / edge.length_m).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let x_m = a.x_m + frac * (b.x_m - a.x_m);
+                let y_m = a.y_m + frac * (b.y_m - a.y_m);
+                let (px, py) = vp.world_to_px(x_m, y_m);
+                let col = match sig.aspect {
+                    SignalAspect::Stop => COL_SIG_STOP,
+                    SignalAspect::Caution => COL_SIG_CAUTION,
+                    SignalAspect::Clear => COL_SIG_CLEAR,
+                };
+                // Outer ring (black) + inner diamond.
+                draw_diamond(&mut buffer, px, py, 7, 0x00_00_00_00);
+                draw_diamond(&mut buffer, px, py, 5, col);
+                // Signal pole (vertical line down).
+                for dy in 1..=10 {
+                    set_pixel(&mut buffer, px, py + dy, 0x00_88_88_88);
                 }
+                // Label above.
+                draw_str(&mut buffer, &sig.id, px + 7, py - 12, col);
             }
         }
 

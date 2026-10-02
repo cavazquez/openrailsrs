@@ -255,8 +255,8 @@ fn build_hud_replay(
         ) {
             vel_kmh = v * 3.6;
         }
-    } else if let Some(track) = replay.tracks.first() {
-        if let Some((_, _, v)) = pose_at_time(
+    } else if let Some(track) = replay.tracks.first()
+        && let Some((_, _, v)) = pose_at_time(
             &scene.graph,
             &track.rows,
             replay.t_sim,
@@ -264,9 +264,9 @@ fn build_hud_replay(
             scene,
             world_offset,
             focus,
-        ) {
-            vel_kmh = v * 3.6;
-        }
+        )
+    {
+        vel_kmh = v * 3.6;
     }
 
     let progress = if replay.max_t > 0.0 {
@@ -506,11 +506,11 @@ pub fn build_hud_content_live(
         live.session.driver_brake * 100.0,
         live.session.speed_mul,
     );
-    if follow == CameraFollowMode::DriverCam {
-        if let Some(diag) = cab_render_diag {
-            row2.push_str("  |  ");
-            row2.push_str(diag);
-        }
+    if follow == CameraFollowMode::DriverCam
+        && let Some(diag) = cab_render_diag
+    {
+        row2.push_str("  |  ");
+        row2.push_str(diag);
     }
     HudContent {
         row1: format!(
@@ -664,10 +664,10 @@ pub(crate) fn update_hud(
                 text.0.clear();
                 text.0.push_str(&content.controls);
             }
-        } else if fill.is_some() {
-            if let Some(node) = node.as_mut() {
-                node.width = Val::Percent(content.progress * 100.0);
-            }
+        } else if fill.is_some()
+            && let Some(node) = node.as_mut()
+        {
+            node.width = Val::Percent(content.progress * 100.0);
         }
     }
 }

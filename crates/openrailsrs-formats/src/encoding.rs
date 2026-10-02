@@ -194,7 +194,7 @@ fn collapse_utf16le_pairs(payload: &[u8]) -> Vec<u8> {
 /// True when `bytes` looks like UTF-16-LE ASCII without a BOM (`J\0I\0N\0X`, etc.).
 fn is_utf16le_interleaved_ascii(bytes: &[u8]) -> bool {
     bytes.len() >= 4
-        && bytes.len() % 2 == 0
+        && bytes.len().is_multiple_of(2)
         && bytes[1] == 0
         && bytes[3] == 0
         && bytes.chunks_exact(2).take(8).all(|pair| pair[1] == 0)

@@ -84,10 +84,10 @@ pub fn should_draw_wire_for(
         return false;
     }
     if obj.kind == "TrackObj" {
-        if let Some(idx) = obj.section_idx {
-            if assets.tsection().is_road_shape(idx) {
-                return false;
-            }
+        if let Some(idx) = obj.section_idx
+            && assets.tsection().is_road_shape(idx)
+        {
+            return false;
         }
         if obj
             .shape_file

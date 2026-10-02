@@ -315,103 +315,101 @@ pub fn spawn_train_markers(
                             .shape_file
                             .as_deref()
                             .filter(|s| !s.eq_ignore_ascii_case("test.s"))
-                        {
-                            if let Some(shape_path) =
+                            && let Some(shape_path) =
                                 resolve_shape_path_in_dirs(&shape_dirs, shape_name)
-                            {
-                                let shape_path_key = shape_path.clone();
-                                let (asset, shape_file) = shape_cache
-                                    .entry(shape_path_key)
-                                    .or_insert_with(|| {
-                                        load_vehicle_shape_assets(
-                                            &shape_path,
-                                            &assets.route_dir,
-                                            &mut meshes,
-                                            &mut images,
-                                            &mut materials,
-                                            &mut texture_cache,
-                                            color,
-                                        )
-                                    })
-                                    .clone();
-                                let wheel_radius = meshes
-                                    .get(&asset.combined_mesh)
-                                    .map(|m| {
-                                        m.attribute(Mesh::ATTRIBUTE_POSITION)
-                                            .and_then(|a| a.as_float3())
-                                            .map(|pos| {
-                                                let mut min_y = f32::MAX;
-                                                let mut max_y = f32::MIN;
-                                                for p in pos {
-                                                    min_y = min_y.min(p[1]);
-                                                    max_y = max_y.max(p[1]);
-                                                }
-                                                ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
-                                            })
-                                            .unwrap_or(
-                                                crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M,
-                                            )
-                                    })
-                                    .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
-                                let local = meshes
-                                    .get(&asset.combined_mesh)
-                                    .map(|m| {
-                                        vehicle_shape_local_transform(
-                                            m,
-                                            vehicle.offset_m,
-                                            vehicle.length_m,
-                                            vehicle.flipped,
-                                        )
-                                    })
-                                    .unwrap_or_else(|| {
-                                        vehicle_local_transform(
-                                            &scene,
-                                            vehicle.offset_m,
-                                            vehicle.length_m,
-                                        )
-                                    });
-                                train
-                                    .spawn((
-                                        local,
-                                        Visibility::default(),
-                                        crate::rolling_stock_anim::TrainCarTrackOffset {
-                                            offset_m: vehicle.offset_m,
-                                            track_index: i,
-                                            flipped: vehicle.flipped,
-                                        },
-                                        Name::new(format!(
-                                            "train:{}:car:{vi}:{}",
-                                            track.label, vehicle.name
-                                        )),
-                                    ))
-                                    .with_children(|car| {
-                                        for (pi, part) in asset.parts.iter().enumerate() {
-                                            // Opaque exterior casts onto terrain (#41); glass/blend skip.
-                                            let mut part_entity = car.spawn((
-                                                Mesh3d(part.mesh.clone()),
-                                                MeshMaterial3d(part.material.clone()),
-                                                Transform::default(),
-                                                Name::new(format!(
-                                                    "train:{}:car:{vi}:{}:part:{pi}:{}",
-                                                    track.label, vehicle.name, part.prim_state_idx
-                                                )),
-                                            ));
-                                            if !train_part_casts_shadow(part.is_transparent) {
-                                                part_entity.insert(NotShadowCaster);
+                        {
+                            let shape_path_key = shape_path.clone();
+                            let (asset, shape_file) = shape_cache
+                                .entry(shape_path_key)
+                                .or_insert_with(|| {
+                                    load_vehicle_shape_assets(
+                                        &shape_path,
+                                        &assets.route_dir,
+                                        &mut meshes,
+                                        &mut images,
+                                        &mut materials,
+                                        &mut texture_cache,
+                                        color,
+                                    )
+                                })
+                                .clone();
+                            let wheel_radius = meshes
+                                .get(&asset.combined_mesh)
+                                .map(|m| {
+                                    m.attribute(Mesh::ATTRIBUTE_POSITION)
+                                        .and_then(|a| a.as_float3())
+                                        .map(|pos| {
+                                            let mut min_y = f32::MAX;
+                                            let mut max_y = f32::MIN;
+                                            for p in pos {
+                                                min_y = min_y.min(p[1]);
+                                                max_y = max_y.max(p[1]);
                                             }
-                                            if let Some(shape) = shape_file.as_ref() {
-                                                crate::rolling_stock_anim::insert_part_anim(
-                                                    &mut part_entity,
-                                                    shape,
-                                                    part.prim_state_idx,
-                                                    wheel_radius,
-                                                );
-                                            }
+                                            ((max_y - min_y) * 0.25).clamp(0.25, 0.75)
+                                        })
+                                        .unwrap_or(
+                                            crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M,
+                                        )
+                                })
+                                .unwrap_or(crate::rolling_stock_anim::DEFAULT_WHEEL_RADIUS_M);
+                            let local = meshes
+                                .get(&asset.combined_mesh)
+                                .map(|m| {
+                                    vehicle_shape_local_transform(
+                                        m,
+                                        vehicle.offset_m,
+                                        vehicle.length_m,
+                                        vehicle.flipped,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    vehicle_local_transform(
+                                        &scene,
+                                        vehicle.offset_m,
+                                        vehicle.length_m,
+                                    )
+                                });
+                            train
+                                .spawn((
+                                    local,
+                                    Visibility::default(),
+                                    crate::rolling_stock_anim::TrainCarTrackOffset {
+                                        offset_m: vehicle.offset_m,
+                                        track_index: i,
+                                        flipped: vehicle.flipped,
+                                    },
+                                    Name::new(format!(
+                                        "train:{}:car:{vi}:{}",
+                                        track.label, vehicle.name
+                                    )),
+                                ))
+                                .with_children(|car| {
+                                    for (pi, part) in asset.parts.iter().enumerate() {
+                                        // Opaque exterior casts onto terrain (#41); glass/blend skip.
+                                        let mut part_entity = car.spawn((
+                                            Mesh3d(part.mesh.clone()),
+                                            MeshMaterial3d(part.material.clone()),
+                                            Transform::default(),
+                                            Name::new(format!(
+                                                "train:{}:car:{vi}:{}:part:{pi}:{}",
+                                                track.label, vehicle.name, part.prim_state_idx
+                                            )),
+                                        ));
+                                        if !train_part_casts_shadow(part.is_transparent) {
+                                            part_entity.insert(NotShadowCaster);
                                         }
-                                    });
-                                shape_mesh_count += asset.parts.len();
-                                continue;
-                            }
+                                        if let Some(shape) = shape_file.as_ref() {
+                                            crate::rolling_stock_anim::insert_part_anim(
+                                                &mut part_entity,
+                                                shape,
+                                                part.prim_state_idx,
+                                                wheel_radius,
+                                            );
+                                        }
+                                    }
+                                });
+                            shape_mesh_count += asset.parts.len();
+                            continue;
                         }
 
                         let local =

@@ -110,15 +110,15 @@ pub fn apply_scenario_runtime_overlay(scenario: &mut ScenarioFile, overlay: &Sce
     }
     if let Some(sim) = &overlay.simulation {
         // Scenario.toml wins when it already sets a scale (e.g. brake-coast identity 121 PSI).
-        if scenario.simulation.driver_brake_full_scale_psi.is_none() {
-            if let Some(v) = sim.driver_brake_full_scale_psi {
-                scenario.simulation.driver_brake_full_scale_psi = Some(v);
-            }
+        if scenario.simulation.driver_brake_full_scale_psi.is_none()
+            && let Some(v) = sim.driver_brake_full_scale_psi
+        {
+            scenario.simulation.driver_brake_full_scale_psi = Some(v);
         }
-        if scenario.simulation.brake_cylinder_full_scale_psi.is_none() {
-            if let Some(v) = sim.brake_cylinder_full_scale_psi {
-                scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
-            }
+        if scenario.simulation.brake_cylinder_full_scale_psi.is_none()
+            && let Some(v) = sim.brake_cylinder_full_scale_psi
+        {
+            scenario.simulation.brake_cylinder_full_scale_psi = Some(v);
         }
     }
 }

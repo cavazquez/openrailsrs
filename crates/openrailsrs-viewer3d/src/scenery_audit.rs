@@ -129,10 +129,10 @@ impl ShapeAuditSummary {
                     .iter()
                     .enumerate()
                     .min_by_key(|(_, s)| s.issues.len());
-                if let Some((idx, existing)) = replace {
-                    if sample.issues.len() > existing.issues.len() {
-                        self.worst[idx] = sample;
-                    }
+                if let Some((idx, existing)) = replace
+                    && sample.issues.len() > existing.issues.len()
+                {
+                    self.worst[idx] = sample;
                 }
             }
         }

@@ -374,10 +374,10 @@ fn scan_includes(text: &str, base: &Path) -> Vec<PathBuf> {
             continue;
         };
         let open = after_tag + rel_paren;
-        if let Ok(Ast::List(items)) = parse_first(&text[open..]) {
-            if let Some(rel) = items.first().and_then(ast_to_include_path) {
-                paths.push(base.join(rel.trim()));
-            }
+        if let Ok(Ast::List(items)) = parse_first(&text[open..])
+            && let Some(rel) = items.first().and_then(ast_to_include_path)
+        {
+            paths.push(base.join(rel.trim()));
         }
         pos = open + 1;
     }
@@ -448,10 +448,10 @@ fn scan_tagged_entries(text: &str, tag: &str, mut apply: impl FnMut(&[Ast])) {
             continue;
         }
         let open = after_tag + rel_paren;
-        if let Ok(Ast::List(items)) = parse_first(&text[open..]) {
-            if matches_head(&items, tag) || items.first().and_then(ast_to_u32).is_some() {
-                apply(&items);
-            }
+        if let Ok(Ast::List(items)) = parse_first(&text[open..])
+            && (matches_head(&items, tag) || items.first().and_then(ast_to_u32).is_some())
+        {
+            apply(&items);
         }
         pos = open + 1;
     }
@@ -480,21 +480,21 @@ fn discover_route_tsection(route_dir: &Path) -> Option<PathBuf> {
 
 fn discover_global_tsection(route_dir: &Path) -> Option<PathBuf> {
     let mut candidates = Vec::new();
-    if let Some(name) = route_dir.file_name() {
-        if let Some(content) = route_dir.parent().and_then(|p| p.parent()) {
-            candidates.push(content.join(name).join("GLOBAL/tsection.dat"));
-            candidates.push(content.join(name).join("Global/tsection.dat"));
-        }
+    if let Some(name) = route_dir.file_name()
+        && let Some(content) = route_dir.parent().and_then(|p| p.parent())
+    {
+        candidates.push(content.join(name).join("GLOBAL/tsection.dat"));
+        candidates.push(content.join(name).join("Global/tsection.dat"));
     }
     candidates.push(route_dir.join("GLOBAL/tsection.dat"));
     candidates.push(route_dir.join("Global/tsection.dat"));
     candidates.push(route_dir.join("../GLOBAL/tsection.dat"));
     candidates.push(route_dir.join("../../GLOBAL/tsection.dat"));
     for candidate in candidates {
-        if let Some(resolved) = resolve_path_case_insensitive(&candidate) {
-            if resolved.is_file() {
-                return Some(resolved);
-            }
+        if let Some(resolved) = resolve_path_case_insensitive(&candidate)
+            && resolved.is_file()
+        {
+            return Some(resolved);
         }
     }
     None
@@ -516,12 +516,11 @@ fn ast_to_include_path(ast: &Ast) -> Option<String> {
 fn collect_sections(items: &[Ast], out: &mut HashMap<u32, TrackSectionDef>) {
     if matches_head(items, "TrackSections") {
         for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "TrackSection") {
-                    if let Some(def) = parse_track_section(sub) {
-                        out.insert(def.0, def.1);
-                    }
-                }
+            if let Ast::List(sub) = item
+                && matches_head(sub, "TrackSection")
+                && let Some(def) = parse_track_section(sub)
+            {
+                out.insert(def.0, def.1);
             }
         }
         return;
@@ -536,12 +535,11 @@ fn collect_sections(items: &[Ast], out: &mut HashMap<u32, TrackSectionDef>) {
 fn collect_shapes(items: &[Ast], out: &mut HashMap<u32, TrackShapeDef>) {
     if matches_head(items, "TrackShapes") {
         for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "TrackShape") {
-                    if let Some(def) = parse_track_shape(sub) {
-                        insert_track_shape(out, def.0, def.1);
-                    }
-                }
+            if let Ast::List(sub) = item
+                && matches_head(sub, "TrackShape")
+                && let Some(def) = parse_track_shape(sub)
+            {
+                insert_track_shape(out, def.0, def.1);
             }
         }
         return;
@@ -679,20 +677,20 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
             }
             Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("SectionIdx") => {
                 i += 1;
-                if let Some(Ast::List(sub)) = items.get(i) {
-                    if let Some(path) = parse_section_idx_from_flat(sub) {
-                        paths.push(path);
-                    }
+                if let Some(Ast::List(sub)) = items.get(i)
+                    && let Some(path) = parse_section_idx_from_flat(sub)
+                {
+                    paths.push(path);
                 }
             }
             _ => {}
         }
         i += 1;
     }
-    if !is_shape_file_name(&file_name) {
-        if let Some(found) = find_shape_file_name(items, body_start) {
-            file_name = found;
-        }
+    if !is_shape_file_name(&file_name)
+        && let Some(found) = find_shape_file_name(items, body_start)
+    {
+        file_name = found;
     }
     if !is_shape_file_name(&file_name) {
         return None;

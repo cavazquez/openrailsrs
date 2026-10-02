@@ -40,10 +40,10 @@ pub fn build_reverse_throttle_rpm_tab(throttle_rpm_tab: &[(f64, f64)]) -> Vec<(f
     }
     let mut pairs: Vec<(f64, f64)> = throttle_rpm_tab.iter().map(|(t, r)| (*r, *t)).collect();
     pairs.sort_by(|a, b| a.0.total_cmp(&b.0));
-    if pairs.first().map(|(r, _)| *r > 0.0).unwrap_or(true) {
-        if let Some((_, idle_rpm)) = throttle_rpm_tab.first() {
-            pairs.insert(0, (*idle_rpm, 0.0));
-        }
+    if pairs.first().map(|(r, _)| *r > 0.0).unwrap_or(true)
+        && let Some((_, idle_rpm)) = throttle_rpm_tab.first()
+    {
+        pairs.insert(0, (*idle_rpm, 0.0));
     }
     pairs
 }

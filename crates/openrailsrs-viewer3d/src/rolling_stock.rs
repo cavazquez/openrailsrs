@@ -56,6 +56,14 @@ impl TrainConsistScene {
                 dirs.push(scenario_dir.to_path_buf());
             }
             dirs.extend(self.trainset_shape_dirs.iter().cloned());
+            if let Some(relative) = &self.primary_consist_rel {
+                let path = scenario_dir.join(relative);
+                let root = consist_asset_root(&path);
+                if root != scenario_dir {
+                    dirs.push(root.to_path_buf());
+                    dirs.extend(collect_trainset_shape_dirs(root));
+                }
+            }
         }
         dirs
     }
@@ -67,11 +75,9 @@ impl TrainConsistScene {
 }
 
 fn collect_trainset_shape_dirs(scenario_dir: &Path) -> Vec<PathBuf> {
-    let trains = scenario_dir.join("trains");
-    let Ok(entries) = std::fs::read_dir(trains) else {
-        return Vec::new();
-    };
-    entries
+    let mut dirs: Vec<_> = [scenario_dir.join("trains"), scenario_dir.join("TRAINSET")]
+        .into_iter()
+        .flat_map(|trains| std::fs::read_dir(trains).into_iter().flatten())
         .flatten()
         .filter_map(|entry| {
             // Return the vehicle ROOT directory (not the SHAPES subdir) so that
@@ -81,7 +87,10 @@ fn collect_trainset_shape_dirs(scenario_dir: &Path) -> Vec<PathBuf> {
             let shapes = path.join("SHAPES");
             shapes.is_dir().then_some(path)
         })
-        .collect()
+        .collect();
+    dirs.sort();
+    dirs.dedup();
+    dirs
 }
 
 /// Build vehicle visuals from a parsed consist.
@@ -153,6 +162,19 @@ pub fn longitudinal_offsets_m(lengths: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relative_consist_in_another_scenario_keeps_its_trainset_assets() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples");
+        let mut scene = TrainConsistScene::default();
+        scene.set_scenario_dir(root.join("chiltern_local"));
+        scene.primary_consist_rel = Some("../chiltern/consists/birmingham_pullman.con".into());
+        let dirs = scene.shape_search_dirs(&root.join("chiltern_local"));
+        assert!(
+            dirs.iter().any(|dir| dir.join("SHAPES").is_dir()),
+            "physics and rendering must resolve the same relative consist root"
+        );
+    }
 
     #[test]
     fn trainset_shape_dirs_return_vehicle_roots_not_shapes_subdir() {

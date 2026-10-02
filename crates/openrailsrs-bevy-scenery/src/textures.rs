@@ -241,10 +241,10 @@ pub fn texture_search_dirs_for_shape(
         });
         if in_asset_subdir {
             push(parent.to_path_buf());
-            if let Some(asset_root) = parent.parent() {
-                if asset_root != route_dir {
-                    push(asset_root.to_path_buf());
-                }
+            if let Some(asset_root) = parent.parent()
+                && asset_root != route_dir
+            {
+                push(asset_root.to_path_buf());
             }
         }
     }
@@ -506,10 +506,10 @@ fn texture_name_candidates(file_name: &str) -> Vec<String> {
             }
         }
     }
-    if stem.contains('_') {
-        if let Some((_p, rest)) = stem.split_once('_') {
-            push(&mut out, format!("{rest}.{ext}"));
-        }
+    if stem.contains('_')
+        && let Some((_p, rest)) = stem.split_once('_')
+    {
+        push(&mut out, format!("{rest}.{ext}"));
     }
     out
 }
@@ -603,10 +603,10 @@ pub fn resolve_shape_path_with_index(
     file_name: &str,
 ) -> Option<PathBuf> {
     let base = shape_file_basename(file_name);
-    if let Some(path) = index.get(&base.to_ascii_lowercase()) {
-        if path.is_file() {
-            return Some(path.clone());
-        }
+    if let Some(path) = index.get(&base.to_ascii_lowercase())
+        && path.is_file()
+    {
+        return Some(path.clone());
     }
     resolve_shape_path_in_dirs(dirs, file_name)
 }

@@ -103,10 +103,10 @@ fn extract_path_name(ast: &Ast) -> Option<String> {
     for item in items {
         let Ast::List(sub) = item else { continue };
         if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("TrPathName") {
-                if let Some(Ast::Atom(a)) = sub.get(1) {
-                    return atom_to_string(a);
-                }
+            if tag.eq_ignore_ascii_case("TrPathName")
+                && let Some(Ast::Atom(a)) = sub.get(1)
+            {
+                return atom_to_string(a);
             }
             if let Some(n) = extract_path_name(item) {
                 return Some(n);
@@ -127,11 +127,12 @@ fn collect_pdps(ast: &Ast, out: &mut Vec<PathDataPoint>) {
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
         // TrPathPDP <node_id> <junction_flag>  (compact / fixture format with real TDB ids)
-        if head.eq_ignore_ascii_case("TrPathPDP") && items.len() >= 3 {
-            if let Some(pdp) = pdp_from_tr_path_pdp(items.get(1), items.get(2)) {
-                out.push(pdp);
-                return;
-            }
+        if head.eq_ignore_ascii_case("TrPathPDP")
+            && items.len() >= 3
+            && let Some(pdp) = pdp_from_tr_path_pdp(items.get(1), items.get(2))
+        {
+            out.push(pdp);
+            return;
         }
         // TrackPDP tileX tileZ x y z junction_flag invalid_flag  (native MSTS / OR PathFile.cs)
         if head.eq_ignore_ascii_case("TrackPDP") && items.len() >= 8 {

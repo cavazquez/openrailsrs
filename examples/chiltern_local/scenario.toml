@@ -1,0 +1,67 @@
+[scenario]
+name = "Chiltern local: Northolt Park → West Ruislip"
+description = "Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas."
+start_time_s = 35700
+
+[route]
+path = "."
+start = "n95"
+destination = "n105"
+start_offset_m = 264.48412978746114
+assume_signals_clear = false
+waypoints = ["n95", "n97", "n99", "n101", "n103", "n105"]
+
+[[route.stops]]
+node = "n97"
+name = "Northolt Park"
+offset_m = -3403.245530621014
+arrive_s = 0.0
+depart_s = 20.0
+dwell_s = 20.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n101"
+name = "South Ruislip"
+offset_m = -335.82113991194643
+arrive_s = 360.0
+depart_s = 390.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n105"
+name = "West Ruislip"
+offset_m = -27.668200043942594
+arrive_s = 720.0
+depart_s = 750.0
+dwell_s = 30.0
+passengers_on = 0
+passengers_off = 40
+
+[train]
+consist = "../chiltern/consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 2.0
+
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "pullman"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+brake_cylinder_full_scale_psi = 35.0
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

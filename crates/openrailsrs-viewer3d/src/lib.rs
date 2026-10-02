@@ -22,6 +22,7 @@ pub mod camera;
 pub mod capture;
 pub mod etcs;
 pub use openrailsrs_or_shader::coordinates;
+pub mod driving_hud;
 pub mod dyntrack;
 pub mod floating_origin;
 pub mod forest;
@@ -116,6 +117,8 @@ pub struct ViewerPlugin;
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(driving_hud::DrivingHudPlugin);
+        app.insert_resource(Time::<Fixed>::from_hz(60.0));
         use bevy::state::condition::in_state;
         use openrailsrs_bevy_scenery::ScenerySpawnSet;
 
@@ -325,7 +328,6 @@ impl Plugin for ViewerPlugin {
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
                     train::advance_replay_time.run_if(live::live_mode_inactive),
-                    live::advance_live_sim.run_if(live::live_mode_active),
                     live::live_audio_frame.run_if(live::live_mode_active),
                     signals::update_live_signal_markers.run_if(live::live_mode_active),
                     train::update_train_markers.run_if(live::live_mode_inactive),
@@ -405,12 +407,10 @@ impl Plugin for ViewerPlugin {
                 capture::capture_system.run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
-                Update,
-                live::live_autodrive
+                FixedUpdate,
+                live::advance_live_sim
                     .run_if(live::live_mode_active)
-                    .run_if(live::autodrive_enabled)
-                    .run_if(in_state(ViewerAppState::Playing))
-                    .before(live::advance_live_sim),
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,

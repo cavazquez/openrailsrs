@@ -50,10 +50,10 @@ fn parse_esd_int(text: &str, field: &str) -> u32 {
     };
     let rest = &tail[open + 1..];
     for token in rest.split(|c: char| !c.is_ascii_digit() && c != '-') {
-        if let Ok(v) = token.parse::<i64>() {
-            if v >= 0 {
-                return v as u32;
-            }
+        if let Ok(v) = token.parse::<i64>()
+            && v >= 0
+        {
+            return v as u32;
         }
     }
     0

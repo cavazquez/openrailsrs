@@ -154,17 +154,17 @@ fn parse_wagon_type(s: &str) -> OrtsWagonType {
 
 fn parse_size_dimensions(ast: &Ast, fields: &mut OrtsFrictionFields) {
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("Size") {
-                if items.len() >= 4 {
-                    fields.car_width_m = parse_length(items.get(1));
-                    fields.car_height_m = parse_length(items.get(3));
-                } else if let Some(crate::ast::Ast::List(dims)) = items.get(1) {
-                    if dims.len() >= 3 {
-                        fields.car_width_m = parse_length(dims.get(1));
-                        fields.car_height_m = parse_length(dims.get(2));
-                    }
-                }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("Size")
+        {
+            if items.len() >= 4 {
+                fields.car_width_m = parse_length(items.get(1));
+                fields.car_height_m = parse_length(items.get(3));
+            } else if let Some(crate::ast::Ast::List(dims)) = items.get(1)
+                && dims.len() >= 3
+            {
+                fields.car_width_m = parse_length(dims.get(1));
+                fields.car_height_m = parse_length(dims.get(2));
             }
         }
         None
@@ -181,12 +181,11 @@ fn parse_length(node: Option<&Ast>) -> Option<f64> {
 
 fn find_optional_u32(ast: &Ast, keys: &[&str]) -> Option<u32> {
     for key in keys {
-        if let Some(v) = find_list_value(ast, key) {
-            if let Some(n) = parse_scalar(v) {
-                if n >= 0.0 {
-                    return Some(n.round() as u32);
-                }
-            }
+        if let Some(v) = find_list_value(ast, key)
+            && let Some(n) = parse_scalar(v)
+            && n >= 0.0
+        {
+            return Some(n.round() as u32);
         }
     }
     None
@@ -194,10 +193,10 @@ fn find_optional_u32(ast: &Ast, keys: &[&str]) -> Option<u32> {
 
 fn find_optional_f64(ast: &Ast, keys: &[&str]) -> Option<f64> {
     for key in keys {
-        if let Some(v) = find_list_value(ast, key) {
-            if let Some(n) = parse_scalar(v) {
-                return Some(n);
-            }
+        if let Some(v) = find_list_value(ast, key)
+            && let Some(n) = parse_scalar(v)
+        {
+            return Some(n);
         }
     }
     None

@@ -1122,18 +1122,17 @@ pub fn cycle_follow_mode(
 
         // Ctrl+Shift+1 — CameraChange3DCabViewPoint
         if ctrl && shift && !alt {
-            if *follow == CameraFollowMode::DriverCam {
-                if let Some(ref mut cab) = driver_cab {
-                    if cab.cycle_eyepoint() {
-                        look.reset();
-                        viewer_log!(
-                            "openrailsrs-viewer3d: driver eyepoint {}/{} ({:?})",
-                            cab.eyepoint_index + 1,
-                            cab.eyepoints.len(),
-                            cab.active_slot()
-                        );
-                    }
-                }
+            if *follow == CameraFollowMode::DriverCam
+                && let Some(ref mut cab) = driver_cab
+                && cab.cycle_eyepoint()
+            {
+                look.reset();
+                viewer_log!(
+                    "openrailsrs-viewer3d: driver eyepoint {}/{} ({:?})",
+                    cab.eyepoint_index + 1,
+                    cab.eyepoints.len(),
+                    cab.active_slot()
+                );
             }
             return;
         }
@@ -2507,8 +2506,9 @@ mod tests {
         };
         let tf = driver_camera_transform_from_lead(&lead_global, &cab, DriverLookOffset::default());
         let cam_fwd = tf.forward().as_vec3();
-        // Converted MSTS cab forward is lead-local −Z.
-        let travel_fwd = lead_global.rotation().mul_vec3(Vec3::NEG_Z);
+        // The cab must look along the route's travel direction, including the
+        // shape's handedness conversion, rather than back through the consist.
+        let travel_fwd = train.rotation * Vec3::X;
         let cam_h = Vec3::new(cam_fwd.x, 0.0, cam_fwd.z).normalize();
         let travel_h = Vec3::new(travel_fwd.x, 0.0, travel_fwd.z).normalize();
         assert!(

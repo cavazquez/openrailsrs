@@ -321,10 +321,10 @@ fn resolve_player_consist(route_dir: &Path, activity: &ActivityFile) -> String {
 }
 
 fn service_id_for_player(activity: &ActivityFile) -> Option<String> {
-    if let Some(id) = &activity.player_service_id {
-        if !id.trim().is_empty() {
-            return Some(id.trim().to_string());
-        }
+    if let Some(id) = &activity.player_service_id
+        && !id.trim().is_empty()
+    {
+        return Some(id.trim().to_string());
     }
     let path = activity.player_path.trim();
     if path.is_empty() {
@@ -410,6 +410,8 @@ fn stop_from_object(obj: &ActivityObjectDef, node_id: &str, arrive: f64, depart:
             (obj.workers, 0u32)
         };
     StopDef {
+        name: None,
+        offset_m: 0.0,
         node: node_id.to_string(),
         arrive_s: arrive,
         depart_s: depart,
@@ -476,10 +478,10 @@ fn apply_sound_region_overrides(regions: &mut [SoundRegionDef], overrides: &[Sou
             if ov.volume > 0.0 {
                 region.base_volume = ov.volume.clamp(0.0, 1.0) as f32;
             }
-            if let Some(r) = ov.radius_m {
-                if r > 0.0 {
-                    region.radius_m = r;
-                }
+            if let Some(r) = ov.radius_m
+                && r > 0.0
+            {
+                region.radius_m = r;
             }
         }
     }

@@ -156,10 +156,10 @@ pub fn refine_trackobj_rotation(
 }
 
 fn load_tsection_catalog(route_dir: &Path) -> TSectionCatalog {
-    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir) {
-        if !catalog.shapes.is_empty() {
-            return catalog;
-        }
+    if let Ok(catalog) = TSectionCatalog::load_for_route(route_dir)
+        && !catalog.shapes.is_empty()
+    {
+        return catalog;
     }
     TSectionCatalog::default()
 }

@@ -83,10 +83,10 @@ pub fn resolve_world_tile_file(route_dir: &Path, tile_x: i32, tile_z: i32) -> Op
     let name = world_w_filename_from_tile_xz(tile_x, tile_z);
     for dir in world_subdirs(route_dir) {
         let candidate = dir.join(&name);
-        if let Some(resolved) = resolve_path_case_insensitive(&candidate) {
-            if resolved.is_file() {
-                return Some(resolved);
-            }
+        if let Some(resolved) = resolve_path_case_insensitive(&candidate)
+            && resolved.is_file()
+        {
+            return Some(resolved);
         }
         // Filename may differ only in case from the canonical stem/extension.
         if let Some(found) = find_file_case_insensitive(&dir, &name) {
@@ -111,10 +111,10 @@ pub fn resolve_hash_terrain_tile_file(
     for dir in tiles_subdirs(route_dir) {
         for name in &names {
             let candidate = dir.join(name);
-            if let Some(resolved) = resolve_path_case_insensitive(&candidate) {
-                if resolved.is_file() {
-                    return Some(resolved);
-                }
+            if let Some(resolved) = resolve_path_case_insensitive(&candidate)
+                && resolved.is_file()
+            {
+                return Some(resolved);
             }
             if let Some(found) = find_file_case_insensitive(&dir, name) {
                 return Some(found);

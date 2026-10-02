@@ -17,10 +17,10 @@ use openrailsrs_or_shader::coordinates::{
 /// matrix 0 translation is cleared before controllers run (OR `SharedShape` load, #94).
 pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
     let mut pose: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
-    if shape_zero_root_translation(shape) {
-        if let Some(root) = pose.get_mut(0) {
-            root.rows[3] = [0.0, 0.0, 0.0];
-        }
+    if shape_zero_root_translation(shape)
+        && let Some(root) = pose.get_mut(0)
+    {
+        root.rows[3] = [0.0, 0.0, 0.0];
     }
     let Some(anim) = shape.animations.first() else {
         return pose;

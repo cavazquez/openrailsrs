@@ -133,10 +133,10 @@ impl TrVectorSectionRecord {
             self.header_tile_x,
             self.header_tile_z,
         );
-        if let Some(r) = ref_tile {
-            if r.tile_x != self.start.tile_x || r.tile_z != self.start.tile_z {
-                push_point_tile_variants(&mut points, self.start, r.tile_x, r.tile_z);
-            }
+        if let Some(r) = ref_tile
+            && (r.tile_x != self.start.tile_x || r.tile_z != self.start.tile_z)
+        {
+            push_point_tile_variants(&mut points, self.start, r.tile_x, r.tile_z);
         }
         let mut out = Vec::new();
         let mut seen = std::collections::HashSet::new();
@@ -591,31 +591,30 @@ fn collect_nodes(ast: &Ast, out: &mut Vec<TrackDbNode>) {
             parse_track_nodes_children(track_nodes_body(items), out);
             return;
         }
-        if head.eq_ignore_ascii_case("TrackNode") && items.len() >= 3 {
-            if let Some(id) = parse_u32(&items[1]) {
-                if let Some(kind) = parse_node_kind(&items[2..]) {
-                    out.push(TrackDbNode {
-                        id,
-                        position: parse_node_position(&items[2..]),
-                        pin_refs: parse_tr_pins(&items[2..]),
-                        kind,
-                    });
-                    return;
-                }
-            }
+        if head.eq_ignore_ascii_case("TrackNode")
+            && items.len() >= 3
+            && let Some(id) = parse_u32(&items[1])
+            && let Some(kind) = parse_node_kind(&items[2..])
+        {
+            out.push(TrackDbNode {
+                id,
+                position: parse_node_position(&items[2..]),
+                pin_refs: parse_tr_pins(&items[2..]),
+                kind,
+            });
+            return;
         }
     }
 
     let mut skip_idx: Option<usize> = None;
     for i in 0..items.len().saturating_sub(1) {
-        if let Ast::Atom(Atom::Symbol(tag)) = &items[i] {
-            if tag.eq_ignore_ascii_case("TrackNodes") {
-                if let Ast::List(body) = &items[i + 1] {
-                    parse_track_nodes_children(body, out);
-                    skip_idx = Some(i + 1);
-                    break;
-                }
-            }
+        if let Ast::Atom(Atom::Symbol(tag)) = &items[i]
+            && tag.eq_ignore_ascii_case("TrackNodes")
+            && let Ast::List(body) = &items[i + 1]
+        {
+            parse_track_nodes_children(body, out);
+            skip_idx = Some(i + 1);
+            break;
         }
     }
 
@@ -628,10 +627,10 @@ fn collect_nodes(ast: &Ast, out: &mut Vec<TrackDbNode>) {
 }
 
 fn track_nodes_body(items: &[Ast]) -> &[Ast] {
-    if items.len() >= 2 {
-        if let Ast::List(inner) = &items[1] {
-            return inner.as_slice();
-        }
+    if items.len() >= 2
+        && let Ast::List(inner) = &items[1]
+    {
+        return inner.as_slice();
     }
     &items[1..]
 }
@@ -649,42 +648,37 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
             continue;
         }
 
-        if let Ast::Atom(Atom::Symbol(tag)) = &children[i] {
-            if tag.eq_ignore_ascii_case("TrackNode") {
-                if let Some(Ast::List(body)) = children.get(i + 1) {
-                    if let Some(id) = body.first().and_then(parse_u32) {
-                        if let Some(kind) = parse_node_kind(&body[1..]) {
-                            out.push(TrackDbNode {
-                                id,
-                                position: parse_node_position(&body[1..]),
-                                pin_refs: parse_tr_pins(&body[1..]),
-                                kind,
-                            });
-                            i += 2;
-                            continue;
-                        }
-                    }
-                }
-            }
+        if let Ast::Atom(Atom::Symbol(tag)) = &children[i]
+            && tag.eq_ignore_ascii_case("TrackNode")
+            && let Some(Ast::List(body)) = children.get(i + 1)
+            && let Some(id) = body.first().and_then(parse_u32)
+            && let Some(kind) = parse_node_kind(&body[1..])
+        {
+            out.push(TrackDbNode {
+                id,
+                position: parse_node_position(&body[1..]),
+                pin_refs: parse_tr_pins(&body[1..]),
+                kind,
+            });
+            i += 2;
+            continue;
         }
 
-        if let Ast::List(sub) = &children[i] {
-            if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-                if tag.eq_ignore_ascii_case("TrackNode") && sub.len() >= 3 {
-                    if let Some(id) = parse_u32(&sub[1]) {
-                        if let Some(kind) = parse_node_kind(&sub[2..]) {
-                            out.push(TrackDbNode {
-                                id,
-                                position: parse_node_position(&sub[2..]),
-                                pin_refs: parse_tr_pins(&sub[2..]),
-                                kind,
-                            });
-                            i += 1;
-                            continue;
-                        }
-                    }
-                }
-            }
+        if let Ast::List(sub) = &children[i]
+            && let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && tag.eq_ignore_ascii_case("TrackNode")
+            && sub.len() >= 3
+            && let Some(id) = parse_u32(&sub[1])
+            && let Some(kind) = parse_node_kind(&sub[2..])
+        {
+            out.push(TrackDbNode {
+                id,
+                position: parse_node_position(&sub[2..]),
+                pin_refs: parse_tr_pins(&sub[2..]),
+                kind,
+            });
+            i += 1;
+            continue;
         }
 
         i += 1;
@@ -852,20 +846,20 @@ fn extract_tr_pin_refs(pins: &[Ast]) -> Vec<TrPinRef> {
         while i < pins.len() {
             match (&pins[i], pins.get(i + 1)) {
                 (Ast::List(pin_sub), _) => {
-                    if let Some(Ast::Atom(Atom::Symbol(pin_tag))) = pin_sub.first() {
-                        if pin_tag.eq_ignore_ascii_case("TrPin") {
-                            if let (Some(id), branch) = (
-                                pin_sub.get(1).and_then(parse_u32),
-                                pin_sub.get(2).and_then(parse_u32).unwrap_or(0) as u8,
-                            ) {
-                                out.push(TrPinRef {
-                                    node_id: id,
-                                    branch_index: branch,
-                                });
-                            }
-                            i += 1;
-                            continue;
+                    if let Some(Ast::Atom(Atom::Symbol(pin_tag))) = pin_sub.first()
+                        && pin_tag.eq_ignore_ascii_case("TrPin")
+                    {
+                        if let (Some(id), branch) = (
+                            pin_sub.get(1).and_then(parse_u32),
+                            pin_sub.get(2).and_then(parse_u32).unwrap_or(0) as u8,
+                        ) {
+                            out.push(TrPinRef {
+                                node_id: id,
+                                branch_index: branch,
+                            });
                         }
+                        i += 1;
+                        continue;
                     }
                 }
                 (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(args)))
@@ -965,25 +959,23 @@ fn parse_vector_section_records(vector_node: &[Ast]) -> Vec<TrVectorSectionRecor
     for sections in vector_sections_lists(vector_node) {
         let mut list_records = Vec::new();
         for section in sections.iter().skip(1) {
-            if let Ast::List(sec_items) = section {
-                if sec_items
+            if let Ast::List(sec_items) = section
+                && sec_items
                     .first()
                     .and_then(symbol_name)
                     .is_some_and(|s| s.eq_ignore_ascii_case("TrVectorSection"))
-                {
-                    if let Some(point) = parse_tagged_vector_section_point(sec_items) {
-                        list_records.push(TrVectorSectionRecord {
-                            section_index: sec_items.get(1).and_then(parse_u32).unwrap_or(0),
-                            shape_index: sec_items.get(2).and_then(parse_u32).unwrap_or(0),
-                            header_tile_x: point.tile_x,
-                            header_tile_z: point.tile_z,
-                            start: point,
-                            ax: sec_items.get(10).and_then(ast_to_f64).unwrap_or(0.0),
-                            ay: sec_items.get(11).and_then(ast_to_f64).unwrap_or(0.0),
-                            az: sec_items.get(12).and_then(ast_to_f64).unwrap_or(0.0),
-                        });
-                    }
-                }
+                && let Some(point) = parse_tagged_vector_section_point(sec_items)
+            {
+                list_records.push(TrVectorSectionRecord {
+                    section_index: sec_items.get(1).and_then(parse_u32).unwrap_or(0),
+                    shape_index: sec_items.get(2).and_then(parse_u32).unwrap_or(0),
+                    header_tile_x: point.tile_x,
+                    header_tile_z: point.tile_z,
+                    start: point,
+                    ax: sec_items.get(10).and_then(ast_to_f64).unwrap_or(0.0),
+                    ay: sec_items.get(11).and_then(ast_to_f64).unwrap_or(0.0),
+                    az: sec_items.get(12).and_then(ast_to_f64).unwrap_or(0.0),
+                });
             }
         }
 
@@ -1172,22 +1164,22 @@ fn parse_vector_speed(vector_node: &[Ast]) -> f64 {
         let Ast::List(sub) = item else { continue };
         if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
             // SpeedMpS is already in m/s in MSTS files.
-            if tag.eq_ignore_ascii_case("SpeedMpS") {
-                if let Some(v) = sub.get(1).and_then(|a| match a {
+            if tag.eq_ignore_ascii_case("SpeedMpS")
+                && let Some(v) = sub.get(1).and_then(|a| match a {
                     Ast::Atom(at) => atom_to_number(at),
                     _ => None,
-                }) {
-                    return v;
-                }
+                })
+            {
+                return v;
             }
             // Some older files use MaxVelocity in km/h.
-            if tag.eq_ignore_ascii_case("MaxVelocity") {
-                if let Some(v) = sub.get(1).and_then(|a| match a {
+            if tag.eq_ignore_ascii_case("MaxVelocity")
+                && let Some(v) = sub.get(1).and_then(|a| match a {
                     Ast::Atom(at) => atom_to_number(at),
                     _ => None,
-                }) {
-                    return kmh_to_mps(v);
-                }
+                })
+            {
+                return kmh_to_mps(v);
             }
         }
     }
@@ -1253,14 +1245,13 @@ fn parse_tr_item_refs(vector_node: &[Ast]) -> Vec<u32> {
         while j < refs_slice.len() {
             if let (Ast::Atom(Atom::Symbol(tag)), Some(Ast::List(args))) =
                 (&refs_slice[j], refs_slice.get(j + 1))
+                && (tag.eq_ignore_ascii_case("TrItemRef") || tag.eq_ignore_ascii_case("TrItemId"))
             {
-                if tag.eq_ignore_ascii_case("TrItemRef") || tag.eq_ignore_ascii_case("TrItemId") {
-                    if let Some(id) = args.first().and_then(parse_u32) {
-                        out.push(id);
-                    }
-                    j += 2;
-                    continue;
+                if let Some(id) = args.first().and_then(parse_u32) {
+                    out.push(id);
                 }
+                j += 2;
+                continue;
             }
             if let Some(id) = parse_tr_item_ref_entry(&refs_slice[j]) {
                 out.push(id);
@@ -1285,11 +1276,11 @@ fn parse_tr_item_ref_entry(ref_item: &Ast) -> Option<u32> {
         return Some(id);
     }
     if let Ast::List(ref_sub) = ref_item {
-        if let Some(Ast::Atom(Atom::Symbol(ref_tag))) = ref_sub.first() {
-            if ref_tag.eq_ignore_ascii_case("TrItemId") || ref_tag.eq_ignore_ascii_case("TrItemRef")
-            {
-                return ref_sub.get(1).and_then(parse_u32);
-            }
+        if let Some(Ast::Atom(Atom::Symbol(ref_tag))) = ref_sub.first()
+            && (ref_tag.eq_ignore_ascii_case("TrItemId")
+                || ref_tag.eq_ignore_ascii_case("TrItemRef"))
+        {
+            return ref_sub.get(1).and_then(parse_u32);
         }
         return ref_sub.first().and_then(parse_u32);
     }
@@ -1307,23 +1298,22 @@ fn ast_to_f64(ast: &Ast) -> Option<f64> {
 fn collect_items(ast: &Ast, out: &mut Vec<TrItem>) {
     let Ast::List(items) = ast else { return };
 
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case("TrItemTable") {
-            parse_tr_item_table_entries(&items[1..], out);
-            return;
-        }
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case("TrItemTable")
+    {
+        parse_tr_item_table_entries(&items[1..], out);
+        return;
     }
 
     let mut skip_idx: Option<usize> = None;
     for i in 0..items.len().saturating_sub(1) {
-        if let Ast::Atom(Atom::Symbol(tag)) = &items[i] {
-            if tag.eq_ignore_ascii_case("TrItemTable") {
-                if let Ast::List(body) = &items[i + 1] {
-                    parse_tr_item_table_entries(body, out);
-                    skip_idx = Some(i + 1);
-                    break;
-                }
-            }
+        if let Ast::Atom(Atom::Symbol(tag)) = &items[i]
+            && tag.eq_ignore_ascii_case("TrItemTable")
+            && let Ast::List(body) = &items[i + 1]
+        {
+            parse_tr_item_table_entries(body, out);
+            skip_idx = Some(i + 1);
+            break;
         }
     }
 
@@ -1346,18 +1336,17 @@ fn parse_tr_item_table_entries(children: &[Ast], out: &mut Vec<TrItem>) {
             continue;
         }
 
-        if let Ast::Atom(Atom::Symbol(tag)) = &children[i] {
-            if is_tr_item_kind_tag(tag) {
-                if let Some(Ast::List(body)) = children.get(i + 1) {
-                    let mut combined = vec![Ast::Atom(Atom::Symbol(tag.clone()))];
-                    combined.extend(body.iter().cloned());
-                    if let Some(item) = parse_tr_item(&Ast::List(combined)) {
-                        out.push(item);
-                    }
-                    i += 2;
-                    continue;
-                }
+        if let Ast::Atom(Atom::Symbol(tag)) = &children[i]
+            && is_tr_item_kind_tag(tag)
+            && let Some(Ast::List(body)) = children.get(i + 1)
+        {
+            let mut combined = vec![Ast::Atom(Atom::Symbol(tag.clone()))];
+            combined.extend(body.iter().cloned());
+            if let Some(item) = parse_tr_item(&Ast::List(combined)) {
+                out.push(item);
             }
+            i += 2;
+            continue;
         }
 
         if let Some(item) = parse_tr_item(&children[i]) {
@@ -1374,7 +1363,9 @@ fn is_tr_item_kind_tag(tag: &str) -> bool {
     tag.ends_with("Item") || tag.eq_ignore_ascii_case("SignalItem")
 }
 
-/// `(SpeedpostTrItemData <display> <limit_mph> <heading>)` — OR uses the second value as mph.
+/// Native flags follow Open Rails 1.6.1 `SpeedPostItem`: bit 1 is a limit,
+/// bit 0 a warning (both mean resume), and bit 8 selects mph instead of km/h.
+/// Mileposts and resume signs carry no speed restriction.
 fn parse_speed_post_limit_mph(item: &[Ast]) -> f64 {
     let mut i = 0;
     while i < item.len() {
@@ -1403,25 +1394,33 @@ fn speedpost_mph_from_tagged_list(sub: &[Ast]) -> Option<f64> {
     if !tag.eq_ignore_ascii_case("SpeedpostTrItemData") {
         return None;
     }
-    sub.get(1).and_then(speedpost_mph_from_values).or_else(|| {
-        sub.get(2).and_then(|a| match a {
-            Ast::Atom(at) => atom_to_number(at),
-            _ => None,
-        })
-    })
+    match sub.get(1)? {
+        Ast::List(_) => speedpost_mph_from_values(&sub[1]),
+        _ => speedpost_limit_mph(&sub[1..]),
+    }
 }
 
 fn speedpost_mph_from_values(ast: &Ast) -> Option<f64> {
     if let Ast::List(values) = ast {
-        return values.get(1).and_then(|a| match a {
-            Ast::Atom(at) => atom_to_number(at),
-            _ => None,
-        });
+        return speedpost_limit_mph(values);
     }
-    match ast {
-        Ast::Atom(at) => atom_to_number(at),
-        _ => None,
+    None
+}
+
+fn speedpost_limit_mph(values: &[Ast]) -> Option<f64> {
+    let flags = parse_u32(values.first()?)?;
+    if flags & 3 != 2 {
+        return Some(0.0);
     }
+    let Ast::Atom(value) = values.get(1)? else {
+        return None;
+    };
+    let speed = atom_to_number(value)?;
+    Some(if flags & 256 != 0 {
+        speed
+    } else {
+        speed / 1.609_344
+    })
 }
 
 fn parse_tr_item_scalar(ast: &Ast) -> Option<u32> {
@@ -1602,13 +1601,13 @@ fn find_tr_item_distance(item: &[Ast]) -> f64 {
                     i += 1;
                     continue;
                 };
-                if tag.eq_ignore_ascii_case("TrItemSData") {
-                    if let Some(v) = sub.get(1).and_then(|a| match a {
+                if tag.eq_ignore_ascii_case("TrItemSData")
+                    && let Some(v) = sub.get(1).and_then(|a| match a {
                         Ast::Atom(at) => atom_to_number(at),
                         _ => None,
-                    }) {
-                        return v;
-                    }
+                    })
+                {
+                    return v;
                 }
             }
             Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrItemSData") => {
@@ -1662,18 +1661,18 @@ fn parse_signal_aspect(item: &[Ast]) -> SignalAspectKind {
         let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() else {
             continue;
         };
-        if tag.eq_ignore_ascii_case("InitialAspect") || tag.eq_ignore_ascii_case("SignalAspect") {
-            if let Some(Ast::Atom(at)) = sub.get(1) {
-                let s = match at {
-                    Atom::Symbol(s) | Atom::String(s) => s.to_ascii_lowercase(),
-                    _ => continue,
-                };
-                return match s.as_str() {
-                    "clear" | "green" | "proceed" => SignalAspectKind::Clear,
-                    "caution" | "yellow" | "approach" => SignalAspectKind::Caution,
-                    _ => SignalAspectKind::Stop,
-                };
-            }
+        if (tag.eq_ignore_ascii_case("InitialAspect") || tag.eq_ignore_ascii_case("SignalAspect"))
+            && let Some(Ast::Atom(at)) = sub.get(1)
+        {
+            let s = match at {
+                Atom::Symbol(s) | Atom::String(s) => s.to_ascii_lowercase(),
+                _ => continue,
+            };
+            return match s.as_str() {
+                "clear" | "green" | "proceed" => SignalAspectKind::Clear,
+                "caution" | "yellow" | "approach" => SignalAspectKind::Caution,
+                _ => SignalAspectKind::Stop,
+            };
         }
     }
     SignalAspectKind::Stop
@@ -1915,6 +1914,28 @@ mod tests {
         assert!(
             matches!(post.kind, TrItemKind::SpeedPost { speed_mph } if (speed_mph - 50.0).abs() < 1e-6)
         );
+    }
+
+    #[test]
+    fn speedpost_flags_distinguish_mileposts_limits_warnings_and_units() {
+        use crate::parser::parse_from_first_paren;
+        for (flags, speed, expected) in [
+            (256, 11.0, 0.0),
+            (0, 1.0, 0.0),
+            (257, 40.0, 0.0),
+            (259, 0.0, 0.0),
+            (898, 50.0, 50.0),
+            (130, 80.0, 80.0 / 1.609_344),
+        ] {
+            let src = format!("(SpeedPostItem (SpeedpostTrItemData ({flags} {speed} 0)))");
+            let Ast::List(item) = parse_from_first_paren(&src).unwrap() else {
+                panic!("list");
+            };
+            assert!(
+                (parse_speed_post_limit_mph(&item) - expected).abs() < 1e-6,
+                "flags {flags} must not turn a distance post into a speed limit"
+            );
+        }
     }
 
     #[test]

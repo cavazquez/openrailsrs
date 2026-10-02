@@ -18,7 +18,7 @@ use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::state::TrainSimState;
 
 /// Average mass per passenger including luggage (kg).
-const KG_PER_PASSENGER: f64 = 70.0;
+pub(crate) const KG_PER_PASSENGER: f64 = 70.0;
 
 /// Pipe propagation speed for the Westinghouse brake system (m/s).
 const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
@@ -323,6 +323,7 @@ pub fn run_scenario_headless_with_driver(
     let diesel_count = train_physics.diesel_engines.len();
     let mut csv_writer =
         RunCsvWriter::new_with_options(csv_file, has_steam, brake_telemetry, diesel_count)?;
+    csv_writer.write_sample(&state)?;
     let mut events = Vec::new();
 
     // Distance ahead (on the current edge) at which the train starts braking for a dwell stop.
@@ -379,13 +380,12 @@ pub fn run_scenario_headless_with_driver(
                     // Train has effectively stopped — snap to the next edge boundary
                     // (simulate rolling exactly to the platform).
                     let node_id = node.clone();
-                    if let Some(eid) = state.current_edge() {
-                        if let Some(edge) = graph.edge(eid) {
-                            if edge.to.0 == node_id {
-                                state.edge_index += 1;
-                                state.pos_on_edge_m = 0.0;
-                            }
-                        }
+                    if let Some(eid) = state.current_edge()
+                        && let Some(edge) = graph.edge(eid)
+                        && edge.to.0 == node_id
+                    {
+                        state.edge_index += 1;
+                        state.pos_on_edge_m = 0.0;
                     }
                     events.push(SimEvent::StationArrival {
                         time_s: state.time_s(),
@@ -641,7 +641,7 @@ pub fn run_scenario_headless_with_driver(
 
                 // Evaluate scripted signals every ~1 s of simulation time.
                 // Build a single-entry block_map for this train's current edge.
-                if steps % ((1.0 / dt).round() as u64).max(1) == 0 {
+                if steps.is_multiple_of(((1.0 / dt).round() as u64).max(1)) {
                     let mut block_map = HashMap::new();
                     if let Some(eid) = state.current_edge() {
                         block_map.insert(eid.to_string(), "player".to_string());

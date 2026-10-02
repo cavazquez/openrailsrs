@@ -1,0 +1,51 @@
+# Frozen Open Rails data; thresholds are acceptance criteria, not fit parameters.
+reference_version = "1.6.1"
+
+[[cases]]
+id = "birmingham_multi_body"
+scenario = "examples/chiltern/scenario_multi_body.toml"
+driver = "examples/chiltern/driver_or.csv"
+baseline = "examples/baselines/chiltern_birmingham/or_evaluation_speed.csv"
+phase_bounds = [0.0, 30.0, 61.0, 136.0]
+phase_max_velocity_rms = 1.10
+[cases.thresholds]
+max_velocity_rms = 0.55
+max_velocity_max = 2.0
+max_position_max = 45.0
+
+[[cases]]
+id = "full_throttle_multi_body"
+scenario = "examples/chiltern/scenario_throttle100_multi_body.toml"
+driver = "examples/chiltern/driver_throttle100.csv"
+baseline = "examples/baselines/chiltern_fullthrottle/or_evaluation_speed.csv"
+phase_bounds = [0.0, 30.0, 60.0, 120.0]
+phase_max_velocity_rms = 1.10
+[cases.thresholds]
+max_velocity_rms = 0.75
+max_velocity_max = 2.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05
+
+[[cases]]
+id = "brake_coast_multi_body"
+scenario = "examples/chiltern/scenario_brake_coast_multi_body.toml"
+driver = "examples/chiltern/driver_brake_coast.csv"
+baseline = "examples/baselines/chiltern_brake_coast/or_evaluation_speed.csv"
+phase_bounds = [0.0, 100.0, 115.0, 180.0]
+phase_max_velocity_rms = 0.75
+[cases.thresholds]
+max_velocity_rms = 0.75
+max_velocity_max = 2.0
+max_throttle_rms = 0.10
+max_brake_rms = 0.16
+
+[[cases]]
+id = "half_throttle"
+scenario = "examples/chiltern/scenario_throttle50.toml"
+driver = "examples/chiltern/driver_throttle50.csv"
+baseline = "examples/baselines/chiltern_throttle50/or_evaluation_speed.csv"
+[cases.thresholds]
+max_velocity_rms = 0.75
+max_velocity_max = 2.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05

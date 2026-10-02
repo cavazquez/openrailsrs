@@ -179,17 +179,15 @@ impl ActivityFile {
         if file.player_service_id.is_none() {
             file.player_service_id = extract_activity_name_from_text(&text);
         }
-        if file.player_path.is_empty() {
-            if let Some(id) = file
+        if file.player_path.is_empty()
+            && let Some(id) = file
                 .player_service_id
                 .clone()
                 .or_else(|| Some(file.name.clone()))
-            {
-                if valid_service_name(&id) {
-                    file.player_path = pat_path_from_service_id(&id);
-                    file.player_service_id = Some(id);
-                }
-            }
+            && valid_service_name(&id)
+        {
+            file.player_path = pat_path_from_service_id(&id);
+            file.player_service_id = Some(id);
         }
         Ok(file)
     }
@@ -212,10 +210,10 @@ impl ActivityFile {
         for &id in candidates {
             let srv_path = route_dir.join("SERVICES").join(format!("{id}.srv"));
             if let Ok(text) = crate::encoding::read_msts_file_case_insensitive(&srv_path) {
-                if let Ok(ast) = parse_from_first_paren(&text) {
-                    if let Some(name) = find_string_field(&ast, &["Train_Config"]) {
-                        return Some(name);
-                    }
+                if let Ok(ast) = parse_from_first_paren(&text)
+                    && let Some(name) = find_string_field(&ast, &["Train_Config"])
+                {
+                    return Some(name);
                 }
                 if let Some(name) = extract_train_config_from_text(&text) {
                     return Some(name);
@@ -242,10 +240,10 @@ fn find_header_name(ast: &Ast) -> Option<String> {
     };
     for item in items {
         let Ast::List(sub) = item else { continue };
-        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("Tr_Activity_Header") {
-                return find_string_field(item, &["Name"]);
-            }
+        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && tag.eq_ignore_ascii_case("Tr_Activity_Header")
+        {
+            return find_string_field(item, &["Name"]);
         }
         if let Some(name) = find_header_name(item) {
             return Some(name);
@@ -307,10 +305,10 @@ pub(crate) fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     // Pattern 1: list starts with the key symbol — nested format `(Name "value")`.
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
         for n in names {
-            if head.eq_ignore_ascii_case(n) {
-                if let Some(s) = string_after_first(items) {
-                    return Some(s);
-                }
+            if head.eq_ignore_ascii_case(n)
+                && let Some(s) = string_after_first(items)
+            {
+                return Some(s);
             }
         }
     }
@@ -321,10 +319,10 @@ pub(crate) fn find_string_field(ast: &Ast, names: &[&str]) -> Option<String> {
     for i in 0..items.len().saturating_sub(1) {
         if let Ast::Atom(Atom::Symbol(sym)) = &items[i] {
             for n in names {
-                if sym.eq_ignore_ascii_case(n) {
-                    if let Some(s) = extract_any_string(&items[i + 1]) {
-                        return Some(s);
-                    }
+                if sym.eq_ignore_ascii_case(n)
+                    && let Some(s) = extract_any_string(&items[i + 1])
+                {
+                    return Some(s);
                 }
             }
         }
@@ -376,21 +374,21 @@ fn parse_duration(ast: &Ast) -> f64 {
 fn find_numeric_tuple(ast: &Ast, name: &str, count: usize) -> Option<Vec<f64>> {
     let Ast::List(items) = ast else { return None };
 
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case(name) {
-            let vals: Vec<f64> = items
-                .iter()
-                .skip(1)
-                .take(count)
-                .filter_map(|a| match a {
-                    Ast::Atom(Atom::Integer(i)) => Some(*i as f64),
-                    Ast::Atom(Atom::Number(n)) => Some(*n),
-                    _ => None,
-                })
-                .collect();
-            if vals.len() == count {
-                return Some(vals);
-            }
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case(name)
+    {
+        let vals: Vec<f64> = items
+            .iter()
+            .skip(1)
+            .take(count)
+            .filter_map(|a| match a {
+                Ast::Atom(Atom::Integer(i)) => Some(*i as f64),
+                Ast::Atom(Atom::Number(n)) => Some(*n),
+                _ => None,
+            })
+            .collect();
+        if vals.len() == count {
+            return Some(vals);
         }
     }
 
@@ -406,13 +404,13 @@ fn find_numeric_tuple(ast: &Ast, name: &str, count: usize) -> Option<Vec<f64>> {
 fn collect_service_defs(ast: &Ast, out: &mut Vec<TrafficServiceDef>) {
     let Ast::List(items) = ast else { return };
 
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case("Service_Definition") {
-            if let Some(svc) = parse_one_service(items) {
-                out.push(svc);
-            }
-            return;
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case("Service_Definition")
+    {
+        if let Some(svc) = parse_one_service(items) {
+            out.push(svc);
         }
+        return;
     }
 
     for child in items {
@@ -469,14 +467,12 @@ fn find_pat_path(items: &[Ast]) -> Option<String> {
 fn find_service_init_time(items: &[Ast]) -> Option<f64> {
     for item in items {
         let Ast::List(sub) = item else { continue };
-        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("Service_Init_Time") {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(v) = atom_to_number(at) {
-                        return Some(v);
-                    }
-                }
-            }
+        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && tag.eq_ignore_ascii_case("Service_Init_Time")
+            && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(v) = atom_to_number(at)
+        {
+            return Some(v);
         }
         if let Some(t) = find_service_init_time(sub) {
             return Some(t);
@@ -489,16 +485,13 @@ fn find_service_init_time(items: &[Ast]) -> Option<f64> {
 fn find_service_consist(items: &[Ast]) -> Option<String> {
     for item in items {
         let Ast::List(sub) = item else { continue };
-        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-            if tag.eq_ignore_ascii_case("Train_Config")
-                || tag.eq_ignore_ascii_case("Service_Train_Config")
-            {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(s) = atom_to_string(at) {
-                        return Some(s);
-                    }
-                }
-            }
+        if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+            && (tag.eq_ignore_ascii_case("Train_Config")
+                || tag.eq_ignore_ascii_case("Service_Train_Config"))
+            && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(s) = atom_to_string(at)
+        {
+            return Some(s);
         }
         if let Some(c) = find_service_consist(sub) {
             return Some(c);
@@ -516,25 +509,21 @@ fn collect_failed_signals(ast: &Ast) -> Vec<u32> {
 
 fn walk_failed_signals(ast: &Ast, out: &mut Vec<u32>) {
     let Ast::List(items) = ast else { return };
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case("FailedSignals") {
-            for child in items.iter().skip(1) {
-                if let Ast::List(sub) = child {
-                    if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-                        if tag.eq_ignore_ascii_case("TrItemId") || tag.eq_ignore_ascii_case("UiD") {
-                            if let Some(Ast::Atom(at)) = sub.get(1) {
-                                if let Some(n) = atom_to_number(at) {
-                                    if n >= 0.0 {
-                                        out.push(n as u32);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case("FailedSignals")
+    {
+        for child in items.iter().skip(1) {
+            if let Ast::List(sub) = child
+                && let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+                && (tag.eq_ignore_ascii_case("TrItemId") || tag.eq_ignore_ascii_case("UiD"))
+                && let Some(Ast::Atom(at)) = sub.get(1)
+                && let Some(n) = atom_to_number(at)
+                && n >= 0.0
+            {
+                out.push(n as u32);
             }
-            return;
         }
+        return;
     }
     for child in items {
         walk_failed_signals(child, out);
@@ -550,15 +539,14 @@ fn collect_restricted_zones(ast: &Ast) -> Vec<RestrictedZone> {
 
 fn walk_restricted_zones(ast: &Ast, out: &mut Vec<RestrictedZone>) {
     let Ast::List(items) = ast else { return };
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case("ActivityRestrictedSpeedZone")
-            || head.eq_ignore_ascii_case("RestrictedSpeedZone")
-        {
-            if let Some(zone) = parse_restricted_zone(items) {
-                out.push(zone);
-            }
-            return;
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && (head.eq_ignore_ascii_case("ActivityRestrictedSpeedZone")
+            || head.eq_ignore_ascii_case("RestrictedSpeedZone"))
+    {
+        if let Some(zone) = parse_restricted_zone(items) {
+            out.push(zone);
         }
+        return;
     }
     for child in items {
         walk_restricted_zones(child, out);
@@ -579,12 +567,11 @@ fn parse_restricted_zone(items: &[Ast]) -> Option<RestrictedZone> {
         let lower = tag.to_ascii_lowercase();
         match lower.as_str() {
             "zonestart" | "zoneend" | "tritemid" => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        if n >= 0.0 {
-                            ids.push(n as u32);
-                        }
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                    && n >= 0.0
+                {
+                    ids.push(n as u32);
                 }
             }
             "startposition" => {
@@ -658,13 +645,13 @@ fn collect_activity_objects(ast: &Ast) -> Vec<ActivityObjectDef> {
 
 fn walk_activity_objects(ast: &Ast, out: &mut Vec<ActivityObjectDef>) {
     let Ast::List(items) = ast else { return };
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-        if head.eq_ignore_ascii_case("ActivityObject") {
-            if let Some(obj) = parse_activity_object(items) {
-                out.push(obj);
-            }
-            return;
+    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+        && head.eq_ignore_ascii_case("ActivityObject")
+    {
+        if let Some(obj) = parse_activity_object(items) {
+            out.push(obj);
         }
+        return;
     }
     for child in items {
         walk_activity_objects(child, out);
@@ -684,28 +671,26 @@ fn parse_activity_object(items: &[Ast]) -> Option<ActivityObjectDef> {
         let lower = tag.to_ascii_lowercase();
         match lower.as_str() {
             "tritemid" | "uid" if item_id.is_none() => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        if n >= 0.0 {
-                            item_id = Some(n as u32);
-                        }
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                    && n >= 0.0
+                {
+                    item_id = Some(n as u32);
                 }
             }
             "workers" | "population" => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        if n >= 0.0 {
-                            workers = n as u32;
-                        }
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                    && n >= 0.0
+                {
+                    workers = n as u32;
                 }
             }
             "objecttype" | "type" if kind.is_empty() => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(s) = atom_to_string(at) {
-                        kind = s;
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(s) = atom_to_string(at)
+                {
+                    kind = s;
                 }
             }
             "track_items" => {
@@ -715,14 +700,13 @@ fn parse_activity_object(items: &[Ast]) -> Option<ActivityObjectDef> {
                     let Some(Ast::Atom(Atom::Symbol(itag))) = isub.first() else {
                         continue;
                     };
-                    if itag.eq_ignore_ascii_case("TrItemId") && item_id.is_none() {
-                        if let Some(Ast::Atom(at)) = isub.get(1) {
-                            if let Some(n) = atom_to_number(at) {
-                                if n >= 0.0 {
-                                    item_id = Some(n as u32);
-                                }
-                            }
-                        }
+                    if itag.eq_ignore_ascii_case("TrItemId")
+                        && item_id.is_none()
+                        && let Some(Ast::Atom(at)) = isub.get(1)
+                        && let Some(n) = atom_to_number(at)
+                        && n >= 0.0
+                    {
+                        item_id = Some(n as u32);
                     }
                 }
             }
@@ -757,16 +741,13 @@ fn walk_sound_regions(ast: &Ast, out: &mut Vec<SoundRegionOverride>) {
         }
         if head.eq_ignore_ascii_case("SoundRegions") {
             for child in items.iter().skip(1) {
-                if let Ast::List(sub) = child {
-                    if let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first() {
-                        if tag.eq_ignore_ascii_case("SoundRegion")
-                            || tag.eq_ignore_ascii_case("ActivitySoundRegion")
-                        {
-                            if let Some(region) = parse_sound_region(sub) {
-                                out.push(region);
-                            }
-                        }
-                    }
+                if let Ast::List(sub) = child
+                    && let Some(Ast::Atom(Atom::Symbol(tag))) = sub.first()
+                    && (tag.eq_ignore_ascii_case("SoundRegion")
+                        || tag.eq_ignore_ascii_case("ActivitySoundRegion"))
+                    && let Some(region) = parse_sound_region(sub)
+                {
+                    out.push(region);
                 }
             }
             return;
@@ -791,35 +772,33 @@ fn parse_sound_region(items: &[Ast]) -> Option<SoundRegionOverride> {
         let lower = tag.to_ascii_lowercase();
         match lower.as_str() {
             "tritemid" | "uid" if tr_item_id.is_none() => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        if n >= 0.0 {
-                            tr_item_id = Some(n as u32);
-                        }
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                    && n >= 0.0
+                {
+                    tr_item_id = Some(n as u32);
                 }
             }
             "soundregiontype" | "regiontype" | "kind" | "type" if kind.is_empty() => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(s) = atom_to_string(at) {
-                        kind = s;
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(s) = atom_to_string(at)
+                {
+                    kind = s;
                 }
             }
             "volume" | "basevolume" => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        volume = n;
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                {
+                    volume = n;
                 }
             }
             "radiusm" | "radius" | "soundregionradius" => {
-                if let Some(Ast::Atom(at)) = sub.get(1) {
-                    if let Some(n) = atom_to_number(at) {
-                        if n > 0.0 {
-                            radius_m = Some(n);
-                        }
-                    }
+                if let Some(Ast::Atom(at)) = sub.get(1)
+                    && let Some(n) = atom_to_number(at)
+                    && n > 0.0
+                {
+                    radius_m = Some(n);
                 }
             }
             _ => {}

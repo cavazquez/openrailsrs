@@ -3,6 +3,7 @@
 pub mod brake;
 pub mod compare;
 pub mod error;
+pub mod oracle;
 pub mod trace;
 
 pub use brake::{BrakeCommandMapping, OR_DEFAULT_BRAKE_FULL_SCALE_PSI};

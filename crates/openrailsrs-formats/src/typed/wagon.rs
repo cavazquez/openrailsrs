@@ -80,22 +80,21 @@ impl WagonFile {
 pub fn parse_passenger_viewpoints(ast: &Ast) -> Vec<PassengerViewpoint> {
     let mut views = Vec::new();
     walk_lists_visit(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("Inside")
-                || head.eq_ignore_ascii_case("ORTSAlternatePassengerViewPoint")
-            {
-                if let Some(vp) = parse_passenger_viewpoint_block(items) {
-                    views.push(vp);
-                }
-                return;
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && (head.eq_ignore_ascii_case("Inside")
+                || head.eq_ignore_ascii_case("ORTSAlternatePassengerViewPoint"))
+        {
+            if let Some(vp) = parse_passenger_viewpoint_block(items) {
+                views.push(vp);
             }
+            return;
         }
         // Bare Inside body: `parse_first` on `Inside (` yields content whose first
         // atom is `PassengerCabinFile` / `PassengerCabinHeadPos` (not `Inside`).
-        if looks_like_inside_body(items) {
-            if let Some(vp) = parse_passenger_viewpoint_fields(items) {
-                views.push(vp);
-            }
+        if looks_like_inside_body(items)
+            && let Some(vp) = parse_passenger_viewpoint_fields(items)
+        {
+            views.push(vp);
         }
     });
     views
@@ -377,23 +376,23 @@ fn parse_length_from_ast(ast: &Ast) -> Option<f64> {
         "Length",
         "WagonLength",
     ] {
-        if let Some(v) = find_list_value(ast, key) {
-            if let Some(len) = parse_length_ast(v) {
-                return Some(len);
-            }
+        if let Some(v) = find_list_value(ast, key)
+            && let Some(len) = parse_length_ast(v)
+        {
+            return Some(len);
         }
     }
     let mut found = None;
     walk_lists_find::<(), _>(ast, &mut |items| {
-        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first() {
-            if head.eq_ignore_ascii_case("Size") {
-                if items.len() >= 4 {
-                    found = parse_length_ast(&items[3]);
-                } else if let Some(Ast::List(dims)) = items.get(1) {
-                    if dims.len() >= 3 {
-                        found = parse_length_ast(&dims[2]);
-                    }
-                }
+        if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
+            && head.eq_ignore_ascii_case("Size")
+        {
+            if items.len() >= 4 {
+                found = parse_length_ast(&items[3]);
+            } else if let Some(Ast::List(dims)) = items.get(1)
+                && dims.len() >= 3
+            {
+                found = parse_length_ast(&dims[2]);
             }
         }
         None

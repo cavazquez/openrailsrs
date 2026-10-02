@@ -1,0 +1,13 @@
+{
+  "updated_on": "2026-10-02",
+  "bevy_version": "0.19.1",
+  "render_adapter": "Vulkan lavapipe (Xvfb)",
+  "previous_sha256": "f85ff70b7463759ab332151a83c7c675d7865dc41ac77e88d4202c9ad8ad3872",
+  "sha256": "9d672a4869627306da203e91e060d1405937c4df5be9f7fb7c4373c7947f6506",
+  "previous_fixture_commit": "b83e717",
+  "reviewed_source_base": "34389c0",
+  "reason": "The previous fixture retained layout space for a hidden progress bar. Existing HEAD removes that empty space with Display::None. The scene above the old footer differs in only 0.0063% of pixels at tolerance 16.",
+  "tolerance": 16,
+  "max_hot_pct": 2.0,
+  "scope": "Internal static viewer smoke. Open Rails reference captures are unchanged."
+}

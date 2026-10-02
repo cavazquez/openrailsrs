@@ -198,16 +198,15 @@ pub fn load_smoke_route_bundle() -> Option<(
 
     let scenario_path = smoke_scenario_path();
     let mut consist = TrainConsistScene::default();
-    if scenario_path.exists() {
-        if let Ok(scenario) = load_scenario(&scenario_path) {
-            let scenario_dir = scenario_path.parent().unwrap();
-            consist.set_scenario_dir(scenario_dir.to_path_buf());
-            if let Some(vehicles) = crate::rolling_stock::try_load_consist_vehicles(
-                scenario_dir,
-                &scenario.train.consist,
-            ) {
-                consist.by_label.insert("primary".into(), vehicles);
-            }
+    if scenario_path.exists()
+        && let Ok(scenario) = load_scenario(&scenario_path)
+    {
+        let scenario_dir = scenario_path.parent().unwrap();
+        consist.set_scenario_dir(scenario_dir.to_path_buf());
+        if let Some(vehicles) =
+            crate::rolling_stock::try_load_consist_vehicles(scenario_dir, &scenario.train.consist)
+        {
+            consist.by_label.insert("primary".into(), vehicles);
         }
     }
 

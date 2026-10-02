@@ -177,13 +177,13 @@ fn evaluate(scenario: &ScenarioFile, sim: &openrailsrs_sim::SimRunResult) -> Pla
         }
     }
 
-    if let Some(limit) = scenario.gameplay.time_limit_seconds {
-        if sim.metadata.final_time_s > limit as f64 {
-            penalties.push(format!(
-                "late_arrival:{:.0}s_over",
-                sim.metadata.final_time_s - limit as f64
-            ));
-        }
+    if let Some(limit) = scenario.gameplay.time_limit_seconds
+        && sim.metadata.final_time_s > limit as f64
+    {
+        penalties.push(format!(
+            "late_arrival:{:.0}s_over",
+            sim.metadata.final_time_s - limit as f64
+        ));
     }
 
     let reached = sim.metadata.reached_destination;

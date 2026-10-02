@@ -59,17 +59,16 @@ impl CarSpawnerCatalog {
 
     /// Resolve list for a spawner: named ORTS list, else `"Default"`, else first non-empty.
     pub fn resolve_list(&self, list_name: Option<&str>) -> Option<&CarSpawnerList> {
-        if let Some(name) = list_name {
-            if let Some(list) = self.list_by_name(name) {
-                if !list.items.is_empty() {
-                    return Some(list);
-                }
-            }
+        if let Some(name) = list_name
+            && let Some(list) = self.list_by_name(name)
+            && !list.items.is_empty()
+        {
+            return Some(list);
         }
-        if let Some(list) = self.list_by_name("Default") {
-            if !list.items.is_empty() {
-                return Some(list);
-            }
+        if let Some(list) = self.list_by_name("Default")
+            && !list.items.is_empty()
+        {
+            return Some(list);
         }
         self.lists.iter().find(|l| !l.items.is_empty())
     }

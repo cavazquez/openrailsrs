@@ -795,10 +795,10 @@ fn try_object_from_item(
     let position = placement.pose.position;
     let position_precision_offset =
         msts_position_precision_offset(tile_x, tile_z, local_position, position);
-    if let Some(window) = window {
-        if !window.contains_xz(position) {
-            return Err(ObjectSkip::OutOfWindow);
-        }
+    if let Some(window) = window
+        && !window.contains_xz(position)
+    {
+        return Err(ObjectSkip::OutOfWindow);
     }
     let rotation = placement.pose.rotation;
     let scale = placement.pose.scale;
@@ -968,10 +968,10 @@ pub fn discover_world_tile_entries(
         .into_iter()
         .filter_map(|path| {
             let (tile_x, tile_z) = parse_world_w_tile_xz(&path)?;
-            if let Some(c) = center {
-                if tile_center_distance_m(tile_x, tile_z, c) > radius_m + extra {
-                    return None;
-                }
+            if let Some(c) = center
+                && tile_center_distance_m(tile_x, tile_z, c) > radius_m + extra
+            {
+                return None;
             }
             Some((tile_x, tile_z, path))
         })
@@ -3810,28 +3810,29 @@ pub fn spawn_world_boxes(
             if !trackobj_placeholders_enabled() {
                 continue;
             }
-        } else if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
-            if let Some(shape_path) = resolve_object_shape_path(obj, &assets) {
-                let render_pos = obj.render_position(&focus);
-                shape_instances
-                    .entry(shape_path)
-                    .or_default()
-                    .push(ShapeInstancePlacement {
-                        transform: Transform {
-                            translation: render_pos,
-                            rotation: obj.rotation,
-                            scale: obj.scale,
-                        },
-                        linear: obj.linear,
-                        tile_x: obj.tile_x,
-                        tile_z: obj.tile_z,
-                        auto_z_bias: false,
-                        signal_sub_obj: (obj.kind == "Signal")
-                            .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
-                            .flatten(),
-                    });
-                continue;
-            }
+        } else if shape_eligible(obj)
+            && dist <= shape_mesh_radius_m()
+            && let Some(shape_path) = resolve_object_shape_path(obj, &assets)
+        {
+            let render_pos = obj.render_position(&focus);
+            shape_instances
+                .entry(shape_path)
+                .or_default()
+                .push(ShapeInstancePlacement {
+                    transform: Transform {
+                        translation: render_pos,
+                        rotation: obj.rotation,
+                        scale: obj.scale,
+                    },
+                    linear: obj.linear,
+                    tile_x: obj.tile_x,
+                    tile_z: obj.tile_z,
+                    auto_z_bias: false,
+                    signal_sub_obj: (obj.kind == "Signal")
+                        .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
+                        .flatten(),
+                });
+            continue;
         }
 
         // Placeholders only near the camera; 4–8 km clutter dominated spawn time on large routes.

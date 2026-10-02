@@ -814,12 +814,14 @@ fn apply_discrete_frame(
     frames: &CabLeverFrames,
     index: usize,
 ) {
-    if frames.frames_count > 1 && frames.frames_x > 0 && frames.frames_y > 0 {
-        if let Some(image) = images.get(&image_node.image) {
-            let size = image.size();
-            let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, index);
-            image_node.rect = Some(Rect::new(x, y, x + w, y + h));
-        }
+    if frames.frames_count > 1
+        && frames.frames_x > 0
+        && frames.frames_y > 0
+        && let Some(image) = images.get(&image_node.image)
+    {
+        let size = image.size();
+        let (x, y, w, h) = frames.frame_rect(size.x as f32, size.y as f32, index);
+        image_node.rect = Some(Rect::new(x, y, x + w, y + h));
     }
 }
 

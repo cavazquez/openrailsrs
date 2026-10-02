@@ -216,10 +216,8 @@ impl TrackGraph {
                 let first_edges = self.outgoing_edges(&dest_node_str).to_vec();
                 let block1_occupied = first_edges.iter().any(|e| block_map.contains_key(e));
 
-                if block1_occupied {
-                    if let Some(aspect) = script.on_block_ahead {
-                        return Some((sig.id.clone(), aspect));
-                    }
+                if block1_occupied && let Some(aspect) = script.on_block_ahead {
+                    return Some((sig.id.clone(), aspect));
                 }
 
                 // Second-block edges: outgoing from each first-edge destination.
@@ -232,10 +230,8 @@ impl TrackGraph {
                     })
                 });
 
-                if block2_occupied {
-                    if let Some(aspect) = script.on_second_block_ahead {
-                        return Some((sig.id.clone(), aspect));
-                    }
+                if block2_occupied && let Some(aspect) = script.on_second_block_ahead {
+                    return Some((sig.id.clone(), aspect));
                 }
 
                 // Default.

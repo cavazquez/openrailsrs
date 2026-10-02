@@ -570,10 +570,10 @@ fn parse_shaders_block(cur: &mut SbrCursor<'_>, block_end: usize) -> Vec<Terrain
         let Some((tok, end)) = cur.read_block_header() else {
             break;
         };
-        if tok == TOK_TERRAIN_SHADER {
-            if let Some(shader) = parse_shader_block(cur, end) {
-                shaders.push(shader);
-            }
+        if tok == TOK_TERRAIN_SHADER
+            && let Some(shader) = parse_shader_block(cur, end)
+        {
+            shaders.push(shader);
         }
         cur.pos = end.min(block_end);
     }
@@ -685,10 +685,10 @@ fn parse_patchsets_block(
         let Some((tok, end)) = cur.read_block_header() else {
             break;
         };
-        if tok == TOK_TERRAIN_PATCHSET {
-            if let Some(ps) = parse_patchset_block(cur, end) {
-                out.push(ps);
-            }
+        if tok == TOK_TERRAIN_PATCHSET
+            && let Some(ps) = parse_patchset_block(cur, end)
+        {
+            out.push(ps);
         }
         cur.pos = end.min(block_end);
     }
@@ -743,10 +743,10 @@ fn parse_patchset_patches(
         let Some((tok, end)) = cur.read_block_header() else {
             break;
         };
-        if tok == TOK_TERRAIN_PATCHSET_PATCH {
-            if let Some(p) = parse_patch_raw(cur) {
-                out.push(p);
-            }
+        if tok == TOK_TERRAIN_PATCHSET_PATCH
+            && let Some(p) = parse_patch_raw(cur)
+        {
+            out.push(p);
         }
         cur.pos = end.min(block_end);
     }
@@ -1408,10 +1408,10 @@ fn parse_terrain_shaders(ast: &Ast) -> Vec<TerrainShader> {
     let mut out = Vec::new();
     walk_named_blocks(ast, "terrain_shaders", &mut |block| {
         for item in block {
-            if list_head_ast(item) == Some("terrain_shader") {
-                if let Some(shader) = parse_terrain_shader(item) {
-                    out.push(shader);
-                }
+            if list_head_ast(item) == Some("terrain_shader")
+                && let Some(shader) = parse_terrain_shader(item)
+            {
+                out.push(shader);
             }
         }
     });
@@ -1427,19 +1427,19 @@ fn parse_terrain_shader(ast: &Ast) -> Option<TerrainShader> {
     let mut uvcalcs = Vec::new();
     walk_named_blocks(ast, "terrain_texslots", &mut |block| {
         for item in block {
-            if list_head_ast(item) == Some("terrain_texslot") {
-                if let Some(slot) = parse_terrain_texslot(item) {
-                    texslots.push(slot);
-                }
+            if list_head_ast(item) == Some("terrain_texslot")
+                && let Some(slot) = parse_terrain_texslot(item)
+            {
+                texslots.push(slot);
             }
         }
     });
     walk_named_blocks(ast, "terrain_uvcalcs", &mut |block| {
         for item in block {
-            if list_head_ast(item) == Some("terrain_uvcalc") {
-                if let Some(calc) = parse_terrain_uvcalc(item) {
-                    uvcalcs.push(calc);
-                }
+            if list_head_ast(item) == Some("terrain_uvcalc")
+                && let Some(calc) = parse_terrain_uvcalc(item)
+            {
+                uvcalcs.push(calc);
             }
         }
     });
@@ -1492,10 +1492,10 @@ fn parse_terrain_patch_sets(ast: &Ast) -> Vec<TerrainPatchSet> {
     let mut out = Vec::new();
     walk_named_blocks(ast, "terrain_patches", &mut |block| {
         for item in block {
-            if list_head_ast(item) == Some("terrain_patchset") {
-                if let Some(set) = parse_terrain_patch_set(item) {
-                    out.push(set);
-                }
+            if list_head_ast(item) == Some("terrain_patchset")
+                && let Some(set) = parse_terrain_patch_set(item)
+            {
+                out.push(set);
             }
         }
     });
@@ -1529,10 +1529,10 @@ fn parse_terrain_patch_set(ast: &Ast) -> Option<TerrainPatchSet> {
     });
     walk_named_blocks(ast, "terrain_patchset_patches", &mut |block| {
         for item in block {
-            if list_head_ast(item) == Some("terrain_patchset_patch") {
-                if let Some(patch) = parse_terrain_patch(item) {
-                    patches.push(patch);
-                }
+            if list_head_ast(item) == Some("terrain_patchset_patch")
+                && let Some(patch) = parse_terrain_patch(item)
+            {
+                patches.push(patch);
             }
         }
     });

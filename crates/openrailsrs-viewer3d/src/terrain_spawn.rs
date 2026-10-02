@@ -799,10 +799,10 @@ fn evict_unreferenced_terrain_assets(
         .map(|(key, _)| key.clone())
         .collect();
     for key in stale_mats {
-        if let Some(handle) = stream.material_cache.remove(&key) {
-            if terrain_materials.remove(handle.id()).is_some() {
-                materials_removed += 1;
-            }
+        if let Some(handle) = stream.material_cache.remove(&key)
+            && terrain_materials.remove(handle.id()).is_some()
+        {
+            materials_removed += 1;
         }
     }
 
@@ -825,10 +825,10 @@ fn evict_unreferenced_terrain_assets(
         .map(|(key, _)| key.clone())
         .collect();
     for key in stale_tex {
-        if let Some(handle) = stream.texture_cache.remove(&key) {
-            if images.remove(handle.id()).is_some() {
-                textures_removed += 1;
-            }
+        if let Some(handle) = stream.texture_cache.remove(&key)
+            && images.remove(handle.id()).is_some()
+        {
+            textures_removed += 1;
         }
     }
 

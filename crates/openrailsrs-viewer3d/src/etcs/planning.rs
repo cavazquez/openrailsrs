@@ -65,20 +65,21 @@ pub fn paint_planning(
         }
     }
 
-    if let Some(im) = status.indication_marker_m {
-        if im > 0.0 && im < max_m {
-            let y = origin_y + planning_height(im, max_m);
-            stroke_line(
-                rgba,
-                stride_w,
-                stride_h,
-                origin_x + 14 + 133,
-                y,
-                origin_x + 14 + 133 + 93,
-                y,
-                colors::YELLOW,
-            );
-        }
+    if let Some(im) = status.indication_marker_m
+        && im > 0.0
+        && im < max_m
+    {
+        let y = origin_y + planning_height(im, max_m);
+        stroke_line(
+            rgba,
+            stride_w,
+            stride_h,
+            origin_x + 14 + 133,
+            y,
+            origin_x + 14 + 133 + 93,
+            y,
+            colors::YELLOW,
+        );
     }
 
     for cond in &status.track_conditions {
@@ -96,38 +97,38 @@ pub fn paint_planning(
         );
     }
 
-    if let (Some(td), Some(ts)) = (status.target_distance_m, status.target_kmh) {
-        if td <= max_m {
-            let y = origin_y + planning_height(td, max_m);
-            stroke_line(
+    if let (Some(td), Some(ts)) = (status.target_distance_m, status.target_kmh)
+        && td <= max_m
+    {
+        let y = origin_y + planning_height(td, max_m);
+        stroke_line(
+            rgba,
+            stride_w,
+            stride_h,
+            origin_x + 40,
+            y,
+            origin_x + PLAN_W - 8,
+            y,
+            colors::YELLOW,
+        );
+        if let Some(tex) = status.planning_symbol.texture() {
+            let _ = symbols.blit(rgba, stride_w, stride_h, origin_x + 90, y - 18, tex);
+        }
+        let txt = format!("{:.0}", ts);
+        let mut tx = origin_x + PLAN_W - 50;
+        for ch in txt.chars() {
+            blit_digit3x5(
                 rgba,
                 stride_w,
                 stride_h,
-                origin_x + 40,
-                y,
-                origin_x + PLAN_W - 8,
-                y,
+                tx,
+                y - 14,
+                10,
+                14,
+                ch,
                 colors::YELLOW,
             );
-            if let Some(tex) = status.planning_symbol.texture() {
-                let _ = symbols.blit(rgba, stride_w, stride_h, origin_x + 90, y - 18, tex);
-            }
-            let txt = format!("{:.0}", ts);
-            let mut tx = origin_x + PLAN_W - 50;
-            for ch in txt.chars() {
-                blit_digit3x5(
-                    rgba,
-                    stride_w,
-                    stride_h,
-                    tx,
-                    y - 14,
-                    10,
-                    14,
-                    ch,
-                    colors::YELLOW,
-                );
-                tx += 11;
-            }
+            tx += 11;
         }
     }
 

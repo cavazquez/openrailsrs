@@ -1105,27 +1105,26 @@ mod tests {
             eprintln!("=== cab_matrix_for_prim bindings (levers) ===");
             let parts = crate::shapes::build_mesh_parts_from_shape_lod_cab(&shape, level, &levers);
             for part in &parts {
-                if let Some(m) = part.cab_matrix_idx {
-                    if levers.contains(&m) {
-                        let tex = part.texture_file.as_deref().unwrap_or("?");
-                        let (c, h) = (
-                            part.bounds_center.unwrap_or(Vec3::ZERO),
-                            part.bounds_half_extent.unwrap_or(Vec3::ZERO),
-                        );
-                        let pivot =
-                            crate::shapes::matrix_pivot_bevy(&shape, m).unwrap_or(Vec3::ZERO);
-                        eprintln!(
-                            "sub {} prim {} -> matrix {m} ({}) tex={tex} center=({:.3},{:.3},{:.3}) r={:.3} dist={:.3}",
-                            part.sub_object_idx,
-                            part.prim_state_idx,
-                            shape.matrices[m].name,
-                            c.x,
-                            c.y,
-                            c.z,
-                            h.max_element(),
-                            c.distance(pivot),
-                        );
-                    }
+                if let Some(m) = part.cab_matrix_idx
+                    && levers.contains(&m)
+                {
+                    let tex = part.texture_file.as_deref().unwrap_or("?");
+                    let (c, h) = (
+                        part.bounds_center.unwrap_or(Vec3::ZERO),
+                        part.bounds_half_extent.unwrap_or(Vec3::ZERO),
+                    );
+                    let pivot = crate::shapes::matrix_pivot_bevy(&shape, m).unwrap_or(Vec3::ZERO);
+                    eprintln!(
+                        "sub {} prim {} -> matrix {m} ({}) tex={tex} center=({:.3},{:.3},{:.3}) r={:.3} dist={:.3}",
+                        part.sub_object_idx,
+                        part.prim_state_idx,
+                        shape.matrices[m].name,
+                        c.x,
+                        c.y,
+                        c.z,
+                        h.max_element(),
+                        c.distance(pivot),
+                    );
                 }
             }
             eprintln!("hierarchy: {:?}", level.hierarchy);
@@ -1196,16 +1195,16 @@ mod tests {
                     part.prim_state_idx,
                     part.cab_matrix_idx
                 );
-            } else if let Some(m) = authored {
-                if lever_matrices.contains(&m) {
-                    assert_eq!(
-                        part.cab_matrix_idx,
-                        Some(m),
-                        "authored M{m} part sub={} prim={} must bind",
-                        part.sub_object_idx,
-                        part.prim_state_idx
-                    );
-                }
+            } else if let Some(m) = authored
+                && lever_matrices.contains(&m)
+            {
+                assert_eq!(
+                    part.cab_matrix_idx,
+                    Some(m),
+                    "authored M{m} part sub={} prim={} must bind",
+                    part.sub_object_idx,
+                    part.prim_state_idx
+                );
             }
         }
         let bound: HashSet<usize> = parts.iter().filter_map(|p| p.cab_matrix_idx).collect();

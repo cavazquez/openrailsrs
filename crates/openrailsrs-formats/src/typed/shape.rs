@@ -526,10 +526,10 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
     let mut out = Vec::new();
     walk_named_list(ast, "texture_filenames", &mut |items| {
         for item in shape_section_body(items) {
-            if let Ast::Atom(at) = item {
-                if let Some(s) = atom_to_string(at) {
-                    out.push(s);
-                }
+            if let Ast::Atom(at) = item
+                && let Some(s) = atom_to_string(at)
+            {
+                out.push(s);
             }
         }
     });
@@ -537,10 +537,10 @@ fn collect_texture_filenames(ast: &Ast) -> Vec<String> {
         walk_named_list(ast, "images", &mut |items| {
             for_each_tagged(items, "image", |sub| {
                 for item in shape_section_body(sub) {
-                    if let Ast::Atom(at) = item {
-                        if let Some(s) = atom_to_string(at) {
-                            out.push(s);
-                        }
+                    if let Ast::Atom(at) = item
+                        && let Some(s) = atom_to_string(at)
+                    {
+                        out.push(s);
                     }
                 }
             });
@@ -730,20 +730,20 @@ fn parse_prim_state(items: &[Ast]) -> PrimState {
     if z_bias.is_none() {
         z_bias = top_level_nums.get(2).copied();
     }
-    if vertex_state_idx < 0 {
-        if let Some(n) = top_level_nums.get(3) {
-            vertex_state_idx = *n as i32;
-        }
+    if vertex_state_idx < 0
+        && let Some(n) = top_level_nums.get(3)
+    {
+        vertex_state_idx = *n as i32;
     }
-    if alpha_test_mode < 0 {
-        if let Some(n) = top_level_nums.get(4) {
-            alpha_test_mode = *n as i32;
-        }
+    if alpha_test_mode < 0
+        && let Some(n) = top_level_nums.get(4)
+    {
+        alpha_test_mode = *n as i32;
     }
-    if z_buf_mode < 0 {
-        if let Some(n) = top_level_nums.get(6) {
-            z_buf_mode = *n as i32;
-        }
+    if z_buf_mode < 0
+        && let Some(n) = top_level_nums.get(6)
+    {
+        z_buf_mode = *n as i32;
     }
     if tex_indices.is_empty() {
         for_each_tagged(items, "tex_idxs", |sub| {
@@ -912,12 +912,11 @@ fn parse_sub_object(items: &[Ast]) -> SubObject {
                 let mut raw = Vec::new();
                 for_each_tagged(prim, "vertex_idxs", |idx| {
                     for v in shape_section_body(idx) {
-                        if let Ast::Atom(at) = v {
-                            if let Some(n) = shape_atom_to_i32(at) {
-                                if n >= 0 {
-                                    raw.push(n as u32);
-                                }
-                            }
+                        if let Ast::Atom(at) = v
+                            && let Some(n) = shape_atom_to_i32(at)
+                            && n >= 0
+                        {
+                            raw.push(n as u32);
                         }
                     }
                 });
@@ -951,7 +950,7 @@ pub fn take_indexed_trilist_indices(raw: &[u32]) -> Option<Vec<u32>> {
     }
     let declared = raw[0] as usize;
     let body = &raw[1..];
-    if declared == body.len() && declared % 3 == 0 {
+    if declared == body.len() && declared.is_multiple_of(3) {
         Some(body.to_vec())
     } else {
         None
@@ -1102,12 +1101,11 @@ fn collect_matrices(ast: &Ast) -> Vec<NamedMatrix> {
     let mut out = Vec::new();
     walk_named_list(ast, "matrices", &mut |items| {
         for item in items.iter().skip(1) {
-            if let Ast::List(sub) = item {
-                if matches_head(sub, "matrix") {
-                    if let Some(m) = parse_named_matrix(sub) {
-                        out.push(m);
-                    }
-                }
+            if let Ast::List(sub) = item
+                && matches_head(sub, "matrix")
+                && let Some(m) = parse_named_matrix(sub)
+            {
+                out.push(m);
             }
         }
     });
@@ -1292,11 +1290,11 @@ fn for_each_tagged_ordered(items: &[Ast], tags: &[&str], mut f: impl FnMut(&[Ast
                     .unwrap_or(tags[0]);
                 i += 1;
                 let mut synthetic = vec![Ast::Atom(Atom::Symbol(tag.to_string()))];
-                if let Some(Ast::Atom(Atom::Symbol(name))) = body.get(i) {
-                    if !name.eq_ignore_ascii_case(tag) {
-                        synthetic.push(Ast::Atom(Atom::Symbol(name.clone())));
-                        i += 1;
-                    }
+                if let Some(Ast::Atom(Atom::Symbol(name))) = body.get(i)
+                    && !name.eq_ignore_ascii_case(tag)
+                {
+                    synthetic.push(Ast::Atom(Atom::Symbol(name.clone())));
+                    i += 1;
                 }
                 if let Some(Ast::List(coords)) = body.get(i) {
                     synthetic.extend(coords.iter().cloned());
@@ -1557,10 +1555,10 @@ fn parse_anim_node(items: &[Ast]) -> Option<AnimNode> {
             Ast::Atom(Atom::Symbol(s)) if name.is_empty() => name = s.clone(),
             Ast::List(sub) if matches_head(sub, "controllers") => {
                 for controller_item in sub.iter().skip(1) {
-                    if let Ast::List(controller_sub) = controller_item {
-                        if let Some(c) = parse_controller(controller_sub) {
-                            controllers.push(c);
-                        }
+                    if let Ast::List(controller_sub) = controller_item
+                        && let Some(c) = parse_controller(controller_sub)
+                    {
+                        controllers.push(c);
                     }
                 }
             }
@@ -1588,10 +1586,10 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             for_each_tagged(items, "linear_key", |sub| {
                 let mut nums = Vec::new();
                 for at in sub.iter().skip(1) {
-                    if let Ast::Atom(atom) = at {
-                        if let Some(n) = atom_to_number(atom) {
-                            nums.push(n as f32);
-                        }
+                    if let Ast::Atom(atom) = at
+                        && let Some(n) = atom_to_number(atom)
+                    {
+                        nums.push(n as f32);
                     }
                 }
                 if nums.len() >= 4 {
@@ -1608,10 +1606,10 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             for_each_tagged_ordered(items, &["slerp_rot", "slerp_key"], |sub| {
                 let mut nums = Vec::new();
                 for at in sub.iter().skip(1) {
-                    if let Ast::Atom(atom) = at {
-                        if let Some(n) = atom_to_number(atom) {
-                            nums.push(n as f32);
-                        }
+                    if let Ast::Atom(atom) = at
+                        && let Some(n) = atom_to_number(atom)
+                    {
+                        nums.push(n as f32);
                     }
                 }
                 if nums.len() >= 5 {
@@ -1626,10 +1624,10 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             for_each_tagged(items, "tcb_key", |sub| {
                 let mut nums = Vec::new();
                 for at in sub.iter().skip(1) {
-                    if let Ast::Atom(atom) = at {
-                        if let Some(n) = atom_to_number(atom) {
-                            nums.push(n as f32);
-                        }
+                    if let Ast::Atom(atom) = at
+                        && let Some(n) = atom_to_number(atom)
+                    {
+                        nums.push(n as f32);
                     }
                 }
                 if nums.len() >= 5 {
@@ -1643,10 +1641,10 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
             for_each_tagged(items, "slerp_key", |sub| {
                 let mut nums = Vec::new();
                 for at in sub.iter().skip(1) {
-                    if let Ast::Atom(atom) = at {
-                        if let Some(n) = atom_to_number(atom) {
-                            nums.push(n as f32);
-                        }
+                    if let Ast::Atom(atom) = at
+                        && let Some(n) = atom_to_number(atom)
+                    {
+                        nums.push(n as f32);
                     }
                 }
                 if nums.len() >= 5 {

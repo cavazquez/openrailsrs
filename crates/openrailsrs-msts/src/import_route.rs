@@ -16,8 +16,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use openrailsrs_formats::{
-    ActivityFile, MstsFile, TrItem, TrItemKind, TrPinRef, TrVectorSectionRecord, TrackDbFile,
-    TrackNodeKind, TrackVectorGeometry, TrackVectorPoint, parse_msts_file,
+    ActivityFile, MstsFile, TSectionCatalog, TrItem, TrItemKind, TrPinRef, TrVectorSectionRecord,
+    TrackDbFile, TrackNodeKind, TrackVectorGeometry, TrackVectorPoint, parse_msts_file,
 };
 use serde::Serialize;
 
@@ -199,8 +199,33 @@ fn node_coordinates_from_toml(value: &toml::Value) -> HashMap<String, (f64, f64)
     out
 }
 
-fn load_tdb(_route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError> {
+fn load_tdb(route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError> {
     let mut tdb = TrackDbFile::from_path(tdb_path)?;
+    // Native TrVectorSection coordinates/orientations are not lengths. Open Rails
+    // sums TrackSections.Get(SectionIndex).Length, including circular arc length.
+    let catalog = TSectionCatalog::load_for_route(route_dir)?;
+    for node in &mut tdb.nodes {
+        if let TrackNodeKind::Vector {
+            length_m, sections, ..
+        } = &mut node.kind
+        {
+            let exact = sections
+                .iter()
+                .map(|s| {
+                    catalog
+                        .sections
+                        .get(&s.section_index)
+                        .map(|def| def.effective_length_m())
+                })
+                .collect::<Option<Vec<_>>>();
+            if let Some(lengths) = exact.filter(|v| !v.is_empty()) {
+                let total: f64 = lengths.iter().sum();
+                if total.is_finite() && total > 0.0 {
+                    *length_m = total;
+                }
+            }
+        }
+    }
     let tit_path = tdb_path.with_extension("tit");
     if tit_path.exists() {
         let _ = tdb.merge_tit_speed_posts(&tit_path);
@@ -363,7 +388,7 @@ fn convert_tdb_to_toml(
                 grade_percent: 0.0,
             });
             // Bidirectional travel: PAT / live-drive often continue against pin order.
-            // Keep `_r` so TDB pose lookup only binds forward `e{N}`.
+            // `_r` retains the vector ID while distinguishing reverse travel.
             edges.push(EdgeToml {
                 id: reverse_id,
                 from: to_id.clone(),
@@ -540,10 +565,10 @@ fn apply_failed_signals(signals: &mut [SignalToml], failed_ids: &[u32]) {
             .id
             .strip_prefix("sig")
             .and_then(|s| s.parse::<u32>().ok());
-        if let Some(num) = id_num {
-            if failed_ids.contains(&num) {
-                sig.aspect = "stop".to_string();
-            }
+        if let Some(num) = id_num
+            && failed_ids.contains(&num)
+        {
+            sig.aspect = "stop".to_string();
         }
     }
 }

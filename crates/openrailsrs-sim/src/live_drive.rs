@@ -16,6 +16,8 @@ use crate::path::resolve_route_edges;
 use crate::path_data::PathData;
 use crate::physics::{TrainPhysics, max_partial_throttle_run_up_time_s, step};
 use crate::runner::consist_root;
+pub use crate::service::{LiveGameplay, LiveStopTarget};
+use crate::service::{STOP_POSITION_TOLERANCE_M, STOP_SPEED_TOLERANCE_MPS, ServicePhase};
 use crate::state::TrainSimState;
 
 const BRAKE_PIPE_SPEED_MPS: f64 = 200.0;
@@ -78,73 +80,69 @@ fn init_signal_runtime(
     }
 }
 
-/// Scheduled stop along the route (cumulative distance from start).
-#[derive(Debug, Clone)]
-pub struct LiveStopTarget {
-    /// Graph node id (`n12345`) where the stop is scheduled.
-    pub node_id: String,
-    pub cum_dist_m: f64,
-    pub arrive_s: f64,
-    pub name: String,
-}
-
-/// Lightweight gameplay state for live HUD (stops, penalties, overspeed).
-#[derive(Debug, Clone)]
-pub struct LiveGameplay {
-    pub destination: String,
-    /// Graph node id for the route destination (for 3D marker placement).
-    pub destination_node: String,
-    pub penalty_per_second_late: f64,
-    pub stop_targets: Vec<LiveStopTarget>,
-    pub next_stop_idx: usize,
-    pub accrued_penalty: f64,
-    /// `(stop name, delay_s)` for stops already passed.
-    pub passed_stops: Vec<(String, f64)>,
-    pub overspeed_active: bool,
-}
-
 fn build_live_gameplay(
     scenario: &ScenarioFile,
     graph: &TrackGraph,
     path_edges: &[String],
-) -> LiveGameplay {
+) -> Result<LiveGameplay, SimError> {
     let stops = &scenario.route.stops;
     let mut stop_targets = Vec::new();
     let mut cum = 0.0;
+    let mut node_chainages = vec![(scenario.route.start.as_str(), 0.0)];
     for eid in path_edges {
         if let Some(edge) = graph.edge(eid) {
             cum += edge.length_m;
-            let to_id = &edge.to.0;
-            if let Some(stop) = stops.iter().find(|s| &s.node == to_id) {
-                let name = graph
-                    .node(to_id)
-                    .and_then(|n| {
-                        if let NodeKind::Station { name } = &n.kind {
-                            Some(name.clone())
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_else(|| to_id.clone());
-                stop_targets.push(LiveStopTarget {
-                    node_id: to_id.clone(),
-                    cum_dist_m: cum,
-                    arrive_s: stop.arrive_s,
-                    name,
-                });
-            }
+            node_chainages.push((edge.to.0.as_str(), cum));
         }
     }
-    LiveGameplay {
-        destination: scenario.route.destination.clone(),
-        destination_node: scenario.route.destination.clone(),
-        penalty_per_second_late: scenario.gameplay.penalty_per_second_late,
-        stop_targets,
-        next_stop_idx: 0,
-        accrued_penalty: 0.0,
-        passed_stops: Vec::new(),
-        overspeed_active: false,
+    for stop in stops {
+        let to_id = &stop.node;
+        if let Some((_, distance)) = node_chainages.iter().find(|(n, _)| *n == to_id) {
+            let target_distance = distance + stop.offset_m;
+            if target_distance < 0.0 || target_distance > cum {
+                return Err(SimError::Msg(format!(
+                    "stop {to_id} lies outside the route"
+                )));
+            }
+            let name = graph
+                .node(to_id)
+                .and_then(|n| {
+                    if let NodeKind::Station { name } = &n.kind {
+                        Some(name.clone())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| to_id.clone());
+            stop_targets.push(LiveStopTarget {
+                node_id: to_id.clone(),
+                cum_dist_m: target_distance,
+                arrive_s: stop.arrive_s,
+                depart_s: stop.depart_s,
+                dwell_s: stop.dwell_s,
+                name: stop.name.clone().unwrap_or(name),
+                is_terminal: to_id == &scenario.route.destination,
+                passengers_on: stop.passengers_on,
+                passengers_off: stop.passengers_off,
+            });
+        } else {
+            return Err(SimError::Msg(format!(
+                "scheduled stop {to_id} is not on the resolved path"
+            )));
+        }
     }
+    for pair in stop_targets.windows(2) {
+        if pair[0].cum_dist_m >= pair[1].cum_dist_m || pair[0].is_terminal {
+            return Err(SimError::Msg(
+                "stops must follow route order; the terminal stop must be last".into(),
+            ));
+        }
+    }
+    Ok(LiveGameplay::new(
+        scenario.route.destination.clone(),
+        scenario.gameplay.penalty_per_second_late,
+        stop_targets,
+    ))
 }
 
 /// Interactive session: same physics as headless `sim` / `cab`, stepped from a real-time loop.
@@ -175,6 +173,7 @@ pub struct LiveDriveSession {
     sim_time_remainder: f64,
     signal_steps: u64,
     pub arrived: bool,
+    pub start_chainage_m: f64,
 }
 
 impl LiveDriveSession {
@@ -269,7 +268,9 @@ impl LiveDriveSession {
 
         let assume_signals_clear = scenario.route.assume_signals_clear;
         let signal_runtime = init_signal_runtime(&graph, assume_signals_clear);
-        let gameplay = build_live_gameplay(scenario, &graph, &path_edges);
+        let gameplay = build_live_gameplay(scenario, &graph, &path_edges)?;
+        let start_chainage_m =
+            path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
         let region_tracker = RegionTracker::new(scenario.sound_regions.clone());
 
         Ok(Self {
@@ -293,6 +294,7 @@ impl LiveDriveSession {
             sim_time_remainder: 0.0,
             signal_steps: 0,
             arrived: false,
+            start_chainage_m,
         })
     }
 
@@ -362,6 +364,64 @@ impl LiveDriveSession {
         self.signal_runtime.get(signal_id).copied()
     }
 
+    pub fn next_signal_ahead(&self) -> Option<(f64, SignalAspect)> {
+        let mut before = -self.state.pos_on_edge_m;
+        for (index, edge_id) in self
+            .state
+            .path_edges
+            .iter()
+            .enumerate()
+            .skip(self.state.edge_index)
+        {
+            let nearest = self
+                .graph
+                .signals_on_edge(edge_id)
+                .filter(|signal| before + signal.position_m >= 0.0)
+                .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
+            if let Some(signal) = nearest {
+                return Some((
+                    before + signal.position_m,
+                    self.signal_runtime
+                        .get(&signal.id)
+                        .copied()
+                        .unwrap_or(signal.aspect),
+                ));
+            }
+            before += self.path_data.edges[index].length_m;
+        }
+        None
+    }
+
+    fn distance_to_red_signal_m(&self) -> Option<f64> {
+        let mut before = -self.state.pos_on_edge_m;
+        for (index, edge_id) in self
+            .state
+            .path_edges
+            .iter()
+            .enumerate()
+            .skip(self.state.edge_index)
+        {
+            let nearest = self
+                .graph
+                .signals_on_edge(edge_id)
+                .filter(|signal| {
+                    before + signal.position_m >= 0.0
+                        && self
+                            .signal_runtime
+                            .get(&signal.id)
+                            .copied()
+                            .unwrap_or(signal.aspect)
+                            == SignalAspect::Stop
+                })
+                .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
+            if let Some(signal) = nearest {
+                return Some(before + signal.position_m);
+            }
+            before += self.path_data.edges[index].length_m;
+        }
+        None
+    }
+
     pub fn next_stop_label(&self) -> Option<&str> {
         self.gameplay
             .stop_targets
@@ -374,12 +434,30 @@ impl LiveDriveSession {
         self.gameplay
             .stop_targets
             .get(self.gameplay.next_stop_idx)
-            .map(|t| (t.cum_dist_m - self.state.odometer_m).max(0.0))
+            .map(|t| (t.cum_dist_m - self.head_chainage_m()).max(0.0))
+    }
+
+    pub fn head_chainage_m(&self) -> f64 {
+        self.path_data
+            .chainage_at_edge_position(self.state.edge_index, self.state.pos_on_edge_m)
+    }
+
+    pub fn toggle_doors(&mut self) {
+        if self.velocity_mps().abs() <= STOP_SPEED_TOLERANCE_MPS {
+            self.exterior.toggle_door();
+        }
     }
 
     /// Fraction of route distance travelled [0, 1].
     pub fn route_progress(&self) -> f64 {
-        let total = self.path_data.total_length_m();
+        let end = self
+            .gameplay
+            .stop_targets
+            .last()
+            .filter(|s| s.is_terminal)
+            .map(|s| s.cum_dist_m)
+            .unwrap_or_else(|| self.path_data.total_length_m());
+        let total = end - self.start_chainage_m;
         if total > 0.0 {
             (self.state.odometer_m / total).clamp(0.0, 1.0)
         } else {
@@ -475,23 +553,130 @@ impl LiveDriveSession {
     where
         F: FnMut(&RegionTransition),
     {
-        if self.arrived || real_dt <= 0.0 {
+        self.step_with_controller(real_dt, None, &mut on_region_transition);
+    }
+
+    /// Deterministic demonstration driver; decisions run at each physics quantum.
+    pub fn step_autodrive<F>(&mut self, real_dt: f64, throttle: f64, mut on_region_transition: F)
+    where
+        F: FnMut(&RegionTransition),
+    {
+        self.step_with_controller(
+            real_dt,
+            Some(throttle.clamp(0.0, 1.0)),
+            &mut on_region_transition,
+        );
+    }
+
+    fn step_with_controller<F>(
+        &mut self,
+        real_dt: f64,
+        automatic: Option<f64>,
+        on_region_transition: &mut F,
+    ) where
+        F: FnMut(&RegionTransition),
+    {
+        if self.arrived
+            || !real_dt.is_finite()
+            || real_dt <= 0.0
+            || !self.speed_mul.is_finite()
+            || self.speed_mul <= 0.0
+        {
             return;
         }
         let mut budget = self.sim_time_remainder + real_dt * self.speed_mul;
         let dt = self.realtime_physics_dt();
-        while budget >= dt {
-            self.state.throttle = self.driver_throttle;
+        while budget + 1e-12 >= dt {
+            if let Some(throttle) = automatic {
+                self.autodrive_inputs(throttle);
+            }
+            self.state.throttle = if self.driver_direction >= 0.75
+                && self.exterior.door == crate::exterior::DoorState::Closed
+                && !matches!(
+                    self.gameplay.phase,
+                    ServicePhase::Boarding | ServicePhase::ReadyToDepart
+                ) {
+                self.driver_throttle
+            } else {
+                0.0
+            };
             self.state.brake = self.driver_brake;
+            let red_distance = self.distance_to_red_signal_m();
+            let previous_odometer = self.state.odometer_m;
             let res = step(&mut self.state, &self.path_data, &self.physics, dt);
-            self.tick_after_physics_step(dt, &mut on_region_transition);
-            if res.arrived {
+            if red_distance
+                .is_some_and(|distance| self.state.odometer_m - previous_odometer > distance + 0.01)
+            {
+                self.gameplay.fail("Señal de parada rebasada");
+            }
+            if res.arrived && self.gameplay.next_stop_idx < self.gameplay.stop_targets.len() {
+                self.gameplay
+                    .fail("Fin de vía alcanzado sin completar las paradas");
+            }
+            self.tick_after_physics_step(dt, on_region_transition);
+            budget -= dt;
+            if self.gameplay.is_finished() {
                 self.arrived = true;
                 break;
             }
-            budget -= dt;
+            if res.arrived {
+                self.gameplay.phase = ServicePhase::Completed;
+                self.arrived = true;
+                break;
+            }
         }
-        self.sim_time_remainder = budget;
+        self.sim_time_remainder = if self.arrived { 0.0 } else { budget };
+    }
+
+    fn autodrive_inputs(&mut self, notch: f64) {
+        use crate::exterior::DoorState;
+        self.driver_direction = 1.0;
+        let v = self.velocity_mps();
+        match self.gameplay.phase {
+            ServicePhase::Boarding | ServicePhase::ReadyToDepart => {
+                self.driver_throttle = 0.0;
+                self.driver_brake = 1.0;
+                if self.gameplay.phase == ServicePhase::ReadyToDepart {
+                    if matches!(self.exterior.door, DoorState::Open | DoorState::Opening) {
+                        self.exterior.set_door(DoorState::Closing);
+                    }
+                } else if self.exterior.door == DoorState::Closed {
+                    self.exterior.set_door(DoorState::Opening);
+                }
+                return;
+            }
+            ServicePhase::Completed | ServicePhase::Failed => return,
+            ServicePhase::Approaching => {}
+        }
+        // Conservative service-brake approach with a propagation/release margin.
+        // The curve tightens to zero at the authored stop, without snapping physics.
+        let stop_cap = self
+            .distance_to_next_stop_m()
+            .map(|distance| (2.0 * 0.22 * (distance - 4.0).max(0.0)).sqrt())
+            .unwrap_or(f64::INFINITY);
+        let route_cap = self.effective_speed_limit_mps() * 0.9;
+        let signal_cap = self
+            .distance_to_red_signal_m()
+            .map(|distance| (2.0 * 0.22 * (distance - 4.0).max(0.0)).sqrt())
+            .unwrap_or(f64::INFINITY);
+        let cap = route_cap.min(stop_cap).min(signal_cap);
+        if self
+            .distance_to_next_stop_m()
+            .is_some_and(|d| d <= STOP_POSITION_TOLERANCE_M)
+            && v <= STOP_SPEED_TOLERANCE_MPS
+        {
+            self.driver_throttle = 0.0;
+            self.driver_brake = 1.0;
+        } else if v > cap + 0.15 {
+            self.driver_throttle = 0.0;
+            self.driver_brake = if cap < 0.5 { 1.0 } else { 0.45 };
+        } else if v < cap - 0.3 {
+            self.driver_brake = 0.0;
+            self.driver_throttle = notch;
+        } else {
+            self.driver_throttle = 0.0;
+            self.driver_brake = 0.0;
+        }
     }
 
     fn tick_after_physics_step<F>(&mut self, step_dt: f64, on_region_transition: &mut F)
@@ -500,7 +685,7 @@ impl LiveDriveSession {
     {
         self.exterior.tick(step_dt);
         self.tick_signals(step_dt);
-        self.tick_gameplay();
+        self.tick_gameplay(step_dt);
 
         if let Some(edge_id) = self.state.current_edge() {
             let transitions = self.region_tracker.step(edge_id, self.state.pos_on_edge_m);
@@ -511,24 +696,23 @@ impl LiveDriveSession {
     }
 
     fn tick_signals(&mut self, step_dt: f64) {
-        let t = self.state.time_s();
-        for sig in self.graph.signals() {
-            let id = sig.id.clone();
-            let asp = self.signal_runtime.get(&id).copied().unwrap_or(sig.aspect);
-            if asp != SignalAspect::Clear && sig.clear_after_s.is_some_and(|clear_t| t >= clear_t) {
-                self.signal_runtime.insert(id, SignalAspect::Clear);
-            }
-        }
-
         self.signal_steps += 1;
         let every = (1.0 / step_dt).round().max(1.0) as u64;
-        if every > 0 && self.signal_steps % every == 0 {
+        if every > 0 && self.signal_steps.is_multiple_of(every) {
             let mut block_map = HashMap::new();
             if let Some(eid) = self.state.current_edge() {
                 block_map.insert(eid.to_string(), "player".to_string());
             }
             self.graph.evaluate_signals(&block_map);
             for sig in self.graph.signals() {
+                if sig
+                    .clear_after_s
+                    .is_some_and(|clear_t| self.state.time_s() >= clear_t)
+                {
+                    self.signal_runtime
+                        .insert(sig.id.clone(), SignalAspect::Clear);
+                    continue;
+                }
                 if self.assume_signals_clear && sig.script.is_none() {
                     continue;
                 }
@@ -537,21 +721,21 @@ impl LiveDriveSession {
         }
     }
 
-    fn tick_gameplay(&mut self) {
+    fn tick_gameplay(&mut self, step_dt: f64) {
         let limit = self.effective_speed_limit_mps();
         self.gameplay.overspeed_active =
             limit.is_finite() && self.state.velocity_mps > limit * 1.05;
 
-        if self.gameplay.next_stop_idx < self.gameplay.stop_targets.len() {
-            let target = &self.gameplay.stop_targets[self.gameplay.next_stop_idx];
-            if self.state.odometer_m >= target.cum_dist_m {
-                let delay = (self.state.time_s() - target.arrive_s).max(0.0);
-                self.gameplay.accrued_penalty += delay * self.gameplay.penalty_per_second_late;
-                self.gameplay
-                    .passed_stops
-                    .push((target.name.clone(), delay));
-                self.gameplay.next_stop_idx += 1;
-            }
+        if let Some((off, on)) = self.gameplay.tick(
+            self.time_s(),
+            self.head_chainage_m(),
+            self.velocity_mps(),
+            self.exterior.door,
+            step_dt,
+        ) {
+            self.state.passengers = self.state.passengers.saturating_sub(off).saturating_add(on);
+            self.state.extra_mass_kg =
+                self.state.passengers as f64 * crate::runner::KG_PER_PASSENGER;
         }
     }
 }
@@ -574,6 +758,7 @@ mod tests {
         let mut session =
             LiveDriveSession::from_scenario(scenario_dir, &scenario).expect("live session");
         session.driver_throttle = 1.0;
+        session.driver_direction = 1.0;
         assert_eq!(session.time_s(), 0.0);
         session.step_realtime(5.0, |_| {});
         assert!(session.time_s() > 0.0);
@@ -604,6 +789,7 @@ mod tests {
             "realtime dt must be capped"
         );
         session.driver_throttle = 1.0;
+        session.driver_direction = 1.0;
         session.step_realtime(0.2, |_| {});
         assert!(
             session.time_s() >= 0.15,
@@ -671,9 +857,11 @@ mod tests {
             return;
         }
         let scenario_dir = scenario_path.parent().unwrap();
-        let Ok(scenario) = load_scenario(&scenario_path) else {
+        let Ok(mut scenario) = load_scenario(&scenario_path) else {
             return;
         };
+        // This regression exercises propulsion and path arrival, without signals.
+        scenario.route.assume_signals_clear = true;
         let Ok(mut session) = LiveDriveSession::from_scenario(scenario_dir, &scenario) else {
             return;
         };
@@ -682,6 +870,7 @@ mod tests {
         // n3 → n10770 corridor is a few tens of km; 30 min at speed is enough to arrive.
         for _ in 0..1800 {
             session.driver_throttle = 1.0;
+            session.driver_direction = 1.0;
             session.driver_brake = 0.0;
             session.step_realtime(1.0, |_| {});
             if session.arrived {

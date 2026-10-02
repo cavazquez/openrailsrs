@@ -498,10 +498,10 @@ impl TerrainSpawnCtx {
             .map(|(key, _)| key.clone())
             .collect();
         for key in stale_mats {
-            if let Some(handle) = self.mat_cache.remove(&key) {
-                if or_materials.remove(handle.id()).is_some() {
-                    mats_removed += 1;
-                }
+            if let Some(handle) = self.mat_cache.remove(&key)
+                && or_materials.remove(handle.id()).is_some()
+            {
+                mats_removed += 1;
             }
         }
 
@@ -525,10 +525,10 @@ impl TerrainSpawnCtx {
             .map(|(key, _)| key.clone())
             .collect();
         for key in stale_tex {
-            if let Some(handle) = self.tex_cache.remove(&key) {
-                if images.remove(handle.id()).is_some() {
-                    tex_removed += 1;
-                }
+            if let Some(handle) = self.tex_cache.remove(&key)
+                && images.remove(handle.id()).is_some()
+            {
+                tex_removed += 1;
             }
         }
         (mats_removed, tex_removed)
@@ -1055,10 +1055,11 @@ pub fn spawn_tile_track(
         }
         return;
     }
-    if suppress && force_procedural {
-        if let Some(stats) = track_stats.as_deref_mut() {
-            stats.tiles_suppressed_bypassed += 1;
-        }
+    if suppress
+        && force_procedural
+        && let Some(stats) = track_stats.as_deref_mut()
+    {
+        stats.tiles_suppressed_bypassed += 1;
     }
     if let Some(ctx) = tdb.filter(|c| crate::tdb_track::route_has_ukfs_tsection(&c.tsection)) {
         let ukfs_on = tdb_ukfs_shapes_enabled();
@@ -1153,10 +1154,10 @@ pub fn spawn_tile_track(
             return;
         }
     }
-    if !ribbon.positions.is_empty() {
-        if let Some(stats) = track_stats {
-            stats.ribbon_fallback = true;
-        }
+    if !ribbon.positions.is_empty()
+        && let Some(stats) = track_stats
+    {
+        stats.ribbon_fallback = true;
     }
     spawn_track(
         commands,
@@ -1765,18 +1766,17 @@ fn build_shape(
                 material,
             }];
             // OR BlendATex* second pass (Standard path only; OrScenery keeps single draw).
-            if dual_blend {
-                if let SceneMaterialHandle::Standard(h) = &out[0].material {
-                    if let Some(base) = materials.get(h) {
-                        let mut blend_mat = base.clone();
-                        blend_mat.alpha_mode = AlphaMode::Blend;
-                        blend_mat.depth_bias += 0.0002;
-                        out.push(PartHandles {
-                            mesh,
-                            material: SceneMaterialHandle::Standard(materials.add(blend_mat)),
-                        });
-                    }
-                }
+            if dual_blend
+                && let SceneMaterialHandle::Standard(h) = &out[0].material
+                && let Some(base) = materials.get(h)
+            {
+                let mut blend_mat = base.clone();
+                blend_mat.alpha_mode = AlphaMode::Blend;
+                blend_mat.depth_bias += 0.0002;
+                out.push(PartHandles {
+                    mesh,
+                    material: SceneMaterialHandle::Standard(materials.add(blend_mat)),
+                });
             }
             out
         })
@@ -2405,10 +2405,8 @@ fn shape_part_mesh(part: &shapes::ShapePart, textured: bool, ukfs_track: bool) -
     if textured && ukfs_track {
         let white = vec![[1.0_f32, 1.0, 1.0, 1.0]; part.positions.len()];
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, white);
-    } else if !textured {
-        if let Some(colors) = &part.colors {
-            mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.clone());
-        }
+    } else if !textured && let Some(colors) = &part.colors {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.clone());
     }
     mesh
 }

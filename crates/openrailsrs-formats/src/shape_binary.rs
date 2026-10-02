@@ -613,14 +613,15 @@ impl<'a> BinaryReader<'a> {
             return Ok(false);
         }
         let saved = self.pos;
-        if let Ok(s) = self.read_string() {
-            if !s.is_empty() && is_safe_ascii_text(&s) {
-                out.push(' ');
-                out.push('"');
-                out.push_str(&s.replace('\\', "\\\\").replace('"', "\\\""));
-                out.push('"');
-                return Ok(true);
-            }
+        if let Ok(s) = self.read_string()
+            && !s.is_empty()
+            && is_safe_ascii_text(&s)
+        {
+            out.push(' ');
+            out.push('"');
+            out.push_str(&s.replace('\\', "\\\\").replace('"', "\\\""));
+            out.push('"');
+            return Ok(true);
         }
         self.pos = saved;
         Ok(false)
@@ -1170,10 +1171,10 @@ mod tests {
         let mut uv_idx_set = std::collections::HashSet::new();
         for sub in &level.sub_objects {
             for v in &sub.vertices {
-                if let Some(&ui) = v.uv_indices.first() {
-                    if ui >= 0 {
-                        uv_idx_set.insert(ui);
-                    }
+                if let Some(&ui) = v.uv_indices.first()
+                    && ui >= 0
+                {
+                    uv_idx_set.insert(ui);
                 }
             }
         }
@@ -1205,10 +1206,10 @@ mod tests {
         let mut uv_idx_set = std::collections::HashSet::new();
         for sub in &level.sub_objects {
             for v in &sub.vertices {
-                if let Some(&ui) = v.uv_indices.first() {
-                    if ui >= 0 {
-                        uv_idx_set.insert(ui);
-                    }
+                if let Some(&ui) = v.uv_indices.first()
+                    && ui >= 0
+                {
+                    uv_idx_set.insert(ui);
                 }
             }
         }

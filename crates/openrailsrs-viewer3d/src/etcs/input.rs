@@ -83,14 +83,14 @@ impl EtcsUiState {
             .messages
             .iter()
             .any(|m| m.acknowledgeable && !m.acknowledged);
-        if let Some(msg) = self.last_action.as_ref() {
-            if now_s < self.last_action_until_s {
-                status.messages.push(super::status::TextMessage {
-                    text: msg.clone(),
-                    acknowledgeable: false,
-                    acknowledged: true,
-                });
-            }
+        if let Some(msg) = self.last_action.as_ref()
+            && now_s < self.last_action_until_s
+        {
+            status.messages.push(super::status::TextMessage {
+                text: msg.clone(),
+                acknowledgeable: false,
+                acknowledged: true,
+            });
         }
     }
 
@@ -132,26 +132,26 @@ impl EtcsUiState {
                     DmiOverlay::Settings => Some(self.settings_menu.clone()),
                     _ => None,
                 };
-                if let Some(def) = def {
-                    if let Some(btn) = def.buttons.get(i as usize) {
-                        if btn.enabled {
-                            self.apply_menu_action(&btn.action, now_s);
-                        }
-                    }
+                if let Some(def) = def
+                    && let Some(btn) = def.buttons.get(i as usize)
+                    && btn.enabled
+                {
+                    self.apply_menu_action(&btn.action, now_s);
                 }
             }
             SubHit::KeyDigit(d) => {
-                if let DmiOverlay::DataEntry { value } = &mut self.overlay {
-                    if value.len() < 8 {
-                        value.push(char::from(b'0' + d));
-                    }
+                if let DmiOverlay::DataEntry { value } = &mut self.overlay
+                    && value.len() < 8
+                {
+                    value.push(char::from(b'0' + d));
                 }
             }
             SubHit::KeyDot => {
-                if let DmiOverlay::DataEntry { value } = &mut self.overlay {
-                    if !value.contains('.') && value.len() < 8 {
-                        value.push('.');
-                    }
+                if let DmiOverlay::DataEntry { value } = &mut self.overlay
+                    && !value.contains('.')
+                    && value.len() < 8
+                {
+                    value.push('.');
                 }
             }
             SubHit::KeyDel => {
@@ -219,10 +219,10 @@ impl EtcsUiState {
                 }
             }
             DmiHit::SoftKey(i) => {
-                if let Some(key) = self.soft_keys.get(i as usize).cloned() {
-                    if key.enabled {
-                        self.apply_soft_key(key.action, now_s);
-                    }
+                if let Some(key) = self.soft_keys.get(i as usize).cloned()
+                    && key.enabled
+                {
+                    self.apply_soft_key(key.action, now_s);
                 }
             }
         }
