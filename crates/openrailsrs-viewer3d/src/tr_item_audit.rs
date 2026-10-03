@@ -397,6 +397,7 @@ mod tests {
             &[WorldObject {
                 kind: "Static",
                 uid: Some(1),
+                source_index: 0,
                 label: "box".into(),
                 shape_file: None,
                 section_idx: None,
@@ -445,6 +446,7 @@ mod tests {
             &[WorldObject {
                 kind: "Signal",
                 uid: Some(7),
+                source_index: 0,
                 label: "sig".into(),
                 shape_file: Some("sig.s".into()),
                 section_idx: None,

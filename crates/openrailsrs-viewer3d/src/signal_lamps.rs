@@ -47,6 +47,7 @@ pub fn spawn_signal_lamp_objects(
     assets: &RouteAssets,
     focus: &RouteFocus,
     cull_center: Option<Vec3>,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
     let sigcfg = assets.sigcfg();
     if sigcfg.signal_shapes.is_empty() {
@@ -68,7 +69,7 @@ pub fn spawn_signal_lamp_objects(
         if let Some(center) = cull_center {
             let dx = obj.position.x - center.x;
             let dz = obj.position.z - center.z;
-            if dx * dx + dz * dz > crate::launch::view_radius_m().powi(2) {
+            if dx * dx + dz * dz > crate::world::shape_mesh_radius_m().powi(2) {
                 continue;
             }
         }
@@ -90,7 +91,10 @@ pub fn spawn_signal_lamp_objects(
                     tile_z: obj.tile_z,
                     uid: obj.uid.unwrap_or(patch.uid),
                 },
-                Transform::IDENTITY,
+                Transform::from_translation(-crate::floating_origin::horizontal_shift(
+                    origin.shift,
+                )),
+                crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
                 Visibility::default(),
                 Name::new(format!("signal-lamps:{}:{}", shape_name, patch.uid)),
             ))
@@ -220,6 +224,7 @@ pub fn spawn_signal_lamps(
         &assets,
         &focus,
         None,
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 

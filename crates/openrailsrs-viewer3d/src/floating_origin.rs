@@ -159,6 +159,10 @@ pub(crate) fn apply_floating_origin(
         >,
     )>,
     mut billboards: Query<&mut crate::gameplay::StopBillboard>,
+    mut animations: Query<
+        &mut openrailsrs_bevy_scenery::shapes::ShapeAnimBinding,
+        Without<ChildOf>,
+    >,
 ) {
     if mode.is_tile_lab() {
         return;
@@ -193,6 +197,13 @@ pub(crate) fn apply_floating_origin(
     for mut billboard in &mut billboards {
         billboard.world.x -= delta.x;
         billboard.world.z -= delta.z;
+    }
+    // Animation writes the placement back every frame. Shift the stored pose
+    // as well as Transform so a moving signal never returns to an old origin.
+    for mut binding in &mut animations {
+        if binding.baked_rest_mesh {
+            binding.placement.translation -= delta;
+        }
     }
 
     // Driver view: camera is set every frame from the lead vehicle; do not zero it here.
@@ -241,5 +252,45 @@ mod tests {
         };
         let render = Vec3::new(110.0, 0.3, -40.0);
         assert_eq!(view_position(render, &origin).y, 0.3);
+    }
+
+    #[test]
+    fn rebase_shifts_animation_placement_as_well_as_its_transform() {
+        use openrailsrs_bevy_scenery::shapes::ShapeAnimBinding;
+        let mut app = App::new();
+        app.insert_resource(ViewerSceneryMode::Full)
+            .insert_resource(crate::launch::ViewerLaunchOpts::default())
+            .insert_resource(CameraFollowMode::Off)
+            .init_resource::<FloatingOrigin>()
+            .add_systems(Update, apply_floating_origin);
+        app.world_mut().spawn((
+            Camera3d::default(),
+            OrbitState::default(),
+            Transform::from_xyz(300.0, 5.0, -400.0),
+        ));
+        let placement = Transform::from_xyz(360.0, 12.0, -390.0);
+        let signal = app
+            .world_mut()
+            .spawn((
+                placement,
+                ShapeAnimBinding {
+                    shape: std::sync::Arc::new(openrailsrs_formats::ShapeFile::default()),
+                    matrix_idx: 0,
+                    speed: 0.0,
+                    frame_count: 0.0,
+                    placement,
+                    baked_rest_mesh: true,
+                },
+            ))
+            .id();
+        app.update();
+        let tf = app.world().get::<Transform>(signal).unwrap();
+        let binding = app.world().get::<ShapeAnimBinding>(signal).unwrap();
+        assert_eq!(tf.translation, Vec3::new(60.0, 12.0, 10.0));
+        assert_eq!(binding.placement.translation, tf.translation);
+        assert_eq!(
+            app.world().resource::<FloatingOrigin>().shift,
+            Vec3::new(300.0, 0.0, -400.0)
+        );
     }
 }

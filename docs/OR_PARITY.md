@@ -80,6 +80,29 @@ sin afirmar equivalencia visual ni física de la partida completa.
 
 ## Escenario y oráculos gráficos
 
+El streaming del visor conserva todos los objetos CPU de cada tile leído y
+activa su geometría al entrar en la ventana móvil, con 64 m de preparación.
+La identidad usa tile y ordinal del archivo, incluso si falta UID. La geometría
+GPU distante se libera antes que el tile CPU; al volver se activa nuevamente.
+La cola guarda poses relativas al foco y aplica el origen vigente al enviar
+las entidades, incluyendo señales animadas, bosques, decals, agua y tráfico.
+La simulación espera la carga inicial y continúa durante las cargas posteriores.
+El primer LOD comparte los buffers de la malla inicial cuando corresponde;
+las mallas temporales y los ACE decodificados se liberan al terminar la conversión.
+
+La regresión integrada mueve la ventana por tiles ya leídos, cambia el origen
+entre construcción y envío de mallas, comprueba ausencia de duplicados y vuelve
+al inicio después de liberar el GPU. Con los assets originales se verifican
+además dos capturas tras **viajar desde Northolt Park**, a 3,7 km y al completar
+el servicio en West Ruislip; se exige cero shapes cercanos sin activar y RSS
+máximo de 6 GiB. Se conservan PNG, logs y metadatos en `tmp/viewer-streaming`.
+Este control comprueba continuidad y memoria, sin certificar paridad de píxeles
+ni ampliar las tolerancias físicas.
+
+```bash
+python3 scripts/check_viewer_streaming.py --route-root "$CHILTERN_ROUTE" --software
+```
+
 La composición de tres modelos residenciales de Chiltern se compara con
 `ShapeFile` de la DLL original 1.6.1: `housesemi1.s`, `housesemirow1.s` y
 `Doc_30sDetachedHouse1.s`. `oracles/chiltern-scenery.json` conserva hashes de

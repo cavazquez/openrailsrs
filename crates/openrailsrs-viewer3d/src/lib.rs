@@ -187,21 +187,10 @@ impl Plugin for ViewerPlugin {
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
                     tdb_track::spawn_tdb_graph_track.run_if(tdb_track::tdb_startup_spawn_active),
-                    dyntrack::spawn_dyntrack_segments.run_if(launch::full_scenery_active),
-                    forest::spawn_forest_patches.run_if(launch::full_scenery_active),
-                    water::spawn_water_patches.run_if(launch::full_scenery_active),
-                    transfer::spawn_transfer_patches.run_if(launch::full_scenery_active),
-                    road_cars::spawn_road_cars.run_if(launch::full_scenery_active),
                     world::init_world_spawn_progress.in_set(ScenerySpawnSet::Catalog),
                     world::init_scenery_stream_state.in_set(ScenerySpawnSet::Ready),
                 )
                     .chain(),
-            )
-            .add_systems(
-                OnEnter(ViewerAppState::Playing),
-                signal_lamps::spawn_signal_lamps
-                    .run_if(launch::full_scenery_active)
-                    .after(world::init_scenery_stream_state),
             )
             .add_systems(
                 Update,
@@ -435,6 +424,7 @@ impl Plugin for ViewerPlugin {
                 FixedUpdate,
                 live::advance_live_sim
                     .run_if(live::live_mode_active)
+                    .run_if(world::initial_scenery_ready)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

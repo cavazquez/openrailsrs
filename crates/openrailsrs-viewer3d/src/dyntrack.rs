@@ -39,6 +39,7 @@ pub fn spawn_dyntrack_segments(
         &world.items,
         &focus,
         Some(&wire),
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 
@@ -51,7 +52,15 @@ pub fn spawn_dyntrack_objects(
     _track: &TrackScene,
     focus: &crate::world::RouteFocus,
 ) {
-    spawn_dyntrack_objects_with_wire(commands, meshes, materials, items, focus, None);
+    spawn_dyntrack_objects_with_wire(
+        commands,
+        meshes,
+        materials,
+        items,
+        focus,
+        None,
+        &crate::floating_origin::FloatingOrigin::default(),
+    );
 }
 
 /// Same as [`spawn_dyntrack_objects`], optionally drawing overhead wire (#36).
@@ -62,51 +71,69 @@ pub fn spawn_dyntrack_objects_with_wire(
     items: &[crate::world::WorldObject],
     focus: &crate::world::RouteFocus,
     wire: Option<&crate::overhead_wire::RouteWireConfig>,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
-    let segments: Vec<ProceduralTrackSegment> = items
-        .iter()
-        .filter(|obj| obj.kind == "Dyntrack")
-        .flat_map(|obj| {
+    // Tile groups own their meshes so leaving a tile releases both rails and
+    // sleepers. A single route-wide batch cannot be unloaded independently.
+    let mut by_tile = std::collections::HashMap::<_, Vec<&crate::world::WorldObject>>::new();
+    for obj in items.iter().filter(|obj| obj.kind == "Dyntrack") {
+        by_tile
+            .entry((obj.tile_x, obj.tile_z))
+            .or_default()
+            .push(obj);
+    }
+    let mut segment_count = 0;
+    for ((tile_x, tile_z), items) in by_tile {
+        let bound = crate::world::WorldTileBound::new(tile_x, tile_z);
+        let segments: Vec<_> = items.iter().flat_map(|obj| {
             openrailsrs_bevy_scenery::spawn::dyntrack::procedural_segments_from_dyntrack_sections(
-                obj.render_position(focus),
-                obj.rotation,
-                &obj.dyntrack_sections,
+                crate::floating_origin::view_translation(obj.render_position(focus), origin),
+                obj.rotation, &obj.dyntrack_sections,
             )
-        })
-        .collect();
-    spawn_procedural_track_batch(
-        commands,
-        meshes,
-        materials,
-        &segments,
-        "dyntrack",
-        ProceduralTrackStyle::Full,
-    );
-    if let Some(wire) = wire.filter(|w| w.enabled) {
-        let wire_segs: Vec<ProceduralTrackSegment> = items
-            .iter()
-            .filter(|obj| {
-                obj.kind == "Dyntrack"
-                    && !crate::overhead_wire::is_hide_wire_detail_level(obj.static_detail_level)
-            })
-            .map(|obj| ProceduralTrackSegment {
-                position: obj.render_position(focus),
-                rotation: obj.rotation,
-                length_m: Some(MSTS_DEFAULT_SECTION_LENGTH_M),
-                half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),
-                curve_radius_m: None,
-                curve_angle_deg: None,
-            })
-            .collect();
-        if !wire_segs.is_empty() {
-            crate::overhead_wire::spawn_overhead_wire_batch(
-                commands, meshes, materials, &wire_segs, wire.style, "dyntrack",
-            );
+        }).collect();
+        segment_count += segments.len();
+        let entities = spawn_procedural_track_batch(
+            commands,
+            meshes,
+            materials,
+            &segments,
+            "dyntrack",
+            ProceduralTrackStyle::Full,
+        );
+        for entity in entities {
+            commands.entity(entity).insert(bound);
+        }
+        if let Some(wire) = wire.filter(|w| w.enabled) {
+            let wire_segs: Vec<ProceduralTrackSegment> = items
+                .iter()
+                .filter(|obj| {
+                    obj.kind == "Dyntrack"
+                        && !crate::overhead_wire::is_hide_wire_detail_level(obj.static_detail_level)
+                })
+                .map(|obj| ProceduralTrackSegment {
+                    position: crate::floating_origin::view_translation(
+                        obj.render_position(focus),
+                        origin,
+                    ),
+                    rotation: obj.rotation,
+                    length_m: Some(MSTS_DEFAULT_SECTION_LENGTH_M),
+                    half_gauge_m: Some(MSTS_STANDARD_HALF_GAUGE_M),
+                    curve_radius_m: None,
+                    curve_angle_deg: None,
+                })
+                .collect();
+            if !wire_segs.is_empty()
+                && let Some(entity) = crate::overhead_wire::spawn_overhead_wire_batch(
+                    commands, meshes, materials, &wire_segs, wire.style, "dyntrack",
+                )
+            {
+                commands.entity(entity).insert(bound);
+            }
         }
     }
     viewer_log!(
         "openrailsrs-viewer3d: {} dyntrack segment(s)",
-        segments.len()
+        segment_count
     );
 }
 

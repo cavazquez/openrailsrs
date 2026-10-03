@@ -297,10 +297,14 @@ pub fn keep_by_world_object_density(static_detail_level: u32, density: u32) -> b
     static_detail_level <= density
 }
 
-/// Within this radius, spawn real `.s` meshes when the file resolves; matches [`visible_radius_m`].
+/// Prepare real `.s` meshes with a small margin around [`visible_radius_m`].
 pub fn shape_mesh_radius_m() -> f32 {
-    visible_radius_m()
+    // Prepare assets before they enter the advertised view distance. At line
+    // speed, parsing a new shape must not leave a gap immediately ahead.
+    visible_radius_m() + WORLD_PRELOAD_MARGIN_M
 }
+
+pub const WORLD_PRELOAD_MARGIN_M: f32 = 64.0;
 
 /// Legacy bake-merge (disabled). GPU instancing (#58) replaces this path.
 const ENABLE_SHAPE_INSTANCE_MERGE: bool = false;
@@ -424,6 +428,9 @@ pub struct CarSpawnerPatch {
 pub struct WorldObject {
     pub kind: &'static str,
     pub uid: Option<u32>,
+    /// Ordinal in the source WORLD tile, stable across filtering and reloads.
+    /// Some native objects omit UID, so UID alone cannot identify activation.
+    pub source_index: usize,
     pub label: String,
     /// Shape filename from the world item (`FileName`), if any.
     pub shape_file: Option<String>,
@@ -456,6 +463,13 @@ pub struct WorldObject {
 }
 
 impl WorldObject {
+    fn key(&self) -> WorldObjectKey {
+        WorldObjectKey {
+            tile: (self.tile_x, self.tile_z),
+            source_index: self.source_index,
+        }
+    }
+
     /// Rebase first, then restore the sub-metre component of the WORLD position.
     pub fn render_position(&self, focus: &RouteFocus) -> Vec3 {
         focus.scenery_to_render(self.position) + self.position_precision_offset
@@ -901,6 +915,7 @@ fn try_object_from_item(
     Ok(Some(WorldObject {
         kind: item.kind(),
         uid: item.uid(),
+        source_index: 0,
         label: object_label(item),
         shape_file: item.file_name().map(str::to_string),
         section_idx: item.section_idx(),
@@ -1117,9 +1132,12 @@ pub(crate) fn append_world_tile_with_density(
         scene.tiles_loaded = scene.loaded_tiles.len();
     }
     scene.items_skipped_invalid_pose += world.skipped_invalid_pose;
-    for item in &world.items {
+    for (source_index, item) in world.items.iter().enumerate() {
         match try_object_from_item(world.tile_x, world.tile_z, item, item_window, density) {
-            Ok(Some(obj)) => scene.items.push(obj),
+            Ok(Some(mut obj)) => {
+                obj.source_index = source_index;
+                scene.items.push(obj);
+            }
             Ok(None) => {}
             Err(ObjectSkip::OutOfWindow) => scene.items_skipped_out_of_window += 1,
             Err(ObjectSkip::Density) => scene.items_skipped_by_density += 1,
@@ -1453,18 +1471,21 @@ pub struct WorldSpawnProgress {
     phase: WorldSpawnPhase,
     started: Instant,
     item_index: usize,
+    /// Selected indices remain valid while tile materialize/unload is gated.
+    /// None is the initial full classification; later cycles revisit deferred items.
+    item_indices: Option<Vec<usize>>,
     shape_path_cache: std::collections::HashMap<String, Option<PathBuf>>,
     shape_instances: std::collections::HashMap<PathBuf, Vec<ShapeInstancePlacement>>,
-    merged_boxes: std::collections::HashMap<String, MergedBoxGroup>,
+    merged_boxes: std::collections::HashMap<(String, WorldTileBound), MergedBoxGroup>,
     culled_count: usize,
     trackobj_seen: usize,
     trackobj_resolved: usize,
     trackobj_procedural_objects: usize,
     trackobj_failed: usize,
     trackobj_failures: Vec<TrackObjFailure>,
-    trackobj_procedural: Vec<crate::dyntrack::ProceduralTrackSegment>,
+    trackobj_procedural: Vec<(WorldTileBound, crate::dyntrack::ProceduralTrackSegment)>,
     /// Overhead wire centreline segments (#36).
-    trackobj_wire: Vec<crate::dyntrack::ProceduralTrackSegment>,
+    trackobj_wire: Vec<(WorldTileBound, crate::dyntrack::ProceduralTrackSegment)>,
     placeholder_base: f32,
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
@@ -1553,6 +1574,7 @@ impl WorldSpawnProgress {
             phase: WorldSpawnPhase::Classifying,
             started: Instant::now(),
             item_index,
+            item_indices: None,
             shape_path_cache: std::collections::HashMap::new(),
             shape_instances: std::collections::HashMap::new(),
             merged_boxes: std::collections::HashMap::new(),
@@ -1802,7 +1824,7 @@ fn classify_one_object(
     {
         return;
     }
-    if should_cull_world_object_at(cull_center, obj.position) {
+    if horizontal_distance_xz(cull_center, obj.position) > shape_mesh_radius_m() {
         progress.culled_count += 1;
         return;
     }
@@ -1823,7 +1845,10 @@ fn classify_one_object(
         if crate::overhead_wire::should_draw_wire_for(obj, assets, wire) {
             let render_pos = obj.render_position(focus);
             let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
-            progress.trackobj_wire.extend(segs);
+            progress.trackobj_wire.extend(
+                segs.into_iter()
+                    .map(|seg| (WorldTileBound::new(obj.tile_x, obj.tile_z), seg)),
+            );
         }
         let cache_key = obj
             .shape_file
@@ -1871,7 +1896,10 @@ fn classify_one_object(
             let segs = trackobj_procedural_segments(obj, render_pos, assets, mode);
             if !segs.is_empty() {
                 progress.trackobj_procedural_objects += 1;
-                progress.trackobj_procedural.extend(segs);
+                progress.trackobj_procedural.extend(
+                    segs.into_iter()
+                        .map(|seg| (WorldTileBound::new(obj.tile_x, obj.tile_z), seg)),
+                );
                 return;
             }
         }
@@ -1948,7 +1976,10 @@ fn classify_one_object(
     };
     let kind_entry = progress
         .merged_boxes
-        .entry(obj.kind.to_string())
+        .entry((
+            obj.kind.to_string(),
+            WorldTileBound::new(obj.tile_x, obj.tile_z),
+        ))
         .or_insert_with(|| MergedBoxGroup {
             positions: Vec::new(),
             normals: Vec::new(),
@@ -2407,6 +2438,7 @@ fn build_world_shape_asset(
 fn build_shape_lod_assets(
     shape_path: &Path,
     shape: &ShapeFile,
+    base_asset: &ShapeRenderAsset,
     route_dir: &Path,
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
@@ -2423,8 +2455,21 @@ fn build_shape_lod_assets(
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let pbr = load_shape_pbr_sidecar(shape_path);
+    let primary_is_band_zero = shape.lod_controls.iter().all(|control| {
+        control.distance_levels.first().is_none_or(|first| {
+            control
+                .distance_levels
+                .iter()
+                .all(|level| first.selection_m <= level.selection_m)
+        })
+    });
     (0..band_count)
         .filter_map(|band| {
+            // The primary WORLD asset is already the finest band. Rebuilding
+            // it kept duplicate vertex buffers and materials for every model.
+            if band == 0 && primary_is_band_zero {
+                return Some(base_asset.clone());
+            }
             let parts = openrailsrs_bevy_scenery::shapes::build_mesh_parts_for_lod_band(
                 shape,
                 band,
@@ -2775,47 +2820,182 @@ fn camera_msts_xz(
     )
 }
 
-/// Tracks how many world items already have forest / water / transfer / dyntrack GPU spawns.
-#[derive(Resource, Default)]
-pub struct WorldSceneryStreamState {
-    pub processed_items: usize,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct WorldObjectKey {
+    tile: (i32, i32),
+    source_index: usize,
 }
 
-/// After startup (or tile stream), spawn forest / water / transfer / dyntrack for newly loaded items.
+/// CPU tile coverage and GPU activation have different lifetimes. A parsed tile
+/// retains all its objects; only nearby, previously unactivated objects spawn.
+#[derive(Resource, Default)]
+pub struct WorldSceneryStreamState {
+    shapes: HashSet<WorldObjectKey>,
+    auxiliary: HashSet<WorldObjectKey>,
+    last_center: Option<Vec3>,
+    last_item_count: usize,
+    initial_ready: bool,
+}
+
+impl WorldSceneryStreamState {
+    pub(crate) fn pending_shape_count(
+        &self,
+        world: &WorldScene,
+        center: Vec3,
+        radius: f32,
+    ) -> usize {
+        self.pending_shapes(world, center, radius).len()
+    }
+    fn distant_gpu_tiles(
+        &self,
+        world: &WorldScene,
+        center: Vec3,
+        radius: f32,
+    ) -> HashSet<(i32, i32)> {
+        let mut distant: HashSet<_> = self
+            .shapes
+            .iter()
+            .chain(&self.auxiliary)
+            .map(|key| key.tile)
+            .collect();
+        for obj in &world.items {
+            let key = obj.key();
+            if (self.shapes.contains(&key) || self.auxiliary.contains(&key))
+                && horizontal_distance_xz(center, obj.position) <= radius
+            {
+                distant.remove(&key.tile);
+            }
+        }
+        distant
+    }
+    fn needs_scan(&self, center: Vec3, item_count: usize) -> bool {
+        self.last_item_count != item_count
+            || self
+                .last_center
+                .is_none_or(|last| horizontal_distance_xz(last, center) >= 32.0)
+    }
+
+    fn forget_tiles(&mut self, tiles: &HashSet<(i32, i32)>) {
+        self.shapes.retain(|key| !tiles.contains(&key.tile));
+        self.auxiliary.retain(|key| !tiles.contains(&key.tile));
+        self.last_center = None;
+    }
+
+    fn pending_shapes(&self, world: &WorldScene, center: Vec3, radius: f32) -> Vec<usize> {
+        world
+            .items
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, obj)| {
+                (is_shape_scenery(obj.kind)
+                    && !self.shapes.contains(&obj.key())
+                    && horizontal_distance_xz(center, obj.position) <= radius)
+                    .then_some(idx)
+            })
+            .collect()
+    }
+
+    fn activate_auxiliary(
+        &mut self,
+        world: &WorldScene,
+        center: Vec3,
+        radius: f32,
+    ) -> Vec<WorldObject> {
+        world
+            .items
+            .iter()
+            .filter(|obj| {
+                is_auxiliary_scenery(obj.kind)
+                    && horizontal_distance_xz(center, obj.position) <= radius
+                    && self.auxiliary.insert(obj.key())
+            })
+            .cloned()
+            .collect()
+    }
+}
+
+fn is_auxiliary_scenery(kind: &str) -> bool {
+    matches!(
+        kind,
+        "Dyntrack" | "Forest" | "HWater" | "Transfer" | "CarSpawner" | "Signal"
+    )
+}
+
+fn is_shape_scenery(kind: &str) -> bool {
+    !matches!(
+        kind,
+        "Dyntrack" | "Forest" | "HWater" | "Transfer" | "CarSpawner"
+    ) && !is_tr_item_label_only(kind)
+}
+
+/// Reset activation when entering a new route.
 pub fn init_scenery_stream_state(
     world: Res<WorldScene>,
+    mode: Res<ViewerSceneryMode>,
     mut state: ResMut<WorldSceneryStreamState>,
 ) {
-    state.processed_items = world.items.len();
+    *state = WorldSceneryStreamState::default();
+    state.initial_ready = world.is_empty() || !mode.loads_msts_scenery();
+}
+
+/// Hold the initial train position while the loading screen builds its scenery.
+/// Later stream cycles continue in parallel with the simulation.
+pub fn initial_scenery_ready(state: Res<WorldSceneryStreamState>) -> bool {
+    state.initial_ready
+}
+
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct WorldSceneryView<'w> {
+    world: Res<'w, WorldScene>,
+    progress: Option<Res<'w, WorldSpawnProgress>>,
+    mode: Res<'w, ViewerSceneryMode>,
+    track: Res<'w, TrackScene>,
+    terrain: Option<Res<'w, TerrainElevation>>,
+    assets: Res<'w, RouteAssets>,
+    focus: Res<'w, RouteFocus>,
+    window: Res<'w, crate::view_window::ViewWindow>,
+    offset: Res<'w, RouteWorldOffset>,
+    wire: Res<'w, crate::overhead_wire::RouteWireConfig>,
+    origin: Res<'w, FloatingOrigin>,
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn world_stream_scenery_system(
-    world: Res<WorldScene>,
+    view: WorldSceneryView,
     mut state: ResMut<WorldSceneryStreamState>,
-    progress: Option<Res<WorldSpawnProgress>>,
-    mode: Res<ViewerSceneryMode>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut forest_materials: ResMut<Assets<openrailsrs_bevy_scenery::OrForestMaterial>>,
-    track: Res<TrackScene>,
-    terrain: Option<Res<TerrainElevation>>,
-    assets: Res<RouteAssets>,
-    focus: Res<RouteFocus>,
-    window: Res<crate::view_window::ViewWindow>,
-    offset: Res<RouteWorldOffset>,
-    wire: Res<crate::overhead_wire::RouteWireConfig>,
+    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
 ) {
-    if progress.is_some() {
+    let WorldSceneryView {
+        world,
+        progress,
+        mode,
+        track,
+        terrain,
+        assets,
+        focus,
+        window,
+        offset,
+        wire,
+        origin,
+    } = view;
+    if progress.is_some() || !mode.loads_msts_scenery() {
         return;
     }
-    if world.items.len() <= state.processed_items {
-        return;
-    }
-    let new_items = &world.items[state.processed_items..];
     let cull_center = window.center_world;
+    if !state.needs_scan(cull_center, world.items.len()) {
+        return;
+    }
+    let radius = shape_mesh_radius_m();
+    let selected_shapes = state.pending_shapes(&world, cull_center, radius);
+    let auxiliary = state.activate_auxiliary(&world, cull_center, radius);
+    let new_items = auxiliary.as_slice();
+    state.last_center = Some(cull_center);
+    state.last_item_count = world.items.len();
     let forests = if !mode.loads_msts_scenery() {
         0
     } else {
@@ -2865,6 +3045,7 @@ pub fn world_stream_scenery_system(
             &focus,
             &offset,
             Some(cull_center),
+            &origin,
         );
     }
     if waters > 0 {
@@ -2878,6 +3059,7 @@ pub fn world_stream_scenery_system(
             terrain.as_deref(),
             &assets,
             &focus,
+            &origin,
         );
     }
     if transfers > 0 {
@@ -2891,6 +3073,7 @@ pub fn world_stream_scenery_system(
             &assets,
             &focus,
             Some(window.center_world),
+            &origin,
         );
     }
     if road_cars > 0 {
@@ -2903,6 +3086,7 @@ pub fn world_stream_scenery_system(
             &assets,
             &focus,
             Some(cull_center),
+            &origin,
         );
     }
     let signal_lamps = if !mode.loads_msts_scenery() {
@@ -2922,6 +3106,7 @@ pub fn world_stream_scenery_system(
             &assets,
             &focus,
             Some(cull_center),
+            &origin,
         );
     }
     if dyntracks > 0 {
@@ -2932,6 +3117,7 @@ pub fn world_stream_scenery_system(
             new_items,
             &focus,
             Some(&wire),
+            &origin,
         );
     }
     if forests + waters + transfers + road_cars + dyntracks > 0 {
@@ -2939,7 +3125,18 @@ pub fn world_stream_scenery_system(
             "openrailsrs-viewer3d: streamed scenery — {forests} forest, {waters} water, {transfers} transfer, {road_cars} roadcar, {dyntracks} dyntrack"
         );
     }
-    state.processed_items = world.items.len();
+    if !selected_shapes.is_empty() {
+        viewer_log!(
+            "openrailsrs-viewer3d: activating {} deferred world item(s) near ({:.0},{:.0})",
+            selected_shapes.len(),
+            cull_center.x,
+            cull_center.z
+        );
+        let mut progress = WorldSpawnProgress::new(track.bounds.edge_radius().max(2.0) * 1.5);
+        progress.item_indices = Some(selected_shapes);
+        cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Objects);
+        commands.insert_resource(progress);
+    }
 }
 
 /// Request `.tilebundle` loads for WORLD tiles near the view window (#111).
@@ -3040,13 +3237,7 @@ pub struct WorldTileBundleAssets<'w> {
 
 /// View / mode inputs for WORLD tilebundle materialize (param budget for schedule traits).
 #[derive(bevy::ecs::system::SystemParam)]
-pub struct WorldTileMaterializeView<'w, 's> {
-    focus: Res<'w, RouteFocus>,
-    window: Res<'w, crate::view_window::ViewWindow>,
-    opts: Res<'w, crate::launch::ViewerLaunchOpts>,
-    origin: Res<'w, crate::floating_origin::FloatingOrigin>,
-    scene: Res<'w, TrackScene>,
-    camera: Query<'w, 's, &'static Transform, With<Camera3d>>,
+pub struct WorldTileMaterializeView<'w> {
     progress: Option<Res<'w, WorldSpawnProgress>>,
     mode: Res<'w, crate::launch::ViewerSceneryMode>,
 }
@@ -3057,8 +3248,6 @@ pub fn world_tile_bundle_materialize_system(
     mut stream: ResMut<WorldTileStream>,
     assets: WorldTileBundleAssets,
     view: WorldTileMaterializeView,
-    mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
-    mut commands: Commands,
 ) {
     let WorldTileBundleAssets {
         handles,
@@ -3067,35 +3256,13 @@ pub fn world_tile_bundle_materialize_system(
         worlds,
         terrains,
     } = assets;
-    let WorldTileMaterializeView {
-        focus,
-        window,
-        opts,
-        origin,
-        scene,
-        camera,
-        progress,
-        mode,
-    } = view;
+    let WorldTileMaterializeView { progress, mode } = view;
     if mode.is_tile_lab() || !mode.loads_msts_scenery() || progress.is_some() {
         return;
     }
     if stream.pending.is_empty() {
         return;
     }
-    let center = if opts.live {
-        window.center_world
-    } else {
-        let Ok(cam) = camera.single() else {
-            return;
-        };
-        let msts_xz = camera_msts_xz(&focus, cam, &origin);
-        Vec3::new(msts_xz.x, focus.center.y, msts_xz.y)
-    };
-    let item_window = Some(WorldItemWindow {
-        center,
-        radius_m: world_item_keep_radius_m(stream.radius_m),
-    });
     let item_base = world.items.len();
     let mut tiles_loaded = 0usize;
     let mut added_tile_keys = Vec::new();
@@ -3125,11 +3292,7 @@ pub fn world_tile_bundle_materialize_system(
             continue;
         };
         if !crate::tile_bundle::try_materialize_world_bundle(
-            bundle,
-            &worlds,
-            &terrains,
-            &mut world,
-            item_window,
+            bundle, &worlds, &terrains, &mut world, None,
         ) {
             continue;
         }
@@ -3151,12 +3314,6 @@ pub fn world_tile_bundle_materialize_system(
         viewer_log!(
             "openrailsrs-viewer3d: streamed {tiles_loaded} world tile(s) ({new_items} item(s)) via tilebundle"
         );
-        let placeholder_base = scene.bounds.edge_radius().max(2.0) * 1.5;
-        cycle.begin(openrailsrs_bevy_scenery::ScenerySpawnPhase::Objects);
-        commands.insert_resource(WorldSpawnProgress::new_from_item_index(
-            placeholder_base,
-            item_base,
-        ));
     }
 }
 
@@ -3222,7 +3379,17 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
         p.stream.loaded.remove(&key);
         p.stream.pending.remove(&key);
     }
-    if unloaded_tiles.is_empty() {
+    let mut gpu_unloaded_tiles = if p.stream_state.needs_scan(center, p.world.items.len()) {
+        p.stream_state.distant_gpu_tiles(
+            &p.world,
+            center,
+            p.window.radius_m + WORLD_PRELOAD_MARGIN_M * 2.0,
+        )
+    } else {
+        HashSet::new()
+    };
+    gpu_unloaded_tiles.extend(&unloaded_tiles);
+    if unloaded_tiles.is_empty() && gpu_unloaded_tiles.is_empty() {
         return;
     }
     // Drop AssetServer strong handles for unloaded tiles (#111 / #51).
@@ -3238,10 +3405,10 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
         p.world.loaded_tiles.remove(key);
     }
     p.world.tiles_loaded = p.world.loaded_tiles.len();
-    p.stream_state.processed_items = p.stream_state.processed_items.min(p.world.items.len());
+    p.stream_state.forget_tiles(&gpu_unloaded_tiles);
 
     // O(candidates): only entities indexed on unloaded tiles (#75).
-    let mut to_despawn = p.tile_index.take_tiles(&unloaded_tiles);
+    let mut to_despawn = p.tile_index.take_tiles(&gpu_unloaded_tiles);
     let visited = to_despawn.len();
 
     // Legacy scenery without WorldTileBound: distance fallback (#62).
@@ -3277,8 +3444,9 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
         );
     }
     viewer_log!(
-        "openrailsrs-viewer3d: unloaded {} world tile(s) ({} → {} items; despawned {} entit(ies); evicted {} shape(s)/{} texture(s); session {}/{} )",
+        "openrailsrs-viewer3d: unloaded {} CPU / {} GPU world tile(s) ({} → {} items; despawned {} entit(ies); evicted {} shape(s)/{} texture(s); session {}/{} )",
         unloaded_tiles.len(),
+        gpu_unloaded_tiles.len(),
         before,
         p.world.items.len(),
         despawned,
@@ -3293,6 +3461,19 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
 pub struct WorldSpawnSession<'w> {
     session: ResMut<'w, WorldShapeLodCache>,
     cycle: ResMut<'w, openrailsrs_bevy_scenery::ScenerySpawnCycle>,
+    activation: ResMut<'w, WorldSceneryStreamState>,
+}
+
+fn view_segments_by_tile(
+    segments: Vec<(WorldTileBound, crate::dyntrack::ProceduralTrackSegment)>,
+    origin: &FloatingOrigin,
+) -> HashMap<WorldTileBound, Vec<crate::dyntrack::ProceduralTrackSegment>> {
+    let mut by_tile = HashMap::<_, Vec<_>>::new();
+    for (bound, mut seg) in segments {
+        seg.position = view_translation(seg.position, origin);
+        by_tile.entry(bound).or_default().push(seg);
+    }
+    by_tile
 }
 
 /// Continue progressive world spawn across frames so the window stays responsive.
@@ -3321,6 +3502,7 @@ pub fn progressive_world_spawn_system(
     let WorldSpawnSession {
         mut session,
         mut cycle,
+        mut activation,
     } = spawn_session;
     // Spawn culling must follow the mobile view window (camera/train), not only the
     // startup RouteFocus — otherwise streamed tiles far from the anchor never appear.
@@ -3359,10 +3541,25 @@ pub fn progressive_world_spawn_system(
 
     match progress.phase {
         WorldSpawnPhase::Classifying => {
-            // Defense: never slice past `world.items` if another system shrank the vec.
-            progress.item_index = progress.item_index.min(world.items.len());
-            let end = (progress.item_index + classify_batch).min(world.items.len());
-            for obj in &world.items[progress.item_index..end] {
+            let item_count = progress
+                .item_indices
+                .as_ref()
+                .map_or(world.items.len(), Vec::len);
+            let end = (progress.item_index + classify_batch).min(item_count);
+            for cursor in progress.item_index..end {
+                let idx = progress
+                    .item_indices
+                    .as_ref()
+                    .map_or(cursor, |indices| indices[cursor]);
+                let Some(obj) = world.items.get(idx) else {
+                    continue;
+                };
+                if !is_shape_scenery(obj.kind)
+                    || horizontal_distance_xz(cull_center, obj.position) > shape_mesh_radius_m()
+                    || !activation.shapes.insert(obj.key())
+                {
+                    continue;
+                }
                 classify_one_object(
                     obj,
                     &focus,
@@ -3374,10 +3571,14 @@ pub fn progressive_world_spawn_system(
                 );
             }
             progress.item_index = end;
-            if progress.item_index >= world.items.len() {
+            if progress.item_index >= item_count {
                 viewer_log!(
                     "openrailsrs-viewer3d: classified {} visible world item(s)",
-                    world.items.len().saturating_sub(progress.culled_count)
+                    progress
+                        .shape_instances
+                        .values()
+                        .map(Vec::len)
+                        .sum::<usize>()
                 );
                 if progress.trackobj_seen > 0 {
                     viewer_log!(
@@ -3416,8 +3617,12 @@ pub fn progressive_world_spawn_system(
             // every mip of the route on every frame while building GPU assets.
             let ace_cache = std::mem::take(&mut progress.ace_cache);
             let end = (progress.asset_build_index + asset_batch).min(progress.parsed_shapes.len());
-            let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> =
-                progress.parsed_shapes[progress.asset_build_index..end].to_vec();
+            let start = progress.asset_build_index;
+            let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> = progress.parsed_shapes
+                [start..end]
+                .iter_mut()
+                .map(|(path, loaded)| (path.clone(), loaded.take()))
+                .collect();
             for (shape_path, loaded) in batch {
                 let (shape_path, asset) = build_world_shape_asset(
                     shape_path,
@@ -3435,6 +3640,7 @@ pub fn progressive_world_spawn_system(
                     let lod_assets = build_shape_lod_assets(
                         &shape_path,
                         &shape,
+                        &asset,
                         &assets.route_dir,
                         &mut meshes,
                         &mut images,
@@ -3455,6 +3661,10 @@ pub fn progressive_world_spawn_system(
             progress.ace_cache = ace_cache;
             progress.asset_build_index = end;
             if progress.asset_build_index >= progress.parsed_shapes.len() {
+                // All source pixels/temporary meshes have become shared Bevy
+                // assets. Release them before building and submitting entities.
+                progress.ace_cache.clear();
+                progress.parsed_shapes.clear();
                 if let Some(start) = progress.loading_shapes_started {
                     log_step("loaded world shape assets", start);
                 }
@@ -3478,7 +3688,7 @@ pub fn progressive_world_spawn_system(
                     &asset,
                     &mut meshes,
                     &mut materials,
-                    &origin,
+                    &FloatingOrigin::default(),
                     Some(assets.sigcfg()),
                 );
             }
@@ -3511,18 +3721,27 @@ pub fn progressive_world_spawn_system(
                 );
             }
             let end = (progress.spawn_index + spawn_batch).min(progress.spawn_queue.len());
-            let batch: Vec<ShapeSpawnBundle> =
-                progress.spawn_queue[progress.spawn_index..end].to_vec();
+            let batch: Vec<ShapeSpawnBundle> = progress.spawn_queue[progress.spawn_index..end]
+                .iter()
+                .cloned()
+                .map(|mut bundle| {
+                    bundle.0 = view_transform(bundle.0, &origin);
+                    bundle
+                })
+                .collect();
             commands.spawn_batch(batch);
             progress.spawn_index = end;
             if progress.spawn_index >= progress.spawn_queue.len() {
                 let instanced = std::mem::take(&mut progress.instanced_spawn_queue);
-                for bundle in instanced {
+                for mut bundle in instanced {
+                    bundle.0 = view_transform(bundle.0, &origin);
                     commands.spawn(bundle);
                 }
                 // Animated bundles carry cloned ShapeFile — spawn one-by-one.
                 let animated = std::mem::take(&mut progress.anim_spawn_queue);
-                for (bundle, signal) in animated {
+                for (mut bundle, signal) in animated {
+                    bundle.0 = view_transform(bundle.0, &origin);
+                    bundle.7.placement = view_transform(bundle.7.placement, &origin);
                     let mut entity = commands.spawn(bundle);
                     if let Some(signal) = signal {
                         entity.insert(signal);
@@ -3532,9 +3751,9 @@ pub fn progressive_world_spawn_system(
             }
         }
         WorldSpawnPhase::SpawningPlaceholders => {
-            let placeholders: Vec<(String, MergedBoxGroup)> =
+            let placeholders: Vec<((String, WorldTileBound), MergedBoxGroup)> =
                 progress.merged_boxes.drain().collect();
-            for (kind, group) in placeholders {
+            for ((kind, bound), group) in placeholders {
                 let material = materials.add(StandardMaterial {
                     base_color: group.color,
                     perceptual_roughness: 0.85,
@@ -3557,52 +3776,43 @@ pub fn progressive_world_spawn_system(
                         origin.shift,
                     )),
                     Name::new(format!("world-boxes:{kind}")),
+                    bound,
                 ));
                 viewer_log!("openrailsrs-viewer3d: merged {cuboid_count} {kind} placeholder(s)");
             }
-            if !progress.trackobj_procedural.is_empty() {
-                let segments = std::mem::take(&mut progress.trackobj_procedural)
-                    .into_iter()
-                    .map(|mut seg| {
-                        seg.position = view_translation(seg.position, &origin);
-                        seg
-                    })
-                    .collect::<Vec<_>>();
-                crate::dyntrack::spawn_procedural_track_batch(
+            for (bound, segments) in
+                view_segments_by_tile(std::mem::take(&mut progress.trackobj_procedural), &origin)
+            {
+                for entity in crate::dyntrack::spawn_procedural_track_batch(
                     &mut commands,
                     &mut meshes,
                     &mut materials,
                     &segments,
                     "trackobj",
                     crate::dyntrack::ProceduralTrackStyle::Full,
-                );
+                ) {
+                    commands.entity(entity).insert(bound);
+                }
             }
-            if !progress.trackobj_wire.is_empty() {
-                let wire_count = progress.trackobj_wire.len();
-                let segments = std::mem::take(&mut progress.trackobj_wire)
-                    .into_iter()
-                    .map(|mut seg| {
-                        seg.position = view_translation(seg.position, &origin);
-                        seg
-                    })
-                    .collect::<Vec<_>>();
-                crate::overhead_wire::spawn_overhead_wire_batch(
+            for (bound, segments) in
+                view_segments_by_tile(std::mem::take(&mut progress.trackobj_wire), &origin)
+            {
+                if let Some(entity) = crate::overhead_wire::spawn_overhead_wire_batch(
                     &mut commands,
                     &mut meshes,
                     &mut materials,
                     &segments,
                     wire.style,
                     "trackobj",
-                );
-                viewer_log!(
-                    "openrailsrs-viewer3d: overhead wire {wire_count} segment(s) at {:.2} m",
-                    wire.style.height_m
-                );
+                ) {
+                    commands.entity(entity).insert(bound);
+                }
             }
             let load_diag =
                 log_world_spawn_summary(&progress, Some(world.as_ref()), terrain.as_deref());
             commands.insert_resource(load_diag);
             commit_spawn_to_session(&mut session, &mut progress);
+            activation.initial_ready = true;
             cycle.finish();
             commands.remove_resource::<WorldSpawnProgress>();
         }
@@ -4364,6 +4574,7 @@ mod tests {
         let platform = WorldObject {
             kind: "Platform",
             uid: Some(1),
+            source_index: 0,
             label: String::new(),
             shape_file: Some("Platforms1and2.s".into()),
             section_idx: None,
@@ -4400,7 +4611,10 @@ mod tests {
     #[test]
     fn default_visible_radius_matches_viewing_distance() {
         assert_eq!(VISIBLE_RADIUS_M, crate::launch::VIEWING_DISTANCE_M);
-        assert_eq!(shape_mesh_radius_m(), visible_radius_m());
+        assert_eq!(
+            shape_mesh_radius_m(),
+            visible_radius_m() + WORLD_PRELOAD_MARGIN_M
+        );
         assert!(crate::launch::scenery_content_radius_m() > visible_radius_m());
         assert!(crate::launch::view_unload_radius_m() > visible_radius_m());
     }
@@ -4989,3 +5203,7 @@ mod tests {
         assert!((legacy2 - correct2).abs() < 1e-4);
     }
 }
+
+#[cfg(test)]
+#[path = "world_stream_tests.rs"]
+mod stream_tests;

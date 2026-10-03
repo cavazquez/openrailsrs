@@ -12,9 +12,7 @@ use openrailsrs_bevy_scenery::build_transfer_mesh as shared_build_transfer_mesh;
 use crate::shapes::{RouteAssets, load_ace_image};
 use crate::terrain::TerrainElevation;
 use crate::viewer_log;
-use crate::world::{
-    RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz, visible_radius_m,
-};
+use crate::world::{RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz};
 
 const COLOR_TRANSFER_FALLBACK: Color = Color::srgb(0.72, 0.70, 0.66);
 #[cfg(test)]
@@ -96,6 +94,7 @@ pub fn spawn_transfer_patches(
         &assets,
         &focus,
         None,
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 
@@ -114,6 +113,7 @@ pub fn spawn_transfer_objects(
     assets: &RouteAssets,
     focus: &RouteFocus,
     cull_center: Option<Vec3>,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
     let patches: Vec<_> = items
         .iter()
@@ -129,7 +129,7 @@ pub fn spawn_transfer_objects(
     let cull_at = cull_center.unwrap_or(focus.center);
 
     for obj in patches {
-        if horizontal_distance_xz(cull_at, obj.position) > visible_radius_m() {
+        if horizontal_distance_xz(cull_at, obj.position) > crate::world::shape_mesh_radius_m() {
             continue;
         }
         let patch = obj.transfer.as_ref().expect("filtered");
@@ -188,7 +188,7 @@ pub fn spawn_transfer_objects(
             },
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(material),
-            Transform::from_translation(render),
+            Transform::from_translation(crate::floating_origin::view_translation(render, origin)),
             NotShadowCaster,
             Name::new(format!("transfer:{}:{}", obj.label, patch.uid)),
         ));

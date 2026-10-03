@@ -18,9 +18,7 @@ use crate::shapes::{
 };
 use crate::train::train_part_casts_shadow;
 use crate::viewer_log;
-use crate::world::{
-    RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz, visible_radius_m,
-};
+use crate::world::{RouteFocus, WorldObject, WorldScene, WorldTileBound, horizontal_distance_xz};
 
 const COLOR_CAR_FALLBACK: Color = Color::srgb(0.75, 0.22, 0.18);
 
@@ -134,6 +132,7 @@ pub fn spawn_road_cars(
         &assets,
         &focus,
         None,
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 
@@ -148,6 +147,7 @@ pub fn spawn_road_car_objects(
     assets: &RouteAssets,
     focus: &RouteFocus,
     cull_center: Option<Vec3>,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
     let spawners: Vec<_> = items
         .iter()
@@ -176,7 +176,7 @@ pub fn spawn_road_car_objects(
     let mut skipped = 0usize;
 
     for obj in spawners {
-        if horizontal_distance_xz(cull_at, obj.position) > visible_radius_m() {
+        if horizontal_distance_xz(cull_at, obj.position) > crate::world::shape_mesh_radius_m() {
             continue;
         }
         let patch = obj.car_spawner.as_ref().expect("filtered");
@@ -213,7 +213,7 @@ pub fn spawn_road_car_objects(
                 forward: patch.uid % 2 == 0,
             },
             Transform {
-                translation: render,
+                translation: crate::floating_origin::view_translation(render, origin),
                 rotation: rot,
                 scale: Vec3::ONE,
             },
@@ -301,6 +301,7 @@ pub fn spawn_road_car_objects(
 
 pub(crate) fn update_road_cars(
     time: Res<Time>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
     mut cars: Query<(&mut Transform, &mut RoadCarMotion)>,
 ) {
     let dt = time.delta_secs();
@@ -324,7 +325,7 @@ pub(crate) fn update_road_cars(
         }
         let u = motion.t.clamp(margin, margin + usable);
         let world = motion.start + (motion.end - motion.start) * u;
-        tf.translation = world;
+        tf.translation = crate::floating_origin::view_translation(world, &origin);
         tf.rotation = if motion.forward {
             yaw_along(motion.start, motion.end)
         } else {
@@ -337,6 +338,40 @@ pub(crate) fn update_road_cars(
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn road_car_motion_keeps_world_position_after_multiple_origin_shifts() {
+        let mut app = App::new();
+        app.insert_resource(Time::<()>::default())
+            .init_resource::<crate::floating_origin::FloatingOrigin>()
+            .add_systems(Update, update_road_cars);
+        let car = app
+            .world_mut()
+            .spawn((
+                Transform::IDENTITY,
+                RoadCarMotion {
+                    start: Vec3::new(4000.0, 3.0, -2000.0),
+                    end: Vec3::new(4200.0, 3.0, -2000.0),
+                    speed_mps: 0.0,
+                    length_m: 4.0,
+                    t: 0.5,
+                    forward: true,
+                },
+            ))
+            .id();
+        for shift in [
+            Vec3::ZERO,
+            Vec3::new(3700.0, 0.0, -1800.0),
+            Vec3::new(4050.0, 0.0, -2100.0),
+        ] {
+            app.world_mut()
+                .resource_mut::<crate::floating_origin::FloatingOrigin>()
+                .shift = shift;
+            app.update();
+            let tf = app.world().get::<Transform>(car).unwrap();
+            assert_eq!(tf.translation + shift, Vec3::new(4100.0, 3.0, -2000.0));
+        }
+    }
 
     fn chiltern_route() -> Option<PathBuf> {
         std::env::var_os("CHILTERN_ROUTE")

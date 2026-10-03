@@ -194,9 +194,9 @@ pub fn spawn_overhead_wire_batch(
     segments: &[ProceduralTrackSegment],
     style: OverheadWireStyle,
     label: &str,
-) {
+) -> Option<Entity> {
     if segments.is_empty() {
-        return;
+        return None;
     }
 
     let mut positions: Vec<[f32; 3]> = Vec::new();
@@ -216,7 +216,7 @@ pub fn spawn_overhead_wire_batch(
     }
 
     if positions.is_empty() {
-        return;
+        return None;
     }
 
     let material = materials.add(StandardMaterial {
@@ -238,13 +238,16 @@ pub fn spawn_overhead_wire_batch(
     mesh.insert_indices(Indices::U32(indices));
 
     let count = segments.len();
-    commands.spawn((
-        Mesh3d(meshes.add(mesh)),
-        MeshMaterial3d(material),
-        Transform::IDENTITY,
-        Visibility::default(),
-        Name::new(format!("{label}:overhead_wire:{count}")),
-    ));
+    let entity = commands
+        .spawn((
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(material),
+            Transform::IDENTITY,
+            Visibility::default(),
+            Name::new(format!("{label}:overhead_wire:{count}")),
+        ))
+        .id();
+    Some(entity)
 }
 
 fn push_cuboid(

@@ -102,6 +102,7 @@ pub fn spawn_water_patches(
         terrain.as_deref(),
         &assets,
         &focus,
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 
@@ -117,6 +118,7 @@ pub fn spawn_water_objects(
     terrain: Option<&TerrainElevation>,
     assets: &RouteAssets,
     focus: &crate::world::RouteFocus,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
     let patches: Vec<_> = items
         .iter()
@@ -165,6 +167,7 @@ pub fn spawn_water_objects(
         let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z))
             + obj.position_precision_offset;
         commands.spawn((
+            crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             WaterSurface {
                 render_base_y: render.y,
                 phase,
@@ -172,7 +175,7 @@ pub fn spawn_water_objects(
             },
             Mesh3d(mesh.clone()),
             MeshMaterial3d(material),
-            Transform::from_translation(render),
+            Transform::from_translation(crate::floating_origin::view_translation(render, origin)),
             Name::new(format!("water:{}:{}", obj.label, patch.uid)),
         ));
 
@@ -180,6 +183,7 @@ pub fn spawn_water_objects(
             focus.to_render_surface(Vec3::new(obj.position.x, base_y - 0.05, obj.position.z))
                 + obj.position_precision_offset;
         commands.spawn((
+            crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             WaterSurface {
                 render_base_y: reflect_render.y,
                 phase: phase + 1.1,
@@ -187,8 +191,11 @@ pub fn spawn_water_objects(
             },
             Mesh3d(mesh),
             MeshMaterial3d(reflect_mat),
-            Transform::from_translation(reflect_render)
-                .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
+            Transform::from_translation(crate::floating_origin::view_translation(
+                reflect_render,
+                origin,
+            ))
+            .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
             Name::new(format!("water-reflect:{}:{}", obj.label, patch.uid)),
         ));
 

@@ -379,11 +379,12 @@ pub fn spawn_procedural_track_batch(
     segments: &[ProceduralTrackSegment],
     label: &str,
     style: ProceduralTrackStyle,
-) {
+) -> Vec<Entity> {
     if segments.is_empty() {
-        return;
+        return Vec::new();
     }
 
+    let mut spawned = Vec::new();
     let count = segments.len();
     let sleeper_material = materials.add(StandardMaterial {
         base_color: COLOR_SLEEPER,
@@ -449,13 +450,17 @@ pub fn spawn_procedural_track_batch(
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, sleeper_nrm);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, sleeper_uv);
         mesh.insert_indices(Indices::U32(sleeper_idx));
-        commands.spawn((
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(sleeper_material),
-            Transform::IDENTITY,
-            Visibility::default(),
-            Name::new(format!("{label}:sleepers:{count}")),
-        ));
+        spawned.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(mesh)),
+                    MeshMaterial3d(sleeper_material),
+                    Transform::IDENTITY,
+                    Visibility::default(),
+                    Name::new(format!("{label}:sleepers:{count}")),
+                ))
+                .id(),
+        );
     }
 
     if !rail_pos.is_empty() {
@@ -467,14 +472,19 @@ pub fn spawn_procedural_track_batch(
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, rail_nrm);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, rail_uv);
         mesh.insert_indices(Indices::U32(rail_idx));
-        commands.spawn((
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(rail_material),
-            Transform::IDENTITY,
-            Visibility::default(),
-            Name::new(format!("{label}:rails:{count}")),
-        ));
+        spawned.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(mesh)),
+                    MeshMaterial3d(rail_material),
+                    Transform::IDENTITY,
+                    Visibility::default(),
+                    Name::new(format!("{label}:rails:{count}")),
+                ))
+                .id(),
+        );
     }
+    spawned
 }
 
 /// Spawn one procedural segment as a single rail mesh entity (for mobile TDB streaming).

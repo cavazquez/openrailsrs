@@ -227,6 +227,7 @@ mod tests {
         WorldObject {
             kind: "Signal",
             uid: Some(uid),
+            source_index: uid as usize,
             label: "sig".into(),
             shape_file: Some("sig.s".into()),
             section_idx: None,

@@ -88,8 +88,8 @@ use openrailsrs_viewer3d::track_position::{
 };
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
 use openrailsrs_viewer3d::world::{
-    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, load_world_from_route_dir_near, msts_to_bevy,
-    world_tile_center_hint,
+    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, load_world_from_route_dir_near,
+    load_world_from_route_dir_near_filtered, msts_to_bevy, world_tile_center_hint,
 };
 use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
@@ -615,12 +615,12 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
     let scene = TrackScene::from_loaded_route(loaded);
     let track_dev = track_dev_cli;
     let t = Instant::now();
-    let mut world = if track_dev {
+    let world = if track_dev {
         viewer_log!("openrailsrs-viewer3d: track_dev — skipping .w world load");
         WorldScene::default()
     } else {
         let world_hint = world_tile_center_hint(route_dir).unwrap_or(scene.bounds.center);
-        load_world_from_route_dir_near(route_dir, Some(world_hint), view_radius_m())
+        load_world_from_route_dir_near_filtered(route_dir, Some(world_hint), view_radius_m(), false)
     };
     if !track_dev {
         log_step(
@@ -633,9 +633,6 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
         );
     }
     let focus = RouteFocus::from_scene_and_world(&scene, &world);
-    if !track_dev {
-        world.retain_within_visible_radius(&focus, scenery_content_radius_m());
-    }
     let t = Instant::now();
     let terrain = if track_dev {
         TerrainScene::default()
@@ -767,7 +764,7 @@ fn load_from_scenario(
         .or_else(|| world_tile_center_hint(&route_dir))
         .unwrap_or(scene.bounds.center);
     let t = Instant::now();
-    let mut world = if scenery_mode.loads_msts_scenery() {
+    let world = if scenery_mode.loads_msts_scenery() {
         if live {
             viewer_log!(
                 "openrailsrs-viewer3d: loading world near ({:.0}, {:.0}, {:.0})",
@@ -776,7 +773,12 @@ fn load_from_scenario(
                 scenery_load_center.z
             );
         }
-        load_world_from_route_dir_near(&route_dir, Some(scenery_load_center), view_radius_m())
+        load_world_from_route_dir_near_filtered(
+            &route_dir,
+            Some(scenery_load_center),
+            view_radius_m(),
+            false,
+        )
     } else {
         viewer_log!("openrailsrs-viewer3d: track-focused — skipping .w world load");
         WorldScene::default()
@@ -801,13 +803,6 @@ fn load_from_scenario(
         RunCorridorPath::default()
     };
     let focus_center = anchor_world.unwrap_or(scenery_load_center);
-    let provisional_focus = RouteFocus {
-        center: focus_center,
-        height_origin: focus_center.y,
-    };
-    if scenery_mode.loads_msts_scenery() {
-        world.retain_within_visible_radius(&provisional_focus, scenery_content_radius_m());
-    }
     let t = Instant::now();
     let terrain = if scenery_mode.loads_msts_scenery() {
         load_terrain_from_route_dir_near(&route_dir, Some(scenery_load_center), view_radius_m())

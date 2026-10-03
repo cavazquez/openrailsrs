@@ -15,9 +15,7 @@ use std::time::Instant;
 use crate::shapes::load_ace_image;
 use crate::terrain::TerrainElevation;
 use crate::track::{SceneBounds, TrackScene, TrackSegmentIndex, forest_track_clearance_m};
-use crate::world::{
-    RouteFocus, RouteWorldOffset, WorldObject, WorldScene, horizontal_distance_xz, visible_radius_m,
-};
+use crate::world::{RouteFocus, RouteWorldOffset, WorldObject, WorldScene, horizontal_distance_xz};
 use crate::{log_step, viewer_log};
 
 pub use openrailsrs_bevy_scenery::{
@@ -130,6 +128,7 @@ pub fn spawn_forest_patches(
         &focus,
         &offset,
         None,
+        &crate::floating_origin::FloatingOrigin::default(),
     );
 }
 
@@ -147,6 +146,7 @@ pub fn spawn_forest_objects(
     focus: &RouteFocus,
     offset: &RouteWorldOffset,
     cull_center: Option<Vec3>,
+    origin: &crate::floating_origin::FloatingOrigin,
 ) {
     let spawn_start = Instant::now();
     let forests: Vec<_> = items
@@ -183,7 +183,7 @@ pub fn spawn_forest_objects(
             default_half
         };
         let (base_w, base_h) = forest_tree_size(patch.tree_width, patch.tree_height);
-        if horizontal_distance_xz(cull_at, obj.position) > visible_radius_m() {
+        if horizontal_distance_xz(cull_at, obj.position) > crate::world::shape_mesh_radius_m() {
             continue;
         }
         let trees_world = scatter_trees_in_patch(
@@ -230,7 +230,8 @@ pub fn spawn_forest_objects(
         commands.spawn((
             Mesh3d(mesh),
             MeshMaterial3d(material),
-            Transform::IDENTITY,
+            Transform::from_translation(-crate::floating_origin::horizontal_shift(origin.shift)),
+            crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             Name::new(format!("forest:{}:{}", obj.label, patch.uid)),
         ));
     }
