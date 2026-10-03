@@ -430,12 +430,8 @@ fn graph_endpoint_render_pos(
 #[derive(Component)]
 pub(crate) struct CompactTrackLines;
 
-fn should_hide_compact_track_lines(
-    opts: ViewerLaunchOpts,
-    render_mode: TrackRenderMode,
-    has_world_scenery: bool,
-) -> bool {
-    opts.live && render_mode == TrackRenderMode::Compact && has_world_scenery
+fn should_hide_logical_track_geometry(opts: ViewerLaunchOpts, has_world_scenery: bool) -> bool {
+    opts.live && has_world_scenery
 }
 
 /// One-shot: spawn edge cylinders and node spheres for the loaded graph.
@@ -457,9 +453,9 @@ pub fn spawn_track_meshes(
         return;
     }
     let has_world_scenery = world.as_deref().is_some_and(|w| !w.is_empty());
-    if should_hide_compact_track_lines(*opts, scene.render_mode, has_world_scenery) {
+    if should_hide_logical_track_geometry(*opts, has_world_scenery) {
         crate::viewer_log!(
-            "openrailsrs-viewer3d: hiding compact logical track graph in live MSTS scenery; TrackObj/TDB geometry provides visual rails"
+            "openrailsrs-viewer3d: hiding logical track graph in live MSTS scenery; TrackObj/TDB geometry provides visual rails"
         );
         return;
     }
@@ -875,32 +871,18 @@ mod tests {
     }
 
     #[test]
-    fn live_msts_scenery_hides_compact_graph_overlay() {
+    fn live_msts_scenery_hides_logical_graph_geometry_for_small_and_large_routes() {
         let opts = ViewerLaunchOpts {
             live: true,
             ..Default::default()
         };
-        assert!(should_hide_compact_track_lines(
-            opts,
-            TrackRenderMode::Compact,
-            true
-        ));
-        assert!(!should_hide_compact_track_lines(
-            opts,
-            TrackRenderMode::Compact,
-            false
-        ));
-        assert!(!should_hide_compact_track_lines(
+        assert!(should_hide_logical_track_geometry(opts, true));
+        assert!(!should_hide_logical_track_geometry(opts, false));
+        assert!(!should_hide_logical_track_geometry(
             ViewerLaunchOpts {
                 live: false,
                 ..Default::default()
             },
-            TrackRenderMode::Compact,
-            true
-        ));
-        assert!(!should_hide_compact_track_lines(
-            opts,
-            TrackRenderMode::Full,
             true
         ));
     }

@@ -442,8 +442,10 @@ pub fn texture_path_candidates(
         }
     }
 
-    out.sort();
-    out.dedup();
+    // Candidate order encodes OR precedence: night/season first, then the
+    // authored day texture. Lexical sorting chose TEXTURES/NIGHT in daylight.
+    let mut seen = std::collections::HashSet::new();
+    out.retain(|path| seen.insert(path.clone()));
     out
 }
 
@@ -940,6 +942,47 @@ mod tests {
 
     fn default_flags() -> TextureFlags {
         TextureFlags::from_raw(TextureFlags::NONE)
+    }
+
+    #[test]
+    fn texture_variants_respect_day_night_and_season_precedence() {
+        let route = tempfile::tempdir().unwrap();
+        for folder in ["", "NIGHT", "SNOW"] {
+            let dir = route.path().join("TEXTURES").join(folder);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("house.ace"), []).unwrap();
+        }
+        let day = summer_env();
+        assert_eq!(
+            resolve_texture_path(route.path(), "house.ace", &day, default_flags()).unwrap(),
+            route.path().join("TEXTURES/house.ace")
+        );
+        let night = TextureEnvironment { night: true, ..day };
+        assert_eq!(
+            resolve_texture_path(
+                route.path(),
+                "house.ace",
+                &night,
+                TextureFlags::from_raw(TextureFlags::NIGHT)
+            )
+            .unwrap(),
+            route.path().join("TEXTURES/NIGHT/house.ace")
+        );
+        let snow = TextureEnvironment {
+            season: Season::Winter,
+            snow_weather: true,
+            ..day
+        };
+        assert_eq!(
+            resolve_texture_path(
+                route.path(),
+                "house.ace",
+                &snow,
+                TextureFlags::from_raw(TextureFlags::SNOW)
+            )
+            .unwrap(),
+            route.path().join("TEXTURES/SNOW/house.ace")
+        );
     }
 
     #[test]

@@ -52,6 +52,7 @@ pub struct SignalLightDef {
 pub struct SignalDrawStateDef {
     pub name: String,
     pub draw_lights: Vec<u32>,
+    pub semaphore_pos: Option<f32>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,6 +63,27 @@ pub struct SignalTypeDef {
     pub draw_states: Vec<SignalDrawStateDef>,
     /// `(aspect_name, draw_state_name)` e.g. `STOP` → `Red`.
     pub aspects: Vec<(String, String)>,
+    /// `SemaphoreInfo` transition duration; absent for electric signals.
+    pub semaphore_animation_time_s: Option<f32>,
+}
+
+impl SignalTypeDef {
+    pub fn draw_state_for_aspect(&self, aspect: u8) -> Option<&SignalDrawStateDef> {
+        let aliases: &[&str] = match aspect {
+            0 => &["STOP", "STOP_AND_PROCEED", "RESTRICTING"],
+            1 => &["APPROACH_1", "APPROACH_2", "APPROACH_3", "APPROACH"],
+            _ => &["CLEAR_1", "CLEAR_2", "CLEAR"],
+        };
+        self.aspects.iter().find_map(|(name, state)| {
+            if aliases.iter().any(|alias| name.eq_ignore_ascii_case(alias)) {
+                self.draw_states
+                    .iter()
+                    .find(|draw| draw.name.eq_ignore_ascii_case(state))
+            } else {
+                None
+            }
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -328,6 +350,21 @@ fn scan_signal_types(text: &str, out: &mut SigCfgFile) {
         let lights = scan_signal_lights(block);
         let draw_states = scan_draw_states(block);
         let aspects = scan_aspects(block);
+        let semaphore_animation_time_s = find_keyword_blocks(block, "SignalFlags")
+            .iter()
+            .any(|flags| {
+                flags
+                    .to_ascii_uppercase()
+                    .split_whitespace()
+                    .any(|flag| flag == "SEMAPHORE")
+            })
+            .then(|| {
+                find_keyword_blocks(block, "SemaphoreInfo")
+                    .first()
+                    .and_then(|info| first_numbers(info, 1).first().copied())
+                    .filter(|time| time.is_finite() && *time >= 0.0)
+                    .unwrap_or(0.0)
+            });
         out.signal_types.insert(
             name.clone(),
             SignalTypeDef {
@@ -336,6 +373,7 @@ fn scan_signal_types(text: &str, out: &mut SigCfgFile) {
                 lights,
                 draw_states,
                 aspects,
+                semaphore_animation_time_s,
             },
         );
     }
@@ -387,7 +425,15 @@ fn scan_draw_states(block: &str) -> Vec<SignalDrawStateDef> {
                 draw_lights.push(*n as u32);
             }
         }
-        out.push(SignalDrawStateDef { name, draw_lights });
+        let semaphore_pos = find_keyword_blocks(ds, "SemaphorePos")
+            .first()
+            .and_then(|pos| first_numbers(pos, 1).first().copied())
+            .filter(|pos| pos.is_finite());
+        out.push(SignalDrawStateDef {
+            name,
+            draw_lights,
+            semaphore_pos,
+        });
     }
     out
 }
@@ -496,20 +542,8 @@ pub fn lit_light_indices_for_aspect(
     signal_type: &SignalTypeDef,
     aspect_stop_caution_clear: u8,
 ) -> Vec<u32> {
-    let aliases: &[&str] = match aspect_stop_caution_clear {
-        0 => &["STOP", "STOP_AND_PROCEED", "RESTRICTING"],
-        1 => &["APPROACH_1", "APPROACH_2", "APPROACH_3", "APPROACH"],
-        _ => &["CLEAR_1", "CLEAR_2", "CLEAR"],
-    };
-    for (asp, ds_name) in &signal_type.aspects {
-        if aliases.iter().any(|a| asp.eq_ignore_ascii_case(a))
-            && let Some(ds) = signal_type
-                .draw_states
-                .iter()
-                .find(|d| d.name.eq_ignore_ascii_case(ds_name))
-        {
-            return ds.draw_lights.clone();
-        }
+    if let Some(ds) = signal_type.draw_state_for_aspect(aspect_stop_caution_clear) {
+        return ds.draw_lights.clone();
     }
     let want = match aspect_stop_caution_clear {
         0 => "red",

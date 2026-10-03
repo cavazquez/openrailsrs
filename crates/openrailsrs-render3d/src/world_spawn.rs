@@ -1770,9 +1770,7 @@ fn build_shape(
                 && let SceneMaterialHandle::Standard(h) = &out[0].material
                 && let Some(base) = materials.get(h)
             {
-                let mut blend_mat = base.clone();
-                blend_mat.alpha_mode = AlphaMode::Blend;
-                blend_mat.depth_bias += 0.0002;
+                let blend_mat = openrailsrs_bevy_scenery::shapes::scenery_blend_followup(base);
                 out.push(PartHandles {
                     mesh,
                     material: SceneMaterialHandle::Standard(materials.add(blend_mat)),

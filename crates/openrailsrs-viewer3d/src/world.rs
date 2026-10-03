@@ -137,7 +137,7 @@ pub fn scenery_entity_should_unload(
 }
 
 /// One WORLD shape instance queued for spawn, with tile membership (#62).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct ShapeInstancePlacement {
     pub transform: Transform,
     /// Full Matrix3x3 linear when present (shear); overrides TRS in GPU instancing (#139).
@@ -148,6 +148,7 @@ pub struct ShapeInstancePlacement {
     pub auto_z_bias: bool,
     /// WORLD `SignalSubObj` bitmask when this instance is a Signal mesh (#80).
     pub signal_sub_obj: Option<u32>,
+    pub signal_patch: Option<std::sync::Arc<SignalPatch>>,
 }
 
 /// True shear: `linear` does not round-trip via Quat×scale (#139 / #174).
@@ -1430,6 +1431,11 @@ type AnimatedShapeSpawnBundle = (
     ShapeAnimBinding,
 );
 
+type AnimatedShapeSpawnEntry = (
+    AnimatedShapeSpawnBundle,
+    Option<crate::signal_animation::SignalSemaphore>,
+);
+
 /// GPU-instanced static opaque WORLD group (#58).
 type InstancedShapeSpawnBundle = (
     Transform,
@@ -1476,7 +1482,7 @@ pub struct WorldSpawnProgress {
     instance_paths: Vec<PathBuf>,
     build_queue_index: usize,
     spawn_queue: Vec<ShapeSpawnBundle>,
-    anim_spawn_queue: Vec<AnimatedShapeSpawnBundle>,
+    anim_spawn_queue: Vec<AnimatedShapeSpawnEntry>,
     instanced_spawn_queue: Vec<InstancedShapeSpawnBundle>,
     spawn_index: usize,
     shape_mesh_count: usize,
@@ -1855,6 +1861,7 @@ fn classify_one_object(
                     tile_z: obj.tile_z,
                     auto_z_bias: true,
                     signal_sub_obj: None,
+                    signal_patch: None,
                 });
             return;
         }
@@ -1919,6 +1926,7 @@ fn classify_one_object(
                     signal_sub_obj: (obj.kind == "Signal")
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
+                    signal_patch: obj.signal.clone().map(std::sync::Arc::new),
                 });
             return;
         }
@@ -1976,7 +1984,7 @@ fn append_shape_spawn_entries_for_transforms(
     materials: &mut Assets<StandardMaterial>,
     placements: &[ShapeInstancePlacement],
     spawn_queue: &mut Vec<ShapeSpawnBundle>,
-    anim_spawn_queue: &mut Vec<AnimatedShapeSpawnBundle>,
+    anim_spawn_queue: &mut Vec<AnimatedShapeSpawnEntry>,
     instanced_spawn_queue: &mut Vec<InstancedShapeSpawnBundle>,
     initial_lod_idx: usize,
     shape_mesh_count: &mut usize,
@@ -2193,25 +2201,38 @@ fn append_shape_spawn_entries_for_transforms(
                     lod_idx: initial_lod_idx,
                 };
                 if shape_matrix_chain_is_animated(shape, matrix_idx) {
+                    let signal = inst.signal_patch.as_deref().and_then(|patch| {
+                        crate::signal_animation::SignalSemaphore::for_part(
+                            shape,
+                            sigcfg?,
+                            shape_file_name,
+                            patch,
+                            matrix_idx,
+                        )
+                    });
+                    let controlled = inst.signal_sub_obj.is_some();
                     anim_spawn_queue.push((
-                        placement,
-                        Mesh3d(part.mesh.clone()),
-                        MeshMaterial3d(material),
-                        Name::new("world:anim"),
-                        lod,
-                        bound,
-                        ShapeAnimState {
-                            key: 0.0,
-                            matrix_idx,
-                        },
-                        ShapeAnimBinding {
-                            shape: shared_shape.clone(),
-                            matrix_idx,
-                            speed,
-                            frame_count,
+                        (
                             placement,
-                            baked_rest_mesh: true,
-                        },
+                            Mesh3d(part.mesh.clone()),
+                            MeshMaterial3d(material),
+                            Name::new("world:anim"),
+                            lod,
+                            bound,
+                            ShapeAnimState {
+                                key: 0.0,
+                                matrix_idx,
+                            },
+                            ShapeAnimBinding {
+                                shape: shared_shape.clone(),
+                                matrix_idx,
+                                speed: if controlled { 0.0 } else { speed },
+                                frame_count: if controlled { 0.0 } else { frame_count },
+                                placement,
+                                baked_rest_mesh: true,
+                            },
+                        ),
+                        signal,
                     ));
                 } else {
                     // A shape can animate one small matrix while most of its parts
@@ -3391,7 +3412,9 @@ pub fn progressive_world_spawn_system(
                 return;
             };
             let fallback_color = progress.shape_fallback_color;
-            let ace_cache = progress.ace_cache.clone();
+            // Loan the decoded textures to this batch. Cloning this map copied
+            // every mip of the route on every frame while building GPU assets.
+            let ace_cache = std::mem::take(&mut progress.ace_cache);
             let end = (progress.asset_build_index + asset_batch).min(progress.parsed_shapes.len());
             let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> =
                 progress.parsed_shapes[progress.asset_build_index..end].to_vec();
@@ -3429,6 +3452,7 @@ pub fn progressive_world_spawn_system(
                 }
                 progress.shape_cache.insert(shape_path, asset);
             }
+            progress.ace_cache = ace_cache;
             progress.asset_build_index = end;
             if progress.asset_build_index >= progress.parsed_shapes.len() {
                 if let Some(start) = progress.loading_shapes_started {
@@ -3498,8 +3522,11 @@ pub fn progressive_world_spawn_system(
                 }
                 // Animated bundles carry cloned ShapeFile — spawn one-by-one.
                 let animated = std::mem::take(&mut progress.anim_spawn_queue);
-                for bundle in animated {
-                    commands.spawn(bundle);
+                for (bundle, signal) in animated {
+                    let mut entity = commands.spawn(bundle);
+                    if let Some(signal) = signal {
+                        entity.insert(signal);
+                    }
                 }
                 progress.phase = WorldSpawnPhase::SpawningPlaceholders;
             }
@@ -3794,6 +3821,7 @@ pub fn spawn_world_boxes(
                         tile_z: obj.tile_z,
                         auto_z_bias: true,
                         signal_sub_obj: None,
+                        signal_patch: None,
                     });
                 continue;
             }
@@ -3831,6 +3859,7 @@ pub fn spawn_world_boxes(
                     signal_sub_obj: (obj.kind == "Signal")
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
+                    signal_patch: obj.signal.clone().map(std::sync::Arc::new),
                 });
             continue;
         }
@@ -3933,7 +3962,7 @@ pub fn spawn_world_boxes(
     }
     log_step("built world shape Bevy assets", asset_start);
 
-    let mut anim_spawn_batches: Vec<AnimatedShapeSpawnBundle> = Vec::new();
+    let mut anim_spawn_batches: Vec<AnimatedShapeSpawnEntry> = Vec::new();
     for (shape_path, placements) in shape_instances {
         let Some(asset) = shape_cache.get(&shape_path) else {
             continue;
@@ -3965,8 +3994,11 @@ pub fn spawn_world_boxes(
     for bundle in instanced_spawn_batches {
         commands.spawn(bundle);
     }
-    for bundle in anim_spawn_batches {
-        commands.spawn(bundle);
+    for (bundle, signal) in anim_spawn_batches {
+        let mut entity = commands.spawn(bundle);
+        if let Some(signal) = signal {
+            entity.insert(signal);
+        }
     }
 
     for (kind, group) in merged_boxes {
@@ -4131,6 +4163,7 @@ mod tests {
             tile_z: 0,
             auto_z_bias: false,
             signal_sub_obj: None,
+            signal_patch: None,
         };
         assert!(placement_has_shear(&sheared));
 
@@ -4147,6 +4180,7 @@ mod tests {
             tile_z: 0,
             auto_z_bias: false,
             signal_sub_obj: None,
+            signal_patch: None,
         };
         assert!(
             !placement_has_shear(&orthogonal),
@@ -4853,6 +4887,7 @@ mod tests {
                 tile_z: 0,
                 auto_z_bias: false,
                 signal_sub_obj: None,
+                signal_patch: None,
             }],
         );
         prepare_shape_load_paths(&mut progress);

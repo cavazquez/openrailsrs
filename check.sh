@@ -19,6 +19,7 @@ unset OPENRAILSRS_FOLLOW OPENRAILSRS_CAM_YAW OPENRAILSRS_CAM_PITCH OPENRAILSRS_C
 unset OPENRAILSRS_VIEW_RADIUS_M OPENRAILSRS_VISIBLE_RADIUS_M
 unset OPENRAILSRS_SCREENSHOT OPENRAILSRS_SCREENSHOT_DELAY_S OPENRAILSRS_SCREENSHOT_READY_FRAMES
 unset OPENRAILSRS_SCREENSHOT_AFTER_READY OPENRAILSRS_WINDOW_WIDTH OPENRAILSRS_WINDOW_HEIGHT
+unset OPENRAILSRS_FOG_VISIBILITY_M
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check
@@ -33,6 +34,7 @@ cargo test --locked --workspace --all-features -- --test-threads=1
 
 echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py
+python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 
 if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
     echo "==> native platform geometry and continuous train motion"
@@ -41,6 +43,9 @@ fi
 
 echo "==> build"
 cargo build --locked --workspace --all-features
+if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
+    python3 scripts/run_scenery_oracle.py --route-root "$OPENRAILSRS_NATIVE_ROUTE"
+fi
 
 echo "==> pinned Open Rails acceptance oracles"
 python3 scripts/run_oracles.py

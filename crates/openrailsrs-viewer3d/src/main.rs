@@ -16,7 +16,7 @@
 //!   the scenario/track graph from `scenario.toml`.
 //! - `--run-corridor` — minimal train + `.tdb` procedural track view; no world/terrain scenery.
 //! - `--track-dev` — grafo `.tdb` + vía procedural continua; sin terreno/shapes/`TrackObj`.
-//! - `--live scenario.toml` — run physics in real time (no CSV); drive with arrow keys.
+//! - `--live scenario.toml` — run physics in real time (no CSV); A/D throttle, W/S reverser.
 //!
 //! Generate CSV for replay mode, e.g.:
 //!   cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml

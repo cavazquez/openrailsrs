@@ -32,6 +32,10 @@ target/debug/openrailsrs play-service examples/chiltern_local/scenario.toml --ou
 Controles: `1` cabina, `Alt+1` 2D/3D, `2` exterior, `W/S` inversor, `A/D`
 regulador, `;/'` freno de tren, `Backspace` emergencia, `Q` puertas,
 `Space` bocina, `V` limpiaparabrisas, `Pause` pausa, `R` reiniciar.
+Las flechas desplazan la cámara y `PageUp/PageDown` cambian su altura.
+Estas teclas no modifican el regulador; `Q` no desplaza la cámara exterior.
+Open Rails 1.6.1 asigna `Q` a puertas izquierdas y `Shift+Q` a derechas;
+esta formación conserva por ahora un único mando para todas sus puertas.
 `F5` muestra conducción y presiones; `F4` muestra próxima estación y señal;
 `F3` habilita información de depuración; `C` abre el instrumental digital
 opcional sin ocultar por defecto los instrumentos de la cabina original.

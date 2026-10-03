@@ -1,5 +1,6 @@
 //! Shared sky palette and distance fog (#123 / #39).
 
+use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 
@@ -24,7 +25,7 @@ pub fn sky_clear_color(night: bool) -> Color {
 
 /// Atmospheric fog keyed to an explicit visibility distance (metres).
 pub fn distance_fog(visibility_m: f32, night: bool) -> DistanceFog {
-    let visibility = visibility_m.clamp(200.0, 16_000.0);
+    let visibility = visibility_m.clamp(200.0, 100_000.0);
     let (horizon, _) = sky_palette(night);
 
     if night {
@@ -78,6 +79,10 @@ pub fn spawn_sky_dome(
         Mesh3d(mesh),
         MeshMaterial3d(material),
         Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(-1.0)),
+        // This inverted sphere is a background, not physical geometry. Its
+        // shadow otherwise covers the camera's cascades and moves with the view.
+        NotShadowCaster,
+        NotShadowReceiver,
         Name::new("sky-dome"),
     ));
 }
@@ -85,6 +90,31 @@ pub fn spawn_sky_dome(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::ecs::system::RunSystemOnce;
+
+    #[test]
+    fn sky_dome_does_not_cast_or_receive_scene_shadows() {
+        let mut world = World::new();
+        world.insert_resource(Assets::<Mesh>::default());
+        world.insert_resource(Assets::<StandardMaterial>::default());
+        world
+            .run_system_once(
+                |mut commands: Commands,
+                 mut meshes: ResMut<Assets<Mesh>>,
+                 mut materials: ResMut<Assets<StandardMaterial>>| {
+                    spawn_sky_dome(&mut commands, &mut meshes, &mut materials, 500.0, false);
+                },
+            )
+            .unwrap();
+        let mut query = world.query::<(
+            &Mesh3d,
+            Option<&NotShadowCaster>,
+            Option<&NotShadowReceiver>,
+        )>();
+        let (_, no_cast, no_receive) = query.single(&world).unwrap();
+        assert!(no_cast.is_some(), "the sky must not shadow the route");
+        assert!(no_receive.is_some());
+    }
 
     #[test]
     fn clear_color_is_light_blue_by_day() {

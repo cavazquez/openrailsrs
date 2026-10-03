@@ -7,7 +7,6 @@ use openrailsrs_bevy_scenery::{
     spawn_sky_dome as shared_spawn_sky_dome,
 };
 
-use crate::launch::view_radius_m;
 use crate::track::TrackScene;
 use crate::viewer_log;
 use crate::world::RouteFocus;
@@ -56,12 +55,17 @@ pub fn viewer_distance_fog(visibility_m: f32, night: bool) -> DistanceFog {
     distance_fog(visibility_m, night)
 }
 
-/// Fog for the playable camera using the process viewing-distance policy (#39 / #30).
-///
-/// Visibility tracks [`view_radius_m`] so scenery is not culled before the fog horizon.
+/// OR 1.6.1 WeatherControl.SetInitialWeatherParameters: clear weather is 20 km.
+/// A smaller scenery loading radius must not turn a clear day into dense fog.
+pub const CLEAR_WEATHER_VISIBILITY_M: f32 = 20_000.0;
+
+/// Weather visibility for the playable camera, independent of the loading budget.
 pub fn camera_distance_fog() -> DistanceFog {
-    // Slightly beyond the view window so tiles at the rim fade instead of popping.
-    let visibility = (view_radius_m() * 1.15).max(view_radius_m());
+    let visibility = std::env::var("OPENRAILSRS_FOG_VISIBILITY_M")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .unwrap_or(CLEAR_WEATHER_VISIBILITY_M);
     viewer_distance_fog(visibility, false)
 }
 
@@ -182,19 +186,29 @@ mod tests {
     }
 
     #[test]
-    fn camera_fog_visibility_not_below_view_radius() {
-        let fog = camera_distance_fog();
-        let view = view_radius_m();
-        // Atmospheric extinction decreases as visibility grows; ensure we use ≥ view radius.
-        let at_view = viewer_distance_fog(view, false);
+    fn scenery_loading_budget_does_not_change_clear_weather() {
+        let previous = std::env::var_os("OPENRAILSRS_VIEW_RADIUS_M");
         let dens = |f: &DistanceFog| match &f.falloff {
             FogFalloff::Atmospheric { extinction, .. } => extinction.x,
             other => panic!("expected atmospheric fog, got {other:?}"),
         };
-        assert!(
-            dens(&fog) <= dens(&at_view) + 1e-6,
-            "camera fog must not be denser than view-radius fog (would hide tiles early)"
-        );
+        unsafe {
+            std::env::set_var("OPENRAILSRS_VIEW_RADIUS_M", "450");
+        }
+        let near = dens(&camera_distance_fog());
+        unsafe {
+            std::env::set_var("OPENRAILSRS_VIEW_RADIUS_M", "4000");
+        }
+        let far = dens(&camera_distance_fog());
+        unsafe {
+            if let Some(value) = previous {
+                std::env::set_var("OPENRAILSRS_VIEW_RADIUS_M", value);
+            } else {
+                std::env::remove_var("OPENRAILSRS_VIEW_RADIUS_M");
+            }
+        }
+        assert_eq!(near, far, "lowering RAM use must preserve the weather");
+        assert!(near < dens(&viewer_distance_fog(450.0, false)) / 10.0);
     }
 
     #[test]

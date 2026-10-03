@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::read_ace;
 pub use openrailsrs_bevy_scenery::terrain_shader_material_key;
 use openrailsrs_bevy_scenery::{
@@ -68,7 +70,28 @@ pub fn terrain_material_textures(
         .unwrap_or_else(|| fallback.clone());
     let overlay = texture_handle(route_dir, images, cache, overlay_name, false)
         .or_else(|| texture_handle(route_dir, images, cache, DEFAULT_MICROTEX, false))
-        .unwrap_or_else(|| base.clone());
+        .unwrap_or_else(|| {
+            cache
+                .entry("@neutral-terrain-overlay:raw".into())
+                .or_insert_with(|| {
+                    // OR terrain multiplies base × overlay × 2. A missing overlay
+                    // must be half intensity in linear space, not a second base map.
+                    let mut image = Image::new_fill(
+                        Extent3d {
+                            width: 1,
+                            height: 1,
+                            depth_or_array_layers: 1,
+                        },
+                        TextureDimension::D2,
+                        &[128, 128, 128, 255],
+                        TextureFormat::Rgba8Unorm,
+                        RenderAssetUsages::default(),
+                    );
+                    set_terrain_repeat_sampler(&mut image);
+                    images.add(image)
+                })
+                .clone()
+        });
 
     (base, overlay, overlay_scale_from_shader(shader))
 }
@@ -124,6 +147,38 @@ mod tests {
         let route =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
         assert!(resolve_terrtex_path(&route, "grass.ace").is_some());
+    }
+
+    #[test]
+    fn missing_microtexture_preserves_base_color_and_reuses_neutral_overlay() {
+        let route = tempfile::tempdir().unwrap();
+        let shader = TerrainShader {
+            name: "t".into(),
+            texslots: vec![],
+            uvcalcs: vec![],
+        };
+        let mut images = Assets::<Image>::default();
+        let fallback = images.add(Image::default());
+        let mut cache = HashMap::new();
+        let (base, overlay, _) = terrain_material_textures(
+            route.path(),
+            &mut images,
+            &mut cache,
+            &shader,
+            fallback.clone(),
+        );
+        assert_eq!(base, fallback);
+        assert_ne!(overlay, base);
+        let image = images.get(&overlay).unwrap();
+        assert_eq!(image.texture_descriptor.format, TextureFormat::Rgba8Unorm);
+        for channel in &image.data.as_deref().unwrap()[..3] {
+            assert!((2.0 * f32::from(*channel) / 255.0 - 1.0).abs() < 0.01);
+        }
+        let count = images.len();
+        let (_, again, _) =
+            terrain_material_textures(route.path(), &mut images, &mut cache, &shader, fallback);
+        assert_eq!(again, overlay);
+        assert_eq!(images.len(), count);
     }
 
     #[test]

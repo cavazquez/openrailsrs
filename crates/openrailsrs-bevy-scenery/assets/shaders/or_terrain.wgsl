@@ -1,6 +1,6 @@
 // Open Rails SceneryShader.fx PSTerrain (TerrainLevel9_3).
 // Pipeline flags: lit/night via uniforms; vsm=true in render3d app; fog via DISTANCE_FOG.
-// TODO(#121): unify overlay blend with terrain.wgsl (OR uses lit_rgb * overlay*2).
+// Shares the viewer's OR detail multiplication: lit_rgb * overlay * 2.
 #import bevy_pbr::{
     forward_io::VertexOutput,
     mesh_view_bindings as view_bindings,

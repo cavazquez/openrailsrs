@@ -331,13 +331,9 @@ pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveD
         viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
     }
 
-    // OR ControlThrottleIncrease/Decrease (D / A); arrows still work.
-    let throttle_up = keys.just_pressed(KeyCode::KeyD)
-        || keys.just_pressed(KeyCode::ArrowUp)
-        || keys.just_pressed(KeyCode::PageUp);
-    let throttle_down = keys.just_pressed(KeyCode::KeyA)
-        || keys.just_pressed(KeyCode::ArrowDown)
-        || keys.just_pressed(KeyCode::PageDown);
+    // OR ControlThrottleIncrease/Decrease (D / A). Camera keys are exclusive.
+    let throttle_up = keys.just_pressed(KeyCode::KeyD);
+    let throttle_down = keys.just_pressed(KeyCode::KeyA);
     if throttle_up {
         live.session.driver_throttle = (live.session.driver_throttle + 0.1).min(1.0);
     }

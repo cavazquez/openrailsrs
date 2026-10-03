@@ -36,11 +36,12 @@ pub use material::{
     cab_interior_albedo_boost, cab_or_scenery_material_with_texture,
     cab_or_scenery_material_with_texture_ex, finalize_scenery_material,
     legacy_standard_scenery_enabled, or_ace_requests_blending, or_lighting_enabled,
-    resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_material_tint_for_ace,
-    scenery_materials_lit, scenery_uses_or_wgsl_shaders, shader_uses_vertex_color_multiply,
-    shape_alpha_mode, shape_shader_requests_additive, shape_shader_requests_blend,
-    shape_shader_requests_blending, texture_name_suggests_transparency,
-    train_exterior_material_with_texture, train_exterior_material_with_texture_ex,
+    resolve_or_lighting, scenery_albedo_tint, scenery_base_tint, scenery_blend_followup,
+    scenery_material_tint_for_ace, scenery_materials_lit, scenery_uses_or_wgsl_shaders,
+    shader_uses_vertex_color_multiply, shape_alpha_mode, shape_shader_requests_additive,
+    shape_shader_requests_blend, shape_shader_requests_blending,
+    texture_name_suggests_transparency, train_exterior_material_with_texture,
+    train_exterior_material_with_texture_ex,
 };
 pub use mesh::{
     LoadedShape, LoadedShapePart, LodPolicy, MeshBuffers, MeshPartBuildOptions,

@@ -35,7 +35,7 @@ def verify(pin, source_root=None, installation_root=None):
         if dirty:
             raise ValueError("Open Rails reference source has uncommitted modifications")
     if installation_root is not None:
-        for entry in pin["binaries"]:
+        for entry in [*pin["binaries"], *pin.get("scenery_binaries", [])]:
             path = installation_root / entry["name"]
             if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
                 raise ValueError(f"Installed Open Rails binary differs: {path}")

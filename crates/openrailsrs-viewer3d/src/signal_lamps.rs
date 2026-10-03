@@ -231,7 +231,7 @@ fn aspect_to_code(aspect: SignalAspect) -> u8 {
     }
 }
 
-fn aspect_for_tr_item(assets: &RouteAssets, tr_item_id: u32) -> SignalAspect {
+pub(crate) fn aspect_for_tr_item(assets: &RouteAssets, tr_item_id: u32) -> SignalAspect {
     // Prefer graph signal `sig{id}` when present.
     // TrackScene is not passed here at spawn; use TDB initial aspect as fallback.
     if let Some(tdb) = assets.track_db()
@@ -254,17 +254,12 @@ pub fn update_signal_lamps(
     mut lamps: Query<(&mut SignalLamp, &mut Visibility)>,
 ) {
     for (mut lamp, mut visibility) in &mut lamps {
-        let aspect = live
-            .as_ref()
-            .and_then(|l| {
-                if l.session.assume_signals_clear {
-                    Some(SignalAspect::Clear)
-                } else {
-                    l.session.signal_aspect(&lamp.signal_id)
-                }
-            })
-            .or_else(|| scene.graph.signal(&lamp.signal_id).map(|s| s.aspect))
-            .unwrap_or(lamp.fallback_aspect);
+        let aspect = runtime_aspect(
+            &scene,
+            live.as_deref(),
+            &lamp.signal_id,
+            lamp.fallback_aspect,
+        );
         let on = lamp.lit_for_aspect[aspect_to_code(aspect) as usize];
         if lamp.is_on == on {
             continue;
@@ -276,6 +271,23 @@ pub fn update_signal_lamps(
         };
         lamp.is_on = on;
     }
+}
+
+pub(crate) fn runtime_aspect(
+    scene: &TrackScene,
+    live: Option<&crate::live::LiveDrive>,
+    signal_id: &str,
+    fallback: SignalAspect,
+) -> SignalAspect {
+    live.and_then(|l| {
+        if l.session.assume_signals_clear {
+            Some(SignalAspect::Clear)
+        } else {
+            l.session.signal_aspect(signal_id)
+        }
+    })
+    .or_else(|| scene.graph.signal(signal_id).map(|s| s.aspect))
+    .unwrap_or(fallback)
 }
 
 #[cfg(test)]

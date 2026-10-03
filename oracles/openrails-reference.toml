@@ -106,3 +106,21 @@ sha256 = "22ab7fea6aee4c836c10758f6c8544f298edcf9636af5ebd4838499c15e0d9c1"
 [[files]]
 path = "examples/baselines/chiltern_local/reproducibility.json"
 sha256 = "1c54758f0b5dbc3a46f2d6db2fee820fe4af8251281bd058833c353bff285b8e"
+
+# Native building composition and controlled Northolt exterior reference.
+
+[[files]]
+path = "oracles/chiltern-scenery.json"
+sha256 = "1024afc98bc2c2706cf67aa67ee6252db636a121b5ae3cc5d8e3fd8cb82e7f21"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_exterior.png"
+sha256 = "623e6f3a6d080ed49f064fb90dff3a0b962eedb45fc66b7dd520575d65feab45"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_exterior.json"
+sha256 = "4d85e1dcf5549089d7990a2be1614bbb7235aebc668e9d5e70062d575bb72b19"
+
+[[scenery_binaries]]
+name = "Orts.Formats.Msts.dll"
+sha256 = "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465"

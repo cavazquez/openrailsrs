@@ -1659,9 +1659,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         });
         // OR BlendATexDiff second pass: soft alpha with depth read (#101).
         if dual_blend && let Some(base) = materials.get(&material) {
-            let mut blend_mat = base.clone();
-            blend_mat.alpha_mode = AlphaMode::Blend;
-            blend_mat.depth_bias += 0.0002;
+            let blend_mat = openrailsrs_bevy_scenery::shapes::scenery_blend_followup(base);
             let blend_handle = materials.add(blend_mat);
             parts.push(ShapePartAsset {
                 prim_state_idx: part.prim_state_idx,
@@ -2047,10 +2045,10 @@ fn material_for_shape_texture(
                 }
 
                 let ace = if let Some(ace) = ace_cache.get(&tex_path) {
-                    Some(ace.clone())
+                    Some(std::borrow::Cow::Borrowed(ace))
                 } else {
                     match read_ace(&tex_path) {
-                        Ok(ace) => Some(ace),
+                        Ok(ace) => Some(std::borrow::Cow::Owned(ace)),
                         Err(e) => {
                             viewer_log!(
                                 "openrailsrs-viewer3d: ACE decode error for {}: {e}",
@@ -2098,7 +2096,14 @@ fn material_for_shape_texture(
                         (image, mip0, brightened)
                     } else {
                         // Keep ACE mips (render3d / cab path). mip0-only + aniso = track moiré.
-                        let (rgba, pixel_brightened) = brighten_dark_ace_rgba(&ace.mip0);
+                        // Native OR samples the authored albedo. Normalizing a
+                        // dark atlas in the lit path clips brick reds and turns
+                        // foliage neon; normalization belongs to legacy unlit.
+                        let (rgba, pixel_brightened) = if lit {
+                            (ace.mip0.clone(), false)
+                        } else {
+                            brighten_dark_ace_rgba(&ace.mip0)
+                        };
                         let image = if pixel_brightened {
                             scenery_ace_brightened_to_image(
                                 &ace,
@@ -3259,6 +3264,45 @@ mod tests {
             image.texture_descriptor.mip_level_count, 2,
             "scenery ACE must keep mips for anisotropic track/ballast filtering"
         );
+    }
+
+    #[test]
+    fn lit_shape_material_preserves_authored_dark_albedo() {
+        let route = tempfile::tempdir().unwrap();
+        let textures = route.path().join("TEXTURES");
+        std::fs::create_dir_all(&textures).unwrap();
+        let authored = [12, 8, 5, 255];
+        write_synthetic_ace(&textures.join("dark.ace"), &authored);
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let (handle, _, has_texture, _, _) = material_for_shape_texture(
+            &[route.path()],
+            Some("dark.ace"),
+            Some("TexDiff"),
+            0,
+            None,
+            1,
+            &mut images,
+            &mut materials,
+            None,
+            &mut HashMap::new(),
+            &HashMap::new(),
+            Color::WHITE,
+            Some(true),
+            None,
+            false,
+            false,
+            None,
+            None,
+            None,
+        );
+        assert!(has_texture);
+        let material = materials.get(&handle).unwrap();
+        assert!(!material.unlit);
+        let image = images
+            .get(material.base_color_texture.as_ref().unwrap())
+            .unwrap();
+        assert_eq!(image.data.as_deref().unwrap(), &authored);
     }
 
     #[test]

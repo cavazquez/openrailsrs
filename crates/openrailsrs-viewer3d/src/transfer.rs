@@ -1,14 +1,13 @@
 //! MSTS `Transfer` ground decals from `.w` tiles (issue #31).
 //!
 //! `FileName` is a texture (`.ace`), not a shape. Mesh follows terrain relief
-//! with OR-style alpha mask and a small depth bias to reduce z-fighting.
+//! with native UV clipping, alpha blending and a small depth bias.
 
 use std::collections::HashMap;
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
-use openrailsrs_bevy_scenery::{
-    TRANSFER_ALPHA_CUTOFF, build_transfer_mesh as shared_build_transfer_mesh,
-};
+use openrailsrs_bevy_scenery::build_transfer_mesh as shared_build_transfer_mesh;
 
 use crate::shapes::{RouteAssets, load_ace_image};
 use crate::terrain::TerrainElevation;
@@ -63,7 +62,8 @@ fn transfer_material(
             COLOR_TRANSFER_FALLBACK
         },
         base_color_texture: texture,
-        alpha_mode: AlphaMode::Mask(TRANSFER_ALPHA_CUTOFF),
+        // Native TransferMaterial blends over the terrain without writing depth.
+        alpha_mode: AlphaMode::Blend,
         double_sided: true,
         cull_mode: None,
         // OR TransferObj uses ShapeFlags.AutoZBias → ZBias=1 when unset (#103).
@@ -141,8 +141,18 @@ pub fn spawn_transfer_objects(
         );
         let center = Vec3::new(obj.position.x, center_y, obj.position.z);
         let inv_rot = obj.rotation.conjugate();
-        let Some(mesh) = build_transfer_mesh(center, patch.width, patch.height, inv_rot, terrain)
-        else {
+        // Build in tile-local coordinates. Restoring WORLD's fractional offset
+        // after building an absolute grid displaced the draped vertices from
+        // the terrain's 8 m grid, producing alternating coplanar triangles.
+        let (ox, oz) = openrailsrs_formats::msts_tile_world_origin(obj.tile_x, obj.tile_z);
+        let local_center = center - Vec3::new(ox, 0.0, oz) + obj.position_precision_offset;
+        let Some(mesh) = shared_build_transfer_mesh(
+            local_center,
+            patch.width,
+            patch.height,
+            inv_rot,
+            &|x, z| sample_y(terrain, x + ox, z + oz, center.y),
+        ) else {
             continue;
         };
 
@@ -155,8 +165,10 @@ pub fn spawn_transfer_objects(
             }
             cached.clone()
         } else {
-            let texture =
-                load_ace_image(&assets.route_dir, &tex_key).map(|image| images.add(image));
+            let texture = load_ace_image(&assets.route_dir, &tex_key).map(|mut image| {
+                openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, Some(3));
+                images.add(image)
+            });
             let has_tex = texture.is_some();
             if has_tex {
                 textured += 1;
@@ -177,6 +189,7 @@ pub fn spawn_transfer_objects(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(material),
             Transform::from_translation(render),
+            NotShadowCaster,
             Name::new(format!("transfer:{}:{}", obj.label, patch.uid)),
         ));
         spawned += 1;
@@ -247,11 +260,11 @@ mod tests {
     }
 
     #[test]
-    fn transfer_material_uses_alpha_mask() {
+    fn transfer_material_blends_without_writing_terrain_depth() {
         let mut materials = Assets::<StandardMaterial>::default();
         let handle = transfer_material(&mut materials, None, "ChalkCliff.ace");
         let m = materials.get(&handle).expect("mat");
-        assert!(matches!(m.alpha_mode, AlphaMode::Mask(_)));
+        assert!(matches!(m.alpha_mode, AlphaMode::Blend));
         assert!((m.depth_bias - 1.0).abs() < 1e-6);
     }
 

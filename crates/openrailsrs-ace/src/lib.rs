@@ -208,6 +208,9 @@ fn parse_or_body(body: &[u8]) -> Result<AceFile, AceError> {
     }
 
     let has_mipmaps = (options & OPT_MIPMAPS) != 0;
+    if has_mipmaps && (width != height || !width.is_power_of_two()) {
+        return Err(AceError::InvalidDimensions { width, height });
+    }
     let is_raw_data = (options & OPT_RAW_DATA) != 0;
     let image_count = if has_mipmaps {
         1 + f64::log2(width as f64) as usize
@@ -252,19 +255,46 @@ fn parse_or_raw_data(
     // Skip offset table (imageCount × i32)
     let after_table = data_offset + image_count * 4;
 
-    // Mip 0 block: i32 size + data (only when width >= 4 && height >= 4)
-    let mip0 = if width >= 4 && height >= 4 {
-        if body.len() < after_table + 4 {
-            return Err(AceError::Truncated(body.len()));
+    if after_table > body.len() {
+        return Err(AceError::Truncated(body.len()));
+    }
+    let mut pos = after_table;
+    let mut compressed = &[][..];
+    let mut mips = Vec::with_capacity(image_count);
+    for level in 0..image_count {
+        let mip_width = (width >> level).max(1);
+        let mip_height = (height >> level).max(1);
+        if mip_width >= 4 && mip_height >= 4 {
+            let length_end = pos.checked_add(4).ok_or(AceError::Truncated(body.len()))?;
+            if length_end > body.len() {
+                return Err(AceError::Truncated(body.len()));
+            }
+            let length = read_u32_le(body, pos) as usize;
+            if length == 0 {
+                return Err(AceError::Truncated(body.len()));
+            }
+            let end = length_end
+                .checked_add(length)
+                .ok_or(AceError::Truncated(body.len()))?;
+            compressed = body
+                .get(length_end..end)
+                .ok_or(AceError::Truncated(body.len()))?;
+            pos = end;
         }
-        let mip_len = read_u32_le(body, after_table) as usize;
-        let mip_data = body
-            .get(after_table + 4..after_table + 4 + mip_len)
-            .ok_or(AceError::Truncated(body.len()))?;
-        decode_dxt(format, width, height, mip_data)?
-    } else {
-        vec![0xFFu8; width as usize * height as usize * 4]
-    };
+        // OR AceFile.Texture2DFromReader reuses the final 4×4 compressed block
+        // for 2×2 and 1×1 levels, ignoring their legacy ARGB tail.
+        let rgba = if compressed.is_empty() {
+            vec![0xFF; mip_width as usize * mip_height as usize * 4]
+        } else {
+            decode_dxt(format, mip_width, mip_height, compressed)?
+        };
+        mips.push(AceMipLevel {
+            width: mip_width,
+            height: mip_height,
+            rgba,
+        });
+    }
+    let mip0 = mips[0].rgba.clone();
 
     let alpha_bits = if channels.iter().any(|(_, k)| *k == CH_ALPHA) {
         8
@@ -279,12 +309,8 @@ fn parse_or_raw_data(
         height,
         format,
         mips_count: image_count as u8,
-        mip0: mip0.clone(),
-        mips: vec![AceMipLevel {
-            width,
-            height,
-            rgba: mip0,
-        }],
+        mip0,
+        mips,
         // DXT raw-data path has no explicit alpha/mask channels.
         has_mask_channel: false,
         alpha_bits,
@@ -576,6 +602,70 @@ pub fn write_synthetic_ace(path: &std::path::Path, pixels: &[u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn raw_dxt_mips_body() -> Vec<u8> {
+        let mut body = vec![0; 152];
+        for (offset, value) in [
+            (0, 1u32),
+            (4, OPT_MIPMAPS | OPT_RAW_DATA),
+            (8, 8),
+            (12, 8),
+            (16, 0x12),
+        ] {
+            body[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        body.extend_from_slice(&[0; 16]); // Four mip offsets, ignored by OR.
+        let red_block = [0x00, 0xf8, 0, 0, 0, 0, 0, 0];
+        let green_block = [0xe0, 0x07, 0, 0, 0, 0, 0, 0];
+        body.extend_from_slice(&32u32.to_le_bytes());
+        for _ in 0..4 {
+            body.extend_from_slice(&red_block);
+        }
+        body.extend_from_slice(&8u32.to_le_bytes());
+        body.extend_from_slice(&green_block);
+        body.extend_from_slice(&[0, 0, 255, 255].repeat(5)); // Legacy ARGB tail is ignored.
+        body
+    }
+
+    #[test]
+    fn raw_dxt_preserves_authored_mips_and_or_small_level_reuse() {
+        let ace = parse_or_body(&raw_dxt_mips_body()).expect("DXT mip chain");
+        assert_eq!(ace.mips_count, 4);
+        assert_eq!(
+            ace.mips
+                .iter()
+                .map(|m| (m.width, m.height))
+                .collect::<Vec<_>>(),
+            vec![(8, 8), (4, 4), (2, 2), (1, 1)]
+        );
+        assert_eq!(&ace.mip0[..4], &[255, 0, 0, 255]);
+        for mip in &ace.mips[1..] {
+            assert!(
+                mip.rgba
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .all(|p| *p == [0, 255, 0, 255])
+            );
+        }
+    }
+
+    #[test]
+    fn raw_dxt_rejects_a_truncated_lower_mip() {
+        let mut body = raw_dxt_mips_body();
+        body.truncate(152 + 16 + 4 + 32 + 4 + 3);
+        assert!(matches!(parse_or_body(&body), Err(AceError::Truncated(_))));
+    }
+
+    #[test]
+    fn mipmapped_dimensions_match_openrails_validation() {
+        let mut body = raw_dxt_mips_body();
+        body[12..16].copy_from_slice(&4u32.to_le_bytes());
+        assert!(matches!(
+            parse_or_body(&body),
+            Err(AceError::InvalidDimensions { .. })
+        ));
+    }
 
     #[test]
     fn rgba8_roundtrips_known_pixels() {

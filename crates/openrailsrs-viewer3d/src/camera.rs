@@ -33,9 +33,9 @@ pub fn live_outdoor_ambient() -> f32 {
         .unwrap_or(LIVE_OUTDOOR_AMBIENT)
 }
 
-/// Tonemapper for the live outdoor world. Open Rails tone-maps its HDR sun-lit scene;
-/// `Tonemapping::None` clips highlights and crushes shadows. A neutral filmic curve
-/// (TonyMcMapface) reframes the HDR for a more OR-like look. Override at runtime with
+/// Tonemapper for the Bevy physical light path. Native OR uses its own SDR
+/// scenery lighting; a filmic curve here is an adaptation, not a native oracle.
+/// Override at runtime with
 /// `OPENRAILSRS_TONEMAP=none|tony|agx|aces|reinhard|blender` to A/B compare.
 pub fn live_tonemapping() -> Tonemapping {
     parse_tonemapping(std::env::var("OPENRAILSRS_TONEMAP").ok().as_deref())
@@ -677,7 +677,10 @@ pub fn apply_orbit_follow(
     if follow == CameraFollowMode::ChaseCam {
         yaw = lerp_yaw_toward(yaw, chase_yaw_from_train(train.yaw), dt);
         pitch = lerp_yaw_toward(pitch, CHASE_PITCH, dt);
-        distance = lerp_yaw_toward(distance, chase_distance_m, dt);
+        // Metres do not wrap at 2π. Angle interpolation left the camera far
+        // away after changing from an orbit to the close exterior view.
+        let t = (FOLLOW_LERP_SPEED * dt).clamp(0.0, 1.0);
+        distance += (chase_distance_m - distance) * t;
     }
 
     if distance < FOLLOW_MIN_DISTANCE {
@@ -1444,17 +1447,17 @@ fn shift_held(keys: &ButtonInput<KeyCode>) -> bool {
 fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>, live_mode: bool) -> Vec3 {
     let mut axes = Vec3::ZERO;
     if live_mode {
-        // OR: A/D=throttle, W/S=reverser — pan with I/J/K/L instead.
-        if keys.pressed(KeyCode::KeyI) {
+        // OR reserves A/D, W/S and Q for driving; arrows belong to the camera.
+        if keys.pressed(KeyCode::ArrowUp) {
             axes.z += 1.0;
         }
-        if keys.pressed(KeyCode::KeyK) {
+        if keys.pressed(KeyCode::ArrowDown) {
             axes.z -= 1.0;
         }
-        if keys.pressed(KeyCode::KeyL) {
+        if keys.pressed(KeyCode::ArrowRight) {
             axes.x += 1.0;
         }
-        if keys.pressed(KeyCode::KeyJ) {
+        if keys.pressed(KeyCode::ArrowLeft) {
             axes.x -= 1.0;
         }
     } else {
@@ -1471,10 +1474,10 @@ fn read_orbit_pan_axes(keys: &ButtonInput<KeyCode>, live_mode: bool) -> Vec3 {
             axes.x -= 1.0;
         }
     }
-    if keys.pressed(KeyCode::KeyE) {
+    if keys.pressed(KeyCode::PageUp) {
         axes.y += 1.0;
     }
-    if keys.pressed(KeyCode::KeyQ) {
+    if keys.pressed(KeyCode::PageDown) {
         axes.y -= 1.0;
     }
     axes
@@ -1543,7 +1546,7 @@ pub fn orbit_camera_system(
         if keys.just_pressed(KeyCode::Home) {
             look.reset();
         }
-        // Look via mouse (OR RMB). Arrows stay throttle aliases in live.
+        // Look via mouse (OR RMB). Driving keys never pan the camera.
         let (yaw_lim, pitch_lim) = if *follow == CameraFollowMode::DriverCam {
             // OR InsideThreeDimCamera ignores eng RotationLimit for 3D cab.
             (DRIVER_CAM_FREE_YAW_MAX, DRIVER_CAM_FREE_PITCH_MAX)
@@ -1737,29 +1740,11 @@ fn replay_blocks_space(replay: Option<&crate::train::ReplayState>) -> bool {
 fn read_fly_axes(
     keys: &ButtonInput<KeyCode>,
     replay: Option<&crate::train::ReplayState>,
-    live_blocks_space: bool,
+    live_mode: bool,
 ) -> Vec3 {
-    let mut axes = Vec3::ZERO;
-    if keys.pressed(KeyCode::KeyW) {
-        axes.z += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        axes.z -= 1.0;
-    }
-    if keys.pressed(KeyCode::KeyD) {
-        axes.x += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyA) {
-        axes.x -= 1.0;
-    }
-    if keys.pressed(KeyCode::KeyE) {
+    let mut axes = read_orbit_pan_axes(keys, live_mode);
+    if keys.pressed(KeyCode::Space) && !replay_blocks_space(replay) && !live_mode {
         axes.y += 1.0;
-    }
-    if keys.pressed(KeyCode::Space) && !replay_blocks_space(replay) && !live_blocks_space {
-        axes.y += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyQ) {
-        axes.y -= 1.0;
     }
     axes
 }
@@ -1797,7 +1782,7 @@ pub fn fly_camera_allowed(follow: Res<CameraFollowMode>) -> bool {
     *follow != CameraFollowMode::DriverCam && !follow.is_cab2d() && !follow.is_passenger()
 }
 
-/// Widen FOV, tighten near clip, and tune exposure/ambient per camera mode.
+/// Widen FOV and tighten near clip indoors; keep the live world's light policy.
 pub fn update_driver_camera_fov(
     opts: Res<ViewerLaunchOpts>,
     follow: Res<CameraFollowMode>,
@@ -1818,28 +1803,33 @@ pub fn update_driver_camera_fov(
     let Projection::Perspective(persp) = &mut *projection else {
         return;
     };
-    if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() || follow.is_passenger() {
+    let indoors =
+        *follow == CameraFollowMode::DriverCam || follow.is_cab2d() || follow.is_passenger();
+    if indoors {
         // Cab2d needs the forward world through ACE window alpha.
         // Passenger uses the same near clip as InsideThreeDimCamera.
         persp.fov = driver_cab_fov_deg(&opts).to_radians();
         persp.near = DRIVER_NEAR_CLIP_M;
-        ambient.brightness = 350.0;
-        ambient.color = Color::srgb(0.95, 0.94, 0.92);
-        *tonemapping = Tonemapping::None;
-        *exposure = Exposure::BLENDER;
         // Do not toggle `Msaa` here: Bevy 0.19 crashes when the main pass switches to
         // sample count 4 while cached `opaque_mesh_pipeline` (world/StandardMaterial)
         // is still specialized for sample count 1. Keep camera `Msaa::Off` for the session.
-    } else if opts.live {
+    } else {
         persp.fov = std::f32::consts::FRAC_PI_4;
         persp.near = 0.1;
+    }
+    if opts.live {
+        // Cab and scenery share this camera. Changing its exposure for the
+        // dashboard also changed the sunlit world through the windscreen.
         ambient.brightness = live_outdoor_ambient();
         ambient.color = Color::srgb(0.85, 0.9, 1.0);
         *tonemapping = live_tonemapping();
         *exposure = Exposure::SUNLIGHT;
+    } else if indoors {
+        ambient.brightness = 350.0;
+        ambient.color = Color::srgb(0.95, 0.94, 0.92);
+        *tonemapping = Tonemapping::None;
+        *exposure = Exposure::BLENDER;
     } else {
-        persp.fov = std::f32::consts::FRAC_PI_4;
-        persp.near = 0.1;
         ambient.brightness = 0.15;
         ambient.color = Color::srgb(1.0, 1.0, 1.0);
         *tonemapping = Tonemapping::default();
@@ -1906,6 +1896,34 @@ mod tests {
         let (mesh, no_shadow) = cameras.single(world).expect("viewer camera");
         assert!(mesh.is_none());
         assert!(no_shadow.is_some());
+    }
+
+    #[test]
+    fn entering_live_cab_keeps_outdoor_exposure_through_the_windscreen() {
+        let mut app = App::new();
+        app.insert_resource(ViewerLaunchOpts {
+            live: true,
+            ..default()
+        });
+        app.world_mut().run_system_once(spawn_camera).unwrap();
+        for mode in [
+            CameraFollowMode::OrbitFollow,
+            CameraFollowMode::DriverCam,
+            CameraFollowMode::Cab2d,
+            CameraFollowMode::PassengerCam,
+        ] {
+            app.insert_resource(mode);
+            app.world_mut()
+                .run_system_once(update_driver_camera_fov)
+                .unwrap();
+            let world = app.world_mut();
+            let mut query =
+                world.query_filtered::<(&Exposure, &Tonemapping, &AmbientLight), With<Camera3d>>();
+            let (exposure, tone, ambient) = query.single(world).unwrap();
+            assert_eq!(exposure.ev100, Exposure::SUNLIGHT.ev100, "{mode:?}");
+            assert_eq!(*tone, live_tonemapping());
+            assert_eq!(ambient.brightness, live_outdoor_ambient());
+        }
     }
 
     #[test]
@@ -2666,13 +2684,78 @@ mod tests {
     }
 
     #[test]
-    fn read_fly_axes_wasd_and_qe() {
+    fn read_fly_axes_wasd_and_page_down_in_route_lab() {
         let mut keys = ButtonInput::<KeyCode>::default();
         keys.press(KeyCode::KeyW);
         keys.press(KeyCode::KeyD);
-        keys.press(KeyCode::KeyQ);
+        keys.press(KeyCode::PageDown);
         let axes = read_fly_axes(&keys, None, false);
         assert_eq!(axes, Vec3::new(1.0, -1.0, 1.0));
+    }
+
+    #[test]
+    fn driving_keys_do_not_move_orbit_or_fly_cameras() {
+        for key in [
+            KeyCode::KeyQ,
+            KeyCode::KeyW,
+            KeyCode::KeyS,
+            KeyCode::KeyA,
+            KeyCode::KeyD,
+            KeyCode::Space,
+        ] {
+            let mut keys = ButtonInput::<KeyCode>::default();
+            keys.press(key);
+            assert_eq!(
+                read_orbit_pan_axes(&keys, true),
+                Vec3::ZERO,
+                "orbit moved on {key:?}"
+            );
+            assert_eq!(
+                read_fly_axes(&keys, None, true),
+                Vec3::ZERO,
+                "fly moved on {key:?}"
+            );
+        }
+        let mut camera_keys = ButtonInput::<KeyCode>::default();
+        camera_keys.press(KeyCode::ArrowUp);
+        camera_keys.press(KeyCode::ArrowRight);
+        camera_keys.press(KeyCode::PageDown);
+        assert_eq!(
+            read_orbit_pan_axes(&camera_keys, true),
+            Vec3::new(1.0, -1.0, 1.0)
+        );
+        assert_eq!(
+            read_fly_axes(&camera_keys, None, true),
+            Vec3::new(1.0, -1.0, 1.0)
+        );
+    }
+
+    #[test]
+    fn chase_distance_interpolates_in_metres_without_angle_wrapping() {
+        let orbit = OrbitState {
+            distance: 160.0,
+            ..default()
+        };
+        let train = TrainFollowPose {
+            translation: Vec3::ZERO,
+            yaw: 0.0,
+        };
+        let halfway = apply_orbit_follow(
+            orbit,
+            CameraFollowMode::ChaseCam,
+            train,
+            LIVE_CHASE_DISTANCE,
+            0.0625,
+        );
+        assert!((halfway.distance - 94.0).abs() < 1e-5);
+        let settled = apply_orbit_follow(
+            orbit,
+            CameraFollowMode::ChaseCam,
+            train,
+            LIVE_CHASE_DISTANCE,
+            0.125,
+        );
+        assert!((settled.distance - LIVE_CHASE_DISTANCE).abs() < 1e-5);
     }
 
     #[test]

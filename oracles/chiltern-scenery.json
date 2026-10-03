@@ -1,0 +1,518 @@
+{
+  "schema": 1,
+  "version": "1.6.1",
+  "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "reader": {
+    "name": "Orts.Formats.Msts.dll",
+    "sha256": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465"
+  },
+  "generator": "tools/openrails-reference/InspectShapes.cs",
+  "models": [
+    {
+      "file": "housesemi1.s",
+      "sha256": "9953c7c1f9939f93d7e248ec145915b9fbdbd43117793ed8d47cf7dd546428d7",
+      "expected": {
+        "points": 108,
+        "normals": 93,
+        "uvs": 103,
+        "matrices": 8,
+        "texture_filenames": [
+          "housesemi.ACE",
+          "housesemiends.ACE",
+          "garages.ACE"
+        ],
+        "shader_names": [
+          "TexDiff",
+          "BlendATexDiff"
+        ],
+        "prim_state_details": [
+          {
+            "index": 0,
+            "name": "housesemitran",
+            "flags": 0,
+            "shader_idx": 1,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 1,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 1,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 2,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 1,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 3,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 2,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 4,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 3,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 5,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 4,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 6,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 5,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 7,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 6,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 8,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 7,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 9,
+            "name": "hsemiends",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 1,
+            "tex_indices": [
+              1
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 10,
+            "name": "garages",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 2,
+            "tex_indices": [
+              2
+            ],
+            "vertex_state_idx": 4,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 11,
+            "name": "garages",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 2,
+            "tex_indices": [
+              2
+            ],
+            "vertex_state_idx": 5,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          }
+        ],
+        "lod_details": [
+          [
+            {
+              "selection_m": 260.0,
+              "sub_objects": [
+                [
+                  {
+                    "prim_state_idx": 0,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 1,
+                    "triangles": 38
+                  },
+                  {
+                    "prim_state_idx": 2,
+                    "triangles": 22
+                  },
+                  {
+                    "prim_state_idx": 3,
+                    "triangles": 22
+                  },
+                  {
+                    "prim_state_idx": 4,
+                    "triangles": 12
+                  },
+                  {
+                    "prim_state_idx": 5,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 6,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 7,
+                    "triangles": 16
+                  },
+                  {
+                    "prim_state_idx": 8,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 9,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 10,
+                    "triangles": 10
+                  },
+                  {
+                    "prim_state_idx": 11,
+                    "triangles": 10
+                  }
+                ]
+              ]
+            },
+            {
+              "selection_m": 1400.0,
+              "sub_objects": [
+                [
+                  {
+                    "prim_state_idx": 1,
+                    "triangles": 10
+                  },
+                  {
+                    "prim_state_idx": 5,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 6,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 7,
+                    "triangles": 10
+                  },
+                  {
+                    "prim_state_idx": 9,
+                    "triangles": 4
+                  },
+                  {
+                    "prim_state_idx": 10,
+                    "triangles": 8
+                  },
+                  {
+                    "prim_state_idx": 11,
+                    "triangles": 8
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "file": "housesemirow1.s",
+      "sha256": "e27f8457d5f1e449274877fdcff0523c5fc51a37a9b1e29249e0415fe5e62622",
+      "expected": {
+        "points": 340,
+        "normals": 160,
+        "uvs": 105,
+        "matrices": 5,
+        "texture_filenames": [
+          "housesemi.ACE",
+          "garages.ACE"
+        ],
+        "shader_names": [
+          "TexDiff",
+          "BlendATexDiff"
+        ],
+        "prim_state_details": [
+          {
+            "index": 0,
+            "name": "housesemitran",
+            "flags": 0,
+            "shader_idx": 1,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 1,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 1,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 2,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 1,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 3,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 2,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 4,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 3,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 5,
+            "name": "housesemisolid",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 4,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          },
+          {
+            "index": 6,
+            "name": "garages",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 1,
+            "tex_indices": [
+              1
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          }
+        ],
+        "lod_details": [
+          [
+            {
+              "selection_m": 260.0,
+              "sub_objects": [
+                [
+                  {
+                    "prim_state_idx": 0,
+                    "triangles": 12
+                  },
+                  {
+                    "prim_state_idx": 1,
+                    "triangles": 166
+                  },
+                  {
+                    "prim_state_idx": 2,
+                    "triangles": 66
+                  },
+                  {
+                    "prim_state_idx": 3,
+                    "triangles": 66
+                  },
+                  {
+                    "prim_state_idx": 4,
+                    "triangles": 40
+                  },
+                  {
+                    "prim_state_idx": 5,
+                    "triangles": 12
+                  },
+                  {
+                    "prim_state_idx": 6,
+                    "triangles": 72
+                  }
+                ]
+              ]
+            },
+            {
+              "selection_m": 1400.0,
+              "sub_objects": [
+                [
+                  {
+                    "prim_state_idx": 1,
+                    "triangles": 46
+                  },
+                  {
+                    "prim_state_idx": 4,
+                    "triangles": 22
+                  },
+                  {
+                    "prim_state_idx": 6,
+                    "triangles": 64
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "file": "Doc_30sDetachedHouse1.s",
+      "sha256": "3f1348ffee4ddfd7a2ac4e88e7a0e7cde9769e98566541c73d0cfc9908cd9293",
+      "expected": {
+        "points": 68,
+        "normals": 54,
+        "uvs": 108,
+        "matrices": 1,
+        "texture_filenames": [
+          "DetHse1.ace"
+        ],
+        "shader_names": [
+          "TexDiff"
+        ],
+        "prim_state_details": [
+          {
+            "index": 0,
+            "name": "Tube_SolidNorm",
+            "flags": 0,
+            "shader_idx": 0,
+            "texture_idx": 0,
+            "tex_indices": [
+              0
+            ],
+            "vertex_state_idx": 0,
+            "z_bias": 0.0,
+            "alpha_test_mode": 0,
+            "z_buf_mode": 1
+          }
+        ],
+        "lod_details": [
+          [
+            {
+              "selection_m": 2000.0,
+              "sub_objects": [
+                [
+                  {
+                    "prim_state_idx": 0,
+                    "triangles": 69
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

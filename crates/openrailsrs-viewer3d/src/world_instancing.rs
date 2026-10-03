@@ -6,10 +6,12 @@
 //! alpha-discards cutout. True blend materials must not use this path.
 //! Directional shadow cast uses the [`Shadow`] phase with the same instance buffer (#72).
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use bevy::asset::RenderAssetUsages;
+use bevy::camera::visibility::NoAutoAabb;
 use bevy::core_pipeline::core_3d::{
     CORE_3D_DEPTH_FORMAT, Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey,
 };
@@ -152,6 +154,13 @@ pub struct WorldInstanceAppearance {
     pub base_color_texture: Option<Handle<Image>>,
     /// 0 = disabled; typically `200/255` for MSTS alpha test.
     pub alpha_cutoff: f32,
+    /// Match the entity material for thin / mixed-winding scenery parts.
+    pub cull_mode: Option<Face>,
+    pub double_sided: bool,
+    /// Group transform, including floating-origin shifts. The render extraction
+    /// fills this from this entity's GlobalTransform, independently of Bevy's
+    /// mesh-uniform buffer ordering.
+    pub world_from_local: Mat4,
 }
 
 impl SyncComponent for WorldInstanceAppearance {
@@ -159,12 +168,15 @@ impl SyncComponent for WorldInstanceAppearance {
 }
 
 impl ExtractComponent for WorldInstanceAppearance {
-    type QueryData = &'static WorldInstanceAppearance;
+    type QueryData = (&'static WorldInstanceAppearance, &'static GlobalTransform);
     type QueryFilter = ();
     type Out = Self;
 
     fn extract_component(item: QueryItem<'_, '_, Self::QueryData>) -> Option<Self> {
-        Some(item.clone())
+        let (appearance, transform) = item;
+        let mut extracted = appearance.clone();
+        extracted.world_from_local = transform.to_matrix();
+        Some(extracted)
     }
 }
 
@@ -195,6 +207,10 @@ pub struct WorldInstancingPlugin;
 impl Plugin for WorldInstancingPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WorldInstancingFallbackImage>()
+            // Bevy 0.19 refreshes bounds on Changed<Mesh3d>. The source mesh
+            // encloses one model, while our draw places many copies across a
+            // tile. Keep the aggregate bounds, including on LOD mesh swaps.
+            .register_required_components::<WorldInstanceBuffer, NoAutoAabb>()
             .add_plugins((
                 ExtractResourcePlugin::<WorldInstancingFallbackImage>::default(),
                 ExtractComponentPlugin::<WorldInstanceBuffer>::default(),
@@ -223,7 +239,13 @@ impl Plugin for WorldInstancingPlugin {
                 (
                     prepare_world_instance_buffers.in_set(RenderSystems::PrepareResources),
                     prepare_world_instance_bind_groups.in_set(RenderSystems::PrepareBindGroups),
-                    (queue_world_instanced, queue_world_instanced_shadows)
+                    (
+                        // Bevy's material queue first removes dirty meshes from
+                        // the shared bins, including meshes with custom draws.
+                        // Queue ours afterwards so that cleanup cannot erase them.
+                        queue_world_instanced.after(bevy::pbr::queue_material_meshes),
+                        queue_world_instanced_shadows.after(bevy::pbr::queue_shadows),
+                    )
                         .in_set(RenderSystems::QueueMeshes),
                 ),
             );
@@ -307,6 +329,9 @@ pub fn appearance_from_standard_material(
         base_color,
         base_color_texture,
         alpha_cutoff,
+        cull_mode: mat.and_then(|m| m.cull_mode),
+        double_sided: mat.is_some_and(|m| m.double_sided),
+        world_from_local: Mat4::IDENTITY,
     }
 }
 
@@ -397,6 +422,7 @@ struct GpuWorldInstanceBindGroup {
 struct AppearanceGpu {
     base_color: Vec4,
     params: Vec4,
+    world_from_local: Mat4,
 }
 
 #[derive(Resource)]
@@ -408,6 +434,13 @@ struct WorldInstancingPipeline {
     shadow_view_layout: BindGroupLayoutDescriptor,
     shadow_empty_layout: BindGroupLayoutDescriptor,
     depth_clip_control_supported: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct WorldInstancingPipelineKey {
+    mesh_key: MeshPipelineKey,
+    cull_mode: Option<Face>,
+    shadow: bool,
 }
 
 fn instance_vertex_buffer_layout() -> VertexBufferLayout {
@@ -454,7 +487,7 @@ fn init_world_instancing_pipeline(
         &BindGroupLayoutEntries::sequential(
             ShaderStages::FRAGMENT,
             (
-                uniform_buffer::<AppearanceGpu>(false),
+                uniform_buffer::<AppearanceGpu>(false).visibility(ShaderStages::VERTEX_FRAGMENT),
                 texture_2d(TextureSampleType::Float { filterable: true }),
                 sampler(SamplerBindingType::Filtering),
             ),
@@ -473,7 +506,7 @@ fn init_world_instancing_pipeline(
 }
 
 impl SpecializedMeshPipeline for WorldInstancingPipeline {
-    type Key = MeshPipelineKey;
+    type Key = WorldInstancingPipelineKey;
 
     fn specialize(
         &self,
@@ -481,11 +514,12 @@ impl SpecializedMeshPipeline for WorldInstancingPipeline {
         layout: &MeshVertexBufferLayoutRef,
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
         // Shadow / depth-prepass: depth-only pipeline with prepass view layouts (#72).
-        if key.contains(MeshPipelineKey::DEPTH_PREPASS) {
+        if key.shadow {
             return self.specialize_shadow(key, layout);
         }
 
-        let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
+        let mut descriptor = self.mesh_pipeline.specialize(key.mesh_key, layout)?;
+        descriptor.primitive.cull_mode = key.cull_mode;
         // Same WGSL as shadow pass — must name entry points (wgpu rejects multi-EP modules).
         apply_opaque_instancing_shaders(&mut descriptor, &self.shader);
         descriptor
@@ -519,7 +553,7 @@ pub(crate) const SHADOW_INSTANCING_FRAGMENT_EP: &str = "fragment_shadow";
 impl WorldInstancingPipeline {
     fn specialize_shadow(
         &self,
-        key: MeshPipelineKey,
+        key: WorldInstancingPipelineKey,
         layout: &MeshVertexBufferLayoutRef,
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
         let mut vertex_attributes = vec![Mesh::ATTRIBUTE_POSITION.at_shader_location(0)];
@@ -531,7 +565,9 @@ impl WorldInstancingPipeline {
         }
         let vertex_buffer_layout = layout.0.get_layout(&vertex_attributes)?;
 
-        let unclipped_depth = key.contains(MeshPipelineKey::UNCLIPPED_DEPTH_ORTHO)
+        let unclipped_depth = key
+            .mesh_key
+            .contains(MeshPipelineKey::UNCLIPPED_DEPTH_ORTHO)
             && self.depth_clip_control_supported;
 
         Ok(RenderPipelineDescriptor {
@@ -556,9 +592,9 @@ impl WorldInstancingPipeline {
                 ..default()
             }),
             primitive: PrimitiveState {
-                topology: key.primitive_topology(),
-                strip_index_format: key.strip_index_format(),
-                cull_mode: Some(Face::Back),
+                topology: key.mesh_key.primitive_topology(),
+                strip_index_format: key.mesh_key.strip_index_format(),
+                cull_mode: key.cull_mode,
                 unclipped_depth,
                 ..default()
             },
@@ -579,7 +615,7 @@ impl WorldInstancingPipeline {
                 },
             }),
             multisample: MultisampleState {
-                count: key.msaa_samples(),
+                count: key.mesh_key.msaa_samples(),
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
@@ -656,7 +692,13 @@ fn prepare_world_instance_bind_groups(
         };
         let gpu = AppearanceGpu {
             base_color: Vec4::from_array(appearance.base_color.to_f32_array()),
-            params: Vec4::new(appearance.alpha_cutoff, 0.0, 0.0, 0.0),
+            params: Vec4::new(
+                appearance.alpha_cutoff,
+                if appearance.double_sided { 1.0 } else { 0.0 },
+                0.0,
+                0.0,
+            ),
+            world_from_local: appearance.world_from_local,
         };
         let uniform = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("world_instance_appearance"),
@@ -688,7 +730,10 @@ fn queue_world_instanced(
     meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
     mesh_allocator: Res<MeshAllocator>,
-    material_meshes: Query<(Entity, &MainEntity), With<WorldInstanceBuffer>>,
+    material_meshes: Query<
+        (Entity, &MainEntity, &WorldInstanceAppearance),
+        With<WorldInstanceBuffer>,
+    >,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     views: Query<(&ExtractedView, &RenderVisibleEntities)>,
     view_key_cache: Res<ViewKeyCache>,
@@ -707,9 +752,10 @@ fn queue_world_instanced(
         let Some(visible_meshes) = visible_entities.get::<Mesh3d>() else {
             continue;
         };
+        let visible_groups = visible_main_entities(visible_meshes);
 
-        for (entity, main_entity) in &material_meshes {
-            if !visible_meshes.entity_pair_is_visible(entity, *main_entity) {
+        for (entity, main_entity, appearance) in &material_meshes {
+            if !visible_groups.contains(main_entity) {
                 opaque_phase.remove(*main_entity);
                 continue;
             }
@@ -723,11 +769,15 @@ fn queue_world_instanced(
             let Some(mesh_slabs) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id()) else {
                 continue;
             };
-            let key = view_key
-                | MeshPipelineKey::from_primitive_topology_and_strip_index(
-                    mesh.primitive_topology(),
-                    mesh.index_format(),
-                );
+            let key = WorldInstancingPipelineKey {
+                mesh_key: view_key
+                    | MeshPipelineKey::from_primitive_topology_and_strip_index(
+                        mesh.primitive_topology(),
+                        mesh.index_format(),
+                    ),
+                cull_mode: appearance.cull_mode,
+                shadow: false,
+            };
             let Ok(pipeline) =
                 pipelines.specialize(&pipeline_cache, &custom_pipeline, key, &mesh.layout)
             else {
@@ -789,9 +839,10 @@ fn queue_world_instanced_shadows(
         else {
             continue;
         };
+        let visible_groups = visible_main_entities(visible_meshes);
 
         for (entity, main_entity, appearance) in &material_meshes {
-            if !visible_meshes.entity_pair_is_visible(entity, *main_entity) {
+            if !visible_groups.contains(main_entity) {
                 shadow_phase.remove(*main_entity);
                 continue;
             }
@@ -821,6 +872,11 @@ fn queue_world_instanced_shadows(
                 key |= MeshPipelineKey::MAY_DISCARD;
             }
 
+            let key = WorldInstancingPipelineKey {
+                mesh_key: key,
+                cull_mode: appearance.and_then(|a| a.cull_mode),
+                shadow: true,
+            };
             let Ok(pipeline) =
                 pipelines.specialize(&pipeline_cache, &custom_pipeline, key, &mesh.layout)
             else {
@@ -843,6 +899,16 @@ fn queue_world_instanced_shadows(
             );
         }
     }
+}
+
+/// Mesh visibility is keyed by MainEntity in Bevy 0.19. CPU-culled meshes
+/// use Entity::PLACEHOLDER in the render-entity slot; GPU tables can contain
+/// legacy render entities. Our extracted component has its own RenderEntity,
+/// so use the stable main-world identity for both visibility paths.
+fn visible_main_entities(
+    visible: &bevy::render::view::RenderVisibleEntitiesClass,
+) -> HashSet<MainEntity> {
+    visible.iter_visible().map(|(_, main)| *main).collect()
 }
 
 /// Resolve Bevy's CPU-culling table for one shadow subview.
@@ -1002,16 +1068,34 @@ pub fn group_placements_by_tile(
     map
 }
 
+/// Shared LOD uses the nearest placement so a distant group centre cannot
+/// discard roofs/supports of nearby houses or poles.
+fn nearest_instance_distance_m(
+    camera: Vec3,
+    group: &GlobalTransform,
+    instances: &WorldInstanceBuffer,
+) -> f32 {
+    instances
+        .0
+        .iter()
+        .map(|instance| camera.distance_squared(group.transform_point(instance.translation())))
+        .reduce(f32::min)
+        .map(f32::sqrt)
+        .unwrap_or_else(|| camera.distance(group.translation()))
+}
+
 /// LOD update for instanced groups (shared LOD per tile group).
 pub fn update_world_instanced_lod(
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
+    meshes: Res<Assets<Mesh>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut groups: Query<(
         &GlobalTransform,
         &mut WorldInstancedGroup,
         &mut Mesh3d,
         &mut Visibility,
-        Option<&bevy::camera::primitives::Aabb>,
+        &WorldInstanceBuffer,
+        &mut bevy::camera::primitives::Aabb,
     )>,
 ) {
     let Some(cache) = cache else {
@@ -1022,7 +1106,7 @@ pub fn update_world_instanced_lod(
     };
     let cam_pos = cam_gt.translation();
 
-    for (gt, mut group, mut mesh3d, mut visibility, aabb) in &mut groups {
+    for (gt, mut group, mut mesh3d, mut visibility, instances, mut aabb) in &mut groups {
         if !group.lod_enabled {
             continue;
         }
@@ -1035,10 +1119,7 @@ pub fn update_world_instanced_lod(
         if lod_assets.is_empty() {
             continue;
         }
-        let center = aabb
-            .map(|a| gt.transform_point(a.center.into()))
-            .unwrap_or_else(|| gt.translation());
-        let instance_dist = crate::world::world_lod_distance_m(cam_pos, center);
+        let instance_dist = nearest_instance_distance_m(cam_pos, gt, instances);
         let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
         if new_lod == group.lod_idx {
             continue;
@@ -1056,6 +1137,13 @@ pub fn update_world_instanced_lod(
             continue;
         };
         mesh3d.0 = part.mesh.clone();
+        *aabb = instances_aabb(
+            instances,
+            meshes
+                .get(&part.mesh)
+                .and_then(bevy::camera::primitives::MeshAabb::compute_aabb)
+                .as_ref(),
+        );
         *visibility = Visibility::Inherited;
         group.part_index = part_index;
         group.lod_idx = new_lod;
@@ -1068,6 +1156,132 @@ mod tests {
     use crate::world::ShapeInstancePlacement;
 
     #[test]
+    fn visibility_keeps_groups_when_render_entities_have_a_different_order() {
+        let entity = |index| Entity::from_raw_u32(index).expect("valid test index");
+        let pairs = [
+            (entity(50), MainEntity::from(entity(1))),
+            (entity(20), MainEntity::from(entity(2))),
+            (entity(30), MainEntity::from(entity(3))),
+        ];
+        let mut visible = bevy::render::view::RenderVisibleEntitiesClass::default();
+        visible.update_cpu_culled_entities(&pairs);
+        let groups = visible_main_entities(&visible);
+        assert_eq!(
+            groups,
+            [1, 2, 3].map(|i| MainEntity::from(entity(i))).into()
+        );
+        assert!(!groups.contains(&MainEntity::from(entity(40))));
+    }
+
+    #[test]
+    fn cpu_mesh_placeholders_and_gpu_entities_share_main_world_visibility() {
+        let entity = |i| Entity::from_raw_u32(i).unwrap();
+        let mut visible = bevy::render::view::RenderVisibleEntitiesClass::default();
+        visible.update_cpu_culled_entities(&[
+            (Entity::PLACEHOLDER, MainEntity::from(entity(1))),
+            (Entity::PLACEHOLDER, MainEntity::from(entity(2))),
+        ]);
+        visible
+            .entities_gpu_culling
+            .insert(MainEntity::from(entity(3)), entity(50));
+        let groups = visible_main_entities(&visible);
+        for i in 1..=3 {
+            assert!(groups.contains(&MainEntity::from(entity(i))));
+        }
+        assert!(!groups.contains(&MainEntity::from(entity(4))));
+    }
+
+    #[test]
+    fn bevy_bounds_refresh_does_not_collapse_an_instance_group_to_one_model() {
+        use bevy::asset::AssetApp;
+        use bevy::camera::primitives::MeshAabb;
+        use bevy::camera::visibility::calculate_bounds;
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .add_plugins(WorldInstancingPlugin)
+            .add_systems(PostUpdate, calculate_bounds);
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::new(2.0, 2.0, 2.0));
+        let instances = vec![
+            WorldInstanceData::from_transform(Transform::from_xyz(100.0, 0.0, 0.0)),
+            WorldInstanceData::from_transform(Transform::from_xyz(200.0, 0.0, 0.0)),
+        ];
+        let aggregate = instances_aabb(
+            &instances,
+            app.world()
+                .resource::<Assets<Mesh>>()
+                .get(&mesh)
+                .and_then(MeshAabb::compute_aabb)
+                .as_ref(),
+        );
+        let group = app
+            .world_mut()
+            .spawn((
+                Mesh3d(mesh.clone()),
+                aggregate,
+                WorldInstanceBuffer(instances.into()),
+            ))
+            .id();
+        let ordinary = app.world_mut().spawn((Mesh3d(mesh), aggregate)).id();
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<bevy::camera::primitives::Aabb>(group)
+                .unwrap()
+                .center
+                .x,
+            150.0
+        );
+        assert_eq!(
+            app.world()
+                .get::<bevy::camera::primitives::Aabb>(ordinary)
+                .unwrap()
+                .center
+                .x,
+            0.0
+        );
+
+        let replacement = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::new(4.0, 4.0, 4.0));
+        app.world_mut().get_mut::<Mesh3d>(group).unwrap().0 = replacement;
+        app.update();
+        assert_eq!(
+            app.world()
+                .get::<bevy::camera::primitives::Aabb>(group)
+                .unwrap()
+                .center
+                .x,
+            150.0
+        );
+    }
+
+    #[test]
+    fn shared_lod_keeps_nearby_parts_when_other_placements_are_far_away() {
+        let group = GlobalTransform::from_translation(Vec3::new(1000.0, 0.0, 0.0));
+        let instances = WorldInstanceBuffer(
+            vec![
+                WorldInstanceData::from_transform(Transform::from_xyz(-980.0, 0.0, 0.0)),
+                WorldInstanceData::from_transform(Transform::from_xyz(1000.0, 0.0, 0.0)),
+            ]
+            .into(),
+        );
+        assert!(
+            (nearest_instance_distance_m(Vec3::new(50.0, 0.0, 0.0), &group, &instances) - 30.0)
+                .abs()
+                < 1e-5
+        );
+        // The old aggregate centre was nearly one kilometre away, selecting
+        // the coarse band for a house only 30 m from the camera.
+    }
+
+    #[test]
     fn group_by_tile_splits_placements() {
         let placements = vec![
             ShapeInstancePlacement {
@@ -1077,6 +1291,7 @@ mod tests {
                 tile_z: 0,
                 auto_z_bias: false,
                 signal_sub_obj: None,
+                signal_patch: None,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(1.0, 0.0, 0.0),
@@ -1085,6 +1300,7 @@ mod tests {
                 tile_z: 0,
                 auto_z_bias: false,
                 signal_sub_obj: None,
+                signal_patch: None,
             },
             ShapeInstancePlacement {
                 transform: Transform::from_xyz(2.0, 0.0, 0.0),
@@ -1093,6 +1309,7 @@ mod tests {
                 tile_z: 0,
                 auto_z_bias: false,
                 signal_sub_obj: None,
+                signal_patch: None,
             },
         ];
         let grouped = group_placements_by_tile(&placements);
@@ -1117,6 +1334,22 @@ mod tests {
         );
         let extracted = original.clone();
         assert!(Arc::ptr_eq(&original.0, &extracted.0));
+    }
+
+    #[test]
+    fn extracted_group_transform_preserves_placement_after_origin_shift() {
+        let materials = Assets::<StandardMaterial>::default();
+        let appearance = appearance_from_standard_material(&materials, &Handle::default());
+        let placement = WorldInstanceData::from_transform(Transform::from_xyz(120.0, 8.0, -40.0));
+        let shifted_group = GlobalTransform::from_translation(Vec3::new(-100.0, 0.0, 30.0));
+        let extracted = WorldInstanceAppearance::extract_component((&appearance, &shifted_group))
+            .expect("group must extract its own transform");
+        let position = extracted
+            .world_from_local
+            .transform_point3(placement.translation());
+        assert_eq!(position, Vec3::new(20.0, 8.0, -10.0));
+        assert_eq!(appearance.world_from_local, Mat4::IDENTITY);
+        assert_ne!(extracted, appearance);
     }
 
     #[test]
@@ -1158,6 +1391,7 @@ mod tests {
                 tile_z: 0,
                 auto_z_bias: false,
                 signal_sub_obj: None,
+                signal_patch: None,
             })
             .collect();
         let grouped = group_placements_by_tile(&placements);

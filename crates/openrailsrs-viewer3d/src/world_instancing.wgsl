@@ -1,6 +1,6 @@
 // WORLD GPU instancing (#58): albedo + alpha cutoff + scene light + fog (#76) +
 // receive + cast directional shadows (#72).
-#import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
+#import bevy_pbr::view_transformations::position_world_to_clip
 #import bevy_pbr::{
     mesh_view_bindings as view_bindings,
     mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT,
@@ -29,8 +29,9 @@ struct VertexOutput {
 
 struct AppearanceUniform {
     base_color: vec4<f32>,
-    // x = alpha_cutoff (0 = disabled), yzw unused
+    // x = alpha_cutoff (0 = disabled), y = double_sided, zw unused
     params: vec4<f32>,
+    world_from_local: mat4x4<f32>,
 };
 
 @group(3) @binding(0)
@@ -50,10 +51,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     );
     let local_pos = model * vec4<f32>(vertex.position, 1.0);
     // Entity Transform carries floating-origin; instances are in that local frame.
-    let world_from_local = get_world_from_local(0u);
+    // Each custom draw starts its own instance buffer at zero; mesh[0] belongs
+    // to an unrelated scene entity when Bevy uses storage mesh uniforms.
+    let world_from_local = appearance.world_from_local;
     var out: VertexOutput;
-    out.clip_position = mesh_position_local_to_clip(world_from_local, local_pos);
     let world_pos4 = world_from_local * local_pos;
+    out.clip_position = position_world_to_clip(world_pos4.xyz);
     out.world_position = world_pos4.xyz;
     let n = (model * vec4<f32>(vertex.normal, 0.0)).xyz;
     out.world_normal = normalize((world_from_local * vec4<f32>(n, 0.0)).xyz);
@@ -62,14 +65,17 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 }
 
 @fragment
-fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @location(0) vec4<f32> {
     var color = appearance.base_color * textureSample(base_color_texture, base_color_sampler, in.uv);
     let cutoff = appearance.params.x;
     if cutoff > 0.0 && color.a < cutoff {
         discard;
     }
 
-    let n = normalize(in.world_normal);
+    var n = normalize(in.world_normal);
+    if appearance.params.y > 0.0 && !front_facing {
+        n = -n;
+    }
     var lit = color.rgb;
     let ambient = view_bindings::lights.ambient_color.rgb;
     let exposure = view_bindings::view.exposure;
@@ -127,9 +133,9 @@ fn vertex_shadow(vertex: Vertex) -> ShadowVertexOutput {
         vertex.i_col3,
     );
     let local_pos = model * vec4<f32>(vertex.position, 1.0);
-    let world_from_local = get_world_from_local(0u);
+    let world_from_local = appearance.world_from_local;
     var out: ShadowVertexOutput;
-    out.clip_position = mesh_position_local_to_clip(world_from_local, local_pos);
+    out.clip_position = position_world_to_clip((world_from_local * local_pos).xyz);
     out.uv = vertex.uv;
     return out;
 }

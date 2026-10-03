@@ -1,4 +1,4 @@
-# Paridad física con Open Rails
+# Paridad con Open Rails
 
 Complementa [`ROADMAP.md`](../ROADMAP.md). Baselines: `examples/baselines/` · escenarios: `examples/chiltern/`.
 
@@ -77,6 +77,54 @@ de renderizado; se comprueba además el vector anfitrión y la distancia exacta
 registrada en `TrItemSData`. Esta prueba detecta errores de longitudes,
 sentido, curvas y confusiones entre un punto PAT y un andén,
 sin afirmar equivalencia visual ni física de la partida completa.
+
+## Escenario y oráculos gráficos
+
+La composición de tres modelos residenciales de Chiltern se compara con
+`ShapeFile` de la DLL original 1.6.1: `housesemi1.s`, `housesemirow1.s` y
+`Doc_30sDetachedHouse1.s`. `oracles/chiltern-scenery.json` conserva hashes de
+modelos y lector, primitivas, materiales y bandas LOD. Se exige igualdad de
+conteos e identidades y una tolerancia de **1 mm** en distancias LOD.
+
+```bash
+python3 scripts/run_scenery_oracle.py --route-root "$CHILTERN_ROUTE"
+xvfb-run -a bash scripts/visual_regression_instancing.sh
+```
+
+El segundo oráculo dibuja realmente las mismas geometrías mediante instancias
+GPU y mallas individuales. Incluye una caja indexada, una tarjeta abierta
+vista por detrás y una barra no indexada con mallas distintas. Una entidad
+ajena y un grupo trasladado/rotado fuera del frustum detectan dependencia
+del orden de uniforms, caras descartadas y pérdida del AABB agregado.
+El solapamiento de siluetas debe ser ≥**98 %** en cada región; la corrección
+da 100 % en las tres geometrías.
+No compara iluminación ni sustituye una referencia de píxeles nativa.
+
+La [vista nativa de Northolt](fixtures/visual/or_reference/chiltern_local/README.md)
+congela cámara, hora, distancia de dibujo, matrices y captura de OR 1.6.1.
+El lector y el consumidor gráfico son clientes de las DLL originales; no
+modifican shaders ni contenido. La vista permite revisar casas, caminos y
+terreno, pero todavía quedan diferencias de iluminación, sombras y detalle a
+distancia. La paridad visual completa no se declara aprobada.
+
+Las correcciones del visor conservan las texturas diurnas antes que los
+fallbacks de carpetas, los mipmaps ACE originales y el filtrado anisotrópico.
+La niebla de día despejado usa 20 km, independientemente del radio de carga.
+El grafo lógico no se superpone a las vías originales durante una partida.
+La carga presta el caché ACE por lote, sin copiar todas las texturas por frame.
+El domo del cielo queda excluido de las sombras: no debe oscurecer las cascadas
+que siguen a la cámara. Se mantienen los objetos físicos como emisores de sombra.
+El AABB agregado se conserva mediante `NoAutoAabb`; la visibilidad usa la
+identidad principal y el LOD considera la colocación más cercana del grupo.
+La cabina conserva la exposición exterior del paisaje. Los Transfer se
+recortan a sus límites UV, se construyen sobre la grilla local de terreno y
+mezclan con profundidad de solo lectura. La captura nativa de West Ruislip
+sirvió para identificar el patrón de triángulos causado por esas superficies.
+
+Los brazos de señales usan `SemaphorePos`, `SemaphoreInfo` y la compatibilidad
+de dos claves de OR: se colocan al iniciar, se desplazan una vez al cambiar
+el aspecto y permanecen inmóviles con aspecto estable. Se comparte el aspecto
+con las luces; esto no amplía el alcance actual del intérprete SIGSCR.
 
 ## Modelo (importante)
 

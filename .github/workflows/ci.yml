@@ -63,6 +63,12 @@ jobs:
             libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb \
             libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
 
+      - name: GPU instance placement oracle
+        env:
+          WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER: "1"
+          WGPU_BACKEND: vulkan
+        run: xvfb-run -a -s "-screen 0 512x256x24" bash scripts/visual_regression_instancing.sh
+
       - name: Visual regression smoke
         env:
           # Lavapipe a veces se marca non-conformant; wgpu lo rechaza sin esto.
@@ -79,6 +85,8 @@ jobs:
           path: |
             tmp/visual_smoke/actual.png
             tmp/visual_smoke/diff.png
+            tmp/instancing_oracle/individual.png
+            tmp/instancing_oracle/instanced.png
           if-no-files-found: warn
 
   coverage:

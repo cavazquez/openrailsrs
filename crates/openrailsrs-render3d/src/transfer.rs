@@ -3,10 +3,9 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
-use openrailsrs_bevy_scenery::{
-    TRANSFER_ALPHA_CUTOFF, build_transfer_mesh as shared_build_transfer_mesh,
-};
+use openrailsrs_bevy_scenery::build_transfer_mesh as shared_build_transfer_mesh;
 
 use crate::objects::{ObjectKind, ObjectMarker};
 use crate::stream::TileContent;
@@ -41,7 +40,9 @@ fn transfer_material_for_ace(
     tex_name: &str,
     lit: bool,
 ) -> Handle<StandardMaterial> {
-    let image = images.add(crate::textures::ace_to_image(ace));
+    let mut image = crate::textures::ace_to_image(ace);
+    openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, Some(3));
+    let image = images.add(image);
     let lower = tex_name.to_ascii_lowercase();
     let tint = if lower.contains("chalk") {
         Color::linear_rgb(0.92, 0.90, 0.86)
@@ -53,8 +54,8 @@ fn transfer_material_for_ace(
     materials.add(StandardMaterial {
         base_color: tint,
         base_color_texture: Some(image),
-        // OR siempre usa ReferenceAlpha=10 en TransferMaterial.
-        alpha_mode: AlphaMode::Mask(TRANSFER_ALPHA_CUTOFF),
+        // OR TransferMaterial blends over terrain with read-only depth.
+        alpha_mode: AlphaMode::Blend,
         unlit: !lit,
         fog_enabled: lit,
         double_sided: true,
@@ -134,6 +135,7 @@ pub fn spawn_tile_transfers(
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(material),
             Transform::from_translation(tile_offset + local_center),
+            NotShadowCaster,
             TileContent { tile_x, tile_z },
             Name::new(format!("transfer:{tex_name}")),
         ));
@@ -148,7 +150,7 @@ mod tests {
     use crate::terrain::load_tile_geometry;
 
     #[test]
-    fn transfer_material_uses_alpha_test_not_blend() {
+    fn transfer_material_blends_without_writing_terrain_depth() {
         use openrailsrs_ace::read_ace;
         use std::path::PathBuf;
 
@@ -163,7 +165,7 @@ mod tests {
         let mat =
             transfer_material_for_ace(&mut materials, &mut images, &ace, "ChalkCliff.ace", true);
         let m = materials.get(&mat).expect("mat");
-        assert!(matches!(m.alpha_mode, AlphaMode::Mask(_)));
+        assert!(matches!(m.alpha_mode, AlphaMode::Blend));
     }
 
     #[test]

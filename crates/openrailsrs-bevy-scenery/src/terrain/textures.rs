@@ -1,15 +1,25 @@
 //! Shared terrtex CPU helpers (sampler wrap + base alpha sanitize).
 
-use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::Image;
 
 /// Repeat UVs like Open Rails terrain samplers.
 pub fn set_terrain_repeat_sampler(image: &mut Image) {
-    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        ..Default::default()
-    });
+    // Keep the ACE loader's trilinear/aniso settings. Replacing the descriptor
+    // with its default selected nearest filtering and discarded mip filtering.
+    let mut descriptor = match &image.sampler {
+        ImageSampler::Descriptor(descriptor) => descriptor.clone(),
+        ImageSampler::Default => ImageSamplerDescriptor {
+            mag_filter: ImageFilterMode::Linear,
+            min_filter: ImageFilterMode::Linear,
+            mipmap_filter: ImageFilterMode::Linear,
+            anisotropy_clamp: 16,
+            ..Default::default()
+        },
+    };
+    descriptor.address_mode_u = ImageAddressMode::Repeat;
+    descriptor.address_mode_v = ImageAddressMode::Repeat;
+    image.sampler = ImageSampler::Descriptor(descriptor);
 }
 
 /// Fill transparent / chroma-key pixels in base TERRTEX so holes are mesh-driven.
@@ -82,5 +92,31 @@ mod tests {
         };
         assert_eq!(desc.address_mode_u, ImageAddressMode::Repeat);
         assert_eq!(desc.address_mode_v, ImageAddressMode::Repeat);
+        assert_eq!(desc.min_filter, ImageFilterMode::Linear);
+        assert_eq!(desc.mipmap_filter, ImageFilterMode::Linear);
+        assert_eq!(desc.anisotropy_clamp, 16);
+    }
+
+    #[test]
+    fn repeat_preserves_existing_mip_filtering_and_bias() {
+        let mut image = Image {
+            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                mag_filter: ImageFilterMode::Linear,
+                min_filter: ImageFilterMode::Linear,
+                mipmap_filter: ImageFilterMode::Linear,
+                anisotropy_clamp: 8,
+                lod_min_clamp: 2.0,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        set_terrain_repeat_sampler(&mut image);
+        let ImageSampler::Descriptor(desc) = image.sampler else {
+            panic!("sampler")
+        };
+        assert_eq!(desc.min_filter, ImageFilterMode::Linear);
+        assert_eq!(desc.mipmap_filter, ImageFilterMode::Linear);
+        assert_eq!(desc.anisotropy_clamp, 8);
+        assert_eq!(desc.lod_min_clamp, 2.0);
     }
 }

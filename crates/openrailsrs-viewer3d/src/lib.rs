@@ -46,6 +46,7 @@ pub mod route_bootstrap;
 pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
+pub mod signal_animation;
 pub mod signal_lamps;
 pub mod signal_subobj;
 pub mod signals;
@@ -115,8 +116,20 @@ pub use world::WorldScene;
 /// resources then enter `Playing`, or start directly in `Playing` (tests).
 pub struct ViewerPlugin;
 
+fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
+    // The bundled font includes accented Latin glyphs and is available even
+    // before asynchronous assets finish loading, including the loading overlay.
+    fonts
+        .insert(
+            bevy::asset::AssetId::default(),
+            Font::from_bytes(include_bytes!("../assets/fonts/DejaVuSansMono.ttf").to_vec()),
+        )
+        .expect("default font asset");
+}
+
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(PreStartup, install_ui_font);
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.insert_resource(Time::<Fixed>::from_hz(60.0));
         use bevy::state::condition::in_state;
@@ -204,6 +217,9 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 (
+                    signal_animation::update_signal_semaphores
+                        .after(live::live_driver_input)
+                        .before(openrailsrs_bevy_scenery::shapes::update_world_shape_anim),
                     openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
                     rolling_stock_anim::update_consist_car_track_poses
                         .after(live::update_live_train_marker)

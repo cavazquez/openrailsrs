@@ -31,6 +31,51 @@ Casi todo el lote P0–P2 de map rendering (2026-07) está **cerrado** (issues #
 - Cabina: palancas CVF parciales; puertas/panto sim → visual (#81).
 - Cast/receive sombras instanced ✅ (#72); VSM completo solo en render3d.
 
+La revisión de Chiltern de octubre corrige la desaparición de paredes en el
+camino de instancias GPU de Bevy 0.19.1. Las colas identifican la visibilidad
+por `MainEntity`: el camino CPU puede entregar `Entity::PLACEHOLDER` como
+entidad de render. Los grupos usan `NoAutoAabb` para conservar sus límites
+agregados cuando Bevy recalcula los límites al crear o cambiar una malla.
+El LOD actualiza esos límites y conserva las piezas de la instancia más
+cercana del grupo; otras instancias del mismo tile pueden usar más detalle.
+El shader recibe explícitamente el `GlobalTransform` y respeta las caras
+dobles del material. El [oráculo gráfico](../scripts/visual_regression_instancing.sh)
+exige ≥98 % de solapamiento por geometría con mallas individuales en CI.
+
+La selección de texturas conserva el orden de prioridad: ordenar las rutas
+alfabéticamente elegía `NIGHT` durante el día. La carga mantiene los mipmaps
+DXT originales y el sampler de terreno conserva filtros y anisotropía. La
+niebla despejada de 20 km se regula con `OPENRAILSRS_FOG_VISIBILITY_M`, sin
+depender de `OPENRAILSRS_VIEW_RADIUS_M`.
+
+El domo del cielo no proyecta ni recibe sombras. La esfera invertida del fondo
+estaba entrando en las cascadas del sol y generaba una mancha que parecía
+seguir a la cámara; el tren y los edificios mantienen sus sombras.
+
+La cabina de una partida mantiene la exposición exterior al mirar por el
+parabrisas. Cambiar a la exposición de interiores saturaba el paisaje bajo
+el sol físico. La distancia de la cámara exterior interpola metros de forma
+lineal, sin tratarlos como ángulos.
+
+Los Transfer se construyen en coordenadas locales del tile y se recortan al
+rectángulo UV [0,1], como el shader nativo. Sus texturas usan clamp y sus
+materiales mezclan sobre el terreno sin escribir profundidad ni proyectar
+sombras. Esto elimina el patrón de triángulos repetidos de West Ruislip.
+
+El segundo pase transparente de BlendATex respeta el descarte de caras de
+Open Rails. Algunos árboles ya traen ambas caras en la malla; dibujarlas
+otra vez duplicaba el fondo parcialmente transparente de su textura.
+
+En una partida, `Q` queda reservado para puertas; `A/D` y `W/S` para conducción.
+Las flechas desplazan la cámara y `PageUp/PageDown` cambian su altura, tanto
+en órbita como en vuelo. Se eliminan los alias de regulador que ocupaban esas
+teclas. La fuente DejaVu ya incluida se instala también como fuente predeterminada
+para que la pantalla de carga y todos los textos admitan tildes y `ñ`.
+
+Los semáforos mecánicos no usan el reloj de animación continua del WORLD:
+su pose y transición vienen de `sigcfg.dat` y del aspecto de la señal. Las
+animaciones de objetos decorativos conservan su reproducción normal.
+
 ### Alpha / sorting / instancing / night (cerrados)
 
 | Tema | Notas |

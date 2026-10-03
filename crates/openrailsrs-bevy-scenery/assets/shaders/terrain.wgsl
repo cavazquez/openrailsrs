@@ -1,6 +1,5 @@
 // Dual-texture terrain for viewer3d (#42 shadows + #39 fog).
 // Pipeline flags: lit=true, night=false, vsm=false, fog=true (see TerrainPipelineFlags::VIEWER).
-// TODO(#121): unify overlay blend with or_terrain.wgsl (viewer uses alpha mix; OR uses *2 multiply).
 #import bevy_pbr::{
     forward_io::VertexOutput,
     mesh_view_bindings as view_bindings,
@@ -24,9 +23,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let base = textureSample(base_texture, base_sampler, in.uv);
     let overlay_uv = in.uv * overlay_scale;
     let overlay = textureSample(overlay_texture, overlay_sampler, overlay_uv);
-    let detail = overlay.rgb;
-    let mix_strength = clamp(overlay.a * 0.65 + 0.2, 0.0, 1.0);
-    var rgb = mix(base.rgb, base.rgb * detail, mix_strength);
+    // Open Rails SceneryShader.fx PSTerrain: detail multiplies by RGB * 2.
+    // Overlay alpha does not change the terrain lighting or the blend weight.
+    var rgb = base.rgb * overlay.rgb * 2.0;
 
     let n = normalize(in.world_normal);
     let light = view_bindings::lights.directional_lights[0];

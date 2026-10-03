@@ -1281,6 +1281,19 @@ fn run_shape_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             "shader_names": shape.shader_names,
             "prim_state_details": prim_states,
             "matrices": matrix_count,
+            "lod_details": shape.lod_controls.iter().map(|control| {
+                control.distance_levels.iter().map(|level| {
+                    serde_json::json!({
+                        "selection_m": level.selection_m,
+                        "sub_objects": level.sub_objects.iter().map(|sub| {
+                            sub.primitives.iter().map(|prim| {
+                                serde_json::json!({"prim_state_idx": prim.prim_state_idx,
+                                    "triangles": prim.triangle_count()})
+                            }).collect::<Vec<_>>()
+                        }).collect::<Vec<_>>()
+                    })
+                }).collect::<Vec<_>>()
+            }).collect::<Vec<_>>(),
         });
         println!("{}", serde_json::to_string_pretty(&value)?);
     } else {
@@ -1506,6 +1519,18 @@ fn run_terrain_dump(file: &std::path::Path, json: bool) -> anyhow::Result<()> {
             "patch_count": patch_count,
             "hidden_vertices": hidden_vertices,
             "textures": textures,
+            "shaders": tile.shaders.iter().map(|shader| serde_json::json!({
+                "name": shader.name,
+                "textures": shader.texslots.iter().map(|slot| &slot.filename).collect::<Vec<_>>(),
+                "uv_calcs": shader.uvcalcs.iter().map(|calc| [calc.a as f64, calc.b as f64, calc.c as f64, calc.d]).collect::<Vec<_>>(),
+            })).collect::<Vec<_>>(),
+            "patches": patch_set.map(|set| set.patches.iter().map(|patch| serde_json::json!({
+                "flags": patch.flags,
+                "center": [patch.center_x, patch.average_y, patch.center_z],
+                "radius_m": patch.radius_m,
+                "shader_index": patch.shader_index,
+                "uv_transform": [patch.x, patch.y, patch.w, patch.b, patch.c, patch.h],
+            })).collect::<Vec<_>>()).unwrap_or_default(),
         });
         println!("{}", serde_json::to_string_pretty(&payload)?);
     } else {

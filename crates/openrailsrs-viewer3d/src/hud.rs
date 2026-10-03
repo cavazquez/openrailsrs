@@ -494,7 +494,7 @@ pub fn build_hud_content_live(
         "A/D:thr  ;/':brk  RMB:mirar  5:sig.vagon  Ctrl+Shift+5:asiento  1:cab  2:chase  Esc:quit"
             .to_string()
     } else {
-        "A/D:thr  ;/':brk  W/S:dir  Space:horn  V:wiper  1:cab  Alt+1:2D/3D  2:chase  3:orbit  5:pasajero  8:fly  IJKL:pan  P:pause  Esc:quit"
+        "A/D:thr  ;/':brk  W/S:dir  Q:puertas  Space:horn  V:wiper  1:cab  Alt+1:2D/3D  2:chase  3:orbit  5:pasajero  8:fly  flechas:pan  PgUp/PgDn:altura  Pause:pausa  Esc:quit"
             .to_string()
     };
     let mut row2 = format!(

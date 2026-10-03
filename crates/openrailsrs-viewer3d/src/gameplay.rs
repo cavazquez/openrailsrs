@@ -1,5 +1,6 @@
 //! Live gameplay visuals: stop markers, toasts, arrival summary, driver vignette.
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use openrailsrs_sim::path_data::PathData;
 
@@ -330,6 +331,8 @@ pub(crate) fn spawn_gameplay_markers(
             GameplayStopMarker { stop_index: idx },
             Mesh3d(sphere.clone()),
             MeshMaterial3d(mat),
+            // Navigation helpers are UI, not physical scenery.
+            NotShadowCaster,
             Transform::from_translation(Vec3::new(world.x, y, world.z)),
             Name::new(format!("gameplay:stop:{idx}:{}", stop.name)),
         ));
@@ -361,6 +364,7 @@ pub(crate) fn spawn_gameplay_markers(
         commands.spawn((
             Mesh3d(pole.clone()),
             MeshMaterial3d(pole_mat.clone()),
+            NotShadowCaster,
             Transform::from_translation(Vec3::new(world.x, world.y + size * 1.5, world.z)),
         ));
     }
@@ -402,6 +406,7 @@ pub(crate) fn spawn_gameplay_markers(
             GameplayDestMarker,
             Mesh3d(sphere.clone()),
             MeshMaterial3d(dest_mat),
+            NotShadowCaster,
             Transform::from_translation(Vec3::new(world.x, y, world.z)),
             Name::new("gameplay:dest"),
         ));

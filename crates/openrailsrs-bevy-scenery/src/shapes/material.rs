@@ -50,8 +50,8 @@ pub fn scenery_uses_or_wgsl_shaders() -> bool {
     or_scenery_shaders_enabled(scenery_materials_lit()) && !legacy_standard_scenery_enabled()
 }
 
-/// Open Rails lights its world with a sun + ambient and tone-maps it; MSTS `.ace`
-/// albedos look right under that model. This OR-style lit path (sun shading + shadow
+/// The Bevy adaptation lights scenery with a physical sun + ambient. MSTS `.ace`
+/// albedos are preserved in that path. This lit path (sun shading + shadow
 /// receive, neutral albedo) is the **default** and matches the camera's physical
 /// `Exposure::SUNLIGHT` + 75 klux sun + ambient fill.
 ///
@@ -294,6 +294,18 @@ pub fn apply_standard_normal_map(
 pub fn apply_train_exterior_culling(mat: &mut StandardMaterial) {
     mat.double_sided = false;
     mat.cull_mode = Some(Face::Back);
+}
+
+/// Native SceneryMaterial's transparent follow-up draws front faces only.
+/// Authored tree cards can already contain both windings; drawing each again
+/// doubles the translucent background (OldOakTree.ace has background alpha 15).
+pub fn scenery_blend_followup(base: &StandardMaterial) -> StandardMaterial {
+    let mut blend = base.clone();
+    blend.alpha_mode = AlphaMode::Blend;
+    blend.double_sided = false;
+    blend.cull_mode = Some(Face::Back);
+    blend.depth_bias += 0.0002;
+    blend
 }
 
 /// Textured exterior body for live/replay train `.s` meshes (single-sided + back cull).
