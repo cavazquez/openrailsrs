@@ -88,8 +88,9 @@ use openrailsrs_viewer3d::track_position::{
 };
 use openrailsrs_viewer3d::train::{ReplayState, TRAIN_COLORS, TrainTrack, load_csv};
 use openrailsrs_viewer3d::world::{
-    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, load_world_from_route_dir_near,
-    load_world_from_route_dir_near_filtered, msts_to_bevy, world_tile_center_hint,
+    MSTS_TILE_SIZE_M, RouteFocus, RouteWorldOffset, WorldItemWindow,
+    load_world_from_route_dir_near, load_world_from_route_dir_near_filtered, msts_to_bevy,
+    world_tile_center_hint,
 };
 use openrailsrs_viewer3d::{log_step, viewer_log};
 use serde::Deserialize;
@@ -615,11 +616,11 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
     let scene = TrackScene::from_loaded_route(loaded);
     let track_dev = track_dev_cli;
     let t = Instant::now();
+    let world_hint = world_tile_center_hint(route_dir).unwrap_or(scene.bounds.center);
     let world = if track_dev {
         viewer_log!("openrailsrs-viewer3d: track_dev — skipping .w world load");
         WorldScene::default()
     } else {
-        let world_hint = world_tile_center_hint(route_dir).unwrap_or(scene.bounds.center);
         load_world_from_route_dir_near_filtered(route_dir, Some(world_hint), view_radius_m(), false)
     };
     if !track_dev {
@@ -632,7 +633,16 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
             t,
         );
     }
-    let focus = RouteFocus::from_scene_and_world(&scene, &world);
+    let focus = RouteFocus::at_world_center(
+        startup_world_center(
+            &world,
+            world_hint,
+            scenery_content_radius_m(),
+            scene.bounds.center,
+        ),
+        None,
+    );
+    let route_offset = RouteWorldOffset::from_scene_and_center(&scene, Some(focus.center));
     let t = Instant::now();
     let terrain = if track_dev {
         TerrainScene::default()
@@ -663,8 +673,8 @@ fn load_from_route_dir(route_dir: &Path, track_dev_cli: bool) -> Result<LaunchCo
         live: None,
         scenery_mode: resolve_scenery_mode(track_dev_cli, false, false, SceneryModeToml::Full),
         run_corridor_path: RunCorridorPath::default(),
-        focus_center_override: None,
-        route_offset_override: None,
+        focus_center_override: Some(focus.center),
+        route_offset_override: Some(route_offset),
     })
 }
 
@@ -821,11 +831,19 @@ fn load_from_scenario(
     };
     log_step("loaded terrain elevation", t);
 
-    let focus = if anchor_world.is_some() {
-        RouteFocus::at_world_center(focus_center, Some(&elevation))
-    } else {
-        RouteFocus::from_scene_world_and_elevation(&scene, &world, Some(&elevation))
-    };
+    let render_center = anchor_world.unwrap_or_else(|| {
+        startup_world_center(
+            &world,
+            scenery_load_center,
+            scenery_content_radius_m(),
+            scene.bounds.center,
+        )
+    });
+    let focus = RouteFocus::at_world_center(render_center, Some(&elevation));
+    let route_offset_override =
+        Some(route_offset_override.unwrap_or_else(|| {
+            RouteWorldOffset::from_scene_and_center(&scene, Some(render_center))
+        }));
     if focus.height_origin != focus_center.y {
         viewer_log!(
             "openrailsrs-viewer3d: render height origin {:.1} m terrain MSL (anchor scenery y {:.1})",
@@ -899,7 +917,7 @@ fn load_from_scenario(
         live: live_drive,
         scenery_mode,
         run_corridor_path,
-        focus_center_override: anchor_world,
+        focus_center_override: Some(render_center),
         route_offset_override,
     })
 }
@@ -1026,6 +1044,18 @@ fn load_tile_lab(
         // Coordenadas absolutas correctas: nunca desplazar el grafo en tile-lab.
         route_offset_override: Some(RouteWorldOffset::default()),
     })
+}
+
+/// CPU prefetch coverage must not choose a different initial camera/terrain frame.
+fn startup_world_center(
+    world: &openrailsrs_viewer3d::world::WorldScene,
+    center: Vec3,
+    radius_m: f32,
+    fallback: Vec3,
+) -> Vec3 {
+    world
+        .position_center_in_window(Some(WorldItemWindow { center, radius_m }))
+        .unwrap_or(fallback)
 }
 
 fn route_focus_for_config(config: &LaunchConfig) -> RouteFocus {
@@ -1550,6 +1580,40 @@ fn exit_on_esc(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cpu_prefetch_preserves_the_initial_camera_and_graph_frame() {
+        let route =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test");
+        let loaded = load_route_from_dir(&route).unwrap();
+        let scene = TrackScene::from_loaded_route(loaded);
+        let mut baseline = load_world_from_route_dir_near(&route, Some(Vec3::ZERO), 400.0);
+        let baseline_focus = RouteFocus::from_scene_and_world(&scene, &baseline);
+        baseline.retain_within_visible_radius(&baseline_focus, 2448.0);
+        let prefetched =
+            load_world_from_route_dir_near_filtered(&route, Some(Vec3::ZERO), 400.0, false);
+        assert_eq!(prefetched.items.len(), 7);
+        assert_eq!(baseline.items.len(), 5);
+        assert_ne!(prefetched.position_center(), baseline.position_center());
+
+        let center = startup_world_center(&prefetched, Vec3::ZERO, 2448.0, scene.bounds.center);
+        assert_eq!(Some(center), baseline.position_center());
+        assert_eq!(center, Vec3::new(165.0, 1.5, -40.4));
+        assert_eq!(
+            RouteWorldOffset::from_scene_and_center(&scene, Some(center)).delta,
+            RouteWorldOffset::from_scene_and_world(&scene, &baseline).delta,
+        );
+        assert_eq!(
+            startup_world_center(
+                &prefetched,
+                Vec3::splat(100000.0),
+                400.0,
+                scene.bounds.center
+            ),
+            scene.bounds.center,
+        );
+        assert_eq!(prefetched.items.len(), 7, "future scenery stays available");
+    }
 
     fn args(items: &[&str]) -> CliArgs {
         parse_cli_from(items.iter().map(|s| s.to_string()))

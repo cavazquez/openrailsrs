@@ -82,6 +82,8 @@ sin afirmar equivalencia visual ni física de la partida completa.
 
 El streaming del visor conserva todos los objetos CPU de cada tile leído y
 activa su geometría al entrar en la ventana móvil, con 64 m de preparación.
+El encuadre inicial y la alineación del grafo usan los objetos de la ventana
+de inicio; los objetos CPU lejanos no desplazan la cámara ni el terreno.
 La identidad usa tile y ordinal del archivo, incluso si falta UID. La geometría
 GPU distante se libera antes que el tile CPU; al volver se activa nuevamente.
 La cola guarda poses relativas al foco y aplica el origen vigente al enviar

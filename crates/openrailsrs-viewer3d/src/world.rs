@@ -560,14 +560,22 @@ impl WorldScene {
 
     /// World-space centre of loaded scenery (for culling / terrain when the track graph has no `x_m`/`y_m`).
     pub fn position_center(&self) -> Option<Vec3> {
-        if self.items.is_empty() {
-            return None;
-        }
-        let mut min = Vec3::splat(f32::MAX);
-        let mut max = Vec3::splat(f32::MIN);
-        for obj in &self.items {
-            min = min.min(obj.position);
-            max = max.max(obj.position);
+        self.position_center_in_window(None)
+    }
+
+    /// Compute an initial view frame without removing prefetched CPU objects.
+    pub fn position_center_in_window(&self, window: Option<WorldItemWindow>) -> Option<Vec3> {
+        let mut positions = self
+            .items
+            .iter()
+            .map(|obj| obj.position)
+            .filter(|position| window.is_none_or(|w| w.contains_xz(*position)));
+        let first = positions.next()?;
+        let mut min = first;
+        let mut max = first;
+        for position in positions {
+            min = min.min(position);
+            max = max.max(position);
         }
         Some((min + max) * 0.5)
     }
@@ -718,8 +726,13 @@ impl RouteWorldOffset {
     const ALIGN_THRESHOLD_XZ_M: f32 = 10000.0;
 
     pub fn from_scene_and_world(scene: &TrackScene, world: &WorldScene) -> Self {
+        Self::from_scene_and_center(scene, world.position_center())
+    }
+
+    /// Use the startup view centre; distant CPU prefetch must not shift the graph.
+    pub fn from_scene_and_center(scene: &TrackScene, center: Option<Vec3>) -> Self {
         let graph_center = scene.bounds.center;
-        let Some(world_center) = world.position_center() else {
+        let Some(world_center) = center else {
             return Self::default();
         };
         let delta_xz = Vec2::new(
