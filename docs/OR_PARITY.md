@@ -132,6 +132,12 @@ modifican shaders ni contenido. La vista permite revisar casas, caminos y
 terreno, pero todavía quedan diferencias de iluminación, sombras y detalle a
 distancia. La paridad visual completa no se declara aprobada.
 
+La referencia baja `northolt_low_exterior` (pitch −0,15, 160 m) expone huecos
+bajo calles y jardines también en el render original. El visor mantiene la
+cámara exterior de una partida 1,5 m sobre el RAW visible, respetando huecos y
+ojos de cabina/pasajeros. Es una adaptación de cámara; no certifica el cierre
+geométrico de las superficies originales ni cambia sus alturas.
+
 Las correcciones del visor conservan las texturas diurnas antes que los
 fallbacks de carpetas, los mipmaps ACE originales y el filtrado anisotrópico.
 La niebla de día despejado usa 20 km, independientemente del radio de carga.

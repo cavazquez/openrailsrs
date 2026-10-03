@@ -451,6 +451,13 @@ impl Plugin for ViewerPlugin {
                         .run_if(camera::in_fly_mode)
                         .run_if(camera::fly_camera_allowed)
                         .run_if(teleport::teleport_closed),
+                    camera::constrain_exterior_camera_to_terrain
+                        .after(camera::orbit_camera_system)
+                        .after(camera::follow_train_camera)
+                        .after(camera::fly_camera_system)
+                        .after(floating_origin::apply_floating_origin)
+                        .before(view_window::sync_view_window_from_train)
+                        .run_if(live::live_mode_active),
                 )
                     .run_if(in_state(ViewerAppState::Playing)),
             );

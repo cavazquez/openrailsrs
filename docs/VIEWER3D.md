@@ -72,6 +72,18 @@ en órbita como en vuelo. Se eliminan los alias de regulador que ocupaban esas
 teclas. La fuente DejaVu ya incluida se instala también como fuente predeterminada
 para que la pantalla de carga y todos los textos admitan tildes y `ñ`.
 
+La cámara exterior de una partida mantiene 1,5 m de separación sobre el terreno
+RAW visible, tanto en órbita como en vuelo. Bajarla ya no permite atravesar el
+suelo y ver el reverso de caminos y jardines. El límite usa el datum MSL y el
+origen flotante actual; conserva las alturas originales del escenario y no
+altera los ojos de cabina/pasajeros ni añade un piso sobre vértices ocultos o
+tiles sin cargar. Es una adaptación para la partida: la cámara libre de
+Open Rails 1.6.1 también permite vistas subterráneas.
+La [referencia baja de Northolt](fixtures/visual/or_reference/chiltern_local/README.md)
+confirma además huecos bajo caminos y jardines en el render nativo. El límite
+de cámara evita atravesar el RAW; esas superficies abiertas son una limitación
+del contenido original que puede seguir siendo visible desde posiciones bajas.
+
 Los semáforos mecánicos no usan el reloj de animación continua del WORLD:
 su pose y transición vienen de `sigcfg.dat` y del aspecto de la señal. Las
 animaciones de objetos decorativos conservan su reproducción normal.

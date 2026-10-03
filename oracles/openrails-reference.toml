@@ -124,3 +124,13 @@ sha256 = "4d85e1dcf5549089d7990a2be1614bbb7235aebc668e9d5e70062d575bb72b19"
 [[scenery_binaries]]
 name = "Orts.Formats.Msts.dll"
 sha256 = "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465"
+
+# Native low camera: open undersides in the original Northolt content.
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_low_exterior.png"
+sha256 = "c5827cc0dc597e952a9db6ca74c787983e687a6927f2f46972549fd82f883ac5"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_low_exterior.json"
+sha256 = "8a4109f26450f326fe5308763d71ddcafedda0decd2b3b98f39716d8f7f686dd"

@@ -61,6 +61,9 @@ fn parse_tonemapping(value: Option<&str>) -> Tonemapping {
 /// avoid gimbal flip when looking straight up/down.
 pub const MAX_PITCH: f32 = 1.5;
 
+/// Keep the exterior eye above the visible RAW terrain when the player lowers it.
+const EXTERIOR_TERRAIN_CLEARANCE_M: f32 = 1.5;
+
 /// Sensitivity (rad per pixel) for orbit rotate (left mouse drag).
 const ORBIT_ROTATE_SENSITIVITY: f32 = 0.005;
 
@@ -474,7 +477,8 @@ pub struct OrbitState {
     pub focus: Vec3,
     /// Yaw in radians (rotation around world Y).
     pub yaw: f32,
-    /// Pitch in radians, clamped to ±[`MAX_PITCH`].
+    /// Pitch in radians. User rotation clamps to ±[`MAX_PITCH`]; terrain
+    /// clearance may raise the eye farther without changing the focus.
     pub pitch: f32,
     /// Distance from `focus` to the camera (m), clamped to
     /// [`ORBIT_MIN_DISTANCE`]..[`ORBIT_MAX_DISTANCE`].
@@ -1733,6 +1737,60 @@ pub fn fly_camera_system(
     transform.rotation = Quat::from_euler(EulerRot::YXZ, fly.yaw, fly.pitch, 0.0);
 }
 
+/// Resolve exterior terrain clearance after all camera movement and origin rebasing.
+///
+/// This is a gameplay adaptation: OR's free camera also permits underground views.
+/// Authored cab/passenger eyes and hidden terrain vertices must remain untouched.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
+pub fn constrain_exterior_camera_to_terrain(
+    opts: Res<ViewerLaunchOpts>,
+    scenery: Res<crate::launch::ViewerSceneryMode>,
+    mode: Res<CameraMode>,
+    follow: Res<CameraFollowMode>,
+    terrain: Option<Res<crate::terrain::TerrainElevation>>,
+    focus: Res<crate::world::RouteFocus>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+) {
+    if !opts.live
+        || scenery.is_tile_lab()
+        || scenery.is_track_dev()
+        || *follow == CameraFollowMode::DriverCam
+        || follow.is_cab2d()
+        || follow.is_passenger()
+    {
+        return;
+    }
+    let Some(terrain) = terrain else {
+        return;
+    };
+    let Ok((mut camera, mut orbit)) = cameras.single_mut() else {
+        return;
+    };
+    let world_x = camera.translation.x + origin.shift.x + focus.center.x;
+    let world_z = camera.translation.z + origin.shift.z + focus.center.z;
+    let Some(ground_msl) = terrain
+        .sample_world_y(world_x, world_z)
+        .filter(|y| y.is_finite())
+    else {
+        // No invented floor over an unloaded tile or an authored terrain hole.
+        return;
+    };
+    let min_y = ground_msl - focus.height_origin + EXTERIOR_TERRAIN_CLEARANCE_M;
+    if camera.translation.y >= min_y {
+        return;
+    }
+    camera.translation.y = min_y;
+    if *mode == CameraMode::Orbit {
+        // Keep looking at the subject, and persist the corrected pose so the
+        // next drag/zoom does not rebuild the old underground eye.
+        let offset = camera.translation - orbit.focus;
+        orbit.distance = offset.length();
+        orbit.pitch = offset.y.atan2(Vec2::new(offset.x, offset.z).length());
+        camera.look_at(orbit.focus, Vec3::Y);
+    }
+}
+
 fn replay_blocks_space(replay: Option<&crate::train::ReplayState>) -> bool {
     replay.is_some_and(|r| r.is_active())
 }
@@ -1896,6 +1954,183 @@ mod tests {
         let (mesh, no_shadow) = cameras.single(world).expect("viewer camera");
         assert!(mesh.is_none());
         assert!(no_shadow.is_some());
+    }
+
+    fn exterior_terrain_camera_app(
+        mode: CameraMode,
+        world_eye: Vec3,
+        shift: Vec3,
+    ) -> (App, Entity) {
+        let route = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/smoke/routes/test");
+        let focus = crate::world::RouteFocus {
+            center: Vec3::new(250.0, 300.0, -310.0),
+            height_origin: 91.0,
+        };
+        let eye = Vec3::new(
+            world_eye.x - focus.center.x - shift.x,
+            world_eye.y - focus.height_origin,
+            world_eye.z - focus.center.z - shift.z,
+        );
+        let orbit = OrbitState {
+            focus: eye + Vec3::new(0.0, 3.0, -25.0),
+            yaw: 0.0,
+            pitch: (-3.0_f32).atan2(25.0),
+            distance: Vec2::new(3.0, 25.0).length(),
+        };
+        let mut app = App::new();
+        app.insert_resource(ViewerLaunchOpts {
+            live: true,
+            ..default()
+        })
+        .insert_resource(crate::launch::ViewerSceneryMode::Full)
+        .insert_resource(mode)
+        .insert_resource(CameraFollowMode::Off)
+        .insert_resource(crate::terrain::TerrainElevation::load_from_route_dir(
+            &route,
+        ))
+        .insert_resource(focus)
+        .insert_resource(crate::floating_origin::FloatingOrigin { shift });
+        let camera = app
+            .world_mut()
+            .spawn((
+                Camera3d::default(),
+                camera_transform_from_orbit_state(
+                    orbit.focus,
+                    orbit.yaw,
+                    orbit.pitch,
+                    orbit.distance,
+                ),
+                orbit,
+            ))
+            .id();
+        (app, camera)
+    }
+
+    #[test]
+    fn exterior_camera_terrain_clearance_uses_msl_after_rebasing() {
+        let eye = Vec3::new(120.0, -20.0, 15.0);
+        for shift in [Vec3::ZERO, Vec3::new(5600.0, 0.0, -1800.0)] {
+            let (mut app, camera) = exterior_terrain_camera_app(CameraMode::Orbit, eye, shift);
+            let focus = *app.world().resource::<crate::world::RouteFocus>();
+            let ground = app
+                .world()
+                .resource::<crate::terrain::TerrainElevation>()
+                .sample_world_y(eye.x, eye.z)
+                .unwrap();
+            let before = app.world().get::<Transform>(camera).unwrap().translation;
+            let target = app.world().get::<OrbitState>(camera).unwrap().focus;
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            let corrected = *app.world().get::<Transform>(camera).unwrap();
+            assert!((corrected.translation.y + focus.height_origin - ground - 1.5).abs() < 1e-4);
+            assert_eq!(corrected.translation.xz(), before.xz());
+            assert!(vec3_close(
+                corrected.forward().as_vec3(),
+                (target - corrected.translation).normalize(),
+                1e-5
+            ));
+            let orbit = *app.world().get::<OrbitState>(camera).unwrap();
+            let rebuilt = camera_transform_from_orbit_state(
+                orbit.focus,
+                orbit.yaw,
+                orbit.pitch,
+                orbit.distance,
+            );
+            assert!(vec3_close(rebuilt.translation, corrected.translation, 1e-3));
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            assert_eq!(*app.world().get::<Transform>(camera).unwrap(), corrected);
+        }
+    }
+
+    #[test]
+    fn exterior_fly_camera_terrain_clearance_preserves_mouse_look() {
+        let (mut app, camera) = exterior_terrain_camera_app(
+            CameraMode::Fly,
+            Vec3::new(120.0, -20.0, 15.0),
+            Vec3::new(-800.0, 0.0, 900.0),
+        );
+        let rotation = Quat::from_euler(EulerRot::YXZ, 0.8, -0.6, 0.0);
+        app.world_mut()
+            .get_mut::<Transform>(camera)
+            .unwrap()
+            .rotation = rotation;
+        for _ in 0..3 {
+            app.world_mut()
+                .get_mut::<Transform>(camera)
+                .unwrap()
+                .translation
+                .y = -200.0;
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            let tf = app.world().get::<Transform>(camera).unwrap();
+            let ground = app
+                .world()
+                .resource::<crate::terrain::TerrainElevation>()
+                .sample_world_y(120.0, 15.0)
+                .unwrap();
+            assert!((tf.translation.y + 91.0 - ground - 1.5).abs() < 1e-4);
+            assert_eq!(tf.rotation, rotation);
+        }
+    }
+
+    #[test]
+    fn exterior_camera_guard_preserves_authored_interior_and_lab_views() {
+        for follow in [
+            CameraFollowMode::DriverCam,
+            CameraFollowMode::Cab2d,
+            CameraFollowMode::PassengerCam,
+        ] {
+            let (mut app, camera) = exterior_terrain_camera_app(
+                CameraMode::Orbit,
+                Vec3::new(120.0, -20.0, 15.0),
+                Vec3::ZERO,
+            );
+            app.insert_resource(follow);
+            let before = *app.world().get::<Transform>(camera).unwrap();
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            assert_eq!(*app.world().get::<Transform>(camera).unwrap(), before);
+        }
+        for (live, scenery) in [
+            (false, crate::launch::ViewerSceneryMode::Full),
+            (true, crate::launch::ViewerSceneryMode::TileLab),
+            (true, crate::launch::ViewerSceneryMode::TrackDev),
+        ] {
+            let (mut app, camera) = exterior_terrain_camera_app(
+                CameraMode::Orbit,
+                Vec3::new(120.0, -20.0, 15.0),
+                Vec3::ZERO,
+            );
+            app.world_mut().resource_mut::<ViewerLaunchOpts>().live = live;
+            app.insert_resource(scenery);
+            let before = *app.world().get::<Transform>(camera).unwrap();
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            assert_eq!(*app.world().get::<Transform>(camera).unwrap(), before);
+        }
+    }
+
+    #[test]
+    fn exterior_camera_guard_does_not_invent_ground_in_holes_or_missing_tiles() {
+        for eye in [
+            Vec3::new(-912.0, -20.0, -912.0), // Hidden smoke vertex (14, 14).
+            Vec3::new(8000.0, -20.0, 8000.0), // Unloaded tile.
+            Vec3::new(120.0, 1000.0, 15.0),   // Already above visible terrain.
+        ] {
+            let (mut app, camera) = exterior_terrain_camera_app(CameraMode::Orbit, eye, Vec3::ZERO);
+            let before = *app.world().get::<Transform>(camera).unwrap();
+            app.world_mut()
+                .run_system_once(constrain_exterior_camera_to_terrain)
+                .unwrap();
+            assert_eq!(*app.world().get::<Transform>(camera).unwrap(), before);
+        }
     }
 
     #[test]

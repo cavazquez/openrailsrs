@@ -20,3 +20,11 @@ no se establece un presupuesto de píxeles entre ambos renders.
 La composición de casas sí se comprueba contra la DLL original en
 `oracles/chiltern-scenery.json`: conteos exactos y distancia LOD ±1 mm.
 El oráculo de instancias GPU tiene su propio presupuesto de silueta ≥98 %.
+
+`northolt_low_exterior.png` registra la misma estación a las 09:55 con yaw
+1,6, pitch −0,15 y distancia 160 m. Se observa el reverso abierto de caminos,
+jardines y viviendas también en Open Rails 1.6.1. Sirve para distinguir esta
+limitación del contenido de un error de altura del importador Bevy. La cámara
+se fija con `OPENRAILS_REFERENCE_CAM_PITCH=-0.15`; pose, matrices y hashes
+quedan en `northolt_low_exterior.json`. El solapamiento visual no se mide contra
+esta vista porque el visor jugable limita la cámara exterior sobre el RAW.

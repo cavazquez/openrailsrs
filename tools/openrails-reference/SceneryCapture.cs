@@ -68,11 +68,16 @@ class SceneryCapture
             if (++readyFrames == 30 && metadata != null)
             {
                 var location = viewer.Camera.CameraWorldLocation;
+                var orbit = viewer.Camera as ReferenceOrbitCamera;
                 File.WriteAllText(metadata, JsonConvert.SerializeObject(new {
                     version = "1.6.1", view, time_s = viewer.Simulator.ClockTime,
                     tile_x = location.TileX, tile_z = location.TileZ,
                     location = location.Location, view_matrix = viewer.Camera.XnaView,
                     projection_matrix = viewer.Camera.XnaProjection,
+                    orbit = orbit == null ? null : new {
+                        yaw_rad = orbit.Yaw, pitch_rad = orbit.Pitch,
+                        distance_m = orbit.Distance
+                    },
                     target_override = Environment.GetEnvironmentVariable("OPENRAILS_REFERENCE_TARGET"),
                     host_statistics_disabled = true
                 }, Formatting.Indented));
@@ -84,6 +89,15 @@ class SceneryCapture
     class ReferenceOrbitCamera : FreeRoamCamera
     {
         readonly Vector3 target;
+        public readonly float Yaw, Pitch, Distance;
+
+        static float ReadParameter(string name, float fallback)
+        {
+            float value;
+            return Single.TryParse(Environment.GetEnvironmentVariable(name),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                && !Single.IsNaN(value) && !Single.IsInfinity(value) ? value : fallback;
+        }
 
         public ReferenceOrbitCamera(Viewer viewer) : base(viewer, viewer.Camera)
         {
@@ -102,9 +116,11 @@ class SceneryCapture
                         Single.Parse(values[4], CultureInfo.InvariantCulture)));
             }
             target = center.Location;
-            const float yaw = 1.6f, pitch = 0.6f, distance = 160f;
-            var offset = new Vector3(distance * (float)Math.Cos(pitch) * (float)Math.Sin(yaw),
-                distance * (float)Math.Sin(pitch), -distance * (float)Math.Cos(pitch) * (float)Math.Cos(yaw));
+            Yaw = ReadParameter("OPENRAILS_REFERENCE_CAM_YAW", 1.6f);
+            Pitch = ReadParameter("OPENRAILS_REFERENCE_CAM_PITCH", 0.6f);
+            Distance = ReadParameter("OPENRAILS_REFERENCE_CAM_DIST", 160f);
+            var offset = new Vector3(Distance * (float)Math.Cos(Pitch) * (float)Math.Sin(Yaw),
+                Distance * (float)Math.Sin(Pitch), -Distance * (float)Math.Cos(Pitch) * (float)Math.Cos(Yaw));
             cameraLocation = new WorldLocation(center.TileX, center.TileZ, target + offset);
         }
 

@@ -36,6 +36,12 @@ Para una vista exterior de otra estación, definir opcionalmente
 y separador decimal punto. El consumidor registra ese objetivo junto con
 las matrices de cámara; omitirlo mantiene el foco en el tren de la actividad.
 
+La órbita admite `OPENRAILS_REFERENCE_CAM_YAW`,
+`OPENRAILS_REFERENCE_CAM_PITCH` (radianes) y `OPENRAILS_REFERENCE_CAM_DIST`
+(metros), con valores predeterminados 1,6 / 0,6 / 160. Los valores resueltos
+quedan en los metadatos. La referencia baja de Northolt utiliza pitch −0,15
+para comprobar los reversos abiertos del contenido original.
+
 En Wine, usar el prefijo privado generado por el capturador de servicio y
 `WINEDLLOVERRIDES=d3d11,dxgi=b` si DXVK no puede abrir el adaptador. El Host de
 estadísticas se detiene para evitar la función PDH ausente en Wine; las tareas
