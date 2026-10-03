@@ -65,6 +65,8 @@ pub struct RouteFile {
     pub source_path: Option<PathBuf>,
     /// Overhead wire / electrification visual flags (#36).
     pub overhead_wire: OverheadWireParams,
+    /// Native season/weather environment filenames, e.g. `SummerClear`.
+    pub environments: Vec<(String, String)>,
 }
 
 impl RouteFile {
@@ -82,6 +84,7 @@ impl RouteFile {
             route_start,
             source_path: None,
             overhead_wire: parse_overhead_wire_params(ast),
+            environments: parse_environments(ast),
         })
     }
 
@@ -102,6 +105,39 @@ impl RouteFile {
         route.source_path = Some(path.to_path_buf());
         Ok(route)
     }
+
+    /// Resolve the authored environment, preserving route-relative filenames
+    /// and MSTS case-insensitive path lookup. Clear weather is the viewer default.
+    pub fn environment_path(
+        &self,
+        route_dir: &Path,
+        season: &str,
+        weather: &str,
+    ) -> Option<PathBuf> {
+        let key = format!("{season}{weather}");
+        let (_, filename) = self
+            .environments
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(&key))?;
+        let relative = crate::normalize_msts_filename(filename);
+        resolve_path_case_insensitive(&route_dir.join("ENVFILES").join(relative))
+            .filter(|path| path.is_file())
+    }
+}
+
+fn parse_environments(ast: &Ast) -> Vec<(String, String)> {
+    let mut result = Vec::new();
+    for block in super::named_blocks(ast, "Environment") {
+        for season in ["Spring", "Summer", "Autumn", "Winter"] {
+            for weather in ["Clear", "Rain", "Snow"] {
+                let key = format!("{season}{weather}");
+                if let Some(file) = find_string_field(block, &[&key]) {
+                    result.push((key, file));
+                }
+            }
+        }
+    }
+    result
 }
 
 /// Deterministic `.trk` selection for a route directory.
@@ -331,6 +367,27 @@ fn collect_numbers(ast: &Ast) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn environment_mapping_accepts_both_stf_forms_and_case_insensitive_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("Envfiles")).unwrap();
+        let expected = dir.path().join("Envfiles/SummerClear.env");
+        std::fs::write(&expected, "world ( )").unwrap();
+        for text in [
+            r#"(Tr_RouteFile (RouteID test) (Environment (SummerClear Summerclear.env) (WinterClear Winterclear.env)))"#,
+            r#"(RouteID (test) Environment (SummerClear (Summerclear.env) WinterClear (Winterclear.env)))"#,
+        ] {
+            let route = RouteFile::from_ast(&crate::parse_first(text).unwrap()).unwrap();
+            assert_eq!(route.environments.len(), 2);
+            assert_eq!(
+                route.environment_path(dir.path(), "summer", "clear"),
+                Some(expected.clone())
+            );
+            assert_eq!(route.environment_path(dir.path(), "winter", "clear"), None);
+        }
+    }
+
     use crate::parser::parse_from_first_paren;
 
     #[test]

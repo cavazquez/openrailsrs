@@ -2,6 +2,7 @@
 name = "Chiltern local: Northolt Park → West Ruislip"
 description = "Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas."
 start_time_s = 35700
+season = "summer"
 
 [route]
 path = "."

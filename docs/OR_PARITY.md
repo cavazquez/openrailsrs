@@ -80,6 +80,12 @@ sin afirmar equivalencia visual ni física de la partida completa.
 
 ## Escenario y oráculos gráficos
 
+Se conserva la fidelidad del contenido y de la conducción junto con las mejoras
+de Bevy que benefician la partida. Iluminación física, tonemapping, instancias
+GPU, origen flotante y límite exterior sobre el terreno son decisiones
+intencionales. Los errores de posición, carga o movimiento se corrigen; no se
+copian limitaciones del motor original como requisito de paridad.
+
 El streaming del visor conserva todos los objetos CPU de cada tile leído y
 activa su geometría al entrar en la ventana móvil, con 64 m de preparación.
 El encuadre inicial y la alineación del grafo usan los objetos de la ventana
@@ -101,9 +107,44 @@ máximo de 6 GiB. Se conservan PNG, logs y metadatos en `tmp/viewer-streaming`.
 Este control comprueba continuidad y memoria, sin certificar paridad de píxeles
 ni ampliar las tolerancias físicas.
 
+La revisión de verano registra 3708,84 m y 7 tiles GPU a mitad de recorrido,
+y 7054,34 m, 6 tiles GPU y las tres paradas servidas al terminar. Ambos puntos
+tienen cero shapes cercanos pendientes. El pico RSS medido es 5606,4 MiB y
+5689,2 MiB, respectivamente, con Vulkan lavapipe, vista desde la cabina a
+1280×720, ventana de escenario de 2000 m y un único visor por prueba.
+Estas cifras verifican el límite de memoria en esa configuración; no son
+una medición de FPS de hardware.
+
 ```bash
 python3 scripts/check_viewer_streaming.py --route-root "$CHILTERN_ROUTE" --software
 ```
+
+Las vistas detenidas de Northolt Park, South Ruislip, West Ruislip y cabina
+se capturan secuencialmente con `scripts/capture_route_views.py --with-cab`.
+Incluyen pose de cámara, hora, dirección solar y cantidad de modelos compartidos
+del tren. Complementan el viaje real; no lo reemplazan como prueba de streaming.
+
+```bash
+python3 scripts/capture_route_views.py --route-root "$CHILTERN_ROUTE" --software --with-cab
+```
+
+`oracles/solar-or161.json` contrasta ubicación MSTS y dirección del sol con
+las DLL originales: 75 casos válidos y 15 discontinuidades de la proyección,
+tres estaciones del año y cinco horarios. Exige error geográfico ≤1e−11 rad
+y error L2 del vector solar <1e−5. Incluye los horarios de `SummerClear.env`
+para la partida de verano a las 09:55 y los hashes de entradas y consumidor.
+`check.sh` ejecuta esta comparación; las instrucciones de recaptura están en
+[`tools/openrails-reference`](../tools/openrails-reference/README.md).
+El visor evalúa la misma ecuación directamente cada segundo simulado;
+OR interpola una tabla de muestras tomadas cada 20 minutos. Se mantiene
+esa diferencia como mejora de Bevy,
+sin declarar aprobada la iluminación ni la paridad completa de píxeles.
+
+Las regresiones ECS de ruedas y bogies verifican pausa, reinicio, multiplicador
+de tiempo, muestras por tren e inversión del coche sobre una curva. La fase
+de rueda usa la distancia de presentación de la carrocería, no un reloj paralelo;
+las partes comparten la shape original inmutable. Esto comprueba coherencia
+de movimiento y memoria, sin ampliar la tolerancia física del servicio completo.
 
 La composición de tres modelos residenciales de Chiltern se compara con
 `ShapeFile` de la DLL original 1.6.1: `housesemi1.s`, `housesemirow1.s` y

@@ -50,6 +50,8 @@ pub struct CsvRow {
     pub time_s: f64,
     pub velocity_mps: f64,
     #[serde(default)]
+    pub odometer_m: Option<f64>,
+    #[serde(default)]
     pub edge_id: String,
     #[serde(default)]
     pub pos_on_edge_m: f64,
@@ -64,10 +66,39 @@ pub struct ReplayState {
     pub speed: f64,
     pub paused: bool,
     pub max_t: f64,
+    /// Signed distance prefix, computed once when immutable CSV tracks are loaded.
+    wheel_distances: Vec<Vec<f64>>,
 }
 
 impl ReplayState {
     pub fn new(scenario_name: String, tracks: Vec<TrainTrack>) -> Self {
+        let wheel_distances = tracks
+            .iter()
+            .map(|track| {
+                let mut distance = 0.0;
+                let mut result = Vec::with_capacity(track.rows.len());
+                if !track.rows.is_empty() {
+                    result.push(0.0);
+                }
+                for pair in track.rows.windows(2) {
+                    let (a, b) = (&pair[0], &pair[1]);
+                    let delta = match (a.odometer_m, b.odometer_m) {
+                        (Some(a), Some(b)) if a.is_finite() && b.is_finite() => b - a,
+                        _ if !a.edge_id.is_empty() && a.edge_id == b.edge_id => {
+                            b.pos_on_edge_m - a.pos_on_edge_m
+                        }
+                        _ => {
+                            (a.velocity_mps + b.velocity_mps) * 0.5 * (b.time_s - a.time_s).max(0.0)
+                        }
+                    };
+                    if delta.is_finite() {
+                        distance += delta;
+                    }
+                    result.push(distance);
+                }
+                result
+            })
+            .collect();
         let max_t = tracks
             .iter()
             .filter_map(|t| t.rows.last().map(|r| r.time_s))
@@ -81,11 +112,21 @@ impl ReplayState {
             speed: 1.0,
             paused,
             max_t,
+            wheel_distances,
         }
     }
 
     pub fn is_active(&self) -> bool {
         !self.tracks.is_empty()
+    }
+
+    /// Follow the same CSV sample as the train body (including pause, speed and seek).
+    pub fn wheel_distance_m(&self, track_index: usize) -> Option<f64> {
+        let rows = &self.tracks.get(track_index)?.rows;
+        let idx = rows
+            .partition_point(|r| r.time_s <= self.t_sim)
+            .saturating_sub(1);
+        self.wheel_distances.get(track_index)?.get(idx).copied()
     }
 }
 
@@ -207,7 +248,13 @@ pub struct TrainMarker {
     pub track_index: usize,
 }
 
-type ShapeCache = HashMap<PathBuf, (ShapeRenderAsset, Option<openrailsrs_formats::ShapeFile>)>;
+type ShapeCache = HashMap<
+    PathBuf,
+    (
+        ShapeRenderAsset,
+        Option<std::sync::Arc<openrailsrs_formats::ShapeFile>>,
+    ),
+>;
 
 /// Spawn train visuals: consist meshes for the primary track when available, else cubes.
 #[allow(clippy::too_many_arguments)]
@@ -486,7 +533,10 @@ fn load_vehicle_shape_assets(
     materials: &mut Assets<StandardMaterial>,
     texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
     fallback_color: Color,
-) -> (ShapeRenderAsset, Option<openrailsrs_formats::ShapeFile>) {
+) -> (
+    ShapeRenderAsset,
+    Option<std::sync::Arc<openrailsrs_formats::ShapeFile>>,
+) {
     // Open Rails resolves rolling-stock textures from ReferencePath (trainset root),
     // not route TEXTURES/ — see `vehicle_texture_search_dirs`.
     let tex_dirs_owned = vehicle_texture_search_dirs(shape_path, route_dir);
@@ -503,7 +553,7 @@ fn load_vehicle_shape_assets(
         fallback_color,
         true,
     ) {
-        return (asset, Some(shape));
+        return (asset, Some(std::sync::Arc::new(shape)));
     }
     let mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
     let material = materials.add(StandardMaterial {
@@ -726,12 +776,14 @@ mod tests {
             CsvRow {
                 time_s: 0.0,
                 velocity_mps: 0.0,
+                odometer_m: None,
                 edge_id: "e1".into(),
                 pos_on_edge_m: 0.0,
             },
             CsvRow {
                 time_s: 10.0,
                 velocity_mps: 5.0,
+                odometer_m: None,
                 edge_id: "e1".into(),
                 pos_on_edge_m: 100.0,
             },

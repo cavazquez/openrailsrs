@@ -717,12 +717,14 @@ mod tests {
                     CsvRow {
                         time_s: 0.0,
                         velocity_mps: 10.0,
+                        odometer_m: None,
                         edge_id: "e1".into(),
                         pos_on_edge_m: 0.0,
                     },
                     CsvRow {
                         time_s: 10.0,
                         velocity_mps: 10.0,
+                        odometer_m: None,
                         edge_id: "e1".into(),
                         pos_on_edge_m: 100.0,
                     },

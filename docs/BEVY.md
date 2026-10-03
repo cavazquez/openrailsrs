@@ -2,6 +2,12 @@
 
 Presentación 3D separada del núcleo headless. Versión **Bevy 0.19.1** (`Cargo.lock`), con Rust mínimo 1.95 por el requisito de Bevy.
 
+La compatibilidad conserva el contenido, los controles y el comportamiento
+ferroviario de la referencia. Las mejoras de Bevy se mantienen cuando benefician
+la partida: iluminación física, tonemapping, instancias GPU, origen flotante y
+cámara exterior sobre el terreno. Cada diferencia intencional se documenta;
+los oráculos siguen detectando errores de importación, posición y movimiento.
+
 La física interactiva se ejecuta en `FixedUpdate` con reloj Bevy de 60 Hz y
 cuantos físicos de hasta 0,05 s. La representación, cámaras, cabina y HUD se
 actualizan en `Update`. `LiveDriveSession` y la máquina de estados de servicio
@@ -13,11 +19,26 @@ compara 30 y 144 FPS sin cambiar las llegadas ni las posiciones.
 `Text`, `FontSource`, recursos de visibilidad y consultas Bevy disjuntas,
 actualizando textos sólo cuando cambian y como máximo a 20 Hz. La fuente
 DejaVu Sans Mono está incluida con su licencia para representar el español.
+Los paneles separan velocidad, presiones, reloj del servicio, estación y señal;
+`F6` muestra la ayuda sin ocupar permanentemente la vista de la cabina.
 Los vectores TDB conservan posición, elevación, tangente y sentido de marcha,
 incluyendo las aristas inversas `eNNN_r` y los offsets de andén.
 Los vértices MSTS ya invierten Z al convertirse a Bevy: la base del coche
 rota −90° sobre Y para que el frente de la cabina siga el +X del recorrido.
 La prueba de cámara compara esa vista contra la dirección real de marcha.
+
+Las ruedas usan la distancia de presentación de la misma sesión que coloca
+las carrocerías, en lugar de integrar un reloj de animación independiente.
+Pausa, reinicio y multiplicador de tiempo mantienen ambos movimientos juntos.
+Las partes comparten el `ShapeFile` inmutable mediante `Arc`; las poses de
+puertas y pantógrafos sólo se recalculan cuando cambia su clave.
+
+El sol toma ubicación geográfica MSTS, estación del año y reloj de la partida;
+el lector de `.env` respeta los horarios del satélite solar de la ruta.
+La ecuación se comprueba contra las DLL originales 1.6.1 y se evalúa cada
+segundo simulado. Se evalúa directamente para la hora de la partida, mientras
+el cielo nativo interpola una tabla de muestras cada 20 minutos. Se conserva
+esa mejora junto con las sombras y exposición de Bevy.
 
 Los catálogos combinan GLOBAL, la variante OpenRails y las secciones dinámicas
 del `tsection.dat` de la ruta. Las secciones cortas conservan su longitud

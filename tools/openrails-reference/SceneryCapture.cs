@@ -48,6 +48,13 @@ class SceneryCapture
 
         public CaptureGame(UserSettings settings) : base(settings) { }
 
+        static float[] NativeSolarDirection(Viewer viewer)
+        {
+            var direction = (Vector3)typeof(SkyViewer).GetField("SolarDirection",
+                BindingFlags.Instance | BindingFlags.NonPublic).GetValue(viewer.World.Sky);
+            return new[] { direction.X, direction.Y, direction.Z };
+        }
+
         protected override void Update(GameTime time)
         {
             base.Update(time);
@@ -65,6 +72,16 @@ class SceneryCapture
                     new ReferenceOrbitCamera(viewer).Activate();
                 configured = true;
             }
+            // A remote target can change tiles after the initial activity load.
+            // Wait for the original loader to publish the new WORLD window;
+            // thirty rendered frames alone can still contain only old terrain.
+            var scenery = viewer.World.Scenery.WorldFiles;
+            if (!scenery.Any(tile => tile.TileX == viewer.Camera.TileX
+                && tile.TileZ == viewer.Camera.TileZ))
+            {
+                readyFrames = 0;
+                return;
+            }
             if (++readyFrames == 30 && metadata != null)
             {
                 var location = viewer.Camera.CameraWorldLocation;
@@ -74,6 +91,8 @@ class SceneryCapture
                     tile_x = location.TileX, tile_z = location.TileZ,
                     location = location.Location, view_matrix = viewer.Camera.XnaView,
                     projection_matrix = viewer.Camera.XnaProjection,
+                    solar_direction = NativeSolarDirection(viewer),
+                    scenery_tiles = scenery.Select(tile => new[] { tile.TileX, tile.TileZ }).ToArray(),
                     orbit = orbit == null ? null : new {
                         yaw_rad = orbit.Yaw, pitch_rad = orbit.Pitch,
                         distance_m = orbit.Distance

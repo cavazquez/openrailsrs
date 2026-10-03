@@ -43,6 +43,7 @@ pub mod road_cars;
 pub mod rolling_stock;
 pub mod rolling_stock_anim;
 pub mod route_bootstrap;
+pub mod route_lighting;
 pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
@@ -302,6 +303,7 @@ impl Plugin for ViewerPlugin {
                     live::spawn_live_train.run_if(live::live_mode_active),
                     floating_origin::track_dev_recenter_at_subject.run_if(launch::track_dev_active),
                     live::enable_live_defaults.run_if(live::live_mode_active),
+                    route_lighting::init_route_sun.run_if(live::live_mode_active),
                     gameplay::spawn_gameplay_ui,
                     gameplay::spawn_gameplay_markers.run_if(live::live_mode_active),
                 )
@@ -350,6 +352,14 @@ impl Plugin for ViewerPlugin {
                 Update,
                 live::sync_live_render_clock
                     .after(live::live_driver_input)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                route_lighting::update_route_sun
+                    .after(live::live_driver_input)
+                    .before(camera::update_driver_camera_fov)
                     .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
@@ -418,7 +428,11 @@ impl Plugin for ViewerPlugin {
             .add_systems(Startup, capture::init_capture)
             .add_systems(
                 Update,
-                capture::capture_system.run_if(in_state(ViewerAppState::Playing)),
+                capture::capture_system
+                    .after(camera::constrain_exterior_camera_to_terrain)
+                    .after(camera::update_driver_camera_fov)
+                    .after(route_lighting::update_route_sun)
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 FixedUpdate,

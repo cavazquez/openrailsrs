@@ -40,6 +40,9 @@ pub struct LiveDrive {
     pub session: LiveDriveSession,
     pub audio: Option<AudioEngine>,
     pub paused: bool,
+    /// Wall-clock start and visual season from the scenario, independent of elapsed physics time.
+    pub start_clock_s: f64,
+    pub season: String,
     render_frame_remainder_s: f64,
     scenario_dir: PathBuf,
     scenario_path: PathBuf,
@@ -132,6 +135,16 @@ impl LiveDrive {
             session,
             audio,
             paused: false,
+            start_clock_s: scenario
+                .scenario
+                .start_time_s
+                .filter(|t| t.is_finite())
+                .unwrap_or(12.0 * 3600.0),
+            season: scenario
+                .scenario
+                .season
+                .clone()
+                .unwrap_or_else(|| "spring".into()),
             render_frame_remainder_s: 0.0,
             scenario_dir: scenario_dir.to_path_buf(),
             scenario_path: scenario_path.to_path_buf(),
@@ -147,6 +160,16 @@ impl LiveDrive {
         self.session = LiveDriveSession::from_scenario(&self.scenario_dir, &scenario)
             .map_err(|e| e.to_string())?;
         self.paused = false;
+        self.start_clock_s = scenario
+            .scenario
+            .start_time_s
+            .filter(|t| t.is_finite())
+            .unwrap_or(12.0 * 3600.0);
+        self.season = scenario
+            .scenario
+            .season
+            .clone()
+            .unwrap_or_else(|| "spring".into());
         self.render_frame_remainder_s = 0.0;
         Ok(())
     }
@@ -154,6 +177,16 @@ impl LiveDrive {
     pub fn visual_position_at_head_offset(&self, offset_m: f64) -> Option<(String, f64)> {
         self.session
             .render_position_at_head_offset(offset_m, self.render_frame_remainder_s)
+    }
+
+    pub fn clock_time_s(&self) -> f64 {
+        self.start_clock_s + self.session.time_s()
+    }
+
+    pub fn visual_distance_m(&self) -> f64 {
+        self.session
+            .render_head_chainage_m(self.render_frame_remainder_s)
+            - self.session.start_chainage_m
     }
 }
 
@@ -930,6 +963,7 @@ pub fn spawn_live_train(
     const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
     let mut texture_cache: HashMap<(PathBuf, i32), Handle<Image>> = HashMap::new();
     let mut shape_cars = 0usize;
+    let mut train_shape_cache = HashMap::new();
     let mut fallback_cars = 0usize;
     let mut shape_parts = 0usize;
     let mut textured_parts = 0usize;
@@ -954,17 +988,24 @@ pub fn spawn_live_train(
                     let tex_dirs_owned =
                         vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
                     let tex_dirs: Vec<&Path> = tex_dirs_owned.iter().map(|p| p.as_path()).collect();
-                    if let Some((asset, shape_file)) = load_shape_render_asset_and_file_from_path(
-                        &shape_path,
-                        &tex_dirs,
-                        Some(LIVE_TRAIN_LOD_DISTANCE_M),
-                        &mut meshes,
-                        &mut images,
-                        &mut materials,
-                        &mut texture_cache,
-                        TRAIN_SHAPE_FALLBACK,
-                        true,
-                    ) {
+                    if let Some((asset, shape_file)) = train_shape_cache
+                        .entry(shape_path.clone())
+                        .or_insert_with(|| {
+                            load_shape_render_asset_and_file_from_path(
+                                &shape_path,
+                                &tex_dirs,
+                                Some(LIVE_TRAIN_LOD_DISTANCE_M),
+                                &mut meshes,
+                                &mut images,
+                                &mut materials,
+                                &mut texture_cache,
+                                TRAIN_SHAPE_FALLBACK,
+                                true,
+                            )
+                            .map(|(asset, shape)| (asset, std::sync::Arc::new(shape)))
+                        })
+                        .clone()
+                    {
                         shape_cars += 1;
                         shape_parts += asset.parts.len();
                         textured_parts +=

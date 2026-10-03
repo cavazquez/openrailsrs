@@ -1,4 +1,4 @@
-# Northolt Park, Open Rails 1.6.1
+# Estaciones de Chiltern, Open Rails 1.6.1
 
 `northolt_exterior.png` es una captura del render original con la actividad
 local generada, pausada a las 09:55. El commit nativo, hash de imagen, posición,
@@ -28,3 +28,17 @@ limitación del contenido de un error de altura del importador Bevy. La cámara
 se fija con `OPENRAILS_REFERENCE_CAM_PITCH=-0.15`; pose, matrices y hashes
 quedan en `northolt_low_exterior.json`. El solapamiento visual no se mide contra
 esta vista porque el visor jugable limita la cámara exterior sobre el RAW.
+
+`south_ruislip_exterior` y `west_ruislip_exterior` registran las otras dos
+estaciones a las 09:55 de verano, con yaw 1,6, pitch 0,6 y distancia 160 m.
+Se cambia únicamente el objetivo de cámara; el tren permanece en Northolt.
+Sirven para comparar edificios, andenes, caminos y terreno. El consumidor
+espera que la ventana WORLD contenga el tile objetivo antes de escribir los
+metadatos; éstos incluyen tiles cargados, dirección solar y hash del consumidor.
+Los márgenes negros del terreno corresponden al render nativo con distancia
+de dibujo de 450 m; no se reproducen como requisito en Bevy.
+
+El cielo nativo interpola muestras solares cada 20 minutos. Bevy evalúa la
+ecuación directamente para la hora de la partida y conserva su iluminación
+física y tonemapping. El oráculo de ecuación solar y el de composición de casas
+siguen midiendo compatibilidad; estas imágenes no establecen igualdad de píxeles.

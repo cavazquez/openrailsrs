@@ -134,3 +134,43 @@ sha256 = "c5827cc0dc597e952a9db6ca74c787983e687a6927f2f46972549fd82f883ac5"
 [[files]]
 path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_low_exterior.json"
 sha256 = "8a4109f26450f326fe5308763d71ddcafedda0decd2b3b98f39716d8f7f686dd"
+
+# Native geometry / solar equation samples, without a renderer.
+
+[[files]]
+path = "oracles/solar-or161.json"
+sha256 = "e037d38fdcfda6ad4e5f26c18fef4b45d6cc448c6ab8606e31a6fef390386770"
+
+[[files]]
+path = "tools/openrails-reference/SolarReference.cs"
+sha256 = "a4d53e18640fe4411c988f8da90cfd42bc05dbd7a4ccae5f781e6c1fdc7129e2"
+
+[[files]]
+path = "tools/openrails-reference/solar-samples.json"
+sha256 = "fcbd2e1682ec25826921ff7d861804cce1fe1605f37a84d8a38afd5b222665ca"
+
+[[scenery_binaries]]
+name = "Orts.Common.dll"
+sha256 = "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212"
+
+# Native South / West scenery views, after original WORLD loading.
+
+[[files]]
+path = "tools/openrails-reference/SceneryCapture.cs"
+sha256 = "70a37c8042d9833dd182c0526637d49e963d32e55c9a67659418094169a3cb60"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/south_ruislip_exterior.png"
+sha256 = "b427671488908a09ad0bf8266b2f52dec1e714834076efd42b8495a8fc007c5b"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/south_ruislip_exterior.json"
+sha256 = "ae06f4c51cfe4ad8b48071eddf1e1c2d89f759a2fe083b91472e013b6e0282a2"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/west_ruislip_exterior.png"
+sha256 = "8bbcf1ce99ddcf1987be76f65c270d60866084882e8774a74375a6571c1fbd13"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/west_ruislip_exterior.json"
+sha256 = "5f3ffe96dfbf88852c9fce8bf288bb75e42b2a344a2ac9abb04b20d764e3c425"

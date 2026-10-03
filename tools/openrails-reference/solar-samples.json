@@ -1,0 +1,827 @@
+[
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 1,
+    "time_s": 0,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 1,
+    "time_s": 18000,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 1,
+    "time_s": 35700,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 1,
+    "time_s": 43200,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 1,
+    "time_s": 76980,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "northolt",
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "local_x": 847.9395,
+    "local_z": 924.236633,
+    "season_index": 3,
+    "time_s": 76980
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 1,
+    "time_s": 0,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 1,
+    "time_s": 18000,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 1,
+    "time_s": 35700,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 1,
+    "time_s": 43200,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 1,
+    "time_s": 76980,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "south-ruislip",
+    "tile_x": -6087,
+    "tile_z": 14927,
+    "local_x": -604,
+    "local_z": 626,
+    "season_index": 3,
+    "time_s": 76980
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 1,
+    "time_s": 0,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 1,
+    "time_s": 18000,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 1,
+    "time_s": 35700,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 1,
+    "time_s": 43200,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 1,
+    "time_s": 76980,
+    "environment_file": "SummerClear.env"
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "west-ruislip",
+    "tile_x": -6088,
+    "tile_z": 14928,
+    "local_x": -825.2352,
+    "local_z": 818.6705,
+    "season_index": 3,
+    "time_s": 76980
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 1,
+    "time_s": 0
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 1,
+    "time_s": 18000
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 1,
+    "time_s": 35700
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 1,
+    "time_s": 43200
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 1,
+    "time_s": 76980
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "southern",
+    "tile_x": 1000,
+    "tile_z": 10200,
+    "local_x": 100,
+    "local_z": -200,
+    "season_index": 3,
+    "time_s": 76980
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 0
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 18000
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 35700
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 43200
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 76980
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "north-america",
+    "tile_x": -11000,
+    "tile_z": 14000,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 76980
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 0
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 18000
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 35700
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 43200
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 0,
+    "time_s": 76980
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 0
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 18000
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 35700
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 43200
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 1,
+    "time_s": 76980
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 0
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 18000
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 35700
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 43200
+  },
+  {
+    "label": "interruption",
+    "tile_x": -16384,
+    "tile_z": 16384,
+    "local_x": 0,
+    "local_z": 0,
+    "season_index": 3,
+    "time_s": 76980
+  }
+]

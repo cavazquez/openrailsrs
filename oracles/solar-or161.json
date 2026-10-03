@@ -1,0 +1,1687 @@
+{
+  "version": "1.6.1",
+  "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "consumer": "tools/openrails-reference/SolarReference.cs",
+  "samples": [
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 0,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.0384258926,
+        -0.614239454,
+        -0.78818357
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9552966,
+        -0.17543532,
+        -0.237972468
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.550732732,
+        0.528468549,
+        0.6460762
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.0377436578,
+        0.631311834,
+        0.7746101
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.661007,
+        -0.454583257,
+        -0.59701246
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 1,
+      "time_s": 0,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.287439734,
+        -0.230116934,
+        -0.9297445
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 1,
+      "time_s": 18000,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.7683674,
+        8.67280363e-08,
+        -0.640009165
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 1,
+      "time_s": 35700,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.6946654,
+        0.684331238,
+        0.221654654
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 1,
+      "time_s": 43200,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.282111764,
+        0.8545769,
+        0.436017543
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 1,
+      "time_s": 76980,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.7683713,
+        4.48435244e-09,
+        -0.6400044
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 3,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.003953385,
+        -0.8818762,
+        -0.4714645
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.887287855,
+        -0.456772059,
+        0.06387313
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.473312944,
+        0.1776724,
+        0.862790465
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.003022927,
+        0.2594293,
+        0.96575737
+      ]
+    },
+    {
+      "label": "northolt",
+      "tile_x": -6086,
+      "tile_z": 14927,
+      "local_x": 847.9395,
+      "local_z": 924.236633,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8996076833075783,
+      "longitude": -0.006176449506182902,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.5787876,
+        -0.7541132,
+        -0.310352027
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 0,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.0392246731,
+        -0.6142598,
+        -0.7881284
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9550601,
+        -0.17592214,
+        -0.238561481
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.551399767,
+        0.528227031,
+        0.6457046
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.03854249,
+        0.631331861,
+        0.774554431
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.6616065,
+        -0.4542845,
+        -0.5965756
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 1,
+      "time_s": 0,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.287345171,
+        -0.23018308,
+        -0.929757237
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 1,
+      "time_s": 18000,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.768400967,
+        6.61246036e-09,
+        -0.6399687
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 1,
+      "time_s": 35700,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.6946493,
+        0.684354,
+        0.221634835
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 1,
+      "time_s": 43200,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.2821032,
+        0.854600549,
+        0.435976684
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 1,
+      "time_s": 76980,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.7684052,
+        3.87181736e-08,
+        -0.6399638
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 3,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.00321979844,
+        -0.8819017,
+        -0.471422374
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.887100339,
+        -0.457209975,
+        0.06334066
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.473941356,
+        0.17748034,
+        0.8624851
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.002289313,
+        0.259479225,
+        0.965746
+      ]
+    },
+    {
+      "label": "south-ruislip",
+      "tile_x": -6087,
+      "tile_z": 14927,
+      "local_x": -604,
+      "local_z": 626,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8995573537566397,
+      "longitude": -0.006975902096930775,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.5793566,
+        -0.7538408,
+        -0.309951574
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 0,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.0399162322,
+        -0.61394453,
+        -0.788339257
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.954854846,
+        -0.176242769,
+        -0.239145741
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.551977,
+        0.527745366,
+        0.6456053
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.03923407,
+        0.631022036,
+        0.774772167
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.662125051,
+        -0.453774065,
+        -0.596388757
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 1,
+      "time_s": 0,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.2880563,
+        -0.229685321,
+        -0.9296604
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 1,
+      "time_s": 18000,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.7681469,
+        4.78137636e-08,
+        -0.6402737
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 1,
+      "time_s": 35700,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.6947707,
+        0.6841826,
+        0.221783459
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 1,
+      "time_s": 43200,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        0.282167584,
+        0.8544226,
+        0.4362837
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 1,
+      "time_s": 76980,
+      "environment_file": "SummerClear.env",
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 173,
+      "rise_time_s": 18000,
+      "set_time_s": 76980,
+      "direction": [
+        -0.768151,
+        7.677468e-08,
+        -0.640268743
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 3,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.00258466369,
+        -0.881724536,
+        -0.4717576
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.886937737,
+        -0.4576156,
+        0.06268679
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.474485,
+        0.176949948,
+        0.862295032
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.00165418093,
+        0.259114683,
+        0.965845168
+      ]
+    },
+    {
+      "label": "west-ruislip",
+      "tile_x": -6088,
+      "tile_z": 14928,
+      "local_x": -825.2352,
+      "local_z": 818.6705,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.8999356986039488,
+      "longitude": -0.00766804543080557,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.5798491,
+        -0.753474,
+        -0.309922427
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 0,
+      "time_s": 0,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 264,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.120366156,
+        -0.816530347,
+        0.5646151
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 264,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9899121,
+        -0.1253017,
+        0.0661342144
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 264,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.4113904,
+        0.7273979,
+        -0.54922694
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 264,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.121182181,
+        0.7935223,
+        -0.596353352
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 264,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.533583939,
+        -0.693992,
+        0.48338747
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 1,
+      "time_s": 0,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.09332481,
+        -0.5065978,
+        0.8571169
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 1,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9058679,
+        0.11429701,
+        0.407847583
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 1,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.394483,
+        0.90419817,
+        -0.163734049
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 1,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.09239499,
+        0.9726227,
+        -0.213233024
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 1,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.506675065,
+        -0.386710316,
+        0.7705424
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 3,
+      "time_s": 0,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 172,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.07886801,
+        -0.9737539,
+        0.213502109
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 172,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9032495,
+        -0.36337626,
+        -0.228250369
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 172,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.407061249,
+        0.432721257,
+        -0.804396331
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 172,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.07842826,
+        0.5071585,
+        -0.8582769
+      ]
+    },
+    {
+      "label": "southern",
+      "tile_x": 1000,
+      "tile_z": 10200,
+      "local_x": 100,
+      "local_z": -200,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": -0.6264363332771935,
+      "longitude": 2.447584849025036,
+      "ordinal": 172,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.517855167,
+        -0.8467966,
+        0.121497266
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.06443443,
+        -0.821170449,
+        -0.567033768
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.9472783,
+        -0.259226322,
+        -0.188322812
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.572280467,
+        0.685740232,
+        0.4497283
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.0637522,
+        0.833403051,
+        0.548976362
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 82,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.680319846,
+        -0.5981901,
+        -0.4234778
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 173,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.03530578,
+        -0.535954237,
+        -0.8435085
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 173,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.8762642,
+        -0.00170698646,
+        -0.481827885
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 173,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.506039441,
+        0.856767654,
+        0.09936442
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 173,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.0357437842,
+        0.9822205,
+        0.184296891
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 173,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.607922554,
+        -0.34576562,
+        -0.714756131
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 0,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.0199453011,
+        -0.9824832,
+        -0.18528083
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.8808916,
+        -0.435681939,
+        0.1849633
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.4936249,
+        0.417732149,
+        0.762780666
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        0.020874517,
+        0.5368326,
+        0.8434305
+      ]
+    },
+    {
+      "label": "north-america",
+      "tile_x": -11000,
+      "tile_z": 14000,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": 1,
+      "latitude": 0.5951307150199568,
+      "longitude": -1.3412182024729005,
+      "ordinal": 355,
+      "rise_time_s": 0,
+      "set_time_s": 0,
+      "direction": [
+        -0.597134054,
+        -0.7997872,
+        -0.061412774
+      ]
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 0,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 18000,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 35700,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 43200,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 0,
+      "time_s": 76980,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 0,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 18000,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 35700,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 43200,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 1,
+      "time_s": 76980,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 0,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 18000,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 35700,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 43200,
+      "status": -2
+    },
+    {
+      "label": "interruption",
+      "tile_x": -16384,
+      "tile_z": 16384,
+      "local_x": 0,
+      "local_z": 0,
+      "season_index": 3,
+      "time_s": 76980,
+      "status": -2
+    }
+  ],
+  "tolerances": {
+    "geography_radians": 1e-11,
+    "solar_vector_l2": 1e-05
+  },
+  "consumer_sha256": "a4d53e18640fe4411c988f8da90cfd42bc05dbd7a4ccae5f781e6c1fdc7129e2",
+  "input_sha256": "fcbd2e1682ec25826921ff7d861804cce1fe1605f37a84d8a38afd5b222665ca",
+  "binaries": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542"
+  },
+  "environment_sha256": {
+    "SummerClear.env": "88f0f06b175126cc7254aaaeef5f2bbed84c23d1e44888a47009d0851b570699"
+  }
+}

@@ -167,6 +167,7 @@ pub fn spawn_ground_and_lights(
         shadow_cascades,
         sun_transform(&sun),
         Name::new("sun"),
+        crate::route_lighting::RouteSunLight,
     ));
     if shadows_enabled {
         commands.insert_resource(DirectionalLightShadowMap { size: 2048 });

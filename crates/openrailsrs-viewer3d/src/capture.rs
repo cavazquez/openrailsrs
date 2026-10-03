@@ -147,7 +147,7 @@ pub fn capture_system(
             }
             if should_capture {
                 let path = state.path.clone();
-                if state.target_odometer_m.is_some() || state.after_service {
+                {
                     let report = scene.report(live.as_deref());
                     let report_path = path.with_extension("stream.json");
                     if let Err(err) =
@@ -185,15 +185,33 @@ pub fn capture_system(
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
-pub struct CaptureScene<'w> {
+pub struct CaptureScene<'w, 's> {
     world: Option<Res<'w, crate::world::WorldScene>>,
     activation: Option<Res<'w, crate::world::WorldSceneryStreamState>>,
     window: Option<Res<'w, crate::view_window::ViewWindow>>,
     origin: Option<Res<'w, crate::floating_origin::FloatingOrigin>>,
     entities: Option<Res<'w, crate::world_tile_index::WorldTileEntityIndex>>,
+    focus: Option<Res<'w, crate::world::RouteFocus>>,
+    sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    camera: Query<
+        'w,
+        's,
+        (
+            &'static Transform,
+            &'static Projection,
+            Option<&'static crate::camera::OrbitState>,
+        ),
+        With<Camera3d>,
+    >,
+    train_parts: Query<
+        'w,
+        's,
+        &'static openrailsrs_bevy_scenery::shapes::ShapeAnimBinding,
+        With<crate::rolling_stock_anim::TrainExteriorAnimPart>,
+    >,
 }
 
-impl CaptureScene<'_> {
+impl CaptureScene<'_, '_> {
     fn report(&self, live: Option<&crate::live::LiveDrive>) -> serde_json::Value {
         let deferred = self
             .world
@@ -203,6 +221,36 @@ impl CaptureScene<'_> {
             .map(|((world, state), window)| {
                 state.pending_shape_count(world, window.center_world, window.radius_m)
             });
+        let camera = self
+            .camera
+            .single()
+            .ok()
+            .and_then(|(transform, projection, orbit)| {
+                let focus = self.focus.as_ref()?;
+                let shift = self
+                    .origin
+                    .as_ref()
+                    .map_or(Vec3::ZERO, |origin| origin.shift);
+                let base = Vec3::new(focus.center.x, focus.height_origin, focus.center.z) + shift;
+                let Projection::Perspective(projection) = projection else {
+                    return None;
+                };
+                Some(serde_json::json!({
+                    "position_world": (transform.translation + base).to_array(),
+                    "rotation_xyzw": transform.rotation.to_array(),
+                    "target_world": orbit.map(|orbit| (orbit.focus + base).to_array()),
+                    "yaw_rad": orbit.map(|orbit| orbit.yaw),
+                    "pitch_rad": orbit.map(|orbit| orbit.pitch),
+                    "distance_m": orbit.map(|orbit| orbit.distance),
+                    "fov_y_rad": projection.fov,
+                    "aspect_ratio": projection.aspect_ratio,
+                }))
+            });
+        let shared_shapes: std::collections::HashSet<_> = self
+            .train_parts
+            .iter()
+            .map(|binding| std::sync::Arc::as_ptr(&binding.shape) as usize)
+            .collect();
         serde_json::json!({
             "odometer_m": live.map(|live| live.session.state.odometer_m),
             "service_complete": live.map(|live| live.session.arrived),
@@ -211,6 +259,13 @@ impl CaptureScene<'_> {
             "gpu_entities": self.entities.as_ref().map(|index| index.entity_count()),
             "unactivated_near_shapes": deferred,
             "floating_origin_shift": self.origin.as_ref().map(|origin| origin.shift.to_array()),
+            "clock_time_s": live.map(|live| live.clock_time_s()),
+            "camera": camera,
+            "solar_direction": self.sun.as_ref().map(|sun| sun.direction.to_array()),
+            "sunrise_s": self.sun.as_ref().and_then(|sun| sun.environment.map(|env| env.rise_time_s)),
+            "sunset_s": self.sun.as_ref().and_then(|sun| sun.environment.map(|env| env.set_time_s)),
+            "train_animated_parts": self.train_parts.iter().count(),
+            "train_shared_shapes": shared_shapes.len(),
         })
     }
 }

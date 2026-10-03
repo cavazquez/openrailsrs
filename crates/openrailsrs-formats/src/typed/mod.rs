@@ -4,6 +4,7 @@ mod carspawn;
 mod consist;
 mod cvf;
 mod engine;
+mod environment;
 mod friction;
 mod hazard;
 mod path;
@@ -29,6 +30,7 @@ pub use cvf::{
     CabViewFile, ControlState, ControlType, ScreenRect,
 };
 pub use engine::{EngineCabView, EngineFile, MstsSteamFields, Orts3dCabViewpoint};
+pub use environment::EnvironmentSun;
 pub use friction::{
     OrtsBearingType, OrtsFrictionFields, OrtsWagonType, parse_orts_friction_fields,
 };
@@ -67,6 +69,33 @@ pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem, WorldTrIte
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
+
+/// Named STF blocks in either `(key values...)` or `key (values...)` form.
+fn named_blocks<'a>(ast: &'a Ast, key: &str) -> Vec<&'a Ast> {
+    fn collect<'a>(ast: &'a Ast, key: &str, out: &mut Vec<&'a Ast>) {
+        let Ast::List(items) = ast else { return };
+        let is_key = |value: &Ast| matches!(value, Ast::Atom(Atom::Symbol(s)) if s.eq_ignore_ascii_case(key));
+        // A flat block's payload may itself start with another flat key. Do
+        // not mistake `key (value) next_key (...)` for a headed nested block.
+        let flat_head = matches!(items.get(1), Some(Ast::List(_)))
+            && (items.len() == 2 || matches!(items.get(2), Some(Ast::Atom(_))));
+        let nested = items.first().is_some_and(is_key) && !flat_head;
+        if nested {
+            out.push(ast);
+        }
+        for pair in items[usize::from(nested)..].windows(2) {
+            if is_key(&pair[0]) && matches!(&pair[1], Ast::List(_)) {
+                out.push(&pair[1]);
+            }
+        }
+        for item in items {
+            collect(item, key, out);
+        }
+    }
+    let mut out = Vec::new();
+    collect(ast, key, &mut out);
+    out
+}
 
 fn atom_to_string(atom: &Atom) -> Option<String> {
     match atom {

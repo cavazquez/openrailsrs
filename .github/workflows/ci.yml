@@ -113,7 +113,11 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Generar LCOV
-        run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+        # CLI tests share generated CSV paths; parallel writers can truncate a
+        # baseline while another test reads its header. Match check.sh.
+        env:
+          OPENRAILSRS_DISABLE_AUDIO: "1"
+        run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info -- --test-threads=1
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5

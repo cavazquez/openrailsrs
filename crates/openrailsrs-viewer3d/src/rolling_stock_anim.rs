@@ -16,6 +16,7 @@ use openrailsrs_bevy_scenery::shapes::{
 use openrailsrs_formats::ShapeFile;
 use openrailsrs_or_shader::coordinates::static_hierarchy_chain_transform;
 use openrailsrs_sim::RollingStockExteriorState;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::floating_origin::{FloatingOrigin, view_position};
 use crate::live::{LiveDrive, LiveTrainMarker};
@@ -61,7 +62,7 @@ pub fn classify_matrix_name(name: &str) -> RollingStockPartKind {
     RollingStockPartKind::Other
 }
 
-/// Wheel rotation driven by train speed (not shape keyframes).
+/// Wheel rotation driven by signed presentation distance (not wall-clock time).
 #[derive(Component, Clone, Debug)]
 pub struct TrainWheelAnim {
     pub matrix_idx: usize,
@@ -292,7 +293,7 @@ fn stub_key_for_kind(kind: RollingStockPartKind, shape: &ShapeFile) -> f32 {
 /// Build anim components for one exterior part, if the matrix name is animated.
 #[allow(clippy::type_complexity)]
 pub fn part_anim_bundle(
-    shape: &ShapeFile,
+    shape: &Arc<ShapeFile>,
     prim_state_idx: i32,
     radius_m: f32,
 ) -> Option<(
@@ -309,7 +310,7 @@ pub fn part_anim_bundle(
         return None;
     }
     let binding = ShapeAnimBinding {
-        shape: std::sync::Arc::new(shape.clone()),
+        shape: Arc::clone(shape),
         matrix_idx,
         speed: 0.0,
         frame_count: shape
@@ -351,7 +352,7 @@ pub fn part_anim_bundle(
 /// Insert anim components on a freshly spawned exterior part entity.
 pub fn insert_part_anim(
     entity: &mut EntityCommands,
-    shape: &ShapeFile,
+    shape: &Arc<ShapeFile>,
     prim_state_idx: i32,
     radius_m: f32,
 ) {
@@ -372,26 +373,10 @@ pub fn insert_part_anim(
     }
 }
 
-fn train_speed_mps(live: Option<&LiveDrive>, replay: Option<&ReplayState>) -> f32 {
-    if let Some(live) = live {
-        return live.session.velocity_mps() as f32;
-    }
-    if let Some(replay) = replay.filter(|r| r.is_active())
-        && let Some(track) = replay.tracks.first()
-    {
-        // Nearest row by time for visual wheel speed.
-        let mut best = 0.0f32;
-        let mut best_dt = f64::MAX;
-        for row in &track.rows {
-            let dt = (row.time_s - replay.t_sim).abs();
-            if dt < best_dt {
-                best_dt = dt;
-                best = row.velocity_mps as f32;
-            }
-        }
-        return best;
-    }
-    0.0
+fn wheel_angle(distance_m: f64, radius_m: f32, flipped: bool) -> f32 {
+    let direction = if flipped { -1.0 } else { 1.0 };
+    ((distance_m * direction / f64::from(radius_m.max(0.15))).rem_euclid(std::f64::consts::TAU))
+        as f32
 }
 
 fn wrap_angle(a: f32) -> f32 {
@@ -473,7 +458,6 @@ fn sample_yaw_at_path_offset(
 /// Advance wheel / bogie / keyed exterior parts each frame (#40 / #69).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_rolling_stock_part_anim(
-    time: Res<Time>,
     live: Option<Res<LiveDrive>>,
     replay: Option<Res<ReplayState>>,
     scene: Res<TrackScene>,
@@ -483,7 +467,12 @@ pub fn update_rolling_stock_part_anim(
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
     mut wheels: Query<
-        (&mut TrainWheelAnim, &ShapeAnimBinding, &mut Transform),
+        (
+            &mut TrainWheelAnim,
+            Ref<ShapeAnimBinding>,
+            &mut Transform,
+            &ChildOf,
+        ),
         With<TrainExteriorAnimPart>,
     >,
     mut bogies: Query<
@@ -494,7 +483,7 @@ pub fn update_rolling_stock_part_anim(
     train_markers: Query<&TrainMarker>,
     car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
-        (&mut TrainKeyedAnim, &ShapeAnimBinding, &mut Transform),
+        (&mut TrainKeyedAnim, Ref<ShapeAnimBinding>, &mut Transform),
         (
             With<TrainExteriorAnimPart>,
             Without<TrainWheelAnim>,
@@ -502,20 +491,27 @@ pub fn update_rolling_stock_part_anim(
         ),
     >,
 ) {
-    let dt = time.delta_secs();
     let live_ref = live.as_deref();
     let replay_ref = replay.as_deref();
-    let speed = train_speed_mps(live_ref, replay_ref);
     let exterior = live_ref.map(|l| &l.session.exterior);
 
-    for (mut wheel, binding, mut tf) in &mut wheels {
-        let r = wheel.radius_m.max(0.15);
-        wheel.angle_rad += (speed / r) * dt;
+    for (mut wheel, binding, mut tf, parent) in &mut wheels {
+        let car = cars.get(parent.parent()).ok();
+        let track_index = car.map_or(0, |car| car.track_index);
+        let distance = live_ref
+            .map(LiveDrive::visual_distance_m)
+            .or_else(|| replay_ref.and_then(|replay| replay.wheel_distance_m(track_index)))
+            .unwrap_or(0.0);
+        let angle = wheel_angle(distance, wheel.radius_m, car.is_some_and(|car| car.flipped));
+        if wheel.angle_rad == angle && !wheel.is_added() && !binding.is_changed() {
+            continue;
+        }
+        wheel.angle_rad = angle;
         // Rotate about the authored axle while retaining its baked pivot.
         let rot = Quat::from_rotation_x(-wheel.angle_rad);
         let next = baked_part_local_rotation(&binding.shape, wheel.matrix_idx, rot);
         if next.translation.is_finite() && next.rotation.is_finite() {
-            *tf = next;
+            tf.set_if_neq(next);
         }
     }
 
@@ -547,7 +543,8 @@ pub fn update_rolling_stock_part_anim(
         };
 
         let car_path = f64::from(car_off.offset_m);
-        let bogie_path = car_path + f64::from(bogie.long_offset_m);
+        let bogie_path =
+            car_path + f64::from(bogie.long_offset_m) * if car_off.flipped { -1.0 } else { 1.0 };
         let Some(car_yaw) = sample_yaw_at_path_offset(
             &scene.graph,
             live_ref,
@@ -585,24 +582,31 @@ pub fn update_rolling_stock_part_anim(
         let next =
             baked_part_local_rotation(&binding.shape, bogie.matrix_idx, Quat::from_rotation_y(rel));
         if next.rotation.is_finite() {
-            *tf = next;
+            tf.set_if_neq(next);
         }
     }
 
+    let mut pose_cache = HashMap::new();
     for (mut keyed_anim, binding, mut tf) in &mut keyed {
         let frac = resolve_keyed_frac(keyed_anim.kind, exterior);
-        keyed_anim.key = key_from_frac(frac, binding.frame_count);
-        let key = keyed_anim.key;
+        let key = key_from_frac(frac, binding.frame_count);
+        if keyed_anim.key == key && !keyed_anim.is_added() && !binding.is_changed() {
+            continue;
+        }
+        keyed_anim.key = key;
         if binding.frame_count > 0.0 && !binding.shape.animations.is_empty() {
-            let pose = animation_pose_matrices(&binding.shape, key);
+            let shape_id = Arc::as_ptr(&binding.shape) as usize;
+            let pose = pose_cache
+                .entry((shape_id, key.to_bits()))
+                .or_insert_with(|| animation_pose_matrices(&binding.shape, key));
             let next = world_baked_anim_transform(
                 Transform::IDENTITY,
                 &binding.shape,
                 keyed_anim.matrix_idx,
-                &pose,
+                pose,
             );
             if next.translation.is_finite() && next.rotation.is_finite() {
-                *tf = next;
+                tf.set_if_neq(next);
             }
         }
     }
@@ -676,28 +680,218 @@ mod tests {
     }
 
     #[test]
+    fn animated_parts_share_the_authored_shape_instead_of_copying_mesh_data() {
+        let shape = Arc::new(shape_with_named_matrix("WHEELS1"));
+        let first = part_anim_bundle(&shape, 0, 0.5).unwrap().2;
+        let second = part_anim_bundle(&shape, 0, 0.5).unwrap().2;
+        assert!(Arc::ptr_eq(&first.shape, &second.shape));
+        assert!(Arc::ptr_eq(&first.shape, &shape));
+    }
+
+    #[test]
     fn part_anim_bundle_selects_wheel() {
         let shape = shape_with_named_matrix("WHEELS1");
-        let bundle = part_anim_bundle(&shape, 0, 0.5).expect("wheel");
+        let bundle = part_anim_bundle(&Arc::new(shape.clone()), 0, 0.5).expect("wheel");
         assert_eq!(bundle.1, RollingStockPartKind::Wheel);
         assert!(bundle.3.is_some());
         assert!(bundle.4.is_none());
     }
 
+    fn spawn_test_wheel(app: &mut App, track: usize, flipped: bool) -> Entity {
+        let car = app
+            .world_mut()
+            .spawn(TrainCarTrackOffset {
+                offset_m: 0.0,
+                track_index: track,
+                flipped,
+            })
+            .id();
+        let shape = shape_with_named_matrix("WHEELS1");
+        let (marker, _, binding, wheel, _, _) =
+            part_anim_bundle(&Arc::new(shape.clone()), 0, 0.5).unwrap();
+        app.world_mut()
+            .spawn((
+                marker,
+                binding,
+                wheel.unwrap(),
+                Transform::IDENTITY,
+                ChildOf(car),
+            ))
+            .id()
+    }
+
     #[test]
-    fn wheel_angle_increases_with_speed_body_untouched() {
-        let mut wheel = TrainWheelAnim {
-            matrix_idx: 0,
-            radius_m: 0.5,
-            angle_rad: 0.0,
+    fn live_wheels_follow_body_distance_at_accelerated_time_pause_and_reset() {
+        let mut app = crate::test_harness::minimal_app();
+        let mut live =
+            LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path()).unwrap();
+        live.session.speed_mul = 4.0;
+        live.session.state.velocity_mps = 10.0;
+        crate::test_harness::insert_live_bundle(&mut app, live);
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(100),
+        ));
+        app.add_systems(Update, update_rolling_stock_part_anim);
+        let wheel = spawn_test_wheel(&mut app, 0, false);
+        let flipped = spawn_test_wheel(&mut app, 0, true);
+        app.update();
+        app.world_mut()
+            .resource_mut::<LiveDrive>()
+            .session
+            .step_realtime(0.1, |_| {});
+        app.update();
+        let live = app.world().resource::<LiveDrive>();
+        let distance = live.visual_distance_m();
+        assert!(
+            distance > 2.0,
+            "accelerated presentation should actually move"
+        );
+        let (edge, body_position) = live.visual_position_at_head_offset(0.0).unwrap();
+        assert_eq!(edge, live.session.state.path_edges[0]);
+        assert!((body_position - live.session.start_chainage_m - distance).abs() < 1e-6);
+        let normal = app.world().get::<Transform>(wheel).unwrap().rotation;
+        let inverse = app.world().get::<Transform>(flipped).unwrap().rotation;
+        let expected = Quat::from_rotation_x(-(distance / 0.5) as f32);
+        assert!(normal.dot(expected).abs() > 0.99999);
+        assert!(normal.inverse().dot(inverse).abs() > 0.99999);
+        app.world_mut().resource_mut::<LiveDrive>().paused = true;
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(wheel).unwrap().rotation,
+            normal,
+            "paused wheels must not keep spinning"
+        );
+        app.world_mut().resource_mut::<LiveDrive>().reset().unwrap();
+        app.update();
+        assert_eq!(
+            *app.world().get::<Transform>(wheel).unwrap(),
+            Transform::IDENTITY
+        );
+        assert_eq!(
+            *app.world().get::<Transform>(flipped).unwrap(),
+            Transform::IDENTITY
+        );
+    }
+
+    #[test]
+    fn replay_wheels_use_each_trains_distance_and_seek_with_the_body() {
+        use crate::train::TrainTrack;
+        let make_track = |distance: f64| TrainTrack {
+            label: "test".into(),
+            color: Color::WHITE,
+            rows: vec![
+                CsvRow {
+                    time_s: 0.0,
+                    velocity_mps: 10.0,
+                    edge_id: "e1".into(),
+                    pos_on_edge_m: 20.0,
+                    odometer_m: Some(0.0),
+                },
+                CsvRow {
+                    time_s: 1.0,
+                    velocity_mps: 10.0,
+                    edge_id: "e1".into(),
+                    pos_on_edge_m: 20.0 + distance,
+                    odometer_m: Some(distance),
+                },
+            ],
         };
-        let body = Transform::from_xyz(10.0, 0.0, 3.0);
-        let speed = 10.0f32;
-        let dt = 0.1f32;
-        wheel.angle_rad += (speed / wheel.radius_m) * dt;
-        assert!((wheel.angle_rad - 2.0).abs() < 1e-4);
-        // Body transform is independent of wheel angle.
-        assert!((body.translation.x - 10.0).abs() < 1e-6);
+        let mut app = crate::test_harness::minimal_app();
+        crate::test_harness::insert_replay_bundle(
+            &mut app,
+            TrackScene::from_graph(elbow_graph()),
+            ReplayState::new("test".into(), vec![make_track(1.25), make_track(-0.75)]),
+        );
+        app.add_systems(Update, update_rolling_stock_part_anim);
+        let first = spawn_test_wheel(&mut app, 0, false);
+        let second = spawn_test_wheel(&mut app, 1, false);
+        app.update();
+        {
+            let mut replay = app.world_mut().resource_mut::<ReplayState>();
+            replay.t_sim = 1.0;
+            replay.speed = 16.0;
+        }
+        app.update();
+        let rotation = |app: &App, entity| app.world().get::<Transform>(entity).unwrap().rotation;
+        assert!(rotation(&app, first).dot(Quat::from_rotation_x(-2.5)).abs() > 0.99999);
+        assert!(rotation(&app, second).dot(Quat::from_rotation_x(1.5)).abs() > 0.99999);
+        let before = rotation(&app, first);
+        app.world_mut().resource_mut::<ReplayState>().paused = true;
+        app.update();
+        app.update();
+        assert_eq!(rotation(&app, first), before);
+        app.world_mut().resource_mut::<ReplayState>().t_sim = 0.0;
+        app.update();
+        assert_eq!(rotation(&app, first), Quat::IDENTITY);
+        assert_eq!(rotation(&app, second), Quat::IDENTITY);
+        assert!(wheel_angle(10_000_000.0, 0.5, false) < std::f32::consts::TAU);
+    }
+
+    #[test]
+    fn flipped_bogie_samples_the_opposite_end_of_the_car_on_a_curve() {
+        use crate::train::TrainTrack;
+        let mut app = crate::test_harness::minimal_app();
+        let replay = ReplayState::new(
+            "test".into(),
+            vec![TrainTrack {
+                label: "test".into(),
+                color: Color::WHITE,
+                rows: vec![CsvRow {
+                    time_s: 0.0,
+                    velocity_mps: 0.0,
+                    edge_id: "e1".into(),
+                    pos_on_edge_m: 85.0,
+                    odometer_m: None,
+                }],
+            }],
+        );
+        crate::test_harness::insert_replay_bundle(
+            &mut app,
+            TrackScene::from_graph(elbow_graph()),
+            replay,
+        );
+        app.add_systems(Update, update_rolling_stock_part_anim);
+        let mut entities = Vec::new();
+        for flipped in [false, true] {
+            let car = app
+                .world_mut()
+                .spawn(TrainCarTrackOffset {
+                    offset_m: 0.0,
+                    track_index: 0,
+                    flipped,
+                })
+                .id();
+            let shape = shape_with_named_matrix("BOGIE1");
+            let (marker, _, binding, _, mut bogie, _) =
+                part_anim_bundle(&Arc::new(shape.clone()), 0, 0.5).unwrap();
+            bogie.as_mut().unwrap().long_offset_m = 35.0;
+            entities.push(
+                app.world_mut()
+                    .spawn((
+                        marker,
+                        binding,
+                        bogie.unwrap(),
+                        Transform::IDENTITY,
+                        ChildOf(car),
+                    ))
+                    .id(),
+            );
+        }
+        app.update();
+        assert!(
+            app.world()
+                .get::<Transform>(entities[0])
+                .unwrap()
+                .rotation
+                .dot(Quat::IDENTITY)
+                .abs()
+                < 0.999
+        );
+        assert_eq!(
+            app.world().get::<Transform>(entities[1]).unwrap().rotation,
+            Quat::IDENTITY
+        );
     }
 
     #[test]
@@ -901,7 +1095,7 @@ mod tests {
     #[test]
     fn keyed_stub_matrix_idx_stable() {
         let shape = shape_with_named_matrix("DOOR_LEFT");
-        let bundle = part_anim_bundle(&shape, 0, 0.5).expect("door");
+        let bundle = part_anim_bundle(&Arc::new(shape.clone()), 0, 0.5).expect("door");
         assert_eq!(bundle.1, RollingStockPartKind::Door);
         let keyed = bundle.5.expect("keyed");
         assert_eq!(keyed.matrix_idx, 0);

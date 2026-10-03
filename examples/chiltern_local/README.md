@@ -4,6 +4,8 @@ Partida completa de Northolt Park a West Ruislip, con parada en South Ruislip,
 la formación Birmingham Pullman de ocho coches y el mapa original Chiltern.
 La cabina CVF/ORTS y los modelos exteriores se resuelven desde la formación
 compartida en `../chiltern/consists`, sin duplicar el Content.
+La partida comienza en verano a las 09:55; el sol usa la ubicación de la ruta
+y los horarios de `SummerClear.env`, conservando la iluminación física de Bevy.
 
 El recorrido utiliza `RS_Maryleb-WRuislip0955.pat`, cuyos primeros puntos están
 en Northolt Park aunque el nombre mencione Marylebone. El PAT define el camino;
@@ -37,6 +39,7 @@ Estas teclas no modifican el regulador; `Q` no desplaza la cámara exterior.
 Open Rails 1.6.1 asigna `Q` a puertas izquierdas y `Shift+Q` a derechas;
 esta formación conserva por ahora un único mando para todas sus puertas.
 `F5` muestra conducción y presiones; `F4` muestra próxima estación y señal;
+el monitor incluye reloj, horario y progreso. `F6` muestra la ayuda;
 `F3` habilita información de depuración; `C` abre el instrumental digital
 opcional sin ocultar por defecto los instrumentos de la cabina original.
 El audio conserva la configuración
@@ -67,3 +70,15 @@ límites por posición, pendientes y especificación nativa de frenos. Los
 cuatro oráculos breves anteriores siguen aprobados. La prueba de servicio
 valida ejecución completa e independencia de la frecuencia de renderizado;
 la paridad visual de todas las estaciones sigue pendiente.
+
+Para revisar las tres estaciones y la cabina por separado, sin ejecutar dos
+visores simultáneos y con un límite RSS de 6 GiB:
+
+```bash
+python3 scripts/capture_route_views.py --route-root "$CHILTERN_ROUTE" --software --with-cab
+```
+
+Las capturas detenidas documentan escenario, HUD, cámara y dirección solar.
+El recorrido real y su continuidad se comprueban por separado con
+`scripts/check_viewer_streaming.py`; las vistas detenidas no certifican
+comportamiento físico ni paridad de píxeles.

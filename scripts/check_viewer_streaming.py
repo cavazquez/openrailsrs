@@ -14,25 +14,32 @@ import time
 
 def run_checkpoint(args, name, target, pause):
     prefix = args.out_dir / name
+    # A successful process exit must not reuse captures from an earlier run.
+    for suffix in (".png", ".stream.json"):
+        prefix.with_suffix(suffix).unlink(missing_ok=True)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith("OPENRAILSRS_")}
     env.pop("WAYLAND_DISPLAY", None)
     env.update({
-        "OPENRAILSRS_FOLLOW": "driver",
-        "OPENRAILSRS_VIEW_RADIUS_M": "2000",
+        "OPENRAILSRS_FOLLOW": getattr(args, "follow", "driver"),
+        "OPENRAILSRS_VIEW_RADIUS_M": str(getattr(args, "view_radius_m", 2000)),
         "OPENRAILSRS_WINDOW_WIDTH": "1280",
         "OPENRAILSRS_WINDOW_HEIGHT": "720",
         "OPENRAILSRS_DISABLE_AUDIO": "1",
-        "OPENRAILSRS_AUTODRIVE": "0.75",
-        "OPENRAILSRS_SPEED_MUL": "16",
+        "OPENRAILSRS_AUTODRIVE": str(getattr(args, "autodrive", 0.75)),
+        "OPENRAILSRS_SPEED_MUL": str(getattr(args, "speed_mul", 16)),
         "OPENRAILSRS_SCREENSHOT": str(prefix.with_suffix(".png")),
         "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
-        "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "8",
+        "OPENRAILSRS_SCREENSHOT_READY_FRAMES": str(getattr(args, "ready_frames", 8)),
         "OPENRAILSRS_SCREENSHOT_MIN_ODOMETER_M": str(target),
         "OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET": "1" if pause else "0",
         "OPENRAILSRS_SCREENSHOT_AFTER_SERVICE": "0" if pause else "1",
         "OPENRAILSRS_SCREENSHOT_DELAY_S": str(args.timeout_s - 10),
     })
+    if hasattr(args, "camera_yaw"):
+        env.update(OPENRAILSRS_CAM_YAW=str(args.camera_yaw),
+                   OPENRAILSRS_CAM_PITCH=str(args.camera_pitch),
+                   OPENRAILSRS_CAM_DIST=str(args.camera_distance))
     if args.software:
         env.update({
             "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",

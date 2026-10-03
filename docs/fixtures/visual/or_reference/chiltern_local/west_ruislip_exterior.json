@@ -1,0 +1,104 @@
+{
+  "version": "1.6.1",
+  "view": "exterior",
+  "time_s": 35700.0,
+  "tile_x": -6088,
+  "tile_z": 14928,
+  "location": "-693.237854, 135.797, 822.526367",
+  "view_matrix": {
+    "M11": -0.02919946,
+    "M12": -0.5644018,
+    "M13": 0.824983656,
+    "M14": 0.0,
+    "M21": 0.0,
+    "M22": 0.8253356,
+    "M23": 0.564642549,
+    "M24": 0.0,
+    "M31": -0.999573648,
+    "M32": 0.0164872576,
+    "M33": -0.0240993518,
+    "M34": 0.0,
+    "M41": -842.417847,
+    "M42": -489.7816,
+    "M43": 475.4108,
+    "M44": 1.0
+  },
+  "projection_matrix": {
+    "M11": 1.357995,
+    "M12": 0.0,
+    "M13": 0.0,
+    "M14": 0.0,
+    "M21": 0.0,
+    "M22": 2.41421342,
+    "M23": 0.0,
+    "M24": 0.0,
+    "M31": 0.0,
+    "M32": 0.0,
+    "M33": -1.00222719,
+    "M34": -1.0,
+    "M41": 0.0,
+    "M42": 0.0,
+    "M43": -1.00222719,
+    "M44": 0.0
+  },
+  "solar_direction": [
+    0.732436061,
+    0.6552199,
+    0.184998184
+  ],
+  "scenery_tiles": [
+    [
+      -6089,
+      14927
+    ],
+    [
+      -6089,
+      14928
+    ],
+    [
+      -6089,
+      14929
+    ],
+    [
+      -6088,
+      14927
+    ],
+    [
+      -6088,
+      14928
+    ],
+    [
+      -6088,
+      14929
+    ],
+    [
+      -6087,
+      14927
+    ],
+    [
+      -6087,
+      14928
+    ],
+    [
+      -6087,
+      14929
+    ]
+  ],
+  "orbit": {
+    "yaw_rad": 1.6,
+    "pitch_rad": 0.6,
+    "distance_m": 160.0
+  },
+  "target_override": "-6088,14928,-825.2352,45.4542,818.6705",
+  "host_statistics_disabled": true,
+  "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "width": 1280,
+  "height": 720,
+  "viewing_distance_m": 450,
+  "renderer": "Open Rails 1.6.1 MonoGame / Wine builtin D3D11 / llvmpipe",
+  "consumer": "tools/openrails-reference/SceneryCapture.cs",
+  "consumer_sha256": "70a37c8042d9833dd182c0526637d49e963d32e55c9a67659418094169a3cb60",
+  "image_sha256": "8bbcf1ce99ddcf1987be76f65c270d60866084882e8774a74375a6571c1fbd13",
+  "scope": "Remote scenery camera; train remains at Northolt Park",
+  "peak_process_group_rss_mib": 4214
+}

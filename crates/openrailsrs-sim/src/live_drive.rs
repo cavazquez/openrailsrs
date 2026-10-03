@@ -347,6 +347,17 @@ impl LiveDriveSession {
         offset_along_path_m: f64,
         frame_remainder_s: f64,
     ) -> Option<(String, f64)> {
+        let interpolated = self.render_head_chainage_m(frame_remainder_s);
+        PathData::position_at_odometer(
+            &self.state.path_edges,
+            &self.path_data.edges,
+            (interpolated + offset_along_path_m).max(0.0),
+        )
+    }
+
+    /// Signed routed distance on the same presentation clock used by the bodies,
+    /// cameras and wheels. Stable during pause; resetting the session resets it.
+    pub fn render_head_chainage_m(&self, frame_remainder_s: f64) -> f64 {
         let current = self.head_chainage_m();
         let fraction = if self.arrived {
             1.0
@@ -355,13 +366,7 @@ impl LiveDriveSession {
                 / self.realtime_physics_dt())
             .clamp(0.0, 1.0)
         };
-        let interpolated = self.previous_render_chainage_m
-            + (current - self.previous_render_chainage_m) * fraction;
-        PathData::position_at_odometer(
-            &self.state.path_edges,
-            &self.path_data.edges,
-            (interpolated + offset_along_path_m).max(0.0),
-        )
+        self.previous_render_chainage_m + (current - self.previous_render_chainage_m) * fraction
     }
 
     pub fn speed_limit_mps(&self) -> f64 {

@@ -253,7 +253,7 @@ def prepare(route_root, imported_track, output):
         if alias["id"] in node_ids or alias["id"] in {edge["id"].removesuffix("_r") for edge in path}:
             track += "\n[[msts_aliases]]\n" + fields(alias)
     (output / "track.toml").write_text(track)
-    scenario = "[scenario]\n" + fields(dict(name="Chiltern local: Northolt Park → West Ruislip", description="Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas.", start_time_s=35700))
+    scenario = "[scenario]\n" + fields(dict(name="Chiltern local: Northolt Park → West Ruislip", description="Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas.", start_time_s=35700, season="summer"))
     scenario += "\n[route]\n" + fields(dict(path=".", start=path[0]["from"], destination=terminal, start_offset_m=start_offset, assume_signals_clear=False,
         waypoints=[path[0]["from"]] + [edge["to"] for edge in path]))
     for stop in stops:

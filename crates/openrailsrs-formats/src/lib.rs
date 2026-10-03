@@ -5,6 +5,7 @@ pub mod cab_link;
 pub mod dispatch;
 pub mod encoding;
 pub mod error;
+pub mod geography;
 pub mod lexer;
 pub mod msts_file_text;
 pub mod msts_simisa;
@@ -59,26 +60,26 @@ pub use typed::{
     CabControl, CabDialParams, CabDigitalParams, CabGaugeParams, CabLeverFrames, CabView,
     CabViewFile, CarSpawnerCatalog, CarSpawnerItem, CarSpawnerList, ConsistEntry, ConsistFile,
     ControlState, ControlType, DistanceLevel, DyntrackSection, ElevationGrid, EngineCabView,
-    EngineFile, FeatureGrid, HazardFile, IndexedTrVectorSection, LightModelCfg, LodControl,
-    Matrix43, MstsSteamFields, MstsTexAddrMode, NamedMatrix, Orts3dCabViewpoint, OrtsBearingType,
-    OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, OverheadWireParams, PassengerViewpoint,
-    PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile, RouteStart,
-    SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, ShapeTextureSlot, SigCfgFile, SignalAspectKind,
-    SignalDrawStateDef, SignalLightDef, SignalShapeDef, SignalShapeSubObjDef, SignalTypeDef,
-    SignalUnitRef, SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile, TerrainMeshData,
-    TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot, TerrainUvCalc,
-    TrItem, TrItemHost, TrItemKind, TrItemWorldPose, TrPinRef, TrVectorSectionRecord, TrackDbFile,
-    TrackDbNode, TrackNodeKind, TrackProceduralDims, TrackProceduralLink, TrackVectorGeometry,
-    TrackVectorPoint, TrafficServiceDef, TrilistTopologyError, UvOp, UvOpKind, Vec2, Vec3, Vertex,
-    VtxState, WagonFile, WorldFile, WorldItem, WorldTrItemRef, build_patch_mesh_data,
-    build_patch_mesh_data_ex, build_patch_mesh_data_sampled, build_tile_mesh_data,
-    build_tile_mesh_data_sampled, find_trk_path, lit_light_indices_for_aspect,
-    materialize_legacy_point_index_vertices, msts_tex_addr_mode, parse_orts_brake_shoe,
-    parse_orts_friction_fields, parse_passenger_viewpoints, parse_tile_xz_from_filename,
-    patch_affine_uv, read_f_raw, read_f_raw_bytes, read_y_raw, read_y_raw_bytes,
-    resolve_brake_shoe_curve, resolve_hazard_shape_name, take_indexed_trilist_indices,
-    terrain_patches_per_side, validate_shape_trilist_topology,
-    validate_sub_object_trilist_topology,
+    EngineFile, EnvironmentSun, FeatureGrid, HazardFile, IndexedTrVectorSection, LightModelCfg,
+    LodControl, Matrix43, MstsSteamFields, MstsTexAddrMode, NamedMatrix, Orts3dCabViewpoint,
+    OrtsBearingType, OrtsBrakeShoeType, OrtsFrictionFields, OrtsWagonType, OverheadWireParams,
+    PassengerViewpoint, PathDataPoint, PathFile, PrimState, Primitive, RestrictedZone, RouteFile,
+    RouteStart, SKEW_AS_CURVE_RADIUS_M, ScreenRect, ShapeFile, ShapeTextureSlot, SigCfgFile,
+    SignalAspectKind, SignalDrawStateDef, SignalLightDef, SignalShapeDef, SignalShapeSubObjDef,
+    SignalTypeDef, SignalUnitRef, SoundRegionOverride, SubObject, TSectionCatalog, TerrainFile,
+    TerrainMeshData, TerrainPatch, TerrainPatchSet, TerrainSamples, TerrainShader, TerrainTexSlot,
+    TerrainUvCalc, TrItem, TrItemHost, TrItemKind, TrItemWorldPose, TrPinRef,
+    TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind, TrackProceduralDims,
+    TrackProceduralLink, TrackVectorGeometry, TrackVectorPoint, TrafficServiceDef,
+    TrilistTopologyError, UvOp, UvOpKind, Vec2, Vec3, Vertex, VtxState, WagonFile, WorldFile,
+    WorldItem, WorldTrItemRef, build_patch_mesh_data, build_patch_mesh_data_ex,
+    build_patch_mesh_data_sampled, build_tile_mesh_data, build_tile_mesh_data_sampled,
+    find_trk_path, lit_light_indices_for_aspect, materialize_legacy_point_index_vertices,
+    msts_tex_addr_mode, parse_orts_brake_shoe, parse_orts_friction_fields,
+    parse_passenger_viewpoints, parse_tile_xz_from_filename, patch_affine_uv, read_f_raw,
+    read_f_raw_bytes, read_y_raw, read_y_raw_bytes, resolve_brake_shoe_curve,
+    resolve_hazard_shape_name, take_indexed_trilist_indices, terrain_patches_per_side,
+    validate_shape_trilist_topology, validate_sub_object_trilist_topology,
 };
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};
 pub use vehicle_audit::{

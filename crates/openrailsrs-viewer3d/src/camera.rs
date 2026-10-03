@@ -1844,6 +1844,7 @@ pub fn fly_camera_allowed(follow: Res<CameraFollowMode>) -> bool {
 pub fn update_driver_camera_fov(
     opts: Res<ViewerLaunchOpts>,
     follow: Res<CameraFollowMode>,
+    sun: Option<Res<crate::route_lighting::RouteSunState>>,
     mut query: Query<
         (
             &mut Projection,
@@ -1878,7 +1879,7 @@ pub fn update_driver_camera_fov(
     if opts.live {
         // Cab and scenery share this camera. Changing its exposure for the
         // dashboard also changed the sunlit world through the windscreen.
-        ambient.brightness = live_outdoor_ambient();
+        ambient.brightness = live_outdoor_ambient() * sun.as_ref().map_or(1.0, |s| s.ambient_scale);
         ambient.color = Color::srgb(0.85, 0.9, 1.0);
         *tonemapping = live_tonemapping();
         *exposure = Exposure::SUNLIGHT;
@@ -3005,6 +3006,7 @@ mod tests {
                 rows: vec![CsvRow {
                     time_s: 0.0,
                     velocity_mps: 0.0,
+                    odometer_m: None,
                     edge_id: String::new(),
                     pos_on_edge_m: 0.0,
                 }],

@@ -88,6 +88,12 @@ Los semáforos mecánicos no usan el reloj de animación continua del WORLD:
 su pose y transición vienen de `sigcfg.dat` y del aspecto de la señal. Las
 animaciones de objetos decorativos conservan su reproducción normal.
 
+El HUD de conducción usa paneles separados con velocidad y próxima estación
+destacadas, reloj de la partida y señales en español con su color de seguridad.
+`F5` muestra conducción, `F4` el monitor, `F6` la ayuda y `F3` la depuración.
+Las instrucciones cambian según parada, embarque y salida; la ayuda queda
+oculta al iniciar para conservar la vista de instrumentos y paisaje.
+
 ### Alpha / sorting / instancing / night (cerrados)
 
 | Tema | Notas |
@@ -128,6 +134,20 @@ El camino instanciado conserva sombras y niebla, pero ahora calcula:
 fuertemente metálicos continúan en el camino entity/PBR descrito arriba.
 
 #### Rendimiento del instanciado y las sombras
+
+En una partida, la dirección solar proviene de la ubicación MSTS inicial,
+la estación del año, el reloj simulado y el satélite solar del `.env` indicado
+en el `.trk`. Chiltern local usa verano a las 09:55 y `SummerClear.env`
+(amanecer 05:00, ocaso 21:23). Si faltan esos horarios se usa la ecuación
+astronómica nativa. La dirección se actualiza cada segundo simulado y se
+congela durante la pausa; mover la cámara no cambia el sol.
+
+La ecuación y la conversión geográfica están contrastadas con las DLL
+originales mediante `oracles/solar-or161.json`. La evaluación directa
+es una mejora deliberada respecto de la tabla de OR 1.6.1, que interpola
+muestras tomadas cada 20 minutos;
+se mantienen exposición, tonemapping y sombras de Bevy. Esto verifica
+dirección solar, sin certificar igualdad de materiales, cielo o píxeles.
 
 Los datos de transformación de cada grupo WORLD son inmutables y se comparten entre
 el mundo principal y el mundo de render mediante `Arc<[WorldInstanceData]>`. El
@@ -170,6 +190,18 @@ cabeza; no se arrastra como una barra rígida. Las ruedas y bogies son mallas co
 jerarquía de reposo ya horneada. Su animación compone
 `rest × rotación_local × inverse(rest)` para conservar el pivote MSTS; aplicar una
 rotación directa al `Transform` de entidad las hacía orbitar y separarse del coche.
+
+La fase de rueda se calcula directamente como distancia recorrida / radio,
+con el mismo reloj de presentación que la carrocería. Respeta pausa, reinicio,
+velocidad de simulación y orientación `Flip` del consist. En replay se calcula
+una sola vez un prefijo de distancias por tren y se usa su misma muestra CSV.
+Los bogies de un coche invertido muestrean el extremo correspondiente de la vía.
+
+Las partes animadas comparten el modelo original inmutable mediante `Arc`;
+los coches que usan el mismo archivo comparten además mallas y materiales.
+Puertas y pantógrafos conservan sus animaciones originales y sólo evalúan
+una pose por modelo y clave modificada. Se evitan copias del `ShapeFile` y
+escrituras de `Transform` que no cambian la geometría.
 
 #### Continuidad de vías al cambiar LOD
 
