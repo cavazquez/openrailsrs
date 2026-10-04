@@ -3,10 +3,12 @@
 use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::{
-    distance_fog, sky_clear_color as shared_sky_clear_color,
+    SkyDome, distance_fog, sky_clear_color as shared_sky_clear_color, sky_palette,
     spawn_sky_dome as shared_spawn_sky_dome,
 };
 
+use crate::player_launch::{ActivePlayerContent, PlayerWeather};
+use crate::route_lighting::RouteSunState;
 use crate::track::TrackScene;
 use crate::viewer_log;
 use crate::world::RouteFocus;
@@ -90,6 +92,50 @@ pub fn sync_camera_fog(fog: &mut DistanceFog, enabled: bool) {
     } else {
         disabled_distance_fog()
     };
+}
+
+/// Keep the sky, window background and camera fog on the same route clock.
+/// Only palette/weather changes invalidate materials, even as the sun moves.
+#[allow(clippy::too_many_arguments)]
+pub fn sync_route_atmosphere(
+    sun: Option<Res<RouteSunState>>,
+    content: Res<ActivePlayerContent>,
+    fog_state: Res<FogState>,
+    mut clear: ResMut<ClearColor>,
+    domes: Query<Ref<MeshMaterial3d<StandardMaterial>>, With<SkyDome>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut cameras: Query<&mut DistanceFog, With<Camera3d>>,
+    mut previous: Local<Option<(bool, PlayerWeather, bool)>>,
+) {
+    let night = sun.is_some_and(|sun| sun.direction.y < 0.0);
+    let signature = (night, content.weather, fog_state.enabled);
+    if *previous == Some(signature)
+        && !domes.iter().any(|dome| dome.is_added())
+        && !cameras.iter_mut().any(|fog| fog.is_added())
+    {
+        return;
+    }
+    let (horizon, zenith) = sky_palette(night);
+    clear.0 = horizon;
+    for dome in &domes {
+        if let Some(mut material) = materials.get_mut(&dome.0) {
+            material.base_color = horizon;
+            material.emissive = LinearRgba::from(zenith) * if night { 0.35 } else { 0.85 };
+        }
+    }
+    let visibility = match content.weather {
+        PlayerWeather::Clear => CLEAR_WEATHER_VISIBILITY_M,
+        PlayerWeather::Rain => 7_000.0,
+        PlayerWeather::Fog => 500.0,
+    };
+    for mut fog in &mut cameras {
+        *fog = if fog_state.enabled {
+            viewer_distance_fog(visibility, night)
+        } else {
+            disabled_distance_fog()
+        };
+    }
+    *previous = Some(signature);
 }
 
 /// Toggle fog with `F` — zeros falloff instead of removing [`DistanceFog`].

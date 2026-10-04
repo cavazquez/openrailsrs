@@ -39,7 +39,8 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    ofrece el Content se cargan mediante su selección original: en invierno el
    terreno usa TERRTEX/Snow y los árboles sus variantes Winter cuando existen.
    Los recursos ausentes usan la textura base. De noche se seleccionan las
-   variantes Night que declara cada modelo, además de cambiar la luz del sol.
+   variantes Night que declara cada modelo; el sol, el cielo y la niebla deben
+   oscurecerse juntos. Probá 21:55: el horizonte no debe conservar el azul diurno.
 4. Elegí un PAT diferente en **Recorrido**. Debe indicarse que se iniciará una
    exploración por ese camino, hasta su destino; no deben conservarse las tres
    paradas del servicio local en un recorrido diferente.
@@ -191,9 +192,9 @@ no se inventan palancas interactivas sobre indicadores o piezas decorativas.
 
 ## Recorrido completo de aceptación
 
-En Northolt Park esperá a que termine el embarque y aparezca autorización de
-salida; cerrá puertas con Q. W selecciona adelante; pulsaciones de D aumentan el
-regulador y A lo reducen. `;` suelta freno y `'` lo aplica. Acercate a las paradas
+En Northolt Park abrí puertas con Q, esperá a que termine el embarque y aparezca
+autorización de salida, y cerralas con Q. W selecciona adelante; pulsaciones de D
+aumentan el regulador y A lo reducen. `;` suelta freno y `'` lo aplica. Acercate a las paradas
 con regulador cerrado y frená hasta ≤0,1 m/s dentro de ±10 m del punto mostrado.
 Abrí puertas, esperá el embarque (20 s en Northolt; 30 s en las otras estaciones)
 y cerralas cuando el HUD autorice salida.

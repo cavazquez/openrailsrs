@@ -123,3 +123,121 @@ pub fn update_route_sun(
         light.illuminance = 75_000.0 * daylight;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::pbr::{DistanceFog, FogFalloff};
+    use openrailsrs_bevy_scenery::{SkyDome, sky_palette};
+
+    use crate::player_launch::{ActivePlayerContent, PlayerWeather};
+    use crate::sky::{FogState, sync_route_atmosphere, viewer_distance_fog};
+
+    fn atmosphere_app(direction: Vec3) -> (App, Handle<StandardMaterial>, Entity) {
+        let mut app = App::new();
+        app.insert_resource(RouteSunState {
+            position: GeographicPosition {
+                latitude: 51.55_f64.to_radians(),
+                longitude: -0.37_f64.to_radians(),
+            },
+            environment: None,
+            direction,
+            ambient_scale: 1.0,
+            last_clock_s: None,
+        })
+        .init_resource::<ActivePlayerContent>()
+        .init_resource::<FogState>()
+        .init_resource::<ClearColor>()
+        .init_resource::<Assets<StandardMaterial>>()
+        .add_systems(Update, sync_route_atmosphere);
+        let material = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial::default());
+        app.world_mut()
+            .spawn((SkyDome, MeshMaterial3d(material.clone())));
+        let camera = app
+            .world_mut()
+            .spawn((Camera3d::default(), viewer_distance_fog(20_000.0, false)))
+            .id();
+        (app, material, camera)
+    }
+
+    fn assert_palette(app: &App, material: &Handle<StandardMaterial>, night: bool) {
+        let (horizon, zenith) = sky_palette(night);
+        assert_eq!(app.world().resource::<ClearColor>().0, horizon);
+        let materials = app.world().resource::<Assets<StandardMaterial>>();
+        let sky = materials.get(material).unwrap();
+        assert_eq!(sky.base_color, horizon);
+        assert_eq!(
+            sky.emissive,
+            LinearRgba::from(zenith) * if night { 0.35 } else { 0.85 }
+        );
+    }
+
+    #[test]
+    fn sky_and_camera_fog_follow_sunset_weather_and_sunrise() {
+        let (mut app, material, camera) = atmosphere_app(Vec3::Y);
+        app.update();
+        assert_palette(&app, &material, false);
+        assert!(matches!(
+            app.world().get::<DistanceFog>(camera).unwrap().falloff,
+            FogFalloff::Atmospheric { .. }
+        ));
+        app.world_mut().resource_mut::<RouteSunState>().direction = Vec3::NEG_Y;
+        app.update();
+        assert_palette(&app, &material, true);
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        assert_eq!(fog.color, sky_palette(true).0.with_alpha(0.75));
+        assert!(!matches!(fog.falloff, FogFalloff::Atmospheric { .. }));
+
+        app.world_mut()
+            .resource_mut::<ActivePlayerContent>()
+            .weather = PlayerWeather::Fog;
+        app.world_mut().resource_mut::<RouteSunState>().direction = Vec3::Y;
+        app.update();
+        assert_palette(&app, &material, false);
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        let expected = viewer_distance_fog(500.0, false);
+        assert_eq!(fog.color, expected.color);
+        let FogFalloff::Atmospheric { extinction, .. } = fog.falloff else {
+            panic!("sunrise must restore daytime fog");
+        };
+        let FogFalloff::Atmospheric {
+            extinction: expected_extinction,
+            ..
+        } = expected.falloff
+        else {
+            unreachable!();
+        };
+        assert_eq!(extinction, expected_extinction);
+    }
+
+    #[test]
+    fn fog_toggle_and_added_camera_keep_night_palette() {
+        let (mut app, material, camera) = atmosphere_app(Vec3::NEG_Y);
+        app.update();
+        app.world_mut().resource_mut::<FogState>().enabled = false;
+        app.update();
+        assert!(matches!(
+            app.world().get::<DistanceFog>(camera).unwrap().falloff,
+            FogFalloff::Exponential { density } if density == 0.0
+        ));
+        app.world_mut().resource_mut::<FogState>().enabled = true;
+        app.update();
+        assert_eq!(
+            app.world().get::<DistanceFog>(camera).unwrap().color,
+            sky_palette(true).0.with_alpha(0.75)
+        );
+        let added_camera = app
+            .world_mut()
+            .spawn((Camera3d::default(), viewer_distance_fog(20_000.0, false)))
+            .id();
+        app.update();
+        assert_palette(&app, &material, true);
+        assert_eq!(
+            app.world().get::<DistanceFog>(added_camera).unwrap().color,
+            sky_palette(true).0.with_alpha(0.75)
+        );
+    }
+}

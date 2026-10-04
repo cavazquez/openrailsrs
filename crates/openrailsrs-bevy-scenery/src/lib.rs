@@ -31,7 +31,8 @@ pub use assets::{
     write_tile_bundle_manifest,
 };
 pub use atmosphere::{
-    distance_fog, fog_visibility_from_tile_span, sky_clear_color, sky_palette, spawn_sky_dome,
+    SkyDome, distance_fog, fog_visibility_from_tile_span, sky_clear_color, sky_palette,
+    spawn_sky_dome,
 };
 pub use catalog::{MstsRouteCatalog, index_shapes_tree, route_pack_dir};
 pub use lighting::{SceneSunLight, directional_light_from_sun, sun_transform};

@@ -410,6 +410,14 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
+                sky::sync_route_atmosphere
+                    .after(route_lighting::update_route_sun)
+                    .after(player_ui::apply_settings)
+                    .after(sky::toggle_distance_fog)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
                 (
                     gameplay::update_gameplay_markers.run_if(live::live_mode_active),
                     gameplay::update_gameplay_toast.run_if(live::live_mode_active),

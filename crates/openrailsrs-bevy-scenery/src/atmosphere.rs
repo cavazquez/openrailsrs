@@ -9,6 +9,10 @@ pub const SKY_COLOR_HORIZON: Color = Color::srgb(0.72, 0.84, 0.96);
 pub const NIGHT_ZENITH: Color = Color::srgb(0.04, 0.06, 0.14);
 pub const NIGHT_HORIZON: Color = Color::srgb(0.08, 0.10, 0.18);
 
+/// Background geometry whose palette follows the route's time of day.
+#[derive(Component)]
+pub struct SkyDome;
+
 /// Horizon + zenith colours for day/night.
 pub fn sky_palette(night: bool) -> (Color, Color) {
     if night {
@@ -76,6 +80,7 @@ pub fn spawn_sky_dome(
     });
 
     commands.spawn((
+        SkyDome,
         Mesh3d(mesh),
         MeshMaterial3d(material),
         Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(-1.0)),

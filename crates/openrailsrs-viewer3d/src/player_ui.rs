@@ -1912,13 +1912,11 @@ fn update_monitor(
         });
     });
 }
-fn apply_settings(
+pub(crate) fn apply_settings(
     settings: Res<PlayerSettings>,
-    content: Res<ActivePlayerContent>,
     opts: Option<ResMut<crate::launch::ViewerLaunchOpts>>,
     mut lights: Query<&mut DirectionalLight>,
     mut fog: ResMut<crate::sky::FogState>,
-    mut cameras: Query<&mut bevy::pbr::DistanceFog, With<Camera3d>>,
     mut scale: ResMut<UiScale>,
 ) {
     crate::launch::set_viewing_distance_m(settings.view_distance_m);
@@ -1929,20 +1927,6 @@ fn apply_settings(
         light.shadow_maps_enabled = settings.shadows;
     }
     fog.enabled = settings.fog;
-    for mut camera in &mut cameras {
-        *camera = if settings.fog {
-            crate::sky::viewer_distance_fog(
-                match content.weather {
-                    PlayerWeather::Clear => 20000.0,
-                    PlayerWeather::Rain => 7000.0,
-                    PlayerWeather::Fog => 500.0,
-                },
-                false,
-            )
-        } else {
-            crate::sky::disabled_distance_fog()
-        };
-    }
     scale.0 = settings.ui_scale;
 }
 
@@ -1951,8 +1935,6 @@ fn apply_weather(
     content: Res<ActivePlayerContent>,
     mut precipitation: ResMut<crate::precipitation::PrecipitationState>,
     rain: Query<Entity, With<crate::precipitation::RainMeshMarker>>,
-    settings: Res<PlayerSettings>,
-    mut fog: Query<&mut bevy::pbr::DistanceFog, With<Camera3d>>,
 ) {
     precipitation.enabled = content.weather == PlayerWeather::Rain;
     if !precipitation.enabled {
@@ -1960,20 +1942,6 @@ fn apply_weather(
             commands.entity(entity).despawn();
         }
         commands.remove_resource::<crate::precipitation::RainState>();
-    }
-    for mut camera in &mut fog {
-        *camera = if settings.fog {
-            crate::sky::viewer_distance_fog(
-                match content.weather {
-                    PlayerWeather::Clear => 20000.0,
-                    PlayerWeather::Rain => 7000.0,
-                    PlayerWeather::Fog => 500.0,
-                },
-                false,
-            )
-        } else {
-            crate::sky::disabled_distance_fog()
-        };
     }
 }
 
