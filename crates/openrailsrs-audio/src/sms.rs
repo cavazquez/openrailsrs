@@ -180,7 +180,9 @@ fn curve(ast: &Ast, warnings: &mut Vec<String>) -> Option<Curve> {
     let count = items(points).get(1).and_then(num)? as usize;
     let values: Vec<_> = items(points).iter().skip(2).filter_map(num).collect();
     let points: Vec<_> = values
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .take(count)
         .map(|p| {
             (
