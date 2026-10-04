@@ -2,7 +2,7 @@
 
 Referencia: Open Rails 1.6.1, fijada por el proyecto. Verificación local del
 4 de octubre de 2026, Rust 1.97.1 y Bevy 0.19.1. Las instrucciones para el jugador
-están en [PLAYER_MANUAL_TESTS.md](PLAYER_MANUAL_TESTS.md), secciones 15–20.
+están en [PLAYER_MANUAL_TESTS.md](PLAYER_MANUAL_TESTS.md), secciones 15–22.
 
 ## Implementación
 
@@ -29,6 +29,9 @@ puertas abiertas mantienen el corte de tracción actual. El horario del servicio
 normal y los oráculos congelados permanecen intactos.
 
 ## Comprobaciones automatizadas
+
+Los resultados de esta sección y del primer viaje gráfico corresponden a la
+base `0dd3502`; la ampliación con nieve y SIGSCR se identifica más abajo.
 
 `OPENRAILSRS_NATIVE_ROUTE="$CHILTERN_ROUTE" CARGO_BUILD_JOBS=2 ./check.sh` pasó:
 formato, Clippy con advertencias como errores, 1416 pruebas Rust, 11 regresiones
@@ -101,8 +104,96 @@ ralentí y carga positiva en tracción, verificado por pruebas de los controles 
 La composición geométrica y la partida completa están comprobadas. La paridad
 física de la captura histórica completa sigue fuera de tolerancia: RMS 7,5749
 m/s y diferencia máxima de odómetro 2717,27 m, sin cambiar la referencia ni sus
-umbrales. Las señales siguen reglas de ocupación de tres aspectos; no se afirma
-compatibilidad completa SIGSCR. Los parámetros nativos mejoran el modelo de
+umbrales. El servicio extendido ahora usa el subconjunto SIGSCR original de
+Chiltern; no se afirma compatibilidad completa SIGSCR ni ejecución de C#.
+Los parámetros nativos mejoran el modelo de
 cilindros, pero no reproducen todas las válvulas/depósitos del original. El
-amperímetro eléctrico sigue siendo una estimación y el acabado de los objetos
-con material de instancias permanece original.
+amperímetro eléctrico sigue siendo una estimación. La nieve es cobertura visual;
+no incluye temperatura ni adhesión por hielo. Algunas mallas originales pueden
+necesitar ajustes específicos de normales/texturas para un acabado uniforme.
+
+## Ampliación: señales originales, nieve y carga GPU
+
+- Las seis estaciones tienen referencias cabina/exterior de Open Rails 1.6.1.
+  Las tres nuevas referencias se capturaron con el adaptador de plataforma
+  descrito en [su procedencia](fixtures/visual/or_reference/chiltern_station_views/README.md).
+  Se verificaron los hashes de los binarios y del código de referencia antes y
+  después; no se modificó el adaptador original fijado.
+- Chiltern extendido incorpora 66 programas SIGSCR con dirección TDB, aspectos
+  normal/distante originales y ocupación longitudinal de los coches. El guardado
+  y restauración recalculan las señales del jugador y del tráfico sin avanzar el
+  reloj. El intérprete limita tamaño, anidamiento y ejecución y falla en Alto.
+- Nieve seleccionable: copos exteriores lentos, depósito en el vidrio y barrido,
+  cobertura del terreno y de superficies superiores, variantes nativas según
+  estación y visibilidad inicial de 500 m. Lluvia/nieve alcanzan los materiales
+  de terreno, los originales opacos y las instancias GPU; mantienen el recorte
+  alfa. El manómetro utiliza el cilindro del vehículo principal.
+  Los modelos PBR utilizan una extensión del material de Bevy que conserva sus
+  texturas y el material original para mojado y cambios de LOD; no tiñe toda la
+  fachada al cubrir un techo.
+- Las cargas GPU tienen un presupuesto flexible de 8 MiB por cuadro. Bevy 0.19
+  omite una especialización si la malla aún no está subida: se agregó un reintento
+  al terminar esa subida, también para recursos reemplazados durante streaming.
+  La prueba visual confirmó tren y cabina con el presupuesto activo. El HUD se
+  dibuja en la cámara de interfaz posterior al efecto del parabrisas.
+- La pantalla inicial espera mallas, imágenes y shaders de GPU; no consume
+  tiempo del servicio. La telemetría conserva las mediciones globales y separa
+  el máximo de arranque de los cuadros de juego de más de 100 ms.
+- La comparación detectó terreno desplazado en West Ruislip y Gerrards Cross:
+  las entidades diferidas podían nacer con el origen anterior al recentrado del
+  mismo cuadro. La creación progresiva ahora sucede después del cambio de origen.
+  Una regresión de creación/recentrado simultáneos comprueba coordenadas y altura
+  MSL; las capturas finales muestran la vía despejada en cabina y exterior.
+
+Verificación final de esta ampliación: `check.sh` pasó con **1428 pruebas Rust**,
+**11 Python**, Clippy, formato, geometría/movimiento de contenido nativo, los
+cuatro oráculos físicos cortos y el servicio corto completo. Los archivos
+generados del servicio extendido se reprodujeron byte por byte. Se conservaron
+las salidas de simulación que ya estaban modificadas antes de este trabajo.
+
+Se inspeccionaron las doce vistas de las seis estaciones con GPU dedicada,
+1280×720, FOV de cabina 45° y radio 450 m. Se recapturaron las cuatro vistas
+afectadas por el defecto de origen. Pico de RSS entre **1110 y 2045 MiB**,
+66 programas nativos, cero errores SIGSCR, cero shaders fallidos/pendientes y
+cero subidas GPU pendientes al capturar. Los resultados finales están en
+`tmp/visual-snow-six-stations-final/`; las imágenes anteriores al arreglo se
+conservan en `tmp/visual-snow-terrain-before/` para diagnóstico.
+
+Nieve, lluvia y noche despejada se inspeccionaron en Northolt Park, cabina y
+exterior, con tren/cabina visibles y HUD legible. Se observó nieve en suelo y
+superficies superiores, lluvia limitada al vidrio y estrellas/instrumentos
+luminosos a las 02:00. Evidencia local en `tmp/visual-snow-pbr-final/`,
+`tmp/visual-snow-rain-final/` y `tmp/visual-snow-night-final/`. West Ruislip se
+recapturó también con nieve tras corregir el origen, en
+`tmp/visual-snow-aligned-snow/`, con pico de RSS de 1832 MiB. Estas capturas
+detenidas no certifican por sí solas el costo del clima durante todo un viaje.
+
+El Pullman de Bristol recorrió **80,88 m** con 2 emisores nativos/60 partículas,
+y la King **81,39 m** con 14 emisores/90–108 partículas. Pasaron cinco vistas
+de exterior/cabinas originales, sin geometría de sustitución; RSS 1432–1807 MiB.
+Las cuatro mezclas SMS/WAV fuera del renderer pasaron sin advertencias ni
+clipping. PNG, JSON y WAV están en `tmp/visual-snow-moving-stock/`; esta prueba
+no reproduce todas las maniobras de purga/silbato de la locomotora de vapor.
+
+El último viaje gráfico, después de corregir el terreno, utilizó la misma RX
+7600/Vulkan, Weston privado, 1280×720, radio 2000 m y tiempo ×16:
+
+- Completó **6/6**, **15318,90 m** y **2545,60 s** de simulación. Error máximo
+  de detención **4,03 m**; las seis llegadas fueron a menos de 0,1 m/s. Ambos
+  servicios de tráfico llegaron y registraron sus paradas.
+- El servicio terminó con demoras: hasta **713,65 s** en Gerrards Cross. Este
+  resultado acredita que el viaje se puede completar con las señales nuevas;
+  no acredita cumplimiento del horario ni paridad física con OR.
+- Captura en **211,5 s** reales; pico externo de RSS **3008 MiB**, seis sectores
+  GPU, 6560 entidades y cero objetos cercanos pendientes.
+- **7387 cuadros**, P50 **25 ms**, P95 **29 ms**, P99 **43 ms**. Incluye 4586
+  cuadros con carga de WORLD. Máximo de arranque **3885 ms**; durante el juego
+  hubo **un cuadro de 107 ms**. Se mantienen tirones medibles, aunque la subida
+  a GPU esté distribuida.
+- Cero errores SIGSCR, shaders pendientes/fallidos y subidas GPU pendientes al
+  finalizar. Seis emisores nativos y 76 partículas, dentro del límite de 512.
+
+PNG, JSON y log finales: `tmp/visual-snow-aligned-journey/`. Las métricas
+anteriores de la base `0dd3502` se conservan identificadas arriba; cambiaron la
+lógica de señales y la duración del servicio, por lo que no son un ensayo de
+rendimiento equivalente cuadro por cuadro.

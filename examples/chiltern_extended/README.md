@@ -36,8 +36,11 @@ seis extremos de plataforma y los ocho ENG/WAG originales con sus parámetros
 de freno. Los pequeños archivos físicos de este servicio agregan esos tokens a
 las bases convertidas, conservando intactos los fixtures históricos del replay.
 El exterior, las cabinas y los emisores se resuelven desde el Content original.
-Se mantiene el máximo del corredor de 80 km/h;
-las señales usan ocupación de tres aspectos y no el SIGSCR completo.
+Se mantiene el máximo del corredor de 80 km/h. Las señales respetan la dirección
+TDB e incorporan el SIGSCR original de Chiltern, sus ocho aspectos de lámparas y
+las funciones normal/distante utilizadas por el corredor. La autoridad considera
+la ocupación de la formación completa y el tráfico. No se afirma compatibilidad
+general con todos los scripts, enlaces y reservas de Open Rails.
 
 Regeneración: importar la TDB con `openrailsrs import-msts RUTA --out-dir tmp/imported` y pasar su
 `track.toml` a `scripts/prepare_chiltern_extended.py --route-root ...

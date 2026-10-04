@@ -93,6 +93,26 @@ solo los escenarios con `legacy_power_cap` conservan el resguardo automático.
 Los perfiles no se insertan retroactivamente en los escenarios históricos de los
 oráculos congelados.
 
+### Señales y clima del servicio extendido
+
+`chiltern_extended/track.toml` contiene los programas originales de `SIGSCR`,
+la función declarada por `SIGCFG` y la dirección del `SignalItem` TDB. El
+intérprete admite las condiciones y funciones normal/distante utilizadas por
+Chiltern y conserva ocho aspectos en las lámparas. La evaluación utiliza bloques
+dirigidos y la ocupación longitudinal de jugador, tráfico y sección estacionada.
+Errores o construcciones no soportadas rechazan el contenido o dan alto; una
+orden manual de vía libre no anula la restricción del script. La regresión del
+recorrido verifica seis paradas, ambos servicios AI y estados de alto/advertencia.
+Esto no certifica todos los enlaces, reservas, memorias y scripts de Open Rails.
+
+La nieve usa la visibilidad inicial nativa de 500 m y las variantes Snow del
+Content disponibles según la estación del año. La precipitación, el vidrio barrido por limpiaparabrisas,
+la cobertura superior y el mojado de instancias GPU se adaptan a Bevy. Son
+mejoras visuales; no modifican la referencia física ni simulan hielo/adhesión.
+El presupuesto nativo de subida de recursos a GPU es de 8 MiB por cuadro
+(límite flexible de Bevy). El informe conserva el histograma de toda la sesión
+y separa los máximos/tirones de carga inicial y partida para comparar mediciones.
+
 Los cuatro ensayos cortos siguen pasando sin cambiar tolerancias. El diagnóstico
 completo continúa **FAIL**: RMS 7,5749 m/s, pico 16,6450 m/s y odómetro máximo
 2717,27 m. Completar el servicio de seis estaciones demuestra funcionamiento; no

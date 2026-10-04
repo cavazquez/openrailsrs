@@ -216,7 +216,8 @@ comprobaciones diferentes; aprobar la interfaz no elimina esa diferencia.
 
 ## 9. Escenario, materiales y detalle a distancia
 
-1. Probá las tres estaciones con **1** en cabina y **2** en exterior. Aumentá y
+1. Elegí el servicio extendido y probá las seis estaciones con **1** en cabina y
+   **2** en exterior. Aumentá y
    reducí la distancia en F10; acercate a casas, árboles, cercos y andenes.
 2. Deben conservar posición y forma, con ventanas y follaje recortados por su
    transparencia. La cámara exterior no debe atravesar el terreno ni producir
@@ -227,7 +228,7 @@ comprobaciones diferentes; aprobar la interfaz no elimina esa diferencia.
    histéresis del 8 %. Los grupos de instancias cambian de malla con una transición
    de 0,35 s: puede verse un tramado breve, pero no deben desaparecer ni duplicar
    su sombra. Los objetos sin instancias conservan el cambio discreto con histéresis.
-4. Conducí hasta West Ruislip. Edificios, vía y árboles deben seguir apareciendo;
+4. Conducí hasta Gerrards Cross. Edificios, vía y árboles deben seguir apareciendo;
    no debe quedar sólo terreno vacío al superar el sector inicial.
 5. Las seis referencias originales están en
    `docs/fixtures/visual/or_reference/chiltern_station_views/`. Compará desde un
@@ -273,7 +274,8 @@ densidad con la altura y en sus bordes; no debe dibujar una pared negra rectangu
 
 ## 11. Fluidez y memoria durante todo el viaje
 
-1. Iniciá una sesión nueva y completá las tres paradas. F8 → Diagnóstico conserva
+1. Iniciá una sesión nueva del servicio extendido y completá las seis paradas.
+   F8 → Diagnóstico conserva
    mediciones de toda esa sesión aunque cierres el panel.
 2. Compará las mismas condiciones con 500, 2000 y 4000 m de distancia de carga.
    Anotá P95/P99, máximo por cuadro y pico de RAM. El parseo de modelos y la
@@ -471,7 +473,7 @@ acabado original; los cambios PBR se aplican al tren y a objetos individuales.
 Para abrirlo directamente: `./scripts/run_chiltern_service.sh --direct`.
 La referencia geométrica son el PAT local original y las plataformas/conexiones
 TDB hacia Gerrards Cross. El horario es propio del escenario; no reproduce una
-actividad nativa completa. Las señales siguen reglas de ocupación de tres aspectos.
+actividad nativa completa. El servicio extendido utiliza los scripts SIGSCR originales de Chiltern; los escenarios históricos conservan las reglas de tres aspectos.
 
 ## 19. Cambios de detalle y memoria
 
@@ -512,3 +514,31 @@ Estos perfiles se incluyen en el escenario extendido. Los escenarios históricos
 sin perfiles mantienen sus pendientes/límites declarados. La importación nativa
 produce perfiles para ambos sentidos. Los oráculos congelados de Open Rails
 siguen siendo la referencia física; no se amplían sus tolerancias.
+
+## 21. Nieve y materiales del escenario
+
+1. Iniciá el servicio extendido con **Clima → Nieve**. La cobertura visual funciona también en otras estaciones; elegí invierno para usar las variantes de textura de nieve originales que admite esa estación.
+2. En exterior (`2`), observá copos blancos cortos y lentos, con deriva lateral; el terreno y las superficies superiores deben tener nieve. Las paredes y los recortes transparentes de árboles no deben convertirse en rectángulos blancos.
+3. En cabina (`1` o `Alt+1`), observá copos adheridos al vidrio. Pulsá `V`: el barrido limpia el sector correspondiente. El tablero, los instrumentos y el HUD no reciben el efecto del vidrio.
+4. Repetí con lluvia: el terreno y los edificios agrupados en GPU se oscurecen y reciben reflejos discretos. Las ventanas/recortes mantienen su transparencia. Con tiempo despejado los acabados vuelven a sus valores originales al iniciar otra partida.
+5. Guardá y cargá la partida con nieve; el clima debe conservarse. Acelerá/pausá: copos y escobillas usan el reloj de simulación.
+
+La cobertura ya representa un escenario nevado al cargar. No se simula hielo/adhesión ni temperatura. En nieve se reduce la visibilidad a 500 m como el ajuste inicial de Open Rails 1.6.1.
+
+## 22. Señales originales de Chiltern y calidad del recorrido
+
+1. Seleccioná el servicio extendido. Abrí `F4` y `M`: el adelantado ocupa el corredor y los aspectos responden a su posición. Los semáforos de dos estados conservan sus posiciones originales, y los distantes advierten sobre señales normales.
+2. Detenete ante alto. Cuando la cola del otro tren libere el bloque, verificá que cambia la lámpara/brazo y coincide con F4. Una orden de vía libre no permite ignorar un bloque ocupado.
+3. Completá las seis estaciones; comprobá edificios, andenes, árboles y cercos desde cabina y exterior. Las posiciones de los objetos deben permanecer estables al cambiar de cámara o detalle.
+4. Durante la pantalla de carga, el tren y los contadores de pasajeros/horario deben quedar detenidos. Al terminar, la partida comienza desde su hora inicial.
+5. En `F8 → Diagnóstico`, observá tiempos de cuadro y RAM durante el viaje. El JSON de las capturas distingue el máximo de arranque y los tirones durante juego; no uses FPS de lavapipe como rendimiento de una GPU.
+
+Para capturar las seis estaciones en ambas vistas con GPU real:
+
+```bash
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json WGPU_BACKEND=vulkan \
+python3 scripts/capture_route_views.py --route-root "$CHILTERN_ROUTE" \
+  --with-cab --headless-wayland --require-hardware --out-dir tmp/six-station-views
+```
+
+El intérprete reconoce las funciones normal/distante utilizadas por esta ruta. No sustituye todavía las reservas, enlaces de todos los cruces ni los scripts C# del original. Las capturas se comparan por composición, geometría y transparencia; los motores conservan su iluminación/tonemapping propios.

@@ -20,3 +20,6 @@ Raíz del repo: [`README.md`](../README.md) · [`ROADMAP.md`](../ROADMAP.md).
 
 Para jugar y comprobar los menús, guardado, operaciones y HUD:
 [`PLAYER_MANUAL_TESTS.md`](PLAYER_MANUAL_TESTS.md).
+Incluye nieve, limpiaparabrisas, sonido, tráfico y las seis estaciones.
+Resultados y límites de las comprobaciones en
+[`PLAYER_POLISH_QA.md`](PLAYER_POLISH_QA.md).
