@@ -27,6 +27,7 @@ fn perf_debug_enabled() -> bool {
 /// Estados de arranque del viewer (#55).
 #[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ViewerAppState {
+    Menu,
     #[default]
     Loading,
     Playing,
@@ -34,6 +35,7 @@ pub enum ViewerAppState {
 
 /// Resultado de la carga CPU pre-escena (hilo background).
 pub struct RouteLoadBundle {
+    pub saved_camera: Option<crate::saved_game::SavedCamera>,
     pub title: String,
     pub route_dir: std::path::PathBuf,
     pub scene: TrackScene,
@@ -130,6 +132,7 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
         .spawn((
             LoadingScreenCamera,
             Camera2d,
+            Msaa::Off,
             Camera {
                 order: 10,
                 clear_color: ClearColorConfig::Custom(Color::srgb(0.08, 0.10, 0.14)),
@@ -230,7 +233,13 @@ pub fn poll_route_load(
                 *t = Text::new(format!("Error: {err}"));
             }
             eprintln!("error: {err}");
+            commands.queue(move |world: &mut World| {
+                world
+                    .resource_mut::<crate::player_ui::PlayerUiState>()
+                    .notice = format!("No se pudo iniciar la partida: {err}");
+            });
             commands.remove_resource::<PendingRouteLoad>();
+            next.set(ViewerAppState::Menu);
         }
         Err(TryRecvError::Empty) => {
             if let Some(screen) = screen.as_ref()
@@ -258,6 +267,14 @@ pub fn update_loading_screen_progress(
         return;
     };
 
+    if *app_state.get() == ViewerAppState::Menu {
+        let root = screen.root;
+        let camera = screen.camera;
+        commands.remove_resource::<ViewerLoadingScreen>();
+        commands.entity(root).despawn();
+        commands.entity(camera).despawn();
+        return;
+    }
     if let Some(progress) = progress.as_ref() {
         screen.scenery_spawn_started = true;
         if let Ok(mut t) = texts.get_mut(screen.status) {
@@ -286,6 +303,7 @@ pub fn update_loading_screen_progress(
 
 fn insert_route_bundle(commands: &mut Commands, bundle: RouteLoadBundle) {
     let RouteLoadBundle {
+        saved_camera,
         title,
         route_dir,
         scene,
@@ -302,6 +320,12 @@ fn insert_route_bundle(commands: &mut Commands, bundle: RouteLoadBundle) {
         assets,
         launch_opts,
     } = bundle;
+
+    crate::route_lighting::prepare_route_textures(live.as_ref(), &assets, route_focus.center);
+
+    if let Some(camera) = saved_camera {
+        commands.insert_resource(crate::saved_game::PendingSavedCamera(camera));
+    }
 
     let world_stream = if scenery_mode.is_tile_lab() {
         WorldTileStream::default()

@@ -5,7 +5,7 @@ use openrailsrs_core::{EdgeId, NodeId};
 use serde::{Deserialize, Serialize};
 
 use crate::TrackError;
-use crate::signal::TrackSignal;
+use crate::signal::{SignalAspect, TrackSignal};
 
 /// Runtime position of a switch node.
 ///
@@ -184,6 +184,47 @@ impl TrackGraph {
         self.switch_positions.get(node).copied()
     }
 
+    /// Evaluate the directed blocks ahead. A train's own authority can ignore its
+    /// footprint; other signals still see that same footprint as occupied.
+    pub fn signal_aspect_for_occupancy(
+        &self,
+        id: &str,
+        block_map: &HashMap<String, String>,
+        ignored_train: Option<&str>,
+    ) -> Option<SignalAspect> {
+        let sig = self.signal(id)?;
+        let script = sig.script.as_ref()?;
+        let edge = self.edge(&sig.edge_id)?;
+        let base = |id: &str| id.strip_suffix("_r").unwrap_or(id).to_owned();
+        let occupied = |id: &str| {
+            block_map
+                .get(id)
+                .is_some_and(|train| ignored_train != Some(train.as_str()))
+        };
+        let first = self
+            .outgoing_edges(&edge.to.0)
+            .iter()
+            .filter(|id| base(id) != base(&sig.edge_id))
+            .collect::<Vec<_>>();
+        if first.iter().any(|id| occupied(id))
+            && let Some(aspect) = script.on_block_ahead
+        {
+            return Some(aspect);
+        }
+        let second_occupied = first.iter().any(|id| {
+            self.edge(id).is_some_and(|first_edge| {
+                self.outgoing_edges(&first_edge.to.0)
+                    .iter()
+                    .filter(|second| base(second) != base(id))
+                    .any(|second| occupied(second))
+            })
+        });
+        if second_occupied && let Some(aspect) = script.on_second_block_ahead {
+            return Some(aspect);
+        }
+        script.default
+    }
+
     /// Evaluate all scripted signals and update their aspects based on block occupancy.
     ///
     /// `block_map` maps edge IDs to the ID of the train currently occupying that edge.
@@ -198,44 +239,14 @@ impl TrackGraph {
     ///    first-block edge.
     /// 5. Apply the highest-priority rule whose condition is met.
     pub fn evaluate_signals(&mut self, block_map: &HashMap<String, String>) {
-        use crate::signal::SignalAspect;
-
         // Collect signal updates separately to avoid borrowing `self` mutably while
         // iterating over it.
         let updates: Vec<(String, SignalAspect)> = self
             .signals
             .values()
             .filter_map(|sig| {
-                let script = sig.script.as_ref()?;
-
-                // Destination node of the signal's edge.
-                let edge = self.edges.get(&sig.edge_id)?;
-                let dest_node_str = edge.to.0.clone();
-
-                // First-block edges: outgoing from dest_node.
-                let first_edges = self.outgoing_edges(&dest_node_str).to_vec();
-                let block1_occupied = first_edges.iter().any(|e| block_map.contains_key(e));
-
-                if block1_occupied && let Some(aspect) = script.on_block_ahead {
-                    return Some((sig.id.clone(), aspect));
-                }
-
-                // Second-block edges: outgoing from each first-edge destination.
-                let block2_occupied = first_edges.iter().any(|e| {
-                    let dest2 = self.edges.get(e).map(|ed| ed.to.0.clone());
-                    dest2.is_some_and(|d| {
-                        self.outgoing_edges(&d)
-                            .iter()
-                            .any(|e2| block_map.contains_key(e2))
-                    })
-                });
-
-                if block2_occupied && let Some(aspect) = script.on_second_block_ahead {
-                    return Some((sig.id.clone(), aspect));
-                }
-
-                // Default.
-                script.default.map(|aspect| (sig.id.clone(), aspect))
+                self.signal_aspect_for_occupancy(&sig.id, block_map, None)
+                    .map(|aspect| (sig.id.clone(), aspect))
             })
             .collect();
 
@@ -244,6 +255,61 @@ impl TrackGraph {
                 sig.aspect = aspect;
             }
         }
+    }
+}
+
+impl TrackGraph {
+    /// Keep the complete network for dispatching, with a service's authored geometry and signals.
+    /// Missing switch metadata in a corridor does not erase the source junction.
+    pub fn with_service_overlay(&self, service: &TrackGraph) -> Result<Self, TrackError> {
+        let mut graph = Self::new();
+        for (id, node) in self.nodes_iter() {
+            let mut node = service.node(id).cloned().unwrap_or_else(|| node.clone());
+            if matches!(node.kind, NodeKind::Plain)
+                && let Some(original) = self.node(id)
+                && matches!(original.kind, NodeKind::Switch { .. })
+            {
+                node.kind = original.kind.clone();
+            }
+            graph.insert_node(node)?;
+        }
+        for (id, node) in service.nodes_iter() {
+            if graph.node(id).is_none() {
+                graph.insert_node(node.clone())?;
+            }
+        }
+        for (id, edge) in self.edges_iter() {
+            graph.insert_edge(service.edge(id).cloned().unwrap_or_else(|| edge.clone()))?;
+        }
+        for (id, edge) in service.edges_iter() {
+            if graph.edge(id).is_none() {
+                graph.insert_edge(edge.clone())?;
+            }
+        }
+        for signal in self.signals() {
+            if service.edge(&signal.edge_id).is_none() && service.signal(&signal.id).is_none() {
+                graph.insert_signal(signal.clone())?;
+            }
+        }
+        for signal in service.signals() {
+            graph.insert_signal(signal.clone())?;
+        }
+        for (id, node) in graph
+            .nodes_iter()
+            .map(|(id, n)| (id.to_owned(), n.clone()))
+            .collect::<Vec<_>>()
+        {
+            if matches!(node.kind, NodeKind::Switch { .. }) {
+                graph.set_switch(
+                    &id,
+                    service
+                        .switch_position(&id)
+                        .or_else(|| self.switch_position(&id))
+                        .unwrap_or_default(),
+                )?;
+            }
+        }
+        Ok(graph)
     }
 }
 

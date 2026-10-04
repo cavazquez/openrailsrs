@@ -1,6 +1,6 @@
 //! Launch-time options (set from `main` before the viewer plugin runs).
 
-use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::coordinates::MSTS_TILE_SIZE_M;
 use bevy::prelude::*;
@@ -195,24 +195,27 @@ pub const RUN_CORRIDOR_AHEAD_M: f32 = 80.0;
 /// Longitudinal window behind train in `--run-corridor` (metres).
 pub const RUN_CORRIDOR_BEHIND_M: f32 = 40.0;
 
-static VIEWING_DISTANCE_OVERRIDE: OnceLock<f32> = OnceLock::new();
+static VIEWING_DISTANCE_OVERRIDE: AtomicU32 = AtomicU32::new(0);
 
 /// Pin the process-wide viewing distance (CLI / scenario config). Call once at startup.
 pub fn set_viewing_distance_m(meters: f32) {
     let clamped = meters.clamp(VIEWING_DISTANCE_MIN_M, VIEWING_DISTANCE_MAX_M);
-    let _ = VIEWING_DISTANCE_OVERRIDE.set(clamped);
+    if clamped.is_finite() {
+        VIEWING_DISTANCE_OVERRIDE.store(clamped.to_bits(), Ordering::Relaxed);
+    }
 }
 
 /// Resolve viewing distance: CLI/config override → env → default.
 ///
 /// Env: `OPENRAILSRS_VIEW_RADIUS_M` or legacy `OPENRAILSRS_VISIBLE_RADIUS_M`.
 pub fn view_radius_m() -> f32 {
-    VIEWING_DISTANCE_OVERRIDE
-        .get()
-        .copied()
-        .or_else(|| parse_radius_env("OPENRAILSRS_VIEW_RADIUS_M"))
-        .or_else(|| parse_radius_env("OPENRAILSRS_VISIBLE_RADIUS_M"))
-        .unwrap_or(VIEWING_DISTANCE_M)
+    match VIEWING_DISTANCE_OVERRIDE.load(Ordering::Relaxed) {
+        0 => None,
+        bits => Some(f32::from_bits(bits)),
+    }
+    .or_else(|| parse_radius_env("OPENRAILSRS_VIEW_RADIUS_M"))
+    .or_else(|| parse_radius_env("OPENRAILSRS_VISIBLE_RADIUS_M"))
+    .unwrap_or(VIEWING_DISTANCE_M)
 }
 
 /// Max tile-centre distance for stream/load (viewing distance + one tile).

@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 use crate::coordinates::{
     rebase_points_to_bone_local, rebase_vectors_to_bone_local,
@@ -423,17 +423,44 @@ pub fn camera_underground_forced() -> bool {
     )
 }
 
+// CPU texture resolution also runs on background loading workers, outside ECS.
+// One viewer owns one scene; atomics publish the selected season and route sun
+// without mutating process environment variables while worker threads run.
+static SCENERY_SEASON: AtomicU32 = AtomicU32::new(1);
+static SCENERY_SUN_Y: AtomicU32 = AtomicU32::new(1.0_f32.to_bits());
+
+pub fn set_scenery_season(season: &str) {
+    use openrailsrs_bevy_scenery::textures::Season;
+    SCENERY_SEASON.store(Season::parse(season) as u32, Ordering::Relaxed);
+    SCENERY_SUN_Y.store(1.0_f32.to_bits(), Ordering::Relaxed);
+}
+
+pub fn set_scenery_sun_y(sun_y: f32) {
+    if sun_y.is_finite() {
+        SCENERY_SUN_Y.store(sun_y.to_bits(), Ordering::Relaxed);
+    }
+}
+
 /// Active scenery [`TextureEnvironment`] for WORLD/train textures (#142).
 pub fn scenery_texture_environment(flags: TextureFlags) -> TextureEnvironment {
     use openrailsrs_bevy_scenery::textures::{Season, use_night_texture};
+    let season = match SCENERY_SEASON.load(Ordering::Relaxed) {
+        0 => Season::Spring,
+        2 => Season::Autumn,
+        3 => Season::Winter,
+        _ => Season::Summer,
+    };
     let night = if scenery_night_forced() {
         true
     } else {
-        // Day sun_y = +1 unless forced underground with Underground bit.
-        use_night_texture(flags, 1.0, camera_underground_forced())
+        use_night_texture(
+            flags,
+            f32::from_bits(SCENERY_SUN_Y.load(Ordering::Relaxed)),
+            camera_underground_forced(),
+        )
     };
     TextureEnvironment {
-        season: Season::Summer,
+        season,
         snow_weather: false,
         night,
     }
@@ -441,7 +468,9 @@ pub fn scenery_texture_environment(flags: TextureFlags) -> TextureEnvironment {
 
 /// Whether scenery is currently in daytime for night-subobj visibility (#95/#142).
 pub fn scenery_is_day(flags: TextureFlags) -> bool {
-    !scenery_texture_environment(flags).night
+    !scenery_night_forced()
+        && f32::from_bits(SCENERY_SUN_Y.load(Ordering::Relaxed)) >= 0.0
+        && !scenery_texture_environment(flags).night
 }
 
 /// Bevy asset handles for one renderable shape part.
@@ -1234,7 +1263,7 @@ pub fn cab_night_textures_enabled() -> bool {
             v.trim().to_ascii_lowercase().as_str(),
             "1" | "true" | "yes" | "on"
         ),
-        Err(_) => false,
+        Err(_) => f32::from_bits(SCENERY_SUN_Y.load(Ordering::Relaxed)) < 0.0,
     }
 }
 
@@ -1363,7 +1392,19 @@ pub fn vehicle_texture_search_dirs(shape_path: &Path, route_dir: &Path) -> Vec<P
 
 /// Load and decode an `.ace` file into a Bevy image (mip 0 only).
 pub fn load_ace_image(route_dir: &Path, file_name: &str) -> Option<Image> {
-    let path = resolve_texture_path(route_dir, file_name)?;
+    load_ace_image_with_flags(
+        route_dir,
+        file_name,
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
+}
+
+pub fn load_ace_image_with_flags(
+    route_dir: &Path,
+    file_name: &str,
+    flags: TextureFlags,
+) -> Option<Image> {
+    let path = resolve_texture_path_with_flags(route_dir, file_name, flags)?;
     let ace = read_ace(&path).ok()?;
     Some(ace_to_scenery_image(&ace).0)
 }
@@ -1431,6 +1472,7 @@ pub fn load_shape_render_asset_and_file_from_path(
         false,
         train_exterior,
         pbr.as_ref(),
+        texture_flags_for_shape(shape_path),
     );
     if train_exterior {
         set_train_shape_debug_scope(false);
@@ -1467,6 +1509,7 @@ pub fn load_cab_interior_render_asset_from_path(
         true,
         false,
         None,
+        TextureFlags::from_raw(TextureFlags::NIGHT),
     ))
 }
 
@@ -1485,6 +1528,7 @@ pub fn shape_render_asset_from_loaded(
     cab_interior: bool,
     train_exterior: bool,
     pbr: Option<&ShapePbrSidecar>,
+    texture_flags: TextureFlags,
 ) -> ShapeRenderAsset {
     shape_render_asset_from_loaded_with_ace_cache(
         loaded,
@@ -1500,6 +1544,7 @@ pub fn shape_render_asset_from_loaded(
         cab_interior,
         train_exterior,
         pbr,
+        texture_flags,
     )
 }
 
@@ -1519,6 +1564,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     cab_interior: bool,
     train_exterior: bool,
     pbr: Option<&ShapePbrSidecar>,
+    texture_flags: TextureFlags,
 ) -> ShapeRenderAsset {
     let triangle_count_total: usize = loaded
         .parts
@@ -1551,6 +1597,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 None,
                 None,
                 None,
+                texture_flags,
             );
         has_any_texture |= has_texture;
         parts.push(ShapePartAsset {
@@ -1598,6 +1645,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 part.light_mat_idx,
                 part.tex_addr_mode,
                 part.mip_map_lod_bias,
+                texture_flags,
             );
         let mut mesh = part.mesh.clone();
         // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
@@ -1739,6 +1787,14 @@ pub fn collect_loaded_shape_texture_paths(
     loaded: &LoadedShape,
     texture_dirs: &[&Path],
 ) -> Vec<PathBuf> {
+    collect_loaded_shape_texture_paths_with_flags(loaded, texture_dirs, TextureFlags::from_raw(0))
+}
+
+pub fn collect_loaded_shape_texture_paths_with_flags(
+    loaded: &LoadedShape,
+    texture_dirs: &[&Path],
+    flags: TextureFlags,
+) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     let mut names = Vec::new();
     if let Some(name) = loaded.texture_file.as_deref() {
@@ -1750,7 +1806,7 @@ pub fn collect_loaded_shape_texture_paths(
         }
     }
     for name in names {
-        if let Some(path) = resolve_texture_path_in_dirs(texture_dirs, name) {
+        if let Some(path) = resolve_texture_path_in_dirs_with_flags(texture_dirs, name, flags) {
             paths.push(path);
         }
     }
@@ -1964,6 +2020,7 @@ fn material_for_shape_texture(
     light_mat_idx: Option<i32>,
     tex_addr_mode: Option<i32>,
     mip_map_lod_bias: Option<f32>,
+    texture_flags: TextureFlags,
 ) -> (
     Handle<StandardMaterial>,
     Option<Handle<crate::or_cab_material::OrCabMaterial>>,
@@ -1975,7 +2032,7 @@ fn material_for_shape_texture(
     let lit = lit_override.unwrap_or_else(scenery_materials_lit);
     let addr_key = texture_cache_sampler_key(tex_addr_mode, mip_map_lod_bias);
     if let Some(tex_name) = texture_file {
-        match resolve_texture_path_in_dirs(texture_dirs, tex_name) {
+        match resolve_texture_path_in_dirs_with_flags(texture_dirs, tex_name, texture_flags) {
             None => {}
             Some(tex_path) => {
                 let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
@@ -2287,6 +2344,12 @@ pub fn load_shape_file_and_loaded(
     let options = world_mesh_options_for_shape(path);
     let loaded = loaded_shape_from_shape_file_with_options(&shape, camera_distance_m, options)?;
     Some((shape, loaded))
+}
+
+/// The descriptor must participate in texture lookup as well as visibility.
+pub fn texture_flags_for_shape(shape_path: &Path) -> TextureFlags {
+    let desc = ShapeDescriptor::load_for_shape(shape_path);
+    shape_texture_flags(shape_path, desc.alternative_texture)
 }
 
 /// Attach `.sd` night-subobj + texture flags after building GPU assets (#95/#142).
@@ -3295,6 +3358,7 @@ mod tests {
             None,
             None,
             None,
+            TextureFlags::from_raw(0),
         );
         assert!(has_texture);
         let material = materials.get(&handle).unwrap();
@@ -3343,6 +3407,7 @@ mod tests {
                 None,
                 None,
                 None,
+                TextureFlags::from_raw(0),
             );
             (handle, has_texture, is_transparent, dual_blend)
         };
@@ -3446,6 +3511,7 @@ mod tests {
                 None,
                 None,
                 None,
+                TextureFlags::from_raw(0),
             );
             (handle, is_transparent)
         };
@@ -3475,6 +3541,7 @@ mod tests {
                 None,
                 None,
                 None,
+                TextureFlags::from_raw(0),
             );
             (handle, ())
         };

@@ -431,6 +431,7 @@ fn sample_yaw_at_path_offset(
     head_edge: &str,
     head_pos: f64,
     path_offset_m: f64,
+    car_offset_m: f64,
     resolver: Option<&TrackPositionResolver<'_>>,
     scene: &TrackScene,
     route_offset: Vec3,
@@ -438,7 +439,7 @@ fn sample_yaw_at_path_offset(
     terrain: Option<&TerrainElevation>,
 ) -> Option<f32> {
     let (edge_id, pos) = if let Some(live) = live {
-        live.visual_position_at_head_offset(path_offset_m)?
+        live.visual_position_for_car(path_offset_m, car_offset_m)?
     } else {
         advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
     };
@@ -499,7 +500,7 @@ pub fn update_rolling_stock_part_anim(
         let car = cars.get(parent.parent()).ok();
         let track_index = car.map_or(0, |car| car.track_index);
         let distance = live_ref
-            .map(LiveDrive::visual_distance_m)
+            .map(|live| live.visual_car_distance_m(car.map_or(0.0, |car| f64::from(car.offset_m))))
             .or_else(|| replay_ref.and_then(|replay| replay.wheel_distance_m(track_index)))
             .unwrap_or(0.0);
         let angle = wheel_angle(distance, wheel.radius_m, car.is_some_and(|car| car.flipped));
@@ -551,6 +552,7 @@ pub fn update_rolling_stock_part_anim(
             &head_edge,
             head_pos,
             car_path,
+            car_path,
             resolver_ref,
             &scene,
             offset.delta,
@@ -567,6 +569,7 @@ pub fn update_rolling_stock_part_anim(
             &head_edge,
             head_pos,
             bogie_path,
+            car_path,
             resolver_ref,
             &scene,
             offset.delta,

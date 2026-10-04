@@ -104,14 +104,15 @@ fn _rain_streak_mesh(width: f32, height: f32) -> Mesh {
 #[derive(Component)]
 pub(crate) struct RainMeshMarker;
 
-pub fn spawn_precipitation(
+pub(crate) fn spawn_precipitation(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
     state: Res<PrecipitationState>,
+    existing: Query<Entity, With<RainMeshMarker>>,
 ) {
-    if !state.enabled {
+    if !state.enabled || !existing.is_empty() {
         return;
     }
     let origin = scene.bounds.center;
@@ -203,8 +204,7 @@ pub(crate) fn toggle_precipitation(
     mut materials: ResMut<Assets<StandardMaterial>>,
     scene: Res<TrackScene>,
 ) {
-    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
-    if live.is_some() && !shift {
+    if live.is_some() {
         return;
     }
     if !keys.just_pressed(KeyCode::KeyP) {

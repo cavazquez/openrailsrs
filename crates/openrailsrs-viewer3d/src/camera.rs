@@ -151,7 +151,7 @@ pub fn driver_cab_fov_deg(opts: &ViewerLaunchOpts) -> f32 {
                 .ok()
                 .and_then(|v| v.parse().ok())
         })
-        .filter(|f| *f >= 40.0 && *f <= 90.0)
+        .filter(|f| *f >= 35.0 && *f <= 90.0)
         .unwrap_or(DRIVER_FOV_DEG_DEFAULT)
 }
 
@@ -931,14 +931,18 @@ pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
 #[allow(clippy::type_complexity)]
 pub fn toggle_mode_system(
     keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
     mut mode: ResMut<CameraMode>,
     mut query: Query<
         (&Transform, &mut OrbitState, &mut FlyState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
-    let want_orbit = keys.just_pressed(KeyCode::F1);
-    let want_fly = keys.just_pressed(KeyCode::F2);
+    let defaults = crate::player_settings::PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&defaults);
+    let want_orbit =
+        settings.just_pressed(&keys, crate::player_settings::PlayerAction::OrbitCamera);
+    let want_fly = settings.just_pressed(&keys, crate::player_settings::PlayerAction::FlyCamera);
     if !want_orbit && !want_fly {
         return;
     }
@@ -1097,6 +1101,7 @@ fn handle_passenger_camera_key(
 /// **2** outside front · **3** outside rear · **5** passenger · **8** free/fly.
 pub fn cycle_follow_mode(
     keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
     replay: Option<Res<crate::train::ReplayState>>,
     live: Option<Res<crate::live::LiveDrive>>,
     mut mode: ResMut<CameraMode>,
@@ -1121,7 +1126,10 @@ pub fn cycle_follow_mode(
     };
     target.clamp_to(count);
 
-    let digit1 = keys.just_pressed(KeyCode::Digit1) || keys.just_pressed(KeyCode::Numpad1);
+    let defaults = crate::player_settings::PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&defaults);
+    let digit1 = settings.just_pressed(&keys, crate::player_settings::PlayerAction::DriverCamera)
+        || keys.just_pressed(KeyCode::Numpad1);
     if digit1 {
         let alt = alt_held(&keys);
         let ctrl = ctrl_held(&keys);
@@ -1175,7 +1183,9 @@ pub fn cycle_follow_mode(
     }
 
     // 2 — Camera Outside Front
-    if keys.just_pressed(KeyCode::Digit2) || keys.just_pressed(KeyCode::Numpad2) {
+    if settings.just_pressed(&keys, crate::player_settings::PlayerAction::ExteriorCamera)
+        || keys.just_pressed(KeyCode::Numpad2)
+    {
         *follow = CameraFollowMode::ChaseCam;
         *mode = CameraMode::Orbit;
         look.reset();
@@ -1183,7 +1193,9 @@ pub fn cycle_follow_mode(
     }
 
     // 3 — Camera Outside Rear (orbit follow as external alternate)
-    if keys.just_pressed(KeyCode::Digit3) || keys.just_pressed(KeyCode::Numpad3) {
+    if settings.just_pressed(&keys, crate::player_settings::PlayerAction::OrbitView)
+        || keys.just_pressed(KeyCode::Numpad3)
+    {
         *follow = CameraFollowMode::OrbitFollow;
         *mode = CameraMode::Orbit;
         look.reset();
@@ -1527,7 +1539,15 @@ pub fn orbit_camera_system(
         (&mut Transform, &mut OrbitState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
+    ui: Option<Res<crate::player_ui::PlayerUiState>>,
+    pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
+    cab: Option<Res<crate::cab_mouse::CabMouseState>>,
 ) {
+    if !crate::player_ui::camera_input_available(ui, pointer, cab) {
+        motion.clear();
+        wheel.clear();
+        return;
+    }
     if *mode != CameraMode::Orbit {
         motion.clear();
         wheel.clear();
@@ -1691,7 +1711,15 @@ pub fn fly_camera_system(
         (&mut Transform, &mut FlyState),
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
+    ui: Option<Res<crate::player_ui::PlayerUiState>>,
+    pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
+    cab: Option<Res<crate::cab_mouse::CabMouseState>>,
 ) {
+    if !crate::player_ui::camera_input_available(ui, pointer, cab) {
+        motion.clear();
+        wheel.clear();
+        return;
+    }
     if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() || follow.is_passenger() {
         motion.clear();
         wheel.clear();

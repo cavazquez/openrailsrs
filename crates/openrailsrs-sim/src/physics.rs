@@ -34,6 +34,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 }
 
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
+#[derive(Clone)]
 pub struct TrainPhysics {
     pub mass_kg: f64,
     pub max_power_w: f64,

@@ -33,12 +33,12 @@ target/debug/openrailsrs play-service examples/chiltern_local/scenario.toml --ou
 
 Controles: `1` cabina, `Alt+1` 2D/3D, `2` exterior, `W/S` inversor, `A/D`
 regulador, `;/'` freno de tren, `Backspace` emergencia, `Q` puertas,
-`Space` bocina, `V` limpiaparabrisas, `Pause` pausa, `R` reiniciar.
+`Space` bocina, `V` limpiaparabrisas, `P`/`Esc` pausa, `R` reiniciar.
 Las flechas desplazan la cámara y `PageUp/PageDown` cambian su altura.
 Estas teclas no modifican el regulador; `Q` no desplaza la cámara exterior.
 Open Rails 1.6.1 asigna `Q` a puertas izquierdas y `Shift+Q` a derechas;
 esta formación conserva por ahora un único mando para todas sus puertas.
-`F5` muestra conducción y presiones; `F4` muestra próxima estación y señal;
+`F5` muestra conducción y presiones; `F4` abre el monitor gráfico de vía;
 el monitor incluye reloj, horario y progreso. `F6` muestra la ayuda;
 `F3` habilita información de depuración; `C` abre el instrumental digital
 opcional sin ocultar por defecto los instrumentos de la cabina original.
@@ -56,8 +56,12 @@ postes kilométricos, advertencias y señales de fin de restricción como límit
 de velocidad. Las velocidades se limitan a 65 km/h para este servicio local.
 Las señales usan un script explícito de ocupación de tres aspectos para una
 formación; todavía no se ha traducido el SIGSCR completo de Chiltern.
-El selector de marcha y el corte en neutro funcionan; las maniobras de
-retroceso quedan pendientes en el modelo de física de recorrido dirigido.
+El selector de marcha admite retroceso sobre el mismo recorrido y rechaza
+cambios de sentido en movimiento. F9 permite separar una sección posterior
+asegurada y volver a acoplarla; M abre el mapa y despachador.
+F7 abre la libreta, F8 el HUD avanzado y F10 los ajustes.
+El menú de inicio y el guardado completan la interfaz de partida.
+Pruebas paso a paso: [guía manual](../../docs/PLAYER_MANUAL_TESTS.md).
 
 La captura [OR nativa completa](../baselines/chiltern_local/README.md) ya
 recorre las tres estaciones con las DLL originales 1.6.1 y controles

@@ -40,10 +40,11 @@ use crate::floating_origin::{FloatingOrigin, view_transform, view_translation};
 use crate::launch::ViewerSceneryMode;
 use crate::shapes::{
     RouteAssets, ShapeRenderAsset, apply_shape_descriptor_to_asset,
-    collect_loaded_shape_texture_paths, collect_pbr_normal_map_texture_paths,
+    collect_loaded_shape_texture_paths_with_flags, collect_pbr_normal_map_texture_paths,
     load_shape_file_and_loaded, load_shape_pbr_sidecar, prefetch_ace_textures,
     reset_shape_file_parse_count, shape_file_parse_count, shape_part_visible_for_day_night,
-    shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
+    shape_render_asset_from_loaded_with_ace_cache, texture_flags_for_shape,
+    texture_search_dirs_for_shape,
 };
 
 /// WORLD-tile membership for scenery unload (shapes LOD, Transfer, road cars, …) (#62 / #113).
@@ -2407,6 +2408,7 @@ fn build_world_shape_asset(
             false,
             false,
             pbr.as_ref(),
+            texture_flags_for_shape(&shape_path),
         ),
         None => {
             viewer_log!(
@@ -2512,6 +2514,7 @@ fn build_shape_lod_assets(
                 false,
                 false,
                 pbr.as_ref(),
+                base_asset.texture_flags,
             );
             apply_shape_descriptor_to_asset(shape_path, &mut asset);
             Some(asset)
@@ -2569,7 +2572,11 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
             progress
                 .texture_paths
-                .extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+                .extend(collect_loaded_shape_texture_paths_with_flags(
+                    loaded,
+                    &tex_refs,
+                    texture_flags_for_shape(&shape_path),
+                ));
             let pbr = load_shape_pbr_sidecar(&shape_path);
             progress
                 .texture_paths
@@ -4142,7 +4149,11 @@ pub fn spawn_world_boxes(
         if let Some((_, loaded)) = loaded {
             let tex_dirs = texture_search_dirs_for_shape(shape_path, &assets.route_dir);
             let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-            texture_paths.extend(collect_loaded_shape_texture_paths(loaded, &tex_refs));
+            texture_paths.extend(collect_loaded_shape_texture_paths_with_flags(
+                loaded,
+                &tex_refs,
+                texture_flags_for_shape(shape_path),
+            ));
             let pbr = load_shape_pbr_sidecar(shape_path);
             texture_paths.extend(collect_pbr_normal_map_texture_paths(
                 pbr.as_ref(),

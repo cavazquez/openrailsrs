@@ -17,7 +17,7 @@ pub enum OrtsBrakeShoeType {
 }
 
 /// Speed (km/h) vs coefficient of friction μ. OR normalizes to μ at standstill.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BrakeShoeFrictionCurve {
     points_kph: Vec<(f64, f64)>,
     mu_at_zero_kph: f64,

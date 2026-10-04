@@ -38,6 +38,7 @@
 //! This prevents the simulation from stalling mid-trip due to empty tender.
 
 use openrailsrs_train::SteamParams;
+use serde::{Deserialize, Serialize};
 
 // ── Physical constants ────────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ pub const INJECTOR_RATE_KG_PER_S: f64 = 5.0;
 ///
 /// This is initialised from [`SteamParams`] at the start of a simulation and
 /// updated every physics step.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BoilerState {
     /// Current boiler pressure (bar).
     pub pressure_bar: f64,

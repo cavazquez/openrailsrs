@@ -13,9 +13,10 @@
 
 use openrailsrs_formats::{BrakeShoeFrictionCurve, resolve_brake_shoe_curve};
 use openrailsrs_train::{Consist, Vehicle};
+use serde::{Deserialize, Serialize};
 
 /// State of one brake cylinder.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BrakeState {
     /// Pipe fully charged; no braking force.
     Charged,
@@ -28,7 +29,7 @@ pub enum BrakeState {
 }
 
 /// One brake cylinder, representing a single vehicle's brakes.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeCylinder {
     /// Distance from the front of the train (metres).
     pub position_m: f64,
@@ -40,6 +41,15 @@ pub struct BrakeCylinder {
     pub state: BrakeState,
     /// Currently applied force (N).
     pub current_force_n: f64,
+    /// Parking brake force, independent of train air.
+    #[serde(default)]
+    pub handbrake_force_n: f64,
+    /// An open disconnected hose vents this vehicle and everything behind it.
+    #[serde(default)]
+    pub air_vented: bool,
+    /// Closed angle cocks retain cylinder pressure and isolate driver commands.
+    #[serde(default)]
+    pub air_isolated: bool,
     /// Seconds of pipe-signal travel still to cover before this cylinder reacts.
     time_pending_s: f64,
     /// Apply/release ramp rate (N/s) when increasing cylinder force.
@@ -57,7 +67,7 @@ pub struct BrakeCylinder {
 }
 
 /// Per-vehicle brake cylinder specification for [`BrakeSystem`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeVehicleSpec {
     pub position_m: f64,
     pub max_force_n: f64,
@@ -158,6 +168,9 @@ impl BrakeCylinder {
             ep_instant,
             state: BrakeState::Charged,
             current_force_n: 0.0,
+            handbrake_force_n: 0.0,
+            air_vented: false,
+            air_isolated: false,
             time_pending_s: 0.0,
             apply_ramp_rate_n_per_s: max_force_n / apply_time_s,
             release_ramp_rate_n_per_s: max_force_n / release_time_s,
@@ -170,7 +183,8 @@ impl BrakeCylinder {
 
     /// Wheel-rim braking force after shoe μ(v) and optional skid adhesion cap.
     pub fn effective_force_n(&self, speed_mps: f64) -> f64 {
-        let shoe = self.current_force_n * self.shoe_friction.speed_factor(speed_mps);
+        let shoe = (self.current_force_n * self.shoe_friction.speed_factor(speed_mps))
+            .max(self.handbrake_force_n);
         if self.skid_adhesion_mu > 0.0 && self.mass_kg > 0.0 {
             shoe.min(self.mass_kg * 9.81 * self.skid_adhesion_mu)
         } else {
@@ -196,7 +210,7 @@ impl BrakeCylinder {
 }
 
 /// Whole-train brake system: a collection of cylinders fed by a single pipe.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeSystem {
     pub cylinders: Vec<BrakeCylinder>,
     /// Speed at which the brake-pipe pressure change propagates (m/s).
@@ -306,6 +320,14 @@ impl BrakeSystem {
         }
 
         for cyl in &mut self.cylinders {
+            if cyl.air_vented {
+                cyl.current_force_n = cyl.max_force_n;
+                cyl.state = BrakeState::Applied;
+                continue;
+            }
+            if cyl.air_isolated {
+                continue;
+            }
             // Drain pending travel time.
             if cyl.time_pending_s > 0.0 {
                 cyl.time_pending_s = (cyl.time_pending_s - dt).max(0.0);

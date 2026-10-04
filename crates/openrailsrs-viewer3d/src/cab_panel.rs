@@ -300,13 +300,16 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
 
 pub(crate) fn toggle_cab_panel(
     keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
     follow: Res<CameraFollowMode>,
     mut visible: ResMut<CabPanelVisible>,
 ) {
     if *follow != CameraFollowMode::DriverCam {
         return;
     }
-    if keys.just_pressed(KeyCode::KeyC) {
+    let defaults = crate::player_settings::PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&defaults);
+    if settings.just_pressed(&keys, crate::player_settings::PlayerAction::CabPanel) {
         visible.open = !visible.open;
     }
 }

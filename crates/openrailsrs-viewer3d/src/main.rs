@@ -115,6 +115,8 @@ struct LaunchConfig {
 }
 
 struct CliArgs {
+    menu: bool,
+    wait_parent: Option<u32>,
     live: bool,
     track_dev: bool,
     run_corridor: bool,
@@ -235,6 +237,8 @@ fn parse_cli() -> CliArgs {
 }
 
 fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
+    let mut menu = None;
+    let mut wait_parent = None;
     let mut live = false;
     let mut track_dev = false;
     let mut run_corridor = false;
@@ -247,7 +251,13 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
     let mut path = None;
     let mut args = args.into_iter().peekable();
     while let Some(arg) = args.next() {
-        if arg == "--live" {
+        if arg == "--wait-parent" {
+            wait_parent = args.next().and_then(|s| s.parse().ok());
+        } else if arg == "--menu" {
+            menu = Some(true);
+        } else if arg == "--direct" {
+            menu = Some(false);
+        } else if arg == "--live" {
             live = true;
         } else if arg == "--track-dev" {
             track_dev = true;
@@ -276,6 +286,8 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
         }
     }
     CliArgs {
+        wait_parent,
+        menu: menu.unwrap_or(path.is_none() && !audit_placement && !audit_tr_item),
         live,
         track_dev,
         run_corridor,
@@ -292,6 +304,12 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
 fn main() {
     init_viewer_log();
     let cli = parse_cli();
+    if let Some(parent) = cli.wait_parent {
+        let deadline = Instant::now() + std::time::Duration::from_secs(10);
+        while PathBuf::from(format!("/proc/{parent}")).exists() && Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+    }
 
     if cli.audit_placement {
         if let Err(err) = run_audit_placement_mode(&cli) {
@@ -321,21 +339,23 @@ fn main() {
     let route_root = cli.route_root.clone();
     let cab_fov_deg = cli.cab_fov_deg;
     let (tx, rx) = std::sync::mpsc::sync_channel::<Result<RouteLoadBundle, String>>(1);
-    std::thread::Builder::new()
-        .name("route-load".into())
-        .spawn(move || {
-            let result = load_route_bundle_for_viewer(
-                &path,
-                live,
-                track_dev,
-                run_corridor,
-                tile_lab,
-                route_root.as_deref(),
-                cab_fov_deg,
-            );
-            let _ = tx.send(result);
-        })
-        .expect("spawn route-load thread");
+    if !cli.menu {
+        std::thread::Builder::new()
+            .name("route-load".into())
+            .spawn(move || {
+                let result = load_route_bundle_for_viewer(
+                    &path,
+                    live,
+                    track_dev,
+                    run_corridor,
+                    tile_lab,
+                    route_root.as_deref(),
+                    cab_fov_deg,
+                );
+                let _ = tx.send(result);
+            })
+            .expect("spawn route-load thread");
+    }
 
     viewer_log!("openrailsrs-viewer3d: starting Bevy app (route load in background, #55)");
     // #82: do not log time_to_window here — App/plugins/event loop have not started.
@@ -381,23 +401,57 @@ fn main() {
                 ..default()
             }),
     )
-    .insert_resource(PendingRouteLoad {
-        rx: std::sync::Mutex::new(rx),
-        started: boot,
-    })
     .insert_resource(ViewerBootClock::new(boot))
     .add_plugins(ViewerPlugin)
-    .add_systems(Startup, setup_viewer_loading_ui)
+    .add_systems(OnEnter(ViewerAppState::Loading), setup_viewer_loading_ui)
     .add_systems(
         Update,
         (
             log_time_to_first_presented_frame,
             poll_route_load.run_if(in_state(ViewerAppState::Loading)),
             update_loading_screen_progress,
+            begin_player_launch,
             exit_on_esc,
         ),
     );
 
+    let mut settings = openrailsrs_viewer3d::player_settings::PlayerSettings::load(
+        &openrailsrs_viewer3d::player_settings::player_data_dir().join("settings.json"),
+    )
+    .unwrap_or_else(|error| {
+        eprintln!("Ajustes: {error}");
+        Default::default()
+    });
+    if !cli.menu {
+        settings.view_distance_m = openrailsrs_viewer3d::view_radius_m();
+        if let Some(fov) = cli.cab_fov_deg {
+            settings.cab_fov_deg = fov;
+        }
+        settings.shadows = openrailsrs_viewer3d::scene::shadows_enabled();
+        app.insert_resource(PendingRouteLoad {
+            rx: std::sync::Mutex::new(rx),
+            started: boot,
+        });
+    }
+    app.insert_resource(settings)
+        .insert_resource(
+            openrailsrs_viewer3d::player_launch::PlayerLaunchMenu::discover(
+                Path::new("."),
+                cli.route_root.clone(),
+            ),
+        )
+        .insert_resource(openrailsrs_viewer3d::player_launch::ActivePlayerContent {
+            route_root: cli.route_root.clone(),
+            description: openrailsrs_scenarios::load_scenario(&cli.path)
+                .map(|s| s.scenario.description)
+                .unwrap_or_default(),
+            weather: Default::default(),
+        });
+    app.insert_state(if cli.menu {
+        ViewerAppState::Menu
+    } else {
+        ViewerAppState::Loading
+    });
     app.run();
 }
 
@@ -505,6 +559,21 @@ fn load_route_bundle_for_viewer(
     let route_offset = config
         .route_offset_override
         .unwrap_or_else(|| RouteWorldOffset::from_scene_and_world(&config.scene, &config.world));
+    // Expand dispatch tools after fixing the initial render frame; loading the full
+    // network must not move the train/camera to the midpoint of a 200 km route.
+    if let (Some(live), Some(scenario)) = (config.live.as_mut(), config.scenario.as_ref()) {
+        let logical = path
+            .parent()
+            .unwrap_or(Path::new("."))
+            .join(&scenario.route.path);
+        let network_dir = openrailsrs_viewer3d::player_launch::dispatch_network_dir(&logical);
+        if network_dir != logical && network_dir.join("track.toml").is_file() {
+            let network = openrailsrs_route::load_track_graph_from_route_dir(&network_dir)
+                .map_err(|e| e.to_string())?;
+            live.expand_dispatch_network(network, scenario)?;
+            config.scene.graph = live.session.graph.clone();
+        }
+    }
     log_coord_debug_if_enabled(&config.scene, &config.world, route_offset);
     log_scenery_debug_if_enabled(&config.route_dir, &config.world, route_focus.center);
 
@@ -537,6 +606,7 @@ fn load_route_bundle_for_viewer(
     }
 
     Ok(RouteLoadBundle {
+        saved_camera: None,
         title: config.title,
         route_dir: config.route_dir,
         scene: config.scene,
@@ -1562,9 +1632,62 @@ fn load_train_consists(
     scene
 }
 
+fn begin_player_launch(
+    mut commands: Commands,
+    mut queue: ResMut<openrailsrs_viewer3d::player_launch::PlayerLaunchQueue>,
+    mut next: ResMut<NextState<ViewerAppState>>,
+    settings: Res<openrailsrs_viewer3d::player_settings::PlayerSettings>,
+    mut content: ResMut<openrailsrs_viewer3d::player_launch::ActivePlayerContent>,
+) {
+    let Some(request) = queue.0.take() else {
+        return;
+    };
+    openrailsrs_viewer3d::launch::set_viewing_distance_m(settings.view_distance_m);
+    content.route_root = request.route_root.clone();
+    content.weather = request.weather;
+    content.description = openrailsrs_scenarios::load_scenario(&request.path)
+        .map(|s| s.scenario.description)
+        .unwrap_or_default();
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    let fov = settings.cab_fov_deg;
+    std::thread::Builder::new()
+        .name("player-route-load".into())
+        .spawn(move || {
+            let result = load_route_bundle_for_viewer(
+                &request.path,
+                true,
+                false,
+                false,
+                false,
+                request.route_root.as_deref(),
+                Some(fov),
+            )
+            .and_then(|mut bundle| {
+                if let Some(path) = request.resume {
+                    let saved = openrailsrs_viewer3d::saved_game::SavedGame::read(&path)?;
+                    let live = bundle
+                        .live
+                        .as_mut()
+                        .ok_or("La partida no tiene un tren de jugador")?;
+                    bundle.saved_camera = Some(saved.restore(live)?);
+                }
+                Ok(bundle)
+            });
+            let _ = tx.send(result);
+        })
+        .expect("spawn player loader");
+    commands.insert_resource(PendingRouteLoad {
+        rx: std::sync::Mutex::new(rx),
+        started: Instant::now(),
+    });
+    next.set(ViewerAppState::Loading);
+}
+
 fn exit_on_esc(
     keys: Res<ButtonInput<KeyCode>>,
     mut dialog: ResMut<TeleportDialog>,
+    live: Option<Res<LiveDrive>>,
+    state: Res<State<ViewerAppState>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if !keys.just_pressed(KeyCode::Escape) {
@@ -1574,7 +1697,10 @@ fn exit_on_esc(
         openrailsrs_viewer3d::teleport::close_teleport_dialog(&mut dialog);
         return;
     }
-    exit.write(AppExit::Success);
+    // A live game routes Escape to the pause menu, where Quit is explicit.
+    if live.is_none() && *state.get() != ViewerAppState::Menu {
+        exit.write(AppExit::Success);
+    }
 }
 
 #[cfg(test)]

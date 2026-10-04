@@ -127,3 +127,26 @@ fn station_nodes_outside_the_chosen_path_are_rejected() {
     scenario.route.stops[1].node = "missing_station".into();
     assert!(LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).is_err());
 }
+
+#[test]
+fn full_dispatch_network_preserves_the_complete_player_service() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern_local/scenario.toml");
+    let scenario = load_scenario(&path).unwrap();
+    let network = openrailsrs_route::load_track_graph_from_route_dir(
+        path.parent().unwrap().parent().unwrap().join("chiltern"),
+    )
+    .unwrap();
+    let mut train = session();
+    train.expand_dispatch_network(&network, &scenario).unwrap();
+    while !train.arrived && train.time_s() < 1800.0 {
+        train.step_autodrive(0.1, 0.75, |_| {});
+    }
+    assert_eq!(
+        train.gameplay.phase,
+        ServicePhase::Completed,
+        "{:?}",
+        train.gameplay.failure
+    );
+    assert_eq!(train.gameplay.stop_results.len(), 3);
+}

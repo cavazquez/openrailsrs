@@ -22,14 +22,31 @@ pub fn overlay_scale_from_shader(shader: &TerrainShader) -> f32 {
 }
 
 pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf> {
-    let base = Path::new(file_name).file_name()?.to_str()?;
-    for subdir in ["TERRTEX", "terrtex"] {
-        let path = route_dir.join(subdir).join(base);
-        if path.is_file() {
-            return Some(path);
-        }
+    resolve_terrtex_for_environment(
+        route_dir,
+        file_name,
+        crate::shapes::scenery_texture_environment(
+            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0),
+        ),
+    )
+}
+
+fn resolve_terrtex_for_environment(
+    route_dir: &Path,
+    file_name: &str,
+    environment: openrailsrs_bevy_scenery::textures::TextureEnvironment,
+) -> Option<PathBuf> {
+    let base = openrailsrs_bevy_scenery::textures::texture_file_basename(file_name);
+    // OR Helpers.GetTerrainTextureFile uses Snow in winter regardless of weather.
+    // Fall back to the base asset when a pack has no winter variant.
+    let root = route_dir.join("TERRTEX");
+    if environment.is_snow()
+        && let Some(path) =
+            openrailsrs_formats::resolve_path_case_insensitive(&root.join("Snow").join(base))
+    {
+        return Some(path);
     }
-    None
+    openrailsrs_formats::resolve_path_case_insensitive(&root.join(base))
 }
 
 pub fn load_terrtex_image(route_dir: &Path, file_name: &str) -> Option<Image> {
@@ -104,7 +121,11 @@ fn texture_handle(
     sanitize_base_alpha: bool,
 ) -> Option<Handle<Image>> {
     let key = format!(
-        "{file_name}:{}",
+        "{file_name}:{}:{}",
+        crate::shapes::scenery_texture_environment(
+            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0)
+        )
+        .cache_key(),
         if sanitize_base_alpha { "base" } else { "raw" }
     );
     if let Some(handle) = cache.get(&key) {
@@ -125,6 +146,35 @@ mod tests {
     use super::*;
     use bevy::image::{ImageAddressMode, ImageSampler};
     use openrailsrs_formats::TerrainUvCalc;
+
+    #[test]
+    fn winter_terrain_uses_native_snow_and_falls_back_for_missing_variants() {
+        use openrailsrs_bevy_scenery::textures::TextureEnvironment;
+        let route = tempfile::tempdir().unwrap();
+        let base = route.path().join("terrtex/Grass.ACE");
+        let snow = route.path().join("terrtex/SNOW/Grass.ACE");
+        std::fs::create_dir_all(snow.parent().unwrap()).unwrap();
+        std::fs::write(&base, []).unwrap();
+        std::fs::write(&snow, []).unwrap();
+        let winter = TextureEnvironment::from_cli("winter", "clear", false);
+        assert_eq!(
+            resolve_terrtex_for_environment(route.path(), r"TERRTEX\grass.ace", winter),
+            Some(snow.clone())
+        );
+        assert_eq!(
+            resolve_terrtex_for_environment(
+                route.path(),
+                "grass.ace",
+                TextureEnvironment::summer_day()
+            ),
+            Some(base.clone())
+        );
+        std::fs::remove_file(snow).unwrap();
+        assert_eq!(
+            resolve_terrtex_for_environment(route.path(), "grass.ace", winter),
+            Some(base)
+        );
+    }
 
     #[test]
     fn overlay_scale_defaults_to_32() {

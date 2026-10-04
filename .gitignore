@@ -83,3 +83,6 @@ backtrace.txt
 **/*.bak.*
 scripts/__pycache__/
 /json
+
+# Local player preferences, launch selections and save slots.
+/player-data/

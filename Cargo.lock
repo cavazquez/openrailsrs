@@ -4401,6 +4401,7 @@ dependencies = [
  "flate2",
  "openrailsrs-core",
  "pretty_assertions",
+ "serde",
  "tempfile",
  "thiserror 2.0.21",
 ]
@@ -4510,6 +4511,7 @@ dependencies = [
  "openrailsrs-validate",
  "pretty_assertions",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
@@ -4573,6 +4575,7 @@ dependencies = [
  "openrailsrs-bevy-scenery",
  "openrailsrs-core",
  "openrailsrs-formats",
+ "openrailsrs-msts",
  "openrailsrs-or-shader",
  "openrailsrs-route",
  "openrailsrs-scenarios",

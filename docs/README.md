@@ -17,3 +17,6 @@
 | [`THIRD_PARTY.md`](THIRD_PARTY.md) | Licencias externas |
 
 Raíz del repo: [`README.md`](../README.md) · [`ROADMAP.md`](../ROADMAP.md).
+
+Para jugar y comprobar los menús, guardado, operaciones y HUD:
+[`PLAYER_MANUAL_TESTS.md`](PLAYER_MANUAL_TESTS.md).

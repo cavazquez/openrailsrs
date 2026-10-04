@@ -46,6 +46,7 @@ pub struct LiveDrive {
     render_frame_remainder_s: f64,
     scenario_dir: PathBuf,
     scenario_path: PathBuf,
+    dispatch_network: Option<openrailsrs_track::TrackGraph>,
 }
 
 /// Initial close-chase framing derived from the player consist.
@@ -148,6 +149,7 @@ impl LiveDrive {
             render_frame_remainder_s: 0.0,
             scenario_dir: scenario_dir.to_path_buf(),
             scenario_path: scenario_path.to_path_buf(),
+            dispatch_network: None,
         })
     }
 
@@ -159,6 +161,9 @@ impl LiveDrive {
             .map_err(|e| e.to_string())?;
         self.session = LiveDriveSession::from_scenario(&self.scenario_dir, &scenario)
             .map_err(|e| e.to_string())?;
+        if let Some(network) = &self.dispatch_network {
+            self.session.expand_dispatch_network(network, &scenario)?;
+        }
         self.paused = false;
         self.start_clock_s = scenario
             .scenario
@@ -177,6 +182,43 @@ impl LiveDrive {
     pub fn visual_position_at_head_offset(&self, offset_m: f64) -> Option<(String, f64)> {
         self.session
             .render_position_at_head_offset(offset_m, self.render_frame_remainder_s)
+    }
+
+    pub fn expand_dispatch_network(
+        &mut self,
+        network: openrailsrs_track::TrackGraph,
+        scenario: &ScenarioFile,
+    ) -> Result<(), String> {
+        self.session.expand_dispatch_network(&network, scenario)?;
+        self.dispatch_network = Some(network);
+        Ok(())
+    }
+
+    pub fn visual_position_for_car(&self, offset: f64, car_offset: f64) -> Option<(String, f64)> {
+        let chainage = self.session.presentation_chainage_for_car(
+            offset,
+            car_offset,
+            self.render_frame_remainder_s,
+        );
+        openrailsrs_sim::path_data::PathData::position_at_odometer(
+            &self.session.state.path_edges,
+            &self.session.path_data.edges,
+            chainage.max(0.0),
+        )
+    }
+
+    pub fn visual_car_distance_m(&self, car_offset: f64) -> f64 {
+        self.session
+            .presentation_chainage_for_car(0.0, car_offset, self.render_frame_remainder_s)
+            - self.session.start_chainage_m
+    }
+
+    pub fn scenario_path(&self) -> &Path {
+        &self.scenario_path
+    }
+
+    pub fn reset_presentation_clock(&mut self) {
+        self.render_frame_remainder_s = 0.0;
     }
 
     pub fn clock_time_s(&self) -> f64 {
@@ -353,74 +395,72 @@ pub fn live_audio_frame(live: Res<LiveDrive>) {
 /// Driver controls — Open Rails default InputSettings:
 /// **A/D** throttle · **;/'** train brake · **W/S** reverser · **Space** horn ·
 /// **V** wiper · **Backspace** emergency · arrows kept as aliases.
-pub fn live_driver_input(keys: Res<ButtonInput<KeyCode>>, mut live: ResMut<LiveDrive>) {
-    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
-    if (keys.just_pressed(KeyCode::KeyP) && !shift) || keys.just_pressed(KeyCode::Pause) {
+pub fn live_driver_input(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut live: ResMut<LiveDrive>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
+    ui: Option<Res<crate::player_ui::PlayerUiState>>,
+) {
+    use crate::player_settings::{PlayerAction as A, PlayerSettings};
+    if ui
+        .as_ref()
+        .is_some_and(|u| u.panel != crate::player_ui::PlayerPanel::None)
+    {
+        return;
+    }
+    let fallback = PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&fallback);
+    let pressed = |action| settings.just_pressed(&keys, action);
+    // The UI owns pause in the game; standalone system tests retain the same control.
+    if ui.is_none() && pressed(A::Pause) {
         live.paused = !live.paused;
     }
-    if keys.just_pressed(KeyCode::KeyR)
+    if pressed(A::Reset)
         && let Err(err) = live.reset()
     {
         viewer_log!("openrailsrs-viewer3d: live reset failed: {err}");
     }
-
-    // OR ControlThrottleIncrease/Decrease (D / A). Camera keys are exclusive.
-    let throttle_up = keys.just_pressed(KeyCode::KeyD);
-    let throttle_down = keys.just_pressed(KeyCode::KeyA);
-    if throttle_up {
+    if pressed(A::ThrottleUp) {
         live.session.driver_throttle = (live.session.driver_throttle + 0.1).min(1.0);
     }
-    if throttle_down {
+    if pressed(A::ThrottleDown) {
         live.session.driver_throttle = (live.session.driver_throttle - 0.1).max(0.0);
     }
-
-    // OR ControlTrainBrakeIncrease/Decrease (' / ;)
-    if keys.just_pressed(KeyCode::Quote) {
+    if pressed(A::BrakeUp) {
         live.session.driver_brake = (live.session.driver_brake + 0.15).min(1.0);
     }
-    if keys.just_pressed(KeyCode::Semicolon) {
+    if pressed(A::BrakeDown) {
         live.session.driver_brake = (live.session.driver_brake - 0.15).max(0.0);
     }
-
-    // OR ControlEmergencyPushButton (Backspace)
-    if keys.just_pressed(KeyCode::Backspace) {
+    if pressed(A::Emergency) {
         live.session.driver_throttle = 0.0;
         live.session.driver_brake = 1.0;
     }
-
-    // OR ControlForwards / ControlBackwards (W / S); \ = neutral.
-    if keys.just_pressed(KeyCode::KeyW) {
-        live.session.driver_direction = 1.0;
+    if pressed(A::Forward) {
+        let _ = live.session.set_direction(1.0);
     }
-    if keys.just_pressed(KeyCode::KeyS) {
-        live.session.driver_direction = 0.0;
+    if pressed(A::Reverse) {
+        let _ = live.session.set_direction(0.0);
     }
-    if keys.just_pressed(KeyCode::Backslash) {
-        live.session.driver_direction = 0.5;
+    if pressed(A::Neutral) {
+        let _ = live.session.set_direction(0.5);
     }
-
-    // OR ControlHorn (Space); H kept as alias.
-    if keys.just_pressed(KeyCode::Space) || keys.just_pressed(KeyCode::KeyH) {
+    if pressed(A::Horn) {
         live.session.trigger_horn(0.35);
         if let Some(ref audio) = live.audio {
             audio.send(AudioCmd::Horn);
         }
     }
-
-    // OR ControlWiper (V); U kept as alias.
-    if keys.just_pressed(KeyCode::KeyV) || keys.just_pressed(KeyCode::KeyU) {
+    if pressed(A::Wiper) {
         live.session.toggle_wiper();
     }
-
-    // OR Q / Shift+Q doors. This consist currently has one shared door target.
-    if keys.just_pressed(KeyCode::KeyQ) {
+    if pressed(A::Doors) {
         live.session.toggle_doors();
     }
-
-    if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
+    if pressed(A::Faster) {
         live.session.speed_mul = (live.session.speed_mul * 2.0).min(16.0);
     }
-    if keys.just_pressed(KeyCode::Minus) || keys.just_pressed(KeyCode::NumpadSubtract) {
+    if pressed(A::Slower) {
         live.session.speed_mul = (live.session.speed_mul / 2.0).max(0.25);
     }
 }

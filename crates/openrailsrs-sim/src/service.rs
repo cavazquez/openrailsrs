@@ -3,14 +3,14 @@
 //! Distances are absolute path chainage, unlike the journey odometer which starts
 //! at zero after a scenario spawn offset. No position or velocity is snapped.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::exterior::DoorState;
 
 pub const STOP_POSITION_TOLERANCE_M: f64 = 10.0;
 pub const STOP_SPEED_TOLERANCE_MPS: f64 = 0.1;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveStopTarget {
     pub node_id: String,
     pub cum_dist_m: f64,
@@ -23,7 +23,7 @@ pub struct LiveStopTarget {
     pub passengers_off: u32,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ServicePhase {
     #[default]
@@ -34,7 +34,7 @@ pub enum ServicePhase {
     Failed,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceStopResult {
     pub name: String,
     pub node: String,
@@ -47,7 +47,7 @@ pub struct ServiceStopResult {
     pub delay_s: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveGameplay {
     pub destination: String,
     pub destination_node: String,
@@ -91,6 +91,10 @@ impl LiveGameplay {
 
     pub fn is_finished(&self) -> bool {
         matches!(self.phase, ServicePhase::Completed | ServicePhase::Failed)
+    }
+
+    pub fn current_arrival_s(&self) -> Option<f64> {
+        self.arrival.map(|a| a.0)
     }
 
     pub fn remaining_dwell_s(&self, time_s: f64) -> f64 {

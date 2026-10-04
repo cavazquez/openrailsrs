@@ -1,11 +1,12 @@
 use openrailsrs_core::SimTime;
 use openrailsrs_train::{Consist, Vehicle};
+use serde::{Deserialize, Serialize};
 
 use crate::brake::BrakeSystem;
 use crate::coupler::{CouplerKind, CouplerState, VehicleState};
 use crate::steam::BoilerState;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
     pub time: SimTime,
     pub path_edges: Vec<String>,

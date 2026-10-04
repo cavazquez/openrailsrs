@@ -148,6 +148,12 @@ fn build_live_gameplay(
 /// Interactive session: same physics as headless `sim` / `cab`, stepped from a real-time loop.
 pub struct LiveDriveSession {
     pub scenario_name: String,
+    pub formation: crate::FormationState,
+    pub signal_overrides: HashMap<String, SignalAspect>,
+    pub(crate) consist: openrailsrs_train::Consist,
+    pub(crate) original_physics: TrainPhysics,
+    pub(crate) content_signature: String,
+    pub(crate) stop_offsets: HashMap<String, f64>,
     pub state: TrainSimState,
     pub physics: TrainPhysics,
     pub path_data: PathData,
@@ -166,13 +172,13 @@ pub struct LiveDriveSession {
     /// Door / pantograph presentation for exterior shape keys (#81).
     pub exterior: RollingStockExteriorState,
     /// Sim time until which horn button appears pressed (cab M5).
-    horn_pressed_until_s: f64,
+    pub(crate) horn_pressed_until_s: f64,
     /// Wiper switch (cab CVF TWO_STATE / EXTERNALWIPERS).
     pub wiper_active: bool,
     pub speed_mul: f64,
-    sim_time_remainder: f64,
-    previous_render_chainage_m: f64,
-    signal_steps: u64,
+    pub(crate) sim_time_remainder: f64,
+    pub(crate) previous_render_chainage_m: f64,
+    pub(crate) signal_steps: u64,
     pub arrived: bool,
     pub start_chainage_m: f64,
 }
@@ -276,6 +282,17 @@ impl LiveDriveSession {
 
         Ok(Self {
             scenario_name: scenario.scenario.name.clone(),
+            formation: crate::FormationState::new(&consist),
+            signal_overrides: HashMap::new(),
+            original_physics: physics.clone(),
+            content_signature: crate::operations::content_signature(&graph, scenario, &consist),
+            consist,
+            stop_offsets: scenario
+                .route
+                .stops
+                .iter()
+                .map(|s| (s.node.clone(), s.offset_m))
+                .collect(),
             state,
             physics,
             path_data,
@@ -298,6 +315,17 @@ impl LiveDriveSession {
             arrived: false,
             start_chainage_m,
         })
+    }
+
+    pub fn set_direction(&mut self, direction: f64) -> Result<(), String> {
+        if (direction - self.driver_direction).abs() > 0.01
+            && self.velocity_mps() > 0.1
+            && direction != 0.5
+        {
+            return Err("Detené el tren antes de invertir el sentido".into());
+        }
+        self.driver_direction = direction.clamp(0.0, 1.0);
+        Ok(())
     }
 
     pub fn trigger_horn(&mut self, hold_s: f64) {
@@ -347,11 +375,12 @@ impl LiveDriveSession {
         offset_along_path_m: f64,
         frame_remainder_s: f64,
     ) -> Option<(String, f64)> {
-        let interpolated = self.render_head_chainage_m(frame_remainder_s);
+        let interpolated =
+            self.presentation_chainage_at_offset(offset_along_path_m, frame_remainder_s);
         PathData::position_at_odometer(
             &self.state.path_edges,
             &self.path_data.edges,
-            (interpolated + offset_along_path_m).max(0.0),
+            interpolated.max(0.0),
         )
     }
 
@@ -525,8 +554,28 @@ impl LiveDriveSession {
         };
         let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
         let main_res_bar = boiler_bar.unwrap_or(8.0 - self.driver_brake * 2.0);
-        let brake_pipe_bar = (5.0 - self.driver_brake * 3.5).max(0.0);
-        let brake_cyl_bar = (self.driver_brake * 4.5).min(5.0);
+        let head_vented = self
+            .state
+            .brake_system
+            .cylinders
+            .first()
+            .is_some_and(|b| b.air_vented);
+        let brake_pipe_bar = if head_vented {
+            0.0
+        } else {
+            (5.0 - self.driver_brake * 3.5).max(0.0)
+        };
+        let cylinders = &self.state.brake_system.cylinders;
+        let brake_cyl_bar = if cylinders.is_empty() {
+            self.driver_brake * 4.5
+        } else {
+            cylinders
+                .iter()
+                .map(|b| (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0))
+                .sum::<f64>()
+                / cylinders.len() as f64
+                * 4.5
+        };
         CabTelemetry {
             speed_kmh,
             limit_kmh,
@@ -622,7 +671,8 @@ impl LiveDriveSession {
             if let Some(throttle) = automatic {
                 self.autodrive_inputs(throttle);
             }
-            self.state.throttle = if self.driver_direction >= 0.75
+            self.state.throttle = if (self.driver_direction >= 0.75
+                || self.driver_direction <= 0.25)
                 && self.exterior.door == crate::exterior::DoorState::Closed
                 && !matches!(
                     self.gameplay.phase,
@@ -636,9 +686,40 @@ impl LiveDriveSession {
             let red_distance = self.distance_to_red_signal_m();
             let previous_odometer = self.state.odometer_m;
             self.previous_render_chainage_m = self.head_chainage_m();
-            let res = step(&mut self.state, &self.path_data, &self.physics, dt);
-            if red_distance
-                .is_some_and(|distance| self.state.odometer_m - previous_odometer > distance + 0.01)
+            let backwards = self.driver_direction <= 0.25;
+            let res = if backwards {
+                let previous = self.head_chainage_m();
+                let old_odometer = self.state.odometer_m;
+                let mut edge = self.path_data.edges[self.state.edge_index].clone();
+                edge.length_m = 1.0e12;
+                edge.grade_percent = -edge.grade_percent;
+                self.state.edge_index = 0;
+                self.state.pos_on_edge_m = 0.0;
+                step(
+                    &mut self.state,
+                    &PathData { edges: vec![edge] },
+                    &self.physics,
+                    dt,
+                );
+                let traveled = (self.state.odometer_m - old_odometer).min(previous);
+                apply_start_offset(&mut self.state, &self.path_data, previous - traveled);
+                self.state.odometer_m = old_odometer + traveled;
+                if previous - traveled <= 0.001 {
+                    self.state.velocity_mps = 0.0;
+                    for vehicle in &mut self.state.vehicles {
+                        vehicle.velocity_mps = 0.0;
+                    }
+                    self.driver_throttle = 0.0;
+                    self.driver_brake = 1.0;
+                }
+                crate::physics::StepResult { arrived: false }
+            } else {
+                step(&mut self.state, &self.path_data, &self.physics, dt)
+            };
+            if !backwards
+                && red_distance.is_some_and(|distance| {
+                    self.state.odometer_m - previous_odometer > distance + 0.01
+                })
             {
                 self.gameplay.fail("Señal de parada rebasada");
             }
@@ -732,12 +813,13 @@ impl LiveDriveSession {
         self.signal_steps += 1;
         let every = (1.0 / step_dt).round().max(1.0) as u64;
         if every > 0 && self.signal_steps.is_multiple_of(every) {
-            let mut block_map = HashMap::new();
-            if let Some(eid) = self.state.current_edge() {
-                block_map.insert(eid.to_string(), "player".to_string());
-            }
+            let block_map = self.occupied_edges();
             self.graph.evaluate_signals(&block_map);
             for sig in self.graph.signals() {
+                if let Some(aspect) = self.signal_overrides.get(&sig.id) {
+                    self.signal_runtime.insert(sig.id.clone(), *aspect);
+                    continue;
+                }
                 if sig
                     .clear_after_s
                     .is_some_and(|clear_t| self.state.time_s() >= clear_t)
@@ -749,7 +831,25 @@ impl LiveDriveSession {
                 if self.assume_signals_clear && sig.script.is_none() {
                     continue;
                 }
-                self.signal_runtime.insert(sig.id.clone(), sig.aspect);
+                let governs_player = self
+                    .state
+                    .path_edges
+                    .iter()
+                    .enumerate()
+                    .skip(self.state.edge_index)
+                    .any(|(index, edge)| {
+                        edge == &sig.edge_id
+                            && (index > self.state.edge_index
+                                || sig.position_m >= self.pos_on_edge_m())
+                    });
+                let aspect = if governs_player {
+                    self.graph
+                        .signal_aspect_for_occupancy(&sig.id, &block_map, Some("Jugador"))
+                        .unwrap_or(sig.aspect)
+                } else {
+                    sig.aspect
+                };
+                self.signal_runtime.insert(sig.id.clone(), aspect);
             }
         }
     }

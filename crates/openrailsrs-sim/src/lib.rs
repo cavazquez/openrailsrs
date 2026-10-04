@@ -8,6 +8,8 @@ pub mod etcs;
 pub mod exterior;
 pub mod live_drive;
 pub mod multi_runner;
+pub mod operations;
+pub use operations::{CarOperation, CarOperationState, FormationState, SessionSnapshot};
 pub mod path;
 pub mod path_data;
 pub mod physics;

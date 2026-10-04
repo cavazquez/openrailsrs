@@ -2,8 +2,9 @@
 //!
 //! Visual-only: doors / pantograph command for shape keys. Not air-brake physics.
 
+use serde::{Deserialize, Serialize};
 /// Door presentation (OR-style coarse states).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DoorState {
     #[default]
     Closed,
@@ -20,7 +21,7 @@ impl DoorState {
 }
 
 /// Consist-level exterior anim targets consumed by the viewer.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RollingStockExteriorState {
     pub door: DoorState,
     /// OR pantograph `CommandUp` (true = raise / up).

@@ -15,8 +15,9 @@
 //! When `state.vehicles` is empty the old single-mass path is used unchanged
 //! (backwards-compatible).
 
+use serde::{Deserialize, Serialize};
 /// Per-vehicle kinematic state.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VehicleState {
     /// Current velocity (m/s).
     pub velocity_mps: f64,
@@ -29,7 +30,7 @@ pub struct VehicleState {
 /// `extension_m` is positive when the coupler is in tension (vehicles pulling
 /// apart) and negative when in compression.  Within ±`free_play_m` the spring
 /// force is zero (slack).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CouplerState {
     /// Spring stiffness (N/m). Typical value: 2e6 N/m.
     pub stiffness_n_per_m: f64,

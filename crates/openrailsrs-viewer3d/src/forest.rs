@@ -12,7 +12,7 @@ use openrailsrs_bevy_scenery::{
 };
 use std::time::Instant;
 
-use crate::shapes::load_ace_image;
+use crate::shapes::load_ace_image_with_flags;
 use crate::terrain::TerrainElevation;
 use crate::track::{SceneBounds, TrackScene, TrackSegmentIndex, forest_track_clearance_m};
 use crate::world::{RouteFocus, RouteWorldOffset, WorldObject, WorldScene, horizontal_distance_xz};
@@ -215,7 +215,13 @@ pub fn spawn_forest_objects(
             material_cache
                 .entry(tex_name.to_string())
                 .or_insert_with(|| {
-                    if let Some(image) = load_ace_image(&assets.route_dir, tex_name) {
+                    if let Some(image) = load_ace_image_with_flags(
+                        &assets.route_dir,
+                        tex_name,
+                        openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                            openrailsrs_bevy_scenery::textures::TextureFlags::FOREST,
+                        ),
+                    ) {
                         let handle = images.add(image);
                         create_or_forest_material(materials, handle)
                     } else {

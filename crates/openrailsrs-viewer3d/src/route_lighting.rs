@@ -23,6 +23,41 @@ pub struct RouteSunState {
     last_clock_s: Option<f64>,
 }
 
+fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<RouteSunState> {
+    let tile_x = openrailsrs_formats::msts_tile_x_index_for_coord(world.x);
+    let tile_z = openrailsrs_formats::msts_tile_z_index_for_coord(world.z);
+    let local_x = f64::from(world.x) - f64::from(tile_x) * 2048.0;
+    let local_z = -f64::from(world.z) - f64::from(tile_z) * 2048.0;
+    let position = geographic_position(tile_x, tile_z, local_x, local_z)?;
+    let environment = RouteFile::from_route_dir(&assets.route_dir)
+        .ok()
+        .and_then(|route| route.environment_path(&assets.route_dir, &live.season, "Clear"))
+        .and_then(|path| EnvironmentSun::from_path(&path).ok().flatten());
+    let direction = solar_direction(
+        position,
+        season_ordinal(&live.season, position.latitude),
+        live.clock_time_s(),
+        environment,
+    );
+    Some(RouteSunState {
+        position,
+        environment,
+        direction,
+        ambient_scale: 0.02 + 0.98 * (direction.y * 2.0).clamp(0.0, 1.0),
+        last_clock_s: None,
+    })
+}
+
+/// Publish the launch environment before any train, cab or scenery textures load.
+pub fn prepare_route_textures(live: Option<&LiveDrive>, assets: &RouteAssets, center: Vec3) {
+    crate::shapes::set_scenery_season(live.map(|l| l.season.as_str()).unwrap_or("summer"));
+    if let Some(live) = live
+        && let Some(sun) = route_sun_at(live, assets, center)
+    {
+        crate::shapes::set_scenery_sun_y(sun.direction.y);
+    }
+}
+
 /// Load once after the initial camera is placed. Native OR also anchors its sky
 /// lookup to the initial viewer location; camera panning must not move the sun.
 pub fn init_route_sun(
@@ -35,37 +70,23 @@ pub fn init_route_sun(
 ) {
     let Ok(camera) = camera.single() else { return };
     let world = camera.translation + focus.center + origin.shift;
-    let tile_x = openrailsrs_formats::msts_tile_x_index_for_coord(world.x);
-    let tile_z = openrailsrs_formats::msts_tile_z_index_for_coord(world.z);
-    let local_x = f64::from(world.x) - f64::from(tile_x) * 2048.0;
-    let local_z = -f64::from(world.z) - f64::from(tile_z) * 2048.0;
-    let Some(position) = geographic_position(tile_x, tile_z, local_x, local_z) else {
+    let Some(state) = route_sun_at(&live, &assets, world) else {
         return;
     };
-    let env_path = RouteFile::from_route_dir(&assets.route_dir)
-        .ok()
-        .and_then(|route| route.environment_path(&assets.route_dir, &live.season, "Clear"));
-    let environment = env_path
-        .as_deref()
-        .and_then(|path| EnvironmentSun::from_path(path).ok().flatten());
+    crate::shapes::set_scenery_sun_y(state.direction.y);
     crate::viewer_log!(
         "openrailsrs-viewer3d: route sun — {:.5}°, {:.5}°, season {}, clock {:.0}s, environment {}",
-        position.latitude.to_degrees(),
-        position.longitude.to_degrees(),
+        state.position.latitude.to_degrees(),
+        state.position.longitude.to_degrees(),
         live.season,
         live.clock_time_s(),
-        env_path
-            .as_deref()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "astronomical fallback".into())
+        if state.environment.is_some() {
+            "route ENV"
+        } else {
+            "astronomical fallback"
+        }
     );
-    commands.insert_resource(RouteSunState {
-        position,
-        environment,
-        direction: Vec3::Y,
-        ambient_scale: 1.0,
-        last_clock_s: None,
-    });
+    commands.insert_resource(state);
 }
 
 pub fn update_route_sun(
@@ -89,6 +110,7 @@ pub fn update_route_sun(
         return;
     }
     state.direction = direction;
+    crate::shapes::set_scenery_sun_y(direction.y);
     let daylight = (direction.y * 2.0).clamp(0.0, 1.0);
     state.ambient_scale = 0.02 + 0.98 * daylight;
     let up = if direction.y.abs() > 0.999 {

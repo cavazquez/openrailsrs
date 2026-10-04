@@ -35,15 +35,20 @@ pub mod or_cab_material;
 pub mod or_shader {
     pub use openrailsrs_or_shader::*;
 }
+pub mod cab_mouse;
 pub mod overhead_wire;
 pub mod overspeed_flash;
 pub mod placement_audit;
+pub mod player_launch;
+pub mod player_settings;
+pub mod player_ui;
 pub mod precipitation;
 pub mod road_cars;
 pub mod rolling_stock;
 pub mod rolling_stock_anim;
 pub mod route_bootstrap;
 pub mod route_lighting;
+pub mod saved_game;
 pub mod scene;
 pub mod scenery_audit;
 pub mod shapes;
@@ -132,6 +137,24 @@ impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, install_ui_font);
         app.add_plugins(driving_hud::DrivingHudPlugin);
+        app.add_plugins(player_ui::PlayerUiPlugin);
+        app.init_resource::<cab_mouse::CabMouseState>();
+        app.add_systems(
+            OnEnter(ViewerAppState::Playing),
+            cab_mouse::spawn_cab_mouse_label,
+        );
+        app.add_systems(
+            Update,
+            (
+                cab_mouse::cab_mouse_controls
+                    .before(camera::orbit_camera_system)
+                    .before(camera::fly_camera_system)
+                    .run_if(live::live_mode_active),
+                cab_mouse::update_cab_mouse_label,
+            )
+                .chain()
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         app.insert_resource(Time::<Fixed>::from_hz(60.0));
         use bevy::state::condition::in_state;
         use openrailsrs_bevy_scenery::ScenerySpawnSet;
@@ -320,18 +343,25 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 (
-                    teleport::toggle_teleport_dialog,
+                    teleport::toggle_teleport_dialog.run_if(player_ui::world_input_available),
                     teleport::teleport_input_system,
                     teleport::teleport_button_system,
                     teleport::sync_teleport_ui,
-                    precipitation::toggle_precipitation.run_if(teleport::teleport_closed),
-                    camera::toggle_mode_system.run_if(teleport::teleport_closed),
-                    camera::cycle_follow_mode.run_if(teleport::teleport_closed),
+                    precipitation::toggle_precipitation
+                        .run_if(player_ui::world_input_available)
+                        .run_if(teleport::teleport_closed),
+                    camera::toggle_mode_system
+                        .run_if(player_ui::world_input_available)
+                        .run_if(teleport::teleport_closed),
+                    camera::cycle_follow_mode
+                        .run_if(player_ui::world_input_available)
+                        .run_if(teleport::teleport_closed),
                     camera::update_primary_window_cursor,
                     train::replay_controls
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_inactive),
                     live::live_driver_input
+                        .run_if(player_ui::world_input_available)
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
                     train::advance_replay_time.run_if(live::live_mode_inactive),
@@ -374,6 +404,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 sky::toggle_distance_fog
+                    .run_if(player_ui::world_input_available)
                     .run_if(teleport::teleport_closed)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
@@ -398,6 +429,7 @@ impl Plugin for ViewerPlugin {
                     cab_cvf_overlay::update_cab_cvf_overlay
                         .after(cab_cvf_overlay::sync_cab_cvf_overlay),
                     cab_cvf_overlay::handle_cab2d_mouse_controls
+                        .run_if(player_ui::world_input_available)
                         .after(cab_cvf_overlay::update_cab_cvf_overlay)
                         .run_if(live::live_mode_active),
                     cab_render::update_cab_render_diagnostic
@@ -414,6 +446,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 cab_screen::handle_cab_dmi_mouse
+                    .run_if(player_ui::world_input_available)
                     .after(cab_view::sync_cab_interior)
                     .before(cab_screen::update_cab_screens)
                     .run_if(live::live_mode_active)
@@ -449,6 +482,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 (
                     cab_panel::toggle_cab_panel
+                        .run_if(player_ui::world_input_available)
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
                     cab_panel::update_cab_panel,

@@ -23,7 +23,10 @@ impl Plugin for DrivingHudPlugin {
             )
             .add_systems(
                 Update,
-                (toggle_driving_hud, update_driving_hud)
+                (
+                    toggle_driving_hud.run_if(crate::player_ui::world_input_available),
+                    update_driving_hud,
+                )
                     .chain()
                     .run_if(crate::teleport::teleport_closed),
             );
@@ -141,7 +144,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 }
                 panel.spawn((
                     Text::new(if right {
-                        "F4 monitor"
+                        "F4 vía · F7 servicio · M mapa"
                     } else {
                         "F5 conducción · F6 ayuda"
                     }),
@@ -168,19 +171,15 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
 
 fn toggle_driving_hud(
     keys: Res<ButtonInput<KeyCode>>,
+    settings: Res<crate::player_settings::PlayerSettings>,
     mut visibility: ResMut<DrivingHudVisibility>,
 ) {
-    if keys.just_pressed(KeyCode::F5) {
+    if settings.just_pressed(&keys, crate::player_settings::PlayerAction::DrivingHud) {
         visibility.driving = !visibility.driving;
     }
-    if keys.just_pressed(KeyCode::F4) {
-        visibility.monitor = !visibility.monitor;
-    }
-    if keys.just_pressed(KeyCode::F3) {
+
+    if settings.just_pressed(&keys, crate::player_settings::PlayerAction::DebugHud) {
         visibility.debug = !visibility.debug;
-    }
-    if keys.just_pressed(KeyCode::F6) {
-        visibility.help = !visibility.help;
     }
 }
 
@@ -236,6 +235,7 @@ fn signal_label(aspect: SignalAspect) -> (&'static str, Color) {
 
 fn update_driving_hud(
     live: Option<Res<LiveDrive>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
     visibility: Res<DrivingHudVisibility>,
     mut fields: Query<(&HudField, &mut Text, &mut TextColor)>,
     mut panels: Query<(&HudPanel, &mut Visibility), Without<crate::hud::HudRoot>>,
@@ -270,6 +270,13 @@ fn update_driving_hud(
     }
     let session = &live.session;
     let cab = session.cab_telemetry();
+    let door_key = settings
+        .as_ref()
+        .map(|s| s.key_label(crate::player_settings::PlayerAction::Doors))
+        .unwrap_or_else(|| "Q".into());
+    let mph = settings.is_some_and(|s| s.mph);
+    let unit = if mph { "mph" } else { "km/h" };
+    let factor = if mph { 1.0 / 1.609344 } else { 1.0 };
     for (field, mut text, mut color) in &mut fields {
         let (content, tint) = match field {
             HudField::Status => (
@@ -283,7 +290,7 @@ fn update_driving_hud(
                 if live.paused { CAUTION } else { MUTED },
             ),
             HudField::Speed => (
-                format!("{:.1} km/h", cab.speed_kmh),
+                format!("{:.1} {unit}", cab.speed_kmh * factor),
                 if cab.speed_kmh > cab.limit_kmh + 5.0 {
                     ALERT
                 } else if cab.speed_kmh > cab.limit_kmh + 0.5 {
@@ -292,7 +299,10 @@ fn update_driving_hud(
                     TEXT
                 },
             ),
-            HudField::Limit => (format!("Límite  {:.0} km/h", cab.limit_kmh), MUTED),
+            HudField::Limit => (
+                format!("Límite  {:.0} {unit}", cab.limit_kmh * factor),
+                MUTED,
+            ),
             HudField::Controls => {
                 let direction = if cab.direction >= 0.75 {
                     "Adelante"
@@ -375,7 +385,7 @@ fn update_driving_hud(
                 MUTED,
             ),
             HudField::Instruction => (
-                service_instruction(session),
+                service_instruction(session).replace("Q ·", &format!("{door_key} ·")),
                 match session.gameplay.phase {
                     ServicePhase::Completed | ServicePhase::ReadyToDepart => GOOD,
                     ServicePhase::Failed => ALERT,

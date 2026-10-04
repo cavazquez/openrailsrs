@@ -96,6 +96,7 @@ pub fn sync_view_window_from_train(
         )
     };
     window.center_world = Vec3::new(msts_x, focus.center.y, msts_z);
+    window.radius_m = crate::launch::view_radius_m();
 }
 
 pub fn view_window_stream_center(window: &ViewWindow, focus: &RouteFocus, live: bool) -> Vec3 {

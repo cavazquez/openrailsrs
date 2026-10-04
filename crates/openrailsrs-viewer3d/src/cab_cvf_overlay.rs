@@ -1027,18 +1027,12 @@ fn apply_mouse_lever_value(live: &mut LiveDrive, control: &ControlType, value: f
     match control {
         ControlType::Throttle | ControlType::ThrottleDisplay => {
             live.session.driver_throttle = value.clamp(0.0, 1.0);
-            if value > 0.01 {
-                live.session.driver_brake = 0.0;
-            }
         }
         ControlType::TrainBrake => {
             live.session.driver_brake = value.clamp(0.0, 1.0);
-            if value > 0.01 {
-                live.session.driver_throttle = 0.0;
-            }
         }
         ControlType::DirectionDisplay => {
-            live.session.driver_direction = value.clamp(0.0, 1.0);
+            let _ = live.session.set_direction(value.clamp(0.0, 1.0));
         }
         _ => {}
     }
