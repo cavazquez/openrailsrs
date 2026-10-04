@@ -20,6 +20,8 @@ pub enum SignalAspect {
 /// aspects, timed rules, etc.) without breaking the existing format.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SignalScript {
+    #[serde(default)]
+    pub native: Option<crate::sigscript::NativeSignalDef>,
     /// Aspect to show when the immediately-ahead block is occupied by any train.
     #[serde(default)]
     pub on_block_ahead: Option<SignalAspect>,

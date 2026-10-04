@@ -428,6 +428,11 @@ pub fn camera_underground_forced() -> bool {
 // without mutating process environment variables while worker threads run.
 static SCENERY_SEASON: AtomicU32 = AtomicU32::new(1);
 static SCENERY_SUN_Y: AtomicU32 = AtomicU32::new(1.0_f32.to_bits());
+static SCENERY_SNOW: AtomicU32 = AtomicU32::new(0);
+
+pub fn set_scenery_snow(snow: bool) {
+    SCENERY_SNOW.store(u32::from(snow), Ordering::Relaxed);
+}
 
 pub fn set_scenery_season(season: &str) {
     use openrailsrs_bevy_scenery::textures::Season;
@@ -461,7 +466,7 @@ pub fn scenery_texture_environment(flags: TextureFlags) -> TextureEnvironment {
     };
     TextureEnvironment {
         season,
-        snow_weather: false,
+        snow_weather: SCENERY_SNOW.load(Ordering::Relaxed) != 0,
         night,
     }
 }

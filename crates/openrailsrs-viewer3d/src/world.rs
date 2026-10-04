@@ -4040,6 +4040,7 @@ pub fn update_world_scenery_lod(
         Option<&ChildOf>,
         Option<&WorldTileBound>,
         Option<&crate::world_lod_fade::LodFade>,
+        Option<&crate::surface_weather::SnowSurfaceSource>,
     )>,
 ) {
     let Some(cache) = cache else {
@@ -4087,6 +4088,7 @@ pub fn update_world_scenery_lod(
         parent,
         tile,
         fade,
+        snow_source,
     ) in &mut parts
     {
         if !lod.enabled {
@@ -4119,16 +4121,19 @@ pub fn update_world_scenery_lod(
             continue;
         };
         let target = shape_lod_part_by_identity(asset, lod.sub_object_idx, lod.prim_state_idx);
+        let source_material = material
+            .map(|m| m.0.clone())
+            .or_else(|| snow_source.map(|s| s.0.clone()));
         // Animated parts retain their binding/pose; crossfade only rigid WORLD
         // parts, so moving signals never leave a stationary duplicate behind.
         if anim_state.is_none()
             && *visibility != Visibility::Hidden
-            && let (Some(material), Some(local)) = (material, transform.as_deref())
+            && let (Some(material), Some(local)) = (source_material.as_ref(), transform.as_deref())
         {
             let (outgoing, incoming) = crate::world_lod_fade::ranges(instance_dist, 0.0);
             let mut ghost = commands.spawn((
                 mesh3d.clone(),
-                material.clone(),
+                MeshMaterial3d(material.clone()),
                 *local,
                 Visibility::Inherited,
                 outgoing,
@@ -4158,7 +4163,7 @@ pub fn update_world_scenery_lod(
             continue;
         };
         mesh3d.0 = part.mesh.clone();
-        if material.is_some() {
+        if source_material.is_some() {
             commands
                 .entity(entity)
                 .insert(MeshMaterial3d(part.material.clone()));

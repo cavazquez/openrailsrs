@@ -15,14 +15,16 @@ pub enum PlayerWeather {
     Clear,
     Rain,
     Fog,
+    Snow,
 }
 impl PlayerWeather {
-    pub const ALL: [Self; 3] = [Self::Clear, Self::Rain, Self::Fog];
+    pub const ALL: [Self; 4] = [Self::Clear, Self::Rain, Self::Fog, Self::Snow];
     pub fn label(self) -> &'static str {
         match self {
             Self::Clear => "Despejado",
             Self::Rain => "Lluvia",
             Self::Fog => "Niebla",
+            Self::Snow => "Nieve",
         }
     }
 }

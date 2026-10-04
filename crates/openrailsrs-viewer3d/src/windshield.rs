@@ -33,8 +33,9 @@ impl Plugin for WindshieldPlugin {
         ))
         .init_resource::<WindshieldWipeState>()
         .add_systems(
-            Update,
+            PostUpdate,
             sync_windshield
+                .after(bevy::transform::TransformSystems::Propagate)
                 .run_if(crate::live::live_mode_active)
                 .run_if(in_state(crate::ViewerAppState::Playing)),
         );
@@ -54,6 +55,7 @@ pub struct WindshieldSettings {
     pub near_clip: f32,
     pub last_wipe_s: f32,
     pub wiper_on: f32,
+    pub snow: f32,
     pub _pad: Vec3,
     pub glass: Vec4,
     pub blade1: Vec4,
@@ -74,11 +76,13 @@ fn sync_windshield(
     overlay: Res<crate::cab_cvf_overlay::CabCvfOverlayState>,
     preferences: Res<crate::player_settings::PlayerSettings>,
     mut wipe: ResMut<WindshieldWipeState>,
+    roots: Query<&GlobalTransform, With<crate::cab_view::CabInteriorRoot>>,
     mut cameras: Query<(
         Entity,
         &mut Camera3d,
         &Projection,
         &Camera,
+        &GlobalTransform,
         Option<&mut WindshieldSettings>,
     )>,
 ) {
@@ -91,8 +95,8 @@ fn sync_windshield(
         wipe.last_wipe_s = Some(clock);
     }
     let visible = (*follow == CameraFollowMode::DriverCam || follow.is_cab2d())
-        && weather.weather == PlayerWeather::Rain;
-    for (e, mut camera, projection, view, current) in &mut cameras {
+        && matches!(weather.weather, PlayerWeather::Rain | PlayerWeather::Snow);
+    for (e, mut camera, projection, view, camera_transform, current) in &mut cameras {
         // Sample the resolved main-pass depth, without introducing a separate
         // prepass that would use the wrong alpha bindings for original materials.
         camera.depth_texture_usages =
@@ -129,20 +133,63 @@ fn sync_windshield(
         } else {
             (0.25, 0.75, 0.60)
         };
+        let mut blade1 = Vec4::new(left, 0.96, radius * profile.wipe_scale, f32::from(front));
+        let mut blade2 = Vec4::new(
+            right,
+            0.96,
+            radius * profile.wipe_scale,
+            f32::from(front && count > 1),
+        );
+        if *follow == CameraFollowMode::DriverCam
+            && let Some(runtime) = cvf.runtime.as_ref()
+            && let Ok(root) = roots.single()
+        {
+            let screen = view
+                .logical_viewport_size()
+                .unwrap_or(Vec2::new(1280.0, 720.0));
+            let mut pivots = Vec::new();
+            for (index, matrix) in runtime.shape.matrices.iter().enumerate() {
+                if !matrix
+                    .name
+                    .to_ascii_uppercase()
+                    .starts_with("EXTERNALWIPERS")
+                {
+                    continue;
+                }
+                let local =
+                    crate::cab_cvf::static_matrix_transform(&runtime.shape, index).translation;
+                if let Ok(pixel) =
+                    view.world_to_viewport(camera_transform, root.transform_point(local))
+                {
+                    let uv = pixel / screen;
+                    if (0.0..=1.0).contains(&uv.x)
+                        && (0.0..=1.2).contains(&uv.y)
+                        && pivots.iter().all(|p: &Vec2| p.distance(uv) > 0.05)
+                    {
+                        pivots.push(uv);
+                    }
+                }
+            }
+            pivots.sort_by(|a, b| a.x.total_cmp(&b.x));
+            if let Some(p) = pivots.first() {
+                blade1.x = p.x;
+                blade1.y = p.y;
+            }
+            if let Some(p) = pivots.get(1) {
+                blade2.x = p.x;
+                blade2.y = p.y;
+            }
+        }
         let settings = WindshieldSettings {
             time_s: clock as f32,
             rain: f32::from(visible),
+            snow: f32::from(weather.weather == PlayerWeather::Snow),
             near_clip: near,
             last_wipe_s: wipe.last_wipe_s.map_or(-1.0, |s| s as f32),
             wiper_on: f32::from(live.session.wiper_active),
             glass,
-            blade1: Vec4::new(left, 0.96, radius * profile.wipe_scale, f32::from(front)),
-            blade2: Vec4::new(
-                right,
-                0.96,
-                radius * profile.wipe_scale,
-                f32::from(front && count > 1),
-            ),
+            blade1,
+            blade2,
             ..default()
         };
         if let Some(mut current) = current {

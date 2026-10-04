@@ -154,6 +154,7 @@ pub fn sky_parameters(
         PlayerWeather::Clear => (0.22 * day, 0.0),
         PlayerWeather::Rain => (0.88, 0.7),
         PlayerWeather::Fog => (0.96, 0.85),
+        PlayerWeather::Snow => (0.6, 0.65),
     };
     let grey =
         linear(Color::srgb(0.045, 0.055, 0.075)).lerp(linear(Color::srgb(0.48, 0.54, 0.59)), day);
@@ -199,6 +200,7 @@ pub fn sync_route_atmosphere(
         PlayerWeather::Clear => CLEAR_WEATHER_VISIBILITY_M,
         PlayerWeather::Rain => 7000.0,
         PlayerWeather::Fog => 500.0,
+        PlayerWeather::Snow => 500.0,
     };
     for mut fog in &mut cameras {
         if !fog_state.enabled {

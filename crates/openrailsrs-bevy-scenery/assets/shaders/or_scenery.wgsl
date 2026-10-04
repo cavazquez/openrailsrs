@@ -30,6 +30,10 @@ struct OrSceneryParams {
     shadow_map_limit_z: f32,
     shadow_map_limit_w: f32,
     debug_flags: f32,
+    wetness: f32,
+    snow_cover: f32,
+    weather_pad0: f32,
+    weather_pad1: f32,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> params: OrSceneryParams;
@@ -165,6 +169,10 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let kind = params.shader_kind;
     let lit = params.flags >= OR_FLAG_LIT;
+    let n = normalize(in.world_normal);
+    let wet = clamp(params.wetness, 0.0, 1.0);
+    let snow = clamp(params.snow_cover, 0.0, 1.0) * smoothstep(0.30, 0.85, n.y);
+    color = vec4(mix(color.rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89), snow * 0.80), color.a);
 
     if (!lit) {
         return vec4(color.rgb * params.night_color_modifier, color.a);
@@ -174,7 +182,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(color.rgb, color.a);
     }
 
-    let n = normalize(in.world_normal);
     let light = view_bindings::lights.directional_lights[0];
     let light_dir = light.direction_to_light;
 
@@ -239,9 +246,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
             let brightness = mix(params.shadow_brightness, params.full_brightness, t);
             lit_rgb = color.rgb * brightness;
 
-            if (params.specular_strength > 0.0) {
+            if (params.specular_strength > 0.0 || wet > 0.0) {
                 let view_dir = pbr_functions::calculate_view(in.world_position, false);
-                let spec = ndotl * params.specular_strength * pow(
+                let spec = ndotl * max(params.specular_strength, wet * 0.18) * pow(
                     saturate(dot(n, normalize(view_dir + light_dir))),
                     params.specular_power,
                 ) * shadow_mod;

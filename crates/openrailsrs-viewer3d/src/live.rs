@@ -371,11 +371,12 @@ pub fn enable_live_defaults(
 }
 
 pub fn advance_live_sim(
+    loading: Option<Res<crate::route_bootstrap::ViewerLoadingScreen>>,
     time: Res<Time<Fixed>>,
     mut live: ResMut<LiveDrive>,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
 ) {
-    if live.paused {
+    if live.paused || loading.is_some() {
         return;
     }
     if let Some(settings) = settings {

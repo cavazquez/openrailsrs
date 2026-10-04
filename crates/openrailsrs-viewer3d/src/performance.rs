@@ -10,6 +10,7 @@ use std::sync::{
 #[derive(Resource, Clone, Default, bevy::render::extract_resource::ExtractResource)]
 pub struct ScenePipelineStatus {
     counts: Arc<AtomicU64>,
+    uploads: Arc<AtomicU64>,
     device: Arc<std::sync::Mutex<Option<RendererDevice>>>,
 }
 #[derive(Clone, Debug, Serialize)]
@@ -28,14 +29,98 @@ impl ScenePipelineStatus {
         ((counts >> 32) as usize, (counts as u32) as usize)
     }
     pub fn ready(&self) -> bool {
-        self.counts() == (0, 0)
+        self.counts() == (0, 0) && self.pending_uploads() == 0
     }
+    pub fn pending_uploads(&self) -> usize {
+        self.uploads.load(Ordering::Relaxed) as usize
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct RequiredRenderAssets {
+    meshes: Vec<bevy::asset::AssetId<Mesh>>,
+    images: Vec<bevy::asset::AssetId<Image>>,
+    renderables: Vec<(
+        bevy::render::sync_world::MainEntity,
+        bevy::asset::AssetId<Mesh>,
+    )>,
+}
+
+pub fn extract_required_render_assets(
+    meshes: bevy::render::Extract<Res<Assets<Mesh>>>,
+    images: bevy::render::Extract<Res<Assets<Image>>>,
+    renderables: bevy::render::Extract<Query<(Entity, &Mesh3d)>>,
+    mut required: ResMut<RequiredRenderAssets>,
+) {
+    use bevy::asset::RenderAssetUsages;
+    required.meshes.clear();
+    required.images.clear();
+    required.renderables.clear();
+    required.renderables.extend(
+        renderables
+            .iter()
+            .map(|(entity, mesh)| (entity.into(), mesh.id())),
+    );
+    required
+        .meshes
+        .extend(meshes.iter().filter_map(|(id, mesh)| {
+            mesh.asset_usage
+                .contains(RenderAssetUsages::RENDER_WORLD)
+                .then_some(id)
+        }));
+    required
+        .images
+        .extend(images.iter().filter_map(|(id, image)| {
+            image
+                .asset_usage
+                .contains(RenderAssetUsages::RENDER_WORLD)
+                .then_some(id)
+        }));
+}
+
+/// Bevy 0.19 skips specialization when a visible mesh is still in the upload
+/// queue, without adding that mesh to its pending-material queue. Retry once
+/// when its GPU asset becomes available, including after streamed replacements.
+pub fn retry_uploaded_mesh_specializations(
+    required: Res<RequiredRenderAssets>,
+    meshes: Res<bevy::render::render_asset::RenderAssets<bevy::render::mesh::RenderMesh>>,
+    mut previous: Local<std::collections::HashSet<bevy::asset::AssetId<Mesh>>>,
+    mut dirty: ResMut<bevy::render::camera::DirtySpecializations>,
+) {
+    let added = newly_ready_meshes(
+        &required.meshes,
+        |id| meshes.get(id).is_some(),
+        &mut previous,
+    );
+    for &(entity, mesh) in &required.renderables {
+        if added.contains(&mesh) {
+            dirty.changed_renderables.insert(entity);
+        }
+    }
+}
+
+fn newly_ready_meshes(
+    required: &[bevy::asset::AssetId<Mesh>],
+    is_ready: impl Fn(bevy::asset::AssetId<Mesh>) -> bool,
+    previous: &mut std::collections::HashSet<bevy::asset::AssetId<Mesh>>,
+) -> std::collections::HashSet<bevy::asset::AssetId<Mesh>> {
+    let ready: std::collections::HashSet<_> = required
+        .iter()
+        .copied()
+        .filter(|id| is_ready(*id))
+        .collect();
+    let added = ready.difference(previous).copied().collect();
+    *previous = ready;
+    added
 }
 
 pub fn update_pipeline_status(
     cache: Res<bevy::render::render_resource::PipelineCache>,
     status: Res<ScenePipelineStatus>,
     adapter: Res<bevy::render::renderer::RenderAdapterInfo>,
+    required: Res<RequiredRenderAssets>,
+    meshes: Res<bevy::render::render_asset::RenderAssets<bevy::render::mesh::RenderMesh>>,
+    images: Res<bevy::render::render_asset::RenderAssets<bevy::render::texture::GpuImage>>,
 ) {
     use bevy::render::render_resource::CachedPipelineState;
     if status.device.lock().unwrap().is_none() {
@@ -60,6 +145,19 @@ pub fn update_pipeline_status(
     status
         .counts
         .store((pending << 32) | failed, Ordering::Relaxed);
+    let pending_uploads = required
+        .meshes
+        .iter()
+        .filter(|id| meshes.get(**id).is_none())
+        .count()
+        + required
+            .images
+            .iter()
+            .filter(|id| images.get(**id).is_none())
+            .count();
+    status
+        .uploads
+        .store(pending_uploads as u64, Ordering::Relaxed);
 }
 
 /// Opt-in diagnostics include unresolved imports that Bevy retries silently.
@@ -127,6 +225,9 @@ pub struct JourneyPerformance {
     rss_clock_s: f64,
     rss_mib: Option<f64>,
     peak_rss_mib: Option<f64>,
+    gameplay_longest_ms: f64,
+    gameplay_hitches: u64,
+    startup_longest_ms: f64,
 }
 impl Default for JourneyPerformance {
     fn default() -> Self {
@@ -140,6 +241,9 @@ impl Default for JourneyPerformance {
             rss_clock_s: 0.0,
             rss_mib: None,
             peak_rss_mib: None,
+            gameplay_longest_ms: 0.0,
+            gameplay_hitches: 0,
+            startup_longest_ms: 0.0,
         }
     }
 }
@@ -156,6 +260,9 @@ pub struct JourneyPerformanceReport {
     pub hitches_over_100_ms: u64,
     pub rss_mib: Option<f64>,
     pub peak_rss_mib: Option<f64>,
+    pub gameplay_longest_frame_ms: f64,
+    pub gameplay_hitches_over_100_ms: u64,
+    pub startup_longest_frame_ms: f64,
 }
 impl JourneyPerformance {
     fn record(&mut self, seconds: f64, loading: bool) {
@@ -196,6 +303,9 @@ impl JourneyPerformance {
             hitches_over_100_ms: self.hitches,
             rss_mib: self.rss_mib,
             peak_rss_mib: self.peak_rss_mib,
+            gameplay_longest_frame_ms: self.gameplay_longest_ms,
+            gameplay_hitches_over_100_ms: self.gameplay_hitches,
+            startup_longest_frame_ms: self.startup_longest_ms,
         }
     }
     pub fn hud_text(&self) -> String {
@@ -219,8 +329,16 @@ impl JourneyPerformance {
 pub fn measure_journey(
     time: Res<Time<Real>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    startup: Option<Res<crate::route_bootstrap::ViewerLoadingScreen>>,
     mut metrics: ResMut<JourneyPerformance>,
 ) {
+    let ms = time.delta_secs_f64() * 1000.0;
+    if startup.is_some() || metrics.frames == 0 {
+        metrics.startup_longest_ms = metrics.startup_longest_ms.max(ms);
+    } else {
+        metrics.gameplay_longest_ms = metrics.gameplay_longest_ms.max(ms);
+        metrics.gameplay_hitches += u64::from(ms > 100.0);
+    }
     metrics.record(time.delta_secs_f64(), progress.is_some());
     metrics.rss_clock_s += time.delta_secs_f64();
     if metrics.rss_clock_s < 1.0 {
@@ -250,6 +368,20 @@ pub fn measure_journey(
 mod tests {
     use super::*;
     #[test]
+    fn delayed_mesh_upload_and_replacement_retry_once_when_ready() {
+        let mut meshes = Assets::<Mesh>::default();
+        let id = meshes.add(Cuboid::default()).id();
+        let required = [id];
+        let mut previous = std::collections::HashSet::new();
+        assert!(newly_ready_meshes(&required, |_| false, &mut previous).is_empty());
+        assert!(newly_ready_meshes(&required, |_| true, &mut previous).contains(&id));
+        assert!(newly_ready_meshes(&required, |_| true, &mut previous).is_empty());
+        assert!(newly_ready_meshes(&required, |_| false, &mut previous).is_empty());
+        assert!(newly_ready_meshes(&required, |_| true, &mut previous).contains(&id));
+        assert!(newly_ready_meshes(&[], |_| true, &mut previous).is_empty());
+        assert!(previous.is_empty());
+    }
+    #[test]
     fn capture_readiness_rejects_uncompiled_and_failed_shaders() {
         let status = ScenePipelineStatus::default();
         let extracted = status.clone();
@@ -260,6 +392,11 @@ mod tests {
         assert_eq!(extracted.counts(), (0, 1));
         assert!(!extracted.ready());
         status.counts.store(0, Ordering::Relaxed);
+        assert!(extracted.ready());
+        status.uploads.store(2, Ordering::Relaxed);
+        assert_eq!(extracted.pending_uploads(), 2);
+        assert!(!extracted.ready());
+        status.uploads.store(0, Ordering::Relaxed);
         assert!(extracted.ready());
     }
 

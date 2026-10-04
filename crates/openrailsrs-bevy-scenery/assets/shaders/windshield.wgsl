@@ -1,5 +1,5 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
-struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32> }
+struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, snow: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32> }
 @group(0) @binding(0) var scene: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
 @group(0) @binding(2) var<uniform> settings: Settings;
@@ -34,7 +34,9 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let local = fract(grid) - vec2(0.2 + random.x * 0.6, 0.12 + fall * 0.76);
     let radius = length(local * vec2(1.0, 0.7));
     let drop = (1.0 - smoothstep(0.055, 0.17, radius)) * wetness * step(0.5, random.x);
+    let snow = settings.snow * (1.0 - smoothstep(0.09, 0.23, radius)) * wetness * step(0.6, random.x);
     let refracted = textureSample(scene, scene_sampler, in.uv + local * drop * 0.008);
     let highlight = (1.0 - smoothstep(0.01, 0.08, abs(radius - 0.12))) * drop * 0.16;
-    return vec4(mix(dry.rgb, refracted.rgb, drop) + vec3(highlight), dry.a);
+    let wet = mix(dry.rgb, refracted.rgb, drop * (1.0-settings.snow)) + vec3(highlight * (1.0-settings.snow));
+    return vec4(mix(wet, vec3(0.80, 0.86, 0.91), snow * 0.65), dry.a);
 }

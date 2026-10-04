@@ -445,7 +445,10 @@ fn main() {
             description: openrailsrs_scenarios::load_scenario(&cli.path)
                 .map(|s| s.scenario.description)
                 .unwrap_or_default(),
-            weather: Default::default(),
+            weather: std::env::var("OPENRAILSRS_WEATHER")
+                .ok()
+                .and_then(|s| serde_json::from_value(serde_json::Value::String(s)).ok())
+                .unwrap_or_default(),
         });
     app.insert_state(if cli.menu {
         ViewerAppState::Menu

@@ -336,6 +336,7 @@ pub(crate) fn spawn_hud(mut commands: Commands) {
     commands
         .spawn((
             HudRoot,
+            crate::player_ui::ScreenHud,
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.0),

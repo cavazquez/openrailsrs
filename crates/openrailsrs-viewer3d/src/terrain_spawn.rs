@@ -108,6 +108,7 @@ fn spawn_textured_patches(
                         overlay_scale,
                         base_texture: base,
                         overlay_texture: overlay,
+                        surface_weather: Vec2::ZERO,
                     }),
                 );
             }
@@ -933,6 +934,98 @@ mod tests {
     use openrailsrs_formats::TerrainMeshData;
 
     use super::*;
+
+    #[test]
+    fn terrain_created_during_rebase_stays_aligned_with_native_coordinates() {
+        use crate::camera::{CameraFollowMode, OrbitState};
+        use crate::floating_origin::{FloatingOrigin, apply_floating_origin};
+        use crate::launch::{ViewerLaunchOpts, ViewerSceneryMode};
+        use crate::live::LiveTrainMarker;
+        use openrailsrs_formats::{ElevationGrid, TerrainFile, TerrainSamples};
+        use std::sync::Arc;
+
+        let (wx, wz) = msts_tile_world_origin(3, -2);
+        let mut app = App::new();
+        app.insert_resource(RouteAssets::new(PathBuf::from("nonexistent-test-route")))
+            .insert_resource(crate::world::RouteFocus {
+                center: Vec3::new(wx, 0.0, wz),
+                height_origin: 30.0,
+            })
+            .insert_resource(TerrainScene {
+                tiles_loaded: 1,
+                tiles: vec![TerrainTile {
+                    tile_x: 3,
+                    tile_z: -2,
+                    translation: Vec3::ZERO,
+                    path: PathBuf::from("test.t"),
+                    file: TerrainFile {
+                        tile_x: 3,
+                        tile_z: -2,
+                        samples: TerrainSamples {
+                            nsamples: 16,
+                            sample_size: 8.0,
+                            ..Default::default()
+                        },
+                        shaders: Vec::new(),
+                        patch_sets: Vec::new(),
+                    },
+                    data: Some(Arc::new(crate::terrain_io::TerrainTileData {
+                        grid: Arc::new(ElevationGrid {
+                            nsamples: 16,
+                            elevations: vec![40.0; 16 * 16],
+                        }),
+                        features: None,
+                    })),
+                }],
+                ..Default::default()
+            })
+            .insert_resource(ViewerSceneryMode::Full)
+            .insert_resource(ViewerLaunchOpts::default())
+            .insert_resource(CameraFollowMode::Off)
+            .insert_resource(FloatingOrigin {
+                shift: Vec3::new(25.0, 0.0, 0.0),
+            })
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<Image>>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<TerrainMaterial>>()
+            .add_systems(Startup, init_terrain_spawn_progress)
+            .add_systems(Update, apply_floating_origin)
+            .add_systems(
+                Update,
+                progressive_terrain_spawn_system.after(apply_floating_origin),
+            );
+        app.world_mut().spawn((
+            Camera3d::default(),
+            OrbitState::default(),
+            Transform::from_xyz(300.0, 5.0, -400.0),
+        ));
+        app.world_mut()
+            .spawn((LiveTrainMarker, Transform::from_xyz(300.0, 10.0, -400.0)));
+        // Commands create terrain after rebasing. It must include the new shift,
+        // rather than remaining displaced underneath a neighbouring tile.
+        app.update();
+        let shift = app.world().resource::<FloatingOrigin>().shift;
+        assert_eq!(shift, Vec3::new(325.0, 0.0, -400.0));
+        let mut terrain = app
+            .world_mut()
+            .query_filtered::<(&Transform, &Mesh3d), With<TerrainTileTag>>();
+        let (transform, mesh) = terrain.single(app.world()).unwrap();
+        assert_eq!(transform.translation, -shift);
+        let positions = app
+            .world()
+            .resource::<Assets<Mesh>>()
+            .get(&mesh.0)
+            .unwrap()
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .unwrap()
+            .as_float3()
+            .unwrap();
+        assert_eq!(
+            positions[0][1], 10.0,
+            "MSL height is independent of XZ rebasing"
+        );
+    }
 
     #[test]
     fn append_terrain_mesh_data_offsets_and_reindexes() {

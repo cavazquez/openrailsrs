@@ -1,8 +1,7 @@
 //! Dual-texture terrain material for viewer3d (fog #39 + shadows #42).
 //!
 //! Pipeline: [`crate::materials::TerrainPipelineFlags::VIEWER`] — lit, fog,
-//! no night/VSM uniforms. GPU layout stays a single `overlay_scale` uniform so
-//! existing viewer bind groups keep working. Shared CPU keys/UV/sanitize live
+//! no night/VSM uniforms. Weather has its own uniform binding; shared CPU keys/UV/sanitize live
 //! in [`crate::terrain`]; fragment lighting shares `terrain_common.wgsl` (#121).
 
 use bevy::mesh::MeshVertexBufferLayoutRef;
@@ -27,6 +26,9 @@ pub struct TerrainMaterial {
     #[texture(3)]
     #[sampler(4)]
     pub overlay_texture: Handle<Image>,
+    /// Outdoor wetness and visual snow coverage, independent of texture variants.
+    #[uniform(5)]
+    pub surface_weather: Vec2,
 }
 
 impl TerrainMaterial {

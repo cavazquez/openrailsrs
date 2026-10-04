@@ -47,6 +47,7 @@ fn build_graph() -> TrackGraph {
         aspect: SignalAspect::Clear,
         clear_after_s: None,
         script: Some(SignalScript {
+            native: None,
             on_block_ahead: Some(SignalAspect::Stop),
             on_second_block_ahead: Some(SignalAspect::Caution),
             default: Some(SignalAspect::Clear),

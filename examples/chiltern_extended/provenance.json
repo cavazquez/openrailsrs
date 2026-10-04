@@ -163,6 +163,8 @@
       }
     }
   ],
-  "signal_policy": "three aspect occupancy, not full SIGSCR",
+  "signal_policy": "original directed Chiltern SIGSCR programs; normal/distant blocks on the service path",
+  "sigscr_sha256": "50e1b910dec361d47b3afeb52b5f48ccf92272f96dc1f3bf46c2cae96cc98fa9",
+  "sigcfg_sha256": "2a504f3b767705484dbf87ef64200cc0820c1048ef0671be349290c850bf723c",
   "traffic": "existing lead and adjacent opposite services"
 }

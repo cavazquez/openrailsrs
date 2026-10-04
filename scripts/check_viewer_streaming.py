@@ -53,6 +53,8 @@ def run_checkpoint(args, name, target, pause):
             OPENRAILSRS_CAM_PITCH=str(args.camera_pitch),
             OPENRAILSRS_CAM_DIST=str(args.camera_distance),
         )
+    if hasattr(args, "weather"):
+        env["OPENRAILSRS_WEATHER"] = args.weather
     if args.software:
         env.update(
             {
@@ -185,6 +187,10 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(
             f"{name}: scenery shaders incomplete: {report.get('shader_pipelines')}"
         )
+    if report.get("native_signal_errors"):
+        raise RuntimeError(f"{name}: native signal script errors: {report['native_signal_errors']}")
+    if report.get("pending_gpu_uploads", 0):
+        raise RuntimeError(f"{name}: textures or meshes not yet uploaded to the GPU")
     if not pause and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
     if not pause and hasattr(args, "expected_station_names"):

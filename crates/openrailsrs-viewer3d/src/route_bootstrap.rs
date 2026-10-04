@@ -122,6 +122,7 @@ pub struct ViewerLoadingScreen {
     pub status: Entity,
     pub camera: Entity,
     pub scenery_spawn_started: bool,
+    pub gpu_ready_frames: u8,
 }
 
 pub fn setup_viewer_loading_ui(mut commands: Commands) {
@@ -182,6 +183,7 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
         status,
         camera,
         scenery_spawn_started: false,
+        gpu_ready_frames: 0,
     });
     crate::viewer_log!(
         "openrailsrs-viewer3d: loading screen active — waiting for world progressive spawn"
@@ -191,6 +193,7 @@ pub fn setup_viewer_loading_ui(mut commands: Commands) {
 pub fn poll_route_load(
     mut commands: Commands,
     pending: Option<ResMut<PendingRouteLoad>>,
+    content: Res<crate::player_launch::ActivePlayerContent>,
     screen: Option<Res<ViewerLoadingScreen>>,
     mut texts: Query<&mut Text>,
     mut next: ResMut<NextState<ViewerAppState>>,
@@ -216,6 +219,9 @@ pub fn poll_route_load(
             }
             crate::viewer_log!(
                 "openrailsrs-viewer3d: route ready in {elapsed_ms:.0} ms — inserting scenes"
+            );
+            crate::shapes::set_scenery_snow(
+                content.weather == crate::player_launch::PlayerWeather::Snow,
             );
             insert_route_bundle(&mut commands, bundle);
             if let Some(screen) = screen.as_ref()
@@ -261,6 +267,7 @@ pub fn update_loading_screen_progress(
     screen: Option<ResMut<ViewerLoadingScreen>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
     app_state: Res<State<ViewerAppState>>,
+    pipelines: Option<Res<crate::performance::ScenePipelineStatus>>,
     mut texts: Query<&mut Text>,
 ) {
     let Some(mut screen) = screen else {
@@ -281,6 +288,19 @@ pub fn update_loading_screen_progress(
             *t = Text::new(progress.status_text());
         }
     } else if screen.scenery_spawn_started || *app_state.get() == ViewerAppState::Playing {
+        if let Some(pipelines) = pipelines.as_ref() {
+            if !pipelines.ready() {
+                screen.gpu_ready_frames = 0;
+                if let Ok(mut text) = texts.get_mut(screen.status) {
+                    *text = Text::new("Preparando recursos gráficos...");
+                }
+                return;
+            }
+            screen.gpu_ready_frames = screen.gpu_ready_frames.saturating_add(1);
+            if screen.gpu_ready_frames < 3 {
+                return;
+            }
+        }
         // Progressive world spawn finished, or this mode deliberately has no
         // WORLD spawn (run-corridor/track-dev). The old condition left the
         // loading camera permanently covering an otherwise running corridor.

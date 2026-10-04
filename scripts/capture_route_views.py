@@ -67,10 +67,15 @@ def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--route-root", type=Path, required=True)
-    parser.add_argument("--scenario", type=Path, default=repo / "examples/chiltern_local/scenario.toml")
+    parser.add_argument("--scenario", type=Path, default=repo / "examples/chiltern_extended/scenario.toml")
     parser.add_argument("--viewer", type=Path, default=repo / "target/debug/openrailsrs-viewer3d")
     parser.add_argument("--out-dir", type=Path, default=repo / "tmp/route-views")
     parser.add_argument("--software", action="store_true")
+    parser.add_argument("--headless-wayland", action="store_true")
+    parser.add_argument("--require-hardware", action="store_true")
+    parser.add_argument("--weather", choices=["clear","rain","fog","snow"], default="clear")
+    parser.add_argument("--clock-time-s", type=float, default=35700)
+    parser.add_argument("--station", action="append", help="station slug; repeat to select views")
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=180)
     parser.add_argument("--camera-yaw", type=float, default=1.6)
@@ -101,9 +106,14 @@ def main():
     reports = {}
     for index, stop in enumerate(scenario["route"]["stops"]):
         name = re.sub(r"[^a-z0-9]+", "-", stop.get("name", stop["node"]).lower()).strip("-")
+        if args.station and name not in args.station:
+            continue
         chainage = chainages[stop["node"]] + stop.get("offset_m", 0)
         args.scenario = station_scenario(source, scenario, chainage, index,
                                          args.out_dir / "scenarios" / name)
+        station_text = args.scenario.read_text()
+        station_text = re.sub(r"(?m)^start_time_s\s*=.*$", f"start_time_s = {args.clock_time_s}", station_text, count=1)
+        args.scenario.write_text(station_text)
         report = run_checkpoint(args, name, 0, True)
         if not report.get("camera") or not report.get("solar_direction"):
             raise RuntimeError("Viewer lacks camera / sun metadata; rebuild the workspace")

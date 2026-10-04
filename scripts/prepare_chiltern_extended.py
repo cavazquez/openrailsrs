@@ -85,6 +85,26 @@ def prepare_brake_profiles(route, output):
 
 def prepare(route, imported, output):
     graph = tomllib.loads(imported.read_text())
+    script_path = route / "sigscr.dat"
+    script_text = native.msts_text(script_path)
+    scripts = {m[1].casefold(): m[2] for m in re.finditer(r"^SCRIPT\s+(\w+)\s*\n(.*?)(?=^SCRIPT|\Z)", script_text, re.M | re.S)}
+    # Balanced STF blocks preserve UTF-16 content and original signal direction.
+    signal_types = {}
+    tdb_text = native.msts_text(route / "Chiltern.tdb")
+    for body in re.split(r"\n\s*SignalItem\s*\(", tdb_text)[1:]:
+        body = body.split("\n\t\t)")[0]
+        item = re.search(r"TrItemId\s*\(\s*(\d+)", body)
+        signal = re.search(r'TrSignalType\s*\(\s*\w+\s+(\d+)\s+\S+\s+"?([^\s)"]+)', body)
+        if item and signal:
+            signal_types[int(item[1])] = (int(signal[1]), signal[2])
+    cfg = native.msts_text(route / "sigcfg.dat")
+    functions = {}
+    for name in set(name for _, name in signal_types.values()):
+        block = re.search(r'SignalType\s*\(\s*"?' + re.escape(name) + r'"?\s+(.*?)(?=\n\s*SignalType\s*\(|\Z)', cfg, re.S | re.I)
+        function = re.search(r"SignalFnType\s*\(\s*(\w+)", block[1]) if block else None
+        if function:
+            functions[name.casefold()] = function[1]
+
     polylines = native.native_polylines(route, graph)
     pat = route / "PATHS" / PAT
     pdps = [
@@ -196,6 +216,12 @@ def prepare(route, imported, output):
     for signal in graph["signals"]:
         for edge in edges.values():
             if edge["id"].removesuffix("_r") == signal["edge_id"]:
+                item = int(re.search(r"\d+", signal["id"])[0])
+                direction, type_name = signal_types[item]
+                if edge["id"].endswith("_r") != bool(direction):
+                    continue
+                source_script = scripts[type_name.casefold()]
+                function = functions[type_name.casefold()]
                 position = min(signal["position_m"], edge["length_m"])
                 if edge["id"].endswith("_r"):
                     position = edge["length_m"] - position
@@ -207,7 +233,8 @@ def prepare(route, imported, output):
                         aspect="clear",
                     )
                 )
-                track += '[signals.script]\non_block_ahead = "stop"\non_second_block_ahead = "caution"\ndefault = "clear"\n'
+                track += '[signals.script]\n'
+                track += '[signals.script.native]\n' + fields(dict(name=type_name, function=function, source=source_script))
     for alias in graph["msts_aliases"]:
         if alias["id"] in node_ids or alias["id"] in edges:
             track += "\n[[msts_aliases]]\n" + fields(alias)
@@ -266,7 +293,9 @@ def prepare(route, imported, output):
         station_markers=markers,
         physical_profiles=True,
         brake_profiles=prepare_brake_profiles(route, output),
-        signal_policy="three aspect occupancy, not full SIGSCR",
+        signal_policy="original directed Chiltern SIGSCR programs; normal/distant blocks on the service path",
+        sigscr_sha256=hashlib.sha256(script_path.read_bytes()).hexdigest(),
+        sigcfg_sha256=hashlib.sha256((route / "sigcfg.dat").read_bytes()).hexdigest(),
         traffic="existing lead and adjacent opposite services",
     )
     (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")

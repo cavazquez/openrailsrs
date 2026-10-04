@@ -45,6 +45,7 @@ impl Plugin for PlayerUiPlugin {
             .init_resource::<ActivePlayerContent>()
             .init_resource::<UiPointerCapture>()
             .add_systems(Startup, spawn_ui_camera)
+            .add_systems(Update, target_screen_hud_camera)
             .add_systems(OnEnter(ViewerAppState::Menu), enter_menu)
             .add_systems(
                 OnEnter(ViewerAppState::Playing),
@@ -171,6 +172,9 @@ pub fn camera_input_available(
 }
 #[derive(Component)]
 struct PlayerUiCamera;
+/// Screen information renders after cab/weather postprocessing.
+#[derive(Component)]
+pub(crate) struct ScreenHud;
 #[derive(Component)]
 struct PlayerToolbar;
 #[derive(Component)]
@@ -323,6 +327,18 @@ fn spawn_ui_camera(mut commands: Commands, mut ui: ResMut<PlayerUiState>) {
             ))
             .id(),
     );
+}
+fn target_screen_hud_camera(
+    mut commands: Commands,
+    ui: Res<PlayerUiState>,
+    roots: Query<Entity, (With<ScreenHud>, Without<UiTargetCamera>)>,
+) {
+    let Some(camera) = ui.camera else {
+        return;
+    };
+    for entity in &roots {
+        commands.entity(entity).insert(UiTargetCamera(camera));
+    }
 }
 fn enter_menu(mut ui: ResMut<PlayerUiState>) {
     ui.panel = PlayerPanel::Menu;
@@ -597,7 +613,7 @@ fn handle_buttons(
                 MenuField::Path=>menu.path=cycle(menu.path,menu.paths.len()+1,*delta),
                 MenuField::Time=>menu.start_time_s=(menu.start_time_s+f64::from(*delta)*900.0).rem_euclid(86400.0),
                 MenuField::Season=>menu.season=cycle(menu.season,4,*delta),
-                MenuField::Weather=>menu.weather=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==menu.weather).unwrap_or(0),3,*delta)],
+                MenuField::Weather=>menu.weather=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==menu.weather).unwrap_or(0),PlayerWeather::ALL.len(),*delta)],
             }Ok(())},
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
@@ -2139,7 +2155,9 @@ fn apply_weather(
     mut precipitation: ResMut<crate::precipitation::PrecipitationState>,
     rain: Query<Entity, With<crate::precipitation::RainMeshMarker>>,
 ) {
-    precipitation.enabled = content.weather == PlayerWeather::Rain;
+    precipitation.enabled = matches!(content.weather, PlayerWeather::Rain | PlayerWeather::Snow);
+    precipitation.snow = content.weather == PlayerWeather::Snow;
+    crate::shapes::set_scenery_snow(precipitation.snow);
     if !precipitation.enabled {
         for entity in &rain {
             commands.entity(entity).despawn();

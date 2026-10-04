@@ -34,6 +34,10 @@ pub struct OrSceneryGpuParams {
     pub shadow_map_limit_z: f32,
     pub shadow_map_limit_w: f32,
     pub debug_flags: f32,
+    pub wetness: f32,
+    pub snow_cover: f32,
+    pub weather_pad0: f32,
+    pub weather_pad1: f32,
 }
 
 const OR_KIND_TEX: f32 = 0.0;
@@ -152,6 +156,10 @@ pub fn build_or_scenery_params(
         shadow_map_limit_z: shadow_map_limits[2],
         shadow_map_limit_w: shadow_map_limits[3],
         debug_flags: 0.0,
+        wetness: 0.0,
+        snow_cover: 0.0,
+        weather_pad0: 0.0,
+        weather_pad1: 0.0,
     }
 }
 

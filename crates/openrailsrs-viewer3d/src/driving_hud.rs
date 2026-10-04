@@ -130,6 +130,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 Visibility::Hidden,
                 ZIndex(110),
                 kind,
+                crate::player_ui::ScreenHud,
             ))
             .with_children(|panel| {
                 for (field, size) in fields {
@@ -163,7 +164,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
         Node { position_type: PositionType::Absolute, left: Val::Px(12.0), bottom: Val::Px(12.0),
             max_width: Val::Percent(90.0), padding: UiRect::all(Val::Px(12.0)), ..default() },
         BackgroundColor(Color::srgba(0.02, 0.03, 0.04, 0.90)),
-        Visibility::Hidden, ZIndex(120), HudPanel::Help,
+        Visibility::Hidden, ZIndex(120), HudPanel::Help, crate::player_ui::ScreenHud,
     )).with_children(|panel| {
         panel.spawn((Text::new(
             "CONTROLES · F6 cierra esta ayuda\n\nD / A  subir / bajar regulador    ' / ;  aplicar / soltar freno\nW / S  adelante / atrás          \\  inversor neutro\nQ  puertas · Space  bocina · V  limpiaparabrisas\nBackspace  emergencia · Pause o P  pausa · R  reiniciar\n+ / -  acelerar / reducir el tiempo\n\n1  cabina · Alt+1  cambiar 2D/3D · 2  exterior · 3  órbita\nF1  cámara orbital · F2  cámara libre · flechas  mover cámara\nRePág / AvPág  subir / bajar cámara · rueda  acercar / alejar\nArrastrar con botón izquierdo  girar · botón central  desplazar\nF4  monitor · F5  conducción · F3  diagnóstico"

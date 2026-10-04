@@ -278,6 +278,10 @@ impl LiveDriveSession {
         self.signal_steps = saved.signal_steps;
         self.arrived = saved.arrived;
         self.rebuild_formation_physics();
+        self.evaluate_native_signals();
+        // Traffic footprints are restored separately; recompute after that sync,
+        // including when the player remains paused on the loaded frame.
+        self.native_signals.needs_refresh = true;
         Ok(())
     }
 

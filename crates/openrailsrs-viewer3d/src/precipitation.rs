@@ -19,6 +19,7 @@ const RAIN_STREAK_WIDTH: f32 = 0.045;
 #[derive(Resource, Clone, Debug)]
 pub struct PrecipitationState {
     pub enabled: bool,
+    pub snow: bool,
     pub area_half: f32,
     pub ceiling: f32,
 }
@@ -33,6 +34,7 @@ impl Default for PrecipitationState {
     fn default() -> Self {
         Self {
             enabled: false,
+            snow: false,
             area_half: 35.0,
             ceiling: 45.0,
         }
@@ -121,7 +123,14 @@ pub(crate) fn spawn_precipitation(
         let speed = 20.0 + rain_rng01(seed, 3) * 16.0;
         drops.push(RainDropState { seed, speed });
     }
-    let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling, 0.0);
+    let mesh = build_rain_mesh(
+        &drops,
+        origin,
+        state.area_half,
+        state.ceiling,
+        0.0,
+        state.snow,
+    );
     let material = materials.add(StandardMaterial {
         base_color: Color::srgba(0.94, 0.97, 1.0, 0.9),
         emissive: LinearRgba::from(Color::srgb(0.55, 0.72, 1.0)) * 0.35,
@@ -150,8 +159,10 @@ fn build_rain_mesh(
     area_half: f32,
     ceiling: f32,
     elapsed_s: f32,
+    snow: bool,
 ) -> Mesh {
-    let hw = RAIN_STREAK_WIDTH * 0.5;
+    let hw = if snow { 0.09 } else { RAIN_STREAK_WIDTH * 0.5 };
+    let height = if snow { 0.18 } else { RAIN_STREAK_HEIGHT };
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(drops.len() * 4);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(drops.len() * 4);
     let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(drops.len() * 4);
@@ -168,14 +179,20 @@ fn build_rain_mesh(
             z = origin.z + offset.y;
         }
         let y = origin.y - 15.0
-            + (rain_rng01(drop.seed, 2) * ceiling - drop.speed * elapsed_s).rem_euclid(ceiling);
+            + (rain_rng01(drop.seed, 2) * ceiling
+                - drop.speed * if snow { 0.065 } else { 1.0 } * elapsed_s)
+                .rem_euclid(ceiling);
+        if snow {
+            x += (elapsed_s * 0.65 + drop.seed as f32).sin() * 1.2;
+            z += (elapsed_s * 0.45 + drop.seed as f32 * 1.7).cos() * 1.0;
+        }
         let yaw = rain_billboard_yaw(Vec3::new(x, y, z), origin);
         let rot = Quat::from_rotation_y(yaw);
         let corners_local = [
             Vec3::new(-hw, 0.0, 0.0),
             Vec3::new(hw, 0.0, 0.0),
-            Vec3::new(hw, RAIN_STREAK_HEIGHT, 0.0),
-            Vec3::new(-hw, RAIN_STREAK_HEIGHT, 0.0),
+            Vec3::new(hw, height, 0.0),
+            Vec3::new(-hw, height, 0.0),
         ];
         let base = positions.len() as u32;
         for c in &corners_local {
@@ -232,7 +249,14 @@ pub(crate) fn toggle_precipitation(
                 let speed = 20.0 + rain_rng01(seed, 3) * 16.0;
                 drops.push(RainDropState { seed, speed });
             }
-            let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling, 0.0);
+            let mesh = build_rain_mesh(
+                &drops,
+                origin,
+                state.area_half,
+                state.ceiling,
+                0.0,
+                state.snow,
+            );
             let material = materials.add(StandardMaterial {
                 base_color: Color::srgba(0.94, 0.97, 1.0, 0.9),
                 emissive: LinearRgba::from(Color::srgb(0.55, 0.72, 1.0)) * 0.35,
@@ -285,7 +309,14 @@ pub(crate) fn update_precipitation(
 
     let origin = cam.translation;
     let elapsed = live.map_or_else(|| time.elapsed_secs(), |l| l.session.time_s() as f32);
-    let mesh = build_rain_mesh(&rain.drops, origin, state.area_half, state.ceiling, elapsed);
+    let mesh = build_rain_mesh(
+        &rain.drops,
+        origin,
+        state.area_half,
+        state.ceiling,
+        elapsed,
+        state.snow,
+    );
     if let Some(mut existing) = mesh_assets.get_mut(&mesh_handle.0) {
         *existing = mesh;
     }
@@ -308,6 +339,7 @@ mod tests {
         assert_eq!(
             PrecipitationState {
                 enabled: false,
+                snow: false,
                 ..Default::default()
             }
             .hud_label(),
@@ -335,5 +367,31 @@ mod tests {
         let cam = Vec3::new(10.0, 10.0, 0.0);
         let yaw = rain_billboard_yaw(drop, cam);
         assert!((yaw - std::f32::consts::FRAC_PI_2).abs() < 0.05);
+    }
+}
+
+#[cfg(test)]
+mod snow_tests {
+    use super::*;
+    #[test]
+    fn snow_uses_bounded_quads_and_falls_more_slowly_than_rain() {
+        let drops = [RainDropState {
+            seed: 1,
+            speed: 30.0,
+        }];
+        let positions = |snow, t| {
+            let m = build_rain_mesh(&drops, Vec3::ZERO, 35.0, 45.0, t, snow);
+            m.attribute(Mesh::ATTRIBUTE_POSITION)
+                .unwrap()
+                .as_float3()
+                .unwrap()
+                .to_vec()
+        };
+        let initial = positions(true, 0.0);
+        let later = positions(true, 0.1);
+        assert!((initial[0][1] - later[0][1] - 0.195).abs() < 1e-4);
+        assert!((initial[2][1] - initial[0][1] - 0.18).abs() < 1e-4);
+        assert_eq!(later.len(), 4);
+        assert!((positions(false, 0.0)[0][1] - positions(false, 0.1)[0][1] - 3.0).abs() < 1e-4);
     }
 }

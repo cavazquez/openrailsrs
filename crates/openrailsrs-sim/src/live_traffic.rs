@@ -90,10 +90,12 @@ impl LiveTraffic {
     }
 
     pub fn synchronize_occupancy(&mut self, player: &mut LiveDriveSession) {
+        let mut footprints = player.own_track_occupancy();
         let mut blocks = player.own_occupied_edges();
         for service in &self.services {
             if service.departed {
                 blocks.extend(service.session.own_occupied_edges());
+                footprints.extend(service.session.own_track_occupancy());
             }
         }
         let other_blocks = |id: &str| -> HashMap<_, _> {
@@ -104,13 +106,27 @@ impl LiveTraffic {
                 .collect()
         };
         let others = other_blocks(&player.service_id);
-        if player.external_occupancy != others {
+        let positions: Vec<_> = footprints
+            .iter()
+            .filter(|i| i.owner != player.service_id)
+            .cloned()
+            .collect();
+        player.external_track_occupancy = positions;
+        if player.external_occupancy != others || player.native_signals.needs_refresh {
             player.external_occupancy = others;
             player.refresh_traffic_signals();
         }
         for service in &mut self.services {
             let others = other_blocks(&service.id);
-            if service.session.external_occupancy != others {
+            let positions: Vec<_> = footprints
+                .iter()
+                .filter(|i| i.owner != service.id)
+                .cloned()
+                .collect();
+            service.session.external_track_occupancy = positions;
+            if service.session.external_occupancy != others
+                || service.session.native_signals.needs_refresh
+            {
                 service.session.external_occupancy = others;
                 service.session.refresh_traffic_signals();
             }

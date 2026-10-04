@@ -15,6 +15,7 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(2) var base_sampler: sampler;
 @group(#{MATERIAL_BIND_GROUP}) @binding(3) var overlay_texture: texture_2d<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(4) var overlay_sampler: sampler;
+@group(#{MATERIAL_BIND_GROUP}) @binding(5) var<uniform> surface_weather: vec2<f32>;
 
 const SHADOW_BRIGHTNESS: f32 = 0.5;
 const FULL_BRIGHTNESS: f32 = 1.0;
@@ -29,6 +30,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var rgb = base.rgb * overlay.rgb * 2.0;
 
     let n = normalize(in.world_normal);
+    let wet = clamp(surface_weather.x, 0.0, 1.0);
+    let snow = clamp(surface_weather.y, 0.0, 1.0) * smoothstep(0.30, 0.85, n.y);
+    rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89), snow * 0.80);
     let light = view_bindings::lights.directional_lights[0];
     let light_dir = light.direction_to_light;
     let ambient = terrain_half_lambert(n, light_dir);
@@ -41,6 +45,11 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let t = saturate(ambient * shadow_mod);
     rgb = rgb * (mix(SHADOW_BRIGHTNESS, FULL_BRIGHTNESS, t) * railway_lighting::railway_daylight()
         + railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy));
+    if (wet > 0.0) {
+        let eye = normalize(view_bindings::view.world_position.xyz - in.world_position.xyz);
+        let h = normalize(eye + light_dir);
+        rgb += vec3(wet * 0.18 * pow(max(dot(n, h), 0.0), 40.0) * t * railway_lighting::railway_daylight());
+    }
 
     var out_color = vec4<f32>(rgb, 1.0);
 #ifdef DISTANCE_FOG

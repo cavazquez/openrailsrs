@@ -128,6 +128,8 @@ pub struct SignalDef {
 #[derive(Debug, Default, Deserialize)]
 pub struct SignalScriptDef {
     #[serde(default)]
+    pub native: Option<openrailsrs_track::sigscript::NativeSignalDef>,
+    #[serde(default)]
     pub on_block_ahead: Option<SignalAspectDef>,
     #[serde(default)]
     pub on_second_block_ahead: Option<SignalAspectDef>,
@@ -249,6 +251,7 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
             aspect,
             clear_after_s: s.clear_after_s,
             script: s.script.map(|sc| openrailsrs_track::SignalScript {
+                native: sc.native,
                 on_block_ahead: sc.on_block_ahead.map(|a| match a {
                     SignalAspectDef::Clear => SignalAspect::Clear,
                     SignalAspectDef::Caution => SignalAspect::Caution,

@@ -74,7 +74,11 @@ def main():
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=240)
     parser.add_argument("--audio", action="store_true", help="also render offline native WAV demonstrations")
+    parser.add_argument("--travel-m", type=float, default=0,
+                        help="drive to this distance before capture; exercise instruments and emitters")
     args = parser.parse_args()
+    if not math.isfinite(args.travel_m) or args.travel_m < 0:
+        parser.error("travel distance must be finite and nonnegative")
     args.repo = repo
     args.viewer = repo / "target/debug/openrailsrs-viewer3d"
     args.route_root = args.route_root.resolve()
@@ -93,8 +97,8 @@ def main():
     selected = set(args.formation or [name for name, _ in FORMATIONS])
     if selected - {name for name, _ in FORMATIONS}:
         parser.error("--formation must name a representative formation")
-    args.autodrive = 0
-    args.speed_mul = 1
+    args.autodrive = 0.75 if args.travel_m else 0
+    args.speed_mul = 16 if args.travel_m else 1
     args.ready_frames = 20
     args.view_radius_m = 450
     args.cab_fov_deg = 45
@@ -117,7 +121,11 @@ def main():
         for view, follow in modes:
             args.follow = follow
             label = f"{slug}-{view}"
-            views[view] = run_checkpoint(args, label, 0, True)
+            views[view] = run_checkpoint(args, label, args.travel_m, True)
+            if args.travel_m:
+                effects = views[view].get("train_effects") or {}
+                if not (0 < effects.get("live_particles", 0) <= effects.get("particle_limit", 0)):
+                    raise RuntimeError(f"{label}: moving emitters missing or unbounded: {effects}")
             log = (args.out_dir / f"{label}.log").read_text()
             matched = re.search(r"live drive — (\d+) vehicle\(s\) \((\d+) shape / (\d+) fallback", log)
             if not matched or int(matched[3]) or int(matched[1]) != stock["report"]["vehicles"]:

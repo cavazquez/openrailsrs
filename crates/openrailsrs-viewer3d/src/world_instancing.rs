@@ -163,6 +163,8 @@ pub struct WorldInstanceAppearance {
     /// Signed dither coverage: + fades the new mesh in, - fades the old out.
     /// 0 is steady state; the normal opaque/depth pipeline remains unchanged.
     pub lod_fade: f32,
+    /// x: wetness, y: snow coverage; updated without replacing instance buffers.
+    pub surface_weather: Vec2,
 }
 
 impl SyncComponent for WorldInstanceAppearance {
@@ -228,6 +230,12 @@ impl Plugin for WorldInstancingPlugin {
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
+        render_app
+            .init_resource::<crate::performance::RequiredRenderAssets>()
+            .add_systems(
+                bevy::render::ExtractSchedule,
+                crate::performance::extract_required_render_assets,
+            );
         if std::env::var_os("OPENRAILSRS_SHADER_DIAGNOSTICS").is_some() {
             render_app.add_systems(
                 Render,
@@ -238,6 +246,12 @@ impl Plugin for WorldInstancingPlugin {
             .add_systems(
                 Render,
                 crate::performance::update_pipeline_status.in_set(RenderSystems::Cleanup),
+            )
+            .add_systems(
+                Render,
+                crate::performance::retry_uploaded_mesh_specializations
+                    .after(bevy::render::render_asset::prepare_assets::<bevy::render::mesh::RenderMesh>)
+                    .before(RenderSystems::Specialize),
             )
             .add_render_command::<Opaque3d, DrawWorldInstanced>()
             .add_render_command::<Shadow, DrawWorldInstancedShadow>()
@@ -347,6 +361,7 @@ pub fn appearance_from_standard_material(
         double_sided: mat.is_some_and(|m| m.double_sided),
         world_from_local: Mat4::IDENTITY,
         lod_fade: 0.0,
+        surface_weather: Vec2::ZERO,
     }
 }
 
@@ -436,6 +451,7 @@ struct GpuWorldInstanceBindGroup {
 #[derive(Clone, Copy, ShaderType, Pod, Zeroable)]
 #[repr(C)]
 struct AppearanceGpu {
+    surface_weather: Vec4,
     base_color: Vec4,
     params: Vec4,
     world_from_local: Mat4,
@@ -711,6 +727,7 @@ fn prepare_world_instance_bind_groups(
             continue;
         };
         let gpu = AppearanceGpu {
+            surface_weather: appearance.surface_weather.extend(0.0).extend(0.0),
             base_color: Vec4::from_array(appearance.base_color.to_f32_array()),
             params: Vec4::new(
                 appearance.alpha_cutoff,

@@ -24,6 +24,7 @@ pub struct SignalLamp {
     pub signal_id: String,
     /// Whether this physical lamp is lit for Stop / Caution / Clear.
     pub lit_for_aspect: [bool; 3],
+    pub lit_for_native_aspect: [bool; 8],
     pub fallback_aspect: SignalAspect,
     /// Last state already uploaded to the material asset.
     pub is_on: bool,
@@ -134,6 +135,11 @@ pub fn spawn_signal_lamp_objects(
                         Color::linear_rgb(rgb[0], rgb[1], rgb[2])
                     })
                     .unwrap_or(Color::srgb(1.0, 1.0, 1.0));
+                let lit_for_native_aspect = std::array::from_fn(|idx| {
+                    sig_type
+                        .draw_state_for_native_aspect(idx as u8)
+                        .is_some_and(|s| s.draw_lights.contains(&light.index))
+                });
                 let lit_for_aspect =
                     std::array::from_fn(|idx| lit_by_aspect[idx].contains(&light.index));
                 let on = lit_for_aspect[aspect_to_code(aspect) as usize];
@@ -174,6 +180,7 @@ pub fn spawn_signal_lamp_objects(
                         SignalLamp {
                             signal_id: signal_id.clone(),
                             lit_for_aspect,
+                            lit_for_native_aspect,
                             fallback_aspect: aspect,
                             is_on: on,
                         },
@@ -265,7 +272,12 @@ pub fn update_signal_lamps(
             &lamp.signal_id,
             lamp.fallback_aspect,
         );
-        let on = lamp.lit_for_aspect[aspect_to_code(aspect) as usize];
+        let native = live
+            .as_ref()
+            .and_then(|l| native_aspect(l, &lamp.signal_id));
+        let on = native.map_or(lamp.lit_for_aspect[aspect_to_code(aspect) as usize], |a| {
+            lamp.lit_for_native_aspect[a as usize]
+        });
         if lamp.is_on == on {
             continue;
         }
@@ -278,6 +290,15 @@ pub fn update_signal_lamps(
     }
 }
 
+fn native_aspect(live: &crate::live::LiveDrive, id: &str) -> Option<u8> {
+    live.session.native_signal_aspect(id).or_else(|| {
+        live.traffic
+            .services
+            .iter()
+            .find_map(|service| service.session.native_signal_aspect(id))
+    })
+}
+
 pub(crate) fn runtime_aspect(
     scene: &TrackScene,
     live: Option<&crate::live::LiveDrive>,
@@ -287,6 +308,12 @@ pub(crate) fn runtime_aspect(
     live.and_then(|l| {
         if l.session.assume_signals_clear {
             Some(SignalAspect::Clear)
+        } else if let Some(native) = native_aspect(l, signal_id) {
+            Some(match native {
+                0..=2 => SignalAspect::Stop,
+                3..=5 => SignalAspect::Caution,
+                _ => SignalAspect::Clear,
+            })
         } else {
             l.session.signal_aspect(signal_id)
         }

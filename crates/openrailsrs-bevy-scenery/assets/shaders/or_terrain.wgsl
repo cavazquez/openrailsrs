@@ -47,12 +47,14 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         t = saturate(ambient * shadow_mod + params.image_texture_is_night);
     }
 
-    var lit_rgb = color.rgb * mix(params.shadow_brightness, params.full_brightness, t);
+    let snow = clamp(params._pad1, 0.0, 1.0) * smoothstep(0.30,0.85,normalize(in.world_normal).y);
+    let surface = mix(color.rgb,vec3(0.78,0.84,0.90),snow*0.8);
+    var lit_rgb = surface * mix(params.shadow_brightness, params.full_brightness, t);
     let overlay = textureSample(overlay_texture, overlay_sampler, in.uv * params.overlay_scale).rgb * 2.0;
     lit_rgb = lit_rgb * overlay;
     lit_rgb = lit_rgb * min(params.night_color_modifier, railway_lighting::railway_daylight());
     if (params.lit >= 0.5) {
-        lit_rgb += color.rgb * overlay * railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy);
+        lit_rgb += surface * overlay * railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy);
     }
     // Rain darkens the ground and adds a restrained sun reflection at grazing angles.
     let wet = clamp(params._pad0, 0.0, 1.0);

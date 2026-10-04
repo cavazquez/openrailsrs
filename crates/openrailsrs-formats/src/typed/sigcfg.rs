@@ -68,6 +68,28 @@ pub struct SignalTypeDef {
 }
 
 impl SignalTypeDef {
+    /// Exact native SIGASP value, including both yellow states and both clears.
+    pub fn draw_state_for_native_aspect(&self, aspect: u8) -> Option<&SignalDrawStateDef> {
+        let name = [
+            "STOP",
+            "STOP_AND_PROCEED",
+            "RESTRICTING",
+            "APPROACH_1",
+            "APPROACH_2",
+            "APPROACH_3",
+            "CLEAR_1",
+            "CLEAR_2",
+        ]
+        .get(aspect as usize)?;
+        let draw = self
+            .aspects
+            .iter()
+            .find(|(n, _)| n.eq_ignore_ascii_case(name))?;
+        self.draw_states
+            .iter()
+            .find(|s| s.name.eq_ignore_ascii_case(&draw.1))
+    }
+
     pub fn draw_state_for_aspect(&self, aspect: u8) -> Option<&SignalDrawStateDef> {
         let aliases: &[&str] = match aspect {
             0 => &["STOP", "STOP_AND_PROCEED", "RESTRICTING"],

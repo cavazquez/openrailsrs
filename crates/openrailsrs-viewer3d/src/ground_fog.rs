@@ -131,6 +131,7 @@ pub fn update_ground_fog(
                 PlayerWeather::Clear => 0.00004,
                 PlayerWeather::Rain => 0.0003,
                 PlayerWeather::Fog => 0.0012,
+                PlayerWeather::Snow => 0.0008,
             }
         } else {
             0.0

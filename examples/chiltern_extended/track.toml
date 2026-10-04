@@ -335,19 +335,10 @@ edge_id = "e14603_r"
 position_m = 2647.9903682693084
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig516"
-edge_id = "e14603"
-position_m = 735.905
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig561_r"
@@ -355,19 +346,10 @@ edge_id = "e96_r"
 position_m = 2800.2408079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig561"
-edge_id = "e96"
-position_m = 873.7772
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "LNER_Searchlight"
+function = "NORMAL"
+source = "// LNER 4 Aspect Searchlight\r\n\r\nextern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tnext_sig_lr ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\tfloat\t\t\tnext_state;\r\n\r\n// If required, show the 'stop' indication.\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n// Signal head is enabled and the block ahead is clear - update based on state of\r\n// next signal head.\r\n\telse\r\n\t{\r\n\t\tnext_state = next_sig_lr (SIGFN_NORMAL);\r\n\r\n\t\tif (next_state ==# SIGASP_STOP ||\r\n\t\t\tnext_state ==# SIGASP_STOP_AND_PROCEED ||\r\n\t\t\tnext_state ==# SIGASP_RESTRICTING)\r\n\t\t{\r\n\t\t\tstate = SIGASP_APPROACH_1;\r\n\t\t}\r\n\t\telse if (next_state ==# SIGASP_APPROACH_1)\r\n\t\t{\r\n\t\t\tstate = SIGASP_APPROACH_2;\r\n\t\t}\r\n\t\telse //if (next_state ==# SIGASP_APPROACH_2 ||\r\n\t\t\t//\tnext_state ==# SIGASP_CLEAR_2)\r\n\t\t{\r\n\t\t\tstate = SIGASP_CLEAR_2;\r\n\t\t}\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig564_r"
@@ -375,19 +357,10 @@ edge_id = "e14615_r"
 position_m = 0.0
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig564"
-edge_id = "e14615"
-position_m = 3226.936564218667
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig685_r"
@@ -395,19 +368,10 @@ edge_id = "e94_r"
 position_m = 1196.5319198967397
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig685"
-edge_id = "e94"
-position_m = 47.0324
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemHomeUQ"
+function = "NORMAL"
+source = "// UQ Semephore (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig686_r"
@@ -415,19 +379,10 @@ edge_id = "e94_r"
 position_m = 549.1843198967398
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig686"
-edge_id = "e94"
-position_m = 694.38
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemHomeUQ"
+function = "NORMAL"
+source = "// UQ Semephore (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig687_r"
@@ -435,19 +390,10 @@ edge_id = "e94_r"
 position_m = 152.76431989673983
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig687"
-edge_id = "e94"
-position_m = 1090.8
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemHomeUQ"
+function = "NORMAL"
+source = "// UQ Semephore (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig688_r"
@@ -455,19 +401,10 @@ edge_id = "e96_r"
 position_m = 149.99800792455562
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig688"
-edge_id = "e96"
-position_m = 3524.02
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemHomeUQ"
+function = "NORMAL"
+source = "// UQ Semephore (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig689_r"
@@ -475,19 +412,10 @@ edge_id = "e96_r"
 position_m = 3670.3461289245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig689"
-edge_id = "e96"
-position_m = 3.671879
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig690_r"
@@ -495,19 +423,10 @@ edge_id = "e96_r"
 position_m = 3670.3461289245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig690"
-edge_id = "e96"
-position_m = 3.671879
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStopBranch"
+function = "NORMAL"
+source = "// Branch Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig691_r"
@@ -515,19 +434,10 @@ edge_id = "e96_r"
 position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig691"
-edge_id = "e96"
-position_m = 1698.04
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemHomeUQ"
+function = "NORMAL"
+source = "// UQ Semephore (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig694"
@@ -535,29 +445,10 @@ edge_id = "e102"
 position_m = 1287.87
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig694_r"
-edge_id = "e102_r"
-position_m = 1463.7884600000002
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig695_r"
-edge_id = "e3661_r"
-position_m = 1654.9439799999996
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig695"
@@ -565,9 +456,10 @@ edge_id = "e3661"
 position_m = 1324.42
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig696"
@@ -575,29 +467,10 @@ edge_id = "e102"
 position_m = 2724.35
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig696_r"
-edge_id = "e102_r"
-position_m = 27.308460000000196
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig697_r"
-edge_id = "e3661_r"
-position_m = 233.4139799999998
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GW_TubHomeWRu"
+function = "NORMAL"
+source = "// GWR Lower Quadrant Home\r\n\r\nextern float block_state ();\r\n\r\nextern float route_set ();\r\n\r\nextern float def_draw_state ();\r\n\r\nextern float state;\r\n\r\nextern float draw_state;\r\n\r\nextern float enabled;\r\n\r\nif (!enabled || // Not enabled/cleared to show natural state?\r\n\r\nblock_state() !=# BLOCK_CLEAR || // Block ahead not clear?\r\n\r\n!route_set()) // Switch not set as per link?\r\n\r\n{\r\n\r\nstate = SIGASP_STOP;\r\n\r\n}\r\n\r\nelse\r\n\r\n{\r\n\r\nstate = SIGASP_CLEAR_2;\r\n\r\n}\r\n\r\n// Get draw state\r\n\r\ndraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig697"
@@ -605,9 +478,10 @@ edge_id = "e3661"
 position_m = 2745.95
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig698_r"
@@ -615,19 +489,10 @@ edge_id = "e104_r"
 position_m = 132.15789
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig698"
-edge_id = "e104"
-position_m = 5.84211
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig699_r"
@@ -635,19 +500,10 @@ edge_id = "e104_r"
 position_m = 132.15789
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig699"
-edge_id = "e104"
-position_m = 5.84211
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStopBranch"
+function = "NORMAL"
+source = "// Branch Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig700_r"
@@ -655,19 +511,10 @@ edge_id = "e104_r"
 position_m = 134.99381
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig700"
-edge_id = "e104"
-position_m = 3.00619
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig705_r"
@@ -675,19 +522,10 @@ edge_id = "e14615_r"
 position_m = 2696.562564218667
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig705"
-edge_id = "e14615"
-position_m = 530.374
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig707_r"
@@ -695,19 +533,10 @@ edge_id = "e14606_r"
 position_m = 224.06824378528594
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig707"
-edge_id = "e14606"
-position_m = 73.4213
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig708_r"
@@ -715,19 +544,10 @@ edge_id = "e14603_r"
 position_m = 3348.5137682693085
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig708"
-edge_id = "e14603"
-position_m = 35.3816
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig709_r"
@@ -735,19 +555,10 @@ edge_id = "e14603_r"
 position_m = 3348.5137682693085
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig709"
-edge_id = "e14603"
-position_m = 35.3816
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStopBranch"
+function = "NORMAL"
+source = "// Branch Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig713_r"
@@ -755,29 +566,10 @@ edge_id = "e14601_r"
 position_m = 575.6996402065547
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig713"
-edge_id = "e14601"
-position_m = 93.67519
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig926_r"
-edge_id = "e14615_r"
-position_m = 0.0
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig926"
@@ -785,19 +577,10 @@ edge_id = "e14615"
 position_m = 3226.936564218667
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig927"
-edge_id = "e106"
-position_m = 43.1077
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig927_r"
@@ -805,9 +588,10 @@ edge_id = "e106_r"
 position_m = 101.8923
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig928_r"
@@ -815,29 +599,10 @@ edge_id = "e14615_r"
 position_m = 0.0
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig928"
-edge_id = "e14615"
-position_m = 3226.936564218667
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig932_r"
-edge_id = "e104_r"
-position_m = 6.634999999999991
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig932"
@@ -845,19 +610,10 @@ edge_id = "e104"
 position_m = 131.365
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig941"
-edge_id = "e102"
-position_m = 3.12757
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig941_r"
@@ -865,9 +621,10 @@ edge_id = "e102_r"
 position_m = 2748.53089
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig942_r"
@@ -875,19 +632,10 @@ edge_id = "e3661_r"
 position_m = 2975.8613479999995
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig942"
-edge_id = "e3661"
-position_m = 3.502632
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1058"
@@ -895,29 +643,10 @@ edge_id = "e102"
 position_m = 2380.5
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1058_r"
-edge_id = "e102_r"
-position_m = 371.1584600000001
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1059_r"
-edge_id = "e3661_r"
-position_m = 564.2139799999995
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1059"
@@ -925,9 +654,10 @@ edge_id = "e3661"
 position_m = 2415.15
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1060_r"
@@ -935,29 +665,10 @@ edge_id = "e100_r"
 position_m = 384.688
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1060"
-edge_id = "e100"
-position_m = 121.566
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1061"
-edge_id = "e3659"
-position_m = 86.78519
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1061_r"
@@ -965,9 +676,10 @@ edge_id = "e3659_r"
 position_m = 385.03781000000004
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1065_r"
@@ -975,19 +687,10 @@ edge_id = "e100_r"
 position_m = 197.98790000000002
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1065"
-edge_id = "e100"
-position_m = 308.2661
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1066_r"
@@ -995,19 +698,10 @@ edge_id = "e96_r"
 position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1066"
-edge_id = "e96"
-position_m = 1698.04
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "SemDistUQ"
+function = "DISTANCE"
+source = "// UQ Semaphore Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1067_r"
@@ -1015,19 +709,10 @@ edge_id = "e96_r"
 position_m = 1975.9780079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1067"
-edge_id = "e96"
-position_m = 1698.04
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "Counterbalance_SemHomeUQ"
+function = "INFO"
+source = "// UQ Counterbalance Arm (Home)\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1184"
@@ -1035,19 +720,10 @@ edge_id = "e102"
 position_m = 2724.35
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1184_r"
-edge_id = "e102_r"
-position_m = 27.308460000000196
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GW_TubHome"
+function = "NORMAL"
+source = "// GWR Lower Quadrant Home\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig1910_r"
@@ -1055,19 +731,10 @@ edge_id = "e14603_r"
 position_m = 3351.8815682693084
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig1910"
-edge_id = "e14603"
-position_m = 32.0138
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig2684_r"
@@ -1075,19 +742,10 @@ edge_id = "e14603_r"
 position_m = 2654.1153682693084
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig2684"
-edge_id = "e14603"
-position_m = 729.78
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig4140_r"
@@ -1095,29 +753,10 @@ edge_id = "e104_r"
 position_m = 98.2989
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig4140"
-edge_id = "e104"
-position_m = 39.7011
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig4198_r"
-edge_id = "e3661_r"
-position_m = 93.04397999999946
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig4198"
@@ -1125,9 +764,10 @@ edge_id = "e3661"
 position_m = 2886.32
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8517_r"
@@ -1135,19 +775,10 @@ edge_id = "e96_r"
 position_m = 3671.7489079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8517"
-edge_id = "e96"
-position_m = 2.2691
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8518_r"
@@ -1155,19 +786,10 @@ edge_id = "e96_r"
 position_m = 3671.7489079245556
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8518"
-edge_id = "e96"
-position_m = 2.2691
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistBranch"
+function = "DISTANCE"
+source = "// Branch Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) <# SIGASP_CLEAR_1)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8519_r"
@@ -1175,19 +797,10 @@ edge_id = "e96_r"
 position_m = 3186.1850079245555
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8519"
-edge_id = "e96"
-position_m = 487.833
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8520_r"
@@ -1195,19 +808,10 @@ edge_id = "e96_r"
 position_m = 3186.1850079245555
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8520"
-edge_id = "e96"
-position_m = 487.833
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistBranch"
+function = "DISTANCE"
+source = "// Branch Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) <# SIGASP_CLEAR_1)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8522_r"
@@ -1215,29 +819,10 @@ edge_id = "e100_r"
 position_m = 197.98790000000002
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8522"
-edge_id = "e100"
-position_m = 308.2661
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8523"
-edge_id = "e3659"
-position_m = 273.3088
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistStop"
+function = "DISTANCE"
+source = "// Distant and Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\textern float\tthis_sig_lr ();\r\n\r\n\tif ( //!enabled ||\r\n\t\t!route_set () ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2 ||\r\n\t\tthis_sig_lr (SIGFN_NORMAL) !=# SIGASP_CLEAR_2 )\r\n\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8523_r"
@@ -1245,19 +830,10 @@ edge_id = "e3659_r"
 position_m = 198.51420000000002
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8524"
-edge_id = "e3659"
-position_m = 273.3088
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8524_r"
@@ -1265,9 +841,10 @@ edge_id = "e3659_r"
 position_m = 198.51420000000002
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistStop"
+function = "DISTANCE"
+source = "// Distant and Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\textern float\tthis_sig_lr ();\r\n\r\n\tif ( //!enabled ||\r\n\t\t!route_set () ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2 ||\r\n\t\tthis_sig_lr (SIGFN_NORMAL) !=# SIGASP_CLEAR_2 )\r\n\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8532_r"
@@ -1275,19 +852,10 @@ edge_id = "e3661_r"
 position_m = 2792.2045799999996
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8532"
-edge_id = "e3661"
-position_m = 187.1594
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8533_r"
@@ -1295,29 +863,10 @@ edge_id = "e3661_r"
 position_m = 2792.2045799999996
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8533"
-edge_id = "e3661"
-position_m = 187.1594
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8536_r"
-edge_id = "e3661_r"
-position_m = 2766.98998
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistBranch"
+function = "DISTANCE"
+source = "// Branch Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) <# SIGASP_CLEAR_1)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8536"
@@ -1325,9 +874,10 @@ edge_id = "e3661"
 position_m = 212.374
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8537"
@@ -1335,19 +885,10 @@ edge_id = "e102"
 position_m = 177.938
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8537_r"
-edge_id = "e102_r"
-position_m = 2573.72046
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8541_r"
@@ -1355,19 +896,10 @@ edge_id = "e14615_r"
 position_m = 2696.562564218667
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8541"
-edge_id = "e14615"
-position_m = 530.374
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistStop"
+function = "DISTANCE"
+source = "// Distant and Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\textern float\tthis_sig_lr ();\r\n\r\n\tif ( //!enabled ||\r\n\t\t!route_set () ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2 ||\r\n\t\tthis_sig_lr (SIGFN_NORMAL) !=# SIGASP_CLEAR_2 )\r\n\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8542_r"
@@ -1375,19 +907,10 @@ edge_id = "e14615_r"
 position_m = 1491.556564218667
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8542"
-edge_id = "e14615"
-position_m = 1735.38
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDist"
+function = "DISTANCE"
+source = "// Distant\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8543_r"
@@ -1395,19 +918,10 @@ edge_id = "e14615_r"
 position_m = 3161.6958642186673
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8543"
-edge_id = "e14615"
-position_m = 65.2407
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8549_r"
@@ -1415,19 +929,10 @@ edge_id = "e14618_r"
 position_m = 486.24617
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8549"
-edge_id = "e14618"
-position_m = 4.75383
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8550_r"
@@ -1435,19 +940,10 @@ edge_id = "e14618_r"
 position_m = 486.24617
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8550"
-edge_id = "e14618"
-position_m = 4.75383
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRDistStop"
+function = "DISTANCE"
+source = "// Distant and Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\textern float\tthis_sig_lr ();\r\n\r\n\tif ( //!enabled ||\r\n\t\t!route_set () ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) !=# SIGASP_CLEAR_2 ||\r\n\t\tthis_sig_lr (SIGFN_NORMAL) !=# SIGASP_CLEAR_2 )\r\n\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8551_r"
@@ -1455,19 +951,10 @@ edge_id = "e14618_r"
 position_m = 486.24617
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8551"
-edge_id = "e14618"
-position_m = 4.75383
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStopBranch"
+function = "NORMAL"
+source = "// Branch Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig8563_r"
@@ -1475,19 +962,10 @@ edge_id = "e3666_r"
 position_m = 89.22454378528596
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8563"
-edge_id = "e3666"
-position_m = 332.91
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8569_r"
@@ -1495,29 +973,10 @@ edge_id = "e3666_r"
 position_m = 332.340793785286
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8569"
-edge_id = "e3666"
-position_m = 89.79375
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8576_r"
-edge_id = "e14606_r"
-position_m = 1.6275437852859227
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8576"
@@ -1525,9 +984,10 @@ edge_id = "e14606"
 position_m = 295.862
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRGrdSig"
+function = "NORMAL"
+source = "// Shunt\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_1;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig8581_r"
@@ -1535,19 +995,10 @@ edge_id = "e14603_r"
 position_m = 767.3053682693085
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8581"
-edge_id = "e14603"
-position_m = 2616.59
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "BRCLHome"
+function = "Normal"
+source = "// BR 2 Aspect Colour Light Home\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tnext_sig_lr ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\tfloat\t\t\tnext_state;\r\n\r\n// If required, show the 'stop' indication.\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n// Signal head is enabled and the block ahead is clear - update based on state of\r\n// next signal head.\r\n\telse\r\n      {\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig8582_r"
@@ -1555,19 +1006,10 @@ edge_id = "e14603_r"
 position_m = 2063.345368269309
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8582"
-edge_id = "e14603"
-position_m = 1320.55
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "BRCLHome"
+function = "Normal"
+source = "// BR 2 Aspect Colour Light Home\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tnext_sig_lr ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\tfloat\t\t\tnext_state;\r\n\r\n// If required, show the 'stop' indication.\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n// Signal head is enabled and the block ahead is clear - update based on state of\r\n// next signal head.\r\n\telse\r\n      {\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////////////////////////////////////\r\n\r\n"
 
 [[signals]]
 id = "sig8831_r"
@@ -1575,19 +1017,10 @@ edge_id = "e14603_r"
 position_m = 540.2853682693085
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig8831"
-edge_id = "e14603"
-position_m = 2843.61
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig9283_r"
@@ -1595,19 +1028,10 @@ edge_id = "e3661_r"
 position_m = 2794.3209799999995
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig9283"
-edge_id = "e3661"
-position_m = 185.043
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "BR_M_TubHome"
+function = "NORMAL"
+source = "// BR(M) Upper Quad Home\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\r\n\tdraw_state = def_draw_state (state);\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig9962_r"
@@ -1615,29 +1039,10 @@ edge_id = "e14615_r"
 position_m = 3165.4640642186673
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig9962"
-edge_id = "e14615"
-position_m = 61.4725
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
-
-[[signals]]
-id = "sig10493_r"
-edge_id = "e3661_r"
-position_m = 61.2839799999997
-aspect = "clear"
-[signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "DummyDistant_2"
+function = "DISTANCE"
+source = "// Dummy Distant Signal to end the search done by \"dist_multi_sig_mr\" function\r\n// This signal is placed beyond the next home when the preceeding distant never clears\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tdist_multi_sig_mr ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif ( //!enabled ||\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\t!route_set() ||\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t\tdist_multi_sig_mr (SIGFN_NORMAL, SIGFN_DISTANCE) ==# SIGASP_STOP)\r\n\t{\r\n\t\tstate = SIGASP_APPROACH_2;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n// These Scripts copied from other of my signal sets //////////////////////////\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[signals]]
 id = "sig10493"
@@ -1645,9 +1050,10 @@ edge_id = "e3661"
 position_m = 2918.08
 aspect = "clear"
 [signals.script]
-on_block_ahead = "stop"
-on_second_block_ahead = "caution"
-default = "clear"
+[signals.script.native]
+name = "GWRStop"
+function = "NORMAL"
+source = "// Stop\r\n\r\n\textern float\tblock_state ();\r\n\textern float\troute_set ();\r\n\textern float\tdef_draw_state ();\r\n\textern float\tstate;\r\n\textern float\tdraw_state;\r\n\textern float\tenabled;\r\n\r\n\tif (!enabled ||\t\t\t\t\t\t\t\t// Not enabled/cleared to show natural state?\r\n\t\tblock_state() !=# BLOCK_CLEAR ||\t\t// Block ahead not clear?\r\n\t\t!route_set())\t\t\t\t\t\t\t// Switch not set as per link?\r\n\t{\r\n\t\tstate = SIGASP_STOP;\r\n\t}\r\n\telse\r\n\t{\r\n\t\tstate = SIGASP_CLEAR_2;\r\n\t}\r\n\r\n// Get draw state\r\n\tdraw_state = def_draw_state (state);\r\n\r\n///////////////////////////////////////////////////////////////////////////////\r\n"
 
 [[msts_aliases]]
 tdb_id = 93

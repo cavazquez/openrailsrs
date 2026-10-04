@@ -273,11 +273,15 @@ impl CaptureScene<'_, '_> {
                 let (pending, failed) = p.counts();
                 serde_json::json!({"pending":pending,"failed":failed})
             }),
+            "pending_gpu_uploads": self.pipelines.as_ref().map(|p| p.pending_uploads()),
             "headlights": live.map(|live| live.session.headlights),
             "cab_light": live.map(|live| live.session.cab_light),
             "wiper": live.map(|live| live.session.wiper_active),
             "train_effects":self.effects.as_ref().map(|effects|effects.report()),
             "wetness":self.wet_surfaces.as_ref().map(|wet|wet.wetness),
+            "snow_cover":self.wet_surfaces.as_ref().map(|wet|wet.snow_cover),
+            "native_signal_programs":live.map(|l|l.session.native_signals.count()),
+            "native_signal_errors":live.map(|l|&l.session.native_signals.errors),
             "active_lod_fades":self.lod_fades.iter().count(),
             "station_results":live.map(|live|&live.session.gameplay.stop_results),
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),

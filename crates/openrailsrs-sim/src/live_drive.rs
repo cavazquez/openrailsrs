@@ -151,6 +151,8 @@ pub struct LiveDriveSession {
     pub formation: crate::FormationState,
     pub signal_overrides: HashMap<String, SignalAspect>,
     pub service_id: String,
+    pub native_signals: crate::native_signals::NativeSignalRuntime,
+    pub external_track_occupancy: Vec<crate::native_signals::TrackOccupancy>,
     /// Rebuilt by the live traffic coordinator at every physics quantum.
     pub external_occupancy: HashMap<String, String>,
     pub(crate) consist: openrailsrs_train::Consist,
@@ -281,6 +283,8 @@ impl LiveDriveSession {
 
         let assume_signals_clear = scenario.route.assume_signals_clear;
         let signal_runtime = init_signal_runtime(&graph, assume_signals_clear);
+        let native_signals = crate::native_signals::NativeSignalRuntime::from_graph(&graph)
+            .map_err(crate::SimError::Msg)?;
         let gameplay = build_live_gameplay(scenario, &graph, &path_edges)?;
         let start_chainage_m =
             path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
@@ -298,7 +302,7 @@ impl LiveDriveSession {
         }
         let region_tracker = RegionTracker::new(scenario.sound_regions.clone());
 
-        Ok(Self {
+        let mut session = Self {
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
             signal_overrides: HashMap::new(),
@@ -320,6 +324,8 @@ impl LiveDriveSession {
             dt: scenario.simulation.time_step,
             assume_signals_clear,
             signal_runtime,
+            native_signals,
+            external_track_occupancy: Vec::new(),
             gameplay,
             region_tracker,
             driver_throttle: 0.0,
@@ -336,7 +342,12 @@ impl LiveDriveSession {
             signal_steps: 0,
             arrived: false,
             start_chainage_m,
-        })
+        };
+        session.evaluate_native_signals();
+        // A static cab/capture needs real aspects at t=0. The traffic layer
+        // supplies its positional footprints before the first physics step.
+        session.native_signals.needs_refresh = true;
+        Ok(session)
     }
 
     pub fn set_direction(&mut self, direction: f64) -> Result<(), String> {
@@ -588,18 +599,11 @@ impl LiveDriveSession {
             (5.0 - self.driver_brake * 3.5).max(0.0)
         };
         let cylinders = &self.state.brake_system.cylinders;
-        let brake_cyl_bar = if cylinders.is_empty() {
-            self.driver_brake * 4.5
-        } else {
-            cylinders
-                .iter()
-                .map(|b| {
-                    (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0)
-                        * b.full_pressure_bar
-                })
-                .sum::<f64>()
-                / cylinders.len() as f64
-        };
+        // The driving cab reads the lead vehicle's cylinder, not the average of
+        // trailer/motor pressures with different native full-pressure ratings.
+        let brake_cyl_bar = cylinders.first().map_or(self.driver_brake * 4.5, |b| {
+            (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0) * b.full_pressure_bar
+        });
         CabTelemetry {
             speed_kmh,
             limit_kmh,
@@ -912,6 +916,7 @@ impl LiveDriveSession {
                 };
                 self.signal_runtime.insert(sig.id.clone(), aspect);
             }
+            self.evaluate_native_signals();
         }
     }
 

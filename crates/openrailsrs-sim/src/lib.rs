@@ -43,3 +43,5 @@ pub use scripted_driver::{Keyframe, ScriptedDriver};
 pub use service::{LiveGameplay, LiveStopTarget, ServicePhase, ServiceStopResult};
 pub use state::TrainSimState;
 pub use steam::BoilerState;
+
+pub mod native_signals;

@@ -29,6 +29,7 @@ struct VertexOutput {
 };
 
 struct AppearanceUniform {
+    surface_weather: vec4<f32>,
     base_color: vec4<f32>,
     // x = alpha_cutoff (0 = disabled), y = double_sided, zw unused
     params: vec4<f32>,
@@ -90,6 +91,10 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
     if appearance.params.y > 0.0 && !front_facing {
         n = -n;
     }
+    let wet=appearance.surface_weather.x;
+    let snow=appearance.surface_weather.y * smoothstep(0.35,0.85,n.y);
+    // Preserve cutout alpha: snow on a tree must not turn its quad opaque.
+    color=vec4(mix(color.rgb * (1.0-0.16*wet),vec3(0.78,0.84,0.90),snow),color.a);
     var lit = color.rgb;
     let ambient = view_bindings::lights.ambient_color.rgb;
     let exposure = view_bindings::view.exposure;
@@ -119,6 +124,13 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
     }
 
     lit += color.rgb * railway_spot_lighting(vec4(in.world_position, 1.0), n, in.clip_position.xy);
+    if wet>0.0 && view_bindings::lights.n_directional_lights>0u {
+        let light=view_bindings::lights.directional_lights[0];
+        let eye=normalize(view_bindings::view.world_position.xyz-in.world_position);
+        let h=normalize(eye+light.direction_to_light);
+        let daylight=clamp(light.direction_to_light.y*2.0,0.0,1.0);
+        lit+=vec3(pow(max(dot(n,h),0.0),48.0)*wet*0.04*daylight);
+    }
     var out_color = vec4<f32>(lit, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

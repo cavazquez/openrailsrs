@@ -62,6 +62,7 @@ pub mod signal_lamps;
 pub mod signal_subobj;
 pub mod signals;
 pub mod sky;
+pub mod surface_weather;
 pub mod tdb_track;
 pub mod teleport;
 pub mod terrain;
@@ -146,6 +147,11 @@ fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        // Bevy's native limiter shares the budget between images and meshes.
+        // A large scenery stream must not submit its entire upload in one frame.
+        app.insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
+            8 * 1024 * 1024,
+        ));
         app.add_systems(
             Update,
             world_lod_fade::tick
@@ -160,6 +166,15 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<wet_surfaces::WetSurfaces>();
+        app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
+            .init_resource::<surface_weather::SnowMaterials>()
+            .add_systems(
+                Update,
+                surface_weather::sync
+                    .after(wet_surfaces::update)
+                    .after(world::update_world_scenery_lod)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         app.add_systems(
             Update,
             wet_surfaces::update
@@ -282,6 +297,8 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 terrain::progressive_terrain_spawn_system
+                    // Deferred entities must use the origin selected this frame.
+                    .after(floating_origin::apply_floating_origin)
                     .run_if(in_state(ViewerAppState::Playing))
                     .run_if(launch::full_scenery_active)
                     .in_set(ScenerySpawnSet::Terrain),
