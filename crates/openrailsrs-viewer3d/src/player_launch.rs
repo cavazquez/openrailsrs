@@ -496,11 +496,44 @@ mod tests {
     #[test]
     fn selected_menu_service_is_written_and_loadable() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let mut menu = PlayerLaunchMenu::discover(&root, None);
+        let dir = tempfile::tempdir().unwrap();
+        // A launch test must not rely on an installed MSTS Content. The project
+        // Pullman physics fixtures intentionally omit its authored cab assets.
+        let stock = dir.path().join("TRAINS/TRAINSET/DMU");
+        let cons = dir.path().join("TRAINS/CONSISTS");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        std::fs::write(
+            stock.join("power.eng"),
+            "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power MaxPower ( 500kW ) MaxForce ( 100kN ) )",
+        )
+        .unwrap();
+        let con = cons.join("test.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( test Engine ( EngineData ( power DMU ) UiD ( 0 ) ) ) )",
+        )
+        .unwrap();
+        let mut menu = PlayerLaunchMenu::discover(&root, Some(dir.path().join("ROUTES/Chiltern")));
+        let mut authored = load_scenario(&menu.current().unwrap().source).unwrap();
+        authored.route.path = menu
+            .current()
+            .unwrap()
+            .route_dir
+            .to_string_lossy()
+            .into_owned();
+        authored.train.consist = con.to_string_lossy().into_owned();
+        for service in &mut authored.extra_trains {
+            service.consist = con.to_string_lossy().into_owned();
+        }
+        let source = dir.path().join("traffic.toml");
+        std::fs::write(&source, toml::to_string_pretty(&authored).unwrap()).unwrap();
+        menu.services[menu.service].source = source.clone();
+        menu.consists = vec![con];
+        menu.consist_audits.clear();
         menu.start_time_s = 45000.0;
         menu.season = 3;
         menu.weather = PlayerWeather::Rain;
-        let dir = tempfile::tempdir().unwrap();
         let request = menu.prepare_in(dir.path()).unwrap();
         let scenario = load_scenario(&request.path).unwrap();
         assert_eq!(scenario.route.stops.len(), 3);
@@ -508,6 +541,24 @@ mod tests {
         assert_eq!(scenario.scenario.season.as_deref(), Some("winter"));
         assert_eq!(request.weather, PlayerWeather::Rain);
         assert!(crate::live::LiveDrive::from_scenario_path(&request.path).is_ok());
+        assert_eq!(scenario.extra_trains.len(), 2);
+        assert!(
+            scenario
+                .extra_trains
+                .iter()
+                .all(|s| Path::new(&s.consist).is_absolute())
+        );
+
+        let previous_launch = std::fs::read(&request.path).unwrap();
+        authored.extra_trains[0].consist = dir
+            .path()
+            .join("missing.con")
+            .to_string_lossy()
+            .into_owned();
+        std::fs::write(&source, toml::to_string_pretty(&authored).unwrap()).unwrap();
+        let error = menu.prepare_in(dir.path()).unwrap_err();
+        assert!(error.contains(&authored.extra_trains[0].id), "{error}");
+        assert_eq!(std::fs::read(&request.path).unwrap(), previous_launch);
     }
 
     #[test]
