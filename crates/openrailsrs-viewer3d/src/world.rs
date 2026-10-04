@@ -4021,12 +4021,14 @@ pub fn progressive_world_spawn_system(
 /// baked-rest delta on the new mesh (#100).
 #[allow(clippy::type_complexity)]
 pub fn update_world_scenery_lod(
+    mut commands: Commands,
     cache: Option<Res<WorldShapeLodCache>>,
     progress: Option<Res<WorldSpawnProgress>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     focus: Option<Res<RouteFocus>>,
     mut lod_cam: ResMut<WorldLodCameraState>,
     mut parts: Query<(
+        Entity,
         &GlobalTransform,
         &mut WorldSceneryLod,
         &mut Mesh3d,
@@ -4034,6 +4036,10 @@ pub fn update_world_scenery_lod(
         Option<&mut ShapeAnimState>,
         Option<&mut ShapeAnimBinding>,
         Option<&mut Transform>,
+        Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&ChildOf>,
+        Option<&WorldTileBound>,
+        Option<&crate::world_lod_fade::LodFade>,
     )>,
 ) {
     let Some(cache) = cache else {
@@ -4065,8 +4071,23 @@ pub fn update_world_scenery_lod(
     let lod_t0 = Instant::now();
     let mut scanned = 0u32;
     let mut swapped = 0u32;
+    let mut active_fades = parts.iter().filter(|p| p.11.is_some()).count();
+    let mut deferred = false;
 
-    for (gt, mut lod, mut mesh3d, mut visibility, anim_state, anim_binding, transform) in &mut parts
+    for (
+        entity,
+        gt,
+        mut lod,
+        mut mesh3d,
+        mut visibility,
+        anim_state,
+        anim_binding,
+        transform,
+        material,
+        parent,
+        tile,
+        fade,
+    ) in &mut parts
     {
         if !lod.enabled {
             continue;
@@ -4086,12 +4107,50 @@ pub fn update_world_scenery_lod(
         if new_lod == lod.lod_idx {
             continue;
         }
+        if fade.is_some() {
+            lod_cam.last_cam = None;
+            continue;
+        }
+        if active_fades >= crate::world_lod_fade::MAX_ACTIVE {
+            deferred = true;
+            continue;
+        }
         let Some(asset) = lod_assets.get(new_lod) else {
             continue;
         };
-        let Some((part_index, part)) =
-            shape_lod_part_by_identity(asset, lod.sub_object_idx, lod.prim_state_idx)
-        else {
+        let target = shape_lod_part_by_identity(asset, lod.sub_object_idx, lod.prim_state_idx);
+        // Animated parts retain their binding/pose; crossfade only rigid WORLD
+        // parts, so moving signals never leave a stationary duplicate behind.
+        if anim_state.is_none()
+            && *visibility != Visibility::Hidden
+            && let (Some(material), Some(local)) = (material, transform.as_deref())
+        {
+            let (outgoing, incoming) = crate::world_lod_fade::ranges(instance_dist, 0.0);
+            let mut ghost = commands.spawn((
+                mesh3d.clone(),
+                material.clone(),
+                *local,
+                Visibility::Inherited,
+                outgoing,
+                Name::new("WORLD outgoing LOD"),
+            ));
+            if let Some(parent) = parent {
+                ghost.insert(ChildOf(parent.parent()));
+            }
+            if let Some(tile) = tile {
+                ghost.insert(*tile);
+            }
+            let ghost = ghost.id();
+            commands.entity(entity).insert((
+                incoming,
+                crate::world_lod_fade::LodFade {
+                    outgoing: ghost,
+                    elapsed_s: 0.0,
+                },
+            ));
+            active_fades += 1;
+        }
+        let Some((part_index, part)) = target else {
             // The target band intentionally omits this primitive group.
             *visibility = Visibility::Hidden;
             lod.lod_idx = new_lod;
@@ -4099,6 +4158,11 @@ pub fn update_world_scenery_lod(
             continue;
         };
         mesh3d.0 = part.mesh.clone();
+        if material.is_some() {
+            commands
+                .entity(entity)
+                .insert(MeshMaterial3d(part.material.clone()));
+        }
         *visibility = Visibility::Inherited;
         lod.part_index = part_index;
         lod.lod_idx = new_lod;
@@ -4122,6 +4186,9 @@ pub fn update_world_scenery_lod(
             }
         }
         swapped += 1;
+    }
+    if deferred {
+        lod_cam.last_cam = None;
     }
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() && scanned > 0 {
         eprintln!(

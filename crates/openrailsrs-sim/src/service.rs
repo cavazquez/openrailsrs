@@ -45,6 +45,9 @@ pub struct ServiceStopResult {
     pub arrival_speed_mps: f64,
     pub dwell_s: f64,
     pub delay_s: f64,
+    /// Player may depart early, as in OR activities; this affects evaluation.
+    #[serde(default)]
+    pub early_departure_s: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +64,10 @@ pub struct LiveGameplay {
     pub phase: ServicePhase,
     pub stop_results: Vec<ServiceStopResult>,
     pub failure: Option<String>,
+    /// Explicit practice mode: five seconds of boarding, without timetable wait.
+    /// Kept in the saved session; the authored timetable is never rewritten.
+    #[serde(default)]
+    pub quick_station_practice: bool,
     boarding_elapsed_s: f64,
     arrival: Option<(f64, f64, f64)>,
 }
@@ -84,6 +91,7 @@ impl LiveGameplay {
             phase: ServicePhase::Approaching,
             stop_results: Vec::new(),
             failure: None,
+            quick_station_practice: false,
             boarding_elapsed_s: 0.0,
             arrival: None,
         }
@@ -98,14 +106,32 @@ impl LiveGameplay {
     }
 
     pub fn remaining_dwell_s(&self, time_s: f64) -> f64 {
+        self.remaining_boarding_s()
+            .max(self.remaining_schedule_s(time_s))
+    }
+
+    pub fn remaining_boarding_s(&self) -> f64 {
         self.stop_targets
             .get(self.next_stop_idx)
-            .map(|stop| {
-                (stop.dwell_s - self.boarding_elapsed_s)
-                    .max(stop.depart_s - time_s)
-                    .max(0.0)
-            })
+            .map(|stop| (self.required_boarding_s(stop) - self.boarding_elapsed_s).max(0.0))
             .unwrap_or(0.0)
+    }
+
+    pub fn remaining_schedule_s(&self, time_s: f64) -> f64 {
+        if self.quick_station_practice {
+            return 0.0;
+        }
+        self.stop_targets
+            .get(self.next_stop_idx)
+            .map_or(0.0, |stop| (stop.depart_s - time_s).max(0.0))
+    }
+
+    fn required_boarding_s(&self, stop: &LiveStopTarget) -> f64 {
+        if self.quick_station_practice {
+            stop.dwell_s.min(5.0)
+        } else {
+            stop.dwell_s
+        }
     }
 
     pub fn fail(&mut self, message: impl Into<String>) {
@@ -127,6 +153,19 @@ impl LiveGameplay {
         }
         let stop = self.stop_targets.get(self.next_stop_idx)?;
         let error = chainage_m - stop.cum_dist_m;
+        // OR does not immobilize the player for the station countdown. Closed
+        // doors permit an early departure, recorded once, without resetting the
+        // boarding timer or preventing the rest of the activity from running.
+        let departed_early = self.arrival.is_some()
+            && door == DoorState::Closed
+            && velocity_mps.abs() > STOP_SPEED_TOLERANCE_MPS
+            && matches!(
+                self.phase,
+                ServicePhase::Boarding | ServicePhase::ReadyToDepart
+            );
+        if departed_early {
+            return self.finish_stop(time_s, true);
+        }
         if error > STOP_POSITION_TOLERANCE_M {
             self.fail(format!(
                 "Parada omitida: {} ({error:.1} m después del punto de parada)",
@@ -141,23 +180,33 @@ impl LiveGameplay {
             self.arrival = None;
             return None;
         }
-        let arrival = *self
-            .arrival
+        self.arrival
             .get_or_insert((time_s, error.abs(), velocity_mps.abs()));
         if self.phase != ServicePhase::ReadyToDepart {
             self.phase = ServicePhase::Boarding;
             if stop.dwell_s == 0.0 || door == DoorState::Open {
                 self.boarding_elapsed_s += dt;
             }
-            if self.boarding_elapsed_s + 1e-9 >= stop.dwell_s && time_s + 1e-9 >= stop.depart_s {
+            if self.remaining_dwell_s(time_s) <= 1e-9 {
                 self.phase = ServicePhase::ReadyToDepart;
             }
         }
         if self.phase != ServicePhase::ReadyToDepart || door != DoorState::Closed {
             return None;
         }
+        self.finish_stop(time_s, false)
+    }
+
+    fn finish_stop(&mut self, time_s: f64, premature: bool) -> Option<(u32, u32)> {
+        let stop = self.stop_targets.get(self.next_stop_idx)?;
+        let arrival = self.arrival?;
+        let early_departure_s = if premature {
+            self.remaining_dwell_s(time_s)
+        } else {
+            0.0
+        };
         let delay = (arrival.0 - stop.arrive_s).max(0.0);
-        self.accrued_penalty += delay * self.penalty_per_second_late;
+        self.accrued_penalty += (delay + early_departure_s) * self.penalty_per_second_late;
         self.stop_results.push(ServiceStopResult {
             name: stop.name.clone(),
             node: stop.node_id.clone(),
@@ -168,9 +217,18 @@ impl LiveGameplay {
             arrival_speed_mps: arrival.2,
             dwell_s: self.boarding_elapsed_s,
             delay_s: delay,
+            early_departure_s,
         });
         self.passed_stops.push((stop.name.clone(), delay));
-        let passengers = (stop.passengers_off, stop.passengers_on);
+        let fraction = if premature && self.required_boarding_s(stop) > 0.0 {
+            (self.boarding_elapsed_s / self.required_boarding_s(stop)).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let passengers = (
+            (stop.passengers_off as f64 * fraction).floor() as u32,
+            (stop.passengers_on as f64 * fraction).floor() as u32,
+        );
         let terminal = stop.is_terminal;
         self.next_stop_idx += 1;
         self.boarding_elapsed_s = 0.0;
@@ -246,5 +304,47 @@ mod tests {
         assert_eq!(s.phase, ServicePhase::Approaching);
         s.tick(18.0, 103.0, 0.0, DoorState::Open, 1.0);
         assert_eq!(s.remaining_dwell_s(18.0), 2.0);
+    }
+
+    #[test]
+    fn early_arrival_reports_boarding_separately_from_schedule() {
+        let mut s = service(false);
+        s.stop_targets[0].depart_s = 240.0;
+        s.tick(10.0, 100.0, 0.0, DoorState::Open, 3.0);
+        assert_eq!(s.remaining_boarding_s(), 0.0);
+        assert_eq!(s.remaining_schedule_s(10.0), 230.0);
+        assert_eq!(s.phase, ServicePhase::Boarding);
+        s.quick_station_practice = true;
+        s.tick(11.0, 100.0, 0.0, DoorState::Open, 0.05);
+        assert_eq!(s.phase, ServicePhase::ReadyToDepart);
+        assert_eq!(
+            s.tick(12.0, 100.0, 0.0, DoorState::Closed, 0.05),
+            Some((0, 10))
+        );
+        assert_eq!(s.stop_targets[0].depart_s, 240.0);
+    }
+
+    #[test]
+    fn premature_departure_is_evaluated_and_does_not_stop_the_train() {
+        let mut s = service(false);
+        s.tick(10.0, 100.0, 0.0, DoorState::Open, 1.0);
+        assert_eq!(
+            s.tick(11.0, 101.0, 0.2, DoorState::Closed, 0.05),
+            Some((0, 3))
+        );
+        assert_eq!(s.stop_results.len(), 1);
+        assert_eq!(s.stop_results[0].early_departure_s, 4.0);
+        assert_eq!(s.phase, ServicePhase::Approaching);
+    }
+    #[test]
+    fn closed_doors_can_wait_for_timetable_after_passengers_finish() {
+        let mut s = service(false);
+        s.stop_targets[0].depart_s = 240.0;
+        s.tick(10.0, 100.0, 0.0, DoorState::Open, 3.0);
+        s.tick(230.0, 100.0, 0.0, DoorState::Closed, 0.1);
+        assert_eq!(s.remaining_boarding_s(), 0.0);
+        assert_eq!(s.remaining_schedule_s(230.0), 10.0);
+        assert!(s.tick(240.0, 100.0, 0.0, DoorState::Closed, 0.1).is_some());
+        assert_eq!(s.stop_results[0].early_departure_s, 0.0);
     }
 }

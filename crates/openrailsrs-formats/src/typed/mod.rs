@@ -73,6 +73,8 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 
 /// Named STF blocks in either `(key values...)` or `key (values...)` form.
+pub mod vehicle_runtime;
+
 fn named_blocks<'a>(ast: &'a Ast, key: &str) -> Vec<&'a Ast> {
     fn collect<'a>(ast: &'a Ast, key: &str, out: &mut Vec<&'a Ast>) {
         let Ast::List(items) = ast else { return };

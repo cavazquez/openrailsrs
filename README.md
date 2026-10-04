@@ -33,20 +33,20 @@ cargo run -p openrailsrs-cli -- sim examples/smoke/scenario.toml
 ```
 
 ```bash
-# Servicio completo: Northolt Park → South Ruislip → West Ruislip (7,06 km).
+# Servicio completo: seis estaciones Northolt Park → Gerrards Cross (15,32 km).
 # Necesita el Content Chiltern instalado; CHILTERN_ROUTE permite cambiar su ubicación.
 ./scripts/run_chiltern_service.sh  # menú de inicio
 ./scripts/run_chiltern_service.sh --direct  # servicio predeterminado
 ./scripts/run_chiltern_service.sh --autodrive --cab
 
 # La misma partida y conductor automático sin ventana.
-target/debug/openrailsrs play-service examples/chiltern_local/scenario.toml --out-dir tmp/service
+target/debug/openrailsrs play-service examples/chiltern_extended/scenario.toml --out-dir tmp/service
 
 # Verifica versión/hashes y compara física con las capturas OR congeladas.
 python3 scripts/run_oracles.py
 ```
 
-`1` cabina, `Alt+1` alterna 2D/3D, `2` exterior; `W/S` inversor, `A/D` regulador, `;/'` freno, `Q` puertas, `P`/`Esc` pausa. `F5` información de conducción, `F4` monitor de vía. En cada estación: detenerse a ≤0,1 m/s dentro de ±10 m, abrir puertas, completar el embarque y cerrar puertas; el HUD indica cuándo salir. Detalles y límites de paridad: [`examples/chiltern_local/README.md`](examples/chiltern_local/README.md).
+`1` cabina, `Alt+1` alterna 2D/3D, `2` exterior; `W/S` inversor, `A/D` regulador, `;/'` freno, `Q` puertas, `P`/`Esc` pausa. `F5` información de conducción, `F4` monitor de vía. En cada estación: detenerse a ≤0,1 m/s dentro de ±10 m, abrir puertas, completar el embarque y cerrar puertas; el HUD separa pasajeros y horario. **F10 → Práctica de estaciones** permite probar paradas en 5 s. El menú conserva también el servicio corto de tres estaciones. Detalles y límites de paridad: [`examples/chiltern_local/README.md`](examples/chiltern_local/README.md).
 
 Pruebas de menús, guardado, monitor, libreta, formación, despachador, HUD y ratón en cabina: [`docs/PLAYER_MANUAL_TESTS.md`](docs/PLAYER_MANUAL_TESTS.md).
 

@@ -69,6 +69,8 @@ def main():
     parser.add_argument("--out-dir", type=Path, default=repo / "tmp/rolling-stock")
     parser.add_argument("--formation", action="append", help="one of the six representative .con names")
     parser.add_argument("--software", action="store_true")
+    parser.add_argument("--headless-wayland", action="store_true", help="use private Weston for hardware Vulkan presentation")
+    parser.add_argument("--require-hardware", action="store_true")
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=240)
     parser.add_argument("--audio", action="store_true", help="also render offline native WAV demonstrations")

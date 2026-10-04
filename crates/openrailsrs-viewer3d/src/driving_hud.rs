@@ -189,12 +189,24 @@ pub fn service_instruction(session: &openrailsrs_sim::LiveDriveSession) -> Strin
     use openrailsrs_sim::exterior::DoorState;
     let gp = &session.gameplay;
     match gp.phase {
-        ServicePhase::Boarding if session.exterior.door == DoorState::Closed => {
+        ServicePhase::Boarding
+            if session.exterior.door == DoorState::Closed && gp.remaining_boarding_s() > 0.0 =>
+        {
             "Q · abrir puertas para embarcar".into()
         }
+        ServicePhase::Boarding if gp.remaining_boarding_s() > 0.0 => format!(
+            "{} · pasajeros {:.0} s · horario {:.0} s",
+            if gp.quick_station_practice {
+                "Práctica"
+            } else {
+                "Embarque"
+            },
+            gp.remaining_boarding_s(),
+            gp.remaining_schedule_s(session.time_s())
+        ),
         ServicePhase::Boarding => format!(
-            "Embarque · faltan {:.0} s",
-            gp.remaining_dwell_s(session.time_s())
+            "Pasajeros listos · salida en {:.0} s · F10 práctica rápida",
+            gp.remaining_schedule_s(session.time_s())
         ),
         ServicePhase::ReadyToDepart if session.exterior.door == DoorState::Closed => {
             "Salida autorizada".into()

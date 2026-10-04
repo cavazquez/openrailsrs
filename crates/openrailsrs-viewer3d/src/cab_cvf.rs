@@ -306,10 +306,7 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         ControlType::Generic(name) if name.contains("CABLIGHT") => {
             f64::from(u8::from(tel.cab_light))
         }
-        ControlType::Ammeter => tel
-            .diesel_rpm
-            .map(|r| (r / 1500.0).clamp(0.0, 1.0))
-            .unwrap_or(0.0),
+        ControlType::Ammeter | ControlType::LoadMeter => tel.traction_load_fraction,
         _ => 0.0,
     }
 }
@@ -341,7 +338,29 @@ pub fn dial_control_value(
                 bar
             }
         }
-        ControlType::Ammeter => tel.diesel_rpm.unwrap_or(0.0),
+        ControlType::Ammeter | ControlType::LoadMeter => {
+            let low = dial.scale_min.min(dial.scale_max);
+            let high = dial.scale_min.max(dial.scale_max);
+            let idle = 0.0_f64.clamp(low, high);
+            let full_load = if high > 0.0 { high } else { low };
+            idle + tel.traction_load_fraction * (full_load - idle)
+        }
+        ControlType::Generic(name) if name.to_ascii_uppercase().contains("RPM") => {
+            tel.diesel_rpm.unwrap_or(0.0)
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "BOILER_PRESSURE" | "STEAM_PRESSURE"
+            ) =>
+        {
+            tel.boiler_bar.unwrap_or(0.0)
+                * if units.eq_ignore_ascii_case("PSI") {
+                    14.5037738
+                } else {
+                    1.0
+                }
+        }
         _ => {
             let n = control_value(control, tel);
             dial.scale_min + n * (dial.scale_max - dial.scale_min)
@@ -886,6 +905,7 @@ mod tests {
             brake_force_kn: 80.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
+            traction_load_fraction: 0.0,
             overspeed: false,
         };
         assert!((control_value(&ControlType::Throttle, &tel) - 0.75).abs() < 1e-6);
@@ -905,6 +925,46 @@ mod tests {
             units: Some("MILES_PER_HOUR".into()),
             ..Default::default()
         };
+        let load_dial = openrailsrs_formats::CabDialParams {
+            scale_min: 0.0,
+            scale_max: 1500.0,
+            ..Default::default()
+        };
+        let loaded = CabTelemetry {
+            traction_load_fraction: 0.4,
+            boiler_bar: Some(10.0),
+            ..tel.clone()
+        };
+        assert_eq!(
+            dial_control_value(&ControlType::Ammeter, &load_dial, &loaded),
+            600.0
+        );
+        assert_eq!(
+            dial_control_value(&ControlType::Ammeter, &load_dial, &tel),
+            0.0
+        );
+        let bipolar = openrailsrs_formats::CabDialParams {
+            scale_min: -1500.0,
+            ..load_dial.clone()
+        };
+        assert_eq!(
+            dial_control_value(&ControlType::Ammeter, &bipolar, &tel),
+            0.0
+        );
+        assert_eq!(
+            dial_control_value(&ControlType::Ammeter, &bipolar, &loaded),
+            600.0
+        );
+        let pressure_dial = openrailsrs_formats::CabDialParams {
+            units: Some("PSI".into()),
+            ..load_dial
+        };
+        let pressure = dial_control_value(
+            &ControlType::Generic("BOILER_PRESSURE".into()),
+            &pressure_dial,
+            &loaded,
+        );
+        assert!((pressure - 145.0377).abs() < 0.001);
         let mph = dial_control_value(&ControlType::Speedometer, &dial, &tel);
         assert!((mph - 50.0 * 0.621_371).abs() < 1e-3);
     }

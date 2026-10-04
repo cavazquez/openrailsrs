@@ -229,6 +229,11 @@ enum MenuField {
 }
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
+    QuickStations,
+    SeatHeight,
+    SeatBack,
+    WipeScale,
+    CabReset,
     Distance,
     Fov,
     Scale,
@@ -544,6 +549,7 @@ fn handle_buttons(
     camera: CameraForSave,
     mut exit: MessageWriter<AppExit>,
     mouse: Res<ButtonInput<MouseButton>>,
+    cab: Res<crate::cab_cvf::CabCvfState>,
 ) {
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
@@ -609,6 +615,18 @@ fn handle_buttons(
             UiCommand::Pan(delta)=>{let scale=ui.map_scale;ui.map_center+= *delta/scale;Ok(())},
             UiCommand::FitMap=>{ui.map_initialized=false;Ok(())},
             UiCommand::Setting(field,step)=>{match field {
+                SettingField::SeatHeight | SettingField::SeatBack | SettingField::WipeScale | SettingField::CabReset => {
+                    if let Some(path) = &cab.cvf_path {
+                        let profile = settings.cab_profiles.entry(path.to_string_lossy().into_owned()).or_default();
+                        match field {
+                            SettingField::SeatHeight => profile.seat_height_m=(profile.seat_height_m+step).clamp(-0.4,0.4),
+                            SettingField::SeatBack => profile.seat_back_m=(profile.seat_back_m+step).clamp(-0.4,0.4),
+                            SettingField::WipeScale => profile.wipe_scale=(profile.wipe_scale+step).clamp(0.6,1.4),
+                            _ => *profile=default(),
+                        }
+                    }
+                },
+                SettingField::QuickStations=>settings.quick_station_practice= !settings.quick_station_practice,
                 SettingField::Distance=>settings.view_distance_m=(settings.view_distance_m+step).clamp(500.0,4000.0),
                 SettingField::Fov=>settings.cab_fov_deg=(settings.cab_fov_deg+step).clamp(35.0,90.0),
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
@@ -653,6 +671,7 @@ fn build_panel(
     settings: Res<PlayerSettings>,
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
+    cab: Res<crate::cab_cvf::CabCvfState>,
 ) {
     if !ui.rebuild {
         return;
@@ -789,7 +808,7 @@ fn build_panel(
                     });
                     dynamic(p, DynamicText::Advanced, 13.0);
                 }
-                PlayerPanel::Settings => build_settings(p, &settings),
+                PlayerPanel::Settings => build_settings(p, &settings, cab.cvf_path.as_deref()),
                 PlayerPanel::Help => {
                     dynamic(p, DynamicText::Help, 14.0);
                 }
@@ -971,7 +990,25 @@ fn settings_row(
         button(p, "+", UiCommand::Setting(field, step));
     });
 }
-fn build_settings(p: &mut ChildSpawnerCommands<'_>, s: &PlayerSettings) {
+fn build_settings(
+    p: &mut ChildSpawnerCommands<'_>,
+    s: &PlayerSettings,
+    cab_path: Option<&std::path::Path>,
+) {
+    button(
+        p,
+        format!(
+            "Práctica rápida en estaciones: {}",
+            yes(s.quick_station_practice)
+        ),
+        UiCommand::Setting(SettingField::QuickStations, 0.0),
+    );
+    label(
+        p,
+        "Práctica: embarque hasta 5 s, sin espera de horario. Normal: respeta el servicio original.",
+        12.0,
+        MUTED,
+    );
     settings_row(
         p,
         format!("Distancia del escenario: {:.0} m", s.view_distance_m),
@@ -984,6 +1021,51 @@ fn build_settings(p: &mut ChildSpawnerCommands<'_>, s: &PlayerSettings) {
         SettingField::Fov,
         5.0,
     );
+    if let Some(path) = cab_path {
+        let profile = s
+            .cab_profiles
+            .get(path.to_string_lossy().as_ref())
+            .copied()
+            .unwrap_or_default();
+        label(
+            p,
+            format!(
+                "CABINA · {}",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ),
+            13.0,
+            ACCENT,
+        );
+        settings_row(
+            p,
+            format!(
+                "Altura del asiento 3D: {:+.0} cm",
+                profile.seat_height_m * 100.0
+            ),
+            SettingField::SeatHeight,
+            0.05,
+        );
+        settings_row(
+            p,
+            format!(
+                "Asiento 3D hacia atrás: {:+.0} cm",
+                profile.seat_back_m * 100.0
+            ),
+            SettingField::SeatBack,
+            0.05,
+        );
+        settings_row(
+            p,
+            format!("Alcance del barrido: {:.0}%", profile.wipe_scale * 100.0),
+            SettingField::WipeScale,
+            0.05,
+        );
+        button(
+            p,
+            "Restaurar puesto y barrido originales",
+            UiCommand::Setting(SettingField::CabReset, 0.0),
+        );
+    }
     settings_row(
         p,
         format!("Tamaño de interfaz: {:.0}%", s.ui_scale * 100.0),
@@ -1515,9 +1597,15 @@ fn notebook_text(l: &LiveDrive, content: &ActivePlayerContent, tab: usize) -> St
                 );
             }
             out += &format!(
-                "\n{}\nPermanencia restante: {:.0} s\n",
+                "\n{}\nPasajeros: {:.0} s · espera de horario: {:.0} s\nModo: {}\n",
                 crate::driving_hud::service_instruction(s),
-                g.remaining_dwell_s(s.time_s())
+                g.remaining_boarding_s(),
+                g.remaining_schedule_s(s.time_s()),
+                if g.quick_station_practice {
+                    "Práctica rápida (horario libre)"
+                } else {
+                    "Servicio normal"
+                }
             );
             out
         }
@@ -1532,6 +1620,18 @@ fn notebook_text(l: &LiveDrive, content: &ActivePlayerContent, tab: usize) -> St
                 s.state.odometer_m,
                 s.state.cumulative_energy_j / 3_600_000.0,
                 s.state.fuel_consumption_g / 1000.0
+            );
+            out += &format!(
+                "Salidas anticipadas: {}\nModo: {}\n",
+                g.stop_results
+                    .iter()
+                    .filter(|r| r.early_departure_s > 0.0)
+                    .count(),
+                if g.quick_station_practice {
+                    "Práctica rápida"
+                } else {
+                    "Servicio normal"
+                }
             );
             for r in &g.stop_results {
                 out += &format!(
@@ -1747,7 +1847,7 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
             let grade = s
                 .path_data
                 .get(state.edge_index)
-                .map(|e| e.grade_percent)
+                .map(|e| e.grade_at(state.pos_on_edge_m))
                 .unwrap_or(0.0);
             out += &format!(
                 "Tracción diésel calculada {:.2} kN\nFrenado efectivo {:.2} kN\nResistencia Davis {:.2} kN\nResistencia de pendiente {:.2} kN ({:+.2}%)\n\n",
@@ -1856,19 +1956,33 @@ pub fn monitor_events(s: &LiveDriveSession) -> Vec<MonitorEvent> {
     let mut before = 0.0;
     let mut out = vec![];
     let mut previous_limit = None;
-    for eid in &s.state.path_edges {
+    for (index, eid) in s.state.path_edges.iter().enumerate() {
         let Some(edge) = s.graph.edge(eid) else {
             continue;
         };
+        let physics = s.path_data.get(index);
+        let initial_limit = physics.map_or(edge.speed_limit_mps, |p| p.speed_limit_at(0.0));
         if before - head >= 0.0
             && before - head <= 5000.0
-            && previous_limit.is_some_and(|v: f64| (v - edge.speed_limit_mps).abs() > 0.01)
+            && previous_limit.is_some_and(|v: f64| (v - initial_limit).abs() > 0.01)
         {
             out.push(MonitorEvent {
                 distance_m: before - head,
-                text: format!("Límite {:.0} km/h", edge.speed_limit_mps * 3.6),
+                text: format!("Límite {:.0} km/h", initial_limit * 3.6),
                 color: CAUTION,
             });
+        }
+        if let Some(physics) = physics {
+            for post in &physics.profile.speed_posts {
+                let distance = before + post.position_m - head;
+                if (0.0..=5000.0).contains(&distance) {
+                    out.push(MonitorEvent {
+                        distance_m: distance,
+                        text: format!("Límite {:.0} km/h", post.speed_limit_kmh),
+                        color: CAUTION,
+                    });
+                }
+            }
         }
         for signal in s.graph.signals_on_edge(eid) {
             let d = before + signal.position_m - head;
@@ -1893,7 +2007,8 @@ pub fn monitor_events(s: &LiveDriveSession) -> Vec<MonitorEvent> {
                 });
             }
         }
-        previous_limit = Some(edge.speed_limit_mps);
+        previous_limit =
+            Some(physics.map_or(edge.speed_limit_mps, |p| p.speed_limit_at(edge.length_m)));
         before += edge.length_m;
     }
     for stop in s

@@ -190,6 +190,9 @@ pub struct CaptureScene<'w, 's> {
     performance: Res<'w, crate::performance::JourneyPerformance>,
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
+    effects: Option<Res<'w, crate::train_effects::TrainEffects>>,
+    wet_surfaces: Option<Res<'w, crate::wet_surfaces::WetSurfaces>>,
+    lod_fades: Query<'w, 's, &'static crate::world_lod_fade::LodFade>,
     camera: Query<
         'w,
         's,
@@ -273,6 +276,11 @@ impl CaptureScene<'_, '_> {
             "headlights": live.map(|live| live.session.headlights),
             "cab_light": live.map(|live| live.session.cab_light),
             "wiper": live.map(|live| live.session.wiper_active),
+            "train_effects":self.effects.as_ref().map(|effects|effects.report()),
+            "wetness":self.wet_surfaces.as_ref().map(|wet|wet.wetness),
+            "active_lod_fades":self.lod_fades.iter().count(),
+            "station_results":live.map(|live|&live.session.gameplay.stop_results),
+            "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         })
     }

@@ -1,0 +1,73 @@
+//! Bounded LOD crossfades using Bevy's native complementary visibility dithering.
+//! Both meshes share textures/materials, and the outgoing part lives at most .35s.
+use bevy::{camera::visibility::VisibilityRange, prelude::*};
+
+pub const DURATION_S: f32 = 0.35;
+pub const MAX_ACTIVE: usize = 64;
+
+#[derive(Component)]
+pub struct LodFade {
+    pub outgoing: Entity,
+    pub elapsed_s: f32,
+}
+
+/// Same range on outgoing.end and incoming.start yields complementary pixels.
+pub fn ranges(distance: f32, fraction: f32) -> (VisibilityRange, VisibilityRange) {
+    let start = distance - fraction.clamp(0.0, 1.0) * 2.0;
+    let transition = start..start + 2.0;
+    let outgoing = VisibilityRange {
+        start_margin: -4.0..-3.0,
+        end_margin: transition.clone(),
+        use_aabb: false,
+    };
+    let incoming = VisibilityRange {
+        start_margin: transition,
+        end_margin: 1.0e8..1.0e8,
+        use_aabb: false,
+    };
+    (outgoing, incoming)
+}
+
+pub fn tick(
+    mut commands: Commands,
+    time: Res<Time>,
+    camera: Query<&GlobalTransform, With<Camera3d>>,
+    mut fades: Query<(Entity, &GlobalTransform, &mut LodFade)>,
+) {
+    let Ok(camera) = camera.single() else { return };
+    for (entity, transform, mut fade) in &mut fades {
+        fade.elapsed_s += time.delta_secs();
+        if fade.elapsed_s >= DURATION_S {
+            commands.entity(fade.outgoing).try_despawn();
+            commands
+                .entity(entity)
+                .remove::<LodFade>()
+                .insert(VisibilityRange {
+                    start_margin: -4.0..-3.0,
+                    end_margin: 1.0e8..1.0e8,
+                    use_aabb: false,
+                });
+        } else {
+            let distance = transform.translation().distance(camera.translation());
+            let (outgoing, incoming) = ranges(distance, fade.elapsed_s / DURATION_S);
+            commands.entity(fade.outgoing).try_insert(outgoing);
+            commands.entity(entity).insert(incoming);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn ranges_are_complementary_at_every_fraction_and_distance() {
+        for distance in [0.0, 10.0, 3000.0] {
+            for fraction in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                let (old, new) = ranges(distance, fraction);
+                assert_eq!(old.end_margin, new.start_margin);
+                let weight = (distance - new.start_margin.start) / 2.0;
+                assert!((weight - fraction).abs() < 1.0e-4);
+            }
+        }
+    }
+}

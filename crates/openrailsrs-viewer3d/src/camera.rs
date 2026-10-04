@@ -1286,7 +1286,11 @@ pub fn follow_train_camera(
     cab: Option<Res<LiveDriverCab>>,
     look: Option<Res<DriverLookOffset>>,
     overlay: Option<Res<crate::cab_cvf_overlay::CabCvfOverlayState>>,
-    passenger: Option<Res<PassengerCamState>>,
+    cab_preferences: (
+        Option<Res<crate::player_settings::PlayerSettings>>,
+        Option<Res<crate::cab_cvf::CabCvfState>>,
+        Option<Res<PassengerCamState>>,
+    ),
     train_query: Query<
         (&Transform, Option<&crate::train::TrainMarker>),
         (
@@ -1318,6 +1322,7 @@ pub fn follow_train_camera(
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
+    let (settings, cvf, passenger) = cab_preferences;
     if *follow == CameraFollowMode::Off {
         return;
     }
@@ -1388,7 +1393,27 @@ pub fn follow_train_camera(
         orbit.focus = lerp_follow_focus(orbit.focus, train_root_pose.translation, dt);
         orbit.yaw = train_root_pose.yaw;
         let default_cab = LiveDriverCab::default();
-        let cab = cab.as_deref().unwrap_or(&default_cab);
+        let mut cab = cab.as_deref().unwrap_or(&default_cab).clone();
+        if let Some(profile) = cvf
+            .as_ref()
+            .and_then(|c| c.cvf_path.as_ref())
+            .and_then(|p| {
+                settings
+                    .as_ref()
+                    .and_then(|s| s.cab_profiles.get(p.to_string_lossy().as_ref()))
+            })
+        {
+            let offset = Vec3::new(0.0, profile.seat_height_m, profile.seat_back_m);
+            let train_offset = cab.interior_placement.rotation * offset;
+            if let Some(eye) = cab.head_lead_local.as_mut() {
+                *eye += offset;
+            }
+            if let Some(eye) = cab.head_pos_train.as_mut() {
+                *eye += train_offset;
+            }
+            cab.height_m += profile.seat_height_m;
+            cab.back_m += profile.seat_back_m;
+        }
         let look = look.as_deref().copied().unwrap_or_default();
         *transform = lead_car
             .iter()
@@ -1397,11 +1422,11 @@ pub fn follow_train_camera(
             .map(|lead| {
                 driver_camera_transform_from_lead(
                     &GlobalTransform::from(train_tf.mul_transform(*lead)),
-                    cab,
+                    &cab,
                     look,
                 )
             })
-            .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
+            .unwrap_or_else(|| driver_camera_transform(train_root_pose, &cab, look));
         return;
     }
 

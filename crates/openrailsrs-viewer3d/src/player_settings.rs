@@ -195,6 +195,9 @@ pub struct PlayerSettings {
     pub mph: bool,
     pub audio_enabled: bool,
     pub audio_volume: f32,
+    /// Short boarding and no booked-departure wait; distinct from normal service.
+    pub quick_station_practice: bool,
+    pub cab_profiles: BTreeMap<String, crate::cab_profile::CabProfile>,
     pub keys: BTreeMap<PlayerAction, String>,
 }
 
@@ -210,6 +213,8 @@ impl Default for PlayerSettings {
             mph: false,
             audio_enabled: true,
             audio_volume: 0.4,
+            quick_station_practice: false,
+            cab_profiles: BTreeMap::new(),
             keys: PlayerAction::ALL
                 .into_iter()
                 .map(|a| (a, format!("{:?}", a.default_key())))
@@ -255,6 +260,16 @@ impl PlayerSettings {
             || !(0.0..=1.0).contains(&self.audio_volume)
         {
             return Err("Ajustes gráficos fuera del rango permitido".into());
+        }
+        if self.cab_profiles.values().any(|p| {
+            !p.seat_height_m.is_finite()
+                || !(-0.4..=0.4).contains(&p.seat_height_m)
+                || !p.seat_back_m.is_finite()
+                || !(-0.4..=0.4).contains(&p.seat_back_m)
+                || !p.wipe_scale.is_finite()
+                || !(0.6..=1.4).contains(&p.wipe_scale)
+        }) {
+            return Err("Ajustes de cabina fuera del rango permitido".into());
         }
         let mut used = BTreeMap::new();
         for action in PlayerAction::ALL {

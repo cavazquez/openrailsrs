@@ -17,6 +17,9 @@ pub mod shape_binary_direct;
 pub mod shape_binary_reader;
 pub mod tile_paths;
 pub mod typed;
+pub use typed::vehicle_runtime::{
+    VehicleBrakeProfile, VehicleEmitter, parse_vehicle_brake_profile, parse_vehicle_emitters,
+};
 pub mod units;
 pub mod vehicle_audit;
 pub mod vehicle_field_catalog;

@@ -406,6 +406,7 @@ mod tests {
             brake_force_kn: 120.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
+            traction_load_fraction: 0.0,
             overspeed: false,
         };
         let c = build_cab_panel_content(&tel);
@@ -434,6 +435,7 @@ mod tests {
             brake_force_kn: 0.0,
             diesel_rpm: None,
             boiler_bar: Some(12.0),
+            traction_load_fraction: 0.0,
             overspeed: true,
         };
         let c = build_cab_panel_content(&tel);

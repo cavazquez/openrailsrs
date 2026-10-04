@@ -54,8 +54,27 @@ pub struct Edge {
     pub grade_percent: f64,
 }
 
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct EdgePhysicsProfile {
+    #[serde(default)]
+    pub speed_posts: Vec<PositionSpeedLimit>,
+    #[serde(default)]
+    pub grades: Vec<PositionGrade>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionSpeedLimit {
+    pub position_m: f64,
+    pub speed_limit_kmh: f64,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionGrade {
+    pub position_m: f64,
+    pub grade_percent: f64,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct TrackGraph {
+    profiles: HashMap<String, EdgePhysicsProfile>,
     nodes: IndexMap<String, Node>,
     edges: IndexMap<String, Edge>,
     /// Keyed by signal id for O(1) lookup.
@@ -68,6 +87,18 @@ pub struct TrackGraph {
 }
 
 impl TrackGraph {
+    pub fn set_physics_profile(&mut self, edge: &str, mut profile: EdgePhysicsProfile) {
+        profile
+            .speed_posts
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        profile
+            .grades
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        self.profiles.insert(edge.into(), profile);
+    }
+    pub fn physics_profile(&self, edge: &str) -> Option<&EdgePhysicsProfile> {
+        self.profiles.get(edge)
+    }
     pub fn new() -> Self {
         Self::default()
     }

@@ -296,6 +296,8 @@ impl TrItemWorldPose {
 /// One entry of `TrItemTable`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrItem {
+    /// Native sign angle; needed to restrict only its direction of travel.
+    pub speed_post_angle_rad: Option<f64>,
     /// `TrItemId` (1-based, unique inside the `.tdb`).
     pub id: u32,
     pub kind: TrItemKind,
@@ -1472,6 +1474,12 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     };
 
     Some(TrItem {
+        speed_post_angle_rad: if matches!(kind, TrItemKind::SpeedPost { .. }) {
+            find_tr_item_numbered_block(items, "SpeedpostTrItemData", 3)
+                .and_then(|n| n.last().copied())
+        } else {
+            None
+        },
         id,
         kind,
         distance_m,
@@ -1696,6 +1704,7 @@ mod tests {
             kind: TrackNodeKind::End,
         };
         let item = |id| TrItem {
+            speed_post_angle_rad: None,
             id,
             kind: TrItemKind::Other,
             distance_m: 0.0,

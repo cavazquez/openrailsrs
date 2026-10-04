@@ -319,6 +319,7 @@ mod tests {
                     wagon_shape: Some("a.s".into()),
                     brake_shoe_type: Default::default(),
                     brake_shoe_friction: None,
+                    brake_profile: Default::default(),
                     flipped: false,
                 }),
                 Vehicle::Wagon(Wagon {
@@ -330,6 +331,7 @@ mod tests {
                     wagon_shape: Some("b.s".into()),
                     brake_shoe_type: Default::default(),
                     brake_shoe_friction: None,
+                    brake_profile: Default::default(),
                     flipped: true,
                 }),
             ],

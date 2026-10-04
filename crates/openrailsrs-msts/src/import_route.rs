@@ -12,7 +12,7 @@
 //!
 //! Output matches [`openrailsrs_route::load::RouteLayoutFile`] (see `examples/` and OSM import).
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 use openrailsrs_formats::{
@@ -27,6 +27,8 @@ use crate::error::MstsError;
 
 #[derive(Serialize)]
 struct TrackToml {
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    edge_profiles: BTreeMap<String, openrailsrs_track::EdgePhysicsProfile>,
     route: RouteMeta,
     nodes: Vec<NodeToml>,
     edges: Vec<EdgeToml>,
@@ -109,10 +111,10 @@ fn is_zero(v: &f64) -> bool {
 /// `track.toml` TOML string.
 pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = load_tdb(route_dir, &tdb_path)?;
+    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
-    let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
+    let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
     Ok(toml)
 }
 
@@ -120,22 +122,22 @@ pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
 /// and restricted speed zones) to the generated `track.toml`.
 pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<String, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = load_tdb(route_dir, &tdb_path)?;
+    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let activity = ActivityFile::from_path(act_path)?;
-    let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity))?;
+    let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity), Some(&catalog))?;
     Ok(toml)
 }
 
 /// Same as `import_route` but also returns a count summary `(nodes, edges)`.
 pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usize), MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = load_tdb(route_dir, &tdb_path)?;
+    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let (nodes, edges) = count_nodes_edges(&tdb);
-    let toml = convert_tdb_to_toml(&tdb, &route_id, None)?;
+    let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
     Ok((toml, nodes, edges))
 }
 
@@ -145,10 +147,10 @@ pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usi
 /// that received non-zero coordinates.
 pub fn patch_track_coordinates(route_dir: &Path, track_path: &Path) -> Result<usize, MstsError> {
     let tdb_path = find_tdb(route_dir)?;
-    let tdb = load_tdb(route_dir, &tdb_path)?;
+    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
-    let fresh = convert_tdb_to_toml(&tdb, &route_id, None)?;
+    let fresh = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
     let fresh_val: toml::Value = toml::from_str(&fresh)?;
     let existing_text = std::fs::read_to_string(track_path)?;
     let mut existing: toml::Value = toml::from_str(&existing_text)?;
@@ -199,7 +201,10 @@ fn node_coordinates_from_toml(value: &toml::Value) -> HashMap<String, (f64, f64)
     out
 }
 
-fn load_tdb(route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError> {
+fn load_tdb(
+    route_dir: &Path,
+    tdb_path: &Path,
+) -> Result<(TrackDbFile, TSectionCatalog), MstsError> {
     let mut tdb = TrackDbFile::from_path(tdb_path)?;
     // Native TrVectorSection coordinates/orientations are not lengths. Open Rails
     // sums TrackSections.Get(SectionIndex).Length, including circular arc length.
@@ -230,7 +235,7 @@ fn load_tdb(route_dir: &Path, tdb_path: &Path) -> Result<TrackDbFile, MstsError>
     if tit_path.exists() {
         let _ = tdb.merge_tit_speed_posts(&tit_path);
     }
-    Ok(tdb)
+    Ok((tdb, catalog))
 }
 
 fn ensure_non_empty_tdb(tdb: &TrackDbFile, tdb_path: &Path) -> Result<(), MstsError> {
@@ -302,6 +307,7 @@ fn convert_tdb_to_toml(
     tdb: &TrackDbFile,
     route_id: &str,
     activity: Option<&ActivityFile>,
+    catalog: Option<&TSectionCatalog>,
 ) -> Result<String, MstsError> {
     let mut node_map: HashMap<u32, String> = HashMap::new();
     let mut junction_pins: HashMap<u32, Vec<TrPinRef>> = HashMap::new();
@@ -352,6 +358,7 @@ fn convert_tdb_to_toml(
     let mut vec_counter = 0u32;
     let mut item_to_edge: HashMap<u32, String> = HashMap::new();
     let mut edges: Vec<EdgeToml> = Vec::new();
+    let mut edge_profiles = BTreeMap::new();
 
     for n in &tdb.nodes {
         if let TrackNodeKind::Vector {
@@ -376,6 +383,22 @@ fn convert_tdb_to_toml(
             let edge_id = format!("e{}", n.id);
             let reverse_id = format!("{edge_id}_r");
             let speed_limit_kmh = *speed_limit_mps * 3.6;
+            let forward = grade_profile(*length_m, sections, catalog, false);
+            let reverse = grade_profile(*length_m, sections, catalog, true);
+            edge_profiles.insert(
+                edge_id.clone(),
+                openrailsrs_track::EdgePhysicsProfile {
+                    grades: forward,
+                    ..Default::default()
+                },
+            );
+            edge_profiles.insert(
+                reverse_id.clone(),
+                openrailsrs_track::EdgePhysicsProfile {
+                    grades: reverse,
+                    ..Default::default()
+                },
+            );
             for item_id in item_ids {
                 item_to_edge.insert(*item_id, edge_id.clone());
             }
@@ -414,13 +437,28 @@ fn convert_tdb_to_toml(
 
     if let Some(act) = activity {
         apply_failed_signals(&mut signals, &act.failed_signals);
-        apply_speed_posts(&mut edges, &tdb.items, &item_to_edge);
+        apply_speed_posts(
+            &edges,
+            &tdb.items,
+            &item_to_edge,
+            tdb,
+            catalog,
+            &mut edge_profiles,
+        );
         apply_restricted_zones(&mut edges, &act.restricted_zones, &item_to_edge);
     } else {
-        apply_speed_posts(&mut edges, &tdb.items, &item_to_edge);
+        apply_speed_posts(
+            &edges,
+            &tdb.items,
+            &item_to_edge,
+            tdb,
+            catalog,
+            &mut edge_profiles,
+        );
     }
 
     let track = TrackToml {
+        edge_profiles,
         route: RouteMeta {
             id: route_id.to_string(),
         },
@@ -573,10 +611,63 @@ fn apply_failed_signals(signals: &mut [SignalToml], failed_ids: &[u32]) {
     }
 }
 
+/// Native section orientation is radians: +AX descends in the +Z direction.
+fn section_lengths(
+    length: f64,
+    sections: &[TrVectorSectionRecord],
+    catalog: Option<&TSectionCatalog>,
+) -> Vec<f64> {
+    let mut values: Vec<_> = sections
+        .iter()
+        .map(|s| {
+            catalog
+                .and_then(|c| c.sections.get(&s.section_index))
+                .map_or(length / sections.len().max(1) as f64, |d| {
+                    d.effective_length_m()
+                })
+        })
+        .collect();
+    let total: f64 = values.iter().sum();
+    if total > 0.0 {
+        for v in &mut values {
+            *v *= length / total;
+        }
+    }
+    values
+}
+fn grade_profile(
+    length: f64,
+    sections: &[TrVectorSectionRecord],
+    catalog: Option<&TSectionCatalog>,
+    reverse: bool,
+) -> Vec<openrailsrs_track::PositionGrade> {
+    let lengths = section_lengths(length, sections, catalog);
+    let mut before = 0.0;
+    let mut grades = vec![];
+    for (section, span) in sections.iter().zip(lengths) {
+        let grade = -section.ax.tan() * 100.0;
+        if span > 1e-6 && grade.is_finite() && grade.abs() <= 25.0 {
+            grades.push(openrailsrs_track::PositionGrade {
+                position_m: if reverse {
+                    (length - before - span).max(0.0)
+                } else {
+                    before
+                },
+                grade_percent: if reverse { -grade } else { grade },
+            });
+        }
+        before += span;
+    }
+    grades.sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+    grades
+}
 fn apply_speed_posts(
-    edges: &mut [EdgeToml],
+    edges: &[EdgeToml],
     items: &[TrItem],
     item_to_edge: &HashMap<u32, String>,
+    tdb: &TrackDbFile,
+    catalog: Option<&TSectionCatalog>,
+    profiles: &mut BTreeMap<String, openrailsrs_track::EdgePhysicsProfile>,
 ) {
     for item in items {
         let TrItemKind::SpeedPost { speed_mph } = item.kind else {
@@ -585,15 +676,58 @@ fn apply_speed_posts(
         if speed_mph <= 0.0 {
             continue;
         }
-        let Some(edge_id) = item_to_edge.get(&item.id) else {
+        let Some(id) = item_to_edge.get(&item.id) else {
             continue;
         };
-        let reverse_id = format!("{edge_id}_r");
-        let cap_kmh = speed_mph * 1.609_344;
-        for edge in edges.iter_mut() {
-            if &edge.id == edge_id || edge.id == reverse_id {
-                edge.speed_limit_kmh = edge.speed_limit_kmh.min(cap_kmh);
+        let Some(edge) = edges.iter().find(|e| &e.id == id) else {
+            continue;
+        };
+        let direction = item.speed_post_angle_rad.and_then(|angle| {
+            let vector = tdb.nodes.iter().find(|n| format!("e{}", n.id) == *id)?;
+            let TrackNodeKind::Vector { sections, .. } = &vector.kind else {
+                return None;
+            };
+            let lengths = section_lengths(edge.length_m, sections, catalog);
+            let mut before = 0.0;
+            for (section, span) in sections.iter().zip(lengths) {
+                if item.distance_m <= before + span + 1e-6 {
+                    // OR Signals.AddSpeed: initial Traveller direction is Backward.
+                    // Convert its orientation comparison to the native forward AY.
+                    let curve_yaw = catalog
+                        .and_then(|c| c.sections.get(&section.section_index))
+                        .and_then(|d| d.curve_angle_deg)
+                        .map_or(0.0, |a| {
+                            a.to_radians() * ((item.distance_m - before) / span).clamp(0.0, 1.0)
+                        });
+                    return Some(
+                        (section.ay + curve_yaw - (std::f64::consts::FRAC_PI_2 - angle)).cos()
+                            < 0.0,
+                    );
+                }
+                before += span;
             }
+            None
+        });
+        for reverse in [false, true] {
+            if direction.is_some_and(|forward| forward == reverse) {
+                continue;
+            }
+            let position = item.distance_m.clamp(0.0, edge.length_m);
+            let id = if reverse {
+                format!("{id}_r")
+            } else {
+                id.clone()
+            };
+            profiles.entry(id).or_default().speed_posts.push(
+                openrailsrs_track::PositionSpeedLimit {
+                    position_m: if reverse {
+                        edge.length_m - position
+                    } else {
+                        position
+                    },
+                    speed_limit_kmh: speed_mph * 1.609344,
+                },
+            );
         }
     }
 }
@@ -808,7 +942,7 @@ mod tests {
     fn native_msts_emits_vector_alias() {
         let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
         let tdb = TrackDbFile::from_path(fixtures.join("native_msts.tdb")).expect("tdb");
-        let toml = convert_tdb_to_toml(&tdb, "test", None).expect("toml");
+        let toml = convert_tdb_to_toml(&tdb, "test", None, None).expect("toml");
         assert!(toml.contains("tdb_id = 2"));
         assert!(toml.contains("kind = \"edge\""));
         assert!(toml.contains("id = \"e2\""));
@@ -818,7 +952,7 @@ mod tests {
     fn native_msts_propagates_end_node_position() {
         let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
         let tdb = TrackDbFile::from_path(fixtures.join("native_msts.tdb")).expect("tdb");
-        let toml = convert_tdb_to_toml(&tdb, "test", None).expect("toml");
+        let toml = convert_tdb_to_toml(&tdb, "test", None, None).expect("toml");
         let value: toml::Value = toml::from_str(&toml).expect("valid toml");
         let nodes = value["nodes"].as_array().expect("nodes");
         let n4 = nodes

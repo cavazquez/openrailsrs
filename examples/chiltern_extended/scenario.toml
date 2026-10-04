@@ -1,0 +1,143 @@
+[scenario]
+name = "Chiltern extendido: Northolt Park → Gerrards Cross"
+description = "Seis estaciones originales, pendientes, límites por posición y tráfico vivo."
+start_time_s = 35700
+season = "summer"
+
+[route]
+path = "."
+start = "n93"
+destination = "n3670"
+start_offset_m = 1385.9003278212956
+assume_signals_clear = false
+waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105", "n3662", "n3663", "n3665", "n3667", "n3668", "n3669", "n3670"]
+
+[[route.stops]]
+node = "n97"
+name = "Northolt Park"
+offset_m = -3531.682
+arrive_s = 0.0
+depart_s = 20.0
+dwell_s = 20.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n101"
+name = "South Ruislip"
+offset_m = -329.501
+arrive_s = 480.0
+depart_s = 510.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n105"
+name = "West Ruislip"
+offset_m = -29.362650000000002
+arrive_s = 840.0
+depart_s = 870.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n3668"
+name = "Denham"
+offset_m = -153.828
+arrive_s = 1200.0
+depart_s = 1230.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n3669"
+name = "Denham Golf Course"
+offset_m = -1769.85
+arrive_s = 1410.0
+depart_s = 1440.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n3670"
+name = "Gerrards Cross"
+offset_m = -310.466
+arrive_s = 1800.0
+depart_s = 1830.0
+dwell_s = 30.0
+passengers_on = 0
+passengers_off = 100
+
+[train]
+consist = "consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 2.0
+
+[simulation]
+duration = 3600.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "pullman"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+driver_brake_full_scale_psi = 45.0
+brake_cylinder_full_scale_psi = 45.0
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[extra_trains]]
+id = "Pullman adelantado"
+consist = "consists/birmingham_pullman.con"
+start = "n93"
+destination = "n109"
+waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105", "n107", "n109"]
+start_offset_m = 5200.0
+start_time_s = 0.0
+output_csv = "run_lead.csv"
+
+[[extra_trains.stops]]
+node = "n101"
+name = "South Ruislip"
+offset_m = -329.501
+arrive_s = 20.0
+depart_s = 230.0
+dwell_s = 180.0
+
+[[extra_trains.stops]]
+node = "n105"
+name = "West Ruislip"
+offset_m = -29.36265
+arrive_s = 530.0
+depart_s = 570.0
+dwell_s = 20.0
+
+[[extra_trains]]
+id = "Pullman contrario"
+consist = "consists/birmingham_pullman.con"
+start = "n3662"
+destination = "n3658"
+waypoints = ["n3662", "n3660", "n3658"]
+start_offset_m = 200.0
+start_time_s = 700.0
+output_csv = "run_opposite.csv"
+
+[[extra_trains.stops]]
+node = "n3660"
+name = "South Ruislip · vía contigua"
+offset_m = -30.0
+arrive_s = 1000.0
+depart_s = 1060.0
+dwell_s = 45.0

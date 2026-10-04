@@ -9,6 +9,7 @@ use openrailsrs_train::{Consist, TractiveCurve, load_consist_with_asset_root};
 fn flat_path() -> PathData {
     PathData {
         edges: vec![PathEdgeData {
+            profile: Default::default(),
             length_m: 10_000.0,
             speed_limit_mps: 50.0,
             grade_percent: 0.0,
@@ -54,6 +55,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
                 wagon_shape: None,
                 brake_shoe_type: Default::default(),
                 brake_shoe_friction: None,
+                brake_profile: Default::default(),
                 flipped: false,
             }),
             Vehicle::Wagon(Wagon {
@@ -69,6 +71,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
                 wagon_shape: None,
                 brake_shoe_type: Default::default(),
                 brake_shoe_friction: None,
+                brake_profile: Default::default(),
                 flipped: false,
             }),
         ],

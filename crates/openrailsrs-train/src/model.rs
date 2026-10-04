@@ -156,6 +156,7 @@ fn scale_davis_per_vehicle(
 
 #[derive(Clone, Debug)]
 pub struct Locomotive {
+    pub brake_profile: openrailsrs_formats::VehicleBrakeProfile,
     pub name: String,
     pub mass_kg: f64,
     pub max_power_w: f64,
@@ -188,6 +189,7 @@ pub struct Locomotive {
 
 #[derive(Clone, Debug)]
 pub struct Wagon {
+    pub brake_profile: openrailsrs_formats::VehicleBrakeProfile,
     pub name: String,
     pub mass_kg: f64,
     pub max_brake_force_n: f64,

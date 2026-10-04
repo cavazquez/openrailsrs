@@ -55,6 +55,9 @@ pub struct WindshieldSettings {
     pub last_wipe_s: f32,
     pub wiper_on: f32,
     pub _pad: Vec3,
+    pub glass: Vec4,
+    pub blade1: Vec4,
+    pub blade2: Vec4,
 }
 #[derive(Resource, Default)]
 struct WindshieldWipeState {
@@ -67,11 +70,15 @@ fn sync_windshield(
     live: Res<LiveDrive>,
     weather: Res<ActivePlayerContent>,
     follow: Res<CameraFollowMode>,
+    cvf: Res<crate::cab_cvf::CabCvfState>,
+    overlay: Res<crate::cab_cvf_overlay::CabCvfOverlayState>,
+    preferences: Res<crate::player_settings::PlayerSettings>,
     mut wipe: ResMut<WindshieldWipeState>,
     mut cameras: Query<(
         Entity,
         &mut Camera3d,
         &Projection,
+        &Camera,
         Option<&mut WindshieldSettings>,
     )>,
 ) {
@@ -85,7 +92,7 @@ fn sync_windshield(
     }
     let visible = (*follow == CameraFollowMode::DriverCam || follow.is_cab2d())
         && weather.weather == PlayerWeather::Rain;
-    for (e, mut camera, projection, current) in &mut cameras {
+    for (e, mut camera, projection, view, current) in &mut cameras {
         // Sample the resolved main-pass depth, without introducing a separate
         // prepass that would use the wrong alpha bindings for original materials.
         camera.depth_texture_usages =
@@ -94,12 +101,48 @@ fn sync_windshield(
             Projection::Perspective(p) => p.near,
             _ => 0.02,
         };
+        let path = cvf.cvf_path.as_deref();
+        let profile = path
+            .and_then(|p| preferences.cab_profiles.get(p.to_string_lossy().as_ref()))
+            .copied()
+            .unwrap_or_default();
+        let count = path
+            .zip(cvf.runtime.as_ref())
+            .map_or(2, |(p, r)| crate::cab_profile::blade_count(r, p));
+        let front = overlay.view_index == 0 || !follow.is_cab2d();
+        let glass = if follow.is_cab2d() {
+            cvf.runtime
+                .as_ref()
+                .and_then(|r| r.cvf.views.get(overlay.view_index))
+                .map_or(Vec4::new(0.0, 0.0, 1.0, 1.0), |v| {
+                    crate::cab_profile::window_uv(
+                        v,
+                        view.logical_viewport_size()
+                            .unwrap_or(Vec2::new(640.0, 480.0)),
+                    )
+                })
+        } else {
+            Vec4::new(0.0, 0.0, 1.0, 1.0)
+        };
+        let (left, right, radius) = if count == 1 {
+            (0.5, 0.5, 0.82)
+        } else {
+            (0.25, 0.75, 0.60)
+        };
         let settings = WindshieldSettings {
             time_s: clock as f32,
             rain: f32::from(visible),
             near_clip: near,
             last_wipe_s: wipe.last_wipe_s.map_or(-1.0, |s| s as f32),
             wiper_on: f32::from(live.session.wiper_active),
+            glass,
+            blade1: Vec4::new(left, 0.96, radius * profile.wipe_scale, f32::from(front)),
+            blade2: Vec4::new(
+                right,
+                0.96,
+                radius * profile.wipe_scale,
+                f32::from(front && count > 1),
+            ),
             ..default()
         };
         if let Some(mut current) = current {

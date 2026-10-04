@@ -65,6 +65,7 @@ impl PlayerLaunchMenu {
         let mut services = vec![];
         let native = scenery_root.or_else(default_chiltern_root);
         for (folder, label) in [
+            ("chiltern_extended", "Chiltern"),
             ("chiltern_traffic", "Chiltern"),
             ("chiltern_local", "Chiltern"),
             ("chiltern", "Chiltern"),
@@ -536,7 +537,7 @@ mod tests {
         menu.weather = PlayerWeather::Rain;
         let request = menu.prepare_in(dir.path()).unwrap();
         let scenario = load_scenario(&request.path).unwrap();
-        assert_eq!(scenario.route.stops.len(), 3);
+        assert_eq!(scenario.route.stops.len(), 6);
         assert_eq!(scenario.scenario.start_time_s, Some(45000.0));
         assert_eq!(scenario.scenario.season.as_deref(), Some("winter"));
         assert_eq!(request.weather, PlayerWeather::Rain);

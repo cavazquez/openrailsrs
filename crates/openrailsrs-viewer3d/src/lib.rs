@@ -36,6 +36,7 @@ pub mod or_shader {
     pub use openrailsrs_or_shader::*;
 }
 pub mod cab_mouse;
+mod cab_profile;
 pub mod ground_fog;
 pub mod native_audio;
 pub mod night_sky;
@@ -78,13 +79,16 @@ pub mod track_position;
 pub mod traffic;
 pub mod train;
 pub mod train_diagnostics;
+mod train_effects;
 pub mod train_lighting;
 pub mod transfer;
 pub mod view_window;
 pub mod water;
+mod wet_surfaces;
 pub mod windshield;
 pub mod world;
 pub mod world_instancing;
+mod world_lod_fade;
 pub mod world_tile_index;
 
 #[cfg(test)]
@@ -142,6 +146,12 @@ fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            world_lod_fade::tick
+                .after(world::update_world_scenery_lod)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         app.add_systems(PreStartup, install_ui_font);
         if std::env::var_os("OPENRAILSRS_SHADER_DIAGNOSTICS").is_some() {
             app.add_systems(Update, performance::log_shader_dependencies);
@@ -149,6 +159,27 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
+        app.init_resource::<wet_surfaces::WetSurfaces>();
+        app.add_systems(
+            Update,
+            wet_surfaces::update
+                .run_if(live::live_mode_active)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
+        app.add_systems(
+            OnEnter(ViewerAppState::Playing),
+            train_effects::spawn
+                .after(live::spawn_live_train)
+                .after(traffic::spawn_traffic)
+                .run_if(live::live_mode_active),
+        );
+        app.add_systems(
+            PostUpdate,
+            train_effects::update
+                .after(bevy::transform::TransformSystems::Propagate)
+                .run_if(live::live_mode_active)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         app.add_plugins(bevy::pbr::MaterialPlugin::<sky::RailwaySkyMaterial>::default());
         app.init_resource::<native_audio::NativeAudio>();
         app.add_systems(

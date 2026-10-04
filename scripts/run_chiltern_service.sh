@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 ROUTE="${CHILTERN_ROUTE:-${OPENRAILSRS_MSTS_CONTENT:-$HOME/Documentos/Open Rails/Content}/Chiltern/ROUTES/Chiltern}"
-SERVICE="${CHILTERN_SERVICE:-examples/chiltern_traffic/scenario.toml}"
+SERVICE="${CHILTERN_SERVICE:-examples/chiltern_extended/scenario.toml}"
 if [[ ! -d "$ROUTE/WORLD" ]]; then
   echo "Chiltern no encontrado en $ROUTE; definir CHILTERN_ROUTE con la ruta del Content." >&2
   exit 1

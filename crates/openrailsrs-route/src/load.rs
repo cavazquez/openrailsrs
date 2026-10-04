@@ -40,6 +40,8 @@ pub struct LoadedRoute {
 /// Declarative route layout for tests and minimal routes (`track.toml`).
 #[derive(Debug, Deserialize)]
 pub struct RouteLayoutFile {
+    #[serde(default)]
+    pub edge_profiles: HashMap<String, openrailsrs_track::EdgePhysicsProfile>,
     pub route: RouteMeta,
     #[serde(default)]
     pub nodes: Vec<NodeDef>,
@@ -212,6 +214,27 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
             speed_limit_mps: lim_mps,
             grade_percent: e.grade_percent,
         })?;
+    }
+    for (id, profile) in layout.edge_profiles {
+        let edge = g.edge(&id).ok_or_else(|| {
+            RouteError::Msg(format!("Physical profile references missing edge {id}"))
+        })?;
+        if profile.speed_posts.iter().any(|p| {
+            !p.position_m.is_finite()
+                || !(0.0..=edge.length_m).contains(&p.position_m)
+                || !p.speed_limit_kmh.is_finite()
+                || p.speed_limit_kmh <= 0.0
+        }) || profile.grades.iter().any(|p| {
+            !p.position_m.is_finite()
+                || !(0.0..=edge.length_m).contains(&p.position_m)
+                || !p.grade_percent.is_finite()
+                || p.grade_percent.abs() > 25.0
+        }) {
+            return Err(RouteError::Msg(format!(
+                "Invalid speed/grade profile for {id}"
+            )));
+        }
+        g.set_physics_profile(&id, profile);
     }
     for s in layout.signals {
         let aspect = match s.aspect {

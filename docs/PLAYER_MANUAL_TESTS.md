@@ -390,3 +390,125 @@ algunas variables, filtros y scripts específicos de contenido siguen pendientes
 Las variables de diésel conservan la escala 0–1; las eléctricas y de vapor
 usan los porcentajes esperados por sus SMS. Para las dos últimas, la demanda
 del regulador aproxima carga/presión; faltan sus variables físicas completas.
+
+## 15. Embarque, horario y práctica rápida
+
+1. Abrí el servicio corto **Chiltern local con tráfico**, quedate detenido en
+   Northolt Park y abrí las puertas con **Q**. El HUD debe distinguir **pasajeros**
+   (20 s) y **horario** (hasta 300 s en esta salida). Cuando termina el embarque
+   debe decir **Pasajeros listos**, aunque aún falte la hora de salida. F7 muestra
+   ambos tiempos por separado.
+2. Cerrá las puertas. Podés esperar con puertas cerradas; no debe reiniciarse el
+   embarque. Si salís antes del horario, el tren puede moverse y la evaluación de
+   F7 registra una salida anticipada. Las puertas abiertas siguen cortando la
+   tracción en la implementación actual.
+3. Para probar sin esperas largas, **F10 → Práctica rápida en estaciones → Sí** y Esc.
+   Abrí las puertas: una parada requiere como máximo **5 segundos de pasajeros**
+   y permite salir sin esperar al horario. Cerrá las puertas y conducí normalmente.
+   Se mantienen las posiciones, señales y paradas. F7 identifica la práctica.
+4. Desactivá la práctica y reiniciá con **R** para volver al servicio normal.
+   **Guardar ajustes** conserva la preferencia al volver a abrir el visor.
+
+Open Rails 1.6.1 calcula el embarque y además espera la salida programada. No
+inmoviliza universalmente al jugador por ese contador: salir antes afecta la
+actividad; los enclavamientos dependen del vehículo. Aquí se quitaron el bloqueo
+artificial del regulador por el temporizador y el mensaje que confundía las dos
+esperas. El modo de práctica es una comodidad adicional, activada explícitamente.
+
+## 16. Puesto de conducción por cabina
+
+1. Elegí Pullman, **1 → Alt+1** para la cabina 3D y abrí F10. Probá **Altura del
+   asiento** y **Asiento 3D hacia atrás**: al cerrar el panel el puesto se mueve
+   respecto del escritorio. El límite de cada ajuste es ±0,40 m.
+2. Guardá los ajustes, cerrá y abrí el juego: deben conservarse para esa cabina.
+   Otra formación con un CVF distinto tiene su propio ajuste. **Restaurar puesto y
+   barrido originales** devuelve los valores de ese perfil.
+3. Conduciendo, el amperímetro/medidor de carga debe responder a la tracción:
+   al quitar potencia su lectura baja aunque el motor conserve RPM. La presión
+   de una cabina de vapor debe usar la caldera y las unidades del instrumento.
+4. En clima **Lluvia**, probá **V** en cabinas 2D y 3D. Las gotas quedan en el
+   vidrio y el barrido despeja su área. En 2D se usa la ventana definida en el CVF,
+   conservando las bandas del panel al cambiar la relación de aspecto. F10 permite
+   ajustar el alcance del barrido por cabina.
+
+El barrido usa huesos WIPER cuando existen; en cabinas clásicas su área se
+aproxima. El medidor eléctrico aún usa una estimación de carga, no un modelo
+completo de corriente/tensión. Las cabinas 2D conservan su punto de vista original.
+
+## 17. Humo, vapor y superficies mojadas
+
+1. Elegí **Pullman**, vista exterior **2**. Con el motor funcionando observá las
+   salidas de escape: el humo sale del punto definido por el ENG y aumenta con la
+   potencia. Al avanzar debe quedar atrás del tren.
+2. Elegí **Downton Hall LE** o **KingLE**: observá la chimenea, las purgas cerca de
+   los cilindros al arrancar y el vapor al usar la bocina. La pausa congela el
+   efecto. Las partículas no deben proyectar sombras ni seguir a la cámara.
+3. Compará el mismo lugar en **Despejado** y **Lluvia**. El tren, los materiales
+   opacos individuales y el terreno deben oscurecerse ligeramente; los materiales
+   PBR adquieren más brillo y menos rugosidad. Cambiar lluvia/despejado en una
+   partida restaurada permite observar el mojado y secado progresivos.
+
+Se usan emisores originales y partículas acotadas a 512, cercanas a la cámara.
+La intensidad es visual; no certifica la termodinámica completa de Open Rails.
+Los objetos renderizados con el material específico de instancias conservan su
+acabado original; los cambios PBR se aplican al tren y a objetos individuales.
+
+## 18. Seis estaciones hasta Gerrards Cross
+
+1. En el menú elegí **Chiltern extendido: Northolt Park → Gerrards Cross**,
+   **birmingham_pullman** y **Recorrido del servicio**. F7 debe enumerar
+   Northolt Park, South Ruislip, West Ruislip, Denham, Denham Golf Course y
+   Gerrards Cross. Comienza con freno aplicado para sostener la pendiente; soltalo
+   después de embarcar, cerrar puertas y elegir el sentido. F10 activa la práctica de 5 s.
+2. Conducí y completá las seis paradas. El trayecto mide unos **15,3 km** desde
+   Northolt Park. El mapa y el paisaje deben acompañar el avance después de West
+   Ruislip, incluyendo las tres estaciones adicionales.
+3. Observá el servicio adelantado y el contrario en F4/mapa. El adelantado ocupa
+   estaciones y afecta señales; el contrario circula por el corredor contiguo.
+4. En Gerrards Cross, frená dentro de ±10 m a ≤0,1 m/s, abrí puertas, completá el
+   embarque y cerralas. Debe aparecer **Servicio completado** y F7 mostrar 6/6.
+
+Para abrirlo directamente: `./scripts/run_chiltern_service.sh --direct`.
+La referencia geométrica son el PAT local original y las plataformas/conexiones
+TDB hacia Gerrards Cross. El horario es propio del escenario; no reproduce una
+actividad nativa completa. Las señales siguen reglas de ocupación de tres aspectos.
+
+## 19. Cambios de detalle y memoria
+
+1. En exterior acercá/alejá despacio la cámara alrededor de edificios rígidos.
+   Las mallas de un LOD deben sustituirse con una transición breve (0,35 s). No
+   debe aparecer un objeto duplicado permanente ni cambiar de lugar una señal.
+2. Durante el recorrido largo probá cabina y exterior, con distancia de dibujo
+   de 2000 m. Los sectores cercanos deben estar completos al detenerse; los
+   distantes se liberan al avanzar. No abras dos visores para esta prueba.
+3. Para dejar evidencia reproducible, usá el comando de streaming documentado en
+   `examples/chiltern_extended/README.md`. Produce PNG, memoria máxima, tiempos
+   de cuadro, adaptador utilizado y sectores pendientes.
+
+Las transiciones comparten materiales y texturas y admiten como máximo 64 mallas
+salientes. Los objetos animados conservan su animación y el cambio discreto; las
+instancias usan su ruta de detalle existente. Los resultados con lavapipe/CPU
+certifican carga y memoria en esa configuración; los FPS de una GPU deben medirse
+con `--require-hardware` en una máquina con el controlador funcionando.
+
+## 20. Límites, pendientes y frenos nativos
+
+1. En el servicio extendido abrí **F4**: los límites por cartel aparecen en su
+   distancia real. El HUD cambia al alcanzarlos; un aumento espera a que pase
+   también la cola de la formación.
+2. Abrí **F8 → Fuerzas**: la pendiente debe cambiar con los tramos nativos de la
+   vía. A igual regulador el tren responde de forma distinta en subida/bajada.
+3. Aplicá y soltá freno. El Pullman original combina **siete vehículos EP** con
+   **un motor de cola de aire**. Los EP responden sin espera de propagación;
+   el motor de cola conserva la propagación y retención del aire. Las tasas de
+   aplicación/liberación son 30/10 PSI/s para EP y 40/40 PSI/s para la cola.
+   La lectura de cilindro utiliza la presión de plena fuerza del vehículo
+   (45, 90 o 70 PSI según su ENG/WAG), dentro del modelo de freno simplificado.
+4. Con puertas cerradas, pasar el límite no debe quitar automáticamente la
+   potencia de una locomotora nativa: la conducción y sus consecuencias siguen
+   siendo responsabilidad del jugador. Frená y verificá el aviso de exceso.
+
+Estos perfiles se incluyen en el escenario extendido. Los escenarios históricos
+sin perfiles mantienen sus pendientes/límites declarados. La importación nativa
+produce perfiles para ambos sentidos. Los oráculos congelados de Open Rails
+siguen siendo la referencia física; no se amplían sus tolerancias.

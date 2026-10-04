@@ -54,6 +54,16 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     if (params.lit >= 0.5) {
         lit_rgb += color.rgb * overlay * railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy);
     }
+    // Rain darkens the ground and adds a restrained sun reflection at grazing angles.
+    let wet = clamp(params._pad0, 0.0, 1.0);
+    lit_rgb *= 1.0 - wet * 0.18;
+    if (params.lit >= 0.5 && wet > 0.0) {
+        let n = normalize(in.world_normal);
+        let eye = normalize(view_bindings::view.world_position.xyz - in.world_position.xyz);
+        let light = view_bindings::lights.directional_lights[0].direction_to_light;
+        let h = normalize(eye + light);
+        lit_rgb += vec3(pow(max(dot(n, h), 0.0), 32.0) * wet * 0.04 * railway_lighting::railway_daylight());
+    }
     var out_color = vec4(lit_rgb, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

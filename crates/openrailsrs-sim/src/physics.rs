@@ -15,7 +15,7 @@ const G: f64 = 9.81;
 const BRAKE_TRACTION_CUTOFF: f64 = 0.001;
 /// Full tractive effort below this fraction of the edge speed limit.
 const SPEED_EPS_RATIO: f64 = 0.99;
-/// Open Rails allows modest overspeed before the limiter fully cuts power (see `runner` overspeed at 1.05×).
+/// Legacy scenario safety guard; native stock is driven by the requested power.
 const SPEED_OVERSPEED_RATIO: f64 = 1.05;
 
 /// Tractive effort multiplier from edge speed limiting (1.0 = unrestricted, 0.0 = at/above overspeed).
@@ -112,7 +112,7 @@ pub fn step(
     };
 
     let v = state.velocity_mps.max(0.0);
-    let speed_cap = edge_data.speed_limit_mps;
+    let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
     let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
 
     // ── Tractive force ────────────────────────────────────────────────────────
@@ -121,11 +121,21 @@ pub fn step(
     let f_motor = if let (Some(params), Some(boiler)) =
         (&train.steam_params, state.boiler_state.as_mut())
     {
-        // Steam: the regulator is capped by the speed limiter.
-        let effective_throttle = state.throttle * speed_limit_traction_factor(v, speed_cap);
+        // Route limits are driving instructions. Only legacy toy scenarios use
+        // the automatic power guard; a native regulator can produce overspeed.
+        let factor = if train.legacy_power_cap {
+            speed_limit_traction_factor(v, speed_cap)
+        } else {
+            1.0
+        };
+        let effective_throttle = state.throttle * factor;
         steam_step(boiler, params, effective_throttle, v, dt)
     } else if state.throttle > 0.0 {
-        let speed_factor = speed_limit_traction_factor(v, speed_cap);
+        let speed_factor = if train.legacy_power_cap {
+            speed_limit_traction_factor(v, speed_cap)
+        } else {
+            1.0
+        };
         let raw = if !train.diesel_engines.is_empty() {
             let n = train.diesel_engines.len();
             if state.diesel_rpm.len() != n {
@@ -246,7 +256,7 @@ pub fn step(
         }
     };
     let f_resist = train.davis.resistance_n(v);
-    let grade_fraction = edge_data.grade_percent / 100.0;
+    let grade_fraction = edge_data.grade_at(state.pos_on_edge_m) / 100.0;
     let f_grade = effective_mass * G * grade_fraction;
 
     // ── Multi-body coupler path ───────────────────────────────────────────────

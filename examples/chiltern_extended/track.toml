@@ -1,0 +1,1995 @@
+[route]
+id = "chiltern_extended"
+
+[[nodes]]
+id = "n93"
+x_m = -12462102.2842
+y_m = -30571720.05
+
+[[nodes]]
+id = "n95"
+x_m = -12463292.836
+y_m = -30571473.309
+
+[[nodes]]
+id = "n97"
+x_m = -12466561.037
+y_m = -30570867.727
+
+[[nodes]]
+id = "n99"
+x_m = -12466657.045
+y_m = -30570995.151
+
+[[nodes]]
+id = "n101"
+x_m = -12467008.077
+y_m = -30571359.876
+
+[[nodes]]
+id = "n103"
+x_m = -12468970.558
+y_m = -30573287.756
+
+[[nodes]]
+id = "n105"
+x_m = -12469070.499
+y_m = -30573382.918
+
+[[nodes]]
+id = "n107"
+x_m = -12469175.509
+y_m = -30573482.908
+
+[[nodes]]
+id = "n109"
+x_m = -12469342.077
+y_m = -30573641.5118
+
+[[nodes]]
+id = "n3658"
+x_m = -12466653.118
+y_m = -30570998.64
+
+[[nodes]]
+id = "n3660"
+x_m = -12466980.2772
+y_m = -30571338.554
+
+[[nodes]]
+id = "n3662"
+x_m = -12469106.4542
+y_m = -30573424.395
+
+[[nodes]]
+id = "n3663"
+x_m = -12472688.3268
+y_m = -30574596.2119
+
+[[nodes]]
+id = "n3665"
+x_m = -12473165.555
+y_m = -30574711.674
+
+[[nodes]]
+id = "n3667"
+x_m = -12473576.779
+y_m = -30574806.411
+
+[[nodes]]
+id = "n3668"
+x_m = -12473864.668
+y_m = -30574880.841
+
+[[nodes]]
+id = "n3669"
+x_m = -12477181.748
+y_m = -30575460.963
+
+[[nodes]]
+id = "n3670"
+x_m = -12477768.99
+y_m = -30575781.214
+
+[[edges]]
+id = "e94_r"
+from = "n93"
+to = "n95"
+length_m = 1243.5643198967398
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e96_r"
+from = "n95"
+to = "n97"
+length_m = 3674.0180079245556
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e98"
+from = "n97"
+to = "n99"
+length_m = 159.79026389394392
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e100_r"
+from = "n99"
+to = "n101"
+length_m = 506.254
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e102"
+from = "n101"
+to = "n103"
+length_m = 2751.65846
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e104_r"
+from = "n103"
+to = "n105"
+length_m = 138.0
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e9760"
+from = "n105"
+to = "n3662"
+length_m = 54.9337395993319
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3661_r"
+from = "n3662"
+to = "n3660"
+length_m = 2979.3639799999996
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3659"
+from = "n3660"
+to = "n3658"
+length_m = 471.82300000000004
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e106"
+from = "n105"
+to = "n107"
+length_m = 145.0
+speed_limit_kmh = 24.14016
+
+[[edges]]
+id = "e108"
+from = "n107"
+to = "n109"
+length_m = 230.0
+speed_limit_kmh = 24.14016
+
+[[edges]]
+id = "e94"
+from = "n95"
+to = "n93"
+length_m = 1243.5643198967398
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e96"
+from = "n97"
+to = "n95"
+length_m = 3674.0180079245556
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e98_r"
+from = "n99"
+to = "n97"
+length_m = 159.79026389394392
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e100"
+from = "n101"
+to = "n99"
+length_m = 506.254
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e102_r"
+from = "n103"
+to = "n101"
+length_m = 2751.65846
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e104"
+from = "n105"
+to = "n103"
+length_m = 138.0
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e9760_r"
+from = "n3662"
+to = "n105"
+length_m = 54.9337395993319
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3661"
+from = "n3660"
+to = "n3662"
+length_m = 2979.3639799999996
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3659_r"
+from = "n3658"
+to = "n3660"
+length_m = 471.82300000000004
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e106_r"
+from = "n107"
+to = "n105"
+length_m = 145.0
+speed_limit_kmh = 24.14016
+
+[[edges]]
+id = "e108_r"
+from = "n109"
+to = "n107"
+length_m = 230.0
+speed_limit_kmh = 24.14016
+
+[[edges]]
+id = "e14615_r"
+from = "n3662"
+to = "n3663"
+length_m = 3226.936564218667
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14615"
+from = "n3663"
+to = "n3662"
+length_m = 3226.936564218667
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14618_r"
+from = "n3663"
+to = "n3665"
+length_m = 491.0
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14618"
+from = "n3665"
+to = "n3663"
+length_m = 491.0
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3666_r"
+from = "n3665"
+to = "n3667"
+length_m = 422.134543785286
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e3666"
+from = "n3667"
+to = "n3665"
+length_m = 422.134543785286
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14606_r"
+from = "n3667"
+to = "n3668"
+length_m = 297.48954378528595
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14606"
+from = "n3668"
+to = "n3667"
+length_m = 297.48954378528595
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14603_r"
+from = "n3668"
+to = "n3669"
+length_m = 3383.8953682693086
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14603"
+from = "n3669"
+to = "n3668"
+length_m = 3383.8953682693086
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14601_r"
+from = "n3669"
+to = "n3670"
+length_m = 669.3748302065547
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e14601"
+from = "n3670"
+to = "n3669"
+length_m = 669.3748302065547
+speed_limit_kmh = 80.0
+
+[[signals]]
+id = "sig516_r"
+edge_id = "e14603_r"
+position_m = 2647.9903682693084
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig516"
+edge_id = "e14603"
+position_m = 735.905
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig561_r"
+edge_id = "e96_r"
+position_m = 2800.2408079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig561"
+edge_id = "e96"
+position_m = 873.7772
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig564_r"
+edge_id = "e14615_r"
+position_m = 0.0
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig564"
+edge_id = "e14615"
+position_m = 3226.936564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig685_r"
+edge_id = "e94_r"
+position_m = 1196.5319198967397
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig685"
+edge_id = "e94"
+position_m = 47.0324
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig686_r"
+edge_id = "e94_r"
+position_m = 549.1843198967398
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig686"
+edge_id = "e94"
+position_m = 694.38
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig687_r"
+edge_id = "e94_r"
+position_m = 152.76431989673983
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig687"
+edge_id = "e94"
+position_m = 1090.8
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig688_r"
+edge_id = "e96_r"
+position_m = 149.99800792455562
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig688"
+edge_id = "e96"
+position_m = 3524.02
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig689_r"
+edge_id = "e96_r"
+position_m = 3670.3461289245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig689"
+edge_id = "e96"
+position_m = 3.671879
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig690_r"
+edge_id = "e96_r"
+position_m = 3670.3461289245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig690"
+edge_id = "e96"
+position_m = 3.671879
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig691_r"
+edge_id = "e96_r"
+position_m = 1975.9780079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig691"
+edge_id = "e96"
+position_m = 1698.04
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig694"
+edge_id = "e102"
+position_m = 1287.87
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig694_r"
+edge_id = "e102_r"
+position_m = 1463.7884600000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig695_r"
+edge_id = "e3661_r"
+position_m = 1654.9439799999996
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig695"
+edge_id = "e3661"
+position_m = 1324.42
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig696"
+edge_id = "e102"
+position_m = 2724.35
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig696_r"
+edge_id = "e102_r"
+position_m = 27.308460000000196
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig697_r"
+edge_id = "e3661_r"
+position_m = 233.4139799999998
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig697"
+edge_id = "e3661"
+position_m = 2745.95
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig698_r"
+edge_id = "e104_r"
+position_m = 132.15789
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig698"
+edge_id = "e104"
+position_m = 5.84211
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig699_r"
+edge_id = "e104_r"
+position_m = 132.15789
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig699"
+edge_id = "e104"
+position_m = 5.84211
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig700_r"
+edge_id = "e104_r"
+position_m = 134.99381
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig700"
+edge_id = "e104"
+position_m = 3.00619
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig705_r"
+edge_id = "e14615_r"
+position_m = 2696.562564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig705"
+edge_id = "e14615"
+position_m = 530.374
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig707_r"
+edge_id = "e14606_r"
+position_m = 224.06824378528594
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig707"
+edge_id = "e14606"
+position_m = 73.4213
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig708_r"
+edge_id = "e14603_r"
+position_m = 3348.5137682693085
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig708"
+edge_id = "e14603"
+position_m = 35.3816
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig709_r"
+edge_id = "e14603_r"
+position_m = 3348.5137682693085
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig709"
+edge_id = "e14603"
+position_m = 35.3816
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig713_r"
+edge_id = "e14601_r"
+position_m = 575.6996402065547
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig713"
+edge_id = "e14601"
+position_m = 93.67519
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig926_r"
+edge_id = "e14615_r"
+position_m = 0.0
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig926"
+edge_id = "e14615"
+position_m = 3226.936564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig927"
+edge_id = "e106"
+position_m = 43.1077
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig927_r"
+edge_id = "e106_r"
+position_m = 101.8923
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig928_r"
+edge_id = "e14615_r"
+position_m = 0.0
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig928"
+edge_id = "e14615"
+position_m = 3226.936564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig932_r"
+edge_id = "e104_r"
+position_m = 6.634999999999991
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig932"
+edge_id = "e104"
+position_m = 131.365
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig941"
+edge_id = "e102"
+position_m = 3.12757
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig941_r"
+edge_id = "e102_r"
+position_m = 2748.53089
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig942_r"
+edge_id = "e3661_r"
+position_m = 2975.8613479999995
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig942"
+edge_id = "e3661"
+position_m = 3.502632
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1058"
+edge_id = "e102"
+position_m = 2380.5
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1058_r"
+edge_id = "e102_r"
+position_m = 371.1584600000001
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1059_r"
+edge_id = "e3661_r"
+position_m = 564.2139799999995
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1059"
+edge_id = "e3661"
+position_m = 2415.15
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1060_r"
+edge_id = "e100_r"
+position_m = 384.688
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1060"
+edge_id = "e100"
+position_m = 121.566
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1061"
+edge_id = "e3659"
+position_m = 86.78519
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1061_r"
+edge_id = "e3659_r"
+position_m = 385.03781000000004
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1065_r"
+edge_id = "e100_r"
+position_m = 197.98790000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1065"
+edge_id = "e100"
+position_m = 308.2661
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1066_r"
+edge_id = "e96_r"
+position_m = 1975.9780079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1066"
+edge_id = "e96"
+position_m = 1698.04
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1067_r"
+edge_id = "e96_r"
+position_m = 1975.9780079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1067"
+edge_id = "e96"
+position_m = 1698.04
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1184"
+edge_id = "e102"
+position_m = 2724.35
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1184_r"
+edge_id = "e102_r"
+position_m = 27.308460000000196
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1910_r"
+edge_id = "e14603_r"
+position_m = 3351.8815682693084
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig1910"
+edge_id = "e14603"
+position_m = 32.0138
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig2684_r"
+edge_id = "e14603_r"
+position_m = 2654.1153682693084
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig2684"
+edge_id = "e14603"
+position_m = 729.78
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig4140_r"
+edge_id = "e104_r"
+position_m = 98.2989
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig4140"
+edge_id = "e104"
+position_m = 39.7011
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig4198_r"
+edge_id = "e3661_r"
+position_m = 93.04397999999946
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig4198"
+edge_id = "e3661"
+position_m = 2886.32
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8517_r"
+edge_id = "e96_r"
+position_m = 3671.7489079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8517"
+edge_id = "e96"
+position_m = 2.2691
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8518_r"
+edge_id = "e96_r"
+position_m = 3671.7489079245556
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8518"
+edge_id = "e96"
+position_m = 2.2691
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8519_r"
+edge_id = "e96_r"
+position_m = 3186.1850079245555
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8519"
+edge_id = "e96"
+position_m = 487.833
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8520_r"
+edge_id = "e96_r"
+position_m = 3186.1850079245555
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8520"
+edge_id = "e96"
+position_m = 487.833
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8522_r"
+edge_id = "e100_r"
+position_m = 197.98790000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8522"
+edge_id = "e100"
+position_m = 308.2661
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8523"
+edge_id = "e3659"
+position_m = 273.3088
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8523_r"
+edge_id = "e3659_r"
+position_m = 198.51420000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8524"
+edge_id = "e3659"
+position_m = 273.3088
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8524_r"
+edge_id = "e3659_r"
+position_m = 198.51420000000002
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8532_r"
+edge_id = "e3661_r"
+position_m = 2792.2045799999996
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8532"
+edge_id = "e3661"
+position_m = 187.1594
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8533_r"
+edge_id = "e3661_r"
+position_m = 2792.2045799999996
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8533"
+edge_id = "e3661"
+position_m = 187.1594
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8536_r"
+edge_id = "e3661_r"
+position_m = 2766.98998
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8536"
+edge_id = "e3661"
+position_m = 212.374
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8537"
+edge_id = "e102"
+position_m = 177.938
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8537_r"
+edge_id = "e102_r"
+position_m = 2573.72046
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8541_r"
+edge_id = "e14615_r"
+position_m = 2696.562564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8541"
+edge_id = "e14615"
+position_m = 530.374
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8542_r"
+edge_id = "e14615_r"
+position_m = 1491.556564218667
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8542"
+edge_id = "e14615"
+position_m = 1735.38
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8543_r"
+edge_id = "e14615_r"
+position_m = 3161.6958642186673
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8543"
+edge_id = "e14615"
+position_m = 65.2407
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8549_r"
+edge_id = "e14618_r"
+position_m = 486.24617
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8549"
+edge_id = "e14618"
+position_m = 4.75383
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8550_r"
+edge_id = "e14618_r"
+position_m = 486.24617
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8550"
+edge_id = "e14618"
+position_m = 4.75383
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8551_r"
+edge_id = "e14618_r"
+position_m = 486.24617
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8551"
+edge_id = "e14618"
+position_m = 4.75383
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8563_r"
+edge_id = "e3666_r"
+position_m = 89.22454378528596
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8563"
+edge_id = "e3666"
+position_m = 332.91
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8569_r"
+edge_id = "e3666_r"
+position_m = 332.340793785286
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8569"
+edge_id = "e3666"
+position_m = 89.79375
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8576_r"
+edge_id = "e14606_r"
+position_m = 1.6275437852859227
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8576"
+edge_id = "e14606"
+position_m = 295.862
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8581_r"
+edge_id = "e14603_r"
+position_m = 767.3053682693085
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8581"
+edge_id = "e14603"
+position_m = 2616.59
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8582_r"
+edge_id = "e14603_r"
+position_m = 2063.345368269309
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8582"
+edge_id = "e14603"
+position_m = 1320.55
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8831_r"
+edge_id = "e14603_r"
+position_m = 540.2853682693085
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig8831"
+edge_id = "e14603"
+position_m = 2843.61
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig9283_r"
+edge_id = "e3661_r"
+position_m = 2794.3209799999995
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig9283"
+edge_id = "e3661"
+position_m = 185.043
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig9962_r"
+edge_id = "e14615_r"
+position_m = 3165.4640642186673
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig9962"
+edge_id = "e14615"
+position_m = 61.4725
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig10493_r"
+edge_id = "e3661_r"
+position_m = 61.2839799999997
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[signals]]
+id = "sig10493"
+edge_id = "e3661"
+position_m = 2918.08
+aspect = "clear"
+[signals.script]
+on_block_ahead = "stop"
+on_second_block_ahead = "caution"
+default = "clear"
+
+[[msts_aliases]]
+tdb_id = 93
+kind = "node"
+id = "n93"
+
+[[msts_aliases]]
+tdb_id = 95
+kind = "node"
+id = "n95"
+
+[[msts_aliases]]
+tdb_id = 97
+kind = "node"
+id = "n97"
+
+[[msts_aliases]]
+tdb_id = 99
+kind = "node"
+id = "n99"
+
+[[msts_aliases]]
+tdb_id = 101
+kind = "node"
+id = "n101"
+
+[[msts_aliases]]
+tdb_id = 103
+kind = "node"
+id = "n103"
+
+[[msts_aliases]]
+tdb_id = 105
+kind = "node"
+id = "n105"
+
+[[msts_aliases]]
+tdb_id = 107
+kind = "node"
+id = "n107"
+
+[[msts_aliases]]
+tdb_id = 109
+kind = "node"
+id = "n109"
+
+[[msts_aliases]]
+tdb_id = 3658
+kind = "node"
+id = "n3658"
+
+[[msts_aliases]]
+tdb_id = 3660
+kind = "node"
+id = "n3660"
+
+[[msts_aliases]]
+tdb_id = 3662
+kind = "node"
+id = "n3662"
+
+[[msts_aliases]]
+tdb_id = 3663
+kind = "node"
+id = "n3663"
+
+[[msts_aliases]]
+tdb_id = 3665
+kind = "node"
+id = "n3665"
+
+[[msts_aliases]]
+tdb_id = 3667
+kind = "node"
+id = "n3667"
+
+[[msts_aliases]]
+tdb_id = 3668
+kind = "node"
+id = "n3668"
+
+[[msts_aliases]]
+tdb_id = 3669
+kind = "node"
+id = "n3669"
+
+[[msts_aliases]]
+tdb_id = 3670
+kind = "node"
+id = "n3670"
+
+[[msts_aliases]]
+tdb_id = 94
+kind = "edge"
+id = "e94"
+from = "n95"
+to = "n93"
+
+[[msts_aliases]]
+tdb_id = 96
+kind = "edge"
+id = "e96"
+from = "n97"
+to = "n95"
+
+[[msts_aliases]]
+tdb_id = 98
+kind = "edge"
+id = "e98"
+from = "n97"
+to = "n99"
+
+[[msts_aliases]]
+tdb_id = 100
+kind = "edge"
+id = "e100"
+from = "n101"
+to = "n99"
+
+[[msts_aliases]]
+tdb_id = 102
+kind = "edge"
+id = "e102"
+from = "n101"
+to = "n103"
+
+[[msts_aliases]]
+tdb_id = 104
+kind = "edge"
+id = "e104"
+from = "n105"
+to = "n103"
+
+[[msts_aliases]]
+tdb_id = 106
+kind = "edge"
+id = "e106"
+from = "n105"
+to = "n107"
+
+[[msts_aliases]]
+tdb_id = 108
+kind = "edge"
+id = "e108"
+from = "n107"
+to = "n109"
+
+[[msts_aliases]]
+tdb_id = 3659
+kind = "edge"
+id = "e3659"
+from = "n3660"
+to = "n3658"
+
+[[msts_aliases]]
+tdb_id = 3661
+kind = "edge"
+id = "e3661"
+from = "n3660"
+to = "n3662"
+
+[[msts_aliases]]
+tdb_id = 3666
+kind = "edge"
+id = "e3666"
+from = "n3667"
+to = "n3665"
+
+[[msts_aliases]]
+tdb_id = 9760
+kind = "edge"
+id = "e9760"
+from = "n105"
+to = "n3662"
+
+[[msts_aliases]]
+tdb_id = 14601
+kind = "edge"
+id = "e14601"
+from = "n3670"
+to = "n3669"
+
+[[msts_aliases]]
+tdb_id = 14603
+kind = "edge"
+id = "e14603"
+from = "n3669"
+to = "n3668"
+
+[[msts_aliases]]
+tdb_id = 14606
+kind = "edge"
+id = "e14606"
+from = "n3668"
+to = "n3667"
+
+[[msts_aliases]]
+tdb_id = 14615
+kind = "edge"
+id = "e14615"
+from = "n3663"
+to = "n3662"
+
+[[msts_aliases]]
+tdb_id = 14618
+kind = "edge"
+id = "e14618"
+from = "n3665"
+to = "n3663"
+
+[edge_profiles.e100]
+speed_posts = [{ position_m = 461.806, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 20.0, grade_percent = -0.0 }, { position_m = 80.0, grade_percent = -0.0 }, { position_m = 85.0, grade_percent = -0.0 }, { position_m = 87.0, grade_percent = -0.0 }, { position_m = 89.0, grade_percent = -0.0 }, { position_m = 89.254, grade_percent = -0.0 }, { position_m = 289.254, grade_percent = -0.0 }, { position_m = 489.254, grade_percent = -0.0 }, { position_m = 499.254, grade_percent = -0.0 }, { position_m = 504.254, grade_percent = -0.0 }, { position_m = 505.254, grade_percent = -0.0 }]
+
+[edge_profiles.e100_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 1.0, grade_percent = 0.0 }, { position_m = 2.0, grade_percent = 0.0 }, { position_m = 7.0, grade_percent = 0.0 }, { position_m = 17.0, grade_percent = 0.0 }, { position_m = 217.0, grade_percent = 0.0 }, { position_m = 417.0, grade_percent = 0.0 }, { position_m = 417.254, grade_percent = 0.0 }, { position_m = 419.254, grade_percent = 0.0 }, { position_m = 421.254, grade_percent = 0.0 }, { position_m = 426.254, grade_percent = 0.0 }, { position_m = 486.254, grade_percent = 0.0 }]
+
+[edge_profiles.e102]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 200.0, grade_percent = -0.0 }, { position_m = 400.0, grade_percent = -0.0 }, { position_m = 600.0, grade_percent = 0.23299542161833828 }, { position_m = 800.0, grade_percent = -0.0 }, { position_m = 850.0, grade_percent = 0.1780261880743622 }, { position_m = 966.37, grade_percent = 0.1780261880743622 }, { position_m = 1001.77856, grade_percent = 0.17785318752660034 }, { position_m = 1005.01856, grade_percent = -0.0 }, { position_m = 1205.01856, grade_percent = 0.23301242171063272 }, { position_m = 1305.01856, grade_percent = 0.2330004216454823 }, { position_m = 1505.01856, grade_percent = 0.23301242171063272 }, { position_m = 1705.01856, grade_percent = 0.2330004216454823 }, { position_m = 1905.01856, grade_percent = 0.23301242171063272 }, { position_m = 2105.01856, grade_percent = -0.0 }, { position_m = 2110.01856, grade_percent = -0.0 }, { position_m = 2160.01856, grade_percent = -0.0 }, { position_m = 2260.01856, grade_percent = -0.0 }, { position_m = 2360.01856, grade_percent = -0.0 }, { position_m = 2396.65846, grade_percent = -0.0 }, { position_m = 2426.65846, grade_percent = -0.0 }, { position_m = 2526.65846, grade_percent = -0.0 }, { position_m = 2726.65846, grade_percent = -0.0 }]
+
+[edge_profiles.e102_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 25.0, grade_percent = 0.0 }, { position_m = 225.0, grade_percent = 0.0 }, { position_m = 325.0, grade_percent = 0.0 }, { position_m = 355.0000000000001, grade_percent = 0.0 }, { position_m = 391.6399000000001, grade_percent = 0.0 }, { position_m = 491.6399000000001, grade_percent = 0.0 }, { position_m = 591.6399000000001, grade_percent = 0.0 }, { position_m = 641.6399000000001, grade_percent = 0.0 }, { position_m = 646.6399000000001, grade_percent = -0.23301242171063272 }, { position_m = 846.6399000000001, grade_percent = -0.2330004216454823 }, { position_m = 1046.6399000000001, grade_percent = -0.23301242171063272 }, { position_m = 1246.6399000000001, grade_percent = -0.2330004216454823 }, { position_m = 1446.6399000000001, grade_percent = -0.23301242171063272 }, { position_m = 1546.6399000000001, grade_percent = 0.0 }, { position_m = 1746.6399000000001, grade_percent = -0.17785318752660034 }, { position_m = 1749.8799000000001, grade_percent = -0.1780261880743622 }, { position_m = 1785.2884600000002, grade_percent = -0.1780261880743622 }, { position_m = 1901.65846, grade_percent = 0.0 }, { position_m = 1951.65846, grade_percent = -0.23299542161833828 }, { position_m = 2151.65846, grade_percent = 0.0 }, { position_m = 2351.65846, grade_percent = 0.0 }, { position_m = 2551.65846, grade_percent = 0.0 }]
+
+[edge_profiles.e104]
+speed_posts = [{ position_m = 124.617, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 18.0, grade_percent = -0.0 }, { position_m = 118.0, grade_percent = -0.0 }]
+
+[edge_profiles.e104_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 20.0, grade_percent = 0.0 }, { position_m = 120.0, grade_percent = 0.0 }]
+
+[edge_profiles.e106]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 20.0, grade_percent = -0.0 }, { position_m = 95.0, grade_percent = -0.0 }, { position_m = 125.0, grade_percent = -0.0 }]
+
+[edge_profiles.e106_r]
+speed_posts = [{ position_m = 116.0403, speed_limit_kmh = 24.14016 }]
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 20.0, grade_percent = 0.0 }, { position_m = 50.0, grade_percent = 0.0 }, { position_m = 125.0, grade_percent = 0.0 }]
+
+[edge_profiles.e108]
+speed_posts = [{ position_m = 222.781, speed_limit_kmh = 24.14016 }]
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 100.0, grade_percent = -0.0 }, { position_m = 175.0, grade_percent = -0.0 }, { position_m = 225.0, grade_percent = -0.0 }]
+
+[edge_profiles.e108_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 5.0, grade_percent = 0.0 }, { position_m = 55.0, grade_percent = 0.0 }, { position_m = 130.0, grade_percent = 0.0 }]
+
+[edge_profiles.e14601]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 15.85329709394393, grade_percent = -0.0 }, { position_m = 25.07229709394393, grade_percent = -0.0 }, { position_m = 33.798943353915575, grade_percent = -0.0 }, { position_m = 40.57895335391557, grade_percent = -0.0 }, { position_m = 62.245353353915576, grade_percent = -0.0 }, { position_m = 65.29535335391557, grade_percent = -0.0 }, { position_m = 90.29535335391557, grade_percent = -0.0 }, { position_m = 92.29535335391557, grade_percent = -0.0 }, { position_m = 93.29535335391557, grade_percent = -0.0 }, { position_m = 293.2953533539156, grade_percent = -0.0 }, { position_m = 493.2953533539156, grade_percent = -0.0 }, { position_m = 543.2953533539155, grade_percent = -0.0 }, { position_m = 563.2953533539155, grade_percent = -0.0 }, { position_m = 573.2953533539155, grade_percent = -0.0 }, { position_m = 644.3025331126107, grade_percent = -0.0 }, { position_m = 653.5215331126108, grade_percent = -0.0 }]
+
+[edge_profiles.e14601_r]
+speed_posts = [{ position_m = 394.12573020655475, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 4.973799150320701e-14, grade_percent = 0.0 }, { position_m = 15.85329709394403, grade_percent = 0.0 }, { position_m = 25.072297093944073, grade_percent = 0.0 }, { position_m = 96.07947685263923, grade_percent = 0.0 }, { position_m = 106.07947685263923, grade_percent = 0.0 }, { position_m = 126.07947685263917, grade_percent = 0.0 }, { position_m = 176.07947685263917, grade_percent = 0.0 }, { position_m = 376.0794768526391, grade_percent = 0.0 }, { position_m = 576.0794768526391, grade_percent = 0.0 }, { position_m = 577.0794768526391, grade_percent = 0.0 }, { position_m = 579.0794768526391, grade_percent = 0.0 }, { position_m = 604.0794768526392, grade_percent = 0.0 }, { position_m = 607.1294768526392, grade_percent = 0.0 }, { position_m = 628.7958768526393, grade_percent = 0.0 }, { position_m = 635.5758868526392, grade_percent = 0.0 }, { position_m = 644.3025331126107, grade_percent = 0.0 }, { position_m = 653.5215331126108, grade_percent = 0.0 }]
+
+[edge_profiles.e14603]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.37961682352340864 }, { position_m = 87.86214347342214, grade_percent = -0.37961482349458703 }, { position_m = 262.69290910970795, grade_percent = -0.37961482349458703 }, { position_m = 437.52367474599373, grade_percent = -0.5707256965868095 }, { position_m = 655.8387514637113, grade_percent = -0.5707256965868095 }, { position_m = 874.1538281814289, grade_percent = -0.5707256965868095 }, { position_m = 1074.153828181429, grade_percent = -0.5707256965868095 }, { position_m = 1274.153828181429, grade_percent = -0.5707256965868095 }, { position_m = 1492.3199846807202, grade_percent = -0.5707256965868095 }, { position_m = 1692.3199846807202, grade_percent = -0.5707256965868095 }, { position_m = 1892.3199846807202, grade_percent = -0.5707256965868095 }, { position_m = 2092.31998468072, grade_percent = -0.5707256965868095 }, { position_m = 2266.852909880153, grade_percent = -0.5707256965868095 }, { position_m = 2441.3858350795863, grade_percent = -0.5707256965868095 }, { position_m = 2659.700911797304, grade_percent = -0.5707256965868095 }, { position_m = 2834.5316774335897, grade_percent = -0.5707256965868095 }, { position_m = 3009.3624430698756, grade_percent = -0.5707256965868095 }, { position_m = 3209.3624430698756, grade_percent = -0.37961682352340864 }]
+
+[edge_profiles.e14603_r]
+speed_posts = []
+grades = [{ position_m = 1.1368683772161603e-13, grade_percent = 0.37961682352340864 }, { position_m = 174.53292519943307, grade_percent = 0.5707256965868095 }, { position_m = 374.53292519943307, grade_percent = 0.5707256965868095 }, { position_m = 549.3636908357189, grade_percent = 0.5707256965868095 }, { position_m = 724.1944564720047, grade_percent = 0.5707256965868095 }, { position_m = 942.5095331897224, grade_percent = 0.5707256965868095 }, { position_m = 1117.0424583891554, grade_percent = 0.5707256965868095 }, { position_m = 1291.5753835885885, grade_percent = 0.5707256965868095 }, { position_m = 1491.5753835885885, grade_percent = 0.5707256965868095 }, { position_m = 1691.5753835885885, grade_percent = 0.5707256965868095 }, { position_m = 1891.5753835885887, grade_percent = 0.5707256965868095 }, { position_m = 2109.74154008788, grade_percent = 0.5707256965868095 }, { position_m = 2309.74154008788, grade_percent = 0.5707256965868095 }, { position_m = 2509.74154008788, grade_percent = 0.5707256965868095 }, { position_m = 2728.0566168055975, grade_percent = 0.5707256965868095 }, { position_m = 2946.3716935233147, grade_percent = 0.37961482349458703 }, { position_m = 3121.2024591596005, grade_percent = 0.37961482349458703 }, { position_m = 3296.0332247958863, grade_percent = 0.37961682352340864 }]
+
+[edge_profiles.e14606]
+speed_posts = [{ position_m = 170.516, speed_limit_kmh = 112.65408000000001 }, { position_m = 290.947, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 15.85329709394393, grade_percent = -0.0 }, { position_m = 25.07229709394393, grade_percent = -0.0 }, { position_m = 83.835543785286, grade_percent = -0.0 }, { position_m = 108.835543785286, grade_percent = -0.0 }, { position_m = 158.835543785286, grade_percent = -0.0 }, { position_m = 163.835543785286, grade_percent = -0.0 }, { position_m = 164.835543785286, grade_percent = -0.0 }, { position_m = 165.835543785286, grade_percent = -0.0 }, { position_m = 166.535543785286, grade_percent = -0.0 }, { position_m = 167.23554378528598, grade_percent = -0.0 }, { position_m = 167.48954378528597, grade_percent = -0.0 }, { position_m = 267.48954378528595, grade_percent = -0.0 }]
+
+[edge_profiles.e14606_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 29.99999999999997, grade_percent = 0.0 }, { position_m = 129.99999999999997, grade_percent = 0.0 }, { position_m = 130.25399999999996, grade_percent = 0.0 }, { position_m = 130.95399999999995, grade_percent = 0.0 }, { position_m = 131.65399999999994, grade_percent = 0.0 }, { position_m = 132.65399999999994, grade_percent = 0.0 }, { position_m = 133.65399999999994, grade_percent = 0.0 }, { position_m = 138.65399999999994, grade_percent = 0.0 }, { position_m = 188.65399999999994, grade_percent = 0.0 }, { position_m = 213.65399999999997, grade_percent = 0.0 }, { position_m = 272.41724669134203, grade_percent = 0.0 }, { position_m = 281.636246691342, grade_percent = 0.0 }]
+
+[edge_profiles.e14615]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 8.0, grade_percent = -0.0 }, { position_m = 16.0, grade_percent = -0.0 }, { position_m = 32.896, grade_percent = -0.0 }, { position_m = 35.396, grade_percent = -0.0 }, { position_m = 65.396, grade_percent = 0.14923611078983928 }, { position_m = 165.39600000000002, grade_percent = 0.4450733387884354 }, { position_m = 365.396, grade_percent = 0.4450733387884354 }, { position_m = 565.396, grade_percent = 0.4450733387884354 }, { position_m = 765.396, grade_percent = 0.4450733387884354 }, { position_m = 965.396, grade_percent = 0.4450733387884354 }, { position_m = 1065.396, grade_percent = -0.0 }, { position_m = 1265.396, grade_percent = -0.0 }, { position_m = 1465.396, grade_percent = -0.0 }, { position_m = 1565.396, grade_percent = -0.4451133395808677 }, { position_m = 1765.396, grade_percent = -0.4451133395808677 }, { position_m = 1965.396, grade_percent = -0.4451133395808677 }, { position_m = 2165.3959999999997, grade_percent = -0.44509293917670945 }, { position_m = 2365.3959999999997, grade_percent = -0.0 }, { position_m = 2470.1157551196593, grade_percent = -0.0 }, { position_m = 2644.6486803190924, grade_percent = -0.0 }, { position_m = 2646.7486803190923, grade_percent = -0.0 }, { position_m = 2683.1168703190924, grade_percent = -0.0 }, { position_m = 2696.0368703190925, grade_percent = -0.0 }, { position_m = 2826.936564218667, grade_percent = -0.0 }, { position_m = 3026.936564218667, grade_percent = -0.0 }]
+
+[edge_profiles.e14615_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 200.0, grade_percent = 0.0 }, { position_m = 400.0, grade_percent = 0.0 }, { position_m = 530.8996938995748, grade_percent = 0.0 }, { position_m = 543.8196938995749, grade_percent = 0.0 }, { position_m = 580.1878838995748, grade_percent = 0.0 }, { position_m = 582.2878838995749, grade_percent = 0.0 }, { position_m = 756.8208090990076, grade_percent = 0.0 }, { position_m = 861.5405642186674, grade_percent = 0.44509293917670945 }, { position_m = 1061.5405642186672, grade_percent = 0.4451133395808677 }, { position_m = 1261.5405642186672, grade_percent = 0.4451133395808677 }, { position_m = 1461.5405642186672, grade_percent = 0.4451133395808677 }, { position_m = 1661.5405642186672, grade_percent = 0.0 }, { position_m = 1761.5405642186672, grade_percent = 0.0 }, { position_m = 1961.540564218667, grade_percent = 0.0 }, { position_m = 2161.540564218667, grade_percent = -0.4450733387884354 }, { position_m = 2261.540564218667, grade_percent = -0.4450733387884354 }, { position_m = 2461.540564218667, grade_percent = -0.4450733387884354 }, { position_m = 2661.540564218667, grade_percent = -0.4450733387884354 }, { position_m = 2861.540564218667, grade_percent = -0.4450733387884354 }, { position_m = 3061.540564218667, grade_percent = -0.14923611078983928 }, { position_m = 3161.540564218667, grade_percent = 0.0 }, { position_m = 3191.540564218667, grade_percent = 0.0 }, { position_m = 3194.040564218667, grade_percent = 0.0 }, { position_m = 3210.936564218667, grade_percent = 0.0 }, { position_m = 3218.936564218667, grade_percent = 0.0 }]
+
+[edge_profiles.e14618]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.37961482349458703 }, { position_m = 1.0, grade_percent = -0.37961482349458703 }, { position_m = 201.0, grade_percent = -0.37961482349458703 }, { position_m = 401.0, grade_percent = -0.0865729216284189 }, { position_m = 451.0, grade_percent = -0.0863983214978222 }, { position_m = 456.0, grade_percent = -0.0 }, { position_m = 461.0, grade_percent = -0.0 }]
+
+[edge_profiles.e14618_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 30.0, grade_percent = 0.0 }, { position_m = 35.0, grade_percent = 0.0863983214978222 }, { position_m = 40.0, grade_percent = 0.0865729216284189 }, { position_m = 90.0, grade_percent = 0.37961482349458703 }, { position_m = 290.0, grade_percent = 0.37961482349458703 }, { position_m = 490.0, grade_percent = 0.37961482349458703 }]
+
+[edge_profiles.e3659]
+speed_posts = [{ position_m = 427.117, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 4.5, grade_percent = -0.0 }, { position_m = 27.284, grade_percent = -0.0 }, { position_m = 54.569, grade_percent = -0.0 }, { position_m = 254.56900000000002, grade_percent = -0.0 }, { position_m = 454.569, grade_percent = -0.0 }, { position_m = 464.569, grade_percent = -0.0 }, { position_m = 469.569, grade_percent = -0.0 }, { position_m = 470.569, grade_percent = -0.0 }, { position_m = 471.569, grade_percent = -0.0 }]
+
+[edge_profiles.e3659_r]
+speed_posts = []
+grades = [{ position_m = 1.9095836023552692e-14, grade_percent = 0.0 }, { position_m = 0.2540000000000191, grade_percent = 0.0 }, { position_m = 1.254000000000019, grade_percent = 0.0 }, { position_m = 2.254000000000019, grade_percent = 0.0 }, { position_m = 7.254000000000019, grade_percent = 0.0 }, { position_m = 17.25400000000002, grade_percent = 0.0 }, { position_m = 217.25400000000002, grade_percent = 0.0 }, { position_m = 417.254, grade_percent = 0.0 }, { position_m = 444.53900000000004, grade_percent = 0.0 }, { position_m = 467.32300000000004, grade_percent = 0.0 }]
+
+[edge_profiles.e3661]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 0.5, grade_percent = -0.0 }, { position_m = 1.2, grade_percent = -0.0 }, { position_m = 1.7, grade_percent = -0.0 }, { position_m = 2.7, grade_percent = -0.0 }, { position_m = 4.7, grade_percent = -0.0 }, { position_m = 34.7, grade_percent = -0.0 }, { position_m = 234.7, grade_percent = -0.0 }, { position_m = 434.7, grade_percent = -0.0 }, { position_m = 634.7, grade_percent = 0.23299542161833828 }, { position_m = 834.7, grade_percent = -0.0 }, { position_m = 884.7, grade_percent = 0.17802518807119289 }, { position_m = 1001.75, grade_percent = 0.17802518807119289 }, { position_m = 1037.7279800000001, grade_percent = 0.17783418746650642 }, { position_m = 1039.8979800000002, grade_percent = -0.0 }, { position_m = 1239.8979800000002, grade_percent = 0.23301242171063272 }, { position_m = 1339.8979800000002, grade_percent = 0.2330004216454823 }, { position_m = 1539.8979800000002, grade_percent = 0.23301242171063272 }, { position_m = 1739.8979800000002, grade_percent = 0.2330004216454823 }, { position_m = 1939.8979800000002, grade_percent = 0.23301242171063272 }, { position_m = 2139.89798, grade_percent = -0.0 }, { position_m = 2144.89798, grade_percent = -0.0 }, { position_m = 2194.89798, grade_percent = -0.0 }, { position_m = 2294.89798, grade_percent = -0.0 }, { position_m = 2394.89798, grade_percent = -0.0 }, { position_m = 2424.89798, grade_percent = -0.0 }, { position_m = 2474.89798, grade_percent = -0.0 }, { position_m = 2674.89798, grade_percent = -0.0 }, { position_m = 2709.03098, grade_percent = -0.0 }, { position_m = 2743.16398, grade_percent = -0.0 }, { position_m = 2753.16398, grade_percent = -0.0 }, { position_m = 2754.16398, grade_percent = -0.0 }, { position_m = 2756.66398, grade_percent = -0.0 }, { position_m = 2806.66398, grade_percent = -0.0 }, { position_m = 2906.66398, grade_percent = -0.0 }, { position_m = 2924.66398, grade_percent = -0.0 }, { position_m = 2954.66398, grade_percent = -0.0 }, { position_m = 2956.66398, grade_percent = -0.0 }, { position_m = 2958.66398, grade_percent = -0.0 }, { position_m = 2959.3639799999996, grade_percent = -0.0 }]
+
+[edge_profiles.e3661_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 19.99999999999982, grade_percent = 0.0 }, { position_m = 20.699999999999818, grade_percent = 0.0 }, { position_m = 22.699999999999818, grade_percent = 0.0 }, { position_m = 24.699999999999818, grade_percent = 0.0 }, { position_m = 54.69999999999982, grade_percent = 0.0 }, { position_m = 72.69999999999982, grade_percent = 0.0 }, { position_m = 172.69999999999982, grade_percent = 0.0 }, { position_m = 222.69999999999982, grade_percent = 0.0 }, { position_m = 225.19999999999982, grade_percent = 0.0 }, { position_m = 226.19999999999982, grade_percent = 0.0 }, { position_m = 236.19999999999962, grade_percent = 0.0 }, { position_m = 270.33299999999946, grade_percent = 0.0 }, { position_m = 304.46599999999944, grade_percent = 0.0 }, { position_m = 504.46599999999944, grade_percent = 0.0 }, { position_m = 554.4659999999994, grade_percent = 0.0 }, { position_m = 584.4659999999994, grade_percent = 0.0 }, { position_m = 684.4659999999994, grade_percent = 0.0 }, { position_m = 784.4659999999994, grade_percent = 0.0 }, { position_m = 834.4659999999994, grade_percent = 0.0 }, { position_m = 839.4659999999994, grade_percent = -0.23301242171063272 }, { position_m = 1039.4659999999994, grade_percent = -0.2330004216454823 }, { position_m = 1239.4659999999994, grade_percent = -0.23301242171063272 }, { position_m = 1439.4659999999994, grade_percent = -0.2330004216454823 }, { position_m = 1639.4659999999994, grade_percent = -0.23301242171063272 }, { position_m = 1739.4659999999994, grade_percent = 0.0 }, { position_m = 1939.4659999999994, grade_percent = -0.17783418746650642 }, { position_m = 1941.6359999999995, grade_percent = -0.17802518807119289 }, { position_m = 1977.6139799999994, grade_percent = -0.17802518807119289 }, { position_m = 2094.6639799999994, grade_percent = 0.0 }, { position_m = 2144.6639799999994, grade_percent = -0.23299542161833828 }, { position_m = 2344.66398, grade_percent = 0.0 }, { position_m = 2544.66398, grade_percent = 0.0 }, { position_m = 2744.66398, grade_percent = 0.0 }, { position_m = 2944.66398, grade_percent = 0.0 }, { position_m = 2974.66398, grade_percent = 0.0 }, { position_m = 2976.66398, grade_percent = 0.0 }, { position_m = 2977.66398, grade_percent = 0.0 }, { position_m = 2978.16398, grade_percent = 0.0 }, { position_m = 2978.8639799999996, grade_percent = 0.0 }]
+
+[edge_profiles.e3666]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 25.0, grade_percent = -0.0 }, { position_m = 27.0, grade_percent = -0.0 }, { position_m = 42.0, grade_percent = -0.0 }, { position_m = 42.5, grade_percent = -0.0 }, { position_m = 43.2, grade_percent = -0.0 }, { position_m = 44.2, grade_percent = -0.0 }, { position_m = 54.2, grade_percent = -0.0 }, { position_m = 88.333, grade_percent = -0.0 }, { position_m = 122.46600000000001, grade_percent = -0.0 }, { position_m = 122.96600000000001, grade_percent = -0.0 }, { position_m = 123.66600000000001, grade_percent = -0.0 }, { position_m = 124.66600000000001, grade_percent = -0.0 }, { position_m = 134.666, grade_percent = -0.37961482349458703 }, { position_m = 168.799, grade_percent = -0.37961482349458703 }, { position_m = 169.299, grade_percent = -0.37961482349458703 }, { position_m = 170.299, grade_percent = -0.37961482349458703 }, { position_m = 172.299, grade_percent = -0.37961482349458703 }, { position_m = 272.299, grade_percent = -0.37961482349458703 }, { position_m = 277.299, grade_percent = -0.37961682352340864 }, { position_m = 287.299, grade_percent = -0.37961482349458703 }, { position_m = 288.299, grade_percent = -0.37961682352340864 }, { position_m = 338.299, grade_percent = -0.37961482349458703 }, { position_m = 397.06224669134207, grade_percent = -0.3777327965078081 }, { position_m = 406.28124669134206, grade_percent = -0.3777327965078081 }]
+
+[edge_profiles.e3666_r]
+speed_posts = [{ position_m = 393.91843378528597, speed_limit_kmh = 24.14016 }, { position_m = 13.14984378528601, speed_limit_kmh = 112.65408000000001 }, { position_m = 13.115543785285979, speed_limit_kmh = 112.65408000000001 }, { position_m = 293.660543785286, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = 0.3777327965078081 }, { position_m = 15.853297093943917, grade_percent = 0.3777327965078081 }, { position_m = 25.072297093943938, grade_percent = 0.37961482349458703 }, { position_m = 83.835543785286, grade_percent = 0.37961682352340864 }, { position_m = 133.835543785286, grade_percent = 0.37961482349458703 }, { position_m = 134.835543785286, grade_percent = 0.37961682352340864 }, { position_m = 144.835543785286, grade_percent = 0.37961482349458703 }, { position_m = 149.83554378528598, grade_percent = 0.37961482349458703 }, { position_m = 249.83554378528598, grade_percent = 0.37961482349458703 }, { position_m = 251.83554378528598, grade_percent = 0.37961482349458703 }, { position_m = 252.83554378528598, grade_percent = 0.37961482349458703 }, { position_m = 253.33554378528598, grade_percent = 0.37961482349458703 }, { position_m = 287.468543785286, grade_percent = 0.0 }, { position_m = 297.468543785286, grade_percent = 0.0 }, { position_m = 298.468543785286, grade_percent = 0.0 }, { position_m = 299.168543785286, grade_percent = 0.0 }, { position_m = 299.668543785286, grade_percent = 0.0 }, { position_m = 333.801543785286, grade_percent = 0.0 }, { position_m = 367.934543785286, grade_percent = 0.0 }, { position_m = 377.934543785286, grade_percent = 0.0 }, { position_m = 378.934543785286, grade_percent = 0.0 }, { position_m = 379.634543785286, grade_percent = 0.0 }, { position_m = 380.134543785286, grade_percent = 0.0 }, { position_m = 395.134543785286, grade_percent = 0.0 }, { position_m = 397.134543785286, grade_percent = 0.0 }]
+
+[edge_profiles.e94]
+speed_posts = [{ position_m = 1167.26, speed_limit_kmh = 112.65408000000001 }]
+grades = [{ position_m = 0.0, grade_percent = 0.36914367672366954 }, { position_m = 20.0, grade_percent = 0.36914367672366954 }, { position_m = 220.0, grade_percent = 0.36914367672366954 }, { position_m = 429.43951023931953, grade_percent = 0.36914367672366954 }, { position_m = 647.6056667386107, grade_percent = 0.001926080000238178 }, { position_m = 691.238898038469, grade_percent = -0.26347720968583177 }, { position_m = 778.5053606381855, grade_percent = -0.5236037849778661 }, { position_m = 822.1385919380438, grade_percent = -0.7566155374201374 }, { position_m = 857.0451769779304, grade_percent = -0.7566155374201374 }, { position_m = 891.951762017817, grade_percent = -0.7566155374201374 }, { position_m = 926.8583470577037, grade_percent = -0.7566135373056444 }, { position_m = 961.7649320975903, grade_percent = -0.7566155374201374 }, { position_m = 981.7649320975903, grade_percent = -0.5236037849778661 }, { position_m = 1025.3981633974486, grade_percent = -0.43720788572167885 }, { position_m = 1069.0313946973067, grade_percent = -0.37961482349458703 }, { position_m = 1156.2978572970233, grade_percent = -0.37961482349458703 }]
+
+[edge_profiles.e94_r]
+speed_posts = []
+grades = [{ position_m = 5.684341886080802e-14, grade_percent = 0.37961482349458703 }, { position_m = 87.26646259971659, grade_percent = 0.37961482349458703 }, { position_m = 174.53292519943298, grade_percent = 0.43720788572167885 }, { position_m = 218.16615649929125, grade_percent = 0.5236037849778661 }, { position_m = 261.7993877991495, grade_percent = 0.7566155374201374 }, { position_m = 281.79938779914954, grade_percent = 0.7566135373056444 }, { position_m = 316.7059728390362, grade_percent = 0.7566155374201374 }, { position_m = 351.6125578789228, grade_percent = 0.7566155374201374 }, { position_m = 386.51914291880945, grade_percent = 0.7566155374201374 }, { position_m = 421.42572795869603, grade_percent = 0.5236037849778661 }, { position_m = 465.05895925855435, grade_percent = 0.26347720968583177 }, { position_m = 552.3254218582708, grade_percent = -0.001926080000238178 }, { position_m = 595.958653158129, grade_percent = -0.36914367672366954 }, { position_m = 814.1248096574202, grade_percent = -0.36914367672366954 }, { position_m = 1023.5643198967398, grade_percent = -0.36914367672366954 }, { position_m = 1223.5643198967398, grade_percent = -0.36914367672366954 }]
+
+[edge_profiles.e96]
+speed_posts = [{ position_m = 852.9882, speed_limit_kmh = 80.4672 }, { position_m = 116.81, speed_limit_kmh = 56.327040000000004 }, { position_m = 3669.02, speed_limit_kmh = 96.56064 }]
+grades = [{ position_m = 0.0, grade_percent = -0.6518903340303281 }, { position_m = 15.0, grade_percent = -0.6518903340303281 }, { position_m = 40.0, grade_percent = -0.6518882339410866 }, { position_m = 214.53292519943295, grade_percent = -0.6518882339410866 }, { position_m = 389.0658503988659, grade_percent = -0.6518923341153207 }, { position_m = 563.5987755982989, grade_percent = -0.6518882339410866 }, { position_m = 607.2320068981571, grade_percent = -0.6518882339410866 }, { position_m = 650.8652381980154, grade_percent = -0.6518903340303281 }, { position_m = 694.4984694978737, grade_percent = -0.26347720968583177 }, { position_m = 729.4050545377603, grade_percent = -0.0 }, { position_m = 764.3116395776469, grade_percent = 0.26347720968583177 }, { position_m = 799.2182246175336, grade_percent = 0.5236037849778661 }, { position_m = 834.1248096574202, grade_percent = 0.7854143495031687 }, { position_m = 869.0313946973068, grade_percent = 1.0472382813016827 }, { position_m = 903.9379797371935, grade_percent = 1.3090747700123173 }, { position_m = 938.8445647770801, grade_percent = 1.6128168189715124 }, { position_m = 973.7511498169667, grade_percent = 1.6128168189715124 }, { position_m = 1008.6577348568534, grade_percent = 1.6128168189715124 }, { position_m = 1043.56431989674, grade_percent = 1.6128168189715124 }, { position_m = 1218.097245096173, grade_percent = 1.6128168189715124 }, { position_m = 1418.097245096173, grade_percent = 1.6128168189715124 }, { position_m = 1518.097245096173, grade_percent = 1.6128168189715124 }, { position_m = 1692.6301702956061, grade_percent = 1.0655603258273327 }, { position_m = 1867.1630954950392, grade_percent = 0.5332960556435837 }, { position_m = 1920.1257554950391, grade_percent = 0.5340934783559405 }, { position_m = 1956.485755495039, grade_percent = 0.5544956828375458 }, { position_m = 2174.65191199433, grade_percent = 0.5550196989639664 }, { position_m = 2274.65191199433, grade_percent = 0.5550196989639664 }, { position_m = 2474.65191199433, grade_percent = 0.5550196989639664 }, { position_m = 2504.65191199433, grade_percent = 0.42150349619011795 }, { position_m = 2704.65191199433, grade_percent = 0.5052807000174957 }, { position_m = 2922.818068493621, grade_percent = 0.5026592334375269 }, { position_m = 3045.1315453248394, grade_percent = 0.5026592334375269 }, { position_m = 3245.1315453248394, grade_percent = 0.5052807000174957 }, { position_m = 3345.1315453248394, grade_percent = 0.5052807000174957 }, { position_m = 3432.3980079245557, grade_percent = 0.5126809917289741 }, { position_m = 3448.2480079245556, grade_percent = 0.5126809917289741 }, { position_m = 3505.3680079245555, grade_percent = 0.5131509040912343 }, { position_m = 3524.0180079245556, grade_percent = 0.5052807000174957 }, { position_m = 3624.0180079245556, grade_percent = 0.5026592334375269 }, { position_m = 3654.0180079245556, grade_percent = 0.5052807000174957 }, { position_m = 3664.0180079245556, grade_percent = 0.5026592334375269 }, { position_m = 3669.0180079245556, grade_percent = 0.5052807000174957 }]
+
+[edge_profiles.e96_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.5052807000174957 }, { position_m = 5.0, grade_percent = -0.5026592334375269 }, { position_m = 10.0, grade_percent = -0.5052807000174957 }, { position_m = 20.0, grade_percent = -0.5026592334375269 }, { position_m = 50.0, grade_percent = -0.5052807000174957 }, { position_m = 150.00000000000009, grade_percent = -0.5131509040912343 }, { position_m = 168.64999999999998, grade_percent = -0.5126809917289741 }, { position_m = 225.7699999999999, grade_percent = -0.5126809917289741 }, { position_m = 241.61999999999972, grade_percent = -0.5052807000174957 }, { position_m = 328.8864625997162, grade_percent = -0.5052807000174957 }, { position_m = 428.8864625997162, grade_percent = -0.5026592334375269 }, { position_m = 628.8864625997161, grade_percent = -0.5026592334375269 }, { position_m = 751.1999394309344, grade_percent = -0.5052807000174957 }, { position_m = 969.3660959302256, grade_percent = -0.42150349619011795 }, { position_m = 1169.3660959302256, grade_percent = -0.5550196989639664 }, { position_m = 1199.3660959302256, grade_percent = -0.5550196989639664 }, { position_m = 1399.3660959302256, grade_percent = -0.5550196989639664 }, { position_m = 1499.3660959302254, grade_percent = -0.5544956828375458 }, { position_m = 1717.5322524295166, grade_percent = -0.5340934783559405 }, { position_m = 1753.8922524295165, grade_percent = -0.5332960556435837 }, { position_m = 1806.8549124295164, grade_percent = -1.0655603258273327 }, { position_m = 1981.3878376289495, grade_percent = -1.6128168189715124 }, { position_m = 2155.9207628283825, grade_percent = -1.6128168189715124 }, { position_m = 2255.9207628283825, grade_percent = -1.6128168189715124 }, { position_m = 2455.9207628283825, grade_percent = -1.6128168189715124 }, { position_m = 2630.4536880278156, grade_percent = -1.6128168189715124 }, { position_m = 2665.360273067702, grade_percent = -1.6128168189715124 }, { position_m = 2700.266858107589, grade_percent = -1.6128168189715124 }, { position_m = 2735.1734431474756, grade_percent = -1.3090747700123173 }, { position_m = 2770.080028187362, grade_percent = -1.0472382813016827 }, { position_m = 2804.986613227249, grade_percent = -0.7854143495031687 }, { position_m = 2839.8931982671356, grade_percent = -0.5236037849778661 }, { position_m = 2874.799783307022, grade_percent = -0.26347720968583177 }, { position_m = 2909.7063683469087, grade_percent = 0.0 }, { position_m = 2944.612953386795, grade_percent = 0.26347720968583177 }, { position_m = 2979.5195384266817, grade_percent = 0.6518903340303281 }, { position_m = 3023.15276972654, grade_percent = 0.6518882339410866 }, { position_m = 3066.7860010263985, grade_percent = 0.6518882339410866 }, { position_m = 3110.4192323262564, grade_percent = 0.6518923341153207 }, { position_m = 3284.9521575256895, grade_percent = 0.6518882339410866 }, { position_m = 3459.4850827251225, grade_percent = 0.6518882339410866 }, { position_m = 3634.0180079245556, grade_percent = 0.6518903340303281 }, { position_m = 3659.0180079245556, grade_percent = 0.6518903340303281 }]
+
+[edge_profiles.e9760]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = -0.0 }, { position_m = 12.698869799665946, grade_percent = -0.0 }, { position_m = 20.089869799665948, grade_percent = -0.0 }, { position_m = 20.34386979966595, grade_percent = -0.0 }, { position_m = 22.84386979966595, grade_percent = -0.0 }, { position_m = 24.84386979966595, grade_percent = -0.0 }, { position_m = 34.84386979966595, grade_percent = -0.0 }, { position_m = 42.23486979966595, grade_percent = -0.0 }]
+
+[edge_profiles.e9760_r]
+speed_posts = []
+grades = [{ position_m = 3.552713678800501e-15, grade_percent = 0.0 }, { position_m = 12.698869799665948, grade_percent = 0.0 }, { position_m = 20.08986979966595, grade_percent = 0.0 }, { position_m = 30.089869799665948, grade_percent = 0.0 }, { position_m = 32.08986979966595, grade_percent = 0.0 }, { position_m = 34.589869799665955, grade_percent = 0.0 }, { position_m = 34.84386979966596, grade_percent = 0.0 }, { position_m = 42.23486979966596, grade_percent = 0.0 }]
+
+[edge_profiles.e98]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.6518882339410866 }, { position_m = 32.0, grade_percent = 0.6518903340303281 }, { position_m = 59.8879668, grade_percent = 0.649597136924916 }, { position_m = 84.7179668, grade_percent = 0.6518903340303281 }, { position_m = 134.7179668, grade_percent = -0.0 }, { position_m = 143.9369668, grade_percent = -0.0 }]
+
+[edge_profiles.e98_r]
+speed_posts = []
+grades = [{ position_m = 0.0, grade_percent = 0.0 }, { position_m = 15.853297093943917, grade_percent = 0.0 }, { position_m = 25.072297093943916, grade_percent = -0.6518903340303281 }, { position_m = 75.07229709394392, grade_percent = -0.649597136924916 }, { position_m = 99.90229709394391, grade_percent = -0.6518903340303281 }, { position_m = 127.79026389394392, grade_percent = -0.6518882339410866 }]

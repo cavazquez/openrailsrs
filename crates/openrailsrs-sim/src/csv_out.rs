@@ -175,6 +175,7 @@ mod tests {
         let shoe = BrakeShoeFrictionCurve::identity();
         let vehicles = vec![
             BrakeVehicleSpec {
+                profile: Default::default(),
                 position_m: 0.0,
                 max_force_n: 100_000.0,
                 ep_instant: true,
@@ -183,6 +184,7 @@ mod tests {
                 skid_adhesion_mu: 0.0,
             },
             BrakeVehicleSpec {
+                profile: Default::default(),
                 position_m: 20.0,
                 max_force_n: 80_000.0,
                 ep_instant: false,
@@ -191,6 +193,7 @@ mod tests {
                 skid_adhesion_mu: 0.0,
             },
             BrakeVehicleSpec {
+                profile: Default::default(),
                 position_m: 40.0,
                 max_force_n: 100_000.0,
                 ep_instant: true,

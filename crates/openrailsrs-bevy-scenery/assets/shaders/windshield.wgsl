@@ -1,16 +1,16 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
-struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, _pad: vec3<f32> }
+struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32> }
 @group(0) @binding(0) var scene: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
 @group(0) @binding(2) var<uniform> settings: Settings;
 @group(0) @binding(3) var depth: texture_depth_2d;
 
 fn hash(p: vec2<f32>) -> vec2<f32> { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
-fn wet_after_wipe(uv: vec2<f32>, pivot: vec2<f32>) -> f32 {
-    if (settings.last_wipe_s < 0.0) { return 1.0; }
-    let vector = (uv - pivot) * vec2(1.0, 0.65);
+fn wet_after_wipe(uv: vec2<f32>, blade: vec4<f32>) -> f32 {
+    if (settings.last_wipe_s < 0.0 || blade.w < 0.5) { return 1.0; }
+    let vector = (uv - blade.xy) * vec2(1.0, 0.8);
     let angle = atan2(vector.x, -vector.y);
-    if (abs(angle) > 0.95 || length(vector) > 0.43 || length(vector) < 0.025) { return 1.0; }
+    if (abs(angle) > 0.95 || length(vector) > blade.z || length(vector) < 0.025) { return 1.0; }
     let a = (angle + 0.95) / 1.9;
     let phase = fract(settings.last_wipe_s / 1.8);
     let since = min(fract(phase - a * 0.5), fract(phase - (1.0 - a * 0.5))) * 1.8;
@@ -24,7 +24,9 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Reverse-Z main depth: the desk/frames are close, scenery through a window
     // is distant. Rain must never appear over instruments or the opaque cab.
     if (d > settings.near_clip / 3.0) { return dry; }
-    let wetness = min(wet_after_wipe(in.uv, vec2(0.23, 0.81)), wet_after_wipe(in.uv, vec2(0.72, 0.81)));
+    let pane = (in.uv - settings.glass.xy) / max(settings.glass.zw, vec2(0.001));
+    if (any(pane < vec2(0.0)) || any(pane > vec2(1.0))) { return dry; }
+    let wetness = min(wet_after_wipe(pane, settings.blade1), wet_after_wipe(pane, settings.blade2));
     let grid = in.uv * vec2(105.0, 70.0);
     let cell = floor(grid);
     let random = hash(cell);

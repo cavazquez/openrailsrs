@@ -370,9 +370,16 @@ pub fn enable_live_defaults(
     );
 }
 
-pub fn advance_live_sim(time: Res<Time<Fixed>>, mut live: ResMut<LiveDrive>) {
+pub fn advance_live_sim(
+    time: Res<Time<Fixed>>,
+    mut live: ResMut<LiveDrive>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
+) {
     if live.paused {
         return;
+    }
+    if let Some(settings) = settings {
+        live.session.gameplay.quick_station_practice = settings.quick_station_practice;
     }
     let was_arrived = live.session.arrived;
     let audio = live.audio.take();

@@ -1,0 +1,168 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "path_file": "RS_Maryleb-WRuislip0955.pat",
+  "extension": "Native TDB connected mainline via Denham Platform 2, Denham Golf Course Platform 2 and Gerrards Cross Platform 1",
+  "pat_sha256": "ee9518d145b7363408106193e48359367a8f0f7b9a260fd17177da1f82ac3d61",
+  "tdb_sha256": "acc945a063dce6a3272bfae610c48b2aff939d2435d5b1db07f2b36614e7b47a",
+  "service_length_m": 15322.683313758378,
+  "start_chainage_m": 1385.9003278212956,
+  "station_markers": [
+    {
+      "item_id": 1286,
+      "station": "Northolt Park",
+      "platform": "Northolt Park Platform 2",
+      "distance_m": 3531.682,
+      "pair": 1287,
+      "edge_id": "e96_r",
+      "chainage_m": 142.33600792455582,
+      "platform_length_m": 126.51000000000022,
+      "arrival_s": 0.0,
+      "dwell_s": 20.0
+    },
+    {
+      "item_id": 1290,
+      "station": "South Ruislip",
+      "platform": "South Ruislip Platform 3",
+      "distance_m": 329.501,
+      "pair": 1291,
+      "edge_id": "e100_r",
+      "chainage_m": 176.75300000000004,
+      "platform_length_m": 125.14600000000002,
+      "arrival_s": 480.0,
+      "dwell_s": 30.0
+    },
+    {
+      "item_id": 1080,
+      "station": "West Ruislip",
+      "platform": "West Ruislip Platform 3",
+      "distance_m": 29.36265,
+      "pair": 1292,
+      "edge_id": "e104_r",
+      "chainage_m": 108.63735,
+      "platform_length_m": 92.65435,
+      "arrival_s": 840.0,
+      "dwell_s": 30.0
+    },
+    {
+      "item_id": 1864,
+      "station": "Denham",
+      "platform": "Denham Platform 2",
+      "distance_m": 153.828,
+      "pair": 1865,
+      "edge_id": "e14606_r",
+      "chainage_m": 143.66154378528594,
+      "platform_length_m": 136.50679999999997,
+      "arrival_s": 1200.0,
+      "dwell_s": 30.0
+    },
+    {
+      "item_id": 1299,
+      "station": "Denham Golf Course",
+      "platform": "Denham Golf Course Platform 2",
+      "distance_m": 1769.85,
+      "pair": 1300,
+      "edge_id": "e14603_r",
+      "chainage_m": 1614.0453682693087,
+      "platform_length_m": 168.83000000000015,
+      "arrival_s": 1410.0,
+      "dwell_s": 30.0
+    },
+    {
+      "item_id": 1303,
+      "station": "Gerrards Cross",
+      "platform": "Gerrards Cross Platform 1",
+      "distance_m": 310.466,
+      "pair": 1304,
+      "edge_id": "e14601_r",
+      "chainage_m": 358.90883020655474,
+      "platform_length_m": 172.48000000000002,
+      "arrival_s": 1800.0,
+      "dwell_s": 30.0
+    }
+  ],
+  "physical_profiles": true,
+  "brake_profiles": [
+    {
+      "file": "RF_WP_DMBSA.eng",
+      "sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "45psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_PSB.wag",
+      "sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_KFC.wag",
+      "sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_PCFD.wag",
+      "sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_PCFE.wag",
+      "sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_KFF.wag",
+      "sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_PSG.wag",
+      "sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "tokens": {
+        "BrakeSystemType": "\"EP\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "90psi",
+        "MaxApplicationRate": "30psi/s",
+        "MaxReleaseRate": "10psi/s"
+      }
+    },
+    {
+      "file": "RF_WP_DMBSH.eng",
+      "sha256": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402",
+      "tokens": {
+        "BrakeSystemType": "\"Air_single_pipe\"",
+        "BrakeCylinderPressureForMaxBrakeBrakeForce": "70",
+        "MaxApplicationRate": "40",
+        "MaxReleaseRate": "40"
+      }
+    }
+  ],
+  "signal_policy": "three aspect occupancy, not full SIGSCR",
+  "traffic": "existing lead and adjacent opposite services"
+}

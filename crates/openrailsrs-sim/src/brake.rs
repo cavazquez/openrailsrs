@@ -31,6 +31,10 @@ pub enum BrakeState {
 /// One brake cylinder, representing a single vehicle's brakes.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeCylinder {
+    #[serde(default = "default_full_pressure_bar")]
+    pub full_pressure_bar: f64,
+    #[serde(default)]
+    authored_response: bool,
     /// Distance from the front of the train (metres).
     pub position_m: f64,
     /// Maximum braking force this cylinder can produce (N).
@@ -69,6 +73,7 @@ pub struct BrakeCylinder {
 /// Per-vehicle brake cylinder specification for [`BrakeSystem`].
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeVehicleSpec {
+    pub profile: openrailsrs_formats::VehicleBrakeProfile,
     pub position_m: f64,
     pub max_force_n: f64,
     pub ep_instant: bool,
@@ -82,6 +87,9 @@ pub struct BrakeVehicleSpec {
 pub const OR_DEFAULT_BRAKE_ADHESION_MU: f64 = 0.25;
 
 const DEFAULT_VEHICLE_LENGTH_M: f64 = 15.0;
+fn default_full_pressure_bar() -> f64 {
+    4.5
+}
 
 /// Build per-vehicle brake specs from a loaded consist.
 pub fn vehicle_specs_from_consist(
@@ -112,13 +120,14 @@ pub fn vehicle_specs_from_consist(
                 }
             };
             pos += length_m;
-            let (force_n, ep, shoe_type, user_curve, mass_kg) = match v {
+            let (force_n, ep, shoe_type, user_curve, mass_kg, profile) = match v {
                 Vehicle::Loco(l) => (
                     l.max_brake_force_n,
                     true,
                     &l.brake_shoe_type,
                     &l.brake_shoe_friction,
                     l.mass_kg,
+                    &l.brake_profile,
                 ),
                 Vehicle::Wagon(w) => (
                     w.max_brake_force_n,
@@ -126,6 +135,7 @@ pub fn vehicle_specs_from_consist(
                     &w.brake_shoe_type,
                     &w.brake_shoe_friction,
                     w.mass_kg,
+                    &w.brake_profile,
                 ),
             };
             let shoe_friction = if shoe_speed_factor {
@@ -139,9 +149,10 @@ pub fn vehicle_specs_from_consist(
                 0.0
             };
             BrakeVehicleSpec {
+                profile: profile.clone(),
                 position_m: cylinder_pos,
                 max_force_n: force_n,
-                ep_instant: ep,
+                ep_instant: profile.electro_pneumatic().unwrap_or(ep),
                 shoe_friction,
                 mass_kg,
                 skid_adhesion_mu,
@@ -163,6 +174,8 @@ impl BrakeCylinder {
         // Release: EP ~2.5 s; wagons ~8 s (OR pipe recharge). Fast bleed on full release when lap-hold enabled.
         let (apply_time_s, release_time_s) = if ep_instant { (0.15, 2.5) } else { (0.5, 8.0) };
         Self {
+            full_pressure_bar: default_full_pressure_bar(),
+            authored_response: false,
             position_m,
             max_force_n,
             ep_instant,
@@ -239,14 +252,28 @@ impl BrakeSystem {
         let cylinders = vehicles
             .iter()
             .map(|v| {
-                BrakeCylinder::new(
+                let mut cylinder = BrakeCylinder::new(
                     v.position_m,
                     v.max_force_n,
                     v.ep_instant,
                     v.shoe_friction.clone(),
                     v.mass_kg,
                     v.skid_adhesion_mu,
-                )
+                );
+                if let Some(pressure) = v.profile.max_cylinder_bar {
+                    cylinder.full_pressure_bar = pressure;
+                }
+                if let Some(rate) = v.profile.application_bar_s {
+                    cylinder.apply_ramp_rate_n_per_s =
+                        v.max_force_n * rate / cylinder.full_pressure_bar;
+                    cylinder.authored_response = true;
+                }
+                if let Some(rate) = v.profile.release_bar_s {
+                    cylinder.release_ramp_rate_n_per_s =
+                        v.max_force_n * rate / cylinder.full_pressure_bar;
+                    cylinder.authored_response = true;
+                }
+                cylinder
             })
             .collect();
         Self {
@@ -277,6 +304,7 @@ impl BrakeSystem {
         let specs: Vec<BrakeVehicleSpec> = vehicles
             .iter()
             .map(|&(pos, force, ep)| BrakeVehicleSpec {
+                profile: Default::default(),
                 position_m: pos,
                 max_force_n: force,
                 ep_instant: ep,
@@ -344,13 +372,15 @@ impl BrakeSystem {
             // Release: EP + latched train-air bleed at `train_air_full_release_s` when lap-hold is on
             // (OR pipe exhaust / BC bleed); otherwise use per-cylinder default release ramp.
             let delta = if cyl.current_force_n > target {
-                let rate =
-                    if command <= 0.0 && self.train_air_lap_hold && (cyl.ep_instant || was_latched)
-                    {
-                        cyl.max_force_n / self.train_air_full_release_s
-                    } else {
-                        cyl.release_ramp_rate_n_per_s
-                    };
+                let rate = if !cyl.authored_response
+                    && command <= 0.0
+                    && self.train_air_lap_hold
+                    && (cyl.ep_instant || was_latched)
+                {
+                    cyl.max_force_n / self.train_air_full_release_s
+                } else {
+                    cyl.release_ramp_rate_n_per_s
+                };
                 rate * dt
             } else {
                 cyl.apply_ramp_rate_n_per_s * dt
@@ -459,5 +489,33 @@ mod tests {
             "expected cap {cap}, got {effective}"
         );
         assert!(effective < max_force * 0.5);
+    }
+    #[test]
+    fn native_ep_rates_apply_to_every_car_without_pipe_delay_or_global_release_override() {
+        let mut system = BrakeSystem::from_vehicle_specs(
+            &[BrakeVehicleSpec {
+                position_m: 250.0,
+                max_force_n: 100_000.0,
+                ep_instant: true,
+                shoe_friction: BrakeShoeFrictionCurve::identity(),
+                mass_kg: 40_000.0,
+                skid_adhesion_mu: OR_DEFAULT_BRAKE_ADHESION_MU,
+                profile: openrailsrs_formats::VehicleBrakeProfile {
+                    system: Some("EP".into()),
+                    max_cylinder_bar: Some(3.0),
+                    application_bar_s: Some(2.0),
+                    release_bar_s: Some(1.0),
+                },
+            }],
+            200.0,
+            true,
+            10.0,
+        );
+        system.step(1.0, 0.75);
+        assert!((system.cylinders[0].current_force_n - 50_000.0).abs() < 1e-6);
+        assert_eq!(system.cylinders[0].time_pending_s, 0.0);
+        system.step(0.0, 0.75);
+        assert!((system.cylinders[0].current_force_n - 25_000.0).abs() < 1e-6);
+        assert_eq!(system.cylinders[0].full_pressure_bar, 3.0);
     }
 }

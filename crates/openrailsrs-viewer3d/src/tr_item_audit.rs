@@ -329,6 +329,7 @@ mod tests {
     fn signal_item(id: u32, distance_m: f64) -> TrItem {
         TrItem {
             world: None,
+            speed_post_angle_rad: None,
             id,
             distance_m,
             kind: TrItemKind::Signal {

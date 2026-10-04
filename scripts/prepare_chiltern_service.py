@@ -51,7 +51,7 @@ def msts_blocks(text, name):
             raise ValueError(f"Unterminated native {name} block")
 
 
-def native_station_markers(route_root, path):
+def native_station_markers(route_root, path, stations=None):
     """Use platform SData chainage on its host vector, never PAT spawn positions."""
     text = msts_text(route_root / "Chiltern.tdb")
     hosts = {}
@@ -73,7 +73,7 @@ def native_station_markers(route_root, path):
             platform=field("PlatformName"), distance_m=float(field("TrItemSData").split()[0]),
             pair=int(field("PlatformTrItemData").split()[1]))
     markers = []
-    for name, item_id, arrival, dwell in STATIONS:
+    for name, item_id, arrival, dwell in (STATIONS if stations is None else stations):
         platform = platforms[item_id]
         pair = platforms[platform["pair"]]
         host = hosts[item_id]

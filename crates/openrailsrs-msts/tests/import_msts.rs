@@ -473,9 +473,15 @@ fn import_route_applies_speed_post_limits() {
         .expect("e2 missing");
     let lim = as_f64(e2.get("speed_limit_kmh").expect("speed_limit_kmh")).unwrap_or_default();
     assert!(
-        (lim - 50.0 * 1.609_344).abs() < 1e-3,
-        "expected 50 mph speed post cap, got {lim}"
+        (lim - 90.0).abs() < 1e-6,
+        "speed post must not lower the preceding kilometre: {lim}"
     );
+    let posts = value["edge_profiles"]["e2_r"]["speed_posts"]
+        .as_array()
+        .unwrap();
+    assert_eq!(posts.len(), 1);
+    assert!((as_f64(&posts[0]["speed_limit_kmh"]).unwrap() - 50.0 * 1.609344).abs() < 1e-3);
+    assert_eq!(as_f64(&posts[0]["position_m"]).unwrap(), 500.0);
 }
 
 #[test]

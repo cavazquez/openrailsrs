@@ -284,6 +284,18 @@ impl LiveDriveSession {
         let gameplay = build_live_gameplay(scenario, &graph, &path_edges)?;
         let start_chainage_m =
             path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
+        let at_station = gameplay.stop_targets.first().is_some_and(|stop| {
+            (stop.cum_dist_m - start_chainage_m).abs() <= crate::service::STOP_POSITION_TOLERANCE_M
+        });
+        let initial_brake = if at_station { 1.0 } else { 0.0 };
+        if at_station {
+            // New native gradients must not let a parked consist roll away and
+            // accidentally complete its first station before the player acts.
+            state.brake = initial_brake;
+            state
+                .brake_system
+                .precharge(physics.brake_mapping.command_to_sim_fraction(initial_brake));
+        }
         let region_tracker = RegionTracker::new(scenario.sound_regions.clone());
 
         Ok(Self {
@@ -311,7 +323,7 @@ impl LiveDriveSession {
             gameplay,
             region_tracker,
             driver_throttle: 0.0,
-            driver_brake: 0.0,
+            driver_brake: initial_brake,
             driver_direction: 0.5,
             exterior: RollingStockExteriorState::new(),
             horn_pressed_until_s: 0.0,
@@ -409,10 +421,10 @@ impl LiveDriveSession {
     }
 
     pub fn speed_limit_mps(&self) -> f64 {
+        let head = self.head_chainage_m();
+        let length = self.formation.length_m();
         self.path_data
-            .get(self.state.edge_index)
-            .map(|e| e.speed_limit_mps)
-            .unwrap_or(f64::INFINITY)
+            .minimum_speed_limit_between((head - length).max(0.0), head)
     }
 
     /// Effective limit including caution signals on the current edge.
@@ -581,10 +593,12 @@ impl LiveDriveSession {
         } else {
             cylinders
                 .iter()
-                .map(|b| (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0))
+                .map(|b| {
+                    (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0)
+                        * b.full_pressure_bar
+                })
                 .sum::<f64>()
                 / cylinders.len() as f64
-                * 4.5
         };
         CabTelemetry {
             speed_kmh,
@@ -602,6 +616,17 @@ impl LiveDriveSession {
             brake_force_kn,
             diesel_rpm,
             boiler_bar,
+            traction_load_fraction: if self.physics.max_tractive_effort_n > 0.0 {
+                if self.state.diesel_traction_force_n.is_empty() {
+                    self.state.throttle
+                } else {
+                    (self.state.diesel_traction_force_n.iter().sum::<f64>()
+                        / self.physics.max_tractive_effort_n)
+                        .clamp(0.0, 1.0)
+                }
+            } else {
+                0.0
+            },
             overspeed: self.gameplay.overspeed_active,
         }
     }
@@ -626,6 +651,7 @@ pub struct CabTelemetry {
     pub brake_force_kn: f64,
     pub diesel_rpm: Option<f64>,
     pub boiler_bar: Option<f64>,
+    pub traction_load_fraction: f64,
     pub overspeed: bool,
 }
 
@@ -688,10 +714,7 @@ impl LiveDriveSession {
             self.state.throttle = if (self.driver_direction >= 0.75
                 || self.driver_direction <= 0.25)
                 && self.exterior.door == crate::exterior::DoorState::Closed
-                && !matches!(
-                    self.gameplay.phase,
-                    ServicePhase::Boarding | ServicePhase::ReadyToDepart
-                ) {
+            {
                 self.driver_throttle
             } else {
                 0.0
@@ -923,6 +946,28 @@ mod tests {
     use openrailsrs_scenarios::load_scenario;
     use std::path::PathBuf;
 
+    #[test]
+    fn native_service_starts_with_brakes_holding_its_real_gradient() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern_extended/scenario.toml");
+        let scenario = load_scenario(&path).unwrap();
+        let mut session =
+            LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+        let cylinders = &session.state.brake_system.cylinders;
+        assert_eq!(cylinders.len(), 8);
+        assert!(cylinders[..7].iter().all(|c| c.ep_instant));
+        assert!(!cylinders[7].ep_instant);
+        for (index, pressure_psi) in [(0, 45.0), (1, 90.0), (7, 70.0)] {
+            assert!(
+                (cylinders[index].full_pressure_bar - pressure_psi * 0.0689475729).abs() < 1e-6
+            );
+        }
+        assert_eq!(session.driver_brake, 1.0);
+        session.step_realtime(8.0, |_| {});
+        assert_eq!(session.velocity_mps(), 0.0);
+        assert_eq!(session.gameplay.next_stop_idx, 0);
+        assert!(session.gameplay.stop_results.is_empty());
+    }
     #[test]
     fn live_session_advances_time_on_smoke_scenario() {
         let scenario_path =

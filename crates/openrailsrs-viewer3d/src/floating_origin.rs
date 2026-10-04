@@ -155,6 +155,7 @@ pub(crate) fn apply_floating_origin(
                 Without<LiveTrainBody>,
                 Without<CabInteriorMarker>,
                 Without<CabInteriorRoot>,
+                Without<crate::train_effects::ExhaustMesh>,
             ),
         >,
     )>,

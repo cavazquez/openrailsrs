@@ -16,7 +16,9 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
         .map_err(|e| TrainError::Parse(format!("read engine: {e}")))?;
     let ast = parse_vehicle_text(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
-    Ok(engine.into())
+    let mut locomotive: Locomotive = engine.into();
+    locomotive.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    Ok(locomotive)
 }
 
 pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError> {
@@ -24,7 +26,9 @@ pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError>
         .map_err(|e| TrainError::Parse(format!("read wagon: {e}")))?;
     let ast = parse_vehicle_text(&text)?;
     let wagon = WagonFile::from_ast(&ast)?;
-    Ok(wagon.into())
+    let mut vehicle: Wagon = wagon.into();
+    vehicle.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    Ok(vehicle)
 }
 
 /// Load a `.con` file; engine/wagon relative paths resolve against the **consist file's parent** directory.
@@ -308,6 +312,7 @@ impl From<EngineFile> for Locomotive {
             length_m: value.length_m,
             davis,
             brake_shoe_type: value.brake_shoe_type,
+            brake_profile: Default::default(),
             brake_shoe_friction: value.brake_shoe_friction,
             flipped: false,
         }
@@ -334,6 +339,7 @@ impl From<WagonFile> for Wagon {
             wagon_shape: value.wagon_shape,
             brake_shoe_type: value.brake_shoe_type,
             brake_shoe_friction: value.brake_shoe_friction,
+            brake_profile: Default::default(),
             flipped: false,
         }
     }

@@ -57,10 +57,10 @@ escenario de replay sin intervenciones automáticas del runner antiguo.
 `check.sh` verifica la integridad y contratos de la referencia completa,
 además de los cuatro casos físicos ya aceptados y el servicio Bevy.
 
-La siguiente corrección se concentra en el poste de 35 mph aplicado a todo
-el vector 96, pendientes nativas ausentes en la física del mapa y siete
-frenos EP originales frente a la clasificación simplificada del perfil
-convertido. El servicio usa ahora una demanda de freno EP en [0,1], con
+La importación y el escenario extendido corrigen el poste de 35 mph aplicado a
+todo el vector 96, incorporan pendientes nativas y reconocen los frenos EP de
+ENG/WAG. Su efecto sobre la comparación completa requiere actualizar de forma
+explícita el escenario de replay histórico y contrastarlo nuevamente con OR. El servicio usa ahora una demanda de freno EP en [0,1], con
 escalas de conductor/cilindro ambas de 45 PSI. Las capturas anteriores
 conservan su propio convenio de presión. Los objetivos de aceptación de
 velocidad/distancia y las referencias anteriores permanecen iguales.
@@ -77,6 +77,27 @@ de renderizado; se comprueba además el vector anfitrión y la distancia exacta
 registrada en `TrItemSData`. Esta prueba detecta errores de longitudes,
 sentido, curvas y confusiones entre un punto PAT y un andén,
 sin afirmar equivalencia visual ni física de la partida completa.
+
+### Perfiles nativos y servicio extendido (octubre de 2026)
+
+La importación conserva carteles por posición y sentido y pendientes AX por
+sección, incluidos los sentidos inversos. `chiltern_extended` aplica estos
+perfiles durante un recorrido de seis estaciones/15,32 km. También se importan
+el sistema EP/aire, la presión de plena fuerza y las tasas de aplicación y
+liberación de ENG/WAG. El Pullman usa siete vehículos EP y un motor de cola de
+aire; no se infiere el sistema solo de la categoría locomotora/remolque. Estos
+datos mejoran el modelo simplificado de cilindros; todavía no reproducen todas
+las válvulas, depósitos y demanda de presión del original. El regulador nativo
+permite sobrepasar un límite de vía;
+solo los escenarios con `legacy_power_cap` conservan el resguardo automático.
+Los perfiles no se insertan retroactivamente en los escenarios históricos de los
+oráculos congelados.
+
+Los cuatro ensayos cortos siguen pasando sin cambiar tolerancias. El diagnóstico
+completo continúa **FAIL**: RMS 7,5749 m/s, pico 16,6450 m/s y odómetro máximo
+2717,27 m. Completar el servicio de seis estaciones demuestra funcionamiento; no
+cierra esa brecha física. `docs/PLAYER_MANUAL_TESTS.md` secciones 15–20 documenta
+los modos normal/práctica y la verificación de las cinco mejoras.
 
 ## Escenario y oráculos gráficos
 
