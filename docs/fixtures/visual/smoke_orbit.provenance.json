@@ -2,11 +2,11 @@
   "updated_on": "2026-10-04",
   "bevy_version": "0.19.1",
   "render_adapter": "Vulkan lavapipe (Xvfb)",
-  "previous_sha256": "5ff44cfe87aa1c9077e416d24862f33cdd3ddad2bdd54a4daa3c969dce4daf88",
-  "sha256": "274c3f29bc0025cb7ef351df0d17fb7356e60070a4b2e28e4c6f05ddd403c7ce",
-  "previous_fixture_commit": "cdbc1ac",
-  "reviewed_source_base": "cdbc1ac",
-  "reason": "Camera pitch is now above the terrain and the 180 m explicit distance is reapplied after automatic track framing. Scenery shaders compile all dependencies; actual terrain and synthetic test objects are visible. Old and new captures were inspected. The synthetic fixture uses diagnostic colors; native Open Rails reference images remain frozen.",
+  "previous_sha256": "274c3f29bc0025cb7ef351df0d17fb7356e60070a4b2e28e4c6f05ddd403c7ce",
+  "sha256": "8bb5297266bf1a0938bcd585f5a9dcba694ce1f2af45cd745c94e45fe859f056",
+  "previous_fixture_commit": "9cae818",
+  "reviewed_source_base": "9cae818",
+  "reason": "Reviewed candidate and previous smoke side by side. The continuous RailwaySkyMaterial replaces the flat sky tint with a vertical gradient and high clouds; scenery geometry, framing and diagnostic fixture colors are unchanged. Preserve native Open Rails references and the 16-level/2-percent tolerance.",
   "tolerance": 16,
   "max_hot_pct": 2.0,
   "scope": "Internal static Bevy viewer smoke. Native Open Rails references are frozen separately.",
@@ -19,5 +19,30 @@
       360
     ]
   },
-  "previous_diff_hot_pct": 85.541
+  "previous_diff": "visual-diff summary\n  actual:     tmp/visual-five/candidate.png\n  golden:     docs/fixtures/visual/smoke_orbit.png\n  size:       640x360\n  tol:        16/255 per channel\n  hot pixels: 28362/230400 (12.310%)\n  rmse:       13.086\n  max hot %:  2\n  diff png:   tmp/visual-five/sky-change.png",
+  "history": [
+    {
+      "updated_on": "2026-10-04",
+      "bevy_version": "0.19.1",
+      "render_adapter": "Vulkan lavapipe (Xvfb)",
+      "previous_sha256": "5ff44cfe87aa1c9077e416d24862f33cdd3ddad2bdd54a4daa3c969dce4daf88",
+      "sha256": "274c3f29bc0025cb7ef351df0d17fb7356e60070a4b2e28e4c6f05ddd403c7ce",
+      "previous_fixture_commit": "cdbc1ac",
+      "reviewed_source_base": "cdbc1ac",
+      "reason": "Camera pitch is now above the terrain and the 180 m explicit distance is reapplied after automatic track framing. Scenery shaders compile all dependencies; actual terrain and synthetic test objects are visible. Old and new captures were inspected. The synthetic fixture uses diagnostic colors; native Open Rails reference images remain frozen.",
+      "tolerance": 16,
+      "max_hot_pct": 2.0,
+      "scope": "Internal static Bevy viewer smoke. Native Open Rails references are frozen separately.",
+      "camera": {
+        "yaw_rad": 0.85,
+        "pitch_rad": 0.35,
+        "distance_m": 180,
+        "window": [
+          640,
+          360
+        ]
+      },
+      "previous_diff_hot_pct": 85.541
+    }
+  ]
 }

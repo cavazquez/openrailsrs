@@ -37,6 +37,7 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 pub mod ground_fog;
+pub mod native_audio;
 pub mod night_sky;
 pub mod overhead_wire;
 pub mod overspeed_flash;
@@ -148,6 +149,22 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
+        app.add_plugins(bevy::pbr::MaterialPlugin::<sky::RailwaySkyMaterial>::default());
+        app.init_resource::<native_audio::NativeAudio>();
+        app.add_systems(
+            OnEnter(ViewerAppState::Playing),
+            native_audio::start_native_audio.after(live::spawn_live_train),
+        );
+        app.add_systems(
+            OnExit(ViewerAppState::Playing),
+            native_audio::stop_native_audio,
+        );
+        app.add_systems(
+            PostUpdate,
+            native_audio::update_native_audio
+                .after(bevy::transform::TransformSystems::Propagate)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         app.init_resource::<cab_mouse::CabMouseState>();
         app.add_systems(
             OnEnter(ViewerAppState::Playing),
@@ -281,6 +298,8 @@ impl Plugin for ViewerPlugin {
                 (
                     world::update_world_scenery_lod,
                     world_instancing::update_world_instanced_lod,
+                    world_instancing::update_world_lod_fades
+                        .after(world_instancing::update_world_instanced_lod),
                 )
                     .after(world::progressive_world_spawn_system)
                     .run_if(in_state(ViewerAppState::Playing))

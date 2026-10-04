@@ -46,7 +46,6 @@ use bevy::render::view::{
 use bevy::render::{Render, RenderApp, RenderStartup, RenderSystems};
 use bevy::shader::Shader;
 use bytemuck::{Pod, Zeroable};
-use openrailsrs_bevy_scenery::shapes::lod_level_index_for_distance;
 
 /// Minimum placements in one tile before GPU instancing is used.
 ///
@@ -161,6 +160,9 @@ pub struct WorldInstanceAppearance {
     /// fills this from this entity's GlobalTransform, independently of Bevy's
     /// mesh-uniform buffer ordering.
     pub world_from_local: Mat4,
+    /// Signed dither coverage: + fades the new mesh in, - fades the old out.
+    /// 0 is steady state; the normal opaque/depth pipeline remains unchanged.
+    pub lod_fade: f32,
 }
 
 impl SyncComponent for WorldInstanceAppearance {
@@ -344,6 +346,7 @@ pub fn appearance_from_standard_material(
         cull_mode: mat.and_then(|m| m.cull_mode),
         double_sided: mat.is_some_and(|m| m.double_sided),
         world_from_local: Mat4::IDENTITY,
+        lod_fade: 0.0,
     }
 }
 
@@ -427,6 +430,7 @@ struct GpuWorldInstanceBuffer {
 struct GpuWorldInstanceBindGroup {
     bind_group: BindGroup,
     source: WorldInstanceAppearance,
+    uniform: Buffer,
 }
 
 #[derive(Clone, Copy, ShaderType, Pod, Zeroable)]
@@ -674,6 +678,7 @@ fn prepare_world_instance_bind_groups(
     pipeline_cache: Res<PipelineCache>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<bevy::render::texture::GpuImage>>,
+    render_queue: Res<bevy::render::renderer::RenderQueue>,
     fallback_image: Option<Res<WorldInstancingFallbackImage>>,
     query: Query<(
         Entity,
@@ -710,11 +715,24 @@ fn prepare_world_instance_bind_groups(
             params: Vec4::new(
                 appearance.alpha_cutoff,
                 if appearance.double_sided { 1.0 } else { 0.0 },
-                0.0,
+                appearance.lod_fade,
                 0.0,
             ),
             world_from_local: appearance.world_from_local,
         };
+        if let Some(existing) =
+            existing.filter(|gpu| gpu.source.base_color_texture == appearance.base_color_texture)
+        {
+            // LOD fading and floating origin only change the uniform. Reuse the
+            // allocation/bind group instead of creating GPU objects every frame.
+            render_queue.write_buffer(&existing.uniform, 0, bytemuck::bytes_of(&gpu));
+            commands.entity(entity).insert(GpuWorldInstanceBindGroup {
+                bind_group: existing.bind_group.clone(),
+                uniform: existing.uniform.clone(),
+                source: appearance.clone(),
+            });
+            continue;
+        }
         let uniform = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("world_instance_appearance"),
             contents: bytemuck::bytes_of(&gpu),
@@ -731,6 +749,7 @@ fn prepare_world_instance_bind_groups(
         );
         commands.entity(entity).insert(GpuWorldInstanceBindGroup {
             bind_group,
+            uniform,
             source: appearance.clone(),
         });
     }
@@ -1099,59 +1118,128 @@ fn nearest_instance_distance_m(
         .unwrap_or_else(|| camera.distance(group.translation()))
 }
 
-/// LOD update for instanced groups (shared LOD per tile group).
+/// Short-lived old mesh; shares immutable instance data and texture handles.
+#[derive(Component)]
+pub struct WorldLodFade {
+    elapsed: f32,
+    outgoing: bool,
+}
+
+/// Complementary screen-door coverage keeps depth writes and alpha cutouts.
+/// Ghosts are tile-bound so unloading cancels both sides of a transition.
+pub fn update_world_lod_fades(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut fading: Query<(Entity, &mut WorldLodFade, &mut WorldInstanceAppearance)>,
+) {
+    for (entity, mut fade, mut appearance) in &mut fading {
+        fade.elapsed += time.delta_secs();
+        let t = (fade.elapsed / 0.35).clamp(0.001, 1.0);
+        appearance.lod_fade = if fade.outgoing { -t } else { t };
+        if t >= 1.0 {
+            if fade.outgoing {
+                commands.entity(entity).despawn();
+            } else {
+                appearance.lod_fade = 0.0;
+                commands.entity(entity).remove::<WorldLodFade>();
+            }
+        }
+    }
+}
+
+/// LOD update for instanced groups, with authored bands and 8% hysteresis.
+#[allow(clippy::type_complexity)]
 pub fn update_world_instanced_lod(
+    mut commands: Commands,
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
     meshes: Res<Assets<Mesh>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
-    mut groups: Query<(
-        &GlobalTransform,
-        &mut WorldInstancedGroup,
-        &mut Mesh3d,
-        &mut Visibility,
-        &WorldInstanceBuffer,
-        &mut bevy::camera::primitives::Aabb,
-    )>,
+    mut groups: Query<
+        (
+            Entity,
+            &Transform,
+            &GlobalTransform,
+            &mut WorldInstancedGroup,
+            &mut Mesh3d,
+            &mut Visibility,
+            &WorldInstanceBuffer,
+            &mut bevy::camera::primitives::Aabb,
+            &mut WorldInstanceAppearance,
+            &crate::world::WorldTileBound,
+        ),
+        Without<WorldLodFade>,
+    >,
 ) {
-    let Some(cache) = cache else {
-        return;
-    };
-    let Ok(cam_gt) = camera.single() else {
-        return;
-    };
-    let cam_pos = cam_gt.translation();
-
-    for (gt, mut group, mut mesh3d, mut visibility, instances, mut aabb) in &mut groups {
+    let Some(cache) = cache else { return };
+    let Ok(cam) = camera.single() else { return };
+    for (
+        entity,
+        tf,
+        gt,
+        mut group,
+        mut mesh,
+        mut visible,
+        instances,
+        mut aabb,
+        mut appearance,
+        bound,
+    ) in &mut groups
+    {
         if !group.lod_enabled {
             continue;
         }
-        let Some(shape) = cache.shapes.get(&group.shape_path) else {
+        let (Some(shape), Some(assets)) = (
+            cache.shapes.get(&group.shape_path),
+            cache.assets_by_lod.get(&group.shape_path),
+        ) else {
             continue;
         };
-        let Some(lod_assets) = cache.assets_by_lod.get(&group.shape_path) else {
-            continue;
-        };
-        if lod_assets.is_empty() {
+        if assets.is_empty() {
             continue;
         }
-        let instance_dist = nearest_instance_distance_m(cam_pos, gt, instances);
-        let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
+        let new_lod = crate::world::stable_lod_level(
+            shape,
+            nearest_instance_distance_m(cam.translation(), gt, instances),
+            group.lod_idx,
+        )
+        .min(assets.len() - 1);
         if new_lod == group.lod_idx {
             continue;
         }
-        let Some(asset) = lod_assets.get(new_lod) else {
-            continue;
-        };
-        let Some((part_index, part)) = crate::world::shape_lod_part_by_identity(
-            asset,
+        let old_visible = *visible != Visibility::Hidden;
+        if old_visible {
+            let mut old = appearance.clone();
+            old.lod_fade = -0.001;
+            let mut ghost_group = group.clone();
+            ghost_group.lod_enabled = false;
+            commands.spawn((
+                *tf,
+                mesh.clone(),
+                Visibility::Inherited,
+                instances.clone(),
+                old,
+                *aabb,
+                *bound,
+                ghost_group,
+                WorldLodFade {
+                    elapsed: 0.0,
+                    outgoing: true,
+                },
+                Name::new("world:lod-outgoing"),
+            ));
+        }
+        group.lod_idx = new_lod;
+        let Some((index, part)) = crate::world::shape_lod_part_by_identity(
+            &assets[new_lod],
             group.sub_object_idx,
             group.prim_state_idx,
         ) else {
-            *visibility = Visibility::Hidden;
-            group.lod_idx = new_lod;
+            *visible = Visibility::Hidden;
             continue;
         };
-        mesh3d.0 = part.mesh.clone();
+        mesh.0 = part.mesh.clone();
+        group.part_index = index;
+        *visible = Visibility::Inherited;
         *aabb = instances_aabb(
             instances,
             meshes
@@ -1159,9 +1247,11 @@ pub fn update_world_instanced_lod(
                 .and_then(bevy::camera::primitives::MeshAabb::compute_aabb)
                 .as_ref(),
         );
-        *visibility = Visibility::Inherited;
-        group.part_index = part_index;
-        group.lod_idx = new_lod;
+        appearance.lod_fade = 0.001;
+        commands.entity(entity).insert(WorldLodFade {
+            elapsed: 0.0,
+            outgoing: false,
+        });
     }
 }
 
@@ -1169,6 +1259,68 @@ pub fn update_world_instanced_lod(
 mod tests {
     use super::*;
     use crate::world::ShapeInstancePlacement;
+
+    #[test]
+    fn lod_transition_completes_and_releases_the_outgoing_entity() {
+        let mut app = App::new();
+        app.init_resource::<Time>();
+        app.add_systems(Update, update_world_lod_fades);
+        let incoming = app
+            .world_mut()
+            .spawn((
+                WorldLodFade {
+                    elapsed: 0.0,
+                    outgoing: false,
+                },
+                appearance_from_standard_material(&Assets::default(), &Handle::default()),
+            ))
+            .id();
+        let outgoing = app
+            .world_mut()
+            .spawn((
+                WorldLodFade {
+                    elapsed: 0.0,
+                    outgoing: true,
+                },
+                appearance_from_standard_material(&Assets::default(), &Handle::default()),
+            ))
+            .id();
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(175));
+        app.update();
+        assert!(
+            (app.world()
+                .get::<WorldInstanceAppearance>(incoming)
+                .unwrap()
+                .lod_fade
+                - 0.5)
+                .abs()
+                < 0.001
+        );
+        assert!(
+            (app.world()
+                .get::<WorldInstanceAppearance>(outgoing)
+                .unwrap()
+                .lod_fade
+                + 0.5)
+                .abs()
+                < 0.001
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(200));
+        app.update();
+        assert!(app.world().get_entity(outgoing).is_err());
+        assert!(app.world().get::<WorldLodFade>(incoming).is_none());
+        assert_eq!(
+            app.world()
+                .get::<WorldInstanceAppearance>(incoming)
+                .unwrap()
+                .lod_fade,
+            0.0
+        );
+    }
 
     #[test]
     fn visibility_keeps_groups_when_render_entities_have_a_different_order() {

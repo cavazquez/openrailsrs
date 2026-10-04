@@ -22,8 +22,8 @@ use crate::launch::{LIVE_TRAIN_LOD_DISTANCE_M, ViewerSceneryMode, track_dev_rend
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_shape_from_path, load_shape_render_asset_and_file_from_path,
-    resolve_vehicle_shape_path, vehicle_cab_frame_and_exterior_scale,
-    vehicle_shape_local_transform, vehicle_texture_search_dirs,
+    vehicle_cab_frame_and_exterior_scale, vehicle_shape_local_transform,
+    vehicle_texture_search_dirs,
 };
 use crate::terrain::TerrainElevation;
 use crate::track::TrackScene;
@@ -126,12 +126,8 @@ impl LiveDrive {
                 "openrailsrs-viewer3d: live sim speed_mul = {mul:.1}x (OPENRAILSRS_SPEED_MUL)"
             );
         }
-        let audio = None; // AudioEngine::try_start(); // Desactivado por pedido del usuario para evitar ruido
-        if audio.is_none() {
-            viewer_log!(
-                "openrailsrs-viewer3d: no audio device or audio disabled — live drive is silent"
-            );
-        }
+        // Native SMS/WAV playback is owned by the viewer's separate audio worker.
+        let audio = None;
         Ok(Self {
             session,
             traffic: openrailsrs_sim::LiveTraffic::from_scenario(scenario_dir, scenario)?,
@@ -480,8 +476,8 @@ pub fn live_driver_input(
     if pressed(A::Neutral) {
         let _ = live.session.set_direction(0.5);
     }
-    if pressed(A::Horn) {
-        live.session.trigger_horn(0.35);
+    if keys.pressed(settings.key(A::Horn)) {
+        live.session.trigger_horn(0.08);
         if let Some(ref audio) = live.audio {
             audio.send(AudioCmd::Horn);
         }
@@ -884,7 +880,8 @@ pub(crate) fn live_driver_cab_from_vehicles(
     if let Some(vehicle) = vehicles.first()
         && let Some(shape_name) = vehicle.shape_file.as_deref()
     {
-        if let Some(shape_path) = resolve_vehicle_shape_path(shape_dirs, shape_name, route_dir)
+        if let Some(shape_path) =
+            crate::rolling_stock::resolve_consist_vehicle_shape_path(shape_dirs, vehicle, route_dir)
             && let Some(loaded) = load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
         {
             return driver_cab_from_lead_vehicle(vehicle, shape_dirs, route_dir, &loaded.mesh);
@@ -1060,12 +1057,16 @@ pub fn spawn_live_train(
         ))
         .with_children(|train| {
             for (vi, vehicle) in vehicles.iter().enumerate() {
-                if let Some(shape_name) = vehicle
+                if let Some(_shape_name) = vehicle
                     .shape_file
                     .as_deref()
                     .filter(|s| !s.eq_ignore_ascii_case("test.s"))
                     && let Some(shape_path) =
-                        resolve_vehicle_shape_path(&shape_dirs, shape_name, &assets.route_dir)
+                        crate::rolling_stock::resolve_consist_vehicle_shape_path(
+                            &shape_dirs,
+                            vehicle,
+                            &assets.route_dir,
+                        )
                 {
                     let tex_dirs_owned =
                         vehicle_texture_search_dirs(&shape_path, &assets.route_dir);
@@ -1134,6 +1135,7 @@ pub fn spawn_live_train(
                             car_transform,
                             Visibility::default(),
                             LiveTrainCar { index: vi },
+                            crate::rolling_stock::ConsistCarIndex(vi),
                             crate::rolling_stock_anim::TrainCarTrackOffset {
                                 offset_m: vehicle.offset_m,
                                 track_index: 0,
@@ -1260,6 +1262,7 @@ pub fn spawn_live_train(
                     local,
                     Visibility::default(),
                     LiveTrainCar { index: vi },
+                    crate::rolling_stock::ConsistCarIndex(vi),
                     Name::new(format!("train:live:car:{vi}:fallback")),
                 ));
                 if is_lead {
@@ -1421,6 +1424,7 @@ mod tests {
             .map(|i| ConsistVehicleVisual {
                 name: format!("car-{i}"),
                 shape_file: None,
+                asset_dir: None,
                 length_m: 20.0,
                 offset_m: -(i as f32) * 20.0,
                 flipped: false,
@@ -1448,6 +1452,7 @@ mod tests {
             &[ConsistVehicleVisual {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
+                asset_dir: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,

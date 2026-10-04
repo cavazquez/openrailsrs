@@ -4,7 +4,7 @@ use crate::ast::Ast;
 use crate::encoding::read_msts_file_to_string;
 use crate::error::FormatError;
 use crate::msts_file_text::read_msts_file_decoded;
-use crate::parser::{parse_from_first_paren, parse_vehicle_text};
+use crate::parser::{parse_cab_view_text, parse_from_first_paren, parse_vehicle_text};
 use crate::typed::{CabViewFile, ConsistFile, EngineFile, RouteFile, WagonFile};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +35,8 @@ pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> 
     };
     let ast = if matches!(ext.as_deref(), Some("eng" | "wag" | "con")) {
         parse_vehicle_text(&source)?
+    } else if ext.as_deref() == Some("cvf") {
+        parse_cab_view_text(&source)?
     } else {
         parse_from_first_paren(&source)?
     };

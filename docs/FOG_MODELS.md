@@ -44,7 +44,12 @@ Una prueba con lavapipe sirve para comprobar shaders y recursos, pero sus FPS
 no representan una GPU dedicada. El perfil de niebla es una adaptación Bevy,
 no una reproducción píxel a píxel del clima de OR 1.6.1.
 
-La inspección nocturna detectó una franja oscura en el horizonte del volumen.
-Las dos calidades funcionan y reciben iluminación de los faros, pero todavía
-requieren suavizar esa transición. Hasta cerrar ese ajuste, la atmosférica
-permanece como opción recomendada y predeterminada.
+La inspección nocturna inicial detectó una franja negra al usar un volumen
+uniforme de 12 km. Se sustituyó por una capa local de 1800×120×1800 m, centrada
+en la cámara y la vía, con densidad exponencial por altura y transición radial
+suave a cero en sus bordes. La textura 32³ usa filtrado lineal y ClampToEdge.
+Las capturas nocturnas de cabina y exterior con 32/64 pasos ya no muestran esa
+pared; los faros siguen iluminando la vía y las sombras están habilitadas.
+La regresión portable comprueba bordes nulos y transmisión horizontal mayor
+al 85 % a la altura de cabina. La atmosférica sigue siendo la opción económica
+y predeterminada; el volumen agrega dispersión local.

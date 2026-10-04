@@ -783,6 +783,24 @@ pub fn cab_view_look_offset(
     msts_direction_to_look_offset(view_direction_deg)
 }
 
+/// OR's CabCamera uses the active CVF Position/Direction rather than the
+/// independent ORTS3DCab eyepoint (Cameras.cs SetCameraCar/InitialiseRotation).
+pub fn cab2d_driver_frame(cab: &LiveDriverCab, position: Option<[f64; 3]>) -> LiveDriverCab {
+    let mut frame = cab.clone();
+    if let Some(position) = position {
+        let head = crate::shapes::msts_shape_vec3_to_bevy(Vec3::new(
+            position[0] as f32,
+            position[1] as f32,
+            position[2] as f32,
+        ));
+        frame.head_lead_local = Some(head);
+        frame.head_pos_train = Some(frame.interior_placement.transform_point(head));
+        frame.look_pitch = 0.0;
+        frame.look_yaw = 0.0;
+    }
+    frame
+}
+
 /// Cab orientation in converted MSTS shape space: `StartDirection` + CVF `Direction`.
 ///
 /// Bevy camera −Z is already the neutral windshield direction in this space, so
@@ -1338,29 +1356,31 @@ pub fn follow_train_camera(
         yaw: yaw_from_transform(train_tf),
     };
 
-    // Cab2d: same eyepoint as 3D cab so ACE window alpha shows the forward world.
-    // Compose `.eng` StartDirection + CVF Direction (same forward as DriverCam, #169).
+    // Classic cab viewpoints come from the active CVF; 3D cab viewpoints remain
+    // separate. Both use the vehicle hierarchy, including slope and Flip.
     if follow.is_cab2d() {
         orbit.focus = lerp_follow_focus(orbit.focus, train_root_pose.translation, dt);
         orbit.yaw = train_root_pose.yaw;
         let default_cab = LiveDriverCab::default();
         let cab = cab.as_deref().unwrap_or(&default_cab);
+        let cab = cab2d_driver_frame(cab, overlay.as_ref().and_then(|o| o.view_position_m));
         let dir = overlay
             .as_ref()
             .map(|o| o.view_direction_deg)
             .unwrap_or([0.0; 3]);
-        let look = cab_view_look_offset(cab, dir);
+        let look = cab_view_look_offset(&cab, dir);
         *transform = lead_car
             .iter()
             .next()
+            .filter(|_| cab.head_lead_local.is_some())
             .map(|lead| {
                 driver_camera_transform_from_lead(
                     &GlobalTransform::from(train_tf.mul_transform(*lead)),
-                    cab,
+                    &cab,
                     look,
                 )
             })
-            .unwrap_or_else(|| driver_camera_transform(train_root_pose, cab, look));
+            .unwrap_or_else(|| driver_camera_transform(train_root_pose, &cab, look));
         return;
     }
 
@@ -1373,6 +1393,7 @@ pub fn follow_train_camera(
         *transform = lead_car
             .iter()
             .next()
+            .filter(|_| cab.head_lead_local.is_some())
             .map(|lead| {
                 driver_camera_transform_from_lead(
                     &GlobalTransform::from(train_tf.mul_transform(*lead)),
@@ -2507,6 +2528,41 @@ mod tests {
         let eye = driver_eye_from_lead(&lead_global, &cab).expect("head_lead_local");
         let expected = lead_global.transform_point(head_lead);
         assert!((eye - expected).length() < 1e-4);
+    }
+
+    #[test]
+    fn classic_cvf_eyepoint_is_above_the_vehicle_and_independent_of_orts3d() {
+        let original = LiveDriverCab {
+            head_lead_local: Some(Vec3::new(3.0, 8.0, 1.0)),
+            look_pitch: -15f32.to_radians(),
+            look_yaw: 0.5,
+            ..Default::default()
+        };
+        let frame = cab2d_driver_frame(&original, Some([-0.2, 2.5, 9.011]));
+        let eye_local = crate::shapes::msts_shape_vec3_to_bevy(Vec3::new(-0.2, 2.5, 9.011));
+        for flipped in [false, true] {
+            let mut rotation = crate::shapes::msts_shape_to_train_rotation();
+            if flipped {
+                rotation = Quat::from_rotation_y(std::f32::consts::PI) * rotation;
+            }
+            let lead = GlobalTransform::from(
+                Transform::from_xyz(10.0, 58.0, 20.0).with_rotation(rotation),
+            );
+            let camera = driver_camera_transform_from_lead(
+                &lead,
+                &frame,
+                cab_view_look_offset(&frame, [6.0, 0.0, 0.0]),
+            );
+            assert!((camera.translation - lead.transform_point(eye_local)).length() < 1e-4);
+            assert!((camera.translation.y - 60.5).abs() < 1e-4);
+            let forward = lead.rotation() * Vec3::NEG_Z;
+            assert!(camera.forward().dot(forward) > 0.99);
+        }
+        assert_eq!(frame.look_pitch, 0.0);
+        assert_eq!(frame.look_yaw, 0.0);
+        assert_eq!(original.look_pitch, -15f32.to_radians());
+        let side = cab2d_driver_frame(&original, Some([0.5, 2.5, 10.85]));
+        assert_ne!(side.head_lead_local, frame.head_lead_local);
     }
 
     #[test]

@@ -17,15 +17,24 @@ use crate::{
 #[derive(Component)]
 pub struct GroundFog;
 
+/// Smooth compact support eliminates the vertical wall produced by a uniform
+/// 12 km box. DistanceFog handles distant extinction; this local layer is for
+/// ground mist and headlight shafts within 900 metres.
+pub fn ground_density(uvw: Vec3) -> f32 {
+    let radial = Vec2::new(uvw.x - 0.5, uvw.z - 0.5).length() * 2.0;
+    let edge = ((1.0 - radial) / 0.35).clamp(0.0, 1.0);
+    let edge = edge * edge * (3.0 - 2.0 * edge);
+    let h = uvw.y.clamp(0.0, 1.0);
+    (-h * 8.0).exp() * edge
+}
 fn density_texture() -> Image {
     const SIZE: u32 = 32;
     let mut data = Vec::with_capacity((SIZE * SIZE * SIZE) as usize);
     for z in 0..SIZE {
         for y in 0..SIZE {
             for x in 0..SIZE {
-                let h = y as f32 / (SIZE - 1) as f32;
-                let noise = crate::precipitation::rain_rng01(x + z * SIZE, 6);
-                data.push((255.0 * (-h * 6.0).exp() * (0.8 + noise * 0.2)) as u8);
+                let uvw = Vec3::new(x as f32, y as f32, z as f32) / (SIZE - 1) as f32;
+                data.push((255.0 * ground_density(uvw)).round() as u8);
             }
         }
     }
@@ -41,9 +50,11 @@ fn density_texture() -> Image {
         RenderAssetUsages::RENDER_WORLD,
     );
     image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_u: ImageAddressMode::ClampToEdge,
         address_mode_v: ImageAddressMode::ClampToEdge,
-        address_mode_w: ImageAddressMode::Repeat,
+        address_mode_w: ImageAddressMode::ClampToEdge,
+        mag_filter: bevy::image::ImageFilterMode::Linear,
+        min_filter: bevy::image::ImageFilterMode::Linear,
         ..default()
     });
     image
@@ -56,10 +67,12 @@ pub fn spawn_ground_fog(mut commands: Commands, mut images: ResMut<Assets<Image>
         FogVolume {
             density_texture: Some(images.add(density_texture())),
             density_factor: 0.0,
-            scattering_asymmetry: 0.5,
+            scattering_asymmetry: 0.35,
+            absorption: 0.05,
+            scattering: 0.25,
             ..default()
         },
-        Transform::from_scale(Vec3::new(12_000.0, 100.0, 12_000.0)),
+        Transform::from_scale(Vec3::new(1800.0, 120.0, 1800.0)),
         Visibility::Hidden,
     ));
 }
@@ -107,7 +120,7 @@ pub fn update_ground_fog(
     let rail_y = trains.iter().next().map_or(0.0, |t| t.translation.y);
     for (mut transform, mut volume, mut visibility) in &mut volumes {
         transform.translation =
-            Vec3::new(camera.translation.x, rail_y + 35.0, camera.translation.z);
+            Vec3::new(camera.translation.x, rail_y + 45.0, camera.translation.z);
         *visibility = if steps.is_some() {
             Visibility::Visible
         } else {
@@ -115,9 +128,9 @@ pub fn update_ground_fog(
         };
         let density = if steps.is_some() {
             match content.weather {
-                PlayerWeather::Clear => 0.00008,
-                PlayerWeather::Rain => 0.0006,
-                PlayerWeather::Fog => 0.003,
+                PlayerWeather::Clear => 0.00004,
+                PlayerWeather::Rain => 0.0003,
+                PlayerWeather::Fog => 0.0012,
             }
         } else {
             0.0
@@ -132,6 +145,20 @@ pub fn update_ground_fog(
 mod tests {
     use super::*;
     use crate::player_settings::FogQuality;
+    #[test]
+    fn height_layer_has_no_hard_wall_or_opaque_night_horizon() {
+        assert_eq!(ground_density(Vec3::new(1.0, 0.1, 0.5)), 0.0);
+        assert_eq!(ground_density(Vec3::new(0.0, 0.1, 0.5)), 0.0);
+        assert!(ground_density(Vec3::new(0.999, 0.1, 0.5)) < 0.0001);
+        let height = (2.8 + 15.0) / 120.0;
+        let optical_depth: f32 = (0..900)
+            .map(|x| ground_density(Vec3::new(0.5 + x as f32 / 1800.0, height, 0.5)) * 0.0012 * 0.3)
+            .sum();
+        assert!(
+            (-optical_depth).exp() > 0.85,
+            "local layer must preserve the night background; far haze belongs to DistanceFog"
+        );
+    }
     #[test]
     fn legacy_preferences_keep_the_low_cost_fog_model() {
         let settings: PlayerSettings = serde_json::from_str("{\"fog\":true}").unwrap();

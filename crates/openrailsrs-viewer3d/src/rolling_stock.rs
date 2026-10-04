@@ -6,11 +6,17 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use openrailsrs_train::{Consist, Vehicle, consist_asset_root, load_consist_with_asset_root};
 
+/// Stable consist slot on player and traffic car roots.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct ConsistCarIndex(pub usize);
+
 /// One vehicle in the consist ready for 3D spawn.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConsistVehicleVisual {
     pub name: String,
     pub shape_file: Option<String>,
+    /// Authored ENG/WAG directory, retaining identity when filenames are shared.
+    pub asset_dir: Option<PathBuf>,
     pub length_m: f32,
     /// Metres behind the train head along the travel axis (negative X local).
     pub offset_m: f32,
@@ -54,6 +60,18 @@ impl TrainConsistScene {
         if let Some(scenario_dir) = self.scenario_dir.as_deref() {
             if scenario_dir != route_dir {
                 dirs.push(scenario_dir.to_path_buf());
+            }
+            for vehicle in self.vehicles_for("primary").iter().chain(
+                self.by_label
+                    .iter()
+                    .filter(|(label, _)| label.as_str() != "primary")
+                    .flat_map(|(_, cars)| cars.iter()),
+            ) {
+                if let Some(root) = &vehicle.asset_dir
+                    && !dirs.contains(root)
+                {
+                    dirs.push(root.clone());
+                }
             }
             dirs.extend(self.trainset_shape_dirs.iter().cloned());
             if let Some(relative) = &self.primary_consist_rel {
@@ -113,6 +131,7 @@ pub fn vehicles_from_consist(consist: &Consist) -> Vec<ConsistVehicleVisual> {
             Vehicle::Loco(l) => ConsistVehicleVisual {
                 name: l.name.clone(),
                 shape_file: l.wagon_shape.clone(),
+                asset_dir: None,
                 length_m: l.length_m as f32,
                 offset_m,
                 flipped: l.flipped,
@@ -120,6 +139,7 @@ pub fn vehicles_from_consist(consist: &Consist) -> Vec<ConsistVehicleVisual> {
             Vehicle::Wagon(w) => ConsistVehicleVisual {
                 name: w.name.clone(),
                 shape_file: w.wagon_shape.clone(),
+                asset_dir: None,
                 length_m: w.length_m as f32,
                 offset_m,
                 flipped: w.flipped,
@@ -136,12 +156,50 @@ pub fn try_load_consist_vehicles(
     let con_path = scenario_dir.join(consist_rel);
     let asset_root = consist_asset_root(&con_path);
     let consist = load_consist_with_asset_root(&con_path, asset_root).ok()?;
-    let vehicles = vehicles_from_consist(&consist);
+    let mut vehicles = vehicles_from_consist(&consist);
+    if let Ok(entries) = openrailsrs_formats::read_msts_file_to_string(&con_path)
+        .and_then(|text| openrailsrs_formats::parse_vehicle_text(&text))
+        .and_then(|ast| openrailsrs_formats::ConsistFile::from_ast(&ast))
+    {
+        for (visual, entry) in vehicles.iter_mut().zip(entries.entries) {
+            let stock = openrailsrs_train::resolve_consist_entry_path(asset_root, entry.path());
+            visual.asset_dir = stock.parent().map(Path::to_path_buf);
+        }
+    }
     if vehicles.is_empty() {
         None
     } else {
         Some(vehicles)
     }
+}
+
+/// Resolve from the authored stock first; shared filenames must not select a
+/// model belonging to another formation. Original Content still overrides fixtures.
+pub fn resolve_consist_vehicle_shape_path(
+    dirs: &[&Path],
+    vehicle: &ConsistVehicleVisual,
+    route: &Path,
+) -> Option<PathBuf> {
+    let name = vehicle.shape_file.as_deref()?;
+    if let Some(root) = &vehicle.asset_dir {
+        if root.ancestors().any(|p| {
+            p.file_name()
+                .is_some_and(|name| name.eq_ignore_ascii_case("TRAINSET"))
+        }) && let Some(path) = crate::shapes::resolve_shape_path(root, name)
+        {
+            return Some(path);
+        }
+        let trainset = root.file_name()?.to_string_lossy();
+        for native in crate::shapes::or_content_trainset_roots(route, &trainset) {
+            if let Some(path) = crate::shapes::resolve_shape_path(&native, name) {
+                return Some(path);
+            }
+        }
+        if let Some(path) = crate::shapes::resolve_shape_path(root, name) {
+            return Some(path);
+        }
+    }
+    crate::shapes::resolve_vehicle_shape_path(dirs, name, route)
 }
 
 /// Longitudinal offsets from the train head (first vehicle at 0, followers negative).
@@ -162,6 +220,40 @@ pub fn longitudinal_offsets_m(lengths: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn authored_native_directory_wins_over_same_named_model_in_other_stock() {
+        let temp = tempfile::tempdir().unwrap();
+        let wrong = temp.path().join("wrong");
+        let right = temp.path().join("TRAINS/TRAINSET/specific-stock");
+        std::fs::create_dir_all(&wrong).unwrap();
+        std::fs::create_dir_all(&right).unwrap();
+        std::fs::write(wrong.join("shared.s"), b"wrong geometry").unwrap();
+        std::fs::write(right.join("shared.s"), b"authored geometry").unwrap();
+        let vehicle = ConsistVehicleVisual {
+            name: "native".into(),
+            shape_file: Some("shared.s".into()),
+            asset_dir: Some(right.clone()),
+            length_m: 20.0,
+            offset_m: 0.0,
+            flipped: false,
+        };
+        assert_eq!(
+            resolve_consist_vehicle_shape_path(&[wrong.as_path()], &vehicle, temp.path()),
+            Some(right.join("shared.s"))
+        );
+    }
+
+    #[test]
+    fn consist_visuals_keep_the_stock_directory_for_every_vehicle() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern");
+        let cars = try_load_consist_vehicles(&root, "consists/birmingham_pullman.con").unwrap();
+        assert_eq!(cars.len(), 8);
+        assert!(cars.iter().all(|car| {
+            car.asset_dir
+                .as_ref()
+                .is_some_and(|p| p.ends_with("RF_Blue_Pullman"))
+        }));
+    }
 
     #[test]
     fn relative_consist_in_another_scenario_keeps_its_trainset_assets() {

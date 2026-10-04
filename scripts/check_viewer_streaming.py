@@ -102,6 +102,8 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: scenery shaders incomplete: {report.get('shader_pipelines')}")
     if not pause and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
+    if getattr(args,"require_hardware",False) and not (report.get("renderer") or {}).get("hardware"):
+        raise RuntimeError(f"{name}: hardware benchmark requested, renderer is {report.get('renderer')}")
     report.update(peak_rss_mib=round(peak_kib / 1024, 1),
                   elapsed_s=round(time.monotonic() - started, 1))
     prefix.with_suffix(".stream.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -117,6 +119,7 @@ def main():
     parser.add_argument("--viewer", type=Path, default=repo / "target/debug/openrailsrs-viewer3d")
     parser.add_argument("--out-dir", type=Path, default=repo / "tmp/viewer-streaming")
     parser.add_argument("--scenario", type=Path, default=repo / "examples/chiltern_local/scenario.toml")
+    parser.add_argument("--require-hardware",action="store_true",help="fail instead of reporting CPU/software rendering as GPU performance")
     parser.add_argument("--software", action="store_true", help="use Vulkan lavapipe")
     parser.add_argument("--checkpoint", choices=["middle", "terminal"], action="append")
     parser.add_argument("--max-rss-mib", type=int, default=6144)

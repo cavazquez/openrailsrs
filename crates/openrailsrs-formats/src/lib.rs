@@ -24,7 +24,7 @@ pub mod vehicle_field_catalog;
 pub use ast::{Ast, Atom};
 pub use cab_link::{
     ResolvedCabAssets, find_cabview_dir, pick_cab_shape_in_dir, resolve_cab_assets,
-    resolve_cab_assets_scan,
+    resolve_cab_assets_scan, resolve_cab_view_path,
 };
 pub use dispatch::{MstsFile, parse_msts_file};
 pub use encoding::{
@@ -43,8 +43,8 @@ pub use msts_units::{
     parse_velocity_mps,
 };
 pub use parser::{
-    parse, parse_all_top_level, parse_all_top_level_lenient, parse_first,
-    parse_first_from_first_paren, parse_from_first_paren, parse_vehicle_text,
+    parse, parse_all_top_level, parse_all_top_level_lenient, parse_cab_view_text, parse_first,
+    parse_first_from_first_paren, parse_from_first_paren, parse_named_stf, parse_vehicle_text,
 };
 pub use shape_binary_direct::{
     binary_shape_to_ast, is_binary_shape_payload, shape_from_binary_payload,

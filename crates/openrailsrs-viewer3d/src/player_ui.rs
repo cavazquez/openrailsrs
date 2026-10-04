@@ -235,6 +235,8 @@ enum SettingField {
     Shadows,
     Fog,
     FogQuality,
+    Audio,
+    Volume,
     Units,
 }
 
@@ -613,6 +615,8 @@ fn handle_buttons(
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.mph= !settings.mph,
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
+                SettingField::Audio=>settings.audio_enabled= !settings.audio_enabled,
+                SettingField::Volume=>settings.audio_volume=(settings.audio_volume+step).clamp(0.0,1.0),
             }ui.notice="Vista previa aplicada; pulsá Guardar ajustes para conservarla".into();Ok(())},
             UiCommand::Rebind(action)=>{ui.awaiting_key=Some(*action);ui.notice=format!("Pulsá la nueva tecla para {} · Esc cancela",action.label());Ok(())},
             UiCommand::DefaultKeys=>{settings.keys=PlayerSettings::default().keys;ui.notice="Controles predeterminados restaurados".into();Ok(())},
@@ -1008,6 +1012,17 @@ fn build_settings(p: &mut ChildSpawnerCommands<'_>, s: &PlayerSettings) {
         format!("Modelo de niebla: {}", s.fog_quality.label()),
         UiCommand::Setting(SettingField::FogQuality, 0.0),
     );
+    button(
+        p,
+        format!("Sonido original: {}", yes(s.audio_enabled)),
+        UiCommand::Setting(SettingField::Audio, 0.0),
+    );
+    settings_row(
+        p,
+        format!("Volumen: {:.0}%", s.audio_volume * 100.0),
+        SettingField::Volume,
+        0.1,
+    );
     label(
         p,
         "CONTROLES · clic en una asignación y pulsá la nueva tecla",
@@ -1357,6 +1372,7 @@ fn update_panel_text(
     content: Res<ActivePlayerContent>,
     fps: Res<crate::hud::HudFps>,
     performance: Res<crate::performance::JourneyPerformance>,
+    audio: Res<crate::native_audio::NativeAudio>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
@@ -1377,6 +1393,24 @@ fn update_panel_text(
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page);
                         if ui.advanced_page == 9 {
+                            if let Some(engine) = &audio.engine {
+                                let report = engine.report();
+                                text += &format!(
+                                    "\nSonido SMS/WAV: {} programas · {} muestras · {:.1} MiB · {} voces\nSalida de audio: {}",
+                                    report.programs,
+                                    report.samples,
+                                    report.decoded_mib,
+                                    report.active_voices,
+                                    if report.device {
+                                        "activa"
+                                    } else {
+                                        "cargando o no disponible"
+                                    }
+                                );
+                                if let Some(warning) = report.warnings.first() {
+                                    text += &format!("\nAudio: {warning}");
+                                }
+                            }
                             text += &format!("\n{}", performance.hud_text());
                             text += &format!(
                                 "\n\nFPS {:.1} · cuadro {:.1} ms\nEscenario: {} sectores activos · {} entidades en GPU\nDistancia de carga {:.0} m",
@@ -1787,7 +1821,7 @@ fn help_text(s: &PlayerSettings) -> String {
     for action in PlayerAction::ALL {
         out += &format!("{:9} {}\n", s.key_label(action), action.label());
     }
-    out + "\nEsc: pausa / cerrar ventana · flechas: mover cámara · RePág / AvPág: altura\nRueda: acercar / alejar · arrastrar en el fondo: mirar\nEn cabina 3D: arrastrar una palanca hacia arriba aumenta su valor;\nel clic en un interruptor lo conmuta. El control bajo el cursor aparece abajo.\nLa bocina permanece sin sonido porque el audio está desactivado."
+    out + "\nEsc: pausa / cerrar ventana · flechas: mover cámara · RePág / AvPág: altura\nRueda: acercar / alejar · arrastrar en el fondo: mirar\nEn cabina 3D: arrastrar una palanca hacia arriba aumenta su valor;\nel clic en un interruptor lo conmuta. El control bajo el cursor aparece abajo.\nSonidos originales SMS/WAV: motor, rodadura, frenos y bocina. F10 permite ajustar volumen o silenciar."
 }
 fn scroll_panel(
     mut wheel: MessageReader<MouseWheel>,

@@ -26,6 +26,8 @@ use crate::viewer_log;
 #[derive(Resource, Default, Debug)]
 pub struct CabCvfState {
     pub cvf_path: Option<PathBuf>,
+    /// `None` for a classic sprite cab; a 3D view rebuilds its matrix bindings.
+    pub shape_path: Option<PathBuf>,
     pub runtime: Option<CabCvfRuntime>,
     /// Smoothed control positions (matrix index → shape frame or normalized fallback).
     pub lever_keys: HashMap<usize, f32>,
@@ -378,29 +380,58 @@ pub fn load_cab_cvf_runtime(
         );
         return;
     };
-    if !assets.cvf_path.is_file() {
+    load_cvf_runtime_from_paths(state, assets.cvf_path, Some(cab_shape));
+}
+
+/// Classic CVF backgrounds and sprites do not require a `.s` file.
+pub fn load_cab_2d_cvf_runtime(
+    state: &mut CabCvfState,
+    trainset_root: &Path,
+    cab: &openrailsrs_formats::EngineCabView,
+) {
+    let path = openrailsrs_formats::resolve_cab_view_path(trainset_root, cab)
+        .or_else(|| resolve_cab_assets(trainset_root, cab).map(|a| a.cvf_path));
+    if let Some(path) = path {
+        load_cvf_runtime_from_paths(state, path, None);
+    }
+}
+
+fn load_cvf_runtime_from_paths(
+    state: &mut CabCvfState,
+    cvf_path: PathBuf,
+    cab_shape: Option<&Path>,
+) {
+    if !cvf_path.is_file() {
         viewer_log!(
             "openrailsrs-viewer3d: cab CVF missing {}",
-            assets.cvf_path.display()
+            cvf_path.display()
         );
         return;
     }
-    if state.cvf_path.as_deref() == Some(assets.cvf_path.as_path()) && state.runtime.is_some() {
+    if state.cvf_path.as_deref() == Some(cvf_path.as_path())
+        && state.shape_path.as_deref() == cab_shape
+        && state.runtime.is_some()
+    {
         return;
     }
-    let Ok(openrailsrs_formats::MstsFile::CabView(cvf)) = parse_msts_file(&assets.cvf_path) else {
+    let Ok(openrailsrs_formats::MstsFile::CabView(cvf)) = parse_msts_file(&cvf_path) else {
         viewer_log!(
             "openrailsrs-viewer3d: failed to parse cab CVF {}",
-            assets.cvf_path.display()
+            cvf_path.display()
         );
         return;
     };
-    let Ok(shape) = ShapeFile::from_path(cab_shape) else {
-        viewer_log!(
-            "openrailsrs-viewer3d: failed to parse cab shape for CVF {}",
-            cab_shape.display()
-        );
-        return;
+    let shape = if let Some(path) = cab_shape {
+        let Ok(shape) = ShapeFile::from_path(path) else {
+            viewer_log!(
+                "openrailsrs-viewer3d: failed to parse cab shape for CVF {}",
+                path.display()
+            );
+            return;
+        };
+        shape
+    } else {
+        ShapeFile::default()
     };
     let runtime = build_cab_cvf_runtime(cvf, shape);
     let lever_count = runtime
@@ -410,12 +441,13 @@ pub fn load_cab_cvf_runtime(
         .count();
     viewer_log!(
         "openrailsrs-viewer3d: cab CVF {} — {} controls, {} matrix bindings ({} levers)",
-        assets.cvf_path.display(),
+        cvf_path.display(),
         runtime.cvf.controls.len(),
         runtime.matrix_drivers.len(),
         lever_count,
     );
-    state.cvf_path = Some(assets.cvf_path);
+    state.cvf_path = Some(cvf_path);
+    state.shape_path = cab_shape.map(Path::to_path_buf);
     state.runtime = Some(runtime);
     state.lever_keys.clear();
 }
@@ -806,6 +838,35 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce;
     use openrailsrs_formats::ControlState;
     use std::collections::HashSet;
+
+    #[test]
+    fn classic_cab_runtime_does_not_require_a_shape() {
+        let root = std::env::temp_dir().join(format!("classic_cvf_{}", std::process::id()));
+        let dir = root.join("CABVIEW");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("panel.cvf");
+        std::fs::write(
+            &path,
+            "Tr_CabViewFile ( CabViewType ( 1 ) CabViewFile ( panel.ace ) CabViewControls ( 0 ) )",
+        )
+        .unwrap();
+        let cab = openrailsrs_formats::EngineCabView {
+            cab_view_file: Some("panel.cvf".into()),
+            ..Default::default()
+        };
+        let mut state = CabCvfState::default();
+        load_cab_2d_cvf_runtime(&mut state, &root, &cab);
+        assert_eq!(state.cvf_path, Some(path));
+        assert!(state.shape_path.is_none());
+        let runtime = state
+            .runtime
+            .as_ref()
+            .expect("classic CVF loaded without .s");
+        assert_eq!(runtime.cvf.views.len(), 1);
+        assert!(runtime.shape.matrices.is_empty());
+        assert!(runtime.matrix_drivers.is_empty());
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn control_value_maps_throttle_and_brake() {

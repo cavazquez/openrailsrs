@@ -4,7 +4,6 @@ use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use openrailsrs_bevy_scenery::{
     SkyDome, distance_fog, sky_clear_color as shared_sky_clear_color, sky_palette,
-    spawn_sky_dome as shared_spawn_sky_dome,
 };
 
 use crate::player_launch::{ActivePlayerContent, PlayerWeather};
@@ -35,7 +34,7 @@ impl FogState {
 pub fn spawn_sky_dome(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<RailwaySkyMaterial>>,
     scene: Res<TrackScene>,
     mode: Res<crate::launch::ViewerSceneryMode>,
     _focus: Res<RouteFocus>,
@@ -43,7 +42,17 @@ pub fn spawn_sky_dome(
     // Tile-lab puede tener grafo vacío (bbox 0 → radio mínimo 500 m), pero la
     // cámara orbita a ~2.6 km: el domo debe envolverla siempre.
     let radius = sky_dome_radius(&scene, &mode);
-    shared_spawn_sky_dome(&mut commands, &mut meshes, &mut materials, radius, false);
+    commands.spawn((
+        SkyDome,
+        Mesh3d(meshes.add(Sphere::new(radius))),
+        MeshMaterial3d(materials.add(RailwaySkyMaterial {
+            params: sky_parameters(1.0, PlayerWeather::Clear, Vec3::Y, 0.0),
+        })),
+        Transform::IDENTITY,
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+        Name::new("railway-sky"),
+    ));
 }
 
 pub fn sky_dome_radius(scene: &TrackScene, _mode: &crate::launch::ViewerSceneryMode) -> f32 {
@@ -97,48 +106,118 @@ pub fn sync_camera_fog(fog: &mut DistanceFog, enabled: bool) {
     };
 }
 
-/// Keep the sky, window background and camera fog on the same route clock.
-/// Only palette/weather changes invalidate materials, even as the sun moves.
+#[derive(Clone, Copy, Debug, bevy::render::render_resource::ShaderType)]
+pub struct SkyParameters {
+    pub horizon: Vec4,
+    pub zenith: Vec4,
+    pub sun: Vec4,
+    pub clouds: Vec4,
+}
+#[derive(Asset, TypePath, bevy::render::render_resource::AsBindGroup, Debug, Clone)]
+pub struct RailwaySkyMaterial {
+    #[uniform(0)]
+    pub params: SkyParameters,
+}
+impl bevy::pbr::Material for RailwaySkyMaterial {
+    fn fragment_shader() -> bevy::shader::ShaderRef {
+        "shaders/railway_sky.wgsl".into()
+    }
+    fn specialize(
+        _pipeline: &bevy::pbr::MaterialPipeline,
+        _descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
+        _layout: &bevy::mesh::MeshVertexBufferLayoutRef,
+        _key: bevy::pbr::MaterialPipelineKey<Self>,
+    ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        _descriptor.primitive.cull_mode = None;
+        Ok(())
+    }
+}
+fn smooth(a: f32, b: f32, x: f32) -> f32 {
+    let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+pub fn sky_parameters(
+    sun_y: f32,
+    weather: PlayerWeather,
+    sun: Vec3,
+    seconds: f64,
+) -> SkyParameters {
+    let day = smooth(-0.16, 0.12, sun_y);
+    let (dh, dz) = sky_palette(false);
+    let (nh, nz) = sky_palette(true);
+    let linear = |c: Color| Vec4::from_array(LinearRgba::from(c).to_f32_array());
+    let twilight = (1.0 - smooth(0.0, 0.14, sun_y.abs())) * smooth(-0.16, -0.04, sun_y);
+    let mut horizon = linear(nh).lerp(linear(dh), day);
+    horizon = horizon.lerp(linear(Color::srgb(0.72, 0.39, 0.24)), twilight * 0.42);
+    let mut zenith = linear(nz).lerp(linear(dz), day);
+    let (coverage, overcast) = match weather {
+        PlayerWeather::Clear => (0.22 * day, 0.0),
+        PlayerWeather::Rain => (0.88, 0.7),
+        PlayerWeather::Fog => (0.96, 0.85),
+    };
+    let grey =
+        linear(Color::srgb(0.045, 0.055, 0.075)).lerp(linear(Color::srgb(0.48, 0.54, 0.59)), day);
+    horizon = horizon.lerp(grey, overcast);
+    zenith = zenith.lerp(grey * 0.8, overcast);
+    SkyParameters {
+        horizon,
+        zenith,
+        sun: sun.extend(day),
+        clouds: Vec4::new(
+            coverage,
+            (seconds % 86400.0) as f32 * 0.000025,
+            twilight,
+            overcast,
+        ),
+    }
+}
+
+/// Continuous solar-height palettes; the same horizon colour drives distance
+/// fog so sunrise does not produce an abrupt blue/black seam.
 #[allow(clippy::too_many_arguments)]
 pub fn sync_route_atmosphere(
     sun: Option<Res<RouteSunState>>,
+    live: Option<Res<crate::live::LiveDrive>>,
     content: Res<ActivePlayerContent>,
     fog_state: Res<FogState>,
     mut clear: ResMut<ClearColor>,
-    domes: Query<Ref<MeshMaterial3d<StandardMaterial>>, With<SkyDome>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
+    mut materials: ResMut<Assets<RailwaySkyMaterial>>,
     mut cameras: Query<&mut DistanceFog, With<Camera3d>>,
-    mut previous: Local<Option<(bool, PlayerWeather, bool)>>,
 ) {
-    let night = sun.is_some_and(|sun| sun.direction.y < 0.0);
-    let signature = (night, content.weather, fog_state.enabled);
-    if *previous == Some(signature)
-        && !domes.iter().any(|dome| dome.is_added())
-        && !cameras.iter_mut().any(|fog| fog.is_added())
-    {
-        return;
-    }
-    let (horizon, zenith) = sky_palette(night);
+    let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
+    let clock = live.as_ref().map_or(0.0, |l| l.clock_time_s());
+    let params = sky_parameters(direction.y, content.weather, direction, clock);
+    let horizon = Color::linear_rgba(params.horizon.x, params.horizon.y, params.horizon.z, 1.0);
     clear.0 = horizon;
     for dome in &domes {
         if let Some(mut material) = materials.get_mut(&dome.0) {
-            material.base_color = horizon;
-            material.emissive = LinearRgba::from(zenith) * if night { 0.35 } else { 0.85 };
+            material.params = params;
         }
     }
     let visibility = match content.weather {
         PlayerWeather::Clear => CLEAR_WEATHER_VISIBILITY_M,
-        PlayerWeather::Rain => 7_000.0,
+        PlayerWeather::Rain => 7000.0,
         PlayerWeather::Fog => 500.0,
     };
     for mut fog in &mut cameras {
-        *fog = if fog_state.enabled {
-            viewer_distance_fog(visibility, night)
-        } else {
-            disabled_distance_fog()
-        };
+        if !fog_state.enabled {
+            *fog = disabled_distance_fog();
+            continue;
+        }
+        let day = params.sun.w;
+        let mut f = viewer_distance_fog(visibility, false);
+        // One atmospheric model throughout twilight; reduce forward sun glare
+        // continuously rather than changing the shader's model at y=0.
+        f.color = horizon.with_alpha(0.94);
+        f.directional_light_color = Color::srgba(1.0, 0.95, 0.86, 0.28 * day);
+        f.falloff = FogFalloff::from_visibility_colors(
+            visibility * (0.55 + 0.45 * day),
+            Color::srgba(0.62, 0.70, 0.80, 0.88),
+            horizon.with_alpha(0.96),
+        );
+        *fog = f;
     }
-    *previous = Some(signature);
 }
 
 /// Toggle fog with `F` — zeros falloff instead of removing [`DistanceFog`].
@@ -182,6 +261,18 @@ mod tests {
     use openrailsrs_track::TrackGraph;
 
     use crate::track::TrackScene;
+
+    #[test]
+    fn sunrise_is_continuous_and_overcast_changes_the_palette() {
+        let before = sky_parameters(-0.00001, PlayerWeather::Clear, Vec3::X, 0.0);
+        let after = sky_parameters(0.00001, PlayerWeather::Clear, Vec3::X, 0.0);
+        assert!(before.horizon.distance(after.horizon) < 0.0002);
+        assert!(before.zenith.distance(after.zenith) < 0.0002);
+        let clear = sky_parameters(0.7, PlayerWeather::Clear, Vec3::Y, 0.0);
+        let rain = sky_parameters(0.7, PlayerWeather::Rain, Vec3::Y, 0.0);
+        assert!(rain.clouds.x > clear.clouds.x);
+        assert!(rain.zenith.length() < clear.zenith.length());
+    }
 
     #[test]
     fn clear_color_is_light_blue() {

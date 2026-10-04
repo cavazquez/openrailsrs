@@ -16,7 +16,7 @@ use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
 use crate::shapes::{
     RouteAssets, load_cab_interior_render_asset_from_path, msts_shape_to_train_rotation,
-    resolve_shape_path_in_dirs, texture_search_dirs_for_shape,
+    texture_search_dirs_for_shape,
 };
 use crate::viewer_log;
 use openrailsrs_formats::ShapeFile;
@@ -102,8 +102,11 @@ pub fn lead_trainset_root(consist: &TrainConsistScene, route_dir: &Path) -> Opti
     }
     let shape_dirs: Vec<&Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
     let vehicles = consist.vehicles_for("primary");
-    let shape_name = vehicles.first()?.shape_file.as_deref()?;
-    let shape_path = resolve_shape_path_in_dirs(&shape_dirs, shape_name)?;
+    let shape_path = crate::rolling_stock::resolve_consist_vehicle_shape_path(
+        &shape_dirs,
+        vehicles.first()?,
+        route_dir,
+    )?;
     let trainset = if shape_path
         .parent()
         .and_then(|p| p.file_name())
@@ -476,7 +479,34 @@ pub fn sync_cab_interior(
     if driver && !existing.is_empty() {
         return;
     }
-    if cab2d && cvf_state.runtime.is_some() {
+    if cab2d && cvf_state.runtime.is_some() && cvf_state.shape_path.is_none() {
+        for entity in &existing {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+
+    // Classic sprite cabs are valid without a corresponding CABVIEW3D mesh.
+    if cab2d {
+        if let Some(trainset) = lead_trainset_root(&consist, &assets.route_dir)
+            && let Some(shape_name) = consist
+                .vehicles_for("primary")
+                .first()
+                .and_then(|v| v.shape_file.as_deref())
+        {
+            let stem = Path::new(shape_name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("engine");
+            let eng_path = trainset.join(format!("{stem}.eng"));
+            let eng_path =
+                openrailsrs_formats::resolve_path_case_insensitive(&eng_path).unwrap_or(eng_path);
+            if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
+                openrailsrs_formats::parse_msts_file(&eng_path)
+            {
+                cab_cvf::load_cab_2d_cvf_runtime(&mut cvf_state, &trainset, &eng.cab);
+            }
+        }
         for entity in &existing {
             commands.entity(entity).despawn();
         }
@@ -519,14 +549,6 @@ pub fn sync_cab_interior(
                 cab_cvf::load_cab_cvf_runtime(&mut cvf_state, &trainset, &eng.cab, &cab_shape);
             }
         }
-    }
-
-    // 2D Cab: CVF runtime only — no CABVIEW3D mesh (#152).
-    if cab2d {
-        for entity in &existing {
-            commands.entity(entity).despawn();
-        }
-        return;
     }
 
     let _head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
@@ -806,6 +828,7 @@ mod tests {
             vec![ConsistVehicleVisual {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
+                asset_dir: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,
@@ -827,6 +850,7 @@ mod tests {
             vec![ConsistVehicleVisual {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
+                asset_dir: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,
@@ -1051,6 +1075,7 @@ mod tests {
             vec![ConsistVehicleVisual {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
+                asset_dir: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,

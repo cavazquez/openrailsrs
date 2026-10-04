@@ -257,7 +257,7 @@ fn material_with_auto_z_bias(
 /// evicted on tile unload so GPU `Assets` can drop (#51).
 #[derive(Resource, Default)]
 pub struct WorldShapeLodCache {
-    pub shapes: HashMap<PathBuf, ShapeFile>,
+    pub shapes: HashMap<PathBuf, std::sync::Arc<ShapeFile>>,
     pub assets_by_lod: HashMap<PathBuf, Vec<ShapeRenderAsset>>,
     /// Primary spawn assets (Bevy handles) keyed by canonical `.s` path.
     pub shape_assets: openrailsrs_bevy_scenery::SessionShapeCache<PathBuf, ShapeRenderAsset>,
@@ -320,7 +320,66 @@ pub fn shape_mesh_radius_m() -> f32 {
     visible_radius_m() + WORLD_PRELOAD_MARGIN_M
 }
 
-pub const WORLD_PRELOAD_MARGIN_M: f32 = 64.0;
+pub const WORLD_PRELOAD_MARGIN_M: f32 = 128.0;
+/// Limit native tile grouping to small spatial cells. Loading a whole 2 km tile
+/// for one nearby house wastes memory; loading origins alone cuts entire rows.
+pub const STATIC_CLUSTER_SIDE_M: f32 = 256.0;
+
+fn static_cluster_key(obj: &WorldObject) -> Option<(i32, i32, String, i32, i32)> {
+    (obj.kind == "Static").then(|| {
+        (
+            obj.tile_x,
+            obj.tile_z,
+            obj.shape_file
+                .clone()
+                .unwrap_or_default()
+                .to_ascii_lowercase(),
+            (obj.position.x / STATIC_CLUSTER_SIDE_M).floor() as i32,
+            (obj.position.z / STATIC_CLUSTER_SIDE_M).floor() as i32,
+        )
+    })
+}
+
+fn pending_cluster_items(
+    world: &WorldScene,
+    center: Vec3,
+    radius: f32,
+    active: &HashSet<WorldObjectKey>,
+) -> Vec<usize> {
+    let mut groups: HashMap<_, Vec<usize>> = HashMap::new();
+    let mut selected = Vec::new();
+    for (idx, obj) in world.items.iter().enumerate() {
+        if !is_shape_scenery(obj.kind) || active.contains(&obj.key()) {
+            continue;
+        }
+        if let Some(key) = static_cluster_key(obj) {
+            groups.entry(key).or_default().push(idx);
+        } else if horizontal_distance_xz(center, obj.position) <= radius {
+            selected.push(idx);
+        }
+    }
+    for indices in groups.values() {
+        // Conservative sphere includes the native view sphere (default 100 m).
+        // Relative differences keep centimetre precision in MSTS absolute space.
+        let anchor = world.items[indices[0]].position;
+        let offset = indices
+            .iter()
+            .map(|i| world.items[*i].position - anchor)
+            .sum::<Vec3>()
+            / indices.len() as f32;
+        let group_center = anchor + offset;
+        let extent = indices
+            .iter()
+            .map(|i| horizontal_distance_xz(group_center, world.items[*i].position))
+            .fold(0.0_f32, f32::max)
+            + 100.0;
+        if horizontal_distance_xz(center, group_center) <= radius + extent {
+            selected.extend(indices);
+        }
+    }
+    selected.sort_unstable();
+    selected
+}
 
 /// Legacy bake-merge (disabled). GPU instancing (#58) replaces this path.
 const ENABLE_SHAPE_INSTANCE_MERGE: bool = false;
@@ -359,10 +418,10 @@ pub struct TrackObjFailure {
 const CLASSIFY_ITEMS_PER_FRAME: usize = 12_000;
 
 /// Unique `.s` files parsed per frame during progressive scenery spawn.
-const SHAPE_PARSE_PER_FRAME: usize = 16;
+const SHAPE_PARSE_PER_FRAME: usize = 4;
 
 /// ACE texture files decoded per frame after shape parse.
-const ACE_TEXTURES_PER_FRAME: usize = 32;
+const ACE_TEXTURES_PER_FRAME: usize = 8;
 
 /// Shape assets converted to Bevy handles per frame.
 const SHAPE_ASSETS_PER_FRAME: usize = 64;
@@ -1499,6 +1558,7 @@ type ParsedWorldShape = (
     PathBuf,
     Option<ShapeFile>,
     Option<crate::shapes::LoadedShape>,
+    Vec<Option<crate::shapes::LoadedShape>>,
 );
 type ShapeBatchReceiver = std::sync::Mutex<std::sync::mpsc::Receiver<Vec<ParsedWorldShape>>>;
 type TextureBatchReceiver = std::sync::Mutex<
@@ -1529,6 +1589,7 @@ pub struct WorldSpawnProgress {
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
     parsed_shapes: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)>,
+    prepared_lods: HashMap<PathBuf, Vec<Option<crate::shapes::LoadedShape>>>,
     shape_task: Option<ShapeBatchReceiver>,
     texture_task: Option<TextureBatchReceiver>,
     shape_load_paths: Vec<PathBuf>,
@@ -1537,7 +1598,7 @@ pub struct WorldSpawnProgress {
     texture_prefetch_index: usize,
     ace_cache: std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
-    parsed_shape_files: std::collections::HashMap<PathBuf, ShapeFile>,
+    parsed_shape_files: std::collections::HashMap<PathBuf, std::sync::Arc<ShapeFile>>,
     shape_lod_assets: std::collections::HashMap<PathBuf, Vec<ShapeRenderAsset>>,
     texture_image_cache: std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     asset_build_index: usize,
@@ -1632,6 +1693,7 @@ impl WorldSpawnProgress {
             shape_fallback_material: None,
             parsed_shapes: Vec::new(),
             shape_task: None,
+            prepared_lods: HashMap::new(),
             texture_task: None,
             shape_load_paths: Vec::new(),
             shape_parse_index: 0,
@@ -1867,7 +1929,9 @@ fn classify_one_object(
     {
         return;
     }
-    if horizontal_distance_xz(cull_center, obj.position) > shape_mesh_radius_m() {
+    if obj.kind != "Static"
+        && horizontal_distance_xz(cull_center, obj.position) > shape_mesh_radius_m()
+    {
         progress.culled_count += 1;
         return;
     }
@@ -1970,7 +2034,7 @@ fn classify_one_object(
             return;
         }
         // Fall through to placeholder cuboid when opt-in.
-    } else if shape_eligible(obj) && dist <= shape_mesh_radius_m() {
+    } else if shape_eligible(obj) && (obj.kind == "Static" || dist <= shape_mesh_radius_m()) {
         let cache_key = obj.shape_file.clone().unwrap_or_default();
         let shape_path = progress
             .shape_path_cache
@@ -2370,7 +2434,10 @@ fn append_shape_spawn_entries(
     // Spawn the finest band so every stable part identity exists. The runtime LOD
     // system immediately selects the correct band for each placement independently.
     let initial_lod_idx = 0;
-    let shape_file = progress.parsed_shape_files.get(shape_path);
+    let shape_file = progress
+        .parsed_shape_files
+        .get(shape_path)
+        .map(std::sync::Arc::as_ref);
     append_shape_spawn_entries_for_transforms(
         shape_path,
         asset,
@@ -2479,6 +2546,41 @@ fn build_world_shape_asset(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn primary_is_band_zero(shape: &ShapeFile) -> bool {
+    shape.lod_controls.iter().all(|c| {
+        c.distance_levels.first().is_none_or(|first| {
+            c.distance_levels
+                .iter()
+                .all(|level| first.selection_m <= level.selection_m)
+        })
+    })
+}
+/// Hierarchy transforms and vertex generation run on the bounded shape worker.
+fn prepare_lod_meshes(path: &Path, shape: &ShapeFile) -> Vec<Option<crate::shapes::LoadedShape>> {
+    let count = openrailsrs_bevy_scenery::shapes::lod_band_count(shape);
+    if count <= 1 {
+        return vec![];
+    }
+    (0..count)
+        .map(|band| {
+            if band == 0 && primary_is_band_zero(shape) {
+                return None;
+            }
+            let parts = openrailsrs_bevy_scenery::shapes::build_mesh_parts_for_lod_band(
+                shape,
+                band,
+                world_mesh_options_for_shape(path),
+            );
+            let mesh = parts.first()?.mesh.clone();
+            Some(openrailsrs_bevy_scenery::shapes::LoadedShape {
+                mesh,
+                texture_file: primary_texture_filename(shape),
+                parts,
+            })
+        })
+        .collect()
+}
+
 fn build_shape_lod_assets(
     shape_path: &Path,
     shape: &ShapeFile,
@@ -2491,43 +2593,24 @@ fn build_shape_lod_assets(
     ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     fallback_color: Color,
     _fallback_material: &Handle<StandardMaterial>,
+    prepared: Vec<Option<crate::shapes::LoadedShape>>,
 ) -> Vec<ShapeRenderAsset> {
-    let band_count = openrailsrs_bevy_scenery::shapes::lod_band_count(shape);
-    if band_count <= 1 {
-        return Vec::new();
-    }
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let pbr = load_shape_pbr_sidecar(shape_path);
-    let primary_is_band_zero = shape.lod_controls.iter().all(|control| {
-        control.distance_levels.first().is_none_or(|first| {
-            control
-                .distance_levels
-                .iter()
-                .all(|level| first.selection_m <= level.selection_m)
-        })
-    });
-    (0..band_count)
-        .filter_map(|band| {
-            // The primary WORLD asset is already the finest band. Rebuilding
-            // it kept duplicate vertex buffers and materials for every model.
-            if band == 0 && primary_is_band_zero {
-                return Some(base_asset.clone());
+    prepared
+        .into_iter()
+        .enumerate()
+        .map(|(band, loaded)| {
+            if band == 0 && primary_is_band_zero(shape) {
+                return base_asset.clone();
             }
-            let parts = openrailsrs_bevy_scenery::shapes::build_mesh_parts_for_lod_band(
-                shape,
-                band,
-                world_mesh_options_for_shape(shape_path),
-            );
-            if parts.is_empty() {
-                return None;
-            }
-            // Bounds/combined mesh: first part is enough for WORLD LOD bookkeeping.
-            let mesh = parts.first()?.mesh.clone();
-            let loaded = openrailsrs_bevy_scenery::shapes::LoadedShape {
-                mesh,
-                texture_file: primary_texture_filename(shape),
-                parts,
+            let Some(loaded) = loaded else {
+                // Keep empty bands at their authored index; filter_map previously
+                // shifted every later LOD and could leave geometry visible forever.
+                let mut empty = base_asset.clone();
+                empty.parts.clear();
+                return empty;
             };
             let mut asset = shape_render_asset_from_loaded_with_ace_cache(
                 loaded,
@@ -2546,7 +2629,7 @@ fn build_shape_lod_assets(
                 base_asset.texture_flags,
             );
             apply_shape_descriptor_to_asset(shape_path, &mut asset);
-            Some(asset)
+            asset
         })
         .collect()
 }
@@ -2582,8 +2665,11 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
             let parsed = batch
                 .par_iter()
                 .map(|path| match load_shape_file_and_loaded(path, None) {
-                    Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
-                    None => (path.clone(), None, None),
+                    Some((shape, loaded)) => {
+                        let lods = prepare_lod_meshes(path, &shape);
+                        (path.clone(), Some(shape), Some(loaded), lods)
+                    }
+                    None => (path.clone(), None, None, vec![]),
                 })
                 .collect();
             let _ = sender.send(parsed);
@@ -2601,15 +2687,16 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
         Ok(parsed) => parsed,
         Err(std::sync::mpsc::TryRecvError::Empty) => return true,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-            batch.into_iter().map(|p| (p, None, None)).collect()
+            batch.into_iter().map(|p| (p, None, None, vec![])).collect()
         }
     };
     progress.shape_task = None;
-    for (shape_path, shape_file, loaded) in parsed {
+    for (shape_path, shape_file, loaded, lods) in parsed {
+        progress.prepared_lods.insert(shape_path.clone(), lods);
         if let Some(shape) = shape_file {
             progress
                 .parsed_shape_files
-                .insert(shape_path.clone(), shape);
+                .insert(shape_path.clone(), std::sync::Arc::new(shape));
         }
         if let Some(ref loaded) = loaded {
             progress
@@ -2624,6 +2711,17 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
                     &tex_refs,
                     texture_flags_for_shape(&shape_path),
                 ));
+            if let Some(lods) = progress.prepared_lods.get(&shape_path) {
+                for lod in lods.iter().flatten() {
+                    progress
+                        .texture_paths
+                        .extend(collect_loaded_shape_texture_paths_with_flags(
+                            lod,
+                            &tex_refs,
+                            texture_flags_for_shape(&shape_path),
+                        ));
+                }
+            }
             let pbr = load_shape_pbr_sidecar(&shape_path);
             progress
                 .texture_paths
@@ -2969,17 +3067,7 @@ impl WorldSceneryStreamState {
     }
 
     fn pending_shapes(&self, world: &WorldScene, center: Vec3, radius: f32) -> Vec<usize> {
-        world
-            .items
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, obj)| {
-                (is_shape_scenery(obj.kind)
-                    && !self.shapes.contains(&obj.key())
-                    && horizontal_distance_xz(center, obj.position) <= radius)
-                    .then_some(idx)
-            })
-            .collect()
+        pending_cluster_items(world, center, radius, &self.shapes)
     }
 
     fn activate_auxiliary(
@@ -3632,6 +3720,14 @@ pub fn progressive_world_spawn_system(
 
     match progress.phase {
         WorldSpawnPhase::Classifying => {
+            if progress.item_indices.is_none() {
+                progress.item_indices = Some(pending_cluster_items(
+                    &world,
+                    cull_center,
+                    shape_mesh_radius_m(),
+                    &activation.shapes,
+                ));
+            }
             let item_count = progress
                 .item_indices
                 .as_ref()
@@ -3650,10 +3746,7 @@ pub fn progressive_world_spawn_system(
                 let Some(obj) = world.items.get(idx) else {
                     continue;
                 };
-                if !is_shape_scenery(obj.kind)
-                    || horizontal_distance_xz(cull_center, obj.position) > shape_mesh_radius_m()
-                    || !activation.shapes.insert(obj.key())
-                {
+                if !is_shape_scenery(obj.kind) || !activation.shapes.insert(obj.key()) {
                     continue;
                 }
                 classify_one_object(
@@ -3731,6 +3824,10 @@ pub fn progressive_world_spawn_system(
                     &fallback_material,
                 );
                 if let Some(shape) = progress.parsed_shape_files.get(&shape_path).cloned() {
+                    let prepared = progress
+                        .prepared_lods
+                        .remove(&shape_path)
+                        .unwrap_or_default();
                     let lod_assets = build_shape_lod_assets(
                         &shape_path,
                         &shape,
@@ -3743,6 +3840,7 @@ pub fn progressive_world_spawn_system(
                         &ace_cache,
                         fallback_color,
                         &fallback_material,
+                        prepared,
                     );
                     if !lod_assets.is_empty() {
                         progress
@@ -4396,6 +4494,33 @@ mod tests {
     use super::*;
     use crate::shapes::ShapePartAsset;
     use openrailsrs_formats::Vec3 as FVec3;
+
+    #[test]
+    fn static_clusters_preload_whole_nearby_rows_without_loading_far_tiles() {
+        let scene = load_world_from_route_dir(
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test"),
+        );
+        let template = scene.items.iter().find(|o| o.kind == "Static").unwrap();
+        let mut world = WorldScene::default();
+        for (i, x) in [180.0, 240.0, 900.0, 180.0].into_iter().enumerate() {
+            let mut item = template.clone();
+            item.position = Vec3::new(x, 0.0, 0.0);
+            item.source_index = i;
+            if i == 3 {
+                item.kind = "Signal";
+            }
+            world.items.push(item);
+        }
+        assert_eq!(
+            pending_cluster_items(&world, Vec3::ZERO, 100.0, &HashSet::new()),
+            vec![0, 1]
+        );
+        let active = HashSet::from([world.items[1].key()]);
+        assert_eq!(
+            pending_cluster_items(&world, Vec3::ZERO, 100.0, &active),
+            vec![0]
+        );
+    }
 
     #[test]
     fn qdir_identity_is_identity() {
@@ -5075,10 +5200,10 @@ mod tests {
             .insert((PathBuf::from("drop.ace"), 1), drop_tex.clone());
         session
             .shapes
-            .insert(keep_path.clone(), ShapeFile::default());
+            .insert(keep_path.clone(), ShapeFile::default().into());
         session
             .shapes
-            .insert(drop_path.clone(), ShapeFile::default());
+            .insert(drop_path.clone(), ShapeFile::default().into());
 
         let live = HashSet::from([keep_path.clone()]);
         let (shapes, textures) = evict_unreferenced_world_shapes(
@@ -5116,7 +5241,9 @@ mod tests {
         session
             .shape_assets
             .insert(hit.clone(), dummy_shape_asset());
-        session.shapes.insert(hit.clone(), ShapeFile::default());
+        session
+            .shapes
+            .insert(hit.clone(), ShapeFile::default().into());
 
         let mut progress = WorldSpawnProgress::new(1.0);
         progress.shape_load_paths = vec![hit.clone(), miss.clone()];
@@ -5143,7 +5270,9 @@ mod tests {
         session
             .shape_assets
             .insert(prior.clone(), dummy_shape_asset());
-        session.shapes.insert(prior.clone(), ShapeFile::default());
+        session
+            .shapes
+            .insert(prior.clone(), ShapeFile::default().into());
 
         let mut progress = WorldSpawnProgress::new(1.0);
         progress.cache_hits = 1;
@@ -5152,7 +5281,7 @@ mod tests {
             .insert(fresh.clone(), dummy_shape_asset());
         progress
             .parsed_shape_files
-            .insert(fresh.clone(), ShapeFile::default());
+            .insert(fresh.clone(), ShapeFile::default().into());
 
         commit_spawn_to_session(&mut session, &mut progress);
         assert!(session.shape_assets.contains_key(&prior));
@@ -5187,7 +5316,7 @@ mod tests {
         assert_eq!(shape_file_parse_count(), 1);
 
         let mut session = WorldShapeLodCache::default();
-        session.shapes.insert(path.clone(), shape);
+        session.shapes.insert(path.clone(), shape.into());
         session
             .shape_assets
             .insert(path.clone(), dummy_shape_asset());

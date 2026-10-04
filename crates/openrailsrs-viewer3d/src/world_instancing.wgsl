@@ -65,8 +65,21 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     return out;
 }
 
+// A fixed Bayer matrix has complementary coverage for old/new meshes and
+// does not shimmer across frames. Apply the same policy in shadow depth.
+fn discard_lod(position: vec2<f32>) -> bool {
+    let fade=appearance.params.z;
+    if fade==0.0 {return false;}
+    let x=u32(position.x)%4u;
+    let y=u32(position.y)%4u;
+    let bayer=array<f32,16>(0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
+    let threshold=(bayer[y*4u+x]+0.5)/16.0;
+    return select(threshold >= fade,threshold < -fade,fade<0.0);
+}
+
 @fragment
 fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @location(0) vec4<f32> {
+    if discard_lod(in.clip_position.xy) {discard;}
     var color = appearance.base_color * textureSample(base_color_texture, base_color_sampler, in.uv);
     let cutoff = appearance.params.x;
     if cutoff > 0.0 && color.a < cutoff {
@@ -144,6 +157,7 @@ fn vertex_shadow(vertex: Vertex) -> ShadowVertexOutput {
 
 @fragment
 fn fragment_shadow(in: ShadowVertexOutput) {
+    if discard_lod(in.clip_position.xy) {discard;}
     let cutoff = appearance.params.x;
     if cutoff > 0.0 {
         let color = appearance.base_color * textureSample(base_color_texture, base_color_sampler, in.uv);

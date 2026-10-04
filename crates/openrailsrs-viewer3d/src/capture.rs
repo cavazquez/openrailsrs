@@ -189,6 +189,7 @@ pub struct CaptureScene<'w, 's> {
     sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
     performance: Res<'w, crate::performance::JourneyPerformance>,
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
+    audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
     camera: Query<
         'w,
         's,
@@ -263,6 +264,8 @@ impl CaptureScene<'_, '_> {
             "train_animated_parts": self.train_parts.iter().count(),
             "train_shared_shapes": shared_shapes.len(),
             "performance": self.performance.report(),
+            "renderer": self.pipelines.as_ref().and_then(|p|p.device()),
+            "native_audio": self.audio.as_ref().and_then(|a| a.engine.as_ref().map(|engine|engine.report())),
             "shader_pipelines": self.pipelines.as_ref().map(|p| {
                 let (pending, failed) = p.counts();
                 serde_json::json!({"pending":pending,"failed":failed})

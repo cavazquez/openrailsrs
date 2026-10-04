@@ -28,6 +28,7 @@ fn spawn_generic_car(
     train: &mut ChildSpawnerCommands,
     vehicle: &ConsistVehicleVisual,
     index: usize,
+    car_index: usize,
     mesh: &Handle<Mesh>,
     material: &Handle<StandardMaterial>,
 ) {
@@ -35,6 +36,7 @@ fn spawn_generic_car(
         .spawn((
             Transform::from_xyz(vehicle.offset_m, 0.0, 0.0),
             Visibility::Inherited,
+            crate::rolling_stock::ConsistCarIndex(car_index),
             crate::rolling_stock_anim::TrainCarTrackOffset {
                 offset_m: vehicle.offset_m,
                 track_index: index,
@@ -107,13 +109,16 @@ pub fn spawn_traffic(
             ))
             .with_children(|train| {
                 for (car_index, vehicle) in consist.vehicles_for(&service.id).iter().enumerate() {
-                    let Some(path) = vehicle.shape_file.as_deref().and_then(|name| {
-                        crate::shapes::resolve_vehicle_shape_path(&dirs, name, &assets.route_dir)
-                    }) else {
+                    let Some(path) = crate::rolling_stock::resolve_consist_vehicle_shape_path(
+                        &dirs,
+                        vehicle,
+                        &assets.route_dir,
+                    ) else {
                         spawn_generic_car(
                             train,
                             vehicle,
                             index + 1,
+                            car_index,
                             &generic_mesh,
                             &generic_material,
                         );
@@ -145,6 +150,7 @@ pub fn spawn_traffic(
                             train,
                             vehicle,
                             index + 1,
+                            car_index,
                             &generic_mesh,
                             &generic_material,
                         );
@@ -165,6 +171,7 @@ pub fn spawn_traffic(
                         .spawn((
                             transform,
                             Visibility::Inherited,
+                            crate::rolling_stock::ConsistCarIndex(car_index),
                             crate::rolling_stock_anim::TrainCarTrackOffset {
                                 offset_m: vehicle.offset_m,
                                 track_index: index + 1,

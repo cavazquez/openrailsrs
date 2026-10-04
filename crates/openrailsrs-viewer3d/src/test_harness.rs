@@ -119,6 +119,7 @@ pub fn minimal_app() -> App {
     app.init_asset::<Mesh>();
     app.init_asset::<Image>();
     app.init_asset::<StandardMaterial>();
+    app.init_asset::<crate::sky::RailwaySkyMaterial>();
     app.init_asset::<TerrainMaterial>();
     app.init_resource::<ButtonInput<KeyCode>>();
     app.init_resource::<ButtonInput<MouseButton>>();

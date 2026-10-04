@@ -4308,7 +4308,12 @@ dependencies = [
 name = "openrailsrs-audio"
 version = "0.1.0"
 dependencies = [
+ "openrailsrs-formats",
+ "openrailsrs-train",
  "rodio",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

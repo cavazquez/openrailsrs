@@ -10,8 +10,19 @@ use std::sync::{
 #[derive(Resource, Clone, Default, bevy::render::extract_resource::ExtractResource)]
 pub struct ScenePipelineStatus {
     counts: Arc<AtomicU64>,
+    device: Arc<std::sync::Mutex<Option<RendererDevice>>>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct RendererDevice {
+    pub name: String,
+    pub backend: String,
+    pub device_type: String,
+    pub hardware: bool,
 }
 impl ScenePipelineStatus {
+    pub fn device(&self) -> Option<RendererDevice> {
+        self.device.lock().unwrap().clone()
+    }
     pub fn counts(&self) -> (usize, usize) {
         let counts = self.counts.load(Ordering::Relaxed);
         ((counts >> 32) as usize, (counts as u32) as usize)
@@ -24,8 +35,20 @@ impl ScenePipelineStatus {
 pub fn update_pipeline_status(
     cache: Res<bevy::render::render_resource::PipelineCache>,
     status: Res<ScenePipelineStatus>,
+    adapter: Res<bevy::render::renderer::RenderAdapterInfo>,
 ) {
     use bevy::render::render_resource::CachedPipelineState;
+    if status.device.lock().unwrap().is_none() {
+        *status.device.lock().unwrap() = Some(RendererDevice {
+            name: adapter.name.clone(),
+            backend: format!("{:?}", adapter.backend),
+            device_type: format!("{:?}", adapter.device_type),
+            hardware: matches!(
+                format!("{:?}", adapter.device_type).as_str(),
+                "DiscreteGpu" | "IntegratedGpu"
+            ),
+        });
+    }
     let (mut pending, mut failed) = (0, 0);
     for pipeline in cache.pipelines() {
         match pipeline.state {

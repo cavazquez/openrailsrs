@@ -2,7 +2,7 @@
 
 Las funciones se usan en una partida real. La referencia de contenido sigue
 siendo Open Rails 1.6.1; la iluminación, el streaming y la interfaz se ejecutan en
-Bevy. El audio continúa desactivado. Esta guía comprueba funcionamiento y efectos
+Bevy. El sonido original SMS/WAV está habilitado y se ajusta en F10. Esta guía comprueba funcionamiento y efectos
 visibles; no certifica la paridad física completa con Open Rails.
 
 ## Preparación
@@ -183,7 +183,7 @@ fijo a cerrar/pausa y la tecla física Pause es un alias del mismo menú.
    mantené el tren detenido.
 4. Pulsá interruptores que el modelo identifica como limpiaparabrisas, puertas,
    bocina o pantógrafo. Debe actuar el subsistema correspondiente. La bocina
-   cambia su estado, pero permanece silenciosa por la configuración actual.
+   cambia su estado y usa el sonido original si el SMS lo declara y el audio está activo.
 5. Un clic sobre el mapa, un menú o el DMI no debe accionar una palanca ni
    arrastrar la cámara. Al cerrar los paneles la cámara no debe saltar por
    movimientos del ratón acumulados mientras estaban abiertos.
@@ -224,7 +224,9 @@ comprobaciones diferentes; aprobar la interfaz no elimina esa diferencia.
    rectangulares sobre la vía.
 3. Mové lentamente la cámara alrededor de una distancia de cambio de detalle.
    El modelo no debe alternar entre dos niveles por pequeños movimientos. Hay
-   histéresis del 8 %; sigue existiendo un cambio discreto de malla, sin fundido.
+   histéresis del 8 %. Los grupos de instancias cambian de malla con una transición
+   de 0,35 s: puede verse un tramado breve, pero no deben desaparecer ni duplicar
+   su sombra. Los objetos sin instancias conservan el cambio discreto con histéresis.
 4. Conducí hasta West Ruislip. Edificios, vía y árboles deben seguir apareciendo;
    no debe quedar sólo terreno vacío al superar el sector inicial.
 5. Las seis referencias originales están en
@@ -258,11 +260,16 @@ comprobaciones diferentes; aprobar la interfaz no elimina esa diferencia.
    Volumétrica 64. Probá faros altos de noche y sol bajo de día. La volumétrica
    concentra densidad cerca de la vía y participa en la iluminación de faros;
    el costo aumenta con los pasos. Guardá ajustes para conservar la elección.
+7. Elegí una hora próxima al amanecer o atardecer. El horizonte debe tomar un
+   tono cálido y el cielo cambiar gradualmente, sin un salto al cruzar la puesta
+   del sol. En Despejado diurno aparecen nubes altas; Lluvia y Niebla usan un
+   cielo más cubierto. En Despejado nocturno deben volver a verse las estrellas.
 
 El cielo estrellado es procedural y repetible, sin reproducir un catálogo
 astronómico de OR. El limpiado del vidrio usa una proyección aproximada de dos
 escobillas; modelos con otra disposición pueden requerir perfiles específicos.
-El audio continúa desactivado.
+El cielo y la niebla comparten el color del horizonte. El volumen local pierde
+densidad con la altura y en sus bordes; no debe dibujar una pared negra rectangular.
 
 ## 11. Fluidez y memoria durante todo el viaje
 
@@ -276,6 +283,18 @@ El audio continúa desactivado.
 3. La RAM debe estabilizarse al descargar sectores anteriores; no debe crecer
    con cada captura o visita. El histograma tiene tamaño fijo. No compares los
    FPS de lavapipe con los de una GPU dedicada.
+
+Para medir el viaje en tu GPU y rechazar automáticamente un renderer por CPU:
+
+```bash
+python3 scripts/check_viewer_streaming.py --route-root "$CHILTERN_ROUTE" \
+  --scenario examples/chiltern_traffic/scenario.toml --checkpoint terminal \
+  --require-hardware --timeout-s 480 --out-dir tmp/hardware-journey
+```
+
+El informe conserva el dispositivo, los percentiles, el pico de RAM, las paradas,
+los sectores activos y el estado de los shaders. Usá el mismo alcance y reloj
+al comparar versiones; la compilación inicial de shaders puede producir tirones.
 
 ## 12. Tráfico ferroviario en vivo
 
@@ -312,3 +331,62 @@ target/debug/openrailsrs audit-consists \
 Este control verifica parámetros, rutas ENG/WAG, modelos, archivos de texturas
 y gráficos de cabina. No garantiza que cualquier locomotora tenga física,
 sonidos o scripts C# equivalentes a Open Rails.
+
+Probá estas seis formaciones originales desde el menú: **Bristol Pullman** y
+**121single** (diésel), **1960CentralWR8Car** y **R Stock 6 Car** (eléctricas),
+**Downton Hall LE** y **KingLE** (vapor). Deben aparecer 8, 1, 8, 6, 2 y 2 vehículos,
+respectivamente. En el Pullman, **1** abre cabina 3D y **Alt+1** alterna 2D/3D.
+Las otras cinco declaran cabina 2D: usá **Alt+1** para comprobar su panel original.
+Las flechas izquierda/derecha cambian entre los puntos de vista CVF disponibles.
+El ojo debe seguir Position/Direction de cada vista, manteniendo el paisaje a
+la altura del puesto; en Hall las palancas deben quedar sobre el panel.
+Revisá el velocímetro al avanzar, las palancas al mover regulador/freno y ruedas,
+bogies y luces desde **2**. Sin una cabina 3D declarada no se genera una réplica
+3D de la cabina 2D. Los controles luminosos y faros dependen de cada ENG/CVF.
+
+El oráculo de recursos y capturas puede repetirse con un solo renderer por vez:
+
+```bash
+cargo build --locked -p openrailsrs-audio --example native_oracle
+python3 scripts/check_rolling_stock.py --route-root "$CHILTERN_ROUTE" \
+  --audio --out-dir tmp/rolling-stock
+```
+
+## 14. Sonido original SMS/WAV
+
+1. Iniciá el Pullman, abrí F10 y activá **Sonido original**, con volumen 40 %.
+   En F8 → Diagnóstico deben aparecer programas SMS, muestras y salida activa.
+   Si no hay dispositivo o falta un archivo, el diagnóstico informa el problema.
+2. Con el tren detenido, escuchá el ralentí. Cerrá puertas con **Q**, poné el
+   inversor adelante y aumentá el regulador: debe cambiar el sonido del motor.
+   Al ganar velocidad debe sumarse el rodaje de los coches según sus curvas SMS.
+3. Mantené **Space** dos segundos y soltá. La bocina debe iniciar una vez,
+   mantenerse y terminar al soltar; no debe reiniciarse en cada cuadro.
+4. Alterná **1**, **Alt+1** y **2**. Cabina y exterior deben usar sus programas
+   originales, sin recargar todas las muestras al cambiar de cámara. Alejá la
+   cámara: cada coche debe atenuarse con su distancia. El otro servicio debe
+   escucharse al aproximarse y alejarse, según sus archivos de sonido.
+5. Aplicá y soltá el freno, y alterná puertas y limpiaparabrisas. Deben sonar
+   los eventos que declare el SMS; no todos los modelos tienen cada efecto.
+6. Pausá: el sonido debe detenerse. Reanudá y restaurá una partida anterior:
+   los bucles deben continuar o reiniciarse de acuerdo con el estado restaurado.
+   F10 permite silenciar y ajustar volumen; guardá ajustes para conservarlos.
+7. Repetí cabina/exterior con los dos eléctricos y las dos locomotoras de vapor.
+   King debe mantener sonidos de marcha fuera de la cabina. Con varios coches
+   sonando y la bocina activa, la mezcla debe limitar sus picos sin recortar
+   bruscamente las muestras. El ensayo WAV comprueba señal y cero saturación.
+
+Para escuchar una demostración del mismo motor de audio sin abrir un dispositivo:
+
+```bash
+target/debug/examples/native_oracle "/ruta/TRAINS/CONSISTS/Bristol Pullman.con" \
+  "$CHILTERN_ROUTE" tmp/pullman.wav exterior
+```
+
+El runtime admite curvas de volumen/frecuencia, bucles WAV con introducción y
+salida, y eventos de conducción. No equivale todavía al motor completo de OR:
+algunas variables, filtros y scripts específicos de contenido siguen pendientes.
+
+Las variables de diésel conservan la escala 0–1; las eléctricas y de vapor
+usan los porcentajes esperados por sus SMS. Para las dos últimas, la demanda
+del regulador aproxima carga/presión; faltan sus variables físicas completas.

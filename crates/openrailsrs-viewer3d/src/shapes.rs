@@ -656,10 +656,16 @@ fn push_unique_path(candidates: &mut Vec<PathBuf>, path: PathBuf) {
 
 /// Open Rails `Content/` trainset folders for a vehicle (e.g. `RF_Blue_Pullman`).
 pub fn or_content_trainset_roots(route_dir: &Path, trainset_name: &str) -> Vec<PathBuf> {
-    let Some(content) = msts_content_root() else {
-        return Vec::new();
-    };
     let mut roots = Vec::new();
+    if let Some(content) = route_dir.parent().and_then(Path::parent) {
+        let candidate = content.join("TRAINS/TRAINSET").join(trainset_name);
+        if let Some(path) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
+            push_unique_path(&mut roots, path);
+        }
+    }
+    let Some(content) = msts_content_root() else {
+        return roots;
+    };
     let route_names = route_dir
         .file_name()
         .into_iter()
@@ -2063,7 +2069,13 @@ fn material_for_shape_texture(
                     } else {
                         decode_dds_to_image_with_sampler(&bytes, tex_addr_mode, mip_map_lod_bias)
                     };
-                    if let Ok(image) = image {
+                    if let Ok(mut image) = image {
+                        // Static scenery never reads pixels after GPU upload. Let
+                        // Bevy release its CPU copy while keeping the texture handle.
+                        // Cab/vehicle images retain pixels for instruments and variants.
+                        if !cab_interior && !train_exterior {
+                            image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+                        }
                         let handle = texture_cache
                             .entry((tex_path.clone(), addr_key))
                             .or_insert_with(|| images.add(image))
@@ -2186,6 +2198,10 @@ fn material_for_shape_texture(
                     } else {
                         scenery_albedo_tint(pixel_brightened, lit)
                     };
+                    let mut image = image;
+                    if !cab_interior && !train_exterior {
+                        image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+                    }
                     let handle = texture_cache
                         .entry((tex_path, addr_key))
                         .or_insert_with(|| images.add(image))

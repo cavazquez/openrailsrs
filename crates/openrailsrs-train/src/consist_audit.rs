@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use openrailsrs_formats::{
     CabControl, CabViewFile, ConsistEntry, ConsistFile, EngineCabView, MstsFile, ShapeFile,
-    parse_from_first_paren, parse_msts_file, parse_vehicle_text, read_msts_file_to_string,
+    parse_cab_view_text, parse_msts_file, parse_vehicle_text, read_msts_file_to_string,
     resolve_path_case_insensitive,
 };
 use serde::Serialize;
@@ -276,7 +276,7 @@ impl ConsistAuditor {
             return result.clone();
         }
         let result = read_msts_file_to_string(path)
-            .and_then(|t| parse_from_first_paren(&t))
+            .and_then(|t| parse_cab_view_text(&t))
             .and_then(|a| CabViewFile::from_ast(&a))
             .map_err(|e| format!("Cabina {}: {e}", path.display()))
             .and_then(|cab| {
@@ -312,7 +312,7 @@ impl ConsistAuditor {
                     .filter(|_| require_views)
                     .map(|v| v.texture_ace.as_str())
                     .chain(graphics)
-                    .filter(|s| !s.is_empty())
+                    .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("none"))
                 {
                     if asset(&dirs, name, true).is_none() {
                         return Err(format!("Falta el gráfico de cabina {name}"));
@@ -343,6 +343,13 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn none_graphic_is_a_valid_control_without_a_sprite() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("cab.cvf");
+        std::fs::write(&path,"Tr_CabViewFile ( CabViewControls ( 1 Digital ( Type ( SPEEDOMETER DIGITAL ) Position ( 0 0 20 20 ) Graphic ( None ) ScaleRange ( 0 100 ) ) ) )").unwrap();
+        assert!(ConsistAuditor::default().inspect_cvf(&path, true).is_ok());
+    }
     #[test]
     fn three_dimensional_cvf_does_not_require_unused_two_dimensional_graphics() {
         let tmp = tempfile::tempdir().unwrap();

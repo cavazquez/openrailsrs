@@ -4,7 +4,14 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Synthesized audio engine for openrailsrs (cab sounds + ambient regions)"
+description = "Native MSTS SMS/WAV playback and optional synthesized audio"
 
 [dependencies]
 rodio = "0.22.2"
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-train = { path = "../openrailsrs-train" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

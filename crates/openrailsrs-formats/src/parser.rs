@@ -2,6 +2,76 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::lexer::{Lexer, Token};
 
+/// Parse native keyword-before-parenthesis files while retaining root names.
+/// Sound programs distinguish Wagon/Engine/Inside Sound blocks, unlike legacy
+/// vehicle field scans which only need their normalized bodies.
+pub fn parse_named_stf(source: &str) -> Result<Ast, FormatError> {
+    let source = source.trim_start_matches('\u{feff}').trim_start();
+    let source = if source.starts_with("SIMISA") {
+        source.split_once('\n').map_or("", |(_, s)| s).trim_start()
+    } else {
+        source
+    };
+    if source.starts_with('(') {
+        return parse_vehicle_text(source);
+    }
+    let mut lexer = Lexer::new_stf(source);
+    let mut roots = vec![];
+    while let Some(token) = lexer.next_token()? {
+        lexer.skip_ws_and_comments();
+        if lexer.peek_byte() != Some(b'(') {
+            continue;
+        }
+        let Ast::List(mut body) = normalize_stf_body(parse_expr(&mut lexer)?) else {
+            unreachable!()
+        };
+        if let Token::Symbol(name) = token {
+            body.insert(0, Ast::Atom(Atom::Symbol(name)));
+        }
+        roots.push(Ast::List(body));
+    }
+    match roots.len() {
+        0 => Err(FormatError::UnexpectedEof),
+        1 => Ok(roots.remove(0)),
+        _ => Ok(Ast::List(roots)),
+    }
+}
+
+/// OR's STFReader accepts EOF after the complete contents of a CVF whose outer
+/// closing parenthesis is omitted. Tolerate only that case, not an unfinished
+/// control, quoted filename or an extra closing parenthesis.
+pub fn parse_cab_view_text(source: &str) -> Result<Ast, FormatError> {
+    let parsed = parse_named_stf(source);
+    if !matches!(parsed, Err(FormatError::UnexpectedEof)) {
+        return parsed;
+    }
+    let body = source.trim_start_matches('\u{feff}').trim_start();
+    let body = if body.starts_with("SIMISA") {
+        body.split_once('\n').map_or("", |(_, s)| s).trim_start()
+    } else {
+        body
+    };
+    if !body.to_ascii_lowercase().starts_with("tr_cabviewfile") {
+        return parsed;
+    }
+    let mut lexer = Lexer::new_stf(body);
+    let mut depth = 0;
+    while let Some(token) = lexer.next_token()? {
+        match token {
+            Token::LParen => depth += 1,
+            Token::RParen => depth -= 1,
+            _ => {}
+        }
+        if depth < 0 {
+            return parsed;
+        }
+    }
+    if depth != 1 {
+        return parsed;
+    }
+    parse_named_stf(&format!("{source}\n)"))
+}
+
 /// Read rolling-stock files in either native STF (`Wagon ( ... )`) or the
 /// parenthesized fixture notation (`(Wagon ...)`). Native ENG files commonly
 /// have separate Wagon and Engine roots; both are required for mass and power.
@@ -187,6 +257,31 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn named_native_roots_preserve_exterior_cab_and_passenger_scopes() {
+        let ast = parse_named_stf("Wagon ( coach Sound ( exterior.sms ) Inside ( Sound ( passenger.sms ) ) ) Engine ( coach Sound ( cab.sms ) )").unwrap();
+        let Ast::List(roots) = ast else {
+            panic!("root list")
+        };
+        assert!(
+            matches!(&roots[0], Ast::List(items) if items[0] == Ast::Atom(Atom::Symbol("Wagon".into())))
+        );
+        assert!(
+            matches!(&roots[1], Ast::List(items) if items[0] == Ast::Atom(Atom::Symbol("Engine".into())))
+        );
+    }
+
+    #[test]
+    fn cab_eof_tolerates_only_the_missing_outer_close() {
+        let body =
+            "Tr_CabViewFile ( CabViewType ( 1 ) CabViewFile ( front.ace ) CabViewControls ( 0 )";
+        assert_eq!(
+            parse_cab_view_text(body).unwrap(),
+            parse_cab_view_text(&format!("{body})")).unwrap()
+        );
+        assert!(parse_cab_view_text("Tr_CabViewFile ( CabViewControls ( 1 Dial (").is_err());
+        assert!(parse_cab_view_text("Tr_CabViewFile ( CabViewFile ( \"unfinished").is_err());
+    }
 
     #[test]
     fn native_vehicle_roots_and_consist_keyword_blocks() {

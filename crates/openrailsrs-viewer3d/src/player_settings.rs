@@ -193,6 +193,8 @@ pub struct PlayerSettings {
     pub fog_quality: FogQuality,
     pub ui_scale: f32,
     pub mph: bool,
+    pub audio_enabled: bool,
+    pub audio_volume: f32,
     pub keys: BTreeMap<PlayerAction, String>,
 }
 
@@ -206,6 +208,8 @@ impl Default for PlayerSettings {
             fog_quality: FogQuality::Distance,
             ui_scale: 1.0,
             mph: false,
+            audio_enabled: true,
+            audio_volume: 0.4,
             keys: PlayerAction::ALL
                 .into_iter()
                 .map(|a| (a, format!("{:?}", a.default_key())))
@@ -247,6 +251,8 @@ impl PlayerSettings {
             || !(35.0..=90.0).contains(&self.cab_fov_deg)
             || !self.ui_scale.is_finite()
             || !(0.8..=1.5).contains(&self.ui_scale)
+            || !self.audio_volume.is_finite()
+            || !(0.0..=1.0).contains(&self.audio_volume)
         {
             return Err("Ajustes gráficos fuera del rango permitido".into());
         }

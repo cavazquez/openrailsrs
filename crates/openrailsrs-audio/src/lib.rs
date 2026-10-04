@@ -1,7 +1,9 @@
-//! Synthesized audio engine for openrailsrs.
+//! Native SMS/WAV playback and the legacy synthesized audio API.
 //!
-//! Produces cab sounds (motor / brake / horn) and ambient sound regions
-//! entirely from generated sine waves — no external audio files required.
+//! [`native`] interprets original sound programs and decoded WAV loops in a
+//! bounded background engine; it also provides a device-independent WAV oracle.
+//! The legacy [`AudioEngine`] produces synthesized motor/brake/horn and ambient
+//! sounds for clients that do not supply original content.
 //! The engine runs in a dedicated OS thread and receives commands via an
 //! `mpsc` channel.  If no audio output device is available (CI, headless
 //! servers) [`AudioEngine::try_start`] returns `None` and callers continue
@@ -13,6 +15,9 @@ use std::thread;
 use std::time::Duration;
 
 use rodio::{DeviceSinkBuilder, Player, Source, source::SineWave};
+
+pub mod native;
+pub mod sms;
 
 /// Commands sent to the audio thread.
 pub enum AudioCmd {

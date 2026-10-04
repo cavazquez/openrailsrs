@@ -39,6 +39,8 @@ pub struct CabCvfOverlayState {
     pub view_index: usize,
     /// CVF `Direction` (pitch, yaw, roll) degrees for the active view.
     pub view_direction_deg: [f64; 3],
+    /// Classic CVF eyepoint in MSTS vehicle coordinates; independent of ORTS3DCab.
+    pub view_position_m: Option<[f64; 3]>,
     /// Whether the last spawn used night ACE lookup.
     pub night_textures: bool,
     image_cache: HashMap<String, Handle<Image>>,
@@ -51,6 +53,7 @@ impl Default for CabCvfOverlayState {
             panel_size: (640.0, 480.0),
             view_index: 0,
             view_direction_deg: [0.0; 3],
+            view_position_m: None,
             night_textures: false,
             image_cache: HashMap::new(),
         }
@@ -105,16 +108,10 @@ pub enum CabCvfOverlayKind {
     },
 }
 
-pub fn reference_panel_size(cvf: &CabViewFile) -> (f32, f32) {
-    cvf.views
-        .first()
-        .map(|v| {
-            (
-                v.window.width.max(1.0) as f32,
-                v.window.height.max(1.0) as f32,
-            )
-        })
-        .unwrap_or((640.0, 480.0))
+pub fn reference_panel_size(_cvf: &CabViewFile) -> (f32, f32) {
+    // CVF controls use a 640×480 design grid (OR CabControlRenderer).
+    // CabViewWindow is the windshield rectangle, not the panel dimensions.
+    (640.0, 480.0)
 }
 
 /// Letterbox scale so the CVF window fits inside the screen.
@@ -345,15 +342,10 @@ pub(crate) fn sync_cab_cvf_overlay(
         overlay_state.image_cache.clear();
         return;
     };
-    let Some(cab_shape) = cvf_state
-        .cvf_path
-        .as_ref()
-        .map(|p| p.with_extension("s"))
-        .filter(|p| p.is_file())
-    else {
+    let Some(cvf_path) = cvf_state.cvf_path.as_ref() else {
         return;
     };
-    let Some(cab_dir) = cab_shape.parent() else {
+    let Some(cab_dir) = cvf_path.parent() else {
         return;
     };
 
@@ -384,7 +376,7 @@ pub(crate) fn sync_cab_cvf_overlay(
     }
     overlay_state.image_cache.clear();
 
-    let tex_dirs = cvf_texture_search_dirs(&cab_shape, &assets.route_dir);
+    let tex_dirs = cvf_texture_search_dirs(cvf_path, &assets.route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let (panel_w, panel_h) = reference_panel_size(&runtime.cvf);
     overlay_state.panel_size = (panel_w, panel_h);
@@ -403,6 +395,7 @@ pub(crate) fn sync_cab_cvf_overlay(
         .views
         .get(overlay_state.view_index)
         .or_else(|| runtime.cvf.views.first());
+    overlay_state.view_position_m = view.map(|v| v.position_m);
     if let Some(v) = view {
         overlay_state.view_direction_deg = v.direction_deg;
     }
@@ -1057,23 +1050,23 @@ mod tests {
     }
 
     #[test]
-    fn reference_panel_size_uses_cabview_window() {
+    fn windshield_crop_does_not_resize_the_cvf_control_grid() {
         let cvf = CabViewFile {
             cab_view_type: Some(2),
             views: vec![openrailsrs_formats::CabView {
                 texture_ace: "panel.ace".into(),
                 window: ScreenRect {
-                    x: 0.0,
+                    x: 402.0,
                     y: 0.0,
-                    width: 800.0,
-                    height: 600.0,
+                    width: 300.0,
+                    height: 400.0,
                 },
                 position_m: [0.0; 3],
                 direction_deg: [0.0; 3],
             }],
             controls: vec![],
         };
-        assert_eq!(reference_panel_size(&cvf), (800.0, 600.0));
+        assert_eq!(reference_panel_size(&cvf), (640.0, 480.0));
     }
 
     #[test]

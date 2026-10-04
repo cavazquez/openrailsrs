@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::encoding::resolve_path_case_insensitive;
+use crate::encoding::{normalize_msts_filename, resolve_path_case_insensitive};
 use crate::typed::EngineCabView;
 
 /// Resolved cab interior assets under a trainset folder.
@@ -31,6 +31,21 @@ pub fn resolve_cab_assets(trainset_root: &Path, cab: &EngineCabView) -> Option<R
         return Some(assets);
     }
     resolve_cab_assets_scan(trainset_root)
+}
+
+/// Resolve a classic 2D `CabView` independently of an optional 3D cab shape.
+pub fn resolve_cab_view_path(trainset_root: &Path, cab: &EngineCabView) -> Option<PathBuf> {
+    let name = normalize_msts_filename(cab.cab_view_file.as_deref()?);
+    let mut dirs = cabview_search_dirs(trainset_root);
+    // Identically named 3D CVFs can contain only matrix controls. A classic
+    // CabView must prefer its sprite panel before the CABVIEW3D fallback.
+    dirs.sort_by_key(|dir| {
+        dir.file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("cabview3d"))
+    });
+    dirs.into_iter()
+        .chain([trainset_root.to_path_buf()])
+        .find_map(|dir| resolve_file_in_dir(&dir, &name))
 }
 
 /// Scan `CABVIEW3D` / `CabView` folders for the first shape paired with a `.cvf`.
@@ -258,6 +273,32 @@ mod tests {
         assert!(assets.cvf_path.ends_with("GP38.cvf"));
         assert!(assets.shape_path.ends_with("GP38.s"));
 
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn classic_cab_resolves_without_a_shape_and_with_shared_relative_paths() {
+        let dir = temp_trainset("classic2d");
+        let cab_dir = dir.join("CabView");
+        let cab3d = dir.join("CABVIEW3D");
+        let shared = dir.join("Common.Cab");
+        std::fs::create_dir_all(&cab_dir).unwrap();
+        std::fs::create_dir_all(&cab3d).unwrap();
+        std::fs::create_dir_all(&shared).unwrap();
+        std::fs::write(cab_dir.join("DMUGen1.CVF"), b"").unwrap();
+        std::fs::write(cab3d.join("DMUGen1.CVF"), b"").unwrap();
+        std::fs::write(shared.join("shared.cvf"), b"").unwrap();
+        let mut cab = EngineCabView {
+            cab_view_file: Some("dmugen1.cvf".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            resolve_cab_view_path(&dir, &cab),
+            Some(cab_dir.join("DMUGen1.CVF"))
+        );
+        assert!(resolve_cab_assets(&dir, &cab).is_none());
+        cab.cab_view_file = Some("..\\Common.Cab\\shared.cvf".into());
+        assert!(resolve_cab_view_path(&dir, &cab).unwrap().is_file());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
