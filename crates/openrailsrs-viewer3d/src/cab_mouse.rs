@@ -281,7 +281,7 @@ pub fn raycast_mesh(mesh: &Mesh, world: Mat4, origin: Vec3, direction: Vec3) -> 
         .map(|i| i.iter().collect())
         .unwrap_or_else(|| (0..points.len()).collect());
     let mut closest = f32::INFINITY;
-    for tri in indices.chunks_exact(3) {
+    for tri in indices.as_chunks::<3>().0 {
         let (Some(a), Some(b), Some(c)) =
             (points.get(tri[0]), points.get(tri[1]), points.get(tri[2]))
         else {
