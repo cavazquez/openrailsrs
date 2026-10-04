@@ -275,6 +275,8 @@ fn build_one_extra_train(
         start,
         destination,
         start_time_s: svc.start_time_s,
+        waypoints: Vec::new(),
+        start_offset_m: 0.0,
         stops: Vec::new(),
         davis: None,
         switches: Vec::new(),

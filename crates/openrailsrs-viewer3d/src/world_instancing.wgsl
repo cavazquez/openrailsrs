@@ -8,6 +8,7 @@
     pbr_functions,
 }
 #import bevy_render::maths::PI
+#import "shaders/railway_lighting.wgsl"::railway_spot_lighting
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -104,6 +105,7 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
         lit = color.rgb * exposure * max(ambient, vec3<f32>(0.35));
     }
 
+    lit += color.rgb * railway_spot_lighting(vec4(in.world_position, 1.0), n, in.clip_position.xy);
     var out_color = vec4<f32>(lit, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use openrailsrs_formats::parse_from_first_paren;
+use openrailsrs_formats::parse_vehicle_text;
 use openrailsrs_formats::read_msts_file_to_string;
 use openrailsrs_formats::{Ast, ConsistEntry, ConsistFile, EngineFile, MstsSteamFields, WagonFile};
 
@@ -14,7 +14,7 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     }
     let text = read_msts_file_to_string(path.as_ref())
         .map_err(|e| TrainError::Parse(format!("read engine: {e}")))?;
-    let ast = parse_from_first_paren(&text)?;
+    let ast = parse_vehicle_text(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
     Ok(engine.into())
 }
@@ -22,7 +22,7 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
 pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError> {
     let text = read_msts_file_to_string(path.as_ref())
         .map_err(|e| TrainError::Parse(format!("read wagon: {e}")))?;
-    let ast = parse_from_first_paren(&text)?;
+    let ast = parse_vehicle_text(&text)?;
     let wagon = WagonFile::from_ast(&ast)?;
     Ok(wagon.into())
 }
@@ -41,7 +41,7 @@ pub fn load_consist_with_asset_root(
 ) -> Result<Consist, TrainError> {
     let text = read_msts_file_to_string(consist.as_ref())
         .map_err(|e| TrainError::Parse(format!("read consist: {e}")))?;
-    let ast = parse_from_first_paren(&text)?;
+    let ast = parse_vehicle_text(&text)?;
     consist_from_ast(&ast, asset_root.as_ref())
 }
 
@@ -51,13 +51,13 @@ fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
     for entry in consist_file.entries {
         match entry {
             ConsistEntry::Engine { path, flipped, .. } => {
-                let p = resolve_path(base, &path);
+                let p = resolve_consist_entry_path(base, &path);
                 let mut loco = load_engine_from_path(&p)?;
                 loco.flipped = flipped;
                 vehicles.push(Vehicle::Loco(loco));
             }
             ConsistEntry::Wagon { path, flipped, .. } => {
-                let p = resolve_path(base, &path);
+                let p = resolve_consist_entry_path(base, &path);
                 let mut wagon = load_wagon_from_path(&p)?;
                 wagon.flipped = flipped;
                 vehicles.push(Vehicle::Wagon(wagon));
@@ -118,9 +118,25 @@ fn upgrade_trail_diesel_from_lead_orts(consist: &mut Consist) {
     }
 }
 
-fn resolve_path(base: &Path, rel: &str) -> std::path::PathBuf {
+/// Resolve both project `trains/folder/car.eng` paths and native
+/// `TRAINS/CONSISTS` → `TRAINS/TRAINSET` references, including Windows casing.
+/// The same resolver is used by the simulation and the installed-content audit.
+pub fn resolve_consist_entry_path(base: &Path, rel: &str) -> std::path::PathBuf {
     let trimmed = rel.trim().replace('\\', "/");
-    base.join(trimmed)
+    let direct = base.join(&trimmed);
+    let mut candidates = vec![direct.clone()];
+    if let Some((prefix, rest)) = trimmed.split_once('/')
+        && prefix.eq_ignore_ascii_case("trains")
+    {
+        candidates.push(base.join("TRAINSET").join(rest));
+        candidates.push(base.join("TRAINS/TRAINSET").join(rest));
+    }
+    candidates
+        .into_iter()
+        .find_map(|p| {
+            openrailsrs_formats::resolve_path_case_insensitive(&p).filter(|p| p.is_file())
+        })
+        .unwrap_or(direct)
 }
 
 /// Directory used to resolve `Engine` / `Wagon` paths in a scenario layout

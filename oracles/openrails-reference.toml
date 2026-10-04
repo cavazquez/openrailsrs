@@ -157,7 +157,7 @@ sha256 = "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212"
 
 [[files]]
 path = "tools/openrails-reference/SceneryCapture.cs"
-sha256 = "70a37c8042d9833dd182c0526637d49e963d32e55c9a67659418094169a3cb60"
+sha256 = "876e0ec7eb9c7a0482e201e3f5b1132b7867c6e3aca3f74fb6a8ea4419f5bed4"
 
 [[files]]
 path = "docs/fixtures/visual/or_reference/chiltern_local/south_ruislip_exterior.png"
@@ -174,3 +174,53 @@ sha256 = "8bbcf1ce99ddcf1987be76f65c270d60866084882e8774a74375a6571c1fbd13"
 [[files]]
 path = "docs/fixtures/visual/or_reference/chiltern_local/west_ruislip_exterior.json"
 sha256 = "5f3ffe96dfbf88852c9fce8bf288bb75e42b2a344a2ac9abb04b20d764e3c425"
+
+# Six native station poses, including the original cab at every station.
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-cab.png"
+sha256 = "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-cab.json"
+sha256 = "10cbdc78ac902bc5e7d2dd0971d456c28fbabddfd099846e3c635b9f52e79553"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-exterior.png"
+sha256 = "364f2d7ae95e9947bbcf3b65e71d21650f8ffd75ad378317ba85ba60e8001754"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-exterior.json"
+sha256 = "2a4619a6c06283a691ce6f6ac225418a97ed93c6bc6c3e4eb46dc3146f3c7f8c"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-cab.png"
+sha256 = "492b1a318c3ed03f6bdbfcbd192bc6f80c84e555242a10bba9046a46866b66d2"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-cab.json"
+sha256 = "d072d4b4b42121545a7293ad45395d7fdf628e7ad4eb8a9ccacf4ecedb0b918f"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-exterior.png"
+sha256 = "40296bdf6be8614a1200ac6435747c8a3ca01e589b0fff640766354dd7b04a0d"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-exterior.json"
+sha256 = "ccb1b77bd13331a3513e44b9dd7b4466b0424b54e6aeb1b07c5ecbdc8c085137"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-cab.png"
+sha256 = "e2ecb67d7e890845d4f889068e1e5c34f882a3240ac73a574d1142400a25c81f"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-cab.json"
+sha256 = "e3ad3bfbd8e15aa5cf1a2718fc502feb6480f2eba7726eb93566a2de7d59df24"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-exterior.png"
+sha256 = "1fb0c500e7080fb6b55ea81790505c51893341066b0307e06450c9873ed1c6f9"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-exterior.json"
+sha256 = "50ae7c14ededf733ffcb8e3022f3bb8def040f32d919d7836a3649094f1cb2d5"

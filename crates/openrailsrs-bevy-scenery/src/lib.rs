@@ -117,3 +117,49 @@ pub fn shared_asset_plugin() -> AssetPlugin {
         ..default()
     }
 }
+
+#[cfg(test)]
+mod shader_tests {
+    use bevy::shader::{Shader, ShaderImport};
+    use std::collections::HashSet;
+
+    #[test]
+    fn material_file_imports_resolve_without_duplicate_dependencies() {
+        for (path, source) in [
+            (
+                "terrain.wgsl",
+                include_str!("../assets/shaders/terrain.wgsl"),
+            ),
+            (
+                "or_terrain.wgsl",
+                include_str!("../assets/shaders/or_terrain.wgsl"),
+            ),
+            (
+                "or_scenery.wgsl",
+                include_str!("../assets/shaders/or_scenery.wgsl"),
+            ),
+            (
+                "or_forest.wgsl",
+                include_str!("../assets/shaders/or_forest.wgsl"),
+            ),
+        ] {
+            let shader = Shader::from_wgsl(source, path);
+            let imports: Vec<_> = shader
+                .imports
+                .iter()
+                .filter(|import| matches!(import, ShaderImport::AssetPath(_)))
+                .collect();
+            // ShaderCache compares a count with a map of resolved dependencies.
+            // Duplicate file imports would leave the pipeline pending forever.
+            assert_eq!(
+                imports.len(),
+                imports.iter().collect::<HashSet<_>>().len(),
+                "{path}"
+            );
+            assert!(
+                !imports.is_empty(),
+                "{path}: missing shared lighting import"
+            );
+        }
+    }
+}

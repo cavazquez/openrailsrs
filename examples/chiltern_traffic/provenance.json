@@ -1,0 +1,20 @@
+{
+  "source_tdb_sha256": "acc945a063dce6a3272bfae610c48b2aff939d2435d5b1db07f2b36614e7b47a",
+  "player_edges": [
+    "e100_r",
+    "e102",
+    "e104_r",
+    "e94_r",
+    "e96_r",
+    "e98"
+  ],
+  "added_native_edges": [
+    "e106",
+    "e108",
+    "e3659",
+    "e3661_r",
+    "e9760"
+  ],
+  "crossing_edge": "e3661_r",
+  "traffic_scope": "demonstration timetable using native track geometry; not the original activity traffic"
+}

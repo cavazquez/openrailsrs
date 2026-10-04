@@ -14,6 +14,7 @@ pub enum Token {
 pub struct Lexer<'a> {
     input: &'a [u8],
     pos: usize,
+    semicolon_comments: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -21,6 +22,16 @@ impl<'a> Lexer<'a> {
         Self {
             input: input.as_bytes(),
             pos: 0,
+            semicolon_comments: true,
+        }
+    }
+
+    /// Native STF comments are named blocks. Semicolons inside those blocks
+    /// must not swallow the closing parenthesis as fixture line comments do.
+    pub fn new_stf(input: &'a str) -> Self {
+        Self {
+            semicolon_comments: false,
+            ..Self::new(input)
         }
     }
 
@@ -44,7 +55,7 @@ impl<'a> Lexer<'a> {
                 self.pos += 1;
             }
             // Line comments starting with ';' (common in route files)
-            if self.peek_byte() == Some(b';') {
+            if self.semicolon_comments && self.peek_byte() == Some(b';') {
                 while let Some(b) = self.peek_byte() {
                     self.pos += 1;
                     if b == b'\n' {
@@ -78,11 +89,14 @@ impl<'a> Lexer<'a> {
                 if self
                     .input
                     .get(self.pos + 1)
-                    .is_some_and(|b| b.is_ascii_digit()) =>
+                    .is_some_and(|b| b.is_ascii_digit() || *b == b'.') =>
             {
                 Ok(Some(self.read_number_or_digit_symbol()?))
             }
             Some(b) if b.is_ascii_digit() => Ok(Some(self.read_number_or_digit_symbol()?)),
+            Some(b'.') if self.input.get(self.pos + 1).is_some_and(u8::is_ascii_digit) => {
+                Ok(Some(self.read_number_or_digit_symbol()?))
+            }
             Some(_) => Ok(Some(self.read_symbol()?)),
         }
     }
@@ -90,7 +104,9 @@ impl<'a> Lexer<'a> {
     fn item_end_from(&self, start: usize) -> usize {
         let mut end = start;
         while let Some(b) = self.input.get(end).copied() {
-            if matches!(b, b'(' | b')' | b'"' | b' ' | b'\t' | b'\r' | b'\n' | b';') {
+            if matches!(b, b'(' | b')' | b'"' | b' ' | b'\t' | b'\r' | b'\n')
+                || (self.semicolon_comments && b == b';')
+            {
                 break;
             }
             end += 1;
@@ -100,43 +116,7 @@ impl<'a> Lexer<'a> {
 
     /// True when `text` is entirely an integer/float (optional `e`/`E` exponent with digits).
     fn is_numeric_item(text: &str) -> bool {
-        let bytes = text.as_bytes();
-        let mut i = 0usize;
-        if matches!(bytes.first(), Some(b'+' | b'-')) {
-            i = 1;
-        }
-        let int_start = i;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i += 1;
-        }
-        if i == int_start {
-            return false;
-        }
-        if i < bytes.len() && bytes[i] == b'.' {
-            i += 1;
-            let frac_start = i;
-            while i < bytes.len() && bytes[i].is_ascii_digit() {
-                i += 1;
-            }
-            if i == frac_start {
-                return false;
-            }
-        }
-        if i < bytes.len() && matches!(bytes[i], b'e' | b'E') {
-            let mut j = i + 1;
-            if j < bytes.len() && matches!(bytes[j], b'+' | b'-') {
-                j += 1;
-            }
-            if j >= bytes.len() || !bytes[j].is_ascii_digit() {
-                // `4994E` / incomplete exponent → not a number (STF keeps one item).
-                return false;
-            }
-            i = j;
-            while i < bytes.len() && bytes[i].is_ascii_digit() {
-                i += 1;
-            }
-        }
-        i == bytes.len()
+        text.bytes().any(|b| b.is_ascii_digit()) && text.parse::<f64>().is_ok_and(f64::is_finite)
     }
 
     fn read_number_or_digit_symbol(&mut self) -> Result<Token, FormatError> {
@@ -159,7 +139,7 @@ impl<'a> Lexer<'a> {
         let start = self.pos;
         debug_assert_eq!(self.peek_byte(), Some(b'"'));
         self.pos += 1;
-        let mut out = String::new();
+        let mut out = Vec::new();
         loop {
             match self.peek_byte() {
                 None => return Err(FormatError::UnclosedString(start)),
@@ -170,95 +150,49 @@ impl<'a> Lexer<'a> {
                 Some(b'\\') => {
                     self.pos += 1;
                     match self.bump() {
-                        Some(b'n') => out.push('\n'),
-                        Some(b'r') => out.push('\r'),
-                        Some(b't') => out.push('\t'),
-                        Some(b'"') => out.push('"'),
-                        Some(b'\\') => out.push('\\'),
-                        Some(c) => out.push(c as char),
+                        Some(b'n') => out.push(b'\n'),
+                        Some(b'r') => out.push(b'\r'),
+                        Some(b't') => out.push(b'\t'),
+                        Some(b'"') => out.push(b'"'),
+                        Some(b'\\') => out.push(b'\\'),
+                        Some(c) => out.push(c),
                         None => return Err(FormatError::UnclosedString(start)),
                     }
                 }
                 Some(b) => {
                     self.pos += 1;
-                    out.push(b as char);
+                    out.push(b);
                 }
             }
         }
+        let out = String::from_utf8(out).map_err(|_| FormatError::UnexpectedToken {
+            offset: start,
+            message: "invalid utf-8 string".into(),
+        })?;
         Ok(Token::String(out))
     }
 
     fn read_number(&mut self) -> Result<Token, FormatError> {
         let start = self.pos;
-        if matches!(self.peek_byte(), Some(b'-' | b'+')) {
-            self.pos += 1;
-        }
-        let int_start = self.pos;
-        while matches!(self.peek_byte(), Some(b) if b.is_ascii_digit()) {
-            self.pos += 1;
-        }
-        if self.pos == int_start {
-            return Err(FormatError::InvalidNumber {
-                offset: start,
-                text: "expected digit".into(),
-            });
-        }
-        let mut is_float = false;
-        if self.peek_byte() == Some(b'.') {
-            is_float = true;
-            self.pos += 1;
-            let frac_start = self.pos;
-            while matches!(self.peek_byte(), Some(b) if b.is_ascii_digit()) {
-                self.pos += 1;
-            }
-            if frac_start == self.pos {
-                return Err(FormatError::InvalidNumber {
-                    offset: start,
-                    text: "expected fractional digits".into(),
-                });
-            }
-        }
-
-        let exponent_is_numeric = matches!(self.peek_byte(), Some(b'e' | b'E')) && {
-            let mut lookahead = self.pos + 1;
-            if matches!(self.input.get(lookahead), Some(b'-' | b'+')) {
-                lookahead += 1;
-            }
-            self.input
-                .get(lookahead)
-                .is_some_and(|b| b.is_ascii_digit())
-        };
-        if exponent_is_numeric {
-            is_float = true;
-            self.pos += 1;
-            if matches!(self.peek_byte(), Some(b'-' | b'+')) {
-                self.pos += 1;
-            }
-            while matches!(self.peek_byte(), Some(b) if b.is_ascii_digit()) {
-                self.pos += 1;
-            }
-        }
-
+        self.pos = self.item_end_from(start);
         let text = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-        if is_float {
-            let value: f64 = text.parse().map_err(|_| FormatError::InvalidNumber {
-                offset: start,
-                text: text.into(),
-            })?;
-            Ok(Token::Number(value))
-        } else {
-            let value: i64 = text.parse().map_err(|_| FormatError::InvalidNumber {
-                offset: start,
-                text: text.into(),
-            })?;
-            Ok(Token::Integer(value))
+        if let Ok(integer) = text.parse::<i64>() {
+            return Ok(Token::Integer(integer));
         }
+        text.parse::<f64>()
+            .map(Token::Number)
+            .map_err(|_| FormatError::InvalidNumber {
+                offset: start,
+                text: text.into(),
+            })
     }
 
     fn read_symbol(&mut self) -> Result<Token, FormatError> {
         let start = self.pos;
         while let Some(b) = self.peek_byte() {
-            if matches!(b, b'(' | b')' | b'"' | b' ' | b'\t' | b'\r' | b'\n' | b';') {
+            if matches!(b, b'(' | b')' | b'"' | b' ' | b'\t' | b'\r' | b'\n')
+                || (self.semicolon_comments && b == b';')
+            {
                 break;
             }
             self.pos += 1;
@@ -301,6 +235,13 @@ mod tests {
     fn keeps_plain_integers_and_decimals_compatible() {
         assert_eq!(token("-12"), Token::Integer(-12));
         assert_eq!(token("3.25"), Token::Number(3.25));
+        assert_eq!(token("-.2"), Token::Number(-0.2));
+        assert_eq!(token(".5"), Token::Number(0.5));
+        assert_eq!(token("2."), Token::Number(2.0));
+        assert_eq!(
+            token("\"Señal · estación\""),
+            Token::String("Señal · estación".into())
+        );
     }
 
     #[test]

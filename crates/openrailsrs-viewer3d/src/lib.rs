@@ -36,8 +36,11 @@ pub mod or_shader {
     pub use openrailsrs_or_shader::*;
 }
 pub mod cab_mouse;
+pub mod ground_fog;
+pub mod night_sky;
 pub mod overhead_wire;
 pub mod overspeed_flash;
+pub mod performance;
 pub mod placement_audit;
 pub mod player_launch;
 pub mod player_settings;
@@ -71,11 +74,14 @@ pub mod tr_item_index;
 pub mod track;
 pub mod track_audit;
 pub mod track_position;
+pub mod traffic;
 pub mod train;
 pub mod train_diagnostics;
+pub mod train_lighting;
 pub mod transfer;
 pub mod view_window;
 pub mod water;
+pub mod windshield;
 pub mod world;
 pub mod world_instancing;
 pub mod world_tile_index;
@@ -136,8 +142,12 @@ fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, install_ui_font);
+        if std::env::var_os("OPENRAILSRS_SHADER_DIAGNOSTICS").is_some() {
+            app.add_systems(Update, performance::log_shader_dependencies);
+        }
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
+        app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<cab_mouse::CabMouseState>();
         app.add_systems(
             OnEnter(ViewerAppState::Playing),
@@ -175,6 +185,8 @@ impl Plugin for ViewerPlugin {
             .init_resource::<camera::PassengerCamState>()
             .init_resource::<camera::PassengerSeatCatalog>()
             .init_resource::<precipitation::PrecipitationState>()
+            .init_resource::<traffic::TrainRenderCache>()
+            .init_resource::<performance::JourneyPerformance>()
             .init_resource::<sky::FogState>()
             .init_resource::<overhead_wire::RouteWireConfig>()
             .init_resource::<teleport::TeleportDialog>()
@@ -208,6 +220,9 @@ impl Plugin for ViewerPlugin {
                     track_position::populate_track_position_resolver_cache,
                     scene::spawn_ground_and_lights,
                     sky::spawn_sky_dome.run_if(launch::sky_dome_active),
+                    night_sky::spawn_stars.run_if(launch::sky_dome_active),
+                    ground_fog::spawn_ground_fog.run_if(launch::sky_dome_active),
+                    train_lighting::spawn_train_lights.run_if(live::live_mode_active),
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
                     track::spawn_track_meshes,
                     tdb_track::spawn_tdb_graph_track.run_if(tdb_track::tdb_startup_spawn_active),
@@ -236,6 +251,7 @@ impl Plugin for ViewerPlugin {
                     openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
                     rolling_stock_anim::update_consist_car_track_poses
                         .after(live::update_live_train_marker)
+                        .after(traffic::update_traffic_poses)
                         .after(train::update_train_markers),
                     rolling_stock_anim::update_rolling_stock_part_anim
                         .after(rolling_stock_anim::update_consist_car_track_poses),
@@ -324,6 +340,9 @@ impl Plugin for ViewerPlugin {
                     track::frame_orbit_camera_on_track.run_if(live::live_mode_inactive),
                     train::spawn_train_markers.run_if(live::live_mode_inactive),
                     live::spawn_live_train.run_if(live::live_mode_active),
+                    traffic::spawn_traffic
+                        .after(live::spawn_live_train)
+                        .run_if(live::live_mode_active),
                     floating_origin::track_dev_recenter_at_subject.run_if(launch::track_dev_active),
                     live::enable_live_defaults.run_if(live::live_mode_active),
                     route_lighting::init_route_sun.run_if(live::live_mode_active),
@@ -332,6 +351,14 @@ impl Plugin for ViewerPlugin {
                 )
                     .chain()
                     .after(world::init_scenery_stream_state),
+            )
+            .add_systems(
+                Update,
+                (
+                    performance::measure_journey,
+                    traffic::update_traffic_poses.run_if(live::live_mode_active),
+                )
+                    .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
@@ -414,6 +441,32 @@ impl Plugin for ViewerPlugin {
                     .after(route_lighting::update_route_sun)
                     .after(player_ui::apply_settings)
                     .after(sky::toggle_distance_fog)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                night_sky::update_stars
+                    .after(route_lighting::update_route_sun)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                ground_fog::update_ground_fog
+                    .after(player_ui::apply_settings)
+                    .after(sky::toggle_distance_fog)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                train_lighting::update_cab_lighting
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                PostUpdate,
+                train_lighting::update_train_lights
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(

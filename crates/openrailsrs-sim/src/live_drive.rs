@@ -150,6 +150,9 @@ pub struct LiveDriveSession {
     pub scenario_name: String,
     pub formation: crate::FormationState,
     pub signal_overrides: HashMap<String, SignalAspect>,
+    pub service_id: String,
+    /// Rebuilt by the live traffic coordinator at every physics quantum.
+    pub external_occupancy: HashMap<String, String>,
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
     pub(crate) content_signature: String,
@@ -175,6 +178,9 @@ pub struct LiveDriveSession {
     pub(crate) horn_pressed_until_s: f64,
     /// Wiper switch (cab CVF TWO_STATE / EXTERNALWIPERS).
     pub wiper_active: bool,
+    /// OR headlight positions: 0 off, 1 dim, 2 bright.
+    pub headlights: u8,
+    pub cab_light: bool,
     pub speed_mul: f64,
     pub(crate) sim_time_remainder: f64,
     pub(crate) previous_render_chainage_m: f64,
@@ -284,6 +290,8 @@ impl LiveDriveSession {
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
             signal_overrides: HashMap::new(),
+            service_id: "Jugador".into(),
+            external_occupancy: HashMap::new(),
             original_physics: physics.clone(),
             content_signature: crate::operations::content_signature(&graph, scenario, &consist),
             consist,
@@ -308,6 +316,8 @@ impl LiveDriveSession {
             exterior: RollingStockExteriorState::new(),
             horn_pressed_until_s: 0.0,
             wiper_active: false,
+            headlights: 1,
+            cab_light: false,
             speed_mul: 1.0,
             sim_time_remainder: 0.0,
             previous_render_chainage_m: start_chainage_m,
@@ -584,6 +594,8 @@ impl LiveDriveSession {
             direction: self.driver_direction.clamp(0.0, 1.0),
             horn_active: self.time_s() < self.horn_pressed_until_s,
             wiper_active: self.wiper_active,
+            headlights: self.headlights,
+            cab_light: self.cab_light,
             main_res_bar,
             brake_pipe_bar,
             brake_cyl_bar,
@@ -606,6 +618,8 @@ pub struct CabTelemetry {
     pub direction: f64,
     pub horn_active: bool,
     pub wiper_active: bool,
+    pub headlights: u8,
+    pub cab_light: bool,
     pub main_res_bar: f64,
     pub brake_pipe_bar: f64,
     pub brake_cyl_bar: f64,
@@ -683,6 +697,13 @@ impl LiveDriveSession {
                 0.0
             };
             self.state.brake = self.driver_brake;
+            if self
+                .distance_to_occupied_block_m()
+                .is_some_and(|distance| distance < self.velocity_mps().powi(2) / 0.44 + 12.0)
+            {
+                self.state.throttle = 0.0;
+                self.state.brake = 1.0;
+            }
             let red_distance = self.distance_to_red_signal_m();
             let previous_odometer = self.state.odometer_m;
             self.previous_render_chainage_m = self.head_chainage_m();
@@ -771,6 +792,9 @@ impl LiveDriveSession {
         let route_cap = self.effective_speed_limit_mps() * 0.9;
         let signal_cap = self
             .distance_to_red_signal_m()
+            .into_iter()
+            .chain(self.distance_to_occupied_block_m())
+            .reduce(f64::min)
             .map(|distance| (2.0 * 0.22 * (distance - 4.0).max(0.0)).sqrt())
             .unwrap_or(f64::INFINITY);
         let cap = route_cap.min(stop_cap).min(signal_cap);
@@ -809,7 +833,7 @@ impl LiveDriveSession {
         }
     }
 
-    fn tick_signals(&mut self, step_dt: f64) {
+    pub(crate) fn tick_signals(&mut self, step_dt: f64) {
         self.signal_steps += 1;
         let every = (1.0 / step_dt).round().max(1.0) as u64;
         if every > 0 && self.signal_steps.is_multiple_of(every) {
@@ -817,18 +841,32 @@ impl LiveDriveSession {
             self.graph.evaluate_signals(&block_map);
             for sig in self.graph.signals() {
                 if let Some(aspect) = self.signal_overrides.get(&sig.id) {
-                    self.signal_runtime.insert(sig.id.clone(), *aspect);
+                    let protection = self.graph.signal_occupancy_constraint(
+                        &sig.id,
+                        &self.external_occupancy,
+                        None,
+                    );
+                    let aspect = match (aspect, protection) {
+                        (_, Some(SignalAspect::Stop)) => SignalAspect::Stop,
+                        (SignalAspect::Clear, Some(SignalAspect::Caution)) => SignalAspect::Caution,
+                        _ => *aspect,
+                    };
+                    self.signal_runtime.insert(sig.id.clone(), aspect);
                     continue;
                 }
-                if sig
-                    .clear_after_s
-                    .is_some_and(|clear_t| self.state.time_s() >= clear_t)
+                if self.external_occupancy.is_empty()
+                    && sig
+                        .clear_after_s
+                        .is_some_and(|clear_t| self.state.time_s() >= clear_t)
                 {
                     self.signal_runtime
                         .insert(sig.id.clone(), SignalAspect::Clear);
                     continue;
                 }
-                if self.assume_signals_clear && sig.script.is_none() {
+                if self.external_occupancy.is_empty()
+                    && self.assume_signals_clear
+                    && sig.script.is_none()
+                {
                     continue;
                 }
                 let governs_player = self
@@ -844,7 +882,7 @@ impl LiveDriveSession {
                     });
                 let aspect = if governs_player {
                     self.graph
-                        .signal_aspect_for_occupancy(&sig.id, &block_map, Some("Jugador"))
+                        .signal_aspect_for_occupancy(&sig.id, &block_map, Some(&self.service_id))
                         .unwrap_or(sig.aspect)
                 } else {
                     sig.aspect
@@ -852,6 +890,12 @@ impl LiveDriveSession {
                 self.signal_runtime.insert(sig.id.clone(), aspect);
             }
         }
+    }
+
+    pub(crate) fn refresh_traffic_signals(&mut self) {
+        let dt = self.realtime_physics_dt();
+        self.signal_steps = (1.0 / dt).round().max(1.0) as u64 - 1;
+        self.tick_signals(dt);
     }
 
     fn tick_gameplay(&mut self, step_dt: f64) {

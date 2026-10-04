@@ -69,7 +69,7 @@ fn actionable(control: &ControlType) -> bool {
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"PANTOGRAPH"|"PANTOGRAPHS"))
+    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"))
 }
 fn control_name(control: &ControlType) -> &str {
     match control {
@@ -110,6 +110,10 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
         ControlType::Generic(name) => match name.to_ascii_uppercase().as_str() {
             "HORN" => live.session.trigger_horn(0.15),
             "WIPERS" | "WIPER" | "EXTERNALWIPERS" => live.session.toggle_wiper(),
+            "HEADLIGHT" | "HEADLIGHTS" => {
+                live.session.headlights = (live.session.headlights + 1) % 3
+            }
+            "CABLIGHT" => live.session.cab_light = !live.session.cab_light,
             "DOORS" => live.session.toggle_doors(),
             "PANTOGRAPH" | "PANTOGRAPHS" => {
                 live.session.exterior.pantograph_command_up =

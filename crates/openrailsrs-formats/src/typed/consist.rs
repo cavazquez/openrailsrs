@@ -227,6 +227,8 @@ fn trainset_path(data: &[Ast]) -> String {
 
 fn ast_atom_string(ast: &Ast) -> Option<String> {
     match ast {
+        Ast::Atom(Atom::Integer(n)) => Some(n.to_string()),
+        Ast::Atom(Atom::Number(n)) => Some(n.to_string()),
         Ast::Atom(atom) => atom_to_string(atom),
         _ => None,
     }

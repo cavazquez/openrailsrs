@@ -1,0 +1,116 @@
+[scenario]
+name = "Chiltern local con tráfico: Northolt Park → West Ruislip"
+description = "Servicio local con un Pullman delante y otro en la vía contigua. Las señales responden a las formaciones completas."
+start_time_s = 35700
+season = "summer"
+
+[route]
+path = "."
+start = "n93"
+destination = "n105"
+start_offset_m = 1385.9003278212956
+assume_signals_clear = false
+waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105"]
+
+[[route.stops]]
+node = "n97"
+name = "Northolt Park"
+offset_m = -3531.682
+arrive_s = 0.0
+depart_s = 300.0
+dwell_s = 20.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n101"
+name = "South Ruislip"
+offset_m = -329.501
+arrive_s = 750.0
+depart_s = 830.0
+dwell_s = 30.0
+passengers_on = 20
+passengers_off = 0
+
+[[route.stops]]
+node = "n105"
+name = "West Ruislip"
+offset_m = -29.362650000000002
+arrive_s = 1150.0
+depart_s = 1180.0
+dwell_s = 30.0
+passengers_on = 0
+passengers_off = 40
+
+[train]
+consist = "../chiltern/consists/birmingham_pullman.con"
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 2.0
+
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "pullman"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+# Live controls express EP service demand, not the old logger's PSI/121 scale.
+driver_brake_full_scale_psi = 45.0
+brake_cylinder_full_scale_psi = 45.0
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+# Lead service holds South Ruislip, then clears the player's terminal into the siding.
+[[extra_trains]]
+id = "Pullman adelantado"
+consist = "../chiltern/consists/birmingham_pullman.con"
+start = "n93"
+destination = "n109"
+waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105", "n107", "n109"]
+start_offset_m = 5200.0
+start_time_s = 0.0
+output_csv = "run_lead.csv"
+
+[[extra_trains.stops]]
+node = "n101"
+name = "South Ruislip"
+offset_m = -329.501
+arrive_s = 20.0
+depart_s = 230.0
+dwell_s = 180.0
+
+[[extra_trains.stops]]
+node = "n105"
+name = "West Ruislip"
+offset_m = -29.36265
+arrive_s = 530.0
+depart_s = 570.0
+dwell_s = 20.0
+
+# Opposite service on native e3661, adjacent to the South–West Ruislip corridor.
+[[extra_trains]]
+id = "Pullman contrario"
+consist = "../chiltern/consists/birmingham_pullman.con"
+start = "n3662"
+destination = "n3658"
+waypoints = ["n3662", "n3660", "n3658"]
+start_offset_m = 200.0
+start_time_s = 700.0
+output_csv = "run_opposite.csv"
+
+[[extra_trains.stops]]
+node = "n3660"
+name = "South Ruislip · vía contigua"
+offset_m = -30.0
+arrive_s = 1000.0
+depart_s = 1060.0
+dwell_s = 45.0

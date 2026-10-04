@@ -1,6 +1,6 @@
 # Prueba manual de la interfaz y de la partida
 
-Las ocho funciones se usan en una partida real. La referencia de contenido sigue
+Las funciones se usan en una partida real. La referencia de contenido sigue
 siendo Open Rails 1.6.1; la iluminación, el streaming y la interfaz se ejecutan en
 Bevy. El audio continúa desactivado. Esta guía comprueba funcionamiento y efectos
 visibles; no certifica la paridad física completa con Open Rails.
@@ -17,7 +17,7 @@ El script compila y abre el menú. Si el Content está en otro directorio, defin
 `CHILTERN_ROUTE` con la carpeta que contiene `WORLD`, `TILES` y `Chiltern.tdb`.
 Para saltar el menú: `./scripts/run_chiltern_service.sh --direct`.
 
-Elegí **Chiltern**, **Chiltern local: Northolt Park → West Ruislip**,
+Elegí **Chiltern**, **Chiltern local con tráfico: Northolt Park → West Ruislip**,
 **birmingham_pullman**, **Recorrido del servicio**, **09:55**, **Verano** y
 **Despejado**. El tren debe tener ocho coches y comenzar detenido en Northolt Park.
 No abras dos visores a la vez.
@@ -143,8 +143,8 @@ simular todos los subsistemas eléctricos ni scripts específicos de cada modelo
    conserva el itinerario previo. No todos los cambios libres ofrecen un
    itinerario alternativo válido para un servicio con paradas.
 
-El despachador opera el tren del jugador y su sección estacionada. No crea
-circulaciones AI adicionales ni sesiones de multijugador.
+El mapa también muestra los servicios del escenario en violeta y las secciones
+que ocupan. El despachador no crea servicios nuevos ni sesiones de multijugador.
 
 ## 7. HUD avanzado — F8; ajustes y teclas — F10
 
@@ -152,6 +152,8 @@ circulaciones AI adicionales ni sesiones de multijugador.
    Potencia distribuida, Alimentación, Frenos, Fuerzas, Despachador, Clima y
    Diagnóstico. Deben mostrar datos de la sesión, no valores de demostración.
    Diagnóstico incluye FPS, tiempo por cuadro y sectores/entidades del escenario.
+   También muestra P50/P95/P99, cuadros de carga, cuadros superiores a 100 ms
+   y RAM actual/máxima de toda la sesión; la memoria no disponible aparece como «—».
 2. En F10 cambiá distancia de escenario, campo visual y tamaño de interfaz.
    Al cerrar deben cambiar alcance del escenario, amplitud de la vista de
    cabina y tamaño del texto. Sombras y niebla permiten comparar sus efectos.
@@ -211,3 +213,102 @@ no lo uses para probar manualmente regulador o inversor porque los sobrescribe.
 La comparación física del recorrido completo con OR 1.6.1 continúa pendiente.
 Los cuatro oráculos físicos breves y la prueba funcional del servicio son
 comprobaciones diferentes; aprobar la interfaz no elimina esa diferencia.
+
+## 9. Escenario, materiales y detalle a distancia
+
+1. Probá las tres estaciones con **1** en cabina y **2** en exterior. Aumentá y
+   reducí la distancia en F10; acercate a casas, árboles, cercos y andenes.
+2. Deben conservar posición y forma, con ventanas y follaje recortados por su
+   transparencia. La cámara exterior no debe atravesar el terreno ni producir
+   una sombra propia. Cristales y planos transparentes no deben generar manchas
+   rectangulares sobre la vía.
+3. Mové lentamente la cámara alrededor de una distancia de cambio de detalle.
+   El modelo no debe alternar entre dos niveles por pequeños movimientos. Hay
+   histéresis del 8 %; sigue existiendo un cambio discreto de malla, sin fundido.
+4. Conducí hasta West Ruislip. Edificios, vía y árboles deben seguir apareciendo;
+   no debe quedar sólo terreno vacío al superar el sector inicial.
+5. Las seis referencias originales están en
+   `docs/fixtures/visual/or_reference/chiltern_station_views/`. Compará desde un
+   encuadre equivalente; para cabina usá 45° en F10. Bevy conserva su iluminación
+   y tonemapping. Algunas construcciones del Content tienen reversos abiertos
+   también en OR; no se les agregaron edificios o pisos inventados.
+
+## 10. Noche, faros, lluvia y limpiaparabrisas
+
+1. Elegí **21:55**, Verano y Despejado. En exterior, mirá hacia arriba: deben
+   verse estrellas sobre cielo oscuro. El terreno y las casas deben oscurecerse
+   junto con el cielo. Las ventanas con textura Night pueden quedar iluminadas.
+2. **H** alterna faros apagados, bajos y altos. En cabina, sobre una recta,
+   compará la vía frente al tren: altos deben iluminar los rieles y apagados
+   deben quitar el haz. Las lámparas siguen las condiciones del archivo original;
+   el Pullman declara sus luces blancas delanteras para altos y marcadores rojos
+   para bajos. Mové la cámara exterior: la luz debe seguir la
+   locomotora, sin actuar como una linterna de cámara.
+3. **I** enciende la luz de cabina. El interior debe quedar más legible de noche,
+   mientras los instrumentos luminosos conservan su iluminación. H e I también
+   actúan mediante controles originales que declaren HEADLIGHT/CABLIGHT en CVF.
+4. Iniciá con Lluvia y volvé a cabina. Deben caer gotas afuera y acumularse gotas
+   con refracción en el parabrisas, sin cubrir el tablero ni los marcos opacos.
+   **V** debe mover las escobillas originales y despejar sus arcos. Al apagarlo,
+   los sectores limpiados vuelven a mojarse gradualmente.
+5. Pausá: precipitación, gotas y escobillas deben detenerse con el reloj. En
+   exterior no debe aparecer el efecto de gotas sobre la pantalla. Con lluvia
+   o niebla las estrellas no deben verse. Guardar/cargar conserva H, I y V.
+6. Con Niebla, compará F10 → **Modelo de niebla**: Atmosférica, Volumétrica 32 y
+   Volumétrica 64. Probá faros altos de noche y sol bajo de día. La volumétrica
+   concentra densidad cerca de la vía y participa en la iluminación de faros;
+   el costo aumenta con los pasos. Guardá ajustes para conservar la elección.
+
+El cielo estrellado es procedural y repetible, sin reproducir un catálogo
+astronómico de OR. El limpiado del vidrio usa una proyección aproximada de dos
+escobillas; modelos con otra disposición pueden requerir perfiles específicos.
+El audio continúa desactivado.
+
+## 11. Fluidez y memoria durante todo el viaje
+
+1. Iniciá una sesión nueva y completá las tres paradas. F8 → Diagnóstico conserva
+   mediciones de toda esa sesión aunque cierres el panel.
+2. Compará las mismas condiciones con 500, 2000 y 4000 m de distancia de carga.
+   Anotá P95/P99, máximo por cuadro y pico de RAM. El parseo de modelos y la
+   decodificación ACE se ejecutan en segundo plano; la construcción principal
+   se reparte con un presupuesto de 4 ms por cuadro. Un recurso grande puede
+   superar ese presupuesto porque no se interrumpe a mitad de construcción.
+3. La RAM debe estabilizarse al descargar sectores anteriores; no debe crecer
+   con cada captura o visita. El histograma tiene tamaño fijo. No compares los
+   FPS de lavapipe con los de una GPU dedicada.
+
+## 12. Tráfico ferroviario en vivo
+
+1. Seleccioná **Chiltern local con tráfico**. Abrí F4/M: el Pullman adelantado
+   debe ocupar secciones y mantener la primera señal en Alto mientras está
+   delante. Al atender South Ruislip y continuar, las secciones se liberan.
+2. Atendé Northolt y esperá la salida de las **10:00**. `+` acelera el reloj y
+   `−` lo reduce. F7 muestra los horarios. El servicio sin tráfico anterior
+   conserva su horario más corto.
+3. Entre South Ruislip y West Ruislip debe pasar otro Pullman en la vía contigua.
+   Su salida es a las **10:06:40**; no aparece antes. Sus coches, bogies, ruedas,
+   puertas y luces deben seguir ese tren. M identifica los dos servicios.
+4. Guardá antes del cruce, avanzá y restaurá. El jugador y los dos servicios
+   deben volver juntos al estado guardado. Pausa congela todos.
+5. Completá el recorrido: el jugador debe terminar con **3/3**; el adelantado
+   atiende dos estaciones y el contrario una. El adelantado deja libre la
+   terminal, sin quedarse bloqueando al jugador. El horario AI es de demostración.
+
+## 13. Validez de todas las formaciones instaladas
+
+1. Recorré **Formación** en el menú. Debajo aparece el estado de cada una.
+   Las que tienen archivos faltantes o incompatibles deben explicar el motivo
+   y rechazar Iniciar; las no motorizadas se identifican como material estático.
+2. Una formación utilizable debe cargar todos sus vehículos, respetar Flip y
+   usar cabina original 2D/3D cuando existe. Sin cabina declarada, el visor puede
+   ofrecer su cabina genérica y lo informa como advertencia.
+3. Para obtener el diagnóstico de todo el Content:
+
+```bash
+target/debug/openrailsrs audit-consists \
+  "/ruta/Content/Chiltern/TRAINS/CONSISTS" --json > tmp/formaciones.json
+```
+
+Este control verifica parámetros, rutas ENG/WAG, modelos, archivos de texturas
+y gráficos de cabina. No garantiza que cualquier locomotora tenga física,
+sonidos o scripts C# equivalentes a Open Rails.

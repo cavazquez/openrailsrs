@@ -240,7 +240,8 @@ fn control_type_from_matrix_prefix(prefix: &str) -> Option<ControlType> {
         "BRAKE PIPE" => ControlType::BrakePipe,
         "AMMETER" => ControlType::Ammeter,
         "HORN" => ControlType::Generic("HORN".into()),
-        "WIPERS" | "EXTERNALWIPERS" | "EXTERNAL WIPERS" => ControlType::Generic("WIPERS".into()),
+        "WIPERS" => ControlType::Generic("WIPERS".into()),
+        "EXTERNALWIPERS" | "EXTERNAL WIPERS" => ControlType::Generic("EXTERNALWIPERS".into()),
         other => ControlType::Generic(other.to_string()),
     })
 }
@@ -252,7 +253,7 @@ fn control_is_lever(control: &ControlType) -> bool {
             | ControlType::TrainBrake
             | ControlType::DynamicBrakeDisplay
             | ControlType::DirectionDisplay
-    )
+    ) || matches!(control, ControlType::Generic(n) if n == "EXTERNALWIPERS")
 }
 
 /// Matrices whose bound meshes are rebaked to bone-local space (entity transform).
@@ -299,6 +300,10 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         }
         ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") && tel.horn_active => 1.0,
         ControlType::Generic(name) if name.contains("WIPER") && tel.wiper_active => 1.0,
+        ControlType::Generic(name) if name.contains("HEADLIGHT") => f64::from(tel.headlights) / 2.0,
+        ControlType::Generic(name) if name.contains("CABLIGHT") => {
+            f64::from(u8::from(tel.cab_light))
+        }
         ControlType::Ammeter => tel
             .diesel_rpm
             .map(|r| (r / 1500.0).clamp(0.0, 1.0))
@@ -502,10 +507,17 @@ fn procedural_cab_motion(
         ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") => {
             (0.0, Vec3::NEG_Y * (0.018 * value))
         }
+        ControlType::Generic(name) if name == "EXTERNALWIPERS" => {
+            (110.0_f32.to_radians() * value, Vec3::ZERO)
+        }
         _ => return None,
     };
     Some(ProceduralCabMotion {
-        local_axis: Vec3::Y,
+        local_axis: if matches!(control, ControlType::Generic(n) if n == "EXTERNALWIPERS") {
+            Vec3::Z
+        } else {
+            Vec3::Y
+        },
         angle_radians,
         local_translation,
     })
@@ -564,6 +576,18 @@ fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -
     (value as f32 * max_frame).clamp(0.0, max_frame)
 }
 
+fn moving_control_value(control: &ControlType, tel: &CabTelemetry, time_s: f64) -> f64 {
+    if matches!(control, ControlType::Generic(n) if n == "EXTERNALWIPERS") {
+        if tel.wiper_active {
+            crate::windshield::wiper_phase(time_s)
+        } else {
+            0.0
+        }
+    } else {
+        control_value(control, tel)
+    }
+}
+
 /// Apply CVF / matrix animation from live telemetry.
 pub fn update_cab_cvf_controls(
     time: Res<Time>,
@@ -608,7 +632,7 @@ pub fn update_cab_cvf_controls(
                 visibility.set_if_neq(Visibility::Visible);
                 let has_anim = lever_has_authored_animation(&runtime.shape, *anim_node);
                 if !has_anim {
-                    let target = control_value(control, &tel) as f32;
+                    let target = moving_control_value(control, &tel, live.session.time_s()) as f32;
                     let value = smoothed_control_value(lever_keys, part.matrix_idx, target, smooth);
                     let next_transform = procedural_control_transform(
                         &runtime.shape,
@@ -624,7 +648,7 @@ pub fn update_cab_cvf_controls(
                     transform.set_if_neq(next_transform);
                     continue;
                 }
-                let value = control_value(control, &tel);
+                let value = moving_control_value(control, &tel, live.session.time_s());
                 let target_key = anim_key_for_lever(&runtime.shape, *anim_node, value);
                 let key = smoothed_control_value(lever_keys, part.matrix_idx, target_key, smooth);
                 let pose_mats = animation_pose_matrices(&runtime.shape, key);
@@ -793,6 +817,8 @@ mod tests {
             direction: 0.5,
             horn_active: false,
             wiper_active: false,
+            headlights: 1,
+            cab_light: false,
             main_res_bar: 8.0,
             brake_pipe_bar: 4.0,
             brake_cyl_bar: 1.0,

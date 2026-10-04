@@ -115,6 +115,8 @@ fn make_two_train_scenario(
             start: "yard_a".into(),
             destination: "yard_b".into(),
             start_time_s: extra_start_time_s,
+            waypoints: vec![],
+            start_offset_m: 0.0,
             stops: vec![],
             davis: Some(extra_davis),
             switches: vec![],

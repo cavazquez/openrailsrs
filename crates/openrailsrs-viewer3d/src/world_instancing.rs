@@ -207,11 +207,13 @@ pub struct WorldInstancingPlugin;
 impl Plugin for WorldInstancingPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WorldInstancingFallbackImage>()
+            .init_resource::<crate::performance::ScenePipelineStatus>()
             // Bevy 0.19 refreshes bounds on Changed<Mesh3d>. The source mesh
             // encloses one model, while our draw places many copies across a
             // tile. Keep the aggregate bounds, including on LOD mesh swaps.
             .register_required_components::<WorldInstanceBuffer, NoAutoAabb>()
             .add_plugins((
+                ExtractResourcePlugin::<crate::performance::ScenePipelineStatus>::default(),
                 ExtractResourcePlugin::<WorldInstancingFallbackImage>::default(),
                 ExtractComponentPlugin::<WorldInstanceBuffer>::default(),
                 ExtractComponentPlugin::<WorldInstanceAppearance>::default(),
@@ -224,7 +226,17 @@ impl Plugin for WorldInstancingPlugin {
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
+        if std::env::var_os("OPENRAILSRS_SHADER_DIAGNOSTICS").is_some() {
+            render_app.add_systems(
+                Render,
+                crate::performance::log_shader_pipeline_status.in_set(RenderSystems::Cleanup),
+            );
+        }
         render_app
+            .add_systems(
+                Render,
+                crate::performance::update_pipeline_status.in_set(RenderSystems::Cleanup),
+            )
             .add_render_command::<Opaque3d, DrawWorldInstanced>()
             .add_render_command::<Shadow, DrawWorldInstancedShadow>()
             .init_resource::<SpecializedMeshPipelines<WorldInstancingPipeline>>()
@@ -428,6 +440,8 @@ struct AppearanceGpu {
 #[derive(Resource)]
 struct WorldInstancingPipeline {
     shader: Handle<Shader>,
+    // AssetServer::add bypasses ShaderLoader's import dependency discovery.
+    _lighting_shader: Handle<Shader>,
     mesh_pipeline: MeshPipeline,
     appearance_layout: BindGroupLayoutDescriptor,
     /// Prepass/shadow view layout (group 0) — matches [`SetPrepassViewBindGroup`].
@@ -495,6 +509,7 @@ fn init_world_instancing_pipeline(
     );
     commands.insert_resource(WorldInstancingPipeline {
         shader,
+        _lighting_shader: asset_server.load("shaders/railway_lighting.wgsl"),
         mesh_pipeline: mesh_pipeline.clone(),
         appearance_layout,
         shadow_view_layout: prepass_pipeline.view_layout_no_motion_vectors.clone(),

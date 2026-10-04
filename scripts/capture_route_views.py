@@ -33,12 +33,21 @@ def station_scenario(source, scenario, chainage, stop_index, directory):
     base = source.parent
     # Preserve the full authored physics/configuration and resolve paths before
     # writing a disposable scenario outside the original scenario directory.
-    for key, value in [("path", scenario["route"]["path"]),
-                       ("consist", scenario["train"]["consist"])]:
-        text = re.sub(rf"(?m)^{key}\s*=.*$",
-                      lambda _: f"{key} = {json.dumps(str((base / value).resolve()))}", text)
-    text = re.sub(r"(?m)^start_offset_m\s*=.*$",
-                  f"start_offset_m = {chainage:.12f}", text)
+    section = ""
+    lines = []
+    for line in text.splitlines():
+        if line.strip().startswith("["):
+            section = line.strip()
+        if section == "[route]" and re.match(r"path\s*=", line):
+            line = f"path = {json.dumps(str((base / scenario['route']['path']).resolve()))}"
+        elif section == "[route]" and re.match(r"start_offset_m\s*=", line):
+            line = f"start_offset_m = {chainage:.12f}"
+        elif section in ("[train]", "[[extra_trains]]") and re.match(r"consist\s*=", line):
+            # Every service keeps its own consist and native initial position.
+            value = tomllib.loads(line)["consist"]
+            line = f"consist = {json.dumps(str((base / value).resolve()))}"
+        lines.append(line)
+    text = "\n".join(lines) + "\n"
     index = -1
 
     def keep_stop(match):
@@ -68,7 +77,8 @@ def main():
     parser.add_argument("--camera-pitch", type=float, default=0.6)
     parser.add_argument("--camera-distance", type=float, default=160)
     parser.add_argument("--view-radius-m", type=int, default=450)
-    parser.add_argument("--with-cab", action="store_true", help="also inspect the starting 3D cab/HUD")
+    parser.add_argument("--with-cab", action="store_true", help="inspect the 3D cab/HUD at every station")
+    parser.add_argument("--cab-fov-deg", type=float, default=45, help="native OR reference uses 45 degrees")
     args = parser.parse_args()
     args.repo = repo
     args.scenario = args.scenario.resolve()
@@ -98,10 +108,10 @@ def main():
         if not report.get("camera") or not report.get("solar_direction"):
             raise RuntimeError("Viewer lacks camera / sun metadata; rebuild the workspace")
         reports[name] = report
-    if args.with_cab:
-        args.follow = "driver"
-        args.scenario = source
-        reports["cab"] = run_checkpoint(args, "cab", 0, True)
+        if args.with_cab:
+            args.follow = "driver"
+            reports[name + "-cab"] = run_checkpoint(args, name + "-cab", 0, True)
+            args.follow = "orbit"
     (args.out_dir / "report.json").write_text(json.dumps(reports, indent=2) + "\n")
 
 

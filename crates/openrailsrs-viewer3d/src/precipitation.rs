@@ -11,11 +11,11 @@ use bevy::prelude::*;
 use crate::track::TrackScene;
 use crate::viewer_log;
 
-const RAIN_DROP_COUNT: usize = 200;
-const RAIN_STREAK_HEIGHT: f32 = 3.4;
-const RAIN_STREAK_WIDTH: f32 = 0.14;
+const RAIN_DROP_COUNT: usize = 480;
+const RAIN_STREAK_HEIGHT: f32 = 1.5;
+const RAIN_STREAK_WIDTH: f32 = 0.045;
 
-/// Toggle with `P`. Disabled by default for performance.
+/// Activated by selected weather; the standalone scenery viewer also uses `P`.
 #[derive(Resource, Clone, Debug)]
 pub struct PrecipitationState {
     pub enabled: bool,
@@ -33,8 +33,8 @@ impl Default for PrecipitationState {
     fn default() -> Self {
         Self {
             enabled: false,
-            area_half: 260.0,
-            ceiling: 95.0,
+            area_half: 35.0,
+            ceiling: 45.0,
         }
     }
 }
@@ -43,7 +43,6 @@ impl Default for PrecipitationState {
 #[derive(Clone, Copy, Debug)]
 struct RainDropState {
     seed: u32,
-    #[allow(dead_code)]
     speed: f32,
 }
 
@@ -122,7 +121,7 @@ pub(crate) fn spawn_precipitation(
         let speed = 20.0 + rain_rng01(seed, 3) * 16.0;
         drops.push(RainDropState { seed, speed });
     }
-    let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling);
+    let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling, 0.0);
     let material = materials.add(StandardMaterial {
         base_color: Color::srgba(0.94, 0.97, 1.0, 0.9),
         emissive: LinearRgba::from(Color::srgb(0.55, 0.72, 1.0)) * 0.35,
@@ -142,12 +141,16 @@ pub(crate) fn spawn_precipitation(
         Name::new("rain"),
     ));
     commands.insert_resource(RainState { drops });
-    viewer_log!(
-        "openrailsrs-viewer3d: precipitation on ({RAIN_DROP_COUNT} billboards merged, P toggles)"
-    );
+    viewer_log!("openrailsrs-viewer3d: precipitation on ({RAIN_DROP_COUNT} billboards merged)");
 }
 
-fn build_rain_mesh(drops: &[RainDropState], origin: Vec3, area_half: f32, ceiling: f32) -> Mesh {
+fn build_rain_mesh(
+    drops: &[RainDropState],
+    origin: Vec3,
+    area_half: f32,
+    ceiling: f32,
+    elapsed_s: f32,
+) -> Mesh {
     let hw = RAIN_STREAK_WIDTH * 0.5;
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(drops.len() * 4);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(drops.len() * 4);
@@ -155,8 +158,17 @@ fn build_rain_mesh(drops: &[RainDropState], origin: Vec3, area_half: f32, ceilin
     let mut indices: Vec<u32> = Vec::with_capacity(drops.len() * 6);
 
     for drop in drops {
-        let (x, z) = rain_offset_xz(origin, drop.seed, area_half);
-        let y = origin.y + rain_rng01(drop.seed, 2) * ceiling;
+        let (mut x, mut z) = rain_offset_xz(origin, drop.seed, area_half);
+        // Keep outdoor streaks beyond the opaque cab shell. Windshield droplets
+        // are rendered by the depth-masked postprocess, never inside the cab.
+        let mut offset = Vec2::new(x - origin.x, z - origin.z);
+        if offset.length() < 8.0 {
+            offset = offset.normalize_or_zero() * 8.0;
+            x = origin.x + offset.x;
+            z = origin.z + offset.y;
+        }
+        let y = origin.y - 15.0
+            + (rain_rng01(drop.seed, 2) * ceiling - drop.speed * elapsed_s).rem_euclid(ceiling);
         let yaw = rain_billboard_yaw(Vec3::new(x, y, z), origin);
         let rot = Quat::from_rotation_y(yaw);
         let corners_local = [
@@ -220,7 +232,7 @@ pub(crate) fn toggle_precipitation(
                 let speed = 20.0 + rain_rng01(seed, 3) * 16.0;
                 drops.push(RainDropState { seed, speed });
             }
-            let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling);
+            let mesh = build_rain_mesh(&drops, origin, state.area_half, state.ceiling, 0.0);
             let material = materials.add(StandardMaterial {
                 base_color: Color::srgba(0.94, 0.97, 1.0, 0.9),
                 emissive: LinearRgba::from(Color::srgb(0.55, 0.72, 1.0)) * 0.35,
@@ -251,6 +263,7 @@ pub(crate) fn toggle_precipitation(
 
 pub(crate) fn update_precipitation(
     time: Res<Time>,
+    live: Option<Res<crate::live::LiveDrive>>,
     state: Res<PrecipitationState>,
     camera: Query<&Transform, With<Camera3d>>,
     rain_state: Option<ResMut<RainState>>,
@@ -271,9 +284,8 @@ pub(crate) fn update_precipitation(
     };
 
     let origin = cam.translation;
-    let _dt = time.delta_secs();
-
-    let mesh = build_rain_mesh(&rain.drops, origin, state.area_half, state.ceiling);
+    let elapsed = live.map_or_else(|| time.elapsed_secs(), |l| l.session.time_s() as f32);
+    let mesh = build_rain_mesh(&rain.drops, origin, state.area_half, state.ceiling, elapsed);
     if let Some(mut existing) = mesh_assets.get_mut(&mesh_handle.0) {
         *existing = mesh;
     }

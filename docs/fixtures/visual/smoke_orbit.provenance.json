@@ -1,13 +1,23 @@
 {
-  "updated_on": "2026-10-02",
+  "updated_on": "2026-10-04",
   "bevy_version": "0.19.1",
   "render_adapter": "Vulkan lavapipe (Xvfb)",
-  "previous_sha256": "9d672a4869627306da203e91e060d1405937c4df5be9f7fb7c4373c7947f6506",
-  "sha256": "5ff44cfe87aa1c9077e416d24862f33cdd3ddad2bdd54a4daa3c969dce4daf88",
-  "previous_fixture_commit": "addcb67",
-  "reviewed_source_base": "addcb67",
-  "reason": "Clear-weather fog is now independent of the 400 m asset-loading radius, revealing the synthetic smoke geometry. The full DejaVu font replaces the ASCII subset for loading and default HUD text. Both captures were inspected; the old/new change was 9.348% of pixels at tolerance 16.",
+  "previous_sha256": "5ff44cfe87aa1c9077e416d24862f33cdd3ddad2bdd54a4daa3c969dce4daf88",
+  "sha256": "274c3f29bc0025cb7ef351df0d17fb7356e60070a4b2e28e4c6f05ddd403c7ce",
+  "previous_fixture_commit": "cdbc1ac",
+  "reviewed_source_base": "cdbc1ac",
+  "reason": "Camera pitch is now above the terrain and the 180 m explicit distance is reapplied after automatic track framing. Scenery shaders compile all dependencies; actual terrain and synthetic test objects are visible. Old and new captures were inspected. The synthetic fixture uses diagnostic colors; native Open Rails reference images remain frozen.",
   "tolerance": 16,
   "max_hot_pct": 2.0,
-  "scope": "Internal static Bevy viewer smoke. Native Open Rails references are frozen separately."
+  "scope": "Internal static Bevy viewer smoke. Native Open Rails references are frozen separately.",
+  "camera": {
+    "yaw_rad": 0.85,
+    "pitch_rad": 0.35,
+    "distance_m": 180,
+    "window": [
+      640,
+      360
+    ]
+  },
+  "previous_diff_hot_pct": 85.541
 }

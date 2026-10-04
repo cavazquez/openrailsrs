@@ -108,6 +108,21 @@ pub fn world_lod_distance_m(cam_pos: Vec3, entity_or_group_center: Vec3) -> f32 
     cam_pos.distance(entity_or_group_center)
 }
 
+/// Use overlapping distance bands to avoid repeated mesh swaps near a boundary.
+/// Preserve the authored OR LOD policy, including its view-sphere bias.
+pub fn stable_lod_level(shape: &ShapeFile, distance_m: f32, current: usize) -> usize {
+    let desired = lod_level_index_for_distance(shape, distance_m);
+    match desired.cmp(&current) {
+        std::cmp::Ordering::Greater => {
+            lod_level_index_for_distance(shape, distance_m / 1.08).max(current)
+        }
+        std::cmp::Ordering::Less => {
+            lod_level_index_for_distance(shape, distance_m * 1.08).min(current)
+        }
+        std::cmp::Ordering::Equal => current,
+    }
+}
+
 /// Find the same logical shape part in another LOD band.
 ///
 /// Vector positions are not stable in MSTS shapes: a band can remove an earlier
@@ -1480,6 +1495,16 @@ type InstancedShapeSpawnBundle = (
     bevy::camera::primitives::Aabb,
 );
 
+type ParsedWorldShape = (
+    PathBuf,
+    Option<ShapeFile>,
+    Option<crate::shapes::LoadedShape>,
+);
+type ShapeBatchReceiver = std::sync::Mutex<std::sync::mpsc::Receiver<Vec<ParsedWorldShape>>>;
+type TextureBatchReceiver = std::sync::Mutex<
+    std::sync::mpsc::Receiver<std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>>,
+>;
+
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
     phase: WorldSpawnPhase,
@@ -1504,6 +1529,8 @@ pub struct WorldSpawnProgress {
     shape_fallback_color: Color,
     shape_fallback_material: Option<Handle<StandardMaterial>>,
     parsed_shapes: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)>,
+    shape_task: Option<ShapeBatchReceiver>,
+    texture_task: Option<TextureBatchReceiver>,
     shape_load_paths: Vec<PathBuf>,
     shape_parse_index: usize,
     texture_paths: Vec<PathBuf>,
@@ -1604,6 +1631,8 @@ impl WorldSpawnProgress {
             shape_fallback_color: Color::srgb(0.72, 0.55, 0.42),
             shape_fallback_material: None,
             parsed_shapes: Vec::new(),
+            shape_task: None,
+            texture_task: None,
             shape_load_paths: Vec::new(),
             shape_parse_index: 0,
             texture_paths: Vec::new(),
@@ -2540,24 +2569,42 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
     if progress.shape_parse_index >= progress.shape_load_paths.len() {
         return false;
     }
-    if progress.shape_parse_index == 0 {
-        reset_shape_file_parse_count();
-    }
     let end =
         (progress.shape_parse_index + SHAPE_PARSE_PER_FRAME).min(progress.shape_load_paths.len());
     let batch: Vec<PathBuf> = progress.shape_load_paths[progress.shape_parse_index..end].to_vec();
-    // One `ShapeFile::from_path` per unique path → mesh + LOD/anim file (#57).
-    let parsed: Vec<(
-        PathBuf,
-        Option<ShapeFile>,
-        Option<crate::shapes::LoadedShape>,
-    )> = batch
-        .par_iter()
-        .map(|path| match load_shape_file_and_loaded(path, None) {
-            Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
-            None => (path.clone(), None, None),
-        })
-        .collect();
+    if progress.shape_task.is_none() {
+        if progress.shape_parse_index == 0 {
+            reset_shape_file_parse_count();
+        }
+        let (sender, receiver) = std::sync::mpsc::channel();
+        progress.shape_task = Some(std::sync::Mutex::new(receiver));
+        std::thread::spawn(move || {
+            let parsed = batch
+                .par_iter()
+                .map(|path| match load_shape_file_and_loaded(path, None) {
+                    Some((shape, loaded)) => (path.clone(), Some(shape), Some(loaded)),
+                    None => (path.clone(), None, None),
+                })
+                .collect();
+            let _ = sender.send(parsed);
+        });
+        return true;
+    }
+    let result = progress
+        .shape_task
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .try_recv();
+    let parsed = match result {
+        Ok(parsed) => parsed,
+        Err(std::sync::mpsc::TryRecvError::Empty) => return true,
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+            batch.into_iter().map(|p| (p, None, None)).collect()
+        }
+    };
+    progress.shape_task = None;
     for (shape_path, shape_file, loaded) in parsed {
         if let Some(shape) = shape_file {
             progress
@@ -2618,7 +2665,27 @@ fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool 
     let end = (progress.texture_prefetch_index + ACE_TEXTURES_PER_FRAME)
         .min(progress.texture_paths.len());
     let batch: Vec<PathBuf> = progress.texture_paths[progress.texture_prefetch_index..end].to_vec();
-    let decoded = prefetch_ace_textures(&batch);
+    if progress.texture_task.is_none() {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        progress.texture_task = Some(std::sync::Mutex::new(receiver));
+        std::thread::spawn(move || {
+            let _ = sender.send(prefetch_ace_textures(&batch));
+        });
+        return true;
+    }
+    let result = progress
+        .texture_task
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .try_recv();
+    let decoded = match result {
+        Ok(decoded) => decoded,
+        Err(std::sync::mpsc::TryRecvError::Empty) => return true,
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => std::collections::HashMap::new(),
+    };
+    progress.texture_task = None;
     for path in &batch {
         if decoded.contains_key(path) {
             progress
@@ -3558,6 +3625,10 @@ pub fn progressive_world_spawn_system(
     let asset_batch = scaled_usize(SHAPE_ASSETS_PER_FRAME, driver_throttle);
     let build_batch = scaled_usize(BUILD_QUEUE_SHAPES_PER_FRAME, driver_throttle);
     let spawn_batch = scaled_usize(SPAWN_ENTITIES_PER_FRAME, driver_throttle);
+    // Bound foreground work as well as item counts. A large unique asset may
+    // consume this allowance alone, but no following asset compounds the hitch.
+    let foreground_started = Instant::now();
+    let foreground_budget = std::time::Duration::from_millis(4);
 
     match progress.phase {
         WorldSpawnPhase::Classifying => {
@@ -3566,7 +3637,12 @@ pub fn progressive_world_spawn_system(
                 .as_ref()
                 .map_or(world.items.len(), Vec::len);
             let end = (progress.item_index + classify_batch).min(item_count);
-            for cursor in progress.item_index..end {
+            let start = progress.item_index;
+            for cursor in start..end {
+                if cursor > start && foreground_started.elapsed() >= foreground_budget {
+                    break;
+                }
+                progress.item_index = cursor + 1;
                 let idx = progress
                     .item_indices
                     .as_ref()
@@ -3590,7 +3666,6 @@ pub fn progressive_world_spawn_system(
                     &mut progress,
                 );
             }
-            progress.item_index = end;
             if progress.item_index >= item_count {
                 viewer_log!(
                     "openrailsrs-viewer3d: classified {} visible world item(s)",
@@ -3637,13 +3712,12 @@ pub fn progressive_world_spawn_system(
             // every mip of the route on every frame while building GPU assets.
             let ace_cache = std::mem::take(&mut progress.ace_cache);
             let end = (progress.asset_build_index + asset_batch).min(progress.parsed_shapes.len());
-            let start = progress.asset_build_index;
-            let batch: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)> = progress.parsed_shapes
-                [start..end]
-                .iter_mut()
-                .map(|(path, loaded)| (path.clone(), loaded.take()))
-                .collect();
-            for (shape_path, loaded) in batch {
+            while progress.asset_build_index < end {
+                let index = progress.asset_build_index;
+                let (shape_path, loaded) = &mut progress.parsed_shapes[index];
+                let shape_path = shape_path.clone();
+                let loaded = loaded.take();
+                progress.asset_build_index += 1;
                 let (shape_path, asset) = build_world_shape_asset(
                     shape_path,
                     loaded,
@@ -3677,9 +3751,11 @@ pub fn progressive_world_spawn_system(
                     }
                 }
                 progress.shape_cache.insert(shape_path, asset);
+                if foreground_started.elapsed() >= foreground_budget {
+                    break;
+                }
             }
             progress.ace_cache = ace_cache;
-            progress.asset_build_index = end;
             if progress.asset_build_index >= progress.parsed_shapes.len() {
                 // All source pixels/temporary meshes have become shared Bevy
                 // assets. Release them before building and submitting entities.
@@ -3696,9 +3772,9 @@ pub fn progressive_world_spawn_system(
         }
         WorldSpawnPhase::BuildingQueue => {
             let end = (progress.build_queue_index + build_batch).min(progress.instance_paths.len());
-            let paths: Vec<PathBuf> =
-                progress.instance_paths[progress.build_queue_index..end].to_vec();
-            for shape_path in paths {
+            while progress.build_queue_index < end {
+                let shape_path = progress.instance_paths[progress.build_queue_index].clone();
+                progress.build_queue_index += 1;
                 let Some(asset) = progress.shape_cache.get(&shape_path).cloned() else {
                     continue;
                 };
@@ -3711,8 +3787,10 @@ pub fn progressive_world_spawn_system(
                     &FloatingOrigin::default(),
                     Some(assets.sigcfg()),
                 );
+                if foreground_started.elapsed() >= foreground_budget {
+                    break;
+                }
             }
-            progress.build_queue_index = end;
             if progress.build_queue_index >= progress.instance_paths.len() {
                 if let Some(start) = progress.build_queue_started {
                     log_step(
@@ -3906,7 +3984,7 @@ pub fn update_world_scenery_lod(
             continue;
         }
         let instance_dist = world_lod_distance_m(cam_pos, gt.translation());
-        let new_lod = lod_level_index_for_distance(shape, instance_dist).min(lod_assets.len() - 1);
+        let new_lod = stable_lod_level(shape, instance_dist, lod.lod_idx).min(lod_assets.len() - 1);
         if new_lod == lod.lod_idx {
             continue;
         }

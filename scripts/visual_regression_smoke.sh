@@ -27,7 +27,7 @@ mkdir -p "$OUT_DIR" "$(dirname "$GOLDEN")"
 export OPENRAILSRS_WINDOW_WIDTH="${OPENRAILSRS_WINDOW_WIDTH:-640}"
 export OPENRAILSRS_WINDOW_HEIGHT="${OPENRAILSRS_WINDOW_HEIGHT:-360}"
 export OPENRAILSRS_CAM_YAW="${OPENRAILSRS_CAM_YAW:-0.85}"
-export OPENRAILSRS_CAM_PITCH="${OPENRAILSRS_CAM_PITCH:--0.35}"
+export OPENRAILSRS_CAM_PITCH="${OPENRAILSRS_CAM_PITCH:-0.35}"
 export OPENRAILSRS_CAM_DIST="${OPENRAILSRS_CAM_DIST:-180}"
 export OPENRAILSRS_VIEW_RADIUS_M="${OPENRAILSRS_VIEW_RADIUS_M:-400}"
 export OPENRAILSRS_SCREENSHOT_AFTER_READY="${OPENRAILSRS_SCREENSHOT_AFTER_READY:-1}"
@@ -49,7 +49,11 @@ echo "cam:     yaw=$OPENRAILSRS_CAM_YAW pitch=$OPENRAILSRS_CAM_PITCH dist=$OPENR
 echo "ready:   AFTER_READY=$OPENRAILSRS_SCREENSHOT_AFTER_READY frames=$OPENRAILSRS_SCREENSHOT_READY_FRAMES max_delay=${OPENRAILSRS_SCREENSHOT_DELAY_S}s"
 
 set +e
-cargo run --release -q -p openrailsrs-viewer3d --bin openrailsrs-viewer3d -- "$ROUTE"
+if [[ -n "${OPENRAILSRS_VIEWER_BIN:-}" ]]; then
+  "$OPENRAILSRS_VIEWER_BIN" "$ROUTE"
+else
+  cargo run --release -q -p openrailsrs-viewer3d --bin openrailsrs-viewer3d -- "$ROUTE"
+fi
 viewer_rc=$?
 set -e
 
@@ -73,8 +77,12 @@ if [[ ! -f "$GOLDEN" ]]; then
 fi
 
 set +e
-cargo run --release -q -p openrailsrs-viewer3d --bin openrailsrs-visual-diff -- \
-  "$ACTUAL" "$GOLDEN" --diff "$DIFF" --tol "$TOL" --max-hot-pct "$MAX_HOT_PCT"
+if [[ -n "${OPENRAILSRS_DIFF_BIN:-}" ]]; then
+  "$OPENRAILSRS_DIFF_BIN" "$ACTUAL" "$GOLDEN" --diff "$DIFF" --tol "$TOL" --max-hot-pct "$MAX_HOT_PCT"
+else
+  cargo run --release -q -p openrailsrs-viewer3d --bin openrailsrs-visual-diff -- \
+    "$ACTUAL" "$GOLDEN" --diff "$DIFF" --tol "$TOL" --max-hot-pct "$MAX_HOT_PCT"
+fi
 diff_rc=$?
 set -e
 

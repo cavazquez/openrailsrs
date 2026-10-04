@@ -1894,6 +1894,7 @@ mod tests {
             let car = openrailsrs_viewer3d::rolling_stock_anim::car_world_pose_at_head_offset(
                 &config.scene.graph,
                 Some(live),
+                0,
                 edge,
                 pos_on_edge,
                 f64::from(vehicle.offset_m),

@@ -84,7 +84,7 @@ pub struct TrainBogieAnim {
 pub struct TrainCarTrackOffset {
     /// Metres along the path from the consist head (negative = behind).
     pub offset_m: f32,
-    /// Replay track index; live drive ignores this (always primary).
+    /// 0 = player, subsequent indices = live traffic / replay services.
     pub track_index: usize,
     /// `.con` Flip — applied in the authored vehicle frame (#130 / #128).
     pub flipped: bool,
@@ -94,6 +94,7 @@ pub struct TrainCarTrackOffset {
 pub fn car_world_pose_at_head_offset(
     graph: &openrailsrs_track::TrackGraph,
     live: Option<&LiveDrive>,
+    track_index: usize,
     head_edge: &str,
     head_pos: f64,
     path_offset_m: f64,
@@ -106,7 +107,7 @@ pub fn car_world_pose_at_head_offset(
     origin: &FloatingOrigin,
 ) -> Option<Transform> {
     let (edge_id, pos) = if let Some(live) = live {
-        live.visual_position_at_head_offset(path_offset_m)?
+        live.visual_position_for_service(track_index, path_offset_m, path_offset_m)?
     } else {
         advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
     };
@@ -161,11 +162,22 @@ pub fn update_consist_car_track_poses(
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
     origin: Res<FloatingOrigin>,
-    parents: Query<&Transform, Or<(With<LiveTrainMarker>, With<TrainMarker>)>>,
+    parents: Query<
+        &Transform,
+        Or<(
+            With<LiveTrainMarker>,
+            With<TrainMarker>,
+            With<crate::traffic::TrafficTrainMarker>,
+        )>,
+    >,
     // Disjoint from `parents`: lead may be LiveTrainMarker without TrainMarker (Bevy B0001).
     mut cars: Query<
         (&TrainCarTrackOffset, &ChildOf, &mut Transform),
-        (Without<TrainMarker>, Without<LiveTrainMarker>),
+        (
+            Without<TrainMarker>,
+            Without<LiveTrainMarker>,
+            Without<crate::traffic::TrafficTrainMarker>,
+        ),
     >,
 ) {
     let live_ref = live.as_deref();
@@ -187,6 +199,7 @@ pub fn update_consist_car_track_poses(
         let Some(car_world) = car_world_pose_at_head_offset(
             &scene.graph,
             live_ref,
+            car.track_index,
             &head_edge,
             head_pos,
             f64::from(car.offset_m),
@@ -413,7 +426,7 @@ fn head_graph_position(
     track_index: usize,
 ) -> Option<(String, f64)> {
     if let Some(live) = live {
-        return live.visual_position_at_head_offset(0.0);
+        return live.visual_position_for_service(track_index, 0.0, 0.0);
     }
     let replay = replay.filter(|r| r.is_active())?;
     let track = replay.tracks.get(track_index)?;
@@ -428,6 +441,7 @@ fn head_graph_position(
 fn sample_yaw_at_path_offset(
     graph: &openrailsrs_track::TrackGraph,
     live: Option<&LiveDrive>,
+    track_index: usize,
     head_edge: &str,
     head_pos: f64,
     path_offset_m: f64,
@@ -439,7 +453,7 @@ fn sample_yaw_at_path_offset(
     terrain: Option<&TerrainElevation>,
 ) -> Option<f32> {
     let (edge_id, pos) = if let Some(live) = live {
-        live.visual_position_for_car(path_offset_m, car_offset_m)?
+        live.visual_position_for_service(track_index, path_offset_m, car_offset_m)?
     } else {
         advance_along_graph(graph, head_edge, head_pos, path_offset_m)?
     };
@@ -484,7 +498,12 @@ pub fn update_rolling_stock_part_anim(
     train_markers: Query<&TrainMarker>,
     car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
-        (&mut TrainKeyedAnim, Ref<ShapeAnimBinding>, &mut Transform),
+        (
+            &mut TrainKeyedAnim,
+            Ref<ShapeAnimBinding>,
+            &mut Transform,
+            &ChildOf,
+        ),
         (
             With<TrainExteriorAnimPart>,
             Without<TrainWheelAnim>,
@@ -500,7 +519,12 @@ pub fn update_rolling_stock_part_anim(
         let car = cars.get(parent.parent()).ok();
         let track_index = car.map_or(0, |car| car.track_index);
         let distance = live_ref
-            .map(|live| live.visual_car_distance_m(car.map_or(0.0, |car| f64::from(car.offset_m))))
+            .map(|live| {
+                live.visual_car_distance_for_service(
+                    track_index,
+                    car.map_or(0.0, |car| f64::from(car.offset_m)),
+                )
+            })
             .or_else(|| replay_ref.and_then(|replay| replay.wheel_distance_m(track_index)))
             .unwrap_or(0.0);
         let angle = wheel_angle(distance, wheel.radius_m, car.is_some_and(|car| car.flipped));
@@ -549,6 +573,7 @@ pub fn update_rolling_stock_part_anim(
         let Some(car_yaw) = sample_yaw_at_path_offset(
             &scene.graph,
             live_ref,
+            track_index,
             &head_edge,
             head_pos,
             car_path,
@@ -566,6 +591,7 @@ pub fn update_rolling_stock_part_anim(
         let Some(bogie_yaw) = sample_yaw_at_path_offset(
             &scene.graph,
             live_ref,
+            track_index,
             &head_edge,
             head_pos,
             bogie_path,
@@ -590,7 +616,12 @@ pub fn update_rolling_stock_part_anim(
     }
 
     let mut pose_cache = HashMap::new();
-    for (mut keyed_anim, binding, mut tf) in &mut keyed {
+    for (mut keyed_anim, binding, mut tf, parent) in &mut keyed {
+        let service = cars.get(parent.parent()).ok().map_or(0, |c| c.track_index);
+        let exterior = live_ref
+            .and_then(|l| l.session_for_track(service))
+            .map(|s| &s.exterior)
+            .or(exterior);
         let frac = resolve_keyed_frac(keyed_anim.kind, exterior);
         let key = key_from_frac(frac, binding.frame_count);
         if keyed_anim.key == key && !keyed_anim.is_added() && !binding.is_changed() {
@@ -998,6 +1029,7 @@ mod tests {
             let pose = car_world_pose_at_head_offset(
                 &g,
                 None,
+                0,
                 "e2",
                 20.0,
                 off,

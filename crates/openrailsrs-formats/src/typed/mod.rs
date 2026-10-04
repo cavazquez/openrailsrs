@@ -14,6 +14,7 @@ mod sigcfg;
 mod terrain;
 mod track_db;
 mod tsection;
+mod vehicle_lights;
 mod wagon;
 mod world;
 
@@ -64,6 +65,7 @@ pub use tsection::{
     SKEW_AS_CURVE_RADIUS_M, TSectionCatalog, TrackProceduralDims, TrackProceduralLink,
     TrackSectionDef, TrackShapeDef, TrackShapePath,
 };
+pub use vehicle_lights::{VehicleLight, parse_vehicle_lights};
 pub use wagon::{PassengerViewpoint, WagonFile, parse_passenger_viewpoints};
 pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem, WorldTrItemRef};
 

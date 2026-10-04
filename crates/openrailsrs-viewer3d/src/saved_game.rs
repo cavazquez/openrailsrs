@@ -73,6 +73,8 @@ pub struct SavedGame {
     pub route_root: Option<PathBuf>,
     pub description: String,
     pub session: openrailsrs_sim::SessionSnapshot,
+    #[serde(default)]
+    pub traffic: Vec<openrailsrs_sim::TrafficSnapshot>,
     pub start_clock_s: f64,
     pub season: String,
     pub weather: PlayerWeather,
@@ -91,6 +93,7 @@ impl SavedGame {
             route_root: content.route_root.clone(),
             description: content.description.clone(),
             session: live.session.snapshot(),
+            traffic: live.traffic.snapshot(),
             start_clock_s: live.start_clock_s,
             season: live.season.clone(),
             weather: content.weather,
@@ -149,7 +152,11 @@ impl SavedGame {
         })
     }
     pub fn restore(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
+        live.session.validate_snapshot(&self.session)?;
+        live.traffic.validate_snapshot(&self.traffic)?;
         live.session.restore_snapshot(self.session)?;
+        live.traffic.restore_snapshot(self.traffic)?;
+        live.traffic.synchronize_occupancy(&mut live.session);
         live.start_clock_s = self.start_clock_s;
         live.season = self.season;
         live.paused = true;
@@ -234,6 +241,17 @@ fn canonical_scenario(path: &Path) -> Result<String, String> {
         {
             let absolute = crate::player_launch::absolute(&dir.join(relative));
             value[section][key] = toml::Value::String(absolute.to_string_lossy().into_owned());
+        }
+    }
+    if let Some(services) = value
+        .get_mut("extra_trains")
+        .and_then(toml::Value::as_array_mut)
+    {
+        for service in services {
+            if let Some(relative) = service.get("consist").and_then(toml::Value::as_str) {
+                let absolute = crate::player_launch::absolute(&dir.join(relative));
+                service["consist"] = toml::Value::String(absolute.to_string_lossy().into_owned());
+            }
         }
     }
     toml::to_string_pretty(&value).map_err(|e| e.to_string())

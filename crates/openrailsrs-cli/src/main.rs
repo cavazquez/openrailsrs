@@ -52,6 +52,16 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Validate installed .con formations and their linked models, textures and cabs.
+    AuditConsists {
+        /// A .con file or a CONSISTS directory.
+        path: PathBuf,
+        /// Additional original TRAINSET root (preferred over project model fixtures).
+        #[arg(long)]
+        trainset_root: Vec<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
     /// Export the route track graph as Graphviz DOT.
     Graph {
         route: PathBuf,
@@ -354,6 +364,46 @@ fn main() -> anyhow::Result<()> {
     }
 
     match cli.command {
+        Commands::AuditConsists {
+            path,
+            trainset_root,
+            json,
+        } => {
+            let mut paths = if path.is_dir() {
+                std::fs::read_dir(&path)?
+                    .filter_map(Result::ok)
+                    .map(|e| e.path())
+                    .filter(|p| {
+                        p.is_file() && p.extension().is_some_and(|e| e.eq_ignore_ascii_case("con"))
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec![path]
+            };
+            paths.sort();
+            let mut auditor = openrailsrs_train::ConsistAuditor::new(trainset_root);
+            let reports = paths.iter().map(|p| auditor.inspect(p)).collect::<Vec<_>>();
+            let valid = reports.iter().filter(|r| r.content_valid()).count();
+            let ready = reports.iter().filter(|r| r.player_ready()).count();
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "total": reports.len(), "content_valid": valid, "player_ready": ready,
+                        "scope": "Declared ENG/WAG parameters, models, texture files and cab graphics; not physics/script parity",
+                        "formations": reports.iter().map(|r| serde_json::json!({"content_valid": r.content_valid(), "player_ready": r.player_ready(), "report": r})).collect::<Vec<_>>()
+                    }))?
+                );
+            } else {
+                println!(
+                    "{} formations: {valid} complete, {ready} powered and player-ready",
+                    reports.len()
+                );
+                for r in reports {
+                    println!("{}: {}", r.path.display(), r.label());
+                }
+            }
+        }
         Commands::AuditVehicle { file, json } => {
             let report = audit_vehicle_file(&file)
                 .map_err(|e| anyhow::anyhow!("audit {}: {e}", file.display()))?;

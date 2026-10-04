@@ -1016,7 +1016,10 @@ pub(crate) fn handle_cab2d_mouse_controls(
                 if !frames.dir_increase {
                     frac = 1.0 - frac;
                 }
-                let _ = frac; // headlight etc. — no live binding yet
+                if matches!(&widget.control_type, ControlType::Generic(n) if n.contains("HEADLIGHT"))
+                {
+                    live.session.headlights = (frac * 2.0).round().clamp(0.0, 2.0) as u8;
+                }
             }
             _ => {}
         }

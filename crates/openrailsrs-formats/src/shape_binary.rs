@@ -453,7 +453,7 @@ impl<'a> BinaryReader<'a> {
         out.push_str(name);
         if let Some(ref l) = label {
             out.push_str(" \"");
-            out.push_str(l);
+            out.push_str(&l.replace('\\', "\\\\").replace('"', "\\\""));
             out.push('"');
         }
 
@@ -1066,6 +1066,26 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn binary_labels_with_quotes_and_backslashes_survive_text_bridge() {
+        let label = "wagon\\body\"named\"";
+        let payload = SimisaPayload {
+            bytes: binary_block_with_label(71, label, &[]),
+            is_text: false,
+            data_offset: 0,
+            token_offset: 0,
+        };
+        let text = binary_shape_to_ascii(&payload).unwrap();
+        let ast = crate::parser::parse_first(&text).unwrap();
+        let crate::ast::Ast::List(items) = ast else {
+            panic!("shape root")
+        };
+        assert_eq!(
+            items[1],
+            crate::ast::Ast::Atom(crate::ast::Atom::String(label.into()))
+        );
     }
 
     #[test]

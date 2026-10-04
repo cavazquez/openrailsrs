@@ -1,6 +1,5 @@
 //! Live simulation bridge: `openrailsrs-sim` stepped each frame, train pose in 3D.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -38,6 +37,7 @@ use crate::{log_step, viewer_log};
 #[derive(Resource)]
 pub struct LiveDrive {
     pub session: LiveDriveSession,
+    pub traffic: openrailsrs_sim::LiveTraffic,
     pub audio: Option<AudioEngine>,
     pub paused: bool,
     /// Wall-clock start and visual season from the scenario, independent of elapsed physics time.
@@ -134,6 +134,7 @@ impl LiveDrive {
         }
         Ok(Self {
             session,
+            traffic: openrailsrs_sim::LiveTraffic::from_scenario(scenario_dir, scenario)?,
             audio,
             paused: false,
             start_clock_s: scenario
@@ -161,6 +162,7 @@ impl LiveDrive {
             .map_err(|e| e.to_string())?;
         self.session = LiveDriveSession::from_scenario(&self.scenario_dir, &scenario)
             .map_err(|e| e.to_string())?;
+        self.traffic = openrailsrs_sim::LiveTraffic::from_scenario(&self.scenario_dir, &scenario)?;
         if let Some(network) = &self.dispatch_network {
             self.session.expand_dispatch_network(network, &scenario)?;
         }
@@ -180,8 +182,41 @@ impl LiveDrive {
     }
 
     pub fn visual_position_at_head_offset(&self, offset_m: f64) -> Option<(String, f64)> {
-        self.session
-            .render_position_at_head_offset(offset_m, self.render_frame_remainder_s)
+        self.visual_position_for_service(0, offset_m, 0.0)
+    }
+
+    pub fn session_for_track(&self, index: usize) -> Option<&LiveDriveSession> {
+        if index == 0 {
+            Some(&self.session)
+        } else {
+            self.traffic.services.get(index - 1).map(|s| &s.session)
+        }
+    }
+
+    pub fn visual_position_for_service(
+        &self,
+        index: usize,
+        offset: f64,
+        car_offset: f64,
+    ) -> Option<(String, f64)> {
+        let session = self.session_for_track(index)?;
+        let chainage = session.presentation_chainage_for_car(
+            offset,
+            car_offset,
+            self.render_frame_remainder_s,
+        );
+        openrailsrs_sim::path_data::PathData::position_at_odometer(
+            &session.state.path_edges,
+            &session.path_data.edges,
+            chainage.max(0.0),
+        )
+    }
+
+    pub fn visual_car_distance_for_service(&self, index: usize, offset: f64) -> f64 {
+        self.session_for_track(index).map_or(0.0, |s| {
+            s.presentation_chainage_for_car(0.0, offset, self.render_frame_remainder_s)
+                - s.start_chainage_m
+        })
     }
 
     pub fn expand_dispatch_network(
@@ -350,13 +385,13 @@ pub fn advance_live_sim(time: Res<Time<Fixed>>, mut live: ResMut<LiveDrive>) {
             apply_region_transition(a, t);
         }
     };
-    if autodrive_enabled() {
-        live.session
-            .step_autodrive(time.delta_secs_f64(), autodrive_notch(), &mut on_transition);
-    } else {
-        live.session
-            .step_realtime(time.delta_secs_f64(), &mut on_transition);
-    }
+    let live = &mut *live;
+    live.traffic.advance(
+        &mut live.session,
+        time.delta_secs_f64(),
+        autodrive_enabled().then(autodrive_notch),
+        &mut on_transition,
+    );
     live.audio = audio;
     if live.session.arrived && !was_arrived {
         viewer_log!(
@@ -453,6 +488,12 @@ pub fn live_driver_input(
     }
     if pressed(A::Wiper) {
         live.session.toggle_wiper();
+    }
+    if pressed(A::Headlights) {
+        live.session.headlights = (live.session.headlights + 1) % 3;
+    }
+    if pressed(A::CabLight) {
+        live.session.cab_light = !live.session.cab_light;
     }
     if pressed(A::Doors) {
         live.session.toggle_doors();
@@ -877,6 +918,7 @@ pub fn spawn_live_train(
     mode: Res<ViewerSceneryMode>,
     terrain: Option<Res<TerrainElevation>>,
     live: Res<LiveDrive>,
+    mut shared: ResMut<crate::traffic::TrainRenderCache>,
 ) {
     viewer_log!("openrailsrs-viewer3d: spawning live train");
     let spawn_start = Instant::now();
@@ -1001,9 +1043,9 @@ pub fn spawn_live_train(
         log_consist_diagnostic(scenario_dir, consist_rel, vehicles, pos, yaw.to_degrees());
     }
     const TRAIN_SHAPE_FALLBACK: Color = Color::srgb(0.55, 0.58, 0.62);
-    let mut texture_cache: HashMap<(PathBuf, i32), Handle<Image>> = HashMap::new();
+    let mut texture_cache = std::mem::take(&mut shared.textures);
     let mut shape_cars = 0usize;
-    let mut train_shape_cache = HashMap::new();
+    let mut train_shape_cache = std::mem::take(&mut shared.shapes);
     let mut fallback_cars = 0usize;
     let mut shape_parts = 0usize;
     let mut textured_parts = 0usize;
@@ -1363,6 +1405,8 @@ pub fn spawn_live_train(
         driver_cab.height_m,
     );
     log_step("spawned live train", spawn_start);
+    shared.shapes = train_shape_cache;
+    shared.textures = texture_cache;
 }
 
 #[cfg(test)]

@@ -67,6 +67,7 @@ enum HudField {
     Controls,
     Brakes,
     Doors,
+    Lights,
     Clock,
     Station,
     Distance,
@@ -93,6 +94,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 (HudField::Controls, 13.0),
                 (HudField::Brakes, 13.0),
                 (HudField::Doors, 13.0),
+                (HudField::Lights, 12.0),
             ],
         ),
         (
@@ -336,6 +338,19 @@ fn update_driving_hud(
                 };
                 (format!("Puertas  {label}"), tint)
             }
+            HudField::Lights => (
+                format!(
+                    "Faros {} · cabina {}\nLimpiaparabrisas {}",
+                    match session.headlights {
+                        0 => "apagados",
+                        1 => "bajos",
+                        _ => "altos",
+                    },
+                    if session.cab_light { "Sí" } else { "No" },
+                    if session.wiper_active { "Sí" } else { "No" },
+                ),
+                MUTED,
+            ),
             HudField::Clock => (
                 format!("MONITOR DE VÍA   {}", clock_label(live.clock_time_s())),
                 MUTED,

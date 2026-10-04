@@ -192,14 +192,31 @@ impl TrackGraph {
         block_map: &HashMap<String, String>,
         ignored_train: Option<&str>,
     ) -> Option<SignalAspect> {
+        self.signal_occupancy_constraint(id, block_map, ignored_train)
+            .or_else(|| self.signal(id)?.script.as_ref()?.default)
+    }
+
+    /// An occupied block restricts authority even after a manual clear order.
+    /// Unlike the full aspect calculation, a free route returns no constraint.
+    pub fn signal_occupancy_constraint(
+        &self,
+        id: &str,
+        block_map: &HashMap<String, String>,
+        ignored_train: Option<&str>,
+    ) -> Option<SignalAspect> {
         let sig = self.signal(id)?;
         let script = sig.script.as_ref()?;
         let edge = self.edge(&sig.edge_id)?;
         let base = |id: &str| id.strip_suffix("_r").unwrap_or(id).to_owned();
         let occupied = |id: &str| {
-            block_map
-                .get(id)
-                .is_some_and(|train| ignored_train != Some(train.as_str()))
+            let physical = base(id);
+            [physical.clone(), format!("{physical}_r")]
+                .iter()
+                .any(|alias| {
+                    block_map
+                        .get(alias)
+                        .is_some_and(|train| ignored_train != Some(train.as_str()))
+                })
         };
         let first = self
             .outgoing_edges(&edge.to.0)
@@ -222,7 +239,7 @@ impl TrackGraph {
         if second_occupied && let Some(aspect) = script.on_second_block_ahead {
             return Some(aspect);
         }
-        script.default
+        None
     }
 
     /// Evaluate all scripted signals and update their aspects based on block occupancy.

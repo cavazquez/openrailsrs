@@ -5,6 +5,38 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FogQuality {
+    #[default]
+    Distance,
+    Volumetric32,
+    Volumetric64,
+}
+impl FogQuality {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Distance => Self::Volumetric32,
+            Self::Volumetric32 => Self::Volumetric64,
+            Self::Volumetric64 => Self::Distance,
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Distance => "Atmosférica (liviana)",
+            Self::Volumetric32 => "Volumétrica · 32 pasos",
+            Self::Volumetric64 => "Volumétrica · 64 pasos",
+        }
+    }
+    pub fn steps(self) -> Option<u32> {
+        match self {
+            Self::Distance => None,
+            Self::Volumetric32 => Some(32),
+            Self::Volumetric64 => Some(64),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PlayerAction {
@@ -17,6 +49,8 @@ pub enum PlayerAction {
     Neutral,
     Horn,
     Wiper,
+    Headlights,
+    CabLight,
     Doors,
     Emergency,
     Pause,
@@ -41,7 +75,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 30] = [
+    pub const ALL: [Self; 32] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -51,6 +85,8 @@ impl PlayerAction {
         Self::Neutral,
         Self::Horn,
         Self::Wiper,
+        Self::Headlights,
+        Self::CabLight,
         Self::Doors,
         Self::Emergency,
         Self::Pause,
@@ -84,6 +120,8 @@ impl PlayerAction {
             Self::Neutral => "Inversor neutro",
             Self::Horn => "Bocina",
             Self::Wiper => "Limpiaparabrisas",
+            Self::Headlights => "Faros: apagados / bajos / altos",
+            Self::CabLight => "Luz de cabina",
             Self::Doors => "Puertas",
             Self::Emergency => "Emergencia",
             Self::Pause => "Pausar / continuar",
@@ -118,6 +156,8 @@ impl PlayerAction {
             Self::Neutral => KeyCode::Backslash,
             Self::Horn => KeyCode::Space,
             Self::Wiper => KeyCode::KeyV,
+            Self::Headlights => KeyCode::KeyH,
+            Self::CabLight => KeyCode::KeyI,
             Self::Doors => KeyCode::KeyQ,
             Self::Emergency => KeyCode::Backspace,
             Self::Pause => KeyCode::KeyP,
@@ -150,6 +190,7 @@ pub struct PlayerSettings {
     pub cab_fov_deg: f32,
     pub shadows: bool,
     pub fog: bool,
+    pub fog_quality: FogQuality,
     pub ui_scale: f32,
     pub mph: bool,
     pub keys: BTreeMap<PlayerAction, String>,
@@ -162,6 +203,7 @@ impl Default for PlayerSettings {
             cab_fov_deg: 60.0,
             shadows: true,
             fog: true,
+            fog_quality: FogQuality::Distance,
             ui_scale: 1.0,
             mph: false,
             keys: PlayerAction::ALL
@@ -226,7 +268,22 @@ impl PlayerSettings {
             return Ok(Self::default());
         }
         let data = std::fs::read(path).map_err(|e| e.to_string())?;
-        let s: Self = serde_json::from_slice(&data).map_err(|e| e.to_string())?;
+        let mut s: Self = serde_json::from_slice(&data).map_err(|e| e.to_string())?;
+        // Upgrade old preference files without losing the user's key assignments.
+        for action in PlayerAction::ALL {
+            if s.keys.contains_key(&action) {
+                continue;
+            }
+            let preferred = format!("{:?}", action.default_key());
+            let key = std::iter::once(preferred)
+                .chain(('A'..='Z').map(|c| format!("Key{c}")))
+                .find(|name| {
+                    !s.keys.values().any(|used| used == name)
+                        && parse_key(name).is_some_and(|key| !reserved_key(key))
+                })
+                .ok_or("No queda una tecla libre para el control nuevo")?;
+            s.keys.insert(action, key);
+        }
         s.validate()?;
         Ok(s)
     }
@@ -406,5 +463,19 @@ mod tests {
                 .key(PlayerAction::Doors),
             KeyCode::KeyZ
         );
+    }
+    #[test]
+    fn adding_lights_preserves_legacy_custom_controls_without_collisions() {
+        let mut old = PlayerSettings::default();
+        old.keys.remove(&PlayerAction::Headlights);
+        old.keys.remove(&PlayerAction::CabLight);
+        old.keys.insert(PlayerAction::Doors, "KeyH".into());
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("settings.json");
+        std::fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let upgraded = PlayerSettings::load(&path).unwrap();
+        assert_eq!(upgraded.key(PlayerAction::Doors), KeyCode::KeyH);
+        assert_ne!(upgraded.key(PlayerAction::Headlights), KeyCode::KeyH);
+        upgraded.validate().unwrap();
     }
 }

@@ -66,6 +66,14 @@ class SceneryCapture
             viewer.QuitWindow.Visible = false;
             if (!configured)
             {
+                // A visual-only relocation on the native track traveller keeps
+                // all vehicles and the original cab at the next station. The
+                // simulator stays paused; this does not create a physics oracle.
+                float advance;
+                if (Single.TryParse(Environment.GetEnvironmentVariable("OPENRAILS_REFERENCE_ADVANCE_M"),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out advance)
+                    && !Single.IsNaN(advance) && !Single.IsInfinity(advance))
+                    viewer.Simulator.PlayerLocomotive.Train.CalculatePositionOfCars(0f, advance);
                 if (view == "cab")
                     viewer.ThreeDimCabCamera.Activate();
                 else
@@ -98,6 +106,8 @@ class SceneryCapture
                         distance_m = orbit.Distance
                     },
                     target_override = Environment.GetEnvironmentVariable("OPENRAILS_REFERENCE_TARGET"),
+                    advance_m = Environment.GetEnvironmentVariable("OPENRAILS_REFERENCE_ADVANCE_M"),
+                    lead_world_location = viewer.Simulator.PlayerLocomotive.WorldPosition.WorldLocation,
                     host_statistics_disabled = true
                 }, Formatting.Indented));
                 Console.WriteLine("Native scenery capture ready");

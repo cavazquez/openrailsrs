@@ -2,6 +2,66 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::lexer::{Lexer, Token};
 
+/// Read rolling-stock files in either native STF (`Wagon ( ... )`) or the
+/// parenthesized fixture notation (`(Wagon ...)`). Native ENG files commonly
+/// have separate Wagon and Engine roots; both are required for mass and power.
+pub fn parse_vehicle_text(source: &str) -> Result<Ast, FormatError> {
+    let source = source.trim_start_matches('\u{feff}').trim_start();
+    let source = if source.starts_with("SIMISA") {
+        source
+            .split_once('\n')
+            .map_or("", |(_, rest)| rest)
+            .trim_start()
+    } else {
+        source
+    };
+    if source.starts_with('(') {
+        let mut roots = parse_all_top_level(source)?;
+        return match roots.len() {
+            0 => Err(FormatError::UnexpectedEof),
+            1 => Ok(roots.remove(0)),
+            _ => Ok(Ast::List(roots)),
+        };
+    }
+    let mut lexer = Lexer::new_stf(source);
+    let mut roots = Vec::new();
+    while lexer.next_token()?.is_some() {
+        // Parse native blocks through their body with the existing lexer, then
+        // normalize keyword/body pairs. Unlike S-expressions their keyword is
+        // before the opening parenthesis, including nested fields.
+        lexer.skip_ws_and_comments();
+        if lexer.peek_byte() == Some(b'(') {
+            roots.push(normalize_stf_body(parse_expr(&mut lexer)?));
+        }
+    }
+    if roots.is_empty() {
+        Err(FormatError::UnexpectedEof)
+    } else {
+        Ok(Ast::List(roots))
+    }
+}
+
+fn normalize_stf_body(ast: Ast) -> Ast {
+    let Ast::List(items) = ast else { return ast };
+    let mut items = items.into_iter().peekable();
+    let mut out = Vec::new();
+    while let Some(item) = items.next() {
+        if matches!(item, Ast::Atom(Atom::Symbol(_))) && matches!(items.peek(), Some(Ast::List(_)))
+        {
+            let Some(Ast::List(body)) = items.next().map(normalize_stf_body) else {
+                unreachable!()
+            };
+            let mut block = Vec::with_capacity(body.len() + 1);
+            block.push(item);
+            block.extend(body);
+            out.push(Ast::List(block));
+        } else {
+            out.push(normalize_stf_body(item));
+        }
+    }
+    Ast::List(out)
+}
+
 /// Parse the first complete S-expression, ignoring any trailing text.
 pub fn parse_first(source: &str) -> Result<Ast, FormatError> {
     let mut lexer = Lexer::new(source);
@@ -127,6 +187,35 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_vehicle_roots_and_consist_keyword_blocks() {
+        let numeric = parse_vehicle_text(
+            "Train ( TrainCfg ( test Engine ( EngineData ( 7030 \"7030Cranbrook Castle\" ) ) ) )",
+        )
+        .unwrap();
+        assert_eq!(
+            crate::ConsistFile::from_ast(&numeric).unwrap().entries[0].path(),
+            "trains/7030Cranbrook Castle/7030.eng"
+        );
+        let comments = parse_vehicle_text("Wagon ( test Comment ( Native semicolons; stay inside this block ) Mass ( 40t ) Size ( 3m 4m 20m ) )").unwrap();
+        assert_eq!(
+            crate::WagonFile::from_ast(&comments).unwrap().mass_kg,
+            40_000.0
+        );
+        let eng = parse_vehicle_text("SIMISA@@@@@@@@@@JINX0D0t______\nWagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power MaxPower ( 500kW ) CabView ( front.cvf ) )").unwrap();
+        let engine = crate::EngineFile::from_ast(&eng).unwrap();
+        assert_eq!(engine.mass_kg, 40_000.0);
+        assert_eq!(engine.max_power_w, 500_000.0);
+        assert_eq!(engine.length_m, 20.0);
+        assert_eq!(engine.cab.cab_view_file.as_deref(), Some("front.cvf"));
+        let con = parse_vehicle_text("Train ( TrainCfg ( express Serial ( 1 ) Engine ( UiD ( 12 ) EngineData ( Power DMU ) Flip ( ) ) Wagon ( WagonData ( Coach DMU ) ) ) )").unwrap();
+        let consist = crate::ConsistFile::from_ast(&con).unwrap();
+        assert_eq!(consist.entries.len(), 2);
+        assert_eq!(consist.entries[0].uid(), Some(12));
+        assert!(consist.entries[0].flipped());
+        assert_eq!(consist.entries[1].path(), "trains/DMU/Coach.wag");
+    }
 
     #[test]
     fn parse_all_top_level_reads_multiple_blocks() {

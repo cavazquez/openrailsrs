@@ -31,15 +31,19 @@ fn main() {
         "scenery_oracle <output.png> [--individual] | --verify <individual.png> <instanced.png>"
     );
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "WORLD instance placement oracle".into(),
-                resolution: (512, 256).into(),
-                resizable: false,
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(openrailsrs_bevy_scenery::shared_asset_plugin())
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "WORLD instance placement oracle".into(),
+                        resolution: (512, 256).into(),
+                        resizable: false,
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_plugins(WorldInstancingPlugin)
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Capture {

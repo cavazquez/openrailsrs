@@ -7,6 +7,8 @@ pub mod error;
 pub mod etcs;
 pub mod exterior;
 pub mod live_drive;
+pub mod live_traffic;
+pub use live_traffic::{LiveTraffic, TrafficService, TrafficSnapshot};
 pub mod multi_runner;
 pub mod operations;
 pub use operations::{CarOperation, CarOperationState, FormationState, SessionSnapshot};

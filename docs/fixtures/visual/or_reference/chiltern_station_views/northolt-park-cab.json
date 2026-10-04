@@ -1,0 +1,109 @@
+{
+  "version": "1.6.1",
+  "view": "cab",
+  "time_s": 35700.0,
+  "tile_x": -6086,
+  "tile_z": 14927,
+  "location": "708.513245, 64.1960754, 915.9467",
+  "view_matrix": {
+    "M11": -0.4309158,
+    "M12": -0.237967119,
+    "M13": 0.8704501,
+    "M14": 0.0,
+    "M21": -4.49548274e-08,
+    "M22": 0.9646029,
+    "M23": 0.263706982,
+    "M24": 0.0,
+    "M31": -0.902392149,
+    "M32": 0.113635466,
+    "M33": -0.415662646,
+    "M34": 0.0,
+    "M41": -521.233643,
+    "M42": 210.763168,
+    "M43": -1014.37915,
+    "M44": 1.0
+  },
+  "projection_matrix": {
+    "M11": 1.357995,
+    "M12": 0.0,
+    "M13": 0.0,
+    "M14": 0.0,
+    "M21": 0.0,
+    "M22": 2.41421342,
+    "M23": 0.0,
+    "M24": 0.0,
+    "M31": 0.0,
+    "M32": 0.0,
+    "M33": -1.00022233,
+    "M34": -1.0,
+    "M41": 0.0,
+    "M42": 0.0,
+    "M43": -0.100022227,
+    "M44": 0.0
+  },
+  "solar_direction": [
+    0.732436061,
+    0.6552199,
+    0.184998184
+  ],
+  "scenery_tiles": [
+    [
+      -6087,
+      14926
+    ],
+    [
+      -6087,
+      14927
+    ],
+    [
+      -6087,
+      14928
+    ],
+    [
+      -6086,
+      14926
+    ],
+    [
+      -6086,
+      14927
+    ],
+    [
+      -6086,
+      14928
+    ],
+    [
+      -6085,
+      14926
+    ],
+    [
+      -6085,
+      14927
+    ],
+    [
+      -6085,
+      14928
+    ]
+  ],
+  "orbit": null,
+  "target_override": "",
+  "advance_m": "0",
+  "lead_world_location": {
+    "TileX": -6086,
+    "TileZ": 14927,
+    "Location": "715.942139, 61.364563, 920.3807"
+  },
+  "host_statistics_disabled": true,
+  "captured_on": "2026-10-04",
+  "openrails_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "consumer": "tools/openrails-reference/SceneryCapture.cs",
+  "consumer_sha256": "876e0ec7eb9c7a0482e201e3f5b1132b7867c6e3aca3f74fb6a8ea4419f5bed4",
+  "image_sha256": "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203",
+  "window": [
+    1280,
+    720
+  ],
+  "viewing_distance_m": 450,
+  "render_adapter": "Wine D3D11 / llvmpipe / private Xvfb",
+  "capture_scope": "Frozen station pose; native track traveller relocation, no physics acceptance",
+  "native_content_limitations": "Three original Pullman vehicle shape names are absent; native renderer also reports missing cab lever textures"
+}

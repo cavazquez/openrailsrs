@@ -60,10 +60,13 @@ def run_checkpoint(args, name, target, pause):
             with os.fdopen(read_fd) as number:
                 env["DISPLAY"] = ":" + number.readline().strip()
             with prefix.with_suffix(".log").open("w") as log:
-                viewer = subprocess.Popen([
+                command = [
                     str(args.viewer), str(args.scenario), "--live",
                     "--route-root", str(args.route_root),
-                ], cwd=args.repo, env=env, stdout=log, stderr=log)
+                ]
+                if hasattr(args, "cab_fov_deg"):
+                    command.extend(["--cab-fov", str(args.cab_fov_deg)])
+                viewer = subprocess.Popen(command, cwd=args.repo, env=env, stdout=log, stderr=log)
                 while viewer.poll() is None:
                     try:
                         status = Path(f"/proc/{viewer.pid}/status").read_text()
@@ -95,6 +98,8 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: actual travel checkpoint missing")
     if report["unactivated_near_shapes"] != 0 or not report["gpu_entities"]:
         raise RuntimeError(f"{name}: scenery incomplete: {report}")
+    if report.get("shader_pipelines") != {"pending": 0, "failed": 0}:
+        raise RuntimeError(f"{name}: scenery shaders incomplete: {report.get('shader_pipelines')}")
     if not pause and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
     report.update(peak_rss_mib=round(peak_kib / 1024, 1),
@@ -111,13 +116,14 @@ def main():
     parser.add_argument("--route-root", type=Path, required=True)
     parser.add_argument("--viewer", type=Path, default=repo / "target/debug/openrailsrs-viewer3d")
     parser.add_argument("--out-dir", type=Path, default=repo / "tmp/viewer-streaming")
+    parser.add_argument("--scenario", type=Path, default=repo / "examples/chiltern_local/scenario.toml")
     parser.add_argument("--software", action="store_true", help="use Vulkan lavapipe")
     parser.add_argument("--checkpoint", choices=["middle", "terminal"], action="append")
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=270)
     args = parser.parse_args()
     args.repo = repo
-    args.scenario = repo / "examples/chiltern_local/scenario.toml"
+    args.scenario = args.scenario.resolve()
     args.viewer = args.viewer.resolve()
     args.route_root = args.route_root.resolve()
     args.out_dir = args.out_dir.resolve()

@@ -1,4 +1,5 @@
 //! Route/service catalog and validated launch requests for the Bevy start menu.
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
@@ -49,6 +50,8 @@ pub struct PlayerLaunchMenu {
     pub season: usize,
     pub weather: PlayerWeather,
     pub status: String,
+    pub consist_audits: HashMap<PathBuf, openrailsrs_train::ConsistAudit>,
+    auditor: openrailsrs_train::ConsistAuditor,
 }
 
 impl Default for PlayerLaunchMenu {
@@ -62,6 +65,7 @@ impl PlayerLaunchMenu {
         let mut services = vec![];
         let native = scenery_root.or_else(default_chiltern_root);
         for (folder, label) in [
+            ("chiltern_traffic", "Chiltern"),
             ("chiltern_local", "Chiltern"),
             ("chiltern", "Chiltern"),
             ("smoke", "Ruta de práctica"),
@@ -130,6 +134,15 @@ impl PlayerLaunchMenu {
             season: 1,
             weather: PlayerWeather::Clear,
             status: String::new(),
+            consist_audits: HashMap::new(),
+            auditor: openrailsrs_train::ConsistAuditor::new(
+                native
+                    .as_deref()
+                    .and_then(Path::parent)
+                    .and_then(Path::parent)
+                    .map(|p| vec![p.join("TRAINS/TRAINSET")])
+                    .unwrap_or_default(),
+            ),
         };
         menu.refresh_choices();
         menu
@@ -197,6 +210,12 @@ impl PlayerLaunchMenu {
             self.paths = files_with_extension(&root.join("PATHS"), "pat");
         }
         // An empty first choice means the consist/path authored by the selected activity.
+        for con in &self.consists {
+            if !self.consist_audits.contains_key(con) {
+                self.consist_audits
+                    .insert(con.clone(), self.auditor.inspect(con));
+            }
+        }
         self.status = "Elegí el servicio y pulsá Iniciar partida".into();
     }
     pub fn consist_label(&self) -> String {
@@ -224,6 +243,13 @@ impl PlayerLaunchMenu {
                 })
                 .unwrap_or_default()
         }
+    }
+    pub fn consist_status(&self) -> String {
+        self.consists
+            .get(self.consist)
+            .and_then(|p| self.consist_audits.get(p))
+            .map(|r| r.label())
+            .unwrap_or_else(|| "Se valida al importar la actividad".into())
     }
     pub fn prepare(&self) -> Result<QueuedPlayerLaunch, String> {
         self.prepare_in(&player_data_dir())
@@ -261,6 +287,27 @@ impl PlayerLaunchMenu {
         }
         .to_string_lossy()
         .into_owned();
+        for service in &mut scenario.extra_trains {
+            if !Path::new(&service.consist).is_absolute() {
+                let root = if choice.native_activity {
+                    choice
+                        .scenery_root
+                        .as_deref()
+                        .and_then(Path::parent)
+                        .and_then(Path::parent)
+                        .ok_or("No se encuentra el Content del tráfico")?
+                } else {
+                    choice.source.parent().unwrap_or(Path::new("."))
+                };
+                service.consist = absolute(&root.join(&service.consist))
+                    .to_string_lossy()
+                    .into_owned();
+            }
+            let audit = self.auditor.clone().inspect(Path::new(&service.consist));
+            if !audit.player_ready() {
+                return Err(format!("{}: {}", service.id, audit.label()));
+            }
+        }
         if let Some(con) = self.consists.get(self.consist) {
             scenario.train.consist = con.to_string_lossy().into_owned();
         } else if !Path::new(&scenario.train.consist).is_absolute() {
@@ -276,6 +323,14 @@ impl PlayerLaunchMenu {
                 .into_owned();
         }
         let con = Path::new(&scenario.train.consist);
+        let audit = self
+            .consist_audits
+            .get(con)
+            .cloned()
+            .unwrap_or_else(|| self.auditor.clone().inspect(con));
+        if !audit.player_ready() {
+            return Err(audit.label());
+        }
         let consist = openrailsrs_train::load_consist_with_asset_root(
             con,
             openrailsrs_train::consist_asset_root(con),

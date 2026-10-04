@@ -234,6 +234,7 @@ enum SettingField {
     Scale,
     Shadows,
     Fog,
+    FogQuality,
     Units,
 }
 
@@ -611,6 +612,7 @@ fn handle_buttons(
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.mph= !settings.mph,
+                SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
             }ui.notice="Vista previa aplicada; pulsá Guardar ajustes para conservarla".into();Ok(())},
             UiCommand::Rebind(action)=>{ui.awaiting_key=Some(*action);ui.notice=format!("Pulsá la nueva tecla para {} · Esc cancela",action.label());Ok(())},
             UiCommand::DefaultKeys=>{settings.keys=PlayerSettings::default().keys;ui.notice="Controles predeterminados restaurados".into();Ok(())},
@@ -772,7 +774,7 @@ fn build_panel(
                 }
                 PlayerPanel::Map => {
                     if let Some(l) = live.as_ref() {
-                        build_map(p, &ui, &l.session);
+                        build_map(p, &ui, l);
                     }
                 }
                 PlayerPanel::Advanced => {
@@ -844,6 +846,12 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         MenuField::Service,
     );
     selector(p, "Formación", menu.consist_label(), MenuField::Consist);
+    label(
+        p,
+        menu.consist_status(),
+        12.0,
+        Color::srgb(0.70, 0.80, 0.88),
+    );
     selector(p, "Recorrido", menu.path_label(), MenuField::Path);
     selector(
         p,
@@ -995,6 +1003,11 @@ fn build_settings(p: &mut ChildSpawnerCommands<'_>, s: &PlayerSettings) {
             UiCommand::Setting(SettingField::Units, 0.0),
         );
     });
+    button(
+        p,
+        format!("Modelo de niebla: {}", s.fog_quality.label()),
+        UiCommand::Setting(SettingField::FogQuality, 0.0),
+    );
     label(
         p,
         "CONTROLES · clic en una asignación y pulsá la nueva tecla",
@@ -1145,7 +1158,8 @@ fn map_marker(
         label(p, value, 11.0, TEXT);
     });
 }
-fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
+fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, live: &LiveDrive) {
+    let s = &live.session;
     row(p, |p| {
         button(p, "+ Zoom", UiCommand::Zoom(1.5));
         button(p, "− Zoom", UiCommand::Zoom(1.0 / 1.5));
@@ -1255,6 +1269,25 @@ fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDrive
                 None,
             );
         }
+        for service in live
+            .traffic
+            .services
+            .iter()
+            .filter(|service| service.departed)
+        {
+            if let Some(edge) = service.session.current_edge_id()
+                && let Some(pos) =
+                    graph_point(&service.session, edge, service.session.pos_on_edge_m())
+            {
+                map_marker(
+                    p,
+                    map_project(ui, pos),
+                    format!("▶ {}", service.id),
+                    Color::srgb(0.45, 0.24, 0.55),
+                    None,
+                );
+            }
+        }
         if let Some(head) = s.formation.parked_head_chainage_m {
             let offset = s.formation.offset_m(s.formation.coupled_count);
             if let Some((edge, pos)) = openrailsrs_sim::path_data::PathData::position_at_odometer(
@@ -1323,6 +1356,7 @@ fn update_panel_text(
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
     fps: Res<crate::hud::HudFps>,
+    performance: Res<crate::performance::JourneyPerformance>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
@@ -1343,6 +1377,7 @@ fn update_panel_text(
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page);
                         if ui.advanced_page == 9 {
+                            text += &format!("\n{}", performance.hud_text());
                             text += &format!(
                                 "\n\nFPS {:.1} · cuadro {:.1} ms\nEscenario: {} sectores activos · {} entidades en GPU\nDistancia de carga {:.0} m",
                                 fps.smoothed,
@@ -1708,6 +1743,23 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
             for (id, aspect) in &s.signal_overrides {
                 out += &format!("Señal {id}: {}\n", aspect_name(*aspect));
             }
+            out += "\nTRÁFICO EN VIVO\n";
+            for service in &l.traffic.services {
+                out += &format!(
+                    "{}: {} · {:.1} km/h · {} paradas · {}\n",
+                    service.id,
+                    if !service.departed {
+                        "Salida pendiente"
+                    } else if service.session.arrived {
+                        "Recorrido terminado"
+                    } else {
+                        phase_name(service.session.gameplay.phase)
+                    },
+                    service.session.velocity_mps() * 3.6,
+                    service.session.gameplay.stop_results.len(),
+                    service.session.current_edge_id().unwrap_or("—")
+                );
+            }
         }
         8 => {
             out += &format!(
@@ -1916,6 +1968,7 @@ pub(crate) fn apply_settings(
     settings: Res<PlayerSettings>,
     opts: Option<ResMut<crate::launch::ViewerLaunchOpts>>,
     mut lights: Query<&mut DirectionalLight>,
+    sun: Option<Res<crate::route_lighting::RouteSunState>>,
     mut fog: ResMut<crate::sky::FogState>,
     mut scale: ResMut<UiScale>,
 ) {
@@ -1924,7 +1977,8 @@ pub(crate) fn apply_settings(
         opts.cab_fov_deg = Some(settings.cab_fov_deg);
     }
     for mut light in &mut lights {
-        light.shadow_maps_enabled = settings.shadows;
+        light.shadow_maps_enabled =
+            settings.shadows && sun.as_ref().is_none_or(|s| s.direction.y > 0.0025);
     }
     fog.enabled = settings.fog;
     scale.0 = settings.ui_scale;

@@ -7,6 +7,8 @@
     pbr_functions,
 }
 
+#import "shaders/railway_lighting.wgsl" as railway_lighting
+
 struct OrSceneryParams {
     tint_r: f32,
     tint_g: f32,
@@ -253,7 +255,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         lit_rgb = or_apply_cascade_debug_tint(lit_rgb, -view_z_dbg);
     }
 
-    lit_rgb *= params.night_color_modifier;
+    lit_rgb *= min(params.night_color_modifier, mix(railway_lighting::railway_daylight(), 1.0, params.image_texture_is_night));
+    lit_rgb += color.rgb * railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy);
     var out_color = vec4(lit_rgb, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

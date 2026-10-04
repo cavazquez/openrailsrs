@@ -23,6 +23,12 @@ pub struct RouteSunState {
     last_clock_s: Option<f64>,
 }
 
+fn ambient_scale(direction: Vec3) -> f32 {
+    // The night camera exposes for headlamps. Two percent of the daytime
+    // 15,000-lux fill would wash the whole town white at that exposure.
+    0.0001 + 0.9999 * (direction.y * 2.0).clamp(0.0, 1.0)
+}
+
 fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<RouteSunState> {
     let tile_x = openrailsrs_formats::msts_tile_x_index_for_coord(world.x);
     let tile_z = openrailsrs_formats::msts_tile_z_index_for_coord(world.z);
@@ -43,7 +49,7 @@ fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<R
         position,
         environment,
         direction,
-        ambient_scale: 0.02 + 0.98 * (direction.y * 2.0).clamp(0.0, 1.0),
+        ambient_scale: ambient_scale(direction),
         last_clock_s: None,
     })
 }
@@ -92,6 +98,7 @@ pub fn init_route_sun(
 pub fn update_route_sun(
     live: Res<LiveDrive>,
     state: Option<ResMut<RouteSunState>>,
+    settings: Res<crate::player_settings::PlayerSettings>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), With<RouteSunLight>>,
 ) {
     let Some(mut state) = state else { return };
@@ -112,7 +119,7 @@ pub fn update_route_sun(
     state.direction = direction;
     crate::shapes::set_scenery_sun_y(direction.y);
     let daylight = (direction.y * 2.0).clamp(0.0, 1.0);
-    state.ambient_scale = 0.02 + 0.98 * daylight;
+    state.ambient_scale = ambient_scale(direction);
     let up = if direction.y.abs() > 0.999 {
         Vec3::Z
     } else {
@@ -120,7 +127,10 @@ pub fn update_route_sun(
     };
     for (mut transform, mut light) in &mut sun {
         transform.set_if_neq(Transform::IDENTITY.looking_to(-direction, up));
-        light.illuminance = 75_000.0 * daylight;
+        // Bevy omits a zero-intensity directional light from the view uniform.
+        // Legacy shaders still need its below-horizon direction to shade night.
+        light.illuminance = (75_000.0 * daylight).max(0.001);
+        light.shadow_maps_enabled = settings.shadows && daylight > 0.005;
     }
 }
 
@@ -132,6 +142,18 @@ mod tests {
 
     use crate::player_launch::{ActivePlayerContent, PlayerWeather};
     use crate::sky::{FogState, sync_route_atmosphere, viewer_distance_fog};
+
+    #[test]
+    fn nighttime_fill_stays_dim_at_the_headlamp_camera_exposure() {
+        let night_exposure = bevy::camera::Exposure { ev100: 6.0 }.exposure();
+        let exposed_fill =
+            crate::camera::LIVE_OUTDOOR_AMBIENT * ambient_scale(Vec3::NEG_Y) * night_exposure;
+        assert!(
+            exposed_fill < 0.03,
+            "night fill washed out the scene: {exposed_fill}"
+        );
+        assert_eq!(ambient_scale(Vec3::Y), 1.0);
+    }
 
     fn atmosphere_app(direction: Vec3) -> (App, Handle<StandardMaterial>, Entity) {
         let mut app = App::new();

@@ -699,6 +699,8 @@ pub fn frame_orbit_camera_on_track(
             }
         }
     }
+    // Framing must not overwrite a reproducible capture's explicit distance.
+    *orbit = crate::camera::orbit_state_with_env_overrides(*orbit);
     *transform = crate::camera::camera_transform_from_orbit_state(
         orbit.focus,
         orbit.yaw,

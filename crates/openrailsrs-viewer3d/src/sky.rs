@@ -42,9 +42,12 @@ pub fn spawn_sky_dome(
 ) {
     // Tile-lab puede tener grafo vacío (bbox 0 → radio mínimo 500 m), pero la
     // cámara orbita a ~2.6 km: el domo debe envolverla siempre.
-    let min_radius = if mode.is_tile_lab() { 20_000.0 } else { 500.0 };
-    let radius = (scene.bounds.orbit_distance() * 3.0).clamp(min_radius, 150_000.0);
+    let radius = sky_dome_radius(&scene, &mode);
     shared_spawn_sky_dome(&mut commands, &mut meshes, &mut materials, radius, false);
+}
+
+pub fn sky_dome_radius(scene: &TrackScene, _mode: &crate::launch::ViewerSceneryMode) -> f32 {
+    (scene.bounds.orbit_distance() * 3.0).clamp(20_000.0, 150_000.0)
 }
 
 /// Horizon tint used as the window clear colour.

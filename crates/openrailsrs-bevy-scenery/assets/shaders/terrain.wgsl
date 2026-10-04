@@ -8,6 +8,7 @@
     pbr_functions,
 }
 #import "shaders/terrain_common.wgsl"::terrain_half_lambert
+#import "shaders/railway_lighting.wgsl" as railway_lighting
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> overlay_scale: f32;
 @group(#{MATERIAL_BIND_GROUP}) @binding(1) var base_texture: texture_2d<f32>;
@@ -38,7 +39,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         shadow_mod = shadow_mod * saturate(ambient * 5.0 - 2.0);
     }
     let t = saturate(ambient * shadow_mod);
-    rgb = rgb * mix(SHADOW_BRIGHTNESS, FULL_BRIGHTNESS, t);
+    rgb = rgb * (mix(SHADOW_BRIGHTNESS, FULL_BRIGHTNESS, t) * railway_lighting::railway_daylight()
+        + railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy));
 
     var out_color = vec4<f32>(rgb, 1.0);
 #ifdef DISTANCE_FOG

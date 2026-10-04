@@ -44,7 +44,7 @@ pub use msts_units::{
 };
 pub use parser::{
     parse, parse_all_top_level, parse_all_top_level_lenient, parse_first,
-    parse_first_from_first_paren, parse_from_first_paren,
+    parse_first_from_first_paren, parse_from_first_paren, parse_vehicle_text,
 };
 pub use shape_binary_direct::{
     binary_shape_to_ast, is_binary_shape_payload, shape_from_binary_payload,
@@ -81,6 +81,7 @@ pub use typed::{
     resolve_hazard_shape_name, take_indexed_trilist_indices, terrain_patches_per_side,
     validate_shape_trilist_topology, validate_sub_object_trilist_topology,
 };
+pub use typed::{VehicleLight, parse_vehicle_lights};
 pub use units::{kmh_to_mps, kn_to_n, kw_to_w, lb_to_kg, mph_to_mps};
 pub use vehicle_audit::{
     FieldAuditEntry, VehicleAuditReport, audit_vehicle_file, collect_msts_list_head_symbols,

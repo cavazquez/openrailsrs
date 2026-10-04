@@ -29,7 +29,7 @@ use crate::world::WorldSpawnProgress;
 pub struct CaptureState {
     path: PathBuf,
     armed_at: Instant,
-    /// Max wait / delay before forcing capture (or the only wait when not after-ready).
+    /// Readiness timeout, or capture delay when readiness is not required.
     delay: Duration,
     after_ready: bool,
     ready_frames_needed: u32,
@@ -124,19 +124,18 @@ pub fn capture_system(
             let timed_out = state.armed_at.elapsed() >= state.delay;
             let should_capture = distance_ok
                 && if state.after_ready {
-                    if scenery_ready(progress) {
+                    if scenery_ready(progress) && scene.pipelines.as_ref().is_none_or(|p| p.ready())
+                    {
                         state.ready_frames = state.ready_frames.saturating_add(1);
                     } else {
                         state.ready_frames = 0;
                     }
-                    let ready_ok = state.ready_frames >= state.ready_frames_needed;
-                    ready_ok
-                        || (timed_out && state.target_odometer_m.is_none() && !state.after_service)
+                    state.ready_frames >= state.ready_frames_needed
                 } else {
                     state.armed_at.elapsed() >= state.delay
                 };
             if timed_out
-                && (state.target_odometer_m.is_some() || state.after_service)
+                && (state.after_ready || state.target_odometer_m.is_some() || state.after_service)
                 && !should_capture
             {
                 viewer_log!(
@@ -158,11 +157,6 @@ pub fn capture_system(
                         );
                     }
                     viewer_log!("openrailsrs-viewer3d: scenery checkpoint {report}");
-                }
-                if state.after_ready && state.ready_frames < state.ready_frames_needed {
-                    viewer_log!(
-                        "openrailsrs-viewer3d: screenshot forced after delay (scenery not ready)"
-                    );
                 }
                 commands
                     .spawn(Screenshot::primary_window())
@@ -193,6 +187,8 @@ pub struct CaptureScene<'w, 's> {
     entities: Option<Res<'w, crate::world_tile_index::WorldTileEntityIndex>>,
     focus: Option<Res<'w, crate::world::RouteFocus>>,
     sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    performance: Res<'w, crate::performance::JourneyPerformance>,
+    pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     camera: Query<
         'w,
         's,
@@ -266,6 +262,15 @@ impl CaptureScene<'_, '_> {
             "sunset_s": self.sun.as_ref().and_then(|sun| sun.environment.map(|env| env.set_time_s)),
             "train_animated_parts": self.train_parts.iter().count(),
             "train_shared_shapes": shared_shapes.len(),
+            "performance": self.performance.report(),
+            "shader_pipelines": self.pipelines.as_ref().map(|p| {
+                let (pending, failed) = p.counts();
+                serde_json::json!({"pending":pending,"failed":failed})
+            }),
+            "headlights": live.map(|live| live.session.headlights),
+            "cab_light": live.map(|live| live.session.cab_light),
+            "wiper": live.map(|live| live.session.wiper_active),
+            "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         })
     }
 }

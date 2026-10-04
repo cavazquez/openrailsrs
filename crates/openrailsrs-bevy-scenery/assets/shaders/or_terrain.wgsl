@@ -9,6 +9,7 @@
     pbr_functions,
 }
 #import "shaders/terrain_common.wgsl"::terrain_half_lambert
+#import "shaders/railway_lighting.wgsl" as railway_lighting
 
 struct OrTerrainParams {
     shadow_brightness: f32,
@@ -49,7 +50,10 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var lit_rgb = color.rgb * mix(params.shadow_brightness, params.full_brightness, t);
     let overlay = textureSample(overlay_texture, overlay_sampler, in.uv * params.overlay_scale).rgb * 2.0;
     lit_rgb = lit_rgb * overlay;
-    lit_rgb = lit_rgb * params.night_color_modifier;
+    lit_rgb = lit_rgb * min(params.night_color_modifier, railway_lighting::railway_daylight());
+    if (params.lit >= 0.5) {
+        lit_rgb += color.rgb * overlay * railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy);
+    }
     var out_color = vec4(lit_rgb, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

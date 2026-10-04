@@ -117,6 +117,10 @@ pub struct SessionSnapshot {
     pub driver_brake: f64,
     pub driver_direction: f64,
     pub wiper_active: bool,
+    #[serde(default)]
+    pub headlights: u8,
+    #[serde(default)]
+    pub cab_light: bool,
     pub horn_pressed_until_s: f64,
     pub speed_mul: f64,
     pub sim_time_remainder: f64,
@@ -145,6 +149,8 @@ impl LiveDriveSession {
             driver_brake: self.driver_brake,
             driver_direction: self.driver_direction,
             wiper_active: self.wiper_active,
+            headlights: self.headlights,
+            cab_light: self.cab_light,
             horn_pressed_until_s: self.horn_pressed_until_s,
             speed_mul: self.speed_mul,
             sim_time_remainder: self.sim_time_remainder,
@@ -155,7 +161,7 @@ impl LiveDriveSession {
     }
 
     /// Validate completely before mutating the current game.
-    pub fn restore_snapshot(&mut self, saved: SessionSnapshot) -> Result<(), String> {
+    pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
         if saved.version != 1 || saved.content_signature != self.content_signature {
             return Err(
                 "La partida pertenece a otra versión de la ruta, servicio o formación".into(),
@@ -241,6 +247,16 @@ impl LiveDriveSession {
         {
             return Err("La posición o los controles guardados no son válidos".into());
         }
+        Ok(())
+    }
+
+    pub fn restore_snapshot(&mut self, saved: SessionSnapshot) -> Result<(), String> {
+        self.validate_snapshot(&saved)?;
+        let mut graph = self.graph.clone();
+        for (id, pos) in &saved.switches {
+            graph.set_switch(id, *pos).map_err(|e| e.to_string())?;
+        }
+        let pd = PathData::from_path(&saved.state.path_edges, &graph);
         self.state = saved.state;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
@@ -253,6 +269,8 @@ impl LiveDriveSession {
         self.driver_brake = saved.driver_brake;
         self.driver_direction = saved.driver_direction;
         self.wiper_active = saved.wiper_active;
+        self.headlights = saved.headlights.min(2);
+        self.cab_light = saved.cab_light;
         self.horn_pressed_until_s = saved.horn_pressed_until_s;
         self.speed_mul = saved.speed_mul;
         self.sim_time_remainder = saved.sim_time_remainder.max(0.0);
@@ -492,6 +510,12 @@ impl LiveDriveSession {
     }
 
     pub fn occupied_edges(&self) -> HashMap<String, String> {
+        let mut occupied = self.external_occupancy.clone();
+        occupied.extend(self.own_occupied_edges());
+        occupied
+    }
+
+    pub fn own_occupied_edges(&self) -> HashMap<String, String> {
         let mut occupied = HashMap::new();
         for (i, car) in self.formation.cars.iter().enumerate() {
             let head = if i < self.formation.coupled_count {
@@ -502,29 +526,46 @@ impl LiveDriveSession {
                     .unwrap_or(self.head_chainage_m())
             };
             let center = head + self.formation.offset_m(i);
-            for pos in [
-                center - car.length_m * 0.5,
-                center,
-                center + car.length_m * 0.5,
-            ] {
-                if let Some((edge, _)) = PathData::position_at_odometer(
-                    &self.state.path_edges,
-                    &self.path_data.edges,
-                    pos.max(0.0),
-                ) {
-                    occupied.insert(
-                        edge,
-                        if i < self.formation.coupled_count {
-                            "Jugador"
-                        } else {
-                            "Estacionado"
-                        }
-                        .into(),
-                    );
+            let rear = (center - car.length_m * 0.5).max(0.0);
+            let front = center + car.length_m * 0.5;
+            let mut start = 0.0;
+            for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+                let end = start + data.length_m;
+                // Intersect the full vehicle interval. Three point samples can
+                // skip a short crossover underneath the middle of a vehicle.
+                if end >= rear && start <= front {
+                    let owner = if i < self.formation.coupled_count {
+                        self.service_id.clone()
+                    } else {
+                        format!("{} · estacionado", self.service_id)
+                    };
+                    let base = edge.strip_suffix("_r").unwrap_or(edge);
+                    occupied.insert(base.to_string(), owner.clone());
+                    occupied.insert(format!("{base}_r"), owner);
                 }
+                start = end;
             }
         }
         occupied
+    }
+
+    /// Authority ends at the first section occupied by another service, even
+    /// on imported routes with incomplete signal scripts. Never ignore the tail.
+    pub fn distance_to_occupied_block_m(&self) -> Option<f64> {
+        let mut distance = -self.pos_on_edge_m();
+        for (index, id) in self
+            .state
+            .path_edges
+            .iter()
+            .enumerate()
+            .skip(self.state.edge_index)
+        {
+            if self.edge_is_occupied(id, &self.external_occupancy) {
+                return Some(distance.max(0.0));
+            }
+            distance += self.path_data.edges.get(index)?.length_m;
+        }
+        None
     }
 
     /// Reverse graph edges refer to the same physical track section.

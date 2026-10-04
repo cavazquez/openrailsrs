@@ -1911,6 +1911,10 @@ pub fn update_driver_camera_fov(
         ambient.color = Color::srgb(0.85, 0.9, 1.0);
         *tonemapping = live_tonemapping();
         *exposure = Exposure::SUNLIGHT;
+        if let Some(sun) = sun.as_ref() {
+            let day = (sun.direction.y * 2.0).clamp(0.0, 1.0);
+            exposure.ev100 = 6.0 + (Exposure::SUNLIGHT.ev100 - 6.0) * day;
+        }
     } else if indoors {
         ambient.brightness = 350.0;
         ambient.color = Color::srgb(0.95, 0.94, 0.92);

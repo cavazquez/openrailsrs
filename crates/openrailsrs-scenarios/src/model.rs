@@ -209,6 +209,12 @@ pub struct TrainEntryDef {
     /// Simulated time (seconds from t=0) at which this train departs.
     #[serde(default)]
     pub start_time_s: f64,
+    /// Explicit route through junctions; an empty list uses the normal path resolver.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waypoints: Vec<String>,
+    /// Initial head chainage along this service's own path, in metres.
+    #[serde(default)]
+    pub start_offset_m: f64,
     /// Intermediate stops for this train.
     #[serde(default)]
     pub stops: Vec<StopDef>,

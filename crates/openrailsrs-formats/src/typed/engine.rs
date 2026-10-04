@@ -519,15 +519,15 @@ fn parse_orts3d_cab_block(items: &[Ast]) -> (Option<String>, Orts3dCabViewpoint)
                 }
             }
             "orts3dcabheadpos" if pair.len() >= 2 => {
-                head = f64_triplet_from_ast(&pair[1]);
+                head = f64_triplet_from_field(pair);
             }
             "startdirection" if pair.len() >= 2 => {
-                if let Some(v) = f64_triplet_from_ast(&pair[1]) {
+                if let Some(v) = f64_triplet_from_field(pair) {
                     start = v;
                 }
             }
             "rotationlimit" if pair.len() >= 2 => {
-                limit = f64_triplet_from_ast(&pair[1]);
+                limit = f64_triplet_from_field(pair);
             }
             _ => {}
         }
@@ -547,7 +547,21 @@ fn parse_cab_shape_ref(ast: &Ast, key: &str) -> Option<String> {
 }
 
 fn parse_f64_triplet_field(ast: &Ast, key: &str) -> Option<[f64; 3]> {
-    find_list_value(ast, key).and_then(f64_triplet_from_ast)
+    super::walk_lists_find(ast, &mut |items| {
+        if matches!(items.first(), Some(Ast::Atom(Atom::Symbol(head))) if head.eq_ignore_ascii_case(key))
+        {
+            f64_triplet_from_field(items)
+        } else {
+            None
+        }
+    })
+}
+
+fn f64_triplet_from_field(items: &[Ast]) -> Option<[f64; 3]> {
+    items
+        .get(1)
+        .and_then(f64_triplet_from_ast)
+        .or_else(|| f64_triplet_from_ast(&Ast::List(items[1..].to_vec())))
 }
 
 fn string_from_ast_value(ast: &Ast) -> Option<String> {
@@ -575,10 +589,7 @@ fn f64_triplet_from_ast(ast: &Ast) -> Option<[f64; 3]> {
                 }
             })
             .collect(),
-        Ast::Atom(atom) => {
-            let n = atom_to_number(atom)?;
-            return Some([n, 0.0, 0.0]);
-        }
+        Ast::Atom(_) => return None,
     };
     if values.len() >= 3 {
         Some([values[0], values[1], values[2]])
