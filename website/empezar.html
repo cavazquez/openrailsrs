@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#132c27">
-  <meta name="description" content="Prepará el contenido Chiltern, compilá openrailsrs e iniciá un servicio de seis estaciones. Guía de controles y modos CPU/GPU.">
+  <meta name="description" content="Cómo compilar en Linux, descargar Demo Model 1 o usar Chiltern y arrancar la primera partida.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="Tu primera partida · openrailsrs">
-  <meta property="og:description" content="Prepará el contenido Chiltern, compilá openrailsrs e iniciá un servicio de seis estaciones. Guía de controles y modos CPU/GPU.">
+  <meta property="og:title" content="Instalar y jugar openrailsrs · openrailsrs">
+  <meta property="og:description" content="Cómo compilar en Linux, descargar Demo Model 1 o usar Chiltern y arrancar la primera partida.">
   <meta property="og:url" content="https://cavazquez.github.io/openrailsrs/empezar.html">
   <meta property="og:image" content="https://cavazquez.github.io/openrailsrs/assets/exterior.webp">
   <meta name="twitter:card" content="summary_large_image">
@@ -16,7 +16,7 @@
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/site.js" defer></script>
-  <title>Tu primera partida · openrailsrs</title>
+  <title>Instalar y jugar openrailsrs · openrailsrs</title>
 </head>
 <body class="inner-page">
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -24,36 +24,64 @@
     <div class="header-inner">
       <a class="brand" href="index.html" aria-label="openrailsrs, inicio"><img src="assets/mark.svg" width="32" height="32" alt="" aria-hidden="true"><span>openrails<span class="brand-end">rs</span></span></a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menú <span aria-hidden="true">＋</span></button>
-      <nav id="main-nav" aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="experiencia.html">La experiencia</a><a href="empezar.html" aria-current="page">Empezar</a><a href="contenido.html">Contenido</a><a href="estado.html">Estado del proyecto</a><a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a></nav>
+      <nav id="main-nav" aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="experiencia.html">El juego</a><a href="empezar.html" aria-current="page">Cómo empezar</a><a href="contenido.html">Rutas y trenes</a><a href="estado.html">Qué falta</a><a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a></nav>
     </div>
   </header>
-  <main id="contenido"><header class="page-intro wrap"><p class="eyebrow">Empezar</p><h1>Tu primera partida.</h1><p class="lead">Prepará el contenido, compilá el proyecto y comenzá en Northolt Park. Esta web presenta el simulador; la partida se ejecuta en tu equipo.</p></header>
-<section class="section wrap getting-started" id="instalacion"><div class="section-heading"><div><p class="eyebrow">Antes de salir</p><h2>Prepará el equipo.</h2></div><p>Linux es la plataforma de referencia. Necesitás Rust 1.95 o superior, Git y el contenido Chiltern de MSTS/Open Rails. Los recursos de terceros se instalan por separado.</p></div><ol class="steps"><li><span class="step-number">01</span><div><h3>Descargá el código</h3><div class="code-box"><pre><code>git clone https://github.com/cavazquez/openrailsrs.git
-cd openrailsrs</code></pre><button class="copy-button" type="button">Copiar</button></div></div></li><li><span class="step-number">02</span><div><h3>Ubicá el contenido Chiltern</h3><p>El lanzador busca por defecto en <code>~/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern</code>. Si está en otra carpeta, indicá la ruta:</p><div class="code-box"><pre><code>export CHILTERN_ROUTE="/ruta/al/Content/Chiltern/ROUTES/Chiltern"</code></pre><button class="copy-button" type="button">Copiar</button></div><a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/CHILTERN.md">Guía del contenido original <span aria-hidden="true">↗</span></a></div></li><li><span class="step-number">03</span><div><h3>Compilá e iniciá el menú</h3><div class="code-box"><pre><code>./scripts/run_chiltern_service.sh</code></pre><button class="copy-button" type="button">Copiar</button></div><p>El lanzador compila los componentes. En el primer inicio puede tardar; la pantalla de carga espera también las mallas, texturas y shaders.</p></div></li><li><span class="step-number">04</span><div><h3>Elegí el servicio y salí</h3><p>Seleccioná Chiltern y el recorrido extendido de seis estaciones. También podés probar el servicio corto, la hora, la estación del año y el clima.</p><div class="code-box"><pre><code># Iniciar directamente el servicio extendido
-./scripts/run_chiltern_service.sh --direct</code></pre><button class="copy-button" type="button">Copiar</button></div></div></li></ol><p class="small-note">Si falla la compilación o el controlador gráfico, consultá <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/BEVY.md">la guía de Bevy</a> y <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/VIEWER3D_TESTING.md">las pruebas del visor</a>.</p></section>
-<section class="section wrap" id="primer-viaje"><div class="section-heading"><div><p class="eyebrow">Desde el andén</p><h2>Conducí el primer tramo.</h2></div><p>El tren comienza detenido. Abrí las puertas, completá el embarque, cerralas y prepará la salida. El monitor te indica la próxima parada.</p></div><dl class="controls"><div><dt><kbd>1</kbd> / <kbd>Alt</kbd> + <kbd>1</kbd></dt><dd>Cabina / alternar 2D y 3D</dd></div><div><dt><kbd>2</kbd></dt><dd>Cámara exterior</dd></div><div><dt><kbd>W</kbd> / <kbd>S</kbd></dt><dd>Inversor adelante / atrás</dd></div><div><dt><kbd>A</kbd> / <kbd>D</kbd></dt><dd>Aumentar / reducir regulador</dd></div><div><dt><kbd>;</kbd> / <kbd>'</kbd></dt><dd>Aumentar / reducir freno</dd></div><div><dt><kbd>Q</kbd> / <kbd>V</kbd></dt><dd>Puertas / limpiaparabrisas</dd></div><div><dt><kbd>F4</kbd> / <kbd>F5</kbd></dt><dd>Monitor de vía / conducción</dd></div><div><dt><kbd>F6</kbd> / <kbd>F10</kbd></dt><dd>Ayuda / ajustes y reasignación</dd></div></dl><aside class="note"><strong>Qué deberías ver en cada parada.</strong> Tren a ≤0,1 m/s, dentro de ±10 m del punto de parada. Pasajeros y horario tienen contadores separados. Al finalizar, aparece el resumen del servicio. Para testear rápido, activá práctica de estaciones en F10.</aside></section>
-<section class="section wrap split" id="rendimiento"><div><p class="eyebrow">Tu equipo</p><h2>Elegí cómo<br>calcular y dibujar.</h2></div><div><p>En F10, <strong>Cálculo del clima</strong> cambia entre automático, GPU, CPU y mixto. <strong>Renderizado al iniciar</strong> selecciona el adaptador y requiere reiniciar el visor.</p><dl class="detail-list"><div><dt>GPU</dt><dd>Dibuja la escena con aceleración y calcula las trayectorias de la precipitación en el shader. Física y señales permanecen en CPU.</dd></div><div><dt>CPU + GPU</dt><dd>La CPU calcula todos o parte de los copos; la GPU dibuja. Automático reduce el detalle del clima ante presión sostenida.</dd></div><div><dt>CPU por software</dt><dd>Dibuja también la escena en CPU, mediante un adaptador compatible como Mesa lavapipe. Sirve como alternativa funcional; puede ser mucho más lento.</dd></div></dl><div class="code-box"><pre><code># Nieve y cálculo de partículas en GPU
-OPENRAILSRS_WEATHER=snow OPENRAILSRS_WEATHER_EXECUTION=gpu \
-  ./scripts/run_chiltern_service.sh --direct --renderer gpu
+  <main id="contenido"><header class="page-intro wrap"><p class="eyebrow">Instalación</p><h1>Tu primera partida.</h1><p class="lead">La versión de desarrollo se compila desde el código. Linux es el sistema que usamos para las pruebas. Podés empezar con Demo Model 1 o con tu instalación de Chiltern.</p></header>
+<section class="section wrap getting-started" id="instalacion">
+  <div class="section-heading"><div><h2>Compilar y abrir el menú</h2></div><p>Necesitás Git, Rust 1.95 o superior y las bibliotecas gráficas y de audio de tu distribución. Python 3 se usa para descargar contenido.</p></div>
+  <ol class="steps">
+    <li><span class="step-number">1</span><div><h3>Descargá el proyecto</h3><div class="code-box"><pre><code>git clone https://github.com/cavazquez/openrailsrs.git
+cd openrailsrs</code></pre><button class="copy-button" type="button">Copiar</button></div></div></li>
+    <li><span class="step-number">2</span><div><h3>Compilá y abrí el juego</h3><div class="code-box"><pre><code>CARGO_BUILD_JOBS=2 CARGO_PROFILE_DEV_OPT_LEVEL=1 \
+CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_DEV_STRIP=symbols \
+CARGO_INCREMENTAL=0 cargo build --locked --workspace --all-features
 
-# Nieve con cálculo mixto y renderizado automático
-OPENRAILSRS_WEATHER=snow OPENRAILSRS_WEATHER_EXECUTION=hybrid \
-  ./scripts/run_chiltern_service.sh --direct --renderer auto
+target/debug/openrailsrs-viewer3d --menu</code></pre><button class="copy-button" type="button">Copiar</button></div><p>La primera compilación tarda porque también construye Bevy y sus dependencias. Si faltan bibliotecas del sistema, la <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/BEVY.md">guía de Bevy</a> tiene las instrucciones.</p></div></li>
+    <li><span class="step-number">3</span><div><h3>Instalá una ruta</h3><p>Si no tenés contenido instalado, abrí <strong>Descargar contenido oficial</strong> y elegí <strong>Demo Model 1</strong>. La actividad de las 09:30 con <strong>MT_MT_Class 47 &amp; 6 mk2 PP</strong> tiene tres paradas y cabina 3D.</p><p>Si ya usás Chiltern, elegí su carpeta en la biblioteca. El servicio extendido recorre seis estaciones; el corto termina en West Ruislip. El menú revisa los archivos del tren antes de iniciar.</p><a href="contenido.html">Rutas, descargas y archivos faltantes <span aria-hidden="true">→</span></a></div></li>
+    <li><span class="step-number">4</span><div><h3>Elegí el servicio</h3><p>Para el primer viaje, elegí día y clima despejado. Podés cambiar la hora, la estación del año y el clima después. Al cargar, el juego espera a que estén listas las mallas, texturas y shaders.</p></div></li>
+  </ol>
+  <details><summary>Ya tengo Chiltern y quiero usar el lanzador</summary><p>Busca la ruta en <code>~/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern</code>. Si la instalaste en otro lugar, indicá la carpeta antes de arrancar:</p><div class="code-box"><pre><code>export CHILTERN_ROUTE="/ruta/al/Content/Chiltern/ROUTES/Chiltern"
+./scripts/run_chiltern_service.sh
 
-# Renderizado completo por software (requiere adaptador compatible)
-./scripts/run_chiltern_service.sh --direct --renderer cpu</code></pre><button class="copy-button" type="button">Copiar</button></div><p class="small-note">F8 → Diagnóstico muestra RAM, VRAM disponible y reparto del clima. RAM y VRAM no se suman como si fueran memoria independiente. El renderizador completo no cambia de dispositivo durante la partida.</p></div></section>
-<section class="section wrap" id="cli"><p class="eyebrow">También sin ventana</p><h2>La misma sesión, para verificar.</h2><div class="code-box"><pre><code>target/debug/openrailsrs play-service \
+# Abrir directamente el servicio de seis estaciones
+./scripts/run_chiltern_service.sh --direct</code></pre><button class="copy-button" type="button">Copiar</button></div><a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/CHILTERN.md">Guía de Chiltern <span aria-hidden="true">↗</span></a></details>
+  <p class="small-note">También hay herramientas para armar un paquete Linux y un Snap de desarrollo. El paquete portátil se probó; la instalación y el confinamiento del Snap siguen pendientes. Los pasos están en <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/DISTRIBUTION.md">la guía de distribución</a>.</p>
+</section>
+<section class="section wrap" id="primer-viaje">
+  <div class="section-heading"><div><h2>Las teclas del primer viaje</h2></div><p>El tren empieza detenido. Mirá el monitor de vía: te indica la parada, la distancia y cuándo podés cerrar las puertas y salir.</p></div>
+  <dl class="controls">
+    <div><dt><kbd>1</kbd> / <kbd>Alt</kbd> + <kbd>1</kbd></dt><dd>Entrar a la cabina / alternar 2D y 3D</dd></div>
+    <div><dt><kbd>2</kbd></dt><dd>Ver el tren desde afuera</dd></div>
+    <div><dt><kbd>W</kbd> / <kbd>S</kbd></dt><dd>Inversor adelante / atrás</dd></div>
+    <div><dt><kbd>A</kbd> / <kbd>D</kbd></dt><dd>Aumentar / reducir regulador</dd></div>
+    <div><dt><kbd>;</kbd> / <kbd>'</kbd></dt><dd>Aumentar / reducir freno</dd></div>
+    <div><dt><kbd>Q</kbd> / <kbd>V</kbd></dt><dd>Puertas / limpiaparabrisas</dd></div>
+    <div><dt><kbd>F4</kbd> / <kbd>F5</kbd></dt><dd>Monitor de vía / conducción</dd></div>
+    <div><dt><kbd>F7</kbd> / <kbd>M</kbd></dt><dd>Servicio / mapa</dd></div>
+    <div><dt><kbd>F8</kbd> / <kbd>F9</kbd></dt><dd>Diagnóstico / formación</dd></div>
+    <div><dt><kbd>F6</kbd> / <kbd>F10</kbd></dt><dd>Ayuda / ajustes y teclas</dd></div>
+  </dl>
+  <aside class="note"><strong>Para que cuente la parada</strong>Dejá el tren a menos de 10 m del punto indicado y prácticamente detenido: hasta 0,1 m/s. Abrí las puertas y esperá la autorización de salida. F7 registra la parada; al terminar el recorrido aparece el resumen.</aside>
+  <p>Si estás probando el juego, activá <strong>Práctica de estaciones</strong> en F10. Reduce el embarque a cinco segundos y omite la espera de horario. En Demo Model 1 la última parada dura 600 segundos en el modo normal, tal como figura en la actividad original.</p>
+</section>
+<section class="section wrap split" id="rendimiento">
+  <div><p class="eyebrow">Rendimiento</p><h2>Opciones para tu equipo</h2></div>
+  <div><p>En F10 hay dos ajustes distintos. <strong>Cálculo del clima</strong> elige dónde se calculan los copos y las gotas. <strong>Renderizado al iniciar</strong> elige el dispositivo que dibuja la escena y requiere reiniciar.</p><dl class="detail-list">
+    <div><dt>GPU</dt><dd>La GPU dibuja y calcula la precipitación. La física, las señales y la lógica del servicio siguen en CPU.</dd></div>
+    <div><dt>CPU o mixto</dt><dd>La CPU calcula toda o parte de la precipitación y la GPU la dibuja. El modo automático reduce ese detalle si el equipo no mantiene el ritmo.</dd></div>
+    <div><dt>Por software</dt><dd>Un adaptador como Mesa lavapipe puede dibujar la escena en CPU. Es una alternativa si no hay una GPU utilizable, aunque mucho más lenta.</dd></div>
+  </dl><p>F8 → Diagnóstico muestra RAM, VRAM y el reparto del clima. El juego conserva un solo dispositivo de renderizado durante la partida.</p><p class="small-note">En la última prueba de Chiltern con RX 7600 y Vulkan se completaron las seis paradas desde cabina y exterior. Hubo un cuadro de más de 100 ms en cada viaje y una pausa inicial de hasta 4,37 s. Las condiciones completas están en el <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/PLAYER_POLISH_QA.md">registro de pruebas</a>.</p></div>
+</section>
+<section class="section wrap" id="cli"><h2>Para repetir las pruebas</h2><p>Desde la carpeta del proyecto, estos comandos completan un servicio sin ventana y ejecutan los controles del código:</p><div class="code-box"><pre><code>target/debug/openrailsrs play-service \
   examples/chiltern_extended/scenario.toml --out-dir tmp/service
 
-# Formato, Clippy, tests, compilación y oráculos fijados
-./check.sh</code></pre><button class="copy-button" type="button">Copiar</button></div><a class="text-link" href="https://github.com/cavazquez/openrailsrs/blob/main/docs/PLAYER_MANUAL_TESTS.md">Abrir el manual de pruebas completo <span aria-hidden="true">↗</span></a></section>
-
-<section class="section wrap"><p class="eyebrow">Tu biblioteca</p><h2>Contenido del autor, ediciones independientes.</h2><p>Desde el menú podés descargar Demo Model 1 (260 MiB; 315 MiB instalado), buscar actualizaciones y reauditar una copia sin conexión. La formación original de siete vehículos dispone de cabina 3D y un trayecto completo Edimburgo–Haymarket–Linlithgow; los Include nativos se leen antes de auditar e iniciar.</p><p>Las copias nuevas de Chiltern conservan las anteriores y muestran fecha del origen e identificador. Los paquetes quedan fuera de Git, en datos del usuario: Linux usa XDG y Snap su carpeta común entre revisiones. El instalador y catálogo están embebidos; descargar requiere Python 3. El Snap real todavía necesita empaquetado y validación.</p><p>El menú muestra la carpeta del escenario, los archivos faltantes y dónde colocarlos. La búsqueda y actualización de dependencias se ofrecen solo en el repositorio original identificado del catálogo. El CAF 6000 sintético del ejemplo Mitre usa marcadores sin modelo original identificado: muestra sus faltantes y destinos para completarlos manualmente.</p><a class="text-link" href="https://github.com/cavazquez/openrailsrs/blob/main/docs/OFFICIAL_CONTENT.md">Descargas, biblioteca, licencias y pruebas <span aria-hidden="true">→</span></a></section>
+./check.sh</code></pre><button class="copy-button" type="button">Copiar</button></div><a class="text-link" href="https://github.com/cavazquez/openrailsrs/blob/main/docs/PLAYER_MANUAL_TESTS.md#L888">Pruebas manuales: pasos y resultado esperado <span aria-hidden="true">↗</span></a></section>
 </main>
   <footer class="site-footer">
-    <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Un viaje que se construye, estación por estación.</p></div>
-    <div class="footer-links"><a href="empezar.html">Preparar una partida</a><a href="fisica.html">Física y arquitectura</a><a href="paridad-or.html">Referencia Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
-    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente. Referencia: Open Rails 1.6.1.</span><span>Actualizado: 5 de octubre de 2026</span></div>
+    <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Simulador ferroviario de código abierto.</p></div>
+    <div class="footer-links"><a href="empezar.html">Instalación y controles</a><a href="fisica.html">Cómo funciona</a><a href="paridad-or.html">Comparación con Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
+    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente de Open Rails. Usamos 1.6.1 como referencia.</span><span>Actualizado: 5 de octubre de 2026</span></div>
   </footer>
 </body>
 </html>

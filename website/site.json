@@ -6,44 +6,44 @@
     {
       "file": "index.html",
       "label": "Inicio",
-      "title": "Un recorrido completo, estación por estación",
-      "description": "Conducí un servicio ferroviario en Rust y Bevy, con cabinas, rutas y trenes originales de Open Rails. Conocé la partida, probala y seguí sus avances."
+      "title": "openrailsrs: conducí el Pullman por Chiltern",
+      "description": "Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico."
     },
     {
       "file": "experiencia.html",
-      "label": "La experiencia",
-      "title": "Desde la cabina hasta el último andén",
-      "description": "Cabinas 2D y 3D, cámaras exteriores, controles, pasajeros, clima, tráfico y escenario: lo que podés probar en openrailsrs."
+      "label": "El juego",
+      "title": "Qué podés hacer en la partida",
+      "description": "Capturas de openrailsrs, controles, cabinas, clima y paradas. Mirá qué funciona en el recorrido de Chiltern."
     },
     {
       "file": "empezar.html",
-      "label": "Empezar",
-      "title": "Tu primera partida",
-      "description": "Prepará el contenido Chiltern, compilá openrailsrs e iniciá un servicio de seis estaciones. Guía de controles y modos CPU/GPU."
+      "label": "Cómo empezar",
+      "title": "Instalar y jugar openrailsrs",
+      "description": "Cómo compilar en Linux, descargar Demo Model 1 o usar Chiltern y arrancar la primera partida."
     },
     {
       "file": "contenido.html",
-      "label": "Contenido",
-      "title": "Tu biblioteca de rutas y trenes",
-      "description": "Elegí contenido de sus autores originales, conservá distintas ediciones y revisá los recursos antes de iniciar una partida."
+      "label": "Rutas y trenes",
+      "title": "Rutas y trenes para openrailsrs",
+      "description": "Descargas de los autores originales, Demo Model 1 y ayuda para encontrar archivos faltantes en tu biblioteca."
     },
     {
       "file": "estado.html",
-      "label": "Estado del proyecto",
-      "title": "Avances que se pueden comprobar",
-      "description": "Funciones disponibles, compatibilidad acotada y próximos objetivos de openrailsrs. Resultados verificables frente a Open Rails 1.6.1."
+      "label": "Qué falta",
+      "title": "Estado de openrailsrs",
+      "description": "Recorridos probados, resultados recientes y trabajo pendiente en gráficos, física y compatibilidad."
     },
     {
       "file": "fisica.html",
-      "label": "Física y arquitectura",
-      "title": "Lo que hace avanzar al tren",
-      "description": "Física, frenos, señales y separación del núcleo de simulación y la presentación Bevy. Referencias técnicas de openrailsrs."
+      "label": "Cómo funciona",
+      "title": "Física y código de openrailsrs",
+      "description": "Tracción, frenos, señales y organización del simulador en Rust y Bevy."
     },
     {
       "file": "paridad-or.html",
-      "label": "Paridad con Open Rails",
-      "title": "Una referencia fija. Diferencias visibles y medibles.",
-      "description": "Cómo se compara openrailsrs con Open Rails 1.6.1: capturas, oráculos físicos, tolerancias y límites de compatibilidad."
+      "label": "Comparación con Open Rails",
+      "title": "Resultados frente a Open Rails 1.6.1",
+      "description": "Resultados de las pruebas físicas, capturas y límites de compatibilidad con Open Rails 1.6.1."
     }
   ]
 }

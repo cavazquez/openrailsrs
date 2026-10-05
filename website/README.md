@@ -6,17 +6,24 @@ documentación canónica y muestran el alcance real de compatibilidad.
 
 ## Estructura
 
-- `src/`: contenido de seis páginas: inicio, experiencia, empezar, estado, física y comparación OR.
+- `src/`: contenido de siete páginas: inicio, experiencia, empezar, estado, física y comparación OR.
 - `templates/layout.html`: navegación, pie, accesibilidad y metadatos compartidos.
 - `site.json`: configuración, navegación y descripciones SEO.
 - `css/style.css`: diseño responsive y foco de teclado.
 - `js/site.js`: menú móvil, estaciones, galería y copiar comandos.
 - `assets/`: marca SVG y capturas reales WebP, con procedencia y hashes.
-- Los seis HTML de la raíz son **generados**; no editarlos a mano.
+- Los siete HTML de la raíz son **generados**; no editarlos a mano.
 
 No necesita framework, Node, CDN ni fuentes externas. Páginas, enlaces y comandos
 siguen accesibles sin JavaScript. Bevy, Rust mínimo y la referencia OR se leen
 del repositorio para evitar versiones contradictorias.
+
+## Textos
+
+La portada explica el recorrido jugable; las guías indican pasos concretos.
+Usamos español rioplatense y evitamos eslóganes, promesas generales y repetir
+la arquitectura en las páginas para jugadores. Los resultados, condiciones
+y límites de las pruebas se mantienen aunque cambie la redacción.
 
 ## Editar, comprobar y publicar
 

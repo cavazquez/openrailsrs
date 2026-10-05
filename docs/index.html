@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#132c27">
-  <meta name="description" content="Conducí un servicio ferroviario en Rust y Bevy, con cabinas, rutas y trenes originales de Open Rails. Conocé la partida, probala y seguí sus avances.">
+  <meta name="description" content="Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="Un recorrido completo, estación por estación · openrailsrs">
-  <meta property="og:description" content="Conducí un servicio ferroviario en Rust y Bevy, con cabinas, rutas y trenes originales de Open Rails. Conocé la partida, probala y seguí sus avances.">
+  <meta property="og:title" content="openrailsrs: conducí el Pullman por Chiltern · openrailsrs">
+  <meta property="og:description" content="Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico.">
   <meta property="og:url" content="https://cavazquez.github.io/openrailsrs/">
   <meta property="og:image" content="https://cavazquez.github.io/openrailsrs/assets/exterior.webp">
   <meta name="twitter:card" content="summary_large_image">
@@ -16,7 +16,7 @@
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/site.js" defer></script>
-  <title>Un recorrido completo, estación por estación · openrailsrs</title>
+  <title>openrailsrs: conducí el Pullman por Chiltern · openrailsrs</title>
 </head>
 <body class="home">
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -24,17 +24,22 @@
     <div class="header-inner">
       <a class="brand" href="index.html" aria-label="openrailsrs, inicio"><img src="assets/mark.svg" width="32" height="32" alt="" aria-hidden="true"><span>openrails<span class="brand-end">rs</span></span></a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menú <span aria-hidden="true">＋</span></button>
-      <nav id="main-nav" aria-label="Navegación principal"><a href="index.html" aria-current="page">Inicio</a><a href="experiencia.html">La experiencia</a><a href="empezar.html">Empezar</a><a href="contenido.html">Contenido</a><a href="estado.html">Estado del proyecto</a><a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a></nav>
+      <nav id="main-nav" aria-label="Navegación principal"><a href="index.html" aria-current="page">Inicio</a><a href="experiencia.html">El juego</a><a href="empezar.html">Cómo empezar</a><a href="contenido.html">Rutas y trenes</a><a href="estado.html">Qué falta</a><a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a></nav>
     </div>
   </header>
   <main id="contenido"><section class="hero" aria-labelledby="hero-title">
-  <div class="hero-image"><img src="assets/exterior.webp" width="1280" height="720" alt="Una formación Blue Pullman en el andén de Northolt Park, capturada en openrailsrs" fetchpriority="high"></div>
-  <div class="hero-content"><p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Simulación ferroviaria · Rust + Bevy</p><h1 id="hero-title">El viaje importa.<br>Cada estación, también.</h1><p class="hero-lead">Conducí desde la cabina, recorré el paisaje y llevá tu tren hasta el último andén. La experiencia de Open Rails, construida sobre una base nueva.</p><div class="actions"><a class="button primary" href="empezar.html">Preparar mi primera partida <span aria-hidden="true">↗</span></a><a class="text-link" href="experiencia.html">Conocer la experiencia <span aria-hidden="true">→</span></a></div></div>
-  <div class="hero-caption"><span>CAPTURA DE LA PARTIDA</span><strong>Chiltern · Northolt Park</strong><span>Blue Pullman / vista exterior</span></div>
+  <div class="hero-image"><img src="assets/exterior.webp" width="1280" height="720" alt="Blue Pullman detenido en Northolt Park en openrailsrs" fetchpriority="high"></div>
+  <div class="hero-content">
+    <p class="eyebrow">openrailsrs · en desarrollo</p>
+    <h1 id="hero-title">Conducí el Pullman<br>por Chiltern.</h1>
+    <p class="hero-lead">Salís de Northolt Park y tenés seis paradas hasta Gerrards Cross. Podés manejar desde la cabina original, seguir el tren desde afuera y guardar la partida para continuar después.</p>
+    <div class="actions"><a class="button primary" href="empezar.html">Cómo empezar <span aria-hidden="true">→</span></a><a class="text-link" href="experiencia.html">Ver el juego <span aria-hidden="true">→</span></a></div>
+  </div>
+  <div class="hero-caption"><span>CAPTURA DEL JUEGO</span><strong>Chiltern · Northolt Park</strong><span>Blue Pullman, vista exterior</span></div>
 </section>
-<div class="service-strip"><span><b>06</b> estaciones</span><span><b>15,32</b> kilómetros</span><span><b>02</b> servicios de tráfico</span><span class="strip-note">Una partida completa, hasta Gerrards Cross.</span></div>
+<div class="service-strip"><span><b>6</b> estaciones</span><span><b>15,32</b> kilómetros</span><span><b>2</b> trenes de tráfico</span><span class="strip-note">Northolt Park → Gerrards Cross</span></div>
 <section class="section wrap" id="recorrido">
-  <div class="section-heading"><div><p class="eyebrow">El recorrido de referencia</p><h2>De Northolt Park<br>a Gerrards Cross.</h2></div><p>Seis estaciones del contenido original Chiltern. Embarcá pasajeros, observá las señales y encontrá tu próximo punto de parada.</p></div>
+  <div class="section-heading"><div><p class="eyebrow">Chiltern</p><h2>Estas son las paradas.</h2></div><p>Este es el recorrido que usamos para probar el juego completo. En cada estación tenés que detenerte, atender a los pasajeros y esperar la salida.</p></div>
   <ol class="route-line" aria-label="Estaciones del servicio Chiltern">
     <li><button type="button" data-station="0" aria-pressed="true"><span class="station-dot"></span><span>Northolt Park</span><small>Salida</small></button></li>
     <li><button type="button" data-station="1" aria-pressed="false"><span class="station-dot"></span><span>South Ruislip</span><small>02</small></button></li>
@@ -43,20 +48,27 @@
     <li><button type="button" data-station="4" aria-pressed="false"><span class="station-dot"></span><span>Denham Golf Course</span><small>05</small></button></li>
     <li><button type="button" data-station="5" aria-pressed="false"><span class="station-dot"></span><span>Gerrards Cross</span><small>Llegada</small></button></li>
   </ol>
-  <div class="station-detail" aria-live="polite"><span class="eyebrow" id="station-index">Estación 01 / 06</span><h3 id="station-name">Northolt Park</h3><p id="station-description">El primer embarque. Iniciá con el tren detenido, abrí las puertas y prepará la salida.</p><a href="empezar.html#primer-viaje">Ver cómo conducir el servicio <span aria-hidden="true">→</span></a></div>
+  <div class="station-detail" aria-live="polite"><span class="eyebrow" id="station-index">Estación 1 / 6</span><h3 id="station-name">Northolt Park</h3><p id="station-description">Acá empieza la partida. El tren está detenido; el monitor te avisa cuándo podés cerrar las puertas y salir.</p><a href="empezar.html#primer-viaje">Controles para el primer tramo <span aria-hidden="true">→</span></a></div>
 </section>
 <section class="experience-preview section wrap">
-  <div class="section-heading"><div><p class="eyebrow">El puesto de conducción</p><h2>Una cabina.<br>Muchas decisiones.</h2></div><a class="text-link" href="experiencia.html">Explorar las funciones <span aria-hidden="true">↗</span></a></div>
-  <figure class="wide-shot"><img src="assets/cabina.webp" width="1280" height="720" loading="lazy" alt="Cabina original del Pullman con instrumentos, vía y HUD de conducción"><figcaption><span>Cabina 3D original</span><span>Instrumentos · controles · monitor de vía</span></figcaption></figure>
-  <div class="feature-row"><article><span class="number">01</span><h3>Conducir</h3><p>Cabinas 2D y 3D, cámaras exteriores y controles configurables. El HUD acompaña cada tramo.</p></article><article><span class="number">02</span><h3>Habitar el recorrido</h3><p>Terreno, edificios y trenes originales. Señales, tráfico, noche y clima forman parte del viaje.</p></article><article><span class="number">03</span><h3>Completar el servicio</h3><p>Paradas, pasajeros y horario. Guardá la partida, retomá el recorrido y llegá a la última estación.</p></article></div>
+  <div class="section-heading"><div><p class="eyebrow">Dentro del Pullman</p><h2>La cabina del tren original.</h2></div><a class="text-link" href="experiencia.html">Cabina, cámaras y clima <span aria-hidden="true">→</span></a></div>
+  <figure class="wide-shot"><img src="assets/cabina.webp" width="1280" height="720" loading="lazy" alt="Cabina del Pullman con sus instrumentos y el monitor de vía"><figcaption><span>Cabina 3D del Pullman</span><span>Captura de openrailsrs</span></figcaption></figure>
+  <div class="feature-row">
+    <article><h3>Para manejar</h3><p>Regulador, frenos, inversor y los instrumentos del tren. Podés cambiar entre cabina 2D, 3D y cámara exterior, y reasignar las teclas.</p></article>
+    <article><h3>Durante el viaje</h3><p>El escenario se carga a medida que avanzás. Otros dos trenes circulan por la ruta y afectan las señales. La hora y el clima se eligen en el menú.</p></article>
+    <article><h3>Al llegar</h3><p>El resumen muestra tus paradas y las demoras. Si sólo querés probar los controles, hay una opción para reducir la espera de pasajeros a cinco segundos.</p></article>
+  </div>
 </section>
-<section class="project-section"><div class="wrap project-grid"><div><p class="eyebrow">Nuestro objetivo</p><h2>Conservar la experiencia.<br>Mejorar la base.</h2></div><div><p>Usamos el código y el contenido original para entender Open Rails y comparar resultados con una versión fija: <strong>1.6.1</strong>. Bevy aporta una presentación nueva, streaming y una arquitectura de sistemas.</p><p>Priorizamos una partida consistente y comprobable: lo que se ve, lo que se controla y lo que sucede durante todo el recorrido.</p><a class="text-link" href="estado.html">Ver avances y trabajo pendiente <span aria-hidden="true">→</span></a></div></div></section>
-<section class="section wrap next-step"><p class="eyebrow">Probalo hoy</p><h2>Tu próximo tren<br>sale desde acá.</h2><p>La versión actual se compila desde el código. Necesitás el contenido original Chiltern instalado.</p><a class="button primary" href="empezar.html">Empezar <span aria-hidden="true">↗</span></a><small>Linux primero · código abierto · desarrollo activo</small></section>
+<section class="project-section"><div class="wrap project-grid">
+  <div><p class="eyebrow">Sobre el proyecto</p><h2>Open Rails en Rust y Bevy.</h2></div>
+  <div><p>openrailsrs es un simulador ferroviario de código abierto. Queremos que las rutas y los trenes de Open Rails puedan usarse en una partida completa, con controles familiares y una implementación nueva en Rust.</p><p>Tomamos Open Rails <strong>1.6.1</strong> como referencia y usamos su código para comparar el comportamiento. Ya se pueden terminar los recorridos de Chiltern y Demo Model 1 que probamos; todavía quedan diferencias en otros vehículos, scripts y operaciones.</p><a class="text-link" href="estado.html">Qué funciona y qué falta <span aria-hidden="true">→</span></a></div>
+</div></section>
+<section class="section wrap next-step"><h2>¿Querés probarlo?</h2><p>La guía explica cómo compilar en Linux, instalar una ruta y arrancar. También podés descargar Demo Model 1 desde el menú del juego.</p><a class="button primary" href="empezar.html">Abrir la guía <span aria-hidden="true">→</span></a><small>El contenido de cada autor se instala por separado.</small></section>
 </main>
   <footer class="site-footer">
-    <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Un viaje que se construye, estación por estación.</p></div>
-    <div class="footer-links"><a href="empezar.html">Preparar una partida</a><a href="fisica.html">Física y arquitectura</a><a href="paridad-or.html">Referencia Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
-    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente. Referencia: Open Rails 1.6.1.</span><span>Actualizado: 5 de octubre de 2026</span></div>
+    <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Simulador ferroviario de código abierto.</p></div>
+    <div class="footer-links"><a href="empezar.html">Instalación y controles</a><a href="fisica.html">Cómo funciona</a><a href="paridad-or.html">Comparación con Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
+    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente de Open Rails. Usamos 1.6.1 como referencia.</span><span>Actualizado: 5 de octubre de 2026</span></div>
   </footer>
 </body>
 </html>

@@ -37,29 +37,29 @@ document.addEventListener('keydown', e => {
 });
 
 const stations = [
-  ['Northolt Park', 'El primer embarque. Iniciá con el tren detenido, abrí las puertas y prepará la salida.'],
-  ['South Ruislip', 'La primera parada del recorrido. Seguí la señalización y detenete en el punto indicado por el monitor.'],
-  ['West Ruislip', 'El final del servicio corto y la tercera parada del extendido. El viaje de seis estaciones continúa hacia Denham.'],
-  ['Denham', 'El escenario sigue cargando sectores durante la marcha. Completá el embarque y retomá el servicio.'],
-  ['Denham Golf Course', 'La penúltima parada. Revisá el horario y la formación antes del último tramo.'],
-  ['Gerrards Cross', 'El último andén. Detené el tren, atendé la parada terminal y consultá el resumen del servicio.'],
+  ['Northolt Park', 'Acá empieza la partida. El tren está detenido; el monitor te avisa cuándo podés cerrar las puertas y salir.'],
+  ['South Ruislip', 'Es la primera parada después de salir de Northolt Park. El monitor marca la distancia al punto donde tenés que frenar.'],
+  ['West Ruislip', 'Acá termina el servicio corto. Si elegiste el de seis estaciones, la próxima parada es Denham.'],
+  ['Denham', 'La cuarta estación del recorrido. Después del embarque seguís hacia Denham Golf Course.'],
+  ['Denham Golf Course', 'Te queda una estación. Cerrá las puertas cuando se autorice la salida y continuá hacia Gerrards Cross.'],
+  ['Gerrards Cross', 'El destino del servicio extendido. Al terminar la parada aparece el resumen con las llegadas y demoras.'],
 ];
 document.querySelectorAll('[data-station]').forEach(button => {
   button.addEventListener('click', () => {
     const index = Number(button.dataset.station);
     if (!stations[index]) return;
     document.querySelectorAll('[data-station]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-    document.querySelector('#station-index').textContent = `Estación ${String(index + 1).padStart(2, '0')} / 06`;
+    document.querySelector('#station-index').textContent = `Estación ${index + 1} / 6`;
     document.querySelector('#station-name').textContent = stations[index][0];
     document.querySelector('#station-description').textContent = stations[index][1];
   });
 });
 
 const views = {
-  cabina: ['Cabina 3D original del Pullman y HUD de conducción', 'Cabina 3D · instrumentos originales y monitor de vía.'],
-  exterior: ['Formación Blue Pullman en Northolt Park vista desde el exterior', 'Exterior · formación, andén y escenario original Chiltern.'],
-  noche: ['Viaje nocturno en Chiltern con faros sobre la vía y estrellas', 'Noche despejada · faros, luces y cielo con estrellas.'],
-  nieve: ['Formación Pullman junto a un andén y terreno cubiertos de nieve', 'Nieve · precipitación y cobertura de superficies en la partida.'],
+  cabina: ['Cabina 3D original del Pullman y HUD de conducción', 'Pullman: cabina 3D e información de conducción.'],
+  exterior: ['Formación Blue Pullman en Northolt Park vista desde el exterior', 'El Pullman en Northolt Park, visto desde afuera.'],
+  noche: ['Viaje nocturno en Chiltern con faros sobre la vía y estrellas', 'Chiltern de noche, con cielo despejado y faros encendidos.'],
+  nieve: ['Formación Pullman junto a un andén y terreno cubiertos de nieve', 'El tren y el andén durante una nevada.'],
 };
 document.querySelectorAll('[data-view]').forEach(button => {
   button.addEventListener('click', () => {

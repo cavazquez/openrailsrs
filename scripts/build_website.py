@@ -26,8 +26,8 @@ def content_catalogue():
             if route.get(field): sizes.append(f"{label}: {route[field]/1048576:.0f} MiB")
         description=html.escape(route.get('description',''))
         origin=html.escape(url.removesuffix('.git'),quote=True)
-        source=f'<a class="text-link" href="{origin}" rel="noopener noreferrer">Origen del autor ↗</a>' if url.startswith('https://') else f'<p>Origen indicado en el catálogo: {html.escape(url)}</p>'
-        cards.append(f'<article class="content-card" data-content-card data-free="{str(free).lower()}" data-automatic="{str(automatic).lower()}" id="paquete-{index}"><p class="eyebrow">{"Gratuito" if free else "Distribución comercial"} · {"Instalación desde el juego" if automatic else "Instalación desde su origen"}</p><h3>{name}</h3><p>Autor: {author}</p><p>{" · ".join(sizes) or "Tamaño no informado"}</p><details><summary>Conocer este contenido</summary><p>{description}</p></details>{source}</article>')
+        source=f'<a class="text-link" href="{origin}" rel="noopener noreferrer">Abrir la descarga original ↗</a>' if url.startswith('https://') else f'<p>Origen indicado en el catálogo: {html.escape(url)}</p>'
+        cards.append(f'<article class="content-card" data-content-card data-free="{str(free).lower()}" data-automatic="{str(automatic).lower()}" id="paquete-{index}"><p class="eyebrow">{"Gratuito" if free else "Distribución comercial"} · {"Se instala desde el menú" if automatic else "Descarga desde el autor"}</p><h3>{name}</h3><p>Autor: {author}</p><p>{" · ".join(sizes) or "El catálogo no indica el tamaño"}</p><details><summary>Descripción del autor</summary><p>{description}</p></details>{source}</article>')
     return '\n'.join(cards)
 
 
