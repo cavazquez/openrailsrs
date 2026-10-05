@@ -16,11 +16,20 @@ pub(crate) struct NativeEpState {
     auto_air_psi_m3: f64,
     auxiliary_psi: f64,
     low_stage: bool,
+    #[serde(default = "default_pipe_ratio")]
+    pipe_volume_ratio: f64,
     travel_table: Vec<(f64, f64)>,
+}
+
+fn default_pipe_ratio() -> f64 {
+    0.2
 }
 
 impl NativeEpState {
     pub fn new(profile: NativeEpBrakeProfile) -> Self {
+        Self::with_pipe_volume(profile, 0.2)
+    }
+    fn with_pipe_volume(profile: NativeEpBrakeProfile, pipe_volume_ratio: f64) -> Self {
         let mut state = Self {
             profile,
             pressure_psi: 0.,
@@ -29,6 +38,7 @@ impl NativeEpState {
             auto_air_psi_m3: 0.,
             auxiliary_psi: 70.,
             low_stage: false,
+            pipe_volume_ratio,
             travel_table: Vec::with_capacity(7),
         };
         let reference = state.profile.reference_psi;
@@ -64,7 +74,7 @@ impl NativeEpState {
         self.area() * self.profile.stroke_m
     }
     fn pipe_volume(&self) -> f64 {
-        self.cylinder_volume() * 0.2
+        self.cylinder_volume() * self.pipe_volume_ratio
     }
     fn travel_at_pressure(&self, pressure: f64) -> f64 {
         self.profile.stroke_m
@@ -166,6 +176,83 @@ impl NativeEpState {
         let per_shoe_kn = (shoe_force / self.profile.shoe_count / 1000.).min(20.);
         let speed_kmh = speed_mps.abs() * 3.6;
         Some(k1 * (per_shoe_kn + k2) / (per_shoe_kn + k3) * (speed_kmh + k4) / (speed_kmh + k5))
+    }
+}
+
+/// Normal UIC distributor applications with pneumatic pipe and relay valves.
+/// Emergency, quick-service bulbs and wheel-slide equipment are not modeled here.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct NativeAirState {
+    pub profile: openrailsrs_formats::NativeAirBrakeProfile,
+    pub cylinder: NativeEpState,
+    pub pipe_psi: f64,
+}
+impl NativeAirState {
+    pub fn new(profile: openrailsrs_formats::NativeAirBrakeProfile) -> Self {
+        let mut cylinder =
+            NativeEpState::with_pipe_volume(profile.cylinder.clone(), profile.pipe_volume_ratio);
+        cylinder.auxiliary_psi = profile.controller.charged_psi;
+        Self {
+            pipe_psi: profile.controller.charged_psi,
+            cylinder,
+            profile,
+        }
+    }
+    fn target(&self) -> f64 {
+        ((self.profile.controller.charged_psi - self.pipe_psi) * self.profile.triple_ratio)
+            .max(0.)
+            .min(self.profile.cylinder.service_psi / self.profile.relay_ratio)
+    }
+    pub fn precharge(&mut self, command: f64) {
+        self.pipe_psi = self.profile.controller.charged_psi
+            - command.clamp(0., 1.) * self.profile.controller.full_service_drop_psi;
+        let target = (self.target() * self.profile.relay_ratio).min(self.profile.cylinder.max_psi);
+        self.cylinder.auto_pressure_psi = self.target();
+        self.cylinder.auto_air_psi_m3 = self
+            .cylinder
+            .air_at_pressure(self.cylinder.auto_pressure_psi);
+        self.cylinder.cylinder_air_psi_m3 = self.cylinder.air_at_pressure(target);
+        self.cylinder.pressure_psi = self
+            .cylinder
+            .pressure_from_air(self.cylinder.cylinder_air_psi_m3);
+    }
+    pub fn step(&mut self, command: f64, dt: f64) {
+        let control = &self.profile.controller;
+        let demanded_pipe =
+            control.charged_psi - command.clamp(0., 1.) * control.full_service_drop_psi;
+        let rate = if demanded_pipe < self.pipe_psi {
+            control.application_psi_s
+        } else {
+            control.release_psi_s
+        };
+        self.pipe_psi += (demanded_pipe - self.pipe_psi).clamp(-rate * dt, rate * dt);
+        let target = self.target();
+        let cylinder = &mut self.cylinder;
+        let old = cylinder.auto_pressure_psi;
+        let mut delta = if old < target {
+            (dt * cylinder.profile.application_psi_s).min(target - old)
+        } else {
+            -(dt * cylinder.profile.release_psi_s * old / cylinder.profile.reference_psi * 2.5)
+                .min(old - target)
+        };
+        // Native distributor sensitivity is 0.1 bar. Once applying, the valve
+        // approaches the demand; otherwise it holds the trapped cylinder air.
+        if old < target && target - old < 1. {
+            delta *= (0.1 + 0.9 * (target - old)).clamp(0.1, 1.);
+        }
+        if self.profile.relay_ratio != 1. {
+            cylinder.auto_pressure_psi = (old + delta).max(0.);
+        } else {
+            (cylinder.auto_air_psi_m3, cylinder.auto_pressure_psi) =
+                cylinder.calculate(cylinder.auto_air_psi_m3, delta, target);
+        }
+        let demanded =
+            (cylinder.auto_pressure_psi * self.profile.relay_ratio).min(cylinder.profile.max_psi);
+        (cylinder.cylinder_air_psi_m3, cylinder.pressure_psi) = cylinder.calculate(
+            cylinder.cylinder_air_psi_m3,
+            demanded - cylinder.pressure_psi,
+            demanded,
+        );
     }
 }
 

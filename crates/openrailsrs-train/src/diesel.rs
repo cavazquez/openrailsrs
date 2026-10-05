@@ -17,6 +17,8 @@ pub struct DieselEngineParams {
     pub throttle_rpm_tab: Vec<(f64, f64)>,
     /// Idle RPM (engine at rest with throttle=0).
     pub idle_rpm: f64,
+    /// Authored ETS minimum; zero keeps the unassisted engine governor.
+    pub minimum_supply_rpm: f64,
     /// Maximum RPM at full throttle.
     pub max_rpm: f64,
     /// First-order time constant for RPM response (seconds); fallback when OR params absent.
@@ -94,6 +96,7 @@ impl DieselEngineParams {
             .collect();
         power_tab.push((max_rpm * 1.5, power_w * 0.5));
         Self {
+            minimum_supply_rpm: 0.0,
             power_tab,
             throttle_rpm_tab: vec![(0., idle_rpm), (1., max_rpm)],
             idle_rpm,
@@ -108,6 +111,11 @@ impl DieselEngineParams {
     }
     /// Target RPM for a given throttle position (0-1).
     pub fn target_rpm(&self, throttle: f64) -> f64 {
+        self.throttle_target_rpm(throttle)
+            .max(self.minimum_supply_rpm)
+    }
+
+    fn throttle_target_rpm(&self, throttle: f64) -> f64 {
         if self.throttle_rpm_tab.is_empty() {
             return self.idle_rpm + throttle * (self.max_rpm - self.idle_rpm);
         }
@@ -789,7 +797,10 @@ impl DieselTractionModel {
 
     /// Idle RPM; returns 0 if no engine params are configured.
     pub fn idle_rpm(&self) -> f64 {
-        self.engine.as_deref().map(|e| e.idle_rpm).unwrap_or(0.0)
+        self.engine
+            .as_deref()
+            .map(|e| e.idle_rpm.max(e.minimum_supply_rpm))
+            .unwrap_or(0.0)
     }
 
     pub fn advance_native_rpm(&self, current: f64, throttle: f64, dt: f64) -> f64 {
@@ -917,6 +928,19 @@ mod tests {
     }
 
     #[test]
+    fn electric_train_supply_keeps_engine_rpm_without_applying_traction() {
+        let mut engine = DieselEngineParams::from_msts_defaults(1_900_000.0, 325.0, 750.0, 50.0);
+        engine.throttle_rpm_tab = vec![(0.0, 325.0), (0.4, 450.0), (1.0, 750.0)];
+        engine.minimum_supply_rpm = 450.0;
+        assert_eq!(engine.target_rpm(0.0), 450.0);
+        assert_eq!(engine.target_rpm(0.75), 625.0);
+        assert_eq!(engine.advance_native_rpm(450.0, 0.0, 0.05), 450.0);
+        // An idle RPM floor is a governor demand; the driver throttle remains zero.
+        engine.minimum_supply_rpm = 0.0;
+        assert_eq!(engine.target_rpm(0.0), 325.0);
+    }
+
+    #[test]
     fn interpolates_between_notches() {
         let m = sample_model();
         let f_half = m.force_at(0.0, 0.75);
@@ -940,6 +964,7 @@ mod tests {
     fn apparent_throttle_limits_force_at_low_rpm() {
         let throttle_rpm = vec![(0.0, 325.0), (1.0, 750.0)];
         let engine = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![(325.0, 100_000.0), (750.0, 1_000_000.0)],
             throttle_rpm_tab: throttle_rpm.clone(),
             idle_rpm: 325.0,
@@ -974,6 +999,7 @@ mod tests {
     #[test]
     fn effective_power_scales_with_throttle_when_engine_present() {
         let engine = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![(325.0, 100_000.0), (1500.0, 500_000.0)],
             throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 1500.0)],
             idle_rpm: 325.0,
@@ -1033,6 +1059,7 @@ mod tests {
         ]);
         lead.max_rail_output_power_w = 745_513.0;
         lead.engine = Some(Box::new(DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![(325.0, 100_000.0), (750.0, 745_513.0)],
             throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 750.0)],
             idle_rpm: 325.0,
@@ -1104,6 +1131,7 @@ mod tests {
         ]
         .to_vec();
         let eng = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![],
             throttle_rpm_tab: throttle_rpm_tab.clone(),
             idle_rpm: 650.0,
@@ -1160,6 +1188,7 @@ mod tests {
     #[test]
     fn or_rpm_sqrt_differs_from_exponential_lag() {
         let base = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![(650.0, 100_000.0), (1500.0, 500_000.0)],
             throttle_rpm_tab: vec![(0.0, 650.0), (1.0, 1500.0)],
             idle_rpm: 650.0,
@@ -1175,6 +1204,7 @@ mod tests {
             ]),
         };
         let lag = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             rate_of_change_up_rpm_pss: 0.0,
             change_up_rpm_ps: 0.0,
             ..base.clone()
@@ -1200,6 +1230,7 @@ mod tests {
         let rev = build_reverse_throttle_rpm_tab(&tab);
         assert!((rev.first().unwrap().0 - 325.0).abs() < 1e-6);
         let engine = DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![],
             throttle_rpm_tab: tab,
             idle_rpm: 325.0,
@@ -1219,6 +1250,7 @@ mod tests {
         let mut m = sample_model();
         m.max_rail_output_power_w = 800_000.0;
         m.engine = Some(Box::new(DieselEngineParams {
+            minimum_supply_rpm: 0.0,
             power_tab: vec![(325.0, 100_000.0), (750.0, 800_000.0)],
             throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 750.0)],
             idle_rpm: 325.0,

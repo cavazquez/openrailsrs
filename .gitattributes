@@ -1,3 +1,5 @@
 # Native Windows captures are immutable byte sequences verified by SHA-256.
 # Keep CRLF/UTF-16 intact, including on clones with core.autocrlf enabled.
 examples/baselines/chiltern_local/** -text whitespace=cr-at-eol
+examples/baselines/class47/** -text whitespace=cr-at-eol
+tools/openrails-reference/FormationCapture.cs -text

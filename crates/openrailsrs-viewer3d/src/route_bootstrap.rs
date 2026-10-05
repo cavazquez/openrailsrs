@@ -269,6 +269,7 @@ pub fn update_loading_screen_progress(
     terrain: Option<Res<crate::terrain_spawn::TerrainSpawnProgress>>,
     app_state: Res<State<ViewerAppState>>,
     pipelines: Option<Res<crate::performance::ScenePipelineStatus>>,
+    cab: Option<Res<crate::cab_view::CabInteriorState>>,
     mut texts: Query<&mut Text>,
 ) {
     let Some(mut screen) = screen else {
@@ -292,6 +293,11 @@ pub fn update_loading_screen_progress(
         screen.gpu_ready_frames = 0;
         if let Ok(mut text) = texts.get_mut(screen.status) {
             *text = Text::new("Preparando terreno...");
+        }
+    } else if cab.is_some_and(|cab| cab.is_preparing()) {
+        screen.gpu_ready_frames = 0;
+        if let Ok(mut text) = texts.get_mut(screen.status) {
+            *text = Text::new("Preparando cabina...");
         }
     } else if screen.scenery_spawn_started || *app_state.get() == ViewerAppState::Playing {
         if let Some(pipelines) = pipelines.as_ref() {

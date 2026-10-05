@@ -20,8 +20,8 @@ pub mod typed;
 pub mod vehicle_include;
 pub use typed::native_physics::{NativeVehiclePhysics, parse_native_vehicle_physics};
 pub use typed::vehicle_runtime::{
-    NativeEpBrakeProfile, VehicleBrakeProfile, VehicleEmitter, parse_vehicle_brake_profile,
-    parse_vehicle_emitters,
+    NativeAirBrakeProfile, NativeAirController, NativeEpBrakeProfile, VehicleBrakeProfile,
+    VehicleEmitter, parse_vehicle_brake_profile, parse_vehicle_emitters,
 };
 pub use typed::{
     CurveComfort, ScriptSystem, VehicleContentMetadata, VehicleCurveParameters,

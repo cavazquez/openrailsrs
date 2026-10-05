@@ -135,6 +135,16 @@ pub fn step(
             state.odometer_m,
             dt,
         );
+        if let Some(dynamics) = state.native_dynamics.as_ref() {
+            for (i, axle) in dynamics.axles.iter().enumerate() {
+                let index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
+                if let Some(cylinder) = state.brake_system.cylinders.get_mut(index) {
+                    cylinder.set_native_air_skid(
+                        state.throttle < 0.001 && axle.wheel_slipping(v, dynamics.adhesion_factor),
+                    );
+                }
+            }
+        }
         // Native safety interlocks use the actual cylinder pressure after this
         // tick's EP update, independently of the driver's brake handle.
         state.brake_system.step_with_speed(brake_frac, dt, v);

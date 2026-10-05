@@ -955,3 +955,71 @@ con seis coches Mk2. La porción del PAT elegida termina en Linlithgow: deben
 registrarse Edimburgo Waverley, Haymarket y Linlithgow, con señales originales y
 cabina 3D. F10 permite práctica de cinco segundos para probar las puertas; el
 modo normal mantiene la espera final de 600 segundos declarada por el autor.
+
+## 34. Probar las cinco mejoras del recorrido y distribución
+
+### 34.1. Carga y fluidez de cabina
+
+Abrí Chiltern extendido con el Pullman original, de día y despejado. Durante
+la carga debe aparecer «Preparando cabina…» y luego el puesto de conducción
+completo. Alterná **1 / 2** varias veces: la cabina debe conservar texturas y
+agujas al regresar. Avanzá hasta Gerrards Cross y revisá RAM, VRAM y cuadros en
+**F8 → Diagnóstico**. Las mediciones publicadas usan 1280×720 y radio 450 m;
+otra resolución o distancia cambia la carga. Todavía puede haber tirones breves.
+
+### 34.2. Las tres estaciones finales
+
+En Denham, Denham Golf Course y Gerrards Cross, usá **1** y **2** para mirar la
+vía, andenes, edificios, cercos y árboles. Los sectores deben estar cargados,
+los objetos deben permanecer anclados y los árboles no deben mostrar rectángulos
+opacos alrededor del follaje. En Denham Golf Course se ve el cerco blanco junto
+a la vía; en Gerrards Cross, el edificio de estación y el puente. No bajar la
+cámara bajo el suelo. Las capturas para contrastar el encuadre están en
+[las doce referencias originales](fixtures/visual/or_reference/chiltern_station_views/README.md)
+y [las vistas Bevy finales](fixtures/compatibility/journey-release-2026-10-05/README.md).
+
+### 34.3. Horario y conductor automático
+
+Probá el servicio extendido normal y mirá **F7**. Las dos últimas llegadas están
+programadas a **10:21:30** y **10:29:30**, con salidas a 10:22 y 10:30. Es el
+horario propio de esta extensión; se conserva el límite original de 15 mph.
+El conductor automático debe registrar **seis paradas**, detenerse dentro de
+10 m y completar el servicio sin salidas anticipadas. Se puede repetir sin
+ventana con `openrailsrs play-service examples/chiltern_extended/scenario.toml`.
+En una conducción manual, el resultado depende de tu manejo. La práctica de
+estaciones acorta las esperas y no sirve para evaluar puntualidad normal.
+
+### 34.4. Class 47: cabina, motor, frenos y sonidos
+
+En Biblioteca, elegí Demo Model 1, la actividad de las 09:30 de Edimburgo y la
+formación **MT_MT_Class 47 & 6 mk2 PP**. Usá cabina 3D. Con regulador en cero,
+en **F8 → Locomotora**, el motor debe permanecer alrededor de **450 RPM** para alimentar los coches,
+y el tren debe seguir detenido. Liberá el freno: la tubería debe subir a **5 bar**
+y el cilindro debe descargarse. Con freno de servicio completo, la tubería baja
+a **3,5 bar** y el cilindro de la locomotora llega cerca de **4,83 bar**.
+
+Acelerá, soltá el regulador y frená: las agujas deben seguir el HUD. Probá la
+bocina y escuchá motor y rodadura desde **1** y **2**; cambia su mezcla por la
+posición del oyente. El paquete original tiene algunos WAV faltantes, detallados
+en los informes de audio. No se rellenan con descargas de terceros. Para la
+comparación física fija, ejecutar `python3 scripts/run_oracles.py --suite class47`:
+debe mostrar `PASS class47_original_controls`. No equivale al servicio completo.
+El viaje normal debe registrar las tres paradas y llegar a Linlithgow con cabina
+y escenario visibles; el conductor al 75 % de la prueba llega unos 105/108 s
+tarde a las dos últimas paradas. La actividad original conserva sus 600 s de
+espera final; F10 permite práctica de cinco segundos.
+
+### 34.5. Paquete Linux sin compilar
+
+Extraé el paquete completo en una carpeta, incluso con espacios. Abrí una
+terminal allí y ejecutá `./Jugar.sh --check`; debe terminar con «Paquete listo».
+Ejecutá `./Jugar.sh` y comprobá que abre el menú, muestra ejemplos y permite
+seleccionar el contenido instalado. Iniciá Chiltern o Demo Model 1 y comprobá
+cabina, HUD y sonidos. No hace falta Cargo ni Rust. `./Jugar.sh --cpu` permite
+probar el renderizador por software, si Mesa/lavapipe está instalado.
+
+Los recursos originales se descargan por separado desde Biblioteca. Guardados,
+ajustes y descargas quedan en los datos del usuario, fuera de la carpeta del
+paquete. `BUILD.json` identifica la compilación y glibc; este paquete de QA
+requiere el sistema del host de prueba o uno compatible. Snap sigue pendiente
+de instalación y prueba de confinamiento, según el issue #189.

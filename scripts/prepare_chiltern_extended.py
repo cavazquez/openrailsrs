@@ -16,8 +16,8 @@ STOPS = [
     ("South Ruislip", 1290, 480.0, 30.0),
     ("West Ruislip", 1080, 840.0, 30.0),
     ("Denham", 1864, 1200.0, 30.0),
-    ("Denham Golf Course", 1299, 1410.0, 30.0),
-    ("Gerrards Cross", 1303, 1800.0, 30.0),
+    ("Denham Golf Course", 1299, 1590.0, 30.0),
+    ("Gerrards Cross", 1303, 2070.0, 30.0),
 ]
 
 

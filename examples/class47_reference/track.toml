@@ -1,0 +1,161 @@
+[route]
+id="class47_reference"
+
+[[nodes]]
+id = "n209"
+x_m = -12517241.989
+y_m = -31018356.323
+kind = "plain"
+
+[[nodes]]
+id = "n210"
+x_m = -12516940.759
+y_m = -31018444.906
+kind = "plain"
+
+[[nodes]]
+id = "n211"
+x_m = -12518737.902
+y_m = -31017721.334
+kind = "plain"
+
+[[nodes]]
+id = "n217"
+x_m = -12516891.29
+y_m = -31018458.382
+kind = "plain"
+
+[[nodes]]
+id = "n330"
+x_m = -12516621.76
+y_m = -31018549.231
+kind = "plain"
+
+[[nodes]]
+id = "n350"
+x_m = -12516981.028
+y_m = -31018432.967
+kind = "plain"
+
+[[nodes]]
+id = "n356"
+x_m = -12517216.101
+y_m = -31018363.994
+kind = "plain"
+
+[[nodes]]
+id = "n360"
+x_m = -12517187.339
+y_m = -31018372.523
+kind = "plain"
+
+[[nodes]]
+id = "n362"
+x_m = -12517218.02
+y_m = -31018363.428
+kind = "plain"
+
+[[nodes]]
+id = "n364"
+x_m = -12517279.3684
+y_m = -31018341.681
+kind = "plain"
+
+[[edges]]
+from = "n330"
+id = "e384"
+length_m = 284.8624014566759
+speed_limit_kmh = 160.9344
+to = "n217"
+
+[[edges]]
+from = "n217"
+id = "e379_r"
+length_m = 51.28500155596999
+speed_limit_kmh = 160.9344
+to = "n210"
+
+[[edges]]
+from = "n210"
+id = "e940_r"
+length_m = 42.0
+speed_limit_kmh = 160.9344
+to = "n350"
+
+[[edges]]
+from = "n350"
+id = "e375_r"
+length_m = 215.13760034490784
+speed_limit_kmh = 160.9344
+to = "n360"
+
+[[edges]]
+from = "n360"
+id = "e359_r"
+length_m = 30.0
+speed_limit_kmh = 160.9344
+to = "n356"
+
+[[edges]]
+from = "n356"
+id = "e361"
+length_m = 2.0
+speed_limit_kmh = 160.9344
+to = "n362"
+
+[[edges]]
+from = "n362"
+id = "e363"
+length_m = 25.0
+speed_limit_kmh = 160.9344
+to = "n209"
+
+[[edges]]
+from = "n209"
+id = "e358"
+length_m = 40.179739599331896
+speed_limit_kmh = 160.9344
+to = "n364"
+
+[[edges]]
+from = "n364"
+id = "e1008"
+length_m = 1590.5582987489636
+speed_limit_kmh = 160.9344
+to = "n211"
+
+[edge_profiles.e384]
+speed_posts = []
+grades = [{ grade_percent = -0.0, position_m = 0.0 }, { grade_percent = -0.0, position_m = 5.0 }, { grade_percent = -0.0, position_m = 25.0 }, { grade_percent = -0.0, position_m = 59.96615312725716 }, { grade_percent = -0.0, position_m = 67.96615312725716 }, { grade_percent = -0.0, position_m = 102.87273816714375 }, { grade_percent = -0.0, position_m = 146.505969467002 }, { grade_percent = -0.0, position_m = 181.41255450688857 }, { grade_percent = -0.0, position_m = 203.2291701568177 }, { grade_percent = -0.0, position_m = 246.86240145667594 }, { grade_percent = -0.0, position_m = 264.8624014566759 }]
+
+[edge_profiles.e379_r]
+speed_posts = []
+grades = [{ grade_percent = 0.0, position_m = 0.0 }, { grade_percent = 0.0, position_m = 33.78500155596999 }]
+
+[edge_profiles.e940_r]
+speed_posts = []
+grades = [{ grade_percent = -0.33248622517136145, position_m = 0.0 }, { grade_percent = -0.33248522516030676, position_m = 1.0 }, { grade_percent = -0.3324842251492522, position_m = 2.0 }, { grade_percent = -0.3299161969797998, position_m = 22.0 }]
+
+[edge_profiles.e375_r]
+speed_posts = []
+grades = [{ grade_percent = -0.33248822519347104, position_m = 0.0 }, { grade_percent = -0.33248822519347104, position_m = 1.0 }, { grade_percent = -0.33248622517136145, position_m = 2.0 }, { grade_percent = -0.33248522516030676, position_m = 3.0 }, { grade_percent = -0.33248622517136145, position_m = 8.0 }, { grade_percent = -0.3324872251824162, position_m = 28.0 }, { grade_percent = -0.36652164124763253, position_m = 77.99999999999999 }, { grade_percent = -0.33248522516030676, position_m = 82.89099999999999 }, { grade_percent = -0.33248522516030676, position_m = 110.17599999999999 }, { grade_percent = -0.3324842251492522, position_m = 160.176 }, { grade_percent = -0.3324842251492522, position_m = 171.08430782496453 }, { grade_percent = -0.33248622517136145, position_m = 171.38430782496454 }, { grade_percent = -0.3324842251492522, position_m = 171.68430782496455 }, { grade_percent = -0.33248622517136145, position_m = 172.68430782496455 }, { grade_percent = -0.33248522516030676, position_m = 190.13760034490784 }]
+
+[edge_profiles.e359_r]
+speed_posts = []
+grades = [{ grade_percent = -0.33248622517136145, position_m = 0.0 }, { grade_percent = -0.32991519696891536, position_m = 10.0 }]
+
+[edge_profiles.e361]
+speed_posts = []
+grades = [{ grade_percent = -0.33248522516030676, position_m = 0.0 }]
+
+[edge_profiles.e363]
+speed_posts = []
+grades = [{ grade_percent = -0.33248622517136145, position_m = 0.0 }, { grade_percent = -0.33248622517136145, position_m = 20.0 }]
+
+[edge_profiles.e358]
+speed_posts = []
+grades = [{ grade_percent = -0.33248622517136145, position_m = 0.0 }, { grade_percent = -0.32991519696891536, position_m = 12.698869799665946 }, { grade_percent = -0.0, position_m = 20.089869799665948 }, { grade_percent = -0.0, position_m = 27.480869799665946 }]
+
+[edge_profiles.e1008]
+grades = [{ grade_percent = -0.0, position_m = 0.0 }, { grade_percent = -0.0, position_m = 21.81661564992912 }, { grade_percent = -0.0, position_m = 65.44984694978736 }, { grade_percent = -0.0, position_m = 130.89969389957471 }, { grade_percent = -0.0, position_m = 196.34954084936209 }, { grade_percent = -0.0, position_m = 230.4825408493621 }, { grade_percent = 0.08639372149438863, position_m = 264.6155408493621 }, { grade_percent = -0.0, position_m = 282.2177535877318 }, { grade_percent = -0.0, position_m = 287.2177535877318 }, { grade_percent = -0.0, position_m = 462.0485192240176 }, { grade_percent = 0.19896726255638747, position_m = 636.8792848603034 }, { grade_percent = 0.19896726255638747, position_m = 736.8792848603034 }, { grade_percent = 0.19893726243764143, position_m = 936.8792848603034 }, { grade_percent = 0.19896726255638747, position_m = 971.8454379875606 }, { grade_percent = 0.1989682625603463, position_m = 1071.8454379875607 }, { grade_percent = -0.0, position_m = 1271.8454379875607 }, { grade_percent = -0.0, position_m = 1291.8454379875607 }, { grade_percent = -0.0, position_m = 1341.8454379875607 }, { grade_percent = -0.0, position_m = 1351.6684379875608 }, { grade_percent = -0.0, position_m = 1352.3684379875608 }, { grade_percent = -0.0, position_m = 1396.0314533311043 }, { grade_percent = -0.0, position_m = 1439.813604849389 }, { grade_percent = -0.0, position_m = 1457.6586048493891 }, { grade_percent = -0.0, position_m = 1459.6586048493891 }, { grade_percent = -0.0, position_m = 1494.5651898892756 }, { grade_percent = -0.0, position_m = 1546.9250674491054 }]
+speed_posts = [{ position_m = 263.832, speed_limit_kmh = 32.18688 }, { position_m = 1583.02, speed_limit_kmh = 80.4672 }]

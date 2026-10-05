@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 import package_linux
@@ -33,6 +34,36 @@ class PackagingTests(unittest.TestCase):
             self.assertFalse(any(p.name in ('run.json', 'credentials', 'private.dat') for p in output.rglob('*')))
             self.assertTrue((output/'bin/openrailsrs').stat().st_mode & 0o111)
             self.assertFalse(json.loads((output/'manifest.json').read_text())['downloaded_content_included'])
+
+    def test_launcher_handles_spaces_and_preserves_player_arguments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "Juego con espacios"
+            (root / "bin").mkdir(parents=True)
+            launcher = root / "Jugar.sh"
+            launcher.write_text(package_linux.LAUNCHER)
+            launcher.chmod(0o755)
+            viewer = root / "bin/openrailsrs-viewer3d"
+            viewer.write_text('#!/bin/sh\nprintf "%s\n" "$OPENRAILSRS_RENDERER" "$@"\n')
+            viewer.chmod(0o755)
+            result = subprocess.run([str(launcher), "--cpu", "--scenario", "ruta con espacios.toml"],
+                                    cwd=directory, text=True, capture_output=True, check=True)
+            self.assertEqual(result.stdout.splitlines(), ["cpu", "--menu", "--scenario", "ruta con espacios.toml"])
+
+    def test_launcher_check_reports_loader_failures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "bin").mkdir()
+            for name in package_linux.BINS:
+                binary = root / "bin" / name
+                binary.write_text('#!/bin/sh\nexit 0\n')
+                binary.chmod(0o755)
+            launcher = root / "Jugar.sh"
+            launcher.write_text(package_linux.LAUNCHER)
+            launcher.chmod(0o755)
+            # ldd must reject scripts/invalid ELF rather than claim readiness.
+            result = subprocess.run([str(launcher), "--check"], text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("No se pudo comprobar", result.stderr)
 
     def test_resource_manifest_cannot_copy_outside_resources(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,83 @@
+{
+  "success": true,
+  "phase": "completed",
+  "scenario": "Chiltern extendido: Northolt Park \u2192 Gerrards Cross",
+  "time_s": 2101.049999998878,
+  "distance_m": 15320.21943609584,
+  "score": 999.9,
+  "failure": null,
+  "stops": [
+    {
+      "name": "Northolt Park",
+      "node": "n97",
+      "scheduled_arrive_s": 0.0,
+      "actual_arrive_s": 0.05,
+      "actual_depart_s": 22.000000000000178,
+      "position_error_m": 2.2737367544323206e-13,
+      "arrival_speed_mps": 0.0,
+      "dwell_s": 20.00000000000015,
+      "delay_s": 0.05,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "South Ruislip",
+      "node": "n101",
+      "scheduled_arrive_s": 480.0,
+      "actual_arrive_s": 299.3000000000338,
+      "actual_depart_s": 511.0000000000819,
+      "position_error_m": 2.7453953901049317,
+      "arrival_speed_mps": 0.09633448440412423,
+      "dwell_s": 209.75000000001344,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "West Ruislip",
+      "node": "n105",
+      "scheduled_arrive_s": 840.0,
+      "actual_arrive_s": 762.0999999998546,
+      "actual_depart_s": 870.9999999997556,
+      "position_error_m": 2.838116782648285,
+      "arrival_speed_mps": 0.09843118432126506,
+      "dwell_s": 106.94999999999607,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "Denham",
+      "node": "n3668",
+      "scheduled_arrive_s": 1200.0,
+      "actual_arrive_s": 1182.5999999994722,
+      "actual_depart_s": 1230.9999999994282,
+      "position_error_m": 2.6319465660508286,
+      "arrival_speed_mps": 0.09828490540320368,
+      "dwell_s": 46.4499999999995,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "Denham Golf Course",
+      "node": "n3669",
+      "scheduled_arrive_s": 1590.0,
+      "actual_arrive_s": 1569.3499999991204,
+      "actual_depart_s": 1620.9999999990735,
+      "position_error_m": 3.271157479581234,
+      "arrival_speed_mps": 0.0957338633443587,
+      "dwell_s": 49.699999999999314,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "Gerrards Cross",
+      "node": "n3670",
+      "scheduled_arrive_s": 2070.0,
+      "actual_arrive_s": 2024.899999998706,
+      "actual_depart_s": 2101.049999998878,
+      "position_error_m": 2.4905093726883933,
+      "arrival_speed_mps": 0.09407862001327748,
+      "dwell_s": 74.19999999999793,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    }
+  ]
+}

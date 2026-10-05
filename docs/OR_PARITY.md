@@ -286,3 +286,46 @@ Referencias OR: `MSTSDieselLocomotive.cs`, `DieselEngine.cs`, `TrainCar.cs`. Aud
 ## Oráculo de confort en curvas
 
 `oracles/superelevation-or-1.6.1.json` congela diez resultados de la expresión original de `TrainCar.UpdateCurveSpeedLimit`, extraída del commit fijado y compilada en C# con aritmética `float`. La comparación Rust admite 0,00002 m/s; la captura inicial mide un error máximo de 0,000011826 m/s. Es validación aislada de la fórmula, no paridad de peralte generado, suspensión, avisos originales ni descarrilamiento. El diagnóstico de F8 utiliza geometría nativa, trocha y déficit de los coches. Los umbrales y capturas anteriores permanecen intactos.
+
+## Segunda formación: Class 47 y seis coches Mk2
+
+El ensayo nuevo conserva las DLL de OR 1.6.1 y su semilla. La actividad original
+proviene de Demo Model 1; `FormationCapture.cs` estabiliza los frenos durante 20 s
+y captura 250 s, con liberación, aceleración, deriva, frenado parcial, nuevo
+arranque y frenado completo de servicio. No sustituye el baseline Pullman.
+
+```bash
+python3 scripts/run_oracles.py --suite class47 --out-dir tmp/class47-parity
+```
+
+Pasa con RMS **0,2382 m/s**, pico **1,9415 m/s** y diferencia máxima de odómetro
+**25,79 m**, usando los mismos límites de **0,75 m/s / 2 m/s / 45 m** fijados antes
+de comparar. Cubre las 5001 muestras y las seis fases. Manifiesto, controles y
+traza están en `examples/baselines/class47`; el verificador rechaza cambios de
+hash, cliente, versión o cobertura.
+
+La extracción numérica conserva los valores finales de los Includes y los
+bloques parciales de alimentación. El motor mantiene 450 RPM para alimentar los
+coches sin producir tracción. El distribuidor UIC, la válvula relé, la carrera de
+cilindros y las zapatas alimentan las presiones reales de cabina; el deslizamiento
+Pacha aplica la fricción de rueda bloqueada. La tubería mide 5 bar liberada,
+4,1 bar con demanda del 60 % y 3,5 bar con servicio completo. En ese último estado,
+el cilindro de la locomotora alcanza 4,826 bar, distinto del de los coches.
+
+Este pase certifica el ensayo. Los depósitos y su agotamiento, emergencia,
+equipamiento de servicio rápido y protección de deslizamiento necesitan pruebas
+adicionales. El mínimo de alimentación se usa con arranque caliente; falta probar
+el ciclo completo del suministro auxiliar. La cabina original y Bevy coinciden
+con error de cámara de **1,00 m / 0,090°**; se cargan 106 partes. Se leen ocho SMS
+y 38 WAV, con 21 archivos referenciados ausentes del paquete original. Son
+comprobaciones de carga y reproducción, no paridad del mezclador de OR.
+
+## Las seis estaciones de Chiltern
+
+`check_station_cameras.py` exige ahora las doce vistas. Error máximo medido:
+**1,720 m / 0,654°**, manteniendo 3 m y 1°. Denham, Denham Golf Course y Gerrards
+Cross se inspeccionaron desde cabina y exterior con los mismos modelos, árboles,
+andén y cercos originales. Las referencias originales conservan sus hashes;
+las imágenes Bevy y los resultados están en
+[las pruebas nuevas](fixtures/compatibility/journey-release-2026-10-05/README.md).
+Persisten diferencias de iluminación, sol y detalle a distancia entre motores.

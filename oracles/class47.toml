@@ -1,0 +1,23 @@
+# Second native formation; original controls and thresholds are fixed before comparison.
+reference_version = "1.6.1"
+[[cases]]
+id = "class47_original_controls"
+scenario = "examples/class47_reference/scenario.toml"
+driver = "examples/baselines/class47/driver.csv"
+baseline = "examples/baselines/class47/capture/trace.csv"
+phase_bounds = [0.0, 30.0, 110.0, 150.0, 180.0, 210.0, 250.0]
+phase_max_velocity_rms = 1.10
+[cases.reference_columns]
+time_column = "time_s"
+speed_column = "velocity_mps"
+distance_column = "odometer_m"
+speed_unit = "mps"
+distance_unit = "meters"
+throttle_column = "throttle"
+brake_column = "brake"
+[cases.thresholds]
+max_velocity_rms = 0.75
+max_velocity_max = 2.0
+max_position_max = 45.0
+max_throttle_rms = 0.05
+max_brake_rms = 0.05

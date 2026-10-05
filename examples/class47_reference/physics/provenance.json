@@ -1,0 +1,30 @@
+{
+  "reference_version": "Open Rails 1.6.1",
+  "original_package": "Demo Model 1",
+  "generator": "scripts/prepare_formation_physics.py",
+  "source_sha256": {
+    "MT_DD_CLASS_47_47706/MT_DD_CLASS_47_47706.eng": "d9e031f65ec61bcc42135d791ac94823ca4d7ca48c5377837058dfc51e1fad71",
+    "common.include/Class47/47_7a_wag.inc": "749dd5faabbd1c4446b48f37815be9e044e63c0b26e7306886c36c12291ae100",
+    "common.include/coupling_screw.inc": "a28a2ece63973f15f9b498bd788433bb383f6ae074cf95216f263e7575034295",
+    "common.brakes/Timing_air2_passenger_loco.inc": "a95a06f0e1dc1a97f8120ace6eb42a0380696248b0027eded75d8ffc0a87b6b5",
+    "common.engines/Sulzer_12LDA28C_2580hp.inc": "5c58a77fc981ab8a8f678b3ff0d7d7546cc3b17801e7f094bc502bc982fd0f00",
+    "common.transmissions/BR_class47_2580hp.inc": "a55ddbf72aef3ee113f08620453669526477d3c37b8756a37781f4dbefdcd320",
+    "common.include/Class47/47_7a_eng.inc": "d67674c2c4992214f295399702e6af9ef4715d844259454a9741dfd0844b6e5b",
+    "common.brakes/System_air2_10_7_5.inc": "9f6a5042d754027991b5b57b03a98f608f7d4df383d3ff73ce78aef30e92250f",
+    "common.brakes/Controller_air_dual_DM.inc": "bc230893f1f77bcae2aca23cb43e5cbbd82a46e8f2ba7cc8c7c250124f5fd093",
+    "mt_db_mkii_bluegrey/MT_DB_MK2_TSO_SC5169.wag": "7810b06e5528d251720897869f58d939975a9689effd43fa76e18e312e3a3942",
+    "common.include/BR_Mk2/Mk2_TSO_64_PP.inc": "a6c3056e7a60ee12badb1f5244acdaca0f48120df4bc87c72f021ea590e19df3",
+    "common.include/coupling_drophead.inc": "e4a76ec8f79096177bd2112df84e744509f543f25b7b271165fb664ec27bd93b",
+    "common.brakes/wag_UIC_air2_passenger.inc": "78596cb50d57acc2f5d156f00eb53960e8da12380bab55d9577cab70d97c746d",
+    "common.include/BR_Mk2/SteamFX_Mk2_TSO_a.inc": "4905ac7901aaa521ba1d38a5e9d2f8de3e0cdc1126f29d6fd8a3a9ebeb8377a3",
+    "mt_db_mkii_bluegrey/MT_DB_MK2_TSO_SC5134.wag": "2a1de861611fcadddd8b104e3cc5adf9af83a2a236f33328d45aaada3309cf87",
+    "mt_db_mkii_bluegrey/MT_DB_MK2_TSO_SC5147.wag": "c80413e406dbd7fa6b45ed4de84ed2d0d08502d6b864160f5ac0c7c8238ca1c5",
+    "mt_db_mkii_bluegrey/MT_DB_MK2_FK_SC13415.wag": "cca98d4bdaf86fd0e5bcead90899acf8301ac4c308da47c31695872b14998fe5",
+    "common.include/BR_Mk2/Mk2_FK_PP.inc": "ec4faed4c251c8b1e4b71a6b799a8ca4ee531cd2a9ef338452a80cb752ebd204",
+    "common.include/BR_Mk2/SteamFX_Mk2_FK.inc": "7ebee5f6fecd0c8f3c49af1cdd40710e39b821c2b14c5b54de72f86e551fccb0",
+    "mt_db_mkii_bluegrey/MT_DB_MK2_BSO_SC9411.wag": "b353e8bcdf5498dd48873039905b852bd3f4717accead4f02420edb06ea5a8b3",
+    "common.include/BR_Mk2/Mk2_BSO_PP.inc": "f754972e98ed1890f3af4e1f3aec3ea7b22632745ecacdbfcabe3bdb0e9d91ca",
+    "common.include/BR_Mk2/SteamFX_Mk2_BSO_a.inc": "edec342dd16510d181d9755911e354ad6c112c240ace0afc5d1e806f32f14a45"
+  },
+  "scope": "numeric physical parameters; original downloads remain outside Git"
+}

@@ -90,3 +90,7 @@ scripts/__pycache__/
 # User downloads and local content archives are not source assets.
 /official-content/
 /content-cache/
+
+# Generated second-formation comparison outputs.
+examples/class47_reference/run.csv
+examples/class47_reference/run.json

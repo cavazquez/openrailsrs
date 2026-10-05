@@ -1,0 +1,27 @@
+{
+  "check_sh_passed": true,
+  "rust_passed": 1553,
+  "rust_ignored_first_pass": 44,
+  "native_platform_motion_tests_passed": 2,
+  "python_passed": 55,
+  "fmt": true,
+  "clippy_warnings_denied": true,
+  "workspace_build": true,
+  "acceptance_oracles": 4,
+  "pullman_service_oracle": true,
+  "class47_oracle": true,
+  "station_camera_views": 12,
+  "visual_smoke": {
+    "passed": true,
+    "hot_pixels": 12,
+    "total_pixels": 230400,
+    "rmse": 0.486,
+    "golden_changed": false
+  },
+  "instance_silhouette_overlap": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "instance_silhouette_minimum": 0.98
+}

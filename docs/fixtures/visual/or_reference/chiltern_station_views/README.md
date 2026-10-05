@@ -28,7 +28,7 @@ Para generar las doce vistas Bevy correspondientes, una por vez:
 
 ```bash
 python3 scripts/capture_route_views.py --route-root "$CHILTERN_ROUTE" \
-  --with-cab --cab-fov-deg 45 --headless-wayland --require-hardware --out-dir tmp/station-materials
+  --with-cab --capture-or-focus --cab-fov-deg 45 --headless-wayland --require-hardware --out-dir tmp/station-materials
 ```
 
 Se comparan andenes, edificios, cercos, árboles y contornos transparentes. La

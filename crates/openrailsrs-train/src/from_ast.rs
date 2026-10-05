@@ -329,6 +329,7 @@ impl From<EngineFile> for Locomotive {
                     crate::diesel::build_reverse_throttle_rpm_tab(&value.diesel_throttle_rpm_tab)
                 };
                 model.engine = Some(Box::new(crate::diesel::DieselEngineParams {
+                    minimum_supply_rpm: value.diesel_supply_min_rpm,
                     power_tab: value.diesel_power_tab,
                     throttle_rpm_tab: value.diesel_throttle_rpm_tab,
                     idle_rpm,

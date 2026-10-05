@@ -236,3 +236,23 @@ sha256 = "6481574e52973a9fb78274ba1aef0897b3cdf141d8c8babac1c999af22bc38ab"
 [[files]]
 path = "oracles/cant-profiles-or-1.6.1.json"
 sha256 = "ed3fcf438bb5c46672f5c8b031755abd85cded2ea3731de252775ce187066e0d"
+
+[[files]]
+path = "examples/baselines/class47/manifest.json"
+sha256 = "967dcd2b67329f0cf53f9174a87778544383375ca2355595e854e3a736f45129"
+
+[[files]]
+path = "examples/baselines/class47/driver.csv"
+sha256 = "36388515fa81a90bffd1158e0f142a13da4d4c635f55b85db5d8b0b993d1337d"
+
+[[files]]
+path = "examples/baselines/class47/capture/initial.json"
+sha256 = "003f62633dd9f6491f3dfd211b2cf641a69a3b7d41e86b55927e3a44bd4ea966"
+
+[[files]]
+path = "examples/baselines/class47/capture/outcome.json"
+sha256 = "612b24e8218dcf568d7b63ee3d35d5e6798e5975ea63c57cb0127c5c4b24f422"
+
+[[files]]
+path = "examples/baselines/class47/capture/trace.csv"
+sha256 = "51fe072f2ed890fdb734d04a969917a6826155b411c3ec4b2c14e292ae1f4955"

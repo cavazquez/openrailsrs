@@ -1,0 +1,40 @@
+{
+  "programs": 8,
+  "streams": 38,
+  "samples": 38,
+  "decoded_mib": 8.601585,
+  "active_voices": 14,
+  "warnings": [
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_dbrakef.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_deadman.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_ebrake.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_flightsf.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_sand.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/gp_sandf.wav",
+    "Missing WAV: ..\\..\\GP38/SOUND/x_gp_sand.wav",
+    "Missing WAV: couple_auto1.wav",
+    "Missing WAV: couple_auto2.wav",
+    "Missing WAV: couple_auto3.wav",
+    "Missing WAV: uncouple_auto1.wav",
+    "Missing WAV: uncouple_auto2.wav",
+    "Missing WAV: uncouple_auto3.wav",
+    "Missing WAV: x_couple_auto1.wav",
+    "Missing WAV: x_couple_auto2.wav",
+    "Missing WAV: x_couple_auto3.wav",
+    "Missing WAV: x_uncouple_auto1.wav",
+    "Missing WAV: x_uncouple_auto2.wav",
+    "Missing WAV: x_uncouple_auto3.wav",
+    "Missing WAV: xcouple.wav",
+    "Missing WAV: xuncouple.wav"
+  ],
+  "device": false,
+  "rendered_wav_sha256": "063f904db2a812455f7ec78656cb7087f0d104edeb72086d44fd4c13e5e3006f",
+  "scope": "native SMS/WAV playback demonstration, not comparison with the Open Rails audio mixer",
+  "wav_measurement": {
+    "duration_s": 11.982267573696145,
+    "channels": 2,
+    "sample_rate": 44100,
+    "rms_normalized": 0.08774275400489409,
+    "peak_normalized": 0.54925537109375
+  }
+}

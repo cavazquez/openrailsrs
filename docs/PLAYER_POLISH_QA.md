@@ -718,3 +718,96 @@ RX 7600/Vulkan: **195,1 s reales**, **1717,9 MiB** de RAM, P50/P95/P99 de juego
 **25/25/48 ms**, un cuadro mayor a 100 ms (máximo **122,3 ms**) y arranque
 máximo de **1513,0 ms**. Se inspeccionaron el tren, la vía y el entorno al final:
 [formación original en exterior](fixtures/compatibility/polish-2026-10-05/chiltern-original-exterior-completed.png).
+
+
+## 5 de octubre de 2026: cabina asíncrona, seis estaciones y Class 47
+
+Esta revisión reemplaza las cifras anteriores de arranque y horario de Chiltern.
+Se conserva el mismo Pullman original, 1280×720, FOV 60°, radio 450 m,
+RX 7600/Vulkan y conductor 75 % a tiempo ×16. La lectura CVF/shape/ACE y su
+preparación se hacen en un trabajador; las texturas únicas y los instrumentos
+se reutilizan al regresar de exterior. Los diagnósticos detallados sólo recorren
+las mallas cuando se activan. La carga espera también la cabina.
+
+El peor cuadro inicial pasa de **4372,98 a 1477,56 ms**. La preparación de cabina
+registró 633,5 ms en el trabajador y 493,4 ms al publicar recursos; esta última
+fase todavía se puede mejorar. En partida: **25/25/51 ms** P50/P95/P99, **dos**
+cuadros mayores a 100 ms y máximo **122,52 ms**. Pico RSS **2089,34 MiB** y
+VRAM del proceso **1644,26 MiB**. Terminaron **6/6 paradas, 15320,21 m**,
+ambos servicios de tráfico y cero shaders, uploads, terreno o modelos cercanos
+pendientes. El control de cabina visible se conserva durante todo el viaje.
+
+Se corrigió la precaución de señales: una señal ya pasada o una amarilla después
+de una verde cercana no reduce el límite de todo el vector de vía. Se verificó
+con la DLL original el límite de 15 mph y se conservó. El horario propio de la
+extensión ajusta las dos últimas llegadas a 10:21:30 y 10:29:30, con salidas a
+10:22 y 10:30. En la prueba gráfica todas las llegadas quedaron a tiempo y no
+hubo salidas anticipadas. La simulación sin ventana repite 2101,05 s y seis
+paradas. El menor tiempo real total también depende del horario revisado;
+no se presenta como una mejora de FPS.
+
+Las doce cámaras de las seis estaciones pasan contra referencias OR 1.6.1
+intactas: máximo **1,7203 m / 0,6541°**, con presupuestos 3 m / 1° y proyección
+sin cambios. Se inspeccionaron Denham, Denham Golf Course y Gerrards Cross en
+cabina y exterior. El cerco blanco de Golf Course, edificios, andenes, puente
+y árboles quedan presentes y anclados. Se mantienen diferencias de iluminación
+y detalle distante; esta aceptación no certifica igualdad por píxel.
+
+La Class 47 + seis Mk2 tiene una nueva captura de 250 s realizada con la DLL
+original, formación/actividad/controles fijados y referencias SHA-256. Pasa
+**RMS 0,2382 m/s**, pico **1,9415 m/s**, posición **25,79 m**, cobertura 100 %,
+con presupuestos originales 0,75 m/s / 2 m/s / 45 m. Se leen parámetros Include
+con precedencia de último valor y bloques de alimentación parciales. El motor
+conserva 450 RPM para alimentación y el freno normal usa cilindro, distribuidor,
+relación de presiones, fricción de zapata y deslizamiento del modelo nativo.
+La liberación llega a 5 bar de tubería; servicio completo, a 3,5 bar de tubería
+y aproximadamente 4,83 bar de cilindro. Depósitos, emergencia y otros sistemas
+siguen parciales. El oráculo Pullman anterior y sus tolerancias permanecen intactos.
+
+La cabina original Class 47 se capturó de nuevo en OR y se contrastó con Bevy:
+**0,9969 m / 0,0900°**, 106 piezas visibles y shaders completos. Las pruebas
+SMS/WAV de 12 s, cabina y exterior, resolvieron 8 programas, 38 streams y 38 WAV;
+las mezclas son distintas y tienen señal de audio. Se informan 21 referencias
+WAV ausentes en el paquete original. No se descargan sustitutos ni se certifica
+paridad del mezclador con OR.
+
+El paquete Linux incluye `Jugar.sh --check`, menú con `Jugar.sh`, selección
+CPU/GPU/Auto, `LEEME.txt`, commit y hashes en `BUILD.json`. Los recursos propios
+están incluidos; descargas y datos del jugador quedan fuera. La comprobación de
+dependencias y catálogo pasa desde una carpeta con espacios. La compilación de
+QA requiere **glibc 2.43**, verificada en ELF; no se anuncia compatibilidad con
+distribuciones anteriores. El Snap construido conserva su prueba de instalación
+pendiente en #189.
+
+[Capturas y mediciones de esta revisión](fixtures/compatibility/journey-release-2026-10-05/README.md).
+[Pasos de prueba manual, sección 34](PLAYER_MANUAL_TESTS.md#34-probar-las-cinco-mejoras-del-recorrido-y-distribución).
+
+El chequeo final completo pasa formato, Clippy sin avisos, compilación, **1553
+pruebas Rust ejecutadas** (incluidas dos de geometría/movimiento con ruta nativa),
+**55 Python**, tres composiciones de edificios originales y los seis oráculos
+físicos. La primera pasada conserva 44 pruebas ignoradas por sus dependencias
+específicas; las dos pruebas nativas indicadas se ejecutan después explícitamente.
+El paquete extraído también pasa simulación y menú con RX 7600 desde una carpeta
+con espacios, sin Cargo/Rust ni shaders externos al paquete.
+
+
+La repetición final de Demo Model 1, con Class 47 original y frenos actualizados,
+completa **3/3 paradas, 28075,79 m y 2090,25 s** simulados. La cabina sigue
+visible en Linlithgow, con tubería 3,5 bar y cilindro 4,83 bar al frenar. La
+partida gráfica tarda 161 s reales; P50/P95/P99 **25/25/25 ms**, máximo de
+partida **28,95 ms**, **cero** cuadros mayores a 100 ms, arranque **441,10 ms**,
+pico RSS **1014,48 MiB** y VRAM **809,66 MiB**. Quedan cero recursos o shaders
+pendientes y se evaluaron 678 cabezas nativas sin errores.
+
+El horario original de esta actividad se conserva: el conductor al 75 % llega
+**105,15 s tarde a Haymarket y 108,30 s a Linlithgow**. No se presenta este viaje
+como puntual ni como el oráculo físico completo de la Class 47. La espera final
+mantiene los 600 s originales; práctica permite reducirla. La simulación sin
+ventana repite exactamente tiempos, paradas y distancia del visor.
+
+La regresión visual por software mantiene el golden: 12/230400 píxeles fuera
+de tolerancia (0,005 %), RMSE 0,486; es una prueba de dibujo, no una medición
+de rendimiento de GPU.
+Las tres siluetas WORLD individuales e instanciadas coinciden **1,0/1,0/1,0**
+frente al mínimo fijo 0,98. Las capturas por software se ejecutaron por separado
+del viaje medido en GPU.

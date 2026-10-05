@@ -1,0 +1,15 @@
+{
+  "graph_sha256": "1ef5c08b17c4f973ed5f9cab2208744fab6a59866ab047a206414edade828c2f",
+  "native_front": {
+    "tile_x": -6112,
+    "tile_z": 15146,
+    "x": 616.2042,
+    "y": 53.3238,
+    "z": -510.922424,
+    "node": 384,
+    "offset_m": 147.5724,
+    "direction": "Forward"
+  },
+  "original_or_graph": true,
+  "full_service": false
+}

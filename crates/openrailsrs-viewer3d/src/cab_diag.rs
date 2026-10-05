@@ -101,7 +101,7 @@ pub fn cab_debug_view() -> CabDebugView {
     }
 }
 
-/// Log once when driver cab spawns (39 parts max — OK at spawn).
+/// Detailed diagnostics are opt-in: decoding every ACE per part stalls startup.
 #[allow(clippy::too_many_arguments)]
 pub fn log_cab_interior_part_diagnostics(
     cab_shape: &Path,
@@ -111,8 +111,11 @@ pub fn log_cab_interior_part_diagnostics(
     materials: &Assets<StandardMaterial>,
     or_materials: &Assets<OrCabMaterial>,
 ) {
-    let tex_refs: Vec<&Path> = texture_dirs.iter().map(|p| p.as_path()).collect();
     let debug = cab_debug_view();
+    if debug == CabDebugView::Off {
+        return;
+    }
+    let tex_refs: Vec<&Path> = texture_dirs.iter().map(|p| p.as_path()).collect();
     viewer_log!(
         "openrailsrs-viewer3d: cab diag — shape {} parts={} debug={}",
         cab_shape.display(),

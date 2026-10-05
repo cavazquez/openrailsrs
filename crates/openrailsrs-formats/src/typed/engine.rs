@@ -79,6 +79,8 @@ pub struct EngineFile {
     pub diesel_throttle_rpm_tab: Vec<(f64, f64)>,
     /// Engine idle RPM (from `IdleRPM`).
     pub diesel_idle_rpm: f64,
+    /// Minimum engine RPM while the authored electric train supply is on.
+    pub diesel_supply_min_rpm: f64,
     /// Engine max RPM (from `MaxRPM`).
     pub diesel_max_rpm: f64,
     /// OR rolling resistance (N); summed across consist with B and C.
@@ -366,6 +368,12 @@ impl EngineFile {
             diesel_power_tab,
             diesel_throttle_rpm_tab,
             diesel_idle_rpm,
+            diesel_supply_min_rpm: find_optional_scalar_field(
+                ast,
+                &["DieselEngineMinRpm"],
+                context,
+            )?
+            .unwrap_or(0.0),
             diesel_max_rpm,
             davis_a_n,
             davis_b_n_per_mps,

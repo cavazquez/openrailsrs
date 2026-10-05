@@ -1,0 +1,27 @@
+{
+  "extracted_archive": true,
+  "path_contains_spaces": true,
+  "rust_or_cargo_used": false,
+  "check_passed": true,
+  "simulation_passed": true,
+  "menu_passed": true,
+  "archive_sha256": "82910087ad3a04db2dd8a25ea4e9ca896259218080b904009b606858976dce2f",
+  "build": {
+    "source_commit": "eed8daaad0d869b9e15dd7f1023eb990f9a225b4",
+    "source_dirty": true,
+    "architecture": "x86_64",
+    "build_libc": [
+      "glibc",
+      "2.43"
+    ],
+    "required_glibc": "2.43",
+    "downloaded_content_included": false,
+    "binary_sha256": {
+      "openrailsrs": "54497cbd74a984647d2e5b3975cc76cc6baa4aa30e62487cc5b4ba87d53dc3bb",
+      "openrailsrs-viewer3d": "fdeaea37f3621166a484bf7474e3e08172028635ff7801bd4702380f4f5f0385",
+      "openrailsrs-prepare-content": "98b045bc9ad84399a703370df1ed58e4b8c3a62e914c419fd50ac1f9d00220e4"
+    }
+  },
+  "menu_sha256": "703700885c92e7f1ac379ae556441aa742480bdf5b7c5c514a1f95534819a1d3",
+  "scope": "QA archive on glibc 2.43 host; separate original-content installation, no cross-distribution certification"
+}

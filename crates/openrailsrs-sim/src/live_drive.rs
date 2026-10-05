@@ -466,8 +466,24 @@ impl LiveDriveSession {
         let Some(edge) = self.current_edge_id() else {
             return base;
         };
-        let has_caution = self.graph.signals_on_edge(edge).any(|s| {
-            self.signal_runtime.get(&s.id).copied().unwrap_or(s.aspect) == SignalAspect::Caution
+        let nearest = self
+            .graph
+            .signals_on_edge(edge)
+            .filter(|signal| signal.position_m >= self.state.pos_on_edge_m)
+            .filter(|signal| {
+                signal
+                    .script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_none_or(|native| native.function.eq_ignore_ascii_case("NORMAL"))
+            })
+            .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        let has_caution = nearest.is_some_and(|signal| {
+            self.signal_runtime
+                .get(&signal.id)
+                .copied()
+                .unwrap_or(signal.aspect)
+                == SignalAspect::Caution
         });
         if has_caution {
             base * CAUTION_SPEED_FACTOR
@@ -770,7 +786,12 @@ impl LiveDriveSession {
         let brake_pipe_bar = if head_vented {
             0.0
         } else {
-            (5.0 - self.driver_brake * 3.5).max(0.0)
+            self.state
+                .brake_system
+                .cylinders
+                .first()
+                .and_then(|c| c.pipe_pressure_bar())
+                .unwrap_or_else(|| (5.0 - self.driver_brake * 3.5).max(0.0))
         };
         let cylinders = &self.state.brake_system.cylinders;
         // The driving cab reads the lead vehicle's cylinder, not the average of
@@ -1362,6 +1383,60 @@ mod tests {
         assert!(
             session.state.odometer_m > start_odo,
             "odometer should advance toward the station"
+        );
+    }
+
+    #[test]
+    fn caution_behind_or_after_a_clear_head_does_not_slow_the_current_block() {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke");
+        let scenario = load_scenario(directory.join("scenario.toml")).unwrap();
+        let mut train = LiveDriveSession::from_scenario(&directory, &scenario).unwrap();
+        let edge = train.current_edge_id().unwrap().to_string();
+        let base = train.speed_limit_mps();
+        let nearest_position = train
+            .graph
+            .signals_on_edge(&edge)
+            .map(|signal| signal.position_m)
+            .reduce(f64::min)
+            .unwrap();
+        train.state.pos_on_edge_m = nearest_position + 0.01;
+        assert_eq!(
+            train.effective_speed_limit_mps(),
+            base,
+            "a passed caution must not hold a train at half speed for the rest of a long vector"
+        );
+        train
+            .graph
+            .insert_signal(openrailsrs_track::TrackSignal {
+                id: "closer-clear".into(),
+                edge_id: edge.clone(),
+                position_m: 100.0,
+                aspect: SignalAspect::Clear,
+                clear_after_s: None,
+                script: None,
+            })
+            .unwrap();
+        train
+            .graph
+            .insert_signal(openrailsrs_track::TrackSignal {
+                id: "distant-caution".into(),
+                edge_id: edge,
+                position_m: 200.0,
+                aspect: SignalAspect::Caution,
+                clear_after_s: None,
+                script: None,
+            })
+            .unwrap();
+        train.state.pos_on_edge_m = 1.0;
+        assert_eq!(
+            train.effective_speed_limit_mps(),
+            base,
+            "a distant caution beyond a nearer clear head is not the current block"
+        );
+        train.state.pos_on_edge_m = 150.0;
+        assert_eq!(
+            train.effective_speed_limit_mps(),
+            base * CAUTION_SPEED_FACTOR
         );
     }
 

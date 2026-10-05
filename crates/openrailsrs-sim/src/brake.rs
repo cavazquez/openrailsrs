@@ -11,7 +11,7 @@
 //! For a single-vehicle consist (locomotive only), the propagation delay is
 //! zero and the behaviour is identical to the previous instantaneous model.
 
-use crate::native_ep_brake::{NativeEpState, PSI_TO_BAR};
+use crate::native_ep_brake::{NativeAirState, NativeEpState, PSI_TO_BAR};
 use openrailsrs_formats::{BrakeShoeFrictionCurve, resolve_brake_shoe_curve};
 use openrailsrs_train::{Consist, Vehicle};
 use serde::{Deserialize, Serialize};
@@ -71,6 +71,10 @@ pub struct BrakeCylinder {
     skid_adhesion_mu: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     native_ep: Option<NativeEpState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    native_air: Option<NativeAirState>,
+    #[serde(default)]
+    native_air_skid: bool,
 }
 
 /// Per-vehicle brake cylinder specification for [`BrakeSystem`].
@@ -195,32 +199,58 @@ impl BrakeCylinder {
             mass_kg,
             skid_adhesion_mu,
             native_ep: None,
+            native_air: None,
+            native_air_skid: false,
         }
     }
 
     /// Wheel-rim braking force after shoe μ(v) and optional skid adhesion cap.
     pub fn effective_force_n(&self, speed_mps: f64) -> f64 {
         let coefficient = self
-            .native_ep
+            .native_air
             .as_ref()
+            .map(|air| &air.cylinder)
+            .or(self.native_ep.as_ref())
             .and_then(|ep| ep.friction_coefficient(self.current_force_n, speed_mps))
             .unwrap_or_else(|| self.shoe_friction.speed_factor(speed_mps));
         let shoe = (self.current_force_n * coefficient).max(self.handbrake_force_n);
-        if self.skid_adhesion_mu > 0.0 && self.mass_kg > 0.0 {
+        if self.native_air.is_some() {
+            // OR TrainCar.UpdateBrakeSlideCalculation derives a diesel's skid
+            // from axle slip; AirSinglePipe uses 0.08 at the shoe while sliding.
+            return if self.native_air_skid {
+                self.current_force_n * 0.08
+            } else {
+                shoe
+            };
+        }
+        if self.native_air.is_none() && self.skid_adhesion_mu > 0.0 && self.mass_kg > 0.0 {
             shoe.min(self.mass_kg * 9.81 * self.skid_adhesion_mu)
         } else {
             shoe
         }
     }
 
+    pub(crate) fn set_native_air_skid(&mut self, skid: bool) {
+        self.native_air_skid = self.native_air.is_some() && skid && self.current_force_n > 25.;
+    }
+    pub fn pipe_pressure_bar(&self) -> Option<f64> {
+        self.native_air
+            .as_ref()
+            .map(|air| air.pipe_psi * PSI_TO_BAR)
+    }
+
     pub fn pressure_bar(&self) -> f64 {
-        self.native_ep.as_ref().map_or_else(
-            || {
-                (self.current_force_n / self.max_force_n.max(1.)).clamp(0., 1.)
-                    * self.full_pressure_bar
-            },
-            |ep| ep.pressure_psi.max(0.) * PSI_TO_BAR,
-        )
+        self.native_air
+            .as_ref()
+            .map(|air| &air.cylinder)
+            .or(self.native_ep.as_ref())
+            .map_or_else(
+                || {
+                    (self.current_force_n / self.max_force_n.max(1.)).clamp(0., 1.)
+                        * self.full_pressure_bar
+                },
+                |ep| ep.pressure_psi.max(0.) * PSI_TO_BAR,
+            )
     }
 
     /// Driver command this cylinder responds to (EP follows handle; train air holds during lap release).
@@ -282,6 +312,13 @@ impl BrakeSystem {
                     v.skid_adhesion_mu,
                 );
                 cylinder.native_ep = v.profile.native_ep.clone().map(NativeEpState::new);
+                cylinder.native_air = v.profile.native_air.clone().map(|mut profile| {
+                    if let Some(lead) = vehicles.first().and_then(|v| v.profile.native_air.as_ref())
+                    {
+                        profile.controller = lead.controller.clone();
+                    }
+                    NativeAirState::new(profile)
+                });
                 if let Some(pressure) = v.profile.max_cylinder_bar {
                     cylinder.full_pressure_bar = pressure;
                 }
@@ -378,6 +415,12 @@ impl BrakeSystem {
 
         for cyl in &mut self.cylinders {
             if cyl.air_vented {
+                if let Some(air) = cyl.native_air.as_mut() {
+                    air.precharge(1.);
+                    cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);
+                    cyl.state = BrakeState::Applied;
+                    continue;
+                }
                 if let Some(ep) = cyl.native_ep.as_mut() {
                     ep.precharge(1.);
                     cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
@@ -417,6 +460,16 @@ impl BrakeSystem {
                 }
             }
 
+            if let Some(air) = cyl.native_air.as_mut() {
+                air.step(command, dt);
+                cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);
+                cyl.state = if command > 0. {
+                    BrakeState::Applying
+                } else {
+                    BrakeState::Releasing
+                };
+                continue;
+            }
             let was_latched = !cyl.ep_instant && cyl.latched_command > 0.0;
             let eff = cyl.effective_command(command, self.train_air_lap_hold);
             let target = eff * cyl.max_force_n;
@@ -480,6 +533,17 @@ impl BrakeSystem {
     pub fn precharge(&mut self, command: f64) {
         let command = command.clamp(0.0, 1.0);
         for cyl in &mut self.cylinders {
+            if let Some(air) = cyl.native_air.as_mut() {
+                air.precharge(command);
+                cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);
+                cyl.time_pending_s = 0.;
+                cyl.state = if command > 0. {
+                    BrakeState::Applied
+                } else {
+                    BrakeState::Charged
+                };
+                continue;
+            }
             if let Some(ep) = cyl.native_ep.as_mut() {
                 ep.precharge(command);
                 cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);

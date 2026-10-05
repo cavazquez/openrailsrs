@@ -1,0 +1,21 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "activity_name": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
+  "activity_sha256": "da803470cd154381437191a30998c12867c889b3b8d221dfcd4fc5603066ade2",
+  "step_s": 0.05,
+  "duration_s": 250,
+  "seed": 0,
+  "full_service": false,
+  "helper_sha256": "e3d41f37b9ffada5027b0e360d650d65a88bc19d7d453b3675edb92ad92d8ba6",
+  "binaries": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679"
+  },
+  "files": {
+    "driver.csv": "36388515fa81a90bffd1158e0f142a13da4d4c635f55b85db5d8b0b993d1337d",
+    "capture/initial.json": "003f62633dd9f6491f3dfd211b2cf641a69a3b7d41e86b55927e3a44bd4ea966",
+    "capture/outcome.json": "612b24e8218dcf568d7b63ee3d35d5e6798e5975ea63c57cb0127c5c4b24f422",
+    "capture/trace.csv": "51fe072f2ed890fdb734d04a969917a6826155b411c3ec4b2c14e292ae1f4955"
+  }
+}

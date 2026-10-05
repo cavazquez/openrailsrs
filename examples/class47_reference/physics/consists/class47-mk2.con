@@ -1,0 +1,9 @@
+(Train
+  (Engine "trains/MT_DD_CLASS_47_47706/MT_DD_CLASS_47_47706.eng")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_TSO_SC5169.wag")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_TSO_SC5134.wag")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_TSO_SC5147.wag")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_FK_SC13415.wag")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_TSO_SC5134.wag")
+  (Wagon "trains/MT_DB_MKII_BlueGrey/MT_DB_MK2_BSO_SC9411.wag")
+)

@@ -64,7 +64,7 @@
       "edge_id": "e14603_r",
       "chainage_m": 1614.0453682693087,
       "platform_length_m": 168.83000000000015,
-      "arrival_s": 1410.0,
+      "arrival_s": 1590.0,
       "dwell_s": 30.0
     },
     {
@@ -76,7 +76,7 @@
       "edge_id": "e14601_r",
       "chainage_m": 358.90883020655474,
       "platform_length_m": 172.48000000000002,
-      "arrival_s": 1800.0,
+      "arrival_s": 2070.0,
       "dwell_s": 30.0
     }
   ],
@@ -229,5 +229,6 @@
       "sha256": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402",
       "tokens": {}
     }
-  ]
+  ],
+  "extended_timetable_note": "Final three stops are authored for this six-station extension. The 15 mph native post 8596 is retained; Golf Course 1590 s and Gerrards 2070 s include acceleration/braking and dwell."
 }

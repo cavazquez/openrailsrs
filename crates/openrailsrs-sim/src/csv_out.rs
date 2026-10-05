@@ -23,8 +23,13 @@ const BASE_HEADERS: &[&str] = &[
 const STEAM_HEADERS: &[&str] = &["boiler_pressure_bar", "water_kg", "coal_kg"];
 
 /// Per-vehicle brake telemetry (head, first train-air wagon, tail).
-const BRAKE_CYLINDER_HEADERS: &[&str] =
-    &["brake_f_head_n", "brake_f_train_air_n", "brake_f_tail_n"];
+const BRAKE_CYLINDER_HEADERS: &[&str] = &[
+    "brake_f_head_n",
+    "brake_f_train_air_n",
+    "brake_f_tail_n",
+    "brake_pipe_bar",
+    "brake_cylinder_bar",
+];
 
 pub struct RunCsvWriter<W: Write> {
     inner: Writer<W>,
@@ -120,6 +125,16 @@ impl<W: Write> RunCsvWriter<W> {
             record.push(format!("{:.1}", head));
             record.push(format!("{:.1}", train_air));
             record.push(format!("{:.1}", tail));
+            let lead = state.brake_system.cylinders.first();
+            record.push(
+                lead.and_then(|c| c.pipe_pressure_bar())
+                    .map(|p| format!("{p:.5}"))
+                    .unwrap_or_default(),
+            );
+            record.push(
+                lead.map(|c| format!("{:.5}", c.pressure_bar()))
+                    .unwrap_or_default(),
+            );
         }
 
         if self.diesel_engine_count > 0 {
@@ -216,10 +231,15 @@ mod tests {
         assert!(text.contains("brake_f_tail_n"));
         let lines: Vec<&str> = text.lines().collect();
         assert_eq!(lines.len(), 2);
+        let headers: Vec<&str> = lines[0].split(',').collect();
         let fields: Vec<&str> = lines[1].split(',').collect();
-        let head: f64 = fields[fields.len() - 3].parse().unwrap();
-        let train_air: f64 = fields[fields.len() - 2].parse().unwrap();
-        let tail: f64 = fields[fields.len() - 1].parse().unwrap();
+        assert_eq!(headers.len(), fields.len());
+        let field = |name| fields[headers.iter().position(|header| *header == name).unwrap()];
+        let head: f64 = field("brake_f_head_n").parse().unwrap();
+        let train_air: f64 = field("brake_f_train_air_n").parse().unwrap();
+        let tail: f64 = field("brake_f_tail_n").parse().unwrap();
+        assert!(field("brake_pipe_bar").is_empty());
+        assert!(field("brake_cylinder_bar").parse::<f64>().unwrap() > 0.0);
         assert!(head > 90_000.0);
         assert!(train_air > 70_000.0);
         assert!(tail > 90_000.0);

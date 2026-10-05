@@ -4,20 +4,17 @@
 //! lead vehicle; the driver camera uses `ORTS3DCabHeadPos` from the `.eng`.
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
+use bevy::tasks::{AsyncComputeTaskPool, Task, block_on, poll_once};
 
 use crate::cab_cvf::{self, CabCvfPart, static_lever_transform};
 use crate::cab_diag;
 use crate::camera::CameraFollowMode;
 use crate::rolling_stock::TrainConsistScene;
-use crate::shapes::{
-    RouteAssets, load_cab_interior_render_asset_from_path, msts_shape_to_train_rotation,
-    texture_search_dirs_for_shape,
-};
+use crate::shapes::{RouteAssets, msts_shape_to_train_rotation, texture_search_dirs_for_shape};
 use crate::viewer_log;
 use openrailsrs_formats::ShapeFile;
 
@@ -57,13 +54,29 @@ enum CabInteriorLookup {
 }
 
 /// Cached cab lookup so we do not scan disk or spam logs every frame.
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Default)]
 pub struct CabInteriorState {
     lookup: CabInteriorLookup,
     cab_shape: Option<PathBuf>,
+    preparation: Option<Task<Option<PreparedCab>>>,
+    render_asset: Option<crate::shapes::ShapeRenderAsset>,
+    runtime: Option<cab_cvf::CabCvfRuntime>,
+    cvf_path: Option<PathBuf>,
+}
+
+struct PreparedCab {
+    cvf: cab_cvf::CabCvfState,
+    shape: ShapeFile,
+    geometry: crate::shapes::LoadedShape,
+    textures: crate::shapes::PrefetchedTextures,
+    texture_dirs: Vec<PathBuf>,
+    elapsed_ms: f64,
 }
 
 impl CabInteriorState {
+    pub fn is_preparing(&self) -> bool {
+        self.preparation.is_some()
+    }
     #[allow(dead_code)]
     fn reset(&mut self) {
         *self = Self::default();
@@ -533,56 +546,125 @@ pub fn sync_cab_interior(
         return;
     };
 
-    if let Some(trainset) = lead_trainset_root(&consist, &assets.route_dir) {
-        let vehicles = consist.vehicles_for("primary");
-        if let Some(shape_name) = vehicles.first().and_then(|v| v.shape_file.as_deref()) {
-            let stem = Path::new(shape_name)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("engine");
-            let eng_path = trainset.join(format!("{stem}.eng"));
-            let eng_path =
-                openrailsrs_formats::resolve_path_case_insensitive(&eng_path).unwrap_or(eng_path);
-            if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
-                openrailsrs_formats::parse_msts_file(&eng_path)
-            {
-                cab_cvf::load_cab_cvf_runtime(&mut cvf_state, &trainset, &eng.cab, &cab_shape);
-            }
+    let (asset, cab_shape_file, tex_dirs) = if let Some(asset) = state.render_asset.clone() {
+        cvf_state.cvf_path = state.cvf_path.clone();
+        cvf_state.shape_path = Some(cab_shape.clone());
+        cvf_state.runtime = state.runtime.clone();
+        (
+            asset,
+            cvf_state.runtime.as_ref().map(|rt| rt.shape.clone()),
+            Vec::new(),
+        )
+    } else {
+        if state.preparation.is_none() {
+            let trainset = lead_trainset_root(&consist, &assets.route_dir);
+            let shape_name = consist
+                .vehicles_for("primary")
+                .first()
+                .and_then(|v| v.shape_file.clone());
+            let path = cab_shape.clone();
+            let route_dir = assets.route_dir.clone();
+            state.preparation = Some(AsyncComputeTaskPool::get().spawn(async move {
+                let started = std::time::Instant::now();
+                let mut cvf = cab_cvf::CabCvfState::default();
+                if let (Some(trainset), Some(shape_name)) = (trainset, shape_name) {
+                    let stem = Path::new(&shape_name).file_stem()?.to_str()?;
+                    let eng_path = trainset.join(format!("{stem}.eng"));
+                    let eng_path = openrailsrs_formats::resolve_path_case_insensitive(&eng_path)
+                        .unwrap_or(eng_path);
+                    if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
+                        openrailsrs_formats::parse_msts_file(&eng_path)
+                    {
+                        cab_cvf::load_cab_cvf_runtime(&mut cvf, &trainset, &eng.cab, &path);
+                    }
+                }
+                let shape = if let Some(rt) = cvf.runtime.as_ref() {
+                    rt.shape.clone()
+                } else {
+                    ShapeFile::from_path(&path).ok()?
+                };
+                let levers = cvf
+                    .runtime
+                    .as_ref()
+                    .map(cab_cvf::cab_lever_matrix_indices)
+                    .unwrap_or_default();
+                let geometry = crate::shapes::loaded_cab_shape(&shape, Some(2.0), &levers)?;
+                let texture_dirs = texture_search_dirs_for_shape(&path, &route_dir);
+                let refs = texture_dirs
+                    .iter()
+                    .map(PathBuf::as_path)
+                    .collect::<Vec<_>>();
+                let mut paths = crate::shapes::collect_loaded_shape_texture_paths_with_flags(
+                    &geometry,
+                    &refs,
+                    openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                        openrailsrs_bevy_scenery::textures::TextureFlags::NIGHT,
+                    ),
+                );
+                paths.sort();
+                paths.dedup();
+                let textures = crate::shapes::prefetch_ace_textures(&paths);
+                Some(PreparedCab {
+                    cvf,
+                    shape,
+                    geometry,
+                    textures,
+                    texture_dirs,
+                    elapsed_ms: started.elapsed().as_secs_f64() * 1000.0,
+                })
+            }));
+            return;
         }
-    }
-
-    let _head_msts = driver_cab.as_ref().and_then(|c| c.head_msts);
-    let cab_shape_file = ShapeFile::from_path(&cab_shape).ok();
-
-    let lever_matrices: HashSet<usize> = cvf_state
-        .runtime
-        .as_ref()
-        .map(cab_cvf::cab_lever_matrix_indices)
-        .unwrap_or_default();
-
-    let tex_dirs: Vec<PathBuf> = texture_search_dirs_for_shape(&cab_shape, &assets.route_dir);
-    let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-    let mut texture_cache = HashMap::new();
-    let Some(asset) = load_cab_interior_render_asset_from_path(
-        &cab_shape,
-        &tex_refs,
-        Some(2.0),
-        &mut meshes,
-        &mut images,
-        &mut materials,
-        &mut or_materials,
-        &mut texture_cache,
-        Color::srgb(0.35, 0.38, 0.42),
-        &lever_matrices,
-    ) else {
-        if state.lookup != CabInteriorLookup::LoadFailed {
+        let Some(prepared) = state
+            .preparation
+            .as_mut()
+            .and_then(|task| block_on(poll_once(task)))
+        else {
+            return;
+        };
+        state.preparation = None;
+        let Some(prepared) = prepared else {
             state.lookup = CabInteriorLookup::LoadFailed;
             viewer_log!(
-                "openrailsrs-viewer3d: failed to load cab shape {}",
+                "openrailsrs-viewer3d: failed to prepare cab {}",
                 cab_shape.display()
             );
-        }
-        return;
+            return;
+        };
+        let publish_started = std::time::Instant::now();
+        *cvf_state = prepared.cvf;
+        let refs = prepared
+            .texture_dirs
+            .iter()
+            .map(PathBuf::as_path)
+            .collect::<Vec<_>>();
+        let asset = crate::shapes::shape_render_asset_from_loaded_with_ace_cache(
+            prepared.geometry,
+            &refs,
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            Some(&mut or_materials),
+            &mut HashMap::new(),
+            &prepared.textures,
+            Color::srgb(0.35, 0.38, 0.42),
+            Some(true),
+            true,
+            false,
+            None,
+            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
+                openrailsrs_bevy_scenery::textures::TextureFlags::NIGHT,
+            ),
+        );
+        state.render_asset = Some(asset.clone());
+        state.runtime = cvf_state.runtime.clone();
+        state.cvf_path = cvf_state.cvf_path.clone();
+        viewer_log!(
+            "openrailsrs-viewer3d: cab prepared on worker {:.1} ms; asset publication {:.1} ms",
+            prepared.elapsed_ms,
+            publish_started.elapsed().as_secs_f64() * 1000.0
+        );
+        (asset, Some(prepared.shape), prepared.texture_dirs)
     };
 
     let textured = asset.parts.iter().filter(|p| p.has_texture).count();
@@ -748,6 +830,7 @@ pub fn sync_cab_interior(
 mod tests {
     use super::*;
     use crate::rolling_stock::ConsistVehicleVisual;
+    use std::collections::HashSet;
     use std::path::PathBuf;
 
     fn cab_fixture_eng() -> PathBuf {

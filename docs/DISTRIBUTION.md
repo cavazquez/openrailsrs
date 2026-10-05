@@ -13,12 +13,27 @@ python3 scripts/package_linux.py --binaries target/release \
   --output tmp/dist/openrailsrs-linux --archive tmp/dist/openrailsrs-linux.tar.gz
 ```
 
-Descomprimí y conservá `bin/` junto a `share/openrailsrs/`. Desde cualquier
-carpeta, ejecutá la ruta absoluta de `bin/openrailsrs-viewer3d --menu` o
-`bin/openrailsrs content --list`. Python 3 y las bibliotecas gráficas/audio del
+Descomprimí el archivo completo y conservá `bin/` y `share/` junto a `Jugar.sh`.
+En la carpeta extraída, incluso si su nombre contiene espacios:
+
+```bash
+./Jugar.sh --check  # dependencias, recursos y catálogo
+./Jugar.sh          # menú, sin Rust ni Cargo
+./Jugar.sh --cpu    # software Mesa/lavapipe
+./Jugar.sh --gpu    # exigir una GPU compatible
+```
+
+`LEEME.txt` contiene los pasos y `BUILD.json` registra commit, estado de fuentes,
+SHA-256 de binarios y `required_glibc`, obtenido de las versiones ELF con
+`readelf` cuando está disponible. Desde cualquier carpeta también podés usar
+la ruta absoluta de `bin/openrailsrs content --list`. Python 3 y las bibliotecas gráficas/audio del
 sistema siguen siendo dependencias del paquete portátil. Un binario compilado
 en una distribución reciente puede requerir su versión de glibc; para publicar
-una descarga general, compilá en la distribución mínima soportada.
+una descarga general, compilá en la distribución mínima soportada. La
+construcción de QA de esta revisión necesita **glibc 2.43 o superior**: se
+comprobó la dependencia ELF y no se presenta como compatible con Ubuntu 24.04
+u otras distribuciones con versiones anteriores. El Snap se compila dentro de
+core24 y tiene una construcción independiente.
 
 El visor resuelve los recursos junto al ejecutable. `OPENRAILSRS_RESOURCES`
 permite indicar otra carpeta absoluta que contenga `assets/` y `examples/`.

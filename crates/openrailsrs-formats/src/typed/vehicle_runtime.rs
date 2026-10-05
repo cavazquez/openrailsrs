@@ -11,6 +11,8 @@ pub struct VehicleBrakeProfile {
     pub release_bar_s: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_ep: Option<NativeEpBrakeProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_air: Option<NativeAirBrakeProfile>,
 }
 
 /// Authored advanced EP hardware, expressed in the native solver's PSI units.
@@ -32,6 +34,24 @@ pub struct NativeEpBrakeProfile {
     pub low_stage_psi: Option<f64>,
     pub stage_up_mps: f64,
     pub stage_down_mps: f64,
+}
+/// UIC distributor with authored cylinders and optional relay valve.
+/// This covers normal service/release; emergency equipment remains separate.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeAirBrakeProfile {
+    pub cylinder: NativeEpBrakeProfile,
+    pub triple_ratio: f64,
+    pub relay_ratio: f64,
+    pub cylinder_count: f64,
+    pub pipe_volume_ratio: f64,
+    pub controller: NativeAirController,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeAirController {
+    pub charged_psi: f64,
+    pub full_service_drop_psi: f64,
+    pub application_psi_s: f64,
+    pub release_psi_s: f64,
 }
 impl VehicleBrakeProfile {
     pub fn electro_pneumatic(&self) -> Option<bool> {
@@ -87,6 +107,7 @@ pub fn parse_vehicle_brake_profile(ast: &Ast) -> VehicleBrakeProfile {
         application_bar_s: scalar(ast, "MaxApplicationRate").and_then(pressure),
         release_bar_s: scalar(ast, "MaxReleaseRate").and_then(pressure),
         native_ep: parse_native_ep(ast),
+        native_air: parse_native_air(ast),
     }
 }
 
@@ -99,6 +120,10 @@ fn parse_native_ep(ast: &Ast) -> Option<NativeEpBrakeProfile> {
     {
         return None;
     }
+    parse_native_cylinder(ast)
+}
+
+fn parse_native_cylinder(ast: &Ast) -> Option<NativeEpBrakeProfile> {
     let psi = |key: &str| {
         scalar(ast, key)
             .and_then(pressure)
@@ -155,12 +180,74 @@ fn parse_native_ep(ast: &Ast) -> Option<NativeEpBrakeProfile> {
         shoe_count: scalar(ast, "ORTSNumberCarBrakeShoes")
             .and_then(|s| s.parse::<f64>().ok())
             .filter(|v| v.is_finite() && *v > 0.)
-            .unwrap_or(8.),
+            .unwrap_or_else(|| {
+                let axles = |key| {
+                    scalar(ast, key)
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(0.)
+                };
+                (4. * (axles("ORTSNumberAxles") + axles("ORTSNumberDriveAxles"))).max(8.)
+            }),
         shoe_type: scalar(ast, "ORTSBrakeShoeType").unwrap_or_else(|| "Cast_Iron_P6".into()),
         main_reservoir: !named_blocks(ast, "Engine").is_empty(),
         low_stage_psi: psi("ORTSTwoStageLowPressure"),
         stage_up_mps: speed("ORTSTwoStageIncreasingSpeed").unwrap_or(0.),
         stage_down_mps: speed("ORTSTwoStageDecreasingSpeed").unwrap_or(0.),
+    })
+}
+
+fn parse_native_air(ast: &Ast) -> Option<NativeAirBrakeProfile> {
+    let system = scalar(ast, "BrakeSystemType")?.to_ascii_lowercase();
+    if !matches!(system.as_str(), "air_twin_pipe" | "air_single_pipe")
+        || !scalar(ast, "BrakeEquipmentType")?
+            .to_ascii_lowercase()
+            .contains("distributor")
+    {
+        return None;
+    }
+    let mut cylinder = parse_native_cylinder(ast)?;
+    let number = |key: &str, default: f64| {
+        scalar(ast, key)
+            .and_then(|v| v.parse::<f64>().ok())
+            .filter(|v| v.is_finite() && *v > 0.)
+            .unwrap_or(default)
+    };
+    let psi = |key: &str, default: f64| {
+        scalar(ast, key)
+            .and_then(pressure)
+            .map(|bar| bar / 0.0689475729)
+            .unwrap_or(default)
+    };
+    let triple_ratio = number("TripleValveRatio", 2.5);
+    let relay_ratio = number("ORTSBrakeRelayValveRatio", 1.);
+    let cylinder_count = number("ORTSNumberBrakeCylinders", 1.);
+    let cylinder_volume =
+        std::f64::consts::PI * cylinder.diameter_m.powi(2) / 4. * cylinder.stroke_m;
+    let nominal_cylinder = 70. * triple_ratio / (triple_ratio + 1.);
+    let piping_volume = if cylinder.main_reservoir || relay_ratio != 1. {
+        cylinder_volume * 0.2
+    } else {
+        ((-cylinder_volume * 14.696
+            - nominal_cylinder * (cylinder_volume + cylinder.auxiliary_volume_m3)
+            + 70. * cylinder.auxiliary_volume_m3)
+            / (cylinder_count * nominal_cylinder))
+            .max(cylinder_volume * 0.05)
+    };
+    // Air cylinders are fed from the auxiliary reservoir or a pneumatic relay;
+    // the EP-only wire and its MainRes release path do not apply.
+    cylinder.main_reservoir = relay_ratio != 1.;
+    Some(NativeAirBrakeProfile {
+        cylinder,
+        triple_ratio,
+        relay_ratio,
+        cylinder_count,
+        pipe_volume_ratio: piping_volume / cylinder_volume,
+        controller: NativeAirController {
+            charged_psi: psi("TrainBrakesControllerMaxSystemPressure", 72.51887),
+            full_service_drop_psi: psi("TrainBrakesControllerFullServicePressureDrop", 21.755661),
+            application_psi_s: psi("TrainBrakesControllerMaxApplicationRate", 5.80151),
+            release_psi_s: psi("TrainBrakesControllerMaxReleaseRate", 7.251887),
+        },
     })
 }
 

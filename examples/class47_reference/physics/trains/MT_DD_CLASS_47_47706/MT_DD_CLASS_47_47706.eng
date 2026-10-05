@@ -1,0 +1,223 @@
+Engine ( "MT_DD_CLASS_47_47706"
+  Name ( "MT_DD_CLASS_47_47706" )
+  Mass ( 116.8t-uk )
+  Size ( 2.8m 3.93m 19.438m )
+  MaxForce ( 62000lbf )
+  ORTSMaxBrakeShoeForce ( 219509lbf )
+  ORTSBrakeShoeType ( Cast_Iron_P6 )
+  BrakeSystemType ( Air_twin_pipe )
+  BrakeEquipmentType ( Distributor, Auxilary_reservoir, Handbrake )
+  ORTSBrakeCylinderDiameter ( 8.00in )
+  ORTSBrakeCylinderPistonTravel ( 4.00in )
+  ORTSCylinderSpringPressure ( 5.0psi )
+  ORTSAuxiliaryResCapacity ( 1000in^3 )
+  MaxApplicationRate ( 1.9bar/s )
+  MaxReleaseRate ( 0.44bar/s )
+  BrakeCylinderPressureForMaxBrakeBrakeForce ( 70psi )
+  ORTSBearingType ( Roller )
+  ORTSDavis_A ( 911 )
+  ORTSDavis_B ( 41.5 )
+  ORTSDavis_C ( 3.36 )
+  ORTSDavisDragConstant ( 0.0015 )
+  ORTSDriveWheelWeight ( 116.8t-uk )
+  WheelRadius ( 22.5in )
+  ORTSNumberAxles ( 0 )
+  ORTSNumberDriveAxles ( 6 )
+  IdleRPM ( 325 )
+  MaxRPM ( 750 )
+  ORTSDieselEngines ( 1
+Diesel(
+IdleRPM ( 325 )
+MaxRPM ( 750 )
+StartingRPM ( 300 )
+StartingConfirmRPM ( 330 )
+ChangeUpRPMpS ( 50 )
+ChangeDownRPMpS ( 40 )
+RateOfChangeUpRPMpSS ( 10 )
+RateOfChangeDownRPMpSS ( 10 )
+MaximalPower ( 2580hp )
+IdleExhaust ( 4.06 ) Comment ( 4-stroke = rpm / 80 )
+MaxExhaust ( 9.38 ) Comment ( 4-stroke = rpm / 80 )
+ExhaustDynamics ( 1.4 )
+ExhaustDynamicsDown ( 0.6 )
+ExhaustColor ( 113c3c46 )
+ExhaustTransientColor ( 11141418 )
+DieselPowerTab (
+0	0
+325	111119
+330	161071
+360	232306
+450	568223
+550	979850
+650	1428015
+750	1924651
+)
+DieselConsumptionTab (
+0	0
+325	29
+330	41
+360	58
+450	137
+550	240
+650	350
+750	472
+  )
+ThrottleRPMTab (
+0	325
+10	330
+20	360
+40	450
+100	750
+ )
+DieselTorqueTab (
+0	0
+325	3262
+330	4656
+360	6156
+450	12046
+550	16996
+650	20959
+750	24482
+ )
+MinOilPressure ( 40 )
+MaxOilPressure ( 90 )
+MaxTemperature ( 120 )
+Cooling	( 3 )
+TempTimeConstant ( 720 )
+OptTemperature ( 90 )
+IdleTemperature	( 70 )
+ ) )
+  ORTSMaxTractiveForceCurves ( 0.00 (
+0.0	0
+49.2	0
+ )
+0.10 (
+0.0	44482
+1.8	23138
+3.6	8766
+5.4	2734
+8.8	289
+12.3	0
+49.2	0
+ )
+0.20 (
+0.0	50873
+2.2	40176
+4.5	21393
+6.7	15132
+8.9	12212
+11.2	8835
+13.4	6584
+15.6	4976
+17.9	3771
+22.4	2549
+26.8	1735
+31.3	1154
+35.8	718
+40.2	0
+49.2	0
+ )
+0.40 (
+0.0	170907
+2.2	134972
+4.5	71871
+6.7	50837
+8.9	41025
+11.2	33934
+13.4	28761
+15.6	24837
+17.9	21780
+22.4	14679
+26.8	11677
+31.3	9532
+35.8	2982
+40.2	0
+49.2	0
+ )
+0.60 (
+0.0	330953
+2.2	261366
+4.5	139174
+6.7	98443
+8.9	79443
+11.2	65711
+13.4	55694
+15.6	48096
+17.9	42177
+22.4	33638
+26.8	27773
+31.3	23690
+35.8	20691
+40.2	13629
+44.7	7979
+49.2	3357
+ )
+0.80 (
+0.0	498945
+2.2	394036
+4.5	209818
+6.7	148413
+8.9	119769
+11.2	99065
+13.4	83964
+15.6	72510
+17.9	63586
+22.4	50713
+26.8	41871
+31.3	35714
+35.8	31194
+40.2	22965
+44.7	16382
+49.2	10995
+ )
+1.00 (
+0.0	684826
+2.2	540833
+4.5	287986
+6.7	203704
+8.9	164389
+11.2	135972
+13.4	115245
+15.6	99524
+17.9	87274
+22.4	69606
+26.8	57470
+31.3	49020
+35.8	42816
+40.2	33696
+44.7	26400
+49.2	20431
+) )
+  DoesBrakeCutPower ( 1 )
+  Throttle ( 0 1 0.0125 0
+ NumNotches ( 3
+  Notch( 0.0  0 Dummy )
+  Notch( 0.1  1 Dummy )
+  Notch( 1.0  0 Dummy ) ) )
+  ORTSLengthBogieCentre ( 37ft 0in )
+  DieselPowerTab ( 0	0
+325	111119
+330	161071
+360	232306
+450	568223
+550	979850
+650	1428015
+750	1924651 )
+  ThrottleRPMTab ( 0	325
+10	330
+20	360
+40	450
+100	750 )
+  ORTSElectricTrainSupply ( DieselEngineMinRpm ( 450 )
+ Mode ( Switch ) )
+  MaxAuxilaryChargingRate ( 0.38bar/s )
+  TripleValveRatio ( 2.5 )
+  ORTSBrakeRelayValveRatio ( 1.3 )
+  ORTSNumberBrakeCylinders ( 12 )
+  BrakePipeVolume ( 1.46ft^3 )
+  ORTSBrakePipeChargingRate ( 4.5bar/s )
+  TrainBrakesControllerMaxSystemPressure ( 5.0bar )
+  TrainBrakesControllerMaxReleaseRate ( 0.5bar/s )
+  TrainBrakesControllerMaxApplicationRate ( 0.4bar/s )
+  TrainBrakesControllerFullServicePressureDrop ( 1.5bar )
+)

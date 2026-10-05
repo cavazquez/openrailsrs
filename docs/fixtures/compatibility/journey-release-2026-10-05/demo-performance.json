@@ -1,0 +1,121 @@
+{
+  "performance": {
+    "elapsed_s": 142.53759476400003,
+    "frame_p50_ms": 25,
+    "frame_p95_ms": 25,
+    "frame_p99_ms": 25,
+    "frames": 5648,
+    "gameplay_frame_p50_ms": 25,
+    "gameplay_frame_p95_ms": 25,
+    "gameplay_frame_p99_ms": 25,
+    "gameplay_frames": 5203,
+    "gameplay_hitches_over_100_ms": 0,
+    "gameplay_longest_frame_ms": 28.947745,
+    "hitches_over_100_ms": 2,
+    "loading_frames": 3285,
+    "longest_frame_ms": 441.101422,
+    "peak_rss_mib": 1014.484375,
+    "rss_mib": 1014.484375,
+    "startup_longest_frame_ms": 441.101422
+  },
+  "graphics_memory": {
+    "device_total_mib": 8688.0,
+    "device_used_mib": 1369.64453125,
+    "peak_process_vram_mib": 809.66015625,
+    "process_gtt_mib": 84.06640625,
+    "process_vram_mib": 809.66015625,
+    "source": "linux_drm_fdinfo"
+  },
+  "renderer": {
+    "backend": "Vulkan",
+    "device_type": "DiscreteGpu",
+    "hardware": true,
+    "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+  },
+  "station_results": [
+    {
+      "actual_arrive_s": 0.05,
+      "actual_depart_s": 61.999999999998614,
+      "arrival_speed_mps": 0.0,
+      "delay_s": 0.05,
+      "dwell_s": 59.99999999999873,
+      "early_departure_s": 0.0,
+      "name": "Edinburgh Waverley",
+      "node": "n217",
+      "position_error_m": 0.0,
+      "scheduled_arrive_s": 0.0
+    },
+    {
+      "actual_arrive_s": 405.15000000005784,
+      "actual_depart_s": 467.10000000007193,
+      "arrival_speed_mps": 0.07155181074542728,
+      "delay_s": 105.15000000005784,
+      "dwell_s": 59.99999999999873,
+      "early_departure_s": 0.0,
+      "name": "Haymarket",
+      "node": "n211",
+      "position_error_m": 4.148174348812063,
+      "scheduled_arrive_s": 300.0
+    },
+    {
+      "actual_arrive_s": 1488.2999999991941,
+      "actual_depart_s": 2090.2499999988386,
+      "arrival_speed_mps": 0.0701623921165547,
+      "delay_s": 108.29999999919414,
+      "dwell_s": 600.000000000002,
+      "early_departure_s": 0.0,
+      "name": "Linlithgow",
+      "node": "n62",
+      "position_error_m": 3.617147877259413,
+      "scheduled_arrive_s": 1380.0
+    }
+  ],
+  "cab_view": {
+    "camera_eye": [
+      -238.8478240966797,
+      18.165464401245117,
+      53.57174301147461
+    ],
+    "camera_inside_geometry": true,
+    "expected_eye": [
+      -238.8478240966797,
+      18.165464401245117,
+      53.571739196777344
+    ],
+    "eye_error_m": 3.814697265625e-06,
+    "mesh_parts": 106,
+    "visible_mesh_parts": 54
+  },
+  "service_complete": true,
+  "odometer_m": 28075.794286256376,
+  "gpu_tiles": 3,
+  "cpu_tiles": 12,
+  "pending_gpu_uploads": 0,
+  "pending_terrain_tiles": 0,
+  "unactivated_near_shapes": 0,
+  "shader_pipelines": {
+    "failed": 0,
+    "pending": 0
+  },
+  "native_signal_errors": {},
+  "native_signal_programs": 678,
+  "elapsed_s": 161.0,
+  "conditions": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "view_radius_m": 450,
+    "follow": "driver",
+    "speed_multiplier": 16,
+    "autodrive": 0.75,
+    "native_original_consist": true,
+    "weather": "clear",
+    "private_weston": true,
+    "normal_native_dwell_s": [
+      60,
+      60,
+      600
+    ]
+  }
+}

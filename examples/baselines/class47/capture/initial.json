@@ -1,0 +1,96 @@
+{
+  "front": {
+    "tile_x": -6112,
+    "tile_z": 15146,
+    "x": 616.2042,
+    "y": 53.3238,
+    "z": -510.922424,
+    "node": 384,
+    "offset_m": 147.5724,
+    "direction": "Forward"
+  },
+  "rear": {
+    "tile_x": -6112,
+    "tile_z": 15146,
+    "x": 748.133,
+    "y": 53.3238,
+    "z": -460.949,
+    "node": 384,
+    "offset_m": 6.484394,
+    "direction": "Forward"
+  },
+  "cars": 7,
+  "length_m": 141.088,
+  "mass_kg": 320674.640625,
+  "speed_mps": 0.0,
+  "rpm": 449.99826,
+  "bearing_c": 16.3646145,
+  "initial_odometer_m": 0.0,
+  "vehicles": [
+    {
+      "source": "MT_DD_CLASS_47_47706.eng",
+      "length_m": 19.438,
+      "mass_kg": 118674.641,
+      "max_brake_force_n": 976424.7,
+      "cylinder_psi": 70.0,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_TSO_SC5169.wag",
+      "length_m": 20.34,
+      "mass_kg": 34000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_TSO_SC5134.wag",
+      "length_m": 20.34,
+      "mass_kg": 34000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_TSO_SC5147.wag",
+      "length_m": 20.34,
+      "mass_kg": 34000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_FK_SC13415.wag",
+      "length_m": 20.34,
+      "mass_kg": 33000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_TSO_SC5134.wag",
+      "length_m": 20.34,
+      "mass_kg": 34000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    },
+    {
+      "source": "MT_DB_MK2_BSO_SC9411.wag",
+      "length_m": 20.25,
+      "mass_kg": 33000.0,
+      "max_brake_force_n": 75000.0,
+      "cylinder_psi": 50.7632065,
+      "brake_type": "AirTwinPipe"
+    }
+  ],
+  "adhesion_fields": {
+    "ZeroSpeedAdhesionBase": 0.165727273,
+    "SaveAdhesionFilter": 0.5,
+    "AdhesionConditions": 0.5,
+    "Adhesion1": 0.27,
+    "Adhesion2": 0.49,
+    "Adhesion3": 2.0,
+    "AdhesionK": 0.7
+  }
+}

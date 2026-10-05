@@ -1,0 +1,84 @@
+{
+  "reference_version": "1.6.1",
+  "limits": {
+    "position_error_m": 3.0,
+    "direction_error_deg": 1.0,
+    "fov_error_deg": 0.05,
+    "aspect_error": 0.001
+  },
+  "views": {
+    "northolt-park": {
+      "position_error_m": 0.3669697746391426,
+      "direction_error_deg": 5.853177225625916e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "northolt-park-cab": {
+      "position_error_m": 0.5241582158074402,
+      "direction_error_deg": 0.5796054934890801,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "south-ruislip": {
+      "position_error_m": 1.1351991337562228,
+      "direction_error_deg": 4.517745487845102e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "south-ruislip-cab": {
+      "position_error_m": 0.8301791895699528,
+      "direction_error_deg": 0.0018226357721303898,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "west-ruislip": {
+      "position_error_m": 1.7202422394464547,
+      "direction_error_deg": 5.399738656763834e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "west-ruislip-cab": {
+      "position_error_m": 1.182629904669901,
+      "direction_error_deg": 0.0005179979172042143,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "denham": {
+      "position_error_m": 0.6084682054423565,
+      "direction_error_deg": 8.18910913293408e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "denham-cab": {
+      "position_error_m": 1.4181185649215033,
+      "direction_error_deg": 0.014550493256835636,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "denham-golf-course": {
+      "position_error_m": 0.9332412439828741,
+      "direction_error_deg": 4.676310850554341e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "denham-golf-course-cab": {
+      "position_error_m": 1.0637300696826544,
+      "direction_error_deg": 0.6540763003860871,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "gerrards-cross": {
+      "position_error_m": 1.0791133531623927,
+      "direction_error_deg": 5.853177225625916e-06,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    },
+    "gerrards-cross-cab": {
+      "position_error_m": 0.6576471809899306,
+      "direction_error_deg": 0.0008397596236071761,
+      "fov_error_deg": 1.1370015826360458e-06,
+      "aspect_error": 5.0574100241007613e-08
+    }
+  },
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+}

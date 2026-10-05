@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the six station cameras with the unchanged OR 1.6.1 references.
+"""Compare the twelve station cameras with the unchanged OR 1.6.1 references.
 
 Use capture_route_views.py --with-cab --capture-or-focus --cab-fov-deg 45.
 This verifies position/direction/projection, not lighting or pixel parity.
@@ -14,7 +14,8 @@ import tomllib
 
 from run_oracles import ROOT, verify
 
-STATIONS = ("northolt-park", "south-ruislip", "west-ruislip")
+STATIONS = ("northolt-park", "south-ruislip", "west-ruislip",
+            "denham", "denham-golf-course", "gerrards-cross")
 
 
 def compare(native, camera):

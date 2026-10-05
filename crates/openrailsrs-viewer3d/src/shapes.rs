@@ -2111,6 +2111,9 @@ fn scenery_alpha_passes(
 /// scenery can publish a ready image without repeating disk I/O/decompression.
 pub trait ShapeTextureSource {
     fn get(&self, path: &Path) -> Option<&AceFile>;
+    fn cab_brightened(&self, _path: &Path) -> Option<bool> {
+        None
+    }
     fn prepared(
         &self,
         _path: &Path,
@@ -2132,12 +2135,16 @@ impl ShapeTextureSource for HashMap<PathBuf, AceFile> {
 #[derive(Default)]
 pub struct PrefetchedTextures {
     pub aces: HashMap<PathBuf, AceFile>,
+    pub cab_brightness: HashMap<PathBuf, bool>,
     pub loaded: HashSet<PathBuf>,
     pub prepared: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::CachedTexture>,
     pub alpha: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::TextureAlpha>,
 }
 
 impl ShapeTextureSource for PrefetchedTextures {
+    fn cab_brightened(&self, path: &Path) -> Option<bool> {
+        self.cab_brightness.get(path).copied()
+    }
     fn get(&self, path: &Path) -> Option<&AceFile> {
         self.aces.get(path)
     }
@@ -2155,6 +2162,7 @@ impl ShapeTextureSource for PrefetchedTextures {
 impl PrefetchedTextures {
     pub fn extend(&mut self, other: Self) {
         self.aces.extend(other.aces);
+        self.cab_brightness.extend(other.cab_brightness);
         self.loaded.extend(other.loaded);
         self.prepared.extend(other.prepared);
         self.alpha.extend(other.alpha);
@@ -2201,6 +2209,9 @@ pub fn prefetch_ace_textures(paths: &[PathBuf]) -> PrefetchedTextures {
             prefetched.prepared.insert(path, texture);
         } else if let Some(ace) = ace {
             prefetched.loaded.insert(path.clone());
+            prefetched
+                .cab_brightness
+                .insert(path.clone(), brighten_cab_ace_rgba(&ace.mip0).1);
             prefetched.aces.insert(path, ace);
         }
     }
@@ -2289,6 +2300,40 @@ fn material_for_shape_texture(
             Some(tex_path) => {
                 // Warm starts reuse lossless derivatives before decoding an ACE.
                 // Cab ACE brightness/instrument processing keeps its native path.
+                if cab_interior
+                    && crate::or_cab_material::or_cab_shaders_enabled()
+                    && let Some(brightened) = ace_cache.cab_brightened(&tex_path)
+                    && let Some(handle) = texture_cache.get(&(tex_path.clone(), addr_key))
+                    && let Some(ace) = ace_cache.get(&tex_path)
+                {
+                    let alpha_mode =
+                        cab_shape_alpha_mode(ace, tex_name, shader_name, alpha_test_mode);
+                    let transparent = !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                    let tint = apply_msts_vertex_tint(
+                        cab_albedo_tint(brightened),
+                        solid_color,
+                        shader_name,
+                    );
+                    let (m, o, ht, it) = finish_shape_textured_part(
+                        handle.clone(),
+                        &[],
+                        tint,
+                        alpha_mode,
+                        transparent,
+                        z_bias.unwrap_or(0.0),
+                        z_buf_mode,
+                        lit,
+                        shader_name,
+                        tex_name,
+                        solid_color,
+                        true,
+                        false,
+                        or_materials,
+                        materials,
+                        light_mat_idx,
+                    );
+                    return (m, o, ht, it, false);
+                }
                 let is_ktx2 = tex_path
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("ktx2"));
@@ -2731,13 +2776,22 @@ pub fn load_cab_shape_from_path(
     lever_matrices: &HashSet<usize>,
 ) -> Option<LoadedShape> {
     let shape = parse_shape_file(path)?;
+    loaded_cab_shape(&shape, camera_distance_m, lever_matrices)
+}
+
+/// Build cab meshes from the CVF's already parsed shape on a worker.
+pub fn loaded_cab_shape(
+    shape: &ShapeFile,
+    camera_distance_m: Option<f32>,
+    lever_matrices: &HashSet<usize>,
+) -> Option<LoadedShape> {
     let level = match camera_distance_m {
-        Some(d) => lod_level_for_distance(&shape, d).or_else(|| closest_lod_level(&shape))?,
-        None => closest_lod_level(&shape)?,
+        Some(d) => lod_level_for_distance(shape, d).or_else(|| closest_lod_level(shape))?,
+        None => closest_lod_level(shape)?,
     };
-    let parts = build_mesh_parts_from_shape_lod_cab(&shape, level, lever_matrices);
-    let mesh = build_mesh_from_shape_lod(&shape, level)?;
-    let texture_file = primary_texture_filename(&shape);
+    let parts = build_mesh_parts_from_shape_lod_cab(shape, level, lever_matrices);
+    let mesh = build_mesh_from_shape_lod(shape, level)?;
+    let texture_file = primary_texture_filename(shape);
     Some(LoadedShape {
         mesh,
         texture_file,

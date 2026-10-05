@@ -1,0 +1,33 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "pose_errors": {
+    "position_error_m": 0.9968430863691824,
+    "direction_error_deg": 0.08997436850107642,
+    "fov_error_deg": 1.1370015826360458e-06,
+    "aspect_error": 5.0574100241007613e-08
+  },
+  "limits": {
+    "position_error_m": 3.0,
+    "direction_error_deg": 1.0,
+    "fov_error_deg": 0.05,
+    "aspect_error": 0.001
+  },
+  "cab_view": {
+    "camera_eye": [
+      173.94561767578125,
+      3.214484691619873,
+      -57.015953063964844
+    ],
+    "camera_inside_geometry": true,
+    "expected_eye": [
+      173.94561767578125,
+      3.214484691619873,
+      -57.015953063964844
+    ],
+    "eye_error_m": 0.0,
+    "mesh_parts": 106,
+    "visible_mesh_parts": 106
+  },
+  "scope": "same native Class 47 cab; camera and loaded geometry, not pixel or all-system parity"
+}

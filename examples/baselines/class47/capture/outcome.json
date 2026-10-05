@@ -1,0 +1,18 @@
+{
+  "version": "1.6.1",
+  "time_s": 250,
+  "final_speed_mps": 0.0,
+  "final_odometer_m": 1897.9408,
+  "front": {
+    "tile_x": -6113,
+    "tile_z": 15145,
+    "x": 910.5384,
+    "y": 53.4906,
+    "z": 832.826538,
+    "node": 1008,
+    "offset_m": 1354.84644,
+    "direction": "Forward"
+  },
+  "full_service": false,
+  "scope": "Class 47: release, traction, coast, service braking, restart, full service"
+}

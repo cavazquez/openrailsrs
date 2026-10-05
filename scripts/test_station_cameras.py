@@ -49,7 +49,7 @@ class StationCameras(unittest.TestCase):
                     key = station + ("-cab" if view == "cab" else "")
                     report[key] = {"pending_gpu_uploads": 0, "pending_terrain_tiles": 0,
                                    "unactivated_near_shapes": 0, "camera": copy.deepcopy(self.camera)}
-            self.assertEqual(len(check(report, folder)["views"]), 6)
+            self.assertEqual(len(check(report, folder)["views"]), 12)
             report["northolt-park"]["pending_terrain_tiles"] = 1
             with self.assertRaisesRegex(ValueError, "Incomplete scenery"):
                 check(report, folder)

@@ -177,6 +177,7 @@ fn per_engine_rpm_independent() {
     let mut fast = orts_engine(50_000.0);
     let mut slow = orts_engine(50_000.0);
     let engine_params = |tau: f64| DieselEngineParams {
+        minimum_supply_rpm: 0.0,
         power_tab: vec![(0.0, 0.0), (750.0, 500_000.0)],
         throttle_rpm_tab: vec![(0.0, 325.0), (1.0, 750.0)],
         idle_rpm: 325.0,

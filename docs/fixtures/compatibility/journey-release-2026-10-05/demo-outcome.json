@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "phase": "completed",
+  "scenario": "0930 Edinburgh-Glasgow Queen Street",
+  "time_s": 2090.2499999988386,
+  "distance_m": 28075.794286256376,
+  "score": 1000.0,
+  "failure": null,
+  "stops": [
+    {
+      "name": "Edinburgh Waverley",
+      "node": "n217",
+      "scheduled_arrive_s": 0.0,
+      "actual_arrive_s": 0.05,
+      "actual_depart_s": 61.999999999998614,
+      "position_error_m": 0.0,
+      "arrival_speed_mps": 0.0,
+      "dwell_s": 59.99999999999873,
+      "delay_s": 0.05,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "Haymarket",
+      "node": "n211",
+      "scheduled_arrive_s": 300.0,
+      "actual_arrive_s": 405.15000000005784,
+      "actual_depart_s": 467.10000000007193,
+      "position_error_m": 4.148174348812063,
+      "arrival_speed_mps": 0.07155181074542728,
+      "dwell_s": 59.99999999999873,
+      "delay_s": 105.15000000005784,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "Linlithgow",
+      "node": "n62",
+      "scheduled_arrive_s": 1380.0,
+      "actual_arrive_s": 1488.2999999991941,
+      "actual_depart_s": 2090.2499999988386,
+      "position_error_m": 3.617147877259413,
+      "arrival_speed_mps": 0.0701623921165547,
+      "dwell_s": 600.000000000002,
+      "delay_s": 108.29999999919414,
+      "early_departure_s": 0.0
+    }
+  ]
+}

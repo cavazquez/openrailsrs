@@ -1,0 +1,236 @@
+{
+  "cases": [
+    {
+      "comparison": {
+        "brake": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 2501
+        },
+        "brake_pass": true,
+        "energy": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 0
+        },
+        "energy_pass": true,
+        "file_a": "examples/baselines/class47/capture/trace.csv",
+        "file_b": "tmp/class47-parity-check/class47_original_controls/run.csv",
+        "pass": true,
+        "position": {
+          "max_abs_diff": 25.78580000000011,
+          "mean_abs_diff": 8.405719165879592,
+          "rms_diff": 12.288907611868748,
+          "samples": 2501
+        },
+        "position_pass": true,
+        "throttle": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 2501
+        },
+        "throttle_pass": true,
+        "time_alignment": "resampled_linear_step_0.1s",
+        "velocity": {
+          "max_abs_diff": 1.9414654999953274,
+          "mean_abs_diff": 0.11347289934532236,
+          "rms_diff": 0.23821276471195812,
+          "samples": 2501
+        },
+        "velocity_pass": true
+      },
+      "coverage": {
+        "candidate_end_s": 250.0,
+        "candidate_start_s": 0.0,
+        "covered_fraction": 1.0,
+        "reference_end_s": 250.0,
+        "reference_start_s": 0.0
+      },
+      "error": null,
+      "id": "class47_original_controls",
+      "pass": true,
+      "phases": [
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "label": "0\u201330 s",
+          "position": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "t_end_s": 30.0,
+          "t_start_s": 0.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 801
+          },
+          "label": "30\u2013110 s",
+          "position": {
+            "max_abs_diff": 4.4894999999997935,
+            "mean_abs_diff": 1.0865811846017628,
+            "rms_diff": 1.7558353175592096,
+            "samples": 801
+          },
+          "t_end_s": 110.0,
+          "t_start_s": 30.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 801
+          },
+          "velocity": {
+            "max_abs_diff": 0.15827789999999986,
+            "mean_abs_diff": 0.07318338317465702,
+            "rms_diff": 0.0911119874686571,
+            "samples": 801
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 400
+          },
+          "label": "110\u2013150 s",
+          "position": {
+            "max_abs_diff": 6.382419999999911,
+            "mean_abs_diff": 5.779010487499784,
+            "rms_diff": 5.8071338890217525,
+            "samples": 400
+          },
+          "t_end_s": 150.0,
+          "t_start_s": 110.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 400
+          },
+          "velocity": {
+            "max_abs_diff": 0.09291210000000305,
+            "mean_abs_diff": 0.04519372000000633,
+            "rms_diff": 0.052492860346556564,
+            "samples": 400
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "label": "150\u2013180 s",
+          "position": {
+            "max_abs_diff": 16.07488999999964,
+            "mean_abs_diff": 10.016324766664887,
+            "rms_diff": 10.525165950775083,
+            "samples": 300
+          },
+          "t_end_s": 180.0,
+          "t_start_s": 150.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 0.8550231999994891,
+            "mean_abs_diff": 0.33583118995200856,
+            "rms_diff": 0.4088173622764218,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "label": "180\u2013210 s",
+          "position": {
+            "max_abs_diff": 18.906789999997727,
+            "mean_abs_diff": 16.392561533332554,
+            "rms_diff": 16.417114523098157,
+            "samples": 300
+          },
+          "t_end_s": 210.0,
+          "t_start_s": 180.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 0.31320099999998785,
+            "mean_abs_diff": 0.12806326860972742,
+            "rms_diff": 0.1767813003270532,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 400
+          },
+          "label": "210\u2013250 s",
+          "position": {
+            "max_abs_diff": 25.78580000000011,
+            "mean_abs_diff": 24.795205049998444,
+            "rms_diff": 24.881988567363486,
+            "samples": 400
+          },
+          "t_end_s": 250.0,
+          "t_start_s": 210.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 400
+          },
+          "velocity": {
+            "max_abs_diff": 1.9414654999953274,
+            "mean_abs_diff": 0.16982501442806985,
+            "rms_diff": 0.4320111468173283,
+            "samples": 400
+          }
+        }
+      ],
+      "reference_duplicate_times": 0
+    }
+  ],
+  "pass": true,
+  "reference_version": "1.6.1"
+}

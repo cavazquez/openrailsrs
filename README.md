@@ -18,7 +18,7 @@ Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/R
 
 La [web del proyecto](https://cavazquez.github.io/openrailsrs/) presenta el recorrido,
 capturas reales, la experiencia, instalación y estado de compatibilidad. Su fuente
-está en [`website/`](website/README.md), con layout y contenido separados y seis páginas.
+está en [`website/`](website/README.md), con layout y contenido separados y páginas de experiencia, contenido, instalación y compatibilidad.
 
 ## CI local
 
@@ -66,6 +66,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Las actividades nativas iniciadas desde el menú convierten el punto inicial de la cola de Open Rails a la cabeza del tren usando la longitud de la formación elegida. Los escenarios TOML ya preparados conservan sus posiciones.
 - Hora visual y clima actuales del lugar, opcionales e independientes: fecha/zona IANA y horario de verano de la ruta; Open-Meteo en segundo plano con caché y respaldo manual. Tormentas elegibles con rayos ramificados, destellos y truenos demorados por distancia; F10 permite elegir manual y desactivar destellos. [Guía y límites](docs/LIVE_ENVIRONMENT.md).
 - Servicio Chiltern de **seis estaciones / 15,32 km**: Northolt Park → South Ruislip → West Ruislip → Denham → Denham Golf Course → Gerrards Cross. También está disponible el servicio corto de tres estaciones.
+- El conductor automático aplica la precaución de la próxima señal normal, evitando mantener restricciones de señales ya superadas o situadas después de una verde. El horario propio de la extensión conserva el límite nativo de 15 mph y permite completar sus seis paradas a tiempo.
 - Conducción manual y automática, embarque/desembarque, puertas, horario, puntuación y resumen final. Pasajeros y espera de horario tienen contadores separados; F10 permite práctica de cinco segundos sin espera de horario. Una salida anticipada con puertas cerradas se registra y permite continuar.
 - Pausa, guardado/carga del jugador y tráfico, libreta F7, formación F9, mapa/despachador M, ajustes F10 y controles con ratón en cabina.
 - Operaciones F9: frenos de mano, mangueras y llaves de freno, batería, tracción y mando múltiple; desacoplar una sección posterior asegurada y volver a acoplarla sobre el mismo recorrido. Retroceso con el tren detenido y protección contra operaciones inválidas.
@@ -76,6 +77,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 ### Cabina, escenario y clima
 
 - Cabinas originales **2D y 3D**, vistas de pasajero y cámaras exteriores. Instrumentos CVF, palancas, iluminación nocturna, **luz interior con I** y perfiles de asiento/barrido por cabina. El manómetro de cilindro lee el vehículo principal.
+- Preparación de cabina en segundo plano, texturas únicas por archivo y reutilización de mallas e instrumentos al volver de la cámara exterior. La carga espera también al interior de la locomotora.
 - Terreno, vías, edificios, árboles, cercos, carreteras, vehículos y señales de los recursos MSTS/Open Rails. Streaming de sectores durante el viaje, origen flotante, agrupación de objetos en GPU y cambios de detalle con transición para geometría rígida.
 - Paquetes independientes como **Demo Model 1** resuelven su propia carpeta `global/`, aunque el nombre del paquete difiera del de la ruta. Los buffers de alturas y huecos del terreno admiten los nombres Windows con mayúsculas distintas, también en la carga asíncrona de Bevy, conservando los archivos originales.
 - Cámara exterior con altura mínima sobre el terreno; ruedas, bogies y señales semafóricas animados con la sesión. Cielo y efectos excluidos de las sombras; edificios y vegetación conservan las transparencias de los materiales originales. La carga de terreno se coordina con el origen flotante para mantenerlo alineado con la vía.
@@ -96,6 +98,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Pantalla ETCS/DMI y `BasicEtcsTcs` en Rust, con estado, planificación y controles. Host C# opcional en proceso .NET separado, API OR 1.6.1 acotado, ocho aspectos y hasta 32 señales/postes por delante, máxima del tren, ACK/menú y freno conectado a la sesión; errores y timeouts provocan intervención. **Save/Restore** para scripts que implementan ambos hooks, identidad SHA-256 y restauración preparada antes de modificar la partida. [Contrato, límites y prueba Linux](docs/TCS_CSHARP_HOST.md).
 - Auditoría de formaciones por vehículo: recursos gráficos y SMS/WAV, subsistemas/scripts declarados, avisos de compatibilidad en menú, trocha y déficit de peralte. Diagnóstico de confort en curvas nativas en F8 → Locomotora, con diez casos de la fórmula original C# de OR 1.6.1 congelados y probados en Rust. [Alcance y comprobaciones](docs/SIGNALS_AND_CONTENT_SCOPE.md).
 - **Peralte automático** en curvas compatibles: estándares de ruta y transiciones del algoritmo fijado de OR 1.6.1; perfil compartido por mallas originales de vía, tren y cámara. Conserva UV y peralte escrito; excluye agujas, vías múltiples y tablas antiguas sin validar. F10 permite desactivarlo para la próxima partida. Diez perfiles del código C# original forman un segundo oráculo independiente.
+- **Class 47 + seis Mk2 de Demo Model 1**: lectura de parámetros `Include` originales, mínimo de 450 RPM para alimentación, freno de servicio neumático con carrera de pistón y deslizamiento de ruedas. Cabina y manómetros contrastados con OR 1.6.1; segundo oráculo físico fijo de 250 s. Depósitos, emergencia y otros sistemas de freno conservan un alcance parcial.
 - Validación de consistencias, importación MSTS, escenarios TOML, simulación sin ventana, CSV/JSON, comparación de trazas y oráculos fijados en Open Rails 1.6.1.
 - Presupuesto flexible de subida a GPU de **8 MiB por cuadro**, con reintento de las mallas preparadas tarde; trabajo progresivo del escenario y telemetría de RAM/P50/P95/P99. La pantalla de carga espera recursos y shaders de GPU; el reloj de la partida empieza después.
 - Siete vistas visuales fijas, máscaras sobre píxeles de cabina/formación, comparación con capturas OR 1.6.1 y pruebas de fallos reales del renderer. [Goldens y comando de validación](docs/fixtures/visual/player_goldens/README.md).
@@ -104,15 +107,19 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 
 La compatibilidad se valida por función y contenido: **no se afirma paridad completa con Open Rails**. SIGSCR cubre las funciones probadas de Chiltern y Demo Model 1. El despachador mantiene seguridad y busca alternativas hacia delante; reversas automáticas, enlaces y horarios avanzados de OR requieren trabajo adicional. El peralte generado usa la velocidad de diseño de la ruta; falta validar límites locales por categoría y tablas antiguas. El API C# sigue acotado. El amperímetro estima carga, vapor y frenos tienen subsistemas parciales, y la paridad física se certifica por ensayo: el servicio nativo completo de tres estaciones pasa sus tolerancias originales, sin afirmar equivalencia de todas las rutas. La nieve es visual, sin termodinámica de deshielo ni adhesión por hielo.
 
-La revisión del 5 de octubre agrega preparación asíncrona de terreno y texturas,
-recorte alfa de árboles, cámaras contrastadas con OR 1.6.1 y señalización nativa
-para Demo Model 1. El viaje final Chiltern de 15,32 km con formación original
-conserva cabina y escenario hasta el destino: un cuadro de partida mayor a
-100 ms, máximo de 148 ms, RAM 2028 MiB y VRAM 1647 MiB (RX 7600, 1280×720,
-radio 450 m). La carga inicial conserva un pico de 4,37 s. El oráculo físico
-completo pasa: RMS **0,2081 m/s**, pico **1,0921 m/s**, odómetro máximo **39,61 m**,
-con límites **0,75 m/s / 2 m/s / 45 m** y referencia intacta. Ambos tipos de
-validación se ejecutan y se documentan por separado.
+La última prueba del 5 de octubre completa Chiltern con formación original,
+dos servicios de tráfico y seis paradas a horario. En RX 7600/Vulkan,
+1280×720 y radio 450 m, la preparación asíncrona de cabina reduce el peor
+cuadro inicial de **4,37 a 1,48 s**. En partida quedan **dos cuadros mayores a
+100 ms**, máximo **122,52 ms**, P50/P95/P99 **25/25/51 ms**, pico RAM **2089 MiB**
+y VRAM **1644 MiB**. Las doce cámaras de las seis estaciones pasan sus límites;
+esto no certifica iluminación idéntica por píxel.
+
+El oráculo físico Pullman conserva RMS **0,2081 m/s**, pico **1,0921 m/s** y
+odómetro máximo **39,61 m**. El nuevo ensayo Class 47 de 250 s obtiene
+**0,2382 m/s / 1,9415 m/s / 25,79 m**. Ambos pasan **0,75 m/s / 2 m/s / 45 m**
+con referencias y tolerancias intactas. El ensayo corto de la Class 47 y los
+viajes gráficos completos tienen alcances distintos.
 
 Pruebas manuales y resultados verificables: [PLAYER_MANUAL_TESTS.md](docs/PLAYER_MANUAL_TESTS.md), [PLAYER_POLISH_QA.md](docs/PLAYER_POLISH_QA.md) y [OR_PARITY.md](docs/OR_PARITY.md). Las capturas nativas y sus poses están en [las referencias de estaciones](docs/fixtures/visual/or_reference/chiltern_station_views/README.md). No se ajustan tolerancias para hacer pasar diferencias conocidas.
 
@@ -129,7 +136,10 @@ Desde el menú también podés elegir noche, lluvia, niebla, nublado o tormenta,
 El [paquete Linux y la receta Snap](docs/DISTRIBUTION.md) incluyen los binarios,
 shaders y ejemplos necesarios para ejecutar desde otra carpeta. El contenido
 original se instala por separado y queda en los datos del usuario; no se
-incorpora al paquete ni al repositorio.
+incorpora al paquete ni al repositorio. El paquete agrega `Jugar.sh --check`,
+`Jugar.sh`, `LEEME.txt` y metadatos/hashes de compilación. No requiere Rust ni
+Cargo para jugar. La construcción de QA actual requiere **glibc 2.43**; todavía
+no es un binario general para distribuciones anteriores.
 
 ```bash
 cargo install --path crates/openrailsrs-cli   # binario `openrailsrs`

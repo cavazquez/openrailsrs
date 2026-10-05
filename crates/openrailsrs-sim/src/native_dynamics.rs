@@ -170,6 +170,11 @@ pub struct NativeAxleState {
     pub speed_mps: f64,
 }
 impl NativeAxleState {
+    /// Pacha slip threshold from pinned Axle.Update: K / adhesion, in km/h.
+    pub fn wheel_slipping(&self, train_speed: f64, adhesion_factor: f64) -> bool {
+        let adhesion = adhesion_factor * (7.5 / (train_speed.abs() * 3.6 + 44.) + 0.161);
+        adhesion > 0. && (self.speed_mps - train_speed).abs() > 0.7 / adhesion / 3.6
+    }
     #[allow(clippy::too_many_arguments)]
     pub fn step(
         &mut self,

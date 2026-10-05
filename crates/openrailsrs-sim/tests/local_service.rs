@@ -150,3 +150,32 @@ fn full_dispatch_network_preserves_the_complete_player_service() {
     );
     assert_eq!(train.gameplay.stop_results.len(), 3);
 }
+
+#[test]
+fn six_station_extension_keeps_its_timetable_without_speed_or_stop_violations() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/chiltern_extended/scenario.toml");
+    let scenario = load_scenario(&path).unwrap();
+    let mut train = LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+    while !train.arrived && train.time_s() < 2400.0 {
+        train.step_autodrive(0.1, 0.75, |_| {});
+    }
+    assert_eq!(
+        train.gameplay.phase,
+        ServicePhase::Completed,
+        "{:?}",
+        train.gameplay.failure
+    );
+    assert_eq!(train.gameplay.stop_results.len(), 6);
+    for stop in &train.gameplay.stop_results {
+        assert!(
+            stop.delay_s < 15.0,
+            "{}: {} s late",
+            stop.name,
+            stop.delay_s
+        );
+        assert!(stop.position_error_m.abs() <= 10.0);
+        assert!(stop.arrival_speed_mps <= 0.1);
+        assert!(stop.dwell_s >= 19.99);
+    }
+}

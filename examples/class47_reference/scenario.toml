@@ -1,0 +1,40 @@
+
+[scenario]
+name = "Class 47 original: referencia de controles"
+start_time_s = 34200
+
+[route]
+path = "."
+start = "n330"
+destination = "n211"
+start_offset_m = 147.5724
+assume_signals_clear = true
+waypoints = ["n330", "n217", "n210", "n350", "n360", "n356", "n362", "n209", "n364", "n211"]
+
+[train]
+consist = "physics/consists/class47-mk2.con"
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 250.0
+time_step = 0.05
+seed = 0
+multi_body = false
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = true
+brake_skid_limit = true
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[simulation.native_physics]
+ambient_c = 16.3646145
+adhesion_factor = 0.5
+paused_weather = true

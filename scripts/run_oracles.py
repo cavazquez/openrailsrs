@@ -20,6 +20,8 @@ def verify(pin, source_root=None, installation_root=None):
         if actual != entry["sha256"]:
             raise ValueError(f"Reference changed: {entry['path']}; recapture and review explicitly")
     verify_capture(BASELINE)
+    from verify_formation_capture import BASELINE as FORMATION_BASELINE, verify_capture as verify_formation
+    verify_formation(FORMATION_BASELINE, pin)
     log = (ROOT / pin["version_evidence"]).read_text()
     if f"Version    = {pin['version']}" not in log:
         raise ValueError("Capture log does not match the pinned Open Rails version")
@@ -48,8 +50,8 @@ def main():
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/openrailsrs")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "tmp/oracles")
-    parser.add_argument("--suite", choices=("acceptance", "service"), default="acceptance",
-        help="Run the four short acceptance cases or the full native three-station service")
+    parser.add_argument("--suite", choices=("acceptance", "service", "class47"), default="acceptance",
+        help="Run the four short acceptance cases or the full native three-station service or Class 47 formation")
     args = parser.parse_args()
     pin = tomllib.loads((ROOT / "oracles/openrails-reference.toml").read_text())
     source = args.source_root
@@ -61,7 +63,7 @@ def main():
         return 0
     return subprocess.run([
         str(args.binary.resolve()), "oracle-suite", "--manifest",
-        str(ROOT / "oracles" / ("chiltern-service.toml" if args.suite == "service" else "chiltern.toml")),
+        str(ROOT / "oracles" / {"service": "chiltern-service.toml", "class47": "class47.toml", "acceptance": "chiltern.toml"}[args.suite]),
         "--out-dir", str(args.out_dir.resolve()),
     ], cwd=ROOT).returncode
 
