@@ -545,7 +545,7 @@ El intérprete reconoce las funciones normal/distante utilizadas por esta ruta. 
 
 ## 23. Copos, modos de cálculo y renderizador
 
-En F10 elegí Nieve y recorré cabina/exterior. Debés ver copos con tamaños y
+En el menú de inicio elegí Clima → Nieve y recorré cabina/exterior. Debés ver copos con tamaños y
 formas variadas, movidos por el viento, que pasan junto al tren sin seguir a
 la cámara. Bajo un techo cerrado debe disminuir la precipitación; es una máscara
 conservadora de alturas. Las superficies superiores acumulan cobertura irregular,
