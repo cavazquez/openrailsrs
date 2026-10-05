@@ -1,0 +1,445 @@
+{
+  "version": 1,
+  "reference": "Open Rails 1.6.1 d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "resolution": [
+    1280,
+    720
+  ],
+  "clock_time_s": 35700,
+  "weather": "clear",
+  "fov_y_degrees": 45,
+  "view_radius_m": 450,
+  "views": {
+    "cab-front": {
+      "regions": {
+        "windshield": {
+          "polygon": [
+            [
+              515,
+              8
+            ],
+            [
+              980,
+              8
+            ],
+            [
+              980,
+              285
+            ],
+            [
+              515,
+              288
+            ]
+          ]
+        },
+        "panel": {
+          "box": [
+            345,
+            340,
+            985,
+            538
+          ]
+        },
+        "instruments": {
+          "box": [
+            370,
+            365,
+            940,
+            500
+          ]
+        }
+      },
+      "sha256": "0e788540976827689243d5cb6481832b2bcaedbe7f72c138583a813c8609f3e6",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.06829042732715607,
+          0.8388839364051819,
+          0.10828603804111481,
+          0.5290409326553345
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      }
+    },
+    "cab-up": {
+      "regions": {
+        "roof": {
+          "box": [
+            260,
+            10,
+            970,
+            210
+          ]
+        },
+        "window_frame": {
+          "box": [
+            270,
+            255,
+            975,
+            660
+          ]
+        }
+      },
+      "sha256": "f66d6ed0c4870003c0de4218f57aa0a6b4dfa9ac5faae44f47ed9ec378de1591",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          0.07793501764535904,
+          0.8367677330970764,
+          -0.12357915192842484,
+          0.5277064442634583
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      }
+    },
+    "cab-left": {
+      "regions": {
+        "cab_frame": {
+          "box": [
+            265,
+            10,
+            960,
+            670
+          ]
+        },
+        "panel": {
+          "box": [
+            265,
+            350,
+            960,
+            650
+          ]
+        }
+      },
+      "sha256": "e207b238a5b2dc3ee89f6455c42cddf2f75e03bd358a17b0e2ec41930d5ea917",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.025566328316926956,
+          0.969310998916626,
+          0.1260537952184677,
+          0.20950645208358765
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      }
+    },
+    "cab-right": {
+      "regions": {
+        "cab_frame": {
+          "box": [
+            265,
+            10,
+            960,
+            670
+          ]
+        },
+        "panel": {
+          "box": [
+            265,
+            350,
+            960,
+            650
+          ]
+        }
+      },
+      "sha256": "66078304a8ca9f732f9dc42440c1cbd5d4a27ef7f0c959f6dc862275a0bbf19f",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.10273401439189911,
+          0.6067383289337158,
+          0.07738810777664185,
+          0.7844268083572388
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      }
+    },
+    "cab-2d": {
+      "regions": {
+        "window": {
+          "box": [
+            300,
+            10,
+            960,
+            320
+          ]
+        },
+        "instruments": {
+          "box": [
+            240,
+            380,
+            970,
+            665
+          ]
+        }
+      },
+      "sha256": "8890110cb88514e09d18e853c47434ac5d438265400b151b276d9f1b590e5ba6",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463427.0,
+          64.5732421875,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.04514898359775543,
+          0.8428088426589966,
+          0.07159135490655899,
+          0.5315161943435669
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      }
+    },
+    "chase": {
+      "regions": {
+        "consist_silhouette": {
+          "box": [
+            265,
+            275,
+            980,
+            675
+          ]
+        }
+      },
+      "sha256": "3c25b77f107928bcd099eba4dbbc5d945e12f8ee8a8ffda33004363a6447a936",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.23999999463558197,
+        "position_world": [
+          -12463407.0,
+          67.63336944580078,
+          -30571418.0
+        ],
+        "rotation_xyzw": [
+          -0.06385849416255951,
+          0.839759349822998,
+          0.10125762224197388,
+          0.5295973420143127
+        ],
+        "target_world": [
+          -12463432.0,
+          60.97769546508789,
+          -30571406.0
+        ],
+        "yaw_rad": 2.0162835121154785
+      }
+    },
+    "orbit": {
+      "regions": {
+        "consist_silhouette": {
+          "train_mask": true,
+          "train_iou_min": 0.9,
+          "polygon": [
+            [
+              595,
+              310
+            ],
+            [
+              643,
+              310
+            ],
+            [
+              971,
+              690
+            ],
+            [
+              886,
+              690
+            ]
+          ]
+        },
+        "roof": {
+          "polygon": [
+            [
+              610,
+              325
+            ],
+            [
+              646,
+              320
+            ],
+            [
+              985,
+              680
+            ],
+            [
+              938,
+              685
+            ]
+          ],
+          "mae_max": 5,
+          "hot_max": 0.03,
+          "edge_min": 0.85
+        }
+      },
+      "sha256": "3b3286abdeac3327d562faad37d8bd53cef0047703e9cb6d39c76b3593575003",
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463289.0,
+          151.38070678710938,
+          -30571416.0
+        ],
+        "rotation_xyzw": [
+          -0.20589089393615723,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      }
+    }
+  },
+  "or_references": [
+    {
+      "view": "cab-front",
+      "path": "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-cab.png",
+      "sha256": "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203",
+      "regions": {
+        "panel": {
+          "box": [
+            345,
+            340,
+            985,
+            538
+          ],
+          "mae_max": 25,
+          "rgb_delta": 64,
+          "hot_max": 0.1,
+          "edge_min": 0.75
+        },
+        "instruments": {
+          "box": [
+            370,
+            365,
+            940,
+            500
+          ],
+          "mae_max": 25,
+          "rgb_delta": 64,
+          "hot_max": 0.1,
+          "edge_min": 0.75
+        }
+      }
+    },
+    {
+      "view": "orbit",
+      "path": "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-exterior.png",
+      "sha256": "364f2d7ae95e9947bbcf3b65e71d21650f8ffd75ad378317ba85ba60e8001754",
+      "regions": {
+        "consist_silhouette": {
+          "mae_max": 55,
+          "rgb_delta": 100,
+          "hot_max": 0.25,
+          "edge_min": 0.75,
+          "train_mask": true,
+          "train_bbox_min": 0.85,
+          "polygon": [
+            [
+              595,
+              310
+            ],
+            [
+              643,
+              310
+            ],
+            [
+              971,
+              690
+            ],
+            [
+              886,
+              690
+            ]
+          ],
+          "train_iou_min": 0.55
+        }
+      },
+      "content_limitations": "Native OR fixture lacks three vehicle shape names. Regional paint/extent acceptance does not establish full-content parity."
+    }
+  ],
+  "scenario_sha256": "471bd41e9b35c1622bbd4a5396508e191cb63893ac441ce5925cc94a36e7997f",
+  "track_sha256": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+  "semantic_sources": [
+    {
+      "path": "docs/fixtures/visual/or_reference/cabina.png",
+      "sha256": "61ed35340822b606b9b66d58edf00f32dc46f1c8ee30117868cf2fffc959348c",
+      "source": "User-provided original Open Rails semantic reference"
+    },
+    {
+      "path": "docs/fixtures/visual/or_reference/desdeafuera.png",
+      "sha256": "46a0f5c19e836a4a7eade65603530f022d6ce71275e2451eab90fbf3b7638a30",
+      "source": "User-provided original Open Rails semantic reference"
+    }
+  ]
+}

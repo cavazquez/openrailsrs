@@ -1,43 +1,40 @@
-# Sitio web de openrailsrs
+# Web de openrailsrs
 
-**Fuente de verdad:** esta carpeta (`website/`). Los HTML se publican en GitHub Pages vía `docs/` (sync automático).
+[Sitio publicado](https://cavazquez.github.io/openrailsrs/). Presenta la partida,
+el recorrido de referencia y cómo probarla. Las páginas técnicas enlazan la
+documentación canónica y muestran el alcance real de compatibilidad.
 
-URL: **https://cavazquez.github.io/openrailsrs/**
+## Estructura
 
-## Páginas
+- `src/`: contenido de seis páginas: inicio, experiencia, empezar, estado, física y comparación OR.
+- `templates/layout.html`: navegación, pie, accesibilidad y metadatos compartidos.
+- `site.json`: configuración, navegación y descripciones SEO.
+- `css/style.css`: diseño responsive y foco de teclado.
+- `js/site.js`: menú móvil, estaciones, galería y copiar comandos.
+- `assets/`: marca SVG y capturas reales WebP, con procedencia y hashes.
+- Los seis HTML de la raíz son **generados**; no editarlos a mano.
 
-| Archivo | Contenido |
-|---------|-----------|
-| `index.html` | Landing: principios, características resumidas, crates, CLI |
-| `fisica.html` | Referencia de conceptos físicos (TOC lateral, anclas por subsistema) |
-| `paridad-or.html` | Comparación Open Rails vs openrailsrs, métricas, roadmap OR-P |
-| `css/style.css` | Estilos compartidos (tema oscuro, tablas, layout docs) |
+No necesita framework, Node, CDN ni fuentes externas. Páginas, enlaces y comandos
+siguen accesibles sin JavaScript. Bevy, Rust mínimo y la referencia OR se leen
+del repositorio para evitar versiones contradictorias.
 
-## Editar y publicar
-
-1. Modificá archivos en `website/`.
-2. Sincronizá a `docs/` (GitHub Pages legacy lee `/docs` en `main`):
+## Editar, comprobar y publicar
 
 ```bash
+python3 scripts/build_website.py
 ./scripts/sync_website_to_docs.sh
-git add website/ docs/
-git commit -m "..."
-git push
+python3 -m unittest discover -s scripts -p test_website.py
+python3 -m http.server 8890 --bind 127.0.0.1 --directory website
 ```
 
-3. El workflow [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) también corre `sync_website_to_docs.sh` antes del deploy por Actions.
+Revisar escritorio y móvil, menú con Escape, estaciones, galería, copia de
+comandos, tildes, foco y ausencia de scroll horizontal. `build_website.py --check`
+rechaza HTML desactualizado. Los tests verifican anclas, enlaces locales,
+recursos, textos alternativos y sincronización con `docs/`. El sync conserva la
+documentación y fixtures existentes.
 
-**Settings → Pages:** conviene **Build and deployment → Source: GitHub Actions**. Si sigue en *Deploy from branch → /docs*, igual funciona mientras `docs/` tenga los HTML sincronizados.
-
-## Ver localmente
-
-```bash
-python3 -m http.server 8080 --directory website
-# http://localhost:8080/fisica.html
-```
-
-## Mantenimiento
-
-- Actualizar métricas en `paridad-or.html` cuando cambien umbrales Chiltern/SCE en CI.
-- Añadir secciones en `fisica.html` al implementar nuevas fases OR-P (p. ej. OR-P6c skid).
-- Documentación canónica en el repo: `docs/OR_PARITY.md`, `docs/OR_PARITY.md`.
+El workflow `.github/workflows/pages.yml` reconstruye, valida y publica `docs/`
+en GitHub Pages al cambiar la web, documentación o sus herramientas en `main`.
+Confirmar el workflow antes de anunciar la publicación. La copia generada
+versionada permite conservar también instalaciones Pages que publican `/docs`
+desde la rama.

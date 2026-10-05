@@ -8,9 +8,7 @@ mod tests {
     use crate::camera::{
         CameraFollowMode, OrbitState, cycle_follow_mode, follow_train_camera, spawn_camera,
     };
-    use crate::precipitation::{
-        PrecipitationState, spawn_precipitation, toggle_precipitation, update_precipitation,
-    };
+    use crate::precipitation::PrecipitationState;
     use crate::signals::spawn_signal_markers;
     use crate::teleport::TeleportDialog;
     use crate::test_harness::{
@@ -18,6 +16,7 @@ mod tests {
     };
     use crate::track::{TrackScene, frame_orbit_camera_on_track, spawn_track_meshes};
     use crate::train::{ReplayState, TrainMarker, spawn_train_markers, update_train_markers};
+    use crate::weather_particles::{ParticleMaterial, WeatherParticles, toggle, update};
 
     #[test]
     fn spawn_systems_create_track_signal_and_train() {
@@ -96,21 +95,27 @@ mod tests {
                 ..Default::default()
             });
             world.insert_resource(TeleportDialog::default());
+            world.insert_resource(crate::player_settings::PlayerSettings::default());
+            world.insert_resource(crate::gpu_memory::GraphicsMemory::default());
+            world.insert_resource(WeatherParticles::default());
+            world.insert_resource(Assets::<ParticleMaterial>::default());
             world.run_system_once(spawn_camera).unwrap();
-            world.run_system_once(spawn_precipitation).unwrap();
-            world.run_system_once(update_precipitation).unwrap();
-            world.run_system_once(toggle_precipitation).unwrap();
+            world.run_system_once(update).unwrap();
+            world.run_system_once(toggle).unwrap();
+            assert_eq!(world.resource::<WeatherParticles>().cpu_particles, 2048);
+            assert_eq!(world.resource::<WeatherParticles>().gpu_particles, 0);
 
             {
                 let mut keys = world.resource_mut::<ButtonInput<KeyCode>>();
                 keys.press(KeyCode::KeyP);
             }
-            world.run_system_once(toggle_precipitation).unwrap();
+            world.run_system_once(toggle).unwrap();
             assert!(
                 !world.resource::<PrecipitationState>().enabled,
                 "P should turn rain off in replay (precipitation toggle)"
             );
-            world.run_system_once(update_precipitation).unwrap();
+            world.run_system_once(update).unwrap();
+            assert_eq!(world.resource::<WeatherParticles>().cpu_particles, 0);
         });
     }
 }

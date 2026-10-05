@@ -1,0 +1,13 @@
+{
+  "name": "openrailsrs",
+  "url": "https://cavazquez.github.io/openrailsrs/",
+  "updated": "4 de octubre de 2026",
+  "pages": [
+    {"file":"index.html","label":"Inicio","title":"Un recorrido completo, estación por estación","description":"Conducí un servicio ferroviario en Rust y Bevy, con cabinas, rutas y trenes originales de Open Rails. Conocé la partida, probala y seguí sus avances."},
+    {"file":"experiencia.html","label":"La experiencia","title":"Desde la cabina hasta el último andén","description":"Cabinas 2D y 3D, cámaras exteriores, controles, pasajeros, clima, tráfico y escenario: lo que podés probar en openrailsrs."},
+    {"file":"empezar.html","label":"Empezar","title":"Tu primera partida","description":"Prepará el contenido Chiltern, compilá openrailsrs e iniciá un servicio de seis estaciones. Guía de controles y modos CPU/GPU."},
+    {"file":"estado.html","label":"Estado del proyecto","title":"Avances que se pueden comprobar","description":"Funciones disponibles, compatibilidad acotada y próximos objetivos de openrailsrs. Resultados verificables frente a Open Rails 1.6.1."},
+    {"file":"fisica.html","label":"Física y arquitectura","title":"Lo que hace avanzar al tren","description":"Física, frenos, señales y separación del núcleo de simulación y la presentación Bevy. Referencias técnicas de openrailsrs."},
+    {"file":"paridad-or.html","label":"Paridad con Open Rails","title":"Una referencia fija. Diferencias visibles y medibles.","description":"Cómo se compara openrailsrs con Open Rails 1.6.1: capturas, oráculos físicos, tolerancias y límites de compatibilidad."}
+  ]
+}

@@ -1,10 +1,11 @@
 //! European Train Control System — Rust TCS subset for the DMI (#163).
 //!
-//! No C# script host: [`BasicEtcsTcs`] derives supervision / TTI / menus from
-//! [`crate::LiveDriveSession`] physics (speed limit + distance to stop).
+//! [`BasicEtcsTcs`] is the default. An explicitly selected C# script can use
+//! [`ScriptTcsHost`], a bounded, optional process with a documented OR API subset.
 
 mod braking;
 mod menu;
+mod script_host;
 mod status;
 mod tcs;
 
@@ -16,6 +17,7 @@ pub use menu::{
     MenuAction, MenuButtonDef, MenuWindowDef, SoftKeyAction, SoftKeyDef, default_soft_keys,
     main_menu_def, settings_menu_def,
 };
+pub use script_host::{ScriptContext, ScriptHostConfig, ScriptTcsHost, TcsInput};
 pub use status::{
     EtcsLevel, EtcsMode, EtcsMonitor, EtcsSupervision, EtcsTcsStatus, GradientSegment,
     PlanningSymbol, SpeedTarget, TextMessage, TrackCondition, TrackConditionKind, pick_dial_scale,

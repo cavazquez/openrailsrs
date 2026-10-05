@@ -53,8 +53,21 @@ def run_checkpoint(args, name, target, pause):
             OPENRAILSRS_CAM_PITCH=str(args.camera_pitch),
             OPENRAILSRS_CAM_DIST=str(args.camera_distance),
         )
+    for attr, key in (("look_yaw", "OPENRAILSRS_LOOK_YAW"), ("look_pitch", "OPENRAILSRS_LOOK_PITCH")):
+        if hasattr(args, attr):
+            env[key] = str(getattr(args, attr))
+    if getattr(args, "visual_fault", None) in ("occluder", "hide_train", "mirror"):
+        env["OPENRAILSRS_VISUAL_FAULT"] = args.visual_fault
+    if getattr(args,"capture_or_focus",False):
+        env["OPENRAILSRS_CAPTURE_OR_FOCUS"]="1"
+    if getattr(args, "flip_u", False):
+        env["OPENRAILSRS_DEBUG_FLIP_U"] = "1"
     if hasattr(args, "weather"):
         env["OPENRAILSRS_WEATHER"] = args.weather
+    env["OPENRAILSRS_WEATHER_EXECUTION"] = getattr(args, "weather_execution", "auto")
+    env["OPENRAILSRS_RENDERER"] = "cpu" if args.software else getattr(args, "renderer", "auto")
+    if getattr(args, "particle_budget", None) is not None:
+        env["OPENRAILSRS_WEATHER_PARTICLE_BUDGET"] = str(args.particle_budget)
     if args.software:
         env.update(
             {
@@ -157,6 +170,14 @@ def run_checkpoint(args, name, target, pause):
                         pass
                     if time.monotonic() - started > args.timeout_s:
                         raise RuntimeError(f"{name}: capture timed out")
+                    # Shader failures cannot satisfy the readiness gate. Report
+                    # them immediately instead of waiting several minutes.
+                    log.flush()
+                    with prefix.with_suffix(".log").open("rb") as diagnostics:
+                        diagnostics.seek(max(0, diagnostics.seek(0, 2) - 65536))
+                        recent = diagnostics.read().decode("utf-8", errors="replace")
+                    if "failed to process shader" in recent or "panicked at" in recent:
+                        raise RuntimeError(f"{name}: renderer/shader failure; see {prefix.with_suffix('.log')}")
                     time.sleep(0.25)
                 if viewer.returncode:
                     raise RuntimeError(
@@ -270,6 +291,10 @@ def main():
         help="use private Weston with hardware presentation instead of Xvfb",
     )
     parser.add_argument("--checkpoint", choices=["middle", "terminal"], action="append")
+    parser.add_argument("--weather", choices=["clear", "rain", "fog", "snow"], default="clear")
+    parser.add_argument("--weather-execution", choices=["auto", "gpu", "cpu", "hybrid"], default="auto")
+    parser.add_argument("--renderer", choices=["auto", "gpu", "cpu"], default="auto")
+    parser.add_argument("--particle-budget", type=int)
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=270)
     args = parser.parse_args()

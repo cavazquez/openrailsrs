@@ -7,6 +7,20 @@ use super::mode::DmiMode;
 use super::status::EtcsStatus;
 use super::subwindow::{self, DmiOverlay, SubHit};
 
+/// Transfer UI events to the session; the viewer does not know the script host.
+pub fn forward_tcs_inputs(
+    mut ui: ResMut<EtcsUiState>,
+    live: Option<ResMut<crate::live::LiveDrive>>,
+) {
+    if let Some(mut live) = live {
+        for input in ui.tcs_inputs.drain(..) {
+            live.session.send_tcs_input(input);
+        }
+    } else {
+        ui.tcs_inputs.clear();
+    }
+}
+
 /// Interactive DMI controls (scroll / scale / menu / overlays).
 #[derive(Resource, Clone, Debug)]
 pub struct EtcsUiState {
@@ -20,6 +34,7 @@ pub struct EtcsUiState {
     pub sub_pressed: Option<SubHit>,
     pub sub_pressed_until_s: f64,
     pub acked: Vec<String>,
+    pub tcs_inputs: Vec<openrailsrs_sim::etcs::TcsInput>,
     /// Cached TCS menu definitions.
     pub main_menu: MenuWindowDef,
     pub settings_menu: MenuWindowDef,
@@ -40,6 +55,7 @@ impl Default for EtcsUiState {
             sub_pressed: None,
             sub_pressed_until_s: 0.0,
             acked: Vec::new(),
+            tcs_inputs: Vec::new(),
             main_menu: main_menu_def(),
             settings_menu: settings_menu_def(),
             soft_keys: default_soft_keys(),
@@ -109,6 +125,10 @@ impl EtcsUiState {
                 .find(|m| m.acknowledgeable && !m.acknowledged)
             {
                 self.acked.push(m.text.clone());
+                self.tcs_inputs
+                    .push(openrailsrs_sim::etcs::TcsInput::Acknowledge {
+                        message: m.text.clone(),
+                    });
                 self.flash_action(&format!("Ack {}", m.text), now_s);
             }
             return;
@@ -162,6 +182,9 @@ impl EtcsUiState {
             SubHit::KeyYes => {
                 if let DmiOverlay::DataEntry { value } = &self.overlay {
                     let v = value.clone();
+                    self.tcs_inputs.push(openrailsrs_sim::etcs::TcsInput::Menu {
+                        action: format!("data:{v}"),
+                    });
                     self.overlay = DmiOverlay::None;
                     self.flash_action(&format!("Entered {v}"), now_s);
                 }
@@ -170,6 +193,9 @@ impl EtcsUiState {
     }
 
     fn apply_menu_action(&mut self, action: &MenuAction, now_s: f64) {
+        self.tcs_inputs.push(openrailsrs_sim::etcs::TcsInput::Menu {
+            action: format!("{action:?}"),
+        });
         match action {
             MenuAction::Flash(s) => self.flash_action(s, now_s),
             MenuAction::OpenMainMenu => self.overlay = DmiOverlay::MainMenu,
@@ -229,6 +255,9 @@ impl EtcsUiState {
     }
 
     fn apply_soft_key(&mut self, action: SoftKeyAction, now_s: f64) {
+        self.tcs_inputs.push(openrailsrs_sim::etcs::TcsInput::Menu {
+            action: format!("{action:?}"),
+        });
         match action {
             SoftKeyAction::None => {}
             SoftKeyAction::OpenMainMenu => {

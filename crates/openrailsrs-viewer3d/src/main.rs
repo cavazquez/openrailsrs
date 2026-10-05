@@ -115,6 +115,7 @@ struct LaunchConfig {
 }
 
 struct CliArgs {
+    renderer: Option<openrailsrs_viewer3d::weather_execution::RendererSelection>,
     menu: bool,
     wait_parent: Option<u32>,
     live: bool,
@@ -237,6 +238,7 @@ fn parse_cli() -> CliArgs {
 }
 
 fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
+    let mut renderer = None;
     let mut menu = None;
     let mut wait_parent = None;
     let mut live = false;
@@ -251,7 +253,14 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
     let mut path = None;
     let mut args = args.into_iter().peekable();
     while let Some(arg) = args.next() {
-        if arg == "--wait-parent" {
+        if arg == "--renderer" {
+            renderer = args
+                .next()
+                .as_deref()
+                .and_then(openrailsrs_viewer3d::weather_execution::RendererSelection::parse);
+        } else if let Some(value) = arg.strip_prefix("--renderer=") {
+            renderer = openrailsrs_viewer3d::weather_execution::RendererSelection::parse(value);
+        } else if arg == "--wait-parent" {
             wait_parent = args.next().and_then(|s| s.parse().ok());
         } else if arg == "--menu" {
             menu = Some(true);
@@ -286,6 +295,7 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
         }
     }
     CliArgs {
+        renderer,
         wait_parent,
         menu: menu.unwrap_or(path.is_none() && !audit_placement && !audit_tr_item),
         live,
@@ -384,9 +394,34 @@ fn main() {
     let present_mode = present_mode_from_env();
     warn_hybrid_gpu_display_if_needed();
 
+    use openrailsrs_viewer3d::weather_execution::RendererSelection;
+    let renderer = cli
+        .renderer
+        .or_else(|| {
+            std::env::var("OPENRAILSRS_RENDERER")
+                .ok()
+                .as_deref()
+                .and_then(RendererSelection::parse)
+        })
+        .unwrap_or_else(|| {
+            openrailsrs_viewer3d::player_settings::PlayerSettings::load(
+                &openrailsrs_viewer3d::player_settings::player_data_dir().join("settings.json"),
+            )
+            .map(|s| s.renderer)
+            .unwrap_or_default()
+        });
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
+            .set(bevy::render::RenderPlugin {
+                render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
+                    bevy::render::settings::WgpuSettings {
+                        force_fallback_adapter: renderer == RendererSelection::Cpu,
+                        ..default()
+                    },
+                )),
+                ..default()
+            })
             // Allow absolute WORLD/terrain paths inside generated `.tilebundle` manifests (#111).
             .set(openrailsrs_viewer3d::tile_bundle::viewer_asset_plugin())
             .set(WindowPlugin {
@@ -403,6 +438,7 @@ fn main() {
     )
     .insert_resource(ViewerBootClock::new(boot))
     .add_plugins(ViewerPlugin)
+    .insert_resource(renderer)
     .add_systems(OnEnter(ViewerAppState::Loading), setup_viewer_loading_ui)
     .add_systems(
         Update,

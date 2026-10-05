@@ -8,6 +8,7 @@
 }
 
 #import "shaders/railway_lighting.wgsl" as railway_lighting
+#import "shaders/snow_surface.wgsl"::snow_surface
 
 struct OrSceneryParams {
     tint_r: f32,
@@ -171,8 +172,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let lit = params.flags >= OR_FLAG_LIT;
     let n = normalize(in.world_normal);
     let wet = clamp(params.wetness, 0.0, 1.0);
-    let snow = clamp(params.snow_cover, 0.0, 1.0) * smoothstep(0.30, 0.85, n.y);
-    color = vec4(mix(color.rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89), snow * 0.80), color.a);
+    let snow_detail = snow_surface(in.uv, n, params.snow_cover);
+    let snow = snow_detail.x;
+    color = vec4(mix(color.rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89)*snow_detail.y, snow * 0.86), color.a);
 
     if (!lit) {
         return vec4(color.rgb * params.night_color_modifier, color.a);

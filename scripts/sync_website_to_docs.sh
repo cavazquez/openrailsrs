@@ -6,10 +6,13 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$REPO_ROOT/website"
 DEST="$REPO_ROOT/docs"
 
-for f in index.html fisica.html paridad-or.html .nojekyll; do
-  cp -a "$SRC/$f" "$DEST/$f"
+python3 "$REPO_ROOT/scripts/build_website.py"
+for f in "$SRC"/*.html "$SRC/.nojekyll"; do
+  cp -a "$f" "$DEST/$(basename "$f")"
 done
-mkdir -p "$DEST/css"
-cp -a "$SRC/css/style.css" "$DEST/css/style.css"
+for directory in css js assets; do
+  mkdir -p "$DEST/$directory"
+  cp -a "$SRC/$directory/." "$DEST/$directory/"
+done
 
-echo "OK: website/ → docs/ ($(wc -l < "$DEST/fisica.html") líneas fisica.html)"
+echo "OK: website/ → docs/ (HTML, CSS, JS y capturas)"

@@ -217,6 +217,8 @@ pub fn log_shader_dependencies(
 #[derive(Resource)]
 pub struct JourneyPerformance {
     histogram: [u64; 4097],
+    gameplay_histogram: [u64; 4097],
+    gameplay_frames: u64,
     frames: u64,
     loading_frames: u64,
     elapsed_s: f64,
@@ -233,6 +235,8 @@ impl Default for JourneyPerformance {
     fn default() -> Self {
         Self {
             histogram: [0; 4097],
+            gameplay_histogram: [0; 4097],
+            gameplay_frames: 0,
             frames: 0,
             loading_frames: 0,
             elapsed_s: 0.0,
@@ -256,6 +260,10 @@ pub struct JourneyPerformanceReport {
     pub frame_p50_ms: u32,
     pub frame_p95_ms: u32,
     pub frame_p99_ms: u32,
+    pub gameplay_frames: u64,
+    pub gameplay_frame_p50_ms: u32,
+    pub gameplay_frame_p95_ms: u32,
+    pub gameplay_frame_p99_ms: u32,
     pub longest_frame_ms: f64,
     pub hitches_over_100_ms: u64,
     pub rss_mib: Option<f64>,
@@ -265,7 +273,7 @@ pub struct JourneyPerformanceReport {
     pub startup_longest_frame_ms: f64,
 }
 impl JourneyPerformance {
-    fn record(&mut self, seconds: f64, loading: bool) {
+    fn record(&mut self, seconds: f64, loading: bool, startup: bool) {
         if !seconds.is_finite() || seconds <= 0.0 {
             return;
         }
@@ -276,14 +284,22 @@ impl JourneyPerformance {
         self.elapsed_s += seconds;
         self.longest_ms = self.longest_ms.max(ms);
         self.hitches += u64::from(ms > 100.0);
+        if startup {
+            self.startup_longest_ms = self.startup_longest_ms.max(ms);
+        } else {
+            self.gameplay_histogram[(ms.round() as usize).min(4096)] += 1;
+            self.gameplay_frames += 1;
+            self.gameplay_longest_ms = self.gameplay_longest_ms.max(ms);
+            self.gameplay_hitches += u64::from(ms > 100.0);
+        }
     }
-    fn percentile(&self, fraction: f64) -> u32 {
-        let target = (self.frames as f64 * fraction).ceil() as u64;
+    fn percentile(histogram: &[u64; 4097], frames: u64, fraction: f64) -> u32 {
+        let target = (frames as f64 * fraction).ceil() as u64;
         if target == 0 {
             return 0;
         }
         let mut count = 0;
-        for (ms, frames) in self.histogram.iter().enumerate() {
+        for (ms, frames) in histogram.iter().enumerate() {
             count += frames;
             if count >= target {
                 return ms as u32;
@@ -296,9 +312,25 @@ impl JourneyPerformance {
             frames: self.frames,
             loading_frames: self.loading_frames,
             elapsed_s: self.elapsed_s,
-            frame_p50_ms: self.percentile(0.5),
-            frame_p95_ms: self.percentile(0.95),
-            frame_p99_ms: self.percentile(0.99),
+            frame_p50_ms: Self::percentile(&self.histogram, self.frames, 0.5),
+            frame_p95_ms: Self::percentile(&self.histogram, self.frames, 0.95),
+            frame_p99_ms: Self::percentile(&self.histogram, self.frames, 0.99),
+            gameplay_frames: self.gameplay_frames,
+            gameplay_frame_p50_ms: Self::percentile(
+                &self.gameplay_histogram,
+                self.gameplay_frames,
+                0.5,
+            ),
+            gameplay_frame_p95_ms: Self::percentile(
+                &self.gameplay_histogram,
+                self.gameplay_frames,
+                0.95,
+            ),
+            gameplay_frame_p99_ms: Self::percentile(
+                &self.gameplay_histogram,
+                self.gameplay_frames,
+                0.99,
+            ),
             longest_frame_ms: self.longest_ms,
             hitches_over_100_ms: self.hitches,
             rss_mib: self.rss_mib,
@@ -314,11 +346,11 @@ impl JourneyPerformance {
             |value: Option<f64>| value.map_or_else(|| "—".to_string(), |v| format!("{v:.0} MiB"));
         format!(
             "Viaje: P50 {} ms · P95 {} ms · P99 {} ms\nMáximo {:.0} ms · {} cuadros >100 ms · {} cuadros de carga\nRAM {} · pico {}",
-            p.frame_p50_ms,
-            p.frame_p95_ms,
-            p.frame_p99_ms,
-            p.longest_frame_ms,
-            p.hitches_over_100_ms,
+            p.gameplay_frame_p50_ms,
+            p.gameplay_frame_p95_ms,
+            p.gameplay_frame_p99_ms,
+            p.gameplay_longest_frame_ms,
+            p.gameplay_hitches_over_100_ms,
             p.loading_frames,
             ram(p.rss_mib),
             ram(p.peak_rss_mib)
@@ -331,20 +363,20 @@ pub fn measure_journey(
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
     startup: Option<Res<crate::route_bootstrap::ViewerLoadingScreen>>,
     mut metrics: ResMut<JourneyPerformance>,
+    mut graphics: ResMut<crate::gpu_memory::GraphicsMemory>,
 ) {
-    let ms = time.delta_secs_f64() * 1000.0;
-    if startup.is_some() || metrics.frames == 0 {
-        metrics.startup_longest_ms = metrics.startup_longest_ms.max(ms);
-    } else {
-        metrics.gameplay_longest_ms = metrics.gameplay_longest_ms.max(ms);
-        metrics.gameplay_hitches += u64::from(ms > 100.0);
-    }
-    metrics.record(time.delta_secs_f64(), progress.is_some());
+    let initial_load = startup.is_some() || metrics.frames == 0;
+    metrics.record(
+        time.delta_secs_f64(),
+        progress.is_some() || initial_load,
+        initial_load,
+    );
     metrics.rss_clock_s += time.delta_secs_f64();
     if metrics.rss_clock_s < 1.0 {
         return;
     }
     metrics.rss_clock_s = 0.0;
+    graphics.sample();
     // Linux native QA. Other platforms keep this field explicitly unavailable.
     if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
         let rss = status
@@ -404,12 +436,12 @@ mod tests {
     fn full_journey_histogram_counts_hitches_without_unbounded_storage() {
         let mut m = JourneyPerformance::default();
         for _ in 0..95 {
-            m.record(0.016, false);
+            m.record(0.016, false, false);
         }
         for _ in 0..4 {
-            m.record(0.060, true);
+            m.record(0.060, true, true);
         }
-        m.record(0.8, true);
+        m.record(0.8, true, true);
         let report = m.report();
         assert_eq!(report.frame_p50_ms, 16);
         assert_eq!(report.frame_p95_ms, 16);
@@ -417,5 +449,11 @@ mod tests {
         assert_eq!(report.longest_frame_ms, 800.0);
         assert_eq!(report.loading_frames, 5);
         assert_eq!(report.hitches_over_100_ms, 1);
+        assert_eq!(report.gameplay_frames, 95);
+        assert_eq!(report.gameplay_frame_p99_ms, 16);
+        assert_eq!(report.gameplay_hitches_over_100_ms, 0);
+        // Streaming after startup remains part of gameplay performance.
+        m.record(0.12, true, false);
+        assert_eq!(m.report().gameplay_hitches_over_100_ms, 1);
     }
 }

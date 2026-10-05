@@ -1,0 +1,22 @@
+{
+  "exterior.webp": {
+    "source": "docs/fixtures/visual/player_goldens/orbit.png",
+    "source_sha256": "3b3286abdeac3327d562faad37d8bd53cef0047703e9cb6d39c76b3593575003",
+    "description": "Captura real del servicio actual de seis estaciones; conversión WebP sin alterar el contenido."
+  },
+  "cabina.webp": {
+    "source": "docs/fixtures/visual/player_goldens/cab-front.png",
+    "source_sha256": "0e788540976827689243d5cb6481832b2bcaedbe7f72c138583a813c8609f3e6",
+    "description": "Captura real del servicio actual de seis estaciones; conversión WebP sin alterar el contenido."
+  },
+  "noche.webp": {
+    "source": "tmp/weather-five-final/005-clear-night-exterior.png",
+    "source_sha256": "feacc6a18aaa01f00b8262abfe39188a63d5ab19d73aab9c7157258cd6fec809",
+    "description": "Captura real de openrailsrs en Chiltern; optimizada para la web, sin alterar el contenido."
+  },
+  "nieve.webp": {
+    "source": "tmp/weather-execution-final-sky/gpu.png",
+    "source_sha256": "b85f75545f6a380ac7b67c80763c923234d0b6741fe6133ee8c436d6fac1e73b",
+    "description": "Captura real del renderer GPU, nieve y cielo continuo actuales, servicio de seis estaciones; conversión WebP sin alterar el contenido."
+  }
+}

@@ -187,10 +187,10 @@ fn sync_windshield(
             near_clip: near,
             last_wipe_s: wipe.last_wipe_s.map_or(-1.0, |s| s as f32),
             wiper_on: f32::from(live.session.wiper_active),
+            _pad: Vec3::new(live.session.velocity_mps().abs() as f32, 0.0, 0.0),
             glass,
             blade1,
             blade2,
-            ..default()
         };
         if let Some(mut current) = current {
             *current = settings;

@@ -27,7 +27,11 @@ STATIONS = [("Northolt Park", 1286, 0.0, 20.0),
 
 def msts_text(path):
     data = path.read_bytes()
-    return data.decode("utf-16") if data[:2] in (b"\xff\xfe", b"\xfe\xff") else data.decode("cp1252")
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return data.decode("utf-16")
+    if data.startswith(b"\xef\xbb\xbf"):
+        return data.decode("utf-8-sig")
+    return data.decode("cp1252")
 
 
 def msts_blocks(text, name):
@@ -95,8 +99,8 @@ def native_station_markers(route_root, path, stations=None):
     return markers
 
 
-def native_polylines(route_root, graph):
-    text = msts_text(route_root / "Chiltern.tdb")
+def native_polylines(route_root, graph, tdb_path=None):
+    text = msts_text(tdb_path or route_root / "Chiltern.tdb")
     anchors = {}
     pattern = r"TrackNode\s*\(\s*(\d+)\s+TrVectorNode\s*\(\s*TrVectorSections\s*\(\s*([^)]*)\)"
     for match in re.finditer(pattern, text):

@@ -21,6 +21,7 @@ pub mod cab_view;
 pub mod camera;
 pub mod capture;
 pub mod etcs;
+mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
 pub mod driving_hud;
 pub mod dyntrack;
@@ -37,6 +38,7 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 mod cab_profile;
+pub mod gpu_memory;
 pub mod ground_fog;
 pub mod native_audio;
 pub mod night_sky;
@@ -85,6 +87,8 @@ pub mod train_lighting;
 pub mod transfer;
 pub mod view_window;
 pub mod water;
+pub mod weather_execution;
+pub mod weather_particles;
 mod wet_surfaces;
 pub mod windshield;
 pub mod world;
@@ -166,6 +170,19 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<wet_surfaces::WetSurfaces>();
+        app.init_resource::<gpu_memory::GraphicsMemory>()
+            .init_resource::<weather_execution::RendererSelection>()
+            .init_resource::<weather_particles::WeatherParticles>()
+            .add_systems(Update, weather_execution::verify_renderer)
+            .add_plugins(bevy::pbr::MaterialPlugin::<
+                weather_particles::ParticleMaterial,
+            >::default())
+            .add_systems(
+                PostUpdate,
+                weather_particles::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
             .init_resource::<surface_weather::SnowMaterials>()
             .add_systems(
@@ -399,7 +416,6 @@ impl Plugin for ViewerPlugin {
                 OnEnter(ViewerAppState::Playing),
                 (
                     signals::spawn_signal_markers.run_if(live::live_mode_inactive),
-                    precipitation::spawn_precipitation.run_if(launch::full_scenery_active),
                     camera::spawn_camera,
                     hud::spawn_hud,
                     cab_panel::spawn_cab_panel,
@@ -441,7 +457,7 @@ impl Plugin for ViewerPlugin {
                     teleport::teleport_input_system,
                     teleport::teleport_button_system,
                     teleport::sync_teleport_ui,
-                    precipitation::toggle_precipitation
+                    weather_particles::toggle
                         .run_if(player_ui::world_input_available)
                         .run_if(teleport::teleport_closed),
                     camera::toggle_mode_system
@@ -465,7 +481,6 @@ impl Plugin for ViewerPlugin {
                     live::update_live_train_marker
                         .after(live::sync_live_render_clock)
                         .run_if(live::live_mode_active),
-                    precipitation::update_precipitation,
                     water::update_water_patches,
                     hud::tick_hud_fps,
                     hud::update_hud.after(hud::tick_hud_fps),
@@ -579,6 +594,16 @@ impl Plugin for ViewerPlugin {
                     .before(cab_screen::update_cab_screens)
                     .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                etcs::input::forward_tcs_inputs.after(cab_screen::handle_cab_dmi_mouse),
+            )
+            .add_systems(
+                PostUpdate,
+                visual_fault::inject
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate),
             )
             .add_systems(
                 Update,

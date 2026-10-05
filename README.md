@@ -16,6 +16,10 @@ Núcleo de simulación **sin gráficos** (Linux-first, Rust ≥1.95). CSV para s
 
 Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/README.md).
 
+La [web del proyecto](https://cavazquez.github.io/openrailsrs/) presenta el recorrido,
+capturas reales, la experiencia, instalación y estado de compatibilidad. Su fuente
+está en [`website/`](website/README.md), con layout y contenido separados y seis páginas.
+
 ## CI local
 
 ```bash
@@ -72,6 +76,9 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Cámara exterior con altura mínima sobre el terreno; ruedas, bogies y señales semafóricas animados con la sesión. Cielo y efectos excluidos de las sombras; edificios y vegetación conservan las transparencias de los materiales originales. La carga de terreno se coordina con el origen flotante para mantenerlo alineado con la vía.
 - Sol según ubicación/hora/estación y entorno original, faros sobre la vía, cielo nocturno con estrellas en tiempo despejado, nubes y niebla atmosférica y de suelo.
 - **Lluvia y nieve seleccionables**: precipitación exterior, gotas/copos sobre el vidrio y barrido del limpiaparabrisas. El tablero y el HUD conservan su legibilidad. Nieve utiliza las variantes de textura originales disponibles según la estación, visibilidad de 500 m y cobertura de terreno/superficies superiores. El mojado alcanza terreno, materiales originales opacos, PBR e instancias GPU.
+- Copos irregulares con tamaños, rotación, viento y caída variados; campo estable en el mundo, máscara conservadora bajo techos y cobertura irregular sobre superficies superiores. Nubes con ruido 3D sin bandas de proyección. Cálculo de precipitación **GPU/CPU/Mixto/Auto** con adaptación por tiempo de cuadro y presión de VRAM.
+- Renderizador seleccionable al iniciar: GPU, automático o software CPU. Telemetría separada de RSS, VRAM del proceso, GTT y memoria global; percentiles de partida separados de la carga inicial. [Uso, mediciones y límites](docs/WEATHER_EXECUTION.md).
+- Preparador de pilotos nativos de tres estaciones desde PAT/TDB/CON y SIGSCR originales, formación auditada, tráfico opcional y procedencia. El menú conserva el escenario y material rodante propios de cada ruta. [Belgrano CC: archivos originales todavía pendientes](docs/NATIVE_ROUTE_PILOT.md).
 - Escape diésel y vapor desde emisores ENG originales; partículas limitadas, sin sombras y coherentes con el reloj de simulación. Motor de sonido original SMS/WAV con eventos y separación interior/exterior.
 
 ### Simulación y señales
@@ -79,9 +86,10 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Dos servicios de tráfico vivo con paradas, reloj compartido, ocupación de la formación completa y restauración de partidas.
 - El servicio extendido incorpora los **scripts SIGSCR originales de Chiltern** y su dirección TDB: intérprete acotado para condiciones, variables y funciones normal/distante utilizadas por esta ruta. Conserva los ocho aspectos nativos en las lámparas; ocupación y órdenes del despachador restringen la autoridad. Los escenarios anteriores conservan sus reglas declarativas.
 - Tracción, resistencia Davis, pendientes y límites por posición/sentido; un aumento de velocidad espera a que pase la cola. Frenos por vehículo, parámetros originales EP/aire, diésel, vapor básico y dinámica opcional de acopladores.
-- Pantalla ETCS/DMI y `BasicEtcsTcs` en Rust, con estado, planificación y controles. Su alcance es propio del simulador; no ejecuta scripts C# de seguridad originales.
+- Pantalla ETCS/DMI y `BasicEtcsTcs` en Rust, con estado, planificación y controles. Host C# opcional en proceso .NET separado, API OR 1.6.1 acotado, ACK/menú y freno conectado a la sesión; errores y timeouts provocan intervención. [Contrato y prueba Linux](docs/TCS_CSHARP_HOST.md). No implementa todo el API C# original ni Save/Restore del script.
 - Validación de consistencias, importación MSTS, escenarios TOML, simulación sin ventana, CSV/JSON, comparación de trazas y oráculos fijados en Open Rails 1.6.1.
 - Presupuesto flexible de subida a GPU de **8 MiB por cuadro**, con reintento de las mallas preparadas tarde; trabajo progresivo del escenario y telemetría de RAM/P50/P95/P99. La pantalla de carga espera recursos y shaders de GPU; el reloj de la partida empieza después.
+- Siete vistas visuales fijas, máscaras sobre píxeles de cabina/formación, comparación con capturas OR 1.6.1 y pruebas de fallos reales del renderer. [Goldens y comando de validación](docs/fixtures/visual/player_goldens/README.md).
 
 ### Alcance y pruebas
 

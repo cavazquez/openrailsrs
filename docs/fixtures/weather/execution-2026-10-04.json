@@ -1,0 +1,307 @@
+{
+  "scenario_sha256": "6b2a1470b94a0aace481f180e3819cd657391bb8aa166d6ad3bf0c73ff3a1065",
+  "track_sha256": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+  "particle_budget": 2048,
+  "resolution": [
+    1280,
+    720
+  ],
+  "presentation": "private compositor, paced; no throughput speedup claim",
+  "date": "2026-10-04",
+  "command": "python3 scripts/benchmark_weather_execution.py --route-root \"$CHILTERN_ROUTE\"",
+  "pass": true,
+  "modes": {
+    "gpu": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "gpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_mesh_updates": 1,
+        "gpu_particles": 2048,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 27
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1859.61328125,
+        "peak_process_vram_mib": 784.953125,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 784.953125,
+        "source": "linux_drm_fdinfo"
+      },
+      "performance": {
+        "elapsed_s": 14.58154263299999,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 28,
+        "frames": 522,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 239,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.744936,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 283,
+        "longest_frame_ms": 1421.5374729999999,
+        "peak_rss_mib": 1476.27734375,
+        "rss_mib": 1476.27734375,
+        "startup_longest_frame_ms": 1421.5374729999999
+      },
+      "peak_rss_mib": 1479.5,
+      "clock_time_s": 35700.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.25,
+        "position_world": [
+          -12463405.0,
+          67.9050064086914,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.0868617370724678,
+          0.7117590308189392,
+          0.08943620324134827,
+          0.6912708282470703
+        ],
+        "target_world": [
+          -12463432.0,
+          60.97769546508789,
+          -30571406.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "png_sha256": "b85f75545f6a380ac7b67c80763c923234d0b6741fe6133ee8c436d6fac1e73b"
+    },
+    "cpu": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "gpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 519,
+        "cpu_particles": 2048,
+        "execution": "cpu",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "cpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 27
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1829.8984375,
+        "peak_process_vram_mib": 808.72265625,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 808.72265625,
+        "source": "linux_drm_fdinfo"
+      },
+      "performance": {
+        "elapsed_s": 14.513586363999979,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 29,
+        "frames": 520,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 239,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.365896,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 281,
+        "longest_frame_ms": 1414.000714,
+        "peak_rss_mib": 1486.53515625,
+        "rss_mib": 1481.73828125,
+        "startup_longest_frame_ms": 1414.000714
+      },
+      "peak_rss_mib": 1486.5,
+      "clock_time_s": 35700.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.25,
+        "position_world": [
+          -12463405.0,
+          67.9050064086914,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.0868617370724678,
+          0.7117590308189392,
+          0.08943620324134827,
+          0.6912708282470703
+        ],
+        "target_world": [
+          -12463432.0,
+          60.97769546508789,
+          -30571406.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "png_sha256": "f13cf1000e18b952f5a2a3e8c1486638edd00579db28a52fe1cadeb636e2d91a"
+    },
+    "hybrid": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "gpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 526,
+        "cpu_particles": 512,
+        "execution": "hybrid",
+        "gpu_mesh_updates": 1,
+        "gpu_particles": 1536,
+        "quality_level": 0,
+        "requested": "hybrid",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 28
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1645.7578125,
+        "peak_process_vram_mib": 808.81640625,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 808.81640625,
+        "source": "linux_drm_fdinfo"
+      },
+      "performance": {
+        "elapsed_s": 14.669460119000005,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 28,
+        "frames": 527,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 239,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.335354000000002,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 288,
+        "longest_frame_ms": 1427.456502,
+        "peak_rss_mib": 1441.53515625,
+        "rss_mib": 1403.078125,
+        "startup_longest_frame_ms": 1427.456502
+      },
+      "peak_rss_mib": 1446.5,
+      "clock_time_s": 35700.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.25,
+        "position_world": [
+          -12463405.0,
+          67.9050064086914,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.08686172962188721,
+          0.711759090423584,
+          0.08943618834018707,
+          0.6912707686424255
+        ],
+        "target_world": [
+          -12463432.0,
+          60.977691650390625,
+          -30571406.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "png_sha256": "5e81f5a6e51b999a29f960ecdb2ca87fb768bab6720a50954f51a7734eacebb7"
+    },
+    "software": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+      },
+      "renderer_selection": "cpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 413,
+        "cpu_particles": 2048,
+        "execution": "cpu",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 2,
+        "requested": "cpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 92
+      },
+      "graphics_memory": {
+        "device_total_mib": null,
+        "device_used_mib": null,
+        "peak_process_vram_mib": null,
+        "process_gtt_mib": null,
+        "process_vram_mib": null,
+        "source": null
+      },
+      "performance": {
+        "elapsed_s": 54.79305188499997,
+        "frame_p50_ms": 93,
+        "frame_p95_ms": 220,
+        "frame_p99_ms": 242,
+        "frames": 414,
+        "gameplay_frame_p50_ms": 202,
+        "gameplay_frame_p95_ms": 235,
+        "gameplay_frame_p99_ms": 261,
+        "gameplay_frames": 130,
+        "gameplay_hitches_over_100_ms": 130,
+        "gameplay_longest_frame_ms": 306.565557,
+        "hitches_over_100_ms": 148,
+        "loading_frames": 284,
+        "longest_frame_ms": 1417.875406,
+        "peak_rss_mib": 2525.21875,
+        "rss_mib": 2525.21875,
+        "startup_longest_frame_ms": 1417.875406
+      },
+      "peak_rss_mib": 2535.2,
+      "clock_time_s": 35700.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.25,
+        "position_world": [
+          -12463405.0,
+          67.9050064086914,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.0868617370724678,
+          0.7117590308189392,
+          0.08943620324134827,
+          0.6912708282470703
+        ],
+        "target_world": [
+          -12463432.0,
+          60.97769546508789,
+          -30571406.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "png_sha256": "ba1d1651f687d8e4e063995a4454d20483e4c42ba5758f4e2ea4e331beb62ecc"
+    }
+  }
+}

@@ -23,6 +23,9 @@ unset OPENRAILSRS_SCREENSHOT_MIN_ODOMETER_M OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARG
 unset OPENRAILSRS_SCREENSHOT_AFTER_SERVICE
 unset OPENRAILSRS_FOG_VISIBILITY_M
 unset OPENRAILSRS_WEATHER
+unset OPENRAILSRS_WEATHER_EXECUTION OPENRAILSRS_WEATHER_PARTICLE_BUDGET OPENRAILSRS_RENDERER
+unset OPENRAILSRS_TCS_SCRIPT OPENRAILSRS_TCS_HOST_DLL OPENRAILSRS_TCS_TYPE OPENRAILSRS_VISUAL_FAULT
+unset OPENRAILSRS_CAPTURE_OR_FOCUS OPENRAILSRS_LOOK_YAW OPENRAILSRS_LOOK_PITCH
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check
@@ -38,6 +41,11 @@ cargo test --locked --workspace --all-features -- --test-threads=1
 echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_scenery_oracle.py
+python3 -m unittest discover -s scripts -p test_weather_execution.py
+python3 -m unittest discover -s scripts -p test_native_pilot.py
+python3 -m unittest discover -s scripts -p test_website.py
+python3 -m unittest discover -s scripts -p test_visual_goldens.py
+python3 scripts/build_website.py --check
 
 if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
     echo "==> native platform geometry and continuous train motion"

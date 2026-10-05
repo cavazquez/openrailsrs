@@ -34,9 +34,20 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let local = fract(grid) - vec2(0.2 + random.x * 0.6, 0.12 + fall * 0.76);
     let radius = length(local * vec2(1.0, 0.7));
     let drop = (1.0 - smoothstep(0.055, 0.17, radius)) * wetness * step(0.5, random.x);
-    let snow = settings.snow * (1.0 - smoothstep(0.09, 0.23, radius)) * wetness * step(0.6, random.x);
+    // Snow adheres as ragged clumps with tiny clear channels, rather than rain
+    // circles recoloured white. Speed increases impacts while the wiper clears
+    // the original native blade sectors, including after pause/restore.
+    let angle = atan2(local.y, local.x);
+    let edge = 0.14 + 0.035 * sin(angle * 5.0 + random.y * 17.0)
+        + 0.025 * sin(angle * 9.0 + random.x * 23.0);
+    let grain = hash(cell + floor(local * 65.0)).x;
+    let cluster = (1.0 - smoothstep(edge - 0.025, edge + 0.025, radius))
+        * mix(0.35, 1.0, smoothstep(0.16, 0.7, grain));
+    let impacts = clamp(0.55 + settings._pad.x * 0.015, 0.55, 1.0);
+    let snow = settings.snow * cluster * wetness * step(0.42, random.x) * impacts;
     let refracted = textureSample(scene, scene_sampler, in.uv + local * drop * 0.008);
     let highlight = (1.0 - smoothstep(0.01, 0.08, abs(radius - 0.12))) * drop * 0.16;
     let wet = mix(dry.rgb, refracted.rgb, drop * (1.0-settings.snow)) + vec3(highlight * (1.0-settings.snow));
-    return vec4(mix(wet, vec3(0.80, 0.86, 0.91), snow * 0.65), dry.a);
+    let frost = settings.snow * wetness * smoothstep(0.18, 0.01, min(pane.y, min(pane.x, 1.0-pane.x))) * 0.09;
+    return vec4(mix(wet, vec3(0.80, 0.86, 0.91), clamp(snow * 0.72 + frost, 0.0, 0.8)), dry.a);
 }

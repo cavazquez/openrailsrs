@@ -115,6 +115,7 @@ impl LiveDrive {
     ) -> Result<Self, String> {
         let mut session =
             LiveDriveSession::from_scenario(scenario_dir, scenario).map_err(|e| e.to_string())?;
+        session.configure_tcs_from_env()?;
         // Optional time-compression for demos / headless capture (e.g. the ~29 km Chiltern run).
         if let Some(mul) = std::env::var("OPENRAILSRS_SPEED_MUL")
             .ok()

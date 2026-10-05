@@ -10,6 +10,7 @@
 }
 #import "shaders/terrain_common.wgsl"::terrain_half_lambert
 #import "shaders/railway_lighting.wgsl" as railway_lighting
+#import "shaders/snow_surface.wgsl"::snow_surface
 
 struct OrTerrainParams {
     shadow_brightness: f32,
@@ -47,8 +48,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         t = saturate(ambient * shadow_mod + params.image_texture_is_night);
     }
 
-    let snow = clamp(params._pad1, 0.0, 1.0) * smoothstep(0.30,0.85,normalize(in.world_normal).y);
-    let surface = mix(color.rgb,vec3(0.78,0.84,0.90),snow*0.8);
+    let snow = snow_surface(in.uv, in.world_normal, params._pad1);
+    let surface = mix(color.rgb,vec3(0.78,0.84,0.90)*snow.y,snow.x*0.86);
     var lit_rgb = surface * mix(params.shadow_brightness, params.full_brightness, t);
     let overlay = textureSample(overlay_texture, overlay_sampler, in.uv * params.overlay_scale).rgb * 2.0;
     lit_rgb = lit_rgb * overlay;

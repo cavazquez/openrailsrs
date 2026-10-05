@@ -1,4 +1,5 @@
 // Preserve Bevy's standard material alpha, lighting and fog; cover upward surfaces.
+#import "shaders/snow_surface.wgsl"::snow_surface
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
@@ -24,9 +25,10 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
 #endif
     var input = pbr_input_from_standard_material(in, is_front);
     input.material.base_color = alpha_discard(input.material, input.material.base_color);
-    let cover = clamp(snow_cover.x, 0.0, 1.0) * smoothstep(0.30, 0.85, normalize(in.world_normal).y);
+    let snow = snow_surface(in.uv, in.world_normal, snow_cover.x);
+    let cover = snow.x;
     input.material.base_color = vec4(mix(input.material.base_color.rgb,
-        vec3(0.78, 0.84, 0.89), cover * 0.80), input.material.base_color.a);
+        vec3(0.78, 0.84, 0.89) * snow.y, cover * 0.86), input.material.base_color.a);
     input.material.perceptual_roughness = mix(input.material.perceptual_roughness, 0.85, cover);
 #ifdef PREPASS_PIPELINE
     return deferred_output(in, input);

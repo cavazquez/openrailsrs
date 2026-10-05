@@ -1476,7 +1476,7 @@ pub fn follow_train_camera(
     } else {
         None
     };
-    let (train_pose, chase_distance_m) = live_car_pose.unwrap_or_else(|| {
+    let (mut train_pose, chase_distance_m) = live_car_pose.unwrap_or_else(|| {
         let train_focus = if live_active {
             frame.focus_from_train(train_tf)
         } else {
@@ -1494,6 +1494,19 @@ pub fn follow_train_camera(
             },
         )
     });
+    // The native OR reference orbits the first vehicle's origin. The playable
+    // chase/orbit keeps its own framing; this explicit frozen-pose override is QA only.
+    if *follow == CameraFollowMode::OrbitFollow
+        && crate::capture::capture_enabled()
+        && std::env::var("OPENRAILSRS_CAPTURE_OR_FOCUS")
+            .ok()
+            .as_deref()
+            == Some("1")
+        && let Some(lead) = lead_car.iter().next()
+    {
+        train_pose.translation = train_tf.mul_transform(*lead).translation;
+        orbit.focus = train_pose.translation;
+    }
     let update = apply_orbit_follow(*orbit, *follow, train_pose, chase_distance_m, dt);
     orbit.focus = update.focus;
     orbit.yaw = update.yaw;

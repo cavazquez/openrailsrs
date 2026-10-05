@@ -65,7 +65,13 @@ impl Default for PlayerLaunchMenu {
 impl PlayerLaunchMenu {
     pub fn discover(project: &Path, scenery_root: Option<PathBuf>) -> Self {
         let mut services = vec![];
-        let native = scenery_root.or_else(default_chiltern_root);
+        // An external Argentine route must never replace Chiltern's scenery.
+        let native = scenery_root
+            .filter(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("chiltern"))
+            })
+            .or_else(default_chiltern_root);
         for (folder, label) in [
             ("chiltern_extended", "Chiltern"),
             ("chiltern_traffic", "Chiltern"),
@@ -96,9 +102,42 @@ impl PlayerLaunchMenu {
                 });
             }
         }
+        // Pilots prepared from installed native content carry their own scenery
+        // root. The generator owns these small metadata files, not the assets.
+        if let Ok(entries) = std::fs::read_dir(project.join("examples")) {
+            for entry in entries.flatten() {
+                let dir = entry.path();
+                let metadata = dir.join("native-content.json");
+                let Ok(text) = std::fs::read_to_string(metadata) else {
+                    continue;
+                };
+                let Ok(metadata) = serde_json::from_str::<NativeContent>(&text) else {
+                    continue;
+                };
+                let source = dir.join("scenario.toml");
+                let Ok(scenario) = load_scenario(&source) else {
+                    continue;
+                };
+                let route_dir = absolute(&dir.join(&scenario.route.path));
+                if route_dir.join("track.toml").is_file()
+                    && metadata.route_root.join("WORLD").is_dir()
+                {
+                    services.push(ServiceChoice {
+                        name: scenario.scenario.name,
+                        source: absolute(&source),
+                        route_dir,
+                        scenery_root: Some(absolute(&metadata.route_root)),
+                        native_activity: false,
+                    });
+                }
+            }
+        }
         // Native activities use the existing importer and the pinned route graph.
         if let Some(root) = native.as_ref()
-            && let Some(route_dir) = services.first().map(|s| s.route_dir.clone())
+            && let Some(route_dir) = services
+                .iter()
+                .find(|s| s.scenery_root.as_ref() == Some(root))
+                .map(|s| s.route_dir.clone())
         {
             for source in files_with_extension(&root.join("ACTIVITIES"), "act") {
                 let name = source
@@ -188,6 +227,18 @@ impl PlayerLaunchMenu {
             self.status = "No hay servicios instalados".into();
             return;
         };
+        // Resolve rolling stock in the selected content pack, including routes
+        // that reuse a folder name from another pack.
+        self.auditor = openrailsrs_train::ConsistAuditor::new(
+            choice
+                .scenery_root
+                .as_deref()
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+                .map(|p| vec![p.join("TRAINS/TRAINSET")])
+                .unwrap_or_default(),
+        );
+        self.consist_audits.clear();
         if !choice.native_activity
             && let Ok(s) = load_scenario(&choice.source)
         {
@@ -418,10 +469,15 @@ pub fn cycle(index: usize, len: usize, delta: i32) -> usize {
     }
 }
 fn route_label(s: &ServiceChoice) -> String {
-    if s.scenery_root.is_some()
-        || s.route_dir
-            .file_name()
-            .is_some_and(|f| f == "chiltern" || f == "chiltern_local")
+    if let Some(root) = &s.scenery_root {
+        root.file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned()
+    } else if s
+        .route_dir
+        .file_name()
+        .is_some_and(|f| f == "chiltern" || f == "chiltern_local")
     {
         "Chiltern".into()
     } else {
@@ -431,6 +487,11 @@ fn route_label(s: &ServiceChoice) -> String {
             .to_string_lossy()
             .into_owned()
     }
+}
+
+#[derive(Deserialize)]
+struct NativeContent {
+    route_root: PathBuf,
 }
 pub fn absolute(p: &Path) -> PathBuf {
     if let Ok(p) = p.canonicalize() {
@@ -496,6 +557,38 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_pilot_keeps_its_own_scenery_and_route_label() {
+        let project = tempfile::tempdir().unwrap();
+        let dir = project.path().join("examples/belgrano_cc");
+        let native = project.path().join("Content/ROUTES/BelgranoCC");
+        std::fs::create_dir_all(native.join("WORLD")).unwrap();
+        std::fs::create_dir_all(&dir).unwrap();
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut scenario = load_scenario(root.join("examples/smoke/scenario.toml")).unwrap();
+        scenario.scenario.name = "Piloto nativo".into();
+        scenario.route.path = ".".into();
+        std::fs::write(
+            dir.join("scenario.toml"),
+            toml::to_string(&scenario).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(dir.join("track.toml"), "").unwrap();
+        std::fs::write(
+            dir.join("native-content.json"),
+            serde_json::json!({"route_root":native}).to_string(),
+        )
+        .unwrap();
+        let menu = PlayerLaunchMenu::discover(project.path(), Some(native.clone()));
+        let pilot = menu
+            .services
+            .iter()
+            .find(|s| s.name == "Piloto nativo")
+            .unwrap();
+        assert_eq!(pilot.scenery_root.as_ref(), Some(&absolute(&native)));
+        assert!(menu.routes.iter().any(|r| r == "BelgranoCC"));
+        assert!(!menu.services.iter().any(|s| s.native_activity));
+    }
     #[test]
     fn selected_menu_service_is_written_and_loadable() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");

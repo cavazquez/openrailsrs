@@ -542,3 +542,52 @@ python3 scripts/capture_route_views.py --route-root "$CHILTERN_ROUTE" \
 ```
 
 El intérprete reconoce las funciones normal/distante utilizadas por esta ruta. No sustituye todavía las reservas, enlaces de todos los cruces ni los scripts C# del original. Las capturas se comparan por composición, geometría y transparencia; los motores conservan su iluminación/tonemapping propios.
+
+## 23. Copos, modos de cálculo y renderizador
+
+En F10 elegí Nieve y recorré cabina/exterior. Debés ver copos con tamaños y
+formas variadas, movidos por el viento, que pasan junto al tren sin seguir a
+la cámara. Bajo un techo cerrado debe disminuir la precipitación; es una máscara
+conservadora de alturas. Las superficies superiores acumulan cobertura irregular,
+las paredes conservan el material, el vidrio tiene manchas y V despeja el barrido.
+
+Alterná Cálculo del clima entre GPU, CPU y Mixto. En F8 → Diagnóstico deben
+cambiar los conteos de cada modo. GPU mantiene las semillas sin subir posiciones
+cada cuadro; CPU tiene un límite menor. Automático puede reducir detalle tras
+presión sostenida y recuperarlo con demora. RSS y VRAM son contadores distintos;
+si el sistema no puede medir VRAM aparece ausencia, no cero.
+
+Elegí Renderizado al iniciar CPU, cerrá y reiniciá. El adaptador debe figurar como
+software; la partida conserva controles y escenario, con muchos menos cuadros
+por segundo. Volvé a GPU/Auto y reiniciá para recuperar aceleración.
+No se cambia de dispositivo en caliente. [Comandos y mediciones](WEATHER_EXECUTION.md).
+
+## 24. Regresiones visuales de cabina y formación
+
+Con los assets Chiltern instalados, ejecutá
+`python3 scripts/check_visual_goldens.py --route-root "$CHILTERN_ROUTE" --prove-faults`.
+Revisá las siete imágenes y `report.json`: frente, arriba, izquierda, derecha,
+cabina 2D, chase y orbit. Texto e instrumentos deben tener orientación correcta,
+las ventanas mostrar el recorrido, no debe haber un objeto tapando la cámara y
+el exterior debe mostrar la formación. Los cuatro fallos intencionales deben
+estar detectados. [Poses, máscaras y tolerancias](fixtures/visual/player_goldens/README.md).
+
+## 25. Host opcional C# TCS
+
+Ejecutá `bash scripts/check_tcs_host.sh` con SDK .NET 10. Debe informar PASS para
+compilación, ACK, menú, límite de 18 km/h, frenado y rechazo de restauración.
+En una locomotora con DMI ETCS, seleccioná explícitamente el fixture como indica
+[TCS_CSHARP_HOST.md](TCS_CSHARP_HOST.md): mensaje de confirmación e intervención,
+reconocimiento que libera el freno y nueva intervención al superar el límite.
+El Pullman no tiene DMI ETCS; allí la aceptación se hace con el fixture headless.
+La partida habitual usa el TCS Rust y no necesita .NET.
+
+## 26. Web del proyecto
+
+Abrí https://cavazquez.github.io/openrailsrs/. Debés ver la nueva portada con
+captura real y seis estaciones. Seleccioná Gerrards Cross: cambia el texto de
+llegada. En La experiencia, Cabina/Exterior/Noche/Nieve deben cambiar imagen y
+leyenda. En Empezar, Copiar copia el comando o lo selecciona si el navegador
+impide acceder al portapapeles. En móvil, Menú muestra navegación y Escape cierra
+el menú. Las páginas Estado, Física y Referencia OR muestran el alcance real y
+la comparación física completa que todavía falla.

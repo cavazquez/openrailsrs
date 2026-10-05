@@ -30,7 +30,8 @@ pub fn ranges(distance: f32, fraction: f32) -> (VisibilityRange, VisibilityRange
 
 pub fn tick(
     mut commands: Commands,
-    time: Res<Time>,
+    // Camera/visual transitions continue while the train simulation is paused.
+    time: Res<Time<Real>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut fades: Query<(Entity, &GlobalTransform, &mut LodFade)>,
 ) {
@@ -69,5 +70,33 @@ mod tests {
                 assert!((weight - fraction).abs() < 1.0e-4);
             }
         }
+    }
+    #[test]
+    fn paused_simulation_still_finishes_visual_fades() {
+        let mut app = App::new();
+        let mut real = Time::<Real>::default();
+        real.update_with_duration(std::time::Duration::ZERO);
+        real.update_with_duration(std::time::Duration::from_secs_f32(DURATION_S + 0.01));
+        let mut virtual_time = Time::<Virtual>::default();
+        virtual_time.pause();
+        app.insert_resource(real)
+            .insert_resource(virtual_time)
+            .add_systems(Update, tick);
+        app.world_mut()
+            .spawn((Camera3d::default(), GlobalTransform::default()));
+        let old = app.world_mut().spawn_empty().id();
+        let new = app
+            .world_mut()
+            .spawn((
+                GlobalTransform::default(),
+                LodFade {
+                    outgoing: old,
+                    elapsed_s: 0.0,
+                },
+            ))
+            .id();
+        app.update();
+        assert!(app.world().get_entity(old).is_err());
+        assert!(app.world().get::<LodFade>(new).is_none());
     }
 }

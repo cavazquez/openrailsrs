@@ -18,6 +18,7 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(5) var<uniform> surface_weather: vec2<f32>;
 
 const SHADOW_BRIGHTNESS: f32 = 0.5;
+#import "shaders/snow_surface.wgsl"::snow_surface
 const FULL_BRIGHTNESS: f32 = 1.0;
 
 @fragment
@@ -31,8 +32,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let n = normalize(in.world_normal);
     let wet = clamp(surface_weather.x, 0.0, 1.0);
-    let snow = clamp(surface_weather.y, 0.0, 1.0) * smoothstep(0.30, 0.85, n.y);
-    rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89), snow * 0.80);
+    let snow = snow_surface(in.uv, n, surface_weather.y);
+    rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89) * snow.y, snow.x * 0.86);
     let light = view_bindings::lights.directional_lights[0];
     let light_dir = light.direction_to_light;
     let ambient = terrain_half_lambert(n, light_dir);

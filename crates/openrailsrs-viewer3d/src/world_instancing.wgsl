@@ -9,6 +9,7 @@
 }
 #import bevy_render::maths::PI
 #import "shaders/railway_lighting.wgsl"::railway_spot_lighting
+#import "shaders/snow_surface.wgsl"::snow_surface
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -92,9 +93,10 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
         n = -n;
     }
     let wet=appearance.surface_weather.x;
-    let snow=appearance.surface_weather.y * smoothstep(0.35,0.85,n.y);
+    let snow_detail=snow_surface(in.uv,n,appearance.surface_weather.y);
+    let snow=snow_detail.x;
     // Preserve cutout alpha: snow on a tree must not turn its quad opaque.
-    color=vec4(mix(color.rgb * (1.0-0.16*wet),vec3(0.78,0.84,0.90),snow),color.a);
+    color=vec4(mix(color.rgb * (1.0-0.16*wet),vec3(0.78,0.84,0.90)*snow_detail.y,snow),color.a);
     var lit = color.rgb;
     let ambient = view_bindings::lights.ambient_color.rgb;
     let exposure = view_bindings::view.exposure;

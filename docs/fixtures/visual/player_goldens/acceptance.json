@@ -1,0 +1,632 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-04",
+  "command": "python3 scripts/check_visual_goldens.py --route-root \"$CHILTERN_ROUTE\" --prove-faults",
+  "reference": "Open Rails 1.6.1 d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "manifest_sha256": "a8105f5a932c74aec7e972d8cbc6da763fc22f3a675e6387d0ca26f722961901",
+  "pass": true,
+  "recorded": false,
+  "views": {
+    "cab-front": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "windshield": {
+          "rgb_mae": 0.0091,
+          "hot_fraction": 0.0002,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 130016
+        },
+        "panel": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 77656
+        }
+      }
+    },
+    "cab-up": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "roof": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 142911
+        },
+        "window_frame": {
+          "rgb_mae": 0.0012,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 286636
+        }
+      }
+    },
+    "cab-left": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "cab_frame": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 460056
+        },
+        "panel": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 209496
+        }
+      }
+    },
+    "cab-right": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "cab_frame": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 460056
+        },
+        "panel": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 209496
+        }
+      }
+    },
+    "cab-2d": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "window": {
+          "rgb_mae": 0.0078,
+          "hot_fraction": 0.0002,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 205571
+        },
+        "instruments": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 209066
+        }
+      }
+    },
+    "chase": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 0.0028,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 287116
+        }
+      }
+    },
+    "orbit": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 4150,
+          "train_pixel_iou": 1.0,
+          "train_pixel_bbox_iou": 1.0,
+          "train_pixel_bbox_actual": [
+            604,
+            310,
+            933,
+            691
+          ],
+          "train_pixel_bbox_reference": [
+            604,
+            310,
+            933,
+            691
+          ]
+        },
+        "roof": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 16972
+        }
+      }
+    }
+  },
+  "or_comparison": {
+    "cab-front": {
+      "pass": true,
+      "cross_engine": true,
+      "regions": {
+        "panel": {
+          "rgb_mae": 3.9043,
+          "hot_fraction": 0.0047,
+          "edge_f1": 0.9663,
+          "pass": true,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 5.0531,
+          "hot_fraction": 0.0076,
+          "edge_f1": 0.9674,
+          "pass": true,
+          "pixel_count": 77656
+        }
+      }
+    },
+    "orbit": {
+      "pass": true,
+      "cross_engine": true,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 19.7881,
+          "hot_fraction": 0.015,
+          "edge_f1": 0.9648,
+          "pass": true,
+          "pixel_count": 4793,
+          "train_pixel_iou": 0.7156,
+          "train_pixel_bbox_iou": 0.9497,
+          "train_pixel_bbox_actual": [
+            604,
+            310,
+            933,
+            691
+          ],
+          "train_pixel_bbox_reference": [
+            613,
+            319,
+            933,
+            691
+          ]
+        }
+      }
+    }
+  },
+  "faults": {
+    "mirror": {
+      "pass": false,
+      "cross_engine": false,
+      "regions": {
+        "windshield": {
+          "rgb_mae": 34.5433,
+          "hot_fraction": 0.2899,
+          "edge_f1": 0.7527,
+          "pass": false,
+          "pixel_count": 130016
+        },
+        "panel": {
+          "rgb_mae": 23.5237,
+          "hot_fraction": 0.2463,
+          "edge_f1": 0.1984,
+          "pass": false,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 26.9209,
+          "hot_fraction": 0.2569,
+          "edge_f1": 0.1881,
+          "pass": false,
+          "pixel_count": 77656
+        }
+      },
+      "detected": true
+    },
+    "forward": {
+      "pass": false,
+      "cross_engine": false,
+      "regions": {
+        "windshield": {
+          "rgb_mae": 56.9284,
+          "hot_fraction": 0.6868,
+          "edge_f1": 0.2444,
+          "pass": false,
+          "pixel_count": 130016
+        },
+        "panel": {
+          "rgb_mae": 47.3402,
+          "hot_fraction": 0.6623,
+          "edge_f1": 0.0989,
+          "pass": false,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 49.7365,
+          "hot_fraction": 0.6858,
+          "edge_f1": 0.1131,
+          "pass": false,
+          "pixel_count": 77656
+        }
+      },
+      "detected": true
+    },
+    "occluder": {
+      "pass": false,
+      "cross_engine": false,
+      "regions": {
+        "windshield": {
+          "rgb_mae": 132.5517,
+          "hot_fraction": 0.9991,
+          "edge_f1": 0.0,
+          "pass": false,
+          "pixel_count": 130016
+        },
+        "panel": {
+          "rgb_mae": 15.1545,
+          "hot_fraction": 0.0655,
+          "edge_f1": 0.0,
+          "pass": false,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 17.0448,
+          "hot_fraction": 0.0897,
+          "edge_f1": 0.0,
+          "pass": false,
+          "pixel_count": 77656
+        }
+      },
+      "detected": true
+    },
+    "train_missing": {
+      "pass": false,
+      "cross_engine": false,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 26.2753,
+          "hot_fraction": 0.872,
+          "edge_f1": 0.5031,
+          "pass": false,
+          "pixel_count": 4150,
+          "train_pixel_iou": 0.0171,
+          "train_pixel_bbox_iou": 0.7322,
+          "train_pixel_bbox_actual": [
+            604,
+            310,
+            902,
+            618
+          ],
+          "train_pixel_bbox_reference": [
+            604,
+            310,
+            933,
+            691
+          ]
+        },
+        "roof": {
+          "rgb_mae": 2.5719,
+          "hot_fraction": 0.0564,
+          "edge_f1": 0.9604,
+          "pass": false,
+          "pixel_count": 16972
+        }
+      },
+      "detected": true
+    }
+  },
+  "captures": {
+    "cab-front": {
+      "sha256": "94dc470c9f00976d3b2de69e5ab17bb52ad233b0b5d78a8e6171323bbf09d3bb",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.06829042732715607,
+          0.8388839364051819,
+          0.10828603804111481,
+          0.5290409326553345
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1333.7
+    },
+    "cab-up": {
+      "sha256": "cb7dcd7ac315a5f08bbda772337208123c0ad228cdc8e5c9b4dfef1f8772c494",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          0.07793501764535904,
+          0.8367677330970764,
+          -0.12357915192842484,
+          0.5277064442634583
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1333.6
+    },
+    "cab-left": {
+      "sha256": "e207b238a5b2dc3ee89f6455c42cddf2f75e03bd358a17b0e2ec41930d5ea917",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.025566328316926956,
+          0.969310998916626,
+          0.1260537952184677,
+          0.20950645208358765
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1341.4
+    },
+    "cab-right": {
+      "sha256": "66078304a8ca9f732f9dc42440c1cbd5d4a27ef7f0c959f6dc862275a0bbf19f",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463428.0,
+          63.956329345703125,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.10273401439189911,
+          0.6067383289337158,
+          0.07738810777664185,
+          0.7844268083572388
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1824.2
+    },
+    "cab-2d": {
+      "sha256": "02912d3e76064760bc512d8c0b035a8618065bc0ab50247e7d099c82cb7cb5e2",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463427.0,
+          64.5732421875,
+          -30571408.0
+        ],
+        "rotation_xyzw": [
+          -0.04514898359775543,
+          0.8428088426589966,
+          0.07159135490655899,
+          0.5315161943435669
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1487.8
+    },
+    "chase": {
+      "sha256": "dd1a9a3621deed8b6f4d375949e066e27379a9bc9a4c33ffcfe53dcbead85efc",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.24000003933906555,
+        "position_world": [
+          -12463407.0,
+          67.63336944580078,
+          -30571418.0
+        ],
+        "rotation_xyzw": [
+          -0.0638585016131401,
+          0.839759349822998,
+          0.10125762969255447,
+          0.529597282409668
+        ],
+        "target_world": [
+          -12463432.0,
+          60.97769546508789,
+          -30571406.0
+        ],
+        "yaw_rad": 2.0162835121154785
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1459.7
+    },
+    "orbit": {
+      "sha256": "337eb8f78c365186d29fbbf13398f670e91017bee871c00ef03b35c53145bbe8",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463289.0,
+          151.38070678710938,
+          -30571416.0
+        ],
+        "rotation_xyzw": [
+          -0.20589089393615723,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "clock_time_s": 35700.0,
+      "active_lod_fades": 0,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1916,
+      "peak_rss_mib": 1492.9
+    }
+  },
+  "scope": "Aceptación de las regiones versionadas; no certifica paridad completa del paisaje ni del contenido de Open Rails."
+}

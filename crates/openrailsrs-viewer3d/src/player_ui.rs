@@ -54,14 +54,10 @@ impl Plugin for PlayerUiPlugin {
                     .after(crate::camera::spawn_camera)
                     .after(crate::scene::spawn_ground_and_lights),
             )
-            .add_systems(
-                OnEnter(ViewerAppState::Playing),
-                apply_weather.before(crate::precipitation::spawn_precipitation),
-            )
+            .add_systems(OnEnter(ViewerAppState::Playing), apply_weather)
             .add_systems(
                 Update,
-                (apply_weather, crate::precipitation::spawn_precipitation)
-                    .chain()
+                apply_weather
                     .run_if(resource_changed::<ActivePlayerContent>)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
@@ -244,6 +240,8 @@ enum SettingField {
     Shadows,
     Fog,
     FogQuality,
+    WeatherExecution,
+    Renderer,
     Audio,
     Volume,
     Units,
@@ -649,6 +647,8 @@ fn handle_buttons(
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.mph= !settings.mph,
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
+                SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
+                SettingField::Renderer=>settings.renderer=settings.renderer.next(),
                 SettingField::Audio=>settings.audio_enabled= !settings.audio_enabled,
                 SettingField::Volume=>settings.audio_volume=(settings.audio_volume+step).clamp(0.0,1.0),
             }ui.notice="Vista previa aplicada; pulsá Guardar ajustes para conservarla".into();Ok(())},
@@ -1112,6 +1112,28 @@ fn build_settings(
     );
     button(
         p,
+        format!("Cálculo del clima: {}", s.weather_execution.label()),
+        UiCommand::Setting(SettingField::WeatherExecution, 0.0),
+    );
+    label(
+        p,
+        "Automático adapta el detalle. CPU calcula los copos; el dibujo usa el render elegido al iniciar.",
+        12.0,
+        MUTED,
+    );
+    button(
+        p,
+        format!("Renderizado al iniciar: {}", s.renderer.label()),
+        UiCommand::Setting(SettingField::Renderer, 0.0),
+    );
+    label(
+        p,
+        "Para cambiar el render: guardá los ajustes y volvé a iniciar el visor. CPU requiere un controlador de software.",
+        12.0,
+        MUTED,
+    );
+    button(
+        p,
         format!("Sonido original: {}", yes(s.audio_enabled)),
         UiCommand::Setting(SettingField::Audio, 0.0),
     );
@@ -1470,6 +1492,8 @@ fn update_panel_text(
     content: Res<ActivePlayerContent>,
     fps: Res<crate::hud::HudFps>,
     performance: Res<crate::performance::JourneyPerformance>,
+    memory: Res<crate::gpu_memory::GraphicsMemory>,
+    weather_particles: Res<crate::weather_particles::WeatherParticles>,
     audio: Res<crate::native_audio::NativeAudio>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
     mut texts: Query<(&DynamicText, &mut Text)>,
@@ -1510,6 +1534,11 @@ fn update_panel_text(
                                 }
                             }
                             text += &format!("\n{}", performance.hud_text());
+                            text += &format!(
+                                "\n{}\n{}",
+                                memory.hud_text(),
+                                weather_particles.hud_text()
+                            );
                             text += &format!(
                                 "\n\nFPS {:.1} · cuadro {:.1} ms\nEscenario: {} sectores activos · {} entidades en GPU\nDistancia de carga {:.0} m",
                                 fps.smoothed,
@@ -2153,7 +2182,7 @@ fn apply_weather(
     mut commands: Commands,
     content: Res<ActivePlayerContent>,
     mut precipitation: ResMut<crate::precipitation::PrecipitationState>,
-    rain: Query<Entity, With<crate::precipitation::RainMeshMarker>>,
+    rain: Query<Entity, With<crate::weather_particles::WeatherMesh>>,
 ) {
     precipitation.enabled = matches!(content.weather, PlayerWeather::Rain | PlayerWeather::Snow);
     precipitation.snow = content.weather == PlayerWeather::Snow;
@@ -2162,7 +2191,7 @@ fn apply_weather(
         for entity in &rain {
             commands.entity(entity).despawn();
         }
-        commands.remove_resource::<crate::precipitation::RainState>();
+        commands.insert_resource(crate::weather_particles::WeatherParticles::default());
     }
 }
 
@@ -2205,7 +2234,6 @@ mod tests {
                 OnEnter(ViewerAppState::Playing),
                 (
                     crate::scene::spawn_ground_and_lights,
-                    crate::precipitation::spawn_precipitation,
                     crate::camera::spawn_camera,
                 )
                     .chain()

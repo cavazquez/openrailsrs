@@ -162,6 +162,9 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if self.script_tcs.is_some() {
+            return Err("El host C# no implementa Save/Restore; reiniciá la sesión con el TCS Rust para cargar una partida".into());
+        }
         if saved.version != 1 || saved.content_signature != self.content_signature {
             return Err(
                 "La partida pertenece a otra versión de la ruta, servicio o formación".into(),

@@ -189,6 +189,7 @@ pub struct LiveDriveSession {
     pub(crate) signal_steps: u64,
     pub arrived: bool,
     pub start_chainage_m: f64,
+    pub(crate) script_tcs: Option<crate::etcs::ScriptTcsHost>,
 }
 
 impl LiveDriveSession {
@@ -342,6 +343,7 @@ impl LiveDriveSession {
             signal_steps: 0,
             arrived: false,
             start_chainage_m,
+            script_tcs: None,
         };
         session.evaluate_native_signals();
         // A static cab/capture needs real aspects at t=0. The traffic layer
@@ -559,10 +561,64 @@ impl LiveDriveSession {
         }
     }
 
-    /// ETCS status from the built-in Rust TCS (#163).
+    /// Cached TCS status. Reading this never performs IPC or executes a script.
     pub fn etcs_status(&self) -> crate::etcs::EtcsTcsStatus {
         use crate::etcs::{BasicEtcsTcs, EtcsTcs};
-        BasicEtcsTcs::default().compute(self)
+        let base = BasicEtcsTcs::default().compute(self);
+        self.script_tcs
+            .as_ref()
+            .map_or_else(|| base.clone(), |host| host.status(base.clone()))
+    }
+
+    fn script_context(&self, dt_s: f64) -> crate::etcs::ScriptContext {
+        crate::etcs::ScriptContext {
+            time_s: self.time_s(),
+            dt_s,
+            speed_mps: self.velocity_mps().abs(),
+            speed_limit_mps: self.effective_speed_limit_mps(),
+            next_signal_distance_m: self.next_signal_ahead().map(|(d, _)| d),
+            next_signal_stop: self
+                .next_signal_ahead()
+                .is_some_and(|(_, aspect)| aspect == SignalAspect::Stop),
+            next_stop_distance_m: self.distance_to_next_stop_m(),
+        }
+    }
+
+    pub fn attach_script_tcs(
+        &mut self,
+        config: &crate::etcs::ScriptHostConfig,
+    ) -> Result<(), String> {
+        self.script_tcs = Some(crate::etcs::ScriptTcsHost::launch(
+            config,
+            &self.script_context(0.0),
+        )?);
+        Ok(())
+    }
+
+    /// Select an optional provider explicitly at startup. Presentation callers
+    /// do not construct .NET processes or parse their protocol.
+    pub fn configure_tcs_from_env(&mut self) -> Result<(), String> {
+        let Ok(script) = std::env::var("OPENRAILSRS_TCS_SCRIPT") else {
+            return Ok(());
+        };
+        let assembly = std::env::var("OPENRAILSRS_TCS_HOST_DLL")
+            .map_err(|_| "OPENRAILSRS_TCS_HOST_DLL is required for an explicit C# TCS")?;
+        self.attach_script_tcs(&crate::etcs::ScriptHostConfig {
+            executable: std::env::var("OPENRAILSRS_DOTNET")
+                .unwrap_or_else(|_| "dotnet".into())
+                .into(),
+            arguments: vec![assembly],
+            script: script.into(),
+            type_name: std::env::var("OPENRAILSRS_TCS_TYPE")
+                .unwrap_or_else(|_| "MinimalTcs".into()),
+            timeout: std::time::Duration::from_millis(250),
+        })
+    }
+
+    pub fn send_tcs_input(&mut self, input: crate::etcs::TcsInput) {
+        if let Some(host) = &mut self.script_tcs {
+            host.push_input(input);
+        }
     }
 
     /// Snapshot for the live cab panel (Fase C3).
@@ -725,6 +781,14 @@ impl LiveDriveSession {
             };
             self.state.brake = self.driver_brake;
             if self
+                .script_tcs
+                .as_ref()
+                .is_some_and(|host| host.applies_brake())
+            {
+                self.state.throttle = 0.0;
+                self.state.brake = 1.0;
+            }
+            if self
                 .distance_to_occupied_block_m()
                 .is_some_and(|distance| distance < self.velocity_mps().powi(2) / 0.44 + 12.0)
             {
@@ -851,6 +915,10 @@ impl LiveDriveSession {
         self.exterior.tick(step_dt);
         self.tick_signals(step_dt);
         self.tick_gameplay(step_dt);
+        let context = self.script_context(step_dt);
+        if let Some(host) = &mut self.script_tcs {
+            host.tick(&context);
+        }
 
         if let Some(edge_id) = self.state.current_edge() {
             let transitions = self.region_tracker.step(edge_id, self.state.pos_on_edge_m);

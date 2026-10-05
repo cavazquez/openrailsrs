@@ -1,5 +1,8 @@
 # Verificación de las cinco mejoras de partida
 
+La ampliación del 4 de octubre de 2026, al final de este documento, agrega los
+modos de nieve, los goldens y el host C# opcional a las verificaciones anteriores.
+
 Referencia: Open Rails 1.6.1, fijada por el proyecto. Verificación local del
 4 de octubre de 2026, Rust 1.97.1 y Bevy 0.19.1. Las instrucciones para el jugador
 están en [PLAYER_MANUAL_TESTS.md](PLAYER_MANUAL_TESTS.md), secciones 15–22.
@@ -197,3 +200,51 @@ PNG, JSON y log finales: `tmp/visual-snow-aligned-journey/`. Las métricas
 anteriores de la base `0dd3502` se conservan identificadas arriba; cambiaron la
 lógica de señales y la duración del servicio, por lo que no son un ensayo de
 rendimiento equivalente cuadro por cuadro.
+
+## Ampliación del 4 de octubre de 2026: nieve, web y issues pendientes
+
+El check completo del workspace pasó formato, Clippy con advertencias como errores,
+1434 tests Rust, tests Python, compilación, cuatro oráculos físicos congelados y
+el servicio corto de tres estaciones. La revisión final del host añadió un plazo
+para escritura y respuesta; pasaron nuevamente Clippy, los tests de fallo del host
+y la aceptación Linux con el fixture C# consumido por Rust.
+
+La matriz final de nieve ejecutó secuencialmente GPU, CPU y Mixto de efectos, y
+renderizado completo por lavapipe. Misma cámara, hora, escena, resolución y 2048
+partículas; verificó cargas de malla y adaptador. Los resultados y hashes se
+conservan en [el fixture de ejecución](fixtures/weather/execution-2026-10-04.json).
+El viaje GPU Auto llegó a seis de seis estaciones con nieve: pico RSS 2695 MiB,
+pico VRAM del proceso 3191 MiB y una subida de semillas. Sus tiempos por cuadro
+coincidieron con compilaciones; los [límites de interpretación](WEATHER_EXECUTION.md)
+distinguen memoria, presentación limitada y rendimiento máximo.
+
+Para [#170](https://github.com/cavazquez/openrailsrs/issues/170), la aceptación
+completa sin `--record` pasó siete vistas, dos comparaciones con regiones de OR
+1.6.1 y cuatro fallos provocados en el renderer. El [informe versionado](fixtures/visual/player_goldens/acceptance.json)
+conserva métricas y hashes. UV reflejado, forward lateral, oclusor negro y tren
+oculto fueron rechazados. El [manifiesto y la guía](fixtures/visual/player_goldens/README.md)
+fijan tolerancias y enlazan las regresiones #165–#169. Esa aceptación no certifica
+el paisaje completo ni los modelos ausentes del paquete de referencia OR.
+
+Para [#164](https://github.com/cavazquez/openrailsrs/issues/164), se eligió host .NET
+separado opcional y Rust por defecto. SDK .NET 10.0.401 en Linux: compilación,
+protocolo JSONL, ACK, menú, restricción a 18 km/h y frenado físico pasaron. Los
+fallos de proceso, lectura/escritura bloqueadas, secuencia y respuesta enorme
+producen intervención. El visor lee el estado de la sesión. El [contrato](TCS_CSHARP_HOST.md)
+detalla el subconjunto del API y la ausencia de persistencia del script.
+
+La web se reconstruyó con seis páginas, plantilla común y contenido generado a
+partir de las versiones del repositorio. Se probaron generación reproducible,
+enlaces/anclas, paridad de `website/` y `docs/`, capturas y textos alternativos.
+En el navegador se verificaron escritorio y móvil, menú y Escape, selección de
+estaciones, galería y copia de comandos, sin errores de consola ni desbordamiento
+horizontal. Las imágenes provienen del juego y tienen su procedencia registrada.
+
+El preparador de pilotos nativos pasó los tests PAT/plataformas/texto y un servicio
+Chiltern con formación/tráfico originales y tres paradas completas. Belgrano CC
+continúa pendiente de sus archivos originales: el enlace público devuelve HTML de
+acceso. No se incluyeron una ruta ni material rodante argentino ficticios. La
+[guía de preparación](NATIVE_ROUTE_PILOT.md) documenta el siguiente paso.
+
+Las [pruebas manuales](PLAYER_MANUAL_TESTS.md) incluyen los pasos 23–26 para copos,
+modos de cálculo, siete vistas, host C# y nueva web, con el resultado esperado.

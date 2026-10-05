@@ -124,7 +124,9 @@ pub fn capture_system(
             let timed_out = state.armed_at.elapsed() >= state.delay;
             let should_capture = distance_ok
                 && if state.after_ready {
-                    if scenery_ready(progress) && scene.pipelines.as_ref().is_none_or(|p| p.ready())
+                    if scenery_ready(progress)
+                        && scene.pipelines.as_ref().is_none_or(|p| p.ready())
+                        && scene.lod_fades.is_empty()
                     {
                         state.ready_frames = state.ready_frames.saturating_add(1);
                     } else {
@@ -188,6 +190,9 @@ pub struct CaptureScene<'w, 's> {
     focus: Option<Res<'w, crate::world::RouteFocus>>,
     sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
     performance: Res<'w, crate::performance::JourneyPerformance>,
+    graphics_memory: Res<'w, crate::gpu_memory::GraphicsMemory>,
+    weather_particles: Res<'w, crate::weather_particles::WeatherParticles>,
+    renderer_selection: Res<'w, crate::weather_execution::RendererSelection>,
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
     effects: Option<Res<'w, crate::train_effects::TrainEffects>>,
@@ -251,7 +256,7 @@ impl CaptureScene<'_, '_> {
             .iter()
             .map(|binding| std::sync::Arc::as_ptr(&binding.shape) as usize)
             .collect();
-        serde_json::json!({
+        let mut report = serde_json::json!({
             "odometer_m": live.map(|live| live.session.state.odometer_m),
             "service_complete": live.map(|live| live.session.arrived),
             "cpu_tiles": self.world.as_ref().map(|world| world.loaded_tiles.len()),
@@ -286,6 +291,12 @@ impl CaptureScene<'_, '_> {
             "station_results":live.map(|live|&live.session.gameplay.stop_results),
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
-        })
+        });
+        report["graphics_memory"] =
+            serde_json::to_value(&self.graphics_memory.0).unwrap_or_default();
+        report["weather_particles"] = self.weather_particles.report();
+        report["renderer_selection"] =
+            serde_json::to_value(*self.renderer_selection).unwrap_or_default();
+        report
     }
 }

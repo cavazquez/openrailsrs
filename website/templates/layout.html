@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#132c27">
+  <meta name="description" content="{{description}}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:title" content="{{title}} · openrailsrs">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:url" content="{{canonical}}">
+  <meta property="og:image" content="https://cavazquez.github.io/openrailsrs/assets/exterior.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="{{canonical}}">
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/site.js" defer></script>
+  <title>{{title}} · openrailsrs</title>
+</head>
+<body class="{{body_class}}">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="openrailsrs, inicio"><img src="assets/mark.svg" width="32" height="32" alt="" aria-hidden="true"><span>openrails<span class="brand-end">rs</span></span></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menú <span aria-hidden="true">＋</span></button>
+      <nav id="main-nav" aria-label="Navegación principal">{{nav}}</nav>
+    </div>
+  </header>
+  <main id="contenido">{{content}}</main>
+  <footer class="site-footer">
+    <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Un viaje que se construye, estación por estación.</p></div>
+    <div class="footer-links"><a href="empezar.html">Preparar una partida</a><a href="fisica.html">Física y arquitectura</a><a href="paridad-or.html">Referencia Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
+    <div class="footer-bottom"><span>Rust · Bevy {{bevy}} · GPL-3.0</span><span>Proyecto independiente. Referencia: Open Rails {{or_version}}.</span><span>Actualizado: {{updated}}</span></div>
+  </footer>
+</body>
+</html>
