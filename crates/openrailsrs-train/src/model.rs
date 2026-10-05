@@ -372,6 +372,29 @@ impl Consist {
             .collect()
     }
 
+    pub fn vehicle_lengths_m(&self) -> Vec<f64> {
+        self.vehicles
+            .iter()
+            .map(|v| match v {
+                Vehicle::Loco(l) => l.length_m,
+                Vehicle::Wagon(w) => w.length_m,
+            })
+            .collect()
+    }
+
+    pub fn diesel_vehicle_indices(&self) -> Vec<usize> {
+        self.vehicles
+            .iter()
+            .enumerate()
+            .filter_map(|(i, v)| match v {
+                Vehicle::Loco(l) if l.diesel_traction.as_ref().is_some_and(|m| !m.is_empty()) => {
+                    Some(i)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Build an aggregate tractive curve for the whole consist.
     /// If any locomotive has an explicit curve, those are summed point-by-point on a merged
     /// velocity grid.  If none have a curve, returns an empty `TractiveCurve` and the caller

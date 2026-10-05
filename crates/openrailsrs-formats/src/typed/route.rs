@@ -60,6 +60,8 @@ impl Default for OverheadWireParams {
 pub struct RouteFile {
     pub route_id: String,
     pub name: String,
+    /// Native `.trk` line speed (MSTS stores this in metres per second).
+    pub speed_limit_mps: Option<f64>,
     pub route_start: Option<RouteStart>,
     /// Path of the `.trk` that was loaded (OpenRails override when present).
     pub source_path: Option<PathBuf>,
@@ -82,6 +84,18 @@ impl RouteFile {
         Ok(Self {
             route_id,
             name,
+            speed_limit_mps: super::named_blocks(ast, "SpeedLimit")
+                .first()
+                .and_then(|block| {
+                    let Ast::List(items) = block else { return None };
+                    items
+                        .iter()
+                        .filter_map(|item| match item {
+                            Ast::Atom(atom) => atom_to_number(atom),
+                            _ => None,
+                        })
+                        .find(|value| value.is_finite() && *value > 0.)
+                }),
             route_start,
             source_path: None,
             overhead_wire: parse_overhead_wire_params(ast),

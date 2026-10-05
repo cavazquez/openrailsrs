@@ -13,7 +13,7 @@ use std::{
 };
 
 const MAX_BYTES: usize = 384 * 1024 * 1024;
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 static HITS: AtomicU64 = AtomicU64::new(0);
 static MISSES: AtomicU64 = AtomicU64::new(0);
 
@@ -21,6 +21,33 @@ static MISSES: AtomicU64 = AtomicU64::new(0);
 pub struct TextureAlpha {
     pub bits: u8,
     pub mask: bool,
+    /// Effectively binary coverage despite an authored eight-bit alpha channel.
+    /// Retain `bits` for native provenance; an explicit alpha-test primitive can
+    /// use Bevy cutout rendering without blending a faint atlas background.
+    pub cutout_only: bool,
+}
+
+impl TextureAlpha {
+    pub fn from_ace(ace: &openrailsrs_ace::AceFile) -> Self {
+        Self {
+            bits: ace.alpha_bits,
+            mask: ace.has_mask_channel,
+            cutout_only: cutout_alpha(&ace.mip0),
+        }
+    }
+}
+
+fn cutout_alpha(rgba: &[u8]) -> bool {
+    let mut clear = false;
+    let mut solid = false;
+    for pixel in rgba.as_chunks::<4>().0 {
+        match pixel[3] {
+            0..=16 => clear = true,
+            250..=255 => solid = true,
+            _ => return false,
+        }
+    }
+    clear && solid
 }
 #[derive(Serialize, Deserialize)]
 struct Record {
@@ -286,9 +313,32 @@ fn alpha(image: &Image) -> TextureAlpha {
     } else {
         8
     };
+    let decoded = if image.texture_descriptor.format.is_compressed() {
+        decompress_bc(image.clone()).ok()
+    } else {
+        Some(image.clone())
+    };
+    let cutout_only = decoded.as_ref().is_some_and(|image| {
+        if !matches!(
+            image.texture_descriptor.format,
+            TextureFormat::Rgba8Unorm
+                | TextureFormat::Rgba8UnormSrgb
+                | TextureFormat::Bgra8Unorm
+                | TextureFormat::Bgra8UnormSrgb
+        ) {
+            return false;
+        }
+        let mip0_bytes = image.width() as usize * image.height() as usize * 4;
+        image
+            .data
+            .as_deref()
+            .and_then(|data| data.get(..mip0_bytes))
+            .is_some_and(cutout_alpha)
+    });
     TextureAlpha {
         bits,
         mask: bits == 1,
+        cutout_only,
     }
 }
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -363,13 +413,7 @@ pub fn load_in(
                 addr,
                 bias,
             );
-            (
-                image,
-                TextureAlpha {
-                    bits: ace.alpha_bits,
-                    mask: ace.has_mask_channel,
-                },
-            )
+            (image, TextureAlpha::from_ace(&ace))
         }
         "dds" => {
             let image = crate::gpu_textures::decode_dds_for_formats(
@@ -386,7 +430,15 @@ pub fn load_in(
             } else {
                 8
             };
-            (image, TextureAlpha { bits, mask: false })
+            let cutout_only = alpha(&image).cutout_only;
+            (
+                image,
+                TextureAlpha {
+                    bits,
+                    mask: false,
+                    cutout_only,
+                },
+            )
         }
         _ => return Err("Expected ACE, DDS or KTX2".into()),
     };
@@ -425,6 +477,17 @@ pub fn load_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn binary_atlas_background_is_distinct_from_glass_and_gradual_alpha() {
+        let atlas = [255, 255, 255, 15, 70, 30, 10, 255, 90, 60, 30, 254];
+        assert!(cutout_alpha(&atlas));
+        let mut glass = atlas;
+        glass[7] = 120;
+        assert!(!cutout_alpha(&glass));
+        assert!(!cutout_alpha(&[255, 255, 255, 255]));
+        assert!(!cutout_alpha(&[255, 255, 255, 15]));
+    }
     fn fixture(name: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../openrailsrs-ace/tests/fixtures")

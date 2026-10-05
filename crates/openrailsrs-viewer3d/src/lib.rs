@@ -75,6 +75,7 @@ pub mod terrain;
 pub mod terrain_assets;
 pub(crate) mod terrain_io;
 pub mod terrain_material;
+pub(crate) mod terrain_prepare;
 pub(crate) mod terrain_sampler;
 pub(crate) mod terrain_spawn;
 pub mod tile_bundle;
@@ -609,14 +610,18 @@ impl Plugin for ViewerPlugin {
                         .run_if(player_ui::world_input_available)
                         .after(cab_cvf_overlay::update_cab_cvf_overlay)
                         .run_if(live::live_mode_active),
-                    cab_render::update_cab_render_diagnostic
-                        .after(cab_render::tag_cab_interior_render_layers)
-                        .after(camera::follow_train_camera)
-                        .run_if(live::live_mode_active),
                     camera::update_driver_camera_fov,
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),
                 )
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                PostUpdate,
+                cab_render::update_cab_render_diagnostic
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .after(bevy::camera::visibility::VisibilitySystems::CheckVisibility)
+                    .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             // Separate tuple: Bevy ~20-system limit on one `.add_systems` group.

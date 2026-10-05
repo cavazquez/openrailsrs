@@ -77,12 +77,20 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
+        native: openrailsrs_sim::native_dynamics::NativeTrainPhysics::load(
+            &consist_path,
+            asset_root,
+            &consist,
+            scenario.simulation.native_physics.as_ref(),
+        )?,
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
         vehicle_davis,
+        vehicle_lengths_m: consist.vehicle_lengths_m(),
+        diesel_vehicle_indices: consist.diesel_vehicle_indices(),
         tractive,
         diesel_engines,
         regen_factor: consist.regen_factor(),

@@ -16,8 +16,8 @@ pub use diesel::{
 pub use error::TrainError;
 pub use from_ast::{
     consist_asset_root, load_consist_curve_parameters, load_consist_from_path,
-    load_consist_with_asset_root, load_engine_from_path, load_wagon_from_path,
-    resolve_consist_entry_path,
+    load_consist_native_parameters, load_consist_with_asset_root, load_engine_from_path,
+    load_wagon_from_path, resolve_consist_entry_path,
 };
 pub use model::{
     Consist, DavisCoefficients, Locomotive, SteamParams, TractiveCurve, Vehicle, Wagon,

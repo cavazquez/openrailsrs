@@ -1282,10 +1282,19 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
 /// Last matching `UiD` wins (Open Rails sequential assign).
 fn find_uid(items: &[Ast]) -> Option<u32> {
     let mut found = None;
-    for item in items {
+    for (index, item) in items.iter().enumerate() {
         if let Ast::List(sub) = item
             && matches_head(sub, "UiD")
             && let Some(Ast::Atom(at)) = sub.get(1)
+            && let Some(n) = atom_to_number(at)
+        {
+            found = Some(n as u32);
+        }
+        // Name normalization can leave the first field outside its parentheses:
+        // `(Signal UiD (2103) (FileName ...) ...)`. Keep its authored identity.
+        if matches!(item, Ast::Atom(Atom::Symbol(key)) if key.eq_ignore_ascii_case("UiD"))
+            && let Some(Ast::List(value)) = items.get(index + 1)
+            && let Some(Ast::Atom(at)) = value.first()
             && let Some(n) = atom_to_number(at)
         {
             found = Some(n as u32);
@@ -1950,6 +1959,20 @@ Tr_Worldfile (
 #[cfg(test)]
 mod scientific_notation_tests {
     use super::*;
+
+    #[test]
+    fn native_signal_objects_keep_distinct_first_field_uids() {
+        let text = "Tr_Worldfile ( Signal ( UiD ( 2103 ) FileName ( signal.s ) Position ( 1 2 3 ) QDirection ( 0 0 0 1 ) SignalUnits ( 1 SignalUnit ( 0 TrItemId ( 0 188 ) ) ) ) Signal ( UiD ( 2104 ) FileName ( signal.s ) Position ( 2 2 3 ) QDirection ( 0 0 0 1 ) SignalUnits ( 1 SignalUnit ( 0 TrItemId ( 0 190 ) ) ) ) )";
+        let world = WorldFile::from_bytes(text.as_bytes(), None).unwrap();
+        assert_eq!(
+            world
+                .items
+                .iter()
+                .map(|item| item.uid())
+                .collect::<Vec<_>>(),
+            vec![Some(2103), Some(2104)]
+        );
+    }
 
     #[test]
     fn qdirection_preserves_scientific_notation() {

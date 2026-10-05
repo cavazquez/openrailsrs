@@ -91,6 +91,11 @@ impl FormationState {
             .map(|c| c.length_m)
             .sum::<f64>()
     }
+
+    /// Centre of a native vehicle; `offset_m` locates its leading end.
+    pub fn center_offset_m(&self, index: usize) -> f64 {
+        self.offset_m(index) - self.cars.get(index).map_or(0.0, |car| car.length_m * 0.5)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -257,6 +262,32 @@ impl LiveDriveSession {
             || saved.gameplay.stop_targets.len() != self.gameplay.stop_targets.len()
         {
             return Err("La partida tiene una formación o un servicio inválidos".into());
+        }
+        if let Some(dynamics) = &saved.state.native_dynamics {
+            let engines = self
+                .original_physics
+                .diesel_vehicle_indices
+                .iter()
+                .filter(|&&i| {
+                    i < n && {
+                        let car = &saved.formation.cars[i];
+                        car.power_on && car.battery_on && (i == 0 || car.mu_connected)
+                    }
+                })
+                .count();
+            if self.original_physics.native.is_none()
+                || dynamics.bearing_c.len() != n
+                || dynamics.axles.len() != engines
+                || dynamics
+                    .bearing_c
+                    .iter()
+                    .any(|t| !t.is_finite() || !(-100.0..=500.0).contains(t))
+                || dynamics.axles.iter().any(|a| !a.speed_mps.is_finite())
+                || !dynamics.adhesion_factor.is_finite()
+                || !(0.05..=2.5).contains(&dynamics.adhesion_factor)
+            {
+                return Err("La dinámica nativa guardada no corresponde a la formación".into());
+            }
         }
         if saved.dispatcher.own_locks.len() > self.graph.nodes_iter().count()
             || saved.dispatcher.own_locks.iter().any(|l| {
@@ -568,6 +599,12 @@ impl LiveDriveSession {
         p.max_tractive_effort_n = consist.total_max_tractive_effort_n();
         p.max_brake_n = consist.total_max_brake_n();
         p.vehicle_davis.truncate(n);
+        p.vehicle_lengths_m = consist.vehicle_lengths_m();
+        p.diesel_vehicle_indices = consist.diesel_vehicle_indices();
+        if let Some(native) = &mut p.native {
+            native.vehicles.truncate(n);
+            native.vehicle_masses_kg.truncate(n);
+        }
         p.davis = p.vehicle_davis.iter().fold(
             openrailsrs_train::DavisCoefficients {
                 a_n: 0.0,
@@ -595,6 +632,23 @@ impl LiveDriveSession {
         if p.tractive.points.is_empty() {
             p.tractive =
                 TractiveCurve::from_power_and_effort(p.max_power_w, p.max_tractive_effort_n);
+        }
+        if let (Some(native), Some(dynamics)) = (&p.native, &mut self.state.native_dynamics) {
+            dynamics.bearing_c.resize(n, native.environment.ambient_c);
+            dynamics.axles = p
+                .diesel_vehicle_indices
+                .iter()
+                .map(|i| {
+                    self.physics
+                        .diesel_vehicle_indices
+                        .iter()
+                        .position(|old| old == i)
+                        .and_then(|index| dynamics.axles.get(index).cloned())
+                        .unwrap_or(crate::native_dynamics::NativeAxleState {
+                            speed_mps: self.state.velocity_mps,
+                        })
+                })
+                .collect();
         }
         self.physics = p;
     }
@@ -670,7 +724,7 @@ impl LiveDriveSession {
                     .parked_head_chainage_m
                     .unwrap_or(self.head_chainage_m())
             };
-            let center = head + self.formation.offset_m(i);
+            let center = head + self.formation.center_offset_m(i);
             let rear = (center - car.length_m * 0.5).max(0.0);
             let front = center + car.length_m * 0.5;
             let mut start = 0.0;

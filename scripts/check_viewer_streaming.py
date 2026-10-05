@@ -15,6 +15,43 @@ import time
 import tomllib
 
 
+def compare_pullman_cab_foreground(reference, candidate):
+    """Check fixed opaque cab panels at the harness's 1280×720 / 60° view.
+
+    These regions exclude the windows, instruments and service-summary overlay.
+    This catches a disappearing cab even when Bevy's visibility/asset counters
+    still pass. The reference must use the same Pullman cab, seat and daylight.
+    It is an internal rendering regression, not Open Rails pixel parity.
+    """
+    from PIL import Image, ImageChops, ImageStat
+
+    regions = (
+        (115, 260, 230, 330),
+        (50, 305, 200, 368),
+        (300, 400, 404, 482),
+        (943, 331, 1015, 392),
+        (1050, 360, 1150, 415),
+        (520, 564, 708, 616),
+    )
+    with Image.open(reference) as original, Image.open(candidate) as captured:
+        if original.size != (1280, 720) or captured.size != original.size:
+            raise ValueError("Pullman cab foreground requires two 1280×720 frames")
+        original, captured = original.convert("RGB"), captured.convert("RGB")
+        errors = [
+            sum(ImageStat.Stat(ImageChops.difference(
+                original.crop(region), captured.crop(region)
+            )).mean) / 3.0
+            for region in regions
+        ]
+    return {
+        "passed": sum(error <= 30.0 for error in errors) >= 4,
+        "matching_regions": sum(error <= 30.0 for error in errors),
+        "minimum_matching_regions": 4,
+        "region_mean_absolute_rgb_errors": errors,
+        "maximum_mean_absolute_rgb_error": 30.0,
+    }
+
+
 def run_checkpoint(args, name, target, pause):
     prefix = args.out_dir / name
     # A successful process exit must not reuse captures from an earlier run.
@@ -76,6 +113,8 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_TEXTURE_CACHE"] = "off"
     if getattr(args, "texture_upload", "auto") == "rgba":
         env["OPENRAILSRS_TEXTURE_UPLOAD"] = "rgba"
+    if getattr(args, "debug_materials", False):
+        env["OPENRAILSRS_DEBUG_MATERIALS"] = "1"
     env["OPENRAILSRS_RENDERER"] = "cpu" if args.software else getattr(args, "renderer", "auto")
     if getattr(args, "particle_budget", None) is not None:
         env["OPENRAILSRS_WEATHER_PARTICLE_BUDGET"] = str(args.particle_budget)
@@ -211,6 +250,13 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: renderer errors; see {prefix.with_suffix('.log')}")
     image = prefix.with_suffix(".png")
     report = json.loads(prefix.with_suffix(".stream.json").read_text())
+    if getattr(args, "pullman_cab_reference", None):
+        report["cab_foreground"] = compare_pullman_cab_foreground(
+            args.pullman_cab_reference, image
+        )
+        prefix.with_suffix(".stream.json").write_text(json.dumps(report, indent=2) + "\n")
+        if not report["cab_foreground"]["passed"]:
+            raise RuntimeError(f"{name}: opaque Pullman cab panels disappeared or changed; see {image}")
     if not image.is_file() or report["odometer_m"] < target:
         raise RuntimeError(f"{name}: actual travel checkpoint missing")
     if report["unactivated_near_shapes"] != 0 or not report["gpu_entities"]:
@@ -223,6 +269,8 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: native signal script errors: {report['native_signal_errors']}")
     if report.get("pending_gpu_uploads", 0):
         raise RuntimeError(f"{name}: textures or meshes not yet uploaded to the GPU")
+    if report.get("pending_terrain_tiles", 0):
+        raise RuntimeError(f"{name}: native terrain still being prepared")
     if not pause and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
     if not pause and hasattr(args, "expected_station_names"):
@@ -267,6 +315,14 @@ def scenario_service_distance(source, scenario):
     terminal = stops[-1]
     for start, end in zip(waypoints, waypoints[1:]):
         edges = [e for e in graph["edges"] if e["from"] == start and e["to"] == end]
+        if len(edges) > 1:
+            node = next((node for node in graph["nodes"] if node["id"] == start), None)
+            switch = (node or {}).get("kind", {}).get("switch")
+            if switch:
+                position = next((item["position"] for item in route.get("switches", [])
+                                 if item["node"] == start), switch.get("default_position", "straight"))
+                selected = switch["diverging_edge" if position == "diverging" else "stem_edge"]
+                edges = [edge for edge in edges if edge["id"] == selected]
         if len(edges) != 1:
             raise ValueError(f"Ambiguous authored path {start} → {end}")
         before += edges[0]["length_m"]
@@ -306,6 +362,9 @@ def main():
     parser.add_argument("--weather-execution", choices=["auto", "gpu", "cpu", "hybrid"], default="auto")
     parser.add_argument("--renderer", choices=["auto", "gpu", "cpu"], default="auto")
     parser.add_argument("--particle-budget", type=int)
+    parser.add_argument("--pullman-cab-reference", type=Path,
+                        help="same-seat daylight Pullman 3D cab PNG, 1280×720 and 60° FOV")
+    parser.add_argument("--view-radius-m", type=int, default=2000)
     parser.add_argument("--max-rss-mib", type=int, default=6144)
     parser.add_argument("--timeout-s", type=int, default=270)
     args = parser.parse_args()

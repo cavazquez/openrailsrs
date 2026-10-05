@@ -1610,7 +1610,7 @@ pub struct WorldSpawnProgress {
     texture_paths: Vec<PathBuf>,
     texture_prefetch_index: usize,
     texture_ready_count: usize,
-    ace_cache: std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
+    ace_cache: crate::shapes::PrefetchedTextures,
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
     parsed_shape_files: std::collections::HashMap<PathBuf, std::sync::Arc<ShapeFile>>,
     shape_lod_assets: std::collections::HashMap<PathBuf, Vec<ShapeRenderAsset>>,
@@ -1714,7 +1714,7 @@ impl WorldSpawnProgress {
             texture_paths: Vec::new(),
             texture_prefetch_index: 0,
             texture_ready_count: 0,
-            ace_cache: std::collections::HashMap::new(),
+            ace_cache: crate::shapes::PrefetchedTextures::default(),
             shape_cache: std::collections::HashMap::new(),
             parsed_shape_files: std::collections::HashMap::new(),
             shape_lod_assets: std::collections::HashMap::new(),
@@ -2507,7 +2507,7 @@ fn build_world_shape_asset(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     texture_image_cache: &mut std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
-    ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
+    ace_cache: &dyn crate::shapes::ShapeTextureSource,
     fallback_color: Color,
     fallback_material: &Handle<StandardMaterial>,
 ) -> (PathBuf, ShapeRenderAsset) {
@@ -2615,7 +2615,7 @@ fn build_shape_lod_assets(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
     texture_image_cache: &mut std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
-    ace_cache: &std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
+    ace_cache: &dyn crate::shapes::ShapeTextureSource,
     fallback_color: Color,
     _fallback_material: &Handle<StandardMaterial>,
     prepared: Vec<Option<crate::shapes::LoadedShape>>,
@@ -2768,13 +2768,9 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
     if progress.shape_parse_index >= progress.shape_load_paths.len() {
         progress.texture_paths.sort_unstable();
         progress.texture_paths.dedup();
-        // Skip ACE decode when the Image handle is already in the session cache (#50).
-        progress.texture_paths.retain(|p| {
-            !progress
-                .texture_image_cache
-                .keys()
-                .any(|(path, _)| path == p)
-        });
+        // Prepare alpha and image variants once per unique texture on workers.
+        // A new shape may share a handle but require a different sampler; the
+        // foreground must not fall back to reading/decompressing that source.
         false
     } else {
         true
@@ -2826,7 +2822,7 @@ fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool 
         }
     }
     progress.texture_ready_count += decoded.loaded.len();
-    progress.ace_cache.extend(decoded.aces);
+    progress.ace_cache.extend(decoded);
     progress.texture_prefetch_index = end;
     progress.texture_prefetch_index < progress.texture_paths.len()
 }
@@ -3143,8 +3139,11 @@ pub fn init_scenery_stream_state(
 
 /// Hold the initial train position while the loading screen builds its scenery.
 /// Later stream cycles continue in parallel with the simulation.
-pub fn initial_scenery_ready(state: Res<WorldSceneryStreamState>) -> bool {
-    state.initial_ready
+pub fn initial_scenery_ready(
+    state: Res<WorldSceneryStreamState>,
+    terrain: Option<Res<crate::terrain_spawn::TerrainSpawnProgress>>,
+) -> bool {
+    state.initial_ready && terrain.is_none()
 }
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -3885,7 +3884,7 @@ pub fn progressive_world_spawn_system(
             if progress.asset_build_index >= progress.parsed_shapes.len() {
                 // All source pixels/temporary meshes have become shared Bevy
                 // assets. Release them before building and submitting entities.
-                progress.ace_cache.clear();
+                progress.ace_cache.clear_pixels();
                 progress.parsed_shapes.clear();
                 if let Some(start) = progress.loading_shapes_started {
                     log_step("loaded world shape assets", start);
@@ -4463,7 +4462,7 @@ pub fn spawn_world_boxes(
         tex_start,
     );
 
-    let ace_cache = prefetched.aces;
+    let ace_cache = prefetched;
     let asset_start = Instant::now();
     let mut parsed_shape_files: HashMap<PathBuf, ShapeFile> = HashMap::new();
     for (shape_path, loaded) in parsed_shapes {

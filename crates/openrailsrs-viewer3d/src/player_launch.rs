@@ -725,6 +725,14 @@ mod tests {
         assert_eq!(launched.route.path, track.to_string_lossy());
         assert_eq!(launched.scenario.start_time_s, Some(34140.0));
         assert_eq!(request.route_root, Some(native));
+        assert_eq!(launched.route.destination, "n62");
+        let stops = &launched.route.stops;
+        assert_eq!(stops.len(), 3);
+        assert_eq!(stops[0].name.as_deref(), Some("Edinburgh Waverley"));
+        assert_eq!(stops[1].name.as_deref(), Some("Haymarket"));
+        assert_eq!(stops[2].name.as_deref(), Some("Linlithgow"));
+        assert_eq!(stops[2].dwell_s, 600.0);
+        assert_eq!(stops[2].passengers_off, 40);
         if let Some(path) = std::env::var_os("OPENRAILSRS_DEMO_LAUNCH_OUT") {
             std::fs::copy(&request.path, path).unwrap();
         }

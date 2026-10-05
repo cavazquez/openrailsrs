@@ -9,6 +9,7 @@
 pub mod error;
 pub mod import_activity;
 pub mod import_route;
+mod native_timetable;
 pub mod path_placement;
 
 pub use error::MstsError;

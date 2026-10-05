@@ -79,7 +79,7 @@ impl LiveTrainCameraFrame {
         Self {
             // The authored origin is at the vehicle centre. Look slightly past
             // its nose so the body remains in the lower chase-camera foreground.
-            focus_offset_m: first.length_m.max(0.0) * 0.5 + 2.0,
+            focus_offset_m: first.offset_m + first.length_m.max(0.0) * 0.5 + 2.0,
             chase_distance_m: LIVE_CHASE_DISTANCE,
         }
     }
@@ -1436,17 +1436,17 @@ mod tests {
                 shape_file: None,
                 asset_dir: None,
                 length_m: 20.0,
-                offset_m: -(i as f32) * 20.0,
+                offset_m: -10.0 - (i as f32) * 20.0,
                 flipped: false,
             })
             .collect();
         let frame = LiveTrainCameraFrame::from_vehicles(&vehicles);
-        assert!((frame.focus_offset_m - 12.0).abs() < 1e-4);
+        assert!((frame.focus_offset_m - 2.0).abs() < 1e-4);
         assert!((frame.chase_distance_m - LIVE_CHASE_DISTANCE).abs() < 1e-4);
         let train = Transform::from_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2));
         let focus = frame.focus_from_train(&train);
         assert!(
-            focus.z < -11.9 && focus.x.abs() < 1e-3,
+            (focus.z + 2.0).abs() < 1e-3 && focus.x.abs() < 1e-3,
             "lead focus offset must rotate with train-local +X: {focus:?}"
         );
     }

@@ -1,6 +1,6 @@
-# Full-service physics target, currently FAIL: do not treat this diagnostic as
-# an accepted parity certificate or relax its thresholds to match the output.
-# The existing accepted short captures remain in chiltern.toml.
+# Full native service: fixed original control capture, environment and authored
+# formation. Thresholds and reference bytes remain unchanged.
+# The four historical short captures remain in chiltern.toml.
 reference_version = "1.6.1"
 
 [[cases]]

@@ -1,0 +1,1386 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "base_commit": "557c53fe2b41ca328855cd36110d2a682c3a69cf",
+  "station_cameras": {
+    "reference_version": "1.6.1",
+    "limits": {
+      "position_error_m": 3.0,
+      "direction_error_deg": 1.0,
+      "fov_error_deg": 0.05,
+      "aspect_error": 0.001
+    },
+    "views": {
+      "northolt-park": {
+        "position_error_m": 0.3669697746391426,
+        "direction_error_deg": 5.853177225625916e-06,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      },
+      "northolt-park-cab": {
+        "position_error_m": 0.5241582158074402,
+        "direction_error_deg": 0.5796054934890801,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      },
+      "south-ruislip": {
+        "position_error_m": 1.1351991337562228,
+        "direction_error_deg": 4.517745487845102e-06,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      },
+      "south-ruislip-cab": {
+        "position_error_m": 0.8301791895699528,
+        "direction_error_deg": 0.0018226357721303898,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      },
+      "west-ruislip": {
+        "position_error_m": 1.7202422394464547,
+        "direction_error_deg": 5.399738656763834e-06,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      },
+      "west-ruislip-cab": {
+        "position_error_m": 1.182629904669901,
+        "direction_error_deg": 0.0005179979172042143,
+        "fov_error_deg": 1.1370015826360458e-06,
+        "aspect_error": 5.0574100241007613e-08
+      }
+    },
+    "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "captures": {
+    "northolt-oak-cab.png": {
+      "sha256": "a8e51181ee918d076c1b11baf8092b8cc6030b4ea45faa046da1c5877bd15dfc",
+      "source": "tmp/polish-parity-20261005/material-after/northolt-park-cab.png"
+    },
+    "northolt-camera-exterior.png": {
+      "sha256": "90f0c9dbdbeba43a58e816f3b636cec5c2500b85de48fce4687e1e1424b3c753",
+      "source": "tmp/polish-parity-20261005/camera-after/northolt-park.png"
+    },
+    "chiltern-streaming-completed.png": {
+      "sha256": "df760e3c43ed418e9d6a9111b7c34a166565c042b8d9a0388d05c5eb1d09cad1",
+      "source": "tmp/polish-parity-20261005/chiltern-matched-final/terminal.png"
+    },
+    "demo-model-1-completed.png": {
+      "sha256": "cb4a4540889c0f3fcdd7d7a08a1cfa43ac892d712062066e71fb492b9cf3e03b",
+      "source": "tmp/polish-parity-20261005/demo-render-final2/terminal.png"
+    },
+    "chiltern-original-service-completed.png": {
+      "sha256": "08a7832c2bcc4a18d629b462e8b9424ddda4b001662f9ae174314497f79807e4",
+      "source": "tmp/polish-parity-20261005/chiltern-render-final2/terminal.png"
+    },
+    "pullman-cab-foreground-reference.png": {
+      "sha256": "5a942ca1b3ade2f5f145dd96b6d5aac2b13e9444c71234a67119ed8e7bc02e5d",
+      "source": "tmp/polish-parity-20261005/cab-native-probe/northolt-park-cab.png",
+      "role": "Internal native Pullman cab foreground regression; 1280x720, FOV 60, default driver seat and daylight. Not an Open Rails pixel baseline."
+    },
+    "chiltern-original-exterior-completed.png": {
+      "sha256": "be1c4ff4a7509085da53f68d92d99073ab4bfd32f04f7f337237ce2675a19bd2",
+      "source": "tmp/polish-parity-20261005/chiltern-exterior-final/terminal.png"
+    }
+  },
+  "streaming": {
+    "before": {
+      "odometer_m": 15318.727820177784,
+      "elapsed_s": 230.4,
+      "peak_rss_mib": 2064.0,
+      "performance": {
+        "elapsed_s": 211.62934550799986,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 62,
+        "frame_p99_ms": 82,
+        "frames": 7145,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 62,
+        "gameplay_frame_p99_ms": 81,
+        "gameplay_frames": 5540,
+        "gameplay_hitches_over_100_ms": 18,
+        "gameplay_longest_frame_ms": 345.342857,
+        "hitches_over_100_ms": 25,
+        "loading_frames": 4979,
+        "longest_frame_ms": 4524.526704000001,
+        "peak_rss_mib": 2063.9921875,
+        "rss_mib": 2021.875,
+        "startup_longest_frame_ms": 4524.526704000001
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2998.27734375,
+        "peak_process_vram_mib": 2435.4375,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 2435.4375,
+        "source": "linux_drm_fdinfo"
+      },
+      "service_complete": true,
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 448.65000000006773,
+          "actual_depart_s": 511.0000000000819,
+          "arrival_speed_mps": 0.09750145492498044,
+          "delay_s": 0.0,
+          "dwell_s": 60.399999999998705,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 4.029934001898255,
+          "scheduled_arrive_s": 480.0
+        },
+        {
+          "actual_arrive_s": 840.4499999997834,
+          "actual_depart_s": 872.3999999997543,
+          "arrival_speed_mps": 0.09838797693568092,
+          "delay_s": 0.44999999978335836,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 3.933954759144399,
+          "scheduled_arrive_s": 840.0
+        },
+        {
+          "actual_arrive_s": 1218.999999999439,
+          "actual_depart_s": 1250.94999999941,
+          "arrival_speed_mps": 0.08116653209641564,
+          "delay_s": 18.99999999943907,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham",
+          "node": "n3668",
+          "position_error_m": 3.843379453239322,
+          "scheduled_arrive_s": 1200.0
+        },
+        {
+          "actual_arrive_s": 1816.5499999988956,
+          "actual_depart_s": 1848.4999999988665,
+          "arrival_speed_mps": 0.07519025886909798,
+          "delay_s": 406.5499999988956,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham Golf Course",
+          "node": "n3669",
+          "position_error_m": 3.99175340140755,
+          "scheduled_arrive_s": 1410.0
+        },
+        {
+          "actual_arrive_s": 2506.4500000003527,
+          "actual_depart_s": 2538.400000000469,
+          "arrival_speed_mps": 0.06938095080751998,
+          "delay_s": 706.4500000003527,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Gerrards Cross",
+          "node": "n3670",
+          "position_error_m": 3.9823586600105045,
+          "scheduled_arrive_s": 1800.0
+        }
+      ],
+      "pending_gpu_uploads": 0,
+      "native_signal_programs": 66,
+      "native_signal_errors": {}
+    },
+    "after": {
+      "active_lod_fades": 0,
+      "cab_light": false,
+      "cab_view": {
+        "camera_eye": [
+          -63.190067291259766,
+          17.778968811035156,
+          -33.550262451171875
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          -63.1900634765625,
+          17.778968811035156,
+          -33.550262451171875
+        ],
+        "eye_error_m": 3.814697265625e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 54
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 1.0471975803375244,
+        "indirect_drawing": false,
+        "pitch_rad": 0.23999999463558197,
+        "position_world": [
+          -12477494.0,
+          68.51830291748047,
+          -30575626.0
+        ],
+        "rotation_xyzw": [
+          -0.11223697662353516,
+          0.5061274170875549,
+          0.066632941365242,
+          0.8525243997573853
+        ],
+        "target_world": [
+          -12477495.0,
+          65.64330291748047,
+          -30575628.0
+        ],
+        "yaw_rad": 2.6423165798187256
+      },
+      "clock_time_s": 38253.000000000524,
+      "cpu_tiles": 35,
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3555
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T22:35:53.860939676Z"
+      },
+      "floating_origin_shift": [
+        -14307.318359375,
+        0.0,
+        -4077.093994140625
+      ],
+      "gpu_entities": 2882,
+      "gpu_tiles": 4,
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2221.859375,
+        "peak_process_vram_mib": 1651.4609375,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 1651.4609375,
+        "source": "linux_drm_fdinfo"
+      },
+      "headlights": 1,
+      "native_audio": null,
+      "native_signal_errors": {},
+      "native_signal_programs": 66,
+      "odometer_m": 15318.753626588676,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "performance": {
+        "elapsed_s": 172.4569264629994,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 48,
+        "frames": 6634,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 48,
+        "gameplay_frames": 6301,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 150.330738,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 4204,
+        "longest_frame_ms": 4289.039698,
+        "peak_rss_mib": 2020.83984375,
+        "rss_mib": 2020.83984375,
+        "startup_longest_frame_ms": 4289.039698
+      },
+      "quick_station_practice": false,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "auto",
+      "service_complete": true,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "snow_cover": 0.0,
+      "solar_direction": [
+        0.571902334690094,
+        0.7577866315841675,
+        0.31414541602134705
+      ],
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 450.85000000006823,
+          "actual_depart_s": 511.0000000000819,
+          "arrival_speed_mps": 0.09504366617992556,
+          "delay_s": 0.0,
+          "dwell_s": 58.19999999999883,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 3.874640551759512,
+          "scheduled_arrive_s": 480.0
+        },
+        {
+          "actual_arrive_s": 842.1499999997818,
+          "actual_depart_s": 874.0999999997528,
+          "arrival_speed_mps": 0.09705417680950924,
+          "delay_s": 2.149999999781812,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 4.028773038469808,
+          "scheduled_arrive_s": 840.0
+        },
+        {
+          "actual_arrive_s": 1218.3999999994396,
+          "actual_depart_s": 1250.3499999994106,
+          "arrival_speed_mps": 0.090270863281635,
+          "delay_s": 18.399999999439615,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham",
+          "node": "n3668",
+          "position_error_m": 3.946084402521592,
+          "scheduled_arrive_s": 1200.0
+        },
+        {
+          "actual_arrive_s": 1825.5499999988874,
+          "actual_depart_s": 1857.4999999988584,
+          "arrival_speed_mps": 0.08911353948843584,
+          "delay_s": 415.5499999988874,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham Golf Course",
+          "node": "n3669",
+          "position_error_m": 3.906389501218655,
+          "scheduled_arrive_s": 1410.0
+        },
+        {
+          "actual_arrive_s": 2521.050000000406,
+          "actual_depart_s": 2553.000000000522,
+          "arrival_speed_mps": 0.0933229639481169,
+          "delay_s": 721.0500000004058,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Gerrards Cross",
+          "node": "n3670",
+          "position_error_m": 3.9767286886381044,
+          "scheduled_arrive_s": 1800.0
+        }
+      ],
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "sunrise_s": 18000,
+      "sunset_s": 76980,
+      "texture_cache": {
+        "directory": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/polish-parity-20261005/chiltern-matched-final/.player-data/cache/textures-v1",
+        "hits": 1988,
+        "misses": 1128
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      },
+      "traffic": [
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman adelantado",
+          "odometer_m": 3648.2850517152287,
+          "stops": 2,
+          "velocity_kmh": 0.0
+        },
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman contrario",
+          "odometer_m": 3251.186980000004,
+          "stops": 1,
+          "velocity_kmh": 0.0
+        }
+      ],
+      "train_animated_parts": 339,
+      "train_effects": {
+        "live_particles": 18,
+        "native_emitters": 6,
+        "particle_limit": 512
+      },
+      "train_shared_shapes": 8,
+      "unactivated_near_shapes": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      },
+      "wetness": 0.0,
+      "wiper": false,
+      "cab_foreground": {
+        "passed": true,
+        "matching_regions": 5,
+        "minimum_matching_regions": 4,
+        "region_mean_absolute_rgb_errors": [
+          26.768819875776398,
+          37.7047619047619,
+          15.687812695434646,
+          26.844945355191257,
+          24.924848484848486,
+          9.425600109110748
+        ],
+        "maximum_mean_absolute_rgb_error": 30.0
+      },
+      "peak_rss_mib": 2022.4,
+      "elapsed_s": 190.9
+    },
+    "conditions": "Historical example formation; same extended six-stop route, RX 7600/Vulkan, 1280x720, 450 m radius, 60 degree FOV, autodriver 75%, time x16, normal passengers.",
+    "comparison_limit": "The historical before run could lose cab and ordinary meshes. Final cab remains visibly rendered and passes 5/6 opaque regions. Before/after visual workloads are not equivalent; figures are historical observations under the same configuration."
+  },
+  "demo_model_1": {
+    "terminal": {
+      "active_lod_fades": 0,
+      "cab_light": false,
+      "cab_view": {
+        "camera_eye": [
+          -183.81808471679688,
+          18.16604995727539,
+          41.12063980102539
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          -183.81808471679688,
+          18.16604995727539,
+          41.12063980102539
+        ],
+        "eye_error_m": 0.0,
+        "mesh_parts": 106,
+        "visible_mesh_parts": 54
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 1.0471975803375244,
+        "indirect_drawing": false,
+        "pitch_rad": 0.23999999463558197,
+        "position_world": [
+          -12541789.0,
+          71.48516845703125,
+          -31021744.0
+        ],
+        "rotation_xyzw": [
+          -0.07247553765773773,
+          0.7665558457374573,
+          0.08790726214647293,
+          0.6319904923439026
+        ],
+        "target_world": [
+          -12541791.0,
+          68.28282928466797,
+          -31021746.0
+        ],
+        "yaw_rad": -2.9545392990112305
+      },
+      "clock_time_s": 36500.94999999982,
+      "cpu_tiles": 12,
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 55.9518,
+          "longitude": -3.2105
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T22:28:22.070062815Z"
+      },
+      "floating_origin_shift": [
+        -24673.224609375,
+        0.0,
+        -3346.3017578125
+      ],
+      "gpu_entities": 1316,
+      "gpu_tiles": 4,
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1383.22265625,
+        "peak_process_vram_mib": 810.8828125,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 810.8046875,
+        "source": "linux_drm_fdinfo"
+      },
+      "headlights": 1,
+      "native_audio": null,
+      "native_signal_errors": {},
+      "native_signal_programs": 678,
+      "odometer_m": 28075.395548286204,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "performance": {
+        "elapsed_s": 160.363374125,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 6322,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 5875,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 29.017628,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 3723,
+        "longest_frame_ms": 1369.647184,
+        "peak_rss_mib": 1023.08203125,
+        "rss_mib": 1023.08203125,
+        "startup_longest_frame_ms": 1369.647184
+      },
+      "quick_station_practice": false,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "auto",
+      "service_complete": true,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "snow_cover": 0.0,
+      "solar_direction": [
+        0.4794124364852905,
+        0.7677084803581238,
+        0.4251910448074341
+      ],
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 61.999999999998614,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 59.99999999999873,
+          "early_departure_s": 0.0,
+          "name": "Edinburgh Waverley",
+          "node": "n217",
+          "position_error_m": 0.0,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 469.45000000007246,
+          "actual_depart_s": 531.4000000000644,
+          "arrival_speed_mps": 0.0741644190365888,
+          "delay_s": 169.45000000007246,
+          "dwell_s": 59.99999999999873,
+          "early_departure_s": 0.0,
+          "name": "Haymarket",
+          "node": "n211",
+          "position_error_m": 3.9497538155187613,
+          "scheduled_arrive_s": 300.0
+        },
+        {
+          "actual_arrive_s": 1758.999999998948,
+          "actual_depart_s": 2360.9499999998234,
+          "arrival_speed_mps": 0.09400504428018393,
+          "delay_s": 378.99999999894794,
+          "dwell_s": 600.000000000002,
+          "early_departure_s": 0.0,
+          "name": "Linlithgow",
+          "node": "n62",
+          "position_error_m": 4.0193531090262695,
+          "scheduled_arrive_s": 1380.0
+        }
+      ],
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "sunrise_s": null,
+      "sunset_s": null,
+      "texture_cache": {
+        "directory": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/polish-parity-20261005/demo-render-final2/.player-data/cache/textures-v1",
+        "hits": 1856,
+        "misses": 782
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      },
+      "traffic": [],
+      "train_animated_parts": 209,
+      "train_effects": {
+        "live_particles": 9,
+        "native_emitters": 1,
+        "particle_limit": 512
+      },
+      "train_shared_shapes": 4,
+      "unactivated_near_shapes": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      },
+      "wetness": 0.0,
+      "wiper": false,
+      "peak_rss_mib": 1023.1,
+      "elapsed_s": 178.8
+    }
+  },
+  "native_physics_service": {
+    "reference_version": "1.6.1",
+    "frozen_reference_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+    "manifest": "oracles/chiltern-service.toml",
+    "scenario": "examples/chiltern_local/scenario_oracle.toml",
+    "environment_provenance": "examples/chiltern_local/physics/environment.json",
+    "velocity_rms_limit_mps": 0.75,
+    "velocity_peak_limit_mps": 2.0,
+    "position_max_limit_m": 45.0,
+    "phase_velocity_rms_limit_mps": 1.1,
+    "pass": true,
+    "coverage": {
+      "candidate_end_s": 750.15,
+      "candidate_start_s": 0.0,
+      "covered_fraction": 1.0,
+      "reference_end_s": 750.1,
+      "reference_start_s": 0.0
+    },
+    "velocity": {
+      "max_abs_diff": 1.0920745404890035,
+      "mean_abs_diff": 0.11624456155991968,
+      "rms_diff": 0.20814117191791448,
+      "samples": 7502
+    },
+    "position": {
+      "max_abs_diff": 39.61086000000023,
+      "mean_abs_diff": 18.943509825444675,
+      "rms_diff": 23.525821377827686,
+      "samples": 7502
+    },
+    "phase_velocity_rms_mps": [
+      0.005487453450853652,
+      0.29417152872365987,
+      0.17804349311229534,
+      0.10300891448020223,
+      0.004653115292433355
+    ],
+    "numerical_fixture_regeneration": {
+      "files": 10,
+      "byte_identical": true
+    },
+    "scope": "Frozen native controls for Northolt Park, South Ruislip and West Ruislip. Original reference and thresholds unchanged; this does not certify all rolling stock or weather."
+  },
+  "checks": {
+    "check_sh": "PASS",
+    "rust_passed": 1547,
+    "rust_ignored": 44,
+    "python_passed": 49,
+    "additional_native_geometry_motion_passed": 2,
+    "station_camera_views_passed": 6,
+    "demo_menu_launch": "PASS",
+    "original_outputs_restored_and_sha256_verified": 134,
+    "check_log": "tmp/polish-parity-20261005/final-check6.log"
+  },
+  "demo_model_1_headless_final": {
+    "success": true,
+    "phase": "completed",
+    "scenario": "0930 Edinburgh-Glasgow Queen Street",
+    "time_s": 2360.9499999998234,
+    "distance_m": 28075.395548286204,
+    "score": 1000.0,
+    "failure": null,
+    "stops": [
+      {
+        "name": "Edinburgh Waverley",
+        "node": "n217",
+        "scheduled_arrive_s": 0.0,
+        "actual_arrive_s": 0.05,
+        "actual_depart_s": 61.999999999998614,
+        "position_error_m": 0.0,
+        "arrival_speed_mps": 0.0,
+        "dwell_s": 59.99999999999873,
+        "delay_s": 0.05,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Haymarket",
+        "node": "n211",
+        "scheduled_arrive_s": 300.0,
+        "actual_arrive_s": 469.45000000007246,
+        "actual_depart_s": 531.4000000000644,
+        "position_error_m": 3.9497538155187613,
+        "arrival_speed_mps": 0.0741644190365888,
+        "dwell_s": 59.99999999999873,
+        "delay_s": 169.45000000007246,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Linlithgow",
+        "node": "n62",
+        "scheduled_arrive_s": 1380.0,
+        "actual_arrive_s": 1758.999999998948,
+        "actual_depart_s": 2360.9499999998234,
+        "position_error_m": 4.0193531090262695,
+        "arrival_speed_mps": 0.09400504428018393,
+        "dwell_s": 600.000000000002,
+        "delay_s": 378.99999999894794,
+        "early_departure_s": 0.0
+      }
+    ]
+  },
+  "chiltern_original_formation_headless": {
+    "success": true,
+    "phase": "completed",
+    "scenario": "Chiltern extendido: Northolt Park → Gerrards Cross",
+    "time_s": 2679.3000000009815,
+    "distance_m": 15320.17972800076,
+    "score": 0.0,
+    "failure": null,
+    "stops": [
+      {
+        "name": "Northolt Park",
+        "node": "n97",
+        "scheduled_arrive_s": 0.0,
+        "actual_arrive_s": 0.05,
+        "actual_depart_s": 22.000000000000178,
+        "position_error_m": 2.2737367544323206e-13,
+        "arrival_speed_mps": 0.0,
+        "dwell_s": 20.00000000000015,
+        "delay_s": 0.05,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "South Ruislip",
+        "node": "n101",
+        "scheduled_arrive_s": 480.0,
+        "actual_arrive_s": 448.75000000006776,
+        "actual_depart_s": 511.0000000000819,
+        "position_error_m": 3.0374620593829604,
+        "arrival_speed_mps": 0.09917938390611829,
+        "dwell_s": 60.29999999999871,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "West Ruislip",
+        "node": "n105",
+        "scheduled_arrive_s": 840.0,
+        "actual_arrive_s": 775.1999999998427,
+        "actual_depart_s": 870.9999999997556,
+        "position_error_m": 2.5993849491042056,
+        "arrival_speed_mps": 0.09587212128358388,
+        "dwell_s": 93.84999999999681,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Denham",
+        "node": "n3668",
+        "scheduled_arrive_s": 1200.0,
+        "actual_arrive_s": 1203.3999999994533,
+        "actual_depart_s": 1235.3499999994242,
+        "position_error_m": 2.8177356517098815,
+        "arrival_speed_mps": 0.09523428797001611,
+        "dwell_s": 30.00000000000029,
+        "delay_s": 3.3999999994532573,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Denham Golf Course",
+        "node": "n3669",
+        "scheduled_arrive_s": 1410.0,
+        "actual_arrive_s": 1869.0999999988478,
+        "actual_depart_s": 1901.0499999988187,
+        "position_error_m": 3.1515130137722736,
+        "arrival_speed_mps": 0.09038025850997865,
+        "dwell_s": 30.00000000000029,
+        "delay_s": 459.0999999988478,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Gerrards Cross",
+        "node": "n3670",
+        "scheduled_arrive_s": 1800.0,
+        "actual_arrive_s": 2647.3500000008653,
+        "actual_depart_s": 2679.3000000009815,
+        "position_error_m": 2.5289886805039714,
+        "arrival_speed_mps": 0.0955158268137439,
+        "dwell_s": 30.00000000000029,
+        "delay_s": 847.3500000008653,
+        "early_departure_s": 0.0
+      }
+    ]
+  },
+  "chiltern_original_formation_live": {
+    "terminal": {
+      "active_lod_fades": 0,
+      "cab_light": false,
+      "cab_view": {
+        "camera_eye": [
+          -74.6910400390625,
+          17.778968811035156,
+          -39.82247543334961
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          -74.6910400390625,
+          17.778968811035156,
+          -39.822471618652344
+        ],
+        "eye_error_m": 3.814697265625e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 54
+      },
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 1.0471975803375244,
+        "indirect_drawing": false,
+        "pitch_rad": 0.23999999463558197,
+        "position_world": [
+          -12477496.0,
+          68.51830291748047,
+          -30575626.0
+        ],
+        "rotation_xyzw": [
+          -0.11223697662353516,
+          0.5061274170875549,
+          0.066632941365242,
+          0.8525243997573853
+        ],
+        "target_world": [
+          -12477497.0,
+          65.64330291748047,
+          -30575628.0
+        ],
+        "yaw_rad": 2.6423165798187256
+      },
+      "clock_time_s": 38379.25000000098,
+      "cpu_tiles": 35,
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3555
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T22:24:20.272253977Z"
+      },
+      "floating_origin_shift": [
+        -14297.173828125,
+        0.0,
+        -4071.5615234375
+      ],
+      "gpu_entities": 2881,
+      "gpu_tiles": 4,
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2217.72265625,
+        "peak_process_vram_mib": 1647.3125,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 1647.3125,
+        "source": "linux_drm_fdinfo"
+      },
+      "headlights": 1,
+      "native_audio": null,
+      "native_signal_errors": {},
+      "native_signal_programs": 66,
+      "odometer_m": 15320.222523569952,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "performance": {
+        "elapsed_s": 180.39028766100085,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 49,
+        "frames": 6945,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 48,
+        "gameplay_frames": 6614,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 148.294613,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 4183,
+        "longest_frame_ms": 4372.984092000001,
+        "peak_rss_mib": 2027.41796875,
+        "rss_mib": 2027.41796875,
+        "startup_longest_frame_ms": 4372.984092000001
+      },
+      "quick_station_practice": false,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "auto",
+      "service_complete": true,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "snow_cover": 0.0,
+      "solar_direction": [
+        0.5652719140052795,
+        0.76104336977005,
+        0.31824618577957153
+      ],
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 448.75000000006776,
+          "actual_depart_s": 511.0000000000819,
+          "arrival_speed_mps": 0.09917938390611829,
+          "delay_s": 0.0,
+          "dwell_s": 60.29999999999871,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 3.0374620593829604,
+          "scheduled_arrive_s": 480.0
+        },
+        {
+          "actual_arrive_s": 832.1499999997909,
+          "actual_depart_s": 870.9999999997556,
+          "arrival_speed_mps": 0.09336203861912694,
+          "delay_s": 0.0,
+          "dwell_s": 36.90000000000004,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 2.6128451337899605,
+          "scheduled_arrive_s": 840.0
+        },
+        {
+          "actual_arrive_s": 1203.2499999994534,
+          "actual_depart_s": 1235.1999999994243,
+          "arrival_speed_mps": 0.09742382502091856,
+          "delay_s": 3.2499999994533937,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham",
+          "node": "n3668",
+          "position_error_m": 2.7541378464648005,
+          "scheduled_arrive_s": 1200.0
+        },
+        {
+          "actual_arrive_s": 1868.899999998848,
+          "actual_depart_s": 1900.849999998819,
+          "arrival_speed_mps": 0.09386790206579342,
+          "delay_s": 458.899999998848,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham Golf Course",
+          "node": "n3669",
+          "position_error_m": 3.158805044586188,
+          "scheduled_arrive_s": 1410.0
+        },
+        {
+          "actual_arrive_s": 2647.300000000865,
+          "actual_depart_s": 2679.2500000009813,
+          "arrival_speed_mps": 0.09204299556811353,
+          "delay_s": 847.3000000008651,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Gerrards Cross",
+          "node": "n3670",
+          "position_error_m": 2.486278637392388,
+          "scheduled_arrive_s": 1800.0
+        }
+      ],
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "sunrise_s": 18000,
+      "sunset_s": 76980,
+      "texture_cache": {
+        "directory": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/polish-parity-20261005/chiltern-render-final2/.player-data/cache/textures-v1",
+        "hits": 1962,
+        "misses": 1129
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      },
+      "traffic": [
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman adelantado",
+          "odometer_m": 3648.2850517152287,
+          "stops": 2,
+          "velocity_kmh": 0.0
+        },
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman contrario",
+          "odometer_m": 3251.186980000004,
+          "stops": 1,
+          "velocity_kmh": 0.0
+        }
+      ],
+      "train_animated_parts": 339,
+      "train_effects": {
+        "live_particles": 18,
+        "native_emitters": 6,
+        "particle_limit": 512
+      },
+      "train_shared_shapes": 8,
+      "unactivated_near_shapes": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      },
+      "wetness": 0.0,
+      "wiper": false,
+      "cab_foreground": {
+        "passed": true,
+        "matching_regions": 5,
+        "minimum_matching_regions": 4,
+        "region_mean_absolute_rgb_errors": [
+          26.16256728778468,
+          39.06412698412698,
+          15.716697936210132,
+          26.844338190649665,
+          24.922060606060608,
+          9.425327332242226
+        ],
+        "maximum_mean_absolute_rgb_error": 30.0
+      },
+      "peak_rss_mib": 2027.5,
+      "elapsed_s": 199.1
+    }
+  },
+  "limits": {
+    "startup": "The final native Chiltern journey still includes a startup frame of 4.373 seconds.",
+    "original_formation_live": "Original-formation cab journey: 1 gameplay frame over 100 ms, maximum 148.3 ms, P99 48 ms. Timetable punctuality is not certified.",
+    "parity": "This verifies the fixed native physics replay and selected cameras/materials, not all Open Rails systems.",
+    "demo_terrain": "Two sparse peripheral SCE terrain bundles have no terrain source in the original package; this does not certify complete map coverage."
+  },
+  "cab_render_regression": {
+    "phase_type": "NonMesh for WORLD and WORLD shadows",
+    "bevy_gpu_preprocessing": "enabled; matrices prepared on GPU with ordinary explicit drawing and CPU visible selection",
+    "opaque_regions": 6,
+    "required_matching_regions": 4,
+    "maximum_mean_absolute_rgb_error": 30.0,
+    "tests": 6,
+    "scope": "Cab foreground survives long travel with unchanged default driver camera; not OR pixel parity.",
+    "camera_indirect_drawing": false
+  },
+  "chiltern_original_formation_exterior": {
+    "terminal": {
+      "active_lod_fades": 0,
+      "cab_light": false,
+      "cab_view": null,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 28.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.23999999463558197,
+        "position_world": [
+          -12477475.0,
+          72.2989730834961,
+          -30575616.0
+        ],
+        "rotation_xyzw": [
+          -0.102938212454319,
+          0.5068238377571106,
+          0.061112482100725174,
+          0.8536970615386963
+        ],
+        "target_world": [
+          -12477499.0,
+          65.64330291748047,
+          -30575628.0
+        ],
+        "yaw_rad": -5.21166467666626
+      },
+      "clock_time_s": 38379.25000000098,
+      "cpu_tiles": 35,
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3555
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T22:32:06.982148475Z"
+      },
+      "floating_origin_shift": [
+        -14259.662109375,
+        0.0,
+        -4051.104248046875
+      ],
+      "gpu_entities": 2891,
+      "gpu_tiles": 4,
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2214.40625,
+        "peak_process_vram_mib": 1644.0078125,
+        "process_gtt_mib": 84.06640625,
+        "process_vram_mib": 1644.0078125,
+        "source": "linux_drm_fdinfo"
+      },
+      "headlights": 1,
+      "native_audio": null,
+      "native_signal_errors": {},
+      "native_signal_programs": 66,
+      "odometer_m": 15320.222523569952,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "performance": {
+        "elapsed_s": 176.66846645099994,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 48,
+        "frames": 6918,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 48,
+        "gameplay_frames": 6621,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 122.338195,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 3911,
+        "longest_frame_ms": 1513.019382,
+        "peak_rss_mib": 1717.91015625,
+        "rss_mib": 1717.91015625,
+        "startup_longest_frame_ms": 1513.019382
+      },
+      "quick_station_practice": false,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "renderer_selection": "auto",
+      "service_complete": true,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "snow_cover": 0.0,
+      "solar_direction": [
+        0.5652851462364197,
+        0.7610370516777039,
+        0.31823813915252686
+      ],
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 448.75000000006776,
+          "actual_depart_s": 511.0000000000819,
+          "arrival_speed_mps": 0.09917938390611829,
+          "delay_s": 0.0,
+          "dwell_s": 60.29999999999871,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 3.0374620593829604,
+          "scheduled_arrive_s": 480.0
+        },
+        {
+          "actual_arrive_s": 832.1499999997909,
+          "actual_depart_s": 870.9999999997556,
+          "arrival_speed_mps": 0.09336203861912694,
+          "delay_s": 0.0,
+          "dwell_s": 36.90000000000004,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 2.6128451337899605,
+          "scheduled_arrive_s": 840.0
+        },
+        {
+          "actual_arrive_s": 1203.2499999994534,
+          "actual_depart_s": 1235.1999999994243,
+          "arrival_speed_mps": 0.09742382502091856,
+          "delay_s": 3.2499999994533937,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham",
+          "node": "n3668",
+          "position_error_m": 2.7541378464648005,
+          "scheduled_arrive_s": 1200.0
+        },
+        {
+          "actual_arrive_s": 1868.899999998848,
+          "actual_depart_s": 1900.849999998819,
+          "arrival_speed_mps": 0.09386790206579342,
+          "delay_s": 458.899999998848,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Denham Golf Course",
+          "node": "n3669",
+          "position_error_m": 3.158805044586188,
+          "scheduled_arrive_s": 1410.0
+        },
+        {
+          "actual_arrive_s": 2647.300000000865,
+          "actual_depart_s": 2679.2500000009813,
+          "arrival_speed_mps": 0.09204299556811353,
+          "delay_s": 847.3000000008651,
+          "dwell_s": 30.00000000000029,
+          "early_departure_s": 0.0,
+          "name": "Gerrards Cross",
+          "node": "n3670",
+          "position_error_m": 2.486278637392388,
+          "scheduled_arrive_s": 1800.0
+        }
+      ],
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "sunrise_s": 18000,
+      "sunset_s": 76980,
+      "texture_cache": {
+        "directory": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/polish-parity-20261005/chiltern-exterior-final/.player-data/cache/textures-v1",
+        "hits": 2075,
+        "misses": 1134
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      },
+      "traffic": [
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman adelantado",
+          "odometer_m": 3648.2850517152287,
+          "stops": 2,
+          "velocity_kmh": 0.0
+        },
+        {
+          "arrived": true,
+          "departed": true,
+          "edge": null,
+          "id": "Pullman contrario",
+          "odometer_m": 3251.186980000004,
+          "stops": 1,
+          "velocity_kmh": 0.0
+        }
+      ],
+      "train_animated_parts": 339,
+      "train_effects": {
+        "live_particles": 18,
+        "native_emitters": 6,
+        "particle_limit": 512
+      },
+      "train_shared_shapes": 8,
+      "unactivated_near_shapes": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      },
+      "wetness": 0.0,
+      "wiper": false,
+      "peak_rss_mib": 1717.9,
+      "elapsed_s": 195.1
+    }
+  }
+}

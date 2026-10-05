@@ -1,0 +1,19 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "simulation_dll_sha256": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+  "frozen_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "diagnostic_client_sha256": "f43f087c95a5abb35b0b052764374938a74ff6478e36be34f0e7e7753c49a5b4",
+  "diagnostic_note": "Read-only reflection added to a separate client of the unchanged DLL. Replaying the frozen controls produces identical speed, distance, throttle and brake at all 15003 original samples. No reference output was replaced.",
+  "inputs": {
+    "tick_s": 0.05,
+    "ambient_c": 18.61272,
+    "paused_weather": true,
+    "visibility_m": 0.0,
+    "precipitation_intensity": 0.0,
+    "base_adhesion_factor": 0.5,
+    "first_slippery_spot_distance_m": 1136.011,
+    "first_slippery_spot_length_m": 18.2413254
+  },
+  "model_scope": "The initial 0.5 adhesion factor follows the paused original weather update and its clamp. The first seeded slippery region changes that base to 0.8 and persists while paused. Adhesion noise is represented by its mean; wheel dynamics use deterministic Pacha RK4 substeps. These are environmental inputs, not fitted force or velocity samples."
+}

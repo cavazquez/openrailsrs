@@ -924,6 +924,10 @@ pub fn spawn_camera(mut commands: Commands, opts: Res<ViewerLaunchOpts>) {
 
     commands.spawn((
         Camera3d::default(),
+        // WORLD owns its instance buffers and issues explicit draws, matching
+        // Bevy's custom_shader_instancing example. Keep GPU mesh preprocessing
+        // while avoiding indirect/culling tables that don't describe these draws.
+        bevy::render::view::NoIndirectDrawing,
         IsDefaultUiCamera,
         transform,
         orbit,
@@ -2044,11 +2048,18 @@ mod tests {
         app.world_mut().run_system_once(spawn_camera).unwrap();
 
         let world = app.world_mut();
-        let mut cameras =
-            world.query_filtered::<(Option<&Mesh3d>, Option<&NotShadowCaster>), With<Camera3d>>();
-        let (mesh, no_shadow) = cameras.single(world).expect("viewer camera");
+        let mut cameras = world.query_filtered::<(
+            Option<&Mesh3d>,
+            Option<&NotShadowCaster>,
+            Has<bevy::render::view::NoIndirectDrawing>,
+        ), With<Camera3d>>();
+        let (mesh, no_shadow, explicit_draws) = cameras.single(world).expect("viewer camera");
         assert!(mesh.is_none());
         assert!(no_shadow.is_some());
+        assert!(
+            explicit_draws,
+            "manual WORLD instancing needs this at camera spawn"
+        );
     }
 
     fn exterior_terrain_camera_app(

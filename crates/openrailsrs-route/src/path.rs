@@ -112,11 +112,23 @@ fn edge_path_with(
 
 /// Direct outgoing edge from `from` to `to`, if any.
 pub fn direct_edge(graph: &TrackGraph, from: &str, to: &str) -> Option<String> {
-    graph
+    let candidates: Vec<_> = graph
         .outgoing_edges(from)
         .iter()
-        .find(|eid| graph.edge(eid).is_some_and(|edge| edge.to.0.as_str() == to))
+        .filter(|eid| graph.edge(eid).is_some_and(|edge| edge.to.0.as_str() == to))
         .cloned()
+        .collect();
+    if candidates.len() <= 1 {
+        return candidates.into_iter().next();
+    }
+    // Parallel native TDB vectors can share both endpoints. PAT waypoints
+    // identify those nodes; the already aligned switch selects the right vector.
+    let allowed = allowed_outgoing_edges(graph, from);
+    let selected: Vec<_> = candidates
+        .into_iter()
+        .filter(|e| allowed.contains(e))
+        .collect();
+    (selected.len() == 1).then(|| selected[0].clone())
 }
 
 /// Chain edges through an ordered list of graph node ids (PAT waypoints).
@@ -210,6 +222,49 @@ mod tests {
         let bfs = edge_path(&g, "start", "dest_b").expect("bfs");
         assert_eq!(via, bfs);
         assert_eq!(via, vec!["e1", "e3"]);
+    }
+
+    #[test]
+    fn parallel_vectors_follow_the_selected_switch_instead_of_insertion_order() {
+        let mut graph = TrackGraph::new();
+        graph
+            .insert_node(Node {
+                id: NodeId("junction".into()),
+                kind: NodeKind::Switch {
+                    stem_edge: EdgeId("earlier".into()),
+                    diverging_edge: EdgeId("chosen".into()),
+                },
+                x_m: 0.,
+                y_m: 0.,
+            })
+            .unwrap();
+        graph
+            .insert_node(Node {
+                id: NodeId("destination".into()),
+                kind: NodeKind::Plain,
+                x_m: 1000.,
+                y_m: 0.,
+            })
+            .unwrap();
+        for (id, length) in [("earlier", 1000.), ("chosen", 1800.)] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId("junction".into()),
+                    to: NodeId("destination".into()),
+                    length_m: length,
+                    speed_limit_mps: 20.,
+                    grade_percent: 0.,
+                })
+                .unwrap();
+        }
+        graph
+            .set_switch("junction", SwitchPosition::Diverging)
+            .unwrap();
+        assert_eq!(
+            direct_edge(&graph, "junction", "destination"),
+            Some("chosen".into())
+        );
     }
 
     /// 3-pin junction: stem/div blades + trailing reverse leg (MSTS PAT outbound).

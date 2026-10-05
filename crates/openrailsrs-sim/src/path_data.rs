@@ -47,6 +47,32 @@ pub struct PathData {
 }
 
 impl PathData {
+    /// Vehicle pitch is the elevation change across its length. Integrating
+    /// each native grade segment also handles a car spanning an edge boundary.
+    pub fn average_grade_between(&self, start: f64, end: f64) -> f64 {
+        let mut before = 0.0;
+        let mut integral = 0.0;
+        let mut length = 0.0;
+        for edge in &self.edges {
+            let lo = (start - before).max(0.0);
+            let hi = (end - before).min(edge.length_m);
+            if hi > lo {
+                let mut pos = lo;
+                let mut grade = edge.grade_at(lo);
+                for post in &edge.profile.grades {
+                    if post.position_m > lo && post.position_m < hi {
+                        integral += (post.position_m - pos) * grade;
+                        pos = post.position_m;
+                        grade = post.grade_percent;
+                    }
+                }
+                integral += (hi - pos) * grade;
+                length += hi - lo;
+            }
+            before += edge.length_m;
+        }
+        if length > 0.0 { integral / length } else { 0.0 }
+    }
     /// Pre-compute edge data for `path_edges` by looking each edge up in `graph`.
     /// Missing edges get conservative defaults (0 grade, 55 km/h speed limit).
     pub fn from_path(path_edges: &[String], graph: &TrackGraph) -> Self {

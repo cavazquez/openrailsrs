@@ -30,7 +30,7 @@ pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf
     )
 }
 
-fn resolve_terrtex_for_environment(
+pub(crate) fn resolve_terrtex_for_environment(
     route_dir: &Path,
     file_name: &str,
     environment: openrailsrs_bevy_scenery::textures::TextureEnvironment,
@@ -78,6 +78,55 @@ pub fn load_terrtex_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     let mut image = load_ace_image(route_dir, file_name)?;
     set_terrain_repeat_sampler(&mut image);
     Some(image)
+}
+
+pub(crate) fn terrain_texture_key(file_name: &str, base: bool) -> String {
+    format!(
+        "{file_name}:{}:{}",
+        crate::shapes::scenery_texture_environment(
+            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0)
+        )
+        .cache_key(),
+        if base { "base" } else { "raw" }
+    )
+}
+
+/// Prepare the same base/overlay pixels used by `texture_handle`, on a worker.
+pub(crate) fn prepare_terrain_images(
+    route_dir: &Path,
+    shaders: &[TerrainShader],
+) -> Vec<(String, Image)> {
+    let mut names = std::collections::BTreeSet::new();
+    names.insert((DEFAULT_MICROTEX.to_string(), false));
+    for shader in shaders {
+        names.insert((
+            shader
+                .texslots
+                .first()
+                .map(|s| s.filename.clone())
+                .unwrap_or_else(|| "grass.ace".into()),
+            true,
+        ));
+        names.insert((
+            shader
+                .texslots
+                .get(1)
+                .map(|s| s.filename.clone())
+                .unwrap_or_else(|| DEFAULT_MICROTEX.into()),
+            false,
+        ));
+    }
+    names
+        .into_iter()
+        .filter_map(|(name, base)| {
+            resolve_terrtex_path(route_dir, &name)?;
+            let mut image = load_terrtex_image(route_dir, &name)?;
+            if base {
+                sanitize_terrain_base_rgba(image.data.as_mut());
+            }
+            Some((terrain_texture_key(&name, base), image))
+        })
+        .collect()
 }
 
 /// Load/cache base + overlay handles for one terrain shader.
@@ -136,14 +185,7 @@ fn texture_handle(
     file_name: &str,
     sanitize_base_alpha: bool,
 ) -> Option<Handle<Image>> {
-    let key = format!(
-        "{file_name}:{}:{}",
-        crate::shapes::scenery_texture_environment(
-            openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0)
-        )
-        .cache_key(),
-        if sanitize_base_alpha { "base" } else { "raw" }
-    );
+    let key = terrain_texture_key(file_name, sanitize_base_alpha);
     if let Some(handle) = cache.get(&key) {
         return Some(handle.clone());
     }

@@ -26,7 +26,17 @@ use crate::parser::parse_from_first_paren;
 
 use std::path::Path;
 
-use super::{atom_to_number, atom_to_string};
+use super::{atom_to_number, atom_to_string, named_blocks};
+
+/// A station record in the player's native activity timetable. Times are
+/// seconds from midnight; DistanceDownPath is metadata, not a spawn offset.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlayerStationStop {
+    pub platform_start_id: u32,
+    pub arrival_time_s: f64,
+    pub departure_time_s: f64,
+    pub distance_down_path_m: f64,
+}
 
 /// One AI traffic service declared inside `Tr_Activity_Service_Definition` /
 /// `Traffic_Definition` blocks.
@@ -104,6 +114,8 @@ pub struct ActivityFile {
     pub season: Option<String>,
     /// AI traffic services parsed from `Service_Definition` blocks.
     pub services: Vec<TrafficServiceDef>,
+    /// Ordered passenger stops in Player_Traffic_Definition (never AI traffic).
+    pub player_stops: Vec<PlayerStationStop>,
     /// `TrItemId`s of signals listed under `FailedSignals` (force `Stop` aspect).
     pub failed_signals: Vec<u32>,
     /// Speed restrictions parsed from `RestrictedSpeedZones`.
@@ -151,6 +163,7 @@ impl ActivityFile {
         let restricted_zones = collect_restricted_zones(ast);
         let activity_objects = collect_activity_objects(ast);
         let sound_regions = collect_sound_regions(ast);
+        let player_stops = collect_player_stops(ast)?;
 
         Ok(Self {
             name,
@@ -161,6 +174,7 @@ impl ActivityFile {
             duration_s,
             season,
             services,
+            player_stops,
             failed_signals,
             restricted_zones,
             activity_objects,
@@ -372,32 +386,75 @@ fn parse_duration(ast: &Ast) -> f64 {
 }
 
 fn find_numeric_tuple(ast: &Ast, name: &str, count: usize) -> Option<Vec<f64>> {
-    let Ast::List(items) = ast else { return None };
-
-    if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
-        && head.eq_ignore_ascii_case(name)
-    {
-        let vals: Vec<f64> = items
+    named_blocks(ast, name).into_iter().find_map(|block| {
+        let Ast::List(items) = block else { return None };
+        let numbers: Vec<_> = items
             .iter()
-            .skip(1)
-            .take(count)
-            .filter_map(|a| match a {
-                Ast::Atom(Atom::Integer(i)) => Some(*i as f64),
-                Ast::Atom(Atom::Number(n)) => Some(*n),
+            .filter_map(|item| match item {
+                Ast::Atom(atom) => atom_to_number(atom),
                 _ => None,
             })
             .collect();
-        if vals.len() == count {
-            return Some(vals);
-        }
-    }
+        (numbers.len() == count).then_some(numbers)
+    })
+}
 
-    for child in items {
-        if let Some(v) = find_numeric_tuple(child, name, count) {
-            return Some(v);
+fn collect_player_stops(ast: &Ast) -> Result<Vec<PlayerStationStop>, FormatError> {
+    let mut stops = Vec::new();
+    for service in named_blocks(ast, "Player_Service_Definition") {
+        for traffic in named_blocks(service, "Player_Traffic_Definition") {
+            let values = |key: &str| -> Result<Vec<f64>, FormatError> {
+                named_blocks(traffic, key)
+                    .into_iter()
+                    .map(|block| {
+                        let number = match block {
+                            Ast::List(items) => items.iter().find_map(|item| match item {
+                                Ast::Atom(atom) => atom_to_number(atom),
+                                _ => None,
+                            }),
+                            _ => None,
+                        };
+                        number
+                            .filter(|number| number.is_finite() && *number >= 0.0)
+                            .ok_or_else(|| FormatError::UnexpectedAtom {
+                                key: key.into(),
+                                context: "Player_Traffic_Definition".into(),
+                                expected: "one finite, nonnegative number".into(),
+                            })
+                    })
+                    .collect()
+            };
+            let platforms = values("PlatformStartID")?;
+            let arrivals = values("ArrivalTime")?;
+            let departures = values("DepartTime")?;
+            let distances = values("DistanceDownPath")?;
+            if [arrivals.len(), departures.len(), distances.len()]
+                .iter()
+                .any(|n| *n != platforms.len())
+            {
+                return Err(FormatError::UnexpectedAtom {
+                    key: "station timetable".into(),
+                    context: "Player_Traffic_Definition".into(),
+                    expected: "one arrival, departure and distance per PlatformStartID".into(),
+                });
+            }
+            for (i, id) in platforms.into_iter().enumerate() {
+                if id.fract() != 0.0 || id > u32::MAX as f64 {
+                    return Err(FormatError::InvalidNumber {
+                        offset: 0,
+                        text: format!("PlatformStartID {id}"),
+                    });
+                }
+                stops.push(PlayerStationStop {
+                    platform_start_id: id as u32,
+                    arrival_time_s: arrivals[i],
+                    departure_time_s: departures[i],
+                    distance_down_path_m: distances[i],
+                });
+            }
         }
     }
-    None
+    Ok(stops)
 }
 
 /// Recursively walk the AST collecting every `Service_Definition` block.
@@ -811,4 +868,47 @@ fn parse_sound_region(items: &[Ast]) -> Option<SoundRegionOverride> {
         volume,
         radius_m,
     })
+}
+
+#[cfg(test)]
+mod timetable_tests {
+    use super::*;
+
+    #[test]
+    fn native_flat_player_timetable_keeps_order_and_ignores_ai() {
+        let source = r#"Tr_Activity (
+            Tr_Activity_Header ( Name ( "Native local" ) StartTime ( 9 29 0 ) Duration ( 1 0 ) )
+            Player_Service_Definition ( "local"
+                Player_Traffic_Definition ( 34140
+                    ArrivalTime ( 33420 ) DepartTime ( 34200 ) SkipCount ( 0 )
+                    DistanceDownPath ( 185.244 ) PlatformStartID ( 361 )
+                    ArrivalTime ( 34440 ) DepartTime ( 34500 ) SkipCount ( 1 )
+                    DistanceDownPath ( 2191.26 ) PlatformStartID ( 948 )
+                )
+                DistanceDownPath ( 9999 ) PlatformStartID ( 9999 )
+            )
+            Traffic_Definition ( Service_Definition ( "AI"
+                ArrivalTime ( 1 ) DepartTime ( 2 ) DistanceDownPath ( 1 ) PlatformStartID ( 1 ) ) )
+        )"#;
+        let ast = parse_from_first_paren(source).unwrap();
+        let activity = ActivityFile::from_ast(&ast).unwrap();
+        assert_eq!(activity.start_time_s, 34140.0);
+        assert_eq!(activity.duration_s, 3600.0);
+        assert_eq!(activity.player_stops.len(), 2);
+        assert_eq!(activity.player_stops[0].platform_start_id, 361);
+        assert_eq!(activity.player_stops[1].departure_time_s, 34500.0);
+        assert_eq!(activity.player_stops[1].distance_down_path_m, 2191.26);
+    }
+
+    #[test]
+    fn incomplete_timetable_is_rejected_instead_of_pairing_wrong_stations() {
+        let ast = parse_from_first_paren(
+            r#"(Player_Service_Definition "local"
+            (Player_Traffic_Definition 0
+                (ArrivalTime 0) (DepartTime 30) (DistanceDownPath 100) (PlatformStartID 1)
+                (ArrivalTime 60) (PlatformStartID 2)))"#,
+        )
+        .unwrap();
+        assert!(ActivityFile::from_ast(&ast).is_err());
+    }
 }

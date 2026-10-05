@@ -11,6 +11,7 @@
 //! For a single-vehicle consist (locomotive only), the propagation delay is
 //! zero and the behaviour is identical to the previous instantaneous model.
 
+use crate::native_ep_brake::{NativeEpState, PSI_TO_BAR};
 use openrailsrs_formats::{BrakeShoeFrictionCurve, resolve_brake_shoe_curve};
 use openrailsrs_train::{Consist, Vehicle};
 use serde::{Deserialize, Serialize};
@@ -68,6 +69,8 @@ pub struct BrakeCylinder {
     mass_kg: f64,
     /// Wheel-rail adhesion μ; 0 disables skid limit on this cylinder.
     skid_adhesion_mu: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    native_ep: Option<NativeEpState>,
 }
 
 /// Per-vehicle brake cylinder specification for [`BrakeSystem`].
@@ -191,18 +194,33 @@ impl BrakeCylinder {
             shoe_friction,
             mass_kg,
             skid_adhesion_mu,
+            native_ep: None,
         }
     }
 
     /// Wheel-rim braking force after shoe μ(v) and optional skid adhesion cap.
     pub fn effective_force_n(&self, speed_mps: f64) -> f64 {
-        let shoe = (self.current_force_n * self.shoe_friction.speed_factor(speed_mps))
-            .max(self.handbrake_force_n);
+        let coefficient = self
+            .native_ep
+            .as_ref()
+            .and_then(|ep| ep.friction_coefficient(self.current_force_n, speed_mps))
+            .unwrap_or_else(|| self.shoe_friction.speed_factor(speed_mps));
+        let shoe = (self.current_force_n * coefficient).max(self.handbrake_force_n);
         if self.skid_adhesion_mu > 0.0 && self.mass_kg > 0.0 {
             shoe.min(self.mass_kg * 9.81 * self.skid_adhesion_mu)
         } else {
             shoe
         }
+    }
+
+    pub fn pressure_bar(&self) -> f64 {
+        self.native_ep.as_ref().map_or_else(
+            || {
+                (self.current_force_n / self.max_force_n.max(1.)).clamp(0., 1.)
+                    * self.full_pressure_bar
+            },
+            |ep| ep.pressure_psi.max(0.) * PSI_TO_BAR,
+        )
     }
 
     /// Driver command this cylinder responds to (EP follows handle; train air holds during lap release).
@@ -234,6 +252,9 @@ pub struct BrakeSystem {
     train_air_lap_hold: bool,
     /// Seconds to dump train-air after driver full release when lap-hold is enabled.
     train_air_full_release_s: f64,
+    /// EP-only service wire does not reduce the pneumatic pipe pressure.
+    #[serde(default)]
+    ep_only_wire: bool,
 }
 
 impl BrakeSystem {
@@ -260,6 +281,7 @@ impl BrakeSystem {
                     v.mass_kg,
                     v.skid_adhesion_mu,
                 );
+                cylinder.native_ep = v.profile.native_ep.clone().map(NativeEpState::new);
                 if let Some(pressure) = v.profile.max_cylinder_bar {
                     cylinder.full_pressure_bar = pressure;
                 }
@@ -282,6 +304,9 @@ impl BrakeSystem {
             prev_command: 0.0,
             train_air_lap_hold,
             train_air_full_release_s: train_air_full_release_s.max(0.5),
+            ep_only_wire: vehicles
+                .first()
+                .is_some_and(|v| v.profile.native_ep.is_some()),
         }
     }
 
@@ -326,6 +351,10 @@ impl BrakeSystem {
     /// - `command == 0.0` → release.
     /// - `command > 0.0`  → apply at `command * max_force_n` (EP) or latched train-air level (wagons).
     pub fn step(&mut self, command: f64, dt: f64) {
+        self.step_with_speed(command, dt, 0.);
+    }
+
+    pub fn step_with_speed(&mut self, command: f64, dt: f64, speed_mps: f64) {
         let command = command.clamp(0.0, 1.0);
         let applying = command > 0.0;
         let command_changed = (command - self.prev_command).abs() > 1e-6;
@@ -349,11 +378,34 @@ impl BrakeSystem {
 
         for cyl in &mut self.cylinders {
             if cyl.air_vented {
+                if let Some(ep) = cyl.native_ep.as_mut() {
+                    ep.precharge(1.);
+                    cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                    cyl.state = BrakeState::Applied;
+                    continue;
+                }
                 cyl.current_force_n = cyl.max_force_n;
                 cyl.state = BrakeState::Applied;
                 continue;
             }
             if cyl.air_isolated {
+                continue;
+            }
+            if let Some(ep) = cyl.native_ep.as_mut() {
+                ep.step(command, dt, speed_mps);
+                cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                cyl.state = if command > 0. {
+                    BrakeState::Applying
+                } else {
+                    BrakeState::Releasing
+                };
+                continue;
+            }
+            if self.ep_only_wire {
+                // An ordinary air-braked car stays released while EP-only
+                // service leaves the shared pneumatic pipe fully charged.
+                cyl.current_force_n =
+                    (cyl.current_force_n - cyl.release_ramp_rate_n_per_s * dt).max(0.);
                 continue;
             }
             // Drain pending travel time.
@@ -428,6 +480,21 @@ impl BrakeSystem {
     pub fn precharge(&mut self, command: f64) {
         let command = command.clamp(0.0, 1.0);
         for cyl in &mut self.cylinders {
+            if let Some(ep) = cyl.native_ep.as_mut() {
+                ep.precharge(command);
+                cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                cyl.time_pending_s = 0.;
+                cyl.state = if command > 0. {
+                    BrakeState::Applied
+                } else {
+                    BrakeState::Charged
+                };
+                continue;
+            }
+            if self.ep_only_wire {
+                cyl.current_force_n = 0.;
+                continue;
+            }
             cyl.latched_command = if cyl.ep_instant || !self.train_air_lap_hold {
                 0.0
             } else {
@@ -457,6 +524,7 @@ impl Default for BrakeSystem {
             prev_command: 0.0,
             train_air_lap_hold: false,
             train_air_full_release_s: 3.0,
+            ep_only_wire: false,
         }
     }
 }
@@ -505,6 +573,7 @@ mod tests {
                     max_cylinder_bar: Some(3.0),
                     application_bar_s: Some(2.0),
                     release_bar_s: Some(1.0),
+                    ..Default::default()
                 },
             }],
             200.0,

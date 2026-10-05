@@ -212,6 +212,47 @@ fn import_activity_produces_scenario() {
 }
 
 #[test]
+fn native_timetable_rejects_a_signal_id_from_a_different_route_edition() {
+    let dir = tempfile::tempdir().unwrap();
+    let native = fixtures_dir().join("with_signals");
+    std::fs::copy(native.join("route.tdb"), dir.path().join("route.tdb")).unwrap();
+    std::fs::copy(
+        fixtures_dir().join("minimal.pat"),
+        dir.path().join("minimal.pat"),
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("track.toml"),
+        import_route(&native).unwrap(),
+    )
+    .unwrap();
+    let activity = dir.path().join("mismatched.act");
+    std::fs::write(
+        &activity,
+        r#"Tr_Activity (
+        Tr_Activity_Header ( Name ( "Mismatched edition" ) StartTime ( 8 0 0 ) Player_Path ( "minimal.pat" ) )
+        Tr_Activity_File ( Player_Service_Definition ( player
+            Player_Traffic_Definition ( 28800
+                ArrivalTime ( 28800 ) DepartTime ( 28860 )
+                DistanceDownPath ( 250 ) PlatformStartID ( 1 )
+            )
+        ) )
+    )"#,
+    )
+    .unwrap();
+    let error =
+        openrailsrs_msts::import_activity_with_track(dir.path(), &activity, Some(dir.path()))
+            .expect_err("a signal cannot become a station");
+    assert!(
+        error
+            .to_string()
+            .contains("Timetable item 1 is not a native platform"),
+        "{error}"
+    );
+    assert!(error.to_string().contains("same route edition"));
+}
+
+#[test]
 fn playable_native_activity_places_the_head_and_preserves_activity_overlays() {
     use openrailsrs_msts::{import_activity_with_consist_length, import_activity_with_track};
     let dir = tempfile::tempdir().unwrap();
@@ -774,7 +815,7 @@ fn engine_traction_curve_parsed() {
 }
 
 #[test]
-fn chiltern_birmingham_import_uses_pat_placement() {
+fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
     use openrailsrs_formats::ActivityFile;
     use openrailsrs_msts::import_activity_with_summary;
     use openrailsrs_msts::path_placement::{
@@ -806,8 +847,24 @@ fn chiltern_birmingham_import_uses_pat_placement() {
         direct.destination, "n17381",
         "with reverse edges, destination must leave the n17368→n17381 stub"
     );
-    let (toml, _, overlay_applied) =
-        import_activity_with_summary(route_dir, &act, Some(&out)).expect("import activity");
+    let imported = import_activity_with_summary(route_dir, &act, Some(&out));
+    let tdb = TrackDbFile::from_path(route_dir.join("Chiltern.tdb")).expect("native database");
+    // Some author editions retain this older activity after renumbering TDB
+    // items. Preserve the PAT placement check, but reject a signal used as a
+    // station rather than inventing a replacement platform from its position.
+    if let Some(stop) = activity.player_stops.iter().find(|stop| {
+        tdb.items.iter().any(|item| {
+            item.id == stop.platform_start_id && !matches!(item.kind, TrItemKind::Platform { .. })
+        })
+    }) {
+        let error = imported.expect_err("activity from a different TDB edition must fail");
+        assert!(error.to_string().contains(&format!(
+            "Timetable item {} is not a native platform",
+            stop.platform_start_id
+        )));
+        return;
+    }
+    let (toml, _, overlay_applied) = imported.expect("import activity");
     assert!(
         toml.contains("start = \"n17368\""),
         "player_path={} service={:?} offset={offset} direct_start={} scenario:\n{}",

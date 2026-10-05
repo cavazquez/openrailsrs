@@ -30,7 +30,7 @@ impl NativeSignalRuntime {
             if let Some(native) = signal.script.as_ref().and_then(|s| s.native.as_ref()) {
                 if !matches!(
                     native.function.to_ascii_uppercase().as_str(),
-                    "NORMAL" | "DISTANCE" | "INFO"
+                    "NORMAL" | "DISTANCE" | "INFO" | "REPEATER" | "SHUNTING"
                 ) {
                     return Err(format!(
                         "{}: unsupported signal function {}",
@@ -78,7 +78,7 @@ impl LiveDriveSession {
                     .parked_head_chainage_m
                     .unwrap_or(self.head_chainage_m())
             };
-            let center = head + self.formation.offset_m(i);
+            let center = head + self.formation.center_offset_m(i);
             let rear = (center - car.length_m * 0.5).max(0.0);
             let front = center + car.length_m * 0.5;
             let mut start = 0.0;
@@ -208,13 +208,95 @@ impl LiveDriveSession {
                                     openrailsrs_track::SwitchPosition::Straight => stem_edge,
                                     openrailsrs_track::SwitchPosition::Diverging => diverging_edge,
                                 };
-                            // Only outward links of this directed edge affect authority.
-                            !self.graph.outgoing_edges(&edge.to.0).contains(&desired.0)
-                                || desired.0 == self.state.path_edges[i + 1]
+                            let Some(next) = self.state.path_edges.get(i + 1) else {
+                                return true;
+                            };
+                            if next == &stem_edge.0 || next == &diverging_edge.0 {
+                                desired.0 == *next
+                            } else {
+                                // A trailing traversal must enter from the selected
+                                // branch before leaving through the common pin.
+                                let incoming = &self.state.path_edges[i];
+                                let reverse = incoming
+                                    .strip_suffix("_r")
+                                    .map(str::to_owned)
+                                    .unwrap_or_else(|| format!("{incoming}_r"));
+                                desired.0 == reverse
+                            }
                         }
                         _ => true,
                     }
                 });
+                let native = self
+                    .graph
+                    .signal(id)
+                    .unwrap()
+                    .script
+                    .as_ref()
+                    .unwrap()
+                    .native
+                    .as_ref()
+                    .unwrap();
+                let same_group = |other: &str| {
+                    self.graph
+                        .signal(other)
+                        .and_then(|s| s.script.as_ref())
+                        .and_then(|s| s.native.as_ref())
+                        .is_some_and(|other| native.group.is_some() && native.group == other.group)
+                };
+                let group_aspect = |function: &str| {
+                    heads
+                        .iter()
+                        .filter(|h| {
+                            same_group(&h.2)
+                                && self
+                                    .graph
+                                    .signal(&h.2)
+                                    .unwrap()
+                                    .script
+                                    .as_ref()
+                                    .unwrap()
+                                    .native
+                                    .as_ref()
+                                    .unwrap()
+                                    .function
+                                    .eq_ignore_ascii_case(function)
+                        })
+                        .filter_map(|h| {
+                            states
+                                .get(&h.2)
+                                .or_else(|| self.native_signals.aspects.get(&h.2))
+                                .copied()
+                        })
+                        .max()
+                        .unwrap_or(0)
+                };
+                let next_function = |function: &str| {
+                    heads
+                        .iter()
+                        .find(|h| {
+                            h.0 > *position + 0.1
+                                && self
+                                    .graph
+                                    .signal(&h.2)
+                                    .unwrap()
+                                    .script
+                                    .as_ref()
+                                    .unwrap()
+                                    .native
+                                    .as_ref()
+                                    .unwrap()
+                                    .function
+                                    .eq_ignore_ascii_case(function)
+                        })
+                        .and_then(|h| {
+                            states
+                                .get(&h.2)
+                                .or_else(|| self.native_signals.aspects.get(&h.2))
+                                .copied()
+                        })
+                        .unwrap_or(0)
+                };
                 let c = SignalContext {
                     enabled: *position + 1.0 >= self.head_chainage_m(),
                     route_set,
@@ -223,7 +305,40 @@ impl LiveDriveSession {
                             && !self.dispatcher.waiting_for.is_empty()),
                     next_normal: next_aspect,
                     distant_normal: distant,
+                    distant_info: heads
+                        .iter()
+                        .filter(|h| h.0 > *position + 0.1 && h.0 <= next_position + 0.1)
+                        .filter(|h| {
+                            self.graph
+                                .signal(&h.2)
+                                .unwrap()
+                                .script
+                                .as_ref()
+                                .unwrap()
+                                .native
+                                .as_ref()
+                                .unwrap()
+                                .function
+                                .eq_ignore_ascii_case("INFO")
+                        })
+                        .filter_map(|h| {
+                            states
+                                .get(&h.2)
+                                .or_else(|| self.native_signals.aspects.get(&h.2))
+                                .copied()
+                        })
+                        .min()
+                        .unwrap_or(0),
                     this_normal: this,
+                    feature_flags: native.feature_flags,
+                    this_shunting: group_aspect("SHUNTING"),
+                    this_info: group_aspect("INFO"),
+                    next_info: next_function("INFO"),
+                    next_distance: next_function("DISTANCE"),
+                    next_repeater: next_function("REPEATER"),
+                    next_shunting: next_function("SHUNTING"),
+                    this_distance: group_aspect("DISTANCE"),
+                    this_repeater: group_aspect("REPEATER"),
                     ..Default::default()
                 };
                 let aspect = match self.native_signals.programs[id].evaluate(c) {
@@ -236,14 +351,15 @@ impl LiveDriveSession {
                 // Restrict the native state before evaluating upstream heads.
                 // Otherwise NEXT_SIG_LR sees Clear behind a dispatcher Stop.
                 let aspect = match self.signal_overrides.get(id) {
+                    _ if native.forced_stop => 0,
                     Some(SignalAspect::Stop) => 0,
                     Some(SignalAspect::Caution) if aspect > 5 => 3,
                     _ => aspect,
                 };
                 states.insert(id.clone(), aspect);
                 let safety = match aspect {
-                    0..=2 => SignalAspect::Stop,
-                    3..=5 => SignalAspect::Caution,
+                    0..=1 => SignalAspect::Stop,
+                    2..=5 => SignalAspect::Caution,
                     _ => SignalAspect::Clear,
                 };
                 let safety = match self.signal_overrides.get(id) {
@@ -259,7 +375,12 @@ impl LiveDriveSession {
                     .signal(id)
                     .and_then(|s| s.script.as_ref())
                     .and_then(|s| s.native.as_ref())
-                    .is_some_and(|s| s.function.eq_ignore_ascii_case("INFO"));
+                    .is_some_and(|s| {
+                        matches!(
+                            s.function.to_ascii_uppercase().as_str(),
+                            "INFO" | "REPEATER" | "SHUNTING"
+                        )
+                    });
                 self.signal_runtime.insert(
                     id.clone(),
                     if info {

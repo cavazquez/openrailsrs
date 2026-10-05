@@ -24,6 +24,16 @@ pub fn resolve_davis_coefficients(
     {
         return parsed;
     }
+    if meta
+        .legacy_friction_speed_mps
+        .is_some_and(|v| !(0.0..=4.4407).contains(&v))
+    {
+        return DavisCoefficients {
+            a_n: 6.3743 * mass_kg / 1000.0 + 128.998 * 4.0,
+            b_n_per_mps: 0.49358 * mass_kg / 1000.0,
+            c_n_per_mps2: 0.11979 * 100.0 / 10.76,
+        };
+    }
     auto_davis_coefficients(parsed, mass_kg, is_loco, meta)
 }
 

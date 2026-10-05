@@ -9,6 +9,29 @@ pub struct VehicleBrakeProfile {
     pub max_cylinder_bar: Option<f64>,
     pub application_bar_s: Option<f64>,
     pub release_bar_s: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_ep: Option<NativeEpBrakeProfile>,
+}
+
+/// Authored advanced EP hardware, expressed in the native solver's PSI units.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeEpBrakeProfile {
+    pub diameter_m: f64,
+    pub stroke_m: f64,
+    pub spring_psi: f64,
+    pub reference_psi: f64,
+    pub max_psi: f64,
+    pub service_psi: f64,
+    pub application_psi_s: f64,
+    pub release_psi_s: f64,
+    pub auxiliary_volume_m3: f64,
+    pub charging_psi_s: f64,
+    pub shoe_count: f64,
+    pub shoe_type: String,
+    pub main_reservoir: bool,
+    pub low_stage_psi: Option<f64>,
+    pub stage_up_mps: f64,
+    pub stage_down_mps: f64,
 }
 impl VehicleBrakeProfile {
     pub fn electro_pneumatic(&self) -> Option<bool> {
@@ -18,7 +41,7 @@ impl VehicleBrakeProfile {
     }
 }
 
-fn scalar(ast: &Ast, key: &str) -> Option<String> {
+pub(super) fn scalar(ast: &Ast, key: &str) -> Option<String> {
     let block = named_blocks(ast, key).into_iter().next()?;
     let Ast::List(items) = block else { return None };
     items
@@ -33,7 +56,7 @@ fn scalar(ast: &Ast, key: &str) -> Option<String> {
         })
         .next()
 }
-fn pressure(value: String) -> Option<f64> {
+pub(super) fn pressure(value: String) -> Option<f64> {
     let value = value.trim().to_ascii_lowercase();
     let end = value
         .find(|c: char| !c.is_ascii_digit() && !matches!(c, '.' | '-' | '+' | 'e'))
@@ -63,7 +86,82 @@ pub fn parse_vehicle_brake_profile(ast: &Ast) -> VehicleBrakeProfile {
         .find_map(|k| scalar(ast, k).and_then(pressure)),
         application_bar_s: scalar(ast, "MaxApplicationRate").and_then(pressure),
         release_bar_s: scalar(ast, "MaxReleaseRate").and_then(pressure),
+        native_ep: parse_native_ep(ast),
     }
+}
+
+fn parse_native_ep(ast: &Ast) -> Option<NativeEpBrakeProfile> {
+    if !scalar(ast, "BrakeSystemType")?.eq_ignore_ascii_case("EP")
+        || scalar(ast, "ORTSEPBrakeControlsBrakePipe")?
+            .parse::<u32>()
+            .ok()?
+            != 0
+    {
+        return None;
+    }
+    let psi = |key: &str| {
+        scalar(ast, key)
+            .and_then(pressure)
+            .map(|bar| bar / 0.0689475729)
+    };
+    let length = |key: &str| scalar(ast, key).and_then(|s| crate::msts_units::parse_length_m(&s));
+    let speed =
+        |key: &str| scalar(ast, key).and_then(|s| crate::msts_units::parse_velocity_mps(&s));
+    let diameter_m = length("ORTSBrakeCylinderDiameter")?;
+    let stroke_m = length("ORTSBrakeCylinderPistonTravel")?;
+    let max_psi = psi("BrakeCylinderPressureForMaxBrakeBrakeForce")?;
+    let reference_psi = psi("ORTSBrakeForceReferencePressure").unwrap_or(max_psi);
+    let spring_psi = psi("ORTSCylinderSpringPressure").unwrap_or(5.);
+    if ![diameter_m, stroke_m, max_psi, reference_psi, spring_psi]
+        .iter()
+        .all(|v| v.is_finite() && *v > 0.)
+        || diameter_m > 2.
+        || stroke_m > 2.
+        || spring_psi >= reference_psi
+        || spring_psi >= 45.
+    {
+        return None;
+    }
+    let auxiliary_volume_m3 = scalar(ast, "ORTSAuxiliaryResCapacity")
+        .and_then(|s| {
+            let end = s
+                .find(|c: char| !c.is_ascii_digit() && !matches!(c, '.' | '+' | '-' | 'e'))
+                .unwrap_or(s.len());
+            let value: f64 = s[..end].parse().ok()?;
+            let unit = s[end..].trim().to_ascii_lowercase();
+            let factor = if unit.starts_with("in") {
+                0.0254f64.powi(3)
+            } else if unit.starts_with("ft") {
+                0.3048f64.powi(3)
+            } else {
+                1.
+            };
+            (value.is_finite() && value > 0.).then_some(value * factor)
+        })
+        .unwrap_or(0.07);
+    Some(NativeEpBrakeProfile {
+        diameter_m,
+        stroke_m,
+        max_psi,
+        reference_psi,
+        spring_psi,
+        service_psi: psi("ORTSMaxServiceCylinderPressure").unwrap_or(max_psi),
+        application_psi_s: psi("ORTSMaxServiceApplicationRate")
+            .or_else(|| psi("MaxApplicationRate"))
+            .unwrap_or(3.),
+        release_psi_s: psi("MaxReleaseRate").unwrap_or(10.),
+        auxiliary_volume_m3,
+        charging_psi_s: psi("MaxAuxiliaryChargingRate").unwrap_or(2.),
+        shoe_count: scalar(ast, "ORTSNumberCarBrakeShoes")
+            .and_then(|s| s.parse::<f64>().ok())
+            .filter(|v| v.is_finite() && *v > 0.)
+            .unwrap_or(8.),
+        shoe_type: scalar(ast, "ORTSBrakeShoeType").unwrap_or_else(|| "Cast_Iron_P6".into()),
+        main_reservoir: !named_blocks(ast, "Engine").is_empty(),
+        low_stage_psi: psi("ORTSTwoStageLowPressure"),
+        stage_up_mps: speed("ORTSTwoStageIncreasingSpeed").unwrap_or(0.),
+        stage_down_mps: speed("ORTSTwoStageDecreasingSpeed").unwrap_or(0.),
+    })
 }
 
 #[derive(Clone, Debug, PartialEq)]

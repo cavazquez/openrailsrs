@@ -267,7 +267,14 @@ pub enum TrItemKind {
     SoundSource { sms_file: Option<String> },
     /// `SpeedPostItem`: wayside speed limit (second field of `SpeedpostTrItemData` is mph).
     SpeedPost { speed_mph: f64 },
-    /// Any other `TrItem` kind (siding, platform, level crossing, etc.).
+    /// One end of a native platform; the reciprocal pair defines its extent.
+    Platform {
+        pair_id: u32,
+        station: String,
+        name: String,
+        passengers_waiting: u32,
+    },
+    /// Any other `TrItem` kind (siding, level crossing, etc.).
     Other,
 }
 
@@ -1468,6 +1475,29 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     } else if tag.eq_ignore_ascii_case("SpeedPostItem") {
         TrItemKind::SpeedPost {
             speed_mph: parse_speed_post_limit_mph(items),
+        }
+    } else if tag.eq_ignore_ascii_case("PlatformItem") {
+        let pair = find_tr_item_numbered_block(items, "PlatformTrItemData", 1)?;
+        let pair_id = *pair.last()?;
+        if !pair_id.is_finite()
+            || pair_id < 0.0
+            || pair_id.fract() != 0.0
+            || pair_id > u32::MAX as f64
+        {
+            return None;
+        }
+        TrItemKind::Platform {
+            pair_id: pair_id as u32,
+            station: super::activity::find_string_field(ast, &["Station"]).unwrap_or_default(),
+            name: super::activity::find_string_field(ast, &["PlatformName"]).unwrap_or_default(),
+            passengers_waiting: find_tr_item_numbered_block(
+                items,
+                "PlatformNumPassengersWaiting",
+                1,
+            )
+            .and_then(|numbers| numbers.first().copied())
+            .filter(|n| n.is_finite() && *n >= 0.0 && *n <= u32::MAX as f64)
+            .unwrap_or(0.0) as u32,
         }
     } else {
         TrItemKind::Other

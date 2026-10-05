@@ -48,22 +48,29 @@ python3 scripts/verify_chiltern_service_capture.py
 python3 scripts/run_oracles.py --suite service --out-dir tmp/service-parity
 ```
 
-El nuevo objetivo de `oracles/chiltern-service.toml` es diagnóstico y devuelve
-**FAIL** con RMS 7,5153 m/s, pico 16,6450 m/s y odómetro máximo 3029,15 m,
-frente a los presupuestos existentes de 0,75 m/s, 2 m/s y 45 m. Utiliza
-columnas y unidades explícitas en m/s, controles aplicados en su tick y
-cobertura completa. Se aíslan las órdenes del freno/regulador mediante un
-escenario de replay sin intervenciones automáticas del runner antiguo.
-`check.sh` verifica la integridad y contratos de la referencia completa,
-además de los cuatro casos físicos ya aceptados y el servicio Bevy.
+El servicio completo de `oracles/chiltern-service.toml` pasa desde la revisión
+del 5 de octubre de 2026: RMS **0,2081 m/s**, pico **1,0921 m/s** y diferencia
+máxima de odómetro **39,61 m**, con cobertura del 100 %. Los presupuestos siguen
+siendo 0,75 m/s, 2 m/s y 45 m; las cinco fases también cumplen su RMS ≤1,10 m/s.
+La referencia de Open Rails 1.6.1, sus 15003 muestras, los controles y sus hashes
+permanecen intactos. `check.sh` ejecuta ahora los cuatro ensayos cortos y este
+servicio completo, además de la partida jugable.
 
-La importación y el escenario extendido corrigen el poste de 35 mph aplicado a
-todo el vector 96, incorporan pendientes nativas y reconocen los frenos EP de
-ENG/WAG. Su efecto sobre la comparación completa requiere actualizar de forma
-explícita el escenario de replay histórico y contrastarlo nuevamente con OR. El servicio usa ahora una demanda de freno EP en [0,1], con
-escalas de conductor/cilindro ambas de 45 PSI. Las capturas anteriores
-conservan su propio convenio de presión. Los objetivos de aceptación de
-velocidad/distancia y las referencias anteriores permanecen iguales.
+El replay usa las pendientes/límites nativos del corredor y una extracción
+numérica independiente de la formación original: 440906,4 kg, 166,164 m,
+gobernadores distintos para ambos motores, escalones reales del regulador,
+corte de tracción por presión del cilindro, EP con carrera del pistón y zapatas,
+patinaje Pacha, rodamientos con temperatura y conexiones rígidas declaradas.
+No incluye los recursos gráficos descargados en Git. Procedencia, extracción y
+condiciones del entorno: [fixtures físicos](../examples/chiltern_local/physics/README.md).
+
+El cliente original avanzaba el simulador con el clima pausado. Se reproducen
+esas entradas explícitamente, con factor base de adherencia 0,5, primer sector
+resbaladizo de la semilla original y temperatura inicial medida; el ruido de
+adherencia se representa por su media. El resultado certifica este ensayo y sus
+presupuestos, no equivalencia universal de motores, frenado, clima o scripts.
+La escala de demanda EP de este caso es 45 PSI. Los casos cortos mantienen su
+convenio histórico y su material rodante, sin volver a capturar sus referencias.
 
 Con el Content original disponible, este comando agrega la comparación
 espacial de las tres estaciones contra los extremos de andén del TDB original:
@@ -113,11 +120,12 @@ El presupuesto nativo de subida de recursos a GPU es de 8 MiB por cuadro
 (límite flexible de Bevy). El informe conserva el histograma de toda la sesión
 y separa los máximos/tirones de carga inicial y partida para comparar mediciones.
 
-Los cuatro ensayos cortos siguen pasando sin cambiar tolerancias. El diagnóstico
-completo continúa **FAIL**: RMS 7,5749 m/s, pico 16,6450 m/s y odómetro máximo
-2717,27 m. Completar el servicio de seis estaciones demuestra funcionamiento; no
-cierra esa brecha física. `docs/PLAYER_MANUAL_TESTS.md` secciones 15–20 documenta
-los modos normal/práctica y la verificación de las cinco mejoras.
+Los cuatro ensayos cortos y el servicio completo pasan con sus tolerancias
+originales. El viaje gráfico de seis estaciones verifica además continuidad de
+escenario, señales y detenciones. Son comprobaciones distintas: la tolerancia
+física del servicio nativo de tres estaciones no certifica todos los horarios.
+La sección 33 de [las pruebas manuales](PLAYER_MANUAL_TESTS.md) y la última
+ampliación de [QA](PLAYER_POLISH_QA.md) documentan las mejoras y sus evidencias.
 
 ## Escenario y oráculos gráficos
 

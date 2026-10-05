@@ -1,0 +1,39 @@
+{
+  "content": "Chiltern original RF Blue Pullman, Birmingham Pullman formation",
+  "generator": "scripts/prepare_chiltern_physics.py",
+  "reference_version": "Open Rails 1.6.1",
+  "sources": {
+    "RF_WP_DMBSA.eng": {
+      "source_sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "fixture_sha256": "91a2e89e1fa251283194b397ab45141c56308e8ddac4624de3344e4490c57066"
+    },
+    "RF_WP_PSB.wag": {
+      "source_sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "fixture_sha256": "0afd4fae879df240f40722d1fdf2864a17a72524f9a46efcc3b111abea54e818"
+    },
+    "RF_WP_KFC.wag": {
+      "source_sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "fixture_sha256": "8c47f1de2a9806145de42277cce971db0841f2c01aabe23be23f74b5cbae6e14"
+    },
+    "RF_WP_PCFD.wag": {
+      "source_sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "fixture_sha256": "77139cedcffa68ae1706e371ff29a9016d8b20d5912ea7a8cbb272c9131db04c"
+    },
+    "RF_WP_PCFE.wag": {
+      "source_sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "fixture_sha256": "80125b73b5e864dfff8bef9f71d6291bd28b0ac07cf9605d8a133a0c36229f7a"
+    },
+    "RF_WP_KFF.wag": {
+      "source_sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "fixture_sha256": "1f9d7d0c6578e579dce98662a430a016d526e7da28bbbc543ef8aa70b6d8c568"
+    },
+    "RF_WP_PSG.wag": {
+      "source_sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "fixture_sha256": "cbac03c2943bb65de2f0ea4a44fd2091d4883dc0c72058566d17474d36e095a2"
+    },
+    "RF_WP_DMBSH.eng": {
+      "source_sha256": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402",
+      "fixture_sha256": "cde6c25417a5aaa0724970bb7f3a519c7d0c294f03d0da95052a8f6452bd8524"
+    }
+  }
+}

@@ -78,6 +78,9 @@ def main():
     parser.add_argument("--renderer", choices=["auto", "gpu", "cpu"], default="auto")
     parser.add_argument("--texture-cache", choices=["on", "off"], default="on")
     parser.add_argument("--texture-upload", choices=["auto", "rgba"], default="auto")
+    parser.add_argument("--debug-materials", action="store_true")
+    parser.add_argument("--capture-or-focus", action="store_true",
+                        help="match the native reference's exterior focus on the lead vehicle centre")
     parser.add_argument("--particle-budget", type=int)
     parser.add_argument("--clock-time-s", type=float, default=35700)
     parser.add_argument("--station", action="append", help="station slug; repeat to select views")

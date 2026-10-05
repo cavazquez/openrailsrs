@@ -7,15 +7,13 @@ use std::time::Instant;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::tasks::{Task, futures::check_ready};
 use openrailsrs_bevy_scenery::{
-    MergedTerrainChunk, TerrainMeshMode, merge_patch_into_chunks, mesh_from_terrain_data_owned,
-    reduce_chunk_maps, set_terrain_repeat_sampler, terrain_patch_offset_in_tile,
+    TerrainMeshMode, mesh_from_terrain_data_owned, set_terrain_repeat_sampler,
 };
 use openrailsrs_formats::{
-    TerrainPatch, build_patch_mesh_data_sampled, build_tile_mesh_data_sampled,
-    msts_tile_world_origin, terrain_patches_per_side,
+    build_tile_mesh_data_sampled, msts_tile_world_origin, terrain_patches_per_side,
 };
-use rayon::prelude::*;
 
 use crate::shapes::RouteAssets;
 use crate::terrain::{TerrainScene, TerrainTile};
@@ -25,9 +23,6 @@ use crate::terrain_sampler::{LoadedTerrainTile, TerrainTileCache};
 use crate::{log_step, viewer_log};
 
 const COLOR_TERRAIN_FALLBACK: Color = Color::srgb(0.28, 0.42, 0.22);
-/// Merged material chunks are cheap enough to finish the initial tile set in one
-/// Update, avoiding wall-clock inflation from interleaving with WORLD spawn (#60).
-const TERRAIN_TILES_PER_FRAME: usize = 8;
 
 /// viewer3d terrain entity strategy (#122): merge by material key.
 const _: TerrainMeshMode = TerrainMeshMode::ChunkMerge;
@@ -65,10 +60,9 @@ fn spawn_textured_patches(
     origin_shift: Vec3,
 ) -> (usize, usize, usize) {
     let tile = &current.tile;
-    let patch_set = match tile.primary_patch_set() {
-        Some(set) => set,
-        None => return (0, 0, 0),
-    };
+    if tile.primary_patch_set().is_none() {
+        return (0, 0, 0);
+    }
     let (wx, wz) = msts_tile_world_origin(tile.tile_x, tile.tile_z);
     let tile_origin = Vec3::new(
         wx - render_origin.x - origin_shift.x,
@@ -76,74 +70,36 @@ fn spawn_textured_patches(
         wz - render_origin.z - origin_shift.z,
     );
 
-    // Collect drawable patches, then build meshes in parallel before merging (#60).
-    let mut jobs: Vec<(u32, u32, TerrainPatch, String)> = Vec::new();
-    for pz in 0..patch_set.npatches {
-        for px in 0..patch_set.npatches {
-            let Some(patch) = patch_set.patch_at(px, pz).cloned() else {
-                continue;
-            };
-            if !patch.drawing_enabled() {
-                continue;
-            }
-            let shader = tile
-                .shaders
-                .get(patch.shader_index as usize)
-                .or_else(|| tile.shaders.first());
-            let Some(shader) = shader else {
-                continue;
-            };
-            let key = terrain_shader_material_key(shader);
-            if !material_cache.contains_key(&key) {
-                let (base, overlay, overlay_scale) = terrain_material_textures(
-                    route_dir,
-                    images,
-                    texture_cache,
-                    shader,
-                    fallback_tex.clone(),
-                );
-                material_cache.insert(
-                    key.clone(),
-                    materials.add(TerrainMaterial {
-                        overlay_scale,
-                        base_texture: base,
-                        overlay_texture: overlay,
-                        surface_weather: Vec2::ZERO,
-                    }),
-                );
-            }
-            jobs.push((px, pz, patch, key));
+    // Use the same native geometry builder as asynchronous terrain preparation.
+    let merged = crate::terrain_prepare::prepare_patch_chunks(current, tile_cache);
+    for key in merged.keys() {
+        if material_cache.contains_key(key) {
+            continue;
         }
+        let Some(shader) = tile
+            .shaders
+            .iter()
+            .find(|s| terrain_shader_material_key(s) == *key)
+        else {
+            continue;
+        };
+        let (base, overlay, overlay_scale) = terrain_material_textures(
+            route_dir,
+            images,
+            texture_cache,
+            shader,
+            fallback_tex.clone(),
+        );
+        material_cache.insert(
+            key.clone(),
+            materials.add(TerrainMaterial {
+                overlay_scale,
+                base_texture: base,
+                overlay_texture: overlay,
+                surface_weather: Vec2::ZERO,
+            }),
+        );
     }
-
-    let sample_size = tile.samples.sample_size;
-    // Parallel build+merge by material key via bevy-scenery::terrain (#60 / #122).
-    let merged: HashMap<String, MergedTerrainChunk> = jobs
-        .into_par_iter()
-        .fold(HashMap::new, |mut acc, (px, pz, patch, key)| {
-            let mesh_data = build_patch_mesh_data_sampled(
-                sample_size,
-                px,
-                pz,
-                Some(&patch),
-                true,
-                |ux, uz| tile_cache.sample_elevation(current, ux, uz),
-                |ux, uz| tile_cache.sample_hidden(current, ux, uz),
-            );
-            let patch_holed = current
-                .features
-                .as_ref()
-                .is_some_and(|f| f.patch_has_hidden_vertices(px, pz));
-            merge_patch_into_chunks(
-                &mut acc,
-                key,
-                mesh_data,
-                terrain_patch_offset_in_tile(px, pz),
-                patch_holed,
-            );
-            acc
-        })
-        .reduce(HashMap::new, reduce_chunk_maps);
 
     let mut patch_count = 0usize;
     let mut holed = 0usize;
@@ -296,6 +252,8 @@ pub struct TerrainSpawnProgress {
     fallback_material: Handle<StandardMaterial>,
     render_origin: Vec3,
     height_origin: f32,
+    preparation: Option<Task<crate::terrain_prepare::PreparedTerrainTile>>,
+    prepared: Option<crate::terrain_prepare::PreparedTerrainTile>,
 }
 
 impl TerrainSpawnProgress {
@@ -326,6 +284,8 @@ impl TerrainSpawnProgress {
             fallback_material,
             render_origin: focus.center,
             height_origin: focus.height_origin,
+            preparation: None,
+            prepared: None,
         }
     }
 
@@ -441,30 +401,73 @@ pub fn progressive_terrain_spawn_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut terrain_materials: ResMut<Assets<TerrainMaterial>>,
+    stream: Option<ResMut<TerrainTileStream>>,
 ) {
     let Some(mut progress) = progress else {
         return;
     };
-    let origin_shift = crate::floating_origin::horizontal_shift(origin.shift);
-    // Streaming may remove pending tiles when the live focus changes. Finish
-    // an exhausted initial queue rather than slicing past the current scene.
-    let start = progress.tile_index.min(terrain.tiles.len());
-    let end = (start + TERRAIN_TILES_PER_FRAME).min(terrain.tiles.len());
-    for terrain_tile in &terrain.tiles[start..end] {
-        progress.spawn_scene_tile(
-            terrain_tile,
-            &route_dir.route_dir,
-            origin_shift,
+    let progress = &mut *progress;
+    if let Some(task) = progress.preparation.as_mut() {
+        let Some(prepared) = check_ready(task) else {
+            return;
+        };
+        progress.preparation = None;
+        progress.prepared = Some(prepared);
+    }
+    if let Some(mut prepared) = progress.prepared.take() {
+        let published = prepared.publish(
             &mut commands,
             &mut meshes,
             &mut images,
             &mut terrain_materials,
+            &mut progress.texture_cache,
+            &mut progress.material_cache,
+            &progress.fallback_tex,
+            &progress.fallback_material,
+            &route_dir.route_dir,
+            progress.render_origin,
+            crate::floating_origin::horizontal_shift(origin.shift),
         );
+        progress.spawned_patches += published.patches;
+        progress.spawned_chunks += published.chunks;
+        progress.holed_patches += published.holed;
+        if published.done {
+            progress.spawned_tiles += 1;
+            progress.tile_index += 1;
+        } else {
+            progress.prepared = Some(prepared);
+            return;
+        }
     }
-    progress.tile_index = end;
     if progress.tile_index >= terrain.tiles.len() {
         progress.log_summary();
+        if let Some(mut stream) = stream {
+            stream
+                .texture_cache
+                .extend(std::mem::take(&mut progress.texture_cache));
+            stream
+                .material_cache
+                .extend(std::mem::take(&mut progress.material_cache));
+            stream.fallback_tex = Some(progress.fallback_tex.clone());
+            stream.fallback_material = Some(progress.fallback_material.clone());
+        }
         commands.remove_resource::<TerrainSpawnProgress>();
+    } else {
+        let tile = &terrain.tiles[progress.tile_index];
+        if let Some(current) = progress
+            .tile_cache
+            .get_display(tile.tile_x, tile.tile_z)
+            .cloned()
+        {
+            progress.preparation = Some(crate::terrain_prepare::start_preparation(
+                current,
+                progress.tile_cache.clone(),
+                route_dir.route_dir.clone(),
+                progress.height_origin,
+            ));
+        } else {
+            progress.tile_index += 1;
+        }
     }
 }
 
@@ -532,9 +535,21 @@ pub struct TerrainTileStream {
     fallback_material: Option<Handle<StandardMaterial>>,
     render_origin: Vec3,
     height_origin: f32,
+    preparation: Option<(
+        (i32, i32),
+        Task<crate::terrain_prepare::PreparedTerrainTile>,
+    )>,
+    prepared: Option<crate::terrain_prepare::PreparedTerrainTile>,
 }
 
 impl TerrainTileStream {
+    pub(crate) fn pending_work(&self) -> usize {
+        self.pending_load.len()
+            + self.pending_spawn.len()
+            + usize::from(self.preparation.is_some())
+            + usize::from(self.prepared.is_some())
+    }
+
     pub fn new(
         route_dir: &Path,
         terrain: &TerrainScene,
@@ -562,6 +577,8 @@ impl TerrainTileStream {
             fallback_material: None,
             render_origin: focus.center,
             height_origin: focus.height_origin,
+            preparation: None,
+            prepared: None,
         }
     }
 }
@@ -731,13 +748,43 @@ pub fn terrain_tile_spawn_stream_system(
     if !opts.live || mode.is_track_focused() || mode.is_tile_lab() || progress.is_some() {
         return;
     }
-    if stream.pending_spawn.is_empty() {
+    if let Some((key, task)) = stream.preparation.as_mut() {
+        let key = *key;
+        let Some(prepared) = check_ready(task) else {
+            return;
+        };
+        stream.preparation = None;
+        // An unloaded sector must not reappear when its old worker completes.
+        if stream.loaded.contains(&key) {
+            stream.prepared = Some(prepared);
+        }
+    }
+    if stream.prepared.is_none() {
+        if stream.pending_spawn.is_empty() {
+            return;
+        }
+        let key = stream.pending_spawn.remove(0);
+        if !terrain
+            .tiles
+            .iter()
+            .any(|tile| (tile.tile_x, tile.tile_z) == key)
+        {
+            return;
+        }
+        let Some(current) = stream.tile_cache.get_display(key.0, key.1).cloned() else {
+            return;
+        };
+        stream.preparation = Some((
+            key,
+            crate::terrain_prepare::start_preparation(
+                current,
+                stream.tile_cache.clone(),
+                route_dir.route_dir.clone(),
+                stream.height_origin,
+            ),
+        ));
         return;
     }
-    let key = stream.pending_spawn.remove(0);
-    let Some(tile) = terrain.tiles.iter().find(|t| (t.tile_x, t.tile_z) == key) else {
-        return;
-    };
     if stream.fallback_tex.is_none() {
         stream.fallback_tex = Some(fallback_terrain_image(&mut images));
         stream.fallback_material = Some(std_materials.add(StandardMaterial {
@@ -748,33 +795,27 @@ pub fn terrain_tile_spawn_stream_system(
             ..default()
         }));
     }
-    let mut scratch = TerrainSpawnProgress {
-        started: Instant::now(),
-        tile_index: 0,
-        spawned_tiles: 0,
-        spawned_patches: 0,
-        spawned_chunks: 0,
-        holed_patches: 0,
-        tile_cache: stream.tile_cache.clone(),
-        texture_cache: std::mem::take(&mut stream.texture_cache),
-        material_cache: std::mem::take(&mut stream.material_cache),
-        fallback_tex: stream.fallback_tex.clone().unwrap(),
-        fallback_material: stream.fallback_material.clone().unwrap(),
-        render_origin: stream.render_origin,
-        height_origin: stream.height_origin,
-    };
-    scratch.spawn_scene_tile(
-        tile,
-        &route_dir.route_dir,
-        crate::floating_origin::horizontal_shift(origin.shift),
+    let stream = &mut *stream;
+    let mut prepared = stream.prepared.take().unwrap();
+    if !stream.loaded.contains(&prepared.key) {
+        return;
+    }
+    let published = prepared.publish(
         &mut commands,
         &mut meshes,
         &mut images,
         &mut terrain_materials,
+        &mut stream.texture_cache,
+        &mut stream.material_cache,
+        stream.fallback_tex.as_ref().unwrap(),
+        stream.fallback_material.as_ref().unwrap(),
+        &route_dir.route_dir,
+        stream.render_origin,
+        crate::floating_origin::horizontal_shift(origin.shift),
     );
-    stream.texture_cache = scratch.texture_cache;
-    stream.material_cache = scratch.material_cache;
-    stream.tile_cache = scratch.tile_cache;
+    if !published.done {
+        stream.prepared = Some(prepared);
+    }
 }
 
 /// Release terrain meshes for unloaded tiles and drop material/texture cache
@@ -896,6 +937,7 @@ pub fn terrain_tile_unload_system(
         .retain(|t| !unloaded.contains(&(t.tile_x, t.tile_z)));
     for key in &unloaded {
         elevation.remove_tile(key.0, key.1);
+        stream.tile_cache.remove_display(key.0, key.1);
     }
 
     let mut live_material_ids = std::collections::HashSet::new();
@@ -967,13 +1009,13 @@ mod tests {
         use crate::camera::{CameraFollowMode, OrbitState};
         use crate::floating_origin::{FloatingOrigin, apply_floating_origin};
         use crate::launch::{ViewerLaunchOpts, ViewerSceneryMode};
-        use crate::live::LiveTrainMarker;
         use openrailsrs_formats::{ElevationGrid, TerrainFile, TerrainSamples};
         use std::sync::Arc;
 
         let (wx, wz) = msts_tile_world_origin(3, -2);
         let mut app = App::new();
-        app.insert_resource(RouteAssets::new(PathBuf::from("nonexistent-test-route")))
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RouteAssets::new(PathBuf::from("nonexistent-test-route")))
             .insert_resource(crate::world::RouteFocus {
                 center: Vec3::new(wx, 0.0, wz),
                 height_origin: 30.0,
@@ -1027,13 +1069,23 @@ mod tests {
             OrbitState::default(),
             Transform::from_xyz(300.0, 5.0, -400.0),
         ));
-        app.world_mut()
-            .spawn((LiveTrainMarker, Transform::from_xyz(300.0, 10.0, -400.0)));
         // Commands create terrain after rebasing. It must include the new shift,
         // rather than remaining displaced underneath a neighbouring tile.
         app.update();
+        // A second rebase occurs after the worker was scheduled. Its output
+        // must use the publication origin, not the origin captured at launch.
+        let mut camera = app
+            .world_mut()
+            .query_filtered::<&mut Transform, With<Camera3d>>();
+        camera.single_mut(app.world_mut()).unwrap().translation = Vec3::new(500.0, 5.0, 500.0);
+        let deadline = Instant::now() + std::time::Duration::from_secs(3);
+        while app.world().contains_resource::<TerrainSpawnProgress>() {
+            assert!(Instant::now() < deadline, "terrain worker failed to finish");
+            app.update();
+            std::thread::yield_now();
+        }
         let shift = app.world().resource::<FloatingOrigin>().shift;
-        assert_eq!(shift, Vec3::new(325.0, 0.0, -400.0));
+        assert_eq!(shift, Vec3::new(825.0, 0.0, 100.0));
         let mut terrain = app
             .world_mut()
             .query_filtered::<(&Transform, &Mesh3d), With<TerrainTileTag>>();

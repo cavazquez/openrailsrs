@@ -79,12 +79,15 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
     };
     let vehicle_davis = consist.per_vehicle_davis(None);
     let train = TrainPhysics {
+        native: None,
         mass_kg: consist.total_mass_kg(),
         max_power_w: 0.0,
         max_tractive_effort_n: 0.0,
         max_brake_n: 80_000.0,
         davis: consist.aggregate_davis(),
         vehicle_davis,
+        vehicle_lengths_m: consist.vehicle_lengths_m(),
+        diesel_vehicle_indices: consist.diesel_vehicle_indices(),
         tractive: TractiveCurve::default(),
         diesel_engines: Vec::new(),
         regen_factor: 0.0,

@@ -237,6 +237,34 @@ pub fn multi_body_step(
     dt: f64,
     damping_scale: f64,
 ) -> f64 {
+    let mut motor_forces = vec![0.0; vehicles.len()];
+    if let Some(first) = motor_forces.first_mut() {
+        *first = f_motor;
+    }
+    multi_body_step_distributed(
+        vehicles,
+        couplers,
+        &motor_forces,
+        brake_forces,
+        grade_resist,
+        masses,
+        dt,
+        damping_scale,
+    )
+}
+
+/// Apply each powered vehicle's force at its own position in the formation.
+#[allow(clippy::too_many_arguments)]
+pub fn multi_body_step_distributed(
+    vehicles: &mut [VehicleState],
+    couplers: &mut [CouplerState],
+    motor_forces: &[f64],
+    brake_forces: &[f64],
+    grade_resist: &[f64],
+    masses: &[f64],
+    dt: f64,
+    damping_scale: f64,
+) -> f64 {
     let n = vehicles.len();
     if n == 0 {
         return 0.0;
@@ -256,7 +284,7 @@ pub fn multi_body_step(
         let f_coupler_fwd = if i > 0 { coupler_forces[i - 1] } else { 0.0 };
         let f_coupler_bwd = if i < n - 1 { coupler_forces[i] } else { 0.0 };
 
-        let f_drive = if i == 0 { f_motor } else { 0.0 };
+        let f_drive = motor_forces.get(i).copied().unwrap_or(0.0);
         let f_net = f_drive - brake_forces[i] - grade_resist[i] + f_coupler_fwd - f_coupler_bwd;
 
         let accel = f_net / masses[i].max(1.0);

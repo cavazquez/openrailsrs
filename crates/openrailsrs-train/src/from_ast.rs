@@ -18,6 +18,10 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     let engine = EngineFile::from_ast(&ast)?;
     let mut locomotive: Locomotive = engine.into();
     locomotive.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    if let Some(ep) = locomotive.brake_profile.native_ep.as_mut() {
+        // Native STF normalization retains bodies; the file kind is known here.
+        ep.main_reservoir = true;
+    }
     Ok(locomotive)
 }
 
@@ -74,6 +78,32 @@ pub fn load_consist_curve_parameters(
             };
             Ok(openrailsrs_formats::parse_vehicle_curve_parameters(
                 &ast, engine,
+            ))
+        })
+        .collect()
+}
+
+pub fn load_consist_native_parameters(
+    consist: &Path,
+    base: &Path,
+    masses: &[f64],
+) -> Result<Vec<openrailsrs_formats::NativeVehiclePhysics>, TrainError> {
+    let ast = parse_vehicle_text(
+        &read_msts_file_to_string(consist).map_err(|e| TrainError::Parse(e.to_string()))?,
+    )?;
+    ConsistFile::from_ast(&ast)?
+        .entries
+        .iter()
+        .zip(masses)
+        .map(|(entry, &mass)| {
+            let (relative, engine) = match entry {
+                ConsistEntry::Engine { path, .. } => (path, true),
+                ConsistEntry::Wagon { path, .. } => (path, false),
+            };
+            let path = resolve_consist_entry_path(base, relative);
+            let ast = openrailsrs_formats::read_vehicle_ast(&path)?;
+            Ok(openrailsrs_formats::parse_native_vehicle_physics(
+                &ast, engine, mass,
             ))
         })
         .collect()
@@ -228,11 +258,27 @@ impl From<EngineFile> for Locomotive {
                 } else {
                     value.max_tractive_effort_n
                 };
+                let native_basic_rpm =
+                    value.diesel_idle_rpm > 0.0 && value.diesel_max_rpm > value.diesel_idle_rpm;
                 let mut model = DieselTractionModel::from_power_and_effort(
                     value.max_power_w,
-                    continuous,
+                    if native_basic_rpm {
+                        value.max_tractive_effort_n
+                    } else {
+                        continuous
+                    },
                     value.run_up_time_s,
                 );
+                if native_basic_rpm {
+                    model.engine = Some(Box::new(
+                        crate::diesel::DieselEngineParams::from_msts_defaults(
+                            value.max_power_w,
+                            value.diesel_idle_rpm,
+                            value.diesel_max_rpm,
+                            value.diesel_change_up_rpm_ps.max(1.0),
+                        ),
+                    ));
+                }
                 let curtius = if value.curtius_a > 0.0 {
                     (value.curtius_a, value.curtius_b, value.curtius_c)
                 } else {

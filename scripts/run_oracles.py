@@ -49,7 +49,7 @@ def main():
     parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/openrailsrs")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "tmp/oracles")
     parser.add_argument("--suite", choices=("acceptance", "service"), default="acceptance",
-        help="The new full-service physics target remains diagnostic and currently returns FAIL")
+        help="Run the four short acceptance cases or the full native three-station service")
     args = parser.parse_args()
     pin = tomllib.loads((ROOT / "oracles/openrails-reference.toml").read_text())
     source = args.source_root

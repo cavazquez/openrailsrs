@@ -43,12 +43,15 @@ fn path_data_for(path: &[&str], g: &TrackGraph) -> PathData {
 /// Train without an explicit traction curve — uses P/v fallback.
 fn default_train_pv() -> TrainPhysics {
     TrainPhysics {
+        native: None,
         mass_kg: 100_000.0,
         max_power_w: 2_000_000.0,
         max_tractive_effort_n: 350_000.0,
         max_brake_n: 400_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: Vec::new(),
         regen_factor: 0.0,
@@ -66,12 +69,15 @@ fn default_train_pv() -> TrainPhysics {
 /// Train with an explicit traction curve (two-segment).
 fn default_train_with_curve() -> TrainPhysics {
     TrainPhysics {
+        native: None,
         mass_kg: 100_000.0,
         max_power_w: 2_000_000.0,
         max_tractive_effort_n: 350_000.0,
         max_brake_n: 400_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::from_power_and_effort(2_000_000.0, 350_000.0),
         diesel_engines: Vec::new(),
         regen_factor: 0.0,
@@ -203,12 +209,15 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
     .unwrap();
 
     let train = TrainPhysics {
+        native: None,
         mass_kg: 50_000.0,
         max_power_w: 5_000_000.0,
         max_tractive_effort_n: 500_000.0,
         max_brake_n: 400_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::from_power_and_effort(5_000_000.0, 500_000.0),
         diesel_engines: Vec::new(),
         regen_factor: 0.0,

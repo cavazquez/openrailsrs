@@ -202,16 +202,14 @@ pub fn resolve_consist_vehicle_shape_path(
     crate::shapes::resolve_vehicle_shape_path(dirs, name, route)
 }
 
-/// Longitudinal offsets from the train head (first vehicle at 0, followers negative).
+/// Authored vehicle centres measured behind the physical train head.
+/// Native ENG/WAG `Size` gives the full length; successive centres are separated
+/// by the half-lengths of both vehicles, including mixed locomotive/car sizes.
 pub fn longitudinal_offsets_m(lengths: &[f32]) -> Vec<f32> {
     let mut offsets = Vec::with_capacity(lengths.len());
     let mut behind = 0.0_f32;
-    for (i, &len) in lengths.iter().enumerate() {
-        if i == 0 {
-            offsets.push(0.0);
-        } else {
-            offsets.push(-behind);
-        }
+    for &len in lengths {
+        offsets.push(-behind - len * 0.5);
         behind += len;
     }
     offsets
@@ -300,8 +298,9 @@ mod tests {
         // Size / length_m drive consist spacing (coupler offsets), not mesh scale (#68).
         let lengths = [18.0_f32, 14.0];
         let offsets = longitudinal_offsets_m(&lengths);
-        assert_eq!(offsets, vec![0.0, -18.0]);
-        assert!((offsets[1] + lengths[0]).abs() < 1e-4);
+        assert_eq!(offsets, vec![-9.0, -25.0]);
+        assert_eq!(offsets[0] + lengths[0] * 0.5, 0.0);
+        assert_eq!(offsets[0] - lengths[0] * 0.5, offsets[1] + lengths[1] * 0.5);
     }
 
     #[test]
@@ -343,7 +342,7 @@ mod tests {
         assert!(!visuals[0].flipped);
         assert_eq!(visuals[1].name, "b");
         assert!(visuals[1].flipped);
-        assert!((visuals[1].offset_m + 10.0).abs() < 1e-4);
+        assert!((visuals[1].offset_m + 15.0).abs() < 1e-4);
     }
 
     #[test]
@@ -354,7 +353,7 @@ mod tests {
         assert_eq!(vehicles.len(), 2);
         assert_eq!(vehicles[0].shape_file.as_deref(), Some("test.s"));
         assert_eq!(vehicles[1].shape_file.as_deref(), Some("test.s"));
-        assert_eq!(vehicles[1].offset_m, -18.0);
+        assert_eq!(vehicles[1].offset_m, -25.0);
     }
 
     #[test]

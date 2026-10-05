@@ -235,12 +235,20 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
+            native: crate::native_dynamics::NativeTrainPhysics::load(
+                &consist_path,
+                consist_root(&consist_path),
+                &consist,
+                scenario.simulation.native_physics.as_ref(),
+            )?,
             mass_kg: consist.total_mass_kg(),
             max_power_w: consist.total_max_power_w(),
             max_tractive_effort_n: consist.total_max_tractive_effort_n(),
             max_brake_n: consist.total_max_brake_n(),
             davis,
             vehicle_davis,
+            vehicle_lengths_m: consist.vehicle_lengths_m(),
+            diesel_vehicle_indices: consist.diesel_vehicle_indices(),
             tractive,
             diesel_engines,
             regen_factor: consist.regen_factor(),
@@ -767,9 +775,9 @@ impl LiveDriveSession {
         let cylinders = &self.state.brake_system.cylinders;
         // The driving cab reads the lead vehicle's cylinder, not the average of
         // trailer/motor pressures with different native full-pressure ratings.
-        let brake_cyl_bar = cylinders.first().map_or(self.driver_brake * 4.5, |b| {
-            (b.current_force_n / b.max_force_n.max(1.0)).clamp(0.0, 1.0) * b.full_pressure_bar
-        });
+        let brake_cyl_bar = cylinders
+            .first()
+            .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
             speed_kmh,
             limit_kmh,

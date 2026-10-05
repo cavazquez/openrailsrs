@@ -250,7 +250,29 @@ pub struct SoundRegionDef {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct NativePhysicsEnvironment {
+    pub ambient_c: f64,
+    pub adhesion_factor: f64,
+    #[serde(default)]
+    pub first_slippery_spot: Option<[f64; 2]>,
+    #[serde(default)]
+    pub paused_weather: bool,
+}
+impl Default for NativePhysicsEnvironment {
+    fn default() -> Self {
+        Self {
+            ambient_c: 20.,
+            adhesion_factor: 1.,
+            first_slippery_spot: None,
+            paused_weather: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SimulationSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_physics: Option<NativePhysicsEnvironment>,
     pub duration: f64,
     pub time_step: f64,
     #[serde(default = "default_seed")]
@@ -334,6 +356,22 @@ impl ScenarioFile {
             return Err(ScenarioError::Validation(
                 "simulation.time_step must be positive".into(),
             ));
+        }
+        if let Some(native) = &self.simulation.native_physics
+            && (!native.ambient_c.is_finite()
+                || !(-100.0..=100.0).contains(&native.ambient_c)
+                || !native.adhesion_factor.is_finite()
+                || !(0.05..=2.5).contains(&native.adhesion_factor)
+                || native
+                    .first_slippery_spot
+                    .is_some_and(|[distance, length]| {
+                        !distance.is_finite()
+                            || !length.is_finite()
+                            || distance < 0.
+                            || length <= 0.
+                    }))
+        {
+            return Err(ScenarioError::Validation("native physics environment: finite temperature, adhesion and positive slippery spot length required".into()));
         }
         if self.route.path.trim().is_empty() {
             return Err(ScenarioError::Validation("route.path is required".into()));

@@ -8,6 +8,18 @@ pub struct NativeSignalDef {
     pub name: String,
     pub function: String,
     pub source: String,
+    /// Original WORLD/SIGCFG feature types, separated for back-facing heads.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feature_flags: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
+    /// Activity FailedSignals must remain restrictive after a script update.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub forced_stop: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 #[derive(Clone, Debug)]
@@ -34,8 +46,19 @@ pub struct SignalContext {
     pub block_clear: bool,
     pub next_normal: u8,
     pub distant_normal: u8,
+    pub distant_info: u8,
     pub this_normal: u8,
     pub draw_states: [i32; 8],
+    pub feature_flags: Option<u16>,
+    pub this_shunting: u8,
+    pub this_info: u8,
+    pub next_info: u8,
+    pub next_distance: u8,
+    pub next_repeater: u8,
+    pub next_shunting: u8,
+    pub this_distance: u8,
+    pub this_repeater: u8,
+    pub call_on_restricted: bool,
 }
 impl Default for SignalContext {
     fn default() -> Self {
@@ -45,8 +68,19 @@ impl Default for SignalContext {
             block_clear: true,
             next_normal: 7,
             distant_normal: 7,
+            distant_info: 0,
             this_normal: 7,
             draw_states: [0, 0, 0, 1, 1, 1, 2, 2],
+            feature_flags: None,
+            this_shunting: 0,
+            this_info: 0,
+            next_info: 0,
+            next_distance: 0,
+            next_repeater: 0,
+            next_shunting: 0,
+            this_distance: 0,
+            this_repeater: 0,
+            call_on_restricted: false,
         }
     }
 }
@@ -139,6 +173,11 @@ impl Parser {
         }
         let mut result = vec![];
         while !self.peek().is_empty() && self.peek() != "}" {
+            if self.peek() == "{" {
+                self.i += 1;
+                result.extend(self.statements(true)?);
+                continue;
+            }
             if self.peek() == "EXTERN" {
                 while self.peek() != ";" {
                     if self.peek().is_empty() {
@@ -292,6 +331,9 @@ fn constant(name: &str) -> Option<f64> {
         "BLOCK_OCCUPIED" => 1.,
         "BLOCK_JN_OBSTRUCTED" => 2.,
         "SIGFN_DISTANCE" => 1.,
+        "SIGFN_REPEATER" => 2.,
+        "SIGFN_SHUNTING" => 3.,
+        "SIGFN_INFO" => 4.,
         _ => return None,
     })
 }
@@ -343,8 +385,22 @@ fn evaluate(e: &Expr, vars: &HashMap<String, f64>, c: SignalContext) -> Result<f
                 ("BLOCK_STATE", []) => f64::from(!c.block_clear),
                 ("ROUTE_SET", []) => f64::from(c.route_set),
                 ("NEXT_SIG_LR", [0.]) => f64::from(c.next_normal),
+                ("NEXT_SIG_LR", [1.]) => f64::from(c.next_distance),
+                ("NEXT_SIG_LR", [2.]) => f64::from(c.next_repeater),
+                ("NEXT_SIG_LR", [3.]) => f64::from(c.next_shunting),
+                ("NEXT_SIG_LR", [4.]) => f64::from(c.next_info),
                 ("DIST_MULTI_SIG_MR", [0., 1.]) => f64::from(c.distant_normal),
+                ("DIST_MULTI_SIG_MR", [4., 0.]) => f64::from(c.distant_info),
                 ("THIS_SIG_LR", [0.]) => f64::from(c.this_normal),
+                ("THIS_SIG_LR", [1.]) => f64::from(c.this_distance),
+                ("THIS_SIG_LR", [2.]) => f64::from(c.this_repeater),
+                ("THIS_SIG_LR", [3.]) => f64::from(c.this_shunting),
+                ("THIS_SIG_LR", [4.]) => f64::from(c.this_info),
+                ("SIG_FEATURE", [v]) if v.fract() == 0. && (0.0..10.0).contains(v) => f64::from(
+                    c.feature_flags
+                        .is_none_or(|flags| flags & (1 << *v as u16) != 0),
+                ),
+                ("TRAINHASCALLON_RESTRICTED", []) => f64::from(c.call_on_restricted),
                 ("DEF_DRAW_STATE", [v]) if v.fract() == 0. && (0.0..8.0).contains(v) => {
                     f64::from(c.draw_states[*v as usize])
                 }
@@ -392,8 +448,8 @@ fn validate_expr(expr: &Expr, variables: &HashSet<String>) -> Result<(), String>
         Expr::Value(value) if !value.is_finite() => return Err("nonfinite literal".into()),
         Expr::Call(name, args) => {
             let arity = match name.as_str() {
-                "BLOCK_STATE" | "ROUTE_SET" => 0,
-                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DEF_DRAW_STATE" => 1,
+                "BLOCK_STATE" | "ROUTE_SET" | "TRAINHASCALLON_RESTRICTED" => 0,
+                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DEF_DRAW_STATE" | "SIG_FEATURE" => 1,
                 "DIST_MULTI_SIG_MR" => 2,
                 _ => return Err(format!("unsupported function {name}")),
             };
@@ -403,18 +459,22 @@ fn validate_expr(expr: &Expr, variables: &HashSet<String>) -> Result<(), String>
             for arg in args {
                 validate_expr(arg, variables)?;
             }
-            // These selectors are the implemented NORMAL/DISTANCE contract.
-            // Dynamic selectors would require a general signal-function table.
+            // Only implemented, constant native selectors are accepted.
             let selector = |e: &Expr, expected: f64| match e {
                 Expr::Value(v) => *v == expected,
                 Expr::Var(n) => constant(n) == Some(expected),
                 _ => false,
             };
-            if matches!(
-                name.as_str(),
-                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DIST_MULTI_SIG_MR"
-            ) && (!selector(&args[0], 0.) || (arity == 2 && !selector(&args[1], 1.)))
-            {
+            let valid = match name.as_str() {
+                "NEXT_SIG_LR" | "THIS_SIG_LR" => (0..5).any(|v| selector(&args[0], f64::from(v))),
+                "DIST_MULTI_SIG_MR" => {
+                    (selector(&args[0], 0.) && selector(&args[1], 1.))
+                        || (selector(&args[0], 4.) && selector(&args[1], 0.))
+                }
+                "SIG_FEATURE" => (0..10).any(|v| selector(&args[0], f64::from(v))),
+                _ => true,
+            };
+            if !valid {
                 return Err(format!("unsupported signal-function selector for {name}"));
             }
         }
@@ -557,6 +617,44 @@ mod tests {
         }
     }
     #[test]
+    fn original_features_and_group_heads_control_junction_indication() {
+        let p = SignalProgram::compile("if(sig_feature(8) && this_sig_lr(SIGFN_INFO)==3 && next_sig_lr(SIGFN_INFO)==7 && !TrainHasCallOn_Restricted()){state=SIGASP_CLEAR_2;}else{state=SIGASP_STOP;}").unwrap();
+        let context = SignalContext {
+            feature_flags: Some(1 << 8),
+            this_info: 3,
+            next_info: 7,
+            ..Default::default()
+        };
+        assert_eq!(p.evaluate(context).unwrap().aspect, 7);
+        assert_eq!(
+            p.evaluate(SignalContext {
+                feature_flags: Some(0),
+                ..context
+            })
+            .unwrap()
+            .aspect,
+            0
+        );
+        assert_eq!(
+            p.evaluate(SignalContext {
+                this_info: 0,
+                ..context
+            })
+            .unwrap()
+            .aspect,
+            0
+        );
+        assert_eq!(
+            p.evaluate(SignalContext {
+                call_on_restricted: true,
+                ..context
+            })
+            .unwrap()
+            .aspect,
+            0
+        );
+    }
+    #[test]
     fn unsupported_calls_and_malformed_inputs_never_silently_clear() {
         assert!(SignalProgram::compile("while(1){state=7;}").is_err());
         assert!(SignalProgram::compile("if (((").is_err());
@@ -567,7 +665,7 @@ mod tests {
     fn dormant_unsupported_calls_are_rejected_before_entering_a_block() {
         for source in [
             "if (!enabled && !route_set()) { state=call_unknown(); } else { state=7; }",
-            "if (0) { state=next_sig_lr(SIGFN_DISTANCE); } else { state=7; }",
+            "if (0) { state=next_sig_lr(5); } else { state=7; }",
             "if (0) { state=block_state(1); } else { state=7; }",
             "if (0) { state=unsupported_variable; } else { state=7; }",
         ] {
@@ -580,6 +678,24 @@ mod tests {
         for _ in 0..3 {
             assert_eq!(p.evaluate(SignalContext::default()).unwrap().aspect, 3);
         }
+    }
+    #[test]
+    fn native_nested_statement_blocks_keep_the_bounded_parser() {
+        let p = SignalProgram::compile("if (!enabled || !route_set()){state=0;}else{{state=2;}}draw_state=def_draw_state(state);").unwrap();
+        assert_eq!(p.evaluate(SignalContext::default()).unwrap().aspect, 2);
+        assert_eq!(
+            p.evaluate(SignalContext {
+                enabled: false,
+                ..Default::default()
+            })
+            .unwrap()
+            .aspect,
+            0
+        );
+        assert!(
+            SignalProgram::compile(&format!("{}state=7;{}", "{".repeat(70), "}".repeat(70)))
+                .is_err()
+        );
     }
     #[test]
     fn unbraced_branches_and_flat_expressions_have_stack_safe_limits() {

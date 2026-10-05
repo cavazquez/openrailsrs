@@ -21,12 +21,15 @@ fn chiltern_pullman_freeroll_deceleration() {
     );
 
     let train = TrainPhysics {
+        native: None,
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: consist.diesel_traction_models(),
         regen_factor: 0.0,

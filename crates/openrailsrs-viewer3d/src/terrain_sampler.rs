@@ -30,7 +30,7 @@ impl LoadedTerrainTile {
 
 #[derive(Clone)]
 pub(crate) struct TerrainTileCache {
-    tiles: HashMap<(i32, i32), LoadedTerrainTile>,
+    tiles: HashMap<(i32, i32), Arc<LoadedTerrainTile>>,
 }
 
 impl TerrainTileCache {
@@ -40,7 +40,7 @@ impl TerrainTileCache {
             let Some(tile) = LoadedTerrainTile::from_scene_tile(terrain_tile) else {
                 continue;
             };
-            out.insert(Self::display_key(&tile.tile), tile);
+            out.insert(Self::display_key(&tile.tile), Arc::new(tile));
         }
         Self { tiles: out }
     }
@@ -49,7 +49,8 @@ impl TerrainTileCache {
         let Some(tile) = LoadedTerrainTile::from_scene_tile(terrain_tile) else {
             return;
         };
-        self.tiles.insert(Self::display_key(&tile.tile), tile);
+        self.tiles
+            .insert(Self::display_key(&tile.tile), Arc::new(tile));
     }
 
     #[cfg(test)]
@@ -57,13 +58,17 @@ impl TerrainTileCache {
         Self {
             tiles: tiles
                 .into_iter()
-                .map(|tile| (Self::display_key(&tile.tile), tile))
+                .map(|tile| (Self::display_key(&tile.tile), Arc::new(tile)))
                 .collect(),
         }
     }
 
     pub(crate) fn get_display(&self, tile_x: i32, tile_z: i32) -> Option<&LoadedTerrainTile> {
-        self.tiles.get(&(tile_x, tile_z))
+        self.tiles.get(&(tile_x, tile_z)).map(Arc::as_ref)
+    }
+
+    pub(crate) fn remove_display(&mut self, tile_x: i32, tile_z: i32) {
+        self.tiles.remove(&(tile_x, tile_z));
     }
 
     pub(crate) fn display_key(tile: &TerrainFile) -> (i32, i32) {

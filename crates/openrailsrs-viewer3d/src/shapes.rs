@@ -2,7 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+#[cfg(not(test))]
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::coordinates::{
     rebase_points_to_bone_local, rebase_vectors_to_bone_local,
@@ -22,9 +24,9 @@ pub use openrailsrs_bevy_scenery::shapes::{
     SCENERY_TEXTURE_TARGET_LUMA, ShapeMaterialDebugCtx, ShapePbrSidecar, ace_mean_luma,
     alpha_mode_from_prim_state, apply_msts_vertex_tint, apply_shape_debug_material_overrides,
     apply_standard_normal_map, apply_train_debug_material_overrides, apply_train_exterior_culling,
-    apply_z_buf_mode, blend_alpha_passes_from_ace_bits, blend_alpha_passes_from_prim_state,
-    brighten_cab_ace_rgba, brighten_dark_ace_rgba, build_mesh_from_shape,
-    build_mesh_from_shape_at_distance, build_mesh_from_shape_lod, build_mesh_parts_from_shape,
+    apply_z_buf_mode, blend_alpha_passes_from_ace_bits, brighten_cab_ace_rgba,
+    brighten_dark_ace_rgba, build_mesh_from_shape, build_mesh_from_shape_at_distance,
+    build_mesh_from_shape_lod, build_mesh_parts_from_shape,
     build_mesh_parts_from_shape_at_distance, build_mesh_parts_from_shape_at_distance_with_options,
     build_mesh_parts_from_shape_lod, cab_ace_brighten_enabled, cab_albedo_tint,
     cab_interior_albedo_boost, cab_or_scenery_material_with_texture_ex, clamp_msts_z_bias_for_bevy,
@@ -1655,7 +1657,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
     materials: &mut Assets<StandardMaterial>,
     mut or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
     texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
-    ace_cache: &HashMap<PathBuf, AceFile>,
+    ace_cache: &dyn ShapeTextureSource,
     fallback_color: Color,
     lit_override: Option<bool>,
     cab_interior: bool,
@@ -1933,7 +1935,7 @@ fn load_normal_map_image_handle(
     file_name: &str,
     images: &mut Assets<Image>,
     texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
-    ace_cache: &HashMap<PathBuf, AceFile>,
+    ace_cache: &dyn ShapeTextureSource,
     tex_addr_mode: Option<i32>,
 ) -> Option<Handle<Image>> {
     let tex_path = resolve_texture_path_in_dirs(texture_dirs, file_name)?;
@@ -2085,12 +2087,82 @@ fn scenery_dds_alpha_passes(
     )
 }
 
-/// CPU pixels are retained only when a material needs them; derivative hits
-/// are still successful loads and must not be reported as broken ACE files.
+fn scenery_alpha_passes(
+    alpha: openrailsrs_bevy_scenery::texture_cache::TextureAlpha,
+    texture: &str,
+    shader: Option<&str>,
+    alpha_test: i32,
+    allow_cutout: bool,
+) -> Vec<openrailsrs_bevy_scenery::shapes::BlendAlphaPass> {
+    if allow_cutout
+        && alpha_test == 1
+        && alpha.cutout_only
+        && shader.is_some_and(openrailsrs_bevy_scenery::shapes::shape_shader_requests_blend)
+    {
+        return vec![openrailsrs_bevy_scenery::shapes::BlendAlphaPass {
+            alpha_mode: AlphaMode::Mask(openrailsrs_or_shader::OR_MSTS_ALPHA_TEST_CUTOFF),
+            depth_write_pass: true,
+        }];
+    }
+    blend_alpha_passes_from_ace_bits(alpha.bits, alpha.mask, texture, shader, alpha_test)
+}
+
+/// Texture input prepared on workers. Native cab processing can borrow the ACE;
+/// scenery can publish a ready image without repeating disk I/O/decompression.
+pub trait ShapeTextureSource {
+    fn get(&self, path: &Path) -> Option<&AceFile>;
+    fn prepared(
+        &self,
+        _path: &Path,
+    ) -> Option<&openrailsrs_bevy_scenery::texture_cache::CachedTexture> {
+        None
+    }
+    fn alpha(&self, path: &Path) -> Option<openrailsrs_bevy_scenery::texture_cache::TextureAlpha> {
+        self.prepared(path).map(|texture| texture.alpha)
+    }
+}
+
+impl ShapeTextureSource for HashMap<PathBuf, AceFile> {
+    fn get(&self, path: &Path) -> Option<&AceFile> {
+        HashMap::get(self, path)
+    }
+}
+
+/// CPU pixels live only until the foreground has published its shared handles.
 #[derive(Default)]
 pub struct PrefetchedTextures {
     pub aces: HashMap<PathBuf, AceFile>,
     pub loaded: HashSet<PathBuf>,
+    pub prepared: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::CachedTexture>,
+    pub alpha: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::TextureAlpha>,
+}
+
+impl ShapeTextureSource for PrefetchedTextures {
+    fn get(&self, path: &Path) -> Option<&AceFile> {
+        self.aces.get(path)
+    }
+    fn prepared(
+        &self,
+        path: &Path,
+    ) -> Option<&openrailsrs_bevy_scenery::texture_cache::CachedTexture> {
+        self.prepared.get(path)
+    }
+    fn alpha(&self, path: &Path) -> Option<openrailsrs_bevy_scenery::texture_cache::TextureAlpha> {
+        self.alpha.get(path).copied()
+    }
+}
+
+impl PrefetchedTextures {
+    pub fn extend(&mut self, other: Self) {
+        self.aces.extend(other.aces);
+        self.loaded.extend(other.loaded);
+        self.prepared.extend(other.prepared);
+        self.alpha.extend(other.alpha);
+    }
+    pub fn clear_pixels(&mut self) {
+        self.aces.clear();
+        self.prepared.clear();
+    }
 }
 
 /// Decode original/derivative textures on workers before inserting Bevy assets.
@@ -2109,29 +2181,74 @@ pub fn prefetch_ace_textures(paths: &[PathBuf]) -> PrefetchedTextures {
             });
             if scenery_materials_lit()
                 && !cab
-                && openrailsrs_bevy_scenery::texture_cache::load(
+                && let Ok(texture) = openrailsrs_bevy_scenery::texture_cache::load(
                     path,
                     openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
                     None,
                     None,
                 )
-                .is_ok()
             {
-                return (path.clone(), Ok(None));
+                return (path.clone(), Some(texture), None);
             }
-            (path.clone(), read_ace(path).map(Some))
+            (path.clone(), None, read_ace(path).ok())
         })
         .collect();
     let mut prefetched = PrefetchedTextures::default();
-    for (path, result) in results {
-        if let Ok(ace) = result {
+    for (path, texture, ace) in results {
+        if let Some(texture) = texture {
             prefetched.loaded.insert(path.clone());
-            if let Some(ace) = ace {
-                prefetched.aces.insert(path, ace);
-            }
+            prefetched.alpha.insert(path.clone(), texture.alpha);
+            prefetched.prepared.insert(path, texture);
+        } else if let Some(ace) = ace {
+            prefetched.loaded.insert(path.clone());
+            prefetched.aces.insert(path, ace);
         }
     }
     prefetched
+}
+
+/// Publish each sampler variant once. A cached handle + alpha metadata never
+/// re-reads the source; GPU-only images may already have released their pixels.
+#[allow(clippy::too_many_arguments)]
+fn prepared_texture_binding(
+    path: &Path,
+    source: &dyn ShapeTextureSource,
+    images: &mut Assets<Image>,
+    handles: &mut HashMap<(PathBuf, i32), Handle<Image>>,
+    addr: Option<i32>,
+    bias: Option<f32>,
+    retain_pixels: bool,
+) -> Option<(
+    Handle<Image>,
+    openrailsrs_bevy_scenery::texture_cache::TextureAlpha,
+)> {
+    let key = (path.to_path_buf(), texture_cache_sampler_key(addr, bias));
+    if let Some(handle) = handles.get(&key)
+        && let Some(alpha) = source.alpha(path)
+    {
+        return Some((handle.clone(), alpha));
+    }
+    let (mut image, alpha) = if let Some(texture) = source.prepared(path) {
+        (texture.image.clone(), texture.alpha)
+    } else {
+        let texture = openrailsrs_bevy_scenery::texture_cache::load(
+            path,
+            openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
+            addr,
+            bias,
+        )
+        .ok()?;
+        (texture.image, texture.alpha)
+    };
+    openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(&mut image, addr, bias);
+    if !retain_pixels {
+        image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+    }
+    let handle = handles
+        .entry(key)
+        .or_insert_with(|| images.add(image))
+        .clone();
+    Some((handle, alpha))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2146,7 +2263,7 @@ fn material_for_shape_texture(
     materials: &mut Assets<StandardMaterial>,
     or_materials: Option<&mut Assets<crate::or_cab_material::OrCabMaterial>>,
     texture_cache: &mut HashMap<(PathBuf, i32), Handle<Image>>,
-    ace_cache: &HashMap<PathBuf, AceFile>,
+    ace_cache: &dyn ShapeTextureSource,
     fallback_color: Color,
     lit_override: Option<bool>,
     solid_color: Option<[f32; 3]>,
@@ -2176,32 +2293,28 @@ fn material_for_shape_texture(
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("ktx2"));
                 if (lit && !cab_interior || is_ktx2)
-                    && (is_ktx2 || !ace_cache.contains_key(&tex_path))
-                    && let Ok(mut loaded) = openrailsrs_bevy_scenery::texture_cache::load(
+                    && (is_ktx2 || ace_cache.get(&tex_path).is_none())
+                    && let Some((handle, alpha)) = prepared_texture_binding(
                         &tex_path,
-                        openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
+                        ace_cache,
+                        images,
+                        texture_cache,
                         tex_addr_mode,
                         mip_map_lod_bias,
+                        cab_interior || train_exterior,
                     )
                 {
-                    let passes = blend_alpha_passes_from_ace_bits(
-                        loaded.alpha.bits,
-                        loaded.alpha.mask,
+                    let passes = scenery_alpha_passes(
+                        alpha,
                         tex_name,
                         shader_name,
                         alpha_test_mode,
+                        !cab_interior && !train_exterior,
                     );
                     let alpha_mode = passes[0].alpha_mode;
                     let dual_blend = !cab_interior && passes.len() > 1;
                     let transparent =
                         dual_blend || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
-                    if !cab_interior && !train_exterior {
-                        loaded.image.asset_usage = RenderAssetUsages::RENDER_WORLD;
-                    }
-                    let handle = texture_cache
-                        .entry((tex_path.clone(), addr_key))
-                        .or_insert_with(|| images.add(loaded.image))
-                        .clone();
                     let tint = apply_msts_vertex_tint(
                         if cab_interior {
                             Color::WHITE
@@ -2324,11 +2437,12 @@ fn material_for_shape_texture(
                             false,
                         )
                     } else {
-                        let passes = blend_alpha_passes_from_prim_state(
-                            &ace,
+                        let passes = scenery_alpha_passes(
+                            openrailsrs_bevy_scenery::texture_cache::TextureAlpha::from_ace(&ace),
                             tex_name,
                             shader_name,
                             alpha_test_mode,
+                            !train_exterior,
                         );
                         (passes[0].alpha_mode, passes.len() > 1)
                     };
@@ -2478,19 +2592,38 @@ fn cab_dds_alpha_mode(
 
 /// Process-wide count of successful `ShapeFile::from_path` calls via this module's loaders.
 /// Used to verify WORLD spawn parses each unique `.s` once (#57).
+#[cfg(not(test))]
 static SHAPE_FILE_PARSE_COUNT: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+thread_local! {
+    // Unit tests reset their own observations without racing other shape loaders.
+    static SHAPE_FILE_PARSE_COUNT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 
 pub fn shape_file_parse_count() -> usize {
-    SHAPE_FILE_PARSE_COUNT.load(Ordering::Relaxed)
+    #[cfg(not(test))]
+    {
+        SHAPE_FILE_PARSE_COUNT.load(Ordering::Relaxed)
+    }
+    #[cfg(test)]
+    {
+        SHAPE_FILE_PARSE_COUNT.with(std::cell::Cell::get)
+    }
 }
 
 pub fn reset_shape_file_parse_count() {
+    #[cfg(not(test))]
     SHAPE_FILE_PARSE_COUNT.store(0, Ordering::Relaxed);
+    #[cfg(test)]
+    SHAPE_FILE_PARSE_COUNT.with(|count| count.set(0));
 }
 
 fn parse_shape_file(path: &Path) -> Option<ShapeFile> {
     let shape = ShapeFile::from_path(path).ok()?;
+    #[cfg(not(test))]
     SHAPE_FILE_PARSE_COUNT.fetch_add(1, Ordering::Relaxed);
+    #[cfg(test)]
+    SHAPE_FILE_PARSE_COUNT.with(|count| count.set(count.get() + 1));
     Some(shape)
 }
 
@@ -3496,6 +3629,102 @@ mod tests {
         let image = ace_to_image(&ace);
         assert_eq!(image.size().x, 4);
         assert_eq!(image.size().y, 4);
+    }
+
+    #[test]
+    fn native_alpha_test_atlas_uses_cutout_but_glass_and_cab_keep_blending() {
+        use openrailsrs_bevy_scenery::texture_cache::TextureAlpha;
+        let alpha = TextureAlpha {
+            bits: 8,
+            mask: false,
+            cutout_only: true,
+        };
+        let passes = scenery_alpha_passes(alpha, "OldOakTree.ace", Some("BlendATexDiff"), 1, true);
+        assert_eq!(passes.len(), 1);
+        assert!(matches!(passes[0].alpha_mode, AlphaMode::Mask(_)));
+        for (a, flag, world) in [
+            (
+                TextureAlpha {
+                    cutout_only: false,
+                    ..alpha
+                },
+                1,
+                true,
+            ),
+            (alpha, -1, true),
+            (alpha, 1, false),
+        ] {
+            let passes = scenery_alpha_passes(a, "glass.ace", Some("BlendATexDiff"), flag, world);
+            assert_eq!(passes.len(), 2);
+            assert_eq!(passes[1].alpha_mode, AlphaMode::Blend);
+        }
+    }
+
+    #[test]
+    fn prepared_texture_reuses_gpu_handle_without_source_or_cpu_pixels() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("original.ace");
+        std::fs::copy(ace_fixture(), &source).unwrap();
+        let texture = openrailsrs_bevy_scenery::texture_cache::load_in(
+            &source,
+            Some(&temp.path().join("cache")),
+            bevy::image::CompressedImageFormats::NONE,
+            None,
+            None,
+        )
+        .unwrap();
+        let expected_mips = texture.image.texture_descriptor.mip_level_count;
+        let expected_alpha = texture.alpha;
+        let mut prefetched = PrefetchedTextures::default();
+        prefetched.alpha.insert(source.clone(), expected_alpha);
+        prefetched.prepared.insert(source.clone(), texture);
+        std::fs::remove_file(&source).unwrap();
+
+        let mut images = Assets::<Image>::default();
+        let mut handles = HashMap::new();
+        let (handle, alpha) = prepared_texture_binding(
+            &source,
+            &prefetched,
+            &mut images,
+            &mut handles,
+            Some(1),
+            None,
+            false,
+        )
+        .expect("worker prepared pixels require no foreground file access");
+        assert_eq!(alpha.bits, expected_alpha.bits);
+        assert_eq!(alpha.mask, expected_alpha.mask);
+        let image = images.get(&handle).unwrap();
+        assert_eq!(image.texture_descriptor.mip_level_count, expected_mips);
+        assert_eq!(image.asset_usage, RenderAssetUsages::RENDER_WORLD);
+        let (clamped, _) = prepared_texture_binding(
+            &source,
+            &prefetched,
+            &mut images,
+            &mut handles,
+            Some(3),
+            None,
+            false,
+        )
+        .unwrap();
+        assert_ne!(handle, clamped, "sampler variants keep distinct handles");
+        assert_eq!(images.len(), 2);
+
+        prefetched.clear_pixels();
+        images.remove(handle.id()); // Like an image extracted into the render world.
+        let (reused, alpha) = prepared_texture_binding(
+            &source,
+            &prefetched,
+            &mut images,
+            &mut handles,
+            Some(1),
+            None,
+            false,
+        )
+        .expect("published GPU handle and alpha survive pixel release");
+        assert_eq!(reused, handle);
+        assert_eq!(alpha.bits, expected_alpha.bits);
+        assert_eq!(images.len(), 1);
     }
 
     #[test]

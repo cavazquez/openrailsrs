@@ -90,6 +90,7 @@ fn make_two_train_scenario(
             penalty_per_second_late: 1.0,
         },
         simulation: SimulationSection {
+            native_physics: None,
             duration,
             time_step: 0.5,
             seed: 1,

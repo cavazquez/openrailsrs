@@ -222,6 +222,7 @@ mod tests {
                 penalty_per_second_late: 0.0,
             },
             simulation: SimulationSection {
+                native_physics: None,
                 duration: 3600.0,
                 time_step: 1.0,
                 seed: 42,

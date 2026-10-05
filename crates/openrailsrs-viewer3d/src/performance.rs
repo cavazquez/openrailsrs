@@ -361,6 +361,8 @@ impl JourneyPerformance {
 pub fn measure_journey(
     time: Res<Time<Real>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    terrain: Option<Res<crate::terrain_spawn::TerrainSpawnProgress>>,
+    stream: Option<Res<crate::terrain_spawn::TerrainTileStream>>,
     startup: Option<Res<crate::route_bootstrap::ViewerLoadingScreen>>,
     mut metrics: ResMut<JourneyPerformance>,
     mut graphics: ResMut<crate::gpu_memory::GraphicsMemory>,
@@ -368,7 +370,10 @@ pub fn measure_journey(
     let initial_load = startup.is_some() || metrics.frames == 0;
     metrics.record(
         time.delta_secs_f64(),
-        progress.is_some() || initial_load,
+        progress.is_some()
+            || terrain.is_some()
+            || stream.is_some_and(|stream| stream.pending_work() > 0)
+            || initial_load,
         initial_load,
     );
     metrics.rss_clock_s += time.delta_secs_f64();

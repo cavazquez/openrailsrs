@@ -52,6 +52,8 @@ python3 -m unittest discover -s scripts -p test_official_content.py
 python3 -m unittest discover -s scripts -p test_website.py
 python3 -m unittest discover -s scripts -p test_packaging.py
 python3 -m unittest discover -s scripts -p test_visual_goldens.py
+python3 -m unittest discover -s scripts -p test_station_cameras.py
+python3 -m unittest discover -s scripts -p test_streaming_cab.py
 python3 scripts/build_website.py --check
 
 if [[ -n "${OPENRAILSRS_NATIVE_ROUTE:-}" ]]; then
@@ -67,6 +69,7 @@ fi
 
 echo "==> pinned Open Rails acceptance oracles"
 python3 scripts/run_oracles.py
+python3 scripts/run_oracles.py --suite service --out-dir tmp/service-parity-check
 
 echo "==> complete station service"
 target/debug/openrailsrs play-service examples/chiltern_local/scenario.toml --out-dir tmp/service-check

@@ -21,7 +21,8 @@ mod wagon;
 mod world;
 
 pub use activity::{
-    ActivityFile, ActivityObjectDef, RestrictedZone, SoundRegionOverride, TrafficServiceDef,
+    ActivityFile, ActivityObjectDef, PlayerStationStop, RestrictedZone, SoundRegionOverride,
+    TrafficServiceDef,
 };
 pub use brake_shoe::{
     BrakeShoeFrictionCurve, OrtsBrakeShoeType, parse_orts_brake_shoe, resolve_brake_shoe_curve,
@@ -74,6 +75,7 @@ pub use world::{DyntrackSection, SignalUnitRef, WorldFile, WorldItem, WorldTrIte
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 
+pub mod native_physics;
 /// Named STF blocks in either `(key values...)` or `key (values...)` form.
 pub mod vehicle_runtime;
 

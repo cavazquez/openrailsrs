@@ -54,12 +54,15 @@ fn legacy_engine(power_w: f64, force_n: f64) -> DieselTractionModel {
 fn two_identical_engines_double_stall_force() {
     let e = orts_engine(80_000.0);
     let train = TrainPhysics {
+        native: None,
         mass_kg: 200_000.0,
         max_power_w: 1_500_000.0,
         max_tractive_effort_n: 160_000.0,
         max_brake_n: 200_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: vec![e.clone(), e],
         regen_factor: 0.0,
@@ -92,12 +95,15 @@ fn orts_plus_legacy_both_contribute() {
     let f_orts = orts.force_at(0.0, 1.0);
     let f_legacy = legacy.force_at(0.0, 1.0);
     let train = TrainPhysics {
+        native: None,
         mass_kg: 250_000.0,
         max_power_w: 1_750_000.0,
         max_tractive_effort_n: f_orts + f_legacy,
         max_brake_n: 200_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: vec![orts, legacy],
         regen_factor: 0.0,
@@ -125,12 +131,15 @@ fn per_engine_power_cap_limits_force_at_speed() {
     let legacy = legacy_engine(400_000.0, 150_000.0);
     let f_orts = orts.force_at(20.0, 1.0);
     let train = TrainPhysics {
+        native: None,
         mass_kg: 250_000.0,
         max_power_w: 750_000.0,
         max_tractive_effort_n: 220_000.0,
         max_brake_n: 200_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: vec![orts, legacy],
         regen_factor: 0.0,
@@ -185,12 +194,15 @@ fn per_engine_rpm_independent() {
     fast.engine = Some(Box::new(engine_params(0.5)));
     slow.engine = Some(Box::new(engine_params(5.0)));
     let train = TrainPhysics {
+        native: None,
         mass_kg: 100_000.0,
         max_power_w: 1_000_000.0,
         max_tractive_effort_n: 100_000.0,
         max_brake_n: 100_000.0,
         davis: DavisCoefficients::default(),
         vehicle_davis: Vec::new(),
+        vehicle_lengths_m: Vec::new(),
+        diesel_vehicle_indices: Vec::new(),
         tractive: TractiveCurve::default(),
         diesel_engines: vec![fast, slow],
         regen_factor: 0.0,

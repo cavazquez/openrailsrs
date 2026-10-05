@@ -6,7 +6,7 @@ description = "Servicio local con Pullman: detenerse, abrir puertas, cumplir la 
 start_time_s = 35700
 
 [route]
-path = "."
+path = "../chiltern_extended"
 start = "n93"
 destination = "n105"
 start_offset_m = 1385.9003278212956
@@ -14,7 +14,7 @@ assume_signals_clear = true
 waypoints = ["n93", "n95", "n97", "n99", "n101", "n103", "n105"]
 
 [train]
-consist = "../chiltern/consists/birmingham_pullman.con"
+consist = "physics/consists/birmingham_pullman.con"
 
 [gameplay]
 objective = "arrive_on_time"
@@ -35,6 +35,14 @@ brake_skid_limit = true
 # Live controls express EP service demand, not the old logger's PSI/121 scale.
 driver_brake_full_scale_psi = 45.0
 brake_cylinder_full_scale_psi = 45.0
+
+# Reproduce the original headless capture's initial conditions.
+# See physics/environment.json; this does not select player weather.
+[simulation.native_physics]
+ambient_c = 18.61272
+adhesion_factor = 0.5
+first_slippery_spot = [1136.011, 18.2413254]
+paused_weather = true
 
 [output]
 csv = "run.csv"

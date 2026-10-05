@@ -144,6 +144,11 @@ pub fn capture_system(
                 && lightning_ok
                 && if state.after_ready {
                     if scenery_ready(progress)
+                        && scene.terrain_progress.is_none()
+                        && scene
+                            .terrain_stream
+                            .as_ref()
+                            .is_none_or(|stream| stream.pending_work() == 0)
                         && scene.pipelines.as_ref().is_none_or(|p| p.ready())
                         && scene.lod_fades.is_empty()
                     {
@@ -204,6 +209,8 @@ pub fn capture_system(
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct CaptureScene<'w, 's> {
+    terrain_progress: Option<Res<'w, crate::terrain_spawn::TerrainSpawnProgress>>,
+    terrain_stream: Option<Res<'w, crate::terrain_spawn::TerrainTileStream>>,
     world: Option<Res<'w, crate::world::WorldScene>>,
     activation: Option<Res<'w, crate::world::WorldSceneryStreamState>>,
     window: Option<Res<'w, crate::view_window::ViewWindow>>,
@@ -221,6 +228,7 @@ pub struct CaptureScene<'w, 's> {
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
     effects: Option<Res<'w, crate::train_effects::TrainEffects>>,
+    cab_diagnostic: Option<Res<'w, crate::cab_render::CabRenderDiagnostic>>,
     wet_surfaces: Option<Res<'w, crate::wet_surfaces::WetSurfaces>>,
     lod_fades: Query<'w, 's, &'static crate::world_lod_fade::LodFade>,
     camera: Query<
@@ -230,6 +238,7 @@ pub struct CaptureScene<'w, 's> {
             &'static Transform,
             &'static Projection,
             Option<&'static crate::camera::OrbitState>,
+            Has<bevy::render::view::NoIndirectDrawing>,
         ),
         With<Camera3d>,
     >,
@@ -251,31 +260,33 @@ impl CaptureScene<'_, '_> {
             .map(|((world, state), window)| {
                 state.pending_shape_count(world, window.center_world, window.radius_m)
             });
-        let camera = self
-            .camera
-            .single()
-            .ok()
-            .and_then(|(transform, projection, orbit)| {
-                let focus = self.focus.as_ref()?;
-                let shift = self
-                    .origin
-                    .as_ref()
-                    .map_or(Vec3::ZERO, |origin| origin.shift);
-                let base = Vec3::new(focus.center.x, focus.height_origin, focus.center.z) + shift;
-                let Projection::Perspective(projection) = projection else {
-                    return None;
-                };
-                Some(serde_json::json!({
-                    "position_world": (transform.translation + base).to_array(),
-                    "rotation_xyzw": transform.rotation.to_array(),
-                    "target_world": orbit.map(|orbit| (orbit.focus + base).to_array()),
-                    "yaw_rad": orbit.map(|orbit| orbit.yaw),
-                    "pitch_rad": orbit.map(|orbit| orbit.pitch),
-                    "distance_m": orbit.map(|orbit| orbit.distance),
-                    "fov_y_rad": projection.fov,
-                    "aspect_ratio": projection.aspect_ratio,
-                }))
-            });
+        let camera =
+            self.camera
+                .single()
+                .ok()
+                .and_then(|(transform, projection, orbit, no_indirect)| {
+                    let focus = self.focus.as_ref()?;
+                    let shift = self
+                        .origin
+                        .as_ref()
+                        .map_or(Vec3::ZERO, |origin| origin.shift);
+                    let base =
+                        Vec3::new(focus.center.x, focus.height_origin, focus.center.z) + shift;
+                    let Projection::Perspective(projection) = projection else {
+                        return None;
+                    };
+                    Some(serde_json::json!({
+                        "position_world": (transform.translation + base).to_array(),
+                        "rotation_xyzw": transform.rotation.to_array(),
+                        "target_world": orbit.map(|orbit| (orbit.focus + base).to_array()),
+                        "yaw_rad": orbit.map(|orbit| orbit.yaw),
+                        "pitch_rad": orbit.map(|orbit| orbit.pitch),
+                        "distance_m": orbit.map(|orbit| orbit.distance),
+                        "fov_y_rad": projection.fov,
+                        "aspect_ratio": projection.aspect_ratio,
+                        "indirect_drawing": !no_indirect,
+                    }))
+                });
         let shared_shapes: std::collections::HashSet<_> = self
             .train_parts
             .iter()
@@ -288,9 +299,11 @@ impl CaptureScene<'_, '_> {
             "gpu_tiles": self.entities.as_ref().map(|index| index.tile_count()),
             "gpu_entities": self.entities.as_ref().map(|index| index.entity_count()),
             "unactivated_near_shapes": deferred,
+            "pending_terrain_tiles": self.terrain_stream.as_ref().map_or(0,|stream| stream.pending_work()),
             "floating_origin_shift": self.origin.as_ref().map(|origin| origin.shift.to_array()),
             "clock_time_s": live.map(|live| live.clock_time_s()),
             "camera": camera,
+            "cab_view": self.cab_diagnostic.as_ref().and_then(|diag| diag.report.as_ref()),
             "solar_direction": self.sun.as_ref().map(|sun| sun.direction.to_array()),
             "sunrise_s": self.sun.as_ref().and_then(|sun| sun.environment.map(|env| env.rise_time_s)),
             "sunset_s": self.sun.as_ref().and_then(|sun| sun.environment.map(|env| env.set_time_s)),

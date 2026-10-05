@@ -207,6 +207,7 @@ fn import_activity_with_length(
             penalty_per_second_late: 0.0,
         },
         simulation: SimulationSection {
+            native_physics: None,
             duration: duration_s,
             time_step: 1.0,
             seed: 42,
@@ -230,6 +231,17 @@ fn import_activity_with_length(
         sound_regions,
         validate: None,
     };
+
+    if !activity.player_stops.is_empty() {
+        let track_dir = imported_route_dir.ok_or_else(|| {
+            MstsError::msg("Import track.toml before importing a native passenger timetable")
+        })?;
+        let tdb = load_first_tdb(route_dir).ok_or_else(|| {
+            MstsError::msg("The passenger timetable requires its original track database")
+        })?;
+        let loaded = load_route_from_dir(track_dir).map_err(|e| MstsError::msg(e.to_string()))?;
+        crate::native_timetable::apply(&activity, &tdb, &loaded.graph, &mut scenario.route)?;
+    }
 
     let mut overlay_applied = false;
     if let Some(track_dir) = imported_route_dir {

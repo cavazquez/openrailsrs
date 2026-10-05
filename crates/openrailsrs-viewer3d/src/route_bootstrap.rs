@@ -266,6 +266,7 @@ pub fn update_loading_screen_progress(
     mut commands: Commands,
     screen: Option<ResMut<ViewerLoadingScreen>>,
     progress: Option<Res<crate::world::WorldSpawnProgress>>,
+    terrain: Option<Res<crate::terrain_spawn::TerrainSpawnProgress>>,
     app_state: Res<State<ViewerAppState>>,
     pipelines: Option<Res<crate::performance::ScenePipelineStatus>>,
     mut texts: Query<&mut Text>,
@@ -286,6 +287,11 @@ pub fn update_loading_screen_progress(
         screen.scenery_spawn_started = true;
         if let Ok(mut t) = texts.get_mut(screen.status) {
             *t = Text::new(progress.status_text());
+        }
+    } else if terrain.is_some() {
+        screen.gpu_ready_frames = 0;
+        if let Ok(mut text) = texts.get_mut(screen.status) {
+            *text = Text::new("Preparando terreno...");
         }
     } else if screen.scenery_spawn_started || *app_state.get() == ViewerAppState::Playing {
         if let Some(pipelines) = pipelines.as_ref() {

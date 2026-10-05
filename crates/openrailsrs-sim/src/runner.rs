@@ -221,12 +221,20 @@ pub fn run_scenario_headless_with_driver(
     let steam_params = consist.aggregate_steam_params();
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
+        native: crate::native_dynamics::NativeTrainPhysics::load(
+            &consist_path,
+            consist_root(&consist_path),
+            &consist,
+            scenario.simulation.native_physics.as_ref(),
+        )?,
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
         max_tractive_effort_n: consist.total_max_tractive_effort_n(),
         max_brake_n: consist.total_max_brake_n(),
         davis,
         vehicle_davis,
+        vehicle_lengths_m: consist.vehicle_lengths_m(),
+        diesel_vehicle_indices: consist.diesel_vehicle_indices(),
         tractive,
         diesel_engines,
         regen_factor: consist.regen_factor(),

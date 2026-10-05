@@ -42,6 +42,14 @@ El shader recibe explícitamente el `GlobalTransform` y respeta las caras
 dobles del material. El [oráculo gráfico](../scripts/visual_regression_instancing.sh)
 exige ≥98 % de solapamiento por geometría con mallas individuales en CI.
 
+Las instancias WORLD dibujan con buffers propios y se registran como `NonMesh`
+en la escena y las sombras. La cámara nace con `NoIndirectDrawing`, siguiendo
+el ejemplo `custom_shader_instancing` de Bevy 0.19.1; evita interferencias con
+las mallas normales durante viajes largos. La preparación de matrices y el
+renderizado siguen en GPU, con selección visible y envío explícito en CPU.
+Las capturas registran este modo y una regresión verifica que la cabina Pullman
+siga visible al terminar el servicio. Evidencias: [QA](PLAYER_POLISH_QA.md).
+
 La selección de texturas conserva el orden de prioridad: ordenar las rutas
 alfabéticamente elegía `NIGHT` durante el día. La carga mantiene los mipmaps
 DXT originales y el sampler de terreno conserva filtros y anisotropía. La

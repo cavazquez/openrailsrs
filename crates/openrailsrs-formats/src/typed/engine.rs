@@ -136,13 +136,9 @@ impl EngineFile {
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let context = "Engine";
         let mass_kg = find_mass_field(ast, &["Mass", "MassKG"], context)?;
-        let mut max_power_w = find_optional_quantity_field(
-            ast,
-            QuantityKind::Power,
-            &["MaxPower", "MaxForce"],
-            context,
-        )?
-        .unwrap_or(0.0);
+        let mut max_power_w =
+            find_optional_quantity_field(ast, QuantityKind::Power, &["MaxPower"], context)?
+                .unwrap_or(0.0);
         if max_power_w <= 0.0 {
             max_power_w = parse_diesel_power_tab_max(ast).unwrap_or(0.0);
         }
@@ -201,10 +197,18 @@ impl EngineFile {
         let steam = parse_steam_fields(ast);
         let mut diesel_power_tab = parse_rpm_power_tab(ast);
         let mut diesel_throttle_rpm_tab = parse_throttle_rpm_tab(ast);
-        let mut diesel_idle_rpm =
-            find_optional_scalar_field(ast, &["IdleRPM", "ORTSIdleRPM"], context)?.unwrap_or(0.0);
-        let mut diesel_max_rpm =
-            find_optional_scalar_field(ast, &["MaxRPM", "ORTSMaxRPM"], context)?.unwrap_or(0.0);
+        let mut diesel_idle_rpm = find_optional_scalar_field(
+            ast,
+            &["IdleRPM", "ORTSIdleRPM", "DieselEngineIdleRPM"],
+            context,
+        )?
+        .unwrap_or(0.0);
+        let mut diesel_max_rpm = find_optional_scalar_field(
+            ast,
+            &["MaxRPM", "ORTSMaxRPM", "DieselEngineMaxRPM"],
+            context,
+        )?
+        .unwrap_or(0.0);
         let mut diesel_block = None;
         if let Some(block) = parse_ortsdieselengines_diesel(ast) {
             diesel_block = Some(block.clone());
@@ -221,22 +225,25 @@ impl EngineFile {
                 diesel_max_rpm = block.max_rpm;
             }
         }
+        let legacy_rpm_rate =
+            find_optional_scalar_field(ast, &["DieselEngineMaxRPMChangeRate"], context)?
+                .unwrap_or(0.0);
         let diesel_rate_of_change_up_rpm_pss = diesel_block
             .as_ref()
             .map(|b| b.rate_of_change_up_rpm_pss)
-            .unwrap_or(0.0);
+            .unwrap_or(legacy_rpm_rate);
         let diesel_rate_of_change_down_rpm_pss = diesel_block
             .as_ref()
             .map(|b| b.rate_of_change_down_rpm_pss)
-            .unwrap_or(0.0);
+            .unwrap_or(legacy_rpm_rate);
         let diesel_change_up_rpm_ps = diesel_block
             .as_ref()
             .map(|b| b.change_up_rpm_ps)
-            .unwrap_or(0.0);
+            .unwrap_or(legacy_rpm_rate);
         let diesel_change_down_rpm_ps = diesel_block
             .as_ref()
             .map(|b| b.change_down_rpm_ps)
-            .unwrap_or(0.0);
+            .unwrap_or(legacy_rpm_rate);
         let (davis_a_n, davis_b_n_per_mps, davis_c_n_per_mps2) = parse_orts_davis(ast);
         let run_up_time_s =
             find_optional_scalar_field(ast, &["RunUpTimeToMaxForce"], context)?.unwrap_or(0.0);
@@ -1271,6 +1278,18 @@ fn parse_orts_notch_curves(ast: &Ast) -> Vec<(f64, Vec<(f64, f64)>)> {
 mod tests {
     use super::*;
     use crate::parser::parse_from_first_paren;
+
+    #[test]
+    fn force_is_not_a_power_fallback_and_basic_rpm_keeps_native_aliases() {
+        let native = crate::parse_vehicle_text("Engine ( unit Mass ( 67t ) MaxForce ( 12000lbf ) DieselEngineIdleRPM ( 315 ) DieselEngineMaxRPM ( 1400 ) DieselEngineMaxRPMChangeRate ( 40 ) DieselPowerTab ( 315 20340 1400 745513 ) )").unwrap();
+        let engine = EngineFile::from_ast(&native).unwrap();
+        assert_eq!(engine.max_power_w, 745513.0);
+        assert_eq!(
+            (engine.diesel_idle_rpm, engine.diesel_max_rpm),
+            (315.0, 1400.0)
+        );
+        assert_eq!(engine.diesel_change_up_rpm_ps, 40.0);
+    }
 
     #[test]
     fn parse_msts_diesel_engine_with_units() {

@@ -848,7 +848,9 @@ fn queue_world_instanced(
                 continue;
             };
 
-            // Custom per-entity instance buffer: never multi-draw / batch with others.
+            // This draw owns its instance buffer and transforms; it does not
+            // consume Bevy's preprocessed MeshUniforms or indirect parameters.
+            // Keep it outside the ordinary mesh preprocessing queues.
             opaque_phase.add(
                 Opaque3dBatchSetKey {
                     pipeline,
@@ -862,7 +864,7 @@ fn queue_world_instanced(
                 },
                 (entity, *main_entity),
                 mesh_instance.current_uniform_index,
-                BinnedRenderPhaseType::UnbatchableMesh,
+                BinnedRenderPhaseType::NonMesh,
             );
         }
     }
@@ -959,7 +961,7 @@ fn queue_world_instanced_shadows(
                 },
                 (entity, *main_entity),
                 mesh_instance.current_uniform_index,
-                BinnedRenderPhaseType::UnbatchableMesh,
+                BinnedRenderPhaseType::NonMesh,
             );
         }
     }

@@ -41,6 +41,9 @@ pub struct OrtsFrictionFields {
     pub drag_constant: Option<f64>,
     pub car_width_m: Option<f64>,
     pub car_height_m: Option<f64>,
+    /// Third MSTS Friction value. Invalid FCalc speeds select OR's legacy
+    /// resistance formula, rather than the newer auto-Davis estimation.
+    pub legacy_friction_speed_mps: Option<f64>,
 }
 
 impl OrtsFrictionFields {
@@ -110,6 +113,12 @@ pub fn parse_orts_friction_fields(ast: &Ast, is_loco: bool, name: &str) -> OrtsF
     fields.drag_constant = find_optional_f64(ast, &["ORTSDavisDragConstant"]);
 
     parse_size_dimensions(ast, &mut fields);
+    fields.legacy_friction_speed_mps = super::named_blocks(ast, "Friction").first().and_then(|values| {
+        let Ast::List(values) = values else { return None };
+        let offset = usize::from(matches!(values.first(), Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case("Friction")));
+        let Ast::Atom(value) = values.get(offset + 2)? else { return None };
+        super::atom_to_number(value).or_else(|| atom_to_string(value).and_then(|value| crate::msts_units::parse_velocity_mps(&value)))
+    });
 
     fields
 }

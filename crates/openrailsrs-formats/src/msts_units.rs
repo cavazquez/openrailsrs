@@ -8,7 +8,10 @@ pub fn parse_mass_kg(raw: &str) -> Option<f64> {
     if let Some(v) = parse_leading_number(s) {
         let rest = s[v.1..].trim().to_ascii_lowercase();
         return Some(match rest.as_str() {
-            "t" | "t-uk" | "ton" | "tons" | "tonne" | "tonnes" => v.0 * 1000.0,
+            // STFReader uses 1016.05 kg for a UK long ton, not a metric tonne.
+            "t-uk" => v.0 * 1016.05,
+            "t-us" => v.0 * 907.18474,
+            "t" | "ton" | "tons" | "tonne" | "tonnes" => v.0 * 1000.0,
             "kg" | "" => v.0,
             "lb" | "lbf" => lb_to_kg(v.0),
             "g-uk" | "g-us" => v.0 * 0.001,
@@ -42,6 +45,12 @@ pub fn parse_force_n(raw: &str) -> Option<f64> {
 /// Parse a length expression to metres (`68ft 6in`, `21.0in`, `20.602m`).
 pub fn parse_length_m(raw: &str) -> Option<f64> {
     let s = raw.trim();
+    if let Some((length, divisor)) = s.split_once('/') {
+        let divisor: f64 = divisor.trim().parse().ok()?;
+        return (divisor.is_finite() && divisor > 0.)
+            .then(|| parse_length_m(length).map(|v| v / divisor))
+            .flatten();
+    }
     if s.contains(' ') {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() == 2
@@ -155,7 +164,7 @@ mod tests {
 
     #[test]
     fn mass_units() {
-        assert!((parse_mass_kg("68t-uk").unwrap() - 68_000.0).abs() < 1.0);
+        assert!((parse_mass_kg("68t-uk").unwrap() - 69_091.4).abs() < 0.01);
         assert!((parse_mass_kg("50t").unwrap() - 50_000.0).abs() < 1.0);
     }
 

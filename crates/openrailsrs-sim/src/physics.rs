@@ -3,14 +3,14 @@ use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, Tra
 use openrailsrs_validate::BrakeCommandMapping;
 
 use crate::coupler::{
-    mass_weighted_mean_velocity, multi_body_step, multi_body_substep_count,
+    mass_weighted_mean_velocity, multi_body_step_distributed, multi_body_substep_count,
     multi_body_substep_count_for_vehicles,
 };
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
 use crate::steam::steam_step;
 
-const G: f64 = 9.81;
+const G: f64 = 9.80665;
 /// OR holds speed with brakes set while diesel RPM can still rise; no tractive demand.
 const BRAKE_TRACTION_CUTOFF: f64 = 0.001;
 /// Full tractive effort below this fraction of the edge speed limit.
@@ -36,6 +36,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
 #[derive(Clone)]
 pub struct TrainPhysics {
+    pub native: Option<crate::native_dynamics::NativeTrainPhysics>,
     pub mass_kg: f64,
     pub max_power_w: f64,
     pub max_tractive_effort_n: f64,
@@ -43,6 +44,8 @@ pub struct TrainPhysics {
     pub davis: DavisCoefficients,
     /// Per-vehicle Davis coefficients (consist order); used in multi-body mode.
     pub vehicle_davis: Vec<DavisCoefficients>,
+    pub vehicle_lengths_m: Vec<f64>,
+    pub diesel_vehicle_indices: Vec<usize>,
     /// Aggregate traction curve. Empty curve → falls back to P/v law.
     pub tractive: TractiveCurve,
     /// ORTS per-notch diesel models (one per powered locomotive in the consist).
@@ -115,6 +118,40 @@ pub fn step(
     let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
     let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
 
+    if let Some(native) = &train.native {
+        if state.native_dynamics.as_ref().is_none_or(|d| {
+            d.bearing_c.len() != native.vehicles.len()
+                || d.axles.len() != train.diesel_engines.len()
+        }) {
+            let mut dynamics = native.initial_state(train.diesel_engines.len());
+            for axle in &mut dynamics.axles {
+                axle.speed_mps = v;
+            }
+            state.native_dynamics = Some(dynamics);
+        }
+        native.update_bearings(
+            state.native_dynamics.as_mut().unwrap(),
+            v,
+            state.odometer_m,
+            dt,
+        );
+        // Native safety interlocks use the actual cylinder pressure after this
+        // tick's EP update, independently of the driver's brake handle.
+        state.brake_system.step_with_speed(brake_frac, dt, v);
+    }
+    let physical_throttle = train.native.as_ref().map_or(state.throttle, |native| {
+        native.throttle(
+            state.throttle,
+            state
+                .brake_system
+                .cylinders
+                .first()
+                .map_or(0., |c| c.pressure_bar()),
+        )
+    });
+    let native_brake_forces = state.brake_system.cylinder_forces_n(v);
+    let mut rail_motor_forces = Vec::with_capacity(train.diesel_engines.len());
+
     // ── Tractive force ────────────────────────────────────────────────────────
     // Steam path: boiler + cylinder model (updates boiler state in place).
     // Electric/diesel path: P/v law or explicit traction curve.
@@ -130,7 +167,7 @@ pub fn step(
         };
         let effective_throttle = state.throttle * factor;
         steam_step(boiler, params, effective_throttle, v, dt)
-    } else if state.throttle > 0.0 {
+    } else if state.throttle > 0.0 || !train.diesel_engines.is_empty() {
         let speed_factor = if train.legacy_power_cap {
             speed_limit_traction_factor(v, speed_cap)
         } else {
@@ -164,14 +201,20 @@ pub fn step(
             }
             let prev_v = v;
             let mut f_total = 0.0;
-            let traction_throttle = if brake_frac > BRAKE_TRACTION_CUTOFF {
+            let traction_throttle = if train.native.is_some() {
+                physical_throttle
+            } else if brake_frac > BRAKE_TRACTION_CUTOFF {
                 0.0
             } else {
                 state.throttle
             };
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
-                let new_rpm = engine.advance_rpm(rpm, state.throttle, dt);
+                let new_rpm = if train.native.is_some() {
+                    engine.advance_native_rpm(rpm, physical_throttle, dt)
+                } else {
+                    engine.advance_rpm(rpm, physical_throttle, dt)
+                };
                 state.diesel_rpm[i] = new_rpm;
                 let curve_throttle = traction_throttle;
                 state.diesel_apparent_throttle[i] = if curve_throttle > 0.0 {
@@ -186,7 +229,10 @@ pub fn step(
                     advance_diesel_run_up(engine, train, state.throttle, dt, &mut run_up);
                 state.diesel_run_up[i] = run_up;
                 let heat = state.diesel_motor_heat.get(i).copied().unwrap_or(0.0);
-                let new_heat = if engine.engine.is_some() && engine.motor_heating_time_s > 0.0 {
+                let new_heat = if train.native.is_none()
+                    && engine.engine.is_some()
+                    && engine.motor_heating_time_s > 0.0
+                {
                     engine.advance_motor_heat(heat, v, state.throttle, run_factor, dt)
                 } else {
                     0.0
@@ -198,14 +244,32 @@ pub fn step(
                 let mut force_n = if curve_throttle <= 0.0 {
                     0.0
                 } else {
-                    let target = engine.target_traction_force_n(
-                        v,
-                        curve_throttle,
-                        new_rpm,
-                        run_factor,
-                        power_reduction,
-                        legacy,
-                    );
+                    let wheel_speed = state
+                        .native_dynamics
+                        .as_ref()
+                        .and_then(|d| d.axles.get(i))
+                        .map_or(v, |a| a.speed_mps.abs());
+                    let target = if let Some(native) = &train.native {
+                        let vehicle_index =
+                            train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
+                        let profile = &native.vehicles[vehicle_index];
+                        engine.native_traction_force_n(
+                            wheel_speed,
+                            curve_throttle,
+                            new_rpm,
+                            profile.authored_force_curves,
+                            profile.rail_power_limit_w,
+                        )
+                    } else {
+                        engine.target_traction_force_n(
+                            v,
+                            curve_throttle,
+                            new_rpm,
+                            run_factor,
+                            power_reduction,
+                            legacy,
+                        )
+                    };
                     let max_force_limit = if target.is_finite() {
                         target
                     } else {
@@ -226,7 +290,39 @@ pub fn step(
                     force_n,
                     dt,
                 );
-                f_total += force_n;
+                let rail_force = if let (Some(native), Some(dynamics)) =
+                    (&train.native, &mut state.native_dynamics)
+                {
+                    let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
+                    let profile = &native.vehicles[vehicle_index];
+                    let mass = state
+                        .vehicle_masses
+                        .get(vehicle_index)
+                        .copied()
+                        .or_else(|| native.vehicle_masses_kg.get(vehicle_index).copied())
+                        .unwrap_or(engine.adhesion_mass_kg);
+                    let speed = state
+                        .vehicles
+                        .get(vehicle_index)
+                        .map_or(v, |vehicle| vehicle.velocity_mps);
+                    dynamics.axles[i].step(
+                        profile,
+                        mass,
+                        engine.adhesion_mass_kg,
+                        speed,
+                        force_n,
+                        native_brake_forces
+                            .get(vehicle_index)
+                            .copied()
+                            .unwrap_or(0.),
+                        dynamics.adhesion_factor,
+                        dt,
+                    )
+                } else {
+                    force_n
+                };
+                rail_motor_forces.push(rail_force);
+                f_total += rail_force;
             }
             f_total
         } else if let Some(f_curve) = train.tractive.interpolate(v) {
@@ -242,7 +338,9 @@ pub fn step(
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
-    state.brake_system.step(brake_frac, dt);
+    if train.native.is_none() {
+        state.brake_system.step_with_speed(brake_frac, dt, v);
+    }
     let effective_mass = train.mass_kg + state.extra_mass_kg;
     let f_brake = if !state.brake_system.cylinders.is_empty() {
         state.brake_system.total_force_n(v)
@@ -258,12 +356,70 @@ pub fn step(
     let f_resist = train.davis.resistance_n(v);
     let grade_fraction = edge_data.grade_at(state.pos_on_edge_m) / 100.0;
     let f_grade = effective_mass * G * grade_fraction;
-
+    let head = path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
+    let mut front = head;
+    let vehicle_grades: Vec<_> = train
+        .vehicle_lengths_m
+        .iter()
+        .enumerate()
+        .map(|(i, length)| {
+            let center = front - length / 2.;
+            let span = train
+                .native
+                .as_ref()
+                .and_then(|n| n.vehicles.get(i))
+                .and_then(|p| p.pitch_span_m)
+                .unwrap_or(*length);
+            let grade =
+                path_data.average_grade_between(center - span / 2., center + span / 2.) / 100.0;
+            front -= length;
+            grade
+        })
+        .collect();
+    let resistance = |i: usize, mass: f64, davis: &DavisCoefficients, speed: f64| {
+        if let (Some(native), Some(dynamics)) = (&train.native, &state.native_dynamics) {
+            native.resistance(i, mass, davis, speed, dynamics)
+        } else {
+            davis.resistance_n(speed)
+        }
+    };
     // ── Multi-body coupler path ───────────────────────────────────────────────
     // When the state has per-vehicle data (initialised by the runner), delegate
     // to the spring-damper solver.  The resulting mean velocity is used for
     // position integration and energy accounting below.
-    let v_new = if !state.vehicles.is_empty() {
+    let rigid_native = train.native.as_ref().is_some_and(|n| {
+        n.vehicles.len() > 1
+            && n.vehicles
+                .iter()
+                .take(n.vehicles.len() - 1)
+                .all(|v| v.rigid_connection)
+    });
+    let v_new = if rigid_native && !state.vehicles.is_empty() {
+        // Native CouplingHasRigidConnection constrains linked vehicles to one
+        // longitudinal velocity. Summing their forces conserves momentum and
+        // prevents artificial spring rebound from driving the wheel-slip model.
+        let resist: f64 = train
+            .vehicle_davis
+            .iter()
+            .enumerate()
+            .map(|(i, d)| resistance(i, state.vehicle_masses[i], d, v))
+            .sum();
+        let grade: f64 = vehicle_grades
+            .iter()
+            .zip(&state.vehicle_masses)
+            .map(|(g, m)| m * G * g)
+            .sum();
+        let new_speed =
+            (v + dt * (f_motor - f_brake - resist - grade) / effective_mass.max(1.)).max(0.);
+        for vehicle in &mut state.vehicles {
+            vehicle.velocity_mps = new_speed;
+            vehicle.position_m += 0.5 * (v + new_speed) * dt;
+        }
+        for coupler in &mut state.couplers {
+            coupler.extension_m = 0.;
+        }
+        new_speed
+    } else if !state.vehicles.is_empty() {
         let total_mass = effective_mass;
         let masses = state.vehicle_masses.clone();
         let scalar_coast = train
@@ -280,12 +436,21 @@ pub fn step(
                     .vehicles
                     .iter()
                     .zip(train.vehicle_davis.iter())
-                    .map(|(veh, davis)| davis.resistance_n(veh.velocity_mps))
+                    .enumerate()
+                    .map(|(i, (veh, davis))| resistance(i, masses[i], davis, veh.velocity_mps))
                     .sum::<f64>()
             } else {
                 train.davis.resistance_n(v)
             };
-            let f_grade_coast = effective_mass * G * grade_fraction;
+            let f_grade_coast = if vehicle_grades.len() == masses.len() {
+                masses
+                    .iter()
+                    .zip(&vehicle_grades)
+                    .map(|(mass, grade)| mass * G * grade)
+                    .sum()
+            } else {
+                effective_mass * G * grade_fraction
+            };
             let accel = (-f_brake_coast - f_resist_coast - f_grade_coast) / effective_mass.max(1.0);
             let mean_v = (v + accel * dt).max(0.0);
             for veh in &mut state.vehicles {
@@ -304,6 +469,19 @@ pub fn step(
             };
             let sub_dt = dt / n_sub as f64;
             let mut mean_v = v;
+            let mut motor_forces = vec![0.; state.vehicles.len()];
+            if train.diesel_vehicle_indices.len() == rail_motor_forces.len()
+                && !train.diesel_vehicle_indices.is_empty()
+            {
+                let raw: f64 = rail_motor_forces.iter().sum();
+                for (&i, &force) in train.diesel_vehicle_indices.iter().zip(&rail_motor_forces) {
+                    if let Some(f) = motor_forces.get_mut(i) {
+                        *f += if raw > 0. { force * f_motor / raw } else { 0. };
+                    }
+                }
+            } else if let Some(first) = motor_forces.first_mut() {
+                *first = f_motor;
+            }
             for _ in 0..n_sub {
                 let coupling_v = mass_weighted_mean_velocity(&state.vehicles, &masses).max(0.0);
                 let brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
@@ -321,8 +499,12 @@ pub fn step(
                         .iter()
                         .zip(train.vehicle_davis.iter())
                         .zip(state.vehicle_masses.iter())
-                        .map(|((veh, davis), mass)| {
-                            davis.resistance_n(veh.velocity_mps) + mass * G * grade_fraction
+                        .enumerate()
+                        .map(|(i, ((veh, davis), mass))| {
+                            resistance(i, *mass, davis, veh.velocity_mps)
+                                + mass
+                                    * G
+                                    * vehicle_grades.get(i).copied().unwrap_or(grade_fraction)
                         })
                         .collect()
                 } else {
@@ -332,10 +514,10 @@ pub fn step(
                         .map(|m| (f_resist + f_grade) * m / total_mass)
                         .collect()
                 };
-                mean_v = multi_body_step(
+                mean_v = multi_body_step_distributed(
                     &mut state.vehicles,
                     &mut state.couplers,
-                    f_motor,
+                    &motor_forces,
                     &brake_forces,
                     &grade_resist,
                     &masses,
@@ -348,6 +530,26 @@ pub fn step(
         }
     } else {
         // ── Single-mass path (default) ────────────────────────────────────────
+        // Native stock retains each car's thermal resistance and bogie grade
+        // even when elastic coupler simulation is disabled in the scenario.
+        let (f_resist, f_grade) = if let Some(native) = &train.native {
+            let resist = native
+                .vehicle_masses_kg
+                .iter()
+                .zip(&train.vehicle_davis)
+                .enumerate()
+                .map(|(i, (mass, davis))| resistance(i, *mass, davis, v))
+                .sum();
+            let grade = native
+                .vehicle_masses_kg
+                .iter()
+                .zip(&vehicle_grades)
+                .map(|(mass, grade)| mass * G * grade)
+                .sum();
+            (resist, grade)
+        } else {
+            (f_resist, f_grade)
+        };
         let f_net = f_motor - f_brake - f_resist - f_grade;
         let accel = f_net / effective_mass;
         (v + accel * dt).max(0.0)

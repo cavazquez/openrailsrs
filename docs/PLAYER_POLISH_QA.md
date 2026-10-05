@@ -104,10 +104,9 @@ ralentí y carga positiva en tracción, verificado por pruebas de los controles 
 
 ## Límites de esta entrega
 
-La composición geométrica y la partida completa están comprobadas. La paridad
-física de la captura histórica completa sigue fuera de tolerancia: RMS 7,5749
-m/s y diferencia máxima de odómetro 2717,27 m, sin cambiar la referencia ni sus
-umbrales. El servicio extendido ahora usa el subconjunto SIGSCR original de
+La composición geométrica y la partida completa están comprobadas. La validación histórica del 4 de octubre aún fallaba; la ampliación del 5 de
+octubre, al final de este documento, registra el servicio completo dentro de
+tolerancia con referencia y presupuestos intactos. El servicio extendido ahora usa el subconjunto SIGSCR original de
 Chiltern; no se afirma compatibilidad completa SIGSCR ni ejecución de C#.
 Los parámetros nativos mejoran el modelo de
 cilindros, pero no reproducen todas las válvulas/depósitos del original. El
@@ -532,3 +531,190 @@ El catálogo web se probó en escritorio/móvil, sin errores JS ni desbordamient
 La revisión de seguridad encontró un KTX2 RGB8 truncado que podía provocar un panic en Bevy. Se corrigieron tamaño/DFD con regresiones para RGB8 válido e inválido. El servicio falló después del hallazgo; **no se declara una revisión automática completa**.
 
 [Servicio completado](fixtures/compatibility/five-items-2026-10-05/chiltern-completed.png) y [mediciones/procedencia](fixtures/compatibility/five-items-2026-10-05/verification.json). Pruebas manuales: [sección 32](PLAYER_MANUAL_TESTS.md#32-catálogo-web-biblioteca-ktx2-y-paquete-trasladable). Distribución: [DISTRIBUTION.md](DISTRIBUTION.md).
+
+## 5 de octubre de 2026: fluidez, transparencias y cámaras
+
+La comparación de streaming usa el mismo recorrido extendido de seis estaciones,
+RX 7600/Vulkan, 1280×720, radio 450 m, FOV 60°, conductor al 75 %, tiempo ×16 y
+pasajeros normales y la formación histórica del ejemplo. Ambas partidas
+completaron **6/6 paradas y aproximadamente 15318,75 m**. El registro anterior
+tuvo 18 cuadros de juego mayores a 100 ms, con máximo 345,34 ms. La prueba
+final tuvo **uno**, de **150,33 ms**, y P50/P95/P99 de **25/25/48 ms**. Tiempo
+real del viaje: 230,4 → 190,9 s; pico RSS: 2064 → 2022,4 MiB; pico de VRAM
+del proceso: 2435,44 → 1651,46 MiB. El peor cuadro de arranque sigue siendo
+de **4,29 s**; esta aceptación no afirma que el inicio sea fluido ni que se
+cumpla el horario.
+
+El registro anterior podía perder la cabina y otras mallas durante el viaje.
+La prueba final conserva la cabina visible hasta Gerrards Cross y pasa cinco
+de las seis regiones del control gráfico. Las cifras anteriores sirven como
+registro histórico de la misma configuración; la carga visual no era equivalente.
+
+La preparación de texturas y mallas del terreno se hace en trabajadores. Se
+publican las mallas con un presupuesto suave de 4 ms por cuadro y con el origen
+actual de la cámara. Se reutilizan handles ya subidos a GPU sin releer la textura.
+Las alturas siguen disponibles en CPU para posicionar cámara y escenario. El
+diagnóstico de rayos de cabina sólo recorre las mallas cuando se activa
+explícitamente, y los mensajes normales se actualizan dos veces por segundo.
+
+Las seis vistas de las tres estaciones cargaron sin texturas, terreno ni modelos
+cercanos pendientes. El rectángulo claro señalado en las pruebas anteriores era
+**OldOakTree.s/OldOaktree.ace**: su fondo blanco tiene alfa de aproximadamente
+6 %. Se clasifica la transparencia del mip original, incluso al reutilizar KTX2.
+Los atlas WORLD con alfa de fondo y follaje opaco usan el recorte nativo de OR;
+los cristales con alfa intermedio conservan su mezcla. No se modifica el asset
+descargado ni se aplica este recorte a la cabina.
+
+Se corrigió el anclaje de cada coche: el viajero de simulación representa el
+frente del tren y el origen del modelo está en el centro del vehículo. El primer
+coche queda a media longitud detrás de la cabeza y los siguientes respetan sus
+propias longitudes. La ocupación de vía usa esos mismos centros. El enfoque
+especial de captura reproduce el centro de OR; el FOV 60° y la cámara exterior
+habitual de Bevy se conservan en la partida.
+
+`scripts/check_station_cameras.py` compara posición, dirección y proyección
+contra las **seis referencias OR 1.6.1 sin modificarlas**. Todas pasan los límites
+de 3 m, 1°, 0,05° de FOV y 0,001 de aspecto: máximo 1,72 m y 0,58°. La auditoría
+de tres edificios nativos también pasa. Esto verifica geometría/materiales y
+cámaras; no certifica igualdad de iluminación por píxel.
+
+[Roble desde cabina](fixtures/compatibility/polish-2026-10-05/northolt-oak-cab.png),
+[cámara exterior](fixtures/compatibility/polish-2026-10-05/northolt-camera-exterior.png),
+[viaje con streaming](fixtures/compatibility/polish-2026-10-05/chiltern-streaming-completed.png)
+y [mediciones y referencias](fixtures/compatibility/polish-2026-10-05/verification.json).
+
+### Demo Model 1: servicio nativo completo
+
+La actividad original `MT_MT_0930 Edinburgh-Glasgow Queen Street.act` contiene
+una sección jugable Edinburgh Waverley → Haymarket → Linlithgow. Se importa su
+horario de jugador, los pares de plataformas TDB, su PAT y la formación original
+Class 47 + seis Mk2. La salida conserva la posición de la cola y suma los
+139,9032 m de la formación elegida para situar la cabeza. Los coches conservan
+sus pasajeros y tiempos originales: la parada final tiene **600 s** de intercambio;
+el modo de práctica permite reducir esa espera a 5 s.
+
+La ruta usa su velocidad de diseño original de **100 mph**, las ramas reales
+de los `TrPin`, la identidad de cada vector paralelo y las agujas que atraviesa
+el PAT. Las señales ya no se fuerzan a verde: se importaron y evaluaron **678
+cabezas SIGSCR**, sin errores. Las funciones NORMAL, DISTANCE, INFO, REPEATER y
+SHUNTING conservan sus aspectos; los indicadores auxiliares no crean autoridad
+de circulación. Un UID que aparecía como primer campo WORLD ya no mezcla las
+características de dos postes distintos.
+
+La prueba sin ventana terminó con **3/3 paradas, 28075,40 m y 2360,95 s**
+simulados, sin fallo. El visor Vulkan/RX 7600 repitió la partida en **178,8 s
+reales**, con **1023,1 MiB** de pico RSS, cuatro sectores GPU y cero terreno o
+uploads pendientes al terminar. Llegó tarde a Haymarket y Linlithgow: completar
+la actividad valida su continuidad y sus paradas, no puntualidad ni equivalencia
+física de este Class 47 con OR. Los cuadros de partida P50/P95/P99 fueron
+25/25/25 ms, sin tirones mayores a 100 ms; arranque máximo de 1,37 s. Dos
+sectores periféricos SCE carecen de fuente de terreno en el paquete original;
+esta prueba no certifica cobertura de todas las esquinas del mapa.
+
+[Cabina al terminar en Linlithgow](fixtures/compatibility/polish-2026-10-05/demo-model-1-completed.png).
+
+### Cabina y escenario después de varios kilómetros
+
+La prueba de viaje detectó un error que los contadores de recursos no mostraban:
+las mallas normales de Bevy podían desaparecer mientras los objetos WORLD
+instanciados seguían dibujándose. La cámara permanecía dentro de la cabina y
+los assets estaban listos. Los dibujos WORLD usan sus propias matrices y
+buffers de instancias; ahora se registran como `NonMesh` tanto en la escena
+como en las sombras, evitando entrar en el procesamiento de mallas ordinarias.
+La cámara se crea con `NoIndirectDrawing`, como requiere el
+[ejemplo oficial de instancias personalizadas de Bevy 0.19.1](https://github.com/bevyengine/bevy/blob/v0.19.1/examples/shader_advanced/custom_shader_instancing.rs).
+Se conservan el renderizado, las instancias WORLD y la preparación de matrices
+en GPU; la selección visible y el envío de dibujos ordinarios usan CPU.
+El informe de cámara registra `indirect_drawing: false`. Esta configuración
+evita la desaparición de mallas y no se presenta como ejecución íntegra en GPU.
+
+La captura registra la posición mundial real de la cámara, su posición relativa
+a la cabina y las piezas visibles. La regresión gráfica compara seis zonas
+opacas de la cabina Pullman, con asiento, luz diurna y FOV 60° fijos. Exige
+cuatro zonas dentro de un error RGB medio de 30/255; permite variaciones de
+iluminación y excluye parabrisas, instrumentos y resumen del servicio. Rechaza
+las capturas del fallo aunque sus contadores de visibilidad sean correctos.
+La referencia es interna del visor y no certifica paridad por píxel con OR.
+El presupuesto se fijó usando la cabina inspeccionada al inicio y al final del
+viaje, y rechaza las capturas anteriores sin cabina. La referencia inicial,
+las seis zonas y todos los presupuestos de paridad con OR permanecen intactos.
+
+```bash
+python3 scripts/check_viewer_streaming.py \
+  --route-root "$CHILTERN_ROUTE" \
+  --scenario /ruta/al/escenario-con-formacion-original.toml \
+  --checkpoint terminal --headless-wayland --require-hardware \
+  --view-radius-m 450 --timeout-s 420 \
+  --pullman-cab-reference docs/fixtures/compatibility/polish-2026-10-05/pullman-cab-foreground-reference.png \
+  --out-dir tmp/chiltern-native-streaming
+```
+
+El escenario de esta prueba conserva las seis estaciones de
+`examples/chiltern_extended/scenario.toml` y usa el `Birmingham Pullman.con`
+original instalado. Las rutas absolutas locales y las descargas no se versionan.
+
+### Física del servicio completo dentro de tolerancia
+
+El 5 de octubre se reprodujo la captura nativa de las tres estaciones con la
+misma versión OR 1.6.1 y la misma referencia SHA-256. Resultado: RMS 0,2081 m/s,
+pico 1,0921 m/s y diferencia máxima de odómetro 39,61 m; cobertura del 100 %.
+Las cinco fases cumplen RMS ≤1,10 m/s. Se conservan los umbrales de 0,75 m/s,
+2 m/s y 45 m. No se reemplazó ni ajustó ningún baseline aceptado.
+
+El replay adopta el corredor con pendientes por sección y la formación nativa
+extraída solo como datos numéricos. Corrige ton UK, motor auxiliar con su propio
+gobernador, descenso de RPM original, regulación por escalones, corte de potencia
+hasta liberar la presión EP, carrera del pistón, zapatas P10, resistencia térmica,
+patinaje Pacha y conexiones rígidas. El entorno original pausado queda identificado
+en `examples/chiltern_local/physics/environment.json`; la media del ruido de
+adherencia y los subpasos deterministas dejan diferencias pequeñas, cuantificadas
+por el oráculo. Este pase certifica el ensayo fijo, no todos los climas ni trenes.
+
+`check.sh` exige también `run_oracles.py --suite service`. El informe reproducible
+se guarda en `tmp/service-parity-check/report.json`. Los gráficos descargados
+permanecen fuera del repositorio; la biblioteca continúa usando el origen del autor.
+
+
+Verificación final del 5 de octubre: `check.sh` pasó **1547 pruebas Rust**,
+**49 pruebas Python** y **dos pruebas nativas adicionales** con el contenido
+Chiltern instalado. Quedaron 44 pruebas que requieren recursos específicos
+sin ejecutar en la batería habitual. Pasaron también la preparación del menú
+nativo de Demo Model 1, las seis cámaras y la regeneración byte a byte de los
+diez fixtures físicos. Los cuatro oráculos cortos y el servicio completo usan
+las referencias y tolerancias originales.
+
+El guardado JSON conserva exactamente los números de coma flotante. Las
+pruebas de física nativa comprueban guardar/reanudar sin divergencia, rechazo
+de estado corrupto antes de modificar la partida y temperatura de los coches
+retenidos al desacoplar. El modo de cuerpo único conserva resistencias y
+pendientes por coche; una formación rígida produce el mismo resultado con
+ambos modos. Una actividad que referencia señales como plataformas se rechaza
+con un diagnóstico de edición incompatible; no se inventa una parada.
+
+Se restauraron y verificaron los 134 outputs de simulación existentes,
+preservando los seis archivos que el usuario ya había cambiado. Los contenidos
+descargados, logs, cachés y ensayos intermedios continúan fuera de Git.
+
+
+El último viaje gráfico usó la **formación original completa** del Pullman,
+las seis estaciones y los dos servicios AI: **6/6 paradas, 15320,22 m**,
+**199,1 s reales** y **2027,5 MiB** de pico RSS. Los dos servicios AI llegaron,
+66 cabezas SIGSCR sin errores, cero terreno o subidas GPU pendientes. Las
+velocidades de llegada fueron menores a 0,1 m/s. Captura:
+[servicio con formación original](fixtures/compatibility/polish-2026-10-05/chiltern-original-service-completed.png).
+
+Esta carga nativa adicional tuvo **un cuadro de juego mayor a 100 ms**,
+con máximo **148,3 ms** y P99 **48 ms**; el arranque máximo fue **4373,0 ms**.
+La cabina permaneció visible y pasó cinco de las seis regiones del control
+gráfico, con la cámara real dentro de su geometría y cero errores de pipelines.
+La formación histórica también tuvo un tirón en su prueba final; estos resultados
+no garantizan fluidez para todos los modos y contenidos. El horario sintético de
+seis estaciones sigue siendo exigente para el conductor automático nativo:
+completar la ruta no certifica puntualidad.
+
+El viaje completo en **exterior** terminó también 6/6, con ocho modelos de
+vehículo compartidos, ambos servicios AI llegados y ningún recurso pendiente.
+RX 7600/Vulkan: **195,1 s reales**, **1717,9 MiB** de RAM, P50/P95/P99 de juego
+**25/25/48 ms**, un cuadro mayor a 100 ms (máximo **122,3 ms**) y arranque
+máximo de **1513,0 ms**. Se inspeccionaron el tren, la vía y el entorno al final:
+[formación original en exterior](fixtures/compatibility/polish-2026-10-05/chiltern-original-exterior-completed.png).

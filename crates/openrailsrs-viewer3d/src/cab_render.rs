@@ -49,6 +49,17 @@ pub fn camera_layers_driver() -> RenderLayers {
 #[derive(Resource, Default, Clone, Debug)]
 pub struct CabRenderDiagnostic {
     pub hud_line: Option<String>,
+    pub report: Option<CabViewReport>,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct CabViewReport {
+    pub camera_eye: [f32; 3],
+    pub expected_eye: Option<[f32; 3]>,
+    pub eye_error_m: Option<f32>,
+    pub camera_inside_geometry: Option<bool>,
+    pub mesh_parts: usize,
+    pub visible_mesh_parts: usize,
 }
 
 #[derive(Resource, Default, Debug)]
@@ -57,6 +68,21 @@ pub struct CabRenderDiagLatch {
     /// True while the last logged mode was outdoor (Chase / Orbit / Off).
     pub was_outdoor: bool,
     pub last_eye: Option<Vec3>,
+    last_sample_at: Option<std::time::Instant>,
+}
+
+impl CabRenderDiagLatch {
+    fn should_sample(&mut self, now: std::time::Instant, entering: bool) -> bool {
+        if !entering
+            && self.last_sample_at.is_some_and(|last| {
+                now.duration_since(last) < std::time::Duration::from_millis(500)
+            })
+        {
+            return false;
+        }
+        self.last_sample_at = Some(now);
+        true
+    }
 }
 
 /// Tag new train exterior meshes (live consist bodies).
@@ -139,6 +165,7 @@ pub fn update_cab_render_diagnostic(
         (&GlobalTransform, &Mesh3d, Option<&CabPartInfo>),
         (With<CabInteriorMarker>, With<Mesh3d>),
     >,
+    cab_visibility: Query<&ViewVisibility, (With<CabInteriorMarker>, With<Mesh3d>)>,
     meshes: Res<Assets<Mesh>>,
     exterior: Query<
         (&Visibility, Option<&RenderLayers>),
@@ -152,6 +179,7 @@ pub fn update_cab_render_diagnostic(
         state.was_driver = false;
         state.was_outdoor = false;
         diag.hud_line = None;
+        diag.report = None;
         return;
     }
 
@@ -165,6 +193,7 @@ pub fn update_cab_render_diagnostic(
     // Do not re-log on free-fly eye motion — that floods the console in Off mode.
     if outdoor {
         diag.hud_line = None;
+        diag.report = None;
         if state.was_outdoor {
             return;
         }
@@ -184,25 +213,26 @@ pub fn update_cab_render_diagnostic(
 
     // DriverCam (CAB-A)
     if cab_parts.is_empty() {
+        diag.report = None;
         return;
     }
 
     let cab_res = driver_cab.as_deref();
-    let eye = lead_car
+    let expected_eye = lead_car
         .iter()
         .next()
-        .and_then(|lead| cab_res.and_then(|cab| driver_eye_from_lead(lead, cab)))
-        .unwrap_or(cam_eye);
+        .and_then(|lead| cab_res.and_then(|cab| driver_eye_from_lead(lead, cab)));
+    let eye = cam_eye;
 
-    let (exterior_total, exterior_visible, exterior_layer1) = count_exterior_visibility(&exterior);
-
-    if !state.was_driver {
-        state.was_driver = true;
-        state.was_outdoor = false;
-    } else if state.last_eye.is_some_and(|last| last.distance(eye) < 0.05) {
+    let entering = !state.was_driver;
+    if !state.should_sample(std::time::Instant::now(), entering) {
         return;
     }
+    state.was_driver = true;
+    state.was_outdoor = false;
     state.last_eye = Some(eye);
+
+    let (exterior_total, exterior_visible, exterior_layer1) = count_exterior_visibility(&exterior);
 
     let mesh_local_aabb = cab_interior_mesh_local_aabb(&cab_parts, &meshes);
     let head_inside_local = cab_res
@@ -211,10 +241,21 @@ pub fn update_cab_render_diagnostic(
         .map(|(head, (min, max))| point_in_aabb(head, min, max));
 
     let cab_world_aabb = cab_interior_world_aabb(&cab_parts, &meshes);
-    let head_inside_world = cab_world_aabb.map(|(min, max)| point_in_aabb(eye, min, max));
-    let head_inside = head_inside_local.or(head_inside_world);
+    // The authored head can be inside the local mesh even when the actual
+    // camera or the propagated cab hierarchy has moved elsewhere.
+    let head_inside = cab_world_aabb.map(|(min, max)| point_in_aabb(eye, min, max));
 
     let cab_part_count = cab_parts.iter().count();
+    let visible_mesh_parts = cab_visibility.iter().filter(|v| v.get()).count();
+    let eye_error_m = expected_eye.map(|head| head.distance(eye));
+    diag.report = Some(CabViewReport {
+        camera_eye: eye.to_array(),
+        expected_eye: expected_eye.map(|eye| eye.to_array()),
+        eye_error_m,
+        camera_inside_geometry: head_inside,
+        mesh_parts: cab_part_count,
+        visible_mesh_parts,
+    });
     let aabb_line = mesh_local_aabb
         .map(|(min, max)| {
             format!(
@@ -242,7 +283,9 @@ pub fn update_cab_render_diagnostic(
         .map(|h| format!(" ORTS=({:.1},{:.1},{:.1})", h.x, h.y, h.z))
         .unwrap_or_default();
 
-    let occluder = closest_cab_occluder_along_ray(eye, cam_forward, near_m, &cab_parts, &meshes);
+    let occluder = cab_occluder_debug_enabled()
+        .then(|| closest_cab_occluder_along_ray(eye, cam_forward, near_m, &cab_parts, &meshes))
+        .flatten();
     let occluder_hud = occluder
         .as_ref()
         .map(|o| {
@@ -264,7 +307,7 @@ pub fn update_cab_render_diagnostic(
     diag.hud_line = Some(hud_line.clone());
 
     viewer_log!(
-        "openrailsrs-viewer3d: cab render diag — eye=({:.2},{:.2},{:.2}) {aabb_line} {inside_label} | near={near_m:.3} fov={fov_deg:.1}° | exterior visible={exterior_visible}/{exterior_total} on_L1={exterior_layer1} | cab_parts={cab_part_count} | camera layers [0,2]",
+        "openrailsrs-viewer3d: cab render diag — eye=({:.2},{:.2},{:.2}) {aabb_line} {inside_label} | near={near_m:.3} fov={fov_deg:.1}° | exterior visible={exterior_visible}/{exterior_total} on_L1={exterior_layer1} | cab_parts={visible_mesh_parts}/{cab_part_count} visible | eye_error={eye_error_m:?} | camera layers [0,2]",
         eye.x,
         eye.y,
         eye.z,
@@ -501,6 +544,55 @@ fn point_in_aabb(point: Vec3, min: Vec3, max: Vec3) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::ecs::system::RunSystemOnce;
+
+    #[test]
+    fn diagnostic_checks_actual_camera_even_when_authored_head_is_inside() {
+        let mut app = App::new();
+        app.insert_resource(CameraFollowMode::DriverCam)
+            .insert_resource(LiveDriverCab {
+                head_lead_local: Some(Vec3::ZERO),
+                ..Default::default()
+            })
+            .init_resource::<CabRenderDiagLatch>()
+            .init_resource::<CabRenderDiagnostic>()
+            .init_resource::<Assets<Mesh>>();
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::new(2.0, 2.0, 2.0));
+        app.world_mut()
+            .spawn((CabLeadVehicle, GlobalTransform::IDENTITY));
+        app.world_mut().spawn((
+            Camera3d::default(),
+            Projection::default(),
+            GlobalTransform::from_translation(Vec3::Y * 9.0),
+        ));
+        app.world_mut()
+            .spawn((CabInteriorMarker, Mesh3d(mesh), GlobalTransform::IDENTITY));
+        app.world_mut()
+            .run_system_once(update_cab_render_diagnostic)
+            .unwrap();
+        let diag = app.world().resource::<CabRenderDiagnostic>();
+        let report = diag.report.as_ref().unwrap();
+        assert_eq!(report.camera_inside_geometry, Some(false));
+        assert_eq!(report.eye_error_m, Some(9.0));
+        assert!(diag.hud_line.as_ref().unwrap().contains("OUTSIDE"));
+    }
+
+    #[test]
+    fn moving_cab_diagnostic_is_bounded_and_camera_transition_is_immediate() {
+        let mut latch = CabRenderDiagLatch::default();
+        let start = std::time::Instant::now();
+        assert!(latch.should_sample(start, true));
+        for frame in 1..30 {
+            assert!(
+                !latch.should_sample(start + std::time::Duration::from_millis(frame * 16), false)
+            );
+        }
+        assert!(latch.should_sample(start + std::time::Duration::from_millis(500), false));
+        assert!(latch.should_sample(start + std::time::Duration::from_millis(501), true));
+    }
 
     #[test]
     fn layer_masks_exclude_exterior_in_driver_view() {

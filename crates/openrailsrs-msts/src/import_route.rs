@@ -22,6 +22,8 @@ use openrailsrs_formats::{
 use serde::Serialize;
 
 use crate::error::MstsError;
+#[path = "native_signal_import.rs"]
+mod native_signal_import;
 
 // ── TOML schema (mirrors openrailsrs-route/src/load.rs) ─────────────────────
 
@@ -115,7 +117,7 @@ pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
-    Ok(toml)
+    native_signal_import::bind(route_dir, &tdb_path, &toml, &[])
 }
 
 /// Same as `import_route` but applies activity-level overrides (failed signals
@@ -127,7 +129,7 @@ pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<S
     let route_id = find_route_id(route_dir, &tdb_path);
     let activity = ActivityFile::from_path(act_path)?;
     let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity), Some(&catalog))?;
-    Ok(toml)
+    native_signal_import::bind(route_dir, &tdb_path, &toml, &activity.failed_signals)
 }
 
 /// Same as `import_route` but also returns a count summary `(nodes, edges)`.
@@ -138,7 +140,11 @@ pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usi
     let route_id = find_route_id(route_dir, &tdb_path);
     let (nodes, edges) = count_nodes_edges(&tdb);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
-    Ok((toml, nodes, edges))
+    Ok((
+        native_signal_import::bind(route_dir, &tdb_path, &toml, &[])?,
+        nodes,
+        edges,
+    ))
 }
 
 /// Update `x_m`/`y_m` on an existing `track.toml` from the route `.tdb` without replacing edges.
@@ -206,14 +212,27 @@ fn load_tdb(
     tdb_path: &Path,
 ) -> Result<(TrackDbFile, TSectionCatalog), MstsError> {
     let mut tdb = TrackDbFile::from_path(tdb_path)?;
+    let line_speed = openrailsrs_formats::RouteFile::from_route_dir(route_dir)
+        .ok()
+        .and_then(|route| route.speed_limit_mps);
     // Native TrVectorSection coordinates/orientations are not lengths. Open Rails
     // sums TrackSections.Get(SectionIndex).Length, including circular arc length.
     let catalog = TSectionCatalog::load_for_route(route_dir)?;
     for node in &mut tdb.nodes {
         if let TrackNodeKind::Vector {
-            length_m, sections, ..
+            length_m,
+            sections,
+            speed_limit_mps,
+            ..
         } = &mut node.kind
         {
+            // Native vector sections have no line-speed token; the .trk owns
+            // that ceiling and the TDB speed posts supply local restrictions.
+            if !sections.is_empty()
+                && let Some(limit) = line_speed
+            {
+                *speed_limit_mps = limit;
+            }
             let exact = sections
                 .iter()
                 .map(|s| {
@@ -488,22 +507,47 @@ fn configure_switch_nodes(
             continue;
         }
 
-        let stem_pin = pins.iter().find(|p| p.branch_index == 0);
-        let div_pin = pins.iter().find(|p| p.branch_index == 1).or_else(|| {
+        // Native TrPins (1 2 ...) stores the common pin first, followed by
+        // straight and diverging. TrPin's second integer is vector direction,
+        // not the branch selection (both branches can have the same direction).
+        let stem_pin = if pins.len() == 3 {
+            pins.get(1)
+        } else {
+            pins.iter().find(|p| p.branch_index == 0)
+        };
+        let div_pin = if pins.len() == 3 {
+            pins.get(2)
+        } else {
+            pins.iter().find(|p| p.branch_index == 1)
+        }
+        .or_else(|| {
             pins.iter().find(|p| {
                 p.branch_index > 0 && p.node_id != stem_pin.map(|s| s.node_id).unwrap_or(0)
             })
         });
 
-        let stem_target = stem_pin.and_then(|p| resolve_pin_endpoint(p.node_id, jid, aliases));
-        let div_target = div_pin.and_then(|p| resolve_pin_endpoint(p.node_id, jid, aliases));
-
-        let stem_id = stem_target
-            .as_ref()
-            .and_then(|t| find_outgoing_edge(edges, &node.id, t));
-        let div_id = div_target
-            .as_ref()
-            .and_then(|t| find_outgoing_edge(edges, &node.id, t));
+        let pin_edge = |pin: &TrPinRef| {
+            let alias = aliases.iter().find(|a| a.tdb_id == pin.node_id)?;
+            if alias.kind == "edge" {
+                let id = if alias.from.as_deref() == Some(node.id.as_str()) {
+                    alias.id.clone()
+                } else if alias.to.as_deref() == Some(node.id.as_str()) {
+                    format!("{}_r", alias.id)
+                } else {
+                    return None;
+                };
+                edges
+                    .iter()
+                    .find(|e| e.id == id && e.from == node.id)
+                    .map(|e| e.id.clone())
+            } else {
+                let target = resolve_pin_endpoint(pin.node_id, jid, aliases)?;
+                find_outgoing_edge(edges, &node.id, &target)
+            }
+        };
+        // Parallel switch branches share endpoints; retain the TDB vector ID.
+        let stem_id = stem_pin.and_then(pin_edge);
+        let div_id = div_pin.and_then(pin_edge);
 
         let (stem_id, div_id) = match (stem_id, div_id) {
             (Some(s), Some(d)) if s != d => (s, d),
@@ -932,6 +976,58 @@ fn point_graph_z(point: TrackVectorPoint) -> f64 {
 mod tests {
     use super::*;
     use openrailsrs_formats::TrackDbFile;
+
+    #[test]
+    fn parallel_native_branches_keep_vector_identity_and_pin_order() {
+        let mut nodes = vec![NodeToml {
+            id: "n1".into(),
+            kind: None,
+            x_m: 0.,
+            y_m: 0.,
+        }];
+        let edges: Vec<_> = [("e10_r", "n0"), ("e11", "n2"), ("e12", "n2")]
+            .into_iter()
+            .map(|(id, to)| EdgeToml {
+                id: id.into(),
+                from: "n1".into(),
+                to: to.into(),
+                length_m: 20.,
+                speed_limit_kmh: 80.,
+                grade_percent: 0.,
+            })
+            .collect();
+        let aliases: Vec<_> = [(10, "n0", "n1"), (11, "n1", "n2"), (12, "n1", "n2")]
+            .into_iter()
+            .map(|(id, from, to)| MstsAliasToml {
+                tdb_id: id,
+                kind: "edge".into(),
+                id: format!("e{id}"),
+                from: Some(from.into()),
+                to: Some(to.into()),
+            })
+            .collect();
+        let pins = HashMap::from([(
+            1,
+            vec![
+                TrPinRef {
+                    node_id: 10,
+                    branch_index: 0,
+                },
+                TrPinRef {
+                    node_id: 11,
+                    branch_index: 1,
+                },
+                TrPinRef {
+                    node_id: 12,
+                    branch_index: 1,
+                },
+            ],
+        )]);
+        configure_switch_nodes(&mut nodes, &edges, &pins, &aliases);
+        let switch = &nodes[0].kind.as_ref().unwrap().switch;
+        assert_eq!(switch.stem_edge, "e11");
+        assert_eq!(switch.diverging_edge, "e12");
+    }
 
     #[test]
     fn mps_to_kmh_conversion() {

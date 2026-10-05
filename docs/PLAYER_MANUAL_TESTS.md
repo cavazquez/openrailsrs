@@ -884,3 +884,74 @@ Belgrano CC sigue necesitando los recursos originales del autor. Tras instalarlo
 `prepare_native_pilot.py --inspect` debe informar las carpetas y faltantes reales;
 el piloto exige tres estaciones nativas, formación auditada y un PAT continuo.
 El ejemplo sintético Mitre no sustituye esta validación.
+
+## 33. Escenario continuo, materiales, cámaras y actividad Demo
+
+1. En la biblioteca elegí **Chiltern ampliado**, formación **Birmingham Pullman**,
+   clima despejado y día. Recorré las seis estaciones, con cabina `1` y exterior
+   `2`. Deben cargarse vía, suelo y objetos al avanzar; al volver a un sector
+   deben reaparecer. La cabina, el tren y la vía deben seguir visibles después
+   de varios kilómetros y al terminar, incluso al cambiar entre `1` y `2`.
+   El HUD no debe mostrar recursos cercanos pendientes una
+   vez estabilizada la vista. La primera carga todavía puede causar una pausa
+   de unos cuatro segundos en el equipo de referencia.
+2. En Northolt Park mirá los árboles desde la cabina y rodealos desde afuera.
+   El roble debe conservar ramas y hojas sin el rectángulo pálido detrás.
+   Ventanas y cristales deben seguir siendo transparentes. En South Ruislip y
+   West Ruislip revisá también edificios, postes y vegetación. Compará las
+   [capturas verificadas](PLAYER_POLISH_QA.md); no se afirma igualdad píxel a píxel.
+3. En exterior rodeá la composición y observá los enganches. La cabeza debe
+   estar delante del centro del primer coche y los coches deben mantener sus
+   uniones sin sumarse media longitud de locomotora al cambiar de cámara.
+   La órbita habitual y el campo de visión de Bevy se conservan. La prueba de
+   cámaras de OR usa su encuadre de referencia de forma explícita.
+4. Con **Demo Model 1** del autor instalado, elegí **0930 Edinburgh–Glasgow** y
+   **MT_MT_Class 47 & 6 mk2 PP**. El monitor debe listar **Edinburgh Waverley,
+   Haymarket y Linlithgow**, en ese orden. Cerrá las puertas cuando el HUD
+   autorice la salida, respetá las señales y detenete en el marcador de cada
+   andén. Esta edición del mapa termina en Linlithgow. La parada final nativa
+   dura **600 s**; para probar rápido podés elegir la espera de práctica de
+   cinco segundos. Al finalizar debe aparecer el resultado de tres paradas.
+5. Para repetir las mediciones, seguí los comandos y condiciones de
+   [PLAYER_POLISH_QA.md](PLAYER_POLISH_QA.md). Los informes incluyen cuadros
+   durante la partida, memoria y recursos pendientes. La comparación física
+   se ejecuta por separado con `openrailsrs oracle-suite --manifest
+   oracles/chiltern-service.toml`: debe evaluar velocidad y distancia contra
+   el registro congelado de Open Rails 1.6.1, usando sus límites publicados.
+
+La prueba gráfica de Pullman admite `--pullman-cab-reference
+docs/fixtures/compatibility/polish-2026-10-05/pullman-cab-foreground-reference.png`.
+Compara seis zonas opacas de la cabina a 1280×720, FOV 60° y de día; al menos
+cuatro deben conservar su imagen. También registra la posición real de la cámara
+y la visibilidad de las mallas. Esta regresión comprueba que la cabina sigue
+dibujándose; la comparación de cámaras y la física con OR se validan aparte.
+
+### 33.6. Repetir la comparación física completa
+
+Desde la raíz del repositorio, ejecutar:
+
+```bash
+python3 scripts/run_oracles.py --suite service --out-dir tmp/service-parity
+```
+
+Debe mostrar `PASS chiltern_local_native_controls`. En
+`tmp/service-parity/report.json` deben aparecer cobertura `1.0`, RMS de velocidad
+menor a 0,75 m/s, pico menor a 2 m/s y diferencia máxima de odómetro menor a 45 m.
+También deben pasar las cinco fases con RMS menor a 1,10 m/s. No editar los
+baselines ni los umbrales para hacer pasar un fallo.
+
+Esta es una prueba automática de los mismos controles del original. Para una
+partida manual, abrir el menú, seleccionar Chiltern y una formación original
+auditable, y recorrer Northolt Park, South Ruislip y West Ruislip. Usar 1 para
+cabina y 2 para exterior; comprobar tildes, árboles sin rectángulos claros,
+edificios apoyados en el terreno, señales ancladas y continuidad de los sectores.
+Al frenar, las RPM deben bajar; al liberar EP, puede quedar unos segundos de
+presión antes de habilitar la tracción. Cada parada debe quedar registrada en F7.
+Al terminar debe aparecer el resumen del servicio. Un manejo manual distinto
+produce otra curva y no se compara con el oráculo del conductor original.
+
+Demo Model 1: seleccionar la actividad nativa de Edimburgo–Glasgow y su Class 47
+con seis coches Mk2. La porción del PAT elegida termina en Linlithgow: deben
+registrarse Edimburgo Waverley, Haymarket y Linlithgow, con señales originales y
+cabina 3D. F10 permite práctica de cinco segundos para probar las puertas; el
+modo normal mantiene la espera final de 600 segundos declarada por el autor.
