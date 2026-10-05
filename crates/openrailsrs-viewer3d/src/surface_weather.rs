@@ -1,4 +1,4 @@
-//! Extend Bevy PBR outdoors without tinting vertical walls or cloning textures.
+//! Snow on explicitly opted-in train exteriors, sharing the original textures.
 use bevy::{
     asset::AssetId,
     pbr::{ExtendedMaterial, MaterialExtension},
@@ -23,6 +23,11 @@ impl MaterialExtension for SnowSurface {
 }
 pub type SnowMaterial = ExtendedMaterial<StandardMaterial, SnowSurface>;
 
+/// Snow is opt-in. Native WORLD shapes (including buildings and their roofs)
+/// retain their authored materials in every rendering/LOD path.
+#[derive(Component)]
+pub struct SnowReceiver;
+
 /// Keep the original material alive for LOD changes and wet-surface updates.
 #[derive(Component)]
 pub struct SnowSurfaceSource(pub Handle<StandardMaterial>);
@@ -41,7 +46,10 @@ pub fn sync(
     mut events: MessageReader<AssetEvent<StandardMaterial>>,
     outdoor: Query<
         (Entity, &MeshMaterial3d<StandardMaterial>),
-        Without<crate::cab_view::CabInteriorMarker>,
+        (
+            With<SnowReceiver>,
+            Without<crate::cab_view::CabInteriorMarker>,
+        ),
     >,
 ) {
     let changed: HashSet<_> = events
@@ -123,16 +131,29 @@ mod tests {
                 alpha_mode: AlphaMode::Blend,
                 ..default()
             });
-        let first = app.world_mut().spawn(MeshMaterial3d(opaque.clone())).id();
-        let second = app.world_mut().spawn(MeshMaterial3d(opaque.clone())).id();
+        let first = app
+            .world_mut()
+            .spawn((SnowReceiver, MeshMaterial3d(opaque.clone())))
+            .id();
+        let second = app
+            .world_mut()
+            .spawn((SnowReceiver, MeshMaterial3d(opaque.clone())))
+            .id();
+        // Even when a building shares the train's source material, it must keep
+        // the original appearance. New streamed WORLD/LOD meshes are opt-out.
+        let building = app.world_mut().spawn(MeshMaterial3d(opaque.clone())).id();
         let cab = app
             .world_mut()
             .spawn((
                 crate::cab_view::CabInteriorMarker,
+                SnowReceiver,
                 MeshMaterial3d(opaque.clone()),
             ))
             .id();
-        let glass = app.world_mut().spawn(MeshMaterial3d(transparent)).id();
+        let glass = app
+            .world_mut()
+            .spawn((SnowReceiver, MeshMaterial3d(transparent)))
+            .id();
         app.update();
         let derived = app
             .world()
@@ -148,7 +169,7 @@ mod tests {
                 .0
         );
         assert_eq!(app.world().resource::<Assets<SnowMaterial>>().len(), 1);
-        // A WORLD LOD replaces the original material on the existing entity.
+        // An opted-in mesh may replace its source material.
         // Rewrap that source rather than retaining the previous band's texture.
         let replacement = app
             .world_mut()
@@ -195,6 +216,14 @@ mod tests {
                 .get::<MeshMaterial3d<StandardMaterial>>(glass)
                 .is_some()
         );
+        assert_eq!(
+            app.world()
+                .get::<MeshMaterial3d<StandardMaterial>>(building)
+                .unwrap()
+                .0,
+            opaque
+        );
+        assert!(app.world().get::<SnowSurfaceSource>(building).is_none());
         assert_eq!(
             app.world().get::<SnowSurfaceSource>(second).unwrap().0,
             opaque

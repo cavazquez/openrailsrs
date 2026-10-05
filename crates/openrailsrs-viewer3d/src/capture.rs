@@ -325,6 +325,10 @@ impl CaptureScene<'_, '_> {
         );
         report["graphics_memory"] =
             serde_json::to_value(&self.graphics_memory.0).unwrap_or_default();
+        report["texture_upload"] = serde_json::json!({
+            "device_formats": format!("{:?}", openrailsrs_bevy_scenery::gpu_textures::device_texture_formats()),
+            "policy": "authored DXT blocks when supported; lossless RGBA fallback",
+        });
         report["weather_particles"] = self.weather_particles.report();
         report["renderer_selection"] =
             serde_json::to_value(*self.renderer_selection).unwrap_or_default();

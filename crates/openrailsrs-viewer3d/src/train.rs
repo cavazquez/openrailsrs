@@ -436,6 +436,7 @@ pub fn spawn_train_markers(
                                         let mut part_entity = car.spawn((
                                             Mesh3d(part.mesh.clone()),
                                             MeshMaterial3d(part.material.clone()),
+                                            crate::surface_weather::SnowReceiver,
                                             Transform::default(),
                                             Name::new(format!(
                                                 "train:{}:car:{vi}:{}:part:{pi}:{}",
@@ -472,6 +473,7 @@ pub fn spawn_train_markers(
                         train.spawn((
                             Mesh3d(unit.clone()),
                             MeshMaterial3d(material),
+                            crate::surface_weather::SnowReceiver,
                             local,
                             Name::new(format!(
                                 "train:{}:car:{vi}:{}:fallback",
@@ -497,6 +499,7 @@ pub fn spawn_train_markers(
         commands.spawn((
             Mesh3d(unit.clone()),
             MeshMaterial3d(material),
+            crate::surface_weather::SnowReceiver,
             head.with_scale(Vec3::new(body_len, body_h, body_w)),
             TrainMarker { track_index: i },
             Name::new(format!("train:{}", track.label)),

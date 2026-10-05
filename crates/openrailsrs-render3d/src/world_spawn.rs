@@ -592,7 +592,17 @@ impl TerrainSpawnCtx {
             .extension()
             .and_then(|e| e.to_str())
             .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
-        let image = if is_dds {
+        let image = if is_dds && sanitize_base {
+            // Base sanitation reads individual pixels, not BC/DXT blocks.
+            let bytes = std::fs::read(&path).ok()?;
+            openrailsrs_bevy_scenery::gpu_textures::decode_dds_for_formats(
+                &bytes,
+                bevy::image::CompressedImageFormats::NONE,
+                None,
+                None,
+            )
+            .ok()?
+        } else if is_dds {
             load_texture_image(&path)?
         } else {
             let ace = load_terrtex_ace(route, file_name)?;
@@ -2538,6 +2548,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![8, 8, 8, 255],
             mips: Vec::new(),
+            compressed_mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         };
@@ -2560,6 +2571,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![180, 180, 180, 255],
             mips: Vec::new(),
+            compressed_mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         };

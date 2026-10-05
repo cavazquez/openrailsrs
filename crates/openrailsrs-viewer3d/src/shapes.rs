@@ -466,7 +466,14 @@ pub fn scenery_texture_environment(flags: TextureFlags) -> TextureEnvironment {
     };
     TextureEnvironment {
         season,
-        snow_weather: SCENERY_SNOW.load(Ordering::Relaxed) != 0,
+        snow_weather: SCENERY_SNOW.load(Ordering::Relaxed) != 0
+            && flags.intersects(
+                TextureFlags::SNOW
+                    | TextureFlags::SNOW_TRACK
+                    | TextureFlags::SPRING_SNOW
+                    | TextureFlags::AUTUMN_SNOW
+                    | TextureFlags::WINTER_SNOW,
+            ),
         night,
     }
 }
@@ -1863,10 +1870,8 @@ fn load_normal_map_image_handle(
     let image = if is_dds {
         let bytes = std::fs::read(&tex_path).ok()?;
         let mut img = decode_dds_to_image_with_addr(&bytes, tex_addr_mode).ok()?;
-        // Prefer linear sampling for normal maps when decoded as uncompressed RGBA.
-        if img.texture_descriptor.format == TextureFormat::Rgba8UnormSrgb {
-            img.texture_descriptor.format = TextureFormat::Rgba8Unorm;
-        }
+        // Normal maps are linear, including compressed BC formats.
+        img.texture_descriptor.format = img.texture_descriptor.format.remove_srgb_suffix();
         img
     } else {
         let ace = if let Some(ace) = ace_cache.get(&tex_path) {
@@ -2186,7 +2191,7 @@ fn material_for_shape_texture(
                                 mip_map_lod_bias,
                             )
                         } else {
-                            openrailsrs_bevy_scenery::textures::ace_to_image_with_sampler(
+                            openrailsrs_bevy_scenery::gpu_textures::ace_to_gpu_image_with_sampler(
                                 &ace,
                                 tex_addr_mode,
                                 mip_map_lod_bias,
@@ -2371,6 +2376,23 @@ pub fn load_shape_file_and_loaded(
 pub fn texture_flags_for_shape(shape_path: &Path) -> TextureFlags {
     let desc = ShapeDescriptor::load_for_shape(shape_path);
     shape_texture_flags(shape_path, desc.alternative_texture)
+}
+
+/// Preserve native WORLD buildings in snow, including authored Snow folders.
+/// Day/night and ordinary seasonal variants remain available.
+pub fn world_texture_flags(flags: TextureFlags) -> TextureFlags {
+    TextureFlags::from_raw(
+        flags.bits()
+            & !(TextureFlags::SNOW
+                | TextureFlags::SNOW_TRACK
+                | TextureFlags::SPRING_SNOW
+                | TextureFlags::AUTUMN_SNOW
+                | TextureFlags::WINTER_SNOW),
+    )
+}
+
+pub fn world_texture_flags_for_shape(shape_path: &Path) -> TextureFlags {
+    world_texture_flags(texture_flags_for_shape(shape_path))
 }
 
 /// Attach `.sd` night-subobj + texture flags after building GPU assets (#95/#142).
@@ -3297,6 +3319,31 @@ mod tests {
     }
 
     #[test]
+    fn world_snow_policy_preserves_buildings_and_regular_season_night_variants() {
+        use openrailsrs_bevy_scenery::textures::{Season, seasonal_subdir};
+        let flags = world_texture_flags(TextureFlags::from_raw(
+            TextureFlags::FOREST
+                | TextureFlags::SNOW
+                | TextureFlags::SNOW_TRACK
+                | TextureFlags::NIGHT,
+        ));
+        assert!(!flags.intersects(
+            TextureFlags::SNOW
+                | TextureFlags::SNOW_TRACK
+                | TextureFlags::SPRING_SNOW
+                | TextureFlags::AUTUMN_SNOW
+                | TextureFlags::WINTER_SNOW
+        ));
+        assert!(flags.contains(TextureFlags::NIGHT));
+        let env = TextureEnvironment {
+            season: Season::Winter,
+            snow_weather: false,
+            night: true,
+        };
+        assert_eq!(seasonal_subdir(flags, &env), Some("Winter"));
+    }
+
+    #[test]
     fn brighten_dark_ace_rgba_lifts_near_black_atlas() {
         let rgba = vec![1u8, 2, 1, 255, 3, 1, 2, 255];
         let (out, brightened) = brighten_dark_ace_rgba(&rgba);
@@ -3339,6 +3386,7 @@ mod tests {
                     rgba: mip1,
                 },
             ],
+            compressed_mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 0,
         };
@@ -3479,6 +3527,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![255, 255, 255, 128],
             mips: Vec::new(),
+            compressed_mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         };

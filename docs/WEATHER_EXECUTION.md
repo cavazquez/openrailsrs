@@ -8,7 +8,8 @@ o cuadros lentos sostenidos reducen el presupuesto; la recuperación usa histér
 
 El campo es estable en el mundo: mover el tren o la cámara no arrastra los copos.
 Hay variación de tamaño, rotación, forma y caída; precipitación iluminada y
-cobertura irregular sobre superficies superiores. Un mapa de altura conservador
+cobertura irregular sobre terreno y trenes. Los edificios, incluidos sus techos,
+conservan sus materiales y no reciben cobertura de nieve. Un mapa de altura conservador
 reduce partículas bajo terreno/techos; no reemplaza una colisión exacta por edificio.
 Vidrio: manchas irregulares, acumulación, velocidad del tren y barrido del limpiaparabrisas.
 Nubes: ruido direccional 3D, sin la proyección plana que producía bandas verticales.

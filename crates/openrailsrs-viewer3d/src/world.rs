@@ -43,8 +43,8 @@ use crate::shapes::{
     collect_loaded_shape_texture_paths_with_flags, collect_pbr_normal_map_texture_paths,
     load_shape_file_and_loaded, load_shape_pbr_sidecar, prefetch_ace_textures,
     reset_shape_file_parse_count, shape_file_parse_count, shape_part_visible_for_day_night,
-    shape_render_asset_from_loaded_with_ace_cache, texture_flags_for_shape,
-    texture_search_dirs_for_shape,
+    shape_render_asset_from_loaded_with_ace_cache, texture_search_dirs_for_shape,
+    world_texture_flags_for_shape as texture_flags_for_shape,
 };
 
 /// WORLD-tile membership for scenery unload (shapes LOD, Transfer, road cars, …) (#62 / #113).
@@ -2626,7 +2626,7 @@ fn build_shape_lod_assets(
                 false,
                 false,
                 pbr.as_ref(),
-                base_asset.texture_flags,
+                crate::shapes::world_texture_flags(base_asset.texture_flags),
             );
             apply_shape_descriptor_to_asset(shape_path, &mut asset);
             asset

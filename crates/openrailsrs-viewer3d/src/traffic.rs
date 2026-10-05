@@ -184,6 +184,7 @@ pub fn spawn_traffic(
                                 let mut entity = car.spawn((
                                     Mesh3d(part.mesh.clone()),
                                     MeshMaterial3d(part.material.clone()),
+                                    crate::surface_weather::SnowReceiver,
                                     Transform::IDENTITY,
                                     Visibility::Inherited,
                                 ));

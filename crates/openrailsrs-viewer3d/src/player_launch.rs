@@ -1,5 +1,5 @@
 //! Route/service catalog and validated launch requests for the Bevy start menu.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
@@ -84,66 +84,7 @@ impl PlayerLaunchMenu {
                     .is_some_and(|n| n.eq_ignore_ascii_case("chiltern"))
             })
             .or_else(default_chiltern_root);
-        for (folder, label) in [
-            ("chiltern_extended", "Chiltern"),
-            ("chiltern_traffic", "Chiltern"),
-            ("chiltern_local", "Chiltern"),
-            ("chiltern", "Chiltern"),
-            ("smoke", "Ruta de práctica"),
-            ("steam", "Vapor"),
-            ("sce", "SCE"),
-        ] {
-            let path = project.join("examples").join(folder).join("scenario.toml");
-            if let Ok(scenario) = load_scenario(&path) {
-                let Some(dir) = path.parent() else { continue };
-                let route_dir = absolute(&dir.join(&scenario.route.path));
-                let source = absolute(&path);
-                if !route_dir.join("track.toml").is_file() {
-                    continue;
-                }
-                services.push(ServiceChoice {
-                    name: scenario.scenario.name,
-                    source,
-                    route_dir,
-                    scenery_root: if label == "Chiltern" {
-                        native.clone()
-                    } else {
-                        None
-                    },
-                    native_activity: false,
-                });
-            }
-        }
-        // Pilots prepared from installed native content carry their own scenery
-        // root. The generator owns these small metadata files, not the assets.
-        if let Ok(entries) = std::fs::read_dir(project.join("examples")) {
-            for entry in entries.flatten() {
-                let dir = entry.path();
-                let metadata = dir.join("native-content.json");
-                let Ok(text) = std::fs::read_to_string(metadata) else {
-                    continue;
-                };
-                let Ok(metadata) = serde_json::from_str::<NativeContent>(&text) else {
-                    continue;
-                };
-                let source = dir.join("scenario.toml");
-                let Ok(scenario) = load_scenario(&source) else {
-                    continue;
-                };
-                let route_dir = absolute(&dir.join(&scenario.route.path));
-                if route_dir.join("track.toml").is_file()
-                    && metadata.route_root.join("WORLD").is_dir()
-                {
-                    services.push(ServiceChoice {
-                        name: scenario.scenario.name,
-                        source: absolute(&source),
-                        route_dir,
-                        scenery_root: Some(absolute(&metadata.route_root)),
-                        native_activity: false,
-                    });
-                }
-            }
-        }
+        services.extend(discover_example_services(project, native.as_deref()));
         // Native activities use the existing importer and the pinned route graph.
         if let Some(root) = native.as_ref()
             && let Some(route_dir) = services
@@ -485,17 +426,109 @@ pub fn cycle(index: usize, len: usize, delta: i32) -> usize {
         (index as i32 + delta).rem_euclid(len as i32) as usize
     }
 }
+/// Discover complete scenario files, including nested examples. Reports,
+/// overlays, timetables and campaigns do not deserialize as playable scenarios.
+fn discover_example_services(project: &Path, chiltern: Option<&Path>) -> Vec<ServiceChoice> {
+    let examples = absolute(&project.join("examples"));
+    // Keep the full station journey as the default, independent of directory order.
+    let mut files: Vec<_> = [
+        "chiltern_extended",
+        "chiltern_traffic",
+        "chiltern_local",
+        "chiltern",
+        "smoke",
+        "steam",
+        "sce",
+    ]
+    .iter()
+    .map(|folder| examples.join(folder).join("scenario.toml"))
+    .collect();
+    let mut pending = vec![examples.clone()];
+    let mut discovered = Vec::new();
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_dir() {
+                pending.push(entry.path());
+            } else if kind.is_file() && entry.path().extension().is_some_and(|e| e == "toml") {
+                discovered.push(entry.path());
+            }
+        }
+    }
+    discovered.sort();
+    files.extend(discovered);
+    let mut seen = HashSet::new();
+    let mut services = Vec::new();
+    for path in files {
+        if path
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().contains(".tmp."))
+        {
+            continue;
+        }
+        let source = absolute(&path);
+        if !seen.insert(source.clone()) {
+            continue;
+        }
+        let Ok(scenario) = load_scenario(&source) else {
+            continue;
+        };
+        let Some(dir) = source.parent() else { continue };
+        let route_dir = absolute(&dir.join(&scenario.route.path));
+        if !route_dir.join("track.toml").is_file() {
+            continue;
+        }
+        // A prepared native pilot owns its metadata; never substitute Chiltern
+        // scenery for another route just because it lives under examples/.
+        let native = dir
+            .ancestors()
+            .take_while(|d| d.starts_with(&examples))
+            .find_map(|d| {
+                let text = std::fs::read_to_string(d.join("native-content.json")).ok()?;
+                let metadata: NativeContent = serde_json::from_str(&text).ok()?;
+                let root = absolute(&d.join(metadata.route_root));
+                root.join("WORLD").is_dir().then_some(root)
+            });
+        let scenery_root = native.or_else(|| {
+            is_chiltern_corridor(&route_dir)
+                .then(|| chiltern.map(Path::to_path_buf))
+                .flatten()
+        });
+        services.push(ServiceChoice {
+            name: scenario.scenario.name,
+            source,
+            route_dir,
+            scenery_root,
+            native_activity: false,
+        });
+    }
+    let mut names = HashMap::<String, usize>::new();
+    for service in &services {
+        *names.entry(service.name.clone()).or_default() += 1;
+    }
+    for service in &mut services {
+        if names[&service.name] > 1 {
+            let relative = service
+                .source
+                .strip_prefix(&examples)
+                .unwrap_or(&service.source);
+            service.name = format!("{} · {}", service.name, relative.display());
+        }
+    }
+    services
+}
 fn route_label(s: &ServiceChoice) -> String {
     if let Some(root) = &s.scenery_root {
         root.file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned()
-    } else if s
-        .route_dir
-        .file_name()
-        .is_some_and(|f| f == "chiltern" || f == "chiltern_local")
-    {
+    } else if is_chiltern_corridor(&s.route_dir) {
         "Chiltern".into()
     } else {
         s.route_dir
@@ -504,6 +537,15 @@ fn route_label(s: &ServiceChoice) -> String {
             .to_string_lossy()
             .into_owned()
     }
+}
+
+fn is_chiltern_corridor(route: &Path) -> bool {
+    route.file_name().is_some_and(|f| {
+        matches!(
+            f.to_str(),
+            Some("chiltern" | "chiltern_local" | "chiltern_extended" | "chiltern_traffic")
+        )
+    })
 }
 
 #[derive(Deserialize)]
@@ -576,6 +618,60 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn extended_and_traffic_examples_keep_native_chiltern_scenery() {
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let content = tempfile::tempdir().unwrap();
+        let native = content.path().join("ROUTES/Chiltern");
+        std::fs::create_dir_all(native.join("WORLD")).unwrap();
+        let menu = PlayerLaunchMenu::discover(&project, Some(native.clone()));
+        assert_eq!(menu.routes[0], "Chiltern");
+        assert_eq!(menu.current().unwrap().scenery_root.as_ref(), Some(&native));
+        for folder in [
+            "chiltern",
+            "chiltern_local",
+            "chiltern_extended",
+            "chiltern_traffic",
+        ] {
+            let source = absolute(&project.join("examples").join(folder).join("scenario.toml"));
+            let service = menu.services.iter().find(|s| s.source == source).unwrap();
+            assert_eq!(service.scenery_root.as_ref(), Some(&native), "{folder}");
+        }
+    }
+    #[test]
+    fn examples_catalog_discovers_nested_scenarios_and_skips_non_playable_files() {
+        let project = tempfile::tempdir().unwrap();
+        let examples = project.path().join("examples/custom/scenarios");
+        std::fs::create_dir_all(&examples).unwrap();
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut scenario = load_scenario(root.join("examples/smoke/scenario.toml")).unwrap();
+        scenario.route.path = "..".into();
+        scenario.scenario.name = "Servicio de ejemplo".into();
+        std::fs::write(examples.parent().unwrap().join("track.toml"), "").unwrap();
+        for file in ["first.toml", "second.toml", "scenario.tmp.toml"] {
+            std::fs::write(examples.join(file), toml::to_string(&scenario).unwrap()).unwrap();
+        }
+        std::fs::write(examples.join("run.toml"), "elapsed_s = 100\n").unwrap();
+        std::fs::write(
+            examples.join("scenario.overlay.toml"),
+            "[train]\nstart_speed_mps = 1\n",
+        )
+        .unwrap();
+        let services = discover_example_services(project.path(), None);
+        assert_eq!(services.len(), 2);
+        assert_ne!(services[0].name, services[1].name);
+        assert!(services.iter().all(|s| s.scenery_root.is_none()));
+        let menu = PlayerLaunchMenu::discover(&root, None);
+        assert!(menu.services.iter().any(|s| {
+            s.source
+                .ends_with("mitre_campaign/scenarios/retiro_olivos.toml")
+        }));
+        assert!(
+            menu.services
+                .iter()
+                .any(|s| s.source.ends_with("sce/scenario_multi_body.toml"))
+        );
+    }
     #[test]
     fn native_pilot_keeps_its_own_scenery_and_route_label() {
         let project = tempfile::tempdir().unwrap();

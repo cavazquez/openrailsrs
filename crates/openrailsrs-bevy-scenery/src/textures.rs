@@ -4,10 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
-use bevy::image::{
-    CompressedImageFormats, Image, ImageAddressMode, ImageFilterMode, ImageSampler,
-    ImageSamplerDescriptor, ImageType,
-};
+use bevy::image::{Image, ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use openrailsrs_ace::{AceFile, read_ace};
@@ -734,21 +731,15 @@ pub fn decode_dds_to_image_with_sampler(
     tex_addr_mode: Option<i32>,
     mip_map_lod_bias: Option<f32>,
 ) -> Result<Image, String> {
-    let mut image = Image::from_buffer(
+    crate::gpu_textures::decode_dds_for_formats(
         bytes,
-        ImageType::Extension("dds"),
-        CompressedImageFormats::all(),
-        false,
-        ImageSampler::Default,
-        RenderAssetUsages::default(),
+        crate::gpu_textures::device_texture_formats(),
+        tex_addr_mode,
+        mip_map_lod_bias,
     )
-    .map_err(|e| e.to_string())?;
-    apply_msts_texture_sampler(&mut image, tex_addr_mode, mip_map_lod_bias);
-    Ok(image)
 }
 
-/// Decodifica `.ace` o `.dds` a `Image` Bevy (descomprimido para poder leer sus píxeles).
-/// Decodifica `.ace` o `.dds` a `Image` Bevy.
+/// Load ACE/DDS for rendering, retaining native block compression when supported.
 pub fn load_texture_image(path: &Path) -> Option<Image> {
     load_texture_image_with_addr(path, None)
 }
@@ -768,7 +759,7 @@ pub fn load_texture_image_with_sampler(
         return decode_dds_to_image_with_sampler(&bytes, tex_addr_mode, mip_map_lod_bias).ok();
     }
     let ace = read_ace(path).ok()?;
-    Some(ace_to_image_with_sampler(
+    Some(crate::gpu_textures::ace_to_gpu_image_with_sampler(
         &ace,
         tex_addr_mode,
         mip_map_lod_bias,

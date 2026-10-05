@@ -4410,6 +4410,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "texpresso",
  "thiserror 2.0.21",
 ]
 

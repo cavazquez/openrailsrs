@@ -2,6 +2,7 @@ mod cab;
 mod dispatch;
 mod oracle;
 mod service;
+mod textures;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -287,6 +288,13 @@ enum Commands {
         file: PathBuf,
         /// Output PNG file.
         out: PathBuf,
+    },
+    /// Export ACE textures to lossless DDS, retaining DXT blocks and mipmaps.
+    /// Accepts a single ACE or a directory tree. Original content is untouched.
+    TexturesDds {
+        input: PathBuf,
+        #[arg(long)]
+        out_dir: PathBuf,
     },
     /// Inspect an MSTS terrain `.y` tile: sample grid stats and optional mesh counts.
     TerrainDump {
@@ -1064,6 +1072,9 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::AceDecode { file, out } => {
             run_ace_decode(&file, &out)?;
+        }
+        Commands::TexturesDds { input, out_dir } => {
+            textures::export_dds(&input, &out_dir)?;
         }
         Commands::TerrainDump { file, json } => {
             run_terrain_dump(&file, json)?;

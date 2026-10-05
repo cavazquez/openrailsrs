@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-05",
+  "renderer": {
+    "backend": "Vulkan",
+    "device_type": "DiscreteGpu",
+    "hardware": true,
+    "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+  },
+  "view_radius_m": 900,
+  "binary_sha256": "1c7759f18a0f3dbe46a37cb92fe7c2ac6aefb1b7369ec223bde0ee76b106862e",
+  "full_check": {
+    "passed": 1455,
+    "failed": 0,
+    "ignored": 43
+  },
+  "northolt_process_vram_mib": {
+    "bc": 808.234375,
+    "rgba": 1064.41015625
+  },
+  "vram_saving_percent": 24.067393546161497,
+  "image_comparison": {
+    "whole_image_mean_absolute_rgb_error": 0.02575954861111111,
+    "scenery_roi_mean_absolute_rgb_error": 0.013963675213675213,
+    "scenery_roi_fraction_over_8_rgb": 0.0,
+    "scenery_roi_p99_rgb_error": 1.0
+  },
+  "native_texture_export": {
+    "dds_upload_bytes": 17874911344,
+    "lossless": true,
+    "rgba_upload_bytes": 21224800460,
+    "saving_percent": 15.782900396699418
+  },
+  "native_texture_counts": {
+    "DXT1": 3858,
+    "RGBA8": 8766
+  },
+  "bulk_export_cleanup": "Temporary 17 GiB derivative tree removed; samples and complete report retained. Original content unchanged.",
+  "captures": {
+    "northolt-clear-bc": {
+      "sha256": "c92e4540ef626365d3ffde4c6a346f978892aab86ae89fd128e6df5f9e546762",
+      "gpu_tiles": 4,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      }
+    },
+    "northolt-clear-rgba": {
+      "sha256": "22a5e5bb81fc63151d6ffe936b405b3a9b196e43a2a4a01858b80dcd5152aa60",
+      "gpu_tiles": 4,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(0x0)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      }
+    },
+    "northolt-snow-bc": {
+      "sha256": "534ba656e716818c23ed4d3b34cdb4eb38d520d4767838bd56feded5d0d7ef2f",
+      "gpu_tiles": 4,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      }
+    },
+    "gerrards-snow-bc": {
+      "sha256": "3c59d9cea5e9dca9564ed9d47c7ae72aa8547a81b25cffc0bca9ae9b08104254",
+      "gpu_tiles": 4,
+      "pending_gpu_uploads": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "texture_upload": {
+        "device_formats": "CompressedImageFormats(BC)",
+        "policy": "authored DXT blocks when supported; lossless RGBA fallback"
+      }
+    }
+  },
+  "cab_light_keyboard_verification": {
+    "method": "real I keypress in private Xvfb/software Vulkan session",
+    "clock": "22:00",
+    "interior_mean_rgb_off": 3.191148863148863,
+    "interior_mean_rgb_on": 4.920772200772201,
+    "shader_failures": 0,
+    "off_screenshot_sha256": "8d1fb137c79bb4bef9984331f6b4148ea7440dd8f90f6d9aa4d93ab214789efd",
+    "on_screenshot_sha256": "d5b834e766e66c5132222077d7afadc25e5b1bf5c2a3fda6d15708a143e84d21"
+  },
+  "final_binary_sha256": "5f891a83d158865b697ef822d06a745d34b3782c97abb2d551943db564f22718",
+  "post_capture_changes": [
+    "Menu native-scenery association fixed for all four Chiltern corridors; rendering/weather/texture code unchanged."
+  ]
+}

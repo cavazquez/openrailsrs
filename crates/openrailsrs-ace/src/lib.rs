@@ -37,6 +37,9 @@ use std::{io::Read, path::Path};
 
 use thiserror::Error;
 
+mod dds;
+pub use dds::write_dds;
+
 // ── Synthetic test-fixture magic (project-internal, not MSTS) ───────────────
 const ACE_MAGIC: &[u8; 4] = b"@ACE";
 // ── SIMISA container prefixes ────────────────────────────────────────────────
@@ -94,6 +97,10 @@ pub struct AceFile {
     pub mip0: Vec<u8>,
     /// Full mip chain (level 0 = full size). Empty when only mip0 was decoded.
     pub mips: Vec<AceMipLevel>,
+    /// Authored DXT blocks, one entry per mip, for lossless DDS export/GPU upload.
+    /// Empty for structured RGBA textures. CPU pixels remain available for
+    /// alpha classification and cab instruments.
+    pub compressed_mips: Vec<Vec<u8>>,
     /// True if the alpha channel originated from a 1-bit MASK channel (kind=2),
     /// meaning pixels are binary (0 or 255 only). Use `AlphaMode::Mask` not
     /// `AlphaMode::Blend` for correct cutout rendering without depth-sort artefacts.
@@ -114,6 +121,8 @@ pub enum AceError {
     UnsupportedFormat(u32),
     #[error("invalid dimensions {width}x{height}")]
     InvalidDimensions { width: u32, height: u32 },
+    #[error("invalid texture mip chain")]
+    InvalidMipChain,
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
     #[error("png encoding error: {0}")]
@@ -261,6 +270,7 @@ fn parse_or_raw_data(
     let mut pos = after_table;
     let mut compressed = &[][..];
     let mut mips = Vec::with_capacity(image_count);
+    let mut compressed_mips = Vec::with_capacity(image_count);
     for level in 0..image_count {
         let mip_width = (width >> level).max(1);
         let mip_height = (height >> level).max(1);
@@ -288,6 +298,10 @@ fn parse_or_raw_data(
         } else {
             decode_dxt(format, mip_width, mip_height, compressed)?
         };
+        if !compressed.is_empty() {
+            let size = dxt_format(format).compressed_size(mip_width as usize, mip_height as usize);
+            compressed_mips.push(compressed[..size].to_vec());
+        }
         mips.push(AceMipLevel {
             width: mip_width,
             height: mip_height,
@@ -311,6 +325,7 @@ fn parse_or_raw_data(
         mips_count: image_count as u8,
         mip0,
         mips,
+        compressed_mips,
         // DXT raw-data path has no explicit alpha/mask channels.
         has_mask_channel: false,
         alpha_bits,
@@ -444,6 +459,7 @@ fn parse_or_structured(
         mips_count: image_count as u8,
         mip0,
         mips,
+        compressed_mips: Vec::new(),
         has_mask_channel,
         alpha_bits,
     })
@@ -490,6 +506,14 @@ fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
             height,
             rgba: mip0,
         }],
+        compressed_mips: if format == AceFormat::Rgba8 {
+            Vec::new()
+        } else {
+            vec![
+                pixel_data[..dxt_format(format).compressed_size(width as usize, height as usize)]
+                    .to_vec(),
+            ]
+        },
         // Synthetic test format has no mask channel metadata.
         has_mask_channel: false,
         alpha_bits: 0,
@@ -525,13 +549,7 @@ fn decode_dxt(
     height: u32,
     data: &[u8],
 ) -> Result<Vec<u8>, AceError> {
-    use texpresso::Format as TF;
-    let tf = match format {
-        AceFormat::Dxt1 => TF::Bc1,
-        AceFormat::Dxt3 => TF::Bc2,
-        AceFormat::Dxt5 => TF::Bc3,
-        AceFormat::Rgba8 => unreachable!(),
-    };
+    let tf = dxt_format(format);
     let w = width as usize;
     let h = height as usize;
     let needed = tf.compressed_size(w, h);
@@ -541,6 +559,16 @@ fn decode_dxt(
     let mut out = vec![0u8; w * h * 4];
     tf.decompress(&data[..needed], w, h, &mut out);
     Ok(out)
+}
+
+fn dxt_format(format: AceFormat) -> texpresso::Format {
+    use texpresso::Format as TF;
+    match format {
+        AceFormat::Dxt1 => TF::Bc1,
+        AceFormat::Dxt3 => TF::Bc2,
+        AceFormat::Dxt5 => TF::Bc3,
+        AceFormat::Rgba8 => unreachable!(),
+    }
 }
 
 // ── ZLIB decompression ────────────────────────────────────────────────────────

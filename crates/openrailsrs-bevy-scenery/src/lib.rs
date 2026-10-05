@@ -6,6 +6,7 @@ pub mod assets;
 pub mod atmosphere;
 pub mod catalog;
 pub mod gpu;
+pub mod gpu_textures;
 pub mod lighting;
 pub mod load_diagnostics;
 pub mod materials;

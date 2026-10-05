@@ -286,3 +286,38 @@ Los [pasos manuales 27](PLAYER_MANUAL_TESTS.md#27-hora-real-clima-del-lugar-y-to
 permiten comprobar los selectores, pausa/aceleración, audio, guardado y respaldo.
 La [guía de entorno](LIVE_ENVIRONMENT.md) distingue condiciones estimadas de
 rayos procedurales y documenta atribución, ubicación y frecuencia de consulta.
+
+## 5 de octubre de 2026: edificios, ejemplos y carga de texturas
+
+- Nieve excluida de edificios y demás shapes WORLD, tanto en materiales
+  estándar como en el shader original y las instancias GPU. Las variantes Snow
+  de esos shapes también se excluyen al construir las bandas LOD. Se conservan
+  día/noche y las variantes estacionales normales.
+- Capturas en Northolt Park (despejado y nieve) y Gerrards Cross (nieve),
+  1280×720, radio 900 m y RX 7600/Vulkan: fachadas y techos conservan textura;
+  4 tiles GPU por vista, sin cargas ni shaders pendientes y sin fallos de shader.
+  Son poses de estación; no certifican un nuevo viaje completo.
+- Comparación Northolt Park, misma pose/hora/despejado: VRAM del proceso
+  **1064,4 MiB en RGBA → 808,2 MiB en BC** (24,1% menos). Error RGB medio del
+  área de escenario: **0,014/255**, percentil 99 **1/255**, sin píxeles con error
+  mayor a 8/255 en esa región. El ahorro depende de la escena.
+- Exportadas **12624 ACE** a DDS sin recompresión: 3858 DXT1 y 8766 RGBA8.
+  Payload agregado: 21,22 → 17,87 GB (15,78% menos que RGBA). Una muestra de
+  cada formato conserva exactamente mip0 al decodificar con Pillow; su fuente
+  mantiene el hash. La copia masiva temporal se limpió para recuperar unos
+  17 GiB; quedaron muestras y reporte en `tmp/cabin-dds-verification/`.
+- Pruebas de bloques BC1/2/3, mips 4/2/1, alfa parcial y alternativa CPU,
+  dimensiones con bloques parciales, exportación sin sobrescritura, escenarios
+  anidados y materiales compartidos que excluyen edificios.
+- Verificada la tecla **I** con entrada real en una ventana Xvfb privada y
+  Vulkan software: HUD «cabina Sí/No» y aumento de brillo del interior 3D de
+  noche. Xvfb no permite presentación Vulkan sobre AMD; las pruebas de GPU
+  anteriores usan Weston privado. No se opera el escritorio del usuario.
+- `check.sh`: **1455 pruebas aprobadas**, 43 ignoradas, 0 fallos; formato, clippy,
+  build, pruebas Python, oráculos fijados y servicio completo sin ventana
+  aprobados. Restaurados y verificados los 134 outputs generados, preservando
+  los seis archivos que ya tenía modificados el usuario.
+
+Evidencia con hashes, parámetros y mediciones:
+[fixtures/textures/2026-10-05.json](fixtures/textures/2026-10-05.json).
+Pruebas manuales: [sección 28](PLAYER_MANUAL_TESTS.md#28-luz-interior-ejemplos-y-dds).

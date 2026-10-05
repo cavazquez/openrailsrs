@@ -517,8 +517,8 @@ siguen siendo la referencia física; no se amplían sus tolerancias.
 
 ## 21. Nieve y materiales del escenario
 
-1. Iniciá el servicio extendido con **Clima → Nieve**. La cobertura visual funciona también en otras estaciones; elegí invierno para usar las variantes de textura de nieve originales que admite esa estación.
-2. En exterior (`2`), observá copos blancos cortos y lentos, con deriva lateral; el terreno y las superficies superiores deben tener nieve. Las paredes y los recortes transparentes de árboles no deben convertirse en rectángulos blancos.
+1. Iniciá el servicio extendido con **Clima → Nieve**. La cobertura visual funciona también en otras estaciones; invierno conserva sus variantes estacionales normales en los edificios.
+2. En exterior (`2`), observá copos con deriva lateral y nieve en el terreno y en superficies del tren. Los edificios completos, incluidos sus techos, conservan las texturas originales; no reciben cobertura ni variantes Snow. Los árboles mantienen sus recortes.
 3. En cabina (`1` o `Alt+1`), observá copos adheridos al vidrio. Pulsá `V`: el barrido limpia el sector correspondiente. El tablero, los instrumentos y el HUD no reciben el efecto del vidrio.
 4. Repetí con lluvia: el terreno y los edificios agrupados en GPU se oscurecen y reciben reflejos discretos. Las ventanas/recortes mantienen su transparencia. Con tiempo despejado los acabados vuelven a sus valores originales al iniciar otra partida.
 5. Guardá y cargá la partida con nieve; el clima debe conservarse. Acelerá/pausá: copos y escobillas usan el reloj de simulación.
@@ -548,8 +548,8 @@ El intérprete reconoce las funciones normal/distante utilizadas por esta ruta. 
 En el menú de inicio elegí Clima → Nieve y recorré cabina/exterior. Debés ver copos con tamaños y
 formas variadas, movidos por el viento, que pasan junto al tren sin seguir a
 la cámara. Bajo un techo cerrado debe disminuir la precipitación; es una máscara
-conservadora de alturas. Las superficies superiores acumulan cobertura irregular,
-las paredes conservan el material, el vidrio tiene manchas y V despeja el barrido.
+conservadora de alturas. El terreno y las superficies del tren acumulan cobertura
+irregular; los edificios conservan el material, el vidrio tiene manchas y V despeja el barrido.
 
 Alterná Cálculo del clima entre GPU, CPU y Mixto. En F8 → Diagnóstico deben
 cambiar los conteos de cada modo. GPU mantiene las semillas sin subir posiciones
@@ -634,3 +634,23 @@ la comparación física completa que todavía falla.
 Los datos actuales son estimaciones de un modelo meteorológico. Los rayos son
 procedurales; no reproducen descargas reales observadas. Detalles, límites y
 comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
+
+## 28. Luz interior, ejemplos y DDS
+
+1. Elegí hora manual nocturna y tiempo despejado. Desde cabina 3D (`1`), pulsá
+   `I`: tablero e interior deben aumentar su brillo. El HUD indica
+   «Luz cabina Sí/No». Volvé a pulsar `I` para apagar. F6 muestra la asignación y
+   F10 permite cambiarla sin conflictos. La 2D usa sus texturas nocturnas; la
+   luz interior de la cabina 3D no es un foco proyectado hacia el exterior.
+2. Iniciá desde el menú y recorré Ruta/Servicio. Deben aparecer los escenarios
+   completos de `examples/`, incluidos SCE multi body y Retiro → Olivos de
+   `mitre_campaign/scenarios/`. Los archivos de reportes/overlays/campañas/horarios
+   no son partidas seleccionables. Los ejemplos sin paisaje nativo son escenas
+   de práctica, no recreaciones visuales completas de Argentina.
+3. Con la misma estación, hora y cámara, compará despejado y nieve. El suelo
+   y los copos cambian; las fachadas y techos conservan sus colores/texturas.
+   Probá también alejándote para activar LOD y cargando un sector nuevo.
+4. Seguí [GPU_TEXTURES.md](GPU_TEXTURES.md): exportá una ACE o una carpeta a
+   `tmp/`, revisá el informe y comprobá que las ACE originales siguen intactas.
+   Compará carga automática y `OPENRAILSRS_TEXTURE_UPLOAD=rgba`: la formación,
+   la vegetación y los edificios deben conservar su apariencia.

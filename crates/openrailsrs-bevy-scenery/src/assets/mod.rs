@@ -40,6 +40,16 @@ impl Plugin for MstsAssetPlugin {
             .init_asset_loader::<MstsTerrainTileAssetLoader>()
             .init_asset_loader::<MstsTileBundleLoader>();
     }
+
+    fn finish(&self, app: &mut App) {
+        let formats = app
+            .world()
+            .get_resource::<bevy::image::CompressedImageFormatSupport>()
+            .map_or(bevy::image::CompressedImageFormats::NONE, |support| {
+                support.0
+            });
+        crate::gpu_textures::set_device_texture_formats(formats);
+    }
 }
 
 /// Register a filesystem [`AssetSource`] named `msts` rooted at `content_root`.

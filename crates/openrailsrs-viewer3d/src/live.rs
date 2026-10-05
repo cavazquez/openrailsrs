@@ -1164,6 +1164,7 @@ pub fn spawn_live_train(
                                             LiveTrainBody,
                                             Mesh3d(part.mesh.clone()),
                                             MeshMaterial3d(part.material.clone()),
+                                            crate::surface_weather::SnowReceiver,
                                             Transform::default(),
                                             Visibility::default(),
                                             Name::new(format!(

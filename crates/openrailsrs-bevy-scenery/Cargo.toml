@@ -23,6 +23,7 @@ openrailsrs-track = { path = "../openrailsrs-track" }
 bevy = { workspace = true }
 bytemuck.workspace = true
 image.workspace = true
+texpresso = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

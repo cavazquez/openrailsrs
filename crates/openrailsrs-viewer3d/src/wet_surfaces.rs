@@ -54,7 +54,10 @@ pub fn update(
     let wetness = state.wetness;
     let snow = state.snow_cover;
     for mut appearance in &mut instances {
-        let next = Vec2::new(wetness, snow);
+        // Buildings and other native WORLD shapes retain their appearance.
+        // Snow belongs to terrain and opted-in train exteriors, including when
+        // WORLD uses GPU instancing rather than StandardMaterial.
+        let next = Vec2::new(wetness, 0.0);
         if appearance.surface_weather != next {
             appearance.surface_weather = next;
         }
@@ -109,15 +112,14 @@ pub fn update(
         .filter_map(|(id, m)| {
             (matches!(m.alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_))
                 && m.params.shader_kind != 4.0
-                && ((m.params.wetness - wetness).abs() > 1e-4
-                    || (m.params.snow_cover - snow).abs() > 1e-4))
+                && ((m.params.wetness - wetness).abs() > 1e-4 || m.params.snow_cover.abs() > 1e-4))
                 .then_some(id)
         })
         .collect();
     for id in changed {
         if let Some(mut material) = scenery.get_mut(id) {
             material.params.wetness = wetness;
-            material.params.snow_cover = snow;
+            material.params.snow_cover = 0.0;
         }
     }
     let changed: Vec<_> = terrain

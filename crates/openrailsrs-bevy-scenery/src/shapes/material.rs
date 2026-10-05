@@ -535,6 +535,7 @@ pub fn blend_alpha_passes_from_ace_bits(
         mips_count: 1,
         mip0: vec![200, 200, 200, if ace_alpha_bits > 0 { 128 } else { 255 }],
         mips: Vec::new(),
+        compressed_mips: Vec::new(),
         has_mask_channel,
         alpha_bits: ace_alpha_bits,
     };
@@ -716,6 +717,7 @@ mod tests {
             mips_count: 1,
             mip0,
             mips: Vec::new(),
+            compressed_mips: Vec::new(),
             has_mask_channel: false,
             alpha_bits: 8,
         }
@@ -729,6 +731,7 @@ mod tests {
             mips_count: 1,
             mip0: vec![200, 200, 200, if bits > 0 { 128 } else { 255 }],
             mips: Vec::new(),
+            compressed_mips: Vec::new(),
             has_mask_channel: bits == 1,
             alpha_bits: bits,
         }
