@@ -404,6 +404,10 @@ Alcance técnico: [SIGNALS_AND_CONTENT_SCOPE.md](SIGNALS_AND_CONTENT_SCOPE.md).
   el destino. Además se confinan rutas canónicas y se rechazan metadatos del
   importador incluidos en un ZIP. No se demostró un ataque remoto completo a
   partir de un manifiesto local manipulado.
+- GitHub también informó 18 alertas previas de Pillow en las herramientas
+  visuales. Se actualizó el pin de 12.1.1 a **12.3.0**, la versión corregida
+  indicada por los avisos. En un entorno temporal con Python 3.14 pasaron las
+  tres pruebas de goldens, las cuatro del oráculo de escenario y `pip check`.
 - Entrada real en Xvfb privado, Vulkan software, 1280×720 y radio 450 m:
   curva original de **2000 m**, peralte observado **15 mm** en transición,
   confort **172,2 km/h**, vía/texturas originales, vistas de cabina/exterior,

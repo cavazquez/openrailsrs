@@ -66,7 +66,19 @@
     "fix": "validate every redirect before request; allow only curated HTTPS hosts",
     "regression": "in-memory 302 to HTTP localhost or other provider issues no second request",
     "additional_hardening": "canonical paths confined to package; reserved importer metadata rejected in ZIP; no remote attack demonstrated from local prepared-manifest edits",
-    "other_confirmed_findings": 0
+    "other_confirmed_findings": 0,
+    "dependency_followup": {
+      "manifest": "scripts/requirements-visual.txt",
+      "package": "Pillow",
+      "before": "12.1.1",
+      "after": "12.3.0",
+      "github_open_alerts_before": 18,
+      "validated_python": "3.14.4",
+      "visual_goldens_passed": 3,
+      "scenery_oracle_passed": 4,
+      "pip_check": "passed",
+      "source": "https://pypi.org/project/pillow/12.3.0/"
+    }
   },
   "media": [
     {
