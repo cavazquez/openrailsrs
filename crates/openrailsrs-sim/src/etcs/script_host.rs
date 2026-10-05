@@ -7,6 +7,7 @@ use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::{EtcsSupervision, EtcsTcsStatus, TextMessage};
 
@@ -21,14 +22,14 @@ pub struct ScriptHostConfig {
     pub timeout: Duration,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TcsInput {
     Acknowledge { message: String },
     Menu { action: String },
 }
 
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ScriptContext {
     pub time_s: f64,
     pub dt_s: f64,
@@ -45,12 +46,12 @@ pub struct ScriptContext {
 }
 
 /// Native SIGASP values, not the differently ordered OR TCS `Aspect` enum.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ScriptSignal {
     pub distance_m: f64,
     pub aspect: u8,
 }
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ScriptSpeedPost {
     pub distance_m: f64,
     pub speed_limit_mps: f64,
@@ -63,9 +64,13 @@ struct Reply {
     seq: u64,
     status: Option<ScriptOutput>,
     error: Option<String>,
+    #[serde(default)]
+    persistent: bool,
+    #[serde(default)]
+    state: Option<ScriptBinaryState>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ScriptOutput {
     allowed_mps: f64,
@@ -76,12 +81,32 @@ struct ScriptOutput {
     messages: Vec<ScriptMessage>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ScriptMessage {
     text: String,
     acknowledgeable: bool,
     acknowledged: bool,
+}
+
+/// A versioned snapshot of an explicitly serializable script, held outputs and
+/// pending inputs. Restoring requires the identical source bytes and class.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScriptSnapshot {
+    pub version: u32,
+    context: ScriptContext,
+    state: ScriptBinaryState,
+    events: Vec<TcsInput>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ScriptBinaryState {
+    source_sha256: String,
+    type_name: String,
+    payload_hex: String,
+    activated: bool,
+    output: ScriptOutput,
 }
 
 pub struct ScriptTcsHost {
@@ -94,6 +119,9 @@ pub struct ScriptTcsHost {
     last: Option<ScriptOutput>,
     error: Option<String>,
     events: Vec<TcsInput>,
+    config: ScriptHostConfig,
+    source_sha256: String,
+    persistent: bool,
 }
 
 impl ScriptTcsHost {
@@ -105,6 +133,11 @@ impl ScriptTcsHost {
             .script
             .canonicalize()
             .map_err(|e| format!("TCS script: {e}"))?;
+        let bytes = std::fs::read(&script).map_err(|e| format!("TCS source: {e}"))?;
+        if bytes.len() > 1024 * 1024 {
+            return Err("TCS source exceeds 1 MiB".into());
+        }
+        let source_sha256 = format!("{:x}", Sha256::digest(&bytes));
         let mut child = Command::new(&config.executable)
             .args(&config.arguments)
             .args([
@@ -166,6 +199,9 @@ impl ScriptTcsHost {
             last: None,
             error: None,
             events: Vec::new(),
+            config: config.clone(),
+            source_sha256,
+            persistent: false,
         };
         // Compilation/initialization gets a separate bounded deadline.
         host.exchange("initialize", context, Duration::from_secs(10))?;
@@ -194,9 +230,21 @@ impl ScriptTcsHost {
         context: &ScriptContext,
         timeout: Duration,
     ) -> Result<(), String> {
+        let events = std::mem::take(&mut self.events);
+        self.rpc(kind, context, events, None, timeout).map(|_| ())
+    }
+
+    fn rpc(
+        &mut self,
+        kind: &str,
+        context: &ScriptContext,
+        events: Vec<TcsInput>,
+        state: Option<&ScriptBinaryState>,
+        timeout: Duration,
+    ) -> Result<Option<ScriptBinaryState>, String> {
         let deadline = Instant::now() + timeout;
         self.seq += 1;
-        let request = serde_json::json!({"version":1,"seq":self.seq,"kind":kind,"context":context,"events":std::mem::take(&mut self.events)});
+        let request = serde_json::json!({"version":1,"seq":self.seq,"kind":kind,"context":context,"events":events,"state":state});
         let mut bytes = serde_json::to_vec(&request).map_err(|e| e.to_string())?;
         if bytes.len() >= MAX_LINE as usize {
             return Err("TCS request exceeds 64 KiB".into());
@@ -216,8 +264,77 @@ impl ScriptTcsHost {
             .map_err(|_| "TCS reply lock poisoned")?
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
             .map_err(|e| format!("TCS response deadline: {e}"))??;
-        self.last = Some(parse_reply(&line, self.seq)?);
+        let reply = decode_reply(&line, self.seq)?;
+        self.last = reply.status;
+        self.persistent = reply.persistent;
+        Ok(reply.state)
+    }
+
+    pub fn snapshot(&mut self, context: &ScriptContext) -> Result<ScriptSnapshot, String> {
+        if !self.persistent || self.error.is_some() {
+            return Err("El script C# debe implementar Save(BinaryWriter) y Restore(BinaryReader), y estar funcionando, para guardar".into());
+        }
+        let result: Result<ScriptSnapshot, String> = (|| {
+            let state = self
+                .rpc("save", context, vec![], None, self.timeout)?
+                .ok_or("TCS saved state missing")?;
+            let saved = ScriptSnapshot {
+                version: 1,
+                context: context.clone(),
+                state,
+                events: self.events.clone(),
+            };
+            self.validate_snapshot(&saved)?;
+            Ok(saved)
+        })();
+        if let Err(error) = &result {
+            self.error = Some(error.clone());
+            let _ = self.child.kill();
+        }
+        result
+    }
+
+    pub fn validate_snapshot(&self, saved: &ScriptSnapshot) -> Result<(), String> {
+        let state = &saved.state;
+        if saved.version != 1
+            || !self.persistent
+            || self.source_sha256 != state.source_sha256
+            || self.config.type_name != state.type_name
+        {
+            return Err(
+                "Partida C# incompatible: cambió el script, su clase o la API de persistencia"
+                    .into(),
+            );
+        }
+        if state.payload_hex.len() > 16384
+            || !state.payload_hex.len().is_multiple_of(2)
+            || !state.payload_hex.bytes().all(|c| c.is_ascii_hexdigit())
+            || saved.events.len() > 64
+        {
+            return Err("Estado C# inválido o demasiado grande".into());
+        }
+        validate_output(&state.output)?;
+        // Bound contexts and inputs as well, including hostile saves loaded from disk.
+        if serde_json::to_vec(saved).map_err(|e| e.to_string())?.len() >= MAX_LINE as usize - 1024 {
+            return Err("Estado C# excede el límite del protocolo".into());
+        }
         Ok(())
+    }
+
+    /// Prepare in a fresh process. A failing Restore cannot mutate the live host.
+    pub fn prepare_restore(&self, saved: &ScriptSnapshot) -> Result<Self, String> {
+        self.validate_snapshot(saved)?;
+        let mut prepared = Self::launch(&self.config, &saved.context)?;
+        prepared.validate_snapshot(saved)?;
+        prepared.rpc(
+            "restore",
+            &saved.context,
+            vec![],
+            Some(&saved.state),
+            prepared.timeout,
+        )?;
+        prepared.events = saved.events.clone();
+        Ok(prepared)
     }
 
     pub fn applies_brake(&self) -> bool {
@@ -275,7 +392,7 @@ impl Drop for ScriptTcsHost {
     }
 }
 
-fn parse_reply(line: &str, seq: u64) -> Result<ScriptOutput, String> {
+fn decode_reply(line: &str, seq: u64) -> Result<Reply, String> {
     let reply: Reply = serde_json::from_str(line).map_err(|e| format!("Invalid TCS JSON: {e}"))?;
     if reply.version != 1 || reply.seq != seq {
         return Err("TCS version / sequence mismatch".into());
@@ -283,7 +400,18 @@ fn parse_reply(line: &str, seq: u64) -> Result<ScriptOutput, String> {
     if let Some(error) = reply.error {
         return Err(format!("C# TCS: {error}"));
     }
-    let status = reply.status.ok_or("TCS status missing")?;
+    validate_output(reply.status.as_ref().ok_or("TCS status missing")?)?;
+    Ok(reply)
+}
+
+#[cfg(test)]
+fn parse_reply(line: &str, seq: u64) -> Result<ScriptOutput, String> {
+    decode_reply(line, seq)?
+        .status
+        .ok_or("TCS status missing".into())
+}
+
+fn validate_output(status: &ScriptOutput) -> Result<(), String> {
     let valid_speed = |v: f64| v.is_finite() && (0.0..=200.0).contains(&v);
     if !valid_speed(status.allowed_mps)
         || !valid_speed(status.intervention_mps)
@@ -293,7 +421,7 @@ fn parse_reply(line: &str, seq: u64) -> Result<ScriptOutput, String> {
     {
         return Err("TCS output outside protocol limits".into());
     }
-    Ok(status)
+    Ok(())
 }
 
 #[cfg(test)]

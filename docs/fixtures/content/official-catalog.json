@@ -1,0 +1,269 @@
+{
+  "source_url": "https://github.com/openrails/content/blob/2bc71f58d04fbce693564db74d577c0ee00b7e31/routes.json",
+  "catalog_commit": "2bc71f58d04fbce693564db74d577c0ee00b7e31",
+  "retrieved_utc": "2026-10-05",
+  "sha256": "0ce6048613a16f94b3fbe112a45470e4161b29cc35568df7a85950e4a40acc0c",
+  "routes": [
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "BNSF Starter Route",
+      "description": "Get started with Open Rails by downloading this free starter route. This route comes with trainsets and activities based on the BNSF Scenic Subdivision in the Pacific Northwest Region of the United States.",
+      "author": {
+        "@type": "https://schema.org/Organization",
+        "name": "TrainSimulations.net",
+        "url": "https://www.trainsimulations.net"
+      },
+      "image": "https://raw.githubusercontent.com/openrails/content/main/images/TrainSimulations.net/BNSF_starter_route.jpg",
+      "screenshot": "https://www.trainsimulations.net/starter",
+      "url": "https://ts-files.com/files/TS_STARTER_ROUTE.zip",
+      "downloadSize": 598168814,
+      "installSize": 894345725,
+      "start": {
+        "route": "BNSF Scenic Sub",
+        "activity": "1. What Goes Up..."
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Burrinjuck Railway",
+      "description": "The historic Burrinjuck railway, built in 1907 and decommissioned in 1929, was a narrow gauge route between Goondah and Burrinjuck in New South Wales, Australia. The line was used to transport workers, material and supplies during the construction of the Burrinjuck dam. Navigate the four German built 0-4-0 Krauss steam locomotives that transported approximately 100 tonnes of material per day, along this 26 mile / 42 km long route with challenging steep gradients.",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Peter Newell",
+        "url": "https://coalstonewcastle.com.au"
+      },
+      "image": "https://www.burrinjuck.coalstonewcastle.com.au/screenshots/images/001-image.jpg",
+      "screenshot": "https://www.burrinjuck.coalstonewcastle.com.au/screenshots/",
+      "url": "https://www.burrinjuck.coalstonewcastle.com.au/",
+      "downloadSize": 136713223
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "commercial",
+      "name": "Canadian National - Ruel Subdivision",
+      "description": "The Canadian National Railway - Ruel Subdivision is situated in early 1990’s Northern Ontario. In this realistic simulation you will travel around the countless lakes and rivers of the beautiful Canadian Shield, from the division point at Capreol to the small village of Foleyet. This route offers challenging activities, detailed scenery, high quality sound and accurate day and nighttime cabviews of 13 high detail Diesel Locomotive models and over 70 different freight cars.",
+      "author": {
+        "@type": "https://schema.org/Organization",
+        "name": "TrainSimulations.net",
+        "url": "https://www.trainsimulations.net"
+      },
+      "image": "https://raw.githubusercontent.com/openrails/content/main/images/TrainSimulations.net/CN_RUEL.jpg",
+      "url": "https://www.trainsimulations.net/ruel/",
+      "installSize": 1850000000
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Chiltern",
+      "description": "This route, set c.1960 in UK, includes two main and many branch lines that run through the Chiltern Hills to London as well as parts of the London Transport underground system. Also included, somewhat anachronistically, is the Shepherds Bush to Uxbridge tram route. This route is a work in progress and scenery is still being added. At the moment scenery is complete between Marylebone Station and Banbury.",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Martin Phillips",
+        "url": "https://github.com/DocMartin7644"
+      },
+      "image": "https://raw.githubusercontent.com/DocMartin7644/Chiltern-Route-v2/main/Screenshot.jpg",
+      "url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git",
+      "installSize": 13227601920,
+      "start": {
+        "route": "Chiltern",
+        "activity": "RS_Let's go to Birmingham"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Craven Timber Railway",
+      "description": "The Craven Timber railway is a 5.8 miles / 9.6 km branch of the North Coast line located in New South Wales, Australia. This typical timber 'tramway' was used to transport timber out of The Glen to a sawmill located adjacent to Craven Station (180 miles north of Sydney).  Built to light railway standards with a number of tight 120m curves the line was operated by two saddle tank steam locomotives, PWD32 and 529X. It crossed the Wards River six times as it wound up the picturesque river valley.",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Peter Newell",
+        "url": "http://coalstonewcastle.com.au"
+      },
+      "image": "http://www.craven.coalstonewcastle.com.au/screenshots/images/002-image.jpg",
+      "screenshot": "http://www.craven.coalstonewcastle.com.au/screenshots/",
+      "url": "http://www.craven.coalstonewcastle.com.au/"
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Demo Model 1",
+      "description": "Demo Model 1 is a great route to get started with Open Rails. It models the Scottish Capital Express during the 'blue' period of British Rail. Your service is a morning express from Edinburgh Waverley as far as the town of Linlithgow, about 20 minutes running. Generously donated by Making Tracks Ltd, Demo Model 1 was cut down from a full-size commercial route and contains lots of detail. Installation instructions are included. ",
+      "author": {
+        "@type": "https://schema.org/Organization",
+        "name": "Making Tracks Ltd"
+      },
+      "image": "https://www.openrails.org/assets/waverley.jpg",
+      "url": "https://static.openrails.org/files/DemoModel1.zip",
+      "downloadSize": 272422379,
+      "installSize": 329994809,
+      "start": {
+        "route": "Scottish Capital Express",
+        "activity": "- Explore Route -",
+        "locomotive": "MT Class 47706 BR Blue",
+        "consist": "MT_MT_Class 47 & 6 mk2 PP",
+        "startingAt": "Edingburgh",
+        "headingTo": "Glasgow",
+        "time": "12:00",
+        "season": "Summer",
+        "weather": "Clear"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Great Zig Zag Railway - New South Wales",
+      "description": "The Great Zig Zag railway between Mt Victoria and Bowenfels, west of Lithgow, New South Wales, Australia, was part of the Great Western line that connects Sydney with Western New South Wales. The line, hailed as an international engineering marvel in the late 19th century, was the most cost effective solution to traverse the Blue Mountains, west of Sydney. This route comes with 7 tutorial activities that introduce you progressively to the challenges of managing a Steam-hauled train. ",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Peter Newell",
+        "url": "http://coalstonewcastle.com.au"
+      },
+      "image": "http://www.zigzag.coalstonewcastle.com.au/screenshots/images/001-image.jpg",
+      "screenshot": "http://www.zigzag.coalstonewcastle.com.au/screenshots/",
+      "url": "http://www.zigzag.coalstonewcastle.com.au/",
+      "downloadSize": 210074550
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Manning River Breakwall Railway",
+      "description": "The Manning River Breakwater railway was built in 1895 to transport rock from a quarry at Crowdy Head to the entrance of the river at Harrington. Powered by a Baldwin Steam Tram motor, approximately 600,000 tons of rock was transported over time from the quarry to Harrington.  Operation of this route was relatively simple as it was fairly flat with a single locomotive, so that signalling was not required.",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Peter Newell",
+        "url": "http://coalstonewcastle.com.au"
+      },
+      "image": "http://www.manning-river.coalstonewcastle.com.au/screenshots/images/002-image.jpg",
+      "screenshot": "http://www.manning-river.coalstonewcastle.com.au/screenshots/",
+      "url": "http://www.manning-river.coalstonewcastle.com.au/",
+      "downloadSize": 74799426
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Long Island Railroad",
+      "description": "The Long Island Rail Road (LIRR) as it existed in 1945 to 1955. Years of effort and countless custom scenery objects have gone into the creation of these seven branches spanning almost 500 miles. Over 20 activities are included along with some basic rolling stock. Trainsim.com offers many loco repaints by Vince and his friends and also a package of five freight switching activities (File ID 86506).",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Vince Cockeram"
+      },
+      "image": "https://static.openrails.org/files/LIRR_TITLE.jpg",
+      "url": "https://static.openrails.org/files/LIRR.zip",
+      "installSize": 1105520887,
+      "start": {
+        "route": "LIRR BETA V 0.0.8",
+        "activity": "04. CENTRAL PICKUPS"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "MidEast Coast",
+      "description": "This route is a \"work in progress\" by Mick Clarke and set in 1950's UK. It runs from London northwards to York and includes the lines to Hunstanton and Skegness as well as many of the East Midlands and Yorkshire coal mines. Further extensions are planned. It is a refinement of MidEast Plus which was written for MSTS and set in the 1970's. (Size about 4GB but growing)",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Mick Clarke"
+      },
+      "image": "https://raw.githubusercontent.com/MECoast/MECoast/main/GitHub_assets/Spilsby.jpg",
+      "url": "https://github.com/MECoast/MECoast.git",
+      "installSize": 8290103296,
+      "start": {
+        "route": "MIDEAST COAST 1.6.7.5 (13 MAR 2024)-3 New Class J69 Locos added. Minor errors corrected",
+        "activity": "MC-SunnyHunny"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "commercial",
+      "name": "Montana Rail Link - Mullan Pass",
+      "description": "Originally built by the Northern Pacific in the 1880's, Mullan Pass is one of the most dramatic Rocky Mountain crossings in the United States, with a ruling westbound grade of 2.2%.  The line came under control of the Burlington Northern in the early 1970's, and was leased to Montana Rail Link (MRL) in the late 1980's.  While MRL maintains the right of way today, the line is owned by the BNSF railway, and is used extensively to move BNSF tonnage trains to the west coast.  BNSF traffic is primarily Powder River coal and grain from the Midwest.  BNSF also moves manifest, intermodal, and Boeing aircraft part trains. The remaining traffic is MRL-specific manifest trains. This is a modern interpretation of this piece of railroad, complete with high horsepower AC traction locomotives.  For those with a passion for nostalgia, MRL still uses cabooses on some local freights.",
+      "author": {
+        "@type": "https://schema.org/Organization",
+        "name": "TrainSimulations.net",
+        "url": "https://www.trainsimulations.net"
+      },
+      "image": "https://raw.githubusercontent.com/openrails/content/main/images/TrainSimulations.net/MULLAN_PASS.jpg",
+      "url": "https://www.trainsimulations.net/mullanpass/"
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "New Forest",
+      "description": "This route is a \"work in progress\" by Rick Loader and set in 1950's UK. It runs from the coastal towns of Weymouth, Bournemouth, Southampton and Portsmouth northwards to Bath and Basingstoke (map). It is notable for its detailed timetable with distinctive operating manoeuvres. (Size about 10GB)",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Rick Loader",
+        "url": "https://github.com/rickloader"
+      },
+      "image": "https://raw.githubusercontent.com/rickloader/NewForestRouteV3/main/NfGit.jpg",
+      "url": "https://github.com/rickloader/NewForestRouteV3.git",
+      "installSize": 23941709824,
+      "start": {
+        "route": "Watersnake",
+        "activity": "+ Explore in Activity Mode +",
+        "locomotive": "DR_BR_WC-R_34046",
+        "consist": "RL_Swanage10RESset297",
+        "startingAt": "Bournemouth Central",
+        "headingTo": "Waterloo",
+        "time": "9:00",
+        "season": "Autumn",
+        "weather": "Clear"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Portugal 79",
+      "description": "The Portugal ’79 route features 1775 km of Portugal’s broad gauge railway network. Full scenery detail is available on the 111 km between Entroncamento and Coimbra. The route includes a broad range of Portuguese rolling stock from different eras.",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Aldarion",
+        "url": "http://trainsim.pt/"
+      },
+      "image": "https://raw.githubusercontent.com/cpvirtual/OR_CPV/main/pt79.jpg",
+      "url": "https://github.com/cpvirtual/OR_CPV.git",
+      "installSize": 11195207680,
+      "start": {
+        "route": "Portugal79",
+        "activity": "+ Explore in Activity Mode +",
+        "locomotive": "CP 2605 Alsthom",
+        "consist": "Directo 13 Entroncamento-Pampilhosa HV1979",
+        "startingAt": "Entroncamento 9",
+        "headingTo": "Campanha 5",
+        "time": "9:50",
+        "season": "Summer",
+        "weather": "Clear"
+      }
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "commercial",
+      "name": "Southern Pacific - Shasta Route",
+      "description": "Southern Pacific's picturesque Shasta Route was the main artery of SP traffic north of Roseville California to the Pacific Northwest.  For decades, Mount Shasta created the perfect marketing piece for SP's passenger services, and even today, countless photos of Amtrak's Coast Starlight include the imposing mountain in the background.  TrainSimulations Shasta Route is a mid-1990's representation of SP's final years in the Pacific Northwest before their merger with Union Pacific.  This single track mainline hosted countless manifest trains carrying everything from California produce to forest products from the Pacific Northwest, as well as numerous intermodal trains.  The steep climb north from Dunsmuir, as well as tight curves makes for challenging mainline operations.  A large amount of SP power and rolling stock are included, and for the passenger train enthusiasts, a mid-90s Amtrak Coast Starlight consist is also included.",
+      "author": {
+        "@type": "https://schema.org/Organization",
+        "name": "TrainSimulations.net",
+        "url": "https://www.trainsimulations.net"
+      },
+      "image": "https://raw.githubusercontent.com/openrails/content/main/images/TrainSimulations.net/SP_SHASTA.jpg",
+      "url": "https://www.trainsimulations.net/sp-shasta/"
+    },
+    {
+      "@type": "https://schema.org/SoftwareApplication",
+      "compensation": "free",
+      "name": "Tweed Railway",
+      "description": "The Tweed railway, built around 1900, covers the Murwillumbah Branch from Casino to Murwillumbah and the short lived branch to Ballina in the timber rich Northern Rivers area of New South Wales, Australia.  The railway crossed many rivers and waterways in its journey between Casino and Murwillumbah, so it was necessary to overcome a number of geographical obstacles. ",
+      "author": {
+        "@type": "https://schema.org/Person",
+        "name": "Peter Newell",
+        "url": "http://coalstonewcastle.com.au"
+      },
+      "image": "http://www.tweed.coalstonewcastle.com.au/screenshots/images/039-image.jpg",
+      "screenshot": "http://www.tweed.coalstonewcastle.com.au/screenshots/",
+      "url": "http://www.tweed.coalstonewcastle.com.au/",
+      "downloadSize": 102575444
+    }
+  ]
+}

@@ -84,7 +84,7 @@ pub struct SavedGame {
 }
 impl SavedGame {
     pub fn save(
-        live: &LiveDrive,
+        live: &mut LiveDrive,
         content: &ActivePlayerContent,
         camera: SavedCamera,
         path: &Path,
@@ -94,8 +94,8 @@ impl SavedGame {
             scenario_toml: canonical_scenario(live.scenario_path())?,
             route_root: content.route_root.clone(),
             description: content.description.clone(),
-            session: live.session.snapshot(),
-            traffic: live.traffic.snapshot(),
+            session: live.session.snapshot_with_scripts()?,
+            traffic: live.traffic.snapshot_with_scripts()?,
             start_clock_s: live.start_clock_s,
             season: live.season.clone(),
             weather: content.weather,
@@ -163,8 +163,15 @@ impl SavedGame {
     pub fn restore(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
         live.session.validate_snapshot(&self.session)?;
         live.traffic.validate_snapshot(&self.traffic)?;
-        live.session.restore_snapshot(self.session)?;
-        live.traffic.restore_snapshot(self.traffic)?;
+        openrailsrs_sim::SessionSnapshot::validate_shared_dispatcher(
+            std::iter::once(&self.session).chain(self.traffic.iter().map(|s| &s.session)),
+        )?;
+        let player_host = live.session.prepare_script_restore(&self.session)?;
+        let traffic_hosts = live.traffic.prepare_script_restore(&self.traffic)?;
+        live.session
+            .restore_prepared_snapshot(self.session, player_host)?;
+        live.traffic
+            .restore_prepared_snapshot(self.traffic, traffic_hosts)?;
         live.traffic.synchronize_occupancy(&mut live.session);
         live.start_clock_s = self.start_clock_s;
         live.season = self.season;
@@ -294,7 +301,7 @@ mod tests {
             },
             ..default()
         };
-        SavedGame::save(&original, &content, cam, &save).unwrap();
+        SavedGame::save(&mut original, &content, cam, &save).unwrap();
         let game = SavedGame::read(&save).unwrap();
         assert_eq!(game.environment, Some(content.environment));
         let mut legacy: serde_json::Value =

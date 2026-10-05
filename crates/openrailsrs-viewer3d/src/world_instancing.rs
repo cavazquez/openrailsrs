@@ -1482,6 +1482,7 @@ mod tests {
     fn group_by_tile_splits_placements() {
         let placements = vec![
             ShapeInstancePlacement {
+                bank: None,
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 linear: None,
                 tile_x: 0,
@@ -1491,6 +1492,7 @@ mod tests {
                 signal_patch: None,
             },
             ShapeInstancePlacement {
+                bank: None,
                 transform: Transform::from_xyz(1.0, 0.0, 0.0),
                 linear: None,
                 tile_x: 0,
@@ -1500,6 +1502,7 @@ mod tests {
                 signal_patch: None,
             },
             ShapeInstancePlacement {
+                bank: None,
                 transform: Transform::from_xyz(2.0, 0.0, 0.0),
                 linear: None,
                 tile_x: 1,
@@ -1582,6 +1585,7 @@ mod tests {
         }
         let placements: Vec<ShapeInstancePlacement> = (0..2)
             .map(|i| ShapeInstancePlacement {
+                bank: None,
                 transform: Transform::from_xyz(i as f32, 0.0, 0.0),
                 linear: None,
                 tile_x: 0,

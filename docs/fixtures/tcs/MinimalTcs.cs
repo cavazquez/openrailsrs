@@ -12,6 +12,8 @@ public class MinimalTcs : TrainControlSystem
         SetInterventionSpeedLimitMpS(limit + 1);
         SetEmergencyBrake(!acknowledged || SpeedMpS() > limit + 1);
     }
+    public override void Save(System.IO.BinaryWriter outf) { outf.Write(acknowledged); outf.Write(restrict); }
+    public override void Restore(System.IO.BinaryReader inf) { acknowledged = inf.ReadBoolean(); restrict = inf.ReadBoolean(); }
     public override void HandleEvent(TCSEvent evt, string message)
     {
         if (evt == TCSEvent.AlerterPressed) acknowledged = true;

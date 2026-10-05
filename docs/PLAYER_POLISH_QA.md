@@ -364,3 +364,57 @@ Evidencia y límites:
 [fixtures/compatibility/2026-10-05.json](fixtures/compatibility/2026-10-05.json).
 Pruebas manuales: [sección 29](PLAYER_MANUAL_TESTS.md#29-señales-compatibilidad-c-y-peralte).
 Alcance técnico: [SIGNALS_AND_CONTENT_SCOPE.md](SIGNALS_AND_CONTENT_SCOPE.md).
+
+
+## 5 de octubre de 2026: peralte, itinerarios, persistencia y descargas
+
+- Perfiles compartidos por la pose del tren/cámara y la deformación de las
+  mallas originales de vía. Oráculo nuevo: diez casos de `MarkSections`,
+  estándares y conversiones C# originales de OR 1.6.1, con error máximo de
+  cant/roll **0 m / 0 rad** frente a tolerancias **0,00001 m / 0,000001 rad**.
+  Contacto geométrico de vía/pose por debajo de 1 mm, con grandes coordenadas.
+- Despachador: bloque/agujas concedidos en conjunto, protección de la cola,
+  posiciones compartidas y rechazo de órdenes manuales sobre agujas reservadas.
+  Regresión de cruce por apartadero, itinerario alternativo que conserva destino,
+  bloqueo hasta despejar la cola, ciclos de espera y guardados incompatibles.
+  El servicio completo con tráfico pasa. La autoridad móvil sin señales no
+  acumula una reserva por quantum.
+- Save/Restore real de un TCS C#: reinicio con reconocimiento, límite y salida
+  retenidos; guardado sin `Update`, identidad/tamaño validados y restore corrupto
+  rechazado antes de modificar la sesión. El SDK .NET sigue siendo opcional y
+  se requieren ambos hooks del script; no se habilitan otros hosts C#.
+- Descarga real del ZIP oficial Demo Model 1: **272422379 bytes**, SHA-256
+  registrado, **329994809 bytes** instalados en una carpeta de prueba independiente.
+  Auditoría/importación: **23 formaciones**, **9** con recursos completos y
+  tracción para iniciar, **1 actividad**. Las nueve alternativas son AI y no
+  incluyen cabina; la formación del jugador requiere ampliar `Include`.
+  Se conservan los archivos originales,
+  los avisos y la instalación Chiltern. Esto no certifica todos sus sistemas.
+- Arranque nativo SCE comprobado después de corregir una falsa alineación entre
+  el centro del recorrido y la estación inicial. El terreno conserva el marco
+  TDB; una cola inicial vacía durante streaming termina sin acceder fuera de
+  sus límites. En la actividad sin paradas programadas, el HUD muestra distancia
+  al destino y no anuncia llegada al inicio. Estas tres regresiones tienen tests. Inversor/regulador reales alcanzaron
+  **4,6 km/h** y la distancia a señal bajó de **211 a 205 m**. Es una prueba
+  corta de arranque/controles con formación AI, no una validación del viaje SCE
+  completo ni de su cabina original.
+- Security Review local: un hallazgo Medium confirmado en redirecciones.
+  Corregido al validar cada destino antes de emitir el siguiente GET; prueba
+  en memoria con redirección a HTTP/localhost u otro proveedor, sin contactar
+  el destino. Además se confinan rutas canónicas y se rechazan metadatos del
+  importador incluidos en un ZIP. No se demostró un ataque remoto completo a
+  partir de un manifiesto local manipulado.
+- Entrada real en Xvfb privado, Vulkan software, 1280×720 y radio 450 m:
+  curva original de **2000 m**, peralte observado **15 mm** en transición,
+  confort **172,2 km/h**, vía/texturas originales, vistas de cabina/exterior,
+  F8 Despachador, selector F10 y guardado del jugador/tráfico. RAM máxima
+  **2767,2 MiB**. No es una medición de GPU ni de viaje completo.
+- `check.sh`: **1482 pruebas Rust aprobadas**, 43 ignoradas, cero fallos;
+  formato, clippy, compilación, Python, oráculos fijados y servicio sin ventana.
+  Aceptación .NET adicional aprobada. Los 134 outputs se restauraron y sus
+  hashes se verificaron, conservando los seis cambios previos del usuario.
+
+Evidencia y capturas:
+[fixtures/compatibility/next-three-2026-10-05.json](fixtures/compatibility/next-three-2026-10-05.json).
+Pruebas manuales: [sección 30](PLAYER_MANUAL_TESTS.md#30-peralte-despachador-guardado-c-y-contenido-oficial).
+Contenido: [OFFICIAL_CONTENT.md](OFFICIAL_CONTENT.md).

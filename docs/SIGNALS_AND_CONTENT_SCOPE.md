@@ -20,14 +20,24 @@ El corredor extendido contiene **66 cabezas**, con **15 tipos de programa**:
   a su entrada. Usa intervalos físicos canónicos: `eNN` y `eNN_r` comparten vía.
   Comprueba formaciones completas, coches estacionados, posiciones de desvíos
   y reservas existentes. Retiene una concesión antes de resolver peticiones
-  nuevas por identificador de servicio. Se libera al avanzar; la ocupación
-  sigue protegiendo la cola. La concesión propia se guarda y valida al cargar.
+  nuevas por antigüedad de espera e identificador. Se libera al avanzar; la
+  ocupación sigue protegiendo la cola. Las concesiones propias se guardan y
+  validan al cargar.
 
-Esto no reproduce el despachador general de OR, sus bloqueos de agujas,
-reversas/itinerarios variables, enlaces completos ni resolución de deadlocks.
-Las reservas se habilitan en sesiones con programas nativos; los escenarios
-anteriores mantienen sus reglas declarativas. Una red en vía única puede
-necesitar un planificador de cruces para evitar esperas sin salida.
+El coordinador concede **bloque y agujas de forma atómica**, comparte la posición
+entre jugador y tráfico y rechaza órdenes manuales sobre agujas reservadas.
+Mantiene bloqueos mientras la formación completa o una sección estacionada
+ocupa su gálibo de 5 m. F8 → Despachador muestra dueños, espera y cambios de ruta.
+
+Después de cinco segundos esperando, busca una alternativa hacia delante que
+conserve las estaciones pendientes y el destino, evitando ocupación, reservas
+ajenas y agujas bloqueadas. No retrocede sobre el prefijo ocupado. Detecta ciclos
+de espera; si no hay alternativa mantiene la restricción y lo informa. No
+reproduce las reversas automáticas, todos los enlaces, las órdenes de horarios
+ni el despachador completo de OR. Sin señales usa autoridad móvil hacia delante
+y ocupación física, sin acumular una nueva reserva retenida por cada quantum.
+Al cargar se rechazan concesiones superpuestas y posiciones compartidas
+contradictorias antes de modificar la partida.
 
 ## Compatibilidad del material
 
@@ -54,8 +64,10 @@ comandos del lenguaje SMS; el motor de audio conserva su propio diagnóstico.
 
 El [host opcional](TCS_CSHARP_HOST.md) recibe aspectos nativos, señales y postes
 por índice, y máxima del tren separada del límite de vía. Sigue requiriendo
-selección explícita de un script compatible, SDK .NET y API acotada. El guardado
-del estado interno del script y los demás hosts C# aún requieren trabajo.
+selección explícita de un script compatible, SDK .NET y API acotada. Save/Restore
+conserva estado, mensajes y eventos cuando el tipo sobrescribe ambos hooks. Se
+vincula a hash/tipo y prepara un host nuevo antes de aplicar el guardado. Los
+hosts C# de frenos y alimentación y otros miembros del API siguen pendientes.
 
 El [documento de peralte](https://openrails.org/files/superelevation_v1.pdf)
 explica la velocidad de equilibrio y el déficit admitido. Se conserva la
@@ -72,11 +84,29 @@ servicio extendido; los valores omitidos mantienen los defaults de la referencia
 F8 → **Locomotora** muestra radio y roll del tramo TDB/TSection validado, peralte
 geométrico, trocha y velocidad de confort más restrictiva de los coches
 acoplados, evaluada en la curva de la cabeza. El exceso de confort se informa.
-Se mantiene el roll escrito en la vía para tren/cabina; no se genera aquí un
-peralte nuevo ni una transición automática en mallas originales. Tampoco es
-un modelo de suspensión, descarrilamiento o penalización de conducción. Cuando
-TSection no da trocha, el diagnóstico utiliza 1,435 m. Faltan perfiles por bogie
-y la reproducción de los estándares/runoff de `SuperElevation.cs`.
+El **peralte automático** agrega perfiles de cant/runoff al TDB, con los
+estándares métricos/imperiales o `ORTSSuperElevation` del TRK. El mismo perfil
+deforma las mallas originales de vía y sitúa tren/cámara, manteniendo UV,
+normales y transiciones de LOD. La elevación conserva la altura del carril
+interior; el contacto entre la vía deformada y la pose se verifica por debajo de
+1 mm en una prueba geométrica a grandes coordenadas.
+
+Se conserva el roll escrito. Se excluyen agujas, vías múltiples, carreteras,
+colocaciones WORLD incompatibles y las tablas antiguas `ORTSTrackSuperElevation`
+sin un oráculo propio. Se usa la velocidad de diseño del TRK para las curvas;
+falta validar velocidades locales por categoría/dirección, perfiles de bogies,
+suspensión y descarrilamiento. F10 permite desactivar generación para la próxima
+partida; `OPENRAILSRS_SUPERELEVATION=0` permite reproducir la vista anterior.
+Cuando TSection no da trocha, el diagnóstico utiliza 1,435 m.
+
+## Descarga de contenido
+
+El menú ofrece el catálogo curado de Open Rails y prepara las actividades de los
+paquetes compatibles. Descarga en segundo plano, cancelación, instalaciones
+independientes, procedencia y auditoría; no reemplaza Chiltern ni ejecuta
+instaladores o scripts del paquete. El catálogo también tiene enlaces de autor
+y contenido comercial que requieren obtenerse en su origen. Las dependencias
+MSTS ausentes no siempre están disponibles libremente. [Guía](OFFICIAL_CONTENT.md).
 
 ## Comprobaciones
 
@@ -85,6 +115,9 @@ cargo test -p openrailsrs-sim -p openrailsrs-train -p openrailsrs-track -p openr
 OPENRAILSRS_DOTNET=/ruta/dotnet bash scripts/check_tcs_host.sh
 python3 scripts/capture_superelevation_or.py --source-root ../openrails \
   --dotnet /ruta/dotnet --out-dir tmp/superelevation-recapture
+python3 scripts/capture_cant_profiles_or.py --source-root ../openrails \
+  --dotnet /ruta/dotnet --out-dir tmp/cant-profiles-recapture
+python3 scripts/test_official_content.py
 python3 scripts/run_oracles.py --verify-only --source-root ../openrails
 ```
 
@@ -93,9 +126,13 @@ fijado, conserva aritmética C# `float` y escribe diez casos en una carpeta nuev
 No reemplaza referencias. `oracles/superelevation-or-1.6.1.json` tiene su hash
 fijado y tolerancia de **0,00002 m/s**; el test Rust comprueba esos resultados.
 Es un oráculo aislado de la fórmula, no una ejecución completa del simulador OR.
+El segundo oráculo conserva diez perfiles generados por `MarkSections`, los
+constructores de estándares y conversiones originales, con tolerancias de
+**0,00001 m de cant** y **0,000001 rad de roll**. Los hashes y el commit se fijan
+en `oracles/openrails-reference.toml`; no se reemplaza la referencia histórica.
 
 Las regresiones adicionales cubren ramas SIGSCR no ejecutadas, la propagación
 de Alto, un bloqueo entre trenes opuestos, liberación/guardado, reservas inválidas,
 recursos opcionales incompletos y el servicio entero de seis paradas con tráfico.
 La aceptación C# verifica la transferencia real SIGSCR → JSONL → script → freno
-físico. [Pruebas manuales](PLAYER_MANUAL_TESTS.md#29-señales-compatibilidad-c-y-peralte).
+físico. [Pruebas manuales](PLAYER_MANUAL_TESTS.md#30-peralte-despachador-guardado-c-y-contenido-oficial).

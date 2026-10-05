@@ -67,6 +67,7 @@ pub struct RouteFile {
     pub overhead_wire: OverheadWireParams,
     /// Native season/weather environment filenames, e.g. `SummerClear`.
     pub environments: Vec<(String, String)>,
+    pub cant: super::RouteCantSettings,
 }
 
 impl RouteFile {
@@ -85,6 +86,7 @@ impl RouteFile {
             source_path: None,
             overhead_wire: parse_overhead_wire_params(ast),
             environments: parse_environments(ast),
+            cant: super::RouteCantSettings::from_ast(ast),
         })
     }
 

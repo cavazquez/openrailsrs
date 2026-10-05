@@ -44,6 +44,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// List or install packages from the curated official Open Rails catalogue.
+    Content {
+        #[arg(long)]
+        list: bool,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        destination: Option<PathBuf>,
+    },
     /// Parse an MSTS-style file and print the generic AST.
     Inspect { file: PathBuf },
     /// Audit `.eng`/`.wag` field coverage: openrailsrs vs OpenBVE catalog.
@@ -372,6 +381,31 @@ fn main() -> anyhow::Result<()> {
     }
 
     match cli.command {
+        Commands::Content {
+            list,
+            package,
+            destination,
+        } => {
+            let helper = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../scripts/download_official_content.py");
+            let mut command = std::process::Command::new(
+                std::env::var_os("OPENRAILSRS_PYTHON").unwrap_or("python3".into()),
+            );
+            command.arg(helper);
+            if list || package.is_none() {
+                command.arg("--list");
+            } else if let Some(package) = package {
+                command.args(["--package", &package]);
+            }
+            if let Some(destination) = destination {
+                command.arg("--destination").arg(destination);
+            }
+            let status = command.status()?;
+            if !status.success() {
+                anyhow::bail!("La instalación de contenido no se completó");
+            }
+        }
+
         Commands::AuditConsists {
             path,
             trainset_root,

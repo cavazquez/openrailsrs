@@ -1,0 +1,748 @@
+{
+  "reference": "Open Rails 1.6.1, isolated unchanged MarkSections with synthetic section/speed inputs",
+  "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "source": "Source/Orts.Simulation/Simulation/SuperElevation.cs",
+  "source_sha256": "f5626803616dab5ab13068481c70a93ac70d82cf15433594004ef06ead467b47",
+  "algorithm_sha256": "d63bf1547fd3b684ba3d4e3e2f856396ca0929644273f0473b9c79b446d07882",
+  "standard_source": "Source/Orts.Formats.Msts/RouteFile.cs",
+  "standard_source_sha256": "b86e087005cdc33d706663d6dd654a99578ef62d4d0467d43e6f4a0e507b9745",
+  "conversions_source": "Source/Orts.Common/Conversions.cs",
+  "conversions_source_sha256": "21c5c72a5e54e408e0d8a41edb54d2ace22285ec2ee1ac310094a47bdfe64b9d",
+  "tolerance_m": 1e-05,
+  "tolerance_rad": 1e-06,
+  "cases": [
+    {
+      "name": "metric-long",
+      "metric": true,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 300,
+          "radius_m": 650,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.4886364,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0,
+            0.037499998
+          ],
+          "angles_rad": [
+            0,
+            0,
+            -0.026135378
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.06818181,
+            0.93181825,
+            1
+          ],
+          "elevations_m": [
+            0.037499998,
+            0.074999996,
+            0.074999996,
+            0.037499998
+          ],
+          "angles_rad": [
+            -0.026135378,
+            -0.05228863,
+            -0.05228863,
+            -0.026135378
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.5113636,
+            1
+          ],
+          "elevations_m": [
+            0.037499998,
+            0,
+            0
+          ],
+          "angles_rad": [
+            -0.026135378,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "imperial-long",
+      "metric": false,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 300,
+          "radius_m": 650,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0.050783746
+          ],
+          "angles_rad": [
+            0,
+            -0.035396762
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.20010671,
+            0.7998933,
+            1
+          ],
+          "elevations_m": [
+            0.050783746,
+            0.127,
+            0.127,
+            0.050783746
+          ],
+          "angles_rad": [
+            -0.035396762,
+            -0.08861769,
+            -0.08861769,
+            -0.035396762
+          ]
+        },
+        {
+          "positions": [
+            0,
+            1
+          ],
+          "elevations_m": [
+            0.050783746,
+            0
+          ],
+          "angles_rad": [
+            -0.035396762,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "imperial-reverse",
+      "metric": false,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": -1,
+      "sections": [
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 300,
+          "radius_m": 650,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        },
+        {
+          "length_m": 40,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 24
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0.050783746
+          ],
+          "angles_rad": [
+            0,
+            0.035396762
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.20010671,
+            0.7998933,
+            1
+          ],
+          "elevations_m": [
+            0.050783746,
+            0.127,
+            0.127,
+            0.050783746
+          ],
+          "angles_rad": [
+            0.035396762,
+            0.08861769,
+            0.08861769,
+            0.035396762
+          ]
+        },
+        {
+          "positions": [
+            0,
+            1
+          ],
+          "elevations_m": [
+            0.050783746,
+            0
+          ],
+          "angles_rad": [
+            0.035396762,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "short-curve",
+      "metric": true,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 2,
+          "radius_m": 100,
+          "passenger_speed_mps": 20,
+          "freight_speed_mps": 20
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [],
+          "elevations_m": [],
+          "angles_rad": []
+        }
+      ]
+    },
+    {
+      "name": "slow-yard",
+      "metric": false,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 200,
+          "radius_m": 150,
+          "passenger_speed_mps": 3,
+          "freight_speed_mps": 3
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [],
+          "elevations_m": [],
+          "angles_rad": []
+        }
+      ]
+    },
+    {
+      "name": "short-straight",
+      "metric": false,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 200,
+          "radius_m": 500,
+          "passenger_speed_mps": 25,
+          "freight_speed_mps": 25
+        },
+        {
+          "length_m": 5,
+          "radius_m": 0,
+          "passenger_speed_mps": 25,
+          "freight_speed_mps": 25
+        },
+        {
+          "length_m": 200,
+          "radius_m": 500,
+          "passenger_speed_mps": 25,
+          "freight_speed_mps": 25
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.43764004,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0.13335,
+            0.13335
+          ],
+          "angles_rad": [
+            0,
+            -0.0930611,
+            -0.0930611
+          ]
+        },
+        {
+          "positions": [
+            0,
+            1
+          ],
+          "elevations_m": [
+            0.13335,
+            0.13335
+          ],
+          "angles_rad": [
+            -0.0930611,
+            -0.0930611
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.56236,
+            1
+          ],
+          "elevations_m": [
+            0.13335,
+            0.13335,
+            0
+          ],
+          "angles_rad": [
+            -0.0930611,
+            -0.0930611,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cusp",
+      "metric": true,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 20,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 30
+        },
+        {
+          "length_m": 15,
+          "radius_m": 400,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 30
+        },
+        {
+          "length_m": 20,
+          "radius_m": 0,
+          "passenger_speed_mps": 30,
+          "freight_speed_mps": 30
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.47115383,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0,
+            0.019391026
+          ],
+          "angles_rad": [
+            0,
+            0,
+            -0.013513323
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.5,
+            1
+          ],
+          "elevations_m": [
+            0.019391026,
+            0.033141024,
+            0.019391026
+          ],
+          "angles_rad": [
+            -0.013513323,
+            -0.023096845,
+            -0.013513323
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.52884614,
+            1
+          ],
+          "elevations_m": [
+            0.019391026,
+            0,
+            0
+          ],
+          "angles_rad": [
+            -0.013513323,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "varying-radius",
+      "metric": true,
+      "high_speed": false,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 60,
+          "radius_m": 0,
+          "passenger_speed_mps": 32,
+          "freight_speed_mps": 22
+        },
+        {
+          "length_m": 120,
+          "radius_m": 450,
+          "passenger_speed_mps": 32,
+          "freight_speed_mps": 22
+        },
+        {
+          "length_m": 70,
+          "radius_m": 1200,
+          "passenger_speed_mps": 32,
+          "freight_speed_mps": 22
+        },
+        {
+          "length_m": 90,
+          "radius_m": 450,
+          "passenger_speed_mps": 32,
+          "freight_speed_mps": 22
+        },
+        {
+          "length_m": 60,
+          "radius_m": 0,
+          "passenger_speed_mps": 32,
+          "freight_speed_mps": 22
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.12727267,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0,
+            0.09
+          ],
+          "angles_rad": [
+            0,
+            0,
+            -0.06275896
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.43636367,
+            0.5878788,
+            1
+          ],
+          "elevations_m": [
+            0.09,
+            0.18,
+            0.18,
+            0.095000006
+          ],
+          "angles_rad": [
+            -0.06275896,
+            -0.12576683,
+            -0.12576683,
+            -0.06625055
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.5,
+            1
+          ],
+          "elevations_m": [
+            0.095000006,
+            0.15515625,
+            0.095000006
+          ],
+          "angles_rad": [
+            -0.06625055,
+            -0.108334616,
+            -0.06625055
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.4838384,
+            1
+          ],
+          "elevations_m": [
+            0.095000006,
+            0.16984376,
+            0.09
+          ],
+          "angles_rad": [
+            -0.06625055,
+            -0.118636124,
+            -0.06275896
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.87272733,
+            1
+          ],
+          "elevations_m": [
+            0.09,
+            0,
+            0
+          ],
+          "angles_rad": [
+            -0.06275896,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "high-speed",
+      "metric": true,
+      "high_speed": true,
+      "gauge_m": 1.435,
+      "direction": 1,
+      "sections": [
+        {
+          "length_m": 120,
+          "radius_m": 0,
+          "passenger_speed_mps": 60,
+          "freight_speed_mps": 40
+        },
+        {
+          "length_m": 900,
+          "radius_m": 2500,
+          "passenger_speed_mps": 60,
+          "freight_speed_mps": 40
+        },
+        {
+          "length_m": 120,
+          "radius_m": 0,
+          "passenger_speed_mps": 60,
+          "freight_speed_mps": 40
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.8125,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0,
+            0.03
+          ],
+          "angles_rad": [
+            0,
+            0,
+            -0.020907447
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.025,
+            0.975,
+            1
+          ],
+          "elevations_m": [
+            0.03,
+            0.06,
+            0.06,
+            0.03
+          ],
+          "angles_rad": [
+            -0.020907447,
+            -0.04182404,
+            -0.04182404,
+            -0.020907447
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.1875,
+            1
+          ],
+          "elevations_m": [
+            0.03,
+            0,
+            0
+          ],
+          "angles_rad": [
+            -0.020907447,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "imperial-high-speed",
+      "metric": false,
+      "high_speed": true,
+      "gauge_m": 1.435,
+      "direction": -1,
+      "sections": [
+        {
+          "length_m": 100,
+          "radius_m": 0,
+          "passenger_speed_mps": 55,
+          "freight_speed_mps": 35
+        },
+        {
+          "length_m": 500,
+          "radius_m": 1500,
+          "passenger_speed_mps": 55,
+          "freight_speed_mps": 35
+        },
+        {
+          "length_m": 100,
+          "radius_m": 0,
+          "passenger_speed_mps": 55,
+          "freight_speed_mps": 35
+        }
+      ],
+      "profiles": [
+        {
+          "positions": [
+            0,
+            0.17473587,
+            1
+          ],
+          "elevations_m": [
+            0,
+            0,
+            0.0762
+          ],
+          "angles_rad": [
+            0,
+            0,
+            0.053126033
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.16505283,
+            0.83494717,
+            1
+          ],
+          "elevations_m": [
+            0.0762,
+            0.1524,
+            0.1524,
+            0.0762
+          ],
+          "angles_rad": [
+            0.053126033,
+            0.106402755,
+            0.106402755,
+            0.053126033
+          ]
+        },
+        {
+          "positions": [
+            0,
+            0.82526416,
+            1
+          ],
+          "elevations_m": [
+            0.0762,
+            0,
+            0
+          ],
+          "angles_rad": [
+            0.053126033,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -218,6 +218,9 @@ pub fn service_instruction(session: &openrailsrs_sim::LiveDriveSession) -> Strin
             .failure
             .clone()
             .unwrap_or_else(|| "Servicio fallido · R reinicia".into()),
+        ServicePhase::Approaching if session.next_stop_label().is_none() => {
+            "Conducir hasta el destino".into()
+        }
         ServicePhase::Approaching => "Detenerse en el punto de parada".into(),
     }
 }
@@ -238,6 +241,38 @@ fn distance_label(metres: f64) -> String {
     } else {
         format!("{metres:.0} m")
     }
+}
+
+fn monitor_distance_label(session: &openrailsrs_sim::LiveDriveSession) -> String {
+    if session.gameplay.phase == ServicePhase::Completed {
+        return "Destino alcanzado".into();
+    }
+    distance_label(session.distance_to_next_stop_m().unwrap_or_else(|| {
+        (session.path_data.total_length_m() - session.head_chainage_m()).max(0.0)
+    }))
+}
+
+fn monitor_schedule_label(
+    session: &openrailsrs_sim::LiveDriveSession,
+    start_clock_s: f64,
+) -> String {
+    session
+        .gameplay
+        .stop_targets
+        .get(session.gameplay.next_stop_idx)
+        .map(|stop| {
+            format!(
+                "Llegada prevista {}",
+                clock_label(start_clock_s + stop.arrive_s)
+            )
+        })
+        .unwrap_or_else(|| {
+            if session.gameplay.phase == ServicePhase::Completed {
+                "Fin del recorrido".into()
+            } else {
+                "Sin paradas programadas".into()
+            }
+        })
 }
 
 fn signal_label(aspect: SignalAspect) -> (&'static str, Color) {
@@ -375,13 +410,7 @@ fn update_driving_hud(
                     .to_string(),
                 TEXT,
             ),
-            HudField::Distance => (
-                session
-                    .distance_to_next_stop_m()
-                    .map(distance_label)
-                    .unwrap_or_else(|| "Destino alcanzado".into()),
-                TEXT,
-            ),
+            HudField::Distance => (monitor_distance_label(session), TEXT),
             HudField::Signal => session
                 .next_signal_ahead()
                 .map(|(distance, aspect)| {
@@ -389,20 +418,7 @@ fn update_driving_hud(
                     (format!("● {label} · {}", distance_label(distance)), color)
                 })
                 .unwrap_or_else(|| ("Señal  —".into(), MUTED)),
-            HudField::Schedule => (
-                session
-                    .gameplay
-                    .stop_targets
-                    .get(session.gameplay.next_stop_idx)
-                    .map(|stop| {
-                        format!(
-                            "Llegada prevista {}",
-                            clock_label(live.start_clock_s + stop.arrive_s)
-                        )
-                    })
-                    .unwrap_or_else(|| "Fin del recorrido".into()),
-                MUTED,
-            ),
+            HudField::Schedule => (monitor_schedule_label(session, live.start_clock_s), MUTED),
             HudField::Progress => (
                 format!(
                     "Paradas {}/{} · recorrido {:.0}%",
@@ -431,6 +447,25 @@ fn update_driving_hud(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn activity_without_scheduled_stops_only_announces_arrival_when_completed() {
+        let mut live =
+            LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path()).unwrap();
+        let session = &mut live.session;
+        session.gameplay.stop_targets.clear();
+        session.gameplay.next_stop_idx = 0;
+        session.gameplay.phase = ServicePhase::Approaching;
+        assert_ne!(monitor_distance_label(session), "Destino alcanzado");
+        assert_eq!(
+            monitor_schedule_label(session, 0.0),
+            "Sin paradas programadas"
+        );
+        assert_eq!(service_instruction(session), "Conducir hasta el destino");
+        session.gameplay.phase = ServicePhase::Completed;
+        assert_eq!(monitor_distance_label(session), "Destino alcanzado");
+        assert_eq!(monitor_schedule_label(session, 0.0), "Fin del recorrido");
+    }
 
     #[test]
     fn clock_wraps_at_midnight_without_resetting_elapsed_service_time() {

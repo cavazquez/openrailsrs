@@ -46,6 +46,7 @@ python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 python3 -m unittest discover -s scripts -p test_weather_execution.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py
+python3 -m unittest discover -s scripts -p test_official_content.py
 python3 -m unittest discover -s scripts -p test_website.py
 python3 -m unittest discover -s scripts -p test_visual_goldens.py
 python3 scripts/build_website.py --check

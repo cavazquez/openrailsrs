@@ -18,6 +18,10 @@ path = "src/main.rs"
 name = "openrailsrs-visual-diff"
 path = "src/bin/visual_diff.rs"
 
+[[bin]]
+name = "openrailsrs-prepare-content"
+path = "src/bin/prepare_content.rs"
+
 [features]
 default = []
 trace = ["bevy/trace"]

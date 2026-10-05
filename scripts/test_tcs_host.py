@@ -28,6 +28,25 @@ def main():
     assert not replies[1]['status']['emergency_brake']
     assert replies[1]['status']['messages'][0]['acknowledged']
     assert replies[2]['status']['allowed_mps']==5
+    save=first|dict(seq=4,kind='save')
+    saved_replies=run(a.dotnet,a.host,script,[first,tick,menu,save])
+    saved=saved_replies[-1]['state']
+    assert saved_replies[0]['persistent'] and saved['payload_hex']=='0101'
+    assert saved_replies[-1]['status']==saved_replies[-2]['status'], 'Save must not advance script'
+    restore=first|dict(seq=2,kind='restore',state=saved)
+    resumed=run(a.dotnet,a.host,script,[first,restore,first|dict(seq=3,kind='tick')])
+    assert not resumed[1]['error'],resumed
+    assert resumed[1]['status']==saved_replies[-1]['status']
+    assert resumed[2]['status']['allowed_mps']==5 and not resumed[2]['status']['emergency_brake']
+    assert resumed[2]['status']['messages'][0]['acknowledged']
+    for invalid in [saved|dict(source_sha256='0'*64),saved|dict(type_name='Other'),
+                    saved|dict(payload_hex='01'),saved|dict(payload_hex='010100'),
+                    saved|dict(payload_hex='zz'),saved|dict(payload_hex='00'*8193)]:
+        assert run(a.dotnet,a.host,script,[first,restore|dict(state=invalid)])[1]['error']
+    oversized=script.replace('outf.Write(acknowledged);', 'outf.Write(new byte[8193]); outf.Write(acknowledged);')
+    assert run(a.dotnet,a.host,oversized,[first,first|dict(seq=2,kind='save')])[1]['error']
+    stateless=script.replace('public override void Save(', 'public void UnusedSave(')
+    assert not run(a.dotnet,a.host,stateless,[first])[0]['persistent']
     # Unsupported OR members must fail loudly instead of being silently stubbed.
     bad=script.replace('Activated = true;', 'UnsupportedNativeMember();')
     assert run(a.dotnet,a.host,bad,[first])[0]['error']
@@ -63,6 +82,6 @@ public class MinimalTcs : TrainControlSystem {
                     extended|dict(train_max_speed_mps=201)]:
         assert run(a.dotnet,a.host,script,[first|dict(context=invalid)])[0]['error']
     assert run(a.dotnet,a.host,lookahead.replace('NextSignalAspect(8)','NextSignalAspect(32)'),[first|dict(context=extended)])[0]['error']
-    print('PASS C# host: compiler rejection, exceptions, sequences, SI limits, clean protocol, ACK/menu, eight native aspects, indexed lookahead, speed posts, train max, OR enum values')
+    print('PASS C# host: compiler rejection, exceptions, sequences, SI limits, clean protocol, ACK/menu, eight native aspects, indexed lookahead, speed posts, train max, OR enum values, binary Save/Restore, restart continuity, source/type binding, corrupt/oversized state rejection')
 
 if __name__=='__main__':main()

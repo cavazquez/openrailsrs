@@ -107,6 +107,20 @@ impl PlayerLaunchMenu {
                 });
             }
         }
+        for route in crate::official_content::prepared_routes() {
+            for source in route.activities {
+                services.push(ServiceChoice {
+                    name: format!(
+                        "Actividad oficial · {}",
+                        source.file_stem().unwrap_or_default().to_string_lossy()
+                    ),
+                    source,
+                    route_dir: route.imported.clone(),
+                    scenery_root: Some(route.native.clone()),
+                    native_activity: true,
+                });
+            }
+        }
         let routes = services
             .iter()
             .map(route_label)

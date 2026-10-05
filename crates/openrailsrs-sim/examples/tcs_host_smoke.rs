@@ -41,6 +41,25 @@ fn main() -> Result<(), String> {
     });
     session.step_realtime(0.1, |_| {});
     assert!((session.etcs_status().allowed_kmh - 18.0).abs() < 1e-6);
+    let saved = session.snapshot_with_scripts()?;
+    let serialized = serde_json::to_vec(&saved).map_err(|e| e.to_string())?;
+    session.send_tcs_input(TcsInput::Menu {
+        action: "ignored_after_save".into(),
+    });
+    session.step_realtime(0.1, |_| {});
+    session.restore_snapshot(serde_json::from_slice(&serialized).map_err(|e| e.to_string())?)?;
+    assert!(!session.etcs_status().needs_ack);
+    assert!((session.etcs_status().allowed_kmh - 18.0).abs() < 1e-6);
+    let before = session.state.time_s();
+    let mut invalid: serde_json::Value = serde_json::from_slice(&serialized).unwrap();
+    invalid["script_state"]["state"]["payload_hex"] = "00".into();
+    assert!(
+        session
+            .restore_snapshot(serde_json::from_value(invalid).unwrap())
+            .is_err()
+    );
+    assert_eq!(session.state.time_s(), before);
+    assert!((session.etcs_status().allowed_kmh - 18.0).abs() < 1e-6);
     session.state.velocity_mps = 7.0;
     session.step_realtime(0.1, |_| {});
     assert_eq!(
@@ -49,7 +68,7 @@ fn main() -> Result<(), String> {
     );
     assert_eq!(session.state.brake, 1.0);
     println!(
-        "PASS C# TCS: initialization, 20 Hz ticks, ACK, menu, speed restriction, physical braking, restore guard"
+        "PASS C# TCS: initialization, 20 Hz ticks, ACK, menu, speed restriction, physical braking, Save/Restore restart, corrupt-state atomicity"
     );
     let extended = root.join("examples/chiltern_extended/scenario.toml");
     let scenario = openrailsrs_scenarios::load_scenario(&extended).map_err(|e| e.to_string())?;

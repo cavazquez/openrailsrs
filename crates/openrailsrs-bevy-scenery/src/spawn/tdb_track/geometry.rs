@@ -859,6 +859,64 @@ pub struct TrackVectorPath {
     origin: DVec3,
     spans: Vec<SectionPathSpan>,
     cumulative_ends_m: Vec<f64>,
+    cant: Vec<openrailsrs_formats::typed::CantProfile>,
+    section_starts_m: Vec<f64>,
+    gauge_m: f32,
+}
+
+#[cfg(test)]
+mod automatic_cant_contact_tests {
+    use super::*;
+    use openrailsrs_formats::typed::CantProfile;
+    #[test]
+    fn original_rail_vertices_and_vehicle_pose_share_bank_and_inner_rail_height() {
+        let gauge = 1.435f32;
+        let span = SectionPathSpan {
+            start_world: Vec3::ZERO,
+            end_world: Vec3::new(5., 0., 100.),
+            world_yaw_deg: 0.,
+            pitch_rad: 0.,
+            roll_rad: 0.,
+            half_gauge_m: Some(gauge / 2.),
+            length_m: Some(100.),
+            curve_radius_m: Some(1000.),
+            curve_angle_deg: Some(100f32 / 1000. * 180. / std::f32::consts::PI),
+        };
+        let path = TrackVectorPath {
+            origin: DVec3::new(10000000., 0., -10000000.),
+            spans: vec![span],
+            cumulative_ends_m: vec![100.],
+            section_starts_m: vec![0.],
+            gauge_m: gauge,
+            cant: vec![CantProfile {
+                positions: vec![0., 0.25, 0.75, 1.],
+                elevations_m: vec![0., 0.12, 0.12, 0.],
+                angles_rad: vec![0., -(0.12 / gauge).asin(), -(0.12 / gauge).asin(), 0.],
+            }],
+        };
+        let frame = path.origin;
+        for distance in [0., 10., 25., 50., 75., 90., 100.] {
+            let old = path.unbanked_pose(distance, frame);
+            let pose = path.pose_in_frame(distance, frame);
+            let mut heights = vec![];
+            for side in [-1., 1.] {
+                let rail = Vec3::X * (side * gauge / 2.);
+                let vertex = old.position + old.rotation() * rail;
+                let actual = path.bank_point_in_frame(vertex, frame, (0., 100.)).0;
+                let expected = pose.position + pose.rotation() * rail;
+                assert!(
+                    actual.distance(expected) < 0.001,
+                    "wheel/rail gap at {distance}: {}",
+                    actual.distance(expected)
+                );
+                heights.push(actual.y - old.position.y);
+            }
+            assert!(
+                heights.into_iter().min_by(f32::total_cmp).unwrap().abs() < 0.001,
+                "inner rail moved below its authored height"
+            );
+        }
+    }
 }
 
 impl TrackVectorPath {
@@ -897,6 +955,7 @@ impl TrackVectorPath {
             })
             .collect();
         let mut spans = Vec::new();
+        let mut section_starts_m = Vec::new();
         if local_sections.is_empty() {
             let geometry = geometry.as_ref()?;
             let (x, y, z) = rebase(geometry.start).bevy_position();
@@ -916,6 +975,7 @@ impl TrackVectorPath {
             });
         } else {
             for (index, section) in local_sections.iter().enumerate() {
+                section_starts_m.push(spans.iter().copied().map(span_length_m).sum());
                 let next = local_sections.get(index + 1).map(|next| {
                     section_world_vec3(*next, Some(section_world_vec3(*section, None)))
                 });
@@ -944,7 +1004,196 @@ impl TrackVectorPath {
             origin,
             spans,
             cumulative_ends_m,
+            cant: vec![],
+            section_starts_m,
+            gauge_m: 1.435,
         })
+    }
+
+    /// Generate banks only on single-path, non-road shapes. Authored AZ banks,
+    /// junctions and incompatible pieces terminate groups instead of being tilted.
+    pub fn with_automatic_cant(
+        mut self,
+        node: &TrackDbNode,
+        tsection: &TSectionCatalog,
+        settings: &openrailsrs_formats::typed::RouteCantSettings,
+    ) -> Self {
+        use openrailsrs_formats::typed::{CantProfile, CantSection, generate_cant_profiles};
+        if settings.legacy_table_present {
+            return self;
+        }
+        let TrackNodeKind::Vector { sections, .. } = &node.kind else {
+            return self;
+        };
+        self.gauge_m = settings.gauge_m;
+        self.cant = vec![CantProfile::default(); self.spans.len()];
+        let total = self.cumulative_ends_m.last().copied().unwrap_or(0.);
+        let eligible: Vec<bool> = self
+            .spans
+            .iter()
+            .enumerate()
+            .map(|(i, s)| {
+                let start = if i == 0 {
+                    0.
+                } else {
+                    self.cumulative_ends_m[i - 1]
+                };
+                let section = self
+                    .section_starts_m
+                    .partition_point(|c| *c <= start + 1e-3)
+                    .saturating_sub(1);
+                let shape = sections
+                    .get(section)
+                    .and_then(|s| tsection.shapes.get(&s.shape_index));
+                self.cumulative_ends_m[i] >= 20.
+                    && total - start >= 20.
+                    && s.roll_rad.abs() < 1e-4
+                    && shape
+                        .is_some_and(|s| !s.is_junction() && !s.road_shape && s.paths.len() == 1)
+            })
+            .collect();
+        let mut group = vec![];
+        let mut direction = 0.;
+        let finish = |group: &mut Vec<usize>, direction: f32, out: &mut Vec<CantProfile>| {
+            let inputs: Vec<_> = group
+                .iter()
+                .map(|i| CantSection {
+                    length_m: span_length_m(self.spans[*i]) as f32,
+                    radius_m: self.spans[*i].curve_radius_m.unwrap_or(0.).abs(),
+                    passenger_speed_mps: settings.design_speed_mps,
+                    freight_speed_mps: settings.design_speed_mps,
+                })
+                .collect();
+            for (i, profile) in group.drain(..).zip(generate_cant_profiles(
+                &inputs,
+                settings.gauge_m,
+                &settings.standards,
+                direction,
+            )) {
+                out[i] = profile;
+            }
+        };
+        let mut out = self.cant.clone();
+        for i in 0..self.spans.len() {
+            let dir = if self.spans[i].is_curved() {
+                self.spans[i].curve_angle_deg.unwrap_or(0.).signum()
+            } else {
+                0.
+            };
+            let next = self
+                .spans
+                .get(i + 1)
+                .filter(|_| eligible.get(i + 1) == Some(&true))
+                .filter(|s| s.is_curved())
+                .map(|s| s.curve_angle_deg.unwrap_or(0.).signum())
+                .unwrap_or(0.);
+            if !eligible[i] {
+                finish(&mut group, direction, &mut out);
+                direction = 0.;
+                continue;
+            }
+            if dir != 0. {
+                if direction != 0. && dir != direction {
+                    finish(&mut group, direction, &mut out);
+                }
+                direction = dir;
+                group.push(i);
+            } else if direction != 0. {
+                if i + 1 < self.spans.len() && !(next != 0. && next != direction) {
+                    group.push(i);
+                }
+                if next != direction {
+                    finish(&mut group, direction, &mut out);
+                    direction = 0.;
+                }
+            } else if next != 0. {
+                direction = next;
+                group.push(i);
+            }
+        }
+        finish(&mut group, direction, &mut out);
+        self.cant = out;
+        self
+    }
+
+    pub fn section_start_m(&self, index: usize) -> Option<f64> {
+        self.section_starts_m.get(index).copied()
+    }
+    pub fn length_m(&self) -> f64 {
+        self.cumulative_ends_m.last().copied().unwrap_or(0.)
+    }
+    pub fn has_automatic_cant(&self) -> bool {
+        self.cant
+            .iter()
+            .any(|p| p.elevations_m.iter().any(|e| *e > 0.))
+    }
+    pub fn automatic_bank_at(&self, chainage: f64) -> (f32, f32) {
+        let i = self
+            .cumulative_ends_m
+            .partition_point(|end| chainage > *end + 1e-6)
+            .min(self.spans.len() - 1);
+        let before = if i == 0 {
+            0.
+        } else {
+            self.cumulative_ends_m[i - 1]
+        };
+        self.cant.get(i).map_or((0., 0.), |c| {
+            let roll = c.roll_rad(((chainage - before) / span_length_m(self.spans[i])) as f32);
+            (roll, self.gauge_m * roll.sin().abs() / 2.)
+        })
+    }
+
+    /// Project within this WORLD piece's authored chainage range. Use a local
+    /// frame throughout; absolute native coordinates cannot preserve rail gauge.
+    pub fn bank_point_in_frame(
+        &self,
+        point: Vec3,
+        frame: DVec3,
+        range: (f64, f64),
+    ) -> (Vec3, Quat) {
+        let mut a = range.0.max(0.);
+        let mut b = range.1.min(self.length_m());
+        for _ in 0..24 {
+            let l = a + (b - a) / 3.;
+            let r = b - (b - a) / 3.;
+            let dl = (self.unbanked_pose(l, frame).position - point)
+                .xz()
+                .length_squared();
+            let dr = (self.unbanked_pose(r, frame).position - point)
+                .xz()
+                .length_squared();
+            if dl < dr {
+                b = r;
+            } else {
+                a = l;
+            }
+        }
+        let chainage = (a + b) / 2.;
+        let original = self.unbanked_pose(chainage, frame);
+        let banked = self.pose_in_frame(chainage, frame);
+        let rotation = banked.rotation() * original.rotation().inverse();
+        (
+            banked.position + rotation * (point - original.position),
+            rotation,
+        )
+    }
+
+    fn unbanked_pose(&self, chainage_m: f64, frame_origin: DVec3) -> TrackPose {
+        let index = self
+            .cumulative_ends_m
+            .partition_point(|end| chainage_m > *end + 1e-6)
+            .min(self.spans.len() - 1);
+        let before = if index == 0 {
+            0.
+        } else {
+            self.cumulative_ends_m[index - 1]
+        };
+        let mut pose = track_pose_along_span(
+            self.spans[index],
+            (chainage_m - before).clamp(0., span_length_m(self.spans[index])),
+        );
+        pose.position += (self.origin - frame_origin).as_vec3();
+        pose
     }
 
     /// Radius, authored roll and optional track gauge in the current span.
@@ -959,7 +1208,7 @@ impl TrackVectorPath {
         }
         Some((
             f64::from(span.curve_radius_m?.abs()),
-            span.roll_rad,
+            span.roll_rad + f64::from(self.automatic_bank_at(chainage_m).0),
             span.half_gauge_m.map(|g| 2. * f64::from(g)),
         ))
     }
@@ -978,6 +1227,9 @@ impl TrackVectorPath {
         let along = (chainage_m - before).clamp(0.0, span_length_m(self.spans[index]));
         let mut pose = track_pose_along_span(self.spans[index], along);
         pose.position += (self.origin - frame_origin).as_vec3();
+        let (roll, rise) = self.automatic_bank_at(chainage_m);
+        pose.roll_rad += roll;
+        pose.position.y += rise * pose.pitch_rad.cos();
         pose
     }
 }

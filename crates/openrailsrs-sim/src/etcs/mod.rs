@@ -18,7 +18,8 @@ pub use menu::{
     main_menu_def, settings_menu_def,
 };
 pub use script_host::{
-    ScriptContext, ScriptHostConfig, ScriptSignal, ScriptSpeedPost, ScriptTcsHost, TcsInput,
+    ScriptContext, ScriptHostConfig, ScriptSignal, ScriptSnapshot, ScriptSpeedPost, ScriptTcsHost,
+    TcsInput,
 };
 pub use status::{
     EtcsLevel, EtcsMode, EtcsMonitor, EtcsSupervision, EtcsTcsStatus, GradientSegment,

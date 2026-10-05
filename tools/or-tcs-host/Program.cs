@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Runtime.Loader;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
@@ -21,7 +23,9 @@ static class Program
         {
             var file = args[Array.IndexOf(args, "--script") + 1];
             var typeName = args[Array.IndexOf(args, "--type") + 1];
-            var source = File.ReadAllText(file);
+            var sourceBytes = File.ReadAllBytes(file);
+            var sourceHash = Convert.ToHexString(SHA256.HashData(sourceBytes)).ToLowerInvariant();
+            var source = Encoding.UTF8.GetString(sourceBytes).TrimStart('\uFEFF');
             if (source.Length > 1024 * 1024) throw new InvalidDataException("Script exceeds 1 MiB");
             var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
                 .Append(typeof(TrainControlSystem).Assembly.Location).Distinct()
@@ -36,6 +40,8 @@ static class Program
             var type = assembly.GetType(typeName, throwOnError:true)!;
             if (!typeof(TrainControlSystem).IsAssignableFrom(type)) throw new InvalidDataException("Type must derive from ORTS.Scripting.Api.TrainControlSystem");
             script = (TrainControlSystem)Activator.CreateInstance(type)!;
+            var persistent = type.GetMethod("Save")!.DeclaringType != typeof(TrainControlSystem)
+                && type.GetMethod("Restore")!.DeclaringType != typeof(TrainControlSystem);
             script.ClockTime = () => (float)context.TimeS;
             script.SpeedMpS = () => (float)context.SpeedMps;
             script.TrainSpeedLimitMpS = () => (float)context.SpeedLimitMps;
@@ -64,11 +70,32 @@ static class Program
                 var request = JsonSerializer.Deserialize<Request>(line, Json) ?? throw new InvalidDataException("Empty request");
                 if (request.Version != 1 || request.Seq != expected) throw new InvalidDataException("Version/sequence mismatch");
                 context = request.Context;
+                SavedState? savedState = null;
                 if (!context.Valid()) throw new InvalidDataException("Invalid SI context");
                 if (request.Kind == "initialize" && expected == 1) {
                     output.AllowedMps = context.SpeedLimitMps;
                     output.InterventionMps = context.SpeedLimitMps + 2;
                     script.Initialize();
+                } else if (request.Kind is "save" or "restore" && expected > 1) {
+                    if (!persistent) throw new NotSupportedException("Script must override both Save and Restore");
+                    if (request.Events.Length != 0) throw new InvalidDataException("Persistence must not consume pending inputs");
+                    if (request.Kind == "save") {
+                        using var data = new BoundedStateStream();
+                        using var writer = new BinaryWriter(data, Encoding.UTF8, leaveOpen:true);
+                        script.Save(writer); writer.Flush();
+                        savedState = new SavedState(sourceHash, typeName, Convert.ToHexString(data.ToArray()).ToLowerInvariant(), script.Activated, output);
+                    } else {
+                        var state = request.State ?? throw new InvalidDataException("Missing script state");
+                        if (state.SourceSha256 != sourceHash || state.TypeName != typeName || state.PayloadHex.Length > 16384)
+                            throw new InvalidDataException("Incompatible script source/type or oversized state");
+                        using var data = new MemoryStream(Convert.FromHexString(state.PayloadHex), writable:false);
+                        using var reader = new BinaryReader(data, Encoding.UTF8, leaveOpen:true);
+                        script.Restore(reader);
+                        if (data.Position != data.Length) throw new InvalidDataException("Script did not consume its saved state");
+                        if (!state.Output.Valid()) throw new InvalidDataException("Invalid saved outputs");
+                        script.Activated = state.Activated;
+                        output = state.Output;
+                    }
                 } else if (request.Kind != "tick" || expected == 1) throw new InvalidDataException("Invalid request kind");
                 if (request.Events.Length > 64) throw new InvalidDataException("Too many inputs");
                 foreach (var input in request.Events)
@@ -82,8 +109,9 @@ static class Program
                         script.HandleEvent(TCSEvent.GenericTCSButtonReleased, input.Action ?? "");
                     } else throw new InvalidDataException("Unknown input kind");
                 }
-                script.Update();
-                protocol.WriteLine(JsonSerializer.Serialize(new {version=1,seq=expected,status=output,error=(string?)null},Json));
+                if (request.Kind is "initialize" or "tick") script.Update();
+                if (!output.Valid()) throw new InvalidDataException("Output outside protocol limits");
+                protocol.WriteLine(JsonSerializer.Serialize(new {version=1,seq=expected,status=output,error=(string?)null,persistent,state=savedState},Json));
                 expected++;
             }
             return 0;
@@ -113,7 +141,8 @@ static class Program
         6 => Aspect.Clear_1, 7 => Aspect.Clear_2, _ => throw new InvalidDataException("Invalid native aspect")
     };
 }
-record Request(int Version, long Seq, string Kind, Context Context, Input[] Events);
+record Request(int Version, long Seq, string Kind, Context Context, Input[] Events, SavedState? State = null);
+record SavedState(string SourceSha256, string TypeName, string PayloadHex, bool Activated, Output Output);
 record Input(string Kind, string? Message, string? Action);
 record Signal(double DistanceM, int Aspect);
 record SpeedPost(double DistanceM, double SpeedLimitMps);
@@ -149,6 +178,19 @@ class Output {
     public double InterventionMps {get;set;}
     public bool EmergencyBrake {get;set;}
     public bool FullBrake {get;set;}
-    public List<Message> Messages {get;} = [];
+    public List<Message> Messages {get;set;} = [];
+    public bool Valid() => new[] {AllowedMps, InterventionMps}.All(v => double.IsFinite(v) && v >= 0 && v <= 200)
+        && (NextLimitMps is null || double.IsFinite(NextLimitMps.Value) && NextLimitMps >= 0 && NextLimitMps <= 200)
+        && Messages is not null && Messages.Count <= 32 && Messages.All(m => m.Text is not null && Encoding.UTF8.GetByteCount(m.Text) <= 1024);
 }
 record Message(string Text, bool Acknowledgeable, bool Acknowledged);
+
+// Cap writes while a script is serializing, before allocating a large buffer.
+sealed class BoundedStateStream : MemoryStream {
+    const int Limit = 8192;
+    void Check(int count) { if (Position + count > Limit) throw new InvalidDataException("Script state exceeds 8 KiB"); }
+    public override void Write(byte[] buffer, int offset, int count) { Check(count); base.Write(buffer, offset, count); }
+    public override void Write(ReadOnlySpan<byte> buffer) { Check(buffer.Length); base.Write(buffer); }
+    public override void WriteByte(byte value) { Check(1); base.WriteByte(value); }
+    public override void SetLength(long value) { if (value > Limit) throw new InvalidDataException("Script state exceeds 8 KiB"); base.SetLength(value); }
+}

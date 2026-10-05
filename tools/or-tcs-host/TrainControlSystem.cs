@@ -27,6 +27,8 @@ public abstract class TrainControlSystem
     public Action<float> SetInterventionSpeedLimitMpS = null!;
     public abstract void Initialize();
     public abstract void Update();
+    public virtual void Save(System.IO.BinaryWriter outf) { }
+    public virtual void Restore(System.IO.BinaryReader inf) { }
     public abstract void HandleEvent(TCSEvent evt, string message);
     // Host extensions are visibly named, rather than pretending to implement OR's full ETCSStatus.
     public Action<string, bool> HostMessage = null!;

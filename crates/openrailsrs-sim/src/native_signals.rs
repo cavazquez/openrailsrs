@@ -218,7 +218,9 @@ impl LiveDriveSession {
                 let c = SignalContext {
                     enabled: *position + 1.0 >= self.head_chainage_m(),
                     route_set,
-                    block_clear: !occupied(*position, next_position),
+                    block_clear: !occupied(*position, next_position)
+                        && !(self.dispatcher.protected_signal.as_ref() == Some(id)
+                            && !self.dispatcher.waiting_for.is_empty()),
                     next_normal: next_aspect,
                     distant_normal: distant,
                     this_normal: this,

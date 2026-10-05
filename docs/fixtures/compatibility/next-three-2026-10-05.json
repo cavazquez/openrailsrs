@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-05",
+  "reference": "Open Rails 1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "checks": {
+    "check_sh": "passed",
+    "rust_passed": 1482,
+    "rust_ignored": 43,
+    "dotnet_acceptance": "passed",
+    "offline_installer_tests": 8,
+    "prepared_path_escape_tests": 2
+  },
+  "cant_oracle": {
+    "cases": 10,
+    "max_cant_error_m": 0,
+    "max_roll_error_rad": 0,
+    "tolerance_m": 1e-05,
+    "tolerance_rad": 1e-06,
+    "scope": "isolated unchanged MarkSections, native standard constructors and conversions; synthetic section and speed inputs"
+  },
+  "visual_session": {
+    "backend": "CPU Vulkan (lavapipe) in private Xvfb",
+    "viewport": [
+      1280,
+      720
+    ],
+    "view_radius_m": 450,
+    "native_curve_radius_m": 2000,
+    "observed_cant_mm": 15,
+    "comfort_kmh": 172.2,
+    "peak_rss_mib": 2767.2,
+    "scope": "UI, one native curve, original meshes/textures and visual contact; not hardware GPU performance or full-route visual parity"
+  },
+  "official_download": {
+    "catalog_commit": "2bc71f58d04fbce693564db74d577c0ee00b7e31",
+    "package": "Demo Model 1",
+    "source": "https://static.openrails.org/files/DemoModel1.zip",
+    "download_sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+    "download_bytes": 272422379,
+    "install_bytes": 329994809,
+    "formations": 23,
+    "player_ready": 9,
+    "activities": 1,
+    "installation": "isolated under tmp; native Chiltern unchanged",
+    "ui_verified": [
+      "catalogue panel",
+      "reuse downloaded package without network",
+      "SCE route and official activity offered",
+      "incomplete original formation reported before start",
+      "native SCE startup with aligned track and station",
+      "remaining route distance instead of false initial completion",
+      "live controls: forward reverser and 10% throttle; observed 4.6 km/h and signal distance 211 -> 205 m"
+    ],
+    "known_limitation": "Original player push-pull consist uses Include .inc fields not expanded by the vehicle reader; nine alternative AI powered consists pass resource/traction audit but have no cab.",
+    "native_startup_fixes": [
+      "Keep imported TDB coordinate frame rather than aligning route midpoint to startup station",
+      "Safely exhaust initial terrain queue when streaming removes pending tiles",
+      "Activities with no scheduled stops show remaining path distance and only announce arrival at real completion"
+    ],
+    "compatible_alternatives_have_cab": false,
+    "native_startup_scope": "SCE station startup and short live control test on an AI Class101 consist without cab; not full journey or complete native activity parity"
+  },
+  "security_review": {
+    "skill": "/home/cristian/.agents/skills/review-security/SKILL.md",
+    "confirmed_finding": "Medium: redirect followed before validation",
+    "fix": "validate every redirect before request; allow only curated HTTPS hosts",
+    "regression": "in-memory 302 to HTTP localhost or other provider issues no second request",
+    "additional_hardening": "canonical paths confined to package; reserved importer metadata rejected in ZIP; no remote attack demonstrated from local prepared-manifest edits",
+    "other_confirmed_findings": 0
+  },
+  "media": [
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/curve-cant-hud.png",
+      "sha256": "25ead030be71603a3bfd842c9734b1f27fe6a683ec3cf32b0ac11a44b76f4000"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/curve-side.png",
+      "sha256": "fd4e89131a4aa3e3da0c9cbce04664124600e8228615fcaf5a69d9f4a8578f1f"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/cant-settings.png",
+      "sha256": "0a4aa595bc27449135787bc694a74b80c3422029c783db2edb18ebab00650374"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/dispatcher-hud.png",
+      "sha256": "ad3254036c5a06a8239bb39c3a97366443e8f0dd99ff92eb55601c73bf305e0c"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/official-content-menu.png",
+      "sha256": "088d5d0a88b5be8418ef3a9c3191f568dfd9b8de374397cb1cb6ee25f2e159ad"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/official-reused-ready.png",
+      "sha256": "9140a6dc10d942567e858b9c402f319d4dcd952512d70e28b0c537fd8b0c1f0e"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/sce-official-activity.png",
+      "sha256": "ca10d4585b457e3ac0fdef7c12b0bd990cad36d0e1664fa3866105effed673ac"
+    },
+    {
+      "path": "docs/fixtures/compatibility/next-three-2026-10-05/sce-native-start.png",
+      "sha256": "60351581239ca9a55b2109baf0e65ef53bbb977b67412e1f9e85d28264237188"
+    }
+  ]
+}

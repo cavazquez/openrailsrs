@@ -66,6 +66,31 @@ impl LiveTraffic {
             .collect()
     }
 
+    pub fn snapshot_with_scripts(&mut self) -> Result<Vec<TrafficSnapshot>, String> {
+        self.services
+            .iter_mut()
+            .map(|s| {
+                Ok(TrafficSnapshot {
+                    id: s.id.clone(),
+                    session: s.session.snapshot_with_scripts()?,
+                    departed: s.departed,
+                })
+            })
+            .collect()
+    }
+
+    pub fn prepare_script_restore(
+        &self,
+        saved: &[TrafficSnapshot],
+    ) -> Result<Vec<Option<crate::etcs::ScriptTcsHost>>, String> {
+        self.validate_snapshot(saved)?;
+        self.services
+            .iter()
+            .zip(saved)
+            .map(|(s, saved)| s.session.prepare_script_restore(&saved.session))
+            .collect()
+    }
+
     /// Validate every service before modifying any of them, including the player.
     pub fn validate_snapshot(&self, saved: &[TrafficSnapshot]) -> Result<(), String> {
         if self.services.len() != saved.len() {
@@ -77,15 +102,54 @@ impl LiveTraffic {
             }
             service.session.validate_snapshot(&snapshot.session)?;
         }
+        crate::SessionSnapshot::validate_shared_dispatcher(saved.iter().map(|s| &s.session))?;
         Ok(())
     }
 
     pub fn restore_snapshot(&mut self, saved: Vec<TrafficSnapshot>) -> Result<(), String> {
+        let hosts = self.prepare_script_restore(&saved)?;
+        self.restore_prepared_snapshot(saved, hosts)
+    }
+
+    pub fn restore_prepared_snapshot(
+        &mut self,
+        saved: Vec<TrafficSnapshot>,
+        hosts: Vec<Option<crate::etcs::ScriptTcsHost>>,
+    ) -> Result<(), String> {
         self.validate_snapshot(&saved)?;
-        for (service, saved) in self.services.iter_mut().zip(saved) {
-            service.session.restore_snapshot(saved.session)?;
+        if hosts.len() != self.services.len() {
+            return Err("Cantidad de estados C# inválida".into());
+        }
+        for ((service, saved), host) in self.services.iter_mut().zip(saved).zip(hosts) {
+            service
+                .session
+                .restore_prepared_snapshot(saved.session, host)?;
             service.departed = saved.departed;
         }
+        Ok(())
+    }
+
+    pub fn dispatch_switch(
+        &mut self,
+        player: &mut LiveDriveSession,
+        id: &str,
+    ) -> Result<(), String> {
+        self.synchronize_occupancy(player);
+        player.dispatch_switch(id)?;
+        let position = player
+            .graph
+            .switch_position(id)
+            .ok_or("Cambio desconocido")?;
+        for service in &mut self.services {
+            service
+                .session
+                .graph
+                .set_switch(id, position)
+                .map_err(|e| e.to_string())?;
+            service.session.native_signals.needs_refresh = true;
+        }
+        player.native_signals.needs_refresh = true;
+        self.synchronize_occupancy(player);
         Ok(())
     }
 

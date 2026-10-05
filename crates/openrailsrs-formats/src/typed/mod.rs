@@ -1,3 +1,5 @@
+pub mod cant;
+pub use cant::{CantProfile, CantSection, CantStandard, RouteCantSettings, generate_cant_profiles};
 mod activity;
 mod brake_shoe;
 mod carspawn;

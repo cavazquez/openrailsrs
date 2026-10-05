@@ -18,14 +18,14 @@ Referencia del API: Open Rails **1.6.1**, commit
 `d16e670da333d26d2edfc97d5631a19dadf49ce5`, archivo
 `Source/Orts.Simulation/Common/Scripting/TrainControlSystem.cs`.
 `tools/or-tcs-host/TrainControlSystem.cs` declara el subconjunto implementado:
-`Initialize`, `Update`, `HandleEvent`; reloj, velocidad, límite de ruta, hasta 32
+`Initialize`, `Update`, `HandleEvent`, `Save(BinaryWriter)` y `Restore(BinaryReader)`; reloj, velocidad, límite de ruta, hasta 32
 señales normales y 32 cambios de límite por delante, próxima señal distante,
 límite/intervención, freno de servicio y emergencia. `HostMessage`,
 `HostDeltaTimeS` y `HostNextStopDistanceM` son extensiones identificadas del host.
 
 **No es el API completo de OR.** Todavía faltan funciones de señales genéricas,
 límites propios de SIGCFG, curvas ETCS originales, pantógrafos/alimentación,
-API completo de `ETCSStatus` y persistencia `Save/Restore` del script. Un miembro
+API completo de `ETCSStatus` y hosts de frenos/alimentación. Un miembro
 ausente produce error de compilación; no se reemplaza con una respuesta vacía.
 `TrainSpeedLimitMpS` recibe el límite efectivo de la sesión; `CurrentPostSpeedLimitMpS`
 recibe el límite de vía en la cabeza. `TrainMaxSpeedMpS` usa el mínimo de las
@@ -41,7 +41,8 @@ no se promete ejecutar cualquier script de un paquete OR.
 
 Entrada/salida estándar del proceso, un objeto UTF-8 por línea, máximo **64 KiB**.
 Cada respuesta debe repetir `version: 1` y el `seq` exacto de su solicitud.
-La primera solicitud tiene `kind: "initialize"`; las siguientes, `"tick"`.
+La primera solicitud tiene `kind: "initialize"`; las siguientes usan `"tick"`,
+`"save"` o `"restore"`.
 `context` contiene `time_s`, `dt_s`, `speed_mps`, `speed_limit_mps`,
 `next_signal_distance_m`, `next_signal_stop` y `next_stop_distance_m`.
 Las distancias ausentes son `null`. El tick usa el quantum de física de la sesión:
@@ -97,6 +98,27 @@ Los tests Rust cubren muerte del proceso, timeout
 de respuesta y de escritura,
 respuesta enorme y secuencia errónea, comprobando intervención sin fallback.
 
+## Persistencia del script
+
+Un tipo debe sobrescribir **ambos** hooks originales `Save(BinaryWriter)` y
+`Restore(BinaryReader)` para declarar persistencia. Guardar no ejecuta `Update`
+ni consume ACK/menús pendientes. El estado incluye su binario (máximo **8 KiB**),
+activación, salida retenida, mensajes y entradas pendientes; el snapshot JSON
+completo respeta el límite de 64 KiB del protocolo.
+
+El guardado se vincula al SHA-256 de los bytes del `.cs`, al nombre completo del
+tipo y a la versión del contrato. Cargar compila un proceso nuevo, restaura el
+contexto y llama `Restore`, que debe consumir todo el binario. Primero se validan
+todas las sesiones y preparan sus hosts; sólo después se aplica el guardado.
+Identidad distinta, bytes corruptos, estado enorme o hook ausente rechazan la
+operación y conservan la sesión actual. Los demás hooks y subsistemas no quedan
+certificados por poder guardar este estado.
+
+La aceptación real prueba ACK y límite de 18 km/h conservados después de
+reiniciar el host, salida/DMI sin un tick extra, eventos pendientes, binarios
+truncados o sobrantes, identidad y tamaño inválidos, y conservación del estado
+Rust ante un restore rechazado. El fixture `MinimalTcs.cs` implementa ambos hooks.
+
 ## Prueba en una partida
 
 ```bash
@@ -111,5 +133,6 @@ contenido. En una cabina con DMI ETCS, aparecerá `C# TCS listo: confirmar` y la
 intervención de freno. Reconocer el mensaje libera esa intervención; el exceso
 de velocidad vuelve a frenar. El Pullman de Chiltern no incluye un DMI ETCS:
 para el fixture allí usá la prueba headless, o una locomotora con pantalla ETCS.
-Con host C# activo, cargar un guardado se rechaza explícitamente porque el estado
-del script no se serializa. Los guardados del TCS Rust mantienen su comportamiento.
+Con el fixture activo, guardar y cargar conserva reconocimiento, límites y
+mensajes. Un script sin ambos hooks puede conducir, pero rechaza guardar/cargar
+su estado con un diagnóstico explícito. El TCS Rust sigue siendo el modo habitual.

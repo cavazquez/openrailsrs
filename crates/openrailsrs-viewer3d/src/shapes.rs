@@ -225,6 +225,15 @@ pub struct RouteAssets {
     carspawn: openrailsrs_formats::CarSpawnerCatalog,
     sigcfg: openrailsrs_formats::SigCfgFile,
     tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
+    pub bank_index: HashMap<
+        u32,
+        Vec<(
+            std::sync::Arc<openrailsrs_bevy_scenery::spawn::tdb_track::TrackVectorPath>,
+            (f64, f64),
+        )>,
+    >,
+    pub banked_paths:
+        HashMap<u32, std::sync::Arc<openrailsrs_bevy_scenery::spawn::tdb_track::TrackVectorPath>>,
 }
 
 impl RouteAssets {
@@ -297,6 +306,62 @@ impl RouteAssets {
                 sigcfg.lights_tab.len()
             );
         }
+        let cant = openrailsrs_formats::RouteFile::from_route_dir(&route_dir)
+            .map(|r| r.cant)
+            .unwrap_or_default();
+        let banking = std::env::var("OPENRAILSRS_SUPERELEVATION")
+            .map(|v| v != "0")
+            .unwrap_or_else(|_| {
+                crate::player_settings::PlayerSettings::load(
+                    &crate::player_settings::player_data_dir().join("settings.json"),
+                )
+                .map(|s| s.automatic_cant)
+                .unwrap_or(true)
+            });
+        let banked_paths: HashMap<
+            u32,
+            std::sync::Arc<openrailsrs_bevy_scenery::spawn::tdb_track::TrackVectorPath>,
+        > = track_db
+            .as_ref()
+            .map(|tdb| {
+                tdb.nodes
+                    .iter()
+                    .filter_map(|node| {
+                        let path =
+                            openrailsrs_bevy_scenery::spawn::tdb_track::TrackVectorPath::new(
+                                node,
+                                Some(&catalog.tsection),
+                            )?;
+                        let path = if banking {
+                            path.with_automatic_cant(node, &catalog.tsection, &cant)
+                        } else {
+                            path
+                        };
+                        Some((node.id, std::sync::Arc::new(path)))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut bank_index: HashMap<u32, Vec<_>> = HashMap::new();
+        if let Some(tdb) = &track_db {
+            for node in &tdb.nodes {
+                let Some(path) = banked_paths.get(&node.id) else {
+                    continue;
+                };
+                let openrailsrs_formats::TrackNodeKind::Vector { sections, .. } = &node.kind else {
+                    continue;
+                };
+                for (i, section) in sections.iter().enumerate() {
+                    if let Some(start) = path.section_start_m(i) {
+                        let end = path.section_start_m(i + 1).unwrap_or(path.length_m());
+                        bank_index
+                            .entry(section.shape_index)
+                            .or_default()
+                            .push((path.clone(), (start, end)));
+                    }
+                }
+            }
+        }
         Self {
             route_dir,
             catalog,
@@ -305,6 +370,8 @@ impl RouteAssets {
             carspawn,
             sigcfg,
             tdb_sections_by_shape,
+            banked_paths,
+            bank_index,
         }
     }
 

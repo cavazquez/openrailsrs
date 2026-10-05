@@ -6,6 +6,9 @@ use openrailsrs_train::{Consist, TractiveCurve, Vehicle};
 use serde::{Deserialize, Serialize};
 
 use crate::path_data::PathData;
+fn base_edge(id: &str) -> &str {
+    id.strip_suffix("_r").unwrap_or(id)
+}
 use crate::{
     BrakeCylinder, CouplerState, LiveDriveSession, LiveGameplay, RollingStockExteriorState,
     TrainSimState,
@@ -114,6 +117,10 @@ pub struct SessionSnapshot {
     pub signal_overrides: HashMap<String, SignalAspect>,
     #[serde(default)]
     pub track_reservations: Vec<crate::native_signals::TrackOccupancy>,
+    #[serde(default)]
+    pub script_state: Option<crate::etcs::ScriptSnapshot>,
+    #[serde(default)]
+    pub dispatcher: crate::DispatcherStatus,
     pub switches: HashMap<String, SwitchPosition>,
     pub driver_throttle: f64,
     pub driver_brake: f64,
@@ -131,6 +138,40 @@ pub struct SessionSnapshot {
     pub arrived: bool,
 }
 
+impl SessionSnapshot {
+    /// Check the shared interlocking before any service is restored. Individual
+    /// snapshots cannot establish that two trains do not own the same authority.
+    pub fn validate_shared_dispatcher<'a>(
+        sessions: impl IntoIterator<Item = &'a Self>,
+    ) -> Result<(), String> {
+        let sessions: Vec<_> = sessions.into_iter().collect();
+        let mut points: HashMap<&str, &crate::SwitchLock> = HashMap::new();
+        let mut grants: Vec<&crate::native_signals::TrackOccupancy> = vec![];
+        for session in &sessions {
+            for lock in &session.dispatcher.own_locks {
+                if points
+                    .insert(&lock.node, lock)
+                    .is_some_and(|old| old.owner != lock.owner || old.position != lock.position)
+                    || sessions
+                        .iter()
+                        .any(|s| s.switches.get(&lock.node) != Some(&lock.position))
+                {
+                    return Err(format!("Enclavamientos incompatibles en {}", lock.node));
+                }
+            }
+            for grant in &session.track_reservations {
+                if grants.iter().any(|other| {
+                    other.owner != grant.owner && crate::track_reservations::overlaps(other, grant)
+                }) {
+                    return Err(format!("Reservas superpuestas en {}", grant.edge));
+                }
+                grants.push(grant);
+            }
+        }
+        Ok(())
+    }
+}
+
 impl LiveDriveSession {
     pub fn snapshot(&self) -> SessionSnapshot {
         SessionSnapshot {
@@ -143,6 +184,8 @@ impl LiveDriveSession {
             signal_runtime: self.signal_runtime.clone(),
             signal_overrides: self.signal_overrides.clone(),
             track_reservations: self.own_track_reservations.clone(),
+            script_state: None,
+            dispatcher: self.dispatcher.clone(),
             switches: self
                 .graph
                 .nodes_iter()
@@ -163,10 +206,34 @@ impl LiveDriveSession {
         }
     }
 
+    /// Capture fallible script serialization without advancing physics or consuming inputs.
+    pub fn snapshot_with_scripts(&mut self) -> Result<SessionSnapshot, String> {
+        let context = self.script_context(0.0);
+        let mut saved = self.snapshot();
+        if let Some(host) = &mut self.script_tcs {
+            saved.script_state = Some(host.snapshot(&context)?);
+        }
+        Ok(saved)
+    }
+
+    /// Prepare every external script before committing any mutable game state.
+    pub fn prepare_script_restore(
+        &self,
+        saved: &SessionSnapshot,
+    ) -> Result<Option<crate::etcs::ScriptTcsHost>, String> {
+        self.validate_snapshot(saved)?;
+        match (&self.script_tcs, &saved.script_state) {
+            (Some(host), Some(state)) => host.prepare_restore(state).map(Some),
+            _ => Ok(None),
+        }
+    }
+
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
-        if self.script_tcs.is_some() {
-            return Err("El host C# no implementa Save/Restore; reiniciá la sesión con el TCS Rust para cargar una partida".into());
+        match (&self.script_tcs, &saved.script_state) {
+            (Some(host), Some(state)) => host.validate_snapshot(state)?,
+            (None, None) => (),
+            _ => return Err("La partida y la sesión deben usar el mismo TCS Rust o C#".into()),
         }
         if saved.version != 1 || saved.content_signature != self.content_signature {
             return Err(
@@ -191,22 +258,55 @@ impl LiveDriveSession {
         {
             return Err("La partida tiene una formación o un servicio inválidos".into());
         }
-        let mut graph = self.graph.clone();
-        if saved.track_reservations.len() > self.state.path_edges.len()
-            || saved.track_reservations.iter().any(|r| {
-                let edge = self
-                    .graph
-                    .edge(&r.edge)
-                    .or_else(|| self.graph.edge(&format!("{}_r", r.edge)));
-                r.owner != self.service_id
-                    || !r.start_m.is_finite()
-                    || !r.end_m.is_finite()
-                    || r.start_m < 0.
-                    || r.end_m <= r.start_m
-                    || edge.is_none_or(|e| r.end_m > e.length_m + 0.01)
+        if saved.dispatcher.own_locks.len() > self.graph.nodes_iter().count()
+            || saved.dispatcher.own_locks.iter().any(|l| {
+                l.owner != self.service_id
+                    || self.graph.switch_position(&l.node).is_none()
+                    || saved.switches.get(&l.node) != Some(&l.position)
             })
+            || saved
+                .dispatcher
+                .wait_since_s
+                .is_some_and(|t| !t.is_finite() || t < 0.)
+            || !saved.dispatcher.last_route_search_s.is_finite()
+            || saved.dispatcher.last_route_search_s < 0.
         {
-            return Err("Reservas de vía guardadas inválidas".into());
+            return Err("Enclavamiento guardado inválido".into());
+        }
+        let mut graph = self.graph.clone();
+        // A vector edge can contain several normal signals. Retained blocks
+        // beneath the tail and the next block can therefore share that edge.
+        if saved.track_reservations.len()
+            > saved
+                .state
+                .path_edges
+                .len()
+                .saturating_add(self.graph.signals().count())
+        {
+            return Err("Cantidad de reservas de vía guardadas inválida".into());
+        }
+        for r in &saved.track_reservations {
+            let edge = self
+                .graph
+                .edge(&r.edge)
+                .or_else(|| self.graph.edge(&format!("{}_r", r.edge)));
+            if r.owner != self.service_id
+                || !r.start_m.is_finite()
+                || !r.end_m.is_finite()
+                || r.start_m < 0.
+                || r.end_m <= r.start_m
+                || edge.is_none_or(|e| r.end_m > e.length_m + 0.01)
+            {
+                return Err(format!(
+                    "Reserva inválida: {} [{}, {}], dueño {} (esperado {}), longitud {:?}",
+                    r.edge,
+                    r.start_m,
+                    r.end_m,
+                    r.owner,
+                    self.service_id,
+                    edge.map(|e| e.length_m)
+                ));
+            }
         }
         for (id, pos) in &saved.switches {
             graph.set_switch(id, *pos).map_err(|e| e.to_string())?;
@@ -273,12 +373,27 @@ impl LiveDriveSession {
     }
 
     pub fn restore_snapshot(&mut self, saved: SessionSnapshot) -> Result<(), String> {
+        let host = self.prepare_script_restore(&saved)?;
+        self.restore_prepared_snapshot(saved, host)
+    }
+
+    pub fn restore_prepared_snapshot(
+        &mut self,
+        saved: SessionSnapshot,
+        host: Option<crate::etcs::ScriptTcsHost>,
+    ) -> Result<(), String> {
         self.validate_snapshot(&saved)?;
+        match (&host, &saved.script_state) {
+            (Some(host), Some(state)) => host.validate_snapshot(state)?,
+            (None, None) => (),
+            _ => return Err("Estado C# preparado incompatible".into()),
+        }
         let mut graph = self.graph.clone();
         for (id, pos) in &saved.switches {
             graph.set_switch(id, *pos).map_err(|e| e.to_string())?;
         }
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
+        self.script_tcs = host;
         self.state = saved.state;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
@@ -286,6 +401,8 @@ impl LiveDriveSession {
         self.signal_runtime = saved.signal_runtime;
         self.signal_overrides = saved.signal_overrides;
         self.own_track_reservations = saved.track_reservations;
+        self.dispatcher = saved.dispatcher;
+        self.dispatcher.other_locks.clear();
         self.external_track_reservations.clear();
         self.graph = graph;
         self.path_data = pd;
@@ -581,6 +698,7 @@ impl LiveDriveSession {
     /// on imported routes with incomplete signal scripts. Never ignore the tail.
     pub fn distance_to_occupied_block_m(&self) -> Option<f64> {
         let mut distance = -self.pos_on_edge_m();
+        let mut result = None;
         for (index, id) in self
             .state
             .path_edges
@@ -588,12 +706,39 @@ impl LiveDriveSession {
             .enumerate()
             .skip(self.state.edge_index)
         {
+            let data = self.path_data.edges.get(index)?;
             if self.edge_is_occupied(id, &self.external_occupancy) {
-                return Some(distance.max(0.0));
+                result = Some(distance.max(0.));
+                break;
             }
-            distance += self.path_data.edges.get(index)?.length_m;
+            for r in &self.external_track_reservations {
+                if base_edge(id) == r.edge {
+                    let start = if id.ends_with("_r") {
+                        data.length_m - r.end_m
+                    } else {
+                        r.start_m
+                    };
+                    let end = if id.ends_with("_r") {
+                        data.length_m - r.start_m
+                    } else {
+                        r.end_m
+                    };
+                    if distance + end > 0. {
+                        let at = (distance + start).max(0.);
+                        result = Some(result.map_or(at, |old: f64| old.min(at)));
+                    }
+                }
+            }
+            distance += data.length_m;
         }
-        None
+        if self.dispatcher.protected_signal.is_none() && !self.dispatcher.waiting_for.is_empty() {
+            let at = (self.path_data.edges.get(self.state.edge_index)?.length_m
+                - self.pos_on_edge_m()
+                - 2.)
+                .max(0.);
+            result = Some(result.map_or(at, |old| old.min(at)));
+        }
+        result
     }
 
     /// Reverse graph edges refer to the same physical track section.
@@ -623,7 +768,48 @@ impl LiveDriveSession {
         Ok(())
     }
 
+    pub(crate) fn adopt_dispatch_path(&mut self, path: Vec<String>) -> Result<(), String> {
+        let mut before = 0.;
+        let mut chainages = HashMap::new();
+        for edge in &path {
+            let e = self.graph.edge(edge).ok_or("Tramo desconocido")?;
+            before += e.length_m;
+            chainages.insert(e.to.0.clone(), before);
+        }
+        let mut targets = self.gameplay.stop_targets.clone();
+        for target in targets.iter_mut().skip(self.gameplay.next_stop_idx) {
+            let position = chainages
+                .get(&target.node_id)
+                .ok_or("El itinerario omite una estación")?;
+            target.cum_dist_m = position
+                + self
+                    .stop_offsets
+                    .get(&target.node_id)
+                    .copied()
+                    .unwrap_or(0.);
+            if target.cum_dist_m < self.head_chainage_m() {
+                return Err("Parada detrás del tren".into());
+            }
+        }
+        self.gameplay.stop_targets = targets;
+        self.path_data = PathData::from_path(&path, &self.graph);
+        self.state.path_edges = path;
+        Ok(())
+    }
+
     pub fn dispatch_switch(&mut self, id: &str) -> Result<(), String> {
+        if let Some(lock) = self
+            .dispatcher
+            .own_locks
+            .iter()
+            .chain(&self.dispatcher.other_locks)
+            .find(|l| l.node == id)
+        {
+            return Err(format!(
+                "Cambio reservado por {}; se libera cuando pase la cola",
+                lock.owner
+            ));
+        }
         let node = self.graph.node(id).ok_or("Cambio desconocido")?;
         if !matches!(node.kind, NodeKind::Switch { .. }) {
             return Err("Este nodo no es un cambio".into());

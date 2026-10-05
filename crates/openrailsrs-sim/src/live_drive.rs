@@ -154,6 +154,7 @@ pub struct LiveDriveSession {
     pub service_id: String,
     pub native_signals: crate::native_signals::NativeSignalRuntime,
     pub external_track_occupancy: Vec<crate::native_signals::TrackOccupancy>,
+    pub dispatcher: crate::DispatcherStatus,
     pub own_track_reservations: Vec<crate::native_signals::TrackOccupancy>,
     pub external_track_reservations: Vec<crate::native_signals::TrackOccupancy>,
     /// Rebuilt by the live traffic coordinator at every physics quantum.
@@ -317,6 +318,7 @@ impl LiveDriveSession {
             service_id: "Jugador".into(),
             external_occupancy: HashMap::new(),
             curve_parameters,
+            dispatcher: crate::DispatcherStatus::default(),
             own_track_reservations: vec![],
             external_track_reservations: vec![],
             original_physics: physics.clone(),
@@ -580,7 +582,7 @@ impl LiveDriveSession {
             .map_or_else(|| base.clone(), |host| host.status(base.clone()))
     }
 
-    fn script_context(&self, dt_s: f64) -> crate::etcs::ScriptContext {
+    pub(crate) fn script_context(&self, dt_s: f64) -> crate::etcs::ScriptContext {
         use crate::etcs::{ScriptSignal, ScriptSpeedPost};
         let mut signals = vec![];
         let mut distance_signal = None;

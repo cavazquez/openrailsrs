@@ -196,7 +196,11 @@ pub fn populate_track_position_resolver_cache(
     let started = std::time::Instant::now();
     cache.tile_index = tdb.index_nodes_by_tile();
     cache.graph_node_to_tdb.clone_from(&scene.graph_node_to_tdb);
-    cache.paths = compile_vector_paths(tdb, Some(assets.tsection()));
+    cache.paths = assets
+        .banked_paths
+        .iter()
+        .map(|(id, path)| (*id, (**path).clone()))
+        .collect();
     cache.ready = true;
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
         eprintln!(

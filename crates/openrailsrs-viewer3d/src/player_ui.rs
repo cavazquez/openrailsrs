@@ -44,6 +44,7 @@ impl Plugin for PlayerUiPlugin {
         app.init_resource::<PlayerUiState>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchMenu>()
+            .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<PlayerLaunchQueue>()
             .init_resource::<ActivePlayerContent>()
             .init_resource::<UiPointerCapture>()
@@ -68,6 +69,7 @@ impl Plugin for PlayerUiPlugin {
                 Update,
                 (
                     player_keys,
+                    poll_content_download,
                     handle_buttons.in_set(EnvironmentControls),
                     capture_ui_pointer,
                     build_panel,
@@ -101,6 +103,7 @@ pub enum PlayerPanel {
     #[default]
     None,
     Menu,
+    Content,
     Pause,
     Notebook,
     Formation,
@@ -181,6 +184,7 @@ struct PlayerScroll;
 #[derive(Component, Clone, Copy)]
 enum DynamicText {
     Status,
+    Content,
     Notebook,
     Advanced,
     Car,
@@ -219,6 +223,10 @@ enum UiCommand {
     Rebind(PlayerAction),
     DefaultKeys,
     SaveSettings,
+    ContentCycle(i32),
+    ContentDownload,
+    ContentCancel,
+    ContentCatalogue,
 }
 #[derive(Clone, Copy, Debug)]
 enum MenuField {
@@ -243,6 +251,7 @@ enum SettingField {
     Fov,
     Scale,
     Shadows,
+    AutomaticCant,
     Fog,
     FogQuality,
     WeatherExecution,
@@ -590,6 +599,7 @@ fn handle_buttons(
     mut settings: ResMut<PlayerSettings>,
     mut launch: ResMut<PlayerLaunchQueue>,
     mut content: ResMut<ActivePlayerContent>,
+    mut downloads: ResMut<crate::official_content::OfficialContent>,
     camera: CameraForSave,
     mut exit: MessageWriter<AppExit>,
     mouse: Res<ButtonInput<MouseButton>>,
@@ -600,6 +610,10 @@ fn handle_buttons(
             continue;
         }
         let result:Result<(),String>=match command {
+            UiCommand::ContentCycle(delta)=>{downloads.cycle(*delta);Ok(())},
+            UiCommand::ContentDownload=>downloads.start(),
+            UiCommand::ContentCancel=>downloads.cancel(),
+            UiCommand::ContentCatalogue=>crate::official_content::open_catalogue(),
             UiCommand::Open(panel)=>{open_panel(&mut ui,&mut live,*panel);Ok(())},
             UiCommand::Close=>{close_panel(&mut ui,&mut live);Ok(())},
             UiCommand::Exit => { exit.write(AppExit::Success); Ok(()) },
@@ -615,7 +629,7 @@ fn handle_buttons(
             },
             UiCommand::Start=>menu.prepare().map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;ui.notice="Cargando la partida…".into();}),
             UiCommand::Resume(slot)=>SavedGame::prepare_resume(&slot_path(*slot)).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;}),
-            UiCommand::Save(slot)=>if let Some(l)=live.as_ref(){
+            UiCommand::Save(slot)=>if let Some(l)=live.as_mut(){
                 camera.cameras.single().map_err(|_|"Cámara no disponible".into()).and_then(|(orbit, fly, transform)| {
                     let mut saved = SavedCamera::capture(*camera.follow, orbit, &camera.look, &camera.origin);
                     saved.pose = Some(crate::saved_game::SavedCameraPose {
@@ -656,7 +670,7 @@ fn handle_buttons(
             UiCommand::Recouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.recouple()).map(|()|{ui.notice="Enganche acoplado; reconectá la manguera, abrí las llaves y soltá los frenos de mano".into();}),
             UiCommand::MapPick(selection)=>{ui.map_selection=Some(selection.clone());Ok(())},
             UiCommand::DispatchSignal(aspect)=>if let Some(MapSelection::Signal(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.dispatch_signal(&id,*aspect)).map(|()|{ui.notice="Orden de señal aplicada".into();})}else{Err("Seleccioná una señal en el mapa".into())},
-            UiCommand::DispatchSwitch=>if let Some(MapSelection::Switch(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.dispatch_switch(&id)).map(|()|{ui.notice="Cambio e itinerario actualizados".into();})}else{Err("Seleccioná un cambio en el mapa".into())},
+            UiCommand::DispatchSwitch=>if let Some(MapSelection::Switch(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let l=&mut **l;l.traffic.dispatch_switch(&mut l.session,&id)}).map(|()|{ui.notice="Cambio e itinerario actualizados".into();})}else{Err("Seleccioná un cambio en el mapa".into())},
             UiCommand::Zoom(factor)=>{ui.map_scale=(ui.map_scale*factor).clamp(0.002,2.0);Ok(())},
             UiCommand::Pan(delta)=>{let scale=ui.map_scale;ui.map_center+= *delta/scale;Ok(())},
             UiCommand::FitMap=>{ui.map_initialized=false;Ok(())},
@@ -676,6 +690,7 @@ fn handle_buttons(
                 SettingField::Distance=>settings.view_distance_m=(settings.view_distance_m+step).clamp(500.0,4000.0),
                 SettingField::Fov=>settings.cab_fov_deg=(settings.cab_fov_deg+step).clamp(35.0,90.0),
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
+                SettingField::AutomaticCant=>settings.automatic_cant= !settings.automatic_cant,
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.mph= !settings.mph,
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
@@ -720,6 +735,7 @@ fn build_panel(
     mut commands: Commands,
     mut ui: ResMut<PlayerUiState>,
     menu: Res<PlayerLaunchMenu>,
+    downloads: Res<crate::official_content::OfficialContent>,
     settings: Res<PlayerSettings>,
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
@@ -768,6 +784,7 @@ fn build_panel(
                     p,
                     match panel {
                         PlayerPanel::Menu => "OPENRAILSRS · nueva partida",
+                        PlayerPanel::Content => "CONTENIDO OFICIAL",
                         PlayerPanel::Pause => "PARTIDA EN PAUSA",
                         PlayerPanel::Notebook => "LIBRETA DEL SERVICIO",
                         PlayerPanel::Formation => "OPERACIONES DE LA FORMACIÓN",
@@ -797,6 +814,7 @@ fn build_panel(
             ))
             .with_children(|p| match panel {
                 PlayerPanel::Menu => build_menu(p, &menu),
+                PlayerPanel::Content => build_content(p, &downloads, &menu),
                 PlayerPanel::Pause => {
                     if let Some(l) = live.as_ref() {
                         label(
@@ -917,6 +935,11 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
     });
 }
 fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
+    button(
+        p,
+        "Descargar contenido oficial",
+        UiCommand::Open(PlayerPanel::Content),
+    );
     selector(
         p,
         "Ruta",
@@ -994,6 +1017,94 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         });
     }
 }
+fn build_content(
+    p: &mut ChildSpawnerCommands<'_>,
+    downloads: &crate::official_content::OfficialContent,
+    menu: &PlayerLaunchMenu,
+) {
+    let package = downloads.selected();
+    row(p, |p| {
+        button(p, "‹", UiCommand::ContentCycle(-1));
+        label(p, &package.name, 19., TEXT);
+        button(p, "›", UiCommand::ContentCycle(1));
+    });
+    label(
+        p,
+        format!(
+            "Autor: {} · {}\n{}\nDescarga aproximada: {:.0} MiB · instalación: {:.1} GiB",
+            package.author.name,
+            package.compensation,
+            package.url,
+            package.download_bytes as f64 / 1048576.,
+            package.install_bytes as f64 / 1073741824.
+        ),
+        14.,
+        TEXT,
+    );
+    label(
+        p,
+        "Catálogo: Open Rails. Las licencias pertenecen a los autores. Cada paquete se instala por separado; conservar recursos completos no certifica todos sus sistemas.",
+        13.,
+        MUTED,
+    );
+    row(p, |p| {
+        if downloads.busy() {
+            button(p, "Cancelar descarga", UiCommand::ContentCancel);
+        } else if package.automatic() {
+            button(p, "Instalar y auditar", UiCommand::ContentDownload);
+        }
+        button(p, "Ver catálogo oficial", UiCommand::ContentCatalogue);
+        button(
+            p,
+            "Volver a nueva partida",
+            UiCommand::Open(PlayerPanel::Menu),
+        );
+    });
+    dynamic(p, DynamicText::Content, 14.);
+    if let Some(audit) = menu
+        .consists
+        .get(menu.consist)
+        .and_then(|p| menu.consist_audits.get(p))
+        && !audit.errors.is_empty()
+    {
+        label(
+            p,
+            format!(
+                "FALTANTES DE LA FORMACIÓN SELECCIONADA\n{}",
+                audit.errors.join("\n")
+            ),
+            13.,
+            CAUTION,
+        );
+    }
+    label(
+        p,
+        format!(
+            "Paquetes instalados: {}\nDestino: {}",
+            downloads.installed.len(),
+            crate::player_settings::player_data_dir()
+                .join("official-content")
+                .display()
+        ),
+        13.,
+        MUTED,
+    );
+}
+fn poll_content_download(
+    mut downloads: ResMut<crate::official_content::OfficialContent>,
+    mut menu: ResMut<PlayerLaunchMenu>,
+    mut ui: ResMut<PlayerUiState>,
+) {
+    let was_busy = downloads.busy();
+    let ready = downloads.poll();
+    if ready {
+        *menu = PlayerLaunchMenu::discover(std::path::Path::new("."), None);
+    }
+    if ui.panel == PlayerPanel::Content && (ready || was_busy != downloads.busy()) {
+        ui.rebuild = true;
+    }
+}
+
 fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
     label(
         p,
@@ -1156,6 +1267,20 @@ fn build_settings(
         format!("Tamaño de interfaz: {:.0}%", s.ui_scale * 100.0),
         SettingField::Scale,
         0.1,
+    );
+    button(
+        p,
+        format!(
+            "Peralte automático: {} · próxima partida",
+            yes(s.automatic_cant)
+        ),
+        UiCommand::Setting(SettingField::AutomaticCant, 0.),
+    );
+    label(
+        p,
+        "Guardá los ajustes y volvé a iniciar la partida para cambiar el peralte. La vía, el tren y la cabina comparten el perfil; los cambios y el peralte ya escrito por el autor se conservan.",
+        12.,
+        MUTED,
     );
     row(p, |p| {
         button(
@@ -1593,10 +1718,14 @@ fn update_panel_text(
     audio: Res<crate::native_audio::NativeAudio>,
     environment: Res<crate::environment::LiveEnvironment>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
-    assets: Option<Res<crate::shapes::RouteAssets>>,
+    sources: (
+        Option<Res<crate::shapes::RouteAssets>>,
+        Res<crate::official_content::OfficialContent>,
+    ),
     track_cache: Option<Res<crate::track_position::TrackPositionResolverCache>>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
+    let (assets, downloads) = sources;
     *elapsed += time.delta_secs();
     if *elapsed < 0.2 && !ui.is_changed() {
         return;
@@ -1604,6 +1733,7 @@ fn update_panel_text(
     *elapsed = 0.0;
     for (kind, mut text) in &mut texts {
         let value = match kind {
+            DynamicText::Content => downloads.status.clone(),
             DynamicText::Status => ui.notice.clone(),
             DynamicText::Help => help_text(&settings),
             _ => {
@@ -2076,6 +2206,34 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
                 s.own_track_reservations.len(),
                 s.external_track_reservations.len()
             );
+            out += &format!(
+                "Cambios enclavados: {} propios · {} de otros · desvíos alternativos {}\n",
+                s.dispatcher.own_locks.len(),
+                s.dispatcher.other_locks.len(),
+                s.dispatcher.reroutes
+            );
+            if !s.dispatcher.waiting_for.is_empty() {
+                out += &format!(
+                    "Esperando a: {}{}\n",
+                    s.dispatcher.waiting_for.join(", "),
+                    if s.dispatcher.deadlock {
+                        " · conflicto circular; buscando alternativa"
+                    } else {
+                        ""
+                    }
+                );
+            }
+            for lock in s
+                .dispatcher
+                .own_locks
+                .iter()
+                .chain(&s.dispatcher.other_locks)
+            {
+                out += &format!(
+                    "Cambio {}: {:?} · {}\n",
+                    lock.node, lock.position, lock.owner
+                );
+            }
             for service in &l.traffic.services {
                 out += &format!(
                     "{}: {} · {:.1} km/h · {} paradas · {}\n",
@@ -2426,6 +2584,7 @@ mod tests {
             let mut app = App::new();
             app.init_resource::<PlayerUiState>()
                 .init_resource::<PlayerLaunchMenu>()
+                .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
                 .init_resource::<ActivePlayerContent>()

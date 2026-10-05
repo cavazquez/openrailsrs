@@ -230,3 +230,9 @@ sha256 = "50ae7c14ededf733ffcb8e3022f3bb8def040f32d919d7836a3649094f1cb2d5"
 [[files]]
 path = "oracles/superelevation-or-1.6.1.json"
 sha256 = "6481574e52973a9fb78274ba1aef0897b3cdf141d8c8babac1c999af22bc38ab"
+
+# Isolated unchanged OR cant/runoff profiles with native float conversions.
+
+[[files]]
+path = "oracles/cant-profiles-or-1.6.1.json"
+sha256 = "ed3fcf438bb5c46672f5c8b031755abd85cded2ea3731de252775ce187066e0d"

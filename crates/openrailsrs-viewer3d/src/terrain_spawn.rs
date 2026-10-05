@@ -446,7 +446,9 @@ pub fn progressive_terrain_spawn_system(
         return;
     };
     let origin_shift = crate::floating_origin::horizontal_shift(origin.shift);
-    let start = progress.tile_index;
+    // Streaming may remove pending tiles when the live focus changes. Finish
+    // an exhausted initial queue rather than slicing past the current scene.
+    let start = progress.tile_index.min(terrain.tiles.len());
     let end = (start + TERRAIN_TILES_PER_FRAME).min(terrain.tiles.len());
     for terrain_tile in &terrain.tiles[start..end] {
         progress.spawn_scene_tile(
@@ -930,6 +932,31 @@ pub fn terrain_tile_unload_system(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn cleared_initial_terrain_finishes_pending_spawn_without_panicking() {
+        use super::*;
+        let terrain = TerrainScene::default();
+        let focus = crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.,
+        };
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut progress = TerrainSpawnProgress::new(&terrain, &mut images, &mut materials, &focus);
+        progress.tile_index = 8;
+        let mut app = App::new();
+        app.insert_resource(terrain)
+            .insert_resource(progress)
+            .insert_resource(images)
+            .insert_resource(materials)
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<TerrainMaterial>>()
+            .init_resource::<crate::floating_origin::FloatingOrigin>()
+            .insert_resource(RouteAssets::new(crate::test_harness::smoke_route_dir()))
+            .add_systems(Update, progressive_terrain_spawn_system);
+        app.update();
+        assert!(!app.world().contains_resource::<TerrainSpawnProgress>());
+    }
     use openrailsrs_bevy_scenery::append_terrain_mesh_data;
     use openrailsrs_formats::TerrainMeshData;
 

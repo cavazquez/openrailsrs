@@ -686,7 +686,8 @@ comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
    lateral. El aviso cambia si superás la velocidad de confort. Puede haber
    peralte cero en el contenido original. En rectas o sin geometría nativa
    aparece «Sin curvatura nativa disponible en este tramo». El cálculo usa la
-   curva de la cabeza y no aplica frenos, penalizaciones ni un peralte nuevo.
+   curva de la cabeza y no aplica frenos ni penalizaciones. El peralte generado
+   se controla ahora desde F10; ver la sección 30.
 5. Con el SDK .NET, ejecutá la aceptación completa:
 
    ```bash
@@ -711,3 +712,91 @@ comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
 
 El [alcance detallado](SIGNALS_AND_CONTENT_SCOPE.md) incluye límites del API,
 reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
+
+## 30. Peralte, despachador, guardado C# y contenido oficial
+
+### Curvas y peralte
+
+1. Abrí **F10 → Peralte automático**, activalo y guardá los ajustes. Volvé al
+   menú e iniciá una partida nueva de Chiltern. La selección se aplica al cargar
+   la geometría: no cambia una vía ya construida durante la partida.
+2. En una curva, abrí **F8 → Locomotora**: radio, roll y peralte deben cambiar de
+   forma progresiva al entrar/salir. Con `2`, acercá la cámara al bogie: ruedas y
+   rieles deben conservar el contacto mientras la vía se inclina. Con `1`, la
+   cámara acompaña la inclinación del tren. Agujas y vías múltiples se excluyen;
+   un peralte cero en un tramo excluido es esperable.
+3. Guardá la posición y compará otra partida con generación desactivada. También
+   podés iniciar con `OPENRAILSRS_SUPERELEVATION=0`. Se conserva cualquier roll
+   escrito en el contenido. Las texturas de vía, edificios y árboles deben
+   mantener sus colores; al cambiar LOD no debe volver la vía a una pose plana.
+4. Para comprobar el algoritmo sin conducir hasta una curva:
+
+   ```bash
+   cargo test -p openrailsrs-sim --test cant_profiles_oracle -- --nocapture
+   cargo test -p openrailsrs-bevy-scenery automatic_cant_contact -- --nocapture
+   ```
+
+   Deben pasar los diez perfiles C# originales con tolerancias fijadas y el
+   contacto geométrico de vía/pose por debajo de 1 mm. El límite local por tipo
+   de tren aún no reemplaza la velocidad de diseño usada para generar cant.
+
+### Agujas y tráfico
+
+1. Elegí **Chiltern extendido** con tráfico y abrí **F8 → Despachador**. Deben
+   aparecer reservas, bloqueos propios/ajenos, dueños de espera y número de
+   desvíos. En **M**, intentá cambiar una aguja reservada: muestra el motivo y
+   conserva su posición. La posición es compartida con los servicios AI.
+2. Al atravesar una aguja, observá la cola: el bloqueo permanece hasta que
+   la formación completa sale de su zona. Una sección desacoplada estacionada
+   sigue ocupando la vía. Guardá/cargá y comprobá que no se libera una autoridad
+   sólo por haber reanudado la partida.
+3. El desvío se busca después de cinco segundos de espera cuando existe una
+   alternativa libre hacia las estaciones pendientes. Una vía única sin
+   alternativa conserva la restricción; no se espera una reversa automática.
+   La reproducción controlada del cruce y de los conflictos de guardado es:
+
+   ```bash
+   cargo test -p openrailsrs-sim track_reservations -- --nocapture
+   ```
+
+### Guardado de un TCS C#
+
+1. Ejecutá `OPENRAILSRS_DOTNET=/ruta/dotnet bash scripts/check_tcs_host.sh`.
+   Debe comprobar el host real, reinicio con ACK/límite conservados y un restore
+   corrupto rechazado sin cambiar la sesión. Incluye la prueba de freno físico
+   desde una señal Chiltern.
+2. Para abrir una partida con persistencia, compilá el host y elegí el fixture
+   **MinimalTcs.cs** de la sección 29 en lugar de NativeLookaheadTcs.cs, con
+   `OPENRAILSRS_TCS_TYPE=MinimalTcs`. En una cabina con DMI, reconocé el mensaje,
+   guardá, cerrá y reanudá con los mismos parámetros del host. Deben conservarse
+   reconocimiento, mensajes y límite. El Pullman no tiene DMI ETCS: la prueba
+   de aceptación permite observar esas salidas sin depender de su cabina.
+3. Cambiar los bytes del script o elegir otro tipo debe rechazar cargar esa
+   partida con un diagnóstico de identidad. Un script sin ambos hooks rechaza
+   guardar su estado; no se simula que se preservó su memoria. El modo Rust
+   habitual continúa guardando sin requerir .NET.
+
+### Descargar contenido
+
+1. En el menú pulsá **Descargar contenido oficial**, seleccioná **Demo Model 1**
+   y **Instalar y auditar**. Debe mostrar autor, origen y tamaños; progreso en
+   MiB, extracción y preparación. El menú sigue respondiendo mientras trabaja.
+2. Cancelá una descarga: debe informar cancelación y volver a ofrecer el botón
+   de instalar. Las rutas previamente instaladas siguen disponibles. Reintentá;
+   si el ZIP ya se descargó completo, se audita esa copia sin otra descarga.
+3. Cuando termine, volvé al menú y elegí la ruta **SCE** y una **Actividad
+   oficial**. La formación debe mostrar su auditoría antes de iniciar y el
+   visor debe utilizar su propio escenario. Chiltern conserva la versión que
+   ya tenías. Algunos formatos de actividad o sistemas todavía pueden mostrar
+   limitaciones del importador; instalar no certifica su comportamiento entero.
+   Si el push-pull original marca campos ausentes de `Include`, elegí una
+   alternativa auditada como **MT SCE BlGr # Set 101 194**; no hace falta volver
+   a descargar el ZIP para resolver esa limitación del lector.
+   Esta alternativa AI no tiene cabina; usá `2` para inspeccionar tren y
+   escenario. En una actividad sin paradas programadas, el monitor debe mostrar
+   la distancia al destino y «Sin paradas programadas». «Destino alcanzado»
+   sólo debe aparecer cuando termine realmente el recorrido.
+4. Consultá `player-data/official-content/`: manifiesto con URL/SHA-256, licencias
+   del autor, informe por formación y red importada. Un paquete comercial o
+   distribuido mediante web indica que se obtiene en su origen; el botón de
+   catálogo abre la página oficial. [Guía y CLI](OFFICIAL_CONTENT.md).

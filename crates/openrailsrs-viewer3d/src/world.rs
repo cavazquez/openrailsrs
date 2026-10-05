@@ -63,6 +63,7 @@ pub fn view_stream_window_policy(view_radius_m: f32) -> StreamWindowPolicy {
 /// Tracks which LOD level a spawned world shape part is using (runtime swap).
 #[derive(Component, Clone, Debug)]
 pub struct WorldSceneryLod {
+    pub bank: Option<std::sync::Arc<crate::superelevation::TrackBankDeformation>>,
     pub enabled: bool,
     pub shape_path: PathBuf,
     /// Stable identity within a shape. LOD bands may omit or reorder parts.
@@ -155,6 +156,7 @@ pub fn scenery_entity_should_unload(
 /// One WORLD shape instance queued for spawn, with tile membership (#62).
 #[derive(Clone, Debug)]
 pub struct ShapeInstancePlacement {
+    pub bank: Option<std::sync::Arc<crate::superelevation::TrackBankDeformation>>,
     pub transform: Transform,
     /// Full Matrix3x3 linear when present (shear); overrides TRS in GPU instancing (#139).
     pub linear: Option<Mat3>,
@@ -216,6 +218,12 @@ fn view_mesh_for_placement(
     origin: &FloatingOrigin,
 ) -> (Transform, Handle<Mesh>) {
     let mut tf = view_transform(p.transform, origin);
+    if let Some(bank) = &p.bank
+        && let Some(source) = meshes.get(part_mesh)
+    {
+        let mesh = bank.deform(source);
+        return (tf, meshes.add(mesh));
+    }
     if let Some(linear) = p.linear.filter(|_| placement_has_shear(p)) {
         let Some(src) = meshes.get(part_mesh) else {
             return (tf, part_mesh.clone());
@@ -806,6 +814,12 @@ impl RouteWorldOffset {
 
     /// Use the startup view centre; distant CPU prefetch must not shift the graph.
     pub fn from_scene_and_center(scene: &TrackScene, center: Option<Vec3>) -> Self {
+        // Imported graphs already use the native TDB world frame. The bounds
+        // centre of a long route can be kilometres from its starting station;
+        // that separation is not a coordinate-system offset.
+        if !scene.graph_node_to_tdb.is_empty() {
+            return Self::default();
+        }
         let graph_center = scene.bounds.center;
         let Some(world_center) = center else {
             return Self::default();
@@ -1987,6 +2001,9 @@ fn classify_one_object(
                 .entry(shape_path.clone())
                 .or_default()
                 .push(ShapeInstancePlacement {
+                    bank: crate::superelevation::TrackBankDeformation::for_object(
+                        obj, focus, assets,
+                    ),
                     transform: tf,
                     linear: obj.linear,
                     tile_x: obj.tile_x,
@@ -2053,6 +2070,7 @@ fn classify_one_object(
                 .entry(shape_path.clone())
                 .or_default()
                 .push(ShapeInstancePlacement {
+                    bank: None,
                     transform: tf,
                     linear: obj.linear,
                     tile_x: obj.tile_x,
@@ -2182,7 +2200,9 @@ fn append_shape_spawn_entries_for_transforms(
         *shape_texture_count += placements.len();
     }
     let animated = shape_file.is_some_and(shape_has_loop_animation);
-    let mergeable = !has_signal_filter
+    let has_bank = placements.iter().any(|p| p.bank.is_some());
+    let mergeable = !has_bank
+        && !has_signal_filter
         && !animated
         && ENABLE_SHAPE_INSTANCE_MERGE
         && placements.len() >= SHAPE_INSTANCE_MERGE_MIN
@@ -2217,6 +2237,7 @@ fn append_shape_spawn_entries_for_transforms(
                     MeshMaterial3d(material),
                     Name::new("world:merged"),
                     WorldSceneryLod {
+                        bank: None,
                         enabled: false,
                         shape_path: PathBuf::new(),
                         sub_object_idx: u32::MAX,
@@ -2238,7 +2259,8 @@ fn append_shape_spawn_entries_for_transforms(
             let tile_auto_z = tile_placements.iter().any(|p| p.auto_z_bias);
             for &(part_index, part) in &visible_parts {
                 let material = material_with_auto_z_bias(materials, &part.material, tile_auto_z);
-                let can_instance = use_gpu
+                let can_instance = !has_bank
+                    && use_gpu
                     && !part.is_transparent
                     && part.has_texture
                     && instancing_part_supported(
@@ -2295,6 +2317,7 @@ fn append_shape_spawn_entries_for_transforms(
                             MeshMaterial3d(mat),
                             Name::new("world:mesh"),
                             WorldSceneryLod {
+                                bank: None,
                                 enabled: true,
                                 shape_path: shape_path.to_path_buf(),
                                 sub_object_idx: part.sub_object_idx,
@@ -2330,7 +2353,7 @@ fn append_shape_spawn_entries_for_transforms(
                 let material =
                     material_with_auto_z_bias(materials, &part.material, inst.auto_z_bias);
                 let lod = WorldSceneryLod {
-                    // LOD stays on; animated swaps re-apply the current pose (#100).
+                    bank: inst.bank.clone(), // LOD stays on; animated swaps re-apply the current pose (#100).
                     enabled: true,
                     shape_path: shape_path.to_path_buf(),
                     sub_object_idx: part.sub_object_idx,
@@ -2402,6 +2425,7 @@ fn append_shape_spawn_entries_for_transforms(
                     MeshMaterial3d(material),
                     Name::new("world:mesh"),
                     WorldSceneryLod {
+                        bank: inst.bank.clone(),
                         enabled: true,
                         shape_path: shape_path.to_path_buf(),
                         sub_object_idx: part.sub_object_idx,
@@ -4022,6 +4046,7 @@ pub fn progressive_world_spawn_system(
 #[allow(clippy::type_complexity)]
 pub fn update_world_scenery_lod(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
     cache: Option<Res<WorldShapeLodCache>>,
     progress: Option<Res<WorldSpawnProgress>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
@@ -4162,7 +4187,16 @@ pub fn update_world_scenery_lod(
             swapped += 1;
             continue;
         };
-        mesh3d.0 = part.mesh.clone();
+        mesh3d.0 = if let Some(bank) = &lod.bank {
+            if let Some(source) = meshes.get(&part.mesh) {
+                let mesh = bank.deform(source);
+                meshes.add(mesh)
+            } else {
+                part.mesh.clone()
+            }
+        } else {
+            part.mesh.clone()
+        };
         if source_material.is_some() {
             commands
                 .entity(entity)
@@ -4289,6 +4323,9 @@ pub fn spawn_world_boxes(
                     .entry(shape_path)
                     .or_default()
                     .push(ShapeInstancePlacement {
+                        bank: crate::superelevation::TrackBankDeformation::for_object(
+                            obj, &focus, &assets,
+                        ),
                         transform: Transform {
                             translation: render_pos,
                             rotation: obj.rotation,
@@ -4325,6 +4362,7 @@ pub fn spawn_world_boxes(
                 .entry(shape_path)
                 .or_default()
                 .push(ShapeInstancePlacement {
+                    bank: None,
                     transform: Transform {
                         translation: render_pos,
                         rotation: obj.rotation,
@@ -4568,6 +4606,28 @@ mod tests {
     use openrailsrs_formats::Vec3 as FVec3;
 
     #[test]
+    fn native_long_route_does_not_align_its_midpoint_to_the_starting_station() {
+        let graph = openrailsrs_route::load_track_graph_from_route_dir(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test"),
+        )
+        .unwrap();
+        let mut scene = TrackScene::from_graph(graph);
+        scene.bounds.center = Vec3::new(-12_510_000., 0., -31_010_000.);
+        let station = Vec3::new(-12_570_000., 65., -31_010_400.);
+        assert!(
+            RouteWorldOffset::from_scene_and_center(&scene, Some(station))
+                .delta
+                .length()
+                > 50_000.
+        );
+        scene.graph_node_to_tdb.insert("native-start".into(), 1);
+        assert_eq!(
+            RouteWorldOffset::from_scene_and_center(&scene, Some(station)).delta,
+            Vec3::ZERO
+        );
+    }
+
+    #[test]
     fn static_clusters_preload_whole_nearby_rows_without_loading_far_tiles() {
         let scene = load_world_from_route_dir(
             &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/routes/test"),
@@ -4662,6 +4722,7 @@ mod tests {
             Vec3::new(0.0, 0.0, 1.0),
         );
         let sheared = ShapeInstancePlacement {
+            bank: None,
             transform: Transform {
                 translation: Vec3::ZERO,
                 rotation: Quat::IDENTITY,
@@ -4679,6 +4740,7 @@ mod tests {
         let (rot, scale) =
             matrix3x3_to_rotation_scale(&[2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0]);
         let orthogonal = ShapeInstancePlacement {
+            bank: None,
             transform: Transform {
                 translation: Vec3::ZERO,
                 rotation: rot,
@@ -5398,6 +5460,7 @@ mod tests {
         progress.shape_instances.insert(
             path.clone(),
             vec![ShapeInstancePlacement {
+                bank: None,
                 transform: Transform::default(),
                 linear: None,
                 tile_x: 0,
