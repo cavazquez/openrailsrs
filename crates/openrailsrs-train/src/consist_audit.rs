@@ -5,9 +5,10 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_formats::{
-    CabControl, CabViewFile, ConsistEntry, ConsistFile, EngineCabView, MstsFile, ShapeFile,
-    parse_cab_view_text, parse_msts_file, parse_vehicle_text, read_msts_file_to_string,
-    resolve_path_case_insensitive,
+    CabControl, CabViewFile, ConsistEntry, ConsistFile, EngineCabView, MstsFile, ScriptSystem,
+    ShapeFile, VehicleContentMetadata, parse_cab_view_text, parse_msts_file, parse_named_stf,
+    parse_vehicle_content_metadata, parse_vehicle_text, read_msts_file_to_string,
+    resolve_path_case_insensitive, sms_wave_references,
 };
 use serde::Serialize;
 
@@ -24,6 +25,15 @@ pub struct ConsistAudit {
     pub cab_3d: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+    pub compatibility: Vec<VehicleCompatibility>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct VehicleCompatibility {
+    pub vehicle: usize,
+    pub stock_path: PathBuf,
+    pub declared: VehicleContentMetadata,
+    pub limitations: Vec<String>,
 }
 
 impl ConsistAudit {
@@ -53,6 +63,21 @@ impl ConsistAudit {
             )
         }
     }
+    pub fn compatibility_summary(&self) -> String {
+        if self.warnings.is_empty() {
+            return "Recursos completos · sistemas pendientes de validar contra OR".into();
+        }
+        let warning = self
+            .warnings
+            .iter()
+            .find(|w| w.contains("C#"))
+            .unwrap_or(&self.warnings[0]);
+        format!(
+            "{} avisos · {}",
+            self.warnings.len(),
+            warning.chars().take(170).collect::<String>()
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -64,6 +89,8 @@ struct StockAudit {
     cab_3d: bool,
     errors: Vec<String>,
     warnings: Vec<String>,
+    metadata: VehicleContentMetadata,
+    limitations: Vec<String>,
 }
 
 /// Cache shared vehicles, shapes and cab panels across hundreds of `.con` files.
@@ -123,6 +150,12 @@ impl ConsistAuditor {
             match &self.stocks[&path] {
                 Err(e) => report.errors.push(format!("{prefix}: {e}")),
                 Ok(stock) => {
+                    report.compatibility.push(VehicleCompatibility {
+                        vehicle: index + 1,
+                        stock_path: path.clone(),
+                        declared: stock.metadata.clone(),
+                        limitations: stock.limitations.clone(),
+                    });
                     report.length_m += stock.length;
                     report.mass_kg += stock.mass;
                     report.powered_vehicles += usize::from(engine && stock.powered);
@@ -158,6 +191,10 @@ impl ConsistAuditor {
                 _ => return Err("El archivo no es un vehículo".into()),
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
+        let ast = read_msts_file_to_string(path)
+            .and_then(|text| parse_vehicle_text(&text))
+            .map_err(|e| e.to_string())?;
+        let metadata = parse_vehicle_content_metadata(&ast, cab.is_some());
         let root = self
             .trainset_roots
             .iter()
@@ -174,7 +211,10 @@ impl ConsistAuditor {
             cab_3d: false,
             errors: vec![],
             warnings: vec![],
+            metadata,
+            limitations: vec![],
         };
+        self.inspect_subsystems(path, &root, &mut stock);
         if !mass.is_finite() || mass <= 0.0 || !length.is_finite() || length <= 0.0 {
             stock.errors.push("Masa o longitud inválida".into());
         }
@@ -196,6 +236,94 @@ impl ConsistAuditor {
             self.inspect_cab(&root, &cab, &mut stock);
         }
         Ok(stock)
+    }
+    fn inspect_subsystems(&self, path: &Path, root: &Path, stock: &mut StockAudit) {
+        if let Some(kind) = &stock.metadata.engine_type {
+            match kind.to_ascii_lowercase().as_str() {
+                "diesel" => {},
+                "electric" => stock.limitations.push("Tracción eléctrica parcial: sin paridad de alimentación y protecciones originales".into()),
+                "steam" => stock.limitations.push("Vapor parcial: no reproduce todos los subsistemas originales".into()),
+                _ => stock.limitations.push(format!("Tipo de motor {kind}: usa el modelo de tracción genérico")),
+            }
+        }
+        if let Some(system) = &stock.metadata.brake_system {
+            stock.limitations.push(format!("Frenos {system}: modelo por vehículo; sin certificación de paridad del sistema original"));
+        }
+        let authored_root = path.parent().unwrap_or(root);
+        let script_dirs = [authored_root.join("Script"), root.join("Script")];
+        for script in &stock.metadata.scripts {
+            if script.built_in {
+                continue;
+            }
+            let file = if Path::new(&script.name).extension().is_none() {
+                format!("{}.cs", script.name)
+            } else {
+                script.name.clone()
+            };
+            let available = asset(&script_dirs, &file, false).is_some();
+            let support = match script.system {
+                ScriptSystem::TrainControl => {
+                    "TCS C#: requiere selección explícita del host .NET y API compatible"
+                }
+                ScriptSystem::TrainBrake | ScriptSystem::EngineBrake => {
+                    "Controlador de freno C#: no se ejecuta; se usa el modelo Rust"
+                }
+                ScriptSystem::PowerSupply => {
+                    "Alimentación C#: no se ejecuta; se usa el modelo Rust"
+                }
+            };
+            stock.limitations.push(format!(
+                "{support} ({}){}",
+                script.name,
+                if available {
+                    ""
+                } else {
+                    " · falta el archivo"
+                }
+            ));
+        }
+        // Sound is optional: missing SMS/WAV is a warning, not a missing train.
+        // Search installed global SOUND as well as the vehicle's local SOUND.
+        let mut dirs = vec![
+            root.to_path_buf(),
+            root.join("SOUND"),
+            authored_root.to_path_buf(),
+            authored_root.join("SOUND"),
+        ];
+        for vehicle_root in [authored_root, root] {
+            if let Some(content) = vehicle_root
+                .parent()
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+            {
+                dirs.push(content.join("SOUND"));
+            }
+        }
+        for name in &stock.metadata.sounds {
+            let Some(sms) = asset(&dirs, name, false) else {
+                stock
+                    .limitations
+                    .push(format!("Falta el sonido opcional {name}"));
+                continue;
+            };
+            match read_msts_file_to_string(&sms).and_then(|text| parse_named_stf(&text)) {
+                Ok(ast) => {
+                    let mut waves = vec![sms.parent().unwrap_or(root).to_path_buf()];
+                    waves.extend(dirs.iter().cloned());
+                    for file in sms_wave_references(&ast) {
+                        if asset(&waves, &file, false).is_none() {
+                            stock
+                                .limitations
+                                .push(format!("Falta la muestra opcional {file} de {name}"));
+                        }
+                    }
+                }
+                Err(e) => stock
+                    .limitations
+                    .push(format!("Sonido opcional {name}: {e}")),
+            }
+        }
+        stock.warnings.extend(stock.limitations.iter().cloned());
     }
     fn inspect_shape(&mut self, path: &Path) -> Result<(), String> {
         if let Some(result) = self.shapes.get(path) {
@@ -343,6 +471,50 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn intact_models_do_not_hide_scripts_brake_electrical_or_sound_limitations() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stock = tmp.path().join("TRAINS/TRAINSET/EMU");
+        let cons = tmp.path().join("TRAINS/CONSISTS");
+        std::fs::create_dir_all(stock.join("SOUND")).unwrap();
+        std::fs::create_dir_all(stock.join("Script")).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        std::fs::write(stock.join("Power.eng"), "Wagon ( power Mass ( 40t ) Type ( Engine ) Size ( 3m 4m 20m ) BrakeSystemType ( EP ) Sound ( motor.sms ) ORTSTrackGauge ( 1676mm ) ) Engine ( power Type ( Electric ) MaxPower ( 500kW ) ORTSTrainControlSystem ( NativeTcs ) ORTSTrainBrakeController ( NativeBrake ) )").unwrap();
+        std::fs::write(stock.join("SOUND/motor.sms"), "Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( absent.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        std::fs::write(
+            stock.join("Script/NativeTcs.cs"),
+            "// present, not implicitly executed",
+        )
+        .unwrap();
+        let con = cons.join("emu.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( emu Engine ( EngineData ( Power EMU ) ) ) )",
+        )
+        .unwrap();
+        let report = ConsistAuditor::default().inspect(&con);
+        assert!(report.player_ready(), "{:?}", report.errors);
+        assert_eq!(report.compatibility.len(), 1);
+        assert_eq!(
+            report.compatibility[0].declared.curve.track_gauge_m,
+            Some(1.676)
+        );
+        for text in [
+            "eléctrica parcial",
+            "Frenos EP",
+            "selección explícita",
+            "Controlador de freno C#",
+            "falta el archivo",
+            "absent.wav",
+        ] {
+            assert!(
+                report.warnings.iter().any(|w| w.contains(text)),
+                "{text}: {:?}",
+                report.warnings
+            );
+        }
+        assert!(report.compatibility_summary().contains("C#"));
+    }
     #[test]
     fn none_graphic_is_a_valid_control_without_a_sprite() {
         let tmp = tempfile::tempdir().unwrap();

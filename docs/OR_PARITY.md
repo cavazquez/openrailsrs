@@ -103,7 +103,7 @@ dirigidos y la ocupación longitudinal de jugador, tráfico y sección estaciona
 Errores o construcciones no soportadas rechazan el contenido o dan alto; una
 orden manual de vía libre no anula la restricción del script. La regresión del
 recorrido verifica seis paradas, ambos servicios AI y estados de alto/advertencia.
-Esto no certifica todos los enlaces, reservas, memorias y scripts de Open Rails.
+Se añaden reservas exclusivas del próximo bloque en recorridos fijos, incluyendo circulación opuesta y guardado de concesiones, y propagación de restricciones del despachador a los scripts anteriores. INFO conserva su representación sin crear autoridad. Esto no certifica el despachador general, todos los enlaces, bloqueos de desvíos, memorias ni scripts de Open Rails. [Alcance ampliado](SIGNALS_AND_CONTENT_SCOPE.md).
 
 La nieve usa la visibilidad inicial nativa de 500 m y las variantes Snow del
 Content disponibles según la estación del año. La precipitación, el vidrio barrido por limpiaparabrisas,
@@ -274,3 +274,7 @@ cargo run -p openrailsrs-cli -- sim examples/chiltern/scenario.toml
 | SCE Glasgow | Umbral ≤1 m/s |
 
 Referencias OR: `MSTSDieselLocomotive.cs`, `DieselEngine.cs`, `TrainCar.cs`. Audit ENG/WAG: [`FORMATS.md`](FORMATS.md).
+
+## Oráculo de confort en curvas
+
+`oracles/superelevation-or-1.6.1.json` congela diez resultados de la expresión original de `TrainCar.UpdateCurveSpeedLimit`, extraída del commit fijado y compilada en C# con aritmética `float`. La comparación Rust admite 0,00002 m/s; la captura inicial mide un error máximo de 0,000011826 m/s. Es validación aislada de la fórmula, no paridad de peralte generado, suspensión, avisos originales ni descarrilamiento. El diagnóstico de F8 utiliza geometría nativa, trocha y déficit de los coches. Los umbrales y capturas anteriores permanecen intactos.

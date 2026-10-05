@@ -192,3 +192,11 @@ where
         Ast::Atom(_) => {}
     }
 }
+mod content_metadata;
+mod superelevation;
+pub use content_metadata::{
+    ScriptSystem, VehicleContentMetadata, VehicleScriptReference, parse_vehicle_content_metadata,
+    sms_wave_references,
+};
+pub use superelevation::{CurveComfort, VehicleCurveParameters, parse_vehicle_curve_parameters};
+pub(crate) use superelevation::{field_values, scalar_text};

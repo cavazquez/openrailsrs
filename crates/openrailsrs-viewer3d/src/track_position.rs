@@ -219,6 +219,17 @@ fn compile_vector_paths(
 }
 
 impl<'a> TrackPositionResolver<'a> {
+    /// Curve diagnostics use the same validated edge direction as train poses.
+    pub fn curve_on_graph_edge(
+        &self,
+        graph: &TrackGraph,
+        edge: &str,
+        position_m: f64,
+    ) -> Option<(f64, f64, Option<f64>)> {
+        let node = Self::parse_e_prefix_tdb_id(edge)?;
+        let (chainage, _) = tdb_chainage_for_graph_edge(self, graph, edge, position_m, node)?;
+        self.paths.get(&node)?.curve_geometry_at(chainage)
+    }
     pub fn new(tdb: &'a TrackDbFile, tsection: Option<&'a TSectionCatalog>) -> Self {
         Self {
             tdb,

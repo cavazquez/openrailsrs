@@ -947,6 +947,23 @@ impl TrackVectorPath {
         })
     }
 
+    /// Radius, authored roll and optional track gauge in the current span.
+    pub fn curve_geometry_at(&self, chainage_m: f64) -> Option<(f64, f64, Option<f64>)> {
+        let index = self
+            .cumulative_ends_m
+            .partition_point(|end| chainage_m > *end + 1e-6)
+            .min(self.spans.len() - 1);
+        let span = self.spans[index];
+        if !span.is_curved() {
+            return None;
+        }
+        Some((
+            f64::from(span.curve_radius_m?.abs()),
+            span.roll_rad,
+            span.half_gauge_m.map(|g| 2. * f64::from(g)),
+        ))
+    }
+
     /// Centreline pose relative to an absolute Bevy/MSTS `frame_origin`.
     pub fn pose_in_frame(&self, chainage_m: f64, frame_origin: DVec3) -> TrackPose {
         let index = self

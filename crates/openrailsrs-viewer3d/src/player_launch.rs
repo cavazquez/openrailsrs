@@ -256,7 +256,7 @@ impl PlayerLaunchMenu {
         self.consists
             .get(self.consist)
             .and_then(|p| self.consist_audits.get(p))
-            .map(|r| r.label())
+            .map(|r| format!("{}\n{}", r.label(), r.compatibility_summary()))
             .unwrap_or_else(|| "Se valida al importar la actividad".into())
     }
     pub fn prepare(&self) -> Result<QueuedPlayerLaunch, String> {

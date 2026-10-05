@@ -37,6 +37,32 @@ def main():
     assert run(a.dotnet,a.host,script,[first|dict(context=context|dict(speed_mps=-1))])[0]['error']
     logging=script.replace('Activated = true;', 'System.Console.WriteLine("should not reach protocol"); Activated = true;')
     assert run(a.dotnet,a.host,logging,[first])[0]['status']
-    print('PASS C# host: compiler subset rejection, exceptions, sequences, SI limits, clean protocol, ACK/menu')
+    lookahead='''using ORTS.Scripting.Api;
+public class MinimalTcs : TrainControlSystem {
+ public override void Initialize() { Activated=true; }
+ public override void Update() {
+  Aspect[] expected = {Aspect.Stop,Aspect.StopAndProceed,Aspect.Restricted,Aspect.Approach_1,Aspect.Approach_2,Aspect.Approach_3,Aspect.Clear_1,Aspect.Clear_2};
+  for(int i=0;i<8;i++) if(NextSignalAspect(i)!=expected[i] || NextSignalDistanceM(i)!=100*(i+1)) throw new System.Exception("native aspect/distance mismatch");
+  if(NextSignalAspect(8)!=Aspect.None || NextSignalDistanceM(8)!=float.MaxValue) throw new System.Exception("absent signal must be None");
+  if(NextDistanceSignalAspect()!=Aspect.Approach_2 || NextDistanceSignalDistanceM()!=50) throw new System.Exception("distance head mismatch");
+  if(TrainMaxSpeedMpS()!=30 || CurrentPostSpeedLimitMpS()!=12 || NextPostDistanceM(1)!=400 || NextPostSpeedLimitMpS(1)!=20 || NextPostSpeedLimitMpS(2)!=-1) throw new System.Exception("speed post/train max mismatch");
+  if((int)TCSEvent.AlerterPressed!=3 || (int)TCSEvent.GenericTCSButtonPressed!=14) throw new System.Exception("OR enum mismatch");
+  HostMessage("Native lookahead OK",false);
+ }
+ public override void HandleEvent(TCSEvent e,string m) {}
+}'''
+    extended=context|dict(train_max_speed_mps=30,current_post_speed_limit_mps=12,
+        signals=[dict(distance_m=100*(i+1),aspect=i) for i in range(8)],distance_signal=dict(distance_m=50,aspect=4),
+        speed_posts=[dict(distance_m=200,speed_limit_mps=10),dict(distance_m=400,speed_limit_mps=20)])
+    reply=run(a.dotnet,a.host,lookahead,[first|dict(context=extended)])[0]
+    assert not reply['error'],reply
+    assert reply['status']['messages'][0]['text']=='Native lookahead OK'
+    for invalid in [extended|dict(signals=[dict(distance_m=10,aspect=8)]),
+                    extended|dict(signals=[dict(distance_m=20,aspect=7),dict(distance_m=10,aspect=7)]),
+                    extended|dict(speed_posts=[dict(distance_m=-1,speed_limit_mps=10)]),
+                    extended|dict(train_max_speed_mps=201)]:
+        assert run(a.dotnet,a.host,script,[first|dict(context=invalid)])[0]['error']
+    assert run(a.dotnet,a.host,lookahead.replace('NextSignalAspect(8)','NextSignalAspect(32)'),[first|dict(context=extended)])[0]['error']
+    print('PASS C# host: compiler rejection, exceptions, sequences, SI limits, clean protocol, ACK/menu, eight native aspects, indexed lookahead, speed posts, train max, OR enum values')
 
 if __name__=='__main__':main()

@@ -224,3 +224,9 @@ sha256 = "1fb0c500e7080fb6b55ea81790505c51893341066b0307e06450c9873ed1c6f9"
 [[files]]
 path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-exterior.json"
 sha256 = "50ae7c14ededf733ffcb8e3022f3bb8def040f32d919d7836a3649094f1cb2d5"
+
+# Isolated OR 1.6.1 curve-comfort expression, compiled with original float arithmetic.
+
+[[files]]
+path = "oracles/superelevation-or-1.6.1.json"
+sha256 = "6481574e52973a9fb78274ba1aef0897b3cdf141d8c8babac1c999af22bc38ab"

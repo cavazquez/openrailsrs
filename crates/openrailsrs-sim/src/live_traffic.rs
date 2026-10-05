@@ -105,6 +105,7 @@ impl LiveTraffic {
                 .map(|(edge, owner)| (edge.clone(), owner.clone()))
                 .collect()
         };
+        crate::track_reservations::coordinate(player, &mut self.services, &footprints);
         let others = other_blocks(&player.service_id);
         let positions: Vec<_> = footprints
             .iter()

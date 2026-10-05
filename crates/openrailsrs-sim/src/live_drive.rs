@@ -149,10 +149,13 @@ fn build_live_gameplay(
 pub struct LiveDriveSession {
     pub scenario_name: String,
     pub formation: crate::FormationState,
+    pub curve_parameters: Vec<openrailsrs_formats::VehicleCurveParameters>,
     pub signal_overrides: HashMap<String, SignalAspect>,
     pub service_id: String,
     pub native_signals: crate::native_signals::NativeSignalRuntime,
     pub external_track_occupancy: Vec<crate::native_signals::TrackOccupancy>,
+    pub own_track_reservations: Vec<crate::native_signals::TrackOccupancy>,
+    pub external_track_reservations: Vec<crate::native_signals::TrackOccupancy>,
     /// Rebuilt by the live traffic coordinator at every physics quantum.
     pub external_occupancy: HashMap<String, String>,
     pub(crate) consist: openrailsrs_train::Consist,
@@ -204,6 +207,10 @@ impl LiveDriveSession {
         let path_edges = resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
         let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+        let curve_parameters = openrailsrs_train::load_consist_curve_parameters(
+            &consist_path,
+            consist_root(&consist_path),
+        )?;
         let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
             a_n: d.a_n,
             b_n_per_mps: d.b_n_per_mps,
@@ -309,6 +316,9 @@ impl LiveDriveSession {
             signal_overrides: HashMap::new(),
             service_id: "Jugador".into(),
             external_occupancy: HashMap::new(),
+            curve_parameters,
+            own_track_reservations: vec![],
+            external_track_reservations: vec![],
             original_physics: physics.clone(),
             content_signature: crate::operations::content_signature(&graph, scenario, &consist),
             consist,
@@ -571,6 +581,99 @@ impl LiveDriveSession {
     }
 
     fn script_context(&self, dt_s: f64) -> crate::etcs::ScriptContext {
+        use crate::etcs::{ScriptSignal, ScriptSpeedPost};
+        let mut signals = vec![];
+        let mut distance_signal = None;
+        let mut speed_posts = vec![];
+        let mut before = -self.state.pos_on_edge_m;
+        let current_post_speed_limit_mps = self
+            .path_data
+            .get(self.state.edge_index)
+            .map_or(self.speed_limit_mps(), |edge| {
+                edge.speed_limit_at(self.state.pos_on_edge_m)
+            });
+        let mut previous_limit = current_post_speed_limit_mps;
+        for (index, edge_id) in self
+            .state
+            .path_edges
+            .iter()
+            .enumerate()
+            .skip(self.state.edge_index)
+        {
+            let mut heads: Vec<_> = self
+                .graph
+                .signals_on_edge(edge_id)
+                .filter(|signal| before + signal.position_m >= 0.)
+                .collect();
+            heads.sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+            for head in heads {
+                let aspect = self.native_signal_aspect(&head.id).unwrap_or_else(|| {
+                    match self
+                        .signal_runtime
+                        .get(&head.id)
+                        .copied()
+                        .unwrap_or(head.aspect)
+                    {
+                        SignalAspect::Stop => 0,
+                        SignalAspect::Caution => 3,
+                        SignalAspect::Clear => 7,
+                    }
+                });
+                let signal = ScriptSignal {
+                    distance_m: before + head.position_m,
+                    aspect,
+                };
+                let distant = head
+                    .script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_some_and(|n| n.function.eq_ignore_ascii_case("DISTANCE"));
+                let normal = head
+                    .script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_none_or(|n| n.function.eq_ignore_ascii_case("NORMAL"));
+                if distant {
+                    if distance_signal.is_none() {
+                        distance_signal = Some(signal);
+                    }
+                } else if normal && signals.len() < 32 {
+                    signals.push(signal);
+                }
+            }
+            let edge = &self.path_data.edges[index];
+            let changes = std::iter::once((0., edge.speed_limit_mps)).chain(
+                edge.profile
+                    .speed_posts
+                    .iter()
+                    .map(|p| (p.position_m, p.speed_limit_kmh / 3.6)),
+            );
+            for (position, limit) in changes {
+                let distance = before + position;
+                if distance >= 0. && (limit - previous_limit).abs() > 1e-6 {
+                    if speed_posts.len() < 32 {
+                        speed_posts.push(ScriptSpeedPost {
+                            distance_m: distance,
+                            speed_limit_mps: limit,
+                        });
+                    }
+                    previous_limit = limit;
+                }
+            }
+            before += edge.length_m;
+        }
+        let train_max_speed_mps = self
+            .consist
+            .vehicles
+            .iter()
+            .filter_map(|v| match v {
+                openrailsrs_train::Vehicle::Loco(l) if l.max_velocity_mps > 0. => {
+                    Some(l.max_velocity_mps)
+                }
+                _ => None,
+            })
+            .reduce(f64::min)
+            .unwrap_or(self.speed_limit_mps());
         crate::etcs::ScriptContext {
             time_s: self.time_s(),
             dt_s,
@@ -581,6 +684,11 @@ impl LiveDriveSession {
                 .next_signal_ahead()
                 .is_some_and(|(_, aspect)| aspect == SignalAspect::Stop),
             next_stop_distance_m: self.distance_to_next_stop_m(),
+            train_max_speed_mps,
+            current_post_speed_limit_mps,
+            signals,
+            distance_signal,
+            speed_posts,
         }
     }
 
@@ -915,9 +1023,11 @@ impl LiveDriveSession {
         self.exterior.tick(step_dt);
         self.tick_signals(step_dt);
         self.tick_gameplay(step_dt);
-        let context = self.script_context(step_dt);
-        if let Some(host) = &mut self.script_tcs {
-            host.tick(&context);
+        if self.script_tcs.is_some() {
+            let context = self.script_context(step_dt);
+            if let Some(host) = &mut self.script_tcs {
+                host.tick(&context);
+            }
         }
 
         if let Some(edge_id) = self.state.current_edge() {
@@ -1263,5 +1373,36 @@ mod tests {
             (effective - base * CAUTION_SPEED_FACTOR).abs() < 1e-6,
             "caution on e1 should halve limit: base={base} effective={effective}"
         );
+    }
+}
+#[cfg(test)]
+mod native_lookahead_tests {
+    use super::*;
+    #[test]
+    fn script_context_contains_directed_native_heads_posts_and_actual_train_maximum() {
+        let directory =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/chiltern_extended");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(directory.join("scenario.toml")).unwrap();
+        let session = LiveDriveSession::from_scenario(&directory, &scenario).unwrap();
+        let context = session.script_context(0.05);
+        assert!(context.signals.len() > 1 && context.signals.len() <= 32);
+        assert!(
+            context
+                .signals
+                .windows(2)
+                .all(|w| w[0].distance_m <= w[1].distance_m)
+        );
+        assert!(context.distance_signal.is_some());
+        assert!(!context.speed_posts.is_empty());
+        assert!(
+            context
+                .speed_posts
+                .windows(2)
+                .all(|w| w[0].distance_m <= w[1].distance_m)
+        );
+        assert!(context.train_max_speed_mps > context.speed_limit_mps);
+        assert!(context.current_post_speed_limit_mps >= context.speed_limit_mps);
+        assert_eq!(session.curve_parameters.len(), session.formation.cars.len());
     }
 }

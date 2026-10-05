@@ -49,6 +49,39 @@ pub fn load_consist_with_asset_root(
     consist_from_ast(&ast, asset_root.as_ref())
 }
 
+/// Authored cant/gauge values in formation order, using the same ENG/WAG roots
+/// as the physics loader. They are immutable and do not belong in a save file.
+pub fn load_consist_curve_parameters(
+    consist: &Path,
+    base: &Path,
+) -> Result<Vec<openrailsrs_formats::VehicleCurveParameters>, TrainError> {
+    let ast = parse_vehicle_text(
+        &read_msts_file_to_string(consist).map_err(|e| TrainError::Parse(e.to_string()))?,
+    )?;
+    ConsistFile::from_ast(&ast)?
+        .entries
+        .iter()
+        .map(|entry| {
+            let (relative, engine) = match entry {
+                ConsistEntry::Engine { path, .. } => (path, true),
+                ConsistEntry::Wagon { path, .. } => (path, false),
+            };
+            let path = resolve_consist_entry_path(base, relative);
+            let ast = if engine && crate::steam_loader::is_toml_eng(&path).unwrap_or(false) {
+                Ast::List(vec![])
+            } else {
+                parse_vehicle_text(
+                    &read_msts_file_to_string(&path)
+                        .map_err(|e| TrainError::Parse(e.to_string()))?,
+                )?
+            };
+            Ok(openrailsrs_formats::parse_vehicle_curve_parameters(
+                &ast, engine,
+            ))
+        })
+        .collect()
+}
+
 fn consist_from_ast(ast: &Ast, base: &Path) -> Result<Consist, TrainError> {
     let consist_file = ConsistFile::from_ast(ast)?;
     let mut vehicles = Vec::with_capacity(consist_file.entries.len());

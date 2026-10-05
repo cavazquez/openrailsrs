@@ -20,6 +20,11 @@ pub mod typed;
 pub use typed::vehicle_runtime::{
     VehicleBrakeProfile, VehicleEmitter, parse_vehicle_brake_profile, parse_vehicle_emitters,
 };
+pub use typed::{
+    CurveComfort, ScriptSystem, VehicleContentMetadata, VehicleCurveParameters,
+    VehicleScriptReference, parse_vehicle_content_metadata, parse_vehicle_curve_parameters,
+    sms_wave_references,
+};
 pub mod units;
 pub mod vehicle_audit;
 pub mod vehicle_field_catalog;

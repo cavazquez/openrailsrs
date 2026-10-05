@@ -112,6 +112,8 @@ pub struct SessionSnapshot {
     pub exterior: RollingStockExteriorState,
     pub signal_runtime: HashMap<String, SignalAspect>,
     pub signal_overrides: HashMap<String, SignalAspect>,
+    #[serde(default)]
+    pub track_reservations: Vec<crate::native_signals::TrackOccupancy>,
     pub switches: HashMap<String, SwitchPosition>,
     pub driver_throttle: f64,
     pub driver_brake: f64,
@@ -140,6 +142,7 @@ impl LiveDriveSession {
             exterior: self.exterior.clone(),
             signal_runtime: self.signal_runtime.clone(),
             signal_overrides: self.signal_overrides.clone(),
+            track_reservations: self.own_track_reservations.clone(),
             switches: self
                 .graph
                 .nodes_iter()
@@ -189,6 +192,22 @@ impl LiveDriveSession {
             return Err("La partida tiene una formación o un servicio inválidos".into());
         }
         let mut graph = self.graph.clone();
+        if saved.track_reservations.len() > self.state.path_edges.len()
+            || saved.track_reservations.iter().any(|r| {
+                let edge = self
+                    .graph
+                    .edge(&r.edge)
+                    .or_else(|| self.graph.edge(&format!("{}_r", r.edge)));
+                r.owner != self.service_id
+                    || !r.start_m.is_finite()
+                    || !r.end_m.is_finite()
+                    || r.start_m < 0.
+                    || r.end_m <= r.start_m
+                    || edge.is_none_or(|e| r.end_m > e.length_m + 0.01)
+            })
+        {
+            return Err("Reservas de vía guardadas inválidas".into());
+        }
         for (id, pos) in &saved.switches {
             graph.set_switch(id, *pos).map_err(|e| e.to_string())?;
         }
@@ -266,6 +285,8 @@ impl LiveDriveSession {
         self.exterior = saved.exterior;
         self.signal_runtime = saved.signal_runtime;
         self.signal_overrides = saved.signal_overrides;
+        self.own_track_reservations = saved.track_reservations;
+        self.external_track_reservations.clear();
         self.graph = graph;
         self.path_data = pd;
         self.driver_throttle = saved.driver_throttle;

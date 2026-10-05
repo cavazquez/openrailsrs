@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import tomllib
 import prepare_chiltern_service as native
+from sync_chiltern_assets import extract_curve_values
 
 PAT = native.PAT
 STOPS = [
@@ -33,7 +34,7 @@ def fields(values):
 
 
 def prepare_brake_profiles(route, output):
-    """Keep frozen replay fixtures; import stock brake tokens into this service.
+    """Keep frozen replays; import authored brakes, gauge and curve comfort.
 
     The small physics fixtures retain their trainset folder and shape names so
     Bevy still resolves the original cab, exterior and effects from Content.
@@ -56,7 +57,12 @@ def prepare_brake_profiles(route, output):
             if len(matches) != 1:
                 raise ValueError(f"Missing or ambiguous {token} in {source}")
             values[token] = matches[0].strip()
+        values.update(extract_curve_values(text))
         fixture = (native.ROOT / "examples/chiltern" / relative).read_text()
+        # The base exporter may already retain these fields. Replace them once,
+        # preserving all unrelated physics and keeping repeated imports stable.
+        names = "|".join(map(re.escape, values))
+        fixture = re.sub(r"(?im)^[ \t]*\((?:" + names + r")\s+[^)]*\)[ \t]*\n?", "", fixture)
         closing = fixture.rfind(")")
         if closing < 0:
             raise ValueError(f"Invalid physics fixture {relative}")

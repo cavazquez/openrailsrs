@@ -17,7 +17,9 @@ pub use menu::{
     MenuAction, MenuButtonDef, MenuWindowDef, SoftKeyAction, SoftKeyDef, default_soft_keys,
     main_menu_def, settings_menu_def,
 };
-pub use script_host::{ScriptContext, ScriptHostConfig, ScriptTcsHost, TcsInput};
+pub use script_host::{
+    ScriptContext, ScriptHostConfig, ScriptSignal, ScriptSpeedPost, ScriptTcsHost, TcsInput,
+};
 pub use status::{
     EtcsLevel, EtcsMode, EtcsMonitor, EtcsSupervision, EtcsTcsStatus, GradientSegment,
     PlanningSymbol, SpeedTarget, TextMessage, TrackCondition, TrackConditionKind, pick_dial_scale,

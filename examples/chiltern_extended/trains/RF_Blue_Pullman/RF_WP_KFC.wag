@@ -11,4 +11,6 @@
   (BrakeCylinderPressureForMaxBrakeBrakeForce 90psi)
   (MaxApplicationRate 30psi/s)
   (MaxReleaseRate 10psi/s)
+  (ORTSTrackGauge 4ft 8.5in)
+  (ORTSUnbalancedSuperElevation 6in)
 )

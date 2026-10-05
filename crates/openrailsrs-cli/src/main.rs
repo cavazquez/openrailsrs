@@ -398,7 +398,7 @@ fn main() -> anyhow::Result<()> {
                     "{}",
                     serde_json::to_string_pretty(&serde_json::json!({
                         "total": reports.len(), "content_valid": valid, "player_ready": ready,
-                        "scope": "Declared ENG/WAG parameters, models, texture files and cab graphics; not physics/script parity",
+                        "scope": "ENG/WAG, models, textures, cabs, optional SMS/WAV, declared subsystems/scripts, gauge and cant deficiency; resource completeness is not physics/script parity",
                         "formations": reports.iter().map(|r| serde_json::json!({"content_valid": r.content_valid(), "player_ready": r.player_ready(), "report": r})).collect::<Vec<_>>()
                     }))?
                 );

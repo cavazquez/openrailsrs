@@ -45,3 +45,4 @@ pub use state::TrainSimState;
 pub use steam::BoilerState;
 
 pub mod native_signals;
+mod track_reservations;

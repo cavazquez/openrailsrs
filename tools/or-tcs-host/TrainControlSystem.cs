@@ -2,8 +2,9 @@
 // API naming follows Source/Orts.Simulation/Common/Scripting/TrainControlSystem.cs.
 namespace ORTS.Scripting.Api;
 
-public enum TCSEvent { AlerterPressed, AlerterReleased, GenericTCSButtonPressed, GenericTCSButtonReleased }
-public enum Aspect { Stop, Clear_2 }
+public enum TCSEvent { AlerterPressed = 3, AlerterReleased = 4, GenericTCSButtonPressed = 14, GenericTCSButtonReleased = 15 }
+// OR's API order differs from SIGASP (which starts with Stop = 0).
+public enum Aspect { None, Clear_2, Clear_1, Approach_3, Approach_2, Approach_1, Restricted, StopAndProceed, Stop, Permission }
 public abstract class TrainControlSystem
 {
     public bool Activated { get; set; }
@@ -14,6 +15,11 @@ public abstract class TrainControlSystem
     public Func<float> CurrentSignalSpeedLimitMpS = null!;
     public Func<int, float> NextSignalDistanceM = null!;
     public Func<int, Aspect> NextSignalAspect = null!;
+    public Func<Aspect> NextDistanceSignalAspect = null!;
+    public Func<float> NextDistanceSignalDistanceM = null!;
+    public Func<float> CurrentPostSpeedLimitMpS = null!;
+    public Func<int, float> NextPostSpeedLimitMpS = null!;
+    public Func<int, float> NextPostDistanceM = null!;
     public Action<bool> SetEmergencyBrake = null!;
     public Action<bool> SetFullBrake = null!;
     public Action<float> SetCurrentSpeedLimitMpS = null!;

@@ -6,7 +6,7 @@ use openrailsrs_track::{
 };
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrackOccupancy {
     pub edge: String,
     pub start_m: f64,
@@ -28,19 +28,34 @@ impl NativeSignalRuntime {
         };
         for signal in graph.signals() {
             if let Some(native) = signal.script.as_ref().and_then(|s| s.native.as_ref()) {
+                if !matches!(
+                    native.function.to_ascii_uppercase().as_str(),
+                    "NORMAL" | "DISTANCE" | "INFO"
+                ) {
+                    return Err(format!(
+                        "{}: unsupported signal function {}",
+                        native.name, native.function
+                    ));
+                }
                 let program = SignalProgram::compile(&native.source)
                     .map_err(|e| format!("{}: {e}", native.name))?;
                 // Validate all aspects used by the route, not just an easy clear branch.
                 for next in 0..8 {
                     for clear in [false, true] {
-                        program
-                            .evaluate(SignalContext {
-                                next_normal: next,
-                                distant_normal: next,
-                                block_clear: clear,
-                                ..Default::default()
-                            })
-                            .map_err(|e| format!("{}: {e}", native.name))?;
+                        for enabled in [false, true] {
+                            for route_set in [false, true] {
+                                program
+                                    .evaluate(SignalContext {
+                                        enabled,
+                                        route_set,
+                                        next_normal: next,
+                                        distant_normal: next,
+                                        block_clear: clear,
+                                        ..Default::default()
+                                    })
+                                    .map_err(|e| format!("{}: {e}", native.name))?;
+                            }
+                        }
                     }
                 }
                 runtime.programs.insert(signal.id.clone(), program);
@@ -113,6 +128,7 @@ impl LiveDriveSession {
         }
         heads.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| b.3.cmp(&a.3)));
         let mut footprint = self.external_track_occupancy.clone();
+        footprint.extend(self.external_track_reservations.iter().cloned());
         footprint.extend(
             self.own_track_occupancy()
                 .into_iter()
@@ -159,7 +175,15 @@ impl LiveDriveSession {
                 let next_aspect = next.and_then(|h| states.get(&h.2).copied()).unwrap_or(0);
                 let end_distant = heads
                     .iter()
-                    .find(|h| !h.3 && h.0 > *position + 0.1)
+                    .find(|h| {
+                        !h.3 && h.0 > *position + 0.1
+                            && self
+                                .graph
+                                .signal(&h.2)
+                                .and_then(|s| s.script.as_ref())
+                                .and_then(|s| s.native.as_ref())
+                                .is_some_and(|s| s.function.eq_ignore_ascii_case("DISTANCE"))
+                    })
                     .map_or(start, |h| h.0);
                 let distant = heads
                     .iter()
@@ -207,6 +231,13 @@ impl LiveDriveSession {
                         0
                     }
                 };
+                // Restrict the native state before evaluating upstream heads.
+                // Otherwise NEXT_SIG_LR sees Clear behind a dispatcher Stop.
+                let aspect = match self.signal_overrides.get(id) {
+                    Some(SignalAspect::Stop) => 0,
+                    Some(SignalAspect::Caution) if aspect > 5 => 3,
+                    _ => aspect,
+                };
                 states.insert(id.clone(), aspect);
                 let safety = match aspect {
                     0..=2 => SignalAspect::Stop,
@@ -221,9 +252,17 @@ impl LiveDriveSession {
                     _ => safety,
                 };
                 // A distant head warns; it never creates a second stop authority.
+                let info = self
+                    .graph
+                    .signal(id)
+                    .and_then(|s| s.script.as_ref())
+                    .and_then(|s| s.native.as_ref())
+                    .is_some_and(|s| s.function.eq_ignore_ascii_case("INFO"));
                 self.signal_runtime.insert(
                     id.clone(),
-                    if !is_normal && safety == SignalAspect::Stop {
+                    if info {
+                        SignalAspect::Clear
+                    } else if !is_normal && safety == SignalAspect::Stop {
                         SignalAspect::Caution
                     } else {
                         safety
@@ -262,6 +301,63 @@ mod tests {
             LiveDriveSession::from_scenario(&directory, &scenario).unwrap(),
             crate::LiveTraffic::from_scenario(&directory, &scenario).unwrap(),
         )
+    }
+    #[test]
+    fn dispatcher_stop_propagates_to_the_upstream_native_program() {
+        let (mut session, _) = extended();
+        let before = session.native_signals.aspects.clone();
+        let targets: Vec<_> = session
+            .graph
+            .signals()
+            .filter(|s| {
+                s.script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_some_and(|n| n.function.eq_ignore_ascii_case("NORMAL"))
+                    && before.get(&s.id).is_some_and(|a| *a > 5)
+            })
+            .map(|s| s.id.clone())
+            .collect();
+        let mut propagated = false;
+        for id in targets {
+            session.signal_overrides.clear();
+            session
+                .signal_overrides
+                .insert(id.clone(), SignalAspect::Stop);
+            session.evaluate_native_signals();
+            assert_eq!(session.native_signals.aspects[&id], 0);
+            propagated |= session.native_signals.aspects.iter().any(|(upstream, a)| {
+                upstream != &id
+                    && before.get(upstream).is_some_and(|b| *b > 5)
+                    && (3..=5).contains(a)
+            });
+        }
+        assert!(
+            propagated,
+            "downstream Stop must produce an upstream native warning"
+        );
+    }
+    #[test]
+    fn native_counterbalance_keeps_its_visual_state_without_creating_train_authority() {
+        let (mut session, _) = extended();
+        let info = session
+            .graph
+            .signals()
+            .find(|s| {
+                s.script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_some_and(|n| n.function.eq_ignore_ascii_case("INFO"))
+            })
+            .unwrap()
+            .id
+            .clone();
+        session
+            .signal_overrides
+            .insert(info.clone(), SignalAspect::Stop);
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signals.aspects[&info], 0);
+        assert_eq!(session.signal_runtime[&info], SignalAspect::Clear);
     }
     #[test]
     fn original_chiltern_scripts_run_through_all_six_stations_with_live_traffic() {

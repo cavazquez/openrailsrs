@@ -1593,6 +1593,8 @@ fn update_panel_text(
     audio: Res<crate::native_audio::NativeAudio>,
     environment: Res<crate::environment::LiveEnvironment>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
+    assets: Option<Res<crate::shapes::RouteAssets>>,
+    track_cache: Option<Res<crate::track_position::TrackPositionResolverCache>>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
     *elapsed += time.delta_secs();
@@ -1611,6 +1613,47 @@ fn update_panel_text(
                     DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page);
+                        if ui.advanced_page == 2 {
+                            if let (Some(assets), Some(track_cache)) =
+                                (assets.as_ref(), track_cache.as_ref())
+                                && let Some(tdb) = assets.track_db()
+                                && let Some(edge) = s.current_edge_id()
+                                && let Some((radius, roll, gauge)) = track_cache
+                                    .resolver(tdb, Some(assets.tsection()))
+                                    .curve_on_graph_edge(&s.graph, edge, s.pos_on_edge_m())
+                            {
+                                let gauge =
+                                    gauge.filter(|g| g.is_finite() && *g > 0.).unwrap_or(1.435);
+                                let cant = gauge * roll.sin().abs();
+                                let comfort = s
+                                    .curve_parameters
+                                    .iter()
+                                    .take(s.formation.coupled_count)
+                                    .filter_map(|p| {
+                                        p.evaluate(radius, cant, s.velocity_mps(), gauge)
+                                    })
+                                    .min_by(|a, b| {
+                                        a.comfortable_speed_mps.total_cmp(&b.comfortable_speed_mps)
+                                    });
+                                if let Some(c) = comfort {
+                                    text += &format!(
+                                        "\n\nCurva nativa: radio {:.0} m · peralte {:.0} mm\nTrocha de vía {:.3} m · confort de la formación {:.1} km/h\nAceleración lateral {:.3} m/s² · {}",
+                                        radius,
+                                        cant * 1000.,
+                                        gauge,
+                                        c.comfortable_speed_mps * 3.6,
+                                        c.lateral_acceleration_mps2,
+                                        if s.velocity_mps().abs() > c.comfortable_speed_mps {
+                                            "Exceso de confort en curva"
+                                        } else {
+                                            "Dentro del confort en curva"
+                                        }
+                                    );
+                                }
+                            } else {
+                                text += "\n\nSin curvatura nativa disponible en este tramo";
+                            }
+                        }
                         if ui.advanced_page == 8 {
                             text = environment.hud_text(&content, l.clock_time_s());
                             text += &format!(
@@ -2028,6 +2071,11 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
                 out += &format!("Señal {id}: {}\n", aspect_name(*aspect));
             }
             out += "\nTRÁFICO EN VIVO\n";
+            out += &format!(
+                "Reservas del próximo bloque: {} intervalos propios · {} de otros servicios\n",
+                s.own_track_reservations.len(),
+                s.external_track_reservations.len()
+            );
             for service in &l.traffic.services {
                 out += &format!(
                     "{}: {} · {:.1} km/h · {} paradas · {}\n",

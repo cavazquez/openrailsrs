@@ -39,10 +39,15 @@ static class Program
             script.ClockTime = () => (float)context.TimeS;
             script.SpeedMpS = () => (float)context.SpeedMps;
             script.TrainSpeedLimitMpS = () => (float)context.SpeedLimitMps;
-            script.TrainMaxSpeedMpS = () => (float)context.SpeedLimitMps;
+            script.TrainMaxSpeedMpS = () => (float)(context.TrainMaxSpeedMps ?? context.SpeedLimitMps);
             script.CurrentSignalSpeedLimitMpS = () => context.NextSignalStop ? 0 : (float)context.SpeedLimitMps;
-            script.NextSignalDistanceM = i => i == 0 ? (float)(context.NextSignalDistanceM ?? float.MaxValue) : throw new NotSupportedException("Only next signal index 0 is available");
-            script.NextSignalAspect = i => i == 0 ? (context.NextSignalStop ? Aspect.Stop : Aspect.Clear_2) : throw new NotSupportedException("Only next signal index 0 is available");
+            script.NextSignalDistanceM = i => (float)(context.Signal(i)?.DistanceM ?? float.MaxValue);
+            script.NextSignalAspect = i => NativeAspect(context.Signal(i)?.Aspect);
+            script.NextDistanceSignalAspect = () => NativeAspect(context.DistanceSignal?.Aspect);
+            script.NextDistanceSignalDistanceM = () => (float)(context.DistanceSignal?.DistanceM ?? float.MaxValue);
+            script.CurrentPostSpeedLimitMpS = () => (float)(context.CurrentPostSpeedLimitMps ?? context.SpeedLimitMps);
+            script.NextPostSpeedLimitMpS = i => (float)(context.Post(i)?.SpeedLimitMps ?? -1);
+            script.NextPostDistanceM = i => (float)(context.Post(i)?.DistanceM ?? float.MaxValue);
             script.SetEmergencyBrake = b => output.EmergencyBrake = b;
             script.SetFullBrake = b => output.FullBrake = b;
             script.SetCurrentSpeedLimitMpS = v => output.AllowedMps = v;
@@ -102,12 +107,41 @@ static class Program
             line.Append((char)c);
         }
     }
+    static Aspect NativeAspect(int? aspect) => aspect switch {
+        null => Aspect.None, 0 => Aspect.Stop, 1 => Aspect.StopAndProceed, 2 => Aspect.Restricted,
+        3 => Aspect.Approach_1, 4 => Aspect.Approach_2, 5 => Aspect.Approach_3,
+        6 => Aspect.Clear_1, 7 => Aspect.Clear_2, _ => throw new InvalidDataException("Invalid native aspect")
+    };
 }
 record Request(int Version, long Seq, string Kind, Context Context, Input[] Events);
 record Input(string Kind, string? Message, string? Action);
-record Context(double TimeS, double DtS, double SpeedMps, double SpeedLimitMps, double? NextSignalDistanceM, bool NextSignalStop, double? NextStopDistanceM)
+record Signal(double DistanceM, int Aspect);
+record SpeedPost(double DistanceM, double SpeedLimitMps);
+record Context(double TimeS, double DtS, double SpeedMps, double SpeedLimitMps, double? NextSignalDistanceM, bool NextSignalStop, double? NextStopDistanceM,
+    double? TrainMaxSpeedMps = null, Signal[]? Signals = null, Signal? DistanceSignal = null, SpeedPost[]? SpeedPosts = null, double? CurrentPostSpeedLimitMps = null)
 {
-    public bool Valid() => double.IsFinite(TimeS) && TimeS >= 0 && double.IsFinite(DtS) && DtS >= 0 && DtS <= 1 && double.IsFinite(SpeedMps) && SpeedMps >= 0 && double.IsFinite(SpeedLimitMps) && SpeedLimitMps >= 0 && (NextSignalDistanceM is null || double.IsFinite(NextSignalDistanceM.Value)) && (NextStopDistanceM is null || double.IsFinite(NextStopDistanceM.Value));
+    static bool Speed(double v) => double.IsFinite(v) && v >= 0 && v <= 200;
+    static bool Distance(double v) => double.IsFinite(v) && v >= 0;
+    static bool Ordered(IEnumerable<double> distances) {
+        double previous = -1;
+        foreach (var distance in distances) { if (!Distance(distance) || distance < previous) return false; previous = distance; }
+        return true;
+    }
+    public Signal? Signal(int index) {
+        CheckIndex(index);
+        if (Signals is { } signals) return index < signals.Length ? signals[index] : null;
+        // Optional v1 fields preserve existing clients; absent signal != Clear.
+        return index == 0 && NextSignalDistanceM is { } d ? new Signal(d, NextSignalStop ? 0 : 7) : null;
+    }
+    public SpeedPost? Post(int index) { CheckIndex(index); return SpeedPosts is { } posts && index < posts.Length ? posts[index] : null; }
+    static void CheckIndex(int index) { if (index < 0 || index >= 32) throw new NotSupportedException("Lookahead index must be in 0..31"); }
+    public bool Valid() => double.IsFinite(TimeS) && TimeS >= 0 && double.IsFinite(DtS) && DtS >= 0 && DtS <= 1
+        && Speed(SpeedMps) && Speed(SpeedLimitMps) && (TrainMaxSpeedMps is null || Speed(TrainMaxSpeedMps.Value))
+        && (CurrentPostSpeedLimitMps is null || Speed(CurrentPostSpeedLimitMps.Value))
+        && (NextSignalDistanceM is null || Distance(NextSignalDistanceM.Value)) && (NextStopDistanceM is null || double.IsFinite(NextStopDistanceM.Value))
+        && (Signals is null || Signals.Length <= 32 && Ordered(Signals.Select(s => s.DistanceM)) && Signals.All(s => s.Aspect >= 0 && s.Aspect <= 7))
+        && (DistanceSignal is null || Distance(DistanceSignal.DistanceM) && DistanceSignal.Aspect >= 0 && DistanceSignal.Aspect <= 7)
+        && (SpeedPosts is null || SpeedPosts.Length <= 32 && Ordered(SpeedPosts.Select(p => p.DistanceM)) && SpeedPosts.All(p => Speed(p.SpeedLimitMps)));
 }
 class Output {
     public double AllowedMps {get;set;}

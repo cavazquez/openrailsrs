@@ -8,9 +8,58 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from capture_chiltern_service_or import clone_prefix, driver_keyframes, validate_replay, write_native
 from verify_chiltern_service_capture import BASELINE, verify_capture
+import prepare_chiltern_extended as extended
+from sync_chiltern_assets import extract_curve_values, write_eng, write_wag
+
+
+class CurveImportTests(unittest.TestCase):
+    def test_export_keeps_authored_imperial_curve_values_and_does_not_invent_missing_ones(self):
+        source = "Mass ( 50t ) ORTSTrackGauge ( 4ft 8.5in ) ORTSUnbalancedSuperelevation ( 6in )"
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, writer in (("passenger.wag", write_wag), ("engine.eng", write_eng)):
+                target = Path(tmp) / name
+                writer(target, "vehicle", source, "")
+                exported = target.read_text()
+                self.assertIn("(ORTSTrackGauge 4ft 8.5in)", exported)
+                self.assertIn("(ORTSUnbalancedSuperElevation 6in)", exported)
+                self.assertEqual(exported.count("ORTSTrackGauge"), 1)
+                self.assertEqual(exported.count("ORTSUnbalancedSuperElevation"), 1)
+        self.assertEqual(extract_curve_values("Wagon ( x Type ( Engine ) )"), {})
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            extract_curve_values("ORTSTrackGauge ( 1m ) ORTSTrackGauge ( 2m )")
+
+    def test_service_import_replaces_existing_values_once_and_preserves_other_physics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            con = root / "examples/chiltern/consists/birmingham_pullman.con"
+            con.parent.mkdir(parents=True)
+            relative = "trains/RF_Blue_Pullman/passenger.wag"
+            con.write_text(f'(Train (Wagon "{relative}"))')
+            reduced = root / "examples/chiltern" / relative
+            reduced.parent.mkdir(parents=True)
+            reduced.write_text('(Wagon (Type "passenger")\n  (Mass 50000)\n  (MaxBrakeForce 44)\n'
+                               '  (ORTSTrackGauge 0.5m)\n  (ORTSUnbalancedSuperElevation 0.01m)\n)\n')
+            original = root / "Content/TRAINS/TRAINSET/RF_Blue_Pullman/passenger.wag"
+            original.parent.mkdir(parents=True)
+            original.write_text('Type ( Carriage ) BrakeSystemType ( "EP" )\n'
+                                'BrakeCylinderPressureForMaxBrakeBrakeForce ( 90psi )\n'
+                                'MaxApplicationRate ( 30psi/s ) MaxReleaseRate ( 10psi/s )\n'
+                                'ORTSTrackGauge ( 4ft 8.5in ) ORTSUnbalancedSuperElevation ( 6in )')
+            output = root / "extended"
+            with patch.object(extended.native, "ROOT", root):
+                profiles = extended.prepare_brake_profiles(root / "Content/ROUTES/Chiltern", output)
+                first = (output / relative).read_text()
+                extended.prepare_brake_profiles(root / "Content/ROUTES/Chiltern", output)
+            self.assertEqual((output / relative).read_text(), first)
+            self.assertEqual(first.count("ORTSTrackGauge"), 1)
+            self.assertEqual(first.count("ORTSUnbalancedSuperElevation"), 1)
+            self.assertIn("(Mass 50000)", first)
+            self.assertIn("(MaxBrakeForce 44)", first)
+            self.assertEqual(profiles[0]["tokens"]["ORTSUnbalancedSuperElevation"], "6in")
 
 
 class CaptureTests(unittest.TestCase):

@@ -656,3 +656,58 @@ comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
    `tmp/`, revisá el informe y comprobá que las ACE originales siguen intactas.
    Compará carga automática y `OPENRAILSRS_TEXTURE_UPLOAD=rgba`: la formación,
    la vegetación y los edificios deben conservar su apariencia.
+
+## 29. Señales, compatibilidad, C# y peralte
+
+1. Elegí **Chiltern extendido** con tráfico. En F8 → **Despachador**, mirá los
+   intervalos de reserva propios y de otros servicios. Al acercarte a una señal
+   normal, el siguiente bloque puede quedar reservado. Al pasar cambia la
+   reserva; la cola continúa ocupando la vía. Guardá, cargá y comprobá los
+   aspectos y el tráfico. El test automatizado `track_reservations` verifica
+   además dos trenes opuestos intentando entrar al mismo bloque vacío: sólo
+   uno recibe concesión y el otro ve Alto. No es el planificador de cruces OR.
+2. En el mapa/despachador ordená **Alto** a una señal normal que tenga otra
+   anterior de varias indicaciones. Debe mostrar Alto y la anterior debe pasar
+   a su aspecto nativo de advertencia. Restaurá la orden; no debe liberar una
+   vía ocupada o reservada por otro tren. Algunas señales de dos aspectos no
+   tienen una indicación amarilla; el resultado debe seguir su SIGSCR original.
+3. En el menú seleccioná formaciones. Los modelos/cabinas faltantes impiden
+   iniciar. Ahora aparecen avisos de sistemas parciales y C#. Un sonido
+   opcional faltante permite iniciar con aviso. Para ver el detalle por coche:
+
+   ```bash
+   target/debug/openrailsrs audit-consists /ruta/TRAINS/CONSISTS --json
+   ```
+
+   Revisá `report.compatibility`: motor, frenos, scripts, sonidos, trocha y
+   déficit de peralte. La auditoría no ejecuta C# automáticamente.
+4. Durante una curva nativa, abrí F8 → **Locomotora**. Deben aparecer radio en
+   metros, peralte en milímetros, trocha, velocidad de confort y aceleración
+   lateral. El aviso cambia si superás la velocidad de confort. Puede haber
+   peralte cero en el contenido original. En rectas o sin geometría nativa
+   aparece «Sin curvatura nativa disponible en este tramo». El cálculo usa la
+   curva de la cabeza y no aplica frenos, penalizaciones ni un peralte nuevo.
+5. Con el SDK .NET, ejecutá la aceptación completa:
+
+   ```bash
+   OPENRAILSRS_DOTNET=/ruta/dotnet bash scripts/check_tcs_host.sh
+   ```
+
+   Deben pasar ACK/menú/freno, ocho aspectos, índices, postes y máxima del tren.
+   La última línea debe confirmar `native SIGSCR -> indexed C# aspect ->
+   physical train brake on Chiltern`. Para probar el fixture nuevo en ventana:
+
+   ```bash
+   dotnet build tools/or-tcs-host -o tmp/or-tcs-host
+   OPENRAILSRS_TCS_HOST_DLL="$PWD/tmp/or-tcs-host/OrTcsHost.dll" \
+   OPENRAILSRS_TCS_SCRIPT="$PWD/docs/fixtures/tcs/NativeLookaheadTcs.cs" \
+   OPENRAILSRS_TCS_TYPE=NativeLookaheadTcs ./scripts/run_chiltern_service.sh
+   ```
+
+   Una señal normal a Alto debe aplicar freno. Este fixture frena de forma
+   deliberadamente conservadora; no es un sistema ETCS operativo. El Pullman
+   no tiene DMI ETCS: verificá el freno en el HUD. La carga de partidas con host
+   C# sigue dando un error explícito porque el script no implementa persistencia.
+
+El [alcance detallado](SIGNALS_AND_CONTENT_SCOPE.md) incluye límites del API,
+reservas y el comando para reproducir el oráculo de peralte sin modificarlo.

@@ -321,3 +321,46 @@ rayos procedurales y documenta atribución, ubicación y frecuencia de consulta.
 Evidencia con hashes, parámetros y mediciones:
 [fixtures/textures/2026-10-05.json](fixtures/textures/2026-10-05.json).
 Pruebas manuales: [sección 28](PLAYER_MANUAL_TESTS.md#28-luz-interior-ejemplos-y-dds).
+
+## 5 de octubre de 2026: señales, formaciones, C# y peralte
+
+- SIGSCR valida todas las ramas y reinicia los locales por actualización. Las
+  órdenes de Alto se propagan antes de evaluar la señal anterior. INFO conserva
+  su representación sin crear autoridad de parada. El corredor tiene 66
+  cabezas, 15 tipos de programa: 44 NORMAL, 21 DISTANCE y un INFO.
+- Reservas exclusivas del siguiente bloque en recorridos fijos: la regresión
+  con dos trenes opuestos comprueba concesión única, Alto para el otro,
+  guardado/restauración y liberación cuando sale la formación completa.
+  Pasa además el servicio de seis estaciones con ambos trenes AI.
+- Auditoría del Content instalado de Chiltern: **184 formaciones, 1980
+  vehículos**, 153 formaciones con recursos obligatorios completos y aptas para
+  iniciar; 31 incompletas. Los errores incluyen 33 referencias de cabina y una
+  textura. Las 184 tienen algún aviso de compatibilidad: recursos completos
+  no certifican sistemas. El JSON de evidencia enumera las formaciones
+  incompletas; los sonidos opcionales se informan sin bloquear el inicio.
+- Aceptación .NET real aprobada: ocho aspectos nativos, señales/postes por
+  índice, máxima del tren, valores de enums OR, entradas inválidas, ACK/menú,
+  errores y transferencia SIGSCR → C# → freno físico sobre Chiltern. Persistencia
+  del script y hosts de freno/alimentación siguen pendientes.
+- Oráculo aislado de la expresión C# original de OR 1.6.1: **10 casos**, error
+  máximo **0,0000118253 m/s**, tolerancia fija **0,00002 m/s**. Una captura nueva
+  coincide byte a byte; el capturador rechaza carpetas ya existentes.
+- La inspección visual detectó que los fixtures reducidos del Pullman omitían
+  su trocha y déficit. Se importaron los campos originales con sus unidades y
+  hashes, conservando el replay histórico. Las pruebas cubren regeneración
+  estable, campos ausentes y el alias nativo Carriage → Passenger.
+- Entrada real en Xvfb privado, Vulkan software, 1280×720 y radio 450 m:
+  F8 → Locomotora muestra la curva TSection de 2000 m, peralte redondeado 0 mm
+  y confort **164,3 km/h** con los parámetros originales. F8 → Despachador muestra
+  sus intervalos; el menú muestra los ocho avisos del Pullman y vuelve mediante
+  un proceso nuevo después de cerrar la partida. RAM máxima observada en esta
+  sesión de interfaz: 2787,2 MiB; no es una medición de GPU ni de viaje completo.
+- `check.sh`: **1468 pruebas Rust aprobadas**, 43 ignoradas, 0 fallos; formato,
+  clippy, build, pruebas Python, referencias fijadas y servicio completo sin
+  ventana aprobados. Aceptación C# adicional aprobada. Restaurados y verificados
+  los 134 outputs, preservando los seis cambios previos del usuario.
+
+Evidencia y límites:
+[fixtures/compatibility/2026-10-05.json](fixtures/compatibility/2026-10-05.json).
+Pruebas manuales: [sección 29](PLAYER_MANUAL_TESTS.md#29-señales-compatibilidad-c-y-peralte).
+Alcance técnico: [SIGNALS_AND_CONTENT_SCOPE.md](SIGNALS_AND_CONTENT_SCOPE.md).

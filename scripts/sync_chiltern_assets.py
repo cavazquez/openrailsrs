@@ -229,6 +229,22 @@ def extract_drive_wheel_line(text: str) -> str:
     return f"  ( ORTSDriveWheelWeight ( {m.group(1).strip()} ) )\n"
 
 
+def extract_curve_values(text: str) -> dict[str, str]:
+    """Retain authored gauge/deficiency and units; absent values use OR defaults."""
+    values = {}
+    for key in ("ORTSTrackGauge", "ORTSUnbalancedSuperElevation"):
+        matches = re.findall(r"\b" + key + r"\s*\(([^)]*)\)", text, re.I)
+        if len(matches) > 1:
+            raise ValueError(f"Ambiguous {key} in rolling stock")
+        if matches:
+            values[key] = matches[0].strip()
+    return values
+
+
+def extract_curve_lines(text: str) -> str:
+    return "".join(f"  ({key} {value})\n" for key, value in extract_curve_values(text).items())
+
+
 def write_eng(path: Path, name: str, text: str, shape_line: str) -> None:
     mass = parse_mass(text)
     length = parse_length(text)
@@ -243,6 +259,7 @@ def write_eng(path: Path, name: str, text: str, shape_line: str) -> None:
     diesel = extract_diesel_physics_lines(text)
     davis = extract_davis_lines(text)
     drive_wheel = extract_drive_wheel_line(text)
+    curve = extract_curve_lines(text)
     extra = ""
     if continuous > 0.0 and not orts:
         extra += f"  (MaxContinuousForce {continuous:.0f})\n"
@@ -254,7 +271,7 @@ def write_eng(path: Path, name: str, text: str, shape_line: str) -> None:
   (MaxVelocity {vmax * 2.2369362921:.1f})
   (MaxBrakeForce {brake:.0f})
   (Length {length:.3f})
-{extra}{davis}{drive_wheel}{diesel}{orts})
+{extra}{davis}{drive_wheel}{curve}{diesel}{orts})
 '''
     path.write_text(body, encoding="utf-8")
     print(f"  eng {path.name}: {mass/1000:.0f}t, {power/1000:.0f}kW, {length:.1f}m")
@@ -267,12 +284,13 @@ def write_wag(path: Path, name: str, text: str, shape_line: str) -> None:
         text, ["ORTSMaxBrakeShoeForce", "MaxBrakeForce"], 60_000.0
     )
     davis = extract_davis_lines(text)
+    curve = extract_curve_lines(text)
     body = f'''(Wagon
   (Type "{name}")
 {shape_line}  (Mass {mass:.0f})
   (MaxBrakeForce {brake:.0f})
   (Length {length:.3f})
-{davis})
+{davis}{curve})
 '''
     path.write_text(body, encoding="utf-8")
     print(f"  wag {path.name}: {mass/1000:.0f}t, {length:.1f}m")

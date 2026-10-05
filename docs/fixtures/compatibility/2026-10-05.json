@@ -1,0 +1,295 @@
+{
+  "date": "2026-10-05",
+  "reference": {
+    "version": "1.6.1",
+    "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "binary_sha256": "5ecd949e9d0ef9306587d70c65d447609127e4cc74a0d1ab2d9481ccd9fe2b8e",
+  "full_check": {
+    "passed": 1468,
+    "failed": 0,
+    "ignored": 43
+  },
+  "checks": {
+    "check.sh": {
+      "log": "tmp/scoped-check-final3.log",
+      "sha256": "07e4e2b00ce5a261df82d6a5d9540f3d5880a7759ba64cc3c103a1a3cd7d51de"
+    },
+    "CSharp_acceptance": {
+      "log": "tmp/scoped-tcs-final3.log",
+      "sha256": "42cbc720dd913f5b36b7ae72b1ee1b839dc400a28083e4dc0cba0ab8d7575491",
+      "compiler_protocol_and_physical_brake_passed": true
+    },
+    "curve_import_regressions": {
+      "python_tests_in_service_capture": 9,
+      "authored_units_and_idempotent_service_import": true
+    },
+    "original_outputs_restored": 134
+  },
+  "superelevation_formula": {
+    "cases": 10,
+    "reference_sha256": "6481574e52973a9fb78274ba1aef0897b3cdf141d8c8babac1c999af22bc38ab",
+    "max_difference_mps": 1.1825222543393465e-05,
+    "tolerance_mps": 2e-05,
+    "fresh_recapture_matches": true,
+    "previous_capture_overwrite_rejected": true
+  },
+  "native_consist_inventory": {
+    "scope": "ENG/WAG, models, textures, cabs, optional SMS/WAV, declared subsystems/scripts, gauge and cant deficiency; resource completeness is not physics/script parity",
+    "total": 184,
+    "content_valid": 153,
+    "player_ready": 153,
+    "vehicles": 1980,
+    "warning_formations": 184,
+    "error_formations": 31,
+    "incomplete_formations": [
+      {
+        "file": "BR_Green_117.con",
+        "errors": [
+          "Vehículo 1 (GreenClass117dmbs.eng): Falta la cabina ..\\..\\common.cab\\Class117\\craven.cvf"
+        ]
+      },
+      {
+        "file": "Class 61xx LE.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6101.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "LT_Faraday+5Dreadnought.con",
+        "errors": [
+          "Vehículo 1 (LT_MichaelFaradayV.eng): Falta la cabina ../../common.cab/Met_BoBo/Met12_Vac.cvf"
+        ]
+      },
+      {
+        "file": "LT_GeorgeRo+Dreadnoughts.con",
+        "errors": [
+          "Vehículo 1 (LT_georgeromneyV.eng): Falta la cabina ../../common.cab/Met_BoBo/Met12_Vac.cvf"
+        ]
+      },
+      {
+        "file": "LT_Gladstone+Dreadnoughts.con",
+        "errors": [
+          "Vehículo 1 (LT_wegladstoneV.eng): Falta la cabina ../../common.cab/Met_BoBo/Met12_Vac.cvf"
+        ]
+      },
+      {
+        "file": "Met Coal Train.con",
+        "errors": [
+          "Vehículo 1 (LT_edmundburkeV.eng): Falta la cabina ../../common.cab/Met_BoBo/Met12_Vac.cvf"
+        ]
+      },
+      {
+        "file": "RS_1959_stock.con",
+        "errors": [
+          "Vehículo 1 (1959StockWest.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\LUL1959\\\\1959.cvf",
+          "Vehículo 7 (1959StockEast.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\LUL1959\\\\1959.cvf"
+        ]
+      },
+      {
+        "file": "RS_61xx+QSet+2nd.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6165.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_61xx+QSet.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6165.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_Aberwys-Padd_0950.con",
+        "errors": [
+          "Vehículo 2 (BR_Green_KingT_Late.wag): Falta la textura King_Green_Ta.ace de BR_Green_KingT_Late.s"
+        ]
+      },
+      {
+        "file": "RS_Ardley limestone pilot.con",
+        "errors": [
+          "Vehículo 1 (41xx_4141.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_Aylesbury-Padd1825atPR.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6155.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_BanbShedtoJcn47xxLE.con",
+        "errors": [
+          "Vehículo 1 (BR4704.eng): Falta la cabina ..\\..\\hw_common.cab\\gwr\\cabview\\manor.cvf"
+        ]
+      },
+      {
+        "file": "RS_Banbury Shed 47xx.con",
+        "errors": [
+          "Vehículo 1 (BR4704.eng): Falta la cabina ..\\..\\hw_common.cab\\gwr\\cabview\\manor.cvf"
+        ]
+      },
+      {
+        "file": "RS_Chiltern Court coal turn.con",
+        "errors": [
+          "Vehículo 1 (LT_BenjaminDisraeliV.eng): Falta la cabina ../../common.cab/Met_BoBo/Met12_Vac.cvf"
+        ]
+      },
+      {
+        "file": "RS_Class 501 G x2.con",
+        "errors": [
+          "Vehículo 1 (501_LMR_EMU_G_DMBSO.eng): Falta la cabina ..\\..\\common.cab\\Class_76\\Class76.cvf",
+          "Vehículo 4 (501_LMR_EMU_G_DMBSO.eng): Falta la cabina ..\\..\\common.cab\\Class_76\\Class76.cvf"
+        ]
+      },
+      {
+        "file": "RS_Hayes-Padd0858.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6111.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_HiWyc-Banbury1050.con",
+        "errors": [
+          "Vehículo 1 (D7003B.eng): Falta la cabina ..\\..\\hw_common.cab\\Hymek\\Hymek.cvf"
+        ]
+      },
+      {
+        "file": "RS_Hinksey08_Shunt.con",
+        "errors": [
+          "Vehículo 1 (BR_HW_D4112.eng): Falta la cabina ..\\..\\hw_common.cab\\Class_08\\Class08.cvf"
+        ]
+      },
+      {
+        "file": "RS_Hinksey_4700_Static.con",
+        "errors": [
+          "Vehículo 1 (BR4704.eng): Falta la cabina ..\\..\\hw_common.cab\\gwr\\cabview\\manor.cvf"
+        ]
+      },
+      {
+        "file": "RS_LlandilloJcn-Banbury0140H.con",
+        "errors": [
+          "Vehículo 1 (BR4702.eng): Falta la cabina ..\\..\\hw_common.cab\\gwr\\cabview\\manor.cvf"
+        ]
+      },
+      {
+        "file": "RS_NeasdenShedO6.con",
+        "errors": [
+          "Vehículo 1 (280WD.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\WDcab\\\\WDcabUK.cvf"
+        ]
+      },
+      {
+        "file": "RS_Oxf-PrRisb0750.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6155.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_Oxf-PrRisb0750.con.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6155.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_PrincesRisb-Slough0840G.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6155.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_STNPrincesRisbWRNbound.con",
+        "errors": [
+          "Vehículo 1 (BR4704.eng): Falta la cabina ..\\..\\hw_common.cab\\gwr\\cabview\\manor.cvf"
+        ]
+      },
+      {
+        "file": "RS_SpecialpassHiWycHymek.con",
+        "errors": [
+          "Vehículo 1 (D7003B.eng): Falta la cabina ..\\..\\hw_common.cab\\Hymek\\Hymek.cvf"
+        ]
+      },
+      {
+        "file": "RS_Thame-PRisb1833atPR.con",
+        "errors": [
+          "Vehículo 1 (BR Class 6100 No 6141.eng): Falta la cabina ..\\..\\Common.Cab\\Tanker\\Tanker.cvf"
+        ]
+      },
+      {
+        "file": "RS_WD280_LE.con",
+        "errors": [
+          "Vehículo 1 (280WD.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\WDcab\\\\WDcabUK.cvf"
+        ]
+      },
+      {
+        "file": "RS_WDfreight_recessed_WestRu.con",
+        "errors": [
+          "Vehículo 1 (280WD.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\WDcab\\\\WDcabUK.cvf"
+        ]
+      },
+      {
+        "file": "tm_lul_1959_stock.con",
+        "errors": [
+          "Vehículo 1 (1959StockWest.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\LUL1959\\\\1959.cvf",
+          "Vehículo 7 (1959StockEast.eng): Falta la cabina ..\\\\..\\\\common.cab\\\\LUL1959\\\\1959.cvf"
+        ]
+      }
+    ]
+  },
+  "native_audit_sha256": "75f7dfa04c7763246b37a7fb4a55121f1829acd743b4d81a4c0d2a728a7bf7a2",
+  "visual_verification": {
+    "renderer": "Vulkan software, lavapipe; private Xvfb, 1280x720",
+    "view_radius_m": 450,
+    "session": {
+      "peak_rss_mib": 2787.2,
+      "elapsed_s": 197.2,
+      "restarts": [
+        {
+          "parent": 16595,
+          "child": 17104,
+          "parent_exited": true
+        }
+      ]
+    },
+    "curve_fixture": {
+      "initial_edge": "e96_r",
+      "initial_position_m": 1894.121375029233,
+      "native_section_id": 38590,
+      "radius_m": 2000,
+      "cant_mm_rounded": 0,
+      "route_gauge_m_default": 1.435,
+      "comfort_kmh_display": 164.3
+    },
+    "dispatcher_at_paused_startup": {
+      "own_intervals": 0,
+      "other_intervals": 0,
+      "note": "Captured before first physics tick; exclusive grant/restore/release verified by opposite-train regressions."
+    },
+    "menu": {
+      "formation": "birmingham_pullman",
+      "vehicles": 8,
+      "compatibility_warnings": 8,
+      "warning_text_visible": true,
+      "return_menu_child_started_after_parent_exit": true
+    },
+    "captures": {
+      "native-curve-hud": {
+        "file": "tmp/scoped-gui-final/native-curve-hud.png",
+        "sha256": "cf54680163b34aa3676a4723d9186485924f5ab05c5050923fa47561efeb37f3"
+      },
+      "native-reservation-hud": {
+        "file": "tmp/scoped-gui-final/native-reservation-hud.png",
+        "sha256": "b202607a2bcf0b03febe4df426a248c5064e3a482863c8d34346dd19ffa3a240"
+      },
+      "launch-menu-ready": {
+        "file": "tmp/scoped-gui-final/launch-menu-ready.png",
+        "sha256": "8a71fc897d9fcef542599515d730f5a7fa61555066dc0ad79af6b8bb82bb1c6d"
+      }
+    },
+    "scope": "UI and metadata verification only; no GPU performance benchmark or new complete visual journey comparison."
+  },
+  "scope_limits": [
+    "Fixed-route next-block reservations; no full OR junction locking or deadlock dispatcher.",
+    "C# restricted TCS API; no script Save/Restore or original brake/power hosts.",
+    "Curve comfort diagnostic; no generated banking, suspension or derailment parity.",
+    "Resource completeness does not certify subsystems or whole-service physical parity."
+  ]
+}

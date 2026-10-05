@@ -28,7 +28,7 @@ pub enum TcsInput {
     Menu { action: String },
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct ScriptContext {
     pub time_s: f64,
     pub dt_s: f64,
@@ -37,6 +37,23 @@ pub struct ScriptContext {
     pub next_signal_distance_m: Option<f64>,
     pub next_signal_stop: bool,
     pub next_stop_distance_m: Option<f64>,
+    pub train_max_speed_mps: f64,
+    pub current_post_speed_limit_mps: f64,
+    pub signals: Vec<ScriptSignal>,
+    pub distance_signal: Option<ScriptSignal>,
+    pub speed_posts: Vec<ScriptSpeedPost>,
+}
+
+/// Native SIGASP values, not the differently ordered OR TCS `Aspect` enum.
+#[derive(Clone, Debug, Serialize)]
+pub struct ScriptSignal {
+    pub distance_m: f64,
+    pub aspect: u8,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct ScriptSpeedPost {
+    pub distance_m: f64,
+    pub speed_limit_mps: f64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -330,6 +347,8 @@ if '{behavior}' == 'oversize': print('x'*70000,flush=True)
                 next_signal_distance_m: None,
                 next_signal_stop: false,
                 next_stop_distance_m: None,
+                train_max_speed_mps: 30.,
+                ..Default::default()
             };
             let config = ScriptHostConfig {
                 executable: "python3".into(),

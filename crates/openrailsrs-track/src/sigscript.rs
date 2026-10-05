@@ -1,7 +1,7 @@
 //! Bounded interpreter for the original MSTS SIGSCR language used by Chiltern.
 //! Unknown instructions/functions are errors; a caller must keep a stop aspect.
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeSignalDef {
@@ -11,9 +11,10 @@ pub struct NativeSignalDef {
 }
 
 #[derive(Clone, Debug)]
-pub struct SignalProgram(Vec<Statement>);
+pub struct SignalProgram(Vec<Statement>, Vec<String>);
 #[derive(Clone, Debug)]
 enum Statement {
+    Declare(Vec<String>),
     Assign(String, Expr),
     If(Expr, Vec<Statement>, Vec<Statement>),
 }
@@ -138,7 +139,7 @@ impl Parser {
         }
         let mut result = vec![];
         while !self.peek().is_empty() && self.peek() != "}" {
-            if matches!(self.peek(), "EXTERN" | "FLOAT") {
+            if self.peek() == "EXTERN" {
                 while self.peek() != ";" {
                     if self.peek().is_empty() {
                         return Err("unterminated declaration".into());
@@ -146,6 +147,24 @@ impl Parser {
                     self.i += 1;
                 }
                 self.i += 1;
+                continue;
+            }
+            if self.peek() == "FLOAT" {
+                self.i += 1;
+                let mut names = vec![];
+                loop {
+                    let name = self.take();
+                    if !name.as_bytes().first().is_some_and(u8::is_ascii_alphabetic) {
+                        return Err("expected local float name".into());
+                    }
+                    names.push(name);
+                    if self.peek() != "," {
+                        break;
+                    }
+                    self.i += 1;
+                }
+                self.expect(";")?;
+                result.push(Statement::Declare(names));
                 continue;
             }
             result.push(self.statement()?);
@@ -270,6 +289,8 @@ fn constant(name: &str) -> Option<f64> {
         "SIGASP_CLEAR_1" => 6.,
         "SIGASP_CLEAR_2" => 7.,
         "BLOCK_CLEAR" | "SIGFN_NORMAL" => 0.,
+        "BLOCK_OCCUPIED" => 1.,
+        "BLOCK_JN_OBSTRUCTED" => 2.,
         "SIGFN_DISTANCE" => 1.,
         _ => return None,
     })
@@ -341,6 +362,8 @@ fn run(
     for s in statements {
         *budget = budget.checked_sub(1).ok_or("SIGSCR execution limit")?;
         match s {
+            // OR 1.6.1 clears LocalFloats at the start of every update.
+            Statement::Declare(_) => {}
             Statement::Assign(n, e) => {
                 let v = evaluate(e, vars, c)?;
                 if !v.is_finite() {
@@ -358,6 +381,86 @@ fn run(
     }
     Ok(())
 }
+
+/// Inspect every branch before a route starts. An unsupported function hidden
+/// behind ENABLED/ROUTE_SET must not be discovered only after a train moves.
+fn validate_expr(expr: &Expr, variables: &HashSet<String>) -> Result<(), String> {
+    match expr {
+        Expr::Var(name) if constant(name).is_none() && !variables.contains(name) => {
+            return Err(format!("unsupported variable {name}"));
+        }
+        Expr::Value(value) if !value.is_finite() => return Err("nonfinite literal".into()),
+        Expr::Call(name, args) => {
+            let arity = match name.as_str() {
+                "BLOCK_STATE" | "ROUTE_SET" => 0,
+                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DEF_DRAW_STATE" => 1,
+                "DIST_MULTI_SIG_MR" => 2,
+                _ => return Err(format!("unsupported function {name}")),
+            };
+            if args.len() != arity {
+                return Err(format!("invalid argument count for {name}"));
+            }
+            for arg in args {
+                validate_expr(arg, variables)?;
+            }
+            // These selectors are the implemented NORMAL/DISTANCE contract.
+            // Dynamic selectors would require a general signal-function table.
+            let selector = |e: &Expr, expected: f64| match e {
+                Expr::Value(v) => *v == expected,
+                Expr::Var(n) => constant(n) == Some(expected),
+                _ => false,
+            };
+            if matches!(
+                name.as_str(),
+                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DIST_MULTI_SIG_MR"
+            ) && (!selector(&args[0], 0.) || (arity == 2 && !selector(&args[1], 1.)))
+            {
+                return Err(format!("unsupported signal-function selector for {name}"));
+            }
+        }
+        Expr::Unary(_, e) => validate_expr(e, variables)?,
+        Expr::Binary(_, a, b) => {
+            validate_expr(a, variables)?;
+            validate_expr(b, variables)?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+fn local_variables(statements: &[Statement], variables: &mut HashSet<String>) {
+    for statement in statements {
+        match statement {
+            Statement::Declare(names) => variables.extend(names.iter().cloned()),
+            Statement::If(_, yes, no) => {
+                local_variables(yes, variables);
+                local_variables(no, variables);
+            }
+            _ => {}
+        }
+    }
+}
+fn validate_statements(
+    statements: &[Statement],
+    variables: &HashSet<String>,
+) -> Result<(), String> {
+    for statement in statements {
+        match statement {
+            Statement::Assign(name, expr) => {
+                if !variables.contains(name) || matches!(name.as_str(), "ENABLED" | "BLOCK_STATE") {
+                    return Err(format!("unsupported assignment {name}"));
+                }
+                validate_expr(expr, variables)?;
+            }
+            Statement::If(expr, yes, no) => {
+                validate_expr(expr, variables)?;
+                validate_statements(yes, variables)?;
+                validate_statements(no, variables)?;
+            }
+            Statement::Declare(_) => {}
+        }
+    }
+    Ok(())
+}
 impl SignalProgram {
     pub fn compile(source: &str) -> Result<Self, String> {
         let mut parser = Parser {
@@ -369,14 +472,28 @@ impl SignalProgram {
         if !parser.peek().is_empty() {
             return Err("unmatched closing brace".into());
         }
-        Ok(Self(statements))
+        let mut locals = HashSet::new();
+        local_variables(&statements, &mut locals);
+        let mut variables = HashSet::from([
+            "STATE".into(),
+            "DRAW_STATE".into(),
+            "ENABLED".into(),
+            "BLOCK_STATE".into(),
+        ]);
+        variables.extend(locals.iter().cloned());
+        validate_statements(&statements, &variables)?;
+        Ok(Self(statements, locals.into_iter().collect()))
     }
     pub fn evaluate(&self, context: SignalContext) -> Result<SignalResult, String> {
         let mut vars = HashMap::from([
             ("ENABLED".into(), f64::from(context.enabled)),
             ("STATE".into(), 0.),
             ("DRAW_STATE".into(), 0.),
+            ("BLOCK_STATE".into(), f64::from(!context.block_clear)),
         ]);
+        for name in &self.1 {
+            vars.entry(name.clone()).or_insert(0.);
+        }
         run(&self.0, &mut vars, context, &mut 4096)?;
         let aspect = vars["STATE"];
         let draw = vars["DRAW_STATE"];
@@ -443,9 +560,26 @@ mod tests {
     fn unsupported_calls_and_malformed_inputs_never_silently_clear() {
         assert!(SignalProgram::compile("while(1){state=7;}").is_err());
         assert!(SignalProgram::compile("if (((").is_err());
-        let p = SignalProgram::compile("state=unsupported();").unwrap();
-        assert!(p.evaluate(SignalContext::default()).is_err());
+        assert!(SignalProgram::compile("state=unsupported();").is_err());
         assert!(SignalProgram::compile(&"(".repeat(300)).is_err());
+    }
+    #[test]
+    fn dormant_unsupported_calls_are_rejected_before_entering_a_block() {
+        for source in [
+            "if (!enabled && !route_set()) { state=call_unknown(); } else { state=7; }",
+            "if (0) { state=next_sig_lr(SIGFN_DISTANCE); } else { state=7; }",
+            "if (0) { state=block_state(1); } else { state=7; }",
+            "if (0) { state=unsupported_variable; } else { state=7; }",
+        ] {
+            assert!(SignalProgram::compile(source).is_err(), "{source}");
+        }
+    }
+    #[test]
+    fn local_floats_start_at_zero_on_every_evaluation() {
+        let p = SignalProgram::compile("float count, aspect; count=count+1; aspect=count+2; state=aspect; draw_state=def_draw_state(state);").unwrap();
+        for _ in 0..3 {
+            assert_eq!(p.evaluate(SignalContext::default()).unwrap().aspect, 3);
+        }
     }
     #[test]
     fn unbraced_branches_and_flat_expressions_have_stack_safe_limits() {

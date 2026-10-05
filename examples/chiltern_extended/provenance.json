@@ -166,5 +166,68 @@
   "signal_policy": "original directed Chiltern SIGSCR programs; normal/distant blocks on the service path",
   "sigscr_sha256": "50e1b910dec361d47b3afeb52b5f48ccf92272f96dc1f3bf46c2cae96cc98fa9",
   "sigcfg_sha256": "2a504f3b767705484dbf87ef64200cc0820c1048ef0671be349290c850bf723c",
-  "traffic": "existing lead and adjacent opposite services"
+  "traffic": "existing lead and adjacent opposite services",
+  "curve_profiles": [
+    {
+      "file": "RF_WP_DMBSA.eng",
+      "sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_PSB.wag",
+      "sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_KFC.wag",
+      "sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_PCFD.wag",
+      "sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_PCFE.wag",
+      "sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_KFF.wag",
+      "sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_PSG.wag",
+      "sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "tokens": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      }
+    },
+    {
+      "file": "RF_WP_DMBSH.eng",
+      "sha256": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402",
+      "tokens": {}
+    }
+  ]
 }

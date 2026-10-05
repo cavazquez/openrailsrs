@@ -1,0 +1,92 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "source": "Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs",
+  "source_sha256": "f1020ef9aedfd0d502383920a94abfc6a93ed3627ab8f8874862579176fb2348",
+  "expression": "(float)Math.Sqrt(((SuperElevationM + MaxUnbalancedSuperElevationM) * GravitationalAccelerationMpS2 * CurrentCurveRadiusM) / TrackGaugeM)",
+  "gravity": "9.80665f",
+  "scope": "Isolated original C# comfort-speed expression with float arithmetic; not a whole-simulator or generated-track capture",
+  "tolerance_mps": 2e-05,
+  "cases": [
+    {
+      "name": "passenger_500m_150mm",
+      "radius_m": 500,
+      "cant_m": 0.15,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 27.801338
+    },
+    {
+      "name": "freight_500m_150mm",
+      "radius_m": 500,
+      "cant_m": 0.15,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 27.801338
+    },
+    {
+      "name": "engine_500m_150mm",
+      "radius_m": 500,
+      "cant_m": 0.15,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.1524,
+      "comfortable_speed_mps": 32.144768
+    },
+    {
+      "name": "turnout_200m_zero_cant",
+      "radius_m": 200,
+      "cant_m": 0,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 10.205326
+    },
+    {
+      "name": "high_speed_4000m",
+      "radius_m": 4000,
+      "cant_m": 0.18,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 83.686226
+    },
+    {
+      "name": "tilting_4000m",
+      "radius_m": 4000,
+      "cant_m": 0.18,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.3,
+      "comfortable_speed_mps": 114.54735
+    },
+    {
+      "name": "argentina_broad_gauge",
+      "radius_m": 500,
+      "cant_m": 0.15,
+      "gauge_m": 1.676,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 25.724957
+    },
+    {
+      "name": "metre_gauge",
+      "radius_m": 300,
+      "cant_m": 0.1,
+      "gauge_m": 1,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 22.76795
+    },
+    {
+      "name": "explicit_imperial_gauge",
+      "radius_m": 500,
+      "cant_m": 0.15,
+      "gauge_m": 1.4351,
+      "max_unbalanced_m": 0.0762,
+      "comfortable_speed_mps": 27.800371
+    },
+    {
+      "name": "unknown_wagon_default",
+      "radius_m": 200,
+      "cant_m": 0,
+      "gauge_m": 1.435,
+      "max_unbalanced_m": 0.000254,
+      "comfortable_speed_mps": 0.5892048
+    }
+  ]
+}

@@ -18,16 +18,22 @@ Referencia del API: Open Rails **1.6.1**, commit
 `d16e670da333d26d2edfc97d5631a19dadf49ce5`, archivo
 `Source/Orts.Simulation/Common/Scripting/TrainControlSystem.cs`.
 `tools/or-tcs-host/TrainControlSystem.cs` declara el subconjunto implementado:
-`Initialize`, `Update`, `HandleEvent`; reloj, velocidad, límite de ruta, próxima
-señal, límite/intervención, freno de servicio y emergencia. `HostMessage`,
+`Initialize`, `Update`, `HandleEvent`; reloj, velocidad, límite de ruta, hasta 32
+señales normales y 32 cambios de límite por delante, próxima señal distante,
+límite/intervención, freno de servicio y emergencia. `HostMessage`,
 `HostDeltaTimeS` y `HostNextStopDistanceM` son extensiones identificadas del host.
 
-**No es el API completo de OR.** Todavía faltan tablas de señales por índice mayor
-que cero, aspectos intermedios, curvas ETCS originales, pantógrafos/alimentación,
+**No es el API completo de OR.** Todavía faltan funciones de señales genéricas,
+límites propios de SIGCFG, curvas ETCS originales, pantógrafos/alimentación,
 API completo de `ETCSStatus` y persistencia `Save/Restore` del script. Un miembro
 ausente produce error de compilación; no se reemplaza con una respuesta vacía.
-El límite actual es el límite efectivo de la sesión. `TrainMaxSpeedMpS` se acota a
-ese mismo límite en este subconjunto. Los aspectos se presentan como Stop/Clear_2.
+`TrainSpeedLimitMpS` recibe el límite efectivo de la sesión; `CurrentPostSpeedLimitMpS`
+recibe el límite de vía en la cabeza. `TrainMaxSpeedMpS` usa el mínimo de las
+velocidades máximas declaradas por las locomotoras, separado del límite de ruta.
+`NextSignalAspect(index)` conserva los ocho aspectos nativos; señales `INFO`
+(contrapesos) no entran en la tabla normal. Se traduce expresamente SIGASP al
+enum `Aspect` de OR, cuyos valores y orden son distintos. Los cuatro `TCSEvent`
+expuestos también conservan los valores numéricos originales.
 Se pueden ejecutar scripts compatibles con ese contrato, incluido el fixture;
 no se promete ejecutar cualquier script de un paquete OR.
 
@@ -40,6 +46,15 @@ La primera solicitud tiene `kind: "initialize"`; las siguientes, `"tick"`.
 `next_signal_distance_m`, `next_signal_stop` y `next_stop_distance_m`.
 Las distancias ausentes son `null`. El tick usa el quantum de física de la sesión:
 normalmente **0,05 s / 20 Hz**; escenarios con quantum menor lo conservan.
+
+El contrato extendido agrega `train_max_speed_mps`, `current_post_speed_limit_mps`,
+`signals: [{distance_m, aspect}]`, `distance_signal` y
+`speed_posts: [{distance_m, speed_limit_mps}]`. Las tablas tienen como máximo
+32 entradas, distancias finitas no negativas y orden ascendente. Índices 0–31:
+una señal ausente devuelve `Aspect.None` / `float.MaxValue`; un poste ausente
+devuelve −1 m/s / `float.MaxValue`. Índices fuera de rango producen error del
+host. Se admiten los campos antiguos de JSONL v1 para el fixture anterior; una
+distancia ausente ya no se transforma en una señal clara ficticia.
 
 `events` entrega hasta 64 entradas por tick: `acknowledge` con `message` y `menu`
 con `action`. ACK llama AlerterPressed/Released; menú llama
@@ -73,9 +88,12 @@ bash scripts/check_tcs_host.sh
 OPENRAILSRS_DOTNET=/ruta/dotnet bash scripts/check_tcs_host.sh
 ```
 
-Compila el fixture `docs/fixtures/tcs/MinimalTcs.cs`, verifica el protocolo real
+Compila los fixtures `MinimalTcs.cs` y `NativeLookaheadTcs.cs`, verifica el protocolo real
 y lo consume desde el simulador Rust. Prueba ACK, menú, cambio a 18 km/h y freno
-físico por exceso de velocidad. Los tests Rust cubren muerte del proceso, timeout
+físico por exceso de velocidad. Comprueba los ocho aspectos, distancias e índices,
+postes, velocidad máxima, enumeraciones nativas y entradas inválidas; una señal
+original de Chiltern ordenada a Alto llega al script y aplica freno físico.
+Los tests Rust cubren muerte del proceso, timeout
 de respuesta y de escritura,
 respuesta enorme y secuencia errónea, comprobando intervención sin fallback.
 
