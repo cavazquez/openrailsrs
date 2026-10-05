@@ -4438,6 +4438,7 @@ dependencies = [
  "openrailsrs-audio",
  "openrailsrs-bevy-scenery",
  "openrailsrs-campaign",
+ "openrailsrs-content",
  "openrailsrs-export",
  "openrailsrs-formats",
  "openrailsrs-game",
@@ -4456,6 +4457,13 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "openrailsrs-content"
+version = "0.1.0"
+dependencies = [
+ "tempfile",
 ]
 
 [[package]]
@@ -4661,6 +4669,7 @@ dependencies = [
  "openrailsrs-ace",
  "openrailsrs-audio",
  "openrailsrs-bevy-scenery",
+ "openrailsrs-content",
  "openrailsrs-core",
  "openrailsrs-formats",
  "openrailsrs-msts",

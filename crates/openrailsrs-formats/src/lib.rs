@@ -17,6 +17,7 @@ pub mod shape_binary_direct;
 pub mod shape_binary_reader;
 pub mod tile_paths;
 pub mod typed;
+pub mod vehicle_include;
 pub use typed::vehicle_runtime::{
     VehicleBrakeProfile, VehicleEmitter, parse_vehicle_brake_profile, parse_vehicle_emitters,
 };
@@ -98,3 +99,4 @@ pub use vehicle_field_catalog::{
     ParserSupport, VEHICLE_FIELD_CATALOG, VehicleFieldSpec, VehicleKind, catalog_for_kind,
     lookup_field,
 };
+pub use vehicle_include::{read_msts_text_with_includes, read_vehicle_ast};

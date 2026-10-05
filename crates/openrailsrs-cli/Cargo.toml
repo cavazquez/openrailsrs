@@ -11,6 +11,7 @@ name = "openrailsrs"
 path = "src/main.rs"
 
 [dependencies]
+openrailsrs-content = { path = "../openrailsrs-content" }
 openrailsrs-export = { path = "../openrailsrs-export" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-campaign = { path = "../openrailsrs-campaign" }

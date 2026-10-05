@@ -191,9 +191,7 @@ impl ConsistAuditor {
                 _ => return Err("El archivo no es un vehículo".into()),
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
-        let ast = read_msts_file_to_string(path)
-            .and_then(|text| parse_vehicle_text(&text))
-            .map_err(|e| e.to_string())?;
+        let ast = openrailsrs_formats::read_vehicle_ast(path).map_err(|e| e.to_string())?;
         let metadata = parse_vehicle_content_metadata(&ast, cab.is_some());
         let root = self
             .trainset_roots
@@ -355,6 +353,7 @@ impl ConsistAuditor {
         result
     }
     fn inspect_cab(&mut self, root: &Path, cab: &EngineCabView, stock: &mut StockAudit) {
+        let previous_errors = stock.errors.len();
         let dirs = vec![
             root.join("CABVIEW"),
             root.join("CABVIEW3D"),
@@ -392,6 +391,16 @@ impl ConsistAuditor {
         } else if let Some(c) = openrailsrs_formats::resolve_cab_assets(root, cab) {
             stock.cab_3d = self.inspect_shape(&c.shape_path).is_ok()
                 && self.inspect_cvf(&c.cvf_path, false).is_ok();
+        }
+        if stock.cab_2d || stock.cab_3d {
+            // OR can drive a locomotive with either cab mode. Missing optional
+            // alternatives remain visible without blocking the working one.
+            stock.warnings.extend(
+                stock
+                    .errors
+                    .drain(previous_errors..)
+                    .map(|e| format!("Cabina alternativa no disponible: {e}")),
+            );
         }
         if !stock.cab_2d && !stock.cab_3d && stock.errors.is_empty() {
             stock
@@ -530,6 +539,33 @@ mod tests {
         let mut auditor = ConsistAuditor::default();
         assert!(auditor.inspect_cvf(&path, false).is_ok());
         assert!(auditor.inspect_cvf(&path, true).is_err());
+    }
+    #[test]
+    fn a_working_cab_does_not_require_the_alternative_mode() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stock = tmp.path().join("TRAINS/TRAINSET/DMU");
+        let cons = tmp.path().join("TRAINS/CONSISTS");
+        std::fs::create_dir_all(stock.join("CABVIEW")).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        std::fs::write(stock.join("power.eng"), "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power MaxPower ( 500kW ) CabView ( front.cvf ) ORTS3DCabFile ( missing.s ) )").unwrap();
+        std::fs::write(stock.join("CABVIEW/front.cvf"), "Tr_CabViewFile ( CabViewControls ( 1 Digital ( Type ( SPEEDOMETER DIGITAL ) Position ( 0 0 20 20 ) Graphic ( None ) ScaleRange ( 0 100 ) ) ) )").unwrap();
+        let con = cons.join("dmu.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( dmu Engine ( EngineData ( power DMU ) ) ) )",
+        )
+        .unwrap();
+        let report = ConsistAuditor::default().inspect(&con);
+        assert!(report.player_ready(), "{:?}", report.errors);
+        assert!(report.cab_2d && !report.cab_3d);
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.contains("Cabina alternativa"))
+        );
+        std::fs::remove_file(stock.join("CABVIEW/front.cvf")).unwrap();
+        assert!(!ConsistAuditor::default().inspect(&con).player_ready());
     }
 
     #[test]

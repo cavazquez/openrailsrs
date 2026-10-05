@@ -225,8 +225,12 @@ enum UiCommand {
     SaveSettings,
     ContentCycle(i32),
     ContentDownload,
+    ContentAudit(usize),
     ContentCancel,
     ContentCatalogue,
+    MissingOrigin,
+    MissingDownload,
+    MissingUpdate,
 }
 #[derive(Clone, Copy, Debug)]
 enum MenuField {
@@ -612,8 +616,12 @@ fn handle_buttons(
         let result:Result<(),String>=match command {
             UiCommand::ContentCycle(delta)=>{downloads.cycle(*delta);Ok(())},
             UiCommand::ContentDownload=>downloads.start(),
+            UiCommand::ContentAudit(index)=>downloads.reaudit(*index),
             UiCommand::ContentCancel=>downloads.cancel(),
             UiCommand::ContentCatalogue=>crate::official_content::open_catalogue(),
+            UiCommand::MissingOrigin=>crate::official_content::missing_source(&menu).ok_or("No hay un origen verificado".to_string()).and_then(|s|crate::official_content::open_source_url(&s.page)),
+            UiCommand::MissingDownload=>crate::official_content::missing_source(&menu).and_then(|s|s.download_page).ok_or("La descarga se obtiene mediante el catálogo del autor".to_string()).and_then(|url|crate::official_content::open_source_url(&url)),
+            UiCommand::MissingUpdate=>crate::official_content::missing_source(&menu).and_then(|s|s.package_id).and_then(|id|downloads.packages.iter().position(|p|p.id()==id)).ok_or("No hay una descarga automática verificada para este origen".to_string()).and_then(|index|{downloads.selected=index;downloads.start().map(|()|open_panel(&mut ui,&mut live,PlayerPanel::Content))}),
             UiCommand::Open(panel)=>{open_panel(&mut ui,&mut live,*panel);Ok(())},
             UiCommand::Close=>{close_panel(&mut ui,&mut live);Ok(())},
             UiCommand::Exit => { exit.write(AppExit::Success); Ok(()) },
@@ -934,6 +942,26 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
         button(p, "›", UiCommand::Cycle(field, 1));
     });
 }
+fn missing_source_buttons(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
+    if let Some(source) = crate::official_content::missing_source(menu) {
+        label(p, source.title, 13.0, CAUTION);
+        label(p, source.note, 12.0, MUTED);
+        row(p, |p| {
+            button(p, "Buscar en el origen", UiCommand::MissingOrigin);
+            if source.download_page.is_some() {
+                button(p, "Descargar desde el autor", UiCommand::MissingDownload);
+            }
+            if source.package_id.is_some() {
+                button(
+                    p,
+                    "Buscar actualización del paquete",
+                    UiCommand::MissingUpdate,
+                );
+            }
+        });
+    }
+}
+
 fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
     button(
         p,
@@ -959,6 +987,7 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         12.0,
         Color::srgb(0.70, 0.80, 0.88),
     );
+    missing_source_buttons(p, menu);
     selector(p, "Recorrido", menu.path_label(), MenuField::Path);
     selector(
         p,
@@ -1051,7 +1080,11 @@ fn build_content(
         if downloads.busy() {
             button(p, "Cancelar descarga", UiCommand::ContentCancel);
         } else if package.automatic() {
-            button(p, "Instalar y auditar", UiCommand::ContentDownload);
+            button(
+                p,
+                "Buscar actualización e instalar",
+                UiCommand::ContentDownload,
+            );
         }
         button(p, "Ver catálogo oficial", UiCommand::ContentCatalogue);
         button(
@@ -1061,6 +1094,15 @@ fn build_content(
         );
     });
     dynamic(p, DynamicText::Content, 14.);
+    missing_source_buttons(p, menu);
+    for (index, path) in downloads.installed.iter().enumerate() {
+        row(p, |p| {
+            label(p, crate::official_content::installed_label(path), 13., TEXT);
+            if !downloads.busy() {
+                button(p, "Reauditar esta copia", UiCommand::ContentAudit(index));
+            }
+        });
+    }
     if let Some(audit) = menu
         .consists
         .get(menu.consist)

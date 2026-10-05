@@ -5,6 +5,8 @@ Only entries in the bundled official catalogue are accepted. Preserve authors'
 licences. Downloads are not executed; audit/import is a separate player choice.
 """
 import argparse
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import hashlib
 import json
 import os
@@ -19,7 +21,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = ROOT / 'docs/fixtures/content/official-catalog.json'
+CATALOG = Path(__file__).with_name('official-catalog.json')
+if not CATALOG.is_file():
+    CATALOG = ROOT / 'docs/fixtures/content/official-catalog.json'
 CATALOG_PAGE = 'https://www.openrails.org/download/content/'
 MAX_DOWNLOAD = 8 * 1024**3
 MAX_INSTALL = 32 * 1024**3
@@ -35,6 +39,24 @@ def catalog():
         entry['id'] = re.sub(r'[^a-z0-9]+', '-', entry['name'].lower()).strip('-')
         entry['automatic'] = provider(entry) is not None
     return data
+
+
+def player_data_dir(env=None, platform=None):
+    env = os.environ if env is None else env
+    platform = os.name if platform is None else platform
+    if env.get('OPENRAILSRS_PLAYER_DIR'):
+        return Path(env['OPENRAILSRS_PLAYER_DIR']).absolute()
+    if env.get('SNAP_USER_COMMON') and Path(env['SNAP_USER_COMMON']).is_absolute():
+        return Path(env['SNAP_USER_COMMON']) / 'openrailsrs'
+    if platform == 'nt' and env.get('LOCALAPPDATA'):
+        return Path(env['LOCALAPPDATA']) / 'openrailsrs'
+    if env.get('XDG_DATA_HOME') and Path(env['XDG_DATA_HOME']).is_absolute():
+        return Path(env['XDG_DATA_HOME']) / 'openrailsrs'
+    if env.get('HOME'):
+        import sys
+        suffix = 'Library/Application Support/openrailsrs' if sys.platform == 'darwin' else '.local/share/openrailsrs'
+        return Path(env['HOME']) / suffix
+    return Path(tempfile.gettempdir()) / ('openrailsrs-' + str(os.getpid()))
 
 
 def provider(entry):
@@ -97,12 +119,37 @@ def resolve_download(entry):
         raise ValueError('Identidad del repositorio inválida')
     from urllib.parse import quote
     with https_open('https://api.github.com/repos/' + repo + '/commits/' + quote(branch, safe='')) as response:
-        commit = json.loads(response.read(1024 * 1024))['sha']
+        commit_data = json.loads(response.read(1024 * 1024))
+        commit = commit_data['sha']
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Commit inválido')
-    # Resolve redirects in author repository identity (Chiltern v2 -> v4),
-    # then freeze this specific download at a commit, not a moving branch.
-    return f'https://codeload.github.com/{repo}/zip/{commit}', dict(repository=repo, commit=commit)
+    # Resolve the author's current branch on each update. Record the identity
+    # of this download so old/new editions coexist; do not pin future updates.
+    return f'https://codeload.github.com/{repo}/zip/{commit}', dict(
+        repository=repo, commit=commit, published_at=metadata.get('pushed_at'),
+        commit_date=commit_data.get('commit', {}).get('committer', {}).get('date'))
+
+
+def installed_match(entry, destination, revision=None, headers=None):
+    for path in sorted(destination.glob(entry['id'] + '-*')):
+        try:
+            if path.is_symlink() or not path.is_dir():
+                continue
+            metadata = path / 'openrailsrs-content.json'
+            if metadata.is_symlink() or metadata.stat().st_size > 8 * 1024**2:
+                continue
+            manifest = json.loads(metadata.read_text())
+            if not isinstance(manifest, dict) or manifest.get('advertised_url') != entry['url'] or manifest.get('package') != entry['name']:
+                continue
+            same_revision = (revision and isinstance(manifest.get('revision'), dict)
+                and all(revision.get(k) == manifest['revision'].get(k) for k in ('repository', 'commit')))
+            same_entity = (headers and headers.get('ETag') and headers.get('ETag') == manifest.get('source_entity_tag'))
+            if same_revision or same_entity:
+                emit('complete', path=str(path), manifest=manifest, reused=True)
+                return path
+        except (OSError, ValueError, TypeError):
+            continue
+    return None
 
 
 def safe_members(archive, max_install):
@@ -181,12 +228,20 @@ def install(entry, destination, cancel_file=None, opener=https_open):
         cancelled(cancel_file)
         emit('resolve', name=entry['name'])
         url, revision = resolve_download(entry)
+        existing = installed_match(entry, destination, revision)
+        if existing:
+            return existing
         with tempfile.TemporaryDirectory(prefix='.' + entry['id'] + '-', dir=destination) as temp:
             stage = Path(temp)
             archive = stage / 'download.zip'
             digest, done, last = hashlib.sha256(), 0, 0.
             with opener(url) as response, archive.open('xb') as output:
+                existing = installed_match(entry, destination, revision, response.headers)
+                if existing:
+                    return existing
                 length = response.headers.get('Content-Length')
+                last_modified = response.headers.get('Last-Modified')
+                entity_tag = response.headers.get('ETag')
                 total = int(length) if length and length.isdigit() else None
                 if total and total > MAX_DOWNLOAD:
                     raise ValueError('La descarga supera el máximo de 8 GiB')
@@ -207,7 +262,12 @@ def install(entry, destination, cancel_file=None, opener=https_open):
             checksum = digest.hexdigest()
             final = destination / (entry['id'] + '-' + checksum[:16])
             if final.exists():
-                manifest = json.loads((final / 'openrailsrs-content.json').read_text())
+                metadata = final / 'openrailsrs-content.json'
+                if final.is_symlink() or not final.is_dir() or metadata.is_symlink() or metadata.stat().st_size > 8 * 1024**2:
+                    raise ValueError('La instalación existente tiene metadatos inseguros')
+                manifest = json.loads(metadata.read_text())
+                if not isinstance(manifest, dict):
+                    raise ValueError('Manifiesto de instalación inválido')
                 if manifest['download_sha256'] != checksum:
                     raise ValueError('La instalación existente tiene otra identidad')
                 emit('complete', path=str(final), manifest=manifest, reused=True)
@@ -218,9 +278,18 @@ def install(entry, destination, cancel_file=None, opener=https_open):
             cancelled(cancel_file)
             routes = discover_content(unpacked)
             # Preserve relative references and all author licence files.
-            manifest = dict(version=1, package=entry['name'], catalog_source=catalog()['source_url'],
+            source_date = (revision.get('published_at') or revision.get('commit_date')) if revision else None
+            if not source_date and last_modified:
+                try:
+                    source_date = parsedate_to_datetime(last_modified).astimezone(timezone.utc).isoformat()
+                except (ValueError, TypeError, OverflowError):
+                    pass
+            manifest = dict(version=2, package=entry['name'], catalog_source=catalog()['source_url'],
                 author=entry['author'], advertised_url=entry['url'], download_url=url,
                 revision=revision, download_sha256=checksum, download_bytes=done,
+                source_date=source_date, source_date_kind='repository' if revision else 'last-modified',
+                source_last_modified=last_modified, source_entity_tag=entity_tag,
+                downloaded_at=datetime.now(timezone.utc).isoformat(),
                 install_bytes=installed, routes=routes,
                 audit='pending; resource completeness does not guarantee systems parity')
             (unpacked / 'openrailsrs-content.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
@@ -237,7 +306,7 @@ def main():
     p.add_argument('--list', action='store_true')
     p.add_argument('--package', help='Stable id from --list, e.g. demo-model-1 or chiltern')
     p.add_argument('--destination', type=Path,
-                   default=Path(os.environ.get('OPENRAILSRS_PLAYER_DIR', ROOT / 'player-data')) / 'official-content')
+                   default=player_data_dir() / 'official-content')
     p.add_argument('--cancel-file', type=Path)
     a = p.parse_args()
     data = catalog()

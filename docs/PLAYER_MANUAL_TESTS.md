@@ -779,7 +779,7 @@ reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
 ### Descargar contenido
 
 1. En el menú pulsá **Descargar contenido oficial**, seleccioná **Demo Model 1**
-   y **Instalar y auditar**. Debe mostrar autor, origen y tamaños; progreso en
+   y **Buscar actualización e instalar**. Debe mostrar autor, origen y tamaños; progreso en
    MiB, extracción y preparación. El menú sigue respondiendo mientras trabaja.
 2. Cancelá una descarga: debe informar cancelación y volver a ofrecer el botón
    de instalar. Las rutas previamente instaladas siguen disponibles. Reintentá;
@@ -789,14 +789,41 @@ reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
    visor debe utilizar su propio escenario. Chiltern conserva la versión que
    ya tenías. Algunos formatos de actividad o sistemas todavía pueden mostrar
    limitaciones del importador; instalar no certifica su comportamiento entero.
-   Si el push-pull original marca campos ausentes de `Include`, elegí una
-   alternativa auditada como **MT SCE BlGr # Set 101 194**; no hace falta volver
-   a descargar el ZIP para resolver esa limitación del lector.
-   Esta alternativa AI no tiene cabina; usá `2` para inspeccionar tren y
-   escenario. En una actividad sin paradas programadas, el monitor debe mostrar
+   Seleccioná **MT_MT_Class 47 & 6 mk2 PP**: debe indicar siete vehículos,
+   unos 140 m y cabina 3D, avisando que la alternativa 2D falta. Iniciá y
+   pulsá `1`: debés ver la cabina original; `2` muestra el tren desde afuera.
+   En una actividad sin paradas programadas, el monitor debe mostrar
    la distancia al destino y «Sin paradas programadas». «Destino alcanzado»
    sólo debe aparecer cuando termine realmente el recorrido.
-4. Consultá `player-data/official-content/`: manifiesto con URL/SHA-256, licencias
+4. Consultá el destino mostrado en el panel: manifiesto con URL/SHA-256, licencias
    del autor, informe por formación y red importada. Un paquete comercial o
    distribuido mediante web indica que se obtiene en su origen; el botón de
    catálogo abre la página oficial. [Guía y CLI](OFFICIAL_CONTENT.md).
+
+## 31. Actualizaciones, biblioteca del usuario y binarios
+
+1. Seleccioná Chiltern en **Descargar contenido oficial** y buscá una
+   actualización. El selector de ruta debe conservar el Chiltern anterior
+   y añadir la copia del autor con **origen fecha · identificador** o
+   **descarga identificador** si no hay fecha. Repetir con el mismo commit
+   debe reutilizarlo. Si el autor publica otro commit, ambas copias deben
+   quedar disponibles; no se sobrescribe el recorrido anterior.
+2. Pulsá **Reauditar esta copia** en una instalación existente. Debe funcionar
+   sin conexión; se actualizan auditoría y actividades sin descargar otra vez.
+3. En Mitre elegí el CAF sintético. Debe explicar los faltantes y ofrecer
+   **Buscar en el origen** / **Descargar desde el autor**. El enlace lleva
+   a Vapor3D y advierte que su Serie 6000 corresponde a Metro/Subte B;
+   no declara que el ejemplo quedó reparado. Para material descargado
+   manualmente, mantené la estructura `rolling-stock/TRAINS` indicada en
+   la guía. Reiniciá y elegí su `.con`: deben aparecer los diagnósticos
+   de sus recursos y sistemas originales antes de iniciar.
+4. Ejecutá `openrailsrs content --list` desde otra carpeta con el binario
+   copiado allí. Debe listar el catálogo sin necesitar `scripts/` ni el repo.
+   Python 3 debe estar instalado. Cambiar de binario o directorio no debe
+   perder las descargas almacenadas en los datos del usuario.
+5. Para probar la ubicación de Snap sin construirlo, ejecutá con
+   `SNAP_USER_COMMON=/tmp/openrailsrs-snap-test` y sin
+   `OPENRAILSRS_PLAYER_DIR`. El destino debe ser
+   `/tmp/openrailsrs-snap-test/openrailsrs/official-content` aunque cambie
+   `SNAP_USER_DATA` entre revisiones. Es una prueba de selección de carpeta;
+   el confinamiento y empaquetado de un Snap real siguen pendientes.

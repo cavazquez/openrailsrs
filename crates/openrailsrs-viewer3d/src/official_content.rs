@@ -72,10 +72,8 @@ pub struct OfficialContent {
 }
 impl Default for OfficialContent {
     fn default() -> Self {
-        let catalog: Catalog = serde_json::from_str(include_str!(
-            "../../../docs/fixtures/content/official-catalog.json"
-        ))
-        .expect("bundled official catalogue");
+        let catalog: Catalog =
+            serde_json::from_str(openrailsrs_content::CATALOG).expect("bundled official catalogue");
         let selected = catalog
             .routes
             .iter()
@@ -87,6 +85,33 @@ impl Default for OfficialContent {
     }
 }
 impl OfficialContent {
+    pub fn reaudit(&mut self, index: usize) -> Result<(), String> {
+        if self.busy() {
+            return Err("Ya hay una operación de contenido en curso".into());
+        }
+        let path = self
+            .installed
+            .get(index)
+            .cloned()
+            .ok_or("Paquete instalado no disponible")?;
+        let cancel = player_data_dir()
+            .join("official-content")
+            .join(format!(".cancel-{}-audit-{index}", std::process::id()));
+        std::fs::create_dir_all(cancel.parent().unwrap()).map_err(|e| e.to_string())?;
+        if cancel.exists() {
+            std::fs::remove_file(&cancel).map_err(|e| e.to_string())?;
+        }
+        let (sender, events) = mpsc::channel();
+        let cancel_worker = cancel.clone();
+        std::thread::spawn(move || send_preparation(&sender, path, &cancel_worker));
+        self.status = "Reauditando la copia elegida sin conexión ni descarga…".into();
+        self.job = Some(Job {
+            child: None,
+            cancel,
+            events: Mutex::new(events),
+        });
+        Ok(())
+    }
     pub fn busy(&self) -> bool {
         self.job.is_some()
     }
@@ -114,35 +139,7 @@ impl OfficialContent {
         if cancel.exists() {
             std::fs::remove_file(&cancel).map_err(|e| e.to_string())?;
         }
-        // Retry preparation after cancellation without downloading the archive
-        // again. An installed package retains the exact catalogue identity.
-        let existing = self
-            .installed
-            .iter()
-            .find(|path| {
-                read_manifest(&path.join("openrailsrs-content.json")).is_some_and(|m| {
-                    m["package"] == self.selected().name
-                        && m["advertised_url"] == self.selected().url
-                })
-            })
-            .cloned();
-        if let Some(path) = existing {
-            let (sender, events) = mpsc::channel();
-            let cancel_worker = cancel.clone();
-            std::thread::spawn(move || send_preparation(&sender, path, &cancel_worker));
-            self.status = "Auditando el paquete ya descargado e importando su red…".into();
-            self.job = Some(Job {
-                child: None,
-                cancel,
-                events: Mutex::new(events),
-            });
-            return Ok(());
-        }
-        let helper = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../scripts/download_official_content.py");
-        let python = std::env::var_os("OPENRAILSRS_PYTHON").unwrap_or("python3".into());
-        let mut child = Command::new(python)
-            .arg(helper)
+        let mut child = openrailsrs_content::installer_command()?
             .args(["--package", &self.selected().id()])
             .arg("--destination")
             .arg(destination)
@@ -264,19 +261,21 @@ impl OfficialContent {
         ready
     }
     fn refresh_installed(&mut self) {
-        let directory = player_data_dir().join("official-content");
-        let Ok(root) = directory.canonicalize() else {
-            self.installed.clear();
-            return;
-        };
-        self.installed = std::fs::read_dir(&root)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .filter_map(|e| canonical_inside(&e.path(), &root))
-            .filter(|p| canonical_inside(&p.join("openrailsrs-content.json"), p).is_some())
+        self.installed = content_directories()
+            .iter()
+            .filter_map(|p| p.canonicalize().ok())
+            .flat_map(|root| {
+                std::fs::read_dir(&root)
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .filter_map(|e| canonical_inside(&e.path(), &root))
+                    .filter(|p| canonical_inside(&p.join("openrailsrs-content.json"), p).is_some())
+                    .collect::<Vec<_>>()
+            })
             .collect();
         self.installed.sort();
+        self.installed.dedup();
     }
 }
 
@@ -304,9 +303,56 @@ pub struct PreparedRoute {
     pub native: PathBuf,
     pub imported: PathBuf,
     pub activities: Vec<PathBuf>,
+    #[serde(default)]
+    pub edition: Option<String>,
+}
+
+fn edition_label(native: &Path, manifest: &Value) -> String {
+    let name = native.file_name().unwrap_or_default().to_string_lossy();
+    let id = manifest["revision"]["commit"]
+        .as_str()
+        .or_else(|| manifest["download_sha256"].as_str())
+        .unwrap_or("sin-id")
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .take(8)
+        .collect::<String>();
+    let date = manifest["source_date"]
+        .as_str()
+        .or_else(|| manifest["revision"]["published_at"].as_str())
+        .filter(|d| {
+            d.len() >= 10
+                && d.as_bytes()[..10]
+                    .iter()
+                    .all(|c| c.is_ascii_digit() || *c == b'-')
+        });
+    match date {
+        Some(date) => format!("{name} · origen {} · {id}", &date[..10]),
+        None => format!("{name} · descarga {id}"),
+    }
+}
+pub fn installed_label(path: &Path) -> String {
+    let Some(m) = read_manifest(&path.join("openrailsrs-content.json")) else {
+        return path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+    };
+    let name = m["package"].as_str().unwrap_or("Contenido");
+    edition_label(Path::new(name), &m)
 }
 pub fn prepared_routes() -> Vec<PreparedRoute> {
-    discover_prepared(&player_data_dir().join("official-content"))
+    content_directories()
+        .iter()
+        .flat_map(|p| discover_prepared(p))
+        .collect()
+}
+fn content_directories() -> Vec<PathBuf> {
+    std::iter::once(player_data_dir())
+        .chain(openrailsrs_content::legacy_data_dirs())
+        .map(|p| p.join("official-content"))
+        .collect()
 }
 fn discover_prepared(directory: &Path) -> Vec<PreparedRoute> {
     let Ok(directory) = directory.canonicalize() else {
@@ -329,9 +375,14 @@ fn discover_prepared(directory: &Path) -> Vec<PreparedRoute> {
         let Ok(routes) = serde_json::from_value::<Vec<PreparedRoute>>(value) else {
             continue;
         };
+        let content_manifest =
+            canonical_inside(&package.join("openrailsrs-content.json"), &package)
+                .and_then(|p| read_manifest(&p))
+                .unwrap_or(Value::Null);
         // Content manifests never authorize paths outside their installation.
         result.extend(routes.into_iter().filter_map(|mut r| {
             r.native = canonical_inside(&r.native, &package)?;
+            r.edition = Some(edition_label(&r.native, &content_manifest));
             r.imported = canonical_inside(&r.imported, &package)?;
             canonical_inside(&r.imported.join("track.toml"), &package).filter(|p| p.is_file())?;
             r.activities = r
@@ -430,6 +481,7 @@ pub fn prepare_installed(directory: &Path, cancel: Option<&Path>) -> Result<Stri
                 .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("act")))
                 .collect();
         routes.push(PreparedRoute {
+            edition: Some(edition_label(&native, &manifest)),
             native,
             imported,
             activities,
@@ -451,6 +503,15 @@ pub fn prepare_installed(directory: &Path, cancel: Option<&Path>) -> Result<Stri
 }
 
 pub fn open_catalogue() -> Result<(), String> {
+    open_source_url("https://www.openrails.org/download/content/")
+}
+pub fn open_source_url(url: &str) -> Result<(), String> {
+    if !url.starts_with("https://github.com/")
+        && !url.starts_with("https://vapor3d.punchinout.net/")
+        && !url.starts_with("https://www.openrails.org/")
+    {
+        return Err("El origen no es uno de los autores verificados".into());
+    }
     #[cfg(target_os = "linux")]
     let mut command = Command::new("xdg-open");
     #[cfg(target_os = "macos")]
@@ -462,10 +523,100 @@ pub fn open_catalogue() -> Result<(), String> {
         c
     };
     command
-        .arg("https://www.openrails.org/download/content/")
+        .arg(url)
         .spawn()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+#[derive(Clone)]
+pub struct MissingContentSource {
+    pub title: String,
+    pub page: String,
+    pub download_page: Option<String>,
+    pub note: String,
+    pub package_id: Option<String>,
+}
+pub fn missing_source(
+    menu: &crate::player_launch::PlayerLaunchMenu,
+) -> Option<MissingContentSource> {
+    let consist = menu.consists.get(menu.consist)?;
+    let audit = menu.consist_audits.get(consist)?;
+    source_for_missing(
+        consist,
+        &audit.errors,
+        menu.current().and_then(|s| s.scenery_root.as_deref()),
+    )
+}
+fn source_for_missing(
+    consist: &Path,
+    errors: &[String],
+    native: Option<&Path>,
+) -> Option<MissingContentSource> {
+    if errors.is_empty() {
+        return None;
+    }
+    let hint = format!("{} {}", consist.display(), errors.join(" ")).to_ascii_lowercase();
+    if hint.contains("caf6000") || hint.contains("caf_6000") {
+        return Some(MissingContentSource {
+            title:"CAF 6000 · Vapor3D / A. Asensio".into(),
+            page:"https://vapor3d.punchinout.net/s6000.html".into(),
+            download_page:Some("https://vapor3d.punchinout.net/downloads/downloads_s6000.html".into()),
+            note:"El autor ofrece el modelo gratuito en RAR (22,7 MB), con cabina 2D. La cabina 3D es opcional de pago. Los nombres CAF del ejemplo Mitre son marcadores: este paquete es una alternativa, no una coincidencia de archivos verificada. Conservá los nombres del autor y elegí su formación después de instalarla.".into(),
+            package_id:None,
+        });
+    }
+    let native = native?;
+    let manifest = native
+        .ancestors()
+        .find_map(|p| read_manifest(&p.join("openrailsrs-content.json")))?;
+    let repo = manifest["revision"]["repository"].as_str()?;
+    let parts: Vec<_> = repo.split('/').collect();
+    if parts.len() != 2
+        || parts.iter().any(|p| {
+            p.is_empty()
+                || *p == "."
+                || *p == ".."
+                || !p
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c))
+        })
+    {
+        return None;
+    }
+    let detail = errors
+        .iter()
+        .find_map(|s| s.find("Falta").map(|i| &s[i..]))
+        .unwrap_or(&errors[0]);
+    let file = detail
+        .split_whitespace()
+        .map(|s| s.trim_matches(['(', ')', '"', '\'', ':', ',']))
+        .find(|s| {
+            [".eng", ".wag", ".s", ".ace", ".cvf", ".sms", ".wav", ".inc"]
+                .iter()
+                .any(|ext| s.to_ascii_lowercase().ends_with(ext))
+        })
+        .unwrap_or("")
+        .replace('\\', "/");
+    let basename = file.rsplit('/').next().unwrap_or("");
+    let query = basename
+        .as_bytes()
+        .iter()
+        .map(|b| {
+            if b.is_ascii_alphanumeric() || b"._-".contains(b) {
+                (*b as char).to_string()
+            } else {
+                format!("%{b:02X}")
+            }
+        })
+        .collect::<String>();
+    Some(MissingContentSource {
+        title:format!("Repositorio original · {repo}"),
+        page:format!("https://github.com/{repo}/search?q={query}&type=code"),
+        download_page:None,
+        note:"Buscá el archivo por su nombre en el repositorio del autor. Actualizar el paquete conserva las copias anteriores; se audita antes de ofrecer sus actividades.".into(),
+        package_id:serde_json::from_str::<Catalog>(openrailsrs_content::CATALOG).ok()?.routes.iter().find(|p|p.automatic() && manifest["advertised_url"].as_str()==Some(p.url.as_str())).map(OfficialPackage::id),
+    })
 }
 
 #[cfg(test)]
@@ -486,6 +637,7 @@ mod tests {
                 native,
                 imported,
                 activities: vec![activity],
+                edition: None,
             },
         )
     }
@@ -542,5 +694,87 @@ mod tests {
         std::fs::rename(&package, &relocated).unwrap();
         symlink(&relocated, &package).unwrap();
         assert!(discover_prepared(&directory).is_empty());
+    }
+    #[test]
+    fn editions_remain_distinct_with_author_date_and_identifier() {
+        let native = Path::new("ROUTES/Chiltern");
+        let old = serde_json::json!({"download_sha256":"11111111aabbccdd"});
+        let new = serde_json::json!({"source_date":"2026-10-04T14:00:00Z", "revision":{"commit":"22222222aabbccdd"}});
+        assert_eq!(edition_label(native, &old), "Chiltern · descarga 11111111");
+        assert_eq!(
+            edition_label(native, &new),
+            "Chiltern · origen 2026-10-04 · 22222222"
+        );
+        assert_ne!(edition_label(native, &old), edition_label(native, &new));
+        let temp = tempfile::tempdir().unwrap();
+        let (package, route) = fixture(temp.path());
+        publish(&package, &route);
+        std::fs::write(package.join("openrailsrs-content.json"), old.to_string()).unwrap();
+        let second = temp.path().join("official-content/other");
+        let mut other = PreparedRoute {
+            native: second.join("ROUTES/Chiltern"),
+            imported: second.join("openrailsrs-import/Chiltern"),
+            activities: vec![],
+            edition: None,
+        };
+        std::fs::create_dir_all(&other.native).unwrap();
+        std::fs::create_dir_all(&other.imported).unwrap();
+        std::fs::write(other.imported.join("track.toml"), "graph").unwrap();
+        std::fs::write(second.join("openrailsrs-content.json"), new.to_string()).unwrap();
+        // A legacy prepared manifest has no edition field; derive it at discovery.
+        other.edition = None;
+        publish(&second, &other);
+        let found = discover_prepared(&temp.path().join("official-content"));
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().all(|r| r.edition.is_some()));
+    }
+    #[test]
+    fn missing_sources_do_not_claim_caf_placeholders_are_a_verified_match() {
+        let source = source_for_missing(
+            Path::new("caf6000.con"),
+            &["Falta caf6000_motor.s".into()],
+            None,
+        )
+        .unwrap();
+        assert!(source.page.starts_with("https://vapor3d.punchinout.net/"));
+        assert!(source.note.contains("no una coincidencia"));
+        assert!(source.package_id.is_none());
+        assert!(source_for_missing(Path::new("caf6000.con"), &[], None).is_none());
+    }
+    #[test]
+    fn repository_search_sends_only_basename_and_rejects_invalid_identity() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let native = root.join("ROUTES/Chiltern");
+        std::fs::create_dir_all(&native).unwrap();
+        let manifest = root.join("openrailsrs-content.json");
+        std::fs::write(
+            &manifest,
+            serde_json::json!({"revision":{"repository":"author/route"}}).to_string(),
+        )
+        .unwrap();
+        let source = source_for_missing(
+            Path::new("test.con"),
+            &["Vehículo 1 (existing.eng): Falta /private/user/locomotive.s".into()],
+            Some(&native),
+        )
+        .unwrap();
+        assert_eq!(
+            source.page,
+            "https://github.com/author/route/search?q=locomotive.s&type=code"
+        );
+        std::fs::write(
+            manifest,
+            serde_json::json!({"revision":{"repository":"../evil"}}).to_string(),
+        )
+        .unwrap();
+        assert!(
+            source_for_missing(
+                Path::new("test.con"),
+                &["Falta car.s".into()],
+                Some(&native)
+            )
+            .is_none()
+        );
     }
 }

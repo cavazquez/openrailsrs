@@ -313,7 +313,13 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
 
 fn main() {
     init_viewer_log();
-    let cli = parse_cli();
+    let mut cli = parse_cli();
+    // AssetServer resolves relative paths under its asset directory, while CLI
+    // content paths are relative to the launch directory. Match menu launches.
+    cli.route_root = cli
+        .route_root
+        .as_deref()
+        .map(openrailsrs_viewer3d::player_launch::absolute);
     if let Some(parent) = cli.wait_parent {
         let deadline = Instant::now() + std::time::Duration::from_secs(10);
         while PathBuf::from(format!("/proc/{parent}")).exists() && Instant::now() < deadline {

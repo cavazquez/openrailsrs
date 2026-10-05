@@ -28,7 +28,9 @@ pub fn parse_msts_file(path: impl AsRef<Path>) -> Result<MstsFile, FormatError> 
         return Ok(MstsFile::Route(RouteFile::from_trk_path(path)?));
     }
 
-    let source = if ext.as_deref() == Some("cvf") {
+    let source = if matches!(ext.as_deref(), Some("eng" | "wag" | "con")) {
+        crate::read_msts_text_with_includes(path)?
+    } else if ext.as_deref() == Some("cvf") {
         read_msts_file_decoded(path)?
     } else {
         read_msts_file_to_string(path)?

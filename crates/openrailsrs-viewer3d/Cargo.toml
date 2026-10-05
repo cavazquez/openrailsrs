@@ -27,6 +27,7 @@ default = []
 trace = ["bevy/trace"]
 
 [dependencies]
+openrailsrs-content = { path = "../openrailsrs-content" }
 openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
 openrailsrs-or-shader = { path = "../openrailsrs-or-shader" }

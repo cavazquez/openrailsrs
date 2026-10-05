@@ -31,7 +31,7 @@ class Installer(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.entry = content.catalog()['routes'][5]
+        self.entry = next(e for e in content.catalog()['routes'] if e['id'] == 'demo-model-1')
 
     def tearDown(self):
         self.temp.cleanup()
@@ -50,6 +50,63 @@ class Installer(unittest.TestCase):
         self.assertEqual(m['routes'], ['Demo/ROUTES/Route'])
         self.assertEqual(before, 'licence')
         self.assertEqual(sorted(p.name for p in self.root.iterdir()), [target.name])
+
+    def test_latest_author_revision_is_checked_and_old_and_new_copies_coexist(self):
+        entry=self.entry | {'url':'https://github.com/author/route.git'}
+        first=dict(repository='author/route',commit='1'*40,published_at='2026-01-01T00:00:00Z')
+        second=dict(repository='author/route',commit='2'*40,published_at='2026-10-05T00:00:00Z')
+        payload=lambda text:archive([('Demo/ROUTES/Route/Route.trk',text),('Demo/ROUTES/Route/WORLD/tile.w','world')])
+        with patch.object(content,'emit'),patch.object(content,'resolve_download',side_effect=[('https://codeload.github.com/author/route/zip/1',first),('https://codeload.github.com/author/route/zip/2',second),('https://codeload.github.com/author/route/zip/2',second)]):
+            old=content.install(entry,self.root,opener=lambda _:Response(payload('old')))
+            new=content.install(entry,self.root,opener=lambda _:Response(payload('new')))
+            reused=content.install(entry,self.root,opener=lambda _:self.fail('Current revision must reuse content after checking the author'))
+        self.assertNotEqual(old,new); self.assertEqual(new,reused)
+        self.assertEqual((old/'Demo/ROUTES/Route/Route.trk').read_text(),'old')
+        metadata=json.loads((new/'openrailsrs-content.json').read_text())
+        self.assertEqual(metadata['source_date'],'2026-10-05T00:00:00Z')
+        self.assertIn('downloaded_at',metadata)
+
+    def test_zip_entity_change_preserves_previous_copy_and_same_entity_skips_body(self):
+        def response(text,tag):
+            r=Response(archive([('Demo/ROUTES/Route/Route.trk',text),('Demo/ROUTES/Route/WORLD/tile.w','world')]))
+            r.headers.update({'ETag':tag,'Last-Modified':'Mon, 05 Oct 2026 12:00:00 GMT'})
+            return r
+        with patch.object(content,'emit'):
+            old=content.install(self.entry,self.root,opener=lambda _:response('old','one'))
+            new=content.install(self.entry,self.root,opener=lambda _:response('new','two'))
+            latest=response('never read','two')
+            latest.read=lambda _:self.fail('Unchanged entity must not download the archive body')
+            reused=content.install(self.entry,self.root,opener=lambda _:latest)
+        self.assertNotEqual(old,new); self.assertEqual(new,reused)
+        self.assertTrue(json.loads((new/'openrailsrs-content.json').read_text())['source_date'].startswith('2026-10-05T12:00:00'))
+
+    def test_default_storage_is_user_owned_and_snap_revision_independent(self):
+        self.assertEqual(content.player_data_dir({'HOME':'/home/test'}),Path('/home/test/.local/share/openrailsrs'))
+        self.assertEqual(content.player_data_dir({'SNAP_USER_COMMON':'/home/test/snap/app/common','SNAP_USER_DATA':'/home/test/snap/app/7'}),Path('/home/test/snap/app/common/openrailsrs'))
+        self.assertEqual(content.player_data_dir({'HOME':'/home/test','XDG_DATA_HOME':'bad-relative'}),Path('/home/test/.local/share/openrailsrs'))
+
+    def test_malformed_cached_metadata_does_not_prevent_a_fresh_install(self):
+        bad=self.root/(self.entry['id']+'-malformed')
+        bad.mkdir(); (bad/'openrailsrs-content.json').write_text('[]')
+        payload=archive([('Demo/ROUTES/Route/Route.trk','route'),('Demo/ROUTES/Route/WORLD/tile.w','world')])
+        with patch.object(content,'emit'):
+            target=content.install(self.entry,self.root,opener=lambda _:Response(payload))
+        self.assertNotEqual(target,bad)
+        self.assertTrue((target/'openrailsrs-content.json').is_file())
+
+    @unittest.skipUnless(content.os.name == 'posix', 'symlink regression')
+    def test_existing_digest_symlink_is_never_reused(self):
+        payload=archive([('Demo/ROUTES/Route/Route.trk','route'),('Demo/ROUTES/Route/WORLD/tile.w','world')])
+        digest=content.hashlib.sha256(payload).hexdigest()
+        with tempfile.TemporaryDirectory() as external:
+            outside=Path(external)
+            metadata=outside/'openrailsrs-content.json'
+            metadata.write_text(json.dumps({'download_sha256':digest}))
+            target=self.root/(self.entry['id']+'-'+digest[:16])
+            target.symlink_to(outside,target_is_directory=True)
+            with patch.object(content,'emit'),self.assertRaisesRegex(ValueError,'inseguros'):
+                content.install(self.entry,self.root,opener=lambda _:Response(payload))
+            self.assertEqual(json.loads(metadata.read_text()),{'download_sha256':digest})
 
     def test_traversal_and_ambiguous_case_are_rejected_before_any_extraction(self):
         for files in [[('../outside', 'bad')], [('C:/outside', 'bad')],

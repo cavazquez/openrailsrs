@@ -421,4 +421,49 @@ Alcance técnico: [SIGNALS_AND_CONTENT_SCOPE.md](SIGNALS_AND_CONTENT_SCOPE.md).
 Evidencia y capturas:
 [fixtures/compatibility/next-three-2026-10-05.json](fixtures/compatibility/next-three-2026-10-05.json).
 Pruebas manuales: [sección 30](PLAYER_MANUAL_TESTS.md#30-peralte-despachador-guardado-c-y-contenido-oficial).
+
+## 5 de octubre de 2026: biblioteca persistente, ediciones e Include
+
+- `./check.sh`: **1499 pruebas Rust pasaron, 43 ignoradas**; formato,
+  Clippy, regresiones Python, build, oráculos fijados y servicio de estaciones.
+  Se restauraron y verificaron SHA-256 de los 134 resultados preexistentes.
+  Tras corregir la selección del nombre faltante para búsquedas, pasaron sus
+  cinco regresiones y Clippy del workspace otra vez.
+- 13 regresiones del instalador: actualizaciones con dos commits y ETag,
+  conservación de ambas copias, consulta fresca del autor antes de reutilizar,
+  cancelación, redirecciones HTTPS, extracción y metadatos inseguros.
+  La consulta real de Chiltern resolvió `DocMartin7644/Chiltern-Route-v4`,
+  commit `8236df20ed9f596b8cf15720c43bfbdd0c43125d`, fecha del repositorio
+  `2026-09-09T15:48:33Z`. Es evidencia de la consulta, no una versión fijada.
+- CLI copiada a una carpeta independiente: `content --list` devolvió las
+  15 entradas, usando instalador/catálogo embebidos y Python 3, sin checkout.
+  Pruebas de ubicación XDG, Windows, macOS, Snap común entre revisiones y
+  copia de preferencias/partidas sin reemplazar datos del destino.
+- Demo Model 1 conserva el ZIP oficial de 272422379 bytes, SHA-256
+  `5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b`.
+  Con Include expandido: **15/23 formaciones con recursos obligatorios
+  válidos; 12/23 con tracción**. El player push-pull original tiene siete
+  vehículos, **318800 kg y 139,9032 m**, con cabina 3D. Se advierte la
+  referencia 2D ausente; se permite la alternativa 3D válida.
+- Cabina original comprobada en Xvfb/Mesa lavapipe: **106 partes texturizadas,
+  22 controles CVF y 62 enlaces de matrices**. W seleccionó adelante y D
+  aumentó el regulador; el tren aceleró y la palanca/aguja de carga cambiaron.
+  Cambiar a exterior mantuvo el escenario nativo. El techo y carteles de
+  la estación pueden ocultar el tren según dónde se coloque la cámara.
+  [Cabina al iniciar](fixtures/compatibility/content-library-2026-10-05/demo-original-cab.png),
+  [tracción a 2,3 km/h](fixtures/compatibility/content-library-2026-10-05/demo-cab-traction.png)
+  y [procedencia](fixtures/compatibility/content-library-2026-10-05/verification.json).
+  La primera sesión usó `--route-root` relativo y detectó errores de caché
+  de terreno en AssetServer. Se normalizó el argumento al iniciar la CLI,
+  usando la misma resolución canónica que el menú. El inicio se repitió
+  con el argumento relativo y cero errores de assets.
+
+La actividad SCE probada no incluye paradas programadas y sigue mostrando
+distancia al destino; esta prueba cubre inicio, cabina y controles, no un
+servicio SCE completo ni paridad física. Las formaciones incompletas siguen
+bloqueadas. CAF 6000 se ofrece como enlace al autor, sin reparación automática
+ni compatibilidad certificada. Se probó la ubicación de datos de Snap, no un
+paquete Snap instalado. Los recursos descargados se conservan fuera de Git.
+
+Pruebas manuales: [sección 31](PLAYER_MANUAL_TESTS.md#31-actualizaciones-biblioteca-del-usuario-y-binarios).
 Contenido: [OFFICIAL_CONTENT.md](OFFICIAL_CONTENT.md).

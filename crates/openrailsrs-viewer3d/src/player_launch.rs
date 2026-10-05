@@ -47,6 +47,7 @@ pub struct ServiceChoice {
     pub route_dir: PathBuf,
     pub scenery_root: Option<PathBuf>,
     pub native_activity: bool,
+    pub edition: Option<String>,
 }
 
 #[derive(Resource, Clone, Debug)]
@@ -104,6 +105,7 @@ impl PlayerLaunchMenu {
                     route_dir: route_dir.clone(),
                     scenery_root: Some(root.clone()),
                     native_activity: true,
+                    edition: None,
                 });
             }
         }
@@ -118,6 +120,7 @@ impl PlayerLaunchMenu {
                     route_dir: route.imported.clone(),
                     scenery_root: Some(route.native.clone()),
                     native_activity: true,
+                    edition: route.edition.clone(),
                 });
             }
         }
@@ -187,6 +190,9 @@ impl PlayerLaunchMenu {
         self.refresh_choices();
     }
     pub fn refresh_choices(&mut self) {
+        self.refresh_choices_with_library(&player_data_dir().join("rolling-stock/TRAINS/CONSISTS"));
+    }
+    fn refresh_choices_with_library(&mut self, library: &Path) {
         self.consists.clear();
         self.paths.clear();
         self.consist = 0;
@@ -207,6 +213,8 @@ impl PlayerLaunchMenu {
                 .unwrap_or_default(),
         );
         self.consist_audits.clear();
+        // Original author packages may supply rolling stock independently of a
+        // route. Keep their native TRAINS layout in the user's writable library.
         if !choice.native_activity
             && let Ok(s) = load_scenario(&choice.source)
         {
@@ -230,6 +238,11 @@ impl PlayerLaunchMenu {
                 }
             }
             self.paths = files_with_extension(&root.join("PATHS"), "pat");
+        }
+        for con in files_with_extension(library, "con") {
+            if !self.consists.contains(&con) {
+                self.consists.push(con);
+            }
         }
         // An empty first choice means the consist/path authored by the selected activity.
         for con in &self.consists {
@@ -519,6 +532,7 @@ fn discover_example_services(project: &Path, chiltern: Option<&Path>) -> Vec<Ser
             route_dir,
             scenery_root,
             native_activity: false,
+            edition: None,
         });
     }
     let mut names = HashMap::<String, usize>::new();
@@ -537,6 +551,9 @@ fn discover_example_services(project: &Path, chiltern: Option<&Path>) -> Vec<Ser
     services
 }
 fn route_label(s: &ServiceChoice) -> String {
+    if let Some(edition) = &s.edition {
+        return edition.clone();
+    }
     if let Some(root) = &s.scenery_root {
         root.file_name()
             .unwrap_or_default()
@@ -632,6 +649,27 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn separately_installed_author_formation_is_selectable_and_audited() {
+        let temp = tempfile::tempdir().unwrap();
+        let trains = temp.path().join("rolling-stock/TRAINS");
+        let library = trains.join("CONSISTS");
+        let stock = trains.join("TRAINSET/AuthorStock");
+        std::fs::create_dir_all(&library).unwrap();
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::write(stock.join("original.eng"),"Wagon ( original Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( original MaxPower ( 500kW ) )").unwrap();
+        let consist = library.join("original.con");
+        std::fs::write(
+            &consist,
+            "Train ( TrainCfg ( original Engine ( EngineData ( original AuthorStock ) ) ) )",
+        )
+        .unwrap();
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&project, None);
+        menu.refresh_choices_with_library(&library);
+        assert!(menu.consists.contains(&consist));
+        assert!(menu.consist_audits[&consist].player_ready());
+    }
     #[test]
     fn extended_and_traffic_examples_keep_native_chiltern_scenery() {
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");

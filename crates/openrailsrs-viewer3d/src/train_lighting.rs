@@ -96,8 +96,7 @@ pub fn spawn_train_lights(
     }
     for (service_index, label, con) in services {
         let lights = original_engine(&con, &route)
-            .and_then(|p| read_msts_file_to_string(&p).ok())
-            .and_then(|t| parse_vehicle_text(&t).ok())
+            .and_then(|p| openrailsrs_formats::read_vehicle_ast(&p).ok())
             .map(|a| parse_vehicle_lights(&a))
             .unwrap_or_default();
         let front = consist

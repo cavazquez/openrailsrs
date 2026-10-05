@@ -10,32 +10,63 @@ publicado por [Open Rails](https://www.openrails.org/download/content/).
 1. Elegí **Demo Model 1** para una primera prueba: ZIP del servidor de Open Rails,
    unos 260 MiB de descarga y 315 MiB instalado. Otros paquetes pueden ser mucho
    mayores; el menú muestra los tamaños del catálogo.
-2. Pulsá **Instalar y auditar**. La descarga y la preparación corren en segundo
+2. Pulsá **Buscar actualización e instalar**. La descarga y la preparación corren en segundo
    plano. El panel informa MiB, extracción y auditoría. Podés cancelar; los
    temporales se limpian y el contenido anterior se conserva.
 3. Al terminar, volvés al menú y elegís la ruta instalada y una actividad.
    Se utiliza su red importada, escenario nativo, formación y recorrido. La
    selección de formación conserva los diagnósticos de modelos, texturas,
    cabinas, sonidos y sistemas antes de iniciar.
-   En Demo Model 1, la formación push-pull original utiliza campos `Include`
-   `.inc` todavía no expandidos por nuestro lector. La auditoría lo detecta;
-   hay nueve alternativas con recursos completos y tracción, por ejemplo
-   **MT SCE BlGr # Set 101 194**, para probar el escenario desde el exterior.
-   Esas nueve formaciones son de tráfico AI y no incluyen cabina: la cámara
-   del conductor muestra la vía sin panel. La cabina original del jugador
-   requiere ampliar la lectura de `Include`.
-4. Si cancelaste después de descargar, volvé a instalar el mismo paquete: se
-   reutiliza esa copia para auditarla, sin descargar otra vez el archivo.
+   Demo Model 1 admite la formación original **MT_MT_Class 47 & 6 mk2 PP**:
+   siete vehículos, 318800 kg, 139,90 m y cabina 3D. Los `.inc` se expanden
+   antes de interpretar masa, motor, frenos, cabina, luces y efectos.
+   Su referencia 2D ausente se informa como alternativa no disponible; la
+   cabina 3D válida permite conducir. La descarga probada contiene 23
+   formaciones: 15 con recursos obligatorios válidos y 12 con tracción.
+   Las formaciones AI pueden no traer cabina. Otras copias conservan faltantes
+   reales de modelos o `.inc`; no se fabrican esos archivos.
+4. **Reauditar esta copia** vuelve a preparar una instalación sin red, útil
+   después de actualizar el lector o agregar recursos legítimos del autor.
+   Buscar actualización consulta el origen de nuevo y reutiliza una copia
+   cuando su commit o ETag coincide; un ZIP sin esos metadatos requiere
+   volver a descargarlo para comparar su SHA-256.
 
-Cada paquete queda en `player-data/official-content/<id>-<hash>`; la ubicación
-respeta `OPENRAILSRS_PLAYER_DIR`. Chiltern y los ejemplos existentes conservan
-sus archivos y versiones. Los repositorios GitHub se resuelven a un commit
-concreto del autor, registrado en el manifiesto. El enlace de Chiltern del
-catálogo actualmente dirige a v4: se instala por separado del piloto fijado.
+## Ediciones y almacenamiento
+
+Las descargas **no se versionan en Git ni fijan las futuras actualizaciones**.
+Cada paquete queda en `official-content/<id>-<hash>` dentro de la carpeta de
+datos del usuario. En cada actualización de GitHub se consulta la rama actual
+del autor, incluidas redirecciones de repositorio. El commit registrado identifica
+esa copia descargada; una actualización posterior se instala junto a ella.
+Chiltern conserva también el piloto local que ya tenías.
+
+El selector de ruta distingue las copias por fecha del origen y commit/hash:
+por ejemplo **Chiltern · origen 2026-10-04 · abcdef12**. GitHub proporciona
+fecha de actualización del repositorio (o fecha del commit); para ZIP se usa
+`Last-Modified`. Esa fecha no certifica una publicación formal del autor.
+Cuando no hay fecha, se muestra **descarga abcdef12**. La fecha local de
+descarga se registra aparte, sin presentarla como fecha del autor.
+
+La prioridad de almacenamiento, compartida por CLI y visor, es:
+
+- `OPENRAILSRS_PLAYER_DIR`: ubicación explícita, también para un modo portátil.
+- Snap: `$SNAP_USER_COMMON/openrailsrs`, común entre revisiones, sin escribir
+  dentro de `$SNAP`. [Variables oficiales de Snap](https://snapcraft.io/docs/reference/development/environment-variables/).
+- Linux: `$XDG_DATA_HOME/openrailsrs` o `~/.local/share/openrailsrs`.
+- Windows: `%LOCALAPPDATA%/openrailsrs`.
+- macOS: `~/Library/Application Support/openrailsrs`.
+
+Mover o reemplazar el binario no mueve los paquetes. Se copian preferencias
+y tres partidas antiguas desde `player-data` si el nuevo destino todavía no
+las contiene, conservando los originales. Las instalaciones antiguas cercanas
+al lanzamiento se descubren sin mover sus recursos; para reubicarlas conviene
+copiar el paquete entero y reauditarlo, ya que sus manifiestos preparados
+contienen rutas absolutas.
 
 La copia conserva licencias y archivos originales. `openrailsrs-content.json`
-registra catálogo, autor, URL, commit cuando corresponde, SHA-256 del ZIP y
-tamaños. Ese hash identifica la descarga; no es una firma del autor.
+registra catálogo, autor, URL, commit cuando corresponde, SHA-256 del ZIP,
+fechas del origen/descarga, ETag y tamaños. Ese hash identifica la descarga;
+no es una firma del autor.
 `openrailsrs-audit.json` contiene el resultado por formación y
 `openrailsrs-prepared.json` enumera las rutas/actividades preparadas localmente.
 
@@ -48,11 +79,45 @@ target/debug/openrailsrs content --package demo-model-1
 target/debug/openrailsrs-prepare-content /ruta/al/paquete-instalado
 ```
 
-`OPENRAILSRS_PYTHON` permite elegir Python 3. El helper está en `scripts/` y se
-distribuye junto al proyecto. La CLI instala; la preparación se hace en el
+`OPENRAILSRS_PYTHON` permite elegir Python 3. El helper y catálogo están
+embebidos en los binarios y se materializan en la carpeta de datos: descargar
+no depende de un checkout ni del directorio actual. Python 3 sigue siendo
+una dependencia de ejecución; el futuro Snap debe incluirlo, junto con
+certificados TLS y permisos de red/gráficos. El almacenamiento fue probado
+con las variables de Snap; todavía no se construyó ni certificó un Snap.
+La CLI instala; la preparación se hace en el
 menú o con `openrailsrs-prepare-content`. Los ZIP gratuitos directos y repositorios GitHub
 del catálogo tienen instalación automática. **Ver catálogo oficial** abre
 la página para los paquetes que usan una web, instalador o distribución comercial.
+
+## Recursos faltantes y CAF 6000
+
+Si el paquete procede de GitHub, **Buscar en el origen** abre una búsqueda
+en ese repositorio por el nombre del archivo faltante, sin enviar rutas locales.
+**Buscar actualización del paquete** ofrece la actualización del catálogo;
+la copia anterior se conserva y la nueva debe superar su propia auditoría.
+Una búsqueda no garantiza que el autor distribuya esa dependencia.
+
+Los nombres `caf6000_motor.s`, etc. del ejemplo Mitre son marcadores de un
+ejemplo de física, no archivos de un modelo original. El menú ofrece la
+[página de A. Asensio / Vapor3D](https://vapor3d.punchinout.net/s6000.html)
+y su descarga gratuita RAR de 22,7 MB con cabina 2D. Ese modelo corresponde
+a Metro de Madrid / Subte B; no es una formación real del ferrocarril Mitre.
+La cabina 3D es opcional de pago. Su compatibilidad con nuestro visor y la
+coincidencia de nombres no están verificadas: no se reemplazan marcadores
+automáticamente ni se renombra el contenido del autor.
+
+Para probar material obtenido legítimamente, extraé sus archivos manteniendo
+`rolling-stock/TRAINS/TRAINSET/<carpeta-del-autor>/` y sus `.con` en
+`rolling-stock/TRAINS/CONSISTS/`, dentro de la carpeta de datos. Reiniciá el
+menú y elegí la formación original; se audita antes de iniciar. El instalador
+automático admite ZIP del catálogo; RAR sigue las instrucciones del autor.
+
+Demo Model 1 es pequeño comparado con rutas de varios GiB, pero pesado para
+Git (260 MiB comprimido / 315 MiB instalado). Se conserva como opción del
+catálogo. Para distribuir una edición con contenido precargado, primero hay
+que confirmar la licencia de redistribución y preparar un paquete separado.
+La descarga gratuita no establece por sí sola ese permiso.
 
 ## Límites y validación
 
@@ -63,6 +128,9 @@ mayúsculas, archivos especiales, paquetes cifrados y metadatos reservados al
 preparador. Cada redirección se verifica **antes** de emitir la siguiente
 petición: solamente HTTPS y proveedores del catálogo. Los manifiestos locales
 usan rutas canónicas confinadas al paquete, también al encontrar enlaces.
+`Include` admite anidación, Unicode UTF-16, separadores Windows y diferencias
+de mayúsculas. Se limita a 32 niveles y 32 MiB; rechaza ciclos y referencias
+fuera de la instalación `TRAINS`, incluidos enlaces que escapan.
 
 Un paquete instalado no certifica todos sus sistemas. Las actividades no
 soportadas muestran el error del importador; los recursos obligatorios ausentes

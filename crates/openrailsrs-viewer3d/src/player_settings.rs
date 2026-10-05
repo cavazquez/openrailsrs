@@ -441,9 +441,15 @@ pub fn key_label(key: KeyCode) -> String {
 }
 
 pub fn player_data_dir() -> PathBuf {
-    std::env::var_os("OPENRAILSRS_PLAYER_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("player-data"))
+    static MIGRATION: std::sync::Once = std::sync::Once::new();
+    let directory = openrailsrs_content::data_dir();
+    MIGRATION.call_once(|| {
+        openrailsrs_content::migrate_player_files(
+            &directory,
+            &openrailsrs_content::legacy_data_dirs(),
+        )
+    });
+    directory
 }
 
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {

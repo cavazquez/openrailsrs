@@ -76,9 +76,8 @@ fn native_emitters(
                 .into_iter()
                 .filter_map(|p| openrailsrs_formats::resolve_path_case_insensitive(&p))
                 .find_map(|p| {
-                    openrailsrs_formats::read_msts_file_to_string(&p)
+                    openrailsrs_formats::read_vehicle_ast(&p)
                         .ok()
-                        .and_then(|s| openrailsrs_formats::parse_vehicle_text(&s).ok())
                         .map(|a| openrailsrs_formats::parse_vehicle_emitters(&a))
                         .filter(|e| !e.is_empty())
                 })

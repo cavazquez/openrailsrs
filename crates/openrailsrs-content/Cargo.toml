@@ -1,0 +1,10 @@
+[package]
+name = "openrailsrs-content"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "User content storage and bundled installer resources"
+
+[dev-dependencies]
+tempfile = "3"

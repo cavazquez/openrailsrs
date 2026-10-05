@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-05",
+  "renderer": "Mesa lavapipe (CPU), private Xvfb 1280x720",
+  "content": "Demo Model 1, official Open Rails ZIP",
+  "content_download_sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+  "download_bytes": 272422379,
+  "install_bytes": 329994809,
+  "formations": {
+    "total": 23,
+    "content_valid": 15,
+    "player_ready": 12
+  },
+  "original_player": {
+    "vehicles": 7,
+    "mass_kg": 318800.0,
+    "length_m": 139.9032,
+    "cab_2d": false,
+    "cab_3d": true,
+    "errors": []
+  },
+  "cab": {
+    "textured_parts": 106,
+    "cvf_controls": 22,
+    "matrix_bindings": 62
+  },
+  "peak_rss_mib": 1760.3,
+  "asset_errors": 0,
+  "screenshots": {
+    "demo-original-cab.png": "56649eadf9c21e06892c6623b80638aa08936f2c133850b01e008ae6664e98bc",
+    "demo-cab-traction.png": "a3170123bd259db89f4114cd0009a51af76d489a0447d72cf544a2decfc20f94"
+  },
+  "check": {
+    "rust_passed": 1499,
+    "rust_ignored": 43,
+    "installer_tests": 13,
+    "result": "success"
+  },
+  "scope": "Native cab/control startup smoke; not a full SCE journey or physical parity. Snap storage selection tested; Snap packaging not tested.",
+  "control_smoke": {
+    "observed_speed_kmh": 2.3,
+    "throttle_percent": 10,
+    "reverser": "forward",
+    "peak_rss_mib": 1760.3,
+    "session": "Final rebuilt binary, relative --route-root normalized at CLI startup; zero asset errors"
+  }
+}

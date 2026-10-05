@@ -386,12 +386,8 @@ fn main() -> anyhow::Result<()> {
             package,
             destination,
         } => {
-            let helper = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../scripts/download_official_content.py");
-            let mut command = std::process::Command::new(
-                std::env::var_os("OPENRAILSRS_PYTHON").unwrap_or("python3".into()),
-            );
-            command.arg(helper);
+            let mut command =
+                openrailsrs_content::installer_command().map_err(anyhow::Error::msg)?;
             if list || package.is_none() {
                 command.arg("--list");
             } else if let Some(package) = package {

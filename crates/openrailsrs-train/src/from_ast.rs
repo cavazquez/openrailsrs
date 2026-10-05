@@ -12,7 +12,7 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     if crate::steam_loader::is_toml_eng(path.as_ref()).unwrap_or(false) {
         return crate::steam_loader::load_steam_engine_from_toml(path);
     }
-    let text = read_msts_file_to_string(path.as_ref())
+    let text = openrailsrs_formats::read_msts_text_with_includes(path.as_ref())
         .map_err(|e| TrainError::Parse(format!("read engine: {e}")))?;
     let ast = parse_vehicle_text(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
@@ -22,7 +22,7 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
 }
 
 pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError> {
-    let text = read_msts_file_to_string(path.as_ref())
+    let text = openrailsrs_formats::read_msts_text_with_includes(path.as_ref())
         .map_err(|e| TrainError::Parse(format!("read wagon: {e}")))?;
     let ast = parse_vehicle_text(&text)?;
     let wagon = WagonFile::from_ast(&ast)?;
@@ -70,10 +70,7 @@ pub fn load_consist_curve_parameters(
             let ast = if engine && crate::steam_loader::is_toml_eng(&path).unwrap_or(false) {
                 Ast::List(vec![])
             } else {
-                parse_vehicle_text(
-                    &read_msts_file_to_string(&path)
-                        .map_err(|e| TrainError::Parse(e.to_string()))?,
-                )?
+                openrailsrs_formats::read_vehicle_ast(&path)?
             };
             Ok(openrailsrs_formats::parse_vehicle_curve_parameters(
                 &ast, engine,

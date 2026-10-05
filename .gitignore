@@ -86,3 +86,7 @@ scripts/__pycache__/
 
 # Local player preferences, launch selections and save slots.
 /player-data/
+
+# User downloads and local content archives are not source assets.
+/official-content/
+/content-cache/
