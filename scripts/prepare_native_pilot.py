@@ -19,6 +19,30 @@ from prepare_chiltern_extended import fields
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def inspect_installation(route):
+    """Report original-file locations even before an incomplete route can be imported."""
+    route=Path(route).absolute()
+    required=[]
+    def files(folder,extension):
+        try:directory=resolve(folder)
+        except (ValueError,OSError):return []
+        return [str(p.resolve()) for p in sorted(directory.iterdir()) if p.is_file() and p.suffix.casefold()==extension]
+    tdbs=files(route,'.tdb');paths=files(route/'PATHS','.pat')
+    for name in ('sigcfg.dat','sigscr.dat'):
+        try:resolve(route/name)
+        except (ValueError,OSError):required.append(str(route/name))
+    if not tdbs:required.append(str(route/'<nombre-original>.tdb'))
+    if not paths:required.append(str(route/'PATHS/<recorrido-original>.pat'))
+    trains=route.parent.parent/'TRAINS'
+    consists=files(trains/'CONSISTS','.con')
+    if not consists:required.append(str(trains/'CONSISTS/<formación-original>.con'))
+    try:trainset=resolve(trains/'TRAINSET');has_trainset=trainset.is_dir()
+    except (ValueError,OSError):has_trainset=False
+    if not has_trainset:required.append(str(trains/'TRAINSET'))
+    return dict(route_root=str(route),train_root=str(trains),paths=paths,consists=consists,
+        missing_locations=required,ready_to_select=not required,
+        guidance='Conservá los nombres y carpetas originales del autor. Esta inspección no certifica la formación ni sustituye la auditoría de sus recursos.')
+
 
 def resolve(path):
     """Windows-authored file casing, without following ambiguous matches."""
@@ -265,6 +289,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--route-root", type=Path, required=True)
     p.add_argument("--list", action="store_true", help="list installed paths/services; no import or writes")
+    p.add_argument("--inspect",action="store_true",help="show incomplete installation paths without importing")
     p.add_argument("--imported-track", type=Path)
     p.add_argument("--path", type=Path)
     p.add_argument("--consist", type=Path)
@@ -273,6 +298,9 @@ def main():
     p.add_argument("--cli", type=Path, default=ROOT/"target/debug/openrailsrs")
     p.add_argument("--out-dir", type=Path, default=ROOT/"examples/belgrano_cc")
     a = p.parse_args()
+    if a.inspect:
+        print(json.dumps(inspect_installation(a.route_root),indent=2,ensure_ascii=False))
+        return
     route = resolve(a.route_root)
     if a.list:
         for folder, extension in (("PATHS", ".pat"), ("SERVICES", ".srv")):

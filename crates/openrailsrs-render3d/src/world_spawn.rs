@@ -602,7 +602,11 @@ impl TerrainSpawnCtx {
                 None,
             )
             .ok()?
-        } else if is_dds {
+        } else if is_dds
+            || path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("ktx2"))
+        {
             load_texture_image(&path)?
         } else {
             let ace = load_terrtex_ace(route, file_name)?;
@@ -611,6 +615,16 @@ impl TerrainSpawnCtx {
         let mut image = image;
         set_terrain_repeat_sampler(&mut image);
         if sanitize_base {
+            if image.texture_descriptor.format.is_compressed() {
+                image = openrailsrs_bevy_scenery::texture_cache::load(
+                    &path,
+                    bevy::image::CompressedImageFormats::NONE,
+                    None,
+                    None,
+                )
+                .ok()?
+                .image;
+            }
             sanitize_terrain_base_rgba(image.data.as_mut());
         }
         let handle = images.add(image);
@@ -1968,7 +1982,7 @@ fn texture_material(
     let is_dds = tex_path
         .extension()
         .and_then(|e| e.to_str())
-        .is_some_and(|e| e.eq_ignore_ascii_case("dds"));
+        .is_some_and(|e| e.eq_ignore_ascii_case("dds") || e.eq_ignore_ascii_case("ktx2"));
 
     let (alpha_mode, dual_blend) = if is_dds {
         use crate::textures::{DdsAlpha, dds_alpha_type};
@@ -2082,7 +2096,11 @@ fn build_textured_standard_material(
     tex_stats: &mut TextureLoadStats,
     lit: bool,
 ) -> Handle<StandardMaterial> {
-    if is_dds {
+    if is_dds
+        || tex_path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("ktx2"))
+    {
         let Some(image) = load_texture_image_with_addr(tex_path, tex_addr_mode) else {
             tex_stats.record_decode_failed(shape_file, name, tex_path);
             return untextured.clone();

@@ -188,6 +188,9 @@ pub fn texture_file_basename(file_name: &str) -> &str {
 pub fn global_assets_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut push = |p: PathBuf| {
+        let Some(p) = resolve_path_case_insensitive(&p) else {
+            return;
+        };
         let has_shapes = p.join("SHAPES").is_dir() || p.join("shapes").is_dir();
         if has_shapes && !out.iter().any(|existing| existing == &p) {
             out.push(p);
@@ -211,6 +214,17 @@ pub fn global_assets_dirs(route_dir: &Path, msts_root: &Path) -> Vec<PathBuf> {
                 push(entry.path().join("GLOBAL"));
             }
         }
+    }
+    // Standalone downloads use <pack>/ROUTES/<route> even when the pack's
+    // name differs from the route (Demo Model 1 / SCE). Their GLOBAL belongs
+    // to that pack, independently of the user's other MSTS installations.
+    if let Some(routes) = route_dir.parent()
+        && routes
+            .file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("ROUTES"))
+        && let Some(pack) = routes.parent()
+    {
+        push(pack.join("GLOBAL"));
     }
     out
 }
@@ -288,7 +302,10 @@ fn index_textures_dir(map: &mut HashMap<String, PathBuf>, dir: &Path) {
         if path.is_file() {
             if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                if ext.eq_ignore_ascii_case("ace") || ext.eq_ignore_ascii_case("dds") {
+                if ext.eq_ignore_ascii_case("ace")
+                    || ext.eq_ignore_ascii_case("dds")
+                    || ext.eq_ignore_ascii_case("ktx2")
+                {
                     map.insert(name.to_ascii_lowercase(), path);
                 }
             }
@@ -396,6 +413,12 @@ fn push_file_variant(out: &mut Vec<PathBuf>, dir: &Path, file_name: &str) {
     {
         let dds = path_obj.with_extension("dds");
         out.push(dir.join(dds));
+        out.push(dir.join(path_obj.with_extension("ktx2")));
+    } else if path_obj
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("dds"))
+    {
+        out.push(dir.join(path_obj.with_extension("ktx2")));
     }
 }
 
@@ -457,6 +480,7 @@ fn night_texture_candidates(textures_root: &Path, file_name: &str) -> Vec<PathBu
 
     for night_dir in [local_night, parent_night] {
         push_file_variant_dds_first(&mut out, &night_dir, file_name);
+        out.push(night_dir.join(Path::new(file_name).with_extension("ktx2")));
     }
     out
 }
@@ -753,17 +777,14 @@ pub fn load_texture_image_with_sampler(
     tex_addr_mode: Option<i32>,
     mip_map_lod_bias: Option<f32>,
 ) -> Option<Image> {
-    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
-    if ext == "dds" {
-        let bytes = std::fs::read(path).ok()?;
-        return decode_dds_to_image_with_sampler(&bytes, tex_addr_mode, mip_map_lod_bias).ok();
-    }
-    let ace = read_ace(path).ok()?;
-    Some(crate::gpu_textures::ace_to_gpu_image_with_sampler(
-        &ace,
+    crate::texture_cache::load(
+        path,
+        crate::gpu_textures::device_texture_formats(),
         tex_addr_mode,
         mip_map_lod_bias,
-    ))
+    )
+    .ok()
+    .map(|loaded| loaded.image)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -933,6 +954,50 @@ mod tests {
 
     fn default_flags() -> TextureFlags {
         TextureFlags::from_raw(TextureFlags::NONE)
+    }
+
+    #[test]
+    fn native_ktx2_fallback_preserves_authored_and_seasonal_precedence() {
+        let route = tempfile::tempdir().unwrap();
+        let textures = route.path().join("TEXTURES");
+        std::fs::create_dir_all(textures.join("SNOW")).unwrap();
+        let authored = textures.join("House.ACE");
+        let ktx = textures.join("house.ktx2");
+        std::fs::write(&authored, []).unwrap();
+        std::fs::write(&ktx, []).unwrap();
+        assert_eq!(
+            resolve_texture_path(
+                route.path(),
+                r"TEXTURES\house.ace",
+                &summer_env(),
+                default_flags()
+            )
+            .unwrap(),
+            authored
+        );
+        std::fs::remove_file(&authored).unwrap();
+        assert_eq!(
+            resolve_texture_path(route.path(), "house.ace", &summer_env(), default_flags())
+                .unwrap(),
+            ktx
+        );
+        let snow = textures.join("SNOW/house.KTX2");
+        std::fs::write(&snow, []).unwrap();
+        let environment = TextureEnvironment {
+            season: Season::Winter,
+            snow_weather: true,
+            night: false,
+        };
+        assert_eq!(
+            resolve_texture_path(
+                route.path(),
+                "house.ace",
+                &environment,
+                TextureFlags::from_raw(TextureFlags::SNOW)
+            )
+            .unwrap(),
+            snow
+        );
     }
 
     #[test]
@@ -1110,8 +1175,10 @@ mod tests {
         assert!(cands.len() >= 4);
         assert_eq!(cands[0], Path::new("/route/TEXTURES/Night/lamp.dds"));
         assert_eq!(cands[1], Path::new("/route/TEXTURES/Night/lamp.ace"));
-        assert_eq!(cands[2], Path::new("/route/Night/lamp.dds"));
-        assert_eq!(cands[3], Path::new("/route/Night/lamp.ace"));
+        assert_eq!(cands[2], Path::new("/route/TEXTURES/Night/lamp.ktx2"));
+        assert_eq!(cands[3], Path::new("/route/Night/lamp.dds"));
+        assert_eq!(cands[4], Path::new("/route/Night/lamp.ace"));
+        assert_eq!(cands[5], Path::new("/route/Night/lamp.ktx2"));
     }
 
     #[test]

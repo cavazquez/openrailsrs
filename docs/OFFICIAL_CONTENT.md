@@ -82,15 +82,29 @@ target/debug/openrailsrs-prepare-content /ruta/al/paquete-instalado
 `OPENRAILSRS_PYTHON` permite elegir Python 3. El helper y catálogo están
 embebidos en los binarios y se materializan en la carpeta de datos: descargar
 no depende de un checkout ni del directorio actual. Python 3 sigue siendo
-una dependencia de ejecución; el futuro Snap debe incluirlo, junto con
-certificados TLS y permisos de red/gráficos. El almacenamiento fue probado
-con las variables de Snap; todavía no se construyó ni certificó un Snap.
+una dependencia de ejecución; la receta Snap lo incluye, junto con
+certificados TLS y permisos de red/gráficos. El paquete se construye con
+core24 y confinamiento estricto. La [guía de distribución](DISTRIBUTION.md)
+registra las pruebas del binario trasladado y el estado de la instalación Snap.
 La CLI instala; la preparación se hace en el
 menú o con `openrailsrs-prepare-content`. Los ZIP gratuitos directos y repositorios GitHub
 del catálogo tienen instalación automática. **Ver catálogo oficial** abre
 la página para los paquetes que usan una web, instalador o distribución comercial.
 
 ## Recursos faltantes y CAF 6000
+
+**Abrir carpeta del escenario** abre su ubicación real en el gestor de archivos;
+cada edición instalada también ofrece **Abrir carpeta**. **Copiar diagnóstico**
+reúne escenario, servicio, formación, referencias ausentes y destinos absolutos
+en el portapapeles. Es útil para completar archivos del autor y reauditar la
+copia. Si el sistema no ofrece portapapeles o gestor de archivos, se muestra el
+error y el panel conserva los detalles.
+
+La [sección Contenido de la web](https://cavazquez.github.io/openrailsrs/contenido.html)
+presenta los mismos quince registros del catálogo integrado. Permite buscar por
+ruta/autor y filtrar gratuitos o instalables desde el juego. Las webs comerciales
+y las descargas que requieren acceso manual conservan el enlace original;
+no se muestran como ZIP instalables automáticamente.
 
 El menú y **Descargar contenido oficial** muestran la carpeta del escenario
 seleccionado, el archivo de actividad/servicio y la formación `.con`. El detalle

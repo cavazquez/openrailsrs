@@ -495,3 +495,40 @@ Contenido: [OFFICIAL_CONTENT.md](OFFICIAL_CONTENT.md).
 y [registro de verificación](fixtures/compatibility/original-content-2026-10-05/verification.json).
 La prueba visual cubre el menú y la auditoría, no una partida completa ni la
 paridad física/visual de un CAF original.
+
+
+## 5 de octubre de 2026: KTX2, catálogo, terreno y paquetes
+
+`./check.sh` pasó formato, Clippy, **1517 pruebas Rust y 44 ignoradas**, regresiones Python, dos pruebas nativas, build, oráculos cortos fijados y servicio corto. Tras completar la carga asíncrona, se repitieron Clippy/build y las ocho pruebas de assets, incluida la regresión nueva. Se restauraron y verificaron SHA-256 de los 134 resultados preexistentes, conservando los seis archivos del usuario.
+
+### Escenario y texturas
+
+Las tres estaciones de Chiltern se inspeccionaron en exterior y cabina a las 09:55, radio 450 m y FOV 45°, contra las referencias OR 1.6.1 existentes. RX 7600/Vulkan cargó las seis vistas sin pipelines fallidos/pendientes, uploads pendientes ni shapes cercanos sin activar. Picos RSS: 1296–1419 MiB exterior y 1574–1594 MiB cabina.
+
+Northolt Park contra RGBA sin caché conservó recortes/transparencias: error RGB medio 0,0166/255 exterior y 0,0086/255 cabina, en el rectángulo de escena `[310,160,660,490]`. El pequeño plano claro de un abedul aparece en ambas variantes: sigue requiriendo revisión del material y no se considera corregido por la caché. Cuatro texturas sumaron 43,58 ms en frío y 17,06 ms en caliente, con igual payload 4,17 MiB; esto no mide una aceleración del arranque completo.
+
+Demo Model 1 se comparó con capturas nuevas de OR 1.6.1, actividad 0930 Edinburgh–Glasgow y formación original Class 47 con seis Mk2. Se corrigieron tres causas:
+
+- El inicio del PAT se trataba como cabeza, aunque OR lo usa para la cola; ahora el menú aplica los 139,9032 m de la formación seleccionada.
+- Los buffers RAW pedidos en minúsculas existían con nombres en mayúsculas. Se resuelven sin renombrarlos, en lectura directa y en AssetServer.
+- `Demo Model 1/ROUTES/SCE` no encontraba su propia carpeta `global/`. Ahora usa sus **314 modelos originales de vías/carreteras**, sin los 162 reemplazos generados de la primera captura.
+
+Las capturas finales muestran suelo continuo y superficies originales de carreteras. Cero faltantes de terreno y errores de shaders. RSS: **744 MiB exterior y 837 MiB cabina**. La calibración exacta del centro del tren/cámara, iluminación, SIGSCR y la inversión del PAT siguen fuera de esta aceptación; estas vistas no son goldens de paridad por píxel.
+
+[Exterior corregido](fixtures/compatibility/five-items-2026-10-05/openrailsrs-exterior.png), [OR 1.6.1 exterior](fixtures/compatibility/five-items-2026-10-05/or161-exterior.png), [cabina corregida](fixtures/compatibility/five-items-2026-10-05/openrailsrs-cab.png) y [OR 1.6.1 cabina](fixtures/compatibility/five-items-2026-10-05/or161-cab.png).
+
+### Recorrido y distribución
+
+El visor final completó **6/6 paradas y 15318,73 m** con streaming, 66 programas SIGSCR y ambos servicios AI llegados. Mayor error de detención: 4,03 m. Conductor automático al 75 %, tiempo ×16 y pasajeros normales: 2538,4 s simulados y 230,4 s reales. Llegó 706 s tarde a Gerrards Cross; completar el viaje no certifica horarios ni paridad física.
+
+Pico RSS: **2064 MiB**. P50/P95/P99: 25/62/82 ms; 25 cuadros de más de 100 ms, el mayor 4525 ms al inicio, y 18 tirones durante la partida. Seis sectores GPU, 6450 entidades, cero errores SIGSCR/pipelines y cero uploads/shapes cercanos pendientes al final. No se afirma que hayan desaparecido los tirones.
+
+El paquete portátil incluye 185 archivos de recursos/binarios y abrió una partida desde una carpeta vacía, usando ejemplos/shaders empaquetados. La CLI listó quince entradas; el menú mostró tildes y los nuevos botones. La partida usó RX 7600, pico RSS 1575 MiB y cero errores de shaders. La primera CLI bajo el sandbox no podía escribir en XDG; se repitió con datos de QA aislados y sin depender del checkout.
+
+Se construyó el Snap real core24. El usuario pospuso la instalación; **confinamiento, portapapeles y persistencia en un Snap instalado siguen pendientes**. Belgrano CC espera la ruta y los trenes originales del autor. `--inspect` informa rutas absolutas y ubicaciones faltantes sin crear una ruta ficticia.
+
+El catálogo web se probó en escritorio/móvil, sin errores JS ni desbordamiento. El juego abre la carpeta exacta y copia el diagnóstico; conserva ediciones y reauditoría. Solo se ofrecen orígenes originales y las descargas quedan fuera de Git.
+
+La revisión de seguridad encontró un KTX2 RGB8 truncado que podía provocar un panic en Bevy. Se corrigieron tamaño/DFD con regresiones para RGB8 válido e inválido. El servicio falló después del hallazgo; **no se declara una revisión automática completa**.
+
+[Servicio completado](fixtures/compatibility/five-items-2026-10-05/chiltern-completed.png) y [mediciones/procedencia](fixtures/compatibility/five-items-2026-10-05/verification.json). Pruebas manuales: [sección 32](PLAYER_MANUAL_TESTS.md#32-catálogo-web-biblioteca-ktx2-y-paquete-trasladable). Distribución: [DISTRIBUTION.md](DISTRIBUTION.md).

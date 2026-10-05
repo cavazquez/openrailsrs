@@ -1,0 +1,644 @@
+{
+  "date": "2026-10-05",
+  "source_base_commit": "8228fdeded91e3d8efce8e08055e33139f1a0761",
+  "openrails_reference": {
+    "version": "1.6.1",
+    "source_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "content": {
+    "name": "Demo Model 1",
+    "original_zip_sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+    "formation": "MT_MT_Class 47 & 6 mk2 PP",
+    "activity": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
+    "consist_length_m": 139.9032
+  },
+  "views": {
+    "exterior": {
+      "images": {
+        "openrailsrs": {
+          "file": "openrailsrs-exterior.png",
+          "sha256": "85737b5ce5e09efcd70e548a59b3ea1bfdb1629e598a09201b1d946cc960de8f"
+        },
+        "or161": {
+          "file": "or161-exterior.png",
+          "sha256": "a4310b4d004fbda68b9bb6d53eacf3c97c5a241e42cd1c2371a1d009191ba92b"
+        }
+      },
+      "openrailsrs": {
+        "camera": {
+          "aspect_ratio": 1.7777777910232544,
+          "distance_m": 160.0,
+          "fov_y_rad": 0.7853981852531433,
+          "pitch_rad": 0.6000000238418579,
+          "position_world": [
+            -12516627.0,
+            143.67263793945312,
+            -31018502.0
+          ],
+          "rotation_xyzw": [
+            -0.20589092373847961,
+            0.6853164434432983,
+            0.2119932323694229,
+            0.6655892729759216
+          ],
+          "target_world": [
+            -12516759.0,
+            53.32985305786133,
+            -31018498.0
+          ],
+          "yaw_rad": 1.600000023841858
+        },
+        "clock_time_s": 34140.0,
+        "solar_direction": [
+          0.6059486269950867,
+          0.715431809425354,
+          0.3478269875049591
+        ],
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "performance": {
+          "elapsed_s": 29.865554234000015,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 52,
+          "frame_p99_ms": 63,
+          "frames": 1010,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 25,
+          "gameplay_frames": 455,
+          "gameplay_hitches_over_100_ms": 0,
+          "gameplay_longest_frame_ms": 25.445804,
+          "hitches_over_100_ms": 1,
+          "loading_frames": 555,
+          "longest_frame_ms": 584.575206,
+          "peak_rss_mib": 740.31640625,
+          "rss_mib": 740.31640625,
+          "startup_longest_frame_ms": 584.575206
+        },
+        "peak_rss_mib": 743.6,
+        "graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 1365.86328125,
+          "peak_process_vram_mib": 807.03125,
+          "process_gtt_mib": 84.06640625,
+          "process_vram_mib": 807.0234375,
+          "source": "linux_drm_fdinfo"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "texture_cache": {
+          "directory": "user-data/cache/textures-v1",
+          "hits": 2824,
+          "misses": 371
+        },
+        "gpu_tiles": 2,
+        "gpu_entities": 3865,
+        "pending_gpu_uploads": 0,
+        "unactivated_near_shapes": 0
+      },
+      "openrails": {
+        "version": "1.6.1",
+        "view": "exterior",
+        "time_s": 34140.0,
+        "tile_x": -6112,
+        "tile_z": 15146,
+        "location": "757.2625, 143.941589, -503.5522",
+        "view_matrix": {
+          "M11": -0.0291994587,
+          "M12": -0.5644018,
+          "M13": 0.8249837,
+          "M14": 0.0,
+          "M21": 0.0,
+          "M22": 0.8253357,
+          "M23": 0.564642549,
+          "M24": 0.0,
+          "M31": -0.999573648,
+          "M32": 0.0164872576,
+          "M33": -0.0240993537,
+          "M34": 0.0,
+          "M41": 525.449158,
+          "M42": 300.298,
+          "M43": -693.8695,
+          "M44": 1.0
+        },
+        "projection_matrix": {
+          "M11": 1.357995,
+          "M12": 0.0,
+          "M13": 0.0,
+          "M14": 0.0,
+          "M21": 0.0,
+          "M22": 2.41421342,
+          "M23": 0.0,
+          "M24": 0.0,
+          "M31": 0.0,
+          "M32": 0.0,
+          "M33": -1.00222719,
+          "M34": -1.0,
+          "M41": 0.0,
+          "M42": 0.0,
+          "M43": -1.00222719,
+          "M44": 0.0
+        },
+        "solar_direction": [
+          0.632538259,
+          0.701806366,
+          0.327663273
+        ],
+        "scenery_tiles": [
+          [
+            -6113,
+            15145
+          ],
+          [
+            -6113,
+            15146
+          ],
+          [
+            -6113,
+            15147
+          ],
+          [
+            -6112,
+            15145
+          ],
+          [
+            -6112,
+            15146
+          ],
+          [
+            -6112,
+            15147
+          ],
+          [
+            -6111,
+            15145
+          ],
+          [
+            -6111,
+            15146
+          ],
+          [
+            -6111,
+            15147
+          ]
+        ],
+        "orbit": {
+          "yaw_rad": 1.6,
+          "pitch_rad": 0.6,
+          "distance_m": 160.0
+        },
+        "target_override": "",
+        "advance_m": "0",
+        "platform_id": null,
+        "lead_world_location": {
+          "TileX": -6112,
+          "TileZ": 15146,
+          "Location": "625.265137, 53.5988, -507.408081"
+        },
+        "host_statistics_disabled": true,
+        "png_sha256": "a4310b4d004fbda68b9bb6d53eacf3c97c5a241e42cd1c2371a1d009191ba92b",
+        "adapter_sha256": "944dcc2f7befba28deba973f8d35a3d255f7a23db0f68f56749aa31ec9465864",
+        "peak_rss_mib": 1477
+      },
+      "native_trackobj": {
+        "seen": 314,
+        "mesh": 314,
+        "procedural": 0,
+        "failed": 0
+      },
+      "terrain_missing_diagnostics": 0
+    },
+    "cab": {
+      "images": {
+        "openrailsrs": {
+          "file": "openrailsrs-cab.png",
+          "sha256": "3f962362bc39fcbd3f2c5d9e524604e2c595806308a50abad50af7571c218df1"
+        },
+        "or161": {
+          "file": "or161-cab.png",
+          "sha256": "8780ae5acf0177fb3125433e66379331fc933efd675d9b9ebece77b493c5fea5"
+        }
+      },
+      "openrailsrs": {
+        "camera": {
+          "aspect_ratio": 1.7777777910232544,
+          "distance_m": 160.0,
+          "fov_y_rad": 0.7853981852531433,
+          "pitch_rad": 0.6000000238418579,
+          "position_world": [
+            -12516766.0,
+            56.53564453125,
+            -31018494.0
+          ],
+          "rotation_xyzw": [
+            -0.06745672971010208,
+            0.8198055624961853,
+            0.09100491553544998,
+            0.5613259077072144
+          ],
+          "target_world": [
+            -12516759.0,
+            53.32985305786133,
+            -31018498.0
+          ],
+          "yaw_rad": -2.7725329399108887
+        },
+        "clock_time_s": 34140.0,
+        "solar_direction": [
+          0.6059486269950867,
+          0.715431809425354,
+          0.3478269875049591
+        ],
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "performance": {
+          "elapsed_s": 30.07427323499999,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 53,
+          "frame_p99_ms": 63,
+          "frames": 985,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 25,
+          "gameplay_frames": 371,
+          "gameplay_hitches_over_100_ms": 0,
+          "gameplay_longest_frame_ms": 25.651862,
+          "hitches_over_100_ms": 1,
+          "loading_frames": 614,
+          "longest_frame_ms": 1359.499198,
+          "peak_rss_mib": 836.86328125,
+          "rss_mib": 827.76953125,
+          "startup_longest_frame_ms": 1359.499198
+        },
+        "peak_rss_mib": 836.9,
+        "graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 1366.1171875,
+          "peak_process_vram_mib": 805.27734375,
+          "process_gtt_mib": 84.06640625,
+          "process_vram_mib": 805.27734375,
+          "source": "linux_drm_fdinfo"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "texture_cache": {
+          "directory": "user-data/cache/textures-v1",
+          "hits": 3195,
+          "misses": 0
+        },
+        "gpu_tiles": 2,
+        "gpu_entities": 3865,
+        "pending_gpu_uploads": 0,
+        "unactivated_near_shapes": 0
+      },
+      "openrails": {
+        "version": "1.6.1",
+        "view": "cab",
+        "time_s": 34140.0,
+        "tile_x": -6112,
+        "tile_z": 15146,
+        "location": "618.062256, 56.7988, -510.9589",
+        "view_matrix": {
+          "M11": -0.362274,
+          "M12": -0.2096675,
+          "M13": 0.9081834,
+          "M14": 0.0,
+          "M21": 0.0,
+          "M22": 0.9743709,
+          "M23": 0.22494781,
+          "M24": 0.0,
+          "M31": -0.932071745,
+          "M32": 0.0814927444,
+          "M33": -0.352989167,
+          "M34": 0.0,
+          "M41": 700.1582,
+          "M42": 32.6050339,
+          "M43": -393.727722,
+          "M44": 1.0
+        },
+        "projection_matrix": {
+          "M11": 1.357995,
+          "M12": 0.0,
+          "M13": 0.0,
+          "M14": 0.0,
+          "M21": 0.0,
+          "M22": 2.41421342,
+          "M23": 0.0,
+          "M24": 0.0,
+          "M31": 0.0,
+          "M32": 0.0,
+          "M33": -1.00022233,
+          "M34": -1.0,
+          "M41": 0.0,
+          "M42": 0.0,
+          "M43": -0.100022227,
+          "M44": 0.0
+        },
+        "solar_direction": [
+          0.632538259,
+          0.701806366,
+          0.327663273
+        ],
+        "scenery_tiles": [
+          [
+            -6113,
+            15145
+          ],
+          [
+            -6113,
+            15146
+          ],
+          [
+            -6113,
+            15147
+          ],
+          [
+            -6112,
+            15145
+          ],
+          [
+            -6112,
+            15146
+          ],
+          [
+            -6112,
+            15147
+          ],
+          [
+            -6111,
+            15145
+          ],
+          [
+            -6111,
+            15146
+          ],
+          [
+            -6111,
+            15147
+          ]
+        ],
+        "orbit": null,
+        "target_override": "",
+        "advance_m": "0",
+        "platform_id": null,
+        "lead_world_location": {
+          "TileX": -6112,
+          "TileZ": 15146,
+          "Location": "625.265137, 53.5988, -507.408081"
+        },
+        "host_statistics_disabled": true,
+        "png_sha256": "8780ae5acf0177fb3125433e66379331fc933efd675d9b9ebece77b493c5fea5",
+        "adapter_sha256": "944dcc2f7befba28deba973f8d35a3d255f7a23db0f68f56749aa31ec9465864",
+        "peak_rss_mib": 1492
+      },
+      "native_trackobj": {
+        "seen": 314,
+        "mesh": 314,
+        "procedural": 0,
+        "failed": 0
+      },
+      "terrain_missing_diagnostics": 0
+    }
+  },
+  "limits": [
+    "Visual comparison at the same station, clock, view radius, FOV and exterior orbit, not pixel parity acceptance.",
+    "Train-centre/lead camera alignment still requires calibration; native world-space target samples differ by roughly 9 m.",
+    "Native Demo activity reversal/timetable and signal-script parity are not certified by these stationary captures."
+  ],
+  "cache_visual_comparison": {
+    "northolt-park": {
+      "rectangle_xywh": [
+        310,
+        160,
+        660,
+        490
+      ],
+      "mean_rgb_error_255": 0.0165563801278087,
+      "p99_rgb_error_255": 1.0,
+      "max_channel_error_255": 2.0
+    },
+    "northolt-park-cab": {
+      "rectangle_xywh": [
+        310,
+        160,
+        660,
+        490
+      ],
+      "mean_rgb_error_255": 0.00862708719851577,
+      "p99_rgb_error_255": 0.0,
+      "max_channel_error_255": 1.0
+    }
+  },
+  "journey": {
+    "service_complete": true,
+    "odometer_m": 15318.727820177784,
+    "station_results": [
+      {
+        "actual_arrive_s": 0.05,
+        "actual_depart_s": 22.000000000000178,
+        "arrival_speed_mps": 0.0,
+        "delay_s": 0.05,
+        "dwell_s": 20.00000000000015,
+        "early_departure_s": 0.0,
+        "name": "Northolt Park",
+        "node": "n97",
+        "position_error_m": 2.2737367544323206e-13,
+        "scheduled_arrive_s": 0.0
+      },
+      {
+        "actual_arrive_s": 448.65000000006773,
+        "actual_depart_s": 511.0000000000819,
+        "arrival_speed_mps": 0.09750145492498044,
+        "delay_s": 0.0,
+        "dwell_s": 60.399999999998705,
+        "early_departure_s": 0.0,
+        "name": "South Ruislip",
+        "node": "n101",
+        "position_error_m": 4.029934001898255,
+        "scheduled_arrive_s": 480.0
+      },
+      {
+        "actual_arrive_s": 840.4499999997834,
+        "actual_depart_s": 872.3999999997543,
+        "arrival_speed_mps": 0.09838797693568092,
+        "delay_s": 0.44999999978335836,
+        "dwell_s": 30.00000000000029,
+        "early_departure_s": 0.0,
+        "name": "West Ruislip",
+        "node": "n105",
+        "position_error_m": 3.933954759144399,
+        "scheduled_arrive_s": 840.0
+      },
+      {
+        "actual_arrive_s": 1218.999999999439,
+        "actual_depart_s": 1250.94999999941,
+        "arrival_speed_mps": 0.08116653209641564,
+        "delay_s": 18.99999999943907,
+        "dwell_s": 30.00000000000029,
+        "early_departure_s": 0.0,
+        "name": "Denham",
+        "node": "n3668",
+        "position_error_m": 3.843379453239322,
+        "scheduled_arrive_s": 1200.0
+      },
+      {
+        "actual_arrive_s": 1816.5499999988956,
+        "actual_depart_s": 1848.4999999988665,
+        "arrival_speed_mps": 0.07519025886909798,
+        "delay_s": 406.5499999988956,
+        "dwell_s": 30.00000000000029,
+        "early_departure_s": 0.0,
+        "name": "Denham Golf Course",
+        "node": "n3669",
+        "position_error_m": 3.99175340140755,
+        "scheduled_arrive_s": 1410.0
+      },
+      {
+        "actual_arrive_s": 2506.4500000003527,
+        "actual_depart_s": 2538.400000000469,
+        "arrival_speed_mps": 0.06938095080751998,
+        "delay_s": 706.4500000003527,
+        "dwell_s": 30.00000000000029,
+        "early_departure_s": 0.0,
+        "name": "Gerrards Cross",
+        "node": "n3670",
+        "position_error_m": 3.9823586600105045,
+        "scheduled_arrive_s": 1800.0
+      }
+    ],
+    "peak_rss_mib": 2064.0,
+    "elapsed_s": 230.4,
+    "performance": {
+      "elapsed_s": 211.62934550799986,
+      "frame_p50_ms": 25,
+      "frame_p95_ms": 62,
+      "frame_p99_ms": 82,
+      "frames": 7145,
+      "gameplay_frame_p50_ms": 25,
+      "gameplay_frame_p95_ms": 62,
+      "gameplay_frame_p99_ms": 81,
+      "gameplay_frames": 5540,
+      "gameplay_hitches_over_100_ms": 18,
+      "gameplay_longest_frame_ms": 345.342857,
+      "hitches_over_100_ms": 25,
+      "loading_frames": 4979,
+      "longest_frame_ms": 4524.526704000001,
+      "peak_rss_mib": 2063.9921875,
+      "rss_mib": 2021.875,
+      "startup_longest_frame_ms": 4524.526704000001
+    },
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "DiscreteGpu",
+      "hardware": true,
+      "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+    },
+    "graphics_memory": {
+      "device_total_mib": 8688.0,
+      "device_used_mib": 2998.27734375,
+      "peak_process_vram_mib": 2435.4375,
+      "process_gtt_mib": 84.06640625,
+      "process_vram_mib": 2435.4375,
+      "source": "linux_drm_fdinfo"
+    },
+    "gpu_tiles": 6,
+    "gpu_entities": 6450,
+    "native_signal_programs": 66,
+    "native_signal_errors": {},
+    "shader_pipelines": {
+      "failed": 0,
+      "pending": 0
+    },
+    "pending_gpu_uploads": 0,
+    "unactivated_near_shapes": 0,
+    "traffic": [
+      {
+        "arrived": true,
+        "departed": true,
+        "edge": null,
+        "id": "Pullman adelantado",
+        "odometer_m": 3648.2850517152397,
+        "stops": 2,
+        "velocity_kmh": 0.0
+      },
+      {
+        "arrived": true,
+        "departed": true,
+        "edge": null,
+        "id": "Pullman contrario",
+        "odometer_m": 3251.186980000002,
+        "stops": 1,
+        "velocity_kmh": 0.0
+      }
+    ],
+    "quick_station_practice": false,
+    "texture_cache": {
+      "directory": "user-data/cache/textures-v1",
+      "hits": 12693,
+      "misses": 1577
+    },
+    "method": {
+      "speed_multiplier": 16,
+      "view_radius_m": 2000,
+      "autodrive_throttle": 0.75,
+      "capture": "after actual terminal stop",
+      "passengers": "normal mode; no quick-practice override"
+    },
+    "image": {
+      "file": "chiltern-completed.png",
+      "sha256": "652274874ce0f566f88bd23f1ce3726ffee80f7188442d9e571e95150e88b791"
+    }
+  },
+  "portable_game": {
+    "peak_rss_mib": 1574.9,
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "DiscreteGpu",
+      "hardware": true,
+      "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+    },
+    "gpu_tiles": 4,
+    "shader_pipelines": {
+      "failed": 0,
+      "pending": 0
+    },
+    "pending_gpu_uploads": 0,
+    "unactivated_near_shapes": 0
+  },
+  "snap": {
+    "size_bytes": 126664704,
+    "sha256": "527a094b42ed7f4d53c5cdf0d5ce9dc0e02a7dffd0e203bc439c0b4ed60bd147",
+    "base": "core24",
+    "grade": "devel",
+    "build": "passed",
+    "host_installation": "postponed by user; confinement not certified"
+  },
+  "checks": {
+    "workspace_tests": {
+      "passed": 1517,
+      "ignored": 44
+    },
+    "native_service_tests": {
+      "passed": 2
+    },
+    "final_async_loader_tests": {
+      "passed": 8
+    },
+    "clippy_after_final_change": "passed",
+    "build_after_final_change": "passed",
+    "preexisting_outputs_restored_and_sha256_verified": 134,
+    "security_review": "one confirmed KTX2 finding fixed; review service failed before completing the review"
+  }
+}

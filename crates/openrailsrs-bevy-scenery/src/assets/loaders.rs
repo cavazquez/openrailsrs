@@ -70,15 +70,6 @@ fn path_buf(load_context: &LoadContext<'_>) -> PathBuf {
     PathBuf::from(load_context.path().path())
 }
 
-fn sibling_asset_path(load_context: &LoadContext<'_>, file_name: &str) -> PathBuf {
-    let parent = load_context
-        .path()
-        .path()
-        .parent()
-        .unwrap_or_else(|| Path::new(""));
-    parent.join(file_name)
-}
-
 #[derive(Default, TypePath)]
 pub struct MstsShapeAssetLoader;
 
@@ -279,12 +270,12 @@ impl AssetLoader for MstsTerrainTileAssetLoader {
         let y_rel = if y_name.is_empty() {
             None
         } else {
-            Some(sibling_asset_path(load_context, &y_name))
+            Some(terrain.y_raw_path(hint))
         };
         let f_rel = if f_name.is_empty() {
             None
         } else {
-            Some(sibling_asset_path(load_context, &f_name))
+            Some(terrain.f_raw_path(hint))
         };
 
         let mut elevation = None;

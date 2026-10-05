@@ -172,7 +172,9 @@ pub fn scenery_material_tint_for_ace(pixel_brightened: bool) -> Color {
 const SCENERY_DARK_EMISSIVE: LinearRgba = LinearRgba::new(0.38, 0.38, 0.38, 1.0);
 
 pub(crate) fn scenery_needs_emissive_texture(rgba: &[u8]) -> bool {
-    ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD
+    // GPU-compressed textures have no CPU pixels here. Unknown luminance
+    // must not turn a normal road/building texture into an emissive surface.
+    !rgba.is_empty() && ace_mean_luma(rgba) < DARK_TEXTURE_LUMA_THRESHOLD
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -703,6 +705,13 @@ fn matches_shader_name(shader_name: &str, names: &[&str]) -> bool {
 mod tests {
     use super::*;
     use openrailsrs_ace::AceFile;
+
+    #[test]
+    fn missing_cpu_pixels_do_not_create_artificial_emission() {
+        assert!(!scenery_needs_emissive_texture(&[]));
+        assert!(!scenery_needs_emissive_texture(&[240, 240, 240, 255]));
+        assert!(scenery_needs_emissive_texture(&[5, 5, 5, 255]));
+    }
 
     fn ace_with_semitransparent() -> AceFile {
         // 2×2 RGBA with mid-alpha texels.

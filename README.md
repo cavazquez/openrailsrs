@@ -61,8 +61,9 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 ### Partida, contenido y controles
 
 - Menú de rutas, servicios, formaciones, recorridos, hora, estación del año y clima; auditoría de recursos antes de iniciar.
-- **Contenido oficial** desde el menú: descarga, progreso, cancelación y auditoría de actividades. Actualizaciones del autor junto a copias anteriores, identificadas por fecha y commit/hash; recursos fuera de Git en datos del usuario, con almacenamiento persistente para Snap. Instalador y catálogo embebidos, sin necesitar el checkout; requiere Python 3. Diagnóstico de faltantes con carpeta del escenario, referencias y destinos absolutos. Búsqueda y actualización solo en el repositorio original identificado del catálogo; biblioteca de material rodante del usuario. [Uso, licencias y límites](docs/OFFICIAL_CONTENT.md).
+- **Contenido oficial** desde el menú: descarga, progreso, cancelación y auditoría de actividades. Actualizaciones del autor junto a copias anteriores, identificadas por fecha y commit/hash; recursos fuera de Git en datos del usuario, con almacenamiento persistente para Snap. Instalador y catálogo embebidos, sin necesitar el checkout; requiere Python 3. Biblioteca con **Abrir carpeta** y **Copiar diagnóstico** de referencias y destinos absolutos. Búsqueda y actualización solo en el repositorio original identificado del catálogo. [Catálogo web de rutas y autores](https://cavazquez.github.io/openrailsrs/contenido.html) · [Uso, licencias y límites](docs/OFFICIAL_CONTENT.md).
 - **Vehículos con `Include` nativo**: expande `.inc` anidados antes de leer física, cabinas, luces y efectos, con límites y confinamiento al paquete. Demo Model 1 permite la formación original de siete vehículos y su cabina 3D; la auditoría acepta una cabina válida y avisa si la alternativa falta.
+- Las actividades nativas iniciadas desde el menú convierten el punto inicial de la cola de Open Rails a la cabeza del tren usando la longitud de la formación elegida. Los escenarios TOML ya preparados conservan sus posiciones.
 - Hora visual y clima actuales del lugar, opcionales e independientes: fecha/zona IANA y horario de verano de la ruta; Open-Meteo en segundo plano con caché y respaldo manual. Tormentas elegibles con rayos ramificados, destellos y truenos demorados por distancia; F10 permite elegir manual y desactivar destellos. [Guía y límites](docs/LIVE_ENVIRONMENT.md).
 - Servicio Chiltern de **seis estaciones / 15,32 km**: Northolt Park → South Ruislip → West Ruislip → Denham → Denham Golf Course → Gerrards Cross. También está disponible el servicio corto de tres estaciones.
 - Conducción manual y automática, embarque/desembarque, puertas, horario, puntuación y resumen final. Pasajeros y espera de horario tienen contadores separados; F10 permite práctica de cinco segundos sin espera de horario. Una salida anticipada con puertas cerradas se registra y permite continuar.
@@ -76,6 +77,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 
 - Cabinas originales **2D y 3D**, vistas de pasajero y cámaras exteriores. Instrumentos CVF, palancas, iluminación nocturna, **luz interior con I** y perfiles de asiento/barrido por cabina. El manómetro de cilindro lee el vehículo principal.
 - Terreno, vías, edificios, árboles, cercos, carreteras, vehículos y señales de los recursos MSTS/Open Rails. Streaming de sectores durante el viaje, origen flotante, agrupación de objetos en GPU y cambios de detalle con transición para geometría rígida.
+- Paquetes independientes como **Demo Model 1** resuelven su propia carpeta `global/`, aunque el nombre del paquete difiera del de la ruta. Los buffers de alturas y huecos del terreno admiten los nombres Windows con mayúsculas distintas, también en la carga asíncrona de Bevy, conservando los archivos originales.
 - Cámara exterior con altura mínima sobre el terreno; ruedas, bogies y señales semafóricas animados con la sesión. Cielo y efectos excluidos de las sombras; edificios y vegetación conservan las transparencias de los materiales originales. La carga de terreno se coordina con el origen flotante para mantenerlo alineado con la vía.
 - Sol según ubicación/hora/estación y entorno original, faros sobre la vía, cielo nocturno con estrellas en tiempo despejado, nubes y niebla atmosférica y de suelo.
 - **Lluvia y nieve seleccionables**: precipitación exterior, gotas/copos sobre el vidrio y barrido del limpiaparabrisas. El tablero y el HUD conservan su legibilidad. Nieve tiene visibilidad de 500 m y cobertura del terreno y exterior de trenes. **Los edificios conservan sus materiales y texturas, incluidos los techos**; no se sustituyen por variantes Snow ni reciben cobertura blanca. El mojado por lluvia alcanza terreno, materiales originales opacos, PBR e instancias GPU.
@@ -83,7 +85,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Renderizador seleccionable al iniciar: GPU, automático o software CPU. Telemetría separada de RSS, VRAM del proceso, GTT y memoria global; percentiles de partida separados de la carga inicial. [Uso, mediciones y límites](docs/WEATHER_EXECUTION.md).
 - Preparador de pilotos nativos de tres estaciones desde PAT/TDB/CON y SIGSCR originales, formación auditada, tráfico opcional y procedencia. El menú conserva el escenario y material rodante propios de cada ruta. [Belgrano CC: archivos originales todavía pendientes](docs/NATIVE_ROUTE_PILOT.md).
 - Menú con descubrimiento de escenarios completos en todo `examples/`, también en subdirectorios y variantes de ensayo. Reportes, overlays, campañas y horarios se operan con sus herramientas propias. Los ejemplos Mitre utilizan el recorrido importado; necesitan los modelos del CAF 6000 para jugar en 3D y no incluyen el paisaje MSTS argentino original. El menú informa las formaciones incompletas.
-- **Texturas DDS/ACE comprimidas en GPU**: se conservan los bloques DXT1/3/5 originales cuando el dispositivo los admite, con mipmaps, sRGB y transparencia; alternativa RGBA para dispositivos sin BC. Conversor `textures-dds` sin recompresión ni cambios al contenido original. [Uso y límites](docs/GPU_TEXTURES.md).
+- **Texturas ACE/DDS/KTX2 y caché persistente**: se conservan los bloques DXT1/3/5 originales, mipmaps, sRGB y transparencia, con alternativa RGBA para dispositivos sin BC. KTX2 nativo y derivados sin pérdida de ACE/DDS, comprimidos con Zstd en datos del usuario; se invalidan al cambiar el original y se reconstruyen si se dañan. Conversores `textures-dds` y `textures-ktx2`, sin reemplazar recursos del autor. [Uso y límites](docs/GPU_TEXTURES.md).
 - Escape diésel y vapor desde emisores ENG originales; partículas limitadas, sin sombras y coherentes con el reloj de simulación. Motor de sonido original SMS/WAV con eventos y separación interior/exterior.
 
 ### Simulación y señales
@@ -113,6 +115,11 @@ OPENRAILSRS_WEATHER=snow ./scripts/run_chiltern_service.sh --direct
 Desde el menú también podés elegir noche, lluvia, niebla, nublado o tormenta, y optar por hora y/o clima actuales del lugar. F10 permite cambiar su origen y elegir clima durante la partida; el reloj del servicio sigue independiente. **V** activa el limpiaparabrisas; las teclas de faros, luces y demás acciones se consultan en **F6** y se reasignan en **F10**.
 
 ## CLI
+
+El [paquete Linux y la receta Snap](docs/DISTRIBUTION.md) incluyen los binarios,
+shaders y ejemplos necesarios para ejecutar desde otra carpeta. El contenido
+original se instala por separado y queda en los datos del usuario; no se
+incorpora al paquete ni al repositorio.
 
 ```bash
 cargo install --path crates/openrailsrs-cli   # binario `openrailsrs`

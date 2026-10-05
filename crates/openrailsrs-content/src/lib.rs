@@ -7,6 +7,26 @@ use std::{
 pub const CATALOG: &str = include_str!("../../../docs/fixtures/content/official-catalog.json");
 const INSTALLER: &[u8] = include_bytes!("../../../scripts/download_official_content.py");
 
+/// Resources of a moved binary/Snap, with source-checkout fallback for developers.
+pub fn resource_dir(fallback: &Path) -> PathBuf {
+    if let Some(root) = std::env::var_os("OPENRAILSRS_RESOURCES")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute() && p.is_dir())
+    {
+        return root;
+    }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(bin) = exe.parent()
+    {
+        for root in [bin.join("../share/openrailsrs"), bin.join("resources")] {
+            if root.join("assets/shaders").is_dir() {
+                return root;
+            }
+        }
+    }
+    fallback.to_path_buf()
+}
+
 pub fn data_dir() -> PathBuf {
     data_dir_with(
         std::env::consts::OS,

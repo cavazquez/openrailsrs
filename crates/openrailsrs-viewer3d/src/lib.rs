@@ -653,7 +653,7 @@ impl Plugin for ViewerPlugin {
                     .after(camera::constrain_exterior_camera_to_terrain)
                     .after(camera::update_driver_camera_fov)
                     .after(route_lighting::update_route_sun)
-                    .run_if(in_state(ViewerAppState::Playing)),
+                    .run_if(capture::capture_state_allowed),
             )
             .add_systems(
                 FixedUpdate,

@@ -386,6 +386,29 @@ impl PlayerLaunchMenu {
         )
         .map_err(|e| e.to_string())?;
         let original_path = self.path == 0;
+        let length = consist
+            .vehicles
+            .iter()
+            .map(|v| match v {
+                openrailsrs_train::Vehicle::Loco(l) => l.length_m,
+                openrailsrs_train::Vehicle::Wagon(w) => w.length_m,
+            })
+            .sum();
+        if original_path && choice.native_activity {
+            let imported = openrailsrs_msts::import_activity_with_consist_length(
+                choice
+                    .scenery_root
+                    .as_deref()
+                    .ok_or("Falta la ruta original")?,
+                &choice.source,
+                &imported_dir,
+                length,
+            )
+            .map_err(|e| e.to_string())?;
+            let native: ScenarioFile = toml::from_str(&imported).map_err(|e| e.to_string())?;
+            scenario.route = native.route;
+            scenario.route.path = imported_dir.to_string_lossy().into_owned();
+        }
         if !original_path {
             let pat_path = self
                 .paths
@@ -395,14 +418,6 @@ impl PlayerLaunchMenu {
                 openrailsrs_route::load_route_from_dir(&imported_dir).map_err(|e| e.to_string())?;
             let pat =
                 openrailsrs_formats::PathFile::from_path(pat_path).map_err(|e| e.to_string())?;
-            let length = consist
-                .vehicles
-                .iter()
-                .map(|v| match v {
-                    openrailsrs_train::Vehicle::Loco(l) => l.length_m,
-                    openrailsrs_train::Vehicle::Wagon(w) => w.length_m,
-                })
-                .sum();
             let hints = openrailsrs_msts::placement_for_pat_with_consist(
                 &loaded.graph,
                 &loaded.msts_aliases,
@@ -663,6 +678,57 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[ignore = "requires the original Demo Model 1 and its imported graph"]
+    fn native_demo_launch_uses_the_chosen_formation_head() {
+        let content = PathBuf::from(
+            std::env::var_os("OPENRAILSRS_NATIVE_DEMO").expect("original Demo Model 1 folder"),
+        );
+        let track =
+            PathBuf::from(std::env::var_os("OPENRAILSRS_DEMO_TRACK").expect("imported SCE folder"));
+        let native = content.join("ROUTES/SCE");
+        let source = native.join("ACTIVITIES/MT_MT_0930 Edinburgh-Glasgow Queen Street.act");
+        let con = content.join("TRAINS/CONSISTS/MT_MT_Class 47 & 6 mk2 PP.con");
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&project, None);
+        menu.services = vec![ServiceChoice {
+            name: "Demo native".into(),
+            source: source.clone(),
+            route_dir: track.clone(),
+            scenery_root: Some(native.clone()),
+            native_activity: true,
+            edition: None,
+        }];
+        menu.routes = vec!["SCE".into()];
+        menu.route = 0;
+        menu.service = 0;
+        menu.consist = 0;
+        menu.path = 0;
+        menu.consists = vec![con];
+        menu.consist_audits.clear();
+        menu.start_time_s = 34140.0;
+        menu.season = 1;
+        let output = tempfile::tempdir().unwrap();
+        let request = menu.prepare_in(output.path()).unwrap();
+        let launched = load_scenario(&request.path).unwrap();
+        let rear: ScenarioFile = toml::from_str(
+            &openrailsrs_msts::import_activity_with_track(&native, &source, Some(&track)).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            (launched.route.start_offset_m.unwrap()
+                - rear.route.start_offset_m.unwrap()
+                - 139.9032)
+                .abs()
+                < 0.01
+        );
+        assert_eq!(launched.route.path, track.to_string_lossy());
+        assert_eq!(launched.scenario.start_time_s, Some(34140.0));
+        assert_eq!(request.route_root, Some(native));
+        if let Some(path) = std::env::var_os("OPENRAILSRS_DEMO_LAUNCH_OUT") {
+            std::fs::copy(&request.path, path).unwrap();
+        }
+    }
     #[test]
     fn separately_installed_author_formation_can_be_reaudited_after_resource_changes() {
         let temp = tempfile::tempdir().unwrap();

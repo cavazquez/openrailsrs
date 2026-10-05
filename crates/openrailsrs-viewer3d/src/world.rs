@@ -1575,9 +1575,8 @@ type ParsedWorldShape = (
     Vec<Option<crate::shapes::LoadedShape>>,
 );
 type ShapeBatchReceiver = std::sync::Mutex<std::sync::mpsc::Receiver<Vec<ParsedWorldShape>>>;
-type TextureBatchReceiver = std::sync::Mutex<
-    std::sync::mpsc::Receiver<std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>>,
->;
+type TextureBatchReceiver =
+    std::sync::Mutex<std::sync::mpsc::Receiver<crate::shapes::PrefetchedTextures>>;
 
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
@@ -1610,6 +1609,7 @@ pub struct WorldSpawnProgress {
     shape_parse_index: usize,
     texture_paths: Vec<PathBuf>,
     texture_prefetch_index: usize,
+    texture_ready_count: usize,
     ace_cache: std::collections::HashMap<PathBuf, openrailsrs_ace::AceFile>,
     shape_cache: std::collections::HashMap<PathBuf, ShapeRenderAsset>,
     parsed_shape_files: std::collections::HashMap<PathBuf, std::sync::Arc<ShapeFile>>,
@@ -1713,6 +1713,7 @@ impl WorldSpawnProgress {
             shape_parse_index: 0,
             texture_paths: Vec::new(),
             texture_prefetch_index: 0,
+            texture_ready_count: 0,
             ace_cache: std::collections::HashMap::new(),
             shape_cache: std::collections::HashMap::new(),
             parsed_shape_files: std::collections::HashMap::new(),
@@ -2805,11 +2806,13 @@ fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool 
     let decoded = match result {
         Ok(decoded) => decoded,
         Err(std::sync::mpsc::TryRecvError::Empty) => return true,
-        Err(std::sync::mpsc::TryRecvError::Disconnected) => std::collections::HashMap::new(),
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+            crate::shapes::PrefetchedTextures::default()
+        }
     };
     progress.texture_task = None;
     for path in &batch {
-        if decoded.contains_key(path) {
+        if decoded.loaded.contains(path) {
             progress
                 .load_diag
                 .record_path_loaded(path, MstsAssetKind::Ace);
@@ -2822,7 +2825,8 @@ fn prefetch_next_shape_texture_batch(progress: &mut WorldSpawnProgress) -> bool 
             );
         }
     }
-    progress.ace_cache.extend(decoded);
+    progress.texture_ready_count += decoded.loaded.len();
+    progress.ace_cache.extend(decoded.aces);
     progress.texture_prefetch_index = end;
     progress.texture_prefetch_index < progress.texture_paths.len()
 }
@@ -2845,7 +2849,7 @@ fn finish_shape_loading(
         parses,
         unique,
         progress.cache_hits,
-        progress.ace_cache.len()
+        progress.texture_ready_count
     );
     if unique > 0 && parses > unique {
         viewer_log!(
@@ -4450,15 +4454,16 @@ pub fn spawn_world_boxes(
     texture_paths.sort_unstable();
     texture_paths.dedup();
     let tex_start = Instant::now();
-    let ace_cache = prefetch_ace_textures(&texture_paths);
+    let prefetched = prefetch_ace_textures(&texture_paths);
     log_step(
         &format!(
             "prefetched {} world shape texture(s) in parallel",
-            ace_cache.len()
+            prefetched.loaded.len()
         ),
         tex_start,
     );
 
+    let ace_cache = prefetched.aces;
     let asset_start = Instant::now();
     let mut parsed_shape_files: HashMap<PathBuf, ShapeFile> = HashMap::new();
     for (shape_path, loaded) in parsed_shapes {

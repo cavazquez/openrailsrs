@@ -22,6 +22,12 @@
       "description": "Prepará el contenido Chiltern, compilá openrailsrs e iniciá un servicio de seis estaciones. Guía de controles y modos CPU/GPU."
     },
     {
+      "file": "contenido.html",
+      "label": "Contenido",
+      "title": "Tu biblioteca de rutas y trenes",
+      "description": "Elegí contenido de sus autores originales, conservá distintas ediciones y revisá los recursos antes de iniciar una partida."
+    },
+    {
       "file": "estado.html",
       "label": "Estado del proyecto",
       "title": "Avances que se pueden comprobar",

@@ -1,4 +1,4 @@
-# Texturas DDS y carga comprimida en GPU
+# Texturas ACE, DDS y KTX2, caché y carga comprimida en GPU
 
 DDS es un contenedor, no una garantía de compresión. Puede almacenar RGBA sin
 comprimir o bloques BC/DXT junto a los mipmaps. La implementación preserva los
@@ -64,3 +64,50 @@ Las muestras/informe están en `tmp/cabin-dds-verification/`; la copia masiva
 temporal se limpió para recuperar espacio.
 
 [Registro verificable](fixtures/textures/2026-10-05.json).
+
+## KTX2 nativo y caché sin pérdida
+
+El resolver admite `.ktx2` para texturas de materiales de escenario, trenes y
+terreno. Una referencia ACE busca primero ACE, después DDS y finalmente KTX2
+en cada carpeta; conserva las prioridades originales de temporada y noche.
+No reemplaza un archivo ACE existente por una variante diferente. Las rutas
+de instrumentos que procesan píxeles ACE conservan su decodificación original.
+
+Al cargar ACE/DDS elegibles, el visor escribe un derivado KTX2 en
+`cache/textures-v1` dentro de la carpeta de datos del usuario. Conserva bloques
+BC1/2/3 o RGBA8 exactos, alfa y todos los mipmaps, con Zstd por nivel.
+**Zstd reduce almacenamiento; no reduce los bytes de textura subidos a GPU.**
+No se realiza una nueva compresión con pérdida. El hash del original invalida
+el derivado si el autor lo cambia; un derivado corrupto se reconstruye. La
+caché se publica con archivos temporales y queda fuera de Git y del paquete.
+
+```bash
+# Primera ejecución: crea el derivado; segunda: informa cache_hit=true.
+target/debug/openrailsrs textures-ktx2 "$CHILTERN_ROUTE/TEXTURES/oak25_1.ace"
+target/debug/openrailsrs textures-ktx2 "$CHILTERN_ROUTE/TEXTURES/oak25_1.ace"
+# Decodificación RGBA con la misma caché:
+target/debug/openrailsrs textures-ktx2 "$CHILTERN_ROUTE/TEXTURES/oak25_1.ace" --rgba
+```
+
+También acepta carpetas y DDS/KTX2. `--cache-dir` permite una caché aislada para
+medir; el JSON informa formato, mipmaps, bytes de carga y tiempo por textura.
+Un KTX2 nativo se lee directamente, sin generar una copia derivada.
+
+Para comparar toda una escena sin caché:
+
+```bash
+OPENRAILSRS_TEXTURE_CACHE=off ./scripts/run_chiltern_service.sh --direct
+```
+
+La alternativa CPU descomprime BC1/2/3 a RGBA conservando mipmaps y dimensiones;
+otros bloques nativos requieren soporte del dispositivo. Bevy 0.19 permite
+UASTC, pero no ETC1S/BasisLZ en este cargador. Los KTX2 sin formato Vulkan
+explícito deben tener un descriptor UASTC válido. Se rechazan dimensiones
+mayores a 8192, matrices/cubemaps, cadenas de mipmaps inválidas e inflación Zstd
+fuera de los tamaños esperados antes de entregarlos al cargador de Bevy.
+
+En una muestra de cuatro texturas reales de Chiltern, la carga fría sumó
+43,58 ms y la caliente 17,06 ms; el payload permaneció en 4,17 MiB.
+Es una muestra de texturas, **no una medición de aceleración del arranque completo**.
+La [verificación de esta entrega](PLAYER_POLISH_QA.md) identifica las capturas
+con GPU, las comprobaciones de originales y los límites visuales restantes.

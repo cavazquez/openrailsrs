@@ -72,6 +72,10 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_SCREENSHOT_DURING_LIGHTNING"] = "1"
         env["OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET"] = "0"
     env["OPENRAILSRS_WEATHER_EXECUTION"] = getattr(args, "weather_execution", "auto")
+    if getattr(args, "texture_cache", "on") == "off":
+        env["OPENRAILSRS_TEXTURE_CACHE"] = "off"
+    if getattr(args, "texture_upload", "auto") == "rgba":
+        env["OPENRAILSRS_TEXTURE_UPLOAD"] = "rgba"
     env["OPENRAILSRS_RENDERER"] = "cpu" if args.software else getattr(args, "renderer", "auto")
     if getattr(args, "particle_budget", None) is not None:
         env["OPENRAILSRS_WEATHER_PARTICLE_BUDGET"] = str(args.particle_budget)

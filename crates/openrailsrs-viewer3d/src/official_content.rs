@@ -505,6 +505,47 @@ pub fn prepare_installed(directory: &Path, cancel: Option<&Path>) -> Result<Stri
 pub fn open_catalogue() -> Result<(), String> {
     open_source_url("https://www.openrails.org/download/content/")
 }
+pub fn open_folder(path: &Path) -> Result<(), String> {
+    let path = path.canonicalize().map_err(|e| e.to_string())?;
+    if !path.is_dir() {
+        return Err("La carpeta no existe".into());
+    }
+    #[cfg(target_os = "linux")]
+    let mut command = Command::new("xdg-open");
+    #[cfg(target_os = "macos")]
+    let mut command = Command::new("open");
+    #[cfg(target_os = "windows")]
+    let mut command = Command::new("explorer");
+    command
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+pub fn diagnostic_text(menu: &crate::player_launch::PlayerLaunchMenu) -> String {
+    let mut lines = vec!["Diagnóstico de contenido openrailsrs".to_string()];
+    if let Some(service) = menu.current() {
+        lines.push(format!(
+            "Escenario: {}\nServicio: {}",
+            service
+                .scenery_root
+                .as_deref()
+                .unwrap_or(&service.route_dir)
+                .display(),
+            service.source.display()
+        ));
+    }
+    if let Some(consist) = menu.consists.get(menu.consist) {
+        lines.push(format!("Formación: {}", consist.display()));
+        if let Some(audit) = menu.consist_audits.get(consist) {
+            for missing in &audit.missing_resources {
+                lines.push(missing.guidance());
+            }
+        }
+    }
+    lines.push("Obtené los recursos únicamente de su origen original. Después de copiarlos, reauditá la formación.".into());
+    lines.join("\n\n")
+}
 pub fn open_source_url(url: &str) -> Result<(), String> {
     if !url.starts_with("https://github.com/") && !url.starts_with("https://www.openrails.org/") {
         return Err("El origen no es uno de los autores verificados".into());

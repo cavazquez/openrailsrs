@@ -48,6 +48,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 chrono-tz = "0.10.4"
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 bevy = { workspace = true, features = ["bevy_gizmos", "bevy_ui_render", "bevy_state"] }
+bevy_clipboard = "0.19.1"
 bytemuck.workspace = true
 image = { workspace = true, features = ["png", "bmp"] }
 

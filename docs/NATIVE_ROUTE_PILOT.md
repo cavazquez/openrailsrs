@@ -7,6 +7,7 @@ continuidad/dirección sobre el grafo importado y usa el extremo de salida real
 de cada plataforma. Audita la formación y escribe los hashes de los archivos fuente.
 
 ```bash
+python3 scripts/prepare_native_pilot.py --route-root /ruta/ROUTES/BelgranoCC --inspect
 python3 scripts/prepare_native_pilot.py --route-root /ruta/ROUTES/BelgranoCC --list
 # Primero importar el grafo físico:
 target/debug/openrailsrs import-msts /ruta/ROUTES/BelgranoCC --out-dir tmp/belgrano-import
@@ -19,6 +20,14 @@ python3 scripts/prepare_native_pilot.py \
   --out-dir examples/belgrano_cc
 target/debug/openrailsrs play-service examples/belgrano_cc/scenario.toml --out-dir tmp/belgrano-service
 ```
+
+`--inspect` no descarga ni modifica archivos. Informa las carpetas absolutas de
+la ruta y de `TRAINS`, el TDB, los PAT/CON disponibles y las ubicaciones de
+SIGCFG/SIGSCR ausentes. Cuando no se conoce un nombre real, utiliza un marcador
+`<nombre-original>`; no inventa el recurso ni lo busca en fuentes alternativas.
+Usá ese diagnóstico para completar la estructura con los archivos del autor.
+Una instalación lista para seleccionar archivos todavía debe superar las
+auditorías del preparador y la prueba de viaje.
 
 `--origin` elige una estación real del PAT. Se necesitan tres estaciones consecutivas,
 un PAT sin inversiones y espacio seguro para el servicio adelantado opcional.

@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+export OPENRAILSRS_RESOURCES="$SNAP/share/openrailsrs"
+export OPENRAILSRS_PYTHON="$SNAP/usr/bin/python3"
+export PYTHONHOME="$SNAP/usr"
+export SSL_CERT_FILE="$SNAP/etc/ssl/certs/ca-certificates.crt"
+export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$@"

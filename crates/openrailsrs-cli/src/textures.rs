@@ -3,6 +3,64 @@ use openrailsrs_ace::read_ace;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
+pub fn cache_ktx2(input: &Path, root: Option<&Path>, rgba: bool) -> anyhow::Result<()> {
+    let default_root = openrailsrs_bevy_scenery::texture_cache::cache_dir();
+    let root = root.unwrap_or(&default_root);
+    let input = input.canonicalize()?;
+    let mut pending = vec![input];
+    let mut reports = vec![];
+    let formats = if rgba {
+        bevy_formats(false)
+    } else {
+        bevy_formats(true)
+    };
+    while let Some(path) = pending.pop() {
+        if path.is_dir() {
+            for entry in std::fs::read_dir(&path)? {
+                let entry = entry?;
+                let kind = entry.file_type()?;
+                if kind.is_file() || kind.is_dir() {
+                    pending.push(entry.path());
+                }
+            }
+            continue;
+        }
+        if !path.extension().is_some_and(|e| {
+            ["ace", "dds", "ktx2"]
+                .iter()
+                .any(|x| e.eq_ignore_ascii_case(x))
+        }) {
+            continue;
+        }
+        let now = std::time::Instant::now();
+        match openrailsrs_bevy_scenery::texture_cache::load_in(&path,Some(root),formats,None,None) {
+            Ok(result)=>reports.push(serde_json::json!({"source":path,"cache_hit":result.hit,"width":result.image.width(),"height":result.image.height(),"mips":result.image.texture_descriptor.mip_level_count,"format":format!("{:?}",result.image.texture_descriptor.format),"upload_bytes":result.image.data.as_ref().map(Vec::len),"elapsed_ms":now.elapsed().as_secs_f64()*1000.})),
+            Err(error)=>reports.push(serde_json::json!({"source":path,"error":error})),
+        }
+    }
+    if reports.is_empty() {
+        bail!("No ACE, DDS or KTX2 textures found");
+    }
+    let failed = reports.iter().any(|r| r.get("error").is_some());
+    println!(
+        "{}",
+        serde_json::to_string_pretty(
+            &serde_json::json!({"cache_directory":root,"lossless":true,"textures":reports})
+        )?
+    );
+    if failed {
+        bail!("Some textures could not be loaded; see the report");
+    }
+    Ok(())
+}
+fn bevy_formats(bc: bool) -> bevy::image::CompressedImageFormats {
+    if bc {
+        bevy::image::CompressedImageFormats::BC
+    } else {
+        bevy::image::CompressedImageFormats::NONE
+    }
+}
+
 #[derive(Serialize)]
 struct TextureExport {
     source: PathBuf,

@@ -16,6 +16,7 @@ vsm = []
 
 [dependencies]
 openrailsrs-ace = { path = "../openrailsrs-ace" }
+openrailsrs-content = { path = "../openrailsrs-content" }
 openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-or-shader = { path = "../openrailsrs-or-shader" }
 openrailsrs-route = { path = "../openrailsrs-route" }
@@ -24,6 +25,10 @@ bevy = { workspace = true }
 bytemuck.workspace = true
 image.workspace = true
 texpresso = "2"
+ktx2 = "0.5"
+blake3 = "1"
+zstd = "0.13"
+tempfile = "3"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

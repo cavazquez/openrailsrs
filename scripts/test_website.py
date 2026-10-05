@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import unittest
 from urllib.parse import urlsplit, unquote
-from build_website import ROOT, SITE, render
+from build_website import ROOT, SITE, render, content_catalogue
 
 class Document(HTMLParser):
     def __init__(self,text):
@@ -23,7 +23,7 @@ class WebsiteTests(unittest.TestCase):
     def test_generated_and_published_pages_have_valid_links_and_accessible_content(self):
         pages=render()
         documents={p.name:Document(text) for p,text in pages.items()}
-        self.assertEqual(len(pages),6)
+        self.assertEqual(len(pages),len(json.loads((SITE/'site.json').read_text())['pages']))
         for p,text in pages.items():
             with self.subTest(page=p.name):
                 self.assertEqual(p.read_text(),text,'generated HTML is stale')
@@ -54,5 +54,14 @@ class WebsiteTests(unittest.TestCase):
         self.assertIn('0.19.1',text)
         self.assertIn('Belgrano',text)
         self.assertNotIn('cdn.jsdelivr',text)
+
+    def test_catalogue_preserves_every_original_source_without_download_mirrors(self):
+        catalogue = json.loads((ROOT/'docs/fixtures/content/official-catalog.json').read_text())
+        cards = Document(content_catalogue())
+        self.assertEqual(len(cards.ids), len(catalogue['routes']))
+        expected = [route['url'].removesuffix('.git') for route in catalogue['routes']
+                    if route['url'].startswith('https://')]
+        self.assertCountEqual(cards.links, expected)
+        self.assertNotIn('download=', content_catalogue())
 
 if __name__=='__main__':unittest.main()

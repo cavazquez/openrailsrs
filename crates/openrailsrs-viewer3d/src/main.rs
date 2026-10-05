@@ -476,7 +476,7 @@ fn main() {
         });
     }
     let mut menu = openrailsrs_viewer3d::player_launch::PlayerLaunchMenu::discover(
-        Path::new("."),
+        &openrailsrs_content::resource_dir(Path::new(".")),
         cli.route_root.clone(),
     );
     menu.environment = settings.environment;

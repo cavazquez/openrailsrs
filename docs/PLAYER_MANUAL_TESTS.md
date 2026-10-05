@@ -830,10 +830,57 @@ reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
    `OPENRAILSRS_PLAYER_DIR`. El destino debe ser
    `/tmp/openrailsrs-snap-test/openrailsrs/official-content` aunque cambie
    `SNAP_USER_DATA` entre revisiones. Es una prueba de selección de carpeta;
-   el confinamiento y empaquetado de un Snap real siguen pendientes.
+   el confinamiento requiere instalar el Snap real de la [guía de distribución](DISTRIBUTION.md).
 6. En una formación incompleta de un paquete GitHub original del catálogo,
    los botones **Buscar en el repositorio original** y **Actualizar desde el
    repositorio original** deben apuntar a ese paquete. La búsqueda debe enviar
    solamente el nombre del faltante. Cambiar a una formación externa no debe
    asignarle el repositorio del escenario. Una formación sin origen identificado
    debe conservar el detalle de rutas y no ofrecer esos botones.
+
+## 32. Catálogo web, biblioteca, KTX2 y paquete trasladable
+
+1. Abrí [Contenido en la web](https://cavazquez.github.io/openrailsrs/contenido.html).
+   Buscá «Chiltern» y luego un autor: deben filtrarse las tarjetas y actualizarse
+   el contador. «Gratuito» e «Instalable desde el juego» deben distinguir las
+   descargas manuales/comerciales. Cada enlace conserva su origen original.
+2. En el menú del juego, pulsá **Abrir carpeta del escenario**. Debe abrir la
+   misma carpeta absoluta que muestra el diagnóstico. En la biblioteca de
+   contenido, cada copia tiene **Abrir carpeta** y conserva fecha/identificador.
+   Pulsá **Copiar diagnóstico** y pegalo en un editor: debe incluir servicio,
+   formación, archivos faltantes y destinos; no debe enviar datos a nadie.
+3. Iniciá Chiltern corto y visitá Northolt Park, South Ruislip y West Ruislip,
+   desde cabina (`1`) y exterior (`2`). Repetí a la misma hora y clima después
+   de cerrar el visor. Edificios, árboles, recortes y detalle deben conservarse;
+   la segunda carga puede reutilizar la caché. Para comparar sin caché, usá
+   `OPENRAILSRS_TEXTURE_CACHE=off`; para RGBA, `OPENRAILSRS_TEXTURE_UPLOAD=rgba`.
+   No esperes una aceleración fija del arranque completo.
+4. Ejecutá dos veces `openrailsrs textures-ktx2 /ruta/a/una.ace`. La segunda
+   salida debe informar `cache_hit: true`, con igual formato/mipmaps/payload.
+   Borrar solo esa carpeta de caché debe regenerar derivados, conservando los
+   originales. Con `--rgba`, BC1/2/3 deben conservar imagen y mipmaps en CPU.
+   Probá KTX2 nativos BC/RGBA/UASTC válidos; ETC1S/BasisLZ muestra un error
+   explícito. [Detalles y límites](GPU_TEXTURES.md).
+5. Trasladá el paquete Linux completo a otra carpeta y ejecutá su visor desde
+   una tercera carpeta vacía. Debe mostrar el menú, los ejemplos, las tildes y
+   cargar shaders al entrar en una partida. No copies solo el ejecutable: debe
+   conservar `share/openrailsrs/` junto a `bin/`. Python 3 sigue siendo necesario
+   para descargar. Para Snap, seguí [DISTRIBUTION.md](DISTRIBUTION.md); las
+   descargas deben quedar en `~/snap/openrailsrs/common/openrailsrs/` y sobrevivir
+   una actualización del paquete.
+6. En Demo Model 1 elegí la actividad 0930 Edinburgh–Glasgow y la formación
+   original **MT_MT_Class 47 & 6 mk2 PP**. La cabina debe arrancar delante de la
+   cubierta de Edinburgh, orientada hacia los túneles, como OR 1.6.1. Cambiar la
+   longitud de la formación debe ajustar la cabeza, manteniendo el inicio de
+   la cola del itinerario original. No implica importación completa de horarios
+   o de las maniobras con inversión del PAT.
+   En exterior, el suelo debe continuar debajo de la estación y las carreteras
+   deben tener sus superficies y marcas originales. No deben aparecer huecos
+   de cielo ni vías generadas donde el paquete ya trae el modelo original.
+   Funciona con los nombres `global/` y `TILES/-11C3DCFC_y.raw` originales: no
+   hace falta renombrar archivos ni mantener otra instalación de MSTS.
+
+Belgrano CC sigue necesitando los recursos originales del autor. Tras instalarlos,
+`prepare_native_pilot.py --inspect` debe informar las carpetas y faltantes reales;
+el piloto exige tres estaciones nativas, formación auditada y un PAT continuo.
+El ejemplo sintético Mitre no sustituye esta validación.

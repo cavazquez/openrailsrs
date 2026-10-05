@@ -60,6 +60,8 @@ bevy = { version = "0.19.1", default-features = false, features = [
     "tonemapping_luts",
     "zstd_rust",
     "dds",
+    "ktx2",
+    "basis-universal",
 ] }
 bytemuck = { version = "1", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["dds"] }

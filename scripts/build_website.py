@@ -14,6 +14,22 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "website"
 
+def content_catalogue():
+    catalog=json.loads((ROOT/'docs/fixtures/content/official-catalog.json').read_text())
+    cards=[]
+    for index, route in enumerate(catalog['routes']):
+        name=html.escape(route['name']);author=html.escape(route.get('author',{}).get('name','Autor del contenido'))
+        url=route['url'];free=route.get('compensation')=='free'
+        automatic=free and ((url.startswith('https://github.com/') and url.endswith('.git')) or (url.startswith(('https://static.openrails.org/','https://ts-files.com/')) and url.endswith('.zip')))
+        sizes=[]
+        for field,label in [('downloadSize','Descarga'),('installSize','Instalación')]:
+            if route.get(field): sizes.append(f"{label}: {route[field]/1048576:.0f} MiB")
+        description=html.escape(route.get('description',''))
+        origin=html.escape(url.removesuffix('.git'),quote=True)
+        source=f'<a class="text-link" href="{origin}" rel="noopener noreferrer">Origen del autor ↗</a>' if url.startswith('https://') else f'<p>Origen indicado en el catálogo: {html.escape(url)}</p>'
+        cards.append(f'<article class="content-card" data-content-card data-free="{str(free).lower()}" data-automatic="{str(automatic).lower()}" id="paquete-{index}"><p class="eyebrow">{"Gratuito" if free else "Distribución comercial"} · {"Instalación desde el juego" if automatic else "Instalación desde su origen"}</p><h3>{name}</h3><p>Autor: {author}</p><p>{" · ".join(sizes) or "Tamaño no informado"}</p><details><summary>Conocer este contenido</summary><p>{description}</p></details>{source}</article>')
+    return '\n'.join(cards)
+
 
 def render():
     config = json.loads((SITE / "site.json").read_text())
@@ -26,7 +42,7 @@ def render():
     result = {}
     for page in config["pages"]:
         links = []
-        for item in config["pages"][:4]:
+        for item in config["pages"][:5]:
             current = ' aria-current="page"' if item["file"] == page["file"] else ""
             links.append(f'<a href="{item["file"]}"{current}>{html.escape(item["label"])}</a>')
         links.append('<a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a>')
@@ -35,6 +51,7 @@ def render():
             body_class="home" if page["file"] == "index.html" else "inner-page", nav="".join(links),
             content=(SITE / "src" / page["file"]).read_text())
         text = layout.replace("{{content}}", variables["content"])
+        text=text.replace('{{catalogue}}',content_catalogue())
         for key, value in variables.items():
             text = text.replace("{{" + key + "}}", value)
         if re.search(r"{{\w+}}", text):

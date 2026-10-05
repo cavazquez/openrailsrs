@@ -1,0 +1,40 @@
+name: openrailsrs
+base: core24
+version: '0.1.0'
+summary: Simulador ferroviario con contenido original de Open Rails
+description: |
+  Conducción desde cabina y exterior, escenarios nativos, estaciones, señales,
+  pasajeros y clima. El contenido de sus autores se descarga por separado.
+grade: devel
+confinement: strict
+license: GPL-3.0-only
+platforms:
+  amd64:
+apps:
+  openrailsrs:
+    command: bin/openrailsrs-viewer3d --menu
+    command-chain: [bin/desktop-launch]
+    plugs: [network, home, removable-media, opengl, x11, wayland, desktop, desktop-legacy, audio-playback]
+  cli:
+    command: bin/openrailsrs
+    command-chain: [bin/desktop-launch]
+    plugs: [network, home, removable-media]
+parts:
+  application:
+    plugin: rust
+    source: .
+    rust-channel: stable
+    build-packages: [pkg-config, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev, libasound2-dev, libwayland-dev, libxkbcommon-dev, libxkbcommon-x11-dev, python3, git]
+    stage-packages: [python3, ca-certificates, libasound2t64, libx11-6, libxcursor1, libxrandr2, libxi6, libwayland-client0, libwayland-cursor0, libxkbcommon0, libxkbcommon-x11-0, libvulkan1, mesa-vulkan-drivers, xdg-utils]
+    override-build: |
+      export CARGO_BUILD_JOBS=2
+      export RUSTUP_TOOLCHAIN=stable
+      cargo build --locked --release -p openrailsrs-cli -p openrailsrs-viewer3d --bins
+      openrailsrs_bundle_dir="$(mktemp -d)"
+      python3 scripts/package_linux.py --binaries target/release --output "$openrailsrs_bundle_dir"
+      cp -a "$openrailsrs_bundle_dir/." "$CRAFT_PART_INSTALL/"
+      rm -rf "$openrailsrs_bundle_dir"
+      cp snap/local/desktop-launch "$CRAFT_PART_INSTALL/bin/desktop-launch"
+      chmod +x "$CRAFT_PART_INSTALL/bin/desktop-launch"
+      mkdir -p "$CRAFT_PART_INSTALL/share/applications"
+      cp "$CRAFT_PART_INSTALL/openrailsrs.desktop" "$CRAFT_PART_INSTALL/share/applications/openrailsrs.desktop"

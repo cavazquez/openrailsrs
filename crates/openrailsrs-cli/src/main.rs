@@ -305,6 +305,15 @@ enum Commands {
         #[arg(long)]
         out_dir: PathBuf,
     },
+    /// Build a lossless user cache from ACE/DDS, or inspect authored KTX2.
+    TexturesKtx2 {
+        input: PathBuf,
+        /// Alternate cache directory; never overwrites original textures.
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+        #[arg(long)]
+        rgba: bool,
+    },
     /// Inspect an MSTS terrain `.y` tile: sample grid stats and optional mesh counts.
     TerrainDump {
         file: PathBuf,
@@ -1106,6 +1115,11 @@ fn main() -> anyhow::Result<()> {
         Commands::TexturesDds { input, out_dir } => {
             textures::export_dds(&input, &out_dir)?;
         }
+        Commands::TexturesKtx2 {
+            input,
+            cache_dir,
+            rgba,
+        } => textures::cache_ktx2(&input, cache_dir.as_deref(), rgba)?,
         Commands::TerrainDump { file, json } => {
             run_terrain_dump(&file, json)?;
         }

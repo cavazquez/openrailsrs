@@ -325,6 +325,33 @@ mod tests {
     }
 
     #[test]
+    fn standalone_pack_resolves_its_lowercase_global_track_and_road_shapes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let other_install = tmp.path().join("Other content");
+        fs::create_dir(&other_install).unwrap();
+        let pack = tmp.path().join("Demo Model 1");
+        let route = pack.join("ROUTES/SCE");
+        fs::create_dir_all(&route).unwrap();
+        let track = pack.join("global/shapes/ukfs_s_1x60m.s");
+        let road = pack.join("global/shapes/US1Rd4l1000r20d.s");
+        write_file(&track, "shape ( track )");
+        write_file(&road, "shape ( road )");
+        write_file(&pack.join("global/textures/dieselsmoke.ace"), "smoke");
+
+        let catalog = MstsRouteCatalog::build(&route, &other_install);
+        assert_eq!(
+            catalog.resolve_world_shape("TrackObj", "UKFS_S_1X60M.S"),
+            Some(track)
+        );
+        assert_eq!(
+            catalog.resolve_trackobj_shape(Some("us1rd4l1000r20d.s"), None),
+            Some(road)
+        );
+        assert!(catalog.textures().contains_key("dieselsmoke.ace"));
+        assert!(pack.join("global").is_dir());
+    }
+
+    #[test]
     fn pack_shape_overrides_global_but_not_route() {
         let tmp = tempfile::tempdir().unwrap();
         let msts = tmp.path().join("Content");

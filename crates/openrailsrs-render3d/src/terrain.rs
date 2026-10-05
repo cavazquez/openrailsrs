@@ -155,17 +155,19 @@ pub fn resolve_terrtex_path(route_dir: &Path, file_name: &str) -> Option<PathBuf
     let path_obj = Path::new(base);
     if path_obj.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("ace"))
     {
-        let dds_name = path_obj
-            .with_extension("dds")
-            .to_string_lossy()
-            .into_owned();
-        for subdir in ["TERRTEX", "terrtex"] {
-            let path = route_dir.join(subdir).join(&dds_name);
-            if path.is_file() {
-                return Some(path);
-            }
-            if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
-                return Some(resolved);
+        for extension in ["dds", "ktx2"] {
+            let dds_name = path_obj
+                .with_extension(extension)
+                .to_string_lossy()
+                .into_owned();
+            for subdir in ["TERRTEX", "terrtex"] {
+                let path = route_dir.join(subdir).join(&dds_name);
+                if path.is_file() {
+                    return Some(path);
+                }
+                if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path) {
+                    return Some(resolved);
+                }
             }
         }
     }

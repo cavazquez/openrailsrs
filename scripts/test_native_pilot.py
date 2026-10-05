@@ -2,11 +2,19 @@
 import tempfile
 from pathlib import Path
 import unittest
-from prepare_native_pilot import main_path_points, station_markers, resolve
+from prepare_native_pilot import main_path_points, station_markers, resolve, inspect_installation
 from prepare_chiltern_service import msts_text
 
 
 class NativePilotTests(unittest.TestCase):
+    def test_incomplete_author_content_has_real_installation_locations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            route=Path(tmp)/'ROUTES/BelgranoCC'
+            report=inspect_installation(route)
+            self.assertFalse(report['ready_to_select'])
+            self.assertTrue(all(Path(p).is_absolute() for p in report['missing_locations']))
+            self.assertEqual(report['train_root'],str(Path(tmp)/'TRAINS'))
+            self.assertEqual(report['paths'],[])
     def test_pat_walks_main_links_instead_of_file_pdp_order(self):
         text = """TrackPDP ( 0 0 40 0 0 1 0 )
         TrackPDP ( 0 0 0 0 0 1 0 )

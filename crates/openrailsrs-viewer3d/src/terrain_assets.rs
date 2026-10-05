@@ -6,14 +6,13 @@ use std::path::{Path, PathBuf};
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use openrailsrs_ace::read_ace;
 pub use openrailsrs_bevy_scenery::terrain_shader_material_key;
 use openrailsrs_bevy_scenery::{
     sanitize_terrain_base_rgba, set_terrain_repeat_sampler, terrain_shader_overlay_scale,
 };
 use openrailsrs_formats::TerrainShader;
 
-use crate::shapes::{ace_to_image, load_ace_image};
+use crate::shapes::load_ace_image;
 use openrailsrs_bevy_scenery::materials::DEFAULT_MICROTEX;
 
 /// Overlay UV scale from OR `terrain_uvcalcs[1].d` when non-zero and not 32.
@@ -40,19 +39,36 @@ fn resolve_terrtex_for_environment(
     // OR Helpers.GetTerrainTextureFile uses Snow in winter regardless of weather.
     // Fall back to the base asset when a pack has no winter variant.
     let root = route_dir.join("TERRTEX");
-    if environment.is_snow()
-        && let Some(path) =
-            openrailsrs_formats::resolve_path_case_insensitive(&root.join("Snow").join(base))
-    {
-        return Some(path);
+    let mut dirs = vec![];
+    if environment.is_snow() {
+        dirs.push(root.join("Snow"));
     }
-    openrailsrs_formats::resolve_path_case_insensitive(&root.join(base))
+    dirs.push(root);
+    for dir in dirs {
+        for ext in [None, Some("dds"), Some("ktx2")] {
+            let candidate = match ext {
+                None => dir.join(base),
+                Some(ext) => dir.join(base).with_extension(ext),
+            };
+            if let Some(path) = openrailsrs_formats::resolve_path_case_insensitive(&candidate) {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
 
 pub fn load_terrtex_image(route_dir: &Path, file_name: &str) -> Option<Image> {
     if let Some(path) = resolve_terrtex_path(route_dir, file_name) {
-        let ace = read_ace(&path).ok()?;
-        let mut image = ace_to_image(&ace);
+        // Terrain base sanitization inspects RGBA, never compressed block bytes.
+        let mut image = openrailsrs_bevy_scenery::texture_cache::load(
+            &path,
+            bevy::image::CompressedImageFormats::NONE,
+            None,
+            None,
+        )
+        .ok()?
+        .image;
         set_terrain_repeat_sampler(&mut image);
         return Some(image);
     }

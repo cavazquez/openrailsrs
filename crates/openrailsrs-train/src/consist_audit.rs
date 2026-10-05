@@ -733,9 +733,12 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
         resolve_path_case_insensitive(&path)
             .filter(|p| p.is_file())
             .or_else(|| {
-                dds.then(|| resolve_path_case_insensitive(&path.with_extension("dds")))
-                    .flatten()
-                    .filter(|p| p.is_file())
+                dds.then(|| {
+                    resolve_path_case_insensitive(&path.with_extension("dds"))
+                        .or_else(|| resolve_path_case_insensitive(&path.with_extension("ktx2")))
+                })
+                .flatten()
+                .filter(|p| p.is_file())
             })
     })
 }

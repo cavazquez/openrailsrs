@@ -26,6 +26,7 @@ openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-audio = { path = "../openrailsrs-audio" }
 openrailsrs-ace = { path = "../openrailsrs-ace" }
 openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
+bevy = { workspace = true }
 openrailsrs-validate = { path = "../openrailsrs-validate" }
 anyhow.workspace = true
 clap.workspace = true

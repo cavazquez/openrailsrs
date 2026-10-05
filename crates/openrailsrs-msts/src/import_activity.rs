@@ -15,7 +15,7 @@ use openrailsrs_scenarios::model::{
 
 use crate::error::MstsError;
 use crate::path_placement::{
-    pat_waypoints_with_offset, placement_from_imported_route, read_distance_down_path,
+    pat_waypoints_with_offset, placement_from_imported_route_with_consist, read_distance_down_path,
 };
 
 /// Parse an MSTS `.act` file (and the `.pat` it references) and produce a
@@ -43,6 +43,38 @@ pub fn import_activity_with_summary(
     act_path: &Path,
     imported_route_dir: Option<&Path>,
 ) -> Result<(String, String, bool), MstsError> {
+    import_activity_with_length(route_dir, act_path, imported_route_dir, None)
+}
+
+/// Import a playable native activity using the chosen formation's length.
+/// Open Rails places the rear traveller on TrackPDP[0]; our drive session uses
+/// the head. Apply the conversion before merging the activity configuration.
+pub fn import_activity_with_consist_length(
+    route_dir: &Path,
+    act_path: &Path,
+    imported_route_dir: &Path,
+    consist_length_m: f64,
+) -> Result<String, MstsError> {
+    if !consist_length_m.is_finite() || consist_length_m <= 0.0 {
+        return Err(MstsError::msg(
+            "Native formation length must be positive and finite",
+        ));
+    }
+    let (text, _, _) = import_activity_with_length(
+        route_dir,
+        act_path,
+        Some(imported_route_dir),
+        Some(consist_length_m),
+    )?;
+    Ok(text)
+}
+
+fn import_activity_with_length(
+    route_dir: &Path,
+    act_path: &Path,
+    imported_route_dir: Option<&Path>,
+    consist_length_m: Option<f64>,
+) -> Result<(String, String, bool), MstsError> {
     let activity = ActivityFile::from_path(act_path)?;
     let pat_path = resolve_player_pat(route_dir, &activity);
     // A missing or unreadable player .pat is non-fatal: we proceed without
@@ -63,7 +95,12 @@ pub fn import_activity_with_summary(
 
     let (start_node, destination_node, route_switches, start_offset_m) =
         if let Some(track_dir) = imported_route_dir {
-            match placement_from_imported_route(track_dir, &pat_path, start_offset_m) {
+            match placement_from_imported_route_with_consist(
+                track_dir,
+                &pat_path,
+                start_offset_m,
+                consist_length_m,
+            ) {
                 Ok(hints) => (
                     hints.start,
                     hints.destination,

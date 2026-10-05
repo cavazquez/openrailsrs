@@ -45,6 +45,7 @@ impl Plugin for PlayerUiPlugin {
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchMenu>()
             .init_resource::<crate::official_content::OfficialContent>()
+            .init_resource::<bevy_clipboard::Clipboard>()
             .init_resource::<PlayerLaunchQueue>()
             .init_resource::<ActivePlayerContent>()
             .init_resource::<UiPointerCapture>()
@@ -198,6 +199,8 @@ struct TrackMonitorRoot;
 struct TrackMonitorBody;
 #[derive(Component, Clone, Debug)]
 enum UiCommand {
+    ContentFolder(Option<usize>),
+    CopyContentDiagnostics,
     Open(PlayerPanel),
     Close,
     Start,
@@ -605,6 +608,7 @@ fn handle_buttons(
     mut launch: ResMut<PlayerLaunchQueue>,
     mut content: ResMut<ActivePlayerContent>,
     mut downloads: ResMut<crate::official_content::OfficialContent>,
+    mut clipboard: Option<ResMut<bevy_clipboard::Clipboard>>,
     camera: CameraForSave,
     mut exit: MessageWriter<AppExit>,
     mouse: Res<ButtonInput<MouseButton>>,
@@ -616,6 +620,11 @@ fn handle_buttons(
         }
         let result:Result<(),String>=match command {
             UiCommand::ContentCycle(delta)=>{downloads.cycle(*delta);Ok(())},
+            UiCommand::ContentFolder(index)=>{
+                let path=match index {Some(i)=>downloads.installed.get(*i).cloned(),None=>menu.current().map(|s|s.scenery_root.clone().unwrap_or_else(||s.route_dir.clone()))};
+                path.ok_or("No hay una carpeta seleccionada".into()).and_then(|p|crate::official_content::open_folder(&p))
+            },
+            UiCommand::CopyContentDiagnostics=>clipboard.as_mut().ok_or("Portapapeles no disponible".into()).and_then(|c|c.set_text(crate::official_content::diagnostic_text(&menu)).map_err(|e|format!("No se pudo copiar: {e}"))).map(|()|{ui.notice="Diagnóstico copiado: incluye los faltantes y sus ubicaciones".into();}),
             UiCommand::ContentDownload=>downloads.start(),
             UiCommand::ContentAudit(index)=>downloads.reaudit(*index),
             UiCommand::ContentCancel=>downloads.cancel(),
@@ -954,6 +963,14 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
     });
 }
 fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu, full: bool) {
+    row(p, |p| {
+        button(
+            p,
+            "Abrir carpeta del escenario",
+            UiCommand::ContentFolder(None),
+        );
+        button(p, "Copiar diagnóstico", UiCommand::CopyContentDiagnostics);
+    });
     if let Some(service) = menu.current() {
         label(
             p,
@@ -1197,6 +1214,7 @@ fn build_content(
             if !downloads.busy() {
                 button(p, "Reauditar esta copia", UiCommand::ContentAudit(index));
             }
+            button(p, "Abrir carpeta", UiCommand::ContentFolder(Some(index)));
         });
     }
     label(

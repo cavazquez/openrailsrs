@@ -1,5 +1,22 @@
 /* Progressive enhancement: content, navigation and commands work without JS. */
 document.body.classList.add('js');
+const contentFilters=document.querySelector('[data-content-filters]');
+if(contentFilters){
+  contentFilters.hidden=false;
+  const search=document.querySelector('#content-search');
+  const kind=document.querySelector('#content-kind');
+  const cards=Array.from(document.querySelectorAll('[data-content-card]'));
+  const normalize=text=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const filter=()=>{
+    let count=0;
+    for(const card of cards){
+      const match=normalize(card.textContent).includes(normalize(search.value))&&(kind.value==='all'||card.dataset[kind.value]==='true');
+      card.hidden=!match;if(match)count++;
+    }
+    document.querySelector('#content-count').textContent=`${count} de ${cards.length} rutas`;
+  };
+  search.addEventListener('input',filter);kind.addEventListener('change',filter);filter();
+}
 const menuButton = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('#main-nav');
 function closeMenu() {

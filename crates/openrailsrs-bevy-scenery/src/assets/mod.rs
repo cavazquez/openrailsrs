@@ -193,6 +193,55 @@ mod tests {
     }
 
     #[test]
+    fn native_terrain_asset_loads_case_mismatched_height_and_feature_buffers() {
+        let temp = tempfile::tempdir().unwrap();
+        let tile_path = temp.path().join("-11C3DCFC.t");
+        std::fs::write(
+            &tile_path,
+            r#"SIMISA@@@@@@@@@@JINX0y0t______
+( terrain ( terrain_samples
+    ( terrain_nsamples ( 2 ) )
+    ( terrain_sample_floor ( 50.0 ) )
+    ( terrain_sample_scale ( 0.25 ) )
+    ( terrain_sample_size ( 8 ) )
+    ( terrain_sample_ybuffer ( "-11c3dcfc_y.raw" ) )
+    ( terrain_sample_fbuffer ( "-11c3dcfc_f.raw" ) )
+) )"#,
+        )
+        .unwrap();
+        std::fs::write(
+            temp.path().join("-11C3DCFC_y.raw"),
+            [0, 0, 4, 0, 8, 0, 12, 0],
+        )
+        .unwrap();
+        std::fs::write(temp.path().join("-11C3DCFC_f.raw"), [0, 4, 1, 0]).unwrap();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(AssetPlugin {
+                file_path: temp.path().to_string_lossy().into_owned(),
+                unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
+                ..default()
+            })
+            .add_plugins(MstsAssetPlugin);
+        let handle: Handle<MstsTerrainTileAsset> = app
+            .world()
+            .resource::<AssetServer>()
+            .load(tile_path.to_string_lossy().into_owned());
+        wait_loaded(&mut app, &handle, "native terrain");
+        let tiles = app.world().resource::<Assets<MstsTerrainTileAsset>>();
+        let tile = tiles.get(&handle).unwrap();
+        assert_eq!(tile.raw_status, TerrainRawStatus::Complete);
+        assert_eq!(
+            tile.elevation.as_ref().unwrap().elevations,
+            [50.0, 51.0, 52.0, 53.0]
+        );
+        assert!(tile.features.as_ref().unwrap().is_vertex_hidden(1, 0));
+        assert!(!tile.features.as_ref().unwrap().is_vertex_hidden(0, 1));
+        assert!(tile.y_raw_path.as_ref().unwrap().is_file());
+        assert!(tile.f_raw_path.as_ref().unwrap().is_file());
+    }
+
+    #[test]
     fn tile_bundle_complete_is_ready() {
         let mut app = msts_test_app();
         let server = app.world().resource::<AssetServer>().clone();

@@ -1202,9 +1202,7 @@ fn msts_root_for_route(route_dir: &Path) -> PathBuf {
 
 /// All `GLOBAL/` asset roots under MSTS Content (OR uses per-route-pack trees like `Chiltern/GLOBAL/`).
 pub fn global_assets_dirs(route_dir: &Path) -> Vec<PathBuf> {
-    let Some(content) = msts_content_root() else {
-        return Vec::new();
-    };
+    let content = msts_root_for_route(route_dir);
     openrailsrs_bevy_scenery::textures::global_assets_dirs(route_dir, &content)
 }
 
@@ -1490,6 +1488,20 @@ pub fn load_ace_image_with_flags(
     flags: TextureFlags,
 ) -> Option<Image> {
     let path = resolve_texture_path_with_flags(route_dir, file_name, flags)?;
+    if scenery_materials_lit()
+        || path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("dds") || e.eq_ignore_ascii_case("ktx2"))
+    {
+        return openrailsrs_bevy_scenery::texture_cache::load(
+            &path,
+            openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
+            None,
+            None,
+        )
+        .ok()
+        .map(|loaded| loaded.image);
+    }
     let ace = read_ace(&path).ok()?;
     Some(ace_to_scenery_image(&ace).0)
 }
@@ -2073,13 +2085,53 @@ fn scenery_dds_alpha_passes(
     )
 }
 
-/// Decode `.ace` files in parallel (safe before inserting into Bevy `Assets`).
-pub fn prefetch_ace_textures(paths: &[PathBuf]) -> HashMap<PathBuf, AceFile> {
+/// CPU pixels are retained only when a material needs them; derivative hits
+/// are still successful loads and must not be reported as broken ACE files.
+#[derive(Default)]
+pub struct PrefetchedTextures {
+    pub aces: HashMap<PathBuf, AceFile>,
+    pub loaded: HashSet<PathBuf>,
+}
+
+/// Decode original/derivative textures on workers before inserting Bevy assets.
+pub fn prefetch_ace_textures(paths: &[PathBuf]) -> PrefetchedTextures {
     use rayon::prelude::*;
-    paths
+    let results: Vec<_> = paths
         .par_iter()
-        .filter_map(|path| read_ace(path).ok().map(|ace| (path.clone(), ace)))
-        .collect()
+        .map(|path| {
+            // Cache generation/decompression runs on workers, before spawning.
+            // Cab ACE keeps its pixel processing; the other assets reuse KTX2.
+            let cab = path.components().any(|p| {
+                p.as_os_str()
+                    .to_string_lossy()
+                    .to_ascii_lowercase()
+                    .contains("cab")
+            });
+            if scenery_materials_lit()
+                && !cab
+                && openrailsrs_bevy_scenery::texture_cache::load(
+                    path,
+                    openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
+                    None,
+                    None,
+                )
+                .is_ok()
+            {
+                return (path.clone(), Ok(None));
+            }
+            (path.clone(), read_ace(path).map(Some))
+        })
+        .collect();
+    let mut prefetched = PrefetchedTextures::default();
+    for (path, result) in results {
+        if let Ok(ace) = result {
+            prefetched.loaded.insert(path.clone());
+            if let Some(ace) = ace {
+                prefetched.aces.insert(path, ace);
+            }
+        }
+    }
+    prefetched
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2118,6 +2170,67 @@ fn material_for_shape_texture(
         match resolve_texture_path_in_dirs_with_flags(texture_dirs, tex_name, texture_flags) {
             None => {}
             Some(tex_path) => {
+                // Warm starts reuse lossless derivatives before decoding an ACE.
+                // Cab ACE brightness/instrument processing keeps its native path.
+                let is_ktx2 = tex_path
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("ktx2"));
+                if (lit && !cab_interior || is_ktx2)
+                    && (is_ktx2 || !ace_cache.contains_key(&tex_path))
+                    && let Ok(mut loaded) = openrailsrs_bevy_scenery::texture_cache::load(
+                        &tex_path,
+                        openrailsrs_bevy_scenery::gpu_textures::device_texture_formats(),
+                        tex_addr_mode,
+                        mip_map_lod_bias,
+                    )
+                {
+                    let passes = blend_alpha_passes_from_ace_bits(
+                        loaded.alpha.bits,
+                        loaded.alpha.mask,
+                        tex_name,
+                        shader_name,
+                        alpha_test_mode,
+                    );
+                    let alpha_mode = passes[0].alpha_mode;
+                    let dual_blend = !cab_interior && passes.len() > 1;
+                    let transparent =
+                        dual_blend || !matches!(alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_));
+                    if !cab_interior && !train_exterior {
+                        loaded.image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+                    }
+                    let handle = texture_cache
+                        .entry((tex_path.clone(), addr_key))
+                        .or_insert_with(|| images.add(loaded.image))
+                        .clone();
+                    let tint = apply_msts_vertex_tint(
+                        if cab_interior {
+                            Color::WHITE
+                        } else {
+                            scenery_base_tint(lit)
+                        },
+                        solid_color,
+                        shader_name,
+                    );
+                    let (m, o, ht, it) = finish_shape_textured_part(
+                        handle,
+                        &[],
+                        tint,
+                        alpha_mode,
+                        transparent,
+                        z_bias.unwrap_or(0.),
+                        z_buf_mode,
+                        lit,
+                        shader_name,
+                        tex_name,
+                        solid_color,
+                        cab_interior,
+                        train_exterior,
+                        or_materials,
+                        materials,
+                        light_mat_idx,
+                    );
+                    return (m, o, ht, it, dual_blend);
+                }
                 let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
                     == Some(std::ffi::OsString::from("dds"));
                 if is_dds && let Ok(bytes) = std::fs::read(&tex_path) {

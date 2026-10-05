@@ -13,7 +13,8 @@ pub mod path_placement;
 
 pub use error::MstsError;
 pub use import_activity::{
-    import_activity, import_activity_with_summary, import_activity_with_track,
+    import_activity, import_activity_with_consist_length, import_activity_with_summary,
+    import_activity_with_track,
 };
 pub use import_route::{
     import_route, import_route_with_activity, import_route_with_summary, patch_track_coordinates,

@@ -211,6 +211,76 @@ fn import_activity_produces_scenario() {
     );
 }
 
+#[test]
+fn playable_native_activity_places_the_head_and_preserves_activity_overlays() {
+    use openrailsrs_msts::{import_activity_with_consist_length, import_activity_with_track};
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(
+        fixtures_dir().join("minimal.act"),
+        dir.path().join("minimal.act"),
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("minimal.pat"),
+        "TrackPDP ( 0 0 100 0 0 1 0 ) TrackPDP ( 0 0 1000 0 0 1 0 )",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("track.toml"),
+        r#"
+[route]
+id = "native"
+[[nodes]]
+id = "a"
+x_m = 0.0
+y_m = 0.0
+[[nodes]]
+id = "b"
+x_m = 1000.0
+y_m = 0.0
+[[edges]]
+id = "e1"
+from = "a"
+to = "b"
+length_m = 1000.0
+speed_limit_kmh = 80.0
+grade_percent = 0.0
+"#,
+    )
+    .unwrap();
+    let act = dir.path().join("minimal.act");
+    let rear: toml::Value =
+        toml::from_str(&import_activity_with_track(dir.path(), &act, Some(dir.path())).unwrap())
+            .unwrap();
+    let head: toml::Value = toml::from_str(
+        &import_activity_with_consist_length(dir.path(), &act, dir.path(), 70.0).unwrap(),
+    )
+    .unwrap();
+    assert!((rear["route"]["start_offset_m"].as_float().unwrap() - 100.0).abs() < 0.01);
+    assert!((head["route"]["start_offset_m"].as_float().unwrap() - 170.0).abs() < 0.01);
+    std::fs::write(
+        dir.path().join("scenario.overlay.toml"),
+        "[route]\nassume_signals_clear = true\n[simulation]\ntime_step = 0.05\n",
+    )
+    .unwrap();
+    let calibrated: toml::Value = toml::from_str(
+        &import_activity_with_consist_length(dir.path(), &act, dir.path(), 70.0).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        calibrated["route"]["start_offset_m"].as_float(),
+        Some(170.0)
+    );
+    assert_eq!(
+        calibrated["route"]["assume_signals_clear"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(calibrated["simulation"]["time_step"].as_float(), Some(0.05));
+    assert!(
+        import_activity_with_consist_length(dir.path(), &act, dir.path(), f64::INFINITY).is_err()
+    );
+}
+
 // ── Sub-phase A: TrItemTable signals ─────────────────────────────────────────
 
 #[test]

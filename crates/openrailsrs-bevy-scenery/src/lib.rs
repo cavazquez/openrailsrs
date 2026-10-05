@@ -14,6 +14,7 @@ pub mod shapes;
 pub mod spawn;
 pub mod stream;
 pub mod terrain;
+pub mod texture_cache;
 pub mod textures;
 pub mod tile;
 pub mod ui;
@@ -93,7 +94,13 @@ use bevy::prelude::*;
 
 /// Absolute path to this crate's `assets/` directory (shaders, etc.).
 pub fn asset_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
+    let fallback = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let resource = openrailsrs_content::resource_dir(&fallback);
+    if resource.join("assets/shaders").is_dir() {
+        resource.join("assets")
+    } else {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
+    }
 }
 
 /// Registers OR material plugins. Call before app-specific systems.

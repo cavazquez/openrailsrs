@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::ast::{Ast, Atom};
+use crate::encoding::{normalize_msts_filename, resolve_path_case_insensitive};
 use crate::error::FormatError;
 use crate::parser::parse_from_first_paren;
 
@@ -228,10 +229,7 @@ impl TerrainFile {
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
         let y_name = format!("{stem}_y.raw");
-        let y_path = tile_path
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join(&y_name);
+        let y_path = raw_buffer_path(tile_path, &y_name);
         let y_bytes = std::fs::read(&y_path).map_err(|e| FormatError::UnexpectedToken {
             offset: 0,
             message: format!("failed to read {}: {e}", y_path.display()),
@@ -793,14 +791,25 @@ fn parse_patch_raw(cur: &mut SbrCursor<'_>) -> Option<TerrainPatch> {
 }
 
 fn raw_buffer_path(tile_path: &Path, name: &str) -> PathBuf {
-    let name = name.trim();
-    if name.is_empty() {
-        return tile_path.with_extension("raw");
+    let name = normalize_msts_filename(name);
+    let candidate = if name.is_empty() {
+        tile_path.with_extension("raw")
+    } else {
+        tile_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(name)
+    };
+    resolve_raw_buffer_case(&candidate)
+}
+
+fn resolve_raw_buffer_case(path: &Path) -> PathBuf {
+    if path.exists() {
+        return path.to_path_buf();
     }
-    tile_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join(name)
+    // Windows-authored tiles can reference lowercase buffers shipped with
+    // uppercase quadtree names. Resolve the original file without renaming it.
+    resolve_path_case_insensitive(path).unwrap_or_else(|| path.to_path_buf())
 }
 
 /// Row-major `nsamples × nsamples` elevation field (metres).
@@ -928,7 +937,8 @@ pub fn terrain_patches_per_side(nsamples: usize) -> u32 {
 
 /// Decode a MSTS `_Y.RAW` height buffer using tile sample parameters.
 pub fn read_y_raw(path: &Path, params: &TerrainSamples) -> Result<ElevationGrid, FormatError> {
-    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
+    let path = resolve_raw_buffer_case(path);
+    let bytes = std::fs::read(&path).map_err(|e| FormatError::UnexpectedAtom {
         key: "read".into(),
         context: path.display().to_string(),
         expected: e.to_string(),
@@ -990,7 +1000,8 @@ pub fn read_y_raw_bytes(
 
 /// Decode `_F.RAW` feature flags (OR: hidden when `(byte & 0x04) != 0`).
 pub fn read_f_raw(path: &Path, params: &TerrainSamples) -> Result<FeatureGrid, FormatError> {
-    let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedAtom {
+    let path = resolve_raw_buffer_case(path);
+    let bytes = std::fs::read(&path).map_err(|e| FormatError::UnexpectedAtom {
         key: "read".into(),
         context: path.display().to_string(),
         expected: e.to_string(),
@@ -1690,6 +1701,59 @@ mod tests {
         let grid = read_y_raw(&raw, &tf.samples).expect("read raw");
         assert_eq!(grid.nsamples, 256);
         assert_eq!(grid.elevations.len(), 256 * 256);
+    }
+
+    #[test]
+    fn windows_buffer_names_load_original_heights_and_hole_flags() {
+        let temp = tempfile::tempdir().unwrap();
+        let buffers = temp.path().join("Buffers");
+        std::fs::create_dir(&buffers).unwrap();
+        let y_path = buffers.join("-11C3DCFC_y.raw");
+        let f_path = buffers.join("-11C3DCFC_f.raw");
+        let y_bytes: Vec<u8> = [0u16, 4, 8, 12]
+            .into_iter()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        std::fs::write(&y_path, &y_bytes).unwrap();
+        std::fs::write(&f_path, [0, 4, 1, 0]).unwrap();
+        let tile = TerrainFile {
+            tile_x: -6112,
+            tile_z: 15146,
+            samples: TerrainSamples {
+                nsamples: 2,
+                sample_floor: 50.0,
+                sample_scale: 0.25,
+                y_buffer_file: "buffers\\-11c3dcfc_y.raw".into(),
+                f_buffer_file: "buffers\\-11c3dcfc_f.raw".into(),
+                ..Default::default()
+            },
+            shaders: Vec::new(),
+            patch_sets: Vec::new(),
+        };
+        let tile_path = temp.path().join("-11C3DCFC.t");
+        assert_eq!(tile.y_raw_path(&tile_path), y_path);
+        assert_eq!(tile.f_raw_path(&tile_path), f_path);
+        let heights = read_y_raw(&tile.y_raw_path(&tile_path), &tile.samples).unwrap();
+        assert_eq!(heights.elevations, [50.0, 51.0, 52.0, 53.0]);
+        let flags =
+            read_f_raw(&temp.path().join("buffers/-11c3dcfc_f.raw"), &tile.samples).unwrap();
+        assert!(flags.is_vertex_hidden(1, 0));
+        assert!(!flags.is_vertex_hidden(0, 1));
+        assert_eq!(std::fs::read(y_path).unwrap(), y_bytes);
+    }
+
+    #[test]
+    fn terrain_sidecar_fallback_accepts_original_uppercase_buffer() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            temp.path().join("-11C3DCFC_Y.RAW"),
+            [4u8, 0, 8, 0, 12, 0, 16, 0],
+        )
+        .unwrap();
+        let tile_path = temp.path().join("-11c3dcfc.t");
+        let tile = TerrainFile::from_y_raw_sidecar(&tile_path, -6112, 15146).unwrap();
+        let grid = read_y_raw(&tile.y_raw_path(&tile_path), &tile.samples).unwrap();
+        assert_eq!(grid.elevations, [1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]

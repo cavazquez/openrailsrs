@@ -45,6 +45,14 @@ pub fn capture_enabled() -> bool {
     std::env::var_os("OPENRAILSRS_SCREENSHOT").is_some_and(|v| !v.is_empty())
 }
 
+/// Menu captures are opt-in QA for relocated binaries and confined packages.
+pub fn capture_state_allowed(state: Res<State<crate::route_bootstrap::ViewerAppState>>) -> bool {
+    *state.get() == crate::route_bootstrap::ViewerAppState::Playing
+        || (*state.get() == crate::route_bootstrap::ViewerAppState::Menu
+            && capture_enabled()
+            && env_truthy("OPENRAILSRS_SCREENSHOT_MENU"))
+}
+
 fn env_truthy(name: &str) -> bool {
     std::env::var_os(name).is_some_and(|v| {
         let v = v.to_string_lossy();
@@ -325,6 +333,8 @@ impl CaptureScene<'_, '_> {
         );
         report["graphics_memory"] =
             serde_json::to_value(&self.graphics_memory.0).unwrap_or_default();
+        let (hits, misses) = openrailsrs_bevy_scenery::texture_cache::telemetry();
+        report["texture_cache"] = serde_json::json!({"hits":hits,"misses":misses,"directory":openrailsrs_bevy_scenery::texture_cache::cache_dir()});
         report["texture_upload"] = serde_json::json!({
             "device_formats": format!("{:?}", openrailsrs_bevy_scenery::gpu_textures::device_texture_formats()),
             "policy": "authored DXT blocks when supported; lossless RGBA fallback",
