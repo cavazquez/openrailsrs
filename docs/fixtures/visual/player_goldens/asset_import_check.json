@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-04",
+  "purpose": "Verify embedded shader file imports without relying on terrain material loading.",
+  "pass": true,
+  "source_sha256": "fae46042ba1110294653db2a21afe5637ac2d2bf749b9beb9143e61520dce974",
+  "instancing_oracle": {
+    "command": "xvfb-run -a -s \"-screen 0 512x256x24\" bash scripts/visual_regression_instancing.sh",
+    "silhouette_overlap": {
+      "0": 1.0,
+      "1": 1.0,
+      "2": 1.0
+    },
+    "minimum": 0.98
+  },
+  "game_views": {
+    "cab-front": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "windshield": {
+          "rgb_mae": 0.0001,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 130016
+        },
+        "panel": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 77656
+        }
+      }
+    },
+    "orbit": {
+      "pass": true,
+      "cross_engine": false,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 4150,
+          "train_pixel_iou": 1.0,
+          "train_pixel_bbox_iou": 1.0,
+          "train_pixel_bbox_actual": [
+            604,
+            310,
+            933,
+            691
+          ],
+          "train_pixel_bbox_reference": [
+            604,
+            310,
+            933,
+            691
+          ]
+        },
+        "roof": {
+          "rgb_mae": 0.0,
+          "hot_fraction": 0.0,
+          "edge_f1": 1.0,
+          "pass": true,
+          "pixel_count": 16972
+        }
+      }
+    }
+  },
+  "or_comparison": {
+    "cab-front": {
+      "pass": true,
+      "cross_engine": true,
+      "regions": {
+        "panel": {
+          "rgb_mae": 3.9043,
+          "hot_fraction": 0.0047,
+          "edge_f1": 0.9663,
+          "pass": true,
+          "pixel_count": 127559
+        },
+        "instruments": {
+          "rgb_mae": 5.0531,
+          "hot_fraction": 0.0076,
+          "edge_f1": 0.9674,
+          "pass": true,
+          "pixel_count": 77656
+        }
+      }
+    },
+    "orbit": {
+      "pass": true,
+      "cross_engine": true,
+      "regions": {
+        "consist_silhouette": {
+          "rgb_mae": 19.7881,
+          "hot_fraction": 0.015,
+          "edge_f1": 0.9648,
+          "pass": true,
+          "pixel_count": 4793,
+          "train_pixel_iou": 0.7156,
+          "train_pixel_bbox_iou": 0.9497,
+          "train_pixel_bbox_actual": [
+            604,
+            310,
+            933,
+            691
+          ],
+          "train_pixel_bbox_reference": [
+            613,
+            319,
+            933,
+            691
+          ]
+        }
+      }
+    }
+  },
+  "recorded": false
+}

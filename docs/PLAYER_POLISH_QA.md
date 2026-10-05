@@ -248,3 +248,10 @@ acceso. No se incluyeron una ruta ni material rodante argentino ficticios. La
 
 Las [pruebas manuales](PLAYER_MANUAL_TESTS.md) incluyen los pasos 23–26 para copos,
 modos de cálculo, siete vistas, host C# y nueva web, con el resultado esperado.
+
+El renderer de instancias retiene todas las dependencias de archivo declaradas
+por su shader embebido, también en aplicaciones sin materiales de terreno. El
+oráculo independiente de instancias pasó con coincidencia de silueta **1,0 en
+las tres regiones**; conserva el mínimo de 0,98 y no modifica sus capturas de referencia.
+Cabina frontal y órbita conservaron también los goldens propios y las regiones
+nativas OR. [Resultado de esa regresión](fixtures/visual/player_goldens/asset_import_check.json).

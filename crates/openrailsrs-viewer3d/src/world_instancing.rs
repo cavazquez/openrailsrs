@@ -461,7 +461,7 @@ struct AppearanceGpu {
 struct WorldInstancingPipeline {
     shader: Handle<Shader>,
     // AssetServer::add bypasses ShaderLoader's import dependency discovery.
-    _lighting_shader: Handle<Shader>,
+    _imported_shaders: Vec<Handle<Shader>>,
     mesh_pipeline: MeshPipeline,
     appearance_layout: BindGroupLayoutDescriptor,
     /// Prepass/shadow view layout (group 0) — matches [`SetPrepassViewBindGroup`].
@@ -515,7 +515,20 @@ fn init_world_instancing_pipeline(
 ) {
     // Bevy 0.19: `Assets<Shader>` lives in the main world, not RenderApp.
     // Register via AssetServer (same approach as `init_mesh_pipeline`).
-    let shader = asset_server.add(Shader::from_wgsl(SHADER_WGSL, "world_instancing.wgsl"));
+    let source = Shader::from_wgsl(SHADER_WGSL, "world_instancing.wgsl");
+    // AssetServer::add has no file LoadContext to fetch imports for this embedded
+    // shader. Retain every file dependency, even in apps with no terrain materials.
+    let imported_shaders = source
+        .imports
+        .iter()
+        .filter_map(|import| match import {
+            bevy::shader::ShaderImport::AssetPath(path) => {
+                Some(asset_server.load::<Shader>(path.clone()))
+            }
+            _ => None,
+        })
+        .collect();
+    let shader = asset_server.add(source);
     let appearance_layout = BindGroupLayoutDescriptor::new(
         "world_instancing_appearance_layout",
         &BindGroupLayoutEntries::sequential(
@@ -529,7 +542,7 @@ fn init_world_instancing_pipeline(
     );
     commands.insert_resource(WorldInstancingPipeline {
         shader,
-        _lighting_shader: asset_server.load("shaders/railway_lighting.wgsl"),
+        _imported_shaders: imported_shaders,
         mesh_pipeline: mesh_pipeline.clone(),
         appearance_layout,
         shadow_view_layout: prepass_pipeline.view_layout_no_motion_vectors.clone(),
