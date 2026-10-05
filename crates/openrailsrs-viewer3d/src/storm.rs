@@ -188,6 +188,11 @@ pub fn update(
         .and_then(|t| t.sample_world_y(position.x + focus.center.x, position.z + focus.center.z))
         .map_or(listener.y - 3.0, |height| height - focus.height_origin);
     let delay = thunder_delay(listener.distance(position));
+    // An elevated free camera can make sound travel longer than the strike
+    // interval. Keep the most recent events and bound the pending queue too.
+    if state.pending.len() >= 2 {
+        state.pending.remove(0);
+    }
     state.pending.push(PendingThunder {
         at: clock + delay,
         position,
@@ -276,6 +281,18 @@ mod tests {
             .insert_resource(StormState {
                 last_clock: Some(clock),
                 next_strike: clock,
+                pending: vec![
+                    PendingThunder {
+                        at: clock + 60.,
+                        position: Vec3::ZERO,
+                        seed: 90,
+                    },
+                    PendingThunder {
+                        at: clock + 90.,
+                        position: Vec3::ZERO,
+                        seed: 91,
+                    },
+                ],
                 ..default()
             })
             .add_systems(Update, update);
@@ -287,7 +304,9 @@ mod tests {
         let state = app.world().resource::<StormState>();
         let entity = state.bolt.unwrap().0;
         assert_eq!(state.strikes, 1);
-        assert_eq!(state.pending.len(), 1);
+        assert_eq!(state.pending.len(), 2);
+        assert_eq!(state.pending[0].seed, 91);
+        assert_eq!(state.pending[1].seed, 1);
         let position = app.world().get::<Transform>(entity).unwrap().translation;
         app.world_mut().resource_mut::<LiveDrive>().paused = true;
         app.world_mut()
