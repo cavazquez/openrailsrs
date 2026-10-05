@@ -38,6 +38,7 @@ pub struct CaptureState {
     target_odometer_m: Option<f64>,
     pause_at_target: bool,
     after_service: bool,
+    during_lightning: bool,
 }
 
 pub fn capture_enabled() -> bool {
@@ -89,6 +90,7 @@ pub fn init_capture(mut commands: Commands) {
         target_odometer_m,
         pause_at_target: env_truthy("OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET"),
         after_service: env_truthy("OPENRAILSRS_SCREENSHOT_AFTER_SERVICE"),
+        during_lightning: env_truthy("OPENRAILSRS_SCREENSHOT_DURING_LIGHTNING"),
     });
 }
 
@@ -109,6 +111,14 @@ pub fn capture_system(
     };
     match state.captured_at {
         None => {
+            let lightning_ok =
+                !state.during_lightning || scene.storm.as_ref().is_some_and(|s| s.flash > 0.3);
+            if state.during_lightning
+                && lightning_ok
+                && let Some(live) = live.as_mut()
+            {
+                live.paused = true; // Freeze the actual event while its GPU upload completes.
+            }
             let distance_ok = state.target_odometer_m.is_none_or(|target| {
                 live.as_ref()
                     .is_some_and(|live| live.session.state.odometer_m >= target)
@@ -123,6 +133,7 @@ pub fn capture_system(
             }
             let timed_out = state.armed_at.elapsed() >= state.delay;
             let should_capture = distance_ok
+                && lightning_ok
                 && if state.after_ready {
                     if scenery_ready(progress)
                         && scene.pipelines.as_ref().is_none_or(|p| p.ready())
@@ -137,7 +148,10 @@ pub fn capture_system(
                     state.armed_at.elapsed() >= state.delay
                 };
             if timed_out
-                && (state.after_ready || state.target_odometer_m.is_some() || state.after_service)
+                && (state.after_ready
+                    || state.target_odometer_m.is_some()
+                    || state.after_service
+                    || state.during_lightning)
                 && !should_capture
             {
                 viewer_log!(
@@ -189,6 +203,9 @@ pub struct CaptureScene<'w, 's> {
     entities: Option<Res<'w, crate::world_tile_index::WorldTileEntityIndex>>,
     focus: Option<Res<'w, crate::world::RouteFocus>>,
     sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
+    content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
+    storm: Option<Res<'w, crate::storm::StormState>>,
     performance: Res<'w, crate::performance::JourneyPerformance>,
     graphics_memory: Res<'w, crate::gpu_memory::GraphicsMemory>,
     weather_particles: Res<'w, crate::weather_particles::WeatherParticles>,
@@ -292,6 +309,20 @@ impl CaptureScene<'_, '_> {
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         });
+        if let Some(environment) = self.environment.as_ref()
+            && let Some(content) = self.content.as_ref()
+        {
+            report["environment"] = serde_json::json!({
+                "selection": content.environment, "effective_weather": content.weather,
+                "location": environment.location, "timezone": environment.timezone.map(|tz| tz.name()),
+                "utc": environment.utc, "local_clock": environment.real_clock(content.environment).map(|t|t.to_rfc3339()),
+                "sample": environment.current_sample(content.environment), "status":environment.network_status,
+            });
+        }
+        report["storm"] = self.storm.as_ref().map_or(
+            serde_json::Value::Null,
+            |s| serde_json::json!({"strikes":s.strikes,"thunders":s.thunders,"flash":s.flash}),
+        );
         report["graphics_memory"] =
             serde_json::to_value(&self.graphics_memory.0).unwrap_or_default();
         report["weather_particles"] = self.weather_particles.report();

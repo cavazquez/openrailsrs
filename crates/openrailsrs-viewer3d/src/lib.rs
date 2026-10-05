@@ -25,6 +25,7 @@ mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
 pub mod driving_hud;
 pub mod dyntrack;
+pub mod environment;
 pub mod floating_origin;
 pub mod forest;
 pub mod gameplay;
@@ -64,6 +65,7 @@ pub mod signal_lamps;
 pub mod signal_subobj;
 pub mod signals;
 pub mod sky;
+pub mod storm;
 pub mod surface_weather;
 pub mod tdb_track;
 pub mod teleport;
@@ -169,6 +171,36 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
+        app.init_resource::<environment::LiveEnvironment>()
+            .init_resource::<storm::StormState>()
+            .add_systems(
+                Update,
+                environment::update_badge
+                    .after(environment::update)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                environment::init.after(route_lighting::init_route_sun),
+            )
+            .add_systems(
+                Update,
+                environment::update
+                    .after(player_ui::EnvironmentControls)
+                    .before(player_ui::apply_weather)
+                    .before(route_lighting::update_route_sun)
+                    .before(wet_surfaces::update)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                storm::update
+                    .after(environment::update)
+                    .after(live::live_driver_input)
+                    .before(camera::update_driver_camera_fov)
+                    .before(sky::sync_route_atmosphere)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         app.init_resource::<wet_surfaces::WetSurfaces>();
         app.init_resource::<gpu_memory::GraphicsMemory>()
             .init_resource::<weather_execution::RendererSelection>()
@@ -615,6 +647,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 capture::capture_system
+                    .after(storm::update)
                     .after(camera::constrain_exterior_camera_to_terrain)
                     .after(camera::update_driver_camera_fov)
                     .after(route_lighting::update_route_sun)

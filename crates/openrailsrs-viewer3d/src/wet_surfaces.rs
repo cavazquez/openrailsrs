@@ -32,7 +32,10 @@ pub fn update(
     let clock = live.session.time_s();
     let previous = state.last_clock.replace(clock);
     let dt = (clock - previous.unwrap_or(clock)).clamp(0.0, 1.0) as f32;
-    let rainy = weather.weather == crate::player_launch::PlayerWeather::Rain;
+    let rainy = matches!(
+        weather.weather,
+        crate::player_launch::PlayerWeather::Rain | crate::player_launch::PlayerWeather::Storm
+    );
     let target = f32::from(rainy);
     let snowy = weather.weather == crate::player_launch::PlayerWeather::Snow;
     let snow_target = f32::from(snowy);

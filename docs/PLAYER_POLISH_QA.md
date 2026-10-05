@@ -255,3 +255,34 @@ oráculo independiente de instancias pasó con coincidencia de silueta **1,0 en
 las tres regiones**; conserva el mínimo de 0,98 y no modifica sus capturas de referencia.
 Cabina frontal y órbita conservaron también los goldens propios y las regiones
 nativas OR. [Resultado de esa regresión](fixtures/visual/player_goldens/asset_import_check.json).
+
+## Ampliación del 4 de octubre de 2026: hora y clima del lugar
+
+El check completo pasó formato, Clippy con advertencias como errores, **1447
+tests Rust**, tests Python, compilación, cuatro oráculos físicos congelados y el
+servicio de tres estaciones. La prueba opcional del proveedor consultó realmente
+Open-Meteo y validó fecha UTC y zona IANA Europe/London. Tras ajustar la emisión
+del rayo, pasaron nuevamente Clippy, compilación y los casos de entorno/tormenta.
+También se prueba el botón de Ajustes desde el menú y durante la partida: elegir
+clima manual conserva la hora real seleccionada.
+
+Cinco combinaciones se capturaron con el renderer real de Chiltern, 1280×720,
+radio 900 m, RX 7600/Vulkan y compositor privado: ambos modos manuales, tormenta
+manual nocturna, hora real con nieve manual, clima real con hora manual y ambos
+actuales. La hora londinense incluyó horario de verano; el servicio conservó las
+09:55. Hubo cuatro sectores GPU, cero shaders fallidos/pendientes y cero subidas
+GPU pendientes en cada captura. Los hashes, selección, relojes y memoria quedan
+en [el fixture de ejecución](fixtures/weather/live-environment-2026-10-04.json).
+
+Se inspeccionó el rayo ramificado y su destello desde cabina. Los tests verifican
+su posición fija, pausa, limpieza al cambiar de clima y demora del trueno por
+distancia. La muestra de audio pasó límites de amplitud y decaimiento; las
+capturas deshabilitan audio y no certifican una escucha manual. Caché vencida,
+fallos de conexión, respuestas inválidas y cambio a manual se probaron sin red.
+Estas capturas detenidas comprueban integración visual; no miden rendimiento
+máximo ni un recorrido completo con consultas meteorológicas.
+
+Los [pasos manuales 27](PLAYER_MANUAL_TESTS.md#27-hora-real-clima-del-lugar-y-tormentas)
+permiten comprobar los selectores, pausa/aceleración, audio, guardado y respaldo.
+La [guía de entorno](LIVE_ENVIRONMENT.md) distingue condiciones estimadas de
+rayos procedurales y documenta atribución, ubicación y frecuencia de consulta.

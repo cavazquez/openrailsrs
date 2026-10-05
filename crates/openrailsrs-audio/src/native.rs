@@ -777,6 +777,7 @@ impl Playback {
 
 pub struct NativeAudioEngine {
     tx: mpsc::SyncSender<SoundFrame>,
+    thunder_tx: mpsc::SyncSender<crate::thunder::ThunderEvent>,
     report: Arc<Mutex<SoundReport>>,
 }
 fn mix_limit() -> rodio::source::LimitSettings {
@@ -795,6 +796,7 @@ impl NativeAudioEngine {
             return None;
         }
         let (tx, rx) = mpsc::sync_channel(2);
+        let (thunder_tx, thunder_rx) = mpsc::sync_channel::<crate::thunder::ThunderEvent>(2);
         let report = Arc::new(Mutex::new(SoundReport::default()));
         let shared = report.clone();
         std::thread::spawn(move || {
@@ -811,17 +813,46 @@ impl NativeAudioEngine {
             );
             output.mixer().add(source.limit(mix_limit()));
             let mut playback = Playback::new(bank, &mixer);
+            let mut thunder_voices: Vec<(Player, f32)> = vec![];
             for frame in rx {
                 playback.update(&frame);
+                thunder_voices.retain(|(player, _)| !player.empty());
+                for event in thunder_rx.try_iter() {
+                    if thunder_voices.len() >= 2 {
+                        thunder_voices.remove(0).0.stop();
+                    }
+                    let player = Player::connect_new(&mixer);
+                    player.append(SamplesBuffer::new(
+                        rodio::ChannelCount::new(1).unwrap(),
+                        rodio::SampleRate::new(crate::thunder::SAMPLE_RATE).unwrap(),
+                        crate::thunder::samples(event.seed, event.distance_m),
+                    ));
+                    thunder_voices.push((player, event.distance_m));
+                }
+                for (player, distance) in &thunder_voices {
+                    player.set_volume(frame.volume * crate::thunder::gain(*distance, frame.cab));
+                    if frame.paused {
+                        player.pause();
+                    } else {
+                        player.play();
+                    }
+                }
                 let mut r = playback.report();
                 r.device = true;
                 *shared.lock().unwrap() = r;
             }
         });
-        Some(Self { tx, report })
+        Some(Self {
+            tx,
+            thunder_tx,
+            report,
+        })
     }
     pub fn send(&self, frame: SoundFrame) {
         let _ = self.tx.try_send(frame);
+    }
+    pub fn thunder(&self, event: crate::thunder::ThunderEvent) {
+        let _ = self.thunder_tx.try_send(event);
     }
     pub fn report(&self) -> SoundReport {
         self.report.lock().unwrap().clone()

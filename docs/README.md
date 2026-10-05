@@ -23,3 +23,5 @@ Para jugar y comprobar los menús, guardado, operaciones y HUD:
 Incluye nieve, limpiaparabrisas, sonido, tráfico y las seis estaciones.
 Resultados y límites de las comprobaciones en
 [`PLAYER_POLISH_QA.md`](PLAYER_POLISH_QA.md).
+
+Hora y clima actuales del lugar, respaldo manual, zona horaria y rayos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).

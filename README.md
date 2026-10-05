@@ -61,6 +61,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 ### Partida, contenido y controles
 
 - Menú de rutas, servicios, formaciones, recorridos, hora, estación del año y clima; auditoría de recursos antes de iniciar.
+- Hora visual y clima actuales del lugar, opcionales e independientes: fecha/zona IANA y horario de verano de la ruta; Open-Meteo en segundo plano con caché y respaldo manual. Tormentas elegibles con rayos ramificados, destellos y truenos demorados por distancia; F10 permite elegir manual y desactivar destellos. [Guía y límites](docs/LIVE_ENVIRONMENT.md).
 - Servicio Chiltern de **seis estaciones / 15,32 km**: Northolt Park → South Ruislip → West Ruislip → Denham → Denham Golf Course → Gerrards Cross. También está disponible el servicio corto de tres estaciones.
 - Conducción manual y automática, embarque/desembarque, puertas, horario, puntuación y resumen final. Pasajeros y espera de horario tienen contadores separados; F10 permite práctica de cinco segundos sin espera de horario. Una salida anticipada con puertas cerradas se registra y permite continuar.
 - Pausa, guardado/carga del jugador y tráfico, libreta F7, formación F9, mapa/despachador M, ajustes F10 y controles con ratón en cabina.
@@ -97,13 +98,13 @@ La compatibilidad se valida por función y contenido: **no se afirma paridad com
 
 Pruebas manuales y resultados verificables: [PLAYER_MANUAL_TESTS.md](docs/PLAYER_MANUAL_TESTS.md), [PLAYER_POLISH_QA.md](docs/PLAYER_POLISH_QA.md) y [OR_PARITY.md](docs/OR_PARITY.md). Las capturas nativas y sus poses están en [las referencias de estaciones](docs/fixtures/visual/or_reference/chiltern_station_views/README.md). No se ajustan tolerancias para hacer pasar diferencias conocidas.
 
-Para probar nieve, elegí **Clima → Nieve** en el menú, o iniciá directamente:
+Para probar nieve, elegí **Origen del clima → Elegido por el jugador** y **Clima manual / respaldo → Nieve** en el menú, o iniciá directamente:
 
 ```bash
 OPENRAILSRS_WEATHER=snow ./scripts/run_chiltern_service.sh --direct
 ```
 
-Desde el menú también podés elegir noche, lluvia o niebla. **V** activa el limpiaparabrisas; las teclas de faros, luces y demás acciones se consultan en **F6** y se reasignan en **F10**.
+Desde el menú también podés elegir noche, lluvia, niebla, nublado o tormenta, y optar por hora y/o clima actuales del lugar. F10 permite cambiar su origen y elegir clima durante la partida; el reloj del servicio sigue independiente. **V** activa el limpiaparabrisas; las teclas de faros, luces y demás acciones se consultan en **F6** y se reasignan en **F10**.
 
 ## CLI
 

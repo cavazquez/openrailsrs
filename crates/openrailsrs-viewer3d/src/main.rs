@@ -469,22 +469,37 @@ fn main() {
             started: boot,
         });
     }
+    let mut menu = openrailsrs_viewer3d::player_launch::PlayerLaunchMenu::discover(
+        Path::new("."),
+        cli.route_root.clone(),
+    );
+    menu.environment = settings.environment;
+    menu.weather = settings.environment.manual_weather;
+    let manual_weather = std::env::var("OPENRAILSRS_WEATHER")
+        .ok()
+        .and_then(|s| serde_json::from_value(serde_json::Value::String(s)).ok())
+        .unwrap_or_default();
+    // Direct/QA launches ignore saved live preferences: network use is explicit.
+    let local_now = |key| {
+        if std::env::var(key).is_ok_and(|s| s == "1") {
+            openrailsrs_viewer3d::environment::EnvironmentSource::LocalNow
+        } else {
+            openrailsrs_viewer3d::environment::EnvironmentSource::Manual
+        }
+    };
     app.insert_resource(settings)
-        .insert_resource(
-            openrailsrs_viewer3d::player_launch::PlayerLaunchMenu::discover(
-                Path::new("."),
-                cli.route_root.clone(),
-            ),
-        )
+        .insert_resource(menu)
         .insert_resource(openrailsrs_viewer3d::player_launch::ActivePlayerContent {
             route_root: cli.route_root.clone(),
             description: openrailsrs_scenarios::load_scenario(&cli.path)
                 .map(|s| s.scenario.description)
                 .unwrap_or_default(),
-            weather: std::env::var("OPENRAILSRS_WEATHER")
-                .ok()
-                .and_then(|s| serde_json::from_value(serde_json::Value::String(s)).ok())
-                .unwrap_or_default(),
+            weather: manual_weather,
+            environment: openrailsrs_viewer3d::environment::EnvironmentSelection {
+                time: local_now("OPENRAILSRS_REAL_TIME"),
+                weather: local_now("OPENRAILSRS_REAL_WEATHER"),
+                manual_weather,
+            },
         });
     app.insert_state(if cli.menu {
         ViewerAppState::Menu
@@ -1684,6 +1699,7 @@ fn begin_player_launch(
     openrailsrs_viewer3d::launch::set_viewing_distance_m(settings.view_distance_m);
     content.route_root = request.route_root.clone();
     content.weather = request.weather;
+    content.environment = request.environment;
     content.description = openrailsrs_scenarios::load_scenario(&request.path)
         .map(|s| s.scenario.description)
         .unwrap_or_default();

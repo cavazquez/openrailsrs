@@ -34,7 +34,11 @@ fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<R
     let tile_z = openrailsrs_formats::msts_tile_z_index_for_coord(world.z);
     let local_x = f64::from(world.x) - f64::from(tile_x) * 2048.0;
     let local_z = -f64::from(world.z) - f64::from(tile_z) * 2048.0;
-    let position = geographic_position(tile_x, tile_z, local_x, local_z)?;
+    let native_position = geographic_position(tile_x, tile_z, local_x, local_z);
+    let position = crate::environment::location_for_route(assets, native_position)
+        .0
+        .map(|p| p.geographic())
+        .or(native_position)?;
     let environment = RouteFile::from_route_dir(&assets.route_dir)
         .ok()
         .and_then(|route| route.environment_path(&assets.route_dir, &live.season, "Clear"))
@@ -55,12 +59,26 @@ fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<R
 }
 
 /// Publish the launch environment before any train, cab or scenery textures load.
-pub fn prepare_route_textures(live: Option<&LiveDrive>, assets: &RouteAssets, center: Vec3) {
+pub fn prepare_route_textures(
+    live: Option<&LiveDrive>,
+    assets: &RouteAssets,
+    center: Vec3,
+    selection: crate::environment::EnvironmentSelection,
+) {
     crate::shapes::set_scenery_season(live.map(|l| l.season.as_str()).unwrap_or("summer"));
     if let Some(live) = live
         && let Some(sun) = route_sun_at(live, assets, center)
     {
-        crate::shapes::set_scenery_sun_y(sun.direction.y);
+        let real = selection.time == crate::environment::EnvironmentSource::LocalNow
+            && crate::environment::location_for_route(assets, Some(sun.position))
+                .0
+                .is_some();
+        let direction = if real {
+            crate::environment::real_solar_direction(sun.position, chrono::Utc::now())
+        } else {
+            sun.direction
+        };
+        crate::shapes::set_scenery_sun_y(direction.y);
     }
 }
 
@@ -72,13 +90,23 @@ pub fn init_route_sun(
     assets: Res<RouteAssets>,
     focus: Res<RouteFocus>,
     origin: Res<FloatingOrigin>,
+    content: Res<crate::player_launch::ActivePlayerContent>,
     camera: Query<&Transform, With<Camera3d>>,
 ) {
     let Ok(camera) = camera.single() else { return };
     let world = camera.translation + focus.center + origin.shift;
-    let Some(state) = route_sun_at(&live, &assets, world) else {
+    let Some(mut state) = route_sun_at(&live, &assets, world) else {
         return;
     };
+    if content.environment.time == crate::environment::EnvironmentSource::LocalNow
+        && crate::environment::location_for_route(&assets, Some(state.position))
+            .0
+            .is_some()
+    {
+        state.direction =
+            crate::environment::real_solar_direction(state.position, chrono::Utc::now());
+        state.ambient_scale = ambient_scale(state.direction);
+    }
     crate::shapes::set_scenery_sun_y(state.direction.y);
     crate::viewer_log!(
         "openrailsrs-viewer3d: route sun — {:.5}°, {:.5}°, season {}, clock {:.0}s, environment {}",
@@ -99,10 +127,13 @@ pub fn update_route_sun(
     live: Res<LiveDrive>,
     state: Option<ResMut<RouteSunState>>,
     settings: Res<crate::player_settings::PlayerSettings>,
+    environment: Res<crate::environment::LiveEnvironment>,
+    content: Res<crate::player_launch::ActivePlayerContent>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), With<RouteSunLight>>,
 ) {
     let Some(mut state) = state else { return };
-    let clock = live.clock_time_s();
+    let real = environment.solar_utc(content.environment);
+    let clock = real.map_or_else(|| live.clock_time_s(), |t| t.timestamp() as f64);
     // A one-second simulation cadence bounds shadow invalidations; pause costs nothing.
     if state
         .last_clock_s
@@ -112,7 +143,16 @@ pub fn update_route_sun(
     }
     state.last_clock_s = Some(clock);
     let ordinal = season_ordinal(&live.season, state.position.latitude);
-    let direction = solar_direction(state.position, ordinal, clock, state.environment);
+    let direction = if let Some(real) = real {
+        crate::environment::real_solar_direction(
+            environment
+                .location
+                .map_or(state.position, |p| p.geographic()),
+            real,
+        )
+    } else {
+        solar_direction(state.position, ordinal, clock, state.environment)
+    };
     if !direction.is_finite() || direction.length_squared() < 0.5 {
         return;
     }

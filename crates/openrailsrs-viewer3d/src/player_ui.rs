@@ -35,6 +35,9 @@ const ADVANCED_PAGES: [&str; 10] = [
     "Diagnóstico",
 ];
 
+#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct EnvironmentControls;
+
 pub struct PlayerUiPlugin;
 impl Plugin for PlayerUiPlugin {
     fn build(&self, app: &mut App) {
@@ -65,7 +68,7 @@ impl Plugin for PlayerUiPlugin {
                 Update,
                 (
                     player_keys,
-                    handle_buttons,
+                    handle_buttons.in_set(EnvironmentControls),
                     capture_ui_pointer,
                     build_panel,
                     update_panel_text,
@@ -226,6 +229,8 @@ enum MenuField {
     Time,
     Season,
     Weather,
+    TimeSource,
+    WeatherSource,
 }
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
@@ -241,6 +246,10 @@ enum SettingField {
     Fog,
     FogQuality,
     WeatherExecution,
+    TimeSource,
+    WeatherSource,
+    ManualWeather,
+    Lightning,
     Renderer,
     Audio,
     Volume,
@@ -396,6 +405,27 @@ fn spawn_toolbar(
                 );
             }
         });
+    commands.spawn((
+        crate::environment::EnvironmentBadge,
+        Text::new(""),
+        TextFont {
+            font_size: FontSize::Px(12.0),
+            ..default()
+        },
+        TextColor(TEXT),
+        Node {
+            position_type: PositionType::Absolute,
+            right: Val::Px(12.0),
+            bottom: Val::Px(12.0),
+            max_width: Val::Px(430.0),
+            padding: UiRect::all(Val::Px(6.0)),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.03, 0.05, 0.08, 0.85)),
+        UiTargetCamera(camera),
+        ZIndex(800),
+        Visibility::Hidden,
+    ));
     commands
         .spawn((
             Node {
@@ -602,7 +632,7 @@ fn handle_buttons(
                     .map(|()|{ui.notice=format!("Partida guardada en la ranura {} · {:.0} m · {:.1} km/h",slot+1,l.session.state.odometer_m,l.session.velocity_mps()*3.6);})
             }else{Err("No hay una partida activa".into())},
             UiCommand::Load(slot)=>if let Some(l)=live.as_mut(){
-                SavedGame::read(&slot_path(*slot)).and_then(|saved|{let weather=saved.weather;let camera=saved.restore(l)?;content.weather=weather;commands.insert_resource(PendingSavedCamera(camera));Ok(())})
+                SavedGame::read(&slot_path(*slot)).and_then(|saved|{let weather=saved.weather;let environment=saved.environment.unwrap_or(crate::environment::EnvironmentSelection { manual_weather: weather, ..default() });let camera=saved.restore(l)?;content.weather=weather;content.environment=environment;commands.insert_resource(PendingSavedCamera(camera));Ok(())})
                     .map(|()|{ui.notice="Partida restaurada y pausada; Continuar reanuda la conducción".into();})
             }else{Err("No hay una partida activa".into())},
             UiCommand::Cycle(field,delta)=>{match field {
@@ -611,8 +641,10 @@ fn handle_buttons(
                 MenuField::Path=>menu.path=cycle(menu.path,menu.paths.len()+1,*delta),
                 MenuField::Time=>menu.start_time_s=(menu.start_time_s+f64::from(*delta)*900.0).rem_euclid(86400.0),
                 MenuField::Season=>menu.season=cycle(menu.season,4,*delta),
-                MenuField::Weather=>menu.weather=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==menu.weather).unwrap_or(0),PlayerWeather::ALL.len(),*delta)],
-            }Ok(())},
+                MenuField::Weather=>{menu.weather=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==menu.weather).unwrap_or(0),PlayerWeather::ALL.len(),*delta)];menu.environment.manual_weather=menu.weather;},
+                MenuField::TimeSource=>menu.environment.time=menu.environment.time.next(),
+                MenuField::WeatherSource=>menu.environment.weather=menu.environment.weather.next(),
+            }settings.environment=menu.environment;Ok(())},
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
@@ -648,6 +680,10 @@ fn handle_buttons(
                 SettingField::Units=>settings.mph= !settings.mph,
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
                 SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
+                SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
+                SettingField::WeatherSource=>{content.environment.weather=if live.is_some(){content.environment.weather.next()}else{menu.environment.weather.next()};menu.environment.weather=content.environment.weather;settings.environment.weather=content.environment.weather;},
+                SettingField::ManualWeather=>{if live.is_none(){content.environment=menu.environment;}let selected=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==content.environment.manual_weather).unwrap_or(0),PlayerWeather::ALL.len(),1)];content.environment.manual_weather=selected;content.environment.weather=crate::environment::EnvironmentSource::Manual;menu.weather=selected;menu.environment=content.environment;settings.environment=content.environment;},
+                SettingField::Lightning=>settings.lightning= !settings.lightning,
                 SettingField::Renderer=>settings.renderer=settings.renderer.next(),
                 SettingField::Audio=>settings.audio_enabled= !settings.audio_enabled,
                 SettingField::Volume=>settings.audio_volume=(settings.audio_volume+step).clamp(0.0,1.0),
@@ -824,7 +860,16 @@ fn build_panel(
                     });
                     dynamic(p, DynamicText::Advanced, 13.0);
                 }
-                PlayerPanel::Settings => build_settings(p, &settings, cab.cvf_path.as_deref()),
+                PlayerPanel::Settings => build_settings(
+                    p,
+                    &settings,
+                    if live.is_some() {
+                        content.environment
+                    } else {
+                        menu.environment
+                    },
+                    cab.cvf_path.as_deref(),
+                ),
                 PlayerPanel::Help => {
                     dynamic(p, DynamicText::Help, 14.0);
                 }
@@ -904,7 +949,30 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         ["Primavera", "Verano", "Otoño", "Invierno"][menu.season].into(),
         MenuField::Season,
     );
-    selector(p, "Clima", menu.weather.label().into(), MenuField::Weather);
+    selector(
+        p,
+        "Hora visual",
+        menu.environment.time.label().into(),
+        MenuField::TimeSource,
+    );
+    selector(
+        p,
+        "Origen del clima",
+        menu.environment.weather.label().into(),
+        MenuField::WeatherSource,
+    );
+    selector(
+        p,
+        "Clima manual / respaldo",
+        menu.weather.label().into(),
+        MenuField::Weather,
+    );
+    label(
+        p,
+        "La hora de salida conserva el horario del servicio. Actual del lugar consulta Open-Meteo; muestra datos estimados y usa la zona horaria de la ruta. F10 permite volver al modo manual.",
+        12.0,
+        MUTED,
+    );
     if menu.path != 0 {
         label(
             p,
@@ -1009,6 +1077,7 @@ fn settings_row(
 fn build_settings(
     p: &mut ChildSpawnerCommands<'_>,
     s: &PlayerSettings,
+    environment: crate::environment::EnvironmentSelection,
     cab_path: Option<&std::path::Path>,
 ) {
     button(
@@ -1109,6 +1178,33 @@ fn build_settings(
         p,
         format!("Modelo de niebla: {}", s.fog_quality.label()),
         UiCommand::Setting(SettingField::FogQuality, 0.0),
+    );
+    label(p, "HORA Y CLIMA DEL LUGAR", 13.0, MUTED);
+    button(
+        p,
+        format!("Hora visual: {}", environment.time.label()),
+        UiCommand::Setting(SettingField::TimeSource, 0.0),
+    );
+    button(
+        p,
+        format!("Origen del clima: {}", environment.weather.label()),
+        UiCommand::Setting(SettingField::WeatherSource, 0.0),
+    );
+    button(
+        p,
+        format!("Elegir clima: {}", environment.manual_weather.label()),
+        UiCommand::Setting(SettingField::ManualWeather, 0.0),
+    );
+    button(
+        p,
+        format!("Rayos y destellos: {}", yes(s.lightning)),
+        UiCommand::Setting(SettingField::Lightning, 0.0),
+    );
+    label(
+        p,
+        "Elegir un clima vuelve al modo manual. La hora real usa la fecha y zona de la ruta; el horario del servicio sigue separado. Open-Meteo requiere conexión (datos estimados).",
+        12.0,
+        MUTED,
     );
     button(
         p,
@@ -1495,6 +1591,7 @@ fn update_panel_text(
     memory: Res<crate::gpu_memory::GraphicsMemory>,
     weather_particles: Res<crate::weather_particles::WeatherParticles>,
     audio: Res<crate::native_audio::NativeAudio>,
+    environment: Res<crate::environment::LiveEnvironment>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
@@ -1514,6 +1611,14 @@ fn update_panel_text(
                     DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page);
+                        if ui.advanced_page == 8 {
+                            text = environment.hud_text(&content, l.clock_time_s());
+                            text += &format!(
+                                "\nReloj del servicio: {} · estación del año {}\nF10: hora, clima manual/actual y rayos. La simulación puede pausarse sin detener el reloj real.",
+                                clock(l.clock_time_s()),
+                                l.season
+                            );
+                        }
                         if ui.advanced_page == 9 {
                             if let Some(engine) = &audio.engine {
                                 let report = engine.report();
@@ -2178,13 +2283,16 @@ pub(crate) fn apply_settings(
     scale.0 = settings.ui_scale;
 }
 
-fn apply_weather(
+pub(crate) fn apply_weather(
     mut commands: Commands,
     content: Res<ActivePlayerContent>,
     mut precipitation: ResMut<crate::precipitation::PrecipitationState>,
     rain: Query<Entity, With<crate::weather_particles::WeatherMesh>>,
 ) {
-    precipitation.enabled = matches!(content.weather, PlayerWeather::Rain | PlayerWeather::Snow);
+    precipitation.enabled = matches!(
+        content.weather,
+        PlayerWeather::Rain | PlayerWeather::Snow | PlayerWeather::Storm
+    );
     precipitation.snow = content.weather == PlayerWeather::Snow;
     crate::shapes::set_scenery_snow(precipitation.snow);
     if !precipitation.enabled {
@@ -2261,6 +2369,65 @@ mod tests {
             .add_systems(Update, apply_settings);
         app.update();
         assert_eq!(app.world().resource::<UiScale>().0, 1.2);
+    }
+
+    #[test]
+    fn choosing_manual_weather_preserves_real_time_in_menu_and_game() {
+        use crate::environment::{EnvironmentSelection, EnvironmentSource};
+        for playing in [false, true] {
+            let mut app = App::new();
+            app.init_resource::<PlayerUiState>()
+                .init_resource::<PlayerLaunchMenu>()
+                .init_resource::<PlayerSettings>()
+                .init_resource::<PlayerLaunchQueue>()
+                .init_resource::<ActivePlayerContent>()
+                .init_resource::<CameraFollowMode>()
+                .init_resource::<DriverLookOffset>()
+                .init_resource::<crate::floating_origin::FloatingOrigin>()
+                .init_resource::<crate::camera::CameraMode>()
+                .init_resource::<crate::camera::LiveDriverCab>()
+                .init_resource::<crate::camera::PassengerCamState>()
+                .init_resource::<crate::cab_cvf_overlay::CabCvfOverlayState>()
+                .init_resource::<crate::cab_cvf::CabCvfState>()
+                .init_resource::<ButtonInput<MouseButton>>()
+                .add_message::<AppExit>()
+                .add_systems(Update, handle_buttons);
+            let selection = EnvironmentSelection {
+                time: EnvironmentSource::LocalNow,
+                weather: EnvironmentSource::LocalNow,
+                manual_weather: PlayerWeather::Snow,
+            };
+            {
+                let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+                menu.environment = selection;
+                menu.weather = PlayerWeather::Snow;
+            }
+            if playing {
+                app.insert_resource(live());
+                app.world_mut()
+                    .resource_mut::<ActivePlayerContent>()
+                    .environment = selection;
+            }
+            // Before launch, active content still has its default time source.
+            // The actual settings button must use the selection in the menu.
+            app.world_mut()
+                .resource_mut::<ButtonInput<MouseButton>>()
+                .press(MouseButton::Left);
+            app.world_mut().spawn((
+                Interaction::Pressed,
+                UiCommand::Setting(SettingField::ManualWeather, 0.0),
+            ));
+            app.update();
+            let chosen = app.world().resource::<ActivePlayerContent>().environment;
+            assert_eq!(chosen.time, EnvironmentSource::LocalNow);
+            assert_eq!(chosen.weather, EnvironmentSource::Manual);
+            assert_eq!(chosen.manual_weather, PlayerWeather::Overcast);
+            assert_eq!(
+                app.world().resource::<PlayerLaunchMenu>().environment,
+                chosen
+            );
+            assert_eq!(app.world().resource::<PlayerSettings>().environment, chosen);
+        }
     }
 
     #[test]

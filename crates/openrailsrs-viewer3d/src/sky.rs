@@ -153,6 +153,8 @@ pub fn sky_parameters(
     let (coverage, overcast) = match weather {
         PlayerWeather::Clear => (0.22 * day, 0.0),
         PlayerWeather::Rain => (0.88, 0.7),
+        PlayerWeather::Overcast => (0.78, 0.5),
+        PlayerWeather::Storm => (0.99, 0.92),
         PlayerWeather::Fog => (0.96, 0.85),
         PlayerWeather::Snow => (0.6, 0.65),
     };
@@ -180,6 +182,8 @@ pub fn sync_route_atmosphere(
     sun: Option<Res<RouteSunState>>,
     live: Option<Res<crate::live::LiveDrive>>,
     content: Res<ActivePlayerContent>,
+    environment: Option<Res<crate::environment::LiveEnvironment>>,
+    storm: Option<Res<crate::storm::StormState>>,
     fog_state: Res<FogState>,
     mut clear: ResMut<ClearColor>,
     domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
@@ -188,7 +192,15 @@ pub fn sync_route_atmosphere(
 ) {
     let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
     let clock = live.as_ref().map_or(0.0, |l| l.clock_time_s());
-    let params = sky_parameters(direction.y, content.weather, direction, clock);
+    let mut params = sky_parameters(direction.y, content.weather, direction, clock);
+    if let Some(environment) = environment.as_ref()
+        && let Some(sample) = environment.current_sample(content.environment)
+    {
+        params.clouds.x = sample.cloud_cover / 100.0;
+    }
+    let flash = storm.as_ref().map_or(0.0, |s| s.flash);
+    params.horizon += Vec4::new(0.48, 0.56, 0.72, 0.0) * flash;
+    params.zenith += Vec4::new(0.35, 0.43, 0.65, 0.0) * flash;
     let horizon = Color::linear_rgba(params.horizon.x, params.horizon.y, params.horizon.z, 1.0);
     clear.0 = horizon;
     for dome in &domes {
@@ -199,6 +211,8 @@ pub fn sync_route_atmosphere(
     let visibility = match content.weather {
         PlayerWeather::Clear => CLEAR_WEATHER_VISIBILITY_M,
         PlayerWeather::Rain => 7000.0,
+        PlayerWeather::Overcast => CLEAR_WEATHER_VISIBILITY_M,
+        PlayerWeather::Storm => 4000.0,
         PlayerWeather::Fog => 500.0,
         PlayerWeather::Snow => 500.0,
     };

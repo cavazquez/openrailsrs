@@ -130,6 +130,8 @@ pub fn update_ground_fog(
             match content.weather {
                 PlayerWeather::Clear => 0.00004,
                 PlayerWeather::Rain => 0.0003,
+                PlayerWeather::Overcast => 0.00008,
+                PlayerWeather::Storm => 0.0005,
                 PlayerWeather::Fog => 0.0012,
                 PlayerWeather::Snow => 0.0008,
             }

@@ -16,15 +16,26 @@ pub enum PlayerWeather {
     Rain,
     Fog,
     Snow,
+    Overcast,
+    Storm,
 }
 impl PlayerWeather {
-    pub const ALL: [Self; 4] = [Self::Clear, Self::Rain, Self::Fog, Self::Snow];
+    pub const ALL: [Self; 6] = [
+        Self::Clear,
+        Self::Rain,
+        Self::Fog,
+        Self::Snow,
+        Self::Overcast,
+        Self::Storm,
+    ];
     pub fn label(self) -> &'static str {
         match self {
             Self::Clear => "Despejado",
             Self::Rain => "Lluvia",
             Self::Fog => "Niebla",
             Self::Snow => "Nieve",
+            Self::Overcast => "Nublado",
+            Self::Storm => "Tormenta",
         }
     }
 }
@@ -51,6 +62,7 @@ pub struct PlayerLaunchMenu {
     pub start_time_s: f64,
     pub season: usize,
     pub weather: PlayerWeather,
+    pub environment: crate::environment::EnvironmentSelection,
     pub status: String,
     pub consist_audits: HashMap<PathBuf, openrailsrs_train::ConsistAudit>,
     auditor: openrailsrs_train::ConsistAuditor,
@@ -175,6 +187,7 @@ impl PlayerLaunchMenu {
             start_time_s: 35700.0,
             season: 1,
             weather: PlayerWeather::Clear,
+            environment: default(),
             status: String::new(),
             consist_audits: HashMap::new(),
             auditor: openrailsrs_train::ConsistAuditor::new(
@@ -456,6 +469,10 @@ impl PlayerLaunchMenu {
             path,
             route_root: choice.scenery_root.clone(),
             weather: self.weather,
+            environment: crate::environment::EnvironmentSelection {
+                manual_weather: self.weather,
+                ..self.environment
+            },
             resume: None,
         })
     }
@@ -532,6 +549,7 @@ pub struct QueuedPlayerLaunch {
     pub path: PathBuf,
     pub route_root: Option<PathBuf>,
     pub weather: PlayerWeather,
+    pub environment: crate::environment::EnvironmentSelection,
     pub resume: Option<PathBuf>,
 }
 #[derive(Resource, Default)]
@@ -541,6 +559,7 @@ pub struct ActivePlayerContent {
     pub route_root: Option<PathBuf>,
     pub description: String,
     pub weather: PlayerWeather,
+    pub environment: crate::environment::EnvironmentSelection,
 }
 
 /// Use the full imported network for dispatch/PAT choices on a compact service corridor.

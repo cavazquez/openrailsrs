@@ -78,6 +78,8 @@ pub struct SavedGame {
     pub start_clock_s: f64,
     pub season: String,
     pub weather: PlayerWeather,
+    #[serde(default)]
+    pub environment: Option<crate::environment::EnvironmentSelection>,
     pub camera: SavedCamera,
 }
 impl SavedGame {
@@ -97,6 +99,7 @@ impl SavedGame {
             start_clock_s: live.start_clock_s,
             season: live.season.clone(),
             weather: content.weather,
+            environment: Some(content.environment),
             camera,
         };
         atomic_write(
@@ -148,6 +151,12 @@ impl SavedGame {
             path: scenario,
             route_root: game.route_root,
             weather: game.weather,
+            environment: game
+                .environment
+                .unwrap_or(crate::environment::EnvironmentSelection {
+                    manual_weather: game.weather,
+                    ..default()
+                }),
             resume: Some(path.to_path_buf()),
         })
     }
@@ -276,8 +285,32 @@ mod tests {
             &DriverLookOffset::default(),
             &FloatingOrigin::default(),
         );
-        SavedGame::save(&original, &ActivePlayerContent::default(), cam, &save).unwrap();
+        let content = ActivePlayerContent {
+            weather: PlayerWeather::Storm,
+            environment: crate::environment::EnvironmentSelection {
+                time: crate::environment::EnvironmentSource::LocalNow,
+                weather: crate::environment::EnvironmentSource::Manual,
+                manual_weather: PlayerWeather::Storm,
+            },
+            ..default()
+        };
+        SavedGame::save(&original, &content, cam, &save).unwrap();
         let game = SavedGame::read(&save).unwrap();
+        assert_eq!(game.environment, Some(content.environment));
+        let mut legacy: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&save).unwrap()).unwrap();
+        legacy.as_object_mut().unwrap().remove("environment");
+        std::fs::write(
+            tmp.path().join("old-save.json"),
+            serde_json::to_vec(&legacy).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            SavedGame::read(&tmp.path().join("old-save.json"))
+                .unwrap()
+                .environment
+                .is_none()
+        );
         let scenario = tmp.path().join("resumed.toml");
         std::fs::write(&scenario, &game.scenario_toml).unwrap();
         let mut resumed = LiveDrive::from_scenario_path(&scenario).unwrap();

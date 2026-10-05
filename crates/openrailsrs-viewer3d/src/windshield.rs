@@ -95,7 +95,10 @@ fn sync_windshield(
         wipe.last_wipe_s = Some(clock);
     }
     let visible = (*follow == CameraFollowMode::DriverCam || follow.is_cab2d())
-        && matches!(weather.weather, PlayerWeather::Rain | PlayerWeather::Snow);
+        && matches!(
+            weather.weather,
+            PlayerWeather::Rain | PlayerWeather::Snow | PlayerWeather::Storm
+        );
     for (e, mut camera, projection, view, camera_transform, current) in &mut cameras {
         // Sample the resolved main-pass depth, without introducing a separate
         // prepass that would use the wrong alpha bindings for original materials.

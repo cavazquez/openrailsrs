@@ -1,0 +1,359 @@
+{
+  "date_local": "2026-10-04",
+  "timezone_of_test_host": "America/Argentina/Buenos_Aires",
+  "route": "Chiltern, Northolt Park",
+  "resolution": [
+    1280,
+    720
+  ],
+  "view_radius_m": 900,
+  "pass": true,
+  "capture_binary_sha256": "0b7ae9d7695cdf4a9e5c154e9e3e6cfb37742bf7130a623d5cc32163ae497b22",
+  "capture_core_source_sha256": {
+    "Cargo.lock": "dbdf33000ac2722d9984ff48455024a3ec4297885a6f82b121577d6775a564f2",
+    "crates/openrailsrs-viewer3d/src/environment.rs": "bde4e738b2fa5b15140f069e906bff1e6b11de912685fc9cb00a172a1c122eb8",
+    "crates/openrailsrs-viewer3d/src/storm.rs": "568546443cd7ca33c0bf9e560e7299fbdf21b377b6106512f00e7c51d4a39a3f",
+    "crates/openrailsrs-viewer3d/src/route_lighting.rs": "b2d78bc4cdc95bfad5b20f6e6392c3d621ba9a1b15e30e6d96a783b0d4e81632",
+    "crates/openrailsrs-viewer3d/src/weather_particles.rs": "73f0d3ec44075c1db3ec1447396cf4ce386fc23c51bb754d2aa349444f21704d",
+    "crates/openrailsrs-viewer3d/src/sky.rs": "3b3d2071065e10273955c4dfc43e73982ba3aa0c3a2270a887abe1f31cdd157b",
+    "crates/openrailsrs-audio/src/thunder.rs": "a17775c7f6a69a5197f208c050705dc689a28e2b8acf19e82a860479feba01fa",
+    "scripts/check_live_environment.py": "e22ba3a3b8667a2fa75007dc3e993a85766c7a24f0e768b19f54f7b1a93d52e3"
+  },
+  "commands": [
+    "python3 scripts/check_live_environment.py --route-root \"$CHILTERN_ROUTE\" --online --case manual-storm-night --case local-clock-local-weather --case local-clock-manual-snow --out-dir tmp/live-environment-final",
+    "python3 scripts/check_live_environment.py --route-root \"$CHILTERN_ROUTE\" --online --case manual-clear --case manual-clock-local-weather --out-dir tmp/live-environment-final-baseline"
+  ],
+  "provider_test": {
+    "name": "public_provider_returns_timestamp_and_iana_timezone",
+    "passed": true,
+    "timezone": "Europe/London"
+  },
+  "checks": {
+    "full_check_rust_tests": 1447,
+    "full_check_passed": true,
+    "normal_environment_tests": 8,
+    "storm_tests": 3,
+    "follow_up_player_ui_tests": 5,
+    "follow_up_player_ui_passed": true
+  },
+  "limits": [
+    "Captures are stationary, not a complete live-weather journey or throughput benchmark.",
+    "Audio was disabled during renderer captures; PCM and event delay/pause were tested without an audio device.",
+    "Open-Meteo returned modelled clear weather. Storm/snow rendering was selected manually.",
+    "Capture binary precedes the menu-only manual-weather selection repair; the repair is exercised through the actual settings button in menu and game tests."
+  ],
+  "captures": {
+    "manual-clear": {
+      "sha256": "ebd5d0691c24b9fea2ebe7fe9bea4acee6556d70cf9f2051ed83839ca45951f4",
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3556
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T02:10:47.476397991Z"
+      },
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "solar_direction": [
+        0.6946653127670288,
+        0.6843313574790955,
+        0.2216544896364212
+      ],
+      "peak_rss_mib": 1946.7,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "local_evidence_directory": "tmp/live-environment-final-baseline",
+      "service_clock_s": 35700.0,
+      "odometer_m": 0.0,
+      "gpu_tiles": 4,
+      "gpu_entities": 3741,
+      "pending_gpu_uploads": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      }
+    },
+    "manual-clock-local-weather": {
+      "sha256": "438ab14d4335c2948a7652e4d22841c7f58c72fb26703cbf213b1889bba3c1fa",
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3556
+        },
+        "sample": {
+          "cloud_cover": 38.0,
+          "precipitation": 0.0,
+          "snowfall": 0.0,
+          "temperature_2m": 12.800000190734863,
+          "time": 1791165600,
+          "timezone": "Europe/London",
+          "weather_code": 1,
+          "wind_direction_10m": 250.0,
+          "wind_speed_10m": 1.399999976158142
+        },
+        "selection": {
+          "manual_weather": "clear",
+          "time": "manual",
+          "weather": "local_now"
+        },
+        "status": "Open-Meteo · condiciones estimadas · actualización cada 10 min",
+        "timezone": "Europe/London",
+        "utc": "2026-10-05T02:11:30.248316669Z"
+      },
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "solar_direction": [
+        0.6946653127670288,
+        0.6843313574790955,
+        0.2216544896364212
+      ],
+      "peak_rss_mib": 2044.5,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "local_evidence_directory": "tmp/live-environment-final-baseline",
+      "service_clock_s": 35700.0,
+      "odometer_m": 0.0,
+      "gpu_tiles": 4,
+      "gpu_entities": 3741,
+      "pending_gpu_uploads": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      }
+    },
+    "manual-storm-night": {
+      "sha256": "f3f22bfea7cc65c203b9dd14b82a872f7645c02fa647148da1763f388a4d7d04",
+      "environment": {
+        "effective_weather": "storm",
+        "local_clock": null,
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3556
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "storm",
+          "time": "manual",
+          "weather": "manual"
+        },
+        "status": "",
+        "timezone": null,
+        "utc": "2026-10-05T02:07:09.752234952Z"
+      },
+      "storm": {
+        "flash": 1.0,
+        "strikes": 1,
+        "thunders": 0
+      },
+      "solar_direction": [
+        -0.49387234449386597,
+        -0.16910907626152039,
+        -0.852931559085846
+      ],
+      "peak_rss_mib": 2036.8,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "local_evidence_directory": "tmp/live-environment-final",
+      "service_clock_s": 82804.05,
+      "odometer_m": 0.0,
+      "gpu_tiles": 4,
+      "gpu_entities": 4048,
+      "pending_gpu_uploads": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_mesh_updates": 1,
+        "gpu_particles": 8192,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 48
+      }
+    },
+    "local-clock-manual-snow": {
+      "sha256": "7ba8da4932c66545fa4be520bfa654808504b0c98958ecac6a0b86d1c060b0f2",
+      "environment": {
+        "effective_weather": "snow",
+        "local_clock": "2026-10-05T03:07:56.348463092+01:00",
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3556
+        },
+        "sample": null,
+        "selection": {
+          "manual_weather": "snow",
+          "time": "local_now",
+          "weather": "manual"
+        },
+        "status": "Zona horaria: Europe/London · clima elegido por el jugador",
+        "timezone": "Europe/London",
+        "utc": "2026-10-05T02:07:56.348463092Z"
+      },
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "solar_direction": [
+        0.5653409361839294,
+        -0.569037675857544,
+        -0.5971480011940002
+      ],
+      "peak_rss_mib": 2041.9,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "local_evidence_directory": "tmp/live-environment-final",
+      "service_clock_s": 35700.0,
+      "odometer_m": 0.0,
+      "gpu_tiles": 4,
+      "gpu_entities": 4048,
+      "pending_gpu_uploads": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_mesh_updates": 1,
+        "gpu_particles": 8192,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 48
+      }
+    },
+    "local-clock-local-weather": {
+      "sha256": "69bf81e04bafd041e987e9a042af2101a215cf30172dc0d7cb05cef81f0521b5",
+      "environment": {
+        "effective_weather": "clear",
+        "local_clock": "2026-10-05T03:08:41.996015920+01:00",
+        "location": {
+          "latitude": 51.5437,
+          "longitude": -0.3556
+        },
+        "sample": {
+          "cloud_cover": 38.0,
+          "precipitation": 0.0,
+          "snowfall": 0.0,
+          "temperature_2m": 12.800000190734863,
+          "time": 1791165600,
+          "timezone": "Europe/London",
+          "weather_code": 1,
+          "wind_direction_10m": 250.0,
+          "wind_speed_10m": 1.399999976158142
+        },
+        "selection": {
+          "manual_weather": "clear",
+          "time": "local_now",
+          "weather": "local_now"
+        },
+        "status": "Open-Meteo · condiciones estimadas · actualización cada 10 min",
+        "timezone": "Europe/London",
+        "utc": "2026-10-05T02:08:41.996015920Z"
+      },
+      "storm": {
+        "flash": 0.0,
+        "strikes": 0,
+        "thunders": 0
+      },
+      "solar_direction": [
+        0.5680267214775085,
+        -0.5678867101669312,
+        -0.5956931710243225
+      ],
+      "peak_rss_mib": 1998.1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "local_evidence_directory": "tmp/live-environment-final",
+      "service_clock_s": 35700.0,
+      "odometer_m": 0.0,
+      "gpu_tiles": 4,
+      "gpu_entities": 4048,
+      "pending_gpu_uploads": 0,
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 0
+      }
+    }
+  },
+  "control_source_sha256": "ca29ec46965f654af01cb95bee7d4e285c0b32f111a03707f91a11530c362d9a",
+  "final_binary_sha256": "02bbb285786611569118748f501a407b0fbf33feee122b1a461b4e5f94e6f17a"
+}

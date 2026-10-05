@@ -223,7 +223,7 @@ pub fn poll_route_load(
             crate::shapes::set_scenery_snow(
                 content.weather == crate::player_launch::PlayerWeather::Snow,
             );
-            insert_route_bundle(&mut commands, bundle);
+            insert_route_bundle(&mut commands, bundle, content.environment);
             if let Some(screen) = screen.as_ref()
                 && let Ok(mut t) = texts.get_mut(screen.status)
             {
@@ -321,7 +321,11 @@ pub fn update_loading_screen_progress(
     }
 }
 
-fn insert_route_bundle(commands: &mut Commands, bundle: RouteLoadBundle) {
+fn insert_route_bundle(
+    commands: &mut Commands,
+    bundle: RouteLoadBundle,
+    selection: crate::environment::EnvironmentSelection,
+) {
     let RouteLoadBundle {
         saved_camera,
         title,
@@ -341,7 +345,12 @@ fn insert_route_bundle(commands: &mut Commands, bundle: RouteLoadBundle) {
         launch_opts,
     } = bundle;
 
-    crate::route_lighting::prepare_route_textures(live.as_ref(), &assets, route_focus.center);
+    crate::route_lighting::prepare_route_textures(
+        live.as_ref(),
+        &assets,
+        route_focus.center,
+        selection,
+    );
 
     if let Some(camera) = saved_camera {
         commands.insert_resource(crate::saved_game::PendingSavedCamera(camera));

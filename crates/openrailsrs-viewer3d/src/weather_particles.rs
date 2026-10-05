@@ -66,6 +66,7 @@ pub struct WeatherParticles {
     shelter_origin: Vec3,
     shelter_clock: f32,
     adaptive: AdaptiveWeather,
+    live_wind: Option<WindDrift>,
     pub execution: WeatherExecution,
     pub requested: WeatherExecution,
     pub gpu_particles: usize,
@@ -73,6 +74,29 @@ pub struct WeatherParticles {
     pub shelter_refreshes: u64,
     pub gpu_mesh_updates: u64,
     pub cpu_mesh_updates: u64,
+}
+/// Changing wind must not multiply a new velocity by the entire elapsed trip.
+/// Integrating a smooth velocity keeps drops continuous across provider updates.
+struct WindDrift {
+    offset: bevy::math::DVec2,
+    velocity: Vec2,
+    clock: f64,
+}
+impl WindDrift {
+    fn advance(&mut self, clock: f64, target: Vec2) -> Vec2 {
+        if clock < self.clock {
+            self.offset = target.as_dvec2() * clock;
+        }
+        let dt = (clock - self.clock).max(0.0);
+        self.clock = clock;
+        let old = self.velocity;
+        self.velocity = old.lerp(target, (1.0 - (-dt / 4.0).exp()) as f32);
+        self.offset += (old + self.velocity).as_dvec2() * 0.5 * dt;
+        Vec2::new(
+            self.offset.x.rem_euclid(f64::from(HALF) * 2.0) as f32,
+            self.offset.y.rem_euclid(f64::from(HALF) * 2.0) as f32,
+        )
+    }
 }
 impl WeatherParticles {
     pub fn report(&self) -> serde_json::Value {
@@ -122,8 +146,9 @@ pub fn particle_position(seed: Vec4, p: &ParticleUniforms) -> Vec3 {
     } else {
         Vec2::ZERO
     };
-    let x = seed.x * HALF * 2.0 + p.wind_time.x * t + flutter.x;
-    let z = seed.z * HALF * 2.0 + p.wind_time.z * t + flutter.y;
+    let drift = if p.wind_time.y > 0.5 { 1.0 } else { t };
+    let x = seed.x * HALF * 2.0 + p.wind_time.x * drift + flutter.x;
+    let z = seed.z * HALF * 2.0 + p.wind_time.z * drift + flutter.y;
     let y = seed.y * HEIGHT - fall * t;
     p.center.truncate()
         + Vec3::new(
@@ -271,6 +296,8 @@ pub struct WeatherDraw<'w, 's> {
     >,
     originals: Res<'w, Assets<StandardMaterial>>,
     native_materials: Res<'w, Assets<openrailsrs_bevy_scenery::OrSceneryMaterial>>,
+    environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
+    content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
     state: ResMut<'w, WeatherParticles>,
     meshes: ResMut<'w, Assets<Mesh>>,
     images: ResMut<'w, Assets<Image>>,
@@ -296,6 +323,8 @@ pub fn update(
         obstacles,
         originals,
         native_materials,
+        environment,
+        content,
         mut state,
         mut meshes,
         mut images,
@@ -352,10 +381,40 @@ pub fn update(
             _ => gpu_count = budget,
         }
     }
+    let sample = environment
+        .as_ref()
+        .zip(content.as_ref())
+        .and_then(|(e, c)| e.current_sample(c.environment));
+    if let Some(sample) = sample {
+        let intensity = if precipitation.snow {
+            sample.snowfall / 0.15
+        } else {
+            sample.precipitation / 2.5
+        };
+        let scale = intensity.clamp(0.15, 1.0);
+        gpu_count = (gpu_count as f32 * scale) as usize;
+        cpu_count = (cpu_count as f32 * scale) as usize;
+    }
     state.execution = mode;
     state.gpu_particles = gpu_count;
     state.cpu_particles = cpu_count;
-    let clock = live.map_or_else(|| time.elapsed_secs(), |l| l.session.time_s() as f32);
+    let clock_s = live.map_or_else(|| time.elapsed_secs_f64(), |l| l.session.time_s());
+    let clock = clock_s as f32;
+    let desired_wind = sample.map_or(Vec3::new(0.8, 0.0, 0.3), |s| s.wind());
+    let desired_wind = Vec2::new(desired_wind.x, desired_wind.z);
+    if sample.is_some() && state.live_wind.is_none() {
+        state.live_wind = Some(WindDrift {
+            offset: desired_wind.as_dvec2() * clock_s,
+            velocity: desired_wind,
+            clock: clock_s,
+        });
+    }
+    let wind = if let Some(drift) = state.live_wind.as_mut() {
+        let offset = drift.advance(clock_s, desired_wind);
+        Vec4::new(offset.x, 1.0, offset.y, clock)
+    } else {
+        Vec4::new(0.8, 0.0, 0.3, clock)
+    };
     // Reduce BEFORE converting to f32 so large cumulative origin shifts retain
     // sub-centimetre phase; a rebase never restarts the field or its clock.
     let phase = |value: f32, shift: f32, period: f64| {
@@ -371,7 +430,7 @@ pub fn update(
         ),
         right: camera.right().as_vec3().extend(1.0),
         up: camera.up().as_vec3().extend(f32::from(precipitation.snow)),
-        wind_time: Vec4::new(0.8, 0.0, 0.3, clock),
+        wind_time: wind,
         grid: Vec4::new(state.shelter_center.x, state.shelter_center.y, HALF, 0.0),
     };
     state.shelter_clock += time.delta_secs();
@@ -517,6 +576,22 @@ fn raster_roof(values: &mut [f32], grid_center: Vec2, center: Vec3, extent: Vec3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn updated_wind_does_not_retroactively_move_drops_and_pause_is_stable() {
+        let mut drift = WindDrift {
+            offset: bevy::math::DVec2::new(10., 20.),
+            velocity: Vec2::X,
+            clock: 600.,
+        };
+        assert_eq!(
+            drift.advance(600., Vec2::new(-15., 10.)),
+            Vec2::new(10., 20.)
+        );
+        let before = drift.advance(600.01, Vec2::new(-15., 10.));
+        assert!(before.distance(Vec2::new(10., 20.)) < 0.1);
+        assert_eq!(before, drift.advance(600.01, Vec2::new(-15., 10.)));
+        assert!(drift.advance(0., Vec2::Y).is_finite());
+    }
     #[test]
     fn camera_motion_and_origin_rebase_do_not_drag_or_restart_snow() {
         let seed = seed_values(517);

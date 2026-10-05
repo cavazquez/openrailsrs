@@ -20,8 +20,9 @@ fn particle_position(seed: vec4<f32>) -> vec3<f32> {
     let fall = select(20.0 + seed.w * 16.0, 0.7 + seed.w * 1.2, snow);
     let flutter = select(vec2(0.0), vec2(sin(t * 0.73 + seed.x * 31.0), cos(t * 0.51 + seed.z * 27.0)) * 0.65, snow);
     let span = weather.center.w * 2.0;
-    let x = seed.x * span + weather.wind_time.x * t + flutter.x;
-    let z = seed.z * span + weather.wind_time.z * t + flutter.y;
+    let drift = select(t, 1.0, weather.wind_time.y > 0.5);
+    let x = seed.x * span + weather.wind_time.x * drift + flutter.x;
+    let z = seed.z * span + weather.wind_time.z * drift + flutter.y;
     let y = seed.y * weather.phase.w - fall * t;
     return weather.center.xyz + vec3(wrap(x - weather.phase.x, span), wrap(y - weather.phase.y, weather.phase.w), wrap(z - weather.phase.z, span));
 }

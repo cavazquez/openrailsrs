@@ -591,3 +591,46 @@ leyenda. En Empezar, Copiar copia el comando o lo selecciona si el navegador
 impide acceder al portapapeles. En móvil, Menú muestra navegación y Escape cierra
 el menú. Las páginas Estado, Física y Referencia OR muestran el alcance real y
 la comparación física completa que todavía falla.
+
+
+## 27. Hora real, clima del lugar y tormentas
+
+1. En el menú dejá **Hora visual** y **Origen del clima → Elegido por el jugador**.
+   Elegí hora de salida 09:55 y **Clima manual / respaldo → Nieve**: se ve nieve
+   y el sol corresponde a esa hora. No debe consultarse internet.
+2. Activá solamente **Hora visual → Actual del lugar**. En Chiltern, el aviso
+   inferior y **F8 → Clima** deben mostrar fecha/hora de **Europe/London**, aunque
+   tu equipo esté en Argentina. La nieve elegida se conserva. Compará la hora
+   londinense teniendo en cuenta horario de verano. El HUD de conducción sigue
+   mostrando el reloj del servicio, separado del reloj del lugar.
+3. Pausá con P, esperá unos segundos y volvé a **F8 → Clima**: avanza la hora
+   real; no avanzan tren, pasajeros ni horario. Acelerá con +: la hora real
+   mantiene su ritmo. Volvé a manual en F10: vuelve la iluminación de la partida.
+4. Activá solamente **Origen del clima → Actual del lugar**. F8 debe mostrar
+   Open-Meteo, dato UTC y antigüedad, temperatura, nubosidad, viento y coordenadas.
+   La hora visual manual se conserva. El clima puede tardar unos segundos en
+   llegar; el aviso muestra “consultando”. Lluvia/nieve/tormenta dependen del dato
+   actual: para probar esos efectos siempre podés elegirlos manualmente.
+5. En F10, pulsá **Elegir clima** hasta **Tormenta** y continuá la partida. Debe
+   pasar a manual, llover y verse cielo cubierto. Tras unos cuatro segundos de
+   simulación aparece un rayo con ramas y un destello; después se oye el trueno.
+   Los eventos siguientes tardan 25–55 s. Alterná 1/2: audio más tenue en cabina,
+   rayos fijos en el escenario, gotas y limpiaparabrisas V. Pausar debe congelar
+   el efecto y pausar el sonido, sin repetir el trueno al continuar.
+6. **F10 → Rayos y destellos → No** debe quitar los destellos y rayos. El trueno
+   sigue controlado por sonido/volumen. Elegí **Despejado**: desaparecen lluvia y
+   tormenta, y se descartan truenos pendientes. Mové la cámara: ningún rayo debe
+   seguirla ni crear una sombra a sus pies.
+7. Activá ambos modos actuales, guardá la partida, cerrá y reanudá. F8 conserva
+   ambos selectores y resuelve la fecha actual; el horario, posición y tráfico
+   guardados no saltan al horario real. Elegí manual y guardá ajustes para que
+   el próximo menú recuerde esa preferencia.
+8. Probá con la conexión deshabilitada antes de iniciar: debe usar el clima de
+   respaldo y avisar el problema, permitiendo conducir. Si ya existe caché, la
+   hora real mantiene su zona y el último clima válido informa su antigüedad.
+   Datos de más de dos horas vuelven al respaldo. Una ruta de práctica sin
+   coordenadas debe informar “ruta sin ubicación” y continuar manual.
+
+Los datos actuales son estimaciones de un modelo meteorológico. Los rayos son
+procedurales; no reproducen descargas reales observadas. Detalles, límites y
+comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).

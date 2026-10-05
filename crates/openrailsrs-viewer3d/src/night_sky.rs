@@ -105,6 +105,7 @@ pub fn update_stars(
     sun: Option<Res<RouteSunState>>,
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
+    environment: Option<Res<crate::environment::LiveEnvironment>>,
     cameras: Query<&Transform, (With<Camera3d>, Without<StarField>, Without<SkyDome>)>,
     mut stars: Query<
         (
@@ -131,9 +132,20 @@ pub fn update_stars(
         };
         transform.translation = camera.translation;
         let latitude = sun.as_ref().map_or(0.9, |s| s.position.latitude as f32);
-        let rotation = live.as_ref().map_or(0.0, |l| {
-            (l.clock_time_s() / 86164.0) as f32 * std::f32::consts::TAU
-        });
+        let rotation = environment
+            .as_ref()
+            .and_then(|e| e.real_clock(content.environment))
+            .map_or_else(
+                || {
+                    live.as_ref().map_or(0.0, |l| {
+                        (l.clock_time_s() / 86164.0) as f32 * std::f32::consts::TAU
+                    })
+                },
+                |utc| {
+                    ((utc.timestamp() as f64).rem_euclid(86164.0) / 86164.0) as f32
+                        * std::f32::consts::TAU
+                },
+            );
         transform.rotation = Quat::from_rotation_z(std::f32::consts::FRAC_PI_2 - latitude)
             * Quat::from_rotation_y(rotation);
         if let Some(mut m) = materials.get_mut(&material.0) {

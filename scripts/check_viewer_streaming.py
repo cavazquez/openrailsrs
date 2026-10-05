@@ -64,6 +64,13 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_DEBUG_FLIP_U"] = "1"
     if hasattr(args, "weather"):
         env["OPENRAILSRS_WEATHER"] = args.weather
+    if getattr(args, "real_time", False):
+        env["OPENRAILSRS_REAL_TIME"] = "1"
+    if getattr(args, "real_weather", False):
+        env["OPENRAILSRS_REAL_WEATHER"] = "1"
+    if getattr(args, "during_lightning", False):
+        env["OPENRAILSRS_SCREENSHOT_DURING_LIGHTNING"] = "1"
+        env["OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET"] = "0"
     env["OPENRAILSRS_WEATHER_EXECUTION"] = getattr(args, "weather_execution", "auto")
     env["OPENRAILSRS_RENDERER"] = "cpu" if args.software else getattr(args, "renderer", "auto")
     if getattr(args, "particle_budget", None) is not None:
@@ -291,7 +298,7 @@ def main():
         help="use private Weston with hardware presentation instead of Xvfb",
     )
     parser.add_argument("--checkpoint", choices=["middle", "terminal"], action="append")
-    parser.add_argument("--weather", choices=["clear", "rain", "fog", "snow"], default="clear")
+    parser.add_argument("--weather", choices=["clear", "rain", "fog", "snow", "overcast", "storm"], default="clear")
     parser.add_argument("--weather-execution", choices=["auto", "gpu", "cpu", "hybrid"], default="auto")
     parser.add_argument("--renderer", choices=["auto", "gpu", "cpu"], default="auto")
     parser.add_argument("--particle-budget", type=int)
