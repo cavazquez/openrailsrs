@@ -101,5 +101,16 @@
   "final_binary_sha256": "5f891a83d158865b697ef822d06a745d34b3782c97abb2d551943db564f22718",
   "post_capture_changes": [
     "Menu native-scenery association fixed for all four Chiltern corridors; rendering/weather/texture code unchanged."
-  ]
+  ],
+  "menu_verification": {
+    "native_chiltern": {
+      "screenshot_sha256": "23e90954aa2dd6e017dc65ddded0aa063db9d356f7ed844c914814d76cb99e0e",
+      "formation": "8 vehicles, 166 m, 3D cab"
+    },
+    "nested_mitre": {
+      "screenshot_sha256": "81fb5284c3e93f514b7102dc121c68ad956a1d118aa1470b28488353056b0862",
+      "scenario": "L\u00ednea Mitre \u2014 Retiro \u2192 Olivos",
+      "missing_model": "caf6000_motor.s; example is listed but cannot start in 3D without original rolling stock models"
+    }
+  }
 }

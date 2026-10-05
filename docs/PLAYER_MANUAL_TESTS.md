@@ -646,7 +646,9 @@ comandos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
    completos de `examples/`, incluidos SCE multi body y Retiro → Olivos de
    `mitre_campaign/scenarios/`. Los archivos de reportes/overlays/campañas/horarios
    no son partidas seleccionables. Los ejemplos sin paisaje nativo son escenas
-   de práctica, no recreaciones visuales completas de Argentina.
+   de práctica, no recreaciones visuales completas de Argentina. Si la formación
+   figura «Incompleta», hay que instalar sus modelos/texturas/cabina antes de
+   iniciar en 3D. Mitre CAF 6000, por ejemplo, aún carece de `caf6000_motor.s`.
 3. Con la misma estación, hora y cámara, compará despejado y nieve. El suelo
    y los copos cambian; las fachadas y techos conservan sus colores/texturas.
    Probá también alejándote para activar LOD y cargando un sector nuevo.
