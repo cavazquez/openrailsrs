@@ -9,7 +9,7 @@ pub mod from_ast;
 pub mod model;
 pub mod steam_loader;
 
-pub use consist_audit::{ConsistAudit, ConsistAuditor};
+pub use consist_audit::{ConsistAudit, ConsistAuditor, MissingResource};
 pub use diesel::{
     DieselEngineParams, DieselTractionModel, TractionDynamicsParams, build_reverse_throttle_rpm_tab,
 };

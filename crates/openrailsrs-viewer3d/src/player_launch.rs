@@ -192,6 +192,20 @@ impl PlayerLaunchMenu {
     pub fn refresh_choices(&mut self) {
         self.refresh_choices_with_library(&player_data_dir().join("rolling-stock/TRAINS/CONSISTS"));
     }
+    /// Re-read manually completed resources without changing the launch choices.
+    pub fn reaudit_selected(&mut self) -> Result<String, String> {
+        let path = self
+            .consists
+            .get(self.consist)
+            .cloned()
+            .ok_or("No hay una formación seleccionada")?;
+        self.auditor = openrailsrs_train::ConsistAuditor::new(self.auditor.trainset_roots.clone());
+        let audit = self.auditor.inspect(&path);
+        let message = format!("Auditoría actualizada: {}", audit.label());
+        self.consist_audits.insert(path, audit);
+        self.status = message.clone();
+        Ok(message)
+    }
     fn refresh_choices_with_library(&mut self, library: &Path) {
         self.consists.clear();
         self.paths.clear();
@@ -650,7 +664,7 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 mod tests {
     use super::*;
     #[test]
-    fn separately_installed_author_formation_is_selectable_and_audited() {
+    fn separately_installed_author_formation_can_be_reaudited_after_resource_changes() {
         let temp = tempfile::tempdir().unwrap();
         let trains = temp.path().join("rolling-stock/TRAINS");
         let library = trains.join("CONSISTS");
@@ -669,6 +683,35 @@ mod tests {
         menu.refresh_choices_with_library(&library);
         assert!(menu.consists.contains(&consist));
         assert!(menu.consist_audits[&consist].player_ready());
+        menu.consist = menu.consists.iter().position(|p| p == &consist).unwrap();
+        menu.start_time_s = 12300.0;
+        let selection = (
+            menu.route,
+            menu.service,
+            menu.consist,
+            menu.path,
+            menu.start_time_s,
+        );
+        std::fs::write(stock.join("original.eng"), "Wagon ( original Mass ( 40t ) Size ( 3m 4m 20m ) WagonShape ( original.s ) ) Engine ( original MaxPower ( 500kW ) )").unwrap();
+        menu.reaudit_selected().unwrap();
+        assert!(!menu.consist_audits[&consist].player_ready());
+        std::fs::write(stock.join("original.s"), "(shape (texture_filenames 0))").unwrap();
+        menu.reaudit_selected().unwrap();
+        assert!(menu.consist_audits[&consist].player_ready());
+        assert!(menu.consist_audits[&consist].missing_resources.is_empty());
+        std::fs::remove_file(stock.join("original.s")).unwrap();
+        menu.reaudit_selected().unwrap();
+        assert!(!menu.consist_audits[&consist].player_ready());
+        assert_eq!(
+            (
+                menu.route,
+                menu.service,
+                menu.consist,
+                menu.path,
+                menu.start_time_s
+            ),
+            selection
+        );
     }
     #[test]
     fn extended_and_traffic_examples_keep_native_chiltern_scenery() {

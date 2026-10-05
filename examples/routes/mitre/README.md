@@ -24,11 +24,12 @@ Incluye: Retiro, Palermo, Belgrano R/C, Núñez, Olivos, Martínez, San Isidro, 
 `consists/caf_6000.con` y sus ENG/WAG son datos sintéticos para pruebas de
 física. No incluyen modelos, texturas ni cabina: sus referencias CAF son
 marcadores y el menú impide iniciar si esos recursos obligatorios faltan.
-No representan el material rodante real del Mitre. El menú enlaza como
-alternativa la [Serie 6000 del autor Vapor3D](https://vapor3d.punchinout.net/s6000.html),
-para Metro de Madrid / Subte B, sin afirmar coincidencia de archivos ni
-compatibilidad ya validada. Conservá sus nombres y elegí su `.con` original
-desde la [biblioteca del usuario](../../../docs/OFFICIAL_CONTENT.md#recursos-faltantes-y-caf-6000).
+No representan el material rodante real del Mitre. El menú muestra el escenario,
+los archivos faltantes y sus destinos absolutos; no ofrece un modelo sustitutivo
+porque no se identificó un repositorio original para esas referencias.
+Para material real obtenido de su origen, conservá los nombres y carpetas del
+autor y elegí su `.con` original desde la
+[biblioteca del usuario](../../../docs/OFFICIAL_CONTENT.md#recursos-faltantes-y-caf-6000).
 
 La Línea Mitre tiene una topología muy granular en OSM (cada aguja y bypass es un way
 separado). Para armar un escenario de simulación útil conviene:

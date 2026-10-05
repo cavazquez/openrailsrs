@@ -92,26 +92,43 @@ la página para los paquetes que usan una web, instalador o distribución comerc
 
 ## Recursos faltantes y CAF 6000
 
-Si el paquete procede de GitHub, **Buscar en el origen** abre una búsqueda
-en ese repositorio por el nombre del archivo faltante, sin enviar rutas locales.
-**Buscar actualización del paquete** ofrece la actualización del catálogo;
-la copia anterior se conserva y la nueva debe superar su propia auditoría.
-Una búsqueda no garantiza que el autor distribuya esa dependencia.
+El menú y **Descargar contenido oficial** muestran la carpeta del escenario
+seleccionado, el archivo de actividad/servicio y la formación `.con`. El detalle
+**Ver todos los faltantes y sus ubicaciones** abre una ventana propia que
+enumera cada archivo ausente, el
+ENG/WAG, modelo, CVF, SMS o Include que lo referencia y sus destinos absolutos.
+Si hay varias ubicaciones admitidas por el cargador, basta con una de ellas.
+Los archivos obligatorios impiden iniciar; sonidos, scripts y cabinas
+alternativas opcionales conservan sus avisos. La auditoría identifica todas
+las texturas y gráficos ausentes, sin detenerse en el primero de cada modelo.
+
+**Buscar en el repositorio original** y **Actualizar desde el repositorio
+original** aparecen solamente si el recurso pertenece a un paquete GitHub
+registrado en el catálogo integrado. Se usa la URL original del catálogo,
+incluso cuando GitHub redirige una ruta renombrada por su autor. Un manifiesto
+no puede cambiar ese enlace mediante `revision.repository` o `download_url`.
+La búsqueda envía únicamente el nombre del archivo, sin rutas locales. La
+actualización conserva la copia anterior y la nueva se audita por separado.
+El repositorio de un escenario no se atribuye a una formación de otra biblioteca.
+
+Si no se conoce ese origen, se muestran los nombres y destinos para completar
+los recursos manualmente; no se ofrecen modelos de otros autores ni sitios
+alternativos. Los paquetes ZIP del catálogo oficial mantienen su descarga
+original, pero no se les inventa un repositorio para buscar dependencias.
+Después de copiar los archivos originales, pulsá **Reauditar esta formación**
+en el detalle. Se vuelven a leer los recursos y se conservan ruta, actividad,
+formación, recorrido y hora elegidos. **Reauditar esta copia** en el gestor
+repite además la preparación del paquete instalado.
 
 Los nombres `caf6000_motor.s`, etc. del ejemplo Mitre son marcadores de un
-ejemplo de física, no archivos de un modelo original. El menú ofrece la
-[página de A. Asensio / Vapor3D](https://vapor3d.punchinout.net/s6000.html)
-y su descarga gratuita RAR de 22,7 MB con cabina 2D. Ese modelo corresponde
-a Metro de Madrid / Subte B; no es una formación real del ferrocarril Mitre.
-La cabina 3D es opcional de pago. Su compatibilidad con nuestro visor y la
-coincidencia de nombres no están verificadas: no se reemplazan marcadores
-automáticamente ni se renombra el contenido del autor.
-
-Para probar material obtenido legítimamente, extraé sus archivos manteniendo
+ejemplo de física, no archivos de un modelo original. No se identificó un
+repositorio original para ese modelo y no se ofrece una descarga sustitutiva.
+No representan el material rodante real del Mitre. Para probar una formación
+real obtenida de su origen, conservá la estructura y los nombres del autor:
 `rolling-stock/TRAINS/TRAINSET/<carpeta-del-autor>/` y sus `.con` en
 `rolling-stock/TRAINS/CONSISTS/`, dentro de la carpeta de datos. Reiniciá el
-menú y elegí la formación original; se audita antes de iniciar. El instalador
-automático admite ZIP del catálogo; RAR sigue las instrucciones del autor.
+menú y elegí su formación original; se audita antes de iniciar. Las ubicaciones
+del detalle corresponden a la formación seleccionada, no a un modelo parecido.
 
 Demo Model 1 es pequeño comparado con rutas de varios GiB, pero pesado para
 Git (260 MiB comprimido / 315 MiB instalado). Se conserva como opción del

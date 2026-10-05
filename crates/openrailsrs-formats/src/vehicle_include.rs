@@ -117,8 +117,34 @@ fn expand(
                     return Err(error(path, "Include absoluto no permitido"));
                 }
                 let requested = path.parent().unwrap().join(relative_path);
+                // Reject a missing escape as well as an existing one: it must
+                // never be presented as an installation destination.
+                let mut normalized = PathBuf::new();
+                for component in requested.components() {
+                    if component == std::path::Component::ParentDir {
+                        normalized.pop();
+                    } else {
+                        normalized.push(component.as_os_str());
+                    }
+                }
+                if !normalized.starts_with(root) {
+                    return Err(error(path, "Include fuera de la instalación"));
+                }
+                if let Some(prefix) = normalized
+                    .ancestors()
+                    .find_map(resolve_path_case_insensitive)
+                    && !prefix
+                        .canonicalize()
+                        .map_err(|e| error(path, e))?
+                        .starts_with(root)
+                {
+                    return Err(error(path, "Include fuera de la instalación"));
+                }
                 let included = resolve_path_case_insensitive(&requested)
-                    .ok_or_else(|| error(path, format!("Falta Include {relative}")))?
+                    .ok_or_else(|| FormatError::MissingInclude {
+                        containing_file: path.to_path_buf(),
+                        reference: relative.clone(),
+                    })?
                     .canonicalize()
                     .map_err(|e| error(path, e))?;
                 if !included.starts_with(root) {
@@ -149,6 +175,31 @@ fn expand(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_missing_include_outside_the_installation_is_not_an_installation_hint() {
+        let (_temp, root) = fixture();
+        let engine = root.join("Stock/power.eng");
+        std::fs::write(
+            &engine,
+            "Wagon ( power Include ( ../../../outside/missing.inc ) )",
+        )
+        .unwrap();
+        let error = read_vehicle_ast(&engine).unwrap_err();
+        assert!(error.to_string().contains("fuera de la instalación"));
+        assert!(!matches!(error, FormatError::MissingInclude { .. }));
+    }
+    #[cfg(unix)]
+    #[test]
+    fn a_missing_include_through_an_escaping_link_is_not_an_installation_hint() {
+        let (_temp, root) = fixture();
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("Stock/link")).unwrap();
+        let engine = root.join("Stock/power.eng");
+        std::fs::write(&engine, "Wagon ( power Include ( link/missing.inc ) )").unwrap();
+        let error = read_vehicle_ast(&engine).unwrap_err();
+        assert!(error.to_string().contains("fuera de la instalación"));
+        assert!(!matches!(error, FormatError::MissingInclude { .. }));
+    }
     fn fixture() -> (tempfile::TempDir, PathBuf) {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("TRAINS/TRAINSET");

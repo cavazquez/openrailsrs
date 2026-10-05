@@ -810,13 +810,17 @@ reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
    quedar disponibles; no se sobrescribe el recorrido anterior.
 2. Pulsá **Reauditar esta copia** en una instalación existente. Debe funcionar
    sin conexión; se actualizan auditoría y actividades sin descargar otra vez.
-3. En Mitre elegí el CAF sintético. Debe explicar los faltantes y ofrecer
-   **Buscar en el origen** / **Descargar desde el autor**. El enlace lleva
-   a Vapor3D y advierte que su Serie 6000 corresponde a Metro/Subte B;
-   no declara que el ejemplo quedó reparado. Para material descargado
-   manualmente, mantené la estructura `rolling-stock/TRAINS` indicada en
-   la guía. Reiniciá y elegí su `.con`: deben aparecer los diagnósticos
-   de sus recursos y sistemas originales antes de iniciar.
+3. En Mitre elegí el CAF sintético. Debe mostrar **Escenario**, **Actividad /
+   servicio**, **Formación** y los archivos faltantes. Abrí **Ver todos los
+   faltantes y sus ubicaciones**: debe abrir su propia ventana; cada archivo
+   debe indicar quién lo referencia
+   y la ruta absoluta donde colocarlo. No debe ofrecer descargas alternativas:
+   ese ejemplo no tiene un repositorio original del modelo identificado.
+   Para material obtenido manualmente de su origen, conservá la estructura
+   `rolling-stock/TRAINS` y elegí su `.con` original. Un archivo opcional
+   ausente debe aparecer como **Falta opcional** y permitir la cabina válida.
+   Tras colocar un archivo original en su destino, pulsá **Reauditar esta
+   formación**: debe actualizar los faltantes sin cambiar el servicio ni la hora.
 4. Ejecutá `openrailsrs content --list` desde otra carpeta con el binario
    copiado allí. Debe listar el catálogo sin necesitar `scripts/` ni el repo.
    Python 3 debe estar instalado. Cambiar de binario o directorio no debe
@@ -827,3 +831,9 @@ reservas y el comando para reproducir el oráculo de peralte sin modificarlo.
    `/tmp/openrailsrs-snap-test/openrailsrs/official-content` aunque cambie
    `SNAP_USER_DATA` entre revisiones. Es una prueba de selección de carpeta;
    el confinamiento y empaquetado de un Snap real siguen pendientes.
+6. En una formación incompleta de un paquete GitHub original del catálogo,
+   los botones **Buscar en el repositorio original** y **Actualizar desde el
+   repositorio original** deben apuntar a ese paquete. La búsqueda debe enviar
+   solamente el nombre del faltante. Cambiar a una formación externa no debe
+   asignarle el repositorio del escenario. Una formación sin origen identificado
+   debe conservar el detalle de rutas y no ofrecer esos botones.

@@ -104,6 +104,7 @@ pub enum PlayerPanel {
     None,
     Menu,
     Content,
+    MissingResources,
     Pause,
     Notebook,
     Formation,
@@ -229,8 +230,8 @@ enum UiCommand {
     ContentCancel,
     ContentCatalogue,
     MissingOrigin,
-    MissingDownload,
     MissingUpdate,
+    MissingAudit,
 }
 #[derive(Clone, Copy, Debug)]
 enum MenuField {
@@ -620,8 +621,8 @@ fn handle_buttons(
             UiCommand::ContentCancel=>downloads.cancel(),
             UiCommand::ContentCatalogue=>crate::official_content::open_catalogue(),
             UiCommand::MissingOrigin=>crate::official_content::missing_source(&menu).ok_or("No hay un origen verificado".to_string()).and_then(|s|crate::official_content::open_source_url(&s.page)),
-            UiCommand::MissingDownload=>crate::official_content::missing_source(&menu).and_then(|s|s.download_page).ok_or("La descarga se obtiene mediante el catálogo del autor".to_string()).and_then(|url|crate::official_content::open_source_url(&url)),
-            UiCommand::MissingUpdate=>crate::official_content::missing_source(&menu).and_then(|s|s.package_id).and_then(|id|downloads.packages.iter().position(|p|p.id()==id)).ok_or("No hay una descarga automática verificada para este origen".to_string()).and_then(|index|{downloads.selected=index;downloads.start().map(|()|open_panel(&mut ui,&mut live,PlayerPanel::Content))}),
+            UiCommand::MissingAudit=>menu.reaudit_selected().map(|message|{ui.notice=message;}),
+            UiCommand::MissingUpdate=>crate::official_content::missing_source(&menu).map(|s|s.package_id).and_then(|id|downloads.packages.iter().position(|p|p.id()==id)).ok_or("No hay una descarga automática verificada para este origen".to_string()).and_then(|index|{downloads.selected=index;downloads.start().map(|()|open_panel(&mut ui,&mut live,PlayerPanel::Content))}),
             UiCommand::Open(panel)=>{open_panel(&mut ui,&mut live,*panel);Ok(())},
             UiCommand::Close=>{close_panel(&mut ui,&mut live);Ok(())},
             UiCommand::Exit => { exit.write(AppExit::Success); Ok(()) },
@@ -793,6 +794,7 @@ fn build_panel(
                     match panel {
                         PlayerPanel::Menu => "OPENRAILSRS · nueva partida",
                         PlayerPanel::Content => "CONTENIDO OFICIAL",
+                        PlayerPanel::MissingResources => "ARCHIVOS FALTANTES Y UBICACIONES",
                         PlayerPanel::Pause => "PARTIDA EN PAUSA",
                         PlayerPanel::Notebook => "LIBRETA DEL SERVICIO",
                         PlayerPanel::Formation => "OPERACIONES DE LA FORMACIÓN",
@@ -823,6 +825,13 @@ fn build_panel(
             .with_children(|p| match panel {
                 PlayerPanel::Menu => build_menu(p, &menu),
                 PlayerPanel::Content => build_content(p, &downloads, &menu),
+                PlayerPanel::MissingResources => {
+                    row(p, |p| {
+                        button(p, "Reauditar esta formación", UiCommand::MissingAudit);
+                        button(p, "Volver a nueva partida", UiCommand::Open(PlayerPanel::Menu));
+                    });
+                    content_diagnostics(p, &menu, true);
+                }
                 PlayerPanel::Pause => {
                     if let Some(l) = live.as_ref() {
                         label(
@@ -906,6 +915,8 @@ fn build_panel(
                 if ui.notice.is_empty() {
                     if panel == PlayerPanel::Menu {
                         &menu.status
+                    } else if panel == PlayerPanel::MissingResources {
+                        "Después de copiar archivos, pulsá Reauditar esta formación para actualizar el diagnóstico."
                     } else {
                         "La partida queda pausada mientras esta ventana está abierta"
                     }
@@ -942,23 +953,98 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
         button(p, "›", UiCommand::Cycle(field, 1));
     });
 }
-fn missing_source_buttons(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
+fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu, full: bool) {
+    if let Some(service) = menu.current() {
+        label(
+            p,
+            format!(
+                "Escenario: {}\nActividad / servicio: {}",
+                service
+                    .scenery_root
+                    .as_deref()
+                    .unwrap_or(&service.route_dir)
+                    .display(),
+                service.source.display()
+            ),
+            12.0,
+            MUTED,
+        );
+    }
+    let Some(consist) = menu.consists.get(menu.consist) else {
+        return;
+    };
+    label(p, format!("Formación: {}", consist.display()), 12.0, MUTED);
+    let Some(audit) = menu.consist_audits.get(consist) else {
+        return;
+    };
+    let required = audit
+        .missing_resources
+        .iter()
+        .filter(|r| r.required)
+        .map(|r| &r.destinations)
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    if required > 0 {
+        label(
+            p,
+            format!("ARCHIVOS FALTANTES ({required}) · necesarios para iniciar"),
+            13.0,
+            CAUTION,
+        );
+    }
+    for missing in audit
+        .missing_resources
+        .iter()
+        .filter(|r| full || r.required)
+        .take(if full { usize::MAX } else { 2 })
+    {
+        label(
+            p,
+            missing.guidance(),
+            12.0,
+            if missing.required { CAUTION } else { MUTED },
+        );
+    }
+    if full && !audit.errors.is_empty() {
+        label(
+            p,
+            format!("DIAGNÓSTICO DE LA FORMACIÓN\n{}", audit.errors.join("\n")),
+            12.0,
+            CAUTION,
+        );
+    }
+    if !full && !audit.missing_resources.is_empty() {
+        button(
+            p,
+            "Ver todos los faltantes y sus ubicaciones",
+            UiCommand::Open(PlayerPanel::MissingResources),
+        );
+    }
+    if required == 0 {
+        return;
+    }
     if let Some(source) = crate::official_content::missing_source(menu) {
         label(p, source.title, 13.0, CAUTION);
         label(p, source.note, 12.0, MUTED);
         row(p, |p| {
-            button(p, "Buscar en el origen", UiCommand::MissingOrigin);
-            if source.download_page.is_some() {
-                button(p, "Descargar desde el autor", UiCommand::MissingDownload);
-            }
-            if source.package_id.is_some() {
-                button(
-                    p,
-                    "Buscar actualización del paquete",
-                    UiCommand::MissingUpdate,
-                );
-            }
+            button(
+                p,
+                "Buscar en el repositorio original",
+                UiCommand::MissingOrigin,
+            );
+            button(
+                p,
+                "Actualizar desde el repositorio original",
+                UiCommand::MissingUpdate,
+            );
         });
+    } else {
+        label(
+            p,
+            "No se identificó un repositorio original para estos recursos. Colocá los archivos originales en las ubicaciones indicadas, conservando sus nombres y carpetas, y pulsá Reauditar esta formación en el detalle de faltantes.",
+            12.0,
+            MUTED,
+        );
     }
 }
 
@@ -987,7 +1073,7 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         12.0,
         Color::srgb(0.70, 0.80, 0.88),
     );
-    missing_source_buttons(p, menu);
+    content_diagnostics(p, menu, false);
     selector(p, "Recorrido", menu.path_label(), MenuField::Path);
     selector(
         p,
@@ -1094,30 +1180,24 @@ fn build_content(
         );
     });
     dynamic(p, DynamicText::Content, 14.);
-    missing_source_buttons(p, menu);
+    label(p, "ESCENARIO Y FORMACIÓN SELECCIONADOS", 13.0, MUTED);
+    content_diagnostics(p, menu, false);
     for (index, path) in downloads.installed.iter().enumerate() {
         row(p, |p| {
-            label(p, crate::official_content::installed_label(path), 13., TEXT);
+            label(
+                p,
+                format!(
+                    "{}\nCarpeta: {}",
+                    crate::official_content::installed_label(path),
+                    path.display()
+                ),
+                13.,
+                TEXT,
+            );
             if !downloads.busy() {
                 button(p, "Reauditar esta copia", UiCommand::ContentAudit(index));
             }
         });
-    }
-    if let Some(audit) = menu
-        .consists
-        .get(menu.consist)
-        .and_then(|p| menu.consist_audits.get(p))
-        && !audit.errors.is_empty()
-    {
-        label(
-            p,
-            format!(
-                "FALTANTES DE LA FORMACIÓN SELECCIONADA\n{}",
-                audit.errors.join("\n")
-            ),
-            13.,
-            CAUTION,
-        );
     }
     label(
         p,

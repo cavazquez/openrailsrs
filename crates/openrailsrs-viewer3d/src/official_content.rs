@@ -506,10 +506,7 @@ pub fn open_catalogue() -> Result<(), String> {
     open_source_url("https://www.openrails.org/download/content/")
 }
 pub fn open_source_url(url: &str) -> Result<(), String> {
-    if !url.starts_with("https://github.com/")
-        && !url.starts_with("https://vapor3d.punchinout.net/")
-        && !url.starts_with("https://www.openrails.org/")
-    {
+    if !url.starts_with("https://github.com/") && !url.starts_with("https://www.openrails.org/") {
         return Err("El origen no es uno de los autores verificados".into());
     }
     #[cfg(target_os = "linux")]
@@ -533,72 +530,50 @@ pub fn open_source_url(url: &str) -> Result<(), String> {
 pub struct MissingContentSource {
     pub title: String,
     pub page: String,
-    pub download_page: Option<String>,
     pub note: String,
-    pub package_id: Option<String>,
+    pub package_id: String,
 }
 pub fn missing_source(
     menu: &crate::player_launch::PlayerLaunchMenu,
 ) -> Option<MissingContentSource> {
     let consist = menu.consists.get(menu.consist)?;
     let audit = menu.consist_audits.get(consist)?;
-    source_for_missing(
-        consist,
-        &audit.errors,
-        menu.current().and_then(|s| s.scenery_root.as_deref()),
-    )
+    audit
+        .missing_resources
+        .iter()
+        .filter(|r| r.required)
+        .find_map(source_for_missing)
 }
 fn source_for_missing(
-    consist: &Path,
-    errors: &[String],
-    native: Option<&Path>,
+    missing: &openrailsrs_train::MissingResource,
 ) -> Option<MissingContentSource> {
-    if errors.is_empty() {
-        return None;
-    }
-    let hint = format!("{} {}", consist.display(), errors.join(" ")).to_ascii_lowercase();
-    if hint.contains("caf6000") || hint.contains("caf_6000") {
-        return Some(MissingContentSource {
-            title:"CAF 6000 · Vapor3D / A. Asensio".into(),
-            page:"https://vapor3d.punchinout.net/s6000.html".into(),
-            download_page:Some("https://vapor3d.punchinout.net/downloads/downloads_s6000.html".into()),
-            note:"El autor ofrece el modelo gratuito en RAR (22,7 MB), con cabina 2D. La cabina 3D es opcional de pago. Los nombres CAF del ejemplo Mitre son marcadores: este paquete es una alternativa, no una coincidencia de archivos verificada. Conservá los nombres del autor y elegí su formación después de instalarla.".into(),
-            package_id:None,
-        });
-    }
-    let native = native?;
-    let manifest = native
-        .ancestors()
-        .find_map(|p| read_manifest(&p.join("openrailsrs-content.json")))?;
-    let repo = manifest["revision"]["repository"].as_str()?;
-    let parts: Vec<_> = repo.split('/').collect();
-    if parts.len() != 2
-        || parts.iter().any(|p| {
-            p.is_empty()
-                || *p == "."
-                || *p == ".."
-                || !p
-                    .bytes()
-                    .all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c))
-        })
-    {
-        return None;
-    }
-    let detail = errors
+    let catalog: Catalog = serde_json::from_str(openrailsrs_content::CATALOG).ok()?;
+    // Use the origin of the actual resource/formation, never the selected
+    // scenery or a similarly named model from another author. The immutable
+    // catalogue supplies the URL: a downloaded manifest cannot redirect this
+    // action through its revision.repository or download_url fields.
+    let package = missing
+        .destinations
         .iter()
-        .find_map(|s| s.find("Falta").map(|i| &s[i..]))
-        .unwrap_or(&errors[0]);
-    let file = detail
-        .split_whitespace()
-        .map(|s| s.trim_matches(['(', ')', '"', '\'', ':', ',']))
-        .find(|s| {
-            [".eng", ".wag", ".s", ".ace", ".cvf", ".sms", ".wav", ".inc"]
-                .iter()
-                .any(|ext| s.to_ascii_lowercase().ends_with(ext))
-        })
-        .unwrap_or("")
-        .replace('\\', "/");
-    let basename = file.rsplit('/').next().unwrap_or("");
+        .chain(std::iter::once(&missing.referenced_by))
+        .find_map(|path| {
+            let manifest = path
+                .ancestors()
+                .find_map(|p| read_manifest(&p.join("openrailsrs-content.json")))?;
+            catalog.routes.iter().find(|package| {
+                package.automatic()
+                    && package.url.starts_with("https://github.com/")
+                    && package.url.ends_with(".git")
+                    && manifest["advertised_url"].as_str() == Some(package.url.as_str())
+                    && manifest["package"].as_str() == Some(package.name.as_str())
+            })
+        })?;
+    let repo = package
+        .url
+        .strip_prefix("https://github.com/")?
+        .strip_suffix(".git")?;
+    let normalized = missing.name.replace('\\', "/");
+    let basename = normalized.rsplit('/').next().unwrap_or("");
     let query = basename
         .as_bytes()
         .iter()
@@ -611,11 +586,10 @@ fn source_for_missing(
         })
         .collect::<String>();
     Some(MissingContentSource {
-        title:format!("Repositorio original · {repo}"),
-        page:format!("https://github.com/{repo}/search?q={query}&type=code"),
-        download_page:None,
-        note:"Buscá el archivo por su nombre en el repositorio del autor. Actualizar el paquete conserva las copias anteriores; se audita antes de ofrecer sus actividades.".into(),
-        package_id:serde_json::from_str::<Catalog>(openrailsrs_content::CATALOG).ok()?.routes.iter().find(|p|p.automatic() && manifest["advertised_url"].as_str()==Some(p.url.as_str())).map(OfficialPackage::id),
+        title: format!("Repositorio original de {basename} · {repo}"),
+        page: format!("https://github.com/{repo}/search?q={query}&type=code"),
+        note: "La búsqueda y actualización usan exclusivamente el repositorio original del catálogo. Se conserva la copia anterior y se audita la nueva. Si el archivo no está allí, se informa el faltante y su destino.".into(),
+        package_id: package.id(),
     })
 }
 
@@ -728,53 +702,73 @@ mod tests {
         assert_eq!(found.len(), 2);
         assert!(found.iter().all(|r| r.edition.is_some()));
     }
-    #[test]
-    fn missing_sources_do_not_claim_caf_placeholders_are_a_verified_match() {
-        let source = source_for_missing(
-            Path::new("caf6000.con"),
-            &["Falta caf6000_motor.s".into()],
-            None,
-        )
-        .unwrap();
-        assert!(source.page.starts_with("https://vapor3d.punchinout.net/"));
-        assert!(source.note.contains("no una coincidencia"));
-        assert!(source.package_id.is_none());
-        assert!(source_for_missing(Path::new("caf6000.con"), &[], None).is_none());
+    fn missing(reference: &Path, name: &str) -> openrailsrs_train::MissingResource {
+        openrailsrs_train::MissingResource {
+            name: name.into(),
+            referenced_by: reference.into(),
+            destinations: vec![reference.parent().unwrap().join(name.replace('\\', "/"))],
+            required: true,
+        }
     }
     #[test]
-    fn repository_search_sends_only_basename_and_rejects_invalid_identity() {
+    fn unknown_caf_placeholders_have_no_alternative_source() {
+        let temp = tempfile::tempdir().unwrap();
+        let resource = missing(&temp.path().join("caf6000_motor.eng"), "caf6000_motor.s");
+        assert!(source_for_missing(&resource).is_none());
+    }
+    #[test]
+    fn repository_search_uses_catalogue_origin_and_only_the_missing_basename() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
-        let native = root.join("ROUTES/Chiltern");
-        std::fs::create_dir_all(&native).unwrap();
-        let manifest = root.join("openrailsrs-content.json");
+        let stock = root.join("TRAINS/TRAINSET/DMU");
+        std::fs::create_dir_all(&stock).unwrap();
         std::fs::write(
-            &manifest,
-            serde_json::json!({"revision":{"repository":"author/route"}}).to_string(),
+            root.join("openrailsrs-content.json"),
+            serde_json::json!({
+                "package": "Chiltern",
+                "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git",
+                "revision": {"repository": "another-author/alternative"},
+                "download_url": "https://unverified.example/locomotive.zip"
+            })
+            .to_string(),
         )
         .unwrap();
-        let source = source_for_missing(
-            Path::new("test.con"),
-            &["Vehículo 1 (existing.eng): Falta /private/user/locomotive.s".into()],
-            Some(&native),
-        )
+        let source = source_for_missing(&missing(
+            &stock.join("existing.eng"),
+            "..\\Common.Shape\\lócó motive.s",
+        ))
         .unwrap();
         assert_eq!(
             source.page,
-            "https://github.com/author/route/search?q=locomotive.s&type=code"
+            "https://github.com/DocMartin7644/Chiltern-Route-v2/search?q=l%C3%B3c%C3%B3%20motive.s&type=code"
         );
-        std::fs::write(
-            manifest,
-            serde_json::json!({"revision":{"repository":"../evil"}}).to_string(),
-        )
-        .unwrap();
+        assert_eq!(source.package_id, "chiltern");
+        assert!(!source.page.contains(root.to_str().unwrap()));
+        assert!(!source.title.contains("another-author"));
+        // A stock file from a different location is not assigned the scenario's
+        // repository, even if that scenario was installed from the catalogue.
+        let other = tempfile::tempdir().unwrap();
         assert!(
-            source_for_missing(
-                Path::new("test.con"),
-                &["Falta car.s".into()],
-                Some(&native)
-            )
+            source_for_missing(&missing(
+                &other.path().join("caf6000_motor.eng"),
+                "caf6000_motor.s"
+            ))
             .is_none()
         );
+    }
+    #[test]
+    fn unlisted_origins_and_mismatched_packages_offer_no_download() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let resource = missing(&root.join("stock.eng"), "missing.s");
+        for manifest in [
+            serde_json::json!({"revision": {"repository": "author/route"}}),
+            serde_json::json!({"package": "Chiltern", "advertised_url": "https://github.com/author/route.git"}),
+            serde_json::json!({"package": "Another route", "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git"}),
+            serde_json::json!({"package": "Demo Model 1", "advertised_url": "https://static.openrails.org/files/DemoModel1.zip", "revision": {"repository": "author/route"}}),
+        ] {
+            std::fs::write(root.join("openrailsrs-content.json"), manifest.to_string()).unwrap();
+            assert!(source_for_missing(&resource).is_none());
+        }
     }
 }

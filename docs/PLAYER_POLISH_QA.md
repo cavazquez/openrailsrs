@@ -461,9 +461,37 @@ Pruebas manuales: [sección 30](PLAYER_MANUAL_TESTS.md#30-peralte-despachador-gu
 La actividad SCE probada no incluye paradas programadas y sigue mostrando
 distancia al destino; esta prueba cubre inicio, cabina y controles, no un
 servicio SCE completo ni paridad física. Las formaciones incompletas siguen
-bloqueadas. CAF 6000 se ofrece como enlace al autor, sin reparación automática
-ni compatibilidad certificada. Se probó la ubicación de datos de Snap, no un
+bloqueadas. La política actual de faltantes se describe en la sección siguiente;
+el CAF sintético carece de un origen identificado para el modelo. Se probó la ubicación de datos de Snap, no un
 paquete Snap instalado. Los recursos descargados se conservan fuera de Git.
 
 Pruebas manuales: [sección 31](PLAYER_MANUAL_TESTS.md#31-actualizaciones-biblioteca-del-usuario-y-binarios).
 Contenido: [OFFICIAL_CONTENT.md](OFFICIAL_CONTENT.md).
+
+
+## 5 de octubre de 2026: faltantes y repositorio original
+
+- Check final completo: **1504 pruebas Rust aprobadas, 43 ignoradas**; formato,
+  Clippy, Python, build, oráculos fijados y servicio de estaciones. Se restauraron
+  y verificaron los 134 resultados preexistentes, incluidos los seis del usuario.
+- Seis pruebas de procedencia: la URL sale del catálogo integrado; se rechazan
+  orígenes no registrados y nombres de paquete incoherentes. `revision.repository`
+  y `download_url` no pueden desviar la búsqueda. Solo se envía el nombre del
+  faltante y una formación externa no hereda el origen del escenario.
+- Siete pruebas de auditoría y nueve de Include: todos los gráficos/texturas
+  ausentes, destinos absolutos, alternativas de cabina opcionales, referencias
+  anidadas, diferencias de mayúsculas y límites del contenido. Un Include ausente
+  que escape directamente o por enlace no se ofrece como destino de instalación.
+- Reauditoría: una prueba de biblioteca agrega y quita un modelo propio de ensayo;
+  el estado se actualiza sin cambiar ruta, servicio, formación, recorrido ni hora.
+- Xvfb privado, Mesa lavapipe y 1280×720: se seleccionó Mitre/CAF, se abrió el
+  detalle, se pulsó **Reauditar esta formación** y se volvió a nueva partida.
+  La ventana muestra `caf6000_motor.s`, su ENG y las dos ubicaciones admitidas.
+  El modelo original sigue sin origen identificado y ausente; la formación
+  permanece bloqueada y no ofrece descargas alternativas. No se descargó ni
+  añadió un modelo sustituto para hacer pasar esta comprobación.
+
+[Captura del diagnóstico](fixtures/compatibility/original-content-2026-10-05/caf-missing-files.png)
+y [registro de verificación](fixtures/compatibility/original-content-2026-10-05/verification.json).
+La prueba visual cubre el menú y la auditoría, no una partida completa ni la
+paridad física/visual de un CAF original.

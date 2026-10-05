@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-05",
+  "scope": "Selected formation resources and original catalogue repository actions; no original CAF model was installed.",
+  "checks": {
+    "check_sh": "passed",
+    "rust_passed": 1504,
+    "rust_ignored": 43,
+    "installer_python_tests": 13,
+    "original_source_tests": 6,
+    "consist_audit_tests": 7,
+    "include_tests": 9,
+    "preserved_output_hashes": 134
+  },
+  "gui": {
+    "display": "private Xvfb",
+    "renderer": "Mesa lavapipe (CPU)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "actions": [
+      "select Mitre and CAF 6000",
+      "open missing-resource details",
+      "reaudit selected formation",
+      "return to new game"
+    ],
+    "automatic_caf_download_offered": false,
+    "missing_resource": "caf6000_motor.s",
+    "required": true,
+    "model_origin": "not identified",
+    "screenshot": "caf-missing-files.png"
+  },
+  "automated_reaudit": "Added and removed a fixture model; confirmed fresh results without changing route/service/formation/path/start time.",
+  "formation": {
+    "vehicles": 6,
+    "missing_resources": [
+      {
+        "destinations": [
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/routes/mitre/consists/caf6000_motor.s",
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/routes/mitre/consists/SHAPES/caf6000_motor.s"
+        ],
+        "name": "caf6000_motor.s",
+        "referenced_by": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/routes/mitre/consists/caf6000_motor.eng",
+        "required": true
+      }
+    ]
+  }
+}

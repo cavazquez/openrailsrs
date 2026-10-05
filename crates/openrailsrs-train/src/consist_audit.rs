@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use openrailsrs_formats::{
-    CabControl, CabViewFile, ConsistEntry, ConsistFile, EngineCabView, MstsFile, ScriptSystem,
-    ShapeFile, VehicleContentMetadata, parse_cab_view_text, parse_msts_file, parse_named_stf,
-    parse_vehicle_content_metadata, parse_vehicle_text, read_msts_file_to_string,
+    CabControl, CabViewFile, ConsistEntry, ConsistFile, EngineCabView, FormatError, MstsFile,
+    ScriptSystem, ShapeFile, VehicleContentMetadata, parse_cab_view_text, parse_msts_file,
+    parse_named_stf, parse_vehicle_content_metadata, parse_vehicle_text, read_msts_file_to_string,
     resolve_path_case_insensitive, sms_wave_references,
 };
 use serde::Serialize;
@@ -25,7 +25,103 @@ pub struct ConsistAudit {
     pub cab_3d: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+    pub missing_resources: Vec<MissingResource>,
     pub compatibility: Vec<VehicleCompatibility>,
+}
+
+/// Actual references and search locations from the loader, without guessing a
+/// replacement package or parsing filenames out of human-readable errors.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct MissingResource {
+    pub name: String,
+    pub referenced_by: PathBuf,
+    pub destinations: Vec<PathBuf>,
+    pub required: bool,
+}
+impl MissingResource {
+    fn new(reference: &Path, dirs: &[PathBuf], name: &str, required: bool) -> Self {
+        Self::with_destinations(
+            reference,
+            name,
+            dirs.iter().map(|p| p.join(name.trim().replace('\\', "/"))),
+            required,
+        )
+    }
+    fn with_destinations(
+        reference: &Path,
+        name: &str,
+        paths: impl IntoIterator<Item = PathBuf>,
+        required: bool,
+    ) -> Self {
+        let mut destinations = vec![];
+        for path in paths {
+            let path = display_path(&path);
+            if !destinations.contains(&path) {
+                destinations.push(path);
+            }
+        }
+        Self {
+            name: name.into(),
+            referenced_by: display_path(reference),
+            destinations,
+            required,
+        }
+    }
+    pub fn guidance(&self) -> String {
+        format!(
+            "{}: {}\nReferenciado por: {}\nColocar en {}:\n{}",
+            if self.required {
+                "Falta"
+            } else {
+                "Falta opcional"
+            },
+            self.name,
+            self.referenced_by.display(),
+            if self.destinations.len() == 1 {
+                "esta ubicación"
+            } else {
+                "una de estas ubicaciones"
+            },
+            self.destinations
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    }
+}
+
+// Missing leaf files cannot be canonicalized. Resolve the existing prefix,
+// preserving the casing of the installation and removing lexical ../ segments.
+fn display_path(path: &Path) -> PathBuf {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
+    };
+    let mut normalized = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            std::path::Component::CurDir => (),
+            _ => normalized.push(component.as_os_str()),
+        }
+    }
+    for ancestor in normalized.ancestors() {
+        if let Some(existing) = resolve_path_case_insensitive(ancestor)
+            && let Ok(canonical) = existing.canonicalize()
+        {
+            let suffix = normalized.strip_prefix(ancestor).unwrap();
+            return if suffix.as_os_str().is_empty() {
+                canonical
+            } else {
+                canonical.join(suffix)
+            };
+        }
+    }
+    normalized
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -65,7 +161,12 @@ impl ConsistAudit {
     }
     pub fn compatibility_summary(&self) -> String {
         if self.warnings.is_empty() {
-            return "Recursos completos · sistemas pendientes de validar contra OR".into();
+            return if self.errors.is_empty() {
+                "Recursos completos · sistemas pendientes de validar contra OR"
+            } else {
+                "Contenido incompleto o inválido · ver diagnóstico"
+            }
+            .into();
         }
         let warning = self
             .warnings
@@ -89,8 +190,58 @@ struct StockAudit {
     cab_3d: bool,
     errors: Vec<String>,
     warnings: Vec<String>,
+    missing_resources: Vec<MissingResource>,
     metadata: VehicleContentMetadata,
     limitations: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+struct ResourceFailure {
+    message: String,
+    missing_resources: Vec<MissingResource>,
+}
+impl ResourceFailure {
+    fn message(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            missing_resources: vec![],
+        }
+    }
+    fn missing(message: String, reference: &Path, dirs: &[PathBuf], name: &str) -> Self {
+        Self {
+            message,
+            missing_resources: vec![MissingResource::new(reference, dirs, name, true)],
+        }
+    }
+}
+impl From<FormatError> for ResourceFailure {
+    fn from(error: FormatError) -> Self {
+        let missing_resources = match &error {
+            FormatError::MissingInclude {
+                containing_file,
+                reference,
+            } => vec![MissingResource::new(
+                containing_file,
+                &[containing_file
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .to_path_buf()],
+                reference,
+                true,
+            )],
+            _ => vec![],
+        };
+        Self {
+            message: error.to_string(),
+            missing_resources,
+        }
+    }
+}
+impl StockAudit {
+    fn failure(&mut self, error: ResourceFailure) {
+        self.errors.push(error.message);
+        self.missing_resources.extend(error.missing_resources);
+    }
 }
 
 /// Cache shared vehicles, shapes and cab panels across hundreds of `.con` files.
@@ -99,9 +250,9 @@ struct StockAudit {
 #[derive(Clone, Debug, Default)]
 pub struct ConsistAuditor {
     pub trainset_roots: Vec<PathBuf>,
-    stocks: HashMap<PathBuf, Result<StockAudit, String>>,
-    shapes: HashMap<PathBuf, Result<(), String>>,
-    cabs: HashMap<(PathBuf, bool), Result<(), String>>,
+    stocks: HashMap<PathBuf, Result<StockAudit, ResourceFailure>>,
+    shapes: HashMap<PathBuf, Result<(), ResourceFailure>>,
+    cabs: HashMap<(PathBuf, bool), Result<(), ResourceFailure>>,
 }
 
 impl ConsistAuditor {
@@ -138,6 +289,26 @@ impl ConsistAuditor {
                 ConsistEntry::Wagon { path, .. } => (path, false),
             };
             let path = resolve_consist_entry_path(consist_asset_root(con), rel);
+            if !path.is_file() {
+                report.errors.push(format!(
+                    "Vehículo {}: Falta el archivo ENG/WAG {rel}",
+                    index + 1
+                ));
+                let base = consist_asset_root(con);
+                let mut destinations = crate::from_ast::consist_entry_candidates(base, rel);
+                if base
+                    .file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINS"))
+                    && destinations.len() > 1
+                {
+                    destinations.swap(0, 1);
+                }
+                let missing = MissingResource::with_destinations(con, rel, destinations, true);
+                if !report.missing_resources.contains(&missing) {
+                    report.missing_resources.push(missing);
+                }
+                continue;
+            }
             if !self.stocks.contains_key(&path) {
                 let audit = self.inspect_stock(&path);
                 self.stocks.insert(path.clone(), audit);
@@ -148,7 +319,14 @@ impl ConsistAuditor {
                 path.file_name().unwrap_or_default().to_string_lossy()
             );
             match &self.stocks[&path] {
-                Err(e) => report.errors.push(format!("{prefix}: {e}")),
+                Err(e) => {
+                    report.errors.push(format!("{prefix}: {}", e.message));
+                    for missing in &e.missing_resources {
+                        if !report.missing_resources.contains(missing) {
+                            report.missing_resources.push(missing.clone());
+                        }
+                    }
+                }
                 Ok(stock) => {
                     report.compatibility.push(VehicleCompatibility {
                         vehicle: index + 1,
@@ -169,17 +347,22 @@ impl ConsistAuditor {
                     report
                         .warnings
                         .extend(stock.warnings.iter().map(|e| format!("{prefix}: {e}")));
+                    for missing in &stock.missing_resources {
+                        if !report.missing_resources.contains(missing) {
+                            report.missing_resources.push(missing.clone());
+                        }
+                    }
                 }
             }
         }
         report
     }
-    fn inspect_stock(&mut self, path: &Path) -> Result<StockAudit, String> {
+    fn inspect_stock(&mut self, path: &Path) -> Result<StockAudit, ResourceFailure> {
         if !path.is_file() {
-            return Err("Falta el archivo ENG/WAG".into());
+            return Err(ResourceFailure::message("Falta el archivo ENG/WAG"));
         }
         let (mass, length, powered, shape, cab) =
-            match parse_msts_file(path).map_err(|e| e.to_string())? {
+            match parse_msts_file(path).map_err(ResourceFailure::from)? {
                 MstsFile::Engine(e) => (
                     e.mass_kg,
                     e.length_m,
@@ -188,10 +371,10 @@ impl ConsistAuditor {
                     Some(e.cab),
                 ),
                 MstsFile::Wagon(w) => (w.mass_kg, w.length_m, false, w.wagon_shape, None),
-                _ => return Err("El archivo no es un vehículo".into()),
+                _ => return Err(ResourceFailure::message("El archivo no es un vehículo")),
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
-        let ast = openrailsrs_formats::read_vehicle_ast(path).map_err(|e| e.to_string())?;
+        let ast = openrailsrs_formats::read_vehicle_ast(path).map_err(ResourceFailure::from)?;
         let metadata = parse_vehicle_content_metadata(&ast, cab.is_some());
         let root = self
             .trainset_roots
@@ -209,6 +392,7 @@ impl ConsistAuditor {
             cab_3d: false,
             errors: vec![],
             warnings: vec![],
+            missing_resources: vec![],
             metadata,
             limitations: vec![],
         };
@@ -220,10 +404,15 @@ impl ConsistAuditor {
             match asset(&[root.clone(), root.join("SHAPES")], &shape, false) {
                 Some(path) => {
                     if let Err(e) = self.inspect_shape(&path) {
-                        stock.errors.push(e);
+                        stock.failure(e);
                     }
                 }
-                None => stock.errors.push(format!("Falta el modelo {shape}")),
+                None => stock.failure(ResourceFailure::missing(
+                    format!("Falta el modelo {shape}"),
+                    path,
+                    &[root.clone(), root.join("SHAPES")],
+                    &shape,
+                )),
             }
         } else {
             stock
@@ -231,7 +420,7 @@ impl ConsistAuditor {
                 .push("Sin modelo declarado: se usa geometría genérica".into());
         }
         if let Some(cab) = cab {
-            self.inspect_cab(&root, &cab, &mut stock);
+            self.inspect_cab(path, &root, &cab, &mut stock);
         }
         Ok(stock)
     }
@@ -259,6 +448,14 @@ impl ConsistAuditor {
                 script.name.clone()
             };
             let available = asset(&script_dirs, &file, false).is_some();
+            if !available {
+                stock.missing_resources.push(MissingResource::new(
+                    path,
+                    &script_dirs,
+                    &file,
+                    false,
+                ));
+            }
             let support = match script.system {
                 ScriptSystem::TrainControl => {
                     "TCS C#: requiere selección explícita del host .NET y API compatible"
@@ -300,6 +497,9 @@ impl ConsistAuditor {
         for name in &stock.metadata.sounds {
             let Some(sms) = asset(&dirs, name, false) else {
                 stock
+                    .missing_resources
+                    .push(MissingResource::new(path, &dirs, name, false));
+                stock
                     .limitations
                     .push(format!("Falta el sonido opcional {name}"));
                 continue;
@@ -310,6 +510,9 @@ impl ConsistAuditor {
                     waves.extend(dirs.iter().cloned());
                     for file in sms_wave_references(&ast) {
                         if asset(&waves, &file, false).is_none() {
+                            stock
+                                .missing_resources
+                                .push(MissingResource::new(&sms, &waves, &file, false));
                             stock
                                 .limitations
                                 .push(format!("Falta la muestra opcional {file} de {name}"));
@@ -323,12 +526,12 @@ impl ConsistAuditor {
         }
         stock.warnings.extend(stock.limitations.iter().cloned());
     }
-    fn inspect_shape(&mut self, path: &Path) -> Result<(), String> {
+    fn inspect_shape(&mut self, path: &Path) -> Result<(), ResourceFailure> {
         if let Some(result) = self.shapes.get(path) {
             return result.clone();
         }
         let result = ShapeFile::from_path(path)
-            .map_err(|e| format!("Modelo {}: {e}", path.display()))
+            .map_err(|e| ResourceFailure::message(format!("Modelo {}: {e}", path.display())))
             .and_then(|shape| {
                 let root = path.parent().unwrap_or(Path::new("."));
                 let mut dirs = vec![root.to_path_buf(), root.join("TEXTURES")];
@@ -339,21 +542,46 @@ impl ConsistAuditor {
                 {
                     dirs.extend([parent.to_path_buf(), parent.join("TEXTURES")]);
                 }
+                let mut missing_resources = vec![];
                 for name in &shape.texture_filenames {
                     if asset(&dirs, name, true).is_none() {
-                        return Err(format!(
-                            "Falta la textura {name} de {}",
-                            path.file_name().unwrap_or_default().to_string_lossy()
-                        ));
+                        let missing = MissingResource::new(path, &dirs, name, true);
+                        if !missing_resources.contains(&missing) {
+                            missing_resources.push(missing);
+                        }
                     }
                 }
-                Ok(())
+                if missing_resources.is_empty() {
+                    Ok(())
+                } else {
+                    Err(ResourceFailure {
+                        message: missing_resources
+                            .iter()
+                            .map(|r| {
+                                format!(
+                                    "Falta la textura {} de {}",
+                                    r.name,
+                                    path.file_name().unwrap_or_default().to_string_lossy()
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                        missing_resources,
+                    })
+                }
             });
         self.shapes.insert(path.into(), result.clone());
         result
     }
-    fn inspect_cab(&mut self, root: &Path, cab: &EngineCabView, stock: &mut StockAudit) {
+    fn inspect_cab(
+        &mut self,
+        reference: &Path,
+        root: &Path,
+        cab: &EngineCabView,
+        stock: &mut StockAudit,
+    ) {
         let previous_errors = stock.errors.len();
+        let previous_missing = stock.missing_resources.len();
         let dirs = vec![
             root.join("CABVIEW"),
             root.join("CABVIEW3D"),
@@ -363,36 +591,56 @@ impl ConsistAuditor {
             match asset(&dirs, name, false) {
                 Some(p) => match self.inspect_cvf(&p, true) {
                     Ok(()) => stock.cab_2d = true,
-                    Err(e) => stock.errors.push(e),
+                    Err(e) => stock.failure(e),
                 },
-                None => stock.errors.push(format!("Falta la cabina {name}")),
+                None => stock.failure(ResourceFailure::missing(
+                    format!("Falta la cabina {name}"),
+                    reference,
+                    &dirs,
+                    name,
+                )),
             }
         }
         if let Some(name) = &cab.orts_3d_cab_shape {
             match asset(&dirs, name, false) {
                 Some(p) => {
                     if let Err(e) = self.inspect_shape(&p) {
-                        stock.errors.push(e);
+                        stock.failure(e);
                     } else if let Some(cvf) =
                         resolve_path_case_insensitive(&p.with_extension("cvf"))
                     {
                         match self.inspect_cvf(&cvf, false) {
                             Ok(()) => stock.cab_3d = true,
-                            Err(e) => stock.errors.push(e),
+                            Err(e) => stock.failure(e),
                         }
                     } else {
-                        stock
-                            .errors
-                            .push(format!("Faltan los instrumentos CVF de {name}"));
+                        let cvf = p.with_extension("cvf");
+                        stock.failure(ResourceFailure {
+                            message: format!("Faltan los instrumentos CVF de {name}"),
+                            missing_resources: vec![MissingResource::with_destinations(
+                                &p,
+                                &cvf.file_name().unwrap_or_default().to_string_lossy(),
+                                [cvf.clone()],
+                                true,
+                            )],
+                        });
                     }
                 }
-                None => stock.errors.push(format!("Falta la cabina 3D {name}")),
+                None => stock.failure(ResourceFailure::missing(
+                    format!("Falta la cabina 3D {name}"),
+                    reference,
+                    &dirs,
+                    name,
+                )),
             }
         } else if let Some(c) = openrailsrs_formats::resolve_cab_assets(root, cab) {
             stock.cab_3d = self.inspect_shape(&c.shape_path).is_ok()
                 && self.inspect_cvf(&c.cvf_path, false).is_ok();
         }
         if stock.cab_2d || stock.cab_3d {
+            for missing in &mut stock.missing_resources[previous_missing..] {
+                missing.required = false;
+            }
             // OR can drive a locomotive with either cab mode. Missing optional
             // alternatives remain visible without blocking the working one.
             stock.warnings.extend(
@@ -408,14 +656,14 @@ impl ConsistAuditor {
                 .push("Sin cabina original: se usa cabina genérica".into());
         }
     }
-    fn inspect_cvf(&mut self, path: &Path, require_views: bool) -> Result<(), String> {
+    fn inspect_cvf(&mut self, path: &Path, require_views: bool) -> Result<(), ResourceFailure> {
         if let Some(result) = self.cabs.get(&(path.into(), require_views)) {
             return result.clone();
         }
         let result = read_msts_file_to_string(path)
             .and_then(|t| parse_cab_view_text(&t))
             .and_then(|a| CabViewFile::from_ast(&a))
-            .map_err(|e| format!("Cabina {}: {e}", path.display()))
+            .map_err(|e| ResourceFailure::message(format!("Cabina {}: {e}", path.display())))
             .and_then(|cab| {
                 let root = path.parent().unwrap_or(Path::new("."));
                 let trainset = root.parent().unwrap_or(root);
@@ -443,6 +691,7 @@ impl ConsistAuditor {
                             | CabControl::Screen { graphic, .. } => Some(graphic.as_str()),
                             _ => None,
                         });
+                let mut missing_resources = vec![];
                 for name in cab
                     .views
                     .iter()
@@ -452,10 +701,24 @@ impl ConsistAuditor {
                     .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("none"))
                 {
                     if asset(&dirs, name, true).is_none() {
-                        return Err(format!("Falta el gráfico de cabina {name}"));
+                        let missing = MissingResource::new(path, &dirs, name, true);
+                        if !missing_resources.contains(&missing) {
+                            missing_resources.push(missing);
+                        }
                     }
                 }
-                Ok(())
+                if missing_resources.is_empty() {
+                    Ok(())
+                } else {
+                    Err(ResourceFailure {
+                        message: missing_resources
+                            .iter()
+                            .map(|r| format!("Falta el gráfico de cabina {}", r.name))
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                        missing_resources,
+                    })
+                }
             });
         self.cabs
             .insert((path.into(), require_views), result.clone());
@@ -480,6 +743,94 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn every_missing_texture_and_cab_graphic_has_its_original_destinations() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stock = tmp.path().join("TRAINS/TRAINSET/EMU");
+        let cons = tmp.path().join("TRAINS/CONSISTS");
+        std::fs::create_dir_all(stock.join("SHAPES")).unwrap();
+        std::fs::create_dir_all(stock.join("CABVIEW")).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        let eng = stock.join("Power.eng");
+        std::fs::write(&eng, "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) WagonShape ( body.s ) ) Engine ( power MaxPower ( 500kW ) CabView ( front.cvf ) )").unwrap();
+        let shape = stock.join("SHAPES/body.s");
+        std::fs::write(
+            &shape,
+            "(shape (texture_filenames 4 body.ace trim.ace body.ace metal.ace))",
+        )
+        .unwrap();
+        // The presence check accepts the loader's DDS substitute for ACE.
+        std::fs::write(stock.join("metal.dds"), "DDS file").unwrap();
+        let cvf = stock.join("CABVIEW/front.cvf");
+        std::fs::write(&cvf, "Tr_CabViewFile ( CabViewControls ( 2 Dial ( Type ( SPEEDOMETER DIAL ) Position ( 0 0 20 20 ) Graphic ( needle.ace ) ScaleRange ( 0 100 ) ) Gauge ( Type ( MAIN_RES GAUGE ) Position ( 0 0 20 20 ) Graphic ( pressure.ace ) ScaleRange ( 0 10 ) ) ) )").unwrap();
+        let con = cons.join("emu.con");
+        std::fs::write(&con, "Train ( TrainCfg ( emu Engine ( EngineData ( Power EMU ) ) Engine ( EngineData ( Power EMU ) ) ) )").unwrap();
+        let report = ConsistAuditor::default().inspect(&con);
+        assert!(!report.player_ready());
+        assert_eq!(
+            report.missing_resources.len(),
+            4,
+            "{:?}",
+            report.missing_resources
+        );
+        for name in ["body.ace", "trim.ace", "needle.ace", "pressure.ace"] {
+            let resource = report
+                .missing_resources
+                .iter()
+                .find(|r| r.name == name)
+                .unwrap();
+            assert!(resource.required);
+            let reference = if name.contains("needle") || name.contains("pressure") {
+                &cvf
+            } else {
+                &shape
+            };
+            let reference = reference.canonicalize().unwrap();
+            assert_eq!(resource.referenced_by, reference);
+            assert!(
+                resource
+                    .destinations
+                    .iter()
+                    .all(|p| p.is_absolute() && p.starts_with(stock.canonicalize().unwrap()))
+            );
+            assert!(resource.guidance().contains(name));
+            assert!(resource.guidance().contains(reference.to_str().unwrap()));
+        }
+    }
+    #[test]
+    fn nested_missing_include_is_reported_relative_to_the_containing_include() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stock = tmp.path().join("TRAINS/TRAINSET/Stock");
+        let common = tmp.path().join("TRAINS/TRAINSET/Common.Include");
+        let cons = tmp.path().join("TRAINS/CONSISTS");
+        for path in [&stock, &common, &cons] {
+            std::fs::create_dir_all(path).unwrap();
+        }
+        std::fs::write(stock.join("Power.eng"), r#"Wagon ( power Include ( "..\\Common.Include\\base.inc" ) ) Engine ( power MaxPower ( 500kW ) )"#).unwrap();
+        let include = common.join("base.inc");
+        std::fs::write(&include, "Include ( details/dimensions.inc ) Mass ( 40t )").unwrap();
+        let con = cons.join("stock.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( test Engine ( EngineData ( Power Stock ) ) ) )",
+        )
+        .unwrap();
+        let report = ConsistAuditor::default().inspect(&con);
+        assert!(!report.player_ready());
+        assert_eq!(report.missing_resources.len(), 1, "{:?}", report.errors);
+        let missing = &report.missing_resources[0];
+        assert_eq!(missing.referenced_by, include.canonicalize().unwrap());
+        assert_eq!(missing.name, "details/dimensions.inc");
+        assert_eq!(
+            missing.destinations,
+            vec![
+                common
+                    .canonicalize()
+                    .unwrap()
+                    .join("details/dimensions.inc")
+            ]
+        );
+    }
     #[test]
     fn intact_models_do_not_hide_scripts_brake_electrical_or_sound_limitations() {
         let tmp = tempfile::tempdir().unwrap();
@@ -560,6 +911,12 @@ mod tests {
         assert!(report.cab_2d && !report.cab_3d);
         assert!(
             report
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "missing.s" && !r.required)
+        );
+        assert!(
+            report
                 .warnings
                 .iter()
                 .any(|w| w.contains("Cabina alternativa"))
@@ -599,6 +956,16 @@ mod tests {
         assert!(static_stock.content_valid());
         assert!(!static_stock.player_ready());
         std::fs::write(&con, "(Train (Engine \"trains/dmu/absent.eng\"))").unwrap();
-        assert!(!auditor.inspect(&con).content_valid());
+        let missing = auditor.inspect(&con);
+        assert!(!missing.content_valid());
+        assert!(missing.compatibility_summary().contains("incompleto"));
+        assert_eq!(
+            missing.missing_resources[0].referenced_by,
+            con.canonicalize().unwrap()
+        );
+        assert_eq!(
+            missing.missing_resources[0].destinations[0],
+            stock.canonicalize().unwrap().join("absent.eng")
+        );
     }
 }

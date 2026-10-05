@@ -20,6 +20,12 @@ pub enum FormatError {
     #[error("missing required field `{key}` in {context}")]
     MissingField { key: String, context: String },
 
+    #[error("{}: Falta Include {reference}", .containing_file.display())]
+    MissingInclude {
+        containing_file: std::path::PathBuf,
+        reference: String,
+    },
+
     #[error("unexpected atom for `{key}` in {context}: {expected}")]
     UnexpectedAtom {
         key: String,

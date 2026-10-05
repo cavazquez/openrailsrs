@@ -156,6 +156,14 @@ fn upgrade_trail_diesel_from_lead_orts(consist: &mut Consist) {
 /// `TRAINS/CONSISTS` → `TRAINS/TRAINSET` references, including Windows casing.
 /// The same resolver is used by the simulation and the installed-content audit.
 pub fn resolve_consist_entry_path(base: &Path, rel: &str) -> std::path::PathBuf {
+    let candidates = consist_entry_candidates(base, rel);
+    candidates
+        .iter()
+        .find_map(|p| openrailsrs_formats::resolve_path_case_insensitive(p).filter(|p| p.is_file()))
+        .unwrap_or_else(|| candidates[0].clone())
+}
+
+pub(crate) fn consist_entry_candidates(base: &Path, rel: &str) -> Vec<std::path::PathBuf> {
     let trimmed = rel.trim().replace('\\', "/");
     let direct = base.join(&trimmed);
     let mut candidates = vec![direct.clone()];
@@ -166,11 +174,6 @@ pub fn resolve_consist_entry_path(base: &Path, rel: &str) -> std::path::PathBuf 
         candidates.push(base.join("TRAINS/TRAINSET").join(rest));
     }
     candidates
-        .into_iter()
-        .find_map(|p| {
-            openrailsrs_formats::resolve_path_case_insensitive(&p).filter(|p| p.is_file())
-        })
-        .unwrap_or(direct)
 }
 
 /// Directory used to resolve `Engine` / `Wagon` paths in a scenario layout
