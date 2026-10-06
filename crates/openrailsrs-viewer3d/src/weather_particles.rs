@@ -400,7 +400,7 @@ pub fn update(
     state.cpu_particles = cpu_count;
     let clock_s = live.map_or_else(|| time.elapsed_secs_f64(), |l| l.session.time_s());
     let clock = clock_s as f32;
-    let desired_wind = sample.map_or(Vec3::new(0.8, 0.0, 0.3), |s| s.wind());
+    let desired_wind = crate::environment::weather_wind(sample);
     let desired_wind = Vec2::new(desired_wind.x, desired_wind.z);
     if sample.is_some() && state.live_wind.is_none() {
         state.live_wind = Some(WindDrift {
@@ -413,7 +413,7 @@ pub fn update(
         let offset = drift.advance(clock_s, desired_wind);
         Vec4::new(offset.x, 1.0, offset.y, clock)
     } else {
-        Vec4::new(0.8, 0.0, 0.3, clock)
+        Vec4::new(desired_wind.x, 0.0, desired_wind.y, clock)
     };
     // Reduce BEFORE converting to f32 so large cumulative origin shifts retain
     // sub-centimetre phase; a rebase never restarts the field or its clock.

@@ -1429,3 +1429,39 @@ carpeta que indica **Biblioteca → Instalado → Abrir carpeta**.
    no incorpora por sí mismo los coches
    originales de 1960. La prueba específica de esa formación y su alcance están
    documentados en PLAYER_POLISH_QA.md.
+
+## 44. Humo, vapor, viento y movimiento del tren
+
+Reiniciá el binario recién compilado. Elegí Chiltern v4 y la actividad
+**RS_Football Special**, con la formación de vapor del mismo nombre o
+**Birmingham Pullman**. Deben estar instalados los emisores ENG del autor;
+los ejemplos que no tienen un modelo original no inventan chimeneas.
+
+1. **Detenido y en marcha.** Usá **2** para mirar desde afuera. El escape debe
+   nacer en la chimenea o salida del coche. Cerrá puertas y empezá a circular:
+   las partículas nuevas acompañan al coche al salir y después forman una
+   estela al desacelerarse hacia el viento. Al frenar, la estela vieja debe
+   continuar en el mundo y desaparecer gradualmente.
+2. **Cámara y pausa.** Orbitá alrededor del tren: la estela conserva su lugar.
+   Pulsá **P**: deja de emitir, moverse y envejecer. La cámara puede cambiar
+   de lado durante la pausa sin llevarse el humo. Reanudá: continúa desde
+   ese estado. Reiniciar la partida limpia las partículas anteriores.
+3. **Sentido y orientación.** Si el recorrido permite retroceder, detené el
+   tren antes de seleccionar atrás con **S**. La velocidad inicial del escape
+   debe seguir al coche hacia atrás. Un coche marcado `Flip` en la formación
+   conserva su salida original, pero no invierte la dirección del movimiento
+   de la estela. Las secciones desacopladas estacionadas permanecen en su lugar.
+4. **Clima.** Probá despejado, lluvia y nieve desde **F10**. El viento manual
+   es suave; cambiar de tipo de precipitación no agrega una ráfaga artificial.
+   Para comprobar la dirección del viento del lugar, activá ese origen y mirá
+   **F8 → Clima**: hace falta una muestra meteorológica vigente. El humo y
+   las gotas o copos deben desviarse hacia el mismo lado, con velocidades
+   distintas. Un viento débil puede hacer el efecto poco visible.
+5. **Motor y vapor.** En Pullman, **K** corta el motor: cuando termina la
+   combustión dejan de nacer partículas, mientras las anteriores se disipan.
+   En Hall, probá silbato y purgas desde **B**: solo debe emitirse vapor cuando
+   el sistema tiene presión y está habilitado. La forma y posición dependen de
+   los emisores que trae el tren original.
+
+La estela es visual; esta prueba no certifica aerodinámica, hielo ni adherencia
+por nieve.

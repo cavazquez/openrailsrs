@@ -1122,3 +1122,62 @@ externas) y **59 Python**, además de formato, Clippy con `-D warnings`, build,
 web y oráculos de aceptación. Los ensayos nativos descritos arriba se ejecutaron
 por separado sobre esta instalación de v4. Los archivos de resultados previos
 y la configuración de lanzamiento del usuario se conservaron.
+
+## Estelas de los trenes y viento — 6 de octubre de 2026
+
+El escape diésel y el vapor conservan los emisores ENG originales. Al nacer
+heredan la velocidad del vehículo; después se frenan respecto del aire y se
+desvían con el viento que también utiliza la precipitación. La cámara orienta
+los planos de las partículas, pero no mueve sus posiciones en el mundo.
+No se cambió la nieve ni la tormenta para igualar su apariencia con Open Rails.
+
+Las seis pruebas de `train_effects::tests` pasaron. Las tres regresiones nuevas
+comprueban movimiento con `Flip`, marcha atrás y secciones desacopladas;
+deriva con viento lateral tanto de humo como de vapor; equivalencia entre un
+paso de 1 s y veinte de 0,05 s; pausa, cambio de origen, reinicio y un máximo
+de 512 partículas incluso en el vector temporal de nacimientos. El ensayo
+del sistema usa una muestra meteorológica vigente de 4 m/s procedente del
+oeste y comprueba su conversión a viento hacia el este. El tiempo acelerado
+envejece las partículas según el reloj de simulación, sin acumular emisiones
+pendientes tras una carga.
+
+### Capturas con las formaciones originales
+
+Se repitieron los controles del commit `7d0da26` con Chiltern v4,
+`RS_Football Special` y `Birmingham Pullman`. Las capturas finales usaron
+RX 7600, Vulkan/RADV, Weston privado, 1280×720, cámara exterior, radio de vista
+de 450 m, conducción al 75%, tiempo ×4 y audio apagado. Se pausó después de
+avanzar al menos 500 m:
+
+- **Hall, despejado:** 502,94 m; nueve emisores originales y 39 partículas.
+- **Pullman, lluvia:** 500,21 m; dos emisores originales y 62 partículas.
+- **Hall, nieve:** 500,65 m; nueve emisores originales y 40 partículas.
+
+Los tres casos llegaron al punto de captura con terreno y objetos cercanos
+publicados, cero shaders pendientes o fallidos y las estelas activas. El
+viento manual fue el habitual: 0,8 m/s hacia el este y 0,3 m/s hacia el sur.
+La validación del viento meteorológico se realizó en la prueba del sistema;
+estas capturas no utilizan un proveedor meteorológico en vivo. Marcha atrás
+y desacople se verificaron con pruebas automatizadas, no con estas tres
+partidas. El escape resulta tenue desde la cámara trasera. La captura orbital
+lateral adicional del Hall, a 500,65 m, conserva los nueve emisores y 39
+partículas, sin shaders pendientes o fallidos, y permite ver la estela desde
+el costado.
+
+El renderizador sigue registrando el aviso de más de 65.535 `VisibilityRange`
+distintos, tanto en la referencia como en los tres casos finales. Este cambio
+no modifica los rangos de visibilidad. Las capturas no constituyen una nueva
+medición de fluidez del recorrido completo ni una comparación de píxeles con
+Open Rails 1.6.1.
+
+La estela utiliza coeficientes visuales de arrastre y ascenso; no certifica
+dinámica de fluidos ni modifica adherencia, hielo o fuerzas del tren. La
+[sección 44 de pruebas manuales](PLAYER_MANUAL_TESTS.md#44-humo-vapor-viento-y-movimiento-del-tren)
+describe qué observar al circular, pausar, cambiar el clima y apagar el motor.
+
+Evidencia local: `tmp/train-environment-20261006/`, con capturas y reportes
+`baseline/`, `final/` y `side/`, registros de pruebas y perfiles que apuntan al contenido
+original instalado fuera del repositorio. `check.sh` pasó con **1.646 pruebas
+Rust** (45 ignoradas) y **59 Python**, formato, Clippy con `-D warnings`, build,
+web y oráculos de aceptación. Los resultados previos de los ejemplos y la
+configuración de lanzamiento del usuario se conservaron.

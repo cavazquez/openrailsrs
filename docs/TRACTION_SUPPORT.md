@@ -166,6 +166,29 @@ falta declaraciones de tramo, locomotora compatible, transición entre adherenci
 y cremallera, velocidad admitida y frenos propios. No se atribuye esta función
 a la referencia 1.6.1 usando documentación de versiones posteriores.
 
+## Escape, vapor y viento
+
+Los emisores ENG originales conservan posición, orientación y tamaño. La nueva
+partícula hereda la velocidad del coche, también con `Flip`, marcha atrás y
+dinámica por vehículo. Una sección desacoplada y estacionada no hereda la
+velocidad del tren que se aleja. El humo y el vapor quedan en coordenadas del
+mundo y su velocidad se aproxima al viento mediante arrastre; mover la cámara
+no arrastra la estela. El origen flotante desplaza las posiciones sin saltos.
+
+Lluvia, nieve y estelas usan el mismo viento. Con clima del lugar se usa la
+dirección meteorológica de la muestra vigente; con clima manual o sin una
+muestra vigente se conserva el viento suave predeterminado. Pausar detiene el
+movimiento y la emisión; reiniciar limpia las partículas antiguas. El tiempo
+acelerado envejece la estela según los segundos de simulación y el nacimiento
+se limita al último intervalo para evitar ráfagas tras la carga.
+
+Es un efecto de presentación con un máximo de 512 partículas y un solo dibujo.
+Los coeficientes de arrastre y ascenso son ajustes visuales: no se certifican
+como dinámica de fluidos ni cambian la fuerza del motor o la adherencia de la
+vía. La nieve sigue sin calcular hielo. La
+[sección 44 de pruebas manuales](PLAYER_MANUAL_TESTS.md#44-humo-vapor-viento-y-movimiento-del-tren)
+explica cómo comprobarlo en una formación original.
+
 ## Qué comprobar en una partida
 
 Elegí Pullman/121, 1960/R Stock y Hall/King: verificá la auditoría, el modelo,

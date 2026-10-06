@@ -125,6 +125,13 @@ impl WeatherSample {
     }
 }
 
+/// World-space air velocity shared by precipitation and train plumes. Manual
+/// weather keeps the existing gentle wind; live weather uses the provider's
+/// meteorological bearing, converted to the route's east/south axes.
+pub fn weather_wind(sample: Option<&WeatherSample>) -> Vec3 {
+    sample.map_or(Vec3::new(0.8, 0.0, 0.3), WeatherSample::wind)
+}
+
 pub fn weather_for_code(code: u16) -> Option<PlayerWeather> {
     Some(match code {
         0..=1 => PlayerWeather::Clear,
