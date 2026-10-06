@@ -585,7 +585,11 @@ impl<'a> BinaryReader<'a> {
             return Ok(());
         }
         out.push(' ');
-        if token_scalars_are_i32(token_id) {
+        if token_id == 404 {
+            // WORLD StaticFlags uses ReadFlags (hex text), including masks
+            // whose printed digits contain no A-F. Preserve the u32 bits.
+            out.push_str(&format!("\"{:08X}\"", self.read_u32()?));
+        } else if token_scalars_are_i32(token_id) {
             let n = self.read_u32()? as i32;
             out.push_str(&n.to_string());
         } else {
@@ -1066,6 +1070,33 @@ mod tests {
         .unwrap();
         let payload = decode_simisa_container(&bytes).unwrap();
         assert!(payload.is_text);
+    }
+
+    #[test]
+    fn binary_world_static_animation_flag_survives_text_bridge() {
+        for mask in [0x0008_0000u32, 0x0009_e000, 0x8009_e000] {
+            // Native WORLD uses a token offset of 300 (JINX0w1b), unlike shapes.
+            let flags = binary_block(104, &mask.to_le_bytes());
+            let position = binary_block(97, &[0u8; 12]);
+            let mut qdir = vec![0u8; 12];
+            qdir.extend_from_slice(&1f32.to_le_bytes());
+            let object = binary_block(3, &[flags, position, binary_block(645, &qdir)].concat());
+            let payload = SimisaPayload {
+                bytes: binary_block(75, &object),
+                is_text: false,
+                data_offset: 0,
+                token_offset: 300,
+            };
+            let text = binary_shape_to_ascii(&payload).unwrap();
+            let ast = crate::parser::parse_from_first_paren(&text).unwrap();
+            let world = crate::WorldFile::from_ast(&ast, 0, 0);
+            assert_eq!(world.items.len(), 1);
+            assert!(world.items[0].has_loop_animation());
+            match world.items[0] {
+                crate::WorldItem::Static { static_flags, .. } => assert_eq!(static_flags, mask),
+                _ => panic!("expected Static"),
+            }
+        }
     }
 
     #[test]

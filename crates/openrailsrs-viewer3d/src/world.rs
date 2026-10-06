@@ -167,6 +167,8 @@ pub struct ShapeInstancePlacement {
     /// WORLD `SignalSubObj` bitmask when this instance is a Signal mesh (#80).
     pub signal_sub_obj: Option<u32>,
     pub signal_patch: Option<std::sync::Arc<SignalPatch>>,
+    /// Authored StaticFlags.Animate; controllers alone do not imply a loop.
+    pub loop_animation: bool,
 }
 
 /// True shear: `linear` does not round-trip via Quat×scale (#139 / #174).
@@ -543,6 +545,8 @@ pub struct WorldObject {
     pub tr_item_ids: Vec<u32>,
     /// From `.w` `Tr_Watermark` — HideWire uses levels 2/3 (#36).
     pub static_detail_level: u32,
+    /// Explicit StaticFlags.Animate, independent of whether the shape has keys.
+    pub loop_animation: bool,
 }
 
 impl WorldObject {
@@ -1036,6 +1040,7 @@ fn try_object_from_item(
         signal,
         tr_item_ids: item.tr_item_ids(),
         static_detail_level: item.static_detail_level(),
+        loop_animation: item.has_loop_animation(),
     }))
 }
 
@@ -2012,6 +2017,7 @@ fn classify_one_object(
                     auto_z_bias: true,
                     signal_sub_obj: None,
                     signal_patch: None,
+                    loop_animation: false,
                 });
             return;
         }
@@ -2081,6 +2087,7 @@ fn classify_one_object(
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
+                    loop_animation: obj.loop_animation,
                 });
             return;
         }
@@ -2200,7 +2207,10 @@ fn append_shape_spawn_entries_for_transforms(
     if asset.has_texture {
         *shape_texture_count += placements.len();
     }
-    let animated = shape_file.is_some_and(shape_has_loop_animation);
+    let animated = shape_file.is_some_and(shape_has_loop_animation)
+        && placements
+            .iter()
+            .any(|p| p.loop_animation || p.signal_sub_obj.is_some());
     let has_bank = placements.iter().any(|p| p.bank.is_some());
     let mergeable = !has_bank
         && !has_signal_filter
@@ -2362,7 +2372,9 @@ fn append_shape_spawn_entries_for_transforms(
                     part_index,
                     lod_idx: initial_lod_idx,
                 };
-                if shape_matrix_chain_is_animated(shape, matrix_idx) {
+                if (inst.loop_animation || inst.signal_sub_obj.is_some())
+                    && shape_matrix_chain_is_animated(shape, matrix_idx)
+                {
                     let signal = inst.signal_patch.as_deref().and_then(|patch| {
                         crate::signal_animation::SignalSemaphore::for_part(
                             shape,
@@ -4340,6 +4352,7 @@ pub fn spawn_world_boxes(
                         auto_z_bias: true,
                         signal_sub_obj: None,
                         signal_patch: None,
+                        loop_animation: false,
                     });
                 continue;
             }
@@ -4379,6 +4392,7 @@ pub fn spawn_world_boxes(
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
+                    loop_animation: obj.loop_animation,
                 });
             continue;
         }
@@ -4738,6 +4752,7 @@ mod tests {
             auto_z_bias: false,
             signal_sub_obj: None,
             signal_patch: None,
+            loop_animation: false,
         };
         assert!(placement_has_shear(&sheared));
 
@@ -4756,6 +4771,7 @@ mod tests {
             auto_z_bias: false,
             signal_sub_obj: None,
             signal_patch: None,
+            loop_animation: false,
         };
         assert!(
             !placement_has_shear(&orthogonal),
@@ -4958,6 +4974,7 @@ mod tests {
             signal: None,
             tr_item_ids: Vec::new(),
             static_detail_level: 0,
+            loop_animation: false,
         };
         assert!(
             !shape_eligible(&platform),
@@ -5241,6 +5258,89 @@ mod tests {
     }
 
     #[test]
+    fn shared_shape_keeps_idle_pickup_static_and_signal_out_of_scenery_loop() {
+        let mut shape = ShapeFile::from_path(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../openrailsrs-formats/tests/fixtures/minimal.s"),
+        )
+        .unwrap();
+        shape.animations = vec![openrailsrs_formats::Animation {
+            frame_count: 2,
+            frame_rate: 30,
+            nodes: vec![openrailsrs_formats::AnimNode {
+                name: "Arm".into(),
+                controllers: vec![openrailsrs_formats::AnimController::LinearPos {
+                    keys: vec![(0.0, [0.0; 3]), (1.0, [0.0, 2.0, 0.0]), (2.0, [0.0; 3])],
+                }],
+            }],
+        }];
+        let mut meshes = Assets::<Mesh>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut asset = dummy_shape_asset();
+        let mut part = dummy_shape_part(u32::MAX, 0);
+        part.mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+        part.material = materials.add(StandardMaterial::default());
+        asset.parts.push(part);
+        let idle = ShapeInstancePlacement {
+            bank: None,
+            transform: Transform::from_xyz(10.0, 0.0, 0.0),
+            linear: None,
+            tile_x: 0,
+            tile_z: 0,
+            auto_z_bias: false,
+            signal_sub_obj: None,
+            signal_patch: None,
+            loop_animation: false,
+        };
+        let scenery_loop = ShapeInstancePlacement {
+            transform: Transform::from_xyz(20.0, 0.0, 0.0),
+            loop_animation: true,
+            ..idle.clone()
+        };
+        let signal = ShapeInstancePlacement {
+            transform: Transform::from_xyz(30.0, 0.0, 0.0),
+            signal_sub_obj: Some(1),
+            ..idle.clone()
+        };
+        for placements in [vec![idle.clone()], vec![idle, scenery_loop, signal]] {
+            let mixed = placements.len() == 3;
+            let mut static_queue = Vec::new();
+            let mut animated_queue = Vec::new();
+            let mut instanced_queue = Vec::new();
+            append_shape_spawn_entries_for_transforms(
+                Path::new("shared-arm.s"),
+                &asset,
+                Some(&shape),
+                &mut meshes,
+                &mut materials,
+                &placements,
+                &mut static_queue,
+                &mut animated_queue,
+                &mut instanced_queue,
+                0,
+                &mut 0,
+                &mut 0,
+                &mut 0,
+                &mut 0,
+                &mut 0,
+                &FloatingOrigin::default(),
+                None,
+            );
+            assert_eq!(static_queue.len(), 1, "idle pickup must keep its rest pose");
+            assert_eq!(static_queue[0].0.translation.x, 10.0);
+            assert_eq!(animated_queue.len(), if mixed { 2 } else { 0 });
+            if mixed {
+                let loop_binding = &animated_queue[0].0.7;
+                assert_eq!(loop_binding.speed, 30.0);
+                assert_eq!(loop_binding.frame_count, 2.0);
+                let signal_binding = &animated_queue[1].0.7;
+                assert_eq!(signal_binding.speed, 0.0);
+                assert_eq!(signal_binding.frame_count, 0.0);
+            }
+        }
+    }
+
+    #[test]
     fn lod_part_lookup_survives_omitted_and_reordered_groups() {
         // Real track shapes do this: a coarser band removes prim-state 1, so
         // prim-state 2 shifts from vector index 2 to index 1.
@@ -5472,6 +5572,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                loop_animation: false,
             }],
         );
         prepare_shape_load_paths(&mut progress);

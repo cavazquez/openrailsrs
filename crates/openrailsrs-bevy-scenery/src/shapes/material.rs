@@ -265,9 +265,12 @@ pub fn cab_or_scenery_material_with_texture_ex(
         ..default()
     };
     if cab_interior && matches!(alpha_mode, AlphaMode::Opaque) {
-        // OR HalfBright-style ambient fill (no emissive_texture — PBR uses base_color_texture).
-        // Skip on blend/mask glass — emissive washes out transparent cab windows (.dds).
+        // OR's ambient term multiplies the authored texture. Bevy samples
+        // emissive independently of base_color_texture; a constant fill lifts
+        // black upholstery/panels to grey and looks like fog inside the car.
+        // Skip on blend/mask glass to keep transparent windows clear.
         mat.emissive = LinearRgba::new(0.22, 0.23, 0.25, 1.0);
+        mat.emissive_texture = mat.base_color_texture.clone();
     } else if !material_lit && scenery_needs_emissive_texture(rgba_for_luma) {
         mat.emissive = SCENERY_DARK_EMISSIVE;
         mat.emissive_texture = mat.base_color_texture.clone();
@@ -276,6 +279,7 @@ pub fn cab_or_scenery_material_with_texture_ex(
         && p.ambient_fill != LinearRgba::new(0.0, 0.0, 0.0, 1.0)
     {
         mat.emissive = p.ambient_fill;
+        mat.emissive_texture = mat.base_color_texture.clone();
     }
     finalize_scenery_material(mat, material_lit)
 }
@@ -705,6 +709,38 @@ fn matches_shader_name(shader_name: &str, names: &[&str]) -> bool {
 mod tests {
     use super::*;
     use openrailsrs_ace::AceFile;
+
+    #[test]
+    fn halfbright_and_cab_fill_sample_the_authored_texture_and_keep_glass_clear() {
+        let mut images = Assets::<Image>::default();
+        let atlas = images.add(Image::default());
+        for (cab, alpha, light_mat, expects_fill) in [
+            (false, AlphaMode::Opaque, Some(-11), true),
+            (false, AlphaMode::Opaque, Some(-5), false),
+            (true, AlphaMode::Opaque, Some(-5), true),
+            (true, AlphaMode::Blend, Some(-5), false),
+            (true, AlphaMode::Mask(0.5), Some(-5), false),
+        ] {
+            let mat = cab_or_scenery_material_with_texture_ex(
+                Color::WHITE,
+                atlas.clone(),
+                &[],
+                alpha,
+                0.0,
+                true,
+                Some("TexDiff"),
+                light_mat,
+                "upholstery.ace",
+                None,
+                cab,
+            );
+            assert_eq!(
+                mat.emissive_texture.as_ref(),
+                expects_fill.then_some(&atlas),
+                "cab={cab} alpha={alpha:?} light={light_mat:?}"
+            );
+        }
+    }
 
     #[test]
     fn missing_cpu_pixels_do_not_create_artificial_emission() {

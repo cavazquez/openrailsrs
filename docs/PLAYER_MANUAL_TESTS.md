@@ -1349,3 +1349,28 @@ sistemas de v4 con Open Rails.
 La actividad **RS_Let's go to Birmingham** incluida en la revisión `8236df20`
 referencia el ítem 11358 como plataforma, pero en el TDB de esa copia es una
 señal. Se rechaza con un diagnóstico; no se sustituye la parada por otra.
+
+## 42. Salón del Pullman y grúas de agua en Banbury
+
+1. Iniciar la versión recién compilada, elegir **Chiltern v4**, la actividad
+   **RS_Football Special** y la formación **Birmingham Pullman**.
+2. Con el tren detenido en Banbury General y tiempo despejado, pulsar **5**
+   para entrar al salón de pasajeros. Los asientos deben conservar su color
+   oscuro y el detalle de la tapicería; paredes, mesas y piso deben mostrar sus
+   texturas sin el velo gris uniforme. Girar la vista hacia ambos lados: las
+   ventanas deben seguir permitiendo ver el andén.
+3. Pulsar **5** otra vez para cambiar de coche; luego **1** para volver a la
+   cabina. Comprobar que los cristales siguen transparentes y que no faltan
+   instrumentos. **Alt+1** permite comparar cabina 2D y 3D.
+4. Pulsar **2** y mirar la grúa de agua del andén, el poste con brazo horizontal
+   mostrado en las capturas. Observar durante al menos diez segundos, con el
+   tren detenido y después al avanzar lentamente: debe permanecer en reposo,
+   sin girar de ida y vuelta. Repetir con la partida pausada.
+5. Observar las señales durante el avance. Sus brazos deben conservar el
+   aspecto indicado por la señalización; no se desactivó su control para
+   corregir la grúa.
+
+El objeto es un punto de abastecimiento de agua, no una señal. La animación
+de abastecimiento por operación aún no está implementada; aquí se comprueba
+su posición de reposo. Las animaciones continuas declaradas por el autor con
+`StaticFlags.Animate` conservan su reproducción.

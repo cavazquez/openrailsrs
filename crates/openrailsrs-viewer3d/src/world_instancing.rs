@@ -1492,6 +1492,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                loop_animation: false,
             },
             ShapeInstancePlacement {
                 bank: None,
@@ -1502,6 +1503,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                loop_animation: false,
             },
             ShapeInstancePlacement {
                 bank: None,
@@ -1512,6 +1514,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                loop_animation: false,
             },
         ];
         let grouped = group_placements_by_tile(&placements);
@@ -1595,6 +1598,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                loop_animation: false,
             })
             .collect();
         let grouped = group_placements_by_tile(&placements);

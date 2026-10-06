@@ -418,6 +418,7 @@ mod tests {
                 signal: None,
                 tr_item_ids: vec![],
                 static_detail_level: 0,
+                loop_animation: false,
             }],
             coverage,
         );
@@ -467,6 +468,7 @@ mod tests {
                 signal: None,
                 tr_item_ids: vec![11],
                 static_detail_level: 0,
+                loop_animation: false,
             }],
             coverage,
         );

@@ -940,3 +940,41 @@ configuración de lanzamiento se restauraron tras las pruebas.
 
 Pasos y resultado esperado en la
 [sección 41 de pruebas manuales](PLAYER_MANUAL_TESTS.md#41-chiltern-v4-descarga-del-autor-y-copias-separadas).
+
+## Pullman: contraste del salón y grúas de Banbury — 2026-10-06
+
+Se reprodujeron las capturas del usuario con **Birmingham Pullman**, actividad
+**RS_Football Special**, Chiltern v4 `8236df20`, Banbury General a 101 m del
+punto de parada y tiempo despejado. El salón mostraba el mismo velo gris:
+el relleno de los materiales HalfBright sumaba un color constante. Ahora el
+relleno usa la textura original como mapa de emisión, también en la cabina
+PBR cuando corresponde, y conserva los negros y el detalle de la tapicería.
+Los cristales de cabina siguen excluidos del relleno.
+
+El poste que oscilaba es **pbwatercrane1.s**, un `Pickup` de agua. Sus dos
+cuadros a 30 cuadros/s se reproducían como un bucle de escenario, unas quince
+veces por segundo incluso con la partida pausada. OR 1.6.1 lo controla desde
+`FuelPickupItemShape.PrepareFrame` según la operación de abastecimiento.
+El visor conserva su posición de reposo y solo reproduce bucles de objetos
+Static con `StaticFlags.Animate`. Las señales conservan su control por aspecto.
+El flag se preserva tanto en WORLD de texto como en el puente de WORLD binario.
+
+Evidencia local, sin versionar contenido descargado:
+
+- `tmp/pullman-banbury-20261006/before/passenger.png`: reproducción anterior.
+- `tmp/pullman-banbury-20261006/after/passenger.png` y `exterior.png`: GPU Vulkan,
+  Radeon RX 7600, cero pipelines pendientes/fallidos y cero errores de señales.
+- En ambas vistas, las últimas treinta muestras de las transformaciones de
+  las grúas fueron idénticas, durante más de diez segundos; no hay grúas en la
+  consulta de animación continua. Se observaron tanto partes PBR como instancias.
+- Pico RSS del visor: **1410,9 MiB**; pico VRAM del proceso: **1057,2 MiB**.
+  Son mediciones de estas escenas, con radio de 450 m.
+- `check.sh` completo: **1630 pruebas Rust** y **59 pruebas Python** aprobadas,
+  formato, Clippy estricto, build, oráculos de aceptación y servicio de tres
+  estaciones. Las 45 pruebas Rust marcadas como ignoradas requieren recursos
+  o ejecuciones específicas y no se cuentan como aprobadas.
+
+Prueba manual en la
+[sección 42](PLAYER_MANUAL_TESTS.md#42-salón-del-pullman-y-grúas-de-agua-en-banbury).
+El abastecimiento por operación sigue pendiente; esta corrección valida el
+reposo del objeto y el contraste, sin alterar archivos originales ni oráculos.

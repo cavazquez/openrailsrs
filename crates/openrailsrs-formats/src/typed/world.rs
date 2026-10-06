@@ -76,6 +76,8 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
+        /// WORLD `StaticFlags` hexadecimal mask (OR `StaticFlag.Animate`).
+        static_flags: u32,
         /// From preceding `Tr_Watermark` (HideWire uses levels 2/3).
         static_detail_level: u32,
     },
@@ -264,6 +266,12 @@ pub struct SignalUnitRef {
 }
 
 impl WorldItem {
+    /// Only explicitly animated Static scenery loops in Open Rails. Pickups,
+    /// signals and moving tables contain controllers driven by operations.
+    pub fn has_loop_animation(&self) -> bool {
+        matches!(self, Self::Static { static_flags, .. } if static_flags & 0x0008_0000 != 0)
+    }
+
     pub fn kind(&self) -> &'static str {
         match self {
             WorldItem::Static { .. } => "Static",
@@ -554,6 +562,8 @@ impl WorldFile {
 /// use `Name ( … )` blocks need [`normalize_world_text`]. Prefer whichever yields
 /// more scenery entries when both parse.
 fn load_world_ast(text: &str) -> Result<Ast, FormatError> {
+    let text = preserve_world_flag_masks(text);
+    let text = text.as_ref();
     let raw = parse_from_first_paren(text).ok();
     let normalized = normalize_world_text(text);
     let norm = parse_from_first_paren(&normalized).ok();
@@ -562,6 +572,47 @@ fn load_world_ast(text: &str) -> Result<Ast, FormatError> {
         (Some(a), None) => Ok(a),
         (None, Some(b)) => Ok(b),
         (None, None) => parse_from_first_paren(text),
+    }
+}
+
+/// Keep the original spelling of ReadFlags tokens before the generic numeric
+/// lexer sees them: `0009E000` is a hex mask, not the floating-point value 9.
+/// Token boundaries preserve quoted filenames, comments and UTF-8 verbatim.
+fn preserve_world_flag_masks(source: &str) -> Cow<'_, str> {
+    use crate::lexer::{Lexer, Token};
+
+    let mut lexer = Lexer::new(source);
+    let mut pending = false;
+    let mut copied_until = 0;
+    let mut out = String::new();
+    loop {
+        lexer.skip_ws_and_comments();
+        let start = lexer.position();
+        let Ok(Some(token)) = lexer.next_token() else {
+            break;
+        };
+        if pending && !matches!(token, Token::LParen | Token::RParen | Token::String(_)) {
+            let raw = &source[start..lexer.position()];
+            let digits = raw
+                .strip_prefix("0x")
+                .or_else(|| raw.strip_prefix("0X"))
+                .unwrap_or(raw);
+            if !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_hexdigit()) {
+                out.push_str(&source[copied_until..start]);
+                out.push('"');
+                out.push_str(raw);
+                out.push('"');
+                copied_until = lexer.position();
+            }
+        }
+        pending = matches!(&token, Token::Symbol(name) if name.eq_ignore_ascii_case("StaticFlags"))
+            || (pending && matches!(token, Token::LParen));
+    }
+    if copied_until == 0 {
+        Cow::Borrowed(source)
+    } else {
+        out.push_str(&source[copied_until..]);
+        Cow::Owned(out)
     }
 }
 
@@ -1138,6 +1189,7 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
             position: position_or_zero,
             qdir,
             matrix3x3,
+            static_flags: find_static_flags(fields),
             static_detail_level: 0,
         },
         s if s.eq_ignore_ascii_case("Forest") => WorldItem::Forest {
@@ -1449,6 +1501,36 @@ fn find_named_u32(items: &[Ast], key: &str) -> Option<u32> {
         }
     }
     found
+}
+
+/// ReadFlags treats digit-only masks as hexadecimal too (`00080000` is not
+/// decimal 80000). The AST may have already parsed those digits as a number.
+fn find_static_flags(items: &[Ast]) -> u32 {
+    items
+        .iter()
+        .filter_map(|item| match item {
+            Ast::List(sub) if matches_head(sub, "StaticFlags") => match sub.get(1)? {
+                Ast::Atom(atom) => {
+                    let raw = match atom {
+                        Atom::Symbol(s) | Atom::String(s) => s.trim().to_owned(),
+                        Atom::Integer(n) if *n >= 0 => n.to_string(),
+                        Atom::Number(n) if n.is_finite() && *n >= 0.0 && n.fract() == 0.0 => {
+                            format!("{n:.0}")
+                        }
+                        _ => return None,
+                    };
+                    let digits = raw
+                        .strip_prefix("0x")
+                        .or_else(|| raw.strip_prefix("0X"))
+                        .unwrap_or(&raw);
+                    u32::from_str_radix(digits, 16).ok()
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .next_back()
+        .unwrap_or(0)
 }
 
 /// Last matching `PlatformData` (decimal or hex symbol like `00000002`).

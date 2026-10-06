@@ -13,6 +13,62 @@ fn fixture(name: &str) -> PathBuf {
 }
 
 #[test]
+fn world_controllers_only_loop_when_static_animate_flag_is_set() {
+    for (mask, loops) in [
+        ("", false),
+        ("00010000", false),
+        ("00080000", true),
+        ("0009E000", true),
+        ("0x00080000", true),
+    ] {
+        let native_flags = if mask.is_empty() {
+            String::new()
+        } else {
+            format!("StaticFlags ( {mask} )")
+        };
+        let canonical_flags = if mask.is_empty() {
+            String::new()
+        } else {
+            format!("( StaticFlags {mask} )")
+        };
+        for text in [
+            format!(
+                "Tr_Worldfile ( Static ( UiD ( 1 ) FileName ( crane.s ) Position ( 0 0 0 ) QDirection ( 0 0 0 1 ) {native_flags} ) )"
+            ),
+            format!(
+                "( Tr_Worldfile ( Static ( UiD 1 ) ( FileName crane.s ) ( Position 0 0 0 ) ( QDirection 0 0 0 1 ) {canonical_flags} ) )"
+            ),
+        ] {
+            let world = WorldFile::from_bytes(text.as_bytes(), None).unwrap();
+            assert_eq!(world.items.len(), 1, "{text}");
+            assert_eq!(world.items[0].has_loop_animation(), loops, "{text}");
+        }
+    }
+    let text = "Tr_Worldfile ( Static ( UiD ( 1 ) Position ( 0 0 0 ) QDirection ( 0 0 0 1 )
+        FileName ( \"StaticFlags ( 00080000 ).s\" ) StaticFlags ( 00010000 )
+        ; StaticFlags ( 00080000 )
+        ) )";
+    let world = WorldFile::from_bytes(text.as_bytes(), None).unwrap();
+    assert_eq!(world.items.len(), 1);
+    assert!(!world.items[0].has_loop_animation());
+    assert_eq!(
+        world.items[0].file_name(),
+        Some("StaticFlags ( 00080000 ).s")
+    );
+    let ast = parse_from_first_paren(
+        "( Tr_Worldfile ( Pickup ( UiD 1531 ) ( FileName pbwatercrane1.s )
+            ( Position 10 95 -6 ) ( QDirection 0 0 0 1 )
+            ( PickupType 5 0 ) ( PickupAnimData 3 2 ) ( StaticFlags 00080000 ) )
+          ( Signal ( UiD 2 ) ( Position 0 0 0 ) ( QDirection 0 0 0 1 )
+            ( StaticFlags 00080000 ) ) )",
+    )
+    .unwrap();
+    let world = WorldFile::from_ast(&ast, 0, 0);
+    assert_eq!(world.items.len(), 2);
+    assert!(world.items.iter().all(|item| !item.has_loop_animation()));
+}
+
+#[test]
 fn parse_chiltern_jinx_text_shape_has_geometry() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/chiltern/SHAPES/Doc_CalvertStn.s");
