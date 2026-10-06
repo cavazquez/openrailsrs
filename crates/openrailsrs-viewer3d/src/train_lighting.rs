@@ -305,23 +305,119 @@ pub fn update_train_lights(
 pub fn update_cab_lighting(
     live: Res<LiveDrive>,
     sun: Option<Res<crate::route_lighting::RouteSunState>>,
+    cab: Res<crate::cab_view::CabInteriorState>,
     mut materials: ResMut<Assets<crate::or_cab_material::OrCabMaterial>>,
-    mut previous: Local<Option<(u32, usize)>>,
+    mut standard: ResMut<Assets<StandardMaterial>>,
+    mut previous: Local<Option<(u32, usize, usize, usize)>>,
 ) {
     let daylight = sun
         .as_ref()
         .map_or(1.0, |s| (s.direction.y * 2.0).clamp(0.0, 1.0));
     let brightness = (0.08 + daylight * 0.92).max(if live.session.cab_light { 0.75 } else { 0.0 });
-    let key = (brightness.to_bits(), materials.len());
+    let variation = if crate::shapes::cab_night_textures_enabled() {
+        if live.session.cab_light { 2 } else { 1 }
+    } else {
+        0
+    };
+    let key = (
+        brightness.to_bits(),
+        materials.len(),
+        cab.texture_lighting.len(),
+        variation,
+    );
     if *previous == Some(key) {
         return;
     }
     *previous = Some(key);
-    for (_, material) in materials.iter_mut() {
-        if material.params.shader_kind < 4.0 {
+    let bound_materials: std::collections::HashSet<_> = cab
+        .texture_lighting
+        .iter()
+        .filter_map(|binding| binding.or_material.as_ref().map(Handle::id))
+        .collect();
+    // Assets::iter_mut marks every visited asset as modified. Inspect first so
+    // unchanged FullBright artwork is not re-extracted and uploaded each frame.
+    let changed_materials: Vec<_> = materials
+        .iter()
+        .filter(|(id, material)| {
+            !bound_materials.contains(id)
+                && material.params.shader_kind < 4.0
+                && [
+                    material.params.tint_r,
+                    material.params.tint_g,
+                    material.params.tint_b,
+                ] != [brightness; 3]
+        })
+        .map(|(id, _)| id)
+        .collect();
+    for id in changed_materials {
+        if let Some(mut material) = materials.get_mut(id) {
             material.params.tint_r = brightness;
             material.params.tint_g = brightness;
             material.params.tint_b = brightness;
+        }
+    }
+    apply_cab_texture_lighting(
+        &cab.texture_lighting,
+        variation,
+        brightness,
+        &mut materials,
+        &mut standard,
+    );
+}
+
+fn apply_cab_texture_lighting(
+    bindings: &[crate::cab_view::CabTextureBinding],
+    variation: usize,
+    brightness: f32,
+    materials: &mut Assets<crate::or_cab_material::OrCabMaterial>,
+    standard: &mut Assets<StandardMaterial>,
+) {
+    for binding in bindings {
+        let (texture, tint) = &binding.variants[variation];
+        if let Some(mut material) = binding
+            .or_material
+            .as_ref()
+            .and_then(|h| materials.get_mut(h))
+        {
+            if material.base_texture != *texture {
+                material.base_texture = texture.clone();
+            }
+            // FullBright artwork retains its authored light.
+            let brightness = if material.params.shader_kind < 4.0 {
+                brightness
+            } else {
+                1.0
+            };
+            let rgb = [
+                tint.red * brightness,
+                tint.green * brightness,
+                tint.blue * brightness,
+            ];
+            if [
+                material.params.tint_r,
+                material.params.tint_g,
+                material.params.tint_b,
+            ] != rgb
+            {
+                [
+                    material.params.tint_r,
+                    material.params.tint_g,
+                    material.params.tint_b,
+                ] = rgb;
+            }
+        } else if let Some(mut material) = standard.get_mut(&binding.standard_material) {
+            if material.base_color_texture.as_ref() != Some(texture) {
+                material.base_color_texture = Some(texture.clone());
+            }
+            let colour = Color::linear_rgba(
+                tint.red * brightness,
+                tint.green * brightness,
+                tint.blue * brightness,
+                tint.alpha,
+            );
+            if material.base_color != colour {
+                material.base_color = colour;
+            }
         }
     }
 }
@@ -329,6 +425,63 @@ pub fn update_cab_lighting(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cab_light_switches_cached_native_textures_without_changing_other_materials() {
+        use crate::cab_view::CabTextureBinding;
+        use crate::or_cab_material::OrCabMaterial;
+        let mut materials = Assets::<OrCabMaterial>::default();
+        let mut standard = Assets::<StandardMaterial>::default();
+        let mut images = Assets::<Image>::default();
+        let [day, night, light] = std::array::from_fn(|_| images.add(Image::default()));
+        let fullbright = crate::or_cab_material::create_or_cab_material(
+            &mut materials,
+            day.clone(),
+            Color::WHITE,
+            AlphaMode::Opaque,
+            Some("Tex"),
+            None,
+        );
+        let unrelated = standard.add(StandardMaterial::default());
+        let bound = standard.add(StandardMaterial::default());
+        let tint = LinearRgba::new(0.7, 0.6, 0.5, 0.4);
+        let variants = [
+            (day.clone(), tint),
+            (night.clone(), tint),
+            (light.clone(), tint),
+        ];
+        let bindings = [
+            CabTextureBinding {
+                or_material: Some(fullbright.clone()),
+                standard_material: unrelated.clone(),
+                variants: variants.clone(),
+            },
+            CabTextureBinding {
+                or_material: None,
+                standard_material: bound.clone(),
+                variants,
+            },
+        ];
+        for (index, image, brightness) in [
+            (1, &night, 0.08),
+            (2, &light, 0.75),
+            (0, &day, 1.0),
+            (1, &night, 0.08),
+        ] {
+            apply_cab_texture_lighting(&bindings, index, brightness, &mut materials, &mut standard);
+            let cab = materials.get(&fullbright).unwrap();
+            assert_eq!(&cab.base_texture, image);
+            assert!(
+                (cab.params.tint_r - 0.7).abs() < 1e-6,
+                "native FullBright was dimmed"
+            );
+            let fallback = standard.get(&bound).unwrap();
+            assert_eq!(fallback.base_color_texture.as_ref(), Some(image));
+            assert!((fallback.base_color.to_linear().alpha - 0.4).abs() < 1e-6);
+            assert!((fallback.base_color.to_linear().red - brightness * 0.7).abs() < 1e-6);
+            assert_eq!(standard.get(&unrelated).unwrap().base_color, Color::WHITE);
+        }
+        assert_eq!(images.len(), 3, "a light toggle allocated a new texture");
+    }
     #[test]
     fn railway_beam_has_useful_illuminance_at_fifty_metres() {
         // A perpendicular target at 50 m receives 100 lux from the high

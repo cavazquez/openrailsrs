@@ -40,7 +40,8 @@ El oráculo [openrails-traction-operation.json](../oracles/openrails-traction-op
 compara 40 puntos de arranque, parada, RPM y caudal contra las DLL originales
 1.6.1. Es un motor sin caja de cambios; no certifica todas las transmisiones,
 motores múltiples dentro de un ENG, suministro auxiliar ni variación de masa
-por combustible. No hay reabastecimiento en depósitos.
+por combustible. Los `Pickup` nativos de diésel y las tomas `IntakePoint`
+permiten abastecer desde el panel B; el consumo acumulado no se reinicia al llenar.
 
 ## Vapor
 
@@ -70,8 +71,31 @@ La energía de caldera, combustión e inyección sigue siendo un modelo de
 conservación simplificado, sin las tablas termodinámicas completas de OR.
 Solo hay una caldera agregada por formación; no se certifican locomotoras
 compuestas, gestión independiente de doble tracción, condensación, toma de
-agua en marcha ni reabastecimiento. Hall y King sirven para probar contenido,
+agua en marcha. Los abastecedores nativos permiten reponer agua del ténder y
+carbón, con sus tomas y caudales. Llenar el ténder no llena la caldera ni repara
+un fallo por falta de agua. Hall y King sirven para probar contenido,
 cabina y sonido; su física completa todavía no está certificada.
+
+## Abastecimiento desde WORLD
+
+`B` ofrece iniciar y cancelar el abastecimiento de la toma más cercana. Se leen
+el tipo, cantidad, caudal, animación y rango de velocidad del `Pickup`, y el
+desplazamiento y ancho del `IntakePoint` del ENG/WAG. La toma debe quedar a
+menos de **2,5 m más la mitad del ancho declarado**, como en OR 1.6.1. Se usa
+la posición propia de cada coche y su orientación `Flip`; solo entran los
+vehículos acoplados al tren del jugador.
+
+La cantidad y caudal originales se convierten de lb a kg; el diésel conserva
+la densidad nativa de 0,8508 kg/L. La conexión respeta el tiempo de animación
+antes de transferir. Un depósito completo, un abastecedor agotado, regulador
+abierto, velocidad incompatible o alejamiento de la toma detienen la operación.
+El brazo regresa al reposo; no reproduce el bucle completo de una grúa.
+
+Las cantidades transferidas y reservas de estación se guardan. Al cargar, la
+conexión se cancela para exigir un nuevo contacto válido con el escenario.
+La reserva finita del abastecedor es una ampliación del comportamiento habitual
+de OR. No se certifican tomas en marcha, suministros de mercancías, varios
+ténderes independientes ni variación de masa por combustible.
 
 ## Electricidad
 

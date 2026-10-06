@@ -97,7 +97,7 @@ pub fn spawn_cab_native_instruments(
                 let width_m = (*width_mm / 1000.0).max(1e-4);
                 let max_len_m = (*length_mm / 1000.0).max(1e-4);
                 let mesh = meshes.add(gauge_mesh(width_m, max_len_m, 0.0, gauge));
-                let rgba = gauge.positive_colour.unwrap_or([1.0, 1.0, 0.0, 1.0]);
+                let rgba = gauge.positive_colour.unwrap_or([1.0, 1.0, 1.0, 0.0]);
                 let material = materials.add(StandardMaterial {
                     base_color: Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0]),
                     unlit: true,
@@ -245,9 +245,9 @@ pub(crate) fn update_cab_native_instruments(
                 .gauge
                 .negative_colour
                 .or(gauge.gauge.positive_colour)
-                .unwrap_or([1.0, 1.0, 0.0, 1.0])
+                .unwrap_or([1.0, 1.0, 1.0, 0.0])
         } else {
-            gauge.gauge.positive_colour.unwrap_or([1.0, 1.0, 0.0, 1.0])
+            gauge.gauge.positive_colour.unwrap_or([1.0, 1.0, 1.0, 0.0])
         };
         if cache.rgba != Some(rgba) {
             if let Some(mut mat) = materials.get_mut(&mat3d.0) {
@@ -271,7 +271,7 @@ pub(crate) fn update_cab_native_instruments(
     }
 }
 
-fn gauge_control_value(
+pub(crate) fn gauge_control_value(
     control: &ControlType,
     gauge: &CabGaugeParams,
     tel: &openrailsrs_sim::CabTelemetry,

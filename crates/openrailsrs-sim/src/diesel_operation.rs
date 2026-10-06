@@ -74,6 +74,8 @@ pub struct DieselCarState {
     pub demanded_rpm: f64,
     pub fuel_l: f64,
     pub consumed_l: f64,
+    #[serde(default)]
+    pub refilled_l: f64,
     pub flow_lps: f64,
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -103,6 +105,7 @@ impl DieselTrainState {
                     demanded_rpm: if running { c.governor.idle_rpm } else { 0. },
                     fuel_l: c.params.capacity_l,
                     consumed_l: 0.,
+                    refilled_l: 0.,
                     flow_lps: 0.,
                 }
             })
@@ -125,13 +128,20 @@ impl DieselTrainState {
         self.cars.len() == config.cars.len()
             && self.cars.iter().zip(&config.cars).all(|(s, c)| {
                 s.vehicle == c.vehicle
-                    && [s.rpm, s.demanded_rpm, s.fuel_l, s.consumed_l, s.flow_lps]
-                        .iter()
-                        .all(|v| v.is_finite() && *v >= 0.)
+                    && [
+                        s.rpm,
+                        s.demanded_rpm,
+                        s.fuel_l,
+                        s.consumed_l,
+                        s.refilled_l,
+                        s.flow_lps,
+                    ]
+                    .iter()
+                    .all(|v| v.is_finite() && *v >= 0.)
                     && s.fuel_l <= c.params.capacity_l
                     && s.rpm <= c.governor.max_rpm * 1.5
                     && s.demanded_rpm <= c.governor.max_rpm * 1.5
-                    && (s.fuel_l + s.consumed_l - c.params.capacity_l).abs() < 1e-5
+                    && (s.fuel_l + s.consumed_l - c.params.capacity_l - s.refilled_l).abs() < 1e-5
                     && (s.phase != EnginePhase::Stopped || s.rpm == 0.)
                     && (s.phase != EnginePhase::Running || s.fuel_l > 0.)
             })

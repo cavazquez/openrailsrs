@@ -239,6 +239,8 @@ enum UiCommand {
     Car(CarOperation),
     DieselEngine(usize),
     Steam(openrailsrs_sim::steam::SteamCommand),
+    BeginRefill,
+    CancelRefill,
     SecureTail,
     Uncouple,
     Recouple,
@@ -694,6 +696,7 @@ fn handle_buttons(
     mut exit: MessageWriter<AppExit>,
     mouse: Res<ButtonInput<MouseButton>>,
     cab: Res<crate::cab_cvf::CabCvfState>,
+    refills: Option<Res<crate::world_operations::RefillTargets>>,
 ) {
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
@@ -790,6 +793,11 @@ fn handle_buttons(
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
             UiCommand::DieselEngine(vehicle)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_diesel_engine(*vehicle)),
             UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
+            UiCommand::BeginRefill=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
+                let target = refills.as_ref().and_then(|r|r.0.first()).ok_or("Alineá la toma de agua, carbón o diésel con un abastecedor compatible; no hay uno al alcance".to_string())?;
+                l.session.begin_refill(target.station.clone(), target.vehicle, target.distance_m, target.width_m)
+            }).map(|()| {ui.notice="Abastecimiento iniciado; Cancelar desconecta la toma".into();}),
+            UiCommand::CancelRefill=>live.as_mut().ok_or("No hay partida".into()).map(|l|l.session.cancel_refill()),
             UiCommand::SecureTail=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{
                 for i in ui.selected_car+1..l.session.formation.coupled_count {
                     if !l.session.formation.cars[i].handbrake {l.session.operate_car(i,CarOperation::Handbrake)?;}
@@ -1265,6 +1273,22 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
         MUTED,
     );
     dynamic(p, DynamicText::Traction, 14.0);
+    if s.state.boiler_state.is_some() || !s.physics.diesel.cars.is_empty() {
+        row(p, |p| {
+            button(
+                p,
+                "Abastecer en la toma más cercana",
+                UiCommand::BeginRefill,
+            );
+            button(p, "Cancelar abastecimiento", UiCommand::CancelRefill);
+        });
+        label(
+            p,
+            "Detené el tren con la toma alineada y el regulador cerrado. El depósito se llena mientras la partida avanza; la pausa detiene también el abastecimiento.",
+            14.0,
+            MUTED,
+        );
+    }
     if s.state.boiler_state.is_some() {
         use openrailsrs_sim::steam::SteamCommand as S;
         row(p, |p| {
@@ -1308,6 +1332,21 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
 
 fn traction_text(s: &LiveDriveSession) -> String {
     let mut out = String::new();
+    if let Some(op) = &s.refilling {
+        out += &format!(
+            "Abastecedor {} · vehículo {} · {} · {:.1} kg transferidos\n\n",
+            op.station.id,
+            op.vehicle + 1,
+            if op.returning {
+                "desconectando"
+            } else if op.opening < 1. {
+                "conectando"
+            } else {
+                "llenando"
+            },
+            op.delivered_kg
+        );
+    }
     if let Some(b) = &s.state.boiler_state {
         out += &format!(
             "{} · {:.2} bar · agua de caldera {:.1}%\nTénder: {:.1} L de agua · {:.1} kg de carbón\nFuego {:.1} kg · producción {:.2} kg/s · consumo {:.2} kg/s\nFogonero {} · corte {:.0}% · pala {:.0}% · tiro {:.0}%\nInyector 1 {} · inyector 2 {} · soplador {} · purgas {}\nInyección {:.2} kg/s · carbón quemado {:.3} kg/s\n\n",

@@ -343,6 +343,7 @@ mod tests {
                     phase: openrailsrs_sim::diesel_operation::EnginePhase::Running,
                     fuel_l: 25.,
                     consumed_l: 0.,
+                    refilled_l: 0.,
                     flow_lps: 0.,
                 },
             )

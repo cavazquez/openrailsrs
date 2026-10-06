@@ -8,6 +8,9 @@ use crate::steam::BoilerState;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
+    /// Finite WORLD supplies already delivered, indexed by tile and native UID.
+    #[serde(default)]
+    pub refill_used_kg: std::collections::BTreeMap<String, f64>,
     #[serde(default)]
     pub diesel: crate::diesel_operation::DieselTrainState,
     #[serde(default)]
@@ -60,6 +63,7 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            refill_used_kg: Default::default(),
             diesel: Default::default(),
             electric: Default::default(),
             native_dynamics: None,

@@ -29,9 +29,11 @@ pub use typed::{
     sms_wave_references,
 };
 pub use typed::{DieselOperatingParams, SteamOperatingParams};
+pub mod intake;
 pub mod units;
 pub mod vehicle_audit;
 pub mod vehicle_field_catalog;
+pub use intake::{IntakePoint, parse_intake_points};
 
 pub use ast::{Ast, Atom};
 pub use cab_link::{

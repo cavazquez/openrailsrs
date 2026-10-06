@@ -15,8 +15,8 @@ use bevy::ui::Val2;
 use bevy::ui::widget::ImageNode;
 use openrailsrs_ace::read_ace;
 use openrailsrs_formats::{
-    CabControl, CabDialParams, CabDigitalParams, CabLeverFrames, CabViewFile, ControlType,
-    ScreenRect,
+    CabControl, CabDialParams, CabDigitalParams, CabGaugeParams, CabLeverFrames, CabViewFile,
+    ControlType, ScreenRect,
 };
 
 use crate::cab_cvf::{
@@ -27,7 +27,7 @@ use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
 use crate::shapes::{
     RouteAssets, ace_to_image, cab_night_textures_enabled, cvf_texture_search_dirs,
-    resolve_cvf_graphic_path_night,
+    resolve_cvf_graphic_path, resolve_cvf_graphic_path_lighting,
 };
 use crate::viewer_log;
 
@@ -43,6 +43,7 @@ pub struct CabCvfOverlayState {
     pub view_position_m: Option<[f64; 3]>,
     /// Whether the last spawn used night ACE lookup.
     pub night_textures: bool,
+    cab_light: bool,
     image_cache: HashMap<String, Handle<Image>>,
 }
 
@@ -55,6 +56,7 @@ impl Default for CabCvfOverlayState {
             view_direction_deg: [0.0; 3],
             view_position_m: None,
             night_textures: false,
+            cab_light: false,
             image_cache: HashMap::new(),
         }
     }
@@ -73,6 +75,77 @@ struct CabCvfOverlayBackground;
 pub struct CabCvfOverlayWidget {
     pub control_type: ControlType,
     pub kind: CabCvfOverlayKind,
+}
+
+#[derive(Component, Clone, Debug)]
+pub(crate) struct CabCvfOverlayGauge {
+    fire_layer: bool,
+    control: ControlType,
+    gauge: CabGaugeParams,
+    position: ScreenRect,
+    panel_h: f32,
+    scale: f32,
+    texture_size: Vec2,
+}
+
+/// CVF coordinates have a downward Y axis. Solid bars grow from zero;
+/// pointer graphics travel along the authored range instead of rotating.
+fn gauge_rect(
+    position: &ScreenRect,
+    gauge: &CabGaugeParams,
+    reading: f64,
+    size: Vec2,
+) -> ScreenRect {
+    let fraction = gauge.range_fraction(reading, false).clamp(0.0, 1.0);
+    let reverse = gauge.direction != 0;
+    let value = if reverse { 1.0 - fraction } else { fraction };
+    if gauge.is_pointer() {
+        return if gauge.orientation == 0 {
+            ScreenRect {
+                x: position.x + position.width * value - f64::from(size.x) * 0.5,
+                y: position.y,
+                width: f64::from(size.x),
+                height: f64::from(size.y),
+            }
+        } else {
+            ScreenRect {
+                x: position.x,
+                y: position.y + position.height * value - f64::from(size.y) * 0.5,
+                width: f64::from(size.x),
+                height: f64::from(size.y),
+            }
+        };
+    }
+    let (zero, value) = if gauge.scale_min < 0.0 {
+        // Native bipolar horizontal bars ignore DirIncrease. A vertical bar
+        // reverses around its zero position, rather than the midpoint.
+        let zero = gauge.range_fraction(0.0, false).clamp(0.0, 1.0);
+        let value = if gauge.orientation != 0 && gauge.direction != 1 {
+            2.0 * zero - fraction
+        } else {
+            fraction
+        };
+        (zero, value)
+    } else {
+        (if reverse { 1.0 } else { 0.0 }, value)
+    };
+    let start = zero.min(value);
+    let length = (value - zero).abs();
+    if gauge.orientation == 0 {
+        ScreenRect {
+            x: position.x + position.width * start,
+            y: position.y,
+            width: position.width * length,
+            height: position.height,
+        }
+    } else {
+        ScreenRect {
+            x: position.x,
+            y: position.y + position.height * start,
+            width: position.width,
+            height: position.height * length,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -222,26 +295,29 @@ fn ui_node_for_rect(rect: &ScreenRect, panel_h: f32, scale: f32) -> Node {
     }
 }
 
+#[derive(Clone, Copy)]
+struct CabTextureLighting {
+    dark: bool,
+    light: bool,
+}
+
 fn load_graphic(
     cab_dir: &Path,
     tex_dirs: &[&Path],
     images: &mut Assets<Image>,
     cache: &mut HashMap<String, Handle<Image>>,
     graphic: &str,
-    night: bool,
+    night: CabTextureLighting,
 ) -> Option<Handle<Image>> {
     if graphic.is_empty() {
         return None;
     }
-    let cache_key = if night {
-        format!("night:{graphic}")
-    } else {
-        graphic.to_string()
-    };
+    let cache_key = format!("{}:{}:{graphic}", night.dark, night.light);
     if let Some(handle) = cache.get(&cache_key) {
         return Some(handle.clone());
     }
-    let path = resolve_cvf_graphic_path_night(tex_dirs, cab_dir, graphic, night)?;
+    let path =
+        resolve_cvf_graphic_path_lighting(tex_dirs, cab_dir, graphic, night.dark, night.light)?;
     let ace = read_ace(&path).ok()?;
     let handle = images.add(ace_to_image(&ace));
     cache.insert(cache_key, handle.clone());
@@ -308,6 +384,7 @@ fn discrete_frame_rect(
 }
 
 pub(crate) fn sync_cab_cvf_overlay(
+    live: Option<Res<LiveDrive>>,
     follow: Res<CameraFollowMode>,
     cvf_state: Res<CabCvfState>,
     assets: Res<RouteAssets>,
@@ -327,9 +404,13 @@ pub(crate) fn sync_cab_cvf_overlay(
         return;
     }
 
-    let night = cab_night_textures_enabled();
-    if night != overlay_state.night_textures {
-        overlay_state.night_textures = night;
+    let night = CabTextureLighting {
+        dark: cab_night_textures_enabled(),
+        light: live.as_ref().is_some_and(|live| live.session.cab_light),
+    };
+    if (night.dark, night.light) != (overlay_state.night_textures, overlay_state.cab_light) {
+        overlay_state.night_textures = night.dark;
+        overlay_state.cab_light = night.light;
         overlay_state.spawned_cvf = None;
         overlay_state.image_cache.clear();
     }
@@ -410,6 +491,19 @@ pub(crate) fn sync_cab_cvf_overlay(
         )
     });
 
+    // Original night artwork is already shaded. Only dim a day fallback,
+    // retaining its alpha windows and leaving the outdoor scene unchanged.
+    let background_colour = if night.dark
+        && !night.light
+        && view.is_some_and(|v| {
+            resolve_cvf_graphic_path_lighting(&tex_refs, cab_dir, &v.texture_ace, true, false)
+                == resolve_cvf_graphic_path(&tex_refs, cab_dir, &v.texture_ace)
+        }) {
+        Color::srgba(0.18, 0.18, 0.18, 1.)
+    } else {
+        Color::WHITE
+    };
+
     let mut spawned = 0usize;
     let mut skipped = 0usize;
     // Transparent root: PullmanCabFront.ace windows are alpha=0 so the 3D world
@@ -465,7 +559,7 @@ pub(crate) fn sync_cab_cvf_overlay(
                             },
                             ImageNode {
                                 image: handle,
-                                color: Color::WHITE,
+                                color: background_colour,
                                 ..default()
                             },
                             UiTransform::default(),
@@ -514,7 +608,7 @@ fn spawn_dial_widget(
     panel_h: f32,
     scale: f32,
     graphic: &str,
-    night: bool,
+    night: CabTextureLighting,
 ) -> usize {
     let Some(handle) = load_graphic(cab_dir, tex_dirs, images, cache, graphic, night) else {
         return 0;
@@ -595,7 +689,7 @@ fn spawn_cvf_control(
     cache: &mut HashMap<String, Handle<Image>>,
     panel_h: f32,
     scale: f32,
-    night: bool,
+    night: CabTextureLighting,
 ) -> (usize, usize) {
     let mut skip = 0usize;
 
@@ -794,10 +888,70 @@ fn spawn_cvf_control(
             ));
             (1, 0)
         }
-        CabControl::Lever { .. }
-        | CabControl::Gauge { .. }
-        | CabControl::Screen { .. }
-        | CabControl::Unknown { .. } => (0, 0),
+        CabControl::Gauge {
+            control_type,
+            position,
+            graphic,
+            gauge,
+        } => {
+            if position.width <= 0.0 || position.height <= 0.0 {
+                return (0, 1);
+            }
+            let texture = load_graphic(cab_dir, tex_dirs, images, cache, graphic, night);
+            if (gauge.is_pointer() || !graphic.is_empty()) && texture.is_none() {
+                return (0, 1);
+            }
+            let size = texture
+                .as_ref()
+                .and_then(|handle| images.get(handle))
+                .map(|image| image.size().as_vec2())
+                .unwrap_or(Vec2::ONE);
+            if let Some(fire) = gauge
+                .fire_graphic
+                .as_deref()
+                .and_then(|graphic| load_graphic(cab_dir, tex_dirs, images, cache, graphic, night))
+            {
+                let fire_size = images
+                    .get(&fire)
+                    .map_or(size, |image| image.size().as_vec2());
+                panel.spawn((
+                    CabCvfOverlayGauge {
+                        fire_layer: true,
+                        control: control_type.clone(),
+                        gauge: gauge.clone(),
+                        position: position.clone(),
+                        panel_h,
+                        scale,
+                        texture_size: fire_size,
+                    },
+                    ui_node_for_rect(position, panel_h, scale),
+                    BackgroundColor(Color::NONE),
+                    ImageNode::new(fire),
+                    Visibility::Visible,
+                    ZIndex(14),
+                ));
+            }
+            let mut entity = panel.spawn((
+                CabCvfOverlayGauge {
+                    fire_layer: false,
+                    control: control_type.clone(),
+                    gauge: gauge.clone(),
+                    position: position.clone(),
+                    panel_h,
+                    scale,
+                    texture_size: size,
+                },
+                ui_node_for_rect(position, panel_h, scale),
+                BackgroundColor(Color::NONE),
+                Visibility::Visible,
+                ZIndex(15),
+            ));
+            if let Some(texture) = texture {
+                entity.insert(ImageNode::new(texture));
+            }
+            (1, 0)
+        }
+        CabControl::Lever { .. } | CabControl::Screen { .. } | CabControl::Unknown { .. } => (0, 0),
     }
 }
 
@@ -837,6 +991,16 @@ pub(crate) fn update_cab_cvf_overlay(
         (&CabCvfOverlayWidget, &mut Text, &mut Visibility),
         (With<Text>, Without<ImageNode>, Without<CabCvfOverlayRoot>),
     >,
+    mut gauges: Query<
+        (
+            &CabCvfOverlayGauge,
+            &mut Node,
+            &mut BackgroundColor,
+            &mut Visibility,
+            Option<&mut ImageNode>,
+        ),
+        (Without<CabCvfOverlayWidget>, Without<CabCvfOverlayRoot>),
+    >,
 ) {
     let Ok(mut root_vis) = roots.single_mut() else {
         return;
@@ -855,6 +1019,91 @@ pub(crate) fn update_cab_cvf_overlay(
     };
     *root_vis = Visibility::Visible;
     let tel = live.session.cab_telemetry();
+
+    for (widget, mut node, mut background, mut visibility, image) in &mut gauges {
+        let reading = crate::cab_native_instruments::gauge_control_value(
+            &widget.control,
+            &widget.gauge,
+            &tel,
+        );
+        let pointer_size = widget
+            .gauge
+            .area
+            .as_ref()
+            .map_or(widget.texture_size, |area| {
+                Vec2::new(area.width as f32, area.height as f32)
+            });
+        let rect = if widget.fire_layer {
+            widget.position.clone()
+        } else {
+            gauge_rect(&widget.position, &widget.gauge, reading, pointer_size)
+        };
+        if widget.fire_layer && reading <= 0. {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
+        *visibility = if rect.width <= 0.0 || rect.height <= 0.0 {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
+        let layout = ui_node_for_rect(&rect, widget.panel_h, widget.scale);
+        if (node.left, node.bottom, node.width, node.height)
+            != (layout.left, layout.bottom, layout.width, layout.height)
+        {
+            node.left = layout.left;
+            node.bottom = layout.bottom;
+            node.width = layout.width;
+            node.height = layout.height;
+        }
+        let rgba = if reading < 0.0 {
+            widget
+                .gauge
+                .negative_colour
+                .or(widget.gauge.positive_colour)
+        } else {
+            widget.gauge.positive_colour
+        }
+        .unwrap_or([1.0, 1.0, 1.0, 0.0]);
+        let colour = if widget.gauge.is_pointer() || widget.gauge.fire_graphic.is_some() {
+            Color::WHITE
+        } else {
+            Color::srgba(rgba[1], rgba[2], rgba[3], rgba[0])
+        };
+        if let Some(mut image) = image {
+            if image.color != colour {
+                image.color = colour;
+            }
+            let area = widget.gauge.area.as_ref().map_or(
+                Rect::from_corners(Vec2::ZERO, widget.texture_size),
+                |area| {
+                    Rect::from_corners(
+                        Vec2::new(area.x as f32, area.y as f32),
+                        Vec2::new((area.x + area.width) as f32, (area.y + area.height) as f32),
+                    )
+                },
+            );
+            let mut source = area;
+            if !widget.gauge.is_pointer() && widget.gauge.fire_graphic.is_none() {
+                if widget.gauge.orientation == 0 {
+                    source.min.x += area.width()
+                        * ((rect.x - widget.position.x) / widget.position.width) as f32;
+                    source.max.x =
+                        source.min.x + area.width() * (rect.width / widget.position.width) as f32;
+                } else {
+                    source.min.y += area.height()
+                        * ((rect.y - widget.position.y) / widget.position.height) as f32;
+                    source.max.y = source.min.y
+                        + area.height() * (rect.height / widget.position.height) as f32;
+                }
+            }
+            if image.rect != Some(source) {
+                image.rect = Some(source);
+            }
+        } else if background.0 != colour {
+            background.0 = colour;
+        }
+    }
 
     for (widget, mut ui, mut visibility, mut image_node) in &mut image_widgets {
         let value = control_value(&widget.control_type, &tel);
@@ -1039,6 +1288,54 @@ mod tests {
     use super::*;
     use openrailsrs_formats::{AnimController, AnimNode, Animation, ShapeFile};
     use std::path::PathBuf;
+
+    #[test]
+    fn gauge_bar_and_pointer_follow_authored_axis_and_zero() {
+        let position = ScreenRect {
+            x: 20.0,
+            y: 30.0,
+            width: 100.0,
+            height: 40.0,
+        };
+        let mut gauge = CabGaugeParams {
+            scale_min: 0.0,
+            scale_max: 10.0,
+            direction: 0,
+            ..Default::default()
+        };
+        let bar = gauge_rect(&position, &gauge, 2.5, Vec2::ONE);
+        assert_eq!(
+            (bar.x, bar.y, bar.width, bar.height),
+            (20.0, 30.0, 25.0, 40.0)
+        );
+        gauge.orientation = 1;
+        gauge.direction = 1;
+        let bar = gauge_rect(&position, &gauge, 2.5, Vec2::ONE);
+        assert_eq!(
+            (bar.x, bar.y, bar.width, bar.height),
+            (20.0, 60.0, 100.0, 10.0)
+        );
+        gauge.orientation = 0;
+        gauge.direction = 0;
+        gauge.scale_min = -10.0;
+        let negative = gauge_rect(&position, &gauge, -5.0, Vec2::ONE);
+        let positive = gauge_rect(&position, &gauge, 5.0, Vec2::ONE);
+        assert_eq!((negative.x, negative.width), (45.0, 25.0));
+        assert_eq!((positive.x, positive.width), (70.0, 25.0));
+        gauge.direction = 1;
+        let bar = gauge_rect(&position, &gauge, 5., Vec2::ONE);
+        assert_eq!((bar.x, bar.width), (positive.x, positive.width));
+        gauge.orientation = 1;
+        let bar = gauge_rect(&position, &gauge, 5., Vec2::ONE);
+        assert_eq!((bar.y, bar.height), (50., 10.));
+        gauge.direction = 0;
+        let bar = gauge_rect(&position, &gauge, 5., Vec2::ONE);
+        assert_eq!((bar.y, bar.height), (40., 10.));
+        gauge.orientation = 0;
+        gauge.style = Some("POINTER".into());
+        let pointer = gauge_rect(&position, &gauge, 0.0, Vec2::new(8.0, 6.0));
+        assert_eq!((pointer.x, pointer.width), (66.0, 8.0));
+    }
 
     #[test]
     fn letterbox_centers_panel() {

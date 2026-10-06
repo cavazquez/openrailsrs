@@ -16,6 +16,20 @@ use openrailsrs_or_shader::coordinates::{
 /// the node name is diagnostic only (#99). When the shape uses a zero-root hierarchy,
 /// matrix 0 translation is cleared before controllers run (OR `SharedShape` load, #94).
 pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
+    animation_pose_matrices_with_clock(shape, key, None)
+}
+
+/// OR analog clocks select hand quadrants from simulation time, independently
+/// of a shape's looping key. Ordinary animations keep their authored key.
+pub fn animation_pose_matrices_with_clock(
+    shape: &ShapeFile,
+    key: f32,
+    clock_s: Option<f64>,
+) -> Vec<Matrix43> {
+    let key = clock_s
+        .filter(|t| t.is_finite())
+        .filter(|_| shape_has_day_clock(shape))
+        .map_or(key, |t| (t.rem_euclid(86400.) / 60.) as f32);
     let mut pose: Vec<Matrix43> = shape.matrices.iter().map(|m| m.matrix).collect();
     if shape_zero_root_translation(shape)
         && let Some(root) = pose.get_mut(0)
@@ -32,9 +46,69 @@ pub fn animation_pose_matrices(shape: &ShapeFile, key: f32) -> Vec<Matrix43> {
         if i >= pose.len() {
             continue;
         }
-        pose[i] = animate_matrix(pose[i], &node.controllers, key);
+        if let Some(quadrant) = clock_s.and_then(|t| clock_quadrant(&node.name, t)) {
+            for controller in &node.controllers {
+                let keys = match controller {
+                    AnimController::SlerpRot { keys } | AnimController::TcbRot { keys } => keys,
+                    _ => continue,
+                };
+                // A native OR hand has the four quadrants plus the closing key.
+                if keys.len() < 5 {
+                    continue;
+                }
+                let q = quadrant.floor() as usize;
+                let frame = keys[q].0 + (keys[q + 1].0 - keys[q].0) * quadrant.fract();
+                pose[i] = apply_controller(pose[i], controller, frame);
+            }
+        } else {
+            pose[i] = animate_matrix(pose[i], &node.controllers, key);
+        }
     }
     pose
+}
+
+fn clock_quadrant(name: &str, clock_s: f64) -> Option<f32> {
+    if !clock_s.is_finite() {
+        return None;
+    }
+    let name = name.to_ascii_lowercase();
+    let centis = (clock_s.rem_euclid(86400.) * 100.).floor();
+    let hour = (centis / 360000.).floor() % 12.;
+    let minute = (centis / 6000.).floor() % 60.;
+    let second = (centis / 100.).floor() % 60.;
+    Some(if name.starts_with("orts_hhand_clock") {
+        (hour + minute / 60.) / 3.
+    } else if name.starts_with("orts_mhand_clock") {
+        minute / 15.
+    } else if name.starts_with("orts_shand_clock") {
+        second / 15.
+    } else if name.starts_with("orts_chand_clock") {
+        (centis % 6000.) / 1500.
+    } else {
+        return None;
+    } as f32)
+}
+
+pub fn shape_has_native_clock(shape: &ShapeFile) -> bool {
+    shape.animations.first().is_some_and(|a| {
+        a.nodes
+            .iter()
+            .any(|n| clock_quadrant(&n.name, 0.).is_some())
+    }) || shape_has_day_clock(shape)
+}
+
+/// Older Chiltern clocks encode a 24-hour day with 1440 minute keys.
+/// Explicit hand names and day length keep ordinary loops out of this path.
+fn shape_has_day_clock(shape: &ShapeFile) -> bool {
+    shape.animations.first().is_some_and(|a| {
+        a.frame_count == 1440
+            && a.nodes.iter().any(|n| {
+                n.name.to_ascii_lowercase().starts_with("hour_hand") && !n.controllers.is_empty()
+            })
+            && a.nodes.iter().any(|n| {
+                n.name.to_ascii_lowercase().starts_with("minute_hand") && !n.controllers.is_empty()
+            })
+    })
 }
 
 /// True when the shape has a usable loop animation (controllers + frame count).
@@ -283,8 +357,8 @@ pub fn update_world_shape_anim(
     let dt = time.delta_secs();
     // Placements of one WORLD shape advance with the same key. Cache both the
     // complete authored pose and the matrix-local delta for this frame.
-    let mut pose_cache: HashMap<(usize, u32), Vec<Matrix43>> = HashMap::new();
-    let mut local_cache: HashMap<(usize, usize, u32, bool), Transform> = HashMap::new();
+    let mut pose_cache: HashMap<(usize, u32, Option<u64>), Vec<Matrix43>> = HashMap::new();
+    let mut local_cache = HashMap::new();
     for (mut state, binding, view_visibility, mut transform) in &mut query {
         state.key += dt * binding.speed;
         if binding.frame_count > 0.0 {
@@ -301,13 +375,20 @@ pub fn update_world_shape_anim(
         let shape_id = Arc::as_ptr(&binding.shape) as usize;
         let key_bits = state.key.to_bits();
         let pose = pose_cache
-            .entry((shape_id, key_bits))
-            .or_insert_with(|| animation_pose_matrices(binding.shape.as_ref(), state.key));
+            .entry((shape_id, key_bits, binding.clock_time_s.map(f64::to_bits)))
+            .or_insert_with(|| {
+                animation_pose_matrices_with_clock(
+                    binding.shape.as_ref(),
+                    state.key,
+                    binding.clock_time_s,
+                )
+            });
         let local = *local_cache
             .entry((
                 shape_id,
                 state.matrix_idx,
                 key_bits,
+                binding.clock_time_s.map(f64::to_bits),
                 binding.baked_rest_mesh,
             ))
             .or_insert_with(|| {
@@ -336,6 +417,7 @@ pub fn update_world_shape_anim(
 /// Binds a cloned shape + matrix index for generic world animation.
 #[derive(Component, Clone)]
 pub struct ShapeAnimBinding {
+    pub clock_time_s: Option<f64>,
     /// Shared authored data; WORLD placements must not deep-clone a complete shape.
     pub shape: Arc<ShapeFile>,
     pub matrix_idx: usize,
@@ -353,6 +435,18 @@ pub struct ShapeAnimBinding {
 mod tests {
     use super::*;
     use openrailsrs_formats::{AnimController, AnimNode, Animation, Matrix43, NamedMatrix};
+
+    #[test]
+    fn native_clock_hands_use_distinct_time_quadrants_and_wrap_at_midnight() {
+        let t = 9. * 3600. + 30. * 60. + 45.25;
+        assert_eq!(clock_quadrant("ORTS_HHAND_CLOCK", t), Some(3.1666667));
+        assert_eq!(clock_quadrant("orts_mhand_clock", t), Some(2.));
+        assert_eq!(clock_quadrant("orts_shand_clock", t), Some(3.));
+        assert!((clock_quadrant("orts_chand_clock", t).unwrap() - 3.0166667).abs() < 1e-6);
+        assert_eq!(clock_quadrant("orts_hhand_clock", 86400.), Some(0.));
+        assert!(clock_quadrant("WHEELS1", t).is_none());
+        assert!(clock_quadrant("orts_hhand_clock", f64::NAN).is_none());
+    }
 
     fn identity_matrix() -> Matrix43 {
         Matrix43 {
@@ -382,6 +476,29 @@ mod tests {
             }],
         });
         shape
+    }
+
+    #[test]
+    fn older_day_clock_uses_authored_minute_keys_and_does_not_run_as_a_loop() {
+        let mut shape = sliding_shape();
+        shape.animations[0].frame_count = 1440;
+        shape.animations[0].nodes[0].name = "hour_hand".into();
+        shape.animations[0].nodes[0].controllers = vec![AnimController::LinearPos {
+            keys: vec![(0., [0., 0., 0.]), (1440., [0., 1440., 0.])],
+        }];
+        let mut minute = shape.animations[0].nodes[0].clone();
+        minute.name = "minute_hand.1".into();
+        shape.animations[0].nodes.push(minute);
+        shape.matrices.push(shape.matrices[0].clone());
+        assert!(shape_has_native_clock(&shape));
+        let pose = animation_pose_matrices_with_clock(&shape, 9., Some(5. * 3600. + 36. * 60.));
+        assert_eq!(pose[0].rows[3][1], 336.);
+        assert_eq!(pose[1].rows[3][1], 336.);
+        assert_eq!(
+            animation_pose_matrices_with_clock(&shape, 9., Some(86400.))[0].rows[3][1],
+            0.
+        );
+        assert_eq!(animation_pose_matrices(&shape, 9.)[0].rows[3][1], 9.);
     }
 
     #[test]

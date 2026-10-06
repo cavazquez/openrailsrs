@@ -198,8 +198,12 @@ pub enum WorldItem {
         position: Vec3,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
-        /// First value of `PickupType` (5=water, 6/2=coal, 7=diesel, …).
+        /// First value of `PickupType` (5=fuel water, 6=fuel coal, 7=diesel, …).
         pickup_type: Option<u32>,
+        /// Native PickupCapacity: quantity and flow in pounds / pounds per second.
+        pickup_capacity: Option<[f64; 2]>,
+        pickup_anim_data: Option<[f64; 2]>,
+        speed_range_mps: Option<[f64; 2]>,
         /// TDB `TrItemId` item ids (database index 0).
         tr_item_ids: Vec<u32>,
         /// From preceding `Tr_Watermark`.
@@ -1287,6 +1291,9 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
             qdir,
             matrix3x3,
             pickup_type: find_named_u32(fields, "PickupType"),
+            pickup_capacity: find_named_pair(fields, "PickupCapacity"),
+            pickup_anim_data: find_named_pair(fields, "PickupAnimData"),
+            speed_range_mps: find_named_pair(fields, "SpeedRange"),
             tr_item_ids: find_tdb_tr_item_ids(fields),
             static_detail_level: 0,
         },
@@ -2097,6 +2104,9 @@ Tr_Worldfile (
 	Pickup (
 		UiD ( 512 )
 		PickupType ( 5 0 )
+		PickupCapacity ( 200000 2000 )
+		PickupAnimData ( 3 2 )
+		SpeedRange ( 0 0 )
 		TrItemId ( 0 768 )
 		FileName ( RF_GW_WaterColumn.s )
 		Position ( -857.82 94.1064 -499.292 )
@@ -2149,6 +2159,17 @@ Tr_Worldfile (
         };
         assert_eq!(file_name.as_deref(), Some("RF_GW_WaterColumn.s"));
         assert_eq!(*pickup_type, Some(5));
+        if let WorldItem::Pickup {
+            pickup_capacity,
+            pickup_anim_data,
+            speed_range_mps,
+            ..
+        } = world.items.iter().find(|i| i.kind() == "Pickup").unwrap()
+        {
+            assert_eq!(*pickup_capacity, Some([200000., 2000.]));
+            assert_eq!(*pickup_anim_data, Some([3., 2.]));
+            assert_eq!(*speed_range_mps, Some([0., 0.]));
+        }
         assert_eq!(tr_item_ids, &vec![768]);
         let Some(WorldItem::Hazard {
             haz_file,

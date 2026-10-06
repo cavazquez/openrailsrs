@@ -1370,7 +1370,62 @@ señal. Se rechaza con un diagnóstico; no se sustituye la parada por otra.
    aspecto indicado por la señalización; no se desactivó su control para
    corregir la grúa.
 
-El objeto es un punto de abastecimiento de agua, no una señal. La animación
-de abastecimiento por operación aún no está implementada; aquí se comprueba
-su posición de reposo. Las animaciones continuas declaradas por el autor con
+El objeto es un punto de abastecimiento de agua, no una señal. Para comprobar
+su operación, seguir la sección 43; aquí se comprueba su posición de reposo.
+Las animaciones continuas declaradas por el autor con
 `StaticFlags.Animate` conservan su reproducción.
+
+## 43. Recorrido v4, cabinas, abastecedores, fluidez y tres formaciones
+
+Reiniciá el binario recién compilado. Los recursos originales siguen en la
+carpeta que indica **Biblioteca → Instalado → Abrir carpeta**.
+
+1. **Viaje completo.** Elegí Chiltern v4, **RS_Football Special** y
+   **Birmingham Pullman**. El monitor debe listar Banbury General, Bicester
+   North, Princes Risborough y High Wycombe. En cada llegada compará **1**
+   (cabina) con **2** (exterior): deben verse vías, andenes, edificios y señales.
+   El escenario tiene que continuar al avanzar, sin terminar en terreno vacío.
+   Detenete dentro de 10 m del punto marcado y atendé puertas/pasajeros. Al final
+   deben figurar cuatro paradas y Servicio completado. El horario original puede
+   generar retrasos; no se ha alargado para hacer pasar la prueba.
+2. **Cabinas e interiores.** En Pullman, alterná **1**, **Alt+1** y **5**;
+   repetí **5** para pasar al siguiente coche. Los cristales deben mostrar el
+   exterior y las texturas del salón deben conservar su contraste. Repetí de
+   noche y pulsá **I** en la cabina 2D y 3D: la luz interna debe cambiar sin
+   encender el cielo. Elegí también la formación original **RS_Football Special**, de vapor,
+   y su cabina 2D: el nivel de agua debe cambiar al usar los inyectores desde B;
+   fuego y carbón deben conservar las texturas originales. Las agujas y manijas
+   deben responder al regulador y al freno. Un recurso que realmente falta debe
+   seguir informado como ausente, sin sustituirlo por el de otra locomotora.
+3. **Relojes y abastecimiento.** Mirá el reloj del andén de Banbury: debe marcar
+   la hora del monitor. Pausá con **P** y comprobá que las manecillas se detienen.
+   Usá la formación **RS_Football Special**, con 4994 Downton Hall y su ténder.
+   Consumí agua del ténder usando un inyector; luego cerrá el regulador, frená
+   y alineá la toma del ténder con una grúa de agua. La grúa compatible está
+   aproximadamente a **113 m de avance desde el inicio**, sobre la misma vía;
+   atendé antes la parada de Banbury. Las grúas de otras vías no son candidatas.
+   En **B**, pulsá **Abastecer en la toma más cercana**. El brazo debe
+   abrirse una vez y el agua del ténder, visible en B, debe aumentar; el agua de
+   caldera se controla con el inyector. Pausar detiene la transferencia. Cancelar, alejarse
+   o completar el depósito devuelve el brazo al reposo. Con Pullman, las grúas
+   de agua deben permanecer quietas: un motor diésel necesita su abastecedor
+   compatible. Guardar y cargar conserva las reservas y desconecta la toma.
+4. **Fluidez.** Repetí el viaje y abrí **F8 → Diagnóstico** para mirar los datos
+   de rendimiento.
+   La memoria puede subir al cargar nuevos sectores y debe estabilizarse cuando
+   se descargan los que quedaron atrás. Comprobá las transiciones de detalle
+   desde el exterior. Los contadores de partida distinguen la carga inicial;
+   el resultado medido y las condiciones están en PLAYER_POLISH_QA.md.
+5. **Formaciones.** Para vapor y diésel, usá las dos formaciones anteriores:
+   probá arrancar, soltar regulador para ir por inercia, frenar, guardar y cargar.
+   El diésel debe consumir incluso al ralentí y permitir parar y arrancar los
+   motores desde B. El vapor debe consumir reservas y mostrar presión y nivel.
+   **1960CentralWR8Car** se comprueba con un perfil separado de cuarto riel:
+   necesita alimentación y captadores compatibles. El archivo original de v4
+   declara 25 kV globales; eso no demuestra electrificación local de todas las
+   vías de Banbury ni certifica el sistema de cuarto riel. Para probar ausencia
+   de corriente, declarala explícitamente en el perfil. El ejemplo
+   `electric_supply` permite probar corte y recuperación de alimentación;
+   no incorpora por sí mismo los coches
+   originales de 1960. La prueba específica de esa formación y su alcance están
+   documentados en PLAYER_POLISH_QA.md.

@@ -323,6 +323,7 @@ pub fn part_anim_bundle(
         return None;
     }
     let binding = ShapeAnimBinding {
+        clock_time_s: None,
         shape: Arc::clone(shape),
         matrix_idx,
         speed: 0.0,

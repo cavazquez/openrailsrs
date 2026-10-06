@@ -19,6 +19,7 @@ pub mod native_dynamics;
 pub mod path;
 pub mod path_data;
 pub mod physics;
+pub mod refill;
 pub mod runner;
 pub mod scripted_driver;
 pub mod state;

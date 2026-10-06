@@ -976,5 +976,149 @@ Evidencia local, sin versionar contenido descargado:
 
 Prueba manual en la
 [sección 42](PLAYER_MANUAL_TESTS.md#42-salón-del-pullman-y-grúas-de-agua-en-banbury).
-El abastecimiento por operación sigue pendiente; esta corrección valida el
-reposo del objeto y el contraste, sin alterar archivos originales ni oráculos.
+Esta primera corrección validó el reposo del objeto y el contraste. La operación
+de abastecimiento se incorpora en la siguiente revisión, con recursos originales.
+
+
+## Chiltern v4: viaje completo y tres formaciones — 2026-10-06
+
+Se conservan la revisión del autor `8236df20`, los archivos descargados fuera de
+Git y Open Rails **1.6.1** como referencia. Se completó RS_Football Special con
+**Birmingham Pullman**, desde Banbury General hasta High Wycombe, pasando por
+Bicester North y Princes Risborough: **62.680 m** recorridos, cuatro paradas,
+error de posición de **2,62–3,43 m**, velocidad de llegada menor de **0,1 m/s** y
+ninguna salida anticipada. Bicester terminó con 265 s de retraso y High Wycombe
+con 110 s; se conservaron los horarios originales. No se trasladan a este
+ensayo las tolerancias de paridad física del piloto de tres estaciones.
+
+Las ocho capturas de cabina/exterior y la captura final muestran el escenario
+cargado en las cuatro estaciones. El terminal tiene cero errores de programas
+SIGSCR, shaders pendientes/fallidos, cargas GPU/terreno pendientes o shapes
+cercanas sin activar. La cabina mantiene sus 69 partes y sus ventanas. La
+revisión visual comprueba continuidad y conservación de los recursos; no es
+una comparación de píxeles contra capturas nuevas de OR 1.6.1.
+
+### Cabinas y operación de la grúa
+
+Se inspeccionaron las cabinas diurnas/nocturnas, con luz apagada y encendida,
+de las tres formaciones y dos vistas de pasajeros del Pullman. El 1960 muestra
+sus ocho controles 2D; el Hall muestra catorce de diecinueve controles. Los
+cinco restantes no tienen `Graphic` en el CVF del autor —blower, damper,
+inyectores de agua y small ejector—, por lo que no se inventan sprites para
+ellos. El nivel de agua y las capas de fuego/carbón ahora usan sus gráficos
+nativos. El Pullman conserva 69 partes 3D y 17 enlaces de matrices CVF.
+Las variantes diurnas, `NIGHT` y `CABLIGHT` se seleccionan con la luz de cabina;
+las de 3D se preparan en el trabajador y mantienen sus mipmaps y samplers.
+Después de subirlas a la GPU se liberan sus píxeles de RAM; cambiar la luz
+reutiliza los handles y no depende de conservar esa copia. Los materiales
+que no cambiaron se conservan sin volver a publicarlos. Las imágenes que
+generan los instrumentos y las utilizadas por la cabina 2D mantienen su
+acceso desde la CPU.
+Las capturas del Pullman con la luz apagada/encendida mantienen idénticos
+los píxeles de la zona de cielo y andén comparada a través del parabrisas;
+la iluminación se aplica al interior.
+
+La formación Hall con su ténder se alineó con la grúa `-6111:14955:1414` de
+Banbury, a unos 113 m del punto inicial. Su toma nativa tiene offset −2,84 m y
+ancho 0,4 m: se conserva el alcance máximo de **2,7 m**, sin ampliarlo para
+hacer pasar el ensayo. El contacto quedó a 0,002 m. La precondición de la
+prueba retiró 4.000 kg de un ténder inicialmente lleno; no cambió los recursos
+originales. La operación real transfirió **544,31 kg** y pasó de **14.143,69**
+a **14.688,01 kg** de agua. Treinta cuadros en pausa conservaron reloj,
+cantidad transferida, agua y key operativo 1. Cancelar volvió todas las grúas
+al key 0. Las dos capturas muestran el brazo sobre el ténder y de regreso.
+El perfil conserva el caudal del WORLD original: 2.000 lb/s, no un valor
+inventado. Las pruebas de reservas finitas y guardar/cargar comprueban además
+que no se recupera combustible consumido ni se reinicia una conexión al cargar.
+
+### Fluidez durante los 63 km
+
+Se comparó el commit anterior con la versión final, incluyendo publicación de
+mallas repartida por cuadro, instancias GPU, objetos animados y las variantes
+de iluminación de cabina. Las ejecuciones usaron RX 7600,
+Vulkan/RADV, Weston privado, 1280×720, tiempo despejado, cabina del Pullman,
+radio de vista de 450 m, conducción de prueba al 75%, tiempo ×32 y audio apagado.
+Cada una arrancó con su propia caché de texturas. Los resultados distinguen
+la carga inicial del recorrido:
+
+- Cuadros de partida de más de 100 ms: **17 → 19**.
+- P99 de partida: **87 → 89 ms**; P50 y P95: **25 ms** en ambas ejecuciones.
+- Mayor cuadro durante la partida: **140,3 → 174,7 ms**; pico inicial:
+  **1.557 → 1.580 ms**. Quedan tirones y trabajo de carga inicial por mejorar.
+- Pico RSS interno: **2.824,7 → 2.673,9 MiB**, una reducción de **150,9 MiB**
+  (5,3%); RSS final: **2.482,1 → 2.447,8 MiB**.
+- Pico de VRAM del proceso: **1.320,4 → 1.596,6 MiB**, medido con DRM fdinfo.
+  Las variantes de iluminación permanecen disponibles en la GPU.
+  La RAM no se trasladó íntegramente a la GPU.
+- Tiempo real del proceso: **170,0 → 167,5 s**. Los resultados de las cuatro
+  paradas son idénticos; los cambios no alteran la física.
+
+La medición intermedia de la publicación repartida, antes de añadir todas las
+variantes de cabina, había reducido los cuadros de más de 100 ms de 17 a 12 y
+el P99 de 87 a 83 ms. Ese resultado aislado no se atribuye a la versión final.
+Con las variantes completas se detectó un pico RSS de 2.993,3 MiB; liberar
+sus copias de CPU y evitar actualizaciones de materiales que no cambiaron
+lo redujo a los 2.673,9 MiB finales. Las capturas nocturnas con cambio de luz
+después de la carga conservan las 69 partes y cero shaders pendientes/fallidos.
+
+Son ejecuciones individuales del mismo caso, no una garantía para otros equipos
+o radios de vista. La memoria mejoró; la medición final no demuestra una mejora
+de fluidez frente al commit anterior. Los relojes WORLD usan tiempo de simulación; los controles nativos de
+las grúas usan su posición operativa, sin repetir la animación de ida y vuelta.
+Los cambios de detalle existentes conservan su transición.
+
+### Vapor, diésel y eléctrico originales
+
+El ejemplo ejecutable `traction_probe` prueba 60 s de aceleración con regulador
+al 60%, 20 s de inercia, frenado de servicio y validación de guardar/cargar.
+Aísla señales y horarios en memoria, sin editar el contenido ni el escenario de
+entrada. Las tres formaciones cargaron sus recursos originales:
+
+- **RS_Football Special**, diez vehículos, vapor: máximo **84,35 km/h**,
+  frenada de **300,29 m**, parada por debajo de 0,1 m/s, consumo de carbón/fuego
+  y reservas válidas de agua y presión.
+- **Birmingham Pullman**, ocho vehículos, diésel: máximo **45,03 km/h**,
+  frenada de **176,41 m**, parada por debajo de 0,1 m/s y **5,13 L** consumidos.
+- **1960CentralWR8Car**, ocho vehículos, eléctrico: máximo **25,85 km/h**,
+  frenada de **27,80 m** y parada por debajo de 0,1 m/s. Los motores de los
+  vehículos 0 y 4 recibieron alimentación. Abrir el disyuntor corta la potencia
+  de ambos y permite continuar por inercia.
+
+El eléctrico se ensayó en un perfil explícito de **cuarto riel, 630 V**, sobre
+un tramo sintético de 6 km con un sector sin corriente entre 150 y 230 m.
+[La documentación de London Underground describe el sistema de tercer y cuarto
+riel de 630 V](https://foi.tfl.gov.uk/FOI-1078-2122/London%20Underground%20and%20Emergency%20Services.pdf).
+El captador se declara para los vehículos 0 y 4; no se deduce del nombre del
+tren. El TRK original declara `Electrified (1)` y `MaxLineVoltage (25000)` de
+forma global; ese dato no certifica alimentación local ni compatibilidad del
+tren de 1960. Las capturas de cabina en Banbury usan un perfil explícito sin
+corriente y captadores de cuarto riel; el ensayo de tracción usa otro perfil.
+El segundo motor estaba en el
+sector sin tensión en la instantánea tomada a los 60 s, aunque había recibido
+corriente antes. Esta prueba no certifica comportamiento físico completo ni
+scripts originales de esas locomotoras.
+
+También se mezclaron **seis WAV de 12 s**, interior y exterior de cada formación,
+con sus SMS/WAV originales. Todos tienen señal, cero recorte y cero WAV faltantes.
+Los RMS interior/exterior fueron **0,0800/0,1600**, **0,1014/0,1805** y
+**0,0955/0,1927**. Se comprueba decodificación y mezcla; no identidad acústica con
+la salida de OpenAL del original.
+
+Evidencia reproducible local: `tmp/five-v4-20261006/baseline-journey/`,
+`after-journey/`, `before-cab-cache-optimization/`, `final-journey/`,
+`station-audit/`, `cabs/`, `water-operation/`, `formations/`,
+`native-audio/`. Los perfiles
+usan las rutas absolutas de esta instalación y los originales no se versionan.
+Para probar otra instalación, prepará el escenario desde el menú y ejecutá
+`target/debug/examples/traction_probe /ruta/al/escenario.toml`; los eléctricos
+necesitan el suministro y los captadores explícitos que se describen en
+[TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
+
+Pasos y resultados esperados en la
+[sección 43 de pruebas manuales](PLAYER_MANUAL_TESTS.md#43-recorrido-v4-cabinas-abastecedores-fluidez-y-tres-formaciones).
+
+`check.sh` pasó con **1.643 pruebas Rust** (45 ignoradas por requerir condiciones
+externas) y **59 Python**, además de formato, Clippy con `-D warnings`, build,
+web y oráculos de aceptación. Los ensayos nativos descritos arriba se ejecutaron
+por separado sobre esta instalación de v4. Los archivos de resultados previos
+y la configuración de lanzamiento del usuario se conservaron.

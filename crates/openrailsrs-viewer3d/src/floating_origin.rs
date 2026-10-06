@@ -275,6 +275,7 @@ mod tests {
             .spawn((
                 placement,
                 ShapeAnimBinding {
+                    clock_time_s: None,
                     shape: std::sync::Arc::new(openrailsrs_formats::ShapeFile::default()),
                     matrix_idx: 0,
                     speed: 0.0,

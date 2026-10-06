@@ -62,6 +62,21 @@ pub struct CabInteriorState {
     render_asset: Option<crate::shapes::ShapeRenderAsset>,
     runtime: Option<cab_cvf::CabCvfRuntime>,
     cvf_path: Option<PathBuf>,
+    pub(crate) texture_lighting: Vec<CabTextureBinding>,
+}
+
+pub(crate) struct CabTextureBinding {
+    pub or_material: Option<Handle<crate::or_cab_material::OrCabMaterial>>,
+    pub standard_material: Handle<StandardMaterial>,
+    /// Day, dark with lights off, dark with lights on.
+    pub variants: [(Handle<Image>, LinearRgba); 3],
+}
+
+#[derive(Default)]
+struct PreparedCabLighting {
+    paths: HashMap<String, [Option<PathBuf>; 3]>,
+    images: HashMap<PathBuf, (Image, bool)>,
+    samplers: HashMap<i32, (Option<i32>, Option<f32>)>,
 }
 
 struct PreparedCab {
@@ -70,7 +85,102 @@ struct PreparedCab {
     geometry: crate::shapes::LoadedShape,
     textures: crate::shapes::PrefetchedTextures,
     texture_dirs: Vec<PathBuf>,
+    lighting: PreparedCabLighting,
     elapsed_ms: f64,
+}
+
+fn cab_lighting_paths(
+    geometry: &crate::shapes::LoadedShape,
+    dirs: &[&Path],
+    cab_dir: &Path,
+) -> PreparedCabLighting {
+    let mut lighting = PreparedCabLighting::default();
+    for name in geometry.texture_file.iter().chain(
+        geometry
+            .parts
+            .iter()
+            .filter_map(|p| p.texture_file.as_ref()),
+    ) {
+        lighting.paths.entry(name.clone()).or_insert_with(|| {
+            [(false, false), (true, false), (true, true)].map(|(dark, light)| {
+                crate::shapes::resolve_cvf_graphic_path_lighting(dirs, cab_dir, name, dark, light)
+            })
+        });
+    }
+    lighting.samplers.extend(
+        geometry
+            .parts
+            .iter()
+            .map(|p| (p.prim_state_idx, (p.tex_addr_mode, p.mip_map_lod_bias))),
+    );
+    lighting
+}
+
+fn publish_cab_lighting(
+    prepared: PreparedCabLighting,
+    asset: &crate::shapes::ShapeRenderAsset,
+    images: &mut Assets<Image>,
+    materials: &Assets<StandardMaterial>,
+    or_materials: &Assets<crate::or_cab_material::OrCabMaterial>,
+    handles: &mut HashMap<(PathBuf, i32), Handle<Image>>,
+) -> Vec<CabTextureBinding> {
+    asset
+        .parts
+        .iter()
+        .filter_map(|part| {
+            let paths = prepared.paths.get(part.texture_name.as_ref()?)?;
+            let base = part
+                .or_cab_material
+                .as_ref()
+                .and_then(|h| or_materials.get(h))
+                .map(|m| &m.base_texture)
+                .or_else(|| materials.get(&part.material)?.base_color_texture.as_ref())?;
+            let (addr, bias) = prepared
+                .samplers
+                .get(&part.prim_state_idx)
+                .copied()
+                .unwrap_or_default();
+            let variants = paths.each_ref().map(|path| {
+                let Some(path) = path else {
+                    return (base.clone(), LinearRgba::WHITE);
+                };
+                let Some((image, brightened)) = prepared.images.get(path) else {
+                    return (base.clone(), LinearRgba::WHITE);
+                };
+                let key = (
+                    path.clone(),
+                    crate::shapes::texture_cache_sampler_key(addr, bias),
+                );
+                let image = handles
+                    .entry(key)
+                    .or_insert_with(|| {
+                        let mut image = image.clone();
+                        openrailsrs_bevy_scenery::textures::apply_msts_texture_sampler(
+                            &mut image, addr, bias,
+                        );
+                        images.add(image)
+                    })
+                    .clone();
+                // The 3D instruments generate their own images. Lighting only
+                // swaps handles, so these atlases need no CPU copy after upload.
+                if let Some(mut image) = images.get_mut(&image) {
+                    image.asset_usage = bevy::asset::RenderAssetUsages::RENDER_WORLD;
+                }
+                let tint = crate::shapes::apply_msts_vertex_tint(
+                    crate::shapes::cab_albedo_tint(*brightened),
+                    part.solid_color,
+                    part.shader_name.as_deref(),
+                )
+                .to_linear();
+                (image, tint)
+            });
+            Some(CabTextureBinding {
+                or_material: part.or_cab_material.clone(),
+                standard_material: part.material.clone(),
+                variants,
+            })
+        })
+        .collect()
 }
 
 impl CabInteriorState {
@@ -601,15 +711,35 @@ pub fn sync_cab_interior(
                         openrailsrs_bevy_scenery::textures::TextureFlags::NIGHT,
                     ),
                 );
+                let mut lighting =
+                    cab_lighting_paths(&geometry, &refs, path.parent().unwrap_or(Path::new(".")));
+                paths.extend(lighting.paths.values().flatten().flatten().cloned());
                 paths.sort();
                 paths.dedup();
                 let textures = crate::shapes::prefetch_ace_textures(&paths);
+                // Decode every authored lighting variation on the worker.
+                // Toggling I, sunrise and sunset only swap cached GPU handles.
+                for path in &paths {
+                    if let Some(ace) = textures.aces.get(path) {
+                        lighting
+                            .images
+                            .insert(path.clone(), crate::shapes::cab_ace_to_image(ace));
+                    } else if path
+                        .extension()
+                        .is_some_and(|e| e.eq_ignore_ascii_case("dds"))
+                        && let Ok(bytes) = std::fs::read(path)
+                        && let Ok(image) = crate::shapes::decode_dds_to_rgba_image(&bytes)
+                    {
+                        lighting.images.insert(path.clone(), (image, false));
+                    }
+                }
                 Some(PreparedCab {
                     cvf,
                     shape,
                     geometry,
                     textures,
                     texture_dirs,
+                    lighting,
                     elapsed_ms: started.elapsed().as_secs_f64() * 1000.0,
                 })
             }));
@@ -638,6 +768,7 @@ pub fn sync_cab_interior(
             .iter()
             .map(PathBuf::as_path)
             .collect::<Vec<_>>();
+        let mut texture_cache = HashMap::new();
         let asset = crate::shapes::shape_render_asset_from_loaded_with_ace_cache(
             prepared.geometry,
             &refs,
@@ -645,7 +776,7 @@ pub fn sync_cab_interior(
             &mut images,
             &mut materials,
             Some(&mut or_materials),
-            &mut HashMap::new(),
+            &mut texture_cache,
             &prepared.textures,
             Color::srgb(0.35, 0.38, 0.42),
             Some(true),
@@ -655,6 +786,14 @@ pub fn sync_cab_interior(
             openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(
                 openrailsrs_bevy_scenery::textures::TextureFlags::NIGHT,
             ),
+        );
+        state.texture_lighting = publish_cab_lighting(
+            prepared.lighting,
+            &asset,
+            &mut images,
+            &materials,
+            &or_materials,
+            &mut texture_cache,
         );
         state.render_asset = Some(asset.clone());
         state.runtime = cvf_state.runtime.clone();
@@ -832,6 +971,87 @@ mod tests {
     use crate::rolling_stock::ConsistVehicleVisual;
     use std::collections::HashSet;
     use std::path::PathBuf;
+
+    #[test]
+    fn cab_lighting_reuses_gpu_atlases_after_cpu_images_are_released() {
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let or_materials = Assets::<crate::or_cab_material::OrCabMaterial>::default();
+        let base = images.add(Image::default());
+        let material = materials.add(StandardMaterial {
+            base_color_texture: Some(base),
+            ..default()
+        });
+        let asset = crate::shapes::ShapeRenderAsset {
+            combined_mesh: Handle::default(),
+            parts: vec![crate::shapes::ShapePartAsset {
+                prim_state_idx: 0,
+                sub_object_idx: 0,
+                sort_index: 0,
+                cab_matrix_idx: None,
+                mesh: Handle::default(),
+                material,
+                or_cab_material: None,
+                has_texture: true,
+                is_transparent: false,
+                texture_name: Some("panel.ace".into()),
+                shader_name: Some("Tex".into()),
+                light_mat_idx: None,
+                solid_color: None,
+                lever_pivot_at_mesh_center: false,
+                lever_local_axis: None,
+                bounds_center: None,
+            }],
+            has_texture: true,
+            has_night_subobj: false,
+            texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0),
+        };
+        let paths = ["day/panel.ace", "night/panel.ace", "cablight/panel.ace"].map(PathBuf::from);
+        let prepared = || PreparedCabLighting {
+            paths: HashMap::from([("panel.ace".into(), paths.clone().map(Some))]),
+            images: paths
+                .iter()
+                .cloned()
+                .map(|p| (p, (Image::default(), false)))
+                .collect(),
+            samplers: HashMap::from([(0, (Some(1), Some(-0.5)))]),
+        };
+        let mut handles = HashMap::new();
+        let first = publish_cab_lighting(
+            prepared(),
+            &asset,
+            &mut images,
+            &materials,
+            &or_materials,
+            &mut handles,
+        );
+        assert_eq!(first.len(), 1);
+        let variants = first[0].variants.clone();
+        assert_ne!(variants[0].0, variants[1].0);
+        for (image, _) in &variants {
+            assert_eq!(
+                images.get(image).unwrap().asset_usage,
+                bevy::asset::RenderAssetUsages::RENDER_WORLD
+            );
+        }
+        // Render-only images leave the main world after their GPU upload. A
+        // subsequent cab publication must reuse their handles without pixels.
+        let ids: Vec<_> = images.iter().map(|(id, _)| id).collect();
+        for id in ids {
+            images.remove(id);
+        }
+        let second = publish_cab_lighting(
+            prepared(),
+            &asset,
+            &mut images,
+            &materials,
+            &or_materials,
+            &mut handles,
+        );
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].variants, variants);
+        assert_eq!(images.len(), 0);
+    }
 
     fn cab_fixture_eng() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))

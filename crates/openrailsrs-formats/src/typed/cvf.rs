@@ -296,9 +296,13 @@ pub struct CabGaugeParams {
     /// `POINTER` → shape MultiState; otherwise solid/liquid native quad.
     pub style: Option<String>,
     pub units: Option<String>,
-    /// RGBA 0–1 (`PositiveColour` / `ControlColour`).
+    /// ARGB 0–1 (`PositiveColour` / `ControlColour`), matching the native colour order.
     pub positive_colour: Option<[f32; 4]>,
     pub negative_colour: Option<[f32; 4]>,
+    /// Authored source rectangle / pointer dimensions in ACE pixels.
+    pub area: Option<ScreenRect>,
+    /// `Firebox.Graphic`; the normal graphic is its `FuelCoal` layer.
+    pub fire_graphic: Option<String>,
 }
 
 impl Default for CabGaugeParams {
@@ -310,8 +314,10 @@ impl Default for CabGaugeParams {
             direction: 1,
             style: None,
             units: None,
-            positive_colour: Some([1.0, 1.0, 0.0, 1.0]),
-            negative_colour: Some([1.0, 0.0, 0.0, 1.0]),
+            positive_colour: Some([1.0, 1.0, 1.0, 0.0]),
+            negative_colour: Some([1.0, 1.0, 0.0, 0.0]),
+            area: None,
+            fire_graphic: None,
         }
     }
 }
@@ -732,6 +738,7 @@ fn parse_control_entry(entry: &[Ast]) -> Result<Option<CabControl>, FormatError>
         "DIAL" => parse_dial(entry)?,
         "DIGITAL" => parse_digital(entry)?,
         "GAUGE" => parse_gauge(entry)?,
+        "FIREBOX" => parse_firebox(entry)?,
         "SCREENDISPLAY" | "SCREEN" => parse_screen(entry)?,
         "TWOSTATEDISPLAY" | "TWOSTATE" => parse_two_state(entry)?,
         "TRISTATEDISPLAY" | "TRISTATE" => parse_tri_state(entry)?,
@@ -992,6 +999,21 @@ fn parse_gauge(items: &[Ast]) -> Result<CabControl, FormatError> {
     })
 }
 
+fn parse_firebox(items: &[Ast]) -> Result<CabControl, FormatError> {
+    Ok(CabControl::Gauge {
+        control_type: parse_control_type(items)?,
+        position: find_screen_rect(items, "Firebox")?,
+        graphic: find_string_in_list(items, "FuelCoal").unwrap_or_default(),
+        gauge: CabGaugeParams {
+            orientation: 1,
+            direction: 1,
+            style: Some("FIREBOX".into()),
+            fire_graphic: find_string_in_list(items, "Graphic"),
+            ..Default::default()
+        },
+    })
+}
+
 fn parse_screen(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
     let position = find_screen_rect(items, "ScreenDisplay").unwrap_or(ScreenRect {
@@ -1086,6 +1108,21 @@ fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
     }
     gauge.style = parse_control_style(items);
     gauge.units = find_string_in_list(items, "Units");
+    gauge.area = find_named_numbers(items, "Area")
+        .filter(|n| {
+            n.len() >= 4
+                && n[..4].iter().all(|v| v.is_finite())
+                && n[0] >= 0.
+                && n[1] >= 0.
+                && n[2] > 0.
+                && n[3] > 0.
+        })
+        .map(|n| ScreenRect {
+            x: n[0],
+            y: n[1],
+            width: n[2],
+            height: n[3],
+        });
     gauge.positive_colour =
         parse_named_control_colour(items, "PositiveColour").or(gauge.positive_colour);
     gauge.negative_colour =
@@ -1093,7 +1130,7 @@ fn parse_gauge_params(items: &[Ast]) -> CabGaugeParams {
     gauge
 }
 
-/// `PositiveColour ( n (ControlColour ( r g b )) … )` → RGBA 0–1 (A=1).
+/// `PositiveColour ( n (ControlColour ( r g b )) … )` → ARGB 0–1 (A=1).
 fn parse_named_control_colour(items: &[Ast], key: &str) -> Option<[f32; 4]> {
     walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
         if list.len() < 2 {
@@ -1615,6 +1652,26 @@ fn collect_numbers(items: &[Ast]) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn firebox_preserves_original_fire_and_coal_layers() {
+        let ast = crate::parse_from_first_paren("(Tr_CabViewFile (CabViewControls (Firebox (Type FIREBOX FIREBOX) (Position 91 393 123 84) (Graphic fire.ace) (FuelCoal coal.ace))))").unwrap();
+        let cab = CabViewFile::from_ast(&ast).unwrap();
+        let CabControl::Gauge {
+            graphic,
+            gauge,
+            position,
+            ..
+        } = &cab.controls[0]
+        else {
+            panic!("firebox gauge");
+        };
+        assert_eq!(graphic, "coal.ace");
+        assert_eq!(gauge.fire_graphic.as_deref(), Some("fire.ace"));
+        assert_eq!(gauge.orientation, 1);
+        assert_eq!(gauge.direction, 1);
+        assert_eq!(position.y, 393.);
+    }
     use crate::parser::parse_from_first_paren;
 
     #[test]
@@ -1814,6 +1871,7 @@ mod tests {
       (Orientation ( 1 ))
       (DirIncrease ( 1 ))
       (Units ( AMPS ))
+      (Area ( 5 6 32 64 ))
       (PositiveColour ( 1 (ControlColour ( 0 255 0 )) ))
       (NegativeColour ( 1 (ControlColour ( 255 0 0 )) ))
     )
@@ -1831,6 +1889,15 @@ mod tests {
         match &cvf.controls[0] {
             CabControl::Gauge { gauge, .. } => {
                 assert_eq!(gauge.orientation, 1);
+                assert_eq!(
+                    gauge.area,
+                    Some(ScreenRect {
+                        x: 5.,
+                        y: 6.,
+                        width: 32.,
+                        height: 64.
+                    })
+                );
                 assert_eq!(gauge.direction, 1);
                 assert!(!gauge.is_pointer());
                 assert_eq!(gauge.units.as_deref(), Some("AMPS"));
@@ -1848,6 +1915,14 @@ mod tests {
             CabControl::Gauge { gauge, .. } => assert!(gauge.is_pointer()),
             other => panic!("expected Gauge POINTER, got {other:?}"),
         }
+        assert_eq!(
+            CabGaugeParams::default().positive_colour,
+            Some([1., 1., 1., 0.])
+        );
+        assert_eq!(
+            CabGaugeParams::default().negative_colour,
+            Some([1., 1., 0., 0.])
+        );
     }
 
     #[test]

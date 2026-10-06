@@ -100,6 +100,7 @@ pub mod windshield;
 pub mod world;
 pub mod world_instancing;
 mod world_lod_fade;
+pub mod world_operations;
 pub mod world_tile_index;
 
 #[cfg(test)]
@@ -303,6 +304,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<precipitation::PrecipitationState>()
             .init_resource::<traffic::TrainRenderCache>()
             .init_resource::<performance::JourneyPerformance>()
+            .init_resource::<world_operations::RefillTargets>()
             .init_resource::<sky::FogState>()
             .init_resource::<overhead_wire::RouteWireConfig>()
             .init_resource::<teleport::TeleportDialog>()
@@ -366,6 +368,8 @@ impl Plugin for ViewerPlugin {
                     signal_animation::update_signal_semaphores
                         .after(live::live_driver_input)
                         .before(openrailsrs_bevy_scenery::shapes::update_world_shape_anim),
+                    world_operations::update_operational_animations
+                        .before(openrailsrs_bevy_scenery::shapes::update_world_shape_anim),
                     openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
                     rolling_stock_anim::update_consist_car_track_poses
                         .after(live::update_live_train_marker)
@@ -375,6 +379,12 @@ impl Plugin for ViewerPlugin {
                         .after(rolling_stock_anim::update_consist_car_track_poses),
                 )
                     .chain()
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                PostUpdate,
+                world_operations::update_pickup_targets
+                    .after(bevy::transform::TransformSystems::Propagate)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
@@ -577,6 +587,8 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 train_lighting::update_cab_lighting
+                    .after(cab_view::sync_cab_interior)
+                    .after(route_lighting::update_route_sun)
                     .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )

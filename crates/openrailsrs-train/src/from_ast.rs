@@ -83,6 +83,33 @@ pub fn load_consist_curve_parameters(
         .collect()
 }
 
+/// Fuel intakes in formation order; retain the author's offset and width.
+pub fn load_consist_intake_points(
+    consist: &Path,
+    base: &Path,
+) -> Result<Vec<Vec<openrailsrs_formats::IntakePoint>>, TrainError> {
+    let ast = parse_vehicle_text(
+        &read_msts_file_to_string(consist).map_err(|e| TrainError::Parse(e.to_string()))?,
+    )?;
+    ConsistFile::from_ast(&ast)?
+        .entries
+        .iter()
+        .map(|entry| {
+            let (relative, engine) = match entry {
+                ConsistEntry::Engine { path, .. } => (path, true),
+                ConsistEntry::Wagon { path, .. } => (path, false),
+            };
+            let path = resolve_consist_entry_path(base, relative);
+            if engine && crate::steam_loader::is_toml_eng(&path).unwrap_or(false) {
+                return Ok(vec![]);
+            }
+            Ok(openrailsrs_formats::parse_intake_points(
+                &openrailsrs_formats::read_vehicle_ast(&path)?,
+            ))
+        })
+        .collect()
+}
+
 pub fn load_consist_native_parameters(
     consist: &Path,
     base: &Path,

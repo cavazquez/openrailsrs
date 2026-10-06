@@ -244,6 +244,7 @@ mod tests {
             transfer: None,
             car_spawner: None,
             signal: None,
+            pickup: None,
             tr_item_ids: item_ids.to_vec(),
             static_detail_level: 0,
             loop_animation: false,

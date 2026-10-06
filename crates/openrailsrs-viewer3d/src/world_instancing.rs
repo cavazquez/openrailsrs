@@ -1492,6 +1492,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                pickup: None,
                 loop_animation: false,
             },
             ShapeInstancePlacement {
@@ -1503,6 +1504,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                pickup: None,
                 loop_animation: false,
             },
             ShapeInstancePlacement {
@@ -1514,6 +1516,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                pickup: None,
                 loop_animation: false,
             },
         ];
@@ -1598,6 +1601,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                pickup: None,
                 loop_animation: false,
             })
             .collect();

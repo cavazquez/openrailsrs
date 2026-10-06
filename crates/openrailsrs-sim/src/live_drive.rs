@@ -150,6 +150,8 @@ pub struct LiveDriveSession {
     pub scenario_name: String,
     pub formation: crate::FormationState,
     pub curve_parameters: Vec<openrailsrs_formats::VehicleCurveParameters>,
+    pub intake_points: Vec<Vec<openrailsrs_formats::IntakePoint>>,
+    pub refilling: Option<crate::refill::RefillOperation>,
     pub signal_overrides: HashMap<String, SignalAspect>,
     pub service_id: String,
     pub native_signals: crate::native_signals::NativeSignalRuntime,
@@ -314,6 +316,10 @@ impl LiveDriveSession {
             &consist_path,
             consist_root(&consist_path),
         )?;
+        let intake_points = openrailsrs_train::from_ast::load_consist_intake_points(
+            &consist_path,
+            consist_root(&consist_path),
+        )?;
         let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
             a_n: d.a_n,
             b_n_per_mps: d.b_n_per_mps,
@@ -442,6 +448,8 @@ impl LiveDriveSession {
             service_id: "Jugador".into(),
             external_occupancy: HashMap::new(),
             curve_parameters,
+            intake_points,
+            refilling: None,
             dispatcher: crate::DispatcherStatus::default(),
             own_track_reservations: vec![],
             external_track_reservations: vec![],
@@ -1214,6 +1222,7 @@ impl LiveDriveSession {
     where
         F: FnMut(&RegionTransition),
     {
+        self.tick_refill(step_dt);
         self.exterior.tick(step_dt);
         self.tick_signals(step_dt);
         self.tick_gameplay(step_dt);

@@ -246,6 +246,15 @@ impl LiveDriveSession {
             );
         }
         let n = saved.formation.coupled_count;
+        if saved.state.refill_used_kg.len() > 10000
+            || saved
+                .state
+                .refill_used_kg
+                .iter()
+                .any(|(k, v)| k.len() > 128 || !v.is_finite() || *v < 0.)
+        {
+            return Err("La partida tiene reservas de abastecimiento inválidas".into());
+        }
         if !saved.state.diesel.valid_for(&self.original_physics.diesel)
             || match (
                 &saved.state.boiler_state,
@@ -445,6 +454,8 @@ impl LiveDriveSession {
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
         self.script_tcs = host;
         self.state = saved.state;
+        // Reconnecting a saved train must not restart a hose without a WORLD match.
+        self.refilling = None;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
         self.exterior = saved.exterior;

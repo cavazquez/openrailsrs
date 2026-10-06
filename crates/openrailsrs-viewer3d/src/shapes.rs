@@ -1019,6 +1019,17 @@ fn cab_ace_brightened_to_image(
     )
 }
 
+/// Preserve native cab mipmaps and the optional debug albedo lift.
+pub(crate) fn cab_ace_to_image(ace: &AceFile) -> (Image, bool) {
+    let (rgba, brightened) = brighten_cab_ace_rgba(&ace.mip0);
+    let image = if brightened {
+        cab_ace_brightened_to_image(ace, &rgba, None, None)
+    } else {
+        openrailsrs_bevy_scenery::textures::ace_to_image_with_sampler(ace, None, None)
+    };
+    (image, brightened)
+}
+
 /// Scenery ACE with dark-atlas brighten on every mip (keeps anisotropic mip chain).
 fn scenery_ace_brightened_to_image(
     ace: &AceFile,
@@ -1085,7 +1096,10 @@ fn texture_cache_addr_key(tex_addr_mode: Option<i32>) -> i32 {
 }
 
 /// Pack address mode + quantized mip bias into the image cache key (#108).
-fn texture_cache_sampler_key(tex_addr_mode: Option<i32>, mip_map_lod_bias: Option<f32>) -> i32 {
+pub(crate) fn texture_cache_sampler_key(
+    tex_addr_mode: Option<i32>,
+    mip_map_lod_bias: Option<f32>,
+) -> i32 {
     let addr = tex_addr_mode.unwrap_or(1).clamp(0, 15);
     let bias_cents = (mip_map_lod_bias.unwrap_or(-3.0) * 100.0).round() as i32;
     addr + bias_cents.saturating_mul(16)
@@ -1286,59 +1300,78 @@ pub fn resolve_cvf_graphic_path(
         if path.is_file() {
             return Some(path);
         }
+        if let Some(resolved) = openrailsrs_formats::resolve_path_case_insensitive(&path)
+            && resolved.is_file()
+        {
+            return Some(resolved);
+        }
         if let Some(name) = path.file_name().and_then(|n| n.to_str())
-            && let Some(found) = resolve_texture_path_in_dirs(search_dirs, name)
+            && let Some(found) = resolve_cab_day_texture_path(search_dirs, name)
         {
             return Some(found);
         }
     }
-    resolve_texture_path_in_dirs(search_dirs, g)
+    resolve_cab_day_texture_path(search_dirs, g)
 }
 
-/// Prefer `NIGHT/` (OR `CABTextureManager`) when night cab textures are active.
+// Cab lighting chooses its variation explicitly. A day lookup must remain
+// daytime even when the outdoor scenery is currently selecting NIGHT.
+fn resolve_cab_day_texture_path(dirs: &[&Path], name: &str) -> Option<PathBuf> {
+    openrailsrs_bevy_scenery::textures::resolve_texture_path_in_dirs(
+        dirs,
+        name,
+        &TextureEnvironment::summer_day(),
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )
+}
+
+/// Prefer the original NIGHT/CABLIGHT variation next to the authored day ACE.
 pub fn resolve_cvf_graphic_path_night(
     search_dirs: &[&Path],
     cab_dir: &Path,
     graphic: &str,
     night: bool,
 ) -> Option<PathBuf> {
-    if night {
-        let g = graphic.trim().trim_matches('"').replace('\\', "/");
-        if let Some(name) = Path::new(&g).file_name().and_then(|n| n.to_str()) {
-            for dir in search_dirs {
-                for folder in ["NIGHT", "Night", "night"] {
-                    let candidate = dir.join(folder).join(name);
-                    if candidate.is_file() {
-                        return Some(candidate);
-                    }
-                    if let Some(resolved) =
-                        openrailsrs_formats::resolve_path_case_insensitive(&candidate)
-                        && resolved.is_file()
-                    {
-                        return Some(resolved);
-                    }
-                }
-            }
+    resolve_cvf_graphic_path_lighting(search_dirs, cab_dir, graphic, night, false)
+}
+
+/// OR uses CABLIGHT in darkness when the cab light is on. Without that
+/// directory it uses the day texture; an absent file within CABLIGHT falls
+/// back to NIGHT. Daytime always retains the day texture.
+pub fn resolve_cvf_graphic_path_lighting(
+    search_dirs: &[&Path],
+    cab_dir: &Path,
+    graphic: &str,
+    night: bool,
+    cab_light: bool,
+) -> Option<PathBuf> {
+    let day = resolve_cvf_graphic_path(search_dirs, cab_dir, graphic);
+    if !night {
+        return day;
+    }
+    let normalized = graphic.trim().trim_matches('"').replace('\\', "/");
+    let name = Path::new(&normalized).file_name()?;
+    let mut dirs: Vec<&Path> = day.as_ref().and_then(|p| p.parent()).into_iter().collect();
+    dirs.extend_from_slice(search_dirs);
+    let variant = |folder: &str| {
+        dirs.iter().find_map(|dir| {
+            openrailsrs_formats::resolve_path_case_insensitive(&dir.join(folder).join(name))
+                .filter(|p| p.is_file())
+        })
+    };
+    if cab_light {
+        if let Some(light) = variant("CABLIGHT") {
+            return Some(light);
         }
-        // Relative day path → sibling NIGHT/ next to the day ACE.
-        if let Some(day) = resolve_cvf_graphic_path(search_dirs, cab_dir, graphic)
-            && let (Some(parent), Some(name)) = (day.parent(), day.file_name())
-        {
-            for folder in ["NIGHT", "Night", "night"] {
-                let candidate = parent.join(folder).join(name);
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
-                if let Some(resolved) =
-                    openrailsrs_formats::resolve_path_case_insensitive(&candidate)
-                    && resolved.is_file()
-                {
-                    return Some(resolved);
-                }
-            }
+        let has_light_dir = dirs.iter().any(|dir| {
+            openrailsrs_formats::resolve_path_case_insensitive(&dir.join("CABLIGHT"))
+                .is_some_and(|p| p.is_dir())
+        });
+        if !has_light_dir {
+            return day;
         }
     }
-    resolve_cvf_graphic_path(search_dirs, cab_dir, graphic)
+    variant("NIGHT").or(day)
 }
 
 /// `OPENRAILSRS_CAB_NIGHT=1` forces night ACE lookup (OR dark / underground).
@@ -2829,6 +2862,46 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::path::PathBuf;
+
+    #[test]
+    fn cab_texture_lighting_keeps_authored_variations_and_native_fallbacks() {
+        let temp = tempfile::tempdir().unwrap();
+        let cab = temp.path().join("Cab");
+        std::fs::create_dir_all(cab.join("Night")).unwrap();
+        let day = cab.join("panel.ace");
+        let night = cab.join("Night/PANEL.ace");
+        std::fs::write(&day, []).unwrap();
+        std::fs::write(&night, []).unwrap();
+        let resolve = |dark, light| {
+            resolve_cvf_graphic_path_lighting(&[&cab], &cab, "panel.ace", dark, light)
+        };
+        assert_eq!(resolve(false, true), Some(day.clone()));
+        assert_eq!(resolve(true, false), Some(night.clone()));
+        assert_eq!(resolve(true, true), Some(day));
+        std::fs::create_dir(cab.join("cablight")).unwrap();
+        assert_eq!(resolve(true, true), Some(night));
+        let lit = cab.join("cablight/Panel.ace");
+        std::fs::write(&lit, []).unwrap();
+        assert_eq!(resolve(true, true), Some(lit));
+    }
+
+    #[test]
+    fn relative_shared_cab_graphic_resolves_case_without_borrowing_another_train() {
+        let root = tempfile::tempdir().unwrap();
+        let cab = root.path().join("TrainA/Cabview");
+        let common = root.path().join("Common.Cab/Pump");
+        std::fs::create_dir_all(&cab).unwrap();
+        std::fs::create_dir_all(&common).unwrap();
+        let needle = common.join("Needle.ace");
+        std::fs::write(&needle, b"lookup fixture").unwrap();
+        assert_eq!(
+            resolve_cvf_graphic_path(&[cab.as_path()], &cab, "../../COMMON.CAB/PUMP/needle.ace"),
+            Some(needle)
+        );
+        assert!(
+            resolve_cvf_graphic_path(&[cab.as_path()], &cab, "../../Absent/needle.ace").is_none()
+        );
+    }
 
     #[test]
     fn night_subobj_part_hidden_of_day_on_asset() {

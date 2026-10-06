@@ -10,8 +10,8 @@ pub mod pbr_sidecar;
 pub use anim::{
     ShapeAnimBinding, ShapeAnimState, animated_hierarchy_transform, animation_playback_speed,
     animation_pose_matrices, lever_entity_transform_at_mesh_center, lever_entity_transform_rebased,
-    shape_has_loop_animation, shape_matrix_chain_is_animated, update_world_shape_anim,
-    world_baked_anim_transform,
+    shape_has_loop_animation, shape_has_native_clock, shape_matrix_chain_is_animated,
+    update_world_shape_anim, world_baked_anim_transform,
 };
 pub use debug::{
     DebugFaceColorMode, MSTS_Z_BIAS_CLAMP, MSTS_Z_BIAS_WARN_ABS, ShapeMaterialDebugCtx,

@@ -167,6 +167,7 @@ pub struct ShapeInstancePlacement {
     /// WORLD `SignalSubObj` bitmask when this instance is a Signal mesh (#80).
     pub signal_sub_obj: Option<u32>,
     pub signal_patch: Option<std::sync::Arc<SignalPatch>>,
+    pub pickup: Option<openrailsrs_sim::refill::RefillStation>,
     /// Authored StaticFlags.Animate; controllers alone do not imply a loop.
     pub loop_animation: bool,
 }
@@ -541,6 +542,7 @@ pub struct WorldObject {
     pub car_spawner: Option<CarSpawnerPatch>,
     /// Signal head units / bitmask for lamp spawn (#37).
     pub signal: Option<SignalPatch>,
+    pub pickup: Option<openrailsrs_sim::refill::RefillStation>,
     /// TDB `TrItemId`s when this object references track items (Signal, Speedpost, …).
     pub tr_item_ids: Vec<u32>,
     /// From `.w` `Tr_Watermark` — HideWire uses levels 2/3 (#36).
@@ -1018,6 +1020,24 @@ fn try_object_from_item(
         }),
         _ => None,
     };
+    let pickup = match item {
+        WorldItem::Pickup {
+            uid,
+            pickup_type: Some(kind @ 5..=7),
+            pickup_capacity: Some([capacity, feed]),
+            pickup_anim_data,
+            speed_range_mps,
+            ..
+        } => Some(openrailsrs_sim::refill::RefillStation {
+            id: format!("{tile_x}:{tile_z}:{uid}"),
+            pickup_type: *kind,
+            capacity_kg: capacity * 0.45359237,
+            feed_kg_s: feed * 0.45359237,
+            opening_time_s: pickup_anim_data.map_or(1., |a| if a[1] > 0. { a[1] } else { 1. }),
+            speed_range_mps: speed_range_mps.unwrap_or([0., 0.]),
+        }),
+        _ => None,
+    };
     Ok(Some(WorldObject {
         kind: item.kind(),
         uid: item.uid(),
@@ -1038,6 +1058,7 @@ fn try_object_from_item(
         transfer,
         car_spawner,
         signal,
+        pickup,
         tr_item_ids: item.tr_item_ids(),
         static_detail_level: item.static_detail_level(),
         loop_animation: item.has_loop_animation(),
@@ -1559,6 +1580,7 @@ type AnimatedShapeSpawnBundle = (
 type AnimatedShapeSpawnEntry = (
     AnimatedShapeSpawnBundle,
     Option<crate::signal_animation::SignalSemaphore>,
+    Option<crate::world_operations::FuelPickupAnimation>,
 );
 
 /// GPU-instanced static opaque WORLD group (#58).
@@ -1627,6 +1649,8 @@ pub struct WorldSpawnProgress {
     anim_spawn_queue: Vec<AnimatedShapeSpawnEntry>,
     instanced_spawn_queue: Vec<InstancedShapeSpawnBundle>,
     spawn_index: usize,
+    instanced_spawn_index: usize,
+    animated_spawn_index: usize,
     shape_mesh_count: usize,
     shape_texture_count: usize,
     merged_shape_groups: usize,
@@ -1675,8 +1699,13 @@ impl WorldSpawnProgress {
             }
             WorldSpawnPhase::BuildingQueue => "Agrupando instancias en GPU...".into(),
             WorldSpawnPhase::SpawningEntities | WorldSpawnPhase::SpawningPlaceholders => {
-                let total = (self.spawn_queue.len() + self.instanced_spawn_queue.len()).max(1);
-                let current = self.spawn_index.min(total);
+                let total = (self.spawn_queue.len()
+                    + self.instanced_spawn_queue.len()
+                    + self.anim_spawn_queue.len())
+                .max(1);
+                let current =
+                    (self.spawn_index + self.instanced_spawn_index + self.animated_spawn_index)
+                        .min(total);
                 let pct = (current * 100) / total;
                 format!(
                     "Instanciando objetos en el mundo ({}% — {}/{})",
@@ -1731,6 +1760,8 @@ impl WorldSpawnProgress {
             anim_spawn_queue: Vec::new(),
             instanced_spawn_queue: Vec::new(),
             spawn_index: 0,
+            instanced_spawn_index: 0,
+            animated_spawn_index: 0,
             shape_mesh_count: 0,
             shape_texture_count: 0,
             merged_shape_groups: 0,
@@ -2017,6 +2048,7 @@ fn classify_one_object(
                     auto_z_bias: true,
                     signal_sub_obj: None,
                     signal_patch: None,
+                    pickup: None,
                     loop_animation: false,
                 });
             return;
@@ -2087,6 +2119,7 @@ fn classify_one_object(
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
+                    pickup: obj.pickup.clone(),
                     loop_animation: obj.loop_animation,
                 });
             return;
@@ -2207,10 +2240,11 @@ fn append_shape_spawn_entries_for_transforms(
     if asset.has_texture {
         *shape_texture_count += placements.len();
     }
+    let clock = shape_file.is_some_and(openrailsrs_bevy_scenery::shapes::shape_has_native_clock);
     let animated = shape_file.is_some_and(shape_has_loop_animation)
         && placements
             .iter()
-            .any(|p| p.loop_animation || p.signal_sub_obj.is_some());
+            .any(|p| p.loop_animation || p.signal_sub_obj.is_some() || p.pickup.is_some() || clock);
     let has_bank = placements.iter().any(|p| p.bank.is_some());
     let mergeable = !has_bank
         && !has_signal_filter
@@ -2372,7 +2406,10 @@ fn append_shape_spawn_entries_for_transforms(
                     part_index,
                     lod_idx: initial_lod_idx,
                 };
-                if (inst.loop_animation || inst.signal_sub_obj.is_some())
+                if (inst.loop_animation
+                    || inst.signal_sub_obj.is_some()
+                    || inst.pickup.is_some()
+                    || clock)
                     && shape_matrix_chain_is_animated(shape, matrix_idx)
                 {
                     let signal = inst.signal_patch.as_deref().and_then(|patch| {
@@ -2384,7 +2421,10 @@ fn append_shape_spawn_entries_for_transforms(
                             matrix_idx,
                         )
                     });
-                    let controlled = inst.signal_sub_obj.is_some();
+                    let pickup = inst.pickup.as_ref().map(|station| {
+                        crate::world_operations::FuelPickupAnimation::new(shape, station)
+                    });
+                    let controlled = inst.signal_sub_obj.is_some() || pickup.is_some() || clock;
                     anim_spawn_queue.push((
                         (
                             placement,
@@ -2398,6 +2438,7 @@ fn append_shape_spawn_entries_for_transforms(
                                 matrix_idx,
                             },
                             ShapeAnimBinding {
+                                clock_time_s: clock.then_some(0.),
                                 shape: shared_shape.clone(),
                                 matrix_idx,
                                 speed: if controlled { 0.0 } else { speed },
@@ -2407,6 +2448,7 @@ fn append_shape_spawn_entries_for_transforms(
                             },
                         ),
                         signal,
+                        pickup,
                     ));
                 } else {
                     // A shape can animate one small matrix while most of its parts
@@ -3943,7 +3985,8 @@ pub fn progressive_world_spawn_system(
             }
         }
         WorldSpawnPhase::SpawningEntities => {
-            if progress.spawn_index == 0
+            if progress.spawn_index + progress.instanced_spawn_index + progress.animated_spawn_index
+                == 0
                 && (!progress.spawn_queue.is_empty()
                     || !progress.anim_spawn_queue.is_empty()
                     || !progress.instanced_spawn_queue.is_empty())
@@ -3956,6 +3999,7 @@ pub fn progressive_world_spawn_system(
                 );
             }
             let end = (progress.spawn_index + spawn_batch).min(progress.spawn_queue.len());
+            let static_spawned = end - progress.spawn_index;
             let batch: Vec<ShapeSpawnBundle> = progress.spawn_queue[progress.spawn_index..end]
                 .iter()
                 .cloned()
@@ -3967,22 +4011,46 @@ pub fn progressive_world_spawn_system(
             commands.spawn_batch(batch);
             progress.spawn_index = end;
             if progress.spawn_index >= progress.spawn_queue.len() {
-                let instanced = std::mem::take(&mut progress.instanced_spawn_queue);
-                for mut bundle in instanced {
+                // All three queues share a bounded per-frame submission budget.
+                // Deferring hundreds of animated/instanced entities at once can
+                // stall Bevy when the commands are applied, despite cheap enqueue.
+                let mut left = spawn_batch.saturating_sub(static_spawned);
+                while progress.instanced_spawn_index < progress.instanced_spawn_queue.len()
+                    && left > 0
+                    && foreground_started.elapsed() < foreground_budget
+                {
+                    let mut bundle =
+                        progress.instanced_spawn_queue[progress.instanced_spawn_index].clone();
                     bundle.0 = view_transform(bundle.0, &origin);
                     commands.spawn(bundle);
+                    progress.instanced_spawn_index += 1;
+                    left -= 1;
                 }
-                // Animated bundles carry cloned ShapeFile — spawn one-by-one.
-                let animated = std::mem::take(&mut progress.anim_spawn_queue);
-                for (mut bundle, signal) in animated {
+                while progress.animated_spawn_index < progress.anim_spawn_queue.len()
+                    && left > 0
+                    && foreground_started.elapsed() < foreground_budget
+                {
+                    let (mut bundle, signal, pickup) =
+                        progress.anim_spawn_queue[progress.animated_spawn_index].clone();
                     bundle.0 = view_transform(bundle.0, &origin);
                     bundle.7.placement = view_transform(bundle.7.placement, &origin);
                     let mut entity = commands.spawn(bundle);
                     if let Some(signal) = signal {
                         entity.insert(signal);
                     }
+                    if let Some(pickup) = pickup {
+                        entity.insert(pickup);
+                    }
+                    progress.animated_spawn_index += 1;
+                    left -= 1;
                 }
-                progress.phase = WorldSpawnPhase::SpawningPlaceholders;
+                if progress.instanced_spawn_index == progress.instanced_spawn_queue.len()
+                    && progress.animated_spawn_index == progress.anim_spawn_queue.len()
+                {
+                    progress.instanced_spawn_queue.clear();
+                    progress.anim_spawn_queue.clear();
+                    progress.phase = WorldSpawnPhase::SpawningPlaceholders;
+                }
             }
         }
         WorldSpawnPhase::SpawningPlaceholders => {
@@ -4352,6 +4420,7 @@ pub fn spawn_world_boxes(
                         auto_z_bias: true,
                         signal_sub_obj: None,
                         signal_patch: None,
+                        pickup: None,
                         loop_animation: false,
                     });
                 continue;
@@ -4392,6 +4461,7 @@ pub fn spawn_world_boxes(
                         .then(|| obj.signal.as_ref().map(|s| s.signal_sub_obj))
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
+                    pickup: obj.pickup.clone(),
                     loop_animation: obj.loop_animation,
                 });
             continue;
@@ -4532,10 +4602,13 @@ pub fn spawn_world_boxes(
     for bundle in instanced_spawn_batches {
         commands.spawn(bundle);
     }
-    for (bundle, signal) in anim_spawn_batches {
+    for (bundle, signal, pickup) in anim_spawn_batches {
         let mut entity = commands.spawn(bundle);
         if let Some(signal) = signal {
             entity.insert(signal);
+        }
+        if let Some(pickup) = pickup {
+            entity.insert(pickup);
         }
     }
 
@@ -4752,6 +4825,7 @@ mod tests {
             auto_z_bias: false,
             signal_sub_obj: None,
             signal_patch: None,
+            pickup: None,
             loop_animation: false,
         };
         assert!(placement_has_shear(&sheared));
@@ -4771,6 +4845,7 @@ mod tests {
             auto_z_bias: false,
             signal_sub_obj: None,
             signal_patch: None,
+            pickup: None,
             loop_animation: false,
         };
         assert!(
@@ -4972,6 +5047,7 @@ mod tests {
             transfer: None,
             car_spawner: None,
             signal: None,
+            pickup: None,
             tr_item_ids: Vec::new(),
             static_detail_level: 0,
             loop_animation: false,
@@ -5290,6 +5366,7 @@ mod tests {
             auto_z_bias: false,
             signal_sub_obj: None,
             signal_patch: None,
+            pickup: None,
             loop_animation: false,
         };
         let scenery_loop = ShapeInstancePlacement {
@@ -5302,8 +5379,20 @@ mod tests {
             signal_sub_obj: Some(1),
             ..idle.clone()
         };
-        for placements in [vec![idle.clone()], vec![idle, scenery_loop, signal]] {
-            let mixed = placements.len() == 3;
+        let pickup = ShapeInstancePlacement {
+            transform: Transform::from_xyz(40., 0., 0.),
+            pickup: Some(openrailsrs_sim::refill::RefillStation {
+                id: "0:0:42".into(),
+                pickup_type: 5,
+                capacity_kg: 1000.,
+                feed_kg_s: 20.,
+                opening_time_s: 2.,
+                speed_range_mps: [0., 0.],
+            }),
+            ..idle.clone()
+        };
+        for placements in [vec![idle.clone()], vec![idle, scenery_loop, signal, pickup]] {
+            let mixed = placements.len() == 4;
             let mut static_queue = Vec::new();
             let mut animated_queue = Vec::new();
             let mut instanced_queue = Vec::new();
@@ -5328,7 +5417,7 @@ mod tests {
             );
             assert_eq!(static_queue.len(), 1, "idle pickup must keep its rest pose");
             assert_eq!(static_queue[0].0.translation.x, 10.0);
-            assert_eq!(animated_queue.len(), if mixed { 2 } else { 0 });
+            assert_eq!(animated_queue.len(), if mixed { 3 } else { 0 });
             if mixed {
                 let loop_binding = &animated_queue[0].0.7;
                 assert_eq!(loop_binding.speed, 30.0);
@@ -5336,6 +5425,13 @@ mod tests {
                 let signal_binding = &animated_queue[1].0.7;
                 assert_eq!(signal_binding.speed, 0.0);
                 assert_eq!(signal_binding.frame_count, 0.0);
+                let (bundle, _, pickup) = &animated_queue[2];
+                assert_eq!(bundle.7.speed, 0.);
+                assert_eq!(bundle.7.frame_count, 0.);
+                let pickup = pickup.as_ref().expect("operational pickup animation");
+                assert_eq!(pickup.id, "0:0:42");
+                assert_eq!(pickup.operating_frames, 1.);
+                assert_eq!(pickup.opening_time_s, 1.);
             }
         }
     }
@@ -5572,6 +5668,7 @@ mod tests {
                 auto_z_bias: false,
                 signal_sub_obj: None,
                 signal_patch: None,
+                pickup: None,
                 loop_animation: false,
             }],
         );
