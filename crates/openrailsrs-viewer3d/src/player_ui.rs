@@ -14,6 +14,9 @@ use crate::player_settings::{PlayerAction, PlayerSettings, player_data_dir};
 use crate::route_bootstrap::ViewerAppState;
 use crate::saved_game::{PendingSavedCamera, SavedCamera, SavedGame, slot_path};
 
+mod launcher;
+use launcher::{LibraryTab, NewGameStep, SettingsTab};
+
 const BG: Color = Color::srgb(0.045, 0.065, 0.095);
 const FIELD: Color = Color::srgb(0.10, 0.15, 0.21);
 const TEXT: Color = Color::srgb(0.93, 0.95, 0.98);
@@ -105,6 +108,8 @@ pub enum PlayerPanel {
     #[default]
     None,
     Menu,
+    NewGame,
+    Continue,
     Content,
     MissingResources,
     Pause,
@@ -134,7 +139,12 @@ pub struct PlayerUiState {
     map_scale: f32,
     map_initialized: bool,
     pause_before: bool,
-    return_to_menu: bool,
+    in_start_menu: bool,
+    navigation: Vec<PlayerPanel>,
+    new_game_step: NewGameStep,
+    new_game_advanced: bool,
+    library_tab: LibraryTab,
+    settings_tab: SettingsTab,
     pub(crate) notice: String,
     rebuild: bool,
     root: Option<Entity>,
@@ -154,7 +164,12 @@ impl Default for PlayerUiState {
             map_scale: 0.05,
             map_initialized: false,
             pause_before: false,
-            return_to_menu: false,
+            in_start_menu: false,
+            navigation: Vec::new(),
+            new_game_step: NewGameStep::Route,
+            new_game_advanced: false,
+            library_tab: LibraryTab::Installed,
+            settings_tab: SettingsTab::General,
             notice: String::new(),
             rebuild: true,
             root: None,
@@ -212,6 +227,11 @@ enum UiCommand {
     Save(usize),
     Load(usize),
     Resume(usize),
+    SelectRoute(usize),
+    NewGameStep(NewGameStep),
+    NewGameAdvanced,
+    LibraryTab(LibraryTab),
+    SettingsTab(SettingsTab),
     Cycle(MenuField, i32),
     NoteTab(usize),
     Advanced(usize),
@@ -286,6 +306,10 @@ fn label(
 ) -> Entity {
     p.spawn((
         Text::new(value),
+        Node {
+            flex_shrink: 0.0,
+            ..default()
+        },
         TextFont {
             font_size: FontSize::Px(size),
             ..default()
@@ -302,14 +326,17 @@ fn button(
     p.spawn((
         Button,
         Node {
+            min_width: Val::Px(0.0),
             padding: UiRect::axes(Val::Px(12.0), Val::Px(7.0)),
             min_height: Val::Px(32.0),
+            flex_shrink: 0.0,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             border_radius: BorderRadius::all(Val::Px(4.0)),
             ..default()
         },
         BackgroundColor(FIELD),
+        Name::new(format!("ui-{command:?}")),
         command,
     ))
     .with_children(|p| {
@@ -319,6 +346,8 @@ fn button(
 }
 fn row(p: &mut ChildSpawnerCommands<'_>, f: impl FnOnce(&mut ChildSpawnerCommands<'_>)) {
     p.spawn(Node {
+        flex_shrink: 0.0,
+        min_width: Val::Px(0.0),
         flex_direction: FlexDirection::Row,
         column_gap: Val::Px(8.0),
         row_gap: Val::Px(6.0),
@@ -371,6 +400,16 @@ fn target_screen_hud_camera(
 }
 fn enter_menu(mut ui: ResMut<PlayerUiState>) {
     ui.panel = PlayerPanel::Menu;
+    ui.in_start_menu = true;
+    ui.navigation.clear();
+    // Deterministic screenshots use the same screen builders as normal play.
+    // This override is ignored outside an explicitly armed menu capture.
+    if crate::capture::capture_enabled()
+        && std::env::var("OPENRAILSRS_SCREENSHOT_MENU").is_ok_and(|v| v == "1")
+        && let Ok(page) = std::env::var("OPENRAILSRS_SCREENSHOT_MENU_PAGE")
+    {
+        launcher::capture_page(&mut ui, &page);
+    }
     ui.rebuild = true;
 }
 fn spawn_toolbar(
@@ -379,6 +418,8 @@ fn spawn_toolbar(
     live: Option<Res<LiveDrive>>,
     settings: Res<PlayerSettings>,
 ) {
+    ui.in_start_menu = false;
+    ui.navigation.clear();
     if live.is_none() {
         return;
     }
@@ -490,17 +531,23 @@ fn spawn_toolbar(
         });
 }
 fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, panel: PlayerPanel) {
-    if ui.panel == PlayerPanel::Menu {
-        ui.return_to_menu = true;
-    }
     if ui.panel == panel {
-        close_panel(ui, live);
+        if panel != PlayerPanel::Menu {
+            close_panel(ui, live);
+        }
         return;
     }
     if ui.panel == PlayerPanel::None
         || (panel == PlayerPanel::Traction && ui.panel == PlayerPanel::Pause)
     {
         ui.pause_before = live.as_ref().is_some_and(|l| l.paused);
+    }
+    if panel == PlayerPanel::Menu {
+        ui.navigation.clear();
+    } else if let Some(index) = ui.navigation.iter().position(|p| *p == panel) {
+        ui.navigation.truncate(index);
+    } else if ui.panel != PlayerPanel::None {
+        ui.navigation.push(ui.panel);
     }
     ui.panel = panel;
     ui.rebuild = true;
@@ -516,16 +563,24 @@ fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, pane
 }
 fn close_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>) {
     let was_pause = ui.panel == PlayerPanel::Pause;
-    ui.panel = if ui.return_to_menu {
-        ui.return_to_menu = false;
+    ui.panel = if let Some(parent) = ui.navigation.pop() {
+        parent
+    } else if ui.in_start_menu {
         PlayerPanel::Menu
     } else {
         PlayerPanel::None
     };
     ui.awaiting_key = None;
+    ui.notice.clear();
     ui.rebuild = true;
     if let Some(l) = live {
-        l.paused = if was_pause { false } else { ui.pause_before };
+        l.paused = if ui.panel == PlayerPanel::None {
+            if was_pause { false } else { ui.pause_before }
+        } else if ui.panel == PlayerPanel::Traction {
+            ui.pause_before
+        } else {
+            true
+        };
     }
 }
 fn player_keys(
@@ -673,6 +728,33 @@ fn handle_buttons(
             },
             UiCommand::Start=>menu.prepare().map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;ui.notice="Cargando la partida…".into();}),
             UiCommand::Resume(slot)=>SavedGame::prepare_resume(&slot_path(*slot)).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;}),
+            UiCommand::SelectRoute(index) => {
+                let delta = *index as i32 - menu.route as i32;
+                menu.cycle_route(delta);
+                ui.new_game_step = NewGameStep::Route;
+                ui.new_game_advanced = false;
+                open_panel(&mut ui, &mut live, PlayerPanel::NewGame);
+                Ok(())
+            },
+            UiCommand::NewGameStep(step) => {
+                ui.new_game_step = *step;
+                ui.new_game_advanced = false;
+                ui.notice.clear();
+                Ok(())
+            },
+            UiCommand::NewGameAdvanced => {
+                ui.new_game_advanced = !ui.new_game_advanced;
+                Ok(())
+            },
+            UiCommand::LibraryTab(tab) => {
+                ui.library_tab = *tab;
+                Ok(())
+            },
+            UiCommand::SettingsTab(tab) => {
+                ui.settings_tab = *tab;
+                ui.awaiting_key = None;
+                Ok(())
+            },
             UiCommand::Save(slot)=>if let Some(l)=live.as_mut(){
                 camera.cameras.single().map_err(|_|"Cámara no disponible".into()).and_then(|(orbit, fly, transform)| {
                     let mut saved = SavedCamera::capture(*camera.follow, orbit, &camera.look, &camera.origin);
@@ -809,10 +891,10 @@ fn build_panel(
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Percent(7.0),
-                right: Val::Percent(7.0),
-                top: Val::Percent(8.0),
-                bottom: Val::Percent(8.0),
+                left: Val::Percent(6.0),
+                right: Val::Percent(6.0),
+                top: Val::Percent(6.0),
+                bottom: Val::Percent(6.0),
                 padding: UiRect::all(Val::Px(18.0)),
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(12.0),
@@ -829,9 +911,11 @@ fn build_panel(
                 label(
                     p,
                     match panel {
-                        PlayerPanel::Menu => "OPENRAILSRS · nueva partida",
-                        PlayerPanel::Content => "CONTENIDO OFICIAL",
-                        PlayerPanel::MissingResources => "ARCHIVOS FALTANTES Y UBICACIONES",
+                        PlayerPanel::Menu => "openrailsrs",
+                        PlayerPanel::NewGame => "Nueva partida",
+                        PlayerPanel::Continue => "Continuar",
+                        PlayerPanel::Content => "Biblioteca",
+                        PlayerPanel::MissingResources => "Detalle de recursos",
                         PlayerPanel::Pause => "PARTIDA EN PAUSA",
                         PlayerPanel::Notebook => "LIBRETA DEL SERVICIO",
                         PlayerPanel::Formation => "OPERACIONES DE LA FORMACIÓN",
@@ -845,13 +929,24 @@ fn build_panel(
                     ACCENT,
                 );
                 if panel != PlayerPanel::Menu {
-                    button(p, "Cerrar · Esc", UiCommand::Close);
+                    button(
+                        p,
+                        if ui.in_start_menu { "Volver · Esc" } else { "Cerrar · Esc" },
+                        UiCommand::Close,
+                    );
                 }
             });
+            match panel {
+                PlayerPanel::NewGame => launcher::build_steps(p, ui.new_game_step),
+                PlayerPanel::Content => launcher::build_library_tabs(p, ui.library_tab),
+                PlayerPanel::Settings => launcher::build_settings_tabs(p, ui.settings_tab),
+                _ => {}
+            }
             p.spawn((
                 Node {
                     flex_grow: 1.0,
                     min_height: Val::Px(0.0),
+                    min_width: Val::Px(0.0),
                     overflow: Overflow::scroll_y(),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(12.0),
@@ -861,13 +956,15 @@ fn build_panel(
                 PlayerScroll,
             ))
             .with_children(|p| match panel {
-                PlayerPanel::Menu => build_menu(p, &menu),
-                PlayerPanel::Content => build_content(p, &downloads, &menu),
+                PlayerPanel::Menu => launcher::build_home(p),
+                PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu),
+                PlayerPanel::Continue => launcher::build_continue(p),
+                PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu),
                 PlayerPanel::MissingResources => {
                     row(p, |p| {
                         button(p, "Reauditar esta formación", UiCommand::MissingAudit);
-                        button(p, "Volver a nueva partida", UiCommand::Open(PlayerPanel::Menu));
                     });
+                    label(p, menu.consist_status(), 13.0, TEXT);
                     content_diagnostics(p, &menu, true);
                 }
                 PlayerPanel::Pause => {
@@ -936,6 +1033,7 @@ fn build_panel(
                 }
                 PlayerPanel::Settings => build_settings(
                     p,
+                    ui.settings_tab,
                     &settings,
                     if live.is_some() {
                         content.environment
@@ -952,13 +1050,26 @@ fn build_panel(
                 }
                 PlayerPanel::None => {}
             });
+            match panel {
+                PlayerPanel::NewGame => launcher::build_launch_footer(p, &ui, &menu),
+                PlayerPanel::Menu => { button(p, "Salir", UiCommand::Exit); }
+                PlayerPanel::Settings => {
+                    row(p, |p| {
+                        button(p, "Guardar ajustes", UiCommand::SaveSettings);
+                        if ui.settings_tab == SettingsTab::Controls {
+                            button(p, "Restablecer controles", UiCommand::DefaultKeys);
+                        }
+                    });
+                }
+                _ => {}
+            }
             let status = label(
                 p,
                 if ui.notice.is_empty() {
-                    if panel == PlayerPanel::Menu {
-                        &menu.status
-                    } else if panel == PlayerPanel::MissingResources {
+                    if panel == PlayerPanel::MissingResources {
                         "Después de copiar archivos, pulsá Reauditar esta formación para actualizar el diagnóstico."
+                    } else if ui.in_start_menu {
+                        ""
                     } else {
                         "La partida queda pausada mientras esta ventana está abierta"
                     }
@@ -977,7 +1088,8 @@ fn build_panel(
 fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: MenuField) {
     row(p, |p| {
         p.spawn(Node {
-            width: Val::Px(145.0),
+            width: Val::Px(150.0),
+            flex_shrink: 0.0,
             ..default()
         })
         .with_children(|p| {
@@ -986,7 +1098,8 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
         button(p, "‹", UiCommand::Cycle(field, -1));
         p.spawn(Node {
             flex_grow: 1.0,
-            min_width: Val::Px(250.0),
+            min_width: Val::Px(0.0),
+            flex_basis: Val::Px(0.0),
             ..default()
         })
         .with_children(|p| {
@@ -1066,6 +1179,14 @@ fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu
             CAUTION,
         );
     }
+    if full && !audit.warnings.is_empty() {
+        label(
+            p,
+            format!("AVISOS DE COMPATIBILIDAD\n{}", audit.warnings.join("\n")),
+            12.0,
+            MUTED,
+        );
+    }
     if !full && !audit.missing_resources.is_empty() {
         button(
             p,
@@ -1101,175 +1222,6 @@ fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu
     }
 }
 
-fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
-    button(
-        p,
-        "Descargar contenido oficial",
-        UiCommand::Open(PlayerPanel::Content),
-    );
-    selector(
-        p,
-        "Ruta",
-        menu.routes.get(menu.route).cloned().unwrap_or_default(),
-        MenuField::Route,
-    );
-    selector(
-        p,
-        "Actividad / servicio",
-        menu.current().map(|c| c.name.clone()).unwrap_or_default(),
-        MenuField::Service,
-    );
-    selector(p, "Formación", menu.consist_label(), MenuField::Consist);
-    label(
-        p,
-        menu.consist_status(),
-        12.0,
-        Color::srgb(0.70, 0.80, 0.88),
-    );
-    content_diagnostics(p, menu, false);
-    selector(p, "Recorrido", menu.path_label(), MenuField::Path);
-    selector(
-        p,
-        "Hora de salida",
-        clock(menu.start_time_s),
-        MenuField::Time,
-    );
-    selector(
-        p,
-        "Estación del año",
-        ["Primavera", "Verano", "Otoño", "Invierno"][menu.season].into(),
-        MenuField::Season,
-    );
-    selector(
-        p,
-        "Hora visual",
-        menu.environment.time.label().into(),
-        MenuField::TimeSource,
-    );
-    selector(
-        p,
-        "Origen del clima",
-        menu.environment.weather.label().into(),
-        MenuField::WeatherSource,
-    );
-    selector(
-        p,
-        "Clima manual / respaldo",
-        menu.weather.label().into(),
-        MenuField::Weather,
-    );
-    label(
-        p,
-        "La hora de salida conserva el horario del servicio. Actual del lugar consulta Open-Meteo; muestra datos estimados y usa la zona horaria de la ruta. F10 permite volver al modo manual.",
-        12.0,
-        MUTED,
-    );
-    if menu.path != 0 {
-        label(
-            p,
-            "Elegir otro recorrido inicia una exploración hasta su destino. Para las tres paradas elegí Recorrido del servicio.",
-            12.0,
-            CAUTION,
-        );
-    }
-    row(p, |p| {
-        if menu.selected_audit_pending() {
-            label(p, "Revisando formación…", 13.0, MUTED);
-        } else {
-            button(p, "Iniciar partida", UiCommand::Start);
-        }
-        button(p, "Ajustes", UiCommand::Open(PlayerPanel::Settings));
-        button(p, "Salir", UiCommand::Exit);
-    });
-    label(p, "CONTINUAR UNA PARTIDA GUARDADA", 13.0, MUTED);
-    for slot in 0..3 {
-        row(p, |p| {
-            button(p, format!("Reanudar {}", slot + 1), UiCommand::Resume(slot));
-            label(p, save_label(slot), 12.0, TEXT);
-        });
-    }
-}
-fn build_content(
-    p: &mut ChildSpawnerCommands<'_>,
-    downloads: &crate::official_content::OfficialContent,
-    menu: &PlayerLaunchMenu,
-) {
-    let package = downloads.selected();
-    row(p, |p| {
-        button(p, "‹", UiCommand::ContentCycle(-1));
-        label(p, &package.name, 19., TEXT);
-        button(p, "›", UiCommand::ContentCycle(1));
-    });
-    label(
-        p,
-        format!(
-            "Autor: {} · {}\n{}\nDescarga aproximada: {:.0} MiB · instalación: {:.1} GiB",
-            package.author.name,
-            package.compensation,
-            package.url,
-            package.download_bytes as f64 / 1048576.,
-            package.install_bytes as f64 / 1073741824.
-        ),
-        14.,
-        TEXT,
-    );
-    label(
-        p,
-        "Catálogo: Open Rails. Las licencias pertenecen a los autores. Cada paquete se instala por separado; conservar recursos completos no certifica todos sus sistemas.",
-        13.,
-        MUTED,
-    );
-    row(p, |p| {
-        if downloads.busy() {
-            button(p, "Cancelar descarga", UiCommand::ContentCancel);
-        } else if package.automatic() {
-            button(
-                p,
-                "Buscar actualización e instalar",
-                UiCommand::ContentDownload,
-            );
-        }
-        button(p, "Ver catálogo oficial", UiCommand::ContentCatalogue);
-        button(
-            p,
-            "Volver a nueva partida",
-            UiCommand::Open(PlayerPanel::Menu),
-        );
-    });
-    dynamic(p, DynamicText::Content, 14.);
-    label(p, "ESCENARIO Y FORMACIÓN SELECCIONADOS", 13.0, MUTED);
-    content_diagnostics(p, menu, false);
-    for (index, path) in downloads.installed.iter().enumerate() {
-        row(p, |p| {
-            label(
-                p,
-                format!(
-                    "{}\nCarpeta: {}",
-                    crate::official_content::installed_label(path),
-                    path.display()
-                ),
-                13.,
-                TEXT,
-            );
-            if !downloads.busy() {
-                button(p, "Reauditar esta copia", UiCommand::ContentAudit(index));
-            }
-            button(p, "Abrir carpeta", UiCommand::ContentFolder(Some(index)));
-        });
-    }
-    label(
-        p,
-        format!(
-            "Paquetes instalados: {}\nDestino: {}",
-            downloads.installed.len(),
-            crate::player_settings::player_data_dir()
-                .join("official-content")
-                .display()
-        ),
-        13.,
-        MUTED,
-    );
-}
 fn poll_content_download(
     mut downloads: ResMut<crate::official_content::OfficialContent>,
     mut menu: ResMut<PlayerLaunchMenu>,
@@ -1278,7 +1230,8 @@ fn poll_content_download(
     let was_busy = downloads.busy();
     let ready = downloads.poll();
     if ready {
-        *menu = PlayerLaunchMenu::discover(std::path::Path::new("."), None);
+        menu.refresh_installed_content();
+        ui.rebuild = true;
     }
     if ui.panel == PlayerPanel::Content && (ready || was_busy != downloads.busy()) {
         ui.rebuild = true;
@@ -1296,7 +1249,7 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
         if (pending != menu.selected_audit_pending() || status != menu.status || reauditing)
             && matches!(
                 ui.panel,
-                PlayerPanel::Menu | PlayerPanel::MissingResources | PlayerPanel::Content
+                PlayerPanel::NewGame | PlayerPanel::MissingResources | PlayerPanel::Content
             )
         {
             ui.rebuild = true;
@@ -1492,218 +1445,230 @@ fn settings_row(
 }
 fn build_settings(
     p: &mut ChildSpawnerCommands<'_>,
+    tab: SettingsTab,
     s: &PlayerSettings,
     environment: crate::environment::EnvironmentSelection,
     cab_path: Option<&std::path::Path>,
 ) {
-    button(
-        p,
-        format!(
-            "Práctica rápida en estaciones: {}",
-            yes(s.quick_station_practice)
-        ),
-        UiCommand::Setting(SettingField::QuickStations, 0.0),
-    );
-    label(
-        p,
-        "Práctica: embarque hasta 5 s, sin espera de horario. Normal: respeta el servicio original.",
-        12.0,
-        MUTED,
-    );
-    settings_row(
-        p,
-        format!("Distancia del escenario: {:.0} m", s.view_distance_m),
-        SettingField::Distance,
-        500.0,
-    );
-    settings_row(
-        p,
-        format!("Campo visual de cabina: {:.0}°", s.cab_fov_deg),
-        SettingField::Fov,
-        5.0,
-    );
-    if let Some(path) = cab_path {
-        let profile = s
-            .cab_profiles
-            .get(path.to_string_lossy().as_ref())
-            .copied()
-            .unwrap_or_default();
-        label(
-            p,
-            format!(
-                "CABINA · {}",
-                path.file_name().unwrap_or_default().to_string_lossy()
-            ),
-            13.0,
-            ACCENT,
-        );
-        settings_row(
-            p,
-            format!(
-                "Altura del asiento 3D: {:+.0} cm",
-                profile.seat_height_m * 100.0
-            ),
-            SettingField::SeatHeight,
-            0.05,
-        );
-        settings_row(
-            p,
-            format!(
-                "Asiento 3D hacia atrás: {:+.0} cm",
-                profile.seat_back_m * 100.0
-            ),
-            SettingField::SeatBack,
-            0.05,
-        );
-        settings_row(
-            p,
-            format!("Alcance del barrido: {:.0}%", profile.wipe_scale * 100.0),
-            SettingField::WipeScale,
-            0.05,
-        );
-        button(
-            p,
-            "Restaurar puesto y barrido originales",
-            UiCommand::Setting(SettingField::CabReset, 0.0),
-        );
-    }
-    settings_row(
-        p,
-        format!("Tamaño de interfaz: {:.0}%", s.ui_scale * 100.0),
-        SettingField::Scale,
-        0.1,
-    );
-    button(
-        p,
-        format!(
-            "Peralte automático: {} · próxima partida",
-            yes(s.automatic_cant)
-        ),
-        UiCommand::Setting(SettingField::AutomaticCant, 0.),
-    );
-    label(
-        p,
-        "Guardá los ajustes y volvé a iniciar la partida para cambiar el peralte. La vía, el tren y la cabina comparten el perfil; los cambios y el peralte ya escrito por el autor se conservan.",
-        12.,
-        MUTED,
-    );
-    row(p, |p| {
-        button(
-            p,
-            format!("Sombras: {}", yes(s.shadows)),
-            UiCommand::Setting(SettingField::Shadows, 0.0),
-        );
-        button(
-            p,
-            format!("Niebla: {}", yes(s.fog)),
-            UiCommand::Setting(SettingField::Fog, 0.0),
-        );
-        button(
-            p,
-            format!("Velocidad: {}", s.speed_unit_label()),
-            UiCommand::Setting(SettingField::Units, 0.0),
-        );
-    });
-    button(
-        p,
-        format!("Modelo de niebla: {}", s.fog_quality.label()),
-        UiCommand::Setting(SettingField::FogQuality, 0.0),
-    );
-    label(p, "HORA Y CLIMA DEL LUGAR", 13.0, MUTED);
-    button(
-        p,
-        format!("Hora visual: {}", environment.time.label()),
-        UiCommand::Setting(SettingField::TimeSource, 0.0),
-    );
-    button(
-        p,
-        format!("Origen del clima: {}", environment.weather.label()),
-        UiCommand::Setting(SettingField::WeatherSource, 0.0),
-    );
-    button(
-        p,
-        format!("Elegir clima: {}", environment.manual_weather.label()),
-        UiCommand::Setting(SettingField::ManualWeather, 0.0),
-    );
-    button(
-        p,
-        format!("Rayos y destellos: {}", yes(s.lightning)),
-        UiCommand::Setting(SettingField::Lightning, 0.0),
-    );
-    label(
-        p,
-        "Elegir un clima vuelve al modo manual. La hora real usa la fecha y zona de la ruta; el horario del servicio sigue separado. Open-Meteo requiere conexión (datos estimados).",
-        12.0,
-        MUTED,
-    );
-    button(
-        p,
-        format!("Cálculo del clima: {}", s.weather_execution.label()),
-        UiCommand::Setting(SettingField::WeatherExecution, 0.0),
-    );
-    label(
-        p,
-        "Automático adapta el detalle. CPU calcula los copos; el dibujo usa el render elegido al iniciar.",
-        12.0,
-        MUTED,
-    );
-    button(
-        p,
-        format!("Renderizado al iniciar: {}", s.renderer.label()),
-        UiCommand::Setting(SettingField::Renderer, 0.0),
-    );
-    label(
-        p,
-        "Para cambiar el render: guardá los ajustes y volvé a iniciar el visor. CPU requiere un controlador de software.",
-        12.0,
-        MUTED,
-    );
-    button(
-        p,
-        format!("Sonido original: {}", yes(s.audio_enabled)),
-        UiCommand::Setting(SettingField::Audio, 0.0),
-    );
-    settings_row(
-        p,
-        format!("Volumen: {:.0}%", s.audio_volume * 100.0),
-        SettingField::Volume,
-        0.1,
-    );
-    label(
-        p,
-        "CONTROLES · clic en una asignación y pulsá la nueva tecla",
-        14.0,
-        ACCENT,
-    );
-    row(p, |p| {
-        for a in PlayerAction::ALL {
+    match tab {
+        SettingsTab::General => {
             button(
                 p,
-                format!("{}: {}", a.label(), s.key_label(a)),
-                UiCommand::Rebind(a),
+                format!("Velocidad: {}", s.speed_unit_label()),
+                UiCommand::Setting(SettingField::Units, 0.0),
+            );
+            button(
+                p,
+                format!(
+                    "Práctica rápida en estaciones: {}",
+                    yes(s.quick_station_practice)
+                ),
+                UiCommand::Setting(SettingField::QuickStations, 0.0),
+            );
+            label(
+                p,
+                "Práctica: embarque hasta 5 s, sin espera de horario. Normal: respeta el servicio original.",
+                12.0,
+                MUTED,
             );
         }
-    });
-    row(p, |p| {
-        button(p, "Restablecer controles", UiCommand::DefaultKeys);
-        button(p, "Guardar ajustes", UiCommand::SaveSettings);
-    });
+        SettingsTab::Graphics => {
+            settings_row(
+                p,
+                format!("Distancia del escenario: {:.0} m", s.view_distance_m),
+                SettingField::Distance,
+                500.0,
+            );
+            settings_row(
+                p,
+                format!("Campo visual de cabina: {:.0}°", s.cab_fov_deg),
+                SettingField::Fov,
+                5.0,
+            );
+            if let Some(path) = cab_path {
+                let profile = s
+                    .cab_profiles
+                    .get(path.to_string_lossy().as_ref())
+                    .copied()
+                    .unwrap_or_default();
+                label(
+                    p,
+                    format!(
+                        "CABINA · {}",
+                        path.file_name().unwrap_or_default().to_string_lossy()
+                    ),
+                    13.0,
+                    ACCENT,
+                );
+                settings_row(
+                    p,
+                    format!(
+                        "Altura del asiento 3D: {:+.0} cm",
+                        profile.seat_height_m * 100.0
+                    ),
+                    SettingField::SeatHeight,
+                    0.05,
+                );
+                settings_row(
+                    p,
+                    format!(
+                        "Asiento 3D hacia atrás: {:+.0} cm",
+                        profile.seat_back_m * 100.0
+                    ),
+                    SettingField::SeatBack,
+                    0.05,
+                );
+                settings_row(
+                    p,
+                    format!("Alcance del barrido: {:.0}%", profile.wipe_scale * 100.0),
+                    SettingField::WipeScale,
+                    0.05,
+                );
+                button(
+                    p,
+                    "Restaurar puesto y barrido originales",
+                    UiCommand::Setting(SettingField::CabReset, 0.0),
+                );
+            }
+            settings_row(
+                p,
+                format!("Tamaño de interfaz: {:.0}%", s.ui_scale * 100.0),
+                SettingField::Scale,
+                0.1,
+            );
+            button(
+                p,
+                format!(
+                    "Peralte automático: {} · próxima partida",
+                    yes(s.automatic_cant)
+                ),
+                UiCommand::Setting(SettingField::AutomaticCant, 0.),
+            );
+            label(
+                p,
+                "Guardá los ajustes y volvé a iniciar la partida para cambiar el peralte. La vía, el tren y la cabina comparten el perfil; los cambios y el peralte ya escrito por el autor se conservan.",
+                12.,
+                MUTED,
+            );
+            row(p, |p| {
+                button(
+                    p,
+                    format!("Sombras: {}", yes(s.shadows)),
+                    UiCommand::Setting(SettingField::Shadows, 0.0),
+                );
+                button(
+                    p,
+                    format!("Niebla: {}", yes(s.fog)),
+                    UiCommand::Setting(SettingField::Fog, 0.0),
+                );
+            });
+            button(
+                p,
+                format!("Modelo de niebla: {}", s.fog_quality.label()),
+                UiCommand::Setting(SettingField::FogQuality, 0.0),
+            );
+            button(
+                p,
+                format!("Renderizado al iniciar: {}", s.renderer.label()),
+                UiCommand::Setting(SettingField::Renderer, 0.0),
+            );
+            label(
+                p,
+                "Para cambiar el render: guardá los ajustes y volvé a iniciar el visor. CPU requiere un controlador de software.",
+                12.0,
+                MUTED,
+            );
+        }
+        SettingsTab::Environment => {
+            label(p, "HORA Y CLIMA DEL LUGAR", 13.0, MUTED);
+            button(
+                p,
+                format!("Hora visual: {}", environment.time.label()),
+                UiCommand::Setting(SettingField::TimeSource, 0.0),
+            );
+            button(
+                p,
+                format!("Origen del clima: {}", environment.weather.label()),
+                UiCommand::Setting(SettingField::WeatherSource, 0.0),
+            );
+            button(
+                p,
+                format!("Elegir clima: {}", environment.manual_weather.label()),
+                UiCommand::Setting(SettingField::ManualWeather, 0.0),
+            );
+            button(
+                p,
+                format!("Rayos y destellos: {}", yes(s.lightning)),
+                UiCommand::Setting(SettingField::Lightning, 0.0),
+            );
+            label(
+                p,
+                "Elegir un clima vuelve al modo manual. La hora real usa la fecha y zona de la ruta; el horario del servicio sigue separado. Open-Meteo requiere conexión (datos estimados).",
+                12.0,
+                MUTED,
+            );
+            button(
+                p,
+                format!("Cálculo del clima: {}", s.weather_execution.label()),
+                UiCommand::Setting(SettingField::WeatherExecution, 0.0),
+            );
+            label(
+                p,
+                "Automático adapta el detalle. CPU calcula los copos; el dibujo usa el render elegido al iniciar.",
+                12.0,
+                MUTED,
+            );
+        }
+        SettingsTab::Audio => {
+            button(
+                p,
+                format!("Sonido original: {}", yes(s.audio_enabled)),
+                UiCommand::Setting(SettingField::Audio, 0.0),
+            );
+            settings_row(
+                p,
+                format!("Volumen: {:.0}%", s.audio_volume * 100.0),
+                SettingField::Volume,
+                0.1,
+            );
+        }
+        SettingsTab::Controls => {
+            label(
+                p,
+                "CONTROLES · clic en una asignación y pulsá la nueva tecla",
+                14.0,
+                ACCENT,
+            );
+            row(p, |p| {
+                for a in PlayerAction::ALL {
+                    button(
+                        p,
+                        format!("{}: {}", a.label(), s.key_label(a)),
+                        UiCommand::Rebind(a),
+                    );
+                }
+            });
+        }
+    }
 }
 fn save_label(slot: usize) -> String {
     match SavedGame::read(&slot_path(slot)) {
-        Ok(s) => format!(
-            "{} · {} · {:.0} m",
-            s.session
-                .gameplay
-                .stop_targets
-                .get(s.session.gameplay.next_stop_idx)
-                .map(|s| s.name.as_str())
-                .unwrap_or(&s.session.gameplay.destination_node),
-            clock(s.start_clock_s + s.session.state.time_s()),
-            s.session.state.odometer_m
-        ),
+        Ok(s) => saved_game_label(&s),
         Err(_) => "Ranura vacía o partida no válida".into(),
     }
+}
+fn saved_game_label(s: &SavedGame) -> String {
+    format!(
+        "{} · {} · {:.0} m",
+        s.session
+            .gameplay
+            .stop_targets
+            .get(s.session.gameplay.next_stop_idx)
+            .map(|s| s.name.as_str())
+            .unwrap_or(&s.session.gameplay.destination_node),
+        clock(s.start_clock_s + s.session.state.time_s()),
+        s.session.state.odometer_m
+    )
 }
 fn yes(v: bool) -> &'static str {
     if v { "Sí" } else { "No" }
@@ -2857,6 +2822,307 @@ pub(crate) fn apply_weather(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn menu_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(bevy::state::app::StatesPlugin)
+            .insert_state(ViewerAppState::Menu)
+            .init_resource::<PlayerUiState>()
+            .insert_resource(PlayerLaunchMenu::discover(
+                &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+                None,
+            ))
+            .init_resource::<crate::official_content::OfficialContent>()
+            .init_resource::<PlayerSettings>()
+            .init_resource::<PlayerLaunchQueue>()
+            .init_resource::<ActivePlayerContent>()
+            .init_resource::<CameraFollowMode>()
+            .init_resource::<DriverLookOffset>()
+            .init_resource::<crate::floating_origin::FloatingOrigin>()
+            .init_resource::<crate::camera::CameraMode>()
+            .init_resource::<crate::camera::LiveDriverCab>()
+            .init_resource::<crate::camera::PassengerCamState>()
+            .init_resource::<crate::cab_cvf_overlay::CabCvfOverlayState>()
+            .init_resource::<crate::cab_cvf::CabCvfState>()
+            .init_resource::<crate::teleport::TeleportDialog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .add_message::<AppExit>()
+            .add_systems(Update, (player_keys, handle_buttons, build_panel).chain());
+        let camera = app.world_mut().spawn_empty().id();
+        let mut ui = app.world_mut().resource_mut::<PlayerUiState>();
+        ui.panel = PlayerPanel::Menu;
+        ui.in_start_menu = true;
+        ui.camera = Some(camera);
+        app
+    }
+    fn click(app: &mut App, predicate: impl Fn(&UiCommand) -> bool) {
+        let mut query = app.world_mut().query::<(Entity, &UiCommand)>();
+        let entity = query
+            .iter(app.world())
+            .find(|(_, cmd)| predicate(cmd))
+            .map(|(entity, _)| entity)
+            .expect("expected a visible command");
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(Interaction::Pressed);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .reset_all();
+    }
+    fn escape(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+    }
+    #[test]
+    fn home_actions_and_nested_details_return_without_losing_the_trip() {
+        let mut app = menu_app();
+        app.update();
+        for destination in [
+            PlayerPanel::NewGame,
+            PlayerPanel::Continue,
+            PlayerPanel::Content,
+            PlayerPanel::Settings,
+        ] {
+            click(
+                &mut app,
+                |cmd| matches!(cmd, UiCommand::Open(panel) if *panel == destination),
+            );
+            assert_eq!(app.world().resource::<PlayerUiState>().panel, destination);
+            escape(&mut app);
+            assert_eq!(
+                app.world().resource::<PlayerUiState>().panel,
+                PlayerPanel::Menu
+            );
+        }
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            menu.start_time_s = 12345.;
+            menu.weather = PlayerWeather::Snow;
+        }
+        let before = {
+            let menu = app.world().resource::<PlayerLaunchMenu>();
+            (menu.route, menu.service, menu.consist, menu.path)
+        };
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::MissingResources))
+        });
+        escape(&mut app);
+        let ui = app.world().resource::<PlayerUiState>();
+        assert_eq!(ui.panel, PlayerPanel::NewGame);
+        assert_eq!(ui.new_game_step, NewGameStep::Train);
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Environment))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::NewGameAdvanced));
+        assert!(app.world().resource::<PlayerUiState>().new_game_advanced);
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        assert_eq!((menu.route, menu.service, menu.consist, menu.path), before);
+        assert_eq!(menu.start_time_s, 12345.);
+        assert_eq!(menu.weather, PlayerWeather::Snow);
+    }
+    #[test]
+    fn launch_and_save_actions_stay_outside_scrolling_content() {
+        let mut app = menu_app();
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            let path = menu.consists[menu.consist].clone();
+            menu.consist_audits.insert(
+                path,
+                openrailsrs_train::ConsistAudit {
+                    vehicles: 2,
+                    powered_vehicles: 1,
+                    ..default()
+                },
+            );
+        }
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        for step in [
+            NewGameStep::Route,
+            NewGameStep::Train,
+            NewGameStep::Environment,
+        ] {
+            click(
+                &mut app,
+                |cmd| matches!(cmd, UiCommand::NewGameStep(s) if *s == step),
+            );
+            let ui = app.world().resource::<PlayerUiState>();
+            let root = ui.root.unwrap();
+            let mut footers = app
+                .world_mut()
+                .query_filtered::<Entity, With<launcher::LaunchFooter>>();
+            let footer = footers.single(app.world()).unwrap();
+            assert_eq!(app.world().get::<ChildOf>(footer).unwrap().parent(), root);
+            let mut buttons = app.world_mut().query::<(Entity, &UiCommand)>();
+            let mut start = buttons
+                .iter(app.world())
+                .find(|(_, cmd)| matches!(cmd, UiCommand::Start))
+                .unwrap()
+                .0;
+            while start != footer {
+                assert!(
+                    app.world().get::<PlayerScroll>(start).is_none(),
+                    "Jugar must remain visible when the body scrolls"
+                );
+                start = app.world().get::<ChildOf>(start).unwrap().parent();
+            }
+        }
+        escape(&mut app);
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::Settings))
+        });
+        let root = app.world().resource::<PlayerUiState>().root.unwrap();
+        let mut buttons = app.world_mut().query::<(Entity, &UiCommand)>();
+        let save = buttons
+            .iter(app.world())
+            .find(|(_, cmd)| matches!(cmd, UiCommand::SaveSettings))
+            .unwrap()
+            .0;
+        let row = app.world().get::<ChildOf>(save).unwrap().parent();
+        assert_eq!(app.world().get::<ChildOf>(row).unwrap().parent(), root);
+    }
+    #[test]
+    fn incomplete_or_pending_train_cannot_start_from_any_step() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        for incomplete in [false, true] {
+            {
+                let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+                menu.consist_audits.clear();
+                if incomplete {
+                    let path = menu.consists[menu.consist].clone();
+                    menu.consist_audits.insert(
+                        path,
+                        openrailsrs_train::ConsistAudit {
+                            vehicles: 1,
+                            powered_vehicles: 1,
+                            errors: vec!["Missing vehicle".into()],
+                            ..default()
+                        },
+                    );
+                }
+            }
+            for step in [
+                NewGameStep::Route,
+                NewGameStep::Train,
+                NewGameStep::Environment,
+            ] {
+                click(
+                    &mut app,
+                    |cmd| matches!(cmd, UiCommand::NewGameStep(s) if *s == step),
+                );
+                let mut commands = app.world_mut().query::<&UiCommand>();
+                assert!(
+                    !commands
+                        .iter(app.world())
+                        .any(|cmd| matches!(cmd, UiCommand::Start))
+                );
+                assert!(app.world().resource::<PlayerLaunchQueue>().0.is_none());
+            }
+        }
+    }
+    #[test]
+    fn library_selection_uses_the_chosen_route_and_returns_to_the_library() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::Content))
+        });
+        let chosen = app.world().resource::<PlayerLaunchMenu>().routes.len() - 1;
+        click(
+            &mut app,
+            |cmd| matches!(cmd, UiCommand::SelectRoute(i) if *i == chosen),
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().route, chosen);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        escape(&mut app);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::Content
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::LibraryTab(LibraryTab::Official))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().library_tab,
+            LibraryTab::Official
+        );
+        escape(&mut app);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::Menu
+        );
+    }
+    #[test]
+    fn settings_tabs_preserve_changes_and_return_to_the_paused_game() {
+        let mut app = menu_app();
+        app.insert_resource(live());
+        app.world_mut().resource_mut::<LiveDrive>().paused = false;
+        app.world_mut()
+            .resource_mut::<PlayerUiState>()
+            .in_start_menu = false;
+        app.world_mut().resource_mut::<PlayerUiState>().panel = PlayerPanel::None;
+        app.world_mut()
+            .resource_mut::<NextState<ViewerAppState>>()
+            .set(ViewerAppState::Playing);
+        app.update();
+        escape(&mut app);
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::Settings))
+        });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::SettingsTab(SettingsTab::Audio))
+        });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Setting(SettingField::Audio, _))
+        });
+        let audio = app.world().resource::<PlayerSettings>().audio_enabled;
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::SettingsTab(SettingsTab::Controls))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerSettings>().audio_enabled,
+            audio
+        );
+        escape(&mut app);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::Pause
+        );
+        assert!(app.world().resource::<LiveDrive>().paused);
+        escape(&mut app);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::None
+        );
+        assert!(!app.world().resource::<LiveDrive>().paused);
+    }
     fn live() -> LiveDrive {
         LiveDrive::from_scenario_path(
             &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))

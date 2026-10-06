@@ -231,6 +231,16 @@ pub struct CaptureScene<'w, 's> {
     cab_diagnostic: Option<Res<'w, crate::cab_render::CabRenderDiagnostic>>,
     wet_surfaces: Option<Res<'w, crate::wet_surfaces::WetSurfaces>>,
     lod_fades: Query<'w, 's, &'static crate::world_lod_fade::LodFade>,
+    menu_nodes: Query<
+        'w,
+        's,
+        (
+            &'static Name,
+            &'static ComputedNode,
+            &'static UiGlobalTransform,
+        ),
+    >,
+    ui_text: Query<'w, 's, (&'static Text, &'static ComputedNode)>,
     camera: Query<
         'w,
         's,
@@ -330,6 +340,17 @@ impl CaptureScene<'_, '_> {
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         });
+        report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
+                name.as_str().starts_with("ui-") || name.as_str().starts_with("home-")
+                    || matches!(name.as_str(), "player-menu" | "launch-footer" | "launch-unavailable")
+            }).map(|(name, node, transform)| {
+                let center = transform.translation;
+                let size = node.size();
+                serde_json::json!({"name": name.as_str(), "min": (center - size * 0.5).to_array(), "max": (center + size * 0.5).to_array()})
+            }).collect::<Vec<_>>());
+        report["ui_text"] = serde_json::Value::Array(self.ui_text.iter().filter(|(text, _)| !text.0.trim().is_empty()).map(|(text, node)| {
+            serde_json::json!({"text": text.0, "size": node.size().to_array()})
+        }).collect());
         if let Some(environment) = self.environment.as_ref()
             && let Some(content) = self.content.as_ref()
         {

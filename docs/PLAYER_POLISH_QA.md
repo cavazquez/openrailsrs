@@ -839,3 +839,48 @@ CARGO_PROFILE_TEST_STRIP=symbols CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 \
 cargo test --locked --workspace --all-features native_menu_route_switch_timing \
   -- --ignored --nocapture --test-threads=1
 ```
+
+## Inicio: cuatro opciones y preparación del viaje
+
+El inicio ofrece Nueva partida, Continuar, Biblioteca y Ajustes. Nueva partida
+se divide en Ruta y servicio, Tren y Hora y clima; resumen y Jugar son hermanos
+del área desplazable. El diagnóstico completo se abre desde Ver detalles.
+Biblioteca separa Instalado de Descargas del autor, y Ajustes usa cinco pestañas
+con Guardar ajustes fuera del desplazamiento.
+
+El chequeo completo pasa **1618 pruebas Rust** (45 ignoradas) y **55 Python**,
+incluidos los oráculos originales, el servicio completo y Class 47. Después de
+la corrección de medidas del texto también pasan las **23 pruebas de jugador**,
+Clippy con `-D warnings` y la compilación de todas las funciones del workspace.
+Las regresiones nuevas comprueban regreso desde el detalle sin perder la
+selección, bloqueo de inicio con recursos incompletos, ubicación de las acciones,
+selección desde Biblioteca, regreso de Ajustes a Pausa y conservación del viaje
+cuando se actualiza el catálogo instalado.
+
+Se revisaron **13 capturas** en RX 7600/Vulkan, siempre en Weston privado:
+las diez vistas de inicio a **1280×720 / 100%**, dos vistas de Nueva partida a
+**150%**, y el inicio a **1024×640 / 100%**. Los textos tienen medidas positivas,
+las cuatro opciones del inicio entran completas, y Jugar, resumen y Guardar
+ajustes quedan dentro del panel. Las páginas largas se desplazan dentro del
+área central. Cero shaders pendientes o fallidos y salida correcta en todos los
+casos; máximo RSS medido del menú: **421,07 MiB**. Este valor no mide la memoria
+de una partida con el escenario cargado.
+
+Se repitió el ensayo de regreso Mitre → Chiltern con 185 formaciones:
+**2,94 / 2,58 / 2,40 ms** para actualizar la selección con diagnósticos en caché.
+Los archivos de salida existentes y las tolerancias de paridad se conservaron.
+
+El script valida también las medidas de los textos, para detectar botones que
+tienen un rectángulo visible pero una etiqueta sin ancho. Permite repetir las
+capturas sin abrir otra ventana en el escritorio del jugador:
+
+```bash
+python3 scripts/capture_player_menu.py \
+  --route-root "/ruta/a/ROUTES/Chiltern" --out-dir tmp/player-menu-qa
+python3 scripts/capture_player_menu.py \
+  --route-root "/ruta/a/ROUTES/Chiltern" \
+  --pages route weather-options --scale 1.5 --out-dir tmp/player-menu-qa-large
+```
+
+Prueba de cada opción y resultado esperado en la
+[sección 40 de pruebas manuales](PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-tres-pasos).

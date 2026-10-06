@@ -28,11 +28,14 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
 
 ## 1. Menú de inicio y selección de contenido
 
-1. Cambiá ruta y servicio con las flechas de sus filas. La lista de formaciones y
-   recorridos debe actualizarse para ese contenido.
-2. Volvé al servicio Chiltern local y pulsá **Iniciar partida**. Debe aparecer la
+1. Desde **Nueva partida**, elegí ruta y servicio en **1 · Ruta y servicio**.
+   Las paradas y el horario previsto deben corresponder al servicio elegido.
+   Pasá a **2 · Tren**; la lista de formaciones y su diagnóstico deben corresponder
+   a esa ruta. **Ver detalles** abre archivos faltantes y sus ubicaciones.
+2. Volvé al servicio Chiltern local y pulsá **Jugar**. Debe aparecer la
    pantalla de carga y después el escenario original, el Pullman y la próxima parada.
-3. Volvé al menú desde la pausa y probá otra hora, estación del año y clima. La
+3. Volvé al menú desde la pausa y, en **3 · Hora y clima**, probá otra hora,
+   estación del año y clima. La
    libreta/HUD deben mostrar la hora elegida; el sol debe cambiar con fecha y hora.
    Lluvia muestra precipitación; Niebla reduce la visibilidad
    a unos 500 m cuando la niebla está habilitada. Los recursos estacionales que
@@ -41,7 +44,8 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    Los recursos ausentes usan la textura base. De noche se seleccionan las
    variantes Night que declara cada modelo; el sol, el cielo y la niebla deben
    oscurecerse juntos. Probá 21:55: el horizonte no debe conservar el azul diurno.
-4. Elegí un PAT diferente en **Recorrido**. Debe indicarse que se iniciará una
+4. En **1 · Ruta y servicio**, abrí **Cambiar recorrido (exploración)**
+   y elegí un PAT diferente en **Recorrido**. Debe indicarse que se iniciará una
    exploración por ese camino, hasta su destino; no deben conservarse las tres
    paradas del servicio local en un recorrido diferente.
 
@@ -56,11 +60,12 @@ intérprete completo de todos los eventos ni scripts C# originales.
 3. Continuá, cambiá controles y cámara, avanzá unos metros y volvé a cargar esa
    ranura. Deben volver posición, velocidad, frenos, inversor, puertas, cámara,
    formación, horario y órdenes del despachador. La partida se restaura pausada.
-4. Salí y abrí de nuevo el menú. **Reanudar 1/2/3** debe cargar la ranura elegida,
+4. Salí y abrí de nuevo el menú. En **Continuar**, **Reanudar** en la tarjeta de
+   la partida 1/2/3 debe cargar la ranura elegida,
    incluso cuando el archivo de escenario original usaba rutas relativas.
 5. Probá cargar una ranura de otro servicio dentro de la partida actual. Debe
    rechazarse con un mensaje, sin alterar el tren. Para cambiar de contenido,
-   usá **Menú de inicio** y después **Reanudar**.
+   usá **Menú de inicio → Continuar → Reanudar**.
 
 Los archivos se guardan en `player-data/save-1.json`, etc. Ajustes y partidas son
 archivos locales y quedan excluidos de Git. `OPENRAILSRS_PLAYER_DIR` permite usar
@@ -1239,7 +1244,8 @@ dinámico. Ver [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
 
 Cerrá el visor anterior y abrí el binario actualizado con `--menu`.
 
-1. Elegí Chiltern y esperá su diagnóstico de formación. En la primera revisión
+1. Entrá en **Nueva partida → 1 · Ruta y servicio**, elegí Chiltern y esperá
+   su diagnóstico de formación. En la primera revisión
    puede aparecer «Revisando archivos…»; las flechas de ruta y servicio deben
    seguir respondiendo mientras se revisa el contenido.
 2. Cambiá a Mitre y volvé a Chiltern varias veces. La ruta y sus opciones deben
@@ -1248,13 +1254,59 @@ Cerrá el visor anterior y abrí el binario actualizado con `--menu`.
 3. Mientras aparezca «Revisando formación…», cambiá rápidamente de ruta, servicio
    y formación. El diagnóstico final debe corresponder al archivo seleccionado;
    un resultado anterior no debe reemplazar el de la nueva ruta.
-4. «Iniciar partida» aparece cuando termina la revisión de la formación elegida.
-   Una formación con archivos necesarios ausentes sigue dando su diagnóstico y
-   no permite empezar; conservar la caché no elimina esa validación.
-5. Después de completar archivos faltantes desde su origen, pulsá «Revisar
-   archivos otra vez». El diagnóstico debe actualizarse sin congelar la ventana
+4. «Jugar» se habilita cuando termina la revisión de una formación apta para
+   conducir. Una formación con archivos necesarios ausentes muestra «Jugar · no
+   disponible» y «Ver detalles»; conservar la caché no elimina esa validación.
+5. Después de completar archivos faltantes desde su origen, en **2 · Tren**
+   pulsá «Revisar archivos otra vez». El diagnóstico debe actualizarse sin congelar la ventana
    ni cambiar ruta, servicio, formación, recorrido u hora de salida.
 
 Se conserva una caché por paquete de contenido, no por nombre de ruta. La
 revisión manual y la instalación de un paquete permiten renovar los resultados;
 los modelos y texturas de una partida todavía se cargan al iniciar el servicio.
+
+
+## 40. Inicio con cuatro opciones y nueva partida en tres pasos
+
+Cerrá el visor anterior y abrí el binario actualizado con `--menu`. Probá primero
+en una ventana de **1280×720** y con interfaz al **100%**.
+
+1. **Inicio.** Deben verse Nueva partida, Continuar, Biblioteca y Ajustes, con una
+   frase que explique cada opción. Salir aparece abajo; el inicio no muestra
+   rutas absolutas ni diagnósticos extensos.
+2. **Nueva partida.** Elegí Chiltern local en Ruta y servicio. Deben aparecer
+   Northolt Park, South Ruislip y West Ruislip, tres paradas y unos 13 minutos de
+   horario previsto. Pasá a Tren: deben verse la formación, su esquema de tamaño,
+   longitud, masa y cabinas disponibles. El esquema no es una foto del modelo.
+3. **Condiciones.** En Hora y clima elegí otra hora, Nieve y una estación del año.
+   Abrí las opciones del lugar para elegir hora/clima actual o manual. Cambiá de
+   paso y volvé: deben conservarse las elecciones. Si usás clima actual, la
+   selección manual sirve de respaldo.
+4. **Jugar y resumen.** Ambos permanecen abajo en los tres pasos, incluso al
+   desplazar el contenido con la rueda. Se puede empezar desde cualquier paso
+   usando las elecciones actuales. Con archivos faltantes, el inicio queda
+   deshabilitado y el detalle explica qué archivos poner y dónde.
+5. **Detalle y regreso.** En Tren abrí Ver detalles. Deben seguir disponibles
+   Abrir carpeta, Copiar diagnóstico y Reauditar. Volver o Esc regresa al paso
+   Tren, con la misma selección. El informe muestra avisos de compatibilidad
+   además de los archivos ausentes.
+6. **Continuar.** Guardá una partida desde la pausa y volvé al inicio. En
+   Continuar, su tarjeta muestra próxima parada, hora y odómetro; Reanudar debe
+   recuperar la partida pausada. Las ranuras vacías o ilegibles no tienen botón
+   Reanudar.
+7. **Biblioteca.** Instalado muestra las rutas disponibles; Elegir esta ruta abre
+   Nueva partida con esa selección. Las copias descargadas conservan fecha o
+   identificador y Abrir carpeta. Descargas del autor muestra catálogo, tamaños,
+   actualización, progreso y cancelación. Instalar se hace solo al pulsarlo. Si
+   una instalación termina mientras elegís otro viaje, debe conservar esa
+   selección y añadir el nuevo contenido al catálogo.
+8. **Ajustes.** Probá Juego, Imagen y cabina, Hora y clima, Sonido y Controles.
+   Guardar ajustes siempre queda visible. Cambiar de pestaña conserva la vista
+   previa; Guardar confirma que se persistió. Durante una partida, abrir Ajustes
+   desde la pausa y cerrarlo debe volver a Pausa; cerrar Pausa permite conducir.
+9. **Ventana y escala.** Reducí la ventana o poné la interfaz al 150% en Imagen y
+   cabina. Las páginas largas deben desplazarse dentro del panel; el resumen,
+   Jugar y Guardar ajustes siguen fuera de esa área. Volvé al 100% al terminar.
+
+La revisión de recursos se conserva en segundo plano al cambiar de ruta. No se
+cargan las mallas ni texturas de todos los trenes para dibujar el selector.

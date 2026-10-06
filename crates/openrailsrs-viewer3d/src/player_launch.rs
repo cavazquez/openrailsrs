@@ -50,6 +50,14 @@ pub struct ServiceChoice {
     pub edition: Option<String>,
 }
 
+/// Small menu metadata, read with the service choices, without importing scenery.
+#[derive(Debug, Default)]
+pub struct ServicePreview {
+    pub description: String,
+    pub stops: Vec<String>,
+    pub scheduled_minutes: Option<f64>,
+}
+
 // The menu owns its reply queue; cloning a live receiver would lose reports.
 #[derive(Resource, Debug)]
 pub struct PlayerLaunchMenu {
@@ -66,7 +74,9 @@ pub struct PlayerLaunchMenu {
     pub weather: PlayerWeather,
     pub environment: crate::environment::EnvironmentSelection,
     pub status: String,
+    pub preview: ServicePreview,
     pub consist_audits: HashMap<PathBuf, openrailsrs_train::ConsistAudit>,
+    project_root: PathBuf,
     auditor: openrailsrs_train::ConsistAuditor,
     audits: crate::launch_audits::LaunchAudits,
     pending_reaudit: Option<PathBuf>,
@@ -150,7 +160,9 @@ impl PlayerLaunchMenu {
             weather: PlayerWeather::Clear,
             environment: default(),
             status: String::new(),
+            preview: ServicePreview::default(),
             consist_audits: HashMap::new(),
+            project_root: absolute(project),
             audits: crate::launch_audits::LaunchAudits::new(),
             pending_reaudit: None,
             auditor: openrailsrs_train::ConsistAuditor::new(
@@ -167,6 +179,58 @@ impl PlayerLaunchMenu {
     }
     pub fn current(&self) -> Option<&ServiceChoice> {
         self.services.get(self.service)
+    }
+    /// Installation may finish while the player is on another start screen.
+    /// Refresh available content without replacing the trip they were choosing.
+    pub fn refresh_installed_content(&mut self) {
+        let source = self.current().map(|s| s.source.clone());
+        let consist = self.consists.get(self.consist).cloned();
+        let path = self
+            .path
+            .checked_sub(1)
+            .and_then(|i| self.paths.get(i))
+            .cloned();
+        let native = self
+            .services
+            .iter()
+            .filter_map(|s| s.scenery_root.as_ref())
+            .find(|p| {
+                p.file_name()
+                    .is_some_and(|name| name.eq_ignore_ascii_case("chiltern"))
+            })
+            .cloned();
+        let mut refreshed = Self::discover(&self.project_root, native);
+        if let Some(index) = refreshed
+            .services
+            .iter()
+            .position(|s| Some(&s.source) == source.as_ref())
+        {
+            refreshed.service = index;
+            let route = route_label(&refreshed.services[index]);
+            refreshed.route = refreshed
+                .routes
+                .iter()
+                .position(|r| r == &route)
+                .unwrap_or(0);
+            refreshed.refresh_choices();
+            if let Some(index) = refreshed
+                .consists
+                .iter()
+                .position(|p| Some(p) == consist.as_ref())
+            {
+                refreshed.cycle_consist(index as i32);
+            }
+            refreshed.path = refreshed
+                .paths
+                .iter()
+                .position(|p| Some(p) == path.as_ref())
+                .map_or(0, |i| i + 1);
+            refreshed.start_time_s = self.start_time_s;
+            refreshed.season = self.season;
+        }
+        refreshed.environment = self.environment;
+        refreshed.weather = self.weather;
+        *self = refreshed;
     }
     pub fn service_indices(&self) -> Vec<usize> {
         self.services
@@ -236,6 +300,9 @@ impl PlayerLaunchMenu {
             .get(self.consist)
             .is_some_and(|p| !self.consist_audits.contains_key(p))
     }
+    pub fn audit_error(&self) -> Option<&str> {
+        self.audits.error()
+    }
     pub fn reaudit_pending(&self) -> bool {
         self.pending_reaudit.is_some()
     }
@@ -281,6 +348,7 @@ impl PlayerLaunchMenu {
         self.paths.clear();
         self.consist = 0;
         self.path = 0;
+        self.preview = ServicePreview::default();
         let Some(choice) = self.current().cloned() else {
             self.status = "No hay servicios instalados".into();
             return;
@@ -302,6 +370,16 @@ impl PlayerLaunchMenu {
         if !choice.native_activity
             && let Ok(s) = load_scenario(&choice.source)
         {
+            self.preview = ServicePreview {
+                description: s.scenario.description.clone(),
+                stops: s
+                    .route
+                    .stops
+                    .iter()
+                    .map(|stop| stop.name.clone().unwrap_or_else(|| stop.node.clone()))
+                    .collect(),
+                scheduled_minutes: s.route.stops.last().map(|stop| stop.depart_s / 60.0),
+            };
             self.consists.push(absolute(
                 &choice.source.parent().unwrap().join(&s.train.consist),
             ));
@@ -312,6 +390,10 @@ impl PlayerLaunchMenu {
                 Some("winter") => 3,
                 _ => 0,
             };
+        } else if choice.native_activity {
+            self.preview.description =
+                "Actividad original. La libreta muestra el horario y las paradas al iniciar."
+                    .into();
         }
         if let Some(root) = &choice.scenery_root {
             if let Some(content) = root.parent().and_then(Path::parent) {
@@ -782,6 +864,47 @@ mod tests {
             menu.poll_consist_audits();
             std::thread::sleep(std::time::Duration::from_millis(1));
         }
+    }
+    #[test]
+    fn installed_catalogue_refresh_preserves_trip_and_preview() {
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&project, None);
+        menu.service = menu
+            .services
+            .iter()
+            .position(|s| s.source.ends_with("examples/chiltern_local/scenario.toml"))
+            .unwrap();
+        menu.route = menu
+            .routes
+            .iter()
+            .position(|name| name == "Chiltern")
+            .unwrap();
+        menu.refresh_choices();
+        assert_eq!(
+            menu.preview.stops,
+            ["Northolt Park", "South Ruislip", "West Ruislip"]
+        );
+        assert_eq!(menu.preview.scheduled_minutes, Some(12.5));
+        let source = menu.current().unwrap().source.clone();
+        let consist = menu.consists[menu.consist].clone();
+        menu.start_time_s = 12345.0;
+        menu.season = 3;
+        menu.weather = PlayerWeather::Snow;
+        menu.environment.time = crate::environment::EnvironmentSource::LocalNow;
+        menu.refresh_installed_content();
+        assert_eq!(menu.current().unwrap().source, source);
+        assert_eq!(menu.consists[menu.consist], consist);
+        assert_eq!(menu.start_time_s, 12345.0);
+        assert_eq!(menu.season, 3);
+        assert_eq!(menu.weather, PlayerWeather::Snow);
+        assert_eq!(
+            menu.environment.time,
+            crate::environment::EnvironmentSource::LocalNow
+        );
+        assert_eq!(
+            menu.preview.stops,
+            ["Northolt Park", "South Ruislip", "West Ruislip"]
+        );
     }
     #[test]
     #[ignore = "requires the original Chiltern installation; prints route-switch timings"]
