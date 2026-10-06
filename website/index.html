@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#132c27">
-  <meta name="description" content="Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico.">
+  <meta name="description" content="Simulador ferroviario en Rust y Bevy. Recorridos de Chiltern, incluido el viaje de 62,68 km de v4, con cabinas originales.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_AR">
   <meta property="og:title" content="openrailsrs: conducí el Pullman por Chiltern · openrailsrs">
-  <meta property="og:description" content="Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico.">
+  <meta property="og:description" content="Simulador ferroviario en Rust y Bevy. Recorridos de Chiltern, incluido el viaje de 62,68 km de v4, con cabinas originales.">
   <meta property="og:url" content="https://cavazquez.github.io/openrailsrs/">
   <meta property="og:image" content="https://cavazquez.github.io/openrailsrs/assets/exterior.webp">
   <meta name="twitter:card" content="summary_large_image">
@@ -38,8 +38,17 @@
   <div class="hero-caption"><span>CAPTURA DEL JUEGO</span><strong>Chiltern · Northolt Park</strong><span>Blue Pullman, vista exterior</span></div>
 </section>
 <div class="service-strip"><span><b>6</b> estaciones</span><span><b>15,32</b> kilómetros</span><span><b>2</b> trenes de tráfico</span><span class="strip-note">Northolt Park → Gerrards Cross</span></div>
+<section class="section wrap" id="chiltern-v4">
+  <div class="section-heading"><div><p class="eyebrow">Chiltern v4</p><h2>Un viaje de 62,68 km.</h2></div><p>También probamos el servicio de Banbury General a High Wycombe, con paradas en Bicester North y Princes Risborough.</p></div>
+  <p>En la biblioteca elegí <strong>Chiltern v4</strong>, la actividad <strong>RS_Football Special</strong> y la formación <strong>Birmingham Pullman</strong>. El viaje llega hasta el final con el escenario cargado en las cuatro estaciones. Se conserva el horario del autor: podés llegar con demora.</p>
+  <div class="feature-row">
+    <article><h3>Cabinas de día y de noche</h3><p>Las agujas, niveles y capas de fuego usan los gráficos originales. La luz interna cambia las texturas de cabina; con 5 podés recorrer los salones del Pullman.</p></article>
+    <article><h3>Agua para el ténder</h3><p>Con la formación de vapor podés detenerte junto a la grúa de Banbury y abastecer desde B. El brazo abre al conectar y vuelve a su lugar al terminar.</p></article>
+    <article><h3>Las pruebas del viaje</h3><p>Se completaron las cuatro paradas. La memoria bajó en el caso medido; todavía hay tirones al cargar recursos.</p><a class="text-link" href="estado.html">Ver resultados y pendientes <span aria-hidden="true">→</span></a></article>
+  </div>
+</section>
 <section class="section wrap" id="recorrido">
-  <div class="section-heading"><div><p class="eyebrow">Chiltern</p><h2>Estas son las paradas.</h2></div><p>Este es el recorrido que usamos para probar el juego completo. En cada estación tenés que detenerte, atender a los pasajeros y esperar la salida.</p></div>
+  <div class="section-heading"><div><p class="eyebrow">El servicio de seis estaciones</p><h2>Estas son las paradas.</h2></div><p>El recorrido de Northolt Park a Gerrards Cross sigue disponible. En cada estación tenés que detenerte, atender a los pasajeros y esperar la salida.</p></div>
   <ol class="route-line" aria-label="Estaciones del servicio Chiltern">
     <li><button type="button" data-station="0" aria-pressed="true"><span class="station-dot"></span><span>Northolt Park</span><small>Salida</small></button></li>
     <li><button type="button" data-station="1" aria-pressed="false"><span class="station-dot"></span><span>South Ruislip</span><small>02</small></button></li>
@@ -68,7 +77,7 @@
   <footer class="site-footer">
     <div class="footer-top"><a class="brand" href="index.html">openrails<span class="brand-end">rs</span></a><p>Simulador ferroviario de código abierto.</p></div>
     <div class="footer-links"><a href="empezar.html">Instalación y controles</a><a href="fisica.html">Cómo funciona</a><a href="paridad-or.html">Comparación con Open Rails</a><a href="https://github.com/cavazquez/openrailsrs/issues">Reportar un problema</a></div>
-    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente de Open Rails. Usamos 1.6.1 como referencia.</span><span>Actualizado: 5 de octubre de 2026</span></div>
+    <div class="footer-bottom"><span>Rust · Bevy 0.19.1 · GPL-3.0</span><span>Proyecto independiente de Open Rails. Usamos 1.6.1 como referencia.</span><span>Actualizado: 6 de octubre de 2026</span></div>
   </footer>
 </body>
 </html>

@@ -1,13 +1,13 @@
 {
   "name": "openrailsrs",
   "url": "https://cavazquez.github.io/openrailsrs/",
-  "updated": "5 de octubre de 2026",
+  "updated": "6 de octubre de 2026",
   "pages": [
     {
       "file": "index.html",
       "label": "Inicio",
       "title": "openrailsrs: conducí el Pullman por Chiltern",
-      "description": "Simulador ferroviario en Rust y Bevy. Probá el recorrido de seis estaciones de Chiltern, con cabinas originales y tráfico."
+      "description": "Simulador ferroviario en Rust y Bevy. Recorridos de Chiltern, incluido el viaje de 62,68 km de v4, con cabinas originales."
     },
     {
       "file": "experiencia.html",
