@@ -3,7 +3,7 @@
 use crate::sms::{self, Command, Control, SmsProgram, TriggerKind};
 use openrailsrs_formats::{
     ConsistEntry, ConsistFile, parse_named_stf, parse_vehicle_text, read_msts_file_to_string,
-    resolve_path_case_insensitive,
+    read_msts_text_with_includes, resolve_path_case_insensitive,
 };
 use openrailsrs_train::{consist_asset_root, resolve_consist_entry_path};
 use rodio::{Decoder, DeviceSinkBuilder, Player, Source, buffer::SamplesBuffer};
@@ -76,16 +76,6 @@ impl SoundState {
         if self.headlights != old.headlights {
             e.push(37);
         }
-        if self.brake_pipe > old.brake_pipe + 0.01 {
-            e.push(14);
-        } else if self.brake_pipe < old.brake_pipe - 0.01 {
-            e.push(54);
-        }
-        if self.brake_cylinder > old.brake_cylinder + 0.01 {
-            e.push(21);
-        } else if self.brake_cylinder < old.brake_cylinder - 0.01 {
-            e.push(22);
-        }
         if let (Some(now), Some(before)) = (self.steam_phase, old.steam_phase)
             && self.throttle > 0.0
             && now >= before
@@ -99,18 +89,95 @@ impl SoundState {
         e
     }
 }
+
+/// AirSinglePipe's sound transitions: sample every half simulation second,
+/// report the beginning/end of a pressure change rather than restarting a
+/// sound every frame. Cylinder pressure is PSI, pipe pressure enters in bar.
+#[derive(Default)]
+struct BrakeSound {
+    last_check_s: Option<f64>,
+    cylinder_psi: f32,
+    pipe_psi: f32,
+    cylinder_changing: bool,
+    pipe_changing: bool,
+}
+impl BrakeSound {
+    fn events(&mut self, time_s: f64, state: SoundState) -> Vec<u32> {
+        let pipe_psi = state.brake_pipe * 14.503774;
+        let Some(last) = self.last_check_s else {
+            self.last_check_s = Some(time_s);
+            self.cylinder_psi = state.brake_cylinder;
+            self.pipe_psi = pipe_psi;
+            return vec![];
+        };
+        if time_s - last + 1e-9 < 0.5 {
+            return vec![];
+        }
+        self.last_check_s = Some(time_s);
+        let mut events = vec![];
+        for (now, before, changing, increase, decrease, stop) in [
+            (
+                state.brake_cylinder,
+                &mut self.cylinder_psi,
+                &mut self.cylinder_changing,
+                14,
+                54,
+                139,
+            ),
+            (
+                pipe_psi,
+                &mut self.pipe_psi,
+                &mut self.pipe_changing,
+                141,
+                142,
+                143,
+            ),
+        ] {
+            if (now - *before).abs() > 0.1 {
+                if !*changing {
+                    events.push(if now > *before { increase } else { decrease });
+                }
+                *changing = true;
+            } else if *changing {
+                *changing = false;
+                events.push(stop);
+            }
+            *before = now;
+        }
+        events
+    }
+}
 #[derive(Clone, Debug)]
 pub struct TrainSoundFrame {
     pub id: usize,
     pub state: SoundState,
     pub distance_m: f32,
     pub vehicle_distances_m: Vec<f32>,
+    /// RPM, pressure and events belong to each car, not the whole formation.
+    /// A short or absent vector retains the train-level fallback for oracles.
+    pub vehicle_states: Vec<SoundState>,
+}
+impl TrainSoundFrame {
+    fn vehicle_state(&self, index: usize) -> SoundState {
+        self.vehicle_states
+            .get(index)
+            .copied()
+            .unwrap_or(self.state)
+    }
+    fn vehicle_distance(&self, index: usize) -> f32 {
+        self.vehicle_distances_m
+            .get(index)
+            .copied()
+            .unwrap_or(self.distance_m)
+    }
 }
 #[derive(Clone, Debug, Default)]
 pub struct SoundFrame {
     pub time_s: f64,
     pub cab: bool,
     pub passenger: bool,
+    /// Index of the player's car to which the listener is attached.
+    pub listener_vehicle: usize,
     pub paused: bool,
     pub volume: f32,
     pub trains: Vec<TrainSoundFrame>,
@@ -146,12 +213,17 @@ struct Bank {
     samples: HashMap<String, Wave>,
 }
 impl Bank {
-    fn audible(&self, listener: SoundLocation, has_interior: bool) -> bool {
+    fn audible(
+        &self,
+        listener: SoundLocation,
+        listener_vehicle: usize,
+        has_interior: bool,
+    ) -> bool {
         if let Some(cameras) = &self.program.cameras {
             // Other services use the exterior viewpoint even when the player
             // is in a cab, as OR SoundSource.ConditionsMet does. The SMS can
             // enable exterior playback from an Engine (cab) sound reference.
-            return match if self.train == 0 {
+            return match if self.train == 0 && self.vehicle == listener_vehicle {
                 listener
             } else {
                 SoundLocation::Exterior
@@ -163,7 +235,7 @@ impl Bank {
         }
         match self.location {
             SoundLocation::Cab | SoundLocation::Passenger => {
-                self.train == 0 && self.location == listener
+                self.train == 0 && self.vehicle == listener_vehicle && self.location == listener
             }
             SoundLocation::Exterior => {
                 self.train != 0 || listener == SoundLocation::Exterior || !has_interior
@@ -173,7 +245,49 @@ impl Bank {
 }
 pub struct NativeSoundBank {
     banks: Vec<Bank>,
+    external_pass_through: HashMap<(usize, usize), f32>,
     pub report: SoundReport,
+}
+
+/// OR 1.6.1 SoundSource.SetRolloffFactor + OpenAL inverse-distance-clamped.
+/// Camera eligibility and SMS activation are applied separately, allowing
+/// authored distance curves to retain their original meaning.
+fn inverse_distance_gain(distance: f32, deactivation_distance: f32) -> f32 {
+    const REFERENCE: f32 = 8.0;
+    const MAX_DISTANCE: f32 = 2000.0;
+    const GAIN_AT_MAX: f32 = 0.025;
+    if !distance.is_finite() {
+        return 0.0;
+    }
+    let maximum = if deactivation_distance > 0.0 {
+        deactivation_distance.min(MAX_DISTANCE)
+    } else {
+        MAX_DISTANCE
+    };
+    // Invalid/very small ranges must not introduce infinite or negative gains.
+    let rolloff = REFERENCE * (1.0 / GAIN_AT_MAX - 1.0) / (maximum - REFERENCE).max(0.001);
+    REFERENCE / (REFERENCE + rolloff * (distance.clamp(REFERENCE, MAX_DISTANCE) - REFERENCE))
+}
+
+fn source_active(was_active: bool, distance: f32, program: &SmsProgram) -> bool {
+    if !distance.is_finite() || distance > 2000.0 || (!was_active && distance == 2000.0) {
+        return false;
+    }
+    if program.deactivation_distance_m > 0.0 && distance > program.deactivation_distance_m {
+        return false;
+    }
+    was_active || program.distance_m <= 0.0 || distance < program.distance_m
+}
+
+fn external_pass_through(ast: &openrailsrs_formats::Ast) -> Option<f32> {
+    let wagon = if sms::block(ast, "Wagon") {
+        Some(ast)
+    } else {
+        sms::child(ast, "Wagon")
+    }?;
+    let block = sms::child(wagon, "ORTSExternalSoundPassedThroughPercent")?;
+    let percent: f32 = sms::items(block).get(1).and_then(sms::text)?.parse().ok()?;
+    (percent.is_finite() && percent >= 0.0).then(|| percent.min(100.0) / 100.0)
 }
 
 fn resolve_sample(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
@@ -256,6 +370,7 @@ impl NativeSoundBank {
     pub fn load(specs: &[ConsistSoundSpec]) -> Self {
         let mut result = Self {
             banks: vec![],
+            external_pass_through: HashMap::new(),
             report: SoundReport::default(),
         };
         let mut waves: HashMap<PathBuf, Wave> = HashMap::new();
@@ -293,14 +408,20 @@ impl NativeSoundBank {
                     })
                     .unwrap_or_else(|| authored.into());
                 let stock = sound_vehicle_path(&root, path.file_name().unwrap_or_default());
-                let ast = match read_msts_file_to_string(&stock).and_then(|t| parse_named_stf(&t)) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        result.report.warnings.push(e.to_string());
-                        continue;
-                    }
-                };
+                let ast =
+                    match read_msts_text_with_includes(&stock).and_then(|t| parse_named_stf(&t)) {
+                        Ok(a) => a,
+                        Err(e) => {
+                            result.report.warnings.push(e.to_string());
+                            continue;
+                        }
+                    };
                 let mut refs = vec![];
+                if let Some(gain) = external_pass_through(&ast) {
+                    result
+                        .external_pass_through
+                        .insert((spec.id, vehicle), gain);
+                }
                 fn visit(
                     a: &openrailsrs_formats::Ast,
                     inside: SoundLocation,
@@ -330,10 +451,9 @@ impl NativeSoundBank {
                 visit(&ast, SoundLocation::Exterior, &mut refs);
                 for (name, location) in refs {
                     if location != SoundLocation::Exterior
-                        && result
-                            .banks
-                            .iter()
-                            .any(|b| b.train == spec.id && b.location == location)
+                        && result.banks.iter().any(|b| {
+                            b.train == spec.id && b.vehicle == vehicle && b.location == location
+                        })
                     {
                         continue;
                     }
@@ -519,7 +639,9 @@ struct StreamRuntime {
 struct Playback {
     bank: NativeSoundBank,
     voices: Vec<Vec<StreamRuntime>>,
-    previous: HashMap<usize, SoundState>,
+    previous: HashMap<(usize, usize), (SoundState, f32)>,
+    brake_sounds: HashMap<(usize, usize), BrakeSound>,
+    active_sources: Vec<bool>,
     initial: bool,
     last_time_s: f64,
     mixer: rodio::mixer::Mixer,
@@ -547,9 +669,11 @@ impl Playback {
             })
             .collect();
         Self {
+            active_sources: vec![false; bank.banks.len()],
             bank,
             voices,
             previous: HashMap::new(),
+            brake_sounds: HashMap::new(),
             initial: true,
             last_time_s: 0.0,
             mixer: mixer.clone(),
@@ -569,23 +693,49 @@ impl Playback {
                 voice.volume = 1.0;
             }
             self.previous.clear();
+            self.brake_sounds.clear();
+            self.active_sources.fill(false);
             self.initial = true;
         }
         self.last_time_s = frame.time_s;
-        for (bank, voices) in self.bank.banks.iter().zip(&mut self.voices) {
+        let interior_gain = self
+            .bank
+            .external_pass_through
+            .get(&(0, frame.listener_vehicle))
+            .copied()
+            // Open Rails UserSettings.ExternalSoundPassThruPercent defaults to 50.
+            .unwrap_or(0.5);
+        let mut frame_events = HashMap::new();
+        for ((bank, voices), active) in self
+            .bank
+            .banks
+            .iter()
+            .zip(&mut self.voices)
+            .zip(&mut self.active_sources)
+        {
             let Some(train) = frame.trains.iter().find(|t| t.id == bank.train) else {
                 for v in voices {
                     v.player.pause();
                 }
                 continue;
             };
-            let previous = self.previous.get(&train.id).copied().unwrap_or_default();
-            let events = train.state.events(previous);
-            let source_distance = train
-                .vehicle_distances_m
-                .get(bank.vehicle)
-                .copied()
-                .unwrap_or(train.distance_m);
+            let state = train.vehicle_state(bank.vehicle);
+            let history = self.previous.get(&(train.id, bank.vehicle)).copied();
+            let previous = history.map_or(SoundState::default(), |(state, _)| state);
+            let events = frame_events
+                .entry((train.id, bank.vehicle))
+                .or_insert_with(|| {
+                    let mut events = state.events(previous);
+                    events.extend(
+                        self.brake_sounds
+                            .entry((train.id, bank.vehicle))
+                            .or_default()
+                            .events(frame.time_s, state),
+                    );
+                    events
+                });
+            let source_distance = train.vehicle_distance(bank.vehicle);
+            *active = source_active(*active, source_distance, &bank.program);
             let listener = if frame.cab {
                 SoundLocation::Cab
             } else if frame.passenger {
@@ -593,36 +743,26 @@ impl Playback {
             } else {
                 SoundLocation::Exterior
             };
-            let has_interior = self
-                .bank
-                .banks
-                .iter()
-                .any(|b| b.train == 0 && b.location == listener);
-            let audible = bank.audible(listener, has_interior);
+            let has_interior = self.bank.banks.iter().any(|b| {
+                b.train == 0 && b.vehicle == frame.listener_vehicle && b.location == listener
+            });
+            let audible = *active && bank.audible(listener, frame.listener_vehicle, has_interior);
             let external = bank
                 .program
                 .cameras
                 .as_ref()
                 .map_or(bank.location == SoundLocation::Exterior, |c| c.exterior);
-            let distance_gain = if !external {
+            let spatial_gain = if !external || bank.program.ignore_3d || bank.program.stereo {
                 1.0
             } else {
-                let distance = source_distance.max(0.0);
-                if !distance.is_finite() {
-                    0.0
-                } else if bank.program.distance_m <= 0.0 {
-                    1.0
-                } else if distance >= bank.program.distance_m {
-                    0.0
-                } else {
-                    (1.0 - distance / bank.program.distance_m).powi(2)
-                        * (if frame.cab || frame.passenger {
-                            0.75
-                        } else {
-                            1.0
-                        })
-                }
+                inverse_distance_gain(source_distance, bank.program.deactivation_distance_m)
             };
+            let distance_gain = spatial_gain
+                * if external && (frame.cab || frame.passenger) {
+                    interior_gain
+                } else {
+                    1.0
+                };
             for (stream, voice) in bank.program.streams.iter().zip(voices) {
                 for (i, trigger) in stream.triggers.iter().enumerate() {
                     if !voice.enabled[i] {
@@ -636,8 +776,19 @@ impl Playback {
                             increasing,
                             threshold,
                         } => {
-                            let old = previous.control(control, source_distance);
-                            let now = train.state.control(control, source_distance);
+                            // Native distance-decrease triggers start at MAX;
+                            // all other variable triggers start at zero.
+                            let old = history.map_or_else(
+                                || {
+                                    if control == Control::Distance && !increasing {
+                                        f32::MAX
+                                    } else {
+                                        0.0
+                                    }
+                                },
+                                |(state, distance)| state.control(control, distance),
+                            );
+                            let now = state.control(control, source_distance);
                             if increasing {
                                 old <= threshold && now > threshold
                             } else {
@@ -658,12 +809,11 @@ impl Playback {
                         }
                         TriggerKind::Distance { min_m, max_m } => {
                             if voice.deadlines[i] == 0.0 {
-                                voice.deadlines[i] =
-                                    train.state.distance as f64 + min_m.max(0.1) as f64;
+                                voice.deadlines[i] = state.distance as f64 + min_m.max(0.1) as f64;
                                 false
-                            } else if train.state.distance as f64 >= voice.deadlines[i] {
-                                voice.deadlines[i] = train.state.distance as f64
-                                    + ((min_m + max_m) * 0.5).max(0.1) as f64;
+                            } else if state.distance as f64 >= voice.deadlines[i] {
+                                voice.deadlines[i] =
+                                    state.distance as f64 + ((min_m + max_m) * 0.5).max(0.1) as f64;
                                 true
                             } else {
                                 false
@@ -736,7 +886,7 @@ impl Playback {
                 let curves = stream
                     .volumes
                     .iter()
-                    .map(|c| c.value(train.state.control(c.control, source_distance)))
+                    .map(|c| c.value(state.control(c.control, source_distance)))
                     .product::<f32>();
                 let gain = bank.program.volume
                     * stream.volume
@@ -748,7 +898,7 @@ impl Playback {
                     .player
                     .set_volume(if audible { gain.clamp(0.0, 1.0) } else { 0.0 });
                 let pitch = stream.frequency.as_ref().map_or(1.0, |c| {
-                    c.value(train.state.control(c.control, source_distance)) / voice.rate
+                    c.value(state.control(c.control, source_distance)) / voice.rate
                 });
                 voice
                     .player
@@ -760,7 +910,21 @@ impl Playback {
                 }
             }
         }
-        self.previous = frame.trains.iter().map(|t| (t.id, t.state)).collect();
+        self.previous = self
+            .bank
+            .banks
+            .iter()
+            .filter_map(|bank| {
+                let train = frame.trains.iter().find(|t| t.id == bank.train)?;
+                Some((
+                    (bank.train, bank.vehicle),
+                    (
+                        train.vehicle_state(bank.vehicle),
+                        train.vehicle_distance(bank.vehicle),
+                    ),
+                ))
+            })
+            .collect();
         self.initial = false;
     }
     fn report(&self) -> SoundReport {
@@ -909,6 +1073,358 @@ pub fn render_oracle(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_bank(vehicle: usize, program: SmsProgram) -> Bank {
+        Bank {
+            train: 0,
+            vehicle,
+            location: SoundLocation::Exterior,
+            program,
+            samples: HashMap::from([("tone.wav".into(), test_wave())]),
+        }
+    }
+
+    fn test_playback(banks: Vec<Bank>) -> (Playback, rodio::mixer::MixerSource) {
+        let (mixer, source) = rodio::mixer::mixer(
+            std::num::NonZeroU16::new(2).unwrap(),
+            std::num::NonZeroU32::new(44100).unwrap(),
+        );
+        (
+            Playback::new(
+                NativeSoundBank {
+                    banks,
+                    external_pass_through: HashMap::new(),
+                    report: SoundReport::default(),
+                },
+                &mixer,
+            ),
+            source,
+        )
+    }
+
+    fn test_frame() -> SoundFrame {
+        SoundFrame {
+            volume: 1.0,
+            trains: vec![TrainSoundFrame {
+                id: 0,
+                state: SoundState::default(),
+                distance_m: 0.0,
+                vehicle_distances_m: vec![],
+                vehicle_states: vec![],
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn included_interior_sound_and_pass_through_load_for_each_car() {
+        let dir = tempfile::tempdir().unwrap();
+        let route = dir.path().join("ROUTES/Test");
+        let stock = dir.path().join("TRAINS/TRAINSET/Stock");
+        let consist = dir.path().join("TRAINS/CONSISTS/two.con");
+        std::fs::create_dir_all(&route).unwrap();
+        std::fs::create_dir_all(stock.join("Sound")).unwrap();
+        std::fs::create_dir_all(consist.parent().unwrap()).unwrap();
+        std::fs::write(&consist, "Train ( TrainCfg ( Two Wagon ( WagonData (car0 Stock) ) Wagon ( WagonData (car1 Stock) ) ) )").unwrap();
+        for car in ["car0", "car1"] {
+            std::fs::write(
+                stock.join(format!("{car}.wag")),
+                format!("Wagon ( {car} Include (interior.inc) )"),
+            )
+            .unwrap();
+        }
+        std::fs::write(
+            stock.join("interior.inc"),
+            "Inside ( Sound (interior.sms) ) ORTSExternalSoundPassedThroughPercent (25)",
+        )
+        .unwrap();
+        std::fs::write(
+            stock.join("Sound/interior.sms"),
+            "Tr_SMS ( ScalabiltyGroup (5 Activation (PassengerCam ()) Streams (0)) )",
+        )
+        .unwrap();
+        let bank = NativeSoundBank::load(&[ConsistSoundSpec {
+            id: 0,
+            consist,
+            route,
+        }]);
+        assert!(
+            bank.report.warnings.is_empty(),
+            "{:?}",
+            bank.report.warnings
+        );
+        assert_eq!(bank.banks.len(), 2);
+        assert_eq!(bank.external_pass_through.get(&(0, 0)), Some(&0.25));
+        assert_eq!(bank.external_pass_through.get(&(0, 1)), Some(&0.25));
+        for b in bank.banks {
+            assert!(b.audible(SoundLocation::Passenger, b.vehicle, true));
+            assert!(!b.audible(SoundLocation::Passenger, 1 - b.vehicle, true));
+        }
+    }
+
+    #[test]
+    fn distance_attenuation_matches_the_original_binary_reference() {
+        let reference: serde_json::Value =
+            serde_json::from_str(include_str!("../../../oracles/openrails-audio.json")).unwrap();
+        for row in reference["attenuation"].as_array().unwrap() {
+            let distance = row["distance_m"].as_f64().unwrap() as f32;
+            let maximum = row["deactivation_m"].as_f64().unwrap() as f32;
+            let expected = row["gain"].as_f64().unwrap() as f32;
+            let actual = inverse_distance_gain(distance, maximum);
+            assert!(
+                (actual - expected).abs() < 1e-6,
+                "{distance}, {maximum}: {actual} vs {expected}"
+            );
+        }
+        assert_eq!(inverse_distance_gain(f32::INFINITY, 0.0), 0.0);
+        assert!(inverse_distance_gain(50.0, 8.0).is_finite());
+    }
+
+    #[test]
+    fn distance_trigger_commands_match_the_original_binary_boundaries() {
+        let reference: serde_json::Value =
+            serde_json::from_str(include_str!("../../../oracles/openrails-audio.json")).unwrap();
+        let program =
+            SmsProgram::parse(include_str!("../../../oracles/fixtures/audio-distance.sms"))
+                .unwrap();
+        let (mut playback, _) = test_playback(vec![test_bank(0, program.clone())]);
+        let mut frame = test_frame();
+        for (i, row) in reference["distance_checkpoints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            frame.time_s = i as f64;
+            frame.trains[0].distance_m = row["distance_m"].as_f64().unwrap() as f32;
+            playback.update(&frame);
+            let actual = playback.voices[0][0].volume;
+            let expected = row["volume"].as_f64().unwrap() as f32;
+            assert_eq!(actual, expected, "distance={}m", frame.trains[0].distance_m);
+        }
+        // A first frame outside the threshold must fire Distance_Inc_Past,
+        // whose native initial value is zero rather than the decrease sentinel.
+        let (mut playback, _) = test_playback(vec![test_bank(0, program)]);
+        frame = test_frame();
+        frame.trains[0].distance_m = 101.0;
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].volume, 0.8);
+    }
+
+    #[test]
+    fn nearby_distance_loop_starts_once_and_restarts_after_reentry_or_rewind() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Variable_Trigger ( Distance_Dec_Past 100 StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let (mut playback, _) = test_playback(vec![test_bank(0, program)]);
+        let mut frame = test_frame();
+        for (i, distance, starts) in [(0, 50.0, 1), (1, 49.0, 1), (2, 101.0, 1), (3, 99.0, 2)] {
+            frame.time_s = i as f64;
+            frame.trains[0].distance_m = distance;
+            playback.update(&frame);
+            assert_eq!(playback.voices[0][0].choices[0], starts);
+            assert_eq!(playback.voices[0][0].player.len(), 1);
+        }
+        frame.time_s = 0.0;
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].choices[0], 1);
+    }
+
+    #[test]
+    fn sms_distance_hysteresis_and_unattenuated_flags_preserve_native_scope() {
+        let mut program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( ExternalCam () Distance (100) ) Deactivation ( Distance (150) ) Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut active = false;
+        for (distance, expected) in [
+            (120.0, false),
+            (100.0, false),
+            (99.0, true),
+            (125.0, true),
+            (150.0, true),
+            (151.0, false),
+            (120.0, false),
+            (99.0, true),
+            (f32::INFINITY, false),
+        ] {
+            active = source_active(active, distance, &program);
+            assert_eq!(active, expected, "distance={distance}");
+        }
+        program.distance_m = 500.0;
+        program.deactivation_distance_m = 1000.0;
+        let normal = test_bank(0, program.clone());
+        let mut unattenuated = test_bank(0, program.clone());
+        unattenuated.program.ignore_3d = true;
+        let mut stereo = test_bank(0, program);
+        stereo.program.stereo = true;
+        let (mut playback, _) = test_playback(vec![normal, unattenuated, stereo]);
+        let mut frame = test_frame();
+        frame.trains[0].distance_m = 100.0;
+        playback.update(&frame);
+        assert!(playback.voices[0][0].player.volume() < 0.5);
+        assert_eq!(playback.voices[1][0].player.volume(), 1.0);
+        assert_eq!(playback.voices[2][0].player.volume(), 1.0);
+        let mut program = playback.bank.banks[0].program.clone();
+        program.distance_m = 0.0;
+        program.deactivation_distance_m = 0.0;
+        assert!(!source_active(false, 2000.0, &program));
+        assert!(source_active(true, 2000.0, &program));
+        assert!(!source_active(true, 2001.0, &program));
+    }
+
+    #[test]
+    fn external_sound_uses_the_listening_car_override_including_other_services() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( ExternalCam () PassengerCam () CabCam () Distance (100) ) Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut bank = test_bank(0, program);
+        bank.train = 1;
+        let (mut playback, _) = test_playback(vec![bank]);
+        let mut frame = test_frame();
+        frame.cab = true;
+        frame.listener_vehicle = 2;
+        frame.trains[0].id = 1;
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].player.volume(), 0.5);
+        playback.bank.external_pass_through.insert((1, 0), 0.9);
+        playback.bank.external_pass_through.insert((0, 2), 0.2);
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].player.volume(), 0.2);
+        assert_eq!(playback.voices[0][0].player.len(), 1);
+        for (value, expected) in [(25, Some(0.25)), (100, Some(1.0)), (-1, None)] {
+            let ast = parse_named_stf(&format!(
+                "Wagon ( unit ORTSExternalSoundPassedThroughPercent ( {value} ) )"
+            ))
+            .unwrap();
+            assert_eq!(external_pass_through(&ast), expected);
+        }
+    }
+
+    #[test]
+    fn each_vehicle_controls_its_own_engine_curve_and_brake_trigger() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( VolumeCurve ( Variable2Controlled CurvePoints ( 2 0 0.2 1 1 ) ) Triggers ( 2 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) Variable_Trigger ( BrakeCyl_Inc_Past 15 SetStreamVolume (0.3) ) ) ) ) ) )").unwrap();
+        let (mut playback, _) =
+            test_playback(vec![test_bank(0, program.clone()), test_bank(1, program)]);
+        let mut frame = test_frame();
+        frame.trains[0].state.brake_cylinder = 30.0;
+        frame.trains[0].vehicle_states = vec![
+            SoundState {
+                variable2: 0.2,
+                ..Default::default()
+            },
+            SoundState {
+                variable2: 0.8,
+                brake_cylinder: 30.0,
+                ..Default::default()
+            },
+        ];
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].volume, 1.0);
+        assert_eq!(playback.voices[1][0].volume, 0.3);
+        assert!((playback.voices[0][0].player.volume() - 0.36).abs() < 1e-6);
+        assert!((playback.voices[1][0].player.volume() - 0.252).abs() < 1e-6);
+    }
+
+    #[test]
+    fn train_and_pipe_pressure_events_use_native_ids_cadence_and_stop_edges() {
+        let reference: serde_json::Value =
+            serde_json::from_str(include_str!("../../../oracles/openrails-audio.json")).unwrap();
+        let ids: HashMap<_, _> = reference["brake_events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| {
+                (
+                    r["native_event"].as_str().unwrap(),
+                    r["id"].as_u64().unwrap() as u32,
+                )
+            })
+            .collect();
+        let mut brakes = BrakeSound::default();
+        let released = SoundState {
+            brake_pipe: 5.0,
+            ..Default::default()
+        };
+        let applied = SoundState {
+            brake_cylinder: 30.0,
+            brake_pipe: 4.0,
+            ..released
+        };
+        assert!(brakes.events(0.0, released).is_empty());
+        assert!(brakes.events(0.2, applied).is_empty());
+        assert_eq!(
+            brakes.events(0.5, applied),
+            vec![
+                ids["TrainBrakePressureIncrease"],
+                ids["BrakePipePressureDecrease"]
+            ]
+        );
+        let ramping = SoundState {
+            brake_cylinder: 35.0,
+            brake_pipe: 3.9,
+            ..applied
+        };
+        assert!(
+            brakes.events(1.0, ramping).is_empty(),
+            "continuing pressure change must not restart the loop"
+        );
+        assert_eq!(
+            brakes.events(1.5, ramping),
+            vec![
+                ids["TrainBrakePressureStoppedChanging"],
+                ids["BrakePipePressureStoppedChanging"]
+            ]
+        );
+        assert_eq!(
+            brakes.events(2.0, released),
+            vec![
+                ids["TrainBrakePressureDecrease"],
+                ids["BrakePipePressureIncrease"]
+            ]
+        );
+        assert_eq!(
+            brakes.events(2.5, released),
+            vec![
+                ids["TrainBrakePressureStoppedChanging"],
+                ids["BrakePipePressureStoppedChanging"]
+            ]
+        );
+        let noise = SoundState {
+            brake_cylinder: 0.05,
+            brake_pipe: 4.999,
+            ..released
+        };
+        assert!(
+            brakes.events(3.0, noise).is_empty(),
+            "sub-0.1 PSI changes are not new sounds"
+        );
+    }
+
+    #[test]
+    fn pressure_events_reach_every_sms_on_the_car_and_release_the_hiss() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 2 Discrete_Trigger (14 StartLoopRelease ( 1 File (tone.wav -1) ) ) Discrete_Trigger (139 ReleaseLoopReleaseWithJump ()) ) ) ) ) )").unwrap();
+        let (mut playback, _) =
+            test_playback(vec![test_bank(0, program.clone()), test_bank(0, program)]);
+        let mut frame = test_frame();
+        frame.trains[0].state.brake_pipe = 5.0;
+        playback.update(&frame);
+        frame.time_s = 0.5;
+        frame.trains[0].state.brake_cylinder = 30.0;
+        playback.update(&frame);
+        for voices in &playback.voices {
+            assert_eq!(voices[0].choices[0], 1);
+            assert_eq!(
+                voices[0].release.as_ref().unwrap().load(Ordering::Relaxed),
+                0
+            );
+        }
+        frame.time_s = 1.0;
+        playback.update(&frame);
+        for voices in &playback.voices {
+            assert_eq!(voices[0].choices[0], 1);
+            assert_eq!(
+                voices[0].release.as_ref().unwrap().load(Ordering::Relaxed),
+                2
+            );
+        }
+        frame.time_s = 0.0;
+        playback.update(&frame);
+        assert!(playback.voices.iter().all(|v| v[0].choices[0] == 0));
+    }
     #[test]
     fn openrails_vehicle_sound_override_keeps_the_stock_sound_root() {
         let dir = tempfile::tempdir().unwrap();
@@ -938,17 +1454,18 @@ mod tests {
             program,
             samples: HashMap::new(),
         };
-        assert!(bank.audible(SoundLocation::Exterior, true));
-        assert!(bank.audible(SoundLocation::Passenger, true));
-        assert!(bank.audible(SoundLocation::Cab, true));
+        assert!(bank.audible(SoundLocation::Exterior, 0, true));
+        assert!(bank.audible(SoundLocation::Passenger, 0, true));
+        assert!(bank.audible(SoundLocation::Cab, 0, true));
         bank.program = SmsProgram::parse(
             "Tr_SMS ( ScalabiltyGroup ( 1 Activation ( CabCam () ExternalCam (0) ) Streams (0) ) )",
         )
         .unwrap();
-        assert!(bank.audible(SoundLocation::Cab, true));
-        assert!(!bank.audible(SoundLocation::Exterior, true));
+        assert!(bank.audible(SoundLocation::Cab, 0, true));
+        assert!(!bank.audible(SoundLocation::Cab, 1, true));
+        assert!(!bank.audible(SoundLocation::Exterior, 0, true));
         bank.train = 1;
-        assert!(!bank.audible(SoundLocation::Cab, true));
+        assert!(!bank.audible(SoundLocation::Cab, 0, true));
     }
     #[test]
     fn formation_mix_preserves_quiet_samples_and_limits_sudden_peaks() {
@@ -1054,6 +1571,7 @@ mod tests {
         let mut playback = Playback::new(
             NativeSoundBank {
                 banks,
+                external_pass_through: HashMap::new(),
                 report: SoundReport::default(),
             },
             &mixer,
@@ -1065,6 +1583,7 @@ mod tests {
                 state: SoundState::default(),
                 distance_m: 0.0,
                 vehicle_distances_m: vec![],
+                vehicle_states: vec![],
             }],
             ..Default::default()
         };

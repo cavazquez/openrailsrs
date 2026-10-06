@@ -428,7 +428,7 @@ impl ConsistAuditor {
         if let Some(kind) = &stock.metadata.engine_type {
             match kind.to_ascii_lowercase().as_str() {
                 "diesel" => {},
-                "electric" => stock.limitations.push("Tracción eléctrica parcial: sin paridad de alimentación y protecciones originales".into()),
+                "electric" => stock.limitations.push("Tracción eléctrica parcial: catenaria y pantógrafo visuales; la falta de alimentación de vía todavía no corta la tracción; protecciones originales pendientes".into()),
                 "steam" => stock.limitations.push("Vapor parcial: no reproduce todos los subsistemas originales".into()),
                 _ => stock.limitations.push(format!("Tipo de motor {kind}: usa el modelo de tracción genérico")),
             }

@@ -399,6 +399,12 @@ impl LiveDriveSession {
         self.state.velocity_mps
     }
 
+    /// Original vehicle data remains available after disabling or separating
+    /// a motor; consumers cannot mutate the simulator's consist through it.
+    pub fn vehicle_definition(&self, index: usize) -> Option<&openrailsrs_train::Vehicle> {
+        self.consist.vehicles.get(index)
+    }
+
     pub fn current_edge_id(&self) -> Option<&str> {
         self.state.current_edge()
     }

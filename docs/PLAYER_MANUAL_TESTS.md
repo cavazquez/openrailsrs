@@ -1040,3 +1040,44 @@ Para conservar la elección al reiniciar, abrí **F10 → Guardar ajustes**. Pod
 reasignar el atajo en F10. Si una configuración anterior ya usaba U para otra
 acción, esa asignación se conserva y **F6** muestra la tecla libre elegida para
 el nuevo control.
+
+## 36. Sonido por coche, distancia y límites de tracción
+
+1. Iniciá Pullman o 121, activá **Sonido original** en **F10**, con volumen
+   moderado. En **F8 → Diagnóstico** deben aparecer SMS, muestras y salida
+   activa. Escuchá primero detenido y después al acelerar: motor y rodaje
+   deben variar según los programas del autor.
+2. En **2**, acercá y alejá la cámara sin cambiar el regulador. Los coches
+   próximos deben escucharse más que los distantes; al cruzar los rangos SMS
+   debe activarse o silenciarse la capa correspondiente. Quedarte cerca no
+   debe reiniciar la misma muestra en cada cuadro. Algunos sonidos no tienen
+   efecto de distancia si su autor declaró `Ignore3D` o `Stereo`.
+3. Alterná **1**, **Alt+1**, **2** y **5**; repetí 5 para cambiar de coche
+   con vista interior. El sonido debe seguir el interior del coche elegido,
+   sin recargar los WAV. Las fuentes externas que su SMS permita oír desde
+   dentro deben estar amortiguadas según el coche; no se espera que todo
+   el volumen de la cabina sea exactamente la mitad del exterior.
+4. Con **Space** sostenida dos segundos, la bocina debe iniciar una vez y
+   terminar al soltar. Aplicá y soltá freno, accioná puertas y limpiaparabrisas.
+   Deben sonar los efectos disponibles, sin copiar la presión de la locomotora
+   a todos los coches. El siseo de presión debe terminar al estabilizarse:
+   puede haber hasta medio segundo de demora de simulación, según el muestreo.
+   Un SMS que no declare un efecto no tiene por qué sonarlo.
+5. Pausá y reanudá; luego guardá, avanzá y restaurá. La pausa detiene el audio
+   y restaurar reinicia el estado de disparadores del instante guardado.
+   Si separás una sección usando F9, sus sonidos de rodaje deben responder
+   a que está estacionada, aunque la sección acoplada vuelva a acelerar.
+6. Repetí con **1960CentralWR8Car**, **R Stock 6 Car**, **Downton Hall LE**,
+   **KingLE** y la **Class 47 de Demo Model 1**. En las de vapor deben existir
+   sonidos de marcha; en Class 47 deben conservarse los avisos de WAV ausentes
+   del paquete. Consultá las ubicaciones indicadas por la auditoría del menú.
+
+La auditoría de los eléctricos avisa que catenaria y pantógrafo siguen siendo
+visuales. Conducir sin alimentación o con pantógrafo abajo todavía no prueba
+paridad eléctrica. Vapor tiene una caldera simplificada y no hay cremallera
+funcional; detalle en [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
+
+Para repetir el ensayo sin ventana, con WAV e informe de cada vista, usá
+[check_native_audio.py](../scripts/check_native_audio.py) según
+[NATIVE_AUDIO.md](NATIVE_AUDIO.md). Señal y ausencia de saturación no certifican
+una mezcla acústicamente idéntica a Open Rails.

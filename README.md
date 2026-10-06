@@ -88,7 +88,8 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Preparador de pilotos nativos de tres estaciones desde PAT/TDB/CON y SIGSCR originales, formación auditada, tráfico opcional y procedencia. El menú conserva el escenario y material rodante propios de cada ruta. [Belgrano CC: archivos originales todavía pendientes](docs/NATIVE_ROUTE_PILOT.md).
 - Menú con descubrimiento de escenarios completos en todo `examples/`, también en subdirectorios y variantes de ensayo. Reportes, overlays, campañas y horarios se operan con sus herramientas propias. Los ejemplos Mitre utilizan el recorrido importado; necesitan los modelos del CAF 6000 para jugar en 3D y no incluyen el paisaje MSTS argentino original. El menú informa las formaciones incompletas.
 - **Texturas ACE/DDS/KTX2 y caché persistente**: se conservan los bloques DXT1/3/5 originales, mipmaps, sRGB y transparencia, con alternativa RGBA para dispositivos sin BC. KTX2 nativo y derivados sin pérdida de ACE/DDS, comprimidos con Zstd en datos del usuario; se invalidan al cambiar el original y se reconstruyen si se dañan. Conversores `textures-dds` y `textures-ktx2`, sin reemplazar recursos del autor. [Uso y límites](docs/GPU_TEXTURES.md).
-- Escape diésel y vapor desde emisores ENG originales; partículas limitadas, sin sombras y coherentes con el reloj de simulación. Motor de sonido original SMS/WAV con eventos y separación interior/exterior.
+- Escape diésel y vapor desde emisores ENG originales; partículas limitadas, sin sombras y coherentes con el reloj de simulación.
+- Sonido original SMS/WAV por vehículo: RPM y frenos propios, disparadores y atenuación por distancia de OR 1.6.1, referencias `Include`, interiores por coche y paso de sonido exterior declarado por el autor. Oráculo capturado de las DLL originales y comprobador WAV con lista de recursos ausentes. [Pruebas y límites](docs/NATIVE_AUDIO.md).
 
 ### Simulación y señales
 
@@ -106,6 +107,8 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 ### Alcance y pruebas
 
 La compatibilidad se valida por función y contenido: **no se afirma paridad completa con Open Rails**. SIGSCR cubre las funciones probadas de Chiltern y Demo Model 1. El despachador mantiene seguridad y busca alternativas hacia delante; reversas automáticas, enlaces y horarios avanzados de OR requieren trabajo adicional. El peralte generado usa la velocidad de diseño de la ruta; falta validar límites locales por categoría y tablas antiguas. El API C# sigue acotado. El amperímetro estima carga, vapor y frenos tienen subsistemas parciales, y la paridad física se certifica por ensayo: el servicio nativo completo de tres estaciones pasa sus tolerancias originales, sin afirmar equivalencia de todas las rutas. La nieve es visual, sin termodinámica de deshielo ni adhesión por hielo.
+
+La catenaria y el pantógrafo todavía son visuales: un eléctrico puede traccionar sin alimentación de vía. Vapor usa fuego e inyección de agua simplificados; la cremallera no está implementada. [Estado de diésel, vapor y electricidad](docs/TRACTION_SUPPORT.md).
 
 La última prueba del 5 de octubre completa Chiltern con formación original,
 dos servicios de tráfico y seis paradas a horario. En RX 7600/Vulkan,

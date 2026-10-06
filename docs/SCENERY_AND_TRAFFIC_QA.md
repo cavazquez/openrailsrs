@@ -265,3 +265,43 @@ efecto de gotas sobre la pantalla y se mantuvo la precipitación. El pico de
 esta sesión fue **3163,6 MiB RSS** con un único renderer.
 Capturas: `tmp/weather-five-final/`. La inspección usa partidas y ajustes privados;
 los guardados del jugador se conservaron.
+
+## Sonido por vehículo y referencia 1.6.1 — 5 de octubre de 2026
+
+Se corrigieron los cruces de `Distance_Inc_Past`/`Distance_Dec_Past`, sus umbrales
+cuadrados y los valores iniciales. La atenuación externa usa la fórmula inversa
+del original, con activación/desactivación separadas y respeto de `Ignore3D`,
+`Stereo` y sus booleanos. El paso de sonido exterior dentro de una cabina usa
+el coche del oyente: valor del autor o 50 % predeterminado, también para tráfico.
+
+El adaptador entrega RPM y presiones de cada vehículo. No deduce que un motor
+con RPM sea eléctrico porque falte su parámetro de consumo. Los coches separados
+mantienen sus propias presiones y no acumulan distancia del tren en marcha.
+Los SMS interiores, incluidos los declarados en `Include`, se mantienen por
+coche. Pullman pasa de diez a dieciséis bancos conservando **69 WAV y 10,45 MiB
+decodificados**: las muestras se comparten.
+
+Los eventos del cilindro de freno del tren se separan de los de tubería; tienen
+muestreo de medio segundo, umbral de 0,1 PSI y evento de finalización. La presión
+del tren no se usa para inventar eventos de freno independiente. Dos programas
+del mismo coche reciben el mismo cambio, sin reiniciar el siseo continuamente.
+
+El oráculo ejecutó las DLL verificadas de OR 1.6.1 y se repitió con salida
+idéntica: **36 ganancias, siete pasos de distancia y nueve identificadores de
+eventos de freno**. Las 30 pruebas seleccionadas de audio, SMS, adaptador y
+auditoría pasan, al igual que Clippy de todo el workspace con todos los targets
+y features y la compilación de binarios/ejemplos.
+
+Las **14 vistas WAV de siete formaciones** conservan señal y **0 % de saturación**.
+Las doce vistas de Chiltern no tienen advertencias; las dos de Class 47 registran
+los **21 WAV ausentes** de Demo Model 1. El dispositivo real abrió para Class 47
+con volumen cero, ocho bancos, 38 WAV y 8,60 MiB decodificados.
+La [evidencia versionada](fixtures/audio/native-consistency-2026-10-05.json)
+conserva métricas y referencias faltantes; los WAV permanecen en
+`tmp/audio-consistency-20261005/after/`. Son comprobaciones de reproducción y
+semántica; no certifican identidad acústica completa con OpenAL.
+
+Uso y escucha manual: [NATIVE_AUDIO.md](NATIVE_AUDIO.md) y sección 36 de
+[PLAYER_MANUAL_TESTS.md](PLAYER_MANUAL_TESTS.md). La revisión también documenta
+que electricidad y cremallera necesitan física propia; detalle en
+[TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).

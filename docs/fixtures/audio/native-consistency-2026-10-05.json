@@ -1,0 +1,432 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "before_source_commit": "b0727dce49b216780966e35d453fbba1767b6fbf",
+  "before_oracle_sha256": "fd688733bbfece8da65904ad89ff9906f19422d9621a5a9632944fef8dba0ecc",
+  "after_oracle_sha256": "b5c65889793aae63dda4b4aafc6e314712ffcc80f50f6c361cbe3dff6c15b166",
+  "scope": "12-second synthetic controls per formation; signal/loading/clipping acceptance and native numerical semantics, not OpenAL acoustic identity",
+  "gain_absolute_tolerance": 1e-06,
+  "rms_minimum": 1e-05,
+  "clipped_percent_maximum": 0,
+  "original_capture_bitwise_reproducible": true,
+  "output_device_probe": {
+    "formation": "MT_MT_Class 47 & 6 mk2 PP.con",
+    "volume": 0.0,
+    "device": true,
+    "programs": 8,
+    "samples": 38,
+    "decoded_mib": 8.601585,
+    "active_voices": 2,
+    "missing_wav_count": 21
+  },
+  "results": [
+    {
+      "formation": "Bristol Pullman.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 10,
+        "streams": 39,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "duration_s": 11.982267573696145,
+        "rms": 0.2669009528628191,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 16,
+        "streams": 58,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "duration_s": 11.982267573696145,
+        "rms": 0.18046646761899382,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "Bristol Pullman.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 10,
+        "streams": 39,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "duration_s": 11.982267573696145,
+        "rms": 0.2347577766377984,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 16,
+        "streams": 58,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "duration_s": 11.982267573696145,
+        "rms": 0.10140138356319066,
+        "peak_dbfs": -3.9015026587209944,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "121single.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 26,
+        "samples": 48,
+        "decoded_mib": 7.7689133,
+        "duration_s": 11.982267573696145,
+        "rms": 0.025491073902787643,
+        "peak_dbfs": -19.192605037970537,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 26,
+        "samples": 48,
+        "decoded_mib": 7.7689133,
+        "duration_s": 11.982267573696145,
+        "rms": 0.011442961170918012,
+        "peak_dbfs": -23.19996829666401,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "121single.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 26,
+        "samples": 48,
+        "decoded_mib": 7.7689133,
+        "duration_s": 11.982267573696145,
+        "rms": 0.11330162759376526,
+        "peak_dbfs": -6.648159553381562,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 26,
+        "samples": 48,
+        "decoded_mib": 7.7689133,
+        "duration_s": 11.982267573696145,
+        "rms": 0.08330965286984997,
+        "peak_dbfs": -6.648159553381562,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "1960CentralWR8Car.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 10,
+        "streams": 59,
+        "samples": 32,
+        "decoded_mib": 5.6836357,
+        "duration_s": 11.982267573696145,
+        "rms": 0.2838537462364267,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 18,
+        "streams": 112,
+        "samples": 32,
+        "decoded_mib": 5.6836357,
+        "duration_s": 11.982267573696145,
+        "rms": 0.19266369401597938,
+        "peak_dbfs": -1.3317817870455446,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "1960CentralWR8Car.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 10,
+        "streams": 59,
+        "samples": 32,
+        "decoded_mib": 5.6836357,
+        "duration_s": 11.982267573696145,
+        "rms": 0.07998395102637114,
+        "peak_dbfs": -9.535800813144439,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 18,
+        "streams": 112,
+        "samples": 32,
+        "decoded_mib": 5.6836357,
+        "duration_s": 11.982267573696145,
+        "rms": 0.09553533740179057,
+        "peak_dbfs": -6.522000212410402,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "R Stock 6 Car.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 8,
+        "streams": 26,
+        "samples": 54,
+        "decoded_mib": 9.776512,
+        "duration_s": 11.982267573696145,
+        "rms": 0.06894725495996507,
+        "peak_dbfs": -8.798059471343743,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 12,
+        "streams": 36,
+        "samples": 54,
+        "decoded_mib": 9.776512,
+        "duration_s": 11.982267573696145,
+        "rms": 0.031888875389107625,
+        "peak_dbfs": -15.47493902003956,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "R Stock 6 Car.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 8,
+        "streams": 26,
+        "samples": 54,
+        "decoded_mib": 9.776512,
+        "duration_s": 11.982267573696145,
+        "rms": 0.0382610688628078,
+        "peak_dbfs": -7.954957475008058,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 12,
+        "streams": 36,
+        "samples": 54,
+        "decoded_mib": 9.776512,
+        "duration_s": 11.982267573696145,
+        "rms": 0.027246300445432962,
+        "peak_dbfs": -13.553443308119693,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "Downton Hall LE.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.022781,
+        "duration_s": 11.982267573696145,
+        "rms": 0.12461654016272233,
+        "peak_dbfs": -3.7880193402595435,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.022781,
+        "duration_s": 11.982267573696145,
+        "rms": 0.06717513105968255,
+        "peak_dbfs": -8.900852264391965,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "Downton Hall LE.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.022781,
+        "duration_s": 11.982267573696145,
+        "rms": 0.09599943868586688,
+        "peak_dbfs": -6.06418092316367,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.022781,
+        "duration_s": 11.982267573696145,
+        "rms": 0.03358175539880153,
+        "peak_dbfs": -14.921452177671588,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "KingLE.con",
+      "view": "exterior",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.023178,
+        "duration_s": 11.982267573696145,
+        "rms": 0.12660691176505015,
+        "peak_dbfs": -3.6006431141234034,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.023178,
+        "duration_s": 11.982267573696145,
+        "rms": 0.06814961994138131,
+        "peak_dbfs": -8.542732387432423,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "KingLE.con",
+      "view": "cab",
+      "status": "pass",
+      "before": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.023178,
+        "duration_s": 11.982267573696145,
+        "rms": 0.0976247925233444,
+        "peak_dbfs": -5.85935155641613,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 3,
+        "streams": 20,
+        "samples": 93,
+        "decoded_mib": 12.023178,
+        "duration_s": 11.982267573696145,
+        "rms": 0.03406896228909117,
+        "peak_dbfs": -14.56404109255528,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": []
+    },
+    {
+      "formation": "MT_MT_Class 47 & 6 mk2 PP.con",
+      "view": "exterior",
+      "status": "pass_with_missing_wav",
+      "before": {
+        "programs": 8,
+        "streams": 38,
+        "samples": 38,
+        "decoded_mib": 8.601585,
+        "duration_s": 11.982267573696145,
+        "rms": 0.18861680619307247,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 8,
+        "streams": 38,
+        "samples": 38,
+        "decoded_mib": 8.601585,
+        "duration_s": 11.982267573696145,
+        "rms": 0.06922436716155579,
+        "peak_dbfs": -7.55622059873923,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": [
+        "../../GP38/SOUND/gp_dbrakef.wav",
+        "../../GP38/SOUND/gp_deadman.wav",
+        "../../GP38/SOUND/gp_ebrake.wav",
+        "../../GP38/SOUND/gp_flightsf.wav",
+        "../../GP38/SOUND/gp_sand.wav",
+        "../../GP38/SOUND/gp_sandf.wav",
+        "../../GP38/SOUND/x_gp_sand.wav",
+        "couple_auto1.wav",
+        "couple_auto2.wav",
+        "couple_auto3.wav",
+        "uncouple_auto1.wav",
+        "uncouple_auto2.wav",
+        "uncouple_auto3.wav",
+        "x_couple_auto1.wav",
+        "x_couple_auto2.wav",
+        "x_couple_auto3.wav",
+        "x_uncouple_auto1.wav",
+        "x_uncouple_auto2.wav",
+        "x_uncouple_auto3.wav",
+        "xcouple.wav",
+        "xuncouple.wav"
+      ]
+    },
+    {
+      "formation": "MT_MT_Class 47 & 6 mk2 PP.con",
+      "view": "cab",
+      "status": "pass_with_missing_wav",
+      "before": {
+        "programs": 8,
+        "streams": 38,
+        "samples": 38,
+        "decoded_mib": 8.601585,
+        "duration_s": 11.982267573696145,
+        "rms": 0.08774275400489409,
+        "peak_dbfs": -5.204513749597486,
+        "clipped_percent": 0.0
+      },
+      "after": {
+        "programs": 8,
+        "streams": 38,
+        "samples": 38,
+        "decoded_mib": 8.601585,
+        "duration_s": 11.982267573696145,
+        "rms": 0.0709696382305816,
+        "peak_dbfs": -4.336739743995418,
+        "clipped_percent": 0.0
+      },
+      "missing_wav_references": [
+        "../../GP38/SOUND/gp_dbrakef.wav",
+        "../../GP38/SOUND/gp_deadman.wav",
+        "../../GP38/SOUND/gp_ebrake.wav",
+        "../../GP38/SOUND/gp_flightsf.wav",
+        "../../GP38/SOUND/gp_sand.wav",
+        "../../GP38/SOUND/gp_sandf.wav",
+        "../../GP38/SOUND/x_gp_sand.wav",
+        "couple_auto1.wav",
+        "couple_auto2.wav",
+        "couple_auto3.wav",
+        "uncouple_auto1.wav",
+        "uncouple_auto2.wav",
+        "uncouple_auto3.wav",
+        "x_couple_auto1.wav",
+        "x_couple_auto2.wav",
+        "x_couple_auto3.wav",
+        "x_uncouple_auto1.wav",
+        "x_uncouple_auto2.wav",
+        "x_uncouple_auto3.wav",
+        "xcouple.wav",
+        "xuncouple.wav"
+      ]
+    }
+  ]
+}

@@ -121,7 +121,11 @@ pub struct CameraActivation {
 pub struct SmsProgram {
     pub volume: f32,
     pub stereo: bool,
+    pub ignore_3d: bool,
+    /// Activation and deactivation form a hysteresis band in native SMS.
+    /// Zero means no distance condition; OR still limits sources to 2 km.
     pub distance_m: f32,
+    pub deactivation_distance_m: f32,
     pub cameras: Option<CameraActivation>,
     pub streams: Vec<Stream>,
     pub warnings: Vec<String>,
@@ -160,6 +164,14 @@ fn scalar(ast: &Ast, name: &str, default: f32) -> f32 {
         .and_then(|a| items(a).get(1))
         .and_then(num)
         .unwrap_or(default)
+}
+fn flag(ast: &Ast, name: &str) -> bool {
+    child(ast, name).is_some_and(|a| {
+        items(a)
+            .get(1)
+            .and_then(text)
+            .is_none_or(|s| s != "0" && !s.eq_ignore_ascii_case("false"))
+    })
 }
 fn pair(ast: &Ast, name: &str, default: (f32, f32)) -> (f32, f32) {
     let Some(a) = child(ast, name) else {
@@ -226,14 +238,15 @@ impl SmsProgram {
             .ok_or("Missing ScalabiltyGroup")?;
         let mut result = Self {
             volume: scalar(group, "Volume", 1.0),
-            stereo: child(group, "Stereo").is_some(),
-            distance_m: child(group, "Activation")
-                .map_or(1000.0, |a| scalar(a, "Distance", 1000.0)),
+            stereo: flag(group, "Stereo"),
+            ignore_3d: flag(group, "Ignore3D"),
+            distance_m: child(group, "Activation").map_or(0.0, |a| scalar(a, "Distance", 1000.0)),
+            deactivation_distance_m: child(group, "Deactivation")
+                .map_or(0.0, |a| scalar(a, "Distance", 1000.0)),
             cameras: child(group, "Activation").map(|a| CameraActivation {
-                cab: child(a, "CabCam").is_some() && scalar(a, "CabCam", 1.0) != 0.0,
-                passenger: child(a, "PassengerCam").is_some()
-                    && scalar(a, "PassengerCam", 1.0) != 0.0,
-                exterior: child(a, "ExternalCam").is_some() && scalar(a, "ExternalCam", 1.0) != 0.0,
+                cab: flag(a, "CabCam"),
+                passenger: flag(a, "PassengerCam"),
+                exterior: flag(a, "ExternalCam"),
             }),
             streams: vec![],
             warnings: vec![],
@@ -271,7 +284,14 @@ impl SmsProgram {
                                 .map(|(control, threshold)| TriggerKind::Variable {
                                     control,
                                     increasing: name.to_ascii_lowercase().contains("inc_past"),
-                                    threshold,
+                                    // SoundManagmentFile.Variable_Trigger stores
+                                    // Distance thresholds squared, as it does
+                                    // for DistanceControlled curve coordinates.
+                                    threshold: if control == Control::Distance {
+                                        threshold * threshold
+                                    } else {
+                                        threshold
+                                    },
                                 })
                         }
                         "random_trigger" => {
@@ -352,6 +372,47 @@ impl SmsProgram {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_distance_and_boolean_defaults_match_the_pinned_parser() {
+        let fixture = include_str!("../../../oracles/fixtures/audio-distance.sms");
+        let reference: serde_json::Value =
+            serde_json::from_str(include_str!("../../../oracles/openrails-audio.json")).unwrap();
+        let highest = SmsProgram::parse(fixture).unwrap();
+        let expected = &reference["groups"][0];
+        assert_eq!(
+            highest.distance_m,
+            expected["activation_m"].as_f64().unwrap() as f32
+        );
+        assert_eq!(
+            highest.deactivation_distance_m,
+            expected["deactivation_m"].as_f64().unwrap() as f32
+        );
+        assert_eq!(highest.stereo, expected["stereo"].as_bool().unwrap());
+        assert_eq!(highest.ignore_3d, expected["ignore_3d"].as_bool().unwrap());
+        assert!(!highest.cameras.unwrap().cab);
+        assert!(highest.warnings.is_empty(), "{:?}", highest.warnings);
+        for (trigger, threshold) in highest.streams[0]
+            .triggers
+            .iter()
+            .zip(reference["distance_thresholds_squared"].as_array().unwrap())
+        {
+            assert!(
+                matches!(trigger.kind, TriggerKind::Variable { control: Control::Distance, threshold: actual, .. } if actual == threshold.as_f64().unwrap() as f32)
+            );
+        }
+        let defaults = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 4 Stereo () Ignore3D () Activation ( ExternalCam () ) Deactivation () Streams (0) ) )").unwrap();
+        let expected = &reference["groups"][1];
+        assert_eq!(
+            defaults.distance_m,
+            expected["activation_m"].as_f64().unwrap() as f32
+        );
+        assert_eq!(
+            defaults.deactivation_distance_m,
+            expected["deactivation_m"].as_f64().unwrap() as f32
+        );
+        assert_eq!(defaults.stereo, expected["stereo"].as_bool().unwrap());
+        assert_eq!(defaults.ignore_3d, expected["ignore_3d"].as_bool().unwrap());
+    }
     #[test]
     fn native_negative_tables_keep_openrails_endpoint_semantics() {
         let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( VolumeCurve ( Variable2Controlled CurvePoints ( 3 0 0 -5 .05 -100 .8 ) ) FrequencyCurve ( Variable1Controlled CurvePoints ( 3 0 11025 -35 11025 -50 14000 ) ) Triggers ( 0 ) ) ) ) )").unwrap();

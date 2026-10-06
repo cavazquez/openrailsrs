@@ -1,12 +1,18 @@
 //! Render a native consist sound demonstration without an output device.
 use openrailsrs_audio::native::{
-    ConsistSoundSpec, SoundFrame, SoundState, TrainSoundFrame, render_oracle,
+    ConsistSoundSpec, NativeAudioEngine, SoundFrame, SoundState, TrainSoundFrame, render_oracle,
 };
 use std::path::PathBuf;
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if args.len() < 3 {
-        eprintln!("Usage: native_oracle CONSIST.con ROUTE OUTPUT.wav [cab|exterior]");
+    if args.len() < 3
+        || args.len() > 5
+        || args.get(3).is_some_and(|s| s != "cab" && s != "exterior")
+        || args.get(4).is_some_and(|s| s != "--probe-device")
+    {
+        eprintln!(
+            "Usage: native_oracle CONSIST.con ROUTE OUTPUT.wav [cab|exterior] [--probe-device]"
+        );
         std::process::exit(2);
     }
     let spec = ConsistSoundSpec {
@@ -20,9 +26,13 @@ fn main() {
     )
     .ok();
     let mut total_length = 0.0_f32;
-    let electric = consist.as_ref().is_some_and(|c| c.vehicles.iter().any(|v| {
-        matches!(v, openrailsrs_train::Vehicle::Loco(l) if l.diesel_sfc_g_per_kwh.is_none() && l.steam.is_none())
-    }));
+    let electric = consist.as_ref().is_some_and(|c| {
+        c.vehicles.iter().any(|v| {
+            matches!(v, openrailsrs_train::Vehicle::Loco(l) if l.diesel_sfc_g_per_kwh.is_none()
+            && l.steam.is_none()
+            && l.diesel_traction.as_ref().is_none_or(|m| m.engine.is_none()))
+        })
+    });
     let offsets: Vec<_> = consist
         .as_ref()
         .map(|c| {
@@ -70,6 +80,7 @@ fn main() {
                     id: 0,
                     distance_m: if cab { 0.0 } else { 25.0 },
                     vehicle_distances_m: offsets.iter().map(|x| x.hypot(25.0)).collect(),
+                    vehicle_states: vec![],
                     state: SoundState {
                         speed: ((seconds - 2.0).max(0.0) * 2.0) as f32,
                         distance: (seconds * seconds) as f32,
@@ -103,11 +114,41 @@ fn main() {
             }
         })
         .collect();
-    match render_oracle(&[spec], &frames, &PathBuf::from(&args[2])) {
-        Ok(report) => println!("{}", serde_json::to_string_pretty(&report).unwrap()),
-        Err(e) => {
-            eprintln!("{e}");
+    let mut report = render_oracle(
+        std::slice::from_ref(&spec),
+        &frames,
+        &PathBuf::from(&args[2]),
+    )
+    .unwrap_or_else(|e| {
+        eprintln!("{e}");
+        std::process::exit(1);
+    });
+    if args.get(4).is_some() {
+        let engine = NativeAudioEngine::start(vec![spec]).unwrap_or_else(|| {
+            eprintln!("Device probe needs OPENRAILSRS_DISABLE_AUDIO unset");
             std::process::exit(1);
+        });
+        let mut frame = frames[0].clone();
+        // Exercise the actual device/mixer without playing sound on the host.
+        frame.volume = 0.0;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            engine.send(frame.clone());
+            report = engine.report();
+            if report.device {
+                break;
+            }
+            if std::time::Instant::now() >= deadline
+                || report
+                    .warnings
+                    .iter()
+                    .any(|w| w == "No audio output device")
+            {
+                eprintln!("Device probe failed: {report:?}");
+                std::process::exit(1);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(25));
         }
     }
+    println!("{}", serde_json::to_string_pretty(&report).unwrap());
 }

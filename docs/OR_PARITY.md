@@ -329,3 +329,17 @@ andén y cercos originales. Las referencias originales conservan sus hashes;
 las imágenes Bevy y los resultados están en
 [las pruebas nuevas](fixtures/compatibility/journey-release-2026-10-05/README.md).
 Persisten diferencias de iluminación, sol y detalle a distancia entre motores.
+
+## Sonido: semántica y atenuación
+
+[openrails-audio.json](../oracles/openrails-audio.json) congela resultados de las
+DLL originales fijadas: lectura SMS, siete cruces de distancia, 36 ganancias
+con `SoundSource.SetRolloffFactor` y nueve identificadores de eventos de freno.
+La captura se repitió con salida idéntica. Rust exige coincidencia de comandos
+y umbrales y error absoluto de ganancia menor que `1e-6`.
+
+La [prueba de siete formaciones](fixtures/audio/native-consistency-2026-10-05.json)
+comprueba señal, ausencia de saturación y recursos SMS/WAV. Las doce vistas de
+Chiltern no tienen advertencias; las dos de Class 47 conservan 21 WAV ausentes
+del paquete. Esto no certifica identidad acústica de la mezcla completa con
+OpenAL. Alcance y comandos en [NATIVE_AUDIO.md](NATIVE_AUDIO.md).

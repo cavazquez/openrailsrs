@@ -256,3 +256,21 @@ sha256 = "612b24e8218dcf568d7b63ee3d35d5e6798e5975ea63c57cb0127c5c4b24f422"
 [[files]]
 path = "examples/baselines/class47/capture/trace.csv"
 sha256 = "51fe072f2ed890fdb734d04a969917a6826155b411c3ec4b2c14e292ae1f4955"
+
+# Original SMS parser, variable-distance triggers and inverse-distance gain.
+
+[[files]]
+path = "oracles/fixtures/audio-distance.sms"
+sha256 = "6b14e464decfd17bc2253b7ad4066f4749c6fa06d5becf087e2fa6307052c8bc"
+
+[[files]]
+path = "tools/openrails-reference/AudioReference.cs"
+sha256 = "763dc33c83694e1a7aa27c99f76567d6a492d41310ab3291af5a7a6c2e9de58f"
+
+[[files]]
+path = "oracles/openrails-audio.json"
+sha256 = "ef9134737e584dc61d13917e5c202d3b8338138014804cd1bfa02e3a314b9560"
+
+[[files]]
+path = "oracles/openrails-audio-provenance.json"
+sha256 = "470edae7eee44d5a27a43b0690f697431d4d614caac2e801538b69e4440c86c1"

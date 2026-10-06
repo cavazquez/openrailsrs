@@ -1,0 +1,25 @@
+SIMISA@@@@@@@@@@JINX0t1t______
+
+Tr_SMS (
+    ScalabiltyGroup ( 5
+        Stereo ( 0 )
+        Ignore3D ( false )
+        Activation ( ExternalCam () PassengerCam () CabCam ( 0 ) Distance ( 100 ) )
+        Deactivation ( CabCam () Distance ( 150 ) )
+        Streams ( 1
+            Stream (
+                Triggers ( 2
+                    Variable_Trigger ( Distance_Dec_Past 100 SetStreamVolume ( 0.4 ) )
+                    Variable_Trigger ( Distance_Inc_Past 100 SetStreamVolume ( 0.8 ) )
+                )
+            )
+        )
+    )
+    ScalabiltyGroup ( 4
+        Stereo ()
+        Ignore3D ()
+        Activation ( ExternalCam () )
+        Deactivation ()
+        Streams ( 0 )
+    )
+)

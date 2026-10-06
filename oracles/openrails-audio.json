@@ -1,0 +1,329 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "groups": [
+    {
+      "detail": 5,
+      "stereo": false,
+      "ignore_3d": false,
+      "activation_m": 100.0,
+      "deactivation_m": 150.0,
+      "cab": false,
+      "passenger": true,
+      "exterior": true
+    },
+    {
+      "detail": 4,
+      "stereo": true,
+      "ignore_3d": true,
+      "activation_m": 1000.0,
+      "deactivation_m": 1000.0,
+      "cab": false,
+      "passenger": false,
+      "exterior": true
+    }
+  ],
+  "distance_thresholds_squared": [
+    10000.0,
+    10000.0
+  ],
+  "distance_checkpoints": [
+    {
+      "distance_m": 50.0,
+      "decrease_runs": 1,
+      "increase_runs": 0,
+      "volume": 0.4
+    },
+    {
+      "distance_m": 100.0,
+      "decrease_runs": 1,
+      "increase_runs": 0,
+      "volume": 0.4
+    },
+    {
+      "distance_m": 101.0,
+      "decrease_runs": 1,
+      "increase_runs": 1,
+      "volume": 0.8
+    },
+    {
+      "distance_m": 100.0,
+      "decrease_runs": 1,
+      "increase_runs": 1,
+      "volume": 0.8
+    },
+    {
+      "distance_m": 99.0,
+      "decrease_runs": 2,
+      "increase_runs": 1,
+      "volume": 0.4
+    },
+    {
+      "distance_m": 98.0,
+      "decrease_runs": 2,
+      "increase_runs": 1,
+      "volume": 0.4
+    },
+    {
+      "distance_m": 101.0,
+      "decrease_runs": 2,
+      "increase_runs": 2,
+      "volume": 0.8
+    }
+  ],
+  "attenuation": [
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 0.0,
+      "rolloff": 0.156626508,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 8.0,
+      "rolloff": 0.156626508,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 25.0,
+      "rolloff": 0.156626508,
+      "gain": 0.750282466
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 50.0,
+      "rolloff": 0.156626508,
+      "gain": 0.5487603
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 100.0,
+      "rolloff": 0.156626508,
+      "gain": 0.356989264
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 500.0,
+      "rolloff": 0.156626508,
+      "gain": 0.09405099
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 1000.0,
+      "rolloff": 0.156626508,
+      "gain": 0.04896755
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 1500.0,
+      "rolloff": 0.156626508,
+      "gain": 0.0331007
+    },
+    {
+      "deactivation_m": 0.0,
+      "distance_m": 2000.0,
+      "rolloff": 0.156626508,
+      "gain": 0.025
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 0.0,
+      "rolloff": 0.314516127,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 8.0,
+      "rolloff": 0.314516127,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 25.0,
+      "rolloff": 0.314516127,
+      "gain": 0.599395752
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 50.0,
+      "rolloff": 0.314516127,
+      "gain": 0.3771863
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 100.0,
+      "rolloff": 0.314516127,
+      "gain": 0.216593876
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 500.0,
+      "rolloff": 0.314516127,
+      "gain": 0.0491575822
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 1000.0,
+      "rolloff": 0.314516127,
+      "gain": 0.025
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 1500.0,
+      "rolloff": 0.314516127,
+      "gain": 0.01676242
+    },
+    {
+      "deactivation_m": 1000.0,
+      "distance_m": 2000.0,
+      "rolloff": 0.314516127,
+      "gain": 0.0126080327
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 0.0,
+      "rolloff": 0.209115282,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 8.0,
+      "rolloff": 0.209115282,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 25.0,
+      "rolloff": 0.209115282,
+      "gain": 0.692343354
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 50.0,
+      "rolloff": 0.209115282,
+      "gain": 0.476677358
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 100.0,
+      "rolloff": 0.209115282,
+      "gain": 0.293700784
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 500.0,
+      "rolloff": 0.209115282,
+      "gain": 0.0721470043
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 1000.0,
+      "rolloff": 0.209115282,
+      "gain": 0.0371329039
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 1500.0,
+      "rolloff": 0.209115282,
+      "gain": 0.025
+    },
+    {
+      "deactivation_m": 1500.0,
+      "distance_m": 2000.0,
+      "rolloff": 0.209115282,
+      "gain": 0.0188431423
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 0.0,
+      "rolloff": 0.156626508,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 8.0,
+      "rolloff": 0.156626508,
+      "gain": 1.0
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 25.0,
+      "rolloff": 0.156626508,
+      "gain": 0.750282466
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 50.0,
+      "rolloff": 0.156626508,
+      "gain": 0.5487603
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 100.0,
+      "rolloff": 0.156626508,
+      "gain": 0.356989264
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 500.0,
+      "rolloff": 0.156626508,
+      "gain": 0.09405099
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 1000.0,
+      "rolloff": 0.156626508,
+      "gain": 0.04896755
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 1500.0,
+      "rolloff": 0.156626508,
+      "gain": 0.0331007
+    },
+    {
+      "deactivation_m": 2000.0,
+      "distance_m": 2000.0,
+      "rolloff": 0.156626508,
+      "gain": 0.025
+    }
+  ],
+  "brake_events": [
+    {
+      "id": 14,
+      "native_event": "TrainBrakePressureIncrease"
+    },
+    {
+      "id": 54,
+      "native_event": "TrainBrakePressureDecrease"
+    },
+    {
+      "id": 139,
+      "native_event": "TrainBrakePressureStoppedChanging"
+    },
+    {
+      "id": 141,
+      "native_event": "BrakePipePressureIncrease"
+    },
+    {
+      "id": 142,
+      "native_event": "BrakePipePressureDecrease"
+    },
+    {
+      "id": 143,
+      "native_event": "BrakePipePressureStoppedChanging"
+    },
+    {
+      "id": 21,
+      "native_event": "EngineBrakePressureIncrease"
+    },
+    {
+      "id": 22,
+      "native_event": "EngineBrakePressureDecrease"
+    },
+    {
+      "id": 140,
+      "native_event": "EngineBrakePressureStoppedChanging"
+    }
+  ]
+}
