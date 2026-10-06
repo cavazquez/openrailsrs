@@ -50,7 +50,8 @@ pub struct ServiceChoice {
     pub edition: Option<String>,
 }
 
-#[derive(Resource, Clone, Debug)]
+// The menu owns its reply queue; cloning a live receiver would lose reports.
+#[derive(Resource, Debug)]
 pub struct PlayerLaunchMenu {
     pub routes: Vec<String>,
     pub services: Vec<ServiceChoice>,
@@ -67,6 +68,8 @@ pub struct PlayerLaunchMenu {
     pub status: String,
     pub consist_audits: HashMap<PathBuf, openrailsrs_train::ConsistAudit>,
     auditor: openrailsrs_train::ConsistAuditor,
+    audits: crate::launch_audits::LaunchAudits,
+    pending_reaudit: Option<PathBuf>,
 }
 
 impl Default for PlayerLaunchMenu {
@@ -148,6 +151,8 @@ impl PlayerLaunchMenu {
             environment: default(),
             status: String::new(),
             consist_audits: HashMap::new(),
+            audits: crate::launch_audits::LaunchAudits::new(),
+            pending_reaudit: None,
             auditor: openrailsrs_train::ConsistAuditor::new(
                 native
                     .as_deref()
@@ -189,10 +194,22 @@ impl PlayerLaunchMenu {
             .unwrap_or(0);
         self.refresh_choices();
     }
+    pub fn cycle_consist(&mut self, delta: i32) {
+        self.consist = cycle(self.consist, self.consists.len(), delta);
+        self.pending_reaudit = None;
+        let mut paths = self.consists.clone();
+        if self.consist < paths.len() {
+            paths.swap(0, self.consist);
+        }
+        self.audits
+            .request(self.auditor.trainset_roots.clone(), &paths, false);
+        self.restore_cached_audits();
+        self.update_audit_status();
+    }
     pub fn refresh_choices(&mut self) {
         self.refresh_choices_with_library(&player_data_dir().join("rolling-stock/TRAINS/CONSISTS"));
     }
-    /// Re-read manually completed resources without changing the launch choices.
+    /// Re-read manually completed resources without blocking or changing the choices.
     pub fn reaudit_selected(&mut self) -> Result<String, String> {
         let path = self
             .consists
@@ -200,13 +217,66 @@ impl PlayerLaunchMenu {
             .cloned()
             .ok_or("No hay una formación seleccionada")?;
         self.auditor = openrailsrs_train::ConsistAuditor::new(self.auditor.trainset_roots.clone());
-        let audit = self.auditor.inspect(&path);
-        let message = format!("Auditoría actualizada: {}", audit.label());
-        self.consist_audits.insert(path, audit);
+        if self.audits.error().is_some() {
+            self.audits = crate::launch_audits::LaunchAudits::new();
+        }
+        self.consist_audits.clear();
+        self.pending_reaudit = Some(path.clone());
+        self.audits
+            .request(self.auditor.trainset_roots.clone(), &[path], true);
+        if let Some(error) = self.audits.error() {
+            return Err(error.into());
+        }
+        let message = "Revisando los archivos de la formación…".to_string();
         self.status = message.clone();
         Ok(message)
     }
+    pub fn selected_audit_pending(&self) -> bool {
+        self.consists
+            .get(self.consist)
+            .is_some_and(|p| !self.consist_audits.contains_key(p))
+    }
+    pub fn reaudit_pending(&self) -> bool {
+        self.pending_reaudit.is_some()
+    }
+    pub fn poll_consist_audits(&mut self) -> bool {
+        if !self.audits.poll() {
+            return false;
+        }
+        self.restore_cached_audits();
+        if self.audits.error().is_some() {
+            self.pending_reaudit = None;
+            self.update_audit_status();
+        } else if let Some(path) = &self.pending_reaudit
+            && let Some(audit) = self.consist_audits.get(path)
+        {
+            self.status = format!("Auditoría actualizada: {}", audit.label());
+            self.pending_reaudit = None;
+        } else {
+            self.update_audit_status();
+        }
+        true
+    }
+    fn restore_cached_audits(&mut self) {
+        for path in &self.consists {
+            if !self.consist_audits.contains_key(path)
+                && let Some(audit) = self.audits.cached(&self.auditor.trainset_roots, path)
+            {
+                self.consist_audits.insert(path.clone(), audit.clone());
+            }
+        }
+    }
+    fn update_audit_status(&mut self) {
+        self.status = if let Some(error) = self.audits.error() {
+            error.into()
+        } else if self.selected_audit_pending() {
+            "Revisando los archivos de la formación… Podés seguir eligiendo ruta y servicio".into()
+        } else {
+            "Elegí el servicio y pulsá Iniciar partida".into()
+        };
+    }
     fn refresh_choices_with_library(&mut self, library: &Path) {
+        self.pending_reaudit = None;
         self.consists.clear();
         self.paths.clear();
         self.consist = 0;
@@ -258,14 +328,12 @@ impl PlayerLaunchMenu {
                 self.consists.push(con);
             }
         }
-        // An empty first choice means the consist/path authored by the selected activity.
-        for con in &self.consists {
-            if !self.consist_audits.contains_key(con) {
-                self.consist_audits
-                    .insert(con.clone(), self.auditor.inspect(con));
-            }
-        }
-        self.status = "Elegí el servicio y pulsá Iniciar partida".into();
+        // Parsing every shared vehicle, shape and cab used to freeze this frame.
+        // Audit the selected formation first; reuse completed reports on return.
+        self.audits
+            .request(self.auditor.trainset_roots.clone(), &self.consists, false);
+        self.restore_cached_audits();
+        self.update_audit_status();
     }
     pub fn consist_label(&self) -> String {
         self.consists
@@ -298,12 +366,21 @@ impl PlayerLaunchMenu {
             .get(self.consist)
             .and_then(|p| self.consist_audits.get(p))
             .map(|r| format!("{}\n{}", r.label(), r.compatibility_summary()))
-            .unwrap_or_else(|| "Se valida al importar la actividad".into())
+            .unwrap_or_else(|| {
+                if self.selected_audit_pending() {
+                    "Revisando archivos de la formación…".into()
+                } else {
+                    "Se valida al importar la actividad".into()
+                }
+            })
     }
     pub fn prepare(&self) -> Result<QueuedPlayerLaunch, String> {
         self.prepare_in(&player_data_dir())
     }
     fn prepare_in(&self, data_dir: &Path) -> Result<QueuedPlayerLaunch, String> {
+        if self.selected_audit_pending() {
+            return Err("La formación todavía se está revisando; esperá su diagnóstico".into());
+        }
         let choice = self.current().ok_or("No hay un servicio seleccionado")?;
         let imported_dir = dispatch_network_dir(&choice.route_dir);
         let (mut value, mut scenario) = if choice.native_activity {
@@ -690,6 +767,51 @@ pub fn dispatch_network_dir(corridor: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn wait_for_audits(menu: &mut PlayerLaunchMenu) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while menu.consist_audits.len() < menu.consists.len() {
+            assert!(std::time::Instant::now() < deadline, "{}", menu.status);
+            menu.poll_consist_audits();
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+    fn wait_for_reaudit(menu: &mut PlayerLaunchMenu) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while menu.reaudit_pending() {
+            assert!(std::time::Instant::now() < deadline, "{}", menu.status);
+            menu.poll_consist_audits();
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+    #[test]
+    #[ignore = "requires the original Chiltern installation; prints route-switch timings"]
+    fn native_menu_route_switch_timing() {
+        let native = PathBuf::from(
+            std::env::var_os("OPENRAILSRS_NATIVE_ROUTE").expect("original Chiltern route"),
+        );
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&project, Some(native));
+        wait_for_audits(&mut menu);
+        let chiltern = menu.routes.iter().position(|r| r == "Chiltern").unwrap();
+        let mitre = menu
+            .routes
+            .iter()
+            .position(|r| r.to_ascii_lowercase().contains("mitre"))
+            .unwrap();
+        for _ in 0..3 {
+            for route in [mitre, chiltern] {
+                let start = std::time::Instant::now();
+                menu.cycle_route(route as i32 - menu.route as i32);
+                println!(
+                    "MENU_SWITCH {} {:.3} ms · {} formations",
+                    menu.routes[menu.route],
+                    start.elapsed().as_secs_f64() * 1000.,
+                    menu.consists.len()
+                );
+                wait_for_audits(&mut menu);
+            }
+        }
+    }
     #[test]
     #[ignore = "requires the original Demo Model 1 and its imported graph"]
     fn native_demo_launch_uses_the_chosen_formation_head() {
@@ -716,8 +838,9 @@ mod tests {
         menu.service = 0;
         menu.consist = 0;
         menu.path = 0;
+        menu.consist_audits
+            .insert(con.clone(), menu.auditor.inspect(&con));
         menu.consists = vec![con];
-        menu.consist_audits.clear();
         menu.start_time_s = 34140.0;
         menu.season = 1;
         let output = tempfile::tempdir().unwrap();
@@ -767,6 +890,7 @@ mod tests {
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
         let mut menu = PlayerLaunchMenu::discover(&project, None);
         menu.refresh_choices_with_library(&library);
+        wait_for_audits(&mut menu);
         assert!(menu.consists.contains(&consist));
         assert!(menu.consist_audits[&consist].player_ready());
         menu.consist = menu.consists.iter().position(|p| p == &consist).unwrap();
@@ -780,13 +904,16 @@ mod tests {
         );
         std::fs::write(stock.join("original.eng"), "Wagon ( original Mass ( 40t ) Size ( 3m 4m 20m ) WagonShape ( original.s ) ) Engine ( original MaxPower ( 500kW ) )").unwrap();
         menu.reaudit_selected().unwrap();
+        wait_for_reaudit(&mut menu);
         assert!(!menu.consist_audits[&consist].player_ready());
         std::fs::write(stock.join("original.s"), "(shape (texture_filenames 0))").unwrap();
         menu.reaudit_selected().unwrap();
+        wait_for_reaudit(&mut menu);
         assert!(menu.consist_audits[&consist].player_ready());
         assert!(menu.consist_audits[&consist].missing_resources.is_empty());
         std::fs::remove_file(stock.join("original.s")).unwrap();
         menu.reaudit_selected().unwrap();
+        wait_for_reaudit(&mut menu);
         assert!(!menu.consist_audits[&consist].player_ready());
         assert_eq!(
             (
@@ -798,6 +925,36 @@ mod tests {
             ),
             selection
         );
+    }
+    #[test]
+    fn launch_waits_for_the_selected_audit_and_rejects_an_incomplete_formation() {
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let temp = tempfile::tempdir().unwrap();
+        let mut menu = PlayerLaunchMenu::discover(&project, None);
+        let service = menu
+            .services
+            .iter()
+            .position(|s| s.source.ends_with("smoke/scenario.toml"))
+            .unwrap();
+        menu.service = service;
+        let con = temp.path().join("missing.con");
+        menu.consists = vec![con.clone()];
+        menu.consist = 0;
+        menu.consist_audits.clear();
+        let error = menu.prepare_in(temp.path()).unwrap_err();
+        assert!(error.contains("todavía se está revisando"), "{error}");
+        assert!(std::fs::read_dir(temp.path()).unwrap().next().is_none());
+        menu.consist_audits.insert(
+            con.clone(),
+            openrailsrs_train::ConsistAudit {
+                path: con,
+                errors: vec!["Falta el recurso original".into()],
+                ..Default::default()
+            },
+        );
+        let error = menu.prepare_in(temp.path()).unwrap_err();
+        assert!(error.contains("Falta el recurso original"), "{error}");
+        assert!(std::fs::read_dir(temp.path()).unwrap().next().is_none());
     }
     #[test]
     fn extended_and_traffic_examples_keep_native_chiltern_scenery() {
@@ -921,8 +1078,9 @@ mod tests {
         let source = dir.path().join("traffic.toml");
         std::fs::write(&source, toml::to_string_pretty(&authored).unwrap()).unwrap();
         menu.services[menu.service].source = source.clone();
+        menu.consist_audits
+            .insert(con.clone(), menu.auditor.inspect(&con));
         menu.consists = vec![con];
-        menu.consist_audits.clear();
         menu.start_time_s = 45000.0;
         menu.season = 3;
         menu.weather = PlayerWeather::Rain;

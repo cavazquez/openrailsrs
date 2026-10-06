@@ -1234,3 +1234,27 @@ Los controles nuevos también funcionan en la simulación sin visor. Las
 pruebas de arranque y unidades usan OR 1.6.1; la caldera tiene termodinámica
 simplificada y no se afirma paridad completa de vapor, transmisiones ni freno
 dinámico. Ver [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
+
+## 39. Cambiar de ruta sin congelar el menú
+
+Cerrá el visor anterior y abrí el binario actualizado con `--menu`.
+
+1. Elegí Chiltern y esperá su diagnóstico de formación. En la primera revisión
+   puede aparecer «Revisando archivos…»; las flechas de ruta y servicio deben
+   seguir respondiendo mientras se revisa el contenido.
+2. Cambiá a Mitre y volvé a Chiltern varias veces. La ruta y sus opciones deben
+   cambiar al pulsar la flecha, sin el bloqueo de varios segundos. La revisión
+   terminada se conserva durante esa sesión del menú.
+3. Mientras aparezca «Revisando formación…», cambiá rápidamente de ruta, servicio
+   y formación. El diagnóstico final debe corresponder al archivo seleccionado;
+   un resultado anterior no debe reemplazar el de la nueva ruta.
+4. «Iniciar partida» aparece cuando termina la revisión de la formación elegida.
+   Una formación con archivos necesarios ausentes sigue dando su diagnóstico y
+   no permite empezar; conservar la caché no elimina esa validación.
+5. Después de completar archivos faltantes desde su origen, pulsá «Revisar
+   archivos otra vez». El diagnóstico debe actualizarse sin congelar la ventana
+   ni cambiar ruta, servicio, formación, recorrido u hora de salida.
+
+Se conserva una caché por paquete de contenido, no por nombre de ruta. La
+revisión manual y la instalación de un paquete permiten renovar los resultados;
+los modelos y texturas de una partida todavía se cargan al iniciar el servicio.

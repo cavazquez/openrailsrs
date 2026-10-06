@@ -41,6 +41,7 @@ pub mod cab_mouse;
 mod cab_profile;
 pub mod gpu_memory;
 pub mod ground_fog;
+mod launch_audits;
 pub mod native_audio;
 pub mod night_sky;
 pub mod official_content;

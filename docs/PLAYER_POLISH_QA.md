@@ -811,3 +811,31 @@ de rendimiento de GPU.
 Las tres siluetas WORLD individuales e instanciadas coinciden **1,0/1,0/1,0**
 frente al mínimo fijo 0,98. Las capturas por software se ejecutaron por separado
 del viaje medido en GPU.
+
+## Menú: volver de Mitre a Chiltern
+
+La selección ejecutaba la auditoría de todas las formaciones en el hilo de Bevy
+y descartaba sus resultados al cambiar de ruta. Con el Chiltern original instalado
+y 185 formaciones, tres vueltas desde Mitre tardaron **8340,09 / 8411,93 / 8529,46 ms**.
+Con la revisión en un único trabajador y caché por paquete, las mismas vueltas
+tardaron **2,90 / 2,20 / 2,15 ms**. Es el tiempo de `cycle_route` con los diagnósticos
+ya disponibles; no mide cuadros del renderizador ni la carga de una partida.
+
+Las regresiones comprueban navegación y consultas mientras el lector está
+bloqueado, descarte de resultados anteriores, separación de paquetes, cancelación
+al cerrar el menú, actualización de recursos y bloqueo de inicio mientras falta
+el diagnóstico seleccionado. El chequeo completo pasa **1612 pruebas Rust** y
+**55 Python**; el ensayo nativo de tiempos se ejecutó además explícitamente.
+
+El menú actualizado se capturó a 1280×720 con RX 7600/Vulkan en Weston privado:
+**408,91 MiB** de pico RSS, cero shaders pendientes o fallidos y salida correcta.
+Se revisaron la formación elegida, sus avisos y «Revisar archivos otra vez».
+Pasos para repetirlo en la [sección 39 de pruebas manuales](PLAYER_MANUAL_TESTS.md#39-cambiar-de-ruta-sin-congelar-el-menú).
+
+```bash
+OPENRAILSRS_NATIVE_ROUTE="/ruta/a/ROUTES/Chiltern" \
+CARGO_PROFILE_TEST_OPT_LEVEL=1 CARGO_PROFILE_TEST_DEBUG=0 \
+CARGO_PROFILE_TEST_STRIP=symbols CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 \
+cargo test --locked --workspace --all-features native_menu_route_switch_timing \
+  -- --ignored --nocapture --test-threads=1
+```

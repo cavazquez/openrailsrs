@@ -71,6 +71,7 @@ impl Plugin for PlayerUiPlugin {
                 (
                     player_keys,
                     poll_content_download,
+                    poll_menu_audits,
                     handle_buttons.in_set(EnvironmentControls),
                     capture_ui_pointer,
                     build_panel,
@@ -694,14 +695,14 @@ fn handle_buttons(
             }else{Err("No hay una partida activa".into())},
             UiCommand::Cycle(field,delta)=>{match field {
                 MenuField::Route=>menu.cycle_route(*delta),MenuField::Service=>menu.cycle_service(*delta),
-                MenuField::Consist=>menu.consist=cycle(menu.consist,menu.consists.len(),*delta),
+                MenuField::Consist=>menu.cycle_consist(*delta),
                 MenuField::Path=>menu.path=cycle(menu.path,menu.paths.len()+1,*delta),
                 MenuField::Time=>menu.start_time_s=(menu.start_time_s+f64::from(*delta)*900.0).rem_euclid(86400.0),
                 MenuField::Season=>menu.season=cycle(menu.season,4,*delta),
                 MenuField::Weather=>{menu.weather=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==menu.weather).unwrap_or(0),PlayerWeather::ALL.len(),*delta)];menu.environment.manual_weather=menu.weather;},
                 MenuField::TimeSource=>menu.environment.time=menu.environment.time.next(),
                 MenuField::WeatherSource=>menu.environment.weather=menu.environment.weather.next(),
-            }settings.environment=menu.environment;Ok(())},
+            }settings.environment=menu.environment;ui.notice.clear();Ok(())},
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
@@ -1002,6 +1003,9 @@ fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu
             UiCommand::ContentFolder(None),
         );
         button(p, "Copiar diagnóstico", UiCommand::CopyContentDiagnostics);
+        if !full && !menu.consists.is_empty() {
+            button(p, "Revisar archivos otra vez", UiCommand::MissingAudit);
+        }
     });
     if let Some(service) = menu.current() {
         label(
@@ -1169,7 +1173,11 @@ fn build_menu(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu) {
         );
     }
     row(p, |p| {
-        button(p, "Iniciar partida", UiCommand::Start);
+        if menu.selected_audit_pending() {
+            label(p, "Revisando formación…", 13.0, MUTED);
+        } else {
+            button(p, "Iniciar partida", UiCommand::Start);
+        }
         button(p, "Ajustes", UiCommand::Open(PlayerPanel::Settings));
         button(p, "Salir", UiCommand::Exit);
     });
@@ -1274,6 +1282,25 @@ fn poll_content_download(
     }
     if ui.panel == PlayerPanel::Content && (ready || was_busy != downloads.busy()) {
         ui.rebuild = true;
+    }
+}
+
+fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiState>) {
+    let reauditing = menu.reaudit_pending();
+    let pending = menu.selected_audit_pending();
+    let status = menu.status.clone();
+    if menu.poll_consist_audits() {
+        if reauditing && !menu.reaudit_pending() {
+            ui.notice = menu.status.clone();
+        }
+        if (pending != menu.selected_audit_pending() || status != menu.status || reauditing)
+            && matches!(
+                ui.panel,
+                PlayerPanel::Menu | PlayerPanel::MissingResources | PlayerPanel::Content
+            )
+        {
+            ui.rebuild = true;
+        }
     }
 }
 
