@@ -94,3 +94,7 @@ scripts/__pycache__/
 # Generated second-formation comparison outputs.
 examples/class47_reference/run.csv
 examples/class47_reference/run.json
+
+# Generated consumable and engine-lifecycle practice runs.
+examples/traction_operation/run*.csv
+examples/traction_operation/run*.json

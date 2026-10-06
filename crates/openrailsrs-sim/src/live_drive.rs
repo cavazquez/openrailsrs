@@ -197,6 +197,75 @@ pub struct LiveDriveSession {
 }
 
 impl LiveDriveSession {
+    pub fn steam_command(&mut self, command: crate::steam::SteamCommand) -> Result<(), String> {
+        self.state
+            .boiler_state
+            .as_mut()
+            .ok_or("Esta formación no tiene caldera de vapor")?
+            .command(command);
+        Ok(())
+    }
+
+    pub fn toggle_diesel_engine(&mut self, vehicle: usize) -> Result<(), String> {
+        let car = self
+            .physics
+            .diesel
+            .cars
+            .iter()
+            .find(|c| c.vehicle == vehicle)
+            .ok_or("Este vehículo no tiene motor diésel")?;
+        let state = self
+            .state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == vehicle)
+            .ok_or("Motor diésel sin inicializar")?;
+        if !state.command_running {
+            if !car.battery {
+                return Err("Conectá la batería para arrancar el motor".into());
+            }
+            if state.fuel_l <= 0. {
+                return Err("El tanque diésel está vacío".into());
+            }
+            if self.driver_throttle > 0.001 {
+                return Err("Cerrá el regulador antes de arrancar".into());
+            }
+        }
+        state.command_running = !state.command_running;
+        crate::diesel_operation::advance(
+            &mut self.state.diesel,
+            &self.physics.diesel,
+            0.,
+            0.,
+            self.physics.native.is_some(),
+        );
+        Ok(())
+    }
+
+    pub fn traction_status(&self) -> Option<String> {
+        if let Some(b) = &self.state.boiler_state {
+            Some(format!(
+                "Caldera {:.1} bar · agua {:.0}%\n{}",
+                b.pressure_bar,
+                b.water_kg / b.initial_water_kg * 100.,
+                b.status()
+            ))
+        } else {
+            self.state.diesel.cars.first().map(|c| {
+                format!(
+                    "Diésel {} · {:.1} L{}",
+                    c.phase.label(),
+                    c.fuel_l,
+                    if c.fuel_l <= 0. {
+                        " · tanque vacío"
+                    } else {
+                        ""
+                    }
+                )
+            })
+        }
+    }
     pub fn toggle_pantograph(&mut self) -> Result<(), String> {
         if !self
             .physics
@@ -268,6 +337,7 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
+            diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
             electric: crate::electric::ElectricTrainConfig::load(
                 &route_dir,
                 scenario.route.electric_supply.as_ref(),
@@ -320,6 +390,7 @@ impl LiveDriveSession {
         state.boiler_state = consist
             .aggregate_steam_params()
             .map(|p| crate::steam::BoilerState::from_params(&p));
+        state.diesel.initialize(&physics.diesel);
         if !physics.diesel_engines.is_empty() {
             state.diesel_rpm = physics
                 .diesel_engines
@@ -820,17 +891,19 @@ impl LiveDriveSession {
             .brake_system
             .total_force_n(self.state.velocity_mps)
             / 1000.0;
-        let diesel_rpm = if self
-            .physics
-            .diesel_engines
-            .iter()
-            .any(|e| e.engine.is_some())
-            && !self.state.diesel_rpm.is_empty()
-        {
-            Some(self.state.diesel_rpm.iter().sum::<f64>() / self.state.diesel_rpm.len() as f64)
-        } else {
-            None
-        };
+        let diesel_rpm = self.state.diesel.cars.first().map(|c| c.rpm).or_else(|| {
+            if self
+                .physics
+                .diesel_engines
+                .iter()
+                .any(|e| e.engine.is_some())
+                && !self.state.diesel_rpm.is_empty()
+            {
+                Some(self.state.diesel_rpm.iter().sum::<f64>() / self.state.diesel_rpm.len() as f64)
+            } else {
+                None
+            }
+        });
         let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
         let main_res_bar = boiler_bar.unwrap_or(8.0 - self.driver_brake * 2.0);
         let head_vented = self
@@ -856,6 +929,8 @@ impl LiveDriveSession {
             .first()
             .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
+            steam: self.state.boiler_state.clone(),
+            diesel: self.state.diesel.cars.first().cloned(),
             pantograph_fraction: self
                 .state
                 .electric
@@ -915,6 +990,8 @@ impl LiveDriveSession {
 /// Driver-facing gauges for the 3D cab panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
+    pub steam: Option<crate::steam::BoilerState>,
+    pub diesel: Option<crate::diesel_operation::DieselCarState>,
     pub pantograph_fraction: f64,
     pub line_voltage_v: f64,
     pub circuit_breaker_state: u8,

@@ -13,13 +13,65 @@ con Open Rails 1.6.1 para Pullman y Class 47, con alcance y tolerancias en
 [OR_PARITY.md](OR_PARITY.md). El resultado de esas pruebas no certifica todas las
 locomotoras, transmisiones, frenos dinámicos ni scripts de sus autores.
 
+Cada vehículo declarado `Type ( Diesel )` conserva su depósito, RPM y estados
+detenido, arrancando, en marcha y deteniéndose. `K` acciona el primer motor;
+el panel `B` y la formación `F9` permiten elegir otros. Arrancar requiere
+batería, combustible y regulador cerrado. La formación inicia con motores
+preparados; un arranque posterior tiene retardo. Cortar el motor elimina
+su fuerza mientras el tren puede seguir por inercia. Aislar el mando múltiple
+no cambia la identidad ni repone el combustible del motor.
+
+Se leen `MaxDieselLevel`, `DieselConsumptionTab`, `DieselUsedPerHourAtIdle`,
+`DieselUsedPerHourAtMaxPower`, `StartingRPM` y `StartingConfirmRPM`. La tabla
+original es RPM → litros/hora, distinta del consumo específico g/kWh.
+El motor consume también en ralentí y durante las fases con combustión;
+un tanque vacío impide volver a arrancar. Guardar conserva el depósito y
+la transición de RPM. La conversión nativa `gal` usa galones estadounidenses;
+`g-uk` conserva los británicos.
+
+Los archivos reducidos del Pullman jugable incorporan el tipo y las reservas
+del original: 250 galones británicos en el DMBSA y la declaración final de
+830 galones estadounidenses en el DMBSH. Las tablas de consumo disponibles
+se conservan. Así los controles también están disponibles en el recorrido
+predeterminado; elegir la formación nativa sigue siendo necesario para cargar
+todos los parámetros y recursos de sus archivos originales.
+
+El oráculo [openrails-traction-operation.json](../oracles/openrails-traction-operation.json)
+compara 40 puntos de arranque, parada, RPM y caudal contra las DLL originales
+1.6.1. Es un motor sin caja de cambios; no certifica todas las transmisiones,
+motores múltiples dentro de un ENG, suministro auxiliar ni variación de masa
+por combustible. No hay reabastecimiento en depósitos.
+
 ## Vapor
 
 Hay caldera, presión, demanda de cilindros, consumo, animación y sonidos de
-marcha. La alimentación del fuego es simplificada y el inyector repone agua
-automáticamente: no reproduce una reserva finita completa del ténder ni todas
-las tareas del fogonero. Hall y King sirven para probar carga, cabina y sonido;
-su comportamiento físico completo todavía no está certificado.
+marcha. El agua de la caldera se distingue de la reserva finita del ténder.
+El carbón pasa del ténder al fuego antes de quemarse. Los inyectores transfieren
+agua, enfrían la caldera y necesitan presión; no crean agua. Sin fuego no
+hay producción nueva y la presión puede caer hasta cero. Un nivel de caldera
+del 15 % o inferior activa el fallo por falta de agua y corta la fuerza.
+
+`B` abre corte independiente del regulador, pala, tiro, dos inyectores,
+soplador y purgas de cilindros. El fogonero automático regula esos controles
+con las mismas reservas. Accionar pala, tiro, inyectores o soplador pasa a
+manual; el corte y las purgas permiten conservar la asistencia automática.
+El panel se puede usar en marcha o en pausa. `F8` muestra cantidades y caudales.
+Los instrumentos CVF disponibles leen presión, nivel, carbón, agua del ténder
+y controles; los SMS reciben los eventos originales de inyectores, tiro,
+soplador y purgas. El vapor de silbato requiere presión.
+
+Se corrigen las unidades de presión sin sufijo (PSI), el volumen de caldera
+en pies cúbicos y el radio de la rueda motriz del bloque Engine. Un diámetro
+menor de dos metros sigue siendo un diámetro. Las cantidades del oráculo
+se comparan con el lector STF original. `BoilerVolume` se aproxima a capacidad
+de agua a 1000 kg/m³; no representa el volumen real de vapor y líquido de OR.
+
+La energía de caldera, combustión e inyección sigue siendo un modelo de
+conservación simplificado, sin las tablas termodinámicas completas de OR.
+Solo hay una caldera agregada por formación; no se certifican locomotoras
+compuestas, gestión independiente de doble tracción, condensación, toma de
+agua en marcha ni reabastecimiento. Hall y King sirven para probar contenido,
+cabina y sonido; su física completa todavía no está certificada.
 
 ## Electricidad
 
@@ -97,3 +149,6 @@ la cabina y sus controles. Los eléctricos necesitan un perfil de alimentación
 que corresponda a su equipo; los ejemplos cortos prueban cortes y reconexión.
 Para vapor, ver animación y oír las emboladas no demuestra gestión completa
 de la caldera. La prueba de sonido está en [NATIVE_AUDIO.md](NATIVE_AUDIO.md).
+Los ejemplos `traction_operation` prueban motores, fogonero y agotamiento sin
+un viaje largo. Pasos y resultados esperados en la
+[sección 38 de pruebas manuales](PLAYER_MANUAL_TESTS.md#38-vapor-y-diésel-reservas-arranque-y-fogonero).

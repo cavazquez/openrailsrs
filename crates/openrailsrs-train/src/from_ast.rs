@@ -221,6 +221,7 @@ pub fn consist_asset_root(consist_path: &Path) -> &Path {
 
 fn msts_steam_to_params(s: MstsSteamFields) -> SteamParams {
     SteamParams {
+        operation: Box::new(s.operation),
         cylinder_count: s.cylinder_count,
         cylinder_bore_m: s.cylinder_bore_m,
         piston_stroke_m: s.piston_stroke_m,
@@ -383,6 +384,7 @@ impl From<EngineFile> for Locomotive {
         );
         Self {
             name: value.name,
+            diesel_operation: value.diesel_operation.map(Box::new),
             electric: value.electric.map(Box::new),
             mass_kg: value.mass_kg,
             max_power_w: value.max_power_w,

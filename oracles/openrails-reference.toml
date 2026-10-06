@@ -286,3 +286,17 @@ sha256 = "4359aaa85bb5dff54d8bc5efdc04a68870bb55690a05ab03a76b723b531e7f37"
 [[files]]
 path = "oracles/openrails-electric-provenance.json"
 sha256 = "f458b138475a22e297ac00d83c2aed90ffdf2fd27063d161ab359bce8dc189bc"
+
+# Original non-geared diesel lifecycle, STF resource units and sound event IDs.
+
+[[files]]
+path = "tools/openrails-reference/TractionOperationReference.cs"
+sha256 = "e19068f18cc71f203bab02cabeb8ed4ce599a58e494b51ba436f933a7369882e"
+
+[[files]]
+path = "oracles/openrails-traction-operation.json"
+sha256 = "45026c82e62a869acb0b461d297ab29b63688978533d3f1568f80ece5e0aaa84"
+
+[[files]]
+path = "oracles/openrails-traction-operation-provenance.json"
+sha256 = "e10f9e760ca47a9ca391c6f5459e21037bd89b9e963525ca77e0d8cf45b49006"

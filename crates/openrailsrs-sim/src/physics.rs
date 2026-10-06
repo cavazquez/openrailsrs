@@ -36,6 +36,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
 #[derive(Clone)]
 pub struct TrainPhysics {
+    pub diesel: crate::diesel_operation::DieselTrainConfig,
     pub electric: crate::electric::ElectricTrainConfig,
     pub native: Option<crate::native_dynamics::NativeTrainPhysics>,
     pub mass_kg: f64,
@@ -162,6 +163,13 @@ pub fn step(
         )
     });
     let native_brake_forces = state.brake_system.cylinder_forces_n(v);
+    state.fuel_consumption_g += crate::diesel_operation::advance(
+        &mut state.diesel,
+        &train.diesel,
+        physical_throttle,
+        dt,
+        train.native.is_some(),
+    );
     let mut rail_motor_forces = Vec::with_capacity(train.diesel_engines.len());
 
     // ── Tractive force ────────────────────────────────────────────────────────
@@ -222,14 +230,19 @@ pub fn step(
             };
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
-                let new_rpm = if train.native.is_some() {
+                let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
+                let new_rpm = if let Some(car) = state.diesel.car(vehicle_index) {
+                    car.rpm
+                } else if train.native.is_some() {
                     engine.advance_native_rpm(rpm, physical_throttle, dt)
                 } else {
                     engine.advance_rpm(rpm, physical_throttle, dt)
                 };
                 state.diesel_rpm[i] = new_rpm;
                 let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
-                let curve_throttle = if state.electric.power_available(vehicle_index) {
+                let curve_throttle = if state.electric.power_available(vehicle_index)
+                    && state.diesel.power_available(vehicle_index)
+                {
                     traction_throttle
                 } else {
                     0.
@@ -342,12 +355,15 @@ pub fn step(
                 f_total += rail_force;
             }
             f_total
-        } else if !train.electric.cars.is_empty() {
+        } else if !train.electric.cars.is_empty() || !train.diesel.cars.is_empty() {
             train
                 .electric
                 .fallback_cars
                 .iter()
-                .filter(|(vehicle, _)| state.electric.power_available(*vehicle))
+                .filter(|(vehicle, _)| {
+                    state.electric.power_available(*vehicle)
+                        && state.diesel.power_available(*vehicle)
+                })
                 .map(|(_, curve)| curve.interpolate(v).unwrap_or(0.))
                 .sum::<f64>()
                 * state.throttle
@@ -626,7 +642,10 @@ pub fn step(
     state.regen_energy_j += regen_j;
     state.cumulative_energy_j -= regen_j; // net consumed = gross - regen
     // Diesel fuel: proportional to mechanical energy output.
-    if let Some(sfc) = train.diesel_sfc_g_per_kwh {
+    if let Some(sfc) = train
+        .diesel_sfc_g_per_kwh
+        .filter(|_| train.diesel.cars.is_empty())
+    {
         let kwh = f_motor.max(0.0) * v_avg * effective_dt / 3_600_000.0;
         state.fuel_consumption_g += kwh * sfc;
     }

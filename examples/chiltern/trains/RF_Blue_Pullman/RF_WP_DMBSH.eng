@@ -9,4 +9,8 @@
   (Length 20.602)
   (RunUpTimeToMaxForce 30.0)
   (MaxContinuousForce 130000)
+  (Type Diesel)
+  (MaxDieselLevel 830gal)
+  (DieselUsedPerHourAtIdle 10gal)
+  (DieselUsedPerHourAtMaxPower 60gal)
 )

@@ -68,6 +68,7 @@ enum HudField {
     Brakes,
     Doors,
     ElectricSupply,
+    TractionStatus,
     Lights,
     Clock,
     Station,
@@ -96,6 +97,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 (HudField::Brakes, 13.0),
                 (HudField::Doors, 13.0),
                 (HudField::ElectricSupply, 12.0),
+                (HudField::TractionStatus, 12.0),
                 (HudField::Lights, 12.0),
             ],
         ),
@@ -414,6 +416,19 @@ fn update_driving_hud(
             HudField::Clock => (
                 format!("MONITOR DE VÍA   {}", clock_label(live.clock_time_s())),
                 MUTED,
+            ),
+            HudField::TractionStatus => (
+                session.traction_status().unwrap_or_default(),
+                if session.state.boiler_state.as_ref().is_some_and(|b| {
+                    b.low_water_failure || b.tender_water_kg <= 0. || b.coal_kg <= 0.
+                }) || session.state.diesel.cars.iter().any(|c| {
+                    c.phase != openrailsrs_sim::diesel_operation::EnginePhase::Running
+                        || c.fuel_l <= 0.
+                }) {
+                    CAUTION
+                } else {
+                    TEXT
+                },
             ),
             HudField::Station => (
                 session

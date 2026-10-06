@@ -186,6 +186,10 @@ impl DieselEngineParams {
     /// for native content, including rapid regulator changes in a full service.
     pub fn advance_native_rpm(&self, current: f64, throttle: f64, dt: f64) -> f64 {
         let target = self.target_rpm(throttle);
+        self.advance_native_target_rpm(current, target, dt)
+    }
+
+    pub fn advance_native_target_rpm(&self, current: f64, target: f64, dt: f64) -> f64 {
         let delta = target - current;
         let rate = if delta > 0. {
             let rate = (2. * self.rate_of_change_up_rpm_pss * delta)

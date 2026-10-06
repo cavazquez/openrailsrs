@@ -69,7 +69,7 @@ fn actionable(control: &ControlType) -> bool {
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"))
+    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"))
 }
 fn control_name(control: &ControlType) -> &str {
     match control {
@@ -87,7 +87,7 @@ fn is_lever(control: &ControlType) -> bool {
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    )
+    ) || matches!(control, ControlType::Generic(name) if matches!(name.to_ascii_uppercase().as_str(), "REGULATOR" | "CUTOFF" | "REVERSER_PLATE" | "DAMPERS_FRONT"))
 }
 pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64) {
     match control {
@@ -108,7 +108,20 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
             let _ = live.session.set_direction(value);
         }
         ControlType::Generic(name) => match name.to_ascii_uppercase().as_str() {
-            "HORN" => live.session.trigger_horn(0.15),
+            "HORN" | "WHISTLE" => live.session.trigger_horn(0.15),
+            "REGULATOR" => live.session.driver_throttle = value.clamp(0., 1.),
+            "CUTOFF" | "REVERSER_PLATE" | "DAMPERS_FRONT" => {
+                if let Some(b) = &live.session.state.boiler_state {
+                    let command = if name.eq_ignore_ascii_case("DAMPERS_FRONT") {
+                        openrailsrs_sim::steam::SteamCommand::Damper(value - b.controls.damper)
+                    } else {
+                        openrailsrs_sim::steam::SteamCommand::Cutoff(
+                            value * openrailsrs_sim::steam::MAX_CUTOFF - b.controls.cutoff,
+                        )
+                    };
+                    let _ = live.session.steam_command(command);
+                }
+            }
             "WIPERS" | "WIPER" | "EXTERNALWIPERS" => live.session.toggle_wiper(),
             "HEADLIGHT" | "HEADLIGHTS" => {
                 live.session.headlights = (live.session.headlights + 1) % 3
@@ -120,6 +133,26 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
             }
             "CIRCUIT_BREAKER" | "CIRCUITBREAKER" | "CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER" => {
                 let _ = live.session.toggle_circuit_breaker();
+            }
+            "STEAM_INJ1" | "WATER_INJECTOR1" => {
+                let _ = live
+                    .session
+                    .steam_command(openrailsrs_sim::steam::SteamCommand::Injector1);
+            }
+            "STEAM_INJ2" | "WATER_INJECTOR2" => {
+                let _ = live
+                    .session
+                    .steam_command(openrailsrs_sim::steam::SteamCommand::Injector2);
+            }
+            "BLOWER" => {
+                let _ = live
+                    .session
+                    .steam_command(openrailsrs_sim::steam::SteamCommand::Blower);
+            }
+            "CYL_COCKS" => {
+                let _ = live
+                    .session
+                    .steam_command(openrailsrs_sim::steam::SteamCommand::CylinderCocks);
             }
             _ => {}
         },

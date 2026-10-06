@@ -515,6 +515,16 @@ pub fn live_driver_input(
     if pressed(A::Doors) {
         live.session.toggle_doors();
     }
+    if pressed(A::DieselEngine)
+        && let Some(car) = live.session.physics.diesel.cars.first()
+    {
+        let vehicle = car.vehicle;
+        if let Err(message) = live.session.toggle_diesel_engine(vehicle)
+            && let Some(ui) = ui.as_mut()
+        {
+            ui.notice = message;
+        }
+    }
     if pressed(A::Faster) {
         live.session.speed_mul = (live.session.speed_mul * 2.0).min(16.0);
     }

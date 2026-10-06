@@ -1,0 +1,550 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "time_step_s": 0.05,
+  "idle_rpm": 300,
+  "max_rpm": 900,
+  "starting_rpm": 200,
+  "confirmation_rpm": 330,
+  "rpm_rate": 80,
+  "consumption_lph": [
+    [
+      0,
+      0
+    ],
+    [
+      300,
+      18
+    ],
+    [
+      900,
+      180
+    ]
+  ],
+  "checkpoints": [
+    {
+      "tick": 10,
+      "time_s": 0.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 300.0,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.005,
+      "consumed_l": 0.002499999944120646
+    },
+    {
+      "tick": 20,
+      "time_s": 1.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 300.0,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.005,
+      "consumed_l": 0.0049999998882412928
+    },
+    {
+      "tick": 30,
+      "time_s": 1.5,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 199.5438,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 40,
+      "time_s": 2.0,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 119.313316,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 50,
+      "time_s": 2.5,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 59.376606,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 60,
+      "time_s": 3.0,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 17.0541611,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 70,
+      "time_s": 3.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 57.05416,
+      "demanded_rpm": 200.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 80,
+      "time_s": 4.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 97.05416,
+      "demanded_rpm": 200.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 90,
+      "time_s": 4.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 137.054169,
+      "demanded_rpm": 200.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 100,
+      "time_s": 5.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 175.6086,
+      "demanded_rpm": 200.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.0068594006937928512
+    },
+    {
+      "tick": 110,
+      "time_s": 5.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 213.648849,
+      "demanded_rpm": 363.0,
+      "flow_lps": 0.00356081431,
+      "consumed_l": 0.007551563531160356
+    },
+    {
+      "tick": 120,
+      "time_s": 6.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 253.648849,
+      "demanded_rpm": 363.0,
+      "flow_lps": 0.004227481,
+      "consumed_l": 0.0095153040019795316
+    },
+    {
+      "tick": 130,
+      "time_s": 6.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Starting",
+      "rpm": 293.648865,
+      "demanded_rpm": 363.0,
+      "flow_lps": 0.004894148,
+      "consumed_l": 0.011812377884052695
+    },
+    {
+      "tick": 140,
+      "time_s": 7.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 333.173981,
+      "demanded_rpm": 363.0,
+      "flow_lps": 0.007488049,
+      "consumed_l": 0.014903781842440371
+    },
+    {
+      "tick": 150,
+      "time_s": 7.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 298.237183,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.00497061945,
+      "consumed_l": 0.017855177260935311
+    },
+    {
+      "tick": 160,
+      "time_s": 8.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 296.060669,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.004934345,
+      "consumed_l": 0.020343376160599298
+    },
+    {
+      "tick": 170,
+      "time_s": 8.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 299.743164,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.00499571953,
+      "consumed_l": 0.0228312956634909
+    },
+    {
+      "tick": 180,
+      "time_s": 9.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 298.3542,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.00497256964,
+      "consumed_l": 0.025317091448232534
+    },
+    {
+      "tick": 190,
+      "time_s": 9.5,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 338.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.007876564,
+      "consumed_l": 0.028580373409204184
+    },
+    {
+      "tick": 200,
+      "time_s": 10.0,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 378.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0108765634,
+      "consumed_l": 0.033343655406497419
+    },
+    {
+      "tick": 210,
+      "time_s": 10.5,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 418.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0138765639,
+      "consumed_l": 0.039606937277130792
+    },
+    {
+      "tick": 220,
+      "time_s": 11.0,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 458.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0168765634,
+      "consumed_l": 0.047370219160802682
+    },
+    {
+      "tick": 230,
+      "time_s": 11.5,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 498.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0198765658,
+      "consumed_l": 0.056633500964380815
+    },
+    {
+      "tick": 240,
+      "time_s": 12.0,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 538.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0228765644,
+      "consumed_l": 0.067396783106960359
+    },
+    {
+      "tick": 250,
+      "time_s": 12.5,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 578.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0258765649,
+      "consumed_l": 0.0796600652160123
+    },
+    {
+      "tick": 260,
+      "time_s": 13.0,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 618.3542,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0288765635,
+      "consumed_l": 0.093423347198404352
+    },
+    {
+      "tick": 270,
+      "time_s": 13.5,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 649.8494,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.0312387068,
+      "consumed_l": 0.10857371606398371
+    },
+    {
+      "tick": 280,
+      "time_s": 14.0,
+      "throttle": 0.6,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 656.0992,
+      "demanded_rpm": 660.0,
+      "flow_lps": 0.03170744,
+      "consumed_l": 0.12445942957419899
+    },
+    {
+      "tick": 290,
+      "time_s": 14.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 545.831665,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.0234373733,
+      "consumed_l": 0.13797643866855647
+    },
+    {
+      "tick": 300,
+      "time_s": 15.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 455.767151,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.0166825354,
+      "consumed_l": 0.14777497418690469
+    },
+    {
+      "tick": 310,
+      "time_s": 15.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 385.958832,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.0114469128,
+      "consumed_l": 0.15461366807576266
+    },
+    {
+      "tick": 320,
+      "time_s": 16.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 336.498657,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.007737399,
+      "consumed_l": 0.15925384543370449
+    },
+    {
+      "tick": 330,
+      "time_s": 16.5,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 296.498657,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.004941644,
+      "consumed_l": 0.16230775732547031
+    },
+    {
+      "tick": 340,
+      "time_s": 17.0,
+      "throttle": 0.0,
+      "command_running": true,
+      "state": "Running",
+      "rpm": 299.755,
+      "demanded_rpm": 300.0,
+      "flow_lps": 0.0049959165,
+      "consumed_l": 0.16479675404261784
+    },
+    {
+      "tick": 350,
+      "time_s": 17.5,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 199.343521,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    },
+    {
+      "tick": 360,
+      "time_s": 18.0,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 119.157951,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    },
+    {
+      "tick": 370,
+      "time_s": 18.5,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 59.26633,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    },
+    {
+      "tick": 380,
+      "time_s": 19.0,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopping",
+      "rpm": 16.9665718,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    },
+    {
+      "tick": 390,
+      "time_s": 19.5,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopped",
+      "rpm": 0.0,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    },
+    {
+      "tick": 400,
+      "time_s": 20.0,
+      "throttle": 0.0,
+      "command_running": false,
+      "state": "Stopped",
+      "rpm": 0.0,
+      "demanded_rpm": 0.0,
+      "flow_lps": 0.0,
+      "consumed_l": 0.16665448490530235
+    }
+  ],
+  "quantities": [
+    {
+      "key": "MaxBoilerPressure",
+      "raw": "225",
+      "value": 15.513203909627999,
+      "unit": "bar"
+    },
+    {
+      "key": "BoilerVolume",
+      "raw": "\"225*(ft^3)\"",
+      "value": 6371.2904832,
+      "unit": "litres"
+    },
+    {
+      "key": "MaxTenderWaterMass",
+      "raw": "40000lb",
+      "value": 18143.6953125,
+      "unit": "kg"
+    },
+    {
+      "key": "MaxTenderCoalMass",
+      "raw": "13440lb",
+      "value": 6096.28125,
+      "unit": "kg"
+    },
+    {
+      "key": "MaxDieselLevel",
+      "raw": "500gal",
+      "value": 1892.7049560546875,
+      "unit": "litres"
+    },
+    {
+      "key": "MaxDieselLevel",
+      "raw": "500g-uk",
+      "value": 2273.045166015625,
+      "unit": "litres"
+    }
+  ],
+  "sound_events": [
+    {
+      "id": 23,
+      "native_event": "EnginePowerOn"
+    },
+    {
+      "id": 24,
+      "native_event": "EnginePowerOff"
+    },
+    {
+      "id": 27,
+      "native_event": "WaterInjector2On"
+    },
+    {
+      "id": 28,
+      "native_event": "WaterInjector2Off"
+    },
+    {
+      "id": 30,
+      "native_event": "WaterInjector1On"
+    },
+    {
+      "id": 31,
+      "native_event": "WaterInjector1Off"
+    },
+    {
+      "id": 32,
+      "native_event": "DamperChange"
+    },
+    {
+      "id": 33,
+      "native_event": "BlowerChange"
+    },
+    {
+      "id": 34,
+      "native_event": "CylinderCocksToggle"
+    },
+    {
+      "id": 137,
+      "native_event": "CylinderCocksOpen"
+    },
+    {
+      "id": 138,
+      "native_event": "CylinderCocksClose"
+    }
+  ],
+  "scope": "Native non-geared DieselEngine start/stop, RPM and flow; native resource units and sound IDs. No complete steam, gearbox, brake, power-supply or fuel-weight parity claim."
+}

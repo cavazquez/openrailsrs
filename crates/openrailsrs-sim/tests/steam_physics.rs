@@ -6,6 +6,7 @@ use openrailsrs_train::SteamParams;
 /// Reference locomotive: 2-8-0 Consolidation with known parameters.
 fn consolidation() -> SteamParams {
     SteamParams {
+        operation: Default::default(),
         cylinder_count: 2,
         cylinder_bore_m: 0.470,
         piston_stroke_m: 0.660,
@@ -114,14 +115,14 @@ fn pressure_drops_under_heavy_load() {
         steam_step(&mut boiler, &params, 1.0, 15.0, 1.0);
     }
     // Under full load the demand typically exceeds supply momentarily → pressure drop.
-    // It should not drop below P_MIN (2 bar).
+    // A finite boiler has no artificial pressure floor.
     assert!(
-        boiler.pressure_bar >= 2.0,
-        "pressure below safety floor: {:.2}",
+        boiler.pressure_bar >= 0.0,
+        "negative boiler pressure: {:.2}",
         boiler.pressure_bar
     );
     // For this loco, heavy load does cause some drop.
-    // We don't assert a specific value since the dynamics depend on K_P; just
+    // We don't assert a specific value for the approximate heat storage; just
     // check it stays in a realistic range.
     assert!(
         boiler.pressure_bar <= p0 * 1.06,
@@ -158,9 +159,10 @@ fn coal_decreases_over_time() {
 fn auto_injector_prevents_empty_boiler() {
     let params = consolidation();
     let mut boiler = fresh_boiler(&params);
-    // Drain water almost completely to force the injector to activate.
-    boiler.water_kg = 100.0;
-    // Simulate 60 steps: injector kicks in immediately (water < 30 % threshold).
+    // Lower the water without exposing the firebox; a damaged dry boiler
+    // cannot be repaired just by toggling an injector.
+    boiler.water_kg = 2000.0;
+    // Simulate 60 steps with both automatic injectors and finite tender water.
     // Net change = injector_rate - steam_demand > 0 → water should rise.
     let w_before = boiler.water_kg;
     for _ in 0..60 {

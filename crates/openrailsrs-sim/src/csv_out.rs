@@ -20,7 +20,17 @@ const BASE_HEADERS: &[&str] = &[
 ];
 
 /// Extra columns appended when a steam boiler state is present.
-const STEAM_HEADERS: &[&str] = &["boiler_pressure_bar", "water_kg", "coal_kg"];
+const STEAM_HEADERS: &[&str] = &[
+    "boiler_pressure_bar",
+    "water_kg",
+    "coal_kg",
+    "tender_water_kg",
+    "fire_mass_kg",
+    "steam_usage_kg_s",
+    "injector_flow_kg_s",
+    "steam_cutoff",
+    "low_water_failure",
+];
 
 /// Per-vehicle brake telemetry (head, first train-air wagon, tail).
 const BRAKE_CYLINDER_HEADERS: &[&str] = &[
@@ -91,7 +101,10 @@ impl<W: Write> RunCsvWriter<W> {
             format!("{:.3}", state.odometer_m),
             format!("{:.6}", state.cumulative_energy_j / 3.6e6),
             format!("{:.6}", state.regen_energy_j / 3.6e6),
-            format!("{:.4}", state.fuel_consumption_g / 840.0),
+            format!(
+                "{:.4}",
+                state.fuel_consumption_g / (crate::diesel_operation::DIESEL_KG_PER_L * 1000.)
+            ),
             state.passengers.to_string(),
             format!("{:.4}", state.throttle),
             format!("{:.4}", state.brake),
@@ -102,10 +115,14 @@ impl<W: Write> RunCsvWriter<W> {
                 record.push(format!("{:.3}", b.pressure_bar));
                 record.push(format!("{:.1}", b.water_kg));
                 record.push(format!("{:.1}", b.coal_kg));
+                record.push(format!("{:.1}", b.tender_water_kg));
+                record.push(format!("{:.1}", b.fire_mass_kg));
+                record.push(format!("{:.4}", b.steam_usage_kg_s));
+                record.push(format!("{:.4}", b.injection_kg_s));
+                record.push(format!("{:.4}", b.controls.cutoff));
+                record.push(u8::from(b.low_water_failure).to_string());
             } else {
-                record.push(String::new());
-                record.push(String::new());
-                record.push(String::new());
+                record.extend(STEAM_HEADERS.iter().map(|_| String::new()));
             }
         }
 
@@ -184,6 +201,36 @@ mod tests {
     use crate::state::TrainSimState;
 
     use super::*;
+
+    #[test]
+    fn fuel_litres_and_steam_columns_have_consistent_units_and_width() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation/scenario_steam.toml");
+        let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+        let mut session =
+            crate::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+        session.state.fuel_consumption_g = 850.8;
+        let mut w = RunCsvWriter::new_with_steam(Vec::new(), true).unwrap();
+        w.write_sample(&session.state).unwrap();
+        w.flush().unwrap();
+        let data = w.inner.into_inner().unwrap();
+        let mut reader = csv::Reader::from_reader(data.as_slice());
+        let headers = reader.headers().unwrap().clone();
+        let row = reader.records().next().unwrap().unwrap();
+        assert_eq!(headers.len(), row.len());
+        let value = |name: &str| {
+            row.get(headers.iter().position(|h| h == name).unwrap())
+                .unwrap()
+                .parse::<f64>()
+                .unwrap()
+        };
+        assert_eq!(value("fuel_consumption_l"), 1.);
+        assert_eq!(value("water_kg"), 3600.);
+        assert_eq!(value("tender_water_kg"), 15000.);
+        assert_eq!(value("fire_mass_kg"), 150.);
+        assert_eq!(value("steam_cutoff"), 0.75);
+        assert_eq!(value("low_water_failure"), 0.);
+    }
 
     #[test]
     fn writes_brake_head_tail_columns() {

@@ -300,13 +300,54 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
             };
             (bar / 5.0).clamp(0.0, 1.0)
         }
-        ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") && tel.horn_active => 1.0,
+        ControlType::Generic(name)
+            if matches!(name.to_ascii_uppercase().as_str(), "HORN" | "WHISTLE")
+                && tel.horn_active =>
+        {
+            1.0
+        }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("REGULATOR") => {
+            tel.throttle_pct / 100.
+        }
         ControlType::Generic(name) if name.contains("WIPER") && tel.wiper_active => 1.0,
         ControlType::Generic(name) if name.contains("HEADLIGHT") => f64::from(tel.headlights) / 2.0,
         ControlType::Generic(name) if name.contains("CABLIGHT") => {
             f64::from(u8::from(tel.cab_light))
         }
         ControlType::Ammeter | ControlType::LoadMeter => tel.traction_load_fraction,
+        ControlType::Generic(name)
+            if tel.steam.is_some()
+                && matches!(
+                    name.to_ascii_uppercase().as_str(),
+                    "CUTOFF"
+                        | "REVERSER_PLATE"
+                        | "WATER_INJECTOR1"
+                        | "STEAM_INJ1"
+                        | "WATER_INJECTOR2"
+                        | "STEAM_INJ2"
+                        | "BLOWER"
+                        | "DAMPERS_FRONT"
+                        | "CYL_COCKS"
+                        | "WATER_LEVEL"
+                        | "BOILER_WATER"
+                        | "FIREBOX"
+                ) =>
+        {
+            let b = tel.steam.as_ref().unwrap();
+            match name.to_ascii_uppercase().as_str() {
+                "CUTOFF" | "REVERSER_PLATE" => {
+                    b.controls.cutoff / openrailsrs_sim::steam::MAX_CUTOFF
+                }
+                "WATER_INJECTOR1" | "STEAM_INJ1" => f64::from(b.controls.injector1),
+                "WATER_INJECTOR2" | "STEAM_INJ2" => f64::from(b.controls.injector2),
+                "BLOWER" => f64::from(b.controls.blower),
+                "DAMPERS_FRONT" => b.controls.damper,
+                "CYL_COCKS" => f64::from(b.controls.cylinder_cocks),
+                "WATER_LEVEL" | "BOILER_WATER" => b.water_kg / b.initial_water_kg,
+                "FIREBOX" => b.fire_mass_kg / b.fire_capacity_kg,
+                _ => 0.,
+            }
+        }
         ControlType::Generic(name)
             if matches!(
                 name.to_ascii_uppercase().as_str(),
@@ -367,6 +408,47 @@ pub fn dial_control_value(
         ControlType::Generic(name) if name.to_ascii_uppercase().contains("RPM") => {
             tel.diesel_rpm.unwrap_or(0.0)
         }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("FUEL_GAUGE") => {
+            if let Some(b) = &tel.steam {
+                b.coal_kg
+                    * if units.eq_ignore_ascii_case("LBS") {
+                        2.20462262185
+                    } else {
+                        1.
+                    }
+            } else {
+                tel.diesel.as_ref().map_or(0., |d| d.fuel_l)
+                    / if units.eq_ignore_ascii_case("GALLONS") {
+                        3.785411784
+                    } else {
+                        1.
+                    }
+            }
+        }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("TENDER_WATER") => {
+            // Native TENDER_WATER is an absolute UK-gallon reading.
+            tel.steam
+                .as_ref()
+                .map_or(0., |b| b.tender_water_kg / 4.54609)
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "BOILER_WATER" | "WATER_LEVEL" | "FIREBOX"
+            ) =>
+        {
+            control_value(control, tel)
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "CUTOFF" | "REVERSER_PLATE"
+            ) =>
+        {
+            tel.steam
+                .as_ref()
+                .map_or(0., |b| b.controls.cutoff * (tel.direction * 2. - 1.))
+        }
         ControlType::Generic(name)
             if matches!(
                 name.to_ascii_uppercase().as_str(),
@@ -383,7 +465,7 @@ pub fn dial_control_value(
         ControlType::Generic(name)
             if matches!(
                 name.to_ascii_uppercase().as_str(),
-                "BOILER_PRESSURE" | "STEAM_PRESSURE"
+                "BOILER_PRESSURE" | "STEAM_PRESSURE" | "STEAM_PR"
             ) =>
         {
             tel.boiler_bar.unwrap_or(0.0)
@@ -587,7 +669,9 @@ fn procedural_cab_motion(
         ControlType::TrainBrake => (65.0_f32.to_radians() * value, Vec3::ZERO),
         ControlType::DynamicBrakeDisplay => (-50.0_f32.to_radians() * value, Vec3::ZERO),
         ControlType::DirectionDisplay => (70.0_f32.to_radians() * (value - 0.5), Vec3::ZERO),
-        ControlType::Generic(name) if name.eq_ignore_ascii_case("HORN") => {
+        ControlType::Generic(name)
+            if matches!(name.to_ascii_uppercase().as_str(), "HORN" | "WHISTLE") =>
+        {
             (0.0, Vec3::NEG_Y * (0.018 * value))
         }
         ControlType::Generic(name) if name == "EXTERNALWIPERS" => {
@@ -891,6 +975,45 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
+    fn native_steam_controls_and_gauges_use_live_boiler_and_tender_state() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation/scenario_steam.toml");
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        let control = |name: &str| ControlType::Generic(name.into());
+        crate::cab_mouse::apply_cab_control(&mut live, &control("REGULATOR"), 0.5);
+        crate::cab_mouse::apply_cab_control(&mut live, &control("CUTOFF"), 0.4);
+        crate::cab_mouse::apply_cab_control(&mut live, &control("DAMPERS_FRONT"), 0.);
+        crate::cab_mouse::apply_cab_control(&mut live, &control("WATER_INJECTOR1"), 1.);
+        crate::cab_mouse::apply_cab_control(&mut live, &control("CYL_COCKS"), 1.);
+        let telemetry = live.session.cab_telemetry();
+        let boiler = telemetry.steam.as_ref().unwrap();
+        assert!(!boiler.controls.automatic_fireman);
+        assert!((boiler.controls.cutoff - 0.3).abs() < 1e-10);
+        assert!(boiler.controls.injector1 && boiler.controls.cylinder_cocks);
+        assert_eq!(control_value(&control("DAMPERS_FRONT"), &telemetry), 0.);
+        let psi = openrailsrs_formats::CabDialParams {
+            units: Some("PSI".into()),
+            ..Default::default()
+        };
+        assert!(
+            (dial_control_value(&control("STEAM_PR"), &psi, &telemetry) - 232.0603808).abs() < 1e-6
+        );
+        assert!(
+            (dial_control_value(&control("TENDER_WATER"), &psi, &telemetry) - 15000. / 4.54609)
+                .abs()
+                < 1e-6
+        );
+        let before = boiler.tender_water_kg;
+        live.session.step_realtime(1., |_| {});
+        let now = live.session.cab_telemetry();
+        assert!(now.steam.as_ref().unwrap().tender_water_kg < before);
+        assert!(
+            dial_control_value(&control("STEAM_PR"), &psi, &now)
+                < dial_control_value(&control("STEAM_PR"), &psi, &telemetry)
+        );
+    }
+
+    #[test]
     fn electric_native_instruments_read_voltage_and_physical_switches() {
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/electric_supply/scenario.toml");
@@ -960,6 +1083,8 @@ mod tests {
     #[test]
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
+            steam: None,
+            diesel: None,
             pantograph_fraction: 0.,
             line_voltage_v: 0.,
             circuit_breaker_state: 0,

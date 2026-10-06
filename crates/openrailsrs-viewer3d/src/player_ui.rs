@@ -111,6 +111,7 @@ pub enum PlayerPanel {
     Formation,
     Map,
     Advanced,
+    Traction,
     Settings,
     Help,
 }
@@ -189,6 +190,7 @@ enum DynamicText {
     Content,
     Notebook,
     Advanced,
+    Traction,
     Car,
     Map,
     Help,
@@ -214,6 +216,8 @@ enum UiCommand {
     Advanced(usize),
     SelectCar(usize),
     Car(CarOperation),
+    DieselEngine(usize),
+    Steam(openrailsrs_sim::steam::SteamCommand),
     SecureTail,
     Uncouple,
     Recouple,
@@ -405,6 +409,7 @@ fn spawn_toolbar(
                 (PlayerPanel::Pause, PlayerAction::Pause),
                 (PlayerPanel::Notebook, PlayerAction::Notebook),
                 (PlayerPanel::Formation, PlayerAction::Formation),
+                (PlayerPanel::Traction, PlayerAction::TractionControls),
                 (PlayerPanel::Map, PlayerAction::Map),
                 (PlayerPanel::Settings, PlayerAction::Settings),
             ] {
@@ -417,6 +422,7 @@ fn spawn_toolbar(
                             PlayerPanel::Pause => "Pausa",
                             PlayerPanel::Notebook => "Servicio",
                             PlayerPanel::Formation => "Formación",
+                            PlayerPanel::Traction => "Tracción",
                             PlayerPanel::Map => "Mapa",
                             _ => "Ajustes",
                         }
@@ -490,7 +496,9 @@ fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, pane
         close_panel(ui, live);
         return;
     }
-    if ui.panel == PlayerPanel::None {
+    if ui.panel == PlayerPanel::None
+        || (panel == PlayerPanel::Traction && ui.panel == PlayerPanel::Pause)
+    {
         ui.pause_before = live.as_ref().is_some_and(|l| l.paused);
     }
     ui.panel = panel;
@@ -498,7 +506,11 @@ fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, pane
     ui.awaiting_key = None;
     ui.notice.clear();
     if let Some(l) = live {
-        l.paused = true;
+        l.paused = if panel == PlayerPanel::Traction {
+            ui.pause_before
+        } else {
+            true
+        };
     }
 }
 fn close_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>) {
@@ -569,6 +581,7 @@ fn player_keys(
         (PlayerAction::Pause, PlayerPanel::Pause),
         (PlayerAction::Notebook, PlayerPanel::Notebook),
         (PlayerAction::AdvancedHud, PlayerPanel::Advanced),
+        (PlayerAction::TractionControls, PlayerPanel::Traction),
         (PlayerAction::Formation, PlayerPanel::Formation),
         (PlayerAction::Map, PlayerPanel::Map),
         (PlayerAction::Settings, PlayerPanel::Settings),
@@ -692,6 +705,8 @@ fn handle_buttons(
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
+            UiCommand::DieselEngine(vehicle)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_diesel_engine(*vehicle)),
+            UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
             UiCommand::SecureTail=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{
                 for i in ui.selected_car+1..l.session.formation.coupled_count {
                     if !l.session.formation.cars[i].handbrake {l.session.operate_car(i,CarOperation::Handbrake)?;}
@@ -821,6 +836,7 @@ fn build_panel(
                         PlayerPanel::Formation => "OPERACIONES DE LA FORMACIÓN",
                         PlayerPanel::Map => "MAPA Y DESPACHADOR",
                         PlayerPanel::Advanced => "HUD AVANZADO",
+                        PlayerPanel::Traction => "VAPOR Y DIÉSEL · CONTROLES",
                         PlayerPanel::Settings => "AJUSTES",
                         _ => "AYUDA Y CONTROLES",
                     },
@@ -927,6 +943,9 @@ fn build_panel(
                     },
                     cab.cvf_path.as_deref(),
                 ),
+                PlayerPanel::Traction => {
+                    if let Some(l) = live.as_ref() { build_traction(p, &l.session); }
+                }
                 PlayerPanel::Help => {
                     dynamic(p, DynamicText::Help, 14.0);
                 }
@@ -1258,6 +1277,100 @@ fn poll_content_download(
     }
 }
 
+fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
+    label(
+        p,
+        "Podés usar estos controles en marcha o con la partida pausada. B cierra el panel; F8 muestra el detalle de tracción.",
+        14.0,
+        MUTED,
+    );
+    dynamic(p, DynamicText::Traction, 14.0);
+    if s.state.boiler_state.is_some() {
+        use openrailsrs_sim::steam::SteamCommand as S;
+        row(p, |p| {
+            button(
+                p,
+                "Fogonero automático / manual",
+                UiCommand::Steam(S::AutomaticFireman),
+            );
+            button(p, "Corte −", UiCommand::Steam(S::Cutoff(-0.05)));
+            button(p, "Corte +", UiCommand::Steam(S::Cutoff(0.05)));
+            button(p, "Cilindros: purgas", UiCommand::Steam(S::CylinderCocks));
+        });
+        row(p, |p| {
+            button(p, "Pala −", UiCommand::Steam(S::Firing(-0.1)));
+            button(p, "Pala +", UiCommand::Steam(S::Firing(0.1)));
+            button(p, "Tiro −", UiCommand::Steam(S::Damper(-0.1)));
+            button(p, "Tiro +", UiCommand::Steam(S::Damper(0.1)));
+            button(p, "Inyector 1", UiCommand::Steam(S::Injector1));
+            button(p, "Inyector 2", UiCommand::Steam(S::Injector2));
+            button(p, "Soplador", UiCommand::Steam(S::Blower));
+        });
+    }
+    row(p, |p| {
+        for car in &s.physics.diesel.cars {
+            button(
+                p,
+                format!("Motor {}: arrancar / parar", car.vehicle + 1),
+                UiCommand::DieselEngine(car.vehicle),
+            );
+        }
+    });
+    if s.state.boiler_state.is_none() && s.physics.diesel.cars.is_empty() {
+        label(
+            p,
+            "Esta formación no tiene controles de vapor ni motor diésel declarado.",
+            14.0,
+            MUTED,
+        );
+    }
+}
+
+fn traction_text(s: &LiveDriveSession) -> String {
+    let mut out = String::new();
+    if let Some(b) = &s.state.boiler_state {
+        out += &format!(
+            "{} · {:.2} bar · agua de caldera {:.1}%\nTénder: {:.1} L de agua · {:.1} kg de carbón\nFuego {:.1} kg · producción {:.2} kg/s · consumo {:.2} kg/s\nFogonero {} · corte {:.0}% · pala {:.0}% · tiro {:.0}%\nInyector 1 {} · inyector 2 {} · soplador {} · purgas {}\nInyección {:.2} kg/s · carbón quemado {:.3} kg/s\n\n",
+            b.status(),
+            b.pressure_bar,
+            b.water_kg / b.initial_water_kg * 100.,
+            b.tender_water_kg,
+            b.coal_kg,
+            b.fire_mass_kg,
+            b.evaporation_kg_s,
+            b.steam_usage_kg_s,
+            if b.controls.automatic_fireman {
+                "automático"
+            } else {
+                "manual"
+            },
+            b.controls.cutoff * 100.,
+            b.controls.firing * 100.,
+            b.controls.damper * 100.,
+            yes(b.controls.injector1),
+            yes(b.controls.injector2),
+            yes(b.controls.blower),
+            yes(b.controls.cylinder_cocks),
+            b.injection_kg_s,
+            b.coal_burn_kg_s
+        );
+    }
+    for (car, state) in s.physics.diesel.cars.iter().zip(&s.state.diesel.cars) {
+        out += &format!(
+            "Vehículo {} · motor {} · {:.0} rpm\nCombustible {:.2} / {:.1} L · consumo {:.2} L/h\nBatería {} · tracción {}\n\n",
+            car.vehicle + 1,
+            state.phase.label(),
+            state.rpm,
+            state.fuel_l,
+            car.params.capacity_l,
+            state.flow_lps * 3600.,
+            yes(car.battery),
+            yes(car.connected && s.state.diesel.power_available(car.vehicle))
+        );
+    }
+    out
+}
+
 fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
     label(
         p,
@@ -1293,6 +1406,18 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
         }
     });
     dynamic(p, DynamicText::Car, 14.0);
+    if s.physics
+        .diesel
+        .cars
+        .iter()
+        .any(|c| c.vehicle == ui.selected_car)
+    {
+        button(
+            p,
+            "Arrancar / detener motor diésel",
+            UiCommand::DieselEngine(ui.selected_car),
+        );
+    }
     row(p, |p| {
         button(p, "Freno de mano", UiCommand::Car(CarOperation::Handbrake));
         button(p, "Manguera delantera", UiCommand::Car(CarOperation::Hose));
@@ -1894,6 +2019,7 @@ fn update_panel_text(
                 let s = &l.session;
                 match kind {
                     DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab, &settings),
+                    DynamicText::Traction => traction_text(s),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page, &settings);
                         if ui.advanced_page == 2 {
@@ -2257,6 +2383,7 @@ fn advanced_text(
             }
         }
         2 => {
+            out += &traction_text(s);
             for (car, electric) in p.electric.cars.iter().zip(&state.electric.cars) {
                 out += &format!(
                     "Vehículo {} · {} · vía {:.0} V · contacto {:.0} V\nPantógrafo {:.0}% · disyuntor {}\n{}\n\n",
@@ -2270,7 +2397,7 @@ fn advanced_text(
                 );
             }
             out += &format!(
-                "Potencia máxima disponible {:.0} kW\nEsfuerzo máximo {:.1} kN\nCaldera {}\n\n",
+                "Potencia nominal instalada {:.0} kW\nEsfuerzo máximo {:.1} kN\nCaldera {}\n\n",
                 p.max_power_w / 1000.0,
                 p.max_tractive_effort_n / 1000.0,
                 state
@@ -2709,6 +2836,121 @@ mod tests {
                 .join("../../examples/chiltern_local/scenario.toml"),
         )
         .unwrap()
+    }
+    #[test]
+    fn traction_panel_keeps_pause_and_buttons_control_the_selected_engine() {
+        for paused in [false, true] {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/traction_operation/scenario_two_diesel.toml");
+            let mut l = LiveDrive::from_scenario_path(&path).unwrap();
+            l.paused = paused;
+            let mut app = App::new();
+            app.add_plugins(bevy::state::app::StatesPlugin)
+                .insert_state(ViewerAppState::Playing)
+                .insert_resource(l)
+                .init_resource::<PlayerUiState>()
+                .init_resource::<PlayerLaunchMenu>()
+                .init_resource::<crate::official_content::OfficialContent>()
+                .init_resource::<PlayerSettings>()
+                .init_resource::<PlayerLaunchQueue>()
+                .init_resource::<ActivePlayerContent>()
+                .init_resource::<CameraFollowMode>()
+                .init_resource::<DriverLookOffset>()
+                .init_resource::<crate::floating_origin::FloatingOrigin>()
+                .init_resource::<crate::camera::CameraMode>()
+                .init_resource::<crate::camera::LiveDriverCab>()
+                .init_resource::<crate::camera::PassengerCamState>()
+                .init_resource::<crate::cab_cvf_overlay::CabCvfOverlayState>()
+                .init_resource::<crate::cab_cvf::CabCvfState>()
+                .init_resource::<crate::teleport::TeleportDialog>()
+                .init_resource::<ButtonInput<KeyCode>>()
+                .init_resource::<ButtonInput<MouseButton>>()
+                .add_message::<AppExit>()
+                .add_systems(
+                    Update,
+                    (player_keys, handle_buttons, crate::live::live_driver_input).chain(),
+                );
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            assert_eq!(
+                app.world().resource::<PlayerUiState>().panel,
+                PlayerPanel::Traction
+            );
+            assert_eq!(app.world().resource::<LiveDrive>().paused, paused);
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyD);
+            app.world_mut()
+                .resource_mut::<ButtonInput<MouseButton>>()
+                .press(MouseButton::Left);
+            app.world_mut()
+                .spawn((Interaction::Pressed, UiCommand::DieselEngine(1)));
+            app.update();
+            let l = app.world().resource::<LiveDrive>();
+            assert!(!l.session.state.diesel.cars[1].command_running);
+            assert!(l.session.state.diesel.cars[0].command_running);
+            assert_eq!(
+                l.session.driver_throttle, 0.,
+                "panel input must not drive the train"
+            );
+            assert_eq!(l.paused, paused);
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            assert_eq!(
+                app.world().resource::<PlayerUiState>().panel,
+                PlayerPanel::None
+            );
+            assert_eq!(app.world().resource::<LiveDrive>().paused, paused);
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyK);
+            app.update();
+            assert!(
+                !app.world()
+                    .resource::<LiveDrive>()
+                    .session
+                    .state
+                    .diesel
+                    .cars[0]
+                    .command_running
+            );
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::Escape);
+            app.update();
+            assert!(app.world().resource::<LiveDrive>().paused);
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .reset_all();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            assert_eq!(
+                app.world().resource::<PlayerUiState>().panel,
+                PlayerPanel::Traction
+            );
+            assert!(
+                app.world().resource::<LiveDrive>().paused,
+                "opening the fireman from the pause menu must keep the game paused"
+            );
+        }
     }
     #[test]
     fn track_monitor_contains_real_station_signal_and_changing_distances() {

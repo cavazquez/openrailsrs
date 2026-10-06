@@ -364,3 +364,33 @@ de la escena y se usa también sin visor y con tráfico.
 python3 scripts/capture_electric_reference.py --out-dir tmp/electric-reference-nuevo
 cargo test --locked --workspace --all-features electric_
 ```
+
+### Arranque diésel y reservas: referencia acotada del 5 de octubre de 2026
+
+[openrails-traction-operation.json](../oracles/openrails-traction-operation.json)
+ejecuta `DieselEngine.Update` de las mismas DLL verificadas de OR 1.6.1.
+Captura 40 puntos cada medio segundo, incluidos parada, petición de arranque
+durante la detención, confirmación, aceleración y vuelta a ralentí.
+Las dos capturas independientes son idénticas byte por byte. El ensayo Rust
+exige el mismo estado y límites fijos de 0,1 RPM, `1e-5` L/s y `1e-4` L consumidos.
+Los errores medidos iniciales son 0,000046 RPM, `3e-9` L/s y `7e-9` L.
+
+El lector STF original aporta seis cantidades de presión, volumen, agua,
+carbón y combustible. `gal` se interpreta como galón estadounidense y `g-uk`
+como británico. Las cantidades se comparan con margen absoluto de 0,002 en
+su unidad de salida por el redondeo `float` original. También se congelan
+once identificadores de eventos SMS de motor, inyectores, tiro, soplador y
+purgas; las transiciones Rust exigen esos mismos identificadores.
+
+La [procedencia](../oracles/openrails-traction-operation-provenance.json) fija
+cliente, DLLs y salida. No se modifican trazas ni tolerancias físicas de los
+servicios anteriores. Este motor de referencia no usa caja de cambios.
+La prueba no certifica termodinámica de vapor, freno dinámico, suministro
+auxiliar ni variación de masa por combustible. Las reservas finitas, el
+fallo por nivel bajo, controles manuales y guardado se verifican en escenarios
+sintéticos de `examples/traction_operation`, con el mismo núcleo que el visor.
+
+```bash
+python3 scripts/capture_traction_operation_reference.py --out-dir tmp/traction-reference-nueva
+cargo test --locked -p openrailsrs-sim --test traction_operation -- --nocapture
+```

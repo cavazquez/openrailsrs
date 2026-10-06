@@ -24,3 +24,9 @@ evaporation_rate_kg_per_s  = 10.0    # ~36 t/h de vapor
 coal_consumption_kg_per_s  = 0.70    # ~2.5 t/h de carbón
 initial_water_kg           = 15000.0 # tender: 15 000 L
 initial_coal_kg            = 8000.0  # tender: 8 t
+
+[steam.operation]
+boiler_water_capacity_kg = 4000.0
+max_fire_mass_kg = 300.0
+max_firing_rate_kg_s = 1.0
+injector_rate_kg_s = 5.0

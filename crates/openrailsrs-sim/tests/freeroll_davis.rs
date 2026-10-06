@@ -21,6 +21,7 @@ fn chiltern_pullman_freeroll_deceleration() {
     );
 
     let train = TrainPhysics {
+        diesel: Default::default(),
         electric: Default::default(),
         native: None,
         mass_kg: consist.total_mass_kg(),

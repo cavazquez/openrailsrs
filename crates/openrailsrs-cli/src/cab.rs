@@ -77,6 +77,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
+        diesel: openrailsrs_sim::diesel_operation::DieselTrainConfig::from_consist(&consist),
         electric: openrailsrs_sim::electric::ElectricTrainConfig::load(
             &route_dir,
             scenario.route.electric_supply.as_ref(),

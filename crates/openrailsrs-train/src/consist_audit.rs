@@ -361,21 +361,42 @@ impl ConsistAuditor {
         if !path.is_file() {
             return Err(ResourceFailure::message("Falta el archivo ENG/WAG"));
         }
-        let (mass, length, powered, shape, cab) =
-            match parse_msts_file(path).map_err(ResourceFailure::from)? {
-                MstsFile::Engine(e) => (
-                    e.mass_kg,
-                    e.length_m,
-                    e.max_power_w > 0.0 || e.steam.is_some(),
-                    e.wagon_shape,
-                    Some(e.cab),
-                ),
-                MstsFile::Wagon(w) => (w.mass_kg, w.length_m, false, w.wagon_shape, None),
-                _ => return Err(ResourceFailure::message("El archivo no es un vehículo")),
+        let (mass, length, powered, shape, cab, metadata) =
+            if crate::steam_loader::is_toml_eng(path)
+                .map_err(|e| ResourceFailure::message(e.to_string()))?
+            {
+                let loco = crate::steam_loader::load_steam_engine_from_toml(path)
+                    .map_err(|e| ResourceFailure::message(e.to_string()))?;
+                let mut metadata =
+                    parse_vehicle_content_metadata(&openrailsrs_formats::Ast::List(vec![]), true);
+                metadata.engine_type = loco.steam.as_ref().map(|_| "Steam".into());
+                (
+                    loco.mass_kg,
+                    loco.length_m,
+                    loco.max_power_w > 0. || loco.steam.is_some(),
+                    loco.wagon_shape,
+                    None,
+                    metadata,
+                )
+            } else {
+                let (mass, length, powered, shape, cab) =
+                    match parse_msts_file(path).map_err(ResourceFailure::from)? {
+                        MstsFile::Engine(e) => (
+                            e.mass_kg,
+                            e.length_m,
+                            e.max_power_w > 0.0 || e.steam.is_some(),
+                            e.wagon_shape,
+                            Some(e.cab),
+                        ),
+                        MstsFile::Wagon(w) => (w.mass_kg, w.length_m, false, w.wagon_shape, None),
+                        _ => return Err(ResourceFailure::message("El archivo no es un vehículo")),
+                    };
+                let ast =
+                    openrailsrs_formats::read_vehicle_ast(path).map_err(ResourceFailure::from)?;
+                let metadata = parse_vehicle_content_metadata(&ast, cab.is_some());
+                (mass, length, powered, shape, cab, metadata)
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
-        let ast = openrailsrs_formats::read_vehicle_ast(path).map_err(ResourceFailure::from)?;
-        let metadata = parse_vehicle_content_metadata(&ast, cab.is_some());
         let root = self
             .trainset_roots
             .iter()
@@ -429,7 +450,7 @@ impl ConsistAuditor {
             match kind.to_ascii_lowercase().as_str() {
                 "diesel" => {},
                 "electric" => stock.limitations.push("Tracción eléctrica parcial: alimentación física, pantógrafo y disyuntor; los captadores de contenido antiguo pueden requerir una declaración explícita; filtros y protecciones originales pendientes".into()),
-                "steam" => stock.limitations.push("Vapor parcial: no reproduce todos los subsistemas originales".into()),
+                "steam" => stock.limitations.push("Vapor parcial: ténder finito y fogonero automático/manual; termodinámica simplificada y equipos originales pendientes".into()),
                 _ => stock.limitations.push(format!("Tipo de motor {kind}: usa el modelo de tracción genérico")),
             }
         }
@@ -969,6 +990,20 @@ mod tests {
         assert_eq!(
             missing.missing_resources[0].destinations[0],
             stock.canonicalize().unwrap().join("absent.eng")
+        );
+    }
+
+    #[test]
+    fn playable_steam_toml_example_passes_the_same_menu_audit_as_native_stock() {
+        let con =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/steam/consists/steam.con");
+        let report = ConsistAuditor::default().inspect(&con);
+        assert!(report.player_ready(), "{:?}", report.errors);
+        assert_eq!(report.powered_vehicles, 1);
+        assert!(
+            report
+                .compatibility_summary()
+                .contains("termodinámica simplificada")
         );
     }
 }

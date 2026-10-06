@@ -13,4 +13,8 @@
   (BrakeCylinderPressureForMaxBrakeBrakeForce 70)
   (MaxApplicationRate 40)
   (MaxReleaseRate 40)
+  (Type Diesel)
+  (MaxDieselLevel 830gal)
+  (DieselUsedPerHourAtIdle 10gal)
+  (DieselUsedPerHourAtMaxPower 60gal)
 )

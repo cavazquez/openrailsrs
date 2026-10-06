@@ -28,6 +28,7 @@ pub use typed::{
     VehicleScriptReference, parse_vehicle_content_metadata, parse_vehicle_curve_parameters,
     sms_wave_references,
 };
+pub use typed::{DieselOperatingParams, SteamOperatingParams};
 pub mod units;
 pub mod vehicle_audit;
 pub mod vehicle_field_catalog;

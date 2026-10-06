@@ -49,6 +49,8 @@ struct EngineToml {
 struct EngineMeta {
     name: String,
     mass_kg: f64,
+    #[serde(default)]
+    wagon_shape: Option<String>,
     #[serde(default = "default_max_velocity")]
     max_velocity_mps: f64,
     #[serde(default = "default_max_brake")]
@@ -57,6 +59,8 @@ struct EngineMeta {
 
 #[derive(Deserialize)]
 struct SteamToml {
+    #[serde(default)]
+    operation: openrailsrs_formats::SteamOperatingParams,
     #[serde(default = "default_cylinder_count")]
     cylinder_count: u32,
     cylinder_bore_m: f64,
@@ -94,10 +98,11 @@ pub fn load_steam_engine_from_toml(path: impl AsRef<Path>) -> Result<Locomotive,
 
 /// Parse a TOML string directly (useful for tests).
 pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
-    let parsed: EngineToml = toml::from_str(text)
+    let parsed: EngineToml = toml::from_str(text.trim_start_matches('\u{feff}'))
         .map_err(|e| TrainError::Parse(format!("steam engine TOML parse error: {e}")))?;
 
     let steam = parsed.steam.map(|s| SteamParams {
+        operation: Box::new(s.operation),
         cylinder_count: s.cylinder_count,
         cylinder_bore_m: s.cylinder_bore_m,
         piston_stroke_m: s.piston_stroke_m,
@@ -109,6 +114,18 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         initial_coal_kg: s.initial_coal_kg,
     });
 
+    if steam.as_ref().is_some_and(|s| !s.valid())
+        || !parsed.engine.mass_kg.is_finite()
+        || parsed.engine.mass_kg <= 0.
+        || !parsed.engine.max_velocity_mps.is_finite()
+        || parsed.engine.max_velocity_mps <= 0.
+        || !parsed.engine.max_brake_force_n.is_finite()
+        || parsed.engine.max_brake_force_n < 0.
+    {
+        return Err(TrainError::Parse(
+            "invalid steam dimensions, capacities or operating rates".into(),
+        ));
+    }
     let max_tractive_effort_n = steam
         .as_ref()
         .map(|s| s.max_tractive_effort_n())
@@ -118,6 +135,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
     let max_power_w = max_tractive_effort_n * parsed.engine.max_velocity_mps / 2.0;
 
     Ok(Locomotive {
+        diesel_operation: None,
         electric: None,
         name: parsed.engine.name,
         mass_kg: parsed.engine.mass_kg,
@@ -130,7 +148,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
         regen_factor: 0.0,
         diesel_sfc_g_per_kwh: None,
         steam,
-        wagon_shape: None,
+        wagon_shape: parsed.engine.wagon_shape,
         length_m: 18.0,
         davis: crate::model::DavisCoefficients::default(),
         brake_shoe_type: openrailsrs_formats::OrtsBrakeShoeType::default(),
@@ -144,12 +162,73 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
 
 /// Detect whether a `.eng` file is in TOML format (vs MSTS S-expression).
 ///
-/// A TOML file starts with `[`; an MSTS file starts with `(` or `S` (SIMISA
-/// header).  This heuristic handles the two known cases.
+/// Ignore BOM, blank lines and TOML comments before the first section. Native
+/// UTF-16 files remain on the MSTS decoding path.
 pub fn is_toml_eng(path: impl AsRef<Path>) -> std::io::Result<bool> {
     use std::io::Read;
-    let mut buf = [0u8; 16];
-    let n = std::fs::File::open(path)?.read(&mut buf)?;
-    let first = buf[..n].iter().find(|&&b| !b.is_ascii_whitespace());
-    Ok(first == Some(&b'['))
+    let mut buf = Vec::new();
+    std::fs::File::open(path)?
+        .take(8192)
+        .read_to_end(&mut buf)?;
+    let Ok(text) = std::str::from_utf8(&buf) else {
+        return Ok(false);
+    };
+    Ok(text
+        .trim_start_matches('\u{feff}')
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .is_some_and(|line| line.starts_with('[')))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn commented_example_loads_and_preserves_operating_capacities() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/steam/vehicles/steam_2_8_0.eng");
+        assert!(is_toml_eng(&path).unwrap());
+        let loco = load_steam_engine_from_toml(path).unwrap();
+        let steam = loco.steam.unwrap();
+        assert_eq!(steam.operation.boiler_water_capacity_kg, 4000.);
+        assert_eq!(steam.initial_water_kg, 15000.);
+        assert!(steam.valid());
+        assert!(
+            loco.wagon_shape.is_none(),
+            "example uses generic geometry with no external model dependencies"
+        );
+    }
+
+    #[test]
+    fn bom_and_comments_dispatch_to_toml_but_native_utf16_does_not() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("engine.eng");
+        std::fs::write(&path, "\u{feff}\n# Header longer than the former sixteen-byte probe\n[engine]\nname = 'BOM'\nmass_kg = 80000\n").unwrap();
+        assert!(is_toml_eng(&path).unwrap());
+        assert_eq!(load_steam_engine_from_toml(&path).unwrap().name, "BOM");
+        let mut native = vec![0xff, 0xfe];
+        for unit in "SIMISA@@@@@@@@@@JINX0D0t______\nEngine ( Hall )".encode_utf16() {
+            native.extend(unit.to_le_bytes());
+        }
+        std::fs::write(&path, native).unwrap();
+        assert!(!is_toml_eng(path).unwrap());
+    }
+
+    #[test]
+    fn invalid_dimensions_or_resource_capacity_fail_before_starting() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/steam/vehicles/steam_2_8_0.eng");
+        let original = std::fs::read_to_string(path).unwrap();
+        for invalid in [
+            original.replace("0.970   #", "0.0   #"),
+            original.replace(
+                "boiler_water_capacity_kg = 4000.0",
+                "boiler_water_capacity_kg = -1.0",
+            ),
+        ] {
+            assert!(parse_steam_engine_toml(&invalid).is_err());
+        }
+    }
 }

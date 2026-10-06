@@ -1,0 +1,13 @@
+(Engine
+  (Name "Diésel sintético: tanque para 20 s de ralentí")
+  (Type Diesel)
+  (Mass 40000)
+  (Size 3 4 20)
+  (MaxPower 1000000)
+  (MaxForce 100000)
+  (MaxVelocity 100km/h)
+  (MaxBrakeForce 120000)
+  (MaxDieselLevel 0.2l)
+  (DieselUsedPerHourAtIdle 36l)
+  (DieselUsedPerHourAtMaxPower 360l)
+)

@@ -79,6 +79,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
     };
     let vehicle_davis = consist.per_vehicle_davis(None);
     let train = TrainPhysics {
+        diesel: Default::default(),
         electric: Default::default(),
         native: None,
         mass_kg: consist.total_mass_kg(),

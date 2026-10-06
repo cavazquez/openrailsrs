@@ -294,4 +294,22 @@
   (MaxReleaseRate 10psi/s)
   (ORTSTrackGauge 4ft 8.5in)
   (ORTSUnbalancedSuperElevation 6in)
+  (Type Diesel)
+  (MaxDieselLevel 250g-uk)
+  (StartingRPM 500)
+  (StartingConfirmRPM 560)
+  (DieselConsumptionTab
+    0 0
+    650 11
+    660 20
+    665 31
+    670 44
+    675 66
+    800 114
+    900 132
+    1050 155
+    1200 173
+    1350 186
+    1500 195
+  )
 )

@@ -413,6 +413,8 @@ mod tests {
     #[test]
     fn cab_panel_formats_diesel_and_brake() {
         let tel = CabTelemetry {
+            steam: None,
+            diesel: None,
             pantograph_fraction: 0.,
             line_voltage_v: 0.,
             circuit_breaker_state: 0,
@@ -459,6 +461,8 @@ mod tests {
     #[test]
     fn cab_panel_marks_overspeed() {
         let tel = CabTelemetry {
+            steam: None,
+            diesel: None,
             pantograph_fraction: 0.,
             line_voltage_v: 0.,
             circuit_breaker_state: 0,

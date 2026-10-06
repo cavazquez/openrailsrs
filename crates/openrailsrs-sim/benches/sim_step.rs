@@ -41,6 +41,7 @@ fn build_line_graph() -> TrackGraph {
 
 fn default_train() -> TrainPhysics {
     TrainPhysics {
+        diesel: Default::default(),
         electric: Default::default(),
         native: None,
         mass_kg: 100_000.0,

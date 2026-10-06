@@ -1,8 +1,7 @@
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 use crate::msts_units::{
-    parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_pressure_bar,
-    parse_velocity_mps,
+    parse_force_n, parse_length_m, parse_mass_kg, parse_power_w, parse_velocity_mps,
 };
 use crate::units::kmh_to_mps;
 
@@ -47,6 +46,7 @@ pub struct EngineCabView {
 /// Optional MSTS steam parameters parsed from `.eng` (mapped to `SteamParams` in train crate).
 #[derive(Clone, Debug, PartialEq)]
 pub struct MstsSteamFields {
+    pub operation: super::SteamOperatingParams,
     pub cylinder_count: u32,
     pub cylinder_bore_m: f64,
     pub piston_stroke_m: f64,
@@ -60,6 +60,7 @@ pub struct MstsSteamFields {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EngineFile {
+    pub diesel_operation: Option<super::DieselOperatingParams>,
     pub electric: Option<openrailsrs_core::electrification::ElectricVehicleParams>,
     pub name: String,
     pub mass_kg: f64,
@@ -197,7 +198,7 @@ impl EngineFile {
         {
             traction_curve = curve.clone();
         }
-        let steam = parse_steam_fields(ast);
+        let steam = parse_steam_fields(ast)?;
         let mut diesel_power_tab = parse_rpm_power_tab(ast);
         let mut diesel_throttle_rpm_tab = parse_throttle_rpm_tab(ast);
         let mut diesel_idle_rpm = find_optional_scalar_field(
@@ -355,6 +356,11 @@ impl EngineFile {
         let passenger_viewpoints = parse_passenger_viewpoints(ast);
 
         Ok(Self {
+            diesel_operation: super::traction_operation::parse_diesel(
+                ast,
+                diesel_idle_rpm,
+                diesel_max_rpm,
+            )?,
             electric: super::parse_electric_vehicle(ast)?,
             name,
             mass_kg,
@@ -628,7 +634,6 @@ enum QuantityKind {
     Velocity,
     Power,
     Length,
-    Pressure,
 }
 
 fn find_mass_field(root: &Ast, keys: &[&str], context: &str) -> Result<f64, FormatError> {
@@ -660,7 +665,6 @@ fn find_optional_quantity_field(
                 QuantityKind::Velocity => parse_velocity_ast(value),
                 QuantityKind::Power => parse_power_ast(value),
                 QuantityKind::Length => parse_length_ast(value),
-                QuantityKind::Pressure => parse_pressure_ast(value),
             };
             return parsed.map(Some).ok_or_else(|| FormatError::UnexpectedAtom {
                 key: (*key).to_string(),
@@ -758,14 +762,6 @@ fn parse_length_ast(value: &Ast) -> Option<f64> {
             atom_to_number(atom).or_else(|| atom_to_string(atom).and_then(|s| parse_length_m(&s)))
         }
         Ast::List(items) => items.first().and_then(parse_length_ast),
-    }
-}
-
-fn parse_pressure_ast(value: &Ast) -> Option<f64> {
-    match value {
-        Ast::Atom(atom) => atom_to_number(atom)
-            .or_else(|| atom_to_string(atom).and_then(|s| parse_pressure_bar(&s))),
-        Ast::List(items) => items.first().and_then(parse_pressure_ast),
     }
 }
 
@@ -1093,77 +1089,125 @@ fn parse_diesel_power_tab_max(ast: &Ast) -> Option<f64> {
     if best > 0.0 { Some(best) } else { None }
 }
 
-fn parse_steam_fields(ast: &Ast) -> Option<MstsSteamFields> {
-    let cylinder_count = find_optional_scalar_field(
+fn parse_steam_fields(ast: &Ast) -> Result<Option<MstsSteamFields>, FormatError> {
+    fn steam_body(ast: &Ast) -> Option<&Ast> {
+        let Ast::List(items) = ast else { return None };
+        if items.iter().any(|a| matches!(a, Ast::List(v)
+            if matches!(v.first(), Some(Ast::Atom(Atom::Symbol(s))) if s.eq_ignore_ascii_case("Type"))
+                && v.get(1).and_then(super::scalar_text).is_some_and(|s| s.eq_ignore_ascii_case("Steam")))) {
+            Some(ast)
+        } else {
+            items.iter().find_map(steam_body)
+        }
+    }
+    let native_body = steam_body(ast);
+    let ast = native_body.unwrap_or(ast);
+    let count = find_optional_scalar_field(
         ast,
-        &["NumCylinders", "ORTSNumCylinder", "NumCylinder"],
+        &[
+            "NumCylinders",
+            "NumberOfCylinders",
+            "ORTSNumCylinder",
+            "NumCylinder",
+        ],
         "Steam",
-    )
-    .ok()
-    .flatten()
-    .map(|v| v.round().max(1.0) as u32);
+    )?;
+    if count
+        .is_some_and(|v| !v.is_finite() || v.fract() != 0. || !(1. ..=u32::MAX as f64).contains(&v))
+    {
+        return Err(FormatError::UnexpectedAtom {
+            key: "NumCylinders".into(),
+            context: "Steam".into(),
+            expected: "positive integer cylinder count".into(),
+        });
+    }
+    let cylinder_count = count.map(|v| v as u32);
     let bore = find_optional_quantity_field(
         ast,
         QuantityKind::Length,
         &["CylinderDiameter", "ORTSCylinderDiameter"],
         "Steam",
-    )
-    .ok()
-    .flatten();
+    )?;
     let stroke = find_optional_quantity_field(
         ast,
         QuantityKind::Length,
         &["CylinderStroke", "ORTSCylinderStroke"],
         "Steam",
-    )
-    .ok()
-    .flatten();
-    let wheel = find_optional_quantity_field(
+    )?;
+    let radius =
+        find_optional_quantity_field(ast, QuantityKind::Length, &["WheelRadius"], "Steam")?;
+    let diameter = find_optional_quantity_field(
         ast,
         QuantityKind::Length,
-        &[
-            "WheelRadius",
-            "DrivingWheelDiameter",
-            "ORTSDrivingWheelDiameter",
-        ],
+        &["DrivingWheelDiameter", "ORTSDrivingWheelDiameter"],
         "Steam",
-    )
-    .ok()
-    .flatten()
-    .map(|d| {
-        // DrivingWheelDiameter is full diameter; WheelRadius is radius.
-        if d > 2.0 { d / 2.0 } else { d }
-    });
-    let pressure = find_optional_quantity_field(
-        ast,
-        QuantityKind::Pressure,
-        &[
-            "MaxBoilerPressure",
-            "BoilerPressure",
-            "ORTSMaxBoilerPressure",
-        ],
-        "Steam",
-    )
-    .ok()
-    .flatten();
-
-    let cylinder_count = cylinder_count?;
-    let cylinder_bore_m = bore?;
-    let piston_stroke_m = stroke?;
-    let driving_wheel_radius_m = wheel?;
-    let working_pressure_bar = pressure.unwrap_or(16.0);
-
-    Some(MstsSteamFields {
+    )?;
+    let Some((cylinder_count, cylinder_bore_m, piston_stroke_m, driving_wheel_radius_m)) =
+        cylinder_count
+            .zip(bore)
+            .zip(stroke)
+            .zip(radius.or(diameter.map(|d| d * 0.5)))
+            .map(|(((n, b), s), r)| (n, b, s, r))
+    else {
+        if native_body.is_some() {
+            return Err(FormatError::MissingField {
+                key: "steam cylinder dimensions or wheel radius".into(),
+                context: "Steam".into(),
+            });
+        }
+        return Ok(None);
+    };
+    use super::traction_operation::quantity;
+    let pressure = quantity(ast, "MaxBoilerPressure", "psi")?
+        .or(quantity(ast, "BoilerPressure", "psi")?)
+        .or(quantity(ast, "ORTSMaxBoilerPressure", "psi")?)
+        .unwrap_or(16.);
+    let mut operation = super::SteamOperatingParams::default();
+    if let Some(volume_l) = quantity(ast, "BoilerVolume", "ft3")? {
+        operation.boiler_water_capacity_kg = volume_l;
+    }
+    if let Some(fire_kg) = quantity(ast, "MaxFireMass", "kg")? {
+        if fire_kg <= 0. {
+            return Err(FormatError::UnexpectedAtom {
+                key: "MaxFireMass".into(),
+                context: "Steam".into(),
+                expected: "positive fire capacity".into(),
+            });
+        }
+        operation.max_fire_mass_kg = fire_kg;
+    }
+    if [
+        cylinder_bore_m,
+        piston_stroke_m,
+        driving_wheel_radius_m,
+        pressure,
+        operation.boiler_water_capacity_kg,
+    ]
+    .iter()
+    .any(|v| !v.is_finite() || *v <= 0.)
+    {
+        return Err(FormatError::UnexpectedAtom {
+            key: "Steam dimensions, pressure or boiler volume".into(),
+            context: "Steam".into(),
+            expected: "finite positive quantity".into(),
+        });
+    }
+    operation.max_firing_rate_kg_s =
+        quantity(ast, "ORTSSteamFiremanMaxPossibleFiringRate", "lb/h")?
+            .or(quantity(ast, "SteamFiremanMaxPossibleFiringRate", "lb/h")?)
+            .unwrap_or(1.);
+    Ok(Some(MstsSteamFields {
+        operation,
         cylinder_count,
         cylinder_bore_m,
         piston_stroke_m,
         driving_wheel_radius_m,
-        working_pressure_bar,
-        evaporation_rate_kg_per_s: 8.0,
+        working_pressure_bar: pressure,
+        evaporation_rate_kg_per_s: quantity(ast, "MaxBoilerOutput", "lb/h")?.unwrap_or(8.0),
         coal_consumption_kg_per_s: 0.5,
-        initial_water_kg: 12_000.0,
-        initial_coal_kg: 6_000.0,
-    })
+        initial_water_kg: quantity(ast, "MaxTenderWaterMass", "kg")?.unwrap_or(12_000.),
+        initial_coal_kg: quantity(ast, "MaxTenderCoalMass", "kg")?.unwrap_or(6_000.),
+    }))
 }
 
 fn parse_traction_curve(ast: &Ast) -> Vec<(f64, f64)> {

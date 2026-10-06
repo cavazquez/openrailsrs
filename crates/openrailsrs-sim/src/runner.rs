@@ -221,6 +221,7 @@ pub fn run_scenario_headless_with_driver(
     let steam_params = consist.aggregate_steam_params();
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let train_physics = TrainPhysics {
+        diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
         electric: crate::electric::ElectricTrainConfig::load(
             &route_dir,
             scenario.route.electric_supply.as_ref(),

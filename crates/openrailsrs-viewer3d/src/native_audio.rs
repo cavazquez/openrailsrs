@@ -61,9 +61,20 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         .iter()
         .position(|&index| index == vehicle);
     let engine = engine_index.and_then(|i| session.physics.diesel_engines.get(i));
-    let rpm = engine
-        .and_then(|e| e.engine.as_deref())
-        .zip(engine_index.and_then(|i| session.state.diesel_rpm.get(i).copied()))
+    let diesel_state = session.state.diesel.car(vehicle);
+    let rpm = session
+        .physics
+        .diesel
+        .cars
+        .iter()
+        .find(|c| c.vehicle == vehicle)
+        .map(|c| &c.governor)
+        .or_else(|| engine.and_then(|e| e.engine.as_deref()))
+        .zip(
+            diesel_state
+                .map(|d| d.rpm)
+                .or_else(|| engine_index.and_then(|i| session.state.diesel_rpm.get(i).copied())),
+        )
         .map_or(t.throttle_pct / 100.0, |(engine, rpm)| {
             (rpm - engine.idle_rpm) / (engine.max_rpm - engine.idle_rpm).max(1.0)
         });
@@ -72,7 +83,9 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
     let controls_powered = car.is_some_and(|c| {
         c.powered && c.power_on && c.battery_on && (vehicle == 0 || c.mu_connected)
     }) && !parked;
-    let powered = controls_powered && session.state.electric.power_available(vehicle);
+    let powered = controls_powered
+        && session.state.electric.power_available(vehicle)
+        && session.state.diesel.power_available(vehicle);
     let velocity = if parked {
         0.0
     } else {
@@ -98,9 +111,12 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         }
     });
     let steam = locomotive.and_then(|l| l.steam.as_ref());
+    let boiler = steam.and(session.state.boiler_state.as_ref());
+    let steam_working = boiler.is_some_and(|b| b.tractive_force_n > 0. && !b.low_water_failure);
     // Missing fuel-consumption data does not turn a diesel with a governor
     // into an electric. Keep the sound-variable scale tied to this motor.
-    let diesel = engine.is_some_and(|e| e.engine.is_some())
+    let diesel = diesel_state.is_some()
+        || engine.is_some_and(|e| e.engine.is_some())
         || locomotive.is_some_and(|l| {
             l.diesel_sfc_g_per_kwh.is_some()
                 || l.diesel_traction
@@ -125,7 +141,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
                     session.driver_throttle
                 },
                 |s| {
-                    if session.driver_throttle > 0.0 {
+                    if steam_working {
                         velocity.abs() / s.driving_wheel_radius_m / std::f64::consts::PI * 5.0
                     } else {
                         0.0
@@ -134,19 +150,31 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
             ) as f32
         },
         // OR diesel uses an RPM fraction; electric/steam programs expect 0–100.
-        // Until effort/chest-pressure telemetry is exposed, demand is a proxy
-        // for those two load variables rather than a falsely normalized RPM.
-        variable2: if !powered {
+        // Steam uses the physical boiler effort; electric demand remains a
+        // proxy until a native motor-current model is available.
+        variable2: if diesel_state.is_some_and(|d| d.rpm > 0.) {
+            rpm.clamp(0., 1.) as f32
+        } else if !powered {
             0.0
-        } else if electric || steam.is_some() {
+        } else if let Some(b) = boiler {
+            (b.tractive_force_n / steam.unwrap().max_tractive_effort_n()).clamp(0., 1.) as f32
+                * 100.
+        } else if electric {
             t.throttle_pct as f32
         } else {
             rpm.clamp(0.0, 1.0) as f32
         },
         variable3: 0.0,
-        steam_phase: steam.filter(|_| powered).map(|s| {
+        steam_phase: steam.filter(|_| powered && steam_working).map(|s| {
             session.state.odometer_m / (std::f64::consts::TAU * s.driving_wheel_radius_m) * 8.0
         }),
+        engine_on: diesel_state
+            .map(|d| d.command_running && d.fuel_l > 0. && car.is_some_and(|c| c.battery_on)),
+        injector1: boiler.is_some_and(|b| b.controls.injector1),
+        injector2: boiler.is_some_and(|b| b.controls.injector2),
+        blower: boiler.is_some_and(|b| b.controls.blower),
+        damper: boiler.map_or(0., |b| b.controls.damper as f32),
+        cylinder_cocks: boiler.is_some_and(|b| b.controls.cylinder_cocks),
         brake_cylinder: cylinder.map_or(t.brake_cyl_bar, |c| c.pressure_bar()) as f32 * 14.503774,
         brake_pipe: cylinder
             .and_then(|c| c.pipe_pressure_bar())
@@ -158,7 +186,9 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         },
         brake: session.driver_brake as f32,
         direction: session.driver_direction as f32,
-        horn: controls_powered && t.horn_active,
+        horn: controls_powered
+            && t.horn_active
+            && boiler.is_none_or(|b| b.pressure_bar > 0. && !b.low_water_failure),
         wiper: vehicle == 0 && t.wiper_active,
         doors: matches!(
             session.exterior.door,
@@ -301,6 +331,23 @@ mod tests {
         s.physics.diesel_vehicle_indices = vec![0, 7];
         s.physics.diesel_engines = vec![engine(300.0, 900.0), engine(500.0, 1500.0)];
         s.state.diesel_rpm = vec![300.0, 1500.0];
+        // Canonical per-car operation state survives filtered traction arrays.
+        s.state.diesel.cars = [(0, 300.), (7, 1500.)]
+            .into_iter()
+            .map(
+                |(vehicle, rpm)| openrailsrs_sim::diesel_operation::DieselCarState {
+                    vehicle,
+                    rpm,
+                    demanded_rpm: rpm,
+                    command_running: true,
+                    phase: openrailsrs_sim::diesel_operation::EnginePhase::Running,
+                    fuel_l: 25.,
+                    consumed_l: 0.,
+                    flow_lps: 0.,
+                },
+            )
+            .collect();
+        s.physics.diesel.cars.clear(); // This test supplies the two governor fixtures above.
         s.driver_throttle = 1.0;
         s.state.velocity_mps = 12.0;
         s.state.vehicles.clear();
@@ -316,8 +363,26 @@ mod tests {
         assert!((frames[7].brake_cylinder - 1.25 * 14.503774).abs() < 1e-4);
         assert_eq!(frames[7].speed, 12.0);
         s.formation.cars[7].mu_connected = false;
-        assert_eq!(state(&s, 7).variable2, 0.0);
+        assert_eq!(state(&s, 7).variable2, 1.0); // Engine still turns; MU isolation cuts traction.
         assert_eq!(state(&s, 7).throttle, 0.0);
+    }
+
+    #[test]
+    fn diesel_with_default_rpm_parameters_keeps_diesel_sound_scale() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation/scenario_low_fuel.toml");
+        let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+        let mut s =
+            openrailsrs_sim::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario)
+                .unwrap();
+        s.driver_throttle = 0.5;
+        let sound = state(&s, 0);
+        assert_eq!(
+            sound.variable1, 0.5,
+            "Type Diesel must not use the electric 0–100 scale when its governor fields are absent"
+        );
+        assert_eq!(sound.engine_on, Some(true));
+        assert!(sound.variable2.is_finite());
     }
 
     #[test]

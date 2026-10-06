@@ -63,6 +63,7 @@ impl TractiveCurve {
 /// When `None` the sim falls back to the electric/diesel P/v model.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SteamParams {
+    pub operation: Box<openrailsrs_formats::SteamOperatingParams>,
     /// Number of cylinders (typically 2 for outside-cylinder or 4 for compound).
     pub cylinder_count: u32,
     /// Cylinder bore (inner diameter) in metres.
@@ -77,13 +78,37 @@ pub struct SteamParams {
     pub evaporation_rate_kg_per_s: f64,
     /// Coal consumption at full fire (kg/s).
     pub coal_consumption_kg_per_s: f64,
-    /// Initial water in tender/boiler (kg).
+    /// Initial water in the finite tender (kg), separate from boiler water.
     pub initial_water_kg: f64,
     /// Initial coal in tender (kg).
     pub initial_coal_kg: f64,
 }
 
 impl SteamParams {
+    pub fn valid(&self) -> bool {
+        self.cylinder_count > 0
+            && [
+                self.cylinder_bore_m,
+                self.piston_stroke_m,
+                self.driving_wheel_radius_m,
+                self.working_pressure_bar,
+                self.operation.boiler_water_capacity_kg,
+                self.operation.max_fire_mass_kg,
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v > 0.)
+            && [
+                self.evaporation_rate_kg_per_s,
+                self.coal_consumption_kg_per_s,
+                self.initial_water_kg,
+                self.initial_coal_kg,
+                self.operation.max_firing_rate_kg_s,
+                self.operation.injector_rate_kg_s,
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v >= 0.)
+    }
+
     /// Theoretical maximum tractive effort at stall (v = 0) with full boiler pressure.
     /// Useful to populate `Locomotive::max_tractive_effort_n` when loading from TOML.
     pub fn max_tractive_effort_n(&self) -> f64 {
@@ -156,6 +181,7 @@ fn scale_davis_per_vehicle(
 
 #[derive(Clone, Debug)]
 pub struct Locomotive {
+    pub diesel_operation: Option<Box<openrailsrs_formats::DieselOperatingParams>>,
     pub electric: Option<Box<openrailsrs_core::electrification::ElectricVehicleParams>>,
     pub brake_profile: openrailsrs_formats::VehicleBrakeProfile,
     pub name: String,

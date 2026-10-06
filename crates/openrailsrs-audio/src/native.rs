@@ -37,6 +37,12 @@ pub struct SoundState {
     pub brake: f32,
     pub direction: f32,
     pub steam_phase: Option<f64>,
+    pub engine_on: Option<bool>,
+    pub injector1: bool,
+    pub injector2: bool,
+    pub blower: bool,
+    pub damper: f32,
+    pub cylinder_cocks: bool,
     pub horn: bool,
     pub wiper: bool,
     pub doors: bool,
@@ -59,15 +65,30 @@ impl SoundState {
             (self.horn, old.horn, 8, 9),
             (self.wiper, old.wiper, 6, 7),
             (self.doors, old.doors, 105, 106),
+            (self.injector1, old.injector1, 30, 31),
+            (self.injector2, old.injector2, 27, 28),
         ] {
             if now != before {
                 e.push(if now { on } else { off });
             }
         }
+        if let Some(now) = self.engine_on
+            && old.engine_on != Some(now)
+        {
+            e.push(if now { 23 } else { 24 });
+        }
+        if self.blower != old.blower {
+            e.push(33);
+        }
+        if self.cylinder_cocks != old.cylinder_cocks {
+            e.push(34);
+            e.push(if self.cylinder_cocks { 137 } else { 138 });
+        }
         for (now, before, event) in [
             (self.throttle, old.throttle, 16),
             (self.brake, old.brake, 17),
             (self.direction, old.direction, 15),
+            (self.damper, old.damper, 32),
         ] {
             if (now - before).abs() > 0.005 {
                 e.push(event);
@@ -1635,5 +1656,42 @@ mod tests {
         assert!(now.events(old).contains(&8));
         assert!(!now.events(now).contains(&8));
         assert!(old.events(now).contains(&9));
+    }
+
+    #[test]
+    fn traction_control_edges_match_original_dll_sound_events() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../oracles/openrails-traction-operation.json"
+        ))
+        .unwrap();
+        let old = SoundState {
+            engine_on: Some(false),
+            ..Default::default()
+        };
+        let on = SoundState {
+            engine_on: Some(true),
+            injector1: true,
+            injector2: true,
+            blower: true,
+            damper: 0.5,
+            cylinder_cocks: true,
+            ..old
+        };
+        let mut emitted = on.events(old);
+        emitted.extend(old.events(on));
+        emitted.sort_unstable();
+        emitted.dedup();
+        let mut native: Vec<_> = reference["sound_events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["id"].as_u64().unwrap() as u32)
+            .collect();
+        native.sort_unstable();
+        assert_eq!(emitted, native);
+        assert!(
+            on.events(on).is_empty(),
+            "held switches must not restart native loops"
+        );
     }
 }

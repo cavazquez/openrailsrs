@@ -176,19 +176,39 @@ pub fn spawn(
 }
 
 /// Rate/load are presentation effects, not an additional physical steam model.
-fn emission(name: &str, session: &openrailsrs_sim::LiveDriveSession) -> (f32, bool, f32) {
+fn emission(
+    name: &str,
+    session: &openrailsrs_sim::LiveDriveSession,
+    vehicle: usize,
+) -> (f32, bool, f32) {
     let n = name.to_ascii_lowercase();
     let t = session.cab_telemetry();
     let load = t.traction_load_fraction.max(session.state.throttle * 0.5) as f32;
     if n.starts_with("exhaust") {
+        if session
+            .state
+            .diesel
+            .car(vehicle)
+            .is_some_and(|c| c.flow_lps <= 0.)
+        {
+            return (0., false, 0.);
+        }
         return (3.0 + 20.0 * load, false, load);
     }
     if n.contains("stack") {
-        return (5.0 + 24.0 * session.state.throttle as f32, true, load);
+        let burning = session
+            .state
+            .boiler_state
+            .as_ref()
+            .map_or(0., |b| b.coal_burn_kg_s as f32);
+        return (burning * 40., true, load);
     }
     if n.contains("cylinder") {
         return (
-            if session.velocity_mps() < 4.0 && session.state.throttle > 0.1 {
+            if session.state.boiler_state.as_ref().is_some_and(|b| {
+                b.controls.cylinder_cocks && b.pressure_bar > 0. && !b.low_water_failure
+            }) && session.state.throttle > 0.1
+            {
                 18.0
             } else {
                 0.0
@@ -198,15 +218,27 @@ fn emission(name: &str, session: &openrailsrs_sim::LiveDriveSession) -> (f32, bo
         );
     }
     if n.contains("whistle") {
-        return (if t.horn_active { 24.0 } else { 0.0 }, true, 1.0);
+        let steam_available = session
+            .state
+            .boiler_state
+            .as_ref()
+            .is_some_and(|b| b.pressure_bar > 0. && !b.low_water_failure);
+        return (
+            if t.horn_active && steam_available {
+                24.0
+            } else {
+                0.0
+            },
+            true,
+            1.0,
+        );
     }
     if n.contains("safety") {
         let open = session
-            .physics
-            .steam_params
+            .state
+            .boiler_state
             .as_ref()
-            .zip(t.boiler_bar)
-            .is_some_and(|(p, b)| b > p.working_pressure_bar * 1.01);
+            .is_some_and(|b| b.safety_valve);
         return (if open { 24.0 } else { 0.0 }, true, 1.0);
     }
     (0.0, true, 0.0)
@@ -216,7 +248,7 @@ pub fn update(
     live: Res<LiveDrive>,
     origin: Res<FloatingOrigin>,
     mut effects: ResMut<TrainEffects>,
-    cars: Query<&GlobalTransform, With<ConsistCarIndex>>,
+    cars: Query<(&GlobalTransform, &ConsistCarIndex)>,
     camera: Query<&Transform, With<Camera3d>>,
     mesh: Query<&Mesh3d, With<ExhaustMesh>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -254,13 +286,13 @@ pub fn update(
                     .filter(|s| s.departed)
                     .map(|s| &s.session)
             };
-            let (Some(session), Ok(car)) = (session, cars.get(emitter.car)) else {
+            let (Some(session), Ok((car, index))) = (session, cars.get(emitter.car)) else {
                 continue;
             };
             if car.translation().distance(camera.translation) > 250.0 {
                 continue;
             }
-            let (rate, steam, load) = emission(&emitter.data.name, session);
+            let (rate, steam, load) = emission(&emitter.data.name, session, index.0);
             emitter.credit += rate * dt;
             let position = Vec3::new(
                 emitter.data.position[0],
@@ -345,6 +377,32 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn session(file: &str) -> openrailsrs_sim::LiveDriveSession {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation")
+            .join(file);
+        let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+        openrailsrs_sim::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap()
+    }
+
+    #[test]
+    fn stopped_diesel_and_empty_boiler_do_not_emit_exhaust_or_whistle_steam() {
+        let mut diesel = session("scenario.toml");
+        diesel.step_realtime(1., |_| {});
+        assert!(emission("Exhaust1", &diesel, 0).0 > 0.);
+        diesel.toggle_diesel_engine(0).unwrap();
+        diesel.step_realtime(10., |_| {});
+        assert_eq!(emission("Exhaust1", &diesel, 0).0, 0.);
+        let mut steam = session("scenario_steam.toml");
+        steam.trigger_horn(1.);
+        assert!(emission("Whistle", &steam, 0).0 > 0.);
+        steam.state.boiler_state.as_mut().unwrap().pressure_bar = 0.;
+        assert_eq!(emission("Whistle", &steam, 0).0, 0.);
+        steam.state.boiler_state.as_mut().unwrap().pressure_bar = 16.;
+        steam.state.boiler_state.as_mut().unwrap().low_water_failure = true;
+        assert_eq!(emission("Whistle", &steam, 0).0, 0.);
+    }
+
     #[test]
     fn mesh_is_bounded_and_retains_each_particles_alpha() {
         let p = Puff {

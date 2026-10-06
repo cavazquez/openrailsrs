@@ -1161,3 +1161,76 @@ Un suministro de tercer riel requiere declarar también ese suministro en
 un motor auxiliar. Los perfiles de ejemplo son deliberados y no describen
 la electrificación histórica de Chiltern. Los límites del modelo se detallan
 en [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
+
+## 38. Vapor y diésel: reservas, arranque y fogonero
+
+En el menú elegí los ejemplos de **traction_operation**. Tienen 1 km, tres
+paradas y esperas de cinco segundos. El modelo sencillo permite probar los
+controles sin descargar contenido. Para las cabinas y sonidos originales,
+repetí con Pullman/121, Downton Hall LE y KingLE del paquete Chiltern instalado.
+Las teclas son las predeterminadas; F6 muestra tus asignaciones actuales.
+
+Iniciá una partida nueva para estas pruebas: los guardados anteriores que no
+incluyen las reservas de tracción no permiten recuperarlas con certeza y pueden
+ser rechazados al cargar.
+
+1. **Parar y arrancar el diésel.** Elegí «Diésel: arranque, parada y combustible».
+   Abrí B: debe mostrar «En marcha», 300 RPM y 25 L de capacidad. Al pasar
+   tiempo en ralentí debe consumir unos 18 L/h. Cerrá B y pulsá K; las RPM
+   deben bajar hasta cero en unos segundos. Ya detenido, el consumo cesa.
+   Con regulador cerrado, K inicia «Arrancando» antes de «En marcha»;
+   durante el arranque todavía no debe producir fuerza.
+2. **Corte en movimiento.** Cerrá puertas con Q, soltá freno con `;`, poné
+   adelante con W y aumentá regulador con D. Pulsá K: el esfuerzo del motor
+   debe caer a cero y el tren sigue por inercia. En un modelo con emisor ENG,
+   el escape cesa cuando termina la combustión, no al instante de pulsar K.
+   Para arrancar de nuevo, cerrá primero el regulador con A.
+3. **Condiciones de arranque.** Con el motor detenido, abrir regulador y
+   pulsar K debe informar que hay que cerrarlo. Con tren detenido, apagá
+   batería en F9: tampoco debe arrancar. Restablecé batería para probarlo.
+4. **Agotamiento rápido.** Elegí «Diésel: agotar el tanque en 20 segundos».
+   El depósito artificial de 0,2 L se vacía en unos 20 segundos a ralentí;
+   al acelerar tarda menos. Debe quedar en cero, cortar fuerza y rechazar
+   otro arranque. Guardar y cargar o aislar y reconectar un motor no lo repone.
+5. **Dos motores.** Elegí «Diésel: dos motores independientes». En B, parando
+   solo el motor 2 debe conservarse el motor 1. En F9, aislá el motor 1 y
+   comprobá en F8 que el 2 conserva sus RPM, reserva e identidad. Reconectar
+   no debe devolver combustible. Las operaciones de F9 requieren tren parado.
+6. **Vapor asistido.** Elegí «Vapor: fogonero y ténder finito». B debe mostrar
+   presión de 16 bar, agua de caldera cerca del 90 %, 15 000 L en el ténder,
+   8000 kg de carbón y fuego separado. Conducí: el consumo de vapor baja el
+   nivel; al bajar del 75 %, el automático acciona los inyectores y toma agua
+   del ténder hasta recuperar el 90 %. En este recorrido corto puede no llegar
+   a ese umbral; el ejemplo de reservas mínimas permite probarlo en segundos.
+   Abrir B no pausa una partida en marcha; si ya estaba pausada, sigue así.
+7. **Corte y purgas.** En B reducí el corte manteniendo el mismo regulador:
+   deben bajar fuerza y consumo. Abrí las purgas: deben aumentar las pérdidas
+   y verse vapor en los emisores de cilindros disponibles. El corte y las
+   purgas permiten conservar el fogonero automático.
+8. **Fogonero manual.** Accioná tiro, pala, soplador o inyectores: debe indicar
+   «manual». Con tiro y pala en cero, el fuego deja de producir calor nuevo.
+   Abrí un inyector: con presión suficiente el agua del ténder baja y la
+   caldera gana agua; inyectar también enfría. Activar el automático devuelve
+   la asistencia con las reservas restantes. No debe rellenar el ténder.
+9. **Vapor con reservas mínimas.** Elegí «Vapor: agotamiento rápido de reservas».
+   Es un banco artificial de 20 L de caldera, 2 L de ténder y 0,2 kg de carbón.
+   En B abrí un inyector para agotar la reserva de agua en segundos. No debe
+   hacerse negativa ni crecer sola. Bajo demanda, una caldera con nivel del
+   15 % o inferior debe indicar daño y perder la fuerza; cerrar controles no
+   elimina ese daño. Reiniciar la partida sí inicia una locomotora nueva.
+10. **Cabina y sonido originales.** Hall/King incluyen cabina clásica 2D.
+    Entrá con 1 y usá Alt+1 para elegirla si estás en la vista 3D.
+    Los manómetros, agua del
+    ténder y controles CVF disponibles deben seguir el estado de B/F8. Con
+    la cabina 2D, probá regulador, corte, tiro e inyectores con el mouse. Las
+    purgas, inyectores y soplador deben disparar el efecto declarado en el SMS
+    una vez por cambio, sin reiniciarlo en cada cuadro. Un control o un
+    sonido que el autor no incluyó puede no estar disponible.
+11. **Guardar y cargar.** Guardá desde Esc con el motor arrancando o el
+    fogonero manual. Al cargar, deben conservarse transición, RPM, reservas,
+    corte e interruptores, en lugar de empezar con depósitos llenos.
+
+Los controles nuevos también funcionan en la simulación sin visor. Las
+pruebas de arranque y unidades usan OR 1.6.1; la caldera tiene termodinámica
+simplificada y no se afirma paridad completa de vapor, transmisiones ni freno
+dinámico. Ver [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).

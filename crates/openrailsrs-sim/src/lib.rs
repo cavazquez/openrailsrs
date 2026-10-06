@@ -3,6 +3,7 @@
 pub mod brake;
 pub mod coupler;
 pub mod csv_out;
+pub mod diesel_operation;
 pub mod electric;
 pub mod error;
 pub mod etcs;

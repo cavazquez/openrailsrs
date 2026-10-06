@@ -53,6 +53,8 @@ pub enum PlayerAction {
     CabLight,
     Pantograph,
     CircuitBreaker,
+    DieselEngine,
+    TractionControls,
     Doors,
     Emergency,
     Pause,
@@ -78,7 +80,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 35] = [
+    pub const ALL: [Self; 37] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -92,6 +94,8 @@ impl PlayerAction {
         Self::CabLight,
         Self::Pantograph,
         Self::CircuitBreaker,
+        Self::DieselEngine,
+        Self::TractionControls,
         Self::Doors,
         Self::Emergency,
         Self::Pause,
@@ -130,6 +134,8 @@ impl PlayerAction {
             Self::CabLight => "Luz de cabina",
             Self::Pantograph => "Subir / bajar pantógrafo",
             Self::CircuitBreaker => "Abrir / cerrar disyuntor",
+            Self::DieselEngine => "Arrancar / detener motor diésel",
+            Self::TractionControls => "Controles de vapor y diésel",
             Self::Doors => "Puertas",
             Self::Emergency => "Emergencia",
             Self::Pause => "Pausar / continuar",
@@ -169,6 +175,8 @@ impl PlayerAction {
             Self::CabLight => KeyCode::KeyI,
             Self::Pantograph => KeyCode::KeyO,
             Self::CircuitBreaker => KeyCode::KeyJ,
+            Self::DieselEngine => KeyCode::KeyK,
+            Self::TractionControls => KeyCode::KeyB,
             Self::Doors => KeyCode::KeyQ,
             Self::Emergency => KeyCode::Backspace,
             Self::Pause => KeyCode::KeyP,

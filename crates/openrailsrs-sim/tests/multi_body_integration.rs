@@ -38,6 +38,7 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
     );
 
     let train = TrainPhysics {
+        diesel: Default::default(),
         electric: Default::default(),
         native: None,
         mass_kg: consist.total_mass_kg(),
@@ -101,6 +102,7 @@ fn multi_body_dt_one_second_remains_stable_over_ten_steps() {
     };
 
     let train = TrainPhysics {
+        diesel: Default::default(),
         electric: Default::default(),
         native: None,
         mass_kg: consist.total_mass_kg(),

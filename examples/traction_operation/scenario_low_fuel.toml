@@ -1,0 +1,44 @@
+[scenario]
+name = "Diésel: agotar el tanque en 20 segundos"
+description = "Prueba sintética de 1 km, sin catenaria. K acciona el motor y B abre sus controles. Paradas de 5 segundos."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/low_fuel.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_low_fuel.csv"
+metadata = "run_low_fuel.json"

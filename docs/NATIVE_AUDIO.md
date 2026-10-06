@@ -36,6 +36,11 @@ cola acotada. Cambiar de cámara mantiene los bancos y bucles ya cargados.
 - Se leen referencias y porcentajes dentro de `Include` mediante el lector
   acotado del contenido. Los programas interiores se conservan por coche;
   al cambiar de coche de pasajeros no se reutiliza el interior del primero.
+- Arranque y parada, inyectores, tiro, soplador y purgas usan los eventos
+  originales congelados en `openrails-traction-operation.json`. Mantener un
+  interruptor no repite su evento en cada cuadro. Las RPM pertenecen al motor
+  original incluso después de aislar otra unidad. Las emboladas responden al
+  esfuerzo de caldera; con corte cero o sin presión no se simula trabajo.
 
 La mezcla del dispositivo y la del ensayo WAV comparten el limitador a −1 dBFS.
 No se reemplaza un WAV ausente por un sonido inventado ni se descarga un recurso
@@ -106,8 +111,9 @@ espacial/Doppler equivalentes, corrección por apertura de ventanas, sonidos
 automáticos de cambios de tipo de vía y todos los comandos/scripts de sonido
 del contenido. El freno independiente necesita su propia física y telemetría;
 la primera muestra de presiones fija la referencia al iniciar/restaurar para
-evitar cambios de sonido artificiales. La carga eléctrica y la presión de admisión de vapor todavía
-usan demanda como aproximación; la variable de freno dinámico no reproduce
+evitar cambios de sonido artificiales. La carga eléctrica todavía usa demanda
+como aproximación y la admisión de vapor deriva del esfuerzo del modelo
+de caldera simplificado; la variable de freno dinámico no reproduce
 un subsistema completo. Ver [alcance de tracción](TRACTION_SUPPORT.md).
 
 La escucha manual se describe en la sección 36 de

@@ -246,6 +246,18 @@ impl LiveDriveSession {
             );
         }
         let n = saved.formation.coupled_count;
+        if !saved.state.diesel.valid_for(&self.original_physics.diesel)
+            || match (
+                &saved.state.boiler_state,
+                &self.original_physics.steam_params,
+            ) {
+                (Some(b), Some(p)) => !b.valid_for(p),
+                (None, None) => false,
+                _ => true,
+            }
+        {
+            return Err("La partida tiene reservas o controles de tracción inválidos".into());
+        }
         if !saved
             .state
             .electric
@@ -601,6 +613,15 @@ impl LiveDriveSession {
             }
         }
         let mut p = self.original_physics.clone();
+        for car in &mut p.diesel.cars {
+            if let Some(op) = self.formation.cars.get(car.vehicle) {
+                car.connected = car.vehicle < n
+                    && op.power_on
+                    && op.battery_on
+                    && (car.vehicle == 0 || op.mu_connected);
+                car.battery = op.battery_on;
+            }
+        }
         p.electric.fallback_cars = crate::electric::ElectricTrainConfig::fallback_curves(&consist);
         for car in &mut p.electric.cars {
             car.enabled = car.vehicle < n

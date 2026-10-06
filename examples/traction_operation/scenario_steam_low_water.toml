@@ -1,0 +1,44 @@
+[scenario]
+name = "Vapor: agotamiento rápido de reservas"
+description = "Banco de prueba artificial: caldera de 20 L, ténder de 2 L y 0,2 kg de carbón para comprobar agotamiento en segundos. B abre el fogonero."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/low_steam.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_steam_low_water.csv"
+metadata = "run_steam_low_water.json"
