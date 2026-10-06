@@ -139,6 +139,7 @@ fn build_physics(
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     Ok(TrainPhysics {
+        rail_adhesion: None,
         diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
         electric: crate::electric::ElectricTrainConfig::load(
             electric_context.0,

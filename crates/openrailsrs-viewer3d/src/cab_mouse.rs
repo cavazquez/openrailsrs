@@ -69,7 +69,7 @@ fn actionable(control: &ControlType) -> bool {
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"))
+    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"SAND"|"SANDER"|"SANDERS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"))
 }
 fn control_name(control: &ControlType) -> &str {
     match control {
@@ -128,6 +128,9 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
             }
             "CABLIGHT" => live.session.cab_light = !live.session.cab_light,
             "DOORS" => live.session.toggle_doors(),
+            "SAND" | "SANDER" | "SANDERS" => {
+                let _ = live.session.toggle_sander();
+            }
             "PANTOGRAPH" | "PANTOGRAPHS" => {
                 let _ = live.session.toggle_pantograph();
             }

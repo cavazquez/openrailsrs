@@ -1,5 +1,6 @@
 //! Headless simulation: integrate train dynamics on a [`TrackGraph`].
 
+pub mod adhesion;
 pub mod brake;
 pub mod coupler;
 pub mod csv_out;

@@ -69,6 +69,7 @@ enum HudField {
     Doors,
     ElectricSupply,
     TractionStatus,
+    Adhesion,
     Lights,
     Clock,
     Station,
@@ -98,6 +99,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 (HudField::Doors, 13.0),
                 (HudField::ElectricSupply, 12.0),
                 (HudField::TractionStatus, 12.0),
+                (HudField::Adhesion, 12.0),
                 (HudField::Lights, 12.0),
             ],
         ),
@@ -405,6 +407,31 @@ fn update_driving_hud(
                 ),
                 MUTED,
             ),
+            HudField::Adhesion => {
+                let content = session
+                    .state
+                    .rail_adhesion
+                    .as_ref()
+                    .map_or_else(String::new, |r| {
+                        format!(
+                            "{} · agarre {:.0}%{}\nArena: {}",
+                            r.weather.label(),
+                            r.weather_factor * 100.,
+                            if cab.wheel_slip { " · PATINA" } else { "" },
+                            r.sander_status()
+                        )
+                    });
+                (
+                    content,
+                    if cab.wheel_slip {
+                        ALERT
+                    } else if cab.sander_on {
+                        CAUTION
+                    } else {
+                        MUTED
+                    },
+                )
+            }
             HudField::ElectricSupply => (
                 session.electric_status().unwrap_or_default(),
                 if session.state.electric.cars.iter().any(|c| !c.main_power) {

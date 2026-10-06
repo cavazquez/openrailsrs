@@ -1233,7 +1233,10 @@ pub(crate) fn handle_cab2d_mouse_controls(
                     && mouse_buttons.just_pressed(MouseButton::Left)
                     && *interaction == Interaction::Pressed
                 {
-                    if is_horn {
+                    if matches!(&widget.control_type, ControlType::Generic(n) if matches!(n.as_str(), "SAND" | "SANDER" | "SANDERS"))
+                    {
+                        let _ = live.session.toggle_sander();
+                    } else if is_horn {
                         live.session.trigger_horn(0.35);
                     } else if matches!(
                         &widget.control_type,

@@ -340,6 +340,8 @@ impl CaptureScene<'_, '_> {
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         });
+        report["rail_adhesion"] =
+            serde_json::json!(live.and_then(|l| l.session.state.rail_adhesion.as_ref()));
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
                 name.as_str().starts_with("ui-") || name.as_str().starts_with("home-")
                     || matches!(name.as_str(), "player-menu" | "launch-footer" | "launch-unavailable")

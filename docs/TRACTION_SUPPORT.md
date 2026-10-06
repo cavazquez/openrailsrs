@@ -76,6 +76,52 @@ carbón, con sus tomas y caudales. Llenar el ténder no llena la caldera ni repa
 un fallo por falta de agua. Hall y King sirven para probar contenido,
 cabina y sonido; su física completa todavía no está certificada.
 
+## Adherencia, ruedas y arena
+
+La partida conecta el clima efectivo, manual o del lugar, con el contacto
+rueda/riel. Los perfiles normalizados son despejado 1, lluvia y niebla 0,6,
+tormenta 0,8 y nieve 0,5. Están dentro del intervalo meteorológico de OR 1.6.1;
+son decisiones de juego, sin equivalencia validada entre mm/h del proveedor
+y partículas de precipitación de OR. La superficie cambia gradualmente:
+constante de tiempo de 12 s al perder agarre y 90 s al recuperarlo. Todo utiliza
+el reloj de simulación y se congela al pausar.
+
+El esfuerzo solicitado por el motor se distingue del transmitido al riel.
+El diésel nativo conserva su integrador de eje Pacha; el vapor y los eléctricos
+usan ese mismo contacto sobre sus modelos de tracción actuales. La demanda
+de vapor utiliza la velocidad de las ruedas motrices, también cuando patinan,
+y respeta el esfuerzo y la potencia máximos declarados por el autor antes de
+calcular ese consumo. Las ruedas motrices animan la velocidad física, con el
+mismo tiempo interpolado que el coche. Las ruedas pasivas de vapor con nombres estándar `WHEELSxx` conservan
+el avance del tren. Las declaraciones especiales de enlaces de ejes todavía
+requieren validación por modelo. El frenado por vehículo queda limitado por
+el agarre rueda/riel, separado de la presión y fricción de las zapatas; no se
+certifica aquí deslizamiento de todos los sistemas de freno.
+
+**X** activa o desactiva el arenado; **B** muestra el estado, litros restantes,
+velocidad de ruedas y fuerzas. X es una acción exclusiva y reasignable en F10.
+Los controles CVF de arenado y aviso de patinaje reciben el mismo estado; los
+SMS originales reciben eventos de inicio/fin de entrega si el autor los usa.
+La arena mejora el factor con los multiplicadores avanzados de OR: 1,4 en
+seco/niebla, 1,25 en lluvia y 1,5 en nieve. Respeta el límite de velocidad,
+sentido, disminución por velocidad y cantidades del ENG.
+
+Se leen `ORTSMaxTrackSanderBoxCapacity`,
+`ORTSMaxTrackSanderSandConsumptionForward/Reverse`, `Sanding` y
+`ORTSSanderSpeedEffectUpTo`. Si faltan, se usan los valores de OR 1.6.1:
+40 pies cúbicos, 3,4 pies cúbicos/hora hacia delante, cero hacia atrás y
+30 m/s de velocidad máxima. Volúmenes o caudales con unidades no admitidas
+deshabilitan esa reserva o entrega. La última fracción de arena solo mejora
+el agarre en proporción al suministro disponible; agotarla elimina el beneficio.
+
+Guardar conserva cada depósito, consumo, superficie y fase de ruedas.
+Desacoplar o aislar motores detiene su entrega sin rellenarlos; acoplar
+restaura las mismas reservas. Esta entrega no añade abastecedores de arena,
+acoplamiento con presión de aire/vapor del arenador, temperatura ni hielo.
+Tampoco amplía la termodinámica simplificada del vapor ni certifica todas las
+locomotoras. Los ensayos de referencia sin clima explícito conservan su
+entorno original. [Prueba manual](PLAYER_MANUAL_TESTS.md#45-adherencia-patinaje-y-arenado).
+
 ## Abastecimiento desde WORLD
 
 `B` ofrece iniciar y cancelar el abastecimiento de la toma más cercana. Se leen

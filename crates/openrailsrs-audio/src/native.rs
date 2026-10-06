@@ -45,6 +45,7 @@ pub struct SoundState {
     pub cylinder_cocks: bool,
     pub horn: bool,
     pub wiper: bool,
+    pub sander: bool,
     pub doors: bool,
     pub headlights: u8,
 }
@@ -64,6 +65,7 @@ impl SoundState {
         for (now, before, on, off) in [
             (self.horn, old.horn, 8, 9),
             (self.wiper, old.wiper, 6, 7),
+            (self.sander, old.sander, 4, 5),
             (self.doors, old.doors, 105, 106),
             (self.injector1, old.injector1, 30, 31),
             (self.injector2, old.injector2, 27, 28),
@@ -1656,6 +1658,18 @@ mod tests {
         assert!(now.events(old).contains(&8));
         assert!(!now.events(now).contains(&8));
         assert!(old.events(now).contains(&9));
+    }
+
+    #[test]
+    fn sand_delivery_emits_original_sms_edges_without_repeating() {
+        let off = SoundState::default();
+        let on = SoundState {
+            sander: true,
+            ..off
+        };
+        assert_eq!(on.events(off), vec![4]);
+        assert!(on.events(on).is_empty());
+        assert_eq!(off.events(on), vec![5]);
     }
 
     #[test]

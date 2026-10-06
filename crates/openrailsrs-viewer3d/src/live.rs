@@ -216,6 +216,27 @@ impl LiveDrive {
         })
     }
 
+    pub fn visual_wheel_slip_distance_for_service(
+        &self,
+        track: usize,
+        car: usize,
+        steam_driver: bool,
+    ) -> f64 {
+        self.session_for_track(track).map_or(0., |s| {
+            let steam = s
+                .physics
+                .rail_adhesion
+                .as_ref()
+                .and_then(|c| c.vehicles.get(car))
+                .is_some_and(|c| c.steam);
+            if steam && !steam_driver {
+                0.
+            } else {
+                s.render_wheel_slip_distance_m(car, self.render_frame_remainder_s)
+            }
+        })
+    }
+
     pub fn expand_dispatch_network(
         &mut self,
         network: openrailsrs_track::TrackGraph,
@@ -376,12 +397,28 @@ pub fn advance_live_sim(
     time: Res<Time<Fixed>>,
     mut live: ResMut<LiveDrive>,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
+    content: Option<Res<crate::player_launch::ActivePlayerContent>>,
 ) {
     if live.paused || loading.is_some() {
         return;
     }
     if let Some(settings) = settings {
         live.session.gameplay.quick_station_practice = settings.quick_station_practice;
+    }
+    if let Some(content) = content {
+        use crate::player_launch::PlayerWeather;
+        use openrailsrs_sim::adhesion::RailWeather;
+        let weather = match content.weather {
+            PlayerWeather::Rain => RailWeather::Rain,
+            PlayerWeather::Storm => RailWeather::Storm,
+            PlayerWeather::Snow => RailWeather::Snow,
+            PlayerWeather::Fog => RailWeather::Fog,
+            _ => RailWeather::Dry,
+        };
+        live.session.set_rail_weather(weather);
+        for service in &mut live.traffic.services {
+            service.session.set_rail_weather(weather);
+        }
     }
     let was_arrived = live.session.arrived;
     let audio = live.audio.take();
@@ -499,6 +536,12 @@ pub fn live_driver_input(
     }
     if pressed(A::CabLight) {
         live.session.cab_light = !live.session.cab_light;
+    }
+    if pressed(A::Sander)
+        && let Err(message) = live.session.toggle_sander()
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
     }
     if pressed(A::Pantograph)
         && let Err(message) = live.session.toggle_pantograph()
@@ -1449,6 +1492,102 @@ mod tests {
     use super::*;
     use crate::rolling_stock::ConsistVehicleVisual;
     use crate::rolling_stock::TrainConsistScene;
+    use bevy::ecs::system::RunSystemOnce;
+
+    #[test]
+    fn sanding_key_is_exclusive_rebindable_and_weather_consumes_only_on_sim_ticks() {
+        use crate::player_settings::{PlayerAction, PlayerSettings};
+        use openrailsrs_sim::adhesion::RailWeather;
+        let live =
+            LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path()).unwrap();
+        let mut app = App::new();
+        app.insert_resource(live)
+            .init_resource::<PlayerSettings>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<Time<Fixed>>()
+            .insert_resource(crate::player_launch::ActivePlayerContent {
+                weather: crate::player_launch::PlayerWeather::Snow,
+                ..Default::default()
+            });
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyX);
+        app.world_mut().run_system_once(live_driver_input).unwrap();
+        let s = &app.world().resource::<LiveDrive>().session;
+        assert!(s.state.rail_adhesion.as_ref().unwrap().sander_command);
+        assert_eq!(
+            s.state.rail_adhesion.as_ref().unwrap().cars[0].consumed_sand_m3,
+            0.
+        );
+        assert_eq!(s.driver_throttle, 0.);
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(std::time::Duration::from_secs(1));
+        app.world_mut().run_system_once(advance_live_sim).unwrap();
+        let r = app
+            .world()
+            .resource::<LiveDrive>()
+            .session
+            .state
+            .rail_adhesion
+            .as_ref()
+            .unwrap();
+        assert_eq!(r.weather, RailWeather::Snow);
+        assert!(r.weather_factor < 1. && r.weather_factor > 0.5);
+        assert!(r.cars[0].consumed_sand_m3 > 0.);
+        let before = serde_json::to_value(r).unwrap();
+        app.world_mut().resource_mut::<LiveDrive>().paused = true;
+        app.world_mut().run_system_once(advance_live_sim).unwrap();
+        assert_eq!(
+            serde_json::to_value(
+                &app.world()
+                    .resource::<LiveDrive>()
+                    .session
+                    .state
+                    .rail_adhesion,
+            )
+            .unwrap(),
+            before
+        );
+        app.world_mut()
+            .resource_mut::<PlayerSettings>()
+            .rebind(PlayerAction::Sander, KeyCode::KeyZ)
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyX);
+        app.world_mut().run_system_once(live_driver_input).unwrap();
+        assert!(
+            app.world()
+                .resource::<LiveDrive>()
+                .session
+                .state
+                .rail_adhesion
+                .as_ref()
+                .unwrap()
+                .sander_command
+        );
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyZ);
+        app.world_mut().run_system_once(live_driver_input).unwrap();
+        assert!(
+            !app.world()
+                .resource::<LiveDrive>()
+                .session
+                .state
+                .rail_adhesion
+                .as_ref()
+                .unwrap()
+                .sander_command
+        );
+    }
 
     #[test]
     fn live_camera_frame_stays_close_to_the_leading_cars() {

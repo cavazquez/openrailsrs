@@ -199,6 +199,67 @@ pub struct LiveDriveSession {
 }
 
 impl LiveDriveSession {
+    pub fn set_rail_weather(&mut self, weather: crate::adhesion::RailWeather) {
+        let Some(config) = &self.physics.rail_adhesion else {
+            return;
+        };
+        let speed = self.state.velocity_mps;
+        let dynamics = self.state.native_dynamics.as_ref();
+        let rail = self.state.rail_adhesion.get_or_insert_with(|| {
+            let mut rail = crate::adhesion::RailAdhesionState::new(config, weather, speed);
+            if let Some(dynamics) = dynamics {
+                for (axle, &index) in dynamics
+                    .axles
+                    .iter()
+                    .zip(&self.physics.diesel_vehicle_indices)
+                {
+                    if let Some(car) = rail.cars.get_mut(index)
+                        && config.vehicles.get(index).is_some_and(|v| !v.steam)
+                    {
+                        car.wheel_speed_mps = axle.speed_mps;
+                    }
+                }
+            }
+            rail
+        });
+        rail.weather = weather;
+    }
+
+    pub fn toggle_sander(&mut self) -> Result<(), String> {
+        if self.state.rail_adhesion.is_none() {
+            self.set_rail_weather(crate::adhesion::RailWeather::Dry);
+        }
+        let rail = self
+            .state
+            .rail_adhesion
+            .as_mut()
+            .ok_or("Esta formación no tiene un arenador disponible")?;
+        rail.sander_command = !rail.sander_command;
+        Ok(())
+    }
+
+    /// Wheel phase correction uses the same interpolation fraction as the body.
+    /// Parked detached cars retain their phase; neither render frames nor pause
+    /// consume sand or integrate the axle a second time.
+    pub fn render_wheel_slip_distance_m(&self, vehicle: usize, remainder_s: f64) -> f64 {
+        let Some(car) = self
+            .state
+            .rail_adhesion
+            .as_ref()
+            .and_then(|r| r.cars.get(vehicle))
+        else {
+            return 0.;
+        };
+        if vehicle >= self.formation.coupled_count || self.arrived {
+            return car.slip_distance_m;
+        }
+        let fraction = ((self.sim_time_remainder + remainder_s.max(0.) * self.speed_mul)
+            / self.realtime_physics_dt())
+        .clamp(0., 1.);
+        car.previous_slip_distance_m
+            + (car.slip_distance_m - car.previous_slip_distance_m) * fraction
+    }
+
     pub fn steam_command(&mut self, command: crate::steam::SteamCommand) -> Result<(), String> {
         self.state
             .boiler_state
@@ -343,6 +404,11 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
+            rail_adhesion: Some(crate::adhesion::RailAdhesionConfig::load(
+                &consist_path,
+                consist_root(&consist_path),
+                &consist,
+            )?),
             diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
             electric: crate::electric::ElectricTrainConfig::load(
                 &route_dir,
@@ -890,15 +956,23 @@ impl LiveDriveSession {
         }
     }
 
+    /// Brake force delivered to the rail after the wheel/rail grip limit.
+    pub fn wheel_rail_brake_forces_n(&self) -> Vec<f64> {
+        let mut forces = self
+            .state
+            .brake_system
+            .cylinder_forces_n(self.state.velocity_mps);
+        if let Some(config) = &self.physics.rail_adhesion {
+            crate::adhesion::cap_brakes(&self.state, config, &mut forces);
+        }
+        forces
+    }
+
     /// Snapshot for the live cab panel (Fase C3).
     pub fn cab_telemetry(&self) -> CabTelemetry {
         let speed_kmh = self.state.velocity_mps * 3.6;
         let limit_kmh = self.effective_speed_limit_mps() * 3.6;
-        let brake_force_kn = self
-            .state
-            .brake_system
-            .total_force_n(self.state.velocity_mps)
-            / 1000.0;
+        let brake_force_kn = self.wheel_rail_brake_forces_n().iter().sum::<f64>() / 1000.;
         let diesel_rpm = self.state.diesel.cars.first().map(|c| c.rpm).or_else(|| {
             if self
                 .physics
@@ -937,6 +1011,16 @@ impl LiveDriveSession {
             .first()
             .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
+            wheel_slip: self
+                .state
+                .rail_adhesion
+                .as_ref()
+                .is_some_and(|r| r.slipping()),
+            sander_on: self
+                .state
+                .rail_adhesion
+                .as_ref()
+                .is_some_and(|r| r.sander_command),
             steam: self.state.boiler_state.clone(),
             diesel: self.state.diesel.cars.first().cloned(),
             pantograph_fraction: self
@@ -998,6 +1082,8 @@ impl LiveDriveSession {
 /// Driver-facing gauges for the 3D cab panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
+    pub wheel_slip: bool,
+    pub sander_on: bool,
     pub steam: Option<crate::steam::BoilerState>,
     pub diesel: Option<crate::diesel_operation::DieselCarState>,
     pub pantograph_fraction: f64,
@@ -1109,6 +1195,9 @@ impl LiveDriveSession {
             let previous_odometer = self.state.odometer_m;
             self.previous_render_chainage_m = self.head_chainage_m();
             let backwards = self.driver_direction <= 0.25;
+            if let Some(rail) = &mut self.state.rail_adhesion {
+                rail.backwards = backwards;
+            }
             let res = if backwards {
                 let previous = self.head_chainage_m();
                 let old_odometer = self.state.odometer_m;

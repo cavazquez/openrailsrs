@@ -21,6 +21,7 @@ fn chiltern_pullman_freeroll_deceleration() {
     );
 
     let train = TrainPhysics {
+        rail_adhesion: None,
         diesel: Default::default(),
         electric: Default::default(),
         native: None,

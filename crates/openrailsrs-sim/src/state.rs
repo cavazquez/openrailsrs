@@ -17,6 +17,8 @@ pub struct TrainSimState {
     pub electric: crate::electric::ElectricTrainState,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_dynamics: Option<crate::native_dynamics::NativeDynamicsState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rail_adhesion: Option<crate::adhesion::RailAdhesionState>,
     pub time: SimTime,
     pub path_edges: Vec<String>,
     pub edge_index: usize,
@@ -67,6 +69,7 @@ impl TrainSimState {
             diesel: Default::default(),
             electric: Default::default(),
             native_dynamics: None,
+            rail_adhesion: None,
             time: SimTime(0.0),
             path_edges,
             edge_index: 0,

@@ -1465,3 +1465,50 @@ los ejemplos que no tienen un modelo original no inventan chimeneas.
 
 La estela es visual; esta prueba no certifica aerodinámica, hielo ni adherencia
 por nieve.
+
+## 45. Adherencia, patinaje y arenado
+
+Reiniciá el binario compilado. Usá la misma formación y el mismo recorrido
+para comparar; Pullman en Chiltern permite probar el diésel. El Hall de
+**RS_Football Special** permite mirar sus grandes ruedas motrices. Las pruebas
+eléctricas cortas están en el ejemplo `electric_supply`.
+
+1. **Arranque en seco y con nieve.** Probá primero despejado y luego una
+   partida nueva con nieve. Cerrá puertas, poné el inversor adelante y soltá
+   el freno; subí regulador gradualmente. El HUD muestra tipo de vía, agarre
+   y aviso rojo **PATINA** si el esfuerzo supera el contacto disponible.
+   No todos los trenes patinan en cada posición del regulador. En **B** mirá
+   velocidad de ruedas y esfuerzo pedido/transmitido: durante el patinaje
+   las ruedas pueden ir más rápido que el tren y transmitir menos esfuerzo.
+2. **Ruedas desde afuera.** Pulsá **2** y acercate al lateral. El patinaje
+   debe verse en las ruedas motrices, sin acelerar la carrocería por igual.
+   En vapor, las ruedas pequeñas pasivas conservan el avance del tren.
+   Bajá el regulador: las ruedas deben recuperar el contacto. Mover la cámara
+   no cambia la velocidad física ni el estado del aviso.
+3. **Arena.** Con lluvia o nieve, pulsá **X** o el botón de arenado en **B**.
+   Debe aparecer **Aplicando**, bajar la reserva en litros y mejorar el factor
+   de contacto. Recuperarse de un patinaje intenso puede exigir además bajar
+   el regulador. X vuelve a apagarlo. Si el ENG limita velocidad o no declara
+   entrega en reversa, puede indicar **Sin aplicación**; un depósito agotado
+   indica **Sin arena** y deja de mejorar el agarre. Los valores originales
+   pueden permitir horas de entrega: no hace falta vaciarlo para probar el consumo.
+   En el Pullman original de Chiltern v4, el coche motor delantero usa el
+   límite predeterminado de **30 m/s (108 km/h)** y el trasero lo limita a
+   **6 mph (9,7 km/h)**. Por debajo de 9,7 km/h deben entregar ambos; después,
+   solo el delantero hasta su propio límite.
+4. **Frenado y clima durante el viaje.** Compará frenadas desde la misma
+   velocidad, con la misma formación, posición y mando. Si las zapatas piden
+   más fuerza de la que admite el riel, la superficie húmeda limita el frenado
+   y puede alargar la detención. **F8 → Fuerzas** muestra el frenado entregado.
+   Cambiá de nieve o lluvia a despejado desde **F10**: el agarre debe recuperarse
+   gradualmente, sin volver inmediatamente al 100 %.
+5. **Pausa, guardado y mandos.** Con arenado aplicando, pulsá **P**: la arena,
+   ruedas y secado deben quedar quietos. Guardá, consumí un poco más y cargá:
+   recuperás el depósito de la partida guardada, junto con la fase de ruedas
+   y superficie. Desacoplar o aislar un motor no rellena su depósito. **U**
+   cambia también la unidad de la velocidad de ruedas en B; **F10 → Controles**
+   permite reasignar X sin compartirla con otra acción.
+
+El perfil de nieve reduce agarre sin simular hielo ni deshielo. El arenador
+conserva arena y límites de velocidad/sentido; su consumo de aire o vapor
+todavía no está conectado a los depósitos de presión.

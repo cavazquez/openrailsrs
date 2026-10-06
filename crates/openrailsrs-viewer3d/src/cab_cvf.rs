@@ -283,6 +283,17 @@ pub fn cab_lever_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
 /// Normalized 0–1 value for a cab control from live telemetry.
 pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
     match control {
+        ControlType::Generic(name) if matches!(name.as_str(), "SAND" | "SANDER" | "SANDERS") => {
+            f64::from(tel.sander_on)
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.as_str(),
+                "WHEELSLIP" | "WHEELSLIPDISPLAY" | "WHEELSLIPWARNING"
+            ) =>
+        {
+            f64::from(tel.wheel_slip)
+        }
         ControlType::Throttle | ControlType::ThrottleDisplay => tel.throttle_pct / 100.0,
         ControlType::TrainBrake => tel.brake_pct / 100.0,
         // Distinct from train brake; no dedicated telemetry yet.
@@ -1083,6 +1094,8 @@ mod tests {
     #[test]
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
+            wheel_slip: false,
+            sander_on: false,
             steam: None,
             diesel: None,
             pantograph_fraction: 0.,
@@ -1118,6 +1131,25 @@ mod tests {
         let mut tel_h = tel.clone();
         tel_h.horn_active = true;
         assert!((control_value(&ControlType::Generic("HORN".into()), &tel_h) - 1.0).abs() < 1e-6);
+        let active = CabTelemetry {
+            wheel_slip: true,
+            sander_on: true,
+            ..tel.clone()
+        };
+        for name in [
+            "SAND",
+            "SANDER",
+            "SANDERS",
+            "WHEELSLIP",
+            "WHEELSLIPDISPLAY",
+            "WHEELSLIPWARNING",
+        ] {
+            assert_eq!(
+                control_value(&ControlType::Generic(name.into()), &active),
+                1.
+            );
+            assert_eq!(control_value(&ControlType::Generic(name.into()), &tel), 0.);
+        }
         let dial = openrailsrs_formats::CabDialParams {
             scale_min: 0.0,
             scale_max: 100.0,

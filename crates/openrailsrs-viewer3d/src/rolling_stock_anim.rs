@@ -68,6 +68,7 @@ pub struct TrainWheelAnim {
     pub matrix_idx: usize,
     pub radius_m: f32,
     pub angle_rad: f32,
+    pub steam_driver: bool,
 }
 
 /// Bogie yaw relative to the car body (track samples at ±longitudinal offset).
@@ -339,6 +340,15 @@ pub fn part_anim_bundle(
         matrix_idx,
         radius_m: radius_m.max(0.15),
         angle_rad: 0.0,
+        // OR steam names WHEELS1…WHEELS9 are driving axles; WHEELS11,
+        // WHEELS21 etc. are bogie/trailing wheels and follow the vehicle.
+        steam_driver: matrix_name(shape, matrix_idx)
+            .trim()
+            .to_ascii_uppercase()
+            .strip_prefix("WHEELS")
+            .is_some_and(|suffix| {
+                suffix.len() == 1 && suffix.starts_with(|c: char| c.is_ascii_digit())
+            }),
     });
     let bogie = (kind == RollingStockPartKind::Bogie).then(|| {
         let long_offset_m = shape
@@ -520,7 +530,7 @@ pub fn update_rolling_stock_part_anim(
     for (mut wheel, binding, mut tf, parent) in &mut wheels {
         let car = cars.get(parent.parent()).ok();
         let track_index = car.map_or(0, |car| car.track_index);
-        let distance = live_ref
+        let mut distance = live_ref
             .map(|live| {
                 live.visual_car_distance_for_service(
                     track_index,
@@ -529,6 +539,15 @@ pub fn update_rolling_stock_part_anim(
             })
             .or_else(|| replay_ref.and_then(|replay| replay.wheel_distance_m(track_index)))
             .unwrap_or(0.0);
+        if let Some(live) = live_ref
+            && let Ok(index) = car_indices.get(parent.parent())
+        {
+            distance += live.visual_wheel_slip_distance_for_service(
+                track_index,
+                index.0,
+                wheel.steam_driver,
+            );
+        }
         let angle = wheel_angle(distance, wheel.radius_m, car.is_some_and(|car| car.flipped));
         if wheel.angle_rad == angle && !wheel.is_added() && !binding.is_changed() {
             continue;
@@ -833,6 +852,88 @@ mod tests {
         assert_eq!(
             *app.world().get::<Transform>(flipped).unwrap(),
             Transform::IDENTITY
+        );
+    }
+
+    #[test]
+    fn physical_wheel_slip_preserves_flip_pause_and_passive_steam_wheels() {
+        use openrailsrs_sim::adhesion::RailWeather;
+        let mut app = crate::test_harness::minimal_app();
+        let mut live =
+            LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path()).unwrap();
+        live.session.set_rail_weather(RailWeather::Snow);
+        let car = &mut live.session.state.rail_adhesion.as_mut().unwrap().cars[0];
+        car.previous_slip_distance_m = 5.;
+        car.slip_distance_m = 5.;
+        crate::test_harness::insert_live_bundle(&mut app, live);
+        app.add_systems(Update, update_rolling_stock_part_anim);
+        let wheel = spawn_test_wheel(&mut app, 0, false);
+        let flipped = spawn_test_wheel(&mut app, 0, true);
+        for entity in [wheel, flipped] {
+            let parent = app.world().get::<ChildOf>(entity).unwrap().parent();
+            app.world_mut()
+                .entity_mut(parent)
+                .insert(crate::rolling_stock::ConsistCarIndex(0));
+        }
+        let physical = serde_json::to_value(
+            &app.world()
+                .resource::<LiveDrive>()
+                .session
+                .state
+                .rail_adhesion,
+        )
+        .unwrap();
+        app.update();
+        let normal = app.world().get::<Transform>(wheel).unwrap().rotation;
+        let inverse = app.world().get::<Transform>(flipped).unwrap().rotation;
+        assert!(normal.dot(Quat::from_rotation_x(-10.)).abs() > 0.99999);
+        assert!(normal.inverse().dot(inverse).abs() > 0.99999);
+        app.world_mut().resource_mut::<LiveDrive>().paused = true;
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(wheel).unwrap().rotation,
+            normal
+        );
+        assert_eq!(
+            serde_json::to_value(
+                &app.world()
+                    .resource::<LiveDrive>()
+                    .session
+                    .state
+                    .rail_adhesion,
+            )
+            .unwrap(),
+            physical,
+            "rendering and pause cannot integrate the axle or consume sand"
+        );
+        app.world_mut()
+            .resource_mut::<LiveDrive>()
+            .session
+            .physics
+            .rail_adhesion
+            .as_mut()
+            .unwrap()
+            .vehicles[0]
+            .steam = true;
+        app.world_mut()
+            .get_mut::<TrainWheelAnim>(flipped)
+            .unwrap()
+            .steam_driver = false;
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(flipped).unwrap().rotation,
+            Quat::IDENTITY
+        );
+        assert_eq!(
+            app.world().get::<Transform>(wheel).unwrap().rotation,
+            normal
+        );
+        app.world_mut().resource_mut::<LiveDrive>().reset().unwrap();
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(wheel).unwrap().rotation,
+            Quat::IDENTITY
         );
     }
 

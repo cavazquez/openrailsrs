@@ -125,6 +125,13 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         });
     let electric = steam.is_none() && !diesel;
     SoundState {
+        sander: controls_powered
+            && session
+                .state
+                .rail_adhesion
+                .as_ref()
+                .and_then(|r| r.cars.get(vehicle))
+                .is_some_and(|c| c.using_sand),
         speed: velocity as f32,
         distance: if parked {
             session.formation.parked_head_chainage_m.unwrap_or(0.0)

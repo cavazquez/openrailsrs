@@ -180,6 +180,17 @@ pub fn steam_step(
     velocity_mps: f64,
     dt: f64,
 ) -> f64 {
+    steam_step_with_force_limit(b, p, regulator, velocity_mps, dt, f64::INFINITY)
+}
+
+pub(crate) fn steam_step_with_force_limit(
+    b: &mut BoilerState,
+    p: &SteamParams,
+    regulator: f64,
+    velocity_mps: f64,
+    dt: f64,
+    force_limit_n: f64,
+) -> f64 {
     if !dt.is_finite() || dt <= 0. {
         return b.tractive_force_n;
     }
@@ -193,6 +204,7 @@ pub fn steam_step(
             / p.working_pressure_bar
             * if b.controls.cylinder_cocks { 0.8 } else { 1. }
     };
+    let force = force.min(force_limit_n);
     let pressure_fraction = (b.pressure_bar / p.working_pressure_bar).clamp(0., 1.);
     let demand = force * velocity_mps.abs() / STEAM_ENTHALPY_J_KG
         + p.evaporation_rate_kg_per_s * 0.1 * regulator * pressure_fraction * b.controls.cutoff

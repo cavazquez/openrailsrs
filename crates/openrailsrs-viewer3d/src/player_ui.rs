@@ -238,6 +238,7 @@ enum UiCommand {
     SelectCar(usize),
     Car(CarOperation),
     DieselEngine(usize),
+    Sander,
     Steam(openrailsrs_sim::steam::SteamCommand),
     BeginRefill,
     CancelRefill,
@@ -792,6 +793,7 @@ fn handle_buttons(
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
             UiCommand::DieselEngine(vehicle)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_diesel_engine(*vehicle)),
+            UiCommand::Sander=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_sander()),
             UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
             UiCommand::BeginRefill=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
                 let target = refills.as_ref().and_then(|r|r.0.first()).ok_or("Alineá la toma de agua, carbón o diésel con un abastecedor compatible; no hay uno al alcance".to_string())?;
@@ -1266,6 +1268,7 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
 }
 
 fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
+    button(p, "Arenado: activar / desactivar", UiCommand::Sander);
     label(
         p,
         "Podés usar estos controles en marcha o con la partida pausada. B cierra el panel; F8 muestra el detalle de tracción.",
@@ -1330,8 +1333,38 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
     }
 }
 
-fn traction_text(s: &LiveDriveSession) -> String {
+fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
     let mut out = String::new();
+    if let Some(rail) = &s.state.rail_adhesion {
+        out += &format!(
+            "Vía: {} · agarre del clima {:.0}%\nArenado: {}\n\n",
+            rail.weather.label(),
+            rail.weather_factor * 100.,
+            rail.sander_status()
+        );
+        if let Some(config) = &s.physics.rail_adhesion {
+            for (i, (car, v)) in rail
+                .cars
+                .iter()
+                .zip(&config.vehicles)
+                .enumerate()
+                .filter(|(_, (_, v))| v.powered)
+            {
+                out += &format!(
+                    "Vehículo {} · arena {:.2} / {:.2} L\nRuedas {:.1} {} · {} · factor {:.2}\nEsfuerzo pedido {:.1} kN · transmitido {:.1} kN\n\n",
+                    i + 1,
+                    car.sand_m3 * 1000.,
+                    v.profile.sander.capacity_m3 * 1000.,
+                    settings.display_speed_mps(car.wheel_speed_mps.abs()),
+                    settings.speed_unit_label(),
+                    if car.slipping { "PATINA" } else { "Con agarre" },
+                    car.factor,
+                    car.requested_force_n / 1000.,
+                    car.rail_force_n / 1000.
+                );
+            }
+        }
+    }
     if let Some(op) = &s.refilling {
         out += &format!(
             "Abastecedor {} · vehículo {} · {} · {:.1} kg transferidos\n\n",
@@ -2050,7 +2083,7 @@ fn update_panel_text(
                 let s = &l.session;
                 match kind {
                     DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab, &settings),
-                    DynamicText::Traction => traction_text(s),
+                    DynamicText::Traction => traction_text(s, &settings),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page, &settings);
                         if ui.advanced_page == 2 {
@@ -2414,7 +2447,7 @@ fn advanced_text(
             }
         }
         2 => {
-            out += &traction_text(s);
+            out += &traction_text(s, settings);
             for (car, electric) in p.electric.cars.iter().zip(&state.electric.cars) {
                 out += &format!(
                     "Vehículo {} · {} · vía {:.0} V · contacto {:.0} V\nPantógrafo {:.0}% · disyuntor {}\n{}\n\n",
@@ -2514,7 +2547,7 @@ fn advanced_text(
             out += &format!(
                 "Tracción diésel calculada {:.2} kN\nFrenado efectivo {:.2} kN\nResistencia Davis {:.2} kN\nResistencia de pendiente {:.2} kN ({:+.2}%)\n\n",
                 state.diesel_traction_force_n.iter().sum::<f64>() / 1000.0,
-                state.brake_system.total_force_n(s.velocity_mps()) / 1000.0,
+                s.wheel_rail_brake_forces_n().iter().sum::<f64>() / 1000.0,
                 p.davis.resistance_n(s.velocity_mps()) / 1000.0,
                 (p.mass_kg + state.extra_mass_kg) * 9.81 * grade / 100.0 / 1000.0,
                 grade
@@ -3230,6 +3263,19 @@ mod tests {
                 l.session.driver_throttle, 0.,
                 "panel input must not drive the train"
             );
+            assert_eq!(l.paused, paused);
+            let sand_before = l.session.physics.rail_adhesion.as_ref().unwrap().vehicles[0]
+                .profile
+                .sander
+                .capacity_m3;
+            app.world_mut()
+                .spawn((Interaction::Pressed, UiCommand::Sander));
+            app.update();
+            let l = app.world().resource::<LiveDrive>();
+            let rail = l.session.state.rail_adhesion.as_ref().unwrap();
+            assert!(rail.sander_command);
+            assert_eq!(rail.cars[0].sand_m3, sand_before);
+            assert_eq!(rail.cars[0].consumed_sand_m3, 0.);
             assert_eq!(l.paused, paused);
             app.world_mut()
                 .resource_mut::<ButtonInput<KeyCode>>()

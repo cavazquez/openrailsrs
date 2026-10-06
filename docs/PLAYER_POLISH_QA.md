@@ -1181,3 +1181,77 @@ original instalado fuera del repositorio. `check.sh` pasó con **1.646 pruebas
 Rust** (45 ignoradas) y **59 Python**, formato, Clippy con `-D warnings`, build,
 web y oráculos de aceptación. Los resultados previos de los ejemplos y la
 configuración de lanzamiento del usuario se conservaron.
+
+## Adherencia, patinaje y arenado — 6 de octubre de 2026
+
+El clima efectivo de la partida modifica el contacto rueda/riel, con perfiles
+normalizados y secado gradual. El diésel nativo conserva el integrador Pacha;
+vapor y eléctricos usan ese mismo contacto sobre sus modelos actuales.
+El esfuerzo solicitado se distingue del transmitido. Las ruedas motrices
+animan su velocidad física con la interpolación del coche; las ruedas pasivas
+de vapor conservan el avance del tren. La demanda de vapor usa la velocidad
+de las ruedas y los límites de esfuerzo y potencia originales.
+
+**X** conmuta el arenado y **B** muestra cantidades, velocidad de ruedas,
+factor y fuerzas. Los depósitos son finitos por vehículo. Las reservas y la fase de las ruedas
+se conservan al pausar, guardar, aislar o desacoplar. Volver a acoplar no
+rellena la arena.
+Los instrumentos CVF y eventos SMS de arenado usan el mismo estado físico.
+El límite de frenado al riel se muestra separado del esfuerzo de las zapatas.
+
+La revisión del contenido real detectó dos casos que ahora tienen regresiones:
+Hall trae una tabla de fuerza auxiliar que no debe omitir la rama de contacto
+de vapor, y `EngineControllers / Sanding (0 1 0)` define el mando de cabina,
+sin deshabilitar el arenador. Los valores físicos se leen del nivel del
+vehículo, respetan unidades y la última declaración; no se confunden con los
+rangos de mandos. El Pullman delantero usa el límite predeterminado de 30 m/s;
+el trasero declara 6 mph.
+
+### Comprobación visual con GPU
+
+Se ejecutaron cuatro partidas en Chiltern v4 con Hall `RS_Football Special`
+y `Birmingham Pullman`: RX 7600, Vulkan/RADV, Weston privado, 1280×720,
+radio de vista de 450 m, regulador al 100 %, tiempo ×4, cámara lateral,
+arenado y audio apagados. Las capturas se pausaron después de avanzar 500 m:
+
+- **Pullman, seco:** 500,15 m; ruedas motrices a 54,4 y 54,7 km/h, sin aviso de patinaje.
+- **Pullman, nieve:** 501,87 m; tren a 43,2 km/h y ruedas del motor trasero a
+  104,2 km/h, con aviso rojo **PATINA**.
+- **Hall, seco:** 500,26 m; ruedas a 54,5 km/h, sin aviso de patinaje.
+- **Hall, nieve:** 501,10 m; tren a 30,2 km/h y ruedas motrices a 130,6 km/h,
+  con aviso rojo **PATINA**.
+
+Los cuatro casos publicaron los sectores y objetos cercanos, con cero shaders
+pendientes o fallidos. El RSS máximo del proceso fue de 1.391 a 1.451 MiB;
+no mide la memoria de la GPU ni un recorrido completo. Sigue presente el aviso
+previo de más de 65.535 `VisibilityRange` distintos. Estas capturas verifican
+la integración del patinaje y el HUD; no constituyen paridad meteorológica con
+OR ni una prueba de arenado mediante entrada de teclado en GPU.
+
+El banco sin visor, con los ENG originales y el parser corregido, comprobó la
+entrega de arena en Hall y en los dos motores del Pullman. Cada arenador activo
+consumió 0,02674 L en un segundo de simulación y llevó el factor de nieve de
+0,5 a 0,75. En el Pullman, superar 6 mph detuvo la entrega del motor trasero y
+congeló su consumo; el delantero continuó dentro de su límite de 30 m/s.
+Estos ensayos no alteran ni reescriben el contenido descargado.
+
+La [sección 45 de pruebas manuales](PLAYER_MANUAL_TESTS.md#45-adherencia-patinaje-y-arenado)
+describe qué observar en HUD, ruedas, arena, frenos, secado, pausa y guardado.
+El [alcance de tracción](TRACTION_SUPPORT.md#adherencia-ruedas-y-arena) detalla
+los perfiles de juego y los límites: no se simulan hielo, temperatura,
+consumo de aire/vapor del arenador ni abastecimiento de arena. Las pruebas
+meteorológicas no amplían la certificación de termodinámica de vapor.
+
+Evidencia local: `tmp/rail-adhesion-20261006/`, con los cuatro pares de PNG y
+reportes en `gpu/`, el banco `native-sand-probe` y los registros de verificación.
+Las formaciones originales permanecen instaladas fuera de Git.
+
+`check.sh` pasó con **1.662 pruebas Rust** (45 ignoradas por condiciones externas)
+y **59 Python**, formato, Clippy con `-D warnings`, build, web y oráculos de
+aceptación. El servicio de tres estaciones completó todas sus paradas. Las
+referencias físicas fijadas de OR 1.6.1 no cambiaron: servicio Pullman con RMS
+de velocidad **0,2081 m/s** y diferencia máxima de posición **39,61 m**; Class47
+con **0,2382 m/s** y **25,79 m**. Los ensayos sin clima explícito conservan
+su entorno de referencia. Se restauraron los resultados generados por los
+chequeos y se verificaron byte a byte los 174 archivos previos, incluida
+la configuración de lanzamiento del usuario.

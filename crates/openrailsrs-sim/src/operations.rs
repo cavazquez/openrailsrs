@@ -274,6 +274,15 @@ impl LiveDriveSession {
         {
             return Err("La alimentación eléctrica guardada no corresponde a la formación".into());
         }
+        if let Some(rail) = &saved.state.rail_adhesion
+            && self
+                .original_physics
+                .rail_adhesion
+                .as_ref()
+                .is_none_or(|c| !rail.valid_for(c))
+        {
+            return Err("La adherencia o las reservas de arena guardadas son inválidas".into());
+        }
         if n == 0
             || n > self.consist.vehicles.len()
             || saved.formation.cars.len() != self.consist.vehicles.len()
@@ -624,6 +633,16 @@ impl LiveDriveSession {
             }
         }
         let mut p = self.original_physics.clone();
+        if let Some(rail) = &mut p.rail_adhesion {
+            for (i, v) in rail.vehicles.iter_mut().enumerate() {
+                v.enabled =
+                    v.powered
+                        && i < n
+                        && self.formation.cars.get(i).is_some_and(|c| {
+                            c.power_on && c.battery_on && (i == 0 || c.mu_connected)
+                        });
+            }
+        }
         for car in &mut p.diesel.cars {
             if let Some(op) = self.formation.cars.get(car.vehicle) {
                 car.connected = car.vehicle < n
