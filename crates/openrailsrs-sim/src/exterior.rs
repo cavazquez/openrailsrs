@@ -1,6 +1,6 @@
 //! Exterior rolling-stock presentation state for live drive (#81).
 //!
-//! Visual-only: doors / pantograph command for shape keys. Not air-brake physics.
+//! Door animation targets and the pantograph command shared with electric supply.
 
 use serde::{Deserialize, Serialize};
 /// Door presentation (OR-style coarse states).

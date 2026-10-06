@@ -495,6 +495,7 @@ pub fn update_rolling_stock_part_anim(
         (With<TrainExteriorAnimPart>, Without<TrainWheelAnim>),
     >,
     cars: Query<&TrainCarTrackOffset, Without<TrainExteriorAnimPart>>,
+    car_indices: Query<&crate::rolling_stock::ConsistCarIndex>,
     train_markers: Query<&TrainMarker>,
     car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
@@ -618,11 +619,37 @@ pub fn update_rolling_stock_part_anim(
     let mut pose_cache = HashMap::new();
     for (mut keyed_anim, binding, mut tf, parent) in &mut keyed {
         let service = cars.get(parent.parent()).ok().map_or(0, |c| c.track_index);
+        let vehicle_index = car_indices.get(parent.parent()).ok().map(|c| c.0);
         let exterior = live_ref
             .and_then(|l| l.session_for_track(service))
             .map(|s| &s.exterior)
             .or(exterior);
-        let frac = resolve_keyed_frac(keyed_anim.kind, exterior);
+        let mut frac = resolve_keyed_frac(keyed_anim.kind, exterior);
+        if keyed_anim.kind == RollingStockPartKind::Pantograph
+            && env_key_frac("OPENRAILSRS_DEBUG_PANTO_KEY").is_none()
+            && let Some(session) = live_ref.and_then(|l| l.session_for_track(service))
+            && let Some(vehicle_index) = vehicle_index
+            && let Some(params) = session
+                .physics
+                .electric
+                .cars
+                .iter()
+                .find(|c| c.vehicle == vehicle_index)
+            && let Some(state) = session
+                .state
+                .electric
+                .cars
+                .iter()
+                .find(|c| c.vehicle == vehicle_index)
+        {
+            frac = if params.params.pickup
+                == openrailsrs_core::electrification::ElectricPickup::Overhead
+            {
+                state.pantograph_fraction as f32
+            } else {
+                0.
+            };
+        }
         let key = key_from_frac(frac, binding.frame_count);
         if keyed_anim.key == key && !keyed_anim.is_added() && !binding.is_changed() {
             continue;

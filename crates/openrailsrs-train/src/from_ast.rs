@@ -160,6 +160,10 @@ fn upgrade_trail_diesel_from_lead_orts(consist: &mut Consist) {
 
     for v in &mut consist.vehicles {
         let Vehicle::Loco(l) = v else { continue };
+        // An electric P/v motor must never inherit a diesel engine or RPM curve.
+        if l.electric.is_some() || l.steam.is_some() {
+            continue;
+        }
         let Some(trail) = l.diesel_traction.as_mut() else {
             continue;
         };
@@ -258,8 +262,9 @@ impl From<EngineFile> for Locomotive {
                 } else {
                     value.max_tractive_effort_n
                 };
-                let native_basic_rpm =
-                    value.diesel_idle_rpm > 0.0 && value.diesel_max_rpm > value.diesel_idle_rpm;
+                let native_basic_rpm = value.electric.is_none()
+                    && value.diesel_idle_rpm > 0.0
+                    && value.diesel_max_rpm > value.diesel_idle_rpm;
                 let mut model = DieselTractionModel::from_power_and_effort(
                     value.max_power_w,
                     if native_basic_rpm {
@@ -378,6 +383,7 @@ impl From<EngineFile> for Locomotive {
         );
         Self {
             name: value.name,
+            electric: value.electric.map(Box::new),
             mass_kg: value.mass_kg,
             max_power_w: value.max_power_w,
             max_velocity_mps: value.max_velocity_mps,

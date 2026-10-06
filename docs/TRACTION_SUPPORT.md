@@ -23,29 +23,59 @@ su comportamiento físico completo todavía no está certificado.
 
 ## Electricidad
 
-**Hoy un eléctrico puede traccionar en una ruta sin electrificar.** La catenaria
-y el pantógrafo son visuales; no hay conexión física entre la tensión de la vía,
-el captador y la fuerza del motor. Bajar el pantógrafo tampoco corta por sí solo
-la tracción. El menú lo advierte al auditar un eléctrico.
+La alimentación es física e independiente de las mallas. Cada coche motor
+consulta la tensión y el tipo de suministro bajo su captador. Sin tensión,
+con captador incompatible, pantógrafo bajado, disyuntor abierto o motor aislado,
+no genera nueva tracción. Puede seguir por inercia; no se congela ni se le aplica
+un freno artificial. Los motores diésel de una formación mixta conservan su fuerza.
 
-Una locomotora puramente eléctrica real necesita un suministro compatible:
-catenaria o tercer/cuarto riel, según su equipo. Sin suministro pierde la
-capacidad de generar nueva tracción y puede seguir por inercia hasta detenerse;
-no queda fijada a la vía. Una batería o un motor auxiliar permitirían circular
-sin alimentación exterior solamente si el tren los tiene y se modelan.
+Se admiten catenaria, tercer y cuarto riel mediante declaraciones explícitas.
+El importador conserva `Electrified` y `MaxLineVoltage` del TRK. Los escenarios
+pueden declarar sectores sin corriente o cambiar el tipo de suministro, con
+validación de bordes, tensiones y superposiciones. Un archivo de ruta sin datos
+eléctricos no se electrifica automáticamente al elegir una formación eléctrica.
 
-Que no se vea una catenaria no demuestra un corte eléctrico: puede faltar la
-geometría, existir otro captador o tratarse de un tramo neutro. La futura
-implementación necesita suministro y captadores separados de la escena 3D,
-con pantógrafo, disyuntor, tensión y transiciones sin alimentación.
+`O` sube o baja el pantógrafo y `J` abre o solicita el cierre del disyuntor.
+Las teclas se pueden reasignar en F10, sin compartir funciones. Los captadores
+por riel no necesitan pantógrafo. El HUD informa tensión y causa del corte; F8,
+en la página de tracción, detalla cada vehículo. Las cabinas con instrumentos
+nativos de tensión, pantógrafo y disyuntor usan el estado de la simulación.
+El movimiento exterior del pantógrafo respeta el mismo progreso físico.
+
+Se leen los retardos `ORTSPantographs / Pantograph / Delay`,
+`ORTSCircuitBreakerClosingDelay` y `ORTSPowerOnDelay`. La partida arranca con los
+sistemas preparados cuando el suministro es compatible. Después de un corte,
+se respetan los retardos de elevación, cierre y alimentación. La reconexión
+predeterminada es automática cuando vuelve la tensión y sigue solicitado el
+cierre. Guardar y cargar conserva las transiciones y los controles, también
+para el tráfico y el simulador sin visor.
+
+El contenido MSTS antiguo suele indicar solamente `Type ( Electric )`: se
+mantiene el captador aéreo predeterminado de OR. Un autor puede declarar
+`ORTSRSPickup ( third_rail )` o `fourth_rail` en su ENG, o el escenario puede usar
+`[[train.electric_pickups]]`. No se adivina el equipo por el nombre del modelo.
+Los límites opcionales `ORTSRSMinimumVoltage` y `ORTSRSMaximumVoltage` permiten
+restringir las tensiones admitidas; sin ellos se requiere tensión positiva.
+
+El captador se representa en el centro del coche motor. No se calcula contacto
+geométrico, arcos eléctricos, frecuencia de red, varios pantógrafos independientes,
+alimentación desde otro coche, baterías de tracción ni motores auxiliares duales.
+Tampoco se ejecutan los scripts C# originales de alimentación ni se certifica el
+filtrado de tensión de OR. Tercer y cuarto riel son perfiles físicos declarativos:
+no agregan geometría de conductor a una ruta que no la tenga.
 
 La referencia fijada es **Open Rails 1.6.1**, commit
-`d16e670da333d26d2edfc97d5631a19dadf49ce5`. Su código
-`ScriptedElectricPowerSupply.LineVoltageV` obtiene la tensión nominal del TRK;
-el suministro predeterminado considera pantógrafo y disyuntor. Elevar el
-pantógrafo en una ruta no electrificada genera un aviso. No hay que interpretar
-eso como detección de contacto con cada malla de catenaria. El manual explica
-el uso de [pantógrafo y disyuntor](https://open-rails.readthedocs.io/en/latest/driving.html).
+`d16e670da333d26d2edfc97d5631a19dadf49ce5`. El oráculo
+[openrails-electric.json](../oracles/openrails-electric.json) ejecuta sus DLL
+originales: ocho puntos de movimiento del pantógrafo y doce estados de
+alimentación principal. La captura repetida produjo exactamente el mismo JSON.
+La coincidencia de estos subsistemas no certifica la física completa de una
+locomotora eléctrica. Los sectores físicos sin tensión y captadores por riel
+son una extensión explícita: el suministro predeterminado original obtiene
+la tensión nominal del TRK, no de cada objeto visible de catenaria.
+
+Para declaraciones TOML y prueba manual, ver
+[PLAYER_MANUAL_TESTS.md, sección 37](PLAYER_MANUAL_TESTS.md#37-alimentación-eléctrica-pantógrafo-y-disyuntor).
 
 ## Cremallera
 
@@ -63,8 +93,7 @@ a la referencia 1.6.1 usando documentación de versiones posteriores.
 ## Qué comprobar en una partida
 
 Elegí Pullman/121, 1960/R Stock y Hall/King: verificá la auditoría, el modelo,
-la cabina y sus controles. Para eléctricos, la advertencia describe una
-limitación real; circular sin catenaria o con pantógrafo abajo todavía no sirve
-para probar paridad eléctrica. Para vapor, ver animación y oír las emboladas
-tampoco demuestra gestión completa de la caldera. La prueba de sonido está en
-[NATIVE_AUDIO.md](NATIVE_AUDIO.md).
+la cabina y sus controles. Los eléctricos necesitan un perfil de alimentación
+que corresponda a su equipo; los ejemplos cortos prueban cortes y reconexión.
+Para vapor, ver animación y oír las emboladas no demuestra gestión completa
+de la caldera. La prueba de sonido está en [NATIVE_AUDIO.md](NATIVE_AUDIO.md).

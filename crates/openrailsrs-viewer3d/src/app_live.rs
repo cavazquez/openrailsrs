@@ -363,6 +363,48 @@ mod tests {
     }
 
     #[test]
+    fn electric_keys_control_supply_without_changing_driving_handles() {
+        with_live_world(|world| {
+            let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples/electric_supply/scenario.toml");
+            let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+            let session =
+                openrailsrs_sim::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario)
+                    .unwrap();
+            world.resource_mut::<crate::live::LiveDrive>().session = session;
+            let handles = {
+                let s = &world.resource::<crate::live::LiveDrive>().session;
+                (s.driver_throttle, s.driver_brake, s.driver_direction)
+            };
+            world
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyO);
+            world.run_system_once(live_driver_input).unwrap();
+            let s = &world.resource::<crate::live::LiveDrive>().session;
+            assert!(!s.exterior.pantograph_command_up);
+            assert!(!s.state.electric.cars[0].main_power);
+            assert_eq!(
+                (s.driver_throttle, s.driver_brake, s.driver_direction),
+                handles
+            );
+            {
+                let mut keys = world.resource_mut::<ButtonInput<KeyCode>>();
+                keys.clear();
+                keys.press(KeyCode::KeyJ);
+            }
+            world.run_system_once(live_driver_input).unwrap();
+            assert!(
+                !world
+                    .resource::<crate::live::LiveDrive>()
+                    .session
+                    .state
+                    .electric
+                    .breaker_command_closed
+            );
+        });
+    }
+
+    #[test]
     fn sync_camera_render_layers_excludes_exterior_in_driver_cam() {
         with_live_world(|world| {
             world.run_system_once(spawn_camera).unwrap();

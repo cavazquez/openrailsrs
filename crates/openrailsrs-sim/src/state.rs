@@ -8,6 +8,8 @@ use crate::steam::BoilerState;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
+    #[serde(default)]
+    pub electric: crate::electric::ElectricTrainState,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_dynamics: Option<crate::native_dynamics::NativeDynamicsState>,
     pub time: SimTime,
@@ -56,6 +58,7 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            electric: Default::default(),
             native_dynamics: None,
             time: SimTime(0.0),
             path_edges,

@@ -1072,12 +1072,92 @@ el nuevo control.
    sonidos de marcha; en Class 47 deben conservarse los avisos de WAV ausentes
    del paquete. Consultá las ubicaciones indicadas por la auditoría del menú.
 
-La auditoría de los eléctricos avisa que catenaria y pantógrafo siguen siendo
-visuales. Conducir sin alimentación o con pantógrafo abajo todavía no prueba
-paridad eléctrica. Vapor tiene una caldera simplificada y no hay cremallera
-funcional; detalle en [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
+Los eléctricos requieren tensión y un captador compatible. Para contenido
+antiguo de tercer o cuarto riel puede hacer falta una declaración explícita;
+las pruebas de alimentación están en la sección 37. Esto no certifica todos
+los sistemas eléctricos originales. Vapor tiene una caldera simplificada y no
+hay cremallera funcional; detalle en [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
 
 Para repetir el ensayo sin ventana, con WAV e informe de cada vista, usá
 [check_native_audio.py](../scripts/check_native_audio.py) según
 [NATIVE_AUDIO.md](NATIVE_AUDIO.md). Señal y ausencia de saturación no certifican
 una mezcla acústicamente idéntica a Open Rails.
+
+
+## 37. Alimentación eléctrica, pantógrafo y disyuntor
+
+Estos ejemplos son un banco de prueba sintético, con un modelo sencillo; no
+pretenden comparar el paisaje ni la cabina de una locomotora eléctrica original.
+Se pueden elegir desde el menú de ejemplos. Para abrirlos directamente:
+
+```bash
+cargo run --locked -p openrailsrs-viewer3d -- --live examples/electric_supply/scenario.toml
+cargo run --locked -p openrailsrs-viewer3d -- --live examples/electric_supply/scenario_third_rail.toml
+```
+
+Usá el binario recién compilado. En F10 podés activar práctica rápida para no
+esperar el horario. Las teclas de abajo son las predeterminadas; F6 muestra las
+asignaciones vigentes si tenés controles propios.
+
+1. **Arranque con catenaria.** Elegí el primer ejemplo. Debés ver 25 000 V y
+   «Tracción disponible». Cerrá puertas con Q, soltá el freno con `;`, poné
+   adelante con W y subí regulador con D. La velocidad debe aumentar.
+2. **Corte del pantógrafo.** En marcha y antes del sector neutro, pulsá O.
+   Debés ver «Pantógrafo sin contacto», tensión de contacto cero y esfuerzo de
+   motor cero en F8, página de tracción. El tren sigue por inercia y pierde
+   velocidad gradualmente. No debe quedarse congelado ni aplicar emergencia.
+3. **Reconexión.** Esperá que termine de bajar y pulsá O otra vez. Este ENG
+   declara 2 s de elevación, 1 s de cierre y 0,5 s de alimentación. La tracción
+   vuelve después de esa secuencia si conservaste regulador y vía con tensión.
+   Un modelo original que tenga pantógrafo animado debe seguir ese progreso.
+4. **Disyuntor.** Pulsá J en un tramo alimentado. Debés ver disyuntor abierto y
+   esfuerzo cero, aunque siga levantado el pantógrafo. Pulsá J de nuevo: el
+   cierre tarda 1 s y la alimentación otros 0,5 s. El HUD y los instrumentos
+   nativos disponibles deben acompañar el estado.
+5. **Sector neutro.** Llegá al tramo de 150–230 m del primer edge con suficiente
+   velocidad para cruzarlo por inercia. La toma está en el centro del coche:
+   el cambio de estado ocurre unos metros después del valor del frente del tren.
+   Dentro del tramo debés ver «Sin tensión de vía»; al salir, la conexión
+   solicitada se recupera con sus retardos. No depende de la carga del escenario.
+6. **Tercer riel.** Reiniciá con el segundo ejemplo. Debés ver 750 V, captador
+   «Tercer riel» en F8 y tracción con el pantógrafo abajo. O no acciona un
+   pantógrafo de esta formación. J y el tramo sin corriente deben cortar y
+   recuperar la fuerza igual que en el otro ejemplo.
+7. **Guardar durante el cierre.** Abrí J, pedí cerrar y guardá antes de que
+   termine el retardo. Al cargar deben conservarse los controles, el tiempo
+   pendiente y el movimiento; no debe recuperarse corriente anticipadamente.
+8. **Aislar un motor.** Detené el tren y usá F9 para apagar alimentación o
+   batería. Debe aparecer «Motor aislado». En una formación mixta diésel y
+   eléctrica, el motor diésel conserva tracción sin suministro exterior.
+9. **Sin electrificación o captador incompatible.** En una copia del TOML,
+   cambiá la alimentación a `kind = "none", voltage_v = 0.0`, o cambiá
+   solamente el suministro a `third_rail` dejando el captador aéreo.
+   En vía plana, con regulador y freno suelto, el motor no debe acelerar.
+   El HUD debe explicar el corte; en pendiente el tren puede moverse por gravedad.
+
+Declaraciones físicas del escenario, separadas de los edificios y de la
+geometría de catenaria:
+
+```toml
+[route.electric_supply]
+kind = "overhead"           # none, overhead, third_rail, fourth_rail
+voltage_v = 25000.0
+
+[[route.electric_supply.sections]]
+edge = "e1"                 # la dirección corresponde a este edge
+start_m = 150.0
+end_m = 230.0                # intervalo [inicio, fin)
+kind = "none"
+voltage_v = 0.0
+
+# Para una formación que toma corriente de tercer riel:
+[[train.electric_pickups]]
+vehicle = 0                 # índice desde cero, contando todos los coches
+kind = "third_rail"
+```
+
+Un suministro de tercer riel requiere declarar también ese suministro en
+`route.electric_supply`. Esta configuración no crea rieles visuales ni añade
+un motor auxiliar. Los perfiles de ejemplo son deliberados y no describen
+la electrificación histórica de Chiltern. Los límites del modelo se detallan
+en [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).

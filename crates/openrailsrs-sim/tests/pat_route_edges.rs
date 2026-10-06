@@ -118,6 +118,7 @@ fn resolve_route_edges_uses_waypoints_when_present() {
     )
     .expect("wps");
     let route = RouteSection {
+        electric_supply: None,
         path: ".".into(),
         start: hints.start.clone(),
         destination: hints.destination.clone(),

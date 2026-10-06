@@ -156,6 +156,7 @@ fn scale_davis_per_vehicle(
 
 #[derive(Clone, Debug)]
 pub struct Locomotive {
+    pub electric: Option<Box<openrailsrs_core::electrification::ElectricVehicleParams>>,
     pub brake_profile: openrailsrs_formats::VehicleBrakeProfile,
     pub name: String,
     pub mass_kg: f64,

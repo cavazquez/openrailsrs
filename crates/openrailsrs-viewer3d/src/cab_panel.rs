@@ -413,6 +413,10 @@ mod tests {
     #[test]
     fn cab_panel_formats_diesel_and_brake() {
         let tel = CabTelemetry {
+            pantograph_fraction: 0.,
+            line_voltage_v: 0.,
+            circuit_breaker_state: 0,
+            main_power: false,
             speed_kmh: 72.0,
             limit_kmh: 80.0,
             throttle_pct: 50.0,
@@ -455,6 +459,10 @@ mod tests {
     #[test]
     fn cab_panel_marks_overspeed() {
         let tel = CabTelemetry {
+            pantograph_fraction: 0.,
+            line_voltage_v: 0.,
+            circuit_breaker_state: 0,
+            main_power: false,
             speed_kmh: 90.0,
             limit_kmh: 40.0,
             throttle_pct: 0.0,

@@ -106,6 +106,9 @@ pub enum SwitchPositionDef {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RouteSection {
+    /// Physical supply; overrides route metadata without changing wire meshes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub electric_supply: Option<openrailsrs_core::electrification::RouteElectricSupply>,
     pub path: String,
     pub start: String,
     pub destination: String,
@@ -150,6 +153,8 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub electric_pickups: Vec<openrailsrs_core::electrification::ElectricPickupOverride>,
     pub consist: String,
     #[serde(default)]
     pub davis: Option<DavisSection>,
@@ -198,6 +203,8 @@ fn default_penalty_rate() -> f64 {
 /// `[[extra_trains]]` with their own route, consist, and departure time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainEntryDef {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub electric_pickups: Vec<openrailsrs_core::electrification::ElectricPickupOverride>,
     /// Unique identifier used in `BlockWait`/`BlockClear` events.
     pub id: String,
     /// Path to the consist file (relative to scenario directory).

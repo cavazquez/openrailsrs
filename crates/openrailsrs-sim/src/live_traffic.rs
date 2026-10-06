@@ -278,6 +278,9 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     ai.route.stops.clone_from(&entry.stops);
     ai.route.switches.clone_from(&entry.switches);
     ai.train.consist.clone_from(&entry.consist);
+    ai.train
+        .electric_pickups
+        .clone_from(&entry.electric_pickups);
     ai.train.davis.clone_from(&entry.davis);
     ai
 }

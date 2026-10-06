@@ -3,6 +3,7 @@
 pub mod brake;
 pub mod coupler;
 pub mod csv_out;
+pub mod electric;
 pub mod error;
 pub mod etcs;
 pub mod exterior;

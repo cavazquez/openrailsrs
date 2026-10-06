@@ -200,6 +200,7 @@ mod tests {
                 season: None,
             },
             route: RouteSection {
+                electric_supply: None,
                 path: ".".into(),
                 start: "n1".into(),
                 destination: "n2".into(),
@@ -211,6 +212,7 @@ mod tests {
                 edge_speed_limits: vec![],
             },
             train: TrainSection {
+                electric_pickups: vec![],
                 consist: "from_act.con".into(),
                 davis: None,
                 max_capacity: None,

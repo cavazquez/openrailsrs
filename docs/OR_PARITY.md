@@ -343,3 +343,24 @@ comprueba señal, ausencia de saturación y recursos SMS/WAV. Las doce vistas de
 Chiltern no tienen advertencias; las dos de Class 47 conservan 21 WAV ausentes
 del paquete. Esto no certifica identidad acústica de la mezcla completa con
 OpenAL. Alcance y comandos en [NATIVE_AUDIO.md](NATIVE_AUDIO.md).
+
+
+### Alimentación eléctrica: referencia acotada del 5 de octubre de 2026
+
+`oracles/openrails-electric.json` captura `Pantograph.Update` y
+`DefaultElectricPowerSupply.Update` de las DLL originales fijadas de OR 1.6.1.
+Contiene ocho puntos de movimiento y doce estados de alimentación principal,
+incluyendo pantógrafo en subida/bajado, disyuntor abierto y reconexión con retardo.
+La captura repetida es idéntica byte por byte. El ensayo Rust compara esos
+estados; las tolerancias físicas de los servicios diésel no cambian.
+
+No certifica el filtrado de tensión, protecciones de un autor ni el recorrido
+completo de una locomotora eléctrica. Los captadores por riel, los sectores sin
+tensión, el corte por coche motor, las formaciones mixtas y la restauración
+se comprueban con escenarios sintéticos. El modelo de suministro está separado
+de la escena y se usa también sin visor y con tráfico.
+
+```bash
+python3 scripts/capture_electric_reference.py --out-dir tmp/electric-reference-nuevo
+cargo test --locked --workspace --all-features electric_
+```

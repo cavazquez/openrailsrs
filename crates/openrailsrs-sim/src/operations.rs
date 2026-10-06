@@ -246,6 +246,13 @@ impl LiveDriveSession {
             );
         }
         let n = saved.formation.coupled_count;
+        if !saved
+            .state
+            .electric
+            .valid_for(&self.original_physics.electric)
+        {
+            return Err("La alimentación eléctrica guardada no corresponde a la formación".into());
+        }
         if n == 0
             || n > self.consist.vehicles.len()
             || saved.formation.cars.len() != self.consist.vehicles.len()
@@ -594,6 +601,13 @@ impl LiveDriveSession {
             }
         }
         let mut p = self.original_physics.clone();
+        p.electric.fallback_cars = crate::electric::ElectricTrainConfig::fallback_curves(&consist);
+        for car in &mut p.electric.cars {
+            car.enabled = car.vehicle < n
+                && self.formation.cars.get(car.vehicle).is_some_and(|op| {
+                    op.power_on && op.battery_on && (car.vehicle == 0 || op.mu_connected)
+                });
+        }
         p.mass_kg = consist.total_mass_kg();
         p.max_power_w = consist.total_max_power_w();
         p.max_tractive_effort_n = consist.total_max_tractive_effort_n();
@@ -651,6 +665,8 @@ impl LiveDriveSession {
                 .collect();
         }
         self.physics = p;
+        self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
+        crate::electric::advance(&mut self.state, &self.path_data, &self.physics.electric, 0.);
     }
 
     pub(crate) fn sync_operating_brakes(&mut self) {
@@ -934,6 +950,7 @@ pub(crate) fn content_signature(
     graph: &openrailsrs_track::TrackGraph,
     scenario: &openrailsrs_scenarios::ScenarioFile,
     consist: &Consist,
+    electric: &crate::electric::ElectricTrainConfig,
 ) -> String {
     let mut h = 0xcbf29ce484222325_u64;
     let mut feed = |s: &str| {
@@ -957,7 +974,8 @@ pub(crate) fn content_signature(
     for signal in graph.signals() {
         feed(&format!("{signal:?}"));
     }
-    feed(&format!("{consist:?}"));
+    feed(&format!("{consist:?}{electric:?}"));
+    feed(&format!("{:?}", scenario.train.electric_pickups));
     format!("{h:016x}")
 }
 
@@ -975,7 +993,12 @@ impl LiveDriveSession {
                 .entry(signal.id.clone())
                 .or_insert(signal.aspect);
         }
-        self.content_signature = content_signature(&self.graph, scenario, &self.consist);
+        self.content_signature = content_signature(
+            &self.graph,
+            scenario,
+            &self.consist,
+            &self.original_physics.electric,
+        );
         Ok(())
     }
 }

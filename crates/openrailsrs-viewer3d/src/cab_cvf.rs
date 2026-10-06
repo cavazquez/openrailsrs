@@ -307,6 +307,25 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
             f64::from(u8::from(tel.cab_light))
         }
         ControlType::Ammeter | ControlType::LoadMeter => tel.traction_load_fraction,
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "PANTOGRAPH" | "PANTOGRAPHS" | "PANTOGRAPH1"
+            ) =>
+        {
+            tel.pantograph_fraction
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "CIRCUIT_BREAKER" | "CIRCUIT_BREAKER_STATE"
+            ) =>
+        {
+            f64::from(tel.circuit_breaker_state)
+        }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("POWER_ON") => {
+            f64::from(u8::from(tel.main_power))
+        }
         _ => 0.0,
     }
 }
@@ -347,6 +366,19 @@ pub fn dial_control_value(
         }
         ControlType::Generic(name) if name.to_ascii_uppercase().contains("RPM") => {
             tel.diesel_rpm.unwrap_or(0.0)
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "LINE_VOLTAGE" | "PANTOGRAPH_VOLTAGE"
+            ) =>
+        {
+            tel.line_voltage_v
+                * if units.eq_ignore_ascii_case("KILOVOLTS") || units.eq_ignore_ascii_case("KV") {
+                    0.001
+                } else {
+                    1.
+                }
         }
         ControlType::Generic(name)
             if matches!(
@@ -859,6 +891,44 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
+    fn electric_native_instruments_read_voltage_and_physical_switches() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/electric_supply/scenario.toml");
+        let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+        let mut session =
+            openrailsrs_sim::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario)
+                .unwrap();
+        let control = ControlType::Generic("LINE_VOLTAGE".into());
+        let dial = openrailsrs_formats::CabDialParams {
+            scale_max: 30.,
+            units: Some("kV".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            dial_control_value(&control, &dial, &session.cab_telemetry()),
+            25.
+        );
+        session.toggle_circuit_breaker().unwrap();
+        let telemetry = session.cab_telemetry();
+        assert_eq!(
+            control_value(
+                &ControlType::Generic("CIRCUIT_BREAKER_STATE".into()),
+                &telemetry
+            ),
+            0.
+        );
+        assert_eq!(
+            control_value(&ControlType::Generic("POWER_ON".into()), &telemetry),
+            0.
+        );
+        session.toggle_pantograph().unwrap();
+        assert_eq!(
+            dial_control_value(&control, &dial, &session.cab_telemetry()),
+            0.
+        );
+    }
+
+    #[test]
     fn classic_cab_runtime_does_not_require_a_shape() {
         let root = std::env::temp_dir().join(format!("classic_cvf_{}", std::process::id()));
         let dir = root.join("CABVIEW");
@@ -890,6 +960,10 @@ mod tests {
     #[test]
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
+            pantograph_fraction: 0.,
+            line_voltage_v: 0.,
+            circuit_breaker_state: 0,
+            main_power: false,
             speed_kmh: 50.0,
             limit_kmh: 80.0,
             throttle_pct: 75.0,

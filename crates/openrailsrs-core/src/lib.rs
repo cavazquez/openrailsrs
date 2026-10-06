@@ -1,5 +1,6 @@
 //! Core types shared across openrailsrs crates.
 
+pub mod electrification;
 pub mod ids;
 pub mod time;
 

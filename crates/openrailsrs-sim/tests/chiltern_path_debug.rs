@@ -10,6 +10,7 @@ const MIN_PATH_EDGES: usize = 6;
 
 fn brake_coast_route() -> RouteSection {
     RouteSection {
+        electric_supply: None,
         path: ".".into(),
         start: "n3".into(),
         destination: "n10770".into(),

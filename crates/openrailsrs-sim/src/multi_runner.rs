@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_scenarios::{ScenarioFile, SwitchPositionDef, load_timetable};
-use openrailsrs_track::{SignalAspect, SwitchPosition};
+use openrailsrs_track::{SignalAspect, SwitchPosition, TrackGraph};
 use openrailsrs_train::{DavisCoefficients, TractiveCurve, load_consist_with_asset_root};
 
 use crate::SimError;
@@ -108,6 +108,12 @@ fn build_physics(
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
     brake_mapping: openrailsrs_validate::BrakeCommandMapping,
     legacy_power_cap: bool,
+    electric_context: (
+        &Path,
+        Option<&openrailsrs_core::electrification::RouteElectricSupply>,
+        &[openrailsrs_core::electrification::ElectricPickupOverride],
+        &TrackGraph,
+    ),
 ) -> Result<TrainPhysics, SimError> {
     let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
     let davis_override = davis_override.map(|d| DavisCoefficients {
@@ -133,6 +139,13 @@ fn build_physics(
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     Ok(TrainPhysics {
+        electric: crate::electric::ElectricTrainConfig::load(
+            electric_context.0,
+            electric_context.1,
+            electric_context.2,
+            &consist,
+            electric_context.3,
+        )?,
         native: None,
         mass_kg: consist.total_mass_kg(),
         max_power_w: consist.total_max_power_w(),
@@ -193,6 +206,12 @@ pub fn run_scenario_multi_train(
             scenario.train.davis.as_ref(),
             scenario.brake_mapping(),
             scenario.simulation.legacy_power_cap,
+            (
+                &route_dir,
+                scenario.route.electric_supply.as_ref(),
+                &scenario.train.electric_pickups,
+                &graph,
+            ),
         )?;
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
@@ -282,6 +301,12 @@ pub fn run_scenario_multi_train(
             entry.davis.as_ref(),
             scenario.brake_mapping(),
             scenario.simulation.legacy_power_cap,
+            (
+                &route_dir,
+                scenario.route.electric_supply.as_ref(),
+                &entry.electric_pickups,
+                &graph,
+            ),
         )?;
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
@@ -704,6 +729,12 @@ impl LiveMultiSim {
                 scenario.train.davis.as_ref(),
                 scenario.brake_mapping(),
                 scenario.simulation.legacy_power_cap,
+                (
+                    &route_dir,
+                    scenario.route.electric_supply.as_ref(),
+                    &scenario.train.electric_pickups,
+                    &graph,
+                ),
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()
@@ -757,6 +788,12 @@ impl LiveMultiSim {
                 entry.davis.as_ref(),
                 scenario.brake_mapping(),
                 scenario.simulation.legacy_power_cap,
+                (
+                    &route_dir,
+                    scenario.route.electric_supply.as_ref(),
+                    &entry.electric_pickups,
+                    &graph,
+                ),
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()
@@ -839,6 +876,7 @@ impl LiveMultiSim {
                 None,
                 openrailsrs_validate::BrakeCommandMapping::default(),
                 true,
+                (&route_dir, None, &[], &graph),
             )?;
             let total_dist_m: f64 = path_edges
                 .iter()

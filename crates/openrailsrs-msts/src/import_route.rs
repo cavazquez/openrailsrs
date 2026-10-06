@@ -117,6 +117,7 @@ pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
     let route_id = find_route_id(route_dir, &tdb_path);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
+    let toml = bind_electric_supply(route_dir, &toml)?;
     native_signal_import::bind(route_dir, &tdb_path, &toml, &[])
 }
 
@@ -129,6 +130,7 @@ pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<S
     let route_id = find_route_id(route_dir, &tdb_path);
     let activity = ActivityFile::from_path(act_path)?;
     let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity), Some(&catalog))?;
+    let toml = bind_electric_supply(route_dir, &toml)?;
     native_signal_import::bind(route_dir, &tdb_path, &toml, &activity.failed_signals)
 }
 
@@ -140,6 +142,7 @@ pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usi
     let route_id = find_route_id(route_dir, &tdb_path);
     let (nodes, edges) = count_nodes_edges(&tdb);
     let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
+    let toml = bind_electric_supply(route_dir, &toml)?;
     Ok((
         native_signal_import::bind(route_dir, &tdb_path, &toml, &[])?,
         nodes,
@@ -304,6 +307,32 @@ fn find_route_id(route_dir: &Path, tdb_path: &Path) -> String {
         .and_then(|s| s.to_str())
         .unwrap_or("imported")
         .to_string()
+}
+
+fn bind_electric_supply(route_dir: &Path, text: &str) -> Result<String, MstsError> {
+    if openrailsrs_formats::find_trk_path(route_dir).is_none() {
+        return Ok(text.into());
+    }
+    let native = openrailsrs_formats::RouteFile::from_route_dir(route_dir)?;
+    use openrailsrs_core::electrification::{ElectricPickup, ElectricSupply, RouteElectricSupply};
+    let supply = RouteElectricSupply {
+        supply: ElectricSupply {
+            kind: if native.overhead_wire.electrified {
+                ElectricPickup::Overhead
+            } else {
+                ElectricPickup::None
+            },
+            voltage_v: if native.overhead_wire.electrified {
+                native.max_line_voltage_v
+            } else {
+                0.
+            },
+        },
+        sections: vec![],
+    };
+    let mut value: toml::Value = toml::from_str(text)?;
+    value["route"]["electric_supply"] = toml::Value::try_from(supply)?;
+    Ok(toml::to_string_pretty(&value)?)
 }
 
 fn count_nodes_edges(tdb: &TrackDbFile) -> (usize, usize) {

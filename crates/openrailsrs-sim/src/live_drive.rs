@@ -197,6 +197,39 @@ pub struct LiveDriveSession {
 }
 
 impl LiveDriveSession {
+    pub fn toggle_pantograph(&mut self) -> Result<(), String> {
+        if !self
+            .physics
+            .electric
+            .cars
+            .iter()
+            .any(|c| c.params.pickup == openrailsrs_core::electrification::ElectricPickup::Overhead)
+        {
+            return Err("Esta formación no usa pantógrafo".into());
+        }
+        self.exterior.toggle_pantograph();
+        self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
+        crate::electric::advance(&mut self.state, &self.path_data, &self.physics.electric, 0.);
+        Ok(())
+    }
+
+    pub fn toggle_circuit_breaker(&mut self) -> Result<(), String> {
+        if self.physics.electric.cars.is_empty() {
+            return Err("Esta formación no tiene tracción eléctrica".into());
+        }
+        self.state.electric.breaker_command_closed = !self.state.electric.breaker_command_closed;
+        crate::electric::advance(&mut self.state, &self.path_data, &self.physics.electric, 0.);
+        Ok(())
+    }
+
+    pub fn electric_status(&self) -> Option<String> {
+        self.state
+            .electric
+            .cars
+            .first()
+            .map(|c| format!("{:.0} V · {}", c.contact_voltage_v, c.loss.label()))
+    }
+
     pub fn from_scenario(scenario_dir: &Path, scenario: &ScenarioFile) -> Result<Self, SimError> {
         let route_dir = scenario_dir.join(&scenario.route.path);
         let mut graph = load_track_graph_from_route_dir(&route_dir)?;
@@ -235,6 +268,13 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
+            electric: crate::electric::ElectricTrainConfig::load(
+                &route_dir,
+                scenario.route.electric_supply.as_ref(),
+                &scenario.train.electric_pickups,
+                &consist,
+                &graph,
+            )?,
             native: crate::native_dynamics::NativeTrainPhysics::load(
                 &consist_path,
                 consist_root(&consist_path),
@@ -269,6 +309,7 @@ impl LiveDriveSession {
         if let Some(offset) = scenario.route.start_offset_m {
             apply_start_offset(&mut state, &path_data, offset);
         }
+        crate::electric::advance(&mut state, &path_data, &physics.electric, 0.);
         state.brake_system = build_brake_system(
             &consist,
             scenario.simulation.train_air_lap_hold,
@@ -319,6 +360,10 @@ impl LiveDriveSession {
         }
         let region_tracker = RegionTracker::new(scenario.sound_regions.clone());
 
+        let mut exterior = RollingStockExteriorState::new();
+        exterior.set_pantograph_up(physics.electric.cars.iter().any(|c| {
+            c.params.pickup == openrailsrs_core::electrification::ElectricPickup::Overhead
+        }));
         let mut session = Self {
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
@@ -330,7 +375,12 @@ impl LiveDriveSession {
             own_track_reservations: vec![],
             external_track_reservations: vec![],
             original_physics: physics.clone(),
-            content_signature: crate::operations::content_signature(&graph, scenario, &consist),
+            content_signature: crate::operations::content_signature(
+                &graph,
+                scenario,
+                &consist,
+                &physics.electric,
+            ),
             consist,
             stop_offsets: scenario
                 .route
@@ -352,7 +402,7 @@ impl LiveDriveSession {
             driver_throttle: 0.0,
             driver_brake: initial_brake,
             driver_direction: 0.5,
-            exterior: RollingStockExteriorState::new(),
+            exterior,
             horn_pressed_until_s: 0.0,
             wiper_active: false,
             headlights: 1,
@@ -806,6 +856,31 @@ impl LiveDriveSession {
             .first()
             .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
+            pantograph_fraction: self
+                .state
+                .electric
+                .cars
+                .first()
+                .map_or(0., |c| c.pantograph_fraction),
+            line_voltage_v: self
+                .state
+                .electric
+                .cars
+                .first()
+                .map_or(0., |c| c.contact_voltage_v),
+            circuit_breaker_state: self.state.electric.cars.first().map_or(0, |c| {
+                match c.breaker {
+                    crate::electric::BreakerState::Open => 0,
+                    crate::electric::BreakerState::Closing => 1,
+                    crate::electric::BreakerState::Closed => 2,
+                }
+            }),
+            main_power: self
+                .state
+                .electric
+                .cars
+                .first()
+                .is_some_and(|c| c.main_power),
             speed_kmh,
             limit_kmh,
             throttle_pct: self.driver_throttle * 100.0,
@@ -840,6 +915,10 @@ impl LiveDriveSession {
 /// Driver-facing gauges for the 3D cab panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
+    pub pantograph_fraction: f64,
+    pub line_voltage_v: f64,
+    pub circuit_breaker_state: u8,
+    pub main_power: bool,
     pub speed_kmh: f64,
     pub limit_kmh: f64,
     pub throttle_pct: f64,
@@ -912,6 +991,7 @@ impl LiveDriveSession {
         }
         let mut budget = self.sim_time_remainder + real_dt * self.speed_mul;
         let dt = self.realtime_physics_dt();
+        self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
         while budget + 1e-12 >= dt {
             if let Some(throttle) = automatic {
                 self.autodrive_inputs(throttle);

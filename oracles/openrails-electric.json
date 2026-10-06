@@ -1,0 +1,131 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "line_voltage_v": 25000.0,
+  "power_on_delay_s": 2.0,
+  "pantograph_delay_s": 2.0,
+  "pantographs": [
+    {
+      "elapsed_s": 0.5,
+      "fraction": 0.25,
+      "state": "Raising",
+      "command_up": true
+    },
+    {
+      "elapsed_s": 1.0,
+      "fraction": 0.5,
+      "state": "Raising",
+      "command_up": true
+    },
+    {
+      "elapsed_s": 1.5,
+      "fraction": 0.75,
+      "state": "Raising",
+      "command_up": true
+    },
+    {
+      "elapsed_s": 2.0,
+      "fraction": 1.0,
+      "state": "Up",
+      "command_up": true
+    },
+    {
+      "elapsed_s": 2.5,
+      "fraction": 0.75,
+      "state": "Lowering",
+      "command_up": false
+    },
+    {
+      "elapsed_s": 3.0,
+      "fraction": 0.5,
+      "state": "Lowering",
+      "command_up": false
+    },
+    {
+      "elapsed_s": 3.5,
+      "fraction": 0.25,
+      "state": "Lowering",
+      "command_up": false
+    },
+    {
+      "elapsed_s": 4.0,
+      "fraction": 0.0,
+      "state": "Down",
+      "command_up": false
+    }
+  ],
+  "checkpoints": [
+    {
+      "time_s": 0.0,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 0.5,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 1.0,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 1.5,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 2.0,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": true
+    },
+    {
+      "time_s": 2.1,
+      "pantograph": "Up",
+      "breaker": "Open",
+      "main_power": false
+    },
+    {
+      "time_s": 2.2,
+      "pantograph": "Raising",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 2.3,
+      "pantograph": "Down",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 2.4,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 3.4,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 4.3,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": false
+    },
+    {
+      "time_s": 4.5,
+      "pantograph": "Up",
+      "breaker": "Closed",
+      "main_power": true
+    }
+  ],
+  "scope": "Native pantograph movement and default main power state; no filtered-voltage or complete electric-locomotive parity claim."
+}

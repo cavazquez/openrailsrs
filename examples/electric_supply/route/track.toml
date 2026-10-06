@@ -1,0 +1,34 @@
+[route]
+id = "electric_supply_test"
+
+[[nodes]]
+id = "a"
+kind = { station = { name = "Inicio eléctrico" } }
+x_m = 0.0
+y_m = 0.0
+
+[[nodes]]
+id = "mid"
+kind = { station = { name = "Después del sector neutro" } }
+x_m = 500.0
+y_m = 0.0
+
+[[nodes]]
+id = "b"
+kind = { station = { name = "Terminal" } }
+x_m = 1000.0
+y_m = 0.0
+
+[[edges]]
+id = "e1"
+from = "a"
+to = "mid"
+length_m = 500.0
+speed_limit_kmh = 80.0
+
+[[edges]]
+id = "e2"
+from = "mid"
+to = "b"
+length_m = 500.0
+speed_limit_kmh = 80.0

@@ -68,6 +68,7 @@ fn make_two_train_scenario(
             season: None,
         },
         route: RouteSection {
+            electric_supply: None,
             path: "routes/test".into(),
             start: "yard_a".into(),
             destination: "yard_b".into(),
@@ -79,6 +80,7 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            electric_pickups: vec![],
             consist: "consists/freight.con".into(),
             davis: Some(heavy_davis()),
             max_capacity: None,
@@ -111,6 +113,7 @@ fn make_two_train_scenario(
             metadata: "run_primary.toml".into(),
         },
         extra_trains: vec![TrainEntryDef {
+            electric_pickups: vec![],
             id: "express".into(),
             consist: "consists/freight.con".into(),
             start: "yard_a".into(),

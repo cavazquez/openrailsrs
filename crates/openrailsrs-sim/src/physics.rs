@@ -36,6 +36,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
 #[derive(Clone)]
 pub struct TrainPhysics {
+    pub electric: crate::electric::ElectricTrainConfig,
     pub native: Option<crate::native_dynamics::NativeTrainPhysics>,
     pub mass_kg: f64,
     pub max_power_w: f64,
@@ -115,6 +116,7 @@ pub fn step(
     };
 
     let v = state.velocity_mps.max(0.0);
+    crate::electric::advance(state, path_data, &train.electric, dt);
     let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
     let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
 
@@ -226,7 +228,12 @@ pub fn step(
                     engine.advance_rpm(rpm, physical_throttle, dt)
                 };
                 state.diesel_rpm[i] = new_rpm;
-                let curve_throttle = traction_throttle;
+                let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
+                let curve_throttle = if state.electric.power_available(vehicle_index) {
+                    traction_throttle
+                } else {
+                    0.
+                };
                 state.diesel_apparent_throttle[i] = if curve_throttle > 0.0 {
                     engine.effective_traction_throttle(curve_throttle, new_rpm)
                 } else if state.throttle > 0.0 && brake_frac > BRAKE_TRACTION_CUTOFF {
@@ -335,6 +342,15 @@ pub fn step(
                 f_total += rail_force;
             }
             f_total
+        } else if !train.electric.cars.is_empty() {
+            train
+                .electric
+                .fallback_cars
+                .iter()
+                .filter(|(vehicle, _)| state.electric.power_available(*vehicle))
+                .map(|(_, curve)| curve.interpolate(v).unwrap_or(0.))
+                .sum::<f64>()
+                * state.throttle
         } else if let Some(f_curve) = train.tractive.interpolate(v) {
             f_curve * state.throttle
         } else {
@@ -600,7 +616,13 @@ pub fn step(
     // Traction energy drawn from supply (gross).
     state.cumulative_energy_j += f_motor.max(0.0) * v_avg * effective_dt;
     // Regenerative braking: recover fraction of braking work.
-    let regen_j = f_brake * v_avg * train.regen_factor * effective_dt;
+    let regen_factor =
+        if !train.electric.cars.is_empty() && !state.electric.cars.iter().any(|c| c.main_power) {
+            0.
+        } else {
+            train.regen_factor
+        };
+    let regen_j = f_brake * v_avg * regen_factor * effective_dt;
     state.regen_energy_j += regen_j;
     state.cumulative_energy_j -= regen_j; // net consumed = gross - regen
     // Diesel fuel: proportional to mechanical energy output.

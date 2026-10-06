@@ -58,6 +58,8 @@ impl Default for OverheadWireParams {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RouteFile {
+    /// Authored line voltage; OR 1.6.1 defaults to zero when absent.
+    pub max_line_voltage_v: f64,
     pub route_id: String,
     pub name: String,
     /// Native `.trk` line speed (MSTS stores this in metres per second).
@@ -82,6 +84,9 @@ impl RouteFile {
         let name = find_string_field(ast, &["Name"]).unwrap_or_else(|| route_id.clone());
         let route_start = parse_route_start(ast);
         Ok(Self {
+            max_line_voltage_v: find_numeric_field(ast, "MaxLineVoltage")
+                .and_then(|v| v.first().copied())
+                .unwrap_or(0.),
             route_id,
             name,
             speed_limit_mps: super::named_blocks(ast, "SpeedLimit")
@@ -455,6 +460,7 @@ Tr_RouteFile (
 	RouteID ( Demo )
 	Name ( "Demo" )
 	Electrified ( 00000001 )
+	MaxLineVoltage ( 25000 )
 	OverheadWireHeight ( 7.23 )
 	ORTSDoubleWireEnabled ( On )
 	ORTSDoubleWireHeight ( 1.5 )
@@ -463,6 +469,7 @@ Tr_RouteFile (
         let ast = parse_from_first_paren(src).expect("parse");
         let route = RouteFile::from_ast(&ast).expect("route");
         assert!(route.overhead_wire.electrified);
+        assert_eq!(route.max_line_voltage_v, 25000.);
         assert!((route.overhead_wire.height_m - 7.23).abs() < 0.001);
         assert!(route.overhead_wire.double_wire);
         assert!((route.overhead_wire.double_wire_height_m - 1.5).abs() < 0.001);

@@ -274,3 +274,15 @@ sha256 = "ef9134737e584dc61d13917e5c202d3b8338138014804cd1bfa02e3a314b9560"
 [[files]]
 path = "oracles/openrails-audio-provenance.json"
 sha256 = "470edae7eee44d5a27a43b0690f697431d4d614caac2e801538b69e4440c86c1"
+
+[[files]]
+path = "tools/openrails-reference/ElectricReference.cs"
+sha256 = "99b410f52a56bcb51bba2af5474b274a415178a327d4143cc8e865adb7b3c2a0"
+
+[[files]]
+path = "oracles/openrails-electric.json"
+sha256 = "4359aaa85bb5dff54d8bc5efdc04a68870bb55690a05ab03a76b723b531e7f37"
+
+[[files]]
+path = "oracles/openrails-electric-provenance.json"
+sha256 = "f458b138475a22e297ac00d83c2aed90ffdf2fd27063d161ab359bce8dc189bc"

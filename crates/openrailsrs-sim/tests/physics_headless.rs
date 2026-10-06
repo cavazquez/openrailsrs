@@ -43,6 +43,7 @@ fn path_data_for(path: &[&str], g: &TrackGraph) -> PathData {
 /// Train without an explicit traction curve — uses P/v fallback.
 fn default_train_pv() -> TrainPhysics {
     TrainPhysics {
+        electric: Default::default(),
         native: None,
         mass_kg: 100_000.0,
         max_power_w: 2_000_000.0,
@@ -69,6 +70,7 @@ fn default_train_pv() -> TrainPhysics {
 /// Train with an explicit traction curve (two-segment).
 fn default_train_with_curve() -> TrainPhysics {
     TrainPhysics {
+        electric: Default::default(),
         native: None,
         mass_kg: 100_000.0,
         max_power_w: 2_000_000.0,
@@ -209,6 +211,7 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
     .unwrap();
 
     let train = TrainPhysics {
+        electric: Default::default(),
         native: None,
         mass_kg: 50_000.0,
         max_power_w: 5_000_000.0,

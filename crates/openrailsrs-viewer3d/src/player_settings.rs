@@ -51,6 +51,8 @@ pub enum PlayerAction {
     Wiper,
     Headlights,
     CabLight,
+    Pantograph,
+    CircuitBreaker,
     Doors,
     Emergency,
     Pause,
@@ -76,7 +78,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 33] = [
+    pub const ALL: [Self; 35] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -88,6 +90,8 @@ impl PlayerAction {
         Self::Wiper,
         Self::Headlights,
         Self::CabLight,
+        Self::Pantograph,
+        Self::CircuitBreaker,
         Self::Doors,
         Self::Emergency,
         Self::Pause,
@@ -124,6 +128,8 @@ impl PlayerAction {
             Self::Wiper => "Limpiaparabrisas",
             Self::Headlights => "Faros: apagados / bajos / altos",
             Self::CabLight => "Luz de cabina",
+            Self::Pantograph => "Subir / bajar pantógrafo",
+            Self::CircuitBreaker => "Abrir / cerrar disyuntor",
             Self::Doors => "Puertas",
             Self::Emergency => "Emergencia",
             Self::Pause => "Pausar / continuar",
@@ -161,6 +167,8 @@ impl PlayerAction {
             Self::Wiper => KeyCode::KeyV,
             Self::Headlights => KeyCode::KeyH,
             Self::CabLight => KeyCode::KeyI,
+            Self::Pantograph => KeyCode::KeyO,
+            Self::CircuitBreaker => KeyCode::KeyJ,
             Self::Doors => KeyCode::KeyQ,
             Self::Emergency => KeyCode::Backspace,
             Self::Pause => KeyCode::KeyP,

@@ -118,6 +118,7 @@ pub fn parse_steam_engine_toml(text: &str) -> Result<Locomotive, TrainError> {
     let max_power_w = max_tractive_effort_n * parsed.engine.max_velocity_mps / 2.0;
 
     Ok(Locomotive {
+        electric: None,
         name: parsed.engine.name,
         mass_kg: parsed.engine.mass_kg,
         max_power_w,

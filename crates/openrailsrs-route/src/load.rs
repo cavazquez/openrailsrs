@@ -55,6 +55,8 @@ pub struct RouteLayoutFile {
 
 #[derive(Debug, Deserialize)]
 pub struct RouteMeta {
+    #[serde(default)]
+    pub electric_supply: Option<openrailsrs_core::electrification::RouteElectricSupply>,
     pub id: String,
 }
 

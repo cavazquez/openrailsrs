@@ -69,9 +69,10 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         });
     let car = session.formation.cars.get(vehicle);
     let parked = vehicle >= session.formation.coupled_count;
-    let powered = car.is_some_and(|c| {
+    let controls_powered = car.is_some_and(|c| {
         c.powered && c.power_on && c.battery_on && (vehicle == 0 || c.mu_connected)
     }) && !parked;
+    let powered = controls_powered && session.state.electric.power_available(vehicle);
     let velocity = if parked {
         0.0
     } else {
@@ -157,7 +158,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         },
         brake: session.driver_brake as f32,
         direction: session.driver_direction as f32,
-        horn: powered && t.horn_active,
+        horn: controls_powered && t.horn_active,
         wiper: vehicle == 0 && t.wiper_active,
         doors: matches!(
             session.exterior.door,

@@ -358,6 +358,18 @@ impl PlayerLaunchMenu {
             }
         }
         if let Some(con) = self.consists.get(self.consist) {
+            let authored = if Path::new(&scenario.train.consist).is_absolute() {
+                PathBuf::from(&scenario.train.consist)
+            } else {
+                choice
+                    .source
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .join(&scenario.train.consist)
+            };
+            if absolute(&authored) != absolute(con) {
+                scenario.train.electric_pickups.clear();
+            }
             scenario.train.consist = con.to_string_lossy().into_owned();
         } else if !Path::new(&scenario.train.consist).is_absolute() {
             let root = choice

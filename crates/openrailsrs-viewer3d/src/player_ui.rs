@@ -2257,6 +2257,18 @@ fn advanced_text(
             }
         }
         2 => {
+            for (car, electric) in p.electric.cars.iter().zip(&state.electric.cars) {
+                out += &format!(
+                    "Vehículo {} · {} · vía {:.0} V · contacto {:.0} V\nPantógrafo {:.0}% · disyuntor {}\n{}\n\n",
+                    car.vehicle + 1,
+                    car.params.pickup.label(),
+                    electric.line_voltage_v,
+                    electric.contact_voltage_v,
+                    electric.pantograph_fraction * 100.,
+                    electric.breaker.label(),
+                    electric.loss.label()
+                );
+            }
             out += &format!(
                 "Potencia máxima disponible {:.0} kW\nEsfuerzo máximo {:.1} kN\nCaldera {}\n\n",
                 p.max_power_w / 1000.0,

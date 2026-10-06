@@ -181,6 +181,7 @@ fn import_activity_with_length(
             season: activity.season.as_ref().map(|s| s.to_ascii_lowercase()),
         },
         route: RouteSection {
+            electric_supply: None,
             path: ".".to_string(),
             start: start_node,
             destination: destination_node,
@@ -196,6 +197,7 @@ fn import_activity_with_length(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            electric_pickups: vec![],
             consist: player_consist_str,
             davis: None,
             max_capacity: None,
@@ -319,6 +321,7 @@ fn build_one_extra_train(
     };
 
     Some(TrainEntryDef {
+        electric_pickups: vec![],
         id: id.clone(),
         consist,
         start,

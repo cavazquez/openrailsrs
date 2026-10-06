@@ -1,0 +1,60 @@
+[scenario]
+name = "Alimentación eléctrica: catenaria y sector neutro"
+description = "Prueba sintética de pantógrafo, disyuntor e inercia. Sector sin tensión entre 150 y 230 m."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[route.electric_supply]
+kind = "overhead"
+voltage_v = 25000.0
+
+[[route.electric_supply.sections]]
+edge = "e1"
+start_m = 150.0
+end_m = 230.0
+kind = "none"
+voltage_v = 0.0
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/electric.con"
+
+[train.davis]
+a_n = 400.0
+b_n_per_mps = 10.0
+c_n_per_mps2 = 0.4
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

@@ -439,7 +439,7 @@ pub fn live_driver_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut live: ResMut<LiveDrive>,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
-    ui: Option<Res<crate::player_ui::PlayerUiState>>,
+    mut ui: Option<ResMut<crate::player_ui::PlayerUiState>>,
 ) {
     use crate::player_settings::{PlayerAction as A, PlayerSettings};
     if ui
@@ -499,6 +499,18 @@ pub fn live_driver_input(
     }
     if pressed(A::CabLight) {
         live.session.cab_light = !live.session.cab_light;
+    }
+    if pressed(A::Pantograph)
+        && let Err(message) = live.session.toggle_pantograph()
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
+    }
+    if pressed(A::CircuitBreaker)
+        && let Err(message) = live.session.toggle_circuit_breaker()
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
     }
     if pressed(A::Doors) {
         live.session.toggle_doors();

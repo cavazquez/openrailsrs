@@ -67,6 +67,7 @@ enum HudField {
     Controls,
     Brakes,
     Doors,
+    ElectricSupply,
     Lights,
     Clock,
     Station,
@@ -94,6 +95,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                 (HudField::Controls, 13.0),
                 (HudField::Brakes, 13.0),
                 (HudField::Doors, 13.0),
+                (HudField::ElectricSupply, 12.0),
                 (HudField::Lights, 12.0),
             ],
         ),
@@ -400,6 +402,14 @@ fn update_driving_hud(
                     if session.wiper_active { "Sí" } else { "No" },
                 ),
                 MUTED,
+            ),
+            HudField::ElectricSupply => (
+                session.electric_status().unwrap_or_default(),
+                if session.state.electric.cars.iter().any(|c| !c.main_power) {
+                    CAUTION
+                } else {
+                    TEXT
+                },
             ),
             HudField::Clock => (
                 format!("MONITOR DE VÍA   {}", clock_label(live.clock_time_s())),

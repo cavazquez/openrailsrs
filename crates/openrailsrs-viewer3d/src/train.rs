@@ -420,6 +420,7 @@ pub fn spawn_train_markers(
                                 .spawn((
                                     local,
                                     Visibility::default(),
+                                    crate::rolling_stock::ConsistCarIndex(vi),
                                     crate::rolling_stock_anim::TrainCarTrackOffset {
                                         offset_m: vehicle.offset_m,
                                         track_index: i,

@@ -60,6 +60,7 @@ pub struct MstsSteamFields {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EngineFile {
+    pub electric: Option<openrailsrs_core::electrification::ElectricVehicleParams>,
     pub name: String,
     pub mass_kg: f64,
     pub max_power_w: f64,
@@ -354,6 +355,7 @@ impl EngineFile {
         let passenger_viewpoints = parse_passenger_viewpoints(ast);
 
         Ok(Self {
+            electric: super::parse_electric_vehicle(ast)?,
             name,
             mass_kg,
             max_power_w,
