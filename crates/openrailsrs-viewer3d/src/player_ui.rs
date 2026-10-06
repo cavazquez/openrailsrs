@@ -391,6 +391,9 @@ fn spawn_toolbar(
                 left: Val::Px(12.0),
                 bottom: Val::Px(8.0),
                 column_gap: Val::Px(6.0),
+                row_gap: Val::Px(6.0),
+                max_width: Val::Percent(90.0),
+                flex_wrap: FlexWrap::Wrap,
                 ..default()
             },
             UiTargetCamera(camera),
@@ -421,6 +424,11 @@ fn spawn_toolbar(
                     UiCommand::Open(panel),
                 );
             }
+            button(
+                p,
+                "km/h ↔ mph",
+                UiCommand::Setting(SettingField::Units, 0.0),
+            );
         });
     commands.spawn((
         crate::environment::EnvironmentBadge,
@@ -576,6 +584,10 @@ fn player_keys(
     if settings.just_pressed(&keys, PlayerAction::TrackMonitor) {
         ui.monitor = !ui.monitor;
     }
+    if settings.just_pressed(&keys, PlayerAction::SpeedUnits) {
+        settings.toggle_speed_units();
+        ui.rebuild = true;
+    }
 }
 
 #[derive(SystemParam)]
@@ -661,7 +673,7 @@ fn handle_buttons(
                     });
                     SavedGame::save(l, &content, saved, &slot_path(*slot))
                 })
-                    .map(|()|{ui.notice=format!("Partida guardada en la ranura {} · {:.0} m · {:.1} km/h",slot+1,l.session.state.odometer_m,l.session.velocity_mps()*3.6);})
+                    .map(|()|{ui.notice=format!("Partida guardada en la ranura {} · {:.0} m · {:.1} {}",slot+1,l.session.state.odometer_m,settings.display_speed_mps(l.session.velocity_mps()),settings.speed_unit_label());})
             }else{Err("No hay una partida activa".into())},
             UiCommand::Load(slot)=>if let Some(l)=live.as_mut(){
                 SavedGame::read(&slot_path(*slot)).and_then(|saved|{let weather=saved.weather;let environment=saved.environment.unwrap_or(crate::environment::EnvironmentSelection { manual_weather: weather, ..default() });let camera=saved.restore(l)?;content.weather=weather;content.environment=environment;commands.insert_resource(PendingSavedCamera(camera));Ok(())})
@@ -710,7 +722,7 @@ fn handle_buttons(
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
                 SettingField::AutomaticCant=>settings.automatic_cant= !settings.automatic_cant,
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
-                SettingField::Units=>settings.mph= !settings.mph,
+                SettingField::Units=>settings.toggle_speed_units(),
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
                 SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
                 SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
@@ -846,11 +858,12 @@ fn build_panel(
                         label(
                             p,
                             format!(
-                                "{}\n{} · {:.0} m · {:.1} km/h",
+                                "{}\n{} · {:.0} m · {:.1} {}",
                                 l.session.scenario_name,
                                 clock(l.clock_time_s()),
                                 l.session.state.odometer_m,
-                                l.session.velocity_mps() * 3.6
+                                settings.display_speed_mps(l.session.velocity_mps()),
+                                settings.speed_unit_label()
                             ),
                             17.0,
                             TEXT,
@@ -1435,7 +1448,7 @@ fn build_settings(
         );
         button(
             p,
-            format!("Velocidad: {}", if s.mph { "mph" } else { "km/h" }),
+            format!("Velocidad: {}", s.speed_unit_label()),
             UiCommand::Setting(SettingField::Units, 0.0),
         );
     });
@@ -1880,9 +1893,9 @@ fn update_panel_text(
                 let Some(l) = live.as_ref() else { continue };
                 let s = &l.session;
                 match kind {
-                    DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab),
+                    DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab, &settings),
                     DynamicText::Advanced => {
-                        let mut text = advanced_text(l, &content, ui.advanced_page);
+                        let mut text = advanced_text(l, &content, ui.advanced_page, &settings);
                         if ui.advanced_page == 2 {
                             if let (Some(assets), Some(track_cache)) =
                                 (assets.as_ref(), track_cache.as_ref())
@@ -1907,11 +1920,12 @@ fn update_panel_text(
                                     });
                                 if let Some(c) = comfort {
                                     text += &format!(
-                                        "\n\nCurva nativa: radio {:.0} m · peralte {:.0} mm\nTrocha de vía {:.3} m · confort de la formación {:.1} km/h\nAceleración lateral {:.3} m/s² · {}",
+                                        "\n\nCurva nativa: radio {:.0} m · peralte {:.0} mm\nTrocha de vía {:.3} m · confort de la formación {:.1} {}\nAceleración lateral {:.3} m/s² · {}",
                                         radius,
                                         cant * 1000.,
                                         gauge,
-                                        c.comfortable_speed_mps * 3.6,
+                                        settings.display_speed_mps(c.comfortable_speed_mps),
+                                        settings.speed_unit_label(),
                                         c.lateral_acceleration_mps2,
                                         if s.velocity_mps().abs() > c.comfortable_speed_mps {
                                             "Exceso de confort en curva"
@@ -1984,9 +1998,10 @@ fn update_panel_text(
                             s.graph.switch_position(id).unwrap_or_default()
                         ),
                         None => format!(
-                            "Jugador: {} · {:.1} km/h · {} tramos ocupados",
+                            "Jugador: {} · {:.1} {} · {} tramos ocupados",
                             s.current_edge_id().unwrap_or("—"),
-                            s.velocity_mps() * 3.6,
+                            settings.display_speed_mps(s.velocity_mps()),
+                            settings.speed_unit_label(),
                             s.occupied_edges().len()
                         ),
                     },
@@ -1999,17 +2014,24 @@ fn update_panel_text(
         }
     }
 }
-fn notebook_text(l: &LiveDrive, content: &ActivePlayerContent, tab: usize) -> String {
+fn notebook_text(
+    l: &LiveDrive,
+    content: &ActivePlayerContent,
+    tab: usize,
+    settings: &PlayerSettings,
+) -> String {
     let s = &l.session;
     let g = &s.gameplay;
     match tab {
         0 => format!(
-            "{}\n\n{}\n\nOBJETIVOS\nCompletar {}/{} paradas y llegar a {}.\nDetenerse a menos de 10 m del punto y por debajo de 0,36 km/h.\nAbrir puertas, completar el embarque y cerrarlas para salir.\nRespetar señales y límites. La tracción se corta con puertas abiertas.\n\nPROCEDIMIENTO\n{}\n\n{}",
+            "{}\n\n{}\n\nOBJETIVOS\nCompletar {}/{} paradas y llegar a {}.\nDetenerse a menos de 10 m del punto y por debajo de {:.2} {}.\nAbrir puertas, completar el embarque y cerrarlas para salir.\nRespetar señales y límites. La tracción se corta con puertas abiertas.\n\nPROCEDIMIENTO\n{}\n\n{}",
             s.scenario_name,
             content.description,
             g.next_stop_idx,
             g.stop_targets.len(),
             g.destination,
+            settings.display_speed_mps(0.1),
+            settings.speed_unit_label(),
             crate::driving_hud::service_instruction(s),
             "Usá Horarios para consultar todas las paradas y Evaluación para revisar el resultado."
         ),
@@ -2098,10 +2120,11 @@ fn notebook_text(l: &LiveDrive, content: &ActivePlayerContent, tab: usize) -> St
             );
             for r in &g.stop_results {
                 out += &format!(
-                    "\n{}: error {:.1} m · llegada {:.2} km/h · demora {:+.0} s · parada {:.0} s",
+                    "\n{}: error {:.1} m · llegada {:.2} {} · demora {:+.0} s · parada {:.0} s",
                     r.name,
                     r.position_error_m,
-                    r.arrival_speed_mps * 3.6,
+                    settings.display_speed_mps(r.arrival_speed_mps),
+                    settings.speed_unit_label(),
                     r.delay_s,
                     r.dwell_s
                 );
@@ -2183,17 +2206,23 @@ fn car_text(s: &LiveDriveSession, index: usize) -> String {
             .unwrap_or("—")
     )
 }
-fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> String {
+fn advanced_text(
+    l: &LiveDrive,
+    content: &ActivePlayerContent,
+    page: usize,
+    settings: &PlayerSettings,
+) -> String {
     let s = &l.session;
     let state = &s.state;
     let p = &s.physics;
+    let unit = settings.speed_unit_label();
     let mut out = format!("{} · {}\n\n", ADVANCED_PAGES[page], clock(l.clock_time_s()));
     match page {
         0 => {
             out += &format!(
-                "Velocidad {:.2} km/h · límite {:.1} km/h\nRegulador {:.0}% · freno {:.0}% · inversor {:.2}\nDistancia {:.1} m · tiempo {:.1} s · escala ×{:.0}\nEstado: {}\n{}",
-                s.velocity_mps() * 3.6,
-                s.effective_speed_limit_mps() * 3.6,
+                "Velocidad {:.2} {unit} · límite {:.1} {unit}\nRegulador {:.0}% · freno {:.0}% · inversor {:.2}\nDistancia {:.1} m · tiempo {:.1} s · escala ×{:.0}\nEstado: {}\n{}",
+                settings.display_speed_mps(s.velocity_mps()),
+                settings.display_speed_mps(s.effective_speed_limit_mps()),
                 s.driver_throttle * 100.0,
                 s.driver_brake * 100.0,
                 s.driver_direction,
@@ -2376,7 +2405,7 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
             }
             for service in &l.traffic.services {
                 out += &format!(
-                    "{}: {} · {:.1} km/h · {} paradas · {}\n",
+                    "{}: {} · {:.1} {unit} · {} paradas · {}\n",
                     service.id,
                     if !service.departed {
                         "Salida pendiente"
@@ -2385,7 +2414,7 @@ fn advanced_text(l: &LiveDrive, content: &ActivePlayerContent, page: usize) -> S
                     } else {
                         phase_name(service.session.gameplay.phase)
                     },
-                    service.session.velocity_mps() * 3.6,
+                    settings.display_speed_mps(service.session.velocity_mps()),
                     service.session.gameplay.stop_results.len(),
                     service.session.current_edge_id().unwrap_or("—")
                 );
@@ -2447,7 +2476,7 @@ pub struct MonitorEvent {
     pub text: String,
     pub color: Color,
 }
-pub fn monitor_events(s: &LiveDriveSession) -> Vec<MonitorEvent> {
+pub fn monitor_events(s: &LiveDriveSession, settings: &PlayerSettings) -> Vec<MonitorEvent> {
     let head = s.head_chainage_m();
     let mut before = 0.0;
     let mut out = vec![];
@@ -2464,7 +2493,11 @@ pub fn monitor_events(s: &LiveDriveSession) -> Vec<MonitorEvent> {
         {
             out.push(MonitorEvent {
                 distance_m: before - head,
-                text: format!("Límite {:.0} km/h", initial_limit * 3.6),
+                text: format!(
+                    "Límite {:.0} {}",
+                    settings.display_speed_mps(initial_limit),
+                    settings.speed_unit_label()
+                ),
                 color: CAUTION,
             });
         }
@@ -2474,7 +2507,11 @@ pub fn monitor_events(s: &LiveDriveSession) -> Vec<MonitorEvent> {
                 if (0.0..=5000.0).contains(&distance) {
                     out.push(MonitorEvent {
                         distance_m: distance,
-                        text: format!("Límite {:.0} km/h", post.speed_limit_kmh),
+                        text: format!(
+                            "Límite {:.0} {}",
+                            settings.display_speed_kmh(post.speed_limit_kmh),
+                            settings.speed_unit_label()
+                        ),
                         color: CAUTION,
                     });
                 }
@@ -2531,6 +2568,7 @@ fn update_monitor(
     mut last: Local<f32>,
     ui: Res<PlayerUiState>,
     live: Option<Res<LiveDrive>>,
+    settings: Res<PlayerSettings>,
     mut roots: Query<&mut Visibility, With<TrackMonitorRoot>>,
     bodies: Query<(Entity, Option<&Children>), With<TrackMonitorBody>>,
 ) {
@@ -2545,7 +2583,7 @@ fn update_monitor(
         return;
     }
     *last += time.delta_secs();
-    if *last < 0.4 {
+    if *last < 0.4 && !settings.is_changed() && !ui.is_changed() {
         return;
     }
     *last = 0.0;
@@ -2558,14 +2596,15 @@ fn update_monitor(
             commands.entity(*child).despawn();
         }
     }
-    let events = monitor_events(&l.session);
+    let events = monitor_events(&l.session, &settings);
     commands.entity(root).with_children(|p| {
         line(p, Vec2::new(20.0, 14.0), Vec2::new(20.0, 245.0), 3.0, MUTED);
         label(
             p,
             format!(
-                "Límite actual {:.0} km/h",
-                l.session.effective_speed_limit_mps() * 3.6
+                "Límite actual {:.0} {}",
+                settings.display_speed_mps(l.session.effective_speed_limit_mps()),
+                settings.speed_unit_label()
             ),
             11.0,
             TEXT,
@@ -2662,16 +2701,40 @@ mod tests {
     #[test]
     fn track_monitor_contains_real_station_signal_and_changing_distances() {
         let mut l = live();
-        let events = monitor_events(&l.session);
+        let edge_index = l.session.state.edge_index;
+        let post_position = l.session.pos_on_edge_m() + 50.0;
+        l.session.path_data.edges[edge_index]
+            .profile
+            .speed_posts
+            .push(openrailsrs_track::PositionSpeedLimit {
+                position_m: post_position,
+                speed_limit_kmh: 96.56064,
+            });
+        let settings = PlayerSettings::default();
+        let events = monitor_events(&l.session, &settings);
         assert!(events.iter().any(|e| e.text.contains("Northolt Park")));
         assert!(events.iter().any(|e| e.text.starts_with('●')));
+        assert!(events.iter().any(|e| e.text == "Límite 97 km/h"));
+        let imperial = monitor_events(
+            &l.session,
+            &PlayerSettings {
+                mph: true,
+                ..default()
+            },
+        );
+        assert!(imperial.iter().any(|e| e.text == "Límite 60 mph"));
+        assert!(imperial.iter().all(|e| !e.text.contains("km/h")));
+        assert_eq!(
+            events.iter().map(|e| e.distance_m).collect::<Vec<_>>(),
+            imperial.iter().map(|e| e.distance_m).collect::<Vec<_>>()
+        );
         let first = events
             .iter()
             .find(|e| e.text.starts_with('●'))
             .unwrap()
             .distance_m;
         l.session.state.pos_on_edge_m += 5.0;
-        let second = monitor_events(&l.session)
+        let second = monitor_events(&l.session, &settings)
             .into_iter()
             .find(|e| e.text.starts_with('●'))
             .unwrap()
@@ -2778,14 +2841,106 @@ mod tests {
     }
 
     #[test]
+    fn toolbar_and_u_change_display_units_without_pausing_or_changing_physics() {
+        let mut l = live();
+        l.paused = false;
+        l.session.state.velocity_mps = 10.0;
+        let mut app = App::new();
+        app.add_plugins(bevy::state::app::StatesPlugin)
+            .insert_state(ViewerAppState::Playing)
+            .insert_resource(l)
+            .init_resource::<PlayerUiState>()
+            .init_resource::<PlayerLaunchMenu>()
+            .init_resource::<crate::official_content::OfficialContent>()
+            .init_resource::<PlayerSettings>()
+            .init_resource::<PlayerLaunchQueue>()
+            .init_resource::<ActivePlayerContent>()
+            .init_resource::<CameraFollowMode>()
+            .init_resource::<DriverLookOffset>()
+            .init_resource::<crate::floating_origin::FloatingOrigin>()
+            .init_resource::<crate::camera::CameraMode>()
+            .init_resource::<crate::camera::LiveDriverCab>()
+            .init_resource::<crate::camera::PassengerCamState>()
+            .init_resource::<crate::cab_cvf_overlay::CabCvfOverlayState>()
+            .init_resource::<crate::cab_cvf::CabCvfState>()
+            .init_resource::<crate::teleport::TeleportDialog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .add_message::<AppExit>()
+            .add_systems(Startup, spawn_toolbar)
+            .add_systems(Update, (player_keys, handle_buttons).chain());
+        let camera = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<PlayerUiState>().camera = Some(camera);
+        app.update();
+        let mut buttons = app.world_mut().query::<(Entity, &UiCommand)>();
+        let button = buttons
+            .iter(app.world())
+            .find(|(_, command)| matches!(command, UiCommand::Setting(SettingField::Units, _)))
+            .map(|(entity, _)| entity)
+            .expect("the toolbar must offer the speed-units button");
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyU);
+        app.update();
+        let settings = app.world().resource::<PlayerSettings>();
+        assert!(settings.mph);
+        let l = app.world().resource::<LiveDrive>();
+        assert!(!l.paused);
+        assert_eq!(l.session.velocity_mps(), 10.0);
+        let text = advanced_text(l, &ActivePlayerContent::default(), 0, settings);
+        assert!(text.contains("Velocidad 22.37 mph"), "{text}");
+        assert!(!text.contains("km/h"));
+        let brief = notebook_text(l, &ActivePlayerContent::default(), 0, settings);
+        assert!(brief.contains("0.22 mph"), "{brief}");
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::None
+        );
+
+        // Holding U must not repeatedly toggle. A mouse click uses the real
+        // toolbar command, independently of the keyboard shortcut.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .clear();
+        app.update();
+        assert!(app.world().resource::<PlayerSettings>().mph);
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.world_mut()
+            .entity_mut(button)
+            .insert(Interaction::Pressed);
+        app.update();
+        let settings = app.world().resource::<PlayerSettings>();
+        assert!(!settings.mph);
+        let l = app.world().resource::<LiveDrive>();
+        assert!(!l.paused);
+        assert_eq!(l.session.velocity_mps(), 10.0);
+        let text = advanced_text(l, &ActivePlayerContent::default(), 0, settings);
+        assert!(text.contains("Velocidad 36.00 km/h"), "{text}");
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::None
+        );
+    }
+
+    #[test]
     fn notebook_and_every_hud_page_report_current_service() {
         let l = live();
         let content = ActivePlayerContent::default();
-        assert!(notebook_text(&l, &content, 1).contains("South Ruislip"));
-        assert!(notebook_text(&l, &content, 1).contains("West Ruislip"));
-        assert!(notebook_text(&l, &content, 2).contains("Paradas cumplidas: 0/3"));
+        assert!(
+            notebook_text(&l, &content, 1, &PlayerSettings::default()).contains("South Ruislip")
+        );
+        assert!(
+            notebook_text(&l, &content, 1, &PlayerSettings::default()).contains("West Ruislip")
+        );
+        assert!(
+            notebook_text(&l, &content, 2, &PlayerSettings::default())
+                .contains("Paradas cumplidas: 0/3")
+        );
         for (page, name) in ADVANCED_PAGES.iter().enumerate() {
-            let text = advanced_text(&l, &content, page);
+            let text = advanced_text(&l, &content, page, &PlayerSettings::default());
             assert!(text.starts_with(name));
             assert!(text.lines().count() > 2);
         }

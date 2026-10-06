@@ -1023,3 +1023,20 @@ ajustes y descargas quedan en los datos del usuario, fuera de la carpeta del
 paquete. `BUILD.json` identifica la compilación y glibc; este paquete de QA
 requiere el sistema del host de prueba o uno compatible. Snap sigue pendiente
 de instalación y prueba de confinamiento, según el issue #189.
+
+## 35. Cambiar km/h y mph durante la partida
+
+Con el tren en marcha, pulsá **U** o el botón **km/h ↔ mph** de la barra inferior.
+La velocidad y el límite del HUD deben cambiar de unidad sin pausar el tren:
+por ejemplo, **36 km/h** equivalen a **22,37 mph**. Repetí para regresar a km/h.
+Mantener U apretada debe producir un solo cambio.
+
+Abrí **F4**, **F7**, **F8** y el **mapa M**: sus velocidades y límites deben usar
+la misma selección. Las distancias, presiones y la física no cambian. Las agujas
+y números de los instrumentos originales mantienen la unidad de la cabina;
+un velocímetro cuya esfera dice MPH continúa mostrando mph.
+
+Para conservar la elección al reiniciar, abrí **F10 → Guardar ajustes**. Podés
+reasignar el atajo en F10. Si una configuración anterior ya usaba U para otra
+acción, esa asignación se conserva y **F6** muestra la tecla libre elegida para
+el nuevo control.

@@ -294,7 +294,10 @@ fn update_driving_hud(
     mut elapsed: Local<f32>,
 ) {
     *elapsed += time.delta_secs();
-    if *elapsed < 0.05 && !visibility.is_changed() {
+    if *elapsed < 0.05
+        && !visibility.is_changed()
+        && settings.as_ref().is_none_or(|s| !s.is_changed())
+    {
         return;
     }
     *elapsed = 0.0;
@@ -324,9 +327,8 @@ fn update_driving_hud(
         .as_ref()
         .map(|s| s.key_label(crate::player_settings::PlayerAction::Doors))
         .unwrap_or_else(|| "Q".into());
-    let mph = settings.is_some_and(|s| s.mph);
-    let unit = if mph { "mph" } else { "km/h" };
-    let factor = if mph { 1.0 / 1.609344 } else { 1.0 };
+    let unit = settings.as_ref().map_or("km/h", |s| s.speed_unit_label());
+    let display_speed = |kmh| settings.as_ref().map_or(kmh, |s| s.display_speed_kmh(kmh));
     for (field, mut text, mut color) in &mut fields {
         let (content, tint) = match field {
             HudField::Status => (
@@ -340,7 +342,7 @@ fn update_driving_hud(
                 if live.paused { CAUTION } else { MUTED },
             ),
             HudField::Speed => (
-                format!("{:.1} {unit}", cab.speed_kmh * factor),
+                format!("{:.1} {unit}", display_speed(cab.speed_kmh)),
                 if cab.speed_kmh > cab.limit_kmh + 5.0 {
                     ALERT
                 } else if cab.speed_kmh > cab.limit_kmh + 0.5 {
@@ -350,7 +352,7 @@ fn update_driving_hud(
                 },
             ),
             HudField::Limit => (
-                format!("Límite  {:.0} {unit}", cab.limit_kmh * factor),
+                format!("Límite  {:.0} {unit}", display_speed(cab.limit_kmh)),
                 MUTED,
             ),
             HudField::Controls => {

@@ -59,6 +59,7 @@ pub enum PlayerAction {
     Slower,
     TrackMonitor,
     DrivingHud,
+    SpeedUnits,
     Help,
     Notebook,
     AdvancedHud,
@@ -75,7 +76,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 32] = [
+    pub const ALL: [Self; 33] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -95,6 +96,7 @@ impl PlayerAction {
         Self::Slower,
         Self::TrackMonitor,
         Self::DrivingHud,
+        Self::SpeedUnits,
         Self::Help,
         Self::Notebook,
         Self::AdvancedHud,
@@ -130,6 +132,7 @@ impl PlayerAction {
             Self::Slower => "Reducir tiempo",
             Self::TrackMonitor => "Monitor de vía",
             Self::DrivingHud => "HUD de conducción",
+            Self::SpeedUnits => "Velocidad: km/h / mph",
             Self::Help => "Ayuda",
             Self::Notebook => "Libreta del servicio",
             Self::AdvancedHud => "HUD avanzado",
@@ -166,6 +169,7 @@ impl PlayerAction {
             Self::Slower => KeyCode::Minus,
             Self::TrackMonitor => KeyCode::F4,
             Self::DrivingHud => KeyCode::F5,
+            Self::SpeedUnits => KeyCode::KeyU,
             Self::Help => KeyCode::F6,
             Self::Notebook => KeyCode::F7,
             Self::AdvancedHud => KeyCode::F8,
@@ -234,6 +238,18 @@ impl Default for PlayerSettings {
 }
 
 impl PlayerSettings {
+    pub fn toggle_speed_units(&mut self) {
+        self.mph = !self.mph;
+    }
+    pub fn speed_unit_label(&self) -> &'static str {
+        if self.mph { "mph" } else { "km/h" }
+    }
+    pub fn display_speed_kmh(&self, kmh: f64) -> f64 {
+        if self.mph { kmh / 1.609344 } else { kmh }
+    }
+    pub fn display_speed_mps(&self, mps: f64) -> f64 {
+        self.display_speed_kmh(mps * 3.6)
+    }
     pub fn key(&self, action: PlayerAction) -> KeyCode {
         self.keys
             .get(&action)
@@ -514,5 +530,24 @@ mod tests {
         assert_eq!(upgraded.key(PlayerAction::Doors), KeyCode::KeyH);
         assert_ne!(upgraded.key(PlayerAction::Headlights), KeyCode::KeyH);
         upgraded.validate().unwrap();
+    }
+    #[test]
+    fn adding_speed_units_preserves_legacy_u_binding_and_unit_preference() {
+        let mut old = PlayerSettings::default();
+        old.keys.remove(&PlayerAction::SpeedUnits);
+        old.keys.insert(PlayerAction::Doors, "KeyU".into());
+        old.mph = true;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("settings.json");
+        std::fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let upgraded = PlayerSettings::load(&path).unwrap();
+        assert_eq!(upgraded.key(PlayerAction::Doors), KeyCode::KeyU);
+        assert_ne!(upgraded.key(PlayerAction::SpeedUnits), KeyCode::KeyU);
+        assert!(upgraded.mph);
+        upgraded.validate().unwrap();
+        upgraded.save(&path).unwrap();
+        let saved = PlayerSettings::load(&path).unwrap();
+        assert!(saved.mph);
+        assert_eq!(saved.keys, upgraded.keys);
     }
 }

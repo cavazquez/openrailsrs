@@ -9,6 +9,7 @@ use openrailsrs_sim::CabTelemetry;
 
 use crate::camera::CameraFollowMode;
 use crate::live::LiveDrive;
+use crate::player_settings::PlayerSettings;
 
 const PANEL_WIDTH_PX: f32 = 520.0;
 const PANEL_HEIGHT_PX: f32 = 210.0;
@@ -44,10 +45,14 @@ pub struct CabPanelContent {
     pub overspeed: bool,
 }
 
-pub fn build_cab_panel_content(tel: &CabTelemetry) -> CabPanelContent {
-    let speed_line = format!("{:.0}", tel.speed_kmh.round());
+pub fn build_cab_panel_content(tel: &CabTelemetry, settings: &PlayerSettings) -> CabPanelContent {
+    let speed_line = format!("{:.0}", settings.display_speed_kmh(tel.speed_kmh).round());
     let limit_line = if tel.limit_kmh.is_finite() {
-        format!("LIM {:.0} km/h", tel.limit_kmh)
+        format!(
+            "LIM {:.0} {}",
+            settings.display_speed_kmh(tel.limit_kmh),
+            settings.speed_unit_label()
+        )
     } else {
         "LIM —".into()
     };
@@ -87,6 +92,9 @@ pub(crate) struct CabModeBadge;
 
 #[derive(Component)]
 pub(crate) struct CabSpeedText;
+
+#[derive(Component)]
+pub(crate) struct CabSpeedUnit;
 
 #[derive(Component)]
 pub(crate) struct CabLimitText;
@@ -230,6 +238,7 @@ pub(crate) fn spawn_cab_panel(mut commands: Commands) {
                                         TextColor(COL_SPEED),
                                     ));
                                     col.spawn((
+                                        CabSpeedUnit,
                                         Text::new("km/h"),
                                         TextFont {
                                             font_size: FontSize::Px(FONT_LABEL),
@@ -319,9 +328,19 @@ pub(crate) fn update_cab_panel(
     follow: Res<CameraFollowMode>,
     visible: Res<CabPanelVisible>,
     live: Option<Res<LiveDrive>>,
+    settings: Res<PlayerSettings>,
     mut root: Query<&mut Visibility, With<CabPanelRoot>>,
     mut speed: Query<(&mut Text, &mut TextColor), With<CabSpeedText>>,
     mut limit: Query<&mut Text, (With<CabLimitText>, Without<CabSpeedText>)>,
+    mut unit: Query<
+        &mut Text,
+        (
+            With<CabSpeedUnit>,
+            Without<CabSpeedText>,
+            Without<CabLimitText>,
+            Without<CabDetailText>,
+        ),
+    >,
     mut detail: Query<
         &mut Text,
         (
@@ -361,7 +380,7 @@ pub(crate) fn update_cab_panel(
     }
     *vis = Visibility::Visible;
 
-    let content = build_cab_panel_content(&live.session.cab_telemetry());
+    let content = build_cab_panel_content(&live.session.cab_telemetry(), &settings);
     if let Ok((mut text, mut color)) = speed.single_mut() {
         **text = content.speed_line.clone();
         *color = if content.overspeed {
@@ -372,6 +391,9 @@ pub(crate) fn update_cab_panel(
     }
     if let Ok(mut text) = limit.single_mut() {
         **text = content.limit_line.clone();
+    }
+    if let Ok(mut text) = unit.single_mut() {
+        **text = settings.speed_unit_label().into();
     }
     if let Ok(mut text) = detail.single_mut() {
         **text = content.detail_line.clone();
@@ -409,12 +431,25 @@ mod tests {
             traction_load_fraction: 0.0,
             overspeed: false,
         };
-        let c = build_cab_panel_content(&tel);
+        let c = build_cab_panel_content(&tel, &PlayerSettings::default());
         assert_eq!(c.speed_line, "72");
+        assert_eq!(c.limit_line, "LIM 80 km/h");
         assert!(c.detail_line.contains("RPM 900"));
         assert!(c.detail_line.contains("INV FWD"));
         assert!((c.throttle_frac - 0.5).abs() < 1e-6);
         assert!((c.brake_frac - 0.25).abs() < 1e-6);
+        let imperial = build_cab_panel_content(
+            &tel,
+            &PlayerSettings {
+                mph: true,
+                ..default()
+            },
+        );
+        assert_eq!(imperial.speed_line, "45");
+        assert_eq!(imperial.limit_line, "LIM 50 mph");
+        assert_eq!(imperial.throttle_frac, c.throttle_frac);
+        assert_eq!(imperial.brake_frac, c.brake_frac);
+        assert_eq!(imperial.overspeed, c.overspeed);
     }
 
     #[test]
@@ -438,7 +473,7 @@ mod tests {
             traction_load_fraction: 0.0,
             overspeed: true,
         };
-        let c = build_cab_panel_content(&tel);
+        let c = build_cab_panel_content(&tel, &PlayerSettings::default());
         assert!(c.overspeed);
         assert!(c.detail_line.contains("P 12.0 bar"));
     }

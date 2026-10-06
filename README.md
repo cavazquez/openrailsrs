@@ -71,7 +71,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 - Pausa, guardado/carga del jugador y tráfico, libreta F7, formación F9, mapa/despachador M, ajustes F10 y controles con ratón en cabina.
 - Operaciones F9: frenos de mano, mangueras y llaves de freno, batería, tracción y mando múltiple; desacoplar una sección posterior asegurada y volver a acoplarla sobre el mismo recorrido. Retroceso con el tren detenido y protección contra operaciones inválidas.
 - Mapa M con red, itinerario, estaciones, jugador y tráfico; órdenes de señales, cambios libres y recálculo del recorrido. Las órdenes sobre vías ocupadas se rechazan.
-- HUD de conducción F5, monitor gráfico de vía F4, ayuda F6 y diez páginas de HUD avanzado F8: formación, locomotora, potencia distribuida, alimentación, frenos, fuerzas, despachador, clima y diagnóstico, además de la vista general.
+- HUD de conducción F5, monitor gráfico de vía F4, ayuda F6 y diez páginas de HUD avanzado F8: formación, locomotora, potencia distribuida, alimentación, frenos, fuerzas, despachador, clima y diagnóstico, además de la vista general. El botón **km/h ↔ mph** de la barra inferior y la tecla **U** alternan las unidades de velocidad y límites durante la partida; F10 permite reasignar la tecla y guardar la preferencia. Los instrumentos originales conservan la escala indicada por su modelo.
 - Ajustes persistentes de distancia, campo visual, escala de interfaz, unidades, sombras, niebla, volumen, puesto de conducción y controles. Las asignaciones rechazan conflictos; Q opera puertas sin mover la cámara. Texto con tildes y caracteres españoles.
 
 ### Cabina, escenario y clima

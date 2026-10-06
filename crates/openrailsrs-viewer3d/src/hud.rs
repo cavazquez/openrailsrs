@@ -18,6 +18,7 @@ pub(crate) struct HudAtmosphere<'w> {
     precipitation: Res<'w, PrecipitationState>,
     fog: Res<'w, FogState>,
     load_diag: Option<Res<'w, openrailsrs_bevy_scenery::MstsLoadDiagnostics>>,
+    settings: Option<Res<'w, crate::player_settings::PlayerSettings>>,
 }
 
 /// Window / route title shown in the HUD (set from `main` at launch).
@@ -433,6 +434,7 @@ pub fn build_hud_content_live(
     camera_pos: Vec3,
     orbit_focus: Option<Vec3>,
     cab_render_diag: Option<&str>,
+    settings: Option<&crate::player_settings::PlayerSettings>,
 ) -> HudContent {
     let coords = format_coords_line(camera_pos, orbit_focus);
     let rain_label = precipitation.hud_label();
@@ -456,6 +458,8 @@ pub fn build_hud_content_live(
     let cam_label = camera_status_label(camera_mode, follow);
     let vel_kmh = live.session.velocity_mps() * 3.6;
     let limit_kmh = live.session.effective_speed_limit_mps() * 3.6;
+    let unit = settings.map_or("km/h", |s| s.speed_unit_label());
+    let display_speed = |kmh| settings.map_or(kmh, |s| s.display_speed_kmh(kmh));
     let gp = &live.session.gameplay;
     let dist_line = live
         .session
@@ -499,10 +503,10 @@ pub fn build_hud_content_live(
             .to_string()
     };
     let mut row2 = format!(
-        "{coords}    t={:.1}s  {:.0} km/h  lim {:.0} km/h  thr={:.0}%  br={:.0}%  sim={:.1}x",
+        "{coords}    t={:.1}s  {:.0} {unit}  lim {:.0} {unit}  thr={:.0}%  br={:.0}%  sim={:.1}x",
         live.session.time_s(),
-        vel_kmh,
-        limit_kmh,
+        display_speed(vel_kmh),
+        display_speed(limit_kmh),
         live.session.driver_throttle * 100.0,
         live.session.driver_brake * 100.0,
         live.session.speed_mul,
@@ -519,7 +523,7 @@ pub fn build_hud_content_live(
         ),
         row2,
         progress: live.session.route_progress() as f32,
-        trains: format!("live {:.0} km/h", vel_kmh),
+        trains: format!("live {:.0} {unit}", display_speed(vel_kmh)),
         controls,
         status_is_paused: live.session.arrived || live.paused,
         show_row2: true,
@@ -594,6 +598,7 @@ pub(crate) fn update_hud(
             camera_pos,
             orbit_focus,
             cab_diag.as_ref().and_then(|d| d.hud_line.as_deref()),
+            atmosphere.settings.as_deref(),
         )
     } else {
         build_hud_content(
