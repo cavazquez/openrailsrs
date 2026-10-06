@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 
-use openrailsrs_formats::PathFile;
+use openrailsrs_formats::{PathFile, TrackDbFile, TrackNodeKind};
 use openrailsrs_route::{
     MstsAlias, load_route_from_dir,
     path::{edge_path, edge_path_ignoring_switches, edge_path_via_waypoints},
@@ -12,6 +12,8 @@ use openrailsrs_scenarios::model::{SwitchDef, SwitchPositionDef};
 use openrailsrs_track::TrackGraph;
 
 use crate::error::MstsError;
+
+type NativePathPolylines = HashMap<String, Vec<(f64, f64)>>;
 
 /// Route start/destination hints derived from a player path and service file.
 #[derive(Debug, Clone)]
@@ -113,13 +115,20 @@ pub fn placement_for_pat_with_consist(
 ) -> Result<RouteHints, MstsError> {
     let path_file = PathFile::from_path(pat_path)?;
     if path_file.has_world_pdps() {
-        return placement_from_world(graph, aliases, &path_file, consist_length_m);
+        let polylines = native_path_polylines(graph, aliases, pat_path)?;
+        return placement_from_world(
+            graph,
+            aliases,
+            &path_file,
+            consist_length_m,
+            polylines.as_ref(),
+        );
     }
 
     let resolved = resolve_pat_sequence(graph, aliases, &path_file)?;
     let (start, offset) = placement_from_distance(graph, &resolved, start_offset_m)?;
     let destination = pick_destination_node(graph, &start, &resolved)?;
-    let switches = switches_from_pat(&path_file, graph, aliases, &start, &destination)?;
+    let switches = switches_from_pat(&path_file, graph, aliases, &start, &destination, offset)?;
 
     Ok(RouteHints {
         start,
@@ -138,6 +147,7 @@ fn placement_from_world(
     aliases: &HashMap<u32, MstsAlias>,
     path_file: &PathFile,
     consist_length_m: Option<f64>,
+    polylines: Option<&NativePathPolylines>,
 ) -> Result<RouteHints, MstsError> {
     let world_pdps = world_pdps_for_placement(path_file);
     if world_pdps.is_empty() {
@@ -149,15 +159,16 @@ fn placement_from_world(
     let sample = world_pdps[0];
     let path_dir = world_pdps.get(1).map(|next| {
         (
-            (next.graph_x_m() - sample.graph_x_m()) as f32,
-            (next.graph_z_m() - sample.graph_z_m()) as f32,
+            next.graph_x_m() - sample.graph_x_m(),
+            next.graph_z_m() - sample.graph_z_m(),
         )
     });
-    let (start, rear_offset) = snap_world_to_edge(
+    let (start, rear_offset, _) = snap_world_to_edge(
         graph,
-        sample.graph_x_m() as f32,
-        sample.graph_z_m() as f32,
+        sample.graph_x_m(),
+        sample.graph_z_m(),
         path_dir,
+        polylines,
     )?;
     // Default: keep rear snap as written offset (Chiltern scenario.toml is calibrated).
     // With consist length: convert to head for OR rear-traveller parity (#132).
@@ -166,9 +177,16 @@ fn placement_from_world(
         _ => rear_offset,
     };
 
-    let destination = destination_from_world_pdps(graph, &start, &world_pdps)?;
+    let destination = destination_from_world_pdps(graph, &start, &world_pdps, polylines)?;
 
-    let switches = switches_from_pat(path_file, graph, aliases, &start, &destination)?;
+    let switches = switches_from_pat(
+        path_file,
+        graph,
+        aliases,
+        &start,
+        &destination,
+        start_offset_m,
+    )?;
 
     Ok(RouteHints {
         start,
@@ -176,6 +194,69 @@ fn placement_from_world(
         start_offset_m,
         switches,
     })
+}
+
+/// Native section anchors distinguish curved/parallel tracks which share an
+/// inaccurate junction-to-junction chord. Keep synthetic graph-only PAT support.
+fn native_path_polylines(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    pat: &Path,
+) -> Result<Option<NativePathPolylines>, MstsError> {
+    let Some(paths) = pat.parent().filter(|p| {
+        p.file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("PATHS"))
+    }) else {
+        return Ok(None);
+    };
+    let Some(route) = paths.parent() else {
+        return Ok(None);
+    };
+    let mut files = std::fs::read_dir(route)?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("tdb")))
+        .collect::<Vec<_>>();
+    files.sort();
+    let Some(tdb) = files.first() else {
+        return Ok(None);
+    };
+    if std::fs::metadata(tdb)?.len() > 64 * 1024 * 1024 {
+        return Err(MstsError::msg("Native path track database exceeds 64 MiB"));
+    }
+    let tdb = TrackDbFile::from_path(tdb)?;
+    let mut out = HashMap::new();
+    for node in &tdb.nodes {
+        let TrackNodeKind::Vector { sections, .. } = &node.kind else {
+            continue;
+        };
+        let Some(alias) = aliases.get(&node.id) else {
+            continue;
+        };
+        let Some(edge) = graph.edge(&alias.id) else {
+            continue;
+        };
+        let (Some(from), Some(to)) = (graph.node(&edge.from.0), graph.node(&edge.to.0)) else {
+            continue;
+        };
+        if sections.is_empty() {
+            continue;
+        }
+        let mut points = vec![(from.x_m, from.y_m)];
+        points.extend(
+            sections
+                .iter()
+                .map(|s| (s.start.graph_x_m(), s.start.graph_z_m())),
+        );
+        points.push((to.x_m, to.y_m));
+        out.insert(alias.id.clone(), points.clone());
+        let reverse = format!("{}_r", alias.id);
+        if graph.edge(&reverse).is_some() {
+            points.reverse();
+            out.insert(reverse, points);
+        }
+    }
+    Ok((!out.is_empty()).then_some(out))
 }
 
 fn world_pdps_for_placement(path_file: &PathFile) -> Vec<openrailsrs_formats::TrackVectorPoint> {
@@ -196,7 +277,40 @@ fn destination_from_world_pdps(
     graph: &TrackGraph,
     start: &str,
     world_pdps: &[openrailsrs_formats::TrackVectorPoint],
+    polylines: Option<&NativePathPolylines>,
 ) -> Result<String, MstsError> {
+    if let Some(polylines) = polylines
+        && let Some(last) = world_pdps.last()
+    {
+        // An endpoint inside a station vector can be closer to a node on
+        // another track. Keep the native vector containing the authored end.
+        let nearest = nearest_node_id(graph, last).filter(|id| {
+            graph
+                .node(id)
+                .is_some_and(|node| sq_dist_node(last.graph_x_m(), last.graph_z_m(), node) < 0.0025)
+        });
+        let destination = if let Some(node) = nearest {
+            node
+        } else {
+            let direction = world_pdps.iter().rev().nth(1).map(|previous| {
+                (
+                    last.graph_x_m() - previous.graph_x_m(),
+                    last.graph_z_m() - previous.graph_z_m(),
+                )
+            });
+            let (_, _, end) = snap_world_to_edge(
+                graph,
+                last.graph_x_m(),
+                last.graph_z_m(),
+                direction,
+                Some(polylines),
+            )?;
+            end
+        };
+        if destination != start && edge_path_ignoring_switches(graph, start, &destination).is_ok() {
+            return Ok(destination);
+        }
+    }
     let mut last_ok: Option<(String, f64)> = None;
     let mut useful: Option<(String, f64)> = None;
     const USEFUL_PATH_M: f64 = 5_000.0;
@@ -268,40 +382,57 @@ pub fn point_along_world_polyline(
 /// Uses `f64` throughout — Bevy/graph coords are ~1e7 m, where `f32` loses sub-metre precision.
 fn snap_world_to_edge(
     graph: &TrackGraph,
-    px: f32,
-    pz: f32,
-    path_dir: Option<(f32, f32)>,
-) -> Result<(String, f64), MstsError> {
-    let px = px as f64;
-    let pz = pz as f64;
-    let path_dir = path_dir.map(|(x, z)| (x as f64, z as f64));
+    px: f64,
+    pz: f64,
+    path_dir: Option<(f64, f64)>,
+    polylines: Option<&NativePathPolylines>,
+) -> Result<(String, f64, String), MstsError> {
     let mut best: Option<(f64, String, String, f64, f64, f64)> = None;
-    for (_eid, edge) in graph.edges_iter() {
+    for (eid, edge) in graph.edges_iter() {
         let Some(from) = graph.node(&edge.from.0) else {
             continue;
         };
         let Some(to) = graph.node(&edge.to.0) else {
             continue;
         };
-        let ax = from.x_m;
-        let az = from.y_m;
-        let bx = to.x_m;
-        let bz = to.y_m;
-        let dx = bx - ax;
-        let dz = bz - az;
-        let len2 = dx * dx + dz * dz;
-        if len2 < 1e-6 {
+        let chord = [(from.x_m, from.y_m), (to.x_m, to.y_m)];
+        let points = polylines
+            .and_then(|p| p.get(eid))
+            .map(Vec::as_slice)
+            .unwrap_or(&chord);
+        let total = points
+            .windows(2)
+            .map(|p| (p[1].0 - p[0].0).hypot(p[1].1 - p[0].1))
+            .sum::<f64>();
+        if total <= 1e-6 {
             continue;
         }
-        let t = (((px - ax) * dx + (pz - az) * dz) / len2).clamp(0.0, 1.0);
-        let qx = ax + t * dx;
-        let qz = az + t * dz;
-        let dist2 = (px - qx) * (px - qx) + (pz - qz) * (pz - qz);
+        let mut before = 0.0;
+        let mut closest = (f64::INFINITY, 0.0, 0.0, 0.0);
+        for pair in points.windows(2) {
+            let (ax, az) = pair[0];
+            let (dx, dz) = (pair[1].0 - ax, pair[1].1 - az);
+            let length = dx.hypot(dz);
+            if length <= 1e-6 {
+                continue;
+            }
+            let t = (((px - ax) * dx + (pz - az) * dz) / (length * length)).clamp(0.0, 1.0);
+            let dist2 = (px - ax - t * dx).powi(2) + (pz - az - t * dz).powi(2);
+            if dist2 < closest.0 {
+                closest = (
+                    dist2,
+                    (before + t * length) / total,
+                    dx / length,
+                    dz / length,
+                );
+            }
+            before += length;
+        }
+        let (dist2, t, dx, dz) = closest;
         let align = path_dir
             .map(|(pdx, pdz)| {
-                let el = (dx * dx + dz * dz).sqrt().max(1e-9);
                 let pl = (pdx * pdx + pdz * pdz).sqrt().max(1e-9);
-                (dx * pdx + dz * pdz) / (el * pl)
+                (dx * pdx + dz * pdz) / pl
             })
             .unwrap_or(1.0);
         let better = match &best {
@@ -334,12 +465,12 @@ fn snap_world_to_edge(
         (to, ((1.0 - t) * len).clamp(0.0, len), from)
     };
     if !graph.outgoing_edges(&cand_start).is_empty() {
-        return Ok((cand_start, cand_offset));
+        return Ok((cand_start, cand_offset, cand_other));
     }
     if !graph.outgoing_edges(&cand_other).is_empty() {
-        return Ok((cand_other, (len - cand_offset).clamp(0.0, len)));
+        return Ok((cand_other, (len - cand_offset).clamp(0.0, len), cand_start));
     }
-    Ok((cand_start, cand_offset))
+    Ok((cand_start, cand_offset, cand_other))
 }
 
 /// Convenience: load `track.toml` from `route_dir` and compute hints.
@@ -450,7 +581,14 @@ pub fn pat_waypoints_from_world(
                 continue;
             }
         }
-        let Some(nid) = nearest_node_id(graph, w) else {
+        // The last PDP may be inside the destination vector. Its nearest
+        // junction can belong to another parallel track; placement already
+        // resolved the actual native endpoint.
+        let Some(nid) = (if i + 1 == world_pdps.len() {
+            Some(destination.to_string())
+        } else {
+            nearest_node_id(graph, w)
+        }) else {
             continue;
         };
         if waypoints.last().map(String::as_str) == Some(nid.as_str()) {
@@ -782,7 +920,22 @@ fn switches_from_pat(
     aliases: &HashMap<u32, MstsAlias>,
     start: &str,
     destination: &str,
+    start_offset_m: f64,
 ) -> Result<Vec<SwitchDef>, MstsError> {
+    if path_file.has_world_pdps() {
+        // A global shortest route may take another branch than the authored PAT.
+        // Align switches to each ordered waypoint hop, before runtime traversal.
+        let waypoints =
+            pat_waypoints_from_world(graph, path_file, start, destination, start_offset_m)?;
+        let mut edges = Vec::new();
+        for pair in waypoints.windows(2) {
+            edges.extend(
+                edge_path_ignoring_switches(graph, &pair[0], &pair[1])
+                    .map_err(|e| MstsError::msg(e.to_string()))?,
+            );
+        }
+        return Ok(switches_for_edges(graph, &edges));
+    }
     let mut out = Vec::new();
     for pdp in &path_file.pdps {
         // TrPathPDP junction_flag 1 = diverging. Native TrackPDP uses flag1==2 for junctions
@@ -819,6 +972,10 @@ fn switches_for_route(
 ) -> Result<Vec<SwitchDef>, MstsError> {
     let edge_ids = edge_path_ignoring_switches(graph, start, destination)
         .map_err(|e| MstsError::Msg(e.to_string()))?;
+    Ok(switches_for_edges(graph, &edge_ids))
+}
+
+fn switches_for_edges(graph: &TrackGraph, edge_ids: &[String]) -> Vec<SwitchDef> {
     let mut out = Vec::new();
     for (node_id, node) in graph.nodes_iter() {
         let openrailsrs_track::NodeKind::Switch {
@@ -842,12 +999,184 @@ fn switches_for_route(
             });
         }
     }
-    Ok(out)
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openrailsrs_core::{EdgeId, NodeId};
+    use openrailsrs_track::{Edge, Node, NodeKind, SwitchPosition};
+
+    #[test]
+    fn native_anchors_choose_the_curved_platform_instead_of_a_neighbouring_chord() {
+        let mut graph = TrackGraph::new();
+        let (x, z) = (-12_450_000.125, -30_566_000.25);
+        for (id, dx, dz) in [
+            ("correct_start", -10.0, 0.0),
+            ("correct_end", -10.0, 100.0),
+            ("other_start", 0.2, 0.0),
+            ("other_end", 0.2, 100.0),
+        ] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind: NodeKind::Plain,
+                    x_m: x + dx,
+                    y_m: z + dz,
+                })
+                .unwrap();
+        }
+        let mut polylines = HashMap::new();
+        for (id, start, end, dx) in [
+            ("correct", "correct_start", "correct_end", 0.0),
+            ("other", "other_start", "other_end", 10.0),
+        ] {
+            let from = graph.node(start).unwrap();
+            let to = graph.node(end).unwrap();
+            let mut points = vec![
+                (from.x_m, from.y_m),
+                (x + dx, z),
+                (x + dx, z + 100.0),
+                (to.x_m, to.y_m),
+            ];
+            polylines.insert(id.to_string(), points.clone());
+            points.reverse();
+            polylines.insert(format!("{id}_r"), points);
+            for (edge, a, b) in [
+                (id.to_string(), start, end),
+                (format!("{id}_r"), end, start),
+            ] {
+                graph
+                    .insert_edge(Edge {
+                        id: EdgeId(edge),
+                        from: NodeId(a.into()),
+                        to: NodeId(b.into()),
+                        length_m: 100.0,
+                        speed_limit_mps: 20.0,
+                        grade_percent: 0.0,
+                    })
+                    .unwrap();
+            }
+        }
+        let chord = snap_world_to_edge(&graph, x, z + 50.0, Some((0.0, 1.0)), None).unwrap();
+        assert_eq!(chord.0, "other_start");
+        let native =
+            snap_world_to_edge(&graph, x, z + 50.0, Some((0.0, 1.0)), Some(&polylines)).unwrap();
+        assert_eq!(native.0, "correct_start");
+        assert_eq!(native.2, "correct_end");
+        assert!((native.1 - 50.0).abs() < 1e-6);
+        let reverse =
+            snap_world_to_edge(&graph, x, z + 50.0, Some((0.0, -1.0)), Some(&polylines)).unwrap();
+        assert_eq!(reverse.0, "correct_end");
+        assert_eq!(reverse.2, "correct_start");
+        assert!((reverse.1 - 50.0).abs() < 1e-6);
+
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("other_track_connection".into()),
+                from: NodeId("correct_end".into()),
+                to: NodeId("other_start".into()),
+                length_m: 100.0,
+                speed_limit_mps: 20.0,
+                grade_percent: 0.0,
+            })
+            .unwrap();
+        let worlds = [z, z + 50.0].map(|z| openrailsrs_formats::TrackVectorPoint {
+            tile_x: 0,
+            tile_z: 0,
+            x,
+            y: 0.0,
+            z: -z,
+        });
+        assert_ne!(
+            destination_from_world_pdps(&graph, "correct_start", &worlds, None).unwrap(),
+            "correct_end"
+        );
+        assert_eq!(
+            destination_from_world_pdps(&graph, "correct_start", &worlds, Some(&polylines))
+                .unwrap(),
+            "correct_end"
+        );
+    }
+
+    #[test]
+    fn native_waypoints_align_switches_to_the_authored_branch() {
+        let mut graph = TrackGraph::new();
+        for (id, x, z) in [
+            ("start", 0.0, 0.0),
+            ("junction", 100.0, 0.0),
+            ("via", 200.0, 100.0),
+            ("end", 300.0, 0.0),
+        ] {
+            let kind = if id == "junction" {
+                NodeKind::Switch {
+                    stem_edge: EdgeId("direct".into()),
+                    diverging_edge: EdgeId("scenic".into()),
+                }
+            } else {
+                NodeKind::Plain
+            };
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind,
+                    x_m: x,
+                    y_m: z,
+                })
+                .unwrap();
+        }
+        for (id, from, to) in [
+            ("lead", "start", "junction"),
+            ("direct", "junction", "end"),
+            ("scenic", "junction", "via"),
+            ("finish", "via", "end"),
+        ] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId(from.into()),
+                    to: NodeId(to.into()),
+                    length_m: 100.0,
+                    speed_limit_mps: 20.0,
+                    grade_percent: 0.0,
+                })
+                .unwrap();
+        }
+        let path = PathFile {
+            name: "Original branch".into(),
+            pdps: [(0.0, 0.0), (100.0, 0.0), (200.0, -100.0), (300.0, 0.0)]
+                .into_iter()
+                .map(|(x, z)| openrailsrs_formats::PathDataPoint {
+                    node_id: None,
+                    junction_flag: 2,
+                    invalid_flag: 0,
+                    world: Some(openrailsrs_formats::TrackVectorPoint {
+                        tile_x: 0,
+                        tile_z: 0,
+                        x,
+                        y: 0.0,
+                        z,
+                    }),
+                })
+                .collect(),
+        };
+        assert_eq!(
+            edge_path(&graph, "start", "end").unwrap(),
+            ["lead", "direct"]
+        );
+        let switches =
+            switches_from_pat(&path, &graph, &HashMap::new(), "start", "end", 0.0).unwrap();
+        assert_eq!(switches.len(), 1);
+        assert!(matches!(switches[0].position, SwitchPositionDef::Diverging));
+        graph
+            .set_switch("junction", SwitchPosition::Diverging)
+            .unwrap();
+        assert_eq!(
+            edge_path(&graph, "start", "end").unwrap(),
+            ["lead", "scenic", "finish"]
+        );
+    }
 
     #[test]
     fn head_offset_from_rear_snap_adds_consist_length() {
@@ -980,8 +1309,8 @@ mod tests {
             pat_path.len()
         );
         assert!(
-            pat_path.iter().any(|e| e == "e17466_r"),
-            "path should continue via e17466_r, got {:?}",
+            pat_path.first().is_some_and(|e| e == "e17431_r"),
+            "native platform 6 must use e17431_r instead of a detour through the neighbouring platform, got {:?}",
             &pat_path[..pat_path.len().min(8)]
         );
         assert!(
@@ -990,7 +1319,7 @@ mod tests {
             wps.len()
         );
         assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
-        assert_eq!(hints.start, "n17368");
+        assert_eq!(hints.start, "n17361");
         let spawn_dist = spawn_distance_to_pat_start(&graph, &hints, &path_file);
         assert!(
             spawn_dist < 150.0,

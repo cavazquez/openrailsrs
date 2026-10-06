@@ -85,6 +85,65 @@ class Installer(unittest.TestCase):
         self.assertEqual(content.player_data_dir({'SNAP_USER_COMMON':'/home/test/snap/app/common','SNAP_USER_DATA':'/home/test/snap/app/7'}),Path('/home/test/snap/app/common/openrailsrs'))
         self.assertEqual(content.player_data_dir({'HOME':'/home/test','XDG_DATA_HOME':'bad-relative'}),Path('/home/test/.local/share/openrailsrs'))
 
+    def test_chiltern_v4_has_a_distinct_original_source_and_preserves_v2(self):
+        entries = {entry['id']: entry for entry in content.catalog()['routes']}
+        new = entries['chiltern-v4']
+        old = new['previousSources'][0] | {'compensation': 'free', 'author': new['author']}
+        self.assertNotIn('chiltern', entries, 'The old repository now redirects to v4')
+        self.assertEqual(old['url'], 'https://github.com/DocMartin7644/Chiltern-Route-v2.git')
+        self.assertEqual(new['url'], 'https://github.com/DocMartin7644/Chiltern-Route-v4.git')
+        self.assertEqual(old['author'], new['author'])
+        self.assertEqual(content.provider(new), 'github')
+        payload = archive([('Chiltern/ROUTES/Chiltern/Chiltern.trk', 'route'),
+                           ('Chiltern/ROUTES/Chiltern/WORLD/tile.w', 'world'),
+                           ('Chiltern/LICENSE.txt', 'original licence')])
+
+        def resolve(entry):
+            repository = entry['url'].removeprefix('https://github.com/').removesuffix('.git')
+            return 'https://codeload.github.com/' + repository + '/zip/' + '1' * 40, {
+                'repository': repository, 'commit': '1' * 40}
+
+        with patch.object(content, 'emit'), patch.object(content, 'resolve_download', side_effect=resolve):
+            previous = content.install(old | {'installSize': 0}, self.root, opener=lambda _: Response(payload))
+            current = content.install(new | {'installSize': 0}, self.root, opener=lambda _: Response(payload))
+            reused = content.install(new | {'installSize': 0}, self.root,
+                                     opener=lambda _: self.fail('The installed v4 revision must be reused'))
+        self.assertNotEqual(previous, current)
+        self.assertEqual(current, reused)
+        self.assertTrue(previous.name.startswith('chiltern-'))
+        self.assertTrue(current.name.startswith('chiltern-v4-'))
+        self.assertEqual((previous / 'Chiltern/LICENSE.txt').read_text(), 'original licence')
+        manifest = json.loads((current / 'openrailsrs-content.json').read_text())
+        self.assertEqual(manifest['catalog_source'], new['source_url'])
+        self.assertEqual(manifest['advertised_url'], new['url'])
+
+    def test_renamed_repository_reuses_legacy_copy_only_for_the_same_current_commit(self):
+        new = next(entry for entry in content.catalog()['routes'] if entry['id'] == 'chiltern-v4')
+        old = new['previousSources'][0] | {'compensation': 'free', 'author': new['author'], 'installSize': 0}
+        current = dict(repository='DocMartin7644/Chiltern-Route-v4', commit='1' * 40)
+        updated = current | {'commit': '2' * 40}
+        payload = lambda text: archive([('Chiltern/ROUTES/Chiltern/Chiltern.trk', text),
+                                        ('Chiltern/ROUTES/Chiltern/WORLD/tile.w', 'world')])
+        with patch.object(content, 'emit'), patch.object(content, 'resolve_download', side_effect=[
+                ('https://codeload.github.com/original/zip/1', current),
+                ('https://codeload.github.com/original/zip/1', current),
+                ('https://codeload.github.com/original/zip/2', updated)]):
+            previous = content.install(old, self.root, opener=lambda _: Response(payload('old')))
+            reused = content.install(new | {'installSize': 0}, self.root,
+                                     opener=lambda _: self.fail('A renamed origin with the same commit must reuse the legacy copy'))
+            latest = content.install(new | {'installSize': 0}, self.root, opener=lambda _: Response(payload('new')))
+        self.assertEqual(previous, reused)
+        self.assertNotEqual(previous, latest)
+        self.assertEqual((previous / 'Chiltern/ROUTES/Chiltern/Chiltern.trk').read_text(), 'old')
+        self.assertEqual((latest / 'Chiltern/ROUTES/Chiltern/Chiltern.trk').read_text(), 'new')
+
+    def test_legacy_cli_package_alias_uses_the_canonical_author_entry(self):
+        with patch('sys.argv', ['download_official_content.py', '--package', 'chiltern']), \
+                patch.object(content, 'install') as install:
+            content.main()
+        self.assertEqual(install.call_args.args[0]['id'], 'chiltern-v4')
+        self.assertEqual(install.call_args.args[0]['url'], 'https://github.com/DocMartin7644/Chiltern-Route-v4.git')
+
     def test_malformed_cached_metadata_does_not_prevent_a_fresh_install(self):
         bad=self.root/(self.entry['id']+'-malformed')
         bad.mkdir(); (bad/'openrailsrs-content.json').write_text('[]')
@@ -124,6 +183,23 @@ class Installer(unittest.TestCase):
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 with self.assertRaises(ValueError):
                     content.safe_members(z, maximum)
+
+    def test_unicode_texture_names_remain_distinct_without_hiding_case_collisions(self):
+        files = [('TEXTURES/DFußballfeld.ace', b'original sharp-s texture'),
+                 ('TEXTURES/DFussballfeld.ace', b'original double-s texture')]
+        source = self.root / 'textures.zip'
+        source.write_bytes(archive(files))
+        destination = self.root / 'textures'
+        destination.mkdir()
+        with patch.object(content, 'emit'):
+            content.extract(source, destination, max_install=1024)
+        for name, data in files:
+            self.assertEqual((destination / name).read_bytes(), data)
+        for files in [[('TEXTURES/Ä.ace', 'one'), ('textures/ä.ACE', 'two')],
+                      [('CAB/file.cvf', 'one'), ('cab/FILE.CVF', 'two')]]:
+            with zipfile.ZipFile(io.BytesIO(archive(files))) as z:
+                with self.assertRaises(ValueError):
+                    content.safe_members(z, 1024)
 
     def test_corrupt_or_executable_only_package_does_not_publish(self):
         for data in [b'not a zip', archive([('installer.exe', b'not executed')])]:

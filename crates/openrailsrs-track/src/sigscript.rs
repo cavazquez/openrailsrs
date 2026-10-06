@@ -334,6 +334,17 @@ fn constant(name: &str) -> Option<f64> {
         "SIGFN_REPEATER" => 2.,
         "SIGFN_SHUNTING" => 3.,
         "SIGFN_INFO" => 4.,
+        // OR 1.6.1 SignalSubTypes: selectors index the original WORLD flags.
+        "SIGFEAT_DECOR" => 0.,
+        "SIGFEAT_SIGNAL_HEAD" => 1.,
+        "SIGFEAT_DUMMY1" => 2.,
+        "SIGFEAT_DUMMY2" => 3.,
+        "SIGFEAT_NUMBER_PLATE" => 4.,
+        "SIGFEAT_GRADIENT_PLATE" => 5.,
+        "SIGFEAT_USER1" => 6.,
+        "SIGFEAT_USER2" => 7.,
+        "SIGFEAT_USER3" => 8.,
+        "SIGFEAT_USER4" => 9.,
         _ => return None,
     })
 }
@@ -616,6 +627,53 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn named_native_features_use_original_subobject_flags() {
+        for (index, name) in [
+            "DECOR",
+            "SIGNAL_HEAD",
+            "DUMMY1",
+            "DUMMY2",
+            "NUMBER_PLATE",
+            "GRADIENT_PLATE",
+            "USER1",
+            "USER2",
+            "USER3",
+            "USER4",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let source = format!(
+                "if(sig_feature(SIGFEAT_{name})){{state=SIGASP_CLEAR_2;}}else{{state=SIGASP_STOP;}}"
+            );
+            let program = SignalProgram::compile(&source).unwrap();
+            assert_eq!(
+                program
+                    .evaluate(SignalContext {
+                        feature_flags: Some(1 << index),
+                        ..Default::default()
+                    })
+                    .unwrap()
+                    .aspect,
+                7,
+                "{name}"
+            );
+            assert_eq!(
+                program
+                    .evaluate(SignalContext {
+                        feature_flags: Some(0),
+                        ..Default::default()
+                    })
+                    .unwrap()
+                    .aspect,
+                0,
+                "{name}"
+            );
+        }
+        assert!(SignalProgram::compile("state=SIGFEAT_UNKNOWN;").is_err());
+    }
+
     #[test]
     fn original_features_and_group_heads_control_junction_indication() {
         let p = SignalProgram::compile("if(sig_feature(8) && this_sig_lr(SIGFN_INFO)==3 && next_sig_lr(SIGFN_INFO)==7 && !TrainHasCallOn_Restricted()){state=SIGASP_CLEAR_2;}else{state=SIGASP_STOP;}").unwrap();

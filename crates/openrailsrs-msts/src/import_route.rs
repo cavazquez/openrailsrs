@@ -331,7 +331,11 @@ fn bind_electric_supply(route_dir: &Path, text: &str) -> Result<String, MstsErro
         sections: vec![],
     };
     let mut value: toml::Value = toml::from_str(text)?;
-    value["route"]["electric_supply"] = toml::Value::try_from(supply)?;
+    let route = value
+        .get_mut("route")
+        .and_then(toml::Value::as_table_mut)
+        .ok_or_else(|| MstsError::msg("Imported track has no [route] table"))?;
+    route.insert("electric_supply".into(), toml::Value::try_from(supply)?);
     Ok(toml::to_string_pretty(&value)?)
 }
 
@@ -1005,6 +1009,33 @@ fn point_graph_z(point: TrackVectorPoint) -> f64 {
 mod tests {
     use super::*;
     use openrailsrs_formats::TrackDbFile;
+
+    #[test]
+    fn native_electric_supply_is_added_to_a_fresh_import_without_panicking() {
+        let route = tempfile::tempdir().unwrap();
+        for (electrified, kind, voltage) in [(0, "none", 0.), (1, "overhead", 25000.)] {
+            std::fs::write(
+                route.path().join("native.trk"),
+                format!(
+                    "Tr_RouteFile ( RouteID ( Native ) Electrified ( {electrified} ) MaxLineVoltage ( 25000 ) )"
+                ),
+            )
+            .unwrap();
+            let original = "[route]\nid = \"Native\"\n";
+            let imported = bind_electric_supply(route.path(), original).unwrap();
+            let value: toml::Value = toml::from_str(&imported).unwrap();
+            assert_eq!(value["route"]["id"].as_str(), Some("Native"));
+            assert_eq!(
+                value["route"]["electric_supply"]["kind"].as_str(),
+                Some(kind)
+            );
+            assert_eq!(
+                value["route"]["electric_supply"]["voltage_v"].as_float(),
+                Some(voltage)
+            );
+        }
+        assert!(bind_electric_supply(route.path(), "[other]\nid = \"missing route\"\n").is_err());
+    }
 
     #[test]
     fn parallel_native_branches_keep_vector_identity_and_pin_order() {

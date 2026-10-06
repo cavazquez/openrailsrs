@@ -56,19 +56,31 @@
     {
       "@type": "https://schema.org/SoftwareApplication",
       "compensation": "free",
-      "name": "Chiltern",
-      "description": "This route, set c.1960 in UK, includes two main and many branch lines that run through the Chiltern Hills to London as well as parts of the London Transport underground system. Also included, somewhat anachronistically, is the Shepherds Bush to Uxbridge tram route. This route is a work in progress and scenery is still being added. At the moment scenery is complete between Marylebone Station and Banbury.",
+      "name": "Chiltern v4",
+      "softwareVersion": "v4",
+      "description": "A route for Open Rails by DocMartin. This route represents the two main lines passing through the Chiltern Hills to London as they were circa 1960. The route is a work-in-progress and will continually be updated. Work on placing scenery is still progressing.",
       "author": {
         "@type": "https://schema.org/Person",
         "name": "Martin Phillips",
         "url": "https://github.com/DocMartin7644"
       },
-      "image": "https://raw.githubusercontent.com/DocMartin7644/Chiltern-Route-v2/main/Screenshot.jpg",
-      "url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git",
-      "installSize": 13227601920,
+      "image": "https://raw.githubusercontent.com/DocMartin7644/Chiltern-Route-v4/main/Screenshot.jpg",
+      "url": "https://github.com/DocMartin7644/Chiltern-Route-v4.git",
+      "source_url": "https://github.com/DocMartin7644/Chiltern-Route-v4",
+      "verified_utc": "2026-10-06",
+      "previousSources": [
+        {
+          "id": "chiltern",
+          "name": "Chiltern",
+          "url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git",
+          "softwareVersion": "v2"
+        }
+      ],
+      "installSize": 9134514214,
       "start": {
         "route": "Chiltern",
-        "activity": "RS_Let's go to Birmingham"
+        "activity": "RS_Football Special",
+        "consist": "RS_Football Special"
       }
     },
     {

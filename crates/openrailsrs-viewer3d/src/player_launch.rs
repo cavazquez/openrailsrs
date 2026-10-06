@@ -1163,7 +1163,13 @@ mod tests {
             .unwrap();
         assert_eq!(pilot.scenery_root.as_ref(), Some(&absolute(&native)));
         assert!(menu.routes.iter().any(|r| r == "BelgranoCC"));
-        assert!(!menu.services.iter().any(|s| s.native_activity));
+        // Other author packages may already be installed in the user's library.
+        // They must not become activities belonging to this TOML pilot's route.
+        assert!(
+            !menu.services.iter().any(|s| {
+                s.native_activity && s.scenery_root.as_ref() == Some(&absolute(&native))
+            })
+        );
     }
     #[test]
     fn selected_menu_service_is_written_and_loadable() {

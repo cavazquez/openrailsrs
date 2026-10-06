@@ -16,6 +16,9 @@ use openrailsrs_track::{
 use crate::MstsError;
 
 const MAX_NATIVE_FILE_BYTES: u64 = 16 * 1024 * 1024;
+// A whole route's TDB is larger than one script or WORLD tile: Chiltern v4
+// has a 24 MiB TDB. Keep the smaller budget for individual signalling files.
+const MAX_TRACK_DB_BYTES: u64 = 64 * 1024 * 1024;
 const FEATURE_TYPES: [&str; 10] = [
     "DECOR",
     "SIGNAL_HEAD",
@@ -65,10 +68,11 @@ fn field(ast: &Ast, key: &str) -> Option<String> {
         .first()
         .and_then(|value| atoms(value).first().cloned())
 }
-fn bounded_text(path: &Path) -> Result<String, MstsError> {
-    if std::fs::metadata(path)?.len() > MAX_NATIVE_FILE_BYTES {
+fn bounded_text(path: &Path, maximum_bytes: u64) -> Result<String, MstsError> {
+    if std::fs::metadata(path)?.len() > maximum_bytes {
         return Err(MstsError::msg(format!(
-            "Native signalling file exceeds 16 MiB: {}",
+            "Native signalling file exceeds {} MiB: {}",
+            maximum_bytes / (1024 * 1024),
             path.display()
         )));
     }
@@ -117,7 +121,7 @@ fn programs(text: &str) -> Result<HashMap<String, String>, MstsError> {
             if parts.next().is_some()
                 || !name
                     .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-'))
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '/'))
                 || out.len() >= 4096
             {
                 return Err(MstsError::msg(
@@ -249,7 +253,7 @@ pub(super) fn bind(
     let Some(cfg_path) = cfg_path else {
         return Ok(imported.into());
     };
-    let cfg = parse_named_stf(&bounded_text(&cfg_path)?)?;
+    let cfg = parse_named_stf(&bounded_text(&cfg_path, MAX_NATIVE_FILE_BYTES)?)?;
     let mut functions = HashMap::new();
     for signal_type in blocks(&cfg, "SignalType") {
         if let (Some(name), Some(function)) = (
@@ -267,7 +271,7 @@ pub(super) fn bind(
             .cloned()
             .ok_or_else(|| MstsError::msg("Missing SIGCFG ScriptFile name"))?;
         let path = script_path(route, cfg_path.parent().unwrap(), &name)?;
-        for (name, source) in programs(&bounded_text(&path)?)? {
+        for (name, source) in programs(&bounded_text(&path, MAX_NATIVE_FILE_BYTES)?)? {
             if sources.insert(name.clone(), source).is_some() {
                 return Err(MstsError::msg(format!(
                     "Duplicate native signal program {name}"
@@ -279,7 +283,7 @@ pub(super) fn bind(
         return Ok(imported.into());
     }
     let world = world_heads(route, &cfg)?;
-    let ast = parse_named_stf(&bounded_text(tdb)?)?;
+    let ast = parse_named_stf(&bounded_text(tdb, MAX_TRACK_DB_BYTES)?)?;
     let mut definitions = HashMap::new();
     for signal in blocks(&ast, "SignalItem") {
         let Some(id) = field(signal, "TrItemId").and_then(|s| s.parse::<u32>().ok()) else {
@@ -351,7 +355,7 @@ pub(super) fn bind(
             // retain more precision. Reject real out-of-vector placements.
             if !position.is_finite() || position < -0.001 || position > length + 0.001 {
                 return Err(MstsError::msg(format!(
-                    "Native signal {id} lies outside its vector"
+                    "Native signal {id} at {position:.6} m lies outside vector {edge} ({length:.6} m)"
                 )));
             }
             let position = position.clamp(0.0, length);
@@ -388,10 +392,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn native_script_names_preserve_hyphens_and_reject_duplicates() {
-        let definitions =
-            programs("SCRIPT RI-Feather\nstate=1;\nSCRIPT UK_4_ASPECT\nstate=7;").unwrap();
+    fn native_script_names_preserve_author_identifiers_and_reject_duplicates() {
+        // These are program identifiers, not filesystem paths. OR preserves
+        // LQ/UQ names used by Chiltern v4; script file paths remain confined.
+        let definitions = programs(
+            "SCRIPT RI-Feather\nstate=1;\nSCRIPT UK_4_ASPECT\nstate=7;\nSCRIPT LQ/UQ_Headshunt\nstate=0;\nSCRIPT LQ/UQ_DummyDist\nstate=1;",
+        )
+        .unwrap();
         assert!(definitions.contains_key("RI-FEATHER"));
+        assert!(definitions.contains_key("LQ/UQ_HEADSHUNT"));
+        assert!(definitions.contains_key("LQ/UQ_DUMMYDIST"));
         assert!(programs("SCRIPT signal\nstate=1;\nSCRIPT SIGNAL\nstate=7;").is_err());
     }
 
@@ -400,6 +410,49 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         assert!(script_path(root.path(), root.path(), "../another/sigscr.dat").is_err());
         assert!(script_path(root.path(), root.path(), "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn large_track_db_does_not_relax_signal_program_limits() {
+        let route = tempfile::tempdir().unwrap();
+        let tdb = route.path().join("large.tdb");
+        let source = b"TrackDB ( TrItemTable ( SignalItem ( TrItemId ( 3 ) TrSignalType ( 00000000 1 1 TEST ) ) ) )";
+        let mut contents = vec![b' '; 17 * 1024 * 1024];
+        contents[..source.len()].copy_from_slice(source);
+        std::fs::write(&tdb, contents).unwrap();
+        std::fs::write(route.path().join("sigcfg.dat"), "SignalTypes ( SignalType ( TEST SignalFnType ( NORMAL ) ) ) ScriptFiles ( ScriptFile ( sigscr.dat ) )").unwrap();
+        let script = route.path().join("sigscr.dat");
+        std::fs::write(&script, "SCRIPT TEST\nstate=SIGASP_CLEAR_2;").unwrap();
+        let imported = "[[edges]]\nid='e1'\nlength_m=100.0\n[[signals]]\nid='sig3'\nedge_id='e1'\nposition_m=25.0\naspect='stop'\n";
+        let result: toml::Value =
+            toml::from_str(&bind(route.path(), &tdb, imported, &[]).unwrap()).unwrap();
+        assert_eq!(result["signals"][0]["edge_id"].as_str(), Some("e1_r"));
+
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&script)
+            .unwrap()
+            .set_len(17 * 1024 * 1024)
+            .unwrap();
+        assert!(
+            bind(route.path(), &tdb, imported, &[])
+                .unwrap_err()
+                .to_string()
+                .contains("exceeds 16 MiB")
+        );
+        std::fs::write(&script, "SCRIPT TEST\nstate=SIGASP_CLEAR_2;").unwrap();
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&tdb)
+            .unwrap()
+            .set_len(65 * 1024 * 1024)
+            .unwrap();
+        assert!(
+            bind(route.path(), &tdb, imported, &[])
+                .unwrap_err()
+                .to_string()
+                .contains("exceeds 64 MiB")
+        );
     }
 
     #[test]

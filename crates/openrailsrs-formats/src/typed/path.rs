@@ -1,6 +1,6 @@
 //! Parser for MSTS Path (`.pat`) files.
 //!
-//! A `.pat` file describes an ordered sequence of track path data points.
+//! A `.pat` file describes track points and the links ordering their traversal.
 //! Native MSTS editor files use `TrackPDP (tileX tileZ x y z flag1 flag2)` where
 //! `flag1`/`flag2` are junction/invalid flags (Open Rails `PathFile.cs`) — **not**
 //! TDB node IDs. Compact fixtures may use `TrPathPDP (node_id junction_flag)`.
@@ -21,7 +21,7 @@
 
 use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
-use crate::parser::parse_from_first_paren;
+use crate::parser::parse_named_stf;
 
 use super::track_db::TrackVectorPoint;
 use super::{atom_to_number, atom_to_string};
@@ -59,17 +59,19 @@ impl PathFile {
     /// Parse from a pre-built AST.
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let name = extract_path_name(ast).unwrap_or_default();
-        let pdps = extract_pdps(ast);
+        let mut pdps = extract_pdps(ast);
+        if let Some(nodes) = find_path_node_table(ast) {
+            pdps = ordered_main_path(&pdps, nodes)?;
+        }
         Ok(Self { name, pdps })
     }
 
     /// Convenience: read and parse a `.pat` file from disk.
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let text = crate::encoding::read_msts_file_to_string(path.as_ref())?;
-        let mut file = match parse_from_first_paren(&text) {
-            Ok(ast) => Self::from_ast(&ast)?,
-            Err(_) => Self::default(),
-        };
+        // Native files have Serial, TrackPDPs and TrackPath as sibling roots.
+        // Parsing just the first parenthesis loses the TrPathNode links.
+        let mut file = Self::from_ast(&parse_named_stf(&text)?)?;
         if file.pdps.is_empty() {
             file.pdps = extract_track_pdps_from_text(&text);
         }
@@ -95,6 +97,84 @@ impl PathFile {
     /// True when any PDP carries a native world position.
     pub fn has_world_pdps(&self) -> bool {
         self.pdps.iter().any(|p| p.world.is_some())
+    }
+}
+
+fn find_path_node_table(ast: &Ast) -> Option<&[Ast]> {
+    let Ast::List(items) = ast else { return None };
+    if matches!(items.first(), Some(Ast::Atom(Atom::Symbol(tag))) if tag.eq_ignore_ascii_case("TrPathNodes"))
+    {
+        return Some(items);
+    }
+    items.iter().find_map(find_path_node_table)
+}
+
+fn path_link_error(expected: &str) -> FormatError {
+    FormatError::UnexpectedAtom {
+        key: "TrPathNodes".into(),
+        context: "native PAT main path".into(),
+        expected: expected.into(),
+    }
+}
+
+fn path_index(value: Option<&Ast>) -> Option<u32> {
+    let Ast::Atom(atom) = value? else { return None };
+    let number = atom_to_number(atom)?;
+    (number.is_finite() && number.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&number))
+        .then_some(number as u32)
+}
+
+/// OR 1.6.1 PathFile: begin at TrPathNode[0], follow nextMainNode, and
+/// resolve each fromPDP. The PDP table itself is neither ordered nor a path;
+/// unused points and optional sidings must not become player waypoints.
+fn ordered_main_path(
+    points: &[PathDataPoint],
+    table: &[Ast],
+) -> Result<Vec<PathDataPoint>, FormatError> {
+    let count =
+        path_index(table.get(1)).ok_or_else(|| path_link_error("an unsigned node count"))? as usize;
+    let mut nodes = Vec::new();
+    for value in table.iter().skip(2) {
+        let Ast::List(items) = value else { continue };
+        if !matches!(items.first(), Some(Ast::Atom(Atom::Symbol(tag))) if tag.eq_ignore_ascii_case("TrPathNode"))
+        {
+            continue;
+        }
+        let next = path_index(items.get(2));
+        let pdp = path_index(items.get(4));
+        let (Some(next), Some(pdp)) = (next, pdp) else {
+            return Err(path_link_error(
+                "unsigned nextMainNode and correspondingPDP indices",
+            ));
+        };
+        nodes.push((next, pdp));
+    }
+    if nodes.is_empty() || nodes.len() != count {
+        return Err(path_link_error("the declared nonempty TrPathNode table"));
+    }
+    let mut ordered = Vec::new();
+    let mut visited = vec![false; nodes.len()];
+    let mut index = 0usize;
+    loop {
+        let Some(&(next, pdp)) = nodes.get(index) else {
+            return Err(path_link_error("nextMainNode within the node table"));
+        };
+        if visited[index] {
+            return Err(path_link_error(
+                "a main path ending without cyclic node links",
+            ));
+        }
+        visited[index] = true;
+        ordered.push(
+            points
+                .get(pdp as usize)
+                .ok_or_else(|| path_link_error("correspondingPDP within the point table"))?
+                .clone(),
+        );
+        if next == u32::MAX {
+            return Ok(ordered);
+        }
+        index = next as usize;
     }
 }
 
@@ -243,6 +323,62 @@ fn extract_track_pdps_from_text(text: &str) -> Vec<PathDataPoint> {
 mod tests {
     use super::*;
     use crate::parser::parse_from_first_paren;
+
+    const LINKED_NATIVE_PATH: &str = "SIMISA@@@@@@@@@@JINX0P0t______\nSerial ( 1 )
+        TrackPDPs (
+            TrackPDP ( 0 0 100 0 0 2 0 )
+            TrackPDP ( 0 0 900 0 0 2 0 )
+            TrackPDP ( 0 0 0 0 0 1 1 )
+            TrackPDP ( 0 0 200 0 0 1 1 )
+        )
+        TrackPath ( TrPathName ( Ordered ) TrPathNodes ( 4
+            TrPathNode ( 00000000 2 1 2 )
+            TrPathNode ( 00000000 4294967295 4294967295 1 )
+            TrPathNode ( 00000000 3 4294967295 0 )
+            TrPathNode ( 00000000 4294967295 4294967295 3 )
+        ) )";
+
+    #[test]
+    fn native_path_follows_main_links_from_node_zero_and_ignores_optional_siding() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(file.path(), LINKED_NATIVE_PATH).unwrap();
+        let path = PathFile::from_path(file.path()).unwrap();
+        assert_eq!(path.name, "Ordered");
+        assert_eq!(
+            path.pdps
+                .iter()
+                .map(|p| p.world.unwrap().x)
+                .collect::<Vec<_>>(),
+            [0.0, 100.0, 200.0]
+        );
+    }
+
+    #[test]
+    fn native_path_rejects_dangling_links_points_and_cycles() {
+        for (old, new, message) in [
+            ("00000000 2 1 2", "00000000 99 1 2", "nextMainNode within"),
+            (
+                "00000000 2 1 2",
+                "00000000 2 1 99",
+                "correspondingPDP within",
+            ),
+            (
+                "00000000 3 4294967295 0",
+                "00000000 0 4294967295 0",
+                "cyclic node links",
+            ),
+            ("TrPathNodes ( 4", "TrPathNodes ( 5", "declared nonempty"),
+        ] {
+            let source = LINKED_NATIVE_PATH.replace(old, new);
+            let ast = parse_named_stf(&source).unwrap();
+            assert!(
+                PathFile::from_ast(&ast)
+                    .unwrap_err()
+                    .to_string()
+                    .contains(message)
+            );
+        }
+    }
 
     #[test]
     fn parse_track_pdp_native_pat_flags_not_node_ids() {

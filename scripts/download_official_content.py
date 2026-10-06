@@ -131,7 +131,13 @@ def resolve_download(entry):
 
 
 def installed_match(entry, destination, revision=None, headers=None):
-    for path in sorted(destination.glob(entry['id'] + '-*')):
+    sources = [entry, *entry.get('previousSources', [])]
+    # Author-renamed repositories retain their old package identity on disk.
+    # Reuse an old copy only when its recorded canonical repository/commit
+    # matches the author's current revision; leave other editions untouched.
+    paths = {path for source in sources
+             for path in destination.glob(source['id'] + '-*')}
+    for path in sorted(paths):
         try:
             if path.is_symlink() or not path.is_dir():
                 continue
@@ -139,7 +145,9 @@ def installed_match(entry, destination, revision=None, headers=None):
             if metadata.is_symlink() or metadata.stat().st_size > 8 * 1024**2:
                 continue
             manifest = json.loads(metadata.read_text())
-            if not isinstance(manifest, dict) or manifest.get('advertised_url') != entry['url'] or manifest.get('package') != entry['name']:
+            if not isinstance(manifest, dict) or not any(
+                    manifest.get('advertised_url') == source['url']
+                    and manifest.get('package') == source['name'] for source in sources):
                 continue
             same_revision = (revision and isinstance(manifest.get('revision'), dict)
                 and all(revision.get(k) == manifest['revision'].get(k) for k in ('repository', 'commit')))
@@ -164,7 +172,10 @@ def safe_members(archive, max_install):
             raise ValueError(f'Ruta insegura en ZIP: {name}')
         if any(part.casefold() in MANAGED_NAMES for part in path.parts):
             raise ValueError(f'El ZIP incluye metadatos reservados al importador: {name}')
-        key = str(path).casefold()
+        # casefold expands ß to ss, conflating distinct authored filenames.
+        # Chiltern v4 supplies both DFußballfeld.ace and DFussballfeld.ace.
+        # Keep lowercase casing checks, and never overwrite during extraction.
+        key = str(path).lower()
         if key in paths:
             raise ValueError(f'Recurso duplicado o ambiguo por mayúsculas: {name}')
         paths.add(key)
@@ -284,7 +295,8 @@ def install(entry, destination, cancel_file=None, opener=https_open):
                     source_date = parsedate_to_datetime(last_modified).astimezone(timezone.utc).isoformat()
                 except (ValueError, TypeError, OverflowError):
                     pass
-            manifest = dict(version=2, package=entry['name'], catalog_source=catalog()['source_url'],
+            manifest = dict(version=2, package=entry['name'],
+                catalog_source=entry.get('source_url', catalog()['source_url']),
                 author=entry['author'], advertised_url=entry['url'], download_url=url,
                 revision=revision, download_sha256=checksum, download_bytes=done,
                 source_date=source_date, source_date_kind='repository' if revision else 'last-modified',
@@ -313,7 +325,8 @@ def main():
     if a.list:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return
-    entry = next((e for e in data['routes'] if e['id'] == a.package), None)
+    entry = next((e for e in data['routes'] if e['id'] == a.package
+                  or any(source['id'] == a.package for source in e.get('previousSources', []))), None)
     if entry is None:
         p.error('Seleccioná un id del catálogo mediante --package; --list muestra las opciones')
     try:

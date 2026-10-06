@@ -1101,7 +1101,9 @@ fn parse_native_section_record(items: &[Ast], base: usize) -> Option<TrVectorSec
 }
 
 fn is_plausible_shape_id(id: i32) -> bool {
-    (20_000..=500_000).contains(&id)
+    // Standard MSTS sections/shapes have low indices too (e.g. 328/215).
+    // Excluding them silently shortens mixed standard/custom vectors.
+    (0..=500_000).contains(&id)
 }
 
 fn is_plausible_tile_pair(tile_x: i32, tile_z: i32) -> bool {
@@ -1853,6 +1855,34 @@ mod tests {
             best < 20.0,
             "tile-x boundary rebase should land near junction UiD, best={best}m"
         );
+    }
+
+    #[test]
+    fn native_vector_keeps_standard_and_custom_section_indices() {
+        // The two standard sections are 100 m each. Dropping low identifiers
+        // loses 200 m of track and shifts signals/platforms on mixed vectors.
+        let source = "TrackDB ( TrackNodes ( 1 TrackNode ( 2
+            TrVectorNode ( TrVectorSections ( 3
+                328 215 -6110 14951 5 1 0 00 -6110 14951 0 88 0 0 0 0
+                328 215 -6110 14951 4 1 0 00 -6110 14951 0 88 100 0 0 0
+                38513 38523 -6110 14951 3 1 0 00 -6110 14951 0 88 200 0 0 0
+            ) ) TrPins ( 1 1 TrPin ( 1 1 ) TrPin ( 3 0 ) )
+        ) ) )";
+        let tdb = TrackDbFile::from_ast(&parse_from_first_paren(source).unwrap()).unwrap();
+        let TrackNodeKind::Vector {
+            sections, length_m, ..
+        } = &tdb.nodes[0].kind
+        else {
+            panic!("native vector expected");
+        };
+        assert_eq!(
+            sections
+                .iter()
+                .map(|s| (s.section_index, s.shape_index))
+                .collect::<Vec<_>>(),
+            [(328, 215), (328, 215), (38513, 38523)]
+        );
+        assert!((*length_m - 200.0).abs() < 1e-6);
     }
 
     #[test]

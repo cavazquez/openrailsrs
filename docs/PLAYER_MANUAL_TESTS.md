@@ -1310,3 +1310,42 @@ en una ventana de **1280×720** y con interfaz al **100%**.
 
 La revisión de recursos se conserva en segundo plano al cambiar de ruta. No se
 cargan las mallas ni texturas de todos los trenes para dibujar el selector.
+
+## 41. Chiltern v4: descarga del autor y copias separadas
+
+1. Reiniciá el visor compilado y abrí **Biblioteca → Descargas del autor**.
+   Elegí **Chiltern v4**. El origen debe ser
+   `https://github.com/DocMartin7644/Chiltern-Route-v4.git`. Los enlaces antiguos
+   del autor ya redirigen a v4; el catálogo ofrece una sola descarga actual,
+   conservando las copias instaladas anteriormente. Los tamaños desconocidos
+   no se muestran como una descarga de cero bytes.
+2. Pulsá **Buscar actualización e instalar**. El progreso informa descarga,
+   extracción y auditoría. La carpeta indicada debe estar en tus datos de
+   usuario, fuera de la carpeta del código. Podés cancelar sin tocar la
+   instalación anterior.
+3. Al terminar, abrí **Instalado**. La nueva copia se identifica como
+   **Chiltern v4**, seguida de fecha del origen y commit/hash. La versión que
+   ya usabas sigue disponible. **Abrir carpeta** muestra la copia elegida.
+4. Elegí la ruta, la actividad **RS_Football Special** y la formación del mismo
+   nombre. El viaje tiene cuatro paradas: **Banbury General → Bicester North →
+   Princes Risborough → High Wycombe**, con locomotora de vapor y cabina 2D.
+   En **Tren → Ver detalles**, revisá
+   recursos y sistemas de la formación. Una formación incompleta informa sus
+   archivos faltantes y destinos; una formación válida permite iniciar.
+   En la partida verificá escenario, tren exterior, cabina y monitor de vía.
+   Pulsá **1** y, si tenías seleccionada la cabina 3D, **Alt+1** para ver la
+   cabina 2D original de esta locomotora. **2** vuelve al exterior.
+5. Volvé a Biblioteca y buscá otra actualización. Si el autor no cambió el
+   commit, se reutiliza la misma instalación; si cambió, aparece otra copia
+   y se conserva la anterior. Cambiar la edición no modifica tus partidas.
+
+En Linux, la ubicación habitual es
+`~/.local/share/openrailsrs/official-content/chiltern-v4-<hash>/`. Snap usa
+`$SNAP_USER_COMMON/openrailsrs/official-content/`. El catálogo y el instalador
+pertenecen al proyecto; los archivos de la ruta, trenes, sonidos y texturas se
+descargan aparte. La auditoría de recursos no certifica paridad de todos los
+sistemas de v4 con Open Rails.
+
+La actividad **RS_Let's go to Birmingham** incluida en la revisión `8236df20`
+referencia el ítem 11358 como plataforma, pero en el TDB de esa copia es una
+señal. Se rechaza con un diagnóstico; no se sustituye la parada por otra.

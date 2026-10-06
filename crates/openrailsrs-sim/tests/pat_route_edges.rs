@@ -60,7 +60,9 @@ fn chiltern_pat_waypoints_build_connected_chain() {
         wps.len()
     );
     assert_eq!(wps.first().map(String::as_str), Some(hints.start.as_str()));
-    assert_eq!(hints.start, "n17368");
+    // The native curved platform is e17431_r; n17368 belonged to the
+    // neighbouring track selected by the old straight-chord projection.
+    assert_eq!(hints.start, "n17361");
     assert_ne!(
         hints.destination, "n17381",
         "must not stop at the 3-node stub sink"
@@ -95,8 +97,8 @@ fn chiltern_pat_edges_leave_platform_via_reverse() {
         "expected ≥5 km PAT corridor, got {dist:.0} m"
     );
     assert!(
-        pat_edges.iter().any(|e| e == "e17466_r"),
-        "outbound must continue via reverse of e17466, got {:?}",
+        pat_edges.first().is_some_and(|e| e == "e17431_r"),
+        "outbound must leave the authored platform directly, got {:?}",
         &pat_edges[..pat_edges.len().min(8)]
     );
     // Global BFS may shortcut the PAT; waypoint resolution must stay connected.
@@ -131,7 +133,7 @@ fn resolve_route_edges_uses_waypoints_when_present() {
     };
     let via = resolve_route_edges(&graph, &route).expect("resolve");
     assert!(via.len() > 5);
-    assert!(via.iter().any(|e| e == "e17466_r"));
+    assert_eq!(via.first().map(String::as_str), Some("e17431_r"));
     let pat_edges = pat_edge_path_with_offset(
         &graph,
         &aliases,

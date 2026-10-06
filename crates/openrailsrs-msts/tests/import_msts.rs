@@ -834,18 +834,20 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
     let pat = route_dir.join("PATHS/RS_Let's go to Birmingham.pat");
     let offset = read_distance_down_path(route_dir, "RS_Let's go to Birmingham").unwrap_or(0.0);
     let direct = placement_from_imported_route(&out, &pat, offset).expect("direct placement");
+    // Marylebone's curved platform 6 is e17431_r. Snapping to the
+    // neighbouring edge's straight chord used to select n17368 instead.
     assert_eq!(
-        direct.start, "n17368",
-        "TrackPDP world snap at Paddington platform"
+        direct.start, "n17361",
+        "TrackPDP snap using Marylebone's native platform geometry"
     );
     assert!(
-        (direct.start_offset_m - 166.735).abs() < 1.0,
-        "expected ~167 m along platform edge, got {}",
+        (direct.start_offset_m - 200.941).abs() < 1.0,
+        "expected ~201 m along the native platform edge, got {}",
         direct.start_offset_m
     );
     assert_ne!(
         direct.destination, "n17381",
-        "with reverse edges, destination must leave the n17368→n17381 stub"
+        "destination must follow the full PAT beyond the neighbouring platform stub"
     );
     let imported = import_activity_with_summary(route_dir, &act, Some(&out));
     let tdb = TrackDbFile::from_path(route_dir.join("Chiltern.tdb")).expect("native database");
@@ -866,7 +868,7 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
     }
     let (toml, _, overlay_applied) = imported.expect("import activity");
     assert!(
-        toml.contains("start = \"n17368\""),
+        toml.contains("start = \"n17361\""),
         "player_path={} service={:?} offset={offset} direct_start={} scenario:\n{}",
         activity.player_path,
         activity.player_service_id,

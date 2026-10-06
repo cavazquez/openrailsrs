@@ -630,15 +630,23 @@ pub(super) fn build_library(
                 label(
                     p,
                     format!(
-                        "{} · {}\nDescarga: {:.0} MiB · espacio instalado: {:.1} GiB",
+                        "{} · {}\nDescarga: {} · espacio instalado: {}",
                         package.author.name,
                         if package.compensation == "free" {
                             "Gratuito"
                         } else {
                             "Consultar condiciones del autor"
                         },
-                        package.download_bytes as f64 / 1048576.,
-                        package.install_bytes as f64 / 1073741824.
+                        if package.download_bytes > 0 {
+                            format!("{:.0} MiB", package.download_bytes as f64 / 1048576.)
+                        } else {
+                            "tamaño sin informar".into()
+                        },
+                        if package.install_bytes > 0 {
+                            format!("{:.1} GiB", package.install_bytes as f64 / 1073741824.)
+                        } else {
+                            "tamaño sin informar".into()
+                        }
                     ),
                     14.0,
                     MUTED,

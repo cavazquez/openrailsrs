@@ -1,9 +1,16 @@
 # Contenido del catálogo oficial
 
-En el menú principal, **Descargar contenido oficial** muestra autor, origen,
+En el menú principal, **Biblioteca → Descargas del autor** muestra autor, origen,
 tamaños anunciados y tipo de distribución. El catálogo se conserva desde el
 [repositorio oficial](https://github.com/openrails/content/tree/2bc71f58d04fbce693564db74d577c0ee00b7e31),
 publicado por [Open Rails](https://www.openrails.org/download/content/).
+La entrada **Chiltern** se actualiza a **Chiltern v4** desde el
+[repositorio original de DocMartin](https://github.com/DocMartin7644/Chiltern-Route-v4),
+verificado el 6 de octubre de 2026. La captura del catálogo de OR todavía usa
+el nombre y enlace anteriores; GitHub redirige esos enlaces de v2 y v3 a v4.
+La URL y el hash del catálogo conservan la procedencia de la lista original.
+La entrada actual registra por separado su `source_url`, fecha de verificación
+y `previousSources`, para reconocer las instalaciones del enlace antiguo.
 
 ## Descargar y jugar
 
@@ -40,6 +47,27 @@ del autor, incluidas redirecciones de repositorio. El commit registrado identifi
 esa copia descargada; una actualización posterior se instala junto a ella.
 Chiltern conserva también el piloto local que ya tenías.
 
+**Chiltern v4** tiene su propio id, `chiltern-v4`, y conserva las copias
+anteriores y la instalación local. El catálogo ofrece una sola descarga actual;
+el antiguo comando `--package chiltern` es un alias de `chiltern-v4`.
+Se consulta la rama actual del repositorio original al instalar o buscar una
+actualización. Los 8,51 GiB
+anunciados corresponden a sus archivos originales; el ZIP, la extracción
+temporal y la preparación requieren espacio adicional. Ruta, trenes, texturas
+y sonidos quedan fuera del checkout. El menú identifica la versión cuando el
+repositorio registrado corresponde a un origen conocido, además de la fecha e
+identificador de cada copia. Si una copia hecha con el enlace de v2 ya registró
+el repositorio canónico de v4, se muestra como v4. Una versión desconocida se
+identifica por fecha y commit/hash, sin atribuirle una versión anterior.
+
+Para probar la revisión `8236df20`, elegí **RS_Football Special** y la formación
+del mismo nombre: Banbury General, Bicester North, Princes Risborough y High
+Wycombe. Conserva el trazado y las plataformas originales, con vapor y cabina
+2D. Algunas otras actividades del paquete necesitan compatibilidad adicional
+o referencias de plataforma de la misma edición. El menú informa esos errores;
+una formación con archivos completos no garantiza que su actividad se pueda
+importar. [Prueba manual](PLAYER_MANUAL_TESTS.md#41-chiltern-v4-descarga-del-autor-y-copias-separadas).
+
 El selector de ruta distingue las copias por fecha del origen y commit/hash:
 por ejemplo **Chiltern · origen 2026-10-04 · abcdef12**. GitHub proporciona
 fecha de actualización del repositorio (o fecha del commit); para ZIP se usa
@@ -75,6 +103,8 @@ no es una firma del autor.
 ```bash
 target/debug/openrailsrs content --list
 target/debug/openrailsrs content --package demo-model-1
+# Chiltern v4, desde el repositorio original y sin reemplazar la copia anterior:
+target/debug/openrailsrs content --package chiltern-v4
 # Auditar/importar una descarga hecha por CLI, sin ventana:
 target/debug/openrailsrs-prepare-content /ruta/al/paquete-instalado
 ```
@@ -101,8 +131,8 @@ copia. Si el sistema no ofrece portapapeles o gestor de archivos, se muestra el
 error y el panel conserva los detalles.
 
 La [sección Contenido de la web](https://cavazquez.github.io/openrailsrs/contenido.html)
-presenta los mismos quince registros del catálogo integrado. Permite buscar por
-ruta/autor y filtrar gratuitos o instalables desde el juego. Las webs comerciales
+presenta los mismos registros del catálogo integrado, incluida Chiltern v4.
+Permite buscar por ruta/autor y filtrar gratuitos o instalables desde el juego. Las webs comerciales
 y las descargas que requieren acceso manual conservan el enlace original;
 no se muestran como ZIP instalables automáticamente.
 

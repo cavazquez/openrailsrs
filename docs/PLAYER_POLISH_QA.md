@@ -884,3 +884,59 @@ python3 scripts/capture_player_menu.py \
 
 Prueba de cada opción y resultado esperado en la
 [sección 40 de pruebas manuales](PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-tres-pasos).
+
+## Chiltern v4: instalación externa y actividades nativas
+
+Se descargó el repositorio original de DocMartin, revisión
+`8236df20ed9f596b8cf15720c43bfbdd0c43125d`, con fecha de origen
+**2026-09-09**. El ZIP ocupa **7,31 GiB** y los originales **8,51 GiB**.
+La copia está en los datos del usuario, fuera del checkout; la instalación
+anterior se conserva. El catálogo del juego y de la web ofrece una sola descarga
+actual, porque los enlaces del autor para v2 y v3 redirigen a v4. La biblioteca
+identifica cada copia por versión conocida, fecha y revisión.
+
+La auditoría encontró **155 de 188 formaciones** con recursos completos y
+tracción, y **34 archivos de actividad**. No es una certificación de sus sistemas
+ni de todas las actividades. Se compilaron sin errores los **143 programas
+SIGSCR usados** por esta edición. La importación conserva los identificadores
+con `/`, los índices estándar de vía y las constantes `SIGFEAT_*` de OR 1.6.1.
+El TDB tiene su propio límite de 64 MiB; scripts y WORLD conservan 16 MiB.
+También se corrigió la inserción de alimentación eléctrica en un TOML nuevo.
+
+El PAT ahora sigue `nextMainNode` desde `TrPathNode[0]`, en vez de recorrer la
+tabla de puntos sin orden. Las regresiones comprueban índices inválidos,
+ciclos y exclusión de una vía alternativa. La ubicación inicial y el destino
+usan los puntos nativos de las vías curvas, con coordenadas `f64`; los cambios
+se alinean con los puntos del recorrido. Esto evita elegir un andén vecino o
+un desvío más corto que el trazado del autor. Los escenarios TOML calibrados y
+las tolerancias de los oráculos se conservaron.
+
+Se preparó desde el menú **RS_Football Special**, con su formación original de
+**10 vehículos, 181 m, vapor y cabina 2D**. Conserva las cuatro plataformas:
+Banbury General, Bicester North, Princes Risborough y High Wycombe. La
+actividad **RS_Let's go to Birmingham** incluida en esta revisión usa el ítem
+11358 como plataforma, pero el TDB lo define como señal: se rechaza, sin
+inventar una parada alternativa.
+
+Se revisaron cinco capturas a **1280×720**, con **RX 7600/Vulkan**, en Weston
+privado y con un límite RSS de 6144 MiB: exterior de Banbury, puesto de
+conducción, cabina 2D y dos vistas tras avanzar **2 km reales** con conducción
+automática de prueba. El tren completó la parada inicial y se cargaron nuevos
+sectores al salir de Banbury. Las instantáneas tienen cero shaders pendientes
+o fallidos, cero errores de señales y cero cargas GPU/terreno pendientes.
+El máximo RSS medido fue **1484,8 MiB**; VRAM del proceso, **1053,6 MiB**.
+Estas cifras corresponden a esas escenas, con radio de vista de 450 m, y no
+al viaje completo. En la segunda vista en movimiento hubo dos cuadros de más
+de 100 ms; el mayor fue de 120,8 ms. La cabina original cargó 19 controles,
+con 12 widgets representados y cinco sin representación; el vapor conserva
+las limitaciones que informa la auditoría.
+
+`check.sh` completo pasa **1626 pruebas Rust** (45 ignoradas) y **59 Python**,
+además de formato, Clippy con `-D warnings`, compilación, sitio generado,
+oráculos de OR 1.6.1, Class 47 y el servicio completo del piloto. Esta prueba
+de v4 comprueba importación, inicio y avance; no mide todavía paridad física
+o visual de su viaje completo. Las salidas que ya tenía el usuario y su
+configuración de lanzamiento se restauraron tras las pruebas.
+
+Pasos y resultado esperado en la
+[sección 41 de pruebas manuales](PLAYER_MANUAL_TESTS.md#41-chiltern-v4-descarga-del-autor-y-copias-separadas).

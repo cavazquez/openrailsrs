@@ -15,17 +15,58 @@ pub struct ContentAuthor {
     pub name: String,
 }
 #[derive(Clone, Debug, Deserialize)]
+pub struct PreviousContentSource {
+    pub name: String,
+    pub url: String,
+    #[serde(rename = "softwareVersion", default)]
+    pub content_version: Option<String>,
+}
+#[derive(Clone, Debug, Deserialize)]
 pub struct OfficialPackage {
     pub name: String,
     pub author: ContentAuthor,
     pub compensation: String,
     pub url: String,
+    #[serde(rename = "softwareVersion", default)]
+    pub content_version: Option<String>,
+    #[serde(rename = "previousSources", default)]
+    pub previous_sources: Vec<PreviousContentSource>,
     #[serde(rename = "downloadSize", default)]
     pub download_bytes: u64,
     #[serde(rename = "installSize", default)]
     pub install_bytes: u64,
 }
 impl OfficialPackage {
+    fn matches_manifest(&self, manifest: &Value) -> bool {
+        let matches = |name: &str, url: &str| {
+            manifest["package"].as_str() == Some(name)
+                && manifest["advertised_url"].as_str() == Some(url)
+        };
+        matches(&self.name, &self.url)
+            || self
+                .previous_sources
+                .iter()
+                .any(|source| matches(&source.name, &source.url))
+    }
+    fn version_for_manifest(&self, manifest: &Value) -> Option<&str> {
+        if !self.matches_manifest(manifest) {
+            return None;
+        }
+        let repository = manifest["revision"]["repository"].as_str()?;
+        let matches = |url: &str| {
+            url.strip_prefix("https://github.com/")
+                .and_then(|path| path.strip_suffix(".git"))
+                == Some(repository)
+        };
+        if matches(&self.url) {
+            self.content_version.as_deref()
+        } else {
+            self.previous_sources
+                .iter()
+                .find(|source| matches(&source.url))
+                .and_then(|source| source.content_version.as_deref())
+        }
+    }
     pub fn id(&self) -> String {
         self.name
             .to_ascii_lowercase()
@@ -309,6 +350,24 @@ pub struct PreparedRoute {
 
 fn edition_label(native: &Path, manifest: &Value) -> String {
     let name = native.file_name().unwrap_or_default().to_string_lossy();
+    // Only the bundled catalogue may add a version label. A local manifest
+    // supplies the installed identity, never a new source or trusted version.
+    let catalog: Catalog =
+        serde_json::from_str(openrailsrs_content::CATALOG).expect("bundled official catalogue");
+    let package = catalog
+        .routes
+        .iter()
+        .find(|package| package.matches_manifest(manifest));
+    let version = package.and_then(|package| package.version_for_manifest(manifest));
+    let name = match version {
+        Some(version) if !name.ends_with(&format!(" {version}")) => format!("{name} {version}"),
+        Some(_) => name.into_owned(),
+        None => package
+            .and_then(|package| package.content_version.as_deref())
+            .and_then(|version| name.strip_suffix(&format!(" {version}")))
+            .unwrap_or(&name)
+            .to_string(),
+    };
     let id = manifest["revision"]["commit"]
         .as_str()
         .or_else(|| manifest["download_sha256"].as_str())
@@ -605,8 +664,7 @@ fn source_for_missing(
                 package.automatic()
                     && package.url.starts_with("https://github.com/")
                     && package.url.ends_with(".git")
-                    && manifest["advertised_url"].as_str() == Some(package.url.as_str())
-                    && manifest["package"].as_str() == Some(package.name.as_str())
+                    && package.matches_manifest(&manifest)
             })
         })?;
     let repo = package
@@ -713,12 +771,15 @@ mod tests {
     #[test]
     fn editions_remain_distinct_with_author_date_and_identifier() {
         let native = Path::new("ROUTES/Chiltern");
-        let old = serde_json::json!({"download_sha256":"11111111aabbccdd"});
-        let new = serde_json::json!({"source_date":"2026-10-04T14:00:00Z", "revision":{"commit":"22222222aabbccdd"}});
-        assert_eq!(edition_label(native, &old), "Chiltern · descarga 11111111");
+        let old = serde_json::json!({"package":"Chiltern", "advertised_url":"https://github.com/DocMartin7644/Chiltern-Route-v2.git", "download_sha256":"11111111aabbccdd", "revision":{"repository":"DocMartin7644/Chiltern-Route-v2"}});
+        let new = serde_json::json!({"package":"Chiltern v4", "advertised_url":"https://github.com/DocMartin7644/Chiltern-Route-v4.git", "source_date":"2026-10-04T14:00:00Z", "revision":{"repository":"DocMartin7644/Chiltern-Route-v4", "commit":"22222222aabbccdd"}});
+        assert_eq!(
+            edition_label(native, &old),
+            "Chiltern v2 · descarga 11111111"
+        );
         assert_eq!(
             edition_label(native, &new),
-            "Chiltern · origen 2026-10-04 · 22222222"
+            "Chiltern v4 · origen 2026-10-04 · 22222222"
         );
         assert_ne!(edition_label(native, &old), edition_label(native, &new));
         let temp = tempfile::tempdir().unwrap();
@@ -742,6 +803,25 @@ mod tests {
         let found = discover_prepared(&temp.path().join("official-content"));
         assert_eq!(found.len(), 2);
         assert!(found.iter().all(|r| r.edition.is_some()));
+        assert_eq!(
+            edition_label(Path::new("Chiltern v4"), &new),
+            "Chiltern v4 · origen 2026-10-04 · 22222222"
+        );
+        let unverified = serde_json::json!({"package":"Chiltern v4", "advertised_url":"https://github.com/another/route.git", "softwareVersion":"v99", "download_sha256":"33333333"});
+        assert_eq!(
+            edition_label(native, &unverified),
+            "Chiltern · descarga 33333333"
+        );
+        let renamed = serde_json::json!({"package":"Chiltern", "advertised_url":"https://github.com/DocMartin7644/Chiltern-Route-v2.git", "source_date":"2026-09-09T15:48:33Z", "revision":{"repository":"DocMartin7644/Chiltern-Route-v4", "commit":"44444444aabbccdd"}});
+        assert_eq!(
+            edition_label(native, &renamed),
+            "Chiltern v4 · origen 2026-09-09 · 44444444"
+        );
+        let future = serde_json::json!({"package":"Chiltern v4", "advertised_url":"https://github.com/DocMartin7644/Chiltern-Route-v4.git", "download_sha256":"55555555", "revision":{"repository":"DocMartin7644/Chiltern-Route-v5"}});
+        assert_eq!(
+            edition_label(Path::new("Chiltern v4"), &future),
+            "Chiltern · descarga 55555555"
+        );
     }
     fn missing(reference: &Path, name: &str) -> openrailsrs_train::MissingResource {
         openrailsrs_train::MissingResource {
@@ -781,9 +861,9 @@ mod tests {
         .unwrap();
         assert_eq!(
             source.page,
-            "https://github.com/DocMartin7644/Chiltern-Route-v2/search?q=l%C3%B3c%C3%B3%20motive.s&type=code"
+            "https://github.com/DocMartin7644/Chiltern-Route-v4/search?q=l%C3%B3c%C3%B3%20motive.s&type=code"
         );
-        assert_eq!(source.package_id, "chiltern");
+        assert_eq!(source.package_id, "chiltern-v4");
         assert!(!source.page.contains(root.to_str().unwrap()));
         assert!(!source.title.contains("another-author"));
         // A stock file from a different location is not assigned the scenario's
@@ -806,6 +886,7 @@ mod tests {
             serde_json::json!({"revision": {"repository": "author/route"}}),
             serde_json::json!({"package": "Chiltern", "advertised_url": "https://github.com/author/route.git"}),
             serde_json::json!({"package": "Another route", "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git"}),
+            serde_json::json!({"package": "Chiltern v4", "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v2.git"}),
             serde_json::json!({"package": "Demo Model 1", "advertised_url": "https://static.openrails.org/files/DemoModel1.zip", "revision": {"repository": "author/route"}}),
         ] {
             std::fs::write(root.join("openrailsrs-content.json"), manifest.to_string()).unwrap();
