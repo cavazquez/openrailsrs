@@ -1,10 +1,16 @@
 name: openrailsrs
 base: core24
-version: '0.1.0'
-summary: Simulador ferroviario con contenido original de Open Rails
+version: '0.1.0-alpha.1'
+title: openrailsrs
+summary: Simulador ferroviario libre en desarrollo
 description: |
-  Conducción desde cabina y exterior, escenarios nativos, estaciones, señales,
-  pasajeros y clima. El contenido de sus autores se descarga por separado.
+  Versión alpha del simulador ferroviario en Rust y Bevy. Conducción desde
+  cabina y exterior, estaciones, señales, pasajeros y clima. Puede tener
+  errores y funciones incompletas. Las rutas y trenes originales se instalan
+  por separado desde los repositorios de sus autores.
+website: https://cavazquez.github.io/openrailsrs/
+source-code: https://github.com/cavazquez/openrailsrs
+issues: https://github.com/cavazquez/openrailsrs/issues
 grade: devel
 confinement: strict
 license: GPL-3.0-only
@@ -29,6 +35,7 @@ parts:
     override-build: |
       export CARGO_BUILD_JOBS=2
       export RUSTUP_TOOLCHAIN=stable
+      export CARGO_PROFILE_RELEASE_STRIP=symbols
       cargo build --locked --release -p openrailsrs-cli -p openrailsrs-viewer3d --bins
       openrailsrs_bundle_dir="$(mktemp -d)"
       python3 scripts/package_linux.py --binaries target/release --output "$openrailsrs_bundle_dir"

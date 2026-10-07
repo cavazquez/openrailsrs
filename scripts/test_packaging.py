@@ -15,11 +15,15 @@ class PackagingTests(unittest.TestCase):
             root = Path(directory)
             for relative in ('packaging/resources.json', 'examples/smoke/scenario.toml',
                              'examples/smoke/run.json', 'crates/openrailsrs-bevy-scenery/assets/shaders/test.wgsl',
+                             'examples/smoke/run_variant.toml', 'examples/smoke/capture.log',
+                             'examples/baselines/test/capture/initial.json',
                              'official-content/route/private.dat', '.aws/credentials'):
                 path = root/relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('original')
             resources = ['examples/smoke/scenario.toml', 'examples/smoke/run.json',
+                         'examples/smoke/run_variant.toml', 'examples/smoke/capture.log',
+                         'examples/baselines/test/capture/initial.json',
                          'crates/openrailsrs-bevy-scenery/assets/shaders/test.wgsl']
             (root/'packaging/resources.json').write_text(json.dumps(resources))
             binaries = root/'compiled'
@@ -31,6 +35,9 @@ class PackagingTests(unittest.TestCase):
                 output = package_linux.assemble(binaries, root/'bundle')
             self.assertTrue((output/'share/openrailsrs/assets/shaders/test.wgsl').is_file())
             self.assertTrue((output/'share/openrailsrs/examples/smoke/scenario.toml').is_file())
+            self.assertTrue((output/'share/openrailsrs/examples/smoke/run_variant.toml').is_file())
+            self.assertFalse((output/'share/openrailsrs/examples/baselines').exists())
+            self.assertFalse(any(p.suffix == '.log' for p in output.rglob('*')))
             self.assertFalse(any(p.name in ('run.json', 'credentials', 'private.dat') for p in output.rglob('*')))
             self.assertTrue((output/'bin/openrailsrs').stat().st_mode & 0o111)
             self.assertFalse(json.loads((output/'manifest.json').read_text())['downloaded_content_included'])
@@ -75,6 +82,31 @@ class PackagingTests(unittest.TestCase):
             with patch.object(package_linux, 'ROOT', root):
                 with self.assertRaisesRegex(ValueError, 'Invalid resource'):
                     package_linux.assemble(root, root/'bundle')
+
+    def test_privacy_guard_checks_binaries_and_utf16_without_disclosing_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            token = 'ghp_' + 'a' * 36
+            (root/'binary').write_bytes(b'\x7fELF\0' + token.encode())
+            (root/'scenario.toml').write_text('/home/tester/private/scenario', encoding='utf-16')
+            (root/'LICENSE').write_text('Copyright Public Author <author@example.org>')
+            findings = package_linux.audit_privacy(root)
+            self.assertIn(('binary', 'token de acceso'), findings)
+            self.assertIn(('scenario.toml', 'ruta personal del equipo'), findings)
+            self.assertFalse(any(name == 'LICENSE' for name, _ in findings))
+            with self.assertRaisesRegex(ValueError, 'Private data') as caught:
+                package_linux.require_private_data_free(root)
+            self.assertNotIn(token, str(caught.exception))
+            self.assertNotIn('/home/tester', str(caught.exception))
+
+    def test_resource_manifest_includes_all_shaders_and_new_playable_examples(self):
+        root = Path(__file__).resolve().parents[1]
+        resources = set(json.loads((root/'packaging/resources.json').read_text()))
+        shaders = root/'crates/openrailsrs-bevy-scenery/assets/shaders'
+        self.assertTrue(all(str(p.relative_to(root)) in resources for p in shaders.glob('*.wgsl')))
+        for relative in ('examples/electric_supply/scenario.toml',
+                         'examples/traction_operation/scenario_steam.toml'):
+            self.assertIn(relative, resources)
 
     def test_snap_build_tree_excludes_previous_builds_and_untracked_downloads(self):
         with tempfile.TemporaryDirectory() as directory:

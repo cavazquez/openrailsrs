@@ -50,7 +50,7 @@ Para un checkout con descargas/builds locales, prepará primero una copia limpia
 python3 scripts/package_snap.py --source-dir tmp/dist/snap-source
 cd tmp/dist/snap-source
 snapcraft pack --use-lxd
-sudo snap install --dangerous openrailsrs_0.1.0_amd64.snap
+sudo snap install --dangerous openrailsrs_0.1.0-alpha.1_amd64.snap
 openrailsrs.cli content --list
 openrailsrs
 ```
@@ -65,6 +65,64 @@ Las descargas, guardados, ajustes y caché se almacenan en
 lectura. Para contenido de un disco externo, conectá explícitamente
 `sudo snap connect openrailsrs:removable-media`; la carpeta debe seguir siendo
 accesible al usuario. La receta de desarrollo no publica nada en Snap Store.
+
+## Primera alpha en Snap Store
+
+La receta identifica la versión como **0.1.0-alpha.1**, con `grade: devel`
+y `confinement: strict`. El nombre `openrailsrs` fue reservado por el
+mantenedor. La publicación propuesta es **latest/edge**: Snap Store ofrece
+stable, candidate, beta y edge, sin un riesgo llamado alpha. Una versión devel
+no puede publicarse en stable o candidate. Ver
+[canales de Snapcraft](https://ubuntu.com/docs/snapcraft/9/reference/channels/).
+
+El paquete de QA anterior, `0.1.0`, precede los cambios de Hanabi y no debe
+usarse como la nueva alpha. Hay que reconstruir desde las fuentes actuales y
+comprobar en confinamiento estricto el menú, una partida, descargas originales,
+audio, GPU y persistencia. La inspección de archivos no reemplaza esa prueba.
+
+Para inspeccionar una distribución extraída, sin subirla ni imprimir valores
+sensibles:
+
+```bash
+python3 scripts/package_linux.py --audit /ruta/al/paquete-extraido
+```
+
+El ensamblador aplica esa comprobación automáticamente a los archivos propios
+y binarios: rechaza rutas personales de Linux/macOS/Windows, claves privadas y
+formatos comunes de tokens. También excluye configuraciones del jugador,
+repositorios Git, credenciales y descargas. No es un detector universal de
+secretos. Los baselines, capturas, logs, CSV y replays de desarrollo no se
+distribuyen. Se conservan los escenarios jugables, shaders, licencias y
+créditos públicos; los contactos de una licencia no se censuran.
+
+Después de reconstruir y probar el Snap, el mantenedor inicia sesión en su
+terminal y puede publicarlo:
+
+```bash
+snapcraft login
+snapcraft upload openrailsrs_0.1.0-alpha.1_amd64.snap --release latest/edge
+```
+
+No se guardan credenciales de Snapcraft dentro del repositorio ni del paquete.
+La tienda muestra el usuario y nombre público del publicador, tomados de la
+cuenta de Ubuntu One; revisalos antes de publicar. Esos datos son ajenos al
+binario. Ver [datos del publicador](https://dashboard.snapcraft.io/docs/reference/v1/snap.html#about-publisher).
+El comando de publicación sigue la
+[guía oficial de revisiones y releases](https://documentation.ubuntu.com/snapcraft/8.9.0/how-to/publishing/manage-revisions-and-releases/).
+Una vez publicado, la instalación será `sudo snap install openrailsrs --edge`.
+
+La inspección del Snap anterior encontró una ruta personal en la descripción
+de `examples/chiltern/scenario.toml` y cuatro registros de ensayos incluidos.
+No detectó claves privadas ni los formatos de tokens examinados en los archivos
+propios y binarios. La descripción se corrigió y los registros quedan fuera
+del ensamblado. Los 205 recursos actuales incluyen los shaders de Hanabi,
+34 candidatos de escenarios TOML y las licencias. Se comprobó esa selección
+con los binarios anteriores para auditar archivos, sin presentarla como una
+alpha nueva ni como una prueba del juego actualizado dentro de Snap.
+
+Snapcraft validó la receta con `expand-extensions`; las siete pruebas de
+empaquetado pasaron y `check.sh` completó 1.681 pruebas Rust y 67 Python.
+El Snap no está instalado en el host y no se realizó una publicación en tienda.
 
 ## Estado de las pruebas del 5 de octubre de 2026
 

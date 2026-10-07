@@ -2,7 +2,7 @@ extra_trains = []
 
 [scenario]
 name = "RS_Let's go to Birmingham"
-description = "Imported from MSTS activity: /home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act"
+description = "Imported from MSTS activity: Chiltern/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act"
 
 [viewer3d.world_anchor]
 tile_x = -6079

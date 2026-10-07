@@ -16,6 +16,63 @@ RESOURCE_PREFIXES = (
     "crates/openrailsrs-bevy-scenery/assets/",
     "crates/openrailsrs-viewer3d/assets/",
 )
+PRIVATE_DATA_PATTERNS = {
+    "ruta personal del equipo": re.compile(
+        rb"(?:/home/[^/\s\"\\]+/|/Users/[^/\s\"\\]+/|[A-Za-z]:\\Users\\[^\\\s\"]+\\)"
+    ),
+    "clave privada": re.compile(rb"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----"),
+    "token de acceso": re.compile(
+        rb"(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|AKIA[A-Z0-9]{16}|sk-[A-Za-z0-9_-]{40,})"
+    ),
+}
+
+
+def runtime_resource(relative):
+    """Retain playable examples and assets, excluding development captures."""
+    path = Path(relative)
+    if not relative.startswith(RESOURCE_PREFIXES) or path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"Invalid resource manifest path: {relative}")
+    if relative.startswith("examples/baselines/"):
+        return False
+    if path.suffix.lower() in (".csv", ".log", ".webm", ".mp4", ".replay", ".cs"):
+        return False
+    if path.name.endswith("_log.txt") or path.name.startswith(("run.", "outcome.")):
+        return False
+    if path.name.startswith("run_") and path.suffix.lower() != ".toml":
+        return False
+    return True
+
+
+def audit_privacy(directory):
+    """Return file names and reasons only, never the matching private values.
+
+    This catches personal paths and common credential formats. It is not a
+    general secret detector; public copyright and license contacts are retained.
+    """
+    findings = []
+    forbidden = {".git", ".aws", ".ssh", ".env", "credentials", "id_rsa", "id_ed25519",
+                 "player-data", "official-content", "launch.toml", "settings.json", "__pycache__"}
+    for path in sorted(directory.rglob("*")):
+        relative = path.relative_to(directory)
+        if forbidden.intersection(relative.parts):
+            findings.append((str(relative), "datos privados o de desarrollo"))
+            continue
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+            data = data.decode("utf-16", errors="replace").encode("utf-8")
+        for reason, pattern in PRIVATE_DATA_PATTERNS.items():
+            if pattern.search(data):
+                findings.append((str(relative), reason))
+    return findings
+
+
+def require_private_data_free(directory):
+    findings = audit_privacy(directory)
+    if findings:
+        details = "; ".join(f"{name}: {reason}" for name, reason in findings[:12])
+        raise ValueError(f"Private data in distribution: {details}")
 
 LAUNCHER = r'''#!/bin/sh
 set -eu
@@ -92,17 +149,13 @@ def assemble(binaries, destination):
     # Git's allowlist excludes ignored native routes, downloads and local data.
     paths = json.loads((ROOT / "packaging/resources.json").read_text())
     for relative in filter(None, paths):
-        if not relative.startswith(RESOURCE_PREFIXES) or ".." in Path(relative).parts:
-            raise ValueError(f"Invalid resource manifest path: {relative}")
+        if not runtime_resource(relative):
+            continue
         source = ROOT / relative
         if source.is_symlink():
             continue
         if not source.resolve().is_relative_to(ROOT.resolve()):
             raise ValueError("Resource escapes the source tree")
-        if source.name.startswith(("run.", "run_", "outcome.")) or source.suffix in (
-            ".csv", ".webm", ".mp4"
-        ):
-            continue
         if not source.is_file():
             continue
         if relative.startswith(RESOURCE_PREFIXES[1]):
@@ -158,6 +211,7 @@ def assemble(binaries, destination):
         "Comment=Simulador ferroviario\nExec=openrailsrs-viewer3d --menu\n"
         "Terminal=false\nCategories=Game;Simulation;\n"
     )
+    require_private_data_free(destination)
     manifest = {
         str(path.relative_to(destination)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(destination.rglob("*")) if path.is_file()
@@ -175,7 +229,15 @@ def main():
     parser.add_argument("--binaries", type=Path, default=ROOT / "target/release")
     parser.add_argument("--output", type=Path, default=ROOT / "tmp/dist/openrailsrs-linux")
     parser.add_argument("--archive", type=Path)
+    parser.add_argument("--audit", type=Path, help="inspect an existing extracted package without rebuilding")
     args = parser.parse_args()
+    if args.audit:
+        directory = args.audit.resolve()
+        if not directory.is_dir():
+            parser.error("--audit requires an extracted package directory")
+        require_private_data_free(directory)
+        print("No personal paths or common credential formats detected.")
+        return
     result = assemble(args.binaries.resolve(), args.output)
     if args.archive:
         args.archive.parent.mkdir(parents=True, exist_ok=True)
