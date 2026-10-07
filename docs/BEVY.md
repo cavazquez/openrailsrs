@@ -54,7 +54,31 @@ y reparte el presupuesto con CPU. CPU, GPU y Mixto comparten un máximo de
 32 emisores originales o falta de cómputo compatible usan la malla CPU.
 Los reportes distinguen capacidad GPU y solicitudes de emisión de partículas
 CPU vivas: no presentan esas solicitudes como un conteo real de partículas GPU.
-Lluvia y nieve conservan sus shaders actuales y su ajuste independiente.
+Lluvia y nieve también usan Hanabi en GPU: semillas persistentes, movimiento
+analítico y cuotas visibles independientes de la capacidad reservada. El
+respaldo CPU conserva el mismo campo, siluetas y mapa de techos. Sus instancias
+usan `SimulationSpace::Global`; los vértices ya se calculan en el marco del
+visor y se excluyen del desplazamiento de raíces del origen flotante.
+
+Los materiales sólo exponen propiedades de Hanabi a vértices en 0.19.0. La
+iluminación y extinción se calculan allí; las coordenadas del mapa de techos
+se conservan en un atributo por partícula para el fragmento. No se modifica
+la dependencia para ampliar la visibilidad de sus bindings.
+
+La suspensión es una capa de presentación tras colocar el coche en la vía.
+El resorte críticamente amortiguado usa el reloj ferroviario. Ruedas, bogies y pantógrafos
+compensan la pose de la carrocería; su transform base se restaura antes de la
+animación para evitar deriva durante pausas. No altera fuerzas ni resultados
+de los oráculos físicos. El ajuste predeterminado es Suave y puede apagarse.
+
+El humo usa pruebas de segmento contra límites opacos próximos: hasta ocho
+cajas por emisor GPU y una lista compartida acotada para CPU. Las instancias
+de edificios se consideran individualmente, con los límites de su malla, no
+con la caja agregada del grupo. Vidrios y tarjetas de follaje no forman muros.
+La caja del coche emisor no bloquea su propio escape al salir de la chimenea.
+El CPU consulta el terreno por partícula; GPU usa el suelo local del emisor.
+Estas aproximaciones evitan atravesar techos sin sustituir una colisión por
+triángulos o un modelo de ventilación de túneles.
 
 El sol toma ubicación geográfica MSTS, estación del año y reloj de la partida;
 el lector de `.env` respeta los horarios del satélite solar de la ruta.

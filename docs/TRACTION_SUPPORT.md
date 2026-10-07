@@ -179,8 +179,18 @@ mantiene el captador aéreo predeterminado de OR. Un autor puede declarar
 Los límites opcionales `ORTSRSMinimumVoltage` y `ORTSRSMaximumVoltage` permiten
 restringir las tensiones admitidas; sin ellos se requiere tensión positiva.
 
-El captador se representa en el centro del coche motor. No se calcula contacto
-geométrico, arcos eléctricos, frecuencia de red, varios pantógrafos independientes,
+La posición física del captador sigue siendo el centro del coche motor. Para
+la presentación, un pantógrafo original animado se ajusta a `OverheadWireHeight`
+mediante su recorrido original, sin estirarlo fuera del rango del modelo. Se
+muestrean los vértices reales en 17 poses; los rangos invertidos o insuficientes conservan su animación
+y se informan en el reporte. El hilo oculto a 10000 m de Chiltern no se trata
+como catenaria visible. Tercer/cuarto riel no producen arcos de pantógrafo.
+
+Un destello de 80 ms y una luz pequeña aparecen al perder o recuperar contacto
+con demanda y alimentación física disponible. El reloj de la partida gobierna
+su duración: la pausa congela el efecto. No hay destellos aleatorios al circular
+en vacío. La geometría descargada por LOD no modifica la tensión. Todavía no
+se calcula elasticidad del hilo, presión de contacto, frecuencia de red, varios pantógrafos independientes,
 alimentación desde otro coche, baterías de tracción ni motores auxiliares duales.
 Tampoco se ejecutan los scripts C# originales de alimentación ni se certifica el
 filtrado de tensión de OR. Tercer y cuarto riel son perfiles físicos declarativos:
@@ -228,7 +238,18 @@ movimiento y la emisión; reiniciar limpia las partículas antiguas. El tiempo
 acelerado envejece la estela según los segundos de simulación y el nacimiento
 se limita al último intervalo para evitar ráfagas tras la carga.
 
-Es un efecto de presentación con un máximo de 512 partículas y un solo dibujo.
+La textura compartida tiene bordes irregulares; cada nube varía su radio y
+rotación, con turbulencia acotada. El escape diésel cambia con ralentí y carga.
+El vapor en trabajo pulsa con la fase de las ruedas; en reposo mantiene el flujo
+de combustión. Se atenúa según la niebla y la luz del ambiente.
+
+La estela termina al cruzar límites opacos cercanos o el suelo. El viento se
+reduce bajo una cubierta. GPU considera ocho cajas por emisor y el suelo local;
+CPU usa la lista acotada de partes y consulta el terreno por partícula. Es una
+aproximación conservadora: no calcula huecos dentro de esas cajas ni circulación
+real de aire por túneles.
+
+Es un efecto de presentación con un máximo compartido de 512 partículas.
 Los coeficientes de arrastre y ascenso son ajustes visuales: no se certifican
 como dinámica de fluidos ni cambian la fuerza del motor o la adherencia de la
 vía. La nieve sigue sin calcular hielo. La

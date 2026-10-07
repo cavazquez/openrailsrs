@@ -1,8 +1,8 @@
 # Nieve, cálculo de efectos y memoria
 
 `F10` permite elegir **Auto, GPU, CPU o Mixto** para la precipitación. El modo
-predeterminado calcula el movimiento en el shader: semillas estáticas, viento,
-caída y oscilación; sin volver a subir las posiciones cada cuadro. CPU actualiza
+predeterminado usa **bevy_hanabi 0.19.0**: inicializa semillas persistentes en
+GPU y calcula viento, caída y oscilación sin subir posiciones cada cuadro. CPU actualiza
 una malla combinada limitada. Mixto reparte ambas cargas. En Auto, presión de VRAM
 o cuadros lentos sostenidos reducen el presupuesto; la recuperación usa histéresis.
 
@@ -23,7 +23,9 @@ no hay cómputo GPU utilizable. Todos toman los mismos emisores originales,
 motor/caldera, viento y reloj ferroviario. El presupuesto total es de hasta
 512 partículas; al cambiar de modo se limpia la estela anterior.
 
-La lluvia y nieve siguen usando los shaders analíticos existentes. Su control
+La lluvia y nieve ahora usan Hanabi en GPU, con el mismo campo analítico y las
+siluetas irregulares del respaldo CPU. Un cambio de intensidad modifica la cuota
+visible; las capacidades se agrupan en potencias de dos para acotar la caché. Su control
 **Cálculo del clima** y `OPENRAILSRS_WEATHER_EXECUTION` no cambian el humo.
 Para pruebas del escape se usa `OPENRAILSRS_TRAIN_EFFECT_EXECUTION=auto|gpu|cpu|hybrid`.
 Los dos ajustes eligen dónde calcular partículas; el dibujo sigue usando
@@ -47,12 +49,41 @@ La física, señales, carga de archivos y lógica de la partida usan CPU en todo
 modos. El modo software permite ejecutar sin GPU utilizable y resulta mucho más
 lento; los modos de efectos no prometen ejecutar toda la aplicación en GPU.
 
+## Niebla y faros
+
+**Clima → Niebla** reduce la visibilidad a **120 m**; el volumen local atenúa
+objetos cercanos y dispersa los faros, también al mirar desde la cabina.
+**F10 → Imagen y cabina → Modelo de niebla → Automática** activa 32 pasos
+volumétricos con niebla, lluvia, nieve o tormenta en un adaptador hardware.
+Distancia mantiene la alternativa económica; 64 pasos mejora el muestreo a
+costa de tiempo GPU. Apagar Niebla elimina ambas capas.
+
+El volumen local mide 400 × 45 × 400 m y se desvanece en los bordes. En niebla
+densa se evita aplicar dos veces la misma extinción, mientras la niebla por
+distancia completa el fondo. Hanabi atenúa e ilumina sus partículas según
+ese ambiente; la precipitación recibe luz de los faros del jugador.
+
+Se corrige en el asset embebido de **Bevy 0.19.1** la distancia usada para
+atenuar luces puntuales en el volumen: distancia luz–muestra, en lugar del
+radio de toda la caja. También se aplica a esas luces la fase normalizada
+Henyey–Greenstein que ya usa la rama direccional: sin ella el haz sobreexpone
+la vista desde la cabina. La modificación se limita a esa versión y no cambia
+la rama del sol. Ver [fallo upstream #25282](https://github.com/bevyengine/bevy/issues/25282)
+y [funciones de fase en PBRT](https://pbr-book.org/4ed/Volume_Scattering/Phase_Functions).
+La luz ambiental usa el color actual del cielo y la transmisión acumulada del
+volumen; la bruma diurna pierde contraste sin oscurecer el fondo a negro.
+El reporte indica si se aplicó; un cambio de shader que impida reconocerla
+se informa en el log. No es una simulación de humedad ni una certificación
+de equivalencia atmosférica con Open Rails.
+
 ## Medición reproducible
 
 ```bash
 python3 scripts/benchmark_weather_execution.py --route-root "$CHILTERN_ROUTE"
 python3 scripts/check_train_effects.py --route-root "$CHILTERN_ROUTE" \
   --scenario "$PERFIL_DE_FORMACION_ORIGINAL" --mode gpu --mode cpu --mode hybrid
+python3 scripts/check_train_atmosphere.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$PERFIL_DE_FORMACION_ORIGINAL"
 python3 scripts/check_viewer_streaming.py --route-root "$CHILTERN_ROUTE" \
   --scenario examples/chiltern_extended/scenario.toml --checkpoint terminal \
   --headless-wayland --require-hardware --weather snow --weather-execution auto --renderer gpu

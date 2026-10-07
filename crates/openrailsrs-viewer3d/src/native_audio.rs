@@ -173,7 +173,10 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         },
         variable3: 0.0,
         steam_phase: steam.filter(|_| powered && steam_working).map(|s| {
-            session.state.odometer_m / (std::f64::consts::TAU * s.driving_wheel_radius_m) * 8.0
+            (session.state.odometer_m + session.render_wheel_slip_distance_m(vehicle, 0.0))
+                / (std::f64::consts::TAU * s.driving_wheel_radius_m)
+                * f64::from(s.cylinder_count)
+                * 2.0
         }),
         engine_on: diesel_state
             .map(|d| d.command_running && d.fuel_l > 0. && car.is_some_and(|c| c.battery_on)),

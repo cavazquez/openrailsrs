@@ -188,7 +188,7 @@ pub fn sync_route_atmosphere(
     mut clear: ResMut<ClearColor>,
     domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
     mut materials: ResMut<Assets<RailwaySkyMaterial>>,
-    mut cameras: Query<&mut DistanceFog, With<Camera3d>>,
+    mut cameras: Query<(&mut DistanceFog, Option<&bevy::light::VolumetricFog>), With<Camera3d>>,
 ) {
     let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
     let clock = live.as_ref().map_or(0.0, |l| l.clock_time_s());
@@ -208,19 +208,19 @@ pub fn sync_route_atmosphere(
             material.params = params;
         }
     }
-    let visibility = match content.weather {
-        PlayerWeather::Clear => CLEAR_WEATHER_VISIBILITY_M,
-        PlayerWeather::Rain => 7000.0,
-        PlayerWeather::Overcast => CLEAR_WEATHER_VISIBILITY_M,
-        PlayerWeather::Storm => 4000.0,
-        PlayerWeather::Fog => 500.0,
-        PlayerWeather::Snow => 500.0,
-    };
-    for mut fog in &mut cameras {
+    let visibility = crate::ground_fog::weather_visibility(content.weather);
+    for (mut fog, volumetric) in &mut cameras {
         if !fog_state.enabled {
             *fog = disabled_distance_fog();
             continue;
         }
+        // Local extinction supplies the dense near field. Retain a milder far
+        // haze rather than charging scene geometry the same fog twice.
+        let visibility = if content.weather == PlayerWeather::Fog && volumetric.is_some() {
+            visibility * 4.0
+        } else {
+            visibility
+        };
         let day = params.sun.w;
         let mut f = viewer_distance_fog(visibility, false);
         // One atmospheric model throughout twilight; reduce forward sun glare

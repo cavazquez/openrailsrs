@@ -492,6 +492,7 @@ pub fn update_rolling_stock_part_anim(
     offset: Res<RouteWorldOffset>,
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
+    contacts: Option<Res<crate::electric_contact::ElectricContacts>>,
     mut wheels: Query<
         (
             &mut TrainWheelAnim,
@@ -669,6 +670,12 @@ pub fn update_rolling_stock_part_anim(
             } else {
                 0.
             };
+        }
+        if keyed_anim.kind == RollingStockPartKind::Pantograph
+            && env_key_frac("OPENRAILSRS_DEBUG_PANTO_KEY").is_none()
+            && let Some(contacts) = &contacts
+        {
+            frac = contacts.fraction(parent.parent(), frac);
         }
         let key = key_from_frac(frac, binding.frame_count);
         if keyed_anim.key == key && !keyed_anim.is_added() && !binding.is_changed() {

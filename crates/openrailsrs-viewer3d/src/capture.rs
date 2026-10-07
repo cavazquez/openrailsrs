@@ -102,6 +102,23 @@ pub fn init_capture(mut commands: Commands) {
     });
 }
 
+/// A capture-only control allows identical frames with lamps off/low/high.
+/// Normal launches never use it, and it does not modify saved player settings.
+pub fn apply_light_override(
+    capture: Option<Res<CaptureState>>,
+    live: Option<ResMut<crate::live::LiveDrive>>,
+) {
+    if capture.is_some()
+        && let Some(mut live) = live
+        && let Some(level) = std::env::var("OPENRAILSRS_CAPTURE_HEADLIGHTS")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .filter(|v| *v <= 2)
+    {
+        live.session.headlights = level;
+    }
+}
+
 fn scenery_ready(progress: Option<Res<WorldSpawnProgress>>) -> bool {
     progress.is_none()
 }
@@ -228,6 +245,9 @@ pub struct CaptureScene<'w, 's> {
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
     effects: Option<Res<'w, crate::train_effects::TrainEffects>>,
+    fog: Option<Res<'w, crate::ground_fog::FogDiagnostics>>,
+    electric_contacts: Option<Res<'w, crate::electric_contact::ElectricContacts>>,
+    motion: Option<Res<'w, crate::train_motion::TrainMotion>>,
     cab_diagnostic: Option<Res<'w, crate::cab_render::CabRenderDiagnostic>>,
     wet_surfaces: Option<Res<'w, crate::wet_surfaces::WetSurfaces>>,
     lod_fades: Query<'w, 's, &'static crate::world_lod_fade::LodFade>,
@@ -340,6 +360,11 @@ impl CaptureScene<'_, '_> {
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         });
+        report["electric_contacts"] = serde_json::json!(
+            self.electric_contacts
+                .as_ref()
+                .map(|contacts| contacts.report())
+        );
         report["rail_adhesion"] =
             serde_json::json!(live.and_then(|l| l.session.state.rail_adhesion.as_ref()));
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
@@ -376,6 +401,14 @@ impl CaptureScene<'_, '_> {
             "policy": "authored DXT blocks when supported; lossless RGBA fallback",
         });
         report["weather_particles"] = self.weather_particles.report();
+        report["fog"] = self
+            .fog
+            .as_ref()
+            .map_or(serde_json::Value::Null, |f| f.report());
+        report["train_motion"] = self
+            .motion
+            .as_ref()
+            .map_or(serde_json::Value::Null, |m| m.report());
         report["renderer_selection"] =
             serde_json::to_value(*self.renderer_selection).unwrap_or_default();
         report

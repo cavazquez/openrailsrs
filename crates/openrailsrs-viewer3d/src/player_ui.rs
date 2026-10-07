@@ -292,6 +292,7 @@ enum SettingField {
     FogQuality,
     WeatherExecution,
     TrainEffectExecution,
+    TrainMotion,
     TimeSource,
     WeatherSource,
     ManualWeather,
@@ -835,6 +836,7 @@ fn handle_buttons(
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
                 SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
                 SettingField::TrainEffectExecution=>settings.train_effect_execution=settings.train_effect_execution.next(),
+                SettingField::TrainMotion=>settings.train_motion=settings.train_motion.next(),
                 SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
                 SettingField::WeatherSource=>{content.environment.weather=if live.is_some(){content.environment.weather.next()}else{menu.environment.weather.next()};menu.environment.weather=content.environment.weather;settings.environment.weather=content.environment.weather;},
                 SettingField::ManualWeather=>{if live.is_none(){content.environment=menu.environment;}let selected=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==content.environment.manual_weather).unwrap_or(0),PlayerWeather::ALL.len(),1)];content.environment.manual_weather=selected;content.environment.weather=crate::environment::EnvironmentSource::Manual;menu.weather=selected;menu.environment=content.environment;settings.environment=content.environment;},
@@ -1638,8 +1640,25 @@ fn build_settings(
             });
             button(
                 p,
+                format!("Movimiento del tren: {}", s.train_motion.label()),
+                UiCommand::Setting(SettingField::TrainMotion, 0.0),
+            );
+            label(
+                p,
+                "Suspensión de carrocería y cabina. Se puede apagar; las ruedas y bogies conservan su posición sobre la vía.",
+                12.0,
+                MUTED,
+            );
+            button(
+                p,
                 format!("Modelo de niebla: {}", s.fog_quality.label()),
                 UiCommand::Setting(SettingField::FogQuality, 0.0),
+            );
+            label(
+                p,
+                "Automática muestra haces de faros con niebla en GPU. Atmosférica conserva la visibilidad reducida con menor costo. La niebla volumétrica usa absorción, dispersión y sombras.",
+                12.0,
+                MUTED,
             );
             button(
                 p,

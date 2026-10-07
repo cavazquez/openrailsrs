@@ -39,6 +39,8 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 mod cab_profile;
+mod effect_obstacles;
+pub mod electric_contact;
 pub mod gpu_memory;
 pub mod ground_fog;
 mod launch_audits;
@@ -91,11 +93,13 @@ pub mod train_diagnostics;
 mod train_effects;
 mod train_effects_gpu;
 pub mod train_lighting;
+pub mod train_motion;
 pub mod transfer;
 pub mod view_window;
 pub mod water;
 pub mod weather_execution;
 pub mod weather_particles;
+mod weather_particles_gpu;
 mod wet_surfaces;
 pub mod windshield;
 pub mod world;
@@ -208,6 +212,47 @@ impl Plugin for ViewerPlugin {
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         app.init_resource::<wet_surfaces::WetSurfaces>();
+        app.init_resource::<train_motion::TrainMotion>()
+            .add_systems(
+                Update,
+                train_motion::restore_running_gear
+                    .before(rolling_stock_anim::update_rolling_stock_part_anim)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                train_motion::update
+                    .after(rolling_stock_anim::update_rolling_stock_part_anim)
+                    .before(camera::follow_train_camera)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
+        app.init_resource::<electric_contact::ElectricContacts>()
+            .add_systems(
+                Update,
+                electric_contact::prepare_geometry
+                    .before(rolling_stock_anim::update_rolling_stock_part_anim)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                electric_contact::spawn_flashes
+                    .after(live::spawn_live_train)
+                    .after(traffic::spawn_traffic)
+                    .run_if(live::live_mode_active),
+            )
+            .add_systems(
+                PostUpdate,
+                electric_contact::update_contacts
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
+        app.init_resource::<ground_fog::FogDiagnostics>()
+            .add_systems(Startup, ground_fog::prepare_shader_fix)
+            .add_systems(Update, ground_fog::apply_shader_fix);
         app.init_resource::<gpu_memory::GraphicsMemory>()
             .init_resource::<weather_execution::RendererSelection>()
             .init_resource::<weather_particles::WeatherParticles>()
@@ -219,6 +264,8 @@ impl Plugin for ViewerPlugin {
                 PostUpdate,
                 weather_particles::update
                     .after(bevy::transform::TransformSystems::Propagate)
+                    .after(bevy_hanabi::EffectSystems::TickSpawners)
+                    .before(bevy_hanabi::EffectSystems::CompileEffects)
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
@@ -244,6 +291,21 @@ impl Plugin for ViewerPlugin {
                 .run_if(live::live_mode_active),
         );
         app.add_plugins(train_effects_gpu::TrainParticlesPlugin);
+        app.add_systems(
+            OnEnter(ViewerAppState::Playing),
+            capture::apply_light_override
+                .after(live::spawn_live_train)
+                .run_if(live::live_mode_active),
+        );
+        app.init_resource::<effect_obstacles::EffectObstacles>()
+            .add_systems(
+                PostUpdate,
+                effect_obstacles::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .before(train_effects::update)
+                    .before(weather_particles::update)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         app.add_systems(
             PostUpdate,
             train_effects::update

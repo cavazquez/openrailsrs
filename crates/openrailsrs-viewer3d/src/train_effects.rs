@@ -36,6 +36,8 @@ struct Puff {
     radius: f32,
     steam: bool,
     load: f32,
+    phase: f32,
+    source: Option<Entity>,
 }
 #[derive(Resource, Default)]
 pub struct TrainEffects {
@@ -55,6 +57,9 @@ pub struct TrainEffects {
     gpu_delta_s: Option<f32>,
     fallback_reason: Option<&'static str>,
     last_camera_rotation: Option<Quat>,
+    birth_seed: u32,
+    cpu_collisions: u64,
+    obstacle_count: usize,
 }
 impl TrainEffects {
     pub fn report(&self) -> serde_json::Value {
@@ -65,6 +70,7 @@ impl TrainEffects {
             .map(|p| p.velocity.length())
             .fold(0.0_f32, f32::max);
         serde_json::json!({"native_emitters":self.emitters.len(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
+            "cpu_obstacle_hits":self.cpu_collisions,"nearby_opaque_bounds":self.obstacle_count,"gpu_bounds_per_emitter":8,"steam_pulses_follow_wheels":true,
             "wind_mps":self.wind.to_array(),"inherits_vehicle_velocity":true,
             "requested":self.requested,"execution":self.execution,"gpu_backend":self.emitters.iter().any(|e|e.gpu.is_some()).then_some("bevy_hanabi 0.19.0"),
             "fallback_reason":self.fallback_reason,
@@ -187,17 +193,20 @@ pub fn spawn(
         "openrailsrs-viewer3d: {} native exhaust/steam emitters (max {MAX_PARTICLES} particles)",
         effects.emitters.len()
     );
-    let mut pixels = vec![255u8; 32 * 32 * 4];
-    for y in 0..32 {
-        for x in 0..32 {
-            let radius = ((x as f32 - 15.5).powi(2) + (y as f32 - 15.5).powi(2)).sqrt() / 15.5;
-            pixels[(y * 32 + x) * 4 + 3] = ((1.0 - radius).max(0.0).powi(2) * 210.0) as u8;
+    let mut pixels = vec![255u8; 64 * 64 * 4];
+    for y in 0..64 {
+        for x in 0..64 {
+            let p = Vec2::new(x as f32 - 31.5, y as f32 - 31.5) / 31.5;
+            let noise =
+                (p.x * 15.0 + (p.y * 9.0).sin()).sin() * (p.y * 13.0 + (p.x * 11.0).cos()).cos();
+            let edge = (1.0 - p.length() + noise * 0.13).clamp(0.0, 1.0);
+            pixels[(y * 64 + x) * 4 + 3] = (edge.powf(1.3) * (0.65 + noise * 0.25) * 230.0) as u8;
         }
     }
     let texture = images.add(Image::new(
         Extent3d {
-            width: 32,
-            height: 32,
+            width: 64,
+            height: 64,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -256,7 +265,22 @@ fn emission(
             .boiler_state
             .as_ref()
             .map_or(0., |b| b.coal_burn_kg_s as f32);
-        return (burning * 40., true, load);
+        let params = session.vehicle_definition(vehicle).and_then(|v| match v {
+            openrailsrs_train::Vehicle::Loco(l) => l.steam.as_ref(),
+            _ => None,
+        });
+        let wheel_radius = params.map_or(0.8, |s| s.driving_wheel_radius_m);
+        let strokes = params.map_or(4.0, |s| f64::from(s.cylinder_count) * 2.0);
+        let distance =
+            session.state.odometer_m + session.render_wheel_slip_distance_m(vehicle, 0.0);
+        let phase = distance / (std::f64::consts::TAU * wheel_radius) * strokes;
+        let working = session
+            .state
+            .boiler_state
+            .as_ref()
+            .is_some_and(|b| b.tractive_force_n > 0.0 && !b.low_water_failure)
+            && session.velocity_mps().abs() > 0.1;
+        return (burning * 40.0 * steam_pulse(phase, working), true, load);
     }
     if n.contains("cylinder") {
         return (
@@ -299,6 +323,15 @@ fn emission(
     (0.0, true, 0.0)
 }
 
+fn steam_pulse(strokes: f64, working: bool) -> f32 {
+    if !working {
+        return 1.0;
+    }
+    // Double-acting strokes follow authored cylinders and driving-wheel slip.
+    let crest = (strokes * std::f64::consts::TAU).cos().max(0.0).powi(4) as f32;
+    0.45 + crest * 2.8
+}
+
 /// Native shapes face -Z after MSTS conversion. Flip reverses the authored
 /// vehicle frame, not its direction of travel; the reverser supplies that sign.
 fn vehicle_world_velocity(
@@ -335,7 +368,16 @@ fn advance_puff(puff: &mut Puff, dt: f32, wind: Vec3) {
     let equilibrium = wind + Vec3::Y * (0.35 / drag);
     let relative = puff.velocity - equilibrium;
     let decay = (-drag * dt).exp();
-    puff.position += equilibrium * dt + relative * ((1.0 - decay) / drag);
+    let turbulence = |age: f32| {
+        Vec3::new(
+            (age * 2.7 + puff.phase).sin() * 0.18,
+            0.0,
+            (age * 1.9 + puff.phase * 1.3).cos() * 0.16,
+        )
+    };
+    puff.position +=
+        equilibrium * dt + relative * ((1.0 - decay) / drag) + turbulence(puff.age + dt)
+            - turbulence(puff.age);
     puff.velocity = equilibrium + relative * decay;
     puff.age += dt;
 }
@@ -379,6 +421,10 @@ pub struct TrainEffectScene<'w, 's> {
     camera: Query<'w, 's, &'static Transform, With<Camera3d>>,
     mesh: Query<'w, 's, &'static Mesh3d, With<ExhaustMesh>>,
     meshes: ResMut<'w, Assets<Mesh>>,
+    obstacles: Option<Res<'w, crate::effect_obstacles::EffectObstacles>>,
+    terrain: Option<Res<'w, crate::terrain::TerrainElevation>>,
+    focus: Option<Res<'w, crate::world::RouteFocus>>,
+    fog: Option<Res<'w, crate::sky::FogState>>,
 }
 
 pub fn update(
@@ -404,6 +450,10 @@ pub fn update(
         camera,
         mesh,
         mut meshes,
+        obstacles,
+        terrain,
+        focus,
+        fog,
     } = scene;
     let (Ok(camera), Ok(mesh)) = (camera.single(), mesh.single()) else {
         return;
@@ -483,14 +533,43 @@ pub fn update(
     }
     let shift = origin.shift - effects.shift;
     effects.shift = origin.shift;
+    effects.obstacle_count = obstacles.as_ref().map_or(0, |s| s.solids.len());
+    let ground = |point: Vec3| {
+        terrain
+            .as_ref()
+            .zip(focus.as_ref())
+            .and_then(|(t, f)| {
+                t.sample_world_y(
+                    point.x + origin.shift.x + f.center.x,
+                    point.z + origin.shift.z + f.center.z,
+                )
+                .map(|h| h - f.height_origin - origin.shift.y)
+            })
+            .unwrap_or(-10000.0)
+    };
+    let mut collisions = 0;
     for puff in &mut effects.particles {
         puff.position -= shift;
-        advance_puff(puff, dt, wind);
+        let from = puff.position;
+        let protection = obstacles.as_ref().map_or(1.0, |s| s.wind_factor(from));
+        advance_puff(puff, dt, wind * protection);
+        if dt > 0.0
+            && puff.age > 0.18
+            && (puff.position.y < ground(puff.position)
+                || obstacles
+                    .as_ref()
+                    .is_some_and(|s| s.blocked(from, puff.position, puff.source)))
+        {
+            puff.age = PUFF_LIFETIME_S;
+            collisions += 1;
+        }
     }
+    effects.cpu_collisions += collisions;
     effects.particles.retain(|p| p.age < PUFF_LIFETIME_S);
     let capacity = effects.cpu_capacity.saturating_sub(effects.particles.len());
     let mut born = Vec::new();
     let mut gpu_spawn_requests = 0;
+    let mut birth_seed = effects.birth_seed;
     if !live.paused {
         for emitter in &mut effects.emitters {
             let session = if emitter.track == 0 {
@@ -553,18 +632,68 @@ pub fn update(
             }
             let cpu_count = (count - gpu_count).min(capacity.saturating_sub(born.len()));
             for _ in 0..cpu_count {
+                birth_seed = birth_seed.wrapping_add(1);
+                let phase = (birth_seed as f32 * 2.399963).rem_euclid(std::f32::consts::TAU);
                 born.push(Puff {
                     position: world_position,
                     velocity,
                     age: 0.0,
-                    radius,
+                    radius: radius * (0.8 + phase.sin().abs() * 0.4),
                     steam,
                     load,
+                    phase,
+                    source: Some(emitter.car),
                 });
             }
         }
     }
+    effects.birth_seed = birth_seed;
     effects.gpu_spawn_requests += gpu_spawn_requests;
+    let density = if fog.as_ref().is_none_or(|f| f.enabled) {
+        content.as_ref().map_or(0.0, |c| {
+            std::f32::consts::LN_10 / crate::ground_fog::weather_visibility(c.weather)
+        })
+    } else {
+        0.0
+    };
+    let fog_color = content.as_ref().map_or(Vec3::splat(0.55), |c| {
+        crate::sky::sky_parameters(
+            sun.as_ref().map_or(0.5, |s| s.direction.y),
+            c.weather,
+            sun.as_ref().map_or(Vec3::Y, |s| s.direction),
+            clock,
+        )
+        .horizon
+        .truncate()
+    });
+    for emitter in &effects.emitters {
+        let Some(instance) = &emitter.gpu else {
+            continue;
+        };
+        let Ok((mut properties, _, anchor, _)) = gpu.get_mut(instance.entity) else {
+            continue;
+        };
+        let Ok((car, _, _)) = cars.get(emitter.car) else {
+            continue;
+        };
+        let point = car.transform_point(Vec3::new(
+            emitter.data.position[0],
+            emitter.data.position[1],
+            -emitter.data.position[2],
+        ));
+        let solids = obstacles
+            .as_ref()
+            .map_or_else(Vec::new, |s| s.nearest(point, 8, emitter.car));
+        let protection = obstacles.as_ref().map_or(1.0, |s| s.wind_factor(point));
+        properties.set("wind", (wind * protection).into());
+        gpu::environment(
+            &mut properties,
+            anchor.translation(),
+            ground(point),
+            fog_color.extend(density),
+            &solids,
+        );
+    }
     let changed = !born.is_empty()
         || had_particles
             && (configuration_changed
@@ -653,8 +782,8 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
     let mut uvs = Vec::with_capacity(particles.len() * 4);
     let mut colors = Vec::with_capacity(particles.len() * 4);
     let mut indices = Vec::with_capacity(particles.len() * 6);
-    let right = camera.rotation * Vec3::X;
-    let up = camera.rotation * Vec3::Y;
+    let camera_right = camera.rotation * Vec3::X;
+    let camera_up = camera.rotation * Vec3::Y;
     let normal = camera.rotation * Vec3::Z;
     let invisible = Puff {
         position: Vec3::ZERO,
@@ -663,6 +792,8 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
         radius: 0.0,
         steam: true,
         load: 0.0,
+        phase: 0.0,
+        source: None,
     };
     // At least one degenerate transparent quad: Bevy's slab allocator does not
     // allocate empty vertex/index data. Never submit a zero-length GPU buffer.
@@ -672,6 +803,8 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
         particles
     };
     for p in particles {
+        let right = camera_right * p.phase.cos() + camera_up * p.phase.sin();
+        let up = -camera_right * p.phase.sin() + camera_up * p.phase.cos();
         let radius = p.radius * (1.0 + p.age * 4.0);
         let (shade, opacity) = appearance(p.steam, p.load);
         let alpha = (1.0 - p.age / PUFF_LIFETIME_S).powi(2) * opacity;
@@ -715,9 +848,17 @@ mod tests {
             radius: 0.1,
             steam: false,
             load: 1.0,
+            phase: 0.0,
+            source: None,
         }
     }
 
+    #[test]
+    fn steam_strokes_repeat_with_wheels_and_idle_has_no_pulses() {
+        assert!(steam_pulse(0.0, true) > steam_pulse(0.5, true) * 5.0);
+        assert!((steam_pulse(0.0, true) - steam_pulse(1.0, true)).abs() < 1e-5);
+        assert_eq!(steam_pulse(0.25, false), 1.0);
+    }
     #[test]
     fn smoke_inherits_car_motion_regardless_of_authored_flip_and_reverses_with_train() {
         let mut train = session("scenario.toml");
@@ -765,8 +906,7 @@ mod tests {
         }
         let mut still = puff(Vec3::Y);
         advance_puff(&mut still, 1.0, Vec3::ZERO);
-        assert_eq!(still.position.x, 0.0);
-        assert_eq!(still.position.z, 0.0);
+        assert!(still.position.x.abs() <= 0.36 && still.position.z.abs() <= 0.32);
         let before = (still.position, still.velocity, still.age);
         advance_puff(&mut still, 0.0, Vec3::X * 18.0);
         assert_eq!((still.position, still.velocity, still.age), before);
@@ -924,6 +1064,8 @@ mod tests {
             radius: 0.1,
             steam: true,
             load: 1.0,
+            phase: 0.0,
+            source: None,
         };
         let mesh = particle_mesh(&[p], &Transform::IDENTITY);
         assert_eq!(mesh.count_vertices(), 4);

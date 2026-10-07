@@ -99,6 +99,8 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_CAPTURE_OR_FOCUS"]="1"
     if getattr(args, "flip_u", False):
         env["OPENRAILSRS_DEBUG_FLIP_U"] = "1"
+    for attr,key in (("fog_quality","OPENRAILSRS_FOG_QUALITY"),("train_motion","OPENRAILSRS_TRAIN_MOTION"),("capture_headlights","OPENRAILSRS_CAPTURE_HEADLIGHTS")):
+        if hasattr(args,attr): env[key] = str(getattr(args,attr))
     if hasattr(args, "weather"):
         env["OPENRAILSRS_WEATHER"] = args.weather
     if getattr(args, "real_time", False):

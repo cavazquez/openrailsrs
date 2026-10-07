@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum FogQuality {
     #[default]
+    Auto,
     Distance,
     Volumetric32,
     Volumetric64,
@@ -16,13 +17,15 @@ pub enum FogQuality {
 impl FogQuality {
     pub fn next(self) -> Self {
         match self {
+            Self::Auto => Self::Distance,
             Self::Distance => Self::Volumetric32,
             Self::Volumetric32 => Self::Volumetric64,
-            Self::Volumetric64 => Self::Distance,
+            Self::Volumetric64 => Self::Auto,
         }
     }
     pub fn label(self) -> &'static str {
         match self {
+            Self::Auto => "Automática · haces con niebla",
             Self::Distance => "Atmosférica (liviana)",
             Self::Volumetric32 => "Volumétrica · 32 pasos",
             Self::Volumetric64 => "Volumétrica · 64 pasos",
@@ -30,6 +33,7 @@ impl FogQuality {
     }
     pub fn steps(self) -> Option<u32> {
         match self {
+            Self::Auto => Some(32),
             Self::Distance => None,
             Self::Volumetric32 => Some(32),
             Self::Volumetric64 => Some(64),
@@ -218,6 +222,7 @@ pub struct PlayerSettings {
     pub fog_quality: FogQuality,
     pub weather_execution: crate::weather_execution::WeatherExecution,
     pub train_effect_execution: crate::weather_execution::WeatherExecution,
+    pub train_motion: crate::train_motion::MotionLevel,
     pub renderer: crate::weather_execution::RendererSelection,
     pub environment: crate::environment::EnvironmentSelection,
     pub lightning: bool,
@@ -239,9 +244,10 @@ impl Default for PlayerSettings {
             shadows: true,
             automatic_cant: true,
             fog: true,
-            fog_quality: FogQuality::Distance,
+            fog_quality: FogQuality::Auto,
             weather_execution: crate::weather_execution::WeatherExecution::Auto,
             train_effect_execution: crate::weather_execution::WeatherExecution::Auto,
+            train_motion: crate::train_motion::MotionLevel::Soft,
             renderer: crate::weather_execution::RendererSelection::Auto,
             environment: default(),
             lightning: true,

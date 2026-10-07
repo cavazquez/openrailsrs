@@ -7,7 +7,7 @@ from benchmark_weather_execution import comparable, validate_mode
 class WeatherTests(unittest.TestCase):
     def test_software_cannot_be_reported_as_hardware_or_gpu_particle_work(self):
         report = {"renderer": {"hardware": True}, "weather_particles": {
-            "gpu_particles": 2048, "cpu_particles": 0, "gpu_mesh_updates": 1},
+            "gpu_particles": 2048, "cpu_particles": 0, "gpu_mesh_updates": 0, "gpu_backend":"bevy_hanabi 0.19.0", "gpu_seed_initializations":1, "gpu_simulation_delta_s":0.0},
             "performance": {"gameplay_frames": 120}}
         validate_mode("gpu", report, 2048)
         with self.assertRaisesRegex(ValueError, "wrong graphics adapter"):
@@ -26,7 +26,7 @@ class WeatherTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "clock_time_s"):
             comparable(a, b)
         report = {"renderer": {"hardware": True}, "weather_particles": {
-            "gpu_particles": 2048, "cpu_particles": 0, "gpu_mesh_updates": 120}}
+            "gpu_particles": 2048, "cpu_particles": 0, "gpu_mesh_updates": 120, "gpu_backend":"bevy_hanabi 0.19.0", "gpu_seed_initializations":1, "gpu_simulation_delta_s":0.0}}
         with self.assertRaisesRegex(ValueError, "uploaded repeatedly"):
             validate_mode("gpu", report, 2048)
 

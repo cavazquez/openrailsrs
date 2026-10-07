@@ -27,8 +27,13 @@ def validate_mode(name, report, budget):
                 "software": (0, budget)}[name]
     if (particles.get("gpu_particles"), particles.get("cpu_particles")) != expected:
         raise ValueError(f"{name}: different particle budget: {particles}")
-    if name == "gpu" and particles.get("gpu_mesh_updates") != 1:
-        raise ValueError("GPU seeds were uploaded repeatedly; rebuild the viewer")
+    if name in ("gpu", "hybrid"):
+        if particles.get("gpu_backend") != "bevy_hanabi 0.19.0" or particles.get("gpu_seed_initializations") != 1:
+            raise ValueError("Hanabi persistent seeds were not initialized exactly once")
+        if particles.get("gpu_mesh_updates") != 0:
+            raise ValueError("GPU seeds were uploaded repeatedly; rebuild the viewer")
+        if particles.get("gpu_simulation_delta_s") != 0.0:
+            raise ValueError("Hanabi precipitation did not freeze on pause")
     if name in ("cpu", "hybrid", "software") and particles.get("cpu_mesh_updates", 0) < 2:
         raise ValueError("CPU vertex path did not run")
     if (report.get("performance") or {}).get("gameplay_frames", 0) < 30:

@@ -1340,3 +1340,111 @@ oráculos mantienen RMS de velocidad de **0,2081 m/s** y diferencia máxima
 de posición de **39,61 m** para Pullman; **0,2382 m/s** y **25,79 m** para
 Class47. Se restauraron los resultados regenerados y se verificaron los
 174 archivos previos, incluida la configuración de lanzamiento del usuario.
+
+
+## Precipitación Hanabi, niebla y contacto con el entorno — 6 de octubre de 2026
+
+La lluvia y nieve usan partículas persistentes Hanabi en hardware, con respaldo
+CPU y reparto mixto. Las semillas se cargan una vez; el reloj ferroviario,
+la pausa, viento y origen flotante conservan el campo. Un mapa de alturas
+compartido deja la precipitación fuera de las cubiertas opacas. Los copos
+conservan bordes irregulares, variación y flutter; no se alteran edificios.
+
+La niebla densa reduce la visibilidad a 120 m y activa por defecto un volumen
+local de 32 pasos en hardware. Los faros iluminan la vía y dispersan luz en
+la bruma; Distancia sigue disponible para menor costo. La corrección acotada
+del shader de Bevy 0.19.1 usa distancia luz–muestra, fase normalizada para
+luces puntuales y luz ambiental del cielo integrada con la transmisión.
+Las primeras capturas permitieron detectar un haz blanco saturado y un fondo
+diurno oscurecido; las imágenes finales superaron ambas revisiones.
+
+La suspensión Suave sigue aceleración, frenado y curvas sin cambiar fuerzas;
+se puede apagar desde F10. Ruedas, bogies y pantógrafos compensan esa pose y
+la pausa no acumula transformaciones. El vapor y su sonido comparten los
+pulsos de los cilindros y la distancia efectiva de las ruedas. Humo y vapor
+usan textura irregular, turbulencia acotada y obstáculos opacos próximos;
+no convierten tarjetas de árboles o ventanas en paredes.
+
+El captador aéreo busca la altura TRK dentro del recorrido de su animación
+original. Una transición física de tensión bajo carga puede producir un arco
+breve. La geometría no sustituye la alimentación eléctrica ni el aislamiento
+por vehículo. Chiltern v4 declara un hilo oculto a 10.000 m y el material
+eléctrico disponible usa riel; no certifica un pantógrafo original en catenaria
+real. Las pruebas de la curva y condiciones del arco son sintéticas y se
+mantienen los oráculos físicos eléctricos. Las cajas de humo y máscara de
+techos son aproximaciones conservadoras; GPU usa el suelo local del emisor.
+
+La evidencia local se guarda en `tmp/train-atmosphere-20261006/`. Los recursos
+originales, capturas y datos de usuario permanecen fuera de Git. La
+[sección 47 de pruebas manuales](PLAYER_MANUAL_TESTS.md#47-precipitación-hanabi-niebla-cercana-e-interacción-del-tren)
+indica controles y resultado esperado para cada cambio.
+
+En RX 7600/Vulkan se verificaron siete capturas 1280×720: lluvia, nieve,
+niebla diurna y faros apagados/altos en cabina y exterior a las 23:00.
+Las dos precipitaciones inicializaron una vez 2.048 semillas Hanabi, con
+cero reconstrucciones de malla GPU/CPU y delta GPU cero en pausa. En niebla
+la densidad fue 0,065 y visibilidad 120 m; todos los pipelines terminaron
+sin pendientes ni fallos. Se revisaron las imágenes, además de los reportes.
+
+La comparación nocturna excluye HUD y exige respuesta al encender los faros.
+El aumento medio RGB fue 6,67/255 en exterior y 6,34/255 en cabina. La fracción
+nueva de blanco recortado fue 0,258 % y 0 %, menor al límite del ensayo de
+2,5 %. Es una comprobación de respuesta y saturación de los faros, no un
+oráculo de píxeles de Open Rails. El pico RSS de esos casos estuvo entre
+1.233 y 2.041 MiB, con radio de escenario de 450 m.
+
+`check.sh` pasó con **1.681 pruebas Rust** y **65 Python**, formato, Clippy con
+`-D warnings`, build, web, oráculos y servicio CLI de tres estaciones. La
+regresión de cubiertas inspecciona las dos texturas subidas: CPU y GPU
+conservan la misma altura de un techo opaco a menos de un centímetro.
+
+La escena congelada de nieve pasó en GPU (2.048/0), CPU (0/2.048), Mixto
+(1.536/512) y software (0/2.048). Cámara, reloj, sol, terreno y presupuesto
+fueron iguales. RAM pico: gpu 1412 MiB, cpu 1440 MiB, hybrid 1420 MiB, software 2414 MiB.
+Los casos hardware dieron p95 de partida de 25 ms con presentación limitada;
+no permiten deducir una mejora de FPS por Hanabi. Software fue más lento.
+RAM y VRAM se registran separadas y no se suman como memoria física total.
+
+Pullman con lluvia GPU completó las cuatro paradas y 62.68 km
+en 166.8 s reales con tiempo ×32. Cada llegada quedó por debajo de
+3.51 m de error y 0.098 m/s. Al final no había sectores
+próximos, terreno ni subidas GPU pendientes, ni errores SIGSCR o de shaders.
+RAM pico 2722 MiB; p95 de partida 28 ms. Hubo 21
+cuadros de más de 100 ms durante ese viaje acelerado; no se promete ausencia
+de tirones. Hanabi recibió 9124 emisiones de los dos escapes nativos y
+mantuvo 8.192 gotas sin reconstruir mallas CPU.
+
+Hall con nieve Mixta completó 62.68 km y las mismas cuatro paradas
+en 181.3 s reales (×32), con error máximo de 3.89 m y llegada
+menor a 0.094 m/s. RAM pico 2371 MiB; p95 de partida 30 ms y
+33 cuadros de más de 100 ms, incluido uno de 949 ms. Se comprobaron
+nueve emisores originales: 10872 solicitudes Hanabi, 4615 actualizaciones CPU y
+172 contactos CPU con límites opacos o terreno. El presupuesto de humo
+permaneció bajo 512; la nieve tuvo 3.072 partículas GPU y 1.024 CPU.
+No hubo errores ni sectores próximos pendientes al completar el servicio.
+
+Pullman con efectos CPU y cielo despejado completó también las cuatro paradas
+y 62,68 km en 164,8 s reales (×32). Error máximo de 3,43 m y llegada inferior
+a 0,097 m/s; RAM pico de 2.320 MiB, p95 de partida de 30 ms y 33 cuadros de
+más de 100 ms. Los dos escapes conservaron el presupuesto CPU de 512,
+con 4.494 actualizaciones de malla y 2.866 contactos con obstáculos o suelo.
+El escenario llegó al final sin pendientes ni errores de señal o shader.
+
+La prueba corta del Hall GPU a 500 m mostró sus nueve emisores originales:
+capacidad 504, 278 solicitudes y ninguna reconstrucción CPU. La pausa dejó
+el delta Hanabi en cero. La suspensión Suave mantuvo máximos de 0,038° de
+balanceo, 0,033° de cabeceo y 3,59 mm de desplazamiento vertical en los diez
+vehículos, con ruedas y bogies compensados. Se inspeccionó el vapor en la
+captura; no hubo shaders fallidos ni sectores próximos pendientes.
+
+El Hall en software recorrió 100 m con llvmpipe, sin adaptador hardware.
+La solicitud GPU pasó al respaldo CPU y la adaptación redujo su capacidad
+a 128; registró 35 actualizaciones y 22 contactos con obstáculos o suelo.
+La captura quedó en pausa sin errores de shader ni cargas próximas pendientes.
+RAM pico de 2.312 MiB en 72,7 s reales: verifica la alternativa funcional,
+no velocidad comparable con hardware ni un viaje completo en software.
+
+Se restauraron 21 resultados regenerados por las pruebas y se verificaron
+los 175 archivos previos, incluidos los ajustes y lanzamiento del jugador.
+Los seis resultados que ya tenían cambios antes del trabajo se conservan
+y quedan fuera del commit.

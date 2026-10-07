@@ -1,8 +1,8 @@
-//! Bounded CPU/GPU precipitation with the same world-space analytic trajectories.
-//! GPU mode uploads seeds once; only uniforms and the small shelter map change.
+//! Bounded Hanabi/CPU precipitation with the same analytic world-space field.
 use crate::{
     precipitation::{PrecipitationState, rain_rng01},
     weather_execution::{AdaptiveWeather, WeatherExecution},
+    weather_particles_gpu::{GpuWeather, HanabiWeather},
 };
 use bevy::ecs::system::SystemParam;
 use bevy::{
@@ -61,12 +61,16 @@ struct Layer {
 pub struct WeatherParticles {
     layers: Vec<Layer>,
     shelter: Handle<Image>,
+    shelter_gpu: Handle<Image>,
+    shelter_base: f32,
     shelter_values: Vec<f32>,
     shelter_center: Vec2,
     shelter_origin: Vec3,
     shelter_clock: f32,
     adaptive: AdaptiveWeather,
     live_wind: Option<WindDrift>,
+    hanabi: GpuWeather,
+    gpu_delta_s: Option<f32>,
     pub execution: WeatherExecution,
     pub requested: WeatherExecution,
     pub gpu_particles: usize,
@@ -102,8 +106,12 @@ impl WeatherParticles {
     pub fn report(&self) -> serde_json::Value {
         serde_json::json!({"execution":self.execution,"requested":self.requested,"gpu_particles":self.gpu_particles,
             "cpu_particles":self.cpu_particles,"quality_level":self.adaptive.level,
-            "shelter_refreshes":self.shelter_refreshes,"seed_upload_capacity":GPU_CAPACITY+CPU_CAPACITY,
-            "gpu_mesh_updates":self.gpu_mesh_updates,"cpu_mesh_updates":self.cpu_mesh_updates})
+            "shelter_refreshes":self.shelter_refreshes,"seed_upload_capacity":self.hanabi.configuration.map_or(0,|(_,n)|n)+CPU_CAPACITY,
+            "gpu_mesh_updates":self.gpu_mesh_updates,"cpu_mesh_updates":self.cpu_mesh_updates,
+            "gpu_backend":self.hanabi.entity.map(|_|"bevy_hanabi 0.19.0"),
+            "gpu_capacity":self.hanabi.configuration.map_or(0,|(_,n)|n),
+            "gpu_seed_initializations":self.hanabi.seed_initializations,
+            "gpu_simulation_delta_s":self.gpu_delta_s})
     }
     pub fn hud_text(&self) -> String {
         format!(
@@ -232,7 +240,19 @@ fn spawn_layers(
         TextureFormat::R32Float,
         RenderAssetUsages::default(),
     ));
-    for (gpu, capacity, first_seed) in [(true, GPU_CAPACITY, 1), (false, CPU_CAPACITY, 1)] {
+    state.shelter_gpu = images.add(Image::new_fill(
+        Extent3d {
+            width: GRID as u32,
+            height: GRID as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[0, 0, 0, 255],
+        TextureFormat::Rgba8Unorm,
+        RenderAssetUsages::default(),
+    ));
+    {
+        let (gpu, capacity, first_seed) = (false, CPU_CAPACITY, 1);
         let mesh = meshes.add(particle_mesh(capacity, first_seed));
         let material = materials.add(ParticleMaterial {
             base: StandardMaterial {
@@ -282,6 +302,31 @@ pub fn toggle(
 #[allow(clippy::too_many_arguments)]
 #[derive(SystemParam)]
 pub struct WeatherDraw<'w, 's> {
+    capabilities: Option<Res<'w, crate::train_effects_gpu::TrainParticleCapabilities>>,
+    gpu_time: Option<Res<'w, Time<bevy_hanabi::EffectSimulation>>>,
+    gpu_assets: Option<ResMut<'w, Assets<bevy_hanabi::EffectAsset>>>,
+    gpu_effects: Query<
+        'w,
+        's,
+        (
+            &'static mut bevy_hanabi::EffectProperties,
+            &'static mut bevy_hanabi::EffectSpawner,
+            &'static bevy_hanabi::CompiledParticleEffect,
+        ),
+        With<HanabiWeather>,
+    >,
+    lamps: Query<
+        'w,
+        's,
+        (
+            &'static crate::train_lighting::Headlamp,
+            &'static GlobalTransform,
+            &'static SpotLight,
+        ),
+    >,
+    solids: Option<Res<'w, crate::effect_obstacles::EffectObstacles>>,
+    sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    fog: Option<Res<'w, crate::sky::FogState>>,
     obstacles: Query<
         'w,
         's,
@@ -320,6 +365,14 @@ pub fn update(
     draw: WeatherDraw,
 ) {
     let WeatherDraw {
+        capabilities,
+        gpu_time,
+        mut gpu_assets,
+        mut gpu_effects,
+        lamps,
+        sun,
+        fog,
+        solids,
         obstacles,
         originals,
         native_materials,
@@ -332,6 +385,7 @@ pub fn update(
     } = draw;
     let Ok(camera) = cameras.single() else { return };
     if !precipitation.enabled {
+        state.hanabi.disable(&mut commands);
         for layer in &mut state.layers {
             if layer.count > 0 {
                 if let Some(mut mesh) = meshes.get_mut(&layer.mesh) {
@@ -365,7 +419,12 @@ pub fn update(
         loading.is_some() || startup.is_some(),
         memory.pressure(),
     );
-    let mode = requested.resolved(hardware, memory.pressure() || state.adaptive.level > 0);
+    let compatible = hardware
+        && gpu_assets.is_some()
+        && capabilities
+            .as_ref()
+            .is_some_and(|c| c.supported && c.hardware);
+    let mode = requested.resolved(compatible, memory.pressure() || state.adaptive.level > 0);
     let (mut gpu_count, mut cpu_count) = state.adaptive.counts(mode);
     if let Some(budget) = std::env::var("OPENRAILSRS_WEATHER_PARTICLE_BUDGET")
         .ok()
@@ -398,6 +457,7 @@ pub fn update(
     state.execution = mode;
     state.gpu_particles = gpu_count;
     state.cpu_particles = cpu_count;
+    state.gpu_delta_s = gpu_time.as_ref().map(|t| t.delta_secs());
     let clock_s = live.map_or_else(|| time.elapsed_secs_f64(), |l| l.session.time_s());
     let clock = clock_s as f32;
     let desired_wind = crate::environment::weather_wind(sample);
@@ -441,6 +501,7 @@ pub fn update(
     {
         state.shelter_clock = 0.0;
         state.shelter_center = center.xz();
+        state.shelter_base = center.y - 256.0;
         state.shelter_origin = origin.shift;
         for z in 0..GRID {
             for x in 0..GRID {
@@ -468,6 +529,9 @@ pub fn update(
                         .and_then(|s| native_materials.get(&s.0))
                         .map(|m| m.alpha_mode)
                 });
+            if solids.is_some() {
+                continue;
+            }
             // Cutout tree cards and glass must not create rectangular roofs.
             if alpha != Some(AlphaMode::Opaque) {
                 continue;
@@ -486,6 +550,17 @@ pub fn update(
                 extent.into(),
             );
         }
+        if let Some(solids) = &solids {
+            let grid_center = state.shelter_center;
+            for solid in &solids.solids {
+                raster_roof(
+                    &mut state.shelter_values,
+                    grid_center,
+                    (solid.min + solid.max) * 0.5,
+                    (solid.max - solid.min) * 0.5,
+                );
+            }
+        }
         let bytes = state
             .shelter_values
             .iter()
@@ -493,6 +568,10 @@ pub fn update(
             .collect();
         if let Some(mut image) = images.get_mut(&state.shelter) {
             image.data = Some(bytes);
+        }
+        let encoded = encode_shelter(&state.shelter_values, state.shelter_base);
+        if let Some(mut image) = images.get_mut(&state.shelter_gpu) {
+            image.data = Some(encoded);
         }
         state.shelter_refreshes += 1;
     }
@@ -558,6 +637,64 @@ pub fn update(
     }
     state.gpu_mesh_updates += gpu_updates;
     state.cpu_mesh_updates += cpu_updates;
+    let shelter = state.shelter_gpu.clone();
+    if let Some(assets) = gpu_assets.as_deref_mut() {
+        state.hanabi.configure(
+            &mut commands,
+            assets,
+            shelter,
+            precipitation.snow,
+            gpu_count,
+        );
+    } else {
+        state.hanabi.disable(&mut commands);
+    }
+    if let Some(entity) = state.hanabi.entity
+        && let Ok((mut properties, mut spawner, compiled)) = gpu_effects.get_mut(entity)
+    {
+        let light = sun.as_ref().map_or(1.0, |s| s.ambient_scale);
+        let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
+        let weather = content
+            .as_ref()
+            .map_or(crate::player_launch::PlayerWeather::Clear, |c| c.weather);
+        let sky = crate::sky::sky_parameters(direction.y, weather, direction, clock_s);
+        let extinction = if fog.as_ref().is_none_or(|f| f.enabled) {
+            3.912 / crate::ground_fog::weather_visibility(weather)
+        } else {
+            0.0
+        };
+        let fog = sky.horizon.truncate().extend(extinction);
+        let (lamp_position, lamp_direction) = lamps
+            .iter()
+            .find(|(l, _, s)| l.service_index == 0 && s.intensity > 0.0)
+            .map_or((Vec4::ZERO, Vec4::ZERO), |(_, t, s)| {
+                (
+                    t.translation()
+                        .extend(s.intensity / (4.0 * std::f32::consts::PI) * 0.001),
+                    t.forward().as_vec3().extend(s.outer_angle.cos()),
+                )
+            });
+        *properties = crate::weather_particles_gpu::properties(
+            &params,
+            state.shelter_base,
+            light,
+            fog,
+            lamp_position,
+            lamp_direction,
+            gpu_count,
+        );
+        state.hanabi.seed_once(&mut spawner, compiled.is_ready());
+    }
+}
+
+fn encode_shelter(values: &[f32], base: f32) -> Vec<u8> {
+    values
+        .iter()
+        .flat_map(|height| {
+            let packed = (((height - base) / 512.0).clamp(0.0, 1.0) * 65535.0).round() as u16;
+            [(packed >> 8) as u8, packed as u8, 0, 255]
+        })
+        .collect()
 }
 
 fn raster_roof(values: &mut [f32], grid_center: Vec2, center: Vec3, extent: Vec3) {
@@ -576,6 +713,63 @@ fn raster_roof(values: &mut [f32], grid_center: Vec2, center: Vec3, extent: Vec3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cpu_and_gpu_shelter_uploads_both_include_the_shared_station_roof() {
+        use bevy::ecs::system::RunSystemOnce;
+        let scene =
+            crate::track::TrackScene::from_graph(crate::test_harness::tiny_graph_with_signal());
+        crate::test_harness::with_replay_world(
+            scene,
+            crate::train::ReplayState::default(),
+            |world| {
+                world.insert_resource(PrecipitationState {
+                    enabled: true,
+                    ..default()
+                });
+                world.insert_resource(crate::player_settings::PlayerSettings::default());
+                world.insert_resource(crate::gpu_memory::GraphicsMemory::default());
+                world.insert_resource(WeatherParticles::default());
+                world.insert_resource(Assets::<ParticleMaterial>::default());
+                let mut solids = crate::effect_obstacles::EffectObstacles::default();
+                solids.solids = vec![crate::effect_obstacles::Solid {
+                    min: Vec3::new(-5.0, 3.0, -5.0),
+                    max: Vec3::new(5.0, 4.0, 5.0),
+                    owner: None,
+                }];
+                world.insert_resource(solids);
+                world.run_system_once(crate::camera::spawn_camera).unwrap();
+                world.run_system_once(update).unwrap();
+                let state = world.resource::<WeatherParticles>();
+                let images = world.resource::<Assets<Image>>();
+                let pixel = (GRID / 2 * GRID + GRID / 2) * 4;
+                let cpu = images.get(&state.shelter).unwrap().data.as_ref().unwrap();
+                assert_eq!(
+                    f32::from_le_bytes(cpu[pixel..pixel + 4].try_into().unwrap()),
+                    4.0
+                );
+                let gpu = images
+                    .get(&state.shelter_gpu)
+                    .unwrap()
+                    .data
+                    .as_ref()
+                    .unwrap();
+                let decoded = state.shelter_base
+                    + f32::from(u16::from_be_bytes([gpu[pixel], gpu[pixel + 1]])) / 65535.0 * 512.0;
+                assert!((decoded - 4.0).abs() < 0.01);
+            },
+        );
+    }
+    #[test]
+    fn encoded_gpu_roof_height_matches_cpu_at_a_centimetre_tolerance() {
+        let base = -180.0;
+        let heights = [-12.3, 0.0, 3.125, 83.65, 300.0];
+        let bytes = encode_shelter(&heights, base);
+        for (height, packed) in heights.iter().zip(bytes.chunks_exact(4)) {
+            let decoded =
+                base + f32::from(u16::from_be_bytes([packed[0], packed[1]])) / 65535.0 * 512.0;
+            assert!((height - decoded).abs() < 0.01);
+        }
+    }
     #[test]
     fn updated_wind_does_not_retroactively_move_drops_and_pause_is_stable() {
         let mut drift = WindDrift {

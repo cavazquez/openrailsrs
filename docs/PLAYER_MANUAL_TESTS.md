@@ -38,7 +38,7 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    estación del año y clima. La
    libreta/HUD deben mostrar la hora elegida; el sol debe cambiar con fecha y hora.
    Lluvia muestra precipitación; Niebla reduce la visibilidad
-   a unos 500 m cuando la niebla está habilitada. Los recursos estacionales que
+   a unos 120 m cuando la niebla está habilitada. Los recursos estacionales que
    ofrece el Content se cargan mediante su selección original: en invierno el
    terreno usa TERRTEX/Snow y los árboles sus variantes Winter cuando existen.
    Los recursos ausentes usan la textura base. De noche se seleccionan las
@@ -1555,3 +1555,56 @@ El reporte distingue capacidades y solicitudes de emisión GPU de partículas
 CPU vivas. No lee el conteo de partículas GPU ni certifica humo volumétrico,
 colisiones con edificios o una mejora de FPS. La física ferroviaria sigue
 ejecutándose en CPU.
+
+
+## 47. Precipitación Hanabi, niebla cercana e interacción del tren
+
+1. **Lluvia y nieve.** Iniciá Pullman o Hall con clima manual Lluvia. En
+   **F10 → Imagen y cabina → Cálculo del clima** elegí GPU, CPU y Mixto. Probá
+   después Nieve. Deben conservar dirección del viento, caída y tamaños
+   variados; los copos tienen bordes irregulares. Los edificios mantienen
+   sus texturas. **F8 → Diagnóstico** identifica el modo activo; CPU conserva
+   el dibujo por GPU si el renderizador es hardware.
+2. **Cubiertas y pausa.** Pasá por una estación. Desde exterior, la lluvia
+   queda fuera del techo y de la carrocería; desde cabina, las manchas están
+   en el vidrio y **V** limpia su zona. Pulsá **P**: las estelas y copos se
+   detienen. Orbitá, continuá y recorré más de 500 m: no debe saltar el campo
+   al cambiar el origen. Las máscaras de techos son conservadoras, no
+   colisiones exactas con todos los huecos del modelo.
+3. **Niebla y faros.** Elegí noche y Niebla. En F10 activá Niebla y poné
+   **Modelo de niebla → Automática** o **Volumétrica 32**. Usá **H** para
+   comparar apagado, bajo y alto, desde **1** y **2**. Se pierde contraste
+   a corta distancia; los haces deben aparecer en la bruma y la vía cercana
+   debe recibir luz. Los faros altos no recuperan la visión hasta el horizonte.
+   Compará Despejado y Distancia: desaparece la dispersión local. Volumétrica
+   64 debe mantener el aspecto con más muestreo; el costo GPU puede subir.
+4. **Suspensión.** En **F10 → Imagen y cabina → Movimiento del tren**,
+   alterná Apagado y Suave. Acelerá, frená y tomá una curva desde cabina y
+   exterior. La carrocería reacciona suavemente; ruedas y bogies permanecen
+   sobre la vía. En pausa no deriva la pose. Apagado recupera el seguimiento
+   rígido original sin cambiar la velocidad ni la frenada.
+5. **Humo y vapor.** En Hall, acelerá y mirá la chimenea desde exterior: la
+   salida pulsa al ritmo de las ruedas, se ensancha y deja una estela en el
+   mundo. Pullman mantiene un escape tenue en ralentí y más oscuro bajo
+   carga. Alterná **Humo y vapor → GPU/CPU/Mixto**. Bajo una cubierta opaca
+   la estela no debe atravesar libremente el techo. Reiniciar limpia el
+   efecto anterior; cambiar de modo puede limpiar la estela.
+6. **Contacto eléctrico.** Usá una formación con pantógrafo animado en una
+   ruta con altura real de catenaria y alimentación compatible. **O** baja
+   el captador y **J** controla el disyuntor. El captador usa la animación
+   original para alcanzar el hilo. Al perder contacto bajo carga puede
+   aparecer un arco breve; en vacío no hay destellos continuos. El tren
+   pierde esfuerzo y continúa por inercia. Los ejemplos `electric_supply`
+   prueban tensión y reconexión, pero sus modelos simplificados no certifican
+   todos los pantógrafos originales. Chiltern usa hilo oculto y material
+   con captación por riel; esa combinación no sirve para validar el arco aéreo.
+7. **Recorrido.** Completá las cuatro paradas de RS_Football Special en v4
+   con Pullman y Hall. Verificá carga del entorno, cabina/exterior, pausa y
+   llegada al final. F8 separa RAM, VRAM y tiempos de partida. Los controles
+   anteriores son sus asignaciones predeterminadas; F6/F10 muestran las
+   reasignaciones vigentes.
+
+La validación automática de shaders exige GPU real y comprueba ambos efectos
+meteorológicos y niebla nocturna. `benchmark_weather_execution.py` compara
+semillas, cuotas y pausa en la misma escena; `check_train_effects.py` prueba
+la estela en marcha. Estas pruebas visuales no sustituyen los oráculos físicos.
