@@ -25,3 +25,5 @@ Resultados y límites de las comprobaciones en
 [`PLAYER_POLISH_QA.md`](PLAYER_POLISH_QA.md).
 
 Hora y clima actuales del lugar, respaldo manual, zona horaria y rayos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
+
+Perfiles de clima, escenografía opcional, inspector y mediciones del renderer: [WEATHER_RENDERER_QA.md](WEATHER_RENDERER_QA.md).

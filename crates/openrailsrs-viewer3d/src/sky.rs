@@ -177,6 +177,24 @@ pub fn sky_parameters(
 
 /// Continuous solar-height palettes; the same horizon colour drives distance
 /// fog so sunrise does not produce an abrupt blue/black seam.
+pub fn atmosphere_parameters(
+    sun_y: f32,
+    weather: &crate::weather_state::Atmosphere,
+    sun: Vec3,
+    seconds: f64,
+) -> SkyParameters {
+    let mut clear = sky_parameters(sun_y, PlayerWeather::Clear, sun, seconds);
+    let grey = sky_parameters(sun_y, PlayerWeather::Storm, sun, seconds);
+    let amount = (weather.overcast / 0.92).clamp(0.0, 1.0);
+    clear.horizon = clear.horizon.lerp(grey.horizon, amount);
+    clear.zenith = clear.zenith.lerp(grey.zenith, amount);
+    if weather.overcast > 0.0 {
+        clear.clouds.x = weather.cloud_cover;
+    }
+    clear.clouds.w = weather.overcast;
+    clear
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn sync_route_atmosphere(
     sun: Option<Res<RouteSunState>>,
@@ -184,6 +202,7 @@ pub fn sync_route_atmosphere(
     content: Res<ActivePlayerContent>,
     environment: Option<Res<crate::environment::LiveEnvironment>>,
     storm: Option<Res<crate::storm::StormState>>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     fog_state: Res<FogState>,
     mut clear: ResMut<ClearColor>,
     domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
@@ -198,6 +217,9 @@ pub fn sync_route_atmosphere(
     {
         params.clouds.x = sample.cloud_cover / 100.0;
     }
+    if let Some(weather) = weather.as_ref() {
+        params = atmosphere_parameters(direction.y, &weather.atmosphere, direction, clock);
+    }
     let flash = storm.as_ref().map_or(0.0, |s| s.flash);
     params.horizon += Vec4::new(0.48, 0.56, 0.72, 0.0) * flash;
     params.zenith += Vec4::new(0.35, 0.43, 0.65, 0.0) * flash;
@@ -208,7 +230,10 @@ pub fn sync_route_atmosphere(
             material.params = params;
         }
     }
-    let visibility = crate::ground_fog::weather_visibility(content.weather);
+    let visibility = weather.as_ref().map_or_else(
+        || crate::ground_fog::weather_visibility(content.weather),
+        |s| s.atmosphere.visibility_m,
+    );
     for (mut fog, volumetric) in &mut cameras {
         if !fog_state.enabled {
             *fog = disabled_distance_fog();

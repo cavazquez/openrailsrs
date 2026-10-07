@@ -25,6 +25,7 @@ mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
 pub mod driving_hud;
 pub mod dyntrack;
+pub mod enhanced_scenery;
 pub mod environment;
 pub mod floating_origin;
 pub mod forest;
@@ -39,6 +40,12 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 mod cab_profile;
+#[cfg(feature = "dev-tools")]
+pub mod dev_camera;
+#[cfg(feature = "dev-inspector")]
+pub mod dev_inspector;
+#[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
+pub mod dev_metrics;
 mod effect_obstacles;
 pub mod electric_contact;
 pub mod gpu_memory;
@@ -100,6 +107,7 @@ pub mod water;
 pub mod weather_execution;
 pub mod weather_particles;
 mod weather_particles_gpu;
+pub mod weather_state;
 mod wet_surfaces;
 pub mod windshield;
 pub mod world;
@@ -163,6 +171,14 @@ fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "dev-inspector")]
+        if app.get_sub_app(bevy::render::RenderApp).is_some() {
+            dev_inspector::install(app);
+        }
+        #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
+        if app.get_sub_app(bevy::render::RenderApp).is_some() {
+            dev_metrics::install(app);
+        }
         // Bevy's native limiter shares the budget between images and meshes.
         // A large scenery stream must not submit its entire upload in one frame.
         app.insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
@@ -182,6 +198,7 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(player_ui::PlayerUiPlugin);
         app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<environment::LiveEnvironment>()
+            .init_resource::<weather_state::WeatherState>()
             .init_resource::<storm::StormState>()
             .add_systems(
                 Update,
@@ -194,12 +211,27 @@ impl Plugin for ViewerPlugin {
                 environment::init.after(route_lighting::init_route_sun),
             )
             .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                (weather_state::reset, storm::reset),
+            )
+            .add_systems(
                 Update,
                 environment::update
                     .after(player_ui::EnvironmentControls)
                     .before(player_ui::apply_weather)
                     .before(route_lighting::update_route_sun)
                     .before(wet_surfaces::update)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                weather_state::update
+                    .after(environment::update)
+                    .before(player_ui::apply_weather)
+                    .before(storm::update)
+                    .before(wet_surfaces::update)
+                    .before(sky::sync_route_atmosphere)
+                    .before(route_lighting::update_route_sun)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
@@ -250,6 +282,7 @@ impl Plugin for ViewerPlugin {
                     .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             );
+        enhanced_scenery::install(app);
         app.init_resource::<ground_fog::FogDiagnostics>()
             .add_systems(Startup, ground_fog::prepare_shader_fix)
             .add_systems(Update, ground_fog::apply_shader_fix);
@@ -270,6 +303,12 @@ impl Plugin for ViewerPlugin {
             );
         app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
             .init_resource::<surface_weather::SnowMaterials>()
+            .add_systems(
+                Update,
+                surface_weather::mark_world_roofs
+                    .before(surface_weather::sync)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
             .add_systems(
                 Update,
                 surface_weather::sync

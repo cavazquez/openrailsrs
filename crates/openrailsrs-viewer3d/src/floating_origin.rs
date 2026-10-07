@@ -183,7 +183,11 @@ pub(crate) fn apply_floating_origin(
         let Ok((cam, _)) = camera_q.single() else {
             return;
         };
-        horizontal_shift(subject.unwrap_or(cam.translation))
+        horizontal_shift(if *follow == CameraFollowMode::Off {
+            cam.translation
+        } else {
+            subject.unwrap_or(cam.translation)
+        })
     };
 
     if reference.length() < FLOATING_ORIGIN_THRESHOLD_M {

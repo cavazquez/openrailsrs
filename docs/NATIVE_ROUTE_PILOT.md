@@ -38,8 +38,11 @@ carpeta de escenario y material rodante. No lo mezcla con el terreno de Chiltern
 Estado de Belgrano CC: la ruta publicada por el autor representa Retiro–Villa Rosa
 en los años sesenta. [Página de descarga del autor](https://jorgeluisgonzalezlopez.jimdofree.com/descarga-rutas-hist%C3%B3ricas-p2/).
 Los enlaces de 4shared devolvieron HTML de acceso, no el RAR; no hay archivos nativos
-Belgrano instalados en este equipo. Por eso quedan pendientes la importación real,
-auditoría del material argentino y las capturas comparables en OR 1.6.1.
+de Belgrano instalados en este equipo. El seguimiento #189 fue cancelado por
+indicación del usuario el 7 de octubre de 2026 porque no se consiguieron los
+archivos originales. No se presenta como una partida validada: no se completaron
+la importación real, la auditoría del material argentino ni las capturas
+comparables en OR 1.6.1.
 El preparador se valida con el PAT y la formación nativos Chiltern, sin presentarlos
 como una ruta argentina. La comparación visual del piloto es un paso posterior
 cuando estén disponibles los archivos de la ruta y sus complementos originales.

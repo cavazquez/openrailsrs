@@ -22,7 +22,7 @@ const GRID: usize = 64;
 const HALF: f32 = 55.0;
 const HEIGHT: f32 = 40.0;
 
-#[derive(Clone, Copy, Debug, Default, ShaderType)]
+#[derive(Clone, Copy, Debug, ShaderType)]
 pub struct ParticleUniforms {
     pub center: Vec4,
     pub phase: Vec4,
@@ -30,6 +30,22 @@ pub struct ParticleUniforms {
     pub up: Vec4,
     pub wind_time: Vec4,
     pub grid: Vec4,
+    /// Horizontal wind, flake size, fall-speed factor. Shared by CPU and GPU.
+    pub motion: Vec4,
+}
+
+impl Default for ParticleUniforms {
+    fn default() -> Self {
+        Self {
+            center: Vec4::ZERO,
+            phase: Vec4::ZERO,
+            right: Vec4::ZERO,
+            up: Vec4::ZERO,
+            wind_time: Vec4::ZERO,
+            grid: Vec4::ZERO,
+            motion: Vec4::new(0., 0., 1., 1.),
+        }
+    }
 }
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct ParticleExtension {
@@ -168,10 +184,11 @@ pub fn particle_position(seed: Vec4, p: &ParticleUniforms) -> Vec3 {
 fn particle_corner(seed: Vec4, uv: Vec2, p: &ParticleUniforms) -> Vec3 {
     if p.up.w <= 0.5 {
         return p.right.truncate() * ((uv.x - 0.5) * 0.025)
-            + Vec3::Y * ((uv.y - 0.5) * (0.8 + seed.w * 0.65));
+            + Vec3::new(p.motion.x / 32.0, -1.0, p.motion.y / 32.0).normalize()
+                * ((uv.y - 0.5) * (0.8 + seed.w * 0.65));
     }
     let angle = seed.w * std::f32::consts::TAU + p.wind_time.w * (0.35 + seed.x);
-    let v = (uv * 2.0 - Vec2::ONE) * (0.018 + seed.w * 0.040);
+    let v = (uv * 2.0 - Vec2::ONE) * (0.018 + seed.w * 0.040) * p.motion.z.max(0.1);
     let rotated = Vec2::new(
         v.x * angle.cos() - v.y * angle.sin(),
         v.x * angle.sin() + v.y * angle.cos(),
@@ -343,6 +360,7 @@ pub struct WeatherDraw<'w, 's> {
     native_materials: Res<'w, Assets<openrailsrs_bevy_scenery::OrSceneryMaterial>>,
     environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
     content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
+    atmosphere: Option<Res<'w, crate::weather_state::WeatherState>>,
     state: ResMut<'w, WeatherParticles>,
     meshes: ResMut<'w, Assets<Mesh>>,
     images: ResMut<'w, Assets<Image>>,
@@ -378,6 +396,7 @@ pub fn update(
         native_materials,
         environment,
         content,
+        atmosphere,
         mut state,
         mut meshes,
         mut images,
@@ -419,6 +438,14 @@ pub fn update(
         loading.is_some() || startup.is_some(),
         memory.pressure(),
     );
+    let quality = std::env::var("OPENRAILSRS_WEATHER_QUALITY")
+        .ok()
+        .as_deref()
+        .and_then(crate::weather_execution::WeatherQuality::parse)
+        .unwrap_or(preferences.weather_quality);
+    if let Some(level) = quality.level() {
+        state.adaptive.level = level;
+    }
     let compatible = hardware
         && gpu_assets.is_some()
         && capabilities
@@ -426,6 +453,12 @@ pub fn update(
             .is_some_and(|c| c.supported && c.hardware);
     let mode = requested.resolved(compatible, memory.pressure() || state.adaptive.level > 0);
     let (mut gpu_count, mut cpu_count) = state.adaptive.counts(mode);
+    let preferred = preferences.weather_particle_budget / [1, 2, 4][state.adaptive.level.min(2)];
+    let total = gpu_count + cpu_count;
+    if total > preferred {
+        gpu_count = gpu_count * preferred / total;
+        cpu_count = (preferred - gpu_count).min(CPU_CAPACITY);
+    }
     if let Some(budget) = std::env::var("OPENRAILSRS_WEATHER_PARTICLE_BUDGET")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
@@ -444,7 +477,16 @@ pub fn update(
         .as_ref()
         .zip(content.as_ref())
         .and_then(|(e, c)| e.current_sample(c.environment));
-    if let Some(sample) = sample {
+    let gpu_capacity = gpu_count;
+    if let Some(atmosphere) = atmosphere.as_ref() {
+        let scale = if precipitation.snow {
+            atmosphere.atmosphere.snow
+        } else {
+            atmosphere.atmosphere.rain
+        };
+        gpu_count = (gpu_count as f32 * scale) as usize;
+        cpu_count = (cpu_count as f32 * scale) as usize;
+    } else if let Some(sample) = sample {
         let intensity = if precipitation.snow {
             sample.snowfall / 0.15
         } else {
@@ -460,9 +502,12 @@ pub fn update(
     state.gpu_delta_s = gpu_time.as_ref().map(|t| t.delta_secs());
     let clock_s = live.map_or_else(|| time.elapsed_secs_f64(), |l| l.session.time_s());
     let clock = clock_s as f32;
-    let desired_wind = crate::environment::weather_wind(sample);
+    let desired_wind = atmosphere.as_ref().map_or_else(
+        || crate::environment::weather_wind(sample),
+        |s| s.atmosphere.wind_mps,
+    );
     let desired_wind = Vec2::new(desired_wind.x, desired_wind.z);
-    if sample.is_some() && state.live_wind.is_none() {
+    if (sample.is_some() || atmosphere.is_some()) && state.live_wind.is_none() {
         state.live_wind = Some(WindDrift {
             offset: desired_wind.as_dvec2() * clock_s,
             velocity: desired_wind,
@@ -492,6 +537,12 @@ pub fn update(
         up: camera.up().as_vec3().extend(f32::from(precipitation.snow)),
         wind_time: wind,
         grid: Vec4::new(state.shelter_center.x, state.shelter_center.y, HALF, 0.0),
+        motion: Vec4::new(
+            desired_wind.x,
+            desired_wind.y,
+            atmosphere.as_ref().map_or(1.0, |s| s.atmosphere.flake_size),
+            1.0,
+        ),
     };
     state.shelter_clock += time.delta_secs();
     if state.shelter_refreshes == 0
@@ -644,7 +695,7 @@ pub fn update(
             assets,
             shelter,
             precipitation.snow,
-            gpu_count,
+            gpu_capacity,
         );
     } else {
         state.hanabi.disable(&mut commands);
@@ -657,9 +708,16 @@ pub fn update(
         let weather = content
             .as_ref()
             .map_or(crate::player_launch::PlayerWeather::Clear, |c| c.weather);
-        let sky = crate::sky::sky_parameters(direction.y, weather, direction, clock_s);
+        let sky = atmosphere.as_ref().map_or_else(
+            || crate::sky::sky_parameters(direction.y, weather, direction, clock_s),
+            |s| crate::sky::atmosphere_parameters(direction.y, &s.atmosphere, direction, clock_s),
+        );
         let extinction = if fog.as_ref().is_none_or(|f| f.enabled) {
-            3.912 / crate::ground_fog::weather_visibility(weather)
+            3.912
+                / atmosphere.as_ref().map_or_else(
+                    || crate::ground_fog::weather_visibility(weather),
+                    |s| s.atmosphere.visibility_m,
+                )
         } else {
             0.0
         };

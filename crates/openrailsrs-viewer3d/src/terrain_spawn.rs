@@ -97,6 +97,7 @@ fn spawn_textured_patches(
                 base_texture: base,
                 overlay_texture: overlay,
                 surface_weather: Vec2::ZERO,
+                enhancement: Vec4::ZERO,
             }),
         );
     }

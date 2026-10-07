@@ -27,6 +27,7 @@ struct VertexOutput {
     @location(0) world_normal: vec3<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) world_position: vec3<f32>,
+    @location(3) @interpolate(flat) vegetation_seed: f32,
 };
 
 struct AppearanceUniform {
@@ -35,6 +36,7 @@ struct AppearanceUniform {
     // x = alpha_cutoff (0 = disabled), y = double_sided, zw unused
     params: vec4<f32>,
     world_from_local: mat4x4<f32>,
+    vegetation: vec4<f32>,
 };
 
 @group(3) @binding(0)
@@ -44,6 +46,27 @@ var base_color_texture: texture_2d<f32>;
 @group(3) @binding(2)
 var base_color_sampler: sampler;
 
+fn phase_seed(model:mat4x4<f32>)->f32 {return model[3].x*0.31+model[3].z*0.47;}
+
+fn vegetation_position(position: vec3<f32>, model: mat4x4<f32>) -> vec4<f32> {
+    var p = position;
+    if appearance.vegetation.x > 0.0 {
+        let snow = clamp(appearance.surface_weather.y, 0.0, 1.0);
+        p.y *= mix(1.0, 0.35, snow);
+        let root = (appearance.world_from_local * model[3]).xyz;
+        let distance = length(root.xz - appearance.surface_weather.zw);
+        let seed=fract(sin(phase_seed(model)) * 43758.5453);
+        let density=mix(1.0,0.28,smoothstep(appearance.vegetation.x*0.28,appearance.vegetation.x*0.55,distance));
+        p *= smoothstep(seed-0.08,seed,density);
+        p.y *= mix(1.0, 0.65, smoothstep(appearance.vegetation.x * 0.3, appearance.vegetation.x * 0.65, distance));
+        let phase = model[3].x * 0.31 + model[3].z * 0.47;
+        let wind = appearance.vegetation.zw;
+        let bend=wind * p.y * p.y * 0.04 * sin(appearance.vegetation.y * 1.4 + phase) * (1.0 - snow * 0.7);
+        p += vec3(bend.x,0.0,bend.y);
+    }
+    return model * vec4(p, 1.0);
+}
+
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     let model = mat4x4<f32>(
@@ -52,7 +75,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         vertex.i_col2,
         vertex.i_col3,
     );
-    let local_pos = model * vec4<f32>(vertex.position, 1.0);
+    let local_pos = vegetation_position(vertex.position, model);
     // Entity Transform carries floating-origin; instances are in that local frame.
     // Each custom draw starts its own instance buffer at zero; mesh[0] belongs
     // to an unrelated scene entity when Bevy uses storage mesh uniforms.
@@ -64,6 +87,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let n = (model * vec4<f32>(vertex.normal, 0.0)).xyz;
     out.world_normal = normalize((world_from_local * vec4<f32>(n, 0.0)).xyz);
     out.uv = vertex.uv;
+    out.vegetation_seed = fract(sin(phase_seed(model)) * 43758.5453);
     return out;
 }
 
@@ -83,6 +107,15 @@ fn discard_lod(position: vec2<f32>) -> bool {
 fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @location(0) vec4<f32> {
     if discard_lod(in.clip_position.xy) {discard;}
     var color = appearance.base_color * textureSample(base_color_texture, base_color_sampler, in.uv);
+    if appearance.vegetation.x > 0.0 {
+        let distance = length(in.world_position.xz - view_bindings::view.world_position.xz);
+        let far = appearance.vegetation.x;
+        let coverage = 1.0 - smoothstep(far * 0.7, far, distance);
+        let threshold = fract(sin(dot(floor(in.clip_position.xy), vec2(12.9898, 78.233))) * 43758.5453);
+        if threshold > coverage { discard; }
+        let variation = 0.88 + 0.24 * in.vegetation_seed;
+        color = vec4(color.rgb * mix(0.68, 1.12, in.uv.y) * variation, color.a);
+    }
     let cutoff = appearance.params.x;
     if cutoff > 0.0 && color.a < cutoff {
         discard;
@@ -94,7 +127,7 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
     }
     let wet=appearance.surface_weather.x;
     let snow_detail=snow_surface(in.uv,n,appearance.surface_weather.y);
-    let snow=snow_detail.x;
+    let snow=max(snow_detail.x, select(0.0, appearance.surface_weather.y * 0.65, appearance.vegetation.x > 0.0));
     // Preserve cutout alpha: snow on a tree must not turn its quad opaque.
     color=vec4(mix(color.rgb * (1.0-0.16*wet),vec3(0.78,0.84,0.90)*snow_detail.y,snow),color.a);
     var lit = color.rgb;
@@ -161,7 +194,7 @@ fn vertex_shadow(vertex: Vertex) -> ShadowVertexOutput {
         vertex.i_col2,
         vertex.i_col3,
     );
-    let local_pos = model * vec4<f32>(vertex.position, 1.0);
+    let local_pos = vegetation_position(vertex.position, model);
     let world_from_local = appearance.world_from_local;
     var out: ShadowVertexOutput;
     out.clip_position = position_world_to_clip((world_from_local * local_pos).xyz);

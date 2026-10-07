@@ -71,6 +71,7 @@ fn sync_windshield(
     mut commands: Commands,
     live: Res<LiveDrive>,
     weather: Res<ActivePlayerContent>,
+    atmosphere: Option<Res<crate::weather_state::WeatherState>>,
     follow: Res<CameraFollowMode>,
     cvf: Res<crate::cab_cvf::CabCvfState>,
     overlay: Res<crate::cab_cvf_overlay::CabCvfOverlayState>,
@@ -185,12 +186,30 @@ fn sync_windshield(
         }
         let settings = WindshieldSettings {
             time_s: clock as f32,
-            rain: f32::from(visible),
-            snow: f32::from(weather.weather == PlayerWeather::Snow),
+            rain: if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() {
+                atmosphere.as_ref().map_or(f32::from(visible), |s| {
+                    s.atmosphere.rain.max(s.atmosphere.snow)
+                })
+            } else {
+                0.0
+            },
+            snow: atmosphere
+                .as_ref()
+                .map_or(f32::from(weather.weather == PlayerWeather::Snow), |s| {
+                    f32::from(s.atmosphere.snow > s.atmosphere.rain)
+                }),
             near_clip: near,
             last_wipe_s: wipe.last_wipe_s.map_or(-1.0, |s| s as f32),
             wiper_on: f32::from(live.session.wiper_active),
-            _pad: Vec3::new(live.session.velocity_mps().abs() as f32, 0.0, 0.0),
+            _pad: Vec3::new(
+                live.session.velocity_mps().abs() as f32,
+                atmosphere
+                    .as_ref()
+                    .map_or(0.0, |s| camera_transform.right().dot(s.atmosphere.wind_mps)),
+                atmosphere.as_ref().map_or(0.0, |s| {
+                    camera_transform.forward().dot(s.atmosphere.wind_mps)
+                }),
+            ),
             glass,
             blade1,
             blade2,
@@ -264,7 +283,7 @@ fn draw_windshield(
     mut ctx: RenderContext,
 ) {
     let (target, depth, settings, index) = view.into_inner();
-    if settings.rain < 0.5 {
+    if settings.rain < 0.002 {
         return;
     }
     let Some(pipeline) = pipeline else { return };

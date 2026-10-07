@@ -25,6 +25,9 @@ path = "src/bin/prepare_content.rs"
 [features]
 default = []
 trace = ["bevy/trace"]
+dev-tools = ["bevy/bevy_dev_tools", "bevy/mesh_picking"]
+dev-inspector = ["dep:bevy-inspector-egui", "bevy/mesh_picking"]
+experimental-framepace = ["dep:bevy_framepace"]
 
 [dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
@@ -51,6 +54,8 @@ ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 bevy = { workspace = true, features = ["bevy_gizmos", "bevy_ui_render", "bevy_state"] }
 bevy_clipboard = "0.19.1"
 bevy_hanabi = { version = "=0.19.0", default-features = false, features = ["3d"] }
+bevy-inspector-egui = { version = "0.37", optional = true, default-features = false, features = ["bevy_pbr", "bevy_render"] }
+bevy_framepace = { version = "0.22", optional = true, default-features = false }
 bytemuck.workspace = true
 image = { workspace = true, features = ["png", "bmp"] }
 

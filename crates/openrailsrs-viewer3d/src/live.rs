@@ -325,12 +325,15 @@ pub fn enable_live_defaults(
     scene: Res<crate::track::TrackScene>,
     focus: Res<crate::world::RouteFocus>,
     mode: Res<ViewerSceneryMode>,
-    live: Res<LiveDrive>,
+    mut live: ResMut<LiveDrive>,
     framing: Option<Res<LiveTrainCameraFrame>>,
     mut limit: ResMut<OrbitDistanceLimit>,
     train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
     mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
 ) {
+    if std::env::var("OPENRAILSRS_CAPTURE_WIPER").is_ok_and(|v| v == "1") {
+        live.session.wiper_active = true;
+    }
     // Always start in chase so the first view is the consist at the scenario *start*
     // (Paddington for Chiltern), not free-orbit far from the train / destination marker.
     *follow = CameraFollowMode::ChaseCam;
@@ -1264,6 +1267,8 @@ pub fn spawn_live_train(
                                                 part.prim_state_idx
                                             )),
                                         ));
+                                        #[cfg(feature = "dev-inspector")]
+                                        entity.insert(crate::dev_inspector::NativePrimitive::from_shape(&shape_file,part.prim_state_idx,&shape_path));
                                         if !crate::train::train_part_casts_shadow(
                                             part.is_transparent,
                                         ) {

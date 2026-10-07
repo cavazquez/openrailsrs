@@ -1,0 +1,333 @@
+extra_trains = []
+
+[gameplay]
+difficulty = "normal"
+objective = "arrive"
+penalty_per_second_late = 0.0
+
+[output]
+csv = "player-data/run.csv"
+metadata = "player-data/run.json"
+
+[route]
+assume_signals_clear = false
+destination = "n4306"
+path = "@IMPORTED_TRACK@"
+start = "n6756"
+start_offset_m = 219.73523665431037
+waypoints = [
+    "n6756",
+    "n6758",
+    "n6760",
+    "n6345",
+    "n6343",
+    "n5401",
+    "n5402",
+    "n5404",
+    "n5406",
+    "n5408",
+    "n5410",
+    "n5411",
+    "n5413",
+    "n5415",
+    "n5417",
+    "n5710",
+    "n5433",
+    "n5435",
+    "n5437",
+    "n5439",
+    "n5754",
+    "n5751",
+    "n5447",
+    "n5449",
+    "n5451",
+    "n6202",
+    "n5465",
+    "n5467",
+    "n5469",
+    "n6198",
+    "n5495",
+    "n5497",
+    "n5499",
+    "n5501",
+    "n6121",
+    "n6119",
+    "n5606",
+    "n5604",
+    "n5507",
+    "n5509",
+    "n5511",
+    "n5513",
+    "n5515",
+    "n5517",
+    "n5519",
+    "n5521",
+    "n5523",
+    "n5525",
+    "n5527",
+    "n4310",
+    "n4308",
+    "n4306",
+]
+
+[[route.stops]]
+arrive_s = 60.0
+depart_s = 60.0
+dwell_s = 0.0
+name = "Banbury General"
+node = "n6758"
+offset_m = -143.71058031909268
+passengers_off = 0
+passengers_on = 20
+
+[[route.stops]]
+arrive_s = 1260.0
+depart_s = 1380.0
+dwell_s = 120.0
+name = "Bicester North"
+node = "n5439"
+offset_m = -50.16500000000087
+passengers_off = 0
+passengers_on = 20
+
+[[route.stops]]
+arrive_s = 2760.0
+depart_s = 2880.0
+dwell_s = 120.0
+name = "Princes Risborough"
+node = "n5509"
+offset_m = -99.63900000000285
+passengers_off = 0
+passengers_on = 20
+
+[[route.stops]]
+arrive_s = 3660.0
+depart_s = 3780.0
+dwell_s = 120.0
+name = "High Wycombe"
+node = "n4306"
+offset_m = -88.53780999999981
+passengers_off = 60
+passengers_on = 0
+
+[[route.switches]]
+node = "n6758"
+position = "straight"
+
+[[route.switches]]
+node = "n6760"
+position = "straight"
+
+[[route.switches]]
+node = "n6345"
+position = "diverging"
+
+[[route.switches]]
+node = "n6343"
+position = "diverging"
+
+[[route.switches]]
+node = "n5401"
+position = "straight"
+
+[[route.switches]]
+node = "n5402"
+position = "diverging"
+
+[[route.switches]]
+node = "n5404"
+position = "straight"
+
+[[route.switches]]
+node = "n5406"
+position = "straight"
+
+[[route.switches]]
+node = "n5408"
+position = "straight"
+
+[[route.switches]]
+node = "n5410"
+position = "diverging"
+
+[[route.switches]]
+node = "n5411"
+position = "diverging"
+
+[[route.switches]]
+node = "n5413"
+position = "straight"
+
+[[route.switches]]
+node = "n5415"
+position = "diverging"
+
+[[route.switches]]
+node = "n5417"
+position = "diverging"
+
+[[route.switches]]
+node = "n5710"
+position = "diverging"
+
+[[route.switches]]
+node = "n5433"
+position = "straight"
+
+[[route.switches]]
+node = "n5435"
+position = "straight"
+
+[[route.switches]]
+node = "n5437"
+position = "straight"
+
+[[route.switches]]
+node = "n5439"
+position = "diverging"
+
+[[route.switches]]
+node = "n5754"
+position = "diverging"
+
+[[route.switches]]
+node = "n5751"
+position = "diverging"
+
+[[route.switches]]
+node = "n5447"
+position = "straight"
+
+[[route.switches]]
+node = "n5449"
+position = "diverging"
+
+[[route.switches]]
+node = "n5451"
+position = "diverging"
+
+[[route.switches]]
+node = "n6202"
+position = "straight"
+
+[[route.switches]]
+node = "n5465"
+position = "straight"
+
+[[route.switches]]
+node = "n5467"
+position = "diverging"
+
+[[route.switches]]
+node = "n5469"
+position = "diverging"
+
+[[route.switches]]
+node = "n6198"
+position = "diverging"
+
+[[route.switches]]
+node = "n5495"
+position = "straight"
+
+[[route.switches]]
+node = "n5497"
+position = "straight"
+
+[[route.switches]]
+node = "n5499"
+position = "diverging"
+
+[[route.switches]]
+node = "n5501"
+position = "diverging"
+
+[[route.switches]]
+node = "n6121"
+position = "straight"
+
+[[route.switches]]
+node = "n6119"
+position = "straight"
+
+[[route.switches]]
+node = "n5606"
+position = "diverging"
+
+[[route.switches]]
+node = "n5604"
+position = "straight"
+
+[[route.switches]]
+node = "n5507"
+position = "straight"
+
+[[route.switches]]
+node = "n5509"
+position = "straight"
+
+[[route.switches]]
+node = "n5511"
+position = "diverging"
+
+[[route.switches]]
+node = "n5513"
+position = "straight"
+
+[[route.switches]]
+node = "n5515"
+position = "diverging"
+
+[[route.switches]]
+node = "n5517"
+position = "diverging"
+
+[[route.switches]]
+node = "n5519"
+position = "diverging"
+
+[[route.switches]]
+node = "n5521"
+position = "diverging"
+
+[[route.switches]]
+node = "n5523"
+position = "straight"
+
+[[route.switches]]
+node = "n5525"
+position = "straight"
+
+[[route.switches]]
+node = "n5527"
+position = "diverging"
+
+[[route.switches]]
+node = "n4310"
+position = "diverging"
+
+[[route.switches]]
+node = "n4308"
+position = "straight"
+
+[scenario]
+description = "QA: RS_Football Special, Chiltern v4"
+name = "RS_Football Special"
+season = "summer"
+start_time_s = 35700.0
+
+[simulation]
+brake_shoe_speed_factor = false
+brake_skid_limit = false
+coupler_kind = ""
+duration = 3600.0
+legacy_power_cap = true
+multi_body = false
+orts_inherit_partial_run_up = false
+seed = 42
+time_step = 0.05
+train_air_full_release_s = 3.0
+train_air_lap_hold = false
+
+[train]
+consist = "@CONSIST_FILE@"

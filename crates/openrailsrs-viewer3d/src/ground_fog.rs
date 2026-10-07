@@ -184,6 +184,7 @@ pub fn update_ground_fog(
     settings: Res<PlayerSettings>,
     fog_state: Res<FogState>,
     content: Res<ActivePlayerContent>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     sun_state: Option<Res<crate::route_lighting::RouteSunState>>,
     live: Option<Res<crate::live::LiveDrive>>,
     pipelines: Option<Res<crate::performance::ScenePipelineStatus>>,
@@ -220,12 +221,15 @@ pub fn update_ground_fog(
     let steps = if fog_state.enabled
         && (!auto
             || hardware
-                && matches!(
-                    content.weather,
-                    PlayerWeather::Fog
-                        | PlayerWeather::Storm
-                        | PlayerWeather::Snow
-                        | PlayerWeather::Rain
+                && weather.as_ref().map_or(
+                    matches!(
+                        content.weather,
+                        PlayerWeather::Fog
+                            | PlayerWeather::Storm
+                            | PlayerWeather::Snow
+                            | PlayerWeather::Rain
+                    ),
+                    |s| s.atmosphere.fog_density > 0.0001,
                 )) {
         quality.steps()
     } else {
@@ -233,12 +237,20 @@ pub fn update_ground_fog(
     };
     if let Some(step_count) = steps {
         let direction = sun_state.as_ref().map_or(Vec3::Y, |s| s.direction);
-        let palette = crate::sky::sky_parameters(
+        let mut palette = crate::sky::sky_parameters(
             direction.y,
             content.weather,
             direction,
             live.as_ref().map_or(0.0, |l| l.clock_time_s()),
         );
+        if let Some(weather) = weather.as_ref() {
+            palette = crate::sky::atmosphere_parameters(
+                direction.y,
+                &weather.atmosphere,
+                direction,
+                live.as_ref().map_or(0.0, |l| l.clock_time_s()),
+            );
+        }
         let ambient_color =
             Color::linear_rgb(palette.horizon.x, palette.horizon.y, palette.horizon.z);
         if let Some(volume) = current.as_mut() {
@@ -268,7 +280,7 @@ pub fn update_ground_fog(
         } else {
             Visibility::Hidden
         };
-        let density = if steps.is_some() {
+        let mut density = if steps.is_some() {
             match content.weather {
                 PlayerWeather::Clear => 0.00004,
                 PlayerWeather::Rain => 0.0003,
@@ -280,11 +292,19 @@ pub fn update_ground_fog(
         } else {
             0.0
         };
+        if let Some(weather) = weather.as_ref()
+            && steps.is_some()
+        {
+            density = weather.atmosphere.fog_density;
+        }
         if volume.density_factor != density {
             volume.density_factor = density;
         }
         diagnostics.volumetric = steps.is_some();
-        diagnostics.visibility_m = weather_visibility(content.weather);
+        diagnostics.visibility_m = weather.as_ref().map_or_else(
+            || weather_visibility(content.weather),
+            |s| s.atmosphere.visibility_m,
+        );
         diagnostics.density = density;
     }
 }

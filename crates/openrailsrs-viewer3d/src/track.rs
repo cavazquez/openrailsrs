@@ -241,6 +241,41 @@ pub struct TrackSegmentIndex {
 }
 
 impl TrackSegmentIndex {
+    pub(crate) fn segment_count(&self) -> usize {
+        self.segments.len()
+    }
+
+    /// Native curved centreline samples, shared by rail and road exclusion masks.
+    pub fn from_segments(segments: impl IntoIterator<Item = [Vec2; 2]>) -> Self {
+        let segments: Vec<_> = segments
+            .into_iter()
+            .map(|[a, b]| TrackSegment {
+                x0: a.x,
+                z0: a.y,
+                x1: b.x,
+                z1: b.y,
+            })
+            .collect();
+        let cell_size = TRACK_SEGMENT_CELL_M;
+        let mut grid = std::collections::HashMap::new();
+        for (index, s) in segments.iter().enumerate() {
+            for x in (s.x0.min(s.x1) / cell_size).floor() as i32
+                ..=(s.x0.max(s.x1) / cell_size).floor() as i32
+            {
+                for z in (s.z0.min(s.z1) / cell_size).floor() as i32
+                    ..=(s.z0.max(s.z1) / cell_size).floor() as i32
+                {
+                    grid.entry((x, z)).or_insert_with(Vec::new).push(index);
+                }
+            }
+        }
+        Self {
+            cell_size,
+            segments,
+            grid,
+        }
+    }
+
     pub fn from_graph(graph: &TrackGraph, world_offset: Vec3) -> Self {
         let mut segments = Vec::new();
         for (_, edge) in graph.edges_iter() {

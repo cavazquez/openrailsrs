@@ -64,6 +64,7 @@ impl GpuWeather {
                 .spawn((
                     HanabiWeather,
                     WeatherMesh,
+                    bevy::camera::visibility::RenderLayers::layer(0),
                     ParticleEffect::new(handle.clone()),
                     EffectSpawner::new(&settings),
                     EffectMaterial {
@@ -121,6 +122,7 @@ pub(super) fn properties(
         ("up".into(), p.up.into()),
         ("wind_time".into(), p.wind_time.into()),
         ("grid".into(), p.grid.into()),
+        ("motion".into(), p.motion.into()),
         ("shelter_base".into(), shelter_base.into()),
         ("light".into(), light.into()),
         ("fog".into(), fog.into()),
@@ -244,11 +246,11 @@ impl RenderModifier for WeatherRender {
 let angle = particle.f32x4_0.w * tau + wp.wind_time.w * (0.35 + particle.f32x4_0.x);
 axis_x = wp.right.xyz * cos(angle) + wp.up.xyz * sin(angle);
 axis_y = -wp.right.xyz * sin(angle) + wp.up.xyz * cos(angle);
-size = vec3(vec2(0.036 + particle.f32x4_0.w * 0.080), 1.0);
+size = vec3(vec2(0.036 + particle.f32x4_0.w * 0.080) * wp.motion.z, 1.0);
 "#,
             );
         } else {
-            context.vertex_code.push_str("axis_x = wp.right.xyz; axis_y = vec3(0.0, 1.0, 0.0); size = vec3(0.025, 0.8 + particle.f32x4_0.w * 0.65, 1.0);\n");
+            context.vertex_code.push_str("axis_x = wp.right.xyz; axis_y = normalize(vec3(wp.motion.x / 32.0, -1.0, wp.motion.y / 32.0)); size = vec3(0.025, 0.8 + particle.f32x4_0.w * 0.65, 1.0);\n");
         }
         context.vertex_code.push_str(r#"
 let weather_world = particle.position;
@@ -281,6 +283,7 @@ fn weather_asset(snow: bool, count: u32) -> EffectAsset {
         ("up", Vec4::ZERO),
         ("wind_time", Vec4::ZERO),
         ("grid", Vec4::ZERO),
+        ("motion", Vec4::new(0., 0., 1., 1.)),
         ("fog", Vec4::ZERO),
         ("lamp_position", Vec4::ZERO),
         ("lamp_direction", Vec4::ZERO),

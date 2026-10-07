@@ -2,6 +2,51 @@
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeatherQuality {
+    #[default]
+    Adaptive,
+    High,
+    Medium,
+    Low,
+}
+impl WeatherQuality {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Adaptive => Self::High,
+            Self::High => Self::Medium,
+            Self::Medium => Self::Low,
+            Self::Low => Self::Adaptive,
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Adaptive => "Adaptativo",
+            Self::High => "Alto",
+            Self::Medium => "Medio",
+            Self::Low => "Bajo",
+        }
+    }
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "auto" | "adaptive" => Self::Adaptive,
+            "high" => Self::High,
+            "medium" => Self::Medium,
+            "low" => Self::Low,
+            _ => return None,
+        })
+    }
+    pub fn level(self) -> Option<usize> {
+        match self {
+            Self::Adaptive => None,
+            Self::High => Some(0),
+            Self::Medium => Some(1),
+            Self::Low => Some(2),
+        }
+    }
+}
+
 #[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RendererSelection {

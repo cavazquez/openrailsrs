@@ -150,6 +150,7 @@ pub(super) fn spawn(
     let entity = commands
         .spawn((
             GpuExhaust,
+            bevy::camera::visibility::RenderLayers::layer(0),
             ParticleEffect::new(handle),
             EffectMaterial {
                 images: vec![texture],

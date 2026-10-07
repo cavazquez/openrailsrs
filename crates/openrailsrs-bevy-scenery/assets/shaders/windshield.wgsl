@@ -14,7 +14,8 @@ fn wet_after_wipe(uv: vec2<f32>, blade: vec4<f32>) -> f32 {
     let a = (angle + 0.95) / 1.9;
     let phase = fract(settings.last_wipe_s / 1.8);
     let since = min(fract(phase - a * 0.5), fract(phase - (1.0 - a * 0.5))) * 1.8;
-    return clamp((since + settings.time_s - settings.last_wipe_s) / 4.5, 0.04, 1.0);
+    let refill_s = mix(14.0, 2.5, settings.rain);
+    return clamp((since + settings.time_s - settings.last_wipe_s) / refill_s, 0.04, 1.0);
 }
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
@@ -27,13 +28,15 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let pane = (in.uv - settings.glass.xy) / max(settings.glass.zw, vec2(0.001));
     if (any(pane < vec2(0.0)) || any(pane > vec2(1.0))) { return dry; }
     let wetness = min(wet_after_wipe(pane, settings.blade1), wet_after_wipe(pane, settings.blade2));
-    let grid = in.uv * vec2(105.0, 70.0);
+    let crosswind = settings._pad.y * 0.003;
+    let grid = vec2(in.uv.x + in.uv.y * crosswind, in.uv.y) * vec2(105.0, 70.0);
     let cell = floor(grid);
     let random = hash(cell);
     let fall = fract(settings.time_s * (0.035 + random.x * 0.04) + random.y);
     let local = fract(grid) - vec2(0.2 + random.x * 0.6, 0.12 + fall * 0.76);
     let radius = length(local * vec2(1.0, 0.7));
-    let drop = (1.0 - smoothstep(0.055, 0.17, radius)) * wetness * step(0.5, random.x);
+    let quota = step(1.0 - settings.rain * 0.7, random.x);
+    let drop = (1.0 - smoothstep(0.055, 0.17, radius)) * wetness * quota;
     // Snow adheres as ragged clumps with tiny clear channels, rather than rain
     // circles recoloured white. Speed increases impacts while the wiper clears
     // the original native blade sectors, including after pause/restore.
@@ -44,10 +47,12 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let cluster = (1.0 - smoothstep(edge - 0.025, edge + 0.025, radius))
         * mix(0.35, 1.0, smoothstep(0.16, 0.7, grain));
     let impacts = clamp(0.55 + settings._pad.x * 0.015, 0.55, 1.0);
-    let snow = settings.snow * cluster * wetness * step(0.42, random.x) * impacts;
+    let snow = settings.snow * cluster * wetness * quota * impacts;
     let refracted = textureSample(scene, scene_sampler, in.uv + local * drop * 0.008);
     let highlight = (1.0 - smoothstep(0.01, 0.08, abs(radius - 0.12))) * drop * 0.16;
     let wet = mix(dry.rgb, refracted.rgb, drop * (1.0-settings.snow)) + vec3(highlight * (1.0-settings.snow));
-    let frost = settings.snow * wetness * smoothstep(0.18, 0.01, min(pane.y, min(pane.x, 1.0-pane.x))) * 0.09;
-    return vec4(mix(wet, vec3(0.80, 0.86, 0.91), clamp(snow * 0.72 + frost, 0.0, 0.8)), dry.a);
+    let rivulet = (1.0 - smoothstep(0.015, 0.045, abs(local.x))) * smoothstep(0.0, 0.35, local.y) * quota * settings.rain * wetness;
+    let frost = settings.snow * settings.rain * wetness * smoothstep(0.18, 0.01, min(pane.y, min(pane.x, 1.0-pane.x))) * 0.09;
+    let runoff = wet + vec3(rivulet * 0.025 * (1.0 - settings.snow));
+    return vec4(mix(runoff, vec3(0.80, 0.86, 0.91), clamp(snow * 0.72 + frost, 0.0, 0.8)), dry.a);
 }

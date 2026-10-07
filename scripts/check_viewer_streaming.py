@@ -7,12 +7,50 @@ streaming regression, not an Open Rails pixel-parity or physics acceptance test.
 
 import argparse
 import json
+import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
 import time
 import tomllib
+
+
+def drm_client_vram(text):
+    """Identify a process's DRM client; do not average unrelated GPUs."""
+    fields = dict(line.split(":", 1) for line in text.splitlines() if ":" in line)
+    pci = fields.get("drm-pdev", "").strip()
+    client = fields.get("drm-client-id", "").strip()
+    if not client or not re.fullmatch(r"[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]", pci):
+        return None
+    value = fields.get("drm-resident-vram", fields.get("drm-memory-vram", ""))
+    try:
+        number, unit = value.split()
+        divisor = {"KiB": 1024, "kB": 1024, "MiB": 1, "B": 1048576, "bytes": 1048576}[unit]
+        memory = float(number) / divisor
+        if not math.isfinite(memory) or memory < 0:
+            return None
+    except (ValueError, KeyError):
+        return None
+    return pci, client, memory
+
+
+def process_gpu_vram(fdinfo_dir):
+    clients, devices = set(), {}
+    for path in fdinfo_dir.glob("*"):
+        try:
+            client = drm_client_vram(path.read_text())
+        except OSError:
+            continue
+        if client is None:
+            continue
+        pci, client_id, memory = client
+        if (pci, client_id) in clients:
+            continue
+        clients.add((pci, client_id))
+        devices[pci] = devices.get(pci, 0) + memory
+    return devices
 
 
 def compare_pullman_cab_foreground(reference, candidate):
@@ -54,6 +92,7 @@ def compare_pullman_cab_foreground(reference, candidate):
 
 def run_checkpoint(args, name, target, pause):
     prefix = args.out_dir / name
+    after_service = getattr(args, "after_service", not pause)
     # A successful process exit must not reuse captures from an earlier run.
     for suffix in (".png", ".stream.json"):
         prefix.with_suffix(suffix).unlink(missing_ok=True)
@@ -80,7 +119,7 @@ def run_checkpoint(args, name, target, pause):
             ),
             "OPENRAILSRS_SCREENSHOT_MIN_ODOMETER_M": str(target),
             "OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET": "1" if pause else "0",
-            "OPENRAILSRS_SCREENSHOT_AFTER_SERVICE": "0" if pause else "1",
+            "OPENRAILSRS_SCREENSHOT_AFTER_SERVICE": "1" if after_service else "0",
             "OPENRAILSRS_SCREENSHOT_DELAY_S": str(args.timeout_s - 10),
         }
     )
@@ -91,7 +130,7 @@ def run_checkpoint(args, name, target, pause):
             OPENRAILSRS_CAM_DIST=str(args.camera_distance),
         )
     for attr, key in (("look_yaw", "OPENRAILSRS_LOOK_YAW"), ("look_pitch", "OPENRAILSRS_LOOK_PITCH")):
-        if hasattr(args, attr):
+        if getattr(args, attr, None) is not None:
             env[key] = str(getattr(args, attr))
     if getattr(args, "visual_fault", None) in ("occluder", "hide_train", "mirror"):
         env["OPENRAILSRS_VISUAL_FAULT"] = args.visual_fault
@@ -103,6 +142,24 @@ def run_checkpoint(args, name, target, pause):
         if hasattr(args,attr): env[key] = str(getattr(args,attr))
     if hasattr(args, "weather"):
         env["OPENRAILSRS_WEATHER"] = args.weather
+    for attr, key in (
+        ("weather_profile", "OPENRAILSRS_WEATHER_PROFILE"),
+        ("weather_seed", "OPENRAILSRS_WEATHER_SEED"),
+        ("weather_phase_s", "OPENRAILSRS_WEATHER_PHASE_S"),
+        ("weather_quality", "OPENRAILSRS_WEATHER_QUALITY"),
+        ("framepace", "OPENRAILSRS_FRAMEPACE"),
+        ("present_mode", "OPENRAILSRS_PRESENT_MODE"),
+        ("scenery_profile", "OPENRAILSRS_SCENERY_PROFILE"),
+        ("scenery_quality", "OPENRAILSRS_SCENERY_QUALITY"),
+        ("camera_journey", "OPENRAILSRS_CAMERA_JOURNEY"),
+        ("train_effects_enabled", "OPENRAILSRS_TRAIN_EFFECTS_ENABLED"),
+        ("dev_inspector", "OPENRAILSRS_DEV_INSPECTOR"),
+        ("dev_tools", "OPENRAILSRS_DEV_TOOLS"),
+        ("dev_inspector_select", "OPENRAILSRS_DEV_INSPECTOR_SELECT"),
+        ("capture_wiper", "OPENRAILSRS_CAPTURE_WIPER"),
+    ):
+        if getattr(args, attr, None) is not None:
+            env[key] = str(getattr(args, attr))
     if getattr(args, "real_time", False):
         env["OPENRAILSRS_REAL_TIME"] = "1"
     if getattr(args, "real_weather", False):
@@ -131,6 +188,8 @@ def run_checkpoint(args, name, target, pause):
         )
     viewer = None
     peak_kib = 0
+    cpu_start = cpu_end = None
+    gpu_busy, gpu_peak_vram = {}, {}
     started = time.monotonic()
     private_runtime = None
     with prefix.with_suffix(".xvfb.log").open("w") as xlog:
@@ -215,6 +274,18 @@ def run_checkpoint(args, name, target, pause):
                             if row.startswith("VmRSS:")
                         )
                         peak_kib = max(peak_kib, rss)
+                        # Per-process CPU seconds; percent uses one core = 100%.
+                        stat = Path(f"/proc/{viewer.pid}/stat").read_text().rsplit(")", 1)[1].split()
+                        cpu_end = (int(stat[11]) + int(stat[12])) / os.sysconf("SC_CLK_TCK")
+                        if cpu_start is None:
+                            cpu_start = cpu_end
+                        for pci, memory in process_gpu_vram(Path(f"/proc/{viewer.pid}/fdinfo")).items():
+                            gpu_peak_vram[pci] = max(gpu_peak_vram.get(pci, 0), memory)
+                            try:
+                                busy = float((Path("/sys/bus/pci/devices") / pci / "gpu_busy_percent").read_text())
+                                gpu_busy.setdefault(pci, []).append(busy)
+                            except (OSError, ValueError):
+                                pass
                         if rss > args.max_rss_mib * 1024:
                             raise RuntimeError(
                                 f"{name}: RSS limit exceeded ({rss / 1024:.0f} MiB)"
@@ -253,6 +324,16 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: renderer errors; see {prefix.with_suffix('.log')}")
     image = prefix.with_suffix(".png")
     report = json.loads(prefix.with_suffix(".stream.json").read_text())
+    elapsed = time.monotonic() - started
+    selected_gpu = max(gpu_peak_vram, key=gpu_peak_vram.get, default=None)
+    busy_samples = gpu_busy.get(selected_gpu, [])
+    report["host_usage"] = {
+        "cpu_percent_one_core": None if cpu_start is None else (cpu_end - cpu_start) / elapsed * 100,
+        "gpu_busy_percent_mean": None if not busy_samples else sum(busy_samples) / len(busy_samples),
+        "selected_gpu_pci": selected_gpu,
+        "gpu_busy_percent_by_device": {pci: sum(values) / len(values) for pci, values in gpu_busy.items()},
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+    }
     if getattr(args, "pullman_cab_reference", None):
         report["cab_foreground"] = compare_pullman_cab_foreground(
             args.pullman_cab_reference, image
@@ -274,9 +355,9 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: textures or meshes not yet uploaded to the GPU")
     if report.get("pending_terrain_tiles", 0):
         raise RuntimeError(f"{name}: native terrain still being prepared")
-    if not pause and not report["service_complete"]:
+    if after_service and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
-    if not pause and hasattr(args, "expected_station_names"):
+    if after_service and hasattr(args, "expected_station_names"):
         stops = report.get("station_results") or []
         if [stop["name"] for stop in stops] != args.expected_station_names:
             raise RuntimeError(f"{name}: station results missing or out of order")

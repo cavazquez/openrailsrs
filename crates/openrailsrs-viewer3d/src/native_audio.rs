@@ -217,6 +217,7 @@ fn vehicle_states(session: &openrailsrs_sim::LiveDriveSession) -> Vec<SoundState
 pub fn update_native_audio(
     live: Option<Res<LiveDrive>>,
     audio: Res<NativeAudio>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     settings: Res<PlayerSettings>,
     follow: Res<CameraFollowMode>,
     passenger: Option<Res<crate::camera::PassengerCamState>>,
@@ -279,6 +280,12 @@ pub fn update_native_audio(
                 vec![]
             },
         });
+    }
+    if let Some(weather) = weather.as_ref() {
+        engine.weather(
+            weather.atmosphere.rain,
+            weather.atmosphere.wind_mps.length(),
+        );
     }
     engine.send(SoundFrame {
         time_s: live.session.time_s(),

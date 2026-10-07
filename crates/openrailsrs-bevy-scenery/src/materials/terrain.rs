@@ -29,6 +29,9 @@ pub struct TerrainMaterial {
     /// Outdoor wetness and visual snow coverage, independent of texture variants.
     #[uniform(5)]
     pub surface_weather: Vec2,
+    /// Opt-in macro variation; x enabled, zw floating-origin offset.
+    #[uniform(6)]
+    pub enhancement: Vec4,
 }
 
 impl TerrainMaterial {

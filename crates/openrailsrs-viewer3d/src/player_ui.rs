@@ -41,6 +41,9 @@ const ADVANCED_PAGES: [&str; 10] = [
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct EnvironmentControls;
 
+#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct UiPointerCaptureSet;
+
 pub struct PlayerUiPlugin;
 impl Plugin for PlayerUiPlugin {
     fn build(&self, app: &mut App) {
@@ -65,9 +68,7 @@ impl Plugin for PlayerUiPlugin {
             .add_systems(OnEnter(ViewerAppState::Playing), apply_weather)
             .add_systems(
                 Update,
-                apply_weather
-                    .run_if(resource_changed::<ActivePlayerContent>)
-                    .run_if(in_state(ViewerAppState::Playing)),
+                apply_weather.run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
                 Update,
@@ -76,7 +77,7 @@ impl Plugin for PlayerUiPlugin {
                     poll_content_download,
                     poll_menu_audits,
                     handle_buttons.in_set(EnvironmentControls),
-                    capture_ui_pointer,
+                    capture_ui_pointer.in_set(UiPointerCaptureSet),
                     build_panel,
                     update_panel_text,
                     scroll_panel,
@@ -179,7 +180,14 @@ impl Default for PlayerUiState {
 }
 #[derive(Resource, Default)]
 pub struct UiPointerCapture(pub bool);
-pub fn world_input_available(ui: Option<Res<PlayerUiState>>) -> bool {
+pub fn world_input_available(
+    ui: Option<Res<PlayerUiState>>,
+    #[cfg(feature = "dev-inspector")] inspector: Option<Res<crate::dev_inspector::InspectorState>>,
+) -> bool {
+    #[cfg(feature = "dev-inspector")]
+    if inspector.is_some_and(|s| s.enabled) {
+        return false;
+    }
     ui.is_none_or(|u| u.panel == PlayerPanel::None)
 }
 pub fn camera_input_available(
@@ -187,9 +195,8 @@ pub fn camera_input_available(
     pointer: Option<Res<UiPointerCapture>>,
     cab: Option<Res<crate::cab_mouse::CabMouseState>>,
 ) -> bool {
-    world_input_available(ui)
-        && pointer.is_none_or(|p| !p.0)
-        && cab.is_none_or(|c| !c.pointer_captured)
+    let available = ui.is_none_or(|u| u.panel == PlayerPanel::None);
+    available && pointer.is_none_or(|p| !p.0) && cab.is_none_or(|c| !c.pointer_captured)
 }
 #[derive(Component)]
 struct PlayerUiCamera;
@@ -293,7 +300,13 @@ enum SettingField {
     Fog,
     FogQuality,
     WeatherExecution,
+    WeatherProfile,
+    WeatherQuality,
+    WeatherBudget,
     TrainEffectExecution,
+    TrainEffectsEnabled,
+    SceneryProfile,
+    SceneryQuality,
     TrainMotion,
     TimeSource,
     WeatherSource,
@@ -839,6 +852,12 @@ fn handle_buttons(
                 SettingField::Units=>settings.toggle_speed_units(),
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
                 SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
+                SettingField::WeatherQuality=>settings.weather_quality=settings.weather_quality.next(),
+                SettingField::WeatherBudget=>settings.weather_particle_budget=match settings.weather_particle_budget {n if n<1024=>1024,n if n<2048=>2048,n if n<4096=>4096,n if n<8192=>8192,_=>512},
+                SettingField::WeatherProfile=>{settings.weather_profile=settings.weather_profile.next(); if let Some(weather)=settings.weather_profile.weather(){content.environment.manual_weather=weather;content.environment.weather=crate::environment::EnvironmentSource::Manual;content.weather=weather;menu.weather=weather;menu.environment=content.environment;settings.environment=content.environment;}},
+                SettingField::SceneryProfile=>settings.scenery_profile=settings.scenery_profile.next(),
+                SettingField::SceneryQuality=>settings.scenery_quality=settings.scenery_quality.next(),
+                SettingField::TrainEffectsEnabled=>settings.train_effects_enabled = !settings.train_effects_enabled,
                 SettingField::TrainEffectExecution=>settings.train_effect_execution=settings.train_effect_execution.next(),
                 SettingField::TrainMotion=>settings.train_motion=settings.train_motion.next(),
                 SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
@@ -1581,6 +1600,16 @@ fn build_settings(
             );
         }
         SettingsTab::Graphics => {
+            button(
+                p,
+                format!("Escenografía: {}", s.scenery_profile.label()),
+                UiCommand::Setting(SettingField::SceneryProfile, 0.0),
+            );
+            button(
+                p,
+                format!("Vegetación: {}", s.scenery_quality.label()),
+                UiCommand::Setting(SettingField::SceneryQuality, 0.0),
+            );
             settings_row(
                 p,
                 format!("Distancia del escenario: {:.0} m", s.view_distance_m),
@@ -1705,6 +1734,11 @@ fn build_settings(
             );
             button(
                 p,
+                format!("Efectos del tren: {}", yes(s.train_effects_enabled)),
+                UiCommand::Setting(SettingField::TrainEffectsEnabled, 0.0),
+            );
+            button(
+                p,
                 format!("Humo y vapor: {}", s.train_effect_execution.label()),
                 UiCommand::Setting(SettingField::TrainEffectExecution, 0.0),
             );
@@ -1734,6 +1768,11 @@ fn build_settings(
             );
             button(
                 p,
+                format!("Perfil de precipitación: {}", s.weather_profile.label()),
+                UiCommand::Setting(SettingField::WeatherProfile, 0.0),
+            );
+            button(
+                p,
                 format!("Rayos y destellos: {}", yes(s.lightning)),
                 UiCommand::Setting(SettingField::Lightning, 0.0),
             );
@@ -1742,6 +1781,16 @@ fn build_settings(
                 "Elegir un clima vuelve al modo manual. La hora real usa la fecha y zona de la ruta; el horario del servicio sigue separado. Open-Meteo requiere conexión (datos estimados).",
                 12.0,
                 MUTED,
+            );
+            button(
+                p,
+                format!("Detalle del clima: {}", s.weather_quality.label()),
+                UiCommand::Setting(SettingField::WeatherQuality, 0.0),
+            );
+            button(
+                p,
+                format!("Presupuesto de copos/gotas: {}", s.weather_particle_budget),
+                UiCommand::Setting(SettingField::WeatherBudget, 0.0),
             );
             button(
                 p,
@@ -2960,23 +3009,27 @@ pub(crate) fn apply_settings(
 }
 
 pub(crate) fn apply_weather(
-    mut commands: Commands,
     content: Res<ActivePlayerContent>,
     mut precipitation: ResMut<crate::precipitation::PrecipitationState>,
-    rain: Query<Entity, With<crate::weather_particles::WeatherMesh>>,
+    state: Option<Res<crate::weather_state::WeatherState>>,
 ) {
     precipitation.enabled = matches!(
         content.weather,
         PlayerWeather::Rain | PlayerWeather::Snow | PlayerWeather::Storm
     );
-    precipitation.snow = content.weather == PlayerWeather::Snow;
-    crate::shapes::set_scenery_snow(precipitation.snow);
-    if !precipitation.enabled {
-        for entity in &rain {
-            commands.entity(entity).despawn();
-        }
-        commands.insert_resource(crate::weather_particles::WeatherParticles::default());
+    if let Some(state) = state.as_ref() {
+        precipitation.enabled = state.atmosphere.rain.max(state.atmosphere.snow) > 0.002;
     }
+    precipitation.snow = state
+        .as_ref()
+        .map_or(content.weather == PlayerWeather::Snow, |s| {
+            s.atmosphere.snow > s.atmosphere.rain
+        });
+    crate::shapes::set_scenery_snow(
+        state
+            .as_ref()
+            .map_or(precipitation.snow, |s| s.atmosphere.snow_cover > 0.5),
+    );
 }
 
 #[cfg(test)]

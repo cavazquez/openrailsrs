@@ -1937,6 +1937,7 @@ pub fn update_driver_camera_fov(
     follow: Res<CameraFollowMode>,
     sun: Option<Res<crate::route_lighting::RouteSunState>>,
     storm: Option<Res<crate::storm::StormState>>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     mut query: Query<
         (
             &mut Projection,
@@ -1973,6 +1974,9 @@ pub fn update_driver_camera_fov(
         // dashboard also changed the sunlit world through the windscreen.
         ambient.brightness = live_outdoor_ambient()
             * (sun.as_ref().map_or(1.0, |s| s.ambient_scale)
+                * weather
+                    .as_ref()
+                    .map_or(1.0, |s| 1.0 - s.atmosphere.overcast * 0.45)
                 + storm.as_ref().map_or(0.0, |s| s.flash * 0.15));
         ambient.color = Color::srgb(0.85, 0.9, 1.0);
         *tonemapping = live_tonemapping();

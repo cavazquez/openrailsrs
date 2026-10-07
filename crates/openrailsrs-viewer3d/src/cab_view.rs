@@ -916,6 +916,14 @@ pub fn sync_cab_interior(
                         Visibility::Visible,
                         Name::new(format!("cab:interior:part:{pi}")),
                     ));
+                    #[cfg(feature = "dev-inspector")]
+                    if let Some(shape) = cab_shape_file.as_ref() {
+                        entity.insert(crate::dev_inspector::NativePrimitive::from_shape(
+                            shape,
+                            part.prim_state_idx,
+                            &cab_shape,
+                        ));
+                    }
                     if let Some(or_mat) = part.or_cab_material.clone() {
                         entity.insert(MeshMaterial3d(or_mat));
                     } else {

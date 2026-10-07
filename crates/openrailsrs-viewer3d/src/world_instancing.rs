@@ -165,6 +165,10 @@ pub struct WorldInstanceAppearance {
     pub lod_fade: f32,
     /// x: wetness, y: snow coverage; updated without replacing instance buffers.
     pub surface_weather: Vec2,
+    /// Grass only: far distance, railway time, horizontal wind. Zero for native shapes.
+    pub vegetation: Vec4,
+    /// Main view centre, also used by shadow passes to share vegetation LOD.
+    pub vegetation_view: Vec2,
 }
 
 impl SyncComponent for WorldInstanceAppearance {
@@ -205,12 +209,43 @@ pub struct WorldInstancedGroup {
 #[derive(Resource, Clone, ExtractResource, Default)]
 pub struct WorldInstancingFallbackImage(pub Handle<Image>);
 
+/// Actual submissions by this custom pipeline; PBR, UI and Hanabi are excluded.
+#[derive(Resource, Clone, ExtractResource, Default)]
+pub struct WorldDrawCounters(pub Arc<DrawCounts>);
+#[derive(Default)]
+pub struct DrawCounts {
+    opaque: std::sync::atomic::AtomicU64,
+    shadow: std::sync::atomic::AtomicU64,
+    grass: std::sync::atomic::AtomicU64,
+    last_opaque: std::sync::atomic::AtomicU64,
+    last_shadow: std::sync::atomic::AtomicU64,
+    last_grass: std::sync::atomic::AtomicU64,
+}
+impl WorldDrawCounters {
+    pub fn report(&self) -> serde_json::Value {
+        use std::sync::atomic::Ordering::Relaxed;
+        serde_json::json!({"opaque":self.0.last_opaque.load(Relaxed),"shadow":self.0.last_shadow.load(Relaxed),"grass":self.0.last_grass.load(Relaxed),"scope":"actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi"})
+    }
+}
+fn publish_draw_counts(counts: Res<WorldDrawCounters>) {
+    use std::sync::atomic::Ordering::Relaxed;
+    for (current, last) in [
+        (&counts.0.opaque, &counts.0.last_opaque),
+        (&counts.0.shadow, &counts.0.last_shadow),
+        (&counts.0.grass, &counts.0.last_grass),
+    ] {
+        last.store(current.swap(0, Relaxed), Relaxed);
+    }
+}
+
 /// Plugin: extract instance buffers and draw via a specialized mesh pipeline.
 pub struct WorldInstancingPlugin;
 
 impl Plugin for WorldInstancingPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<WorldInstancingFallbackImage>()
+        app.init_resource::<WorldDrawCounters>()
+            .add_plugins(ExtractResourcePlugin::<WorldDrawCounters>::default())
+            .init_resource::<WorldInstancingFallbackImage>()
             .init_resource::<crate::performance::ScenePipelineStatus>()
             // Bevy 0.19 refreshes bounds on Changed<Mesh3d>. The source mesh
             // encloses one model, while our draw places many copies across a
@@ -231,6 +266,7 @@ impl Plugin for WorldInstancingPlugin {
             return;
         };
         render_app
+            .add_systems(Render, publish_draw_counts.in_set(RenderSystems::Cleanup))
             .init_resource::<crate::performance::RequiredRenderAssets>()
             .add_systems(
                 bevy::render::ExtractSchedule,
@@ -362,6 +398,8 @@ pub fn appearance_from_standard_material(
         world_from_local: Mat4::IDENTITY,
         lod_fade: 0.0,
         surface_weather: Vec2::ZERO,
+        vegetation: Vec4::ZERO,
+        vegetation_view: Vec2::ZERO,
     }
 }
 
@@ -455,6 +493,7 @@ struct AppearanceGpu {
     base_color: Vec4,
     params: Vec4,
     world_from_local: Mat4,
+    vegetation: Vec4,
 }
 
 #[derive(Resource)]
@@ -740,7 +779,10 @@ fn prepare_world_instance_bind_groups(
             continue;
         };
         let gpu = AppearanceGpu {
-            surface_weather: appearance.surface_weather.extend(0.0).extend(0.0),
+            surface_weather: appearance
+                .surface_weather
+                .extend(appearance.vegetation_view.x)
+                .extend(appearance.vegetation_view.y),
             base_color: Vec4::from_array(appearance.base_color.to_f32_array()),
             params: Vec4::new(
                 appearance.alpha_cutoff,
@@ -749,6 +791,7 @@ fn prepare_world_instance_bind_groups(
                 0.0,
             ),
             world_from_local: appearance.world_from_local,
+            vegetation: appearance.vegetation,
         };
         if let Some(existing) =
             existing.filter(|gpu| gpu.source.base_color_texture == appearance.base_color_texture)
@@ -1065,16 +1108,21 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
         SRes<RenderAssets<RenderMesh>>,
         SRes<RenderMeshInstances>,
         SRes<MeshAllocator>,
+        SRes<WorldDrawCounters>,
     );
     type ViewQuery = ();
-    type ItemQuery = Read<GpuWorldInstanceBuffer>;
+    type ItemQuery = (Read<GpuWorldInstanceBuffer>, Read<WorldInstanceAppearance>);
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        instance_buffer: Option<&'w GpuWorldInstanceBuffer>,
-        (meshes, render_mesh_instances, mesh_allocator): SystemParamItem<'w, '_, Self::Param>,
+        instance: Option<(&'w GpuWorldInstanceBuffer, &'w WorldInstanceAppearance)>,
+        (meshes, render_mesh_instances, mesh_allocator, counts): SystemParamItem<
+            'w,
+            '_,
+            Self::Param,
+        >,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let mesh_allocator = mesh_allocator.into_inner();
@@ -1085,7 +1133,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
         let Some(gpu_mesh) = meshes.into_inner().get(mesh_instance.mesh_asset_id()) else {
             return RenderCommandResult::Skip;
         };
-        let Some(instance_buffer) = instance_buffer else {
+        let Some((instance_buffer, appearance)) = instance else {
             return RenderCommandResult::Skip;
         };
         let Some(vertex_buffer_slice) =
@@ -1116,6 +1164,16 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
             }
             RenderMeshBufferInfo::NonIndexed => {
                 pass.draw(vertex_buffer_slice.range, 0..instance_buffer.length as u32);
+            }
+        }
+        use std::sync::atomic::Ordering::Relaxed;
+        let counts = counts.into_inner();
+        if std::any::TypeId::of::<P>() == std::any::TypeId::of::<Shadow>() {
+            counts.0.shadow.fetch_add(1, Relaxed);
+        } else {
+            counts.0.opaque.fetch_add(1, Relaxed);
+            if appearance.vegetation.x > 0. {
+                counts.0.grass.fetch_add(1, Relaxed);
             }
         }
         RenderCommandResult::Success

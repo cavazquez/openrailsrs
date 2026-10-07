@@ -19,6 +19,7 @@ pub struct OrForestGpuParams {
     pub ambient: f32,
     pub _pad0: f32,
     pub _pad1: f32,
+    pub enhancement: Vec4,
 }
 
 impl Default for OrForestGpuParams {
@@ -28,6 +29,7 @@ impl Default for OrForestGpuParams {
             ambient: 0.92,
             _pad0: 0.0,
             _pad1: 0.0,
+            enhancement: Vec4::ZERO,
         }
     }
 }

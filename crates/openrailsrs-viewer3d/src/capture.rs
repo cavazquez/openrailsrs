@@ -45,6 +45,14 @@ pub fn capture_enabled() -> bool {
     std::env::var_os("OPENRAILSRS_SCREENSHOT").is_some_and(|v| !v.is_empty())
 }
 
+impl CaptureState {
+    #[cfg(feature = "dev-tools")]
+    pub(crate) fn journey_can_start(&self, odometer_m: f64) -> bool {
+        self.target_odometer_m
+            .is_none_or(|target| odometer_m >= target)
+    }
+}
+
 /// Menu captures are opt-in QA for relocated binaries and confined packages.
 pub fn capture_state_allowed(state: Res<State<crate::route_bootstrap::ViewerAppState>>) -> bool {
     *state.get() == crate::route_bootstrap::ViewerAppState::Playing
@@ -157,6 +165,10 @@ pub fn capture_system(
                 live.paused = true;
             }
             let timed_out = state.armed_at.elapsed() >= state.delay;
+            #[cfg(feature = "dev-tools")]
+            let distance_ok = distance_ok
+                && (!std::env::var("OPENRAILSRS_CAMERA_JOURNEY").is_ok_and(|v| v == "aba")
+                    || scene.camera_journey.complete);
             let should_capture = distance_ok
                 && lightning_ok
                 && if state.after_ready {
@@ -241,6 +253,15 @@ pub struct CaptureScene<'w, 's> {
     performance: Res<'w, crate::performance::JourneyPerformance>,
     graphics_memory: Res<'w, crate::gpu_memory::GraphicsMemory>,
     weather_particles: Res<'w, crate::weather_particles::WeatherParticles>,
+    weather_state: Option<Res<'w, crate::weather_state::WeatherState>>,
+    enhanced_scenery: Res<'w, crate::enhanced_scenery::EnhancedScenery>,
+    world_draws: Res<'w, crate::world_instancing::WorldDrawCounters>,
+    #[cfg(feature = "dev-tools")]
+    camera_journey: Res<'w, crate::dev_camera::CameraJourney>,
+    #[cfg(feature = "dev-inspector")]
+    inspector: Option<Res<'w, crate::dev_inspector::InspectorState>>,
+    #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
+    dev_metrics: Option<Res<'w, crate::dev_metrics::DevMetrics>>,
     renderer_selection: Res<'w, crate::weather_execution::RendererSelection>,
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
@@ -394,10 +415,31 @@ impl CaptureScene<'_, '_> {
                 "sample": environment.current_sample(content.environment), "status":environment.network_status,
             });
         }
-        report["storm"] = self.storm.as_ref().map_or(
-            serde_json::Value::Null,
-            |s| serde_json::json!({"strikes":s.strikes,"thunders":s.thunders,"flash":s.flash}),
-        );
+        report["storm"] = self
+            .storm
+            .as_ref()
+            .map_or(serde_json::Value::Null, |s| s.report());
+        #[cfg(feature = "dev-inspector")]
+        {
+            report["dev_inspector"] = self
+                .inspector
+                .as_ref()
+                .map_or(serde_json::Value::Null, |s| s.snapshot.clone());
+        }
+        #[cfg(feature = "dev-tools")]
+        {
+            report["camera_journey"] = self.camera_journey.report();
+        }
+        report["draw_calls"] = self.world_draws.report();
+        report["enhanced_scenery"] = self.enhanced_scenery.report();
+        report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live}));
+        #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
+        {
+            report["dev_diagnostics"] = self
+                .dev_metrics
+                .as_ref()
+                .map_or(serde_json::Value::Null, |m| m.report());
+        }
         report["graphics_memory"] =
             serde_json::to_value(&self.graphics_memory.0).unwrap_or_default();
         let (hits, misses) = openrailsrs_bevy_scenery::texture_cache::telemetry();

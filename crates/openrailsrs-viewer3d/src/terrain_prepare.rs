@@ -221,6 +221,7 @@ impl PreparedTerrainTile {
                         overlay_texture: overlay,
                         overlay_scale: scale,
                         surface_weather: Vec2::ZERO,
+                        enhancement: Vec4::ZERO,
                     })
                 })
                 .clone();

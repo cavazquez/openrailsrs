@@ -221,6 +221,13 @@ pub struct PlayerSettings {
     pub fog: bool,
     pub fog_quality: FogQuality,
     pub weather_execution: crate::weather_execution::WeatherExecution,
+    pub weather_profile: crate::weather_state::WeatherProfile,
+    pub weather_seed: u32,
+    pub weather_quality: crate::weather_execution::WeatherQuality,
+    pub weather_particle_budget: usize,
+    pub train_effects_enabled: bool,
+    pub scenery_profile: crate::enhanced_scenery::SceneryProfile,
+    pub scenery_quality: crate::enhanced_scenery::SceneryQuality,
     pub train_effect_execution: crate::weather_execution::WeatherExecution,
     pub train_motion: crate::train_motion::MotionLevel,
     pub renderer: crate::weather_execution::RendererSelection,
@@ -250,6 +257,13 @@ impl Default for PlayerSettings {
             fog: true,
             fog_quality: FogQuality::Auto,
             weather_execution: crate::weather_execution::WeatherExecution::Auto,
+            weather_profile: default(),
+            weather_seed: 1,
+            weather_quality: default(),
+            weather_particle_budget: 8192,
+            train_effects_enabled: true,
+            scenery_profile: default(),
+            scenery_quality: default(),
             train_effect_execution: crate::weather_execution::WeatherExecution::Auto,
             train_motion: crate::train_motion::MotionLevel::Soft,
             renderer: crate::weather_execution::RendererSelection::Auto,
@@ -318,6 +332,7 @@ impl PlayerSettings {
             || !(0.8..=1.5).contains(&self.ui_scale)
             || !self.audio_volume.is_finite()
             || !(0.0..=1.0).contains(&self.audio_volume)
+            || !(128..=8192).contains(&self.weather_particle_budget)
         {
             return Err("Ajustes gráficos fuera del rango permitido".into());
         }

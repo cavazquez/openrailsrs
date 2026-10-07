@@ -1025,6 +1025,7 @@ impl Playback {
 pub struct NativeAudioEngine {
     tx: mpsc::SyncSender<SoundFrame>,
     thunder_tx: mpsc::SyncSender<crate::thunder::ThunderEvent>,
+    weather_tx: mpsc::SyncSender<(f32, f32)>,
     report: Arc<Mutex<SoundReport>>,
 }
 fn mix_limit() -> rodio::source::LimitSettings {
@@ -1044,6 +1045,7 @@ impl NativeAudioEngine {
         }
         let (tx, rx) = mpsc::sync_channel(2);
         let (thunder_tx, thunder_rx) = mpsc::sync_channel::<crate::thunder::ThunderEvent>(2);
+        let (weather_tx, weather_rx) = mpsc::sync_channel::<(f32, f32)>(2);
         let report = Arc::new(Mutex::new(SoundReport::default()));
         let shared = report.clone();
         std::thread::spawn(move || {
@@ -1061,8 +1063,41 @@ impl NativeAudioEngine {
             output.mixer().add(source.limit(mix_limit()));
             let mut playback = Playback::new(bank, &mixer);
             let mut thunder_voices: Vec<(Player, f32)> = vec![];
+            let rain = Player::connect_new(&mixer);
+            let wind = Player::connect_new(&mixer);
+            for (player, is_wind) in [(&rain, false), (&wind, true)] {
+                player.append(
+                    SamplesBuffer::new(
+                        rodio::ChannelCount::new(1).unwrap(),
+                        rodio::SampleRate::new(crate::weather::SAMPLE_RATE).unwrap(),
+                        crate::weather::samples(is_wind),
+                    )
+                    .repeat_infinite(),
+                );
+                player.set_volume(0.);
+            }
+            let mut atmosphere = (0., 0.);
             for frame in rx {
                 playback.update(&frame);
+                for latest in weather_rx.try_iter() {
+                    atmosphere = latest;
+                }
+                let gains = crate::weather::gains(
+                    atmosphere.0,
+                    atmosphere.1,
+                    frame.cab || frame.passenger,
+                    frame.volume,
+                    frame.paused,
+                );
+                rain.set_volume(gains.0);
+                wind.set_volume(gains.1);
+                for player in [&rain, &wind] {
+                    if frame.paused {
+                        player.pause();
+                    } else {
+                        player.play();
+                    }
+                }
                 thunder_voices.retain(|(player, _)| !player.empty());
                 for event in thunder_rx.try_iter() {
                     if thunder_voices.len() >= 2 {
@@ -1092,6 +1127,7 @@ impl NativeAudioEngine {
         Some(Self {
             tx,
             thunder_tx,
+            weather_tx,
             report,
         })
     }
@@ -1100,6 +1136,9 @@ impl NativeAudioEngine {
     }
     pub fn thunder(&self, event: crate::thunder::ThunderEvent) {
         let _ = self.thunder_tx.try_send(event);
+    }
+    pub fn weather(&self, rain: f32, wind_mps: f32) {
+        let _ = self.weather_tx.try_send((rain, wind_mps));
     }
     pub fn report(&self) -> SoundReport {
         self.report.lock().unwrap().clone()

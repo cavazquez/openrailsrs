@@ -1,4 +1,4 @@
-//! Snow on explicitly opted-in train exteriors, sharing the original textures.
+//! Snow on classified outdoor surfaces, sharing their original textures.
 use bevy::{
     asset::AssetId,
     pbr::{ExtendedMaterial, MaterialExtension},
@@ -23,10 +23,30 @@ impl MaterialExtension for SnowSurface {
 }
 pub type SnowMaterial = ExtendedMaterial<StandardMaterial, SnowSurface>;
 
-/// Snow is opt-in. Native WORLD shapes (including buildings and their roofs)
-/// retain their authored materials in every rendering/LOD path.
+/// Receives coverage only on upward opaque faces. Facades, glass and the cab
+/// retain authored albedo. Shares source images through every LOD change.
 #[derive(Component)]
 pub struct SnowReceiver;
+
+pub fn mark_world_roofs(
+    mut commands: Commands,
+    weather: Res<crate::weather_state::WeatherState>,
+    roofs: Query<
+        Entity,
+        (
+            With<crate::world::WorldSceneryLod>,
+            With<Mesh3d>,
+            Without<SnowReceiver>,
+        ),
+    >,
+) {
+    if weather.atmosphere.snow_cover <= 0.001 {
+        return;
+    }
+    for entity in &roofs {
+        commands.entity(entity).insert(SnowReceiver);
+    }
+}
 
 /// Keep the original material alive for LOD changes and wet-surface updates.
 #[derive(Component)]
@@ -83,7 +103,7 @@ pub fn sync(
         let Some(base) = originals.get(&source.0) else {
             continue;
         };
-        if !matches!(base.alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_)) {
+        if base.unlit || !matches!(base.alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_)) {
             continue;
         }
         let handle = cache
@@ -139,8 +159,8 @@ mod tests {
             .world_mut()
             .spawn((SnowReceiver, MeshMaterial3d(opaque.clone())))
             .id();
-        // Even when a building shares the train's source material, it must keep
-        // the original appearance. New streamed WORLD/LOD meshes are opt-out.
+        // An unclassified, unmarked building must not inherit a train's snow
+        // receiver merely because both share the same source material.
         let building = app.world_mut().spawn(MeshMaterial3d(opaque.clone())).id();
         let cab = app
             .world_mut()

@@ -60,6 +60,7 @@ pub struct TrainEffects {
     birth_seed: u32,
     cpu_collisions: u64,
     obstacle_count: usize,
+    disabled: bool,
 }
 impl TrainEffects {
     pub fn report(&self) -> serde_json::Value {
@@ -69,7 +70,7 @@ impl TrainEffects {
             .iter()
             .map(|p| p.velocity.length())
             .fold(0.0_f32, f32::max);
-        serde_json::json!({"native_emitters":self.emitters.len(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
+        serde_json::json!({"enabled":!self.disabled,"render_layers":[0],"native_emitters":self.emitters.len(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
             "cpu_obstacle_hits":self.cpu_collisions,"nearby_opaque_bounds":self.obstacle_count,"gpu_bounds_per_emitter":8,"steam_pulses_follow_wheels":true,
             "wind_mps":self.wind.to_array(),"inherits_vehicle_velocity":true,
             "requested":self.requested,"execution":self.execution,"gpu_backend":self.emitters.iter().any(|e|e.gpu.is_some()).then_some("bevy_hanabi 0.19.0"),
@@ -386,6 +387,7 @@ fn advance_puff(puff: &mut Puff, dt: f32, wind: Vec3) {
 pub struct TrainEffectScene<'w, 's> {
     commands: Commands<'w, 's>,
     environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
+    atmosphere: Option<Res<'w, crate::weather_state::WeatherState>>,
     content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
     preferences: Option<Res<'w, crate::player_settings::PlayerSettings>>,
     capabilities: Option<Res<'w, TrainParticleCapabilities>>,
@@ -436,6 +438,7 @@ pub fn update(
     let TrainEffectScene {
         mut commands,
         environment,
+        atmosphere,
         content,
         preferences,
         capabilities,
@@ -458,6 +461,28 @@ pub fn update(
     let (Ok(camera), Ok(mesh)) = (camera.single(), mesh.single()) else {
         return;
     };
+    let enabled = std::env::var("OPENRAILSRS_TRAIN_EFFECTS_ENABLED").map_or_else(
+        |_| preferences.as_ref().is_none_or(|p| p.train_effects_enabled),
+        |s| s != "0",
+    );
+    effects.disabled = !enabled;
+    if !enabled {
+        for emitter in &mut effects.emitters {
+            if let Some(gpu) = emitter.gpu.take() {
+                commands.entity(gpu.entity).despawn();
+            }
+        }
+        if !effects.particles.is_empty()
+            && let Some(mut mesh) = meshes.get_mut(&mesh.0)
+        {
+            *mesh = particle_mesh(&[], camera);
+        }
+        effects.particles.clear();
+        effects.configuration = None;
+        effects.cpu_capacity = 0;
+        effects.last_clock = Some(live.session.time_s());
+        return;
+    }
     let clock = live.session.time_s();
     let previous = effects.last_clock.replace(clock).unwrap_or(clock);
     let dt = if live.paused {
@@ -469,7 +494,10 @@ pub fn update(
         .as_ref()
         .zip(content.as_ref())
         .and_then(|(environment, content)| environment.current_sample(content.environment));
-    let wind = crate::environment::weather_wind(sample);
+    let wind = atmosphere.as_ref().map_or_else(
+        || crate::environment::weather_wind(sample),
+        |s| s.atmosphere.wind_mps,
+    );
     effects.wind = wind;
     effects.gpu_delta_s = gpu_time.as_ref().map(|t| t.delta_secs());
     let requested = std::env::var("OPENRAILSRS_TRAIN_EFFECT_EXECUTION")
@@ -651,7 +679,11 @@ pub fn update(
     effects.gpu_spawn_requests += gpu_spawn_requests;
     let density = if fog.as_ref().is_none_or(|f| f.enabled) {
         content.as_ref().map_or(0.0, |c| {
-            std::f32::consts::LN_10 / crate::ground_fog::weather_visibility(c.weather)
+            std::f32::consts::LN_10
+                / atmosphere.as_ref().map_or_else(
+                    || crate::ground_fog::weather_visibility(c.weather),
+                    |s| s.atmosphere.visibility_m,
+                )
         })
     } else {
         0.0
@@ -660,6 +692,16 @@ pub fn update(
         crate::sky::sky_parameters(
             sun.as_ref().map_or(0.5, |s| s.direction.y),
             c.weather,
+            sun.as_ref().map_or(Vec3::Y, |s| s.direction),
+            clock,
+        )
+        .horizon
+        .truncate()
+    });
+    let fog_color = atmosphere.as_ref().map_or(fog_color, |s| {
+        crate::sky::atmosphere_parameters(
+            sun.as_ref().map_or(0.5, |s| s.direction.y),
+            &s.atmosphere,
             sun.as_ref().map_or(Vec3::Y, |s| s.direction),
             clock,
         )

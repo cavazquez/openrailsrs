@@ -14,6 +14,7 @@ struct OrForestParams {
     ambient: f32,
     _pad0: f32,
     _pad1: f32,
+    enhancement: vec4<f32>,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> params: OrForestParams;
@@ -50,6 +51,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     // OR: (uv.y - 1) * (0,-1,0) * height  ≡  (1 - uv.y) * up * height
     world_pos += (1.0 - vertex.uv.y) * up * height;
 
+    if params.enhancement.x > 0.0 {
+        let bend=params.enhancement.zw * 0.008 * pow(1.0-vertex.uv.y,2.0)
+            * sin(params.enhancement.y * 0.8 + vertex.position.x * 0.13 + vertex.position.z * 0.11);
+        world_pos += vec3(bend.x,0.0,bend.y);
+    }
     out.world_position = vec4(world_pos, 1.0);
     out.position = position_world_to_clip(world_pos);
     out.world_normal = eye;
@@ -67,6 +73,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(base_texture, base_sampler, in.uv);
+    if params.enhancement.x > 0.0 {
+        let distance = length(in.world_position.xz-view_bindings::view.world_position.xz);
+        let fade=1.0-smoothstep(params.enhancement.x*0.55,params.enhancement.x,distance);
+        let x=u32(in.position.x)%4u;let y=u32(in.position.y)%4u;
+        let bayer=array<f32,16>(0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
+        if (bayer[y*4u+x]+0.5)/16.0 > fade {discard;}
+    }
     if (params.reference_alpha > 0.01 && color.a < params.reference_alpha) {
         discard;
     }

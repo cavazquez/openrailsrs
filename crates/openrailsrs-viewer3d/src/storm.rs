@@ -24,17 +24,38 @@ struct PendingThunder {
     at: f64,
     position: Vec3,
     seed: u32,
+    delay_s: f64,
 }
 #[derive(Resource, Default)]
 pub struct StormState {
     pub flash: f32,
     pub strikes: u32,
     pub thunders: u32,
+    due_events: u32,
     last_clock: Option<f64>,
     next_strike: f64,
     bolt: Option<(Entity, f64)>,
     pending: Vec<PendingThunder>,
     material: Option<Handle<StandardMaterial>>,
+}
+impl StormState {
+    pub fn report(&self) -> serde_json::Value {
+        serde_json::json!({"strikes":self.strikes,"thunders":self.thunders,"flash":self.flash,
+            "simulation_clock_s":self.last_clock,"next_strike_s":self.next_strike,"elapsed_thunder_events":self.due_events,
+            "pending_thunder":self.pending.iter().map(|e|serde_json::json!({"at_s":e.at,"delay_s":e.delay_s,"distance_m":e.delay_s*SOUND_SPEED_MPS})).collect::<Vec<_>>(),
+            "audio_scope":"thunders counts audio dispatches; elapsed_thunder_events also records muted events"})
+    }
+}
+
+pub fn reset(mut commands: Commands, mut state: ResMut<StormState>) {
+    if let Some((entity, _)) = state.bolt.take() {
+        commands.entity(entity).despawn();
+    }
+    let material = state.material.take();
+    *state = StormState {
+        material,
+        ..default()
+    };
 }
 
 pub fn flash_at(age: f64) -> f32 {
@@ -110,6 +131,7 @@ pub fn update(
     mut commands: Commands,
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     settings: Res<PlayerSettings>,
     origin: Res<FloatingOrigin>,
     focus: Res<crate::world::RouteFocus>,
@@ -123,8 +145,19 @@ pub fn update(
     let Some(live) = live else { return };
     let clock = live.session.time_s();
     let previous = state.last_clock.replace(clock);
-    let active = content.weather == PlayerWeather::Storm;
-    if !active || previous.is_some_and(|last| clock < last) {
+    let strength = weather
+        .as_ref()
+        .map_or(f32::from(content.weather == PlayerWeather::Storm), |s| {
+            s.atmosphere.storm
+        });
+    let active = strength > 0.18;
+    let rewind = previous.is_some_and(|last| clock < last);
+    if rewind {
+        state.strikes = 0;
+        state.thunders = 0;
+        state.due_events = 0;
+    }
+    if !active || rewind {
         if let Some((entity, _)) = state.bolt.take() {
             commands.entity(entity).despawn();
         }
@@ -159,6 +192,7 @@ pub fn update(
             continue;
         }
         let event = state.pending.remove(index);
+        state.due_events += 1;
         if settings.audio_enabled
             && settings.audio_volume > 0.0
             && let Some(engine) = audio.engine.as_ref()
@@ -174,8 +208,13 @@ pub fn update(
         return;
     }
     state.strikes = state.strikes.wrapping_add(1);
-    let seed = state.strikes;
-    state.next_strike = clock + 25.0 + f64::from(rain_rng01(seed, 94)) * 30.0;
+    let seed = state.strikes
+        ^ weather
+            .as_ref()
+            .map_or(1, |s| s.seed)
+            .wrapping_mul(0x9e3779b9);
+    state.next_strike =
+        clock + (25.0 + f64::from(rain_rng01(seed, 94)) * 30.0) / f64::from(strength.max(0.3));
     // Most events occur in the forward hemisphere; moving the camera afterwards
     // does not move the strike. The ground point lies below the listener.
     let forward = Vec3::new(camera.forward().x, 0., camera.forward().z).normalize_or_zero();
@@ -197,6 +236,7 @@ pub fn update(
         at: clock + delay,
         position,
         seed,
+        delay_s: delay,
     });
     if settings.lightning {
         let material = if let Some(handle) = state.material.clone() {
@@ -286,11 +326,13 @@ mod tests {
                         at: clock + 60.,
                         position: Vec3::ZERO,
                         seed: 90,
+                        delay_s: 60.,
                     },
                     PendingThunder {
                         at: clock + 90.,
                         position: Vec3::ZERO,
                         seed: 91,
+                        delay_s: 90.,
                     },
                 ],
                 ..default()
@@ -306,7 +348,7 @@ mod tests {
         assert_eq!(state.strikes, 1);
         assert_eq!(state.pending.len(), 2);
         assert_eq!(state.pending[0].seed, 91);
-        assert_eq!(state.pending[1].seed, 1);
+        assert_eq!(state.pending[1].seed, 1 ^ 0x9e3779b9);
         let position = app.world().get::<Transform>(entity).unwrap().translation;
         app.world_mut().resource_mut::<LiveDrive>().paused = true;
         app.world_mut()

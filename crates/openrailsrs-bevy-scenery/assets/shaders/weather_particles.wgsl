@@ -6,7 +6,7 @@
 }
 struct ParticleUniforms {
     center: vec4<f32>, phase: vec4<f32>, right: vec4<f32>,
-    up: vec4<f32>, wind_time: vec4<f32>, grid: vec4<f32>,
+    up: vec4<f32>, wind_time: vec4<f32>, grid: vec4<f32>, motion: vec4<f32>,
 };
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> weather: ParticleUniforms;
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var shelter: texture_2d<f32>;
@@ -28,10 +28,10 @@ fn particle_position(seed: vec4<f32>) -> vec3<f32> {
 }
 fn particle_corner(seed: vec4<f32>, uv: vec2<f32>) -> vec3<f32> {
     if weather.up.w < 0.5 {
-        return weather.right.xyz * ((uv.x - 0.5) * 0.025) + vec3(0.0, (uv.y - 0.5) * (0.8 + seed.w * 0.65), 0.0);
+        return weather.right.xyz * ((uv.x - 0.5) * 0.025) + normalize(vec3(weather.motion.x / 32.0, -1.0, weather.motion.y / 32.0)) * (uv.y - 0.5) * (0.8 + seed.w * 0.65);
     }
     let angle = seed.w * 6.283185307 + weather.wind_time.w * (0.35 + seed.x);
-    let v = (uv * 2.0 - vec2(1.0)) * (0.018 + seed.w * 0.040);
+    let v = (uv * 2.0 - vec2(1.0)) * (0.018 + seed.w * 0.040) * weather.motion.z;
     let r = vec2(v.x * cos(angle) - v.y * sin(angle), v.x * sin(angle) + v.y * cos(angle));
     return weather.right.xyz * r.x + weather.up.xyz * r.y;
 }

@@ -127,6 +127,7 @@ pub fn update_route_sun(
     live: Res<LiveDrive>,
     state: Option<ResMut<RouteSunState>>,
     settings: Res<crate::player_settings::PlayerSettings>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     environment: Res<crate::environment::LiveEnvironment>,
     content: Res<crate::player_launch::ActivePlayerContent>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), With<RouteSunLight>>,
@@ -169,7 +170,8 @@ pub fn update_route_sun(
         transform.set_if_neq(Transform::IDENTITY.looking_to(-direction, up));
         // Bevy omits a zero-intensity directional light from the view uniform.
         // Legacy shaders still need its below-horizon direction to shade night.
-        light.illuminance = (75_000.0 * daylight).max(0.001);
+        let overcast = weather.as_ref().map_or(0.0, |s| s.atmosphere.overcast);
+        light.illuminance = (75_000.0 * daylight * (1.0 - overcast * 0.8)).max(0.001);
         light.shadow_maps_enabled = settings.shadows && daylight > 0.005;
     }
 }

@@ -223,7 +223,7 @@ pub struct RouteAssets {
     catalog: openrailsrs_bevy_scenery::MstsRouteCatalog,
     track_db: Option<openrailsrs_formats::TrackDbFile>,
     /// Road database (`.rdb`) — same schema as TDB; used for CarSpawner endpoints (#32).
-    road_db: Option<openrailsrs_formats::TrackDbFile>,
+    road_db: Option<std::sync::Arc<openrailsrs_formats::TrackDbFile>>,
     carspawn: openrailsrs_formats::CarSpawnerCatalog,
     sigcfg: openrailsrs_formats::SigCfgFile,
     tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
@@ -368,7 +368,7 @@ impl RouteAssets {
             route_dir,
             catalog,
             track_db,
-            road_db,
+            road_db: road_db.map(std::sync::Arc::new),
             carspawn,
             sigcfg,
             tdb_sections_by_shape,
@@ -386,7 +386,12 @@ impl RouteAssets {
     }
 
     pub fn road_db(&self) -> Option<&openrailsrs_formats::TrackDbFile> {
-        self.road_db.as_ref()
+        self.road_db.as_deref()
+    }
+
+    /// Read-only ownership for background scenery jobs, without copying RDB.
+    pub fn shared_road_db(&self) -> Option<std::sync::Arc<openrailsrs_formats::TrackDbFile>> {
+        self.road_db.clone()
     }
 
     pub fn carspawn(&self) -> &openrailsrs_formats::CarSpawnerCatalog {
