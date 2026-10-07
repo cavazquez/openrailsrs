@@ -1608,3 +1608,54 @@ La validación automática de shaders exige GPU real y comprueba ambos efectos
 meteorológicos y niebla nocturna. `benchmark_weather_execution.py` compara
 semillas, cuotas y pausa en la misma escena; `check_train_effects.py` prueba
 la estela en marcha. Estas pruebas visuales no sustituyen los oráculos físicos.
+
+## 48. Neutro, paradas omitidas, AMP, coches y faros bajos
+
+Reiniciá el visor compilado con `./scripts/run_chiltern_service.sh`. Elegí
+Chiltern extendido y Pullman. Las teclas de abajo son las predeterminadas;
+F6 muestra las que tengas reasignadas.
+
+1. **Inversor.** Detenido, con el regulador en 0%, pulsá W: Neutro → Adelante.
+   Pulsá S una vez: Adelante → Neutro; otra vez: Neutro → Atrás. W recorre
+   esos pasos en sentido contrario. En marcha podés seleccionar neutro,
+   pero invertir el sentido requiere detenerte. La tecla de neutro
+   directo sigue disponible y se puede reasignar en F10.
+2. **Limpiaparabrisas.** En cabina, habilitá sonido y volumen en F10. V debe
+   activar la escobilla y un sonido periódico de motor, goma y cambio de
+   sentido. Al pausar se pausa el sonido; al apagar el limpiaparabrisas se
+   detiene. Desde exterior se oye más tenue y pierde intensidad a distancia. Se usa
+   el evento SMS/WAV del vehículo cuando tiene una muestra reproducible;
+   el Pullman recibe un mecanismo sintetizado porque su SMS no lo define.
+3. **Parada omitida.** En F10 → General dejá desactivado **Terminar servicio
+   al omitir una parada**. Pasá South Ruislip sin detenerte: la partida
+   continúa, el monitor apunta a West Ruislip y aparece una penalización de
+   1000 puntos. F7 → Horarios marca OMITIDA y Evaluación la registra sin
+   sumar pasajeros ni contarla como cumplida. Guardá y recuperá la partida:
+   la omisión y la penalización deben conservarse. Al activar la opción
+   estricta, pasar más de 10 m vuelve a interrumpir ese servicio.
+4. **AMP y frenado de protección.** Con **Frenado asistido ante tráfico**
+   desactivado, acelerá sin aplicar frenos. La aguja de carga debe cambiar
+   con el esfuerzo de tracción, sin alternar rápidamente entre cero y carga
+   por una asistencia invisible. Podés perder velocidad por una pendiente
+   o falta de potencia: eso no indica una avería. Con la asistencia activada,
+   acercate al servicio que circula delante: cuando frene debe aparecer
+   **Asistencia de tráfico · freno …%**. Un TCS C# que ordene frenado muestra
+   **TCS · frenado automático** y sigue actuando en conducción manual. En
+   ambos modos respetá las señales; rebasar una roja sigue siendo una falta.
+   PATINA identifica pérdida de adherencia; reducí regulador o usá X (arena).
+5. **Carrocerías y bogies.** Pulsá 2 y observá la formación al entrar y salir
+   de curvas y cambios de pendiente. Cada coche debe permanecer rígido y
+   orientarse entre sus dos bogies, sin cambiar de ángulo instantáneamente
+   al cruzar una unión de tramos. Dos coches pueden tener ángulos distintos
+   en una curva. Alterná movimiento Apagado/Suave en F10: la suspensión
+   cambia, la geometría del seguimiento permanece. En pausa no debe derivar.
+6. **Faros bajos.** Elegí noche, primero despejado y después niebla densa.
+   H recorre apagados → bajos → altos. Bajos debe iluminar los rieles y el
+   entorno cercano con luz blanca, también en Pullman. Altos conserva mayor
+   intensidad y alcance. En niebla ambos producen un haz visible sin
+   convertir el parabrisas ni la vía cercana en un rectángulo blanco.
+
+`check_train_atmosphere.py` captura ahora apagados, bajos y altos con la
+misma cámara y compara la respuesta fuera del HUD. Los ensayos físicos
+conservan evaluación estricta y protección de tráfico; las preferencias del
+jugador no alteran las capturas de paridad congeladas.

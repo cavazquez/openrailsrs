@@ -17,7 +17,8 @@ use std::path::PathBuf;
 #[derive(Component)]
 pub struct Headlamp {
     pub position: Vec3,
-    pub condition: u8,
+    /// Active off/low/high bits; physical fallback beams may fill a missing level.
+    pub level_mask: u8,
     pub beam: bool,
     pub forward: f32,
     pub service_index: usize,
@@ -67,6 +68,35 @@ pub fn lamps_for_level(condition: u8, level: u8) -> bool {
         6 => level <= 1,
         _ => false,
     }
+}
+
+fn lamp_mask(condition: u8) -> u8 {
+    (0..=2).fold(0, |mask, level| {
+        mask | (u8::from(lamps_for_level(condition, level)) << level)
+    })
+}
+
+fn white_front(lamp: &VehicleLight) -> bool {
+    lamp.position_m[2] > 0.0
+        && lamp.color_rgba[0] > 0.5
+        && lamp.color_rgba[1] > 0.5
+        && lamp.color_rgba[2] > 0.4
+}
+
+fn beam_mask(lamp: &VehicleLight, lights: &[VehicleLight]) -> u8 {
+    if lamp.cone {
+        return lamp_mask(lamp.headlight);
+    }
+    if !white_front(lamp) || lamp_mask(lamp.headlight) & 0b110 == 0 {
+        return 0;
+    }
+    // A high-only white sprite (e.g. Pullman) still provides a usable dipped
+    // beam. An authored front cone suppresses fallback only at its own levels.
+    let authored = lights
+        .iter()
+        .filter(|l| l.cone && matches!(l.unit, 0 | 2) && l.position_m[2] > 0.0)
+        .fold(0, |mask, l| mask | lamp_mask(l.headlight));
+    0b110 & !authored
 }
 
 pub fn spawn_train_lights(
@@ -127,8 +157,8 @@ pub fn spawn_train_lights(
         } else {
             lights
         };
-        let has_cone = lights.iter().any(|l| l.cone);
-        for lamp in lights {
+        let mut fallback_positions: Vec<(Vec3, u8)> = Vec::new();
+        for lamp in &lights {
             // Lead unit only. Lamps authored for trailing/intermediate units belong
             // to those vehicles rather than being duplicated on the player's nose.
             if !matches!(lamp.unit, 0 | 2) {
@@ -144,6 +174,17 @@ pub fn spawn_train_lights(
                 lamp.color_rgba[3],
             );
             let forward = if local.z >= 0.0 { 1.0 } else { -1.0 };
+            let mut physical_mask = beam_mask(lamp, &lights);
+            if !lamp.cone {
+                for (position, mask) in &fallback_positions {
+                    if position.distance(local) < 0.05 {
+                        physical_mask &= !mask;
+                    }
+                }
+                if physical_mask != 0 {
+                    fallback_positions.push((local, physical_mask));
+                }
+            }
             if !lamp.cone {
                 let material = materials.add(StandardMaterial {
                     base_color: color,
@@ -155,7 +196,7 @@ pub fn spawn_train_lights(
                 commands.spawn((
                     Headlamp {
                         position: local,
-                        condition: lamp.headlight,
+                        level_mask: lamp_mask(lamp.headlight) | physical_mask,
                         beam: false,
                         forward,
                         service_index,
@@ -169,14 +210,12 @@ pub fn spawn_train_lights(
                     NotShadowReceiver,
                 ));
             }
-            let white =
-                lamp.color_rgba[0] > 0.5 && lamp.color_rgba[1] > 0.5 && lamp.color_rgba[2] > 0.4;
-            if lamp.cone || (!has_cone && white && local.z < 0.0) {
+            if physical_mask != 0 {
                 let angle = lamp.angle_deg.to_radians().clamp(0.12, 0.6);
                 commands.spawn((
                     Headlamp {
                         position: local,
-                        condition: lamp.headlight,
+                        level_mask: physical_mask,
                         beam: true,
                         forward,
                         service_index,
@@ -267,10 +306,13 @@ pub fn update_train_lights(
         };
         let point = translation + rotation * lamp.position;
         let enabled = active
-            && lamps_for_level(lamp.condition, session.headlights)
+            && lamp.level_mask & (1 << session.headlights.min(2)) != 0
             && session.formation.cars.first().is_none_or(|c| c.battery_on);
         if let Some(mut spot) = spot {
-            let direction = (rotation * Vec3::new(0.0, -0.035, lamp.forward)).normalize();
+            let low = session.headlights == 1;
+            let direction = (rotation
+                * Vec3::new(0.0, if low { -0.055 } else { -0.035 }, lamp.forward))
+            .normalize();
             transform.set_if_neq(Transform::from_translation(point).looking_to(direction, Vec3::Y));
             let intensity = if enabled {
                 beam_intensity(session.headlights)
@@ -278,6 +320,7 @@ pub fn update_train_lights(
                 0.0
             };
             let shadows = settings.shadows && enabled;
+            spot.range = if low { 120.0 } else { 220.0 };
             if spot.intensity != intensity || spot.shadow_maps_enabled != shadows {
                 spot.intensity = intensity;
                 spot.shadow_maps_enabled = shadows;
@@ -425,6 +468,39 @@ fn apply_cab_texture_lighting(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn test_lamp(cone: bool, condition: u8, front: bool, white: bool) -> VehicleLight {
+        VehicleLight {
+            cone,
+            headlight: condition,
+            unit: 2,
+            position_m: [0.7, 1.8, if front { 10.0 } else { -10.0 }],
+            color_rgba: if white {
+                [1.0; 4]
+            } else {
+                [1.0, 0.0, 0.0, 1.0]
+            },
+            radius_m: 0.22,
+            angle_deg: 15.0,
+        }
+    }
+    #[test]
+    fn pullman_high_only_white_lamps_also_offer_a_dipped_beam() {
+        let white = test_lamp(false, 3, true, true);
+        let red = test_lamp(false, 2, true, false);
+        let lights = [white.clone(), red.clone()];
+        assert_eq!(beam_mask(&white, &lights), 0b110);
+        assert_eq!(beam_mask(&red, &lights), 0);
+        assert!(beam_intensity(1) > 0.0 && beam_intensity(1) < beam_intensity(2));
+    }
+    #[test]
+    fn authored_cones_replace_fallback_only_for_the_levels_and_end_they_cover() {
+        let glow = test_lamp(false, 4, true, true);
+        let high = test_lamp(true, 3, true, true);
+        assert_eq!(beam_mask(&glow, &[glow.clone(), high.clone()]), 0b010);
+        assert_eq!(beam_mask(&high, std::slice::from_ref(&high)), 0b100);
+        let rear = test_lamp(true, 4, false, true);
+        assert_eq!(beam_mask(&glow, &[glow.clone(), rear]), 0b110);
+    }
     #[test]
     fn cab_light_switches_cached_native_textures_without_changing_other_materials() {
         use crate::cab_view::CabTextureBinding;

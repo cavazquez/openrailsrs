@@ -502,7 +502,7 @@ pub(crate) fn update_arrival_overlay(
     } else {
         lines.insert_str(0, "Servicio completado\n\n");
     }
-    if gp.passed_stops.is_empty() {
+    if gp.stop_targets.is_empty() {
         lines.push_str("\nSin paradas programadas.");
     } else {
         lines.push_str("\nParadas:\n");
@@ -513,6 +513,12 @@ pub(crate) fn update_arrival_overlay(
                 lines.push_str(&format!("  • {name}: OK\n"));
             }
         }
+    }
+    for stop in &gp.missed_stops {
+        lines.push_str(&format!(
+            "  • {}: OMITIDA · +{:.0} puntos\n",
+            stop.name, stop.penalty
+        ));
     }
     for mut text in &mut body {
         if text.0 != lines {

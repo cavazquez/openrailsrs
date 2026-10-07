@@ -214,6 +214,7 @@ pub struct SoundReport {
     pub active_voices: usize,
     pub warnings: Vec<String>,
     pub device: bool,
+    pub wiper_fallback: bool,
 }
 
 #[derive(Clone)]
@@ -668,9 +669,20 @@ struct Playback {
     initial: bool,
     last_time_s: f64,
     mixer: rodio::mixer::Mixer,
+    wiper: Player,
+    native_wiper: bool,
 }
 impl Playback {
     fn new(bank: NativeSoundBank, mixer: &rodio::mixer::Mixer) -> Self {
+        let native_wiper = bank.banks.iter().any(|b| {
+            b.train == 0 && b.vehicle == 0 && b.audible(SoundLocation::Cab, 0, true)
+                && b.program.streams.iter().flat_map(|s| &s.triggers).any(|trigger| {
+                    matches!(trigger.kind, TriggerKind::Discrete(6))
+                        && trigger.commands.iter().any(|command| {
+                            matches!(command, Command::Play { files, .. } if files.iter().any(|f| b.samples.contains_key(f)))
+                        })
+                })
+        });
         let voices = bank
             .banks
             .iter()
@@ -700,6 +712,8 @@ impl Playback {
             initial: true,
             last_time_s: 0.0,
             mixer: mixer.clone(),
+            wiper: Player::connect_new(mixer),
+            native_wiper,
         }
     }
     fn update(&mut self, frame: &SoundFrame) {
@@ -719,8 +733,11 @@ impl Playback {
             self.brake_sounds.clear();
             self.active_sources.fill(false);
             self.initial = true;
+            self.wiper.stop();
+            self.wiper = Player::connect_new(&self.mixer);
         }
         self.last_time_s = frame.time_s;
+        self.update_wiper(frame);
         let interior_gain = self
             .bank
             .external_pass_through
@@ -950,6 +967,47 @@ impl Playback {
             .collect();
         self.initial = false;
     }
+
+    fn update_wiper(&mut self, frame: &SoundFrame) {
+        if self.native_wiper {
+            return;
+        }
+        let train = frame.trains.iter().find(|t| t.id == 0);
+        let on = train.is_some_and(|t| t.vehicle_state(0).wiper);
+        if !on {
+            if !self.wiper.empty() {
+                self.wiper.stop();
+                self.wiper = Player::connect_new(&self.mixer);
+            }
+            return;
+        }
+        if self.wiper.empty() {
+            self.wiper.append(
+                SamplesBuffer::new(
+                    rodio::ChannelCount::new(1).unwrap(),
+                    rodio::SampleRate::new(crate::wiper::SAMPLE_RATE).unwrap(),
+                    crate::wiper::samples(frame.time_s),
+                )
+                .repeat_infinite(),
+            );
+        }
+        let gain = if frame.cab && frame.listener_vehicle == 0 {
+            1.0
+        } else if !frame.cab && !frame.passenger {
+            train.map_or(0.0, |t| {
+                0.15 * inverse_distance_gain(t.vehicle_distance(0), 100.0)
+            })
+        } else {
+            0.0
+        };
+        self.wiper.set_volume(frame.volume * gain);
+        if frame.paused {
+            self.wiper.pause();
+        } else {
+            self.wiper.play();
+        }
+    }
+
     fn report(&self) -> SoundReport {
         let mut report = self.bank.report.clone();
         report.active_voices = self
@@ -958,6 +1016,8 @@ impl Playback {
             .flatten()
             .filter(|v| !v.player.empty())
             .count();
+        report.active_voices += usize::from(!self.wiper.empty());
+        report.wiper_fallback = !self.native_wiper;
         report
     }
 }
@@ -1137,6 +1197,63 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn wiper_fallback_is_audible_in_cab_and_obeys_pause_mute_and_off() {
+        let (mut playback, mut source) = test_playback(vec![]);
+        let mut frame = test_frame();
+        frame.cab = true;
+        frame.trains[0].state.wiper = true;
+        playback.update(&frame);
+        let energy = |source: &mut rodio::mixer::MixerSource| {
+            source.take(22050).map(|s| s * s).sum::<f32>() / 22050.0
+        };
+        assert!(energy(&mut source) > 0.0001);
+        assert_eq!(playback.report().active_voices, 1);
+        frame.paused = true;
+        playback.update(&frame);
+        for _ in 0..1000 {
+            source.next();
+        }
+        assert_eq!(energy(&mut source), 0.0);
+        frame.paused = false;
+        frame.volume = 0.0;
+        playback.update(&frame);
+        for _ in 0..1000 {
+            source.next();
+        }
+        assert_eq!(energy(&mut source), 0.0);
+        frame.volume = 1.0;
+        playback.update(&frame);
+        assert!(energy(&mut source) > 0.0001);
+        frame.trains[0].state.wiper = false;
+        playback.update(&frame);
+        for _ in 0..1000 {
+            source.next();
+        }
+        assert_eq!(energy(&mut source), 0.0);
+        assert_eq!(playback.report().active_voices, 0);
+    }
+
+    #[test]
+    fn playable_native_wiper_is_used_once_and_missing_wav_gets_fallback() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( CabCam () ) Streams ( 1 Stream ( Triggers ( 2 Discrete_Trigger ( 6 StartLoop ( 1 File ( tone.wav -1 ) ) ) Discrete_Trigger ( 7 ReleaseLoopRelease () ) ) ) ) ) )").unwrap();
+        let mut bank = test_bank(0, program);
+        bank.location = SoundLocation::Cab;
+        let (mut native, _) = test_playback(vec![bank]);
+        assert!(!native.report().wiper_fallback);
+        let mut frame = test_frame();
+        frame.cab = true;
+        frame.trains[0].state.wiper = true;
+        native.update(&frame);
+        assert!(native.wiper.empty());
+        let mut bank = test_bank(0, native.bank.banks[0].program.clone());
+        bank.location = SoundLocation::Cab;
+        bank.samples.clear();
+        let (mut fallback, _) = test_playback(vec![bank]);
+        fallback.update(&frame);
+        assert!(!fallback.wiper.empty());
     }
 
     #[test]

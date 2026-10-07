@@ -172,6 +172,10 @@ pub fn spawn_traffic(
                             transform,
                             Visibility::Inherited,
                             crate::rolling_stock::ConsistCarIndex(car_index),
+                            crate::rolling_stock_anim::TrainCarSupports::from_shape(
+                                Some(&shape),
+                                vehicle.length_m,
+                            ),
                             crate::rolling_stock_anim::TrainCarTrackOffset {
                                 offset_m: vehicle.offset_m,
                                 track_index: index + 1,

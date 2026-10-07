@@ -9,6 +9,26 @@ use crate::exterior::DoorState;
 
 pub const STOP_POSITION_TOLERANCE_M: f64 = 10.0;
 pub const STOP_SPEED_TOLERANCE_MPS: f64 = 0.1;
+pub const MISSED_STOP_PENALTY: f64 = 1000.0;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MissedStopPolicy {
+    /// Headless validation and old saves retain their strict evaluation.
+    #[default]
+    Fail,
+    Continue,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MissedStopResult {
+    pub name: String,
+    pub node: String,
+    pub time_s: f64,
+    pub position_error_m: f64,
+    pub speed_mps: f64,
+    pub penalty: f64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveStopTarget {
@@ -68,6 +88,10 @@ pub struct LiveGameplay {
     /// Kept in the saved session; the authored timetable is never rewritten.
     #[serde(default)]
     pub quick_station_practice: bool,
+    #[serde(default)]
+    pub missed_stop_policy: MissedStopPolicy,
+    #[serde(default)]
+    pub missed_stops: Vec<MissedStopResult>,
     boarding_elapsed_s: f64,
     arrival: Option<(f64, f64, f64)>,
 }
@@ -92,6 +116,8 @@ impl LiveGameplay {
             stop_results: Vec::new(),
             failure: None,
             quick_station_practice: false,
+            missed_stop_policy: MissedStopPolicy::Fail,
+            missed_stops: Vec::new(),
             boarding_elapsed_s: 0.0,
             arrival: None,
         }
@@ -139,6 +165,40 @@ impl LiveGameplay {
         self.failure = Some(message.into());
     }
 
+    fn miss_stop(&mut self, time_s: f64, chainage_m: f64, speed_mps: f64) {
+        let stop = &self.stop_targets[self.next_stop_idx];
+        self.missed_stops.push(MissedStopResult {
+            name: stop.name.clone(),
+            node: stop.node_id.clone(),
+            time_s,
+            position_error_m: chainage_m - stop.cum_dist_m,
+            speed_mps: speed_mps.abs(),
+            penalty: MISSED_STOP_PENALTY,
+        });
+        self.accrued_penalty += MISSED_STOP_PENALTY;
+        self.next_stop_idx += 1;
+        self.boarding_elapsed_s = 0.0;
+        self.arrival = None;
+        self.phase = ServicePhase::Approaching;
+    }
+
+    /// Reaching the end of track cannot leave unserved stops pending forever.
+    pub fn finish_at_route_end(&mut self, time_s: f64, chainage_m: f64, speed_mps: f64) {
+        if self.is_finished() {
+            return;
+        }
+        if self.missed_stop_policy == MissedStopPolicy::Fail
+            && self.next_stop_idx < self.stop_targets.len()
+        {
+            self.fail("Fin de vía alcanzado sin completar las paradas");
+            return;
+        }
+        while self.next_stop_idx < self.stop_targets.len() {
+            self.miss_stop(time_s, chainage_m, speed_mps);
+        }
+        self.phase = ServicePhase::Completed;
+    }
+
     /// Returns passenger changes once, after boarding and door closure.
     pub fn tick(
         &mut self,
@@ -151,8 +211,6 @@ impl LiveGameplay {
         if self.is_finished() {
             return None;
         }
-        let stop = self.stop_targets.get(self.next_stop_idx)?;
-        let error = chainage_m - stop.cum_dist_m;
         // OR does not immobilize the player for the station countdown. Closed
         // doors permit an early departure, recorded once, without resetting the
         // boarding timer or preventing the rest of the activity from running.
@@ -166,6 +224,18 @@ impl LiveGameplay {
         if departed_early {
             return self.finish_stop(time_s, true);
         }
+        // A skipped target never counts as a served stop or transfers passengers.
+        // Process all targets crossed by a long frame without repeated penalties.
+        while self.missed_stop_policy == MissedStopPolicy::Continue
+            && self
+                .stop_targets
+                .get(self.next_stop_idx)
+                .is_some_and(|stop| chainage_m - stop.cum_dist_m > STOP_POSITION_TOLERANCE_M)
+        {
+            self.miss_stop(time_s, chainage_m, velocity_mps);
+        }
+        let stop = self.stop_targets.get(self.next_stop_idx)?;
+        let error = chainage_m - stop.cum_dist_m;
         if error > STOP_POSITION_TOLERANCE_M {
             self.fail(format!(
                 "Parada omitida: {} ({error:.1} m después del punto de parada)",
@@ -262,6 +332,48 @@ mod tests {
                 passengers_off: 0,
             }],
         )
+    }
+
+    #[test]
+    fn missed_station_can_be_penalized_without_serving_it_or_ending_the_trip() {
+        let mut s = service(false);
+        s.missed_stop_policy = MissedStopPolicy::Continue;
+        let mut next = s.stop_targets[0].clone();
+        next.node_id = "second".into();
+        next.cum_dist_m = 300.0;
+        next.is_terminal = true;
+        s.stop_targets.push(next);
+        assert_eq!(s.tick(11.0, 111.0, 12.0, DoorState::Closed, 0.05), None);
+        assert!(!s.is_finished());
+        assert_eq!(s.next_stop_idx, 1);
+        assert_eq!(s.missed_stops.len(), 1);
+        assert!(s.passed_stops.is_empty());
+        assert!(s.stop_results.is_empty());
+        s.tick(12.0, 112.0, 12.0, DoorState::Closed, 0.05);
+        assert_eq!(s.accrued_penalty, MISSED_STOP_PENALTY);
+        s.tick(20.0, 300.0, 0.0, DoorState::Open, 3.0);
+        assert_eq!(
+            s.tick(23.0, 300.0, 0.0, DoorState::Closed, 0.05),
+            Some((0, 10))
+        );
+        assert_eq!(s.phase, ServicePhase::Completed);
+        assert_eq!(s.passed_stops.len(), 1);
+    }
+
+    #[test]
+    fn missed_terminal_allows_driving_until_route_end_and_survives_a_save() {
+        let mut s = service(true);
+        s.missed_stop_policy = MissedStopPolicy::Continue;
+        s.tick(11.0, 111.0, 12.0, DoorState::Closed, 0.05);
+        assert!(!s.is_finished());
+        let mut restored: LiveGameplay =
+            serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        restored.tick(12.0, 150.0, 12.0, DoorState::Closed, 0.05);
+        restored.finish_at_route_end(20.0, 200.0, 0.0);
+        assert_eq!(restored.phase, ServicePhase::Completed);
+        assert_eq!(restored.missed_stops.len(), 1);
+        assert_eq!(restored.accrued_penalty, MISSED_STOP_PENALTY);
+        assert!(restored.passed_stops.is_empty());
     }
 
     #[test]

@@ -302,7 +302,7 @@ fn draw_windshield(
 
 /// Repeating back-and-forth blade motion, shared with original cab bones.
 pub fn wiper_phase(time_s: f64) -> f64 {
-    1.0 - ((time_s / 1.8).rem_euclid(1.0) * 2.0 - 1.0).abs()
+    openrailsrs_audio::wiper::phase(time_s)
 }
 
 #[cfg(test)]

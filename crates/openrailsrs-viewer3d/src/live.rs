@@ -398,12 +398,19 @@ pub fn advance_live_sim(
     mut live: ResMut<LiveDrive>,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
     content: Option<Res<crate::player_launch::ActivePlayerContent>>,
+    mut ui: Option<ResMut<crate::player_ui::PlayerUiState>>,
 ) {
     if live.paused || loading.is_some() {
         return;
     }
     if let Some(settings) = settings {
         live.session.gameplay.quick_station_practice = settings.quick_station_practice;
+        live.session.traffic_brake_assistance = settings.traffic_brake_assistance;
+        live.session.gameplay.missed_stop_policy = if settings.strict_service {
+            openrailsrs_sim::service::MissedStopPolicy::Fail
+        } else {
+            openrailsrs_sim::service::MissedStopPolicy::Continue
+        };
     }
     if let Some(content) = content {
         use crate::player_launch::PlayerWeather;
@@ -421,6 +428,7 @@ pub fn advance_live_sim(
         }
     }
     let was_arrived = live.session.arrived;
+    let missed_count = live.session.gameplay.missed_stops.len();
     let audio = live.audio.take();
     let mut on_transition = |t: &RegionTransition| {
         if let Some(ref a) = audio {
@@ -435,6 +443,15 @@ pub fn advance_live_sim(
         &mut on_transition,
     );
     live.audio = audio;
+    if live.session.gameplay.missed_stops.len() > missed_count
+        && let Some(stop) = live.session.gameplay.missed_stops.last()
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = format!(
+            "Parada omitida: {} · +{:.0} puntos de penalización. Podés continuar.",
+            stop.name, stop.penalty
+        );
+    }
     if live.session.arrived && !was_arrived {
         viewer_log!(
             "openrailsrs-viewer3d: train ARRIVED at destination \"{}\" — t={:.0}s, {:.0}m travelled",
@@ -513,11 +530,17 @@ pub fn live_driver_input(
         live.session.driver_throttle = 0.0;
         live.session.driver_brake = 1.0;
     }
-    if pressed(A::Forward) {
-        let _ = live.session.set_direction(1.0);
+    if pressed(A::Forward)
+        && let Err(message) = live.session.step_direction(true)
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
     }
-    if pressed(A::Reverse) {
-        let _ = live.session.set_direction(0.0);
+    if pressed(A::Reverse)
+        && let Err(message) = live.session.step_direction(false)
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
     }
     if pressed(A::Neutral) {
         let _ = live.session.set_direction(0.5);
@@ -1210,6 +1233,10 @@ pub fn spawn_live_train(
                             Visibility::default(),
                             LiveTrainCar { index: vi },
                             crate::rolling_stock::ConsistCarIndex(vi),
+                            crate::rolling_stock_anim::TrainCarSupports::from_shape(
+                                Some(&shape_file),
+                                vehicle.length_m,
+                            ),
                             crate::rolling_stock_anim::TrainCarTrackOffset {
                                 offset_m: vehicle.offset_m,
                                 track_index: 0,

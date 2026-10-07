@@ -365,6 +365,12 @@ impl CaptureScene<'_, '_> {
                 .as_ref()
                 .map(|contacts| contacts.report())
         );
+        report["drive_controls"] = serde_json::json!(live.map(|l| serde_json::json!({
+            "missed_stops": l.session.gameplay.missed_stops,
+            "traffic_brake_assistance": l.session.traffic_brake_assistance,
+            "braking_intervention": l.session.braking_intervention(),
+            "traction_load_fraction": l.session.cab_telemetry().traction_load_fraction,
+        })));
         report["rail_adhesion"] =
             serde_json::json!(live.and_then(|l| l.session.state.rail_adhesion.as_ref()));
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {

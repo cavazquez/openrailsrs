@@ -91,6 +91,135 @@ pub struct TrainCarTrackOffset {
     pub flipped: bool,
 }
 
+/// Authored longitudinal bogie/axle centres, in native MSTS metres.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct TrainCarSupports {
+    pub front_m: f32,
+    pub rear_m: f32,
+}
+impl TrainCarSupports {
+    pub fn from_shape(shape: Option<&ShapeFile>, length_m: f32) -> Self {
+        let fallback = Self {
+            front_m: length_m.max(1.0) * 0.35,
+            rear_m: -length_m.max(1.0) * 0.35,
+        };
+        let Some(shape) = shape else { return fallback };
+        let offsets = |kind| {
+            shape
+                .matrices
+                .iter()
+                .enumerate()
+                .filter(|(_, m)| classify_matrix_name(&m.name) == kind)
+                .map(|(i, _)| -static_hierarchy_chain_transform(shape, i).translation.z)
+                .filter(|z| z.is_finite() && z.abs() <= length_m * 0.6)
+                .fold((f32::NEG_INFINITY, f32::INFINITY), |(front, rear), z| {
+                    (front.max(z), rear.min(z))
+                })
+        };
+        let mut ends = offsets(RollingStockPartKind::Bogie);
+        if ends.0 - ends.1 < 1.0 || !ends.0.is_finite() || !ends.1.is_finite() {
+            ends = offsets(RollingStockPartKind::Wheel);
+        }
+        if ends.0 - ends.1 < 1.0 || !ends.0.is_finite() || !ends.1.is_finite() {
+            return fallback;
+        }
+        Self {
+            front_m: ends.0,
+            rear_m: ends.1,
+        }
+    }
+}
+
+fn rigid_body_pose(
+    center: Transform,
+    front: Vec3,
+    rear: Vec3,
+    supports: TrainCarSupports,
+) -> Transform {
+    let Some(forward) = (front - rear).try_normalize() else {
+        return center;
+    };
+    let heading = center.rotation * Vec3::NEG_Z;
+    Transform::from_translation(
+        (front + rear) * 0.5 - forward * ((supports.front_m + supports.rear_m) * 0.5),
+    )
+    .with_rotation(Quat::from_rotation_arc(heading, forward) * center.rotation)
+}
+
+/// A rigid carriage follows the chord between its supports, rather than
+/// snapping to the tangent of the section under its centre. Coupled vehicles
+/// can still articulate relative to one another on a real curve.
+#[allow(clippy::too_many_arguments)]
+fn car_world_pose_with_supports(
+    graph: &openrailsrs_track::TrackGraph,
+    live: Option<&LiveDrive>,
+    track_index: usize,
+    head_edge: &str,
+    head_pos: f64,
+    path_offset_m: f64,
+    flipped: bool,
+    resolver: Option<&TrackPositionResolver<'_>>,
+    scene: &TrackScene,
+    route_offset: Vec3,
+    focus: &RouteFocus,
+    terrain: Option<&TerrainElevation>,
+    origin: &FloatingOrigin,
+    supports: Option<TrainCarSupports>,
+) -> Option<Transform> {
+    let sample = |offset| {
+        if let Some(live) = live {
+            // Both supports belong to the same car. Using the support's own
+            // offset to identify the car would attach a parked front bogie to
+            // the moving section after an uncoupling.
+            let (edge, position) =
+                live.visual_position_for_service(track_index, offset, path_offset_m)?;
+            return car_world_pose_at_head_offset(
+                graph,
+                None,
+                track_index,
+                &edge,
+                position,
+                0.0,
+                flipped,
+                resolver,
+                scene,
+                route_offset,
+                focus,
+                terrain,
+                origin,
+            );
+        }
+        car_world_pose_at_head_offset(
+            graph,
+            live,
+            track_index,
+            head_edge,
+            head_pos,
+            offset,
+            flipped,
+            resolver,
+            scene,
+            route_offset,
+            focus,
+            terrain,
+            origin,
+        )
+    };
+    let center = sample(path_offset_m)?;
+    let Some(supports) = supports else {
+        return Some(center);
+    };
+    let sign = if flipped { -1.0 } else { 1.0 };
+    let front = sample(path_offset_m + f64::from(supports.front_m) * sign)?;
+    let rear = sample(path_offset_m + f64::from(supports.rear_m) * sign)?;
+    Some(rigid_body_pose(
+        center,
+        front.translation,
+        rear.translation,
+        supports,
+    ))
+}
+
 /// World pose for a car at `path_offset_m` from the consist head (#128).
 pub fn car_world_pose_at_head_offset(
     graph: &openrailsrs_track::TrackGraph,
@@ -173,7 +302,12 @@ pub fn update_consist_car_track_poses(
     >,
     // Disjoint from `parents`: lead may be LiveTrainMarker without TrainMarker (Bevy B0001).
     mut cars: Query<
-        (&TrainCarTrackOffset, &ChildOf, &mut Transform),
+        (
+            &TrainCarTrackOffset,
+            Option<&TrainCarSupports>,
+            &ChildOf,
+            &mut Transform,
+        ),
         (
             Without<TrainMarker>,
             Without<LiveTrainMarker>,
@@ -188,7 +322,7 @@ pub fn update_consist_car_track_poses(
         .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let terrain_ref = terrain.as_deref();
 
-    for (car, child_of, mut tf) in &mut cars {
+    for (car, supports, child_of, mut tf) in &mut cars {
         let Ok(parent_tf) = parents.get(child_of.parent()) else {
             continue;
         };
@@ -197,7 +331,7 @@ pub fn update_consist_car_track_poses(
         else {
             continue;
         };
-        let Some(car_world) = car_world_pose_at_head_offset(
+        let Some(car_world) = car_world_pose_with_supports(
             &scene.graph,
             live_ref,
             car.track_index,
@@ -211,6 +345,7 @@ pub fn update_consist_car_track_poses(
             &focus,
             terrain_ref,
             &origin,
+            supports.copied(),
         ) else {
             continue;
         };
@@ -506,10 +641,18 @@ pub fn update_rolling_stock_part_anim(
         (&TrainBogieAnim, &ShapeAnimBinding, &mut Transform, &ChildOf),
         (With<TrainExteriorAnimPart>, Without<TrainWheelAnim>),
     >,
-    cars: Query<&TrainCarTrackOffset, Without<TrainExteriorAnimPart>>,
+    cars: Query<
+        (
+            &TrainCarTrackOffset,
+            Option<&Transform>,
+            Option<&TrainCarSupports>,
+            Option<&ChildOf>,
+        ),
+        Without<TrainExteriorAnimPart>,
+    >,
+    frames: Query<&Transform, (Without<TrainCarTrackOffset>, Without<TrainExteriorAnimPart>)>,
     car_indices: Query<&crate::rolling_stock::ConsistCarIndex>,
     train_markers: Query<&TrainMarker>,
-    car_parents: Query<&ChildOf, Without<TrainExteriorAnimPart>>,
     mut keyed: Query<
         (
             &mut TrainKeyedAnim,
@@ -529,7 +672,7 @@ pub fn update_rolling_stock_part_anim(
     let exterior = live_ref.map(|l| &l.session.exterior);
 
     for (mut wheel, binding, mut tf, parent) in &mut wheels {
-        let car = cars.get(parent.parent()).ok();
+        let car = cars.get(parent.parent()).ok().map(|c| c.0);
         let track_index = car.map_or(0, |car| car.track_index);
         let mut distance = live_ref
             .map(|live| {
@@ -569,15 +712,13 @@ pub fn update_rolling_stock_part_anim(
     let resolver_ref = tdb_resolver.as_ref();
 
     for (bogie, binding, mut tf, child_of) in &mut bogies {
-        let Ok(car_off) = cars.get(child_of.parent()) else {
+        let Ok((car_off, car_transform, supports, car_parent)) = cars.get(child_of.parent()) else {
             // No path offset on parent (e.g. fallback cube) — leave bogie straight.
             *tf = Transform::IDENTITY;
             let _ = binding;
             continue;
         };
-        let track_index = car_parents
-            .get(child_of.parent())
-            .ok()
+        let track_index = car_parent
             .and_then(|p| train_markers.get(p.parent()).ok())
             .map(|m| m.track_index)
             .unwrap_or(car_off.track_index);
@@ -592,20 +733,32 @@ pub fn update_rolling_stock_part_anim(
         let car_path = f64::from(car_off.offset_m);
         let bogie_path =
             car_path + f64::from(bogie.long_offset_m) * if car_off.flipped { -1.0 } else { 1.0 };
-        let Some(car_yaw) = sample_yaw_at_path_offset(
-            &scene.graph,
-            live_ref,
-            track_index,
-            &head_edge,
-            head_pos,
-            car_path,
-            car_path,
-            resolver_ref,
-            &scene,
-            offset.delta,
-            &focus,
-            terrain_ref,
-        ) else {
+        let body_yaw = supports.and_then(|_| {
+            let parent = car_parent?;
+            let frame = frames.get(parent.parent()).ok()?;
+            let car_transform = car_transform?;
+            let heading = frame.rotation
+                * car_transform.rotation
+                * Vec3::NEG_Z
+                * if car_off.flipped { -1.0 } else { 1.0 };
+            Some((-heading.z).atan2(heading.x))
+        });
+        let Some(car_yaw) = body_yaw.or_else(|| {
+            sample_yaw_at_path_offset(
+                &scene.graph,
+                live_ref,
+                track_index,
+                &head_edge,
+                head_pos,
+                car_path,
+                car_path,
+                resolver_ref,
+                &scene,
+                offset.delta,
+                &focus,
+                terrain_ref,
+            )
+        }) else {
             *tf = Transform::IDENTITY;
             let _ = binding;
             continue;
@@ -639,7 +792,10 @@ pub fn update_rolling_stock_part_anim(
 
     let mut pose_cache = HashMap::new();
     for (mut keyed_anim, binding, mut tf, parent) in &mut keyed {
-        let service = cars.get(parent.parent()).ok().map_or(0, |c| c.track_index);
+        let service = cars
+            .get(parent.parent())
+            .ok()
+            .map_or(0, |c| c.0.track_index);
         let vehicle_index = car_indices.get(parent.parent()).ok().map(|c| c.0);
         let exterior = live_ref
             .and_then(|l| l.session_for_track(service))
@@ -718,6 +874,74 @@ mod tests {
                 [0.0, 0.0, 0.0],
             ],
         }
+    }
+
+    #[test]
+    fn carriage_uses_both_supports_on_a_bend_and_preserves_its_rigid_dimensions() {
+        let supports = TrainCarSupports {
+            front_m: 7.0,
+            rear_m: -7.0,
+        };
+        let front = Vec3::new(5.0, 1.0, -6.0);
+        let rear = Vec3::new(-4.0, 0.0, 4.0);
+        let center = Transform::IDENTITY;
+        let body = rigid_body_pose(center, front, rear, supports);
+        let expected = (front - rear).normalize();
+        assert!((body.rotation * Vec3::NEG_Z).distance(expected) < 1e-6);
+        assert!(body.translation.distance((front + rear) * 0.5) < 1e-6);
+        assert!(
+            (body
+                .transform_point(Vec3::NEG_Z * 7.0)
+                .distance(body.transform_point(Vec3::Z * 7.0))
+                - 14.0)
+                .abs()
+                < 1e-5
+        );
+        let flipped = rigid_body_pose(
+            center.with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
+            rear,
+            front,
+            supports,
+        );
+        assert!((flipped.rotation * Vec3::NEG_Z).distance(-expected) < 1e-6);
+    }
+
+    #[test]
+    fn support_chord_removes_the_tangent_jump_at_a_section_boundary() {
+        let g = elbow_graph();
+        let scene = TrackScene::from_graph(g.clone());
+        let focus = RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        };
+        let supports = TrainCarSupports {
+            front_m: 7.0,
+            rear_m: -7.0,
+        };
+        let mut poses = Vec::new();
+        for (edge, at) in [("e1", 99.99), ("e2", 0.01)] {
+            poses.push(
+                car_world_pose_with_supports(
+                    &g,
+                    None,
+                    0,
+                    edge,
+                    at,
+                    0.0,
+                    false,
+                    None,
+                    &scene,
+                    Vec3::ZERO,
+                    &focus,
+                    None,
+                    &FloatingOrigin::default(),
+                    Some(supports),
+                )
+                .unwrap(),
+            );
+        }
+        assert!(poses[0].rotation.angle_between(poses[1].rotation) < 0.01);
+        assert!(poses[0].translation.distance(poses[1].translation) < 0.04);
     }
 
     #[test]

@@ -161,6 +161,8 @@ pub struct LiveDriveSession {
     pub external_track_reservations: Vec<crate::native_signals::TrackOccupancy>,
     /// Rebuilt by the live traffic coordinator at every physics quantum.
     pub external_occupancy: HashMap<String, String>,
+    /// Optional player aid; native TCS commands remain authoritative either way.
+    pub traffic_brake_assistance: bool,
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
     pub(crate) content_signature: String,
@@ -513,6 +515,7 @@ impl LiveDriveSession {
             signal_overrides: HashMap::new(),
             service_id: "Jugador".into(),
             external_occupancy: HashMap::new(),
+            traffic_brake_assistance: true,
             curve_parameters,
             intake_points,
             refilling: None,
@@ -576,6 +579,33 @@ impl LiveDriveSession {
         }
         self.driver_direction = direction.clamp(0.0, 1.0);
         Ok(())
+    }
+
+    /// OR's W/S controls advance one detent: reverse ↔ neutral ↔ forward.
+    pub fn step_direction(&mut self, forward: bool) -> Result<(), String> {
+        let current: f64 = if self.driver_direction >= 0.75 {
+            1.0
+        } else if self.driver_direction <= 0.25 {
+            0.0
+        } else {
+            0.5
+        };
+        self.set_direction((current + if forward { 0.5 } else { -0.5 }).clamp(0.0, 1.0))
+    }
+
+    pub fn braking_intervention(&self) -> Option<&'static str> {
+        if self.state.brake <= self.driver_brake + 0.01 {
+            return None;
+        }
+        if self
+            .script_tcs
+            .as_ref()
+            .is_some_and(|host| host.applies_brake())
+        {
+            Some("TCS · frenado automático")
+        } else {
+            Some("Asistencia de tráfico")
+        }
     }
 
     pub fn trigger_horn(&mut self, hold_s: f64) {
@@ -1175,6 +1205,7 @@ impl LiveDriveSession {
             } else {
                 0.0
             };
+            let assistance_was_braking = self.state.brake > self.driver_brake + 0.01;
             self.state.brake = self.driver_brake;
             if self
                 .script_tcs
@@ -1184,9 +1215,12 @@ impl LiveDriveSession {
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
             }
-            if self
-                .distance_to_occupied_block_m()
-                .is_some_and(|distance| distance < self.velocity_mps().powi(2) / 0.44 + 12.0)
+            if (automatic.is_some() || self.traffic_brake_assistance)
+                && self.distance_to_occupied_block_m().is_some_and(|distance| {
+                    let speed =
+                        self.velocity_mps() + if assistance_was_braking { 0.6 } else { 0.0 };
+                    distance < speed.powi(2) / 0.44 + 12.0
+                })
             {
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
@@ -1234,11 +1268,14 @@ impl LiveDriveSession {
             {
                 self.gameplay.fail("Señal de parada rebasada");
             }
-            if res.arrived && self.gameplay.next_stop_idx < self.gameplay.stop_targets.len() {
-                self.gameplay
-                    .fail("Fin de vía alcanzado sin completar las paradas");
-            }
             self.tick_after_physics_step(dt, on_region_transition);
+            if res.arrived {
+                self.gameplay.finish_at_route_end(
+                    self.time_s(),
+                    self.head_chainage_m(),
+                    self.velocity_mps(),
+                );
+            }
             budget -= dt;
             if self.gameplay.is_finished() {
                 self.arrived = true;
@@ -1420,6 +1457,75 @@ mod tests {
     use super::*;
     use openrailsrs_scenarios::load_scenario;
     use std::path::PathBuf;
+
+    #[test]
+    fn reverser_keys_visit_neutral_and_reject_reversing_a_moving_train() {
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        let scenario = load_scenario(&path).unwrap();
+        let mut s = LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+        s.set_direction(0.0).unwrap();
+        for value in [0.5, 1.0, 1.0] {
+            s.step_direction(true).unwrap();
+            assert_eq!(s.driver_direction, value);
+        }
+        for value in [0.5, 0.0, 0.0] {
+            s.step_direction(false).unwrap();
+            assert_eq!(s.driver_direction, value);
+        }
+        s.set_direction(1.0).unwrap();
+        s.state.velocity_mps = 10.0;
+        s.step_direction(false).unwrap();
+        assert_eq!(s.driver_direction, 0.5);
+        assert!(s.step_direction(false).is_err());
+        assert_eq!(s.driver_direction, 0.5);
+    }
+
+    #[test]
+    fn traffic_brake_is_explicit_and_its_hysteresis_prevents_amp_chatter() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/chiltern_extended/scenario.toml");
+        let scenario = load_scenario(&path).unwrap();
+        for assisted in [true, false] {
+            let mut s = LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+            s.traffic_brake_assistance = assisted;
+            s.driver_direction = 1.0;
+            s.driver_throttle = 1.0;
+            s.driver_brake = 0.0;
+            s.exterior.set_door(crate::exterior::DoorState::Closed);
+            s.gameplay.stop_targets.clear();
+            s.set_rail_weather(crate::adhesion::RailWeather::Storm);
+            let mut traffic =
+                crate::LiveTraffic::from_scenario(path.parent().unwrap(), &scenario).unwrap();
+            let mut prev = 0.0;
+            let mut jumps = 0;
+            let mut interventions = 0;
+            for _ in 0..6000 {
+                traffic.advance(&mut s, 0.05, None, |_| {});
+                let t = s.cab_telemetry();
+                if s.time_s() > 60.0 && (t.traction_load_fraction - prev).abs() > 0.03 {
+                    jumps += 1;
+                }
+                prev = t.traction_load_fraction;
+                interventions += usize::from(s.braking_intervention().is_some());
+                if s.arrived {
+                    break;
+                }
+            }
+            // Previously the same trip had 796 abrupt load jumps, while the driver
+            // requested constant power and no brake. Native manual driving has none.
+            assert!(
+                jumps < 50,
+                "assisted={assisted}: {jumps} abrupt AMP changes"
+            );
+            if assisted {
+                assert!(interventions > 0);
+            } else {
+                assert_eq!(interventions, 0);
+                assert_eq!(jumps, 0);
+            }
+        }
+    }
 
     #[test]
     fn native_service_starts_with_brakes_holding_its_real_gradient() {

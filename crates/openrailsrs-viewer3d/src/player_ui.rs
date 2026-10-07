@@ -279,6 +279,8 @@ enum MenuField {
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
     QuickStations,
+    StrictService,
+    TrafficBrakeAssistance,
     SeatHeight,
     SeatBack,
     WipeScale,
@@ -827,6 +829,8 @@ fn handle_buttons(
                     }
                 },
                 SettingField::QuickStations=>settings.quick_station_practice= !settings.quick_station_practice,
+                SettingField::StrictService=>settings.strict_service= !settings.strict_service,
+                SettingField::TrafficBrakeAssistance=>settings.traffic_brake_assistance= !settings.traffic_brake_assistance,
                 SettingField::Distance=>settings.view_distance_m=(settings.view_distance_m+step).clamp(500.0,4000.0),
                 SettingField::Fov=>settings.cab_fov_deg=(settings.cab_fov_deg+step).clamp(35.0,90.0),
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
@@ -1547,6 +1551,34 @@ fn build_settings(
                 12.0,
                 MUTED,
             );
+            button(
+                p,
+                format!(
+                    "Terminar servicio al omitir una parada: {}",
+                    yes(s.strict_service)
+                ),
+                UiCommand::Setting(SettingField::StrictService, 0.0),
+            );
+            label(
+                p,
+                "Desactivado: seguís conduciendo, con 1000 puntos de penalización por parada omitida.",
+                12.0,
+                MUTED,
+            );
+            button(
+                p,
+                format!(
+                    "Frenado asistido ante tráfico: {}",
+                    yes(s.traffic_brake_assistance)
+                ),
+                UiCommand::Setting(SettingField::TrafficBrakeAssistance, 0.0),
+            );
+            label(
+                p,
+                "Desactivado: regulador y frenos manuales. Respetá las señales; el TCS original, si está activo, sigue interviniendo.",
+                12.0,
+                MUTED,
+            );
         }
         SettingsTab::Graphics => {
             settings_row(
@@ -2256,7 +2288,7 @@ fn notebook_text(
             "{}\n\n{}\n\nOBJETIVOS\nCompletar {}/{} paradas y llegar a {}.\nDetenerse a menos de 10 m del punto y por debajo de {:.2} {}.\nAbrir puertas, completar el embarque y cerrarlas para salir.\nRespetar señales y límites. La tracción se corta con puertas abiertas.\n\nPROCEDIMIENTO\n{}\n\n{}",
             s.scenario_name,
             content.description,
-            g.next_stop_idx,
+            g.passed_stops.len(),
             g.stop_targets.len(),
             g.destination,
             settings.display_speed_mps(0.1),
@@ -2272,6 +2304,7 @@ fn notebook_text(
             );
             for (i, stop) in g.stop_targets.iter().enumerate() {
                 let result = g.stop_results.iter().find(|r| r.node == stop.node_id);
+                let missed = g.missed_stops.iter().any(|r| r.node == stop.node_id);
                 let (arrive, depart, delay) = result
                     .map(|r| {
                         (
@@ -2290,14 +2323,24 @@ fn notebook_text(
                                 format!("{:+.0}s", arrival - stop.arrive_s),
                             )
                         } else {
-                            ("—".into(), "—".into(), "—".into())
+                            (
+                                "—".into(),
+                                "—".into(),
+                                if missed {
+                                    "OMITIDA".into()
+                                } else {
+                                    "—".into()
+                                },
+                            )
                         }
                     });
                 out += &format!(
                     "{} {:20} {}     {}     {:11} {:11} {}\n",
                     if i == g.next_stop_idx {
                         "▶"
-                    } else if i < g.next_stop_idx {
+                    } else if missed {
+                        "✗"
+                    } else if result.is_some() {
                         "✓"
                     } else {
                         " "
@@ -2325,7 +2368,7 @@ fn notebook_text(
         }
         _ => {
             let mut out = format!(
-                "EVALUACIÓN · {}\n\nParadas cumplidas: {}/{}\nPenalización por demora: {:.1}\nPasajeros a bordo: {}\nDistancia recorrida: {:.0} m\nEnergía: {:.2} kWh · combustible: {:.2} kg\n",
+                "EVALUACIÓN · {}\n\nParadas cumplidas: {}/{}\nPenalización total: {:.1}\nPasajeros a bordo: {}\nDistancia recorrida: {:.0} m\nEnergía: {:.2} kWh · combustible: {:.2} kg\n",
                 phase_name(g.phase),
                 g.stop_results.len(),
                 g.stop_targets.len(),
@@ -2356,6 +2399,12 @@ fn notebook_text(
                     settings.speed_unit_label(),
                     r.delay_s,
                     r.dwell_s
+                );
+            }
+            for r in &g.missed_stops {
+                out += &format!(
+                    "\n{}: OMITIDA · +{:.0} puntos · no se transfirieron pasajeros",
+                    r.name, r.penalty
                 );
             }
             if let Some(failure) = &g.failure {

@@ -195,6 +195,15 @@ fn toggle_driving_hud(
 pub fn service_instruction(session: &openrailsrs_sim::LiveDriveSession) -> String {
     use openrailsrs_sim::exterior::DoorState;
     let gp = &session.gameplay;
+    if !gp.is_finished()
+        && let Some(stop) = gp.missed_stops.last()
+        && session.time_s() - stop.time_s < 15.0
+    {
+        return format!(
+            "Omitida: {} · +{:.0} puntos\nContinuar hacia la próxima parada",
+            stop.name, stop.penalty
+        );
+    }
     match gp.phase {
         ServicePhase::Boarding
             if session.exterior.door == DoorState::Closed && gp.remaining_boarding_s() > 0.0 =>
@@ -369,12 +378,20 @@ fn update_driving_hud(
                 } else {
                     "Neutro"
                 };
+                let mut controls = format!(
+                    "Regulador {:>3.0}% · {direction}\nFreno de tren {:>3.0}%",
+                    cab.throttle_pct, cab.brake_pct
+                );
+                if let Some(reason) = session.braking_intervention() {
+                    controls += &format!("\n{reason} · freno {:.0}%", session.state.brake * 100.0);
+                }
                 (
-                    format!(
-                        "Regulador {:>3.0}% · {direction}\nFreno de tren {:>3.0}%",
-                        cab.throttle_pct, cab.brake_pct
-                    ),
-                    TEXT,
+                    controls,
+                    if session.braking_intervention().is_some() {
+                        CAUTION
+                    } else {
+                        TEXT
+                    },
                 )
             }
             HudField::Brakes => (
@@ -475,9 +492,10 @@ fn update_driving_hud(
             HudField::Schedule => (monitor_schedule_label(session, live.start_clock_s), MUTED),
             HudField::Progress => (
                 format!(
-                    "Paradas {}/{} · recorrido {:.0}%",
+                    "Paradas {}/{} · omitidas {} · recorrido {:.0}%",
                     session.gameplay.passed_stops.len(),
                     session.gameplay.stop_targets.len(),
+                    session.gameplay.missed_stops.len(),
                     session.route_progress() * 100.0
                 ),
                 MUTED,

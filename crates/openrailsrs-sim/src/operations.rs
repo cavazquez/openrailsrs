@@ -109,6 +109,10 @@ pub enum CarOperation {
     MultipleUnit,
 }
 
+fn default_traffic_brake_assistance() -> bool {
+    true
+}
+
 /// The snapshot contains mutable state, never GPU assets or source content.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionSnapshot {
@@ -130,6 +134,8 @@ pub struct SessionSnapshot {
     pub driver_throttle: f64,
     pub driver_brake: f64,
     pub driver_direction: f64,
+    #[serde(default = "default_traffic_brake_assistance")]
+    pub traffic_brake_assistance: bool,
     pub wiper_active: bool,
     #[serde(default)]
     pub headlights: u8,
@@ -199,6 +205,7 @@ impl LiveDriveSession {
             driver_throttle: self.driver_throttle,
             driver_brake: self.driver_brake,
             driver_direction: self.driver_direction,
+            traffic_brake_assistance: self.traffic_brake_assistance,
             wiper_active: self.wiper_active,
             headlights: self.headlights,
             cab_light: self.cab_light,
@@ -479,6 +486,7 @@ impl LiveDriveSession {
         self.driver_throttle = saved.driver_throttle;
         self.driver_brake = saved.driver_brake;
         self.driver_direction = saved.driver_direction;
+        self.traffic_brake_assistance = saved.traffic_brake_assistance;
         self.wiper_active = saved.wiper_active;
         self.headlights = saved.headlights.min(2);
         self.cab_light = saved.cab_light;
@@ -1069,6 +1077,7 @@ mod tests {
     #[test]
     fn save_restores_physics_and_next_steps_without_divergence() {
         let mut original = session("smoke");
+        original.traffic_brake_assistance = false;
         original.driver_direction = 1.0;
         original.driver_throttle = 0.65;
         original.step_realtime(13.0, |_| {});
@@ -1079,6 +1088,7 @@ mod tests {
         resumed
             .restore_snapshot(serde_json::from_slice(&serialized).unwrap())
             .unwrap();
+        assert!(!resumed.traffic_brake_assistance);
         original.step_realtime(4.0, |_| {});
         resumed.step_realtime(4.0, |_| {});
         assert!((original.velocity_mps() - resumed.velocity_mps()).abs() < 1e-9);

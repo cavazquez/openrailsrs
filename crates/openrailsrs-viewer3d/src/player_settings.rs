@@ -131,8 +131,8 @@ impl PlayerAction {
             Self::ThrottleDown => "Bajar regulador",
             Self::BrakeUp => "Aplicar freno",
             Self::BrakeDown => "Soltar freno",
-            Self::Forward => "Inversor adelante",
-            Self::Reverse => "Inversor atrás",
+            Self::Forward => "Inversor: un paso hacia adelante",
+            Self::Reverse => "Inversor: un paso hacia atrás",
             Self::Neutral => "Inversor neutro",
             Self::Horn => "Bocina",
             Self::Wiper => "Limpiaparabrisas",
@@ -232,6 +232,10 @@ pub struct PlayerSettings {
     pub audio_volume: f32,
     /// Short boarding and no booked-departure wait; distinct from normal service.
     pub quick_station_practice: bool,
+    /// Missed stations normally incur a penalty; strict mode ends the activity.
+    pub strict_service: bool,
+    /// Conventional stock is driven manually unless the player requests this aid.
+    pub traffic_brake_assistance: bool,
     pub cab_profiles: BTreeMap<String, crate::cab_profile::CabProfile>,
     pub keys: BTreeMap<PlayerAction, String>,
 }
@@ -256,6 +260,8 @@ impl Default for PlayerSettings {
             audio_enabled: true,
             audio_volume: 0.4,
             quick_station_practice: false,
+            strict_service: false,
+            traffic_brake_assistance: false,
             cab_profiles: BTreeMap::new(),
             keys: PlayerAction::ALL
                 .into_iter()

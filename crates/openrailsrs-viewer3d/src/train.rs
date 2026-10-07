@@ -421,6 +421,10 @@ pub fn spawn_train_markers(
                                     local,
                                     Visibility::default(),
                                     crate::rolling_stock::ConsistCarIndex(vi),
+                                    crate::rolling_stock_anim::TrainCarSupports::from_shape(
+                                        shape_file.as_deref(),
+                                        vehicle.length_m,
+                                    ),
                                     crate::rolling_stock_anim::TrainCarTrackOffset {
                                         offset_m: vehicle.offset_m,
                                         track_index: i,

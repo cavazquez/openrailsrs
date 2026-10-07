@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture Hanabi precipitation and dense day/night fog on a real GPU.
 
-Original content remains external. The off/high-light pair shares camera,
+Original content remains external. The off/low/high frames share camera,
 clock and weather; an unchanged image cannot pass as headlight scattering.
 """
 import argparse
@@ -23,9 +23,9 @@ def validate_fog(report):
         raise ValueError("Fog shader pipelines are incomplete")
 
 
-def compare_lights(off, high):
+def compare_lights(off, illuminated):
     from PIL import Image, ImageChops, ImageStat
-    with Image.open(off) as a, Image.open(high) as b:
+    with Image.open(off) as a, Image.open(illuminated) as b:
         if a.size != (1280, 720) or b.size != a.size:
             raise ValueError("Scattering pair needs identical 1280x720 frames")
         # Exclude the text panels and action bar, including H's own HUD text.
@@ -40,7 +40,7 @@ def compare_lights(off, high):
         newly_clipped = sum(min(y) >= 245 and min(x) < 245
                             for x, y in zip(pixels_a, pixels_b)) / (a.width * a.height)
     if difference < 0.2 or increase <= 0.05:
-        raise ValueError(f"High lamps did not brighten the fog: difference={difference}, increase={increase}")
+        raise ValueError(f"Headlamps did not brighten the fog: difference={difference}, increase={increase}")
     if newly_clipped > .025:
         raise ValueError(f"Headlight scattering clips the nearby view white: fraction={newly_clipped}")
     return {"mean_absolute_rgb_difference": difference, "mean_rgb_increase": increase,
@@ -97,7 +97,7 @@ def main():
     args.scenario, args.weather = night, "fog"
     for camera in ("orbit", "driver"):
         args.follow = camera
-        for level, suffix in ((0, "off"), (2, "high")):
+        for level, suffix in ((0, "off"), (1, "low"), (2, "high")):
             args.capture_headlights = level
             name = f"fog-{camera}-{suffix}"
             r = run_checkpoint(args, name, 0, True)
@@ -108,6 +108,7 @@ def main():
                 raise ValueError("Night fog scene did not use the fixed night clock")
             reports[name] = r
         reports[f"comparison-{camera}"] = compare_lights(args.out_dir / f"fog-{camera}-off.png", args.out_dir / f"fog-{camera}-high.png")
+        reports[f"comparison-{camera}-low"] = compare_lights(args.out_dir / f"fog-{camera}-off.png", args.out_dir / f"fog-{camera}-low.png")
     (args.out_dir / "report.json").write_text(json.dumps(reports, indent=2) + "\n")
 
 

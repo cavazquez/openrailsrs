@@ -19,6 +19,7 @@ use rodio::{DeviceSinkBuilder, Player, Source, source::SineWave};
 pub mod native;
 pub mod sms;
 pub mod thunder;
+pub mod wiper;
 
 /// Commands sent to the audio thread.
 pub enum AudioCmd {
