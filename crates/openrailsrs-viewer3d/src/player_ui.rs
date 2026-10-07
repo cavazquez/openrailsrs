@@ -291,6 +291,7 @@ enum SettingField {
     Fog,
     FogQuality,
     WeatherExecution,
+    TrainEffectExecution,
     TimeSource,
     WeatherSource,
     ManualWeather,
@@ -833,6 +834,7 @@ fn handle_buttons(
                 SettingField::Units=>settings.toggle_speed_units(),
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
                 SettingField::WeatherExecution=>settings.weather_execution=settings.weather_execution.next(),
+                SettingField::TrainEffectExecution=>settings.train_effect_execution=settings.train_effect_execution.next(),
                 SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
                 SettingField::WeatherSource=>{content.environment.weather=if live.is_some(){content.environment.weather.next()}else{menu.environment.weather.next()};menu.environment.weather=content.environment.weather;settings.environment.weather=content.environment.weather;},
                 SettingField::ManualWeather=>{if live.is_none(){content.environment=menu.environment;}let selected=PlayerWeather::ALL[cycle(PlayerWeather::ALL.iter().position(|w|*w==content.environment.manual_weather).unwrap_or(0),PlayerWeather::ALL.len(),1)];content.environment.manual_weather=selected;content.environment.weather=crate::environment::EnvironmentSource::Manual;menu.weather=selected;menu.environment=content.environment;settings.environment=content.environment;},
@@ -1650,6 +1652,17 @@ fn build_settings(
                 12.0,
                 MUTED,
             );
+            button(
+                p,
+                format!("Humo y vapor: {}", s.train_effect_execution.label()),
+                UiCommand::Setting(SettingField::TrainEffectExecution, 0.0),
+            );
+            label(
+                p,
+                "Se aplica durante la partida. Automático usa GPU y reduce el detalle bajo carga. CPU y Mixto conservan las mismas salidas de humo y vapor.",
+                12.0,
+                MUTED,
+            );
         }
         SettingsTab::Environment => {
             label(p, "HORA Y CLIMA DEL LUGAR", 13.0, MUTED);
@@ -2056,7 +2069,10 @@ fn update_panel_text(
     fps: Res<crate::hud::HudFps>,
     performance: Res<crate::performance::JourneyPerformance>,
     memory: Res<crate::gpu_memory::GraphicsMemory>,
-    weather_particles: Res<crate::weather_particles::WeatherParticles>,
+    particle_effects: (
+        Res<crate::weather_particles::WeatherParticles>,
+        Option<Res<crate::train_effects::TrainEffects>>,
+    ),
     audio: Res<crate::native_audio::NativeAudio>,
     environment: Res<crate::environment::LiveEnvironment>,
     tiles: Res<crate::world_tile_index::WorldTileEntityIndex>,
@@ -2068,6 +2084,7 @@ fn update_panel_text(
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
     let (assets, downloads) = sources;
+    let (weather_particles, train_effects) = particle_effects;
     *elapsed += time.delta_secs();
     if *elapsed < 0.2 && !ui.is_changed() {
         return;
@@ -2161,6 +2178,9 @@ fn update_panel_text(
                                 memory.hud_text(),
                                 weather_particles.hud_text()
                             );
+                            if let Some(effects) = train_effects.as_ref() {
+                                text += &format!("\n{}", effects.hud_text());
+                            }
                             text += &format!(
                                 "\n\nFPS {:.1} · cuadro {:.1} ms\nEscenario: {} sectores activos · {} entidades en GPU\nDistancia de carga {:.0} m",
                                 fps.smoothed,

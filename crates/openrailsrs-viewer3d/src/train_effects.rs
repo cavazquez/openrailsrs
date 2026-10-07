@@ -1,7 +1,13 @@
-//! Native ENG emitters, bounded world-space particles and one merged draw call.
+//! Native ENG emitters shared by Hanabi and the bounded CPU fallback.
 use crate::{
-    floating_origin::FloatingOrigin, live::LiveDrive, rolling_stock::ConsistCarIndex,
+    floating_origin::FloatingOrigin,
+    live::LiveDrive,
+    rolling_stock::ConsistCarIndex,
     rolling_stock_anim::TrainCarTrackOffset,
+    train_effects_gpu::{
+        self as gpu, GpuAssets, GpuEmitter, GpuExhaust, TrainParticleCapabilities,
+    },
+    weather_execution::{AdaptiveWeather, WeatherExecution},
 };
 use bevy::{
     asset::RenderAssetUsages,
@@ -14,13 +20,14 @@ use bevy::{
 use std::collections::HashMap;
 
 const MAX_PARTICLES: usize = 512;
-const PUFF_LIFETIME_S: f32 = 3.0;
-#[derive(Clone)]
+pub(super) const PUFF_LIFETIME_S: f32 = 3.0;
 struct Emitter {
     car: Entity,
     track: usize,
     data: openrailsrs_formats::VehicleEmitter,
     credit: f32,
+    gpu_credit: f32,
+    gpu: Option<GpuEmitter>,
 }
 struct Puff {
     position: Vec3,
@@ -37,12 +44,52 @@ pub struct TrainEffects {
     last_clock: Option<f64>,
     shift: Vec3,
     wind: Vec3,
+    requested: WeatherExecution,
+    execution: WeatherExecution,
+    adaptive: AdaptiveWeather,
+    configuration: Option<(WeatherExecution, usize)>,
+    gpu_assets: Option<GpuAssets>,
+    cpu_capacity: usize,
+    gpu_spawn_requests: u64,
+    cpu_mesh_updates: u64,
+    gpu_delta_s: Option<f32>,
+    fallback_reason: Option<&'static str>,
+    last_camera_rotation: Option<Quat>,
 }
 impl TrainEffects {
     pub fn report(&self) -> serde_json::Value {
-        serde_json::json!({"native_emitters":self.emitters.len(),"live_particles":self.particles.len(),"particle_limit":MAX_PARTICLES,
+        let has_gpu = self.emitters.iter().any(|e| e.gpu.is_some());
+        let cpu_speed = self
+            .particles
+            .iter()
+            .map(|p| p.velocity.length())
+            .fold(0.0_f32, f32::max);
+        serde_json::json!({"native_emitters":self.emitters.len(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
             "wind_mps":self.wind.to_array(),"inherits_vehicle_velocity":true,
-            "max_particle_speed_mps":self.particles.iter().map(|p|p.velocity.length()).fold(0.0_f32,f32::max)})
+            "requested":self.requested,"execution":self.execution,"gpu_backend":self.emitters.iter().any(|e|e.gpu.is_some()).then_some("bevy_hanabi 0.19.0"),
+            "fallback_reason":self.fallback_reason,
+            "gpu_emitters":self.emitters.iter().filter(|e|e.gpu.is_some()).count(),
+            "gpu_capacity":self.emitters.iter().filter_map(|e|e.gpu.as_ref()).map(|e|e.capacity).sum::<usize>(),
+            "cpu_capacity":self.cpu_capacity,"cpu_live_particles":self.particles.len(),
+            "gpu_spawn_requests":self.gpu_spawn_requests,"cpu_mesh_updates":self.cpu_mesh_updates,
+            "quality_level":self.adaptive.level,"simulation_clock_s":self.last_clock,
+            "gpu_simulation_delta_s":self.gpu_delta_s,
+            "max_cpu_particle_speed_mps":cpu_speed,
+            "max_particle_speed_mps":(!has_gpu).then_some(cpu_speed)})
+    }
+    pub fn hud_text(&self) -> String {
+        let capacity = self
+            .emitters
+            .iter()
+            .filter_map(|e| e.gpu.as_ref())
+            .map(|e| e.capacity)
+            .sum::<usize>();
+        format!(
+            "Humo/vapor: {} · capacidad {capacity} GPU + {} CPU · {} emisores originales",
+            self.execution.label(),
+            self.cpu_capacity,
+            self.emitters.len()
+        )
     }
 }
 #[derive(Component)]
@@ -131,6 +178,8 @@ pub fn spawn(
                     track: offset.track_index,
                     data,
                     credit: 0.0,
+                    gpu_credit: 0.0,
+                    gpu: None,
                 }));
         }
     }
@@ -157,7 +206,7 @@ pub fn spawn(
         RenderAssetUsages::RENDER_WORLD,
     ));
     let material = materials.add(StandardMaterial {
-        base_color_texture: Some(texture),
+        base_color_texture: Some(texture.clone()),
         alpha_mode: AlphaMode::Blend,
         double_sided: true,
         cull_mode: None,
@@ -168,6 +217,7 @@ pub fn spawn(
         commands.insert_resource(effects);
         return;
     }
+    effects.gpu_assets = Some(GpuAssets::new(texture));
     commands.spawn((
         ExhaustMesh,
         NotShadowCaster,
@@ -292,8 +342,31 @@ fn advance_puff(puff: &mut Puff, dt: f32, wind: Vec3) {
 
 #[derive(SystemParam)]
 pub struct TrainEffectScene<'w, 's> {
+    commands: Commands<'w, 's>,
     environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
     content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
+    preferences: Option<Res<'w, crate::player_settings::PlayerSettings>>,
+    capabilities: Option<Res<'w, TrainParticleCapabilities>>,
+    memory: Option<Res<'w, crate::gpu_memory::GraphicsMemory>>,
+    time: Option<Res<'w, Time<Real>>>,
+    loading: (
+        Option<Res<'w, crate::world::WorldSpawnProgress>>,
+        Option<Res<'w, crate::route_bootstrap::ViewerLoadingScreen>>,
+    ),
+    gpu_time: Option<Res<'w, Time<bevy_hanabi::EffectSimulation>>>,
+    sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    assets: Option<ResMut<'w, Assets<bevy_hanabi::EffectAsset>>>,
+    gpu: Query<
+        'w,
+        's,
+        (
+            &'static mut bevy_hanabi::EffectProperties,
+            &'static mut bevy_hanabi::EffectSpawner,
+            &'static GlobalTransform,
+            &'static bevy_hanabi::CompiledParticleEffect,
+        ),
+        With<GpuExhaust>,
+    >,
     cars: Query<
         'w,
         's,
@@ -315,8 +388,18 @@ pub fn update(
     scene: TrainEffectScene,
 ) {
     let TrainEffectScene {
+        mut commands,
         environment,
         content,
+        preferences,
+        capabilities,
+        memory,
+        time,
+        loading,
+        gpu_time,
+        sun,
+        mut assets,
+        mut gpu,
         cars,
         camera,
         mesh,
@@ -338,11 +421,65 @@ pub fn update(
         .and_then(|(environment, content)| environment.current_sample(content.environment));
     let wind = crate::environment::weather_wind(sample);
     effects.wind = wind;
-    if clock < previous {
-        effects.particles.clear();
-        for emitter in &mut effects.emitters {
-            emitter.credit = 0.0;
-        }
+    effects.gpu_delta_s = gpu_time.as_ref().map(|t| t.delta_secs());
+    let requested = std::env::var("OPENRAILSRS_TRAIN_EFFECT_EXECUTION")
+        .ok()
+        .as_deref()
+        .and_then(WeatherExecution::parse)
+        .unwrap_or_else(|| {
+            preferences
+                .as_ref()
+                .map_or(WeatherExecution::Auto, |s| s.train_effect_execution)
+        });
+    let pressure = memory.as_ref().is_some_and(|m| m.pressure());
+    effects.adaptive.observe(
+        time.as_ref().map_or(0.0, |t| t.delta_secs()),
+        dt == 0.0 || loading.0.is_some() || loading.1.is_some(),
+        pressure,
+    );
+    let capabilities = capabilities
+        .as_deref()
+        .filter(|_| assets.is_some() && effects.gpu_assets.is_some());
+    let mode = gpu::resolve(
+        requested,
+        capabilities,
+        pressure || effects.adaptive.level > 0,
+        effects.emitters.len(),
+    );
+    effects.requested = requested;
+    effects.execution = mode;
+    effects.fallback_reason = if mode == WeatherExecution::Cpu && requested != WeatherExecution::Cpu
+    {
+        Some(if effects.emitters.len() > gpu::MAX_GPU_EMITTERS {
+            "Más de 32 emisores: se usa la malla CPU compartida"
+        } else if capabilities.is_some_and(|c| c.supported && !c.hardware) {
+            "Adaptador de renderizado por software"
+        } else {
+            "Cómputo GPU no disponible"
+        })
+    } else {
+        None
+    };
+    let configuration = (mode, effects.adaptive.level);
+    let restart = clock < previous;
+    let had_particles = !effects.particles.is_empty();
+    let configuration_changed = effects.configuration != Some(configuration) || restart;
+    if configuration_changed {
+        configure_gpu(
+            &mut effects,
+            &mut commands,
+            assets.as_deref_mut(),
+            configuration,
+            restart,
+        );
+    }
+    // Manual spawn counts must be assigned after Hanabi's TickSpawners. Wind
+    // and light also reach old particles when an emitter stops or leaves view.
+    let light = sun.as_ref().map_or(1.0, |s| s.ambient_scale);
+    for (mut properties, mut spawner, _, _) in &mut gpu {
+        spawner.spawn_count = 0;
+        properties.set("wind", wind.into());
+        properties.set("light", light.into());
     }
     let shift = origin.shift - effects.shift;
     effects.shift = origin.shift;
@@ -351,8 +488,9 @@ pub fn update(
         advance_puff(puff, dt, wind);
     }
     effects.particles.retain(|p| p.age < PUFF_LIFETIME_S);
-    let capacity = MAX_PARTICLES.saturating_sub(effects.particles.len());
+    let capacity = effects.cpu_capacity.saturating_sub(effects.particles.len());
     let mut born = Vec::new();
+    let mut gpu_spawn_requests = 0;
     if !live.paused {
         for emitter in &mut effects.emitters {
             let session = if emitter.track == 0 {
@@ -387,26 +525,126 @@ pub fn update(
                 -emitter.data.direction[2],
             )
             .normalize_or_zero();
-            let count = (emitter.credit.floor() as usize).min(capacity.saturating_sub(born.len()));
+            let count = (emitter.credit.floor() as usize).min(MAX_PARTICLES);
             emitter.credit = emitter.credit.fract();
             let velocity = vehicle_world_velocity(car, offset, session, index.0)
                 + car.rotation() * direction * (1.2 + load * 2.0)
                 + Vec3::Y * 0.5;
-            for _ in 0..count {
+            let world_position = car.transform_point(position);
+            let radius = emitter.data.radius_m.max(0.05);
+            let (shade, opacity) = appearance(steam, load);
+            let gpu_count = split_births(emitter, count, mode);
+            if let Some(emitter) = &emitter.gpu
+                && let Ok((mut properties, mut spawner, anchor, compiled)) =
+                    gpu.get_mut(emitter.entity)
+                && compiled.is_ready()
+            {
+                *properties = gpu::properties(
+                    world_position - anchor.translation(),
+                    velocity,
+                    wind,
+                    radius,
+                    shade,
+                    opacity,
+                    light,
+                );
+                spawner.spawn_count = gpu_count.min(emitter.capacity) as u32;
+                gpu_spawn_requests += u64::from(spawner.spawn_count);
+            }
+            let cpu_count = (count - gpu_count).min(capacity.saturating_sub(born.len()));
+            for _ in 0..cpu_count {
                 born.push(Puff {
-                    position: car.transform_point(position),
+                    position: world_position,
                     velocity,
                     age: 0.0,
-                    radius: emitter.data.radius_m.max(0.05),
+                    radius,
                     steam,
                     load,
                 });
             }
         }
     }
+    effects.gpu_spawn_requests += gpu_spawn_requests;
+    let changed = !born.is_empty()
+        || had_particles
+            && (configuration_changed
+                || dt > 0.0
+                || shift != Vec3::ZERO
+                || effects.last_camera_rotation != Some(camera.rotation));
     effects.particles.extend(born);
-    if let Some(mut mesh) = meshes.get_mut(&mesh.0) {
+    if changed && let Some(mut mesh) = meshes.get_mut(&mesh.0) {
         *mesh = particle_mesh(&effects.particles, camera);
+        effects.cpu_mesh_updates += 1;
+    }
+    effects.last_camera_rotation = Some(camera.rotation);
+}
+
+fn appearance(steam: bool, load: f32) -> (f32, f32) {
+    (
+        if steam { 0.88 } else { 0.55 - load * 0.35 },
+        if steam { 0.6 } else { 0.7 },
+    )
+}
+
+fn split_births(emitter: &mut Emitter, count: usize, mode: WeatherExecution) -> usize {
+    match mode {
+        WeatherExecution::Gpu => count,
+        WeatherExecution::Hybrid => {
+            emitter.gpu_credit += count as f32 * 0.75;
+            let gpu = emitter.gpu_credit.floor() as usize;
+            emitter.gpu_credit = emitter.gpu_credit.fract();
+            gpu.min(count)
+        }
+        _ => 0,
+    }
+}
+
+fn configure_gpu(
+    effects: &mut TrainEffects,
+    commands: &mut Commands,
+    assets: Option<&mut Assets<bevy_hanabi::EffectAsset>>,
+    configuration: (WeatherExecution, usize),
+    restart: bool,
+) {
+    // Replacing the instance releases old GPU particles on a restore/backend
+    // change. Cached assets remain bounded by type, quota and quality level.
+    for emitter in &mut effects.emitters {
+        if let Some(gpu) = emitter.gpu.take() {
+            commands.entity(gpu.entity).despawn();
+        }
+        if restart {
+            emitter.credit = 0.0;
+        }
+        emitter.gpu_credit = 0.0;
+    }
+    if restart || effects.configuration.is_some() || configuration.0 != WeatherExecution::Cpu {
+        effects.particles.clear();
+    }
+    effects.last_camera_rotation = None;
+    effects.configuration = Some(configuration);
+    let (budget, cpu) = gpu::budgets(configuration.0, configuration.1, MAX_PARTICLES);
+    effects.cpu_capacity = cpu;
+    effects.particles.truncate(cpu);
+    let count = effects.emitters.len();
+    let quota = budget.checked_div(count).unwrap_or(0);
+    if quota == 0 {
+        return;
+    }
+    if let (Some(assets), Some(gpu_assets)) = (assets, effects.gpu_assets.as_mut()) {
+        for emitter in &mut effects.emitters {
+            let steam = !emitter
+                .data
+                .name
+                .to_ascii_lowercase()
+                .starts_with("exhaust");
+            let handle = gpu_assets.handle(assets, steam, quota);
+            emitter.gpu = Some(gpu::spawn(
+                commands,
+                handle,
+                gpu_assets.texture.clone(),
+                quota,
+            ));
+        }
     }
 }
 fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
@@ -435,8 +673,8 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
     };
     for p in particles {
         let radius = p.radius * (1.0 + p.age * 4.0);
-        let shade = if p.steam { 0.88 } else { 0.55 - p.load * 0.35 };
-        let alpha = (1.0 - p.age / PUFF_LIFETIME_S).powi(2) * if p.steam { 0.6 } else { 0.7 };
+        let (shade, opacity) = appearance(p.steam, p.load);
+        let alpha = (1.0 - p.age / PUFF_LIFETIME_S).powi(2) * opacity;
         let base = positions.len() as u32;
         for (x, y) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
             positions.push((p.position + (right * x + up * y) * radius).to_array());
@@ -592,6 +830,8 @@ mod tests {
                     radius_m: 0.1,
                 },
                 credit: 10000.5,
+                gpu_credit: 0.0,
+                gpu: None,
             }],
             last_clock: Some(0.0),
             ..default()
@@ -649,6 +889,32 @@ mod tests {
         assert_eq!(emission("Whistle", &steam, 0).0, 0.);
     }
 
+    #[test]
+    fn hybrid_distributes_small_birth_batches_without_double_emission() {
+        let mut emitter = Emitter {
+            car: Entity::PLACEHOLDER,
+            track: 0,
+            data: openrailsrs_formats::VehicleEmitter {
+                name: "Exhaust1".into(),
+                position: [0.0; 3],
+                direction: [0.0, 1.0, 0.0],
+                radius_m: 0.1,
+            },
+            credit: 0.0,
+            gpu_credit: 0.0,
+            gpu: None,
+        };
+        let mut gpu = 0;
+        let mut cpu = 0;
+        for _ in 0..100 {
+            let count = split_births(&mut emitter, 1, WeatherExecution::Hybrid);
+            gpu += count;
+            cpu += 1 - count;
+        }
+        assert_eq!((gpu, cpu), (75, 25));
+        assert_eq!(split_births(&mut emitter, 12, WeatherExecution::Cpu), 0);
+        assert_eq!(split_births(&mut emitter, 12, WeatherExecution::Gpu), 12);
+    }
     #[test]
     fn mesh_is_bounded_and_retains_each_particles_alpha() {
         let p = Puff {

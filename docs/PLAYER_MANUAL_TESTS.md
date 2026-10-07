@@ -1512,3 +1512,46 @@ eléctricas cortas están en el ejemplo `electric_supply`.
 El perfil de nieve reduce agarre sin simular hielo ni deshielo. El arenador
 conserva arena y límites de velocidad/sentido; su consumo de aire o vapor
 todavía no está conectado a los depósitos de presión.
+
+## 46. Humo y vapor con Hanabi: GPU, CPU y Mixto
+
+Reiniciá el visor compilado y elegí Chiltern v4, **RS_Football Special**.
+Probá primero **Birmingham Pullman** y después **Hall**. Los trenes y rutas
+originales deben estar instalados; una formación sin emisores ENG no produce
+escape por este sistema.
+
+1. **Elegir ejecución.** Abrí **F10 → Imagen y cabina → Humo y vapor** y seleccioná
+   **GPU**. Cerrá ajustes, elegí vista exterior con **2** y empezá a circular.
+   En **F8 → Diagnóstico** debe figurar humo/vapor GPU, con capacidad GPU y
+   cero capacidad CPU. La falta de hardware o cómputo compatible activa CPU;
+   seleccionar GPU no convierte un adaptador software en hardware.
+2. **Comparar CPU y Mixto.** Repetí con **CPU** y **Mixto**. Deben conservarse
+   las salidas originales, sentido de la estela, color ligado al motor y
+   desaparición gradual. Mixto muestra capacidad GPU y CPU; CPU muestra
+   únicamente capacidad CPU. Al cambiar de modo la estela se limpia y vuelve
+   a formarse al reanudar, sin duplicar partículas. La suma de capacidades
+   nunca supera 512 y puede bajar con cuadros lentos sostenidos.
+3. **Pausa y origen flotante.** Circulá al menos 500 m, pulsá **P** y orbitá
+   alrededor del tren. El humo debe permanecer en el mismo lugar, sin seguir
+   al coche ni a la cámara. Reanudá y avanzá otro kilómetro: la estela no debe
+   pegar saltos cuando se cargan sectores. Reiniciar limpia la estela anterior.
+4. **Motor, silbato y purgas.** En Pullman apagá el motor con **K** y esperá
+   a que termine la combustión: cesan las emisiones nuevas. En Hall probá
+   silbato y purgas desde **B** con presión disponible; al soltar el mando se
+   corta la emisión nueva y el vapor anterior se disipa. Repetí en GPU y CPU.
+5. **Clima independiente.** Desde **F10 → Hora y clima** probá lluvia, nieve y
+   noche. Cambiar el cálculo del clima no cambia el ajuste del humo. Con
+   viento del lugar vigente, gotas, copos y escape deben desviarse hacia el
+   mismo lado. De noche el escape no debe verse como una fuente de luz.
+
+Para guardar evidencia del recorrido en cada modo:
+
+```bash
+python3 scripts/check_train_effects.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$PERFIL_DE_FORMACION_ORIGINAL" --mode gpu --mode cpu --mode hybrid
+```
+
+El reporte distingue capacidades y solicitudes de emisión GPU de partículas
+CPU vivas. No lee el conteo de partículas GPU ni certifica humo volumétrico,
+colisiones con edificios o una mejora de FPS. La física ferroviaria sigue
+ejecutándose en CPU.

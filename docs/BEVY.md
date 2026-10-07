@@ -33,6 +33,29 @@ Pausa, reinicio y multiplicador de tiempo mantienen ambos movimientos juntos.
 Las partes comparten el `ShapeFile` inmutable mediante `Arc`; las poses de
 puertas y pantógrafos sólo se recalculan cuando cambia su clave.
 
+El humo y vapor usan [bevy_hanabi 0.19.0](https://docs.rs/bevy_hanabi/0.19.0/bevy_hanabi/),
+compatible con Bevy 0.19. Los emisores ENG, estado del motor/caldera y velocidad
+de cada coche alimentan propiedades por emisor; Hanabi conserva posiciones,
+velocidades y envejecimiento en buffers GPU. La alternativa CPU utiliza la
+misma emisión y solución analítica de arrastre. No se leen partículas de GPU
+ni se suben sus vértices cada cuadro en modo GPU.
+
+`Time<EffectSimulation>` recibe los avances de `LiveDriveSession`, después de
+`FixedUpdate` y antes de `EffectSystems::TickSpawners`. La emisión manual se
+asigna después de ese sistema. Las instancias usan `SimulationSpace::Local`
+en raíces independientes del tren: el origen flotante desplaza sus raíces,
+y los nuevos emisores se convierten a ese marco. La malla CPU ya contiene
+posiciones desplazadas y conserva su transformación identidad. Reiniciar o
+cambiar de modo elimina las instancias antiguas y reutiliza assets acotados.
+
+Auto usa GPU con cómputo y adaptador hardware; bajo presión reduce el detalle
+y reparte el presupuesto con CPU. CPU, GPU y Mixto comparten un máximo de
+512 partículas, reducido a 256/128 ante cuadros lentos sostenidos. Más de
+32 emisores originales o falta de cómputo compatible usan la malla CPU.
+Los reportes distinguen capacidad GPU y solicitudes de emisión de partículas
+CPU vivas: no presentan esas solicitudes como un conteo real de partículas GPU.
+Lluvia y nieve conservan sus shaders actuales y su ajuste independiente.
+
 El sol toma ubicación geográfica MSTS, estación del año y reloj de la partida;
 el lector de `.env` respeta los horarios del satélite solar de la ruta.
 La ecuación se comprueba contra las DLL originales 1.6.1 y se evalúa cada
@@ -74,7 +97,7 @@ flowchart LR
   scenery --> render[render3d]
 ```
 
-**Reglas:** headless no depende de Bevy; `bevy-scenery` no depende de las apps; WGSL solo en `bevy-scenery/assets/shaders/`.
+**Reglas:** headless no depende de Bevy; `bevy-scenery` no depende de las apps; WGSL del proyecto en `bevy-scenery/assets/shaders/`. Hanabi genera sus propios shaders a partir de modificadores y expresiones tipadas.
 
 ## Apps
 

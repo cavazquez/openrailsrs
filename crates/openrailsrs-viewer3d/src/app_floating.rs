@@ -76,6 +76,30 @@ mod tests {
     }
 
     #[test]
+    fn plume_anchor_shifts_once_and_cpu_mesh_keeps_identity() {
+        let scene = TrackScene::from_graph(tiny_graph_with_signal());
+        with_replay_world(scene, ReplayState::default(), |world| {
+            setup_camera_and_prop(world, Vec3::new(500.0, 2.0, -30.0), Vec3::ZERO);
+            let cpu = world
+                .spawn((crate::train_effects::ExhaustMesh, Transform::IDENTITY))
+                .id();
+            let gpu = world
+                .spawn((crate::train_effects_gpu::GpuExhaust, Transform::IDENTITY))
+                .id();
+            world.run_system_once(apply_floating_origin).unwrap();
+            let shift = world.resource::<FloatingOrigin>().shift;
+            assert_eq!(world.get::<Transform>(cpu).unwrap().translation, Vec3::ZERO);
+            assert_eq!(world.get::<Transform>(gpu).unwrap().translation, -shift);
+            // GPU particles stay in their anchored coordinates; their root
+            // supplies precisely the shift also applied to CPU puff positions.
+            let puff = Vec3::new(20.0, 5.0, 3.0);
+            assert_eq!(
+                world.get::<Transform>(gpu).unwrap().transform_point(puff),
+                puff - shift
+            );
+        });
+    }
+    #[test]
     fn route_focus_chiltern_like_render_y_in_entity_space() {
         use crate::world::RouteFocus;
 

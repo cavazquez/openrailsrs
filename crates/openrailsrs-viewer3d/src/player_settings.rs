@@ -217,6 +217,7 @@ pub struct PlayerSettings {
     pub fog: bool,
     pub fog_quality: FogQuality,
     pub weather_execution: crate::weather_execution::WeatherExecution,
+    pub train_effect_execution: crate::weather_execution::WeatherExecution,
     pub renderer: crate::weather_execution::RendererSelection,
     pub environment: crate::environment::EnvironmentSelection,
     pub lightning: bool,
@@ -240,6 +241,7 @@ impl Default for PlayerSettings {
             fog: true,
             fog_quality: FogQuality::Distance,
             weather_execution: crate::weather_execution::WeatherExecution::Auto,
+            train_effect_execution: crate::weather_execution::WeatherExecution::Auto,
             renderer: crate::weather_execution::RendererSelection::Auto,
             environment: default(),
             lightning: true,
@@ -535,6 +537,33 @@ mod tests {
                 .unwrap()
                 .key(PlayerAction::Doors),
             KeyCode::KeyZ
+        );
+    }
+    #[test]
+    fn plume_execution_upgrades_old_settings_and_saves_separately_from_weather() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("settings.json");
+        let mut old = serde_json::to_value(PlayerSettings::default()).unwrap();
+        old.as_object_mut()
+            .unwrap()
+            .remove("train_effect_execution");
+        std::fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let mut settings = PlayerSettings::load(&path).unwrap();
+        assert_eq!(
+            settings.train_effect_execution,
+            crate::weather_execution::WeatherExecution::Auto
+        );
+        settings.train_effect_execution = crate::weather_execution::WeatherExecution::Cpu;
+        settings.weather_execution = crate::weather_execution::WeatherExecution::Gpu;
+        settings.save(&path).unwrap();
+        let restored = PlayerSettings::load(&path).unwrap();
+        assert_eq!(
+            restored.train_effect_execution,
+            crate::weather_execution::WeatherExecution::Cpu
+        );
+        assert_eq!(
+            restored.weather_execution,
+            crate::weather_execution::WeatherExecution::Gpu
         );
     }
     #[test]

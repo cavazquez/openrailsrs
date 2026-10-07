@@ -109,6 +109,7 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_SCREENSHOT_DURING_LIGHTNING"] = "1"
         env["OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET"] = "0"
     env["OPENRAILSRS_WEATHER_EXECUTION"] = getattr(args, "weather_execution", "auto")
+    env["OPENRAILSRS_TRAIN_EFFECT_EXECUTION"] = getattr(args, "train_effect_execution", "auto")
     if getattr(args, "texture_cache", "on") == "off":
         env["OPENRAILSRS_TEXTURE_CACHE"] = "off"
     if getattr(args, "texture_upload", "auto") == "rgba":
@@ -360,6 +361,7 @@ def main():
     parser.add_argument("--checkpoint", choices=["middle", "terminal"], action="append")
     parser.add_argument("--weather", choices=["clear", "rain", "fog", "snow", "overcast", "storm"], default="clear")
     parser.add_argument("--weather-execution", choices=["auto", "gpu", "cpu", "hybrid"], default="auto")
+    parser.add_argument("--train-effect-execution", choices=["auto", "gpu", "cpu", "hybrid"], default="auto")
     parser.add_argument("--renderer", choices=["auto", "gpu", "cpu"], default="auto")
     parser.add_argument("--particle-budget", type=int)
     parser.add_argument("--pullman-cab-reference", type=Path,

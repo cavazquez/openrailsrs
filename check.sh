@@ -30,6 +30,7 @@ unset OPENRAILSRS_TEXTURE_UPLOAD
 unset OPENRAILSRS_TEXTURE_CACHE OPENRAILSRS_RESOURCES
 unset OPENRAILSRS_REAL_TIME OPENRAILSRS_REAL_WEATHER
 unset OPENRAILSRS_WEATHER_EXECUTION OPENRAILSRS_WEATHER_PARTICLE_BUDGET OPENRAILSRS_RENDERER
+unset OPENRAILSRS_TRAIN_EFFECT_EXECUTION
 unset OPENRAILSRS_TCS_SCRIPT OPENRAILSRS_TCS_HOST_DLL OPENRAILSRS_TCS_TYPE OPENRAILSRS_VISUAL_FAULT
 unset OPENRAILSRS_CAPTURE_OR_FOCUS OPENRAILSRS_LOOK_YAW OPENRAILSRS_LOOK_PITCH
 
@@ -48,6 +49,7 @@ echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 python3 -m unittest discover -s scripts -p test_weather_execution.py
+python3 -m unittest discover -s scripts -p test_train_effects.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py
 python3 -m unittest discover -s scripts -p test_official_content.py
 python3 -m unittest discover -s scripts -p test_website.py

@@ -14,7 +14,20 @@ reduce partículas bajo terreno/techos; no reemplaza una colisión exacta por ed
 Vidrio: manchas irregulares, acumulación, velocidad del tren y barrido del limpiaparabrisas.
 Nubes: ruido direccional 3D, sin la proyección plana que producía bandas verticales.
 
-## Renderizar con CPU
+## Elegir cálculo y renderizado
+
+El humo y vapor tienen un ajuste separado: **F10 → Imagen y cabina → Humo y vapor**.
+Hanabi 0.19.0 ejecuta su movimiento en GPU; CPU usa la malla combinada existente
+y Mixto reparte los nacimientos 75/25. Auto conserva esa alternativa cuando
+no hay cómputo GPU utilizable. Todos toman los mismos emisores originales,
+motor/caldera, viento y reloj ferroviario. El presupuesto total es de hasta
+512 partículas; al cambiar de modo se limpia la estela anterior.
+
+La lluvia y nieve siguen usando los shaders analíticos existentes. Su control
+**Cálculo del clima** y `OPENRAILSRS_WEATHER_EXECUTION` no cambian el humo.
+Para pruebas del escape se usa `OPENRAILSRS_TRAIN_EFFECT_EXECUTION=auto|gpu|cpu|hybrid`.
+Los dos ajustes eligen dónde calcular partículas; el dibujo sigue usando
+el adaptador seleccionado al iniciar.
 
 El renderizador se selecciona al iniciar, mediante `--renderer auto|gpu|cpu`,
 `OPENRAILSRS_RENDERER` o la preferencia de F10. Cambiarlo desde F10 requiere reiniciar.
@@ -38,6 +51,8 @@ lento; los modos de efectos no prometen ejecutar toda la aplicación en GPU.
 
 ```bash
 python3 scripts/benchmark_weather_execution.py --route-root "$CHILTERN_ROUTE"
+python3 scripts/check_train_effects.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$PERFIL_DE_FORMACION_ORIGINAL" --mode gpu --mode cpu --mode hybrid
 python3 scripts/check_viewer_streaming.py --route-root "$CHILTERN_ROUTE" \
   --scenario examples/chiltern_extended/scenario.toml --checkpoint terminal \
   --headless-wayland --require-hardware --weather snow --weather-execution auto --renderer gpu

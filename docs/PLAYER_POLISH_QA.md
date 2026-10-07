@@ -1255,3 +1255,88 @@ con **0,2382 m/s** y **25,79 m**. Los ensayos sin clima explícito conservan
 su entorno de referencia. Se restauraron los resultados generados por los
 chequeos y se verificaron byte a byte los 174 archivos previos, incluida
 la configuración de lanzamiento del usuario.
+
+## Humo y vapor con Hanabi — 6 de octubre de 2026
+
+Se integró **bevy_hanabi 0.19.0** con Bevy 0.19.1 para calcular el movimiento
+del escape en GPU. El ajuste **F10 → Imagen y cabina → Humo y vapor** permite
+Automático, GPU, CPU y Mixto, independientemente del cálculo de lluvia y nieve.
+CPU conserva la malla combinada; Mixto reparte los nacimientos 75/25. Todos
+usan los emisores ENG, estado de motor/caldera, velocidad del vehículo y viento
+existentes. El máximo compartido es 512 partículas, con niveles adaptativos
+de 256 y 128. Los adaptadores software, falta de cómputo compatible o más de
+32 emisores activan el respaldo CPU.
+
+Hanabi recibe el incremento del reloj ferroviario, incluyendo tiempo acelerado
+y pausa. Sus emisores están anclados al mundo, sin depender de la cámara ni
+seguir al coche después del nacimiento. El arrastre analítico coincide con el
+modelo CPU. Se corrigió además una traslación doble de la malla CPU durante
+los cambios de origen flotante; una regresión ECS comprueba que la malla
+conserva su transformada y el ancla GPU se traslada una sola vez.
+
+### Ensayos con las formaciones originales
+
+Las capturas usaron Chiltern v4 y `RS_Football Special`, RX 7600,
+Vulkan/RADV, Weston privado, 1280×720, radio de vista de 450 m, regulador al
+100 %, tiempo ×4 y audio apagado. Cada captura GPU se pausó después de
+avanzar 500 m y esperó 30 cuadros con los sectores cercanos publicados:
+
+- **Pullman GPU:** 500,15 m; dos emisores, capacidad GPU 512 y CPU 0;
+  2.750 solicitudes de nacimiento y cero reconstrucciones de malla CPU.
+- **Pullman CPU:** la misma distancia y reloj de 121,4 s; capacidad CPU 512,
+  72 partículas CPU vivas y 1.187 reconstrucciones de su malla.
+- **Pullman Mixto:** la misma distancia y reloj; capacidades GPU 384 y CPU
+  128, 2.046 solicitudes GPU, 20 partículas CPU vivas y ambas rutas activas.
+- **Hall GPU, despejado:** 500,26 m; nueve emisores, capacidad GPU 504,
+  302 solicitudes GPU y cero reconstrucciones de malla CPU. La división
+  entera por emisor deja ocho lugares sin asignar del máximo de 512.
+- **Hall GPU, nieve:** 500,68 m; capacidad GPU 504, 602 solicitudes GPU y
+  cero reconstrucciones de malla CPU. La nieve conserva sus 8.192 semillas
+  GPU y una única actualización de su malla, con su shader existente.
+- **Hall GPU, noche:** 500,26 m, a las 23:01; nueve emisores y 302 solicitudes,
+  sin emisión luminosa del vapor. La captura conserva el cielo estrellado.
+- **Pullman con renderizado software:** Vulkan/lavapipe, Xvfb, radio de
+  150 m y 100,27 m recorridos. Solicitar humo GPU activó CPU, con motivo
+  visible de adaptador software, capacidad adaptada a 128, 20 partículas
+  vivas y 111 reconstrucciones de malla. No hubo emisores Hanabi activos.
+
+Todos los casos terminaron con cero shaders pendientes o fallidos y delta
+Hanabi de 0 s durante la pausa. Los ensayos de políticas y reloj comprueban
+también menú, reinicio y ausencia de cómputo. Las pruebas existentes mantienen
+la deriva con viento meteorológico lateral, marcha atrás, vehículos con `Flip`
+y secciones desacopladas. El viento de estas capturas fue el manual habitual,
+0,8 m/s hacia el este y 0,3 m/s hacia el sur.
+
+El Pullman registró picos RSS GPU/CPU/Mixto de **1.274,5 / 1.260,5 / 1.244,6
+MiB**, y VRAM del proceso de **1.032,2 / 1.033,3 / 1.054,3 MiB**. El Hall con
+nieve registró RSS **1.450,1 MiB** y VRAM **1.077,2 MiB**. El caso software
+registró RSS **2.213,7 MiB**, sin contador de VRAM dedicada; utiliza una distancia
+de carga menor y no sirve como comparación directa de memoria. No se suman
+RSS y VRAM. Los ensayos son secuenciales y tienen cadencia limitada por el
+compositor: no demuestran una mejora de FPS ni reemplazan un viaje visual
+completo o una comparación de píxeles con OR 1.6.1. Sigue presente el aviso
+previo de más de 65.535 `VisibilityRange` distintos.
+
+Los reportes separan capacidad y solicitudes GPU del conteo CPU vivo. No se
+lee el conteo de partículas GPU; los campos generales `live_particles` y
+`max_particle_speed_mps` son `null` cuando interviene Hanabi. Las cuatro
+primeras capturas preceden ese ajuste de metadatos y sus campos generales
+solo describían CPU. Las capturas finales de nieve, noche y software usan
+el esquema corregido. La iluminación GPU sigue el ambiente de la ruta;
+los planos transparentes no certifican humo volumétrico ni colisiones con
+edificios. Cambiar de modo limpia la estela anterior y reutiliza los efectos
+por tipo y presupuesto.
+
+Evidencia local: `tmp/hanabi-trains-20261006/`, con `check.log`, los reportes y
+capturas de cada caso. `scripts/check_train_effects.py` permite repetir GPU,
+CPU, Mixto y software; las observaciones manuales están en la
+[sección 46](PLAYER_MANUAL_TESTS.md#46-humo-y-vapor-con-hanabi-gpu-cpu-y-mixto).
+Las rutas y formaciones descargadas permanecen fuera de Git.
+
+`check.sh` pasó con **1.669 pruebas Rust** (45 ignoradas por condiciones externas)
+y **63 Python**, formato, Clippy con `-D warnings`, build, web y oráculos de
+aceptación. El servicio de tres estaciones completó sus tres paradas. Los
+oráculos mantienen RMS de velocidad de **0,2081 m/s** y diferencia máxima
+de posición de **39,61 m** para Pullman; **0,2382 m/s** y **25,79 m** para
+Class47. Se restauraron los resultados regenerados y se verificaron los
+174 archivos previos, incluida la configuración de lanzamiento del usuario.

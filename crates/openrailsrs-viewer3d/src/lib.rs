@@ -89,6 +89,7 @@ pub mod traffic;
 pub mod train;
 pub mod train_diagnostics;
 mod train_effects;
+mod train_effects_gpu;
 pub mod train_lighting;
 pub mod transfer;
 pub mod view_window;
@@ -242,10 +243,13 @@ impl Plugin for ViewerPlugin {
                 .after(traffic::spawn_traffic)
                 .run_if(live::live_mode_active),
         );
+        app.add_plugins(train_effects_gpu::TrainParticlesPlugin);
         app.add_systems(
             PostUpdate,
             train_effects::update
                 .after(bevy::transform::TransformSystems::Propagate)
+                .after(bevy_hanabi::EffectSystems::TickSpawners)
+                .before(bevy_hanabi::EffectSystems::CompileEffects)
                 .run_if(live::live_mode_active)
                 .run_if(in_state(ViewerAppState::Playing)),
         );
