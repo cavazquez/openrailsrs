@@ -144,7 +144,7 @@ pub(super) fn parse_diesel(
         if numbers.len() < 4 || numbers.len() % 2 != 0 {
             return Err(invalid("DieselConsumptionTab"));
         }
-        for pair in numbers.chunks_exact(2) {
+        for pair in numbers.as_chunks::<2>().0 {
             if pair.iter().any(|v| !v.is_finite() || *v < 0.)
                 || consumption.last().is_some_and(|(r, _)| *r >= pair[0])
             {

@@ -764,7 +764,7 @@ mod tests {
         let base = -180.0;
         let heights = [-12.3, 0.0, 3.125, 83.65, 300.0];
         let bytes = encode_shelter(&heights, base);
-        for (height, packed) in heights.iter().zip(bytes.chunks_exact(4)) {
+        for (height, packed) in heights.iter().zip(bytes.as_chunks::<4>().0.iter()) {
             let decoded =
                 base + f32::from(u16::from_be_bytes([packed[0], packed[1]])) / 65535.0 * 512.0;
             assert!((height - decoded).abs() < 0.01);
