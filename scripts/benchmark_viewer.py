@@ -116,6 +116,13 @@ def main():
     p.add_argument("--max-rss-mib", type=int, default=6144)
     p.add_argument("--target-m", type=float, default=0)
     p.add_argument("--follow", choices=["orbit", "driver"], default="orbit")
+    p.add_argument("--view-radius-m", type=float, default=450,
+                   help="scenery radius; use 2000 for dense yards such as Paddington")
+    p.add_argument("--camera-yaw", type=float, default=1.0)
+    p.add_argument("--camera-pitch", type=float, default=0.52)
+    p.add_argument("--camera-distance", type=float, default=75)
+    p.add_argument("--fog-quality", choices=["auto", "distance", "volumetric32", "volumetric64"], default="auto")
+    p.add_argument("--formation-cars", type=int, help="also verify this many player car roots and their spacing")
     p.add_argument("--weather", choices=["clear", "rain", "snow", "storm", "fog", "overcast"], default="clear")
     p.add_argument("--weather-execution", choices=["cpu", "gpu", "hybrid", "auto"], default="gpu")
     p.add_argument("--train-effect-execution", choices=["cpu", "gpu", "hybrid", "auto"], default="gpu")
@@ -126,13 +133,15 @@ def main():
     args = p.parse_args()
     if args.ready_frames < 180 or not 1 <= args.repeats <= 9:
         p.error("requires 180+ frames and 1–9 repeats")
+    if not 0 < args.view_radius_m <= 16384 or args.camera_distance <= 0:
+        p.error("requires a positive camera distance and scenery radius up to 16384 m")
+    if args.formation_cars is not None and args.formation_cars < 1:
+        p.error("--formation-cars must be positive")
     args.repo = root
     for name in ("route_root", "scenario", "viewer", "out_dir"):
         setattr(args, name, getattr(args, name).resolve())
     args.out_dir.mkdir(parents=True, exist_ok=True)
     args.autodrive, args.speed_mul = 1 if args.target_m else 0, 4
-    args.camera_yaw, args.camera_pitch, args.camera_distance = 1.0, 0.52, 75
-    args.view_radius_m = 450
     args.software, args.headless_wayland, args.require_hardware = False, True, True
     args.renderer, args.weather_seed = "gpu", 81
     args.weather_quality, args.present_mode, args.framepace = "high", "fifo", "off"
@@ -145,6 +154,14 @@ def main():
         "viewer_sha256": hashlib.sha256(args.viewer.read_bytes()).hexdigest(),
         "resolution": [1280, 720], "seed": args.weather_seed,
         "view_radius_m": args.view_radius_m,
+        "camera": {"follow": args.follow, "yaw": args.camera_yaw,
+                   "pitch": args.camera_pitch, "distance_m": args.camera_distance},
+        "fog_quality": args.fog_quality,
+        "weather_execution": args.weather_execution,
+        "train_effect_execution": args.train_effect_execution,
+        "target_m": args.target_m,
+        "ready_frames": args.ready_frames,
+        "formation_cars": args.formation_cars,
         "input_latency_scope": "synthetic queue to next ECS frame; excludes hardware/display",
         "presentation": "private Weston; off=fifo VSync, 30/60/unlimited=AutoNoVsync (compositor may cap)",
     }
@@ -152,7 +169,7 @@ def main():
     comparison_path = args.out_dir / "comparison.json"
     if comparison_path.is_file():
         previous = json.loads(comparison_path.read_text())
-        if all(previous.get(key) == metadata[key] for key in ("suite", "scenario_sha256", "viewer_sha256")):
+        if all(previous.get(key) == value for key, value in metadata.items()):
             results.update(previous.get("results", {}))
     selected = [item for item in cases(args.suite) if not args.case or item[0] in args.case]
     if not selected:

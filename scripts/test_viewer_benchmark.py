@@ -3,10 +3,29 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from benchmark_viewer import cases, validate
-from check_viewer_streaming import drm_client_vram, process_gpu_vram
+from check_viewer_streaming import drm_client_vram, process_gpu_vram, renderer_failed, validate_formation
 
 
 class ViewerBenchmarkTests(unittest.TestCase):
+    def test_formation_validation_rejects_paddington_gap_and_duplicate_roots(self):
+        cars = [{"index": i, "offset_m": -i * 20.7,
+                 "position_render_m": [-i * 20.7, 3.0, 0.0]} for i in range(8)]
+        report = {"train_formation": cars}
+        self.assertLess(validate_formation(report, 8)["maximum_spacing_error_m"], 0.001)
+        for car in cars[4:]:
+            car["position_render_m"][0] -= 37.93
+        with self.assertRaisesRegex(ValueError, "spacing error"):
+            validate_formation(report, 8)
+        cars[4]["index"] = 3
+        with self.assertRaisesRegex(ValueError, "duplicated"):
+            validate_formation(report, 8)
+
+    def test_exhausted_visibility_table_is_a_render_failure_even_without_error_level(self):
+        warning = "WARN More than 65535 distinct VisibilityRanges are in use; additional ranges share slot 0"
+        self.assertTrue(renderer_failed(warning))
+        self.assertTrue(renderer_failed("failed to process shader"))
+        self.assertFalse(renderer_failed("scenery ready; shader pipelines pending=0 failed=0"))
+
     def test_gpu_accounting_deduplicates_clients_and_keeps_devices_separate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

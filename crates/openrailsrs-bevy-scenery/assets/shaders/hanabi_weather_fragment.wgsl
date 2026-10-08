@@ -2,14 +2,6 @@
 // and shelter coordinates are particle attributes, without GPU readback.
 // Hanabi 0.19 exposes effect properties to vertices, not fragments.
 if color.a <= 0.0 { discard; }
-let grid = particle.f32x4_1;
-let world = particle.position;
-let grid_uv = (world.xz - grid.xy) / (grid.z * 2.0) + vec2(0.5);
-let dim = textureDimensions(material_texture_0);
-let pixel = clamp(vec2<i32>(grid_uv * vec2<f32>(dim)), vec2(0), vec2<i32>(dim) - vec2(1));
-let packed = textureLoad(material_texture_0, pixel, 0).rg;
-let roof = grid.w + (packed.r * 65280.0 + packed.g * 255.0) / 65535.0 * 512.0;
-let sheltered = smoothstep(roof + 0.03, roof + 0.7, world.y);
 let variation = particle.f32x4_0.w;
 let p = uv * 2.0 - vec2(1.0);
 let radius = length(p);
@@ -23,6 +15,18 @@ if !snow {
     alpha = (1.0 - smoothstep(0.18, 0.5, abs(uv.x - 0.5)))
         * (1.0 - smoothstep(0.3, 0.5, abs(uv.y - 0.5))) * 0.48;
 }
-alpha *= sheltered * color.a * 0.82;
+alpha *= color.a * 0.82;
+// Most pixels in a flake/streak quad are transparent. Skip the roof texture
+// fetch for those pixels, preserving the final roof mask and opacity.
+if alpha < 0.015 { discard; }
+let grid = particle.f32x4_1;
+let world = particle.position;
+let grid_uv = (world.xz - grid.xy) / (grid.z * 2.0) + vec2(0.5);
+let dim = textureDimensions(material_texture_0);
+let pixel = clamp(vec2<i32>(grid_uv * vec2<f32>(dim)), vec2(0), vec2<i32>(dim) - vec2(1));
+let packed = textureLoad(material_texture_0, pixel, 0).rg;
+let roof = grid.w + (packed.r * 65280.0 + packed.g * 255.0) / 65535.0 * 512.0;
+let sheltered = smoothstep(roof + 0.03, roof + 0.7, world.y);
+alpha *= sheltered;
 if alpha < 0.015 { discard; }
 color = vec4(color.rgb, alpha);

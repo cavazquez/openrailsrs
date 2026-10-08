@@ -1092,6 +1092,62 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OPENRAILSRS_NATIVE_ROUTE with original Chiltern v4 content"]
+    fn native_service_paddington_zero_length_section_keeps_formation_connected() {
+        let route = std::path::PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").unwrap());
+        let tdb = TrackDbFile::from_path(route.join("Chiltern.tdb")).unwrap();
+        let catalog = TSectionCatalog::load_for_route(&route).unwrap();
+        let Some(node) = tdb.node_by_id(17433) else {
+            eprintln!("skip: this Chiltern edition does not include the v4 Paddington vector");
+            return;
+        };
+        let openrailsrs_formats::TrackNodeKind::Vector { sections, .. } = &node.kind else {
+            panic!("Paddington node must be a vector");
+        };
+        if !sections.iter().any(|s| s.section_index == 54452) {
+            eprintln!("skip: this Chiltern edition has a different Paddington vector");
+            return;
+        }
+        assert_eq!(catalog.sections[&54452].effective_length_m(), 0.0);
+        let expected_length: f64 = sections
+            .iter()
+            .map(|s| catalog.sections[&s.section_index].effective_length_m())
+            .sum();
+        let next = TrackVectorPath::new(node, Some(&catalog)).unwrap();
+        let previous =
+            TrackVectorPath::new(tdb.node_by_id(17377).unwrap(), Some(&catalog)).unwrap();
+        assert!((next.length_m() - expected_length).abs() < 0.01);
+        let start = sections[0].start;
+        let frame = DVec3::new(
+            f64::from(start.tile_x) * 2048.0,
+            0.0,
+            -f64::from(start.tile_z) * 2048.0,
+        );
+        // Both routed edges are traversed backwards. Sample the physical seam
+        // with the same chainage convention as the live car position resolver.
+        let sample = |travel: f64| {
+            if travel < 0.0 {
+                previous.pose_in_frame(-travel, frame).position
+            } else {
+                next.pose_in_frame(expected_length - travel, frame).position
+            }
+        };
+        let spacing = sample(-10.3632).distance(sample(10.3632));
+        assert!((spacing - 20.7264).abs() < 0.15, "car spacing={spacing}m");
+        let mut last = sample(-20.0);
+        let mut max_step = 0.0_f32;
+        for i in 1..=160 {
+            let position = sample(-20.0 + i as f64 * 0.25);
+            max_step = max_step.max(position.distance(last));
+            last = position;
+        }
+        eprintln!(
+            "Paddington: length={expected_length:.6}m, spacing={spacing:.4}m, max quarter-metre step={max_step:.4}m"
+        );
+        assert!(max_step < 0.5, "native seam jumps {max_step}m");
+    }
+
+    #[test]
     #[ignore = "requires OPENRAILSRS_NATIVE_ROUTE with original Chiltern content"]
     fn native_service_stations_match_platform_world_positions() {
         let route = std::path::PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").unwrap());

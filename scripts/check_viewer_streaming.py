@@ -90,6 +90,38 @@ def compare_pullman_cab_foreground(reference, candidate):
     }
 
 
+def renderer_failed(log_text):
+    return any(message in log_text for message in (
+        "failed to process shader", "ERROR bevy", "panicked at",
+        "More than 65535 distinct VisibilityRanges",
+    ))
+
+
+def validate_formation(report, expected_cars, tolerance_m=2.0):
+    """Reject separated/overlapping car roots, using captured ECS transforms."""
+    cars = report.get("train_formation") or []
+    if len(cars) != expected_cars or [c.get("index") for c in cars] != list(range(expected_cars)):
+        raise ValueError("Formation car roots are missing, duplicated or out of order")
+    maximum_error = 0.0
+    previous = None
+    for car in cars:
+        position = car.get("position_render_m") or []
+        offset = car.get("offset_m")
+        if len(position) != 3 or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in position):
+            raise ValueError("Formation has an invalid captured position")
+        if not isinstance(offset, (int, float)) or not math.isfinite(offset):
+            raise ValueError("Formation has an invalid path offset")
+        if previous is not None:
+            expected = abs(offset - previous["offset_m"])
+            error = abs(math.dist(position, previous["position_render_m"]) - expected)
+            maximum_error = max(maximum_error, error)
+            if expected <= 0 or error > tolerance_m:
+                raise ValueError(f"Formation spacing error at car {car['index']}: {error:.3f} m")
+        previous = car
+    return {"cars": expected_cars, "maximum_spacing_error_m": maximum_error,
+            "tolerance_m": tolerance_m, "scope": "car centres versus path offsets; includes curve chord shortening"}
+
+
 def run_checkpoint(args, name, target, pause):
     prefix = args.out_dir / name
     after_service = getattr(args, "after_service", not pause)
@@ -300,7 +332,7 @@ def run_checkpoint(args, name, target, pause):
                     with prefix.with_suffix(".log").open("rb") as diagnostics:
                         diagnostics.seek(max(0, diagnostics.seek(0, 2) - 65536))
                         recent = diagnostics.read().decode("utf-8", errors="replace")
-                    if "failed to process shader" in recent or "panicked at" in recent:
+                    if renderer_failed(recent):
                         raise RuntimeError(f"{name}: renderer/shader failure; see {prefix.with_suffix('.log')}")
                     time.sleep(0.25)
                 if viewer.returncode:
@@ -320,7 +352,7 @@ def run_checkpoint(args, name, target, pause):
             if private_runtime is not None:
                 private_runtime.cleanup()
     log_text = prefix.with_suffix(".log").read_text(errors="replace")
-    if "ERROR bevy" in log_text or "panicked at" in log_text:
+    if renderer_failed(log_text):
         raise RuntimeError(f"{name}: renderer errors; see {prefix.with_suffix('.log')}")
     image = prefix.with_suffix(".png")
     report = json.loads(prefix.with_suffix(".stream.json").read_text())
@@ -355,6 +387,8 @@ def run_checkpoint(args, name, target, pause):
         raise RuntimeError(f"{name}: textures or meshes not yet uploaded to the GPU")
     if report.get("pending_terrain_tiles", 0):
         raise RuntimeError(f"{name}: native terrain still being prepared")
+    if getattr(args, "formation_cars", None) is not None:
+        report["formation_validation"] = validate_formation(report, args.formation_cars)
     if after_service and not report["service_complete"]:
         raise RuntimeError(f"{name}: service did not complete")
     if after_service and hasattr(args, "expected_station_names"):

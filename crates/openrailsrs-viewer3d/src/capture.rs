@@ -299,6 +299,16 @@ pub struct CaptureScene<'w, 's> {
         &'static openrailsrs_bevy_scenery::shapes::ShapeAnimBinding,
         With<crate::rolling_stock_anim::TrainExteriorAnimPart>,
     >,
+    cars: Query<
+        'w,
+        's,
+        (
+            &'static crate::rolling_stock::ConsistCarIndex,
+            &'static crate::rolling_stock_anim::TrainCarTrackOffset,
+            &'static crate::rolling_stock_anim::TrainCarSupports,
+            &'static GlobalTransform,
+        ),
+    >,
 }
 
 impl CaptureScene<'_, '_> {
@@ -381,6 +391,26 @@ impl CaptureScene<'_, '_> {
             "quick_station_practice":live.map(|live|live.session.gameplay.quick_station_practice),
             "traffic": live.map(|live| live.traffic.services.iter().map(|s| serde_json::json!({"id":s.id,"departed":s.departed,"odometer_m":s.session.state.odometer_m,"edge":s.session.current_edge_id(),"velocity_kmh":s.session.velocity_mps()*3.6,"stops":s.session.gameplay.stop_results.len(),"arrived":s.session.arrived})).collect::<Vec<_>>()),
         });
+        let mut cars: Vec<_> = self
+            .cars
+            .iter()
+            .filter(|(_, offset, _, _)| offset.track_index == 0)
+            .collect();
+        cars.sort_by_key(|(index, _, _, _)| index.0);
+        report["train_formation"] = serde_json::json!(cars.iter().enumerate().map(
+            |(slot, (index, offset, supports, transform))| {
+                let previous = slot.checked_sub(1).map(|i| cars[i]);
+                serde_json::json!({
+                    "index": index.0,
+                    "offset_m": offset.offset_m,
+                    "position_render_m": transform.translation().to_array(),
+                    "rotation_xyzw": transform.rotation().to_array(),
+                    "supports_m": [supports.front_m, supports.rear_m],
+                    "centre_spacing_m": previous.map(|(_, _, _, other)| transform.translation().distance(other.translation())),
+                    "path_spacing_m": previous.map(|(_, other, _, _)| (offset.offset_m - other.offset_m).abs()),
+                })
+            }
+        ).collect::<Vec<_>>());
         report["electric_contacts"] = serde_json::json!(
             self.electric_contacts
                 .as_ref()

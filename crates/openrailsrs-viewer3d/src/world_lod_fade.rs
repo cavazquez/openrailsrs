@@ -4,6 +4,16 @@ use bevy::{camera::visibility::VisibilityRange, prelude::*};
 
 pub const DURATION_S: f32 = 0.35;
 pub const MAX_ACTIVE: usize = 64;
+const DISTANCE_STEP_M: f32 = 8.0;
+pub const MAX_DISTANCE_M: f32 = 8192.0;
+const FADE_STEPS: usize = 24;
+const MARGIN_M: f32 = 256.0;
+
+/// Initial/offscreen selection needs no duplicate mesh. Very distant changes
+/// are immediate so the finite range palette also bounds Bevy's lifetime cache.
+pub fn should_fade(initializing: bool, visible: bool, animated: bool, distance: f32) -> bool {
+    !initializing && visible && !animated && distance.is_finite() && distance <= MAX_DISTANCE_M
+}
 
 #[derive(Component)]
 pub struct LodFade {
@@ -13,8 +23,15 @@ pub struct LodFade {
 
 /// Same range on outgoing.end and incoming.start yields complementary pixels.
 pub fn ranges(distance: f32, fraction: f32) -> (VisibilityRange, VisibilityRange) {
-    let start = distance - fraction.clamp(0.0, 1.0) * 2.0;
-    let transition = start..start + 2.0;
+    // Bevy 0.19 retains each distinct range for the lifetime of the renderer,
+    // with a u16 index. Per-frame floats would exhaust that table during a trip.
+    // This palette has at most 51,250 fade ranges; rounding changes opacity by
+    // less than 4%, while the two meshes still use complementary dithering.
+    let distance =
+        (distance.clamp(0.0, MAX_DISTANCE_M) / DISTANCE_STEP_M).round() * DISTANCE_STEP_M;
+    let fraction = (fraction.clamp(0.0, 1.0) * FADE_STEPS as f32).round() / FADE_STEPS as f32;
+    let start = distance - fraction * MARGIN_M;
+    let transition = start..start + MARGIN_M;
     let outgoing = VisibilityRange {
         start_margin: -4.0..-3.0,
         end_margin: transition.clone(),
@@ -66,10 +83,36 @@ mod tests {
             for fraction in [0.0, 0.25, 0.5, 0.75, 1.0] {
                 let (old, new) = ranges(distance, fraction);
                 assert_eq!(old.end_margin, new.start_margin);
-                let weight = (distance - new.start_margin.start) / 2.0;
-                assert!((weight - fraction).abs() < 1.0e-4);
+                let weight = (distance - new.start_margin.start) / MARGIN_M;
+                assert!((weight - fraction).abs() < 0.04);
             }
         }
+    }
+    #[test]
+    fn range_palette_cannot_exhaust_bevys_lifetime_u16_table() {
+        let mut palette = std::collections::HashSet::new();
+        for bucket in 0..=(MAX_DISTANCE_M / DISTANCE_STEP_M) as usize {
+            for phase in 0..=FADE_STEPS {
+                let (old, new) = ranges(
+                    bucket as f32 * DISTANCE_STEP_M,
+                    phase as f32 / FADE_STEPS as f32,
+                );
+                palette.insert(old);
+                palette.insert(new);
+            }
+        }
+        assert!(palette.len() < u16::MAX as usize - 1);
+        // Moving within a distance bucket and phase reuses the same slots.
+        assert!(ranges(800.0, 0.5) == ranges(802.0, 0.501));
+    }
+    #[test]
+    fn only_visible_rigid_parts_crossfade_after_initial_selection() {
+        assert!(!should_fade(true, true, false, 10.0));
+        assert!(!should_fade(false, false, false, 10.0));
+        assert!(!should_fade(false, true, true, 10.0));
+        assert!(!should_fade(false, true, false, MAX_DISTANCE_M + 1.0));
+        assert!(!should_fade(false, true, false, f32::NAN));
+        assert!(should_fade(false, true, false, 10.0));
     }
     #[test]
     fn paused_simulation_still_finishes_visual_fades() {

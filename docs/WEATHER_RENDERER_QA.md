@@ -63,4 +63,38 @@ CPU del proceso, actividad global del dispositivo usado por el visor y sus lími
 
 Resultados medidos y decisiones: [evidencia de los issues 190–197](fixtures/compatibility/weather-renderer-2026-10-07/README.md). Comprobación manual: [sección 49](PLAYER_MANUAL_TESTS.md#49-clima-perfiles-escenografía-y-herramientas-de-desarrollo).
 
+### Patios densos y continuidad de la formación
+
+Las escenas rurales de radio 450 m no cubren el coste de Paddington. Para probar
+ese patio, usá un escenario por Paddington Suburban y un radio de 2 km. Conservá
+cámara, clima, niebla y ejecutable dentro de cada comparación:
+
+```bash
+python3 scripts/benchmark_viewer.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$CHILTERN_PADDINGTON_SERVICE" --suite rain --case downpour-high \
+  --view-radius-m 2000 --fog-quality volumetric64 --camera-yaw -1 \
+  --camera-pitch 0.65 --camera-distance 210 --formation-cars 8 \
+  --ready-frames 480 --repeats 1 --out-dir tmp/qa/paddington-rain
+python3 scripts/benchmark_viewer.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$CHILTERN_PADDINGTON_SERVICE" --suite snow --case heavy_snow-high \
+  --view-radius-m 2000 --fog-quality volumetric64 --camera-yaw -1 \
+  --camera-pitch 0.65 --camera-distance 210 --formation-cars 8 \
+  --ready-frames 480 --repeats 1 --out-dir tmp/qa/paddington-snow
+```
+
+`train_formation` registra las transformaciones ECS de las raíces de los coches,
+sus desplazamientos en el itinerario y la separación entre centros. La opción
+`--formation-cars` exige todos los coches y rechaza diferencias mayores a 2 m
+entre separación espacial y separación sobre el recorrido; la tolerancia admite
+el acortamiento de la cuerda en curvas. Esta comprobación detecta coches separados
+o superpuestos; no certifica la física de los acopladores.
+
+La selección inicial de detalle se aplica directamente. Las transiciones de
+partes visibles siguen durando 0,35 s y usan un conjunto finito de rangos, porque
+Bevy conserva sus índices durante la vida del renderizador. El validador rechaza
+el agotamiento de esa tabla aunque se informe como advertencia. Los benchmarks
+no reutilizan resultados si cambia la configuración de cámara, radio o niebla.
+[Evidencia de Paddington](fixtures/compatibility/paddington-2026-10-07/README.md).
+[Comprobación manual](PLAYER_MANUAL_TESTS.md#50-chiltern-v4-formación-y-clima-en-paddington).
+
 APIs de referencia: [Bevy dev tools](https://docs.rs/bevy/0.19.1/bevy/dev_tools/index.html), [inspector de sólo lectura](https://docs.rs/bevy-inspector-egui/0.37.0/bevy_inspector_egui/reflect_inspector/struct.InspectorUi.html), [framepace 0.22](https://github.com/aevyrie/bevy_framepace/blob/main/Cargo.toml). Las versiones y features efectivas quedan fijadas por Cargo.lock.

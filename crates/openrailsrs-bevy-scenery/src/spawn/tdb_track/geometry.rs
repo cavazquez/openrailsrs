@@ -117,9 +117,9 @@ pub fn section_track_length_m(
         && let Some(def) = cat.sections.get(&section_index)
     {
         let len = def.effective_length_m();
-        if len > 1e-6 {
-            return len as f32;
-        }
+        // A known zero-length/skew section is metadata, not missing geometry.
+        // Estimating its length shifts every subsequent vehicle and track item.
+        return len.max(0.0) as f32;
     }
     if section_count <= 1 {
         return single_section_length(node_length_m, section_index);
@@ -364,19 +364,10 @@ pub fn section_path_spans(
         && let Some(def) = cat.sections.get(&section.section_index).copied()
     {
         let len = def.effective_length_m();
-        if len <= 1e-6 && next_section_anchor.is_none() {
+        if len <= 1e-6 {
             return Vec::new();
         }
-        let travel = if len > 1e-6 {
-            len
-        } else {
-            f64::from(section_track_length_m(
-                Some(cat),
-                section.section_index,
-                node_length_m,
-                section_count,
-            ))
-        };
+        let travel = len;
         let msts = msts_world_delta_along_section(ax, ay, az, &def, travel);
         let mut end = anchor + bevy_delta_from_msts_vec(msts);
         if let Some(next) = next_section_anchor {
@@ -1665,6 +1656,55 @@ mod tests {
         let beyond = tdb_node_track_pose(&tdb, 1, 101.0, Some(&catalog), None).unwrap();
         assert!((end.position - Vec3::new(0.0, 0.0, -100.254)).length() < 0.001);
         assert_eq!(end, beyond);
+    }
+
+    #[test]
+    fn zero_length_sections_do_not_separate_cars_at_vector_boundaries() {
+        // Chiltern v4 includes a zero-length dynamic section between real
+        // sections. The next native anchor does not turn it into travel.
+        for skew in [None, Some(12.0)] {
+            let mut catalog = catalog_with_straight_shape(1, 40.0);
+            let mut marker = catalog_with_straight_shape(2, 0.0);
+            marker.sections.get_mut(&2).unwrap().skew_deg = skew;
+            catalog.sections.extend(marker.sections);
+            catalog
+                .sections
+                .extend(catalog_with_straight_shape(3, 60.0).sections);
+            let sections = vec![
+                section_at(0.0, 0.0, 1),
+                section_at(0.0, 40.0, 2),
+                section_at(0.0, 40.0, 3),
+            ];
+            let node = TrackDbNode {
+                id: 1,
+                position: Some(sections[0].start),
+                pin_refs: Vec::new(),
+                kind: TrackNodeKind::Vector {
+                    length_m: 100.0,
+                    speed_limit_mps: 0.0,
+                    pins: (0, 0),
+                    item_ids: Vec::new(),
+                    sections,
+                    geometry: None,
+                },
+            };
+            let path = TrackVectorPath::new(&node, Some(&catalog)).unwrap();
+            assert_eq!(section_track_length_m(Some(&catalog), 2, 100.0, 3), 0.0);
+            assert!((path.length_m() - 100.0).abs() < 1e-6);
+            assert_eq!(path.section_starts_m, [0.0, 40.0, 40.0]);
+            // Forward and reverse travel both preserve centre spacing across
+            // the marker and the endpoint of the vector.
+            for (a, b) in [(30.0, 50.0), (50.0, 30.0), (80.0, 100.0)] {
+                let a = path.pose_in_frame(a, DVec3::ZERO).position;
+                let b = path.pose_in_frame(b, DVec3::ZERO).position;
+                assert!((a.distance(b) - 20.0).abs() < 0.001);
+            }
+            assert!(
+                (path.pose_in_frame(100.0, DVec3::ZERO).position - Vec3::new(0.0, 0.0, -100.0))
+                    .length()
+                    < 0.001
+            );
+        }
     }
 
     #[test]

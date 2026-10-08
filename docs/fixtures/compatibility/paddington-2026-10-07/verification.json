@@ -1,0 +1,1645 @@
+{
+  "configuration": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "view_radius_m": 2000,
+    "camera_yaw": -1.0,
+    "camera_pitch": 0.65,
+    "camera_distance_m": 210,
+    "weather_quality": "high",
+    "fog_quality": "volumetric64",
+    "weather_seed": 1,
+    "ready_frames": 120,
+    "renderer": "gpu",
+    "present_mode": "fifo",
+    "framepace": "off",
+    "route_edition": "Chiltern v4",
+    "pat": "Test Paddington Suburban Up.pat",
+    "consist": "Birmingham Pullman (8 cars)",
+    "notes": "Free PAT corridor; no scheduled stops. CPU/mixed checks use distance fog. The moving case uses simulation speed 4, then pauses at 250 m."
+  },
+  "before": {
+    "rain": {
+      "elapsed_until_stable_capture_s": 221.7,
+      "peak_rss_mib": 2744.0,
+      "viewer_sha256": "0107e964e13c0b118cd4c881eb63c090f532a1cb2c223960de3671c7ff778f76",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 6097,
+      "frame_ms": {
+        "p50": 25.958586,
+        "p95": 29.965035,
+        "p99": 34.829569
+      },
+      "cpu_main_ms": {
+        "p50": 23.940561,
+        "p95": 28.179475,
+        "p99": 32.493042
+      },
+      "gpu_ms": {
+        "p50": 1.15812,
+        "p95": 1.22936,
+        "p99": 1.32552
+      },
+      "hitches_over_100_ms": 0,
+      "formation": null,
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 420
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0005799999926239252,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 3000.0,
+        "volumetric": true
+      }
+    },
+    "snow": {
+      "elapsed_until_stable_capture_s": 224.2,
+      "peak_rss_mib": 2626.5,
+      "viewer_sha256": "0107e964e13c0b118cd4c881eb63c090f532a1cb2c223960de3671c7ff778f76",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 5648,
+      "frame_ms": {
+        "p50": 28.531091,
+        "p95": 32.847349,
+        "p99": 37.894228000000005
+      },
+      "cpu_main_ms": {
+        "p50": 26.560685,
+        "p95": 31.038213,
+        "p99": 35.356783
+      },
+      "gpu_ms": {
+        "p50": 1.2402,
+        "p95": 1.6314,
+        "p99": 1.88204
+      },
+      "hitches_over_100_ms": 0,
+      "formation": null,
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 423
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0007999999797903001,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 500.0,
+        "volumetric": true
+      }
+    }
+  },
+  "after": {
+    "rain": {
+      "elapsed_until_stable_capture_s": 62.9,
+      "peak_rss_mib": 2699.3,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 58,
+      "frame_ms": {
+        "p50": 25.112458,
+        "p95": 27.901629,
+        "p99": 29.396411
+      },
+      "cpu_main_ms": {
+        "p50": 5.222269,
+        "p95": 8.029654,
+        "p99": 9.631836
+      },
+      "gpu_ms": {
+        "p50": 1.22052,
+        "p95": 1.24648,
+        "p99": 1.60332
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 110
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0005799999926239252,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 3000.0,
+        "volumetric": true
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            -7.352063179016113,
+            -0.04054642096161842,
+            -7.302827835083008
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.92215895652771,
+            0.0,
+            -0.3868113160133362
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723155975341797,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            -22.424365997314453,
+            -0.04054642096161842,
+            -21.525163650512695
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.914351224899292,
+            0.0,
+            -0.40492212772369385
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726097106933594,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -37.82209777832031,
+            -0.04054642096161842,
+            -35.3989143371582
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132336974143982,
+            0.0,
+            -0.4074361324310303
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.675336837768555,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            -53.20478439331055,
+            -0.04054642096161842,
+            -49.2134895324707
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132330417633057,
+            0.0,
+            -0.4074377715587616
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.724008560180664,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -68.6268081665039,
+            -0.04054642096161842,
+            -63.057106018066406
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132401347160339,
+            0.0,
+            -0.4074218273162842
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.712621688842773,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -83.5857162475586,
+            -0.04054642096161842,
+            -77.38343811035156
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9284833669662476,
+            0.0,
+            -0.3713739216327667
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723831176757812,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -97.66461944580078,
+            -0.04054642096161842,
+            -92.59072875976562
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.66417694091797,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            -111.59263610839844,
+            -0.04054737463593483,
+            -107.85567474365234
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    },
+    "snow": {
+      "elapsed_until_stable_capture_s": 62.1,
+      "peak_rss_mib": 2663.9,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 58,
+      "frame_ms": {
+        "p50": 25.164826,
+        "p95": 28.62759,
+        "p99": 29.671032
+      },
+      "cpu_main_ms": {
+        "p50": 5.638494,
+        "p95": 9.152675,
+        "p99": 9.8002
+      },
+      "gpu_ms": {
+        "p50": 1.17232,
+        "p95": 1.4964,
+        "p99": 1.59792
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 108
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0007999999797903001,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 500.0,
+        "volumetric": true
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            -7.352063179016113,
+            -0.04054642096161842,
+            -7.302827835083008
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.92215895652771,
+            0.0,
+            -0.3868113160133362
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723155975341797,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            -22.424365997314453,
+            -0.04054642096161842,
+            -21.525163650512695
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.914351224899292,
+            0.0,
+            -0.40492212772369385
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726097106933594,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -37.82209777832031,
+            -0.04054642096161842,
+            -35.3989143371582
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132336974143982,
+            0.0,
+            -0.4074361324310303
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.675336837768555,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            -53.20478439331055,
+            -0.04054642096161842,
+            -49.2134895324707
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132330417633057,
+            0.0,
+            -0.4074377715587616
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.724008560180664,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -68.6268081665039,
+            -0.04054642096161842,
+            -63.057106018066406
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132401347160339,
+            0.0,
+            -0.4074218273162842
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.712621688842773,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -83.5857162475586,
+            -0.04054642096161842,
+            -77.38343811035156
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9284833669662476,
+            0.0,
+            -0.3713739216327667
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723831176757812,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -97.66461944580078,
+            -0.04054642096161842,
+            -92.59072875976562
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.66417694091797,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            -111.59263610839844,
+            -0.04054737463593483,
+            -107.85567474365234
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    },
+    "seam": {
+      "elapsed_until_stable_capture_s": 61.4,
+      "peak_rss_mib": 2692.2,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "b2c7e64dca34d4e0ca46c50a95cc16782526b4faf08e4b6f55e88e06dbf49908",
+      "samples": 58,
+      "frame_ms": {
+        "p50": 25.103633,
+        "p95": 29.07868,
+        "p99": 29.708522000000002
+      },
+      "cpu_main_ms": {
+        "p50": 5.205308,
+        "p95": 8.79552,
+        "p99": 9.161741
+      },
+      "gpu_ms": {
+        "p50": 1.18652,
+        "p95": 1.59132,
+        "p99": 1.60932
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.026706835614184854,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 3.9999998989515007e-05,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 20000.0,
+        "volumetric": true
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            -6.609776020050049,
+            -0.04260112717747688,
+            -7.97869873046875
+          ],
+          "rotation_xyzw": [
+            -0.007709586061537266,
+            0.9388510584831238,
+            0.0026487549766898155,
+            -0.3442270755767822
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.71578025817871,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            -20.588171005249023,
+            -0.050722576677799225,
+            -23.26751708984375
+          ],
+          "rotation_xyzw": [
+            -5.030329486288565e-10,
+            0.9257073402404785,
+            -3.143955651374597e-10,
+            -0.3782404065132141
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.72281265258789,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -35.402015686035156,
+            -0.05194476619362831,
+            -37.75837707519531
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9176695942878723,
+            -4.4400921828113837e-10,
+            -0.3973443806171417
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.724903106689453,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            -50.70991134643555,
+            -0.05194469913840294,
+            -51.72941589355469
+          ],
+          "rotation_xyzw": [
+            -5.099037858613542e-10,
+            0.9132336974143982,
+            -3.824277006181376e-10,
+            -0.4074361324310303
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.699695587158203,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -66.11225128173828,
+            -0.051945675164461136,
+            -65.55856323242188
+          ],
+          "rotation_xyzw": [
+            -2.880721083897697e-08,
+            0.9133081436157227,
+            -6.182079204108959e-08,
+            -0.4072691798210144
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.69989013671875,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -81.51490783691406,
+            -0.051944855600595474,
+            -79.38764953613281
+          ],
+          "rotation_xyzw": [
+            -2.549520872197064e-10,
+            0.9132329225540161,
+            -5.736421893054455e-10,
+            -0.40743789076805115
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.72283363342285,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -96.81019592285156,
+            -0.051944974809885025,
+            -93.36942291259766
+          ],
+          "rotation_xyzw": [
+            -7.604062934873923e-10,
+            0.9185773730278015,
+            1.2673427585152552e-10,
+            -0.39524129033088684
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.651216506958008,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            -111.1611328125,
+            -0.051944974809885025,
+            -108.21945190429688
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            9.364236469577847e-11,
+            -0.3614451587200165
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    },
+    "move": {
+      "elapsed_until_stable_capture_s": 76.5,
+      "peak_rss_mib": 2697.6,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 638,
+      "frame_ms": {
+        "p50": 25.090147,
+        "p95": 38.253947000000004,
+        "p99": 47.521345
+      },
+      "cpu_main_ms": {
+        "p50": 18.562899,
+        "p95": 22.737218,
+        "p99": 30.149002
+      },
+      "gpu_ms": {
+        "p50": 1.37972,
+        "p95": 1.55992,
+        "p99": 1.74296
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.017963571314648874,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 251.04768226661534,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 3.9999998989515007e-05,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 20000.0,
+        "volumetric": true
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            70.6725082397461,
+            -0.03914225101470947,
+            221.82183837890625
+          ],
+          "rotation_xyzw": [
+            -2.8137228582636453e-05,
+            0.9998540282249451,
+            0.00024045408645179123,
+            -0.017083216458559036
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726539611816406,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            69.9646224975586,
+            -0.038764454424381256,
+            201.10739135742188
+          ],
+          "rotation_xyzw": [
+            -7.037087925709784e-05,
+            0.9998540282249451,
+            0.0003007588384207338,
+            -0.017083261162042618
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726486206054688,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            69.25650787353516,
+            -0.04086272418498993,
+            180.39300537109375
+          ],
+          "rotation_xyzw": [
+            -5.7418055803282186e-05,
+            0.9998540282249451,
+            0.0003195431490894407,
+            -0.017083261162042618
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726285934448242,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            68.53954315185547,
+            -0.042321737855672836,
+            159.6791229248047
+          ],
+          "rotation_xyzw": [
+            0.0009366997983306646,
+            0.9998461008071899,
+            0.00025817734422162175,
+            -0.017520327121019363
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.715694427490234,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            67.15702056884766,
+            -0.03768991306424141,
+            139.00961303710938
+          ],
+          "rotation_xyzw": [
+            0.0017290307441726327,
+            0.9986151456832886,
+            0.00012571616389323026,
+            -0.052582647651433945
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.708438873291016,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            64.03886413574219,
+            -0.03845331072807312,
+            118.53727722167969
+          ],
+          "rotation_xyzw": [
+            0.001768179121427238,
+            0.9951513409614563,
+            3.108310920652002e-05,
+            -0.0983400046825409
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.70867156982422,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            59.05617904663086,
+            -0.04311152547597885,
+            98.43698120117188
+          ],
+          "rotation_xyzw": [
+            0.0017552539939060807,
+            0.989582359790802,
+            -1.080354650184745e-06,
+            -0.1439567655324936
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.646631240844727,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            52.2745475769043,
+            -0.04065698757767677,
+            78.93588256835938
+          ],
+          "rotation_xyzw": [
+            0.0017083905404433608,
+            0.9819560647010803,
+            -1.5821793567738496e-05,
+            -0.18910124897956848
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    },
+    "rain-cpu": {
+      "elapsed_until_stable_capture_s": 61.6,
+      "peak_rss_mib": 2658.2,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 58,
+      "frame_ms": {
+        "p50": 25.193431,
+        "p95": 28.679396,
+        "p99": 29.715674
+      },
+      "cpu_main_ms": {
+        "p50": 6.3688199999999995,
+        "p95": 9.673632,
+        "p99": 11.343986000000001
+      },
+      "gpu_ms": {
+        "p50": 1.23448,
+        "p95": 1.24088,
+        "p99": 1.25204
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 2062,
+        "cpu_particles": 2048,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 107
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 3000.0,
+        "volumetric": false
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            -7.352063179016113,
+            -0.04054642096161842,
+            -7.302827835083008
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.92215895652771,
+            0.0,
+            -0.3868113160133362
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723155975341797,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            -22.424365997314453,
+            -0.04054642096161842,
+            -21.525163650512695
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.914351224899292,
+            0.0,
+            -0.40492212772369385
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726097106933594,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -37.82209777832031,
+            -0.04054642096161842,
+            -35.3989143371582
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132336974143982,
+            0.0,
+            -0.4074361324310303
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.675336837768555,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            -53.20478439331055,
+            -0.04054642096161842,
+            -49.2134895324707
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132330417633057,
+            0.0,
+            -0.4074377715587616
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.724008560180664,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -68.6268081665039,
+            -0.04054642096161842,
+            -63.057106018066406
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132401347160339,
+            0.0,
+            -0.4074218273162842
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.712621688842773,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -83.5857162475586,
+            -0.04054642096161842,
+            -77.38343811035156
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9284833669662476,
+            0.0,
+            -0.3713739216327667
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723831176757812,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -97.66461944580078,
+            -0.04054642096161842,
+            -92.59072875976562
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.66417694091797,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            -111.59263610839844,
+            -0.04054737463593483,
+            -107.85567474365234
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    },
+    "snow-hybrid": {
+      "elapsed_until_stable_capture_s": 61.9,
+      "peak_rss_mib": 2699.9,
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "samples": 58,
+      "frame_ms": {
+        "p50": 25.122462000000002,
+        "p95": 28.425435999999998,
+        "p99": 30.128664999999998
+      },
+      "cpu_main_ms": {
+        "p50": 7.390796,
+        "p95": 10.561136000000001,
+        "p99": 11.858306
+      },
+      "gpu_ms": {
+        "p50": 1.2054,
+        "p95": 1.57972,
+        "p99": 1.62856
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 2059,
+        "cpu_particles": 1024,
+        "execution": "hybrid",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 4096,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 3072,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "hybrid",
+        "seed_upload_capacity": 6144,
+        "shelter_refreshes": 107
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "active_lod_fades": 0,
+      "odometer_m": 0.0,
+      "native_signal_errors": {},
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "fog": {
+        "density_factor": 0.0,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 500.0,
+        "volumetric": false
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.363200187683105,
+          "path_spacing_m": null,
+          "position_render_m": [
+            -7.352063179016113,
+            -0.04054642096161842,
+            -7.302827835083008
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.92215895652771,
+            0.0,
+            -0.3868113160133362
+          ],
+          "supports_m": [
+            7.038750171661377,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723155975341797,
+          "index": 1,
+          "offset_m": -31.089599609375,
+          "path_spacing_m": 20.726398468017578,
+          "position_render_m": [
+            -22.424365997314453,
+            -0.04054642096161842,
+            -21.525163650512695
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.914351224899292,
+            0.0,
+            -0.40492212772369385
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.726097106933594,
+          "index": 2,
+          "offset_m": -51.816001892089844,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -37.82209777832031,
+            -0.04054642096161842,
+            -35.3989143371582
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132336974143982,
+            0.0,
+            -0.4074361324310303
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.675336837768555,
+          "index": 3,
+          "offset_m": -72.54239654541016,
+          "path_spacing_m": 20.726394653320312,
+          "position_render_m": [
+            -53.20478439331055,
+            -0.04054642096161842,
+            -49.2134895324707
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132330417633057,
+            0.0,
+            -0.4074377715587616
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.724008560180664,
+          "index": 4,
+          "offset_m": -93.268798828125,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -68.6268081665039,
+            -0.04054642096161842,
+            -63.057106018066406
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9132401347160339,
+            0.0,
+            -0.4074218273162842
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.712621688842773,
+          "index": 5,
+          "offset_m": -113.99520111083984,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -83.5857162475586,
+            -0.04054642096161842,
+            -77.38343811035156
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9284833669662476,
+            0.0,
+            -0.3713739216327667
+          ],
+          "supports_m": [
+            7.076240062713623,
+            -7.046669960021973
+          ]
+        },
+        {
+          "centre_spacing_m": 20.723831176757812,
+          "index": 6,
+          "offset_m": -134.7216033935547,
+          "path_spacing_m": 20.726402282714844,
+          "position_render_m": [
+            -97.66461944580078,
+            -0.04054642096161842,
+            -92.59072875976562
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.076240062713623
+          ]
+        },
+        {
+          "centre_spacing_m": 20.66417694091797,
+          "index": 7,
+          "offset_m": -155.38580322265625,
+          "path_spacing_m": 20.664199829101562,
+          "position_render_m": [
+            -111.59263610839844,
+            -0.04054737463593483,
+            -107.85567474365234
+          ],
+          "rotation_xyzw": [
+            0.0,
+            0.9323933124542236,
+            0.0,
+            -0.3614451289176941
+          ],
+          "supports_m": [
+            7.046669960021973,
+            -7.038750171661377
+          ]
+        }
+      ]
+    }
+  },
+  "checks": {
+    "check_sh": "passed",
+    "native_route_tests_included": true,
+    "rust_passed_including_separate_native_run": 1715,
+    "native_paddington_result": "test track_position::tests::native_service_paddington_zero_length_section_keeps_formation_connected ... Paddington: length=382.113137m, spacing=20.7238m, max quarter-metre step=0.2501m"
+  },
+  "steady_validation": {
+    "steady-rain": {
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "weather_seed": 81,
+      "ready_frames": 480,
+      "samples": 418,
+      "frame_ms": {
+        "p50": 25.116846000000002,
+        "p95": 28.148909,
+        "p99": 30.275700999999998
+      },
+      "cpu_main_ms": {
+        "p50": 5.3205860000000005,
+        "p95": 8.237893,
+        "p99": 10.443417
+      },
+      "gpu_ms": {
+        "p50": 1.21972,
+        "p95": 1.40476,
+        "p99": 1.58524
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 128
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    "steady-snow": {
+      "viewer_sha256": "2c04d50af050b752d103fe7a36eac3e4d710e1372793c9d25f5b5249c526de01",
+      "scenario_sha256": "7ac69dbbc971ad663fc2a610593df2450f55d3ed17619f1e1e763f3e6d5da686",
+      "weather_seed": 81,
+      "ready_frames": 480,
+      "samples": 418,
+      "frame_ms": {
+        "p50": 25.184207999999998,
+        "p95": 28.243362,
+        "p99": 32.227726
+      },
+      "cpu_main_ms": {
+        "p50": 5.710805000000001,
+        "p95": 8.55432,
+        "p99": 11.690226999999998
+      },
+      "gpu_ms": {
+        "p50": 1.19516,
+        "p95": 1.55068,
+        "p99": 1.6148
+      },
+      "hitches_over_100_ms": 0,
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 128
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    }
+  }
+}

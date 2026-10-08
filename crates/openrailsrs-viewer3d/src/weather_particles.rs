@@ -569,38 +569,6 @@ pub fn update(
                     .map_or(-10000.0, |h| h - focus.height_origin);
             }
         }
-        for (tf, bounds, standard, source, native) in &obstacles {
-            let alpha = standard
-                .map(|s| &s.0)
-                .or_else(|| source.map(|s| &s.0))
-                .and_then(|h| originals.get(h))
-                .map(|m| m.alpha_mode)
-                .or_else(|| {
-                    native
-                        .and_then(|s| native_materials.get(&s.0))
-                        .map(|m| m.alpha_mode)
-                });
-            if solids.is_some() {
-                continue;
-            }
-            // Cutout tree cards and glass must not create rectangular roofs.
-            if alpha != Some(AlphaMode::Opaque) {
-                continue;
-            }
-            let affine = tf.affine();
-            let center = affine.transform_point3(bounds.center.into());
-            let extent = affine.matrix3.abs() * bounds.half_extents;
-            if extent.x < 0.1 || extent.z < 0.1 {
-                continue;
-            }
-            let grid_center = state.shelter_center;
-            raster_roof(
-                &mut state.shelter_values,
-                grid_center,
-                center,
-                extent.into(),
-            );
-        }
         if let Some(solids) = &solids {
             let grid_center = state.shelter_center;
             for solid in &solids.solids {
@@ -609,6 +577,38 @@ pub fn update(
                     grid_center,
                     (solid.min + solid.max) * 0.5,
                     (solid.max - solid.min) * 0.5,
+                );
+            }
+        } else {
+            // The shared cache already filters materials and bounds nearby
+            // solids. Do not traverse the entire station a second time.
+            let grid_center = state.shelter_center;
+            for (tf, bounds, standard, source, native) in &obstacles {
+                let alpha = standard
+                    .map(|s| &s.0)
+                    .or_else(|| source.map(|s| &s.0))
+                    .and_then(|h| originals.get(h))
+                    .map(|m| m.alpha_mode)
+                    .or_else(|| {
+                        native
+                            .and_then(|s| native_materials.get(&s.0))
+                            .map(|m| m.alpha_mode)
+                    });
+                // Cutout tree cards and glass must not create rectangular roofs.
+                if alpha != Some(AlphaMode::Opaque) {
+                    continue;
+                }
+                let affine = tf.affine();
+                let center = affine.transform_point3(bounds.center.into());
+                let extent = affine.matrix3.abs() * bounds.half_extents;
+                if extent.x < 0.1 || extent.z < 0.1 {
+                    continue;
+                }
+                raster_roof(
+                    &mut state.shelter_values,
+                    grid_center,
+                    center,
+                    extent.into(),
                 );
             }
         }

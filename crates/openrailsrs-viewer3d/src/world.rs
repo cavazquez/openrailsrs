@@ -4149,6 +4149,7 @@ pub fn update_world_scenery_lod(
         Option<&WorldTileBound>,
         Option<&crate::world_lod_fade::LodFade>,
         Option<&crate::surface_weather::SnowSurfaceSource>,
+        Option<&ViewVisibility>,
     )>,
 ) {
     let Some(cache) = cache else {
@@ -4174,6 +4175,7 @@ pub fn update_world_scenery_lod(
     if !lod_camera_needs_update(&lod_cam, cam_pos, focus_pos, WORLD_LOD_EPS_M) {
         return;
     }
+    let initializing = lod_cam.last_cam.is_none() && lod_cam.last_focus.is_none();
     lod_cam.last_cam = Some(cam_pos);
     lod_cam.last_focus = Some(focus_pos);
 
@@ -4197,6 +4199,7 @@ pub fn update_world_scenery_lod(
         tile,
         fade,
         snow_source,
+        view_visibility,
     ) in &mut parts
     {
         if !lod.enabled {
@@ -4221,10 +4224,6 @@ pub fn update_world_scenery_lod(
             lod_cam.last_cam = None;
             continue;
         }
-        if active_fades >= crate::world_lod_fade::MAX_ACTIVE {
-            deferred = true;
-            continue;
-        }
         let Some(asset) = lod_assets.get(new_lod) else {
             continue;
         };
@@ -4234,10 +4233,18 @@ pub fn update_world_scenery_lod(
             .or_else(|| snow_source.map(|s| s.0.clone()));
         // Animated parts retain their binding/pose; crossfade only rigid WORLD
         // parts, so moving signals never leave a stationary duplicate behind.
-        if anim_state.is_none()
-            && *visibility != Visibility::Hidden
+        if crate::world_lod_fade::should_fade(
+            initializing,
+            view_visibility.is_some_and(|visible| visible.get()),
+            anim_state.is_some(),
+            instance_dist,
+        ) && *visibility != Visibility::Hidden
             && let (Some(material), Some(local)) = (source_material.as_ref(), transform.as_deref())
         {
+            if active_fades >= crate::world_lod_fade::MAX_ACTIVE {
+                deferred = true;
+                continue;
+            }
             let (outgoing, incoming) = crate::world_lod_fade::ranges(instance_dist, 0.0);
             let mut ghost = commands.spawn((
                 mesh3d.clone(),
@@ -5747,6 +5754,93 @@ mod tests {
             Vec3::ZERO,
             WORLD_LOD_EPS_M
         ));
+    }
+
+    #[test]
+    fn initial_and_offscreen_lod_selection_is_not_limited_by_fade_budget() {
+        use bevy::ecs::system::RunSystemOnce;
+        use openrailsrs_formats::{DistanceLevel, LodControl};
+        for initializing in [true, false] {
+            let mut world = World::new();
+            let shape_path = PathBuf::from("station.s");
+            let shape = ShapeFile {
+                view_sphere_radius: 1.0,
+                lod_controls: vec![LodControl {
+                    distance_levels: vec![
+                        DistanceLevel {
+                            selection_m: 10.0,
+                            ..default()
+                        },
+                        DistanceLevel {
+                            selection_m: 1000.0,
+                            ..default()
+                        },
+                    ],
+                }],
+                ..default()
+            };
+            let mut meshes = Assets::<Mesh>::default();
+            let old_mesh = meshes.add(Cuboid::default());
+            let new_mesh = meshes.add(Cuboid::default());
+            let mut asset = dummy_shape_asset();
+            let mut part = dummy_shape_part(u32::MAX, 0);
+            part.mesh = new_mesh.clone();
+            asset.parts.push(part);
+            let mut cache = WorldShapeLodCache::default();
+            cache.shapes.insert(shape_path.clone(), shape.into());
+            cache
+                .assets_by_lod
+                .insert(shape_path.clone(), vec![asset.clone(), asset]);
+            world.insert_resource(cache);
+            world.insert_resource(meshes);
+            world.insert_resource(if initializing {
+                WorldLodCameraState::default()
+            } else {
+                WorldLodCameraState {
+                    last_cam: Some(Vec3::X),
+                    last_focus: Some(Vec3::ZERO),
+                }
+            });
+            world.spawn((Camera3d::default(), GlobalTransform::default()));
+            let entities: Vec<_> = (0..crate::world_lod_fade::MAX_ACTIVE * 2)
+                .map(|_| {
+                    world
+                        .spawn((
+                            Transform::from_xyz(100.0, 0.0, 0.0),
+                            GlobalTransform::from_translation(Vec3::new(100.0, 0.0, 0.0)),
+                            Mesh3d(old_mesh.clone()),
+                            MeshMaterial3d::<StandardMaterial>(Handle::default()),
+                            Visibility::Inherited,
+                            if initializing {
+                                ViewVisibility::VISIBLE
+                            } else {
+                                ViewVisibility::HIDDEN
+                            },
+                            WorldSceneryLod {
+                                bank: None,
+                                enabled: true,
+                                shape_path: shape_path.clone(),
+                                sub_object_idx: u32::MAX,
+                                prim_state_idx: 0,
+                                part_index: 0,
+                                lod_idx: 0,
+                            },
+                        ))
+                        .id()
+                })
+                .collect();
+            world.run_system_once(update_world_scenery_lod).unwrap();
+            for entity in entities {
+                assert_eq!(world.get::<WorldSceneryLod>(entity).unwrap().lod_idx, 1);
+                assert_eq!(world.get::<Mesh3d>(entity).unwrap().0, new_mesh);
+                assert!(
+                    world
+                        .get::<crate::world_lod_fade::LodFade>(entity)
+                        .is_none()
+                );
+            }
+            assert!(world.resource::<WorldLodCameraState>().last_cam.is_some());
+        }
     }
 
     #[test]
